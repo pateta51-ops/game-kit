@@ -1,0 +1,9 @@
+{
+  "name": "plan-checker",
+  "source": {
+    "game": "jarl",
+    "commit": "6f006a2",
+    "paths": ["tools/plancheck.py", "scripts/plancheck.ts", "tests/scripts/plancheck.test.ts"]
+  },
+  "needs": []
+}

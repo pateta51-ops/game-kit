@@ -1,0 +1,9 @@
+{
+  "name": "bundle-size",
+  "source": {
+    "game": "ebr",
+    "commit": "33b5abd3",
+    "paths": ["scripts/check-bundle-size.ts"]
+  },
+  "needs": []
+}
