@@ -323,7 +323,7 @@ export function browserTransport(
   online: () => boolean = () => typeof navigator === 'undefined' || navigator.onLine !== false,
 ): GhTransport {
   return async (request) => {
-    // the path as the browser will resolve it (".." and "%2e%2e" are applied), checked against this repository
+    // the path as the browser will resolve it (dot-dot and "%2e%2e" are applied), checked against this repository
     let target: URL;
     try {
       target = new URL(`${GITHUB_API}${request.path}`);

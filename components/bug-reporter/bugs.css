@@ -1,6 +1,44 @@
-/* Bug reports: the dialog, Settings > Bug reports, Home's queue bar and the table's button, in the Menus A look: parchment
-   panels with a bronze edge, bronze buttons, the three type roles only. Both themes keep the parchment (as the menus do);
-   the dark theme darkens the backdrop. Sizes follow the window: about 28 px text at 3840 px, 15 px on the phone. */
+/* Bug reports: the dialog, Settings > Bug reports, the queue bar and the floating button. Every colour, font and radius is a
+   --bug-* variable with a neutral default (set it on :root or any ancestor to theme it). Sizes follow the window: about 28 px
+   text at 3840 px, 15 px on the phone. */
+:where(:root) {
+  --bug-accent: #555555;
+  --bug-backdrop: #0000008c;
+  --bug-bad: #b3261e;
+  --bug-bad-edge: #b3261e;
+  --bug-badge-bg: #333333;
+  --bug-border: #9aa0a6;
+  --bug-button-bg: #e8eaed;
+  --bug-button-shadow: #b4b8bc;
+  --bug-button-text: #222222;
+  --bug-chip-bg: #00000010;
+  --bug-field-bg: #ffffff;
+  --bug-float-bg: #333333cc;
+  --bug-float-border: #8a8f95;
+  --bug-float-text: #ffffff;
+  --bug-font-body: system-ui, sans-serif;
+  --bug-font-caption: system-ui, sans-serif;
+  --bug-font-heading: system-ui, sans-serif;
+  --bug-heading: #111111;
+  --bug-muted: #555555;
+  --bug-note-bg: #ffffff59;
+  --bug-ok: #2e7d32;
+  --bug-ok-edge: #2e7d32;
+  --bug-panel-bg: #f4f4f4;
+  --bug-panel-edge: #9aa0a6;
+  --bug-primary-bg: #2c6bc4;
+  --bug-primary-edge: #1f4d8f;
+  --bug-primary-text: #ffffff;
+  --bug-radius-lg: 8px;
+  --bug-radius-md: 6px;
+  --bug-radius-panel: 8px;
+  --bug-radius-pill: 999px;
+  --bug-radius-sm: 4px;
+  --bug-rule: #d0d4d8;
+  --bug-shadow: #00000066;
+  --bug-shadow-soft: #0000001f;
+  --bug-text: #222222;
+}
 .bug-backdrop {
   --bug-fs: clamp(15px, 0.74vw, 28px);
   position: fixed;
@@ -11,11 +49,8 @@
   justify-content: center;
   padding: 2vmin;
   box-sizing: border-box;
-  background: #2a22188c;
+  background: var(--bug-backdrop);
   font-size: var(--bug-fs);
-}
-:root[data-theme='dark'] .bug-backdrop {
-  background: #0a0806c4;
 }
 .bugdlg {
   width: min(64em, 100%);
@@ -23,17 +58,17 @@
   overflow: auto;
   box-sizing: border-box;
   padding: 1.2em 1.5em 1.3em;
-  border: 1.5px solid var(--parchment-edge);
-  border-radius: var(--radius-panel);
-  background: var(--parchment);
-  box-shadow: 0 0.6em 2em #1d160c66;
-  color: #342e27;
-  font: 1em/1.35 var(--font-body);
+  border: 1.5px solid var(--bug-panel-edge);
+  border-radius: var(--bug-radius-panel);
+  background: var(--bug-panel-bg);
+  box-shadow: 0 0.6em 2em var(--bug-shadow);
+  color: var(--bug-text);
+  font: 1em/1.35 var(--bug-font-body);
 }
 .bugdlg h2 {
   margin: 0 0 0.6em;
-  font: 700 1.7em var(--font-heading);
-  color: #2e2820;
+  font: 700 1.7em var(--bug-font-heading);
+  color: var(--bug-heading);
 }
 .bugdlg__body {
   display: grid;
@@ -53,24 +88,24 @@
   max-width: 100%;
   max-height: 40vh;
   object-fit: contain;
-  border: 1.5px solid #a88b58;
-  border-radius: 6px;
+  border: 1.5px solid var(--bug-border);
+  border-radius: var(--bug-radius-md);
 }
 .bugdlg__label {
   display: block;
   margin-bottom: 0.35em;
-  font: 700 1.1em var(--font-heading);
+  font: 700 1.1em var(--bug-font-heading);
 }
 .bugdlg__text {
   width: 100%;
   box-sizing: border-box;
   min-height: 7em;
   padding: 0.5em 0.6em;
-  border: 1.5px solid #a88b58;
-  border-radius: 6px;
-  background: #fffaf0;
-  color: #2e2820;
-  font: 1em/1.35 var(--font-body);
+  border: 1.5px solid var(--bug-border);
+  border-radius: var(--bug-radius-md);
+  background: var(--bug-field-bg);
+  color: var(--bug-heading);
+  font: 1em/1.35 var(--bug-font-body);
   resize: vertical;
 }
 .bugdlg__buttons {
@@ -80,22 +115,22 @@
   margin-top: 1em;
 }
 .bug-btn {
-  font: 600 1em var(--font-heading);
-  color: #3a2e1f;
-  background: var(--button);
-  border: 1.5px solid #a88b58;
-  border-radius: 8px;
+  font: 600 1em var(--bug-font-heading);
+  color: var(--bug-button-text);
+  background: var(--bug-button-bg);
+  border: 1.5px solid var(--bug-border);
+  border-radius: var(--bug-radius-lg);
   padding: 0.4em 0.95em;
   box-shadow:
-    0 2px 0 #b8a07a,
-    0 4px 8px #51452b1f;
+    0 2px 0 var(--bug-button-shadow),
+    0 4px 8px var(--bug-shadow-soft);
   cursor: pointer;
   text-decoration: none;
 }
 .bug-btn.primary {
-  background: linear-gradient(#7b5c35, #5c4325);
-  color: #fff3d8;
-  border-color: #5c4325;
+  background: linear-gradient(var(--bug-primary-bg), var(--bug-primary-edge));
+  color: var(--bug-primary-text);
+  border-color: var(--bug-primary-edge);
 }
 .bug-btn:disabled {
   opacity: 0.55;
@@ -103,30 +138,30 @@
 }
 .bug-note {
   display: block;
-  font: 0.86em/1.35 var(--font-caption);
-  color: #5d5140;
+  font: 0.86em/1.35 var(--bug-font-caption);
+  color: var(--bug-muted);
   margin: 0.5em 0 0;
 }
 .bug-bad {
   display: block;
-  font: 0.92em/1.35 var(--font-caption);
-  color: #8a2a1e;
+  font: 0.92em/1.35 var(--bug-font-caption);
+  color: var(--bug-bad);
   margin: 0.6em 0 0;
 }
 .bug-ok {
   display: block;
-  font: 0.92em/1.35 var(--font-caption);
-  color: #2f5a3c;
+  font: 0.92em/1.35 var(--bug-font-caption);
+  color: var(--bug-ok);
   margin: 0.6em 0 0;
 }
 .bug-ok a,
 .bug-summary a {
-  color: #795222;
+  color: var(--bug-accent);
   font-weight: 700;
 }
 
 /* Settings > Bug reports, and Home's bar. The book's text sizes are the menu's (zoomed at 4K by .menu-frame). */
-.menu-frame .bug-book {
+.bug-book {
   --bug-fs: 26px;
   font-size: var(--bug-fs);
   margin-top: 28px;
@@ -158,31 +193,31 @@
   gap: 0.7em;
 }
 .bug-count {
-  font: 700 1.1em var(--font-heading);
-  color: #2e2820;
+  font: 700 1.1em var(--bug-font-heading);
+  color: var(--bug-heading);
 }
 .bug-link {
-  font: 0.95em var(--font-caption);
-  color: #3a2e1f;
+  font: 0.95em var(--bug-font-caption);
+  color: var(--bug-button-text);
 }
 .bug-summary {
   padding: 0.5em 0.8em;
-  border-left: 4px solid #4c6b52;
-  background: #ffffff59;
-  border-radius: 4px;
-  font: 0.95em/1.35 var(--font-caption);
-  color: #342e27;
+  border-left: 4px solid var(--bug-ok-edge);
+  background: var(--bug-note-bg);
+  border-radius: var(--bug-radius-sm);
+  font: 0.95em/1.35 var(--bug-font-caption);
+  color: var(--bug-text);
   max-width: 60em;
 }
 .bug-summary.bad {
-  border-left-color: #9a2b2b;
+  border-left-color: var(--bug-bad-edge);
 }
 .bug-summary ul {
   margin: 0.3em 0 0;
   padding-left: 1.2em;
 }
-.menu-frame .bug-summary li {
-  font: 0.95em/1.35 var(--font-caption);
+.bug-summary li {
+  font: 0.95em/1.35 var(--bug-font-caption);
   margin: 0.15em 0;
 }
 .bug-list {
@@ -190,31 +225,31 @@
   margin: 0.8em 0 0;
   padding: 0;
 }
-.menu-frame .bug-list li.bug-row {
+.bug-list li.bug-row {
   display: grid;
   grid-template-columns: 7em minmax(0, 1fr) auto;
   gap: 0.8em;
   align-items: center;
   margin: 0;
   padding: 0.55em 0;
-  border-top: 1px solid #cdb995;
-  font: 1em var(--font-body);
+  border-top: 1px solid var(--bug-rule);
+  font: 1em var(--bug-font-body);
 }
 .bug-thumb {
   width: 7em;
   height: 3.95em;
   object-fit: cover;
   object-position: left top;
-  border: 1px solid #a88b58;
-  border-radius: 4px;
+  border: 1px solid var(--bug-border);
+  border-radius: var(--bug-radius-sm);
 }
 .bug-thumb.none {
   display: flex;
   align-items: center;
   justify-content: center;
-  font: 0.75em var(--font-caption);
-  color: #5d5140;
-  background: #00000010;
+  font: 0.75em var(--bug-font-caption);
+  color: var(--bug-muted);
+  background: var(--bug-chip-bg);
 }
 .bug-row__what {
   display: flex;
@@ -222,7 +257,7 @@
   min-width: 0;
 }
 .bug-row__what b {
-  font: 700 1em var(--font-heading);
+  font: 700 1em var(--bug-font-heading);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -242,11 +277,11 @@
 .bug-token {
   margin-top: 1em;
   padding-top: 0.6em;
-  border-top: 1px solid #cdb995;
+  border-top: 1px solid var(--bug-rule);
 }
-.menu-frame .bug-token h3 {
+.bug-token h3 {
   margin: 0;
-  font: 700 1.15em var(--font-heading);
+  font: 700 1.15em var(--bug-font-heading);
 }
 .bug-token__row {
   display: flex;
@@ -260,11 +295,11 @@
   min-width: 10em;
   max-width: 28em;
   padding: 0.4em 0.6em;
-  border: 1.5px solid #a88b58;
-  border-radius: 6px;
-  background: #fffaf0;
-  color: #2e2820;
-  font: 1em var(--font-caption);
+  border: 1.5px solid var(--bug-border);
+  border-radius: var(--bug-radius-md);
+  background: var(--bug-field-bg);
+  color: var(--bug-heading);
+  font: 1em var(--bug-font-caption);
 }
 .bug-token__row .bug-ok,
 .bug-token__row .bug-bad {
@@ -272,16 +307,16 @@
 }
 
 /* the menu's own paragraph and list sizes would win over these inside the book */
-.menu-frame .book.bug-book p.bug-note {
-  font: 0.86em/1.35 var(--font-caption);
+.book.bug-book p.bug-note {
+  font: 0.86em/1.35 var(--bug-font-caption);
   margin: 0.4em 0 0;
 }
-.menu-frame .book.bug-book .bug-summary li {
-  font: 0.95em/1.35 var(--font-caption);
+.book.bug-book .bug-summary li {
+  font: 0.95em/1.35 var(--bug-font-caption);
   margin: 0.15em 0;
 }
 @media (min-width: 2400px) {
-  .menu-frame .bug-book {
+  .bug-book {
     width: 1840px;
   }
 }
@@ -291,10 +326,10 @@
   --bug-fs: clamp(15px, 0.7vw, 26px);
   margin-top: 1.2em;
   padding: 0.6em 1em;
-  border: 1.5px solid var(--parchment-edge);
-  border-radius: var(--radius-panel);
-  background: var(--parchment);
-  color: #342e27;
+  border: 1.5px solid var(--bug-panel-edge);
+  border-radius: var(--bug-radius-panel);
+  background: var(--bug-panel-bg);
+  color: var(--bug-text);
   position: relative;
   z-index: 1;
   max-width: min(46em, calc(100vw - 32px));
@@ -310,12 +345,12 @@
   display: flex;
   align-items: center;
   gap: 10px;
-  background: #3e5248;
-  color: #f4e5bf;
-  border: 1.5px solid #b8975a;
-  border-radius: 8px;
+  background: var(--bug-badge-bg);
+  color: var(--bug-float-text);
+  border: 1.5px solid var(--bug-float-border);
+  border-radius: var(--bug-radius-lg);
   box-shadow: none;
-  font: 24px var(--font-caption);
+  font: 24px var(--bug-font-caption);
   padding: 12px 18px;
   cursor: pointer;
 }
@@ -324,11 +359,11 @@
   height: 30px;
 }
 .bug-badge {
-  font: 700 18px var(--font-caption);
+  font: 700 18px var(--bug-font-caption);
   font-style: normal;
-  background: #9a2b2b;
-  color: #fff3d8;
-  border-radius: 999px;
+  background: var(--bug-bad-edge);
+  color: var(--bug-primary-text);
+  border-radius: var(--bug-radius-pill);
   padding: 1px 9px;
 }
 
@@ -355,10 +390,10 @@
     flex: 1 1 40%;
     padding: 10px 8px;
   }
-  .menu-frame .bug-book {
+  .bug-book {
     --bug-fs: 15px;
   }
-  .menu-frame .bug-list li.bug-row {
+  .bug-list li.bug-row {
     grid-template-columns: 4.5em minmax(0, 1fr);
   }
   .bug-thumb {
@@ -404,10 +439,10 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  background: #3e5248cc;
-  color: #f4e5bf;
-  border: 1px solid #b8975a;
-  border-radius: 8px;
+  background: var(--bug-float-bg);
+  color: var(--bug-float-text);
+  border: 1px solid var(--bug-float-border);
+  border-radius: var(--bug-radius-lg);
   cursor: pointer;
 }
 .bug-float svg {
@@ -423,9 +458,4 @@
     width: 26px;
     height: 26px;
   }
-}
-/* Glossary and Proof sheet: their dark header holds the logo top left, so the button moves to the empty top right */
-:root:has(.menu-head) .bug-float {
-  left: auto;
-  right: calc(env(safe-area-inset-right, 0px) + 4px);
 }

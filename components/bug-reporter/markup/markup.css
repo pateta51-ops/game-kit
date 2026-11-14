@@ -7,11 +7,11 @@
   gap: 0.7em;
   padding: 0.8em;
   box-sizing: border-box;
-  border: 1.5px solid var(--parchment-edge);
-  border-radius: var(--radius-panel);
-  background: var(--parchment);
-  color: #342e27;
-  font: clamp(15px, 0.74vw, 28px) / 1.4 var(--font-caption);
+  border: 1.5px solid var(--bug-panel-edge);
+  border-radius: var(--bug-radius-panel);
+  background: var(--bug-panel-bg);
+  color: var(--bug-text);
+  font: clamp(15px, 0.74vw, 28px) / 1.4 var(--bug-font-caption);
 }
 .markup__tools {
   display: flex;
@@ -23,11 +23,11 @@
   margin-right: auto;
 }
 .markup .btn {
-  font: 600 1em var(--font-heading);
-  color: #3a2e1f;
-  background: var(--button);
-  border: 1.5px solid #a88b58;
-  border-radius: 8px;
+  font: 600 1em var(--bug-font-heading);
+  color: var(--bug-button-text);
+  background: var(--bug-button-bg);
+  border: 1.5px solid var(--bug-border);
+  border-radius: var(--bug-radius-lg);
   padding: 0.35em 0.7em;
   cursor: pointer;
 }
@@ -35,20 +35,20 @@
   opacity: 0.55;
 }
 .markup [aria-pressed='true'] {
-  background: linear-gradient(#7b5c35, #5c4325);
-  color: #fff3d8;
-  border-color: #5c4325;
+  background: linear-gradient(var(--bug-primary-bg), var(--bug-primary-edge));
+  color: var(--bug-primary-text);
+  border-color: var(--bug-primary-edge);
 }
 .markup strong {
-  font: 700 1.2em var(--font-heading);
+  font: 700 1.2em var(--bug-font-heading);
 }
 .markup select,
 .markup input {
-  font: 1em var(--font-caption);
+  font: 1em var(--bug-font-caption);
   color: inherit;
-  background: #fffaf0;
-  border: 1.5px solid #a88b58;
-  border-radius: 6px;
+  background: var(--bug-field-bg);
+  border: 1.5px solid var(--bug-border);
+  border-radius: var(--bug-radius-md);
   padding: 0.3em;
   max-width: 100%;
 }
