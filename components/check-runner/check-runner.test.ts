@@ -1,6 +1,6 @@
 // Check runner: the chain parser, the drift check (full and --pr), and a real run over a temporary package.
 import { spawnSync } from 'node:child_process';
-import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { createRequire } from 'node:module';
 import { dirname, join, resolve } from 'node:path';
@@ -74,5 +74,24 @@ describe('a real run', () => {
     const r = run(scripts, { first: [], lanes: [['a', 'b']], pr: { first: [], lanes: [['a']] } }, ['--pr']);
     expect(r.status).toBe(0);
     expect(r.stdout).toMatch(/1 of 1 passed/);
+  });
+
+  it('kills a check that passes its timeout together with the child it started, and fails', () => {
+    writeFileSync(join(dir, 'sleeper.js'), "const c = require('child_process').spawn(process.execPath, ['-e', 'setInterval(() => {}, 1000)'], { stdio: 'ignore' });\nrequire('fs').writeFileSync('child.pid', String(c.pid));\nsetInterval(() => {}, 1000);\n");
+    const r = run({ check: 'npm run s', s: 'node sleeper.js' }, { first: [], lanes: [['s']], timeoutMinutes: 0.03, graceSeconds: 1 });
+    expect(r.status).toBe(1);
+    expect(r.stdout).toMatch(/passed the .* min limit/);
+    const pid = Number(readFileSync(join(dir, 'child.pid'), 'utf8'));
+    const alive = (): boolean => {
+      try {
+        process.kill(pid, 0);
+        return true;
+      } catch {
+        return false;
+      }
+    };
+    const end = Date.now() + 5000;
+    while (alive() && Date.now() < end) spawnSync(process.execPath, ['-e', 'setTimeout(() => {}, 200)']);
+    expect(alive()).toBe(false);
   });
 });

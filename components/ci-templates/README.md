@@ -13,3 +13,5 @@ Copy to: `ci.yml` and `full-gate.yml` to `.github/workflows/`, `full-gate.mjs` t
 Other settings are environment variables: `E2E_SCRIPTS` (comma list of npm scripts the full gate runs, default `test:e2e`), `GATE_DIR` and `GATE_SLOTS` (gate slots), `LOCAL_CI_DIR`, `PW_CHROMIUM_PATH`, `RUNNER_WANT_PYMUPDF=1`.
 
 The workflows never use `pull_request_target`, and the full gate refuses a pull request whose head is outside the repository: keep both.
+
+A workflow whose `{{OWNER_LOGIN}}` is left unfilled skips its jobs silently (the guard never matches): fill it in before the first run.

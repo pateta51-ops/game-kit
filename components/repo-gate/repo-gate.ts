@@ -306,7 +306,8 @@ export function readCardNames(root: string, cfg: Config): Set<string> {
 }
 
 export function loadConfig(root: string, file: string): Config {
-  const own = existsSync(join(root, file)) ? (JSON.parse(readFileSync(join(root, file), 'utf8')) as Partial<Config>) : {};
+  if (!existsSync(join(root, file))) throw new Error(`repo-gate: config file ${file} is missing; copy repo-gate.config.example.json and set every check (an empty value turns a check off)`);
+  const own = JSON.parse(readFileSync(join(root, file), 'utf8')) as Partial<Config>;
   const cfg: Config = { ...DEFAULT_CONFIG, ...own };
   const runners = join(root, cfg.runnersFile);
   if (existsSync(runners))
@@ -339,5 +340,10 @@ if (process.argv[1] !== undefined && import.meta.url === pathToFileURL(resolve(p
   const args = process.argv.slice(2);
   const at = args.indexOf('--config');
   const root = process.cwd();
-  process.exitCode = main(root, loadConfig(root, at >= 0 ? (args[at + 1] ?? '') : 'repo-gate.config.json'));
+  try {
+    process.exitCode = main(root, loadConfig(root, at >= 0 ? (args[at + 1] ?? '') : 'repo-gate.config.json'));
+  } catch (e) {
+    console.error(e instanceof Error ? e.message : String(e));
+    process.exitCode = 2;
+  }
 }

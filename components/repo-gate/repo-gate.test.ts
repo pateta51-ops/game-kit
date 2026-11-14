@@ -148,6 +148,7 @@ describe('config and command line', () => {
     writeFileSync(join(dir, 'tools/repogate/runners.json'), JSON.stringify({ runnerNames: [RUNNER] }));
     writeFileSync(join(dir, 'a.txt'), 'clean\n');
     git('add', 'a.txt');
+    writeFileSync(join(dir, 'repo-gate.config.json'), JSON.stringify({ artFolder: 'art/' }));
     const cfg = loadConfig(dir, 'repo-gate.config.json');
     expect(cfg.runnerNames).toEqual([RUNNER]);
     const log = vi.spyOn(console, 'log').mockImplementation(() => undefined);
@@ -157,5 +158,9 @@ describe('config and command line', () => {
     expect(main(dir, cfg)).toBe(1);
     expect(log.mock.calls.flat().join('\n')).toMatch(/b\.txt:1: RUNNER_NAME/);
     log.mockRestore();
+  });
+
+  it('fails loudly when the config file is missing', () => {
+    expect(() => loadConfig(mkdtempSync(join(tmpdir(), 'repo-gate-none-')), 'repo-gate.config.json')).toThrow(/config file repo-gate\.config\.json is missing/);
   });
 });
