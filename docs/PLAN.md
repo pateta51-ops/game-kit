@@ -18,8 +18,12 @@ Kit code compiles under the strictest TypeScript settings in use (Jarl's), so it
 |---|---|---|---|
 | K0 | Repo scaffold (package, strict TypeScript, lint, tests, CI on a runner), tests for `kit.mjs`; small lifts: plan checker, random numbers / hashing / canonical JSON / copy, state-machine check, bundle-size check | S | done (v0.1.0) |
 | K1 | Build gates: traceability, repo gate; check runner; CI and runner scripts as templates | M | done |
-| K2 | Engine core: runner, copy-on-write, undo, replay, save format; command-line replay | M | not started |
+| K2 | Engine core: runner, copy-on-write, undo, replay, save format; command-line replay | M | done |
 | K3 | Bug reporter | M | done |
+
+Stage 1 is complete in v0.2.0.
+
+Known limit (engine-core): the single-copy guard stops two copies loaded from two different paths. It does not see one file loaded twice under two module systems; that happens only when a game engine module sits outside a package with `"type": "module"`. A game keeps its engine and its `kit/` folder in one such package.
 
 ## Stage 2 - when the next new game starts its build
 
