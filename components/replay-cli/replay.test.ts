@@ -1,7 +1,11 @@
 // replay.ts on the fake counter game of engine-core: a save or a record replays headlessly; it fails (exit 1) when an
 // action is refused, a per-action hash or the final hash differs, and refuses (exit 2) what is not a log, a missing file,
 // an engine that does not load and bad usage. The recorded text format round-trips, one action per line.
-import { resolve } from 'node:path';
+import { spawnSync } from 'node:child_process';
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 import { createSave, hashState } from '../engine-core/index';
 import { CONTENT, COUNTER, playGame, RULES, type Counter } from '../engine-core/fake/counter';
@@ -90,6 +94,32 @@ describe('replay.ts', () => {
     expect(await replayFile(P('/k.json'), engine, rules)).toBe(1);
     expect(rules.lines).toContain('DIFF first difference after action 0');
   });
+
+  it('--record refuses to write over the log it replays (exit 2)', async () => {
+    const io = fakeIo({ '/g.json': saveFile });
+    expect(await replayFile(P('/g.json'), engine, io, P('/g.json'))).toBe(2);
+    expect(io.written).toEqual({});
+    expect(io.lines[0]).toMatch(/would overwrite the log it replays/);
+  });
+
+  it('the real command line imports an engine module: a clean replay exits 0, a diverging log names the first action', () => {
+    const dir = mkdtempSync(join(tmpdir(), 'replay-cli-'));
+    try {
+      const cli = (...args: string[]) =>
+        spawnSync(process.execPath, ['--import', 'tsx', fileURLToPath(new URL('./replay.ts', import.meta.url)), ...args, '--engine', fileURLToPath(new URL('./fake-engine.ts', import.meta.url))], { encoding: 'utf8' });
+      writeFileSync(join(dir, 'save.json'), saveFile);
+      const clean = cli(join(dir, 'save.json'), '--record', join(dir, 'rec.json'));
+      expect(clean.status, clean.stderr).toBe(0);
+      expect(clean.stdout).toMatch(/all applied\n.*state hash matches/);
+      const rec = JSON.parse(readFileSync(join(dir, 'rec.json'), 'utf8')) as Required<ReplayLog>;
+      writeFileSync(join(dir, 'bad.json'), JSON.stringify({ ...rec, hashes: rec.hashes.map((h, i) => (i === 3 ? 'x' : h)) }));
+      const bad = cli(join(dir, 'bad.json'));
+      expect(bad.status).toBe(1);
+      expect(bad.stdout).toContain('DIFF first difference after action 3');
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  }, 60_000);
 
   it('the recorded text is the log as JSON, one action per line', () => {
     const log: ReplayLog = { options: { seed: 's' }, rules: RULES, actions: g.actions, finalHash: 'f' };

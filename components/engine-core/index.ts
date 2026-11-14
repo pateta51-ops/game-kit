@@ -1,3 +1,4 @@
+export { claimEngineCore } from './single';
 export { canonicalJson, fnv1a64 } from './canonical';
 export { copyJson, copyState, deepFreeze, freezeState, isFreezing, setStateFreezing } from './copy';
 export {

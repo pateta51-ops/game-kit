@@ -136,6 +136,10 @@ export async function replayFile<G extends GameTypes>(path: string, engine: Repl
     io.err(`no file at ${path}`);
     return 2;
   }
+  if (record !== null && resolve(record) === resolve(path)) {
+    io.err(`--record ${record} would overwrite the log it replays`);
+    return 2;
+  }
   const parsed = parseLog(io.read(path), engine.format);
   if (!parsed.ok) {
     io.err(`${path}: ${parsed.message}`);

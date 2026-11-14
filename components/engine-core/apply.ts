@@ -6,6 +6,7 @@
 // `validateAction` never throws: it says why an answer is refused. `applyAction` throws an `IllegalActionError` for an
 // answer `validateAction` refuses (the UI only sends valid ones), and an `EngineBugError` only when an internal invariant
 // breaks (a runaway task loop, a corrupt state).
+import './single';
 import { closeDraft, copyList, copyMode, openDraft } from './cow';
 import { copyState, freezeState, isFreezing } from './copy';
 import { makeCtx } from './ctx';

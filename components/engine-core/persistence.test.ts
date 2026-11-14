@@ -6,6 +6,9 @@ import {
   canUndo,
   createGame,
   createSave,
+  draftOf,
+  GameOver,
+  type Ctx,
   DAMAGED,
   exportSave,
   hashState,
@@ -100,6 +103,10 @@ describe('save migration (from EBR)', () => {
     expect(oldFile['version']).toBeUndefined(); // pure: the input is not rewritten
     const back = restoreSave(COUNTER, oldFile, content);
     expect(back.ok && hashState(back.state)).toBe(hashState(g.state));
+    expect(back.ok && back.save.version).toBe(1);
+    const { version: _only, ...noVersion } = save;
+    const v1 = restoreSave(COUNTER, noVersion, content);
+    expect(v1.ok && [v1.save.version, v1.save.appCommit]).toEqual([1, save.appCommit]);
     const newer = { ...oldFile, version: 2 };
     expect(migrateSave(newer)).toMatchObject({ ok: false, message: expect.stringMatching(/E_SAVE_VERSION/) as unknown });
     expect(restoreSave(COUNTER, newer, content)).toEqual({ ok: false, error: expect.stringMatching(/newer build/) as unknown });
@@ -180,6 +187,33 @@ describe('undo', () => {
     expect(next.ok).toBe(true);
     expect(next.history.actions).toHaveLength(7);
     expect(redo(COUNTER, next.history, content).ok).toBe(false);
+  });
+
+  it('save, load, then undo: the state hash equals the hash before the undone action', () => {
+    const o = options('u2');
+    const actions = build(o.seed, 7, 10);
+    const before = replay(COUNTER, o, LONG, actions.slice(0, 9), content).hash;
+    const save = createSave(COUNTER, { options: o, rules: LONG, actions, undoUsed: false, savedAt: 't' }, content);
+    const back = importSave(COUNTER, exportSave(save), content);
+    if (!back.ok) throw new Error(back.error);
+    const h: History<Counter> = { ...newHistory<Counter>(back.save.options, back.save.rules), actions: back.save.actions, cursor: back.save.actions.length, undoUsed: back.save.undoUsed };
+    const r = undo(COUNTER, h, 'safe', content);
+    expect(r.ok).toBe(true);
+    expect(hs(r.state)).toBe(before);
+  });
+
+  it('createGame catches a GameOver thrown in setup and returns the state at that instant', () => {
+    const ends = {
+      ...COUNTER,
+      setup: (ctx: Ctx<Counter>) => {
+        draftOf(ctx).result = { kind: 'lost' };
+        throw new GameOver();
+      },
+    };
+    const r = createGame(ends, options('g'), rules, content);
+    expect(r.state.result).toEqual({ kind: 'lost' });
+    expect(r.state.prompt).toBeNull();
+    expect(Object.isFrozen(r.state)).toBe(true);
   });
 
   it('a finished game cannot be undone: refused, no state change', () => {

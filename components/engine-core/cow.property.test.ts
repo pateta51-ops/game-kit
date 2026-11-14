@@ -8,7 +8,7 @@
 //   check mode is on: a barrier called on an object the action does not own throws.
 // The nested write path (`own(own(s, 'marks'), 'added')`) and the rng barrier are reached in every game.
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { applyAction, createGame, setCopyMode, setCowChecks, setStateFreezing, type ApplyResult } from './index';
+import { applyAction, createGame, EngineBugError, own, setCopyMode, setCowChecks, setStateFreezing, type ApplyResult } from './index';
 import { CONTENT, COUNTER, randomAnswer, RULES, type Counter, type CounterState } from './fake/counter';
 
 const GAMES = 60;
@@ -69,5 +69,21 @@ describe('copy on write', () => {
     const before = JSON.stringify(s);
     expect(() => applyAction(bad, s, randomAnswer(s, 'miss'), CONTENT)).toThrow(TypeError);
     expect(JSON.stringify(s)).toBe(before);
+  });
+
+  it('with freezing off nothing stops the missed write: it changes the input, which the input check above catches; a barrier on a shared parent still throws in check mode', () => {
+    setStateFreezing(false);
+    try {
+      const bad = { ...COUNTER, handlers: { ...COUNTER.handlers, chosen: (ctx: { s: CounterState }) => void (ctx.s.marks.added as number[]).push(1) } };
+      const s = createGame(COUNTER, { seed: 'miss' }, RULES, CONTENT).state;
+      const before = JSON.stringify(s);
+      expect(() => applyAction(bad, s, randomAnswer(s, 'miss'), CONTENT)).not.toThrow();
+      expect(JSON.stringify(s)).not.toBe(before);
+      const shared = { ...COUNTER, handlers: { ...COUNTER.handlers, chosen: (ctx: { s: CounterState }) => void own(ctx.s.marks as { added: number[] }, 'added') } };
+      const t = createGame(COUNTER, { seed: 'miss' }, RULES, CONTENT).state;
+      expect(() => applyAction(shared, t, randomAnswer(t, 'miss'), CONTENT)).toThrow(EngineBugError);
+    } finally {
+      setStateFreezing(true);
+    }
   });
 });

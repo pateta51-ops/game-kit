@@ -16,6 +16,7 @@
 //
 // Outside an action (`createGame` building a new state, tests building states) no draft is open and the `own*` functions
 // return the object itself: the caller owns all of it, as before.
+import './single';
 import { EngineBugError } from './errors';
 
 /** The objects this action owns (copied in this action), `ALL` when every object is the action's own, null outside an action. */
