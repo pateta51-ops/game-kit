@@ -9,8 +9,28 @@
       "src/engine/core/canonical.ts",
       "src/engine/core/errors.ts",
       "src/engine/core/copy.ts",
+      "src/engine/core/apply.ts",
+      "src/engine/core/cow.ts",
+      "src/engine/core/ctx.ts",
+      "src/engine/core/draft.ts",
+      "src/engine/core/gameOver.ts",
+      "src/engine/core/ids.ts",
+      "src/engine/core/runner.ts",
+      "src/engine/api.ts (createGame, advance)",
+      "src/engine/replay/replay.ts",
+      "src/engine/replay/undo.ts",
+      "src/engine/replay/save.ts",
       "tests/unit/core/rng.test.ts",
-      "tests/unit/core/canonical.test.ts"
+      "tests/unit/core/canonical.test.ts",
+      "tests/unit/core/ids.test.ts",
+      "tests/unit/kernel/cow.test.ts",
+      "tests/unit/kernel/kernel.test.ts",
+      "tests/property/history.test.ts",
+      "tests/scenarios/persistence.test.ts"
+    ],
+    "grafts": [
+      { "game": "warps", "commit": "2af6937", "paths": ["tests/property/cow.property.test.ts", "src/engine/replay/undo.ts (undo refusal reasons, canUndo)"] },
+      { "game": "ebr", "commit": "33b5abd3", "paths": ["src/engine/save.ts (migrateSave, appCommit)", "tests/realdata/b7-saves.test.ts (migration case)"] }
     ]
   },
   "needs": []

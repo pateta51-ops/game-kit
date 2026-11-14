@@ -1,0 +1,13 @@
+{
+  "name": "replay-cli",
+  "source": {
+    "game": "imp",
+    "commit": "20a033a",
+    "paths": ["scripts/replay.ts", "tests/scripts/replay.test.ts"],
+    "grafts": [
+      { "game": "ebr", "commit": "33b5abd3", "paths": ["scripts/replay.ts (per-action state and event hashes, record mode)"] },
+      { "game": "stcc", "commit": "9fc59643", "paths": ["scripts/replay.ts (injected Io, async engine and content loading)"] }
+    ]
+  },
+  "needs": ["engine-core"]
+}
