@@ -84,7 +84,7 @@ export function migrateSave(save: RawSave, format: SaveFormat = DEFAULT_SAVE_FOR
   if (from > format.version)
     return {
       ok: false,
-      message: `E_SAVE_VERSION: the save is version ${String(from)}, written by a newer build (${String(save['appCommit'] ?? UNKNOWN_COMMIT)}); this build reads up to version ${String(format.version)}.`,
+      message: `E_SAVE_VERSION: the save is version ${String(from)}, written by a newer build (${typeof save['appCommit'] === 'string' ? save['appCommit'] : UNKNOWN_COMMIT}); this build reads up to version ${String(format.version)}.`,
     };
   let s = save;
   for (let v = from; v < format.version; v++) {

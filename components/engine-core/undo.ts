@@ -4,7 +4,7 @@
 // the refusal says why (ported from Warp's Edge undo.ts: the reason of the revealing event, in the game's words).
 // Free: any cursor; `undoUsed` is set. No undo once `result` is set.
 import { applyAction, createGame } from './apply';
-import type { GameRules, GameTypes, KernelEvent } from './types';
+import type { GameRules, GameTypes } from './types';
 
 export type UndoMode = 'safe' | 'free';
 
@@ -36,7 +36,7 @@ export const SOMETHING_REVEALED = 'Something hidden was revealed';
 
 /** Why the events of one action cannot be undone in Safe mode, or null when they revealed nothing. */
 export function revealReason<G extends GameTypes>(game: GameRules<G>, events: readonly G['event'][]): string | null {
-  const first = events.find((e) => (e as KernelEvent).reveal === true);
+  const first = events.find((e) => (e).reveal === true);
   return first === undefined ? null : (game.revealWords?.(first) ?? SOMETHING_REVEALED);
 }
 

@@ -85,7 +85,7 @@ class RunCtx<G extends GameTypes> implements Ctx<G> {
   emit(input: EventInput<G>): void {
     const s = this.s as Work;
     const stamped = { ...input, seq: takeSeq(s), ...this.stamp?.(this.s) } as KernelEvent;
-    this.events.push(stamped as G['event']);
+    this.events.push(stamped);
     const kept = s.log.length >= LOG_CAP ? s.log.slice(s.log.length - LOG_CAP + 1) : s.log;
     s.log = [...kept, stamped] as typeof s.log;
   }
@@ -98,7 +98,7 @@ export function makeCtx<G extends GameTypes>(
   content: G['content'],
   events: G['event'][],
 ): Ctx<G> {
-  return new RunCtx<G>(s as G['state'], content, events, game.stamp?.bind(game));
+  return new RunCtx<G>(s, content, events, game.stamp?.bind(game));
 }
 
 /**
