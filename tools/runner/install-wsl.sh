@@ -111,7 +111,7 @@ if [ ! -x ./config.sh ]; then
     *) say "unsupported machine $(uname -m)"; exit 2 ;;
   esac
   say "looking up the latest runner release"
-  VERSION=$(curl -fsSL https://api.github.com/repos/actions/runner/releases/latest | grep -m1 '"tag_name"' | sed -E 's/.*"v([0-9.]+)".*/\1/')
+  VERSION=$(curl -fsSL https://api.github.com/repos/actions/runner/releases/latest | grep -oE '"tag_name": *"v[0-9.]+"' | grep -oE '[0-9][0-9.]+')
   [ -n "$VERSION" ] || { say "could not read the latest runner version from api.github.com"; exit 2; }
   say "downloading actions-runner-linux-$ARCH-$VERSION"
   curl -fsSL -o runner.tar.gz "https://github.com/actions/runner/releases/download/v$VERSION/actions-runner-linux-$ARCH-$VERSION.tar.gz"
