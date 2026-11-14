@@ -7,7 +7,7 @@ Sources and reasons: `docs/SELECTION.md`. One worker batch per row unless marked
 1. Lift the base from the source commit named in `docs/SELECTION.md` into `components/<name>/`.
 2. Make it generic: replace every import of game code with a small interface or data the game supplies. Add the grafts.
 3. Bring its tests; add a tiny fake game in the tests where the component needs one.
-4. Write `component.json`: source game, commit, paths, licence notice, other components it needs.
+4. Write `component.json`: source game, commit, paths, licence notice, other components it needs. A component a game calls or mounts also gets a `README.md` of 30 lines at most: what the game passes in and, for one that draws, a "Look" section naming the variables a game sets to skin it.
 5. Review, CI green on the runner, merge, tag.
 
 Kit code compiles under the strictest TypeScript settings in use (Jarl's), so it compiles in any game.
@@ -56,7 +56,7 @@ Known limit (engine-core): the single-copy guard stops two copies loaded from tw
 
 ## Asked for by a game
 
-A game's build plan lists the kit work it needs as phases named `GK<n>` for the batch `K<n>` here, and its architect runs them as the README's "Changing the kit" says. Work that no row above covers gets a row in this table first.
+A game's build plan lists the kit work it needs as phases named `GK<n>` for the batch `K<n>` here, and its architect runs them as the README's "Changing the kit" says. Work that no row above covers gets a row in this table first. State is `proposed` (a candidate left by a finished build: nobody builds it until a plan asks for it, and the owner still decides size L), `planned` or `done`.
 
 | Batch | Content | Effort | Asked by | State |
 |---|---|---|---|---|
