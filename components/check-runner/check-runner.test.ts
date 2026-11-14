@@ -2,7 +2,8 @@
 import { spawnSync } from 'node:child_process';
 import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join, resolve } from 'node:path';
+import { createRequire } from 'node:module';
+import { dirname, join, resolve } from 'node:path';
 import { afterAll, describe, expect, it } from 'vitest';
 import { checkScripts, coverageProblems, DEFAULT_CONFIG, type Config } from './check-runner';
 
@@ -43,7 +44,7 @@ describe('coverageProblems', () => {
 describe('a real run', () => {
   const dir = mkdtempSync(join(tmpdir(), 'check-runner-'));
   afterAll(() => rmSync(dir, { recursive: true, force: true }));
-  const tsx = resolve(import.meta.dirname, '../../node_modules/tsx/dist/cli.mjs');
+  const tsx = join(dirname(createRequire(import.meta.url).resolve('tsx/package.json')), 'dist/cli.mjs');
   const script = resolve(import.meta.dirname, 'check-runner.ts');
   const run = (scripts: Record<string, string>, config: Partial<Config>, args: string[] = []) => {
     writeFileSync(join(dir, 'package.json'), JSON.stringify({ scripts }));
