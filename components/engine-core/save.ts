@@ -41,7 +41,7 @@ export interface SaveFormat {
 export const DEFAULT_SAVE_FORMAT: SaveFormat = { version: 1 };
 
 /** `finalHash` binds the state and the undo flag, so editing `undoUsed` in an exported save is caught. */
-const sealOf = (state: unknown, undoUsed: boolean): string => hashValue([hashState(state), undoUsed]);
+export const sealOf = (state: unknown, undoUsed: boolean): string => hashValue([hashState(state), undoUsed]);
 
 export interface CreateSaveInput<G extends GameTypes> {
   readonly options: G['options'];

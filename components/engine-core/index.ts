@@ -27,6 +27,7 @@ export {
   migrateSave,
   OLDER_BUILD,
   restoreSave,
+  sealOf,
   UNKNOWN_COMMIT,
   type CreateSaveInput,
   type MigrateResult,
