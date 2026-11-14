@@ -1,0 +1,14 @@
+{
+  "name": "bug-reporter",
+  "source": {
+    "game": "rome",
+    "commit": "1d0fd2e",
+    "paths": [
+      "src/ui/bugs",
+      "jarl:src/ui/bugs/dialog.machine.ts",
+      "jarl:src/ui/bugs/collect.test.ts",
+      "stcc:src/ui/bugs/capture.ts"
+    ]
+  },
+  "needs": ["state-machines"]
+}

@@ -1,0 +1,104 @@
+.markup {
+  position: fixed;
+  inset: 1.5vmin;
+  z-index: 310;
+  display: flex;
+  flex-direction: column;
+  gap: 0.7em;
+  padding: 0.8em;
+  box-sizing: border-box;
+  border: 1.5px solid var(--bug-panel-edge);
+  border-radius: var(--bug-radius-panel);
+  background: var(--bug-panel-bg);
+  color: var(--bug-text);
+  font: clamp(15px, 0.74vw, 28px) / 1.4 var(--bug-font-caption);
+}
+.markup__tools {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5em;
+  align-items: center;
+}
+.markup__tools strong {
+  margin-right: auto;
+}
+.markup .btn {
+  font: 600 1em var(--bug-font-heading);
+  color: var(--bug-button-text);
+  background: var(--bug-button-bg);
+  border: 1.5px solid var(--bug-border);
+  border-radius: var(--bug-radius-lg);
+  padding: 0.35em 0.7em;
+  cursor: pointer;
+}
+.markup .btn:disabled {
+  opacity: 0.55;
+}
+.markup [aria-pressed='true'] {
+  background: linear-gradient(var(--bug-primary-bg), var(--bug-primary-edge));
+  color: var(--bug-primary-text);
+  border-color: var(--bug-primary-edge);
+}
+.markup strong {
+  font: 700 1.2em var(--bug-font-heading);
+}
+.markup select,
+.markup input {
+  font: 1em var(--bug-font-caption);
+  color: inherit;
+  background: var(--bug-field-bg);
+  border: 1.5px solid var(--bug-border);
+  border-radius: var(--bug-radius-md);
+  padding: 0.3em;
+  max-width: 100%;
+}
+.markup__note {
+  width: 100%;
+}
+.markup__note input {
+  width: min(30em, 70%);
+}
+.markup__workspace {
+  container-type: size;
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+.markup__image {
+  position: relative;
+  max-width: 100%;
+  max-height: 100%;
+  height: auto;
+}
+.markup__image img {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+.markup__image canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  touch-action: none;
+  cursor: crosshair;
+}
+@media (max-width: 600px) {
+  .markup {
+    inset: 0;
+    border-radius: 0;
+    padding: 0.5em;
+  }
+  .markup__tools {
+    gap: 0.35em;
+  }
+  .markup__tools strong {
+    flex-basis: 100%;
+  }
+  .markup .btn {
+    padding: 0.35em 0.5em;
+  }
+}
