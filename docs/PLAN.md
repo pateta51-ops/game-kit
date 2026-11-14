@@ -16,7 +16,7 @@ Kit code compiles under the strictest TypeScript settings in use (Jarl's), so it
 
 | Batch | Content | Effort | State |
 |---|---|---|---|
-| K0 | Repo scaffold (package, strict TypeScript, lint, tests, CI on a runner), tests for `kit.mjs`; small lifts: plan checker, random numbers / hashing / canonical JSON / copy, state-machine check, bundle-size check | S | not started |
+| K0 | Repo scaffold (package, strict TypeScript, lint, tests, CI on a runner), tests for `kit.mjs`; small lifts: plan checker, random numbers / hashing / canonical JSON / copy, state-machine check, bundle-size check | S | done (branch k0-foundation) |
 | K1 | Build gates: traceability, repo gate; check runner; CI and runner scripts as templates | M | not started |
 | K2 | Engine core: runner, copy-on-write, undo, replay, save format; command-line replay | M | not started |
 | K3 | Bug reporter | M | not started |
