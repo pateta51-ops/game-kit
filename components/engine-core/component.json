@@ -1,0 +1,17 @@
+{
+  "name": "engine-core",
+  "source": {
+    "game": "jarl",
+    "commit": "6f006a2",
+    "paths": [
+      "src/engine/core/rng.ts",
+      "src/engine/core/hash.ts",
+      "src/engine/core/canonical.ts",
+      "src/engine/core/errors.ts",
+      "src/engine/core/copy.ts",
+      "tests/unit/core/rng.test.ts",
+      "tests/unit/core/canonical.test.ts"
+    ]
+  },
+  "needs": []
+}
