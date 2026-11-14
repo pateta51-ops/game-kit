@@ -1,0 +1,73 @@
+// the Full gate's steps that need logic, in Node so they run the same on the owner's Windows runner
+// and on ubuntu-latest (full-gate.yml). Run from the gate's checkout (working directory full-gate/).
+//   node .github/scripts/full-gate.mjs prepare   check PR and SHA, check the PR head is in this repository, merge it
+//                                                 into main (what the pull_request event tests)
+//   node .github/scripts/full-gate.mjs browsers  install Playwright's Chromium and WebKit (with system libraries where
+//                                                 sudo works)
+//   node .github/scripts/full-gate.mjs e2e       run each npm script of E2E_SCRIPTS (default test:e2e) on a free port, in order
+import { execFileSync, spawnSync } from 'node:child_process';
+import { appendFileSync } from 'node:fs';
+import { createServer } from 'node:net';
+
+const isWindows = process.platform === 'win32';
+const fail = (message) => {
+  console.error(`::error::${message}`);
+  process.exit(1);
+};
+const REPO_SLUG = '{{REPO_SLUG}}';
+// The e2e npm scripts, run one after the other on the same free port; the gate fails if any fails (E2E_SCRIPTS, comma list).
+const E2E_SCRIPTS = (process.env.E2E_SCRIPTS ?? 'test:e2e').split(',');
+const git = (...args) => execFileSync('git', args, { encoding: 'utf-8' }).trim();
+const run = (cmd, args, env = process.env) => {
+  const r = spawnSync(cmd, args, { stdio: 'inherit', env, shell: isWindows });
+  if (r.status !== 0) process.exit(r.status ?? 1);
+};
+
+async function prepare() {
+  const { PR, SHA, GH_TOKEN, GITHUB_REPOSITORY, GITHUB_STEP_SUMMARY } = process.env;
+  if (GITHUB_REPOSITORY !== REPO_SLUG) fail(`this gate is for ${REPO_SLUG}, not ${GITHUB_REPOSITORY}`);
+  if (!/^[0-9]+$/.test(PR ?? '') || !/^[0-9a-f]{40}$/.test(SHA ?? '')) fail('bad inputs: pr must be a number, sha 40 hex');
+  const res = await fetch(`https://api.github.com/repos/${GITHUB_REPOSITORY}/pulls/${PR}`, {
+    headers: { Authorization: `Bearer ${GH_TOKEN}`, Accept: 'application/vnd.github+json' },
+  });
+  if (!res.ok) fail(`could not read PR #${PR}: HTTP ${res.status}`);
+  const pr = await res.json();
+  if (pr.head?.repo?.full_name !== GITHUB_REPOSITORY) fail(`the head of PR #${PR} is not in ${GITHUB_REPOSITORY}: refused`);
+  if (pr.head.sha !== SHA) fail(`PR #${PR} head is ${pr.head.sha}, expected ${SHA}`);
+  git('fetch', '-q', 'origin', `+pull/${PR}/head:pr-head`); // + : the runner keeps the last PR's pr-head
+  const head = git('rev-parse', 'pr-head');
+  if (head !== SHA) fail(`PR #${PR} head is ${head}, expected ${SHA}`);
+  git('-c', 'user.name=full-gate', '-c', 'user.email=full-gate@invalid', 'merge', '-q', '--no-edit', 'pr-head');
+  const line = `Tested ${git('rev-parse', '--short', 'HEAD')} = main ${git('rev-parse', '--short', 'origin/main')} + PR #${PR} head ${SHA.slice(0, 7)}`;
+  console.log(line);
+  if (GITHUB_STEP_SUMMARY) appendFileSync(GITHUB_STEP_SUMMARY, `${line}\n`);
+}
+
+function browsers() {
+  // System libraries need root once; this never waits for a sudo password.
+  const sudo = !isWindows && spawnSync('sudo', ['-n', 'true']).status === 0;
+  run('npx', ['playwright', 'install', ...(sudo ? ['--with-deps'] : []), 'chromium', 'webkit']);
+}
+
+async function e2e() {
+  // A free port picked at run time: the owner's PC runs other projects' runners and preview servers.
+  const port = await new Promise((resolve, reject) => {
+    const server = createServer();
+    server.once('error', reject);
+    server.listen(0, '127.0.0.1', () => {
+      const { port: p } = server.address();
+      server.close(() => resolve(p));
+    });
+  });
+  console.log(`e2e port: ${port}`);
+  const env = { ...process.env, E2E_PORT: String(port) };
+  // every suite always runs, in order, so a later failure never hides an earlier one
+  const codes = E2E_SCRIPTS.map((script) => spawnSync('npm', ['run', script], { stdio: 'inherit', env, shell: isWindows }).status);
+  if (codes.some((c) => c !== 0)) fail(`e2e: ${E2E_SCRIPTS.map((s, i) => `${s} exit ${String(codes[i])}`).join(', ')}`);
+}
+
+const step = process.argv[2];
+if (step === 'prepare') await prepare();
+else if (step === 'browsers') browsers();
+else if (step === 'e2e') await e2e();
+else fail(`unknown step ${String(step)}: prepare | browsers | e2e`);
