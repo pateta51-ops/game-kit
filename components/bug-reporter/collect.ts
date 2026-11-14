@@ -1,5 +1,5 @@
 // Bug reports: what a report holds: the explanation, the screenshot, the game's snapshot (config.ts), the build, the browser and the screen.
-import { bugConfig } from './config';
+import { bugConfig, type GameSnapshot } from './config';
 import { LOG_LINES, newReportId, type BugReport, type DeviceFacts } from './report';
 
 /** A CSS length in px, or 0 when the browser gives none (jsdom, or `env()` unsupported). */
@@ -40,7 +40,14 @@ export function deviceFacts(): DeviceFacts {
 }
 
 export function collectReport(explanation: string, screenshot: string | null, now = new Date()): BugReport {
-  const snap = bugConfig().snapshot();
+  let snap: GameSnapshot = { contentHash: null, replay: null, round: null, prompt: null, actions: 0, log: [] };
+  let replay: BugReport['replay'] = null;
+  try {
+    snap = bugConfig().snapshot();
+    replay = snap.replay === null ? null : structuredClone(snap.replay);
+  } catch {
+    // the report goes out without the snapshot
+  }
   return {
     format: `${bugConfig().id}-bug-report`,
     version: 1,
@@ -61,7 +68,7 @@ export function collectReport(explanation: string, screenshot: string | null, no
       actions: snap.actions,
       log: snap.log.slice(-LOG_LINES),
     },
-    replay: snap.replay === null ? null : structuredClone(snap.replay),
+    replay,
     screenshot: screenshot === null ? null : { mime: 'image/png', base64: screenshot },
   };
 }

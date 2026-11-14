@@ -25,7 +25,7 @@ export type DeviceFacts = z.infer<typeof DeviceSchema>;
 const Png = z.strictObject({ mime: z.literal('image/png'), base64: z.string() });
 
 export const ReportSchema = z.looseObject({
-  format: z.string().endsWith('bug-report'),
+  format: z.string().refine((f) => f === `${bugConfig().id}-bug-report`),
   version: z.literal(1),
   id: z.string().regex(/^[a-z0-9]{6,20}$/),
   createdAt: z.string().regex(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?Z$/),

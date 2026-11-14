@@ -1,4 +1,4 @@
-// Bug reports: "Send all bug reports" (owner, 10 Nov): every queued report, one at a time (fileAll.ts), with the progress
+// Bug reports: "Send all bug reports": every queued report, one at a time (fileAll.ts), with the progress
 // and the last run's summary shared by Settings and Home.
 import { create } from 'zustand';
 import { fileAll, type FileDeps, type SendAllSummary } from './fileAll';

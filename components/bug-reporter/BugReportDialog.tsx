@@ -1,4 +1,4 @@
-// Bug reports (ported from Rise of a Jarl): the dialog (the table's bug button, Home, Settings, or F8): what happened, and an
+// Bug reports: the dialog (the table's bug button, Home, Settings, or F8): what happened, and an
 // optional markup of the screenshot. The screenshot is taken before the dialog opens, so the dialog is not in it. Every
 // report goes to the local queue first (IndexedDB), so nothing is lost when filing fails; "Send now" then files it as a
 // GitHub issue with the token from Settings, and a failure leaves it queued with the reason (Settings > Send all).

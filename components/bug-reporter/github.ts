@@ -1,4 +1,4 @@
-// Bug reports: filing on GitHub (ported from Rise of a Jarl, made robust for "Send all"). The issue number names the files.
+// Bug reports: filing on GitHub (made robust for "Send all"). The issue number names the files.
 // The token belongs only to browserTransport; it is never put in a message, a report or a log.
 //
 // Errors are FilingErrors with a sentence for the screen and a kind:

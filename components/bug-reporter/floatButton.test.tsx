@@ -1,6 +1,7 @@
 // Issue 44/45: the floating bug button (setting, phone default, opens the report) and the menu's way back.
 import { act, cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { bugConfig, configureBugReporter } from './config';
 import { stopTestGame, useTestSettings } from './test-utils';
 import type * as capture from './capture';
 import { scrolledElements } from './capture';
@@ -34,6 +35,25 @@ afterEach(() => {
 });
 
 describe('floating bug button', () => {
+  it('without useButtonMode and useHideFloatingButton the mode is auto and the button is not hidden', () => {
+    const c = bugConfig();
+    const { useButtonMode: _m, useHideFloatingButton: _h, ...bare } = c;
+    configureBugReporter(bare);
+    try {
+      window.location.hash = '#/game';
+      phone(true);
+      render(<FloatingBugButton />);
+      expect(screen.queryByTestId('bug-float')).not.toBeNull();
+      cleanup();
+      phone(false);
+      render(<FloatingBugButton />);
+      expect(screen.queryByTestId('bug-float')).toBeNull();
+    } finally {
+      window.location.hash = '';
+      configureBugReporter(c);
+    }
+  });
+
   it('shows on a phone and not on desktop by default; on/off override', () => {
     phone(true);
     render(<FloatingBugButton />);

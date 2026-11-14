@@ -1,5 +1,5 @@
-// Bug reports: filing queued reports, one at a time (ported from Rise of a Jarl). Owner, 10 Nov: "Make sure there's a send
-// all bug reports button in the game to avoid errors submitting bugs." The reports in flight are one shared set, so a
+// Bug reports: filing queued reports, one at a time (a Send all
+// button avoids errors submitting bugs). The reports in flight are one shared set, so a
 // row's Send, the dialog's Send now and Send all never file the same report twice (two parallel filings of one report
 // would each open an issue before either can find the other's). A report leaves the queue only once it is filed.
 import { create } from 'zustand';

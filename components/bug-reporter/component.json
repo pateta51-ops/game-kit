@@ -7,7 +7,6 @@
       "src/ui/bugs",
       "jarl:src/ui/bugs/dialog.machine.ts",
       "jarl:src/ui/bugs/collect.test.ts",
-      "jarl:src/ui/bugs/dialog.test.tsx",
       "stcc:src/ui/bugs/capture.ts"
     ]
   },

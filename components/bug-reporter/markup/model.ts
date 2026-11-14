@@ -1,4 +1,4 @@
-// Bug reports (ported from Rise of a Jarl): the screenshot markup (pen, box, arrow, numbered pin), drawn on the live
+// Bug reports: the screenshot markup (pen, box, arrow, numbered pin), drawn on the live
 // preview and flattened into the filed PNG.
 import { z } from 'zod';
 import { bugConfig } from '../config';

@@ -1,4 +1,4 @@
-// Bug reports (ported from Rise of a Jarl): Settings > Bug reports: the GitHub token (stored on this device only), the queue
+// Bug reports: Settings > Bug reports: the GitHub token (stored on this device only), the queue
 // of reports not filed yet with "Send all bug reports" (one at a time, never the same report twice, failures stay queued
 // with their reason, then a summary), and per report Send, Download and Delete. QueueBar is the same count and Send all
 // for Home; BugButton is the table's button.

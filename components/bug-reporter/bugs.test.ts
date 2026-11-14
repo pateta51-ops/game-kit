@@ -1,4 +1,4 @@
-// Bug reports (ported from Rise of a Jarl): every report goes to the queue first; filing opens one GitHub issue per report
+// Bug reports : every report goes to the queue first; filing opens one GitHub issue per report
 // (never two, even when a row's Send and Send all race), keeps a failed report queued with GitHub's own reason, and files a
 // report whose screenshot GitHub refuses without it (downloading the whole report instead). Each failure path that made
 // filing fail is here: no token, a refused token, offline, a network error or timeout, the rate limit, 4xx and 5xx.
