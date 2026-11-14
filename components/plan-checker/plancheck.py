@@ -15,7 +15,17 @@ Checks:
 - the session plan: every phase heading ("#### Phase N — ...") in the implementation-phases section appears in exactly
   one batch row of the session-plan summary table (first column the batch id, a "Phases" column with comma-separated
   phase ids, ranges like `2–4` allowed), every batch names a phase that exists, and every row has a non-empty "Model"
-  cell and a "Confidence" cell holding a percentage;
+  cell and a "Confidence" cell holding a percentage; the Worker, Touches, Gate and Owner columns are filled (a NOTE,
+  not a problem, when an older plan lacks a column);
+- every experience feature (XP-nn) defined in the plan names an existing phase or "Roadmap" in the last cell of its
+  table row, or is cited in the phases section or under a Roadmap heading;
+
+Extraction (prints and exits, no checks):
+  --section 5.3   one numbered section
+  --batch S4      a worker's order: the shared preamble, the batch block, its phase blocks, and the line ranges of
+                  the sections those phases list under "Read first"
+
+Checks, continued:
 - with --tsc: the ```ts blocks of the type-definitions section compile under strict flags (needs `tsc` on PATH or in
   ./node_modules/.bin).
 
@@ -162,10 +172,94 @@ def table_cells(l: str) -> list[str]:
     return out
 
 
+def span_of(lines: list[str], heads: list[tuple[int, int, str]], k: int) -> tuple[int, int]:
+    i, lvl, _ = heads[k]
+    return i, next((j for j, l2, _ in heads[k + 1:] if l2 <= lvl), len(lines))
+
+
+def numbered(heads: list[tuple[int, int, str]], num: str) -> int | None:
+    return next((k for k, (_, _, t) in enumerate(heads) if re.match(rf"§?\s*{re.escape(num)}(?![\d.]*\d)", t)), None)
+
+
+def extract(path: Path, lines: list[str], heads: list[tuple[int, int, str]]) -> int:
+    """--section N.N prints one numbered section. --batch ID prints a worker's order: the shared preamble, the
+    batch block, its phase blocks, and the line ranges of the sections those phases list under "Read first"."""
+    try:
+        sys.stdout.reconfigure(encoding="utf-8")  # type: ignore[union-attr]
+    except (AttributeError, ValueError):
+        pass
+
+    def show(k: int) -> str:
+        a, b = span_of(lines, heads, k)
+        return "\n".join(lines[a:b]).rstrip() + "\n"
+    if "--section" in sys.argv:
+        k = numbered(heads, opt("--section", "").lstrip("§"))
+        if k is None:
+            print(f"no section {opt('--section', '')}")
+            return 1
+        print(show(k))
+        return 0
+    bid = opt("--batch", "")
+    kb = next((k for k, (_, _, t) in enumerate(heads) if re.match(rf"Batch\s+{re.escape(bid)}\b", t)), None)
+    if kb is None:
+        print(f"no 'Batch {bid}' heading")
+        return 1
+    toks: list[str] = []
+    header: list[str] = []
+    for l in section(lines, heads, opt("--sessions", "Session plan")).split("\n"):
+        if l.strip().startswith("|"):
+            cells = [c.strip() for c in table_cells(l)]
+            if any("phase" in c.lower() for c in cells) and cells[0].lower().startswith("batch"):
+                header = [c.lower() for c in cells]
+            elif header and cells[0].strip("`*") == bid and len(cells) == len(header):
+                toks = phase_tokens(cells[next(i for i, c in enumerate(header) if "phase" in c)])
+    out = []
+    kp = find_heading(heads, "Shared preamble")
+    if kp is not None:
+        out.append(show(kp))
+    out.append(show(kb))
+    reads: list[str] = []
+    briefs: list[str] = []
+
+    def read_refs(text: str) -> None:
+        on = False
+        for l in text.split("\n"):
+            if "read first" in l.lower():
+                on = True
+            elif on and (not l.strip() or l.lstrip().startswith(("**", "#"))):
+                on = False
+            if on:
+                briefs.extend(re.findall(r"BRIEF\s*§(\d+(?:\.\d+)*)", l))
+                reads.extend(re.findall(r"(?<!BRIEF )(?<!BRIEF)§(\d+(?:\.\d+)*)", l))
+
+    read_refs(out[-1])
+    for t in toks:
+        k = next((k for k, (_, _, h) in enumerate(heads) if re.match(rf"Phase\s+{re.escape(t)}\b", h)), None)
+        if k is None:
+            out.append(f"(no 'Phase {t}' heading)\n")
+            continue
+        body = show(k)
+        out.append(body)
+        read_refs(body)
+    print("\n".join(out))
+    for r in dict.fromkeys(briefs):
+        print(f"BRIEF §{r}: section {r} of docs/experience/BRIEF.md")
+    if reads:
+        print(f'"Read first" sections in {path} (Read with these line ranges, or --section N.N):')
+        for r in dict.fromkeys(reads):
+            k = numbered(heads, r)
+            if k is None:
+                print(f"  §{r}: not found")
+            else:
+                a, b = span_of(lines, heads, k)
+                print(f"  §{r}: lines {a + 1}-{b}  {heads[k][2]}")
+    return 0
+
+
 def main() -> int:
     safe_console()
     args = [a for a in sys.argv[1:] if not a.startswith("--")]
-    for flag in ("--scenarios", "--phases", "--types", "--sessions"):
+    for flag in ("--scenarios", "--phases", "--types", "--sessions", "--section", "--batch"):
         if flag in sys.argv:
             v = opt(flag, "")
             if v in args:
@@ -177,7 +271,10 @@ def main() -> int:
     src = path.read_text(encoding="utf-8")
     lines = src.split("\n")
     heads = headings(lines)
+    if "--section" in sys.argv or "--batch" in sys.argv:
+        return extract(path, lines, heads)
     problems: list[str] = []
+    notes: set[str] = set()
 
     # --- code fences ---
     if sum(1 for l in lines if l.strip().startswith("```")) % 2:
@@ -189,11 +286,12 @@ def main() -> int:
         if t not in anchors:
             problems.append(f"broken anchor #{t}")
     numbered = {m.group(1) for _, _, h in heads if (m := re.match(r"^(\d+(?:\.\d+)*)", h))}
-    for r in sorted({r for r in re.findall(r"§(\d+(?:\.\d+)*)", src) if r not in numbered}):
+    for r in sorted({r for r in re.findall(r"(?<!BRIEF )(?<!BRIEF)§(\d+(?:\.\d+)*)", src) if r not in numbered}):
         problems.append(f"unresolved §{r}")
 
     # --- tables; collect first-cell definitions ---
     first_cell_defs: list[str] = []
+    xp_rows: dict[str, str] = {}
     scen_sec = section(lines, heads, opt("--scenarios", "Scenario catalogue"))
     scen_start = src.find(scen_sec) if scen_sec else -1
     scen_lines = range(src[:scen_start].count("\n"), src[:scen_start].count("\n") + scen_sec.count("\n") + 1) \
@@ -219,6 +317,8 @@ def main() -> int:
                     m = re.match(rf"^\s*\**({ID}|D\d+)\**", cells[0])
                     if m:
                         first_cell_defs.append(m.group(1))
+                        if m.group(1).startswith("XP-"):
+                            xp_rows[m.group(1)] = cells[-1]
                 j += 1
             i = j
             continue
@@ -319,6 +419,13 @@ def main() -> int:
                             problems.append(f"{batch}: no model")
                         if not re.search(r"\d+\s*%", cells[cols["confidence"]]):
                             problems.append(f"{batch}: confidence is not a percentage")
+                        for name, need in (("worker", r"claude|codex|director"), ("touches", r"\w"), ("gate", r"check|full"),
+                                           ("owner", r"\S")):
+                            c = next((k for k, h in enumerate(header) if name in h), None)
+                            if c is None:
+                                notes.add(f"session table has no '{name}' column (the architect schedules by it)")
+                            elif not re.search(need, cells[c], re.I):
+                                problems.append(f"{batch}: '{name}' cell is empty or not understood")
                     j += 1
                 i = j
                 continue
@@ -331,6 +438,17 @@ def main() -> int:
                     problems.append(f"Phase {p} is in no batch")
                 elif len(bs) > 1:
                     problems.append(f"Phase {p} is in {len(bs)} batches ({', '.join(bs)})")
+
+    # --- experience features: every defined XP id has a phase or a roadmap entry ---
+    road = "\n".join("\n".join(lines[slice(*span_of(lines, heads, k))]) for k, (_, _, t) in enumerate(heads)
+                     if "roadmap" in t.lower())
+    placed = set(expand_ids(phases)) | set(expand_ids(road))
+    for d in sorted(defined):
+        if d.startswith("XP-") and d not in placed:
+            last = xp_rows.get(d, "")
+            if "roadmap" in last.lower() or any(x in phase_ids for x in phase_tokens(last)):
+                continue
+            problems.append(f"{d} has no phase and no roadmap entry")
 
     # --- the type contract ---
     if "--tsc" in sys.argv:
@@ -356,6 +474,8 @@ def main() -> int:
                         problems.append("type contract does not compile:\n" + (r.stdout + r.stderr)[:3000])
 
     print(f"{path}: {len(lines)} lines, {len(defined)} defined IDs, {len(scenarios)} scenarios")
+    for n in sorted(notes):
+        print("NOTE", n)
     for p in problems:
         print("PROBLEM", p)
     print("OK" if not problems else f"{len(problems)} problem(s)")

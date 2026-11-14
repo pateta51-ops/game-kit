@@ -54,6 +54,14 @@ Known limit (engine-core): the single-copy guard stops two copies loaded from tw
 | K16 | Generic simulation runner | L |
 | - | Privacy guard, theme check | M |
 
+## Asked for by a game
+
+A game's build plan lists the kit work it needs as phases named `GK<n>` for the batch `K<n>` here, and its architect runs them as the README's "Changing the kit" says. Work that no row above covers gets a row in this table first.
+
+| Batch | Content | Effort | Asked by | State |
+|---|---|---|---|---|
+| K17 | Plan checker brought level with the build-plan skill's (`--batch`, `--section`, the Worker, Touches, Gate and Owner columns, experience feature ids). The two files stay the same: a change to one goes to the other | S | build-plan skill, 14 Nov 2026 | done |
+
 ## Size
 
-5 small lifts, about 18 worker batches of medium size, 2 large ones. Stage 1 is 4 batches.
+5 small lifts, about 18 worker batches of medium size, 2 large ones. Stage 1 is 4 batches. Work asked for by a game (the table above) comes on top.
