@@ -1,0 +1,13 @@
+{
+  "maxArtMB": 120,
+  "maxRepoMB": 1536,
+  "artFolder": "public/art/",
+  "engineFolders": ["src/engine/"],
+  "engineAllowed": ["src/engine/types/"],
+  "cardIdLiteral": "",
+  "contentDir": "content",
+  "contentSkip": [],
+  "skipText": ["dossier/", "docs/"],
+  "runnerNames": [],
+  "runnersFile": "tools/repogate/runners.json"
+}
