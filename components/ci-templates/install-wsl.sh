@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
 # Installs the GitHub Actions self-hosted runner of one repository as a systemd service in a WSL Ubuntu machine, in
-# its own folder, beside any runners already there, which it does not touch. From the game-kit (lifted from Jarl).
+# its own folder, beside any runners already there, which it does not touch.
 # Safe to run again: it keeps an installed runner, re-registers it only when it is not registered, and always ends by
 # checking the service and the runner's status on GitHub.
 #
-#   RUNNER_REPO=<owner>/<repo> RUNNER_LABEL=<label> bash tools/runner/install-wsl.sh [--check] [--token <token> | <token>]
+#   RUNNER_REPO=<owner>/<repo> RUNNER_LABEL=<label> bash install-wsl.sh [--check] [--token <token> | <token>]
 #
 # Optional: RUNNER_DIR (default ~/actions-runner-<label>), RUNNER_NAME (default <label>-wsl), RUNNER_TOKEN.
 # The registration token (valid one hour) comes from `gh api -X POST repos/<repo>/actions/runners/registration-token`;
@@ -39,12 +39,12 @@ need curl "sudo apt-get install -y curl"
 need tar "sudo apt-get install -y tar"
 need systemctl "WSL needs systemd: add [boot] systemd=true to /etc/wsl.conf, then run wsl --shutdown in PowerShell"
 
-# --- gate prerequisites: PyMuPDF renders the B&W PDF for npm run art:build (BUILD_PLAN section 8.3) ---------------------
-if ! python3 -c 'import pymupdf' >/dev/null 2>&1; then
+# --- gate prerequisites: set RUNNER_WANT_PYMUPDF=1 when a build step renders PDFs with PyMuPDF -------------------------
+if [ "${RUNNER_WANT_PYMUPDF:-0}" = 1 ] && ! python3 -c 'import pymupdf' >/dev/null 2>&1; then
   if [ "$CHECK_ONLY" = 1 ]; then
     say "missing: PyMuPDF (python3 -m pip install --user --break-system-packages pymupdf)"
   else
-    say "installing PyMuPDF for the art build"
+    say "installing PyMuPDF"
     python3 -m pip install --user --break-system-packages -q pymupdf || sudo -n apt-get install -y python3-fitz || say "could not install PyMuPDF"
   fi
 fi

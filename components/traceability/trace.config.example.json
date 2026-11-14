@@ -1,0 +1,13 @@
+{
+  "plan": "docs/BUILD_PLAN.md",
+  "ruleSection": 3,
+  "families": ["R"],
+  "pending": "scripts/traceability-pending.json",
+  "testDirs": ["tests", "e2e"],
+  "testSrcDirs": ["src"],
+  "sourceDirs": ["src"],
+  "selfTest": "",
+  "scenarioPrefix": "SC",
+  "maxIdsPerTitle": 6,
+  "deferred": {}
+}

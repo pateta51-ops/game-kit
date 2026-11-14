@@ -1,0 +1,10 @@
+{
+  "name": "check-runner",
+  "source": {
+    "game": "ebr",
+    "commit": "33b5abd3",
+    "paths": ["scripts/ci-lanes.ts"],
+    "grafts": [{ "game": "stcc", "commit": "9fc59643", "paths": ["scripts/ci/check.ts"] }]
+  },
+  "needs": []
+}
