@@ -1,0 +1,127 @@
+// The shapes the kernel works on. A game declares its own types (extending these) in one `GameTypes` bundle and
+// implements `GameRules` over it.
+import type { Draft } from './draft';
+
+export interface RngWords {
+  readonly a: number;
+  readonly b: number;
+  readonly c: number;
+  readonly d: number;
+}
+
+export interface KernelTask {
+  readonly kind: string;
+  /** For a resume task: the answer once given. */
+  readonly answer?: readonly string[];
+}
+
+export interface KernelOption {
+  readonly id: string;
+  readonly enabled: boolean;
+  /** Why a disabled option is disabled. */
+  readonly why?: string;
+}
+
+export interface KernelPrompt {
+  readonly id: number;
+  readonly options: readonly KernelOption[];
+  readonly min: number;
+  readonly max: number;
+}
+
+export interface KernelEvent {
+  readonly seq: number;
+  /** An action whose events reveal hidden information cannot be undone in Safe mode. */
+  readonly reveal?: boolean;
+}
+
+export interface AnswerAction {
+  readonly kind: 'answer';
+  readonly promptId: number;
+  readonly picks: readonly string[];
+}
+
+/** The fields of a state the kernel reads and writes; `result` is null until the game is over. */
+export interface KernelState {
+  readonly rng: RngWords;
+  readonly stack: readonly KernelTask[];
+  readonly prompt: KernelPrompt | null;
+  readonly result: unknown;
+  readonly seq: number;
+  readonly promptSeq: number;
+  readonly log: readonly KernelEvent[];
+}
+
+/** The types of one game. `stamped`: the event fields `GameRules.stamp` fills (never when none). */
+export interface GameTypes {
+  readonly state: KernelState;
+  readonly action: AnswerAction;
+  readonly task: KernelTask;
+  readonly prompt: KernelPrompt;
+  readonly event: KernelEvent;
+  readonly stamped: string;
+  readonly content: unknown;
+  readonly options: { readonly seed: string };
+  readonly rules: unknown;
+}
+
+export interface InvariantViolation {
+  readonly id: string;
+  readonly message: string;
+}
+
+export interface ApplyResult<G extends GameTypes> {
+  readonly state: G['state'];
+  readonly events: readonly G['event'][];
+  readonly violations: readonly InvariantViolation[];
+}
+
+/** An event as a handler emits it: the context stamps `seq` and the `stamped` fields. */
+export type EventInput<G extends GameTypes> = G['event'] extends infer E
+  ? E extends unknown
+    ? Omit<E, 'seq' | G['stamped']>
+    : never
+  : never;
+
+/** The random source of a context (sfc32 over `state.rng`). */
+export interface CtxRng {
+  nextUint32(): number;
+  shuffle<T>(xs: readonly T[]): T[];
+  int(max: number): number;
+}
+
+export interface Ctx<G extends GameTypes> {
+  s: G['state']; // the working draft
+  readonly content: G['content'];
+  readonly rng: CtxRng;
+  then(...tasks: readonly G['task'][]): void; // pushed so the first runs first
+  ask(prompt: Omit<G['prompt'], 'id'>): void;
+  emit(event: EventInput<G>): void;
+}
+
+export type TaskHandler<G extends GameTypes> = (ctx: Ctx<G>, task: G['task']) => void;
+
+/** One handler per task kind. */
+export type HandlerTable<G extends GameTypes> = Readonly<Record<string, TaskHandler<G>>>;
+
+/** What a game gives the kernel. */
+export interface GameRules<G extends GameTypes> {
+  readonly handlers: HandlerTable<G>;
+  /** A new state: rng seeded from `options.seed`, empty stack and log, no prompt, no result. */
+  blank(options: G['options'], rules: G['rules'], content: G['content']): Draft<G['state']>;
+  /** Schedules (or runs) the setup; `createGame` runs the stack after it. */
+  setup?(ctx: Ctx<G>): void;
+  /** The hash of the content a game is played with (checked by replay and saves). */
+  contentHash(content: G['content']): string;
+  /** The fields stamped on every event after `seq`. */
+  stamp?(s: G['state']): object;
+  /** Checks run after every action while invariant checking is on. */
+  invariants?(
+    state: G['state'],
+    content: G['content'],
+    events: readonly G['event'][],
+    prev?: G['state'],
+  ): readonly InvariantViolation[];
+  /** Why a revealing event cannot be undone in Safe mode, in the game's words. */
+  revealWords?(event: G['event']): string | undefined;
+}
