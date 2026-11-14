@@ -1,0 +1,460 @@
+// Rule-id traceability gate (from Jarl, with EBR's stricter title rules). Every rule id of the plan's rules section,
+// found with the configured id families, must appear twice: in a test title (it/test only; describe, .skip, .todo,
+// .fails and titles listing more than `maxIdsPerTitle` ids count for none; .skipIf/.runIf do count) and in a code comment
+// of a source file. Ids in titles that name a family but are not defined are reported. Scenario ids (`<prefix>-nnn`
+// rows of the plan) must each appear in exactly one title. Everything game-specific comes from trace.config.json.
+//
+//   tsx check-traceability.ts [--config path] [--strict] [--release] [--quiet] [--warn]
+//
+// Exit codes: 0 ok (or warning mode), 1 findings in error mode (or a pending id with --release), 2 bad usage.
+import { readdirSync, readFileSync } from 'node:fs';
+import { join, resolve } from 'node:path';
+import { pathToFileURL } from 'node:url';
+
+export interface Config {
+  plan: string;
+  ruleSection: number;
+  families: string[];
+  pending: string;
+  testDirs: string[];
+  testSrcDirs: string[];
+  sourceDirs: string[];
+  selfTest: string;
+  scenarioPrefix: string;
+  maxIdsPerTitle: number;
+  deferred: Record<string, string>;
+}
+export const DEFAULT_CONFIG: Config = {
+  plan: 'docs/BUILD_PLAN.md',
+  ruleSection: 3,
+  families: ['R'],
+  pending: 'traceability-pending.json',
+  testDirs: ['tests', 'e2e'],
+  testSrcDirs: ['src'],
+  sourceDirs: ['src'],
+  selfTest: '',
+  scenarioPrefix: 'SC',
+  maxIdsPerTitle: 6,
+  deferred: {},
+};
+const USAGE = 'usage: tsx check-traceability.ts [--config path] [--strict] [--release] [--quiet] [--warn]';
+
+/** The pending ids (scripts/traceability-pending.json `pending`: id → the batch that will name it); {} when absent. */
+export function readPending(io: Pick<Io, 'readText'>, cfg: Config): Record<string, string> {
+  try {
+    const parsed = JSON.parse(io.readText(cfg.pending)) as { pending?: unknown };
+    const pending = parsed.pending;
+    if (typeof pending !== 'object' || pending === null) return {};
+    return Object.fromEntries(
+      Object.entries(pending as Record<string, unknown>).filter(
+        (e): e is [string, string] => typeof e[1] === 'string',
+      ),
+    );
+  } catch {
+    return {};
+  }
+}
+
+/** The rule-id regexp for the configured families (longest first, so `R` never reads the tail of `RL-005`). */
+export const ruleIdPattern = (cfg: Config): RegExp =>
+  new RegExp(`(?<![A-Za-z0-9-])(?:${[...cfg.families].sort((a, b) => b.length - a.length).join('|')})-\\d{2,3}(?![0-9])`, 'g');
+const excluded = (cfg: Config): ReadonlySet<string> => new Set(Object.keys(cfg.deferred));
+
+// ---------------------------------------------------------------------------------------------------------------------
+// Rule ids of the plan
+
+/** The lines of section `number` (heading excluded), ignoring headings and lines inside code fences. */
+function sectionLines(markdown: string, number: number): string[] {
+  const out: string[] = [];
+  let inFence = false;
+  let inSection = false;
+  for (const line of markdown.split(/\r?\n/)) {
+    if (/^\s*```/.test(line)) {
+      inFence = !inFence;
+      continue;
+    }
+    if (inFence) continue;
+    const heading = /^## (\d+)\./.exec(line);
+    if (heading !== null) {
+      if (inSection) break;
+      inSection = Number(heading[1]) === number;
+      continue;
+    }
+    if (inSection) out.push(line);
+  }
+  return out;
+}
+
+/** The rule ids the rules section defines, in document order without duplicates or exclusions. Throws without a the rules section. */
+export function extractRuleIds(markdown: string, cfg: Config = DEFAULT_CONFIG): string[] {
+  const lines = sectionLines(markdown, cfg.ruleSection);
+  if (lines.length === 0) throw new Error(`section "## ${String(cfg.ruleSection)}." not found in the plan`);
+  const ids: string[] = [];
+  const seen = new Set<string>();
+  for (const line of lines) {
+    for (const match of line.matchAll(ruleIdPattern(cfg))) {
+      const id = match[0];
+      if (seen.has(id) || excluded(cfg).has(id)) continue;
+      seen.add(id);
+      ids.push(id);
+    }
+  }
+  return ids;
+}
+
+// ---------------------------------------------------------------------------------------------------------------------
+// Test titles
+
+/** A quoted string starting at `start` (the escapes are resolved only far enough for ids); null when there is none. */
+function readString(src: string, start: number): { value: string; end: number } | null {
+  const quote = src.charAt(start);
+  if (quote !== "'" && quote !== '"' && quote !== '`') return null;
+  let value = '';
+  for (let i = start + 1; i < src.length; i++) {
+    const ch = src.charAt(i);
+    if (ch === '\\') {
+      value += src.charAt(i + 1);
+      i++;
+    } else if (ch === quote) {
+      return { value, end: i + 1 };
+    } else {
+      value += ch;
+    }
+  }
+  return null;
+}
+
+/** The index after the parenthesis that closes the one at `open`; -1 when unbalanced. Strings are skipped. */
+function skipBalanced(src: string, open: number): number {
+  let depth = 0;
+  for (let i = open; i < src.length; i++) {
+    const ch = src.charAt(i);
+    if (ch === "'" || ch === '"' || ch === '`') {
+      const s = readString(src, i);
+      if (s === null) return -1;
+      i = s.end - 1;
+    } else if (ch === '(') {
+      depth++;
+    } else if (ch === ')') {
+      depth--;
+      if (depth === 0) return i + 1;
+    }
+  }
+  return -1;
+}
+
+const skipSpace = (src: string, i: number): number => {
+  let at = i;
+  while (/\s/.test(src.charAt(at))) at++;
+  return at;
+};
+
+/** Whole-line comments hold no tests; a trailing comment is left alone (a title may contain `//`). */
+const stripComments = (src: string): string =>
+  src.replace(/^\s*\/\*[\s\S]*?\*\//gm, '').replace(/^\s*\/\/.*$/gm, '');
+
+/**
+ * The counting titles of the tests in one source file: the first string of `it` and `test` calls (with `.only`, …) and of
+ * the second call in `it.each(table)('title', …)` and `it.runIf(cond)('title', …)`. Not counted (EBR): `describe`,
+ * `.skip`, `.todo`, `.fails`, `x`-prefixed calls and titles with too many ids. `.skipIf` counts.
+ * Template literals count with their `${…}` parts as written.
+ */
+export function extractTitles(source: string, cfg: Config = DEFAULT_CONFIG): string[] {
+  const src = stripComments(source);
+  const titles: string[] = [];
+  const call = /\b(?:x?it|x?test|x?describe)((?:\.[A-Za-z]+)*)\s*\(/g;
+  for (let m = call.exec(src); m !== null; m = call.exec(src)) {
+    const modifiers = (m[1] ?? '').split('.').filter((part) => part !== '');
+    const hollow = m[0].startsWith('x') || m[0].startsWith('describe') || modifiers.some((x) => x === 'skip' || x === 'todo' || x === 'fails');
+    let at = call.lastIndex; // just after the opening parenthesis
+    const last = modifiers[modifiers.length - 1];
+    if (last === 'each' || last === 'for' || last === 'runIf' || last === 'skipIf') {
+      const after = skipBalanced(src, at - 1);
+      if (after < 0) continue;
+      at = skipSpace(src, after);
+      if (src.charAt(at) !== '(') continue;
+      at += 1;
+    }
+    const title = readString(src, skipSpace(src, at));
+    if (title !== null && !hollow && new Set(title.value.match(ruleIdPattern(cfg)) ?? []).size <= cfg.maxIdsPerTitle) titles.push(title.value);
+  }
+  return titles;
+}
+
+// ---------------------------------------------------------------------------------------------------------------------
+// Code comments
+
+/**
+ * The comments of one source file: `// …` to the end of the line and `/* … *\/` blocks. Strings are skipped, so a URL in a
+ * string is not a comment; a regular expression literal holding `//` may be read as one, which only ever adds text.
+ */
+export function extractComments(source: string): string[] {
+  const out: string[] = [];
+  for (let i = 0; i < source.length; i++) {
+    const ch = source.charAt(i);
+    if (ch === "'" || ch === '"' || ch === '`') {
+      const s = readString(source, i);
+      if (s === null) break;
+      i = s.end - 1;
+    } else if (ch === '/' && source.charAt(i + 1) === '/') {
+      const end = source.indexOf('\n', i);
+      const stop = end < 0 ? source.length : end;
+      out.push(source.slice(i + 2, stop));
+      i = stop;
+    } else if (ch === '/' && source.charAt(i + 1) === '*') {
+      const end = source.indexOf('*/', i + 2);
+      const stop = end < 0 ? source.length : end;
+      out.push(source.slice(i + 2, stop));
+      i = stop + 1;
+    }
+  }
+  return out;
+}
+
+// ---------------------------------------------------------------------------------------------------------------------
+// Coverage
+
+const escapeRegExp = (text: string): string => text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
+/** The id as a whole word, optionally with one sub-letter ("SET-01a" names SET-01); "SET-01" is not found in "SET-010". */
+function idPattern(id: string): RegExp {
+  return new RegExp(`(?<![A-Za-z0-9-])${escapeRegExp(id)}[a-z]?(?![A-Za-z0-9-])`);
+}
+
+export interface SourceFile {
+  path: string;
+  text: string;
+}
+
+export interface Coverage {
+  ids: string[];
+  /** id → the test files with a title that names it. */
+  titled: Map<string, string[]>;
+  /** id → the source files under src/ (not tests) with a comment that cites it. */
+  cited: Map<string, string[]>;
+  /** Ids both titled and cited. */
+  covered: string[];
+  /** Ids not named in any test title. */
+  untitled: string[];
+  /** Ids not cited in any code comment. */
+  uncited: string[];
+  /** Ids in test titles that name a rule family but that the rules section does not define. */
+  unknown: string[];
+}
+
+function filesNaming(id: string, files: readonly { path: string; texts: string[] }[]): string[] {
+  const pattern = idPattern(id);
+  return files.filter((file) => file.texts.some((text) => pattern.test(text))).map((file) => file.path);
+}
+
+export function computeCoverage(
+  plan: string,
+  tests: readonly SourceFile[],
+  sources: readonly SourceFile[],
+  cfg: Config = DEFAULT_CONFIG,
+): Coverage {
+  const ids = extractRuleIds(plan, cfg);
+  const testTexts = tests.map((file) => ({ path: file.path, texts: extractTitles(file.text, cfg) }));
+  const sourceTexts = sources.map((file) => ({ path: file.path, texts: extractComments(file.text) }));
+  const titled = new Map<string, string[]>();
+  const cited = new Map<string, string[]>();
+  for (const id of ids) {
+    const t = filesNaming(id, testTexts);
+    if (t.length > 0) titled.set(id, t);
+    const c = filesNaming(id, sourceTexts);
+    if (c.length > 0) cited.set(id, c);
+  }
+  const known = new Set(ids);
+  const unknown = new Set<string>();
+  for (const file of testTexts) {
+    for (const text of file.texts) {
+      for (const match of text.matchAll(ruleIdPattern(cfg))) {
+        if (!known.has(match[0]) && !excluded(cfg).has(match[0])) unknown.add(match[0]);
+      }
+    }
+  }
+  return {
+    ids,
+    unknown: [...unknown].sort(),
+    titled,
+    cited,
+    covered: ids.filter((id) => titled.has(id) && cited.has(id)),
+    untitled: ids.filter((id) => !titled.has(id)),
+    uncited: ids.filter((id) => !cited.has(id)),
+  };
+}
+
+/** `SET-01 SET-02 ARR-01` → `SET       01 02` and `ARR       01`: one line per family keeps a long list readable. */
+export function groupByPrefix(ids: readonly string[]): string[] {
+  const groups = new Map<string, string[]>();
+  for (const id of ids) {
+    const dash = id.lastIndexOf('-');
+    const prefix = id.slice(0, dash);
+    groups.set(prefix, [...(groups.get(prefix) ?? []), id.slice(dash + 1)]);
+  }
+  return [...groups].map(([prefix, rest]) => `  ${prefix.padEnd(9)} ${[...rest].sort().join(' ')}`);
+}
+
+// ---------------------------------------------------------------------------------------------------------------------
+// Scenarios (§10.3: every SC id of §10.4 appears in exactly one test title)
+
+const scId = (cfg: Config): RegExp => new RegExp(`(?<![A-Za-z0-9-])${cfg.scenarioPrefix}-\\d{3}(?![0-9])`, 'g');
+
+/** The SC ids of the plan's scenario catalogue (table rows starting `| SC-nnn |`). */
+export function extractScenarioIds(markdown: string, cfg: Config = DEFAULT_CONFIG): string[] {
+  const out: string[] = [];
+  for (const m of markdown.matchAll(new RegExp(`^\\| (${cfg.scenarioPrefix}-\\d{3}) \\|`, 'gm'))) if (!out.includes(m[1] as string)) out.push(m[1] as string);
+  return out;
+}
+
+export interface ScenarioCoverage {
+  /** SC id → the number of test titles naming it. */
+  readonly counts: Map<string, number>;
+  /** Catalogue ids named in no test title (expected until the batch that builds them). */
+  readonly missing: string[];
+  /** Ids named in more than one test title. */
+  readonly repeated: string[];
+  /** SC ids in titles that the catalogue does not define. */
+  readonly unknown: string[];
+}
+
+export function scenarioCoverage(plan: string, tests: readonly SourceFile[], cfg: Config = DEFAULT_CONFIG): ScenarioCoverage {
+  const ids = extractScenarioIds(plan, cfg);
+  const counts = new Map<string, number>();
+  for (const file of tests) {
+    for (const title of extractTitles(file.text, cfg)) {
+      for (const id of new Set([...title.matchAll(scId(cfg))].map((m) => m[0]))) counts.set(id, (counts.get(id) ?? 0) + 1);
+    }
+  }
+  return {
+    counts,
+    missing: ids.filter((id) => !counts.has(id)),
+    repeated: [...counts].filter(([, n]) => n > 1).map(([id]) => id).sort(),
+    unknown: [...counts.keys()].filter((id) => !ids.includes(id)).sort(),
+  };
+}
+
+// ---------------------------------------------------------------------------------------------------------------------
+// Command line
+
+export interface Io {
+  readText(path: string): string;
+  /** The test sources: every .ts/.tsx file under tests/ and e2e/, and the .test.ts(x) files of src/. */
+  testFiles(): SourceFile[];
+  /** The code under src/: every .ts/.tsx file that is not a test. */
+  sourceFiles(): SourceFile[];
+  out(line: string): void;
+  err(line: string): void;
+}
+
+function walk(dir: string, accept: (name: string) => boolean, out: string[]): void {
+  let entries;
+  try {
+    entries = readdirSync(dir, { withFileTypes: true });
+  } catch {
+    return; // a missing folder is fine
+  }
+  for (const entry of entries.sort((a, b) => a.name.localeCompare(b.name))) {
+    if (entry.name === 'node_modules' || entry.name.startsWith('.')) continue;
+    const full = join(dir, entry.name);
+    if (entry.isDirectory()) walk(full, accept, out);
+    else if (accept(entry.name)) out.push(full);
+  }
+}
+
+const isSource = (name: string): boolean => /\.tsx?$/.test(name);
+const isTest = (name: string): boolean => /\.test\.tsx?$/.test(name);
+
+const readAll = (root: string, found: readonly string[]): SourceFile[] =>
+  found.map((full) => ({ path: full.slice(root.length).replace(/\\/g, '/'), text: readFileSync(full, 'utf8') }));
+
+export const makeIo = (root: string, cfg: Config): Io => ({
+  readText: (path) => readFileSync(join(root, path), 'utf8'),
+  testFiles: () => {
+    const found: string[] = [];
+    for (const d of cfg.testDirs) walk(join(root, d), isSource, found);
+    for (const d of cfg.testSrcDirs) walk(join(root, d), isTest, found);
+    return readAll(root, found).filter((file) => file.path !== cfg.selfTest);
+  },
+  sourceFiles: () => {
+    const found: string[] = [];
+    for (const d of cfg.sourceDirs) walk(join(root, d), (name) => isSource(name) && !isTest(name), found);
+    return readAll(root, found);
+  },
+  out: (line) => {
+    console.log(line);
+  },
+  err: (line) => {
+    console.error(line);
+  },
+});
+
+export function run(args: readonly string[], io: Io, cfg: Config = DEFAULT_CONFIG): number {
+  const unknown = args.filter(
+    (a) => a !== '--strict' && a !== '--warn' && a !== '--quiet' && a !== '--release',
+  );
+  if (unknown.length > 0) {
+    io.err(`unknown argument: ${unknown.join(' ')}\n${USAGE}`);
+    return 2;
+  }
+  const release = args.includes('--release');
+  const strict = (args.includes('--strict') || release) && !args.includes('--warn');
+  const quiet = args.includes('--quiet');
+
+  const plan = io.readText(cfg.plan);
+  const coverage = computeCoverage(plan, io.testFiles(), io.sourceFiles(), cfg);
+  const { ids, covered } = coverage;
+  const pending = readPending(io, cfg);
+  const known = new Set(ids);
+  const stale = Object.keys(pending).filter((id) => !known.has(id));
+  const missingTitle = coverage.untitled.filter((id) => pending[id] === undefined);
+  const missingCite = coverage.uncited.filter((id) => pending[id] === undefined);
+  const waiting = ids.filter((id) => pending[id] !== undefined && !covered.includes(id));
+  const done = Object.keys(pending).filter((id) => covered.includes(id));
+  const mode = release ? 'release mode' : strict ? 'error mode' : 'warning mode';
+  io.out(
+    `traceability (${mode}): ${String(ids.length)} rule ids in the rules section (deferred ones excluded), ${String(covered.length)} titled and cited, ${String(waiting.length)} pending (${cfg.pending}), ${String(missingTitle.length)} not in a test title, ${String(missingCite.length)} not in a code comment`,
+  );
+  if (missingTitle.length > 0 && !quiet) {
+    io.out('not named in any test title, and not pending:');
+    for (const line of groupByPrefix(missingTitle)) io.out(line);
+  }
+  if (missingCite.length > 0 && !quiet) {
+    io.out('not cited in any code comment under src/, and not pending:');
+    for (const line of groupByPrefix(missingCite)) io.out(line);
+  }
+  if (done.length > 0 && !quiet)
+    io.out(`titled and cited but still pending (remove them): ${done.join(' ')}`);
+  if (stale.length > 0) io.err(`pending ids that the rules section does not define: ${stale.join(' ')}`);
+  if (release && Object.keys(pending).length > 0) {
+    io.err(`release: ${String(Object.keys(pending).length)} rule id(s) are still pending`);
+    return 1;
+  }
+  if (coverage.unknown.length > 0 && !quiet)
+    io.out(`named in a test title but not defined in the rules section: ${coverage.unknown.join(' ')}`);
+  const sc = scenarioCoverage(plan, io.testFiles(), cfg);
+  if (sc.counts.size > 0 || sc.missing.length > 0) {
+    io.out(
+      `scenarios: ${String(sc.counts.size)} of the catalogue in test titles, ${String(sc.missing.length)} not yet (a later batch), ${String(sc.repeated.length)} in more than one title`,
+    );
+  }
+  if (sc.repeated.length > 0) io.err(`scenario ids in more than one test title: ${sc.repeated.join(' ')}`);
+  if (sc.unknown.length > 0) io.err(`scenario ids in test titles that the plan's scenario catalogue does not define: ${sc.unknown.join(' ')}`);
+  const failed =
+    missingTitle.length > 0 ||
+    missingCite.length > 0 ||
+    stale.length > 0 ||
+    coverage.unknown.length > 0 ||
+    sc.repeated.length > 0 ||
+    sc.unknown.length > 0;
+  return strict && failed ? 1 : 0;
+}
+
+if (process.argv[1] !== undefined && import.meta.url === pathToFileURL(resolve(process.argv[1])).href) {
+  const args = process.argv.slice(2);
+  const at = args.indexOf('--config');
+  const file = at >= 0 ? (args.splice(at, 2)[1] ?? '') : 'trace.config.json';
+  const root = process.cwd();
+  const cfg: Config = { ...DEFAULT_CONFIG, ...(JSON.parse(readFileSync(join(root, file), 'utf8')) as Partial<Config>) };
+  process.exitCode = run(args, makeIo(root + '/', cfg), cfg);
+}

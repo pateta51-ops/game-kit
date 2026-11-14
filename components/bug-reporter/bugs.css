@@ -1,0 +1,461 @@
+/* Bug reports: the dialog, Settings > Bug reports, the queue bar and the floating button. Every colour, font and radius is a
+   --bug-* variable with a neutral default (set it on :root or any ancestor to theme it). Sizes follow the window: about 28 px
+   text at 3840 px, 15 px on the phone. */
+:where(:root) {
+  --bug-accent: #555555;
+  --bug-backdrop: #0000008c;
+  --bug-bad: #b3261e;
+  --bug-bad-edge: #b3261e;
+  --bug-badge-bg: #333333;
+  --bug-border: #9aa0a6;
+  --bug-button-bg: #e8eaed;
+  --bug-button-shadow: #b4b8bc;
+  --bug-button-text: #222222;
+  --bug-chip-bg: #00000010;
+  --bug-field-bg: #ffffff;
+  --bug-float-bg: #333333cc;
+  --bug-float-border: #8a8f95;
+  --bug-float-text: #ffffff;
+  --bug-font-body: system-ui, sans-serif;
+  --bug-font-caption: system-ui, sans-serif;
+  --bug-font-heading: system-ui, sans-serif;
+  --bug-heading: #111111;
+  --bug-muted: #555555;
+  --bug-note-bg: #ffffff59;
+  --bug-ok: #2e7d32;
+  --bug-ok-edge: #2e7d32;
+  --bug-panel-bg: #f4f4f4;
+  --bug-panel-edge: #9aa0a6;
+  --bug-primary-bg: #2c6bc4;
+  --bug-primary-edge: #1f4d8f;
+  --bug-primary-text: #ffffff;
+  --bug-radius-lg: 8px;
+  --bug-radius-md: 6px;
+  --bug-radius-panel: 8px;
+  --bug-radius-pill: 999px;
+  --bug-radius-sm: 4px;
+  --bug-rule: #d0d4d8;
+  --bug-shadow: #00000066;
+  --bug-shadow-soft: #0000001f;
+  --bug-text: #222222;
+}
+.bug-backdrop {
+  --bug-fs: clamp(15px, 0.74vw, 28px);
+  position: fixed;
+  inset: 0;
+  z-index: 300;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2vmin;
+  box-sizing: border-box;
+  background: var(--bug-backdrop);
+  font-size: var(--bug-fs);
+}
+.bugdlg {
+  width: min(64em, 100%);
+  max-height: 100%;
+  overflow: auto;
+  box-sizing: border-box;
+  padding: 1.2em 1.5em 1.3em;
+  border: 1.5px solid var(--bug-panel-edge);
+  border-radius: var(--bug-radius-panel);
+  background: var(--bug-panel-bg);
+  box-shadow: 0 0.6em 2em var(--bug-shadow);
+  color: var(--bug-text);
+  font: 1em/1.35 var(--bug-font-body);
+}
+.bugdlg h2 {
+  margin: 0 0 0.6em;
+  font: 700 1.7em var(--bug-font-heading);
+  color: var(--bug-heading);
+}
+.bugdlg__body {
+  display: grid;
+  grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr);
+  gap: 1.2em;
+  align-items: start;
+}
+.bugdlg__shotcol {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6em;
+  align-items: flex-start;
+}
+.bugdlg__shot {
+  display: block;
+  width: auto;
+  max-width: 100%;
+  max-height: 40vh;
+  object-fit: contain;
+  border: 1.5px solid var(--bug-border);
+  border-radius: var(--bug-radius-md);
+}
+.bugdlg__label {
+  display: block;
+  margin-bottom: 0.35em;
+  font: 700 1.1em var(--bug-font-heading);
+}
+.bugdlg__text {
+  width: 100%;
+  box-sizing: border-box;
+  min-height: 7em;
+  padding: 0.5em 0.6em;
+  border: 1.5px solid var(--bug-border);
+  border-radius: var(--bug-radius-md);
+  background: var(--bug-field-bg);
+  color: var(--bug-heading);
+  font: 1em/1.35 var(--bug-font-body);
+  resize: vertical;
+}
+.bugdlg__buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6em;
+  margin-top: 1em;
+}
+.bug-btn {
+  font: 600 1em var(--bug-font-heading);
+  color: var(--bug-button-text);
+  background: var(--bug-button-bg);
+  border: 1.5px solid var(--bug-border);
+  border-radius: var(--bug-radius-lg);
+  padding: 0.4em 0.95em;
+  box-shadow:
+    0 2px 0 var(--bug-button-shadow),
+    0 4px 8px var(--bug-shadow-soft);
+  cursor: pointer;
+  text-decoration: none;
+}
+.bug-btn.primary {
+  background: linear-gradient(var(--bug-primary-bg), var(--bug-primary-edge));
+  color: var(--bug-primary-text);
+  border-color: var(--bug-primary-edge);
+}
+.bug-btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+.bug-note {
+  display: block;
+  font: 0.86em/1.35 var(--bug-font-caption);
+  color: var(--bug-muted);
+  margin: 0.5em 0 0;
+}
+.bug-bad {
+  display: block;
+  font: 0.92em/1.35 var(--bug-font-caption);
+  color: var(--bug-bad);
+  margin: 0.6em 0 0;
+}
+.bug-ok {
+  display: block;
+  font: 0.92em/1.35 var(--bug-font-caption);
+  color: var(--bug-ok);
+  margin: 0.6em 0 0;
+}
+.bug-ok a,
+.bug-summary a {
+  color: var(--bug-accent);
+  font-weight: 700;
+}
+
+/* Settings > Bug reports, and Home's bar. The book's text sizes are the menu's (zoomed at 4K by .menu-frame). */
+.bug-book {
+  --bug-fs: 26px;
+  font-size: var(--bug-fs);
+  margin-top: 28px;
+  width: 1828px;
+  max-width: calc(100vw - 40px);
+}
+.bug-book__top {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 0.8em;
+}
+.bug-book__more {
+  display: flex;
+  gap: 0.6em;
+  flex-wrap: wrap;
+}
+.bug-queuebar {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5em;
+  font-size: var(--bug-fs, 1em);
+}
+.bug-queuebar__row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.7em;
+}
+.bug-count {
+  font: 700 1.1em var(--bug-font-heading);
+  color: var(--bug-heading);
+}
+.bug-link {
+  font: 0.95em var(--bug-font-caption);
+  color: var(--bug-button-text);
+}
+.bug-summary {
+  padding: 0.5em 0.8em;
+  border-left: 4px solid var(--bug-ok-edge);
+  background: var(--bug-note-bg);
+  border-radius: var(--bug-radius-sm);
+  font: 0.95em/1.35 var(--bug-font-caption);
+  color: var(--bug-text);
+  max-width: 60em;
+}
+.bug-summary.bad {
+  border-left-color: var(--bug-bad-edge);
+}
+.bug-summary ul {
+  margin: 0.3em 0 0;
+  padding-left: 1.2em;
+}
+.bug-summary li {
+  font: 0.95em/1.35 var(--bug-font-caption);
+  margin: 0.15em 0;
+}
+.bug-list {
+  list-style: none;
+  margin: 0.8em 0 0;
+  padding: 0;
+}
+.bug-list li.bug-row {
+  display: grid;
+  grid-template-columns: 7em minmax(0, 1fr) auto;
+  gap: 0.8em;
+  align-items: center;
+  margin: 0;
+  padding: 0.55em 0;
+  border-top: 1px solid var(--bug-rule);
+  font: 1em var(--bug-font-body);
+}
+.bug-thumb {
+  width: 7em;
+  height: 3.95em;
+  object-fit: cover;
+  object-position: left top;
+  border: 1px solid var(--bug-border);
+  border-radius: var(--bug-radius-sm);
+}
+.bug-thumb.none {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font: 0.75em var(--bug-font-caption);
+  color: var(--bug-muted);
+  background: var(--bug-chip-bg);
+}
+.bug-row__what {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.bug-row__what b {
+  font: 700 1em var(--bug-font-heading);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.bug-row__what .bug-note,
+.bug-row__what .bug-bad,
+.bug-row__what .bug-ok {
+  margin: 0.1em 0 0;
+}
+.bug-row__btns {
+  display: flex;
+  gap: 0.45em;
+}
+.bug-row__btns .bug-btn {
+  font-size: 0.9em;
+}
+.bug-token {
+  margin-top: 1em;
+  padding-top: 0.6em;
+  border-top: 1px solid var(--bug-rule);
+}
+.bug-token h3 {
+  margin: 0;
+  font: 700 1.15em var(--bug-font-heading);
+}
+.bug-token__row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.6em;
+  margin-top: 0.5em;
+}
+.bug-token__row input {
+  flex: 1;
+  min-width: 10em;
+  max-width: 28em;
+  padding: 0.4em 0.6em;
+  border: 1.5px solid var(--bug-border);
+  border-radius: var(--bug-radius-md);
+  background: var(--bug-field-bg);
+  color: var(--bug-heading);
+  font: 1em var(--bug-font-caption);
+}
+.bug-token__row .bug-ok,
+.bug-token__row .bug-bad {
+  margin: 0;
+}
+
+/* the menu's own paragraph and list sizes would win over these inside the book */
+.book.bug-book p.bug-note {
+  font: 0.86em/1.35 var(--bug-font-caption);
+  margin: 0.4em 0 0;
+}
+.book.bug-book .bug-summary li {
+  font: 0.95em/1.35 var(--bug-font-caption);
+  margin: 0.15em 0;
+}
+@media (min-width: 2400px) {
+  .bug-book {
+    width: 1840px;
+  }
+}
+
+/* Home: the queue under the buttons, only while reports wait */
+.home .bug-queuebar.compact {
+  --bug-fs: clamp(15px, 0.7vw, 26px);
+  margin-top: 1.2em;
+  padding: 0.6em 1em;
+  border: 1.5px solid var(--bug-panel-edge);
+  border-radius: var(--bug-radius-panel);
+  background: var(--bug-panel-bg);
+  color: var(--bug-text);
+  position: relative;
+  z-index: 1;
+  max-width: min(46em, calc(100vw - 32px));
+  box-sizing: border-box;
+}
+
+/* the table's button, beside Settings in the top band */
+.bug-table-btn {
+  position: absolute;
+  right: 300px;
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: var(--bug-badge-bg);
+  color: var(--bug-float-text);
+  border: 1.5px solid var(--bug-float-border);
+  border-radius: var(--bug-radius-lg);
+  box-shadow: none;
+  font: 24px var(--bug-font-caption);
+  padding: 12px 18px;
+  cursor: pointer;
+}
+.bug-table-btn .bug-ico {
+  width: 30px;
+  height: 30px;
+}
+.bug-badge {
+  font: 700 18px var(--bug-font-caption);
+  font-style: normal;
+  background: var(--bug-bad-edge);
+  color: var(--bug-primary-text);
+  border-radius: var(--bug-radius-pill);
+  padding: 1px 9px;
+}
+
+@media (max-width: 600px) {
+  .bug-backdrop {
+    padding: 0;
+    align-items: stretch;
+  }
+  .bugdlg {
+    border-radius: 0;
+    padding: 14px 14px 16px;
+  }
+  .bugdlg__body {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+  .bugdlg__shotcol {
+    align-items: center;
+  }
+  .bugdlg__shot {
+    max-height: 30vh;
+  }
+  .bugdlg__buttons .bug-btn {
+    flex: 1 1 40%;
+    padding: 10px 8px;
+  }
+  .bug-book {
+    --bug-fs: 15px;
+  }
+  .bug-list li.bug-row {
+    grid-template-columns: 4.5em minmax(0, 1fr);
+  }
+  .bug-thumb {
+    width: 4.5em;
+    height: 2.6em;
+  }
+  .bug-row__btns {
+    grid-column: 1 / -1;
+  }
+  .bug-row__btns .bug-btn {
+    flex: 1;
+    padding: 8px 6px;
+  }
+  .bug-table-btn {
+    right: 52px;
+    top: 26px;
+    font-size: 12px;
+    padding: 5px 7px;
+    gap: 3px;
+  }
+  .bug-table-btn span {
+    display: none;
+  }
+  .bug-table-btn .bug-ico {
+    width: 18px;
+    height: 18px;
+  }
+  .bug-badge {
+    font-size: 11px;
+    padding: 0 5px;
+  }
+}
+
+/* issue 45: the floating bug button, top left on every screen (the safe-area insets keep it clear of the notch) */
+.bug-float {
+  position: fixed;
+  z-index: 900;
+  top: calc(env(safe-area-inset-top, 0px) + 4px);
+  left: calc(env(safe-area-inset-left, 0px) + 4px);
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--bug-float-bg);
+  color: var(--bug-float-text);
+  border: 1px solid var(--bug-float-border);
+  border-radius: var(--bug-radius-lg);
+  cursor: pointer;
+}
+.bug-float svg {
+  width: 18px;
+  height: 18px;
+}
+@media (min-width: 601px) and (pointer: fine) {
+  .bug-float {
+    width: 44px;
+    height: 44px;
+  }
+  .bug-float svg {
+    width: 26px;
+    height: 26px;
+  }
+}
