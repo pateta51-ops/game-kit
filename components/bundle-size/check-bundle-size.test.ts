@@ -35,4 +35,12 @@ describe('bundle size', () => {
     expect(run(['--dir', dir], io)).toBe(2);
     expect(run(['--nope', '1'], io)).toBe(2);
   });
+
+  it('run reads its limits from --config', () => {
+    const cfg = join(dir, 'limits.json');
+    writeFileSync(cfg, JSON.stringify({ initialBudget: 10_000, chunkLimit: 5000, assetLimit: 100 }));
+    expect(run(['--config', cfg, '--dir', dir], io)).toBe(0);
+    writeFileSync(cfg, JSON.stringify({ initialBudget: 10, chunkLimit: 5000, assetLimit: 100 }));
+    expect(run(['--config', cfg, '--dir', dir], io)).toBe(1);
+  });
 });

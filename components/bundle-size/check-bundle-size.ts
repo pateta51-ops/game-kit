@@ -1,4 +1,4 @@
-// The bundle-size gate (from EBR scripts/check-bundle-size.ts). Builds the app with vite into .cache/size-build (or measures
+// The bundle-size gate. Builds the app with vite into .cache/size-build (or measures
 // --dir), gzips index.html and every file it loads at once, and fails when the first download, a script chunk or a
 // media file is over the limits the game supplies (flags or --config). Exit codes: 0 within budget, 1 over, 2 no build
 // or bad usage.

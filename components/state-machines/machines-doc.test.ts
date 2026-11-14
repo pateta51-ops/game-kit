@@ -3,8 +3,8 @@ import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { beforeAll, describe, expect, it } from 'vitest';
 import { DOOR_MACHINE } from './fake/door.machine';
-import { getMachine, listMachines, MACHINES_DOC } from './machine';
-import { checkFindings, definingFiles, loadModules, machineText, renderDoc, tableLine, type MachinesConfig } from './machines-doc';
+import { getMachine, listMachines, MACHINES_DOC, setMachinesDoc } from './machine';
+import { checkFindings, definingFiles, loadModules, machineText, readConfig, renderDoc, tableLine, type MachinesConfig } from './machines-doc';
 import { listText } from './machines';
 import { expectIllegal } from './test-utils';
 
@@ -41,6 +41,22 @@ describe('machines:doc and machines:check (generic)', () => {
       expect(checkFindings(root, cfg)).toEqual([]);
       expect(checkFindings(root, { srcDir: SRC, localState: 'nope.ts' })).toEqual([]);
     } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it('readConfig and loadModules take modules and the doc path from a config file', async () => {
+    const root = mkdtempSync(join(tmpdir(), 'machines-cfg-'));
+    const before = MACHINES_DOC;
+    try {
+      writeFileSync(join(root, 'm.config.json'), JSON.stringify({ modules: [`${SRC}/door.machine.ts`], doc: 'out/MAP.md' }));
+      const c = readConfig('m.config.json', root);
+      expect(c.modules).toEqual([`${SRC}/door.machine.ts`]);
+      expect(MACHINES_DOC).toBe('out/MAP.md');
+      await loadModules({ modules: [`${SRC}/door.machine.ts`] });
+      expect(listMachines().map((m) => m.id)).toContain('fake.door');
+    } finally {
+      setMachinesDoc(before);
       rmSync(root, { recursive: true, force: true });
     }
   });
