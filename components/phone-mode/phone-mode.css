@@ -1,0 +1,108 @@
+/* phone-mode: neutral defaults at zero specificity; a game sets the --pm-* variables on :root or an ancestor. */
+:where(:root) {
+  --sat: env(safe-area-inset-top, 0px);
+  --sar: env(safe-area-inset-right, 0px);
+  --sab: env(safe-area-inset-bottom, 0px);
+  --sal: env(safe-area-inset-left, 0px);
+  --pm-h: 100dvh;
+}
+/* fixed layers measure from a full-height page (an iPhone Home Screen app otherwise leaves a band) */
+:where(:root[data-layout='phone']),
+:where(:root[data-layout='phone'] body) {
+  height: 100%;
+}
+:where(.kit-pm-layer) {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: var(--pm-h);
+  z-index: var(--pm-z, 30);
+}
+:where(.kit-pm-scrim) {
+  position: absolute;
+  inset: 0;
+  background: var(--pm-scrim, rgba(0, 0, 0, 0.6));
+}
+:where(.kit-pm-sheet) {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  max-height: calc(var(--pm-sheet-max, 0.88) * var(--pm-h));
+  display: flex;
+  flex-direction: column;
+  border-radius: var(--pm-sheet-radius, 18px 18px 0 0);
+  background: var(--pm-sheet-bg, #fff);
+  color: var(--pm-sheet-text, #111);
+  animation: kit-pm-slide ease-out both;
+}
+@keyframes kit-pm-slide {
+  from {
+    transform: translateY(40%);
+    opacity: 0.4;
+  }
+}
+:where(.kit-pm-sheet-hd) {
+  position: relative;
+  flex: none;
+  display: flex;
+  align-items: center;
+  height: 44px;
+  padding: 0 52px 0 16px;
+  font: var(--pm-head-font, 700 20px / 1 sans-serif);
+}
+:where(.kit-pm-sheet-hd)::before {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: 6px;
+  width: 40px;
+  height: 5px;
+  margin-left: -20px;
+  border-radius: 3px;
+  background: var(--pm-handle, rgba(0, 0, 0, 0.3));
+}
+:where(.kit-pm-x) {
+  position: absolute;
+  right: 4px;
+  top: 0;
+  width: 44px;
+  height: 44px;
+  border: 0;
+  background: none;
+  font: var(--pm-close-font, 400 26px sans-serif);
+  color: inherit;
+}
+:where(.kit-pm-sheet-body) {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 0 16px 12px;
+}
+:where(.kit-pm-sheet-body:last-child) {
+  padding-bottom: calc(var(--sab) + 12px);
+}
+:where(.kit-pm-sheet-foot) {
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px 12px calc(var(--sab) + 6px);
+  border-top: var(--pm-foot-border, 1px solid rgba(0, 0, 0, 0.2));
+}
+:where(.kit-pm-rotate) {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: var(--pm-h);
+  z-index: var(--pm-rotate-z, 100);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  background: var(--pm-rotate-bg, rgba(0, 0, 0, 0.95));
+  color: var(--pm-rotate-text, #fff);
+}

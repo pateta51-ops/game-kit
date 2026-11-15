@@ -1,0 +1,131 @@
+import { act, fireEvent, render, renderHook, screen } from '@testing-library/react';
+import { afterEach, describe, expect, it, vi } from 'vitest';
+import { setSafeArea, useViewport, type LayoutSetting } from './index';
+import { RotatePanel, Sheet, useSecondTap } from './ui';
+
+const size = (w: number, h: number) => {
+  vi.stubGlobal('innerWidth', w);
+  vi.stubGlobal('innerHeight', h);
+};
+const coarse = (on: boolean) =>
+  vi.stubGlobal('matchMedia', (q: string) => ({
+    matches: on && q === '(pointer: coarse)',
+    media: q,
+    addEventListener: () => undefined,
+    removeEventListener: () => undefined,
+  }));
+
+afterEach(() => {
+  vi.unstubAllGlobals();
+  window.location.hash = '';
+});
+
+describe('the viewport store', () => {
+  it('follows the window and the setting; zooms only fitted or a location with no phone screen; stop removes listeners', () => {
+    size(1920, 1080);
+    coarse(false);
+    let setting: LayoutSetting = 'auto';
+    const subs = new Set<() => void>();
+    const change = (s: LayoutSetting) => {
+      setting = s;
+      for (const f of subs) f();
+    };
+    const root = { style: { zoom: '' } } as unknown as HTMLElement;
+    const stop = useViewport.getState().start(root, {
+      setting: () => setting,
+      onSetting: (f) => {
+        subs.add(f);
+        return () => subs.delete(f);
+      },
+      phoneScreen: (h) => h !== '#/old',
+    });
+    const html = document.documentElement.dataset;
+    expect(useViewport.getState().mode).toBe('fitted');
+    expect(html['layout']).toBe('fitted');
+    expect(html['orient']).toBe('landscape');
+    expect(html['display']).toBe('browser');
+    expect(root.style.zoom).toBe('0.5');
+
+    size(390, 844);
+    coarse(true);
+    change('phone');
+    expect(useViewport.getState().mode).toBe('phonePortrait');
+    expect(html['layout']).toBe('phone');
+    expect(html['orient']).toBe('portrait');
+    expect(root.style.zoom).toBe('');
+
+    window.location.hash = '#/old';
+    window.dispatchEvent(new Event('hashchange'));
+    expect(root.style.zoom).not.toBe('');
+
+    size(844, 390);
+    window.dispatchEvent(new Event('resize'));
+    expect(useViewport.getState().mode).toBe('phoneLandscape');
+
+    size(3840, 2160);
+    coarse(false);
+    change('desk');
+    expect(useViewport.getState().mode).toBe('desk');
+    expect(root.style.zoom).toBe('');
+
+    stop();
+    expect(subs.size).toBe(0);
+    size(1920, 1080);
+    window.dispatchEvent(new Event('resize'));
+    expect(useViewport.getState().mode).toBe('desk');
+  });
+  it('setSafeArea writes the four tokens', () => {
+    setSafeArea(47, 0, 34, 0);
+    expect(document.documentElement.style.getPropertyValue('--sat')).toBe('47px');
+    expect(document.documentElement.style.getPropertyValue('--sab')).toBe('34px');
+  });
+});
+
+describe('Sheet and RotatePanel', () => {
+  it('title labels the dialog with a per-instance id; close button and scrim close; foot shows', () => {
+    const onClose = vi.fn();
+    render(
+      <>
+        <Sheet title="One" onClose={onClose} foot={<button type="button">Pick</button>} slideMs={0}>
+          body
+        </Sheet>
+        <Sheet title="Two" onClose={onClose} testId="other">
+          x
+        </Sheet>
+      </>,
+    );
+    const a = screen.getByRole('dialog', { name: 'One' });
+    const b = screen.getByRole('dialog', { name: 'Two' });
+    expect(a.getAttribute('aria-labelledby')).not.toBe(b.getAttribute('aria-labelledby'));
+    expect(screen.getByText('Pick')).toBeInTheDocument();
+    fireEvent.click(screen.getByTestId('phone-sheet-close'));
+    fireEvent.click(screen.getByTestId('other-scrim'));
+    expect(onClose).toHaveBeenCalledTimes(2);
+  });
+  it('RotatePanel shows the game children and is not captured', () => {
+    render(<RotatePanel>Turn</RotatePanel>);
+    expect(screen.getByTestId('rotate-panel')).toHaveTextContent('Turn');
+    expect(screen.getByTestId('rotate-panel')).toHaveAttribute('data-no-capture');
+  });
+});
+
+describe('useSecondTap', () => {
+  it('commits on the second tap on the same target; a reset key change disarms', () => {
+    const commit = vi.fn();
+    const { result, rerender } = renderHook(({ k }) => useSecondTap(commit, k), { initialProps: { k: 1 } });
+    act(() => result.current.tap('a'));
+    expect(result.current.armed).toBe('a');
+    act(() => result.current.tap('b'));
+    expect(result.current.armed).toBe('b');
+    act(() => result.current.tap('b'));
+    expect(commit).toHaveBeenCalledWith('b');
+    expect(result.current.armed).toBe(null);
+    act(() => result.current.tap('a'));
+    rerender({ k: 2 });
+    expect(result.current.armed).toBe(null);
+    act(() => result.current.tap('a'));
+    act(() => result.current.disarm());
+    expect(result.current.armed).toBe(null);
+    expect(commit).toHaveBeenCalledTimes(1);
+  });
+});

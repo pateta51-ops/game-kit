@@ -1,0 +1,26 @@
+{
+  "name": "phone-mode",
+  "source": {
+    "game": "jarl",
+    "commit": "6f006a2",
+    "paths": [
+      "src/ui/viewport/viewport.machine.ts",
+      "src/ui/viewport/viewport.ts (layoutModeFor, store; the route list and the Layout setting are passed in)",
+      "src/ui/viewport/safeArea.ts",
+      "src/ui/fit.ts",
+      "src/ui/phone/Sheet.tsx (motion speed and close words passed in)",
+      "src/ui/phone/sheetStore.ts (store over the game's own sheet machine)",
+      "src/ui/phone/disclosure.machine.ts (the fold table as a factory)",
+      "src/ui/phone/table/RotatePanel.tsx (content passed in)",
+      "src/ui/theme/phone.css (sheet, scrim, rotate panel), src/ui/theme/tokens.css (safe-area tokens)",
+      "src/ui/viewport/viewport.test.ts, src/ui/viewport/store.test.ts, src/ui/fit.test.ts"
+    ]
+  },
+  "needs": [
+    "state-machines"
+  ],
+  "packages": [
+    "react",
+    "zustand"
+  ]
+}

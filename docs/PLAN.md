@@ -33,7 +33,7 @@ Known limit (engine-core): the single-copy guard stops two copies loaded from tw
 | K5 | Saved games; offline install | M |
 | K6 | Settings; app frame | M |
 | K7 | Glossary | M |
-| K8 | Phone mode | M |
+| K8 | Phone mode | M (done) |
 | K9 | Simulation pool, driver contract, driver random numbers | S to M (done) |
 | K10 | Pattern notes: card-language interpreter, proof sheet, players and sanity bands, themed frames, tutorial freeze, visual replay | S (done) |
 
