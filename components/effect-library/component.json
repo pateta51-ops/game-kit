@@ -1,0 +1,14 @@
+{
+  "name": "effect-library",
+  "source": {
+    "game": "stcc",
+    "commit": "9fc59643",
+    "paths": [
+      "the idea of its generic effect set (overlay layer with clones, one registered effect per name); rewritten as the twelve verbs of the director's spec format on the Web Animations API, no file taken"
+    ],
+    "grafts": [
+      { "game": "ebr", "commit": "33b5abd3", "paths": ["the overlay layer above the page; idea only, no file taken"] }
+    ]
+  },
+  "needs": ["motion-frame"]
+}

@@ -11,6 +11,8 @@ export interface Actor {
   w?: number;
   h?: number;
   hidden?: boolean;
+  opacity?: number;
+  veil?: boolean;
 }
 export interface Step {
   t: number;
@@ -48,7 +50,7 @@ export interface VerbCall {
 export interface Timeline {
   id: string;
   ms: number;
-  actors: { id: string; label: string; rect: Rect; hidden: boolean }[];
+  actors: { id: string; label: string; rect: Rect; hidden: boolean; opacity?: number; veil?: boolean }[];
   calls: VerbCall[];
   cues: { t: number; cue: string }[];
 }
@@ -87,7 +89,7 @@ export function buildTimeline(spec: MotionSpec, stage: Stage, factor = 1): Timel
   const actors = (spec.actors ?? []).map((a) => {
     const rect = place(a.at, stage, a.w, a.h) ?? fail(`actor ${a.id}: zone ${String(a.at)} is not on the stage`);
     now.set(a.id, rect);
-    return { id: a.id, label: a.label ?? a.id, rect, hidden: a.hidden === true };
+    return { id: a.id, label: a.label ?? a.id, rect, hidden: a.hidden === true, ...(a.opacity !== undefined && { opacity: a.opacity }), ...(a.veil && { veil: true }) };
   });
   const calls = spec.steps
     .map((s, i) => ({ s, i }))
