@@ -50,6 +50,19 @@ describe('rendered files', () => {
     }
   });
 
+  it('install-wsl.sh exits 2 on an empty or malformed token, before any download (skipped when bash is missing)', () => {
+    if (spawnSync('bash', ['--version']).status !== 0) return;
+    for (const t of ['', ' \r', 'gh: Server Error (HTTP 500)', '{"message":"Server Error"}', 'short1']) {
+      const r = spawnSync('bash', [join(here, 'install-wsl.sh')], {
+        encoding: 'utf8',
+        env: { ...process.env, RUNNER_REPO: 'x/y', RUNNER_LABEL: 'test', RUNNER_DIR: join(dir, 'runner'), RUNNER_TOKEN: t },
+      });
+      expect(r.status, t).toBe(2);
+      expect(r.stdout, t).toMatch(/token is missing or malformed.*registration-token.*HTTP 500.*run it again/);
+      if (t.trim()) expect(r.stdout + r.stderr, t).not.toContain(t);
+    }
+  });
+
   it('the workflows run only on the labelled runner and never on pull_request_target', () => {
     for (const f of ['ci.yml', 'full-gate.yml']) {
       const y = render(f);

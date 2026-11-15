@@ -10,6 +10,12 @@ Copy these into a new game and replace the three placeholders. Nothing here name
 
 Copy to: `ci.yml` and `full-gate.yml` to `.github/workflows/`, `full-gate.mjs` to `.github/scripts/`, `local-ci.sh` and `gate-slot.sh` to `tools/architect/`, `install-wsl.sh` anywhere (it takes the slug and label as `RUNNER_REPO=<owner>/<repo> RUNNER_LABEL=<label>` environment variables, not placeholders).
 
+`install-wsl.sh` needs a registration token (valid one hour). With `gh` only on Windows, fetch it in PowerShell so that it stops when `gh` fails (for example HTTP 500); the script itself exits 2 before downloading anything when the token it is given is missing or malformed:
+
+```powershell
+$t = gh api -X POST repos/<owner>/<repo>/actions/runners/registration-token -q .token; if ($LASTEXITCODE -ne 0 -or -not $t) { "no token: run again" } else { wsl -d Ubuntu -e env RUNNER_REPO=<owner>/<repo> RUNNER_LABEL=<label> RUNNER_TOKEN=$t bash <path>/install-wsl.sh }
+```
+
 Other settings are environment variables: `E2E_SCRIPTS` (comma list of npm scripts the full gate runs, default `test:e2e`), `GATE_DIR` and `GATE_SLOTS` (gate slots), `LOCAL_CI_DIR`, `PW_CHROMIUM_PATH`, `RUNNER_WANT_PYMUPDF=1`.
 
 The workflows never use `pull_request_target`, and the full gate refuses a pull request whose head is outside the repository: keep both.

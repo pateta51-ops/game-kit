@@ -8,7 +8,10 @@
 #
 # Optional: RUNNER_DIR (default ~/actions-runner-<label>), RUNNER_NAME (default <label>-wsl), RUNNER_TOKEN.
 # The registration token (valid one hour) comes from `gh api -X POST repos/<repo>/actions/runners/registration-token`;
-# that needs `gh` signed in inside WSL. If gh is only on Windows, get the token there and pass it.
+# that needs `gh` signed in inside WSL. If gh is only on Windows, get the token there and pass it; in PowerShell, so
+# that it stops when gh fails (a failed gh leaves no token, and the registration would then fail with 401):
+#   $t = gh api -X POST repos/<owner>/<repo>/actions/runners/registration-token -q .token; if ($LASTEXITCODE -ne 0 -or -not $t) { "no token: run again" } else { wsl -d Ubuntu -e env RUNNER_REPO=<owner>/<repo> RUNNER_LABEL=<label> RUNNER_TOKEN=$t bash <path>/install-wsl.sh }
+# A token that is given (RUNNER_TOKEN set, even empty, or an argument) is checked before anything is downloaded.
 # It needs sudo -n, curl, tar and systemd in the WSL machine. It never
 # prints the token. Exit codes: 0 the service is active and the runner is online (or --check found it so), 1 it is not,
 # 2 bad usage or a missing tool.
@@ -19,22 +22,44 @@ LABEL="${RUNNER_LABEL:?set RUNNER_LABEL=<label>}"
 DIR="${RUNNER_DIR:-$HOME/actions-runner-$LABEL}"
 NAME="${RUNNER_NAME:-$LABEL-wsl}"
 TOKEN="${RUNNER_TOKEN:-}"
+GIVEN="${RUNNER_TOKEN+1}"
 CHECK_ONLY=0
 
 usage() { echo "usage: install-wsl.sh [--check] [--token <registration token> | <registration token>]" >&2; exit 2; }
 while [ $# -gt 0 ]; do
   case "$1" in
     --check) CHECK_ONLY=1 ;;
-    --token) shift; [ $# -gt 0 ] || usage; TOKEN="$1" ;;
+    --token) shift; [ $# -gt 0 ] || usage; TOKEN="$1"; GIVEN=1 ;;
     -h|--help) usage ;;
     -*) usage ;;
-    *) TOKEN="$1" ;;
+    *) TOKEN="$1"; GIVEN=1 ;;
   esac
   shift
 done
 
 say() { printf '[install-wsl] %s\n' "$*"; }
 need() { command -v "$1" >/dev/null 2>&1 || { say "missing tool: $1 ($2)"; exit 2; }; }
+
+# --- the token: checked before anything is downloaded or registered -----------------------------------------------------
+check_token() {
+  TOKEN="${TOKEN#"${TOKEN%%[![:space:]]*}"}"; TOKEN="${TOKEN%"${TOKEN##*[![:space:]]}"}"
+  [[ "$TOKEN" =~ ^[A-Za-z0-9]{20,}$ ]] && return 0
+  say "the registration token is missing or malformed: \`gh api -X POST repos/$REPO/actions/runners/registration-token\` probably failed (for example with a Server Error, HTTP 500): run it again and pass the new token"
+  exit 2
+}
+get_token() {
+  if [ -z "$GIVEN" ] && command -v gh >/dev/null 2>&1; then
+    TOKEN=$(gh api -X POST "repos/$REPO/actions/runners/registration-token" --jq .token 2>/dev/null || true)
+    GIVEN=$TOKEN
+  fi
+  if [ -z "$GIVEN" ]; then
+    say "no registration token: sign gh in inside WSL (gh auth login) or pass the token from Windows (see the top of this script)"
+    exit 2
+  fi
+  check_token
+}
+if [ "$CHECK_ONLY" = 0 ] && [ ! -f "$DIR/.runner" ]; then get_token; fi
+
 need curl "sudo apt-get install -y curl"
 need tar "sudo apt-get install -y tar"
 need systemctl "WSL needs systemd: add [boot] systemd=true to /etc/wsl.conf, then run wsl --shutdown in PowerShell"
@@ -90,17 +115,6 @@ if [ "$CHECK_ONLY" = 1 ]; then verify && exit 0 || exit 1; fi
 # --- sudo, the token ----------------------------------------------------------------------------------------------------
 sudo -n true 2>/dev/null || { say "sudo -n does not work in this WSL machine (the owner allowed it for services); run: sudo true  once, or fix /etc/sudoers.d"; exit 2; }
 
-get_token() {
-  if [ -n "$TOKEN" ]; then return 0; fi
-  if command -v gh >/dev/null 2>&1; then
-    TOKEN=$(gh api -X POST "repos/$REPO/actions/runners/registration-token" --jq .token 2>/dev/null || true)
-  fi
-  if [ -z "$TOKEN" ]; then
-    say "no registration token: sign gh in inside WSL (gh auth login) or pass the token from Windows (see the top of this script)"
-    exit 2
-  fi
-}
-
 # --- download the runner ------------------------------------------------------------------------------------------------
 mkdir -p "$DIR"
 cd "$DIR"
@@ -123,9 +137,12 @@ sudo -n ./bin/installdependencies.sh >/dev/null 2>&1 || say "installdependencies
 
 # --- register ---------------------------------------------------------------------------------------------------------
 if [ ! -f .runner ]; then
-  get_token
   say "registering $NAME with label $LABEL for $REPO"
-  ./config.sh --unattended --url "https://github.com/$REPO" --token "$TOKEN" --name "$NAME" --labels "$LABEL" --work _work --replace
+  ./config.sh --unattended --url "https://github.com/$REPO" --token "$TOKEN" --name "$NAME" --labels "$LABEL" --work _work --replace || {
+    rm -f .runner
+    say "registration failed: the token was rejected or has expired (it is valid one hour): fetch a new one and run this again"
+    exit 1
+  }
 else
   say "already registered (.runner exists in $DIR)"
 fi
