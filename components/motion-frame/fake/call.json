@@ -1,0 +1,15 @@
+{
+  "id": "F-3", "name": "A call and its lamp", "frequency": "rare", "stage": "table", "maxMs": 400,
+  "actors": [
+    { "id": "call", "label": "CALL", "at": "board.spot", "w": 300, "h": 120, "hidden": true },
+    { "id": "lamp", "label": "0", "at": "lamp", "w": 200, "h": 100 }
+  ],
+  "steps": [
+    { "t": 0, "dur": 400, "actor": "call", "do": "show", "note": "The word shows." },
+    { "t": 0, "dur": 200, "actor": "lamp", "do": "scale", "to": 1.3, "pulse": true, "note": "The lamp pops." },
+    { "t": 0, "dur": 200, "actor": "lamp", "do": "flip", "label": "1", "note": "One more is lit." }
+  ],
+  "sound": [{ "t": 0, "cue": "call" }, { "t": 0, "cue": "lamp-on" }],
+  "end": "One more lit.",
+  "speed": { "fast": 0.5, "instant": "jump to the end state" }
+}

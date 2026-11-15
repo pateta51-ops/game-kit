@@ -41,7 +41,7 @@ Known limit (engine-core): the single-copy guard stops two copies loaded from tw
 
 | Batch | Content | Effort | Release |
 |---|---|---|---|
-| K11 | Motion frame | M | 1.1 |
+| K11 | Motion frame (done) | M | 1.1 |
 | K12 | Effect library | M | 1.1 |
 | K13 | Sound player; sound generator | M | 1.2 |
 | K14 | Voice-over | M | 1.3 |

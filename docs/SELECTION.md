@@ -83,7 +83,7 @@ Open check before the lift: the canonical JSON of the Jarl line and of STCC buil
 
 | Component | Base | Graft from others | Effort |
 |---|---|---|---|
-| Motion frame | Warp's (pure tested plan, director, sound-cue hook, skip all) | EBR's registry with one entry per event kind and its speed setting with reduced motion; STCC's view transitions; Rome's injected-speed queue | M |
+| Motion frame | Warp's (pure tested plan, director, sound-cue hook, skip all) | EBR's registry with one entry per event kind and its speed setting with reduced motion; Rome's injected-speed queue (STCC's view transitions not taken: the frame plays stand-ins over a stage and commits no state) | M |
 | Effect library | STCC's generic set (kit, layer, dealing, beam, crumple, target highlight) plus Warp's particle kit | EBR's overlay layer, count-up and ambience | M |
 | Sound player | Warp's (cue table as data, music, priorities, ducking, most fixes) | Unstoppable's event-to-cue merge layer | M |
 | Sound generator | Warp's (the only one) | - | S to M |

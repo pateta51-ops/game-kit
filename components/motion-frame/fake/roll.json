@@ -1,0 +1,20 @@
+{
+  "id": "F-2", "name": "Two pieces thrown", "frequency": "constant", "stage": "table", "maxMs": 800,
+  "actors": [
+    { "id": "p0", "label": "?", "at": "tray", "w": 100, "h": 100 },
+    { "id": "p1", "label": "?", "at": "tray", "w": 100, "h": 100 }
+  ],
+  "steps": [
+    { "t": 0, "dur": 240, "actor": "p0", "do": "move", "to": [300, 2050], "note": "It slides out." },
+    { "t": 240, "dur": 360, "actor": "p0", "do": "shake", "note": "It jitters." },
+    { "t": 600, "dur": 200, "actor": "p0", "do": "flip", "label": "5", "note": "It shows its value." },
+    { "t": 600, "dur": 200, "actor": "p0", "do": "settle", "note": "It stops." },
+    { "t": 40, "dur": 240, "actor": "p1", "do": "move", "to": [420, 2050], "note": "It slides out." },
+    { "t": 240, "dur": 360, "actor": "p1", "do": "shake", "note": "It jitters." },
+    { "t": 600, "dur": 200, "actor": "p1", "do": "flip", "label": "2", "note": "It shows its value." },
+    { "t": 600, "dur": 200, "actor": "p1", "do": "settle", "note": "It stops." }
+  ],
+  "sound": [{ "t": 0, "cue": "throw" }],
+  "end": "Both pieces show a value.",
+  "speed": { "fast": 0.5, "instant": "jump to the end state" }
+}

@@ -1,0 +1,17 @@
+{
+  "name": "motion-frame",
+  "source": {
+    "game": "warps",
+    "commit": "6790200",
+    "paths": [
+      "src/ui/fx/plan.ts (the pure plan: a function of data to a list of timed effects, tested in node; here a function of a motion spec, a stage and a speed)",
+      "src/ui/fx/director.ts (plays a plan on timers, finishFx skips everything, a look that throws never stops the game; the ship looks and the DOM stand-ins stayed behind)",
+      "src/ui/fx/cue.ts (the cue sink, Instant still cues; the cue names became the spec's own strings)"
+    ],
+    "grafts": [
+      { "game": "ebr", "paths": ["the registry with one entry per event kind (as the BeatTable type) and reduced motion in the speed setting (withReducedMotion); idea only, no file taken"] },
+      { "game": "rome", "paths": ["the queue with injected speed (speed read when a beat starts); idea only, no file taken"] }
+    ]
+  },
+  "needs": []
+}

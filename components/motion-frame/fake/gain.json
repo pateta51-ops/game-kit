@@ -1,0 +1,13 @@
+{
+  "id": "F-1", "name": "Piece gained", "frequency": "constant", "stage": "table", "maxMs": 800,
+  "actors": [{ "id": "piece", "label": "Piece", "at": [250, 1690], "w": 100, "h": 100, "hidden": true }],
+  "steps": [
+    { "t": 0, "dur": 160, "actor": "piece", "do": "fade-in", "note": "It appears." },
+    { "t": 160, "dur": 440, "actor": "piece", "do": "move", "to": "tray", "note": "It slides to the tray." },
+    { "t": 600, "dur": 160, "actor": "piece", "do": "settle", "note": "It settles." },
+    { "t": 600, "dur": 200, "actor": "tray", "do": "glow", "note": "The tray glows." }
+  ],
+  "sound": [{ "t": 600, "cue": "drop" }],
+  "end": "The tray holds the piece.",
+  "speed": { "fast": 0.5, "instant": "jump to the end state" }
+}
