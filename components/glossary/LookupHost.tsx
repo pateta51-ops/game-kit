@@ -2,7 +2,7 @@
 // link on the desktop, phone-mode's bottom sheet on a phone. Close, Escape or a press outside closes it. Words inside are
 // links: one shows its entry in the same place, and Back returns. Mounted once, inside <GlossaryProvider>. It reads the
 // entries and the lookup store only, so it works while the game waits on a prompt.
-import { useEffect, useId, useLayoutEffect, useRef, type ReactNode } from 'react';
+import { useEffect, useId, useLayoutEffect, useRef, type ComponentType, type ReactNode } from 'react';
 import { isPhone, useViewport } from '../phone-mode/index';
 import { Sheet } from '../phone-mode/ui';
 import { paragraphs } from './match';
@@ -25,9 +25,12 @@ export function EntryBody({
   id,
   onTerm,
   ruleHref,
+  hideRules,
   words = WORDS,
 }: {
   id: string;
+  /** Leave the rule ids out of the DOM. */
+  hideRules?: boolean;
   onTerm?: OnTerm;
   ruleHref?: (rule: string) => string;
   words?: LookupWords;
@@ -36,7 +39,7 @@ export function EntryBody({
   const entries = useGlossary().index.entries;
   if (entry === undefined) return null;
   const on = onTerm === undefined ? {} : { onTerm };
-  const rules = entry.rules ?? [];
+  const rules = hideRules === true ? [] : (entry.rules ?? []);
   const see = entry.see ?? [];
   return (
     <>
@@ -91,7 +94,12 @@ export function LookupHost({
   ruleHref,
   glossaryHref,
   slideMs,
+  hideRules,
+  frame: Frame,
 }: {
+  hideRules?: boolean;
+  /** The game's own wrapper for the popover's content (the head, body and buttons). */
+  frame?: ComponentType<{ icon: ReactNode; name: string; children: ReactNode }>;
   /** Sheet or popover; by default phone-mode's layout decides. */
   phone?: boolean;
   words?: LookupWords;
@@ -109,7 +117,8 @@ export function LookupHost({
   const box = useRef<HTMLElement>(null);
   const titleId = useId();
   const id = trail.at(-1);
-  const entry = useGlossary().index.entries.get(id ?? '');
+  const { index, renderIcon } = useGlossary();
+  const entry = index.entries.get(id ?? '');
   const open = entry !== undefined;
 
   // Escape closes the lookup first (before anything under it)
@@ -163,7 +172,7 @@ export function LookupHost({
   );
   const body = (
     <div className="kit-glo-body" data-lookup={id} data-testid="lookup-body">
-      <EntryBody id={id} words={words} {...(ruleHref === undefined ? {} : { ruleHref })} />
+      <EntryBody id={id} words={words} {...(hideRules === true ? { hideRules } : {})} {...(ruleHref === undefined ? {} : { ruleHref })} />
     </div>
   );
   if (sheet)
@@ -193,19 +202,28 @@ export function LookupHost({
         style={{ visibility: 'hidden' }}
         role="dialog"
         aria-modal="true"
-        aria-labelledby={titleId}
+        {...(Frame === undefined ? { 'aria-labelledby': titleId } : { 'aria-label': entry.term })}
         data-testid="lookup"
         data-lookup={id}
         onClick={(event) => { event.stopPropagation(); }}
       >
-        <header className="kit-glo-head">
-          {kind !== null && <span className="kit-glo-kind">{kind}</span>}
-          <h2 className="kit-glo-term" id={titleId} data-testid="lookup-term">
-            {entry.term}
-          </h2>
-        </header>
-        {body}
-        {foot}
+        {Frame === undefined ? (
+          <>
+            <header className="kit-glo-head">
+              {kind !== null && <span className="kit-glo-kind">{kind}</span>}
+              <h2 className="kit-glo-term" id={titleId} data-testid="lookup-term">
+                {entry.term}
+              </h2>
+            </header>
+            {body}
+            {foot}
+          </>
+        ) : (
+          <Frame icon={entry.icon === undefined ? null : (renderIcon?.(entry.icon, entry) ?? null)} name={entry.term}>
+            {body}
+            {foot}
+          </Frame>
+        )}
       </section>
     </div>
   );

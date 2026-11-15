@@ -17,11 +17,15 @@ if (cmd === 'pull') {
   const [src, ref, ...names] = a
   const commit = x('git', ['-C', src, 'rev-parse', ref + '^{commit}'], { encoding: 'utf8' }).trim()
   const lock = readLock()
-  for (const n of names.length ? names : Object.keys(lock.components)) {
+  const todo = names.length ? [...names] : Object.keys(lock.components)
+  for (let i = 0; i < todo.length; i++) {
+    const n = todo[i]
     fs.rmSync('kit/' + n, { recursive: true, force: true })
     fs.mkdirSync('kit/' + n, { recursive: true })
     const tar = x('git', ['-C', src, 'archive', commit, 'components/' + n], { maxBuffer: 1 << 30 })
     x('tar', ['-xf', '-', '--strip-components=2', '-C', 'kit/' + n], { input: tar })
+    const cj = 'kit/' + n + '/component.json'
+    if (fs.existsSync(cj)) for (const m of JSON.parse(fs.readFileSync(cj, 'utf8')).needs ?? []) if (!todo.includes(m)) { if (lock.components[m]) console.log(m + ' kept at ' + lock.components[m].ref + ' (needed by ' + n + ')'); else todo.push(m) }
     lock.components[n] = { ref, commit, files: Object.fromEntries(walk('kit/' + n).map((f) => [f, sha(f)])) }
   }
   fs.writeFileSync('kit/kit.mjs', x('git', ['-C', src, 'show', commit + ':kit.mjs']))
@@ -34,6 +38,8 @@ if (cmd === 'pull') {
     const have = fs.existsSync('kit/' + n) ? walk('kit/' + n) : []
     for (const f of have) if (c.files[f] !== sha(f)) bad.push((f in c.files ? 'changed ' : 'added   ') + f)
     for (const f of Object.keys(c.files)) if (!have.includes(f)) bad.push('missing ' + f)
+    const cj = 'kit/' + n + '/component.json'
+    if (fs.existsSync(cj)) for (const m of JSON.parse(fs.readFileSync(cj, 'utf8')).needs ?? []) if (!lock.components[m]) bad.push(n + ' needs ' + m + ' (not pulled)')
   }
   if (bad.length) {
     console.error('kit/ differs from kit/kit.lock.json. Change the code in the game-kit repo and pull a new version; never edit this copy.\n' + bad.join('\n'))

@@ -51,6 +51,27 @@ describe('GlossaryText and LookupHost', () => {
     expect(screen.queryByTestId('lookup')).toBeNull();
   });
 
+  it('hideRules leaves rule ids out; frame wraps the popover content with icon and name', () => {
+    render(app('energy stun', { hideRules: true, frame: ({ icon, name, children }) => <div data-testid="frame" data-name={name}>{icon}{children}</div> }));
+    fireEvent.click(screen.getAllByTestId('glossary-link')[0]!);
+    expect(screen.getByTestId('frame')).toHaveAttribute('data-name', 'energy');
+    expect(screen.getByTestId('frame').querySelector('img')).toHaveAttribute('data-code', 'energy');
+    expect(screen.getByTestId('lookup-close')).toBeInTheDocument();
+    act(() => { useLookup.getState().close(); });
+    fireEvent.click(screen.getAllByTestId('glossary-link')[1]!);
+    expect(screen.getByTestId('lookup-summary').textContent).toBe('Stops an enemy.');
+    expect(screen.queryByText('R-1')).toBeNull();
+    expect(screen.queryByText(/Rules/)).toBeNull();
+  });
+
+  it('on the phone sheet hideRules holds and a frame is ignored', () => {
+    render(app('stun', { phone: true, hideRules: true, frame: ({ children }) => <div data-testid="frame">{children}</div> }));
+    fireEvent.click(screen.getByTestId('glossary-link'));
+    expect(screen.getByTestId('lookup-body')).toBeInTheDocument();
+    expect(screen.queryByTestId('frame')).toBeNull();
+    expect(screen.queryByText('R-1')).toBeNull();
+  });
+
   it('a press outside closes; words are the game\'s; rules are plain text without routes', () => {
     render(app('stun', { words: { back: 'B', close: 'Shut', glossary: 'G', rule: 'Rl', rules: 'Rls', seeAlso: 'Also' }, ruleHref: undefined, glossaryHref: undefined }));
     fireEvent.click(screen.getByTestId('glossary-link'));

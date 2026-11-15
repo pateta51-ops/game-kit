@@ -36,7 +36,7 @@ node kit/kit.mjs check
 
 - From a worktree this repo is not beside the game: give the checkout's full path (`C:/projects/game-kit`) in both places.
 - Run `git -C <kit checkout> fetch --tags` first when the tag is new.
-- A component names the others it needs in its `component.json` (`needs`): pull those too.
+- A component names the others it needs in its `component.json` (`needs`): pull those too (`pull` now does it for you, keeping a need already pulled at its own ref). `check` fails when a pulled component's need is absent: a game that pulled a component without its needs must pull them (`node kit/kit.mjs pull <kit> <tag> <needed...>`).
 - Read a component's `README.md` (or its `component.json` and index file) before using it; never its source game.
 - `engine-core` `appendAction(game, history, state, action, content)`: `state` is trusted to be the state at `history.cursor` (not checked); a cursor out of range is refused.
 

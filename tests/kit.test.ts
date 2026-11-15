@@ -39,6 +39,9 @@ beforeAll(() => {
   commit('v1');
   put(path.join(src, 'components/alpha/a.txt'), 'one changed\n');
   commit('v2');
+  put(path.join(src, 'components/gamma/component.json'), '{"needs":["beta"]}');
+  put(path.join(src, 'components/beta/component.json'), '{"needs":["alpha"]}');
+  commit('v3');
 });
 afterAll(() => fs.rmSync(tmp, { recursive: true, force: true }));
 
@@ -90,6 +93,39 @@ describe('kit.mjs', () => {
     const lock = JSON.parse(fs.readFileSync(path.join(g, 'kit/kit.lock.json'), 'utf8')) as { components: Record<string, { ref: string }> };
     expect(Object.keys(lock.components).sort()).toEqual(['alpha', 'beta']);
     expect(lock.components['beta']?.ref).toBe('v2');
+    expect(run(g, 'check').status).toBe(0);
+  });
+
+  it('pull brings the needs transitively; check fails when a need is absent', () => {
+    const g = game();
+    run(g, 'pull', src, 'v3', 'gamma');
+    expect(fs.existsSync(path.join(g, 'kit/alpha/a.txt'))).toBe(true);
+    const lock = JSON.parse(fs.readFileSync(path.join(g, 'kit/kit.lock.json'), 'utf8')) as { components: Record<string, { ref: string }> };
+    expect(Object.keys(lock.components).sort()).toEqual(['alpha', 'beta', 'gamma']);
+    expect(run(g, 'check').status).toBe(0);
+    delete lock.components['alpha'];
+    fs.writeFileSync(path.join(g, 'kit/kit.lock.json'), JSON.stringify(lock));
+    fs.rmSync(path.join(g, 'kit/alpha'), { recursive: true });
+    const c = run(g, 'check');
+    expect(c.status).toBe(1);
+    expect(c.stderr).toContain('beta needs alpha');
+  });
+
+  it('a need already locked is kept at its ref, never overwritten', () => {
+    const g = game();
+    run(g, 'pull', src, 'v1', 'alpha');
+    const p = run(g, 'pull', src, 'v3', 'gamma');
+    expect(p.stdout).toContain('alpha kept at v1');
+    expect(fs.readFileSync(path.join(g, 'kit/alpha/a.txt'), 'utf8')).toBe('one\n');
+    expect(run(g, 'check').status).toBe(0);
+  });
+
+  it('a cycle of needs ends', () => {
+    put(path.join(src, 'components/alpha/component.json'), '{"needs":["gamma"]}');
+    commit('v4');
+    const g = game();
+    const p = run(g, 'pull', src, 'v4', 'gamma');
+    expect(p.status).toBe(0);
     expect(run(g, 'check').status).toBe(0);
   });
 });

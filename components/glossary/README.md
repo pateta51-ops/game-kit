@@ -17,7 +17,7 @@ The game's script reads its text sources (printed fields, describe output) and c
 
 - `<GlossaryProvider entries icon? renderIcon?>`: `renderIcon(code, entry | undefined)` draws an icon; without it the entry's term (or the code) stands in. `useGlossary()`.
 - `<GlossaryText text onTerm? mode?>`: `click` opens on a press; `hold` (inside a control) opens on right-click or a long press (`HOLD_MS`), the press still goes to the control. `<GlossaryLink id>`.
-- `<LookupHost phone? words? kindTitle? ruleHref? glossaryHref? slideMs?>`: mounted once inside the provider. A popover beside the link (`besideAnchor`), or phone-mode's `Sheet` when `phone` (default: phone-mode's layout). Links inside follow, Back returns, Escape, Close or a press outside close. Store: `useLookup`, `openEntry`.
+- `<LookupHost phone? words? kindTitle? ruleHref? glossaryHref? slideMs? hideRules? frame?>`: mounted once inside the provider. A popover beside the link (`besideAnchor`), or phone-mode's `Sheet` when `phone` (default: phone-mode's layout). Links inside follow, Back returns, Escape, Close or a press outside close. `hideRules` leaves rule ids out of the DOM (also on `EntryBody`). `frame` is a component `({icon, name, children})` that replaces the popover's head and wraps its body and buttons (desktop popover only; `icon` is the entry's `icon` through `renderIcon`). Store: `useLookup`, `openEntry`.
 
 ## Look
 
