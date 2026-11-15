@@ -1,6 +1,6 @@
 # saves
 
-Saved games in IndexedDB over engine-core's `SaveFile`, and a screen for them. `index.ts` draws nothing and loads in node; `ui.ts` holds the screen. Needs engine-core, bug-reporter (`downloadText`) and the packages `idb-keyval`, `react`.
+Saved games in IndexedDB over engine-core's `SaveFile`, and a screen for them. `index.ts` draws nothing and loads in node; `ui/index.ts` (import `./ui`) holds the screen. Needs engine-core, bug-reporter (`downloadText`) and the packages `idb-keyval`, `react`.
 
 ## Store (`saves.ts`)
 
@@ -22,3 +22,5 @@ Saved games in IndexedDB over engine-core's `SaveFile`, and a screen for them. `
 `saves.css` (loaded by the screen) sets neutral values at zero specificity: `--sav-gap`, `--sav-text`, `--sav-font`, `--sav-bg`, `--sav-pad`, `--sav-border`, `--sav-radius`, `--sav-muted-opacity`, `--sav-bad`, `--sav-accent`, `--sav-accent-text`. Classes: `kit-sav`, `kit-sav-section`, `-list`, `-row`, `-what`, `-muted`, `-bad`, `-form`, `-btn`, `-primary`.
 
 Tests: `saves.test.ts`, `kv.test.ts` (node), `ui.test.tsx` (jsdom).
+
+Screen options: `confirmDelete` (Delete needs a second tap on the row; the button then reads `words.confirmDelete`), `renderImport(open, label)` (draws the import control; `open()` picks a file, the file input stays hidden). Each row's replay is computed once per stored save.

@@ -18,6 +18,7 @@ export const SAVES_WORDS = {
   load: 'Load',
   export: 'Export',
   delete: 'Delete',
+  confirmDelete: 'Tap again to delete',
   broken: 'It cannot be loaded; you can delete it.',
   savedAt: 'saved',
   unnamed: 'Saved game',

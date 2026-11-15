@@ -1,1 +1,1 @@
-export { SettingsScreen } from './SettingsScreen';
+export * from './ui/index';

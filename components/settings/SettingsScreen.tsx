@@ -13,13 +13,35 @@ export interface SettingsScreenProps {
   /** A store from createSettingsStore(schema). */
   store: object;
   dev?: boolean;
+  /** `plates`: each toggle or choice option is a button (aria-pressed, class `kit-set-plate-on` when chosen), no radio or checkbox. */
+  look?: 'plates';
+  /** Toggle plate labels in plates mode. */
+  onOff?: readonly [string, string];
   className?: string;
 }
 
-function Setting({ def, store, id }: { def: SettingDef; store: Any; id: string }) {
+function Setting({ def, store, id, plates, onOff }: { def: SettingDef; store: Any; id: string; plates: boolean; onOff: readonly [string, string] }) {
   const value = store((s) => s.values[def.key]);
   const set = store((s) => s.set);
   const hint = def.hint === undefined ? null : <span className="kit-set-hint">{def.hint}</span>;
+  const plate = (on: boolean, text: string, tid: string, go: () => void) => (
+    <button type="button" key={tid} className={on ? 'kit-set-plate kit-set-plate-on' : 'kit-set-plate'} aria-pressed={on} data-testid={tid} onClick={go}>
+      {text}
+    </button>
+  );
+  if (plates && def.kind === 'toggle')
+    return (
+      <div className="kit-set-choice" role="group" aria-labelledby={`${id}-l`} data-testid={`setting-${def.key}`}>
+        <span className="kit-set-label" id={`${id}-l`}>
+          {def.label}
+        </span>
+        {hint}
+        <div className="kit-set-plates">
+          {plate(value === true, onOff[0], `setting-${def.key}-on`, () => { set(def.key, true); })}
+          {plate(value !== true, onOff[1], `setting-${def.key}-off`, () => { set(def.key, false); })}
+        </div>
+      </div>
+    );
   if (def.kind === 'toggle')
     return (
       <label className="kit-set-row">
@@ -41,6 +63,18 @@ function Setting({ def, store, id }: { def: SettingDef; store: Any; id: string }
     const o = def.options.find((x) => String(x.value) === raw);
     if (o) set(def.key, o.value);
   };
+  if (plates && def.select !== true)
+    return (
+      <div className="kit-set-choice" role="group" aria-labelledby={`${id}-l`} data-testid={`setting-${def.key}`}>
+        <span className="kit-set-label" id={`${id}-l`}>
+          {def.label}
+        </span>
+        {hint}
+        <div className="kit-set-plates">
+          {def.options.map((o) => plate(value === o.value, o.label, `setting-${def.key}-${String(o.value)}`, () => { pick(String(o.value)); }))}
+        </div>
+      </div>
+    );
   if (def.select === true)
     return (
       <label className="kit-set-row">
@@ -91,7 +125,7 @@ function Setting({ def, store, id }: { def: SettingDef; store: Any; id: string }
   );
 }
 
-export function SettingsScreen({ schema, store, dev = false, className }: SettingsScreenProps) {
+export function SettingsScreen({ schema, store, dev = false, look, onOff = ['On', 'Off'], className }: SettingsScreenProps) {
   const id = useId();
   return (
     <div className={className === undefined ? 'kit-set' : `kit-set ${className}`}>
@@ -104,7 +138,7 @@ export function SettingsScreen({ schema, store, dev = false, className }: Settin
               {sec.title}
             </h2>
             {shown.map((d) => (
-              <Setting key={d.key} def={d} store={store as Any} id={`${id}-${d.key}`} />
+              <Setting key={d.key} def={d} store={store as Any} id={`${id}-${d.key}`} plates={look === 'plates'} onOff={onOff} />
             ))}
           </fieldset>
         );

@@ -6,3 +6,6 @@
 :where(.kit-set-label) { font-weight: var(--set-label-weight, bold); }
 :where(.kit-set-hint) { display: block; color: var(--set-hint, inherit); opacity: var(--set-hint-opacity, 0.75); }
 :where(.kit-set input) { accent-color: var(--set-accent, auto); }
+:where(.kit-set-plates) { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+:where(.kit-set-plate) { font: inherit; color: inherit; background: transparent; border: var(--set-border, 1px solid currentColor); border-radius: var(--set-radius, 0); padding: 0.25em 0.75em; cursor: pointer; }
+:where(.kit-set-plate-on) { background: var(--set-accent, currentColor); color: var(--set-plate-on-text, Canvas); }

@@ -51,4 +51,22 @@ describe('SettingsScreen', () => {
     const names = new Set([...container.querySelectorAll('input[type=radio]')].map((e) => (e as HTMLInputElement).name));
     expect(names.size).toBe(2);
   });
+
+  it('plates mode: buttons with labels, the chosen one pressed, no radio or checkbox', () => {
+    localStorage.clear();
+    const store = createSettingsStore(schema);
+    const { container } = render(<SettingsScreen schema={schema} store={store} look="plates" />);
+    expect(container.querySelector('input[type=radio], input[type=checkbox]')).toBeNull();
+    const on = screen.getByRole('button', { name: 'On' });
+    const off = screen.getByRole('button', { name: 'Off' });
+    expect(off.getAttribute('aria-pressed')).toBe('true');
+    fireEvent.click(on);
+    expect(store.getState().values.flagA).toBe(true);
+    expect(on.getAttribute('aria-pressed')).toBe('true');
+    expect(on.className).toContain('kit-set-plate-on');
+    fireEvent.click(screen.getByRole('button', { name: 'Two' }));
+    expect(store.getState().values.mode).toBe('two');
+    expect(screen.getByRole('button', { name: 'Two' }).getAttribute('aria-pressed')).toBe('true');
+    expect(screen.getByRole('button', { name: 'One' }).getAttribute('aria-pressed')).toBe('false');
+  });
 });

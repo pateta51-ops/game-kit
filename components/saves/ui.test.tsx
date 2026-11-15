@@ -67,4 +67,32 @@ describe('SavesScreen', () => {
     fireEvent.change(screen.getByTestId('save-import'), { target: { files: [file] } });
     await waitFor(() => expect(screen.getByTestId('save-note').textContent).toBe('This is not a save file.'));
   });
+
+  it('confirmDelete needs a second tap; renderImport opens the hidden file input; rows replay once', async () => {
+    const saves = mk();
+    await saves.saveNamed('One', played('d', 2));
+    const restore = vi.spyOn(saves, 'restore');
+    render(
+      <SavesScreen
+        saves={saves}
+        history={null}
+        summary={summary}
+        onLoad={() => undefined}
+        confirmDelete
+        renderImport={(open, label) => <button type="button" data-testid="my-import" onClick={open}>{label}</button>}
+      />,
+    );
+    await screen.findByText('One');
+    fireEvent.change(screen.getByTestId('save-name'), { target: { value: 'x' } });
+    expect(restore).toHaveBeenCalledTimes(1);
+    const click = vi.spyOn(screen.getByTestId('save-import'), 'click');
+    expect(screen.getByTestId('save-import')).not.toBeVisible();
+    fireEvent.click(screen.getByTestId('my-import'));
+    expect(click).toHaveBeenCalled();
+    fireEvent.click(screen.getByTestId('save-delete'));
+    expect(screen.getByTestId('save-delete').textContent).toBe('Tap again to delete');
+    expect(screen.getByText('One')).toBeInTheDocument();
+    fireEvent.click(screen.getByTestId('save-delete'));
+    await waitFor(() => expect(screen.queryByText('One')).toBeNull());
+  });
 });

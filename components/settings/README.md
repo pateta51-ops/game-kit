@@ -1,6 +1,6 @@
 # settings
 
-Settings declared as data, a persisted store of their values and a screen drawn from them. The game keeps its keys, words, sections and the frame around the screen. Needs the packages `react` and `zustand`. `index.ts` draws nothing and loads in node; `ui.ts` holds the screen.
+Settings declared as data, a persisted store of their values and a screen drawn from them. The game keeps its keys, words, sections and the frame around the screen. Needs the packages `react` and `zustand`. `index.ts` draws nothing and loads in node; `ui/index.ts` (import `./ui`) holds the screen.
 
 ## Schema (`schema.ts`)
 
@@ -23,3 +23,5 @@ Settings declared as data, a persisted store of their values and a screen drawn 
 `settings.css` (loaded by the screen) sets neutral values at zero specificity: `--set-gap`, `--set-text`, `--set-font`, `--set-pad`, `--set-border`, `--set-radius`, `--set-bg`, `--set-row-gap`, `--set-title-font`, `--set-title-color`, `--set-label-weight`, `--set-hint`, `--set-hint-opacity`, `--set-accent`. Classes: `kit-set`, `kit-set-section`, `-title`, `-row`, `-choice`, `-label`, `-option`, `-hint`.
 
 Tests: `settings.test.ts` (node), `ui.test.tsx` (jsdom).
+
+`look="plates"` (with `onOff` labels, default On/Off): each toggle or choice option is a button (`aria-pressed`, class `kit-set-plate-on` when chosen), no checkbox or radio; test ids `setting-<key>-on|off` and `setting-<key>-<value>`; drop-downs stay.

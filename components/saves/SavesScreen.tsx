@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useState, type ReactNode } from 'react';
 import { downloadText } from '../bug-reporter/download';
 import type { GameTypes, History, SaveFile } from '../engine-core';
 import type { Saves, StoredSave } from './saves';
@@ -17,6 +17,10 @@ export interface SavesScreenProps<G extends GameTypes> {
   readonly onLoad: (save: SaveFile<G>, key: string) => string | void;
   readonly words?: Partial<SavesWords>;
   readonly className?: string;
+  /** Delete needs a second tap on the same row (the button then reads `words.confirmDelete`). */
+  readonly confirmDelete?: boolean;
+  /** Draws the import control; call `open` to pick a file (the file input stays hidden). Default: the bare file input. */
+  readonly renderImport?: (open: () => void, label: string) => ReactNode;
   readonly download?: (text: string, name: string) => boolean;
 }
 
@@ -29,6 +33,15 @@ export function SavesScreen<G extends GameTypes>(p: SavesScreenProps<G>) {
   const [named, setNamed] = useState<[string, StoredSave<G>][]>([]);
   const [name, setName] = useState('');
   const [note, setNote] = useState<string | null>(null);
+  const [armed, setArmed] = useState<string | null>(null);
+  const [fileEl, setFileEl] = useState<HTMLInputElement | null>(null);
+  const openFile = () => fileEl?.click();
+  const [memo] = useState(() => new WeakMap<StoredSave<G>, ReturnType<Saves<G>['restore']>>());
+  const restored = (stored: StoredSave<G>) => {
+    let r = memo.get(stored);
+    if (r === undefined) memo.set(stored, (r = saves.restore(stored)));
+    return r;
+  };
   const refresh = useCallback(() => {
     void Promise.all([saves.listAutosaves(), saves.listNamed()])
       .then(([a, n]) => {
@@ -40,7 +53,7 @@ export function SavesScreen<G extends GameTypes>(p: SavesScreenProps<G>) {
   useEffect(refresh, [refresh]);
   const canSave = p.history !== null && p.canSave !== false;
   const row = ([key, stored]: [string, StoredSave<G>], first: boolean) => {
-    const r = saves.restore(stored);
+    const r = restored(stored);
     return (
       <li key={key} className="kit-sav-row" data-testid="save-row" data-slot={key}>
         <div className="kit-sav-what">
@@ -80,10 +93,15 @@ export function SavesScreen<G extends GameTypes>(p: SavesScreenProps<G>) {
           className="kit-sav-btn"
           data-testid="save-delete"
           onClick={() => {
+            if (p.confirmDelete === true && armed !== key) {
+              setArmed(key);
+              return;
+            }
+            setArmed(null);
             void saves.remove(key).then(refresh);
           }}
         >
-          {w.delete}
+          {p.confirmDelete === true && armed === key ? w.confirmDelete : w.delete}
         </button>
       </li>
     );
@@ -149,7 +167,10 @@ export function SavesScreen<G extends GameTypes>(p: SavesScreenProps<G>) {
         </ul>
         <h2>{w.import}</h2>
         <p className="kit-sav-muted">{w.importLine}</p>
+        {p.renderImport?.(openFile, w.import)}
         <input
+          ref={setFileEl}
+          hidden={p.renderImport !== undefined}
           type="file"
           accept="application/json,.json"
           aria-label={w.import}
