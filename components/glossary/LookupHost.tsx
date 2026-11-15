@@ -5,10 +5,10 @@
 import { useEffect, useId, useLayoutEffect, useRef, type ComponentType, type ReactNode } from 'react';
 import { isPhone, useViewport } from '../phone-mode/index';
 import { Sheet } from '../phone-mode/ui';
-import { paragraphs } from './match';
+import { paragraphs, type GlossaryEntry } from './match';
 import { GlossaryLink, GlossaryText, type OnTerm } from './GlossaryText';
 import { useGlossary } from './context';
-import { besideAnchor, useLookup } from './lookupStore';
+import { besideAnchor, useLookup, type LookupAnchor } from './lookupStore';
 
 export interface LookupWords {
   back: string;
@@ -96,10 +96,16 @@ export function LookupHost({
   slideMs,
   hideRules,
   frame: Frame,
+  prefer,
+  avoid,
 }: {
   hideRules?: boolean;
   /** The game's own wrapper for the popover's content (the head, body and buttons). */
-  frame?: ComponentType<{ icon: ReactNode; name: string; children: ReactNode }>;
+  frame?: ComponentType<{ icon: ReactNode; name: string; children: ReactNode; kind?: string; entry: GlossaryEntry }>;
+  /** Sides to try first, in order (default right, then left). */
+  prefer?: readonly ('right' | 'left')[];
+  /** Rects (read when the popover opens) the popover keeps off when another side is free. */
+  avoid?: () => readonly LookupAnchor[];
   /** Sheet or popover; by default phone-mode's layout decides. */
   phone?: boolean;
   words?: LookupWords;
@@ -142,10 +148,11 @@ export function LookupHost({
     const size = el.getBoundingClientRect();
     const screen = { width: window.innerWidth, height: window.innerHeight };
     const a = anchor ?? { left: screen.width / 2, right: screen.width / 2, top: screen.height / 3, bottom: screen.height / 3 };
-    const place = besideAnchor(a, { width: size.width, height: size.height }, screen);
+    const place = besideAnchor(a, { width: size.width, height: size.height }, screen, undefined, { ...(prefer === undefined ? {} : { prefer }), ...(avoid === undefined ? {} : { avoid: avoid() }) });
     el.style.left = `${String(place.left)}px`;
     el.style.top = `${String(place.top)}px`;
     el.style.visibility = 'visible';
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [anchor, id, sheet]);
 
   if (id === undefined || entry === undefined) return null;
@@ -219,7 +226,7 @@ export function LookupHost({
             {foot}
           </>
         ) : (
-          <Frame icon={entry.icon === undefined ? null : (renderIcon?.(entry.icon, entry) ?? null)} name={entry.term}>
+          <Frame icon={entry.icon === undefined ? null : (renderIcon?.(entry.icon, entry) ?? null)} name={entry.term} entry={entry} {...(entry.kind === undefined ? {} : { kind: entry.kind })}>
             {body}
             {foot}
           </Frame>

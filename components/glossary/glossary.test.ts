@@ -95,6 +95,15 @@ describe('matcher', () => {
     const screen = { width: 1000, height: 800 };
     expect(besideAnchor({ left: 10, right: 50, top: 100, bottom: 120 }, { width: 300, height: 200 }, screen)).toEqual({ left: 62, top: 100 });
     expect(besideAnchor({ left: 900, right: 950, top: 700, bottom: 720 }, { width: 300, height: 200 }, screen)).toEqual({ left: 588, top: 588 });
+    const a = { left: 10, right: 50, top: 100, bottom: 120 };
+    const size = { width: 300, height: 200 };
+    expect(besideAnchor(a, size, screen, 12, { prefer: ['left', 'right'] })).toEqual({ left: 62, top: 100 });
+    const wide = { left: 400, right: 450, top: 100, bottom: 120 };
+    expect(besideAnchor(wide, size, screen, 12, { prefer: ['left', 'right'] })).toEqual({ left: 88, top: 100 });
+    const box = { left: 460, right: 800, top: 0, bottom: 500 };
+    expect(besideAnchor(wide, size, screen, 12, { avoid: [box] })).toEqual({ left: 88, top: 100 });
+    const all = [box, { left: 0, right: 440, top: 0, bottom: 500 }];
+    expect(besideAnchor(wide, size, screen, 12, { avoid: all })).toEqual({ left: 462, top: 100 });
   });
 });
 

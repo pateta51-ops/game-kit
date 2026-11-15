@@ -52,9 +52,11 @@ describe('GlossaryText and LookupHost', () => {
   });
 
   it('hideRules leaves rule ids out; frame wraps the popover content with icon and name', () => {
-    render(app('energy stun', { hideRules: true, frame: ({ icon, name, children }) => <div data-testid="frame" data-name={name}>{icon}{children}</div> }));
+    render(app('energy stun', { hideRules: true, frame: ({ icon, name, children, kind, entry }) => <div data-testid="frame" data-name={name} data-kind={String(kind)} data-entry={entry.term}>{icon}{children}</div> }));
     fireEvent.click(screen.getAllByTestId('glossary-link')[0]!);
     expect(screen.getByTestId('frame')).toHaveAttribute('data-name', 'energy');
+    expect(screen.getByTestId('frame')).toHaveAttribute('data-entry', 'energy');
+    expect(screen.getByTestId('frame').getAttribute('data-kind')).toBeTruthy();
     expect(screen.getByTestId('frame').querySelector('img')).toHaveAttribute('data-code', 'energy');
     expect(screen.getByTestId('lookup-close')).toBeInTheDocument();
     act(() => { useLookup.getState().close(); });

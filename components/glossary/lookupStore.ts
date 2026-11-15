@@ -56,11 +56,16 @@ export function besideAnchor(
   size: { width: number; height: number },
   screen: { width: number; height: number },
   gap = 12,
+  o: { prefer?: readonly ('right' | 'left')[]; avoid?: readonly LookupAnchor[] } = {},
 ): { left: number; top: number } {
   const clamp = (v: number, max: number): number => Math.max(gap, Math.min(v, max - gap));
-  let left: number;
-  if (a.right + gap + size.width <= screen.width - gap) left = a.right + gap;
-  else if (a.left - gap - size.width >= gap) left = a.left - gap - size.width;
-  else left = (screen.width - size.width) / 2;
-  return { left: clamp(left, screen.width - size.width), top: clamp(a.top, screen.height - size.height) };
+  const top = clamp(a.top, screen.height - size.height);
+  const spot = {
+    right: a.right + gap + size.width <= screen.width - gap ? a.right + gap : undefined,
+    left: a.left - gap - size.width >= gap ? a.left - gap - size.width : undefined,
+  };
+  const hits = (l: number): boolean => (o.avoid ?? []).some((r) => l < r.right && l + size.width > r.left && top < r.bottom && top + size.height > r.top);
+  const sides = (o.prefer ?? ['right', 'left']).map((s) => spot[s]).filter((l): l is number => l !== undefined);
+  const left = sides.find((l) => !hits(l)) ?? sides[0] ?? (screen.width - size.width) / 2;
+  return { left: clamp(left, screen.width - size.width), top };
 }

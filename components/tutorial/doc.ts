@@ -6,6 +6,8 @@ import type { ExpectedEvent, TutorialScript, TutorialStep } from './script';
 
 export interface DocOptions {
   readonly title: string;
+  /** The field of an event that names its kind (default `type`). */
+  readonly eventKey?: string;
   /** Where the document comes from, e.g. which content gave the names. */
   readonly source: string;
   /** Lines under the title (the scenario in words). */
@@ -23,11 +25,12 @@ export function scriptDoc(script: TutorialScript, o: DocOptions): string {
     const n = o.names?.(x);
     return n === undefined ? `\`${x}\`` : `${n} (\`${x}\`)`;
   };
+  const key = o.eventKey ?? 'type';
   const event = (e: ExpectedEvent): string => {
     const rest = Object.entries(e)
-      .filter(([k]) => k !== 'type')
+      .filter(([k]) => k !== key)
       .map(([k, v]) => `${k} ${typeof v === 'string' ? id(v) : JSON.stringify(v)}`);
-    return `\`${String(e['type'])}\`${rest.length === 0 ? '' : ` (${rest.join(', ')})`}`;
+    return `\`${String(e[key])}\`${rest.length === 0 ? '' : ` (${rest.join(', ')})`}`;
   };
   const what = (s: TutorialStep): string =>
     s.do.kind === 'next'

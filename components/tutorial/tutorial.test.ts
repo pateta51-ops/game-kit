@@ -198,6 +198,21 @@ describe('check and document', () => {
     expect(c.err).toEqual(['tutorial:check: counter: the engine threw while playing the script: boom']);
   });
 
+  it('eventKey names the field that holds an event kind', () => {
+    const s = withStep(1, { expect: [{ t: 'added', n: 1 }] });
+    const untested = (o: object) => playScript(GAME, s, { stopOnFailure: false, evidence: { adding: ['added'] }, ...o }).problems.some((p) => p.startsWith('UNTESTED: step 2'));
+    expect(untested({})).toBe(true);
+    expect(untested({ eventKey: 't' })).toBe(false);
+    expect(scriptDoc(s, { title: 'T', source: 's', eventKey: 't' })).toContain('- **Then:** `added` (n 1)');
+  });
+
+  it('tutorialCheck passes eventKey through', () => {
+    const s = withStep(1, { expect: [{ t: 'added', n: 1 }] });
+    const run = (o: object) => { const err: string[] = []; tutorialCheck(GAME, s, { stopOnFailure: false, items: ['adding'], evidence: { adding: ['added'] }, ...o }, { out: () => {}, err: (l) => err.push(l) }); return err.join(' '); };
+    expect(run({})).toContain('UNTESTED: step 2');
+    expect(run({ eventKey: 't' })).not.toContain('UNTESTED: step 2');
+  });
+
   it('writes the readable script with names, headings and items, and checks it is up to date', () => {
     const headings = stepHeadings(GAME, SCRIPT, (s) => (s.result === null ? `Turn ${String(s.turn)}` : 'Game over'));
     expect(headings).toEqual(['Turn 1', 'Turn 1', 'Turn 2', 'Turn 3', 'Turn 5', 'Game over']);

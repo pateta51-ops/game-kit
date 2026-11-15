@@ -121,6 +121,8 @@ export function playStep<G extends GameTypes>(game: TutorialGame<G>, run: Script
 }
 
 export interface PlayOptions {
+  /** The field of an event that names its kind (default `type`). */
+  readonly eventKey?: string;
   /** Another seed than the script's (a seed search). */
   readonly seed?: string;
   /** Items (mechanics) the steps must teach between them. */
@@ -166,7 +168,7 @@ export function playScript<G extends GameTypes>(game: TutorialGame<G>, script: T
   if (uncovered.length > 0) problems.push(`UNCOVERED: no step teaches ${uncovered.join(', ')}`);
   if (options.evidence !== undefined)
     script.steps.forEach((step, i) => {
-      const kinds = new Set((step.expect ?? []).map((e) => e['type']));
+      const kinds = new Set((step.expect ?? []).map((e) => e[options.eventKey ?? 'type']));
       for (const item of step.items ?? []) {
         const want = options.evidence?.[item] ?? [];
         if (!want.some((k) => kinds.has(k))) problems.push(`UNTESTED: step ${String(i + 1)} (${step.id}) teaches ${item} but expects none of ${want.join(', ') || '(no events listed)'}`);

@@ -24,4 +24,4 @@ Settings declared as data, a persisted store of their values and a screen drawn 
 
 Tests: `settings.test.ts` (node), `ui.test.tsx` (jsdom).
 
-`look="plates"` (with `onOff` labels, default On/Off): each toggle or choice option is a button (`aria-pressed`, class `kit-set-plate-on` when chosen), no checkbox or radio; test ids `setting-<key>-on|off` and `setting-<key>-<value>`; drop-downs stay.
+`look="plates"` (with `onOff` labels, default On/Off): each toggle or choice option is a button (`aria-pressed`, class `kit-set-plate-on` when chosen), no checkbox or radio; test ids `setting-<key>-on|off` and `setting-<key>-<value>`; drop-downs stay. `showLine` (default off) adds the chosen option's `line` under the plates, class `kit-set-line`, test id `setting-<key>-line`.

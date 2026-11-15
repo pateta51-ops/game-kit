@@ -15,12 +15,14 @@ export interface SettingsScreenProps {
   dev?: boolean;
   /** `plates`: each toggle or choice option is a button (aria-pressed, class `kit-set-plate-on` when chosen), no radio or checkbox. */
   look?: 'plates';
+  /** Plates mode: show the chosen option's `line` under the plates (default off). */
+  showLine?: boolean;
   /** Toggle plate labels in plates mode. */
   onOff?: readonly [string, string];
   className?: string;
 }
 
-function Setting({ def, store, id, plates, onOff }: { def: SettingDef; store: Any; id: string; plates: boolean; onOff: readonly [string, string] }) {
+function Setting({ def, store, id, plates, onOff, showLine }: { def: SettingDef; store: Any; id: string; plates: boolean; showLine: boolean; onOff: readonly [string, string] }) {
   const value = store((s) => s.values[def.key]);
   const set = store((s) => s.set);
   const hint = def.hint === undefined ? null : <span className="kit-set-hint">{def.hint}</span>;
@@ -73,6 +75,9 @@ function Setting({ def, store, id, plates, onOff }: { def: SettingDef; store: An
         <div className="kit-set-plates">
           {def.options.map((o) => plate(value === o.value, o.label, `setting-${def.key}-${String(o.value)}`, () => { pick(String(o.value)); }))}
         </div>
+        {showLine && def.options.map((o) => o.line !== undefined && value === o.value && (
+          <p key={String(o.value)} className="kit-set-line" data-testid={`setting-${def.key}-line`}>{o.line}</p>
+        ))}
       </div>
     );
   if (def.select === true)
@@ -125,7 +130,7 @@ function Setting({ def, store, id, plates, onOff }: { def: SettingDef; store: An
   );
 }
 
-export function SettingsScreen({ schema, store, dev = false, look, onOff = ['On', 'Off'], className }: SettingsScreenProps) {
+export function SettingsScreen({ schema, store, dev = false, look, showLine = false, onOff = ['On', 'Off'], className }: SettingsScreenProps) {
   const id = useId();
   return (
     <div className={className === undefined ? 'kit-set' : `kit-set ${className}`}>
@@ -138,7 +143,7 @@ export function SettingsScreen({ schema, store, dev = false, look, onOff = ['On'
               {sec.title}
             </h2>
             {shown.map((d) => (
-              <Setting key={d.key} def={d} store={store as Any} id={`${id}-${d.key}`} plates={look === 'plates'} onOff={onOff} />
+              <Setting key={d.key} def={d} store={store as Any} id={`${id}-${d.key}`} plates={look === 'plates'} showLine={showLine} onOff={onOff} />
             ))}
           </fieldset>
         );
