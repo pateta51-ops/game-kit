@@ -1,0 +1,19 @@
+{
+  "name": "tutorial",
+  "source": {
+    "game": "stcc",
+    "commit": "9fc59643",
+    "paths": [
+      "src/tutorial/play.ts (headless play, step failures, expected events, coverage and evidence, end check)",
+      "src/tutorial/lock.ts (lock model, actionsBefore)",
+      "scripts/tutorial-check.ts (report and exit codes)",
+      "scripts/tutorial-doc.ts (script document, --check)"
+    ],
+    "grafts": [
+      { "game": "jarl", "commit": "6f006a2", "paths": ["src/ui/tutorial/tutorial.machine.ts (phase table)", "src/ui/tutorial/lock.ts (lockPrompt, refusal)", "src/ui/tutorial/narration.ts (bareNumbers)"] }
+    ]
+  },
+  "needs": ["engine-core", "state-machines"],
+  "packages": ["zod"],
+  "imports": ["engine-core/fake/counter.ts (tests only)"]
+}
