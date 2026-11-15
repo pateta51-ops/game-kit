@@ -74,7 +74,7 @@ function sectionLines(markdown: string, number: number): string[] {
       continue;
     }
     if (inFence) continue;
-    const heading = /^## (\d+)\./.exec(line);
+    const heading = /^## (\d+)(?:\.|\s|$)/.exec(line);
     if (heading !== null) {
       if (inSection) break;
       inSection = Number(heading[1]) === number;

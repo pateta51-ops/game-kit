@@ -30,6 +30,8 @@ export interface InventoryInput {
   readonly baseline?: readonly string[];
   /** Count only direct citations, not a test naming a card that uses the piece. */
   readonly directOnly?: boolean;
+  /** Count an id only when it is in a test title (default: anywhere in the file). */
+  readonly titleOnly?: boolean;
   readonly title?: string;
 }
 export interface Row {
@@ -53,12 +55,12 @@ const word = (s: string): RegExp => new RegExp(`(?<![\\w-])${esc(s)}(?![\\w-])`)
 const TITLE = /\b(?:it|test|describe)(?:\.\w+)*\(\s*(['"`])((?:(?!\1).)*)\1/g;
 
 /** The files cited: `path` or `path › title` for the test titles that match. */
-function cites(tests: readonly TestFile[], res: readonly RegExp[]): string[] {
+function cites(tests: readonly TestFile[], res: readonly RegExp[], titleOnly = false): string[] {
   const out: string[] = [];
   for (const t of tests) {
-    if (!res.some((r) => r.test(t.text))) continue;
+    if (!titleOnly && !res.some((r) => r.test(t.text))) continue;
     const titles = [...t.text.matchAll(TITLE)].map((m) => m[2] ?? '').filter((x) => res.some((r) => r.test(x)));
-    out.push(...(titles.length > 0 ? titles.map((x) => `${t.path} › ${x}`) : [t.path]));
+    out.push(...(titles.length > 0 ? titles.map((x) => `${t.path} › ${x}`) : titleOnly ? [] : [t.path]));
   }
   return out;
 }
@@ -67,8 +69,8 @@ export function inventory(input: InventoryInput): Inventory {
   const tests = [...input.tests].sort((a, b) => (a.path < b.path ? -1 : 1));
   const named = (cards: readonly string[]): string[] =>
     cards.length === 0 ? [] : tests.filter((t) => cards.some((c) => word(c).test(t.text))).map((t) => t.path);
-  const row = (kind: string, id: string, res: RegExp[], cards: readonly string[]): Row => {
-    const direct = cites(tests, res);
+  const row = (kind: string, id: string, res: RegExp[], cards: readonly string[], titleOnly = false): Row => {
+    const direct = cites(tests, res, titleOnly);
     const directFiles = new Set(direct.map((d) => d.split(' › ')[0]));
     return {
       key: `${kind}:${id}`,
@@ -81,8 +83,8 @@ export function inventory(input: InventoryInput): Inventory {
     };
   };
   const rows = [
-    ...input.pieces.map((p) => row(p.kind, p.id, (p.cite ?? []).map((c) => new RegExp(c)).concat(p.cite === undefined ? [word(p.id)] : []), p.cards ?? [])),
-    ...(input.clauses ?? []).map((c) => row('clause', c.id, [word(c.id)], c.cards)),
+    ...input.pieces.map((p) => row(p.kind, p.id, (p.cite ?? []).map((c) => new RegExp(c)).concat(p.cite === undefined ? [word(p.id)] : []), p.cards ?? [], input.titleOnly === true && p.cite === undefined)),
+    ...(input.clauses ?? []).map((c) => row('clause', c.id, [word(c.id)], c.cards, input.titleOnly === true)),
   ];
   const seen = new Set<string>();
   for (const r of rows) {

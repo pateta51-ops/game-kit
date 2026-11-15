@@ -186,3 +186,21 @@ describe('card-language checks', () => {
     expect(() => literalsOf(f, 'Nope')).toThrow();
   });
 });
+
+describe('index entries and strict citation', () => {
+  it('literals/index exports literalsOf', async () => {
+    expect((await import('./literals/index')).literalsOf).toBe(literalsOf);
+  });
+  it('a scenario starts from a state and its events', () => {
+    const a = new Scenario(DICE_GAME).set((s) => void (s.dice = [2, 2, 5])).run({ kind: 'play' });
+    const b = new Scenario(DICE_GAME, { from: { state: a.s, events: a.events } });
+    expect(b.events).toEqual(a.events);
+    expect(b.s).toEqual(a.s);
+  });
+  it('counts an id only in a test title, not a comment', () => {
+    const tests = [{ path: 'a.test.ts', text: "// pair is covered here\nit('other', () => {})" }];
+    expect(inventory({ titleOnly: true, pieces: [{ kind: 'p', id: 'pair' }], clauses: [{ id: 'CL-9', cards: [] }], tests }).uncited).toEqual(['p:pair', 'clause:CL-9']);
+    const t2 = [{ path: 'a.test.ts', text: "it('pair works', () => {})" }];
+    expect(inventory({ titleOnly: true, pieces: [{ kind: 'p', id: 'pair' }], tests: t2 }).uncited).toEqual([]);
+  });
+});

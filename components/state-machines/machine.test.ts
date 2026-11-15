@@ -154,3 +154,11 @@ describe('machine helper (src/lib/machine.ts)', () => {
     }).toThrow('duplicate id "test.local"');
   });
 });
+
+describe('index', () => {
+  it('exports the machine helpers', async () => {
+    const m = await import('./index');
+    expect(m.defineMachine).toBe(defineMachine);
+    expect(m.transition).toBe(transition);
+  });
+});

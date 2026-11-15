@@ -216,3 +216,9 @@ describe('the scenario check (§10.3)', () => {
     expect(sc.unknown).toEqual(['SC-009']);
   });
 });
+
+describe('heading without a dot', () => {
+  it('finds `## 3 Rules specification`', () => {
+    expect(extractRuleIds('## 3 Rules specification\nSC-01 x\n## 4 Next', { ...CFG, families: ['SC'] })).toEqual(['SC-01']);
+  });
+});

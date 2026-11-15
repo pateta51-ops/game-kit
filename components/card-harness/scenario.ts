@@ -29,10 +29,11 @@ export class Scenario<G extends GameTypes, W, D = never> {
 
   constructor(
     readonly game: ScenarioGame<G, W, D>,
-    { validate = true }: { validate?: boolean } = {},
+    { validate = true, from }: { validate?: boolean; from?: { state: G['state']; events: readonly G['event'][] } } = {},
   ) {
-    this.s = game.start();
+    this.s = from === undefined ? game.start() : structuredClone(from.state);
     this.checked = !validate;
+    if (from !== undefined) this.history.push({ what: 'start', prompt: this.s.prompt, events: from.events, notes: [] });
   }
 
   /** Edit the position (a copy: earlier states stay as they were). */

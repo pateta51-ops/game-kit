@@ -17,5 +17,5 @@
     ]
   },
   "needs": ["engine-core"],
-  "packages": ["typescript (literals.ts only)"]
+  "packages": ["typescript (literals/ only)"]
 }
