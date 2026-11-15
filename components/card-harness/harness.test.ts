@@ -1,0 +1,188 @@
+import { describe, expect, it } from 'vitest';
+import { dirname } from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { conforms, createProbe, Delivery, describeCheck, inventory, report, runInventory, Scenario, testFiles, type DeliveryGame, type Same } from './index';
+import { literalsOf } from './literals';
+import { DICE, DICE_GAME, PROBE, type Dice, type DiceState, type Note } from './fake/dice';
+import { applyAction } from '../engine-core';
+
+describe('scenario', () => {
+  it('builds a position, plays a card through the rules and records events', () => {
+    const sc = new Scenario(DICE_GAME).set((s) => void (s.dice = [2, 2, 5]));
+    const [twin] = sc.put('hand', 'twin');
+    sc.run({ kind: 'play', card: twin as string });
+    expect(sc.s.score).toBe(2);
+    expect(sc.s.table).toEqual([twin]);
+    expect(sc.events.map((e) => e.type)).toEqual(['scored']);
+    expect(sc.prompt).toBeNull();
+  });
+  it('asks when two cards are legal and records the probe', () => {
+    const sc = new Scenario(DICE_GAME).set((s) => void (s.dice = [1, 2, 3]));
+    const [ladder, a, b] = sc.put('hand', 'ladder', 'plain', 'twin');
+    sc.run({ kind: 'play', card: ladder as string });
+    expect(sc.options()).toEqual([a, b]);
+    expect(sc.offered(b as string)).toBe(true);
+    sc.answer(b as string);
+    expect(sc.s.hand).toEqual([a]);
+    expect(sc.notes).toEqual([{ how: 'asked', legal: [a, b] }]);
+    expect(() => sc.answer('x')).toThrow();
+  });
+  it('sees a forced choice and the before/after delta', () => {
+    const sc = new Scenario(DICE_GAME).set((s) => void (s.dice = [4, 5, 6]));
+    const [ladder, a] = sc.put('hand', 'ladder', 'plain');
+    const d = sc.observe((s) => s.score, (x) => x.run({ kind: 'play', card: ladder as string }));
+    expect(d).toEqual({ before: 0, after: 3 });
+    expect(sc.notes).toEqual([{ how: 'forced', legal: [a], took: a }]);
+    expect(PROBE.listening).toBe(false);
+  });
+  it('refuses an illegal position unless told not to check', () => {
+    const bad = new Scenario(DICE_GAME).set((s) => void (s.score = -1));
+    expect(() => bad.run({ kind: 'play' })).toThrow(/D-01/);
+    expect(() => new Scenario(DICE_GAME, { validate: false }).set((s) => void (s.score = -1)).run({ kind: 'play' })).not.toThrow();
+  });
+  it('probe: nested traces put the outer listener back', () => {
+    const p = createProbe<number>();
+    const r = p.trace(() => {
+      p.note(1);
+      const inner = p.trace(() => p.note(2));
+      p.note(3);
+      return inner.notes;
+    });
+    expect(r).toEqual({ result: [2], notes: [1, 3] });
+  });
+});
+
+describe('delivery', () => {
+  // A stand-in session: with `auto` on, the settings answer every prompt with its first enabled option.
+  const session = (auto: boolean): DeliveryGame<DiceState, Dice['prompt'], Note, string> => {
+    let s: DiceState;
+    const go = (picks: readonly string[]): void => {
+      s = applyAction(DICE, s, { kind: 'answer', promptId: s.prompt?.id ?? -1, picks }, DICE_GAME.content).state;
+    };
+    return {
+      load: (x) => void (s = x),
+      prompt: () => s.prompt,
+      dispatch(picks) {
+        try {
+          go(picks);
+        } catch (e) {
+          return { ok: false, error: String(e), autos: [] };
+        }
+        const autos: string[] = [];
+        while (auto && s.prompt !== null) {
+          const id = s.prompt.options.find((o) => o.enabled)?.id as string;
+          autos.push(id);
+          go([id]);
+        }
+        return { ok: true, autos };
+      },
+      probe: PROBE,
+      silentNote: (n) => (n.how === 'forced' ? `forced ${n.took ?? ''}` : null),
+      silentAuto: (a) => `auto ${a}`,
+    };
+  };
+  const position = (...cards: string[]): DiceState => {
+    const sc = new Scenario(DICE_GAME);
+    const ids = sc.put('hand', ...cards);
+    return sc.run(...ids.filter((i) => i.startsWith('ladder')).map((card) => ({ kind: 'play', card }))).s;
+  };
+  it('reaches the player: no silent choice', () => {
+    const d = new Delivery(session(false)).load(position('ladder', 'plain', 'twin'));
+    expect(d.prompt?.options).toHaveLength(2);
+    expect(d.answer('nope').ok).toBe(false);
+    expect(d.answer('twin#3').ok).toBe(true);
+    expect(d.prompt).toBeNull();
+    expect(d.silentChoices()).toEqual([]);
+  });
+  it('lists an engine choice nobody was asked', () => {
+    const d = new Delivery(session(false)).load(position('ladder', 'ladder', 'plain', 'twin'));
+    d.answer('plain#3');
+    expect(d.log[0]?.notes).toEqual([{ how: 'forced', legal: ['twin#4'], took: 'twin#4' }]);
+    expect(d.silentChoices()).toEqual([{ kind: 'engine', what: 'forced twin#4' }]);
+  });
+  it('lists an answer the settings gave', () => {
+    const d = new Delivery(session(true)).load(position('ladder', 'ladder', 'plain', 'plain', 'twin'));
+    d.answer('plain#3');
+    expect(d.silentChoices()).toEqual([{ kind: 'settings', what: 'auto plain#4' }]);
+  });
+});
+
+describe('inventory', () => {
+  const tests = [
+    { path: 'tests/a.test.ts', text: "it('SC-01 pair scores', () => { roll('pair') })\nit('ladder card', () => {})" },
+    { path: 'tests/b.test.ts', text: "it('runs formula', () => { formula: 'runs' })" },
+  ];
+  const input = {
+    pieces: [
+      { kind: 'pattern', id: 'pair' },
+      { kind: 'pattern', id: 'run', cards: ['ladder'] },
+      { kind: 'pattern', id: 'triple' },
+      { kind: 'formula', id: 'runs', cite: ["formula: 'runs'"] },
+    ],
+    clauses: [{ id: 'CL-1', cards: ['twin'] }],
+    tests,
+    baseline: ['pattern:triple'],
+  };
+  it('reports which test cites which, from data of any shape', () => {
+    const inv = inventory(input);
+    const by = Object.fromEntries(inv.rows.map((r) => [r.key, r]));
+    expect(by['pattern:pair']?.direct).toEqual(['tests/a.test.ts › SC-01 pair scores']);
+    expect(by['pattern:run']?.direct).toEqual([]);
+    expect(by['pattern:run']?.via).toEqual(['tests/a.test.ts']);
+    expect(by['formula:runs']?.direct).toEqual(['tests/b.test.ts']);
+    expect(inv.uncited).toEqual(['clause:CL-1']);
+    expect(inv.staleBaseline).toEqual([]);
+    expect(inventory({ ...input, directOnly: true }).uncited).toEqual(['pattern:run', 'clause:CL-1']);
+    expect(() => inventory({ ...input, pieces: [...input.pieces, { kind: 'pattern', id: 'pair' }] })).toThrow(/twice/);
+  });
+  it('writes, then fails when stale, uncited or the baseline is out of date', () => {
+    const files = new Map<string, string>();
+    const log: string[] = [];
+    const io = { read: (p: string) => files.get(p) ?? null, write: (p: string, t: string) => void files.set(p, t), log: (l: string) => void log.push(l) };
+    const ok = { ...input, clauses: [{ id: 'CL-1', cards: ['ladder'] }] };
+    expect(runInventory(ok, 'inv.md', false, io)).toBe(0);
+    expect(runInventory(ok, 'inv.md', true, io)).toBe(0);
+    expect(files.get('inv.md')).toContain('| pattern | 3 | 1 | 1 | 1 | 1 | 1 |');
+    expect(runInventory({ ...ok, tests: [...tests, { path: 'tests/c.test.ts', text: "it('triple', () => {})" }] }, 'inv.md', true, io)).toBe(1);
+    expect(log.some((l) => l.includes('stale'))).toBe(true);
+    expect(log.some((l) => l.includes('baseline lists pattern:triple'))).toBe(true);
+    expect(runInventory(input, 'x.md', false, io)).toBe(1);
+  });
+  it('collects test files', () => {
+    const root = dirname(dirname(fileURLToPath(import.meta.url)));
+    expect(testFiles(root, ['card-harness']).map((f) => f.path)).toContain('card-harness/harness.test.ts');
+  });
+});
+
+describe('card-language checks', () => {
+  const describeEnc = (e: { n: number; icon: string }): string => `Gain ${String(e.n)} [${e.icon}].`;
+  it('describe-check: generated reading equals the printed text', () => {
+    const cards = [
+      { id: 'a', printed: 'Gain 2 [RUN].', encoding: { n: 2, icon: 'RUN' } },
+      { id: 'b', printed: 'Gain 3 [OUT].', encoding: { n: 3, icon: 'RUN' } },
+      { id: 'c', printed: 'x', encoding: { n: -1, icon: 'RUN' } },
+    ];
+    const errors = describeCheck(cards, describeEnc, (e) => (e.n < 0 ? ['n is negative'] : []));
+    expect(errors).toHaveLength(4);
+    expect(errors[0]).toContain('b: the generated reading differs');
+    expect(errors[1]).toBe('b: printed [OUT] is not in the generated reading');
+    expect(errors[3]).toBe('c: n is negative');
+    const log: string[] = [];
+    expect(report('describe', errors, (l) => log.push(l), 3)).toBe(1);
+    expect(log.at(-1)).toBe('describe: 4 error(s); 3 checked');
+    expect(report('describe', [], () => undefined)).toBe(0);
+  });
+  it('conformance: types match at compile time', () => {
+    conforms<Same<{ a: 1 }, { a: 1 }>>();
+    // @ts-expect-error the types differ
+    conforms<Same<{ a: 1 }, { a: 2 }>>();
+    expect(true).toBe(true);
+  });
+  it('reads pieces from the game types', () => {
+    const f = fileURLToPath(new URL('./fake/lang.ts', import.meta.url));
+    expect(literalsOf(f, 'Formula')).toEqual(['hits', 'outs', 'runs']);
+    expect(literalsOf(f, 'Step', 'op')).toEqual(['gain', 'reroll', 'roll']);
+    expect(literalsOf(f, 'Step', 'kind')).toEqual(['if']);
+    expect(() => literalsOf(f, 'Nope')).toThrow();
+  });
+});

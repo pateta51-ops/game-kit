@@ -29,7 +29,7 @@ Known limit (engine-core): the single-copy guard stops two copies loaded from tw
 
 | Batch | Content | Effort |
 |---|---|---|
-| K4 | Card test harness; card-language checks | M |
+| K4 | Card test harness; card-language checks | M (done) |
 | K5 | Saved games; offline install | M |
 | K6 | Settings; app frame | M |
 | K7 | Glossary | M |

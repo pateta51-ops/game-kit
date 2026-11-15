@@ -1,0 +1,21 @@
+{
+  "name": "card-harness",
+  "source": {
+    "game": "stcc",
+    "commit": "9fc59643",
+    "paths": [
+      "src/test-utils/scenario.ts",
+      "src/test-utils/delivery.ts",
+      "src/engine/ops/pick.ts (pickProbe, tracePicks)",
+      "scripts/testing/card-lang-inventory.ts",
+      "jarl:scripts/describe-check.ts",
+      "jarl:tests conformance (schema type equals engine type)"
+    ],
+    "grafts": [
+      { "game": "ebr", "commit": "33b5abd3", "paths": ["clause-level inventory with test titles and a baseline", "observe (before/after helper)"] },
+      { "game": "warps", "commit": "2af6937", "paths": ["inventory: operation types read with the TypeScript compiler"] }
+    ]
+  },
+  "needs": ["engine-core"],
+  "packages": ["typescript (literals.ts only)"]
+}
