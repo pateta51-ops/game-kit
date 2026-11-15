@@ -46,10 +46,42 @@ async function runOne(verb: string, extra: Record<string, unknown>, skip: boolea
     veil: kept?.classList.contains('fx-veil') ?? null,
     bg: s?.background ?? null,
     label: kept?.getAttribute('data-fx-label') ?? null,
-    style: s ? { left: s.left, top: s.top, opacity: s.opacity, visibility: s.visibility, transform: s.transform, boxShadow: s.boxShadow } : null,
+    style: s ? { left: s.left, top: s.top, opacity: s.opacity, visibility: s.visibility, transform: s.transform, scale: s.scale, translate: s.translate, boxShadow: s.boxShadow } : null,
     flipped: kept?.hasAttribute('data-fx-flipped') ?? null,
     text: kept?.textContent ?? null,
   };
+}
+
+// scale and flip at once on one actor, and the run handed to resolve
+async function together(skip = false, verb = 'flip') {
+  const verbs = createVerbs<EffectCtx>();
+  const seen: string[] = [];
+  const layer = registerEffects(verbs, { resolve: (id, run) => (seen.push(`${id} ${run.timeline.id}`), undefined) });
+  let mid = { scale: '', transform: '' };
+  let end = '';
+  const player = createMotionPlayer({
+    specs: {},
+    stages: { default: () => undefined },
+    verbs,
+    speed: () => 1,
+    context: layer,
+    onBeatEnd: (run) => {
+      end = layer.el.querySelector<HTMLElement>('.fx-actor')?.style.scale ?? '';
+      layer.end(run);
+    },
+  });
+  await new Promise<void>((done) => {
+    player.play(
+      { id: 'tg', maxMs: 300, actors: [{ id: 'a', at: [50, 50], w: 40, h: 30 }], steps: [{ t: 0, dur: 200, actor: 'a', do: 'scale', to: 2 }, { t: 0, dur: 200, actor: 'a', do: verb }] },
+      { onEnd: done },
+    );
+    setTimeout(() => {
+      const a = layer.el.querySelector<HTMLElement>('.fx-actor');
+      if (a) mid = { scale: getComputedStyle(a).scale, transform: getComputedStyle(a).transform };
+    }, 100);
+    if (skip) setTimeout(() => player.skipAll(), 50);
+  });
+  return { mid, end, seen };
 }
 
 async function own() {
@@ -86,4 +118,4 @@ async function reduced() {
   return { ms: performance.now() - t0, actors: layer.el.querySelectorAll('.fx-actor').length, cues };
 }
 
-(window as unknown as Record<string, unknown>)['fxTest'] = { runOne, own, reduced };
+(window as unknown as Record<string, unknown>)['fxTest'] = { runOne, own, reduced, together };

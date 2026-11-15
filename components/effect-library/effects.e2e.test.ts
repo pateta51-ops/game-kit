@@ -9,7 +9,7 @@ const HAVE = existsSync(chromium.executablePath());
 interface Out {
   left: number;
   anims: number;
-  style: { left: string; top: string; opacity: string; visibility: string; transform: string; boxShadow: string } | null;
+  style: { left: string; top: string; opacity: string; visibility: string; transform: string; scale: string; translate: string; boxShadow: string } | null;
   flipped: boolean | null;
   text: string | null;
   midShadow: string;
@@ -21,10 +21,11 @@ interface Out {
 interface Api {
   runOne(verb: string, extra: Record<string, unknown>, skip: boolean, actor?: Record<string, unknown>): Promise<Out>;
   reduced(): Promise<{ ms: number; actors: number; cues: string[] }>;
+  together(skip?: boolean, verb?: string): Promise<{ mid: { scale: string; transform: string }; end: string; seen: string[] }>;
   own(): Promise<{ log: string[]; names: string[] }>;
 }
 const CASES: [string, Record<string, unknown>, (o: Out) => void][] = [
-  ['move', { to: 'b' }, (o) => expect([o.style?.left, o.style?.top, o.style?.transform]).toEqual(['330px', '225px', ''])],
+  ['move', { to: 'b' }, (o) => expect([o.style?.left, o.style?.top, o.style?.translate]).toEqual(['330px', '225px', ''])],
   ['lift', { to: 1.2 }, (o) => expect(o.style?.transform).toContain('scale(1.2)')],
   ['settle', {}, (o) => expect(o.style?.transform).toBe('none')],
   ['fade-in', {}, (o) => expect(o.style?.opacity).toBe('1')],
@@ -32,13 +33,13 @@ const CASES: [string, Record<string, unknown>, (o: Out) => void][] = [
   ['show', {}, (o) => expect(o.style?.visibility).toBe('visible')],
   ['hide', {}, (o) => expect(o.style?.visibility).toBe('hidden')],
   ['flip', {}, (o) => expect(o.flipped).toBe(true)],
-  ['scale', { to: 1.5 }, (o) => expect(o.style?.transform).toBe('scale(1.5)')],
+  ['scale', { to: 1.5 }, (o) => expect(o.style?.scale).toBe('1.5')],
   ['shake', { times: 3 }, (o) => expect(o.style?.transform).toBe('none')],
   ['glow', {}, (o) => expect(o.style?.boxShadow).toBe('')],
   ['text', { text: '+3' }, (o) => expect([o.text, o.style?.opacity]).toEqual(['+3', '1'])],
   ['text', { label: 'PLAY BALL' }, (o) => expect(o.text).toBe('PLAY BALL')],
   ['move', { to: 'b', then: 'hide' }, (o) => expect([o.style?.left, o.style?.visibility]).toEqual(['330px', 'hidden'])],
-  ['scale', { to: 1.5, pulse: true }, (o) => expect(o.style?.transform).toBe('none')],
+  ['scale', { to: 1.5, pulse: true }, (o) => expect(o.style?.scale).toBe('none')],
   ['fade-out', { to: 0.6 }, (o) => expect(o.style?.opacity).toBe('0.6')],
   ['flip', { label: 'Pick 2 of 3' }, (o) => expect([o.flipped, o.label]).toEqual([true, 'Pick 2 of 3'])],
   ['move', { to: 'b', ease: 'out' }, (o) => expect(o.style?.left).toBe('330px')],
@@ -94,6 +95,23 @@ describe.skipIf(!HAVE && !process.env['CI'])('effect library in a browser', () =
     expect(r.actors).toBe(0);
     expect(r.ms).toBeLessThan(100);
     expect(r.cues).toEqual(['c']);
+  });
+
+  it('two verbs on one actor at once both show; resolve gets the run', async () => {
+    const r = await page.evaluate(() => (window as unknown as { fxTest: Api }).fxTest.together());
+    expect(Number(r.mid.scale)).toBeGreaterThan(1);
+    expect(Number(r.mid.transform.split(/[(,]/)[1])).toBeLessThan(0.6);
+    expect(r.end).toBe('2');
+    expect(r.seen).toEqual(['a tg']);
+  });
+
+  it('scale with flip or move, skipped half way: both end states are kept', async () => {
+    for (const verb of ['flip', 'move']) {
+      const r = await page.evaluate((v) => (window as unknown as { fxTest: Api }).fxTest.together(true, v), verb);
+      expect(r.end, verb).toBe('2');
+    }
+    const m = await page.evaluate(() => (window as unknown as { fxTest: Api }).fxTest.together(false, 'move'));
+    expect(Number(m.mid.scale)).toBeGreaterThan(1);
   });
 
   it('a game registers its own effect beside the twelve', async () => {

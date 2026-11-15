@@ -5,7 +5,7 @@ export interface LayerOptions {
   /** the element that holds the layer (default `document.body`) */
   parent?: HTMLElement;
   /** the page element an actor or zone id stands for; the layer animates a clone of it, never the original. None found: a plain box. */
-  resolve?: (id: string) => HTMLElement | undefined;
+  resolve?: (id: string, run: Run<EffectLayer>) => HTMLElement | undefined;
 }
 export interface EffectLayer {
   el: HTMLElement;
@@ -38,7 +38,7 @@ export function createEffectLayer(o: LayerOptions = {}): EffectLayer {
       if (m === undefined) runs.set(run.id, (m = new Map<string, HTMLElement>()));
       let a = m.get(id);
       if (a === undefined) {
-        const src = o.resolve?.(id);
+        const src = o.resolve?.(id, run);
         a = src ? (src.cloneNode(true) as HTMLElement) : document.createElement('div');
         a.classList.add('fx-actor');
         a.removeAttribute('id');

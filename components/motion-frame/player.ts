@@ -46,13 +46,15 @@ export interface PlayerOptions<C = undefined> {
 }
 export interface PlayOptions {
   onEnd?: () => void;
+  /** starts at once, alongside what plays, outside the queue (for `constant` beats that overlap); `skipAll` still ends it */
+  parallel?: boolean;
 }
 export interface MotionPlayer {
   /** queue a beat by name, or a spec built by the game (a template filled with live actors) */
   play(beat: string | MotionSpec, opts?: PlayOptions): void;
   /** a rare or once beat is playing or queued */
   busy(): boolean;
-  /** beats playing or queued */
+  /** beats playing (parallel ones too) or queued */
   pending(): number;
   /** everything playing and queued jumps to its end state: verbs finish, end callbacks fire, cues not yet due are dropped */
   skipAll(): void;
@@ -77,6 +79,7 @@ export function createMotionPlayer<C = undefined>(o: PlayerOptions<C>): MotionPl
   const queue: Item[] = [];
   const subs = new Set<() => void>();
   let cur: Current<C> | null = null;
+  const live = new Set<Current<C>>();
   let runs = 0;
   let skipping = false;
   const emit = (): void => {
@@ -95,10 +98,9 @@ export function createMotionPlayer<C = undefined>(o: PlayerOptions<C>): MotionPl
     safe(`cue ${c}`, () => o.onCue?.(c, beat));
   };
 
-  const finish = (): void => {
-    const c = cur;
-    if (c === null) return;
-    cur = null;
+  const finish = (c: Current<C>): void => {
+    live.delete(c);
+    if (cur === c) cur = null;
     c.timers.forEach((t) => {
       clearTimeout(t);
     });
@@ -109,7 +111,7 @@ export function createMotionPlayer<C = undefined>(o: PlayerOptions<C>): MotionPl
     safe(`${c.run.timeline.id} onEnd`, () => c.item.onEnd?.());
   };
 
-  const start = (item: Item, factor: number): void => {
+  const start = (item: Item, factor: number, parallel = false): void => {
     const { spec } = item;
     const stage = o.stages[spec.stage ?? 'default'];
     if (stage === undefined) throw new Error(`motion-frame ${spec.id}: stage ${String(spec.stage)} is not known`);
@@ -118,7 +120,8 @@ export function createMotionPlayer<C = undefined>(o: PlayerOptions<C>): MotionPl
     const timers = new Set<Timer>();
     const open = new Set<() => void>();
     const me: Current<C> = { item, run, timers, open };
-    cur = me;
+    live.add(me);
+    if (!parallel) cur = me;
     const at = (ms: number, f: () => void): void => {
       const t = setTimeout(() => {
         timers.delete(t);
@@ -148,8 +151,8 @@ export function createMotionPlayer<C = undefined>(o: PlayerOptions<C>): MotionPl
         cue(c.cue, spec.id);
       });
     at(run.timeline.ms, () => {
-      if (cur !== me) return;
-      finish();
+      if (!live.has(me)) return;
+      finish(me);
       next();
       emit();
     });
@@ -159,24 +162,27 @@ export function createMotionPlayer<C = undefined>(o: PlayerOptions<C>): MotionPl
     while (cur === null && !skipping) {
       const item = queue.shift();
       if (item === undefined) return;
-      const speed = o.speed();
-      if (speed === 'instant' || !(speed > 0)) {
-        // no timeline is built; the cues still sound, in order
-        [...(item.spec.sound ?? [])]
-          .sort((a, b) => a.t - b.t)
-          .forEach((c) => {
-            cue(c.cue, item.spec.id);
-          });
-        safe(`${item.spec.id} onEnd`, () => item.onEnd?.());
-        continue;
-      }
-      try {
-        start(item, speed);
-      } catch (e) {
-        cur = null;
-        o.onProblem?.(e instanceof Error ? e.message : String(e));
-        safe(`${item.spec.id} onEnd`, () => item.onEnd?.());
-      }
+      begin(item, false);
+    }
+  };
+  const begin = (item: Item, parallel: boolean): void => {
+    const speed = o.speed();
+    if (speed === 'instant' || !(speed > 0)) {
+      // no timeline is built; the cues still sound, in order
+      [...(item.spec.sound ?? [])]
+        .sort((a, b) => a.t - b.t)
+        .forEach((c) => {
+          cue(c.cue, item.spec.id);
+        });
+      safe(`${item.spec.id} onEnd`, () => item.onEnd?.());
+      return;
+    }
+    try {
+      start(item, speed, parallel);
+    } catch (e) {
+      if (!parallel) cur = null;
+      o.onProblem?.(e instanceof Error ? e.message : String(e));
+      safe(`${item.spec.id} onEnd`, () => item.onEnd?.());
     }
   };
 
@@ -188,17 +194,24 @@ export function createMotionPlayer<C = undefined>(o: PlayerOptions<C>): MotionPl
         safe('onEnd', () => opts?.onEnd?.());
         return;
       }
-      queue.push({ spec, onEnd: opts?.onEnd });
-      next();
+      if (opts?.parallel === true) {
+        // during a skip it jumps to its end at once, like everything else
+        if (skipping) safe(`${spec.id} onEnd`, () => opts.onEnd?.());
+        else begin({ spec, onEnd: opts.onEnd }, true);
+      }
+      else {
+        queue.push({ spec, onEnd: opts?.onEnd });
+        next();
+      }
       emit();
     },
-    busy: () => (cur !== null && blocks(cur.item.spec)) || queue.some((i) => blocks(i.spec)),
-    pending: () => (cur === null ? 0 : 1) + queue.length,
+    busy: () => [...live].some((c) => blocks(c.item.spec)) || queue.some((i) => blocks(i.spec)),
+    pending: () => live.size + queue.length,
     skipAll() {
       // a play() from an end callback waits until every end callback has fired
       const waiting = queue.splice(0);
       skipping = true;
-      finish();
+      [...live].forEach(finish);
       for (const i of waiting) safe(`${i.spec.id} onEnd`, () => i.onEnd?.());
       skipping = false;
       next();

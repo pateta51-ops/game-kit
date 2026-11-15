@@ -190,6 +190,47 @@ describe('player', () => {
     expect(seen).toEqual([false, true, true, false]);
   });
 
+  it('a parallel beat starts at once beside the playing one and skipAll ends both', () => {
+    const { log, player } = setup();
+    const ends: string[] = [];
+    player.play('gain', { onEnd: () => ends.push('gain') });
+    player.play('call', { parallel: true, onEnd: () => ends.push('call') });
+    expect(log.filter((l) => l.startsWith('start'))).toEqual(['start F-1 1', 'start F-3 2']);
+    expect(player.pending()).toBe(2);
+    vi.advanceTimersByTime(300);
+    player.play('gain', { parallel: true });
+    player.skipAll();
+    expect(ends.sort()).toEqual(['call', 'gain']);
+    expect(player.pending()).toBe(0);
+  });
+
+  it('a parallel beat ends on its own once; a rare one holds busy; a parallel play from a skip ends at once', () => {
+    const { log, player } = setup();
+    const ends: string[] = [];
+    player.play('call', { parallel: true, onEnd: () => ends.push('roll') });
+    expect(player.busy()).toBe(true);
+    vi.advanceTimersByTime(5000);
+    expect(ends).toEqual(['roll']);
+    expect(player.busy()).toBe(false);
+    player.play('gain', {
+      onEnd: () => player.play('roll', { parallel: true, onEnd: () => ends.push('call') }),
+    });
+    player.skipAll();
+    expect(ends).toEqual(['roll', 'call']);
+    expect(player.pending()).toBe(0);
+    expect(log.filter((l) => l.startsWith('start'))).toEqual(['start F-3 1', 'start F-1 2']);
+  });
+
+  it('instant speed: a parallel beat ends at once and its cues still sound', () => {
+    const { log, player, setSpeed } = setup();
+    setSpeed('instant');
+    const ends: string[] = [];
+    player.play('gain', { parallel: true, onEnd: () => ends.push('gain') });
+    expect(ends).toEqual(['gain']);
+    expect(log).toContain('cue drop F-1');
+    expect(player.pending()).toBe(0);
+  });
+
   it('skipAll jumps everything queued to its end and drops the cues not yet due', () => {
     const { log, player } = setup();
     const ends: string[] = [];

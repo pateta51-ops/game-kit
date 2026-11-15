@@ -50,7 +50,7 @@ export const BUILT_IN: Readonly<Record<string, Effect>> = {
     const t = call.to;
     if (!t) return undefined;
     const f = call.from;
-    animate([{ transform: 'translate(0,0)' }, { transform: `translate(${String(t[0] - f[0])}px,${String(t[1] - f[1])}px)` }], { transform: '' });
+    animate([{ translate: '0 0' }, { translate: `${String(t[0] - f[0])}px ${String(t[1] - f[1])}px` }], { translate: '' });
     return () => {
       place(el, t);
       if (call.step['then'] === 'hide') css(el, { visibility: 'hidden' });
@@ -105,8 +105,8 @@ export const BUILT_IN: Readonly<Record<string, Effect>> = {
     };
   },
   scale: ({ call, animate }) => {
-    const k = { transform: `scale(${String(call.value ?? 1)})` };
-    const rest = { transform: 'none' };
+    const k = { scale: String(call.value ?? 1) };
+    const rest = { scale: 'none' };
     if (call.step['pulse'] === true) animate([rest, k, rest], rest);
     else animate([rest, k], k);
     return undefined;
