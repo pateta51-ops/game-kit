@@ -1,0 +1,41 @@
+{
+  "name": "glossary",
+  "source": {
+    "game": "warps",
+    "commit": "2af6937",
+    "paths": [
+      "src/ui/glossary/match.ts (matcher; entries passed in, icon markup an option, `#` number patterns)",
+      "src/content/glossary.ts (isPrinted, nameKey, glossaryProblems; no schema)",
+      "src/ui/glossary/GlossaryText.tsx (GlossaryLink, GlossaryText; store, GameIcon and powerText replaced by a provider and renderIcon)",
+      "src/ui/glossary/LookupHost.tsx (popover; the phone sheet is phone-mode's; words, routes and kind titles passed in)",
+      "src/ui/glossary/lookupStore.ts, src/ui/glossary/lookupLayout.ts (besideAnchor)",
+      "src/ui/glossary/glossary.ts (paragraphs, searchEntries)",
+      "scripts/glossary-check.ts (SCHEMA, RULE, ICON, REQUIRED, HEADING, VOCAB, LANGUAGE; lists and readers passed in)",
+      "tests/scripts/glossary-check.test.ts, src/ui/glossary/glossaryUi.test.tsx (rewritten on a fake glossary)"
+    ],
+    "grafts": [
+      {
+        "game": "stcc",
+        "commit": "9fc59643",
+        "paths": [
+          "src/ui/glossary/match.ts (linking index: searchAliases, plain, tokens with #; coverage index)"
+        ]
+      },
+      {
+        "game": "ebr",
+        "commit": "33b5abd3",
+        "paths": [
+          "src/ui/glossary/load.ts (entries passed in as data)"
+        ]
+      }
+    ]
+  },
+  "needs": [
+    "phone-mode",
+    "state-machines"
+  ],
+  "packages": [
+    "react",
+    "zustand"
+  ]
+}

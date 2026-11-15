@@ -1,0 +1,74 @@
+/* glossary: neutral defaults at zero specificity; a game sets the --glo-* variables on :root or an ancestor. */
+:where(.kit-glo-link) {
+  color: var(--glo-link, inherit);
+  text-decoration: var(--glo-link-line, underline dotted);
+  text-underline-offset: 0.15em;
+  cursor: pointer;
+}
+:where(.kit-glo-link:focus-visible) {
+  outline: 2px solid var(--glo-focus, currentColor);
+  outline-offset: 1px;
+}
+:where(.kit-glo-link--hold) {
+  cursor: inherit;
+}
+:where(.kit-glo-icon) {
+  display: inline-block;
+  height: var(--glo-icon-size, 1.1em);
+  vertical-align: -0.15em;
+}
+:where(.kit-glo-scrim) {
+  position: fixed;
+  inset: 0;
+  z-index: var(--glo-z, 40);
+  background: var(--glo-scrim, transparent);
+}
+:where(.kit-glo-pop) {
+  position: fixed;
+  width: var(--glo-pop-width, 28em);
+  max-width: calc(100vw - 24px);
+  max-height: calc(100vh - 24px);
+  overflow: auto;
+  padding: var(--glo-pop-pad, 1em 1.2em);
+  background: var(--glo-pop-bg, #fff);
+  color: var(--glo-pop-text, #111);
+  border: var(--glo-pop-border, 1px solid #888);
+  border-radius: var(--glo-pop-radius, 8px);
+  box-shadow: var(--glo-pop-shadow, 0 6px 24px rgba(0, 0, 0, 0.35));
+  font: var(--glo-font, inherit);
+}
+:where(.kit-glo-kind) {
+  color: var(--glo-kind, inherit);
+  font: var(--glo-kind-font, inherit);
+  opacity: var(--glo-kind-opacity, 0.7);
+}
+:where(.kit-glo-term) {
+  margin: 0 0 0.5em;
+  font: var(--glo-head-font, bold 1.2em inherit);
+}
+:where(.kit-glo-rules, .kit-glo-see) {
+  opacity: var(--glo-meta-opacity, 0.85);
+}
+:where(.kit-glo-foot) {
+  display: flex;
+  gap: 0.5em;
+  justify-content: flex-end;
+  margin-top: 0.8em;
+}
+:where(.kit-glo-btn) {
+  min-height: var(--glo-btn-h, 2.4em);
+  padding: 0 1em;
+  border: var(--glo-btn-border, 1px solid currentColor);
+  border-radius: var(--glo-btn-radius, 6px);
+  background: var(--glo-btn-bg, transparent);
+  color: var(--glo-btn-text, inherit);
+  font: inherit;
+  display: inline-flex;
+  align-items: center;
+  text-decoration: none;
+  cursor: pointer;
+}
+:where(.kit-glo-btn--primary) {
+  background: var(--glo-btn-primary-bg, #333);
+  color: var(--glo-btn-primary-text, #fff);
+}
