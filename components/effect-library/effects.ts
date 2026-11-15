@@ -128,7 +128,7 @@ export const BUILT_IN: Readonly<Record<string, Effect>> = {
     const s = call.step['text'] ?? call.step['label'];
     el.textContent = typeof s === 'string' ? s : call.value !== undefined ? String(call.value) : '';
     css(el, { color: 'var(--fx-text,inherit)', font: 'var(--fx-text-font,inherit)', textAlign: 'center' });
-    animate([{ opacity: 0, transform: 'translateY(var(--fx-text-rise,12px))' }, { opacity: 1, transform: 'none' }], { opacity: '1', transform: 'none' });
+    animate([{ opacity: 0, transform: 'translateY(var(--fx-text-rise,12px))' }, { opacity: 1, offset: 0.25 }, { opacity: 1, transform: 'none' }], { opacity: '1', transform: 'none' });
     return undefined;
   },
 };

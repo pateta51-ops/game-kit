@@ -10,6 +10,7 @@ async function runOne(verb: string, extra: Record<string, unknown>, skip: boolea
   let mid: HTMLElement | undefined;
   let midShadow = '';
   let midTransform = '';
+  let midOpacity = '';
   const player = createMotionPlayer({
     specs: {},
     stages: { default: (z) => (z === 'b' ? [300, 200, 100, 80] : undefined) },
@@ -32,7 +33,7 @@ async function runOne(verb: string, extra: Record<string, unknown>, skip: boolea
     player.play(spec, { onEnd: done });
     setTimeout(() => {
       mid = layer.el.querySelector<HTMLElement>('.fx-actor') ?? undefined;
-      if (mid) ({ boxShadow: midShadow, transform: midTransform } = getComputedStyle(mid));
+      if (mid) ({ boxShadow: midShadow, transform: midTransform, opacity: midOpacity } = getComputedStyle(mid));
     }, 100);
     if (skip) setTimeout(() => player.skipAll(), 80);
   });
@@ -43,6 +44,7 @@ async function runOne(verb: string, extra: Record<string, unknown>, skip: boolea
     anims,
     midShadow,
     midTransform,
+    midOpacity,
     veil: kept?.classList.contains('fx-veil') ?? null,
     bg: s?.background ?? null,
     label: kept?.getAttribute('data-fx-label') ?? null,
@@ -84,6 +86,31 @@ async function together(skip = false, verb = 'flip') {
   return { mid, end, seen };
 }
 
+// a stand-in exists from the beat's start when the game calls layer.start, not before the first verb otherwise
+async function early(start: boolean) {
+  const verbs = createVerbs<EffectCtx>();
+  const layer = registerEffects(verbs);
+  let at50 = -1;
+  const player = createMotionPlayer({
+    specs: {},
+    stages: { default: () => undefined },
+    verbs,
+    speed: () => 1,
+    context: layer,
+    onBeatStart: (run) => {
+      if (start) layer.start(run);
+    },
+    onBeatEnd: (run) => layer.end(run),
+  });
+  await new Promise<void>((done) => {
+    player.play({ id: 'e', maxMs: 300, actors: [{ id: 'a', at: [10, 10], w: 5, h: 5 }], steps: [{ t: 150, dur: 50, actor: 'a', do: 'show' }] }, { onEnd: done });
+    setTimeout(() => {
+      at50 = layer.el.querySelectorAll('.fx-actor').length;
+    }, 50);
+  });
+  return at50;
+}
+
 async function own() {
   const verbs = createVerbs<EffectCtx>();
   const layer = registerEffects(verbs);
@@ -118,4 +145,4 @@ async function reduced() {
   return { ms: performance.now() - t0, actors: layer.el.querySelectorAll('.fx-actor').length, cues };
 }
 
-(window as unknown as Record<string, unknown>)['fxTest'] = { runOne, own, reduced, together };
+(window as unknown as Record<string, unknown>)['fxTest'] = { runOne, own, reduced, together, early };

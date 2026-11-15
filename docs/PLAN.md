@@ -87,6 +87,7 @@ A game's build plan lists the kit work it needs as phases named `GK<n>` for the 
 | K41 | `sim-pool`: a seed plays differently in a pool worker than alone (find the cause); a per-prompt observation hook; a grid-sweep helper over `runResumable` with a CSV and spread per cell | M | a finished build, 15 Nov 2026 | proposed |
 | K42 | `settings` screen: a slot for custom rows (games portal into it by title text today); `saves` screen name fit | S | a finished build, 15 Nov 2026 | proposed |
 | K12b | `motion-frame` `play(beat, { parallel: true })` (a beat starts at once beside the playing one); `effect-library`: `move` and `scale` animate `translate` and `scale` so they compose with the transform verbs, and `resolve(id, run)` gets the run | S | 7th Inning Stretch PR 30, 15 Nov 2026 | done |
+| K12c | `effect-library`: `layer.start(run)` makes the beat's stand-ins at its start (a live piece hidden at the start left a hole until its actor's first verb); `text` reaches full opacity in the first quarter of the call so the rise is seen | S | 7th Inning Stretch PR 36, 15 Nov 2026 | done |
 
 ## Size
 

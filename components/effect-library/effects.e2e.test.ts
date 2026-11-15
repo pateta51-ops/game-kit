@@ -14,6 +14,7 @@ interface Out {
   text: string | null;
   midShadow: string;
   midTransform: string;
+  midOpacity: string;
   veil: boolean | null;
   bg: string | null;
   label: string | null;
@@ -22,6 +23,7 @@ interface Api {
   runOne(verb: string, extra: Record<string, unknown>, skip: boolean, actor?: Record<string, unknown>): Promise<Out>;
   reduced(): Promise<{ ms: number; actors: number; cues: string[] }>;
   together(skip?: boolean, verb?: string): Promise<{ mid: { scale: string; transform: string }; end: string; seen: string[] }>;
+  early(start: boolean): Promise<number>;
   own(): Promise<{ log: string[]; names: string[] }>;
 }
 const CASES: [string, Record<string, unknown>, (o: Out) => void][] = [
@@ -112,6 +114,15 @@ describe.skipIf(!HAVE && !process.env['CI'])('effect library in a browser', () =
     }
     const m = await page.evaluate(() => (window as unknown as { fxTest: Api }).fxTest.together(false, 'move'));
     expect(Number(m.mid.scale)).toBeGreaterThan(1);
+  });
+
+  it('text is fully visible well before its rise ends', async () => {
+    expect(Number((await run('text', { text: '+3' }, false)).midOpacity)).toBe(1);
+  });
+
+  it('layer.start makes the stand-ins at the beat start, not at the first verb', async () => {
+    expect(await page.evaluate(() => (window as unknown as { fxTest: Api }).fxTest.early(false))).toBe(0);
+    expect(await page.evaluate(() => (window as unknown as { fxTest: Api }).fxTest.early(true))).toBe(1);
   });
 
   it('a game registers its own effect beside the twelve', async () => {

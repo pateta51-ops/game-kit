@@ -11,6 +11,8 @@ export interface EffectLayer {
   el: HTMLElement;
   /** the clone (or stand-in) of an actor in this run, made at `from` on first use */
   actor(run: Run<EffectLayer>, id: string, from: Rect): HTMLElement;
+  /** makes the stand-ins of all the beat's actors now, at its start (call it from the player's `onBeatStart`); otherwise each is made at its first verb */
+  start(run: Run<EffectLayer>): void;
   /** removes the run's clones: call it from the player's `onBeatEnd` */
   end(run: Run<EffectLayer>): void;
   clear(): void;
@@ -31,8 +33,11 @@ export function createEffectLayer(o: LayerOptions = {}): EffectLayer {
   el.style.cssText = 'position:fixed;inset:0;overflow:visible;pointer-events:none;z-index:var(--fx-z,1000)';
   parent.appendChild(el);
   const runs = new Map<number, Map<string, HTMLElement>>();
-  return {
+  const self: EffectLayer = {
     el,
+    start(run) {
+      for (const a of run.timeline.actors) self.actor(run, a.id, a.rect);
+    },
     actor(run, id, from) {
       let m = runs.get(run.id);
       if (m === undefined) runs.set(run.id, (m = new Map<string, HTMLElement>()));
@@ -71,4 +76,5 @@ export function createEffectLayer(o: LayerOptions = {}): EffectLayer {
       el.replaceChildren();
     },
   };
+  return self;
 }
