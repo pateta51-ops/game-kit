@@ -41,6 +41,7 @@ export type * from './types';
 export {
   canUndo,
   newHistory,
+  appendAction,
   recordAction,
   redo,
   revealReason,

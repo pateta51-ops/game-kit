@@ -148,3 +148,23 @@ export function recordAction<G extends GameTypes>(
     return refuse(h, r.state, String(e));
   }
 }
+
+/** `recordAction` without the rebuild: `state` is the state at `h.cursor` (the caller keeps it); also returns the events of the action. */
+export function appendAction<G extends GameTypes>(
+  game: GameRules<G>,
+  h: History<G>,
+  state: G['state'],
+  action: G['action'],
+  content: G['content'],
+): HistoryResult<G> & { readonly events: readonly G['event'][] } {
+  if (!Number.isInteger(h.cursor) || h.cursor < 0 || h.cursor > h.actions.length) {
+    return { ...refuse(h, state, 'Invalid history cursor.'), events: [] };
+  }
+  try {
+    const r = applyAction(game, state, action, content);
+    const next: History<G> = { ...h, actions: [...h.actions.slice(0, h.cursor), action], cursor: h.cursor + 1 };
+    return { ok: true, history: next, state: r.state, error: null, events: r.events };
+  } catch (e) {
+    return { ...refuse(h, state, String(e)), events: [] };
+  }
+}

@@ -38,6 +38,7 @@ node kit/kit.mjs check
 - Run `git -C <kit checkout> fetch --tags` first when the tag is new.
 - A component names the others it needs in its `component.json` (`needs`): pull those too.
 - Read a component's `README.md` (or its `component.json` and index file) before using it; never its source game.
+- `engine-core` `appendAction(game, history, state, action, content)`: `state` is trusted to be the state at `history.cursor` (not checked); a cursor out of range is refused.
 
 ## Changing the kit
 
