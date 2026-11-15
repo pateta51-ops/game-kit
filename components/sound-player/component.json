@@ -1,0 +1,18 @@
+{
+  "name": "sound-player",
+  "source": {
+    "game": "warps",
+    "commit": "ad56f42",
+    "paths": [
+      "src/ui/audio/engine.ts (the graph with a limiter, buses, decode with one warning per sound, cue() that never throws; the manifest, the cue-name type and the store import stayed behind: the table is passed in)",
+      "src/ui/audio/mixer.ts (variation never repeated, the 40 ms dedupe, the voice limit; a voice over the limit is now faded, never stopped dead)",
+      "src/ui/audio/catalog.ts (the idea of the cue table as data and of ducking; no entry taken)",
+      "src/ui/audio/index.ts (unlock on a gesture until the context runs, resume when the page is seen again)",
+      "src/ui/audio/fakeContext.ts (the fake context for tests; its gains now keep their schedule)"
+    ],
+    "grafts": [
+      { "game": "unst", "paths": ["the cap per cue name from its event-to-cue merge layer; idea only, no file taken"] }
+    ]
+  },
+  "needs": []
+}
