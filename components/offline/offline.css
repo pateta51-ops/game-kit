@@ -1,0 +1,25 @@
+:where(.kit-upd) {
+  --upd-gap: 0.75rem;
+  --upd-text: inherit;
+  --upd-bg: transparent;
+  --upd-pad: 0.5rem 0.75rem;
+  --upd-border: 1px solid currentColor;
+  --upd-radius: 0.25rem;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--upd-gap);
+  color: var(--upd-text);
+  background: var(--upd-bg);
+  padding: var(--upd-pad);
+  border: var(--upd-border);
+  border-radius: var(--upd-radius);
+}
+:where(.kit-upd-btn) {
+  font: inherit;
+  color: inherit;
+  background: transparent;
+  border: var(--upd-border);
+  border-radius: var(--upd-radius);
+  padding: 0.25rem 0.75rem;
+}

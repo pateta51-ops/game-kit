@@ -1,0 +1,62 @@
+:where(.kit-sav) {
+  --sav-gap: 1rem;
+  --sav-text: inherit;
+  --sav-font: inherit;
+  --sav-bg: transparent;
+  --sav-pad: 0.75rem;
+  --sav-border: 1px solid currentColor;
+  --sav-radius: 0.25rem;
+  --sav-muted-opacity: 0.7;
+  --sav-bad: #b00020;
+  --sav-accent: transparent;
+  --sav-accent-text: inherit;
+  display: grid;
+  gap: var(--sav-gap);
+  color: var(--sav-text);
+  font-family: var(--sav-font);
+}
+:where(.kit-sav-section) {
+  background: var(--sav-bg);
+  padding: var(--sav-pad);
+  border: var(--sav-border);
+  border-radius: var(--sav-radius);
+}
+:where(.kit-sav-list) {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: calc(var(--sav-gap) / 2);
+}
+:where(.kit-sav-row) {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: calc(var(--sav-gap) / 2);
+}
+:where(.kit-sav-what) {
+  display: grid;
+  flex: 1 1 12rem;
+}
+:where(.kit-sav-muted) {
+  opacity: var(--sav-muted-opacity);
+}
+:where(.kit-sav-bad) {
+  color: var(--sav-bad);
+}
+:where(.kit-sav-form) {
+  display: flex;
+  gap: calc(var(--sav-gap) / 2);
+}
+:where(.kit-sav-btn) {
+  font: inherit;
+  border: var(--sav-border);
+  border-radius: var(--sav-radius);
+  padding: 0.25rem 0.75rem;
+  background: transparent;
+  color: inherit;
+}
+:where(.kit-sav-primary) {
+  background: var(--sav-accent);
+  color: var(--sav-accent-text);
+}

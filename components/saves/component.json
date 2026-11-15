@@ -1,0 +1,20 @@
+{
+  "name": "saves",
+  "source": {
+    "game": "jarl",
+    "commit": "6f006a2",
+    "paths": [
+      "src/ui/store/kv.ts (as is; the database name became the game's)",
+      "src/ui/store/kv.test.ts",
+      "src/ui/store/saves.ts (over engine-core's SaveFile; the tutorial marker dropped)",
+      "src/ui/screens/Saves.tsx (the game's describe line became the summary prop, its words a words prop)"
+    ],
+    "grafts": [
+      { "game": "warps", "commit": "2af6937", "paths": ["src/ui/game/saves.ts (askPersistence as keepStorage, exportName)", "src/ui/game/saves.test.ts (restore, other content version, damaged save cases)"] },
+      { "game": "rome", "commit": "1d0fd2e", "paths": ["golden save test (a fixed game's recorded final hash)"] },
+      { "game": "ebr", "commit": "33b5abd3", "paths": ["autosave slots with pruning (autosaves)"] }
+    ]
+  },
+  "needs": ["engine-core", "bug-reporter"],
+  "packages": ["idb-keyval", "react"]
+}

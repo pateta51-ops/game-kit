@@ -1,0 +1,22 @@
+{
+  "name": "offline",
+  "source": {
+    "game": "jarl",
+    "commit": "6f006a2",
+    "paths": [
+      "scripts/lib/sw-precache.ts (the prefix and the exclusions became the game's; the asset folder list added; writes the kit's sw.js itself)",
+      "public/sw.js (the cache prefix read from the precache)",
+      "src/ui/sw.ts (registerServiceWorker takes the build's env and the worker's url)",
+      "src/ui/update.machine.ts",
+      "src/ui/sw.test.tsx",
+      "tests/scripts/sw-precache.test.ts",
+      "e2e/phone/offline.spec.ts and e2e/phone/lib/offline-server.ts (as offline.e2e.test.ts on a small build)",
+      "src/ui/screens/Home.tsx (its update line, as UpdateLine)"
+    ],
+    "grafts": [
+      { "game": "warps", "commit": "2af6937", "paths": ["src/ui/game/saves.ts (askPersistence: in saves as keepStorage)"] }
+    ]
+  },
+  "needs": ["state-machines"],
+  "packages": ["react", "zustand"]
+}
