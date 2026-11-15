@@ -1,0 +1,30 @@
+# check-runner (two scripts a game runs with `tsx` from its root)
+
+## check-runner.ts: the checks of `npm run check`, in lanes
+
+`tsx kit/check-runner/check-runner.ts [--config path] [--pr] [--fail-fast] [--keep-going]`
+
+The game passes `check-runner.config.json` (see `check-runner.config.example.json`):
+- `checkScript`: the package.json script that chains the checks (`npm run a && npm run b`).
+- `first`: scripts run alone before the lanes. `lanes`: each lane runs in order, the lanes side by side.
+- `extra`: CI-only steps that are in a lane but not in the chain. `pr`: the `first`/`lanes` subset of `--pr`.
+- `timeoutMinutes`, `graceSeconds`: per check; a timeout or a cancel kills the check's whole process tree.
+- `failFast` (default false): same as `--fail-fast`.
+
+The run fails while the lanes and the chain disagree. By default every check runs even after a failure.
+With `--fail-fast` the first failing check stops the ones still running (shown as `stopped`, not failed),
+no further check starts, and the failing check's output is printed again after the summary.
+`--keep-going` runs everything, whatever the config says.
+
+## gate-all.ts: one gate process per item, with a known-failing list
+
+`tsx kit/check-runner/gate-all.ts [--config path] [--jobs N]`
+
+The game passes `gate-all.config.json`:
+- `command`: the gate's command line as an array; `{id}` is replaced by the item.
+- `items`: the ids (packs, scenarios); one process each, up to one per core (`--jobs`), rows printed in this order.
+- `known`: `{ "id": "why it fails today" }`. A listed failure is reported, never red. A listed item that
+  now passes is flagged (`::notice::`) so its line can be removed. Any other failure fails the run, with its output.
+- `title`: the heading of the last line and of the job summary table.
+
+A game whose items come from code imports `gateAll`, `gate` and `report` instead of using the config.

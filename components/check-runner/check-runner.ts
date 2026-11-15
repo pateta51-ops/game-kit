@@ -8,7 +8,11 @@
 // and the package.json check chain (+ `extra`) disagree: a check added to one and not the other. `--pr` runs the
 // config's `pr` subset instead (its scripts must exist in package.json and be in the check chain or `extra`).
 //
-//   tsx check-runner.ts [--config path] [--pr]
+//   tsx check-runner.ts [--config path] [--pr] [--fail-fast] [--keep-going]
+//
+// `--fail-fast` (or `"failFast": true` in the config; from STCC): the first failing check stops the checks still running
+// (their whole trees) and no further check starts; its output is printed again after the summary. `--keep-going` runs
+// everything whatever the config says.
 //
 // Adding a check: put it in the check chain (or, for a CI-only step, in `extra`) and in a lane.
 
@@ -30,6 +34,8 @@ export interface Config extends Plan {
   extra: string[];
   /** The `--pr` subset. */
   pr?: Plan;
+  /** Stop at the first failing check (`--keep-going` overrides). */
+  failFast?: boolean;
   timeoutMinutes: number;
   graceSeconds: number;
 }
@@ -66,6 +72,8 @@ interface Done {
   script: string;
   code: number;
   ms: number;
+  /** Ended because another check failed (fail-fast), not by its own result. */
+  stopped: boolean;
 }
 
 let TIMEOUT_MS = 30 * 60_000;
@@ -87,6 +95,20 @@ function killTree(pid: number | undefined, signal: NodeJS.Signals): void {
 /** The checks still running (their process-group leaders). */
 const running = new Set<number | undefined>();
 let stopping = false;
+let bailed = false;
+const killed = new Set<number>();
+
+/** Fail-fast: stops the checks still running; no lane starts its next check. */
+function bail(): void {
+  bailed = true;
+  for (const pid of running) {
+    if (pid !== undefined) killed.add(pid);
+    killTree(pid, 'SIGTERM');
+  }
+  setTimeout(() => {
+    for (const pid of running) killTree(pid, 'SIGKILL');
+  }, GRACE_MS).unref();
+}
 
 /** A cancelled job (the runner sends SIGINT, then SIGTERM) stops every check's tree too: they are in their own groups. */
 function forwardStop(signal: NodeJS.Signals): void {
@@ -125,7 +147,7 @@ function runScript(script: string, log: string): Promise<Done> {
         killTree(child.pid, 'SIGKILL'); // whatever of the tree outlived npm
       }
       closeSync(fd);
-      resolve({ script, code, ms: Date.now() - t0 });
+      resolve({ script, code, ms: Date.now() - t0, stopped: child.pid !== undefined && killed.has(child.pid) });
     };
     child.on('error', (e) => {
       appendFileSync(log, `\ncheck-runner: could not start npm run ${script}: ${e.message}\n`);
@@ -147,6 +169,7 @@ export async function main(argv: readonly string[]): Promise<void> {
   const file = at >= 0 ? (args.splice(at, 2)[1] ?? '') : 'check-runner.config.json';
   const cfg: Config = { ...DEFAULT_CONFIG, ...(JSON.parse(readFileSync(file, 'utf8')) as Partial<Config>) };
   const pr = args.includes('--pr');
+  const failFast = !args.includes('--keep-going') && (args.includes('--fail-fast') || cfg.failFast === true);
   if (pr && cfg.pr === undefined) {
     console.error('check-runner: --pr needs a "pr" plan in the config');
     process.exitCode = 1;
@@ -169,34 +192,38 @@ export async function main(argv: readonly string[]): Promise<void> {
   const t0 = Date.now();
   console.log(`check-runner: first ${FIRST.join(' → ')} alone, then ${LANES.length} lanes: ${LANES.map((l) => l.join(' → ')).join(' | ')}`);
   const results: Done[] = [];
+  const logOf = (script: string) => path.join(dir, `${script.replace(/:/g, '_')}.log`);
+  const state = (d: Done) => (d.code === 0 ? 'passed' : d.stopped ? 'stopped' : `FAILED (exit ${d.code})`);
   const print = (d: Done, log: string) => {
-    const head = `npm run ${d.script}: ${d.code === 0 ? 'passed' : `FAILED (exit ${d.code})`} in ${secs(d.ms)}`;
+    const head = `npm run ${d.script}: ${state(d)} in ${secs(d.ms)}`;
     const text = readFileSync(log, 'utf8');
-    if (d.code === 0) console.log(`::group::${head}\n${text}\n::endgroup::`);
+    if (d.code === 0 || d.stopped) console.log(`::group::${head}\n${text}\n::endgroup::`);
     else console.log(`::error::${head}\n${'='.repeat(80)}\n${head}\n${'='.repeat(80)}\n${text}\n${'='.repeat(80)}`);
   };
   const lane = async (scripts: string[]) => {
     for (const script of scripts) {
-      if (stopping) break;
-      const log = path.join(dir, `${script.replace(/:/g, '_')}.log`);
+      if (stopping || bailed) break;
+      const log = logOf(script);
       const d = await runScript(script, log);
       results.push(d);
       print(d, log); // whole, as soon as the check ends: a log is never interleaved with another
+      if (failFast && d.code !== 0 && !bailed) bail();
     }
   };
   await lane(FIRST); // a failure here still runs every lane: each check reports
   await Promise.all(LANES.map(lane));
-  const failed = results.filter((r) => r.code !== 0);
+  const failed = results.filter((r) => r.code !== 0 && !r.stopped);
   const order = [...FIRST, ...LANES.flat()];
   const rows = [...results].sort((a, b) => order.indexOf(a.script) - order.indexOf(b.script));
-  const table = rows.map((r) => `| ${r.script} | ${r.code === 0 ? 'passed' : `FAILED (exit ${r.code})`} | ${secs(r.ms)} |`);
-  const head = `Checks side by side: ${results.length - failed.length} of ${results.length} passed in ${secs(Date.now() - t0)} (wall clock)`;
+  const table = rows.map((r) => `| ${r.script} | ${state(r)} | ${secs(r.ms)} |`);
+  const head = `Checks side by side: ${results.filter((r) => r.code === 0).length} of ${results.length} passed in ${secs(Date.now() - t0)} (wall clock)`;
   const added = results.reduce((sum, x) => sum + x.ms, 0);
-  console.log(`${head}\n${rows.map((r) => `  ${r.script.padEnd(26)} ${r.code === 0 ? 'passed' : 'FAILED'}  ${secs(r.ms)}`).join('\n')}`);
+  console.log(`${head}\n${rows.map((r) => `  ${r.script.padEnd(26)} ${r.code === 0 ? 'passed' : r.stopped ? 'stopped' : 'FAILED'}  ${secs(r.ms)}`).join('\n')}`);
   console.log(`wall ${secs(Date.now() - t0)}, checks added up ${secs(added)}, ${String(os.availableParallelism())} cores`);
   const summary = process.env['GITHUB_STEP_SUMMARY'];
   if (summary) appendFileSync(summary, `### ${head}\n\n| Check | Result | Time |\n| --- | --- | --- |\n${table.join('\n')}\n\n`);
   if (failed.length) {
+    if (failFast) for (const r of failed) console.log(`\n=== FAILED: npm run ${r.script} (exit ${r.code}) - its output again ===\n${readFileSync(logOf(r.script), 'utf8')}`);
     console.error(`check-runner: failed: ${failed.map((r) => r.script).join(', ')} (their logs are printed above, open)`);
     process.exitCode = 1; // never process.exit(): it cut the long logs still on their way to the runner
   }

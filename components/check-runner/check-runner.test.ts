@@ -76,6 +76,27 @@ describe('a real run', () => {
     expect(r.stdout).toMatch(/1 of 1 passed/);
   });
 
+  it('--fail-fast stops at the first failing check, stops the ones running, and repeats its output; --keep-going runs all', () => {
+    writeFileSync(join(dir, 'slow.js'), 'setInterval(() => {}, 1000);\n');
+    writeFileSync(join(dir, 'boom.js'), "console.log('boom-a');\nprocess.exit(3);\n");
+    const scripts = { check: 'npm run a && npm run b && npm run c', a: 'node boom.js', b: ok, c: 'node slow.js' };
+    const config = { first: [], lanes: [['a', 'b'], ['c']], graceSeconds: 1 };
+    const r = run(scripts, config, ['--fail-fast']);
+    expect(r.status).toBe(1);
+    expect(r.stdout).not.toMatch(/npm run b:/);
+    expect(r.stdout).toMatch(/npm run c: stopped/);
+    expect(r.stdout).toMatch(/0 of 2 passed/);
+    expect(r.stdout).toMatch(/FAILED: npm run a \(exit 3\) - its output again ===\n[^]*boom-a/);
+    expect(r.stderr).toMatch(/failed: a \(/);
+    const first = run({ ...scripts, c: ok }, { first: ['a'], lanes: [['b'], ['c']], failFast: true });
+    expect(first.status).toBe(1);
+    expect(first.stdout).toMatch(/0 of 1 passed/);
+    const all = run({ ...scripts, c: ok }, { ...config, failFast: true }, ['--keep-going']);
+    expect(all.status).toBe(1);
+    expect(all.stdout).toMatch(/2 of 3 passed/);
+    expect(all.stdout).not.toMatch(/its output again/);
+  }, 30_000);
+
   it('kills a check that passes its timeout together with the child it started, and fails', () => {
     writeFileSync(join(dir, 'sleeper.js'), "const c = require('child_process').spawn(process.execPath, ['-e', 'setInterval(() => {}, 1000)'], { stdio: 'ignore' });\nrequire('fs').writeFileSync('child.pid', String(c.pid));\nsetInterval(() => {}, 1000);\n");
     const r = run({ check: 'npm run s', s: 'node sleeper.js' }, { first: [], lanes: [['s']], timeoutMinutes: 0.03, graceSeconds: 1 });
