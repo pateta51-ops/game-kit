@@ -1,0 +1,11 @@
+{
+  "name": "voice",
+  "source": {
+    "game": "ebr",
+    "commit": "unrecorded",
+    "paths": [
+      "The voice-over player was rebuilt generic on the sound player's voice bus: line table as data, one line at a time, never twice in a row, per-line limits, a gate, lines in parts. No file was copied and no key or secret taken; the cast and script files stayed behind."
+    ]
+  },
+  "needs": ["sound-player"]
+}

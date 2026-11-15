@@ -79,6 +79,62 @@ describe('sound-player: cues', () => {
     expect(player.count()).toBe(0);
   });
 
+  it('onEnd is called once when a cue ends, is faded, or is dropped', async () => {
+    const { ctx, player, cues } = await start();
+    const ended: string[] = [];
+    player.play('tap', { onEnd: () => ended.push('tap') });
+    expect(ended).toEqual([]);
+    ctx.end(cues()[0]!);
+    expect(ended).toEqual(['tap']);
+    ctx.currentTime = 1;
+    player.play('thud', { onEnd: () => ended.push('thud') });
+    player.stopCues();
+    expect(ended).toEqual(['tap', 'thud']);
+    player.play('nowhere', { onEnd: () => ended.push('nowhere') });
+    player.play('later', { onEnd: () => ended.push('later') });
+    await tick();
+    expect(ended).toEqual(['tap', 'thud', 'nowhere', 'later']);
+  });
+
+  it('onEnd tells how it ended and fires once: before the first tap, when a file never loads, when the player is disposed', async () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+    void warn;
+    const ctx = new FakeAudioContext();
+    const early = createSoundPlayer({ table, base: 'audio/', context: () => ctx as unknown as AudioContext, fetch: fakeFetch([]).fetch });
+    const how: string[] = [];
+    early.play('tap', { onEnd: (h) => how.push(h) });
+    expect(how).toEqual(['dropped']);
+    const { ctx: c2, player, cues } = await start({ fetch: () => new Promise<Response>(() => undefined) });
+    void c2;
+    vi.useFakeTimers();
+    player.play('roar', { onEnd: (h) => how.push(h) });
+    vi.advanceTimersByTime(3000);
+    vi.useRealTimers();
+    expect(how).toEqual(['dropped', 'dropped']);
+    expect(cues()).toHaveLength(0);
+    expect(player.canPlay('roar')).toBe(true);
+    expect(player.canPlay('nowhere')).toBe(false);
+    player.dispose();
+    player.play('tap', { onEnd: (h) => how.push(h) });
+    expect(how).toEqual(['dropped', 'dropped', 'dropped']);
+  });
+
+  it('onEnd says faded for a stopped cue, ended for one played out; canPlay is false for a cue whose files did not decode', async () => {
+    const { ctx, player, cues } = await start();
+    const how: string[] = [];
+    player.play('tap', { onEnd: (h) => how.push(h) });
+    ctx.end(cues()[0]!);
+    ctx.currentTime = 1;
+    player.play('thud', { onEnd: (h) => how.push(h) });
+    player.stopCues();
+    expect(how).toEqual(['ended', 'faded']);
+    ctx.currentTime = 2;
+    player.play('gone');
+    await tick();
+    expect(player.canPlay('gone')).toBe(false);
+    expect(player.canPlay('tap')).toBe(true);
+  });
+
   it('never plays the variation it played last', async () => {
     let r = 0;
     const { ctx, player, cues } = await start({ random: () => (r = (r + 0.37) % 1) });

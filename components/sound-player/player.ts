@@ -5,6 +5,7 @@
 export type Tier = 'quiet' | 'normal' | 'loud';
 export type Bus = 'sounds' | 'voice' | 'music';
 export const MIN_FADE_MS = 150;
+export type EndHow = 'ended' | 'faded' | 'dropped';
 
 export interface CueDef {
   /** The variations, paths under `base`. None: the cue is silent. */
@@ -76,7 +77,10 @@ export interface SoundPlayerOptions {
 export interface SoundPlayer {
   /** Called by the first tap or key; a game may call it from its own gesture handler. */
   unlock: () => Promise<void>;
-  play: (cue: string, o?: { times?: number; delayMs?: number }) => void;
+  /** `onEnd(how)` is called exactly once: 'ended' (played out), 'faded' (stopped by a fade) or 'dropped' (never started, also before the first tap or when the file never loads). */
+  play: (cue: string, o?: { times?: number; delayMs?: number; onEnd?: (how: EndHow) => void }) => void;
+  /** False when the cue is not in the table or has no file that decoded; true when it can play or is not decoded yet. */
+  canPlay: (cue: string) => boolean;
   /** Fades the playing cues (all, or one name) over `ms`, never less than MIN_FADE_MS. */
   stopCues: (ms?: number, cue?: string) => void;
   setState: (state: string | null) => void;
@@ -138,6 +142,7 @@ interface Voice {
   srcs: AudioBufferSourceNode[];
   left: number;
   unduck: (() => void) | null;
+  onEnd?: ((how: EndHow) => void) | undefined;
 }
 
 export function createSoundPlayer(o: SoundPlayerOptions): SoundPlayer {
@@ -233,11 +238,14 @@ export function createSoundPlayer(o: SoundPlayerOptions): SoundPlayer {
     const voices: Voice[] = [];
     const lastAt = new Map<string, number>();
     const lastPick = new Map<string, number>();
-    const done = (v: Voice): void => {
+    const done = (v: Voice, how: EndHow): void => {
       const i = voices.indexOf(v);
       if (i >= 0) voices.splice(i, 1);
       v.unduck?.();
       v.unduck = null;
+      const e = v.onEnd;
+      v.onEnd = undefined;
+      e?.(how);
     };
     const stop = (v: Voice, ms = MIN_FADE_MS): void => {
       const now = ctx.currentTime;
@@ -250,9 +258,12 @@ export function createSoundPlayer(o: SoundPlayerOptions): SoundPlayer {
           // already ended
         }
       }
-      done(v);
+      done(v, 'faded');
     };
-    const play = (name: string, opts: { times?: number; delayMs?: number } = {}): void => {
+    const canPlay = (name: string): boolean => table.cues[name] !== undefined && (buffers.get(name)?.length ?? 1) > 0;
+    const play = (name: string, opts: { times?: number; delayMs?: number; onEnd?: (how: EndHow) => void } = {}): void => {
+      let began = false;
+      let deferred = false;
       try {
         if (ctx.state !== 'running' || hidden) return;
         const def = table.cues[name];
@@ -261,10 +272,14 @@ export function createSoundPlayer(o: SoundPlayerOptions): SoundPlayer {
         if (list === undefined) {
           const asked = ctx.currentTime;
           const delay = opts.delayMs ?? 0;
+          deferred = true;
+          const giveUp = setTimeout(() => opts.onEnd?.('dropped'), delay + (table.lateMs ?? 200) + 2000);
           return void load(name).then(() => {
+            clearTimeout(giveUp);
             const ms = (ctx.currentTime - asked) * 1000;
             if (ms - delay <= (table.lateMs ?? 200)) play(name, { ...opts, delayMs: Math.max(0, delay - ms) });
-          });
+            else opts.onEnd?.('dropped');
+          }, () => opts.onEnd?.('dropped'));
         }
         if (list.length === 0) return;
         const when = ctx.currentTime + Math.max(0, opts.delayMs ?? 0) / 1000;
@@ -287,6 +302,7 @@ export function createSoundPlayer(o: SoundPlayerOptions): SoundPlayer {
           srcs: [],
           left: 0,
           unduck: db > 0 ? duck(db) : null,
+          onEnd: opts.onEnd,
         };
         let t = when;
         for (let i = 0; i < Math.max(1, Math.floor(opts.times ?? 1)); i += 1) {
@@ -300,7 +316,7 @@ export function createSoundPlayer(o: SoundPlayerOptions): SoundPlayer {
           src.connect(v.fade.node);
           src.onended = () => {
             if ((v.left -= 1) > 0) return;
-            done(v);
+            done(v, 'ended');
             v.fade.node.disconnect();
           };
           src.start(t);
@@ -309,8 +325,12 @@ export function createSoundPlayer(o: SoundPlayerOptions): SoundPlayer {
           v.left += 1;
         }
         voices.push(v);
+        began = true;
+        if (v.left === 0) done(v, 'dropped');
       } catch (err) {
         warn(`cue ${name}`, err);
+      } finally {
+        if (!began && !deferred) opts.onEnd?.('dropped');
       }
     };
 
@@ -428,6 +448,7 @@ export function createSoundPlayer(o: SoundPlayerOptions): SoundPlayer {
       preload,
       preloadAll,
       count: () => voices.length,
+      canPlay,
     };
   };
 
@@ -472,7 +493,14 @@ export function createSoundPlayer(o: SoundPlayerOptions): SoundPlayer {
 
   return {
     unlock,
-    play: (cue, opts) => a?.play(cue, opts),
+    play(cue, opts) {
+      let fired = false;
+      const onEnd = opts?.onEnd;
+      const o2 = onEnd ? { ...opts, onEnd: (h: EndHow) => { if (!fired) { fired = true; onEnd(h); } } } : opts;
+      if (a) a.play(cue, o2);
+      else o2?.onEnd?.('dropped');
+    },
+    canPlay: (cue) => a?.canPlay(cue) ?? table.cues[cue] !== undefined,
     stopCues: (ms, cue) => a?.stopCues(ms, cue),
     setState(state) {
       wantState = state;

@@ -44,7 +44,7 @@ Known limit (engine-core): the single-copy guard stops two copies loaded from tw
 | K11 | Motion frame (done) | M | 1.1 |
 | K12 | Effect library (done) | M | 1.1 |
 | K13 | Sound player (done); sound generator (not built) | M | 1.2 |
-| K14 | Voice-over | M | 1.3 |
+| K14 | Voice-over (done) | M | 1.3 |
 
 ## Stage 4 - only on the owner's word
 
