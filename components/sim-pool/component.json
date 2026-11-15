@@ -1,0 +1,21 @@
+{
+  "name": "sim-pool",
+  "source": {
+    "game": "warps",
+    "commit": "6790200",
+    "paths": [
+      "src/engine/drivers/types.ts",
+      "src/engine/drivers/rng.ts",
+      "src/engine/drivers/random.ts (weighted random, answer cap sampling)",
+      "scripts/sim/pool.ts",
+      "scripts/sim/worker.ts",
+      "scripts/sim/core.ts (one game played to its end)"
+    ],
+    "grafts": [
+      { "game": "ebr", "commit": "b9b06107", "paths": ["scripts/sim/pool.ts (crashRecord, a dead worker replaced)", "scripts/sim/resume.ts (append as each game ends, partial line cut, other settings refused)"] }
+    ]
+  },
+  "needs": ["engine-core"],
+  "packages": ["tsx (worker threads run worker.ts under it)"],
+  "imports": ["engine-core/fake/counter.ts (tests only, by fake/game.ts)"]
+}
