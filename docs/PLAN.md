@@ -89,6 +89,55 @@ A game's build plan lists the kit work it needs as phases named `GK<n>` for the 
 | K12b | `motion-frame` `play(beat, { parallel: true })` (a beat starts at once beside the playing one); `effect-library`: `move` and `scale` animate `translate` and `scale` so they compose with the transform verbs, and `resolve(id, run)` gets the run | S | 7th Inning Stretch PR 30, 15 Nov 2026 | done |
 | K12c | `effect-library`: `layer.start(run)` makes the beat's stand-ins at its start (a live piece hidden at the start left a hole until its actor's first verb); `text` reaches full opacity in the first quarter of the call so the rise is seen | S | 7th Inning Stretch PR 36, 15 Nov 2026 | done |
 
+## Harvest from the existing games (owner, 15 Nov 2026)
+
+"Enrich the kit first, then retrofit the games" (`docs/RETROFIT_PLAN.md`). Seven read-only reviews, one per game, are in `docs/evaluation/harvest/` (109 candidates; their evidence is headers, exports and searches, so a worker reads the bodies before lifting). Merged here by theme. Wave 1 is built first and tagged; the retrofits pull that tag. Wave 2 follows. A worker does not edit this file: the rows are marked by whoever merges.
+
+### Wave 1 - tooling and what every game uses
+
+| Batch | Content | Sources | Effort | State |
+|---|---|---|---|---|
+| K43 | New `perf`: engine speed budget. Percentiles, each call timed several times with the fastest kept, warm-up game, the ten slowest actions, a budgets test, a command line with an exit code; the game supplies the driver | STCC (base), Imperium, Unstoppable, EBR, Warp's, Rome | M | planned |
+| K44 | `ci-templates`: `watch-run.sh` (one background command per run) and `gate-numbers.py`; nightly fuzz workflow with its own concurrency group and checkout folder; skipped-test reporter | Rome, STCC, Warp's, Imperium, EBR | M | planned |
+| K45 | `check-runner`: stop at the first failure with `--keep-going`; one gate per item side by side with a known-failing list | STCC, EBR | S | planned |
+| K46 | New `lint-preset`: engine purity (no clock, random, DOM, console, storage, UI imports) and no direct writes to shared state; "the engine names no real card id" pattern | Jarl (base), EBR | S | planned |
+| K47 | New `plain-text`: strip rule and ruling ids from every shown line; a pattern check for text a player must never see | Rome, Jarl | S | planned |
+| K48 | New `e2e-helpers`: error watch, no sideways scroll, wait for animations, viewports, screenshot, wait for the autosave before a reload; axe check as an option | Imperium (base), STCC, Jarl, Unstoppable | S | planned |
+| K49 | `saves`: autosave time that never goes back; rename a save; export all data, reset all data | EBR, STCC, Unstoppable | M | planned |
+| K50 | `sim-pool`: invariant run that reports a failure as seed plus step and replays to it; fuzz command; sanity-band shape; code-version stamp for resumed sweeps | STCC, EBR, Warp's, Imperium | M | planned |
+
+### Wave 2
+
+| Batch | Content | Sources | Effort | State |
+|---|---|---|---|---|
+| K51 | `replay-cli`: golden games (record, replay in CI, re-record); checkpoint goldens; record on one checkout and replay on another; worked examples as data | Imperium, EBR, STCC | M | proposed |
+| K52 | `sound-player`: synthesised cues without files; events of one action merged to a few cues; ducking test in a real browser | Unstoppable, Warp's | M | proposed |
+| K53 | `effect-library`: canvas particle kit; count-up and boxed particle ambience | Warp's, EBR | M | proposed |
+| K54 | `motion-frame`: motion Off in an automated browser, on by request; motion lab route and clip capture | EBR, Rome | M | proposed |
+| K55 | Resolution frame (`fitBox`, `shouldFrame`, the framed page); `offline` refuses inside a frame (with K38) | Rome | M | proposed |
+| K56 | `engine-core`: undo by step with kept snapshots | Imperium | M | proposed |
+| K57 | `engine-core`: fast-check property test of the kernel; copy-on-write helper for a game's own write paths | Warp's | S | proposed |
+| K58 | `state-machines`: `useMachine` hook; transition-graph invariants | Jarl | S | proposed |
+| K59 | `phone-mode`: full-height layer check; decision dock and short prompt | Jarl, Imperium | M | proposed |
+| K60 | `theme-check`: layout bounds in the browser (inside its zone, no overlap, no cut row, which is on top), beside K31 | STCC | M | proposed |
+| K61 | Prompt gallery and fixtures: one real game state per prompt kind and per ending, a dev route that shows each | EBR, Imperium, STCC, Jarl, Warp's | M | proposed |
+| K62 | Play statistics and high scores | Rome, Imperium | M | proposed |
+| K63 | `app-frame`: crash screen with save export | Imperium | M | proposed |
+| K64 | Tooling scripts (with K37): font fetch and WOFF packer, mock capture with a defect report, picture re-encoder, owner PC setup, art manifest check, dossier sync, node bundler for simulations, printed-text leak check, generated list from a plan table | Jarl, Rome, Warp's, Imperium, STCC | M | proposed |
+| K65 | Small UI helpers: hover held off after an overlay closes, hover-rest inspector, toast store, selection bound to a store version, obvious-answer rule (with K30), rule sheet search, icon words, prompt keys | EBR, Jarl, Imperium, Unstoppable, Warp's | M | proposed |
+| K66 | `voice`: paid speech client with a spending cap and a cost ledger | EBR | M | proposed |
+
+### Owner's word (size L or stage 4)
+
+| Content | Sources | Effort |
+|---|---|---|
+| Privacy guard and private asset link (stage 4 row): the build refuses a public build while private content is linked | STCC, Imperium, Unstoppable, EBR | S to M |
+| Scan ingest core (Python: flatbed scans to card crops and a pack) | Unstoppable, Imperium | L |
+| Imported content packs (JSON or zip, in IndexedDB) | Imperium, Unstoppable | L |
+| Information-set search driver; paired branch tester for AI variants | STCC | L |
+| LLM opponent plumbing | STCC | L |
+| Second-engine tooling (TypeScript and Rust twins) | Warp's | L |
+
 ## Size
 
 5 small lifts, about 18 worker batches of medium size, 2 large ones. Stage 1 is 4 batches. Work asked for by a game (the table above) comes on top.
