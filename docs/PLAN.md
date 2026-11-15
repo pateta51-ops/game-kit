@@ -52,7 +52,7 @@ Known limit (engine-core): the single-copy guard stops two copies loaded from tw
 |---|---|---|
 | K15 | Tutorial engine (owner approved 14 Nov 2026, split in two M parts: K15a core and K15b presentation; done) | L |
 | K16 | Generic simulation runner | L |
-| - | Privacy guard, theme check | M |
+| - | Privacy guard | M |
 
 ## Asked for by a game
 
@@ -61,6 +61,7 @@ A game's build plan lists the kit work it needs as phases named `GK<n>` for the 
 | Batch | Content | Effort | Asked by | State |
 |---|---|---|---|---|
 | K17 | Plan checker brought level with the build-plan skill's (`--batch`, `--section`, the Worker, Touches, Gate and Owner columns, experience feature ids). The two files stay the same: a change to one goes to the other | S | build-plan skill, 14 Nov 2026 | done |
+| K18 | Theme check: no colour, font, radius or shadow literal outside a game's token file; no system font; every menu route renders the logo component | M | 7th Inning Stretch plan, 14 Nov 2026 | done |
 
 ## Size
 
