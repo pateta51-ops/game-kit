@@ -1,0 +1,17 @@
+{
+  "name": "settings",
+  "source": {
+    "game": "imp",
+    "commit": "22736b2",
+    "paths": [
+      "src/ui/store/settingsStore.ts (zustand persist, guarded localStorage, validating merge; the keys became a schema the game passes)",
+      "src/ui/screens/Settings.tsx (checkbox and radio-group controls, each change written at once; drawn from the schema)"
+    ],
+    "grafts": [
+      { "game": "jarl", "commit": "6f006a2", "paths": ["src/ui/store (Layout setting auto/phone/desk, as layoutSetting)"] },
+      { "game": "rome", "commit": "1d0fd2e", "paths": ["src/ui/frame/resolution.ts (sizes and resolutionSize, as resolutionSetting)"] }
+    ]
+  },
+  "needs": [],
+  "packages": ["react", "zustand"]
+}

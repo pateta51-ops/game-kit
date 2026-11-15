@@ -1,0 +1,8 @@
+:where(.kit-set) { display: grid; gap: var(--set-gap, 1rem); color: var(--set-text, inherit); font: var(--set-font, inherit); }
+:where(.kit-set-section) { margin: 0; padding: var(--set-pad, 1rem); border: var(--set-border, 1px solid currentColor); border-radius: var(--set-radius, 0); background: var(--set-bg, transparent); display: grid; gap: var(--set-row-gap, 0.5rem); }
+:where(.kit-set-title) { margin: 0; font: var(--set-title-font, inherit); color: var(--set-title-color, inherit); }
+:where(.kit-set-row) { display: flex; gap: 0.5em; align-items: baseline; cursor: pointer; }
+:where(.kit-set-choice) { display: grid; gap: 0.25rem; }
+:where(.kit-set-label) { font-weight: var(--set-label-weight, bold); }
+:where(.kit-set-hint) { display: block; color: var(--set-hint, inherit); opacity: var(--set-hint-opacity, 0.75); }
+:where(.kit-set input) { accent-color: var(--set-accent, auto); }
