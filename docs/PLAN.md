@@ -50,7 +50,7 @@ Known limit (engine-core): the single-copy guard stops two copies loaded from tw
 
 | Batch | Content | Effort |
 |---|---|---|
-| K15 | Tutorial engine (owner approved 14 Nov 2026, split in two M parts: K15a core done; K15b to come) | L |
+| K15 | Tutorial engine (owner approved 14 Nov 2026, split in two M parts: K15a core and K15b presentation; done) | L |
 | K16 | Generic simulation runner | L |
 | - | Privacy guard, theme check | M |
 

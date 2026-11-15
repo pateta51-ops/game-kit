@@ -1,6 +1,6 @@
 # tutorial
 
-The tutorial engine's core for any `GameRules<G>` game: a script format, headless play of a script on a seed, the lock that allows only the scripted answer, the phase table and session, the check, and the readable script document. Needs `engine-core`, `state-machines` and the package `zod`. No UI here.
+The tutorial engine for any `GameRules<G>` game: a script format, headless play of a script on a seed, the lock that allows only the scripted answer, the phase table and session, the check, the readable script document, a seed search; and, in `ui.ts` (React), the narration panel and the highlight. Needs `engine-core`, `state-machines` and the packages `zod` and `react`. `index.ts` draws nothing and loads in node.
 
 ## Script (`parseScript`)
 
@@ -21,5 +21,10 @@ JSON: `seed`, optional `title`, `steps`, optional `end` (matched against `state.
 - `TUTORIAL_MACHINE` (`kit.tutorial`: off, guided, closing, closed) and the session: `startTutorial`, `stepDone`, `stepBack`, `leaveTutorial`, `closeTutorial`, `playFree`, `lockedStep`.
 - `tutorialCheck(game, script, options, io)`: exit code 0 or 1 for a game's `tutorial:check` script.
 - `scriptDoc(script, { title, source, intro?, names?, heading?, items? })`, `stepHeadings(game, script, heading(state))`, `writeDoc(io, path, text, check)`: the generated document for the owner's approval and its `--check`.
+- `searchSeeds({ seeds, play, accept(events, line), want?, score?, keep? })`: the seeds whose line the game's predicate accepts, else the best by `score`. `play` is `scriptLine(game, script)` (the script on the seed) or `driverLine(game, choose(state, seed), maxActions?)` (the game's driver from the setup); `seedRange(prefix, from, count)`.
+- `placePanel(targets, { w, h }, area, gap?)`: the panel's top-left above, below, right or left of the targets, never on one.
 
-Tests: `tutorial.test.ts`, on the engine-core fake counter game.
+Mount (`ui.ts`): `<TutorialPanel lock phase title? text? words? outro? onNext onBack? onLeave onClose docked?>{extras}</TutorialPanel>`: "Step N of M", the narration through the game's `text` renderer, Next on an explaining step, "Your move:" and `lock.asks` on a move step, Close while closing, Hide/Show. `words` replaces any of `PANEL_WORDS`. `<TutorialHighlight targets find? panel? area? gap? docked? root? version? />`: marks the elements of the step's target ids (default `[data-tutorial-target~="<id>"]`), shades the window with holes over them and the panel, draws a leader, and places the panel with `placePanel` (`position: fixed`); `docked` (the phone) only marks and scrolls the target into view.
+
+## Look
+`tutorial.css` (loaded by the panel) defines neutral `--tut-*` variables at zero specificity; set them on `:root` or an ancestor: `--tut-panel-bg`, `-text`, `-border`, `-shadow`, `-width`, `-radius`, `--tut-font-body`, `--tut-font-heading`, `--tut-text-size`, `--tut-count-text`, `--tut-button-bg`, `--tut-button-text`, `--tut-link`, `--tut-shade`, `--tut-target-ring`, `--tut-arrow`, `--tut-z`. Classes: `kit-tutorial-panel`, `-target`, `-shade`. Tests: `tutorial.test.ts`, `seed.test.ts`, `ui.test.tsx` (jsdom), on the engine-core fake counter game.

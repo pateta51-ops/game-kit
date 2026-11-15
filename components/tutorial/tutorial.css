@@ -1,0 +1,114 @@
+/* Tutorial panel and highlight. Every colour, font, size and radius is a --tut-* variable with a neutral default (set it on
+   :root or any ancestor to theme it). */
+:where(:root) {
+  --tut-panel-bg: #ffffff;
+  --tut-panel-text: #222222;
+  --tut-panel-border: #9aa0a6;
+  --tut-panel-shadow: 0 8px 32px #00000059;
+  --tut-panel-width: min(30em, calc(100vw - 32px));
+  --tut-panel-radius: 12px;
+  --tut-font-body: system-ui, sans-serif;
+  --tut-font-heading: system-ui, sans-serif;
+  --tut-text-size: clamp(15px, 0.75vw, 28px);
+  --tut-count-text: #5f6368;
+  --tut-button-bg: #e8eaed;
+  --tut-button-text: #222222;
+  --tut-link: #1a5fb4;
+  --tut-shade: #000000a8;
+  --tut-target-ring: #ffd54a;
+  --tut-arrow: #ffd54a;
+  --tut-z: 900;
+}
+
+.kit-tutorial-panel {
+  box-sizing: border-box;
+  width: var(--tut-panel-width);
+  max-height: calc(100vh - 48px);
+  overflow: auto;
+  padding: 1em 1.2em;
+  background: var(--tut-panel-bg);
+  color: var(--tut-panel-text);
+  border: 1px solid var(--tut-panel-border);
+  border-radius: var(--tut-panel-radius);
+  box-shadow: var(--tut-panel-shadow);
+  font: var(--tut-text-size) / 1.4 var(--tut-font-body);
+  z-index: calc(var(--tut-z) + 1);
+}
+.kit-tutorial-panel[data-placed] {
+  position: fixed;
+}
+.kit-tutorial-panel[data-docked] {
+  width: auto;
+  box-shadow: none;
+}
+.kit-tutorial-head {
+  display: flex;
+  align-items: baseline;
+  gap: 0.75em;
+}
+.kit-tutorial-head h2 {
+  margin: 0;
+  flex: 1;
+  font: 600 1.15em var(--tut-font-heading);
+}
+.kit-tutorial-count {
+  color: var(--tut-count-text);
+  font-size: 0.85em;
+}
+.kit-tutorial-copy p {
+  margin: 0.6em 0;
+}
+.kit-tutorial-move {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.6em;
+  margin-top: 0.6em;
+}
+.kit-tutorial-move button:not(.kit-tutorial-link) {
+  font: inherit;
+  padding: 0.35em 1em;
+  border: 1px solid var(--tut-panel-border);
+  border-radius: calc(var(--tut-panel-radius) / 2);
+  background: var(--tut-button-bg);
+  color: var(--tut-button-text);
+  cursor: pointer;
+}
+.kit-tutorial-asks {
+  flex: 1;
+  margin: 0;
+}
+.kit-tutorial-link {
+  font: inherit;
+  border: 0;
+  background: none;
+  padding: 0;
+  color: var(--tut-link);
+  text-decoration: underline;
+  cursor: pointer;
+}
+.kit-tutorial-move .kit-tutorial-link {
+  margin-left: auto;
+}
+.kit-tutorial-shade {
+  position: fixed;
+  inset: 0;
+  width: 100vw;
+  height: 100vh;
+  pointer-events: none;
+  z-index: var(--tut-z);
+}
+.kit-tutorial-dim {
+  fill: var(--tut-shade);
+}
+.kit-tutorial-leader {
+  stroke: var(--tut-arrow);
+  stroke-width: 5;
+}
+.kit-tutorial-arrow {
+  fill: var(--tut-arrow);
+}
+.kit-tutorial-target {
+  outline: 4px solid var(--tut-target-ring);
+  outline-offset: 4px;
+}

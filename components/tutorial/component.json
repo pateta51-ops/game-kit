@@ -10,10 +10,48 @@
       "scripts/tutorial-doc.ts (script document, --check)"
     ],
     "grafts": [
-      { "game": "jarl", "commit": "6f006a2", "paths": ["src/ui/tutorial/tutorial.machine.ts (phase table)", "src/ui/tutorial/lock.ts (lockPrompt, refusal)", "src/ui/tutorial/narration.ts (bareNumbers)"] }
+      {
+        "game": "jarl",
+        "commit": "6f006a2",
+        "paths": [
+          "src/ui/tutorial/tutorial.machine.ts (phase table)",
+          "src/ui/tutorial/lock.ts (lockPrompt, refusal)",
+          "src/ui/tutorial/narration.ts (bareNumbers)"
+        ]
+      },
+      {
+        "game": "jarl",
+        "commit": "6f006a2",
+        "paths": [
+          "src/ui/tutorial/place.ts (placePanel; the area is passed in)"
+        ]
+      },
+      {
+        "game": "rome",
+        "commit": "1d0fd2e",
+        "paths": [
+          "src/ui/tutorial/Highlight.tsx (shade, holes, leader, docked scroll)",
+          "src/ui/tutorial/TutorialPanel.tsx (panel, fold)"
+        ]
+      },
+      {
+        "game": "warps",
+        "commit": "6790200",
+        "paths": [
+          "scripts/tutorial-seed.ts (seed loop, best seeds; the predicate and driver are the game's)"
+        ]
+      }
     ]
   },
-  "needs": ["engine-core", "state-machines"],
-  "packages": ["zod"],
-  "imports": ["engine-core/fake/counter.ts (tests only)"]
+  "needs": [
+    "engine-core",
+    "state-machines"
+  ],
+  "packages": [
+    "zod",
+    "react"
+  ],
+  "imports": [
+    "engine-core/fake/counter.ts (tests only)"
+  ]
 }

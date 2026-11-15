@@ -5,3 +5,5 @@ export * from './lock';
 export * from './machine';
 export * from './check';
 export * from './doc';
+export * from './place';
+export * from './seed';
