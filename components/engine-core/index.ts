@@ -73,3 +73,4 @@ export {
 export { differentialApply, type DifferentialResult } from './cowcheck';
 export { hashValue } from './hash';
 export { drawRandom, drawRandomIndex, nextUint32, randomInt, seedRng, shuffleInPlace, type RngState } from './rng';
+export { freshWords } from './fresh';

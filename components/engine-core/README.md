@@ -11,6 +11,10 @@ The kernel of a game engine: seeded random numbers, canonical JSON and hashes, t
   - `canUndoStep(h, mode, { afterGameOver })`: Safe refuses a step that revealed something, with `revealWords`; Free allows it (`peek`) and sets `undoUsed`, and `peeked` when it did reveal. After game over undo is refused unless `afterGameOver` is true.
   - Nothing is saved by the kit. To get the same steps after a reload, the game stores `history.steps.map((s) => s.start)` in its own data and calls `replaySteps(game, options, rules, actions, content, starts)`; `starts` may instead be a function `(state, action, index) => boolean` saying the answer was the player's.
 
+## Non-deterministic play: recorded entropy
+
+`AnswerAction` has an optional `reseed: RngWords`. When present, the kernel replaces `state.rng` with those words before the answer resolves; when absent nothing changes (saves, replays and goldens stay byte for byte the same). The words are part of the recorded action, so `replay`, `createSave`, `restoreSave` and `redo` reproduce the same game. `validateAction` refuses malformed words (`BAD_RESEED`). `freshWords()` (app side, uses `crypto.getRandomValues`; the kernel stays pure) returns four 32-bit words; the game's app decides when to attach `reseed`, e.g. `{ ...answer, reseed: freshWords() }`. `undo` is unchanged.
+
 ## Test helpers
 
 - `differentialApply(game, state, action, content)`: applies one action three ways (copy on write with freezing on, with freezing off on an unfrozen copy, full copy) and returns `{ state, events, problems }`; `problems` is empty when the input did not change and the three results are equal. A game drives the write paths its random games do not reach through it, with `setCowChecks(true)` around the test. It switches the engine's modes and puts them back: test code only.

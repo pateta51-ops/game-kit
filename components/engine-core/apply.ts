@@ -35,6 +35,12 @@ export function setInvariantChecking(on: boolean): void {
 /** Is invariant checking on? */
 export const isChecking = (): boolean => checking;
 
+const validWords = (w: unknown): boolean =>
+  typeof w === 'object' && w !== null && (['a', 'b', 'c', 'd'] as const).every((k) => {
+    const v = (w as Record<string, unknown>)[k];
+    return typeof v === 'number' && Number.isInteger(v) && v >= 0 && v <= 4294967295;
+  });
+
 /**
  * `validateAction`: is this action an acceptable answer to the open prompt? Every legality check lives in the
  * prompt's options (disabled options stay listed with a reason), so the content is not read.
@@ -65,6 +71,8 @@ export function validateAction<G extends GameTypes>(state: G['state'], action: G
       return no('NOT_LEGAL', `"${id}" cannot be chosen${option.why === undefined ? '' : `: ${option.why}`}.`);
     }
   }
+  const rs = (action as { reseed?: unknown }).reseed;
+  if (rs !== undefined && !validWords(rs)) return no('BAD_RESEED', 'reseed needs four unsigned 32-bit integers a, b, c, d.');
   return OK;
 }
 
@@ -109,6 +117,7 @@ export function applyActionWith<G extends GameTypes>(
     // the prompt closes and its resume task runs with the answer
     if (next.prompt === null) throw new Error('unreachable: validated with a prompt open');
     const promptId = next.prompt.id;
+    if (action.reseed !== undefined) next.rng = { a: action.reseed.a, b: action.reseed.b, c: action.reseed.c, d: action.reseed.d };
     next.prompt = null;
     const resume = next.stack.pop();
     if (resume === undefined) {

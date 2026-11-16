@@ -39,6 +39,8 @@ export interface AnswerAction {
   readonly kind: 'answer';
   readonly promptId: number;
   readonly picks: readonly string[];
+  /** Fresh randomness: replaces `state.rng` before the answer resolves. Recorded with the action, so replay is exact. */
+  readonly reseed?: RngWords;
 }
 
 /** The fields of a state the kernel reads and writes; `result` is null until the game is over. */
