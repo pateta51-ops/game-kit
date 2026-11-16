@@ -53,6 +53,24 @@ export interface SimGame<G extends GameTypes, S = unknown, O = unknown> {
   readonly undoCheck?: boolean;
   /** K120: a problem with the open prompt (a placeholder such as `TODO:`) fails the game; return the message. */
   promptProblem?(state: G['state'], content: G['content']): string | undefined;
+  /** K101: the client view of a state; with `view: true` it is built and serialized after setup and every action, and a throw or a view that cannot be serialized fails the game. */
+  view?(state: G['state'], content: G['content']): unknown;
+  /** K101: the action that moves the game on fast (defeat the boss, fill a track) at the open prompt; with `hasten: N` it is applied instead of the driver's answer after every N actions, so late stages are reached. Return undefined to let the driver answer. */
+  hasten?(state: G['state'], content: G['content']): G['action'] | undefined;
+}
+
+/** K101 options of one game; both are off by default. */
+export interface PlayOptions {
+  readonly view?: boolean | undefined;
+  readonly hasten?: number | undefined;
+  /** Called after each step (also the one that threw) with its milliseconds and the largest view so far in JSON characters. */
+  readonly onStep?: ((step: number, ms: StepMs, viewBytes?: number) => void) | undefined;
+}
+export interface StepMs {
+  readonly answers: number;
+  readonly choose: number;
+  readonly apply: number;
+  readonly view: number;
 }
 
 export interface SimRecord<S = unknown> {
@@ -72,6 +90,8 @@ export interface SimRecord<S = unknown> {
   /** The actions, kept only when the game failed (for replay). */
   readonly log?: readonly unknown[];
   readonly summary?: S;
+  /** K101: the largest view in JSON characters, when views were rendered. */
+  readonly viewBytes?: number;
 }
 
 export const ANSWER_CAP = 512;
@@ -122,13 +142,26 @@ export function randomDriver<G extends GameTypes>(weight?: (a: G['action'], stat
 }
 
 /** Play `spec` to its end, or for `until` actions (the driver still answers at that step, so what fails there fails again). Never throws: an error or an invariant violation ends the game as a failed record. */
-export function playOne<G extends GameTypes, S, O = unknown>(game: SimGame<G, S, O>, content: G['content'], spec: GameSpec, until?: number): SimRecord<S> {
+export function playOne<G extends GameTypes, S, O = unknown>(game: SimGame<G, S, O>, content: G['content'], spec: GameSpec, until?: number, opts: PlayOptions = {}): SimRecord<S> {
   let seen: O | undefined;
   const actions: G['action'][] = [];
   const violations: InvariantViolation[] = [];
   let state: G['state'] | undefined;
   let error: string | undefined;
   let errorName: string | undefined;
+  let viewBytes: number | undefined;
+  const ms = { answers: 0, choose: 0, apply: 0, view: 0 };
+  const render = (st: G['state']): void => {
+    if (!opts.view || !game.view) return;
+    const t = performance.now();
+    try {
+      viewBytes = Math.max(viewBytes ?? 0, (JSON.stringify(game.view(st, content)) ?? '').length);
+    } catch (e) {
+      throw new Error(`view after ${String(actions.length)} action(s): ${e instanceof Error ? e.message : String(e)}`, { cause: e });
+    } finally {
+      ms.view += performance.now() - t;
+    }
+  };
   try {
     const start = game.start(spec, content);
     seen = game.observation?.(spec, content);
@@ -136,22 +169,31 @@ export function playOne<G extends GameTypes, S, O = unknown>(game: SimGame<G, S,
     let s: G['state'] = first.state;
     state = s;
     violations.push(...first.violations);
+    render(s);
     const driver = game.driver(spec.driver, spec, content);
     const cap = game.maxActions ?? 100_000;
     while (s.result === null && violations.length === 0) {
       const p = s.prompt;
       if (p === null) throw new Error('no prompt is open and the game has no result');
       if (actions.length >= cap) throw new Error(`no result after ${String(cap)} actions`);
+      ms.answers = ms.choose = ms.apply = ms.view = 0;
+      let t = performance.now();
       const rng = new DriverRng(`${spec.seed}|${spec.driver}|${String(p.id)}`);
       const answers = game.answers ? game.answers(s, content, rng) : (legalAnswers(p, rng) as G['action'][]);
       if (answers.length === 0) throw new Error(`dead end: no legal answer to prompt ${String(p.id)}`);
       const bad = game.promptProblem?.(s, content);
       if (bad !== undefined) throw new Error(`placeholder prompt ${String(p.id)}: ${bad}`);
       game.onPrompt?.(seen as O, s, answers);
-      const a = driver.choose(s, answers, rng);
+      ms.answers = performance.now() - t;
+      t = performance.now();
+      const fast = opts.hasten && actions.length > 0 && actions.length % opts.hasten === 0 ? game.hasten?.(s, content) : undefined;
+      const a = fast ?? driver.choose(s, answers, rng);
+      ms.choose = performance.now() - t;
       if (until !== undefined && actions.length >= until) break;
       actions.push(a);
+      t = performance.now();
       const r = applyAction(game.rules, s, a, content);
+      ms.apply = performance.now() - t;
       const w = s.rng;
       const n = r.state.rng;
       if (game.undoCheck && (a.reseed !== undefined || n.a !== w.a || n.b !== w.b || n.c !== w.c || n.d !== w.d) && !isRevealing(r.events))
@@ -159,10 +201,13 @@ export function playOne<G extends GameTypes, S, O = unknown>(game: SimGame<G, S,
       s = r.state;
       state = s;
       violations.push(...r.violations);
+      render(s);
+      opts.onStep?.(actions.length - 1, { ...ms }, viewBytes);
     }
   } catch (e) {
     error = e instanceof Error ? e.message : String(e);
     if (e instanceof Error && e.name !== 'Error') errorName = e.name;
+    opts.onStep?.(actions.length - 1, { ...ms }, viewBytes);
   }
   const failed = error !== undefined || violations.length > 0;
   let summary: S | undefined;
@@ -184,6 +229,7 @@ export function playOne<G extends GameTypes, S, O = unknown>(game: SimGame<G, S,
     ...(violations.length ? { violations } : {}),
     ...(failed ? { log: actions } : {}),
     ...(summary !== undefined ? { summary } : {}),
+    ...(viewBytes !== undefined ? { viewBytes } : {}),
   };
 }
 

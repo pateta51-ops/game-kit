@@ -2,7 +2,11 @@ import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { afterAll, describe, expect, it } from 'vitest';
-import { DriverRng, legalAnswers, runGames, runInThread, runResumable, type GameSpec, type SimRecord } from './index';
+import { CONTENT } from '../engine-core/fake/counter';
+import type { GameTypes } from '../engine-core/index';
+import { simGame } from './fake/game';
+import { DriverRng, legalAnswers, playOne, replayStep, runGames, runInThread, runResumable, type GameSpec, type SimGame, type SimRecord } from './index';
+const content = CONTENT;
 
 const module = new URL('./fake/game.ts', import.meta.url).href;
 const specs = (n: number, driver = 'random'): GameSpec[] => Array.from({ length: n }, (_, i) => ({ index: i, seed: `s${String(i)}`, driver }));
@@ -94,5 +98,46 @@ describe('resume', () => {
     const crash = path.join(dir, 'crash.jsonl');
     await runResumable({ module, specs: [{ index: 0, seed: 'die', driver: 'random' }, ...specs(3).slice(1)] }, 2, crash, 'x');
     expect(readFileSync(crash, 'utf8').trim().split('\n')).toHaveLength(2);
+  });
+});
+
+describe('K101 view on every step, hasten, one-step replay', () => {
+  const play = (seed: string, until?: number, opts = {}): SimRecord => {
+    const r = playOne(simGame as unknown as SimGame<GameTypes>, content, { index: 0, seed, driver: 'random' }, until, opts);
+    return r;
+  };
+  it('renders the view only when asked, and a broken view fails the game at its step', () => {
+    expect(play('view').error).toBeUndefined();
+    const bad = play('view', undefined, { view: true });
+    expect(bad.error).toMatch(/^view after \d+ action\(s\): view broke$/);
+    expect(bad.result).toBeNull();
+    const cyc = play('cyc', undefined, { view: true });
+    expect(cyc.error).toMatch(/^view after 0 action\(s\): /);
+    const ok = play('s1', undefined, { view: true });
+    expect(ok.error).toBeUndefined();
+    expect(ok.viewBytes).toBeGreaterThan(10);
+    expect(play('s1').viewBytes).toBeUndefined();
+  });
+
+  it('hastens after every N actions, off by default, the same on worker threads', async () => {
+    const plain = play('s2');
+    const fast = play('s2', undefined, { hasten: 1 });
+    expect((fast.summary as { adds: number }).adds).toBeGreaterThanOrEqual(fast.actions - 1);
+    expect(play('s2', undefined, {}).hash).toBe(plain.hash);
+    const req = { module, specs: specs(3), hasten: 1, view: true };
+    expect(await runGames(req, 2)).toEqual(await runGames(req, 1));
+    expect((await runGames(req, 1))[0]?.viewBytes).toBeGreaterThan(0);
+  });
+
+  it('replays one step and reports its timings and the slowest steps', () => {
+    const r = replayStep(simGame as unknown as SimGame<GameTypes>, content, { index: 0, seed: 'view', driver: 'random' }, 5, { view: true }, 3);
+    expect(r.record.error).toMatch(/view broke/);
+    expect(r.slowest.length).toBeLessThanOrEqual(3);
+    expect(r.lines[0]).toMatch(/^seed view \(random\) to step 5: view after/);
+    expect(r.lines[1]).toMatch(/^last step: answers [\d.]+ ms, choose [\d.]+ ms, apply [\d.]+ ms, view [\d.]+ ms/);
+    const ok = replayStep(simGame as unknown as SimGame<GameTypes>, content, { index: 0, seed: 's1', driver: 'random' }, 3, { view: true });
+    expect(ok.record.actions).toBe(3);
+    expect(ok.viewBytes).toBeGreaterThan(0);
+    expect(ok.slowest).toHaveLength(3);
   });
 });

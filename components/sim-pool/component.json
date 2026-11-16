@@ -17,7 +17,8 @@
       { "game": "ebr", "commit": "33b5abd3", "paths": ["scripts/fuzz.ts (the four kinds of finding, exit 1)", "scripts/sim/version.ts (codeVersion)"] },
       { "game": "imp", "commit": "20a033a", "paths": ["scripts/sim/core.ts (Band, formatBands)", "scripts/simulate.ts (--skip-band)"] },
       { "game": "warps", "commit": "2af6937", "paths": ["scripts/sim/core.ts (BandResult: a failing band is an error)"] },
-      { "game": "rally-the-troops", "paths": ["tools/fuzz.js (BadUndo, dead end, TODO: prompt, STOP breakpoint: written anew from the idea; owner authorizes copying from this source)"] }
+      { "game": "rally-the-troops", "paths": ["tools/fuzz.js (BadUndo, dead end, TODO: prompt, STOP breakpoint: written anew from the idea; owner authorizes copying from this source)"] },
+      { "game": "halogenandtoast/MarvelChampions", "paths": ["test/Marvel/SmokeSpec.hs (view on every answer, hasten), tools/replay-smoke-answer.hs (one-answer replay with timings): idea only, written anew; no licence on that source"] }
     ]
   },
   "needs": ["engine-core"],

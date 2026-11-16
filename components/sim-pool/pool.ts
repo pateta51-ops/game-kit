@@ -20,12 +20,18 @@ export interface RunRequest {
   readonly until?: number | undefined;
   /** Every game on a worker thread of its own (slow): what the game's module keeps between games cannot reach the next one. */
   readonly fresh?: boolean | undefined;
+  /** K101: render the game's `view` after setup and every action. */
+  readonly view?: boolean | undefined;
+  /** K101: apply the game's `hasten` action after every N actions. */
+  readonly hasten?: number | undefined;
 }
 
 export interface WorkerInput {
   readonly module: string;
   readonly invariants: boolean;
   readonly until?: number | undefined;
+  readonly view?: boolean | undefined;
+  readonly hasten?: number | undefined;
 }
 export type WorkerCommand = { type: 'play'; spec: GameSpec } | { type: 'stop' };
 export type WorkerMessage = { type: 'record'; record: SimRecord } | { type: 'ready' };
@@ -43,7 +49,7 @@ export async function runInThread(request: RunRequest, onRecord?: (r: SimRecord)
   setStateFreezing(false);
   try {
     return request.specs.map((spec) => {
-      const r = playOne(game, content, spec, request.until);
+      const r = playOne(game, content, spec, request.until, { view: request.view, hasten: request.hasten });
       onRecord?.(r);
       return r;
     });
@@ -62,7 +68,7 @@ function boot(request: RunRequest, input: WorkerInput): Worker {
 }
 
 async function lane(request: RunRequest, next: () => GameSpec | undefined, collect: (r: SimRecord) => void): Promise<void> {
-  const input: WorkerInput = { module: request.module, invariants: request.invariants ?? true, until: request.until };
+  const input: WorkerInput = { module: request.module, invariants: request.invariants ?? true, until: request.until, view: request.view, hasten: request.hasten };
   for (;;) {
     let held: GameSpec | undefined;
     let stopped = false;

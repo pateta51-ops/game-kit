@@ -25,6 +25,10 @@ export interface FuzzOptions {
   /** Stop after this many applied actions. */
   readonly until?: number | undefined;
   readonly worker?: string | undefined;
+  /** K101: render the game's `view` at every step. */
+  readonly view?: boolean | undefined;
+  /** K101: apply the game's `hasten` action after every N actions. */
+  readonly hasten?: number | undefined;
   /** The game's settings for a seed, from the seed alone (so a seed replays). */
   readonly settings?: ((seed: string, driver: string) => NonNullable<GameSpec['settings']>) | undefined;
 }
@@ -50,7 +54,7 @@ export async function fuzz(module: string, o: FuzzOptions = {}): Promise<FuzzRun
   const driver = o.driver ?? 'random';
   const seeds = o.seed !== undefined ? [o.seed] : Array.from({ length: o.games ?? 500 }, (_, i) => `${o.prefix ?? 'fuzz'}-${String(i)}`);
   const specs = seeds.map((seed, index): GameSpec => ({ index, seed, driver, ...(o.settings ? { settings: o.settings(seed, driver) } : {}) }));
-  const records = await runGames({ module, specs, invariants: true, until: o.until, ...(o.worker !== undefined ? { worker: o.worker } : {}) }, o.workers ?? 1);
+  const records = await runGames({ module, specs, invariants: true, until: o.until, view: o.view, hasten: o.hasten, ...(o.worker !== undefined ? { worker: o.worker } : {}) }, o.workers ?? 1);
   return { records, findings: records.flatMap((r) => findingOf(r) ?? []) };
 }
 
@@ -69,7 +73,7 @@ export function formatFuzz(run: FuzzRun, shown = 20): string[] {
   return lines;
 }
 
-const FLAGS = ['--games', '--prefix', '--driver', '--workers', '--seed', '--until'];
+const FLAGS = ['--games', '--prefix', '--driver', '--workers', '--seed', '--until', '--hasten'];
 export const FUZZ_USAGE = 'usage: [--games N] [--prefix P] [--driver D] [--workers N] | --seed S [--driver D] [--until STEP]';
 
 /** The command line of both: many games, or `--seed S [--until N]` for one. Returns the exit code: 1 on any finding, 2 on bad arguments. */
@@ -83,7 +87,7 @@ export async function fuzzMain(
   for (let i = 0; i < args.length; i += 2) {
     const k = args[i] ?? '';
     const v = args[i + 1];
-    const whole = k === '--games' || k === '--workers' || k === '--until';
+    const whole = k === '--games' || k === '--workers' || k === '--until' || k === '--hasten';
     if (!FLAGS.includes(k) || v === undefined || (whole && !/^\d+$/.test(v)) || (k === '--until' && !args.includes('--seed')) || (args.includes('--seed') && ['--games', '--prefix', '--workers'].includes(k))) {
       out(FUZZ_USAGE);
       return 2;
@@ -99,6 +103,7 @@ export async function fuzzMain(
     workers: num('workers') ?? base.workers,
     seed: given.get('seed') ?? base.seed,
     until: num('until') ?? base.until,
+    hasten: num('hasten') ?? base.hasten,
   });
   const one = run.records[0];
   if (given.has('seed') && one) out(`seed ${one.seed}: step ${String(one.actions)}, result ${JSON.stringify(one.result)}, actions hash ${one.hash}`);

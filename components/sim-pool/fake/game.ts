@@ -12,4 +12,13 @@ export const simGame: SimGame<Counter, { adds: number }> = {
   },
   driver: (name) => (name === 'adder' ? randomDriver<Counter>((a) => (a.picks[0] === 'add' ? 3 : 1)) : randomDriver<Counter>()),
   summary: (s) => ({ adds: s.marks.added.length }),
+  // K101: seed `view` has a view that throws from turn 2; seed `cyc` one that cannot be serialized.
+  view(s, _c) {
+    const seed = s.options.seed;
+    if (seed === 'view' && s.turn >= 2) throw new Error('view broke');
+    const v: Record<string, unknown> = { turn: s.turn, counter: s.counter };
+    if (seed === 'cyc') v.me = v;
+    return v;
+  },
+  hasten: (s) => (s.prompt ? { kind: 'answer', promptId: s.prompt.id, picks: ['add'] } : undefined),
 };
