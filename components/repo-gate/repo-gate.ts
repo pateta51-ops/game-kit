@@ -12,7 +12,11 @@
 //                 (cfg.cardIdLiteral) or a component id of the content folder's json files with a dash;
 //   CONTENT_NAME  the same files hold a card name of those json files as a quoted string;
 //   ART_BUDGET    the committed WebP art under cfg.artFolder is over cfg.maxArtMB;
-//   REPO_BUDGET   the tracked files add up to over cfg.maxRepoMB.
+//   REPO_BUDGET   the tracked files add up to over cfg.maxRepoMB (0: no limit; over cfg.warnRepoMB it only prints a warning);
+//   PORT          a pull request changes cfg.portFrom and not cfg.portTo, and its body has no `port: n/a (<reason>)`
+//                 (checked on a pull_request event, or with PORT_RULE_BASE and PORT_RULE_BODY_FILE; '' turns it off).
+// Switches: cfg.sessionUrl, cfg.tailnetHost, cfg.runnerName (false off), cfg.rawScan ('' off), cfg.contentName, cfg.engineTests (CONTENT_ID and CONTENT_NAME also in engine test
+// files), cfg.skipMissingBlobs (a blob a partial clone lacks is counted in a notice, not a SIZE finding).
 // It prints each finding as `path:line: CHECK what`, then the sizes. Exit codes: 0 clean, 1 findings, 2 no git.
 // Config: repo-gate.config.json in the repository root (or --config path); see Config below.
 import { execFileSync } from 'node:child_process';
@@ -35,7 +39,26 @@ export interface Config {
   runnerNames: string[];
   /** A json file `{ "runnerNames": [...] }` kept apart from the code; read when present. */
   runnersFile: string;
+  /** Source of the regexp (any case) of raw scan paths; '' turns RAW_SCAN off. */
+  rawScan: string;
+  /** false turns CONTENT_NAME off. */
+  contentName: boolean;
+  /** true: the engine's test files are checked for CONTENT_ID and CONTENT_NAME too. */
+  engineTests: boolean;
+  /** true: a blob that is not in this partial clone is skipped with a notice instead of a SIZE finding. */
+  skipMissingBlobs: boolean;
+  /** Above this the gate prints a warning and still passes; 0 for none. */
+  warnRepoMB: number;
+  /** PORT: a pull request that changes portFrom changes portTo too; '' turns it off. */
+  portFrom: string;
+  portTo: string;
+  /** false turns SESSION_URL, TAILNET_HOST or RUNNER_NAME off. */
+  sessionUrl: boolean;
+  tailnetHost: boolean;
+  runnerName: boolean;
 }
+/** Raw scan and camera formats. */
+export const RAW_SCAN = /\.(tiff?|bmp|psd|raw|cr2|nef|arw|dng|heic|heif)$/i;
 export const DEFAULT_CONFIG: Config = {
   maxArtMB: 120,
   maxRepoMB: 1536,
@@ -48,14 +71,22 @@ export const DEFAULT_CONFIG: Config = {
   skipText: ['dossier/', 'docs/'],
   runnerNames: [],
   runnersFile: 'tools/repogate/runners.json',
+  rawScan: RAW_SCAN.source,
+  contentName: true,
+  engineTests: false,
+  skipMissingBlobs: false,
+  warnRepoMB: 0,
+  portFrom: '',
+  portTo: '',
+  sessionUrl: true,
+  tailnetHost: true,
+  runnerName: true,
 };
 const MB = 1024 * 1024;
 export const MAX_FILE_BYTES = 50 * MB;
-/** Raw scan and camera formats. */
-export const RAW_SCAN = /\.(tiff?|bmp|psd|raw|cr2|nef|arw|dng|heic|heif)$/i;
-/** A Claude session URL or id. */
+/** A Claude session or chat URL, or a session id. */
 export const SESSION_URL =
-  /claude\.ai\/code\/(?:session_|[0-9a-f]{8}-)|(?<![A-Za-z0-9_])session_[0-9A-Za-z]{20,}/;
+  /claude\.ai\/code\/(?:session_|[0-9a-f]{8}-)|claude\.ai\/session_[A-Za-z0-9]{6,}|claude\.ai\/chat\/[0-9a-f]{8}-[0-9a-f]{4}|(?<![A-Za-z0-9_])session_[0-9A-Za-z]{20,}/;
 /** A tailnet host name: a machine and a tailnet before `.ts.net` (the bare `.ts.net` suffix is allowed). */
 export const TAILNET_HOST = /[A-Za-z0-9][A-Za-z0-9-]*\.[A-Za-z0-9][A-Za-z0-9-]*\.ts\.net/;
 
@@ -136,7 +167,8 @@ export function checkFiles(
 ): Finding[] {
   const findings: Finding[] = [];
   const idRe = idsPattern(contentIds);
-  const nameRe = namesPattern(cardNames);
+  const nameRe = cfg.contentName ? namesPattern(cardNames) : null;
+  const rawScan = cfg.rawScan === '' ? null : new RegExp(cfg.rawScan, 'i');
   const idLiteral = cfg.cardIdLiteral === '' ? null : new RegExp(cfg.cardIdLiteral);
   const runners = cfg.runnerNames.map(namePattern);
   for (const file of files) {
@@ -148,9 +180,9 @@ export function checkFiles(
         message: `${(file.bytes / MB).toFixed(1)} MB is over the 50 MB limit`,
       });
     }
-    if (file.unsized)
+    if (file.unsized && !cfg.skipMissingBlobs)
       findings.push({ path: file.path, line: 0, check: 'SIZE', message: 'size not read: not checked out and its blob is not in this clone (fetch it or check it out)' });
-    if (RAW_SCAN.test(file.path)) {
+    if (rawScan !== null && rawScan.test(file.path)) {
       findings.push({
         path: file.path,
         line: 0,
@@ -162,7 +194,7 @@ export function checkFiles(
     const engineRules =
       cfg.engineFolders.some((dir) => file.path.startsWith(dir)) &&
       !cfg.engineAllowed.some((dir) => file.path.startsWith(dir)) &&
-      !/\.test\.tsx?$/.test(file.path);
+      (cfg.engineTests || !/\.test\.tsx?$/.test(file.path));
     // kept-as-written folders: only secrets are looked for there
     const textRules = !cfg.skipText.some((dir) => file.path.startsWith(dir));
     const lines = file.text.split(/\r?\n/);
@@ -172,21 +204,21 @@ export function checkFiles(
       if (PRIVATE_KEY.test(line))
         findings.push({ path: file.path, line: i + 1, check: 'SECRET', message: 'a private key' });
       if (textRules) {
-        if (SESSION_URL.test(line))
+        if (cfg.sessionUrl && SESSION_URL.test(line))
           findings.push({
             path: file.path,
             line: i + 1,
             check: 'SESSION_URL',
             message: 'a session URL',
           });
-        if (TAILNET_HOST.test(line))
+        if (cfg.tailnetHost && TAILNET_HOST.test(line))
           findings.push({
             path: file.path,
             line: i + 1,
             check: 'TAILNET_HOST',
             message: 'a tailnet host',
           });
-        if (norm(file.path) !== norm(cfg.runnersFile) && runners.some((re) => re.test(line)))
+        if (cfg.runnerName && norm(file.path) !== norm(cfg.runnersFile) && runners.some((re) => re.test(line)))
           findings.push({
             path: file.path,
             line: i + 1,
@@ -233,7 +265,7 @@ export function checkFiles(
       message: `${(art / MB).toFixed(1)} MB of WebP art is over ${String(cfg.maxArtMB)} MB`,
     });
   const total = files.reduce((sum, f) => sum + f.bytes, 0);
-  if (total > cfg.maxRepoMB * MB)
+  if (cfg.maxRepoMB > 0 && total > cfg.maxRepoMB * MB)
     findings.push({
       path: '.',
       line: 0,
@@ -252,7 +284,64 @@ function git(root: string, args: string[], input?: string): string {
   });
 }
 
-/** The tracked files with their sizes and, for text files on disk, their text. */
+/** The text of a file; one that starts with a UTF-16 byte-order mark (PowerShell 5.1's `>`) is decoded as UTF-16. */
+export function decodeText(b: Buffer): string {
+  if (b[0] === 0xff && b[1] === 0xfe) return b.subarray(2).toString('utf16le');
+  if (b[0] === 0xfe && b[1] === 0xff) return Buffer.from(b.subarray(2, b.length - (b.length % 2))).swap16().toString('utf16le');
+  return b.toString('utf8');
+}
+
+const PORT_WAIVER = /^[ \t]*(?:[-*][ \t]+)?port:[ \t]*n\/a[ \t]*\([ \t]*[^)\s][^)\n]*\)/im;
+
+/** PORT: `changed` (the pull request's paths) holds a cfg.portFrom file and no cfg.portTo file, and `body` has no `port: n/a (<reason>)` line. */
+export function checkPortRule(changed: readonly string[], body: string, cfg: Config): Finding | null {
+  const from = changed.filter((p) => p.startsWith(cfg.portFrom));
+  if (cfg.portFrom === '' || from.length === 0 || changed.some((p) => p.startsWith(cfg.portTo)) || PORT_WAIVER.test(body)) return null;
+  return {
+    path: from[0] ?? cfg.portFrom,
+    line: 0,
+    check: 'PORT',
+    message: `${String(from.length)} file(s) under ${cfg.portFrom} changed and none under ${cfg.portTo}: port the change, or write "port: n/a (<reason>)" in the pull request's body`,
+  };
+}
+
+export type PortContext =
+  | { kind: 'pr'; base: string; body: string; where: string }
+  | { kind: 'skip'; why: string }
+  | { kind: 'error'; why: string };
+
+/**
+ * The pull request this run checks: PORT_RULE_BASE (a revision HEAD is diffed against) with PORT_RULE_BODY_FILE; or a
+ * pull_request event (HEAD is the merge commit, diffed against HEAD^1: check out 2 commits deep; the body is the
+ * payload's). A workflow_dispatch run without the variables is an error; anything else is skipped.
+ */
+export function portContext(env: NodeJS.ProcessEnv, readFile: (path: string) => string): PortContext {
+  if (env.PORT_RULE_BASE !== undefined && env.PORT_RULE_BASE !== '') {
+    const file = env.PORT_RULE_BODY_FILE;
+    if (file === undefined || file === '') return { kind: 'error', why: 'PORT_RULE_BASE is set but PORT_RULE_BODY_FILE is not' };
+    return { kind: 'pr', base: env.PORT_RULE_BASE, body: readFile(file), where: `HEAD against ${env.PORT_RULE_BASE}` };
+  }
+  if (env.GITHUB_EVENT_NAME === 'pull_request') {
+    if (env.GITHUB_EVENT_PATH === undefined) return { kind: 'error', why: 'a pull_request event without GITHUB_EVENT_PATH' };
+    const pr = (JSON.parse(readFile(env.GITHUB_EVENT_PATH)) as { pull_request?: { number?: number; body?: string | null } }).pull_request;
+    if (pr === undefined) return { kind: 'error', why: 'the pull_request event has no pull request' };
+    return { kind: 'pr', base: 'HEAD^1', body: pr.body ?? '', where: `pull request #${String(pr.number ?? '?')}` };
+  }
+  if (env.GITHUB_EVENT_NAME === 'workflow_dispatch') return { kind: 'error', why: 'a workflow_dispatch run without PORT_RULE_BASE' };
+  return { kind: 'skip', why: env.GITHUB_ACTIONS === 'true' ? `event ${env.GITHUB_EVENT_NAME ?? '?'}` : 'no pull request (a local run)' };
+}
+
+/** The paths that differ between `base` and HEAD, both sides of a rename; the base is fetched alone when a shallow checkout lacks it. */
+function changedSince(root: string, base: string): string[] {
+  try {
+    git(root, ['cat-file', '-e', `${base}^{commit}`]);
+  } catch {
+    git(root, ['fetch', '-q', '--depth=1', 'origin', base]);
+  }
+  return git(root, ['diff', '--name-only', '--no-renames', '-z', base, 'HEAD']).split('\0').filter((p) => p !== '');
+}
+
+/** The tracked files with their sizes and their text (the working copy, else the blob when this clone holds it). */
 export function readTracked(ROOT: string): TrackedFile[] {
   const entries = git(ROOT, ['ls-files', '-s', '-z'])
     .split('\0')
@@ -296,14 +385,37 @@ export function readTracked(ROOT: string): TrackedFile[] {
       if (sha !== undefined && size !== undefined && /^\d+$/.test(size)) indexSizes.set(sha, Number(size));
     }
   }
+  const blobText = new Map<string, string>();
+  const held = missing.filter((m) => !BINARY.test(m.path) && (indexSizes.get(m.sha) ?? MAX_FILE_BYTES + 1) <= MAX_FILE_BYTES);
+  if (held.length > 0) {
+    const out = execFileSync('git', ['cat-file', '--batch'], {
+      cwd: ROOT,
+      maxBuffer: 2 ** 31 - 1,
+      input: held.map((m) => m.sha).join('\n') + '\n',
+      stdio: ['pipe', 'pipe', 'ignore'],
+      env: { ...process.env, GIT_NO_LAZY_FETCH: '1', GIT_ALLOW_PROTOCOL: 'none' },
+    });
+    let at = 0;
+    for (const m of held) {
+      const end = out.indexOf(0x0a, at);
+      if (end < 0) break;
+      const size = Number(out.subarray(at, end).toString('utf8').split(' ')[2]);
+      if (Number.isNaN(size)) {
+        at = end + 1;
+        continue;
+      }
+      blobText.set(m.sha, decodeText(out.subarray(end + 1, end + 1 + size)));
+      at = end + 2 + size;
+    }
+  }
   return entries.map(({ path, sha }) => {
     const full = join(ROOT, path);
     if (!existsSync(full)) {
       const size = indexSizes.get(sha);
-      return size === undefined ? { path, bytes: 0, text: null, unsized: true } : { path, bytes: size, text: null };
+      return size === undefined ? { path, bytes: 0, text: null, unsized: true } : { path, bytes: size, text: blobText.get(sha) ?? null };
     }
     const bytes = statSync(full).size;
-    return { path, bytes, text: BINARY.test(path) ? null : readFileSync(full, 'utf8') };
+    return { path, bytes, text: BINARY.test(path) ? null : decodeText(readFileSync(full)) };
   });
 }
 
@@ -354,10 +466,24 @@ export function main(root: string, cfg: Config): number {
   const ids = readContentIds(root, cfg);
   const names = readCardNames(root, cfg);
   const findings = checkFiles(files, ids, names, cfg);
+  if (cfg.portFrom !== '') {
+    const ctx = portContext(process.env, (p) => readFileSync(p, 'utf8'));
+    if (ctx.kind === 'error') findings.push({ path: '.', line: 0, check: 'PORT', message: `cannot read the pull request: ${ctx.why}` });
+    else if (ctx.kind === 'skip') console.log(`port rule: not checked (${ctx.why})`);
+    else {
+      const changed = changedSince(root, ctx.base);
+      const f = checkPortRule(changed, ctx.body, cfg);
+      if (f !== null) findings.push(f);
+      console.log(`port rule: ${ctx.where}, ${String(changed.length)} changed file(s), ${f === null ? 'ok' : 'failed'}`);
+    }
+  }
   for (const f of findings) console.log(`${f.path}:${String(f.line)}: ${f.check} ${f.message}`);
   const sum = (prefix: string): number =>
     files.filter((f) => f.path.startsWith(prefix)).reduce((s, f) => s + f.bytes, 0);
   const total = sum('');
+  const skipped = cfg.skipMissingBlobs ? files.filter((f) => f.unsized === true).length : 0;
+  if (skipped > 0) console.log(`repo-gate: ${String(skipped)} tracked file(s) are not in this partial clone: skipped, a full checkout checks their size and text`);
+  if (cfg.warnRepoMB > 0 && total > cfg.warnRepoMB * MB) console.error(`repo-gate: warning: the repository is over ${String(cfg.warnRepoMB)} MB`);
   console.log(
     `repo-gate: ${String(files.length)} tracked files, ${(total / MB).toFixed(0)} MB (art ${(sum(cfg.artFolder) / MB).toFixed(0)} MB), ${String(ids.size)} content ids, ${String(names.size)} names; ${findings.length === 0 ? 'clean' : `${String(findings.length)} finding(s)`}`,
   );

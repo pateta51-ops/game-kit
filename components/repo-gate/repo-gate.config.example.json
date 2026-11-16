@@ -16,5 +16,15 @@
     "docs/"
   ],
   "runnerNames": [],
-  "runnersFile": "tools/repogate/runners.json"
+  "runnersFile": "tools/repogate/runners.json",
+  "rawScan": "\\.(tiff?|bmp|psd|raw|cr2|nef|arw|dng|heic|heif)$",
+  "contentName": true,
+  "engineTests": false,
+  "skipMissingBlobs": false,
+  "warnRepoMB": 0,
+  "portFrom": "",
+  "portTo": "",
+  "sessionUrl": true,
+  "tailnetHost": true,
+  "runnerName": true
 }

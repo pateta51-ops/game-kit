@@ -4,7 +4,7 @@
     "game": "jarl",
     "commit": "6f006a2",
     "paths": ["scripts/repo-gate.ts", "tests/scripts/repo-gate.test.ts"],
-    "grafts": [{ "game": "stcc", "commit": "9fc59643", "paths": ["scripts/repogate.ts", "tools/repogate/runners.json"] }]
+    "grafts": [{ "game": "stcc", "commit": "9fc59643", "paths": ["scripts/repogate.ts", "tools/repogate/runners.json"] }, { "game": "stcc", "commit": "8e6f55bd", "paths": ["scripts/repogate.ts"] }, { "game": "warps", "commit": "7b290454", "paths": ["scripts/repo-gate.ts"] }]
   },
   "needs": []
 }
