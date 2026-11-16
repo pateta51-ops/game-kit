@@ -2,7 +2,7 @@
 
 Which game's version each kit component starts from. Judged on the code of each game's main branch on 14 Nov 2026 by seven read-only reviews; the evidence is in `docs/evaluation/`.
 
-Source commits: stcc `9fc59643`, warps `2af6937`, ebr `33b5abd3`, rome `1d0fd2e`, jarl `6f006a2`, imp `20a033a`, unst `9e666b4`. Under Falling Skies (ufs `07238a4`) was assessed on 16 Nov 2026 (`docs/RETROFIT_PLAN.md`, Part D); it is the source of the rows below marked K167 to K170.
+Source commits: stcc `9fc59643`, warps `2af6937`, ebr `33b5abd3`, rome `1d0fd2e`, jarl `6f006a2`, imp `20a033a`, unst `9e666b4`. Under Falling Skies (ufs `07238a4`) was assessed on 16 Nov 2026 (`docs/RETROFIT_PLAN.md`, Part D); it is the source of the rows below marked K172 and K168 to K170.
 
 ## Criteria
 
@@ -27,7 +27,7 @@ Source commits: stcc `9fc59643`, warps `2af6937`, ebr `33b5abd3`, rome `1d0fd2e`
 | Component | Base | Graft from others | Effort |
 |---|---|---|---|
 | Plan checker | Jarl (same file in Warp's, Rome, Imperium, EBR; Jarl's wrapper finds Python) | - | S |
-| Traceability check | Jarl | EBR's stricter title rules; UFS's rule that every engine handler file cites a rule id (K167) | M |
+| Traceability check | Jarl | EBR's stricter title rules; UFS's rule that every engine handler file cites a rule id (K172) | M |
 | Repo gate | Jarl | STCC's runner names kept as data | M |
 | Bundle-size check | EBR | - | S |
 | Privacy guard | EBR | - | M (dropped by the owner, 16 Nov 2026) |

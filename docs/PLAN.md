@@ -67,18 +67,18 @@ A game's build plan lists the kit work it needs as phases named `GK<n>` for the 
 | K22 | `kit.mjs`: pull brings a component's `needs` (transitively), check fails when one is absent; `glossary` `LookupHost`/`EntryBody` `hideRules`, `LookupHost` `frame` | S | 7th Inning Stretch PR 16, 15 Nov 2026 | done |
 | K23 | `glossary` `LookupHost` `prefer`/`avoid` (popover side) and `frame` gets `kind` and `entry`; `settings` plates show the chosen option's `line`; `tutorial` `eventKey` (PlayOptions, DocOptions) | S | 7th Inning Stretch PRs 19, 20, 15 Nov 2026 | done |
 | K24 | Exact dice odds: enumerate the multisets of k dice (optionally plus one die of another size) with multinomial weights, `chance(k, test)`; cached per thread | S | a finished build, 15 Nov 2026 | done |
-| K25 | `engine-core` or `card-harness`: `enumerateAnswers` (every answer set of a kernel prompt) and the test helpers `randomPicks`, `playUntil`, `expectEvents` | S | a finished build, 15 Nov 2026 | proposed |
+| K25 | `engine-core` or `card-harness`: `enumerateAnswers` (every answer set of a kernel prompt) and the test helpers `randomPicks`, `playUntil`, `expectEvents` | S | a finished build, 15 Nov 2026 | done |
 | K26 | `card-harness` inventory: clause-id scheme (kind plus the shortest unique word prefix of the printed text) | S | a finished build, 15 Nov 2026 | done |
 | K27 | Content build: CSV reader and the schema-to-type equality helpers (`DR`/`Same`/`Is`) | S | a finished build, 15 Nov 2026 | done |
-| K28 | Layout: a layout JSON of [x,y,w,h] zones to parent-relative percent positions, a fixed-size `Stage` scaled to the window, `zone`/`slots`/`withZones`; `app-frame` fixed head (`menu` or `flow`) | M | a finished build, 15 Nov 2026 | proposed |
-| K29 | Paced presentation: an event-step queue, `foldView` (the view as of a paced step, folded onto the pre-answer view) and `questionZone` (move a question band to a second rect when its home covers the targets) | M | a finished build, 15 Nov 2026 | proposed |
-| K30 | `engine-core` test: play real games and assert that every auto-answered prompt equals the only legal answer (skip-empty invariant) | S | a finished build, 15 Nov 2026 | proposed |
+| K28 | Layout: a layout JSON of [x,y,w,h] zones to parent-relative percent positions, a fixed-size `Stage` scaled to the window, `zone`/`slots`/`withZones`; `app-frame` fixed head (`menu` or `flow`) | M | a finished build, 15 Nov 2026 | done |
+| K29 | Paced presentation: an event-step queue, `foldView` (the view as of a paced step, folded onto the pre-answer view) and `questionZone` (move a question band to a second rect when its home covers the targets) | M | a finished build, 15 Nov 2026 | done |
+| K30 | `engine-core` test: play real games and assert that every auto-answered prompt equals the only legal answer (skip-empty invariant) | S | a finished build, 15 Nov 2026 | done |
 | K31 | `theme-check` browser steps: `coverageProblems` (span of content, largest empty block per screen) and a phone font-floor spec | S | a finished build, 15 Nov 2026 | done (`coverage.ts`; the phone font floor was already `fontSizeFindings`, now documented in the README) |
 | K32 | `phone-mode`: a `Scaled` box (a fixed-size piece drawn at a box width), a commit-flag plus second-tap wrapper over `useSecondTap` | S | a finished build, 15 Nov 2026 | proposed |
-| K33 | `tutorial`: a docked side with a reserved-space CSS variable so the screen shrinks beside the panel; panel buttons accept the game's own button component | S | a finished build, 15 Nov 2026 | proposed |
+| K33 | `tutorial`: a docked side with a reserved-space CSS variable so the screen shrinks beside the panel; panel buttons accept the game's own button component | S | a finished build, 15 Nov 2026 | done |
 | K34 | Theme `Button`: `note` (a line under a plate) and `acting` (outline) props; no rivets under a width floor | S | a finished build, 15 Nov 2026 | covered: the kit holds no theme Button (the look is each game's own theme layer), so there is nothing to extend; the two props belong in the game's Button |
-| K35 | `glossary` printed-words check: every summary and body paragraph must occur in the source documents, icons and punctuation aside | S | a finished build, 15 Nov 2026 | proposed |
-| K36 | `tutorial` tooling: build a script from a seed's line of play, list each step's answers in on-screen words, seed search, a script-playing e2e helper | M | a finished build, 15 Nov 2026 | proposed |
+| K35 | `glossary` printed-words check: every summary and body paragraph must occur in the source documents, icons and punctuation aside | S | a finished build, 15 Nov 2026 | done |
+| K36 | `tutorial` tooling: build a script from a seed's line of play, list each step's answers in on-screen words, seed search, a script-playing e2e helper | M | a finished build, 15 Nov 2026 | done |
 | K37 | Tooling scripts: home-screen PNGs from a logo SVG (Playwright) and a screenshot contact-sheet script | S | a finished build, 15 Nov 2026 | done (no source repo: written new; not run against a real chromium) |
 | K38 | `offline`: network-first navigation (with a timeout) and auto-apply of a new build when no input is half-entered; replaces a game-side patch of the worker file | M | a finished build, 15 Nov 2026 | done |
 | K39 | `bug-reporter`: an `index`/`ui` entry (games need an eslint-disable per import today) and token storage read lazily, not at import | S | a finished build, 15 Nov 2026 | done |
@@ -151,13 +151,13 @@ What still keeps a game on its own tool at kit v0.25.0. Details in the second-pa
 
 | # | Batch | Found in | Size | State |
 |---|---|---|---|---|
-| K135 | `theme-check`: a switch per rule (COLOR, RADIUS, SHADOW cannot be turned off; 312 findings in Jarl); the token file not exempt when a game wants it checked | Jarl | S | proposed |
-| K136 | `traceability`: a TypeScript parse of test titles in place of the text scan (ids in a fixture string count today); `idsAtLineStart` takes section 3 table rows as rules; the id pattern given whole as one regexp (STCC's plan regexp verbatim; Imperium's id after a dash or underscore); the dot required in `## 3.`; EBR's scenario report, rejected-title print and counts line | EBR, STCC, Imperium | M | proposed |
-| K137 | `repo-gate`: a PORT rule; CONTENT_NAME and RAW_SCAN switchable; CONTENT_ID not exempting engine test files; a blob missing from a sparse partial clone is skipped with a notice where the game says so; text not checked out, UTF-16, chat URLs, warn-only size | Warp's, STCC | M | proposed |
-| K138 | `check-runner`: streamed `[lane]` output, `npm --silent`, skip `last` once a lane failed | STCC | S | proposed |
-| K139 | `plan-checker`: `--tsc` over several sections in order plus a stub line | Unstoppable | S | proposed |
-| K140 | `bundle-size`: `--follow true` exits 2 on an encoded `url(%23n)` in a stylesheet | STCC | S | proposed |
-| K141 | `ci-templates`: templates for a multi-step gate and a second job (Python), so EBR, Imperium, STCC, Warp's, Rome and Unstoppable can render theirs | six games | M | proposed |
+| K135 | `theme-check`: a switch per rule (COLOR, RADIUS, SHADOW cannot be turned off; 312 findings in Jarl); the token file not exempt when a game wants it checked | Jarl | S | done |
+| K136 | `traceability`: a TypeScript parse of test titles in place of the text scan (ids in a fixture string count today); `idsAtLineStart` takes section 3 table rows as rules; the id pattern given whole as one regexp (STCC's plan regexp verbatim; Imperium's id after a dash or underscore); the dot required in `## 3.`; EBR's scenario report, rejected-title print and counts line | EBR, STCC, Imperium | M | done |
+| K137 | `repo-gate`: a PORT rule; CONTENT_NAME and RAW_SCAN switchable; CONTENT_ID not exempting engine test files; a blob missing from a sparse partial clone is skipped with a notice where the game says so; text not checked out, UTF-16, chat URLs, warn-only size | Warp's, STCC | M | done |
+| K138 | `check-runner`: streamed `[lane]` output, `npm --silent`, skip `last` once a lane failed | STCC | S | done |
+| K139 | `plan-checker`: `--tsc` over several sections in order plus a stub line | Unstoppable | S | done |
+| K140 | `bundle-size`: `--follow true` exits 2 on an encoded `url(%23n)` in a stylesheet | STCC | S | done |
+| K141 | `ci-templates`: templates for a multi-step gate and a second job (Python), so EBR, Imperium, STCC, Warp's, Rome and Unstoppable can render theirs | six games | M | done |
 
 ### Wave 5 - Under Falling Skies (16 Nov 2026)
 
@@ -165,7 +165,7 @@ What the eighth game has that the kit lacks, from its assessment at kit v0.33.0 
 
 | # | Batch | Found in | Size | State |
 |---|---|---|---|---|
-| K167 | `traceability`: `citeFiles` (folders): every non-test file under them cites at least one rule id in a comment, the finding lists the files (UFS: `src/engine/phases`, `rules`, `abilities`); the only thing keeping UFS on its own check | Under Falling Skies | S | proposed |
+| K172 | `traceability`: `citeFiles` (folders): every non-test file under them cites at least one rule id in a comment, the finding lists the files (UFS: `src/engine/phases`, `rules`, `abilities`); the only thing keeping UFS on its own check | Under Falling Skies | S | proposed |
 | K168 | New component `transcription-check`: two transcriptions of each printed item made independently (A and B, each with transcriber, source picture and session), a field-by-field diff written to `DIFF.md` that fails while a difference is open, a generated progress table (item, picture, A, B, diff, verified), an owner verification ledger holding the hash of the agreed file (an edit after verification undoes it), and a gate listing the required items not yet verified, for the content check and the real-pack build; the game passes its item list and transcript schema | Under Falling Skies (`scripts/lib/real.ts`, BUILD_PLAN §12) | M | proposed |
 | K169 | `card-harness` content gate: a folder of broken packs, each with the issue code and severity it must report; generated files compared with what the generator writes now ("stale: run ..."); every card-language feature used at least once by the placeholder and test packs (`--require-all` fails on an unused one) | Under Falling Skies (`scripts/validate-content.ts`) | S each | proposed |
 | K170 | `tutorial` coach (compare first with K15): first-time tips as data (id, text, `when(events, state)`, held back during a guided lesson when situational), the first unseen tip the last action made relevant, seen ids kept per browser; a suggested move taken from the game's driver with its plain-word reasons and the places to spotlight, so it works on any pack | Under Falling Skies (decisions 036, 037) | M | proposed |
@@ -182,7 +182,7 @@ Decided by the owner, 16 Nov 2026:
 
 | Row | Content | Sources | Effort | State |
 |---|---|---|---|---|
-| K164 | `scan-ingest`: flatbed scans to card crops and a content pack (Python) | scanning-pipeline, Unstoppable, Imperium | L | approved |
+| K164 | `scan-ingest`: flatbed scans to card crops and a content pack (Python) | scanning-pipeline, Unstoppable, Imperium | L | done |
 | K167 | `voice`: `play(id, { pieces, gapsMs })` plays given files as one line of the id with a gap after each; `voiceCues(table, extraFiles)` | 7th Inning Stretch (ideas only) | S | done |
 | - | Information-set search driver; paired branch tester for AI variants | STCC | L | competitive two-player games only |
 | - | LLM opponent plumbing | STCC | L | competitive two-player games only |
