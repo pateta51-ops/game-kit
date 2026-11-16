@@ -81,6 +81,21 @@ describe('TutorialHighlight', () => {
     expect(target).not.toHaveClass('kit-tutorial-target');
   });
 
+  it('its own shade does not set the watcher off again (the page froze)', async () => {
+    const { getByText } = render(<button data-tutorial-target="add">t</button>);
+    box(getByText('t'), 0, 0, 10, 10);
+    const panel = document.createElement('div');
+    document.body.append(panel);
+    let n = 0;
+    const { unmount } = render(<TutorialHighlight targets={['add']} panel={() => (++n > 20 ? null : panel)} />);
+    document.body.append(document.createElement('p'));
+    await new Promise((r) => setTimeout(r));
+    expect(n).toBeLessThan(10);
+    expect(document.querySelector('.kit-tutorial-shade mask')).not.toBeNull();
+    unmount();
+    panel.remove();
+  });
+
   it('docked: no shade, the target scrolled into view', () => {
     const scroll = vi.fn();
     const { getByText } = render(<button data-tutorial-target="add">t</button>);

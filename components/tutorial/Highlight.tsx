@@ -83,7 +83,9 @@ export function TutorialHighlight(p: TutorialHighlightProps) {
       layout();
     };
     mark();
-    const observer = new MutationObserver(mark);
+    const observer = new MutationObserver((rs) => {
+      if (rs.some((r) => !overlay.contains(r.target))) mark();
+    });
     observer.observe(p.root?.() ?? document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ['disabled', 'hidden', 'open', 'data-tutorial-target'] });
     window.addEventListener('resize', mark);
     document.addEventListener('scroll', mark, true);
