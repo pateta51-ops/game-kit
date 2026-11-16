@@ -5,10 +5,11 @@
     "commit": "none",
     "paths": [
       "docs/evaluation/outside/story-campaign-marvel.md",
-      "docs/evaluation/outside/story-campaign-arkham.md"
+      "docs/evaluation/outside/story-campaign-arkham.md",
+      "https://github.com/halogenandtoast/ArkhamHorror (no licence: storyWithChooseOne, StoryQuestion.vue, *StepPart; K153 idea only, written new)"
     ]
   },
-  "needs": [],
+  "needs": ["engine-core"],
   "packages": [
     "react"
   ]

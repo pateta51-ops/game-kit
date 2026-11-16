@@ -22,6 +22,9 @@ Story as data only (flavour: no rule lives in it; a missing line never blocks pl
 
 `splashFor(events, lookup, shown, keyOf?)`: the first event not in `shown` whose `lookup` gives a `Splash` `{ title?, picture?, line, note? }`, as `{ key, splash }`; the game adds `key` to `shown`. `splashAutoCloseMs(reduced)`: 4000, null under reduced motion. `<SplashView splash onClose reduced? />`: tap, any key or 4 s.
 
+## Beats as engine questions (K153, opt-in; `beats.ts`, needs `engine-core`)
+`AskBeat` = a `Beat` with `id`, `ask?` (`read`, `choose` `{choices: {id, label, enabled?, why?}}`, `card` `{cards: {id, faceDown?}, min?, max?}` (a face-down card is offered as `down:<index>`; `realPicks` reads it back), `character` `{characters, min?, max?}`) and `split?` (lines per part). Spread `storyHandlers({ story, inPlay?, answered? })` into the handlers and `ctx.then(storyTask(scenario, beatId))`: each part is a prompt (`read` until the last part, then the beat's question; the prompt carries `story: {scenario, beat, part}`), so it saves, replays and undoes like play and a save resumes at the part reached; `answered(ctx, task, picks)` applies the last answer. `beatQuestion(story, task, inPlay)` gives the screen its part's lines, `ask`, `part`/`of`; `beatProblems`.
+
 ## Look
 
 `story.css` at zero specificity: `--story-font`, `-text`, `-bg`, `-pad`, `-gap`, `-head-font`, `-name`, `-narrator-style`, `-note-border`, `-note-opacity`, `-splash-bg`, `-invalid-opacity`, `-changed`, `-box-border`, `-interlude-style`. Classes `kit-story*`, `kit-page-*`, `kit-panel*`, `kit-splash*`.
