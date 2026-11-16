@@ -1,0 +1,20 @@
+{
+  "name": "perf",
+  "source": {
+    "game": "stcc",
+    "commit": "9fc59643",
+    "paths": [
+      "scripts/perf.ts (percentiles, fastest of the repeats, a warm-up game, buckets from the Bot-turn split, exit codes, --json)",
+      "tests/perf/budgets.test.ts (up to 3 attempts on a busy machine)",
+      "tests/scripts/perf.test.ts"
+    ],
+    "grafts": [
+      { "game": "imp", "commit": "20a033a", "paths": ["scripts/perf.ts (measure and formatReport apart from the command line, the output function passed in)"] },
+      { "game": "unst", "commit": "9e666b4", "paths": ["scripts/bench-apply.ts (--budget, the clock passed in, several warm-up games, a budget with no timed call fails)"] },
+      { "game": "ebr", "commit": "33b5abd3", "paths": ["scripts/perf.ts:18-60 (the ten slowest actions with game, index and prompt kind)"] }
+    ]
+  },
+  "needs": ["engine-core", "sim-pool"],
+  "packages": ["tsx (to run cli.ts)"],
+  "imports": ["sim-pool/play.ts, sim-pool/rng.ts (the game and driver contract)", "engine-core/fake/counter.ts (tests only, by fake/game.ts)"]
+}
