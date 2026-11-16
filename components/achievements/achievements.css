@@ -1,0 +1,21 @@
+/* Achievements list and toast. Every look value is a --ach-* variable with a neutral default. */
+:where(:root) {
+  --ach-text: #222222;
+  --ach-muted: #5f6368;
+  --ach-accent: #1a7f37;
+  --ach-gap: 0.5em;
+  --ach-toast-bg: #ffffff;
+  --ach-toast-border: #9aa0a6;
+  --ach-z: 950;
+}
+.kit-ach { color: var(--ach-text); }
+.kit-ach-rows { list-style: none; margin: 0; padding: 0; }
+.kit-ach-row { display: grid; grid-template-columns: 1fr auto; gap: 0 var(--ach-gap); padding: 0.4em 0; }
+.kit-ach-locked .kit-ach-name { color: var(--ach-muted); }
+.kit-ach-earned .kit-ach-name { color: var(--ach-accent); }
+.kit-ach-text, .kit-ach-state { color: var(--ach-muted); }
+.kit-ach-bar { grid-column: 1; width: 100%; accent-color: var(--ach-accent); }
+.kit-ach-items { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: 0.3em; list-style: none; padding: 0; }
+.kit-ach-item { opacity: 0.5; }
+.kit-ach-item-done { opacity: 1; }
+.kit-ach-toast { position: fixed; top: 20%; left: 50%; transform: translateX(-50%); z-index: var(--ach-z); background: var(--ach-toast-bg); border: 1px solid var(--ach-toast-border); padding: 0.8em 1.2em; border-radius: 10px; }

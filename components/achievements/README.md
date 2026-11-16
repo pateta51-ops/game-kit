@@ -1,6 +1,6 @@
 # achievements
 
-The catalogue as data, achievements as pure functions over finished-game summaries, and the small summary written when a game ends. Nothing earned is stored, so a new definition applies to old games. Needs `play-stats`: the summary is a play-stats record and its store is `createPlayStats` (play-stats holds no summary of its own, only the game's fields). No packages; draws nothing (release 1.0: no motion, no sound). Tests: `achievements.test.ts`. K161 (feats inside a game) and K162 (screens) extend it.
+The catalogue as data, achievements as pure functions over finished-game summaries, and the small summary written when a game ends. Nothing earned is stored, so a new definition applies to old games. Needs `play-stats`: the summary is a play-stats record and its store is `createPlayStats` (play-stats holds no summary of its own, only the game's fields). No packages; draws nothing (release 1.0: no motion, no sound). Tests: `achievements.test.ts`. K161 (feats inside a game) extends it.
 
 ## Summary
 
@@ -17,3 +17,8 @@ The catalogue as data, achievements as pure functions over finished-game summari
 - `byFamily(defs, statuses)`: earned, total and points per family, for a list screen.
 
 The game keeps its definitions' words, the meaning of its summary fields and its screens.
+
+## Screens (K162, `ui.ts`, static)
+
+`<AchievementList defs statuses words? />`: by family (earned / total, points), a row each with name, text, bar, "3 / 5", the checklist ticked; a locked row shows its text (how to earn it) and `words.locked`. It is a panel with no tab frame: put it in the campaign log's tab when `campaign` exists. Look: `achievements.css`, `--ach-*` variables.
+`toastFor(defs, newlyEarned ids, { off, silent, holdMs })`: one `Toast` `{ ids, count, name, holdMs }` for all earns of a game, or null. `firstRun(storage, key)` is true once (pass as `silent`, so an old history is not announced). `toastSettings` is a settings section (toggle, hold 3/5/8 s); `toastSettingsWith({ title, toggle, hold, seconds })` words it. `<AchievementToast toast line? onClose? words? />`: centred; the game removes it after `holdMs`. Motion with 1.1, sound with 1.2.

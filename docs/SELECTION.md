@@ -66,7 +66,7 @@ Open check before the lift: the canonical JSON of the Jarl line and of STCC buil
 | Glossary | Warp's (pure matcher, newest, most tests, broadest check) | STCC's linking index; EBR's data-in interface | M |
 | Tutorial engine | STCC (most complete and tested, owner decision notes) | Jarl's pure state machine and placement; Rome's highlight; Warp's deck-order seed script | L |
 | Tutorial freeze | Pattern only | | |
-| Achievements (K160) | New; ideas only from marvel-lcg (nothing stored, versioned summary) and ArkhamHorror (catalogue, checklists); builds on play-stats, which holds no summary | | M |
+| Achievements (K160), K162 | New; ideas only from marvel-lcg (nothing stored, versioned summary) and ArkhamHorror (catalogue, checklists); builds on play-stats, which holds no summary | | M |
 
 ## Menus shell and phone
 

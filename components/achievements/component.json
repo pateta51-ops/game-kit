@@ -9,5 +9,5 @@
     ]
   },
   "needs": ["play-stats"],
-  "packages": []
+  "packages": ["react"]
 }
