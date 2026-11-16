@@ -30,10 +30,29 @@ A subclass of `scanpipe.plugins.base.Plugin`, kept in the game's repository:
 - hooks: `classify(w_mm, h_mm)`, `orient(crop, kind) -> Orientation(turn, confident, why)`, `default_out(project)`,
   `file_for(out_dir, name, ext)`, `preflight(project, names, scans)`, `finish(project, out_dir, manifests)`.
 
-`tests/fake_game.py` is a small example.
+`tests/fake_game.py` is a small example. `--plugin` refuses a class that is not a `Plugin` subclass, and reports an
+error in its constructor as one line. A game checks its own plug-in in a test:
+
+    from scanpipe.plugins.contract import problems
+    assert problems(MyGame()) == []
+
+## Reading print (optional)
+
+`scanpipe.tess` finds and runs Tesseract (`TESSERACT_CMD`, then the PATH, then the Windows install folders); without
+it every caller gets None and one warning. `scanpipe.orient` has what any game's `orient` hook can use:
+`osd_rotation(crop)` (Tesseract's turn of a whole face, with its confidence), `ROTATIONS` and `page_flip` (the other
+face's turn when an item is flipped like a page). Reading a game's printed codes or back designs stays in the game.
+
+## Two items scanned touching
+
+    python -I kit/scan-ingest/scripts/split_touching.py SCAN OUT_A OUT_B h|v x0 y0 x1 y1
+    python -I kit/scan-ingest/scripts/split_touching.py SCAN OUT_A OUT_B point x y
+
+Splits a magenta scan along the backing gap between two items (or takes one token out), so no re-scan is needed;
+then run `scanpipe` on both files.
 
 ## Tests
 
     cd components/scan-ingest && OMP_THREAD_LIMIT=1 python -m pytest tests -q
 
-Run by the kit CI (job `pytest scan-ingest`), about 2 minutes.
+Run by the kit CI (job `pytest scan-ingest`, in a venv), about 2 minutes. The OCR tests skip when Tesseract is absent.

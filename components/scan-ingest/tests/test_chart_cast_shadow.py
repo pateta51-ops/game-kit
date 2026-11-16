@@ -8,7 +8,6 @@ from pathlib import Path
 
 import cv2
 import numpy as np
-import pytest
 
 from scanpipe.__main__ import main
 from tests.fake_game import FakeGame
@@ -69,9 +68,6 @@ def scan(tmp_path: Path, sheet: np.ndarray) -> dict:
     return it
 
 
-# Fails the same way in scanning-pipeline itself (its run 40641413997, 28 Oct 2026: 0.03125 against 0.02); not caused by
-# the move. Strict: it turns red when the cut-out is fixed, and this mark goes then.
-@pytest.mark.xfail(strict=True, reason="known in the source: dark red left on a chart edge, 0.03125 >= 0.02")
 def test_a_bot_state_card_loses_its_cast_shadow_and_keeps_its_print(tmp_path: Path):
     it = scan(tmp_path, chart_sheet(chart()))
     assert it["kind"] == "chart" and "CAST_SHADOW_KEPT" not in it["flags"], it["flags"]

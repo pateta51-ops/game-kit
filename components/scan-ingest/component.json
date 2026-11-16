@@ -8,5 +8,14 @@
       "tests/: synth.py and the black backing, cast shadow, chart cast shadow, flags, magenta backing and token tests, run against tests/fake_game.py instead of the two game plug-ins. plugins/imperium.py, plugins/under_falling_skies.py and test_imperium_plugin.py were left out: plug-ins live in the game."
     ]
   },
+  "also": {
+    "game": "imperium-horizon-fan-prototype",
+    "commit": "working tree of 15 Nov 2026, branch claude/commit-real-pack (tools/ingest)",
+    "paths": [
+      "scanpipe/tess.py: imp_ingest/tess.py as it is. scanpipe/orient.py: page_flip, _downgrade and the constants of imp_ingest/orient.py and osd_rotation of imp_ingest/suggest.py as they are; reading printed codes (codes.py), back designs by perceptual hash and transcript roles were left in the game.",
+      "scripts/split_touching.py as it is (the note on the game's batches dropped).",
+      "tests/synth_cards.py: tests/synth.py as it is. tests/test_split_touching.py as it is; test_detect_edge_cases.py, test_orient.py and test_tesseract_optional.py without the tests that need the game's batch, codes, suggest and CLI."
+    ]
+  },
   "needs": []
 }

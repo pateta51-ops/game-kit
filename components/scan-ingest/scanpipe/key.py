@@ -296,6 +296,17 @@ def decontaminate(roi: np.ndarray, alpha: np.ndarray, body: np.ndarray, px_per_m
         iy, ix = np.nonzero(sel)
         r, g = card_s[ry[iy, ix], rx[iy, ix]], outside_s[oy[iy, ix], ox[iy, ix]]
         c_s, c_p = card_s[iy, ix], bgr[iy, ix]
+        if corners is not None and sheet_L is not None:
+            # a cast shadow wraps round a corner onto the end of the lit side, inside the fitted arc (which runs a pixel
+            # or two outside the card's own): the outside nearest to that sliver is the lit sheet, and no blend of the
+            # card and the lit sheet is darker than both, so on a light-edged card it passed for print. Such a pixel
+            # in the corner zone is read against the nearest outside in shadow instead
+            dark_out = outside & (lab(outside_s)[..., 0] < sheet_L - RIM_DARKER)
+            if dark_out.any():
+                ds, (sy, sx) = ndimage.distance_transform_edt(~dark_out, return_indices=True)
+                wrap = zone[iy, ix] & (ds[iy, ix] <= DECON_CORNER_ZONE_MM * px_per_mm) & \
+                    (lab(c_p[None])[0][:, 0] < np.minimum(lab(r[None])[0][:, 0], lab(g[None])[0][:, 0]) - RIM_DARKER)
+                g = np.where(wrap[:, None], outside_s[sy[iy, ix], sx[iy, ix]], g)
         v = g - r
         vv = (v * v).sum(axis=1)
         absv = np.sqrt(vv)
