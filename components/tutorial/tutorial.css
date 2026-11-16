@@ -41,6 +41,35 @@
   width: auto;
   box-shadow: none;
 }
+.kit-tutorial-panel[data-side] {
+  position: fixed;
+  border-radius: 0;
+}
+.kit-tutorial-panel[data-side='top'],
+.kit-tutorial-panel[data-side='bottom'] {
+  left: 0;
+  right: 0;
+  max-height: var(--tut-side-max, 45vh);
+}
+.kit-tutorial-panel[data-side='top'] {
+  top: 0;
+}
+.kit-tutorial-panel[data-side='bottom'] {
+  bottom: 0;
+}
+.kit-tutorial-panel[data-side='left'],
+.kit-tutorial-panel[data-side='right'] {
+  top: 0;
+  bottom: 0;
+  width: var(--tut-panel-width);
+  max-height: none;
+}
+.kit-tutorial-panel[data-side='left'] {
+  left: 0;
+}
+.kit-tutorial-panel[data-side='right'] {
+  right: 0;
+}
 .kit-tutorial-head {
   display: flex;
   align-items: baseline;

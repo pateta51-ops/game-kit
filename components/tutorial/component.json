@@ -35,6 +35,14 @@
         ]
       },
       {
+        "game": "7th-inning-stretch",
+        "commit": "working tree, 16 Nov 2026",
+        "paths": [
+          "src/ui/tutorial/TutorialLayer.tsx (docked side, reserved-space variable)",
+          "src/ui/tutorial/tutorial.css (panel buttons as the game's plates)"
+        ]
+      },
+      {
         "game": "warps",
         "commit": "6790200",
         "paths": [
