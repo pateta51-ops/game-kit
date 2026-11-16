@@ -48,6 +48,7 @@ Source commits: stcc `9fc59643`, warps `2af6937`, ebr `33b5abd3`, rome `1d0fd2e`
 | Command-line replay | Imperium (most tests, golden updates) | EBR's per-action hash comparison; STCC's injected input and output | M |
 | Greedy and planner players, sanity bands | Pattern only | | |
 | Rule-based opponent (`opponent`, K103, K115: pick an index among legal options through one fixed pipeline, advice per card, handler per verb, reason codes, profiles and memory as data, decision records) | New code from ideas: chiriboga, Forge (GPL), boardgame.io, XMage (MIT) | - | M |
+| Learned opponent (`learned-opponent`, K125: value net, one-horizon look-ahead on the pure reducer, determinization from the redacted view, TD(lambda) self-play on sim-pool) | New code from the design in `docs/evaluation/outside/rftg-opponent.md` (rftg is GPL: no code copied) | - | L |
 
 Open check before the lift: the canonical JSON of the Jarl line and of STCC build their text and hash differently. A new game takes Jarl's as is, so nothing depends on them matching.
 

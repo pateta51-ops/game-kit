@@ -1,0 +1,11 @@
+{
+  "name": "learned-opponent",
+  "source": {
+    "game": "outside: rftg (Keldon Jones's Race for the Galaxy AI), design only",
+    "commit": "none (new code from the K125 study, 15 Nov 2026)",
+    "licence": "https://github.com/bnordli/rftg src/ net.c, learner.c, ai.c: GPL-2.0-or-later. Design and ideas re-implemented from the study only; no code or weights copied or translated.",
+    "paths": ["docs/evaluation/outside/rftg-opponent.md (Minimum pieces, What generalises)"]
+  },
+  "needs": ["engine-core", "sim-pool"],
+  "packages": []
+}
