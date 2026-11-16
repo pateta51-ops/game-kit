@@ -1,6 +1,6 @@
 // CI templates: every placeholder is where the README says, nothing is hard-coded, and the rendered scripts parse.
 import { spawnSync } from 'node:child_process';
-import { chmodSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { chmodSync, cpSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterAll, describe, expect, it } from 'vitest';
@@ -14,7 +14,7 @@ const where: Record<string, string[]> = {
 };
 const render = (f: string): string =>
   read(f).replaceAll('{{REPO_SLUG}}', 'acme/widget').replaceAll('{{RUNNER_LABEL}}', 'widget').replaceAll('{{OWNER_LOGIN}}', 'acme');
-const files = readdirSync(here).filter((f) => !f.endsWith('.test.ts') && f !== 'README.md' && f !== 'component.json');
+const files = readdirSync(here).filter((f) => !f.endsWith('.test.ts') && f !== 'README.md' && f !== 'component.json' && f !== 'render.mjs');
 
 describe('placeholders', () => {
   it('appear in the files the README names, and leave none behind once replaced', () => {
@@ -39,6 +39,78 @@ describe('rendered files', () => {
     const r = spawnSync(process.execPath, [out, 'nope'], { encoding: 'utf8' });
     expect(r.status).toBe(1);
     expect(r.stderr).toMatch(/unknown step/);
+  });
+
+  it('full-gate.mjs as pulled takes the slug and the e2e scripts from ci.config.json, and E2E_SCRIPTS first', () => {
+    const root = join(dir, 'pulled');
+    mkdirSync(root);
+    writeFileSync(join(root, 'ci.config.json'), JSON.stringify({ repo: 'acme/widget', runnerLabel: 'widget', e2eScripts: ['e2e:a', 'e2e:b'] }));
+    writeFileSync(join(root, 'package.json'), JSON.stringify({ scripts: { 'e2e:a': 'node -e "process.exit(0)"', 'e2e:b': 'node -e "process.exit(3)"', 'e2e:c': 'node -e "process.exit(0)"' } }));
+    const go = (step: string, env: Record<string, string>) =>
+      spawnSync(process.execPath, [join(here, 'full-gate.mjs'), step], { cwd: root, encoding: 'utf8', env: { ...process.env, PR: '1', SHA: 'a'.repeat(40), ...env } });
+    const other = go('prepare', { GITHUB_REPOSITORY: 'acme/other' });
+    expect(other.status).toBe(1);
+    expect(other.stderr).toContain('this gate is for acme/widget, not acme/other');
+    const e2e = go('e2e', { E2E_SCRIPTS: undefined as unknown as string });
+    expect(e2e.status).toBe(1);
+    expect(e2e.stderr).toContain('e2e: e2e:a exit 0, e2e:b exit 3');
+    expect(go('e2e', { E2E_SCRIPTS: 'e2e:c' }).status).toBe(0);
+  });
+
+  it('render.mjs writes the workflows from ci.config.json, pointing at the pulled scripts, and --check finds a hand edit', () => {
+    const root = join(dir, 'game');
+    mkdirSync(join(root, 'kit'), { recursive: true });
+    cpSync(here, join(root, 'kit/ci-templates'), { recursive: true });
+    const go = (...a: string[]) => spawnSync(process.execPath, ['kit/ci-templates/render.mjs', ...a], { cwd: root, encoding: 'utf8' });
+    expect(go().status).toBe(2);
+    writeFileSync(join(root, 'ci.config.json'), JSON.stringify({ repo: 'acme/widget' }));
+    expect(go().status).toBe(2);
+    writeFileSync(join(root, 'ci.config.json'), JSON.stringify({ repo: 'acme/widget', runnerLabel: 'widget' }));
+    expect(go('--check').status).toBe(1);
+    expect(go().status).toBe(0);
+    const wf = (f: string): string => readFileSync(join(root, '.github/workflows', f), 'utf8');
+    expect(readdirSync(join(root, '.github/workflows')).sort()).toEqual(['ci.yml', 'full-gate.yml']);
+    for (const f of ['ci.yml', 'full-gate.yml']) {
+      expect(wf(f), f).not.toMatch(/\{\{[A-Z_]+\}\}/);
+      expect(wf(f), f).toContain('runs-on: [self-hosted, widget]');
+      expect(wf(f), f).toContain("'acme'");
+      expect(wf(f).split('\n').slice(1).join('\n'), f).toBe(render(f).replaceAll('.github/scripts/', 'kit/ci-templates/').replaceAll('tools/architect/', 'kit/ci-templates/'));
+    }
+    expect(wf('full-gate.yml')).toContain('run: node kit/ci-templates/full-gate.mjs prepare');
+    expect(go('--check').status).toBe(0);
+    writeFileSync(join(root, '.github/workflows/ci.yml'), wf('ci.yml').replace('timeout-minutes: 15', 'timeout-minutes: 99'));
+    const edited = go('--check');
+    expect(edited.status).toBe(1);
+    expect(edited.stderr).toContain('.github/workflows/ci.yml differ');
+    writeFileSync(join(root, 'ci.config.json'), JSON.stringify({ repo: 'acme/widget', runnerLabel: 'widget', ownerLogin: 'boss', workflows: ['nightly-fuzz.yml'] }));
+    expect(go().status).toBe(0);
+    expect(wf('nightly-fuzz.yml')).toContain("github.repository_owner == 'boss'");
+    // a game's extras: paths a push to main ignores, and CI on draft pull requests too
+    writeFileSync(join(root, 'ci.config.json'), JSON.stringify({ repo: 'acme/widget', runnerLabel: 'widget', pathsIgnore: ['bugs/**', 'notes/**'], runDrafts: true }));
+    expect(go().status).toBe(0);
+    expect(wf('ci.yml')).toContain('  push:\n    branches: [main]\n    paths-ignore: ["bugs/**", "notes/**"]\n  pull_request:\n\nconcurrency:');
+    expect(wf('ci.yml')).toContain("    if: github.repository_owner == 'acme'\n");
+    expect(wf('ci.yml')).not.toMatch(/draft\b.*\n\s+runs-on|types:/);
+    expect(wf('full-gate.yml')).not.toContain('paths-ignore');
+    expect(go('--check').status).toBe(0);
+  });
+
+  it('local-ci.sh as pulled names its output folder after origin and uses the gate-slot.sh beside it (Linux only)', () => {
+    if (process.platform !== 'linux') return;
+    const root = join(dir, 'local');
+    mkdirSync(join(root, 'kit'), { recursive: true });
+    cpSync(here, join(root, 'kit/ci-templates'), { recursive: true });
+    spawnSync('git', ['init', '-q'], { cwd: root });
+    spawnSync('git', ['remote', 'add', 'origin', join(dir, 'nowhere/acme/k70-widget.git')], { cwd: root });
+    const out = '/tmp/k70-widget-ci';
+    rmSync(out, { recursive: true, force: true });
+    const r = spawnSync('bash', ['kit/ci-templates/local-ci.sh', '7', 'a'.repeat(40)], { cwd: root, encoding: 'utf8', env: { ...process.env, LOCAL_CI_DIR: '', REPO_SLUG: '' } });
+    expect(r.status).toBe(2);
+    expect(readFileSync(join(out, '7.summary'), 'utf8')).toBe('fetch failed\nRESULT RED\n');
+    rmSync(out, { recursive: true, force: true });
+    const sh = read('local-ci.sh');
+    expect(sh).toContain('GS=(bash "$(cd "$(dirname "$0")" && pwd)/gate-slot.sh")');
+    expect(sh).not.toContain('tools/architect/gate-slot.sh');
   });
 
   it('the shell scripts parse with bash -n (skipped when bash is missing)', () => {
@@ -86,8 +158,8 @@ describe('rendered files', () => {
   it('watch-run.sh prints the conclusion and each failed step, and gives up at its timeout (skipped without bash or python3)', () => {
     if (!py()) return;
     const bin = join(dir, 'bin');
-    const sh = join(dir, 'watch-run.sh');
-    const run = (status: string, env: Record<string, string>) => {
+    const run = (status: string, env: Record<string, string>, at = dir, src = render('watch-run.sh')) => {
+      const sh = join(at, 'watch-run.sh');
       mkdirSync(bin, { recursive: true });
       writeFileSync(
         join(bin, 'curl'),
@@ -102,7 +174,7 @@ esac
 `,
       );
       chmodSync(join(bin, 'curl'), 0o755);
-      writeFileSync(sh, render('watch-run.sh'));
+      writeFileSync(sh, src);
       return spawnSync('bash', ['-c', 'PATH="$BIN:$PATH" bash "$SH" 7'], {
         encoding: 'utf8',
         env: { ...process.env, BIN: bin, SH: sh, GH_TOKEN: '', GITHUB_TOKEN: '', WATCH_INTERVAL: '0', ...env },
@@ -131,6 +203,17 @@ esac
     expect(half.status).toBe(1);
     expect(half.stdout).toContain('jobs: not read Server Error');
     for (const r of [none, lim, net, half]) expect(r.stderr).not.toMatch(/Traceback|Error/);
+    // as pulled: the slug is REPO_SLUG, else the origin of the checkout the script is in
+    const ok = '{"status":"completed","conclusion":"success"}';
+    for (const [i, url] of ['git@github.com:acme/widget.git', 'https://github.com/acme/widget'].entries()) {
+      const repo = join(dir, `origin${String(i)}`);
+      mkdirSync(repo);
+      spawnSync('git', ['init', '-q'], { cwd: repo });
+      spawnSync('git', ['remote', 'add', 'origin', url], { cwd: repo });
+      expect(run(ok, { GH_TOKEN: 'tok', REPO_SLUG: '' }, repo, read('watch-run.sh')).status, url).toBe(0);
+      expect(run(ok, { GH_TOKEN: 'tok', REPO_SLUG: 'acme/other' }, repo, read('watch-run.sh')).status, url).toBe(4);
+    }
+    expect(run(ok, { GH_TOKEN: 'tok', REPO_SLUG: 'acme/widget' }, dir, read('watch-run.sh')).status).toBe(0);
   });
 
   it('gate-numbers.py prints the count lines of a runner log and of a local log, plus any extra pattern (skipped without python3)', () => {

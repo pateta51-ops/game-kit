@@ -1,6 +1,19 @@
 # ci-templates
 
-Copy these into a new game and replace the three placeholders. Nothing here names a repository, runner or login.
+Pull this component and use it where it is: a game never edits or copies its `kit/` files. Nothing here names a repository, runner or login.
+
+1. Write `ci.config.json` in the repository root: `{ "repo": "<owner>/<repo>", "runnerLabel": "<label>" }`. Optional: `"ownerLogin"` (default the repository's owner), `"workflows"` (default `["ci.yml", "full-gate.yml"]`; add `"nightly-fuzz.yml"` when the game has `npm run fuzz:nightly`), `"e2eScripts"` (the npm scripts the full gate and `local-ci.sh` run, default `["test:e2e"]`), `"pathsIgnore"` (paths whose pushes to main run no CI, for example `["bugs/**"]`), `"runDrafts": true` (CI on draft pull requests too).
+2. `node kit/ci-templates/render.mjs` writes `.github/workflows/` from the templates and that file (GitHub reads workflows only there); commit them. Put `node kit/ci-templates/render.mjs --check` in the game's check: it fails when a workflow was edited by hand or is older than the templates. Run the first again after each pull of this component.
+3. Run the scripts from `kit/ci-templates/`: the written full gate calls `kit/ci-templates/full-gate.mjs`, which reads the slug and `e2eScripts` from `ci.config.json`; `bash kit/ci-templates/local-ci.sh <pr | branch> <sha>` and `bash kit/ci-templates/watch-run.sh <run-id>` take the slug from `REPO_SLUG`, else from the checkout's `origin`; `local-ci.sh` uses the `gate-slot.sh` beside it. The vitest reporter is `./kit/ci-templates/skip-reporter.ts` (vitest 2 and later).
+4. Install the runner, from WSL Ubuntu, with a registration token (valid one hour):
+
+```bash
+RUNNER_REPO=<owner>/<repo> RUNNER_LABEL=<label> RUNNER_TOKEN=<token> bash kit/ci-templates/install-wsl.sh
+```
+
+`RUNNER_LABEL` is the `runnerLabel` of `ci.config.json`. When `repo-gate` is pulled too, the runner's machine name goes in its runners file, and a label that is also a runner name needs `.github/` and `ci.config.json` in the gate's `skipText`.
+
+The older way still works: copy the files and replace the three placeholders by hand (the paths below are for that way).
 
 | Placeholder | Meaning | Where it goes |
 |---|---|---|

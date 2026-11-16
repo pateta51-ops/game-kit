@@ -6,7 +6,7 @@
 //                                                 sudo works)
 //   node .github/scripts/full-gate.mjs e2e       run each npm script of E2E_SCRIPTS (default test:e2e) on a free port, in order
 import { execFileSync, spawnSync } from 'node:child_process';
-import { appendFileSync } from 'node:fs';
+import { appendFileSync, existsSync, readFileSync } from 'node:fs';
 import { createServer } from 'node:net';
 
 const isWindows = process.platform === 'win32';
@@ -14,9 +14,12 @@ const fail = (message) => {
   console.error(`::error::${message}`);
   process.exit(1);
 };
-const REPO_SLUG = '{{REPO_SLUG}}';
-// The e2e npm scripts, run one after the other on the same free port; the gate fails if any fails (E2E_SCRIPTS, comma list).
-const E2E_SCRIPTS = (process.env.E2E_SCRIPTS ?? 'test:e2e').split(',');
+// As pulled (run from kit/ci-templates/), the slug and the e2e scripts come from ci.config.json in the repository root.
+const cfg = existsSync('ci.config.json') ? JSON.parse(readFileSync('ci.config.json', 'utf8')) : {};
+const SLUG = '{{REPO_SLUG}}';
+const REPO_SLUG = SLUG.startsWith('{{') ? cfg.repo : SLUG;
+// The e2e npm scripts, run one after the other on the same free port; the gate fails if any fails (E2E_SCRIPTS, comma list; else e2eScripts of ci.config.json).
+const E2E_SCRIPTS = process.env.E2E_SCRIPTS?.split(',') ?? cfg.e2eScripts ?? ['test:e2e'];
 const git = (...args) => execFileSync('git', args, { encoding: 'utf-8' }).trim();
 const run = (cmd, args, env = process.env) => {
   const r = spawnSync(cmd, args, { stdio: 'inherit', env, shell: isWindows });

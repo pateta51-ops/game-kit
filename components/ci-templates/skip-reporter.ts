@@ -4,6 +4,12 @@
 // `inputs` are the git-ignored paths whose absence makes tests skip, each with the command that makes it.
 import { appendFileSync, existsSync } from 'node:fs';
 
+interface Task {
+  name: string;
+  mode?: string;
+  result?: { state?: string };
+  tasks?: Task[];
+}
 interface Mod {
   relativeModuleId: string;
   children: { allTests(): Iterable<{ fullName: string; result(): { state: string } }> };
@@ -13,6 +19,20 @@ export default class SkipReporter {
   private readonly inputs: [string, string][];
   constructor(options: { inputs?: [string, string][] } = {}) {
     this.inputs = options.inputs ?? [];
+  }
+
+  private modern = false;
+  onTestRunStart(): void {
+    this.modern = true;
+  }
+  /** vitest 2 (no onTestRunEnd): the same list from its task tree. */
+  onFinished(files: readonly Task[] = []): void {
+    if (this.modern) return;
+    const flat = (t: Task, path: string[]): { fullName: string; result(): { state: string } }[] =>
+      t.tasks
+        ? t.tasks.flatMap((c) => flat(c, [...path, c.name]))
+        : [{ fullName: path.join(' > '), result: () => ({ state: t.mode === 'skip' || t.mode === 'todo' || t.result?.state === 'skip' ? 'skipped' : 'ran' }) }];
+    this.onTestRunEnd(files.map((f) => ({ relativeModuleId: f.name, children: { allTests: () => flat(f, []) } })));
   }
 
   onTestRunEnd(modules: readonly Mod[]): void {

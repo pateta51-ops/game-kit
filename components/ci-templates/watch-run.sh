@@ -5,7 +5,10 @@
 # Usage: bash tools/architect/watch-run.sh <run-id>   (WATCH_TIMEOUT seconds, default 3600; WATCH_INTERVAL, default 30)
 # Exit: 0 success, 1 any other conclusion, 2 run not found, 3 timed out, 4 the API answered with an error.
 # A network failure or an unreadable answer is retried quietly until the timeout.
-R=$1; API=${WATCH_API:-https://api.github.com}/repos/{{REPO_SLUG}}/actions/runs/$R
+# As pulled (the slug not filled in): REPO_SLUG, else the owner/repo of this checkout's origin.
+R=$1; S='{{REPO_SLUG}}'
+case "$S" in '{{'*) S=${REPO_SLUG:-$(git -C "$(dirname "$0")" config --get remote.origin.url | sed -E 's#(\.git)?/*$##; s#^.*[:/]([^/]+/[^/]+)$#\1#')};; esac
+API=${WATCH_API:-https://api.github.com}/repos/$S/actions/runs/$R
 TOKEN=${GH_TOKEN:-${GITHUB_TOKEN:-$(gh auth token 2>/dev/null)}}
 get() { if [ -n "$TOKEN" ]; then curl -s -H "Authorization: Bearer $TOKEN" "$1"; else curl -s "$1"; fi; }
 END=$(( $(date +%s) + ${WATCH_TIMEOUT:-3600} ))

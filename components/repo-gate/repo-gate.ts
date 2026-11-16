@@ -1,12 +1,12 @@
 // The repository gate (from Jarl, runner names as data from STCC). It reads the tracked files (git ls-files; a file that
 // is not checked out is sized from git's index) and fails when:
-//   SIZE          a tracked file is over 50 MB (no Git LFS);
+//   SIZE          a tracked file is over 50 MB (no Git LFS), or its size cannot be read (not checked out, blob not in this clone);
 //   RAW_SCAN      a tracked file is a raw scan or camera format (TIFF, BMP, PSD, RAW, DNG, HEIC...);
 //   SECRET        a tracked text file holds something shaped like a GitHub token or a private key block (also in skipText folders);
 //   SESSION_URL   a tracked text file holds a Claude session URL;
 //   TAILNET_HOST  a tracked text file holds a tailnet host name, `<machine>.<tailnet>.ts.net`;
 //   RUNNER_NAME   a tracked text file names a registered runner machine (cfg.runnerNames and the runnersFile list; whole
-//                 words, any case; a space matches any run of white space);
+//                 words, any case; a space matches any run of white space; the runnersFile itself is exempt);
 //                 (RUNNER_NAME, SESSION_URL and TAILNET_HOST skip the cfg.skipText folders);
 //   CONTENT_ID    a cfg.engineFolders file (outside cfg.engineAllowed and the test files) holds a card-id literal
 //                 (cfg.cardIdLiteral) or a component id of the content folder's json files with a dash;
@@ -72,6 +72,8 @@ export interface TrackedFile {
   bytes: number;
   /** The text of the file, or null for a binary file or one that is not checked out. */
   text: string | null;
+  /** Not checked out and its blob is not in this clone: the size could not be read. */
+  unsized?: boolean;
 }
 
 export interface Finding {
@@ -81,6 +83,7 @@ export interface Finding {
   message: string;
 }
 
+const norm = (p: string): string => p.replace(/\\/g, '/').replace(/^\.\//, '');
 const escape = (s: string): string => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
 /** One regular expression per runner name (whole words, any case; a space matches any run of white space). */
@@ -145,6 +148,8 @@ export function checkFiles(
         message: `${(file.bytes / MB).toFixed(1)} MB is over the 50 MB limit`,
       });
     }
+    if (file.unsized)
+      findings.push({ path: file.path, line: 0, check: 'SIZE', message: 'size not read: not checked out and its blob is not in this clone (fetch it or check it out)' });
     if (RAW_SCAN.test(file.path)) {
       findings.push({
         path: file.path,
@@ -181,7 +186,7 @@ export function checkFiles(
             check: 'TAILNET_HOST',
             message: 'a tailnet host',
           });
-        if (runners.some((re) => re.test(line)))
+        if (norm(file.path) !== norm(cfg.runnersFile) && runners.some((re) => re.test(line)))
           findings.push({
             path: file.path,
             line: i + 1,
@@ -260,12 +265,32 @@ export function readTracked(ROOT: string): TrackedFile[] {
   const missing = entries.filter((e) => !existsSync(join(ROOT, e.path)));
   const indexSizes = new Map<string, number>();
   if (missing.length > 0) {
-    // --batch-check reads the size from the object database without fetching a blob a partial clone does not hold
-    const out = git(
-      ROOT,
-      ['cat-file', '--batch-check=%(objectname) %(objectsize)'],
-      missing.map((m) => m.sha).join('\n') + '\n',
-    );
+    // no fetch of a blob a partial clone does not hold (GIT_NO_LAZY_FETCH; an older git is refused every transport): it
+    // answers `missing`, and the file is flagged, never counted as 0
+    const ask = (args: string[], input?: string): string =>
+      execFileSync('git', ['cat-file', ...args], {
+        cwd: ROOT,
+        encoding: 'utf-8',
+        maxBuffer: 256 * MB,
+        ...(input === undefined ? {} : { input }),
+        stdio: ['pipe', 'pipe', 'ignore'],
+        env: { ...process.env, GIT_NO_LAZY_FETCH: '1', GIT_ALLOW_PROTOCOL: 'none' },
+      });
+    let out: string;
+    try {
+      out = ask(['--batch-check=%(objectname) %(objectsize)'], missing.map((m) => m.sha).join('\n') + '\n');
+    } catch {
+      // an older git stops at the first blob it may not fetch: ask one by one
+      out = missing
+        .map((m) => {
+          try {
+            return `${m.sha} ${ask(['-s', m.sha]).trim()}`;
+          } catch {
+            return '';
+          }
+        })
+        .join('\n');
+    }
     for (const line of out.split('\n')) {
       const [sha, size] = line.split(' ');
       if (sha !== undefined && size !== undefined && /^\d+$/.test(size)) indexSizes.set(sha, Number(size));
@@ -273,7 +298,10 @@ export function readTracked(ROOT: string): TrackedFile[] {
   }
   return entries.map(({ path, sha }) => {
     const full = join(ROOT, path);
-    if (!existsSync(full)) return { path, bytes: indexSizes.get(sha) ?? 0, text: null };
+    if (!existsSync(full)) {
+      const size = indexSizes.get(sha);
+      return size === undefined ? { path, bytes: 0, text: null, unsized: true } : { path, bytes: size, text: null };
+    }
     const bytes = statSync(full).size;
     return { path, bytes, text: BINARY.test(path) ? null : readFileSync(full, 'utf8') };
   });

@@ -41,6 +41,21 @@ describe('skip reporter', () => {
     rmSync(dirname(summary), { recursive: true, force: true });
   });
 
+  it('vitest 2 (onFinished, no onTestRunEnd): the same list from the task tree, and nothing twice on a newer vitest', () => {
+    vi.stubEnv('GITHUB_STEP_SUMMARY', '');
+    const log = vi.spyOn(console, 'log').mockImplementation(() => undefined);
+    const files = [
+      { name: 'tests/b.test.ts', tasks: [{ name: 'pack', tasks: [{ name: 'loads', mode: 'skip' }, { name: 'counts', mode: 'run', result: { state: 'pass' } }] }, { name: 'later', mode: 'todo' }] },
+      { name: 'tests/a.test.ts', tasks: [{ name: 'real cards', mode: 'run', result: { state: 'skip' } }, { name: 'fails', mode: 'run', result: { state: 'fail' } }, { name: 'empty', tasks: [] }] },
+    ];
+    new SkipReporter().onFinished(files);
+    expect(log).toHaveBeenCalledWith('\nTests: 2 ran, 3 skipped (in 2 file(s)) of 5.\n- tests/a.test.ts (1)\n  - real cards\n- tests/b.test.ts (2)\n  - pack > loads\n  - later');
+    const r = new SkipReporter();
+    r.onTestRunStart();
+    r.onFinished(files);
+    expect(log).toHaveBeenCalledTimes(1);
+  });
+
   it('runs in real vitest: a fixture run with one skipped test', () => {
     const root = mkdtempSync(join(tmpdir(), 'skip-real-'));
     writeFileSync(join(root, 'x.test.js'), "describe('s', () => { it.skip('skipped one', () => {}); it('runs', () => {}); });\n");

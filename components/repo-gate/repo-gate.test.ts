@@ -15,6 +15,7 @@ import {
   type Config,
   MAX_FILE_BYTES,
   namesPattern,
+  readTracked,
   type TrackedFile,
 } from './repo-gate';
 
@@ -84,6 +85,13 @@ describe('repo-gate', () => {
       'src/x.ts:3 RUNNER_NAME',
     ]);
     expect(checks([text('docs/PLAN.md', body), text('dossier/a.md', body)])).toEqual([]);
+    // the runners file holds the names: exempt from RUNNER_NAME only
+    expect(checks([text(CFG.runnersFile, `{"runnerNames":["${RUNNER}"]}\n${session}\n`), text('tools/repogate/other.json', RUNNER)])).toEqual([
+      `${CFG.runnersFile}:2 SESSION_URL`,
+      'tools/repogate/other.json:1 RUNNER_NAME',
+    ]);
+    for (const runnersFile of ['./tools/repogate/runners.json', '.\\tools\\repogate\\runners.json', 'tools\\repogate\\runners.json'])
+      expect(checkFiles([text('tools/repogate/runners.json', RUNNER), text('tools/repogate/runners.json.bak', RUNNER)], new Set(), new Set(), { ...CFG, runnersFile }).map((f) => f.path), runnersFile).toEqual(['tools/repogate/runners.json.bak']);
     // the bare suffix of the allowed hosts, and a placeholder, are not hosts
     expect(
       checks([text('vite.config.ts', "allowedHosts: ['.ts.net'] // https://<pc-name>.<tailnet>.ts.net")]),
@@ -154,10 +162,34 @@ describe('config and command line', () => {
     const log = vi.spyOn(console, 'log').mockImplementation(() => undefined);
     expect(main(dir, cfg)).toBe(0);
     writeFileSync(join(dir, 'b.txt'), `runs on ${RUNNER}\n`);
-    git('add', 'a.txt', 'b.txt');
+    git('add', 'a.txt', 'b.txt', 'tools/repogate/runners.json');
     expect(main(dir, cfg)).toBe(1);
-    expect(log.mock.calls.flat().join('\n')).toMatch(/b\.txt:1: RUNNER_NAME/);
+    const out = log.mock.calls.flat().join('\n');
+    expect(out).toMatch(/b\.txt:1: RUNNER_NAME/);
+    expect(out).not.toMatch(/runners\.json/);
     log.mockRestore();
+  });
+
+  it('sizes a file that is not checked out from the objects held here; a blob a partial clone lacks is not fetched and is a SIZE finding, never 0 bytes', () => {
+    const src = mkdtempSync(join(tmpdir(), 'repo-gate-src-'));
+    const clone = mkdtempSync(join(tmpdir(), 'repo-gate-clone-'));
+    const git = (cwd: string, ...a: string[]): string => execFileSync('git', a, { cwd, encoding: 'utf8' });
+    git(src, 'init', '-q');
+    git(src, 'config', 'uploadpack.allowFilter', 'true');
+    writeFileSync(join(src, 'big.txt'), 'x'.repeat(1234));
+    git(src, 'add', 'big.txt');
+    git(src, '-c', 'user.name=t', '-c', 'user.email=t@invalid', 'commit', '-q', '-m', 'one');
+    rmSync(join(src, 'big.txt'));
+    expect(readTracked(src)).toEqual([{ path: 'big.txt', bytes: 1234, text: null }]);
+    git(clone, 'clone', '-q', '--filter=blob:none', '--no-checkout', `file://${src.replaceAll('\\', '/')}`, '.');
+    git(clone, 'read-tree', 'HEAD');
+    const missing = (): string[] => git(clone, 'rev-list', '--objects', '--missing=print', 'HEAD').split('\n').filter((l) => l.startsWith('?'));
+    expect(missing()).toHaveLength(1);
+    const tracked = readTracked(clone);
+    expect(tracked).toEqual([{ path: 'big.txt', bytes: 0, text: null, unsized: true }]);
+    expect(checkFiles(tracked, new Set(), new Set(), CFG).map((f) => `${f.path} ${f.check} ${f.message}`)).toEqual([expect.stringMatching(/^big\.txt SIZE size not read/)]);
+    expect(missing()).toHaveLength(1);
+    for (const d of [src, clone]) rmSync(d, { recursive: true, force: true });
   });
 
   it('fails loudly when the config file is missing', () => {

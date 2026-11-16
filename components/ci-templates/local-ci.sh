@@ -12,8 +12,13 @@
 set -u
 REF=$1; SHA=$2; PORT=${3:-47$((RANDOM % 90 + 10))}
 REPO=$(git -C "$(dirname "$0")" rev-parse --show-toplevel)
-OUT=${LOCAL_CI_DIR:-/tmp/$(basename {{REPO_SLUG}})-ci}
-GS="bash $REPO/tools/architect/gate-slot.sh"
+# As pulled (the slug not filled in): REPO_SLUG, else the owner/repo of origin. gate-slot.sh is the one beside this file.
+S='{{REPO_SLUG}}'
+case "$S" in '{{'*) S=${REPO_SLUG:-$(git -C "$REPO" config --get remote.origin.url | sed -E 's#(\.git)?/*$##; s#^.*[:/]([^/]+/[^/]+)$#\1#')};; esac
+OUT=${LOCAL_CI_DIR:-/tmp/$(basename "$S")-ci}
+GS=(bash "$(cd "$(dirname "$0")" && pwd)/gate-slot.sh")
+# E2E_SCRIPTS (comma list), else e2eScripts of ci.config.json: the e2e npm scripts, in order. Neither: test:e2e, then the phone suite.
+E2E=${E2E_SCRIPTS:-$(cd "$REPO" && node -p "(require('./ci.config.json').e2eScripts||[]).join(',')" 2>/dev/null)}
 CHROMIUM=${PW_CHROMIUM_PATH:-}
 if [ -z "$CHROMIUM" ]; then
   for c in /opt/pw-browsers/chromium /opt/pw-browsers/chromium-*/chrome-linux*/chrome; do
@@ -39,20 +44,23 @@ git -c user.name=local-ci -c user.email=local-ci@invalid merge -q --no-edit "$SH
 echo "tested $(git rev-parse --short HEAD) = origin/main $(git rev-parse --short origin/main) + $LABEL head ${SHA:0:7}" >> "$SUM"
 rc=0
 step "npm-ci" npm ci --no-audit --no-fund || rc=1                 # ci.yml
-step "check" $GS npm run check || rc=1                            # ci.yml and full-gate.yml
-if [ -n "$CHROMIUM" ]; then                                       # full-gate.yml
-  step "e2e" $GS env PW_CHROMIUM_PATH="$CHROMIUM" E2E_PORT="$PORT" npm run test:e2e || rc=1
+step "check" "${GS[@]}" npm run check || rc=1                            # ci.yml and full-gate.yml
+if [ -n "$E2E" ]; then
+  for s in ${E2E//,/ }; do step "$s" "${GS[@]}" env ${CHROMIUM:+PW_CHROMIUM_PATH=$CHROMIUM} E2E_PORT="$PORT" npm run "$s" || rc=1; done
+elif [ -n "$CHROMIUM" ]; then                                     # full-gate.yml
+  step "e2e" "${GS[@]}" env PW_CHROMIUM_PATH="$CHROMIUM" E2E_PORT="$PORT" npm run test:e2e || rc=1
 else                                                              # a machine with Playwright's own browser (WSL runner)
-  step "e2e" $GS env E2E_PORT="$PORT" npm run test:e2e || rc=1
+  step "e2e" "${GS[@]}" env E2E_PORT="$PORT" npm run test:e2e || rc=1
 fi
 # the phone suite (WebKit) after the desktop one. Without WebKit it fails, unless PW_SKIP_WEBKIT=1
 # (then SKIPPED, never GREEN for that step).
-if [ "${PW_SKIP_WEBKIT:-0}" = 1 ]; then
+if [ -n "$E2E" ]; then :
+elif [ "${PW_SKIP_WEBKIT:-0}" = 1 ]; then
   echo "e2e-phone SKIPPED (PW_SKIP_WEBKIT=1)" >> "$SUM"
 elif ! ls -d "${PLAYWRIGHT_BROWSERS_PATH:-$HOME/.cache/ms-playwright}"/webkit-* >/dev/null 2>&1; then
   echo "e2e-phone exit=1 WebKit missing: npx playwright install webkit" >> "$SUM"; rc=1
 else
-  step "e2e-phone" $GS env E2E_PORT="$PORT" npm run test:e2e:phone || rc=1
+  step "e2e-phone" "${GS[@]}" env E2E_PORT="$PORT" npm run test:e2e:phone || rc=1
 fi
 grep -E "Tests +[0-9]+ passed|[0-9]+ passed \(|traceability \(|repo-gate: |plancheck|sim(:smoke)?: " "$LOG" | tail -10 >> "$SUM"
 echo "RESULT $([ $rc = 0 ] && echo GREEN || echo RED)" >> "$SUM"
