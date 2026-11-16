@@ -157,7 +157,7 @@ What a game's own tool did that the kit's does not; each kept that game on its o
 
 ## Harvest from outside repositories (owner, 15 Nov 2026)
 
-Eleven public card-game repositories were surveyed read-only; the findings are in `docs/evaluation/outside/` (evidence is docs, headers and excerpts, so a worker reads the bodies before building). Licences: middle-earth-player, netrunner, boardgame.io and netrunnerdb are MIT (code may be lifted with its notice); marvel-champions-digital-game and arkham.build are AGPL-3.0, chiriboga is GPL-3.0, ArkhamHorror, MarvelChampions and marvel-lcg have none: from those take the idea and write it new, never paste code. Rows are built when the first game needs them. Not taken: save-compatibility work (held until a game is complete), the source engines, multiplayer and server parts.
+Sixteen public card- and board-game repositories were surveyed read-only; the findings are in `docs/evaluation/outside/` (evidence is docs, headers and excerpts, so a worker reads the bodies before building). Licences: middle-earth-player, netrunner, boardgame.io and netrunnerdb are MIT (code may be lifted with its notice); marvel-champions-digital-game and arkham.build are AGPL-3.0, chiriboga is GPL-3.0, ArkhamHorror, MarvelChampions and marvel-lcg have none: from those take the idea and write it new, never paste code. Second batch: XMage is MIT and the Rally the Troops server is ISC (liftable with the notice); Forge and Terraforming Mars are GPL-3.0, rftg is GPL-2.0 or later, and the Rally the Troops game modules read have no licence: idea only. Rows are built when the first game needs them. Not taken: save-compatibility work (held until a game is complete), the source engines, multiplayer and server parts.
 
 | Batch | Content | Sources | Effort | State |
 |---|---|---|---|---|
@@ -194,6 +194,22 @@ Eleven public card-game repositories were surveyed read-only; the findings are i
 | K107 | Card query language: typed field table plus a small parser; the game supplies its fields | arkham.build | M to L | proposed |
 | K108 | `engine-core` random: named override in tests; a randomness-used flag that bars undo | boardgame.io | S | proposed |
 | K109 | Small: icon emitted with a hidden word; paired valid / invalid fixtures per setup-legality rule with typed errors; stale flow request dropped and a loop cap; related-cards index; emitted text keys resolve; card stats diff against a community database; missing-card stand-in | netrunnerdb, arkham.build, boardgame.io, ArkhamHorror | S each | proposed |
+| K110 | `card-harness`: unused-answer check and strict-choose mode (an unanswered prompt fails, a scripted answer left over fails); mid-run check commands; tests of the harness's own error messages; no-duplicate-effects check at teardown | XMage | S to M | proposed |
+| K111 | Card language: replacement loop (applied-set on the event, the affected player chooses among several, result codes including changed-but-still-happens) | XMage, Forge | M | proposed |
+| K112 | Card language: layered recompute in game-declared layers, timestamp set on activation, optional `after` dependency | XMage | M | proposed |
+| K113 | `engine-core`: object reference = id plus zone-change counter; last-known snapshots of objects that left a zone | XMage | S to M | proposed |
+| K114 | Small: batch events with declared shared keys; outcome tag (good or bad for the chooser) on every choice for automatic answers; every-card JSON round-trip check; script-format notes for the card-language pattern | XMage, Forge | S each | proposed |
+| K115 | Opponent pattern, added to K103: a handler per effect verb with one fixed pipeline and a conformance test; reason-coded decisions; profiles as data; a closed hint vocabulary and a cannot-use report; memory sets and a runaway guard; evaluator with explain lines, copy-fidelity check, bounded look-ahead | Forge, XMage | M | proposed |
+| K116 | New `board-layout`: a map drawn over the board picture in Inkscape, extracted as space rects and adjacency edges | Rally the Troops | S | proposed |
+| K117 | New board UI: registry of things (space, piece, marker, stack) highlighted from the legal-action list; stack layout for pieces sharing a space; movement animation | Rally the Troops | M to L | proposed |
+| K118 | New `board-model`: spaces as data, adjacency computed once, named placement kinds resolved by the board (cards never filter spaces), empty-board fixture | Terraforming Mars | M | proposed |
+| K119 | `engine-core` (compare first with steps and `state-machines`): legal actions as one table of verb to ids, shown-but-barred included; nested state stack with scopes kept in state; flow as a typed step list with a runaway cap | Rally the Troops | M | proposed |
+| K120 | `sim-pool`: bad-undo invariant (undo left open across a random draw or reveal); dead-end and placeholder-prompt failures; the game's state assertion after every step; a breakpoint that hands back an importable game | Rally the Troops | S each | proposed |
+| K121 | `replay-cli`: three verdicts (crashed, diverged, changed) with a path diff of the final state | Rally the Troops | S | proposed |
+| K122 | `game-log`: space and piece references that highlight and scroll the map; group boxes for a battle or an activation | Rally the Troops | S | proposed |
+| K123 | Prompts (compare first with the kit's prompt model): closed set of prompt kinds with and / or composition and a space kind; renderer registry that fails to compile for a missing kind; a warning on a playable card when part of it will do nothing | Terraforming Mars | M | proposed |
+| K124 | Small: type-level module-boundary check; query channel for derived data; rule-violation panel with links; prompt-kind `cast` in card tests; catalogue check of card face against behaviour | Lew Morski module, Rally the Troops, Paths of Glory module, Terraforming Mars | S each | proposed |
+| K125 | Learned opponent (owner's word; STCC D-067 stands until then): value network with one-round look-ahead on the real engine and self-play training; study in `docs/evaluation/outside/rftg-opponent.md` | rftg (Keldon) | L | proposed |
 
 ## Size
 
