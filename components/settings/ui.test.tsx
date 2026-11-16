@@ -83,4 +83,21 @@ describe('SettingsScreen', () => {
     expect(screen.getByTestId('x').closest('fieldset')?.textContent).toContain('Section A');
     expect(screen.getByTestId('tail').parentElement?.className).toBe('kit-set');
   });
+
+  it('range: writes the store on change, onRelease only on release', () => {
+    localStorage.clear();
+    const rs = { storageKey: 'test.range', sections: [{ id: 'v', title: 'Sound', settings: [{ kind: 'range', key: 'vol', label: 'Volume', min: 0, max: 100, step: 10, default: 50 }] }] } as const satisfies SettingsSchema;
+    const store = createSettingsStore(rs);
+    const seen: [string, number][] = [];
+    render(<SettingsScreen schema={rs} store={store} onRelease={(k, v) => seen.push([k, v])} />);
+    fireEvent.change(screen.getByTestId('setting-vol'), { target: { value: '70' } });
+    expect(store.getState().values.vol).toBe(70);
+    expect(seen).toEqual([]);
+    fireEvent.pointerUp(screen.getByTestId('setting-vol'));
+    expect(seen).toEqual([['vol', 70]]);
+    fireEvent.keyUp(screen.getByTestId('setting-vol'), { key: 'Tab' });
+    expect(seen.length).toBe(1);
+    fireEvent.keyUp(screen.getByTestId('setting-vol'), { key: 'ArrowRight' });
+    expect(seen.length).toBe(2);
+  });
 });

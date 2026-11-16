@@ -8,6 +8,7 @@
       "src/ui/screens/Settings.tsx (checkbox and radio-group controls, each change written at once; drawn from the schema)"
     ],
     "grafts": [
+      { "game": "netrunner", "commit": "idea only (MIT)", "paths": ["src/cljs/nr/account.cljs (a sample when the volume slider is released; the range kind and onRelease, written new)"] },
       { "game": "jarl", "commit": "6f006a2", "paths": ["src/ui/store (Layout setting auto/phone/desk, as layoutSetting)"] },
       { "game": "rome", "commit": "1d0fd2e", "paths": ["src/ui/frame/resolution.ts (sizes and resolutionSize, as resolutionSetting)"] }
     ]

@@ -11,6 +11,9 @@
       { "game": "middle-earth-player", "commit": "design only (MIT)", "paths": ["spotlight hit stop, trauma shake, afterimages, flash limit (feel.ts; written new from the write-up docs/evaluation/outside/motion-sound.md, no file taken)"] },
       { "game": "middle-earth-player", "commit": "design only (MIT)", "paths": ["entry description, token deltas, closed-form effects and particle budget (slots.ts, beats.ts, particles.ts sparkPoints; written new from the write-up, no file taken)"] },
       { "game": "marvel-champions-digital-game", "commit": "idea only (AGPL)", "paths": ["slot held until its ghost lands, pile and host anchors, beats from events by one table (slots.ts, beats.ts; no file taken)"] },
+      { "game": "ArkhamHorror", "commit": "idea only (no licence)", "paths": ["frontend/src/arkham/components/ChaosTokenMorph.vue (flip holdMs), cardFlight.ts and DrawSpotlight.vue (flight); written new, no file taken"] },
+      { "game": "middle-earth-player", "commit": "design only (MIT)", "paths": ["banner lines and ring store, phase title sweep skip rules (bands.ts; written new from the write-up, no file taken)"] },
+      { "game": "marvel-champions-digital-game", "commit": "idea only (AGPL)", "paths": ["second band slot (bands.ts; no file taken)"] },
       { "game": "warps", "commit": "2af6937", "paths": ["src/ui/fx/kit.ts (particles.ts; the colour table left out, arc and star take their colours)", "src/ui/fx/looks.test.tsx (the kit's cases, in particles.test.ts)"] }
     ]
   },

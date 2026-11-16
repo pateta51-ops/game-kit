@@ -27,7 +27,20 @@ export interface Choice<K extends string = string, V extends string | number = s
   readonly select?: boolean;
 }
 
-export type SettingDef = Toggle | Choice;
+/** A slider (a volume): a number from `min` to `max` in `step`s. */
+export interface Range<K extends string = string> {
+  readonly kind: 'range';
+  readonly key: K;
+  readonly min: number;
+  readonly max: number;
+  readonly step?: number;
+  readonly default: number;
+  readonly label: string;
+  readonly hint?: string;
+  readonly dev?: boolean;
+}
+
+export type SettingDef = Toggle | Choice | Range;
 
 export interface Section {
   readonly id: string;
@@ -45,7 +58,7 @@ export interface SettingsSchema {
 type Defs<S extends SettingsSchema> = S['sections'][number]['settings'][number];
 
 export type Values<S extends SettingsSchema> = {
-  -readonly [D in Defs<S> as D['key']]: D extends Toggle ? boolean : D extends Choice<string, infer V> ? V : never;
+  -readonly [D in Defs<S> as D['key']]: D extends Toggle ? boolean : D extends Range ? number : D extends Choice<string, infer V> ? V : never;
 };
 
 export const settingDefs = (s: SettingsSchema): SettingDef[] => s.sections.flatMap((x) => x.settings);
@@ -55,6 +68,7 @@ export function defaults<S extends SettingsSchema>(s: S): Values<S> {
 }
 
 export function isValid(d: SettingDef, v: unknown): boolean {
+  if (d.kind === 'range') return typeof v === 'number' && v >= d.min && v <= d.max;
   return d.kind === 'toggle' ? typeof v === 'boolean' : d.options.some((o) => o.value === v);
 }
 

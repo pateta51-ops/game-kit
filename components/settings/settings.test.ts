@@ -95,4 +95,11 @@ describe('settings store', () => {
     expect(st.getState().values).toEqual(defaults(SCHEMA));
     expectTypeOf(st.getState().values).toEqualTypeOf<Values<typeof SCHEMA>>();
   });
+
+  it('range keeps a stored number only inside min..max', () => {
+    const s = { storageKey: 'r', sections: [{ id: 'a', title: 'A', settings: [{ kind: 'range', key: 'v', label: 'V', min: 0, max: 10, default: 5 }] }] } as const satisfies SettingsSchema;
+    expect(readSettings(s, { v: 7 }).v).toBe(7);
+    expect(readSettings(s, { v: 11 }).v).toBe(5);
+    expect(readSettings(s, { v: '7' }).v).toBe(5);
+  });
 });

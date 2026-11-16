@@ -24,12 +24,26 @@ export interface SettingsScreenProps {
   /** Drawn after the last section. */
   children?: ReactNode;
   className?: string;
+  /** Called when a slider is let go (pointer up or a key up), with its value: the game plays a sample at that level. */
+  onRelease?: (key: string, value: number) => void;
 }
 
-function Setting({ def, store, id, plates, onOff, showLine }: { def: SettingDef; store: Any; id: string; plates: boolean; showLine: boolean; onOff: readonly [string, string] }) {
+function Setting({ def, store, id, plates, onOff, showLine, onRelease }: { def: SettingDef; store: Any; id: string; plates: boolean; showLine: boolean; onOff: readonly [string, string]; onRelease: ((key: string, value: number) => void) | undefined }) {
   const value = store((s) => s.values[def.key]);
   const set = store((s) => s.set);
   const hint = def.hint === undefined ? null : <span className="kit-set-hint">{def.hint}</span>;
+  if (def.kind === 'range') {
+    const up = (e: { currentTarget: HTMLInputElement }) => { onRelease?.(def.key, Number(e.currentTarget.value)); };
+    return (
+      <label className="kit-set-row">
+        <span>
+          <span className="kit-set-label">{def.label}</span>
+          {hint}
+        </span>
+        <input type="range" min={def.min} max={def.max} step={def.step ?? 1} value={Number(value)} data-testid={`setting-${def.key}`} onChange={(e) => { set(def.key, Number(e.target.value)); }} onPointerUp={up} onKeyUp={(e) => { if (/^(Arrow(Left|Right|Up|Down)|Home|End|Page(Up|Down))$/.test(e.key)) up(e); }} />
+      </label>
+    );
+  }
   const plate = (on: boolean, text: string, tid: string, go: () => void) => (
     <button type="button" key={tid} className={on ? 'kit-set-plate kit-set-plate-on' : 'kit-set-plate'} aria-pressed={on} data-testid={tid} onClick={go}>
       {text}
@@ -134,7 +148,7 @@ function Setting({ def, store, id, plates, onOff, showLine }: { def: SettingDef;
   );
 }
 
-export function SettingsScreen({ schema, store, dev = false, look, showLine = false, onOff = ['On', 'Off'], extra, children, className }: SettingsScreenProps) {
+export function SettingsScreen({ schema, store, dev = false, look, showLine = false, onOff = ['On', 'Off'], extra, children, className, onRelease }: SettingsScreenProps) {
   const id = useId();
   return (
     <div className={className === undefined ? 'kit-set' : `kit-set ${className}`}>
@@ -148,7 +162,7 @@ export function SettingsScreen({ schema, store, dev = false, look, showLine = fa
               {sec.title}
             </h2>
             {shown.map((d) => (
-              <Setting key={d.key} def={d} store={store as Any} id={`${id}-${d.key}`} plates={look === 'plates'} showLine={showLine} onOff={onOff} />
+              <Setting key={d.key} def={d} store={store as Any} id={`${id}-${d.key}`} plates={look === 'plates'} showLine={showLine} onOff={onOff} onRelease={onRelease} />
             ))}
             {more}
           </fieldset>

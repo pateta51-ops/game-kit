@@ -111,8 +111,11 @@ export const BUILT_IN: Readonly<Record<string, Effect>> = {
       el.toggleAttribute('data-fx-flipped', target);
       if (typeof label === 'string') el.setAttribute('data-fx-label', label);
     };
-    const timer = setTimeout(swap, call.dur / 2);
-    animate([{ transform: 'scaleX(1)' }, { transform: 'scaleX(0)' }, { transform: 'scaleX(1)' }], { transform: 'none' });
+    const hm = call.step['holdMs'];
+    const h = typeof hm === 'number' && call.dur > 0 ? Math.min(Math.max(hm, 0), call.dur * 0.8) : 0;
+    const mid = h + (call.dur - h) / 2;
+    const timer = setTimeout(swap, mid);
+    animate(h > 0 ? [{ transform: 'scaleX(1)' }, { transform: 'scaleX(1)', offset: h / call.dur }, { transform: 'scaleX(0)', offset: mid / call.dur }, { transform: 'scaleX(1)' }] : [{ transform: 'scaleX(1)' }, { transform: 'scaleX(0)' }, { transform: 'scaleX(1)' }], { transform: 'none' });
     return () => {
       clearTimeout(timer);
       swap();

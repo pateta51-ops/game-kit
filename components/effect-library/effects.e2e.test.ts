@@ -44,6 +44,7 @@ const CASES: [string, Record<string, unknown>, (o: Out) => void][] = [
   ['move', { to: 'b', then: 'hide' }, (o) => expect([o.style?.left, o.style?.visibility]).toEqual(['330px', 'hidden'])],
   ['scale', { to: 1.5, pulse: true }, (o) => expect(o.style?.scale).toBe('none')],
   ['fade-out', { to: 0.6 }, (o) => expect(o.style?.opacity).toBe('0.6')],
+  ['flip', { holdMs: 100 }, (o) => expect(o.flipped).toBe(true)],
   ['flip', { label: 'Pick 2 of 3' }, (o) => expect([o.flipped, o.label]).toEqual([true, 'Pick 2 of 3'])],
   ['fade-in', { scale: 2 }, (o) => expect([o.style?.opacity, o.style?.scale]).toEqual(['1', ''])],
   ['fade-in', { scale: [2, 1.5] }, (o) => expect(o.style?.scale).toBe('1.5')],

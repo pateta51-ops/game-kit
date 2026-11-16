@@ -4,7 +4,7 @@ Settings declared as data, a persisted store of their values and a screen drawn 
 
 ## Schema (`schema.ts`)
 
-`{ storageKey, version?, sections: [{ id, title, settings }] }`. A setting is a toggle `{ kind: 'toggle', key, label, default, hint?, dev? }` or a choice `{ kind: 'choice', key, label, options: [{ value, label, line? }], default, hint?, dev?, select? }` (values are strings or numbers; `select` draws a drop-down). Write the schema `as const satisfies SettingsSchema` and `Values<typeof schema>` types every key.
+`{ storageKey, version?, sections: [{ id, title, settings }] }`. A setting is a slider `{ kind: 'range', key, label, min, max, step?, default, hint?, dev? }` (a number; the screen's `onRelease(key, value)` fires when it is let go, so the game plays a sample at the new level) or a toggle `{ kind: 'toggle', key, label, default, hint?, dev? }` or a choice `{ kind: 'choice', key, label, options: [{ value, label, line? }], default, hint?, dev?, select? }` (values are strings or numbers; `select` draws a drop-down). Write the schema `as const satisfies SettingsSchema` and `Values<typeof schema>` types every key.
 
 - `defaults(schema)`, `readSettings(schema, raw)`: a stored value is kept only when it is a boolean (toggle) or one of the options (choice); anything else, or a missing key, is the default.
 - `layoutSetting(key, label, words, def?)`: a choice of `auto`, `phone`, `desk`, the values phone-mode's `layoutModeFor` reads. A game passes it to phone-mode's viewport as `setting: () => store.getState().values.layout` and `onSetting: (f) => store.subscribe(f)`.
