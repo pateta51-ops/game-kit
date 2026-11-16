@@ -1,0 +1,14 @@
+{
+  "name": "tooling-scripts",
+  "source": {
+    "game": "imp",
+    "commit": "20a033a",
+    "paths": ["tools/architect/ipcheck.py (ported to TypeScript as text-leak.ts)"]
+  },
+  "grafts": [
+    { "game": "stcc", "commit": "9fc59643", "paths": ["scripts/gen-interpretations.ts"], "what": "gen-from-table.ts: a file written from a plan table, with --check" },
+    { "game": "imp", "commit": "20a033a", "paths": ["tests/scripts/verify-sync.test.ts"], "what": "the row splitter that respects escaped pipes and code spans" },
+    { "game": "rome", "commit": "1d0fd2e", "paths": ["scripts/art-check.ts", "scripts/art-build.ts (the manifest shape)"], "what": "art-check.ts: manifest against sources and outputs, needed ids, byte caps" }
+  ],
+  "needs": []
+}
