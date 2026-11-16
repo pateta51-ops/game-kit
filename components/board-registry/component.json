@@ -7,6 +7,6 @@
       "public/common/world.js (define_*, end_update, _layout_stacks)"
     ]
   },
-  "needs": ["effect-library"],
+  "needs": [],
   "packages": []
 }

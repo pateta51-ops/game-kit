@@ -11,7 +11,7 @@ type T = { piecesTest: { demo(noGl: boolean): Promise<{ gl: boolean; layer: bool
 describe.skipIf(!HAVE && !process.env['CI'])('pieces-3d demo in a browser', () => {
   let browser: Browser;
   let js = '';
-  const css = readFileSync(path('./pieces3d.css'), 'utf8') + ':root{--card-shadow:0 2px 4px #0006;--card-shadow-lifted:0 8px 16px #0006;--chip-core-1:#aaa;--chip-core-2:#888;--chip-core-3:#666}';
+  const css = readFileSync(path('../pieces-3d/pieces3d.css'), 'utf8') + ':root{--card-shadow:0 2px 4px #0006;--card-shadow-lifted:0 8px 16px #0006;--chip-core-1:#aaa;--chip-core-2:#888;--chip-core-3:#666}';
   const open = async () => { const page = await browser.newPage(); await page.setContent(`<!doctype html><style>${css}</style><body></body>`); await page.addScriptTag({ content: js }); return page; };
   beforeAll(async () => {
     js = (await build({ entryPoints: [path('./fake/entry.ts')], bundle: true, format: 'iife', write: false, logLevel: 'silent' })).outputFiles[0]?.text ?? '';

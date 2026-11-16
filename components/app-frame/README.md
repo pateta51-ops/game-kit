@@ -14,7 +14,7 @@ Hash routes, the screen of the address bar with an error boundary and lazy loadi
 - Without `fallback`, a failed screen shows the `kit-af-crash` alert (the words, the error message, Try again, Home). `fallback(error, retry, route)` draws the game's own. `words` overrides `FRAME_WORDS` (`loading`, `failed`, `retry`, `home`).
 - `<CrashScreen error getSave? fileName? retry? reload? download? words? timeoutMs?>`: a crash screen to return from `fallback`: the words, `errorWords(error)` (first line, 200 characters), the children, then Download the save, Reload the page and (with `retry`) Try again. `getSave()` returns the save as a string, bytes or a Blob, now or as a promise, or null for none; it is downloaded as `fileName` (default `save.json`) by `downloadSave` (the address is freed 10 s later), or by the game's `download(data, fileName)`. A `getSave` or download that throws, rejects or takes over `timeoutMs` (10 s) only shows the failed words; the button works again. `words` overrides `CRASH_WORDS`. Test ids: `crash`, `crash-error`, `crash-export`, `crash-reload`, `crash-retry`, `crash-export-state` (`data-state` busy, saved, none, failed).
 - `useRoute(names, home)`: the route, re-read on `hashchange`. `ErrorBoundary` `{ fallback(error, retry), onError? }` for any part.
-- `<Stage layout={{ w, h }} heads? head? className?>`: a fixed-size stage (e.g. 3840 x 2160) scaled to fit the window, top-left aligned, in a fixed full-window `kit-stage-viewport`; children place themselves with `zone` from `board-layout`. `heads` names the game's fixed heads once, each `{ rect: [x, y, w, h], node }` (e.g. `menu`: logo and Home button; `flow`: Home button alone); `head` picks one for the screen, drawn in `kit-stage-head` (`data-head`) above the children. `useStageScale(w, h)` is the scale alone. A phone layout that flows instead of scaling stays in the game.
+- `<Stage layout={{ w, h }} heads? head? className?>`: a fixed-size stage (e.g. 3840 x 2160) scaled to fit the window, top-left aligned, in a fixed full-window `kit-stage-viewport`; children place themselves with `zone` from `board-layout`. `heads` names the game's fixed heads once, each `{ rect: [x, y, w, h], node }` (e.g. `menu`: logo and Home button; `flow`: Home button alone); `head` picks one for the screen, drawn in `kit-stage-head` (`data-head`) above the children. `useStageScale(w, h)` is the scale alone. A phone layout that flows instead of scaling stays in the game. With `<Stage>` start phone-mode's viewport with `fit: false`, or the two scalers multiply (0.5 x 0.5).
 - `startApp(app, { root?, before?, hook? })`: finds the root element (default `#root`, throws when missing), puts `hook.api` on `window[hook.name]` (the game passes it only in dev or end-to-end builds), runs `before(root)`, renders in StrictMode; returns the React root.
 
 ## Look
@@ -33,4 +33,11 @@ const route = parseHash('#/play/seed-7?debug=1', names, 'menu')
 // { name: 'play', parts: ['seed-7'], query: ... }
 const href = routeHref('play', 'menu', ['seed-7']) // '#/play/seed-7'
 console.log(route.name, href)
+```
+
+```tsx
+import { AppFrame } from '../kit/app-frame/ui'
+
+const Menu = () => <p>Menu</p>
+export const App = () => <AppFrame<'menu' | 'play'> routes={{ menu: { screen: Menu, title: 'Menu' }, play: { load: () => Promise.resolve({ default: Menu }) } }} home="menu" />
 ```

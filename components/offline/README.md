@@ -4,7 +4,7 @@ Offline install: a Vite plugin that writes a precaching service worker into the 
 
 ## Build (`precache.ts`)
 
-`plugins: [swPrecache({ prefix, assets?, appDir?, exclude?, navTimeoutMs? })]`. After `vite build` it writes `sw.js` at the build's root: the kit's `sw.js` with the files to keep and a version hashed from their contents. `prefix` starts the cache names (one per game; activate deletes the older caches with it). With `assets` (folders of the build, e.g. the faces and the fonts), only root files, the bundler's `assetsDir` and those folders are kept; without it, every file. `exclude` takes more files out (e.g. originals). The game keeps no `public/sw.js`. `writeServiceWorker(outDir, options)` does the same on any folder.
+`plugins: [swPrecache({ prefix, assets?, appDir?, exclude?, navTimeoutMs? })]`. After `vite build` it writes `sw.js` at the build's root: the kit's `sw.js` with the files to keep and a version hashed from their contents. `prefix` starts the cache names (one per game; activate deletes the older caches with it). With `assets` (folders of the build, e.g. the faces and the fonts), only root files, the bundler's `assetsDir` and those folders are kept; without it, every file. `exclude` takes more files out (e.g. originals). Card faces in `assets` are precached here: do not also call card-parts `fillImageCache` (art stored twice). The game keeps no `public/sw.js`. `writeServiceWorker(outDir, options)` does the same on any folder.
 
 The worker answers every stored file from the cache (query and hash ignored, paths percent-encoded once) and every navigation in its scope with the stored `index.html`. With `navTimeoutMs` (e.g. 3000) a navigation goes to the network first (`no-store`) and gets the stored `index.html` only when the network fails, answers with an error or takes longer. A newer version waits until the page sends `skipWaiting`.
 
@@ -32,4 +32,10 @@ import { shouldRegister } from '../kit/offline/index'
 // the Vite plugin writes the service worker; the page registers it only where it may:
 declare const env: Parameters<typeof shouldRegister>[0]
 console.log(shouldRegister(env, { hostname: 'localhost', protocol: 'http:' }, true))
+```
+
+```tsx
+import { UpdateLine } from '../kit/offline/ui'
+
+export const Top = () => <UpdateLine words={{ line: 'A new version is ready' }} />
 ```

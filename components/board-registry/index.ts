@@ -84,4 +84,3 @@ export function stackLayout(n: number, o: StackOpts = {}): V[] {
   const sy = fix(Math.min(...ys), Math.max(...ys) + sh, by, by + bh)
   return out.map(p => ({ dx: p.dx + sx, dy: p.dy + sy }))
 }
-export * from './movement.ts'

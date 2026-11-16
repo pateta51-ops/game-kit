@@ -7,6 +7,7 @@ import { useEffect, useRef, useState, type ComponentType, type ReactNode } from 
 import { seatKey, type KernelOption, type KernelPrompt } from '../engine-core/index.ts';
 import type { PromptSource } from '../prompt-source/index.ts';
 import { defaultLook } from './look.ts';
+import { warnLook } from './lookCheck.ts';
 
 export type Kinded = KernelPrompt & { readonly kind: string; readonly source?: PromptSource };
 /** `promptId`: the prompt the picks answer (the host always sends it); a store drops an answer whose prompt is no longer open. */
@@ -61,6 +62,7 @@ export interface HostProps<P extends Kinded, V> {
 
 export function PromptHost<P extends Kinded, V>({ widgets, prompt, view, answer, seat, mine = seat === undefined || prompt?.seat === undefined || seatKey(prompt.seat) === seatKey(seat), waiting = null, auto, title, look: part }: HostProps<P, V>) {
   const look = { ...(defaultLook as Look<P>), ...part };
+  warnLook(part);
   const id = prompt?.id ?? null;
   const open = useRef(id);
   const sent = useRef<number | null>(null);

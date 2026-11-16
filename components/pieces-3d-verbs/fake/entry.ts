@@ -1,6 +1,7 @@
 import { createMotionPlayer, createVerbs, type MotionSpec } from '../../motion-frame/index.ts';
 import { registerEffects, type EffectCtx } from '../../effect-library/index.ts';
-import { copyPieces, mountPiecesDemo, registerPieceVerbs } from '../index.ts';
+import { mountPiecesDemo } from '../../pieces-3d/index.ts';
+import { copyPieces, registerPieceVerbs } from '../verbs.ts';
 
 const sum = (c: HTMLCanvasElement | null) => { const g = c?.getContext('2d'); if (!c || !g || !c.width) return 0; const d = g.getImageData(0, 0, c.width, c.height).data; let s = 0; for (let i = 3; i < d.length; i += 4) s += d[i] ?? 0; return s; };
 const frame = () => new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));

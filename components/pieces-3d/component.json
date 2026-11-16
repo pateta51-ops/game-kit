@@ -13,6 +13,6 @@
       "src/ui/motion/index.ts (the die and ball verbs, as `shake`, `flip`, `move`, `settle`; the clone repaint as `copyPieces`)"
     ]
   },
-  "needs": ["effect-library", "motion-frame"],
+  "needs": [],
   "packages": ["react (ui.ts only)"]
 }

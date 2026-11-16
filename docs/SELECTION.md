@@ -110,6 +110,7 @@ Open check before the lift: the canonical JSON of the Jarl line and of STCC buil
 | Small helpers (K109) | New code from the outside write-ups: icon with hidden word, text-key check, paired legality fixtures, relation index here; FlowQueue in state-machines, diffCards and cardLookup in card-patches | - | S |
 | Debug console (`debug-console`, K100) | New code from the netrunner (MIT, verb list only) and ArkhamHorror / MarvelChampions (ideas only) write-ups: slash-line parser and a console over engine-core debug edits | - | M |
 | Card query (K107) | New code from the arkham.build BuildQL write-up (ideas only, AGPL): field table, lexer, parser, evaluator | - | M |
+| Dice and ball verbs for `pieces-3d` (`pieces-3d-verbs`, K235; split out so release 1.0 does not pull the effects code) | 7th Inning Stretch, commit 4dcb9be: the verbs of `pieces-3d` | - | S |
 | Code-built 3D pieces (`pieces-3d`, K166) | 7th Inning Stretch, commit 4dcb9be: the only game with WebGL dice and a rolling ball, already free of its game's names | - | M |
 
 Generic effects: deal, move, flip, shake, highlight, beam, sparks, count-up, banner, crumple. One game's look, not shared: phaser, warp tunnel, coins, book, triumph.

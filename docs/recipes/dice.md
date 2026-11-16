@@ -11,7 +11,7 @@ Use when a game rolls, holds, rerolls or adjusts dice. Components: `dice-tray` (
    ```
    Others: `toggleHold`, `hold`, `heldDice`, `adjust(tray, id, +-1)` (stays in 1..sides), `setValue`, `remove`, `rerollSelected(tray, rng, selected)` (one roll count).
 2. **Roll window.** The tap order token, die, then + or -: keep a `WinState` in the UI store (`winStart`, `winPickToken`, `winPickDie`, `winBack`, `canTapDie`; `adjustId(s, '+')` gives the answer id `<token>:<die>:<sign>`). Die taps before a token are ignored. Reset it when the prompt id changes.
-3. **Look.** Draw dice with `pieces-3d`: elements with `data-p3-die="d6"` and `data-v`, then `startDiceLayer(look)` once; without WebGL the element's own children show as the flat die. `registerPieceVerbs` adds `shake` and `flip` to the effect library. `rollWith(tray, rng, { onRoll })` is the animation hook (off unless given; release 1.0 has none).
+3. **Look.** Draw dice with `pieces-3d`: elements with `data-p3-die="d6"` and `data-v`, then `startDiceLayer(look)` once; without WebGL the element's own children show as the flat die. `registerPieceVerbs` (`pieces-3d-verbs`, release 1.1) adds `shake` and `flip` to the effect library. `rollWith(tray, rng, { onRoll })` is the animation hook (off unless given; release 1.0 has none).
 4. **Odds** for tests and sanity bands: `chance(3, (dice) => dice.includes(6))` from `dice-odds`; compare a simulated rate with it.
 
 Pitfalls

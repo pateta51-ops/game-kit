@@ -15,6 +15,8 @@ export interface ViewportOptions {
   readonly phoneScreen?: (hash: string) => boolean;
   readonly autoPhone?: boolean;
   readonly shortSide?: number;
+  /** false: never zoom the container (the game scales itself, e.g. with app-frame `<Stage>`); default true. */
+  readonly fit?: boolean;
   readonly deskW?: number;
   readonly deskH?: number;
 }
@@ -50,7 +52,7 @@ export const useViewport = create<ViewportState>((set, get) => ({
   update() {
     const w = window.innerWidth;
     const h = window.innerHeight;
-    const { setting, onSetting: _, phoneScreen, ...rest } = opts;
+    const { setting, onSetting: _, phoneScreen, fit: _f, ...rest } = opts;
     const mode = layoutModeFor({ w, h, coarse: coarsePointer(), setting: setting?.() ?? 'auto', ...rest });
     const from = get().mode;
     expectEdge(VIEWPORT_MACHINE, from, mode, 'window or Layout setting changed');
@@ -59,7 +61,7 @@ export const useViewport = create<ViewportState>((set, get) => ({
     el.dataset['orient'] = w > h ? 'landscape' : 'portrait';
     el.dataset['display'] = isIosHomeScreenApp() ? 'standalone' : 'browser';
     if (container !== null)
-      applyFit(container, needsFit(mode, window.location.hash, phoneScreen) ? { w, h } : null, opts.deskW, opts.deskH);
+      applyFit(container, opts.fit !== false && needsFit(mode, window.location.hash, phoneScreen) ? { w, h } : null, opts.deskW, opts.deskH);
     if (mode !== from || w !== get().w || h !== get().h) set({ mode, w, h });
   },
   start(root, options = {}) {

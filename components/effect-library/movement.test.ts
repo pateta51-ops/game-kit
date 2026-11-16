@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import { define, emptyRegistry, moveTo, movements, placements, type Thing } from './index.ts'
+import { movements, placements } from './movement.ts'
+import { define, emptyRegistry, moveTo, type Thing } from '../board-registry/index.ts'
 
 const rects: Record<string, { x: number; y: number; w: number; h: number }> = { A: { x: 0, y: 0, w: 10, h: 10 }, B: { x: 100, y: 0, w: 10, h: 10 } }
 const o = { rectOf: (s: string) => rects[s], stack: { collapsed: { dx: 2, dy: 0 } } }

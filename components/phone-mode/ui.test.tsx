@@ -74,6 +74,18 @@ describe('the viewport store', () => {
     window.dispatchEvent(new Event('resize'));
     expect(useViewport.getState().mode).toBe('desk');
   });
+  it('fit: false leaves the root unzoomed, so app-frame <Stage> is the only scaler (K235 A3)', () => {
+    size(1920, 1080);
+    coarse(false);
+    const root = { style: { zoom: '' } } as unknown as HTMLElement;
+    const stop = useViewport.getState().start(root, { fit: false });
+    expect(useViewport.getState().mode).toBe('fitted');
+    expect(root.style.zoom).toBe('');
+    stop();
+    const stop2 = useViewport.getState().start(root, {});
+    expect(root.style.zoom).toBe('0.5');
+    stop2();
+  });
   it('setSafeArea writes the four tokens', () => {
     setSafeArea(47, 0, 34, 0);
     expect(document.documentElement.style.getPropertyValue('--sat')).toBe('47px');

@@ -6,7 +6,7 @@ The mechanism of a phone layout: which layout a window gets, the fit zoom of the
 
 - `layoutModeFor({ w, h, coarse, setting, autoPhone?, shortSide?, deskW?, deskH? })`: `desk` (window at least 3840x2160 or the given design size), `fitted`, `phonePortrait`, `phoneLandscape`. A phone is the setting `phone`, or `auto` with a coarse pointer and a short side of at most 500 CSS px; it follows the window, never the user agent, so a narrow desktop window is not a phone. Sideways needs a touch pointer. `layoutAttr`, `isPhone`.
 - `fitZoom(w, h, dw?, dh?)`, `applyFit(el, size | null, dw?, dh?)`: CSS zoom of the app container in the fitted mode; the phone screens never use zoom.
-- `useViewport` (zustand, machine `kit.viewport`): `start(root, { setting?, onSetting?, phoneScreen?, autoPhone?, shortSide?, deskW?, deskH? })` returns the stop function. It follows resize, rotation, the visual viewport, the pointer, `hashchange` and the game's setting; writes `data-layout` (desk | fitted | phone), `data-orient` (portrait | landscape) and `data-display` (browser | standalone) on `<html>`; zooms `root` when `needsFit(mode, hash, phoneScreen)` (fitted, or a phone upright on a location with no phone screen yet). A rotation changes nothing else, so turning back loses nothing.
+- `useViewport` (zustand, machine `kit.viewport`): `start(root, { setting?, onSetting?, phoneScreen?, autoPhone?, shortSide?, deskW?, deskH?, fit? })` returns the stop function (`fit: false` never zooms the root: use it with app-frame `<Stage>`, the one scaler). It follows resize, rotation, the visual viewport, the pointer, `hashchange` and the game's setting; writes `data-layout` (desk | fitted | phone), `data-orient` (portrait | landscape) and `data-display` (browser | standalone) on `<html>`; zooms `root` when `needsFit(mode, hash, phoneScreen)` (fitted, or a phone upright on a location with no phone screen yet). A rotation changes nothing else, so turning back loses nothing.
 - `setSafeArea(top, right, bottom, left, el?)`: sets `--sat --sar --sab --sal` for an end-to-end test (a browser test cannot emulate a notch).
 
 Page setup the source game learned on a real iPhone: the viewport meta is `width=device-width, initial-scale=1` without `viewport-fit=cover`, and without `apple-mobile-web-app-capable` or a `black-translucent` status bar (they left a band under the dock in the Home Screen app); full-height layers use `100dvh` (`--pm-h`), and the stylesheet gives html and body `height: 100%` in the phone layout.
@@ -35,4 +35,12 @@ import { fitZoom, layoutAttr, layoutModeFor } from '../kit/phone-mode/index'
 
 const mode = layoutModeFor({ w: 390, h: 844, coarse: true, setting: 'auto' })
 console.log(layoutAttr(mode), fitZoom(1920, 1080)) // 'phone'; zoom that fits the 3840x2160 desk layout
+```
+
+```tsx
+import { useViewport } from '../kit/phone-mode/index'
+import { Sheet } from '../kit/phone-mode/ui'
+
+useViewport.getState().start(document.body, { fit: false }) // once at start; fit: false when a <Stage> scales
+export const Help = ({ close }: { close: () => void }) => <Sheet title="Help" onClose={close}><p>Words</p></Sheet>
 ```

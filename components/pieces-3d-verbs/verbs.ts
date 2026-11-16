@@ -2,8 +2,8 @@
 // rolls by distance and rocks back to rest. Any other actor gets the library's verb.
 import type { VerbRegistry } from '../motion-frame/index.ts';
 import { BUILT_IN, registerEffect, type EffectCtx } from '../effect-library/index.ts';
-import { offRest, paintBall, rolled, type BallLook } from './ball.ts';
-import { ID, rotAxis, type M3 } from './solids.ts';
+import { offRest, paintBall, rolled, type BallLook } from '../pieces-3d/ball.ts';
+import { ID, rotAxis, type M3 } from '../pieces-3d/solids.ts';
 
 export interface PieceVerbOptions { ballLook?: () => BallLook | undefined; perTurn?: number }
 /** True while the WebGL dice layer is on (`p3-gl` on <html>). */

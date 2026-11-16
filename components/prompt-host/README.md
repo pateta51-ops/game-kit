@@ -20,7 +20,7 @@ const WIDGETS: Widgets<Prompt, PlayerView> = { pick: PickOptions, amount: (p) =>
 - `May` (yes / no), `PayCost` (one option per way to pay), `OptionList`: a click answers. `OptionButton`: the shared button. A barred option stays, shows `why` and never answers; a legal one with K91 `idle` shows its words as a warning.
 
 ## Look
-Unstyled. `look.cls(part)` gives class names (default `kp-<part>`: host, title, option, mark, why, idle, count, done, cancel, pick, amount, less, more, value, order, list, may, pay, board-bar). `look.label(o, p)` draws an option (words or a card face: `label: (o) => cardOf(o.id) ? <CardFace card={cardOf(o.id)} /> : <>{o.label}</>`, the face from card-parts, see [card-face-zoom.md](../../docs/recipes/card-face-zoom.md)); `count`, `done`, `less`, `more`, `confirm`, `cancel` are the game's words. `aria-pressed` marks picks, `data-option` the option id, `data-kind` the prompt kind. K226: `data-picked` (picked-state: `picked` / `unpicked`, nothing before the first pick) and `data-shortcut` 1-9 (ui-helpers `bindPromptKeys`) on the option buttons. Recipe wiring every prompt part: [prompts.md](../../docs/recipes/prompts.md).
+Unstyled. `look.cls(part)` gives class names (default `kp-<part>`: host, title, option, mark, why, idle, count, done, cancel, pick, amount, less, more, value, order, list, may, pay, board-bar). `look.label(o, p)` draws an option (words or a card face: `label: (o) => cardOf(o.id) ? <CardFace card={cardOf(o.id)} /> : <>{o.label}</>`, the face from card-parts, see [card-face-zoom.md](../../docs/recipes/card-face-zoom.md)); `count`, `done`, `less`, `more`, `confirm`, `cancel` are the game's words; K235: the defaults (label = the option id, English Done) are placeholders: the host warns once in dev, and `checkLook(look)` (node) lists them for a game's test, which expects `[]`. `aria-pressed` marks picks, `data-option` the option id, `data-kind` the prompt kind. K226: `data-picked` (picked-state: `picked` / `unpicked`, nothing before the first pick) and `data-shortcut` 1-9 (ui-helpers `bindPromptKeys`) on the option buttons. Recipe wiring every prompt part: [prompts.md](../../docs/recipes/prompts.md).
 ## Use it in 10 lines
 ```ts
 import { autoAnswer } from '../kit/prompt-host/index'
@@ -28,4 +28,12 @@ import { autoAnswer } from '../kit/prompt-host/index'
 const p = { id: 4, kind: 'pay', min: 1, max: 1, options: [{ id: 'gold', enabled: true }, { id: 'strife', enabled: false }] }
 console.log(autoAnswer(p, true)) // ['gold']: the only legal answer, sent without asking
 console.log(autoAnswer(p, true, ['pay'])) // null: the game always asks this kind
+```
+
+```tsx
+import { PickOptions, PromptHost, type Widgets } from '../kit/prompt-host/ui'
+
+type P = { id: number; kind: 'pick'; min: number; max: number; options: { id: string; enabled: boolean }[] }
+const W: Widgets<P, null> = { pick: PickOptions }
+export const Ask = ({ prompt, send }: { prompt: P | null; send: (picks: readonly string[], id?: number) => void }) => <PromptHost widgets={W} prompt={prompt} view={null} answer={send} look={{ label: (o) => o.id.toUpperCase(), done: 'Fertig' }} />
 ```

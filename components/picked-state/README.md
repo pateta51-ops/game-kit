@@ -11,7 +11,7 @@ Rules
 - Text on a dimmed option must stay readable: raise `--unpicked-dim`, never drop the dimming.
 
 Looks (opt-in, each keyed only to `[data-picked]`; the kit applies none by default)
-- `looks/kit-classic.css`: the former default (green frame, tick badge, unpicked dim .65; variables `--picked`, `--picked-edge`, `--picked-width`, `--tick`, `--tick-mark`, `--unpicked-dim`). A game that imported `picked.css` and wants today's look imports this file as well.
+- `looks/kit-classic.css`: the former default (green frame, tick badge, unpicked dim .65; variables `--picked`, `--picked-edge`, `--picked-width`, `--tick`, `--tick-mark`, `--unpicked-dim`). A game that imported `picked.css` and wants today's look imports this file as well. The looks set their tokens on `:root` at normal specificity (other components use zero): override them later in the cascade or with a more specific selector.
 - `looks/imperium.css`: gold glow and lift; unpicked greyed and darkened.
 - `looks/stcc.css`: white ring and glow; unpicked darkened.
 

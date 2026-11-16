@@ -31,5 +31,5 @@ For the owner's motion review: a clip of the beat on the real screen and a still
 ```ts
 import { placeOf } from '../kit/motion-frame/index'
 
-console.log(placeOf(1, 3)) // the place of card 1 of 3 in a fan or row
+console.log(placeOf(1, 3)) // 'first': card 1 of 3 is the first of the row (lone | first | middle | last; the beat's place, not a fan position)
 ```

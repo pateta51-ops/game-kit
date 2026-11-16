@@ -1,0 +1,12 @@
+{
+  "name": "pieces-3d-verbs",
+  "source": {
+    "game": "7is",
+    "commit": "4dcb9be",
+    "paths": [
+      "src/ui/motion/index.ts (the die and ball verbs, as `shake`, `flip`, `move`, `settle`; the clone repaint as `copyPieces`), split from pieces-3d in K235 so a 1.0 game does not pull the effects code"
+    ]
+  },
+  "needs": ["pieces-3d", "effect-library", "motion-frame"],
+  "packages": []
+}

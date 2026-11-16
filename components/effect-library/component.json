@@ -17,5 +17,5 @@
       { "game": "warps", "commit": "2af6937", "paths": ["src/ui/fx/kit.ts (particles.ts; the colour table left out, arc and star take their colours)", "src/ui/fx/looks.test.tsx (the kit's cases, in particles.test.ts)"] }
     ]
   },
-  "needs": ["motion-frame"]
+  "needs": ["motion-frame", "board-registry"]
 }

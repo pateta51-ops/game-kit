@@ -9,7 +9,7 @@ The board UI's registry of things (space, piece, marker, stack), highlighted str
 - `stackLayout(n, opts)`: offsets `{ dx, dy }` from the anchor. `collapsed` step per piece; expanded (`expanded` or `n <= threshold`) steps `major` along a row of `wrap`, `minor` between rows; `bounds` + `anchor` + `size` shift the splay to stay inside the board padding. Expand on click or focus and raise z-index in the view.
 
 Pairs with `board-model` (spaces, adjacency, `fromLayout`) and `board-layout` (click rects: `spaceAt`). Words shown on screen are the game's.
-- Movement (`movement.ts`, opt-in, pure): `placements(reg, { rectOf, size?, stack?, types? })` gives each piece rect (`type:id`; its space rect plus its `stackLayout` offset); `movements(prevReg, nextReg, opts)` gives `{ moves, ghosts }` from the effect library `entryMotions` (a Motion per piece whose rect changed, restacked ones too; `arc`, `stagger` pass through). Play them with `move` verbs; never calling it leaves the board as it was.
+- Movement (K235, breaking: now `../kit/effect-library/index`, file `movement.ts`; opt-in, pure): `placements(reg, { rectOf, size?, stack?, types? })` gives each piece rect (`type:id`; its space rect plus its `stackLayout` offset); `movements(prevReg, nextReg, opts)` gives `{ moves, ghosts }` from the effect library `entryMotions` (a Motion per piece whose rect changed, restacked ones too; `arc`, `stagger` pass through). Play them with `move` verbs; never calling it leaves the board as it was.
 
 ## Use it in 10 lines
 

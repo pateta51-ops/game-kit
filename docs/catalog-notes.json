@@ -168,6 +168,10 @@
     "use": "Dice, balls and chips built in code with WebGL or CSS (no model files).",
     "not": "Modelled or generated meshes; the owner does no 3D model work."
   },
+  "pieces-3d-verbs": {
+    "use": "Release 1.1: the shake, flip, move and settle verbs for pieces-3d dice and balls, over the effect library.",
+    "not": "Drawing the pieces (pieces-3d); a 1.0 game never pulls it."
+  },
   "plain-text": {
     "use": "Every line a person reads must be free of rule ids (`TURN-07`, `AR-12`).",
     "not": "Engine output, which keeps ids."
