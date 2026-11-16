@@ -36,3 +36,11 @@ Clone the state, run the steps, fork once per enabled option at each prompt, bre
 ## Results cached by immutable state
 - When the engine never mutates a state object (a new object per step), a `WeakMap<State, Result>` caches a pure derived value (constant records, legal actions, a table view) with no invalidation: a changed state is a new key, and the entry goes with the state.
 - Only for pure functions of that state; a key that is cloned or mutated in place makes it wrong. Measure first (`perf`); add it where a profile shows the same state read many times per step.
+
+## Script-format ideas (Forge, excerpts not verified: `docs/Card-scripting-API/*.md`)
+- One line per ability, `Key$ value | Key$ value`; sub-effects are named variables chained with `SubAbility$`.
+- Two ways to name who is affected, never mixed: `Defined$` (described, not targeted) and `ValidTgts$` (targeted); `Targeted` / `Remembered` / `Triggered<Name>` refer back.
+- Restrictions (checked when the ability starts) kept apart from Conditions (checked when it resolves).
+- Cost mini-grammar `Part<amount/type/description>`, third slot is display text; `CostDesc$` overrides the whole text.
+- Do not write default parameters; `Secondary$ True` marks a helper line that must not show in the card text.
+- Selector grammar `Type.restriction+restriction`, `!` negates, `,` is or.
