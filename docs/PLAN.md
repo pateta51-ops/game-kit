@@ -171,6 +171,7 @@ What the eighth game has that the kit lacks, from its assessment at kit v0.33.0 
 | K170 | `tutorial` coach (compare first with K15): first-time tips as data (id, text, `when(events, state)`, held back during a guided lesson when situational), the first unseen tip the last action made relevant, seen ids kept per browser; a suggested move taken from the game's driver with its plain-word reasons and the places to spotlight, so it works on any pack | Under Falling Skies (decisions 036, 037) | M | proposed |
 | K171 | `sound-player` `play(cue, { pitch })`: optional per-play pitch in semitones (file playback rate, synth frequencies scaled), so a game can step a chime up per point | 7th Inning Stretch (point-chime) | S | done |
 | K173 | `sound-player` `playTrack(cue, { fadeInMs, loop, onEnd })`: a whole track on the music bus with fade-in, fade-out by `stopCues(ms, cue)`, `onEnd`; music-bus cues decoded on first play, not after the first tap | 7th Inning Stretch (menu to game crossfade) | S | done |
+| K174 | `pieces-3d` resting tilt: class `p3-tilt` (angle `--piece-tilt`) and `<Chip tilt>` for static pieces outside a cast (swatches); README prefix line corrected | 7th Inning Stretch (theme swatches) | S | done |
 
 ### Owner's word (size L or stage 4)
 

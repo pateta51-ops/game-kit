@@ -1,4 +1,5 @@
 // The rolling ball and the thick chip as React pieces. Looks come from the caller and from CSS variables.
+import type React from 'react';
 import { useEffect, useRef, type CanvasHTMLAttributes, type ImgHTMLAttributes } from 'react';
 import { ID } from './solids';
 import { paintBall, type BallLook } from './ball';
@@ -17,6 +18,6 @@ export function Ball({ look, className, ...rest }: { look?: BallLook | undefined
 }
 
 /** A slab: the printed face on top, board core at its near side, a cast shadow (pieces3d.css). */
-export function Chip({ className, ...img }: ImgHTMLAttributes<HTMLImageElement>) {
-  return <span className="p3-chip"><img className={className} {...img} /></span>;
+export function Chip({ className, tilt, ...img }: { tilt?: string } & ImgHTMLAttributes<HTMLImageElement>) {
+  return <span className="p3-chip" style={tilt ? ({ '--piece-tilt': tilt } as React.CSSProperties) : undefined}><img className={className} {...img} /></span>;
 }

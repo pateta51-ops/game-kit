@@ -1,3 +1,4 @@
+import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import { ID, apply, cube, front, mesh, rest, trapezohedron, tumble, turned } from './solids';
 import { SEAM, offRest, rolled, turnOf, twoArcSeam } from './ball';
@@ -65,5 +66,12 @@ describe('pieces-3d: the code-built pieces', () => {
     expect(m.uv.length / 2).toBe(m.pos.length / 3);
     expect(Math.max(...m.idx)).toBeLessThan(65536);
     expect(mesh(trapezohedron()).pos.length / 3).toBe(10 * 15 * 15);
+  });
+});
+
+describe('pieces-3d: resting tilt', () => {
+  it('p3-tilt tilts a static piece by --piece-tilt', () => {
+    const css = readFileSync(new URL('./pieces3d.css', import.meta.url), 'utf8');
+    expect(css).toMatch(/\.p3-tilt\{[^}]*rotateX\(var\(--piece-tilt,15deg\)\)/);
   });
 });
