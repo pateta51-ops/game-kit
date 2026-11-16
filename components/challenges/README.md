@@ -9,3 +9,19 @@ A challenge is a content item picked before a game: a setup restriction plus tri
 - `penaltiesFor(g, challenge, event)`: the effects whose trigger matches an event, in listed order; the game runs them through its normal effect resolver, so they undo and replay like any card effect.
 
 Store the picked id in the game's setup so a save and a replay keep it. Tests: `challenges.test.ts`.
+
+## Use it in 10 lines
+
+```ts
+import { pickable, penaltiesFor, type Challenge, type ChallengeGame } from '../kit/challenges/index'
+
+type Setup = { heroes: number }
+const game: ChallengeGame<Setup, { minHeroes: number }, string> = {
+  allows: (r, s) => s.heroes >= r.minHeroes,
+  matches: (on, ev) => on === ev,
+}
+const all: Challenge<{ minHeroes: number }, string, string>[] = [
+  { id: 'c1', name: 'Hard', text: 'Lose a card when you fail.', restriction: { minHeroes: 2 }, penalties: [{ on: 'fail', effect: 'lose-card' }] },
+]
+console.log(pickable(game, all, { heroes: 1 }), penaltiesFor(game, all[0]!, 'fail'))
+```

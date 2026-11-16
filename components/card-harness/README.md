@@ -12,7 +12,7 @@ Card tests on real cards. Test code only; the engine imports nothing here but `c
 - **Scenario `{ from: { state, events } }`**: starts from a built state and its events; the state is trusted, not validated unless `validate` is on.
 - **Checks**: `describeCheck(cards, describe, validate?, tokens?)` (generated reading equals the printed text word for word, `[TOKENS]` both ways); `conforms<Same<A, B>>()` (schema type equals engine type, at compile time); `report(name, errors, log)` gives the exit code. `Is<z.infer<typeof S>, T>` is `Same<DR<..>, T>` (`DR` = deep readonly), for readonly game types.
 - **parseCsv(text)**: RFC 4180 reader (quotes, doubled quotes, CRLF or LF); rows as header-keyed string records, blank lines dropped.
-- **Strict checks** (`new Scenario(game, { strict: true })`): `script([picks], …)` answers the prompts that open next; `check(label, fn)` fails mid-run naming label and step; `done()` fails on a leftover scripted answer, an open prompt (strict), or equal entries in the game's optional `effects(state)`. Strict `answer` with no open prompt throws.
+- **Strict checks** (`new Scenario(game, { strict: true })`): `script([picks], ï¿½)` answers the prompts that open next; `check(label, fn)` fails mid-run naming label and step; `done()` fails on a leftover scripted answer, an open prompt (strict), or equal entries in the game's optional `effects(state)`. Strict `answer` with no open prompt throws.
 - **Ability trace** (`traceAbilities(registry, field = 'effects')`): pass `.registry` (the game's ability or card record, wrapped) as the content; `considered` holds ids looked up, `resolved` ids whose `field` was read to run. `expectResolved(trace, ...ids)` fails a test whose card never ran, saying looked up or never reached; `clear()` between parts.
 - Walking the whole registry (`Object.values`, hashing, validation) through `.registry` marks every id looked up, and run if it reads `field`: trace only the content the engine reads to play.
 
@@ -26,3 +26,15 @@ Card tests on real cards. Test code only; the engine imports nothing here but `c
 
 Known bugs are pinned as `it.fails('EXPECTED FAILURE: â€¦')`.
 - **Content gate** (K169, `contentGate(input, log)`): the game script passes `packs` (`validate()` issues; warnings fail unless `allowWarnings`), `broken` packs each with the `code` and `severity` it must report, `generated` files compared with `readGenerated` ("stale: run `regenerate`"), and `features` `{ required, used }` (`requireAll` fails on an unused one). Returns `{ failed }`.
+
+## Use it in 10 lines
+
+```ts
+import { Scenario } from '../kit/card-harness/index'
+import { DICE_GAME } from '../kit/card-harness/fake/dice' // yours: a ScenarioGame over your GameRules
+
+const sc = new Scenario(DICE_GAME).set((s) => void (s.dice = [2, 2, 5]))
+const [twin] = sc.put('hand', 'twin') // a real card of your catalogue, in your hand
+sc.run({ kind: 'play', card: twin as string })
+console.log(sc.s.score, sc.events.map((e) => e.type)) // assert on state, events, options(), answer(...)
+```

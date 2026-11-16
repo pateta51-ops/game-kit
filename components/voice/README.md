@@ -28,3 +28,13 @@ A line player on the sound player's `voice` bus. It knows no game: the lines are
 
 Look: None.
 Tests: `voice.test.ts`, `speech.test.ts` (node), with the sound player's `fakeContext.ts` for the end-to-end case.
+
+## Use it in 10 lines
+
+```ts
+import { createVoice, type VoicePlayer } from '../kit/voice/index'
+
+declare const player: VoicePlayer // the sound player, or any object with play and setVolumes
+const voice = createVoice({ table: { lines: { greet: { files: ['greet-1.mp3', 'greet-2.mp3'] } } }, player })
+voice.play('greet')
+```

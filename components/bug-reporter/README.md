@@ -24,3 +24,12 @@ Import nothing else: `bugs.css` defines neutral `--bug-*` variables (colours, fo
 ## Tests
 
 React tests run in the `ui` (jsdom) Vitest project. `test-utils.ts` configures a stand-in game.
+
+## Use it in 10 lines
+
+```ts
+import { configureBugReporter } from '../kit/bug-reporter/index'
+
+declare const cfg: Parameters<typeof configureBugReporter>[0] // id, repo, buildSha, snapshot()
+configureBugReporter(cfg) // once, before <BugReportHost /> renders
+```

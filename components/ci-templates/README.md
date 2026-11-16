@@ -43,3 +43,10 @@ A workflow whose `{{OWNER_LOGIN}}` is left unfilled skips its jobs silently (the
 - `python3 tools/architect/gate-numbers.py <log> [regex ...]`: the count lines of a saved job log or a `local-ci.sh` log, for the merge message; the defaults are what vitest, tsc, eslint, Playwright and the kit's tools print; extra regexes add the game's own lines, for example `'traceability \(' 'content:gate:' 'games \d+, exceptions'`.
 - `nightly-fuzz.yml` runs `npm run fuzz:nightly` (the game writes it) on main, in its own concurrency group and its own `nightly/` checkout, so it never replaces or collides with a queued gate; set the cron to an idle hour.
 - `skip-reporter.ts`: `reporters: ['default', ['./tools/skip-reporter.ts', { inputs: [['<git-ignored path>', '<command that makes it>']] }]]` in the vitest config lists every skipped test by file at the end of a run and in the GitHub job summary.
+
+## Use it in 10 lines
+
+```sh
+node kit/ci-templates/render.mjs          # writes .github/workflows/ from ci.config.json
+node kit/ci-templates/render.mjs --check  # in the game's check: fails when the workflows are stale
+```

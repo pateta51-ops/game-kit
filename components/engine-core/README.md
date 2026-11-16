@@ -13,3 +13,15 @@ The kernel of a game engine: seeded random numbers, canonical JSON and hashes, t
 - Derived data on demand (K124, opt-in): `GameRules.queries` by name, read with `query(game, state, content, what, player?, arg?)` (an unknown name is a `GameSetupError`), so a view never carries it.
 - Debug edits as engine actions (`DebugAction`: `set`, `force`, `close` and the game's `GameRules.debug` verbs; `debugVerbs`, K100, opt-in): `debug.md`. The console is `debug-console`.
 - Timing (K93, K111, K94, K96, K112, K95, opt-in): batches of occurrences with `would`, `cancelBatch`, `ignoreBatch`, `insteadOf`, the prevention window (`Prevention` card data, `prevent`) the replacement loop (`Replacement`, `ReplaceResult`, `changeOccurrence`), triggers (`TriggerCandidate`, `PendingTrigger`, `DEFAULT_PRIORITY`, `enteredPlay`), `simultaneously`, continuous effects with durations (`addEffect`, `boundary`, `effectsOf`, `sumEffects`, `anyEffect`, K96) layered recompute (`layered`, `stampActive`, K112) and the checkpoint after every action (`cfg.checkpoint`: `derive`, `checks`, `RECOMPUTE_CAP`, K95); a game spreads `timingHandlers(cfg)` into its handlers: `timing.md`.
+
+## Use it in 10 lines
+
+```ts
+import { applyAction, createGame, hashState } from '../kit/engine-core/index'
+import { CONTENT, COUNTER, RULES } from '../kit/engine-core/fake/counter' // a tiny fake game; yours is a `GameRules<G>`
+
+let { state } = createGame(COUNTER, { seed: 'demo' }, RULES, CONTENT)
+const prompt = state.prompt! // the engine always waits on one prompt
+state = applyAction(COUNTER, state, { kind: 'answer', promptId: prompt.id, picks: ['add'] }, CONTENT).state
+console.log(state.counter, hashState(state)) // same seed and answers: same state and hash
+```

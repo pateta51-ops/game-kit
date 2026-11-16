@@ -28,3 +28,11 @@ const spec: GallerySpec<State> = {
 
 ## Look
 Only the shell is drawn here; the fixture has the game's look. Variables: `--gal-bg`, `--gal-text`, `--gal-border`, `--gal-link-bg`, `--gal-current-bg`, `--gal-current-text`, `--gal-alert`, `--gal-font`, `--gal-side-width`.
+
+## Use it in 10 lines
+
+```ts
+import { fixtureId } from '../kit/prompt-gallery/index'
+
+console.log(fixtureId('prompt', 'choose-one')) // one fixture per prompt kind; checkGallery fails on a kind with none
+```

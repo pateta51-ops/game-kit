@@ -10,7 +10,7 @@
     "lint": "eslint .",
     "typecheck": "tsc -b --noEmit",
     "test": "vitest run",
-    "components:check": "node scripts/check-components.mjs",
+    "components:check": "node scripts/check-components.mjs && node scripts/catalog.mjs --check && node scripts/readme-examples.mjs",
     "check": "npm run lint && npm run typecheck && npm run test && npm run components:check"
   },
   "devDependencies": {

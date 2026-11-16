@@ -19,3 +19,14 @@ log = appendLog(log, events, table, step);
 - Map refs (K122, opt-in): `refsOf(row, withCause?)`; `refFocus(ref, mapTypes, on)` and `rowFocus(row, mapTypes, on)` (`on`: hover or click) give `{ highlight, scrollTo? }`: hover lights, click also scrolls, other ref types do nothing. `groupBox(block)` gives `{ id, header, members, summary }` for a battle or activation box. The client draws and scrolls.
 
 Open for later: more optional row fields can be added. The game keeps the log in its own state and decides when to call `appendLog`.
+
+## Use it in 10 lines
+
+```ts
+import { appendLog, plainLine, text, num, type Narrator } from '../kit/game-log/index'
+
+type Added = { type: 'added'; n: number; seq: number; turn: number }
+const table: Narrator<Added> = { added: (e) => ({ kind: 'action', parts: [text('Counter up by'), num(e.n)] }) }
+const log = appendLog([], [{ type: 'added', n: 2, seq: 1, turn: 1 }], table, 0)
+console.log(log.map(plainLine))
+```

@@ -26,3 +26,13 @@ The game keeps its definitions' words, the meaning of its summary fields and its
 ## Feats inside a game (K161, `feats.ts`)
 
 The game gives `track(event)` -> `{ counts?, seen? }` deltas; no engine import. `FeatState` (`emptyFeatState`, `feedFeats(st, ev, track)`) is plain data: keep it in the game state so Undo rewinds it. `detectFeats(defs, st, ev, owned)` with `FeatDef` `{ id, name, text, family, points, test(st, ev) }`: ids earned now. `createEarnStore(storage, key)`: `award(ids)` stores new ids once (after the save; returns the new ones); `tick(listId, keys)`/`ticks` fill a checklist across games; none of it is in the game state. `calloutsFor(before, game, { streakAt?, record? })`: first defeat, win streak, new record as `{ kind, n }` for the game to word (a streak fires once at `streakAt`, then only when it beats the best streak); `<FeatCallout text onClose? words? />` centres one.
+
+## Use it in 10 lines
+
+```ts
+import { countGames, evaluate, makeSummary } from '../kit/achievements/index'
+
+const defs = [{ id: 'win3', name: 'Winner', text: 'Win 3 games', family: 'wins', points: 5, measure: countGames((g) => g.result === 'win', 3) }]
+const games = [makeSummary({ id: 'g1', at: 1, result: 'win', rounds: 5, counts: {}, sets: {} })]
+console.log(evaluate(defs, games)) // [{ id: 'win3', earned: false, current: 1, target: 3 }]
+```

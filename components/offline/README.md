@@ -23,3 +23,13 @@ The manifest, icons and iOS meta are the game's own files in its `public/` and `
 `offline.css` sets at zero specificity `--upd-gap`, `--upd-text`, `--upd-bg`, `--upd-pad`, `--upd-border`, `--upd-radius`. Classes: `kit-upd`, `kit-upd-btn`.
 
 Tests: `precache.test.ts` (node), `ui.test.tsx` (jsdom), `offline.e2e.test.ts` (Chromium through playwright-core; skipped off CI when its browser is not installed).
+
+## Use it in 10 lines
+
+```ts
+import { shouldRegister } from '../kit/offline/index'
+
+// the Vite plugin writes the service worker; the page registers it only where it may:
+declare const env: Parameters<typeof shouldRegister>[0]
+console.log(shouldRegister(env, { hostname: 'localhost', protocol: 'http:' }, true))
+```

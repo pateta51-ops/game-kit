@@ -28,3 +28,15 @@ The campaign log as plain data and pure functions (release 1.0). No packages; dr
 ## Screens (K159, `screens.ts` pure; React in `ui.ts`, static)
 
 `betweenQuestion(save, actions)` + `answerBetween`: the between-scenarios screen as one question (`continue` and the game's `BetweenAction`s, detours). `logSections(log, fields, players)` + `<LogTabs sections tabs />` (the game adds tabs: `changeRows` per instruction, `<AchievementList />`). `handledList` (automated setup as sentences). `startAt({ steps, at, form, answers })` + `<StartForm />`: start anywhere with a chosen history.
+
+## Use it in 10 lines
+
+```ts
+import { addCount, emptyLog, record, setCount } from '../kit/campaign/index'
+
+let log = emptyLog()
+log = record(log, 'met-the-king')
+log = setCount(log, 'gold', 3, 'scenario-1')
+log = addCount(log, 'gold', 2, 'scenario-2')
+console.log(log.counts)
+```

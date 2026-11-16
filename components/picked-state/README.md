@@ -12,3 +12,12 @@ Rules
 
 Look (variables a game sets)
 - `--picked` frame colour, `--picked-edge` the dark line outside it and round the tick, `--picked-width` frame width (8px; `:root[data-layout='phone']` sets 3px), `--tick` badge size (40px; phone 16px), `--tick-mark` the tick drawing, `--unpicked-dim` opacity of unpicked options (.65).
+
+## Use it in 10 lines
+
+```ts
+import { pickedAttrs } from '../kit/picked-state/index'
+
+const attrs = pickedAttrs(true, true) // { 'data-picked': 'picked' }; spread on the option's element
+console.log(attrs)
+```

@@ -28,3 +28,9 @@ Lists the lines added since `--base` that share `--n` or more consecutive words 
 `--plan docs/PLAN.md --heading 'Rulings in effect' --out src/rulings.ts [--name RULINGS] [--check]`
 
 Writes the first table under the first heading containing `--heading` (the first table of the file without it) as `export const RULINGS = [{...}, ...] as const`, or as JSON when `--out` ends in `.json`. Keys are the header cells in lower case with `_` for other characters; code ticks and bold stars are removed from cells; `\|` and a pipe inside a code span do not split a cell. A table with no rows, or two header cells with the same key, is exit 2. `--check` exits 1 when the file differs from what the plan says now (line endings ignored).
+
+## Use it in 10 lines
+
+```sh
+npx tsx kit/tooling-scripts/text-leak.ts --config text-leak.json   # every script takes flags, or the same names in --config <json>
+```

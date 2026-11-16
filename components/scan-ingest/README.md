@@ -88,3 +88,9 @@ then run `scanpipe` on both files.
     cd components/scan-ingest && OMP_THREAD_LIMIT=1 python -m pytest tests -q
 
 Run by the kit CI (job `pytest scan-ingest`, in a venv), about 2 minutes. The OCR tests skip when Tesseract is absent.
+
+## Use it in 10 lines
+
+```sh
+PYTHONPATH=kit/scan-ingest python -m scanpipe scan --plugin tools.ingest.plugin:MyGame --project . scans/*.tif
+```

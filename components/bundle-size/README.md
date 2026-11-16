@@ -31,3 +31,13 @@ process.exitCode = run(process.argv.slice(2), undefined, BUDGET);
 ```
 
 A test imports `BUDGET` from that script and calls `measureBuild(dir, BUDGET)`.
+
+## Use it in 10 lines
+
+```ts
+import { measureBuild, type Limits } from '../kit/bundle-size/check-bundle-size'
+
+export const BUDGET: Limits = { initialBudget: 2 * 1024 * 1024, chunkLimit: 500 * 1024, base: 'auto' }
+// in a test, after `vite build`: the report lists what is over
+console.log(measureBuild('dist', BUDGET))
+```

@@ -25,3 +25,11 @@ For the owner's motion review: a clip of the beat on the real screen and a still
 - `stillTimes(spec, steps = 4)`: ms from the beat's start for the stills: 0, then up to `steps` step ends (the last end excluded, spread evenly when there are more). The sixth still is the rest state: the last frame. `frameAt(frames, t)` (a frame stays until the next), `clipTimes(at, ms, fps = 30, lead = 0.4)`, `stillFrames(frames, at, times)`. Pure; tested in node.
 - `recordClip({ ctx, page, waitMs }, { id, out, tmp, spec, ms, play, fps? })` (node only, import from `record`, not `index`): CDP screencast of a Playwright page, `play()` starts the beat and returns, in epoch seconds (`Date.now() / 1000` in the page, the clock of the screencast frames' timestamps; not `performance.now`), when the step begins; writes `out/<id>.webm` (needs `ffmpeg`) and `out/<id>-stills.jpg` (needs `python3` with PIL). Use a 1920-wide viewport with an even height (libvpx-vp9 with yuv420p fails on an odd one). It throws when no frame falls in the clip (a wrong clock).
 - Real play, not a staged state: the game finds a seed and a line of answers that reaches the beat (its own driver), replays them at instant pace in the page, and `play` gives the last answer at normal pace. That part is the game's.
+
+## Use it in 10 lines
+
+```ts
+import { placeOf } from '../kit/motion-frame/index'
+
+console.log(placeOf(1, 3)) // the place of card 1 of 3 in a fan or row
+```

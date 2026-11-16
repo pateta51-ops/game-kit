@@ -30,3 +30,10 @@ RUNNER_REPO=<owner>/<repo> RUNNER_LABEL=<label> RUNNER_TOKEN=<token> bash kit/ci
 ```
 
 A label that is also a runner name needs `.github/` and `ci.config.json` in `skipText`.
+
+## Use it in 10 lines
+
+```sh
+# package.json: "repo-gate": "tsx kit/repo-gate/repo-gate.ts", inside the game's check
+npm run repo-gate   # exit 0 clean, 1 findings, 2 no git or no config
+```

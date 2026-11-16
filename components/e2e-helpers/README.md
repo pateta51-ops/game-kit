@@ -18,3 +18,11 @@ Playwright helpers a game's browser tests share. Lifted from Imperium's `e2e/hel
 - `expectAccessible(AxeBuilder, page, testInfo, where, tags?)` finishes the animations, runs axe for WCAG 2.1 A and AA (`WCAG_AA`), fails on a serious or critical violation and attaches the others as `axe-minor-<where>`.
 
 Left in the games: starting a game, playing a turn, card-face checks and every locator of a game's screens.
+
+## Use it in 10 lines
+
+```ts
+import { VIEWPORTS } from '../kit/e2e-helpers/index'
+
+for (const v of VIEWPORTS) console.log(v.name) // run each browser test at every named viewport
+```

@@ -51,7 +51,7 @@ Known limit (engine-core): the single-copy guard stops two copies loaded from tw
 | Batch | Content | Effort |
 |---|---|---|
 | K15 | Tutorial engine (owner approved 14 Nov 2026, split in two M parts: K15a core and K15b presentation; done) | L |
-| K16 | Generic simulation runner | L |
+| K16 | Generic simulation runner (covered: sim-pool (whole games with any driver, sweeps, K200 tuner)) | L |
 
 ## Asked for by a game
 
@@ -75,10 +75,10 @@ A game's build plan lists the kit work it needs as phases named `GK<n>` for the 
 | K30 | `engine-core` test: play real games and assert that every auto-answered prompt equals the only legal answer (skip-empty invariant) | S | a finished build, 15 Nov 2026 | done |
 | K31 | `theme-check` browser steps: `coverageProblems` (span of content, largest empty block per screen) and a phone font-floor spec | S | a finished build, 15 Nov 2026 | done (`coverage.ts`; the phone font floor was already `fontSizeFindings`, now documented in the README) |
 | K32 | `phone-mode`: a `Scaled` box (a fixed-size piece drawn at a box width), a commit-flag plus second-tap wrapper over `useSecondTap` | S | a finished build, 15 Nov 2026 | done |
-| K33 | `tutorial`: a docked side with a reserved-space CSS variable so the screen shrinks beside the panel; panel buttons accept the game's own button component | S | a finished build, 15 Nov 2026 | proposed |
+| K33 | `tutorial`: a docked side with a reserved-space CSS variable so the screen shrinks beside the panel; panel buttons accept the game's own button component | S | a finished build, 15 Nov 2026 | done (#108) |
 | K34 | Theme `Button`: `note` (a line under a plate) and `acting` (outline) props; no rivets under a width floor | S | a finished build, 15 Nov 2026 | closed: the kit has no themed Button component |
-| K35 | `glossary` printed-words check: every summary and body paragraph must occur in the source documents, icons and punctuation aside | S | a finished build, 15 Nov 2026 | proposed |
-| K36 | `tutorial` tooling: build a script from a seed's line of play, list each step's answers in on-screen words, seed search, a script-playing e2e helper | M | a finished build, 15 Nov 2026 | proposed |
+| K35 | `glossary` printed-words check: every summary and body paragraph must occur in the source documents, icons and punctuation aside | S | a finished build, 15 Nov 2026 | done (#109) |
+| K36 | `tutorial` tooling: build a script from a seed's line of play, list each step's answers in on-screen words, seed search, a script-playing e2e helper | M | a finished build, 15 Nov 2026 | done (#128) |
 | K37 | Tooling scripts: home-screen PNGs from a logo SVG (Playwright) and a screenshot contact-sheet script | S | a finished build, 15 Nov 2026 | done (built in #163) |
 | K38 | `offline`: network-first navigation (with a timeout) and auto-apply of a new build when no input is half-entered; replaces a game-side patch of the worker file | M | a finished build, 15 Nov 2026 | done |
 | K39 | `bug-reporter`: an `index`/`ui` entry (games need an eslint-disable per import today) and token storage read lazily, not at import | S | a finished build, 15 Nov 2026 | done |
@@ -174,7 +174,7 @@ What the eighth game has that the kit lacks, from its assessment at kit v0.33.0 
 | K174 | `pieces-3d` resting tilt: class `p3-tilt` (angle `--piece-tilt`) and `<Chip tilt>` for static pieces outside a cast (swatches); README prefix line corrected | 7th Inning Stretch (theme swatches) | S | done |
 | K175 | `pieces-3d` ball `stitch: 'chevron'`: seams drawn as rows of V stitches fixed to the sphere (default style kept) | 7th Inning Stretch (XD-63) | S | done |
 | K179 | `pieces-3d` ball chevron fix (director, XD-63): `stitchCount` look option (default 56, 14 per visible arc at rest, seam length measured), every V drawn in its own orthonormal stitch frame so both arms are equal and the opening is 75 degrees on every stitch; proof in docs/proof/k176/ | 7th Inning Stretch (XD-63) | S | done |
-| K180 | `pieces-3d` ball chevron options (director, XD-63): `stitchFlip` (V direction flips on one seam half, switch points in curve-index space at the far points), `stitchWidth` (V half width, default 0.14), `seamLine` + `seamLineWidth` (thin line under the stitches through every apex); defaults unchanged | 7th Inning Stretch (XD-63) | S | in review |
+| K180 | `pieces-3d` ball chevron options (director, XD-63): `stitchFlip` (V direction flips on one seam half, switch points in curve-index space at the far points), `stitchWidth` (V half width, default 0.14), `seamLine` + `seamLineWidth` (thin line under the stitches through every apex); defaults unchanged | 7th Inning Stretch (XD-63) | S | done (#187) |
 
 ### Wave 6 - gaps left after the third pass (16 Nov 2026)
 
@@ -186,8 +186,9 @@ Found by the third retrofit pass (`docs/RETROFIT_PLAN.md`, Part E).
 | K181 | `repo-gate`: size the blobs missing from a sparse partial clone in one pass (`git rev-list --missing=print`), never one `git cat-file -s` per blob (STCC's CI timed out on it; STCC keeps its own gate until then) | STCC | S | done |
 | K182 | `theme-check`: the ICON rule can require a path whose `d` starts with `M` (Jarl's own check did) | Jarl | S | done |
 | K183 | `traceability`: an option to reject test titles written as template literals with `${}` (EBR's own check did) | EBR | S | done |
-| K191 | `pieces-3d` ball chevron option `seamLineDash` (director, XD-63 addition): the seam line becomes dashed, one round-ended dash per stitch centred on its apex, `seamLineDash` x the stitch spacing long (0/undefined = solid, game passes 0.6); colour and width unchanged | 7th Inning Stretch (XD-63) | S | in review |
+| K191 | `pieces-3d` ball chevron option `seamLineDash` (director, XD-63 addition): the seam line becomes dashed, one round-ended dash per stitch centred on its apex, `seamLineDash` x the stitch spacing long (0/undefined = solid, game passes 0.6); colour and width unchanged | 7th Inning Stretch (XD-63) | S | done (#193) |
 | K192 | `voice`: never-twice is keyed by the spoken text (line id plus its filled parts/pieces), not the line id alone (director, XD-64): "top of the 3rd" then "top of the 4th" both play, the same words back to back stay suppressed | 7th Inning Stretch (XD-64) | S | done |
+| K201 | Agent documentation: AGENTS.md, generated `docs/CATALOG.md`, recipes, `docs/GAPS.md`, `kit.mjs list` and `search`, "Use it in 10 lines" in each README with a type-check of the examples | agent-facing docs (owner, 16 Nov 2026) | M | done |
 
 ### Owner's word (size L or stage 4)
 

@@ -9,3 +9,12 @@ A console line for the engine-core debug edits (K100). Needs `engine-core`. Test
 ## Look
 
 `debug.css`: `--dbg-bg`, `--dbg-text`, `--dbg-error`, `--dbg-font`, `--dbg-z`.
+
+## Use it in 10 lines
+
+```ts
+import { parseDebug } from '../kit/debug-console/index'
+
+// a console line becomes an engine-core DebugAction, or { error }
+console.log(parseDebug('set counter 5', ['set', 'force', 'close']))
+```

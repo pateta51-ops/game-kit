@@ -29,3 +29,14 @@ The fold returns what the game wants (`V`, or `{ view, dice }`). The game clears
 ## questionZone
 
 `questionZone(targets, zones, { home = 'question', alt = 'question.alt', altOk? })`: the zone name for the question band. `zones` is the layout (`{ r: [x, y, w, h] }` per zone), `targets` the zones the open question asks about. It gives `alt` when a target's rect overlaps `home` and every target is in `altOk` (the zones `alt` itself does not cover; all when left out); else `home`.
+
+## Use it in 10 lines
+
+```ts
+import { advance, noSteps, pushSteps } from '../kit/paced-view/index'
+
+type Ev = { type: 'draw' | 'note' }
+let s = pushSteps(noSteps<string, Ev>(), 'view-before', [{ type: 'draw' }, { type: 'note' }], (e) => e.type === 'draw')
+s = advance(s) // the table shows one step more
+console.log(s.events.length, s.queue.length)
+```

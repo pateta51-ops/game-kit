@@ -27,3 +27,11 @@ Keep the prefix list level with the pack registry in a game test:
 ```ts
 expect(prefixDrift(PACK_PREFIXES, PACKS.map((p) => p.prefix))).toEqual([]);
 ```
+
+## Use it in 10 lines
+
+```js
+import { engineLint } from './kit/lint-preset/index.js';
+import { PACK_PREFIXES } from './eslint.prefixes.js';
+export default defineConfig(...engineLint({ callers: ['src/ui', 'scripts'], cardPrefixes: PACK_PREFIXES }));
+```

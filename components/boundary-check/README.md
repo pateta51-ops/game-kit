@@ -12,3 +12,17 @@ Its own component: the three checks need no card-language, scenario or gate runn
 
 Not here: the `query` channel for derived data (needs `engine-core`) and prompt-kind `cast` for card tests (needs
 `card-harness`); both have open PRs, so they are later work.
+
+## Use it in 10 lines
+
+```ts
+import { catalogueCheck, violationList } from '../kit/boundary-check/index'
+
+type Card = { id: string; vp?: number; shownVp?: boolean }
+const lines = catalogueCheck<Card>(
+  [{ id: 'c1', vp: 2, shownVp: false }],
+  (c) => c.id,
+  [{ name: 'vp-shown', fails: (c) => (c.vp && !c.shownVp ? 'victory points not shown' : null) }],
+)
+console.log(lines, violationList([{ rule: 'R1', text: 'Not enough gold', severity: 'error' }]))
+```

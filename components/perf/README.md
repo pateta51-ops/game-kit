@@ -28,3 +28,15 @@ const report = expectBudgets(() => measure(perfGame, content, specs), { apply: {
 - Each call is timed `repeats` times on the same state and the fastest is kept (`applyAction` is pure); `warmup` games are played first and not counted. The driver's thinking is not timed.
 - A thrown error or an invariant violation stops the measurement. State freezing and invariant checking stay as the game set them (`setStateFreezing`, `setInvariantChecking`): set them as the shipped game runs.
 - Also exported: `timeGame`, `reportOf`, `overBudget`, `formatReport`, `percentile`, `distribution`, `run`.
+
+## Use it in 10 lines
+
+```ts
+import { expectBudgets, measure } from '../kit/perf/index'
+import { perfGame } from '../kit/perf/fake/game' // yours: a SimGame plus optional `bucket` and `promptKind`
+import { CONTENT } from '../kit/engine-core/fake/counter'
+
+const specs = [0, 1, 2].map((index) => ({ index, seed: `perf-${String(index)}`, driver: 'random' }))
+// throws when the 95th percentile of applyAction goes over 5 ms
+expectBudgets(() => measure(perfGame, CONTENT, specs), { apply: { p95: 5 } })
+```

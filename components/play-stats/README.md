@@ -27,3 +27,18 @@ Pure, over any list (filter it first for a per-difficulty view):
 ## Clock (`clock.ts`)
 
 `createPlayClock({ key, idleMs?, storage?, now? })`: `start(id)` on a new game, `resume(id)` on continue or when the page shows again (another id starts at zero), `tick()` on each move (nothing while paused), `pause()` when the page hides, `stop()` for a game that is not recorded, `session()` gives `{ id, playMs }` or null. The time between two ticks counts up to `idleMs` (default 5 minutes). Kept under `key`; when storage refuses it holds for the page.
+
+## Use it in 10 lines
+
+```ts
+import { createPlayStats, type PlayRecord } from '../kit/play-stats/index'
+
+type Rec = PlayRecord & { score: number }
+const stats = createPlayStats<Rec>({
+  key: 'mygame-scores',
+  valid: (r) => typeof r.score === 'number',
+  compare: (a, b) => b.score - a.score,
+})
+stats.record({ id: 'g1', at: Date.now(), score: 42 })
+console.log(stats.read())
+```

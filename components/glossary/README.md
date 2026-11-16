@@ -26,3 +26,12 @@ Printed words (`printed.ts`, node only, not in `index.ts`): `tsx kit/glossary/pr
 `glossary.css` (loaded by `GlossaryText.tsx`) sets neutral values at zero specificity: `--glo-link`, `--glo-link-line`, `--glo-focus`, `--glo-icon-size`, `--glo-z`, `--glo-scrim`, `--glo-pop-width`, `--glo-pop-pad`, `--glo-pop-bg`, `--glo-pop-text`, `--glo-pop-border`, `--glo-pop-radius`, `--glo-pop-shadow`, `--glo-font`, `--glo-kind`, `--glo-kind-font`, `--glo-kind-opacity`, `--glo-head-font`, `--glo-meta-opacity`, `--glo-btn-h`, `--glo-btn-border`, `--glo-btn-radius`, `--glo-btn-bg`, `--glo-btn-text`, `--glo-btn-primary-bg`, `--glo-btn-primary-text`. The sheet takes phone-mode's `--pm-*`. Classes: `kit-glo-link`, `-link--hold`, `-icon`, `-scrim`, `-pop`, `-sheet`, `-head`, `-kind`, `-term`, `-body`, `-summary`, `-para`, `-rules`, `-rule`, `-see`, `-foot`, `-btn`, `-btn--primary`.
 
 Tests: `glossary.test.ts`, `printed.test.ts` (node), `ui.test.tsx` (jsdom).
+
+## Use it in 10 lines
+
+```ts
+import { buildIndex, matchText } from '../kit/glossary/index'
+
+const index = buildIndex([{ id: 'g1', term: 'Shield', summary: 'Blocks one hit.' }])
+console.log(matchText(index, 'Gain a Shield.')) // text segments, the term linked to its entry
+```

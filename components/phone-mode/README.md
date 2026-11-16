@@ -27,3 +27,12 @@ Page setup the source game learned on a real iPhone: the viewport meta is `width
 `phone-mode.css` (loaded by `Sheet.tsx`) sets neutral values at zero specificity; set the variables on `:root` or an ancestor: `--pm-h`, `--pm-z`, `--pm-scrim`, `--pm-sheet-bg`, `--pm-sheet-text`, `--pm-sheet-radius`, `--pm-sheet-max` (a fraction), `--pm-handle`, `--pm-head-font`, `--pm-close-font`, `--pm-foot-border`, `--pm-rotate-bg`, `--pm-rotate-text`, `--pm-rotate-z`; safe area `--sat --sar --sab --sal` (default `env(safe-area-inset-*)`). Classes: `kit-pm-layer`, `-scrim`, `-sheet`, `-sheet-hd`, `-sheet-title`, `-x`, `-sheet-body`, `-sheet-foot`, `-rotate`. Select phone tokens with `:root[data-layout='phone']`.
 
 Tests: `phone-mode.test.ts`, `dock.test.ts` (node), `ui.test.tsx` (jsdom), `haptics.test.ts`.
+
+## Use it in 10 lines
+
+```ts
+import { fitZoom, layoutAttr, layoutModeFor } from '../kit/phone-mode/index'
+
+const mode = layoutModeFor({ w: 390, h: 844, coarse: true, setting: 'auto' })
+console.log(layoutAttr(mode), fitZoom(1920, 1080)) // 'phone'; zoom that fits the 3840x2160 desk layout
+```

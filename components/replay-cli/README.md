@@ -28,3 +28,10 @@ Flags: `--only <name prefix>`; `--games <export>` (another spec list than `golde
 Exit codes: 0 all the same, 1 a golden or a game differs, 2 bad usage, an unreadable file or a module that does not load.
 
 Not here: a driver answering again at replay.
+
+## Use it in 10 lines
+
+```sh
+npx tsx kit/replay-cli/replay.ts log.json --engine src/engine/replay-engine.ts   # the module exports `engine`
+npx tsx kit/replay-cli/golden.ts check goldens --game src/engine/golden-game.ts  # every stored game must replay the same
+```

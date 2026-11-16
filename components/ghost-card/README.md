@@ -20,3 +20,14 @@ const { onTable, ghosts } = ghostChoices(prompt.choices, (c) => c.source, (r) =>
 
 Pairs with `prompt-gallery` `checkActionCoverage`: a choice that no table control sends is the case this fixes.
 Not here: the drawing (the game's card face and modal), which choice is legal, and keeping the snapshot (engine-core).
+
+## Use it in 10 lines
+
+```ts
+import { ghostChoices } from '../kit/ghost-card/index'
+
+type Choice = { id: string; source: string }
+const choices: Choice[] = [{ id: '1', source: 'a' }, { id: '2', source: 'gone' }]
+const split = ghostChoices(choices, (c) => c.source, (src) => src === 'a', (src) => ({ lastKnown: src }))
+console.log(split.onTable.length, split.ghosts[0]?.snapshot)
+```

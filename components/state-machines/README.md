@@ -23,3 +23,17 @@ Both return `{ machine, index, from, to, message }[]`, empty when legal; a state
 ## FlowQueue (K109, idea from boardgame.io events.ts)
 
 End-turn / set-phase requests stamped with the turn or phase and the call site. `flush(now, same, run)` runs the current ones, returns the stale ones it dropped, and throws past `max` runs (default 100) naming the call site.
+
+## Use it in 10 lines
+
+```ts
+import { can, defineMachine, transition } from '../kit/state-machines/index'
+
+const dialog = defineMachine({
+  id: 'dialog',
+  initial: 'closed',
+  states: { closed: { on: { open: 'open' } }, open: { on: { close: 'closed' } } },
+  describe: { purpose: 'The settings dialog', source: 'src/ui/dialog.ts' },
+})
+console.log(can(dialog, 'closed', 'open'), transition(dialog, 'closed', 'open')) // true 'open'
+```

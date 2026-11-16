@@ -1,10 +1,13 @@
 #!/usr/bin/env node
 // Run from a game's repo root.
 //   node <kit>/kit.mjs pull <path to game-kit checkout> <tag or commit> [component...]   copies components into ./kit and locks them
+//   node kit/kit.mjs list | search <word>                                              the catalogue of every component (pulled or not), from kit/CATALOG.md
 //   node kit/kit.mjs check                                                              fails if ./kit differs from kit/kit.lock.json
 import { execFileSync as x } from 'node:child_process'
 import { createHash } from 'node:crypto'
 import fs from 'node:fs'
+import { dirname } from 'node:path'
+import { fileURLToPath } from 'node:url'
 const [cmd, ...a] = process.argv.slice(2)
 const LOCK = 'kit/kit.lock.json'
 const sha = (f) => {
@@ -30,6 +33,7 @@ if (cmd === 'pull') {
   }
   fs.writeFileSync('kit/kit.mjs', x('git', ['-C', src, 'show', commit + ':kit.mjs']))
   fs.writeFileSync(LOCK, JSON.stringify(lock, null, 1) + '\n')
+  try { fs.writeFileSync('kit/CATALOG.md', x('git', ['-C', src, 'show', commit + ':docs/CATALOG.md'], { stdio: ['ignore', 'pipe', 'ignore'] })) } catch { /* a ref with no catalogue */ }
   console.log('pulled ' + Object.entries(lock.components).map(([n, c]) => n + '@' + c.ref).join(', '))
 } else if (cmd === 'check') {
   const lock = readLock()
@@ -46,7 +50,14 @@ if (cmd === 'pull') {
     process.exit(1)
   }
   console.log('kit ok: ' + (Object.entries(lock.components).map(([n, c]) => n + '@' + c.ref).join(', ') || 'no components'))
+} else if (cmd === 'list' || cmd === 'search') {
+  const d = dirname(fileURLToPath(import.meta.url))
+  const f = [d + '/CATALOG.md', d + '/docs/CATALOG.md'].find((p) => fs.existsSync(p))
+  if (!f || (cmd === 'search' && !a.length)) { console.error(f ? 'usage: kit.mjs search <word>' : 'no CATALOG.md beside kit.mjs: pull again'); process.exit(2) }
+  const secs = fs.readFileSync(f, 'utf8').split(/^## /m).slice(1).map((t) => t.split(/\r?\n/))
+  const words = a.map((w) => w.toLowerCase())
+  for (const [n, , purpose, , use] of secs) if (cmd === 'list' || words.every((w) => (n + purpose + use).toLowerCase().includes(w))) console.log(n + ': ' + (purpose ?? '').split(/(?<=\.)\s/)[0].slice(0, 200) + ' ' + (use ?? '').replace('- **Use it when:** ', '(use when: ') + (use ? ')' : ''))
 } else {
-  console.error('usage: kit.mjs pull <game-kit checkout> <ref> [component...] | kit.mjs check')
+  console.error('usage: kit.mjs pull <game-kit checkout> <ref> [component...] | kit.mjs check | kit.mjs list | kit.mjs search <word>')
   process.exit(2)
 }

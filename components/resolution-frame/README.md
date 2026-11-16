@@ -26,3 +26,11 @@ With offline: the page inside the frame registers no service worker (`pageHost()
 `frame.css` (loaded by the frame): `--res-surround` (default `#000`) colours the letterbox. Classes: `kit-res-host`, `kit-res-frame`, `kit-res-over`. While the frame is mounted, `html` and `body` lose their margin and scrolling.
 
 Tests: `ui.test.tsx` (jsdom).
+
+## Use it in 10 lines
+
+```ts
+import { fitBox } from '../kit/resolution-frame/index'
+
+console.log(fitBox({ w: 1920, h: 1080 }, { w: 1600, h: 1000 })) // { scale, left, top }: the box letterboxed in the window
+```

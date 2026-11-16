@@ -22,3 +22,15 @@ Hash routes, the screen of the address bar with an error boundary and lazy loadi
 `frame.css` (loaded by the frame) sets neutral values at zero specificity: `--af-pad`, `--af-text`, `--af-font`, `--af-crash-bg`, `--af-crash-border`, `--af-radius`, `--af-error-opacity`, `--af-btn-text`, `--af-btn-bg`, `--af-btn-border`. Classes: `kit-af-loading`, `kit-af-crash`, `kit-af-error`, `kit-af-btn`, `kit-af-export` (the export's result line).
 
 Tests: `routes.test.ts` (node), `ui.test.tsx`, `crash.test.tsx`, `stage.test.tsx` (jsdom).
+
+## Use it in 10 lines
+
+```ts
+import { parseHash, routeHref } from '../kit/app-frame/index'
+
+const names = ['menu', 'play', 'settings']
+const route = parseHash('#/play/seed-7?debug=1', names, 'menu')
+// { name: 'play', parts: ['seed-7'], query: ... }
+const href = routeHref('play', 'menu', ['seed-7']) // '#/play/seed-7'
+console.log(route.name, href)
+```

@@ -41,11 +41,20 @@ beforeAll(() => {
   commit('v2');
   put(path.join(src, 'components/gamma/component.json'), '{"needs":["beta"]}');
   put(path.join(src, 'components/beta/component.json'), '{"needs":["alpha"]}');
+  put(path.join(src, 'docs/CATALOG.md'), '# Component catalog\n\n## alpha\n\nThe first letter.\n\n- **Use it when:** you need letters.\n\n## beta\n\nDice maker. More text.\n\n- **Use it when:** you roll.\n');
   commit('v3');
 });
 afterAll(() => fs.rmSync(tmp, { recursive: true, force: true }));
 
 describe('kit.mjs', () => {
+  it('list and search read the catalogue pulled with the components', () => {
+    const g = game();
+    expect(run(g, 'pull', src, 'v3', 'alpha').status).toBe(0);
+    const kit = (...a: string[]) => spawnSync('node', [path.join(g, 'kit/kit.mjs'), ...a], { cwd: g, encoding: 'utf8' }).stdout;
+    expect(kit('list')).toBe('alpha: The first letter. (use when: you need letters.)\nbeta: Dice maker. (use when: you roll.)\n');
+    expect(kit('search', 'DICE')).toBe('beta: Dice maker. (use when: you roll.)\n');
+  });
+
   it('pull then check passes', () => {
     const g = game();
     const p = run(g, 'pull', src, 'v1', 'alpha', 'beta');

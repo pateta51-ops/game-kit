@@ -39,3 +39,9 @@ Not covered:
 - EBR defines scenario rows with any digit count but finds them in titles with 2 or 3 digits; `scenarioDigits` is one count for both (`2,3`).
 - STCC and Imperium scan test files as text: an id in a fixture string or a title after `helper.it(` counts there and not here; a title after `` it.each`…` `` counts here and not there.
 - The report wording differs from every game's.
+
+## Use it in 10 lines
+
+```sh
+npx tsx kit/traceability/check-traceability.ts --config trace.config.json   # test titles must cite rule ids
+```

@@ -17,3 +17,15 @@ A rule-based opponent (K103, K115). Pure data and functions; the engine never im
 - **sim-pool**: `opponentDriver(opponent, { view, candidates(view, answers), timing? }, keep?)` is a `Driver`; candidates line up with the answers; records carry `prompt` (from `state.prompt.id`) and `step` (game's `step(state)`, else the choice count); `reasons()` is the last record's lines.
 
 Not here: alpha-beta over the other side's moves, hidden-card sampling, trained evaluators.
+
+## Use it in 10 lines
+
+```ts
+import { evaluate, lookAhead } from '../kit/opponent/index'
+
+type View = { gold: number; cards: number }
+const terms = { gold: (v: View) => v.gold, cards: (v: View) => v.cards * 2 }
+console.log(evaluate({ gold: 3, cards: 2 }, terms, { gold: 1.5 }).lines) // one explain line per term
+const best = lookAhead(0, { moves: (n) => (n < 3 ? ['inc', 'stay'] : []), apply: (n, m) => (m === 'inc' ? n + 1 : n), score: (n) => n })
+console.log(best.best, best.score) // depth 3, node cap 5000 by default
+```

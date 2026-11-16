@@ -28,3 +28,9 @@ A whole game is played once, in its golden test; every other test reads that gol
 - `players`: names of whole-game player functions; `playerFiles` (a `*` is one folder) and `playerPattern` add the names found in files such as `test/scenarios/*/game.ts`. A player imported under another name (`a as b`) counts too.
 - `roots` (`src`, `test`), `testSuffix` (`.test.ts`), `skip` (file endings left out, e.g. `golden.test.ts`).
 - `allow`: `{ "file": count }`, the calls of players each other test file makes today. A file over its count, or not listed, fails; a file now under its count fails as stale (lower or remove the line). Run it as a check script, or import `testCost(config, root)` (the list of problems) into a test.
+
+## Use it in 10 lines
+
+```sh
+npx tsx kit/check-runner/check-runner.ts --config check-runner.config.json --pr   # the check chain in lanes
+```

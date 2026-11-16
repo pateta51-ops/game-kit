@@ -28,3 +28,12 @@ Story as data only (flavour: no rule lives in it; a missing line never blocks pl
 ## Look
 
 `story.css` at zero specificity: `--story-font`, `-text`, `-bg`, `-pad`, `-gap`, `-head-font`, `-name`, `-narrator-style`, `-note-border`, `-note-opacity`, `-splash-bg`, `-invalid-opacity`, `-changed`, `-box-border`, `-interlude-style`. Classes `kit-story*`, `kit-page-*`, `kit-panel*`, `kit-splash*`.
+
+## Use it in 10 lines
+
+```ts
+import { speakerName, type Story } from '../kit/story/index'
+
+declare const story: Story // the game's story as data; lines are resolved against what is in play
+console.log(speakerName(story, 'narrator'))
+```

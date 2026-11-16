@@ -32,3 +32,12 @@ Mount (`ui.ts`): `<TutorialPanel lock phase title? text? words? outro? onNext on
 
 ## Look
 `tutorial.css` (loaded by the panel) defines neutral `--tut-*` variables at zero specificity; set them on `:root` or an ancestor: `--tut-panel-bg`, `-text`, `-border`, `-shadow`, `-width`, `-radius`, `--tut-font-body`, `--tut-font-heading`, `--tut-text-size`, `--tut-count-text`, `--tut-button-bg`, `--tut-button-text`, `--tut-link`, `--tut-shade`, `--tut-target-ring`, `--tut-arrow`, `--tut-z`, `--tut-side-max` (the height limit docked top or bottom, default 45vh). Classes: `kit-tutorial-panel`, `-target`, `-shade`. Tests: `tutorial.test.ts`, `seed.test.ts`, `build.test.ts`, `ui.test.tsx` (jsdom), on the engine-core fake counter game.
+
+## Use it in 10 lines
+
+```ts
+import { parseScript } from '../kit/tutorial/index'
+
+const script = parseScript({ steps: [] }) // the script from JSON, or every problem as path: message
+console.log(script)
+```

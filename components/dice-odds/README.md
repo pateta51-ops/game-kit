@@ -7,3 +7,12 @@ Exact dice probabilities (K24), opt-in. No packages; import from `index`.
 - The outcome lists are cached in module state, so each worker thread builds each (k, sides) once.
 
 Not here: rerolls, keep-best rules and the game's own success tests; the game writes `test`.
+
+## Use it in 10 lines
+
+```ts
+import { chance } from '../kit/dice-odds/index'
+
+// chance that at least one of 3 six-sided dice shows a 6
+console.log(chance(3, (dice) => dice.includes(6)))
+```

@@ -10,3 +10,15 @@ The board UI's registry of things (space, piece, marker, stack), highlighted str
 
 Pairs with `board-model` (spaces, adjacency, `fromLayout`) and `board-layout` (click rects: `spaceAt`). Words shown on screen are the game's.
 - Movement (`movement.ts`, opt-in, pure): `placements(reg, { rectOf, size?, stack?, types? })` gives each piece rect (`type:id`; its space rect plus its `stackLayout` offset); `movements(prevReg, nextReg, opts)` gives `{ moves, ghosts }` from the effect library `entryMotions` (a Motion per piece whose rect changed, restacked ones too; `arc`, `stagger` pass through). Play them with `move` verbs; never calling it leaves the board as it was.
+
+## Use it in 10 lines
+
+```ts
+import { define, emptyRegistry, highlighted } from '../kit/board-registry/index'
+
+let reg = emptyRegistry()
+reg = define(reg, { type: 'space', id: 'rome' })
+reg = define(reg, { type: 'piece', id: 'p1', space: 'rome' })
+// what the open prompt offers: spaces by id, pieces legal (1) or barred (0)
+console.log(highlighted(reg, { space: ['rome'], piece: { p1: 1 } }))
+```

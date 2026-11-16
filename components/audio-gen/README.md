@@ -29,3 +29,10 @@ Prompt wording built from a sheet differs from hand-written prompts; `prompt.ove
 Left out: any hosted (paid) backend. The script that makes the game's owner-facing review page itself stays in the game-sfx-review skill.
 
 Tests: `tests/test_pure.py` (cue sheet, tail rule on a synthetic clip, loop length and MIDI, voice table, listening data, limits), run through vitest by `audio-gen.test.ts`.
+
+## Use it in 10 lines
+
+```sh
+cd kit/audio-gen
+python3 audiogen/tools.py limits --config config.json   # formats and sizes the sound player expects
+```

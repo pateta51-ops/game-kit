@@ -1,0 +1,114 @@
+// Writes docs/CATALOG.md from components/*/component.json, README.md, docs/catalog-notes.json and docs/catalog-games.json.
+//   node scripts/catalog.mjs          write the file
+//   node scripts/catalog.mjs --check  fail when the file is stale or a component has no note
+//   node scripts/catalog.mjs --scan [dir]  refresh docs/catalog-games.json from <dir>/*/kit/kit.lock.json (default: the folder holding the game repositories)
+import fs from 'node:fs'
+import path from 'node:path'
+import { fileURLToPath } from 'node:url'
+
+const top = path.dirname(path.dirname(fileURLToPath(import.meta.url)))
+const J = (...p) => path.join(top, ...p)
+const rd = (f) => fs.readFileSync(f, 'utf8')
+const arg = process.argv[2]
+const gamesFile = J('docs', 'catalog-games.json')
+
+if (arg === '--scan') {
+  const base = process.argv[3] ?? 'C:/projects'
+  const out = {}
+  for (const d of fs.readdirSync(base, { withFileTypes: true })) {
+    const lock = path.join(base, d.name, 'kit', 'kit.lock.json')
+    if (!d.isDirectory() || !fs.existsSync(lock)) continue
+    for (const c of Object.keys(JSON.parse(rd(lock)).components ?? {})) (out[c] ??= []).push(d.name.replace(/-fan-prototype$/, ''))
+  }
+  for (const k of Object.keys(out)) out[k].sort()
+  fs.writeFileSync(gamesFile, JSON.stringify(Object.fromEntries(Object.entries(out).sort()), null, 2) + '\n')
+  console.log(`games scanned in ${base}`)
+  process.exit(0)
+}
+
+const notes = JSON.parse(rd(J('docs', 'catalog-notes.json')))
+const games = fs.existsSync(gamesFile) ? JSON.parse(rd(gamesFile)) : {}
+const names = fs.readdirSync(J('components'), { withFileTypes: true }).filter((e) => e.isDirectory()).map((e) => e.name).sort()
+const bad = []
+
+const EXP = /^export\s+(?:declare\s+)?(?:async\s+)?(?:default\s+)?(function\*?|const|let|class|type|interface|enum)\s+([A-Za-z_$][\w$]*)/gm
+const LIST = /^export\s+(type\s+)?\{([^}]*)\}(?:\s+from\s+['"]([^'"]+)['"])?/gm
+const STAR = /^export\s+(?:type\s+)?\*\s+from\s+['"]([^'"]+)['"]/gm
+function exportsOf(file, seen = new Set()) {
+  if (seen.has(file) || !fs.existsSync(file)) return []
+  seen.add(file)
+  const src = rd(file)
+  const out = []
+  for (const m of src.matchAll(EXP)) out.push({ n: m[2], t: m[1] === 'type' || m[1] === 'interface' })
+  for (const m of src.matchAll(LIST)) for (const p of m[2].split(',')) {
+    const s = p.trim().replace(/^type\s+/, '')
+    if (s) out.push({ n: s.split(/\s+as\s+/).pop(), t: !!m[1] || /^type\s/.test(p.trim()) })
+  }
+  for (const m of src.matchAll(STAR)) {
+    const base = path.resolve(path.dirname(file), m[1])
+    const f = [base, base + '.ts', base + '.tsx', path.join(base, 'index.ts')].find((x) => fs.existsSync(x) && fs.statSync(x).isFile())
+    if (f) out.push(...exportsOf(f, seen))
+  }
+  return out
+}
+
+const purpose = (readme) => {
+  const lines = readme.split(/\r?\n/)
+  const i = lines.findIndex((l) => l.trim() && !l.startsWith('#'))
+  return i < 0 ? '' : lines[i].trim()
+}
+const one = (s) => s.replace(/\s+/g, ' ').trim()
+
+const parts = []
+const table = []
+for (const n of names) {
+  const dir = J('components', n)
+  let meta
+  try { meta = JSON.parse(rd(path.join(dir, 'component.json'))) } catch { bad.push(`${n}: component.json unreadable`); continue }
+  const note = notes[n]
+  if (!note || !note.use || !note.not) { bad.push(`${n}: add use and not to docs/catalog-notes.json`); continue }
+  const readme = fs.existsSync(path.join(dir, 'README.md')) ? 'components/' + n + '/README.md' : null
+  const text = readme ? purpose(rd(J(readme))) : (note.what ?? '')
+  let ex
+  if (note.exports) ex = note.exports
+  else {
+    const entry = (note.entry ?? ['index.ts']).map((f) => path.join(dir, f))
+    const all = entry.flatMap((f) => exportsOf(f))
+    const seen = new Set()
+    const vals = all.filter((e) => !seen.has(e.n) && seen.add(e.n))
+    const v = vals.filter((e) => !e.t).map((e) => e.n)
+    const t = vals.filter((e) => e.t).map((e) => e.n)
+    const shown = [...v, ...t].slice(0, 14)
+    ex = shown.map((s) => '`' + s + '`').join(', ') + (v.length + t.length > 14 ? `, and ${v.length + t.length - 14} more` : '')
+    if (!shown.length) bad.push(`${n}: no exports found; give "exports" or "entry" in docs/catalog-notes.json`)
+  }
+  const needs = (meta.needs ?? []).map((x) => `[\`${x}\`](#${x})`).join(', ') || 'nothing'
+  const g = games[n]
+  const origin = one(String(meta.source?.game ?? ''))
+  parts.push(
+    `## ${n}\n\n` +
+    `${one(text)}\n\n` +
+    `- **Use it when:** ${note.use}\n` +
+    `- **Not for:** ${note.not}\n` +
+    `- **Key exports:** ${ex}\n` +
+    `- **Needs:** ${needs}\n` +
+    `- **Games that pulled it:** ${g && g.length ? g.join(', ') : 'none yet'}\n` +
+    `- **Came from:** ${origin.length > 160 ? origin.slice(0, 157) + '...' : origin}\n` +
+    `- **Docs:** ${readme ? `[README](../${readme})` : `[component.json](../components/${n}/component.json)`}\n`,
+  )
+  table.push(`| [\`${n}\`](#${n}) | ${note.use.split(/[.;]/)[0]} |`)
+}
+for (const k of Object.keys(notes)) if (!names.includes(k)) bad.push(`${k}: in docs/catalog-notes.json but not a component`)
+if (bad.length) { console.error(bad.join('\n')); process.exit(1) }
+
+const body =
+  '# Component catalog\n\nGenerated by `node scripts/catalog.mjs` (run by `npm run check`; do not edit). Facts come from each `component.json` and README; the use/not-for lines from `docs/catalog-notes.json`; the games from `docs/catalog-games.json` (refresh with `node scripts/catalog.mjs --scan`). Start at [AGENTS.md](../AGENTS.md); task guides are in [recipes](recipes/).\n\n' +
+  '| Component | Use it when |\n|---|---|\n' + table.join('\n') + '\n\n' + parts.join('\n')
+const file = J('docs', 'CATALOG.md')
+if (arg === '--check') {
+  if (!fs.existsSync(file) || rd(file).replace(/\r\n/g, '\n') !== body) { console.error('docs/CATALOG.md is stale: run node scripts/catalog.mjs'); process.exit(1) }
+  console.log(`catalog ok: ${names.length}`)
+} else {
+  fs.writeFileSync(file, body)
+  console.log(`catalog written: ${names.length}`)
+}

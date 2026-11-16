@@ -29,3 +29,14 @@ A layout JSON `{ w, h, zones: { id: { r: [x, y, w, h], ...anything } } }` (a wir
 - The SVG must be saved by Inkscape with one attribute per line, and must use no `transform` attributes (ungroup, or apply transforms in Inkscape).
 - Paths: M, m, C, c, L, l, H, h, V, v and bare pairs; the last point is the end. A path ends at the nearest space even if far away.
 - Rects only; no polygon areas.
+
+## Use it in 10 lines
+
+```ts
+import { newLayoutSvg, parseLayout, spaceAt } from '../kit/board-layout/index'
+
+const svg = newLayoutSvg(1000, 800, 'board.jpg', ['Rome', 'Ostia'])
+// edit the SVG in Inkscape, save it, then:
+const layout = parseLayout(svg)
+console.log(layout.adjacency, spaceAt(layout, 10, 10))
+```

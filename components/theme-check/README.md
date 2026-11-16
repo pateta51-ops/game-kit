@@ -26,3 +26,9 @@ Browser steps (`layout.ts`, Playwright `page`, typed by shape):
 Browser step (`coverage.ts`): `coverageFindings(page, { area?, items?, minSpan?, maxEmpty?, cell? })` returns `{ items, problems }`; pure `coverageProblems({ area, boxes }, spec)`. Content (visible leaf text, images, controls; or the `items` selector) must span `minSpan` (0.7) of the `area` (selector, default the window) in width and height, and no empty block (grid of `cell` px, 16) may exceed `maxEmpty` (0.25) of it. Run it once per screen.
 
 Browser step (`fonts.ts`), the phone font floor (`phoneFontFindings(page, routes, minPx = 26, size = 390x844)` sets the viewport, then runs it): `fontSizeFindings(page, routes, minPx)` from a game's e2e run (Playwright `page`; routes are what `page.goto` takes) visits each route and returns `route: "text" (Npx)` for every visible text node whose computed font size is under `minPx`; empty is clean. Needs a DOM; the static check is unchanged.
+
+## Use it in 10 lines
+
+```sh
+npx tsx kit/theme-check/theme-check.ts --config theme-check.config.json   # exit 0 clean, 1 findings, 2 usage
+```

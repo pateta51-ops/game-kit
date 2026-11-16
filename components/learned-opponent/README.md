@@ -16,3 +16,18 @@ A learned opponent (K125): a value net, a one-horizon look-ahead on the game's o
 Strength: judge new weights with sim-pool's paired validation (K200), new against old and against a scripted driver over the same seeds; no copy of it here.
 
 Not here: multi-round search, a role-prediction search loop, per-prompt choosers (the game's `legal` and `cheap`).
+
+## Use it in 10 lines
+
+```ts
+import { blank, forward, Inputs, newNet, setValue, thermo } from '../kit/learned-opponent/index'
+
+const inputs = new Inputs()
+const cards = inputs.thermo('cards', 4)
+const gold = inputs.value('gold')
+const x = blank(inputs)
+thermo(x, cards, 2)
+setValue(x, gold, 0.5)
+const net = newNet(inputs.names, 8, 2) // two seats: the output is each seat's share of victory
+console.log(forward(net, x))
+```

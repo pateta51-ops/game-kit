@@ -15,3 +15,12 @@ Pieces built in code, no model file: a rounded d6 and a ten-sided die (WebGL), a
 Every class of this component starts with `p3-`, and so do the `data-p3-*` attributes; the dice and ball attributes `data-roll`, `data-turn`, `data-v` and `data-ball` do not. CSS variables (`pieces3d.css`, imported by `ui.ts`): `--card-shadow`, `--card-shadow-lifted`, `--chip-core-1..3`, `--chip-thickness`, `--chip-depth`, `--piece-tilt`, `--piece-perspective`, `--piece-shadow`, `--piece-shadow-ink`, `--die-depth`, `--die-radius`, `--ball-radius`. Colours and the tilt of the dice and ball are parameters (read them from the game's tokens). Light is from the top-left.
 
 Tests: `pieces3d.test.ts` (node: faces per value, ball turn per distance, geometry counts); `pieces3d.e2e.test.ts` (Chromium: the demo draws every piece; skipped off CI without it).
+
+## Use it in 10 lines
+
+```ts
+import { rolled, turnOf } from '../kit/pieces-3d/index'
+
+console.log(turnOf(120)) // how far a ball turns for 120 px of travel; `rolled` applies it to a matrix
+console.log(typeof rolled)
+```

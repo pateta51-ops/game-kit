@@ -5,7 +5,9 @@ Every printed item (card, tile, board) is transcribed twice, independently, then
 ## Use it in 10 lines
 
 ```ts
-import { transcriptionCheck } from './components/transcription-check';
+import { writeFileSync } from 'node:fs';
+import { transcriptionCheck, type Transcript } from '../kit/transcription-check/index';
+declare const mySchema: { parse: (x: unknown) => Transcript }; // the game's schema
 const tc = transcriptionCheck({ root: 'content/real', items: ['sky-1-easy', 'sky-1-hard'], parse: mySchema.parse });
 writeFileSync('content/real/PROGRESS.md', tc.progressMarkdown());
 tc.check();                                          // writes DIFF.md, exit code 1 while a difference is open

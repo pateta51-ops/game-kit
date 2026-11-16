@@ -8,3 +8,14 @@ Four small pure helpers from the outside harvest (K109). No packages; import fro
 - `keysIn(texts, pattern)` and `missingKeys(emitted, table)`: every text key a string or data names exists in the text table (pattern group 1 is the key).
 
 Not here: the rules, fixtures, field maps and the stand-in card itself; the game supplies them.
+
+## Use it in 10 lines
+
+```ts
+import { relationIndex, runLegalCases } from '../kit/small-helpers/index'
+
+type Card = { id: string; needs: string[] }
+const index = relationIndex<Card>([{ id: 'a', needs: ['b'] }], (c) => c.id, { needs: (c) => c.needs })
+console.log(index.to('needs', 'a'), index.dangling) // ['b'], the ids no card has
+console.log(runLegalCases<number>({ positive: (n) => (n > 0 ? [] : [{ code: 'not-positive' }]) }, [{ rule: 'positive', valid: 1, invalid: -1, codes: ['not-positive'] }]))
+```

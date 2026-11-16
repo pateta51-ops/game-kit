@@ -29,3 +29,16 @@ A Web Audio player driven by one table of data. It knows no game. No packages.
 
 ## Look
 None.
+
+## Use it in 10 lines
+
+```ts
+import { createSoundPlayer } from '../kit/sound-player/index'
+
+const player = createSoundPlayer({
+  base: '/audio/',
+  table: { cues: { click: { files: ['click.mp3'], tier: 'quiet' } } },
+})
+await player.unlock() // call from a user gesture first
+player.play('click')
+```

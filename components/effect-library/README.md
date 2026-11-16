@@ -28,3 +28,12 @@ const player = createMotionPlayer({ specs, stages, verbs, speed, context: layer,
 CSS variables a game sets (fallbacks carry no colour): `--fx-z`, `--fx-lift-rise`, `--fx-lift-shadow`, `--fx-settle-shadow`, `--fx-glow`, `--fx-glow-off`, `--fx-shake`, `--fx-text`, `--fx-text-font`, `--fx-text-rise`, `--fx-veil`, `--fx-ambience-z`. The particle kit's colours are arguments (defaults: white arcs and stars, warm sparks and embers, dark smoke).
 
 Tests: `particles.test.ts`, `count.test.ts` (node); `effects.e2e.test.ts` (Chromium via Playwright; skipped off CI when it is not installed).
+
+## Use it in 10 lines
+
+```ts
+import { createEffectLayer } from '../kit/effect-library/index'
+
+const layer = createEffectLayer() // the DOM layer the motion frame draws the twelve verbs on
+console.log(typeof layer)
+```

@@ -25,3 +25,16 @@ Saved games in IndexedDB over engine-core's `SaveFile`, and a screen for them. `
 Tests: `saves.test.ts`, `data.test.ts`, `kv.test.ts` (node), `ui.test.tsx` (jsdom).
 
 Long save names wrap (`overflow-wrap: anywhere`, `min-width: 0` on `.kit-sav-what`). Screen options: `confirmDelete` (Delete needs a second tap on the row; the button then reads `words.confirmDelete`), `renderImport(open, label)` (draws the import control; `open()` picks a file, the file input stays hidden). Each row's replay is computed once per stored save. `rename`: named saves get a Rename button (`save-rename`); the name becomes a text field (`save-rename-name`) and the button then reads `words.save`.
+
+## Use it in 10 lines
+
+```ts
+import { makeSaves } from '../kit/saves/index'
+import { newHistory } from '../kit/engine-core/index'
+import { CONTENT, COUNTER, RULES, type Counter } from '../kit/engine-core/fake/counter'
+
+const saves = makeSaves({ game: COUNTER, content: CONTENT, database: 'mygame', filePrefix: 'mygame' })
+const history = newHistory<Counter>({ seed: 'demo' }, RULES)
+const text = saves.exportText({ name: 'slot', save: saves.saveOf(history) }) // a file to download
+console.log(text.length)
+```

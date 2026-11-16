@@ -17,3 +17,16 @@ ctx.ask({ options, min: 1, max: 1, authority: 'firstPlayerTargets',
 - `checkPromptSources({ states, prompt, frames?, authorities? })`: over seeded states, a line per open prompt with no source, an empty clause, a source frame not among `frames(state)`, or an authority tag missing from `authorities`. Put `expect(checkPromptSources(spec)).toEqual([])` in a test.
 
 Sources and rows are data; the words on screen come from the game's text (rule ids never on screen).
+
+## Use it in 10 lines
+
+```ts
+import { checkPromptSources } from '../kit/prompt-source/index'
+
+type S = { prompt: { source?: { frame: string; clause: string } } | null }
+const problems = checkPromptSources<S>({
+  states: [{ id: 'start', state: { prompt: { source: { frame: 'f1', clause: 'c1' } } } }],
+  prompt: (s) => s.prompt,
+})
+console.log(problems) // [] when every open prompt names its source
+```

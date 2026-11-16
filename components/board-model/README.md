@@ -10,3 +10,16 @@ Spaces as data, adjacency computed once, named placement kinds resolved by the b
 - `emptyBoard(n, type?)`: test fixture of free, unconnected spaces.
 
 Costs, bonuses and expansion tiles belong in the game's kinds, not here.
+
+## Use it in 10 lines
+
+```ts
+import { availableSpaces, baseKinds, createBoard } from '../kit/board-model/index'
+
+const board = createBoard(
+  [{ id: 'a', type: 'land' }, { id: 'b', type: 'water' }, { id: 'c', type: 'land' }],
+  [['a', 'b'], ['b', 'c']],
+)
+const kinds = { ...baseKinds(), shore: (b: typeof board, s: { id: string }) => (b.adjacency[s.id] ?? []).length > 1 }
+console.log(availableSpaces(board, kinds, 'land').map((s) => s.id))
+```

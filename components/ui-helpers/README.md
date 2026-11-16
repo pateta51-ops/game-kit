@@ -28,3 +28,13 @@ empty. `onlyForcedAnswer` is the screen side of the engine-core test that every 
 
 The sheet search never searches or returns a rule id: a block is only its level and its printed words. Not here: the drawing (toast list, inspector panel, rules screen, icons), the game's never-list, its cost function, its
 icon table, its keys and its texts.
+
+## Use it in 10 lines
+
+```ts
+import { createToasts } from '../kit/ui-helpers/index'
+
+const toasts = createToasts<'info' | 'warn'>({ max: 3, ms: 4000 }) // a zustand store: the game draws it
+const id = toasts.getState().push({ text: 'Saved', tone: 'info' })
+toasts.getState().dismiss(id)
+```

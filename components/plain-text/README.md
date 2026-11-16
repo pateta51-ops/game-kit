@@ -28,3 +28,12 @@ expect(visibleText(container)).not.toMatch(bad);
 ## Not here
 
 `glossary`'s `hideRules` (on `LookupHost` and `EntryBody`) leaves an entry's `rules` list out of the popup. That list is a field, not text; use `hideRules` for it and `strip` for the entry's `summary` and `body`.
+
+## Use it in 10 lines
+
+```ts
+import { ruleIdFilter } from '../kit/plain-text/index'
+
+const ids = ruleIdFilter({ long: ['TURN', 'AR'], short: ['R'] })
+console.log(ids.test.test('Pay 1 gold (TURN-07)')) // true: a screen text must never match
+```
