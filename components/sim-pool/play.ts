@@ -4,6 +4,9 @@ import {
   applyAction,
   createGame,
   hashValue,
+  isRevealing,
+  newHistory,
+  type History,
   type AnswerAction,
   type GameRules,
   type GameTypes,
@@ -46,6 +49,10 @@ export interface SimGame<G extends GameTypes, S = unknown, O = unknown> {
   summary?(state: G['state'], actions: readonly G['action'][], content: G['content'], seen: O): S;
   /** A game with no result after this many actions fails (default 100,000). */
   readonly maxActions?: number;
+  /** K120 bad-undo: an action that drew randomness (`state.rng` changed) or carried a `reseed` without a `reveal` event fails the game (safe undo could take it back). */
+  readonly undoCheck?: boolean;
+  /** K120: a problem with the open prompt (a placeholder such as `TODO:`) fails the game; return the message. */
+  promptProblem?(state: G['state'], content: G['content']): string | undefined;
 }
 
 export interface SimRecord<S = unknown> {
@@ -137,11 +144,18 @@ export function playOne<G extends GameTypes, S, O = unknown>(game: SimGame<G, S,
       if (actions.length >= cap) throw new Error(`no result after ${String(cap)} actions`);
       const rng = new DriverRng(`${spec.seed}|${spec.driver}|${String(p.id)}`);
       const answers = game.answers ? game.answers(s, content, rng) : (legalAnswers(p, rng) as G['action'][]);
+      if (answers.length === 0) throw new Error(`dead end: no legal answer to prompt ${String(p.id)}`);
+      const bad = game.promptProblem?.(s, content);
+      if (bad !== undefined) throw new Error(`placeholder prompt ${String(p.id)}: ${bad}`);
       game.onPrompt?.(seen as O, s, answers);
       const a = driver.choose(s, answers, rng);
       if (until !== undefined && actions.length >= until) break;
       actions.push(a);
       const r = applyAction(game.rules, s, a, content);
+      const w = s.rng;
+      const n = r.state.rng;
+      if (game.undoCheck && (a.reseed !== undefined || n.a !== w.a || n.b !== w.b || n.c !== w.c || n.d !== w.d) && !isRevealing(r.events))
+        violations.push({ id: 'bad-undo', message: `action ${String(actions.length)} drew randomness without a reveal event: safe undo could take it back` });
       s = r.state;
       state = s;
       violations.push(...r.violations);
@@ -187,3 +201,24 @@ export const crashRecord = (spec: GameSpec, why: unknown): SimRecord<never> => (
   hash: CRASH_HASH,
   error: `crash in game ${String(spec.index)} (seed ${spec.seed}): ${why instanceof Error ? why.message : String(why)}`,
 });
+
+/** K120 breakpoint: play `spec` until `stop(state, actions)` is true before an action (or `stop` actions are played), and hand back the game there as an engine-core `History` (cursor at the end) with its state: import it to look at that exact point. */
+export function breakAt<G extends GameTypes, S, O = unknown>(
+  game: SimGame<G, S, O>,
+  content: G['content'],
+  spec: GameSpec,
+  stop: number | ((state: G['state'], actions: readonly G['action'][]) => boolean),
+): { history: History<G>; state: G['state'] } {
+  const start = game.start(spec, content);
+  let s: G['state'] = createGame(game.rules, start.options, start.rules, content).state;
+  const actions: G['action'][] = [];
+  const driver = game.driver(spec.driver, spec, content);
+  while (s.result === null && s.prompt !== null && !(typeof stop === 'number' ? actions.length >= stop : stop(s, actions))) {
+    const rng = new DriverRng(`${spec.seed}|${spec.driver}|${String(s.prompt.id)}`);
+    const answers = game.answers ? game.answers(s, content, rng) : (legalAnswers(s.prompt, rng) as G['action'][]);
+    const a = driver.choose(s, answers, rng);
+    actions.push(a);
+    s = applyAction(game.rules, s, a, content).state;
+  }
+  return { history: { ...newHistory<G>(start.options, start.rules), actions, cursor: actions.length }, state: s };
+}
