@@ -96,6 +96,10 @@ Open check before the lift: the canonical JSON of the Jarl line and of STCC buil
 
 Generic effects: deal, move, flip, shake, highlight, beam, sparks, count-up, banner, crumple. One game's look, not shared: phaser, warp tunnel, coins, book, triumph.
 
+## Boards
+
+`board-model` (K118): spaces as data, adjacency computed once, named placement kinds resolved by the board, empty-board fixture. Idea from Terraforming Mars (GPL, written new); takes `board-layout` output through `fromLayout`.
+
 ## Risks to carry into the lifts
 
 - The STCC, EBR and Rome motion code descends from an open-source LOTR LCG project (BSD-3). Its notice file travels with every file taken from it.

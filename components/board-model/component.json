@@ -1,0 +1,14 @@
+{
+  "name": "board-model",
+  "source": {
+    "game": "terraforming-mars",
+    "commit": "idea only, GPL-3.0, written new: github.com/terraforming-mars/terraforming-mars src/server/boards/{Space,BoardBuilder,Board,PlacementType}.ts, tests/testing/EmptyBoard.ts (read 15 Nov 2026); owner authorization on file",
+    "paths": [
+      "src/server/boards/Space.ts",
+      "src/server/boards/Board.ts (adjacency computed once, placement kinds)",
+      "tests/testing/EmptyBoard.ts"
+    ]
+  },
+  "needs": [],
+  "packages": []
+}
