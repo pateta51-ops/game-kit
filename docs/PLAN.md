@@ -209,7 +209,7 @@ Sixteen public card- and board-game repositories were surveyed read-only; the fi
 | K88 | `engine-core`: blocked targets with reason codes on legal actions; barred options with a recorded reason; the only-one-option notice | marvel-champions-digital-game | M | proposed |
 | K89 | `engine-core`: outcome preview by probe (run, discard, return before/after numbers), stopping at hidden information | marvel-champions-digital-game | M | proposed |
 | K90 | Prompts: each choice names its source frame (card and clause); decision-authority tag when the player decides for the automated side; read-only stack view | marvel-champions-digital-game | S | done (new `prompt-source`; engine-core unchanged: the game adds the fields to its prompt type) |
-| K91 | `engine-core`: does-nothing check, separate from legality | netrunner | S | proposed |
+| K91 | `engine-core`: does-nothing check, separate from legality | netrunner | S | done (`idle` on options, `doesNothing` probe, `idleProblems`) |
 | K92 | Ghost card for an ability whose source has left play | ArkhamHorror | S | proposed |
 | K93 | Card language: cancel and instead by batch id; prevention window declared as card data with remaining / prevented counters | ArkhamHorror, netrunner | M | proposed |
 | K94 | Card language: simultaneous triggers (apply all, capture follow-ups, resolve); interactive flag and a priority table for automatic order; once-per-instance against once-per-item | ArkhamHorror, netrunner | M | proposed |

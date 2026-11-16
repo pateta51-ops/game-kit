@@ -20,6 +20,8 @@ export interface KernelOption {
   readonly enabled: boolean;
   /** Why a disabled option is disabled. */
   readonly why?: string;
+  /** K91: legal, but choosing it changes nothing (the game's words why). Not read by `validateAction`; the UI warns, never hides. */
+  readonly idle?: string;
 }
 
 export interface KernelPrompt {
