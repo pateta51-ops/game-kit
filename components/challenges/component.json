@@ -1,0 +1,10 @@
+{
+  "name": "challenges",
+  "source": {
+    "game": "outside: sdolle1775/marvel-lcg (docs/evaluation/outside/story-campaign-marvel.md)",
+    "commit": "ideas-only",
+    "paths": ["cards/pack/challenges/24xx_*.py (a challenge as a content item: setup restriction plus triggered penalties); AGPL or no licence, ideas only, written fresh; owner's written authorisation"]
+  },
+  "needs": [],
+  "packages": []
+}

@@ -77,6 +77,7 @@ Open check before the lift: the canonical JSON of the Jarl line and of STCC buil
 | Campaign log (K156) | No game: a new design from ideas in ArkhamHorror, LordOfTheRings and Marvel Champions (see `docs/evaluation/outside/story-campaign-*.md`) | | S |
 | Game log | New (K86): the design of ArkhamHorror's narrator (no licence, so no code copied): one table from engine event to row, rows as data, append-only, grouped by id | Undo to a line, hover preview (K87); space and piece refs (K122) | M |
 | Achievements (K160), K162 | New; ideas only from marvel-lcg (nothing stored, versioned summary) and ArkhamHorror (catalogue, checklists); builds on play-stats, which holds no summary | | M |
+| Challenges (K163) | New; idea only from marvel-lcg (a challenge as a content item: setup restriction plus triggered penalties) | | S |
 
 ## Menus shell and phone
 
