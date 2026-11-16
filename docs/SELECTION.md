@@ -30,7 +30,7 @@ Source commits: stcc `9fc59643`, warps `2af6937`, ebr `33b5abd3`, rome `1d0fd2e`
 | Traceability check | Jarl | EBR's stricter title rules | M |
 | Repo gate | Jarl | STCC's runner names kept as data | M |
 | Bundle-size check | EBR | - | S |
-| Privacy guard | EBR | - | M |
+| Privacy guard | EBR | - | M (dropped by the owner, 16 Nov 2026) |
 | Theme check | Jarl (its file mode only) | - | M |
 | Check runner | EBR (kills the whole process tree; fails when its lanes drift from the check chain) | STCC's pull-request mode and timing summary | M |
 | CI and runner scripts | Jarl (full gate, workflows, local CI, runner install) | - | M |

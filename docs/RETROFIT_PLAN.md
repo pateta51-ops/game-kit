@@ -15,7 +15,7 @@ Owner, 15 Nov 2026: enrich the kit first, then retrofit the games.
 3. A tag after the last batch. The retrofits pull that tag.
 
 Known today:
-- Unstoppable: the tested public-build guard (the kit's privacy guard is not built); its browser-synth sound recipes as a no-files fallback (noted in the evaluation, not taken); `enumerateAnswers` (already row K25).
+- Unstoppable: its browser-synth sound recipes as a no-files fallback (noted in the evaluation, not taken); `enumerateAnswers` (already row K25).
 - Warp's Edge: motion and sound work merged after the 14 Nov selection.
 - STCC and EBR: every-card test tooling beyond what `card-harness` took.
 

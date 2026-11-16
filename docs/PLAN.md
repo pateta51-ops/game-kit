@@ -52,7 +52,6 @@ Known limit (engine-core): the single-copy guard stops two copies loaded from tw
 |---|---|---|
 | K15 | Tutorial engine (owner approved 14 Nov 2026, split in two M parts: K15a core and K15b presentation; done) | L |
 | K16 | Generic simulation runner | L |
-| - | Privacy guard | M |
 
 ## Asked for by a game
 
@@ -162,14 +161,19 @@ What still keeps a game on its own tool at kit v0.25.0. Details in the second-pa
 
 ### Owner's word (size L or stage 4)
 
-| Content | Sources | Effort |
-|---|---|---|
-| Privacy guard and private asset link (stage 4 row): the build refuses a public build while private content is linked | STCC, Imperium, Unstoppable, EBR | S to M |
-| Scan ingest core (Python: flatbed scans to card crops and a pack) | Unstoppable, Imperium | L |
-| Imported content packs (JSON or zip, in IndexedDB) | Imperium, Unstoppable | L |
-| Information-set search driver; paired branch tester for AI variants | STCC | L |
-| LLM opponent plumbing | STCC | L |
-| Second-engine tooling (TypeScript and Rust twins) | Warp's | L |
+Decided by the owner, 16 Nov 2026:
+- **Privacy guards: dropped, and removed from the games.** The repositories are private and that is enforced on GitHub, so no build-time guard is needed.
+- **Imported content packs: dropped.** A game carries all its cards, code and images in its own private repository; nothing is loaded at runtime from outside it.
+- **Scan ingest: build (K164)**, starting from the `scanning-pipeline` repository, compared with the games' copies.
+- **Information-set search driver, LLM opponent plumbing, second-engine (Rust) tooling:** only for a game with a competitive two-player mode, built when such a game needs them.
+- **Kit enrichment, middle path:** build now what two or more games already do or what is plainly game-independent (wave 4 K135-K141, K25, K28, K29, K30, K33, K35, K36). Single-game visual and sound rows wait for the experience director's release passes; the rest is pulled in by a game's build plan when it needs it.
+
+| Row | Content | Sources | Effort | State |
+|---|---|---|---|---|
+| K164 | `scan-ingest`: flatbed scans to card crops and a content pack (Python) | scanning-pipeline, Unstoppable, Imperium | L | approved |
+| - | Information-set search driver; paired branch tester for AI variants | STCC | L | competitive two-player games only |
+| - | LLM opponent plumbing | STCC | L | competitive two-player games only |
+| - | Second-engine tooling (TypeScript and Rust twins) | Warp's | L | competitive two-player games only |
 
 ## Harvest from outside repositories (owner, 15 Nov 2026)
 
