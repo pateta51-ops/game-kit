@@ -2,3 +2,4 @@
 :where(.kit-af-crash) { margin: var(--af-pad, 1rem); padding: var(--af-pad, 1rem); color: var(--af-text, inherit); background: var(--af-crash-bg, transparent); border: var(--af-crash-border, 1px solid currentColor); border-radius: var(--af-radius, 0); font: var(--af-font, inherit); }
 :where(.kit-af-error) { opacity: var(--af-error-opacity, 0.75); }
 :where(.kit-af-btn) { margin-inline-end: 0.5em; color: var(--af-btn-text, inherit); background: var(--af-btn-bg, transparent); border: var(--af-btn-border, 1px solid currentColor); border-radius: var(--af-radius, 0); padding: 0.25em 0.75em; font: inherit; cursor: pointer; }
+:where(.kit-af-export) { margin-block: 0.5em 0; }

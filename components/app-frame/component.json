@@ -17,6 +17,14 @@
           "src/ui/routes.ts (follow: the code's own moves checked against the route machine)",
           "src/ui/main.tsx (window test hook)"
         ]
+      },
+      {
+        "game": "imp",
+        "commit": "20a033a",
+        "paths": [
+          "src/ui/components/Crash.tsx (crash screen: what went wrong, export the save, reload, try again)",
+          "src/ui/play/crash.ts (errorWords; an export that reports failure instead of throwing)"
+        ]
       }
     ]
   },
