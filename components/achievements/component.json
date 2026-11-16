@@ -1,0 +1,13 @@
+{
+  "name": "achievements",
+  "source": {
+    "game": "marvel-lcg and ArkhamHorror (ideas only, no code copied)",
+    "commit": "ideas-only",
+    "paths": [
+      "docs/evaluation/outside/story-campaign-marvel.md (1.3: nothing stored, derived from finished-game rows; AchievementDef; GameSummary with a version)",
+      "docs/evaluation/outside/story-campaign-arkham.md (1.3, rows 14 and 16: catalogue as data, cross-game checklist)"
+    ]
+  },
+  "needs": ["play-stats"],
+  "packages": []
+}
