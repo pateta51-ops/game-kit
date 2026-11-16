@@ -26,6 +26,13 @@ Extraction (prints and exits, no checks):
                   the sections those phases list under "Read first"
 
 Checks, continued:
+- with --sessions-optional: a plan with no session-plan heading is not a problem (the session checks still run when
+  the heading is there);
+- with --scenarios-end TEXT: the scenario catalogue runs up to the heading for TEXT, so sibling headings that continue
+  it ("10.4.1 ...") are read too;
+- with --cover TEXT: every id defined in the section for TEXT (bolded, or first in a table row when its family
+  is in --cover-rows IR,ICON; a word may end the id, as in ICON-TRAIN) appears in the scenario catalogue;
+  --cover-skip P2,XP leaves out those families;
 - with --tsc: the ```ts blocks of the type-definitions section compile under strict flags (needs `tsc` on PATH or in
   ./node_modules/.bin).
 
@@ -34,7 +41,8 @@ Sections are found by heading keywords (case-insensitive); override them if your
   --sessions "Session plan"
 
 Usage: python plancheck.py docs/BUILD_PLAN.md [--tsc] [--scenarios TEXT] [--phases TEXT] [--types TEXT]
-       [--sessions TEXT]
+       [--sessions TEXT] [--sessions-optional] [--scenarios-end TEXT] [--cover TEXT] [--cover-rows A,B]
+       [--cover-skip A,B]
 Exit code 0 when no problems were found.
 """
 from __future__ import annotations
@@ -259,7 +267,8 @@ def extract(path: Path, lines: list[str], heads: list[tuple[int, int, str]]) -> 
 def main() -> int:
     safe_console()
     args = [a for a in sys.argv[1:] if not a.startswith("--")]
-    for flag in ("--scenarios", "--phases", "--types", "--sessions", "--section", "--batch"):
+    for flag in ("--scenarios", "--phases", "--types", "--sessions", "--section", "--batch", "--scenarios-end", "--cover",
+                 "--cover-rows", "--cover-skip"):
         if flag in sys.argv:
             v = opt(flag, "")
             if v in args:
@@ -293,6 +302,12 @@ def main() -> int:
     first_cell_defs: list[str] = []
     xp_rows: dict[str, str] = {}
     scen_sec = section(lines, heads, opt("--scenarios", "Scenario catalogue"))
+    if scen_sec and "--scenarios-end" in sys.argv:
+        ks, ke = find_heading(heads, opt("--scenarios", "Scenario catalogue")), find_heading(heads, opt("--scenarios-end", ""))
+        if ke is None or ke <= ks:
+            problems.append(f"--scenarios-end: no heading contains {opt('--scenarios-end', '')!r} after the catalogue")
+        else:
+            scen_sec = "\n".join(lines[heads[ks][0]:heads[ke][0]])
     scen_start = src.find(scen_sec) if scen_sec else -1
     scen_lines = range(src[:scen_start].count("\n"), src[:scen_start].count("\n") + scen_sec.count("\n") + 1) \
         if scen_sec else range(0)
@@ -361,6 +376,22 @@ def main() -> int:
             if tok not in defined:
                 problems.append(f"{sc}: {tok} is not defined")
 
+    # --- --cover: every id of the rules section appears in the catalogue ---
+    if "--cover" in sys.argv:
+        rules = section(lines, heads, opt("--cover", ""))
+        if not rules:
+            problems.append(f"--cover: no heading contains {opt('--cover', '')!r}")
+        wide = r"[A-Z][A-Z0-9]*(?:-[A-Z0-9]+)+"
+        skip = tuple(x.strip() + "-" for x in opt("--cover-skip", "").split(",") if x.strip())
+        fams = tuple(x.strip() + "-" for x in opt("--cover-rows", "").split(",") if x.strip())
+        ids = set(re.findall(rf"\*\*({wide})\*\*", rules)) | {
+            d for d in re.findall(rf"^\|\s*\**({wide})\**\s*\|", rules, re.M) if d.startswith(fams or ("~",))}
+        cited = set(expand_ids(scen_sec)) | set(re.findall(rf"(?<![\w-])({wide})(?![\w-])", scen_sec))
+        wild = tuple(f + "-" for f in re.findall(r"\b((?:[A-Z][A-Z0-9]*-)*[A-Z][A-Z0-9]*)-\*", scen_sec))
+        for d in sorted(ids):
+            if not d.startswith(skip or ("\0",)) and d not in cited and not d.startswith(wild or ("\0",)):
+                problems.append(f"rule {d} is not covered by any scenario")
+
     # --- every scenario assigned to a phase ---
     phases = section(lines, heads, opt("--phases", "Implementation phases"))
     if not phases:
@@ -380,7 +411,8 @@ def main() -> int:
         if m:
             phase_ids.append(m.group(1))
     if phases and not sess:
-        problems.append(f"no heading contains {sess_kw!r} (use --sessions)")
+        if "--sessions-optional" not in sys.argv:
+            problems.append(f"no heading contains {sess_kw!r} (use --sessions)")
     elif sess and phases:
         where: dict[str, list[str]] = {p: [] for p in phase_ids}
         batches = 0

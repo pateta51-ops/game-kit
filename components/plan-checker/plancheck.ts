@@ -3,6 +3,7 @@
 // PYTHON names an interpreter to use first. Windows' "python3" may be the Microsoft Store placeholder, which prints a
 // message instead of running: an interpreter counts only when `--version` answers "Python 3".
 // Exit codes: plancheck's own, or 2 when no Python 3 is found.
+// --skip-without-python: with no Python 3 and CI unset, print a notice and exit 0 (the check then runs in CI only).
 import { spawnSync } from 'node:child_process';
 import { resolve } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
@@ -28,14 +29,18 @@ function isPython3(cmd: string[]): boolean {
 
 export function main(argv: readonly string[]): number {
   const python = candidates(process.env, process.platform).find(isPython3);
+  const args = argv.filter((a) => a !== '--skip-without-python');
   if (python === undefined) {
+    if (args.length < argv.length && !process.env['CI']) {
+      console.log('plancheck: skipped (no Python 3 on this computer; CI runs it).');
+      return 0;
+    }
     console.error(
       'plancheck: no Python 3 found (tried PYTHON, python3, python, py -3). Install it with: winget install Python.Python.3.13',
     );
     return 2;
   }
   const [exe, ...lead] = python as [string, ...string[]];
-  const args = [...argv];
   const at = args.indexOf('--plan');
   const plan = at >= 0 ? (args.splice(at, 2)[1] ?? '') : 'docs/BUILD_PLAN.md';
   const r = spawnSync(exe, [...lead, PY, plan, ...args], {
