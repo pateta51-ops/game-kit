@@ -37,6 +37,16 @@ describe('driver random numbers', () => {
     expect(Array.from({ length: 8 }, () => new DriverRng('k').int(1000))).toEqual(Array(8).fill(new DriverRng('k').int(1000)));
   });
 
+  it('an order prompt also lists the other orders (A8)', () => {
+    const options = ['a', 'b', 'c'].map((id) => ({ id, enabled: true }));
+    const all = legalAnswers({ id: 6, kind: 'order', options, min: 3, max: 3 }, new DriverRng('k')).map((a) => a.picks.join(''));
+    expect(all.sort()).toEqual(['abc', 'acb', 'bac', 'bca', 'cab', 'cba']);
+    const big = Array.from({ length: 8 }, (_, i) => ({ id: String(i), enabled: true }));
+    const some = legalAnswers({ id: 7, kind: 'order', options: big, min: 8, max: 8 }, new DriverRng('k'), 16);
+    expect(some).toHaveLength(16);
+    expect(new Set(some.map((a) => a.picks.join(''))).size).toBeGreaterThan(1);
+  });
+
   it('list every answer of a multi-pick prompt, or cap samples of a huge one', () => {
     const options = ['a', 'b', 'c', 'x'].map((id) => ({ id, enabled: id !== 'x' }));
     const all = legalAnswers({ id: 4, options, min: 1, max: 2 }, new DriverRng('k')).map((a) => a.picks.join(''));

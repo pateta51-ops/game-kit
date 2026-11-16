@@ -35,5 +35,6 @@ Tests: `particles.test.ts`, `count.test.ts` (node); `effects.e2e.test.ts` (Chrom
 import { createEffectLayer } from '../kit/effect-library/index'
 
 const layer = createEffectLayer() // the DOM layer the motion frame draws the twelve verbs on
-console.log(typeof layer)
+document.body.append(layer.el)
+layer.clear() // empties it between beats
 ```

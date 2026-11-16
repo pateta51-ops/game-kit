@@ -129,7 +129,9 @@ export function restoreSave<G extends GameTypes>(
     if (save.contentHash !== game.contentHash(content)) return { ok: false, error: OLDER_BUILD };
     const r = replay(game, save.options, save.rules, save.actions, content, { contentHash: save.contentHash });
     // an action the engine refuses: the file was edited (or is broken); a different final hash: the engine changed
-    if (!r.ok || r.state === null) return { ok: false, error: r.reason === 'pack' ? OLDER_BUILD : DAMAGED };
+    // A9: a different build wrote it, so a refused action means the engine changed, not that the file was edited
+    const otherBuild = save.appCommit !== (format.appCommit ?? UNKNOWN_COMMIT) && save.appCommit !== UNKNOWN_COMMIT && format.appCommit !== undefined;
+    if (!r.ok || r.state === null) return { ok: false, error: r.reason === 'pack' || otherBuild ? OLDER_BUILD : DAMAGED };
     if (sealOf(r.state, save.undoUsed) !== save.finalHash) return { ok: false, error: OLDER_BUILD };
     return { ok: true, save, state: r.state };
   } catch (e) {

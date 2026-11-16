@@ -2,7 +2,7 @@
 
 A rule-based opponent (K103, K115). Pure data and functions; the engine never imports it. The game supplies the view, the candidates, the advice and the handlers.
 
-- **Redacted view**: `redact(state, seat, view)` returns `Redacted<V>`; every opponent function takes only that type. `viewLeaks(view, secrets)` lists hidden ids found in a view (a test expects none).
+- **Redacted view**: `redact(state, seat, view)` returns `Redacted<V>`; every opponent function takes only that type. `viewLeaks(view, secrets, { numbers?, keys? })` lists hidden ids found in a view: an exact value or a whole word inside a string (`card:42` holds `42`, `c10` does not hold `c1`); `numbers` are exact secret numbers the game marks; `keys` are key names the view must not hold (`['rng']`), listed as `key:rng` (a test expects none).
 - **Pick an index**: `pick(opponent, view, candidates, { rand, timing?, step?, prompt? })` returns a `DecisionRecord` whose `index` is the legal option taken. A `Candidate` is `{ key, card?, verbs?, pass? }`; `key` is stable across prompts. Order: one option (`only-option`), the plan, the best `play`, a `pass`, else the best of the rest (`forced`). `rand` is sim-pool's `DriverRng` or anything with `int` and `chance`.
 - **Fixed pipeline** (`judge`): advice `cannotUse`, `when` against the timing, `needs` (via `count`), `nonStacking` (via `inPlay`), runaway guard (after `runawayFree` uses of a card, goes on with chance `runawayDecay^n`), then each verb's handler (`judge`, then `cost`; a refused sub-effect is `drawback`), then `advice.priority` and the opponent's `score`. `prune` passes drop keys before the choice.
 - **Handlers per effect verb**: `handlers: { verb: { judge?, cost? } | 'always' | 'never' }`; `judge` returns a score or a `Verdict { reason, score?, lines? }`. Conformance test: `handlerProblems(verbs, handlers)` empty.
@@ -16,7 +16,7 @@ A rule-based opponent (K103, K115). Pure data and functions; the engine never im
 - **Decision record from the log**: `decisionLines(record)` (plain lines for a table or golden), `decisionPart(record)` (a game-log `ref('decision', id)` the game resolves to its stored record), `decisionsAt(records, step)`.
 - **sim-pool**: `opponentDriver(opponent, { view, candidates(view, answers), timing? }, keep?)` is a `Driver` (K222: `view(state, seat)` gets the open prompt's `seat`; `redact` takes a string or number seat); candidates line up with the answers; records carry `prompt` (from `state.prompt.id`) and `step` (game's `step(state)`, else the choice count); `reasons()` is the last record's lines.
 
-Not here: alpha-beta over the other side's moves, hidden-card sampling, trained evaluators.
+Not here: the learned opponent (`learned-opponent`: a model scores the moves, cheaper to build when you have game records) and the sim-pool tuner (`tune`: it fits the weights this one uses, offline). See `docs/recipes/ai-opponent.md`. Also not here: alpha-beta over the other side's moves, hidden-card sampling, trained evaluators.
 
 ## Use it in 10 lines
 

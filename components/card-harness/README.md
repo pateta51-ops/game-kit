@@ -1,6 +1,6 @@
 # card-harness
 
-Card tests on real cards. Test code only; the engine imports nothing here but `createProbe`.
+Card tests on real cards. Test code only; the engine imports nothing here but `createProbe`, and card-language imports the pure `strictProblems` from `strict.ts`. Not here: `validateEffect` in card-language checks one effect at run time, `strictProblems` checks a whole grammar in a test.
 
 - **Probe** (`createProbe<D>()`): the engine calls `probe.note(d)` (or `note(() => d)`) where it settles a choice without asking. Off in the game.
 - **Scenario** (`new Scenario(game)`): the game passes a `ScenarioGame<G, W, D>` over engine-core's `GameRules<G>`: `rules`, `content`, `start()` (the state to build on), `put(s, card, where)` (a new instance, its id) and its `probe`. Then `put`, `set`, `run(...tasks)`, `answer(...picks)`, `options`, `offered`, `events`, `notes`, `observe(read, fn)`. The rules' invariants run on the built position (`{ validate: false }` to skip).

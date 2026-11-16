@@ -11,10 +11,23 @@ declare const SEAT: unique symbol;
 /** What one seat may know. Only `redact` makes one, so an opponent typed on it cannot read the full state. */
 export type Redacted<V> = V & { readonly [SEAT]: true };
 export const redact = <S, V, K extends string | number = string>(state: S, seat: K, view: (s: S, seat: K) => V): Redacted<V> => view(state, seat) as Redacted<V>;
-/** The secrets (hidden card ids, names) found as JSON strings in a view: a test expects none. */
-export function viewLeaks(view: unknown, secrets: readonly string[]): string[] {
-  const s = JSON.stringify(view);
-  return secrets.filter((x) => s.includes(JSON.stringify(x)));
+/** A10: the secrets (hidden card ids, names) found in a view: an exact string value, an exact key name, or an id as a whole word inside a string ("card:42" holds "42"; "c10" does not hold "c1"). `opts.numbers`: secret numbers, matched as exact number values (only those the game marks). `opts.keys`: key names the view must not hold, listed as `key:<name>` (e.g. `['rng']`; opt-in, since `stack` may be a real zone). A test expects none. */
+export function viewLeaks(view: unknown, secrets: readonly string[], opts: { numbers?: readonly number[]; keys?: readonly string[] } = {}): string[] {
+  const strs: string[] = [];
+  const nums = new Set<number>();
+  const keys = new Set<string>();
+  const walk = (v: unknown): void => {
+    if (typeof v === 'string') strs.push(v);
+    else if (typeof v === 'number') nums.add(v);
+    else if (Array.isArray(v)) v.forEach(walk);
+    else if (v !== null && typeof v === 'object') for (const [k, x] of Object.entries(v)) { keys.add(k); strs.push(k); walk(x); }
+  };
+  walk(view);
+  const word = (t: string, x: string) => new RegExp(`(?<![A-Za-z0-9_])${x.replace(/\W/g, '\\$&')}(?![A-Za-z0-9_])`).test(t);
+  const out = secrets.filter((x) => x !== '' && strs.some((t) => t === x || word(t, x)));
+  for (const n of opts.numbers ?? []) if (nums.has(n)) out.push(String(n));
+  for (const k of opts.keys ?? []) if (keys.has(k)) out.push(`key:${k}`);
+  return out;
 }
 
 /** Closed reason vocabulary in three classes (Forge `AiPlayDecision`). */

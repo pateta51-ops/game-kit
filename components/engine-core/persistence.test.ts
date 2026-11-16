@@ -70,6 +70,9 @@ describe('replay and saves', () => {
         error: DAMAGED,
       },
     );
+    // A9: written by another build, a refused action means the engine changed
+    const other = { ...save, appCommit: 'abc1234', actions: [{ kind: 'answer', promptId: 99, picks: [] }] };
+    expect(restoreSave(COUNTER, other, content, { version: 1, appCommit: 'def5678' })).toEqual({ ok: false, error: OLDER_BUILD });
     // editing the undo flag of an export is caught (it is sealed into finalHash)
     expect(restoreSave(COUNTER, { ...save, undoUsed: false }, content).ok).toBe(false);
     expect(restoreSave(COUNTER, { version: 1 }, content).ok).toBe(false);

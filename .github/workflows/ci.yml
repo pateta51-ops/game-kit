@@ -23,6 +23,7 @@ jobs:
       - uses: actions/setup-node@v7
         with:
           node-version-file: .nvmrc
+      - run: echo "::remove-matcher owner=tsc::"
       - run: npm ci --no-audit --no-fund
       - run: node components/check-runner/check-runner.ts --config check-runner.config.json --keep-going
         env:

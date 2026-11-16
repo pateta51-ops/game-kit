@@ -193,7 +193,7 @@ The campaign log as plain data and pure functions (release 1.0). No packages; dr
 
 ## card-harness
 
-Card tests on real cards. Test code only; the engine imports nothing here but `createProbe`.
+Card tests on real cards. Test code only; the engine imports nothing here but `createProbe`, and card-language imports the pure `strictProblems` from `strict.ts`. Not here: `validateEffect` in card-language checks one effect at run time, `strictProblems` checks a whole grammar in a test.
 
 - **Use it when:** Testing card effects on real cards with the scenario builder, prompt delivery, choice probe and inventory with stale check.
 - **Not for:** Card rules themselves; those stay in the game.

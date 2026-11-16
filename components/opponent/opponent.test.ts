@@ -74,6 +74,15 @@ describe('opponent (K103, K115)', () => {
     expect(viewLeaks(state, ['secret-card'])).toEqual(['secret-card']);
   });
 
+  it('viewLeaks (A10): whole words only, numbers and keys opt-in', () => {
+    expect(viewLeaks({ hand: ['card:42'] }, ['42'])).toEqual(['42']);
+    expect(viewLeaks({ hand: ['card:142', 'c10'] }, ['42', 'c1'])).toEqual([]);
+    expect(viewLeaks({ count: 7 }, ['7'])).toEqual([]);
+    expect(viewLeaks({ count: 7, hp: 3 }, [], { numbers: [7] })).toEqual(['7']);
+    expect(viewLeaks({ zones: { stack: ['a'] }, rng: 1 }, [])).toEqual([]);
+    expect(viewLeaks({ rng: { s: 1 }, nested: { stack: [] } }, [], { keys: ['rng', 'stack'] })).toEqual(['key:rng', 'key:stack']);
+  });
+
   it('pipeline: hint, timing, needs, stacking, verb, cost, drawback, missing logic', () => {
     const o = make();
     const j = (c: Candidate, t = 'main') => judge(o, v, c, never, t);

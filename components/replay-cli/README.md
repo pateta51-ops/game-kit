@@ -32,6 +32,7 @@ Not here: a driver answering again at replay.
 ## Use it in 10 lines
 
 ```sh
+# the two modules to write are shaped like `fake-engine.ts` (`engine`) and `fake-golden.ts` (`simGame` + `goldens`) in this folder
 node kit/replay-cli/replay.ts log.json --engine src/engine/replay-engine.ts   # the module exports `engine`
 node kit/replay-cli/golden.ts check goldens --game src/engine/golden-game.ts  # every stored game must replay the same
 ```

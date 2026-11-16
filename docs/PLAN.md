@@ -223,6 +223,7 @@ Found by the third retrofit pass (`docs/RETROFIT_PLAN.md`, Part E).
 | K231 | (GAPS-4 B1; owner decision 2a, 16 Nov 2026) `table-panels`: unstyled log panel (event words with slots, grouped by turn, seat filter, scrolls to newest), opponent-turn panel (paced-view steps, what the viewer may read, skip to end), game over (result, breakdown slot, rematch, review, home), turn banner (phase list, fires on change). Logic in node-testable `.ts`, React in `ui.tsx` | Imperium, STCC, Unstoppable; Radiance is the first user | M | done |
 | K232 | Card-language standard verb pack `cardPack` on `card-zones`, with ask and resume | owner decision 3a, GAPS-4 B3 | M | done (#238) |
 | K233 | `kit.mjs pull` copies `docs/recipes/` to `kit/recipes/` (`check` and stray-file checks know it); scaffold CLAUDE.md and AGENTS.md say search, then recipes, then README; `table-panels` README `logLines` hidden-field note | GAPS-4 A3 item 1 | S | in review |
+| K236 | (GAPS-3 engine A8-A10, B, C; tooling A2, A9) `order` prompts get every order in `legalAnswers`; restore says older build when the engine changed; `viewLeaks` finds numbers, substrings and rng/stack keys; README fixes and twin lines; CI drops the tsc matcher; `.cache/` ignored | GAPS-3 | S ; left for K238: engine A10 type-level fix and a sim-pool secrets option, B1 worked example, B6 heavy needs, C tests (card-language nesting, opponent, reference game timing), tooling A7-A13 | done |
 
 ### Owner's word (size L or stage 4)
 

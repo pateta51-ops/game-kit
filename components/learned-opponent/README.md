@@ -15,7 +15,7 @@ A learned opponent (K125): a value net, a one-horizon look-ahead on the game's o
 
 Strength: judge new weights with sim-pool's paired validation (K200), new against old and against a scripted driver over the same seeds; no copy of it here.
 
-Not here: multi-round search, a role-prediction search loop, per-prompt choosers (the game's `legal` and `cheap`).
+Not here: the rule-based opponent (`opponent`: reasons per card, no training) and the sim-pool tuner (offline weights). See `docs/recipes/ai-opponent.md`. Also not here: multi-round search, a role-prediction search loop, per-prompt choosers (the game's `legal` and `cheap`).
 
 ## Use it in 10 lines
 

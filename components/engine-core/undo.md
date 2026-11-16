@@ -1,7 +1,7 @@
 # engine-core: undo
 
 - **By action** (`newHistory`, `recordAction`, `appendAction`, `undo`, `redo`, `canUndo`, `stateAt`): the options, the actions and a cursor; every move replays from the start.
-- **By step** (`newSteps`, `addStep`, `extendStep`, `undoStep`, `redoStep`, `canUndoStep`, `replaySteps`): a step is one decision of the player plus the answers the settings gave after it, so one Undo takes back what one click did. The two are separate; use one.
+- **By step** (`newSteps`, `addStep`, `extendStep`, `undoStep`, `redoStep`, `canUndoStep`, `replaySteps`): a step is one decision of the player plus the answers the settings gave after it, so one Undo takes back what one click did. The two are separate; use one. Choose by action when one Undo may take back a whole turn and saves keep the action list (`saves` takes this one); by step when one Undo must take back one click, the owner-facing behaviour.
   - `newSteps(state, actions?, { keep, every })` starts at a state (undo never goes before it). `addStep` for the player's answer, `extendStep` for each answer the game gave for the player (it joins the top step; before any step, the start of the game). Each returns `{ ok, history, events, error }`; the state is `history.state`, the recorded game `history.actions`.
   - The newest `keep` steps (default 60) hold the state before them, older ones every `every`-th (default 20, 0 for none); the rest are replayed from the nearest one kept.
   - `canUndoStep(h, mode, { afterGameOver })`: Safe refuses a step that revealed something, with `revealWords`; Free allows it (`peek`) and sets `undoUsed`, and `peeked` when it did reveal. After game over undo is refused unless `afterGameOver` is true.

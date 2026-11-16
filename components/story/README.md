@@ -34,6 +34,6 @@ Story as data only (flavour: no rule lives in it; a missing line never blocks pl
 ```ts
 import { speakerName, type Story } from '../kit/story/index'
 
-declare const story: Story // the game's story as data; lines are resolved against what is in play
-console.log(speakerName(story, 'narrator'))
+const story: Story = { speakers: [{ id: 'ann', name: 'Ann' }], scenarios: [] } // the game's story as data
+console.log(speakerName(story, 'ann'), speakerName(story, 'narrator')) // Ann narrator
 ```

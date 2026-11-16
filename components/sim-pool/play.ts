@@ -103,20 +103,27 @@ const choose = (n: number, k: number): number => {
   return c;
 };
 
-/** Every answer to `prompt` (subsets of its enabled options, in option order, of size min..max); over `cap`, `cap` samples. */
+/** Every answer to `prompt` (subsets of its enabled options, in option order, of size min..max); over `cap`, `cap` samples. A prompt of kind `order` (A8) also gets every other order of each subset. */
 export function legalAnswers(prompt: KernelPrompt, rng: DriverRng, cap = ANSWER_CAP): AnswerAction[] {
   const ids = prompt.options.filter((o) => o.enabled).map((o) => o.id);
   const lo = Math.max(0, prompt.min);
   const hi = Math.min(prompt.max, ids.length);
   const of = (picks: string[]): AnswerAction => ({ kind: 'answer', promptId: prompt.id, picks });
+  const ordered = prompt.kind === 'order';
   let total = 0;
-  for (let k = lo; k <= hi; k += 1) total += choose(ids.length, k);
-  if (total > cap) return Array.from({ length: cap }, () => of(rng.sample(ids, lo + rng.int(hi - lo + 1))));
+  for (let k = lo; k <= hi; k += 1) total += ordered ? choose(ids.length, k) * Array.from({ length: k }, (_, i) => i + 1).reduce((a, b) => a * b, 1) : choose(ids.length, k);
+  if (total > cap) {
+    return Array.from({ length: cap }, () => {
+      const picks = rng.sample(ids, lo + rng.int(hi - lo + 1));
+      if (ordered) for (let i = picks.length - 1; i > 0; i -= 1) { const j = rng.int(i + 1); [picks[i], picks[j]] = [picks[j] as string, picks[i] as string]; }
+      return of(picks);
+    });
+  }
   const out: AnswerAction[] = [];
   const walk = (from: number, picks: string[]): void => {
     if (picks.length >= lo) out.push(of(picks));
     if (picks.length === hi) return;
-    for (let i = from; i < ids.length; i += 1) walk(i + 1, [...picks, ids[i] as string]);
+    for (let i = ordered ? 0 : from; i < ids.length; i += 1) if (!picks.includes(ids[i] as string)) walk(i + 1, [...picks, ids[i] as string]);
   };
   walk(0, []);
   return out;
