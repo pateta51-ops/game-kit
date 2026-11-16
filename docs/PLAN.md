@@ -76,10 +76,10 @@ A game's build plan lists the kit work it needs as phases named `GK<n>` for the 
 | K31 | `theme-check` browser steps: `coverageProblems` (span of content, largest empty block per screen) and a phone font-floor spec | S | a finished build, 15 Nov 2026 | done (`coverage.ts`; the phone font floor was already `fontSizeFindings`, now documented in the README) |
 | K32 | `phone-mode`: a `Scaled` box (a fixed-size piece drawn at a box width), a commit-flag plus second-tap wrapper over `useSecondTap` | S | a finished build, 15 Nov 2026 | done |
 | K33 | `tutorial`: a docked side with a reserved-space CSS variable so the screen shrinks beside the panel; panel buttons accept the game's own button component | S | a finished build, 15 Nov 2026 | proposed |
-| K34 | Theme `Button`: `note` (a line under a plate) and `acting` (outline) props; no rivets under a width floor | S | a finished build, 15 Nov 2026 | proposed |
+| K34 | Theme `Button`: `note` (a line under a plate) and `acting` (outline) props; no rivets under a width floor | S | a finished build, 15 Nov 2026 | closed: the kit has no themed Button component |
 | K35 | `glossary` printed-words check: every summary and body paragraph must occur in the source documents, icons and punctuation aside | S | a finished build, 15 Nov 2026 | proposed |
 | K36 | `tutorial` tooling: build a script from a seed's line of play, list each step's answers in on-screen words, seed search, a script-playing e2e helper | M | a finished build, 15 Nov 2026 | proposed |
-| K37 | Tooling scripts: home-screen PNGs from a logo SVG (Playwright) and a screenshot contact-sheet script | S | a finished build, 15 Nov 2026 | proposed |
+| K37 | Tooling scripts: home-screen PNGs from a logo SVG (Playwright) and a screenshot contact-sheet script | S | a finished build, 15 Nov 2026 | done (built in #163) |
 | K38 | `offline`: network-first navigation (with a timeout) and auto-apply of a new build when no input is half-entered; replaces a game-side patch of the worker file | M | a finished build, 15 Nov 2026 | done |
 | K39 | `bug-reporter`: an `index`/`ui` entry (games need an eslint-disable per import today) and token storage read lazily, not at import | S | a finished build, 15 Nov 2026 | done |
 | K40 | `tutorial`: fix the highlight freezing the page | S | a finished build, 15 Nov 2026 | done |
