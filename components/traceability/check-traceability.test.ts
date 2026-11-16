@@ -405,3 +405,79 @@ describe('heading without a dot', () => {
     expect(extractRuleIds('## 3 Rules specification\nSC-01 x\n## 4 Next', { ...CFG, families: ['SC'] })).toEqual(['SC-01']);
   });
 });
+
+describe('K136', () => {
+  const base: Config = { ...CFG, scenarioPrefix: '', requireComment: false };
+
+  it('test titles come from a TypeScript parse: a string, a comment or a call on another object holds no test', () => {
+    const src = [
+      'const fixture = "it(\'R-010 in a string\', () => {});";',
+      "const a = 1; // it('R-011 after code')",
+      "helper.it('R-012 not a test', () => {});",
+      "it.each`a\n$" + "{1}`('R-013 tagged', () => {});",
+      "it('R-014 ' + name, () => {});",
+      "it('R-015 real', () => {});",
+    ].join('\n');
+    expect(extractTitles(src, CFG)).toEqual(['R-013 tagged', 'R-014 ', 'R-015 real']);
+    expect(extractTitles(src, { ...CFG, ignoreTemplateSubstitutions: true })).toEqual(['R-013 tagged', 'R-015 real']);
+    expect(extractTitles("it('R-010 x', () => <div />);", CFG, 'a.test.tsx')).toEqual(['R-010 x']);
+    const c = computeCoverage('## 3. Rules\nR-010\n', [test('tests/a.test.ts', src)], [], base);
+    expect(c.untitled).toEqual(['R-010']);
+  });
+
+  it('idsAtLineStart: the first cell of a section 3 table row is a rule, and its pending phase is read', () => {
+    const plan = '## 3. Rules\n- **R-010** a.\n| IR-07 | a ruling | pending: 5 |\n| see | IR-08 |\n## 11. Phases\n### 11.3 Phase table\n| 2 | core | R, IR | x |\n### 11.4 Next\n';
+    const cfg: Config = { ...base, idsAtLineStart: true, phaseTable: '### 11.3' };
+    expect(extractRuleIds(plan, cfg)).toEqual(['R-010', 'IR-07']);
+    const go = (progress: string) => {
+      const r = io({}, [test('tests/a.test.ts', "it('R-010 x', () => {});")]);
+      r.fake.readText = (path) => (path.endsWith('.json') ? '{}' : path.endsWith('PROGRESS.md') ? progress : plan);
+      return run(['--strict'], r.fake, cfg);
+    };
+    expect(go('- Phase 2 merged\n')).toBe(0);
+    expect(go('- Phase 2 merged\n- Phase 5 merged\n')).toBe(1);
+  });
+
+  const STCC = String.raw`\b(PREC|VOC|SET|PSET|TURN|RES|RSP|CTL|ACT|TBL|DECK|GAIN|SPC|LOC|SHIP|AWAY|BEAM|DUTY|MIS|LOG|CLN|STD|SCR|MIX|KW-[A-Z]+|BOT-[A-Z]+|CREW-[A-Z]+|SC-RULE|CADET)-\d{2}\b`;
+  const IMPERIUM = String.raw`\b(GEN|CMP|SET|CSET|BSET|RND|TURN|ACT|EXH|INN|REV|CLN|RSH|SOL|TXT|RES|MKT|FAME|END|COL|SCR|IR)-\d{2}\b|\bKW-[A-Z]+-\d{2}\b|\bBOT-[A-Z]+-\d{2}\b|\bVAR-[A-Z]+-\d{2}\b|\bCARD-\d{3}\b`;
+
+  it('idPattern: the whole id regexp as the game wrote it (STCC, Imperium): an id after a dash counts, after an underscore or before a letter not', () => {
+    const plan = '## 3. Rules\nSET-01, KW-FAST-02, X-TURN-03, SET-04a, SET-005, a_SET-06, DEF-01\n';
+    expect(extractRuleIds(plan, { ...base, idPattern: STCC })).toEqual(['SET-01', 'KW-FAST-02', 'TURN-03']);
+    expect(extractRuleIds(plan, { ...base, families: ['SET', 'TURN', 'KW-[A-Z]+'], idTail: '\\d{2}' })).toEqual(['SET-01', 'KW-FAST-02', 'SET-04', 'SET-06']);
+    const imp: Config = { ...base, idPattern: IMPERIUM };
+    const plan2 = '## 3. Rules\nCARD-001 KW-ACQ-01 X-IR-02 y_GEN-03 CARD-01\n';
+    expect(extractRuleIds(plan2, imp)).toEqual(['CARD-001', 'KW-ACQ-01', 'IR-02']);
+    const c = computeCoverage(plan2, [test('tests/a.test.ts', "it('x_IR-02 and KW-ACQ-01a', () => {});\nit('IR-99', () => {});")], [], imp);
+    expect(c.covered).toEqual(['KW-ACQ-01', 'IR-02']);
+    expect(c.unknown).toEqual(['IR-99']);
+    expect(extractRuleIds('## 3. Rules\n- **SET-01** a, see SET-02.\n', { ...base, idPattern: STCC, idsAtLineStart: true })).toEqual(['SET-01']);
+  });
+
+  it('headingDot: only `## 3.` opens or closes a section', () => {
+    const plan = '## 3. Rules\nR-010\n## 4 Next\nR-011\n## 5. Last\nR-012\n';
+    expect(extractRuleIds(plan, base)).toEqual(['R-010']);
+    expect(extractRuleIds(plan, { ...base, headingDot: true })).toEqual(['R-010', 'R-011']);
+    expect(() => extractRuleIds('## 3 Rules\nR-010\n', { ...base, headingDot: true })).toThrow(/section "## 3."/);
+  });
+
+  it('countsLine, rejectedTitles and scenarioReport print the lines of the EBR check; off by default', () => {
+    const plan = ['## 3. Rules', '- **R-010** a.', '- **R-011** b.', '- **RL-005** c.', '## 10. Tests', '| SC-01 | a |', '| SC-02 | b | pending: 2 |', '| SC-03 | c | pending: 9 |', '## 11. Phases', '### 11.3 Phase table', '| 2 | core | R | x |', '| 5 | later | RL | x |', '### 11.4 Next'].join('\n');
+    const cfg: Config = { ...CFG, requireComment: false, reportUnknown: false, idsAtLineStart: true, phaseTable: '### 11.3', scenarioDigits: '2', scenarios: 'required' };
+    const titles = "it('SC-01 R-010 x', () => {});\nit.skip('R-011 skipped', () => {});\nit('R-010 R-011 R-012 R-013 R-014 R-015 R-016 many', () => {});";
+    const go = (c: Config) => {
+      const r = io({}, [test('tests/a.test.ts', titles)]);
+      r.fake.readText = (path) => (path.endsWith('.json') ? '{}' : path.endsWith('PROGRESS.md') ? '- Phase 2 merged\n' : plan);
+      return { code: run(['--strict'], r.fake, c), text: [...r.out, ...r.err].join('\n') };
+    };
+    const off = go(cfg);
+    expect(off.code).toBe(1);
+    expect(off.text).toMatch(/not pending: SC-02$/m);
+    expect(off.text).not.toMatch(/counts:|gate rejects|scenario row/);
+    const on = go({ ...cfg, countsLine: true, rejectedTitles: true, scenarioReport: true });
+    expect(on.code).toBe(1);
+    expect(on.text).toMatch(/counts: 3 rules defined; 2 in implemented families \(R\); 1 cited or pending; 2 of 3 scenarios tested or pending\./);
+    expect(on.text).toMatch(/6 id\(s\) are named only by titles the gate rejects: R-011 \[unconditional skip or todo\], R-012 \[a title with 7 ids\]/);
+    expect(on.text).toMatch(/1 scenario row\(s\) have no test: SC-02 \(pending: 2, which is merged\)$/m);
+  });
+});

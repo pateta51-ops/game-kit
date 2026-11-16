@@ -1,6 +1,6 @@
 # traceability
 
-Rule-citation gate. The game passes a `trace.config.json` (any subset of the options; `trace.config.example.json` shows the base ones) and runs `tsx kit/traceability/check-traceability.ts [--config path] [--strict] [--release] [--quiet] [--warn]`. Defaults are Jarl's check.
+Rule-citation gate. The game passes a `trace.config.json` (any subset of the options; `trace.config.example.json` shows the base ones) and runs `tsx kit/traceability/check-traceability.ts [--config path] [--strict] [--release] [--quiet] [--warn]`. Defaults are Jarl's check. Test titles are read with a TypeScript parse (the game's `typescript` package): the first argument of an `it`, `test` or `describe` call, so a call inside a string or a comment, or on another object (`helper.it(`), holds no title.
 
 | Option (default) | What it does | Games that set it |
 |---|---|---|
@@ -19,19 +19,21 @@ Rule-citation gate. The game passes a `trace.config.json` (any subset of the opt
 | `pending` | The pending file (id to batch); `--release` fails while it is not empty. | STCC, Warp's, Rome, Jarl |
 | `phaseTable` (`''`), `progress`, `phaseDone`, `strictFromPhase` | Phase mode: a family is due once the phase listing it in the table under this heading (phase in column 1, families in column 3) matches `phaseDone` in the progress file; a rule line with `pending: <phase>` waits for that phase; a family in no row is a finding; strict once `strictFromPhase` is merged. | EBR |
 | `strictIdEnd` (false) | true: nothing may follow the id, so `R-05a` does not name `R-05`. | EBR |
-| `skipInsideSkippedDescribe` (false), `ignoreTemplateSubstitutions` (false) | Tests inside a `describe.skip`/`xdescribe` count for none; a template title with `${…}` counts for none. | EBR |
+| `skipInsideSkippedDescribe` (false), `ignoreTemplateSubstitutions` (false) | Tests inside a `describe.skip`/`xdescribe` count for none; a title built with `${…}` or `+` counts for none (by default it counts as written, a `+` title by its first string). | EBR |
 | `testFilePattern` (`''`) | A regexp the file names under `testDirs` must match (`\.(test\|spec)\.tsx?$`); empty reads every `.ts(x)`. | EBR |
 | `staleFails` (true) | false: a pending id the plan does not define is reported, not failed. | STCC |
 | `rulePendingInlineOnly` (false) | Phase mode: a rule waits only by `pending: <phase>` on its own line in the rules section; bare `pending:` lines then count for scenario rows only. | EBR |
 | `unlistedCountsDeferred` (false) | Phase mode: deferred ids also need their family in the phase table. | EBR |
+| `idPattern` (`''`) | The whole id regexp, as the game's plan gives it; `families` and `idTail` are then not read. Its own `\b` decides what may stand before an id: after a dash yes (`X-SET-01` defines `SET-01`), after an underscore no. | STCC, Imperium |
+| `headingDot` (false) | true: only `## 3.` with the dot opens or closes a section. | STCC, Imperium, Unstoppable |
+| `countsLine` (false) | Prints `counts: n rules defined; n in implemented families (…); n cited or pending; n of n scenarios tested or pending.` | EBR |
+| `rejectedTitles` (false) | Prints the ids named only by titles that count for none, each with why (skip or todo, expected failure, too many ids). | EBR |
+| `scenarioReport` (false) | The missing-scenario line gives the count and `(pending: <phase>, which is merged)` beside a row whose phase has merged. | EBR |
 
 Imperium's check is strict without a flag: its npm script passes `--strict`.
 
 Not covered:
-- EBR parses test files with TypeScript; the kit scans text, so a call written inside a string or after code on a commented line can be read differently.
 - EBR's missing-family check reads only the bold list ids of the rules section; with `unlistedCountsDeferred` the kit also reads table rows and `extraRuleHeadings`.
-- EBR prints the ids named only by rejected titles; the kit does not.
 - EBR defines scenario rows with any digit count but finds them in titles with 2 or 3 digits; `scenarioDigits` is one count for both (`2,3`).
-- The kit's id match refuses a letter, digit or dash before the id; the games' `\b` allows a dash (`X-SET-01` names `SET-01` there).
-- Unstoppable and Imperium need the dot in `## 3.`; the kit also accepts `## 3 Rules`.
+- STCC and Imperium scan test files as text: an id in a fixture string or a title after `helper.it(` counts there and not here; a title after `` it.each`…` `` counts here and not there.
 - The report wording differs from every game's.

@@ -10,6 +10,7 @@
 import { readdirSync, readFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
+import ts from 'typescript';
 
 export interface Config {
   plan: string;
@@ -46,6 +47,12 @@ export interface Config {
   ignoreTemplateSubstitutions: boolean;
   testFilePattern: string;
   staleFails: boolean;
+  /** K136 options; README.md has the table. */
+  idPattern: string;
+  headingDot: boolean;
+  scenarioReport: boolean;
+  rejectedTitles: boolean;
+  countsLine: boolean;
 }
 export const DEFAULT_CONFIG: Config = {
   plan: 'docs/BUILD_PLAN.md',
@@ -81,6 +88,11 @@ export const DEFAULT_CONFIG: Config = {
   ignoreTemplateSubstitutions: false,
   testFilePattern: '',
   staleFails: true,
+  idPattern: '',
+  headingDot: false,
+  scenarioReport: false,
+  rejectedTitles: false,
+  countsLine: false,
 };
 const USAGE = 'usage: tsx check-traceability.ts [--config path] [--strict] [--release] [--quiet] [--warn]';
 
@@ -102,8 +114,8 @@ export function readPending(io: Pick<Io, 'readText'>, cfg: Config): Record<strin
 
 /** The rule-id regexp for the configured families (longest first, so `R` never reads the tail of `RL-005`). */
 const idSource = (cfg: Config): string =>
-  `(?:${[...cfg.families].sort((a, b) => b.length - a.length).join('|')})-(?:${cfg.idTail})${cfg.strictIdEnd ? '(?![A-Za-z0-9_])' : '(?![0-9])'}`;
-export const ruleIdPattern = (cfg: Config): RegExp => new RegExp(`(?<![A-Za-z0-9-])${idSource(cfg)}`, 'g');
+  cfg.idPattern !== '' ? `(?:${cfg.idPattern})` : `(?:${[...cfg.families].sort((a, b) => b.length - a.length).join('|')})-(?:${cfg.idTail})${cfg.strictIdEnd ? '(?![A-Za-z0-9_])' : '(?![0-9])'}`;
+export const ruleIdPattern = (cfg: Config): RegExp => new RegExp(cfg.idPattern !== '' ? cfg.idPattern : `(?<![A-Za-z0-9-])${idSource(cfg)}`, 'g');
 const isDeferred = (cfg: Config, id: string): boolean =>
   cfg.deferred[id] !== undefined || cfg.deferredPrefixes.some((p) => id.startsWith(p));
 /** The rule ids one plan line defines: any id of the line, or (idsAtLineStart) the bold id opening a list item or the first cell of a table row. */
@@ -116,7 +128,7 @@ const lineIds = (line: string, cfg: Config): string[] =>
 // Rule ids of the plan
 
 /** The lines of section `number` (heading excluded), ignoring headings and lines inside code fences. */
-function sectionLines(markdown: string, number: number): string[] {
+function sectionLines(markdown: string, number: number, dot = false): string[] {
   const out: string[] = [];
   let inFence = false;
   let inSection = false;
@@ -126,7 +138,7 @@ function sectionLines(markdown: string, number: number): string[] {
       continue;
     }
     if (inFence) continue;
-    const heading = /^## (\d+)(?:\.|\s|$)/.exec(line);
+    const heading = (dot ? /^## (\d+)\./ : /^## (\d+)(?:\.|\s|$)/).exec(line);
     if (heading !== null) {
       if (inSection) break;
       inSection = Number(heading[1]) === number;
@@ -153,7 +165,7 @@ function headingLines(markdown: string, heading: string): string[] {
 }
 
 function ruleLines(markdown: string, cfg: Config): string[] {
-  const lines = sectionLines(markdown, cfg.ruleSection);
+  const lines = sectionLines(markdown, cfg.ruleSection, cfg.headingDot);
   if (lines.length === 0) throw new Error(`section "## ${String(cfg.ruleSection)}." not found in the plan`);
   return [...lines, ...cfg.extraRuleHeadings.flatMap((h) => headingLines(markdown, h))];
 }
@@ -195,78 +207,76 @@ function readString(src: string, start: number): { value: string; end: number } 
   return null;
 }
 
-/** The index after the parenthesis that closes the one at `open`; -1 when unbalanced. Strings are skipped. */
-function skipBalanced(src: string, open: number): number {
-  let depth = 0;
-  for (let i = open; i < src.length; i++) {
-    const ch = src.charAt(i);
-    if (ch === "'" || ch === '"' || ch === '`') {
-      const s = readString(src, i);
-      if (s === null) return -1;
-      i = s.end - 1;
-    } else if (ch === '(') {
-      depth++;
-    } else if (ch === ')') {
-      depth--;
-      if (depth === 0) return i + 1;
+interface Title {
+  title: string;
+  /** '' when the title counts; otherwise why it does not. */
+  why: string;
+}
+const memo = new WeakMap<Config, Map<string, Title[]>>();
+
+/** The titles of `it`, `test` and `describe` calls (K136: a TypeScript parse, so strings and comments hold no tests). */
+function readTitles(source: string, cfg: Config, path = 'test.ts'): Title[] {
+  const key = `${path}\0${source}`;
+  const cached = memo.get(cfg)?.get(key);
+  if (cached !== undefined) return cached;
+  const file = ts.createSourceFile(path, source, ts.ScriptTarget.Latest, true);
+  const out: Title[] = [];
+  const visit = (node: ts.Node, inSkipped: boolean): void => {
+    let childSkipped = inSkipped;
+    if (ts.isCallExpression(node) && !(ts.isCallExpression(node.parent) && node.parent.expression === node)) {
+      const mods: string[] = [];
+      let e: ts.Expression = node.expression;
+      for (;;) {
+        if (ts.isPropertyAccessExpression(e)) {
+          mods.push(e.name.text);
+          e = e.expression;
+        } else if (ts.isCallExpression(e)) e = e.expression;
+        else if (ts.isTaggedTemplateExpression(e)) e = e.tag;
+        else break;
+      }
+      const root = ts.isIdentifier(e) && /^x?(?:it|test|describe)$/.test(e.text) ? e.text : '';
+      const skip = root.startsWith('x') || mods.includes('skip') || mods.includes('todo');
+      if (cfg.skipInsideSkippedDescribe && root.endsWith('describe') && skip) childSkipped = true;
+      let t: ts.Expression | undefined = node.arguments[0];
+      if (!cfg.ignoreTemplateSubstitutions) while (t !== undefined && ts.isBinaryExpression(t)) t = t.left;
+      if (root !== '' && t !== undefined && (ts.isStringLiteral(t) || ts.isNoSubstitutionTemplateLiteral(t) || (ts.isTemplateExpression(t) && !cfg.ignoreTemplateSubstitutions))) {
+        const title = ts.isTemplateExpression(t) ? t.getText(file).slice(1, -1) : t.text;
+        const n = new Set(title.match(ruleIdPattern(cfg)) ?? []).size;
+        out.push({
+          title,
+          why:
+            root.endsWith('describe') && (!cfg.countDescribe || root.startsWith('x'))
+              ? 'describe'
+              : root.startsWith('x') || inSkipped || (!cfg.countSkipped && skip)
+                ? 'unconditional skip or todo'
+                : (!cfg.countSkipped && mods.includes('fails')) || cfg.hollowTitlePrefixes.some((p) => title.startsWith(p))
+                  ? 'pending expected failure'
+                  : cfg.maxIdsPerTitle > 0 && n > cfg.maxIdsPerTitle
+                    ? `a title with ${String(n)} ids`
+                    : '',
+        });
+      }
     }
-  }
-  return -1;
+    ts.forEachChild(node, (child) => {
+      visit(child, childSkipped);
+    });
+  };
+  visit(file, false);
+  if (!memo.has(cfg)) memo.set(cfg, new Map());
+  memo.get(cfg)?.set(key, out);
+  return out;
 }
 
-const skipSpace = (src: string, i: number): number => {
-  let at = i;
-  while (/\s/.test(src.charAt(at))) at++;
-  return at;
-};
-
-/** Whole-line comments hold no tests; a trailing comment is left alone (a title may contain `//`). */
-const stripComments = (src: string): string =>
-  src.replace(/^\s*\/\*[\s\S]*?\*\//gm, '').replace(/^\s*\/\/.*$/gm, '');
-
 /**
- * The counting titles of the tests in one source file: the first string of `it` and `test` calls (with `.only`, …) and of
- * the second call in `it.each(table)('title', …)` and `it.runIf(cond)('title', …)`. Not counted (EBR): `describe`,
+ * The counting titles of the tests in one source file: the first argument of `it` and `test` calls (with `.only`, …), also
+ * of `it.each(table)('title', …)` and `it.runIf(cond)('title', …)`. Not counted (EBR): `describe`,
  * `.skip`, `.todo`, `.fails`, `x`-prefixed calls and titles with too many ids. `.skipIf` counts.
  * Template literals count with their `${…}` parts as written.
  */
-export function extractTitles(source: string, cfg: Config = DEFAULT_CONFIG): string[] {
-  const src = stripComments(source);
-  const titles: string[] = [];
-  let skipUntil = 0;
-  const call = /\b(?:x?it|x?test|x?describe)((?:\.[A-Za-z]+)*)\s*\(/g;
-  for (let m = call.exec(src); m !== null; m = call.exec(src)) {
-    const modifiers = (m[1] ?? '').split('.').filter((part) => part !== '');
-    const hollow =
-      m[0].startsWith('x') ||
-      (!cfg.countDescribe && m[0].startsWith('describe')) ||
-      (!cfg.countSkipped && modifiers.some((x) => x === 'skip' || x === 'todo' || x === 'fails'));
-    let at = call.lastIndex; // just after the opening parenthesis
-    const last = modifiers[modifiers.length - 1];
-    if (last === 'each' || last === 'for' || last === 'runIf' || last === 'skipIf') {
-      const after = skipBalanced(src, at - 1);
-      if (after < 0) continue;
-      at = skipSpace(src, after);
-      if (src.charAt(at) !== '(') continue;
-      at += 1;
-    }
-    const start = skipSpace(src, at);
-    const title = readString(src, start);
-    const inside = cfg.skipInsideSkippedDescribe && m.index < skipUntil;
-    if (cfg.skipInsideSkippedDescribe && /^x?describe/.test(m[0]) && (m[0].startsWith('x') || modifiers.some((x) => x === 'skip' || x === 'todo')))
-      skipUntil = Math.max(skipUntil, skipBalanced(src, at - 1));
-    if (
-      title !== null &&
-      !hollow &&
-      !inside &&
-      !(cfg.ignoreTemplateSubstitutions && src.charAt(start) === '`' && title.value.includes('${')) &&
-      !cfg.hollowTitlePrefixes.some((p) => title.value.startsWith(p)) &&
-      (cfg.maxIdsPerTitle <= 0 || new Set(title.value.match(ruleIdPattern(cfg)) ?? []).size <= cfg.maxIdsPerTitle)
-    )
-      titles.push(title.value);
-  }
-  return titles;
-}
+export const extractTitles = (source: string, cfg: Config = DEFAULT_CONFIG, path = 'test.ts'): string[] =>
+  readTitles(source, cfg, path)
+    .filter((t) => t.why === '')
+    .map((t) => t.title);
 
 // ---------------------------------------------------------------------------------------------------------------------
 // Code comments
@@ -341,7 +351,7 @@ export function computeCoverage(
   cfg: Config = DEFAULT_CONFIG,
 ): Coverage {
   const ids = extractRuleIds(plan, cfg);
-  const testTexts = tests.map((file) => ({ path: file.path, texts: extractTitles(file.text, cfg) }));
+  const testTexts = tests.map((file) => ({ path: file.path, texts: extractTitles(file.text, cfg, file.path) }));
   const sourceTexts = sources.map((file) => ({ path: file.path, texts: extractComments(file.text) }));
   const titled = new Map<string, string[]>();
   const cited = new Map<string, string[]>();
@@ -409,7 +419,7 @@ export function scenarioCoverage(plan: string, tests: readonly SourceFile[], cfg
   const ids = extractScenarioIds(plan, cfg);
   const counts = new Map<string, number>();
   for (const file of tests) {
-    for (const title of extractTitles(file.text, cfg)) {
+    for (const title of extractTitles(file.text, cfg, file.path)) {
       for (const id of new Set([...title.matchAll(scId(cfg))].map((m) => m[0]))) counts.set(id, (counts.get(id) ?? 0) + 1);
     }
   }
@@ -540,19 +550,24 @@ export function run(args: readonly string[], io: Io, cfg: Config = DEFAULT_CONFI
   }
   const strict =
     (args.includes('--strict') || release || (cfg.strictFromPhase !== '' && merged.has(cfg.strictFromPhase))) && !args.includes('--warn');
-  const coverage = computeCoverage(plan, io.testFiles(), io.sourceFiles(), cfg);
+  const tests = io.testFiles();
+  const coverage = computeCoverage(plan, tests, io.sourceFiles(), cfg);
   const { ids, covered } = coverage;
   const pending = readPending(io, cfg);
   const known = new Set(ids);
   const stale = Object.keys(pending).filter((id) => !known.has(id));
   const notDue = new Set<string>();
   let unlisted: string[] = [];
+  let due = ids;
+  let implementedList = '';
   if (cfg.phaseTable !== '') {
     const fams = phaseFamilies(plan, cfg);
     const implemented = new Set([...fams].filter(([p]) => merged.has(p)).flatMap(([, f]) => f));
     const listed = new Set([...fams.values()].flat());
+    due = ids.filter((id) => implemented.has(familyOf(id)));
+    implementedList = [...implemented].sort().join(', ');
     const inline = inlinePending(
-      cfg.rulePendingInlineOnly ? sectionLines(plan, cfg.ruleSection) : ruleLines(plan, cfg),
+      cfg.rulePendingInlineOnly ? sectionLines(plan, cfg.ruleSection, cfg.headingDot) : ruleLines(plan, cfg),
       (l) => lineIds(l, cfg)[0],
       !cfg.rulePendingInlineOnly,
     );
@@ -590,7 +605,7 @@ export function run(args: readonly string[], io: Io, cfg: Config = DEFAULT_CONFI
   if (coverage.unknown.length > 0 && !quiet)
     io.out(`named in a test title but not defined in the rules section: ${coverage.unknown.join(' ')}`);
   const sc: ScenarioCoverage =
-    cfg.scenarioPrefix === '' ? { counts: new Map(), missing: [], repeated: [], unknown: [] } : scenarioCoverage(plan, io.testFiles(), cfg);
+    cfg.scenarioPrefix === '' ? { counts: new Map(), missing: [], repeated: [], unknown: [] } : scenarioCoverage(plan, tests, cfg);
   const required = cfg.scenarios === 'required';
   const scRow = new RegExp(`^\\| (${cfg.scenarioPrefix}-\\d{${cfg.scenarioDigits}}) \\|`);
   const scWaits = inlinePending(plan.split(/\r?\n/), (l) => scRow.exec(l)?.[1]);
@@ -607,8 +622,33 @@ export function run(args: readonly string[], io: Io, cfg: Config = DEFAULT_CONFI
     );
   }
   if (scRepeated.length > 0) io.err(`scenario ids in more than one test title: ${scRepeated.join(' ')}`);
-  if (scMissing.length > 0) io.err(`scenario ids in no test title, and not pending: ${scMissing.join(' ')}`);
+  if (scMissing.length > 0)
+    io.err(
+      cfg.scenarioReport
+        ? `${String(scMissing.length)} scenario row(s) have no test: ${scMissing.map((id) => (scWaits.has(id) ? `${id} (pending: ${scWaits.get(id) ?? ''}, which is merged)` : id)).join(', ')}`
+        : `scenario ids in no test title, and not pending: ${scMissing.join(' ')}`,
+    );
   if (sc.unknown.length > 0) io.err(`scenario ids in test titles that the plan's scenario catalogue does not define: ${sc.unknown.join(' ')}`);
+  if (cfg.countsLine) {
+    const rows = cfg.scenarioPrefix === '' ? 0 : extractScenarioIds(plan, cfg).length;
+    const missing = new Set([...missingTitle, ...missingCite]);
+    io.out(
+      `counts: ${String(ids.length)} rules defined; ${String(due.length)} in implemented families (${implementedList || 'none'}); ${String(due.filter((id) => !missing.has(id)).length)} cited or pending; ${String(rows - scMissing.length)} of ${String(rows)} scenarios tested or pending.`,
+    );
+  }
+  if (cfg.rejectedTitles) {
+    const ok = new Set<string>();
+    const hollow = new Map<string, string>();
+    for (const f of tests)
+      for (const t of readTitles(f.text, cfg, f.path))
+        for (const id of new Set(t.title.match(ruleIdPattern(cfg)) ?? [])) {
+          if (t.why === '') ok.add(id);
+          else if (t.why !== 'describe' && !hollow.has(id)) hollow.set(id, t.why);
+        }
+    const only = [...hollow].filter(([id]) => !ok.has(id));
+    if (only.length > 0)
+      io.out(`${String(only.length)} id(s) are named only by titles the gate rejects: ${only.map(([id, why]) => `${id} [${why}]`).join(', ')}`);
+  }
   const failed =
     missingTitle.length > 0 ||
     missingCite.length > 0 ||
