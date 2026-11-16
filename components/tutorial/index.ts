@@ -7,3 +7,5 @@ export * from './check';
 export * from './doc';
 export * from './place';
 export * from './seed';
+export * from './build';
+export * from './e2e';

@@ -48,6 +48,16 @@
         "paths": [
           "scripts/tutorial-seed.ts (seed loop, best seeds; the predicate and driver are the game's)"
         ]
+      },
+      {
+        "game": "7th-inning-stretch",
+        "commit": "working tree, 16 Nov 2026",
+        "paths": [
+          "scripts/tutorial-build.ts (script from a seed's line and step plan: buildScript)",
+          "scripts/tutorial-doc.ts (answers in on-screen words: answerWords, scriptDoc played)",
+          "scripts/seed-search.ts (line dump: lineDump; steering and items stay the game's)",
+          "e2e/tutorial-play.ts (step loop on data-step and Next: playTutorialE2E; answering stays the game's)"
+        ]
       }
     ]
   },

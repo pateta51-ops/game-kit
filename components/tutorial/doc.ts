@@ -18,6 +18,8 @@ export interface DocOptions {
   readonly heading?: (stepIndex: number) => string | undefined;
   /** The items to tick, with their words. */
   readonly items?: Readonly<Record<string, string>>;
+  /** Each step's answers in the words on screen (`answerWords`): "The player" reads them instead of the option ids. */
+  readonly played?: readonly (readonly string[])[];
 }
 
 export function scriptDoc(script: TutorialScript, o: DocOptions): string {
@@ -32,12 +34,15 @@ export function scriptDoc(script: TutorialScript, o: DocOptions): string {
       .map(([k, v]) => `${k} ${typeof v === 'string' ? id(v) : JSON.stringify(v)}`);
     return `\`${String(e[key])}\`${rest.length === 0 ? '' : ` (${rest.join(', ')})`}`;
   };
-  const what = (s: TutorialStep): string =>
-    s.do.kind === 'next'
+  const what = (s: TutorialStep, i: number): string => {
+    const w = o.played?.[i] ?? [];
+    if (w.length > 0 && s.do.kind !== 'next') return s.do.kind === 'auto' ? `presses Next; the game answers by itself: ${w.join('; then ')}` : `answers "${w.join('')}"`;
+    return s.do.kind === 'next'
       ? 'Next (the step only explains)'
       : s.do.kind === 'auto'
         ? `Next: the game plays ${String(s.do.moves.length)} scripted answer${s.do.moves.length === 1 ? '' : 's'} by itself`
         : `${s.do.prompt === undefined ? '' : `${s.do.prompt}: `}${s.do.choose.length === 0 ? 'nothing chosen' : s.do.choose.map(id).join(', then ')}`;
+  };
   const covered = new Set(script.steps.flatMap((s) => s.items ?? []));
   const lines = [`# Tutorial script: ${o.title}`, '', `Generated from the script (${o.source}); do not edit by hand. ${String(script.steps.length)} steps, seed \`${script.seed}\`.`, ''];
   if (o.intro !== undefined) lines.push(...o.intro, '');
@@ -61,7 +66,7 @@ export function scriptDoc(script: TutorialScript, o: DocOptions): string {
     const mark = s.do.kind === 'auto' ? ' [auto-played]' : s.do.kind === 'next' ? ' [Next]' : '';
     lines.push(`### ${String(i + 1)}. ${s.id}${mark}${s.items === undefined || s.items.length === 0 ? '' : ` (${s.items.join(', ')})`}`, '');
     lines.push(`> ${s.narration.split('\n').join('\n> ')}`, '');
-    lines.push(`- **The player:** ${what(s)}`);
+    lines.push(`- **The player:** ${what(s, i)}`);
     if (s.targets.length > 0) lines.push(`- **Highlight:** ${s.targets.map(id).join(', ')}`);
     if (s.asks !== undefined) lines.push(`- **Dimmed controls say:** The tutorial asks for ${s.asks}.`);
     if ((s.expect ?? []).length > 0) lines.push(`- **Then:** ${(s.expect ?? []).map(event).join(', ')}`);
