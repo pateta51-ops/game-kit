@@ -1,7 +1,7 @@
 import { act, fireEvent, render, renderHook, screen } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { setSafeArea, useViewport, type LayoutSetting } from './index';
-import { RotatePanel, Sheet, useDock, useSecondTap } from './ui';
+import { RotatePanel, Scaled, Sheet, useCommitTap, useDock, useSecondTap } from './ui';
 
 const size = (w: number, h: number) => {
   vi.stubGlobal('innerWidth', w);
@@ -144,5 +144,35 @@ describe('useSecondTap', () => {
     act(() => result.current[1]());
     rerender({ w: false, k: 'd3|fold' });
     expect(result.current[0]).toBe(false);
+  });
+});
+
+describe('Scaled and useCommitTap (K32)', () => {
+  it('draws the piece at the box width and keeps its own size', () => {
+    render(
+      <Scaled w={200} h={100} box={100} testId="sc">
+        <i />
+      </Scaled>,
+    );
+    const outer = screen.getByTestId('sc');
+    expect(outer.style.width).toBe('100px');
+    expect(outer.style.height).toBe('50px');
+    expect((outer.firstChild as HTMLElement).style.transform).toBe('scale(0.5)');
+  });
+  it('one tap commits without the flag; two with it, the arming tap calls onArm', () => {
+    const commit = vi.fn();
+    const arm = vi.fn();
+    const one = renderHook(() => useCommitTap(commit, { twoTap: false }));
+    act(() => one.result.current.tap('a'));
+    expect(commit).toHaveBeenCalledWith('a');
+    commit.mockClear();
+    const two = renderHook(() => useCommitTap(commit, { twoTap: true, onArm: arm }));
+    act(() => two.result.current.tap('a'));
+    expect(commit).not.toHaveBeenCalled();
+    expect(two.result.current.armed).toBe('a');
+    expect(arm).toHaveBeenCalledTimes(1);
+    act(() => two.result.current.tap('a'));
+    expect(commit).toHaveBeenCalledWith('a');
+    expect(arm).toHaveBeenCalledTimes(1);
   });
 });

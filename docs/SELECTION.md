@@ -90,7 +90,7 @@ Open check before the lift: the canonical JSON of the Jarl line and of STCC buil
 | Saved games | Jarl | Warp's tests; Rome's golden test; EBR's autosave slot pruning | M |
 | Offline install | Jarl (precache plugin, pure register rule, offline end-to-end test) | - | S to M |
 | App frame (routes, start-up, error boundary) | Imperium | Jarl's routes state machine | M |
-| Phone mode | Jarl (confirmed on the owner's iPhone). About a third is reusable mechanism: viewport, safe area, sheet, disclosure | - | M |
+| Phone mode | Jarl (confirmed on the owner's iPhone). About a third is reusable mechanism: viewport, safe area, sheet, disclosure | Middle-earth-player's haptic ticks (K149); a Scaled box and commit-flag tap (K32) | M |
 | Proof sheet | Pattern only; take STCC's filters and groups | | |
 | Themed screen frames, dev and phone scripts | Pattern only | | |
 

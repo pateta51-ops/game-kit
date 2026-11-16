@@ -18,6 +18,13 @@
     ],
     "grafts": [
       {
+        "game": "middle-earth-player (MIT, https://github.com/pateta51-ops/middle-earth-player)",
+        "commit": "4c29c95",
+        "paths": [
+          "src/ui/haptics.ts (K149: the five-tick vocabulary and setting; expo calls replaced by navigator.vibrate; caps and the dropped tick from docs/design-system-table.md)"
+        ]
+      },
+      {
         "game": "imp",
         "commit": "20a033a",
         "paths": [
