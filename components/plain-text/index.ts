@@ -101,3 +101,13 @@ export function visibleText(el: {
   const attrs = nodes.flatMap((e) => ['title', 'alt', 'placeholder'].map((a) => e.getAttribute?.(a) ?? '')).filter((a) => a !== '');
   return [el.textContent ?? '', ...attrs].join('\n');
 }
+
+/** The sentences of `text` (split after . ! ? or a line break) with more than `max` words; `strip` runs first when given. For prompt and option wording. */
+export function longSentences(text: string, max = 20, strip?: Strip): { sentence: string; words: number }[] {
+  const t = strip === undefined ? text : strip(text);
+  return t
+    .split(/(?<=[.!?])\s+|\n+/)
+    .map((s) => s.trim())
+    .map((s) => ({ sentence: s, words: s.split(/\s+/).filter((w) => /[\p{L}\p{N}]/u.test(w)).length }))
+    .filter((s) => s.words > max);
+}

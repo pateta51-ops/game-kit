@@ -15,7 +15,8 @@
     { "game": "jarl", "commit": "b9f150a6", "paths": ["setup.ps1"], "what": "setup.ps1: the repository, folder, scripts, Python modules and runner became parameters" },
     { "game": "rome", "commit": "29082f1b", "paths": ["scripts/dossier-sync.ts", "tests/scripts/dossier-sync.test.ts"], "what": "dossier-sync.ts: source, target and excluded files became flags" },
     { "game": "warps", "commit": "6790200d", "paths": ["scripts/bundle-node.mjs"], "what": "bundle-node.ts: the entry list, output folder and target became flags" },
-    { "game": "marvel-champions", "repo": "marvel-champions-digital-game", "commit": "unknown", "paths": ["packages/cards/tools/card-brief.test.ts", "dsl-index.test.ts", "refs-report.test.ts", "packages/mod-sdk/scripts/dsl-reference.mjs"], "what": "lookup.ts: card, dsl and refs commands over a game-supplied module (shape only, rewritten)" }
+    { "game": "marvel-champions", "repo": "marvel-champions-digital-game", "commit": "unknown", "paths": ["packages/cards/tools/card-brief.test.ts", "dsl-index.test.ts", "refs-report.test.ts", "packages/mod-sdk/scripts/dsl-reference.mjs"], "what": "lookup.ts: card, dsl and refs commands over a game-supplied module (shape only, rewritten)" },
+    { "game": "middle-earth-player", "repo": "https://github.com/j-jmnz/middle-earth-player", "licence": "MIT", "commit": "unknown", "paths": ["scripts/tools/move.ts", "scripts/docs/index.ts (headers only; written new from the described behaviour)"], "what": "move.ts, docs-index.ts: the repo-root paths, patterns and folders became flags" }
   ],
   "needs": []
 }

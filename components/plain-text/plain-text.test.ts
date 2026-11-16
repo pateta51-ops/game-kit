@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { forbiddenText, plainPrompt, plainView, ruleIdFilter, ruleIdSource, visibleText } from './index';
+import { forbiddenText, longSentences,plainPrompt, plainView, ruleIdFilter, ruleIdSource, visibleText } from './index';
 
 // A fake game's id families.
 const f = ruleIdFilter({
@@ -112,5 +112,17 @@ describe('visibleText', () => {
     expect(visibleText(el)).toBe('Build\nroot tip\nat the limit (IR-39)\nCoin');
     expect(visibleText(el)).toMatch(f.test);
     expect(visibleText({ textContent: null, querySelectorAll: () => [] })).toBe('');
+  });
+});
+
+describe('longSentences (K85)', () => {
+  it('lists only the sentences over the limit', () => {
+    const long = 'one two three four five six seven eight nine ten eleven.';
+    expect(longSentences(`Short one. ${long}\nTake 2!`, 10)).toEqual([{ sentence: long, words: 11 }]);
+    expect(longSentences(long, 11)).toEqual([]);
+  });
+  it('strips ids first and counts words, not marks', () => {
+    expect(longSentences('a b (TURN-07) c - d', 3, f.strip)).toHaveLength(1);
+    expect(longSentences('a b (TURN-07) c - d', 4, f.strip)).toEqual([]);
   });
 });

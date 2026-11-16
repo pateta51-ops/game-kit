@@ -16,6 +16,13 @@
           "src/ui/identPattern.ts (IDENT as CODE_TEXT and forbiddenText; its D11 and INV-09 ids are passed in)",
           "src/ui/plainText.ts, src/ui/plainText.test.ts (withoutRuleIds: only the dotted id RL-029.1 and its test cases)"
         ]
+      },
+      {
+        "game": "middle-earth-player",
+        "repo": "https://github.com/j-jmnz/middle-earth-player",
+        "licence": "MIT",
+        "commit": "unknown",
+        "paths": ["src/play/words/sentence-length.test.ts (idea; longSentences written new)"]
       }
     ]
   },

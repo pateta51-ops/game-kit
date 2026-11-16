@@ -11,6 +11,7 @@ Small repo scripts a game runs with `npx tsx kit/tooling-scripts/<script>.ts`. E
 - `dossier-sync.ts` (from Rome): `--source <git checkout> --target <dir> [--exclude <path>]... [--name <text>]`. Replaces the target with the source's tracked files and writes `SYNC.md` with the commit; refuses a source with uncommitted changes.
 - `bundle-node.ts` (from Warp's Edge): `--entry <file>... --outdir .bundle/node [--root .] [--target node22]`. Simulator, worker and bench scripts as `.mjs` for plain `node`, without tsx's keep-names cost.
 - `lookup.ts` (from Marvel Champions): `--module <file> card <id> | dsl <word> | refs [--strict]`. The game module exports `lookup` (or default), a `Lookup` or a function returning one: `{ cards: [{ id, name?, pack?, text?, errata?, refs? }], resolve?(ref) => where|null, skipped?: { ref: reason }, vocabulary?: [{ name, signature?, doc? }] }`. `card` prints text, errata loudly, each ref resolved, skipped or NOT RESOLVED; `dsl` searches vocabulary; `refs` counts unscripted refs per pack with a paste-ready skip list. Keep it out of the test glob.
+- `move.ts` (from middle-earth-player): `--from <path> --to <path> [--repo .] [--dry]`. Moves a tracked file or folder and rewrites relative imports and links (with or without extension) and written-out repo paths in every tracked text file. `docs-index.ts` (from middle-earth-player): `--dir docs [--depth 2]` lists each .md with its headings and line numbers; `--file <md> [--section <heading>]` prints one section (exact heading, else first containing it); exit 1 when absent.
 
 ## art-check.ts (from Rome)
 
@@ -20,7 +21,6 @@ The manifest is a record of id to `{ source, sha256, bytes, outSha256? }`: the s
 ## text-leak.ts (from Imperium)
 
 `--base <commit> [--repo .] [--exclude <path>]... --source <file or dir>... [--json-keys printed,text] [--n 6]`
-
 Lists the lines added since `--base` that share `--n` or more consecutive words with the private source texts, as `file:line: N words ~ source | "first five words ..."` (never more of the text). A `.json` source gives the strings under `--json-keys` at any depth (all strings without the flag); any other file its whole text. `--exclude` keeps paths out of the diff (the sources themselves). `--diff <file>` reads a saved `git diff -U0` instead of calling git. Exit 2 when the sources give no run of `--n` words. Short functional overlaps are expected: a person judges the list.
 
 ## gen-from-table.ts (from STCC and Imperium)

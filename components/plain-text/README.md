@@ -23,7 +23,7 @@ expect(visibleText(container)).not.toMatch(bad);
 ```
 
 - `CODE_TEXT`: a camelCase identifier, `=`, a section mark with a number (`§4`). `forbiddenText(...sources)` adds the game's own patterns.
-- `visibleText(el)`: the element's text plus the `title`, `alt` and `placeholder` attributes of it and of everything inside it.
+- `visibleText(el)`: the element's text plus the `title`, `alt` and `placeholder` attributes of it and of everything inside it. `longSentences(text, max = 20, strip?)`: the sentences over `max` words as `{ sentence, words }`; a test runs it over prompt wording and expects `[]`.
 
 ## Not here
 
