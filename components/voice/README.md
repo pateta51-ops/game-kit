@@ -22,8 +22,9 @@ A line player on the sound player's `voice` bus. It knows no game: the lines are
 
 `checkVoiceFiles(table, dir, options?)`: the sound player's file check on every file (missing, format, size; `missing` lists file paths), and a line with no file.
 
-## Look
+## Paid speech (`speech.ts`, node only, build scripts only)
 
-None.
+`createSpeechClient({ dir, cap, keyEnv, send, estimate, id?, meta?, ext?, retries = 5, timeoutMs = 120000, sleep?, env?, append?, write? })`: `synth(request)` gives `{ file, paid }`; also `id`, `file`, `spent()`. The game writes `send(request, key, signal)` (the one HTTP call; returns `{ status, audio?, cost?, body? }`) and `estimate(request)`; the request shape is the game's, and all of it that shapes the sound belongs in it (the clip id is its hash). A clip already in `dir` costs nothing; identical requests in flight share one, and only the first caller gets `paid` (the others 0). The key comes only from the variable named `keyEnv` and is struck from ledger lines and errors. Before every attempt, retries too, the sum of `dir/ledger.jsonl` (failed attempts count, at the estimate) plus requests in flight plus this estimate must not pass `cap`, or it is refused. A failed ledger write, or a damaged ledger, stops every further request; so does a paid clip that cannot be stored (the ledger says `stored: false`). One spender per ledger: the first paid request takes `dir/ledger.lock` and a second client or process is refused until `close()` or exit (delete a lock left by a killed run). `ledgerCredits(file, ids?)`, `mapLimit(items, n, fn)`.
 
-Tests: `voice.test.ts` (node), with the sound player's `fakeContext.ts` for the end-to-end case.
+Look: None.
+Tests: `voice.test.ts`, `speech.test.ts` (node), with the sound player's `fakeContext.ts` for the end-to-end case.

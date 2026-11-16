@@ -4,7 +4,8 @@
     "game": "ebr",
     "commit": "unrecorded",
     "paths": [
-      "The voice-over player was rebuilt generic on the sound player's voice bus: line table as data, one line at a time, never twice in a row, per-line limits, a gate, lines in parts. No file was copied and no key or secret taken; the cast and script files stayed behind."
+      "The voice-over player was rebuilt generic on the sound player's voice bus: line table as data, one line at a time, never twice in a row, per-line limits, a gate, lines in parts. No file was copied and no key or secret taken; the cast and script files stayed behind.",
+      "K66 speech.ts, from ebr 33b5abd3 scripts/lib/elevenlabs.ts (cache-first synth, shared in-flight request, ledger, cap before every attempt, retry rule, mapLimit) and the cases of tests/unit/voice-elevenlabs-billing.test.ts: rewritten with the HTTP call, estimate and request shape supplied by the game. Scanned for secrets: none taken; the provider address, voice settings, prices, cast and script stayed behind."
     ]
   },
   "needs": ["sound-player"]
