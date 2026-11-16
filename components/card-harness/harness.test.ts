@@ -52,6 +52,49 @@ describe('scenario', () => {
   });
 });
 
+describe('strict mode, scripted answers, checks and teardown', () => {
+  const setup = (strict: boolean) => {
+    const sc = new Scenario(DICE_GAME, { strict }).set((s) => void (s.dice = [1, 2, 3]));
+    const ids = sc.put('hand', 'ladder', 'plain', 'twin');
+    return { sc, ids: ids as [string, string, string] };
+  };
+  it('a scripted answer is used when the prompt opens', () => {
+    const { sc, ids } = setup(true);
+    sc.script([ids[2]]).run({ kind: 'play', card: ids[0] }).done();
+    expect(sc.s.hand).toEqual([ids[1]]);
+  });
+  it('fails on an unanswered prompt in strict mode only', () => {
+    const { sc, ids } = setup(true);
+    sc.run({ kind: 'play', card: ids[0] });
+    expect(() => sc.done()).toThrow(/^Unanswered prompt \d+: options plain#2, twin#3$/);
+    const lax = setup(false);
+    lax.sc.run({ kind: 'play', card: lax.ids[0] });
+    expect(() => lax.sc.done()).not.toThrow();
+  });
+  it('fails on a scripted answer left over', () => {
+    const { sc, ids } = setup(true);
+    sc.script([ids[1]], ['x']).run({ kind: 'play', card: ids[0] });
+    expect(() => sc.done()).toThrow('Unused scripted answers: [x]');
+  });
+  it('strict answer with no prompt open says so', () => {
+    const { sc } = setup(true);
+    expect(() => sc.answer('a')).toThrow('Answer [a] given but no prompt is open');
+  });
+  it('a mid-run check names its label and step', () => {
+    const { sc, ids } = setup(false);
+    sc.run({ kind: 'play', card: ids[1] }).check('scored', (s) => s.score === 1);
+    expect(() => sc.check('none', (s) => s.score === 5)).toThrow('Check "none" failed after step 1 (run play)');
+    expect(() => sc.check('why', () => 'bad')).toThrow('Check "why" failed after step 1 (run play): bad');
+  });
+  it('fails on a duplicate effect at teardown', () => {
+    const g = { ...DICE_GAME, effects: (s: DiceState) => s.table.map(() => ({ gain: 1 })) };
+    const sc = new Scenario(g);
+    sc.put('table', 'plain', 'plain');
+    expect(() => sc.done()).toThrow('Duplicate effect: {"gain":1}');
+    expect(() => new Scenario(g).done()).not.toThrow();
+  });
+});
+
 describe('delivery', () => {
   // A stand-in session: with `auto` on, the settings answer every prompt with its first enabled option.
   const session = (auto: boolean): DeliveryGame<DiceState, Dice['prompt'], Note, string> => {

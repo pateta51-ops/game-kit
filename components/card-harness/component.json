@@ -16,6 +16,7 @@
       { "game": "warps", "commit": "2af6937", "paths": ["inventory: operation types read with the TypeScript compiler"] }
     ]
   },
+  "harvest": [{ "source": "XMage", "url": "https://github.com/magefree/mage", "licence": "MIT", "note": "design only (assertAllCommandsUsed, strict choose mode, mid-run checks, effect-count check); no code copied" }],
   "needs": ["engine-core"],
   "packages": ["typescript (literals/ only)"]
 }

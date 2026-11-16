@@ -10,5 +10,6 @@ Card tests on real cards. Test code only; the engine imports nothing here but `c
 - **Inventory `titleOnly: true`** (default off): a piece with no `cite` and a clause count as cited only by an id in a test title (`it`/`test`/`describe`), not one in a comment.
 - **Scenario `{ from: { state, events } }`**: starts from a built state and its events; the state is trusted, not validated unless `validate` is on.
 - **Checks**: `describeCheck(cards, describe, validate?, tokens?)` (generated reading equals the printed text word for word, `[TOKENS]` both ways); `conforms<Same<A, B>>()` (schema type equals engine type, at compile time); `report(name, errors, log)` gives the exit code.
+- **Strict checks** (`new Scenario(game, { strict: true })`): `script([picks], …)` answers the prompts that open next; `check(label, fn)` fails mid-run naming label and step; `done()` fails on a leftover scripted answer, an open prompt (strict), or equal entries in the game's optional `effects(state)`. Strict `answer` with no open prompt throws.
 
 Known bugs are pinned as `it.fails('EXPECTED FAILURE: â€¦')`.
