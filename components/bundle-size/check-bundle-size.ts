@@ -96,10 +96,10 @@ export function cssUrls(css: string): string[] {
   return [...css.matchAll(/url\(\s*(["']?)([^"')]+)\1\s*\)/g)].map((m) => m[2] ?? '');
 }
 
-/** The address `ref`, found in the build file `from`, as a path inside the build; null for another host, `data:` or `#x`. */
+/** The address `ref`, found in the build file `from`, as a path inside the build; null for another host, `data:`, `#x` or the encoded `%23x`. */
 function localPath(ref: string, from: string): string | null {
   const clean = ref.trim().split(/[?#]/)[0] ?? '';
-  if (clean === '' || /^[a-z]+:/i.test(clean) || clean.startsWith('//')) return null;
+  if (clean === '' || clean.startsWith('%23') || /^[a-z]+:/i.test(clean) || clean.startsWith('//')) return null;
   const path = clean.startsWith('/') ? posix.normalize(clean.slice(1)) : posix.join(posix.dirname(from), decodeURIComponent(clean));
   return /^\.\.?(\/|$)/.test(path) ? null : path;
 }

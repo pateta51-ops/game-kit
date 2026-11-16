@@ -14,7 +14,7 @@ Without `--dir` it builds into `.cache/size-build` first. Exit codes: 0 within t
 | `--chunk-limit <bytes>` | `chunkLimit` | any one script chunk, before gzip |
 | `--asset-limit <bytes>` | `assetLimit` | any image, font or audio file in the build that the first download does not hold |
 | `--base <path or auto>` | `base` | the app's base path in the addresses (`/game/assets/x.js`); `auto` finds it |
-| `--follow true` | `follow` | also counts static imports of the scripts, `url(...)` of the stylesheets, icon and manifest links |
+| `--follow true` | `follow` | also counts static imports of the scripts, `url(...)` of the stylesheets (not `data:`, `#x` or the encoded `%23x`), icon and manifest links |
 | `--gzip-level <0-9>` | `gzipLevel` | the gzip level (zlib's default when left out) |
 
 A limit left out is not checked; at least one of the three is required.

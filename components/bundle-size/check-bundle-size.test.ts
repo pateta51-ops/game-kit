@@ -108,6 +108,8 @@ describe('bundle size', () => {
       expect(r.media).toEqual([]);
       expect(measureBuild(b, { base: 'auto', assetLimit: 100 }).media.map((f) => f.path)).toEqual(['assets/f.woff2']);
       expect(run(['--dir', b, '--base', 'auto', '--follow', 'true', '--initial-budget', '10000'], io)).toBe(0);
+      writeFileSync(join(b, 'assets/app.css'), `a{fill:url(%23n);background:url("data:image/svg+xml,%3Csvg fill='url(%23g)'/%3E")}`);
+      expect(run(['--dir', b, '--base', 'auto', '--follow', 'true', '--initial-budget', '10000'], io)).toBe(0);
       writeFileSync(join(b, 'assets/app.css'), 'a{src:url(nope.png)}');
       expect(() => measureBuild(b, { base: 'auto', follow: true })).toThrow(/assets\/app.css loads assets\/nope.png/);
     });
