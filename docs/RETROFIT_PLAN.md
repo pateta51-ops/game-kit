@@ -81,7 +81,7 @@ Result (16 Nov 2026, all seven at v0.25.0):
 | STCC | bundle-size | traceability (K136), repo gate (K137), check runner (K138) |
 | Unstoppable | traceability, bundle-size | plan checker (K139) |
 
-Only Jarl's workflows could be rendered from the templates (K141). A third pass waits for wave 4.
+Only Jarl's workflows could be rendered from the templates (K141). The third pass is Part E.
 
 ## Part D - Under Falling Skies (assessed 16 Nov 2026, kit v0.33.0)
 
@@ -121,6 +121,23 @@ The eighth game, a solo game (no opponent AI: the aliens are engine rules). Read
 10. Remove the privacy guard listed above: the `PUBLIC_BUILD` block in `vite.config.ts` and its two plan lines (D3 keeps "Local only").
 11. Stays the game's: `content:validate`, `sim*`, `golden*`, `replay`, `real:*`, `proof`, `content:build`, `art:build`, `pack:link`, the e2e suite and its helpers, the engine lint in `eslint.config.js`, `ci.yml`, and everything under `src/`.
 12. Gate: CI on the game's runner (label `linux`), then the full gate once at merge. A red finding from a stricter kit tool: Part B's rule (S fixes outside the engine in the same pull request, the rest to the owner).
+
+## Part E - third pass (owner, 16 Nov 2026: "tackle the open questions")
+
+Wave 4 (K135 to K141) and K172 built; each game pulled v0.41.0 (Under Falling Skies v0.42.0) and swapped what now passes and fails as its own did. One pull request per game, merged on green. Port clashes for hand-started gates removed at the same time: Warp's dev server 4199 to 4198 (Rome keeps 4199), STCC 4173 to 4176 (Imperium keeps 4173), Under Falling Skies 4173 to 4177.
+
+| Game | Newly from the kit | Still its own (row in `docs/PLAN.md`) |
+|---|---|---|
+| Jarl | theme check (icon `d="M` rule accepted as a small loss) | - (K177) |
+| Rome | `ci.yml`, `full-gate.yml` rendered | - |
+| EBR | traceability | `ci.yml`, `verify.yml` (K175) |
+| Imperium | plan checker (TypeScript) | traceability: the kit's finds GEN-02 untested (a card exception, `b605-s10`, has no row in BUILD_PLAN 3.20: a rules question for the game); `ci.yml`, `full-gate.yml` (K175) |
+| Warp's Edge | repo gate, `ci.yml` | `full-gate.yml` (K175) |
+| STCC | traceability, check runner, `ci.yml` | repo gate (K176), `full-gate.yml` (K175) |
+| Unstoppable | plan checker, `ci.yml` | - (its size script already wraps the kit's) |
+| Under Falling Skies | traceability (K172; RT8 step 9 done) | - |
+
+A game script a test imports stays in the repo unused by the check chain.
 
 ## Not retrofitted
 
