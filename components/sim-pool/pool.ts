@@ -16,11 +16,14 @@ export interface RunRequest {
   readonly invariants?: boolean;
   /** A bundled worker (the bundle of worker.ts); default worker.ts under tsx. */
   readonly worker?: string;
+  /** Stop each game after this many applied actions (a replay to a step). */
+  readonly until?: number | undefined;
 }
 
 export interface WorkerInput {
   readonly module: string;
   readonly invariants: boolean;
+  readonly until?: number | undefined;
 }
 export type WorkerCommand = { type: 'play'; spec: GameSpec } | { type: 'stop' };
 export type WorkerMessage = { type: 'record'; record: SimRecord } | { type: 'ready' };
@@ -38,7 +41,7 @@ export async function runInThread(request: RunRequest, onRecord?: (r: SimRecord)
   setStateFreezing(false);
   try {
     return request.specs.map((spec) => {
-      const r = playOne(game, content, spec);
+      const r = playOne(game, content, spec, request.until);
       onRecord?.(r);
       return r;
     });
@@ -57,7 +60,7 @@ function boot(request: RunRequest, input: WorkerInput): Worker {
 }
 
 async function lane(request: RunRequest, next: () => GameSpec | undefined, collect: (r: SimRecord) => void): Promise<void> {
-  const input: WorkerInput = { module: request.module, invariants: request.invariants ?? true };
+  const input: WorkerInput = { module: request.module, invariants: request.invariants ?? true, until: request.until };
   for (;;) {
     let held: GameSpec | undefined;
     let stopped = false;

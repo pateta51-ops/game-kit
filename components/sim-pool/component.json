@@ -12,7 +12,11 @@
       "scripts/sim/core.ts (one game played to its end)"
     ],
     "grafts": [
-      { "game": "ebr", "commit": "b9b06107", "paths": ["scripts/sim/pool.ts (crashRecord, a dead worker replaced)", "scripts/sim/resume.ts (append as each game ends, partial line cut, other settings refused)"] }
+      { "game": "ebr", "commit": "b9b06107", "paths": ["scripts/sim/pool.ts (crashRecord, a dead worker replaced)", "scripts/sim/resume.ts (append as each game ends, partial line cut, other settings refused)"] },
+      { "game": "stcc", "commit": "9fc59643", "paths": ["scripts/sim/invariantRun.ts (a failure as seed plus step, --seed --until replay)"] },
+      { "game": "ebr", "commit": "33b5abd3", "paths": ["scripts/fuzz.ts (the four kinds of finding, exit 1)", "scripts/sim/version.ts (codeVersion)"] },
+      { "game": "imp", "commit": "20a033a", "paths": ["scripts/sim/core.ts (Band, formatBands)", "scripts/simulate.ts (--skip-band)"] },
+      { "game": "warps", "commit": "2af6937", "paths": ["scripts/sim/core.ts (BandResult: a failing band is an error)"] }
     ]
   },
   "needs": ["engine-core"],

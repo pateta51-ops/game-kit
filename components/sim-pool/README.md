@@ -19,7 +19,10 @@ const all = await runResumable(request, workers, 'run.jsonl', settingsLabel);
 
 - `GameSpec`: `{ index, seed, driver, settings? }`. Records come back in index order, the same for any worker count.
 - Driver random numbers: `DriverRng` keyed by seed, driver and prompt id; never the game's `state.rng`.
-- `SimRecord`: index, seed, driver, settings, result, actions, hash (of the action list), error, violations, log (failed games only), summary.
+- `SimRecord`: index, seed, driver, settings, result, actions, hash (of the action list), error, errorName, violations, log (failed games only), summary.
 - An error or invariant violation fails that game only; a worker that dies becomes a crash record and a new worker goes on. A worker that dies before its first game (the module fails to load) charges the crash to the next game, so a broken module gives a run of crash records; one that dies after its last game loses nothing.
 - Resume file: one JSON line per finished game; a stopped run continues; other settings are refused; crashes, a partial last line and corrupt lines are played again.
+- Fuzz and invariant run: `process.exitCode = await fuzzMain(process.argv.slice(2), module, { settings? })`. `--games N --prefix P --driver D --workers N` plays `P-0..`, invariants on; findings are `exception`, `violation`, `runaway` (engine-core's task-loop guard) and `endless` (`maxActions`), each with seed, step and a replay line; exit 1 on any. `--seed S --until N` replays one game to step N (the driver still answers there, so the finding shows again); `runResumable` refuses `until`. `fuzz(module, options)` returns `{ records, findings }`; `settings(seed, driver)` draws a game's settings from its seed.
+- Sanity bands: the game writes `SanityBands<S>` (records → `Band[]`: id, text, target, actual, pass); `formatBands(bands, skipIds)` → `{ lines, failed }`; a skipped band prints as INFO and is not counted. Exit 1 when `failed > 0`.
+- Code version: `codeVersion(['src/engine', ...], root)` = git short id (or `nogit`) + a hash of those files and folders (uncommitted edits count, CRLF as LF, no `node_modules` or dot folders); `root` is the repository's top folder. Put it in the `runResumable` settings label and a resumed sweep refuses another version.
 - Workers run `worker.ts` under tsx (the game needs `tsx`); a bundled game passes `worker: <bundle URL>`.

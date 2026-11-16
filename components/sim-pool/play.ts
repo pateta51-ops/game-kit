@@ -55,6 +55,8 @@ export interface SimRecord<S = unknown> {
   /** The hash of the action list: equal hashes, equal games. */
   readonly hash: string;
   readonly error?: string;
+  /** The thrown error's name, when it is not plain `Error`. */
+  readonly errorName?: string;
   readonly violations?: readonly InvariantViolation[];
   /** The actions, kept only when the game failed (for replay). */
   readonly log?: readonly unknown[];
@@ -108,12 +110,13 @@ export function randomDriver<G extends GameTypes>(weight?: (a: G['action'], stat
   };
 }
 
-/** Play `spec` to its end. Never throws: an error or an invariant violation ends the game as a failed record. */
-export function playOne<G extends GameTypes, S>(game: SimGame<G, S>, content: G['content'], spec: GameSpec): SimRecord<S> {
+/** Play `spec` to its end, or for `until` actions (the driver still answers at that step, so what fails there fails again). Never throws: an error or an invariant violation ends the game as a failed record. */
+export function playOne<G extends GameTypes, S>(game: SimGame<G, S>, content: G['content'], spec: GameSpec, until?: number): SimRecord<S> {
   const actions: G['action'][] = [];
   const violations: InvariantViolation[] = [];
   let state: G['state'] | undefined;
   let error: string | undefined;
+  let errorName: string | undefined;
   try {
     const start = game.start(spec, content);
     const first = createGame(game.rules, start.options, start.rules, content);
@@ -129,6 +132,7 @@ export function playOne<G extends GameTypes, S>(game: SimGame<G, S>, content: G[
       const rng = new DriverRng(`${spec.seed}|${spec.driver}|${String(p.id)}`);
       const answers = game.answers ? game.answers(s, content, rng) : (legalAnswers(p, rng) as G['action'][]);
       const a = driver.choose(s, answers, rng);
+      if (until !== undefined && actions.length >= until) break;
       actions.push(a);
       const r = applyAction(game.rules, s, a, content);
       s = r.state;
@@ -137,6 +141,7 @@ export function playOne<G extends GameTypes, S>(game: SimGame<G, S>, content: G[
     }
   } catch (e) {
     error = e instanceof Error ? e.message : String(e);
+    if (e instanceof Error && e.name !== 'Error') errorName = e.name;
   }
   const failed = error !== undefined || violations.length > 0;
   let summary: S | undefined;
@@ -154,6 +159,7 @@ export function playOne<G extends GameTypes, S>(game: SimGame<G, S>, content: G[
     actions: actions.length,
     hash: hashValue(actions),
     ...(error !== undefined ? { error } : {}),
+    ...(errorName !== undefined ? { errorName } : {}),
     ...(violations.length ? { violations } : {}),
     ...(failed ? { log: actions } : {}),
     ...(summary !== undefined ? { summary } : {}),

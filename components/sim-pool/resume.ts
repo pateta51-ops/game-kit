@@ -44,6 +44,7 @@ export function openCheckpoint(file: string, settings: string): Checkpoint {
 
 /** `runGames` over the games not yet in `file`; returns every record of the run (old and new) in index order. */
 export async function runResumable(request: RunRequest, workers: number, file: string, settings: string, onRecord?: (r: SimRecord) => void): Promise<SimRecord[]> {
+  if (request.until !== undefined) throw new RangeError('runResumable: a run with `until` plays cut games and is never kept');
   const cp = openCheckpoint(file, settings);
   const old: SimRecord[] = [];
   const specs = request.specs.filter((s) => {
