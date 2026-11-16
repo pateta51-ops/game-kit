@@ -68,6 +68,20 @@ describe('SavesScreen', () => {
     await waitFor(() => expect(screen.getByTestId('save-note').textContent).toBe('This is not a save file.'));
   });
 
+  it('rename: only named saves get the button; the name becomes a field and Save stores the new name', async () => {
+    const saves = mk();
+    await saves.writeAutosave(played('e', 1), 'Current game');
+    await saves.saveNamed('One', played('e', 2));
+    render(<SavesScreen saves={saves} history={null} summary={summary} onLoad={() => undefined} rename />);
+    await screen.findByText('One');
+    expect(screen.getAllByTestId('save-rename')).toHaveLength(1);
+    fireEvent.click(screen.getByTestId('save-rename'));
+    fireEvent.change(screen.getByTestId('save-rename-name'), { target: { value: ' Two ' } });
+    fireEvent.click(screen.getByTestId('save-rename'));
+    expect(await screen.findByText('Two')).toBeInTheDocument();
+    expect((await saves.listNamed()).map(([, v]) => v.name)).toEqual(['Two']);
+  });
+
   it('confirmDelete needs a second tap; renderImport opens the hidden file input; rows replay once', async () => {
     const saves = mk();
     await saves.saveNamed('One', played('d', 2));

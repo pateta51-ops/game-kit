@@ -19,6 +19,8 @@ export interface SavesScreenProps<G extends GameTypes> {
   readonly className?: string;
   /** Delete needs a second tap on the same row (the button then reads `words.confirmDelete`). */
   readonly confirmDelete?: boolean;
+  /** Named saves get a Rename button: the name becomes a text field, the button then reads `words.save`. */
+  readonly rename?: boolean;
   /** Draws the import control; call `open` to pick a file (the file input stays hidden). Default: the bare file input. */
   readonly renderImport?: (open: () => void, label: string) => ReactNode;
   readonly download?: (text: string, name: string) => boolean;
@@ -34,6 +36,7 @@ export function SavesScreen<G extends GameTypes>(p: SavesScreenProps<G>) {
   const [name, setName] = useState('');
   const [note, setNote] = useState<string | null>(null);
   const [armed, setArmed] = useState<string | null>(null);
+  const [editing, setEditing] = useState<{ key: string; name: string } | null>(null);
   const [fileEl, setFileEl] = useState<HTMLInputElement | null>(null);
   const openFile = () => fileEl?.click();
   const [memo] = useState(() => new WeakMap<StoredSave<G>, ReturnType<Saves<G>['restore']>>());
@@ -52,12 +55,25 @@ export function SavesScreen<G extends GameTypes>(p: SavesScreenProps<G>) {
   }, [saves]);
   useEffect(refresh, [refresh]);
   const canSave = p.history !== null && p.canSave !== false;
-  const row = ([key, stored]: [string, StoredSave<G>], first: boolean) => {
+  const row = ([key, stored]: [string, StoredSave<G>], first: boolean, isNamed = false) => {
     const r = restored(stored);
+    const edit = editing?.key === key ? editing : null;
     return (
       <li key={key} className="kit-sav-row" data-testid="save-row" data-slot={key}>
         <div className="kit-sav-what">
-          <b>{stored.name}</b>
+          {edit ? (
+            <input
+              type="text"
+              value={edit.name}
+              aria-label={w.renameLabel}
+              data-testid="save-rename-name"
+              onChange={(e) => {
+                setEditing({ key, name: e.target.value });
+              }}
+            />
+          ) : (
+            <b>{stored.name}</b>
+          )}
           {r.ok ? <span>{p.summary(r.state, r.save)}</span> : <span className="kit-sav-bad">{r.error} {w.broken}</span>}
           <span className="kit-sav-muted">
             {w.savedAt} {when(stored.save.savedAt)}
@@ -86,6 +102,23 @@ export function SavesScreen<G extends GameTypes>(p: SavesScreenProps<G>) {
             }}
           >
             {w.export}
+          </button>
+        )}
+        {isNamed && p.rename === true && (
+          <button
+            type="button"
+            className="kit-sav-btn"
+            data-testid="save-rename"
+            onClick={() => {
+              if (edit === null) {
+                setEditing({ key, name: stored.name });
+                return;
+              }
+              setEditing(null);
+              void saves.rename(key, edit.name).then(refresh);
+            }}
+          >
+            {edit ? w.save : w.rename}
           </button>
         )}
         <button
@@ -163,7 +196,7 @@ export function SavesScreen<G extends GameTypes>(p: SavesScreenProps<G>) {
         <h2>{w.named}</h2>
         <ul className="kit-sav-list">
           {named.length === 0 && <li className="kit-sav-muted">{w.noNamed}</li>}
-          {named.map((n) => row(n, false))}
+          {named.map((n) => row(n, false, true))}
         </ul>
         <h2>{w.import}</h2>
         <p className="kit-sav-muted">{w.importLine}</p>

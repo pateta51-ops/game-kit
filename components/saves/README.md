@@ -6,12 +6,13 @@ Saved games in IndexedDB over engine-core's `SaveFile`, and a screen for them. `
 
 `makeSaves({ game, content, format?, database, table?, autosaves?, filePrefix, now?, backend? })`. `database` is the game's own IndexedDB name; `filePrefix` starts an export's file name.
 
-- `writeAutosave(history, name)`: call after every action. Writes a new slot, then deletes the slots past the newest `autosaves` (default 1). `readAutosave()` gives the newest `[key, stored]`; `listAutosaves()`, `clearAutosaves()`.
-- `saveNamed(name, history)`, `listNamed()` (newest first), `get(key)`, `remove(key)`.
+- `writeAutosave(history, name)`: call after every action. Writes a new slot stamped later than every earlier autosave, also after the machine clock stepped back or another tab wrote one (the last stamp is stored under `SAVE_CLOCK`, read at every autosave and written with the slot: one transaction in IndexedDB, clock first on a backend without `setMany`; one that is not a time or is over a day ahead is ignored; a failed write goes to `onError`, else one console warning), then deletes the slots past the newest `autosaves` (default 1). `readAutosave()` gives the newest `[key, stored]`; `listAutosaves()`, `clearAutosaves()`.
+- `saveNamed(name, history)`, `listNamed()` (newest first), `get(key)`, `remove(key)`, `rename(key, name)` (named saves only; false for an empty name or an unknown key).
 - `exportText(stored)`, `exportName(stored)` (`<filePrefix>-YYYY-MM-DD-HH-MM.json`), `importNamed(text, name)`: the reason when the text does not load; nothing is stored then.
 - `restore(stored)`: engine-core's `restoreSave` (replays; another build or an edited file gives the reason, never throws). `saveOf(history)` saves the actions up to the cursor; `historyOf(save)` gives the history back.
 - `keepStorage(storage?)`: asks `navigator.storage.persist()` unless the storage is already kept; false when refused or not offered.
 - `makeKv(database, table, backend?)`: the key-value table under it. When IndexedDB refuses, values last in memory for the page.
+- `allData(cfg)`, `exportAllData(cfg, download?)`, `resetAllData(cfg)` (`data.ts`) with `cfg = { format, keys, stores?, storage? }`: one JSON of every localStorage key the game lists, its string as stored (a whole key or a prefix `mygame.*`) and of each named store's `read()`, downloaded as `<format>-YYYY-MM-DD.json`; the reset removes those keys and calls each store's `clear()`. Pass `stores: { saves: saves.data }`. Before a reset, put the stores in memory (settings: `reset()`) back to their defaults.
 
 ## Screen (`ui.ts`)
 
@@ -21,6 +22,6 @@ Saved games in IndexedDB over engine-core's `SaveFile`, and a screen for them. `
 
 `saves.css` (loaded by the screen) sets neutral values at zero specificity: `--sav-gap`, `--sav-text`, `--sav-font`, `--sav-bg`, `--sav-pad`, `--sav-border`, `--sav-radius`, `--sav-muted-opacity`, `--sav-bad`, `--sav-accent`, `--sav-accent-text`. Classes: `kit-sav`, `kit-sav-section`, `-list`, `-row`, `-what`, `-muted`, `-bad`, `-form`, `-btn`, `-primary`.
 
-Tests: `saves.test.ts`, `kv.test.ts` (node), `ui.test.tsx` (jsdom).
+Tests: `saves.test.ts`, `data.test.ts`, `kv.test.ts` (node), `ui.test.tsx` (jsdom).
 
-Screen options: `confirmDelete` (Delete needs a second tap on the row; the button then reads `words.confirmDelete`), `renderImport(open, label)` (draws the import control; `open()` picks a file, the file input stays hidden). Each row's replay is computed once per stored save.
+Screen options: `confirmDelete` (Delete needs a second tap on the row; the button then reads `words.confirmDelete`), `renderImport(open, label)` (draws the import control; `open()` picks a file, the file input stays hidden). Each row's replay is computed once per stored save. `rename`: named saves get a Rename button (`save-rename`); the name becomes a text field (`save-rename-name`) and the button then reads `words.save`.

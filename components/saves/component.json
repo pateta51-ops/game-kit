@@ -12,7 +12,9 @@
     "grafts": [
       { "game": "warps", "commit": "2af6937", "paths": ["src/ui/game/saves.ts (askPersistence as keepStorage, exportName)", "src/ui/game/saves.test.ts (restore, other content version, damaged save cases)"] },
       { "game": "rome", "commit": "1d0fd2e", "paths": ["golden save test (a fixed game's recorded final hash)"] },
-      { "game": "ebr", "commit": "33b5abd3", "paths": ["autosave slots with pruning (autosaves)"] }
+      { "game": "ebr", "commit": "33b5abd3", "paths": ["autosave slots with pruning (autosaves)", "src/ui/persist.ts (stampAutosave, the stored save clock written with the save in one transaction)", "tests/unit/u30-autosave-slots.test.ts (the four clock tests)"] },
+      { "game": "stcc", "commit": "9fc59643", "paths": ["src/ui/store/saves.ts (renameSave, as rename)"] },
+      { "game": "unst", "commit": "9e666b4", "paths": ["src/ui/store/localData.ts, persistence.ts (localKeys, localData, clearLocalData, allData; as data.ts over the keys and stores the game lists)"] }
     ]
   },
   "needs": ["engine-core", "bug-reporter"],
