@@ -224,7 +224,7 @@ Sixteen public card- and board-game repositories were surveyed read-only; the fi
 | K103 | Opponent pattern (when a game has a rule-based opponent): pick an index among legal options; per-card advice data beside the records; redacted view; plan record across prompts; decision record opened from the log | chiriboga, boardgame.io | M | proposed |
 | K104 | Content build: card data patch layer, one file per reason, applied on import | arkham.build | S | done |
 | K105 | Zoomed card: errata as printed / as played / word diff; rulings (question, ruling, citation, date) keyed by card | arkham.build, netrunnerdb | M | proposed |
-| K106 | One delegated tooltip for every card link inside log lines, prompts, rulings and tutorial text | arkham.build | S | proposed |
+| K106 | One delegated tooltip for every card link inside log lines, prompts, rulings and tutorial text | arkham.build | S | done |
 | K107 | Card query language: typed field table plus a small parser; the game supplies its fields | arkham.build | M to L | proposed |
 | K108 | `engine-core` random: named override in tests; a randomness-used flag that bars undo | boardgame.io | S | done |
 | K109 | Small: icon emitted with a hidden word; paired valid / invalid fixtures per setup-legality rule with typed errors; stale flow request dropped and a loop cap; related-cards index; emitted text keys resolve; card stats diff against a community database; missing-card stand-in | netrunnerdb, arkham.build, boardgame.io, ArkhamHorror | S each | done (`small-helpers`) |

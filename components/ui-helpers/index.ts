@@ -24,3 +24,4 @@ export {
   type PromptKeyTools,
   type PromptKeysOptions,
 } from './promptKeys';
+export { bindLinkTooltip, type LinkPointerEvent, type LinkRoot, type LinkTooltipOptions } from './linkTooltip';

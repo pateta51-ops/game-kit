@@ -8,6 +8,13 @@
       "src/ui/prompts/pick.ts, src/ui/prompts/pick.machine.ts (createSelection, picksFor: the prompt replaced by a scope of version, prompt id and max; the status is computed, no machine table; `clickOption` and the store subscription stay in the game)",
       "src/ui/prompts/autoAnswer.ts (onlyForcedAnswer: the never-list of purposes replaced by a `never` flag the game computes)"
     ],
+    "inspiredBy": [
+      {
+        "repo": "https://github.com/fspoettel/arkham.build",
+        "path": "frontend/src/components/card-tooltip/use-card-link-tooltip.tsx",
+        "licence": "AGPL-3.0 (idea only; linkTooltip.ts is re-implemented, no code copied)"
+      }
+    ],
     "grafts": [
       {
         "game": "ebr",
