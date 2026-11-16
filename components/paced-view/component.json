@@ -1,0 +1,14 @@
+{
+  "name": "paced-view",
+  "source": {
+    "game": "7th-inning-stretch",
+    "commit": "6c82d43",
+    "paths": [
+      "src/ui/store.ts lines 90-91, 98-99 (the step queue of an answer: stepBase, stepEvents, queue, advance, skip; here a plain value and pure functions, the store stays in the game; the STEP set became `isStep`)",
+      "src/ui/table/Table.tsx line 62 and src/ui/motion/index.ts line 174 (which events are folded for the step on screen and for the view before a step; the fold itself, src/ui/prompts/logic.ts foldView with its Score Board, runners, dice and Resource Pool, stays in the game and is passed in; shownAt and the later filter became options, by position when left out)",
+      "src/ui/motion/index.ts drive, lines 143-145, 168-169, 183, 235 (one step at a time, the guarded next, Instant drops the queue, a step that throws is passed, the reading step on a timer that a press ends; the beats, casts, Season beat and frame waits stay in the game's `play`)",
+      "src/ui/prompts/logic.ts questionZone and meets (the zone names and the ALT_OK set became options; TARGETS stays in the game)"
+    ]
+  },
+  "needs": []
+}
