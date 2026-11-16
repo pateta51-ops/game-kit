@@ -9,3 +9,4 @@ export * from './place';
 export * from './seed';
 export * from './build';
 export * from './e2e';
+export * from './coach';

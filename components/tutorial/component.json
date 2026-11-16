@@ -58,6 +58,14 @@
           "scripts/seed-search.ts (line dump: lineDump; steering and items stay the game's)",
           "e2e/tutorial-play.ts (step loop on data-step and Next: playTutorialE2E; answering stays the game's)"
         ]
+      },
+      {
+        "game": "under-falling-skies",
+        "commit": "07238a4",
+        "paths": [
+          "src/ui/coach/coach.ts (nextTip, tips as data, suggest from the driver with reasons; the game's texts stay its own)",
+          "src/ui/coach/coachStore.ts (seen ids per browser: seenStore)"
+        ]
       }
     ]
   },
