@@ -1,7 +1,17 @@
 import { fireEvent, render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import { checklist, countGames, evaluate, firstRun, makeSummary, toastFor, type AchievementDef } from './index';
-import { AchievementList, AchievementToast } from './ui';
+import { AchievementList, AchievementToast, FeatCallout } from './ui';
+
+describe('FeatCallout', () => {
+  it('shows the text and a worded close button', () => {
+    const f = vi.fn();
+    render(<FeatCallout text="First defeat" onClose={f} words={{ ok: 'Fine' }} />);
+    fireEvent.click(screen.getByText('Fine'));
+    expect(screen.getByTestId('feat-callout')).toHaveTextContent('First defeat');
+    expect(f).toHaveBeenCalled();
+  });
+});
 
 const defs: AchievementDef[] = [
   { id: 'w1', name: 'First win', text: 'Win a game.', family: 'wins', points: 10, measure: countGames((x) => x.result === 'win', 1) },

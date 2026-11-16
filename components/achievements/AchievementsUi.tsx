@@ -51,6 +51,16 @@ export function AchievementList({ defs, statuses, words, className }: Achievemen
   );
 }
 
+/** A brief centred call-out (a first defeat, a streak, a record); `text` is the game's words; the game removes it. */
+export function FeatCallout({ text, onClose, words }: { text: string; onClose?: () => void; words?: { ok?: string } }) {
+  return (
+    <div className="kit-ach-toast kit-ach-callout" role="status" data-testid="feat-callout">
+      <span>{text}</span>
+      {onClose && <button type="button" onClick={onClose}>{words?.ok ?? 'OK'}</button>}
+    </div>
+  );
+}
+
 /** One centred toast; the game removes it after `toast.holdMs`. `line` words the count ("3 achievements earned"). */
 export function AchievementToast({ toast, line, onClose, words }: { toast: Toast; line?: (t: Toast) => string; onClose?: () => void; words?: { ok?: string; many?: string } }) {
   return (
