@@ -44,11 +44,30 @@ const LOCAL_HOSTS = new Set(['localhost', '127.0.0.1']);
 /** Whether this page registers the service worker. */
 export function shouldRegister(
   env: SwEnv,
-  where: { readonly protocol: string; readonly hostname: string },
+  where: { readonly protocol: string; readonly hostname: string; readonly framed?: boolean },
   supported: boolean,
 ): boolean {
-  if (!env.prod || env.e2e || !supported) return false;
+  if (!env.prod || env.e2e || !supported || where.framed === true) return false;
   return where.protocol === 'https:' || (env.local && LOCAL_HOSTS.has(where.hostname));
+}
+
+export interface PageHost {
+  readonly protocol: string;
+  readonly hostname: string;
+  /** Inside a frame: the page that holds the frame owns the service worker. */
+  readonly framed: boolean;
+  readonly supported: boolean;
+}
+
+/** The real page as a PageHost. A parent of another origin that refuses the look is a frame all the same. */
+export function pageHost(win: Window = window): PageHost {
+  let framed: boolean;
+  try {
+    framed = win.self !== win.top;
+  } catch {
+    framed = true;
+  }
+  return { protocol: win.location.protocol, hostname: win.location.hostname, framed, supported: 'serviceWorker' in win.navigator };
 }
 
 interface UpdateStore {
@@ -78,11 +97,11 @@ export function applyUpdate(reload: () => void = () => window.location.reload())
   setTimeout(reload, RELOAD_FALLBACK_MS);
 }
 
-/** Registers `url` (the build's sw.js, e.g. `${import.meta.env.BASE_URL}sw.js`) when shouldRegister allows it. Once per page. */
-export function registerServiceWorker(env: SwEnv, url: string): void {
+/** Registers `url` (the build's sw.js, e.g. `${import.meta.env.BASE_URL}sw.js`) when shouldRegister allows it (never inside a frame). Once per page. */
+export function registerServiceWorker(env: SwEnv, url: string, host: PageHost = pageHost()): void {
   const { state, send } = useUpdate.getState();
   if (state !== 'idle') return;
-  if (!shouldRegister(env, window.location, 'serviceWorker' in navigator)) {
+  if (!shouldRegister(env, host, host.supported)) {
     send('unsupported');
     return;
   }

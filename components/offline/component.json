@@ -14,7 +14,8 @@
       "src/ui/screens/Home.tsx (its update line, as UpdateLine)"
     ],
     "grafts": [
-      { "game": "warps", "commit": "2af6937", "paths": ["src/ui/game/saves.ts (askPersistence: in saves as keepStorage)"] }
+      { "game": "warps", "commit": "2af6937", "paths": ["src/ui/game/saves.ts (askPersistence: in saves as keepStorage)"] },
+      { "game": "rome", "commit": "1d0fd2e", "paths": ["src/ui/offline.ts, src/ui/offline.test.ts (pageHost and framed: no service worker inside a frame)"] }
     ]
   },
   "needs": ["state-machines"],

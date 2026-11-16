@@ -1,7 +1,7 @@
 import { act, fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { IllegalTransitionError, transition } from '../state-machines/machine';
-import { applyUpdate, registerServiceWorker, RELOAD_FALLBACK_MS, shouldRegister, UPDATE_MACHINE, useUpdate } from './index';
+import { applyUpdate, pageHost, registerServiceWorker, RELOAD_FALLBACK_MS, shouldRegister, UPDATE_MACHINE, useUpdate } from './index';
 import { UpdateLine } from './ui';
 
 const PROD = { prod: true, e2e: false, local: false };
@@ -21,6 +21,30 @@ describe('offline registration and updates', () => {
     expect(shouldRegister(PROD, { protocol: 'http:', hostname: '127.0.0.1' }, true)).toBe(false);
     expect(shouldRegister({ ...PROD, local: true }, { protocol: 'http:', hostname: 'localhost' }, true)).toBe(true);
     expect(shouldRegister({ ...PROD, local: true }, { protocol: 'http:', hostname: '192.168.1.5' }, true)).toBe(false);
+  });
+
+  it('never registers inside a frame: pageHost works out framed, a refused look at the parent counts as framed', () => {
+    expect(shouldRegister(PROD, { ...HTTPS, framed: true }, true)).toBe(false);
+    expect(shouldRegister(PROD, { ...HTTPS, framed: false }, true)).toBe(true);
+    expect(pageHost().framed).toBe(false);
+    const location = { protocol: 'https:', hostname: 'pc.example' };
+    const inner = { self: {}, top: {}, location, navigator: { serviceWorker: {} } } as unknown as Window;
+    expect(pageHost(inner)).toEqual({ ...location, framed: true, supported: true });
+    const refused = {
+      self: {},
+      get top(): Window {
+        throw new Error('cross-origin');
+      },
+      location,
+      navigator: {},
+    } as unknown as Window;
+    expect(pageHost(refused)).toEqual({ ...location, framed: true, supported: false });
+    const register = vi.fn(() => Promise.resolve({}));
+    Object.defineProperty(navigator, 'serviceWorker', { configurable: true, value: { controller: null, register, addEventListener: vi.fn() } });
+    registerServiceWorker(PROD, 'sw.js', { ...location, framed: true, supported: true });
+    expect(useUpdate.getState().state).toBe('off');
+    expect(register).not.toHaveBeenCalled();
+    Reflect.deleteProperty(navigator, 'serviceWorker');
   });
 
   it('the update machine: a newer version found while one runs is offered; Reload takes it; nothing without a worker', () => {

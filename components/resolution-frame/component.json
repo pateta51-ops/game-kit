@@ -1,0 +1,15 @@
+{
+  "name": "resolution-frame",
+  "source": {
+    "game": "rome",
+    "commit": "1d0fd2e",
+    "paths": [
+      "src/ui/frame/resolution.ts (fitBox, shouldFrame; the host of shouldFrame can be passed in; the size list and resolutionSize are in settings)",
+      "src/ui/frame/ResolutionFrame.tsx (the game's settings reader became the schema and the key; the title is passed in)",
+      "src/ui/frame/frame.css",
+      "src/ui/frame/resolution.test.ts"
+    ]
+  },
+  "needs": ["settings"],
+  "packages": ["react"]
+}

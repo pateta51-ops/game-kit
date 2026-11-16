@@ -10,7 +10,7 @@ The worker answers every stored file from the cache (query and hash ignored, pat
 
 ## Page (`index.ts`)
 
-`registerServiceWorker({ prod, e2e, local }, url)` in the game's start-up, e.g. with `import.meta.env.PROD`, the game's e2e flag, and `` `${import.meta.env.BASE_URL}sw.js` ``. `shouldRegister`: production on HTTPS only, never an e2e build; `local` allows http://localhost and 127.0.0.1. When a newer version is stored while one controls the page, `useUpdate` (zustand, machine `kit.offline.update`) goes to `ready`; it checks again whenever the page comes back to the front. `applyUpdate()` hands over and reloads (or after `RELOAD_FALLBACK_MS`).
+`registerServiceWorker({ prod, e2e, local }, url)` in the game's start-up, e.g. with `import.meta.env.PROD`, the game's e2e flag, and `` `${import.meta.env.BASE_URL}sw.js` ``. `shouldRegister`: production on HTTPS only, never an e2e build; `local` allows http://localhost and 127.0.0.1. Never inside a frame: `pageHost()` works out `framed` (`window.self !== window.top`; a parent of another origin that refuses the look counts as framed), and the page holding the frame registers instead; a test passes its own host as the third argument. When a newer version is stored while one controls the page, `useUpdate` (zustand, machine `kit.offline.update`) goes to `ready`; it checks again whenever the page comes back to the front. `applyUpdate()` hands over and reloads (or after `RELOAD_FALLBACK_MS`).
 
 The manifest, icons and iOS meta are the game's own files in its `public/` and `index.html`.
 

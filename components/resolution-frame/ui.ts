@@ -1,0 +1,1 @@
+export { ResolutionFrame } from './ResolutionFrame';
