@@ -1,0 +1,33 @@
+{
+  "name": "card-language",
+  "source": {
+    "game": "jarl",
+    "commit": "6f006a2",
+    "paths": [
+      "src/engine/effects/ops.ts (OPS registry, validateOp, field checks posInt / int / oneOf / listOf)",
+      "src/engine/effects/describe.ts (DESCRIBE table typed per op kind, one sentence per op)"
+    ],
+    "grafts": [
+      {
+        "game": "stcc",
+        "commit": "9fc59643",
+        "paths": [
+          "src/engine/ops/types.ts (OpTable: one entry per op, null = not built yet, reaching it throws)"
+        ]
+      },
+      {
+        "game": "middle-earth-player",
+        "url": "https://github.com/j-jmnz/middle-earth-player",
+        "commit": "4c29c95",
+        "licence": "MIT",
+        "notice": "Copyright the middle-earth-player authors (MIT)",
+        "paths": [
+          "src/rules/interpret/family-manifest.ts (every verb has a runner; design only, from docs/patterns/card-language.md)"
+        ]
+      }
+    ],
+    "compared": "Imperium src/engine/ops + text, Rome src/engine/ops, Unstoppable src/engine/effects, EBR src/engine/effects + describe: interpreters welded to their games; only the shell is shared (SELECTION.md)."
+  },
+  "needs": ["engine-core", "card-harness", "plain-text"],
+  "packages": []
+}

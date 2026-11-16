@@ -47,6 +47,7 @@ Every folder under `components/` (read its README, or `component.json`, before u
 | [`bundle-size`](components/bundle-size/README.md) | The size gate for a vite build: gzips `index.html` and what it loads at once, and fails over the game's limits. | - |
 | [`campaign`](components/campaign/README.md) | The campaign log as plain data and pure functions (release 1.0). | - |
 | [`card-harness`](components/card-harness/README.md) | Card tests on real cards: scenario builder, prompt-delivery harness, choice probe, inventory with stale check, `roundTripCards`. | engine-core |
+| [`card-language`](components/card-language/README.md) | The card-language shell (K206): card effects as data, one typed verb table where each verb has a field check, a handler that runs on engine-core and a text generator that prints the card's words from the same step. | engine-core, card-harness, plain-text |
 | [`card-patches`](components/card-patches/README.md) | Card data patch layer: corrections in small files, one per reason, applied on import; the source card data is never edited. | - |
 | [`card-query`](components/card-query/README.md) | A small card query language (K107): field table, lexer, parser, evaluator. | - |
 | [`challenges`](components/challenges/README.md) | A challenge is a content item picked before a game: a setup restriction plus triggered penalties, written in the game's own card language (release 1.0). | - |

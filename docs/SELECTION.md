@@ -58,6 +58,7 @@ Open check before the lift: the canonical JSON of the Jarl line and of STCC buil
 |---|---|---|---|
 | Card-language interpreter | Pattern only: every interpreter is welded to its game's state, zones and phases. Reference: EBR for the dry run and the handler table, Jarl for the small validator and registry | | L if ever shared |
 | Card-language checks | Jarl's describe-check gate; the Rome and Jarl schema conformance test; the STCC and Imperium content validator | UFS's broken-pack expectations, stale generated files and feature coverage (K169) | S |
+| Card-language shell (`card-language`, K206) | Jarl at 6f006a2 (OPS registry, validator, typed DESCRIBE table), STCC's op table (`null` = not built yet) and middle-earth-player's "every verb has a runner" test; Imperium, Rome, Unstoppable and EBR compared. The shell only: verbs stay in each game | - | M |
 | Card test harness | STCC (scenario builder, prompt-delivery harness, choice probe, synthetic pack, inventory with stale check, written programme) | EBR's clause-level inventory and before/after helper; Warp's compiler-based reading of operation types | M |
 | Small checks (module-boundary file, rule-violation list, catalogue face check) | New; ideas only from Lew Morski, Paths of Glory, Terraforming Mars | | S |
 

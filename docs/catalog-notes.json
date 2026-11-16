@@ -47,6 +47,10 @@
     "use": "Testing card effects on real cards with the scenario builder, prompt delivery, choice probe and inventory with stale check.",
     "not": "Card rules themselves; those stay in the game."
   },
+  "card-language": {
+    "use": "A new game encodes card effects as data: verb table with handler and text slots, validator, every-verb test.",
+    "not": "Shared verbs or an interpreter; each game writes its own verbs."
+  },
   "card-patches": {
     "use": "The card data needs corrections without editing the source data.",
     "not": "Card behaviour; patches change data only."
