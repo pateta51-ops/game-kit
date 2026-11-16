@@ -1,6 +1,6 @@
 # effect-library
 
-The twelve verbs of the director's spec format as DOM effects for the motion frame: `move`, `lift`, `settle`, `fade-in`, `fade-out`, `show`, `hide`, `flip`, `scale`, `shake`, `glow`, `text`. Web Animations API; browser only. Particles, count-up and the like are not in it.
+The twelve verbs of the director's spec format as DOM effects for the motion frame: `move`, `lift`, `settle`, `fade-in`, `fade-out`, `show`, `hide`, `flip`, `scale`, `shake`, `glow`, `text`. Web Animations API; browser only. Beside them: canvas effects with a particle kit, a count-up and a boxed ambience layer.
 
 ```ts
 const verbs = createVerbs<EffectCtx>();
@@ -14,9 +14,12 @@ const player = createMotionPlayer({ specs, stages, verbs, speed, context: layer,
 - Verbs at the same time on one actor compose: `move` animates `translate` and `scale` animates `scale` (the end state is in `style.translate`, `style.scale`); `lift`, `settle`, `flip`, `shake`, `text` use `transform`, so after a kept `scale` they multiply with it. Breaking since v0.17.0: code reading `style.transform` for `move` or `scale`, or setting its own CSS `scale`/`translate` on the actor, must change. `resolve(id, run)` gets the run, so a game can tell two beats' actors of the same id apart.
 - Reduced motion is the player's: `withReducedMotion(speed)` gives `'instant'`, no verb runs and no clone is made.
 - Own effects: `registerEffect(verbs, 'name', ({ call, run, el, layer, animate }) => ...)`. `animate(keyframes, endStyle)` plays over the call's duration and jumps to `endStyle` on finish or skip; a returned function is called then too.
+- Canvas effects: `registerCanvasEffect(verbs, 'burst', (ctx, t, { x, y, call }) => particles.sparks(ctx, t, { seed: 1, n: 12, x, y, t0: 0 }))`. One `canvas.fx-canvas` in the layer, there only while such a verb plays; no clone is made; `x`, `y` are the actor's centre and `t` is ms of the spec, so the picture is the same at any speed. `particles` holds `sparks`, `embers`, `smoke`, `arc`, `impact`, `landing`, `glow`, `star`, `edge`, `rng`, `noise`, `ease`, `pulse`, `seg`, `clamp`, `lerp`, `canDraw`: pure functions of time and a seed; colours are `'r,g,b'` strings the game passes; the last argument `u` scales sizes.
+- `countUp({ value, from?, ms?, speed, show })` calls `show(n)` each frame, easing out to `value`; it never writes game state. `speed` is the player's: the factor scales `ms` (default 700), `'instant'` shows the value at once, also when it turns Off half way. The returned function jumps to the end. `countAt(value, k, from?)` is the pure part.
+- `createAmbience({ target, speed, draw?, className?, parent? })`: a `div.fx-ambience` fixed over the box of `target()`, clipped to it, no pointer events; it follows resize and scroll, and is hidden with no frame drawn while `speed()` is `'instant'` or there is no target. `draw(ctx, t, w, h)` paints its canvas each frame; without it the game's CSS fills the box. Call `update()` when the settings or the screen change, `destroy()` to remove it.
 
 ## Look
 
-CSS variables a game sets (fallbacks carry no colour): `--fx-z`, `--fx-lift-rise`, `--fx-lift-shadow`, `--fx-settle-shadow`, `--fx-glow`, `--fx-glow-off`, `--fx-shake`, `--fx-text`, `--fx-text-font`, `--fx-text-rise`, `--fx-veil`.
+CSS variables a game sets (fallbacks carry no colour): `--fx-z`, `--fx-lift-rise`, `--fx-lift-shadow`, `--fx-settle-shadow`, `--fx-glow`, `--fx-glow-off`, `--fx-shake`, `--fx-text`, `--fx-text-font`, `--fx-text-rise`, `--fx-veil`, `--fx-ambience-z`. The particle kit's colours are arguments (defaults: white arcs and stars, warm sparks and embers, dark smoke).
 
-Tests: `effects.e2e.test.ts` (Chromium via Playwright; skipped off CI when it is not installed).
+Tests: `particles.test.ts`, `count.test.ts` (node); `effects.e2e.test.ts` (Chromium via Playwright; skipped off CI when it is not installed).

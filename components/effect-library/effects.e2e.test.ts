@@ -131,4 +131,25 @@ describe.skipIf(!HAVE && !process.env['CI'])('effect library in a browser', () =
     expect(r.names).toContain('pop');
     expect(r.log).toEqual(['done fx-actor']);
   });
+
+  it('a canvas effect draws on one canvas in the layer, with no clone; the canvas goes at its end or on a skip', async () => {
+    const r = await page.evaluate(() => (window as unknown as { fxTest: Api2 }).fxTest.canvas(false));
+    expect([r.mid, r.after, r.actors, r.at]).toEqual([1, 0, 0, [50, 50]]);
+    expect(r.frames).toBeGreaterThan(0);
+    expect(r.names).toContain('burst');
+    const s = await page.evaluate(() => (window as unknown as { fxTest: Api2 }).fxTest.canvas(true));
+    expect([s.mid, s.after]).toEqual([1, 0]);
+  });
+
+  it('ambience stays in the box of its target, stops while motion is Off and follows the target again after', async () => {
+    const r = await page.evaluate(() => (window as unknown as { fxTest: Api2 }).fxTest.ambience());
+    expect(r.on).toEqual([20, 30, 200, 100, 'fx-ambience mist', 'block', 'none', 'hidden']);
+    expect(r.size).toEqual([200, 100]);
+    expect(r.frames).toBeGreaterThan(0);
+    expect([r.off, r.still, r.back, r.gone]).toEqual(['none', true, ['block', '120px'], true]);
+  });
 });
+interface Api2 {
+  canvas(skip: boolean): Promise<{ mid: number; after: number; frames: number; at: number[]; actors: number; names: string[] }>;
+  ambience(): Promise<{ on: (string | number)[]; size: number[]; frames: number; off: string; still: boolean; back: string[]; gone: boolean }>;
+}

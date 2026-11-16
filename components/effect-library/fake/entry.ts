@@ -1,5 +1,5 @@
-import { createMotionPlayer, createVerbs, withReducedMotion, type MotionSpec } from '../../motion-frame';
-import { registerEffect, registerEffects, type EffectCtx } from '../index';
+import { createMotionPlayer, createVerbs, withReducedMotion, type MotionSpec, type Speed } from '../../motion-frame';
+import { createAmbience, particles, registerCanvasEffect, registerEffect, registerEffects, type EffectCtx } from '../index';
 
 // Runs one step of `verb` on an actor over a 200 ms call, either to its natural end or skipped half way; returns what is left.
 async function runOne(verb: string, extra: Record<string, unknown>, skip: boolean, actorExtra: Record<string, unknown> = {}) {
@@ -145,4 +145,63 @@ async function reduced() {
   return { ms: performance.now() - t0, actors: layer.el.querySelectorAll('.fx-actor').length, cues };
 }
 
-(window as unknown as Record<string, unknown>)['fxTest'] = { runOne, own, reduced, together, early };
+async function canvas(skip: boolean) {
+  const verbs = createVerbs<EffectCtx>();
+  const layer = registerEffects(verbs);
+  let frames = 0;
+  let at: number[] = [];
+  registerCanvasEffect(verbs, 'burst', (ctx, t, fx) => {
+    frames += 1;
+    at = [fx.x, fx.y];
+    particles.sparks(ctx, t, { seed: 1, n: 8, x: fx.x, y: fx.y, t0: 0 });
+  });
+  const player = createMotionPlayer({ specs: {}, stages: { default: () => undefined }, verbs, speed: () => 0.5, context: layer, onBeatEnd: (run) => layer.end(run) });
+  let mid = -1;
+  await new Promise<void>((done) => {
+    player.play({ id: 'cv', maxMs: 400, actors: [{ id: 'a', at: [50, 50], w: 40, h: 30 }], steps: [{ t: 0, dur: 300, actor: 'a', do: 'burst' }] }, { onEnd: done });
+    setTimeout(() => {
+      mid = layer.el.querySelectorAll('canvas.fx-canvas').length;
+    }, 20);
+    if (skip) setTimeout(() => player.skipAll(), 40);
+  });
+  return { mid, after: layer.el.querySelectorAll('canvas').length, frames, at, actors: layer.el.querySelectorAll('.fx-actor').length, names: verbs.names() };
+}
+
+async function ambience() {
+  const wait = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
+  const box = document.createElement('div');
+  box.style.cssText = 'position:absolute;left:20px;top:30px;width:200px;height:100px';
+  document.body.appendChild(box);
+  let speed: Speed = 1;
+  let frames = 0;
+  let size: number[] = [];
+  const a = createAmbience({
+    target: () => box,
+    speed: () => speed,
+    draw: (_ctx, _t, w, h) => {
+      frames += 1;
+      size = [w, h];
+    },
+    className: 'mist',
+  });
+  await wait(100);
+  const r = a.el.getBoundingClientRect();
+  const on = [r.left, r.top, r.width, r.height, a.el.className, a.el.style.display, getComputedStyle(a.el).pointerEvents, getComputedStyle(a.el).overflow];
+  const seen = frames;
+  speed = 'instant';
+  await wait(80);
+  const off = a.el.style.display;
+  const f1 = frames;
+  await wait(80);
+  const still = frames === f1;
+  speed = 1;
+  box.style.width = '120px';
+  a.update();
+  const back = [a.el.style.display, a.el.style.width];
+  a.destroy();
+  const gone = !a.el.isConnected;
+  box.remove();
+  return { on, size, frames: seen, off, still, back, gone };
+}
+
+(window as unknown as Record<string, unknown>)['fxTest'] = { runOne, own, reduced, together, early, canvas, ambience };
