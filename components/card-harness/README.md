@@ -16,5 +16,6 @@ Card tests on real cards. Test code only; the engine imports nothing here but `c
 - Walking the whole registry (`Object.values`, hashing, validation) through `.registry` marks every id looked up, and run if it reads `field`: trace only the content the engine reads to play.
 
 - **K102 helpers**: a refused `answer` prints the open prompt and offered options (`open()`); `noPrompt()`; `changed([[label, read, delta]], fn)` lists every pair off; `literal()` or `scenarioLiteral(state, events)` gives a `{ from }` literal to paste; `withRewind(fn)` runs a branch and restores; `rulingGroups(describe)` gives `errata` and `faq` wrappers.
+- **Record renderer** (K78, `renderRecords({ lines, records, templates })`): each printed line `{ id, text, open? }` followed by its records in English, one template per record `kind` (or `verb`); `say` renders nested pieces. A piece with no template prints `[render-gap kind: {json}]`, a field its template never read `[also {...}]`; `note(r)` adds a `note:` line, `kindOf`/`lineOf`/`idOf` read other shapes. Returns `text` for a reading judge (ok / wrong / ambiguous / render-gap per line), `lines` with each reading's `gaps`, and `stray` records naming no line.
 
 Known bugs are pinned as `it.fails('EXPECTED FAILURE: …')`.

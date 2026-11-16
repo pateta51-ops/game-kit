@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { clauseIds, conforms, createProbe, Delivery, describeCheck, expectResolved, inventory, report, runInventory, Scenario, scenarioLiteral, rulingGroups, testFiles, traceAbilities, type DeliveryGame, type Same } from './index';
+import { clauseIds, conforms, createProbe, Delivery, describeCheck, expectResolved, inventory, renderRecords, report, runInventory, Scenario, scenarioLiteral, rulingGroups, testFiles, traceAbilities, type DeliveryGame, type Same } from './index';
 import { literalsOf } from './literals';
 import { DICE, DICE_GAME, PROBE, type DiceEvent, type Dice, type DiceState, type Note } from './fake/dice';
 import { applyAction } from '../engine-core';
@@ -328,5 +328,49 @@ describe('K102 helpers', () => {
     errata('FAQ 1.2', () => undefined);
     faq('Q7', () => undefined);
     expect(names).toEqual(['errata: FAQ 1.2', 'faq: Q7']);
+  });
+});
+
+describe('record renderer (K78)', () => {
+  type Rec = { id?: string; kind: string; line?: string | string[]; n?: number; who?: string; then?: Rec[]; flag?: string };
+  const templates = {
+    gain: (r: Rec) => `gain ${String(r.n)}`,
+    draw: (r: Rec, say: (p: unknown) => string) => `${r.who ?? 'you'} draw ${String(r.n)}, then ${say(r.then)}`,
+  };
+  const lines = [
+    { id: 'a:1', text: 'Draw 2 cards, then gain 1.' },
+    { id: 'a:2', text: 'Gain 3.' },
+    { id: 'a:3', text: 'Immune.', open: true },
+    { id: 'a:4', text: 'Gain 1.' },
+  ];
+  it('K78: renders each record in English under its printed line, with render gaps marked', () => {
+    const records: Rec[] = [
+      { id: 'r1', kind: 'draw', line: 'a:1', n: 2, then: [{ kind: 'gain', n: 1 }, { kind: 'shuffle' }] },
+      { id: 'r2', kind: 'gain', line: ['a:2', 'a:4'], n: 3, flag: 'once' },
+      { id: 'r3', kind: 'gain', line: 'z:9', n: 1 },
+    ];
+    const out = renderRecords({ lines, records, templates, note: (r) => (r.id === 'r1' ? 'offered while barred: no' : undefined) });
+    expect(out.text).toBe(
+      [
+        'a:1 | Draw 2 cards, then gain 1.',
+        '  r1: you draw 2, then gain 1; [render-gap shuffle: {"kind":"shuffle"}]',
+        '    note: offered while barred: no',
+        'a:2 | Gain 3.',
+        '  r2: gain 3 [also {"flag":"once"}]',
+        'a:3 | Immune.',
+        '  (open: no record yet)',
+        'a:4 | Gain 1.',
+        '  r2: gain 3 [also {"flag":"once"}]',
+        'Records naming no printed line',
+        '  r3: gain 1',
+        '',
+      ].join('\n'),
+    );
+    expect(out.lines[0]?.readings[0]?.gaps).toEqual(['shuffle']);
+    expect(out.lines[1]?.readings[0]?.gaps).toEqual(['gain.flag']);
+    expect(out.stray.map((r) => r.record)).toEqual(['r3']);
+  });
+  it('K78: a line with no record says so', () => {
+    expect(renderRecords({ lines: [{ id: 'b:1', text: 'Gain 1.' }], records: [] as Rec[], templates }).text).toBe('b:1 | Gain 1.\n  (no record)\n');
   });
 });
