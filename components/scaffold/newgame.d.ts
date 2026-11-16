@@ -1,6 +1,8 @@
 import type { ScaffoldOptions } from './scaffold.js'
 export interface NewGameOptions extends ScaffoldOptions {
   remote?: boolean
+  existing?: boolean
+  trailer?: string
   exec?: (cmd: string, args: string[], opts?: { cwd?: string }) => string
   scaffold?: (o: ScaffoldOptions) => unknown
   log?: (s: string) => void

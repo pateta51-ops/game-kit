@@ -53,6 +53,12 @@ describe('kit.mjs', () => {
     const kit = (...a: string[]) => spawnSync('node', [path.join(g, 'kit/kit.mjs'), ...a], { cwd: g, encoding: 'utf8' }).stdout;
     expect(kit('list')).toBe('alpha: (use when: you need letters.)\nbeta: (use when: you roll.)\n');
     expect(kit('search', 'DICE')).toBe('beta: Dice maker. (use when: you roll.)\n');
+    fs.mkdirSync(path.join(g, 'kit/alpha'), { recursive: true });
+    fs.writeFileSync(path.join(g, 'kit/alpha/index.ts'), "export * from './z';\nexport { a as renamed, type T } from './y';\n");
+    fs.writeFileSync(path.join(g, 'kit/alpha/z.ts'), 'export function withZones() {}\nexport const slots = 1;\n');
+    expect(kit('search', 'withzones')).toBe('alpha: The first letter. (use when: you need letters.) [export: withZones]\n');
+    expect(kit('search', 'renamed')).toContain('[export: renamed]');
+    expect(kit('search', 'letter')).not.toContain('[export');
   });
 
   it('pull then check passes', () => {

@@ -10,7 +10,7 @@
 import { execFileSync as x, spawnSync } from 'node:child_process'
 import { createHash } from 'node:crypto'
 import fs from 'node:fs'
-import { dirname } from 'node:path'
+import { dirname, resolve } from 'node:path'
 import { fileURLToPath, pathToFileURL } from 'node:url'
 const [cmd, ...a] = process.argv.slice(2)
 const LOCK = 'kit/kit.lock.json'
@@ -98,15 +98,50 @@ if (cmd === 'pull') {
   if (!f || (cmd === 'search' && !a.length)) { console.error(f ? 'usage: kit.mjs search <word>' : 'no CATALOG.md beside kit.mjs: pull again'); process.exit(2) }
   const secs = fs.readFileSync(f, 'utf8').split(/^## /m).slice(1).map((t) => t.split(/\r?\n/))
   const words = a.map((w) => w.toLowerCase())
-  for (const [n, , purpose, , use] of secs) if (cmd === 'list' || words.every((w) => (n + purpose + use).toLowerCase().includes(w))) console.log(n + ': ' + (cmd === 'list' ? '' : (purpose ?? '').split(/(?<=\.)\s/)[0].slice(0, 200) + ' ') + (use ?? '').replace('- **Use it when:** ', '(use when: ') + (use ? ')' : ''))
+  const exportsOf = (n) => {
+    const out = new Set()
+    const seen = new Set()
+    const scan = (file) => {
+      if (seen.has(file)) return
+      seen.add(file)
+      const src = fs.readFileSync(file, 'utf8')
+      for (const m of src.matchAll(/^export\s+(?:declare\s+)?(?:async\s+)?(?:const|let|var|function\*?|class|interface|type|enum)\s+(\w+)/gm)) out.add(m[1])
+      for (const m of src.matchAll(/^export\s+(?:type\s+)?\{([^}]*)\}(?:\s*from\s*['"]([^'"]+)['"])?/gm)) {
+        for (const e of m[1].split(',')) { const w = e.trim().replace(/^type\s+/, '').split(/\s+as\s+/).pop(); if (w) out.add(w) }
+        if (m[2]) next(file, m[2])
+      }
+      for (const m of src.matchAll(/^export\s+\*(?:\s+as\s+(\w+))?\s*from\s*['"]([^'"]+)['"]/gm)) { if (m[1]) out.add(m[1]); else next(file, m[2]) }
+    }
+    const next = (from, rel) => {
+      if (!rel.startsWith('.')) return
+      const b = resolve(dirname(from), rel)
+      const f = ['', '.ts', '.tsx', '.js', '.mjs', '/index.ts', '/index.tsx', '/index.js'].map((e) => b + e).find((q) => fs.existsSync(q) && fs.statSync(q).isFile())
+      if (f) scan(f)
+    }
+    for (const c of [d + '/components/' + n, d + '/' + n]) {
+      const f = ['index.ts', 'index.tsx', 'index.js', 'index.mjs'].map((e) => c + '/' + e).find((q) => fs.existsSync(q))
+      if (f) { scan(f); break }
+    }
+    return [...out]
+  }
+  for (const [n, , purpose, , use] of secs) {
+    let hit = []
+    if (cmd === 'search') {
+      const text = (n + purpose + use).toLowerCase()
+      const ex = exportsOf(n)
+      if (!words.every((w) => text.includes(w) || ex.some((e) => e.toLowerCase().includes(w)))) continue
+      hit = ex.filter((e) => words.some((w) => !text.includes(w) && e.toLowerCase().includes(w)))
+    }
+    console.log(n + ': ' + (cmd === 'list' ? '' : (purpose ?? '').split(/(?<=\.)\s/)[0].slice(0, 200) + ' ') + (use ?? '').replace('- **Use it when:** ', '(use when: ') + (use ? ')' : '') + (hit.length ? ' [export: ' + hit.slice(0, 8).join(', ') + ']' : ''))
+  }
 } else if (cmd === 'new') {
-  // node <kit>/kit.mjs new <dir> <id> "<Name>" [--ref r] [--repo owner/name] [--runner label] [--link <node_modules>] [--no-install] [--no-remote] [--ports file]
+  // node <kit>/kit.mjs new <dir> <id> "<Name>" [--ref r] [--repo owner/name] [--runner label] [--link <node_modules>] [--no-install] [--no-remote] [--ports file] [--existing]
   const flags = {}
   const pos = []
-  for (let i = 0; i < a.length; i++) if (a[i] === '--no-install') flags.install = false; else if (a[i] === '--no-remote') flags.remote = false; else if (a[i].startsWith('--')) flags[a[i].slice(2)] = a[++i]; else pos.push(a[i])
+  for (let i = 0; i < a.length; i++) if (a[i] === '--no-install') flags.install = false; else if (a[i] === '--no-remote') flags.remote = false; else if (a[i] === '--existing') flags.existing = true; else if (a[i].startsWith('--')) flags[a[i].slice(2)] = a[++i]; else pos.push(a[i])
   const [dir, id, name] = pos
   const d = dirname(fileURLToPath(import.meta.url))
-  if (!name || !fs.existsSync(d + '/components/scaffold/scaffold.js')) { console.error('usage (from the game-kit checkout): node kit.mjs new <dir> <id> "<Name>" [--ref r] [--repo owner/name] [--runner label] [--link <node_modules>] [--no-install] [--no-remote] [--ports file]'); process.exit(2) }
+  if (!name || !fs.existsSync(d + '/components/scaffold/scaffold.js')) { console.error('usage (from the game-kit checkout): node kit.mjs new <dir> <id> "<Name>" [--ref r] [--repo owner/name] [--runner label] [--link <node_modules>] [--no-install] [--no-remote] [--existing] [--ports file]'); process.exit(2) }
   const { newGame } = await import(pathToFileURL(d + '/components/scaffold/newgame.js').href)
   try { newGame({ dir, id, name, kit: d, ...flags, remote: flags.remote !== false }) } catch (e) { console.error(e.message); process.exit(1) }
 } else {

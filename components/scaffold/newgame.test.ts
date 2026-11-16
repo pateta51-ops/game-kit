@@ -79,4 +79,57 @@ describe('kit.mjs new (K214)', () => {
     expect(() => r.go()).toThrow('step "first commit" failed: boom');
     expect(names(r.calls).some((c) => c.startsWith('gh repo create'))).toBe(false);
   });
+  it('--existing (K221): scaffolds into a repo with .git and origin, writes no markers, commits nothing, creates no repo, still sets delete-branch-on-merge', () => {
+    const r = rig({ have: new Set(['commit', 'remote']) });
+    fs.mkdirSync(path.join(r.tmp, 'g/.git'), { recursive: true });
+    fs.writeFileSync(path.join(r.tmp, 'g/README.md'), 'mine');
+    let seen: Record<string, unknown> = {};
+    r.go({ existing: true, scaffold: (o: Record<string, unknown>) => { seen = o; } });
+    expect(seen.existing).toBe(true);
+    expect(fs.readdirSync(path.join(r.tmp, 'g')).sort()).toEqual(['.git', 'README.md']);
+    const n = names(r.calls);
+    expect(n.some((c) => c.startsWith('git add') || c.startsWith('git init') || c.startsWith('gh repo create'))).toBe(false);
+    expect(n).toContain('node');
+    expect(r.calls.at(-1)![1]).toContain('--delete-branch-on-merge');
+  });
+  it('--existing without a commit still does not commit', () => {
+    const r = rig();
+    fs.mkdirSync(path.join(r.tmp, 'g/.git'), { recursive: true });
+    r.go({ existing: true, scaffold: () => undefined });
+    expect(names(r.calls).some((c) => c.startsWith('git add') || c.startsWith('git commit'))).toBe(false);
+  });
+  it('--existing refuses, listing every file it would overwrite, and writes nothing', async () => {
+    const { scaffold } = await import('./scaffold.js');
+    const r = rig();
+    const dir = path.join(r.tmp, 'g');
+    fs.mkdirSync(dir);
+    fs.writeFileSync(path.join(dir, 'package.json'), 'mine');
+    fs.writeFileSync(path.join(dir, '.gitignore'), 'mine');
+    fs.writeFileSync(path.join(r.tmp, 'kit/ports.json'), JSON.stringify({ games: { g: { block: 6000, serve: { local: 4100 } } } }));
+    expect(() => scaffold({ dir, id: 'g', name: 'G', kit: path.join(r.tmp, 'kit'), existing: true, ref: 'v0' })).toThrow(/(package.json.*.gitignore|.gitignore.*package.json)/);
+    expect(fs.readFileSync(path.join(dir, 'package.json'), 'utf8')).toBe('mine');
+    expect(fs.readdirSync(dir).sort()).toEqual(['.gitignore', 'package.json']);
+  });
+  it('commit trailer: default, custom, or none (K221)', () => {
+    const msg = (extra = {}) => { const r = rig(); r.go(extra); return r.calls.find(([, a]) => a[0] === 'commit')![1].at(-1)!; };
+    expect(msg()).toContain('Co-Authored-By: Claude Sonnet 5.5');
+    expect(msg({ trailer: 'Co-Authored-By: X <x@y>' })).toContain('Co-Authored-By: X <x@y>');
+    expect(msg({ trailer: '' })).toBe('Start G from game-kit');
+  });
+  it('the template ignores the marker files and .cache, and the runner label defaults to the id (K221)', () => {
+    const t = path.join(import.meta.dirname, 'template');
+    expect(fs.readFileSync(path.join(t, 'ignorefile.tpl'), 'utf8')).toContain('.kit-new-*');
+    expect(fs.readFileSync(path.join(t, 'ignorefile.tpl'), 'utf8')).toContain('.cache/');
+    expect(fs.readFileSync(path.join(import.meta.dirname, 'scaffold.js'), 'utf8')).toContain('runner: o.runner ?? o.id');
+  });
+  it('--existing refuses on a present .github/workflows/ci.yml, before ports, writing nothing (K221)', () => {
+    const r = rig();
+    const dir = path.join(r.tmp, 'g');
+    fs.mkdirSync(path.join(dir, '.github/workflows'), { recursive: true });
+    fs.writeFileSync(path.join(dir, '.github/workflows/ci.yml'), 'mine');
+    expect(() => r.go({ existing: true })).toThrow('ci.yml');
+    expect(r.calls).toEqual([]);
+    expect(fs.readFileSync(path.join(dir, '.github/workflows/ci.yml'), 'utf8')).toBe('mine');
+    expect(fs.readdirSync(dir)).toEqual(['.github']);
+  });
 });

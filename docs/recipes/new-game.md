@@ -1,6 +1,6 @@
 # Start a new game on the kit
 
-1. **Start in one step:** `node ../game-kit/kit.mjs new <dir> <id> "<Name>"` registers the port block, writes the repo, pulls the kit, makes the first commit and creates the private GitHub repo with delete-branch-on-merge; re-running skips what is done, `--no-remote` skips git and GitHub. Then commit `ports.json` and `docs/PORTS.md` in game-kit. Steps 3-4 below are then partly done: only add what `new` did not.
+1. **Start in one step:** `node ../game-kit/kit.mjs new <dir> <id> "<Name>"` registers the port block, writes the repo, pulls the kit, makes the first commit and creates the private GitHub repo with delete-branch-on-merge; re-running skips what is done, `--no-remote` skips git and GitHub; `--existing` is for a repo that already has files and history: it writes only new files, lists any clash and writes nothing, and commits nothing. Then commit `ports.json` and `docs/PORTS.md` in game-kit. Steps 3-4 below are then partly done: only add what `new` did not.
 2. **Find components.** `node ../game-kit/kit.mjs search <word>` or read [CATALOG.md](../CATALOG.md). Every game starts with `engine-core` (it is the engine), `state-machines`, `app-frame`, `settings`, `saves`, `sim-pool`, `card-harness` (tests on real cards).
 3. **Pull the tooling first** (by hand only if not using `new`; these shape the check chain): `plan-checker`, `repo-gate`, `traceability`, `check-runner`, `ci-templates`, `bundle-size`, `lint-preset`, `theme-check`, `plain-text`.
    ```bash

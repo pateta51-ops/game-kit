@@ -2,10 +2,11 @@
 import { execFileSync } from 'node:child_process'
 import fs from 'node:fs'
 import path from 'node:path'
-import { scaffold as realScaffold } from './scaffold.js'
+import { existingCheck, scaffold as realScaffold } from './scaffold.js'
 
 const run = (cmd, args, o = {}) => execFileSync(cmd, args, { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'], ...o })
 
+// existing: the folder is an existing repo (K221): no markers, no wipe, no first commit of its files; git init and repo create still skip when .git / origin exist
 // options: those of scaffold, plus remote (default true; false skips git init, commit, repo create and repo edit), exec(cmd, args, {cwd}) => stdout (throws on failure), scaffold, log
 export function newGame(o) {
   const exec = o.exec ?? run
@@ -22,8 +23,10 @@ export function newGame(o) {
   }
   const dir = path.resolve(o.dir)
   const mark = (n) => path.join(dir, '.kit-new-' + n)
-  const made = remote && (fs.existsSync(mark('done')) || fs.existsSync(path.join(dir, '.git')))
+  const existing = !!o.existing
+  const made = remote && !existing && (fs.existsSync(mark('done')) || fs.existsSync(path.join(dir, '.git')))
   const portsFile = o.ports ?? path.join(kit, 'ports.json')
+  if (existing) existingCheck({ ...o, dir })
   step('ports', () => {
     if (o.ports || JSON.parse(fs.readFileSync(portsFile, 'utf8')).games?.[o.id]) return 'skipped, entry exists'
     const pkg = path.join(dir, 'package.json')
@@ -36,9 +39,9 @@ export function newGame(o) {
   if (remote && !repo) step('owner', () => { repo = exec('gh', ['api', 'user', '--jq', '.login']).trim() + '/' + o.id; return repo })
   step('files', () => {
     if (made) return 'skipped, ' + dir + ' already has files'
-    if (remote && fs.existsSync(mark('partial'))) fs.rmSync(dir, { recursive: true, force: true })
-    try { scaffold({ ...o, dir, repo, ...(remote ? { git: false } : {}) }) } catch (e) { if (remote && fs.existsSync(dir)) fs.writeFileSync(mark('partial'), ''); throw e }
-    if (remote) fs.writeFileSync(mark('done'), '')
+    if (remote && !existing && fs.existsSync(mark('partial'))) fs.rmSync(dir, { recursive: true, force: true })
+    try { scaffold({ ...o, dir, repo, ...(remote || existing ? { git: false } : {}) }) } catch (e) { if (remote && !existing && fs.existsSync(dir)) fs.writeFileSync(mark('partial'), ''); throw e }
+    if (remote && !existing) fs.writeFileSync(mark('done'), '')
   })
   if (!remote) { log('--no-remote: git commit and GitHub repo skipped'); return done }
   const git = (...a) => exec('git', a, { cwd: dir })
@@ -48,8 +51,9 @@ export function newGame(o) {
   })
   step('first commit', () => {
     try { git('rev-parse', '--verify', 'HEAD'); return 'skipped, already committed' } catch { /* none yet */ }
+    if (existing) return 'skipped, --existing: nothing committed'
     git('add', '-A')
-    git('commit', '-q', '-m', `Start ${o.name} from game-kit\n\nCo-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>`)
+    git('commit', '-q', '-m', `Start ${o.name} from game-kit` + (o.trailer === '' ? '' : '\n\n' + (o.trailer ?? 'Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>')))
   })
   step('repo create', () => {
     try { git('remote', 'get-url', 'origin'); return 'skipped, origin exists' } catch { /* none yet */ }

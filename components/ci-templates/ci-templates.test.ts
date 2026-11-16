@@ -416,4 +416,7 @@ describe('K190: what the four games need (examples/<game>.json renders their wor
     stop({ ci: { flat: true } }, '"flat" is for the gate only');
     stop({ gate: { draftConcurrency: true } }, 'full-gate.yml: "draftConcurrency"');
   });
+  it('K221: concurrency never cancels main', () => {
+    for (const f of ['ci.yml', 'full-gate.yml']) expect(render(f)).toContain("cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}");
+  });
 });

@@ -4,6 +4,7 @@ export interface ScaffoldOptions {
   name: string
   kit: string
   ref?: string
+  existing?: boolean
   ports?: string
   repo?: string
   runner?: string
