@@ -47,6 +47,8 @@ const CASES: [string, Record<string, unknown>, (o: Out) => void][] = [
   ['flip', { label: 'Pick 2 of 3' }, (o) => expect([o.flipped, o.label]).toEqual([true, 'Pick 2 of 3'])],
   ['fade-in', { scale: 2 }, (o) => expect([o.style?.opacity, o.style?.scale]).toEqual(['1', ''])],
   ['fade-in', { scale: [2, 1.5] }, (o) => expect(o.style?.scale).toBe('1.5')],
+  ['fade-in', { scale: 2, hold: true }, (o) => expect(o.style?.scale).toBe('2')],
+  ['fade-in', { scale: [2, 2] }, (o) => expect(o.style?.scale).toBe('2')],
   ['move', { to: 'b', scale: 2 }, (o) => expect([o.style?.left, o.style?.translate, o.style?.scale]).toEqual(['330px', '', ''])],
   ['move', { to: 'b', ease: 'out' }, (o) => expect(o.style?.left).toBe('330px')],
 ];

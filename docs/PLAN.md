@@ -89,6 +89,7 @@ A game's build plan lists the kit work it needs as phases named `GK<n>` for the 
 | K12b | `motion-frame` `play(beat, { parallel: true })` (a beat starts at once beside the playing one); `effect-library`: `move` and `scale` animate `translate` and `scale` so they compose with the transform verbs, and `resolve(id, run)` gets the run | S | 7th Inning Stretch PR 30, 15 Nov 2026 | done |
 | K12c | `effect-library`: `layer.start(run)` makes the beat's stand-ins at its start (a live piece hidden at the start left a hole until its actor's first verb); `text` reaches full opacity in the first quarter of the call so the rise is seen | S | 7th Inning Stretch PR 36, 15 Nov 2026 | done |
 | K12d | `effect-library`: optional step `scale` on `move` and `fade-in` (a number n = from n to 1, `[a, b]` = from a to b), composed with the move's translate; e2e test for two verbs on one actor no longer reads at a fixed 100 ms | S | 7th Inning Stretch, 15 Nov 2026 | done |
+| K12e | `effect-library`: `onActor(source, clone, id, run)` layer option (copy a canvas's pixels into the clone); step `hold: true` keeps a number `scale` for the whole step | S | a game, 15 Nov 2026 | done |
 
 ## Harvest from the existing games (owner, 15 Nov 2026)
 

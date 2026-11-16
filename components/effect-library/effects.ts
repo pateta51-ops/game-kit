@@ -18,11 +18,11 @@ export interface Fx {
 /** May return its own finish (a timer to clear, an end state to set); `animate`'s finishes run too. */
 export type Effect = (fx: Fx) => undefined | (() => void);
 
-/** Step `scale` on an entry verb: a number n = from n to 1, [a, b] = from a to b. */
+/** Step `scale` on an entry verb: a number n = from n to 1 (with `hold: true`, n for the whole step), [a, b] = from a to b. */
 const entry = (call: VerbCall): [string, string] | undefined => {
   const s = call.step['scale'];
   const v = (n: unknown): string => (n === 1 ? 'none' : String(n));
-  if (typeof s === 'number') return [v(s), 'none'];
+  if (typeof s === 'number') return [v(s), call.step['hold'] === true ? v(s) : 'none'];
   if (Array.isArray(s) && s.length === 2 && typeof s[0] === 'number' && typeof s[1] === 'number') return [v(s[0]), v(s[1])];
   return undefined;
 };

@@ -6,6 +6,8 @@ export interface LayerOptions {
   parent?: HTMLElement;
   /** the page element an actor or zone id stands for; the layer animates a clone of it, never the original. None found: a plain box. */
   resolve?: (id: string, run: Run<EffectLayer>) => HTMLElement | undefined;
+  /** called once per actor right after its clone is made and placed in the layer, only when `resolve` found a source (a clone does not copy a canvas's pixels: draw them here, or swap the content) */
+  onActor?: (source: HTMLElement, clone: HTMLElement, id: string, run: Run<EffectLayer>) => void;
 }
 export interface EffectLayer {
   el: HTMLElement;
@@ -62,6 +64,7 @@ export function createEffectLayer(o: LayerOptions = {}): EffectLayer {
         }
         el.appendChild(a);
         m.set(id, a);
+        if (src) o.onActor?.(src, a, id, run);
       }
       return a;
     },
