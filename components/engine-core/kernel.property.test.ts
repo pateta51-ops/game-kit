@@ -117,7 +117,7 @@ function randomPlay<G extends GameTypes>(game: GameRules<G>, start: G['state'], 
   const prompts: KernelPrompt[] = [];
   const check = (problems: readonly unknown[]): void => {
     if (problems.length > 0) {
-      throw new Error(`driver ${driver}, after ${String(actions.length)} action(s), answers so far ${JSON.stringify(actions.map((a) => a.picks))}: ${JSON.stringify(problems.slice(0, 5))}`);
+      throw new Error(`driver ${driver}, after ${String(actions.length)} action(s), answers so far ${JSON.stringify(actions.map((a) => (a.kind === 'answer' ? a.picks : a.verb)))}: ${JSON.stringify(problems.slice(0, 5))}`);
     }
   };
   check(each(s));

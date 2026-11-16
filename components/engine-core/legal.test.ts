@@ -75,9 +75,8 @@ describe('barred options and the only option (K88)', () => {
     expect(onlyOne({ min: 0, max: 1, options: [{ id: 'a', enabled: true }] })).toBeNull();
   });
 
-  it('a game that does not opt in replays to the same hash', () => {
-    const g = playGame('k88-hash');
-    expect(hashState(g.state)).toBe(hashState(playGame('k88-hash').state));
+  it('a game that does not opt in replays to the hash recorded on main before K88', () => {
+    expect(hashState(playGame('k88-hash').state)).toBe('602cdcdb66ea896e');
   });
 });
 
@@ -108,6 +107,16 @@ describe('preview by probe (K89)', () => {
     } finally {
       setRngOverrides(null);
     }
+  });
+
+  it('keeps every event of a task past the state log cap', () => {
+    const big: GameRules<Counter> = { ...g, handlers: { ...g.handlers, chosen: (ctx, t) => {
+      g.handlers['chosen']?.(ctx, t);
+      for (let i = 0; i < 249; i += 1) ctx.emit({ type: 'added', n: 0 });
+    } } };
+    const r = preview(big, s, ['roll'], CONTENT, { count });
+    expect(r.stop).toBe('hiddenInformation');
+    expect(r.events).toHaveLength(250);
   });
 
   it('stops at a nested choice and refuses an illegal answer', () => {

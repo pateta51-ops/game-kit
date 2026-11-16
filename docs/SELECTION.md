@@ -108,6 +108,7 @@ Open check before the lift: the canonical JSON of the Jarl line and of STCC buil
 | Board registry (K117: things highlighted from the legal-action list, stack layout; no animation in 1.0) | Rally the Troops `world.js` (ISC; idea, written new) | - | S |
 | Visual replay | Pattern only: Rome's is welded to its screens and art | | L if ever shared |
 | Small helpers (K109) | New code from the outside write-ups: icon with hidden word, text-key check, paired legality fixtures, relation index here; FlowQueue in state-machines, diffCards and cardLookup in card-patches | - | S |
+| Debug console (`debug-console`, K100) | New code from the netrunner (MIT, verb list only) and ArkhamHorror / MarvelChampions (ideas only) write-ups: slash-line parser and a console over engine-core debug edits | - | M |
 | Card query (K107) | New code from the arkham.build BuildQL write-up (ideas only, AGPL): field table, lexer, parser, evaluator | - | M |
 | Code-built 3D pieces (`pieces-3d`, K166) | 7th Inning Stretch, commit 4dcb9be: the only game with WebGL dice and a rolling ball, already free of its game's names | - | M |
 

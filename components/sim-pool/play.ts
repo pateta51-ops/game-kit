@@ -196,7 +196,7 @@ export function playOne<G extends GameTypes, S, O = unknown>(game: SimGame<G, S,
       ms.apply = performance.now() - t;
       const w = s.rng;
       const n = r.state.rng;
-      if (game.undoCheck && (a.reseed !== undefined || n.a !== w.a || n.b !== w.b || n.c !== w.c || n.d !== w.d) && !isRevealing(r.events))
+      if (game.undoCheck && ((a.kind === 'answer' && a.reseed !== undefined) || n.a !== w.a || n.b !== w.b || n.c !== w.c || n.d !== w.d) && !isRevealing(r.events))
         violations.push({ id: 'bad-undo', message: `action ${String(actions.length)} drew randomness without a reveal event: safe undo could take it back` });
       s = r.state;
       state = s;

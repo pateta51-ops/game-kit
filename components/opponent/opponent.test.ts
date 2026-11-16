@@ -237,7 +237,7 @@ describe('opponent (K103, K115)', () => {
   it('opponentDriver satisfies sim-pool Driver', () => {
     type St = Parameters<Driver['choose']>[0];
     type Ans = Parameters<Driver['choose']>[1][number];
-    const d = opponentDriver(make(), { view: (_s: St) => v, candidates: (_w, answers: readonly Ans[]) => answers.map((a) => C(a.picks.join())) });
+    const d = opponentDriver(make(), { view: (_s: St) => v, candidates: (_w, answers: readonly Ans[]) => answers.map((a) => C(a.kind === 'answer' ? a.picks.join() : a.verb)) });
     const drv: Driver = d;
     expectTypeOf(d).toMatchTypeOf<Driver>();
     expect(drv.name).toBe('ai');

@@ -3,6 +3,7 @@
 // revealing event or draws randomness): it returns what happened before that task, never what the task found.
 import { applyActionWith, validateAction } from './apply';
 import { canonicalJson } from './canonical';
+import { ctxEvents } from './ctx';
 import type { Ctx, GameRules, GameTypes, HandlerTable } from './types';
 
 export type PreviewStop = 'complete' | 'choice' | 'hiddenInformation' | 'rejected';
@@ -42,15 +43,16 @@ export function preview<G extends GameTypes>(
   const rng = canonicalJson(state.rng);
   const seen: G['event'][] = [];
   let last = before;
-  let next = state.seq;
+  let next = 0;
   const hides = (s: G['state'], evs: readonly G['event'][]): boolean => canonicalJson(s.rng) !== rng || evs.some((e) => e.reveal === true);
   const table: HandlerTable<G> = Object.fromEntries(
     Object.entries(game.handlers).map(([k, h]) => [
       k,
       (ctx: Ctx<G>, t: G['task']) => {
         h(ctx, t);
-        const fresh = ctx.s.log.filter((e) => e.seq >= next) as G['event'][];
-        next = ctx.s.seq;
+        const all = ctxEvents(ctx);
+        const fresh = all.slice(next);
+        next = all.length;
         if (hides(ctx.s, fresh)) throw STOP;
         seen.push(...fresh);
         last = count(ctx.s);

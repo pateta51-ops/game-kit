@@ -48,6 +48,13 @@ class StateRng implements CtxRng {
   int(max: number, name?: string): number {
     const o = over(name);
     if (o) return o(max as never) as number;
+    const f = this.s.forced?.[0];
+    if (f !== undefined && (f.name === undefined || f.name === name)) {
+      const rest = this.s.forced?.slice(1) ?? [];
+      if (rest.length > 0) this.s.forced = rest;
+      else delete this.s.forced;
+      return Math.max(0, Math.min(max - 1, f.value));
+    }
     return withRng(this.s, (w) => randomInt(w, max));
   }
   shuffle<T>(xs: readonly T[], name?: string): T[] {
@@ -65,10 +72,12 @@ class StateRng implements CtxRng {
  */
 class RunCtx<G extends GameTypes> implements Ctx<G> {
   readonly rng: CtxRng;
+  /** K100: set while a debug edit runs; its events carry `debug: true`. */
+  debug = false;
   constructor(
     readonly s: G['state'],
     readonly content: G['content'],
-    private readonly events: G['event'][],
+    readonly events: G['event'][],
     private readonly stamp: ((s: G['state']) => object) | undefined,
   ) {
     this.rng = new StateRng(s as Work);
@@ -99,7 +108,7 @@ class RunCtx<G extends GameTypes> implements Ctx<G> {
     const s = this.s as Work;
     const c = currentCause(this);
     const given = (input as { cause?: unknown }).cause;
-    const stamped = { ...input, ...(given === undefined ? (c !== undefined ? { cause: c } : {}) : {}), seq: takeSeq(s), ...this.stamp?.(this.s) } as KernelEvent;
+    const stamped = { ...input, ...(given === undefined ? (c !== undefined ? { cause: c } : {}) : {}), seq: takeSeq(s), ...this.stamp?.(this.s), ...(this.debug ? { debug: true } : {}) } as KernelEvent;
     this.events.push(stamped);
     const kept = s.log.length >= LOG_CAP ? s.log.slice(s.log.length - LOG_CAP + 1) : s.log;
     s.log = [...kept, stamped] as typeof s.log;
@@ -126,4 +135,12 @@ export function readCtx<G extends GameTypes>(
   content: G['content'],
 ): Ctx<G> {
   return new RunCtx<G>(s, content, [], game.stamp?.bind(game));
+}
+
+/** The events emitted so far through a context `makeCtx` built (the full list, not the capped state log). */
+export const ctxEvents = <G extends GameTypes>(ctx: Ctx<G>): readonly G['event'][] => (ctx as RunCtx<G>).events;
+
+/** K100: mark the events `ctx` emits as debug edits (true) or play (false). */
+export function setCtxDebug<G extends GameTypes>(ctx: Ctx<G>, on: boolean): void {
+  (ctx as RunCtx<G>).debug = on;
 }

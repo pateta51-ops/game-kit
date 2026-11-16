@@ -10,3 +10,4 @@ The kernel of a game engine: seeded random numbers, canonical JSON and hashes, t
 - Step causes (`inCause`, `ruleCause`, `effectCause`, `causeProblems`, K79, opt-in; work queued with `ctx.then` inside `inCause` runs later without the cause): `cause.md`.
 - Object references and last-known snapshots (`newObjectTrack`, `refOf`, `leaveZone`, `lastKnown`, K113, opt-in): `objref.md`.
 - Barred options with reason codes, the only-option notice (`bar`, `blocked`, `onlyOne`, `askOrTake`, K88) and outcome preview stopping at hidden information (`preview`, K89), opt-in: `legal.md`.
+- Debug edits as engine actions (`DebugAction`: `set`, `force`, `close` and the game's `GameRules.debug` verbs; `debugVerbs`, K100, opt-in): `debug.md`. The console is `debug-console`.

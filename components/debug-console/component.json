@@ -1,0 +1,15 @@
+{
+  "name": "debug-console",
+  "source": {
+    "game": "netrunner",
+    "url": "https://github.com/mtgred/netrunner",
+    "commit": "ideas-only",
+    "licence": "MIT (Copyright the netrunner contributors, LICENSE.txt); the verb list and slash syntax only, no code copied. Also ArkhamHorror and MarvelChampions (halogenandtoast; no licence, ideas only): debug edits as messages and their three test properties",
+    "paths": [
+      "src/clj/game/core/commands.clj (lines 64-80, 488-659: the slash command table)",
+      "docs/evaluation/outside/netrunner.md (finding 10), docs/evaluation/outside/halogenandtoast.md (finding 22)"
+    ]
+  },
+  "needs": ["engine-core"],
+  "packages": []
+}

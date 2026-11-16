@@ -41,7 +41,25 @@ export interface KernelEvent {
   readonly reveal?: boolean;
   /** K79: why a number moved (a rule id, or an effect record and its printed line); stamped by `inCause`. */
   readonly cause?: { readonly rule: string } | { readonly effect: string; readonly line: string };
+  /** K100: emitted by a debug edit, not by play (a game log skips or marks it). */
+  readonly debug?: true;
 }
+
+/** K100: a debug edit as an engine action, recorded, replayed and undone like an answer. Kernel verbs: `set`, `force`, `close`; others are the game's `GameRules.debug`. */
+export interface DebugAction {
+  readonly kind: 'debug';
+  readonly verb: string;
+  readonly args?: Readonly<Record<string, unknown>>;
+}
+
+/** K100: one forced result of the next `ctx.rng.int` (with that name, or any when unnamed). */
+export interface ForcedRoll {
+  readonly value: number;
+  readonly name?: string;
+}
+
+/** K100: a game's debug verb. Writes the draft through `own`; returns words to refuse the edit (nothing changes). */
+export type DebugHandler<G extends GameTypes> = (ctx: Ctx<G>, args: Readonly<Record<string, unknown>>) => string | undefined;
 
 export interface AnswerAction {
   readonly kind: 'answer';
@@ -60,12 +78,15 @@ export interface KernelState {
   readonly seq: number;
   readonly promptSeq: number;
   readonly log: readonly KernelEvent[];
+  /** K100: results queued by the `force` debug edit; absent when none. */
+  readonly forced?: readonly ForcedRoll[];
 }
 
 /** The types of one game. `stamped`: the event fields `GameRules.stamp` fills (never when none). */
 export interface GameTypes {
   readonly state: KernelState;
-  readonly action: AnswerAction;
+  /** `AnswerAction`, or `AnswerAction | DebugAction` for a game that takes debug edits (K100). */
+  readonly action: AnswerAction | DebugAction;
   readonly task: KernelTask;
   readonly prompt: KernelPrompt;
   readonly event: KernelEvent;
@@ -136,4 +157,6 @@ export interface GameRules<G extends GameTypes> {
   revealWords?(event: G['event']): string | undefined;
   /** When set, an action that used `state.rng` (the words changed) bars Safe undo like a reveal, with this reason (boardgame.io's randomness-used flag). */
   randomWords?: string;
+  /** K100: opt-in debug edits. Set (even `{}`) to accept `DebugAction`s: the kernel verbs plus these. Unset: refused. */
+  readonly debug?: Readonly<Record<string, DebugHandler<G>>>;
 }

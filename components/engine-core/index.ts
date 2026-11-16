@@ -14,7 +14,7 @@ export {
 } from './apply';
 export { adopt, closeDraft, copyList, copyMode, openDraft, own, setCopyMode, setCowChecks } from './cow';
 export type { Draft } from './draft';
-export { draftOf, LOG_CAP, makeCtx, readCtx, setRngOverrides } from './ctx';
+export { ctxEvents, draftOf, LOG_CAP, makeCtx, readCtx, setRngOverrides } from './ctx';
 export { cardInstanceId, parseCardInstanceId, takePromptSeq, takeSeq } from './ids';
 export { GameOver } from './gameOver';
 export { hashState, replay, type ReplayExpectation, type ReplayResult } from './replay';
@@ -81,3 +81,4 @@ export { enumerateAnswers, expectEvents, firstPicks, playUntil, randomPicks, ski
 export { causeProblems, currentCause, effectCause, inCause, ruleCause, type Cause, type CauseCheck } from './cause';
 export { askOrTake, bar, blocked, onlyOne, type Blocked, type OnlyOneNotice } from './legal';
 export { preview, type Preview, type PreviewOptions, type PreviewStop } from './preview';
+export { applyDebug, debugVerbs, KERNEL_VERBS } from './debug';

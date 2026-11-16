@@ -10,11 +10,12 @@ import './single';
 import { closeDraft, copyList, copyMode, openDraft } from './cow';
 import { copyState, freezeState, isFreezing } from './copy';
 import { makeCtx } from './ctx';
+import { applyDebug, KERNEL_VERBS } from './debug';
 import type { Draft } from './draft';
 import { EngineBugError, IllegalActionError } from './errors';
 import { GameOver } from './gameOver';
 import { run } from './runner';
-import type { ApplyResult, Ctx, GameRules, GameTypes, HandlerTable, KernelEvent, KernelState, KernelTask } from './types';
+import type { AnswerAction, ApplyResult, Ctx, GameRules, GameTypes, HandlerTable, KernelEvent, KernelState, KernelTask } from './types';
 
 /** The verdict of `validateAction`: `error` is "CODE: message". */
 export type ValidationResult = { readonly ok: true } | { readonly ok: false; readonly error: string };
@@ -45,8 +46,18 @@ const validWords = (w: unknown): boolean =>
  * `validateAction`: is this action an acceptable answer to the open prompt? Every legality check lives in the
  * prompt's options (disabled options stay listed with a reason), so the content is not read.
  */
-export function validateAction<G extends GameTypes>(state: G['state'], action: G['action']): ValidationResult {
+/** `game` is needed for a debug edit (K100): without it, or when the game has not opted in or lacks the verb, the edit is refused as `applyAction` refuses it. */
+export function validateAction<G extends GameTypes>(state: G['state'], input: G['action'], game?: GameRules<G>): ValidationResult {
+  const action = input as AnswerAction;
   if (state.result !== null) return no('GAME_OVER', 'The game is over.');
+  const d = action as { kind?: unknown; verb?: unknown; args?: unknown };
+  if (d.kind === 'debug') {
+    if (typeof d.verb !== 'string' || !(d.args === undefined || (typeof d.args === 'object' && d.args !== null && !Array.isArray(d.args))))
+      return no('BAD_ACTION', 'A debug edit needs a verb and args as an object.');
+    if (game?.debug === undefined) return no('DEBUG_REFUSED', 'this game takes no debug edits');
+    if (!(KERNEL_VERBS as readonly string[]).includes(d.verb) && game.debug[d.verb] === undefined) return no('DEBUG_REFUSED', `no debug verb "${d.verb}"`);
+    return OK;
+  }
   if ((action as { kind?: unknown }).kind !== 'answer') {
     return no('BAD_ACTION', 'Every action answers the open prompt.');
   }
@@ -102,8 +113,9 @@ export function applyActionWith<G extends GameTypes>(
   content: G['content'],
   table: HandlerTable<G>,
 ): ApplyResult<G> {
-  const check = validateAction<G>(state, action);
+  const check = validateAction<G>(state, action, game);
   if (!check.ok) throw new IllegalActionError(check.error);
+  if (action.kind === 'debug') return applyDebug(game, state, action, content, table);
   const events: G['event'][] = [];
   // Copy on write (cow.ts): the working state shares every container with the input until a handler writes to it
   // through the barrier. With freezing on the input is frozen first (already so for every state the engine returned), so
@@ -117,7 +129,7 @@ export function applyActionWith<G extends GameTypes>(
     // the prompt closes and its resume task runs with the answer
     if (next.prompt === null) throw new Error('unreachable: validated with a prompt open');
     const promptId = next.prompt.id;
-    if (action.reseed !== undefined) next.rng = { a: action.reseed.a, b: action.reseed.b, c: action.reseed.c, d: action.reseed.d };
+    if (action.kind === 'answer' && action.reseed !== undefined) next.rng = { a: action.reseed.a, b: action.reseed.b, c: action.reseed.c, d: action.reseed.d };
     next.prompt = null;
     const resume = next.stack.pop();
     if (resume === undefined) {

@@ -111,6 +111,16 @@
           "packages/engine/src/choices.ts (unavailable options, only-option notice; design only)",
           "packages/engine/src/preview.ts (outcome preview by probe; design only)"
         ]
+      },
+      {
+        "game": "ArkhamHorror, MarvelChampions (halogenandtoast)",
+        "url": "https://github.com/halogenandtoast/ArkhamHorror",
+        "licence": "none found (idea only, no code copied)",
+        "paths": [
+          "backend/arkham-api/library/Arkham/Message.hs (Debug* messages; design only)",
+          "MarvelChampions test/Marvel/PublicSpec.hs (edit keeps the question, refused edits atomic, no misleading log lines; design only)",
+          "netrunner src/clj/game/core/commands.clj (MIT: set with clamping, summon, close-prompt; verb list only)"
+        ]
       }
     ]
   },
