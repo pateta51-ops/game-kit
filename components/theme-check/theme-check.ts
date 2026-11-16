@@ -10,6 +10,9 @@
 //   FONTFACE  (`fontFaces`) an @font-face for another family or file, or a family no @font-face loads
 //   BODY_FONT (`bodyFont`) no body rule sets font-family to a token or an allowed family
 //   `looseFont`: a font shorthand may end in a var(...) token or an allowed family
+// `rules`: `{ "COLOR": false }` drops every finding of that rule (any rule name above or below; default all on).
+// `bodyFontToken` (with `bodyFont`): the body font must be a var(...) token, not a family name.
+// `checkTokenFile`: the token file is checked like any other file (default: exempt).
 // Files mode: paths, folders or globs (relative to the root) after the flags check only those files; no asset check.
 // `assets` (the look's files are in place): FONT_MISSING, FONT_UNREFERENCED, FONT_LICENCE, SVG, FILE.
 // Exit codes: 0 clean, 1 findings, 2 bad usage.
@@ -29,10 +32,13 @@ export interface ThemeConfig {
   menuComponent?: string;
   fontFaces?: { family: string; file: string }[];
   bodyFont?: boolean;
+  bodyFontToken?: boolean;
   looseFont?: boolean;
   fontVars?: string[];
   fontSrcPrefix?: string;
   assets?: ThemeAssets;
+  rules?: Record<string, boolean>;
+  checkTokenFile?: boolean;
 }
 export interface ThemeAssets {
   fontDir?: string;
@@ -55,6 +61,7 @@ const COLOR = /#[0-9a-f]{3,8}\b|\b(?:rgba?|hsla?|hwb)\(/gi;
 const DECL =
   /(?:^|[;{\s'"])(font-family|fontFamily|font|border(?:-(?:top|bottom|start|end)-(?:left|right|start|end))?-radius|border(?:Top|Bottom|Start|End)?(?:Left|Right|Start|End)?Radius|filter|box-shadow|boxShadow|text-shadow|textShadow)\s*:\s*([^;}\n]+)/g;
 
+const on = (cfg: ThemeConfig) => (f: string) => cfg.rules?.[f.split(' ')[0] as string] !== false;
 const norm = (p: string) => p.replace(/\\/g, '/').replace(/^\.\//, '').replace(/\/+$/, '');
 
 export function themeFindings(files: readonly SourceFile[], cfg: ThemeConfig): string[] {
@@ -92,9 +99,9 @@ export function themeFindings(files: readonly SourceFile[], cfg: ThemeConfig): s
         else faces.add(font.family);
       }
       const bv = (/(?:^|[},])\s*body\s*(?:,[^{]*)?{[^}]*?font-family\s*:\s*([^;}]+)/m.exec(css)?.[1] ?? '').trim();
-      if (bv && !GENERIC.test(bv) && fontOk(bv)) body = true;
+      if (bv && !GENERIC.test(bv) && fontOk(bv) && (!cfg.bodyFontToken || (fv ? fv.some((n) => bv === `var(${n})`) : WHOLE_VAR.test(bv)))) body = true;
     }
-    if (f.path === norm(cfg.tokenFile)) continue;
+    if (!cfg.checkTokenFile && f.path === norm(cfg.tokenFile)) continue;
     const text = f.text
       .replace(/\/\*[\s\S]*?\*\//g, '')
       .replace(f.path.endsWith('.tsx') ? /(^|[^:])\/\/.*$/gm : /$^/g, '$1')
@@ -142,7 +149,7 @@ export function themeFindings(files: readonly SourceFile[], cfg: ThemeConfig): s
       )
         out.push(`LOGO ${f.path}: does not render <${mc}>`);
   }
-  return out;
+  return out.filter(on(cfg));
 }
 
 const walk = (dir: string, lean = false): string[] =>
@@ -237,7 +244,7 @@ export function themeCheck(root: string, cfg: ThemeConfig, only?: readonly strin
     ...missing,
     ...themeFindings(files, { ...cfg, menuFiles: menu, ...(only ? { fontFaces: [], bodyFont: false } : {}) }),
     ...(cfg.assets && !only ? assetFindings(root, cfg.assets) : []),
-  ];
+  ].filter(on(cfg));
 }
 
 if (import.meta.url === pathToFileURL(process.argv[1] ?? '').href) {

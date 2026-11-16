@@ -308,3 +308,54 @@ describe('theme-check K74 review fixes', () => {
     expect(themeCheck(root, { ...noMenu, tokenFile: './tokens.css' })).toEqual([]);
   });
 });
+
+describe('theme-check K135 rule switches and token file', () => {
+  const src = [{ path: 'ui/a.css', text: 'a{color:#fff;border-radius:4px;box-shadow:0 0 2px black;font-family:Comic}' }];
+  it('defaults: every rule on, the token file exempt', () => {
+    expect(themeFindings(src, noMenu).map((f) => f.split(' ')[0])).toEqual(['COLOR', 'RADIUS', 'SHADOW', 'FONT']);
+    expect(themeFindings(src, { ...noMenu, rules: {} })).toEqual(themeFindings(src, noMenu));
+    expect(themeFindings(src, { ...noMenu, rules: { COLOR: true } })).toEqual(themeFindings(src, noMenu));
+    expect(themeFindings([{ path: 'tokens.css', text: 'a{font-family:Comic;color:#fff}' }], { ...noMenu, checkTokenFile: false })).toEqual([]);
+  });
+  it('rules: a switch per rule, COLOR, RADIUS and SHADOW included', () => {
+    expect(themeFindings(src, { ...noMenu, rules: { COLOR: false, RADIUS: false, SHADOW: false } })).toEqual(['FONT ui/a.css: font-family Comic']);
+    for (const r of ['COLOR', 'RADIUS', 'SHADOW', 'FONT'])
+      expect(themeFindings(src, { ...noMenu, rules: { [r]: false } }).map((f) => f.split(' ')[0])).toEqual(['COLOR', 'RADIUS', 'SHADOW', 'FONT'].filter((x) => x !== r));
+    const menu = [{ path: 'ui/Menu.tsx', text: '<pre style={{ fontFamily: "Arvo, serif" }} />' }];
+    const c = { ...cfg, fontFaces: [{ family: 'Arvo', file: 'a.woff2' }], bodyFont: true };
+    expect(themeFindings(menu, c).map((f) => f.split(' ')[0]).sort()).toEqual(['BODY_FONT', 'FONTFACE', 'LOGO', 'SYSTEM_FONT', 'SYSTEM_FONT']);
+    expect(themeFindings(menu, { ...c, rules: { SYSTEM_FONT: false, LOGO: false, FONTFACE: false, BODY_FONT: false } })).toEqual([]);
+  });
+  it('rules: asset and file findings too', () => {
+    const root = mkdtempSync(join(tmpdir(), 'tc-rules-'));
+    mkdirSync(join(root, 'ui'));
+    writeFileSync(join(root, 'tokens.css'), ':root{--c:#fff}');
+    const c = { ...noMenu, assets: { files: ['sky.webp'], svgs: ['logo.svg'] } };
+    expect(themeCheck(root, c)).toEqual(['SVG logo.svg is missing or has no paths', 'FILE sky.webp: not found']);
+    expect(themeCheck(root, { ...c, rules: { SVG: false } })).toEqual(['FILE sky.webp: not found']);
+    expect(themeCheck(root, { ...c, rules: { SVG: false, FILE: false } })).toEqual([]);
+  });
+  it('bodyFontToken: the body font must be a token, not a family name', () => {
+    const b = (text: string, o: Partial<ThemeConfig>) => themeFindings([{ path: 'ui/a.css', text }], { ...noMenu, bodyFont: true, ...o });
+    const miss = ['BODY_FONT the body is not set in a theme family'];
+    expect(b('body{font-family:Arvo}', {})).toEqual([]);
+    expect(b('body{font-family:Arvo}', { bodyFontToken: false })).toEqual([]);
+    expect(b('body{font-family:Arvo}', { bodyFontToken: true })).toEqual(miss);
+    expect(b('body{font-family:var(--f-ui), Arvo}', { bodyFontToken: true })).toEqual(miss);
+    expect(b('body{font-family:var(--f-ui)}', { bodyFontToken: true })).toEqual([]);
+    expect(b('body{font-family:var(--f-ui)}', { bodyFontToken: true, fontVars: ['--f-ui'] })).toEqual([]);
+    expect(b('body{font-family:var(--f-ui)}', { bodyFontToken: true, fontVars: ['--f-head'] })).toEqual(['FONT ui/a.css: font-family var(--f-ui)', ...miss]);
+    expect(b('body{font-family:Arvo}', { bodyFontToken: true, bodyFont: false })).toEqual([]);
+  });
+  it('checkTokenFile: the token file is checked like any other file', () => {
+    const tok = [{ path: 'tokens.css', text: ':root{--c:#fff;--f:Arvo}a{font-family:Comic;border-radius:4px}' }];
+    expect(themeFindings(tok, { ...noMenu, tokenFile: './tokens.css', checkTokenFile: true })).toEqual(['COLOR tokens.css: #fff', 'FONT tokens.css: font-family Comic', 'RADIUS tokens.css: 4px']);
+    expect(themeFindings(tok, { ...noMenu, checkTokenFile: true, rules: { COLOR: false, RADIUS: false, SHADOW: false } })).toEqual(['FONT tokens.css: font-family Comic']);
+    const root = mkdtempSync(join(tmpdir(), 'tc-tokchk-'));
+    mkdirSync(join(root, 'ui'));
+    writeFileSync(join(root, 'tokens.css'), 'a{font-family:Comic}');
+    expect(themeCheck(root, noMenu)).toEqual([]);
+    expect(themeCheck(root, { ...noMenu, checkTokenFile: true })).toEqual(['FONT tokens.css: font-family Comic']);
+    expect(themeCheck(root, { ...noMenu, checkTokenFile: true }, ['tokens.css'])).toEqual(['FONT tokens.css: font-family Comic']);
+  });
+});
