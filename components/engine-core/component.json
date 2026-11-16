@@ -113,6 +113,41 @@
         ]
       },
       {
+        "game": "ArkhamHorror (halogenandtoast)",
+        "url": "https://github.com/halogenandtoast/ArkhamHorror",
+        "licence": "none found (idea only, no code copied)",
+        "paths": [
+          "backend/arkham-api/library/Arkham/Game/Runner.hs (Would, CancelBatch, IgnoreBatch, DoBatch, Instead; K93 design only)"
+        ]
+      },
+      {
+        "game": "netrunner",
+        "url": "https://github.com/mtgred/netrunner",
+        "licence": "MIT",
+        "notice": "Copyright the netrunner contributors (LICENSE.txt, MIT)",
+        "paths": [
+          "src/clj/game/core/prevention.clj (prevention window as card data, remaining / prevented counters; K93 design only)"
+        ]
+      },
+      {
+        "game": "XMage",
+        "url": "https://github.com/magefree/mage",
+        "licence": "MIT",
+        "notice": "Copyright (c) 2010 betasteward@gmail.com",
+        "paths": [
+          "Mage/src/main/java/mage/game/events/BatchEvent.java (shared batch keys; K93 design only)",
+          "Mage/src/main/java/mage/abilities/effects/ContinuousEffects.java (replacement loop, applied-set, chooser; K111 design only)"
+        ]
+      },
+      {
+        "game": "Forge",
+        "url": "https://github.com/Card-Forge/forge",
+        "licence": "GPL-3.0 (idea only, no code copied)",
+        "paths": [
+          "forge-game/src/main/java/forge/game/replacement/ReplacementLayer.java, ReplacementHandler.java (ordering classes, result codes; K111 idea only)"
+        ]
+      },
+      {
         "game": "ArkhamHorror, MarvelChampions (halogenandtoast)",
         "url": "https://github.com/halogenandtoast/ArkhamHorror",
         "licence": "none found (idea only, no code copied)",

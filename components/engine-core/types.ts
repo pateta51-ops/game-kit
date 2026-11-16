@@ -1,6 +1,7 @@
 // The shapes the kernel works on. A game declares its own types (extending these) in one `GameTypes` bundle and
 // implements `GameRules` over it.
 import type { Draft } from './draft';
+import type { TimingState } from './timing';
 
 export interface RngWords {
   readonly a: number;
@@ -13,6 +14,8 @@ export interface KernelTask {
   readonly kind: string;
   /** For a resume task: the answer once given. */
   readonly answer?: readonly string[];
+  /** K93: the batch this task belongs to (`cancelBatch` removes it). */
+  readonly batch?: number;
 }
 
 export interface KernelOption {
@@ -43,6 +46,9 @@ export interface KernelEvent {
   readonly cause?: { readonly rule: string } | { readonly effect: string; readonly line: string };
   /** K100: emitted by a debug edit, not by play (a game log skips or marks it). */
   readonly debug?: true;
+  /** K93: the batch and occurrence of an event the timing kit emitted when an occurrence happened. */
+  readonly batch?: number;
+  readonly occurrence?: number;
 }
 
 /** K100: a debug edit as an engine action, recorded, replayed and undone like an answer. Kernel verbs: `set`, `force`, `close`; others are the game's `GameRules.debug`. */
@@ -80,6 +86,8 @@ export interface KernelState {
   readonly log: readonly KernelEvent[];
   /** K100: results queued by the `force` debug edit; absent when none. */
   readonly forced?: readonly ForcedRoll[];
+  /** K93: batches, occurrences and open windows (`timing.md`); absent until the game starts a batch. */
+  readonly timing?: TimingState;
 }
 
 /** The types of one game. `stamped`: the event fields `GameRules.stamp` fills (never when none). */
