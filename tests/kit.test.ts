@@ -137,4 +137,12 @@ describe('kit.mjs', () => {
     expect(p.status).toBe(0);
     expect(run(g, 'check').status).toBe(0);
   });
+
+  it('next-id: highest K number over all given plans + 1, n of them (K208)', () => {
+    const d = game();
+    put(path.join(d, 'a.md'), '| K9 | x | L |\n| K207 | y | S | done |\n| Kx | z |\n');
+    put(path.join(d, 'b.md'), '| K210 | open PR row | S |\n');
+    expect(run(d, 'next-id', '--from', 'a.md', 'b.md').stdout.trim()).toBe('K211');
+    expect(run(d, 'next-id', '3', '--from', 'a.md').stdout.trim()).toBe('K208 K209 K210');
+  });
 });

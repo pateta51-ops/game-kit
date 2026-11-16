@@ -2,6 +2,7 @@
 // Run from a game's repo root.
 //   node <kit>/kit.mjs pull <path to game-kit checkout> <tag or commit> [component...]   copies components into ./kit and locks them
 //   node kit/kit.mjs list | search <word>                                              the catalogue of every component (pulled or not), from kit/CATALOG.md
+//   node kit.mjs next-id [n] [--from <PLAN.md>...]                                     (game-kit checkout) the next free K number(s): origin/main and every open PR's docs/PLAN.md
 //   node kit/kit.mjs check                                                              fails if ./kit differs from kit/kit.lock.json
 import { execFileSync as x } from 'node:child_process'
 import { createHash } from 'node:crypto'
@@ -35,6 +36,23 @@ if (cmd === 'pull') {
   fs.writeFileSync(LOCK, JSON.stringify(lock, null, 1) + '\n')
   try { fs.writeFileSync('kit/CATALOG.md', x('git', ['-C', src, 'show', commit + ':docs/CATALOG.md'], { stdio: ['ignore', 'pipe', 'ignore'] })) } catch { /* a ref with no catalogue */ }
   console.log('pulled ' + Object.entries(lock.components).map(([n, c]) => n + '@' + c.ref).join(', '))
+} else if (cmd === 'next-id') {
+  const ff = a.indexOf('--from')
+  const cnt = Number(a.find((v, i) => /^\d+$/.test(v) && (ff < 0 || i < ff)) ?? 1)
+  let texts
+  if (ff >= 0) texts = a.slice(ff + 1).map((f) => fs.readFileSync(f, 'utf8'))
+  else {
+    const plan = (r) => x('git', ['show', r + ':docs/PLAN.md'], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] })
+    try { x('git', ['fetch', '-q', 'origin']) } catch { console.error('warning: fetch failed, using the local origin/main') }
+    texts = [plan('origin/main')]
+    try {
+      for (const { number } of JSON.parse(x('gh', ['pr', 'list', '--state', 'open', '--limit', '200', '--json', 'number'], { encoding: 'utf8' }))) {
+        try { x('git', ['fetch', '-q', 'origin', 'pull/' + number + '/head:refs/kit-next-id/' + number, '--force']); texts.push(plan('refs/kit-next-id/' + number)) } catch { /* PR without docs/PLAN.md */ }
+      }
+    } catch { console.error('warning: gh missing or offline, only origin/main was read: an open PR may already use the number') }
+  }
+  const top = Math.max(0, ...texts.flatMap((t) => [...t.matchAll(/^\|\s*K(\d+)\s*\|/gm)].map((m) => Number(m[1]))))
+  console.log(Array.from({ length: cnt }, (_, i) => 'K' + (top + 1 + i)).join(' '))
 } else if (cmd === 'check') {
   const lock = readLock()
   const bad = []
@@ -58,6 +76,6 @@ if (cmd === 'pull') {
   const words = a.map((w) => w.toLowerCase())
   for (const [n, , purpose, , use] of secs) if (cmd === 'list' || words.every((w) => (n + purpose + use).toLowerCase().includes(w))) console.log(n + ': ' + (purpose ?? '').split(/(?<=\.)\s/)[0].slice(0, 200) + ' ' + (use ?? '').replace('- **Use it when:** ', '(use when: ') + (use ? ')' : ''))
 } else {
-  console.error('usage: kit.mjs pull <game-kit checkout> <ref> [component...] | kit.mjs check | kit.mjs list | kit.mjs search <word>')
+  console.error('usage: kit.mjs pull <game-kit checkout> <ref> [component...] | kit.mjs check | kit.mjs next-id [n] | kit.mjs list | kit.mjs search <word>')
   process.exit(2)
 }
