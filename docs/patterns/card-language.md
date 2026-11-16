@@ -27,3 +27,12 @@ Clone the state, run the steps, fork once per enabled option at each prompt, bre
 - Keep the engine free of content imports: the validator mirrors the schema by hand and a content check runs both.
 - Coverage of the printed texts decides whether the language is enough: write the inventory (card, op list) before the interpreter.
 - A choice is not an effect (ebr fix): prompts are asked by the runner, not simulated as ops.
+
+## Mechanic-family manifests (middle-earth-player, MIT; `src/rules/interpret/family-manifest.ts`, excerpt not verified)
+- Group ops by mechanic family (draw, damage, tokens, movement...). Each family has one manifest: `vocabulary` (the verbs it owns), `runner` (verb to function), `records` (the card records that use them). A verb belongs to exactly one family.
+- Test in the game: for every family, every declared verb has a runner, every runner is a declared verb, and no verb is declared by two families. Add a family = one manifest file plus its runners; the interpreter never lists verbs itself.
+- Same idea as the `OPS` registry above, split per family so a family can be read, tested and removed alone. The test is a few lines over the manifests; write it in the game, not in the kit.
+
+## Results cached by immutable state
+- When the engine never mutates a state object (a new object per step), a `WeakMap<State, Result>` caches a pure derived value (constant records, legal actions, a table view) with no invalidation: a changed state is a new key, and the entry goes with the state.
+- Only for pure functions of that state; a key that is cloned or mutated in place makes it wrong. Measure first (`perf`); add it where a profile shows the same state read many times per step.
