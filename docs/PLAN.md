@@ -97,14 +97,14 @@ A game's build plan lists the kit work it needs as phases named `GK<n>` for the 
 
 | Batch | Content | Sources | Effort | State |
 |---|---|---|---|---|
-| K43 | New `perf`: engine speed budget. Percentiles, each call timed several times with the fastest kept, warm-up game, the ten slowest actions, a budgets test, a command line with an exit code; the game supplies the driver | STCC (base), Imperium, Unstoppable, EBR, Warp's, Rome | M | planned |
-| K44 | `ci-templates`: `watch-run.sh` (one background command per run) and `gate-numbers.py`; nightly fuzz workflow with its own concurrency group and checkout folder; skipped-test reporter | Rome, STCC, Warp's, Imperium, EBR | M | planned |
-| K45 | `check-runner`: stop at the first failure with `--keep-going`; one gate per item side by side with a known-failing list | STCC, EBR | S | planned |
-| K46 | New `lint-preset`: engine purity (no clock, random, DOM, console, storage, UI imports) and no direct writes to shared state; "the engine names no real card id" pattern | Jarl (base), EBR | S | planned |
-| K47 | New `plain-text`: strip rule and ruling ids from every shown line; a pattern check for text a player must never see | Rome, Jarl | S | planned |
-| K48 | New `e2e-helpers`: error watch, no sideways scroll, wait for animations, viewports, screenshot, wait for the autosave before a reload; axe check as an option | Imperium (base), STCC, Jarl, Unstoppable | S | planned |
-| K49 | `saves`: autosave time that never goes back; rename a save; export all data, reset all data | EBR, STCC, Unstoppable | M | planned |
-| K50 | `sim-pool`: invariant run that reports a failure as seed plus step and replays to it; fuzz command; sanity-band shape; code-version stamp for resumed sweeps | STCC, EBR, Warp's, Imperium | M | planned |
+| K43 | New `perf`: engine speed budget. Percentiles, each call timed several times with the fastest kept, warm-up game, the ten slowest actions, a budgets test, a command line with an exit code; the game supplies the driver | STCC (base), Imperium, Unstoppable, EBR, Warp's, Rome | M | done |
+| K44 | `ci-templates`: `watch-run.sh` (one background command per run) and `gate-numbers.py`; nightly fuzz workflow with its own concurrency group and checkout folder; skipped-test reporter | Rome, STCC, Warp's, Imperium, EBR | M | done |
+| K45 | `check-runner`: stop at the first failure with `--keep-going`; one gate per item side by side with a known-failing list | STCC, EBR | S | done |
+| K46 | New `lint-preset`: engine purity (no clock, random, DOM, console, storage, UI imports) and no direct writes to shared state; "the engine names no real card id" pattern | Jarl (base), EBR | S | done |
+| K47 | New `plain-text`: strip rule and ruling ids from every shown line; a pattern check for text a player must never see | Rome, Jarl | S | done |
+| K48 | New `e2e-helpers`: error watch, no sideways scroll, wait for animations, viewports, screenshot, wait for the autosave before a reload; axe check as an option | Imperium (base), STCC, Jarl, Unstoppable | S | done |
+| K49 | `saves`: autosave time that never goes back; rename a save; export all data, reset all data | EBR, STCC, Unstoppable | M | done |
+| K50 | `sim-pool`: invariant run that reports a failure as seed plus step and replays to it; fuzz command; sanity-band shape; code-version stamp for resumed sweeps | STCC, EBR, Warp's, Imperium | M | done |
 
 ### Wave 2
 
