@@ -69,7 +69,7 @@ A game's build plan lists the kit work it needs as phases named `GK<n>` for the 
 | K24 | Exact dice odds: enumerate the multisets of k dice (optionally plus one die of another size) with multinomial weights, `chance(k, test)`; cached per thread | S | a finished build, 15 Nov 2026 | done |
 | K25 | `engine-core` or `card-harness`: `enumerateAnswers` (every answer set of a kernel prompt) and the test helpers `randomPicks`, `playUntil`, `expectEvents` | S | a finished build, 15 Nov 2026 | proposed |
 | K26 | `card-harness` inventory: clause-id scheme (kind plus the shortest unique word prefix of the printed text) | S | a finished build, 15 Nov 2026 | done |
-| K27 | Content build: CSV reader and the schema-to-type equality helpers (`DR`/`Same`/`Is`) | S | a finished build, 15 Nov 2026 | proposed |
+| K27 | Content build: CSV reader and the schema-to-type equality helpers (`DR`/`Same`/`Is`) | S | a finished build, 15 Nov 2026 | done |
 | K28 | Layout: a layout JSON of [x,y,w,h] zones to parent-relative percent positions, a fixed-size `Stage` scaled to the window, `zone`/`slots`/`withZones`; `app-frame` fixed head (`menu` or `flow`) | M | a finished build, 15 Nov 2026 | proposed |
 | K29 | Paced presentation: an event-step queue, `foldView` (the view as of a paced step, folded onto the pre-answer view) and `questionZone` (move a question band to a second rect when its home covers the targets) | M | a finished build, 15 Nov 2026 | proposed |
 | K30 | `engine-core` test: play real games and assert that every auto-answered prompt equals the only legal answer (skip-empty invariant) | S | a finished build, 15 Nov 2026 | proposed |

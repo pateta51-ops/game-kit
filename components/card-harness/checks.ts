@@ -34,6 +34,10 @@ export function describeCheck<E>(
 }
 
 export type Same<A, B> = [A] extends [B] ? ([B] extends [A] ? true : false) : false;
+/** Deep readonly: a schema's mutable inferred type compared with a game's readonly type. */
+export type DR<T> = T extends readonly (infer U)[] ? readonly DR<U>[] : T extends object ? { readonly [K in keyof T]: DR<T[K]> } : T;
+/** `Is<z.infer<typeof Schema>, T>`: the schema type, made deep readonly, equals T. */
+export type Is<S, T> = Same<DR<S>, T>;
 /** `conforms<Same<z.infer<typeof Schema>, EngineType>>()` compiles only when they match. */
 export const conforms = <T extends true>(): T | undefined => undefined;
 
