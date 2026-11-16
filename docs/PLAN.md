@@ -226,6 +226,15 @@ Sixteen public card- and board-game repositories were surveyed read-only; the fi
 | K126 | `engine-core`: optional `reseed` words on an answer (fresh randomness recorded with the action, replay exact); `freshWords()` app side | 7th Inning Stretch | S | done (asked as K79 in the game plan; K79 was taken) |
 | K127 | `sound-player`: the last played file is excluded from the random pick only when a cue has three or more files (XD-54) | 7th Inning Stretch | S | done (asked as K80 in the game plan; K80 was taken) |
 | K125 | Learned opponent (owner's word; STCC D-067 stands until then): value network with one-round look-ahead on the real engine and self-play training; study in `docs/evaluation/outside/rftg-opponent.md` | rftg (Keldon) | L | proposed |
+| K126 | `motion-frame` (1.1): reading time split from motion time (Slow lengthens holds, Quick does not shorten them); reduced motion keeps the information (a beat appears, held still) where it is dropped today; announcement clocks start when the band is visible, not when queued | middle-earth-player, marvel-champions-digital-game | M | proposed |
+| K127 | `motion-frame` (1.1): a gate for a big beat that never blocks input; hurry (one touch finishes card motion, small feedback keeps running); several big beats under one stage (enter once, swap, leave once) | middle-earth-player | M | proposed |
+| K128 | `effect-library` (1.1): hit stop; trauma-model shake with a frequency cap; afterimages; flash limit (under 3 a second, target only) | middle-earth-player | S each | proposed |
+| K129 | `effect-library` (1.1): a slot held empty until its ghost lands, pile rects as anchors, a per-card entry description; number-and-place beats derived from events by one table; deltas by subtracting two states | marvel-champions-digital-game, middle-earth-player | M | proposed |
+| K130 | `effect-library` (1.1, compare first with the canvas particle kit): effects as closed-form functions of time and a seed, with a particle budget, so tests read the functions directly | middle-earth-player | S to M | proposed |
+| K131 | `sound-player` (1.2, compare first): cues only from the action trail (silent on load, undo and resume); one action's cues in sequence with a cap on the gap; cue fallback chain, the card's own sound first; front-silence check and a no-re-encode trim tool | marvel-champions-digital-game, netrunner, Forge | S each | proposed |
+| K132 | `sound-player` music (1.2): most-specific-first chain by folder convention; a shelved track resumes where it stopped; gapless ambient loop with a crossfaded seam | marvel-champions-digital-game, Forge, ArkhamHorror | M | proposed |
+| K133 | `phone-mode` haptics: five ticks (armed, sent, refused, land, impact) with caps and a setting; a snapped motion drops its tick | middle-earth-player | S | proposed |
+| K134 | Small (1.1 and 1.2): token face flips at the edge-on midpoint; phase band details; banner lines that ring the cards they name; a sample on the volume slider; card flight by the View Transitions API | ArkhamHorror, middle-earth-player, netrunner | S each | proposed |
 
 ### Build order for the outside harvest (owner, 15 Nov 2026)
 
@@ -276,6 +285,8 @@ The owner asked for tiers 1 and 2 to be built now, in this order, without waitin
 | 34 | K118 | Boards | new component `board-model` |
 
 **Tier 3 - when a game needs it:** K122, K92, K117, K123 (compare first), K119 (compare first), K112, K84, K114, K109, K124, K85.
+
+**With the release ladder (stage 3; the experience director decides when):** K126 to K130 and K134 with 1.1, K131 and K132 with 1.2, K133 with a game's phone mode. Write-up: `docs/evaluation/outside/motion-sound.md`; its "kit lacks" claims were checked against the first part of each README only, so a worker reads the whole README first.
 
 **Tier 4 - owner's word:** K103, K115, K107, K125.
 
