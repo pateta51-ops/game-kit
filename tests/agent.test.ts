@@ -78,6 +78,27 @@ describe('agent commands (K216): plain node, no tsx', () => {
     expect(finish(['--repo', main, '--check', 'echo hi'], io, () => ({ status: 3, output: 'boom' }), false)).toBe(1);
     expect(out[1]).toMatch(new RegExp(`^FAIL ${sha} .*exit 3[^]*boom`));
   });
+  it('finish: TMPDIR inside the clone; a Windows worktree seen from non-Windows is refused; no WSL is FAIL, never a local run (K228)', () => {
+    const main = repo('w7');
+    fs.rmSync(path.join(main, 'node_modules'), { recursive: true });
+    const out: string[] = [];
+    const io = { out: (l: string) => void out.push(l), err: (l: string) => void out.push(l) };
+    const sent: string[] = [];
+    finish(['--repo', main], io, (_c, _a, input) => (sent.push(input), { status: 0, output: '' }), false);
+    expect(sent[0]).toContain('export TMPDIR="$d-tmp"');
+    const cmds: string[] = [];
+    expect(finish(['--repo', main], io, (c) => (cmds.push(c), { status: null, output: '' }), true)).toBe(1);
+    expect(cmds).toEqual(['wsl']);
+    expect(out.at(-1)).toMatch(/^FAIL [0-9a-f]{40} .*WSL is unavailable/);
+    const wt = path.join(root, 'w7-wt');
+    g(main, 'worktree', 'add', '-q', '-b', 'winwt', wt, 'origin/main');
+    fs.rmSync(path.join(wt, '.git'), { force: true });
+    fs.writeFileSync(path.join(wt, '.git'), 'gitdir: C:/projects/x/.git/worktrees/winwt\n');
+    out.length = 0;
+    expect(finish(['--repo', wt], io, () => ({ status: 0, output: '' }), false)).toBe(2);
+    expect(out).toHaveLength(1);
+    expect(out[0]).toContain('Windows node');
+  });
   it('teardown cuts a dangling node_modules link before removing the worktree', () => {
     const main = repo('w6');
     const wt = path.join(root, 'w6-wt');

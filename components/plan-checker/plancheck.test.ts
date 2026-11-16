@@ -1,11 +1,21 @@
 // BUILD_PLAN §10.1: npm run plancheck finds a Python 3 (python3 first on Linux, python and the py launcher on Windows).
 import { spawnSync } from 'node:child_process';
-import { mkdirSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterAll, afterEach, describe, expect, it, vi } from 'vitest';
 import { candidates, main } from './plancheck';
+
+const made: string[] = [];
+const tmp = (prefix: string): string => {
+  const d = mkdtempSync(join(tmpdir(), prefix));
+  made.push(d);
+  return d;
+};
+afterAll(() => {
+  for (const d of made) rmSync(d, { recursive: true, force: true });
+});
 
 describe('plancheck interpreters (§10.1)', () => {
   it('tries PYTHON first, then the platform order', () => {
@@ -64,7 +74,7 @@ SC-01
 
 describe('plancheck.py flags (K68)', () => {
   const plan = (text: string): string => {
-    const f = join(mkdtempSync(join(tmpdir(), 'plancheck-')), 'PLAN.md');
+    const f = join(tmp('plancheck-'), 'PLAN.md');
     writeFileSync(f, text, 'utf-8');
     return f;
   };
@@ -131,14 +141,14 @@ describe('plancheck.py flags (K68)', () => {
 
 describe('plancheck.py kit warnings (K207)', () => {
   const git = (cwd: string, ...a: string[]): void => void spawnSync('git', ['-C', cwd, ...a]);
-  const kit = mkdtempSync(join(tmpdir(), 'kit-'));
+  const kit = tmp('kit-');
   mkdirSync(join(kit, 'docs'));
   writeFileSync(join(kit, 'docs', 'PLAN.md'), '| # | Batch | Size | State |\n|---|---|---|---|\n| K25 | x | S | done |\n| K26 | y | S | proposed |\n| K27 | z | S | covered: already there |\n');
   git(kit, 'init');
   git(kit, '-c', 'user.name=t', '-c', 'user.email=t@t', 'commit', '--allow-empty', '-m', 'x');
   for (const t of ['v0.3.0', 'v0.9.0']) git(kit, 'tag', t);
   const plan = (pin: string, gk: string): string => {
-    const d = mkdtempSync(join(tmpdir(), 'plancheck-'));
+    const d = tmp('plancheck-');
     mkdirSync(join(d, 'docs'));
     writeFileSync(join(d, 'docs', 'PLAN.md'), `${PLAN.replace('\nSC-01\n', '\nSC-01, SC-02\n')}\n\nKit pin: ${pin}\n\n#### Phase GK1 - kit\n\n${gk}\n`);
     return join(d, 'docs', 'PLAN.md');

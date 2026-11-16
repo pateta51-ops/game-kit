@@ -24,7 +24,7 @@ export const toWsl = (p) => { const m = /^([A-Za-z]):[\\/](.*)$/.exec(p); return
 const q = (s) => `'${s.replace(/'/g, `'\\''`)}'`
 export const script = (src, branch, id, install, check) => {
   const d = `"$HOME/tmp/${id}"`
-  return `d=${d}; rm -rf "$d"; mkdir -p "$HOME/tmp"; git -c safe.directory='*' clone -q --depth 20 --branch ${q(branch)} ${q('file://' + src)} "$d" && cd "$d" && { ${install}; } </dev/null && { ${check}; } </dev/null; rc=$?; cd "$HOME"; rm -rf "$d"; exit $rc`
+  return `d=${d}; rm -rf "$d"; mkdir -p "$HOME/tmp"; git -c safe.directory='*' clone -q --depth 20 --branch ${q(branch)} ${q('file://' + src)} "$d" && cd "$d" && mkdir -p "$d-tmp" && export TMPDIR="$d-tmp" && { ${install}; } </dev/null && { ${check}; } </dev/null; rc=$?; cd "$HOME"; rm -rf "$d" "$d-tmp"; exit $rc`
 }
 export const mainOf = (repo) => path.dirname(path.resolve(repo, git(repo, ['rev-parse', '--git-common-dir'])))
 const link = (wt, target) => {
@@ -71,11 +71,16 @@ export function teardown(args, io) {
   } catch (e) { io.err('git failed: ' + String(e.message).split('\n')[0]); return 2 }
 }
 
-const real = (cmd, args, input) => { const r = spawnSync(cmd, args, { input, encoding: 'utf8', maxBuffer: 1 << 28 }); return { status: r.status, output: `${r.stdout}${r.stderr}` } }
+const real = (cmd, args, input) => { const r = spawnSync(cmd, args, { input, encoding: 'utf8', maxBuffer: 1 << 28 }); return { status: r.status, error: r.error, output: `${r.stdout ?? ''}${r.stderr ?? ''}` } }
 export function finish(args, io, exec = real, win = process.platform === 'win32') {
   const f = parse(args, ['comment'])
   if (!f) { io.err('usage: finish [--repo <worktree>] [--check "npm run check"] [--install "npm ci"] [--tail 15] [--comment]'); return 2 }
   const repo = path.resolve(f.repo ?? '.')
+  if (!win) {
+    let gf = ''
+    try { gf = fs.readFileSync(path.join(repo, '.git'), 'utf8') } catch { /* a real .git folder */ }
+    if (/^gitdir:\s*[A-Za-z]:[/\\]/m.test(gf)) { io.err('REFUSED: this is a Windows worktree (its .git file holds a Windows path); run `node kit.mjs finish` from Windows node in the worktree'); return 2 }
+  }
   const dirty = git(repo, ['status', '--porcelain']).split('\n').filter(Boolean)
   if (dirty.length) { io.err(`REFUSED: ${dirty.length} uncommitted change(s); commit first:\n${dirty.slice(0, 10).join('\n')}`); return 1 }
   const branch = git(repo, ['rev-parse', '--abbrev-ref', 'HEAD'])
@@ -84,6 +89,7 @@ export function finish(args, io, exec = real, win = process.platform === 'win32'
   const common = path.resolve(repo, git(repo, ['rev-parse', '--git-common-dir']))
   const sh = script(win ? toWsl(common) : common, branch, `finish-${branch.replace(/[^\w.-]/g, '-')}-${Date.now()}`, f.install ?? 'npm ci', f.check ?? 'npm run check')
   const r = win ? exec('wsl', ['-e', 'bash', '-s'], sh) : exec('bash', ['-s'], sh)
+  if (r.status === null || r.error) { io.out(`FAIL ${sha} (${branch}; could not run the check: ${win ? 'WSL is unavailable' : 'bash is unavailable'}${r.error ? ' - ' + r.error.message : ''}; the check never runs on local Windows)`); return 1 }
   const ok = r.status === 0
   const line = `${ok ? 'PASS' : 'FAIL'} ${sha}`
   io.out(`${line} (${branch}; check ${ok ? 'passed' : 'exit ' + r.status}, clone removed)\n${r.output.split('\n').filter((l) => l.trim()).slice(-Number(f.tail ?? 15)).join('\n')}`)
