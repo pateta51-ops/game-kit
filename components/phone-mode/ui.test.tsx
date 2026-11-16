@@ -1,7 +1,7 @@
 import { act, fireEvent, render, renderHook, screen } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { setSafeArea, useViewport, type LayoutSetting } from './index';
-import { RotatePanel, Sheet, useSecondTap } from './ui';
+import { RotatePanel, Sheet, useDock, useSecondTap } from './ui';
 
 const size = (w: number, h: number) => {
   vi.stubGlobal('innerWidth', w);
@@ -127,5 +127,22 @@ describe('useSecondTap', () => {
     act(() => result.current.disarm());
     expect(result.current.armed).toBe(null);
     expect(commit).toHaveBeenCalledTimes(1);
+  });
+  it('useDock: follows what the decision wants; a tap on the head holds until the key changes', () => {
+    const { result, rerender } = renderHook(({ w, k }: { w: boolean; k: string }) => useDock(w, k), {
+      initialProps: { w: false, k: 'd1|fold' },
+    });
+    expect(result.current[0]).toBe(false);
+    act(() => result.current[1]());
+    expect(result.current[0]).toBe(true);
+    rerender({ w: false, k: 'd1|fold' });
+    expect(result.current[0]).toBe(true);
+    act(() => result.current[1]());
+    expect(result.current[0]).toBe(false);
+    rerender({ w: true, k: 'd2|open' });
+    expect(result.current[0]).toBe(true);
+    act(() => result.current[1]());
+    rerender({ w: false, k: 'd3|fold' });
+    expect(result.current[0]).toBe(false);
   });
 });

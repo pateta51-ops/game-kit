@@ -4,3 +4,5 @@ export * from './layout';
 export * from './viewport';
 export * from './sheetStore';
 export { secondTap } from './secondTap';
+export * from './dock';
+export * from './layerCheck';

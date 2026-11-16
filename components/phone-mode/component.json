@@ -13,7 +13,20 @@
       "src/ui/phone/disclosure.machine.ts (the fold table as a factory)",
       "src/ui/phone/table/RotatePanel.tsx (content passed in)",
       "src/ui/theme/phone.css (sheet, scrim, rotate panel), src/ui/theme/tokens.css (safe-area tokens)",
-      "src/ui/viewport/viewport.test.ts, src/ui/viewport/store.test.ts, src/ui/fit.test.ts"
+      "src/ui/viewport/viewport.test.ts, src/ui/viewport/store.test.ts, src/ui/fit.test.ts",
+      "src/ui/theme/phoneHeight.test.ts (K59: as phoneLayerCheck; files, scope, height variable and exceptions passed in)"
+    ],
+    "grafts": [
+      {
+        "game": "imp",
+        "commit": "20a033a",
+        "paths": [
+          "src/ui/board/phone/dock.ts (K59: the open/fold rule and pickTabs over data the game passes; no prompt kinds or areas)",
+          "src/ui/board/phone/PhoneBoard.tsx useDockOpen (K59: dockKey, dockState, dockToggle, useDock)",
+          "src/ui/board/phone/shortPrompt.ts (K59: the table lookup and text helpers; the words stay in the game)",
+          "src/ui/theme/phoneInsets.test.ts (K59: evalLength, bottomPadding)"
+        ]
+      }
     ]
   },
   "needs": [
