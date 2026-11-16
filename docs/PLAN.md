@@ -187,7 +187,7 @@ Sixteen public card- and board-game repositories were surveyed read-only; the fi
 | K79 | `engine-core`: a cause (rule id, or effect record plus printed line) on every step that changes a number; `replay-cli` test refuses a step without one | middle-earth-player | M | proposed |
 | K80 | `e2e-helpers` or `prompt-gallery`: over seeded games, every legal action and target is sent by some labelled control | middle-earth-player | M | done (`prompt-gallery` `checkActionCoverage`) |
 | K81 | `replay-cli`: digest of a curated table view after each move, pinned in goldens; report the scenarios whose digests moved | middle-earth-player | S | done |
-| K82 | `check-runner`: test-cost budget (the list of test files that play whole games may not grow) | middle-earth-player | S | proposed |
+| K82 | `check-runner`: test-cost budget (the list of test files that play whole games may not grow) | middle-earth-player | S | done |
 | K83 | `card-harness` inventory: every printed line owned by a record or listed open; record verbs checked against the engine's route lists | middle-earth-player | S | proposed |
 | K84 | Pattern notes: mechanic-family manifests with a verb-has-runner test; results cached by immutable state | middle-earth-player | S | done (pattern notes in `docs/patterns/card-language.md`) |
 | K85 | Small checks and tools: sentence-length check on prompt wording (`plain-text`); private-data check on tracked files; a `move` tool that rewrites every path; docs index with a section reader | middle-earth-player | S | proposed |

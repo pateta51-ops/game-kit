@@ -4,7 +4,7 @@
     "game": "ebr",
     "commit": "33b5abd3",
     "paths": ["scripts/ci-lanes.ts"],
-    "grafts": [{ "game": "stcc", "commit": "9fc59643", "paths": ["scripts/ci/check.ts"] }, { "game": "ebr", "commit": "33b5abd3", "paths": ["scripts/content-gate-all.ts", "tests/unit/content-gate-all.test.ts"] }]
+    "grafts": [{ "game": "stcc", "commit": "9fc59643", "paths": ["scripts/ci/check.ts"] }, { "game": "ebr", "commit": "33b5abd3", "paths": ["scripts/content-gate-all.ts", "tests/unit/content-gate-all.test.ts"] }, { "game": "middle-earth-player", "url": "https://github.com/j-jmnz/middle-earth-player", "licence": "MIT, copyright notice in the source repository's LICENSE; owner's written authorization", "paths": ["scripts/checks/test-cost.test.ts"] }]
   },
   "needs": []
 }
