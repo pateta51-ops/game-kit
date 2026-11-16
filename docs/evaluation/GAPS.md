@@ -97,7 +97,7 @@ The kit has the parts around the host but not the host itself: `prompt-gallery` 
 6. **Worker setup script (tool, S).**
    - 7th Inning Stretch handoff **[read]**: isolated `game-worker` agents "cannot run git in WSL"; workers leave edits uncommitted; node_modules must be symlinked.
    - Radiance handoff **[read]**: the node_modules symlink again.
-   - Fix: one `worktree-setup` and `worker-finish` script (link node_modules, run the check in a WSL clone, refuse to finish while the worktree has uncommitted changes).
+   - Fix: one worktree and finish script (now `kit.mjs worktree|finish`) (link node_modules, run the check in a WSL clone, refuse to finish while the worktree has uncommitted changes).
 
 7. **Cost of reading the kit's docs (docs, S).**
    - `docs/PLAN.md` is 9,165 words and `SELECTION.md` is 2,169 **[listed]**.
@@ -142,7 +142,7 @@ The kit has the parts around the host but not the host itself: `prompt-gallery` 
 ## State of these items (updated 16 Nov 2026, kit v0.57.0)
 
 - A1: done as K202 `card-parts` and K203 `card-zoom`. Scope changed on the owner's word (16 Nov): no shared layout; the layout is game data. A2: done, K123 `prompt-host`. A3: done, K204 `scaffold` (`kit.mjs new`). A4: done, K206 `card-language`. A5: done (K168, K169). A6: done (K170, K36). A7: done, K211 `dice-tray`; K35 and K33 done.
-- B1, B2: done (K201). B3: done, K205 `reference-game`. B4: done, K207 plan-checker stale-pin warnings. B5: done, K208 `kit.mjs next-id`. B6: done, K209 `tooling-scripts` worktree-setup, worker-finish, worktree-teardown. B7: done, K210 `kit.mjs state`.
+- B1, B2: done (K201). B3: done, K205 `reference-game`. B4: done, K207 plan-checker stale-pin warnings. B5: done, K208 `kit.mjs next-id`. B6: done, K209, now `kit.mjs worktree`, `finish`, `teardown` (K216). B7: done, K210 `kit.mjs state`.
 - C1, C3, C4, C5, C6: **watch**. No merge or refactor now; revisit when a game's use shows the cost.
 - C2: **watch**. Radiance is the first card game on the card-timing engine; its gap reports become kit fix tasks.
 - C7: done, K212 (`sound-player` playTrack fix).

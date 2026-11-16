@@ -13,7 +13,7 @@ Open work: run `node kit.mjs state`.
 - Inside a game, find what exists without the kit checkout: `node kit/kit.mjs list`, `node kit/kit.mjs search <word>`.
 - Before adding a row to `docs/PLAN.md`, take its id with `node kit.mjs next-id` (in the game-kit checkout); it reads main and every open PR.
 - Start a new game: `node kit.mjs new <dir> <id> "<Name>"` does it all (port block, repo, kit pull, first commit, GitHub repo).
-- Workers: `worktree-setup` and `worker-finish` (tooling-scripts) set up and close a worktree; `worktree-teardown` removes it.
+- Workers: `node kit.mjs worktree` (or `worktree --here` when you already are in a worktree), `finish` (prints `PASS <sha>`; the reviewer checks it against the PR head) and `teardown`; no install needed. `next-id --reserve` holds the id.
 - `reference-game` is the contract test of the kit's pieces; `card-parts` and `card-zoom`: the game owns its layout, the kit gives parts.
 - Pulling a newer tag happens only when the game needs something in it. Commit `kit/`.
 

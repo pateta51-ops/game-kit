@@ -4,8 +4,10 @@
 //   node kit/kit.mjs list | search <word>                                              the catalogue of every component (pulled or not), from kit/CATALOG.md
 //   node kit.mjs state                                                                  (game-kit checkout) prints what is open (PLAN rows not done, waiting, watch)
 //   node kit.mjs next-id [n] [--from <PLAN.md>...]                                     (game-kit checkout) the next free K number(s): origin/main and every open PR's docs/PLAN.md
+//   node kit.mjs next-id [n] --reserve                                                 also reserves the ids on origin (refs/kit-reserved/K<n>) so no other session gets them
+//   node kit.mjs worktree --branch <b> | worktree --here | finish [--comment] | teardown --worktree <dir>   worker commands, plain node (scripts/agent.mjs, pulled as kit/agent.mjs); finish prints PASS|FAIL <sha>
 //   node kit/kit.mjs check                                                              fails if ./kit differs from kit/kit.lock.json
-import { execFileSync as x } from 'node:child_process'
+import { execFileSync as x, spawnSync } from 'node:child_process'
 import { createHash } from 'node:crypto'
 import fs from 'node:fs'
 import { dirname } from 'node:path'
@@ -34,11 +36,15 @@ if (cmd === 'pull') {
     lock.components[n] = { ref, commit, files: Object.fromEntries(walk('kit/' + n).map((f) => [f, sha(f)])) }
   }
   fs.writeFileSync('kit/kit.mjs', x('git', ['-C', src, 'show', commit + ':kit.mjs']))
+  try { fs.writeFileSync('kit/agent.mjs', x('git', ['-C', src, 'show', commit + ':scripts/agent.mjs'], { stdio: ['ignore', 'pipe', 'ignore'] })) } catch { /* a ref before the worker commands */ }
+  if (fs.existsSync('kit/agent.mjs')) lock.agent = sha('kit/agent.mjs')
   fs.writeFileSync(LOCK, JSON.stringify(lock, null, 1) + '\n')
   try { fs.writeFileSync('kit/CATALOG.md', x('git', ['-C', src, 'show', commit + ':docs/CATALOG.md'], { stdio: ['ignore', 'pipe', 'ignore'] })) } catch { /* a ref with no catalogue */ }
   console.log('pulled ' + Object.entries(lock.components).map(([n, c]) => n + '@' + c.ref).join(', '))
 } else if (cmd === 'state') {
   x('node', [dirname(fileURLToPath(import.meta.url)) + '/scripts/state.mjs'], { stdio: 'inherit' })
+} else if (cmd === 'worktree' || cmd === 'finish' || cmd === 'teardown') {
+  process.exit(spawnSync('node', [[dirname(fileURLToPath(import.meta.url)) + '/agent.mjs', dirname(fileURLToPath(import.meta.url)) + '/scripts/agent.mjs'].find((p) => fs.existsSync(p)), cmd, ...a], { stdio: 'inherit' }).status ?? 2)
 } else if (cmd === 'next-id') {
   const ff = a.indexOf('--from')
   const cnt = Number(a.find((v, i) => /^\d+$/.test(v) && (ff < 0 || i < ff)) ?? 1)
@@ -55,7 +61,21 @@ if (cmd === 'pull') {
     } catch { console.error('warning: gh missing or offline, only origin/main was read: an open PR may already use the number') }
   }
   const top = Math.max(0, ...texts.flatMap((t) => [...t.matchAll(/^\|\s*K(\d+)\s*\|/gm)].map((m) => Number(m[1]))))
-  console.log(Array.from({ length: cnt }, (_, i) => 'K' + (top + 1 + i)).join(' '))
+  let ids = Array.from({ length: cnt }, (_, i) => top + 1 + i)
+  let res = 0
+  try { res = Math.max(0, ...x('git', ['ls-remote', 'origin', 'refs/kit-reserved/*'], { encoding: 'utf8' }).split(/\r?\n/).map((l) => Number(l.match(/refs\/kit-reserved\/K(\d+)$/)?.[1] ?? 0))) } catch { /* no origin */ }
+  if (res >= ids[0]) ids = ids.map((n) => n + res + 1 - ids[0])
+  if (a.includes('--reserve')) {
+    // a reservation is a ref refs/kit-reserved/K<n> on origin, pushed only if absent (empty lease): the second session's push fails, it takes the next number
+    const out = []
+    for (let n = ids[0]; out.length < cnt; n++) {
+      try { x('git', ['push', '-q', '--force-with-lease=refs/kit-reserved/K' + n + ':', 'origin', 'origin/main:refs/kit-reserved/K' + n], { stdio: 'pipe' }); out.push(n) } catch (e) {
+        if (!/stale info|already exists|rejected/i.test(String(e.stderr))) { console.error('reserve failed: ' + String(e.stderr).trim()); process.exit(1) }
+      }
+    }
+    ids = out
+  }
+  console.log(ids.map((n) => 'K' + n).join(' '))
 } else if (cmd === 'check') {
   const lock = readLock()
   const bad = []
@@ -66,6 +86,7 @@ if (cmd === 'pull') {
     const cj = 'kit/' + n + '/component.json'
     if (fs.existsSync(cj)) for (const m of JSON.parse(fs.readFileSync(cj, 'utf8')).needs ?? []) if (!lock.components[m]) bad.push(n + ' needs ' + m + ' (not pulled)')
   }
+  if (lock.agent && (!fs.existsSync('kit/agent.mjs') || sha('kit/agent.mjs') !== lock.agent)) bad.push('changed kit/agent.mjs')
   if (bad.length) {
     console.error('kit/ differs from kit/kit.lock.json. Change the code in the game-kit repo and pull a new version; never edit this copy.\n' + bad.join('\n'))
     process.exit(1)
@@ -89,6 +110,6 @@ if (cmd === 'pull') {
   const { newGame } = await import(pathToFileURL(d + '/components/scaffold/newgame.js').href)
   try { newGame({ dir, id, name, kit: d, ...flags, remote: flags.remote !== false }) } catch (e) { console.error(e.message); process.exit(1) }
 } else {
-  console.error('usage: kit.mjs pull <game-kit checkout> <ref> [component...] | kit.mjs check | kit.mjs next-id [n] | kit.mjs list | kit.mjs state | kit.mjs search <word> | kit.mjs new <dir> <id> "<Name>"')
+  console.error('usage: kit.mjs pull <game-kit checkout> <ref> [component...] | kit.mjs check | kit.mjs next-id [n] [--reserve] | kit.mjs state | kit.mjs worktree|finish|teardown | kit.mjs list | kit.mjs search <word> | kit.mjs new <dir> <id> "<Name>"')
   process.exit(2)
 }

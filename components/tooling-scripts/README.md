@@ -3,7 +3,7 @@ Small repo scripts a game runs with `npx tsx kit/tooling-scripts/<script>.ts`. E
 - `shrink-png.ts` (from Jarl): `--dir <dir> [--max-bytes 1900000] [--colours 256,192,128] [--sharp <module>]`. Re-encodes each PNG over the limit as a dithered palette PNG at the same size; exit 1 when one still does not fit.
 - `fonts-fetch.ts`, `woff.ts` (from Rome): `--roles <json> --out <dir> [--force]`. The JSON is `{ roles: [{ role, family, printed, ownerPrefix?, substitute: { family, licence, licenceFile, licenceUrl, files: [{ file, url }] } }], copy?: [{ from, note }] }`. Downloads from the URLs you list (a manual step, never in a check); a `.woff` name packs the TTF with `toWoff(bytes)`; writes `fonts.json` and `LICENSES.md`.
 - `mock-capture.ts` (from Jarl and Rome): `--list <json> --src <dir> --out <dir> [--only a,b] [--width 3840] [--height 2160] [--settle-ms 800] [--playwright <module>]`. The list is `[{ name, file, query?, width?, height?, deviceScaleFactor?, browser?, fullPage? }]`; writes `<out>/<name>.png` and `capture-report.json` (errors, failed requests, broken images, fonts, bytes). No callout boards.
-- `worktree-setup.ts`, `worker-finish.ts`, `worktree-teardown.ts` (new, K209): setup `--branch <name> [--repo .] [--dir <path>] [--base origin/main] [--shared <dir with node_modules>]` makes a worktree from origin/main and links node_modules (junction on Windows, kept out of git; none found: says to `npm ci` or use `--shared`, e.g. WSL `~/codex/<key>-base`). Finish `[--repo <worktree>] [--check 'npm run check'] [--install 'npm ci']` exits 1 on uncommitted changes or a detached HEAD, else pipes a clone+install+check script to `bash -s` in WSL and prints PASS/FAIL with the tail. Teardown `--worktree <dir> [--force]` cuts the link (never the target), then `git worktree remove`.
+- Worker commands (worktree, finish, teardown) are not here: `node kit/kit.mjs worktree|finish|teardown` (plain node, carried by every pull; docs/recipes/agent-workflow.md).
 - `setup.ps1` (from Jarl): `-Name -RepoUrl -Dir [-Marker package.json] [-NodeMajor 22] [-Need a,b] [-Playwright] [-Python] [-PipModules a,b] [-Build a,b] [-Check check] [-RunnerRepo owner/repo -RunnerLabel x [-RunnerEnv 'K=V']] [-Ready 'text'] [-CheckOnly]`. The owner's Windows PC check-up; ends with a numbered to-do list.
 - `dossier-sync.ts` (from Rome): `--source <git checkout> --target <dir> [--exclude <path>]... [--name <text>]`. Replaces the target with the source's tracked files and writes `SYNC.md` with the commit; refuses a source with uncommitted changes.
 - `bundle-node.ts` (from Warp's Edge): `--entry <file>... --outdir .bundle/node [--root .] [--target node22]`. Simulator, worker and bench scripts as `.mjs` for plain `node`, without tsx's keep-names cost.
@@ -14,9 +14,9 @@ Small repo scripts a game runs with `npx tsx kit/tooling-scripts/<script>.ts`. E
 - `gen-from-table.ts` (from STCC and Imperium): `--plan docs/PLAN.md --heading 'Rulings in effect' --out src/rulings.ts [--name RULINGS] [--check]` Writes the first table under the first heading containing `--heading` (the first table of the file without it) as `export const RULINGS = [{...}, ...] as const`, or as JSON when `--out` ends in `.json`. Keys are the header cells in lower case with `_` for other characters; code ticks and bold stars are removed from cells; `\|` and a pipe inside a code span do not split a cell. A table with no rows, or two header cells with the same key, is exit 2. `--check` exits 1 when the file differs from what the plan says now (line endings ignored).
 ## Use it in 10 lines
 ```ts
-import { run } from '../kit/tooling-scripts/worktree-setup';
+import { run } from '../kit/tooling-scripts/move';
 
 // every script takes flags, or the same names in --config <json>; run(args, io) returns the exit code
-const code: number = run(['--branch', 'feat/x', '--shared', '../my-base'], { out: console.log, err: console.error });
+const code: number = run(['--from', 'src/a.ts', '--to', 'src/b.ts', '--dry'], { out: console.log, err: console.error });
 void code;
 ```

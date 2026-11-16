@@ -42,6 +42,23 @@ let tag = ''
 const g = spawnSync('git', ['-C', top, 'describe', '--tags', '--abbrev=0'], { encoding: 'utf8' })
 if (g.status === 0) tag = g.stdout.trim()
 
+// open PRs and the component each touches (needs gh; skipped offline)
+let prs = []
+const pj = args.indexOf('--prs-json')
+const pr = pj >= 0 ? { status: 0, stdout: fs.readFileSync(args[pj + 1], 'utf8') } : spawnSync('gh', ['pr', 'list', '--state', 'open', '--limit', '100', '--json', 'number,title,isDraft,files'], { cwd: top, encoding: 'utf8' })
+if (pr.status === 0) try { prs = JSON.parse(pr.stdout).map((p) => `- #${p.number}${p.isDraft ? ' (draft)' : ''}: ${short(p.title)} [${[...new Set(p.files.map((f) => f.path.match(/^components\/([^/]+)\//)?.[1]).filter(Boolean))].join(', ') || 'no component'}]`) } catch { /* bad json */ }
+// each game's kit pin against the latest tag: games are the folders beside the main checkout (or --games <dir>...) holding kit/kit.lock.json
+const gi = args.indexOf('--games')
+const mainCo = path.dirname(path.resolve(top, spawnSync('git', ['-C', top, 'rev-parse', '--git-common-dir'], { encoding: 'utf8' }).stdout.trim() || '.git'))
+const gdirs = gi >= 0 ? args.slice(gi + 1) : (() => { try { return fs.readdirSync(path.dirname(mainCo)).map((d) => path.join(path.dirname(mainCo), d)) } catch { return [] } })()
+const pins = []
+for (const d of gdirs) try {
+  const refs = Object.values(JSON.parse(fs.readFileSync(path.join(d, 'kit', 'kit.lock.json'), 'utf8')).components).map((c) => c.ref)
+  const num = (r) => (r.match(/\d+/g) ?? []).map(Number)
+  const old = refs.sort((x, y) => { const a = num(x), b = num(y); return (a[0] - b[0]) || (a[1] - b[1]) || (a[2] - b[2]) || 0 })[0]
+  pins.push(`- ${path.basename(d)}: oldest pin ${old ?? 'none'} (latest ${tag || 'none'})`)
+} catch { /* not a game with a kit */ }
+
 const open = sections.filter((s) => s.rows.length)
 const nOpen = open.reduce((n, s) => n + s.rows.length, 0)
 const text = [
@@ -57,6 +74,8 @@ const text = [
   ...open.flatMap((s) => [`### ${s.name}`, '', ...s.rows, '']),
   ...(nOpen ? [] : ['None.', '']),
   ...(waiting.length ? ['## Waiting on a game', '', ...waiting, ''] : []),
+  ...(prs.length ? ['## Open pull requests (one per component)', '', ...prs, ''] : []),
+  ...(pins.length ? ['## Games: kit pin', '', ...pins, ''] : []),
   '## Watch (GAPS.md)',
   '',
   ...(watch.length ? watch : ['None.']),
