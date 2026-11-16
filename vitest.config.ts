@@ -11,7 +11,7 @@ export default defineConfig({
           name: 'node',
           environment: 'node',
           testTimeout: 60_000,
-          include: ['tests/**/*.test.ts', 'components/**/*.test.ts'],
+          include: ['tests/**/*.test.ts', 'components/**/*.test.ts', 'tools/**/*.test.mjs'],
           exclude: ['**/node_modules/**', ...UI],
         },
       },
