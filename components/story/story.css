@@ -1,0 +1,7 @@
+/* story: neutral defaults at zero specificity; a game sets the --story-* variables on :root or an ancestor. */
+:where(.kit-story) { font-family: var(--story-font, inherit); color: var(--story-text, inherit); background: var(--story-bg, transparent); padding: var(--story-pad, 0); }
+:where(.kit-story-part) { margin-block: var(--story-gap, 1em); }
+:where(.kit-story-title) { font-family: var(--story-head-font, inherit); }
+:where(.kit-story-name) { color: var(--story-name, inherit); margin-inline-end: 0.5em; }
+:where(.kit-story-narrator) { font-style: var(--story-narrator-style, italic); }
+:where(.kit-story-note) { border: 1px dashed var(--story-note-border, currentColor); padding: 0.5em; opacity: var(--story-note-opacity, 0.7); }

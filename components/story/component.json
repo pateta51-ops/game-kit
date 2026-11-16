@@ -1,0 +1,15 @@
+{
+  "name": "story",
+  "source": {
+    "game": "quincarter/marvel-champions-digital-game, halogenandtoast/MarvelChampions, ArkhamHorror (AGPL or no licence: ideas only, code written fresh)",
+    "commit": "none",
+    "paths": [
+      "docs/evaluation/outside/story-campaign-marvel.md",
+      "docs/evaluation/outside/story-campaign-arkham.md"
+    ]
+  },
+  "needs": [],
+  "packages": [
+    "react"
+  ]
+}
