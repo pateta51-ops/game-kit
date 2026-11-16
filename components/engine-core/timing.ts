@@ -2,6 +2,7 @@
 // (ArkhamHorror Would / CancelBatch / IgnoreBatch / Instead, no licence: idea only, written new), shared batch keys
 // (XMage BatchEvent, MIT, design) and the prevention window declared as card data with remaining / prevented counters
 // (netrunner prevention.clj, MIT, design). Opt-in: `state.timing` and `task.batch` appear only once a game calls `would`.
+import { checkpointHandlers, type CheckpointConfig } from './checkpoint';
 import { adopt, own } from './cow';
 import { draftOf } from './ctx';
 import type { Draft } from './draft';
@@ -133,6 +134,8 @@ export interface TimingConfig<G extends GameTypes> {
   priority?: Readonly<Record<string, number>>;
   /** K94: the game's prompt for choosing which trigger resolves next (option ids are `String(t.id)`). */
   orderPrompt?(base: Pick<KernelPrompt, 'options' | 'min' | 'max'>, info: TriggerPromptInfo): Omit<G['prompt'], 'id'>;
+  /** K95: a checkpoint after every `timing.do` and every trigger (`checkpoint.ts`); absent: none runs. */
+  readonly checkpoint?: CheckpointConfig<G>;
 }
 
 export const DEFAULT_ORDER: readonly WindowTiming[] = ['before', 'instead', 'prevention'];
@@ -305,6 +308,7 @@ export function timingHandlers<G extends GameTypes>(cfg: TimingConfig<G>): Handl
   return {
     ...replaceHandlers(cfg),
     ...triggerHandlers(cfg),
+    ...checkpointHandlers(cfg),
     'timing.before': (ctx, t) => {
       const task = t as TimingTask;
       const o = startTask(ctx, task);
@@ -374,6 +378,11 @@ export function timingHandlers<G extends GameTypes>(cfg: TimingConfig<G>): Handl
         const st = draftOf(ctx).stack;
         const i = st.findIndex((x) => !before.has(x));
         st.splice(i < 0 ? st.length : i, 0, { kind: 'timing.batchEnd', end: o.batch } as never);
+      }
+      if (cfg.checkpoint !== undefined) {
+        const st = draftOf(ctx).stack;
+        const i = st.findIndex((x) => !before.has(x));
+        st.splice(i < 0 ? st.length : i, 0, { kind: 'timing.checkpoint' } as never);
       }
       timingOf(ctx).current = null;
     },

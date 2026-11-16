@@ -142,10 +142,10 @@ export function triggerHandlers<G extends GameTypes>(cfg: TimingConfig<G>): Hand
       }
       const table = cfg.priority ?? DEFAULT_PRIORITY;
       const next = [...mine].sort((a, b) => rank(a.order, table) - rank(b.order, table) || (a.ability < b.ability ? -1 : a.ability > b.ability ? 1 : a.id - b.id))[0] as PendingTrigger;
-      fire(ctx, next.id, cfg.afterTrigger !== undefined);
+      fire(ctx, next.id, cfg.afterTrigger !== undefined || cfg.checkpoint !== undefined);
     },
     'timing.triggerPick': (ctx, t) => {
-      fire(ctx, Number(t.answer?.[0]), cfg.afterTrigger !== undefined);
+      fire(ctx, Number(t.answer?.[0]), cfg.afterTrigger !== undefined || cfg.checkpoint !== undefined);
     },
     'timing.fire': (ctx, t) => {
       const p = (t as TriggerTask).trigger as PendingTrigger;
@@ -157,10 +157,12 @@ export function triggerHandlers<G extends GameTypes>(cfg: TimingConfig<G>): Hand
       }
     },
     'timing.afterTrigger': (ctx, t) => {
+      if (cfg.checkpoint !== undefined) ctx.then({ kind: 'timing.checkpoint' });
       cfg.afterTrigger?.(ctx, (t as TriggerTask).trigger as PendingTrigger);
     },
     'timing.groupEnd': (ctx, t) => {
-      if ((t as { triggers?: boolean }).triggers === true) ctx.then({ kind: 'timing.triggers' });
+      const g = t as { triggers?: boolean; checkpoint?: boolean };
+      ctx.then(...(g.checkpoint === true ? [{ kind: 'timing.checkpoint' }] : []), ...(g.triggers === true ? [{ kind: 'timing.triggers' }] : []));
     },
   };
 }

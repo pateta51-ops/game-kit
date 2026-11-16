@@ -199,6 +199,15 @@
         "paths": [
           "Mage/src/main/java/mage/abilities/effects/ContinuousEffects.java (apply, applyLayer, timestamps, dependency pass; K112 design only)"
         ]
+      },
+      {
+        "game": "netrunner",
+        "url": "https://github.com/mtgred/netrunner",
+        "licence": "MIT",
+        "notice": "Copyright the netrunner contributors (LICENSE.txt, MIT)",
+        "paths": [
+          "src/clj/game/core/engine.clj (checkpoint, end-of-phase-checkpoint), src/clj/game/core/checkpoint.clj (fake-checkpoint pass cap); K95 design only"
+        ]
       }
     ]
   },
