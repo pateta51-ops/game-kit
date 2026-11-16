@@ -11,7 +11,7 @@
 // A replay rebuilds the game and applies every action; it reports where it failed, the first step whose hash differs,
 // whether the final hash matches, and the game's own lines (`describe`). Exit codes: 0 the replay applied every action
 // and every hash matches, 1 otherwise, 2 bad usage, an unreadable file or an engine module that does not load.
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import {
@@ -43,6 +43,8 @@ export interface Io {
   read(path: string): string;
   write(path: string, text: string): void;
   exists(path: string): boolean;
+  /** The file names in a folder (none when it is missing). */
+  list?(dir: string): string[];
   /** Import an engine module. */
   load(path: string): Promise<unknown>;
 }
@@ -60,6 +62,7 @@ export const nodeIo: Io = {
     writeFileSync(path, text);
   },
   exists: (path) => existsSync(path),
+  list: (dir) => (existsSync(dir) ? readdirSync(dir) : []),
   load: (path) => import(pathToFileURL(resolve(path)).href),
 };
 

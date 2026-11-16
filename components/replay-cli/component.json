@@ -3,11 +3,13 @@
   "source": {
     "game": "imp",
     "commit": "20a033a",
-    "paths": ["scripts/replay.ts", "tests/scripts/replay.test.ts"],
+    "paths": ["scripts/replay.ts", "tests/scripts/replay.test.ts", "scripts/sim/golden.ts (golden games, fixed date, --update-golden)", "tests/golden/replays.test.ts"],
     "grafts": [
-      { "game": "ebr", "commit": "33b5abd3", "paths": ["scripts/replay.ts (per-action state and event hashes, record mode)"] },
+      { "game": "ebr", "commit": "33b5abd3", "paths": ["scripts/replay.ts (per-action state and event hashes, record mode; record on one checkout and replay on another, content hash blanked)", "tests/unit/replay-script.test.ts"] },
       { "game": "stcc", "commit": "9fc59643", "paths": ["scripts/replay.ts (injected Io, async engine and content loading)"] }
     ]
   },
-  "needs": ["engine-core"]
+  "needs": ["engine-core", "sim-pool"],
+  "packages": ["tsx (the command lines run under it)"],
+  "imports": ["engine-core/fake/counter.ts and sim-pool/fake/game.ts (tests only, by fake-engine.ts and fake-golden.ts)"]
 }
