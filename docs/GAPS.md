@@ -138,3 +138,11 @@ The kit has the parts around the host but not the host itself: `prompt-gallery` 
    - That goes against README rule 5, "no game's ... look lives here". It does no harm, but it is a precedent.
 
 7. **Known open gap [read].** 7th Inning Stretch's handoff records that sound-player's `playTrack` always plays a cue's first file. The game works around it.
+
+## State of these items (gap architect, 16 Nov 2026)
+
+- A1: K202 (face), K203 (zoom). A2: K123 reopened. A3: K204. A4: K206. A5: done (K168, K169). A6: K170 done; K36 done. A7: K211 dice tray; K35 and K33 done.
+- B1, B2: done (K201). B3: K205. B4: K207 (the planner reference part is done). B5: K208. B6: K209. B7: K210.
+- C1, C3, C4, C5, C6: **watch**. No merge or refactor now; revisit when a game's use shows the cost.
+- C2: **watch**. Radiance is the first card game on the card-timing engine; its gap reports become kit fix tasks.
+- C7: K212.

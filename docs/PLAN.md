@@ -190,6 +190,23 @@ Found by the third retrofit pass (`docs/RETROFIT_PLAN.md`, Part E).
 | K192 | `voice`: never-twice is keyed by the spoken text (line id plus its filled parts/pieces), not the line id alone (director, XD-64): "top of the 3rd" then "top of the 4th" both play, the same words back to back stay suppressed | 7th Inning Stretch (XD-64) | S | done |
 | K201 | Agent documentation: AGENTS.md, generated `docs/CATALOG.md`, recipes, `docs/GAPS.md`, `kit.mjs list` and `search`, "Use it in 10 lines" in each README with a type-check of the examples | agent-facing docs (owner, 16 Nov 2026) | M | done |
 
+### Wave 7 - the gap analysis (`docs/GAPS.md`, 16 Nov 2026)
+
+| # | Batch | Found in | Size | State |
+|---|---|---|---|---|
+| K123 | (reopened, GAPS A2) Prompt host: shows the engine's open question through a typed widget registry (a missing kind fails to compile) with the common widgets: pick cards, pick an amount, order, may / yes-no, pay a cost. Unstyled default; each game styles its own. Folds in ghost-card, prompt-source and paced-view only where that removes duplication | STCC, Imperium, Rome, Jarl, EBR, UFS | M | proposed |
+| K202 | (GAPS A1, part 1) Card face: art cache and provider, printed text with SVG icons inline, tokens; unstyled default. Layout and icon placement accepted as a wireframe and themed mock first | STCC, Imperium, EBR, Unstoppable | M | proposed |
+| K203 | (GAPS A1, part 2) Card zoom: the full transcription (decoded text, icons, tokens, glossary links), text matching what the engine does | STCC, Imperium, EBR, Unstoppable | M | proposed |
+| K204 | (GAPS A3) New-game scaffold: one command makes a working empty game repo (Vite, lint, Vitest, tsconfig, dev and phone scripts, CI from ci-templates, kit pull, engine-core wired, stub GameRules) | 7th Inning Stretch shell | M | proposed |
+| K205 | (GAPS B3) Reference mini-game in the kit's CI: plays through engine-core, app-frame, the prompt host, saves, settings, sim-pool and replay, as a contract test that the components fit | kit | M | proposed |
+| K206 | (GAPS A4) Card-language starter: verb registry with handler and text-generator slots, a validator, and a test that every verb has a runner. The shell only; each game writes its own verbs | STCC, Imperium, Rome, Unstoppable, Jarl, EBR | M | proposed |
+| K207 | (GAPS B4) plan-checker warns when a game's kit pin is far behind the latest tag, and when a GK phase targets a row already done | Radiance plan | S | proposed |
+| K208 | (GAPS B5) `kit.mjs next-id`: reads origin/main and open PRs before handing out a row id | kit | S | proposed |
+| K209 | (GAPS B6) worktree-setup and worker-finish scripts: link node_modules, run the check in a WSL clone, refuse to finish with uncommitted changes | 7th Inning Stretch, Radiance | S | proposed |
+| K210 | (GAPS B7) Generated one-page "state of the kit" from PLAN.md | kit | S | proposed |
+| K211 | (GAPS A7) Dice tray and roll window | 7th Inning Stretch | S | proposed |
+| K212 | (GAPS C7) sound-player: `playTrack` always plays a cue's first file (7th Inning Stretch works around it) | 7th Inning Stretch | S | proposed |
+
 ### Owner's word (size L or stage 4)
 
 Decided by the owner, 16 Nov 2026:
@@ -260,7 +277,7 @@ Sixteen public card- and board-game repositories were surveyed read-only; the fi
 | K120 | `sim-pool`: bad-undo invariant (undo left open across a random draw or reveal); dead-end and placeholder-prompt failures; the game's state assertion after every step; a breakpoint that hands back an importable game | Rally the Troops | S each | done (state assertion after every step was already covered: engine-core `invariants`) |
 | K121 | `replay-cli`: three verdicts (crashed, diverged, changed) with a path diff of the final state | Rally the Troops | S | done |
 | K122 | `game-log`: space and piece references that highlight and scroll the map; group boxes for a battle or an activation | Rally the Troops | S | done |
-| K123 | Prompts (compare first with the kit's prompt model): closed set of prompt kinds with and / or composition and a space kind; renderer registry that fails to compile for a missing kind; a warning on a playable card when part of it will do nothing | Terraforming Mars | M | covered: and/or = a prompt with min/max plus tasks on the engine-core stack (continuations are data); a space kind = option ids the board highlights (the game types its kinds; prompt-gallery fails a kind with no fixture, and `satisfies Record<Kind, Component>` is plain TypeScript); the does-nothing warning is K91 `idle` (words per option) |
+| K123 | Prompts (compare first with the kit's prompt model): closed set of prompt kinds with and / or composition and a space kind; renderer registry that fails to compile for a missing kind; a warning on a playable card when part of it will do nothing | Terraforming Mars | M | reopened as Wave 7 K123 (the earlier "covered" was a mistake) |
 | K124 | Small: type-level module-boundary check; query channel for derived data; rule-violation panel with links; prompt-kind `cast` in card tests; catalogue check of card face against behaviour | Lew Morski module, Rally the Troops, Paths of Glory module, Terraforming Mars | S each | done: boundary-check built; prompt-kind cast built in card-harness (Scenario.cast); engine-core `GameRules.queries` with `query` |
 | K126 | `engine-core`: optional `reseed` words on an answer (fresh randomness recorded with the action, replay exact); `freshWords()` app side | 7th Inning Stretch | S | done (asked as K79 in the game plan; K79 was taken) |
 | K127 | `sound-player`: the last played file is excluded from the random pick only when a cue has three or more files (XD-54) | 7th Inning Stretch | S | done (asked as K80 in the game plan; K80 was taken) |
