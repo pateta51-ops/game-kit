@@ -220,7 +220,7 @@ Sixteen public card- and board-game repositories were surveyed read-only; the fi
 | K99 | `tooling-scripts`: `card <id>`, `dsl <word>` and `refs` lookup commands generated on each run | marvel-champions-digital-game | M | done |
 | K100 | Debug edits as engine actions (set a counter, summon a card, force the next random result, close a stuck prompt) and a console for them | ArkhamHorror, netrunner | M | proposed |
 | K101 | `sim-pool`: render the view on every step; hasten mode; one-answer replay of the failing step with timings | halogenandtoast MarvelChampions | S | proposed |
-| K102 | `card-harness` helpers: failures print the open prompt and its choices; no-prompt-left assertion; multi-delta `changed`; live state exported as a scenario literal; `errata` / `faq` test wrappers; `withRewind` | netrunner, chiriboga, ArkhamHorror | S | proposed |
+| K102 | `card-harness` helpers: failures print the open prompt and its choices; no-prompt-left assertion; multi-delta `changed`; live state exported as a scenario literal; `errata` / `faq` test wrappers; `withRewind` | netrunner, chiriboga, ArkhamHorror | S | done |
 | K103 | Opponent pattern (when a game has a rule-based opponent): pick an index among legal options; per-card advice data beside the records; redacted view; plan record across prompts; decision record opened from the log | chiriboga, boardgame.io | M | proposed |
 | K104 | Content build: card data patch layer, one file per reason, applied on import | arkham.build | S | done |
 | K105 | Zoomed card: errata as printed / as played / word diff; rulings (question, ruling, citation, date) keyed by card | arkham.build, netrunnerdb | M | proposed |

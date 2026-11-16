@@ -121,9 +121,54 @@ export class Scenario<G extends GameTypes, W, D = never> {
   answer(...picks: string[]): this {
     if (this.strict && this.s.prompt === null) throw new Error(`Answer [${picks.join(', ')}] given but no prompt is open`);
     const promptId = this.s.prompt?.id ?? -1;
-    return this.record(`answer ${picks.join(', ')}`, () =>
-      applyAction(this.game.rules, this.s, { kind: 'answer', promptId, picks }, this.game.content),
-    );
+    return this.record(`answer ${picks.join(', ')}`, () => {
+      try {
+        return applyAction(this.game.rules, this.s, { kind: 'answer', promptId, picks }, this.game.content);
+      } catch (e) {
+        throw new Error(`Answer [${picks.join(', ')}] refused: ${e instanceof Error ? e.message : String(e)}\n${this.open()}`, { cause: e });
+      }
+    });
+  }
+
+  /** The open prompt and its enabled options as text (K102), for failure messages. */
+  open(): string {
+    const p = this.s.prompt;
+    return p === null ? 'no prompt is open' : `open prompt ${String(p.id)}: ${JSON.stringify(p)}\noffered: ${this.options().join(', ') || 'none'}`;
+  }
+  /** Fails when a prompt is still open, printing it (K102). */
+  noPrompt(): this {
+    if (this.s.prompt !== null) throw new Error(`A prompt is left open: ${this.open()}`);
+    return this;
+  }
+  /** Run `fn`, then check each `[label, read, delta]` moved by exactly `delta`; one failure lists every pair off (K102). */
+  changed(pairs: readonly (readonly [string, (s: G['state']) => number, number])[], fn: (sc: this) => void): this {
+    const before = pairs.map(([, read]) => read(this.s));
+    fn(this);
+    const bad = pairs.flatMap(([label, read, want], i) => {
+      const b = before[i] as number;
+      const a = read(this.s);
+      return a - b === want ? [] : [`${label}: ${String(b)} -> ${String(a)}, wanted ${want >= 0 ? '+' : ''}${String(want)}`];
+    });
+    if (bad.length > 0) throw new Error(`Not changed as expected after step ${String(this.history.length)}:\n${bad.join('\n')}`);
+    return this;
+  }
+  /** The live state as a scenario literal to paste into a test (K102). */
+  literal(): string {
+    return scenarioLiteral(this.s, this.events);
+  }
+  /** Run `fn` here, then put the position and history back: an "and if instead" branch in one test (K102). */
+  withRewind<T>(fn: (sc: this) => T): T {
+    const s = this.s;
+    const h = this.history.length;
+    const scripted = this.scripted;
+    this.scripted = [];
+    try {
+      return fn(this);
+    } finally {
+      this.s = s;
+      this.history.length = h;
+      this.scripted = scripted;
+    }
   }
 
   get prompt(): G['prompt'] | null {
@@ -150,4 +195,17 @@ export class Scenario<G extends GameTypes, W, D = never> {
     fn(this);
     return { before, after: read(this.s) };
   }
+}
+
+/** `{ from: { state, events } }` source for `new Scenario(game, ...)`: paste a bug report state as a test (K102). */
+export function scenarioLiteral(state: unknown, events: readonly unknown[] = []): string {
+  return `{ from: { state: ${JSON.stringify(state, null, 2)}, events: ${JSON.stringify(events)} } }`;
+}
+
+/** `errata` and `faq` group wrappers over the runner describe, so the ruling source is in the test name (K102). */
+export function rulingGroups(describe: (name: string, fn: () => void) => unknown): {
+  errata: (source: string, fn: () => void) => unknown;
+  faq: (source: string, fn: () => void) => unknown;
+} {
+  return { errata: (s, fn) => describe(`errata: ${s}`, fn), faq: (s, fn) => describe(`faq: ${s}`, fn) };
 }

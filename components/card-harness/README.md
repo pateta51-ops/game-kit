@@ -15,4 +15,6 @@ Card tests on real cards. Test code only; the engine imports nothing here but `c
 - **Ability trace** (`traceAbilities(registry, field = 'effects')`): pass `.registry` (the game's ability or card record, wrapped) as the content; `considered` holds ids looked up, `resolved` ids whose `field` was read to run. `expectResolved(trace, ...ids)` fails a test whose card never ran, saying looked up or never reached; `clear()` between parts.
 - Walking the whole registry (`Object.values`, hashing, validation) through `.registry` marks every id looked up, and run if it reads `field`: trace only the content the engine reads to play.
 
+- **K102 helpers**: a refused `answer` prints the open prompt and offered options (`open()`); `noPrompt()`; `changed([[label, read, delta]], fn)` lists every pair off; `literal()` or `scenarioLiteral(state, events)` gives a `{ from }` literal to paste; `withRewind(fn)` runs a branch and restores; `rulingGroups(describe)` gives `errata` and `faq` wrappers.
+
 Known bugs are pinned as `it.fails('EXPECTED FAILURE: …')`.

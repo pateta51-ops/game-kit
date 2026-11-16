@@ -1,9 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import { dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { clauseIds, conforms, createProbe, Delivery, describeCheck, expectResolved, inventory, report, runInventory, Scenario, testFiles, traceAbilities, type DeliveryGame, type Same } from './index';
+import { clauseIds, conforms, createProbe, Delivery, describeCheck, expectResolved, inventory, report, runInventory, Scenario, scenarioLiteral, rulingGroups, testFiles, traceAbilities, type DeliveryGame, type Same } from './index';
 import { literalsOf } from './literals';
-import { DICE, DICE_GAME, PROBE, type Dice, type DiceState, type Note } from './fake/dice';
+import { DICE, DICE_GAME, PROBE, type DiceEvent, type Dice, type DiceState, type Note } from './fake/dice';
 import { applyAction } from '../engine-core';
 
 describe('scenario', () => {
@@ -280,5 +280,53 @@ describe('ability-fired trace (K98)', () => {
     // @ts-expect-error a Map is not a record by id
     expect(() => traceAbilities(new Map([['a', {}]]))).not.toThrow();
     expect(traceAbilities({ a: { effects: [1] } }).registry.a?.effects).toEqual([1]);
+  });
+});
+
+describe('K102 helpers', () => {
+  const setup = () => {
+    const sc = new Scenario(DICE_GAME).set((s) => void (s.dice = [1, 2, 3]));
+    return { sc, ids: sc.put('hand', 'ladder', 'plain', 'twin') as [string, string, string] };
+  };
+  it('a refused answer prints the open prompt and its choices', () => {
+    const { sc, ids } = setup();
+    sc.run({ kind: 'play', card: ids[0] });
+    expect(() => sc.answer('x')).toThrow(/refused[\s\S]*open prompt \d+[\s\S]*offered: plain#2, twin#3/);
+  });
+  it('noPrompt fails on a left-open prompt', () => {
+    const { sc, ids } = setup();
+    expect(() => sc.noPrompt()).not.toThrow();
+    sc.run({ kind: 'play', card: ids[0] });
+    expect(() => sc.noPrompt()).toThrow(/left open[\s\S]*offered: plain#2, twin#3/);
+  });
+  it('changed checks several deltas and lists each one off', () => {
+    const { sc, ids } = setup();
+    const hand = (s: DiceState): number => s.hand.length;
+    sc.changed([['score', (s) => s.score, 1], ['hand', hand, -1]], (x) => x.run({ kind: 'play', card: ids[1] }));
+    expect(() => sc.changed([['score', (s) => s.score, 5], ['hand', hand, 0]], () => undefined)).toThrow(/score: 1 -> 1, wanted \+5/);
+  });
+  it('literal gives a { from } source that starts the same position', () => {
+    const { sc } = setup();
+    const lit = sc.literal();
+    expect(lit.startsWith('{ from: { state: {')).toBe(true);
+    const json = lit.slice('{ from: { state: '.length, lit.lastIndexOf(', events:'));
+    const from = { state: JSON.parse(json) as DiceState, events: [] as DiceEvent[] };
+    expect(new Scenario(DICE_GAME, { from }).s).toEqual(sc.s);
+    expect(scenarioLiteral({ a: 1 })).toContain('"a": 1');
+  });
+  it('withRewind runs a branch and puts the position back', () => {
+    const { sc, ids } = setup();
+    const n = sc.withRewind((x) => x.run({ kind: 'play', card: ids[1] }).s.score);
+    expect(n).toBe(1);
+    expect(sc.s.score).toBe(0);
+    expect(sc.history).toHaveLength(0);
+    expect(sc.s.hand).toHaveLength(3);
+  });
+  it('rulingGroups names the source in the group', () => {
+    const names: string[] = [];
+    const { errata, faq } = rulingGroups((n) => void names.push(n));
+    errata('FAQ 1.2', () => undefined);
+    faq('Q7', () => undefined);
+    expect(names).toEqual(['errata: FAQ 1.2', 'faq: Q7']);
   });
 });
