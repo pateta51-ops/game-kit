@@ -1,0 +1,12 @@
+{
+  "name": "ghost-card",
+  "source": {
+    "game": "ArkhamHorror (idea only, no licence: no code copied)",
+    "commit": "ideas-only",
+    "paths": [
+      "docs/evaluation/outside/halogenandtoast.md (section 12: ghost card for an ability whose source has left play; from frontend/src/arkham/ghostAbility.ts, https://github.com/halogenandtoast/ArkhamHorror)"
+    ]
+  },
+  "needs": [],
+  "packages": []
+}

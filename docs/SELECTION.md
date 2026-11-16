@@ -76,6 +76,7 @@ Open check before the lift: the canonical JSON of the Jarl line and of STCC buil
 | Story | Pattern only: Marvel and Arkham story code is AGPL or unlicensed, so written fresh (data shape, narrator fallback, sheet parts, picture note) | | S |
 | Campaign log (K156) | No game: a new design from ideas in ArkhamHorror, LordOfTheRings and Marvel Champions (see `docs/evaluation/outside/story-campaign-*.md`) | | S |
 | Game log | New (K86): the design of ArkhamHorror's narrator (no licence, so no code copied): one table from engine event to row, rows as data, append-only, grouped by id | Undo to a line, hover preview (K87); space and piece refs (K122) | M |
+| Ghost card (K92) | No game: a new design from ArkhamHorror `ghostAbility.ts` (no licence, so no code copied): a choice whose source left play grouped under its last-known snapshot (engine-core K113) | | S |
 | Achievements (K160), K162 | New; ideas only from marvel-lcg (nothing stored, versioned summary) and ArkhamHorror (catalogue, checklists); builds on play-stats, which holds no summary | | M |
 | Challenges (K163) | New; idea only from marvel-lcg (a challenge as a content item: setup restriction plus triggered penalties) | | S |
 
