@@ -20,8 +20,19 @@ export interface Step {
   actor: string;
   do: string;
   to?: string | Point | number;
+  /** a hold for reading: Slow lengthens it, Quick does not shorten it (K142) */
+  read?: boolean;
+  /** the gate's `leaving` turns true when the first such step starts (K143) */
+  leave?: boolean;
   [more: string]: unknown;
 }
+/** Replaces the spec's steps, sound and maxMs: under reduced motion, or at a place in a run. */
+export interface SpecVariant {
+  steps: readonly Step[];
+  sound?: readonly { t: number; cue: string }[];
+  maxMs?: number;
+}
+export type Place = 'lone' | 'first' | 'middle' | 'last';
 export interface MotionSpec {
   id: string;
   stage?: string;
@@ -30,7 +41,25 @@ export interface MotionSpec {
   actors?: readonly Actor[];
   steps: readonly Step[];
   sound?: readonly { t: number; cue: string }[];
+  /** played instead under reduced motion (the information held still); without it the beat is instant (K142) */
+  reduced?: SpecVariant;
+  /** waits in the queue until the player's `visible()` is true; its clock starts then (K142) */
+  whenVisible?: boolean;
+  /** `keep`: `hurry()` lets it run (small feedback); otherwise hurry snaps it (K143) */
+  hurry?: 'snap' | 'keep';
+  /** variants by place in a run of this beat (K143) */
+  places?: Partial<Record<Place, SpecVariant>>;
   [more: string]: unknown;
+}
+
+/** The spec with a variant's steps, sound and maxMs; the variant fields are dropped. */
+export function withVariant(spec: MotionSpec, v: SpecVariant | undefined): MotionSpec {
+  if (v === undefined) return spec;
+  const { reduced: _r, places: _p, sound: _s, ...rest } = spec;
+  const out: MotionSpec = { ...rest, steps: v.steps };
+  if (v.sound !== undefined) out.sound = v.sound;
+  if (v.maxMs !== undefined) out.maxMs = v.maxMs;
+  return out;
 }
 
 export interface VerbCall {
@@ -79,9 +108,18 @@ function place(at: string | Point, stage: Stage, w?: number, h?: number): Rect |
   return z && centred(centreOf(z), w ?? z[2], h ?? z[3]);
 }
 
-/** Times are multiplied by `factor` (1 normal, 0.5 twice as fast). Throws on what `validateSpec` reports. */
-export function buildTimeline(spec: MotionSpec, stage: Stage, factor = 1): Timeline {
-  const ms = (n: number): number => Math.round(n * factor);
+/** Times are multiplied by `factor` (1 normal, 0.5 twice as fast); time inside `read` steps by `pace` (default: never under 1). Throws on what `validateSpec` reports. */
+export function buildTimeline(spec: MotionSpec, stage: Stage, factor = 1, pace = Math.max(1, factor)): Timeline {
+  const reads: [number, number][] = [];
+  for (const s of [...spec.steps].filter((x) => x.read === true).sort((a, b) => a.t - b.t)) {
+    const l = reads.at(-1);
+    if (l !== undefined && s.t <= l[1]) l[1] = Math.max(l[1], s.t + s.dur);
+    else reads.push([s.t, s.t + s.dur]);
+  }
+  const ms = (n: number): number => {
+    const r = reads.reduce((a, [x, y]) => a + Math.max(0, Math.min(n, y) - x), 0);
+    return Math.round((n - r) * factor + r * pace);
+  };
   const fail = (m: string): never => {
     throw new Error(`motion-frame ${spec.id}: ${m}`);
   };
@@ -97,7 +135,7 @@ export function buildTimeline(spec: MotionSpec, stage: Stage, factor = 1): Timel
     .map(({ s }): VerbCall => {
       const own = now.get(s.actor);
       const from = own ?? stage(s.actor) ?? fail(`step actor ${s.actor} is neither an actor nor a zone`);
-      const call: VerbCall = { t: ms(s.t), dur: ms(s.dur), actor: s.actor, zone: own === undefined, verb: s.do, from, step: s };
+      const call: VerbCall = { t: ms(s.t), dur: reads.length > 0 ? ms(s.t + s.dur) - ms(s.t) : Math.round(s.dur * factor), actor: s.actor, zone: own === undefined, verb: s.do, from, step: s };
       if (typeof s.to === 'number') call.value = s.to;
       else if (s.to !== undefined) {
         const to = place(s.to, stage, from[2], from[3]) ?? fail(`step target ${String(s.to)} is not on the stage`);
@@ -125,6 +163,12 @@ export function validateSpec(raw: unknown, stage: Stage, verbs: { has(name: stri
   if (typeof raw !== 'object' || raw === null) return ['not an object'];
   const spec = raw as Partial<MotionSpec>;
   if (typeof spec.id !== 'string' || !spec.id) out.push('id missing');
+  if (spec.hurry !== undefined && spec.hurry !== 'snap' && spec.hurry !== 'keep') out.push(`hurry ${String(spec.hurry)} is not snap or keep`);
+  const variants: [string, unknown][] = [['reduced', spec.reduced], ...Object.entries(spec.places ?? {}).map(([k, v]): [string, unknown] => [`place ${k}`, v])];
+  for (const k of Object.keys(spec.places ?? {})) if (!['lone', 'first', 'middle', 'last'].includes(k)) out.push(`place ${k} is not lone, first, middle or last`);
+  for (const [n, v] of variants)
+    if (v !== undefined)
+      out.push(...validateSpec(typeof v === 'object' && v !== null ? { ...spec, reduced: undefined, places: undefined, sound: undefined, hurry: undefined, ...v } : v, stage, verbs).map((p) => `${n}: ${p}`));
   if (spec.frequency !== undefined && !FREQ.includes(spec.frequency)) out.push(`frequency ${String(spec.frequency)} is not one of ${FREQ.join(', ')}`);
   if (!num(spec.maxMs)) out.push(spec.maxMs === undefined ? 'maxMs missing' : 'maxMs is not a number');
   if (!Array.isArray(spec.steps)) return [...out, 'steps missing'];
