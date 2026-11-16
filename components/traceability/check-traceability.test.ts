@@ -13,7 +13,12 @@ import {
   type SourceFile,
   extractScenarioIds,
   scenarioCoverage,
+  phaseFamilies,
+  makeIo,
 } from './check-traceability';
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join, sep } from 'node:path';
 
 const CFG: Config = { ...DEFAULT_CONFIG, families: ['RL', 'IR', 'R'] };
 const PLAN = `# Plan
@@ -214,6 +219,184 @@ describe('the scenario check (§10.3)', () => {
     expect(sc.missing).toEqual(['SC-003']);
     expect(sc.repeated).toEqual(['SC-002']);
     expect(sc.unknown).toEqual(['SC-009']);
+  });
+});
+
+describe('K67 options', () => {
+  const src = [
+    "describe('R-010 group', () => {",
+    "  it.skip('R-011 skipped', () => {});",
+    "  it('TODAY R-012 known gap', () => {});",
+    "  it('R-016 R-017 R-018 R-019 R-020 R-021 R-022 many', () => {});",
+    '});',
+  ].join('\n');
+
+  it('countDescribe, countSkipped, hollowTitlePrefixes and maxIdsPerTitle 0 (no cap)', () => {
+    expect(extractTitles(src, CFG)).toEqual(['TODAY R-012 known gap']);
+    expect(extractTitles(src, { ...CFG, countDescribe: true })).toContain('R-010 group');
+    expect(extractTitles(src, { ...CFG, countSkipped: true })).toContain('R-011 skipped');
+    expect(extractTitles(src, { ...CFG, hollowTitlePrefixes: ['TODAY'] })).toEqual([]);
+    expect(extractTitles(src, { ...CFG, maxIdsPerTitle: 0 })).toHaveLength(2);
+  });
+
+  it('requireComment false: a test title alone covers an id', () => {
+    const c = computeCoverage('## 3. Rules\nR-010\n', [test('tests/a.test.ts', "it('R-010 x', () => {});")], [], { ...CFG, requireComment: false });
+    expect(c.covered).toEqual(['R-010']);
+    expect(c.uncited).toEqual([]);
+  });
+
+  it('reportUnknown false: an undefined id in a title is not a finding', () => {
+    const tests = [test('tests/a.test.ts', "it('R-077 x', () => {});")];
+    expect(computeCoverage('## 3. Rules\nR-010\n', tests, [], CFG).unknown).toEqual(['R-077']);
+    expect(computeCoverage('## 3. Rules\nR-010\n', tests, [], { ...CFG, reportUnknown: false }).unknown).toEqual([]);
+  });
+
+  it('idTail, idsAtLineStart and deferredPrefixes: word suffixes, one digit, a sub-letter, defining positions only', () => {
+    const cfg: Config = { ...CFG, families: ['[A-Z][A-Z0-9]*'], idTail: '[A-Z0-9]+(?:-[A-Z0-9]+)*', idsAtLineStart: true, deferredPrefixes: ['P2-'] };
+    const plan = '## 3. Rules\n- **KW-FAST** acts first, see DMG-03.\n* **LVL-01a** sub.\n- **SET-7** one digit.\n- **KW-R-01** two parts.\n- **P2-04** later.\n| IR-2 | a ruling |\n| see | KW-SLOW |\n';
+    expect(extractRuleIds(plan, cfg)).toEqual(['KW-FAST', 'LVL-01', 'SET-7', 'KW-R-01', 'IR-2']);
+    const c = computeCoverage(plan, [test('tests/a.test.ts', "it('KW-FAST and LVL-01a and SET-70', () => {});")], [], { ...cfg, requireComment: false, reportUnknown: false });
+    expect(c.covered).toEqual(['KW-FAST', 'LVL-01']);
+    expect(extractRuleIds('## 3. Rules\nR-1 and R-22\n', { ...CFG, idTail: '\\d{1,2}' })).toEqual(['R-1', 'R-22']);
+  });
+
+  it('extraRuleHeadings: ids of another heading are rules too', () => {
+    const plan = '## 3. Rules\nR-010\n## 4. Arch\n#### 4.4.8 Invariants\n| IR-05 | x |\n#### 4.4.9 Next\nIR-06\n';
+    expect(extractRuleIds(plan, { ...CFG, extraRuleHeadings: ['#### 4.4.8'] })).toEqual(['R-010', 'IR-05']);
+  });
+
+  const scPlan = '## 3. Rules\nR-010\n## 10. Tests\n| SC-01 | a |\n| SC-02 | b |\n| SC-03 | c | pending: 9 |\n#### Group\npending: 9.\n| SC-04 | d |\n';
+  const scIo = (text: string, progress = '') => {
+    const r = io({}, [test('tests/a.test.ts', text)]);
+    r.fake.readText = (path) => (path.endsWith('.json') ? '{"pending":{"R-010":"B1"}}' : path.endsWith('PROGRESS.md') ? progress : scPlan);
+    return r;
+  };
+
+  it('scenarioDigits: two-digit scenario ids; scenarioPrefix empty: no scenario check', () => {
+    const cfg: Config = { ...CFG, scenarioDigits: '2' };
+    expect(extractScenarioIds(scPlan, cfg)).toEqual(['SC-01', 'SC-02', 'SC-03', 'SC-04']);
+    const twice = "it('SC-01 a', () => {}); it('SC-01 b', () => {}); it('SC-09 c', () => {});";
+    expect(run(['--strict'], scIo(twice).fake, cfg)).toBe(1);
+    const off = scIo(twice);
+    expect(run(['--strict'], off.fake, { ...cfg, scenarioPrefix: '' })).toBe(0);
+    expect(off.out.join('\n')).not.toMatch(/scenarios:/);
+  });
+
+  it('scenarios required: every row needs a title unless pending on a phase not yet merged; repeats are fine', () => {
+    const cfg: Config = { ...CFG, scenarioDigits: '2', scenarios: 'required' };
+    const both = "it('SC-01 a', () => {}); it('SC-01 b', () => {}); it('SC-02 c', () => {});";
+    expect(run(['--strict'], scIo(both).fake, cfg)).toBe(0);
+    const one = scIo("it('SC-01 a', () => {});");
+    expect(run(['--strict'], one.fake, cfg)).toBe(1);
+    expect(one.err.join('\n')).toMatch(/not pending: SC-02$/);
+    const late = scIo(both, '- Phase 9 merged\n');
+    expect(run(['--strict'], late.fake, cfg)).toBe(1);
+    expect(late.err.join('\n')).toMatch(/not pending: SC-03 SC-04/);
+  });
+
+  it('phase mode: a family is due once its phase is in the progress file; inline pending waits; strictFromPhase', () => {
+    const plan = [
+      '## 3. Rules',
+      '- **R-010** a.',
+      '- **R-011** b. pending: 5',
+      '- **RL-005** c.',
+      '## 11. Phases',
+      '### 11.3 Phase table',
+      '| Phase | Name | Families | Gate |',
+      '|---|---|---|---|',
+      '| 2 | core | R | x |',
+      '| 5 | later | (all RL-*) | x |',
+      '### 11.4 Next',
+    ].join('\n');
+    const cfg: Config = { ...CFG, scenarioPrefix: '', requireComment: false, idsAtLineStart: true, phaseTable: '### 11.3', strictFromPhase: '2' };
+    const go = (progress: string, titles: string, c: Config = cfg) => {
+      const r = io({}, [test('tests/a.test.ts', titles)]);
+      r.fake.readText = (path) => (path.endsWith('.json') ? '{}' : path.endsWith('PROGRESS.md') ? progress : plan);
+      return { code: run([], r.fake, c), text: [...r.out, ...r.err].join('\n') };
+    };
+    expect(phaseFamilies(plan, cfg)).toEqual(new Map([['2', ['R']], ['5', ['RL']]]));
+    expect(go('', '').code).toBe(0);
+    expect(go('- Phase 2 merged\n', '').code).toBe(1);
+    expect(go('- Phase 2 merged\n', "it('R-010 x', () => {});").code).toBe(0);
+    const all = go('- Phase 2 merged\n- Batch 5 merged\n', "it('R-010 x', () => {});");
+    expect(all.code).toBe(1);
+    expect(all.text).toMatch(/R {9}011[\s\S]*RL {8}005/);
+    const unlisted = go('- Phase 2 merged\n', "it('R-010 x', () => {});", { ...cfg, phaseTable: '### 11.4' });
+    expect(unlisted.text).toMatch(/missing from the phase table: R RL/);
+    expect(unlisted.code).toBe(1);
+  });
+});
+
+describe('K67 options, the review round', () => {
+  const base: Config = { ...CFG, scenarioPrefix: '', requireComment: false };
+  const go = (plan: string, titles: string, cfg: Config, files: Record<string, string> = {}) => {
+    const r = io({}, [test('tests/a.test.ts', titles)]);
+    r.fake.readText = (path) => files[path] ?? (path.endsWith('.json') ? '{}' : path.endsWith('.md') && path !== cfg.plan ? '' : plan);
+    return { code: run(['--strict'], r.fake, cfg), text: [...r.out, ...r.err].join('\n') };
+  };
+  const phased = (rules: string[]) => [...['## 3. Rules'], ...rules, '## 11. Phases', '### 11.3 Phase table', '| 2 | core | R | x |', '### 11.4 Next'].join('\n');
+  const done = { 'docs/PROGRESS.md': '- Phase 2 merged\n' };
+
+  it('strictIdEnd: a sub-letter no longer names the id', () => {
+    const tests = [test('tests/a.test.ts', "it('R-010a x', () => {});")];
+    expect(computeCoverage('## 3. Rules\nR-010\n', tests, [], base).covered).toEqual(['R-010']);
+    expect(computeCoverage('## 3. Rules\nR-010\n', tests, [], { ...base, strictIdEnd: true }).covered).toEqual([]);
+    expect(extractRuleIds('## 3. Rules\nR-010a R-011\n', { ...base, strictIdEnd: true })).toEqual(['R-011']);
+  });
+
+  it('unlistedCountsDeferred: a deferred family missing from the phase table fails; progress and phaseDone are read as configured', () => {
+    const plan = phased(['- **R-010** a.', '- **CPN-01** later.']);
+    const cfg: Config = { ...base, families: ['CPN', 'R'], deferredPrefixes: ['CPN-'], idsAtLineStart: true, phaseTable: '### 11.3', progress: 'docs/DONE.md', phaseDone: '^done: (\\w+)' };
+    const files = { 'docs/DONE.md': 'done: 2\n' };
+    expect(go(plan, "it('R-010 x', () => {});", cfg, files).code).toBe(0);
+    expect(go(plan, '', cfg, files).code).toBe(1);
+    expect(go(plan, '', cfg, { 'docs/DONE.md': '- Phase 2 merged\n' }).code).toBe(0);
+    const r = go(plan, "it('R-010 x', () => {});", { ...cfg, unlistedCountsDeferred: true }, files);
+    expect(r.code).toBe(1);
+    expect(r.text).toMatch(/phase table: CPN$/m);
+  });
+
+  it('rulePendingInlineOnly: a bare pending line does not cover rule lines', () => {
+    const plan = phased(['pending: 5', '- **R-010** a.', '- **R-011** b. pending: 5']);
+    const cfg: Config = { ...base, idsAtLineStart: true, phaseTable: '### 11.3' };
+    expect(go(plan, '', cfg, done).code).toBe(0);
+    const r = go(plan, '', { ...cfg, rulePendingInlineOnly: true }, done);
+    expect(r.code).toBe(1);
+    expect(r.text).toMatch(/R {9}010$/m);
+  });
+
+  it('skipInsideSkippedDescribe and ignoreTemplateSubstitutions', () => {
+    const src = "describe.skip('g', () => {\n  it('R-010 in', () => {});\n});\nit('R-011 out', () => {});\nit(`R-012 $" + '{n}`, () => {});';
+    expect(extractTitles(src, base)).toHaveLength(3);
+    expect(extractTitles(src, { ...base, skipInsideSkippedDescribe: true })).toEqual(['R-011 out', 'R-012 $' + '{n}']);
+    expect(extractTitles(src, { ...base, ignoreTemplateSubstitutions: true })).toEqual(['R-010 in', 'R-011 out']);
+  });
+
+  it('staleFails false: a pending id the plan does not define is only reported', () => {
+    const pending = { ...Object.fromEntries(ALL.map((id) => [id, 'B3'])), 'R-099': 'B3' };
+    const r = io(pending, []);
+    expect(run(['--strict'], r.fake, { ...CFG, staleFails: false })).toBe(0);
+    expect(r.err.join('\n')).toMatch(/R-099/);
+  });
+
+  it('testFilePattern: only matching files of the test folders are read', () => {
+    const dir = mkdtempSync(join(tmpdir(), 'k67-'));
+    mkdirSync(join(dir, 'tests'));
+    writeFileSync(join(dir, 'tests', 'a.test.ts'), '');
+    writeFileSync(join(dir, 'tests', 'helper.ts'), '');
+    const cfg: Config = { ...base, testDirs: ['tests'], testSrcDirs: [] };
+    const paths = (c: Config) => makeIo(dir + sep, c).testFiles().map((f) => f.path);
+    expect(paths(cfg)).toEqual(['tests/a.test.ts', 'tests/helper.ts']);
+    expect(paths({ ...cfg, testFilePattern: '\\.(test|spec)\\.tsx?$' })).toEqual(['tests/a.test.ts']);
+    rmSync(dir, { recursive: true });
+  });
+
+  it('extraRuleHeadings through run: an id of the extra heading is required', () => {
+    const plan = '## 3. Rules\nR-010\n## 4. Arch\n#### 4.4.8 Invariants\n| IR-05 | x |\n';
+    expect(go(plan, "it('R-010 x', () => {});", base).code).toBe(0);
+    const r = go(plan, "it('R-010 x', () => {});", { ...base, extraRuleHeadings: ['#### 4.4.8'] });
+    expect(r.code).toBe(1);
+    expect(r.text).toMatch(/IR {8}05/);
   });
 });
 
