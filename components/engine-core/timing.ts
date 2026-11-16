@@ -7,6 +7,7 @@ import { draftOf } from './ctx';
 import type { Draft } from './draft';
 import { EngineBugError } from './errors';
 import { replaceHandlers, type Replacement, type ReplaceResult } from './replace';
+import { triggerHandlers, type PendingTrigger, type TriggerCandidate, type TriggerPromptInfo } from './triggers';
 import type { Ctx, EventInput, GameTypes, HandlerTable, KernelPrompt, KernelTask } from './types';
 
 export type SharedKey = 'player' | 'source' | 'target';
@@ -31,6 +32,8 @@ export interface Occurrence {
   readonly result?: ReplaceResult;
   /** Its effect was ignored (`ignoreBatch`): the windows still run, `timing.do` does not do it. */
   readonly ignored?: boolean;
+  /** K94: cards that entered play after it happened (their triggers do not answer it). */
+  readonly enteredAfter?: readonly string[];
 }
 export interface Batch {
   readonly id: number;
@@ -56,6 +59,10 @@ export interface TimingState {
   readonly batches: readonly Batch[];
   readonly occurrences: readonly Occurrence[];
   readonly windows: readonly Window[];
+  /** K94: collected, not yet resolved. */
+  readonly pending?: readonly PendingTrigger[];
+  /** K94: triggers resolved in the current chain (the cap counts them). */
+  readonly fired?: number;
 }
 /** Card data: what a prevention ability prevents, at most how much per use, how many uses. */
 export interface Prevention {
@@ -101,6 +108,26 @@ export interface TimingConfig<G extends GameTypes> {
   chooser?(s: G['state'], occ: Occurrence): string;
   /** The game's prompt from the kit's options (default: those as they are). */
   prompt?(base: Pick<KernelPrompt, 'options' | 'min' | 'max'>, info: TimingPromptInfo): Omit<G['prompt'], 'id'>;
+  /** K94: the abilities that answer a happened occurrence. */
+  triggersFor?(s: G['state'], occ: Occurrence): readonly TriggerCandidate[];
+  /** K94: resolves one trigger (may ask, push tasks). */
+  resolveTrigger?(ctx: Ctx<G>, t: PendingTrigger): void;
+  /** K94: why a trigger no longer resolves (source gone, blanked), or undefined. */
+  invalid?(s: G['state'], t: PendingTrigger): string | undefined;
+  /** K94: the event emitted when a trigger is dropped. */
+  dropped?(t: PendingTrigger, why: string): EventInput<G> | undefined;
+  /** K94: players, active player first, then turn order (default: by the first trigger). */
+  turnOrder?(s: G['state']): readonly string[];
+  /** K94: most triggers resolved in one chain, follow-ups included (default `TRIGGER_CAP`); then the rest are dropped. */
+  triggerCap?: number;
+  /** K94: the event emitted when the cap drops the triggers left. */
+  capped?(left: readonly PendingTrigger[]): EventInput<G> | undefined;
+  /** K94: runs after each trigger and what it pushed (K95 puts its checkpoint here). */
+  afterTrigger?(ctx: Ctx<G>, t: PendingTrigger): void;
+  /** K94: automatic order table (default `DEFAULT_PRIORITY`). */
+  priority?: Readonly<Record<string, number>>;
+  /** K94: the game's prompt for choosing which trigger resolves next (option ids are `String(t.id)`). */
+  orderPrompt?(base: Pick<KernelPrompt, 'options' | 'min' | 'max'>, info: TriggerPromptInfo): Omit<G['prompt'], 'id'>;
 }
 
 export const DEFAULT_ORDER: readonly WindowTiming[] = ['before', 'instead', 'prevention'];
@@ -198,6 +225,7 @@ export function cancelBatch<G extends GameTypes>(ctx: Ctx<G>, b: number): void {
   const t = timingOf(ctx);
   markCancelled(t, (o) => o.batch !== b);
   t.windows = t.windows.filter((w) => w.batch !== b);
+  if (t.pending?.some((p) => p.batch === b)) t.pending = t.pending.filter((p) => p.batch !== b);
   if (t.current === b) t.current = null;
 }
 
@@ -270,6 +298,7 @@ export function timingHandlers<G extends GameTypes>(cfg: TimingConfig<G>): Handl
   const re = (task: TimingTask, kind: string): G['task'] => ({ kind, batch: task.batch, occ: task.occ }) as TimingTask;
   return {
     ...replaceHandlers(cfg),
+    ...triggerHandlers(cfg),
     'timing.before': (ctx, t) => {
       const task = t as TimingTask;
       const o = startTask(ctx, task);

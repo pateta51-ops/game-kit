@@ -4,7 +4,8 @@ import { createGame, draftOf, seedRng, timingHandlers, would, type AnswerAction,
 
 export type TimedEvent =
   | { readonly type: 'damaged'; readonly n: number; readonly target: string; readonly seq: number; readonly batch?: number; readonly occurrence?: number }
-  | { readonly type: 'healed'; readonly n: number; readonly seq: number; readonly batch?: number };
+  | { readonly type: 'healed'; readonly n: number; readonly seq: number; readonly batch?: number }
+  | { readonly type: 'dropped'; readonly ability: string; readonly why: string; readonly seq: number };
 
 export interface TimedRules {
   readonly items: readonly OccurrenceInput[];
