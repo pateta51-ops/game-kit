@@ -9,7 +9,7 @@ The game passes `check-runner.config.json` (see `check-runner.config.example.jso
 - `first`: scripts run alone before the lanes. `lanes`: each lane runs in order, the lanes side by side.
 - `extra`: CI-only steps that are in a lane but not in the chain. `pr`: the `first`/`lanes` subset of `--pr`.
 - `timeoutMinutes`, `graceSeconds`: per check; a timeout or a cancel kills the check's whole process tree.
-- `failFast` (default false): same as `--fail-fast`. `last`: scripts run alone after every lane ended (wall-clock budgets), also in `pr`. `pr.own`: scripts of `--pr` that need not be in the chain or `extra`. `env`: `{ "<script>": { "VAR": "value" } }`, `*` for every script; a value starting with `~/` is under the home folder.
+- `failFast` (default false): same as `--fail-fast`. `last`: scripts run alone after every lane ended (wall-clock budgets), also in `pr`. `pr.own`: scripts of `--pr` that need not be in the chain or `extra`. `env`: `{ "<script>": { "VAR": "value" } }`, `*` for every script; a value starting with `~/` is under the home folder. Opt-in (from STCC, K138): `stream` prints each output line as it arrives, prefixed `[lane]` (`laneNames`, also in `pr`; default the lane's first script), instead of each log whole at the end, and repeats a failing check's output after the summary. `npmSilent` runs `npm run --silent`. `skipLastAfterFailure` does not start `last` once a check failed (`--keep-going` still runs it).
 
 The run fails while the lanes and the chain disagree. By default every check runs even after a failure.
 With `--fail-fast` the first failing check stops the ones still running (shown as `stopped`, not failed),

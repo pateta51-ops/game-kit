@@ -138,6 +138,74 @@ describe('a real run', () => {
     expect(all.stdout).not.toMatch(/its output again/);
   }, 30_000);
 
+  it('K138 stream: lines arrive prefixed [lane] (laneNames, else the first script), no whole logs, a failure repeated; off by default', () => {
+    writeFileSync(join(dir, 'say.js'), "console.log('out-' + process.argv[2]);\nconsole.error('err-' + process.argv[2]);\nprocess.exitCode = Number(process.argv[3] ?? 0);\n");
+    const scripts = { check: 'npm run a && npm run b && npm run c && npm run d', a: 'node say.js a', b: 'node say.js b', c: 'node say.js c', d: 'node say.js d 3' };
+    const config = { first: ['a'], lanes: [['b', 'c'], ['d']], laneNames: ['gates'], stream: true, npmSilent: true };
+    const r = run(scripts, config);
+    expect(r.status).toBe(1);
+    expect(r.stdout).toMatch(/^\[a\] > a\n\[a\] (out|err)-a\n\[a\] (out|err)-a\n\[a\] < a ok in [\d.]+s$/m);
+    expect(r.stdout).toMatch(/^\[gates\] > b$/m);
+    expect(r.stdout).toMatch(/^\[gates\] out-c$/m);
+    expect(r.stdout).toMatch(/^\[gates\] err-c$/m);
+    expect(r.stdout).toMatch(/^\[gates\] < c ok in/m);
+    expect(r.stdout).toMatch(/^\[d\] < d FAILED \(exit 3\) in/m);
+    expect(r.stdout).not.toMatch(/::group::|::error::/);
+    expect(r.stdout).toMatch(/3 of 4 passed/);
+    expect(r.stdout).toMatch(/FAILED: npm run d \(exit 3\) - its output again ===\n[^]*out-d/);
+    const plain = run(scripts, { ...config, stream: false });
+    expect(plain.stdout).not.toMatch(/^\[/m);
+    expect(plain.stdout).toMatch(/::group::npm run a: passed/);
+  }, 30_000);
+
+  it('K138 stream: a line split across chunks is printed whole, stdout and stderr each on their own lines', () => {
+    writeFileSync(join(dir, 'split.js'), "process.stdout.write('par');\nsetTimeout(() => process.stderr.write('ERR\\n'), 300);\nsetTimeout(() => process.stdout.write('tial\\nend'), 600);\n");
+    const r = run({ check: 'npm run a', a: 'node split.js' }, { first: [], lanes: [['a']], stream: true, npmSilent: true });
+    expect(r.status).toBe(0);
+    expect(r.stdout).toMatch(/^\[a\] > a\n\[a\] ERR\n\[a\] partial\n\[a\] end\n\[a\] < a ok/m);
+  }, 30_000);
+
+  it('K138 stream: a check that leaves a background process holding its output still ends', () => {
+    writeFileSync(join(dir, 'bg.js'), "const c = require('child_process').spawn(process.execPath, ['-e', 'setTimeout(() => {}, 60000)'], { stdio: 'inherit', detached: true });\nc.unref();\nrequire('fs').writeFileSync('bg.pid', String(c.pid));\nconsole.log('bg-started');\n");
+    const t0 = Date.now();
+    const r = run({ check: 'npm run a', a: 'node bg.js' }, { first: [], lanes: [['a']], stream: true, npmSilent: true });
+    const ms = Date.now() - t0;
+    try {
+      process.kill(Number(readFileSync(join(dir, 'bg.pid'), 'utf8')));
+    } catch {
+      // already gone
+    }
+    expect(r.status).toBe(0);
+    expect(r.stdout).toMatch(/^\[a\] bg-started\n\[a\] < a ok/m);
+    expect(ms).toBeLessThan(30_000);
+  }, 90_000);
+
+  it('K138 npmSilent: npm run --silent prints no "> script" banner; without it the banner is there', () => {
+    writeFileSync(join(dir, 'hi.js'), "console.log('hi');\n");
+    const scripts = { check: 'npm run a', a: 'node hi.js' };
+    const loud = run(scripts, { first: [], lanes: [['a']] });
+    expect(loud.stdout).toMatch(/> node hi\.js/);
+    const quiet = run(scripts, { first: [], lanes: [['a']], npmSilent: true });
+    expect(quiet.status).toBe(0);
+    expect(quiet.stdout).toMatch(/\nhi\n/);
+    expect(quiet.stdout).not.toMatch(/> node hi\.js/);
+  }, 30_000);
+
+  it('K138 skipLastAfterFailure: `last` does not start once a check failed; it runs when all passed, without the option, and with --keep-going', () => {
+    const scripts = { check: 'npm run a && npm run b && npm run z', a: ko, b: ok, z: ok };
+    const config = { first: [], lanes: [['a'], ['b']], last: ['z'], skipLastAfterFailure: true };
+    const r = run(scripts, config);
+    expect(r.status).toBe(1);
+    expect(r.stdout).toMatch(/not starting z/);
+    expect(r.stdout).not.toMatch(/npm run z:/);
+    expect(r.stdout).toMatch(/1 of 2 passed/);
+    expect(run(scripts, config, ['--keep-going']).stdout).toMatch(/2 of 3 passed/);
+    expect(run(scripts, { ...config, skipLastAfterFailure: false }).stdout).toMatch(/2 of 3 passed/);
+    const good = run({ ...scripts, a: ok }, config);
+    expect(good.status).toBe(0);
+    expect(good.stdout).toMatch(/3 of 3 passed/);
+  }, 30_000);
+
   it('kills a check that passes its timeout together with the child it started, and fails', () => {
     writeFileSync(join(dir, 'sleeper.js'), "const c = require('child_process').spawn(process.execPath, ['-e', 'setInterval(() => {}, 1000)'], { stdio: 'ignore' });\nrequire('fs').writeFileSync('child.pid', String(c.pid));\nsetInterval(() => {}, 1000);\n");
     const r = run({ check: 'npm run s', s: 'node sleeper.js' }, { first: [], lanes: [['s']], timeoutMinutes: 0.03, graceSeconds: 1 });
