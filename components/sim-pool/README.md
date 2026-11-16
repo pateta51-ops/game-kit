@@ -7,7 +7,7 @@ A game writes one module that exports `simGame: SimGame<G, S>`:
 - `rules`, `content()` (loaded once per thread), `start(spec, content)` → `{ options, rules }` for `createGame`.
 - `driver(name, spec, content)` → `Driver<G>`: `choose(state, answers, rng)` → action, `reasons()`. The game's greedy and planner drivers live in the game; `randomDriver(weight?)` is here.
 - `answers?(state, content, rng)`: the legal answers; default `legalAnswers(prompt, rng)` (subsets of enabled options, min..max; over 512, 512 samples).
-- `summary?(state, actions, content)` → `S`: the game's own counters, stored on each record.
+- `summary?(state, actions, content, seen)` → `S`: the game's own counters, stored on each record. `observation?(spec, content)` → a new `seen` per game; `onPrompt?(seen, state, answers)` at every open prompt before the driver answers (per-game notes go there, never in module variables).
 - `maxActions?` (default 100,000): a game with no result by then fails.
 
 Run it:
@@ -19,6 +19,8 @@ const all = await runResumable(request, workers, 'run.jsonl', settingsLabel);
 
 - `GameSpec`: `{ index, seed, driver, settings? }`. Records come back in index order, the same for any worker count.
 - Driver random numbers: `DriverRng` keyed by seed, driver and prompt id; never the game's `state.rng`.
+- A game is a function of its spec (seed, driver, settings) only, whatever its index and the games before it on the worker. To replay one alone pass the same three. `fresh: true` in the request gives every game a worker of its own: records that differ from a plain run mean the game's module (a driver cache, counters) keeps something between games.
+- Grid sweep: `sweep({ module, cells: grid({ hit: [0, 0.5], run: [0, 1] }), games, driver, metrics: { runs: (r) => r.summary.runs }, workers, file, label, out? })` plays seeds `sweep-0..` in every cell through `runResumable`; returns `{ records, cells, csv }`, one CSV row per cell: the cell's settings, games, failed, and each metric's mean, `_sd`, `_se`.
 - `SimRecord`: index, seed, driver, settings, result, actions, hash (of the action list), error, errorName, violations, log (failed games only), summary.
 - An error or invariant violation fails that game only; a worker that dies becomes a crash record and a new worker goes on. A worker that dies before its first game (the module fails to load) charges the crash to the next game, so a broken module gives a run of crash records; one that dies after its last game loses nothing.
 - Resume file: one JSON line per finished game; a stopped run continues; other settings are refused; crashes, a partial last line and corrupt lines are played again.

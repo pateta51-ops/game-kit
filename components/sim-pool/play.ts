@@ -30,7 +30,11 @@ export interface GameSpec {
 }
 
 /** What a game gives the pool. The module a worker loads exports it as `simGame`. */
-export interface SimGame<G extends GameTypes, S = unknown> {
+export interface SimGame<G extends GameTypes, S = unknown, O = unknown> {
+  /** A new observation for each game: `onPrompt` fills it, `summary` reads it. Keep per-game notes here, never in the module. */
+  observation?(spec: GameSpec, content: G['content']): O;
+  /** Called at every open prompt, before the driver answers. */
+  onPrompt?(seen: O, state: G['state'], answers: readonly G['action'][]): void;
   readonly rules: GameRules<G>;
   /** Loaded once per thread. */
   content(): G['content'] | Promise<G['content']>;
@@ -39,7 +43,7 @@ export interface SimGame<G extends GameTypes, S = unknown> {
   /** The legal answers to the open prompt; default `legalAnswers`. */
   answers?(state: G['state'], content: G['content'], rng: DriverRng): readonly G['action'][];
   /** The game's own counters for a game that ended (or stopped). */
-  summary?(state: G['state'], actions: readonly G['action'][], content: G['content']): S;
+  summary?(state: G['state'], actions: readonly G['action'][], content: G['content'], seen: O): S;
   /** A game with no result after this many actions fails (default 100,000). */
   readonly maxActions?: number;
 }
@@ -111,7 +115,8 @@ export function randomDriver<G extends GameTypes>(weight?: (a: G['action'], stat
 }
 
 /** Play `spec` to its end, or for `until` actions (the driver still answers at that step, so what fails there fails again). Never throws: an error or an invariant violation ends the game as a failed record. */
-export function playOne<G extends GameTypes, S>(game: SimGame<G, S>, content: G['content'], spec: GameSpec, until?: number): SimRecord<S> {
+export function playOne<G extends GameTypes, S, O = unknown>(game: SimGame<G, S, O>, content: G['content'], spec: GameSpec, until?: number): SimRecord<S> {
+  let seen: O | undefined;
   const actions: G['action'][] = [];
   const violations: InvariantViolation[] = [];
   let state: G['state'] | undefined;
@@ -119,6 +124,7 @@ export function playOne<G extends GameTypes, S>(game: SimGame<G, S>, content: G[
   let errorName: string | undefined;
   try {
     const start = game.start(spec, content);
+    seen = game.observation?.(spec, content);
     const first = createGame(game.rules, start.options, start.rules, content);
     let s: G['state'] = first.state;
     state = s;
@@ -131,6 +137,7 @@ export function playOne<G extends GameTypes, S>(game: SimGame<G, S>, content: G[
       if (actions.length >= cap) throw new Error(`no result after ${String(cap)} actions`);
       const rng = new DriverRng(`${spec.seed}|${spec.driver}|${String(p.id)}`);
       const answers = game.answers ? game.answers(s, content, rng) : (legalAnswers(p, rng) as G['action'][]);
+      game.onPrompt?.(seen as O, s, answers);
       const a = driver.choose(s, answers, rng);
       if (until !== undefined && actions.length >= until) break;
       actions.push(a);
@@ -146,7 +153,7 @@ export function playOne<G extends GameTypes, S>(game: SimGame<G, S>, content: G[
   const failed = error !== undefined || violations.length > 0;
   let summary: S | undefined;
   try {
-    if (state !== undefined && game.summary) summary = game.summary(state, actions, content);
+    if (state !== undefined && game.summary) summary = game.summary(state, actions, content, seen as O);
   } catch (e) {
     error ??= `summary: ${e instanceof Error ? e.message : String(e)}`;
   }

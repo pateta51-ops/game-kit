@@ -5,3 +5,4 @@ export { findingOf, formatFuzz, fuzz, fuzzMain, FUZZ_USAGE, type Finding, type F
 export { formatBands, type Band, type SanityBands } from './bands';
 export { codeVersion, gitShort, sourceHash } from './version';
 export { openCheckpoint, runResumable, specKey, type Checkpoint } from './resume';
+export { grid, spread, sweep, type Cell, type Spread, type Sweep, type SweepCell, type SweepOptions } from './sweep';

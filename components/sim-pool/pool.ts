@@ -18,6 +18,8 @@ export interface RunRequest {
   readonly worker?: string;
   /** Stop each game after this many applied actions (a replay to a step). */
   readonly until?: number | undefined;
+  /** Every game on a worker thread of its own (slow): what the game's module keeps between games cannot reach the next one. */
+  readonly fresh?: boolean | undefined;
 }
 
 export interface WorkerInput {
@@ -64,11 +66,19 @@ async function lane(request: RunRequest, next: () => GameSpec | undefined, colle
   for (;;) {
     let held: GameSpec | undefined;
     let stopped = false;
+    let again = false;
     try {
       await new Promise<void>((resolve, reject) => {
         const w = boot(request, input);
         w.on('message', (m: WorkerMessage) => {
           if (m.type === 'record') collect(m.record);
+          if (m.type === 'record' && request.fresh === true) {
+            held = undefined;
+            again = true;
+            stopped = true;
+            w.postMessage({ type: 'stop' } satisfies WorkerCommand);
+            return;
+          }
           held = next();
           if (held === undefined) {
             stopped = true;
@@ -81,8 +91,9 @@ async function lane(request: RunRequest, next: () => GameSpec | undefined, colle
           else reject(new Error(`a simulation worker stopped with exit code ${String(code)}`));
         });
       });
-      return;
+      if (!again) return;
     } catch (e) {
+      if (again) continue;
       if (stopped) return; // died after its last game: nothing lost
       held ??= next(); // died before its first game (the module failed to load): the next game takes the crash
       if (held === undefined) return;
@@ -99,7 +110,7 @@ export async function runGames(request: RunRequest, workers: number, onRecord?: 
     onRecord?.(r);
   };
   const count = Math.max(1, Math.min(workers, request.specs.length));
-  if (count === 1) await runInThread(request, collect);
+  if (count === 1 && request.fresh !== true) await runInThread(request, collect);
   else {
     let at = 0;
     const next = (): GameSpec | undefined => request.specs[at++];
