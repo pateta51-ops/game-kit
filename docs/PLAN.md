@@ -154,6 +154,46 @@ What a game's own tool did that the kit's does not; each kept that game on its o
 | LLM opponent plumbing | STCC | L |
 | Second-engine tooling (TypeScript and Rust twins) | Warp's | L |
 
+## Harvest from outside repositories (owner, 15 Nov 2026)
+
+Eleven public card-game repositories were surveyed read-only; the findings are in `docs/evaluation/outside/` (evidence is docs, headers and excerpts, so a worker reads the bodies before building). Licences: middle-earth-player, netrunner, boardgame.io and netrunnerdb are MIT (code may be lifted with its notice); marvel-champions-digital-game and arkham.build are AGPL-3.0, chiriboga is GPL-3.0, ArkhamHorror, MarvelChampions and marvel-lcg have none: from those take the idea and write it new, never paste code. Rows are built when the first game needs them. Not taken: save-compatibility work (held until a game is complete), the source engines, multiplayer and server parts.
+
+| Batch | Content | Sources | Effort | State |
+|---|---|---|---|---|
+| K77 | `card-harness`: spec rows (printed line, layout by zone, one act, an expectation), each run again with that line's records removed; a row that still passes fails | middle-earth-player | M | proposed |
+| K78 | `card-harness`: render effect records as English under their printed line; a read-only reading-judge step (ok / wrong / ambiguous / render-gap) before tests are written | middle-earth-player | M | proposed |
+| K79 | `engine-core`: a cause (rule id, or effect record plus printed line) on every step that changes a number; `replay-cli` test refuses a step without one | middle-earth-player | M | proposed |
+| K80 | `e2e-helpers` or `prompt-gallery`: over seeded games, every legal action and target is sent by some labelled control | middle-earth-player | M | proposed |
+| K81 | `replay-cli`: digest of a curated table view after each move, pinned in goldens; report the scenarios whose digests moved | middle-earth-player | S | proposed |
+| K82 | `check-runner`: test-cost budget (the list of test files that play whole games may not grow) | middle-earth-player | S | proposed |
+| K83 | `card-harness` inventory: every printed line owned by a record or listed open; record verbs checked against the engine's route lists | middle-earth-player | S | proposed |
+| K84 | Pattern notes: mechanic-family manifests with a verb-has-runner test; results cached by immutable state | middle-earth-player | S | proposed |
+| K85 | Small checks and tools: sentence-length check on prompt wording (`plain-text`); private-data check on tracked files; a `move` tool that rewrites every path; docs index with a section reader | middle-earth-player | S | proposed |
+| K86 | New `game-log`: log lines derived from engine events by one table (cards write nothing); entries as data (parts, card refs, cause, kind); append-only rows grouped by id; wording rules | ArkhamHorror | M | proposed |
+| K87 | `game-log`: undo back to a log line; hover a line to preview that past state; plain-text export a golden can pin | ArkhamHorror, boardgame.io | S | proposed |
+| K88 | `engine-core`: blocked targets with reason codes on legal actions; barred options with a recorded reason; the only-one-option notice | marvel-champions-digital-game | M | proposed |
+| K89 | `engine-core`: outcome preview by probe (run, discard, return before/after numbers), stopping at hidden information | marvel-champions-digital-game | M | proposed |
+| K90 | Prompts: each choice names its source frame (card and clause); decision-authority tag when the player decides for the automated side; read-only stack view | marvel-champions-digital-game | S | proposed |
+| K91 | `engine-core`: does-nothing check, separate from legality | netrunner | S | proposed |
+| K92 | Ghost card for an ability whose source has left play | ArkhamHorror | S | proposed |
+| K93 | Card language: cancel and instead by batch id; prevention window declared as card data with remaining / prevented counters | ArkhamHorror, netrunner | M | proposed |
+| K94 | Card language: simultaneous triggers (apply all, capture follow-ups, resolve); interactive flag and a priority table for automatic order; once-per-instance against once-per-item | ArkhamHorror, netrunner | M | proposed |
+| K95 | `engine-core`: one checkpoint step after every action in rulebook order, and a recompute-until-stable pass with a cap | netrunner | M | proposed |
+| K96 | Card language: continuous-effects registry with typed durations | netrunner, marvel-champions-digital-game | M | proposed |
+| K97 | `card-harness`: strict validator (unknown keys fail, variables bound before read, cited opt-outs stored as data); grammar reference generated from source | marvel-champions-digital-game, ArkhamHorror, netrunner | M | proposed |
+| K98 | `card-harness`: ability-fired trace (looked up against actually run); `expectResolved` | marvel-champions-digital-game | S | proposed |
+| K99 | `tooling-scripts`: `card <id>`, `dsl <word>` and `refs` lookup commands generated on each run | marvel-champions-digital-game | M | proposed |
+| K100 | Debug edits as engine actions (set a counter, summon a card, force the next random result, close a stuck prompt) and a console for them | ArkhamHorror, netrunner | M | proposed |
+| K101 | `sim-pool`: render the view on every step; hasten mode; one-answer replay of the failing step with timings | halogenandtoast MarvelChampions | S | proposed |
+| K102 | `card-harness` helpers: failures print the open prompt and its choices; no-prompt-left assertion; multi-delta `changed`; live state exported as a scenario literal; `errata` / `faq` test wrappers; `withRewind` | netrunner, chiriboga, ArkhamHorror | S | proposed |
+| K103 | Opponent pattern (when a game has a rule-based opponent): pick an index among legal options; per-card advice data beside the records; redacted view; plan record across prompts; decision record opened from the log | chiriboga, boardgame.io | M | proposed |
+| K104 | Content build: card data patch layer, one file per reason, applied on import | arkham.build | S | proposed |
+| K105 | Zoomed card: errata as printed / as played / word diff; rulings (question, ruling, citation, date) keyed by card | arkham.build, netrunnerdb | M | proposed |
+| K106 | One delegated tooltip for every card link inside log lines, prompts, rulings and tutorial text | arkham.build | S | proposed |
+| K107 | Card query language: typed field table plus a small parser; the game supplies its fields | arkham.build | M to L | proposed |
+| K108 | `engine-core` random: named override in tests; a randomness-used flag that bars undo | boardgame.io | S | proposed |
+| K109 | Small: icon emitted with a hidden word; paired valid / invalid fixtures per setup-legality rule with typed errors; stale flow request dropped and a loop cap; related-cards index; emitted text keys resolve; card stats diff against a community database; missing-card stand-in | netrunnerdb, arkham.build, boardgame.io, ArkhamHorror | S each | proposed |
+
 ## Size
 
 5 small lifts, about 18 worker batches of medium size, 2 large ones. Stage 1 is 4 batches. Work asked for by a game (the table above) comes on top.
