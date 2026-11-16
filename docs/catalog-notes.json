@@ -204,6 +204,11 @@
     "use": "Saved games in IndexedDB over engine-core's save file and a saves screen.",
     "not": "Old-save migration work (the owner's rule: none until the game is complete)."
   },
+  "reference-game": {
+    "use": "Kit CI only: a made-up game generated through the scaffold whose own check fails when a component interface drifts.",
+    "not": "Pulling into a game or copying as a starter; use scaffold for a new game.",
+    "exports": "`reference.test.ts`; template/ overlay for scaffold"
+  },
   "scaffold": {
     "use": "Starting a new game: one command makes the empty working repo (Vite, ESLint, Vitest, tsconfig, CI, kit pull, stub GameRules).",
     "not": "Anything inside a running game; it is a generator run from the kit checkout.",

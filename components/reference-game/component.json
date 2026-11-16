@@ -1,0 +1,11 @@
+{
+  "name": "reference-game",
+  "source": {
+    "game": "kit",
+    "commit": "none",
+    "paths": [],
+    "note": "Written new for the kit (K205); the rules shape follows scaffold's template and engine-core/fake/counter.ts. No real game's content."
+  },
+  "needs": ["scaffold"],
+  "packages": []
+}
