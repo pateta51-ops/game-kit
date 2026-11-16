@@ -1,0 +1,12 @@
+{
+  "name": "game-log",
+  "source": {
+    "game": "ArkhamHorror",
+    "url": "https://github.com/halogenandtoast/ArkhamHorror",
+    "commit": "3eab026",
+    "licence": "none found (all rights reserved): design taken from docs/game-log/README.md and STATE-OF-PLAY.md, no code copied; the kit's own build",
+    "paths": ["docs/game-log/README.md", "docs/game-log/STATE-OF-PLAY.md"]
+  },
+  "needs": ["engine-core"],
+  "packages": []
+}

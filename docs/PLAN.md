@@ -203,7 +203,7 @@ Sixteen public card- and board-game repositories were surveyed read-only; the fi
 | K83 | `card-harness` inventory: every printed line owned by a record or listed open; record verbs checked against the engine's route lists | middle-earth-player | S | proposed |
 | K84 | Pattern notes: mechanic-family manifests with a verb-has-runner test; results cached by immutable state | middle-earth-player | S | done (pattern notes in `docs/patterns/card-language.md`) |
 | K85 | Small checks and tools: sentence-length check on prompt wording (`plain-text`); private-data check on tracked files; a `move` tool that rewrites every path; docs index with a section reader | middle-earth-player | S | proposed |
-| K86 | New `game-log`: log lines derived from engine events by one table (cards write nothing); entries as data (parts, card refs, cause, kind); append-only rows grouped by id; wording rules | ArkhamHorror | M | proposed |
+| K86 | New `game-log`: log lines derived from engine events by one table (cards write nothing); entries as data (parts, card refs, cause, kind); append-only rows grouped by id; wording rules | ArkhamHorror | M | done |
 | K87 | `game-log`: undo back to a log line; hover a line to preview that past state; plain-text export a golden can pin | ArkhamHorror, boardgame.io | S | proposed |
 | K88 | `engine-core`: blocked targets with reason codes on legal actions; barred options with a recorded reason; the only-one-option notice | marvel-champions-digital-game | M | proposed |
 | K89 | `engine-core`: outcome preview by probe (run, discard, return before/after numbers), stopping at hidden information | marvel-champions-digital-game | M | proposed |
