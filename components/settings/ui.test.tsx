@@ -72,4 +72,15 @@ describe('SettingsScreen', () => {
     expect(screen.getByRole('button', { name: 'Two' }).getAttribute('aria-pressed')).toBe('true');
     expect(screen.getByRole('button', { name: 'One' }).getAttribute('aria-pressed')).toBe('false');
   });
+  it('draws extra rows inside a section and children after the sections', () => {
+    localStorage.clear();
+    const store = createSettingsStore(schema);
+    render(
+      <SettingsScreen schema={schema} store={store} extra={{ a: <p data-testid="x">row</p> }}>
+        <p data-testid="tail">tail</p>
+      </SettingsScreen>,
+    );
+    expect(screen.getByTestId('x').closest('fieldset')?.textContent).toContain('Section A');
+    expect(screen.getByTestId('tail').parentElement?.className).toBe('kit-set');
+  });
 });

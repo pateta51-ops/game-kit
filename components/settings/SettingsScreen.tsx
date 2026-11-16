@@ -1,6 +1,6 @@
 // The settings form drawn from the schema: one fieldset per section (named by its heading), a checkbox per toggle, a
 // radio group or a drop-down per choice. Each change writes the store at once. Dev settings show only with `dev`.
-import { useId } from 'react';
+import { useId, type ReactNode } from 'react';
 import type { StoreApi, UseBoundStore } from 'zustand';
 import type { SettingDef, SettingsSchema } from './schema';
 import type { SettingsState } from './store';
@@ -19,6 +19,10 @@ export interface SettingsScreenProps {
   showLine?: boolean;
   /** Toggle plate labels in plates mode. */
   onOff?: readonly [string, string];
+  /** Custom rows by section id: drawn inside that section's fieldset after its settings (a section with only an extra still shows). */
+  extra?: Readonly<Record<string, ReactNode>>;
+  /** Drawn after the last section. */
+  children?: ReactNode;
   className?: string;
 }
 
@@ -130,13 +134,14 @@ function Setting({ def, store, id, plates, onOff, showLine }: { def: SettingDef;
   );
 }
 
-export function SettingsScreen({ schema, store, dev = false, look, showLine = false, onOff = ['On', 'Off'], className }: SettingsScreenProps) {
+export function SettingsScreen({ schema, store, dev = false, look, showLine = false, onOff = ['On', 'Off'], extra, children, className }: SettingsScreenProps) {
   const id = useId();
   return (
     <div className={className === undefined ? 'kit-set' : `kit-set ${className}`}>
       {schema.sections.map((sec) => {
         const shown = sec.settings.filter((d) => dev || d.dev !== true);
-        if (shown.length === 0) return null;
+        const more = extra?.[sec.id];
+        if (shown.length === 0 && (more === undefined || more === null)) return null;
         return (
           <fieldset key={sec.id} className="kit-set-section" aria-labelledby={`${id}-${sec.id}`}>
             <h2 className="kit-set-title" id={`${id}-${sec.id}`}>
@@ -145,9 +150,11 @@ export function SettingsScreen({ schema, store, dev = false, look, showLine = fa
             {shown.map((d) => (
               <Setting key={d.key} def={d} store={store as Any} id={`${id}-${d.key}`} plates={look === 'plates'} showLine={showLine} onOff={onOff} />
             ))}
+            {more}
           </fieldset>
         );
       })}
+      {children}
     </div>
   );
 }

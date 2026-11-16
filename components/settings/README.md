@@ -25,3 +25,5 @@ Settings declared as data, a persisted store of their values and a screen drawn 
 Tests: `settings.test.ts` (node), `ui.test.tsx` (jsdom).
 
 `look="plates"` (with `onOff` labels, default On/Off): each toggle or choice option is a button (`aria-pressed`, class `kit-set-plate-on` when chosen), no checkbox or radio; test ids `setting-<key>-on|off` and `setting-<key>-<value>`; drop-downs stay. `showLine` (default off) adds the chosen option's `line` under the plates, class `kit-set-line`, test id `setting-<key>-line`.
+
+`extra` (`{ [sectionId]: ReactNode }`): custom rows drawn inside that section's fieldset after its settings; a section with only an extra still shows. `children` draw after the last section. A game no longer portals into the screen by title text.

@@ -37,6 +37,10 @@
 :where(.kit-sav-what) {
   display: grid;
   flex: 1 1 12rem;
+  min-width: 0;
+}
+:where(.kit-sav-what > b, .kit-sav-what > span) {
+  overflow-wrap: anywhere;
 }
 :where(.kit-sav-muted) {
   opacity: var(--sav-muted-opacity);

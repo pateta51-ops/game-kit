@@ -24,4 +24,4 @@ Saved games in IndexedDB over engine-core's `SaveFile`, and a screen for them. `
 
 Tests: `saves.test.ts`, `data.test.ts`, `kv.test.ts` (node), `ui.test.tsx` (jsdom).
 
-Screen options: `confirmDelete` (Delete needs a second tap on the row; the button then reads `words.confirmDelete`), `renderImport(open, label)` (draws the import control; `open()` picks a file, the file input stays hidden). Each row's replay is computed once per stored save. `rename`: named saves get a Rename button (`save-rename`); the name becomes a text field (`save-rename-name`) and the button then reads `words.save`.
+Long save names wrap (`overflow-wrap: anywhere`, `min-width: 0` on `.kit-sav-what`). Screen options: `confirmDelete` (Delete needs a second tap on the row; the button then reads `words.confirmDelete`), `renderImport(open, label)` (draws the import control; `open()` picks a file, the file input stays hidden). Each row's replay is computed once per stored save. `rename`: named saves get a Rename button (`save-rename`); the name becomes a text field (`save-rename-name`) and the button then reads `words.save`.
