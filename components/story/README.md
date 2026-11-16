@@ -21,8 +21,10 @@ Story as data only (flavour: no rule lives in it; a missing line never blocks pl
 
 `<StorySheet story scenarioId reached inPlay fileExists? renderFile? />`: draws the visible parts; a picture without its file shows its note.
 
+Page (`page.ts`, `PageView.tsx`): `{id, entries}`, a tree of text keys: `text` (`{vars}`), `header`, `list`, `card` (`note` = text key), `icon`, `footnote`, `mod` (`resolution`, `interlude`, `boxed`), `branch`. `pageView(page, texts, log, overlay?)`: every branch case stays, the first whose `when` (log key, `not`/`all`/`any`) holds, or has none, is `applied`. `overlay` = alternative prose by key, lines marked `changed`. `pageProblems`. `<PageView page texts log overlay? renderCard? renderIcon? />` (no renderer = nothing drawn): `kit-page-valid`, `-invalid`, `-changed`; vars `--story-invalid-opacity`, `--story-changed`, `--story-box-border`, `--story-interlude-style`.
+
 ## Look
 
 `story.css` (loaded by `StorySheet.tsx`) at zero specificity: `--story-font`, `--story-text`, `--story-bg`, `--story-pad`, `--story-gap`, `--story-head-font`, `--story-name`, `--story-narrator-style`, `--story-note-border`, `--story-note-opacity`. Classes: `kit-story`, `-part`, `-title`, `-beat`, `-pic`, `-note`, `-line`, `-narrator`, `-name`.
 
-Tests: `story.test.ts` (node), `ui.test.tsx` (jsdom).
+Tests: `story.test.ts`, `page.test.ts` (node), `ui.test.tsx` (jsdom).

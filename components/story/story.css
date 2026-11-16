@@ -4,4 +4,9 @@
 :where(.kit-story-title) { font-family: var(--story-head-font, inherit); }
 :where(.kit-story-name) { color: var(--story-name, inherit); margin-inline-end: 0.5em; }
 :where(.kit-story-narrator) { font-style: var(--story-narrator-style, italic); }
+:where(.kit-page-invalid) { opacity: var(--story-invalid-opacity, 0.45); }
+:where(.kit-page-changed) { border-inline-start: 2px solid var(--story-changed, currentColor); padding-inline-start: 0.5em; }
+:where(.kit-page-boxed) { border: 1px solid var(--story-box-border, currentColor); padding: var(--story-pad, 0.5em); }
+:where(.kit-page-interlude) { font-style: var(--story-interlude-style, normal); }
+:where(.kit-page-resolution) { font-family: var(--story-head-font, inherit); }
 :where(.kit-story-note) { border: 1px dashed var(--story-note-border, currentColor); padding: 0.5em; opacity: var(--story-note-opacity, 0.7); }
