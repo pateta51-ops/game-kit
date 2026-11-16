@@ -1,0 +1,57 @@
+/* Dev gallery shell. Every colour, font and size is a --gal-* variable with a neutral default. The fixture itself is drawn
+   by the game inside .kit-gallery-shown > section, with the game's own look. */
+:where(:root) {
+  --gal-bg: #f1f3f4;
+  --gal-text: #222222;
+  --gal-border: #9aa0a6;
+  --gal-link-bg: #ffffff;
+  --gal-current-bg: #222222;
+  --gal-current-text: #ffffff;
+  --gal-alert: #a50e0e;
+  --gal-font: system-ui, sans-serif;
+  --gal-side-width: 28em;
+}
+
+.kit-gallery {
+  box-sizing: border-box;
+  min-height: 100vh;
+  padding: 1.5em;
+  background: var(--gal-bg);
+  color: var(--gal-text);
+  font-family: var(--gal-font);
+}
+
+.kit-gallery nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5em;
+  margin-bottom: 1em;
+}
+
+.kit-gallery nav a {
+  padding: 0.25em 0.5em;
+  border: 1px solid var(--gal-border);
+  border-radius: 4px;
+  background: var(--gal-link-bg);
+  color: inherit;
+  text-decoration: none;
+}
+
+.kit-gallery nav a[aria-current] {
+  background: var(--gal-current-bg);
+  color: var(--gal-current-text);
+}
+
+.kit-gallery nav a[data-missing] {
+  opacity: 0.5;
+}
+
+.kit-gallery [role='alert'] {
+  color: var(--gal-alert);
+}
+
+.kit-gallery-shown {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) var(--gal-side-width);
+  gap: 1.5em;
+}

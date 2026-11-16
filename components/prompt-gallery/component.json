@@ -1,0 +1,39 @@
+{
+  "name": "prompt-gallery",
+  "source": {
+    "game": "ebr",
+    "commit": "33b5abd3",
+    "paths": [
+      "src/ui/dev/PromptGallery.tsx (the route shell: kind links, the missing-sample mark, the stale message, answers checked and listed but never played, open again; the prompt components, pack loading and store replaced by the game's render and check functions)",
+      "src/ui/dev/promptSample.ts (replaySample's kind check as loadFixture with kindOf; the replay itself stays in the game's state function)",
+      "scripts/prompt-samples.ts (--check as checkStates; the first-save-per-kind loop as keepBest; the drivers, packs and file writing stay in the game)"
+    ],
+    "grafts": [
+      {
+        "game": "jarl",
+        "commit": "6f006a2",
+        "paths": [
+          "scripts/prompt-fixtures.ts (the purpose list from the engine and the exit on a missing purpose as checkGallery; keeping the fullest table per purpose as keepBest's score; the fullness score and rule switches stay in the game)"
+        ]
+      },
+      {
+        "game": "warps",
+        "commit": "2af6937",
+        "paths": [
+          "scripts/end-fixtures.ts (one fixture per result kind: the 'ending' group; the search and the autosave writer stay in the game)"
+        ]
+      },
+      {
+        "game": "stcc",
+        "commit": "9fc59643",
+        "paths": [
+          "src/ui/dev/devMode.ts (isDevMode)"
+        ]
+      }
+    ]
+  },
+  "needs": [],
+  "packages": [
+    "react"
+  ]
+}
