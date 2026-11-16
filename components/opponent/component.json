@@ -1,0 +1,15 @@
+{
+  "name": "opponent",
+  "source": {
+    "game": "chiriboga, Forge (GPL-3.0, ideas only); boardgame.io, XMage (MIT, ideas only, no code ported)",
+    "commit": "ideas-only",
+    "licence": "chiriboga https://github.com/bobtheuberfish/chiriboga GPL-3.0 and Forge https://github.com/Card-Forge/forge GPL-3.0 (at 50b6a8f): ideas only, from the write-ups, no code copied; boardgame.io https://github.com/boardgameio/boardgame.io MIT and XMage https://github.com/magefree/mage MIT (at cb1a4ee): ideas only. All code written new for the kit.",
+    "paths": [
+      "docs/evaluation/outside/netrunner.md items 15, 17, 18 (chiriboga ai_runner.js, ai_corp.js, runcalculator.js: per-card advice, redacted view, preferred-plan record, pick an index)",
+      "docs/evaluation/outside/boardgameio-deckbuilders.md item 8 (src/ai/mcts-bot.ts: decision metadata opened from the log)",
+      "docs/evaluation/outside/forge-xmage.md F9 to F14 (forge-ai SpellApiToAi, SpellAbilityAi, AiPlayDecision, res/ai/*.ai, AiCardMemory, ComputerUtil runaway guard, simulation/GameSimulator, GameStateEvaluator; XMage ComputerPlayer6 caps and repeat cut)"
+    ]
+  },
+  "needs": ["game-log", "sim-pool"],
+  "packages": []
+}

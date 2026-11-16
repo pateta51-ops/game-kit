@@ -47,6 +47,7 @@ Source commits: stcc `9fc59643`, warps `2af6937`, ebr `33b5abd3`, rome `1d0fd2e`
 | Generic simulation runner | Warp's contract | | L |
 | Command-line replay | Imperium (most tests, golden updates) | EBR's per-action hash comparison; STCC's injected input and output | M |
 | Greedy and planner players, sanity bands | Pattern only | | |
+| Rule-based opponent (`opponent`, K103, K115: pick an index among legal options through one fixed pipeline, advice per card, handler per verb, reason codes, profiles and memory as data, decision records) | New code from ideas: chiriboga, Forge (GPL), boardgame.io, XMage (MIT) | - | M |
 
 Open check before the lift: the canonical JSON of the Jarl line and of STCC build their text and hash differently. A new game takes Jarl's as is, so nothing depends on them matching.
 
