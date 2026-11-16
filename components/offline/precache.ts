@@ -17,6 +17,8 @@ export interface PrecacheOptions {
   readonly appDir?: string;
   /** Files never kept, besides sw.js and `.vite/`. */
   readonly exclude?: readonly RegExp[];
+  /** Page loads go to the network first and fall back to the stored index.html after this many ms (or offline). Left out: always the stored page. */
+  readonly navTimeoutMs?: number;
 }
 
 export const SW_FILE = 'sw.js';
@@ -29,6 +31,7 @@ export interface Precache {
   readonly version: string;
   /** Relative to the service worker's scope (the build's root), POSIX, sorted. */
   readonly files: readonly string[];
+  readonly navTimeout?: number;
 }
 
 const under = (f: string, dir: string): boolean => f.startsWith(`${dir.replace(/^\.?\/+|\/+$/g, '')}/`);
@@ -53,7 +56,7 @@ export const cacheName = (p: Precache): string => `${p.prefix}${p.version}`;
 /** sw.js with the precache written in place of its placeholder; throws when the placeholder is missing. */
 export function injectPrecache(source: string, p: Precache): string {
   if (!PLACEHOLDER.test(source)) throw new Error(`${SW_FILE}: the /*PRECACHE*/ ... /*END*/ placeholder is missing`);
-  const json = JSON.stringify({ prefix: p.prefix, version: p.version, files: p.files });
+  const json = JSON.stringify({ prefix: p.prefix, version: p.version, files: p.files, navTimeout: p.navTimeout });
   return source.replace(PLACEHOLDER, () => `/*PRECACHE*/ ${json} /*END*/`);
 }
 
@@ -64,7 +67,7 @@ const walk = (dir: string): string[] =>
 export function buildPrecache(outDir: string, o: PrecacheOptions): Precache {
   const files = precacheList(walk(outDir).map((f) => relative(outDir, f)), o);
   const entries = files.map((f) => [f, createHash('sha256').update(readFileSync(join(outDir, f))).digest('hex')] as const);
-  return { prefix: o.prefix, version: cacheVersion(entries), files };
+  return { prefix: o.prefix, version: cacheVersion(entries), files, ...(o.navTimeoutMs === undefined ? {} : { navTimeout: o.navTimeoutMs }) };
 }
 
 /** The kit's service worker, unbuilt. */

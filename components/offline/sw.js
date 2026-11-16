@@ -44,11 +44,15 @@ self.addEventListener('fetch', (event) => {
   const req = event.request;
   if (req.method !== 'GET') return;
   if (req.mode === 'navigate' && req.url.startsWith(SCOPE)) {
+    const kept = () => caches.open(CACHE).then((cache) => cache.match(INDEX, { ignoreVary: true }));
     event.respondWith(
-      caches
-        .open(CACHE)
-        .then((cache) => cache.match(INDEX, { ignoreVary: true }))
-        .then((hit) => hit || fetch(req)),
+      // navTimeout (precache.ts navTimeoutMs): the network first, the stored page when it fails, refuses or is too slow
+      (PRECACHE.navTimeout > 0
+        ? Promise.race([fetch(req, { cache: 'no-store' }), new Promise((_, no) => setTimeout(no, PRECACHE.navTimeout))])
+            .then((r) => (r.ok || r.type === 'opaqueredirect' ? r : Promise.reject(r)))
+            .catch(kept)
+        : kept()
+      ).then((hit) => hit || fetch(req)),
     );
     return;
   }

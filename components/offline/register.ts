@@ -97,6 +97,57 @@ export function applyUpdate(reload: () => void = () => window.location.reload())
   setTimeout(reload, RELOAD_FALLBACK_MS);
 }
 
+export interface AutoApply {
+  /** Whether the page may reload now (the game: nothing half-entered, no open form). */
+  readonly safe: () => boolean;
+  /** Awaited before the reload (the game's pending save); `safe` is asked again after it. */
+  readonly flush?: () => Promise<unknown>;
+  readonly apply?: () => void;
+}
+
+/** Applies a waiting version by itself when `safe` allows it, and looks for a newer build now, back online and on pageshow. The game calls `check` whenever what `safe` reads changes; `stop` ends it. */
+export function autoApply(d: AutoApply): { check: () => void; stop: () => void } {
+  let busy = false;
+  let stopped = false;
+  const ready = (): boolean => useUpdate.getState().state === 'ready';
+  const run = async (): Promise<void> => {
+    if (stopped || busy || !ready() || !d.safe()) return;
+    busy = true;
+    try {
+      await d.flush?.();
+      if (!stopped && ready() && d.safe()) (d.apply ?? applyUpdate)();
+    } catch {
+      // the save failed: not now
+    } finally {
+      busy = false;
+    }
+  };
+  const check = (): void => {
+    void run();
+  };
+  const look = (): void => {
+    if (!('serviceWorker' in navigator)) return;
+    navigator.serviceWorker
+      .getRegistration()
+      .then((r) => r?.update())
+      .catch(() => undefined);
+  };
+  look();
+  const unsub = useUpdate.subscribe(check);
+  window.addEventListener('online', look);
+  window.addEventListener('pageshow', look);
+  check();
+  return {
+    check,
+    stop: () => {
+      stopped = true;
+      unsub();
+      window.removeEventListener('online', look);
+      window.removeEventListener('pageshow', look);
+    },
+  };
+}
+
 /** Registers `url` (the build's sw.js, e.g. `${import.meta.env.BASE_URL}sw.js`) when shouldRegister allows it (never inside a frame). Once per page. */
 export function registerServiceWorker(env: SwEnv, url: string, host: PageHost = pageHost()): void {
   const { state, send } = useUpdate.getState();

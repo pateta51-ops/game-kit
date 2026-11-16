@@ -1,7 +1,7 @@
 import { act, fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { IllegalTransitionError, transition } from '../state-machines/machine';
-import { applyUpdate, pageHost, registerServiceWorker, RELOAD_FALLBACK_MS, shouldRegister, UPDATE_MACHINE, useUpdate } from './index';
+import { applyUpdate, autoApply, pageHost, registerServiceWorker, RELOAD_FALLBACK_MS, shouldRegister, UPDATE_MACHINE, useUpdate } from './index';
 import { UpdateLine } from './ui';
 
 const PROD = { prod: true, e2e: false, local: false };
@@ -103,5 +103,55 @@ describe('offline registration and updates', () => {
     expect(reload).not.toHaveBeenCalled();
     vi.advanceTimersByTime(1);
     expect(reload).toHaveBeenCalledTimes(1);
+  });
+
+  it('auto-apply: looks for a newer build at once and back online; applies a waiting one only when safe, after the save, once at a time', async () => {
+    const tick = (): Promise<void> => new Promise((r) => setTimeout(r, 0));
+    const update = vi.fn(() => Promise.resolve());
+    Object.defineProperty(navigator, 'serviceWorker', { configurable: true, value: { getRegistration: () => Promise.resolve({ update }) } });
+    let safe = false;
+    const saved: (() => void)[] = [];
+    const flush = vi.fn(() => new Promise<void>((r) => saved.push(r)));
+    const apply = vi.fn();
+    const auto = autoApply({ safe: () => safe, flush, apply });
+    await tick();
+    expect(update).toHaveBeenCalledTimes(1);
+    window.dispatchEvent(new Event('online'));
+    await tick();
+    expect(update).toHaveBeenCalledTimes(2);
+    safe = true;
+    auto.check();
+    expect(flush).not.toHaveBeenCalled();
+    safe = false;
+    useUpdate.setState({ state: 'ready', waiting: {} as ServiceWorker });
+    expect(flush).not.toHaveBeenCalled();
+    safe = true;
+    auto.check();
+    auto.check();
+    expect(flush).toHaveBeenCalledTimes(1);
+    safe = false;
+    saved.pop()?.();
+    await tick();
+    expect(apply).not.toHaveBeenCalled();
+    safe = true;
+    auto.check();
+    saved.pop()?.();
+    await tick();
+    expect(apply).toHaveBeenCalledTimes(1);
+    auto.stop();
+    window.dispatchEvent(new Event('online'));
+    useUpdate.setState({ state: 'ready' });
+    await tick();
+    expect(update).toHaveBeenCalledTimes(2);
+    expect(flush).toHaveBeenCalledTimes(2);
+    // stopped while the save is still being written: nothing is applied afterwards
+    const late = autoApply({ safe: () => true, flush, apply });
+    expect(flush).toHaveBeenCalledTimes(3);
+    late.stop();
+    saved.pop()?.();
+    await tick();
+    expect(apply).toHaveBeenCalledTimes(1);
+    late.check();
+    expect(flush).toHaveBeenCalledTimes(3);
   });
 });

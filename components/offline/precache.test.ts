@@ -2,7 +2,7 @@ import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'nod
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { Script } from 'node:vm';
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
   buildPrecache,
   cacheName,
@@ -106,5 +106,62 @@ describe('the offline precache', () => {
     plugin.configResolved({ root: empty, build: { outDir: '.', assetsDir: 'assets' }, logger: { info: (m) => logs.push(m) } });
     plugin.closeBundle();
     expect(logs).toHaveLength(1);
+  });
+
+  it('navTimeoutMs: page loads go to the network first, the stored page when it fails, refuses or is slow; without it, always the stored page', async () => {
+    type Handler = (e: { request: object; respondWith: (p: Promise<unknown>) => void }) => void;
+    const puts = vi.fn();
+    const NAV = { method: 'GET', mode: 'navigate', url: 'https://g.example/app/' };
+    const load = (source: string, fetch: (...a: unknown[]) => Promise<unknown>, request: object = NAV): Promise<unknown> => {
+      const on: Record<string, Handler> = {};
+      new Script(source).runInNewContext({
+        self: { registration: { scope: 'https://g.example/app/' }, addEventListener: (t: string, f: Handler) => (on[t] = f) },
+        caches: { open: () => Promise.resolve({ match: () => Promise.resolve('stored'), put: puts, add: puts, addAll: puts }) },
+        fetch,
+        URL,
+        setTimeout,
+      });
+      return new Promise((done) => {
+        on['fetch']?.({ request, respondWith: done });
+      });
+    };
+    const dir = fakeBuild(BUILD);
+    writeServiceWorker(dir, O);
+    const plain = readFileSync(join(dir, 'sw.js'), 'utf8');
+    expect(plain).not.toContain('navTimeout"');
+    const never = vi.fn((..._a: unknown[]) => new Promise(() => undefined));
+    expect(await load(plain, never)).toBe('stored');
+    expect(never).not.toHaveBeenCalled();
+    const p = writeServiceWorker(dir, { ...O, navTimeoutMs: 30 });
+    expect(p.navTimeout).toBe(30);
+    const first = readFileSync(join(dir, 'sw.js'), 'utf8');
+    expect(first).toContain('"navTimeout":30} /*END*/');
+    const fresh = { ok: true };
+    const net = vi.fn((..._a: unknown[]) => Promise.resolve(fresh));
+    expect(await load(first, net)).toBe(fresh);
+    expect(net.mock.calls[0]?.[1]).toEqual({ cache: 'no-store' });
+    expect(await load(first, () => Promise.reject(new Error('offline')))).toBe('stored');
+    expect(await load(first, () => Promise.resolve({ ok: false }))).toBe('stored');
+    expect(await load(first, never)).toBe('stored');
+    // a server redirect (navigations ask with redirect 'manual') goes through to the browser
+    const redirect = { ok: false, type: 'opaqueredirect' };
+    expect(await load(first, () => Promise.resolve(redirect))).toBe(redirect);
+    // a network answer that arrives after the stored page was served is dropped: nothing thrown, nothing stored
+    const wait = (ms: number): Promise<void> => new Promise((r) => setTimeout(r, ms));
+    const slow = vi.fn((..._a: unknown[]) => wait(80).then(() => fresh));
+    expect(await load(first, slow)).toBe('stored');
+    await wait(120);
+    expect(slow).toHaveBeenCalledTimes(1);
+    expect(await load(first, () => wait(80).then(() => Promise.reject(new Error('late failure'))))).toBe('stored');
+    await wait(120);
+    expect(puts).not.toHaveBeenCalled();
+    // other requests are as without the option: a stored file from the cache without the network, anything else left alone
+    for (const sw of [plain, first]) {
+      const net2 = vi.fn((..._a: unknown[]) => Promise.resolve(fresh));
+      expect(await load(sw, net2, { method: 'GET', mode: 'cors', url: 'https://g.example/app/assets/index-abc.js?v=1' })).toBe('stored');
+      const other = load(sw, net2, { method: 'GET', mode: 'cors', url: 'https://g.example/app/api/data.json' });
+      expect(await Promise.race([other, wait(60).then(() => 'left alone')])).toBe('left alone');
+      expect(net2).not.toHaveBeenCalled();
+    }
   });
 });
