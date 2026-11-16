@@ -1,0 +1,17 @@
+{
+  "name": "table-panels",
+  "source": {
+    "game": "imperium",
+    "commit": "none",
+    "paths": [
+      "src/ui/board/formatEvent.ts, LogPanel.tsx (event words with slots, grouped by turn, filter by seat; the text stays in the game's word table)",
+      "src/ui/play/botTurn.ts (the opponent's steps as the viewer may read them)"
+    ],
+    "grafts": [
+      { "game": "stcc", "commit": "none", "paths": ["src/ui/board/BotTurnPanel.tsx (current step, steps done, continue)"] },
+      { "game": "unstoppable", "commit": "none", "paths": ["log panel, game over screen (result, breakdown, rematch, review, home)"] }
+    ]
+  },
+  "needs": ["game-log", "paced-view"],
+  "packages": ["react"]
+}

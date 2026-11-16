@@ -239,7 +239,7 @@ describe('mock-capture', () => {
                     goto: (u: string) => {
                       url = u;
                       seen.push([u.replace(/^.*\//, ''), o]);
-                      if (u.includes('table')) {
+                      if (u.includes('table.html')) {
                         const e = { message: 'boom', type: () => 'error', text: () => 'console boom', url: () => 'file:///missing.png' };
                         for (const k of ['pageerror', 'console', 'requestfailed']) on[k]?.(e);
                         on['console']?.({ ...e, type: () => 'log' });
@@ -250,10 +250,10 @@ describe('mock-capture', () => {
                     waitForTimeout: (ms: number) => Promise.resolve(void seen.push(ms)),
                     evaluate: <T>() => {
                       n += 1;
-                      return Promise.resolve((n === 1 ? null : n === 2 ? (url.includes('table') ? ['file:///x.png'] : []) : ['Serif', 'Serif', 'Sans']) as T);
+                      return Promise.resolve((n === 1 ? null : n === 2 ? (url.includes('table.html') ? ['file:///x.png'] : []) : ['Serif', 'Serif', 'Sans']) as T);
                     },
                     screenshot: (s: { path: string; fullPage: boolean }) => {
-                      writeFileSync(s.path, url.includes('table') ? 'tt' : 'h');
+                      writeFileSync(s.path, url.includes('table.html') ? 'tt' : 'h');
                       seen.push(s.fullPage);
                       return Promise.resolve();
                     },
