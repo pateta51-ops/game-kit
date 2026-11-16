@@ -23,19 +23,38 @@ export function readToken(): string | null {
   return held ?? safeStorage.getItem(tokenKey());
 }
 
-export const useToken = create<TokenState>((set) => ({
-  has: readToken() !== null,
+let read = false;
+// Storage (and the game's id) is read on first use, not at import: a game may import this before configureBugReporter.
+const sync = (): void => {
+  if (read) return;
+  const has = readToken() !== null;
+  read = true;
+  // In place: nobody has read or subscribed yet (every entry below syncs first), so nothing is notified, even in a render.
+  store.getState().has = has;
+};
+
+const store = create<TokenState>((set) => ({
+  has: false,
   save: (token) => {
     const clean = token.trim();
     if (clean === '' || /\s/.test(clean)) return false;
+    read = true;
     held = clean;
     safeStorage.setItem(tokenKey(), clean);
     set({ has: true });
     return true;
   },
   forget: () => {
+    read = true;
     held = null;
     safeStorage.removeItem(tokenKey());
     set({ has: false });
   },
 }));
+
+const hook = (selector?: (s: TokenState) => unknown): unknown => (sync(), selector ? store(selector) : store());
+export const useToken = Object.assign(hook as unknown as typeof store, store, {
+  getState: (): TokenState => (sync(), store.getState()),
+  setState: ((partial: never, replace?: never) => (sync(), store.setState(partial, replace))) as typeof store.setState,
+  subscribe: (listener: Parameters<typeof store.subscribe>[0]): (() => void) => (sync(), store.subscribe(listener)),
+});

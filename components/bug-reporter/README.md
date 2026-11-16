@@ -11,6 +11,8 @@ Call `configureBugReporter(config)` once, before any of the components render (s
 - `buildSha`, and `snapshot()`: returns what to attach (`contentHash`, `replay` save, `theme`, `round`, `prompt`, `actions`, `log` lines).
 - Optional: `useButtonMode` (hook, `auto | on | off`), `useHideFloatingButton` (hook), `markupFont`, `fonts()` (font files to embed in captures), `dev` (installs `window.bugReports`).
 
+Import from `bug-reporter/index` (config, stores, queue, token, filing; no React components) and `bug-reporter/ui` (`BugReportHost`, `FloatingBugButton`, `BugSettings`, `QueueBar`, `BugButton`); the file paths still work. Importing reads nothing: the token's storage is read on first use.
+
 ## Mount
 
 Render `<BugReportHost />` once (from `BugReportDialog.tsx`; it also listens for F8), `<FloatingBugButton />`, and `<BugSettings />` / `<QueueBar />` in the game's settings. `openBugReport()` opens the dialog from any button.
