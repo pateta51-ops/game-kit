@@ -91,8 +91,12 @@ export function PromptHost<P extends Kinded, V>({ widgets, prompt, view, answer,
   );
 }
 
+// K226: keys 1-9 for ui-helpers bindPromptKeys; picked-state's data-picked (nothing before the first pick)
+const key = (i: number): number | undefined => (i < 9 ? i + 1 : undefined);
+const mark = (picks: readonly string[], id: string): 'picked' | 'unpicked' | undefined => (picks.length === 0 ? undefined : picks.includes(id) ? 'picked' : 'unpicked');
+
 /** One option as a button: barred ones stay, say why and never answer; a legal one that does nothing warns (K91 `idle`). */
-export function OptionButton<P extends Kinded>({ option: o, prompt, look, onPick, pressed, mark }: { option: KernelOption; prompt: P; look: Look<P>; onPick: () => void; pressed?: boolean; mark?: ReactNode }) {
+export function OptionButton<P extends Kinded>({ option: o, prompt, look, onPick, pressed, mark, picked, shortcut }: { option: KernelOption; prompt: P; look: Look<P>; onPick: () => void; pressed?: boolean; mark?: ReactNode; picked?: 'picked' | 'unpicked' | undefined; shortcut?: number | undefined }) {
   return (
     <button
       type="button"
@@ -100,6 +104,8 @@ export function OptionButton<P extends Kinded>({ option: o, prompt, look, onPick
       data-option={o.id}
       aria-disabled={o.enabled ? undefined : 'true'}
       aria-pressed={pressed}
+      data-picked={picked}
+      data-shortcut={shortcut}
       onClick={() => {
         if (o.enabled) onPick();
       }}
@@ -116,8 +122,8 @@ export function OptionButton<P extends Kinded>({ option: o, prompt, look, onPick
 export function OptionList<P extends Kinded, V>({ prompt, answer, look, part = 'list' }: WidgetProps<P, V> & { part?: string }) {
   return (
     <div className={look.cls(part)}>
-      {prompt.options.map((o) => (
-        <OptionButton key={o.id} option={o} prompt={prompt} look={look} onPick={() => answer([o.id])} />
+      {prompt.options.map((o, i) => (
+        <OptionButton key={o.id} option={o} prompt={prompt} look={look} shortcut={key(i)} onPick={() => answer([o.id])} />
       ))}
     </div>
   );
@@ -139,8 +145,8 @@ export function PickOptions<P extends Kinded, V>({ prompt, answer, look, confirm
   const ready = picked.length >= prompt.min && picked.length <= prompt.max;
   return (
     <div className={look.cls('pick')}>
-      {prompt.options.map((o) => (
-        <OptionButton key={o.id} option={o} prompt={prompt} look={look} pressed={picked.includes(o.id)} onPick={() => toggle(o.id)} />
+      {prompt.options.map((o, i) => (
+        <OptionButton key={o.id} option={o} prompt={prompt} look={look} pressed={picked.includes(o.id)} picked={mark(picked, o.id)} shortcut={key(i)} onPick={() => toggle(o.id)} />
       ))}
       {one ? null : (
         <>
@@ -188,7 +194,7 @@ export function Order<P extends Kinded, V>({ prompt, answer, look }: WidgetProps
   const ready = order.length >= prompt.min && order.length <= prompt.max;
   return (
     <div className={look.cls('order')}>
-      {prompt.options.map((o) => {
+      {prompt.options.map((o, i) => {
         const at = clicked.indexOf(o.id);
         return (
           <OptionButton
@@ -197,6 +203,8 @@ export function Order<P extends Kinded, V>({ prompt, answer, look }: WidgetProps
             prompt={prompt}
             look={look}
             pressed={at >= 0}
+            picked={mark(clicked, o.id)}
+            shortcut={key(i)}
             mark={at >= 0 ? at + 1 : undefined}
             onPick={() => {
               if (at >= 0) setClicked(clicked.slice(0, at));

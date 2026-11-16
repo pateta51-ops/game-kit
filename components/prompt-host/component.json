@@ -31,6 +31,13 @@
         "paths": [
           "src/ui/prompts/confirm.tsx useTapConfirm (first tap previews, second tap or Confirm commits, Cancel, a target no longer legal disarms; the overlay marks became option-id marks) and simple.tsx (the keyboard key listener on window, here Enter and Escape)"
         ]
+      },
+      {
+        "game": "7th-inning-stretch",
+        "commit": "6c82d43",
+        "paths": [
+          "src/ui/store.ts dispatch, the skipEmpty loop (the forced answers after the player's answer, sent by the store; here joined to the undo step with engine-core extendStep and stopped at another seat's prompt)"
+        ]
       }
     ]
   },

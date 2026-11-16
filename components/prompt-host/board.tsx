@@ -7,6 +7,18 @@ import type { BoardPick } from './pick';
 export function BoardBar<P extends Kinded>({ pick, prompt, look, hint = null }: { pick: BoardPick; prompt: P; look: Look<P>; hint?: ReactNode }) {
   const o = prompt.options.find((x) => x.id === pick.armed);
   if (o === undefined) return <>{hint}</>;
+  if (prompt.max > 1)
+    return (
+      <section className={look.cls('board-bar')}>
+        <span className={look.cls('count')}>{look.count(pick.picks.length, prompt)}</span>
+        <button type="button" className={look.cls('done')} disabled={!pick.ready} onClick={pick.confirm}>
+          {look.confirm}
+        </button>
+        <button type="button" className={look.cls('cancel')} onClick={pick.cancel}>
+          {look.cancel}
+        </button>
+      </section>
+    );
   return (
     <section className={look.cls('board-bar')} data-option={o.id}>
       <span className={look.cls('value')}>{look.label(o, prompt)}</span>

@@ -186,7 +186,7 @@
     "not": "Runtime screens."
   },
   "prompt-host": {
-    "use": "Showing the open engine-core prompt on screen: a widget per prompt kind (a missing one fails to compile), the common widgets (pick, amount, order, may, pay) unstyled, auto-answer of forced prompts, board picks with tap to confirm. Recipe: docs/recipes/prompts.md.",
+    "use": "Showing the open engine-core prompt on screen: a widget per prompt kind (a missing one fails to compile), the common widgets (pick, amount, order, may, pay) unstyled, forced answers sent from the store in one undo step (answerWithForced), board picks with tap to confirm (one or several). Recipe: docs/recipes/prompts.md.",
     "not": "The game's look or its own kind-specific widgets; board highlights (the game draws those from the option ids)."
   },
   "prompt-source": {
@@ -286,7 +286,7 @@
     "not": "Rules text or free-play hints."
   },
   "ui-helpers": {
-    "use": "Small screen helpers: hover hold, inspect, rule sheet, toasts, prompt keys.",
+    "use": "Small screen helpers: hover hold, inspect, rule sheet, toasts, prompt keys. For an engine-core prompt use prompt-host instead of createSelection and onlyForcedAnswer.",
     "not": "Any look or game type."
   },
   "voice": {

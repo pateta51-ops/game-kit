@@ -15,6 +15,15 @@ const UNKNOWN: Widgets<P, null> = { k: PickOptions, j: PickOptions, z: PickOptio
 void UNKNOWN;
 
 describe('widgets (K123 review)', () => {
+  it('K226: options carry data-shortcut 1-9 (bindPromptKeys) and data-picked once one is picked (picked-state)', () => {
+    render(<PickOptions prompt={pr(opts('a', 'b', 'c'), 1, 2)} view={null} answer={vi.fn<Answer>()} look={look} />);
+    expect(opt('b')).toHaveAttribute('data-shortcut', '2');
+    expect(opt('a')).not.toHaveAttribute('data-picked');
+    fireEvent.click(document.querySelector<HTMLElement>('[data-shortcut="1"]')!);
+    expect(opt('a')).toHaveAttribute('data-picked', 'picked');
+    expect(opt('c')).toHaveAttribute('data-picked', 'unpicked');
+  });
+
   it('PickOptions: min = max = 1 answers on the click; with confirm it waits for Done', () => {
     const a = vi.fn<Answer>();
     const { unmount } = render(<PickOptions prompt={pr(opts('a', 'b'))} view={null} answer={a} look={look} />);
@@ -165,6 +174,29 @@ describe('board pick (K123, UFS tap to confirm)', () => {
     fireEvent.click(space('b'));
     fireEvent.click(screen.getByRole('button', { name: 'Confirm' }));
     expect(a).toHaveBeenCalledTimes(3);
+  });
+
+  it('K226: max > 1 picks several; a tap toggles, Confirm answers once min are picked; confirm: false answers at max', () => {
+    const a = vi.fn<Answer>();
+    const { unmount } = render(<Board prompt={pr(opts('a', 'b', 'c', '-d'), 2, 2, 9)} answer={a} />);
+    fireEvent.click(space('a'));
+    expect(screen.getByRole('button', { name: 'Confirm' })).toBeDisabled();
+    fireEvent.click(space('b'));
+    fireEvent.click(space('c'));
+    expect(space('c')).toHaveAttribute('data-mark', 'legal');
+    fireEvent.click(space('a'));
+    expect(space('a')).toHaveAttribute('data-mark', 'legal');
+    fireEvent.click(space('c'));
+    expect(space('b')).toHaveAttribute('data-mark', 'armed');
+    fireEvent.keyDown(window, { key: 'Enter' });
+    expect(a).toHaveBeenCalledWith(['b', 'c'], 9);
+    unmount();
+    const q = vi.fn<Answer>();
+    render(<Board prompt={pr(opts('a', 'b', 'c'), 1, 2, 3)} answer={q} confirm={false} />);
+    fireEvent.click(space('c'));
+    expect(q).not.toHaveBeenCalled();
+    fireEvent.click(space('a'));
+    expect(q).toHaveBeenCalledWith(['c', 'a'], 3);
   });
 
   it('confirm: false answers on the first tap', () => {
