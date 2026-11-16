@@ -128,12 +128,12 @@ Wave 4 (K135 to K141) and K172 built; each game pulled v0.41.0 (Under Falling Sk
 
 | Game | Newly from the kit | Still its own (row in `docs/PLAN.md`) |
 |---|---|---|
-| Jarl | theme check (icon `d="M` rule accepted as a small loss) | - (K177) |
+| Jarl | theme check (icon `d="M` rule accepted as a small loss) | - (K182) |
 | Rome | `ci.yml`, `full-gate.yml` rendered | - |
-| EBR | traceability | `ci.yml`, `verify.yml` (K175) |
-| Imperium | plan checker (TypeScript) | traceability: the kit's finds GEN-02 untested (a card exception, `b605-s10`, has no row in BUILD_PLAN 3.20: a rules question for the game); `ci.yml`, `full-gate.yml` (K175) |
-| Warp's Edge | repo gate, `ci.yml` | `full-gate.yml` (K175) |
-| STCC | traceability, check runner, `ci.yml` | repo gate (K176), `full-gate.yml` (K175) |
+| EBR | traceability | `ci.yml`, `verify.yml` (K180) |
+| Imperium | plan checker (TypeScript) | traceability: the kit's finds GEN-02 untested (a card exception, `b605-s10`, has no row in BUILD_PLAN 3.20: a rules question for the game); `ci.yml`, `full-gate.yml` (K180) |
+| Warp's Edge | repo gate, `ci.yml` | `full-gate.yml` (K180) |
+| STCC | traceability, check runner, `ci.yml` | repo gate (K181), `full-gate.yml` (K180) |
 | Unstoppable | plan checker, `ci.yml` | - (its size script already wraps the kit's) |
 | Under Falling Skies | traceability (K172; RT8 step 9 done) | - |
 
