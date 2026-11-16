@@ -9,4 +9,13 @@
 :where(.kit-page-boxed) { border: 1px solid var(--story-box-border, currentColor); padding: var(--story-pad, 0.5em); }
 :where(.kit-page-interlude) { font-style: var(--story-interlude-style, normal); }
 :where(.kit-page-resolution) { font-family: var(--story-head-font, inherit); }
+:where(.kit-panel) { font-family: var(--story-font, inherit); color: var(--story-text, inherit); background: var(--story-bg, transparent); }
+:where(.kit-panel-view) { overflow: hidden; position: relative; }
+:where(.kit-panel-page) { position: absolute; left: 0; top: 0; }
+:where(.kit-panel-caption) { padding: var(--story-pad, 0.5em); font-style: var(--story-narrator-style, italic); }
+:where(.kit-panel-sfx) { font-family: var(--story-head-font, inherit); font-weight: bold; }
+:where(.kit-panel-credit) { opacity: var(--story-note-opacity, 0.7); font-size: 0.8em; }
+:where(.kit-splash) { position: fixed; inset: 0; display: grid; place-content: center; text-align: center; background: var(--story-splash-bg, rgba(0,0,0,0.8)); color: var(--story-text, inherit); font-family: var(--story-font, inherit); }
+:where(.kit-splash-title) { font-family: var(--story-head-font, inherit); font-size: 3em; }
+:where(.kit-splash-note) { opacity: var(--story-note-opacity, 0.7); }
 :where(.kit-story-note) { border: 1px dashed var(--story-note-border, currentColor); padding: 0.5em; opacity: var(--story-note-opacity, 0.7); }
