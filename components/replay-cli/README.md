@@ -4,7 +4,7 @@ Headless replays, golden games and a determinism check across two checkouts. Nee
 
 ## replay.ts: one log
 
-`tsx replay.ts <log.json> (--engine <module> | --config <replay.json>) [--record <out.json>]`. The module exports `engine: { game, content(), format?, describe? }`. A log is a sealed save or a record with per-action hashes. Exit 0 same, 1 differs, 2 unusable.
+`tsx replay.ts <log.json> (--engine <module> | --config <replay.json>) [--record <out.json>]`. The module exports `engine: { game, content(), format?, describe? }`. A log is a sealed save or a record with per-action hashes. Exit 0 same, 1 differs, 2 unusable. Checkpoint goldens: an engine with `checkpoint(state, content, action)` names checkpoints (one per round, say; `action` is null after setup); `--checkpoints <golden.json>` compares the hash at each (of `project(state, content)` when the engine has it, else of the state) with the file and names the first that differs; `--update-golden` writes the file.
 
 ## golden.ts: whole games
 
@@ -27,4 +27,4 @@ Flags: `--only <name prefix>`; `--games <export>` (another spec list than `golde
 
 Exit codes: 0 all the same, 1 a golden or a game differs, 2 bad usage, an unreadable file or a module that does not load.
 
-Not here: checkpoint goldens (one projection per round, the driver answering again at replay).
+Not here: a driver answering again at replay (checkpoint goldens replay a recorded log).

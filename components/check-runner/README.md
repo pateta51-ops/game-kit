@@ -9,7 +9,7 @@ The game passes `check-runner.config.json` (see `check-runner.config.example.jso
 - `first`: scripts run alone before the lanes. `lanes`: each lane runs in order, the lanes side by side.
 - `extra`: CI-only steps that are in a lane but not in the chain. `pr`: the `first`/`lanes` subset of `--pr`.
 - `timeoutMinutes`, `graceSeconds`: per check; a timeout or a cancel kills the check's whole process tree.
-- `failFast` (default false): same as `--fail-fast`.
+- `failFast` (default false): same as `--fail-fast`. `last`: scripts run alone after every lane ended (wall-clock budgets), also in `pr`. `pr.own`: scripts of `--pr` that need not be in the chain or `extra`. `env`: `{ "<script>": { "VAR": "value" } }`, `*` for every script; a value starting with `~/` is under the home folder.
 
 The run fails while the lanes and the chain disagree. By default every check runs even after a failure.
 With `--fail-fast` the first failing check stops the ones still running (shown as `stopped`, not failed),
@@ -25,6 +25,6 @@ The game passes `gate-all.config.json`:
 - `items`: the ids (packs, scenarios); one process each, up to one per core (`--jobs`), rows printed in this order.
 - `known`: `{ "id": "why it fails today" }`. A listed failure is reported, never red. A listed item that
   now passes is flagged (`::notice::`) so its line can be removed. Any other failure fails the run, with its output.
-- `title`: the heading of the last line and of the job summary table.
+- `title`: the heading of the last line and of the job summary table. `codes`: a regular expression whose first group is an error code (`^\\s*error (E_[A-Z_]+)`); adds a column counting them per item. `timeoutMinutes`, `graceSeconds` (20): a gate past the limit is stopped with its whole process tree and fails.
 
-A game whose items come from code imports `gateAll`, `gate` and `report` instead of using the config.
+A game whose items come from code imports `gateAll`, `gate(command, id, options)` and `report` instead of using the config.

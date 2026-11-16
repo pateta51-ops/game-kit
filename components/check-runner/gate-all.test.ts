@@ -1,11 +1,11 @@
 // gate-all: every item gated once, at most `jobs` at a time, rows in the given order; the known-failing list; a real run.
 import { spawnSync } from 'node:child_process';
-import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { afterAll, describe, expect, it } from 'vitest';
-import { gateAll, report, rowOf, type Row } from './gate-all';
+import { gate, gateAll, report, rowOf, type Row } from './gate-all';
 
 describe('gate-all', () => {
   it('gates every item once, at most `jobs` at a time, rows in the given order', async () => {
@@ -50,6 +50,41 @@ describe('gate-all', () => {
     expect(rep.table).toContain('| b | fails, known: map missing | bad \\| b |');
     expect(report(rows).unexpected.map((r) => r.id)).toEqual(['b', 'd']);
   });
+});
+
+describe('gate-all options (K71)', () => {
+  it('counts error codes with a pattern and adds the column; no pattern, no column', () => {
+    const codes = '^\\s*error (E_[A-Z_]+)';
+    const rows = [rowOf('a', 0, 'ok', codes), rowOf('b', 1, 'error E_ONE x\n  error E_TWO y\nerror E_ONE z\nbad', codes)];
+    expect(rows[1]?.codes).toEqual({ E_ONE: 2, E_TWO: 1 });
+    const rep = report(rows);
+    expect(rep.lines).toEqual(['a: passes; -; ok', 'b: FAILS (unexpected); E_ONE x2, E_TWO x1; bad']);
+    expect(rep.table).toContain('| Item | Result | Error codes | Last line |\n| --- | --- | --- | --- |\n| a | passes | - | ok |');
+    expect(rowOf('a', 0, 'error E_ONE').codes).toBeUndefined();
+    expect(report([rowOf('a', 0, 'ok')]).table).toContain('| Item | Result | Last line |');
+  });
+
+  it('gate() stops a gate that passes its timeout, with the child it started, and the row fails', async () => {
+    const dir = mkdtempSync(join(tmpdir(), 'gate-timeout-'));
+    writeFileSync(join(dir, 'sleeper.js'), "const c = require('child_process').spawn(process.execPath, ['-e', 'setInterval(() => {}, 1000)'], { stdio: 'ignore' });\nrequire('fs').writeFileSync(process.argv[2], String(c.pid));\nconsole.log('started');\nsetInterval(() => {}, 1000);\n");
+    const row = await gate([process.execPath, join(dir, 'sleeper.js'), join(dir, '{id}.pid')], 'x', { timeoutMinutes: 0.03, graceSeconds: 1 });
+    expect(row.ok).toBe(false);
+    expect(row.last).toMatch(/x passed the 0.03 min limit; stopped/);
+    const pid = Number(readFileSync(join(dir, 'x.pid'), 'utf8'));
+    const alive = (): boolean => {
+      try {
+        process.kill(pid, 0);
+        return true;
+      } catch {
+        return false;
+      }
+    };
+    const end = Date.now() + 5000;
+    while (alive() && Date.now() < end) await new Promise((r) => setTimeout(r, 200));
+    expect(alive()).toBe(false);
+    rmSync(dir, { recursive: true, force: true });
+    expect((await gate([process.execPath, '-e', 'console.log(1)'], 'y', { timeoutMinutes: 1 })).ok).toBe(true);
+  }, 20_000);
 });
 
 describe('gate-all, a real run', () => {

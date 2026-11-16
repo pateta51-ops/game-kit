@@ -8,6 +8,10 @@
 // The engine module exports `engine`: `{ game, content(), format?, describe? }` (a ReplayEngine). A log is a sealed save
 // of engine-core (migrated first) or a record `{ options, rules, actions, contentHash?, finalHash?, hashes?, events? }`:
 // `hashes[0]` is the state hash after createGame, then one per action, and `events` the hashes of each step's events.
+//   tsx replay.ts <log.json> --engine <module> --checkpoints <golden.json> [--update-golden]
+//     compare the hash at every checkpoint the engine names (`checkpoint`, e.g. one per round) with the golden file;
+//     `--update-golden` writes the file instead (one checkpoint per line)
+//
 // A replay rebuilds the game and applies every action; it reports where it failed, the first step whose hash differs,
 // whether the final hash matches, and the game's own lines (`describe`). Exit codes: 0 the replay applied every action
 // and every hash matches, 1 otherwise, 2 bad usage, an unreadable file or an engine module that does not load.
@@ -27,7 +31,7 @@ import {
   type SaveFormat,
 } from '../engine-core/index';
 
-const USAGE = 'usage: tsx replay.ts <log.json> (--engine <module> | --config <replay.json>) [--record <out.json>]';
+const USAGE = 'usage: tsx replay.ts <log.json> (--engine <module> | --config <replay.json>) [--record <out.json>] [--checkpoints <golden.json> [--update-golden]]';
 
 export interface ReplayEngine<G extends GameTypes = GameTypes> {
   readonly game: GameRules<G>;
@@ -35,6 +39,35 @@ export interface ReplayEngine<G extends GameTypes = GameTypes> {
   readonly format?: SaveFormat;
   /** Lines about the final state (result, scores). */
   describe?(state: G['state'], content: G['content']): string[];
+  /** The name of the checkpoint this state is (after createGame: `action` null; then after each action), or null. */
+  checkpoint?(state: G['state'], content: G['content'], action: G['action'] | null): string | null;
+  /** What a checkpoint hashes instead of the whole state (the rule-visible part). */
+  project?(state: G['state'], content: G['content']): unknown;
+}
+
+export interface Checkpoint {
+  readonly name: string;
+  /** Actions applied when it was taken. */
+  readonly at: number;
+  readonly hash: string;
+}
+
+/** A checkpoint golden as text, one checkpoint per line. */
+export function checkpointText(points: readonly Checkpoint[]): string {
+  return `{"checkpoints":[${points.map((p) => `\n ${JSON.stringify(p)}`).join(',')}\n]}\n`;
+}
+
+/** The first checkpoint that differs between a golden and a replay, or null. */
+export function checkpointDiff(want: readonly Checkpoint[], got: readonly Checkpoint[]): string | null {
+  for (let i = 0; i < Math.max(want.length, got.length); i += 1) {
+    const w = want[i];
+    const g = got[i];
+    if (w === undefined) return `checkpoint ${String(i)}: the golden ends, the replay has "${g?.name ?? ''}"`;
+    if (g === undefined) return `checkpoint ${String(i)} "${w.name}": the replay ends before it`;
+    if (w.name !== g.name || w.at !== g.at) return `checkpoint ${String(i)}: golden "${w.name}" after ${String(w.at)} actions, replay "${g.name}" after ${String(g.at)}`;
+    if (w.hash !== g.hash) return `checkpoint ${String(i)} "${w.name}" (after ${String(w.at)} actions): hash ${w.hash} in the golden, ${g.hash} now`;
+  }
+  return null;
 }
 
 export interface Io {
@@ -134,7 +167,11 @@ export async function loadEngine(io: Io, module: string | null, config: string |
 }
 
 /** Replay one log; returns the exit code. With `record`, writes the log with its hashes there. */
-export async function replayFile<G extends GameTypes>(path: string, engine: ReplayEngine<G>, io: Io, record: string | null = null): Promise<number> {
+export async function replayFile<G extends GameTypes>(path: string, engine: ReplayEngine<G>, io: Io, record: string | null = null, golden: { path: string; update: boolean } | null = null): Promise<number> {
+  if (golden !== null && engine.checkpoint === undefined) {
+    io.err('--checkpoints needs an engine with `checkpoint`');
+    return 2;
+  }
   if (!io.exists(path)) {
     io.err(`no file at ${path}`);
     return 2;
@@ -163,6 +200,12 @@ export async function replayFile<G extends GameTypes>(path: string, engine: Repl
   }
   const hashes: string[] = [];
   const events: string[] = [];
+  const points: Checkpoint[] = [];
+  const mark = (s: G['state'], at: number, action: G['action'] | null): void => {
+    if (golden === null) return;
+    const name = engine.checkpoint?.(s, content, action) ?? null;
+    if (name !== null) points.push({ name, at, hash: engine.project === undefined ? hashState(s) : hashValue(engine.project(s, content)) });
+  };
   let failed: string | null = null;
   let state: G['state'] | null = null;
   try {
@@ -171,6 +214,7 @@ export async function replayFile<G extends GameTypes>(path: string, engine: Repl
     state = cur;
     hashes.push(hashState(cur));
     events.push(hashValue(created.events));
+    mark(cur, 0, null);
     for (const [at, action] of log.actions.entries()) {
       try {
         const r = applyAction(game, cur, action as G['action'], content);
@@ -178,6 +222,7 @@ export async function replayFile<G extends GameTypes>(path: string, engine: Repl
         state = cur;
         hashes.push(hashState(cur));
         events.push(hashValue(r.events));
+        mark(cur, at + 1, action as G['action']);
       } catch (e) {
         failed = `failed at action ${String(at)}: ${e instanceof Error ? e.message : String(e)}`;
         break;
@@ -206,6 +251,27 @@ export async function replayFile<G extends GameTypes>(path: string, engine: Repl
     if (matches === false) ok = false;
     for (const line of engine.describe?.(state, content) ?? []) io.out(line);
   }
+  if (golden !== null) {
+    if (golden.update) {
+      if (failed === null) {
+        io.write(golden.path, checkpointText(points));
+        io.out(`checkpoints: wrote ${String(points.length)} to ${golden.path}`);
+      }
+    } else if (!io.exists(golden.path)) {
+      io.out(`CHECKPOINTS no golden at ${golden.path} (record it with --update-golden)`);
+      ok = false;
+    } else {
+      let diff: string | null;
+      try {
+        const want = (JSON.parse(io.read(golden.path)) as { checkpoints?: Checkpoint[] }).checkpoints;
+        diff = Array.isArray(want) ? checkpointDiff(want, points) : 'the golden has no checkpoints';
+      } catch (e) {
+        diff = `the golden is not JSON: ${e instanceof Error ? e.message : String(e)}`;
+      }
+      io.out(diff === null ? `checkpoints: ${String(points.length)} match` : `CHECKPOINTS ${diff}`);
+      if (diff !== null) ok = false;
+    }
+  }
   if (record !== null && failed === null) {
     io.write(record, logText({ ...log, contentHash, finalHash: hashes[hashes.length - 1] as string, hashes, events, undoUsed: undefined } as unknown as ReplayLog));
     io.out(`recorded ${record}`);
@@ -214,7 +280,8 @@ export async function replayFile<G extends GameTypes>(path: string, engine: Repl
 }
 
 export async function run(args: readonly string[], io: Io = nodeIo): Promise<number> {
-  const flags: Record<string, string | null> = { '--engine': null, '--config': null, '--record': null };
+  const flags: Record<string, string | null> = { '--engine': null, '--config': null, '--record': null, '--checkpoints': null };
+  const update = args.includes('--update-golden');
   const files: string[] = [];
   for (let i = 0; i < args.length; i += 1) {
     const arg = args[i] as string;
@@ -226,13 +293,13 @@ export async function run(args: readonly string[], io: Io = nodeIo): Promise<num
       }
       flags[arg] = value;
       i += 1;
-    } else if (arg.startsWith('--')) {
+    } else if (arg.startsWith('--') && arg !== '--update-golden') {
       io.err(`unknown option: ${arg}`);
       io.err(USAGE);
       return 2;
-    } else files.push(arg);
+    } else if (arg !== '--update-golden') files.push(arg);
   }
-  if (files.length !== 1 || (flags['--engine'] === null) === (flags['--config'] === null)) {
+  if (files.length !== 1 || (flags['--engine'] === null) === (flags['--config'] === null) || (update && flags['--checkpoints'] === null)) {
     io.err(USAGE);
     return 2;
   }
@@ -241,7 +308,7 @@ export async function run(args: readonly string[], io: Io = nodeIo): Promise<num
     io.err(engine);
     return 2;
   }
-  return replayFile(resolve(files[0] as string), engine, io, flags['--record'] === null ? null : resolve(flags['--record'] as string));
+  return replayFile(resolve(files[0] as string), engine, io, flags['--record'] === null ? null : resolve(flags['--record'] as string), flags['--checkpoints'] === null ? null : { path: resolve(flags['--checkpoints'] as string), update });
 }
 
 if (process.argv[1] !== undefined && import.meta.url === pathToFileURL(resolve(process.argv[1])).href) {

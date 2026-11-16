@@ -5,7 +5,8 @@ import { tmpdir } from 'node:os';
 import { createRequire } from 'node:module';
 import { dirname, join, resolve } from 'node:path';
 import { afterAll, describe, expect, it } from 'vitest';
-import { checkScripts, coverageProblems, DEFAULT_CONFIG, type Config } from './check-runner';
+import { homedir } from 'node:os';
+import { checkScripts, coverageProblems, DEFAULT_CONFIG, envOf, type Config } from './check-runner';
 
 const CHECK = 'npm run lint && npm run test && npm run size';
 const cfg: Config = { ...DEFAULT_CONFIG, first: ['test'], lanes: [['lint'], ['size']], extra: ['gate'] };
@@ -41,6 +42,24 @@ describe('coverageProblems', () => {
   });
 });
 
+describe('options (K71)', () => {
+  it('a `last` script counts as a lane; `own` scripts of the pr plan need not be in the chain', () => {
+    expect(coverageProblems(CHECK, { ...cfg, extra: [], lanes: [['lint']], last: ['size'] })).toEqual([]);
+    expect(coverageProblems(CHECK, { ...cfg, extra: [], lanes: [['lint', 'size']], last: ['size'] })).toEqual(['size is in more than one lane (or in first and a lane)']);
+    const scripts = { lint: 'x', 'test:ci': 'x' };
+    expect(coverageProblems(CHECK, { ...cfg, pr: { first: [], lanes: [['lint'], ['test:ci']], own: ['test:ci'] } }, scripts)).toEqual([]);
+    expect(coverageProblems(CHECK, { ...cfg, pr: { first: [], lanes: [['lint'], ['gone']], own: ['gone'] } }, scripts)).toEqual(['gone is in the --pr lanes but is no package.json script']);
+  });
+
+  it('envOf: `*` for every script, the script\'s own over it, `~/` under the home folder, the rest of the process kept', () => {
+    const env = { '*': { K71_A: 'all', K71_B: 'all' }, t: { K71_B: 'own', K71_C: '~/cache/x' } };
+    expect(envOf(env, 't')).toMatchObject({ K71_A: 'all', K71_B: 'own', K71_C: join(homedir(), 'cache/x') });
+    expect(envOf(env, 'u')['K71_B']).toBe('all');
+    expect(envOf(env, 'u')['K71_C']).toBeUndefined();
+    expect(envOf(undefined, 't')).toEqual({ ...process.env });
+  });
+});
+
 describe('a real run', () => {
   const dir = mkdtempSync(join(tmpdir(), 'check-runner-'));
   afterAll(() => rmSync(dir, { recursive: true, force: true }));
@@ -68,6 +87,28 @@ describe('a real run', () => {
     expect(drift.status).toBe(1);
     expect(drift.stderr).toMatch(/b is a CI check but in no lane/);
   });
+
+  it('env reaches only its script; `last` runs after the lanes, also in --pr with its own script', () => {
+    writeFileSync(join(dir, 'env.js'), "console.log('seen=' + process.env.K71_X);\n");
+    writeFileSync(join(dir, 'mark.js'), "require('fs').writeFileSync('lane.done', '1');\n");
+    writeFileSync(join(dir, 'after.js'), "process.exit(require('fs').existsSync('lane.done') ? 0 : 4);\n");
+    const scripts = { check: 'npm run a && npm run b && npm run z', a: 'node env.js', b: 'node env.js && node mark.js', z: 'node after.js', p: 'node after.js' };
+    const config = { first: ['a'], lanes: [['b']], last: ['z'], env: { b: { K71_X: 'lane' } }, pr: { first: [], lanes: [['b']], last: ['p'], own: ['p'] } };
+    const r = run(scripts, config);
+    expect(r.status).toBe(0);
+    expect(r.stdout).toMatch(/then z alone/);
+    expect(r.stdout).toMatch(/npm run a: passed[^]*?seen=undefined/);
+    expect(r.stdout).toMatch(/npm run b: passed[^]*?seen=lane/);
+    expect(r.stdout).toMatch(/3 of 3 passed/);
+    rmSync(join(dir, 'lane.done'));
+    const pr = run(scripts, config, ['--pr']);
+    expect(pr.status).toBe(0);
+    expect(pr.stdout).toMatch(/2 of 2 passed/);
+    rmSync(join(dir, 'lane.done'));
+    const early = run({ ...scripts, b: 'node env.js' }, config);
+    expect(early.status).toBe(1);
+    expect(early.stderr).toMatch(/failed: z/);
+  }, 30_000);
 
   it('--pr runs only the pr subset', () => {
     const scripts = { check: 'npm run a && npm run b', a: ok, b: ko };

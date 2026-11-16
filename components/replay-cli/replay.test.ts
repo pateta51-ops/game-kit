@@ -9,7 +9,7 @@ import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 import { createSave, hashState } from '../engine-core/index';
 import { CONTENT, COUNTER, playGame, RULES, type Counter } from '../engine-core/fake/counter';
-import { logText, parseLog, replayFile, run, type Io, type ReplayEngine, type ReplayLog } from './replay';
+import { checkpointDiff, checkpointText, logText, parseLog, replayFile, run, type Checkpoint, type Io, type ReplayEngine, type ReplayLog } from './replay';
 
 const engine: ReplayEngine<Counter> = {
   game: COUNTER,
@@ -45,6 +45,67 @@ function fakeIo(files: Record<string, string>, modules: Record<string, unknown> 
     },
   };
 }
+
+describe('checkpoint goldens (K71)', () => {
+  const cp: ReplayEngine<Counter> = { ...engine, checkpoint: (s, c, action) => (action === null ? 'start' : (s.turn + c.cards) % 2 === 0 ? `turn ${String(s.turn)}` : null) };
+  const record = async (e: ReplayEngine<Counter>): Promise<string> => {
+    const io = fakeIo({ '/g.json': saveFile });
+    expect(await replayFile(P('/g.json'), e, io, null, { path: P('/cp.json'), update: true })).toBe(0);
+    expect(io.lines.some((l) => l.startsWith('checkpoints: wrote '))).toBe(true);
+    return io.written[P('/cp.json')] as string;
+  };
+
+  it('--update-golden writes one checkpoint per line; the same replay then matches (exit 0)', async () => {
+    const text = await record(cp);
+    const points = (JSON.parse(text) as { checkpoints: Checkpoint[] }).checkpoints;
+    expect(points[0]).toMatchObject({ name: 'start', at: 0 });
+    expect(points.length).toBeGreaterThan(1);
+    expect(text.split('\n').length).toBe(points.length + 3);
+    expect(checkpointText(points)).toBe(text);
+    const io = fakeIo({ '/g.json': saveFile, '/cp.json': text });
+    expect(await replayFile(P('/g.json'), cp, io, null, { path: P('/cp.json'), update: false })).toBe(0);
+    expect(io.lines).toContain(`checkpoints: ${String(points.length)} match`);
+    expect(io.written).toEqual({});
+    expect(await run(['/g.json', '--engine', 'eng.ts', '--checkpoints', '/cp.json'], fakeIo({ '/g.json': saveFile, '/cp.json': text }, { 'eng.ts': { engine: cp } }))).toBe(0);
+    const up = fakeIo({ '/g.json': saveFile }, { 'eng.ts': { engine: cp } });
+    expect(await run(['/g.json', '--engine', 'eng.ts', '--checkpoints', '/cp.json', '--update-golden'], up)).toBe(0);
+    expect(up.written[P('/cp.json')]).toBe(text);
+  });
+
+  it('a changed hash, a moved, missing or extra checkpoint, a missing or broken golden fail (exit 1), naming the first', async () => {
+    const text = await record(cp);
+    const points = (JSON.parse(text) as { checkpoints: Checkpoint[] }).checkpoints;
+    const check = async (golden: string | null, e = cp): Promise<string[]> => {
+      const io = fakeIo(golden === null ? { '/g.json': saveFile } : { '/g.json': saveFile, '/cp.json': golden });
+      expect(await replayFile(P('/g.json'), e, io, null, { path: P('/cp.json'), update: false })).toBe(1);
+      return io.lines.filter((l) => l.startsWith('CHECKPOINTS'));
+    };
+    const one = points[1] as Checkpoint;
+    expect(await check(checkpointText(points.map((p, i) => (i === 1 ? { ...p, hash: 'beef' } : p))))).toEqual([
+      `CHECKPOINTS checkpoint 1 "${one.name}" (after ${String(one.at)} actions): hash beef in the golden, ${one.hash} now`,
+    ]);
+    expect((await check(checkpointText(points.slice(0, 1))))[0]).toMatch(/checkpoint 1: the golden ends, the replay has/);
+    expect((await check(checkpointText([...points, { name: 'late', at: 99, hash: 'x' }])))[0]).toMatch(/"late": the replay ends before it/);
+    expect((await check(checkpointText(points.map((p, i) => (i === 1 ? { ...p, at: p.at + 1 } : p)))))[0]).toMatch(/checkpoint 1: golden ".*" after \d+ actions, replay/);
+    expect((await check(null))[0]).toMatch(/no golden at .* \(record it with --update-golden\)/);
+    expect((await check('nope'))[0]).toMatch(/the golden is not JSON/);
+    expect((await check('{}'))[0]).toMatch(/the golden has no checkpoints/);
+    expect((await check(text, { ...cp, project: (s) => ({ counter: s.counter }) }))[0]).toMatch(/checkpoint 0 "start"/);
+    expect(checkpointDiff(points, points)).toBeNull();
+  });
+
+  it('`project` hashes the rule-visible part only; no `checkpoint` in the engine or --update-golden alone is refused (exit 2)', async () => {
+    const projected: ReplayEngine<Counter> = { ...cp, project: (s) => ({ counter: s.counter }) };
+    const a = await record(projected);
+    expect(a).not.toBe(await record(cp));
+    const io = fakeIo({ '/g.json': saveFile });
+    expect(await replayFile(P('/g.json'), engine, io, null, { path: P('/cp.json'), update: false })).toBe(2);
+    expect(await run(['/g.json', '--engine', 'eng.ts', '--update-golden'], fakeIo({ '/g.json': saveFile }, { 'eng.ts': { engine: cp } }))).toBe(2);
+    const refused = fakeIo({ '/r.json': JSON.stringify({ ...save, actions: save.actions.map((x, i) => (i === 3 ? { ...x, picks: ['nonsense'] } : x)) }) });
+    expect(await replayFile(P('/r.json'), cp, refused, null, { path: P('/cp.json'), update: true })).toBe(1);
+    expect(refused.written).toEqual({});
+  });
+});
 
 describe('replay.ts', () => {
   it('replays a save, reports a matching hash and prints the game lines; exit 0', async () => {

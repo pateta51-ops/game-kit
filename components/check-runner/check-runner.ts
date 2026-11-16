@@ -26,6 +26,10 @@ export interface Plan {
   first: string[];
   /** Each lane runs its scripts one after the other; the lanes run at the same time, after `first`. */
   lanes: string[][];
+  /** Run alone, one after the other, after every lane ended (wall-clock budgets). */
+  last?: string[];
+  /** In `pr` only: the pull-request job's own scripts, which need not be in the check chain or `extra`. */
+  own?: string[];
 }
 export interface Config extends Plan {
   /** The package.json script that chains the checks. */
@@ -36,6 +40,8 @@ export interface Config extends Plan {
   pr?: Plan;
   /** Stop at the first failing check (`--keep-going` overrides). */
   failFast?: boolean;
+  /** Variables per script (`*`: every script); a value starting with `~/` is under the home folder. */
+  env?: Record<string, Record<string, string>>;
   timeoutMinutes: number;
   graceSeconds: number;
 }
@@ -54,7 +60,7 @@ export function checkScripts(check: string): string[] {
 export function coverageProblems(check: string, cfg: Config, scripts?: Record<string, string>): string[] {
   const chain = checkScripts(check);
   const plan = scripts === undefined ? cfg : (cfg.pr ?? cfg);
-  const have = [...plan.first, ...plan.lanes.flat()];
+  const have = [...plan.first, ...plan.lanes.flat(), ...(plan.last ?? [])];
   const out: string[] = [];
   if (scripts === undefined) {
     const want = [...chain, ...cfg.extra];
@@ -62,7 +68,7 @@ export function coverageProblems(check: string, cfg: Config, scripts?: Record<st
     for (const s of have) if (!want.includes(s)) out.push(`${s} is in a lane but neither in "npm run check" nor in extra`);
   } else {
     for (const s of have) if (scripts[s] === undefined) out.push(`${s} is in the --pr lanes but is no package.json script`);
-    for (const s of have) if (!chain.includes(s) && !cfg.extra.includes(s)) out.push(`${s} is in the --pr lanes but neither in "npm run check" nor in extra`);
+    for (const s of have) if (!chain.includes(s) && !cfg.extra.includes(s) && !plan.own?.includes(s)) out.push(`${s} is in the --pr lanes but neither in "npm run check" nor in extra`);
   }
   for (const s of new Set(have)) if (have.filter((x) => x === s).length > 1) out.push(`${s} is in more than one lane (or in first and a lane)`);
   return out;
@@ -123,7 +129,13 @@ function forwardStop(signal: NodeJS.Signals): void {
   });
 }
 
-function runScript(script: string, log: string): Promise<Done> {
+/** The environment of a script: the config's `*` and its own variables over the process's. */
+export function envOf(env: Config['env'], script: string): NodeJS.ProcessEnv {
+  const set = Object.entries({ ...env?.['*'], ...env?.[script] }).map(([k, v]) => [k, v.startsWith('~/') ? path.join(os.homedir(), v.slice(2)) : v]);
+  return { ...process.env, ...(Object.fromEntries(set) as Record<string, string>) };
+}
+
+function runScript(script: string, log: string, env: NodeJS.ProcessEnv = process.env): Promise<Done> {
   const t0 = Date.now();
   const fd = openSync(log, 'w');
   return new Promise((resolve) => {
@@ -131,7 +143,7 @@ function runScript(script: string, log: string): Promise<Done> {
       stdio: ['ignore', fd, fd],
       shell: !POSIX, // npm is npm.cmd there
       detached: POSIX, // its own process group, so a timeout reaches every process the check started
-      env: process.env,
+      env,
     });
     running.add(child.pid);
     let kill: NodeJS.Timeout | undefined;
@@ -177,6 +189,7 @@ export async function main(argv: readonly string[]): Promise<void> {
   }
   const FIRST = pr ? (cfg.pr?.first ?? []) : cfg.first;
   const LANES = pr ? (cfg.pr?.lanes ?? []) : cfg.lanes;
+  const LAST = (pr ? cfg.pr?.last : cfg.last) ?? [];
   TIMEOUT_MS = cfg.timeoutMinutes * 60_000;
   GRACE_MS = cfg.graceSeconds * 1000;
   const pkg = JSON.parse(readFileSync('package.json', 'utf8')) as { scripts: Record<string, string> };
@@ -190,7 +203,7 @@ export async function main(argv: readonly string[]): Promise<void> {
   forwardStop('SIGTERM');
   const dir = mkdtempSync(path.join(os.tmpdir(), 'check-runner-'));
   const t0 = Date.now();
-  console.log(`check-runner: first ${FIRST.join(' → ')} alone, then ${LANES.length} lanes: ${LANES.map((l) => l.join(' → ')).join(' | ')}`);
+  console.log(`check-runner: first ${FIRST.join(' → ')} alone, then ${LANES.length} lanes: ${LANES.map((l) => l.join(' → ')).join(' | ')}${LAST.length ? `, then ${LAST.join(' → ')} alone` : ''}`);
   const results: Done[] = [];
   const logOf = (script: string) => path.join(dir, `${script.replace(/:/g, '_')}.log`);
   const state = (d: Done) => (d.code === 0 ? 'passed' : d.stopped ? 'stopped' : `FAILED (exit ${d.code})`);
@@ -204,7 +217,7 @@ export async function main(argv: readonly string[]): Promise<void> {
     for (const script of scripts) {
       if (stopping || bailed) break;
       const log = logOf(script);
-      const d = await runScript(script, log);
+      const d = await runScript(script, log, envOf(cfg.env, script));
       results.push(d);
       print(d, log); // whole, as soon as the check ends: a log is never interleaved with another
       if (failFast && d.code !== 0 && !bailed) bail();
@@ -212,8 +225,9 @@ export async function main(argv: readonly string[]): Promise<void> {
   };
   await lane(FIRST); // a failure here still runs every lane: each check reports
   await Promise.all(LANES.map(lane));
+  await lane(LAST);
   const failed = results.filter((r) => r.code !== 0 && !r.stopped);
-  const order = [...FIRST, ...LANES.flat()];
+  const order = [...FIRST, ...LANES.flat(), ...LAST];
   const rows = [...results].sort((a, b) => order.indexOf(a.script) - order.indexOf(b.script));
   const table = rows.map((r) => `| ${r.script} | ${state(r)} | ${secs(r.ms)} |`);
   const head = `Checks side by side: ${results.filter((r) => r.code === 0).length} of ${results.length} passed in ${secs(Date.now() - t0)} (wall clock)`;
