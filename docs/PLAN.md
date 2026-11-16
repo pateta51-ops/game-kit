@@ -212,6 +212,58 @@ Sixteen public card- and board-game repositories were surveyed read-only; the fi
 | K126 | `engine-core`: optional `reseed` words on an answer (fresh randomness recorded with the action, replay exact); `freshWords()` app side | 7th Inning Stretch | S | done (asked as K79 in the game plan; K79 was taken) |
 | K125 | Learned opponent (owner's word; STCC D-067 stands until then): value network with one-round look-ahead on the real engine and self-play training; study in `docs/evaluation/outside/rftg-opponent.md` | rftg (Keldon) | L | proposed |
 
+### Build order for the outside harvest (owner, 15 Nov 2026)
+
+The owner asked for tiers 1 and 2 to be built now, in this order, without waiting for a game to need them. Tier 3 is built when a game needs the row; tier 4 waits for the owner's word. The order is gain against cost, judged from the survey write-ups, not measured. A row works as "How a batch works" says, with two differences: the base is a design described in `docs/evaluation/outside/`, not a lift from one of the owner's games, and code is copied only from the MIT and ISC sources (middle-earth-player, netrunner, boardgame.io, netrunnerdb, XMage, the Rally the Troops server), with the notice in `component.json`; from every other source the worker reads the write-up, not the repository, and writes new code. The write-ups are excerpts: where a row lifts code, the worker reads the source file in full first. A row marked "compare first" starts by reading the kit component named and is closed as "covered" in this file when the kit already does it.
+
+**Tier 1 - high gain, small cost (one batch per row, in this order)**
+
+| # | Row | Note |
+|---|---|---|
+| 1 | K110 | |
+| 2 | K98 | |
+| 3 | K120 | compare first: `sim-pool` fuzz |
+| 4 | K83 | compare first: `card-harness` inventory, K26 |
+| 5 | K108 | |
+| 6 | K121 | |
+| 7 | K81 | same pull request as K121 if small |
+| 8 | K82 | |
+| 9 | K113 | |
+| 10 | K91 | |
+| 11 | K90 | |
+| 12 | K104 | |
+| 13 | K102 | |
+| 14 | K101 | |
+| 15 | K106 | |
+| 16 | K116 | lift from the Rally the Troops server tools (ISC) |
+
+**Tier 2 - high gain, medium cost**
+
+| # | Row | Bundle | Note |
+|---|---|---|---|
+| 17 | K78 | Card testing | the renderer here; the reading-judge step goes to the architect skill master in `C:\projects\_skills` |
+| 18 | K77 | Card testing | |
+| 19 | K97 | Card testing | |
+| 20 | K99 | Card testing | |
+| 21 | K86 | What the player sees | new component `game-log` |
+| 22 | K79 | What the player sees | |
+| 23 | K88 | What the player sees | |
+| 24 | K80 | What the player sees | |
+| 25 | K93 | Card-language core | rows 25 to 29 share one timing vocabulary: one design note in `docs/patterns/` first (its own pull request), then one batch per row |
+| 26 | K111 | Card-language core | |
+| 27 | K94 | Card-language core | |
+| 28 | K96 | Card-language core | |
+| 29 | K95 | Card-language core | |
+| 30 | K100 | Tools | |
+| 31 | K87 | What the player sees | needs K86 |
+| 32 | K89 | What the player sees | |
+| 33 | K105 | What the player sees | needs K104 |
+| 34 | K118 | Boards | new component `board-model` |
+
+**Tier 3 - when a game needs it:** K122, K92, K117, K123 (compare first), K119 (compare first), K112, K84, K114, K109, K124, K85.
+
+**Tier 4 - owner's word:** K103, K115, K107, K125.
+
 ## Size
 
 5 small lifts, about 18 worker batches of medium size, 2 large ones. Stage 1 is 4 batches. Work asked for by a game (the table above) comes on top.
