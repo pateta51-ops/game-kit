@@ -62,6 +62,17 @@ describe('voice', () => {
     expect(voice.play('bye')).toBe(true);
   });
 
+  it('never-twice is keyed by the spoken text: same line with other parts plays, the same words do not (XD-64)', () => {
+    const { voice, started, files } = fake();
+    voice.play('count', { parts: ['three'] });
+    started[0]!.end();
+    started[1]?.end();
+    expect(voice.play('count', { parts: ['three'] })).toBe(false);
+    expect(voice.play('count', { parts: ['four'] })).toBe(true);
+    started[2]!.end();
+    expect(files()).toContain('n4.ogg');
+  });
+
   it('plays the files of a line back to back with the gap, each after the end of the one before', () => {
     const { voice, started, files } = fake({ gapMs: 120 });
     voice.play('pair');

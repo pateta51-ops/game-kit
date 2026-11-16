@@ -79,6 +79,7 @@ export function voiceCues(t: VoiceTable, extraFiles: readonly string[] = []): Re
 
 interface Item {
   id: string;
+  key: string;
   files: string[];
   gaps?: readonly number[] | undefined;
 }
@@ -107,7 +108,7 @@ export function createVoice(o: VoiceOptions): Voice {
     const t = (token += 1);
     current = { id: item.id, token: t };
     counts[item.id] = (counts[item.id] ?? 0) + 1;
-    last = item.id;
+    last = item.key;
     const g = o.table.lines[item.id]?.gapMs ?? gap;
     const step = (i: number): void => {
       if (current?.token !== t || dead) return;
@@ -143,7 +144,7 @@ export function createVoice(o: VoiceOptions): Voice {
     while (current === null && !dead) {
       const item = queue.shift();
       if (item === undefined) return;
-      if (on && item.id !== last && limitOk(item.id, false) && o.mayPlay?.(item.id) !== false) run(item);
+      if (on && item.key !== last && limitOk(item.id, false) && o.mayPlay?.(item.id) !== false) run(item);
     }
   }
 
@@ -157,16 +158,17 @@ export function createVoice(o: VoiceOptions): Voice {
       files.push(f);
     }
     if (files.length === 0 || files.some((f) => o.player.canPlay?.(voiceCue(f)) === false)) return false;
-    if (current === null && id === last) return false;
+    const key = JSON.stringify([id, files]);
+    if (current === null && key === last) return false;
     if (current !== null && def.busy !== 'wait') return false;
     if (!limitOk(id, true)) return false;
     if (current === null && o.mayPlay?.(id) === false) return false;
     if (current !== null) {
-      queue.push({ id, files, gaps: opts.gapsMs });
+      queue.push({ id, key, files, gaps: opts.gapsMs });
       while (queue.length > maxWaiting) queue.shift();
       return true;
     }
-    run({ id, files, gaps: opts.gapsMs });
+    run({ id, key, files, gaps: opts.gapsMs });
     return true;
   };
 
