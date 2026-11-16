@@ -1,0 +1,16 @@
+{
+  "name": "play-stats",
+  "source": {
+    "game": "imp",
+    "commit": "20a033a",
+    "paths": [
+      "src/ui/store/highScores.ts (the guarded store, the validated reader, the unreadable text kept aside, one record per game and per ending, the cap that drops the lowest, compareRecords and bestPerNation; the record fields, the same-ending test and the comparison became what the game passes)",
+      "src/ui/store/highScores.test.ts"
+    ],
+    "grafts": [
+      { "game": "rome", "commit": "1d0fd2e", "paths": ["src/ui/game/stats.ts (unrecord as remove, the cap that drops the oldest, figures as totals, personalBest, the play session clock with its idle cap as clock.ts)"] }
+    ]
+  },
+  "needs": [],
+  "packages": []
+}
