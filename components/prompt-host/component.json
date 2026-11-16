@@ -1,0 +1,44 @@
+{
+  "name": "prompt-host",
+  "source": {
+    "game": "rome",
+    "commit": "e76d56f",
+    "paths": [
+      "src/ui/prompts/PromptHost.tsx (the Record of one component per prompt kind and the host that picks it; the `plain` rule-id wrapper became `look.text`; the picks reset on a new prompt became a key on the prompt id)",
+      "src/ui/prompts/parts.tsx (OptionButton with the reason when barred, OptionButtons, MultiPick with the count and Done; the Strip's card face and art stay in the game, its clause is the prompt-source clause)",
+      "src/ui/prompts/ChooseAmount.tsx, May.tsx, PayGoldOrStrife.tsx (the stepper then Confirm; the option buttons)"
+    ],
+    "grafts": [
+      {
+        "game": "stcc",
+        "commit": "8e6f55b",
+        "paths": [
+          "src/ui/prompts/OrderPrompt.tsx FanOrder (order by clicks; a click on a numbered one takes it and those after it back; the rest follow in the engine's order)",
+          "src/ui/prompts/registry.ts (a Record over the engine's kind type: a new kind fails to compile)",
+          "src/ui/prompts/simple.tsx ChooseNumber (start at the largest: `start: 'last'`)"
+        ]
+      },
+      {
+        "game": "jarl",
+        "commit": "cf3ecfe",
+        "paths": [
+          "src/ui/prompts/autoAnswer.ts (the setting, the forced single option, the never-list of kinds; the single option is engine-core onlyOne)"
+        ]
+      },
+      {
+        "game": "ufs",
+        "commit": "07238a4",
+        "paths": [
+          "src/ui/prompts/confirm.tsx useTapConfirm (first tap previews, second tap or Confirm commits, Cancel, a target no longer legal disarms; the overlay marks became option-id marks) and simple.tsx (the keyboard key listener on window, here Enter and Escape)"
+        ]
+      }
+    ]
+  },
+  "needs": [
+    "engine-core",
+    "prompt-source"
+  ],
+  "packages": [
+    "react"
+  ]
+}

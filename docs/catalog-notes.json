@@ -165,6 +165,10 @@
     "use": "Showing one state per prompt kind and ending, with a check that no kind lacks one.",
     "not": "Runtime screens."
   },
+  "prompt-host": {
+    "use": "Showing the open engine-core prompt on screen: a widget per prompt kind (a missing one fails to compile), the common widgets (pick, amount, order, may, pay) unstyled, auto-answer of forced prompts, board picks with tap to confirm.",
+    "not": "The game's look or its own kind-specific widgets; board highlights (the game draws those from the option ids)."
+  },
   "prompt-source": {
     "use": "Each prompt must name its source card and clause and who decides.",
     "not": "Prompt wording (the game's printed words)."
