@@ -20,6 +20,7 @@ Rule-citation gate. The game passes a `trace.config.json` (any subset of the opt
 | `phaseTable` (`''`), `progress`, `phaseDone`, `strictFromPhase` | Phase mode: a family is due once the phase listing it in the table under this heading (phase in column 1, families in column 3) matches `phaseDone` in the progress file; a rule line with `pending: <phase>` waits for that phase; a family in no row is a finding; strict once `strictFromPhase` is merged. | EBR |
 | `strictIdEnd` (false) | true: nothing may follow the id, so `R-05a` does not name `R-05`. | EBR |
 | `skipInsideSkippedDescribe` (false), `ignoreTemplateSubstitutions` (false) | Tests inside a `describe.skip`/`xdescribe` count for none; a title built with `${…}` or `+` counts for none (by default it counts as written, a `+` title by its first string). | EBR |
+| `citeFiles` (`[]`) | Folders: every non-test source file under them must cite at least one rule id of the plan in a comment, else one finding lists the files (fails in strict mode); the folders are read even when outside `sourceDirs`. | Under Falling Skies (`src/engine/phases`, `rules`, `abilities`) |
 | `testFilePattern` (`''`) | A regexp the file names under `testDirs` must match (`\.(test\|spec)\.tsx?$`); empty reads every `.ts(x)`. | EBR |
 | `staleFails` (true) | false: a pending id the plan does not define is reported, not failed. | STCC |
 | `rulePendingInlineOnly` (false) | Phase mode: a rule waits only by `pending: <phase>` on its own line in the rules section; bare `pending:` lines then count for scenario rows only. | EBR |

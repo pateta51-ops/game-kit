@@ -481,3 +481,35 @@ describe('K136', () => {
     expect(on.text).toMatch(/1 scenario row\(s\) have no test: SC-02 \(pending: 2, which is merged\)$/m);
   });
 });
+
+describe('K172 citeFiles', () => {
+  const cfg: Config = { ...CFG, scenarioPrefix: '', requireComment: false, citeFiles: ['src\\engine\\rules\\'] };
+  const go = (sources: SourceFile[], c: Config = cfg) => {
+    const r = io({}, [test('tests/a.test.ts', "it('R-010 R-011 R-012 x', () => {});")], sources);
+    return { code: run(['--strict'], r.fake, c), text: r.out.join('\n') };
+  };
+  it('a file under a cite folder with no known rule id in a comment fails and is listed', () => {
+    const r = go([test('src/engine/rules/a.ts', '// R-010\nx;'), test('src/engine/rules/b.ts', '// nothing\nx;'), test('src/engine/rules/c.ts', "const s = 'R-010';")]);
+    expect(r.code).toBe(1);
+    expect(r.text).toMatch(/citing no rule id in a comment: src\/engine\/rules\/b\.ts, src\/engine\/rules\/c\.ts$/m);
+  });
+  it('an id the plan does not define does not count; files outside the folders are ignored; off by default', () => {
+    expect(go([test('src/engine/rules/a.ts', '// R-999')]).text).toMatch(/citing no rule id/);
+    expect(go([test('src/engine/rules/a.ts', '// R-010'), test('src/engine/other/b.ts', 'x;')]).text).not.toMatch(/citing no rule id/);
+    expect(go([test('src/engine/rules/b.ts', 'x;')], { ...cfg, citeFiles: [] }).text).not.toMatch(/citing no rule id/);
+  });
+  it('makeIo reads the cite folders outside sourceDirs and skips tests', () => {
+    const dir = mkdtempSync(join(tmpdir(), 'k172-'));
+    mkdirSync(join(dir, 'engine'));
+    writeFileSync(join(dir, 'engine', 'a.ts'), '');
+    writeFileSync(join(dir, 'engine', 'a.test.ts'), '');
+    const paths = makeIo(dir + sep, { ...cfg, sourceDirs: ['none'], citeFiles: ['engine'] }).sourceFiles().map((f) => f.path);
+    expect(paths).toEqual(['engine/a.ts']);
+    rmSync(dir, { recursive: true });
+  });
+  it('overlapping sourceDirs and citeFiles list a file once; backslashes in citeFiles are normalised', () => {
+    const c: Config = { ...cfg, sourceDirs: ['src'], citeFiles: ['src\\engine\\rules\\'] };
+    const r = go([test('src/engine/rules/b.ts', 'x;'), test('src/engine/rules/b.ts', 'x;')], c);
+    expect(r.text).toMatch(/: src\/engine\/rules\/b\.ts$/m);
+  });
+});

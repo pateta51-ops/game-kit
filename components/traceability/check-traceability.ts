@@ -53,6 +53,8 @@ export interface Config {
   scenarioReport: boolean;
   rejectedTitles: boolean;
   countsLine: boolean;
+  /** K172 */
+  citeFiles: string[];
 }
 export const DEFAULT_CONFIG: Config = {
   plan: 'docs/BUILD_PLAN.md',
@@ -93,6 +95,7 @@ export const DEFAULT_CONFIG: Config = {
   scenarioReport: false,
   rejectedTitles: false,
   countsLine: false,
+  citeFiles: [],
 };
 const USAGE = 'usage: tsx check-traceability.ts [--config path] [--strict] [--release] [--quiet] [--warn]';
 
@@ -519,7 +522,7 @@ export const makeIo = (root: string, cfg: Config): Io => ({
   },
   sourceFiles: () => {
     const found: string[] = [];
-    for (const d of cfg.sourceDirs) walk(join(root, d), (name) => isSource(name) && !isTest(name), found);
+    for (const d of new Set([...cfg.sourceDirs, ...cfg.citeFiles])) walk(join(root, d), (name) => isSource(name) && !isTest(name), found);
     return readAll(root, found);
   },
   out: (line) => {
@@ -649,7 +652,11 @@ export function run(args: readonly string[], io: Io, cfg: Config = DEFAULT_CONFI
     if (only.length > 0)
       io.out(`${String(only.length)} id(s) are named only by titles the gate rejects: ${only.map(([id, why]) => `${id} [${why}]`).join(', ')}`);
   }
+  const sourcesAll = io.sourceFiles();
+  const noCite = cfg.citeFiles.length === 0 ? [] : sourcesAll.filter((f) => cfg.citeFiles.some((d) => f.path.startsWith(d.replace(/\\/g, '/').replace(/\/+$/, '') + '/')) && !extractComments(f.text).some((t) => (t.match(ruleIdPattern(cfg)) ?? []).some((id) => known.has(id)))).map((f) => f.path).filter((p, i, a) => a.indexOf(p) === i);
+  if (noCite.length > 0) io.out(`files under ${cfg.citeFiles.join(', ')} citing no rule id in a comment: ${noCite.join(', ')}`);
   const failed =
+    noCite.length > 0 ||
     missingTitle.length > 0 ||
     missingCite.length > 0 ||
     (cfg.staleFails && stale.length > 0) ||
