@@ -78,19 +78,27 @@ export interface SparkOpts {
   len?: number;
 }
 
-/** Sparks: hot streaks thrown from (x, y), additive; `u` scales speed, length and width. */
-export function sparks(ctx: Ctx, t: number, o: SparkOpts, u = 1): void {
+export interface SparkPoint { x0: number; y0: number; x1: number; y1: number; fade: number; w: number; g: number }
+
+/** Particle budget: at most 70 alive; a `max` in the opts caps `n` (opt-in, no cap without it). */
+export const BUDGET = 70;
+export const capN = (n: number, max = BUDGET): number => Math.min(n, max);
+/** Integer hash of (seed, i) in [0, 1): the same numbers on every engine. */
+export const hash = (seed: number, i: number): number => (Math.imul(seed * 31 + i, 2654435761) >>> 0) / 4294967296;
+
+/** The sparks alive at `t` as plain numbers (tail, head, fade, width, colour roll): tests read these, `sparks` draws them. */
+export function sparkPoints(t: number, o: SparkOpts & { max?: number }, u = 1): SparkPoint[] {
   const r = rng(o.seed);
-  ctx.save();
-  ctx.globalCompositeOperation = 'lighter';
-  ctx.lineCap = 'round';
-  for (let i = 0; i < o.n; i += 1) {
+  const out: SparkPoint[] = [];
+  const n = o.max === undefined ? o.n : capN(o.n, o.max);
+  for (let i = 0; i < n; i += 1) {
     const a = (o.angle ?? 0) + (r() - 0.5) * (o.spread ?? Math.PI * 2);
     const sp = (o.speed ?? 0.8) * (0.35 + r() * 0.9) * u;
     const life = (o.life ?? 400) * (0.5 + r() * 0.7);
     const t0 = o.t0 + r() * (o.stagger ?? 0);
     const w = (o.width ?? 2) * (0.6 + r() * 0.8) * u;
-    const g = r();    const age = t - t0;
+    const g = r();
+    const age = t - t0;
     if (age <= 0 || age >= life) continue;
     const k = o.drag ?? 0.004;
     const grav = (o.gravity ?? 0) * u;
@@ -100,7 +108,17 @@ export function sparks(ctx: Ctx, t: number, o: SparkOpts, u = 1): void {
     ];
     const [x1, y1] = p(age);
     const [x0, y0] = p(Math.max(0, age - (o.len ?? 28)));
-    const fade = 1 - age / life;
+    out.push({ x0, y0, x1, y1, fade: 1 - age / life, w, g });
+  }
+  return out;
+}
+
+/** Sparks: hot streaks thrown from (x, y), additive; `u` scales speed, length and width. */
+export function sparks(ctx: Ctx, t: number, o: SparkOpts & { max?: number }, u = 1): void {
+  ctx.save();
+  ctx.globalCompositeOperation = 'lighter';
+  ctx.lineCap = 'round';
+  for (const { x0, y0, x1, y1, fade, w, g } of sparkPoints(t, o, u)) {
     ctx.strokeStyle = o.color ?? `rgba(255,${String(180 + g * 60)},${String(90 + g * 60)},1)`;
     ctx.globalAlpha = fade;
     ctx.lineWidth = w * (0.5 + fade * 0.5);

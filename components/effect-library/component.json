@@ -9,6 +9,8 @@
     "grafts": [
       { "game": "ebr", "commit": "33b5abd3", "paths": ["the overlay layer above the page; idea only, no file taken", "src/ui/motion/Count.tsx (count.ts, without React or the store)", "src/ui/motion/Ambience.tsx (ambience.ts: the box-confined layer only; the choice of kind from card ids and the response glow stay in the game)"] },
       { "game": "middle-earth-player", "commit": "design only (MIT)", "paths": ["spotlight hit stop, trauma shake, afterimages, flash limit (feel.ts; written new from the write-up docs/evaluation/outside/motion-sound.md, no file taken)"] },
+      { "game": "middle-earth-player", "commit": "design only (MIT)", "paths": ["entry description, token deltas, closed-form effects and particle budget (slots.ts, beats.ts, particles.ts sparkPoints; written new from the write-up, no file taken)"] },
+      { "game": "marvel-champions-digital-game", "commit": "idea only (AGPL)", "paths": ["slot held until its ghost lands, pile and host anchors, beats from events by one table (slots.ts, beats.ts; no file taken)"] },
       { "game": "warps", "commit": "2af6937", "paths": ["src/ui/fx/kit.ts (particles.ts; the colour table left out, arc and star take their colours)", "src/ui/fx/looks.test.tsx (the kit's cases, in particles.test.ts)"] }
     ]
   },

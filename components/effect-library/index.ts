@@ -5,3 +5,5 @@ export * from './count';
 export * from './ambience';
 export * as particles from './particles';
 export * from './feel';
+export * from './slots';
+export * from './beats';
