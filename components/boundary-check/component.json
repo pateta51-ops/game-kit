@@ -1,0 +1,9 @@
+{
+  "name": "boundary-check",
+  "source": {
+    "game": "outside-ideas",
+    "commit": "k124",
+    "paths": ["docs/evaluation/outside/terraforming-mars-rally-the-troops.md (section 13)"]
+  },
+  "needs": []
+}
