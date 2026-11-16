@@ -25,9 +25,21 @@
           "src/ui/components/Crash.tsx (crash screen: what went wrong, export the save, reload, try again)",
           "src/ui/play/crash.ts (errorWords; an export that reports failure instead of throwing)"
         ]
+      },
+      {
+        "game": "7th-inning-stretch",
+        "commit": "f6d14aa",
+        "paths": [
+          "src/ui/screens/Stage.tsx (Stage: fixed-size stage scaled to the window, fixed head menu or flow; phone page left in the game)"
+        ]
       }
     ]
   },
-  "needs": ["state-machines"],
-  "packages": ["react", "react-dom"]
+  "needs": [
+    "state-machines"
+  ],
+  "packages": [
+    "react",
+    "react-dom"
+  ]
 }

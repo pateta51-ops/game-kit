@@ -14,6 +14,16 @@ Draw the map once over the board picture in Inkscape; get the click areas (space
 
 Save the data as JSON or a TS file in the game; the SVG stays a source asset.
 
+## Zones (screen layouts)
+
+A layout JSON `{ w, h, zones: { id: { r: [x, y, w, h], ...anything } } }` (a wireframe tool's output, or `zonesOf(parsed, w, h)` from the board above) places every part of a fixed-size screen; components read their zone, never type a position. Each placer returns `{ position: 'absolute', left, top, width, height }`, a React style as is.
+
+- `zone(L, id, pad?)`: stage pixels, grown by `pad` on each side (for a `Stage` from `app-frame`).
+- `zonePct(L, id, parent?, dx?, dy?)`: percent of the stage, or of the zone `parent` when the element sits inside that zone's element; `dx`/`dy` shift it in stage units.
+- `zoneRect(L, id)`: the rect (`[0, 0, 0, 0]` for a missing id).
+- `slots(L, 'roster')`: the zones `roster.1`, `roster.2`, ... in number order (`roster.1.text` and `rosterx` are not slots).
+- `withZones(L, { id: [x, y, w, h] })`: a copy with zones moved or added (e.g. the zones a fixed head would cover).
+
 ## Limits
 
 - The SVG must be saved by Inkscape with one attribute per line, and must use no `transform` attributes (ungroup, or apply transforms in Inkscape).

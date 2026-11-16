@@ -144,3 +144,27 @@ export function newLayoutSvg(width: number, height: number, image: string, names
 
 export const spaceAt = (layout: Pick<Layout, 'nodes'>, px: number, py: number): string | undefined =>
   Object.entries(layout.nodes).find(([, [x, y, w, h]]) => px >= x && px <= x + w && py >= y && py <= y + h)?.[0];
+
+// Lifted from 7th Inning Stretch src/ui/screens/layout.ts and src/ui/table/geometry.ts: a layout JSON of named [x, y, w, h]
+// zones on a fixed-size stage, placed as stage pixels or as percent of the stage or of a parent zone.
+export type ZoneLayout = { w: number; h: number; zones: Record<string, { r: readonly number[] }> };
+export type Place = { position: 'absolute'; left: number | string; top: number | string; width: number | string; height: number | string };
+
+export const zoneRect = (L: ZoneLayout, id: string): Rect => {
+  const [x = 0, y = 0, w = 0, h = 0] = L.zones[id]?.r ?? [];
+  return [x, y, w, h];
+};
+export const zone = (L: ZoneLayout, id: string, pad = 0): Place => {
+  const [x, y, w, h] = zoneRect(L, id);
+  return { position: 'absolute', left: x - pad, top: y - pad, width: w + 2 * pad, height: h + 2 * pad };
+};
+const pc = (v: number, of: number) => `${String((v / of) * 100)}%`;
+export function zonePct(L: ZoneLayout, id: string, parent?: string, dx = 0, dy = 0): Place {
+  const [x, y, w, h] = zoneRect(L, id);
+  const [px, py, pw, ph] = parent === undefined ? [0, 0, L.w, L.h] : zoneRect(L, parent);
+  return { position: 'absolute', left: pc(x + dx - px, pw), top: pc(y + dy - py, ph), width: pc(w, pw), height: pc(h, ph) };
+}
+export const slots = (L: ZoneLayout, base: string): string[] =>
+  Object.keys(L.zones).filter((k) => k.startsWith(`${base}.`) && /^\d+$/.test(k.slice(base.length + 1))).sort((a, b) => Number(a.slice(base.length + 1)) - Number(b.slice(base.length + 1)));
+export const withZones = <T extends ZoneLayout>(L: T, z: Record<string, readonly number[]>): T => ({ ...L, zones: { ...L.zones, ...Object.fromEntries(Object.entries(z).map(([k, r]) => [k, { r }])) } });
+export const zonesOf = (layout: Pick<Layout, 'nodes'>, w: number, h: number): ZoneLayout => ({ w, h, zones: Object.fromEntries(Object.entries(layout.nodes).map(([k, r]) => [k, { r }])) });

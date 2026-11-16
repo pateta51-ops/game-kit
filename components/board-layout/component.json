@@ -7,7 +7,17 @@
       "tools/parse-layout.js (parseLayout; ported to TypeScript, returns data instead of printing a script, adds adjacency and spaceAt)",
       "tools/new-layout.js (newLayoutSvg)"
     ],
-    "licence": "ISC. The ISC licence applies to the Rally the Troops platform software (rally-the-troops.com), not the game titles. Notice: permission to use, copy, modify and distribute this software for any purpose with or without fee is granted, provided this notice appears in all copies."
+    "licence": "ISC. The ISC licence applies to the Rally the Troops platform software (rally-the-troops.com), not the game titles. Notice: permission to use, copy, modify and distribute this software for any purpose with or without fee is granted, provided this notice appears in all copies.",
+    "grafts": [
+      {
+        "game": "7th-inning-stretch",
+        "commit": "f6d14aa",
+        "paths": [
+          "src/ui/screens/layout.ts (zone, slots, withZones)",
+          "src/ui/table/geometry.ts (at: percent of the stage or a parent zone, as zonePct)"
+        ]
+      }
+    ]
   },
   "needs": [],
   "packages": []
