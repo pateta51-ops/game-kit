@@ -5,7 +5,11 @@
 //   SYSTEM_FONT  a generic or system family in a font stack, or a code/pre/kbd/samp element (tsx)
 //   RADIUS    a border-radius value that is neither 0, a var(...) nor inherit
 //   SHADOW    a box-shadow or text-shadow value that is neither none nor a var(...)
-//   LOGO      a `menuFiles` file that does not render <logoComponent>
+//   LOGO      a `menuFiles` file that does not render <logoComponent>, or a .tsx directly in a `menuDirs` folder
+//             that does not render <menuComponent> (default logoComponent)
+//   FONTFACE  (`fontFaces`) an @font-face for another family or file, or a family no @font-face loads
+//   BODY_FONT (`bodyFont`) no body rule sets font-family to a token or an allowed family
+//   `looseFont`: a font shorthand may end in a var(...) token or an allowed family
 // Files mode: paths, folders or globs (relative to the root) after the flags check only those files; no asset check.
 // `assets` (the look's files are in place): FONT_MISSING, FONT_UNREFERENCED, FONT_LICENCE, SVG, FILE.
 // Exit codes: 0 clean, 1 findings, 2 bad usage.
@@ -21,14 +25,23 @@ export interface ThemeConfig {
   fontFamilies?: string[];
   logoComponent?: string;
   menuFiles?: string[];
+  menuDirs?: string[];
+  menuComponent?: string;
+  fontFaces?: { family: string; file: string }[];
+  bodyFont?: boolean;
+  looseFont?: boolean;
+  fontVars?: string[];
+  fontSrcPrefix?: string;
   assets?: ThemeAssets;
 }
 export interface ThemeAssets {
   fontDir?: string;
   fonts?: { family: string; file: string }[];
   licenceFile?: string;
+  licenceHeading?: boolean;
   svgs?: string[];
   files?: string[];
+  icons?: { dir: string; tokens: string[]; listFile?: string; listPattern?: string };
 }
 export interface SourceFile {
   path: string;
@@ -42,17 +55,46 @@ const COLOR = /#[0-9a-f]{3,8}\b|\b(?:rgba?|hsla?|hwb)\(/gi;
 const DECL =
   /(?:^|[;{\s'"])(font-family|fontFamily|font|border(?:-(?:top|bottom|start|end)-(?:left|right|start|end))?-radius|border(?:Top|Bottom|Start|End)?(?:Left|Right|Start|End)?Radius|filter|box-shadow|boxShadow|text-shadow|textShadow)\s*:\s*([^;}\n]+)/g;
 
+const norm = (p: string) => p.replace(/\\/g, '/').replace(/^\.\//, '').replace(/\/+$/, '');
+
 export function themeFindings(files: readonly SourceFile[], cfg: ThemeConfig): string[] {
   const out: string[] = [];
   const fams = cfg.fontFamilies ?? [];
+  const fv = cfg.fontVars;
+  const shortOk = (v: string) => {
+    const u = v.replace(/['"]/g, '');
+    const tail = (x: string) => u === x || u.endsWith(` ${x}`);
+    return (
+      (fv ? fv.some((n) => u === `var(${n})`) : WHOLE_VAR.test(v)) ||
+      (!!cfg.looseFont && (fams.some(tail) || (fv ? fv.some((n) => tail(`var(${n})`)) : /(^|\s)var\([^()]*\)$/.test(u))))
+    );
+  };
   const fontOk = (v: string) =>
     v
       .split(',')
       .map((x) => x.trim().replace(/^['"]|['"]$/g, ''))
       .filter(Boolean)
-      .every((p) => p.startsWith('var(') || fams.includes(p));
+      .every((p) => (fv ? fv.some((n) => p === `var(${n})`) : p.startsWith('var(')) || fams.includes(p));
+  const ff = cfg.fontFaces ?? [];
+  const faces = new Set<string>();
+  let body = false;
   for (const f of files) {
-    if (f.path === cfg.tokenFile) continue;
+    if ((ff.length > 0 || cfg.bodyFont) && f.path.endsWith('.css')) {
+      const css = f.text.replace(/\/\*[\s\S]*?\*\//g, '');
+      for (const m of ff.length > 0 ? css.matchAll(/@font-face\s*{([^}]*)}/g) : []) {
+        const b = m[1] as string;
+        const fam = /font-family\s*:\s*['"]?([^;'"]+)/.exec(b)?.[1]?.trim();
+        const src = decodeURIComponent(/url\(\s*['"]?([^'")]+)/.exec(b)?.[1] ?? '');
+        const font = ff.find((x) => x.family === fam);
+        if (!font) out.push(`FONTFACE ${f.path}: @font-face for ${String(fam)}`);
+        else if (cfg.fontSrcPrefix ? !src.endsWith(cfg.fontSrcPrefix + font.file) : src !== font.file && !src.endsWith(`/${font.file}`))
+          out.push(`FONTFACE ${f.path}: ${font.family} loads ${src}, not ${(cfg.fontSrcPrefix ?? '') + font.file}`);
+        else faces.add(font.family);
+      }
+      const bv = (/(?:^|[},])\s*body\s*(?:,[^{]*)?{[^}]*?font-family\s*:\s*([^;}]+)/m.exec(css)?.[1] ?? '').trim();
+      if (bv && !GENERIC.test(bv) && fontOk(bv)) body = true;
+    }
+    if (f.path === norm(cfg.tokenFile)) continue;
     const text = f.text
       .replace(/\/\*[\s\S]*?\*\//g, '')
       .replace(f.path.endsWith('.tsx') ? /(^|[^:])\/\/.*$/gm : /$^/g, '$1')
@@ -67,7 +109,7 @@ export function themeFindings(files: readonly SourceFile[], cfg: ThemeConfig): s
       v = v.replace(/[,'"`]+$/, '');
       if (prop === 'font-family' || prop === 'font') {
         if (GENERIC.test(v)) out.push(`SYSTEM_FONT ${f.path}: ${prop} ${v}`);
-        else if (prop === 'font-family' ? !fontOk(v) : !WHOLE_VAR.test(v)) out.push(`FONT ${f.path}: ${prop} ${v}`);
+        else if (prop === 'font-family' ? !fontOk(v) : !shortOk(v)) out.push(`FONT ${f.path}: ${prop} ${v}`);
       } else if (prop.endsWith('radius')) {
         if (!/^(0|0px|inherit|initial)$/.test(v) && !WHOLE_VAR.test(v)) out.push(`RADIUS ${f.path}: ${v}`);
       } else if (prop === 'filter') {
@@ -84,6 +126,21 @@ export function themeFindings(files: readonly SourceFile[], cfg: ThemeConfig): s
       if (!f) out.push(`LOGO ${p}: not found`);
       else if (!re.test(f.text)) out.push(`LOGO ${p}: does not render <${cfg.logoComponent}>`);
     }
+  }
+  for (const x of ff) if (!faces.has(x.family)) out.push(`FONTFACE no @font-face loads ${x.family}`);
+  if (cfg.bodyFont && !body) out.push('BODY_FONT the body is not set in a theme family');
+  const mc = cfg.menuComponent ?? cfg.logoComponent;
+  const md = (cfg.menuDirs ?? []).map(norm);
+  if (mc && md.length) {
+    const re = new RegExp(`<${mc}[\\s/>]`);
+    for (const f of files)
+      if (
+        f.path.endsWith('.tsx') &&
+        md.some((d) => f.path.startsWith(`${d}/`) && !f.path.slice(d.length + 1).includes('/')) &&
+        !(cfg.menuFiles ?? []).includes(f.path) &&
+        !re.test(f.text)
+      )
+        out.push(`LOGO ${f.path}: does not render <${mc}>`);
   }
   return out;
 }
@@ -113,13 +170,25 @@ export function assetFindings(root: string, a: ThemeAssets): string[] {
     const lic = join(root, a.licenceFile);
     const text = existsSync(lic) ? readFileSync(lic, 'utf8') : '';
     if (!text) out.push(`FONT_LICENCE ${a.licenceFile} is missing`);
-    else for (const f of fonts) if (!text.includes(f.family)) out.push(`FONT_LICENCE ${a.licenceFile} does not name ${f.family}`);
+    else for (const f of fonts) if (a.licenceHeading ? !text.split(/\r?\n/).some((l) => l.trim() === `## ${f.family}`) : !text.includes(f.family)) out.push(`FONT_LICENCE ${a.licenceFile} does not name ${f.family}`);
   }
   for (const p of a.svgs ?? []) {
     const t = existsSync(join(root, p)) ? readFileSync(join(root, p), 'utf8') : '';
     if (!t.includes('<svg') || !/<path\s[^>]*\bd=/.test(t)) out.push(`SVG ${p} is missing or has no paths`);
   }
   for (const p of a.files ?? []) if (!existsSync(join(root, p))) out.push(`FILE ${p}: not found`);
+  const ic = a.icons;
+  if (ic) {
+    for (const t of ic.tokens) {
+      const p = `${ic.dir}/${t}.svg`;
+      const s = existsSync(join(root, p)) ? readFileSync(join(root, p), 'utf8') : '';
+      if (!s.includes('<svg') || !/<path\s[^>]*\bd=/.test(s)) out.push(`ICON ${p} is missing or has no paths`);
+    }
+    const lf = ic.listFile ?? '';
+    const list = lf && existsSync(join(root, lf)) ? readFileSync(join(root, lf), 'utf8') : '';
+    for (const m of list.matchAll(new RegExp(ic.listPattern ?? '^\\| \\[([A-Z_0-9]+)\\]', 'gm')))
+      if (m[1] && !ic.tokens.includes(m[1])) out.push(`ICON ${lf} defines [${m[1]}] but the icon list lacks it`);
+  }
   return out;
 }
 
@@ -154,13 +223,19 @@ export function themeCheck(root: string, cfg: ThemeConfig, only?: readonly strin
     return hit;
   });
   const menu = (cfg.menuFiles ?? []).filter((p) => !picked || picked.includes(p));
-  const files = (picked ?? [...cfg.dirs.flatMap((d) => walk(join(root, d))), ...menu.map((p) => join(root, p))].map(rel))
+  if (!only)
+    for (const m of (cfg.menuDirs ?? []).map(norm)) {
+      if (!statSync(join(root, m), { throwIfNoEntry: false })?.isDirectory()) missing.push(`LOGO ${m}: menu folder not found`);
+      else if (!cfg.dirs.map(norm).some((x) => x === '.' || x === '' || m === x || m.startsWith(`${x}/`)))
+        missing.push(`LOGO ${m}: menu folder outside dirs`);
+    }
+  const files = (picked ?? [...cfg.dirs.flatMap((d) => walk(join(root, d))), ...menu.map((p) => join(root, p)), join(root, cfg.tokenFile)].map(rel))
     .filter((p, i, a) => a.indexOf(p) === i && existsSync(join(root, p)))
-    .filter((p) => menu.includes(p) || (exts.some((e) => p.endsWith(e)) && !ex.some((r) => r.test(p))))
+    .filter((p) => menu.includes(p) || p === norm(cfg.tokenFile) || (exts.some((e) => p.endsWith(e)) && !ex.some((r) => r.test(p))))
     .map((p) => ({ path: p, text: readFileSync(join(root, p), 'utf8') }));
   return [
     ...missing,
-    ...themeFindings(files, { ...cfg, menuFiles: menu }),
+    ...themeFindings(files, { ...cfg, menuFiles: menu, ...(only ? { fontFaces: [], bodyFont: false } : {}) }),
     ...(cfg.assets && !only ? assetFindings(root, cfg.assets) : []),
   ];
 }

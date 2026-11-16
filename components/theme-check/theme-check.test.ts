@@ -166,3 +166,145 @@ describe('theme-check files mode and assets', () => {
     expect(themeCheck(root, withAssets, ['ui/a.css'])).toEqual(['RADIUS ui/a.css: 9px']);
   });
 });
+
+describe('theme-check K74 options', () => {
+  const run = (files: Record<string, string>, extra: Partial<ThemeConfig>) =>
+    themeFindings(
+      Object.entries(files).map(([path, text]) => ({ path, text })),
+      { ...noMenu, ...extra },
+    );
+  const fontFaces = [{ family: 'Arvo', file: 'arvo.woff2' }];
+  it('fontFaces: each family has an @font-face that loads its file, also in the token file', () => {
+    expect(run({ 'tokens.css': `@font-face{font-family:'Arvo';src:url('/fonts/arvo.woff2')}` }, { fontFaces })).toEqual([]);
+    expect(run({ 'tokens.css': ':root{}' }, { fontFaces })).toEqual(['FONTFACE no @font-face loads Arvo']);
+    expect(run({ 'tokens.css': `@font-face{font-family:Arvo;src:url(/fonts/other.woff2)}` }, { fontFaces })).toEqual([
+      'FONTFACE tokens.css: Arvo loads /fonts/other.woff2, not arvo.woff2',
+      'FONTFACE no @font-face loads Arvo',
+    ]);
+    expect(
+      run({ 'tokens.css': `@font-face{font-family:Arvo;src:url(arvo.woff2)}@font-face{font-family:Comic;src:url(c.woff2)}` }, { fontFaces }),
+    ).toEqual(['FONTFACE tokens.css: @font-face for Comic']);
+    expect(run({ 'tokens.css': ':root{}' }, {})).toEqual([]);
+  });
+  it('bodyFont: the body is set in a token or an allowed family', () => {
+    expect(run({ 'ui/a.css': 'body{margin:0;font-family:var(--f)}' }, { bodyFont: true })).toEqual([]);
+    expect(run({ 'tokens.css': 'html,body{font-family:Arvo}' }, { bodyFont: true })).toEqual([]);
+    expect(run({ 'ui/a.css': 'p{font-family:var(--f)}' }, { bodyFont: true })).toEqual(['BODY_FONT the body is not set in a theme family']);
+    expect(run({ 'tokens.css': 'body{font-family:Comic}' }, { bodyFont: true })).toEqual(['BODY_FONT the body is not set in a theme family']);
+    expect(run({ 'ui/a.css': 'p{font-family:var(--f)}' }, {})).toEqual([]);
+  });
+  it('looseFont: a font shorthand may end in a token or an allowed family', () => {
+    const loose = (text: string) => run({ 'ui/a.css': text }, { looseFont: true }).map((f) => f.split(' ')[0]);
+    expect(loose('a{font:12px var(--f)}b{font:italic 1rem/1.2 Arvo}')).toEqual([]);
+    expect(loose('a{font:12px Comic}')).toEqual(['FONT']);
+    expect(loose('a{font:12px Arvo, serif}')).toEqual(['SYSTEM_FONT']);
+    expect(css('a{font:12px var(--f)}')).toEqual(['FONT']);
+  });
+  it('menuDirs: every tsx directly in the folder renders the menu component', () => {
+    const files = {
+      'ui/screens/Home.tsx': '<MenuFrame><p/></MenuFrame>',
+      'ui/screens/Bad.tsx': '<div/>',
+      'ui/screens/deep/Part.tsx': '<div/>',
+      'ui/screens/a.css': 'a{}',
+      'ui/screens/MenuFrame.tsx': '<Logo />',
+    };
+    const extra = { menuDirs: ['ui/screens'], menuFiles: ['ui/screens/MenuFrame.tsx'] };
+    expect(run(files, { ...extra, menuComponent: 'MenuFrame' })).toEqual(['LOGO ui/screens/Bad.tsx: does not render <MenuFrame>']);
+    expect(run(files, extra)).toEqual([
+      'LOGO ui/screens/Home.tsx: does not render <Logo>',
+      'LOGO ui/screens/Bad.tsx: does not render <Logo>',
+    ]);
+    expect(run(files, { menuFiles: ['ui/screens/MenuFrame.tsx'] })).toEqual([]);
+  });
+  it('assets.icons: each token has an svg and the list file defines no other token', () => {
+    const root = mkdtempSync(join(tmpdir(), 'tc-icons-'));
+    mkdirSync(join(root, 'icons'));
+    writeFileSync(join(root, 'icons', 'COIN.svg'), '<svg><path d="M0 0"/></svg>');
+    writeFileSync(join(root, 'icons', 'WOOD.svg'), '<svg></svg>');
+    writeFileSync(join(root, 'ICONS.md'), '| Token | Means |\n| [COIN] | a coin |\n| [GOAT] | a goat |\n');
+    expect(assetFindings(root, { icons: { dir: 'icons', tokens: ['COIN'] } })).toEqual([]);
+    expect(assetFindings(root, { icons: { dir: 'icons', tokens: ['COIN', 'WOOD', 'INGOT'], listFile: 'ICONS.md' } })).toEqual([
+      'ICON icons/WOOD.svg is missing or has no paths',
+      'ICON icons/INGOT.svg is missing or has no paths',
+      'ICON ICONS.md defines [GOAT] but the icon list lacks it',
+    ]);
+    expect(assetFindings(root, { icons: { dir: 'icons', tokens: ['COIN'], listFile: 'ICONS.md', listPattern: '^\\| \\[(GOAT)\\]' } })).toEqual([
+      'ICON ICONS.md defines [GOAT] but the icon list lacks it',
+    ]);
+    expect(assetFindings(root, { icons: { dir: 'icons', tokens: ['COIN'], listFile: 'none.md' } })).toEqual([]);
+  });
+  it('themeCheck reads the token file for fontFaces and skips them in files mode', () => {
+    const root = mkdtempSync(join(tmpdir(), 'tc-faces-'));
+    mkdirSync(join(root, 'ui'));
+    writeFileSync(join(root, 'tokens.css'), `@font-face{font-family:Arvo;src:url(/fonts/arvo.woff2)}body{font-family:Arvo}`);
+    writeFileSync(join(root, 'ui', 'a.css'), 'a{color:var(--c)}');
+    const c = { ...noMenu, fontFaces, bodyFont: true };
+    expect(themeCheck(root, c)).toEqual([]);
+    writeFileSync(join(root, 'tokens.css'), ':root{}');
+    expect(themeCheck(root, c)).toEqual(['FONTFACE no @font-face loads Arvo', 'BODY_FONT the body is not set in a theme family']);
+    expect(themeCheck(root, c, ['ui/a.css'])).toEqual([]);
+  });
+});
+
+describe('theme-check K74 review fixes', () => {
+  const run = (files: Record<string, string>, extra: Partial<ThemeConfig>) =>
+    themeFindings(
+      Object.entries(files).map(([path, text]) => ({ path, text })),
+      { ...noMenu, ...extra },
+    );
+  const fontVars = ['--f'];
+  it('fontVars: only the listed variables are font tokens for the body and font-family', () => {
+    expect(run({ 'tokens.css': 'body{font-family:var(--size)}' }, { bodyFont: true, fontVars })).toEqual(['BODY_FONT the body is not set in a theme family']);
+    expect(run({ 'tokens.css': 'body{font-family:var(--f)}' }, { bodyFont: true, fontVars })).toEqual([]);
+    expect(run({ 'tokens.css': 'body{font-family:var(--size)}' }, { bodyFont: true })).toEqual([]);
+    expect(run({ 'ui/a.css': 'a{font-family:var(--size)}b{font-family:var(--f)}' }, { fontVars })).toEqual(['FONT ui/a.css: font-family var(--size)']);
+  });
+  it('looseFont: the value ends in an accepted token or an exact allowed family', () => {
+    const kind = (text: string, extra: Partial<ThemeConfig>) => run({ 'ui/a.css': text }, { looseFont: true, ...extra }).map((f) => f.split(' ')[0]);
+    expect(kind('a{font:12px MyArvo}', {})).toEqual(['FONT']);
+    expect(kind('a{font:12px MyArvo}', { fontVars })).toEqual(['FONT']);
+    expect(kind('a{font:var(--size)}', { fontVars })).toEqual(['FONT']);
+    expect(kind('a{font:12px var(--size)}', { fontVars })).toEqual(['FONT']);
+    expect(kind(`a{font:12px var(--f)}b{font:var(--f)}c{font:12px 'Arvo'}`, { fontVars })).toEqual([]);
+    expect(kind('a{font:var(--size)}', {})).toEqual([]);
+  });
+  it('fontSrcPrefix: the src ends in the prefix and the file', () => {
+    const fontFaces = [{ family: 'Arvo', file: 'arvo.woff2' }];
+    const bare = { 'tokens.css': '@font-face{font-family:Arvo;src:url(arvo.woff2)}' };
+    expect(run(bare, { fontFaces })).toEqual([]);
+    expect(run(bare, { fontFaces, fontSrcPrefix: '/fonts/' })).toEqual([
+      'FONTFACE tokens.css: Arvo loads arvo.woff2, not /fonts/arvo.woff2',
+      'FONTFACE no @font-face loads Arvo',
+    ]);
+    expect(run({ 'tokens.css': '@font-face{font-family:Arvo;src:url(/fonts/arvo.woff2)}' }, { fontFaces, fontSrcPrefix: '/fonts/' })).toEqual([]);
+  });
+  it('licenceHeading: the licence file has a heading per family', () => {
+    const root = mkdtempSync(join(tmpdir(), 'tc-lic-'));
+    const a = { licenceFile: 'L.md', fonts: [{ family: 'Arvo', file: 'a.woff2' }] };
+    writeFileSync(join(root, 'L.md'), 'Arvo is under the OFL\n');
+    expect(assetFindings(root, a)).toEqual([]);
+    expect(assetFindings(root, { ...a, licenceHeading: true })).toEqual(['FONT_LICENCE L.md does not name Arvo']);
+    writeFileSync(join(root, 'L.md'), '# Fonts\r\n## Arvo\r\nOFL\r\n');
+    expect(assetFindings(root, { ...a, licenceHeading: true })).toEqual([]);
+  });
+  it('menuDirs: a trailing slash is the same folder, a folder outside dirs or missing is a finding', () => {
+    const files = { 'ui/screens/Bad.tsx': '<div/>' };
+    expect(run(files, { menuDirs: ['ui/screens/'] })).toEqual(['LOGO ui/screens/Bad.tsx: does not render <Logo>']);
+    const root = mkdtempSync(join(tmpdir(), 'tc-menu-'));
+    mkdirSync(join(root, 'ui', 'screens'), { recursive: true });
+    mkdirSync(join(root, 'menus'));
+    writeFileSync(join(root, 'ui', 'screens', 'Bad.tsx'), '<div/>');
+    expect(themeCheck(root, { ...noMenu, menuDirs: ['./ui/screens/', 'menus', 'nope'] })).toEqual([
+      'LOGO menus: menu folder outside dirs',
+      'LOGO nope: menu folder not found',
+      'LOGO ui/screens/Bad.tsx: does not render <Logo>',
+    ]);
+  });
+  it('the token file path is normalised', () => {
+    expect(run({ 'tokens.css': ':root{--c:#fff}' }, { tokenFile: './tokens.css' })).toEqual([]);
+    const root = mkdtempSync(join(tmpdir(), 'tc-tok-'));
+    mkdirSync(join(root, 'ui'));
+    writeFileSync(join(root, 'tokens.css'), ':root{--c:#fff}');
+    expect(themeCheck(root, { ...noMenu, tokenFile: './tokens.css' })).toEqual([]);
+  });
+});
