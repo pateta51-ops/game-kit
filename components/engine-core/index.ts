@@ -53,5 +53,23 @@ export {
   type UndoMode,
 } from './undo';
 export { EngineBugError, GameSetupError, IllegalActionError, notYet } from './errors';
+export {
+  addStep,
+  canUndoStep,
+  CHECKPOINT_EVERY,
+  extendStep,
+  KEEP_STEPS,
+  newSteps,
+  redoStep,
+  replaySteps,
+  undoStep,
+  type ReplayedSteps,
+  type Step,
+  type StepHistory,
+  type StepOptions,
+  type StepResult,
+  type UndoStepOptions,
+} from './steps';
+export { differentialApply, type DifferentialResult } from './cowcheck';
 export { hashValue } from './hash';
 export { drawRandom, drawRandomIndex, nextUint32, randomInt, seedRng, shuffleInPlace, type RngState } from './rng';
