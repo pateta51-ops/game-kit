@@ -32,3 +32,11 @@ export async function fontSizeFindings(page: FontPage, routes: readonly string[]
   }
   return out;
 }
+
+export interface PhonePage extends FontPage {
+  setViewportSize(size: { width: number; height: number }): Promise<unknown>;
+}
+export async function phoneFontFindings(page: PhonePage, routes: readonly string[], minPx = 26, size = { width: 390, height: 844 }): Promise<string[]> {
+  await page.setViewportSize(size);
+  return fontSizeFindings(page, routes, minPx);
+}
