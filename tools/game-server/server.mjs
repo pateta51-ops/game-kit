@@ -6,7 +6,7 @@ import { createServer } from 'node:http';
 import { connect } from 'node:net';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { cmdlineMatches, descendantOf, lockIsHeld, originAllowed, portsMd, SERVE_ROOT, clonePath, gitSteps, killArgs, logPath, mappingPresent, publicUrl, startCommand, tailscaleServeArgs, validatePorts } from './lib.mjs';
+import { cmdlineMatches, descendantOf, lockIsHeld, originAllowed, portsMd, SERVE_ROOT, clonePath, gitSteps, killArgs, logPath, mappingPresent, nextSlot, addGameText, publicUrl, startCommand, tailscaleServeArgs, validatePorts } from './lib.mjs';
 
 const PORTS = join(dirname(fileURLToPath(import.meta.url)), '..', '..', 'ports.json');
 const STATE = `${SERVE_ROOT}/state.json`;
@@ -202,4 +202,17 @@ else if (cmd === 'status') console.log(Object.values(await status()).map((g) => 
 else if (cmd === 'ports-md') writeFileSync(join(dirname(PORTS), 'docs', 'PORTS.md'), portsMd(cfg));
 else if (cmd === 'update') { await update(id); console.log('serving'); process.exit(0); }
 else if (cmd === 'stop') { stop(id); console.log('stopped'); }
-else { console.error('usage: server.mjs [update <id> | stop <id> | status]'); process.exit(2); }
+else if (cmd === 'add') {
+  const [, , , , name, repo, cwd = ''] = process.argv;
+  if (!id || !name || !repo) { console.error('usage: server.mjs add <id> "<Name>" <repo path> [app subfolder]'); process.exit(2); }
+  if (!existsSync(join(repo, cwd, 'package.json'))) { console.error(`no package.json in ${join(repo, cwd)}`); process.exit(1); }
+  const s = nextSlot(cfg);
+  const g = { name, repo: repo.replaceAll('\\', '/'), block: s.block, serve: { local: s.local, https: s.https, ...(cwd ? { cwd } : {}), build: 'npm run build', start: 'npx vite preview --host 127.0.0.1 --port {port} --strictPort', copyIgnored: [], env: {} } };
+  writeFileSync(PORTS, addGameText(readFileSync(PORTS, 'utf8'), id, g));
+  loadCfg();
+  writeFileSync(join(dirname(PORTS), 'docs', 'PORTS.md'), portsMd(cfg));
+  console.log(`${id}: dev ${s.block}, preview ${s.block + 1}, e2e ${s.block + 2}; phone ${publicUrl(s.https)} (local ${s.local}).
+Next: commit ports.json + docs/PORTS.md in game-kit, set the game's vite ports (server ${s.block}, preview ${s.block + 1}, preview.allowedHosts ['.ts.net']), then Reload ports.json in the panel.`);
+  try { await fetch(`http://127.0.0.1:${cfg.panel.local}/api/reload`, { method: 'POST' }); } catch { /* panel not running */ }
+}
+else { console.error('usage: server.mjs [update <id> | stop <id> | status | ports-md | add <id> "<Name>" <repo> [app subfolder]]'); process.exit(2); }

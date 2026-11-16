@@ -1,6 +1,6 @@
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
-import { allowedHosts, cmdlineMatches, descendantOf, lockIsHeld, originAllowed, safeRel, gitSteps, portsMd, killArgs, mappingPresent, publicUrl, startCommand, tailscaleServeArgs, validatePorts } from './lib.mjs';
+import { allowedHosts, cmdlineMatches, descendantOf, lockIsHeld, originAllowed, safeRel, gitSteps, portsMd, killArgs, mappingPresent, publicUrl, startCommand, tailscaleServeArgs, validatePorts, nextSlot, addGameText } from './lib.mjs';
 
 const cfg = JSON.parse(readFileSync(new URL('../../ports.json', import.meta.url), 'utf8'));
 const g = (block, local, https) => ({ name: 'X', repo: 'r', block, serve: { local, https, build: 'b', start: 'x {port}', copyIgnored: [] } });
@@ -69,5 +69,22 @@ describe('safety', () => {
     const ps = [{ ProcessId: 2, ParentProcessId: 1 }, { ProcessId: 3, ParentProcessId: 2 }, { ProcessId: 9, ParentProcessId: 8 }];
     expect(descendantOf(ps, 3, 1)).toBe(true);
     expect(descendantOf(ps, 9, 1)).toBe(false);
+  });
+});
+
+describe('add a game', () => {
+  const text = readFileSync(new URL('../../ports.json', import.meta.url), 'utf8');
+  it('picks the next free block and serve slots', () => {
+    const s = nextSlot(cfg);
+    expect(s.block).toBe(Math.max(...Object.values(cfg.games).map((x) => x.block)) + 10);
+    expect(Object.values(cfg.games).some((x) => x.serve.local === s.local || x.serve.https === s.https)).toBe(false);
+    expect(nextSlot({ panel: P, games: { a: g(5180, 4171, 8441) } })).toEqual({ block: 6010, local: 4172, https: 8442 });
+  });
+  it('adds one valid line and keeps the rest', () => {
+    const s = nextSlot(cfg);
+    const out = addGameText(text, 'newgame', g(s.block, s.local, s.https));
+    expect(validatePorts(JSON.parse(out))).toEqual([]);
+    expect(out.split('\n').length).toBe(text.split('\n').length + 1);
+    expect(() => addGameText(text, 'rome', g(s.block, s.local, s.https))).toThrow();
   });
 });

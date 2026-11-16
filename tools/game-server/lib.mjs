@@ -82,3 +82,24 @@ Panel: local ${cfg.panel.local}, ${publicUrl(cfg.panel.https)}
 ${rows.join('\n')}
 `;
 }
+export function nextSlot(cfg) {
+  const gs = Object.values(cfg.games);
+  let block = Math.max(6000, ...gs.map((g) => g.block)) + 10;
+  while ((block + 9 >= 4170 && block <= 4199) || (block + 9 >= 5190 && block <= 5299)) block += 10;
+  const locals = new Set([cfg.panel.local, ...gs.map((g) => g.serve.local)]);
+  const https = new Set([cfg.panel.https, ...gs.map((g) => g.serve.https)]);
+  let local = 4171; while (locals.has(local)) local++;
+  let h = 8441; while (https.has(h)) h++;
+  if (local > 4199) throw new Error('no free serve port left in 4170-4199');
+  return { block, local, https: h };
+}
+export function addGameText(text, id, g) {
+  const cfg = JSON.parse(text);
+  if (cfg.games[id]) throw new Error(`${id} is already in ports.json`);
+  const end = text.lastIndexOf('\n  }\n}');
+  if (end < 0) throw new Error('ports.json layout not recognised');
+  const out = text.slice(0, end) + `,\n    ${JSON.stringify(id)}: ${JSON.stringify(g).replaceAll('":', '": ').replaceAll(',"', ', "')}` + text.slice(end);
+  const errs = validatePorts(JSON.parse(out));
+  if (errs.length) throw new Error(errs.join('\n'));
+  return out;
+}
