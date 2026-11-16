@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { addStep, applyAction, createGame, createSave, draftOf, hashValue, newSteps, own, restoreSave, seedRng, undoStep, type AnswerAction, type GameRules, type KernelPrompt, type KernelState, type KernelTask } from '../engine-core/index';
-import { beatProblems, beatQuestion, READ_ON, storyHandlers, storyTask, type AskBeat, type Story } from './index';
+import { addStep, applyAction, createGame, createSave, draftOf, hashValue, newSteps, own, restoreSave, seedRng, undoStep, type AnswerAction, type GameRules, type KernelPrompt, type KernelState, type KernelTask } from '../engine-core/index.ts';
+import { beatProblems, beatQuestion, READ_ON, storyHandlers, storyTask, type AskBeat, type Story } from './index.ts';
 
 const long: AskBeat = { id: 'long', lines: [{ text: 'one' }, { text: 'two' }, { speaker: 'cap', text: 'three', fallback: 'Someone speaks.' }], split: 1, ask: { kind: 'choose', choices: [{ id: 'east', label: 'Go east' }, { id: 'west', label: 'Go west', enabled: false, why: 'Bridge out' }] } };
 const S: Story = {

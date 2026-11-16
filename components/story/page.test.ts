@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { holds, pageProblems, pageView, type Page } from './page';
+import { holds, pageProblems, pageView, type Page } from './page.ts';
 
 const T = { a: 'Hello {who}, {n} left.', b: 'Base', c: 'Else', h: 'Head' };
 const P: Page = { id: 'p', entries: [

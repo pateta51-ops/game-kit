@@ -1,8 +1,8 @@
 // The readable script document the owner approves (generated, never edited by hand), and its up-to-date check.
-import type { GameTypes } from '../engine-core';
-import type { TutorialGame } from './game';
-import { playStep, startRun } from './play';
-import type { ExpectedEvent, TutorialScript, TutorialStep } from './script';
+import type { GameTypes } from '../engine-core/index.ts';
+import type { TutorialGame } from './game.ts';
+import { playStep, startRun } from './play.ts';
+import type { ExpectedEvent, TutorialScript, TutorialStep } from './script.ts';
 
 export interface DocOptions {
   readonly title: string;

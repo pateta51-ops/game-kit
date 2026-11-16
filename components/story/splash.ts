@@ -1,5 +1,5 @@
 // Event splash, pure part (K155): decides from the engine event list whether a story splash opens. Draws nothing.
-import type { Line, Picture } from './story';
+import type { Line, Picture } from './story.ts';
 export type Splash = { title?: string; picture?: Picture; line: Line; note?: string };
 export type SplashEvent = { type: string; id?: string | number };
 

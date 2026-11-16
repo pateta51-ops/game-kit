@@ -1,6 +1,6 @@
 import { act, render, screen } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
-import { Stage } from './ui';
+import { Stage } from './ui.ts';
 
 const heads = { menu: { rect: [3400, 40, 400, 360] as const, node: <p>logo and home</p> }, flow: { rect: [3400, 40, 400, 110] as const, node: <p>home</p> } };
 

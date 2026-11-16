@@ -1,6 +1,6 @@
 // A seamed ball as a true sphere, drawn on a small canvas from the sphere's equation and a seam curve computed in code.
 // No model file, no dependency. The seams travel around the ball as it turns.
-import { ID, mmul, rotAxis, transpose, type M3, type V3 } from './solids';
+import { ID, mmul, rotAxis, transpose, type M3, type V3 } from './solids.ts';
 
 /** `curve`: points on the unit sphere along the seam (default `twoArcSeam()`); `perTurn`: px of travel per turn for each px across. */
 export interface BallLook { leather: string; seam?: string; curve?: V3[] | undefined; stitch?: 'bars' | 'chevron'; stitchCount?: number; stitchWidth?: number; stitchFlip?: boolean | [number, number]; seamLine?: string; seamLineWidth?: number; seamLineDash?: number }

@@ -1,8 +1,8 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { bugConfig } from './config';
-import * as index from './index';
-import * as ui from './ui';
-import './test-utils';
+import { bugConfig } from './config.ts';
+import * as index from './index.ts';
+import * as ui from './ui.ts';
+import './test-utils.ts';
 
 afterEach(() => {
   vi.restoreAllMocks();
@@ -21,10 +21,10 @@ describe('token storage is read on first use', () => {
   it('importing reads no storage and needs no configuration; the first use sees a token stored since', async () => {
     vi.resetModules();
     const get = vi.spyOn(Storage.prototype, 'getItem');
-    const token = await import('./token');
+    const token = await import('./token.ts');
     expect(get).not.toHaveBeenCalled();
     expect(() => token.useToken.getState()).toThrow('configureBugReporter was not called.');
-    (await import('./config')).configureBugReporter({ ...bugConfig(), id: 'lazy' });
+    (await import('./config.ts')).configureBugReporter({ ...bugConfig(), id: 'lazy' });
     window.localStorage.setItem('lazy:github-token:v1', 'stored');
     expect(token.useToken.getState().has).toBe(true);
     token.useToken.getState().forget();
@@ -36,8 +36,8 @@ describe('token storage is read on first use', () => {
   const fresh = async () => {
     const config = bugConfig();
     vi.resetModules();
-    (await import('./config')).configureBugReporter({ ...config, id: 'lazy' });
-    return (await import('./token')).useToken;
+    (await import('./config.ts')).configureBugReporter({ ...config, id: 'lazy' });
+    return (await import('./token.ts')).useToken;
   };
 
   it('the hook, used first, sees a token already in storage, without notifying anyone', async () => {

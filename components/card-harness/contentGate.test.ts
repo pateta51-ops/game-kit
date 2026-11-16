@@ -1,5 +1,5 @@
 import { expect, it } from 'vitest';
-import { contentGate } from './index';
+import { contentGate } from './index.ts';
 
 const err = { code: 'E1', severity: 'error' };
 const run = (o: Partial<Parameters<typeof contentGate>[0]>) => {

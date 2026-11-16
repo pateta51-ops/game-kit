@@ -1,8 +1,8 @@
 // `hashState` and replay (ported from Rome's replay/replay.ts, adapted). A game is
 // `(options, rules, actions)`: the state is rebuilt by replay, and the same inputs give the same hash.
-import { applyAction, createGame } from './apply';
-import { hashValue } from './hash';
-import type { GameRules, GameTypes } from './types';
+import { applyAction, createGame } from './apply.ts';
+import { hashValue } from './hash.ts';
+import type { GameRules, GameTypes } from './types.ts';
 
 /** `hashState`: FNV-1a 64 over the canonical JSON of the state. */
 export const hashState = (state: unknown): string => hashValue(state);

@@ -1,7 +1,7 @@
 // A perf game whose every game throws in setup; its budgets are tight on purpose.
-import type { Counter } from '../../engine-core/fake/counter';
-import type { Budgets, PerfGame } from '../perf';
-import { perfGame as good } from './game';
+import type { Counter } from '../../engine-core/fake/counter.ts';
+import type { Budgets, PerfGame } from '../perf.ts';
+import { perfGame as good } from './game.ts';
 
 export const perfGame: PerfGame<Counter> = {
   ...good,

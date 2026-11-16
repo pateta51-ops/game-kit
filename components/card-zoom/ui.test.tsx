@@ -1,7 +1,7 @@
 import { fireEvent, render } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
-import { buildIndex } from '../glossary/match'
-import { CardZoom, transcribe, useZoomEscape } from './ui'
+import { buildIndex } from '../glossary/match.ts'
+import { CardZoom, transcribe, useZoomEscape } from './ui.ts'
 
 const icons = { gold: { label: 'gold', body: '<circle r="5"/>' } }
 const glossary = buildIndex([{ id: 'exhaust', term: 'Exhaust', summary: 'Turn it sideways.' }, { id: 'gold', term: 'Gold', icon: 'gold', summary: 'Money.' }])

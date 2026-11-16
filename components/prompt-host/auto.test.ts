@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { applyAction, createGame } from '../engine-core/index';
-import { autoAnswer } from './index';
-import { MARKET } from './fake/market';
+import { applyAction, createGame } from '../engine-core/index.ts';
+import { autoAnswer } from './index.ts';
+import { MARKET } from './fake/market.ts';
 
 describe('autoAnswer (Jarl autoAnswer)', () => {
   const s0 = createGame(MARKET, { seed: 's' }, null, null).state;

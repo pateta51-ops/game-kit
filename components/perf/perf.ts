@@ -1,8 +1,8 @@
 // The engine speed budget (stcc scripts/perf.ts made generic over the sim-pool game contract; the slowest list from ebr,
 // the injected clock and "no call was timed" from unst, measure/formatReport from imp).
-import { applyAction, createGame, type ApplyResult, type GameTypes } from '../engine-core/index';
-import { legalAnswers, type GameSpec, type SimGame } from '../sim-pool/play';
-import { DriverRng } from '../sim-pool/rng';
+import { applyAction, createGame, type ApplyResult, type GameTypes } from '../engine-core/index.ts';
+import { legalAnswers, type GameSpec, type SimGame } from '../sim-pool/play.ts';
+import { DriverRng } from '../sim-pool/rng.ts';
 
 export const REPEATS = 3;
 export const SLOWEST = 10;

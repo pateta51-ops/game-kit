@@ -1,5 +1,5 @@
 // Bug reports: what a game supplies when it mounts the reporter (configureBugReporter), and the fixed limits.
-import type { EmbedFont } from './capture';
+import type { EmbedFont } from './capture.ts';
 
 export interface GameSnapshot {
   contentHash: string | null;

@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
-import { ID, apply, cube, front, mesh, rest, trapezohedron, tumble, turned } from './solids';
-import { SEAM, chevronAt, chevronPoints, chevrons, flipRange, seamLineAt, offRest, rolled, turnOf, twoArcSeam } from './ball';
+import { ID, apply, cube, front, mesh, rest, trapezohedron, tumble, turned } from './solids.ts';
+import { SEAM, chevronAt, chevronPoints, chevrons, flipRange, seamLineAt, offRest, rolled, turnOf, twoArcSeam } from './ball.ts';
 
 const TILT = (15 * Math.PI) / 180;
 describe('pieces-3d: the code-built pieces', () => {

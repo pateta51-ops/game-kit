@@ -1,8 +1,8 @@
 // A simulation worker thread (pool.ts): plays the games it is sent, one at a time, and sends each record back.
 import { parentPort, workerData } from 'node:worker_threads';
-import { setInvariantChecking, setStateFreezing, type GameTypes } from '../engine-core/index';
-import { playOne, type SimGame } from './play';
-import type { WorkerCommand, WorkerInput, WorkerMessage } from './pool';
+import { setInvariantChecking, setStateFreezing, type GameTypes } from '../engine-core/index.ts';
+import { playOne, type SimGame } from './play.ts';
+import type { WorkerCommand, WorkerInput, WorkerMessage } from './pool.ts';
 
 const port = parentPort;
 if (port === null) throw new Error('worker.ts runs only as a worker thread');

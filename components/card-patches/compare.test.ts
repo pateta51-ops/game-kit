@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { cardLookup, diffCards } from './compare';
+import { cardLookup, diffCards } from './compare.ts';
 
 describe('diffCards', () => {
   const fields = [{ name: 'cost', ours: (c: { cost: number }) => c.cost, theirs: (c: { c: number }) => c.c }];

@@ -1,5 +1,5 @@
-import { createMotionPlayer, createVerbs, withReducedMotion, type MotionSpec, type Speed } from '../../motion-frame';
-import { createAmbience, particles, registerCanvasEffect, registerEffect, registerEffects, type EffectCtx } from '../index';
+import { createMotionPlayer, createVerbs, withReducedMotion, type MotionSpec, type Speed } from '../../motion-frame/index.ts';
+import { createAmbience, particles, registerCanvasEffect, registerEffect, registerEffects, type EffectCtx } from '../index.ts';
 
 // Runs one step of `verb` on an actor over a 200 ms call, either to its natural end or skipped half way; returns what is left.
 async function runOne(verb: string, extra: Record<string, unknown>, skip: boolean, actorExtra: Record<string, unknown> = {}) {

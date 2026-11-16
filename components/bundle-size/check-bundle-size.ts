@@ -221,7 +221,7 @@ const FLAGS: Record<string, keyof Limits | 'dir' | 'json' | 'config'> = {
   '--gzip-level': 'gzipLevel',
 };
 const USAGE =
-  'usage: tsx check-bundle-size.ts [--config <json with initialBudget, chunkLimit, assetLimit>] [--initial-budget <bytes>] [--chunk-limit <bytes>] [--asset-limit <bytes>] [--base <path|auto>] [--follow true] [--gzip-level <0-9>] [--dir <build folder>] [--json <path>]';
+  'usage: node check-bundle-size.ts [--config <json with initialBudget, chunkLimit, assetLimit>] [--initial-budget <bytes>] [--chunk-limit <bytes>] [--asset-limit <bytes>] [--base <path|auto>] [--follow true] [--gzip-level <0-9>] [--dir <build folder>] [--json <path>]';
 
 export function run(
   args: readonly string[],

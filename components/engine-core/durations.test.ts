@@ -1,7 +1,7 @@
 // K96: continuous effects with typed durations; K112: layered recompute.
 import { describe, expect, it } from 'vitest';
-import { addEffect, anyEffect, applyAction, hashState, type GameRules, bindEffect, boundary, cancelBatch, draftOf, effectsOf, EngineBugError, expireEffects, layered, removeEffect, sourceLeft, stampActive, sumEffects, spendEffect, would, type ContinuousEffect, type Ctx, type EffectsConfig } from './index';
-import { answer, HIT, SHIELD, startTimed, timedGame, type Timed, type TimedState } from './fake/timed';
+import { addEffect, anyEffect, applyAction, hashState, type GameRules, bindEffect, boundary, cancelBatch, draftOf, effectsOf, EngineBugError, expireEffects, layered, removeEffect, sourceLeft, stampActive, sumEffects, spendEffect, would, type ContinuousEffect, type Ctx, type EffectsConfig } from './index.ts';
+import { answer, HIT, SHIELD, startTimed, timedGame, type Timed, type TimedState } from './fake/timed.ts';
 
 const play = (f: (ctx: Ctx<Timed>) => void, cfg: Parameters<typeof timedGame>[0] = {}, extra: Parameters<typeof timedGame>[1] = {}): TimedState =>
   startTimed(timedGame(cfg, { turn: f, ...extra }));

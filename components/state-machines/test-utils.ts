@@ -1,7 +1,7 @@
 // Shared check for the UI machine tests: an illegal event throws an IllegalTransitionError whose message carries what an
 // agent needs (machine, state, event, allowed events, the table's file:line, the map and the fix line).
 import { expect } from 'vitest';
-import { IllegalTransitionError, MACHINES_DOC, type AnyMachine } from './machine';
+import { IllegalTransitionError, MACHINES_DOC, type AnyMachine } from './machine.ts';
 
 export function expectIllegal(run: () => unknown, m: AnyMachine, state: string, event: string): IllegalTransitionError {
   let error: unknown;

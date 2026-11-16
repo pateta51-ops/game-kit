@@ -1,7 +1,7 @@
 // A store for the one bottom sheet open at a time, over the game's own sheet machine (its states and events): opening
 // one replaces the other, so no lone booleans. The data (a card, an entry) stays while `keeps(state)` says so.
 import { create, type StoreApi, type UseBoundStore } from 'zustand';
-import { can, transition, type Machine } from '../state-machines/machine';
+import { can, transition, type Machine } from '../state-machines/machine.ts';
 
 export interface SheetStore<S extends string, E extends string, D> {
   readonly state: S;

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { chance, outcomes } from './index';
+import { chance, outcomes } from './index.ts';
 
 describe('dice-odds', () => {
   it('multisets of 3d6 are 56 and weights sum to 1', () => {

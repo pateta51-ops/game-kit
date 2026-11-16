@@ -1,7 +1,7 @@
 // The shapes the kernel works on. A game declares its own types (extending these) in one `GameTypes` bundle and
 // implements `GameRules` over it.
-import type { Draft } from './draft';
-import type { TimingState } from './timing';
+import type { Draft } from './draft.ts';
+import type { TimingState } from './timing.ts';
 
 export interface RngWords {
   readonly a: number;

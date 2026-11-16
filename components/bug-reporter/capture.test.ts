@@ -5,8 +5,8 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 const toPng = vi.fn();
 vi.mock('html-to-image', () => ({ toPng: (...a: unknown[]) => toPng(...a) as unknown }));
 
-import './test-utils';
-import { captureScreen, freezeScroll, scrolledElements } from './capture';
+import './test-utils.ts';
+import { captureScreen, freezeScroll, scrolledElements } from './capture.ts';
 
 function scroller(x: number, y: number): HTMLElement {
   const el = document.createElement('div');

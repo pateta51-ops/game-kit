@@ -1,7 +1,7 @@
 // Lifted from jarl src/ui/components/inspect.ts (the trigger only): an inspector opens after the pointer rests on a
 // piece, at once on `openNow` (a right-click), and closes a moment after the pointer leaves unless `hold` is called.
 import { createStore, type StoreApi } from 'zustand/vanilla';
-import { realTimers, type Timers } from './timers';
+import { realTimers, type Timers } from './timers.ts';
 
 export interface InspectState<T> {
   readonly target: T | null;

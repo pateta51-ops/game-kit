@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { availableSpaces, baseKinds, createBoard, emptyBoard, fromLayout, hexRows, neighbours, setSpace } from './index'
+import { availableSpaces, baseKinds, createBoard, emptyBoard, fromLayout, hexRows, neighbours, setSpace } from './index.ts'
 
 describe('board-model', () => {
   it('computes adjacency once, symmetric, no duplicates', () => {

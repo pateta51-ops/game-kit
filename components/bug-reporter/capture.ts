@@ -1,8 +1,8 @@
 // Bug reports: the screenshot of the current screen, taken in the browser at the window's size. html-to-image (1.11.13,
 // pinned) draws the page into an SVG image and a canvas; the card faces and marble are same-origin, so they are inlined.
 // It loads on first use. Returns the PNG as base64 (no data-URL prefix), or null when the browser cannot.
-import { bugConfig, MAX_ATTACHMENT_BASE64 } from './config';
-import { type Image } from './github';
+import { bugConfig, MAX_ATTACHMENT_BASE64 } from './config.ts';
+import { type Image } from './github.ts';
 
 /**
  * The elements scrolled away from their origin, with their offsets. The page itself (html, body, #root) is left out: its

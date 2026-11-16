@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { fileURLToPath } from 'node:url';
-import { grammarReference, strictProblems, type Grammar, type OptOut } from './index';
-import { nodesOf } from './literals';
+import { grammarReference, strictProblems, type Grammar, type OptOut } from './index.ts';
+import { nodesOf } from './literals.ts';
 
 const G: Grammar = {
   nodes: {

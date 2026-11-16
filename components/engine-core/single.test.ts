@@ -1,6 +1,6 @@
 // Two copies of engine-core fail loudly; the same copy evaluated again (hot reload, test isolation) does not.
 import { describe, expect, it } from 'vitest';
-import { claimEngineCore } from './index';
+import { claimEngineCore } from './index.ts';
 
 describe('one copy of engine-core', () => {
   it('a second copy at another URL throws; the same URL, with or without a query, does not', () => {

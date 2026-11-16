@@ -1,8 +1,8 @@
 // The scenario builder: an exact position put in place fast (given cards in given places, any other field set by the
 // test), then tasks run and prompts answered through the game's own rules, recording the events, the prompt left open
 // and every choice the engine settled without asking (the game's probe). Deterministic: the game's seed, no clock.
-import { advance, applyAction, type Draft, type GameRules, type GameTypes } from '../engine-core';
-import type { Probe } from './probe';
+import { advance, applyAction, type Draft, type GameRules, type GameTypes } from '../engine-core/index.ts';
+import type { Probe } from './probe.ts';
 
 /** What a game gives the builder. `W`: where a card can go; `D`: what the game's probe notes. */
 export interface ScenarioGame<G extends GameTypes, W, D = never> {
@@ -31,10 +31,12 @@ export class Scenario<G extends GameTypes, W, D = never> {
   private scripted: string[][] = [];
   private strict: boolean;
 
+  readonly game: ScenarioGame<G, W, D>;
   constructor(
-    readonly game: ScenarioGame<G, W, D>,
+    game: ScenarioGame<G, W, D>,
     { validate = true, strict = false, from }: { validate?: boolean; strict?: boolean; from?: { state: G['state']; events: readonly G['event'][] } } = {},
   ) {
+    this.game = game;
     this.s = from === undefined ? game.start() : structuredClone(from.state);
     this.checked = !validate;
     this.strict = strict;

@@ -1,5 +1,5 @@
-export { Sheet, RotatePanel } from './Sheet';
-export { useSecondTap } from './secondTap';
-export { useDock } from './useDock';
-export { Scaled } from './commitTap';
-export { scaleFor, useCommitTap } from './commitHook';
+export { Sheet, RotatePanel } from './Sheet.tsx';
+export { useSecondTap } from './secondTap.ts';
+export { useDock } from './useDock.ts';
+export { Scaled } from './commitTap.tsx';
+export { scaleFor, useCommitTap } from './commitHook.ts';

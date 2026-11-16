@@ -1,7 +1,7 @@
 // Node only (reads the disk): import it from a game's check script, never from the app.
 import fs from 'node:fs';
 import path from 'node:path';
-import type { SoundTable } from './player';
+import type { SoundTable } from './player.ts';
 
 export interface SoundCheckOptions {
   /** Names with no file yet: a cue name, `layer:<name>`, `once:<name>` or `ambience:<name>`. */

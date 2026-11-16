@@ -1,6 +1,6 @@
 import './story.css';
 import type { ReactNode } from 'react';
-import { pictureView, sheetView, type Story } from './story';
+import { pictureView, sheetView, type Story } from './story.ts';
 
 export type StorySheetProps = {
   story: Story;

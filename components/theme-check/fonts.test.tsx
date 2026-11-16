@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { phoneFontFindings, fontSizeFindings, smallText, type FontPage } from './fonts';
+import { phoneFontFindings, fontSizeFindings, smallText, type FontPage } from './fonts.ts';
 
 const pages: Record<string, string> = {
   '/a': '<p style="font-size:30px">Big</p><span style="font-size:12px">Tiny</span><i hidden style="font-size:5px">Gone</i><b style="display:none;font-size:5px">No</b>',

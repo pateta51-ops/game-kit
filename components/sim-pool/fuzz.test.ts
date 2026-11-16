@@ -2,7 +2,7 @@ import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { afterAll, describe, expect, it } from 'vitest';
-import { codeVersion, gitShort, formatBands, fuzz, fuzzMain, runResumable, sourceHash, type Band, type SanityBands } from './index';
+import { codeVersion, gitShort, formatBands, fuzz, fuzzMain, runResumable, sourceHash, type Band, type SanityBands } from './index.ts';
 
 const module = new URL('./fake/faulty.ts', import.meta.url).href;
 const good = new URL('./fake/game.ts', import.meta.url).href;

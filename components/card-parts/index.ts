@@ -1,3 +1,3 @@
-export * from './layout'
-export * from './text'
-export * from './imageCache'
+export * from './layout.ts'
+export * from './text.ts'
+export * from './imageCache.ts'

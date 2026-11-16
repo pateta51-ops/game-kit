@@ -1,6 +1,6 @@
 import './story.css';
 import type { ReactNode } from 'react';
-import { pageView, type Node, type Page, type Texts } from './page';
+import { pageView, type Node, type Page, type Texts } from './page.ts';
 
 export type PageViewProps = { page: Page; texts: Texts; log: readonly string[]; overlay?: Texts; renderCard?: (card: string) => ReactNode; renderIcon?: (icon: string) => ReactNode };
 

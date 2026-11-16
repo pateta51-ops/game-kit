@@ -3,7 +3,7 @@
 The size gate for a vite build: gzips `index.html` and what it loads at once, and fails over the game's limits.
 
 ```
-tsx kit/bundle-size/check-bundle-size.ts --initial-budget 2097152 --chunk-limit 512000 [--dir dist] [--json report.json]
+node kit/bundle-size/check-bundle-size.ts --initial-budget 2097152 --chunk-limit 512000 [--dir dist] [--json report.json]
 ```
 
 Without `--dir` it builds into `.cache/size-build` first. Exit codes: 0 within the limits, 1 over, 2 no build or bad usage.

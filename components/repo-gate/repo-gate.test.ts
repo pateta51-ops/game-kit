@@ -20,7 +20,7 @@ import {
   namesPattern,
   readTracked,
   type TrackedFile,
-} from './repo-gate';
+} from './repo-gate.ts';
 
 const MB = 1024 * 1024;
 const RUNNER = 'ci' + '-box';

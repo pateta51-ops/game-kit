@@ -1,6 +1,6 @@
 // Impact feel as pure arithmetic on time (ms) and a seed: hit stop, trauma shake with a frequency cap, afterimages,
 // and a flash limiter. Opt-in; nothing here draws or reads the page.
-import { clamp, pulse } from './particles';
+import { clamp, pulse } from './particles.ts';
 
 /** Hit stop: the time the picture shows when the clock reads `t`. The picture holds at `contact` for `hold` ms, the
  * rest runs on; shorten the beat's impact by `hold` to keep the total unchanged. `kill` holds longer. */

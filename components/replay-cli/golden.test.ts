@@ -6,11 +6,11 @@ import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
-import { inCause, restoreSave, ruleCause, type SaveFile, type TaskHandler } from '../engine-core/index';
-import { COUNTER, type Counter } from '../engine-core/fake/counter';
-import * as fake from './fake-golden';
-import { blankContentHashes, checkGoldens, GOLDEN_SAVED_AT, goldenGameSpec, playGolden, recordGames, replayGames, run, type CrossGame, type GoldenModule, type GoldenSpec } from './golden';
-import { pathDiff, type Io } from './replay';
+import { inCause, restoreSave, ruleCause, type SaveFile, type TaskHandler } from '../engine-core/index.ts';
+import { COUNTER, type Counter } from '../engine-core/fake/counter.ts';
+import * as fake from './fake-golden.ts';
+import { blankContentHashes, checkGoldens, GOLDEN_SAVED_AT, goldenGameSpec, playGolden, recordGames, replayGames, run, type CrossGame, type GoldenModule, type GoldenSpec } from './golden.ts';
+import { pathDiff, type Io } from './replay.ts';
 
 type Mod = GoldenModule<Counter, { adds: number }>;
 const mod: Mod = { simGame: fake.simGame, specs: fake.goldens };
@@ -346,7 +346,7 @@ describe('golden.ts command line', () => {
     const dir = mkdtempSync(join(tmpdir(), 'golden-cli-'));
     try {
       const cli = (...args: string[]) =>
-        spawnSync(process.execPath, ['--import', 'tsx', fileURLToPath(new URL('./golden.ts', import.meta.url)), ...args, '--game', fileURLToPath(new URL('./fake-golden.ts', import.meta.url))], { encoding: 'utf8', timeout: 50_000 });
+        spawnSync(process.execPath, [fileURLToPath(new URL('./golden.ts', import.meta.url)), ...args, '--game', fileURLToPath(new URL('./fake-golden.ts', import.meta.url))], { encoding: 'utf8', timeout: 50_000 });
       expect(cli('check', join(dir, 'gold')).status).toBe(1);
       const up = cli('check', join(dir, 'gold'), '--update-golden');
       expect(up.status, up.stderr).toBe(0);

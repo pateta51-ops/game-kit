@@ -3,7 +3,7 @@ import call from './fake/call.json';
 import gain from './fake/gain.json';
 import roll from './fake/roll.json';
 import layout from './fake/stage.layout.json';
-import { createMotionPlayer, createVerbs, mountMotionLab, stageFromLayout, type Layout, type MotionSpec, type Speed } from './index';
+import { createMotionPlayer, createVerbs, mountMotionLab, stageFromLayout, type Layout, type MotionSpec, type Speed } from './index.ts';
 
 const specs = { gain: gain as unknown as MotionSpec, roll: roll as unknown as MotionSpec, call: call as unknown as MotionSpec };
 

@@ -2,8 +2,8 @@ import { act, fireEvent, render, screen } from '@testing-library/react';
 import { lazy } from 'react';
 import { create } from 'zustand';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import type { Route } from './index';
-import { AppFrame, startApp, type RouteDef } from './ui';
+import type { Route } from './index.ts';
+import { AppFrame, startApp, type RouteDef } from './ui.ts';
 
 type N = 'home' | 'play' | 'later' | 'broken' | 'flaky';
 

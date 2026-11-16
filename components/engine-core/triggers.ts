@@ -3,11 +3,11 @@
 // `simultaneously` (apply all, capture follow-ups, then resolve). netrunner engine.clj queue-event, create-instances,
 // trigger-event-simult and the priority table (MIT, design); ArkhamHorror / MarvelChampions Simultaneously and
 // captureQueueT (no licence: idea only). Written new.
-import { draftOf } from './ctx';
-import { triggersOver } from './durations';
-import { EngineBugError } from './errors';
-import { timingOf, type Occurrence, type TimingConfig } from './timing';
-import type { Ctx, GameTypes, HandlerTable, KernelPrompt, KernelTask } from './types';
+import { draftOf } from './ctx.ts';
+import { triggersOver } from './durations.ts';
+import { EngineBugError } from './errors.ts';
+import { timingOf, type Occurrence, type TimingConfig } from './timing.ts';
+import type { Ctx, GameTypes, HandlerTable, KernelPrompt, KernelTask } from './types.ts';
 
 export type TriggerOrder = 'silent' | 'interactive' | { readonly auto: string };
 /** What the game's `triggersFor` returns: an ability of `source`, controlled by `player`, that answers the occurrence. */

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { CONTENT, COUNTER, RULES, type Counter } from '../engine-core/fake/counter';
-import { answerWords, buildScript, driverLine, lineDump, NEXT, playScript, playTutorialE2E, scriptDoc, stepSelector, type TutorialGame, type TutorialPage, type TutorialStep } from './index';
+import { CONTENT, COUNTER, RULES, type Counter } from '../engine-core/fake/counter.ts';
+import { answerWords, buildScript, driverLine, lineDump, NEXT, playScript, playTutorialE2E, scriptDoc, stepSelector, type TutorialGame, type TutorialPage, type TutorialStep } from './index.ts';
 
 const GAME: TutorialGame<Counter> = {
   rules: COUNTER,

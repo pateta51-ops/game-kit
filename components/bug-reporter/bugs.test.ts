@@ -3,16 +3,16 @@
 // report whose screenshot GitHub refuses without it (downloading the whole report instead). Each failure path that made
 // filing fail is here: no token, a refused token, offline, a network error or timeout, the rate limit, 4xx and 5xx.
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { collectReport } from './collect';
-import { startTestGame } from './test-utils';
-import { MAX_ATTACHMENT_BASE64, MAX_ISSUE_BODY } from './config';
-import { fakeGitHub } from './fakeGitHub';
-import { fileAll, fileQueued, NO_TOKEN, useFiling } from './fileAll';
-import { browserTransport, fileReport, FilingError, type GhRequest, type GhResponse } from './github';
-import { issueBody, reportIdLine } from './issue';
-import { queueReport, unqueueReport, useQueue } from './queue';
-import { LOG_LINES, parseReport, reportFileName, type BugReport } from './report';
-import { readToken, tokenKey, useToken } from './token';
+import { collectReport } from './collect.ts';
+import { startTestGame } from './test-utils.ts';
+import { MAX_ATTACHMENT_BASE64, MAX_ISSUE_BODY } from './config.ts';
+import { fakeGitHub } from './fakeGitHub.ts';
+import { fileAll, fileQueued, NO_TOKEN, useFiling } from './fileAll.ts';
+import { browserTransport, fileReport, FilingError, type GhRequest, type GhResponse } from './github.ts';
+import { issueBody, reportIdLine } from './issue.ts';
+import { queueReport, unqueueReport, useQueue } from './queue.ts';
+import { LOG_LINES, parseReport, reportFileName, type BugReport } from './report.ts';
+import { readToken, tokenKey, useToken } from './token.ts';
 
 // built at run time: this file holds nothing shaped like a token (the repository gate would refuse it)
 const PLANTED = ['github', 'pat', 'PLANTED0TOKEN0FOR0THE0LEAK0TEST'].join('_');

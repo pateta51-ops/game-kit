@@ -10,7 +10,7 @@ import {
   seedRng,
   shuffleInPlace,
   type RngState,
-} from './index';
+} from './index.ts';
 
 const KNOWN: { seed: string; words: RngState; first6: number[]; afterSix: RngState }[] = [
   {

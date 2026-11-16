@@ -1,5 +1,5 @@
-import { addCount, crossOut, forget, isCrossed, count, has, record, reward, setCount, setCrossOut, setHas, setInsert, setRemove, type CampaignLog, type LedgerEntry } from './log';
-import { played, stepKey, type CampaignSave, type NextStep, type Step, type StepKind } from './steps';
+import { addCount, crossOut, forget, isCrossed, count, has, record, reward, setCount, setCrossOut, setHas, setInsert, setRemove, type CampaignLog, type LedgerEntry } from './log.ts';
+import { played, stepKey, type CampaignSave, type NextStep, type Step, type StepKind } from './steps.ts';
 
 /** A test over the log (and, between games, the save): data, or a function for anything else. */
 export type Cond =

@@ -1,12 +1,12 @@
-// tsx components/perf/cli.ts --module <file> [--games N] [--driver D] [--seed S] [--warmup N] [--repeats N] [--attempts N]
+// node components/perf/cli.ts --module <file> [--games N] [--driver D] [--seed S] [--warmup N] [--repeats N] [--attempts N]
 //   [--budget bucket.stat=ms]... [--json <path>]
 // Exit codes: 0 within budget, 1 over budget, 2 bad usage, a module that cannot be loaded or a game that failed.
 import { writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
-import type { GameTypes } from '../engine-core/index';
-import type { GameSpec } from '../sim-pool/play';
-import { formatReport, measure, overBudget, type Budgets, type PerfGame, type PerfReport } from './perf';
+import type { GameTypes } from '../engine-core/index.ts';
+import type { GameSpec } from '../sim-pool/play.ts';
+import { formatReport, measure, overBudget, type Budgets, type PerfGame, type PerfReport } from './perf.ts';
 
 /** What the module named by `--module` exports: `perfGame` (or sim-pool's `simGame`), and optionally the rest. */
 export interface PerfModule {

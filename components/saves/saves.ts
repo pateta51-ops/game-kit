@@ -13,8 +13,8 @@ import {
   type RestoreResult,
   type SaveFile,
   type SaveFormat,
-} from '../engine-core';
-import { makeKv, type KvBackend } from './kv';
+} from '../engine-core/index.ts';
+import { makeKv, type KvBackend } from './kv.ts';
 
 export interface StoredSave<G extends GameTypes> {
   readonly name: string;

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { nextTip, seenStore, suggest, type Tip } from './coach';
+import { nextTip, seenStore, suggest, type Tip } from './coach.ts';
 
 type S = { row: number };
 const tips: Tip<S, string>[] = [

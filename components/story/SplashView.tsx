@@ -1,8 +1,8 @@
 import './story.css';
 import { useEffect, useRef, type ReactNode } from 'react';
-import { splashAutoCloseMs, type Splash } from './splash';
-import { pictureView } from './story';
-import { prefersReduced } from './panels';
+import { splashAutoCloseMs, type Splash } from './splash.ts';
+import { pictureView } from './story.ts';
+import { prefersReduced } from './panels.ts';
 
 export type SplashViewProps = { splash: Splash; onClose: () => void; reduced?: boolean; fileExists?: (file: string) => boolean; renderFile?: (file: string) => ReactNode };
 

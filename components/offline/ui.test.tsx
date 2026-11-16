@@ -1,8 +1,8 @@
 import { act, fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { IllegalTransitionError, transition } from '../state-machines/machine';
-import { applyUpdate, autoApply, pageHost, registerServiceWorker, RELOAD_FALLBACK_MS, shouldRegister, UPDATE_MACHINE, useUpdate } from './index';
-import { UpdateLine } from './ui';
+import { IllegalTransitionError, transition } from '../state-machines/machine.ts';
+import { applyUpdate, autoApply, pageHost, registerServiceWorker, RELOAD_FALLBACK_MS, shouldRegister, UPDATE_MACHINE, useUpdate } from './index.ts';
+import { UpdateLine } from './ui.ts';
 
 const PROD = { prod: true, e2e: false, local: false };
 const HTTPS = { protocol: 'https:', hostname: 'pc.example' };

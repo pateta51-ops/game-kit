@@ -5,7 +5,7 @@ import { execFileSync } from 'node:child_process';
 import { cpSync, existsSync, lstatSync, mkdirSync, rmSync, writeFileSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { dirname, isAbsolute, join, parse, relative, resolve } from 'node:path';
-import { flags, isMain, stdio, type Io } from './args';
+import { flags, isMain, stdio, type Io } from './args.ts';
 
 const git = (cwd: string, args: string[]): string => execFileSync('git', args, { cwd, encoding: 'utf-8', maxBuffer: 64 * 1024 * 1024 });
 
@@ -25,7 +25,7 @@ This folder is a copy of ${source.name}, made by dossier-sync. Change the source
 ${exclude.length > 0 ? `- Left out: ${exclude.map((file) => `\`${file}\``).join(', ')}\n` : ''}`;
 }
 
-const USAGE = 'usage: tsx dossier-sync.ts --source <git checkout> --target <dir> [--exclude <path>]... [--name <what the source is called>] [--config <json>]';
+const USAGE = 'usage: node dossier-sync.ts --source <git checkout> --target <dir> [--exclude <path>]... [--name <what the source is called>] [--config <json>]';
 
 export function run(args: readonly string[], io: Io = stdio): number {
   try {

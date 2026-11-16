@@ -1,7 +1,7 @@
 // Copy to your engine (e.g. src/engine/verbs.ts), point the imports at kit/card-language and kit/engine-core, set G to
 // your GameTypes bundle and replace the placeholder verb. One union member and one table row per verb.
-import type { GameTypes } from '../../engine-core/index';
-import { str, verbHandler, type VerbTable } from '../index';
+import type { GameTypes } from '../../engine-core/index.ts';
+import { str, verbHandler, type VerbTable } from '../index.ts';
 
 type G = GameTypes; // your game's GameTypes bundle
 

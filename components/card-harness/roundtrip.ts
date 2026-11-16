@@ -1,6 +1,6 @@
 // K114: every card put in a minimal state survives a JSON round trip (no non-plain values), and the rules give the same result from the copy.
-import { advance, type Draft, type GameTypes } from '../engine-core';
-import { Scenario, type ScenarioGame } from './scenario';
+import { advance, type Draft, type GameTypes } from '../engine-core/index.ts';
+import { Scenario, type ScenarioGame } from './scenario.ts';
 
 /** Paths where `a` and `b` differ (an undefined field counts as missing; a Map, Set, Date or function differs from its JSON copy). */
 export function diffPaths(a: unknown, b: unknown, path = '$'): string[] {

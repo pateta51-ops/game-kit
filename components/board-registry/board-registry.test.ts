@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import type { Thing } from './index'
-import { define, emptyRegistry, get, highlighted, inSpace, mark, moveTo, remove, stackLayout, unknownOffered } from './index'
+import type { Thing } from './index.ts'
+import { define, emptyRegistry, get, highlighted, inSpace, mark, moveTo, remove, stackLayout, unknownOffered } from './index.ts'
 
 const reg = () => ([
   { type: 'space', id: 'A' }, { type: 'space', id: 'B' },

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
-import { buildIndex } from '../glossary/match'
-import { ruleIdFilter } from '../plain-text/index'
-import { plainSegs, transcribe, zoomLine, type Seg } from './index'
+import { buildIndex } from '../glossary/match.ts'
+import { ruleIdFilter } from '../plain-text/index.ts'
+import { plainSegs, transcribe, zoomLine, type Seg } from './index.ts'
 
 const icons = { gold: { label: 'gold', body: '<circle r="5"/>' }, dmg: { label: 'damage', body: '<path d="M0 0"/>' }, act: { label: 'action' } }
 const glossary = buildIndex([

@@ -2,6 +2,10 @@
 
 The shared code for the owner's digital board-game builds: the best version of each reusable component, taken from the games already built. Private. For new games.
 
+Breaking (v0.62): a game needs Node 22.18+, `allowImportingTsExtensions` in its tsconfig, `.ts` in its relative imports of modules kit CLIs load; tsx can go (docs/recipes/upgrade-kit.md).
+
+Needs Node 22.18 or newer: every kit tool runs with plain `node` (type stripping, no tsx or build step), so relative imports name their `.ts`/`.tsx` file and code uses erasable TypeScript syntax only (no enums, namespaces or parameter properties).
+
 ## For agents
 
 - [AGENTS.md](AGENTS.md): the rules for working here and in a game's `kit/` copy.

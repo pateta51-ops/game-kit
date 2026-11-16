@@ -1,9 +1,9 @@
 import { act, fireEvent, render, screen } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { resolutionSetting, type SettingsSchema } from '../settings/schema';
-import { createSettingsStore } from '../settings/store';
-import { fitBox, frameHost, shouldFrame, storedResolution } from './index';
-import { ResolutionFrame } from './ui';
+import { resolutionSetting, type SettingsSchema } from '../settings/schema.ts';
+import { createSettingsStore } from '../settings/store.ts';
+import { fitBox, frameHost, shouldFrame, storedResolution } from './index.ts';
+import { ResolutionFrame } from './ui.ts';
 
 const schema = {
   storageKey: 'test.res.settings',

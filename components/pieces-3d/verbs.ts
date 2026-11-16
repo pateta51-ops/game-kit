@@ -1,9 +1,9 @@
 // The pieces' own `shake`, `flip`, `move` and `settle`, registered over the effect library's: a die tumbles or turns, the ball
 // rolls by distance and rocks back to rest. Any other actor gets the library's verb.
-import type { VerbRegistry } from '../motion-frame';
-import { BUILT_IN, registerEffect, type EffectCtx } from '../effect-library';
-import { offRest, paintBall, rolled, type BallLook } from './ball';
-import { ID, rotAxis, type M3 } from './solids';
+import type { VerbRegistry } from '../motion-frame/index.ts';
+import { BUILT_IN, registerEffect, type EffectCtx } from '../effect-library/index.ts';
+import { offRest, paintBall, rolled, type BallLook } from './ball.ts';
+import { ID, rotAxis, type M3 } from './solids.ts';
 
 export interface PieceVerbOptions { ballLook?: () => BallLook | undefined; perTurn?: number }
 /** True while the WebGL dice layer is on (`p3-gl` on <html>). */

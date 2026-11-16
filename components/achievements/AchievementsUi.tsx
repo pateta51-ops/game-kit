@@ -1,6 +1,6 @@
 // Static screens (release 1.0): the list by family with progress bars, and the toast. No motion, no sound.
-import { byFamily, type AchievementDef, type Status } from './achievements';
-import { progressText, type Toast } from './toast';
+import { byFamily, type AchievementDef, type Status } from './achievements.ts';
+import { progressText, type Toast } from './toast.ts';
 import './achievements.css';
 
 export interface AchievementListProps {

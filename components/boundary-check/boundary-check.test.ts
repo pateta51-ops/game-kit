@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { boundaryFile, catalogueCheck, violationList } from './index';
+import { boundaryFile, catalogueCheck, violationList } from './index.ts';
 
 describe('boundary-check', () => {
   it('writes one expect-error import per path', () => {

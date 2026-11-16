@@ -1,5 +1,5 @@
 // Stub game: one move ("step"); after `target` steps the game is won. Replace with the game's own rules.
-import { draftOf, hashValue, seedRng, type AnswerAction, type Ctx, type Draft, type GameRules, type KernelPrompt, type KernelState } from '../../kit/engine-core/index';
+import { draftOf, hashValue, seedRng, type AnswerAction, type Ctx, type Draft, type GameRules, type KernelPrompt, type KernelState } from '../../kit/engine-core/index.ts';
 
 export interface StubTask { readonly kind: string; readonly answer?: readonly string[] }
 export interface StubEvent { readonly type: 'stepped'; readonly n: number; readonly seq: number }

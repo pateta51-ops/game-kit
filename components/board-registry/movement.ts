@@ -1,5 +1,5 @@
-import { entryMotions, type EntryOpts, type Motion, type Placed, type Rect } from '../effect-library/slots'
-import { inSpace, stackLayout, type Registry, type StackOpts } from './index'
+import { entryMotions, type EntryOpts, type Motion, type Placed, type Rect } from '../effect-library/slots.ts'
+import { inSpace, stackLayout, type Registry, type StackOpts } from './index.ts'
 
 export type MoveOpts = EntryOpts & {
   /** Piece-like types that are placed in their space (default piece, marker). */

@@ -2,8 +2,8 @@
 // Safe undo never goes back past a revealing action. (Jarl ran this with fast-check; the kit has no fast-check, so the
 // cases come from the seeded rng: 100 runs, fixed seed.)
 import { describe, expect, it } from 'vitest';
-import { appendAction, recordAction, applyAction, createGame, hashState, isRevealing, newHistory, randomInt, replay, seedRng, stateAt, undo, type History } from './index';
-import { CONTENT, COUNTER, playGame, type Counter } from './fake/counter';
+import { appendAction, recordAction, applyAction, createGame, hashState, isRevealing, newHistory, randomInt, replay, seedRng, stateAt, undo, type History } from './index.ts';
+import { CONTENT, COUNTER, playGame, type Counter } from './fake/counter.ts';
 
 const content = CONTENT;
 

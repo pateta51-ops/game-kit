@@ -2,7 +2,7 @@
 // rule that moved it or the effect record and the printed line it implements. Opt-in: `inCause` stamps the cause on the
 // events emitted inside it; a game that never calls it emits what it always did. `causeProblems` lists the counted
 // events without one (replay-cli refuses them in the goldens when the game module exports `causes`).
-import type { Ctx, GameTypes, KernelEvent } from './types';
+import type { Ctx, GameTypes, KernelEvent } from './types.ts';
 
 export type Cause = { readonly rule: string } | { readonly effect: string; readonly line: string };
 

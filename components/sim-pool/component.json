@@ -23,6 +23,5 @@
     ]
   },
   "needs": ["engine-core"],
-  "packages": ["tsx (worker threads run worker.ts under it)"],
   "imports": ["engine-core/fake/counter.ts (tests only, by fake/game.ts)"]
 }

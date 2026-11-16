@@ -2,10 +2,10 @@
 // viewport, screen, pixel ratio, safe-area insets, Home Screen display mode, touch pointer, orientation), so a report
 // filed from the owner's iPhone 16e settles the plan's [VERIFY] values.
 import 'fake-indexeddb/auto';
-import './test-utils';
+import './test-utils.ts';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { collectReport, deviceFacts } from './collect';
-import { parseReport } from './report';
+import { collectReport, deviceFacts } from './collect.ts';
+import { parseReport } from './report.ts';
 
 afterEach(() => {
   vi.unstubAllGlobals();

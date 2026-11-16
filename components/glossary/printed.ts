@@ -1,12 +1,12 @@
 // The printed-words check (lifted from 7th Inning Stretch scripts/glossary-check.ts, PRINTED): every entry's summary and
 // each body paragraph occurs in the game's source documents, icons and punctuation aside. Never a paraphrase.
-// CLI: tsx kit/glossary/printed.ts --entries <glossary.json> --source <file or folder> [--source ...]
+// CLI: node kit/glossary/printed.ts --entries <glossary.json> --source <file or folder> [--source ...]
 //        [--icon <regex>] [--strip <regex>]... [--letters <character class>] [--exempt <field>=<value>]...
 // Uses node:fs, so it is not exported from index.ts.
 import { readFileSync, readdirSync, statSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
-import type { GlossaryEntry } from './match';
+import type { GlossaryEntry } from './match.ts';
 
 export const PRINTED_ICON = /\{[a-z0-9-]+(?::[^}]*)?\}/g;
 

@@ -1,7 +1,7 @@
 // Bug reports: an in-memory GitHub for the unit tests and the dev server's simulation (window.bugReports, dev builds only).
 // It answers the requests fileReport makes; `fail` decides, per request, to answer with an error instead.
-import { bugRepo } from './config';
-import { type GhRequest, type GhResponse, type GhTransport } from './github';
+import { bugRepo } from './config.ts';
+import { type GhRequest, type GhResponse, type GhTransport } from './github.ts';
 
 export interface FakeIssue {
   number: number;

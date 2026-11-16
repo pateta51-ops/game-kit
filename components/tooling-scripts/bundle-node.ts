@@ -1,13 +1,13 @@
 // Bundles headless Node scripts (a simulator, its worker thread, benches) with esbuild into plain .mjs files, so they run
-// on `node` instead of tsx. No keepNames: tsx's transform keeps every function's name with a helper call on each closure
+// on `node` instead of a loader. No keepNames: a loader's transform keeps every function's name with a helper call on each closure
 // it creates, which cost about a quarter of a simulator's time. Keep --outdir as deep under the root as the entries are
 // (scripts/x.ts -> .bundle/node/x.mjs), so paths the scripts build from import.meta.url still resolve. Packages stay
 // external. Needs the game's `esbuild`. Exit codes: 0 done, 2 usage or a failed build.
 import { build } from 'esbuild';
 import { resolve } from 'node:path';
-import { flags, isMain, stdio, type Io } from './args';
+import { flags, isMain, stdio, type Io } from './args.ts';
 
-const USAGE = 'usage: tsx bundle-node.ts --entry <file>... --outdir <dir> [--root .] [--target node22] [--config <json>]';
+const USAGE = 'usage: node bundle-node.ts --entry <file>... --outdir <dir> [--root .] [--target node22] [--config <json>]';
 
 export async function run(args: readonly string[], io: Io = stdio): Promise<number> {
   try {

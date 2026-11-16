@@ -1,7 +1,7 @@
 // The fake counter with a game-side leak: a module-level count of the games this thread has played changes the driver.
-import type { Counter } from '../../engine-core/fake/counter';
-import { randomDriver, type SimGame } from '../index';
-import { simGame as base } from './game';
+import type { Counter } from '../../engine-core/fake/counter.ts';
+import { randomDriver, type SimGame } from '../index.ts';
+import { simGame as base } from './game.ts';
 
 let played = 0;
 export const simGame: SimGame<Counter, { adds: number }> = {

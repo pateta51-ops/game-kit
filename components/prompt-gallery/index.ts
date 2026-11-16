@@ -1,2 +1,2 @@
-export * from './registry';
-export * from './coverage';
+export * from './registry.ts';
+export * from './coverage.ts';

@@ -1,12 +1,10 @@
 // Runs the games of a simulation in this thread or on worker threads (warps scripts/sim/pool.ts): each worker asks for
 // its next game when it finishes one, and records come back in index order, so results never depend on the number of
 // workers. A worker that dies (ebr scripts/sim/pool.ts) turns the game it held into a crash record and a new worker
-// takes the next games. A worker loads the game's module (`simGame` export); under tsx it registers tsx itself.
-import { createRequire } from 'node:module';
-import { pathToFileURL } from 'node:url';
+// takes the next games. A worker loads the game's module (`simGame` export).
 import { Worker } from 'node:worker_threads';
-import { isChecking, isFreezing, setInvariantChecking, setStateFreezing, type GameTypes } from '../engine-core/index';
-import { crashRecord, playOne, type GameSpec, type SimGame, type SimRecord } from './play';
+import { isChecking, isFreezing, setInvariantChecking, setStateFreezing, type GameTypes } from '../engine-core/index.ts';
+import { crashRecord, playOne, type GameSpec, type SimGame, type SimRecord } from './play.ts';
 
 export interface RunRequest {
   /** The URL of the module that exports `simGame`. */
@@ -14,7 +12,7 @@ export interface RunRequest {
   readonly specs: readonly GameSpec[];
   /** Invariant checks on (default true). */
   readonly invariants?: boolean;
-  /** A bundled worker (the bundle of worker.ts); default worker.ts under tsx. */
+  /** A bundled worker (the bundle of worker.ts); default worker.ts. */
   readonly worker?: string;
   /** Stop each game after this many applied actions (a replay to a step). */
   readonly until?: number | undefined;
@@ -61,10 +59,7 @@ export async function runInThread(request: RunRequest, onRecord?: (r: SimRecord)
 
 function boot(request: RunRequest, input: WorkerInput): Worker {
   if (request.worker !== undefined) return new Worker(new URL(request.worker), { workerData: input });
-  const api = pathToFileURL(createRequire(import.meta.url).resolve('tsx/esm/api')).href;
-  const entry = new URL('./worker.ts', import.meta.url).href;
-  const code = `import { register } from ${JSON.stringify(api)}; register(); await import(${JSON.stringify(entry)});`;
-  return new Worker(code, { eval: true, workerData: input });
+  return new Worker(new URL('./worker.ts', import.meta.url), { workerData: input });
 }
 
 async function lane(request: RunRequest, next: () => GameSpec | undefined, collect: (r: SimRecord) => void): Promise<void> {

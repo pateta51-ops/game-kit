@@ -1,5 +1,5 @@
-import { count, emptyLog, fieldKey, record, setCount, setInsert, setOf, type CampaignLog, type FieldDef } from './log';
-import { detour, newCampaign, stepKey, type CampaignSave, type Step, type StepKind } from './steps';
+import { count, emptyLog, fieldKey, record, setCount, setInsert, setOf, type CampaignLog, type FieldDef } from './log.ts';
+import { detour, newCampaign, stepKey, type CampaignSave, type Step, type StepKind } from './steps.ts';
 
 /** An extra thing the game lets a player do between scenarios (an upgrade, a side scenario); `when` hides it. */
 export interface BetweenAction { id: string; label: string; kind: StepKind; step: string; when?: (s: CampaignSave) => boolean }

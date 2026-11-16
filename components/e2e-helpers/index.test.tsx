@@ -1,7 +1,7 @@
 import 'fake-indexeddb/auto';
 import { describe, expect, it, vi } from 'vitest';
-import { expectAccessible, type Axe, type Violation } from './a11y';
-import { VIEWPORTS, autosaveSettled, expectNoHorizontalScroll, finishAnimations, idbCount, motionsDone, settle, shoot, watchErrors, type EvalPage, type WatchPage } from './index';
+import { expectAccessible, type Axe, type Violation } from './a11y.ts';
+import { VIEWPORTS, autosaveSettled, expectNoHorizontalScroll, finishAnimations, idbCount, motionsDone, settle, shoot, watchErrors, type EvalPage, type WatchPage } from './index.ts';
 
 // as Playwright does: each function is rebuilt from its source and run with only its argument, so one that closes over
 // a module binding fails here

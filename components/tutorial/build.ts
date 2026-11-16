@@ -1,9 +1,9 @@
 // Tooling for writing a script: build it from a seed's line of play (a seed search's driver line) and the game's narration,
 // list each step's answers in the words on screen, and dump a line for reading.
-import { applyAction, type AnswerAction, type GameTypes } from '../engine-core';
-import type { TutorialGame } from './game';
-import { startRun } from './play';
-import type { ExpectedEvent, TutorialScript, TutorialStep } from './script';
+import { applyAction, type AnswerAction, type GameTypes } from '../engine-core/index.ts';
+import type { TutorialGame } from './game.ts';
+import { startRun } from './play.ts';
+import type { ExpectedEvent, TutorialScript, TutorialStep } from './script.ts';
 
 /** One step to build: it takes the next `n` answers of the line (0: Next); `auto` plays them on Next. */
 export interface StepPlan {

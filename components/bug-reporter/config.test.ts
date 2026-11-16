@@ -1,13 +1,13 @@
 import { describe, expect, it, vi } from 'vitest';
-import { collectReport } from './collect';
-import { bugConfig, configureBugReporter } from './config';
-import { parseReport } from './report';
-import './test-utils';
+import { collectReport } from './collect.ts';
+import { bugConfig, configureBugReporter } from './config.ts';
+import { parseReport } from './report.ts';
+import './test-utils.ts';
 
 describe('configuration', () => {
   it('using the reporter before configureBugReporter throws a clear error', async () => {
     vi.resetModules();
-    const fresh = await import('./config');
+    const fresh = await import('./config.ts');
     expect(() => fresh.bugConfig()).toThrow('configureBugReporter was not called.');
   });
 

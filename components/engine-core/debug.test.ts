@@ -1,7 +1,7 @@
 // K100: debug edits as engine actions.
 import { describe, expect, it } from 'vitest';
-import { applyAction, createGame, debugVerbs, draftOf, hashState, replay, validateAction, type AnswerAction, type DebugAction, type GameRules } from './index';
-import { CONTENT, COUNTER, RULES, type Counter, type CounterState } from './fake/counter';
+import { applyAction, createGame, debugVerbs, draftOf, hashState, replay, validateAction, type AnswerAction, type DebugAction, type GameRules } from './index.ts';
+import { CONTENT, COUNTER, RULES, type Counter, type CounterState } from './fake/counter.ts';
 
 type Dbg = Omit<Counter, 'action'> & { readonly action: AnswerAction | DebugAction };
 const G: GameRules<Dbg> = {

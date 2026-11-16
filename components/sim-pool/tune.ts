@@ -2,9 +2,9 @@
 // games, and paired validation of a tuned set against a baseline on fresh seeds.
 import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
-import type { SimRecord } from './play';
-import { runGames } from './pool';
-import { DriverRng } from './rng';
+import type { SimRecord } from './play.ts';
+import { runGames } from './pool.ts';
+import { DriverRng } from './rng.ts';
 
 export type Weights = Readonly<Record<string, number>>;
 

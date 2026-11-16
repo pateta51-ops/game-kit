@@ -2,7 +2,7 @@
 // write (a private window, blocked site data) is not an error: the values last for the session.
 import { create } from 'zustand';
 import { createJSONStorage, persist, type StateStorage } from 'zustand/middleware';
-import { defaults, readSettings, type SettingsSchema, type Values } from './schema';
+import { defaults, readSettings, type SettingsSchema, type Values } from './schema.ts';
 
 export const safeStorage: StateStorage = {
   getItem: (n) => {

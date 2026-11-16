@@ -1,1 +1,1 @@
-export { applyUpdate, autoApply, pageHost, registerServiceWorker, RELOAD_FALLBACK_MS, shouldRegister, UPDATE_MACHINE, useUpdate, type AutoApply, type PageHost, type SwEnv, type UpdateEvent, type UpdateState } from './register';
+export { applyUpdate, autoApply, pageHost, registerServiceWorker, RELOAD_FALLBACK_MS, shouldRegister, UPDATE_MACHINE, useUpdate, type AutoApply, type PageHost, type SwEnv, type UpdateEvent, type UpdateState } from './register.ts';

@@ -1,5 +1,5 @@
 import { describe, expect, expectTypeOf, it } from 'vitest';
-import { DriverRng, type Driver } from '../sim-pool/index';
+import { DriverRng, type Driver } from '../sim-pool/index.ts';
 import {
   PIPELINE,
   adviceProblems,
@@ -30,7 +30,7 @@ import {
   type HandlerRow,
   type Opponent,
   type Rand,
-} from './index';
+} from './index.ts';
 
 // A tiny fake game: the opponent holds cards and money; the other hand is hidden.
 interface State { money: number; mine: string[]; theirs: string[]; inPlay: string[] }

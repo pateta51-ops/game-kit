@@ -1,5 +1,5 @@
 // Beats as "a number and a place", derived from events by one table, and deltas by subtracting two states. Pure.
-import type { Rect } from './slots';
+import type { Rect } from './slots.ts';
 
 export type Tone = 'harm' | 'gain' | 'status' | 'guard' | 'info';
 export interface Beat { anchor: string; text: string; tone: Tone; at?: Rect }

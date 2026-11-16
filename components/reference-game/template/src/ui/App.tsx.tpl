@@ -1,10 +1,10 @@
-import { AppFrame, type RouteDef } from '../../kit/app-frame/ui';
-import { autoAnswer } from '../../kit/prompt-host/index';
-import { May, PickAmount, PickOptions, PromptHost, type Widgets } from '../../kit/prompt-host/ui';
-import { SavesScreen } from '../../kit/saves/ui';
-import { SettingsScreen } from '../../kit/settings/ui';
-import { cardText, viewOf, type RefPrompt, type RefView } from '../engine/api';
-import { saves, SCHEMA, useGame, useSettings } from './store';
+import { AppFrame, type RouteDef } from '../../kit/app-frame/ui.ts';
+import { autoAnswer } from '../../kit/prompt-host/index.ts';
+import { May, PickAmount, PickOptions, PromptHost, type Widgets } from '../../kit/prompt-host/ui.ts';
+import { SavesScreen } from '../../kit/saves/ui.ts';
+import { SettingsScreen } from '../../kit/settings/ui.ts';
+import { cardText, viewOf, type RefPrompt, type RefView } from '../engine/api.ts';
+import { saves, SCHEMA, useGame, useSettings } from './store.ts';
 
 type Name = 'menu' | 'play' | 'settings' | 'saves';
 const WIDGETS: Widgets<RefPrompt, RefView> = { pick: PickOptions, amount: PickAmount, may: May };

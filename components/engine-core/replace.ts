@@ -2,9 +2,9 @@
 // ContinuousEffects replacement loop (MIT, design: applied-set on the event, the affected player picks among several, a
 // one-use effect removes itself) and Forge ReplacementLayer / ReplacementResult (GPL-3.0, idea only: ordering classes,
 // result codes with `updated` = still happens with changed numbers). Written new.
-import { EngineBugError } from './errors';
-import { chooserOf, inBatch, occurrenceDraft, occurrenceOf, openWindow, promptOf, startTask, type Occurrence, type TimingConfig, type TimingTask } from './timing';
-import type { Ctx, GameTypes, HandlerTable } from './types';
+import { EngineBugError } from './errors.ts';
+import { chooserOf, inBatch, occurrenceDraft, occurrenceOf, openWindow, promptOf, startTask, type Occurrence, type TimingConfig, type TimingTask } from './timing.ts';
+import type { Ctx, GameTypes, HandlerTable } from './types.ts';
 
 export type ReplaceResult = 'kept' | 'updated' | 'replaced' | 'prevented' | 'skipped';
 /** A replacement effect the game offers; `cls` is the game's ordering class (lowest first). */

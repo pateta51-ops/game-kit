@@ -22,7 +22,10 @@ export interface FakeGain {
 }
 export class FakeParam {
   events: { t: number; v: number; ramp: boolean; exp?: boolean }[] = [];
-  constructor(public value = 1) {}
+  value: number;
+  constructor(value = 1) {
+    this.value = value;
+  }
   setValueAtTime(v: number, t: number): void {
     this.events.push({ t, v, ramp: false });
   }

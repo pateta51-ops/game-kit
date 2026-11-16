@@ -1,7 +1,7 @@
 import { act, fireEvent, render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
-import { PanelReader, SplashView } from './ui';
-import type { PanelSheet } from './index';
+import { PanelReader, SplashView } from './ui.ts';
+import type { PanelSheet } from './index.ts';
 
 const sheet: PanelSheet = { id: 's', picture: { note: 'A page', w: 1000, h: 1000 }, credit: 'By X', beats: [
   { rect: { x: 0, y: 0, w: 100, h: 100 }, caption: 'One', sfx: 'BOOM' },

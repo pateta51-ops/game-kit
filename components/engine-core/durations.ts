@@ -3,11 +3,11 @@
 // lasting.ts LastingDuration with endOfEvent ifCancelled, AGPL: idea only). K112: layered recompute in game-declared
 // layers, timestamp set on activation, optional `after` dependency (XMage ContinuousEffects.java apply / applyLayer,
 // MIT, design). Written new. Opt-in: `state.timing.effects` appears only once a game calls `addEffect`.
-import { own } from './cow';
-import type { Draft } from './draft';
-import { EngineBugError } from './errors';
-import { timingOf, type TimingState } from './timing';
-import type { Ctx, GameTypes } from './types';
+import { own } from './cow.ts';
+import type { Draft } from './draft.ts';
+import { EngineBugError } from './errors.ts';
+import { timingOf, type TimingState } from './timing.ts';
+import type { Ctx, GameTypes } from './types.ts';
 
 export type Duration =
   | { readonly until: 'endOfTurn' | 'endOfRound' | 'endOfPhase'; readonly phase?: string }

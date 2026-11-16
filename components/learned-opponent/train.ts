@@ -1,10 +1,10 @@
 // Self-play training on the sim-pool (public API only, K125): each generation plays games with the weights in `file`,
 // every record carries the per-seat features at its decision points, then TD(lambda) updates the net and writes the file.
-import type { GameTypes } from '../engine-core/index';
-import { runGames, type GameSpec, type SimGame } from '../sim-pool/index';
-import { actorOf, type Model } from './driver';
-import { readWeights, writeWeights, type Net } from './net';
-import { tdTrain, type TdOptions } from './td';
+import type { GameTypes } from '../engine-core/index.ts';
+import { runGames, type GameSpec, type SimGame } from '../sim-pool/index.ts';
+import { actorOf, type Model } from './driver.ts';
+import { readWeights, writeWeights, type Net } from './net.ts';
+import { tdTrain, type TdOptions } from './td.ts';
 
 export interface Trace {
   readonly steps: { seat: number; x: number[] }[];

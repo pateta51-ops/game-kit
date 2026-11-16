@@ -2,9 +2,9 @@
 // that runs on engine-core and a text generator that prints the card's words from the same step. Shape from Jarl's
 // OPS / DESCRIBE (registry, validator, field checks), STCC's op table (`null` = not built yet) and middle-earth-player's
 // family manifests (one verb per family). The game owns every verb.
-import { EngineBugError, type Ctx, type GameTypes, type KernelTask } from '../engine-core/index';
-import { strictProblems, type Grammar } from '../card-harness/strict';
-import { ruleIdFilter, type RuleIdFilter } from '../plain-text/index';
+import { EngineBugError, type Ctx, type GameTypes, type KernelTask } from '../engine-core/index.ts';
+import { strictProblems, type Grammar } from '../card-harness/strict.ts';
+import { ruleIdFilter, type RuleIdFilter } from '../plain-text/index.ts';
 
 /** A field's check: null when it holds, else what it must be. `optional` fields may be absent. */
 export type Field = ((v: unknown) => string | null) & { readonly optional?: true };

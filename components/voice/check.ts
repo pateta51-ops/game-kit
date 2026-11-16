@@ -1,6 +1,6 @@
 // Node only (reads the disk): import it from a game's check script, never from the app.
-import { checkSoundFiles, type SoundCheckOptions } from '../sound-player/check';
-import { voiceCues, type VoiceTable } from './voice';
+import { checkSoundFiles, type SoundCheckOptions } from '../sound-player/check.ts';
+import { voiceCues, type VoiceTable } from './voice.ts';
 
 /** Lines of problems: the sound player's file check on every file of the line table, plus lines with no file. `missing` names are file paths. */
 export function checkVoiceFiles(t: VoiceTable, dir: string, o: SoundCheckOptions = {}): string[] {

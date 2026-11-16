@@ -1,9 +1,9 @@
 // Seed search: try seeds until a line of play on one shows what the game wants (a predicate over its events). The line
 // is the script played on the seed, or a game's driver playing from the setup.
-import { applyAction, type AnswerAction, type GameTypes } from '../engine-core';
-import type { TutorialGame } from './game';
-import { formatFailure, playStep, startRun } from './play';
-import type { TutorialScript } from './script';
+import { applyAction, type AnswerAction, type GameTypes } from '../engine-core/index.ts';
+import type { TutorialGame } from './game.ts';
+import { formatFailure, playStep, startRun } from './play.ts';
+import type { TutorialScript } from './script.ts';
 
 export interface SeedLine<G extends GameTypes> {
   readonly events: readonly G['event'][];

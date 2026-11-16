@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { available, begin, checkGraph, chooseNode, count, emptyLog, end, graphNext, has, holds, inGameAt, instructions, newCampaign, nodeChoice, nodeStep, record, rewardTotal, runBetween, setHas, type CampaignGraph, type CampaignSave, type Instruction } from './index';
+import { available, begin, checkGraph, chooseNode, count, emptyLog, end, graphNext, has, holds, inGameAt, instructions, newCampaign, nodeChoice, nodeStep, record, rewardTotal, runBetween, setHas, type CampaignGraph, type CampaignSave, type Instruction } from './index.ts';
 
 const I = (id: string, x: Partial<Instruction<string>>): Instruction<string> => ({ id, text: `printed ${id}`, cite: 'p.12', ...x });
 const choice: CampaignGraph<string> = {

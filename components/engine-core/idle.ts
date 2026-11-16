@@ -1,9 +1,9 @@
 // K91 (netrunner `:change-in-game-state`, MIT; design only): "does this change the game?" is asked apart from "is this
 // legal?". A legal option that would change nothing carries `idle` (the game's words); it stays enabled and is never
 // swallowed: the UI warns, the game resolves it loudly. `idleProblems` probes each option and reports marks that lie.
-import { applyAction } from './apply';
-import { canonicalJson } from './canonical';
-import type { GameRules, GameTypes, KernelOption } from './types';
+import { applyAction } from './apply.ts';
+import { canonicalJson } from './canonical.ts';
+import type { GameRules, GameTypes, KernelOption } from './types.ts';
 
 /** `options` with `idle` set where `why(id)` gives words (left as they are where it gives undefined). */
 export const markIdle = <O extends KernelOption>(options: readonly O[], why: (id: string) => string | undefined): O[] =>

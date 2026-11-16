@@ -206,14 +206,22 @@ export function whereIs(m: AnyMachine): string {
 }
 
 export class IllegalTransitionError extends Error {
+  readonly machine: string;
+  readonly state: string;
+  readonly event: string;
+  readonly allowed: readonly string[];
   constructor(
-    readonly machine: string,
-    readonly state: string,
-    readonly event: string,
-    readonly allowed: readonly string[],
+    machine: string,
+    state: string,
+    event: string,
+    allowed: readonly string[],
     message: string,
   ) {
     super(message);
+    this.machine = machine;
+    this.state = state;
+    this.event = event;
+    this.allowed = allowed;
     this.name = 'IllegalTransitionError';
   }
 }

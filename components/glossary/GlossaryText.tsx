@@ -5,9 +5,9 @@
 //   'hold'   inside a control a press already answers: a press still does what the control does, and the entry opens on a
 //            right-click or a long press, so a lookup never answers a decision by accident.
 import { Fragment, useMemo, useRef, type KeyboardEvent, type MouseEvent, type ReactNode } from 'react';
-import { buildIndex, matchText, type GlossaryEntry } from './match';
-import { GlossaryContext, useGlossary, type Ctx, type RenderIcon } from './context';
-import { openEntry } from './lookupStore';
+import { buildIndex, matchText, type GlossaryEntry } from './match.ts';
+import { GlossaryContext, useGlossary, type Ctx, type RenderIcon } from './context.ts';
+import { openEntry } from './lookupStore.ts';
 import './glossary.css';
 
 export type OnTerm = (id: string, el: Element) => void;

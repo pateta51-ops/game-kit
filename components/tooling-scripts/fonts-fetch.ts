@@ -4,8 +4,8 @@
 // --force; a failed download keeps what is there. Exit codes: 0 done, 1 a download failed, 2 usage or a failed read.
 import { copyFileSync, existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { basename, isAbsolute, join, relative, resolve } from 'node:path';
-import { flags, isMain, stdio, type Io } from './args';
-import { toWoff } from './woff';
+import { flags, isMain, stdio, type Io } from './args.ts';
+import { toWoff } from './woff.ts';
 
 export interface FontRole {
   role: string;
@@ -88,7 +88,7 @@ export async function fontsFetch(c: FontsConfig, out: string, force: boolean, io
   return failed === 0 ? 0 : 1;
 }
 
-const USAGE = 'usage: tsx fonts-fetch.ts --roles <json> --out <dir> [--force] [--config <json>]';
+const USAGE = 'usage: node fonts-fetch.ts --roles <json> --out <dir> [--force] [--config <json>]';
 
 export async function run(args: readonly string[], io: Io = stdio, get: Download = download): Promise<number> {
   try {

@@ -1,7 +1,7 @@
 // A Resolution setting on a PC: the game is laid out as on a screen of the chosen size, then the whole picture is scaled
 // to fill the browser window. It runs in a same-origin <iframe> of that size, so every CSS media query sees the chosen
 // width and height. Phone-sized screens keep their own layout.
-import { readSettings, resolutionSize, type SettingsSchema } from '../settings/schema';
+import { readSettings, resolutionSize, type SettingsSchema } from '../settings/schema.ts';
 
 /** The scale and offset that fit a w×h picture into the window, centred (letterboxed). */
 export function fitBox(size: { w: number; h: number }, win: { w: number; h: number }): { scale: number; left: number; top: number } {

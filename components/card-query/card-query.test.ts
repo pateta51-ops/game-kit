@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { compileQuery, filterCards, type Field, type QueryError } from './index';
+import { compileQuery, filterCards, type Field, type QueryError } from './index.ts';
 
 interface C { name: string; cost: number | null; hp: number; sp: number; traits: string[]; unique: boolean; back?: { name: string } }
 const fields: Field<C>[] = [

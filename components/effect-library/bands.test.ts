@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { bannerAt, createBandSlots, createRingStore, flight, phaseSweeps } from './bands';
+import { bannerAt, createBandSlots, createRingStore, flight, phaseSweeps } from './bands.ts';
 
 const order = ['mulligan', 'play', 'combat', 'end'];
 const el = () => {

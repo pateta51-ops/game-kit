@@ -1,7 +1,7 @@
 // K111: the replacement loop: applied-set, lowest class first, the affected player picks among several, result codes.
 import { describe, expect, it } from 'vitest';
-import { applyAction, changeOccurrence, draftOf, type Replacement, type ReplaceResult, type TimingConfig } from './index';
-import { answer, startTimed, timedGame, type Timed } from './fake/timed';
+import { applyAction, changeOccurrence, draftOf, type Replacement, type ReplaceResult, type TimingConfig } from './index.ts';
+import { answer, startTimed, timedGame, type Timed } from './fake/timed.ts';
 
 // fixture cards: Double (p1, x2), Halve (p2, /2 rounded down), Armor (p2, -1, later class), Mirror (heal instead), Absorb, Skip, Idle
 const CARDS: Record<string, Replacement> = {

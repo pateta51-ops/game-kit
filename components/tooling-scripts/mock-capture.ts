@@ -4,7 +4,7 @@
 import { existsSync, mkdirSync, readFileSync, statSync, writeFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
-import { flags, isMain, stdio, type Io } from './args';
+import { flags, isMain, stdio, type Io } from './args.ts';
 
 export interface Mock {
   name: string;
@@ -94,7 +94,7 @@ export async function capture(list: readonly Mock[], o: CaptureOptions, pw: Play
 }
 
 const USAGE =
-  'usage: tsx mock-capture.ts --list <json array of { name, file, ... }> --src <dir> --out <dir> [--only a,b] [--width 3840] [--height 2160] [--settle-ms 800] [--playwright <module>] [--config <json>]';
+  'usage: node mock-capture.ts --list <json array of { name, file, ... }> --src <dir> --out <dir> [--only a,b] [--width 3840] [--height 2160] [--settle-ms 800] [--playwright <module>] [--config <json>]';
 
 export async function run(args: readonly string[], io: Io = stdio, pw?: Playwright): Promise<number> {
   try {

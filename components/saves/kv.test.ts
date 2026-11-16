@@ -2,7 +2,7 @@
 // read sees the newest value while its write is pending or after it failed.
 import 'fake-indexeddb/auto';
 import { describe, expect, it } from 'vitest';
-import { makeKv, type KvBackend } from './kv';
+import { makeKv, type KvBackend } from './kv.ts';
 
 interface Pending {
   value: unknown;

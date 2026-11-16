@@ -2,10 +2,10 @@ import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { afterAll, describe, expect, it } from 'vitest';
-import { createGame, type KernelPrompt } from '../engine-core/index';
-import { DriverRng, runGames, type SimRecord } from '../sim-pool/index';
-import { DUEL, INPUTS, MODEL, encodeEnd, type DuelState } from './fake/duel';
-import { actorOf, Evaluator, Inputs, behind, blank, combos, deal, decide, expected, finalTarget, forward, fromWeights, newNet, predictorTarget, present, pretrain, readWeights, seatOrder, tdTrain, thermo, toWeights, trainSelfPlay, trainStep, writeWeights } from './index';
+import { createGame, type KernelPrompt } from '../engine-core/index.ts';
+import { DriverRng, runGames, type SimRecord } from '../sim-pool/index.ts';
+import { DUEL, INPUTS, MODEL, encodeEnd, type DuelState } from './fake/duel.ts';
+import { actorOf, Evaluator, Inputs, behind, blank, combos, deal, decide, expected, finalTarget, forward, fromWeights, newNet, predictorTarget, present, pretrain, readWeights, seatOrder, tdTrain, thermo, toWeights, trainSelfPlay, trainStep, writeWeights } from './index.ts';
 
 const dir = mkdtempSync(path.join(tmpdir(), 'learned-'));
 afterAll(() => rmSync(dir, { recursive: true, force: true }));

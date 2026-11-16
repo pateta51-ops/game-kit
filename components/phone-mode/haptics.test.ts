@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { createHaptics, TICK_MS } from './haptics';
+import { createHaptics, TICK_MS } from './haptics.ts';
 
 const rig = () => {
   const got: unknown[] = [];

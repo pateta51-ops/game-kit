@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { beatsFor, camera, dualFraming, earnedStories, framing, keyAction, moveMs, panelProblems, readerStart, readerStep, splashAutoCloseMs, splashFor, type PanelSheet } from './index';
+import { beatsFor, camera, dualFraming, earnedStories, framing, keyAction, moveMs, panelProblems, readerStart, readerStep, splashAutoCloseMs, splashFor, type PanelSheet } from './index.ts';
 
 const page = { w: 1000, h: 1000 };
 const sheet: PanelSheet = { id: 'p', picture: { note: 'n', ...page }, beats: [{ rect: { x: 0, y: 0, w: 100, h: 100 } }, { rect: { x: 800, y: 800, w: 200, h: 100 }, wideOnly: true }, { rect: { x: 100, y: 100, w: 50, h: 50 }, narrowOnly: true }] };

@@ -1,6 +1,6 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { copyMode, createGame, differentialApply, isFreezing, own, setCopyMode, setCowChecks, setStateFreezing } from './index';
-import { CONTENT, COUNTER, randomAnswer, RULES, type CounterState } from './fake/counter';
+import { copyMode, createGame, differentialApply, isFreezing, own, setCopyMode, setCowChecks, setStateFreezing } from './index.ts';
+import { CONTENT, COUNTER, randomAnswer, RULES, type CounterState } from './fake/counter.ts';
 
 beforeAll(() => setCowChecks(true));
 afterAll(() => setCowChecks(false));

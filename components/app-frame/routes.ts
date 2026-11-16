@@ -1,6 +1,6 @@
 // Hash routes: `#/name/part/part?query`. No hash, `#/` and any name not in the game's list are the home route. A move
 // the code makes on its own goes through follow(), checked against the game's route machine.
-import { transition, type Machine } from '../state-machines/machine';
+import { transition, type Machine } from '../state-machines/machine.ts';
 
 export interface Route<N extends string> {
   readonly name: N;

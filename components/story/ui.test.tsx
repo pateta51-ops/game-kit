@@ -1,8 +1,8 @@
 import { render, screen } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
-import type { Story } from './index';
-import { PageView, StorySheet } from './ui';
-import type { Page } from './page';
+import type { Story } from './index.ts';
+import { PageView, StorySheet } from './ui.ts';
+import type { Page } from './page.ts';
 
 const S: Story = {
   speakers: [{ id: 'cap', name: 'Cap' }],

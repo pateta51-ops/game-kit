@@ -1,9 +1,9 @@
 // The headless check: replay a script on its seed (or another) and print every problem. A game's `tutorial:check`
 // script loads its script and adapter and returns this function's exit code (0 the script plays, 1 a problem).
-import type { GameTypes } from '../engine-core';
-import type { TutorialGame } from './game';
-import { playScript, type PlayOptions } from './play';
-import type { TutorialScript } from './script';
+import type { GameTypes } from '../engine-core/index.ts';
+import type { TutorialGame } from './game.ts';
+import { playScript, type PlayOptions } from './play.ts';
+import type { TutorialScript } from './script.ts';
 
 export interface CheckIo {
   out(line: string): void;

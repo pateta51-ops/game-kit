@@ -1,7 +1,7 @@
 // K94: triggers once per item / per instance, silent / interactive / automatic order, revalidation, entered-after, simultaneously.
 import { describe, expect, it } from 'vitest';
-import { applyAction, cancelBatch, createSave, draftOf, exportSave, importSave, EngineBugError, enteredPlay, simultaneously, would, type Ctx, type GameRules, type PendingTrigger, type TimingConfig, type TriggerCandidate } from './index';
-import { answer, HIT, startTimed, timedGame, type Timed, type TimedState } from './fake/timed';
+import { applyAction, cancelBatch, createSave, draftOf, exportSave, importSave, EngineBugError, enteredPlay, simultaneously, would, type Ctx, type GameRules, type PendingTrigger, type TimingConfig, type TriggerCandidate } from './index.ts';
+import { answer, HIT, startTimed, timedGame, type Timed, type TimedState } from './fake/timed.ts';
 
 const record = (ctx: Ctx<Timed>, p: PendingTrigger): void => {
   const s = draftOf(ctx);

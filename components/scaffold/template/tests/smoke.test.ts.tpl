@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { applyAction, createGame, CONTENT, RULES, STUB } from '../src/engine/api';
+import { applyAction, createGame, CONTENT, RULES, STUB } from '../src/engine/api.ts';
 
 describe('smoke', () => {
   it('plays the stub game to a win', () => {

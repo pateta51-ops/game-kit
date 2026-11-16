@@ -1,7 +1,7 @@
 // The engine-core fake counter as a perf game: a call that drew a card counts in `draw`, the others in `apply`.
-import { CONTENT, COUNTER, RULES, type Counter } from '../../engine-core/fake/counter';
-import { randomDriver } from '../../sim-pool/play';
-import type { Budgets, PerfGame } from '../perf';
+import { CONTENT, COUNTER, RULES, type Counter } from '../../engine-core/fake/counter.ts';
+import { randomDriver } from '../../sim-pool/play.ts';
+import type { Budgets, PerfGame } from '../perf.ts';
 
 export const perfGame: PerfGame<Counter> = {
   rules: COUNTER,

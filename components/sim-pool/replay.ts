@@ -1,6 +1,6 @@
 // K101 (halogenandtoast MarvelChampions tools/replay-smoke-answer.hs, idea only): replay a game to one step and say where the time went.
-import type { GameTypes } from '../engine-core/index';
-import { playOne, type GameSpec, type PlayOptions, type SimGame, type SimRecord, type StepMs } from './play';
+import type { GameTypes } from '../engine-core/index.ts';
+import { playOne, type GameSpec, type PlayOptions, type SimGame, type SimRecord, type StepMs } from './play.ts';
 
 export interface StepReport {
   readonly step: number;

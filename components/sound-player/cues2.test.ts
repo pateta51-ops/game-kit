@@ -2,8 +2,8 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { checkFrontSilence, decodeWav } from './check';
-import { createTrailSounds, mp3Frames, resolveCue, trimMp3, type SoundTable } from './index';
+import { checkFrontSilence, decodeWav } from './check.ts';
+import { createTrailSounds, mp3Frames, resolveCue, trimMp3, type SoundTable } from './index.ts';
 
 describe('sound-player: trail, chain, front silence, trim (K147)', () => {
   it('cues come only from actions added to the trail: not on load, undo or a rewritten trail', () => {

@@ -15,7 +15,7 @@
     "kit:check": "node kit/kit.mjs check",
     "ci:check": "node kit/ci-templates/render.mjs --check",
     "check:chain": "npm run test && npm run lint && npm run typecheck && npm run kit:check && npm run ci:check && npm run build",
-    "check": "tsx kit/check-runner/check-runner.ts --config scripts/check-runner.config.json"
+    "check": "node kit/check-runner/check-runner.ts --config scripts/check-runner.config.json"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
@@ -29,7 +29,6 @@
     "fake-indexeddb": "^6.2.8",
     "globals": "^17.13.0",
     "jsdom": "^29.1.1",
-    "tsx": "^4.23.15",
     "typescript": "~6.0.3",
     "typescript-eslint": "^8.71.1",
     "vite": "^8.3.3",

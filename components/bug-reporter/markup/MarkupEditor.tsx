@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type PointerEvent } from 'react';
-import { COLORS, drawMarkup, displayPoint, type Markup, type Point } from './model';
+import { COLORS, drawMarkup, displayPoint, type Markup, type Point } from './model.ts';
 import './markup.css';
 
 interface Props {

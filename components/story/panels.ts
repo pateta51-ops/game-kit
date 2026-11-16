@@ -1,5 +1,5 @@
 // Panel reader, pure part: one picture read as ordered beats (K154). Draws nothing; loads in node.
-import type { Line, Picture } from './story';
+import type { Line, Picture } from './story.ts';
 export type Rect = { x: number; y: number; w: number; h: number };
 export type Size = { w: number; h: number };
 export type PanelBeat = { rect: Rect; caption?: string; lines?: Line[]; sfx?: string; wideOnly?: boolean; narrowOnly?: boolean };

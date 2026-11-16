@@ -1,7 +1,7 @@
 // Lifted from 7th Inning Stretch src/ui/screens/Stage.tsx: a fixed-size stage scaled to fit the window, with one of the
 // game's fixed heads (a logo and a Home button for menus, the Home button alone for flow screens) at one rect on top.
 import type { ReactNode } from 'react';
-import { useStageScale } from './stageScale';
+import { useStageScale } from './stageScale.ts';
 
 export type StageHead = { rect: readonly [number, number, number, number]; node: ReactNode };
 export interface StageProps<H extends string = string> {

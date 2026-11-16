@@ -1,10 +1,10 @@
 // K222: the prompt contract. The answer resumes the task bound to the prompt (by id), never whatever is on top; a prompt
 // nobody can answer is refused; `kind` and `seat` are optional prompt fields.
 import { describe, expect, it } from 'vitest';
-import { applyAction, applyActionWith, createGame, draftOf, EngineBugError, makeCtx, run, seatKey, would, type AnswerAction, type Ctx, type DebugAction, type Draft, type GameRules, type HandlerTable, type KernelPrompt } from './index';
-import { answer as pickIn, HIT, SHIELD, startTimed, timedGame, type Timed } from './fake/timed';
-import { promptOf } from './timing';
-import { bareState, CONTENT, COUNTER, RULES, type Counter, type CounterState, type CounterTask } from './fake/counter';
+import { applyAction, applyActionWith, createGame, draftOf, EngineBugError, makeCtx, run, seatKey, would, type AnswerAction, type Ctx, type DebugAction, type Draft, type GameRules, type HandlerTable, type KernelPrompt } from './index.ts';
+import { answer as pickIn, HIT, SHIELD, startTimed, timedGame, type Timed } from './fake/timed.ts';
+import { promptOf } from './timing.ts';
+import { bareState, CONTENT, COUNTER, RULES, type Counter, type CounterState, type CounterTask } from './fake/counter.ts';
 
 const P: Omit<KernelPrompt, 'id'> = { options: [{ id: 'x', enabled: true }], min: 1, max: 1 };
 

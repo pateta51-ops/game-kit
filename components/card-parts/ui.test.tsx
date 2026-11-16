@@ -1,6 +1,6 @@
 import { render, screen, waitFor } from '@testing-library/react'
 import { describe, expect, it } from 'vitest'
-import { ArtImage, ArtProvider, CardFace, IconText, TokenLayer, useArt, type CardLayout } from './ui'
+import { ArtImage, ArtProvider, CardFace, IconText, TokenLayer, useArt, type CardLayout } from './ui.ts'
 
 const L: CardLayout = { w: 200, h: 100, zones: { art: { x: 0, y: 0, w: 100, h: 100 }, text: { x: 100, y: 0, w: 100, h: 50, kind: 'text' }, unused: { x: 0, y: 0, w: 1, h: 1 } }, anchors: { dmg: { x: 50, y: 50, dx: 20 } } }
 const icons = { gold: { label: 'gold', body: '<circle r="5"/>' }, act: { label: 'action', src: '/a.svg' } }

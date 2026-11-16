@@ -2,9 +2,9 @@
 // data-layout (desk | fitted | phone), data-orient (portrait | landscape) and data-display (browser | standalone) on
 // <html>, and zooms the app container only in the fitted mode, or on a phone when the location has no phone screen yet.
 import { create } from 'zustand';
-import { expectEdge } from '../state-machines/machine';
-import { applyFit, layoutAttr, layoutModeFor, type LayoutSetting } from './layout';
-import { VIEWPORT_MACHINE, type LayoutMode } from './machine';
+import { expectEdge } from '../state-machines/machine.ts';
+import { applyFit, layoutAttr, layoutModeFor, type LayoutSetting } from './layout.ts';
+import { VIEWPORT_MACHINE, type LayoutMode } from './machine.ts';
 
 export interface ViewportOptions {
   /** The game's Layout setting now. Default auto. */

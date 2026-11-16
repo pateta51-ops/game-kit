@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { adjust, heldDice, newTray, readRoll, remove, roll, rollWith, step, toggleHold, values } from './index';
+import { adjust, heldDice, newTray, readRoll, remove, roll, rollWith, step, toggleHold, values } from './index.ts';
 
 const seq = (xs: number[]) => { let i = 0; return { int: (max: number) => (xs[i++] ?? 0) % max } };
 
@@ -46,7 +46,7 @@ describe('dice-tray', () => {
   });
 });
 
-import { adjustId, canReroll, canTapDie, rerollSelected, selectOne, setValue, toggleSelect, winBack, winPickDie, winPickToken, winStart } from './index';
+import { adjustId, canReroll, canTapDie, rerollSelected, selectOne, setValue, toggleSelect, winBack, winPickDie, winPickToken, winStart } from './index.ts';
 describe('roll window flow (7IS)', () => {
   it('die taps are ignored before a token, then token, die, sign', () => {
     let s = winPickDie(winStart(), 1);

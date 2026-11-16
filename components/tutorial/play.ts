@@ -1,8 +1,8 @@
 // Play a script headless, step by step, on any `GameRules` game: the same functions serve the check, the lock (which
 // option a step asks for) and a seed search (`stopOnFailure: false` to see how far a seed gets).
-import { applyAction, createGame, type AnswerAction, type GameTypes } from '../engine-core';
-import type { TutorialGame } from './game';
-import { bareNumbers, type ExpectedEvent, type TutorialScript, type TutorialStep } from './script';
+import { applyAction, createGame, type AnswerAction, type GameTypes } from '../engine-core/index.ts';
+import type { TutorialGame } from './game.ts';
+import { bareNumbers, type ExpectedEvent, type TutorialScript, type TutorialStep } from './script.ts';
 
 export interface StepFailure {
   /** 1-based, as "Step N of M" shows it. */

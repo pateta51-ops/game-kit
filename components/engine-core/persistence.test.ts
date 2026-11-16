@@ -26,8 +26,8 @@ import {
   type History,
   type RawSave,
   type SaveFormat,
-} from './index';
-import { CONTENT, COUNTER, playGame, RULES, type Counter, type CounterState } from './fake/counter';
+} from './index.ts';
+import { CONTENT, COUNTER, playGame, RULES, type Counter, type CounterState } from './fake/counter.ts';
 
 type Action = AnswerAction;
 const content = CONTENT;

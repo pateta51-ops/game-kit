@@ -4,7 +4,7 @@
 // of a source file. Ids in titles that name a family but are not defined are reported. Scenario ids (`<prefix>-nnn`
 // rows of the plan) must each appear in exactly one title. Everything game-specific comes from trace.config.json.
 //
-//   tsx check-traceability.ts [--config path] [--strict] [--release] [--quiet] [--warn]
+//   node check-traceability.ts [--config path] [--strict] [--release] [--quiet] [--warn]
 //
 // Exit codes: 0 ok (or warning mode), 1 findings in error mode (or a pending id with --release), 2 bad usage.
 import { readdirSync, readFileSync } from 'node:fs';
@@ -99,7 +99,7 @@ export const DEFAULT_CONFIG: Config = {
   countsLine: false,
   citeFiles: [],
 };
-const USAGE = 'usage: tsx check-traceability.ts [--config path] [--strict] [--release] [--quiet] [--warn]';
+const USAGE = 'usage: node check-traceability.ts [--config path] [--strict] [--release] [--quiet] [--warn]';
 
 /** The pending ids (scripts/traceability-pending.json `pending`: id → the batch that will name it); {} when absent. */
 export function readPending(io: Pick<Io, 'readText'>, cfg: Config): Record<string, string> {

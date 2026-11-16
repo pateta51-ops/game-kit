@@ -3,8 +3,8 @@
 // answers, Cancel or Escape disarms. A target that stops being legal disarms. K226: max > 1 picks several (a tap toggles,
 // Confirm or Enter answers once min..max are picked; `confirm: false` answers when max are picked).
 import { useEffect, useState } from 'react';
-import type { KernelPrompt } from '../engine-core/index';
-import type { Answer } from './host';
+import type { KernelPrompt } from '../engine-core/index.ts';
+import type { Answer } from './host.tsx';
 
 export type Mark = 'legal' | 'barred' | 'armed';
 

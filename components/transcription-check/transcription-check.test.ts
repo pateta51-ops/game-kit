@@ -2,7 +2,7 @@ import { mkdirSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { jsonDiff, transcriptionCheck } from './index';
+import { jsonDiff, transcriptionCheck } from './index.ts';
 
 const t = (id: string, who: 'A' | 'B', data: unknown, flags: string[] = []) => JSON.stringify({ id, source: { transcriber: who, from: 'photo', picture: `${id}.jpg`, session: 's1' }, flags, data });
 function setup() {

@@ -1,7 +1,7 @@
 import { fireEvent, render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
-import { parseDebug } from './index';
-import { DebugConsole } from './ui';
+import { parseDebug } from './index.ts';
+import { DebugConsole } from './ui.ts';
 
 const verbs = ['set', 'force', 'close', 'summon'];
 

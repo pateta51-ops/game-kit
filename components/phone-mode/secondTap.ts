@@ -1,7 +1,7 @@
 // Second-tap commit (machine kit.secondTap): on a touch screen an irreversible answer needs two taps on the same target.
 import { useState } from 'react';
-import { transition } from '../state-machines/machine';
-import { SECOND_TAP_MACHINE } from './machine';
+import { transition } from '../state-machines/machine.ts';
+import { SECOND_TAP_MACHINE } from './machine.ts';
 
 /** One tap: the armed target after it, and whether the tap commits. */
 export function secondTap(armed: string | null, id: string): { armed: string | null; commit: boolean } {

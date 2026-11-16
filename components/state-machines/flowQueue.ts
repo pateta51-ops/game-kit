@@ -6,7 +6,10 @@ export interface FlowRequest<C> {
 }
 export class FlowQueue<C> {
   private q: FlowRequest<C>[] = [];
-  constructor(private readonly max = 100) {}
+  private readonly max: number;
+  constructor(max = 100) {
+    this.max = max;
+  }
   /** `at` is the turn/phase now; `site` names the caller (default: the call's stack line). */
   request(name: string, at: C, site = new Error().stack?.split('\n')[2]?.trim() ?? ''): void {
     this.q.push({ name, at, site });

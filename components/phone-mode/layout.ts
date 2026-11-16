@@ -1,6 +1,6 @@
 // The layout mode for a window, the fit zoom of the large screens, the safe-area tokens. Pure, apart from the two
 // setters that write to an element.
-import type { LayoutMode } from './machine';
+import type { LayoutMode } from './machine.ts';
 
 export type LayoutSetting = 'auto' | 'phone' | 'desk';
 

@@ -1,7 +1,7 @@
 // Count-up with a hand-driven clock: the shown number moves, the stored one is never written.
 import { describe, expect, it } from 'vitest';
-import type { Speed } from '../motion-frame';
-import { countAt, countUp } from './count';
+import type { Speed } from '../motion-frame/index.ts';
+import { countAt, countUp } from './count.ts';
 
 function clock() {
   let q: ((now: number) => void)[] = [];

@@ -1,7 +1,7 @@
 // K95: the checkpoint after every timing.do and trigger, steps in order, recompute until stable with a cap, state checks.
 import { describe, expect, it } from 'vitest';
-import { addEffect, applyAction, boundary, draftOf, EngineBugError, hashValue, simultaneously, would, type CheckpointConfig, type Ctx, type GameRules, type TimingConfig } from './index';
-import { answer, HIT, SHIELD, startTimed, timedGame, type Timed, type TimedState } from './fake/timed';
+import { addEffect, applyAction, boundary, draftOf, EngineBugError, hashValue, simultaneously, would, type CheckpointConfig, type Ctx, type GameRules, type TimingConfig } from './index.ts';
+import { answer, HIT, SHIELD, startTimed, timedGame, type Timed, type TimedState } from './fake/timed.ts';
 
 const TWO = [HIT, { ...HIT, keys: { ...HIT.keys, target: 'u2' } }];
 const note = (ctx: Ctx<Timed>, k: string): void => {

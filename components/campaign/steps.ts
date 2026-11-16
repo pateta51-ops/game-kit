@@ -1,4 +1,4 @@
-import { emptyLog, readLog, type CampaignLog } from './log';
+import { emptyLog, readLog, type CampaignLog } from './log.ts';
 
 export type StepKind = 'prologue' | 'scenario' | 'interlude' | 'upgrade' | 'epilogue' | 'side';
 /** A step; a detour (upgrade, side scenario) carries in `then` the step to return to. */

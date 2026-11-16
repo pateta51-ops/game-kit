@@ -1,9 +1,9 @@
 // The lock as a pure model: at a step of the script and a game state, which option, control and answer is allowed, and
 // why not ("The tutorial asks for …"). The game's store holds the step and refuses any answer `accepts` refuses.
-import type { AnswerAction, GameTypes, KernelPrompt } from '../engine-core';
-import type { TutorialGame } from './game';
-import { scriptedIds, type StepFailure } from './play';
-import type { TutorialScript, TutorialStep } from './script';
+import type { AnswerAction, GameTypes, KernelPrompt } from '../engine-core/index.ts';
+import type { TutorialGame } from './game.ts';
+import { scriptedIds, type StepFailure } from './play.ts';
+import type { TutorialScript, TutorialStep } from './script.ts';
 
 /** The controls outside the prompt the lock rules on; any other control stays free (menu, settings, lookups, exit). */
 export type TutorialButton = 'undo' | 'redo' | 'next' | (string & {});

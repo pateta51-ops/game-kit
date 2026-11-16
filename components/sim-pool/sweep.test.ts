@@ -2,9 +2,9 @@ import { mkdtempSync, readFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { afterAll, describe, expect, it } from 'vitest';
-import { CONTENT, type Counter } from '../engine-core/fake/counter';
-import { grid, playOne, runGames, spread, sweep, type GameSpec, type SimGame, type SimRecord } from './index';
-import { simGame } from './fake/game';
+import { CONTENT, type Counter } from '../engine-core/fake/counter.ts';
+import { grid, playOne, runGames, spread, sweep, type GameSpec, type SimGame, type SimRecord } from './index.ts';
+import { simGame } from './fake/game.ts';
 
 const module = new URL('./fake/game.ts', import.meta.url).href;
 const leaky = new URL('./fake/leaky.ts', import.meta.url).href;

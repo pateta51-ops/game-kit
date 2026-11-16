@@ -4,13 +4,13 @@
 //
 // `s` is typed as the readonly state. Engine code that writes takes the working draft with `draftOf(ctx)` (the same
 // object, typed as a `Draft`) and writes below the top level only through the copy-on-write barrier of cow.ts.
-import { currentCause } from './cause';
-import { own } from './cow';
-import type { Draft } from './draft';
-import { EngineBugError } from './errors';
-import { takePromptSeq, takeSeq } from './ids';
-import { nextUint32, randomInt, shuffleInPlace, type RngState } from './rng';
-import type { Ctx, CtxRng, EventInput, GameRules, GameTypes, KernelEvent, KernelState, KernelTask } from './types';
+import { currentCause } from './cause.ts';
+import { own } from './cow.ts';
+import type { Draft } from './draft.ts';
+import { EngineBugError } from './errors.ts';
+import { takePromptSeq, takeSeq } from './ids.ts';
+import { nextUint32, randomInt, shuffleInPlace, type RngState } from './rng.ts';
+import type { Ctx, CtxRng, EventInput, GameRules, GameTypes, KernelEvent, KernelState, KernelTask } from './types.ts';
 
 /** The working state of `ctx` as a writable draft (the same object; typed readonly). */
 export const draftOf = <G extends GameTypes>(ctx: Ctx<G>): Draft<G['state']> => ctx.s as Draft<G['state']>;
@@ -41,7 +41,10 @@ export function setRngOverrides(o: Readonly<Record<string, (arg: never) => unkno
 const over = (name: string | undefined): Override | undefined => (name === undefined ? undefined : overrides?.[name]);
 
 class StateRng implements CtxRng {
-  constructor(private readonly s: Work) {}
+  private readonly s: Work;
+  constructor(s: Work) {
+    this.s = s;
+  }
   nextUint32(): number {
     return withRng(this.s, nextUint32);
   }
@@ -76,12 +79,20 @@ class RunCtx<G extends GameTypes> implements Ctx<G> {
   debug = false;
   /** K222: the stack depth when the running handler started (-1 outside the runner). */
   base = -1;
+  readonly s: G['state'];
+  readonly content: G['content'];
+  readonly events: G['event'][];
+  private readonly stamp: ((s: G['state']) => object) | undefined;
   constructor(
-    readonly s: G['state'],
-    readonly content: G['content'],
-    readonly events: G['event'][],
-    private readonly stamp: ((s: G['state']) => object) | undefined,
+    s: G['state'],
+    content: G['content'],
+    events: G['event'][],
+    stamp: ((s: G['state']) => object) | undefined,
   ) {
+    this.s = s;
+    this.content = content;
+    this.events = events;
+    this.stamp = stamp;
     this.rng = new StateRng(s as Work);
   }
 

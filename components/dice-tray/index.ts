@@ -1,4 +1,4 @@
-import { defineMachine, transition } from '../state-machines/index';
+import { defineMachine, transition } from '../state-machines/index.ts';
 
 export interface Die { id: number; sides: number; value: number; held: boolean; kind?: string }
 export interface Rng { int(max: number, name?: string): number }

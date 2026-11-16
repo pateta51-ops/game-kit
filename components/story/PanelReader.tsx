@@ -1,7 +1,7 @@
 import './story.css';
 import { useEffect, useRef, useState, type ReactNode } from 'react';
-import { camera, beatsFor, keyAction, prefersReduced, moveMs, readerStart, readerStep, type Aspect, type PanelSheet, type ReaderAction, type Size } from './panels';
-import { pictureView, speakerName, type Story } from './story';
+import { camera, beatsFor, keyAction, prefersReduced, moveMs, readerStart, readerStep, type Aspect, type PanelSheet, type ReaderAction, type Size } from './panels.ts';
+import { pictureView, speakerName, type Story } from './story.ts';
 
 export type PanelReaderProps = {
   sheet: PanelSheet;

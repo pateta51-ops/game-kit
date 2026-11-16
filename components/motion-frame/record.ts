@@ -1,7 +1,7 @@
 // Node only (not exported from index): records a clip of a page by CDP screencast, then ffmpeg (webm) and python3 with PIL (stills sheet).
 import { execFileSync } from 'node:child_process';
 import { mkdirSync, rmSync, writeFileSync } from 'node:fs';
-import { clipTimes, frameAt, stillFrames, stillTimes, type Frame } from './clips';
+import { clipTimes, frameAt, stillFrames, stillTimes, type Frame } from './clips.ts';
 
 type Cdp = { send(m: string, p?: unknown): Promise<unknown>; on(e: string, f: (p: { data: string; sessionId: number; metadata: { timestamp?: number } }) => void): void };
 export type ClipPage = { ctx: { newCDPSession(page: unknown): Promise<Cdp> }; page: unknown; waitMs(ms: number): Promise<void> };

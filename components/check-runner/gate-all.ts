@@ -3,7 +3,7 @@
 // their failure is reported, never a red run; any other failing item fails the run, with its output printed. A known
 // item that now passes is flagged so its line can be removed. The job summary gets a table.
 //
-//   tsx gate-all.ts [--config path] [--jobs N]
+//   node gate-all.ts [--config path] [--jobs N]
 //
 // Config (gate-all.config.json): { "command": ["npm", "run", "gate", "--", "--pack", "{id}"], "items": ["a", "b"],
 // "known": { "b": "why it fails" }, "title": "Content gate" }. `{id}` in the command is replaced by the item.

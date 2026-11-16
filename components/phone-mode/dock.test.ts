@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
-import { edgesOf } from '../state-machines/machine';
+import { edgesOf } from '../state-machines/machine.ts';
 import {
   bare,
   bottomPadding,
@@ -17,7 +17,7 @@ import {
   phoneLayerCheck,
   pickTabs,
   shortPrompt,
-} from './index';
+} from './index.ts';
 
 const P = ":root[data-layout='phone']";
 const GAME_CSS = `

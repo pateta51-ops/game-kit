@@ -1,8 +1,8 @@
 // K88 (marvel-champions-digital-game `legal.ts`, `choices.ts`, AGPL-3.0; idea only, written new): a barred option keeps
 // a reason code and, for a missing target, what was missing, read when the prompt opened. `askOrTake` takes the only
 // legal option without asking and returns the notice the UI shows (every option, the taken one, each barred one).
-import { draftOf } from './ctx';
-import type { Ctx, GameTypes, KernelOption, KernelPrompt } from './types';
+import { draftOf } from './ctx.ts';
+import type { Ctx, GameTypes, KernelOption, KernelPrompt } from './types.ts';
 
 export interface Blocked {
   readonly id: string;

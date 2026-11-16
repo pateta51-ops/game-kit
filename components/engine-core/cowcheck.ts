@@ -4,10 +4,10 @@
 // an unfrozen copy, where a missed barrier would not throw) and the full copy. The input must not change and the three
 // results (state JSON with keys in order, and events) must be equal. Test code: it switches the engine's modes and puts
 // them back. Turn `setCowChecks(true)` on around it to also catch a barrier on a shared parent.
-import { applyAction } from './apply';
-import { isFreezing, setStateFreezing } from './copy';
-import { copyMode, setCopyMode } from './cow';
-import type { GameRules, GameTypes } from './types';
+import { applyAction } from './apply.ts';
+import { isFreezing, setStateFreezing } from './copy.ts';
+import { copyMode, setCopyMode } from './cow.ts';
+import type { GameRules, GameTypes } from './types.ts';
 
 export interface DifferentialResult<G extends GameTypes> {
   /** The state after the action (copy on write, frozen); null when that run threw. */

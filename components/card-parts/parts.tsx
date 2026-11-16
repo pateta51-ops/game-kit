@@ -1,9 +1,9 @@
 // The React parts a game builds its card face from (STCC CardFace, IconText, ArtProvider, Tokens). Unstyled: positions only.
 import { useContext, useEffect, useId, useMemo, useState, type CSSProperties, type ReactNode } from 'react'
-import { displayUrl, markUndecoded, prepareImages, retainImages } from './imageCache'
-import { placeTokens, zoneBox, zonesInOrder, type CardLayout, type TokenAt, type Zone } from './layout'
-import { BRACKETS, parseIconText, type IconDef, type IconSet, type Part, type Syntax } from './text'
-import { ArtContext } from './art'
+import { displayUrl, markUndecoded, prepareImages, retainImages } from './imageCache.ts'
+import { placeTokens, zoneBox, zonesInOrder, type CardLayout, type TokenAt, type Zone } from './layout.ts'
+import { BRACKETS, parseIconText, type IconDef, type IconSet, type Part, type Syntax } from './text.ts'
+import { ArtContext } from './art.ts'
 
 /** Class names of the parts (default `kc-<part>`): face, zone, art, icon, unknown, tokens, token. */
 export type Cls = (part: string) => string

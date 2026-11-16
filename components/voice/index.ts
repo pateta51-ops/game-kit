@@ -1,1 +1,1 @@
-export * from './voice';
+export * from './voice.ts';

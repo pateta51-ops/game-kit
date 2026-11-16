@@ -4,7 +4,7 @@
 import { spawnSync } from 'node:child_process';
 import { mkdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs';
 import { dirname, join, posix, resolve } from 'node:path';
-import { flags, isMain, stdio, type Io } from './args';
+import { flags, isMain, stdio, type Io } from './args.ts';
 
 const EXT = /\.(?:[cm]?[jt]sx?|json|md)$/;
 const INDEX = /\/index\.(?:[cm]?[jt]sx?)$/;
@@ -44,7 +44,7 @@ export function rewrite(text: string, file: string, newFile: string, moves: Read
 }
 
 const NAMES = ['from', 'to', 'repo'];
-const USAGE = 'usage: tsx move.ts --from <tracked path> --to <new path> [--repo <dir>] [--dry]';
+const USAGE = 'usage: node move.ts --from <tracked path> --to <new path> [--repo <dir>] [--dry]';
 
 export function run(args: readonly string[], io: Io = stdio): number {
   try {

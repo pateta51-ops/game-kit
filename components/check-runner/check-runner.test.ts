@@ -2,11 +2,10 @@
 import { spawnSync } from 'node:child_process';
 import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { createRequire } from 'node:module';
-import { dirname, join, resolve } from 'node:path';
+import { join, resolve } from 'node:path';
 import { afterAll, describe, expect, it } from 'vitest';
 import { homedir } from 'node:os';
-import { checkScripts, coverageProblems, DEFAULT_CONFIG, envOf, type Config } from './check-runner';
+import { checkScripts, coverageProblems, DEFAULT_CONFIG, envOf, type Config } from './check-runner.ts';
 
 const CHECK = 'npm run lint && npm run test && npm run size';
 const cfg: Config = { ...DEFAULT_CONFIG, first: ['test'], lanes: [['lint'], ['size']], extra: ['gate'] };
@@ -63,12 +62,11 @@ describe('options (K71)', () => {
 describe('a real run', () => {
   const dir = mkdtempSync(join(tmpdir(), 'check-runner-'));
   afterAll(() => rmSync(dir, { recursive: true, force: true }));
-  const tsx = join(dirname(createRequire(import.meta.url).resolve('tsx/package.json')), 'dist/cli.mjs');
   const script = resolve(import.meta.dirname, 'check-runner.ts');
   const run = (scripts: Record<string, string>, config: Partial<Config>, args: string[] = []) => {
     writeFileSync(join(dir, 'package.json'), JSON.stringify({ scripts }));
     writeFileSync(join(dir, 'check-runner.config.json'), JSON.stringify(config));
-    return spawnSync(process.execPath, [tsx, script, ...args], { cwd: dir, encoding: 'utf8' });
+    return spawnSync(process.execPath, [script, ...args], { cwd: dir, encoding: 'utf8' });
   };
   const ok = 'node -e "process.exit(0)"';
   const ko = 'node -e "process.exit(3)"';

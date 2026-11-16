@@ -1,8 +1,8 @@
 // A toy competitive game for the tests. Cards 1-10 shuffled, four dealt to each of two seats (hidden); prizes 1-4 shuffled,
 // one shown per round. The leader plays a card face up, then the other seat; the higher card takes the prize. Four rounds.
-import { applyAction, draftOf, hashValue, seedRng, type AnswerAction, type Ctx, type GameRules, type KernelPrompt, type KernelState, type KernelTask } from '../../engine-core/index';
-import { bySeat, DriverRng, legalAnswers, randomDriver, type Driver, type SimGame } from '../../sim-pool/index';
-import { Inputs, behind, blank, deal, learnedDriver, present, readWeights, relative, setValue, thermo, withTrace, type Model } from '../index';
+import { applyAction, draftOf, hashValue, seedRng, type AnswerAction, type Ctx, type GameRules, type KernelPrompt, type KernelState, type KernelTask } from '../../engine-core/index.ts';
+import { bySeat, DriverRng, legalAnswers, randomDriver, type Driver, type SimGame } from '../../sim-pool/index.ts';
+import { Inputs, behind, blank, deal, learnedDriver, present, readWeights, relative, setValue, thermo, withTrace, type Model } from '../index.ts';
 
 export interface DuelState extends KernelState {
   readonly options: { readonly seed: string };

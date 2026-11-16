@@ -2,11 +2,11 @@ import { mkdirSync, mkdtempSync, copyFileSync, rmSync, writeFileSync } from 'nod
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { beforeAll, describe, expect, it } from 'vitest';
-import { DOOR_MACHINE } from './fake/door.machine';
-import { getMachine, listMachines, MACHINES_DOC, setMachinesDoc } from './machine';
-import { checkFindings, definingFiles, loadModules, machineText, readConfig, renderDoc, tableLine, type MachinesConfig } from './machines-doc';
-import { listText } from './machines';
-import { expectIllegal } from './test-utils';
+import { DOOR_MACHINE } from './fake/door.machine.ts';
+import { getMachine, listMachines, MACHINES_DOC, setMachinesDoc } from './machine.ts';
+import { checkFindings, definingFiles, loadModules, machineText, readConfig, renderDoc, tableLine, type MachinesConfig } from './machines-doc.ts';
+import { listText } from './machines.ts';
+import { expectIllegal } from './test-utils.ts';
 
 const SRC = 'components/state-machines/fake';
 const cfg: MachinesConfig = { modules: [`${SRC}/door.machine.ts`], srcDir: SRC };
@@ -71,7 +71,7 @@ describe('machines:doc and machines:check (generic)', () => {
   });
 
   it('expectIllegal checks the error message', async () => {
-    const { transition } = await import('./machine');
+    const { transition } = await import('./machine.ts');
     expectIllegal(() => transition(DOOR_MACHINE, 'locked', 'open'), DOOR_MACHINE, 'locked', 'open');
   });
 });

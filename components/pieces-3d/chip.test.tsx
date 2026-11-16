@@ -1,6 +1,6 @@
 import { render } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
-import { Chip } from './Pieces3d';
+import { Chip } from './Pieces3d.tsx';
 
 describe('pieces-3d: Chip tilt', () => {
   it('tilt sets --piece-tilt on the chip; without it nothing is set', () => {

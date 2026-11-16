@@ -1,3 +1,3 @@
-export * from './context';
-export * from './GlossaryText';
-export * from './LookupHost';
+export * from './context.ts';
+export * from './GlossaryText.tsx';
+export * from './LookupHost.tsx';

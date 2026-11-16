@@ -9,7 +9,7 @@
 //   VOCAB     a game word (`vocab`, regex sources matched at word boundaries, case ignored) has no entry: it is neither
 //             inside a link nor covered by a `plain` entry or a search alias (the coverage index);
 //   LANGUAGE  a generated text links no entry at all (unless `nothingToLink` says it names nothing of the game).
-import { buildIndex, coveredChars, glossaryProblems, iconEntry, matchText, type GlossaryEntry, type GlossaryIndex } from './match';
+import { buildIndex, coveredChars, glossaryProblems, iconEntry, matchText, type GlossaryEntry, type GlossaryIndex } from './match.ts';
 
 export type CheckKind = 'SCHEMA' | 'RULE' | 'ICON' | 'REQUIRED' | 'HEADING' | 'VOCAB' | 'LANGUAGE';
 export interface Finding {

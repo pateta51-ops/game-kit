@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { applyPatches, errata, rulingsFor, wordDiff, type PatchFile, type PatchLog } from './index';
+import { applyPatches, errata, rulingsFor, wordDiff, type PatchFile, type PatchLog } from './index.ts';
 
 const src = [
   { code: '01', name: 'Scout', text: 'Gain 1 gold' },

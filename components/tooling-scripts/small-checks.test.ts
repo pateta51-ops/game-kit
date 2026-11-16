@@ -3,8 +3,8 @@ import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { afterAll, describe, expect, it } from 'vitest';
-import { headings, run as docs, section } from './docs-index';
-import { moveMap, rewrite, run as move } from './move';
+import { headings, run as docs, section } from './docs-index.ts';
+import { moveMap, rewrite, run as move } from './move.ts';
 
 const UP = '.' + '.';
 const dir = mkdtempSync(join(tmpdir(), 'small-checks-'));

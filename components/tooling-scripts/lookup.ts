@@ -3,7 +3,7 @@
 // Exit 0 found, 1 not found or unresolved refs with --strict, 2 usage or a failed load.
 import { resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
-import { flags, isMain, stdio, type Io } from './args';
+import { flags, isMain, stdio, type Io } from './args.ts';
 
 export interface LookupCard {
   id: string;
@@ -29,7 +29,7 @@ export interface Lookup {
   vocabulary?: LookupWord[];
 }
 
-const USAGE = 'usage: tsx lookup.ts --module <file> card <id> | dsl <word> | refs [--strict]';
+const USAGE = 'usage: node lookup.ts --module <file> card <id> | dsl <word> | refs [--strict]';
 
 export function card(l: Lookup, id: string): { code: number; lines: string[] } {
   const c = l.cards.find((x) => x.id === id) ?? l.cards.find((x) => x.id.toLowerCase() === id.toLowerCase());

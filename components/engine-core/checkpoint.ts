@@ -2,13 +2,13 @@
 // triggers, expire durations, recompute derived values until stable, the game's state checks, then the after-window),
 // and the recompute pass with a cap. netrunner engine.clj checkpoint and checkpoint.clj fake-checkpoint (MIT, design).
 // Written new. Opt-in: nothing runs unless the game passes `cfg.checkpoint`.
-import { canonicalJson } from './canonical';
-import { draftOf } from './ctx';
-import { expireEffects, stampActive, type EffectsConfig } from './durations';
-import { EngineBugError } from './errors';
-import type { TimingConfig } from './timing';
-import { collectTriggers, pendingTriggers } from './triggers';
-import type { Ctx, GameTypes, HandlerTable, KernelTask } from './types';
+import { canonicalJson } from './canonical.ts';
+import { draftOf } from './ctx.ts';
+import { expireEffects, stampActive, type EffectsConfig } from './durations.ts';
+import { EngineBugError } from './errors.ts';
+import type { TimingConfig } from './timing.ts';
+import { collectTriggers, pendingTriggers } from './triggers.ts';
+import type { Ctx, GameTypes, HandlerTable, KernelTask } from './types.ts';
 
 /** One state check (win/loss, uniqueness, limits, empty zones). Returns true when it changed something; asking or pushing tasks counts too. */
 export interface StateCheck<G extends GameTypes> {

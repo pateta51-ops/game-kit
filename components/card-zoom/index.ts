@@ -1,1 +1,1 @@
-export * from './transcribe'
+export * from './transcribe.ts'

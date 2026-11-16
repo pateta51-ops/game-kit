@@ -1,7 +1,7 @@
 import { fireEvent, render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
-import { checklist, countGames, evaluate, firstRun, makeSummary, toastFor, type AchievementDef } from './index';
-import { AchievementList, AchievementToast, FeatCallout } from './ui';
+import { checklist, countGames, evaluate, firstRun, makeSummary, toastFor, type AchievementDef } from './index.ts';
+import { AchievementList, AchievementToast, FeatCallout } from './ui.ts';
 
 describe('FeatCallout', () => {
   it('shows the text and a worded close button', () => {

@@ -8,7 +8,7 @@
 // and the package.json check chain (+ `extra`) disagree: a check added to one and not the other. `--pr` runs the
 // config's `pr` subset instead (its scripts must exist in package.json and be in the check chain or `extra`).
 //
-//   tsx check-runner.ts [--config path] [--pr] [--fail-fast] [--keep-going]
+//   node check-runner.ts [--config path] [--pr] [--fail-fast] [--keep-going]
 //
 // `--fail-fast` (or `"failFast": true` in the config; from STCC): the first failing check stops the checks still running
 // (their whole trees) and no further check starts; its output is printed again after the summary. `--keep-going` runs

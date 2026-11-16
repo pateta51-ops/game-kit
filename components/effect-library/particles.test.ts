@@ -1,7 +1,7 @@
 // The pure parts of the canvas kit, and what each helper asks of a recording context (no pixels).
 import { describe, expect, it } from 'vitest';
-import { specTime } from './canvas';
-import { arc, canDraw, ease, edge, embers, glow, impact, landing, noise, pulse, rng, seg, smoke, sparks, star } from './particles';
+import { specTime } from './canvas.ts';
+import { arc, canDraw, ease, edge, embers, glow, impact, landing, noise, pulse, rng, seg, smoke, sparks, star } from './particles.ts';
 
 type Call = Parameters<typeof specTime>[1];
 

@@ -1,7 +1,7 @@
 // Test-cost budget (from middle-earth-player, MIT): a whole game is played once, in its golden test; the test files that still
 // play whole games are listed with their call count and the list may not grow. A listed file that plays fewer (or none) is stale.
 //
-//   tsx test-cost.ts [--config path]
+//   node test-cost.ts [--config path]
 //
 // Config (test-cost.config.json): { "roots": ["src", "test"], "testSuffix": ".test.ts", "skip": ["golden.test.ts"],
 // "players": ["playOut"], "playerFiles": ["test/scenarios/*/game.ts"], "playerPattern": "^export (?:async )?(?:function|const) (play[A-Z]\\w*)\\b",

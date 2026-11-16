@@ -3,9 +3,9 @@
 // the route its state wants (or null to stay); the frame then replaces the hash. The tab title follows the route and
 // a new route starts scrolled to the top.
 import { lazy, Suspense, useEffect, useState, type ComponentType, type ErrorInfo, type LazyExoticComponent, type ReactNode } from 'react';
-import { ErrorBoundary } from './ErrorBoundary';
-import { replaceRoute, routeHref, type Route } from './routes';
-import { FRAME_WORDS, useRoute, type FrameWords } from './useRoute';
+import { ErrorBoundary } from './ErrorBoundary.tsx';
+import { replaceRoute, routeHref, type Route } from './routes.ts';
+import { FRAME_WORDS, useRoute, type FrameWords } from './useRoute.ts';
 import './frame.css';
 
 type Screen<N extends string> = ComponentType<{ route: Route<N> }>;

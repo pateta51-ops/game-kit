@@ -1,7 +1,7 @@
 // The tutorial's phases as a table, and the pure session over a script: off (an ordinary game), guided (a step waits:
 // one answer, Next or an automatic stretch), closing (after the last step: free play, the panel offers Close), closed.
-import { defineMachine, transition } from '../state-machines/machine';
-import type { TutorialScript } from './script';
+import { defineMachine, transition } from '../state-machines/machine.ts';
+import type { TutorialScript } from './script.ts';
 
 export type TutorialPhase = 'off' | 'guided' | 'closing' | 'closed';
 export type TutorialEvent = 'start' | 'step' | 'finish' | 'back' | 'leave' | 'close' | 'play';

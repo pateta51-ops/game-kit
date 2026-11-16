@@ -1,10 +1,10 @@
 import { act, fireEvent, render, screen } from '@testing-library/react';
 import { useEffect, useState } from 'react';
 import { describe, expect, it } from 'vitest';
-import { applyAction, createGame } from '../engine-core/index';
-import { autoAnswer } from './index';
-import { May, Order, PayCost, PickAmount, PickOptions, PromptHost, type PromptOf, type WidgetProps, type Widgets } from './ui';
-import { MARKET, type MarketPrompt, type MarketState } from './fake/market';
+import { applyAction, createGame } from '../engine-core/index.ts';
+import { autoAnswer } from './index.ts';
+import { May, Order, PayCost, PickAmount, PickOptions, PromptHost, type PromptOf, type WidgetProps, type Widgets } from './ui.ts';
+import { MARKET, type MarketPrompt, type MarketState } from './fake/market.ts';
 
 type View = { readonly got: number };
 const WIDGETS: Widgets<MarketPrompt, View> = {

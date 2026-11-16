@@ -3,8 +3,8 @@
 // `browserTransport` (github.ts) in the Authorization header to api.github.com, and shows in Settings as "saved" without
 // any of its characters. `forget` removes it. Storage can refuse: then the token lasts until the page closes.
 import { create } from 'zustand';
-import { bugConfig } from './config';
-import { safeStorage } from './storage';
+import { bugConfig } from './config.ts';
+import { safeStorage } from './storage.ts';
 
 export const tokenKey = (): string => `${bugConfig().id}:github-token:v1`;
 

@@ -1,6 +1,6 @@
 // Browser step for a game's e2e run: does the content fill the screen? `coverageProblems` is pure over boxes;
 // `contentBoxes` runs in the page. Empty problems is clean.
-import type { Box, LayoutPage } from './layout';
+import type { Box, LayoutPage } from './layout.ts';
 export interface CoverageSpec {
   area?: string;
   items?: string;

@@ -1,8 +1,8 @@
 // K223 (GAPS D1): zones as data, moves through the copy-on-write barrier, shuffle by ctx.rng, the per-seat view.
 import { afterEach, describe, expect, it } from 'vitest';
-import { applyActionWith, createGame, draftOf, hashState, isCurrent, newObjectTrack, refOf, lastKnown, setCowChecks, setStateFreezing, type Ctx } from '../engine-core/index';
-import { CONTENT, COUNTER, type Counter, type CounterState } from '../engine-core/fake/counter';
-import { canSee, cardsIn, draw, hiddenFrom, locate, moveCard, newZones, place, reveal, seatZone, shuffleZone, viewOf, zoneProblems, type Zoned } from './index';
+import { applyActionWith, createGame, draftOf, hashState, isCurrent, newObjectTrack, refOf, lastKnown, setCowChecks, setStateFreezing, type Ctx } from '../engine-core/index.ts';
+import { CONTENT, COUNTER, type Counter, type CounterState } from '../engine-core/fake/counter.ts';
+import { canSee, cardsIn, draw, hiddenFrom, locate, moveCard, newZones, place, reveal, seatZone, shuffleZone, viewOf, zoneProblems, type Zoned } from './index.ts';
 
 const DECK = ['c1', 'c2', 'c3', 'c4', 'c5', 'c6'];
 const zones = () =>

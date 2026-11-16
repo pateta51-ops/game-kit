@@ -4,7 +4,7 @@
 import { createHash } from 'node:crypto';
 import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
 import { join, resolve } from 'node:path';
-import { flags, isMain, stdio, type Io } from './args';
+import { flags, isMain, stdio, type Io } from './args.ts';
 
 export interface ArtEntry {
   source: string;
@@ -65,7 +65,7 @@ export function artCheck(c: ArtConfig): { errors: string[]; faces: number; total
 
 const NAMES = ['manifest', 'sources', 'out', 'ext', 'source-id', 'need', 'max-bytes', 'max-file-bytes'];
 const USAGE =
-  'usage: tsx art-check.ts --manifest <json> --sources <dir> --out <dir> --ext <webp> [--source-id <regex, group 1 is the id>] [--need <json array of ids>]... [--max-bytes <n>] [--max-file-bytes <n>] [--config <json>]';
+  'usage: node art-check.ts --manifest <json> --sources <dir> --out <dir> --ext <webp> [--source-id <regex, group 1 is the id>] [--need <json array of ids>]... [--max-bytes <n>] [--max-file-bytes <n>] [--config <json>]';
 
 export function run(args: readonly string[], io: Io = stdio): number {
   try {

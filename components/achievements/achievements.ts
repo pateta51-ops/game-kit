@@ -1,6 +1,6 @@
 // Achievements as pure functions over finished-game summaries: nothing is earned or stored, so a new definition applies
 // to old games. Only the small summary is written when a game ends, in a play-stats store.
-import { createPlayStats, type PlayRecord, type PlayStats, type PlayStatsOptions } from '../play-stats';
+import { createPlayStats, type PlayRecord, type PlayStats, type PlayStatsOptions } from '../play-stats/index.ts';
 
 export const SUMMARY_VERSION = 1;
 

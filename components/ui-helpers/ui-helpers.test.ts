@@ -9,7 +9,7 @@ import {
   picksFor,
   probedAnswer,
   type Timers,
-} from './index';
+} from './index.ts';
 
 function fakeTimers(): Timers & { advance: (ms: number) => void; pending: () => number } {
   let now = 0;

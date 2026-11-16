@@ -3,8 +3,8 @@
 // deleted. If IndexedDB refuses (a private window), the queue lasts until the page closes.
 import { createStore, del, entries, set, type UseStore } from 'idb-keyval';
 import { create } from 'zustand';
-import { bugConfig } from './config';
-import { parseReport, type BugReport } from './report';
+import { bugConfig } from './config.ts';
+import { parseReport, type BugReport } from './report.ts';
 
 export interface QueuedReport {
   report: BugReport;

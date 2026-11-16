@@ -2,7 +2,7 @@ import { mkdtempSync, readFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { afterAll, describe, expect, it } from 'vitest';
-import { DriverRng, poolBatch, tune, validate, type PlayFn, type WeightSpace, type WeightsFile } from './index';
+import { DriverRng, poolBatch, tune, validate, type PlayFn, type WeightSpace, type WeightsFile } from './index.ts';
 
 const dir = mkdtempSync(path.join(tmpdir(), 'sim-tune-'));
 afterAll(() => rmSync(dir, { recursive: true, force: true }));

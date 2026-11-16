@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { FlowQueue } from './flowQueue';
+import { FlowQueue } from './flowQueue.ts';
 
 describe('FlowQueue', () => {
   const same = (a: number, b: number) => a === b;

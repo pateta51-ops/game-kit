@@ -2,11 +2,11 @@
 // (sent N, failed M with each reason); the failed one stays listed. The dialog keeps a report in the queue first.
 import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { startTestGame } from './test-utils';
-import { BugReportHost } from './BugReportDialog';
-import { BugSettings, QueueBar } from './BugSettings';
-import { collectReport } from './collect';
-import { useBugDialog } from './dialogStore';
+import { startTestGame } from './test-utils.ts';
+import { BugReportHost } from './BugReportDialog.tsx';
+import { BugSettings, QueueBar } from './BugSettings.tsx';
+import { collectReport } from './collect.ts';
+import { useBugDialog } from './dialogStore.ts';
 import {
   MEMORY_ONLY_NOTE,
   queueReport,
@@ -14,14 +14,14 @@ import {
   savedMessage,
   unqueueReport,
   useQueue,
-} from './queue';
-import { useSendAll } from './sendAll';
-import { useToken } from './token';
-import { installDevBugHooks } from './transport';
+} from './queue.ts';
+import { useSendAll } from './sendAll.ts';
+import { useToken } from './token.ts';
+import { installDevBugHooks } from './transport.ts';
 
 const SHOT = 'iVBORw0KGgo'.repeat(30);
 
-vi.mock('./capture', () => ({
+vi.mock('./capture.ts', () => ({
   captureScreen: () => Promise.resolve('iVBORw0KGgo'.repeat(30)),
   compressScreenshot: (png: string) => Promise.resolve({ ext: 'png', base64: png }),
 }));

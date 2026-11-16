@@ -1,7 +1,7 @@
 // Bug reports: the issue's title and body (pure, shared by the browser and the tests). The files live in bugs/ on the
 // `bug-reports` branch, named by the issue number.
-import { bugRepo, MAX_ISSUE_BODY } from './config';
-import { reportHeadline, type BugReport } from './report';
+import { bugRepo, MAX_ISSUE_BODY } from './config.ts';
+import { reportHeadline, type BugReport } from './report.ts';
 
 /** The folder (on the `bug-reports` branch) that holds the files of every report. */
 export const BUGS_DIR = 'bugs';

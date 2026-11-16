@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { createGame, draftOf, hashValue, newSteps, seedRng, undoStep, type AnswerAction, type Ctx, type Draft, type GameRules, type KernelOption, type KernelState, type StepHistory } from '../engine-core/index';
-import { answerWithForced, autoAnswer, sendForced } from './index';
+import { createGame, draftOf, hashValue, newSteps, seedRng, undoStep, type AnswerAction, type Ctx, type Draft, type GameRules, type KernelOption, type KernelState, type StepHistory } from '../engine-core/index.ts';
+import { answerWithForced, autoAnswer, sendForced } from './index.ts';
 
 interface P {
   readonly id: number;

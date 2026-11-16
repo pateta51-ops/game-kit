@@ -1,7 +1,7 @@
 // The value network (K125, from the rftg study): inputs -> N tanh units -> softmax over seats (seat-relative, self first).
 // Plain loops over typed arrays. w1: one row per hidden unit of (inputs + 1), bias last; w2: one row per output of (hidden + 1).
 import { readFileSync, writeFileSync } from 'node:fs';
-import { DriverRng } from '../sim-pool/index';
+import { DriverRng } from '../sim-pool/index.ts';
 
 export interface Net {
   readonly inputs: number;
@@ -56,7 +56,9 @@ export function forward(net: Net, x: ArrayLike<number>): Float64Array {
 export class Evaluator {
   private last: Float32Array | null = null;
   private readonly sums: Float64Array;
-  constructor(readonly net: Net) {
+  readonly net: Net;
+  constructor(net: Net) {
+    this.net = net;
     this.sums = new Float64Array(net.hidden);
   }
   run(x: Float32Array): Float64Array {

@@ -1,6 +1,6 @@
 // Feats inside a game (K161): detection over the engine's event stream. The game supplies `track` (what an event adds to the
 // counters and seen-sets) and the defs; no engine import. FeatState is plain data: keep it inside the game state so Undo rewinds it.
-import type { GameSummary } from './achievements';
+import type { GameSummary } from './achievements.ts';
 
 export interface FeatState {
   counts: Record<string, number>;

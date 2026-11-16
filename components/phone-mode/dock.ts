@@ -1,6 +1,6 @@
 // The decision dock of a phone layout (the decision panel above the tabs) and its one-line prompt, as pure rules.
-import { transition } from '../state-machines/machine';
-import { foldMachine, type FoldState } from './machine';
+import { transition } from '../state-machines/machine.ts';
+import { foldMachine, type FoldState } from './machine.ts';
 
 export const DOCK_MACHINE = foldMachine('kit.dock', 'folded', {
   purpose:

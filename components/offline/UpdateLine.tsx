@@ -1,6 +1,6 @@
-import { applyUpdate, useUpdate } from './register';
+import { applyUpdate, useUpdate } from './register.ts';
 import './offline.css';
-import { UPDATE_WORDS } from './words';
+import { UPDATE_WORDS } from './words.ts';
 
 
 /** The update line: shown only while a newer version waits (or is taking over). */

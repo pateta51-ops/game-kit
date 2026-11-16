@@ -3,15 +3,15 @@
 // with their reason, then a summary), and per report Send, Download and Delete. QueueBar is the same count and Send all
 // for Home; BugButton is the table's button.
 import { useEffect, useState } from 'react';
-import { bugConfig, bugRepo } from './config';
-import { openBugReport } from './dialogStore';
-import { downloadText } from './download';
-import { fileQueued, useFiling, type SendAllSummary } from './fileAll';
-import { sendAllQueued, useSendAll } from './sendAll';
-import { MEMORY_ONLY_NOTE, queueText, unqueueReport, useQueue, type QueuedReport } from './queue';
-import { reportFileName, reportHeadline } from './report';
-import { useToken } from './token';
-import { sendDeps } from './transport';
+import { bugConfig, bugRepo } from './config.ts';
+import { openBugReport } from './dialogStore.ts';
+import { downloadText } from './download.ts';
+import { fileQueued, useFiling, type SendAllSummary } from './fileAll.ts';
+import { sendAllQueued, useSendAll } from './sendAll.ts';
+import { MEMORY_ONLY_NOTE, queueText, unqueueReport, useQueue, type QueuedReport } from './queue.ts';
+import { reportFileName, reportHeadline } from './report.ts';
+import { useToken } from './token.ts';
+import { sendDeps } from './transport.ts';
 import './bugs.css';
 
 const plural = (n: number, word: string): string => `${String(n)} ${word}${n === 1 ? '' : 's'}`;

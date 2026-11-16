@@ -24,7 +24,7 @@ jobs:
         with:
           node-version-file: .nvmrc
       - run: npm ci --no-audit --no-fund
-      - run: npx tsx components/check-runner/check-runner.ts --config check-runner.config.json --keep-going
+      - run: node components/check-runner/check-runner.ts --config check-runner.config.json --keep-going
         env:
           NO_COLOR: '1'
 

@@ -2,7 +2,7 @@
 // reload. The game injects how to get the save and the texts. Nothing the export does can throw out of this screen.
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import './frame.css';
-import { CRASH_WORDS, downloadSave, errorWords, type CrashWords, type SaveData } from './crashWords';
+import { CRASH_WORDS, downloadSave, errorWords, type CrashWords, type SaveData } from './crashWords.ts';
 
 export interface CrashScreenProps {
   error: Error;

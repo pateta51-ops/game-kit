@@ -1,5 +1,5 @@
 // The earn toast as data: several earns of one game become one counted toast; none on the first run, none when off.
-import type { AchievementDef } from './achievements';
+import type { AchievementDef } from './achievements.ts';
 
 export interface Toast {
   /** Ids earned, in catalogue order. */

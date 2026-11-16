@@ -1,5 +1,5 @@
 import { expect, it } from 'vitest';
-import { conforms, parseCsv, type Is } from './index';
+import { conforms, parseCsv, type Is } from './index.ts';
 
 it('parseCsv reads quotes, doubled quotes, CRLF and short rows', () => {
   expect(parseCsv('id,text\r\na,"x, ""y"""\nb\n\n')).toEqual([{ id: 'a', text: 'x, "y"' }, { id: 'b', text: '' }]);

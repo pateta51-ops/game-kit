@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { buildTimeline, createMotionPlayer, createVerbs, hurryOnInput, placeOf, validateSpec, type MotionSpec, type Rect, type Speed } from './index';
+import { buildTimeline, createMotionPlayer, createVerbs, hurryOnInput, placeOf, validateSpec, type MotionSpec, type Rect, type Speed } from './index.ts';
 
 const stage = (z: string): Rect | undefined => ({ tray: [0, 0, 100, 100] as const, lamp: [500, 0, 100, 100] as const })[z];
 const VERBS = ['move', 'text', 'pop'];

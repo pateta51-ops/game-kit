@@ -3,12 +3,12 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
-import { CONTENT, COUNTER, type CounterState } from '../engine-core/fake/counter';
-import { hashValue, isChecking, setInvariantChecking, type AnswerAction } from '../engine-core/index';
-import { playOne, type GameSpec } from '../sim-pool/play';
-import { run } from './cli';
-import { perfGame } from './fake/game';
-import { distribution, expectBudgets, formatReport, measure, overBudget, percentile, reportOf, timeGame, type PerfReport, type Sample } from './perf';
+import { CONTENT, COUNTER, type CounterState } from '../engine-core/fake/counter.ts';
+import { hashValue, isChecking, setInvariantChecking, type AnswerAction } from '../engine-core/index.ts';
+import { playOne, type GameSpec } from '../sim-pool/play.ts';
+import { run } from './cli.ts';
+import { perfGame } from './fake/game.ts';
+import { distribution, expectBudgets, formatReport, measure, overBudget, percentile, reportOf, timeGame, type PerfReport, type Sample } from './perf.ts';
 
 const spec = (index: number, seed: string): GameSpec => ({ index, seed, driver: 'random' });
 /** A clock whose timed spans last 5, 1, 3, 5, 1, 3... ms. */

@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { advance, createStepper, foldBefore, foldView, noSteps, pushSteps, questionZone, skip, type Fold, type FoldOptions, type Steps } from './index';
+import { advance, createStepper, foldBefore, foldView, noSteps, pushSteps, questionZone, skip, type Fold, type FoldOptions, type Steps } from './index.ts';
 
 // the fake game: a score and a pool of dice; events gain or roll
 interface View { score: number; pool: number }

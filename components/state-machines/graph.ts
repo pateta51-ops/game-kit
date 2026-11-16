@@ -1,5 +1,5 @@
 // Transition-graph invariants: machine tables that drive nothing, checked against the positions a game went through.
-import { allowedFrom, hasEdge, isState, whereIs, type AnyMachine } from './machine';
+import { allowedFrom, hasEdge, isState, whereIs, type AnyMachine } from './machine.ts';
 
 export interface Track<T> {
   readonly machine: AnyMachine;

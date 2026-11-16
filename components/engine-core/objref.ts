@@ -2,8 +2,8 @@
 // times it has changed zone, so a reference taken before a move goes stale by itself. When an object leaves a zone the
 // game stores a snapshot of it, read back by (id, counter) or by (id, zone). Opt-in: a game that wants it keeps an
 // `objRefs: ObjectTrack<T>` field in its state (start it with `newObjectTrack()`); nothing else in the kernel reads it.
-import { adopt, own } from './cow';
-import type { Draft } from './draft';
+import { adopt, own } from './cow.ts';
+import type { Draft } from './draft.ts';
 
 export interface ObjectRef {
   readonly id: string;

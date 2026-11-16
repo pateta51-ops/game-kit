@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { addStep, canUndoStep, createGame, extendStep, hashState, newSteps, redoStep, replay, replaySteps, undoStep, type AnswerAction, type StepHistory, type StepOptions } from './index';
-import { CONTENT, COUNTER, playGame, type Counter, type CounterState } from './fake/counter';
+import { addStep, canUndoStep, createGame, extendStep, hashState, newSteps, redoStep, replay, replaySteps, undoStep, type AnswerAction, type StepHistory, type StepOptions } from './index.ts';
+import { CONTENT, COUNTER, playGame, type Counter, type CounterState } from './fake/counter.ts';
 
 const LONG = { target: 1000 };
 const start = (o?: StepOptions): StepHistory<Counter> => newSteps<Counter>(createGame(COUNTER, { seed: 'steps' }, LONG, CONTENT).state, [], o);

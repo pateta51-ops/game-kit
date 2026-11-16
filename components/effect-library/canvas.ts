@@ -1,7 +1,7 @@
 // Canvas effects: one canvas in the layer, there only while a canvas effect plays; each effect draws a frame from time `t`.
-import type { Run, VerbCall, VerbRegistry } from '../motion-frame';
-import type { EffectLayer } from './layer';
-import { canDraw } from './particles';
+import type { Run, VerbCall, VerbRegistry } from '../motion-frame/index.ts';
+import type { EffectLayer } from './layer.ts';
+import { canDraw } from './particles.ts';
 
 export interface CanvasFx {
   call: VerbCall;

@@ -1,4 +1,4 @@
-import { useSecondTap } from './secondTap';
+import { useSecondTap } from './secondTap.ts';
 
 /** The scale that draws a piece `w` wide in a box `box` wide. */
 export const scaleFor = (w: number, box: number) => (w > 0 ? box / w : 1);

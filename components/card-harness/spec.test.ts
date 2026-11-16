@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { cardSpecs, specCoverage, specProblems, withoutLine, type SpecGame, type SpecRow } from './index';
+import { cardSpecs, specCoverage, specProblems, withoutLine, type SpecGame, type SpecRow } from './index.ts';
 
 interface Rec { id: string; line: string; gain: number }
 type Layout = { hand: number };

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { IllegalActionError, newHistory, recordAction, undo, redo, stateAt, applyAction, createGame, createSave, freshWords, hashState, importSave, exportSave, replay, validateAction, type AnswerAction, type RngWords } from './index';
-import { CONTENT, COUNTER, RULES, playGame, type Counter } from './fake/counter';
+import { IllegalActionError, newHistory, recordAction, undo, redo, stateAt, applyAction, createGame, createSave, freshWords, hashState, importSave, exportSave, replay, validateAction, type AnswerAction, type RngWords } from './index.ts';
+import { CONTENT, COUNTER, RULES, playGame, type Counter } from './fake/counter.ts';
 
 const W: RngWords = { a: 1, b: 2, c: 3, d: 4 };
 const first = (seed: string) => {

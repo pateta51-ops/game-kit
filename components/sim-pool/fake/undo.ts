@@ -1,7 +1,7 @@
 // The fake counter with a bad undo (its `add` draws randomness without a reveal; `good*` seeds only draw cards, which reveal),
 // a placeholder prompt (`ph*`) and a dead end (`dead*`).
-import { CONTENT, COUNTER, RULES, type Counter } from '../../engine-core/fake/counter';
-import { randomDriver, type SimGame } from '../index';
+import { CONTENT, COUNTER, RULES, type Counter } from '../../engine-core/fake/counter.ts';
+import { randomDriver, type SimGame } from '../index.ts';
 
 export const simGame: SimGame<Counter> = {
   rules: COUNTER,

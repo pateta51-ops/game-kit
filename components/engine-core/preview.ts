@@ -1,10 +1,10 @@
 // K89 (marvel-champions-digital-game `preview.ts`, AGPL-3.0; idea only, written new): what an answer would do, by
 // running it on the real engine and throwing the state away. The probe stops at hidden information (a task that emits a
 // revealing event or draws randomness): it returns what happened before that task, never what the task found.
-import { applyActionWith, validateAction } from './apply';
-import { canonicalJson } from './canonical';
-import { ctxEvents } from './ctx';
-import type { Ctx, GameRules, GameTypes, HandlerTable } from './types';
+import { applyActionWith, validateAction } from './apply.ts';
+import { canonicalJson } from './canonical.ts';
+import { ctxEvents } from './ctx.ts';
+import type { Ctx, GameRules, GameTypes, HandlerTable } from './types.ts';
 
 export type PreviewStop = 'complete' | 'choice' | 'hiddenInformation' | 'rejected';
 

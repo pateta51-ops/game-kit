@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { addCount, count, countHistory, crossOut, emptyLog, fieldKey, forget, has, isCrossed, readLog, record, reward, rewardsByStep, rewardTotal, setCount, setCrossOut, setHas, setInsert, setOf, setRemove, visibleKeys, type FieldDef } from './index';
+import { addCount, count, countHistory, crossOut, emptyLog, fieldKey, forget, has, isCrossed, readLog, record, reward, rewardsByStep, rewardTotal, setCount, setCrossOut, setHas, setInsert, setOf, setRemove, visibleKeys, type FieldDef } from './index.ts';
 
 describe('keys', () => {
   it('records once, in order; cross-out leaves the order; recording again brings it back last', () => {

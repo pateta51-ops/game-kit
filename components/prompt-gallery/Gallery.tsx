@@ -1,7 +1,7 @@
 // The dev route: one fixture at a time on the game's own render function. An answer is checked by the game and listed,
 // never played: nothing reaches a game or a store.
 import { Component, useEffect, useMemo, useState, type ReactNode } from 'react';
-import { galleryEntries, loadFixture, type Fixture, type FixtureGroup, type GalleryEntry, type GallerySpec, type Loaded } from './registry';
+import { galleryEntries, loadFixture, type Fixture, type FixtureGroup, type GalleryEntry, type GallerySpec, type Loaded } from './registry.ts';
 import './gallery.css';
 
 export interface GalleryProps<S> {

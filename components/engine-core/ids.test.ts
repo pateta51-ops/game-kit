@@ -8,7 +8,7 @@ import {
   parseCardInstanceId,
   takePromptSeq,
   takeSeq,
-} from './index';
+} from './index.ts';
 
 describe('ids (§6.1)', () => {
   it('writes a card instance id as the card id, a hash and the copy number', () => {

@@ -1,8 +1,8 @@
 // sim-pool and replay-cli module: `simGame` (whole games with a driver) and `specs` (the golden games).
-import type { AnswerAction } from '../../kit/engine-core/index';
-import { bySeat, randomDriver, type Driver, type SimGame } from '../../kit/sim-pool/index';
-import type { GoldenSpec } from '../../kit/replay-cli/golden';
-import { CONTENT, GAME, greedyPicks, RULES, viewOf, type Ref, type Seat } from './rules';
+import type { AnswerAction } from '../../kit/engine-core/index.ts';
+import { bySeat, randomDriver, type Driver, type SimGame } from '../../kit/sim-pool/index.ts';
+import type { GoldenSpec } from '../../kit/replay-cli/golden.ts';
+import { CONTENT, GAME, greedyPicks, RULES, viewOf, type Ref, type Seat } from './rules.ts';
 
 // decides from its own seat's view (bySeat routes each prompt by its seat): the full state is never read past viewOf
 const greedy = (seat: Seat): Driver<Ref> => ({

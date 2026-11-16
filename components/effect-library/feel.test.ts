@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { afterimages, createFlashLimiter, flashAt, holdMs, shakeAt, stopTime, trauma, traumaAt } from './feel';
+import { afterimages, createFlashLimiter, flashAt, holdMs, shakeAt, stopTime, trauma, traumaAt } from './feel.ts';
 
 describe('impact feel', () => {
   it('hit stop holds at contact and keeps the total', () => {

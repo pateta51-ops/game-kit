@@ -1,11 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import { dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { clauseIds, conforms, createProbe, Delivery, describeCheck, expectResolved, inventory, renderRecords, report, runInventory, Scenario, scenarioLiteral, rulingGroups, testFiles, traceAbilities, type DeliveryGame, type Same } from './index';
-import { literalsOf } from './literals';
-import { DICE, DICE_GAME, PROBE, type DiceEvent, type Dice, type DiceState, type Note } from './fake/dice';
-import { applyAction } from '../engine-core';
-import { diffPaths, roundTripCards } from './roundtrip';
+import { clauseIds, conforms, createProbe, Delivery, describeCheck, expectResolved, inventory, renderRecords, report, runInventory, Scenario, scenarioLiteral, rulingGroups, testFiles, traceAbilities, type DeliveryGame, type Same } from './index.ts';
+import { literalsOf } from './literals.ts';
+import { DICE, DICE_GAME, PROBE, type DiceEvent, type Dice, type DiceState, type Note } from './fake/dice.ts';
+import { applyAction } from '../engine-core/index.ts';
+import { diffPaths, roundTripCards } from './roundtrip.ts';
 
 describe('K124 cast and K114 round trip', () => {
   it('cast returns the open prompt of that kind and names the kind otherwise', () => {
@@ -264,7 +264,7 @@ describe('card-language checks', () => {
 
 describe('index entries and strict citation', () => {
   it('literals/index exports literalsOf', async () => {
-    expect((await import('./literals/index')).literalsOf).toBe(literalsOf);
+    expect((await import('./literals/index.ts')).literalsOf).toBe(literalsOf);
   });
   it('a scenario starts from a state and its events', () => {
     const a = new Scenario(DICE_GAME).set((s) => void (s.dice = [2, 2, 5])).run({ kind: 'play' });

@@ -5,12 +5,12 @@ import { dirname, join, parse } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { inflateSync } from 'node:zlib';
 import { afterAll, describe, expect, it } from 'vitest';
-import { run as bundle } from './bundle-node';
-import { filesToCopy, run as sync, syncNote } from './dossier-sync';
-import { looksLikeFont, ownerFiles, run as fonts } from './fonts-fetch';
-import { run as mocks, type Playwright } from './mock-capture';
-import { run as shrinkRun } from './shrink-png';
-import { toWoff } from './woff';
+import { run as bundle } from './bundle-node.ts';
+import { filesToCopy, run as sync, syncNote } from './dossier-sync.ts';
+import { looksLikeFont, ownerFiles, run as fonts } from './fonts-fetch.ts';
+import { run as mocks, type Playwright } from './mock-capture.ts';
+import { run as shrinkRun } from './shrink-png.ts';
+import { toWoff } from './woff.ts';
 
 const dir = mkdtempSync(join(tmpdir(), 'tooling-more-'));
 afterAll(() => rmSync(dir, { recursive: true, force: true }));

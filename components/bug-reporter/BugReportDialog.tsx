@@ -3,17 +3,17 @@
 // report goes to the local queue first (IndexedDB), so nothing is lost when filing fails; "Send now" then files it as a
 // GitHub issue with the token from Settings, and a failure leaves it queued with the reason (Settings > Send all).
 import { useEffect, useRef, useState } from 'react';
-import { bugConfig } from './config';
-import { collectReport } from './collect';
-import { openBugReport, useBugDialog } from './dialogStore';
-import { downloadText } from './download';
-import { fileQueued } from './fileAll';
-import { MarkupEditor } from './markup/MarkupEditor';
-import { flattenMarkup, type Markup } from './markup/model';
-import { queueReport, safeInQueueMessage, savedMessage, useQueue } from './queue';
-import { reportFileName, type BugReport } from './report';
-import { useToken } from './token';
-import { installDevBugHooks, sendDeps } from './transport';
+import { bugConfig } from './config.ts';
+import { collectReport } from './collect.ts';
+import { openBugReport, useBugDialog } from './dialogStore.ts';
+import { downloadText } from './download.ts';
+import { fileQueued } from './fileAll.ts';
+import { MarkupEditor } from './markup/MarkupEditor.tsx';
+import { flattenMarkup, type Markup } from './markup/model.ts';
+import { queueReport, safeInQueueMessage, savedMessage, useQueue } from './queue.ts';
+import { reportFileName, type BugReport } from './report.ts';
+import { useToken } from './token.ts';
+import { installDevBugHooks, sendDeps } from './transport.ts';
 import './bugs.css';
 
 type Outcome =

@@ -2,7 +2,7 @@ import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterAll, describe, expect, it } from 'vitest';
-import { cssUrls, initialFiles, measureBuild, run, staticImports } from './check-bundle-size';
+import { cssUrls, initialFiles, measureBuild, run, staticImports } from './check-bundle-size.ts';
 
 const dir = mkdtempSync(join(tmpdir(), 'size-'));
 mkdirSync(join(dir, 'assets'));

@@ -1,1 +1,1 @@
-export { ResolutionFrame } from './ResolutionFrame';
+export { ResolutionFrame } from './ResolutionFrame.tsx';

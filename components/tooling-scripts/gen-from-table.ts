@@ -3,7 +3,7 @@
 // Exit codes: 0 written or current, 1 stale, 2 usage, no such table or a failed write.
 import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { basename, resolve } from 'node:path';
-import { flags, isMain, stdio, type Io } from './args';
+import { flags, isMain, stdio, type Io } from './args.ts';
 
 /** The cells of a table row, or null when the line is not one. `\|` and a pipe inside a code span do not split. */
 export function splitRow(line: string): string[] | null {
@@ -76,7 +76,7 @@ export function render(name: string, rows: readonly Record<string, string>[], fr
 }
 
 const NAMES = ['plan', 'heading', 'out', 'name'];
-const USAGE = 'usage: tsx gen-from-table.ts --plan <md> --out <file.ts or .json> [--heading <text of the heading above the table>] [--name <ROWS>] [--check] [--config <json>]';
+const USAGE = 'usage: node gen-from-table.ts --plan <md> --out <file.ts or .json> [--heading <text of the heading above the table>] [--name <ROWS>] [--check] [--config <json>]';
 
 export function run(args: readonly string[], io: Io = stdio): number {
   try {

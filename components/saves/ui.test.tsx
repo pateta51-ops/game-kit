@@ -1,10 +1,10 @@
 import 'fake-indexeddb/auto';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
-import { createGame, newHistory, recordAction, type History } from '../engine-core';
-import { CONTENT, COUNTER, randomAnswer, RULES, type Counter } from '../engine-core/fake/counter';
-import { makeSaves } from './index';
-import { SavesScreen } from './ui';
+import { createGame, newHistory, recordAction, type History } from '../engine-core/index.ts';
+import { CONTENT, COUNTER, randomAnswer, RULES, type Counter } from '../engine-core/fake/counter.ts';
+import { makeSaves } from './index.ts';
+import { SavesScreen } from './ui.ts';
 
 let db = 0;
 const mk = () => makeSaves<Counter>({ game: COUNTER, content: CONTENT, database: `ui-saves-${String(db++)}`, filePrefix: 'neutral' });

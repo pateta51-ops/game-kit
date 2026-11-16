@@ -2,15 +2,15 @@
 // (ArkhamHorror Would / CancelBatch / IgnoreBatch / Instead, no licence: idea only, written new), shared batch keys
 // (XMage BatchEvent, MIT, design) and the prevention window declared as card data with remaining / prevented counters
 // (netrunner prevention.clj, MIT, design). Opt-in: `state.timing` and `task.batch` appear only once a game calls `would`.
-import { checkpointHandlers, type CheckpointConfig } from './checkpoint';
-import { adopt, own } from './cow';
-import { draftOf } from './ctx';
-import type { Draft } from './draft';
-import { batchOver, type ContinuousEffect } from './durations';
-import { EngineBugError } from './errors';
-import { replaceHandlers, type Replacement, type ReplaceResult } from './replace';
-import { triggerHandlers, type PendingTrigger, type TriggerCandidate, type TriggerPromptInfo } from './triggers';
-import type { Ctx, EventInput, GameTypes, HandlerTable, KernelPrompt, KernelTask } from './types';
+import { checkpointHandlers, type CheckpointConfig } from './checkpoint.ts';
+import { adopt, own } from './cow.ts';
+import { draftOf } from './ctx.ts';
+import type { Draft } from './draft.ts';
+import { batchOver, type ContinuousEffect } from './durations.ts';
+import { EngineBugError } from './errors.ts';
+import { replaceHandlers, type Replacement, type ReplaceResult } from './replace.ts';
+import { triggerHandlers, type PendingTrigger, type TriggerCandidate, type TriggerPromptInfo } from './triggers.ts';
+import type { Ctx, EventInput, GameTypes, HandlerTable, KernelPrompt, KernelTask } from './types.ts';
 
 export type SharedKey = 'player' | 'source' | 'target';
 export interface OccurrenceKeys {

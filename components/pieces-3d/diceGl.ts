@@ -2,7 +2,7 @@
 // matching `sel` with data-p3-die="d6|d10" and data-v="<value>", so covers, clipping and opacity of the page apply to it as to
 // any element. One light from the top-left, a cast shadow under it. data-roll="t0,dur,seed" tumbles it to its value, data-turn="t0,dur,out|in" turns it a quarter
 // (times of performance.now()). No model file, no dependency. Returns null where WebGL is not available.
-import { cube, mesh, rest, trapezohedron, tumble, turned, type M3, type Solid } from './solids';
+import { cube, mesh, rest, trapezohedron, tumble, turned, type M3, type Solid } from './solids.ts';
 
 export interface DiceLook { body: string; ink: string; font: string; tilt: number }
 export interface DiceLayer { canvas: HTMLCanvasElement; stop: () => void; frames: () => number }

@@ -1,6 +1,6 @@
 // Two small pieces of a phone table: a fixed-size piece drawn at a box width, and a commit-flag second tap.
 import type { CSSProperties, ReactNode } from 'react';
-import { scaleFor } from './commitHook';
+import { scaleFor } from './commitHook.ts';
 
 /** A `w` x `h` piece drawn at a `box` px width (height follows); the piece keeps its own size, so its layout is unchanged. */
 export function Scaled({ w, h, box, children, className, testId }: { w: number; h: number; box: number; children: ReactNode; className?: string; testId?: string }) {

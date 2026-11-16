@@ -1,7 +1,7 @@
 import { fireEvent, render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
-import type { Fixture, GallerySpec } from './index';
-import { Gallery } from './ui';
+import type { Fixture, GallerySpec } from './index.ts';
+import { Gallery } from './ui.ts';
 
 interface Lanterns {
   readonly prompt: string | null;

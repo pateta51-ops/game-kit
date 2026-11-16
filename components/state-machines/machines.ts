@@ -3,8 +3,8 @@
 // Exit codes: 0 ok, 1 unknown id.
 import { resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
-import { getMachine, listMachines, MACHINES_DOC } from './machine';
-import { loadModules, machineText, readConfig, where } from './machines-doc';
+import { getMachine, listMachines, MACHINES_DOC } from './machine.ts';
+import { loadModules, machineText, readConfig, where } from './machines-doc.ts';
 
 export function listText(): string {
   const ms = listMachines();

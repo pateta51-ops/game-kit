@@ -5,7 +5,7 @@ import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { afterAll, afterEach, describe, expect, it, vi } from 'vitest';
-import { candidates, main } from './plancheck';
+import { candidates, main } from './plancheck.ts';
 
 const made: string[] = [];
 const tmp = (prefix: string): string => {

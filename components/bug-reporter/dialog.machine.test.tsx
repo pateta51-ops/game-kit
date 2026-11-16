@@ -3,11 +3,11 @@
 import 'fake-indexeddb/auto';
 import { act } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { edgesOf, setMachineMode, transition } from '../state-machines/machine';
-import { expectIllegal } from '../state-machines/test-utils';
-import { after, BUG_DIALOG_MACHINE, BUG_MARKUP_MACHINE, BUG_REPORT_MACHINE } from './dialog.machine';
-import { useBugDialog } from './dialogStore';
-import { unqueueReport, useQueue } from './queue';
+import { edgesOf, setMachineMode, transition } from '../state-machines/machine.ts';
+import { expectIllegal } from '../state-machines/test-utils.ts';
+import { after, BUG_DIALOG_MACHINE, BUG_MARKUP_MACHINE, BUG_REPORT_MACHINE } from './dialog.machine.ts';
+import { useBugDialog } from './dialogStore.ts';
+import { unqueueReport, useQueue } from './queue.ts';
 
 // The next screenshot, settled by release() whether the store has called captureScreen yet or not: the store waits two
 // animation frames before it captures, and under load (CI, the full run) those frames can land after the test's own
@@ -24,7 +24,7 @@ freshShot();
 const release = (s: string | null) => {
   shot.resolve(s);
 };
-vi.mock('./capture', () => ({
+vi.mock('./capture.ts', () => ({
   captureScreen: () => shot.promise,
 }));
 

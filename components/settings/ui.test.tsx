@@ -1,7 +1,7 @@
 import { fireEvent, render, screen } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
-import { createSettingsStore, resolutionSetting, type SettingsSchema } from './index';
-import { SettingsScreen } from './ui';
+import { createSettingsStore, resolutionSetting, type SettingsSchema } from './index.ts';
+import { SettingsScreen } from './ui.ts';
 
 const schema = {
   storageKey: 'test.ui.settings',

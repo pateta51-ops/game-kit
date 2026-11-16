@@ -1,14 +1,14 @@
 // Issue 44/45: the floating bug button (setting, phone default, opens the report) and the menu's way back.
 import { act, cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { bugConfig, configureBugReporter } from './config';
-import { stopTestGame, useTestSettings } from './test-utils';
-import type * as capture from './capture';
-import { scrolledElements } from './capture';
-import { useBugDialog } from './dialogStore';
-import { FloatingBugButton } from './FloatingBugButton';
+import { bugConfig, configureBugReporter } from './config.ts';
+import { stopTestGame, useTestSettings } from './test-utils.ts';
+import type * as capture from './capture.ts';
+import { scrolledElements } from './capture.ts';
+import { useBugDialog } from './dialogStore.ts';
+import { FloatingBugButton } from './FloatingBugButton.tsx';
 
-vi.mock('./capture', async (orig) => ({
+vi.mock('./capture.ts', async (orig) => ({
   ...(await orig<typeof capture>()),
   captureScreen: () => Promise.resolve('iVBORw0KGgo'.repeat(30)),
 }));

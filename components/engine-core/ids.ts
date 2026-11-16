@@ -1,6 +1,6 @@
 // Deterministic ids: the instance id of a copy of a definition (definition id, a hash and the copy number: C-nn#1), and the
 // sequence counters. No clocks and no randomness.
-import { EngineBugError } from './errors';
+import { EngineBugError } from './errors.ts';
 
 /** The instance id of copy `copy` (from 1) of the card `defId`: C-nn#1. */
 export function cardInstanceId(defId: string, copy: number): string {

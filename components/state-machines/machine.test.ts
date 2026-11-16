@@ -17,7 +17,7 @@ import {
   expectEdge,
   listLocalState,
   transitionTo,
-} from './machine';
+} from './machine.ts';
 
 type Door = 'closed' | 'open' | 'locked';
 type DoorEvent = 'open' | 'close' | 'lock' | 'unlock';
@@ -157,7 +157,7 @@ describe('machine helper (src/lib/machine.ts)', () => {
 
 describe('index', () => {
   it('exports the machine helpers', async () => {
-    const m = await import('./index');
+    const m = await import('./index.ts');
     expect(m.defineMachine).toBe(defineMachine);
     expect(m.transition).toBe(transition);
   });

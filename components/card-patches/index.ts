@@ -70,4 +70,4 @@ export function errata(source: readonly Card[], played: readonly Card[], fields?
 export function rulingsFor(rulings: Readonly<Record<string, readonly Ruling[]>>, code: string): Ruling[] {
   return (rulings[code] ?? []).map((r, i) => ({ r, i })).sort((x, y) => (y.r.date ?? '').localeCompare(x.r.date ?? '') || x.i - y.i).map((x) => x.r);
 }
-export * from './compare';
+export * from './compare.ts';

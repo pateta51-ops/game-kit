@@ -2,8 +2,8 @@
 // radio group or a drop-down per choice. Each change writes the store at once. Dev settings show only with `dev`.
 import { useId, type ReactNode } from 'react';
 import type { StoreApi, UseBoundStore } from 'zustand';
-import type { SettingDef, SettingsSchema } from './schema';
-import type { SettingsState } from './store';
+import type { SettingDef, SettingsSchema } from './schema.ts';
+import type { SettingsState } from './store.ts';
 import './settings.css';
 
 type Any = UseBoundStore<StoreApi<SettingsState<Record<string, unknown>>>>;

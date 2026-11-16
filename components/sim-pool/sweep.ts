@@ -1,8 +1,8 @@
 // A grid sweep (7is scripts/sweep.ts): every cell of a settings grid plays the same seeds through `runResumable`; one CSV
 // row per cell with the mean, standard deviation and standard error of each metric over the games that did not fail.
 import { writeFileSync } from 'node:fs';
-import type { GameSpec, SimRecord } from './play';
-import { runResumable } from './resume';
+import type { GameSpec, SimRecord } from './play.ts';
+import { runResumable } from './resume.ts';
 
 export type Cell = NonNullable<GameSpec['settings']>;
 

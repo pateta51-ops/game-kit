@@ -1,5 +1,5 @@
 // The phone mode's machines: the layout mode, a fold (open or folded part), the second-tap commit.
-import { defineMachine, type Machine } from '../state-machines/machine';
+import { defineMachine, type Machine } from '../state-machines/machine.ts';
 
 const SOURCE = 'components/phone-mode/machine.ts';
 

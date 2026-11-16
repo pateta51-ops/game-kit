@@ -1,8 +1,8 @@
 // An end-to-end helper: plays a script through the game's screen (a Playwright page, or anything with the two calls),
 // waiting for each step on the panel's `data-step`, pressing the panel's Next on Next and auto steps, and handing a
 // move step to the game's own `answer` (how its controls are pressed is the game's).
-import type { TutorialScript, TutorialStep } from './script';
-import { PANEL_WORDS } from './words';
+import type { TutorialScript, TutorialStep } from './script.ts';
+import { PANEL_WORDS } from './words.ts';
 
 /** The two Playwright `Page` calls the helper uses. */
 export interface TutorialPage {

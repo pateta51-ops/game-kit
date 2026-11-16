@@ -1,9 +1,9 @@
 // The canvas board's bookkeeping on a faked page (no pixels): when it is made, kept and removed.
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { createVerbs, type Run, type VerbCall } from '../motion-frame';
-import { registerCanvasEffect } from './canvas';
-import { fakeDom, type FakeEl } from './fake/dom';
-import type { EffectLayer } from './layer';
+import { createVerbs, type Run, type VerbCall } from '../motion-frame/index.ts';
+import { registerCanvasEffect } from './canvas.ts';
+import { fakeDom, type FakeEl } from './fake/dom.ts';
+import type { EffectLayer } from './layer.ts';
 
 afterEach(() => {
   vi.unstubAllGlobals();

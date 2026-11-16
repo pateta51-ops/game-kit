@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { calloutsFor, createEarnStore, detectFeats, emptyFeatState, feedFeats, makeSummary, type FeatDef } from './index';
+import { calloutsFor, createEarnStore, detectFeats, emptyFeatState, feedFeats, makeSummary, type FeatDef } from './index.ts';
 
 type Ev = { t: 'kill'; foe: string };
 const track = (e: Ev) => ({ counts: { kills: 1 }, seen: { foes: [e.foe] } });

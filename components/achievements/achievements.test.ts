@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { bestCount, byFamily, checklist, countGames, createSummaryStore, evaluate, makeSummary, newlyEarned, validSummary, type AchievementDef, type GameSummary } from './index';
+import { bestCount, byFamily, checklist, countGames, createSummaryStore, evaluate, makeSummary, newlyEarned, validSummary, type AchievementDef, type GameSummary } from './index.ts';
 
 const g = (id: string, o: Partial<GameSummary> = {}): GameSummary =>
   makeSummary({ id, at: Number(id.replace(/\D/g, '')) || 1, result: 'win', rounds: 5, counts: {}, sets: { hero: ['a'] }, ...o });

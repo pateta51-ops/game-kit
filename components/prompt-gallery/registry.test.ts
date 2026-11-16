@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { checkGallery, checkStates, fixtureId, galleryEntries, isDevMode, keepBest, loadFixture, type Fixture, type GallerySpec, type Seen } from './index';
+import { checkGallery, checkStates, fixtureId, galleryEntries, isDevMode, keepBest, loadFixture, type Fixture, type GallerySpec, type Seen } from './index.ts';
 
 // The fake game "Lanterns": light lamps until the row is lit (won) or the oil runs out (lost).
 interface Lanterns {

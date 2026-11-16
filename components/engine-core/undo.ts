@@ -3,8 +3,8 @@
 // Safe (default): the cursor may not go back past the last action whose events show hidden information (`reveal`);
 // the refusal says why (ported from Warp's Edge undo.ts: the reason of the revealing event, in the game's words).
 // Free: any cursor; `undoUsed` is set. No undo once `result` is set.
-import { applyAction, createGame } from './apply';
-import type { GameRules, GameTypes } from './types';
+import { applyAction, createGame } from './apply.ts';
+import type { GameRules, GameTypes } from './types.ts';
 
 export type UndoMode = 'safe' | 'free';
 

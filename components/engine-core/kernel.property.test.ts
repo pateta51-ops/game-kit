@@ -6,8 +6,8 @@
 // - the same seed and actions give the same hashes, and a replay reaches the last one.
 // A failure names the seed, the action number and the prompt, so the run can be played again.
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { applyAction, createGame, draftOf, hashState, randomInt, replay, seedRng, setInvariantChecking, validateAction, type Draft, type GameRules, type GameTypes, type KernelPrompt, type KernelState, type KernelTask } from './index';
-import { CONTENT, COUNTER, type Counter } from './fake/counter';
+import { applyAction, createGame, draftOf, hashState, randomInt, replay, seedRng, setInvariantChecking, validateAction, type Draft, type GameRules, type GameTypes, type KernelPrompt, type KernelState, type KernelTask } from './index.ts';
+import { CONTENT, COUNTER, type Counter } from './fake/counter.ts';
 
 interface FxTask extends KernelTask {
   readonly left: number;

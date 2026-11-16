@@ -1,5 +1,5 @@
 // K100: one console line to a debug edit (netrunner's slash commands, MIT; the syntax only, written new).
-import type { DebugAction } from '../engine-core/index';
+import type { DebugAction } from '../engine-core/index.ts';
 
 /** Positional argument names per game verb (`summon: ['card']` lets `/summon 9` mean `card=9`). */
 export type DebugParams = Readonly<Record<string, readonly string[]>>;

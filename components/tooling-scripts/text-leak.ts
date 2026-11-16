@@ -4,7 +4,7 @@
 import { spawnSync } from 'node:child_process';
 import { readdirSync, readFileSync, statSync } from 'node:fs';
 import { basename, join, resolve } from 'node:path';
-import { flags, isMain, stdio, type Io } from './args';
+import { flags, isMain, stdio, type Io } from './args.ts';
 
 export const words = (s: string): string[] => s.toLowerCase().replace(/[’']/g, '').match(/[a-z0-9]+/g) ?? [];
 
@@ -130,7 +130,7 @@ export function gramsOf(sources: readonly string[], keys: readonly string[], n: 
 
 const NAMES = ['base', 'diff', 'repo', 'n', 'source', 'json-keys', 'exclude'];
 const USAGE =
-  'usage: tsx text-leak.ts (--base <commit> [--repo <dir>] [--exclude <path>]... | --diff <file of git diff -U0>) --source <file or dir>... [--json-keys <a,b>] [--n <6>] [--config <json>]';
+  'usage: node text-leak.ts (--base <commit> [--repo <dir>] [--exclude <path>]... | --diff <file of git diff -U0>) --source <file or dir>... [--json-keys <a,b>] [--n <6>] [--config <json>]';
 
 export function run(args: readonly string[], io: Io = stdio): number {
   try {

@@ -1,6 +1,6 @@
 // The sanity-band shape (warps scripts/sim/core.ts BandResult; imperium scripts/sim/core.ts Band, formatBands and
 // `--skip-band`): a game writes its own bands over its simulation records; only the shape and the report are here.
-import type { SimRecord } from './play';
+import type { SimRecord } from './play.ts';
 
 export interface Band {
   readonly id: string;

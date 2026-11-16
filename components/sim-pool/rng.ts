@@ -1,7 +1,7 @@
 // The drivers' randomness (warps src/engine/drivers/rng.ts). A driver never touches the game's RNG (`state.rng`): its own choices
 // come from a counter-mode hash of its seed and the open prompt's id, built on the public `fnv1a64`. So the random draws
 // are a pure function of (seed, state): the same game and seed always give the same answers.
-import { fnv1a64 } from '../engine-core/index';
+import { fnv1a64 } from '../engine-core/index.ts';
 
 const TWO_32 = 4294967296;
 
@@ -9,7 +9,10 @@ const TWO_32 = 4294967296;
 export class DriverRng {
   private n = 0;
 
-  constructor(private readonly key: string) {}
+  private readonly key: string;
+  constructor(key: string) {
+    this.key = key;
+  }
 
   /**
    * The next unsigned 32-bit number: the low word of the hash, passed through the murmur3 finalizer. The low word of one

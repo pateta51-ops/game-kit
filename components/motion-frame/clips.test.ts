@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { clipTimes, frameAt, stillFrames, stillTimes } from './clips';
+import { clipTimes, frameAt, stillFrames, stillTimes } from './clips.ts';
 
 const spec = (...e: [number, number][]) => ({ steps: e.map(([t, dur]) => ({ t, dur })) });
 describe('stillTimes', () => {

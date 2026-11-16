@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { ghostChoices } from './index';
+import { ghostChoices } from './index.ts';
 
 // Fake game: cards on a table; a choice is an ability with a source ref (id plus zone-change counter, as engine-core's).
 interface Ref { id: string; zcc: number }

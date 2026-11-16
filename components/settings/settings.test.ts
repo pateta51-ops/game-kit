@@ -1,6 +1,6 @@
 import { describe, expect, expectTypeOf, it } from 'vitest';
 import type { StateStorage } from 'zustand/middleware';
-import { createSettingsStore, defaults, layoutSetting, readSettings, resolutionSetting, resolutionSize, type SettingsSchema, type Values } from './index';
+import { createSettingsStore, defaults, layoutSetting, readSettings, resolutionSetting, resolutionSize, type SettingsSchema, type Values } from './index.ts';
 
 const SCHEMA = {
   storageKey: 'test.settings.v1',

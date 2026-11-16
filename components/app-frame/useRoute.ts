@@ -1,6 +1,6 @@
 // The route of the address bar (re-read on hashchange) and the frame's own words.
 import { useSyncExternalStore } from 'react';
-import { parseHash, type Route } from './routes';
+import { parseHash, type Route } from './routes.ts';
 
 export interface FrameWords {
   loading: string;

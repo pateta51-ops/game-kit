@@ -1,5 +1,5 @@
 // The overlay layer: one element above the page that holds the clones and stand-ins the effects animate.
-import type { Rect, Run } from '../motion-frame';
+import type { Rect, Run } from '../motion-frame/index.ts';
 
 export interface LayerOptions {
   /** the element that holds the layer (default `document.body`) */

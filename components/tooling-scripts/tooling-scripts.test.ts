@@ -4,10 +4,10 @@ import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterAll, describe, expect, it } from 'vitest';
-import { flags } from './args';
-import { run as art } from './art-check';
-import { records, run as gen, splitRow, tableAfter } from './gen-from-table';
-import { addGrams, addedLines, diffPath, jsonStrings, leaks, run as leak, type Grams } from './text-leak';
+import { flags } from './args.ts';
+import { run as art } from './art-check.ts';
+import { records, run as gen, splitRow, tableAfter } from './gen-from-table.ts';
+import { addGrams, addedLines, diffPath, jsonStrings, leaks, run as leak, type Grams } from './text-leak.ts';
 
 const dir = mkdtempSync(join(tmpdir(), 'tooling-'));
 afterAll(() => rmSync(dir, { recursive: true, force: true }));

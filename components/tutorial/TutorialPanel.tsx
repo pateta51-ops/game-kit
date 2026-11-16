@@ -1,9 +1,9 @@
 // The narration panel: "Step N of M", the step's narration (drawn by the game's own text renderer), what the step asks
 // for, and Back, Next, Leave and Close. It holds no game state: the game passes the lock and the session phase in.
 import { useLayoutEffect, useRef, useState, type ComponentType, type ReactNode } from 'react';
-import type { TutorialLock } from './lock';
-import type { TutorialPhase } from './machine';
-import { PANEL_WORDS } from './words';
+import type { TutorialLock } from './lock.ts';
+import type { TutorialPhase } from './machine.ts';
+import { PANEL_WORDS } from './words.ts';
 import './tutorial.css';
 
 export type TutorialSide = 'top' | 'bottom' | 'left' | 'right';

@@ -1,5 +1,5 @@
 import { useCallback, useRef, useState } from 'react';
-import { can, transition, type Machine } from './machine';
+import { can, transition, type Machine } from './machine.ts';
 
 export interface Machined<S extends string, E extends string, D> {
   readonly state: S;

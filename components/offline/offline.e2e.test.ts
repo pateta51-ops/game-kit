@@ -10,7 +10,7 @@ import { extname, join, normalize, sep } from 'node:path';
 import { build } from 'esbuild';
 import { chromium, type Browser, type Page } from 'playwright-core';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { writeServiceWorker } from './precache';
+import { writeServiceWorker } from './precache.ts';
 
 const HAVE = existsSync(chromium.executablePath());
 const O = { prefix: 'e2e-', assets: ['faces'] };

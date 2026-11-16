@@ -7,6 +7,8 @@ Private shared code for digital board-game builds: one best version of each reus
 
 Open work: run `node kit.mjs state`.
 
+Needs Node 22.18+: tools run with plain `node` (no tsx, no build); relative imports name the `.ts`/`.tsx` file; no enums, namespaces or parameter properties (`erasableSyntaxOnly`).
+
 ## The locked copy (in a game)
 - A game holds `kit/`, a copy of named components at a tag. **Never edit `kit/`**, never copy a component into `src/`, never port from an older game what the kit has.
 - A game holds one kit tag. `node ../game-kit/kit.mjs pull ../game-kit <tag> [component...]` copies components (and their `needs`), moves the whole kit to that tag, and writes `kit/kit.lock.json` plus `kit/CATALOG.md`. Run `node kit/kit.mjs outdated` first ([upgrade-kit](docs/recipes/upgrade-kit.md)). `node kit/kit.mjs check` fails when `kit/` differs from the lock; every game runs it in its check chain.

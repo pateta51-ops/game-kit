@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { forbiddenText, longSentences,plainPrompt, plainView, ruleIdFilter, ruleIdSource, visibleText } from './index';
+import { forbiddenText, longSentences,plainPrompt, plainView, ruleIdFilter, ruleIdSource, visibleText } from './index.ts';
 
 // A fake game's id families.
 const f = ruleIdFilter({

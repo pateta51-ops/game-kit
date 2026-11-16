@@ -1,7 +1,7 @@
 // K123 (UFS src/ui/prompts/confirm.tsx): the confirm bar of a board pick (`pick.ts`).
 import type { ReactNode } from 'react';
-import type { Kinded, Look } from './host';
-import type { BoardPick } from './pick';
+import type { Kinded, Look } from './host.tsx';
+import type { BoardPick } from './pick.ts';
 
 /** The bar under the board: the armed option's label with Confirm and Cancel, else `hint` (or nothing). */
 export function BoardBar<P extends Kinded>({ pick, prompt, look, hint = null }: { pick: BoardPick; prompt: P; look: Look<P>; hint?: ReactNode }) {

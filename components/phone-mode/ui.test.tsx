@@ -1,7 +1,7 @@
 import { act, fireEvent, render, renderHook, screen } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { setSafeArea, useViewport, type LayoutSetting } from './index';
-import { RotatePanel, Scaled, Sheet, useCommitTap, useDock, useSecondTap } from './ui';
+import { setSafeArea, useViewport, type LayoutSetting } from './index.ts';
+import { RotatePanel, Scaled, Sheet, useCommitTap, useDock, useSecondTap } from './ui.ts';
 
 const size = (w: number, h: number) => {
   vi.stubGlobal('innerWidth', w);

@@ -1,3 +1,3 @@
-export * from './achievements';
-export * from './toast';
-export * from './feats';
+export * from './achievements.ts';
+export * from './toast.ts';
+export * from './feats.ts';

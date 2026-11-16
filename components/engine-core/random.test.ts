@@ -1,7 +1,7 @@
 // K108 (boardgame.io MockRandom, "randomness used" flag): a named override in tests; a rng-using action bars Safe undo when the game sets `randomWords`.
 import { afterEach, describe, expect, it } from 'vitest';
-import { addStep, applyAction, createGame, newHistory, newSteps, recordAction, setRngOverrides, undo, undoStep, type AnswerAction } from './index';
-import { CONTENT, COUNTER, type Counter, type CounterState } from './fake/counter';
+import { addStep, applyAction, createGame, newHistory, newSteps, recordAction, setRngOverrides, undo, undoStep, type AnswerAction } from './index.ts';
+import { CONTENT, COUNTER, type Counter, type CounterState } from './fake/counter.ts';
 
 const LONG = { target: 1000 };
 const O = { seed: 'k108' };

@@ -1,3 +1,3 @@
-export * from './index'
-export * from './zoom'
-export * from './escape'
+export * from './index.ts'
+export * from './zoom.tsx'
+export * from './escape.ts'

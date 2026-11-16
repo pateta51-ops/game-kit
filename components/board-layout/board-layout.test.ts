@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { newLayoutSvg, parseLayout, spaceAt } from './index';
+import { newLayoutSvg, parseLayout, spaceAt } from './index.ts';
 
 // What Inkscape saves: one attribute per line. The blank file from newLayoutSvg is split the same way.
 const blank = newLayoutSvg(400, 300, 'map.jpg', ['A,red,50,50,10,10', 'B,blue,50,50,200,100', 'Q&R']);

@@ -1,7 +1,7 @@
 // K113 (XMage MageObjectReference, LastKnownInformationTest): references go stale on a zone change; snapshots by ref and by zone.
 import { afterEach, describe, expect, it } from 'vitest';
-import { applyAction, applyActionWith, clearLastKnown, clearLeft, createGame, draftOf, hasLeft, isCurrent, lastKnown, lastKnownIn, leaveZone, newObjectTrack, refOf, setCowChecks, setStateFreezing, type Ctx, type Draft, type ObjectTrack, type Tracked } from './index';
-import { CONTENT, COUNTER, type Counter, type CounterState } from './fake/counter';
+import { applyAction, applyActionWith, clearLastKnown, clearLeft, createGame, draftOf, hasLeft, isCurrent, lastKnown, lastKnownIn, leaveZone, newObjectTrack, refOf, setCowChecks, setStateFreezing, type Ctx, type Draft, type ObjectTrack, type Tracked } from './index.ts';
+import { CONTENT, COUNTER, type Counter, type CounterState } from './fake/counter.ts';
 
 interface Unit {
   readonly power: number;

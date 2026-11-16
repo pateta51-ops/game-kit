@@ -1,9 +1,9 @@
 // whether the bug-report dialog is open. Opening takes the screenshot first, so the dialog is not in it. Machine
 // ui.bugDialog (dialog.machine.ts): one value, each phase with its data; a capture that lands after a close is dropped.
 import { create } from 'zustand';
-import { transition } from '../state-machines/machine';
-import { captureScreen } from './capture';
-import { BUG_DIALOG_MACHINE } from './dialog.machine';
+import { transition } from '../state-machines/machine.ts';
+import { captureScreen } from './capture.ts';
+import { BUG_DIALOG_MACHINE } from './dialog.machine.ts';
 
 export type BugDialog =
   | { readonly phase: 'closed' }

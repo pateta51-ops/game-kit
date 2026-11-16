@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { appendLog, blocks, groupBox, refFocus, refsOf, rowFocus, delta, exportText, num, previewAt, rewindLog, stepOf, plainLine, ref, text, wordingProblems, type Narrator, type TypedEvent } from './index';
+import { appendLog, blocks, groupBox, refFocus, refsOf, rowFocus, delta, exportText, num, previewAt, rewindLog, stepOf, plainLine, ref, text, wordingProblems, type Narrator, type TypedEvent } from './index.ts';
 
 type Ev = (TypedEvent & { type: 'hurt'; who: string; n: number }) | (TypedEvent & { type: 'tick' }) | (TypedEvent & { type: 'boom' });
 const table: Narrator<Ev> = {

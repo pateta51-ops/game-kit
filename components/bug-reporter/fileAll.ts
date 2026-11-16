@@ -3,10 +3,10 @@
 // row's Send, the dialog's Send now and Send all never file the same report twice (two parallel filings of one report
 // would each open an issue before either can find the other's). A report leaves the queue only once it is filed.
 import { create } from 'zustand';
-import { downloadText } from './download';
-import { fileReport, FilingError, type Compress, type FilingErrorKind, type GhTransport } from './github';
-import { queueReport, stillQueued as inQueue, unqueueReport, type QueuedReport } from './queue';
-import { reportFileName, reportHeadline, type BugReport } from './report';
+import { downloadText } from './download.ts';
+import { fileReport, FilingError, type Compress, type FilingErrorKind, type GhTransport } from './github.ts';
+import { queueReport, stillQueued as inQueue, unqueueReport, type QueuedReport } from './queue.ts';
+import { reportFileName, reportHeadline, type BugReport } from './report.ts';
 
 export const useFiling = create<{ ids: ReadonlySet<string> }>(() => ({ ids: new Set<string>() }));
 

@@ -1,7 +1,7 @@
 // The invariant run and the fuzz command (stcc scripts/sim/invariantRun.ts, ebr scripts/fuzz.ts): random games with every
 // invariant checked after every action; each failure is a seed plus a step, and `--seed X --until N` replays it to there.
-import type { GameSpec, SimRecord } from './play';
-import { runGames } from './pool';
+import type { GameSpec, SimRecord } from './play.ts';
+import { runGames } from './pool.ts';
 
 export type FindingKind = 'violation' | 'runaway' | 'endless' | 'exception';
 

@@ -5,7 +5,7 @@ import { mkdtempSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
-import { flags, isMain, stdio, type Io } from './args';
+import { flags, isMain, stdio, type Io } from './args.ts';
 
 export interface Sheet {
   goto(url: string): Promise<unknown>;
@@ -23,7 +23,7 @@ export function sheetHtml(dir: string, names: readonly string[], cols: number, t
   return `<html><body style="margin:0;padding:8px;background:#222;color:#ddd;font:12px sans-serif"><div style="display:grid;grid-template-columns:repeat(${String(cols)},${String(thumb)}px);gap:8px">${cells}</div><style>figure{margin:0}img{width:${String(thumb)}px;display:block;background:#444}</style></body></html>`;
 }
 
-const USAGE = 'usage: tsx contact-sheet.ts --dir <dir> --out <sheet.png> [--cols 4] [--thumb 480] [--match <regex>] [--playwright <module>] [--config <json>]';
+const USAGE = 'usage: node contact-sheet.ts --dir <dir> --out <sheet.png> [--cols 4] [--thumb 480] [--match <regex>] [--playwright <module>] [--config <json>]';
 
 export async function run(args: readonly string[], io: Io = stdio, lib?: Lib): Promise<number> {
   try {

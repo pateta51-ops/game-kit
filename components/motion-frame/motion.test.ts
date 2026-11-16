@@ -17,7 +17,7 @@ import {
   type Layout,
   type MotionSpec,
   type Speed,
-} from './index';
+} from './index.ts';
 
 const load = (n: string): unknown => JSON.parse(readFileSync(new URL(`./fake/${n}.json`, import.meta.url), 'utf8'));
 const stage = stageFromLayout(load('stage.layout') as Layout);

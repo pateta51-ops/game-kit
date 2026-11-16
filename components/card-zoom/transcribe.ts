@@ -1,8 +1,8 @@
 // The zoomed card as a full transcription (STCC CardDetail, EBR Zoom, Imperium ViewCard): the printed text decoded with its
 // icons, the engine's own reading where it differs, the tokens on the card, a legend of its icons and its glossary terms.
 // Data only: each game places and styles it.
-import { BRACKETS, parseIconText, type IconSet, type Syntax } from '../card-parts/index'
-import { iconEntry, matchText, type GlossaryIndex } from '../glossary/match'
+import { BRACKETS, parseIconText, type IconSet, type Syntax } from '../card-parts/index.ts'
+import { iconEntry, matchText, type GlossaryIndex } from '../glossary/match.ts'
 
 export type IconSeg = { t: 'icon'; name: string; label: string; known: boolean; id: string | null }
 /** A piece of a line: words, an icon (with the glossary entry that explains it), or a glossary term. */

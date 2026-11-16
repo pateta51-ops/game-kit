@@ -1,5 +1,5 @@
 // The playing half: a queue of beats, each a timeline run on timers. It draws nothing itself: the verbs do.
-import { buildTimeline, withVariant, type MotionSpec, type Place, type Stage, type Timeline, type VerbCall } from './timeline';
+import { buildTimeline, withVariant, type MotionSpec, type Place, type Stage, type Timeline, type VerbCall } from './timeline.ts';
 
 export type Speed = number | 'instant';
 /** Starts a verb call; may return its finish (called once: at the call's end, or early on a skip). */

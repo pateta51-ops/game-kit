@@ -1,6 +1,6 @@
-import '../test-utils';
+import '../test-utils.ts';
 import { afterEach, expect, it, vi } from 'vitest';
-import { drawMarkup, flattenMarkup, displayPoint, type Markup } from './model';
+import { drawMarkup, flattenMarkup, displayPoint, type Markup } from './model.ts';
 
 afterEach(() => {
   vi.restoreAllMocks();

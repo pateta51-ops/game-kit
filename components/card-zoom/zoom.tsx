@@ -1,8 +1,8 @@
 // The zoom's parts (unstyled) and a default composition; each section can be replaced or hidden through a slot.
 import type { ReactNode } from 'react'
-import { Icon, type Cls, type IconDef, type IconSet } from '../card-parts/ui'
-import { GlossaryLink, type OnTerm } from '../glossary/GlossaryText'
-import { SECTIONS, ZOOM_WORDS, type IconSeg, type Section, type Seg, type Transcription } from './transcribe'
+import { Icon, type Cls, type IconDef, type IconSet } from '../card-parts/ui.ts'
+import { GlossaryLink, type OnTerm } from '../glossary/GlossaryText.tsx'
+import { SECTIONS, ZOOM_WORDS, type IconSeg, type Section, type Seg, type Transcription } from './transcribe.ts'
 
 const kz: Cls = (p) => `kz-${p}`
 

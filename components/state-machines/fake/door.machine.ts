@@ -1,4 +1,4 @@
-import { defineMachine } from '../machine';
+import { defineMachine } from '../machine.ts';
 
 export type DoorState = 'closed' | 'open' | 'locked';
 export type DoorEvent = 'open' | 'close' | 'lock' | 'unlock';

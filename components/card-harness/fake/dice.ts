@@ -1,8 +1,8 @@
 // A tiny fake game for the harness tests: three dice, a hand and a table. Playing a card scores its gain when the dice
 // show its pattern; a card with `discard` then discards another hand card (asked, or forced when only one is legal).
-import { draftOf, hashValue, seedRng, type AnswerAction, type Ctx, type Draft, type GameRules, type KernelPrompt, type KernelState } from '../../engine-core';
-import { createProbe } from '../probe';
-import type { ScenarioGame } from '../scenario';
+import { draftOf, hashValue, seedRng, type AnswerAction, type Ctx, type Draft, type GameRules, type KernelPrompt, type KernelState } from '../../engine-core/index.ts';
+import { createProbe } from '../probe.ts';
+import type { ScenarioGame } from '../scenario.ts';
 
 export type Pattern = 'pair' | 'run' | 'any';
 export interface DiceCard {

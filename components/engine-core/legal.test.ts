@@ -1,7 +1,7 @@
 // K88 (barred options with codes, only-option notice) and K89 (preview by probe, stopping at hidden information).
 import { describe, expect, it } from 'vitest';
-import { askOrTake, bar, blocked, createGame, legalIn, legalTable, draftOf, hashState, onlyOne, preview, setRngOverrides, validateAction, type Ctx, type GameRules, type OnlyOneNotice } from './index';
-import { CONTENT, COUNTER, playGame, RULES, type Counter, type CounterState, type CounterTask } from './fake/counter';
+import { askOrTake, bar, blocked, createGame, legalIn, legalTable, draftOf, hashState, onlyOne, preview, setRngOverrides, validateAction, type Ctx, type GameRules, type OnlyOneNotice } from './index.ts';
+import { CONTENT, COUNTER, playGame, RULES, type Counter, type CounterState, type CounterTask } from './fake/counter.ts';
 
 const notices: OnlyOneNotice[] = [];
 const game = (forced: boolean): GameRules<Counter> => ({

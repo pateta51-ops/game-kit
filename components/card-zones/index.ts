@@ -2,7 +2,7 @@
 // (lists of card ids, index 0 = top, a card carries no zone field and is found by looking, every move takes it out and
 // puts it in one step) and their view selectors (INFO-04: count and top only); Rome keeps the same lists per seat.
 // Writes go through engine-core's copy-on-write barrier inside an action; the only randomness is ctx.rng.
-import { draftOf, EngineBugError, leaveZone, own, type Ctx, type Draft, type GameTypes, type Tracked } from '../engine-core/index';
+import { draftOf, EngineBugError, leaveZone, own, type Ctx, type Draft, type GameTypes, type Tracked } from '../engine-core/index.ts';
 
 /** Who sees a zone's cards: everyone, its owner, no one (not even the count), the top card only, the count only. */
 export type Seen = 'all' | 'owner' | 'none' | 'top' | 'count';

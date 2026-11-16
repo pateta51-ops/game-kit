@@ -1,6 +1,6 @@
 // Bug reports: what a report holds: the explanation, the screenshot, the game's snapshot (config.ts), the build, the browser and the screen.
-import { bugConfig, type GameSnapshot } from './config';
-import { LOG_LINES, newReportId, type BugReport, type DeviceFacts } from './report';
+import { bugConfig, type GameSnapshot } from './config.ts';
+import { LOG_LINES, newReportId, type BugReport, type DeviceFacts } from './report.ts';
 
 /** A CSS length in px, or 0 when the browser gives none (jsdom, or `env()` unsupported). */
 const px = (v: string): number => {

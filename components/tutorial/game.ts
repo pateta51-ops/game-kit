@@ -1,5 +1,5 @@
 // What a game gives the tutorial: its `GameRules`, content and options from a seed, and how to read its prompts.
-import type { GameRules, GameTypes } from '../engine-core';
+import type { GameRules, GameTypes } from '../engine-core/index.ts';
 
 export interface TutorialGame<G extends GameTypes> {
   readonly rules: GameRules<G>;

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { applyAction, causeProblems, createGame, effectCause, inCause, makeCtx, ruleCause, type Cause, type GameRules, type KernelEvent, type TaskHandler } from './index';
-import { bareState, CONTENT, COUNTER, RULES, type Counter, type CounterEvent } from './fake/counter';
+import { applyAction, causeProblems, createGame, effectCause, inCause, makeCtx, ruleCause, type Cause, type GameRules, type KernelEvent, type TaskHandler } from './index.ts';
+import { bareState, CONTENT, COUNTER, RULES, type Counter, type CounterEvent } from './fake/counter.ts';
 
 const chosen = COUNTER.handlers['chosen'] as TaskHandler<Counter>;
 const CAUSED: GameRules<Counter> = { ...COUNTER, handlers: { ...COUNTER.handlers, chosen: (ctx, t) => inCause(ctx, ruleCause('C-ADD'), () => chosen(ctx, t)) } };

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { createPlayClock, type StatsStorage } from './index';
+import { createPlayClock, type StatsStorage } from './index.ts';
 
 const KEY = 'fake.session.v1';
 const memory = (init: Record<string, string> = {}): StatsStorage & { data: Record<string, string> } => {

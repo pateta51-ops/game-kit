@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { authorityNotice, checkPromptSources, stackView, type AuthorityTable, type OpenPrompt } from './index';
+import { authorityNotice, checkPromptSources, stackView, type AuthorityTable, type OpenPrompt } from './index.ts';
 
 const table: AuthorityTable = { firstPlayerTargets: { instruction: 'Choose the target for the villain.', rule: 'The first player chooses.' } };
 interface Task { kind: string; id?: string; card?: string }

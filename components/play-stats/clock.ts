@@ -1,6 +1,6 @@
 // The playing time of the game in progress: the time between two moves counts up to `idleMs` (a longer gap is a pause).
 // Kept under one storage key so it survives a reload; when storage refuses it holds for this page.
-import { localStats, type StatsStorage } from './stats';
+import { localStats, type StatsStorage } from './stats.ts';
 
 export interface PlaySession {
   readonly id: string;

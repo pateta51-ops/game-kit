@@ -1,9 +1,9 @@
 // K25, K30: every answer set of a prompt, and test helpers that drive a game through `applyAction`. Ported from
 // 7th Inning Stretch (src/engine/api.ts enumerateAnswers; tests/helpers randomPicks, playUntil, expectEvents; the
 // skip-empty test in src/ui/prompts/prompts.test.tsx). They throw plain Errors, so no test runner is imported.
-import { applyAction } from './apply';
-import { nextUint32, seedRng } from './rng';
-import type { AnswerAction, GameRules, GameTypes, KernelPrompt, KernelState } from './types';
+import { applyAction } from './apply.ts';
+import { nextUint32, seedRng } from './rng.ts';
+import type { AnswerAction, GameRules, GameTypes, KernelPrompt, KernelState } from './types.ts';
 
 /** Every answer `validateAction` accepts: each set of enabled option ids of size min..max, in option order (an ordered prompt is listed once per set). */
 export function enumerateAnswers(state: KernelState): AnswerAction[] {

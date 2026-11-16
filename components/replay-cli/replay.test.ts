@@ -7,9 +7,9 @@ import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
-import { createSave, hashState } from '../engine-core/index';
-import { CONTENT, COUNTER, playGame, RULES, type Counter } from '../engine-core/fake/counter';
-import { checkpointDiff, checkpointText, logText, parseLog, replayFile, run, type Checkpoint, type Io, type ReplayEngine, type ReplayLog } from './replay';
+import { createSave, hashState } from '../engine-core/index.ts';
+import { CONTENT, COUNTER, playGame, RULES, type Counter } from '../engine-core/fake/counter.ts';
+import { checkpointDiff, checkpointText, logText, parseLog, replayFile, run, type Checkpoint, type Io, type ReplayEngine, type ReplayLog } from './replay.ts';
 
 const engine: ReplayEngine<Counter> = {
   game: COUNTER,
@@ -167,7 +167,7 @@ describe('replay.ts', () => {
     const dir = mkdtempSync(join(tmpdir(), 'replay-cli-'));
     try {
       const cli = (...args: string[]) =>
-        spawnSync(process.execPath, ['--import', 'tsx', fileURLToPath(new URL('./replay.ts', import.meta.url)), ...args, '--engine', fileURLToPath(new URL('./fake-engine.ts', import.meta.url))], { encoding: 'utf8' });
+        spawnSync(process.execPath, [fileURLToPath(new URL('./replay.ts', import.meta.url)), ...args, '--engine', fileURLToPath(new URL('./fake-engine.ts', import.meta.url))], { encoding: 'utf8' });
       writeFileSync(join(dir, 'save.json'), saveFile);
       const clean = cli(join(dir, 'save.json'), '--record', join(dir, 'rec.json'));
       expect(clean.status, clean.stderr).toBe(0);

@@ -1,7 +1,7 @@
 import { fireEvent, render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
-import type { KernelOption } from '../engine-core/index';
-import { BoardBar, defaultLook, Order, PickAmount, PickOptions, PromptHost, useBoardPick, type Answer, type Kinded, type Look, type WidgetProps, type Widgets } from './ui';
+import type { KernelOption } from '../engine-core/index.ts';
+import { BoardBar, defaultLook, Order, PickAmount, PickOptions, PromptHost, useBoardPick, type Answer, type Kinded, type Look, type WidgetProps, type Widgets } from './ui.ts';
 
 type P = Kinded & { readonly kind: 'k' | 'j' };
 const opts = (...ids: string[]): KernelOption[] => ids.map((id) => ({ id, enabled: !id.startsWith('-'), ...(id.startsWith('-') ? { why: 'Barred here' } : {}) }));

@@ -1,8 +1,8 @@
 import { StrictMode } from 'react';
 import { act, renderHook } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { defineMachine, IllegalTransitionError, setMachineMode } from './index';
-import { step, useMachine } from './ui';
+import { defineMachine, IllegalTransitionError, setMachineMode } from './index.ts';
+import { step, useMachine } from './ui.ts';
 
 type Row = 'shut' | 'shown' | 'big';
 type RowEvent = 'show' | 'grow' | 'shrink' | 'shut';

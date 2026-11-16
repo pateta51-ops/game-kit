@@ -1,14 +1,14 @@
 // Headless replays (ported from Imperium's scripts/replay.ts; per-action hashes from EBR's, injected input and output
 // from STCC's).
 //
-//   tsx replay.ts <log.json> --engine <module>            replay a game and check its hashes
-//   tsx replay.ts <log.json> --config <replay.json>       the same, the engine module named in a config file
-//   tsx replay.ts <log.json> --engine <module> --record <out.json>   write the log with its hashes (one action per line)
+//   node replay.ts <log.json> --engine <module>            replay a game and check its hashes
+//   node replay.ts <log.json> --config <replay.json>       the same, the engine module named in a config file
+//   node replay.ts <log.json> --engine <module> --record <out.json>   write the log with its hashes (one action per line)
 //
 // The engine module exports `engine`: `{ game, content(), format?, describe? }` (a ReplayEngine). A log is a sealed save
 // of engine-core (migrated first) or a record `{ options, rules, actions, contentHash?, finalHash?, hashes?, events? }`:
 // `hashes[0]` is the state hash after createGame, then one per action, and `events` the hashes of each step's events.
-//   tsx replay.ts <log.json> --engine <module> --checkpoints <golden.json> [--update-golden]
+//   node replay.ts <log.json> --engine <module> --checkpoints <golden.json> [--update-golden]
 //     compare the hash at every checkpoint the engine names (`checkpoint`, e.g. one per round) with the golden file;
 //     `--update-golden` writes the file instead (one checkpoint per line)
 //
@@ -29,9 +29,9 @@ import {
   type GameTypes,
   type RawSave,
   type SaveFormat,
-} from '../engine-core/index';
+} from '../engine-core/index.ts';
 
-const USAGE = 'usage: tsx replay.ts <log.json> (--engine <module> | --config <replay.json>) [--record <out.json>] [--checkpoints <golden.json> [--update-golden]]';
+const USAGE = 'usage: node replay.ts <log.json> (--engine <module> | --config <replay.json>) [--record <out.json>] [--checkpoints <golden.json> [--update-golden]]';
 
 export interface ReplayEngine<G extends GameTypes = GameTypes> {
   readonly game: GameRules<G>;

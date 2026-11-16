@@ -4,7 +4,7 @@
 // Exit 0 done, 1 section not found, 2 usage or a failed read.
 import { readdirSync, readFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
-import { flags, isMain, stdio, type Io } from './args';
+import { flags, isMain, stdio, type Io } from './args.ts';
 
 export interface Heading {
   level: number;
@@ -41,7 +41,7 @@ function mdFiles(dir: string, base = ''): string[] {
 }
 
 const NAMES = ['dir', 'file', 'section', 'depth'];
-const USAGE = 'usage: tsx docs-index.ts (--dir <folder> [--depth <max heading level, default 2>] | --file <md> [--section <heading>])';
+const USAGE = 'usage: node docs-index.ts (--dir <folder> [--depth <max heading level, default 2>] | --file <md> [--section <heading>])';
 
 export function run(args: readonly string[], io: Io = stdio): number {
   try {

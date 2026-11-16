@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { CONTENT, COUNTER, playGame, randomAnswer, RULES, type Counter } from '../engine-core/fake/counter';
-import { driverLine, placePanel, scriptLine, searchSeeds, seedRange, type TutorialGame, type TutorialScript } from './index';
+import { CONTENT, COUNTER, playGame, randomAnswer, RULES, type Counter } from '../engine-core/fake/counter.ts';
+import { driverLine, placePanel, scriptLine, searchSeeds, seedRange, type TutorialGame, type TutorialScript } from './index.ts';
 
 const GAME: TutorialGame<Counter> = { rules: COUNTER, content: CONTENT, gameRules: RULES, options: (seed) => ({ seed }) };
 const SCRIPT: TutorialScript = {

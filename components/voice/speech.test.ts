@@ -2,7 +2,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
-import { createSpeechClient, ledgerCredits, mapLimit, readLedger, type SpeechOptions, type SpeechReply } from './speech';
+import { createSpeechClient, ledgerCredits, mapLimit, readLedger, type SpeechOptions, type SpeechReply } from './speech.ts';
 
 interface Req {
   speaker: string;

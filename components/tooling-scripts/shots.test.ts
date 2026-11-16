@@ -2,8 +2,8 @@ import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterAll, describe, expect, it } from 'vitest';
-import { run as sheet, sheetHtml, type Lib as SheetLib } from './contact-sheet';
-import { iconHtml, run as icons, type Lib } from './home-screen';
+import { run as sheet, sheetHtml, type Lib as SheetLib } from './contact-sheet.ts';
+import { iconHtml, run as icons, type Lib } from './home-screen.ts';
 
 const dir = mkdtempSync(join(tmpdir(), 'shots-'));
 afterAll(() => rmSync(dir, { recursive: true, force: true }));

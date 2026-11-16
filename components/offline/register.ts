@@ -2,7 +2,7 @@
 // version is stored, the update machine is `ready` and the page can show its update line; Reload (applyUpdate) lets it
 // take over. Production builds on HTTPS only, never in dev or an e2e build; a `local` build also allows http://localhost.
 import { create } from 'zustand';
-import { defineMachine, transition } from '../state-machines/machine';
+import { defineMachine, transition } from '../state-machines/machine.ts';
 
 export type UpdateState = 'idle' | 'off' | 'current' | 'ready' | 'reloading';
 export type UpdateEvent = 'unsupported' | 'registered' | 'failed' | 'found' | 'reload';

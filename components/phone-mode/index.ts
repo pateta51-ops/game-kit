@@ -1,9 +1,9 @@
 // Draws nothing; loads in node (the viewport store needs a window only when started).
-export * from './machine';
-export * from './layout';
-export * from './viewport';
-export * from './sheetStore';
-export { secondTap } from './secondTap';
-export * from './dock';
-export * from './layerCheck';
-export * from './haptics';
+export * from './machine.ts';
+export * from './layout.ts';
+export * from './viewport.ts';
+export * from './sheetStore.ts';
+export { secondTap } from './secondTap.ts';
+export * from './dock.ts';
+export * from './layerCheck.ts';
+export * from './haptics.ts';

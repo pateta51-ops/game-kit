@@ -1,8 +1,8 @@
 // The rolling ball and the thick chip as React pieces. Looks come from the caller and from CSS variables.
 import type React from 'react';
 import { useEffect, useRef, type CanvasHTMLAttributes, type ImgHTMLAttributes } from 'react';
-import { ID } from './solids';
-import { paintBall, type BallLook } from './ball';
+import { ID } from './solids.ts';
+import { paintBall, type BallLook } from './ball.ts';
 import './pieces3d.css';
 
 /** A sphere at rest; a motion layer repaints its clone with `paintBall` as it rolls. */

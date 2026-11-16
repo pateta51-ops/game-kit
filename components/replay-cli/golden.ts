@@ -2,18 +2,18 @@
 // scripts/replay.ts). The game module exports `simGame` (the sim-pool contract), a spec list (`goldens`, or the export
 // `--games` names) and optionally `format` (its SaveFormat).
 //
-//   tsx golden.ts check <dir> --game <module> [--only <prefix>] [--update-golden]
-//   tsx golden.ts record <out.json> --game <module> [--only <prefix>] [--games <export>] [--seedx <text>] [--cap <n>]
-//   tsx golden.ts replay <in.json> --game <module> [--only <prefix>]
+//   node golden.ts check <dir> --game <module> [--only <prefix>] [--update-golden]
+//   node golden.ts record <out.json> --game <module> [--only <prefix>] [--games <export>] [--seedx <text>] [--cap <n>]
+//   node golden.ts replay <in.json> --game <module> [--only <prefix>]
 //
 // Exit codes: 0 all the same, 1 a golden or a game differs, 2 bad usage, an unreadable file or a module that does not load.
 import { join, resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
-import { applyAction, causeProblems, createGame, type CauseCheck, createSave, hashValue, restoreSave, type GameRules, type GameTypes, type SaveFile, type SaveFormat } from '../engine-core/index';
-import { DriverRng, legalAnswers, type GameSpec, type SimGame } from '../sim-pool/index';
-import { logText, nodeIo, pathDiff, viewDigest, type Io } from './replay';
+import { applyAction, causeProblems, createGame, type CauseCheck, createSave, hashValue, restoreSave, type GameRules, type GameTypes, type SaveFile, type SaveFormat } from '../engine-core/index.ts';
+import { DriverRng, legalAnswers, type GameSpec, type SimGame } from '../sim-pool/index.ts';
+import { logText, nodeIo, pathDiff, viewDigest, type Io } from './replay.ts';
 
-const USAGE = 'usage: tsx golden.ts (check <dir> | record <out.json> | replay <in.json>) --game <module> [--only <prefix>] [--update-golden] [--games <export>] [--seedx <text>] [--cap <n>]';
+const USAGE = 'usage: node golden.ts (check <dir> | record <out.json> | replay <in.json>) --game <module> [--only <prefix>] [--update-golden] [--games <export>] [--seedx <text>] [--cap <n>]';
 
 /** The `savedAt` of every golden save: fixed, so the same engine writes the same bytes. */
 export const GOLDEN_SAVED_AT = '2026-01-01T00:00:00.000Z';

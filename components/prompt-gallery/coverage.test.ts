@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { checkActionCoverage, type Control } from './index';
+import { checkActionCoverage, type Control } from './index.ts';
 
 type A = { kind: string; target?: number };
 const legal = (): A[] => [{ kind: 'light', target: 1 }, { kind: 'light', target: 2 }, { kind: 'pass' }];

@@ -3,9 +3,9 @@
 // it stopped. Each line carries the run's settings; a file played with other settings is refused. A partial last line
 // (a run stopped mid-write) is cut off and a corrupt line skipped, and that game is played again; crashed games are never written.
 import { appendFileSync, existsSync, readFileSync, writeFileSync } from 'node:fs';
-import { canonicalJson } from '../engine-core/index';
-import { CRASH_HASH, type GameSpec, type SimRecord } from './play';
-import { runGames, type RunRequest } from './pool';
+import { canonicalJson } from '../engine-core/index.ts';
+import { CRASH_HASH, type GameSpec, type SimRecord } from './play.ts';
+import { runGames, type RunRequest } from './pool.ts';
 
 /** A game's key: its seed, driver and settings (not its index, so a run may grow). */
 export const specKey = (s: { seed: string; driver: string; settings?: GameSpec['settings'] }): string =>

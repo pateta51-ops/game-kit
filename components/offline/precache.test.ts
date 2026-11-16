@@ -13,7 +13,7 @@ import {
   swPrecache,
   swTemplate,
   writeServiceWorker,
-} from './precache';
+} from './precache.ts';
 
 const dirs: string[] = [];
 afterEach(() => {

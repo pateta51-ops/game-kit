@@ -1,6 +1,6 @@
-# check-runner (two scripts a game runs with `tsx` from its root)
+# check-runner (two scripts a game runs with `node` from its root)
 ## check-runner.ts: the checks of `npm run check`, in lanes
-`tsx kit/check-runner/check-runner.ts [--config path] [--pr] [--fail-fast] [--keep-going]`
+`node kit/check-runner/check-runner.ts [--config path] [--pr] [--fail-fast] [--keep-going]`
 The game passes `check-runner.config.json` (see `check-runner.config.example.json`):
 - `checkScript`: the package.json script that chains the checks (`npm run a && npm run b`).
 - `first`: scripts run alone before the lanes. `lanes`: each lane runs in order, the lanes side by side.
@@ -13,7 +13,7 @@ no further check starts, and the failing check's output is printed again after t
 `--keep-going` runs everything, whatever the config says.
 
 ## gate-all.ts: one gate process per item, with a known-failing list
-`tsx kit/check-runner/gate-all.ts [--config path] [--jobs N]`
+`node kit/check-runner/gate-all.ts [--config path] [--jobs N]`
 The game passes `gate-all.config.json`:
 - `command`: the gate's command line as an array; `{id}` is replaced by the item.
 - `items`: the ids (packs, scenarios); one process each, up to one per core (`--jobs`), rows printed in this order.
@@ -23,7 +23,7 @@ The game passes `gate-all.config.json`:
 A game whose items come from code imports `gateAll`, `gate(command, id, options)` and `report` instead of using the config.
 
 ## test-cost.ts: the test files that play whole games may not grow (from middle-earth-player, MIT)
-`tsx kit/check-runner/test-cost.ts [--config path]`
+`node kit/check-runner/test-cost.ts [--config path]`
 A whole game is played once, in its golden test; every other test reads that golden's state or builds its table. The game passes `test-cost.config.json`:
 - `players`: names of whole-game player functions; `playerFiles` (a `*` is one folder) and `playerPattern` add the names found in files such as `test/scenarios/*/game.ts`. A player imported under another name (`a as b`) counts too.
 - `roots` (`src`, `test`), `testSuffix` (`.test.ts`), `skip` (file endings left out, e.g. `golden.test.ts`).
@@ -32,5 +32,5 @@ A whole game is played once, in its golden test; every other test reads that gol
 ## Use it in 10 lines
 
 ```sh
-npx tsx kit/check-runner/check-runner.ts --config check-runner.config.json --pr   # the check chain in lanes
+node kit/check-runner/check-runner.ts --config check-runner.config.json --pr   # the check chain in lanes
 ```

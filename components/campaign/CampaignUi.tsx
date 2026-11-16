@@ -1,6 +1,6 @@
 // Static campaign screens (release 1.0): no motion, no sound. The look is the game's (kit-camp-* classes).
 import { useState, type ReactNode } from 'react';
-import type { BetweenQuestion, ChangeRow, LogSection, StartQuestion, StartAnswer } from './screens';
+import type { BetweenQuestion, ChangeRow, LogSection, StartQuestion, StartAnswer } from './screens.ts';
 
 export function BetweenScreen({ q, onChoose, words, nextText }: { q: BetweenQuestion; onChoose: (id: string) => void; words?: { cont?: string }; nextText?: string }) {
   return (

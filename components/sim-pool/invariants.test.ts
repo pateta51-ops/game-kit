@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { stateAt } from '../engine-core/index';
-import { simGame } from './fake/undo';
-import { breakAt, fuzz } from './index';
+import { stateAt } from '../engine-core/index.ts';
+import { simGame } from './fake/undo.ts';
+import { breakAt, fuzz } from './index.ts';
 
 const um = new URL('./fake/undo.ts', import.meta.url).href;
 

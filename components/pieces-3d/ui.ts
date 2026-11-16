@@ -1,1 +1,1 @@
-export * from './Pieces3d';
+export * from './Pieces3d.tsx';

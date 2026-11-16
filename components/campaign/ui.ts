@@ -1,1 +1,1 @@
-export * from './CampaignUi';
+export * from './CampaignUi.tsx';

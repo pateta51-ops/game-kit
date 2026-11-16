@@ -1,8 +1,8 @@
 // The copy-on-write barrier and the working copy (ported from Warp's Edge). An action copies only what
 // it writes to; the input state never changes.
 import { describe, expect, it } from 'vitest';
-import { adopt, closeDraft, copyJson, copyList, deepFreeze, EngineBugError, hashValue, openDraft, own, setCowChecks, type Draft } from './index';
-import { bareState, type CounterState } from './fake/counter';
+import { adopt, closeDraft, copyJson, copyList, deepFreeze, EngineBugError, hashValue, openDraft, own, setCowChecks, type Draft } from './index.ts';
+import { bareState, type CounterState } from './fake/counter.ts';
 
 describe('write barrier (cow.ts)', () => {
   it('copies a container once per action, and returns the same copy afterwards', () => {

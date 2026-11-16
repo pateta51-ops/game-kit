@@ -13,8 +13,8 @@ import {
   type GameTypes,
   type InvariantViolation,
   type KernelPrompt,
-} from '../engine-core/index';
-import { DriverRng } from './rng';
+} from '../engine-core/index.ts';
+import { DriverRng } from './rng.ts';
 
 /** Decides the answers. The engine never calls a driver: the pool asks it and applies its answer. */
 export interface Driver<G extends GameTypes = GameTypes> {

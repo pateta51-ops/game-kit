@@ -2,7 +2,7 @@ import { readFileSync, readdirSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { describe, expect, it } from 'vitest'
-import { pickedAttrs, pickedState, pickedStates } from './index'
+import { pickedAttrs, pickedState, pickedStates } from './index.ts'
 
 describe('picked-state', () => {
   it('nothing is dimmed before the first pick', () => {

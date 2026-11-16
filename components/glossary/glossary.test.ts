@@ -12,7 +12,7 @@ import {
   searchEntries,
   besideAnchor,
   type GlossaryEntry,
-} from './index';
+} from './index.ts';
 
 // a tiny fake game
 const E: GlossaryEntry[] = [

@@ -1,10 +1,10 @@
 import 'fake-indexeddb/auto';
 import { del, entries, get, set, setMany } from 'idb-keyval';
 import { describe, expect, it, vi } from 'vitest';
-import { createGame, newHistory, OLDER_BUILD, DAMAGED, recordAction, type History } from '../engine-core';
-import { CONTENT, COUNTER, playGame, randomAnswer, RULES, type Counter } from '../engine-core/fake/counter';
-import { keepStorage, makeSaves, SAVE_CLOCK_MAX_AHEAD_MS, type SavesConfig } from './index';
-import { makeKv, type KvBackend } from './kv';
+import { createGame, newHistory, OLDER_BUILD, DAMAGED, recordAction, type History } from '../engine-core/index.ts';
+import { CONTENT, COUNTER, playGame, randomAnswer, RULES, type Counter } from '../engine-core/fake/counter.ts';
+import { keepStorage, makeSaves, SAVE_CLOCK_MAX_AHEAD_MS, type SavesConfig } from './index.ts';
+import { makeKv, type KvBackend } from './kv.ts';
 
 let db = 0;
 let clock = Date.UTC(2026, 10, 15, 12, 0, 0);

@@ -1,7 +1,7 @@
 // Bug reports: the screenshot markup (pen, box, arrow, numbered pin), drawn on the live
 // preview and flattened into the filed PNG.
 import { z } from 'zod';
-import { bugConfig } from '../config';
+import { bugConfig } from '../config.ts';
 
 const PointSchema = z.strictObject({ x: z.number().min(0).max(1), y: z.number().min(0).max(1) });
 /** Coordinates and widths are fractions of the original image, independent of editor size. */

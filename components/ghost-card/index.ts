@@ -1,1 +1,1 @@
-export { ghostChoices, type GhostGroup, type GhostSplit } from './ghost';
+export { ghostChoices, type GhostGroup, type GhostSplit } from './ghost.ts';

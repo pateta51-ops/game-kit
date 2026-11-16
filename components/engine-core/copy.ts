@@ -8,7 +8,7 @@
  * A deep copy of plain JSON data (arrays, plain objects, primitives). Own keys in their own order (`Object.keys`, the
  * same keys and order a `for…in` over plain JSON gives), primitives copied without a call.
  */
-import './single';
+import './single.ts';
 
 export function copyJson<T>(value: T): T {
   if (value === null || typeof value !== 'object') return value;

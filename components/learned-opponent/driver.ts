@@ -1,9 +1,9 @@
 // The decision driver and determinization (K125, rftg study). It decides from the seat's redacted view only: every full
 // state it plays forward is sampled from that view (`model.sample`), never the real state.
-import type { GameTypes } from '../engine-core/index';
-import { DriverRng, type Driver } from '../sim-pool/index';
-import { Evaluator, type Net } from './net';
-import { finalTarget, relative, type TargetOptions } from './td';
+import type { GameTypes } from '../engine-core/index.ts';
+import { DriverRng, type Driver } from '../sim-pool/index.ts';
+import { Evaluator, type Net } from './net.ts';
+import { finalTarget, relative, type TargetOptions } from './td.ts';
 
 /** What a game supplies. `S` full state, `A` action, `V` the redacted view of one seat. */
 export interface Model<S, A, V> {

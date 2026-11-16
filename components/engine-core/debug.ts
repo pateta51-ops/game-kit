@@ -1,15 +1,15 @@
 // K100 (ArkhamHorror Debug* messages and Marvel card edits: ideas only, no licence; netrunner commands.clj, MIT: the
 // verb list): debug edits as engine actions, so they are recorded, replayed, saved and undone like answers. An edit
 // keeps the open prompt, a refused edit changes nothing, and kernel edits emit no events (a game verb's carry `debug`).
-import { closeDraft, copyList, openDraft, own } from './cow';
-import { freezeState } from './copy';
-import { makeCtx, setCtxDebug } from './ctx';
-import { isChecking } from './apply';
-import type { Draft } from './draft';
-import { IllegalActionError } from './errors';
-import { GameOver } from './gameOver';
-import { run } from './runner';
-import type { ApplyResult, DebugAction, ForcedRoll, GameRules, GameTypes, HandlerTable, KernelState, KernelTask } from './types';
+import { closeDraft, copyList, openDraft, own } from './cow.ts';
+import { freezeState } from './copy.ts';
+import { makeCtx, setCtxDebug } from './ctx.ts';
+import { isChecking } from './apply.ts';
+import type { Draft } from './draft.ts';
+import { IllegalActionError } from './errors.ts';
+import { GameOver } from './gameOver.ts';
+import { run } from './runner.ts';
+import type { ApplyResult, DebugAction, ForcedRoll, GameRules, GameTypes, HandlerTable, KernelState, KernelTask } from './types.ts';
 
 /** The verbs the kernel itself answers. */
 export const KERNEL_VERBS = ['set', 'force', 'close'] as const;

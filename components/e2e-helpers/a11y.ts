@@ -1,6 +1,6 @@
 // Optional entry: axe on the page as it is now. The game passes its own `AxeBuilder` (default export of `@axe-core/playwright`),
 // so a game that does not test accessibility never installs or loads axe.
-import { finishAnimations, type EvalPage, type Info } from './index';
+import { finishAnimations, type EvalPage, type Info } from './index.ts';
 
 export interface Violation {
   id: string;

@@ -1,1 +1,1 @@
-export { parseDebug, type DebugParams } from './parse';
+export { parseDebug, type DebugParams } from './parse.ts';

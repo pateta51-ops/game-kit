@@ -2,7 +2,7 @@
 // player's answers dispatched through it under given settings. For every answer it records what reached the player
 // and what was decided without asking: the engine's notes (its probe), the answers the settings gave, the prompt left
 // open. `silentChoices` lists every viewer decision taken without a prompt the player answered, so a test can require none.
-import type { Probe } from './probe';
+import type { Probe } from './probe.ts';
 
 /** What a game gives the harness. `S` state, `P` prompt, `D` probe note, `A` an answer the settings gave. */
 export interface DeliveryGame<S, P, D = never, A = never> {
@@ -31,7 +31,10 @@ export interface Delivered<P, D, A> {
 export class Delivery<S, P, D = never, A = never> {
   readonly log: Delivered<P, D, A>[] = [];
 
-  constructor(readonly game: DeliveryGame<S, P, D, A>) {}
+  readonly game: DeliveryGame<S, P, D, A>;
+  constructor(game: DeliveryGame<S, P, D, A>) {
+    this.game = game;
+  }
 
   load(state: S): this {
     this.game.load(state);

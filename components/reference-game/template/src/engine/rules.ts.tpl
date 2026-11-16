@@ -2,8 +2,8 @@
 // hidden from the other seat. A turn: play a card (pick); a wild asks how much it is worth (amount); then you may draw (may).
 // First to the target wins; a seat with no card to play ends the game: the higher score wins, a tie is a draw.
 // Card effects are data run through card-language: one verb table gives each verb's handler and its words.
-import { draftOf, hashValue, seedRng, type AnswerAction, type Ctx, type Draft, type GameRules, type KernelPrompt, type KernelState } from '../../kit/engine-core/index';
-import { describeEffect, effectTasks, posInt, verbHandler, type VerbTable, type VerbTask } from '../../kit/card-language/index';
+import { draftOf, hashValue, seedRng, type AnswerAction, type Ctx, type Draft, type GameRules, type KernelPrompt, type KernelState } from '../../kit/engine-core/index.ts';
+import { describeEffect, effectTasks, posInt, verbHandler, type VerbTable, type VerbTask } from '../../kit/card-language/index.ts';
 
 export type Seat = 0 | 1;
 export type RefPrompt = KernelPrompt & { readonly kind: 'pick' | 'amount' | 'may'; readonly seat: Seat };

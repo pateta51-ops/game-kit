@@ -2,10 +2,10 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { FakeAudioContext, fakeFetch } from '../sound-player/fakeContext';
-import { createSoundPlayer } from '../sound-player';
-import { checkVoiceFiles } from './check';
-import { createVoice, voiceCue, voiceCues, type VoiceOptions, type VoiceTable } from './index';
+import { FakeAudioContext, fakeFetch } from '../sound-player/fakeContext.ts';
+import { createSoundPlayer } from '../sound-player/index.ts';
+import { checkVoiceFiles } from './check.ts';
+import { createVoice, voiceCue, voiceCues, type VoiceOptions, type VoiceTable } from './index.ts';
 
 const table: VoiceTable = {
   lines: {

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { defineMachine, recordingViolations, stepViolations, type Track } from './index';
+import { defineMachine, recordingViolations, stepViolations, type Track } from './index.ts';
 
 type Stage = 'deal' | 'play' | 'tidy' | 'tally' | 'done';
 const STAGE = defineMachine<Stage, 'dealt' | 'played' | 'next' | 'last' | 'counted'>({

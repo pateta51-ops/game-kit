@@ -2,8 +2,8 @@
 // window and centred. The route (#/…) and title follow the game; a change of the setting inside the game (the storage
 // event) resizes the frame at once. 'window' fills the window unscaled.
 import { useEffect, useRef, useState, type ReactElement, type ReactNode } from 'react';
-import { resolutionSize, type SettingsSchema } from '../settings/schema';
-import { fitBox, storedResolution } from './resolution';
+import { resolutionSize, type SettingsSchema } from '../settings/schema.ts';
+import { fitBox, storedResolution } from './resolution.ts';
 import './frame.css';
 
 function useWindowSize(): { w: number; h: number } {

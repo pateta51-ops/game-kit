@@ -1,8 +1,8 @@
 import { create } from 'zustand';
-import { makeSaves } from '../../kit/saves/index';
-import { createSettingsStore, type SettingsSchema } from '../../kit/settings/index';
-import type { SaveFile } from '../../kit/engine-core/index';
-import { appendAction, CONTENT, createGame, GAME, greedyPicks, newHistory, RULES, viewOf, type History, type Ref, type RefState, type Seat } from '../engine/api';
+import { makeSaves } from '../../kit/saves/index.ts';
+import { createSettingsStore, type SettingsSchema } from '../../kit/settings/index.ts';
+import type { SaveFile } from '../../kit/engine-core/index.ts';
+import { appendAction, CONTENT, createGame, GAME, greedyPicks, newHistory, RULES, viewOf, type History, type Ref, type RefState, type Seat } from '../engine/api.ts';
 
 export const SCHEMA = {
   storageKey: '{{id}}-settings',

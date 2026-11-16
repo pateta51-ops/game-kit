@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { bestBy, createPlayStats, personalBest, ranked, totals, type PlayRecord, type PlayStatsOptions, type StatsStorage } from './index';
+import { bestBy, createPlayStats, personalBest, ranked, totals, type PlayRecord, type PlayStatsOptions, type StatsStorage } from './index.ts';
 
 interface Rec extends PlayRecord {
   hero: string;

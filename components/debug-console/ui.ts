@@ -1,1 +1,1 @@
-export * from './DebugConsole';
+export * from './DebugConsole.tsx';

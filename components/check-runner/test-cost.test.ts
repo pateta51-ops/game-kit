@@ -2,7 +2,7 @@ import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { afterAll, describe, expect, it } from 'vitest';
-import { testCost, wholeGames } from './test-cost';
+import { testCost, wholeGames } from './test-cost.ts';
 
 const root = mkdtempSync(join(tmpdir(), 'tc-'));
 afterAll(() => rmSync(root, { recursive: true, force: true }));

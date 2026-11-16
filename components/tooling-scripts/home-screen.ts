@@ -4,7 +4,7 @@
 // package (or the one `--playwright` names). Exit codes: 0 done, 2 usage or a failed read or write.
 import { mkdirSync, readFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
-import { flags, isMain, stdio, type Io } from './args';
+import { flags, isMain, stdio, type Io } from './args.ts';
 
 export interface Shot {
   setContent(html: string): Promise<unknown>;
@@ -19,7 +19,7 @@ export function iconHtml(svg: string, size: number, background: string, padding:
   return `<html><body style="margin:0;background:${background};width:${String(size)}px;height:${String(size)}px;display:flex;align-items:center;justify-content:center"><div style="width:${String(inner)}px;height:${String(inner)}px;display:flex">${svg.replace(/<svg\b/, '<svg style="width:100%;height:100%"')}</div></body></html>`;
 }
 
-const USAGE = 'usage: tsx home-screen.ts --svg <file> --out <dir> [--sizes 180,192,512] [--background transparent] [--padding 0] [--prefix icon-] [--playwright <module>] [--config <json>]';
+const USAGE = 'usage: node home-screen.ts --svg <file> --out <dir> [--sizes 180,192,512] [--background transparent] [--padding 0] [--prefix icon-] [--playwright <module>] [--config <json>]';
 
 export async function run(args: readonly string[], io: Io = stdio, lib?: Lib): Promise<number> {
   try {

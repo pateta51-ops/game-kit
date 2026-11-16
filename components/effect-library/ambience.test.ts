@@ -1,8 +1,8 @@
 // The ambience layer on a faked page (no pixels): what it places, watches and lets go of.
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import type { Speed } from '../motion-frame';
-import { createAmbience } from './ambience';
-import { fakeDom } from './fake/dom';
+import type { Speed } from '../motion-frame/index.ts';
+import { createAmbience } from './ambience.ts';
+import { fakeDom } from './fake/dom.ts';
 
 afterEach(() => {
   vi.unstubAllGlobals();

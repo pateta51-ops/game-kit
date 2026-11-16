@@ -19,8 +19,8 @@ import {
   type Draft,
   type HandlerTable,
   type KernelPrompt,
-} from './index';
-import { bareState, CONTENT, COUNTER, type Counter, type CounterEvent, type CounterState, type CounterTask } from './fake/counter';
+} from './index.ts';
+import { bareState, CONTENT, COUNTER, type Counter, type CounterEvent, type CounterState, type CounterTask } from './fake/counter.ts';
 
 type Action = AnswerAction;
 type Task = CounterTask;

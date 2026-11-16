@@ -1,6 +1,6 @@
 // A tiny fake game for the tests: five questions in a row, one per common widget; each answer is kept in `got`.
-import { draftOf, hashValue, seedRng, type AnswerAction, type Ctx, type Draft, type GameRules, type KernelOption, type KernelState } from '../../engine-core/index';
-import type { PromptSource } from '../../prompt-source/index';
+import { draftOf, hashValue, seedRng, type AnswerAction, type Ctx, type Draft, type GameRules, type KernelOption, type KernelState } from '../../engine-core/index.ts';
+import type { PromptSource } from '../../prompt-source/index.ts';
 
 export type MarketKind = 'pick' | 'amount' | 'order' | 'may' | 'pay';
 

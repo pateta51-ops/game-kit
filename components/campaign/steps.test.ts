@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { addCount, begin, count, detour, emptyLog, end, endsAfterOne, has, linear, newCampaign, played, readSave, record, retry, standalone, type NextStep, type Step } from './index';
+import { addCount, begin, count, detour, emptyLog, end, endsAfterOne, has, linear, newCampaign, played, readSave, record, retry, standalone, type NextStep, type Step } from './index.ts';
 
 const pro: Step = { kind: 'prologue', id: 'p' }, s1: Step = { kind: 'scenario', id: 's1' }, i1: Step = { kind: 'interlude', id: '1' }, ep: Step = { kind: 'epilogue', id: 'e' };
 const flow = linear([pro, s1, i1, ep]);

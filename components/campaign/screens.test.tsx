@@ -1,11 +1,11 @@
 import { fireEvent, render, screen } from '@testing-library/react';
 import { useState } from 'react';
 import { describe, expect, it } from 'vitest';
-import { BetweenScreen, ChangeList, HandledList, LogTabs, StartForm } from './ui';
+import { BetweenScreen, ChangeList, HandledList, LogTabs, StartForm } from './ui.ts';
 import {
   answerBetween, betweenQuestion, changeRows, emptyLog, handledList, linear, logSections, newCampaign,
   record, reward, setCount, setInsert, startAt, stepKey, type FieldDef, type Step, type StartAnswer,
-} from './index';
+} from './index.ts';
 
 const s1: Step = { kind: 'scenario', id: 'a' }, s2: Step = { kind: 'scenario', id: 'b' };
 const fields: FieldDef[] = [

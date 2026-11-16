@@ -12,7 +12,7 @@ import {
   type PromptKeysOptions,
   type Segment,
   type SheetBlock,
-} from './index';
+} from './index.ts';
 
 // A tiny fake game: coins, coin tokens with a value, runes with a letter (X or Y), a gate, and a card named "Coin Toss".
 const IDS: Record<string, string> = { coin: 'coin', 'coin token': 'coin-token', rune: 'rune', gate: 'gate' };

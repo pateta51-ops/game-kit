@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { bindLinkTooltip, type LinkPointerEvent } from './index';
+import { bindLinkTooltip, type LinkPointerEvent } from './index.ts';
 
 interface Link {
   id: string | null;

@@ -1,6 +1,6 @@
 // The engine-core fake counter as a simulation game. Seed `boom` throws in setup; seed `die` kills its worker thread.
-import { CONTENT, COUNTER, RULES, type Counter } from '../../engine-core/fake/counter';
-import { randomDriver, type SimGame } from '../index';
+import { CONTENT, COUNTER, RULES, type Counter } from '../../engine-core/fake/counter.ts';
+import { randomDriver, type SimGame } from '../index.ts';
 
 export const simGame: SimGame<Counter, { adds: number }> = {
   rules: COUNTER,

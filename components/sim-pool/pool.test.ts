@@ -2,10 +2,10 @@ import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { afterAll, describe, expect, it } from 'vitest';
-import { CONTENT } from '../engine-core/fake/counter';
-import type { AnswerAction, GameTypes } from '../engine-core/index';
-import { simGame } from './fake/game';
-import { bySeat, DriverRng, legalAnswers, playOne, replayStep, runGames, runInThread, runResumable, type Driver, type GameSpec, type SimGame, type SimRecord } from './index';
+import { CONTENT } from '../engine-core/fake/counter.ts';
+import type { AnswerAction, GameTypes } from '../engine-core/index.ts';
+import { simGame } from './fake/game.ts';
+import { bySeat, DriverRng, legalAnswers, playOne, replayStep, runGames, runInThread, runResumable, type Driver, type GameSpec, type SimGame, type SimRecord } from './index.ts';
 const content = CONTENT;
 
 const module = new URL('./fake/game.ts', import.meta.url).href;

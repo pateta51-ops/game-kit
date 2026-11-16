@@ -1,7 +1,7 @@
 // The layer's onActor hook on a hand-made fake page.
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { createEffectLayer } from './layer';
-import type { Run } from '../motion-frame';
+import { createEffectLayer } from './layer.ts';
+import type { Run } from '../motion-frame/index.ts';
 
 interface Fake {
   style: Record<string, string>;

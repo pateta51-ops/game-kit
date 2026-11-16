@@ -1,8 +1,8 @@
 import 'fake-indexeddb/auto';
 import { describe, expect, it, vi } from 'vitest';
-import { newHistory } from '../engine-core';
-import { CONTENT, COUNTER, RULES, type Counter } from '../engine-core/fake/counter';
-import { allData, exportAllData, makeSaves, resetAllData, type AllDataConfig } from './index';
+import { newHistory } from '../engine-core/index.ts';
+import { CONTENT, COUNTER, RULES, type Counter } from '../engine-core/fake/counter.ts';
+import { allData, exportAllData, makeSaves, resetAllData, type AllDataConfig } from './index.ts';
 
 function fakeStorage(init: Record<string, string>) {
   const m = new Map(Object.entries(init));

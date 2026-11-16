@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { applyAction, createGame, draftOf, EngineBugError, hashValue, seedRng, timingHandlers, would, type AnswerAction, type Ctx, type Draft, type GameRules, type KernelPrompt, type KernelState, type KernelTask } from '../engine-core/index';
-import { ruleIdFilter } from '../plain-text/index';
-import { describeEffect, effectOf, effectTasks, expectVerbs, oneOf, optional, posInt, validateEffect, validateStep, verbHandler, verbProblems, type AnyVerbTable, type VerbTable, type VerbTask } from './index';
+import { applyAction, createGame, draftOf, EngineBugError, hashValue, seedRng, timingHandlers, would, type AnswerAction, type Ctx, type Draft, type GameRules, type KernelPrompt, type KernelState, type KernelTask } from '../engine-core/index.ts';
+import { ruleIdFilter } from '../plain-text/index.ts';
+import { describeEffect, effectOf, effectTasks, expectVerbs, oneOf, optional, posInt, validateEffect, validateStep, verbHandler, verbProblems, type AnyVerbTable, type VerbTable, type VerbTask } from './index.ts';
 
 // A tiny fake game with example verbs (tests only; the kit holds no game verbs).
 type Step =

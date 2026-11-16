@@ -1,1 +1,1 @@
-export * from './AchievementsUi';
+export * from './AchievementsUi.tsx';

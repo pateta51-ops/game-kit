@@ -1,11 +1,10 @@
 // gate-all: every item gated once, at most `jobs` at a time, rows in the given order; the known-failing list; a real run.
 import { spawnSync } from 'node:child_process';
 import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
-import { createRequire } from 'node:module';
 import { tmpdir } from 'node:os';
-import { dirname, join, resolve } from 'node:path';
+import { join, resolve } from 'node:path';
 import { afterAll, describe, expect, it } from 'vitest';
-import { gate, gateAll, report, rowOf, type Row } from './gate-all';
+import { gate, gateAll, report, rowOf, type Row } from './gate-all.ts';
 
 describe('gate-all', () => {
   it('gates every item once, at most `jobs` at a time, rows in the given order', async () => {
@@ -90,11 +89,10 @@ describe('gate-all options (K71)', () => {
 describe('gate-all, a real run', () => {
   const dir = mkdtempSync(join(tmpdir(), 'gate-all-'));
   afterAll(() => rmSync(dir, { recursive: true, force: true }));
-  const tsx = join(dirname(createRequire(import.meta.url).resolve('tsx/package.json')), 'dist/cli.mjs');
   writeFileSync(join(dir, 'gate.js'), "const id = process.argv[2];\nconsole.log('gate ' + id);\nprocess.exit(id === 'b' ? 1 : 0);\n");
   const run = (known: Record<string, string>) => {
     writeFileSync(join(dir, 'gate-all.config.json'), JSON.stringify({ command: [process.execPath, 'gate.js', '{id}'], items: ['a', 'b', 'c'], known }));
-    return spawnSync(process.execPath, [tsx, resolve(import.meta.dirname, 'gate-all.ts'), '--jobs', '2'], { cwd: dir, encoding: 'utf8' });
+    return spawnSync(process.execPath, [resolve(import.meta.dirname, 'gate-all.ts'), '--jobs', '2'], { cwd: dir, encoding: 'utf8' });
   };
 
   it('is red on an unlisted failure, and not red when the failure is listed', () => {

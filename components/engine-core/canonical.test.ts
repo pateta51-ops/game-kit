@@ -1,6 +1,6 @@
 // BUILD_PLAN §4.4, §4.9: canonical JSON, the FNV-1a 64-bit hash and hashValue (ported from Warp's Edge).
 import { describe, expect, it } from 'vitest';
-import { canonicalJson, fnv1a64, hashValue } from './index';
+import { canonicalJson, fnv1a64, hashValue } from './index.ts';
 
 /** FNV-1a 64 with BigInt: the textbook definition, slow but obviously right. */
 function reference(text: string): string {

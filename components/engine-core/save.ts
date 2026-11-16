@@ -4,9 +4,9 @@
 // Migration (ported from EBR's save.ts): `migrateSave` brings an older save to the format's version through a chain of
 // pure steps, one per version; a save without `version` is version 1. Old files are never rewritten: the migrated copy
 // is what loads.
-import { hashValue } from './hash';
-import { hashState, replay } from './replay';
-import type { GameRules, GameTypes } from './types';
+import { hashValue } from './hash.ts';
+import { hashState, replay } from './replay.ts';
+import type { GameRules, GameTypes } from './types.ts';
 
 export const OLDER_BUILD = 'This save is from an older build.';
 export const DAMAGED = 'This save file is damaged.';

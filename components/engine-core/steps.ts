@@ -3,9 +3,9 @@
 // newest `keep` steps hold the state before them, older ones only every `every`-th; a missing one is replayed from the
 // nearest before it. Nothing here is stored by the kit: a game that wants the same steps after a reload stores where they
 // start (`h.steps.map((s) => s.start)`) and calls `replaySteps`.
-import { applyAction, createGame } from './apply';
-import type { GameRules, GameTypes } from './types';
-import { randomReason, revealReason, type UndoMode } from './undo';
+import { applyAction, createGame } from './apply.ts';
+import type { GameRules, GameTypes } from './types.ts';
+import { randomReason, revealReason, type UndoMode } from './undo.ts';
 
 export interface Step<G extends GameTypes> {
   /** Index in `actions` of the player's decision. */

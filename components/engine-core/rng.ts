@@ -4,7 +4,7 @@
 //
 // cyrb128 is bryc's public-domain string hash (four 32-bit words); sfc32 is Chris Doty-Humphrey's "small fast counting"
 // generator (PractRand). The known-answer tests pin both against an independent implementation.
-import { EngineBugError } from './errors';
+import { EngineBugError } from './errors.ts';
 
 /** The generator state: four unsigned 32-bit words (a, b, c, counter). Mutated in place by the functions below. */
 export type RngState = [number, number, number, number];

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { slots, withZones, zone, zonePct, zoneRect, zonesOf, type ZoneLayout } from './index';
+import { slots, withZones, zone, zonePct, zoneRect, zonesOf, type ZoneLayout } from './index.ts';
 
 const L: ZoneLayout = { w: 1000, h: 500, zones: { box: { r: [100, 50, 400, 200] }, 'box.2': { r: [150, 100, 100, 50] }, 'box.10': { r: [0, 0, 1, 1] }, 'box.1': { r: [0, 0, 1, 1] }, 'box.1.text': { r: [0, 0, 1, 1] }, boxx: { r: [0, 0, 1, 1] } } };
 

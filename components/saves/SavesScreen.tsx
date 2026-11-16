@@ -1,9 +1,9 @@
 import { useCallback, useEffect, useState, type ReactNode } from 'react';
-import { downloadText } from '../bug-reporter/download';
-import type { GameTypes, History, SaveFile } from '../engine-core';
-import type { Saves, StoredSave } from './saves';
+import { downloadText } from '../bug-reporter/download.ts';
+import type { GameTypes, History, SaveFile } from '../engine-core/index.ts';
+import type { Saves, StoredSave } from './saves.ts';
 import './saves.css';
-import { SAVES_WORDS, type SavesWords } from './words';
+import { SAVES_WORDS, type SavesWords } from './words.ts';
 
 
 export interface SavesScreenProps<G extends GameTypes> {

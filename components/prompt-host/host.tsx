@@ -4,9 +4,9 @@
 // (order by clicks, the rest follow in the engine's order), Jarl src/ui/prompts/autoAnswer.ts (`auto`). Unstyled: class
 // names come from `look.cls`, words and card faces from `look.label`.
 import { useEffect, useRef, useState, type ComponentType, type ReactNode } from 'react';
-import { seatKey, type KernelOption, type KernelPrompt } from '../engine-core/index';
-import type { PromptSource } from '../prompt-source/index';
-import { defaultLook } from './look';
+import { seatKey, type KernelOption, type KernelPrompt } from '../engine-core/index.ts';
+import type { PromptSource } from '../prompt-source/index.ts';
+import { defaultLook } from './look.ts';
 
 export type Kinded = KernelPrompt & { readonly kind: string; readonly source?: PromptSource };
 /** `promptId`: the prompt the picks answer (the host always sends it); a store drops an answer whose prompt is no longer open. */

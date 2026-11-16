@@ -1,7 +1,7 @@
 // A stand-in game for the tests: a snapshot store, a "Bug report button" setting and a route flag.
 import { useSyncExternalStore } from 'react';
 import { create } from 'zustand';
-import { configureBugReporter } from './config';
+import { configureBugReporter } from './config.ts';
 
 export const useTestGame = create<{ round: number | null }>(() => ({ round: null }));
 export const startTestGame = (): void => useTestGame.setState({ round: 1 });

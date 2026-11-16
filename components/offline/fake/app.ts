@@ -1,5 +1,5 @@
 // The offline e2e's page script: registers the worker through register.ts and shows the update state on <body>.
-import { applyUpdate, registerServiceWorker, useUpdate } from '../register';
+import { applyUpdate, registerServiceWorker, useUpdate } from '../register.ts';
 
 const show = (): void => {
   document.body.dataset['update'] = useUpdate.getState().state;

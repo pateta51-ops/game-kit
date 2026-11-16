@@ -4,9 +4,9 @@ import { describe, expect, it, vi } from 'vitest';
 const toPng = vi.fn((..._a: unknown[]) => Promise.resolve('data:image/png;base64,' + 'A'.repeat(200)));
 vi.mock('html-to-image', () => ({ toPng: (...a: unknown[]) => toPng(...a) }));
 
-import { buildFontEmbedCss, captureScreen } from './capture';
-import { bugConfig, configureBugReporter } from './config';
-import './test-utils';
+import { buildFontEmbedCss, captureScreen } from './capture.ts';
+import { bugConfig, configureBugReporter } from './config.ts';
+import './test-utils.ts';
 
 describe('capture fonts', () => {
   it('writes one @font-face per readable file and skips the unreadable', async () => {

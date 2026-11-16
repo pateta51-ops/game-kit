@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import {
   cacheNameFor, cachedBlobReader, retainImages, checkLayout, checkLayouts, displayUrl, fillImageCache, markUndecoded, mergeLayout, parseIconText, placeTokens,
   plainOf, prepareImages, releaseImages, unknownIcons, zoneBox, zonesInOrder, type CardLayout, type ImageBucket, type ImageStore,
-} from './index'
+} from './index.ts'
 
 const PORTRAIT: CardLayout = {
   w: 1170, h: 1635,

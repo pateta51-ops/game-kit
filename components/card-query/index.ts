@@ -3,7 +3,9 @@ export type Value = string | number | boolean | null | readonly string[] | undef
 export type Side = 'front' | 'back';
 export interface Field<C> { name: string; aliases?: string[]; type: FieldType; get: (card: C, side: Side) => Value }
 export class QueryError extends Error {
-  constructor(msg: string, public line: number, public col: number) { super(`${msg} (line ${line}, col ${col})`); }
+  line: number;
+  col: number;
+  constructor(msg: string, line: number, col: number) { super(`${msg} (line ${line}, col ${col})`); this.line = line; this.col = col; }
 }
 interface Pos { line: number; col: number }
 export type Node =

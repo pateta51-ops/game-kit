@@ -2,8 +2,8 @@
 // prompt, last log lines), the replay (a save file, so loading it in Saves reproduces the game) and the screenshot.
 // It never holds the GitHub token: nothing in this module can read it.
 import { z } from 'zod';
-import { bugConfig } from './config';
-import { MarkupSchema } from './markup/model';
+import { bugConfig } from './config.ts';
+import { MarkupSchema } from './markup/model.ts';
 
 
 const Size = z.looseObject({ width: z.number(), height: z.number() });

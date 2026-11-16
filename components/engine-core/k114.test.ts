@@ -1,8 +1,8 @@
 // K114 (batch groups by key, outcome tag and outcomePicks) and K124 (query channel).
 import { describe, expect, it } from 'vitest';
-import { applyAction, batchGroups, hashState, GameSetupError, outcomePicks, query, type GameRules, type KernelOption } from './index';
-import { bareState, CONTENT, COUNTER, playGame, type Counter, type CounterState } from './fake/counter';
-import { answer, HIT, startTimed, timedGame } from './fake/timed';
+import { applyAction, batchGroups, hashState, GameSetupError, outcomePicks, query, type GameRules, type KernelOption } from './index.ts';
+import { bareState, CONTENT, COUNTER, playGame, type Counter, type CounterState } from './fake/counter.ts';
+import { answer, HIT, startTimed, timedGame } from './fake/timed.ts';
 
 const at = (min: number, max: number, options: KernelOption[]): CounterState => ({ ...bareState(), prompt: { id: 1, min, max, options } });
 

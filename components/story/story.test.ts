@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { pictureView, resolveLine, sheetView, slotBeats, storyProblems, type Story } from './index';
+import { pictureView, resolveLine, sheetView, slotBeats, storyProblems, type Story } from './index.ts';
 
 const S: Story = {
   speakers: [{ id: 'cap', name: 'Cap' }],

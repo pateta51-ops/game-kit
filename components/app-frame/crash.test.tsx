@@ -1,6 +1,6 @@
 import { act, fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { AppFrame, CrashScreen, downloadSave, errorWords, type SaveData } from './ui';
+import { AppFrame, CrashScreen, downloadSave, errorWords, type SaveData } from './ui.ts';
 
 const boom = new Error('boom\nat somewhere');
 const click = async (id: string, waitMs = 0) => {

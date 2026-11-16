@@ -1,8 +1,8 @@
 import { fireEvent, render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
-import { CONTENT, COUNTER, RULES, type Counter } from '../engine-core/fake/counter';
-import { lockAt, startRun, type TutorialGame, type TutorialScript } from './index';
-import { TutorialHighlight, TutorialPanel, type TutorialButtonProps } from './ui';
+import { CONTENT, COUNTER, RULES, type Counter } from '../engine-core/fake/counter.ts';
+import { lockAt, startRun, type TutorialGame, type TutorialScript } from './index.ts';
+import { TutorialHighlight, TutorialPanel, type TutorialButtonProps } from './ui.ts';
 
 const GAME: TutorialGame<Counter> = { rules: COUNTER, content: CONTENT, gameRules: RULES, options: (seed) => ({ seed }), optionWords: (_s, id) => (id === 'add' ? 'Add' : id) };
 const SCRIPT: TutorialScript = {

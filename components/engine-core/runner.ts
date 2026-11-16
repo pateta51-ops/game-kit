@@ -1,10 +1,10 @@
 // The guarded task loop (ported from Warp's Edge core/runner.ts). `run` pops tasks off the LIFO
 // stack and executes them until the stack is empty, a prompt is open, or the game is over. A runaway loop (a handler that
 // keeps scheduling itself) aborts with an EngineBugError instead of hanging the tab or a simulation.
-import { draftOf, setHandlerBase } from './ctx';
-import type { Draft } from './draft';
-import { EngineBugError } from './errors';
-import type { Ctx, GameTypes, HandlerTable, KernelState } from './types';
+import { draftOf, setHandlerBase } from './ctx.ts';
+import type { Draft } from './draft.ts';
+import { EngineBugError } from './errors.ts';
+import type { Ctx, GameTypes, HandlerTable, KernelState } from './types.ts';
 
 /** Tasks executed in one `applyAction` before the runner gives up. */
 export const MAX_TASKS_PER_ACTION = 50_000;

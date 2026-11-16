@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { iconHtml, iconText, keysIn, missingKeys, relationIndex, runLegalCases, validateAll, type LegalRule } from './index';
+import { iconHtml, iconText, keysIn, missingKeys, relationIndex, runLegalCases, validateAll, type LegalRule } from './index.ts';
 
 describe('iconHtml', () => {
   it('carries the word, escaped', () => {

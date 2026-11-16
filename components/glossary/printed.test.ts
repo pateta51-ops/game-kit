@@ -2,7 +2,7 @@ import { mkdirSync, mkdtempSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { printedFindings, runPrintedCheck } from './printed';
+import { printedFindings, runPrintedCheck } from './printed.ts';
 
 const RULES = 'Each player has a Roster: the cards in the Line-\nup and on the Bench.\n\nSpend {die:6} to steal a base; "Outs" end the half-inning.';
 const E = [

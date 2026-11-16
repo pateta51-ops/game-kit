@@ -1,4 +1,4 @@
-import type { RngWords } from './types';
+import type { RngWords } from './types.ts';
 
 /** Four fresh unsigned 32-bit words from `crypto.getRandomValues`, for `AnswerAction.reseed`. App side only. */
 export function freshWords(): RngWords {

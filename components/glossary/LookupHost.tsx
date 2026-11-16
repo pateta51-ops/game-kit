@@ -3,12 +3,12 @@
 // links: one shows its entry in the same place, and Back returns. Mounted once, inside <GlossaryProvider>. It reads the
 // entries and the lookup store only, so it works while the game waits on a prompt.
 import { useEffect, useId, useLayoutEffect, useRef, type ComponentType, type ReactNode } from 'react';
-import { isPhone, useViewport } from '../phone-mode/index';
-import { Sheet } from '../phone-mode/ui';
-import { paragraphs, type GlossaryEntry } from './match';
-import { GlossaryLink, GlossaryText, type OnTerm } from './GlossaryText';
-import { useGlossary } from './context';
-import { besideAnchor, useLookup, type LookupAnchor } from './lookupStore';
+import { isPhone, useViewport } from '../phone-mode/index.ts';
+import { Sheet } from '../phone-mode/ui.ts';
+import { paragraphs, type GlossaryEntry } from './match.ts';
+import { GlossaryLink, GlossaryText, type OnTerm } from './GlossaryText.tsx';
+import { useGlossary } from './context.ts';
+import { besideAnchor, useLookup, type LookupAnchor } from './lookupStore.ts';
 
 export interface LookupWords {
   back: string;

@@ -2,7 +2,7 @@
 //        layer / ambience loop -> its gain -> duck -> music bus
 // A cue is never cut: it plays out, or its gain ramps to zero over MIN_FADE_MS or more before its source stops.
 
-import { startSynthVoice, synthLength, type SynthVoice } from './synth';
+import { startSynthVoice, synthLength, type SynthVoice } from './synth.ts';
 
 export type Tier = 'quiet' | 'normal' | 'loud';
 export type Bus = 'sounds' | 'voice' | 'music';

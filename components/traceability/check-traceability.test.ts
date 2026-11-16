@@ -15,7 +15,7 @@ import {
   scenarioCoverage,
   phaseFamilies,
   makeIo,
-} from './check-traceability';
+} from './check-traceability.ts';
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, sep } from 'node:path';

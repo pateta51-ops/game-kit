@@ -1,8 +1,8 @@
 // The fake counter with faults, by seed: `bad*` breaks invariant F-01 at step 2, `loop*` trips the runaway guard,
 // `long*` never ends, `word*` throws an ordinary error that says runaway, `drv*` has a driver that throws at step 2.
-import { CONTENT, COUNTER, RULES, type Counter } from '../../engine-core/fake/counter';
-import { draftOf } from '../../engine-core/index';
-import { randomDriver, type Driver, type SimGame } from '../index';
+import { CONTENT, COUNTER, RULES, type Counter } from '../../engine-core/fake/counter.ts';
+import { draftOf } from '../../engine-core/index.ts';
+import { randomDriver, type Driver, type SimGame } from '../index.ts';
 
 const add = randomDriver<Counter>((a) => (a.picks[0] === 'add' ? 1 : 0));
 const thrower: Driver<Counter> = {

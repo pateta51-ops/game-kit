@@ -6,16 +6,16 @@
 // `validateAction` never throws: it says why an answer is refused. `applyAction` throws an `IllegalActionError` for an
 // answer `validateAction` refuses (the UI only sends valid ones), and an `EngineBugError` only when an internal invariant
 // breaks (a runaway task loop, a corrupt state).
-import './single';
-import { closeDraft, copyList, copyMode, openDraft } from './cow';
-import { copyState, freezeState, isFreezing } from './copy';
-import { makeCtx } from './ctx';
-import { applyDebug, KERNEL_VERBS } from './debug';
-import type { Draft } from './draft';
-import { EngineBugError, IllegalActionError } from './errors';
-import { GameOver } from './gameOver';
-import { run } from './runner';
-import type { AnswerAction, ApplyResult, Ctx, GameRules, GameTypes, HandlerTable, KernelEvent, KernelState, KernelTask } from './types';
+import './single.ts';
+import { closeDraft, copyList, copyMode, openDraft } from './cow.ts';
+import { copyState, freezeState, isFreezing } from './copy.ts';
+import { makeCtx } from './ctx.ts';
+import { applyDebug, KERNEL_VERBS } from './debug.ts';
+import type { Draft } from './draft.ts';
+import { EngineBugError, IllegalActionError } from './errors.ts';
+import { GameOver } from './gameOver.ts';
+import { run } from './runner.ts';
+import type { AnswerAction, ApplyResult, Ctx, GameRules, GameTypes, HandlerTable, KernelEvent, KernelState, KernelTask } from './types.ts';
 
 /** The verdict of `validateAction`: `error` is "CODE: message". */
 export type ValidationResult = { readonly ok: true } | { readonly ok: false; readonly error: string };

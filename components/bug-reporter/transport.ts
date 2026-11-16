@@ -1,12 +1,12 @@
 // Bug reports: the transport every Send uses: the browser's fetch with the stored token, or null when there is no token.
 // Dev builds only: window.bugReports.simulate() swaps in the in-memory GitHub (fakeGitHub.ts), failing the reports whose
 // explanation contains "[fail]" with a GitHub server error, so Send all's summary can be seen without filing anything.
-import { compressScreenshot } from './capture';
-import { fakeGitHub } from './fakeGitHub';
-import { browserTransport, type GhTransport } from './github';
-import { type FileDeps } from './fileAll';
-import { queueReport } from './queue';
-import { readToken } from './token';
+import { compressScreenshot } from './capture.ts';
+import { fakeGitHub } from './fakeGitHub.ts';
+import { browserTransport, type GhTransport } from './github.ts';
+import { type FileDeps } from './fileAll.ts';
+import { queueReport } from './queue.ts';
+import { readToken } from './token.ts';
 
 let override: GhTransport | null = null;
 

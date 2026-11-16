@@ -1,6 +1,6 @@
 // Re-implemented from the idea of arkham.build's card-link tooltip hook (AGPL-3.0: idea only, no code copied). One pair of
 // listeners on any container finds the link under the pointer and asks the game to float a tooltip there.
-import { realTimers, type Timers } from './timers';
+import { realTimers, type Timers } from './timers.ts';
 
 export interface LinkPointerEvent {
   target: unknown;

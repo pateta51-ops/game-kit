@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { coverageFindings, coverageProblems } from './coverage';
-import type { LayoutPage } from './layout';
+import { coverageFindings, coverageProblems } from './coverage.ts';
+import type { LayoutPage } from './layout.ts';
 
 const B = (l: number, t: number, r: number, b: number) => ({ l, t, r, b });
 const alone = <A, R>(fn: (arg: A) => R): ((arg: A) => R) => globalThis.eval(`(${fn.toString()})`) as (arg: A) => R;

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { CONTENT, COUNTER, RULES, type Counter } from '../engine-core/fake/counter';
-import { IllegalTransitionError } from '../state-machines/machine';
+import { CONTENT, COUNTER, RULES, type Counter } from '../engine-core/fake/counter.ts';
+import { IllegalTransitionError } from '../state-machines/machine.ts';
 import {
   actionsBefore,
   bareNumbers,
@@ -24,7 +24,7 @@ import {
   writeDoc,
   type TutorialGame,
   type TutorialScript,
-} from './index';
+} from './index.ts';
 
 const GAME: TutorialGame<Counter> = {
   rules: COUNTER,

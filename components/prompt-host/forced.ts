@@ -1,7 +1,7 @@
 // K226 (7IS src/ui/store.ts dispatch, lines 99-104): forced answers are sent from the game's store, right after the player's
 // answer, and join its undo step (engine-core `extendStep`), so one Undo takes back one click and the events of the click
 // and of every forced answer after it are paced as one (paced-view `pushSteps`). Only prompts of `seat` (or with no seat).
-import { addStep, extendStep, seatKey, type GameRules, type GameTypes, type StepHistory, type StepResult } from '../engine-core/index';
+import { addStep, extendStep, seatKey, type GameRules, type GameTypes, type StepHistory, type StepResult } from '../engine-core/index.ts';
 
 /** The picks to send without asking (e.g. `(p) => autoAnswer(p, setting, NEVER)`), or null to ask. */
 export type Forced<P> = (p: P) => readonly string[] | null;

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { countDeltas, beatsFromEvents } from './beats';
-import { createSlotHold, entryMotions, moveEnds, resolveRect, type Rect } from './slots';
-import { BUDGET, capN, hash, sparkPoints } from './particles';
+import { countDeltas, beatsFromEvents } from './beats.ts';
+import { createSlotHold, entryMotions, moveEnds, resolveRect, type Rect } from './slots.ts';
+import { BUDGET, capN, hash, sparkPoints } from './particles.ts';
 
 const R = (x: number): Rect => ({ x, y: 0, w: 10, h: 10 });
 const anch = (cards: Record<string, Rect>, piles: Record<string, Rect>, hosts: Record<string, string>) => ({

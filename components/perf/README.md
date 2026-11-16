@@ -13,7 +13,7 @@ A game writes one module (its sim-pool module will do) that exports:
 Command line (exit 0 within budget, 1 over budget, 2 bad usage, a module that cannot be loaded or a game that failed):
 
 ```
-tsx kit/perf/cli.ts --module scripts/sim-game.ts [--games 5] [--driver random] [--seed perf] [--warmup 1] [--repeats 3]
+node kit/perf/cli.ts --module scripts/sim-game.ts [--games 5] [--driver random] [--seed perf] [--warmup 1] [--repeats 3]
   [--attempts 1] [--budget apply.p95=5]... [--json perf.json]
 ```
 

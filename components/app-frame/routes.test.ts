@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { defineMachine } from '../state-machines/machine';
-import { follow, parseHash, routeHref } from './index';
+import { defineMachine } from '../state-machines/machine.ts';
+import { follow, parseHash, routeHref } from './index.ts';
 
 const NAMES = ['home', 'play', 'over', 'proof'] as const;
 type N = (typeof NAMES)[number];

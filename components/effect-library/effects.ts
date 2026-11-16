@@ -1,6 +1,6 @@
 // The twelve verbs of the director's spec format as DOM effects (Web Animations API), plus the way a game adds its own.
-import type { Run, VerbCall, VerbRegistry } from '../motion-frame';
-import { createEffectLayer, place, type EffectLayer, type LayerOptions } from './layer';
+import type { Run, VerbCall, VerbRegistry } from '../motion-frame/index.ts';
+import { createEffectLayer, place, type EffectLayer, type LayerOptions } from './layer.ts';
 
 export type EffectCtx = EffectLayer;
 export interface Fx {

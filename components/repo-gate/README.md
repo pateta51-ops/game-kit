@@ -3,7 +3,7 @@
 The repository gate: file sizes, raw scans, secrets, session URLs, tailnet hosts, runner names, card ids and names in rules code, art and repository budgets (the list is at the top of `repo-gate.ts`). Use it as pulled:
 
 1. Copy `repo-gate.config.example.json` to `repo-gate.config.json` in the repository root and set every check (an empty value turns a check off).
-2. `"repo-gate": "tsx kit/repo-gate/repo-gate.ts"` in `package.json`, inside the game's check. Exit 0 clean, 1 findings, 2 no git or no config.
+2. `"repo-gate": "node kit/repo-gate/repo-gate.ts"` in `package.json`, inside the game's check. Exit 0 clean, 1 findings, 2 no git or no config.
 3. Runner names: copy `runners.example.json` to the `runnersFile` of the config (default `tools/repogate/runners.json`) and list the machine name of each registered runner. That file is exempt from the RUNNER_NAME check, and only from that one.
 
 Options a game sets (the defaults keep every check on):
@@ -34,6 +34,6 @@ A label that is also a runner name needs `.github/` and `ci.config.json` in `ski
 ## Use it in 10 lines
 
 ```sh
-# package.json: "repo-gate": "tsx kit/repo-gate/repo-gate.ts", inside the game's check
+# package.json: "repo-gate": "node kit/repo-gate/repo-gate.ts", inside the game's check
 npm run repo-gate   # exit 0 clean, 1 findings, 2 no git or no config
 ```

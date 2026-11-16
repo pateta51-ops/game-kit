@@ -2,9 +2,9 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { checkSoundFiles } from './check';
-import { FakeAudioContext, fakeFetch } from './fakeContext';
-import { createSoundPlayer, MIN_FADE_MS, synthLength, type EndHow, type SoundTable } from './index';
+import { checkSoundFiles } from './check.ts';
+import { FakeAudioContext, fakeFetch } from './fakeContext.ts';
+import { createSoundPlayer, MIN_FADE_MS, synthLength, type EndHow, type SoundTable } from './index.ts';
 
 const table: SoundTable = {
   cues: {

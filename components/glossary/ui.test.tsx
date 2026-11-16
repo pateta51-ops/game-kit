@@ -1,8 +1,8 @@
 import { act, fireEvent, render, screen } from '@testing-library/react';
 import type { ReactNode } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { useLookup, type GlossaryEntry } from './index';
-import { GlossaryProvider, GlossaryText, HOLD_MS, LookupHost } from './ui';
+import { useLookup, type GlossaryEntry } from './index.ts';
+import { GlossaryProvider, GlossaryText, HOLD_MS, LookupHost } from './ui.ts';
 
 const E: GlossaryEntry[] = [
   { id: 'stun', term: 'stun', kind: 'term', summary: 'Stops an enemy.', body: 'One.\n\nTwo.', rules: ['R-1', 'R-2'], see: ['enemy'] },

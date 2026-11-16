@@ -1,5 +1,5 @@
 // A rule-based opponent (K103, K115). Ideas from chiriboga (GPL-3.0), Forge (GPL-3.0), boardgame.io (MIT) and XMage (MIT); written new.
-import { ref, type Part } from '../game-log/index';
+import { ref, type Part } from '../game-log/index.ts';
 
 /** The random numbers a decision may draw (sim-pool's `DriverRng` fits); never the game's `state.rng`. */
 export interface Rand {

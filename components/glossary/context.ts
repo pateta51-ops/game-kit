@@ -1,5 +1,5 @@
 import { createContext, useContext, type ReactNode } from 'react';
-import { buildIndex, type GlossaryEntry, type GlossaryIndex } from './match';
+import { buildIndex, type GlossaryEntry, type GlossaryIndex } from './match.ts';
 
 /** Draws an icon code; `entry` is the one that explains it, if any. Without it the entry's term (or the code) stands in. */
 export type RenderIcon = (code: string, entry: GlossaryEntry | undefined) => ReactNode;

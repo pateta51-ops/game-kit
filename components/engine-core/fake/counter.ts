@@ -1,6 +1,6 @@
 // A tiny fake game for the kernel tests: a counter and a shuffled draw pile. Each turn: add 1 or 2 (rng), or draw the top
 // card (revealing) and add its value. Reaching the target wins; an empty pile on a draw turn loses (thrown GameOver).
-import { applyAction, createGame, draftOf, GameOver, hashValue, nextUint32, own, seedRng, type AnswerAction, type Ctx, type Draft, type GameRules, type KernelPrompt, type KernelState } from '../index';
+import { applyAction, createGame, draftOf, GameOver, hashValue, nextUint32, own, seedRng, type AnswerAction, type Ctx, type Draft, type GameRules, type KernelPrompt, type KernelState } from '../index.ts';
 
 export interface CounterTask {
   readonly kind: string;

@@ -1,6 +1,6 @@
 // Ambience: a decorative layer confined to the box of one page element; hidden while motion is Off.
-import type { Speed } from '../motion-frame';
-import { canDraw } from './particles';
+import type { Speed } from '../motion-frame/index.ts';
+import { canDraw } from './particles.ts';
 
 export interface AmbienceOptions {
   /** the page element whose box confines the layer; none: the layer is hidden */

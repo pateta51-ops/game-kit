@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { defineMachine, edgesOf, IllegalTransitionError, transition } from '../state-machines/machine';
+import { defineMachine, edgesOf, IllegalTransitionError, transition } from '../state-machines/machine.ts';
 import {
   applyFit,
   createSheetStore,
@@ -11,7 +11,7 @@ import {
   secondTap,
   VIEWPORT_MACHINE,
   type LayoutSetting,
-} from './index';
+} from './index.ts';
 
 const at = (w: number, h: number, coarse: boolean, setting: LayoutSetting = 'auto', autoPhone = true) =>
   layoutModeFor({ w, h, coarse, setting, autoPhone });

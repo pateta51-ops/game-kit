@@ -1,7 +1,7 @@
 // K25, K30 on the fake counter game.
 import { describe, expect, it } from 'vitest';
-import { createGame, draftOf, enumerateAnswers, expectEvents, playUntil, randomPicks, skipEmptyProblems, validateAction, type GameRules, type KernelPrompt } from './index';
-import { bareState, CONTENT, COUNTER, RULES, type Counter, type CounterState } from './fake/counter';
+import { createGame, draftOf, enumerateAnswers, expectEvents, playUntil, randomPicks, skipEmptyProblems, validateAction, type GameRules, type KernelPrompt } from './index.ts';
+import { bareState, CONTENT, COUNTER, RULES, type Counter, type CounterState } from './fake/counter.ts';
 
 const prompt = (min: number, max: number): CounterState => ({
   ...bareState(),

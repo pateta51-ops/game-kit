@@ -1,7 +1,7 @@
 // K100: a console line for debug edits. The game sends the action through its store (so it is recorded like an answer).
 import { useState } from 'react';
-import type { DebugAction } from '../engine-core/index';
-import { parseDebug, type DebugParams } from './parse';
+import type { DebugAction } from '../engine-core/index.ts';
+import { parseDebug, type DebugParams } from './parse.ts';
 import './debug.css';
 
 export interface DebugConsoleProps {

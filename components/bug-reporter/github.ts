@@ -7,9 +7,9 @@
 //   the issue itself ('permission', 'api');
 // - an attachment that GitHub refuses ('permission' or 'api', e.g. no Contents permission, or too large) does not stop
 //   the filing: the issue is filed without it, says so, and the caller downloads the full report as a file.
-import { bugRepo, GITHUB_API, MAX_ATTACHMENT_BASE64 } from './config';
-import { bugFiles, issueBody, issueTitle, reportIdLine, type Attached } from './issue';
-import { type BugReport } from './report';
+import { bugRepo, GITHUB_API, MAX_ATTACHMENT_BASE64 } from './config.ts';
+import { bugFiles, issueBody, issueTitle, reportIdLine, type Attached } from './issue.ts';
+import { type BugReport } from './report.ts';
 
 export interface GhRequest {
   method: 'GET' | 'POST' | 'PUT' | 'PATCH';
@@ -30,12 +30,16 @@ export type FilingErrorKind = 'token' | 'offline' | 'network' | 'rate' | 'permis
 
 /** Why filing failed, in a sentence for the screen (never holds the token). */
 export class FilingError extends Error {
+  readonly kind: FilingErrorKind;
+  readonly status?: number;
   constructor(
     message: string,
-    readonly kind: FilingErrorKind,
-    readonly status?: number,
+    kind: FilingErrorKind,
+    status?: number,
   ) {
     super(message);
+    this.kind = kind;
+    if (status !== undefined) this.status = status;
     this.name = 'FilingError';
   }
 }

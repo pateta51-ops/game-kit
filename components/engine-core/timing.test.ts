@@ -1,8 +1,8 @@
 // K93: batches with cancel, ignore and instead; shared keys; the prevention window as card data.
 import { afterEach, describe, expect, it } from 'vitest';
-import { advance, applyAction, cancelBatch, createGame, draftOf, EngineBugError, ignoreBatch, insteadOf, prevent, setCowChecks, setStateFreezing, sharedKeys, would, type Ctx, type PreventionOffer } from './index';
-import { CONTENT, COUNTER, playGame, RULES } from './fake/counter';
-import { answer, HIT, SHIELD, startTimed, timedGame, WARD, type Timed, type TimedState } from './fake/timed';
+import { advance, applyAction, cancelBatch, createGame, draftOf, EngineBugError, ignoreBatch, insteadOf, prevent, setCowChecks, setStateFreezing, sharedKeys, would, type Ctx, type PreventionOffer } from './index.ts';
+import { CONTENT, COUNTER, playGame, RULES } from './fake/counter.ts';
+import { answer, HIT, SHIELD, startTimed, timedGame, WARD, type Timed, type TimedState } from './fake/timed.ts';
 
 const hit = (g: ReturnType<typeof timedGame>, s0 = startTimed(g)) => applyAction(g, s0, answer(s0, 'hit'), null);
 const offersOf = (s: TimedState): PreventionOffer[] => [

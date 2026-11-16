@@ -4,9 +4,9 @@ import 'fake-indexeddb/auto';
 import { act } from 'react';
 import { createRoot } from 'react-dom/client';
 import { afterEach, describe, expect, it } from 'vitest';
-import { CONTENT, createGame, GAME, RULES } from '../src/engine/api';
-import { App } from '../src/ui/App';
-import { useGame, useSettings } from '../src/ui/store';
+import { CONTENT, createGame, GAME, RULES } from '../src/engine/api.ts';
+import { App } from '../src/ui/App.tsx';
+import { useGame, useSettings } from '../src/ui/store.ts';
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 window.scrollTo = () => undefined;

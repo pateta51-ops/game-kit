@@ -2,7 +2,7 @@
 // leader from the panel to the first target, and places the panel next to them (`placePanel`). Docked (the phone): no
 // shade and no placement, the first target is scrolled into view.
 import { useLayoutEffect } from 'react';
-import { placePanel, type Rect } from './place';
+import { placePanel, type Rect } from './place.ts';
 
 export interface TutorialHighlightProps {
   /** The step's target ids (the script's `targets`). */

@@ -1,5 +1,5 @@
-import type { MotionPlayer } from './player';
-import type { MotionSpec } from './timeline';
+import type { MotionPlayer } from './player.ts';
+import type { MotionSpec } from './timeline.ts';
 
 export interface MotionLabOptions {
   specs: Readonly<Record<string, MotionSpec>>;

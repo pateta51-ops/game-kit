@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { FakeAudioContext } from './fakeContext';
-import { createEventSounds, createSoundPlayer, cuesFor, type CueHit, type CuePlan, type EventSoundsOptions, type SoundTable } from './index';
+import { FakeAudioContext } from './fakeContext.ts';
+import { createEventSounds, createSoundPlayer, cuesFor, type CueHit, type CuePlan, type EventSoundsOptions, type SoundTable } from './index.ts';
 
 interface Ev {
   kind: string;

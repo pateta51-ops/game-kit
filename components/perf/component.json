@@ -15,6 +15,5 @@
     ]
   },
   "needs": ["engine-core", "sim-pool"],
-  "packages": ["tsx (to run cli.ts)"],
   "imports": ["sim-pool/play.ts, sim-pool/rng.ts (the game and driver contract)", "engine-core/fake/counter.ts (tests only, by fake/game.ts)"]
 }

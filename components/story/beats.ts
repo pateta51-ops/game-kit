@@ -1,8 +1,8 @@
 // K153: a story beat as an engine question (idea from ArkhamHorror storyWithChooseOne / *StepPart; written new). The
 // beat is a task on the engine stack and its question a prompt, so it saves, replays and undoes like play; a long beat
 // is split into parts, each its own question, so a save between parts resumes at the part reached.
-import type { Ctx, GameTypes, HandlerTable, KernelOption, KernelTask } from '../engine-core/index';
-import { findScenario, resolveBeat, type Beat, type SeenBeat, type Story } from './story';
+import type { Ctx, GameTypes, HandlerTable, KernelOption, KernelTask } from '../engine-core/index.ts';
+import { findScenario, resolveBeat, type Beat, type SeenBeat, type Story } from './story.ts';
 
 export type BeatAsk =
   | { kind: 'read' }

@@ -1,3 +1,3 @@
-export * from './machine';
-export * from './graph';
-export * from './flowQueue';
+export * from './machine.ts';
+export * from './graph.ts';
+export * from './flowQueue.ts';

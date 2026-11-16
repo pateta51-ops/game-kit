@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { FakeAudioContext, fakeFetch } from './fakeContext';
-import { createSoundPlayer, musicTracks, pickTrack, seamLoop, untitledTracks, type SoundTable } from './index';
+import { FakeAudioContext, fakeFetch } from './fakeContext.ts';
+import { createSoundPlayer, musicTracks, pickTrack, seamLoop, untitledTracks, type SoundTable } from './index.ts';
 
 const files = {
   'scenarios/s1/battle.mp3': 'a',

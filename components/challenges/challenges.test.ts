@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { type Challenge, type ChallengeGame, penaltiesFor, pickable, pickChallenge } from './index'
+import { type Challenge, type ChallengeGame, penaltiesFor, pickable, pickChallenge } from './index.ts'
 
 type Setup = { heroes: string[] }
 const g: ChallengeGame<Setup, string, string> = { allows: (r, s) => s.heroes.every((h) => h === r), matches: (on, e) => on === e }

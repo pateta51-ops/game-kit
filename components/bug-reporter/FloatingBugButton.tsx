@@ -2,8 +2,8 @@
 // "Bug report button" is auto (on for phone-sized screens), on or off. It is marked data-no-capture, so it is never in its own
 // screenshot, and it hides while the dialog is open.
 import { useSyncExternalStore } from 'react';
-import { bugConfig } from './config';
-import { openBugReport, useBugDialog } from './dialogStore';
+import { bugConfig } from './config.ts';
+import { openBugReport, useBugDialog } from './dialogStore.ts';
 import './bugs.css';
 
 // a phone, upright or sideways: a narrow screen, or a short touch screen

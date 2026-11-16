@@ -1,6 +1,6 @@
 # traceability
 
-Rule-citation gate. The game passes a `trace.config.json` (any subset of the options; `trace.config.example.json` shows the base ones) and runs `tsx kit/traceability/check-traceability.ts [--config path] [--strict] [--release] [--quiet] [--warn]`. Defaults are Jarl's check. Test titles are read with a TypeScript parse (the game's `typescript` package): the first argument of an `it`, `test` or `describe` call, so a call inside a string or a comment, or on another object (`helper.it(`), holds no title.
+Rule-citation gate. The game passes a `trace.config.json` (any subset of the options; `trace.config.example.json` shows the base ones) and runs `node kit/traceability/check-traceability.ts [--config path] [--strict] [--release] [--quiet] [--warn]`. Defaults are Jarl's check. Test titles are read with a TypeScript parse (the game's `typescript` package): the first argument of an `it`, `test` or `describe` call, so a call inside a string or a comment, or on another object (`helper.it(`), holds no title.
 
 | Option (default) | What it does | Games that set it |
 |---|---|---|
@@ -43,5 +43,5 @@ Not covered:
 ## Use it in 10 lines
 
 ```sh
-npx tsx kit/traceability/check-traceability.ts --config trace.config.json   # test titles must cite rule ids
+node kit/traceability/check-traceability.ts --config trace.config.json   # test titles must cite rule ids
 ```

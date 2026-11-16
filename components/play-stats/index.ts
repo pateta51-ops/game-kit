@@ -1,2 +1,2 @@
-export * from './stats';
-export * from './clock';
+export * from './stats.ts';
+export * from './clock.ts';

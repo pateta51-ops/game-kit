@@ -1,4 +1,4 @@
-import type { Look } from './host';
+import type { Look } from './host.tsx';
 
 export const defaultLook: Look = {
   cls: (part) => `kp-${part}`,

@@ -1,7 +1,7 @@
 // K91 (netrunner change-in-game-state): does-nothing is checked apart from legality.
 import { describe, expect, it } from 'vitest';
-import { createGame, doesNothing, draftOf, idleProblems, markIdle, validateAction, type Ctx, type GameRules, type KernelOption } from './index';
-import { CONTENT, COUNTER, RULES, type Counter, type CounterState, type CounterTask } from './fake/counter';
+import { createGame, doesNothing, draftOf, idleProblems, markIdle, validateAction, type Ctx, type GameRules, type KernelOption } from './index.ts';
+import { CONTENT, COUNTER, RULES, type Counter, type CounterState, type CounterTask } from './fake/counter.ts';
 
 const game = (mark: (id: string) => string | undefined): GameRules<Counter> => ({
   ...COUNTER,

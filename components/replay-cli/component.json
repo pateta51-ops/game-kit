@@ -14,6 +14,5 @@
     { "game": "middle-earth-player", "paths": ["src/campaign/digest.ts", "scripts/release/reach.ts", "src/campaign/causes.test.ts (goldens refuse a number step with no cause)"], "licence": "MIT, copyright the middle-earth-player authors; lifted with the owner's written authorisation" }
   ],
   "needs": ["engine-core", "sim-pool"],
-  "packages": ["tsx (the command lines run under it)"],
   "imports": ["engine-core/fake/counter.ts and sim-pool/fake/game.ts (tests only, by fake-engine.ts and fake-golden.ts)"]
 }

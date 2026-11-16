@@ -3,7 +3,7 @@
 // Exit codes: 0 all fit, 1 a picture is still over the limit, 2 usage or a failed read or write.
 import { readdirSync, readFileSync, statSync, writeFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
-import { flags, isMain, stdio, type Io } from './args';
+import { flags, isMain, stdio, type Io } from './args.ts';
 
 export type Encode = (png: Uint8Array, colours: number) => Promise<Uint8Array>;
 
@@ -27,7 +27,7 @@ export async function shrink(dir: string, limit: number, colours: readonly numbe
 
 type Sharp = (input: Uint8Array) => { png(o: object): { toBuffer(): Promise<Uint8Array> } };
 
-const USAGE = 'usage: tsx shrink-png.ts --dir <dir> [--max-bytes 1900000] [--colours 256,192,128] [--sharp <module>] [--config <json>]';
+const USAGE = 'usage: node shrink-png.ts --dir <dir> [--max-bytes 1900000] [--colours 256,192,128] [--sharp <module>] [--config <json>]';
 
 export async function run(args: readonly string[], io: Io = stdio, encode?: Encode): Promise<number> {
   try {

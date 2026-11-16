@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { layoutFindings, layoutProblems, measure, onTop, outside, overlap, type LayoutPage, type Measured } from './layout';
+import { layoutFindings, layoutProblems, measure, onTop, outside, overlap, type LayoutPage, type Measured } from './layout.ts';
 
 const B = (l: number, t: number, r: number, b: number) => ({ l, t, r, b });
 // as Playwright does: each function is rebuilt from its source and run with only its argument

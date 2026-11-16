@@ -8,8 +8,8 @@
 //   check mode is on: a barrier called on an object the action does not own throws.
 // The nested write path (`own(own(s, 'marks'), 'added')`) and the rng barrier are reached in every game.
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { applyAction, createGame, EngineBugError, own, setCopyMode, setCowChecks, setStateFreezing, type ApplyResult } from './index';
-import { CONTENT, COUNTER, randomAnswer, RULES, type Counter, type CounterState } from './fake/counter';
+import { applyAction, createGame, EngineBugError, own, setCopyMode, setCowChecks, setStateFreezing, type ApplyResult } from './index.ts';
+import { CONTENT, COUNTER, randomAnswer, RULES, type Counter, type CounterState } from './fake/counter.ts';
 
 const GAMES = 60;
 const MAX_ACTIONS = 30_000;

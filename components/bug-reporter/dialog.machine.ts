@@ -1,6 +1,6 @@
 // The bug-report dialog's machines (inventory M10). Map: docs/architecture/STATE_MACHINES.md (npm run machines:doc after
 // editing these tables; npm run machines -- ui.bugDialog).
-import { can, defineMachine, transition } from '../state-machines/machine';
+import { can, defineMachine, transition } from '../state-machines/machine.ts';
 
 const SOURCE = 'components/bug-reporter/dialog.machine.ts';
 

@@ -1,6 +1,6 @@
 // The demo route: every piece on one plain page, flat dice under the WebGL ones. The game mounts it on a dev route.
-import { startDiceLayer, type DiceLayer, type DiceLook } from './diceGl';
-import { paintBall, type BallLook } from './ball';
+import { startDiceLayer, type DiceLayer, type DiceLook } from './diceGl.ts';
+import { paintBall, type BallLook } from './ball.ts';
 
 export interface DemoLook { dice?: DiceLook; ball?: BallLook; chip?: string }
 const DICE: DiceLook = { body: '#f4efe2', ink: '#1b1b1b', font: '700 54px serif', tilt: (15 * Math.PI) / 180 };

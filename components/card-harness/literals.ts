@@ -1,1 +1,1 @@
-export * from './literals/index';
+export * from './literals/index.ts';

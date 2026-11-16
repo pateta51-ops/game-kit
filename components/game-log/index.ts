@@ -1,4 +1,4 @@
-import type { KernelEvent } from '../engine-core/index';
+import type { KernelEvent } from '../engine-core/index.ts';
 
 export type LogKind = 'structure' | 'action' | 'mechanic' | 'test' | 'narrative' | 'record' | 'notice' | 'problem';
 /** A reference to a thing the game owns (card, space, piece, player). `type` is the game's own word; the client resolves it. */

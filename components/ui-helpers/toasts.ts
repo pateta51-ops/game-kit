@@ -1,6 +1,6 @@
 // Lifted from imp src/ui/play/toasts.ts: short messages that go away by themselves; one with a title stays until closed.
 import { createStore, type StoreApi } from 'zustand/vanilla';
-import { realTimers, type Timers } from './timers';
+import { realTimers, type Timers } from './timers.ts';
 
 export interface ToastInput<Tone extends string = string> {
   text: string;

@@ -1,9 +1,9 @@
 // Bug reports: "Send all bug reports": every queued report, one at a time (fileAll.ts), with the progress
 // and the last run's summary shared by Settings and Home.
 import { create } from 'zustand';
-import { fileAll, type FileDeps, type SendAllSummary } from './fileAll';
-import { useQueue } from './queue';
-import { sendDeps } from './transport';
+import { fileAll, type FileDeps, type SendAllSummary } from './fileAll.ts';
+import { useQueue } from './queue.ts';
+import { sendDeps } from './transport.ts';
 
 export const useSendAll = create<{ summary: SendAllSummary | null; progress: string | null }>(() => ({
   summary: null,

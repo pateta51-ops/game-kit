@@ -18,7 +18,7 @@ import {
   setMachinesDoc,
   type AnyMachine,
   type LocalState,
-} from './machine';
+} from './machine.ts';
 
 export const ROOT = process.cwd();
 export interface MachinesConfig {
@@ -28,7 +28,7 @@ export interface MachinesConfig {
   localState?: string;
 }
 const CONFIG = 'machines.config.json';
-const USAGE = 'usage: tsx machines-doc.ts [--config <file>] --write | --check';
+const USAGE = 'usage: node machines-doc.ts [--config <file>] --write | --check';
 const HELPER = relative(ROOT, fileURLToPath(new URL('./machine.ts', import.meta.url))).replace(/\\/g, '/');
 
 export function readConfig(file = CONFIG, root = ROOT): MachinesConfig {

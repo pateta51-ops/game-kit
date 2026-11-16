@@ -1,1 +1,1 @@
-export { Gallery, type GalleryProps } from './Gallery';
+export { Gallery, type GalleryProps } from './Gallery.tsx';

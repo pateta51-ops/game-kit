@@ -1,7 +1,7 @@
-import type { Counter } from '../engine-core/fake/counter';
-import type { Driver, SimGame } from '../sim-pool/index';
-import { simGame as base } from '../sim-pool/fake/game';
-import type { GoldenSpec } from './golden';
+import type { Counter } from '../engine-core/fake/counter.ts';
+import type { Driver, SimGame } from '../sim-pool/index.ts';
+import { simGame as base } from '../sim-pool/fake/game.ts';
+import type { GoldenSpec } from './golden.ts';
 
 const fixed = (name: string): Driver<Counter> => ({
   name,

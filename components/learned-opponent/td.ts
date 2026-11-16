@@ -1,6 +1,6 @@
 // TD(lambda) on recorded per-seat states, the final-result targets and pre-training on synthetic end states (K125, rftg study).
-import { DriverRng } from '../sim-pool/index';
-import { forward, trainStep, type Net } from './net';
+import { DriverRng } from '../sim-pool/index.ts';
+import { forward, trainStep, type Net } from './net.ts';
 
 /** `scores`: softmax of final scores (+1 point to a lone top scorer), graded by margin. `win`: 1 to the winner, split on a tie. */
 export type Target = 'scores' | 'win';

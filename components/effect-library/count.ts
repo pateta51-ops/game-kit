@@ -1,5 +1,5 @@
 // Count-up: animates the number shown, never the stored one. No DOM: the game's `show` writes it.
-import type { Speed } from '../motion-frame';
+import type { Speed } from '../motion-frame/index.ts';
 
 /** The number shown at progress k (0..1) of a count from `from` to `value`, easing out. */
 export const countAt = (value: number, k: number, from = 0): number => Math.round(from + (value - from) * (1 - (1 - Math.min(1, Math.max(0, k))) ** 3));
