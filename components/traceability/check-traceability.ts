@@ -45,6 +45,7 @@ export interface Config {
   rulePendingInlineOnly: boolean;
   skipInsideSkippedDescribe: boolean;
   ignoreTemplateSubstitutions: boolean;
+  rejectTemplateTitles: boolean;
   testFilePattern: string;
   staleFails: boolean;
   /** K136 options; README.md has the table. */
@@ -88,6 +89,7 @@ export const DEFAULT_CONFIG: Config = {
   rulePendingInlineOnly: false,
   skipInsideSkippedDescribe: false,
   ignoreTemplateSubstitutions: false,
+  rejectTemplateTitles: false,
   testFilePattern: '',
   staleFails: true,
   idPattern: '',
@@ -254,7 +256,9 @@ function readTitles(source: string, cfg: Config, path = 'test.ts'): Title[] {
                 ? 'unconditional skip or todo'
                 : (!cfg.countSkipped && mods.includes('fails')) || cfg.hollowTitlePrefixes.some((p) => title.startsWith(p))
                   ? 'pending expected failure'
-                  : cfg.maxIdsPerTitle > 0 && n > cfg.maxIdsPerTitle
+                  : cfg.rejectTemplateTitles && ts.isTemplateExpression(t)
+                    ? 'a template title with ${...}'
+                    : cfg.maxIdsPerTitle > 0 && n > cfg.maxIdsPerTitle
                     ? `a title with ${String(n)} ids`
                     : '',
         });

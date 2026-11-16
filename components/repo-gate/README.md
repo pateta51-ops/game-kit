@@ -12,6 +12,7 @@ Options a game sets (the defaults keep every check on):
 - `contentName: false` turns CONTENT_NAME off.
 - `sessionUrl: false`, `tailnetHost: false`, `runnerName: false` turn SESSION_URL, TAILNET_HOST, RUNNER_NAME off.
 - `engineTests: true` checks the engine's `*.test.ts` files for CONTENT_ID and CONTENT_NAME too.
+- K181: a file not checked out is sized in one pass whatever the number of blobs: one `rev-list --objects --missing=print` finds the blobs a partial clone lacks (unsized, never fetched, never one call per blob), one `cat-file --batch-check` sizes the rest.
 - `skipMissingBlobs: true`: a blob a partial clone does not hold is counted in a notice, not a SIZE finding (the full checkout's gate checks it).
 - `maxRepoMB: 0` is no limit; `warnRepoMB` prints a warning above it and still passes.
 - `portFrom`, `portTo` (PORT): a pull request that changes a `portFrom` file changes a `portTo` file too, or has a line `port: n/a (<reason>)` in its body. Checked on a `pull_request` event (check out 2 commits deep) or with `PORT_RULE_BASE` (a revision) and `PORT_RULE_BODY_FILE`; a `workflow_dispatch` run without them fails; a local run or a push prints that it was not checked.

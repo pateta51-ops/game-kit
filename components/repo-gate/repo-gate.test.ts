@@ -173,6 +173,28 @@ describe('config and command line', () => {
     log.mockRestore();
   });
 
+  it('K181 sizes many blobs missing from a partial clone in one pass: held ones sized, lacking ones unsized, none fetched', () => {
+    const src = mkdtempSync(join(tmpdir(), 'repo-gate-src-'));
+    const clone = mkdtempSync(join(tmpdir(), 'repo-gate-clone-'));
+    const git = (cwd: string, ...a: string[]): string => execFileSync('git', a, { cwd, encoding: 'utf8' });
+    git(src, 'init', '-q');
+    git(src, 'config', 'uploadpack.allowFilter', 'true');
+    for (let i = 0; i < 30; i++) writeFileSync(join(src, `f${String(i)}.txt`), `blob ${String(i)}`.repeat(i + 1));
+    git(src, 'add', '.');
+    git(src, '-c', 'user.name=t', '-c', 'user.email=t@invalid', 'commit', '-q', '-m', 'one');
+    git(clone, 'clone', '-q', '--filter=blob:none', '--no-checkout', `file://${src.replaceAll('\\', '/')}`, '.');
+    git(clone, 'read-tree', 'HEAD');
+    git(clone, 'fetch', '-q', 'origin', git(clone, 'rev-parse', ':f3.txt').trim());
+    const lacking = (): number => git(clone, 'rev-list', '--objects', '--missing=print', 'HEAD').split('\n').filter((l) => l.startsWith('?')).length;
+    const before = lacking();
+    expect(before).toBeGreaterThan(20);
+    const tracked = readTracked(clone);
+    expect(tracked.filter((f) => f.unsized === true)).toHaveLength(before);
+    expect(tracked.find((f) => f.path === 'f3.txt')).toMatchObject({ bytes: 'blob 3'.repeat(4).length });
+    expect(lacking()).toBe(before);
+    for (const d of [src, clone]) rmSync(d, { recursive: true, force: true });
+  });
+
   it('sizes a file that is not checked out from the objects held here; a blob a partial clone lacks is not fetched and is a SIZE finding, never 0 bytes', () => {
     const src = mkdtempSync(join(tmpdir(), 'repo-gate-src-'));
     const clone = mkdtempSync(join(tmpdir(), 'repo-gate-clone-'));

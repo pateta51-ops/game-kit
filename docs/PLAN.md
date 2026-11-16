@@ -182,9 +182,9 @@ Found by the third retrofit pass (`docs/RETROFIT_PLAN.md`, Part E).
 | # | Batch | Found in | Size | State |
 |---|---|---|---|---|
 | K180 | `ci-templates`: what keeps four games on their own workflows: a `workflow_dispatch` trigger and extra dispatch inputs (runner, bands), `branches-ignore`, a draft-aware concurrency group, per-step timeouts and step `env`, the failure artifact upload, the Node version from config, a Python setup before the Node step, `E2E_PORT` on the e2e step with a free-port pick, Rust steps, a conditional npm cache, STCC's media guard, merge-with-main and face-test venv; the header comment must match `runDrafts` | EBR, Imperium, Warp's, STCC | M | proposed |
-| K181 | `repo-gate`: size the blobs missing from a sparse partial clone in one pass (`git rev-list --missing=print`), never one `git cat-file -s` per blob (STCC's CI timed out on it; STCC keeps its own gate until then) | STCC | S | proposed |
-| K182 | `theme-check`: the ICON rule can require a path whose `d` starts with `M` (Jarl's own check did) | Jarl | S | proposed |
-| K183 | `traceability`: an option to reject test titles written as template literals with `${}` (EBR's own check did) | EBR | S | proposed |
+| K181 | `repo-gate`: size the blobs missing from a sparse partial clone in one pass (`git rev-list --missing=print`), never one `git cat-file -s` per blob (STCC's CI timed out on it; STCC keeps its own gate until then) | STCC | S | done |
+| K182 | `theme-check`: the ICON rule can require a path whose `d` starts with `M` (Jarl's own check did) | Jarl | S | done |
+| K183 | `traceability`: an option to reject test titles written as template literals with `${}` (EBR's own check did) | EBR | S | done |
 
 ### Owner's word (size L or stage 4)
 

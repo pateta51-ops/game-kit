@@ -47,7 +47,7 @@ export interface ThemeAssets {
   licenceHeading?: boolean;
   svgs?: string[];
   files?: string[];
-  icons?: { dir: string; tokens: string[]; listFile?: string; listPattern?: string };
+  icons?: { dir: string; tokens: string[]; listFile?: string; listPattern?: string; pathStartsWithM?: boolean };
 }
 export interface SourceFile {
   path: string;
@@ -190,6 +190,7 @@ export function assetFindings(root: string, a: ThemeAssets): string[] {
       const p = `${ic.dir}/${t}.svg`;
       const s = existsSync(join(root, p)) ? readFileSync(join(root, p), 'utf8') : '';
       if (!s.includes('<svg') || !/<path\s[^>]*\bd=/.test(s)) out.push(`ICON ${p} is missing or has no paths`);
+      else if (ic.pathStartsWithM && !/<path\s[^>]*\bd=["']\s*[Mm]/.test(s)) out.push(`ICON ${p} has a path whose d does not start with M`);
     }
     const lf = ic.listFile ?? '';
     const list = lf && existsSync(join(root, lf)) ? readFileSync(join(root, lf), 'utf8') : '';

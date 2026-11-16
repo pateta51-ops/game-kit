@@ -365,6 +365,12 @@ describe('K67 options, the review round', () => {
     expect(r.text).toMatch(/R {9}010$/m);
   });
 
+  it('K183 rejectTemplateTitles: a title with ${ counts for none, off by default', () => {
+    const src = "it('R-010 plain', () => {});\nit(`R-011 $" + "{n}`, () => {});\nit(`R-012 nosub`, () => {});";
+    expect(extractTitles(src, base)).toHaveLength(3);
+    expect(extractTitles(src, { ...base, rejectTemplateTitles: true })).toEqual(['R-010 plain', 'R-012 nosub']);
+  });
+
   it('skipInsideSkippedDescribe and ignoreTemplateSubstitutions', () => {
     const src = "describe.skip('g', () => {\n  it('R-010 in', () => {});\n});\nit('R-011 out', () => {});\nit(`R-012 $" + '{n}`, () => {});';
     expect(extractTitles(src, base)).toHaveLength(3);

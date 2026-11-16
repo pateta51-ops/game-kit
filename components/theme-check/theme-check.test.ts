@@ -216,6 +216,15 @@ describe('theme-check K74 options', () => {
     ]);
     expect(run(files, { menuFiles: ['ui/screens/MenuFrame.tsx'] })).toEqual([]);
   });
+  it('K182 assets.icons.pathStartsWithM: a path d must start with M or m, off by default', () => {
+    const root = mkdtempSync(join(tmpdir(), 'tc-iconm-'));
+    writeFileSync(join(root, 'A.svg'), '<svg><path d="M0 0"/></svg>');
+    writeFileSync(join(root, 'B.svg'), '<svg><path d="m0 0"/></svg>');
+    writeFileSync(join(root, 'C.svg'), '<svg><path d="L0 0"/></svg>');
+    expect(assetFindings(root, { icons: { dir: '.', tokens: ['A', 'B', 'C'] } })).toEqual([]);
+    expect(assetFindings(root, { icons: { dir: '.', tokens: ['A', 'B', 'C'], pathStartsWithM: true } })).toEqual(['ICON ./C.svg has a path whose d does not start with M']);
+  });
+
   it('assets.icons: each token has an svg and the list file defines no other token', () => {
     const root = mkdtempSync(join(tmpdir(), 'tc-icons-'));
     mkdirSync(join(root, 'icons'));

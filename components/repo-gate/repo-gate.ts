@@ -365,20 +365,27 @@ export function readTracked(ROOT: string): TrackedFile[] {
         stdio: ['pipe', 'pipe', 'ignore'],
         env: { ...process.env, GIT_NO_LAZY_FETCH: '1', GIT_ALLOW_PROTOCOL: 'none' },
       });
-    let out: string;
+    // one pass: the blobs this clone lacks come from one `rev-list --missing=print`; the rest are sized by one batch-check
+    // (a per-blob call timed out in a partial sparse clone)
+    let lacking = new Set<string>();
     try {
-      out = ask(['--batch-check=%(objectname) %(objectsize)'], missing.map((m) => m.sha).join('\n') + '\n');
+      lacking = new Set(
+        git(ROOT, ['rev-list', '--objects', '--missing=print', '--no-object-names', '--no-walk', 'HEAD'])
+          .split('\n')
+          .filter((l) => l.startsWith('?'))
+          .map((l) => l.slice(1)),
+      );
     } catch {
-      // an older git stops at the first blob it may not fetch: ask one by one
-      out = missing
-        .map((m) => {
-          try {
-            return `${m.sha} ${ask(['-s', m.sha]).trim()}`;
-          } catch {
-            return '';
-          }
-        })
-        .join('\n');
+      // no HEAD: nothing is known to be lacking
+    }
+    const here = [...new Set(missing.map((m) => m.sha).filter((sha) => !lacking.has(sha)))];
+    let out = '';
+    if (here.length > 0) {
+      try {
+        out = ask(['--batch-check=%(objectname) %(objectsize)'], here.join('\n') + '\n');
+      } catch {
+        // a blob that is neither held nor listed: stays unsized
+      }
     }
     for (const line of out.split('\n')) {
       const [sha, size] = line.split(' ');
