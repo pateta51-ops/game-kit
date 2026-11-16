@@ -1,7 +1,9 @@
 // BUILD_PLAN §10.1: npm run plancheck finds a Python 3 (python3 first on Linux, python and the py launcher on Windows).
-import { mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
+import { spawnSync } from 'node:child_process';
+import { mkdirSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { dirname, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { candidates, main } from './plancheck';
 
@@ -124,5 +126,42 @@ describe('plancheck.py flags (K68)', () => {
     expect(main([])).toBe(2);
     vi.stubEnv('CI', 'true');
     expect(main(['--skip-without-python'])).toBe(2);
+  });
+});
+
+describe('plancheck.py kit warnings (K207)', () => {
+  const git = (cwd: string, ...a: string[]): void => void spawnSync('git', ['-C', cwd, ...a]);
+  const kit = mkdtempSync(join(tmpdir(), 'kit-'));
+  mkdirSync(join(kit, 'docs'));
+  writeFileSync(join(kit, 'docs', 'PLAN.md'), '| # | Batch | Size | State |\n|---|---|---|---|\n| K25 | x | S | done |\n| K26 | y | S | proposed |\n| K27 | z | S | covered: already there |\n');
+  git(kit, 'init');
+  git(kit, '-c', 'user.name=t', '-c', 'user.email=t@t', 'commit', '--allow-empty', '-m', 'x');
+  for (const t of ['v0.3.0', 'v0.9.0']) git(kit, 'tag', t);
+  const plan = (pin: string, gk: string): string => {
+    const d = mkdtempSync(join(tmpdir(), 'plancheck-'));
+    mkdirSync(join(d, 'docs'));
+    writeFileSync(join(d, 'docs', 'PLAN.md'), `${PLAN.replace('\nSC-01\n', '\nSC-01, SC-02\n')}\n\nKit pin: ${pin}\n\n#### Phase GK1 - kit\n\n${gk}\n`);
+    return join(d, 'docs', 'PLAN.md');
+  };
+  const py = candidates(process.env, process.platform)[0] ?? ['python'];
+  const out = (f: string, ...a: string[]): string =>
+    spawnSync(py[0] ?? 'python', [...py.slice(1), fileURLToPath(new URL('./plancheck.py', import.meta.url)), f, '--sessions-optional', ...a], { encoding: 'utf-8' }).stdout;
+  it('warns on a pin 5+ minor versions behind and on a done K row, without failing', () => {
+    const o = out(plan('v0.3.0', 'Targets K25 and K26.'), '--kit', kit);
+    expect(o).toContain('WARN kit pin v0.3.0 is far behind the latest kit tag v0.9.0');
+    expect(o).toContain('GK1 targets kit row K25');
+    expect(o).not.toContain('row K26');
+    expect(o).not.toContain('PROBLEM');
+  });
+  it('is quiet for a recent pin, no done row, or no kit checkout', () => {
+    expect(out(plan('v0.8.0', 'Targets K26.'), '--kit', kit)).not.toContain('WARN');
+    expect(out(plan('v0.3.0', 'Targets K25.'), '--kit', join(kit, 'nope'))).not.toContain('GK1 targets');
+  });
+  it('covered counts as done; the pin comes from kit/kit.lock.json before the plan text', () => {
+    expect(out(plan('v0.9.0', 'Targets K27.'), '--kit', kit)).toContain('GK1 targets kit row K27');
+    const f = plan('v0.9.0', 'Targets K26.');
+    mkdirSync(join(dirname(dirname(f)), 'kit'));
+    writeFileSync(join(dirname(dirname(f)), 'kit', 'kit.lock.json'), JSON.stringify({ components: { a: { ref: 'v0.3.0' } } }));
+    expect(out(f, '--kit', kit)).toContain('WARN kit pin v0.3.0');
   });
 });

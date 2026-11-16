@@ -42,6 +42,11 @@ Sections are found by heading keywords (case-insensitive); override them if your
   --scenarios "Scenario catalogue"  --phases "Implementation phases"  --types "Type definitions"
   --sessions "Session plan"
 
+Warnings (never fail; skipped quietly when no game-kit checkout is found: --kit PATH, else C:/projects/game-kit or
+~/game-kit): the kit pin (kit/kit.lock.json beside the plan's docs folder, else a "kit ... pin ... vX.Y.Z" line) is 5+
+minor versions behind the latest kit tag; a "Phase GKnn" heading or its "targets" lines name a K row that the kit's
+docs/PLAN.md marks done.
+
 Usage: python plancheck.py docs/BUILD_PLAN.md [--tsc] [--scenarios TEXT] [--phases TEXT] [--types TEXT] [--tsc-stub TEXT]
        [--sessions TEXT] [--sessions-optional] [--scenarios-end TEXT] [--cover TEXT] [--cover-rows A,B]
        [--cover-skip A,B]
@@ -266,11 +271,61 @@ def extract(path: Path, lines: list[str], heads: list[tuple[int, int, str]]) -> 
     return 0
 
 
+def kit_warnings(path: Path, lines: list[str]) -> set[str]:
+    out: set[str] = set()
+    kit = None
+    for c in ([Path(opt("--kit", ""))] if "--kit" in sys.argv else [Path("C:/projects/game-kit"), Path.home() / "game-kit"]):
+        if (c / "docs" / "PLAN.md").is_file():
+            kit = c
+            break
+    if kit is None:
+        return out
+    try:
+        tags = subprocess.run(["git", "-C", str(kit), "tag"], capture_output=True, text=True, encoding="utf-8").stdout.split()
+    except OSError:
+        return out
+    ver = lambda t: tuple(int(x) for x in re.findall(r"\d+", t)[:3])
+    tags = [t for t in tags if re.fullmatch(r"v\d+\.\d+\.\d+", t)]
+    if tags:
+        latest = max(tags, key=ver)
+        pin = None
+        lock = path.resolve().parent.parent / "kit" / "kit.lock.json"
+        if lock.is_file():
+            try:
+                refs = [c.get("ref", "") for c in json.loads(lock.read_text(encoding="utf-8")).get("components", {}).values()]
+                refs = [r for r in refs if re.fullmatch(r"v\d+\.\d+\.\d+", r)]
+                pin = min(refs, key=ver) if refs else None
+            except (ValueError, AttributeError):
+                pass
+        if pin is None:
+            for l in lines:
+                if re.search(r"kit.*pin|pin.*kit", l, re.I) and (m := re.search(r"v\d+\.\d+\.\d+", l)):
+                    pin = m.group(0)
+                    break
+        if pin and (ver(latest)[0] > ver(pin)[0] or (ver(latest)[0] == ver(pin)[0] and ver(latest)[1] - ver(pin)[1] >= 5)):
+            out.add(f"WARN kit pin {pin} is far behind the latest kit tag {latest}")
+    done = {}
+    for l in (kit / "docs" / "PLAN.md").read_text(encoding="utf-8").split("\n"):
+        cells = [c.strip() for c in table_cells(l)] if l.startswith("|") else []
+        if len(cells) > 2 and re.fullmatch(r"K\d+", cells[0]) and cells[-1].lower().startswith(("done", "covered")):
+            done[cells[0]] = cells[-1]
+    heads = headings(lines)
+    for i, (k, _, h) in enumerate(heads):
+        if not re.match(r"Phase GK\d+", h):
+            continue
+        end = heads[i + 1][0] if i + 1 < len(heads) else len(lines)
+        text = h + "\n" + "\n".join(l for l in lines[k + 1:end] if re.search(r"\btargets?\b", l, re.I))
+        for r in sorted(set(re.findall(r"\bK\d+\b", text))):
+            if r in done:
+                out.add(f"WARN {h.split(' ')[1]} targets kit row {r}, which the kit's PLAN marks {done[r]}")
+    return out
+
+
 def main() -> int:
     safe_console()
     args = [a for a in sys.argv[1:] if not a.startswith("--")]
     for flag in ("--scenarios", "--phases", "--types", "--sessions", "--section", "--batch", "--scenarios-end", "--cover",
-                 "--cover-rows", "--cover-skip", "--tsc-stub"):
+                 "--cover-rows", "--cover-skip", "--tsc-stub", "--kit"):
         if flag in sys.argv:
             v = opt(flag, "")
             if v in args:
@@ -521,6 +576,8 @@ def main() -> int:
                     )
                     if r.returncode != 0:
                         problems.append("type contract does not compile:\n" + (r.stdout + r.stderr)[:3000])
+
+    notes |= kit_warnings(path, lines)
 
     print(f"{path}: {len(lines)} lines, {len(defined)} defined IDs, {len(scenarios)} scenarios")
     for n in sorted(notes):
