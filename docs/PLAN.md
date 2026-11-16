@@ -186,6 +186,7 @@ Found by the third retrofit pass (`docs/RETROFIT_PLAN.md`, Part E).
 | K181 | `repo-gate`: size the blobs missing from a sparse partial clone in one pass (`git rev-list --missing=print`), never one `git cat-file -s` per blob (STCC's CI timed out on it; STCC keeps its own gate until then) | STCC | S | done |
 | K182 | `theme-check`: the ICON rule can require a path whose `d` starts with `M` (Jarl's own check did) | Jarl | S | done |
 | K183 | `traceability`: an option to reject test titles written as template literals with `${}` (EBR's own check did) | EBR | S | done |
+| K191 | `pieces-3d` ball chevron option `seamLineDash` (director, XD-63 addition): the seam line becomes dashed, one round-ended dash per stitch centred on its apex, `seamLineDash` x the stitch spacing long (0/undefined = solid, game passes 0.6); colour and width unchanged | 7th Inning Stretch (XD-63) | S | in review |
 
 ### Owner's word (size L or stage 4)
 

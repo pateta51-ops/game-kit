@@ -140,4 +140,22 @@ describe('pieces-3d: resting tilt', () => {
     const off: [number, number, number] = [m[0] + 0.05 * a[0]!.N[0], m[1] + 0.05 * a[0]!.N[1], m[2] + 0.05 * a[0]!.N[2]];
     expect(seamLineAt(SEAM, 10, off, 0.01)).toBe(0);
   });
+  it('XD-63: seamLineDash draws one round-ended dash per stitch, centred on its apex, dash x spacing long', () => {
+    const S = twoArcSeam(4800), { s, P, k } = chevrons(S, 56), n = S.length, w = 0.01, L = s[n]!;
+    const cov = S.map((p, i) => seamLineAt(S, i, p, w, 0.6, 56) > 0.5);
+    const solid = S.map((p, i) => seamLineAt(S, i, p, w) > 0.5);
+    expect(solid.every(Boolean)).toBe(true);
+    const runs: [number, number][] = [];
+    const st = cov.findIndex((v, i) => v && !cov[(i + n - 1) % n]);
+    for (let q = 0, i = st; q < n; q += 1, i = (i + 1) % n) if (cov[i] && !cov[(i + n - 1) % n]) { let e = i; while (cov[(e + 1) % n]) e = (e + 1) % n; runs.push([s[i]!, s[i]! + (((s[e]! - s[i]!) % L) + L) % L]); }
+    expect(runs.length).toBe(56);
+    const apex = k.map((c) => S.reduce((m, p, i) => (p[0] * c.A[0] + p[1] * c.A[1] + p[2] * c.A[2] > S[m]![0] * c.A[0] + S[m]![1] * c.A[1] + S[m]![2] * c.A[2] ? i : m), 0));
+    runs.forEach(([a, b]) => {
+      expect((b - a) / P).toBeCloseTo(0.6, 1);
+      const mid = (a + b) / 2;
+      expect(Math.min(...apex.map((x) => Math.min(Math.abs(mid - s[x]!), L - Math.abs(mid - s[x]!))))).toBeLessThan(0.03 * P);
+    });
+    const gap = (runs[1]![0] - runs[0]![1]) / P;
+    expect(gap).toBeCloseTo(0.4, 1);
+  });
 });

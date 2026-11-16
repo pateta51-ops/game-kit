@@ -3,7 +3,7 @@
 import { ID, mmul, rotAxis, transpose, type M3, type V3 } from './solids';
 
 /** `curve`: points on the unit sphere along the seam (default `twoArcSeam()`); `perTurn`: px of travel per turn for each px across. */
-export interface BallLook { leather: string; seam?: string; curve?: V3[] | undefined; stitch?: 'bars' | 'chevron'; stitchCount?: number; stitchWidth?: number; stitchFlip?: boolean | [number, number]; seamLine?: string; seamLineWidth?: number }
+export interface BallLook { leather: string; seam?: string; curve?: V3[] | undefined; stitch?: 'bars' | 'chevron'; stitchCount?: number; stitchWidth?: number; stitchFlip?: boolean | [number, number]; seamLine?: string; seamLineWidth?: number; seamLineDash?: number }
 /** `stitchFlip: true` = [0.25, 0.75]: stitches whose seam position (curve index / curve length) lies in [from, to) point the other way. For `twoArcSeam()` these are the two points furthest from the viewer at rest, also after the curve is rotated about the view axis. */
 export const flipRange = (f: BallLook['stitchFlip']): [number, number] | undefined => (f === true ? [0.25, 0.75] : f || undefined);
 // V half width 0.14 (14% of the diameter across), depth so the opening angle is 75 degrees
@@ -51,14 +51,17 @@ export const chevronAt = (S: V3[], at: number, o: V3, count = 56, hw = CHEV_HW, 
   return best;
 };
 /** Seam line coverage (0..1) at `o` whose nearest curve point is `at`: a line `w` of the diameter wide along the seam polyline, through every stitch apex. */
-export const seamLineAt = (S: V3[], at: number, o: V3, w: number): number => {
+export const seamLineAt = (S: V3[], at: number, o: V3, w: number, dash = 0, count = 56): number => {
   const n = S.length, a = S[at] as V3;
-  let dm = 2;
-  for (const b of [S[(at + 1) % n] as V3, S[(at + n - 1) % n] as V3]) {
-    const d: V3 = [b[0] - a[0], b[1] - a[1], b[2] - a[2]], f = Math.min(1, Math.max(0, ((o[0] - a[0]) * d[0] + (o[1] - a[1]) * d[1] + (o[2] - a[2]) * d[2]) / (d[0] * d[0] + d[1] * d[1] + d[2] * d[2] || 1)));
-    dm = Math.min(dm, Math.hypot(o[0] - a[0] - f * d[0], o[1] - a[1] - f * d[1], o[2] - a[2] - f * d[2]));
+  let dm = 2, pos = 0;
+  const c = dash > 0 ? chevrons(S, count) : undefined;
+  for (const sg of [1, -1]) {
+    const b = S[(at + n + sg) % n] as V3, d: V3 = [b[0] - a[0], b[1] - a[1], b[2] - a[2]], dd = d[0] * d[0] + d[1] * d[1] + d[2] * d[2] || 1, f = Math.min(1, Math.max(0, ((o[0] - a[0]) * d[0] + (o[1] - a[1]) * d[1] + (o[2] - a[2]) * d[2]) / dd)), h = Math.hypot(o[0] - a[0] - f * d[0], o[1] - a[1] - f * d[1], o[2] - a[2] - f * d[2]);
+    if (h < dm) { dm = h; pos = (c?.s[at] ?? 0) + sg * f * Math.sqrt(dd); }
   }
-  return Math.min(1, Math.max(0, (w - dm) / 0.006 + 0.5));
+  let e = 0;
+  if (c) { const u = pos - Math.round(pos / c.P) * c.P; e = Math.max(0, Math.abs(u) - Math.max(0, (dash * c.P) / 2 - w)); }
+  return Math.min(1, Math.max(0, (w - Math.hypot(dm, e)) / 0.006 + 0.5));
 };
 export const PER_TURN = 345 / 110;
 /** The turn of a ball `size` px across that rolls `px` without sliding: one full turn per `perTurn * size` px. */
@@ -97,7 +100,7 @@ export function paintBall(c: HTMLCanvasElement, m: M3 = ID, look: BallLook = { l
     for (let i = 0; i < N; i += 1) { const s = S[i] as V3, k = s[0] * o0 + s[1] * o1 + s[2] * o2; if (k > best) { best = k; at = i; } }
     const ang = Math.acos(Math.min(1, best));
     // the stitches: short bars across the seam, a thin groove along it
-    const sl = look.stitch === 'chevron' && look.seamLine && ang < 0.1 ? seamLineAt(S, at, [o0, o1, o2], look.seamLineWidth ?? 0.01) : 0, lr = lr0 + (qr - lr0) * sl, lg = lg0 + (qg - lg0) * sl, lb = lb0 + (qb - lb0) * sl;
+    const sl = look.stitch === 'chevron' && look.seamLine && ang < 0.1 ? seamLineAt(S, at, [o0, o1, o2], look.seamLineWidth ?? 0.01, look.seamLineDash, look.stitchCount) : 0, lr = lr0 + (qr - lr0) * sl, lg = lg0 + (qg - lg0) * sl, lb = lb0 + (qb - lb0) * sl;
     const stitch = look.stitch === 'chevron' ? (ang < 0.25 ? chevronAt(S, at, [o0, o1, o2], look.stitchCount, look.stitchWidth, fl) : 0) : ang < 0.012 ? 0.55 : ang < 0.1 && ang > 0.02 && at % 6 < 2 ? 1 : 0;
     const lit = 0.62 + 0.5 * Math.max(0, x * L[0] + y * L[1] + z * L[2]), k = (py * n + px) * 4;
     d[k] = Math.min(255, (lr + (sr - lr) * stitch) * lit); d[k + 1] = Math.min(255, (lg + (sg - lg) * stitch) * lit); d[k + 2] = Math.min(255, (lb + (sb - lb) * stitch) * lit);
