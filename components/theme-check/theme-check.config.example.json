@@ -5,5 +5,12 @@
   "exclude": ["\\.test\\.tsx?$"],
   "fontFamilies": ["Heading Family", "Body Family"],
   "logoComponent": "Logo",
-  "menuFiles": ["src/ui/screens/MenuFrame.tsx"]
+  "menuFiles": ["src/ui/screens/MenuFrame.tsx"],
+  "assets": {
+    "fontDir": "public/fonts",
+    "fonts": [{ "family": "Heading Family", "file": "heading.woff2" }],
+    "licenceFile": "public/fonts/LICENSES.md",
+    "svgs": ["public/logo/logo.svg"],
+    "files": ["public/logo/backdrop.webp"]
+  }
 }

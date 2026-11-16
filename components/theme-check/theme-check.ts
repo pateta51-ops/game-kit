@@ -6,9 +6,11 @@
 //   RADIUS    a border-radius value that is neither 0, a var(...) nor inherit
 //   SHADOW    a box-shadow or text-shadow value that is neither none nor a var(...)
 //   LOGO      a `menuFiles` file that does not render <logoComponent>
+// Files mode: paths, folders or globs (relative to the root) after the flags check only those files; no asset check.
+// `assets` (the look's files are in place): FONT_MISSING, FONT_UNREFERENCED, FONT_LICENCE, SVG, FILE.
 // Exit codes: 0 clean, 1 findings, 2 bad usage.
-import { existsSync, readdirSync, readFileSync } from 'node:fs';
-import { join, relative, resolve } from 'node:path';
+import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
+import { join, relative, resolve, sep } from 'node:path';
 import { pathToFileURL } from 'node:url';
 
 export interface ThemeConfig {
@@ -19,6 +21,14 @@ export interface ThemeConfig {
   fontFamilies?: string[];
   logoComponent?: string;
   menuFiles?: string[];
+  assets?: ThemeAssets;
+}
+export interface ThemeAssets {
+  fontDir?: string;
+  fonts?: { family: string; file: string }[];
+  licenceFile?: string;
+  svgs?: string[];
+  files?: string[];
 }
 export interface SourceFile {
   path: string;
@@ -78,35 +88,96 @@ export function themeFindings(files: readonly SourceFile[], cfg: ThemeConfig): s
   return out;
 }
 
-const walk = (dir: string): string[] =>
+const walk = (dir: string, lean = false): string[] =>
   existsSync(dir)
     ? readdirSync(dir, { withFileTypes: true }).flatMap((d) =>
-        d.isDirectory() ? walk(join(dir, d.name)) : [join(dir, d.name)],
+        lean && d.isDirectory() && (d.name === 'node_modules' || d.name.startsWith('.'))
+          ? []
+          : d.isDirectory()
+            ? walk(join(dir, d.name), lean)
+            : [join(dir, d.name)],
       )
     : [];
 
-export function themeCheck(root: string, cfg: ThemeConfig): string[] {
+export function assetFindings(root: string, a: ThemeAssets): string[] {
+  const out: string[] = [];
+  const fonts = a.fonts ?? [];
+  if (a.fontDir !== undefined) {
+    const dir = join(root, a.fontDir);
+    const have = existsSync(dir) ? readdirSync(dir) : [];
+    for (const f of fonts) if (!have.includes(f.file)) out.push(`FONT_MISSING ${a.fontDir}/${f.file} (${f.family})`);
+    for (const n of have.filter((x) => /\.(ttf|otf|woff2?)$/i.test(x)))
+      if (!fonts.some((f) => f.file === n)) out.push(`FONT_UNREFERENCED ${a.fontDir}/${n}`);
+  }
+  if (a.licenceFile !== undefined) {
+    const lic = join(root, a.licenceFile);
+    const text = existsSync(lic) ? readFileSync(lic, 'utf8') : '';
+    if (!text) out.push(`FONT_LICENCE ${a.licenceFile} is missing`);
+    else for (const f of fonts) if (!text.includes(f.family)) out.push(`FONT_LICENCE ${a.licenceFile} does not name ${f.family}`);
+  }
+  for (const p of a.svgs ?? []) {
+    const t = existsSync(join(root, p)) ? readFileSync(join(root, p), 'utf8') : '';
+    if (!t.includes('<svg') || !/<path\s[^>]*\bd=/.test(t)) out.push(`SVG ${p} is missing or has no paths`);
+  }
+  for (const p of a.files ?? []) if (!existsSync(join(root, p))) out.push(`FILE ${p}: not found`);
+  return out;
+}
+
+const globRe = (g: string) =>
+  new RegExp(
+    `^${g.replace(/\*\*\/?|\*|\?|[.+^${}()|[\]\\]/g, (m) =>
+      m.startsWith('**') ? '.*' : m === '*' ? '[^/]*' : m === '?' ? '[^/]' : `\\${m}`,
+    )}$`,
+  );
+
+export function themeCheck(root: string, cfg: ThemeConfig, only?: readonly string[]): string[] {
   const exts = cfg.exts ?? ['.css', '.tsx'];
   const ex = (cfg.exclude ?? []).map((r) => new RegExp(r));
-  const menu = cfg.menuFiles ?? [];
-  const files = [...cfg.dirs.flatMap((d) => walk(join(root, d))), ...menu.map((p) => join(root, p))]
-    .map((p) => relative(root, p).replace(/\\/g, '/'))
+  const rel = (p: string) => relative(root, p).replace(/\\/g, '/');
+  const missing: string[] = [];
+  const picked = only?.flatMap((raw) => {
+    const g = raw.replace(/\\/g, '/');
+    const cut = g.search(/[*?]/);
+    const at = resolve(root, cut < 0 ? g : g.slice(0, cut).replace(/[^/]*$/, ''));
+    const top = resolve(root);
+    if (at !== top && !at.startsWith(top.endsWith(sep) ? top : top + sep)) {
+      missing.push(`FILE ${g}: outside the root`);
+      return [];
+    }
+    if (cut < 0 && !existsSync(at)) missing.push(`FILE ${rel(at)}: not found`);
+    if (cut < 0 && !statSync(at, { throwIfNoEntry: false })?.isDirectory()) return [rel(at)];
+    const re = globRe(cut < 0 ? '**' : g);
+    const hit = walk(at, true)
+      .map(rel)
+      .filter((p) => re.test(p));
+    if (!hit.length) missing.push(`FILE ${g}: no file matches`);
+    return hit;
+  });
+  const menu = (cfg.menuFiles ?? []).filter((p) => !picked || picked.includes(p));
+  const files = (picked ?? [...cfg.dirs.flatMap((d) => walk(join(root, d))), ...menu.map((p) => join(root, p))].map(rel))
     .filter((p, i, a) => a.indexOf(p) === i && existsSync(join(root, p)))
     .filter((p) => menu.includes(p) || (exts.some((e) => p.endsWith(e)) && !ex.some((r) => r.test(p))))
     .map((p) => ({ path: p, text: readFileSync(join(root, p), 'utf8') }));
-  return themeFindings(files, cfg);
+  return [
+    ...missing,
+    ...themeFindings(files, { ...cfg, menuFiles: menu }),
+    ...(cfg.assets && !only ? assetFindings(root, cfg.assets) : []),
+  ];
 }
 
 if (import.meta.url === pathToFileURL(process.argv[1] ?? '').href) {
   const i = process.argv.indexOf('--config');
   const cfgPath = i > 0 ? process.argv[i + 1] : undefined;
   if (!cfgPath || !existsSync(cfgPath)) {
-    console.error('usage: theme-check --config <file.json> [--root <dir>]');
+    console.error('usage: theme-check --config <file.json> [--root <dir>] [file, folder or glob ...]');
     process.exit(2);
   }
   const r = process.argv.indexOf('--root');
   const root = resolve(r > 0 ? (process.argv[r + 1] ?? '.') : '.');
-  const findings = themeCheck(root, JSON.parse(readFileSync(cfgPath, 'utf8')) as ThemeConfig);
+  const only = process.argv
+    .slice(2)
+    .filter((a, k, all) => !a.startsWith('--') && !/^--(config|root)$/.test(all[k - 1] ?? ''));
+  const findings = themeCheck(root, JSON.parse(readFileSync(cfgPath, 'utf8')) as ThemeConfig, only.length ? only : undefined);
   for (const f of findings) console.log(f);
   console.log(`theme-check: ${findings.length ? `${String(findings.length)} finding(s)` : 'clean'}`);
   process.exit(findings.length ? 1 : 0);

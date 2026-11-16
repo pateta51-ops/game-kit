@@ -2,7 +2,7 @@ import { mkdirSync, mkdtempSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { themeCheck, themeFindings, type ThemeConfig } from './theme-check';
+import { assetFindings, themeCheck, themeFindings, type ThemeConfig } from './theme-check';
 
 const cfg: ThemeConfig = {
   tokenFile: 'tokens.css',
@@ -70,5 +70,99 @@ describe('theme-check', () => {
     writeFileSync(join(root, 'ui', 'a.css'), 'a{border-radius:9px}');
     writeFileSync(join(root, 'ui', 'a.test.tsx'), '#fff');
     expect(themeCheck(root, { ...cfg, exclude: ['\\.test\\.tsx$'] })).toEqual(['RADIUS ui/a.css: 9px']);
+  });
+});
+
+describe('theme-check files mode and assets', () => {
+  const tree = () => {
+    const root = mkdtempSync(join(tmpdir(), 'tc-'));
+    mkdirSync(join(root, 'ui', 'deep'), { recursive: true });
+    mkdirSync(join(root, 'other'));
+    writeFileSync(join(root, 'ui', 'Menu.tsx'), '<div/>');
+    writeFileSync(join(root, 'ui', 'a.css'), 'a{border-radius:9px}');
+    writeFileSync(join(root, 'ui', 'deep', 'b.css'), 'a{color:#fff}');
+    writeFileSync(join(root, 'ui', 'deep', 'c.test.tsx'), '#abc');
+    writeFileSync(join(root, 'ui', 'notes.md'), '#fff');
+    writeFileSync(join(root, 'other', 'x.css'), 'a{box-shadow:1px 1px}');
+    writeFileSync(join(root, 'tokens.css'), 'a{color:#000}');
+    return root;
+  };
+  const ex = { ...cfg, exclude: ['\\.test\\.tsx$'] };
+  it('checks only the files, folders and globs given', () => {
+    const root = tree();
+    expect(themeCheck(root, ex, ['ui/a.css'])).toEqual(['RADIUS ui/a.css: 9px']);
+    expect(themeCheck(root, ex, ['ui\\a.css', join(root, 'ui', 'a.css')])).toEqual(['RADIUS ui/a.css: 9px']);
+    expect(themeCheck(root, ex, ['other/x.css', 'tokens.css', 'ui/notes.md', 'ui/deep/c.test.tsx'])).toEqual([
+      'SHADOW other/x.css: box-shadow 1px 1px',
+    ]);
+    expect(themeCheck(root, ex, ['ui/*.css'])).toEqual(['RADIUS ui/a.css: 9px']);
+    expect(themeCheck(root, ex, ['ui/**/*.css']).sort()).toEqual(['COLOR ui/deep/b.css: #fff', 'RADIUS ui/a.css: 9px']);
+    expect(themeCheck(root, ex, ['ui/deep'])).toEqual(['COLOR ui/deep/b.css: #fff']);
+    expect(themeCheck(root, ex, ['u?/de*/*'])).toEqual(['COLOR ui/deep/b.css: #fff']);
+    expect(themeCheck(root, ex, ['**/*.tsx'])).toEqual(['LOGO ui/Menu.tsx: does not render <Logo>']);
+  });
+  it('reports a named file that is not there; an empty list or glob finds nothing', () => {
+    const root = tree();
+    expect(themeCheck(root, ex, ['ui/gone.css'])).toEqual(['FILE ui/gone.css: not found']);
+    expect(themeCheck(root, ex, ['nowhere/*.css'])).toEqual(['FILE nowhere/*.css: no file matches']);
+    expect(themeCheck(root, ex, ['ui/*.scss', 'ui/a.css'])).toEqual(['FILE ui/*.scss: no file matches', 'RADIUS ui/a.css: 9px']);
+    mkdirSync(join(root, 'empty'));
+    expect(themeCheck(root, ex, ['empty'])).toEqual(['FILE empty: no file matches']);
+    expect(themeCheck(root, ex, [])).toEqual([]);
+  });
+  it('refuses a path outside the root and leaves node_modules and dot folders alone', () => {
+    const root = tree();
+    const far = join(root, 'other', 'x.css');
+    expect(themeCheck(join(root, 'ui'), ex, [far])).toEqual([`FILE ${far.replace(/\\/g, '/')}: outside the root`]);
+    expect(
+      themeCheck(root, ex, [join(tmpdir(), 'elsewhere.css'), `${root}-twin/a.css`]).map((f) => f.slice(-16)),
+    ).toEqual(['outside the root', 'outside the root']);
+    mkdirSync(join(root, 'node_modules', 'pkg'), { recursive: true });
+    mkdirSync(join(root, '.cache'));
+    writeFileSync(join(root, 'node_modules', 'pkg', 'n.css'), 'a{color:#111}');
+    writeFileSync(join(root, '.cache', 'd.css'), 'a{color:#222}');
+    writeFileSync(join(root, 'top.css'), 'a{color:#333}');
+    expect(themeCheck(root, ex, ['*.css'])).toEqual(['COLOR top.css: #333']);
+    expect(themeCheck(root, ex, ['**/*.css']).filter((f) => /#111|#222/.test(f))).toEqual([]);
+    expect(themeCheck(root, ex, ['.'])).toContain('COLOR top.css: #333');
+  });
+  it('checks that the fonts, licences, svgs and files of the look are in place', () => {
+    const root = tree();
+    const assets = {
+      fontDir: 'fonts',
+      fonts: [
+        { family: 'Arvo', file: 'arvo.woff2' },
+        { family: 'Bree', file: 'bree.woff2' },
+      ],
+      licenceFile: 'fonts/LICENSES.md',
+      svgs: ['logo.svg', 'flat.svg', 'gone.svg'],
+      files: ['tokens.css', 'sky.webp'],
+    };
+    expect(assetFindings(root, assets)).toEqual([
+      'FONT_MISSING fonts/arvo.woff2 (Arvo)',
+      'FONT_MISSING fonts/bree.woff2 (Bree)',
+      'FONT_LICENCE fonts/LICENSES.md is missing',
+      'SVG logo.svg is missing or has no paths',
+      'SVG flat.svg is missing or has no paths',
+      'SVG gone.svg is missing or has no paths',
+      'FILE sky.webp: not found',
+    ]);
+    mkdirSync(join(root, 'fonts'));
+    for (const f of ['arvo.woff2', 'stray.ttf', 'readme.txt']) writeFileSync(join(root, 'fonts', f), '');
+    writeFileSync(join(root, 'fonts', 'LICENSES.md'), '## Arvo\nOFL');
+    writeFileSync(join(root, 'logo.svg'), '<svg><path fill="x" d="M0 0"/></svg>');
+    writeFileSync(join(root, 'flat.svg'), '<svg><rect/></svg>');
+    expect(assetFindings(root, assets)).toEqual([
+      'FONT_MISSING fonts/bree.woff2 (Bree)',
+      'FONT_UNREFERENCED fonts/stray.ttf',
+      'FONT_LICENCE fonts/LICENSES.md does not name Bree',
+      'SVG flat.svg is missing or has no paths',
+      'SVG gone.svg is missing or has no paths',
+      'FILE sky.webp: not found',
+    ]);
+    expect(assetFindings(root, {})).toEqual([]);
+    const withAssets = { ...noMenu, assets: { files: ['sky.webp'] } };
+    expect(themeCheck(root, withAssets)).toContain('FILE sky.webp: not found');
+    expect(themeCheck(root, withAssets, ['ui/a.css'])).toEqual(['RADIUS ui/a.css: 9px']);
   });
 });

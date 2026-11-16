@@ -5,5 +5,9 @@
     "commit": "6f006a2",
     "paths": ["scripts/theme-check.ts"]
   },
+  "grafts": [
+    { "game": "stcc", "commit": "9fc59643", "paths": ["e2e/layout-bounds.spec.ts", "e2e/table-text-under-cards.spec.ts"], "what": "layout.ts: inside its zone, no overlap, no cut row, onTop" },
+    { "game": "jarl", "commit": "6f006a2", "paths": ["scripts/theme-check.ts"], "what": "assets: font files, licences, svgs and files in place" }
+  ],
   "needs": []
 }
