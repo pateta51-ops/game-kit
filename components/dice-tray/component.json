@@ -1,0 +1,16 @@
+{
+  "name": "dice-tray",
+  "source": {
+    "game": "7th-inning-stretch",
+    "commit": "bb71c3fa646d088b46aec5d750f93822f4c35219",
+    "paths": [
+      "src/ui/prompts/logic.ts (rollWindow, step, rollKinds)",
+      "src/ui/prompts/answers.ts (usePick pick state, adjustRoll flow, tapTray, chooseSubset reroll selection, defence die selection)",
+      "src/ui/table/Table.tsx (tray zone)",
+      "docs/post-build/README.md item 18"
+    ],
+    "note": "Game-neutral logic only; the game's tokens, prompt kinds and look stay in the game. The tray's data model and meanings are new code."
+  },
+  "needs": ["state-machines"],
+  "packages": []
+}

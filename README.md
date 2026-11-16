@@ -55,6 +55,7 @@ Every folder under `components/` (read its README, or `component.json`, before u
 | [`ci-templates`](components/ci-templates/README.md) | Renders a game's CI workflows, full gate and local CI script from a small `ci.config.json`; nothing names a repository or runner. | - |
 | [`debug-console`](components/debug-console/README.md) | A slash-line console over the engine-core debug edits (K100). | engine-core |
 | [`dice-odds`](components/dice-odds/README.md) | Exact dice probabilities (K24): multiset outcomes with multinomial weights and `chance(k, test)`. | - |
+| [`dice-tray`](components/dice-tray/README.md) | Dice tray and roll window logic (K211): hold, roll through `ctx.rng`, adjust, read a roll with its meanings, tap-order machine. | state-machines |
 | [`e2e-helpers`](components/e2e-helpers/README.md) | Playwright helpers a game's browser tests share. | - |
 | [`effect-library`](components/effect-library/README.md) | The twelve verbs of the director's spec format as DOM effects for the motion frame: `move`, `lift`, `settle`, `fade-in`, `fade-out`, `show`, `hide`, `flip`, `scale`, `shake`, `glow`, `text`. | motion-frame |
 | [`engine-core`](components/engine-core/README.md) | The kernel of a game engine: seeded random numbers, canonical JSON and hashes, the task runner with prompts, copy on write, replay, undo and the save format. | - |

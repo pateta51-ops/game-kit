@@ -81,6 +81,10 @@
     "use": "A developer slash console over the engine-core debug edits.",
     "not": "Player-facing UI; it is a dev tool."
   },
+  "dice-tray": {
+    "use": "Dice in play, held dice, rolling through ctx.rng and the roll window content.",
+    "not": "Dice drawing or 3D (pieces-3d) and odds (dice-odds)."
+  },
   "dice-odds": {
     "use": "Exact dice probabilities for tests, sanity bands or AI.",
     "not": "Rolling dice in play; that is engine-core's seeded random."
