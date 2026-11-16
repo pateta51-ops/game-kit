@@ -5,6 +5,7 @@
 import { adopt, own } from './cow';
 import { draftOf } from './ctx';
 import type { Draft } from './draft';
+import { batchOver, type ContinuousEffect } from './durations';
 import { EngineBugError } from './errors';
 import { replaceHandlers, type Replacement, type ReplaceResult } from './replace';
 import { triggerHandlers, type PendingTrigger, type TriggerCandidate, type TriggerPromptInfo } from './triggers';
@@ -63,6 +64,8 @@ export interface TimingState {
   readonly pending?: readonly PendingTrigger[];
   /** K94: triggers resolved in the current chain (the cap counts them). */
   readonly fired?: number;
+  /** K96: continuous effects (`durations.ts`); absent until the game adds one. */
+  readonly effects?: readonly ContinuousEffect[];
 }
 /** Card data: what a prevention ability prevents, at most how much per use, how many uses. */
 export interface Prevention {
@@ -124,6 +127,8 @@ export interface TimingConfig<G extends GameTypes> {
   capped?(left: readonly PendingTrigger[]): EventInput<G> | undefined;
   /** K94: runs after each trigger and what it pushed (K95 puts its checkpoint here). */
   afterTrigger?(ctx: Ctx<G>, t: PendingTrigger): void;
+  /** K96: an `endOfBatch` effect lasts through that batch's after-triggers (ends when the `timing.triggers` chain that collected it is over). Default: it ends with the batch's follow-ups, before its triggers. */
+  batchEndAfterTriggers?: boolean;
   /** K94: automatic order table (default `DEFAULT_PRIORITY`). */
   priority?: Readonly<Record<string, number>>;
   /** K94: the game's prompt for choosing which trigger resolves next (option ids are `String(t.id)`). */
@@ -227,6 +232,7 @@ export function cancelBatch<G extends GameTypes>(ctx: Ctx<G>, b: number): void {
   t.windows = t.windows.filter((w) => w.batch !== b);
   if (t.pending?.some((p) => p.batch === b)) t.pending = t.pending.filter((p) => p.batch !== b);
   if (t.current === b) t.current = null;
+  batchOver(ctx, b, true);
 }
 
 /** Ignore batch `b`: only its effect is dropped (`ignored`; `timing.do` then cancels the occurrence); its windows stay. Returns where the topmost effect task is, or -1. */
@@ -354,6 +360,7 @@ export function timingHandlers<G extends GameTypes>(cfg: TimingConfig<G>): Handl
     'timing.do': (ctx, t) => {
       const task = t as TimingTask;
       const o = startTask(ctx, task);
+      const before = new Set<object>(ctx.s.stack);
       if (o.state === 'pending') {
         if (o.ignored === true || (o.amount === 0 && (o.prevented ?? 0) > 0)) occurrenceDraft(ctx, o.id).state = 'cancelled';
         else {
@@ -363,7 +370,15 @@ export function timingHandlers<G extends GameTypes>(cfg: TimingConfig<G>): Handl
           if (e !== undefined) ctx.emit({ ...e, batch: o.batch, occurrence: o.id });
         }
       }
+      if (ctx.s.timing?.effects !== undefined && !ctx.s.timing.occurrences.some((x) => x.batch === o.batch && x.state === 'pending')) {
+        const st = draftOf(ctx).stack;
+        const i = st.findIndex((x) => !before.has(x));
+        st.splice(i < 0 ? st.length : i, 0, { kind: 'timing.batchEnd', end: o.batch } as never);
+      }
       timingOf(ctx).current = null;
+    },
+    'timing.batchEnd': (ctx, t) => {
+      batchOver(ctx, (t as unknown as { end: number }).end, false, cfg.batchEndAfterTriggers === true);
     },
   };
 }

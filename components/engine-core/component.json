@@ -173,6 +173,32 @@
           "MarvelChampions test/Marvel/PublicSpec.hs (edit keeps the question, refused edits atomic, no misleading log lines; design only)",
           "netrunner src/clj/game/core/commands.clj (MIT: set with clamping, summon, close-prompt; verb list only)"
         ]
+      },
+      {
+        "game": "netrunner",
+        "url": "https://github.com/mtgred/netrunner",
+        "licence": "MIT",
+        "notice": "Copyright the netrunner contributors (LICENSE.txt, MIT)",
+        "paths": [
+          "src/clj/game/core/effects.clj (continuous-effects registry, duration keys, get / sum / any queries; K96 design only)"
+        ]
+      },
+      {
+        "game": "marvel-champions-digital-game",
+        "url": "https://github.com/quincarter/marvel-champions-digital-game",
+        "licence": "AGPL-3.0 (idea only, no code copied)",
+        "paths": [
+          "packages/engine/src/lasting.ts (LastingDuration, endOfEvent ifCancelled; K96 idea only)"
+        ]
+      },
+      {
+        "game": "XMage",
+        "url": "https://github.com/magefree/mage",
+        "licence": "MIT",
+        "notice": "Copyright (c) 2010 betasteward@gmail.com",
+        "paths": [
+          "Mage/src/main/java/mage/abilities/effects/ContinuousEffects.java (apply, applyLayer, timestamps, dependency pass; K112 design only)"
+        ]
       }
     ]
   },

@@ -4,6 +4,7 @@
 // trigger-event-simult and the priority table (MIT, design); ArkhamHorror / MarvelChampions Simultaneously and
 // captureQueueT (no licence: idea only). Written new.
 import { draftOf } from './ctx';
+import { triggersOver } from './durations';
 import { EngineBugError } from './errors';
 import { timingOf, type Occurrence, type TimingConfig } from './timing';
 import type { Ctx, GameTypes, HandlerTable, KernelPrompt, KernelTask } from './types';
@@ -117,6 +118,7 @@ export function triggerHandlers<G extends GameTypes>(cfg: TimingConfig<G>): Hand
       const mine = nextGroup(cfg, ctx.s, pendingTriggers(ctx.s));
       const fired = ctx.s.timing?.fired;
       if (mine.length === 0) {
+        triggersOver(ctx);
         if (fired !== undefined) delete timingOf(ctx).fired;
         return;
       }
@@ -125,6 +127,7 @@ export function triggerHandlers<G extends GameTypes>(cfg: TimingConfig<G>): Hand
         const t = timingOf(ctx);
         t.pending = [];
         delete t.fired;
+        triggersOver(ctx);
         const e = cfg.capped?.(left);
         if (e !== undefined) ctx.emit(e);
         return;
