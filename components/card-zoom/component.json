@@ -1,0 +1,29 @@
+{
+  "name": "card-zoom",
+  "source": {
+    "game": "stcc",
+    "commit": "8e6f55b",
+    "paths": [
+      "src/ui/glossary/LookupHost.tsx CardDetail (the card large beside its printed text with the card's icons, every term and icon a glossary link; the kind line; the pack, art context and VP badge stay in the game)",
+      "src/ui/board/table/preview.tsx (the facts beside the card that it does not print: its tokens)"
+    ],
+    "grafts": [
+      {
+        "game": "ebr",
+        "commit": "33b5abd3",
+        "paths": [
+          "src/ui/cards/Zoom.tsx (the face beside a labelled 'Card text' section; Escape caught in the capture phase before windows underneath, now the optional useZoomEscape)"
+        ]
+      }
+    ],
+    "note": "Compared with Imperium ViewCard.tsx (the side of a double-sided card; no transcription). The icon legend, the engine-notes section and the rule-id strip over every line are new (owner's rules: full transcription, screen text matches the engine, no rule ids on screen)."
+  },
+  "needs": [
+    "card-parts",
+    "glossary",
+    "plain-text"
+  ],
+  "packages": [
+    "react"
+  ]
+}
