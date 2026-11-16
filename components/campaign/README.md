@@ -25,3 +25,6 @@ The `step` of a write is a string the game chooses (a scenario id; `stepKey(step
 - `newCampaign(id, version, first, seed, log?)`; `standalone(step, seed)` with `endsAfterOne` is a scenario played alone.
 - `begin(save, seed?)` gives `{ save, log }`: a frozen copy of the log for the game's setup; the game never reads the campaign. `end(save, { log, outcome?, resolution? }, next)` takes back the log it wrote, files the attempt in `history` and moves on.
 - Save = `{ v, id, version, log, position, seed, history, attempt?, status }`; each attempt keeps `step, seed, logBefore`. `retry(save)` puts back the last attempt's `logBefore` and step. `readSave(parsed, version)` marks another version `incompatible`.
+## Screens (K159, `screens.ts` pure; React in `ui.ts`, static)
+
+`betweenQuestion(save, actions)` + `answerBetween`: the between-scenarios screen as one question (`continue` and the game's `BetweenAction`s, detours). `logSections(log, fields, players)` + `<LogTabs sections tabs />` (the game adds tabs: `changeRows` per instruction, `<AchievementList />`). `handledList` (automated setup as sentences). `startAt({ steps, at, form, answers })` + `<StartForm />`: start anywhere with a chosen history.
