@@ -174,6 +174,7 @@ Decided by the owner, 16 Nov 2026:
 | - | Information-set search driver; paired branch tester for AI variants | STCC | L | competitive two-player games only |
 | - | LLM opponent plumbing | STCC | L | competitive two-player games only |
 | - | Second-engine tooling (TypeScript and Rust twins) | Warp's | L | competitive two-player games only |
+| K165 | `picked-state` (asked as K78 in a game's plan; K78 was taken): picked frame and tick tokens (`--picked`, `--picked-edge`, `--picked-width`, `--tick`, `--unpicked-dim`; phone width 3, tick 16), `pickedAttrs`; pattern note `docs/patterns/scoreboards-and-totals.md` | a finished build, 16 Nov 2026 | S | done |
 
 ## Harvest from outside repositories (owner, 15 Nov 2026)
 

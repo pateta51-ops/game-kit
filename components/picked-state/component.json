@@ -1,0 +1,9 @@
+{
+  "name": "picked-state",
+  "source": {
+    "game": "7is",
+    "commit": "6c82d43",
+    "paths": ["src/ui/theme/tokens.css (--picked, --picked-edge, --picked-width, --tick, --tick-mark, --unpicked-dim; the frame, the tick badge and the phone width 3 and tick 16)"]
+  },
+  "needs": []
+}
