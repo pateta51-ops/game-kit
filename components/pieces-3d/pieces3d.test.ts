@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import { ID, apply, cube, front, mesh, rest, trapezohedron, tumble, turned } from './solids';
-import { SEAM, chevronAt, offRest, rolled, turnOf, twoArcSeam } from './ball';
+import { SEAM, chevronAt, chevronPoints, chevrons,offRest, rolled, turnOf, twoArcSeam } from './ball';
 
 const TILT = (15 * Math.PI) / 180;
 describe('pieces-3d: the code-built pieces', () => {
@@ -74,16 +74,33 @@ describe('pieces-3d: resting tilt', () => {
     const css = readFileSync(new URL('./pieces3d.css', import.meta.url), 'utf8');
     expect(css).toMatch(/\.p3-tilt\{[^}]*rotateX\(var\(--piece-tilt,15deg\)\)/);
   });
-  it('XD-63: chevron stitches are 28 V marks along the seam, none on a gap, all pointing the same way, with no line along it', () => {
-    const n = SEAM.length, at = (i: number) => chevronAt(SEAM, i, SEAM[i] as [number, number, number]);
-    const on = SEAM.map((_, i) => at(i) > 0.5), rises = on.filter((b, i) => b && !on[(i + n - 1) % n]).length;
-    expect(rises).toBe(28);
-    expect(on.filter(Boolean).length).toBeLessThan(n / 4); // marks, not a line
-    // off the seam by the half width, a stitch shows only where the V's arms end, again once per period, and not on the other side's vertex
-    const [p0, p1, p2] = SEAM[0] as [number, number, number], [q0, q1, q2] = SEAM[1] as [number, number, number], t0 = q0 - p0, t1 = q1 - p1, t2 = q2 - p2, h = Math.hypot(t0, t1, t2);
-    const s0 = (p1 * t2 - p2 * t1) / h, s1 = (p2 * t0 - p0 * t2) / h, s2 = (p0 * t1 - p1 * t0) / h;
-    const o = (u: number, w: number): [number, number, number] => { const r0 = p0 + u * s0 + (w * t0) / h, r1 = p1 + u * s1 + (w * t1) / h, r2 = p2 + u * s2 + (w * t2) / h, l = Math.hypot(r0, r1, r2); return [r0 / l, r1 / l, r2 / l]; };
-    const arm = (u: number) => Array.from({ length: 200 }, (_, k) => chevronAt(SEAM, 0, o(u, (k - 100) * 0.0015))).some((x) => x > 0.9);
-    expect(arm(0.14)).toBe(true); expect(arm(-0.14)).toBe(true); expect(arm(0.3)).toBe(false);
+  it('XD-63: 56 chevrons by default, 13+ on each visible arc at rest, every V symmetric with a 70-80 degree opening, pointing along the seam', () => {
+    const { k, s } = chevrons(SEAM, 56), L = s[SEAM.length] ?? 0;
+    expect(L).not.toBeCloseTo(2 * Math.PI, 1);
+    expect(k.length).toBe(56);
+    // visible arcs at rest: runs of stitches facing the viewer (+z)
+    const vis = k.map((c) => c.A[2] > 0), runs: number[] = [];
+    const start = vis.findIndex((v, i) => v && !vis[(i + 55) % 56]);
+    for (let i = 0; i < 56; i += 1) { const j = (start + i) % 56; if (vis[j]) { if (!vis[(j + 55) % 56]) runs.push(0); runs[runs.length - 1] = (runs[runs.length - 1] ?? 0) + 1; } }
+    expect(runs.length).toBe(2);
+    for (const r of runs) expect(r).toBeGreaterThanOrEqual(13);
+    const d = (a: readonly number[], b: readonly number[]) => Math.hypot((a[0] ?? 0) - (b[0] ?? 0), (a[1] ?? 0) - (b[1] ?? 0), (a[2] ?? 0) - (b[2] ?? 0));
+    for (const c of k) {
+      const [A, e1, e2] = chevronPoints(c), l1 = d(A, e1), l2 = d(A, e2);
+      expect(Math.abs(l1 - l2)).toBeLessThan(1e-9);
+      expect(l1).toBeCloseTo(d(chevronPoints(k[0]!)[0], chevronPoints(k[0]!)[1]), 9);
+      const v1 = e1.map((x, i) => x - (A[i] ?? 0)), v2 = e2.map((x, i) => x - (A[i] ?? 0)), ang = (Math.acos(v1.reduce((m, x, i) => m + x * (v2[i] ?? 0), 0) / (l1 * l2)) * 180) / Math.PI;
+      expect(ang).toBeGreaterThan(70); expect(ang).toBeLessThan(80);
+      // apex points along the seam: the arms' mid lies behind the apex on -T, not across it
+      const mid = [0, 1, 2].map((i) => ((e1[i] ?? 0) + (e2[i] ?? 0)) / 2 - (A[i] ?? 0)), dt = mid.reduce((m, x, i) => m + x * (c.T[i] ?? 0), 0), dn = mid.reduce((m, x, i) => m + x * (c.N[i] ?? 0), 0);
+      expect(dt).toBeLessThan(0); expect(Math.abs(dn)).toBeLessThan(1e-9);
+    }
+    // drawn: the apex and both arm ends are inked, the middle between neighbours and far off the seam are not
+    const near = (p: readonly number[]) => SEAM.reduce((b, q, i) => (q[0] * (p[0] ?? 0) + q[1] * (p[1] ?? 0) + q[2] * (p[2] ?? 0) > (SEAM[b] as readonly number[]).reduce((m, x, j) => m + x * (p[j] ?? 0), 0) ? i : b), 0);
+    const [A, e1, e2] = chevronPoints(k[5]!);
+    for (const p of [A, e1, e2]) expect(chevronAt(SEAM, near(p), p)).toBeGreaterThan(0.9);
+    const far: [number, number, number] = [A[0] + 0.3 * k[5]!.N[0], A[1] + 0.3 * k[5]!.N[1], A[2] + 0.3 * k[5]!.N[2]];
+    expect(chevronAt(SEAM, near(far), far)).toBe(0);
+    expect(chevronAt(SEAM, 0, SEAM[0]!, 28)).toBeGreaterThanOrEqual(0); // count is a look option
   });
 });

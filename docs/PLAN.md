@@ -173,6 +173,7 @@ What the eighth game has that the kit lacks, from its assessment at kit v0.33.0 
 | K173 | `sound-player` `playTrack(cue, { fadeInMs, loop, onEnd })`: a whole track on the music bus with fade-in, fade-out by `stopCues(ms, cue)`, `onEnd`; music-bus cues decoded on first play, not after the first tap | 7th Inning Stretch (menu to game crossfade) | S | done |
 | K174 | `pieces-3d` resting tilt: class `p3-tilt` (angle `--piece-tilt`) and `<Chip tilt>` for static pieces outside a cast (swatches); README prefix line corrected | 7th Inning Stretch (theme swatches) | S | done |
 | K175 | `pieces-3d` ball `stitch: 'chevron'`: seams drawn as rows of V stitches fixed to the sphere (default style kept) | 7th Inning Stretch (XD-63) | S | done |
+| K179 | `pieces-3d` ball chevron fix (director, XD-63): `stitchCount` look option (default 56, 14 per visible arc at rest, seam length measured), every V drawn in its own orthonormal stitch frame so both arms are equal and the opening is 75 degrees on every stitch; proof in docs/proof/k176/ | 7th Inning Stretch (XD-63) | S | done |
 
 ### Wave 6 - gaps left after the third pass (16 Nov 2026)
 
