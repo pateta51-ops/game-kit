@@ -35,6 +35,6 @@ export function scaffold(o) {
   if (o.render !== false) node('kit/ci-templates/render.mjs')
   if (o.link) fs.symlinkSync(path.resolve(o.link), path.join(o.dir, 'node_modules'), 'junction')
   if (o.install !== false && !o.link) x('npm', ['install'], { cwd: o.dir, stdio: 'inherit', shell: process.platform === 'win32' })
-  try { x('git', ['init', '-q'], { cwd: o.dir }) } catch { /* no git: the folder is still complete */ }
+  if (o.git !== false) try { x('git', ['init', '-q'], { cwd: o.dir }) } catch { /* no git: the folder is still complete */ }
   return { dir: o.dir, ref, ports: vars }
 }

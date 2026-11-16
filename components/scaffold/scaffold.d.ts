@@ -12,6 +12,7 @@ export interface ScaffoldOptions {
   components?: string[]
   render?: boolean
   install?: boolean
+  git?: boolean
 }
 export const BASE: string[]
 export const TEMPLATE: string

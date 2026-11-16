@@ -79,15 +79,15 @@ if (cmd === 'pull') {
   const words = a.map((w) => w.toLowerCase())
   for (const [n, , purpose, , use] of secs) if (cmd === 'list' || words.every((w) => (n + purpose + use).toLowerCase().includes(w))) console.log(n + ': ' + (purpose ?? '').split(/(?<=\.)\s/)[0].slice(0, 200) + ' ' + (use ?? '').replace('- **Use it when:** ', '(use when: ') + (use ? ')' : ''))
 } else if (cmd === 'new') {
-  // node <kit>/kit.mjs new <dir> <id> "<Name>" [--ref r] [--repo owner/name] [--runner label] [--link <node_modules>] [--no-install] [--ports file]
+  // node <kit>/kit.mjs new <dir> <id> "<Name>" [--ref r] [--repo owner/name] [--runner label] [--link <node_modules>] [--no-install] [--no-remote] [--ports file]
   const flags = {}
   const pos = []
-  for (let i = 0; i < a.length; i++) if (a[i] === '--no-install') flags.install = false; else if (a[i].startsWith('--')) flags[a[i].slice(2)] = a[++i]; else pos.push(a[i])
+  for (let i = 0; i < a.length; i++) if (a[i] === '--no-install') flags.install = false; else if (a[i] === '--no-remote') flags.remote = false; else if (a[i].startsWith('--')) flags[a[i].slice(2)] = a[++i]; else pos.push(a[i])
   const [dir, id, name] = pos
   const d = dirname(fileURLToPath(import.meta.url))
-  if (!name || !fs.existsSync(d + '/components/scaffold/scaffold.js')) { console.error('usage (from the game-kit checkout): node kit.mjs new <dir> <id> "<Name>" [--ref r] [--repo owner/name] [--runner label] [--link <node_modules>] [--no-install] [--ports file]'); process.exit(2) }
-  const { scaffold } = await import(pathToFileURL(d + '/components/scaffold/scaffold.js').href)
-  try { console.log(JSON.stringify(scaffold({ dir, id, name, kit: d, ...flags }))) } catch (e) { console.error(e.message); process.exit(1) }
+  if (!name || !fs.existsSync(d + '/components/scaffold/scaffold.js')) { console.error('usage (from the game-kit checkout): node kit.mjs new <dir> <id> "<Name>" [--ref r] [--repo owner/name] [--runner label] [--link <node_modules>] [--no-install] [--no-remote] [--ports file]'); process.exit(2) }
+  const { newGame } = await import(pathToFileURL(d + '/components/scaffold/newgame.js').href)
+  try { newGame({ dir, id, name, kit: d, ...flags, remote: flags.remote !== false }) } catch (e) { console.error(e.message); process.exit(1) }
 } else {
   console.error('usage: kit.mjs pull <game-kit checkout> <ref> [component...] | kit.mjs check | kit.mjs next-id [n] | kit.mjs list | kit.mjs search <word> | kit.mjs new <dir> <id> "<Name>"')
   process.exit(2)

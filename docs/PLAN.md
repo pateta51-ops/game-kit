@@ -207,6 +207,7 @@ Found by the third retrofit pass (`docs/RETROFIT_PLAN.md`, Part E).
 | K211 | (GAPS A7) Dice tray and roll window | 7th Inning Stretch | S | done |
 | K212 | (GAPS C7) sound-player: `playTrack` always plays a cue's first file (7th Inning Stretch works around it) | 7th Inning Stretch | S | done |
 | K213 | sound-player: preload a subset (`autoPreload`, `preloadAll(filter)` by bus and/or cue), `release(filter)` frees decoded buffers, `playTrack` `take` index | game performance pass | S | done (`sound-player`) |
+| K214 | `kit.mjs new` does the whole start: registers the port block (`server.mjs add`, read-only use), `git init`, first commit, private GitHub repo, delete-branch-on-merge; re-run safe; `--no-remote`, `--no-install` (owner, 16 Nov 2026) | new-game start | S | done (`scaffold`) |
 
 ### Owner's word (size L or stage 4)
 

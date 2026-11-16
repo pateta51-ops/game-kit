@@ -23,19 +23,19 @@ describe('scaffold (K204)', () => {
   it('refuses an entry with no phone slot (serve.local)', () => {
     const p2 = path.join(tmp, 'p2.json');
     fs.writeFileSync(p2, JSON.stringify({ games: { bare: { name: 'Bare', block: 6980 } } }));
-    const r = spawnSync('node', [kitMjs, 'new', path.join(tmp, 'y'), 'bare', 'Bare', '--ports', p2, '--no-install'], { encoding: 'utf8' });
+    const r = spawnSync('node', [kitMjs, 'new', path.join(tmp, 'y'), 'bare', 'Bare', '--ports', p2, '--no-install', '--no-remote'], { encoding: 'utf8' });
     expect(r.status).toBe(1);
     expect(r.stderr).toContain('serve.local');
   });
 
   it('refuses an id that has no ports.json entry', () => {
-    const r = spawnSync('node', [kitMjs, 'new', path.join(tmp, 'x'), 'nope', 'Nope', '--ports', ports], { encoding: 'utf8' });
+    const r = spawnSync('node', [kitMjs, 'new', path.join(tmp, 'x'), 'nope', 'Nope', '--ports', ports, '--no-remote'], { encoding: 'utf8' });
     expect(r.status).toBe(1);
     expect(r.stderr).toContain('server.mjs add');
   });
 
   it('writes a working game: kit checks, workflows, ports, type-check and smoke test', () => {
-    const r = spawnSync('node', [kitMjs, 'new', out, 'demo', 'Demo Game', '--ref', head, '--ports', ports, '--link', nm, '--no-install'], { encoding: 'utf8' });
+    const r = spawnSync('node', [kitMjs, 'new', out, 'demo', 'Demo Game', '--ref', head, '--ports', ports, '--link', nm, '--no-install', '--no-remote'], { encoding: 'utf8' });
     expect(r.stderr).toBe('');
     expect(r.status).toBe(0);
     const pkg = fs.readFileSync(path.join(out, 'package.json'), 'utf8');
@@ -52,7 +52,7 @@ describe('scaffold (K204)', () => {
   }, 180_000);
 
   it('refuses a folder that is not empty', () => {
-    const r = spawnSync('node', [kitMjs, 'new', out, 'demo', 'Demo Game', '--ports', ports], { encoding: 'utf8' });
+    const r = spawnSync('node', [kitMjs, 'new', out, 'demo', 'Demo Game', '--ports', ports, '--no-remote'], { encoding: 'utf8' });
     expect(r.status).toBe(1);
   });
 });
