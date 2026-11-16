@@ -41,7 +41,7 @@ Source commits: stcc `9fc59643`, warps `2af6937`, ebr `33b5abd3`, rome `1d0fd2e`
 | Component | Base | Graft from others | Effort |
 |---|---|---|---|
 | Random numbers, hashing, canonical JSON, copy | Jarl, byte for byte (same as Rome; known-answer tests, no modulo bias). Never EBR's random numbers: they seed differently | - | S |
-| Runner, copy-on-write, undo, replay, save format | Jarl | Warp's copy-on-write property tests and undo refusal reasons; EBR's save migration | M |
+| Runner, copy-on-write, undo, replay, save format | Jarl | Warp's copy-on-write property tests and undo refusal reasons; EBR's save migration; 7th Inning Stretch's `enumerateAnswers`, test helpers and skip-empty check (K25, K30) | M |
 | State-machine check | Jarl (the only one; its library has no imports) | - | S |
 | Simulation pool, driver contract, driver random numbers | Warp's | EBR's crash-safe records, resume file and fuzz script | S to M |
 | Generic simulation runner | Warp's contract | | L |

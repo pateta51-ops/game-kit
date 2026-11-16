@@ -77,3 +77,4 @@ export { drawRandom, drawRandomIndex, nextUint32, randomInt, seedRng, shuffleInP
 export { freshWords } from './fresh';
 export { clearLastKnown, clearLeft, hasLeft, isCurrent, lastKnown, lastKnownIn, leaveZone, newObjectTrack, refOf, type LastKnown, type ObjectRef, type ObjectTrack, type Tracked } from './objref';
 export { doesNothing, idleProblems, markIdle } from './idle';
+export { enumerateAnswers, expectEvents, firstPicks, playUntil, randomPicks, skipEmptyProblems, type Played } from './answers';

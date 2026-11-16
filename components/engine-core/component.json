@@ -75,6 +75,15 @@
         ]
       },
       {
+        "game": "7th-inning-stretch",
+        "commit": "e62f773",
+        "paths": [
+          "src/engine/api.ts (enumerateAnswers)",
+          "tests/helpers/index.ts (randomPicks, firstPicks, playUntil, expectEvents; made game-independent)",
+          "src/ui/prompts/prompts.test.tsx (the skip-empty check, as skipEmptyProblems)"
+        ]
+      },
+      {
         "game": "netrunner",
         "url": "https://github.com/mtgred/netrunner",
         "licence": "MIT",
