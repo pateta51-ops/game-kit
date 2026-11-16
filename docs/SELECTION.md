@@ -100,6 +100,7 @@ Open check before the lift: the canonical JSON of the Jarl line and of STCC buil
 | Voice-over | EBR (the only one). The player is generic; the scripts are tied to EBR's guide text and cast | - | M |
 | Paced view (step queue, view as of a step, question band zone) | 7th Inning Stretch at 6c82d43 (the only game that paces an answer's events and folds the view per step) | - | M |
 | Board layout (K116: map drawn in Inkscape, extracted as space rects and adjacency edges) | Rally the Troops `parse-layout.js`, `new-layout.js` (ISC; ported to TypeScript) | - | S |
+| Board registry (K117: things highlighted from the legal-action list, stack layout; no animation in 1.0) | Rally the Troops `world.js` (ISC; idea, written new) | - | S |
 | Visual replay | Pattern only: Rome's is welded to its screens and art | | L if ever shared |
 | Small helpers (K109) | New code from the outside write-ups: icon with hidden word, text-key check, paired legality fixtures, relation index here; FlowQueue in state-machines, diffCards and cardLookup in card-patches | - | S |
 | Code-built 3D pieces (`pieces-3d`, K166) | 7th Inning Stretch, commit 4dcb9be: the only game with WebGL dice and a rolling ball, already free of its game's names | - | M |

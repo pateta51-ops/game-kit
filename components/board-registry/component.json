@@ -1,0 +1,12 @@
+{
+  "name": "board-registry",
+  "source": {
+    "game": "rally-the-troops",
+    "commit": "idea from world.js (define_space/piece/marker/stack, end_update highlight, _layout_stacks), ISC, written new: git.rally-the-troops.com public/common/world.js; owner authorization on file",
+    "paths": [
+      "public/common/world.js (define_*, end_update, _layout_stacks)"
+    ]
+  },
+  "needs": [],
+  "packages": []
+}
