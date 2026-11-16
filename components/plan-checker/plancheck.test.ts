@@ -92,6 +92,29 @@ describe('plancheck.py flags (K68)', () => {
     expect(run(full, ...end, ...cover, '--cover-skip', 'P2', '--cover-rows', 'ICON,CARD')).toBe(1);
     expect(run(full.replace(', ICON-TRAIN', ''), ...end, ...cover, '--cover-skip', 'P2', '--cover-rows', 'ICON')).toBe(1);
   });
+  it('--tsc (K139): several sections in the order given, a range B..C, and a stub line; one section as before', () => {
+    const ts = (h: string, code: string): string => `\n${h}\n\n\`\`\`ts\n${code}\n\`\`\`\n`;
+    const typed =
+      full +
+      ts('## 12. Type definitions', "export interface GameState { status: 'on' | 'off' }") +
+      ts('## 13. Effect DSL reference', 'export type Effect = (s: GameState) => GameState;') +
+      ts('### 13.3 Text generation', "export const broken: number = 'x';") +
+      ts('## 14. Boss modules', 'export type Boss = (v: PlayerView, e: Effect) => GameState;');
+    const stub = ['--tsc-stub', "export interface PlayerView { status: GameState['status'] }"];
+    const tsc = (...flags: string[]): number => run(typed, ...end, '--tsc', ...flags);
+    expect(tsc()).toBe(0);
+    expect(tsc('--types', 'Boss modules')).toBe(1);
+    expect(tsc('--types', 'Effect DSL reference..Text generation;Type definitions;Boss modules', ...stub)).toBe(0);
+    expect(tsc('--types', 'Effect DSL reference..Text generation;Type definitions;Boss modules')).toBe(1);
+    expect(tsc('--types', 'Effect DSL reference;Type definitions;Boss modules', ...stub)).toBe(1);
+    expect(tsc('--types', 'Type definitions;No such heading')).toBe(1);
+    expect(tsc('--types', 'Type definitions..No such heading')).toBe(1);
+    expect(tsc('--types', '..Effect DSL reference')).toBe(1);
+    expect(tsc('--types', 'Type definitions..')).toBe(1);
+    expect(tsc('--types', 'Type definitions;')).toBe(1);
+    expect(tsc('--types', 'Type definitions;;Effect DSL reference..Text generation')).toBe(1);
+    expect(tsc('--types', 'Type definitions;Effect DSL reference..Text generation')).toBe(0);
+  }, 300_000);
   it('--skip-without-python: no Python 3 is a notice and exit 0, but exit 2 in CI or without the flag', () => {
     vi.stubEnv('PATH', join(tmpdir(), 'no-such-dir'));
     vi.stubEnv('Path', join(tmpdir(), 'no-such-dir'));

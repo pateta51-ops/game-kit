@@ -34,13 +34,15 @@ Checks, continued:
   is in --cover-rows IR,ICON; a word may end the id, as in ICON-TRAIN) appears in the scenario catalogue;
   --cover-skip P2,XP leaves out those families;
 - with --tsc: the ```ts blocks of the type-definitions section compile under strict flags (needs `tsc` on PATH or in
-  ./node_modules/.bin).
+  ./node_modules/.bin). --types "A;B..C;D" compiles several sections as one file, in the order given; "B..C" runs
+  from the heading for B up to the heading for C. --tsc-stub TEXT adds TEXT as a last line (a type the plan leaves
+  to the code).
 
 Sections are found by heading keywords (case-insensitive); override them if your plan names them differently:
   --scenarios "Scenario catalogue"  --phases "Implementation phases"  --types "Type definitions"
   --sessions "Session plan"
 
-Usage: python plancheck.py docs/BUILD_PLAN.md [--tsc] [--scenarios TEXT] [--phases TEXT] [--types TEXT]
+Usage: python plancheck.py docs/BUILD_PLAN.md [--tsc] [--scenarios TEXT] [--phases TEXT] [--types TEXT] [--tsc-stub TEXT]
        [--sessions TEXT] [--sessions-optional] [--scenarios-end TEXT] [--cover TEXT] [--cover-rows A,B]
        [--cover-skip A,B]
 Exit code 0 when no problems were found.
@@ -268,7 +270,7 @@ def main() -> int:
     safe_console()
     args = [a for a in sys.argv[1:] if not a.startswith("--")]
     for flag in ("--scenarios", "--phases", "--types", "--sessions", "--section", "--batch", "--scenarios-end", "--cover",
-                 "--cover-rows", "--cover-skip"):
+                 "--cover-rows", "--cover-skip", "--tsc-stub"):
         if flag in sys.argv:
             v = opt(flag, "")
             if v in args:
@@ -484,11 +486,26 @@ def main() -> int:
 
     # --- the type contract ---
     if "--tsc" in sys.argv:
-        types = section(lines, heads, opt("--types", "Type definitions"))
-        code = "\n".join(re.findall(r"```ts\n(.*?)```", types, re.S))
+        specs, blocks = opt("--types", "Type definitions").split(";"), []
+        for spec in specs:
+            a, _, b = (x.strip() for x in spec.partition(".."))
+            if not a or (_ and not b):
+                problems.append(f"--tsc: empty section name in --types {spec!r}")
+                continue
+            if b:
+                ka, kb = find_heading(heads, a), find_heading(heads, b)
+                types = "" if ka is None or kb is None or kb <= ka else "\n".join(lines[heads[ka][0]:heads[kb][0]])
+            else:
+                types = section(lines, heads, a)
+            if not types and (b or len(specs) > 1):
+                problems.append(f"--tsc: no section for {spec.strip()!r} (--types)")
+            blocks += re.findall(r"```ts\n(.*?)```", types, re.S)
+        code = "\n".join(blocks)
         if not code:
             problems.append("--tsc: no ```ts blocks found in the type-definitions section")
         else:
+            if "--tsc-stub" in sys.argv:
+                code += "\n" + opt("--tsc-stub", "") + "\n"
             local = Path("node_modules") / ".bin" / ("tsc.cmd" if sys.platform == "win32" else "tsc")
             tsc = str(local.resolve()) if local.exists() else shutil.which("tsc")
             if not tsc:
