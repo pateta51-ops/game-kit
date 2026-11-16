@@ -13,6 +13,8 @@ Links every glossary term and icon code in the game's texts to a lookup, and che
 
 The game's script reads its text sources (printed fields, describe output) and calls `runGlossaryCheck({ entries, texts: [{ where, text, generated? }], iconCodes?, required?, vocab?, headings?, ruleIds?, nothingToLink?, icon? }, { out?, err?, quiet? })`: exit code 0 or 1. Findings: SCHEMA, RULE, ICON (a code of the set or in a text with no entry), REQUIRED (a name that is not one whole entry), HEADING (capitals outside a link), VOCAB (a game word with no entry in the coverage index), LANGUAGE (a generated text that links nothing). `checkGlossary` returns them.
 
+Printed words (`printed.ts`, node only, not in `index.ts`): `tsx kit/glossary/printed.ts --entries content/glossary.json --source <file or folder> [--source ...] [--icon <regex>] [--strip <regex>]... [--letters <class, default a-z0-9>] [--exempt <field>=<value>]...` in the game's check chain: exit 1 with a `PRINTED` line for each summary or body paragraph that is not in the source documents, icons (default `{code}`, `{code:value}`), case and punctuation aside. `--strip` removes markup from the sources; `--exempt source=arbiter` skips explanations. `printedFindings({ entries, sources, icon?, strip?, letters?, exempt? })` returns the lines.
+
 ## UI (`ui.ts`)
 
 - `<GlossaryProvider entries icon? renderIcon?>`: `renderIcon(code, entry | undefined)` draws an icon; without it the entry's term (or the code) stands in. `useGlossary()`.
@@ -23,4 +25,4 @@ The game's script reads its text sources (printed fields, describe output) and c
 
 `glossary.css` (loaded by `GlossaryText.tsx`) sets neutral values at zero specificity: `--glo-link`, `--glo-link-line`, `--glo-focus`, `--glo-icon-size`, `--glo-z`, `--glo-scrim`, `--glo-pop-width`, `--glo-pop-pad`, `--glo-pop-bg`, `--glo-pop-text`, `--glo-pop-border`, `--glo-pop-radius`, `--glo-pop-shadow`, `--glo-font`, `--glo-kind`, `--glo-kind-font`, `--glo-kind-opacity`, `--glo-head-font`, `--glo-meta-opacity`, `--glo-btn-h`, `--glo-btn-border`, `--glo-btn-radius`, `--glo-btn-bg`, `--glo-btn-text`, `--glo-btn-primary-bg`, `--glo-btn-primary-text`. The sheet takes phone-mode's `--pm-*`. Classes: `kit-glo-link`, `-link--hold`, `-icon`, `-scrim`, `-pop`, `-sheet`, `-head`, `-kind`, `-term`, `-body`, `-summary`, `-para`, `-rules`, `-rule`, `-see`, `-foot`, `-btn`, `-btn--primary`.
 
-Tests: `glossary.test.ts` (node), `ui.test.tsx` (jsdom).
+Tests: `glossary.test.ts`, `printed.test.ts` (node), `ui.test.tsx` (jsdom).

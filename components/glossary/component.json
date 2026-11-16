@@ -22,6 +22,13 @@
         ]
       },
       {
+        "game": "7th-inning-stretch",
+        "commit": "working tree, 16 Nov 2026",
+        "paths": [
+          "scripts/glossary-check.ts (PRINTED: summary and body paragraphs occur in the source documents; paths, icon, markup, letters and the exempt field passed in)"
+        ]
+      },
+      {
         "game": "ebr",
         "commit": "33b5abd3",
         "paths": [
