@@ -4,17 +4,23 @@
 // or bad usage.
 import { spawnSync } from 'node:child_process';
 import { existsSync, readFileSync, readdirSync, statSync, writeFileSync } from 'node:fs';
-import { join, relative, resolve } from 'node:path';
+import { join, posix, relative, resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { gzipSync } from 'node:zlib';
 
 export interface Limits {
   /** The first download, gzipped, in bytes (the check passes below it). */
-  initialBudget: number;
+  initialBudget?: number;
   /** Any one script chunk, before gzip, in bytes. */
-  chunkLimit: number;
+  chunkLimit?: number;
   /** An image, font or audio file in the build over this size fails the check. */
-  assetLimit: number;
+  assetLimit?: number;
+  /** The app's base path in the addresses (`/game/assets/x.js` is `assets/x.js` in the build), or `auto` to find it. */
+  base?: string;
+  /** Also count what the scripts import statically, what the stylesheets load with `url(...)`, and icon and manifest links. */
+  follow?: boolean;
+  /** The gzip level (zlib's default when left out). */
+  gzipLevel?: number;
 }
 const MEDIA = /\.(png|jpe?g|webp|gif|avif|svg|woff2?|ttf|otf|mp3|ogg|wav|m4a)$/i;
 
@@ -36,25 +42,66 @@ export interface SizeReport {
   pass: boolean;
 }
 
+function attr(tag: string, name: string): string | undefined {
+  const m = new RegExp(`\\b${name}\\s*=\\s*(?:"([^"]*)"|'([^']*)'|([^\\s>]+))`, 'i').exec(tag);
+  return m?.[1] ?? m?.[2] ?? m?.[3];
+}
+
 /** The files index.html loads at once: its module script, the preloaded chunks and the stylesheets (local ones only). */
-export function initialFiles(html: string): string[] {
+export function initialFiles(html: string, all = false): string[] {
   const found: string[] = [];
   const add = (url: string | undefined): void => {
     if (url === undefined || /^(?:[a-z]+:)?\/\//i.test(url) || url.startsWith('data:')) return;
     const path = url.replace(/^\.?\//, '').split(/[?#]/)[0] ?? '';
     if (path !== '' && !found.includes(path)) found.push(path);
   };
-  for (const tag of html.match(/<script\b[^>]*>/gi) ?? []) add(/\bsrc="([^"]+)"/i.exec(tag)?.[1]);
+  for (const tag of html.match(/<script\b[^>]*>/gi) ?? []) add(attr(tag, 'src'));
   for (const tag of html.match(/<link\b[^>]*>/gi) ?? []) {
-    const rel = /\brel="([^"]+)"/i.exec(tag)?.[1] ?? '';
-    if (/\b(modulepreload|stylesheet|preload)\b/i.test(rel)) add(/\bhref="([^"]+)"/i.exec(tag)?.[1]);
+    const rel = attr(tag, 'rel') ?? '';
+    if ((all ? /\b(modulepreload|stylesheet|preload|icon|manifest)\b/i : /\b(modulepreload|stylesheet|preload)\b/i).test(rel)) add(attr(tag, 'href'));
   }
   return found;
 }
 
-function sizeOf(dir: string, path: string): FileSize {
+function sizeOf(dir: string, path: string, level?: number): FileSize {
   const data = readFileSync(join(dir, path));
-  return { path, bytes: data.length, gzip: gzipSync(data).length };
+  return { path, bytes: data.length, gzip: (level === undefined ? gzipSync(data) : gzipSync(data, { level })).length };
+}
+
+function withinBuild(dir: string, path: string, base: string | undefined): string {
+  if (base === undefined || existsSync(join(dir, path))) return path;
+  if (base !== 'auto') {
+    const b = `${base.replace(/^\/+|\/+$/g, '')}/`;
+    return path.startsWith(b) ? path.slice(b.length) : path;
+  }
+  const parts = path.split('/');
+  for (let i = 1; i < parts.length; i += 1) {
+    const rest = parts.slice(i).join('/');
+    if (existsSync(join(dir, rest))) return rest;
+  }
+  return path;
+}
+
+/** The modules a built script imports statically (`import ... from "./x.js"`, `import "./x.js"`, `export ... from`). */
+export function staticImports(js: string): string[] {
+  const refs: string[] = [];
+  for (const m of js.matchAll(/(?:\bimport|\bexport)\s*(?:[\w*{}\s,$]+\s*from\s*)?["']([^"']+\.m?js)["']/g)) {
+    if (js[m.index - 1] !== '.' && m[1] !== undefined) refs.push(m[1]);
+  }
+  return refs;
+}
+
+/** The files a stylesheet loads with `url(...)`. */
+export function cssUrls(css: string): string[] {
+  return [...css.matchAll(/url\(\s*(["']?)([^"')]+)\1\s*\)/g)].map((m) => m[2] ?? '');
+}
+
+/** The address `ref`, found in the build file `from`, as a path inside the build; null for another host, `data:` or `#x`. */
+function localPath(ref: string, from: string): string | null {
+  const clean = ref.trim().split(/[?#]/)[0] ?? '';
+  if (clean === '' || /^[a-z]+:/i.test(clean) || clean.startsWith('//')) return null;
+  const path = clean.startsWith('/') ? posix.normalize(clean.slice(1)) : posix.join(posix.dirname(from), decodeURIComponent(clean));
+  return /^\.\.?(\/|$)/.test(path) ? null : path;
 }
 
 /** Every file below `dir`, as forward-slash paths relative to it (source maps left out). */
@@ -70,27 +117,46 @@ function allFiles(dir: string, sub = ''): string[] {
 
 /** Measure a build folder. Throws when it holds no index.html. */
 export function measureBuild(dir: string, limits: Limits): SizeReport {
+  const level = limits.gzipLevel;
+  if (level !== undefined && !(Number.isInteger(level) && level >= 0 && level <= 9)) throw new Error(`gzipLevel must be a whole number from 0 to 9, not ${String(level)}`);
   const htmlPath = join(dir, 'index.html');
   if (!existsSync(htmlPath)) throw new Error(`no build in ${dir} (run vite build first)`);
-  const named = initialFiles(readFileSync(htmlPath, 'utf8'));
+  const named = initialFiles(readFileSync(htmlPath, 'utf8'), limits.follow === true).map((path) => withinBuild(dir, path, limits.base));
   const missing = named.filter((path) => !existsSync(join(dir, path)));
   if (missing.length > 0) throw new Error(`index.html names files the build does not have: ${missing.join(', ')}`);
-  const initial = [sizeOf(dir, 'index.html'), ...named.map((path) => sizeOf(dir, path))];
+  if (limits.follow === true) {
+    for (let i = 0; i < named.length; i += 1) {
+      const from = named[i] ?? '';
+      const js = /\.m?js$/.test(from);
+      if (!js && !from.endsWith('.css')) continue;
+      const text = readFileSync(join(dir, from), 'utf8');
+      for (const ref of js ? staticImports(text) : cssUrls(text)) {
+        const to = js && !/^\.{0,2}\//.test(ref) ? null : localPath(ref, from);
+        if (to === null) continue;
+        const path = withinBuild(dir, to, limits.base);
+        if (named.includes(path)) continue;
+        if (existsSync(join(dir, path))) named.push(path);
+        else if (!js) throw new Error(`${from} loads ${path}, which the build does not have`);
+      }
+    }
+  }
+  const size = (path: string): FileSize => sizeOf(dir, path, limits.gzipLevel);
+  const initial = [size('index.html'), ...named.map(size)];
   const rest = allFiles(dir).filter((path) => path !== 'index.html' && !named.includes(path));
-  const lazy = rest.filter((path) => /\.(js|css)$/.test(path)).map((path) => sizeOf(dir, path));
+  const lazy = rest.filter((path) => /\.(js|css)$/.test(path)).map(size);
   const media = rest
     .filter((path) => MEDIA.test(path))
-    .map((path) => sizeOf(dir, path))
-    .filter((f) => f.bytes > limits.assetLimit);
+    .map(size)
+    .filter((f) => f.bytes > (limits.assetLimit ?? Infinity));
   const initialGzip = initial.reduce((sum, file) => sum + file.gzip, 0);
-  const oversized = [...initial, ...lazy].filter((file) => file.path.endsWith('.js') && file.bytes > limits.chunkLimit);
+  const oversized = [...initial, ...lazy].filter((file) => file.path.endsWith('.js') && file.bytes > (limits.chunkLimit ?? Infinity));
   return {
     initial,
     initialGzip,
     lazy,
     oversized,
     media,
-    pass: initialGzip < limits.initialBudget && oversized.length === 0 && media.length === 0,
+    pass: initialGzip < (limits.initialBudget ?? Infinity) && oversized.length === 0 && media.length === 0,
   };
 }
 
@@ -102,15 +168,25 @@ export function formatSize(report: SizeReport, limits: Limits): string[] {
   return [
     'First download (index.html and what it loads at once):',
     ...report.initial.map(row),
-    `  total ${kB(report.initialGzip)} gzipped; budget ${kB(limits.initialBudget)}: ${report.initialGzip < limits.initialBudget ? 'pass' : 'FAIL'}`,
+    limits.initialBudget === undefined
+      ? `  total ${kB(report.initialGzip)} gzipped`
+      : `  total ${kB(report.initialGzip)} gzipped; budget ${kB(limits.initialBudget)}: ${report.initialGzip < limits.initialBudget ? 'pass' : 'FAIL'}`,
     `Loaded on demand (${String(report.lazy.length)} files):`,
     ...report.lazy.map(row),
-    report.oversized.length === 0
-      ? `Every script chunk is under ${kB(limits.chunkLimit)} before gzip.`
-      : `FAIL: over ${kB(limits.chunkLimit)} before gzip: ${report.oversized.map((f) => f.path).join(', ')}`,
-    report.media.length === 0
-      ? `No image, font or audio file over ${kB(limits.assetLimit)}.`
-      : `FAIL: media over the asset limit in the build: ${report.media.map((f) => f.path).join(', ')}`,
+    ...(limits.chunkLimit === undefined
+      ? []
+      : [
+          report.oversized.length === 0
+            ? `Every script chunk is under ${kB(limits.chunkLimit)} before gzip.`
+            : `FAIL: over ${kB(limits.chunkLimit)} before gzip: ${report.oversized.map((f) => f.path).join(', ')}`,
+        ]),
+    ...(limits.assetLimit === undefined
+      ? []
+      : [
+          report.media.length === 0
+            ? `No image, font or audio file over ${kB(limits.assetLimit)}.`
+            : `FAIL: media over the asset limit in the build: ${report.media.map((f) => f.path).join(', ')}`,
+        ]),
   ];
 }
 
@@ -140,13 +216,17 @@ const FLAGS: Record<string, keyof Limits | 'dir' | 'json' | 'config'> = {
   '--initial-budget': 'initialBudget',
   '--chunk-limit': 'chunkLimit',
   '--asset-limit': 'assetLimit',
+  '--base': 'base',
+  '--follow': 'follow',
+  '--gzip-level': 'gzipLevel',
 };
 const USAGE =
-  'usage: tsx check-bundle-size.ts [--config <json with initialBudget, chunkLimit, assetLimit>] [--initial-budget <bytes>] [--chunk-limit <bytes>] [--asset-limit <bytes>] [--dir <build folder>] [--json <path>]';
+  'usage: tsx check-bundle-size.ts [--config <json with initialBudget, chunkLimit, assetLimit>] [--initial-budget <bytes>] [--chunk-limit <bytes>] [--asset-limit <bytes>] [--base <path|auto>] [--follow true] [--gzip-level <0-9>] [--dir <build folder>] [--json <path>]';
 
 export function run(
   args: readonly string[],
   io: SizeIo = { out: (l) => console.log(l), err: (l) => console.error(l) },
+  defaults: Limits = {},
 ): number {
   const given: Record<string, string> = {};
   for (let i = 0; i < args.length; i += 2) {
@@ -158,11 +238,13 @@ export function run(
     }
     given[key] = value;
   }
-  const fromFile = given['config'] === undefined ? {} : (JSON.parse(readFileSync(resolve(given['config']), 'utf8')) as Partial<Limits>);
-  const num = (k: keyof Limits): number => Number(given[k] ?? fromFile[k]);
-  const limits: Limits = { initialBudget: num('initialBudget'), chunkLimit: num('chunkLimit'), assetLimit: num('assetLimit') };
-  if (Object.values(limits).some((v) => !Number.isFinite(v))) {
-    io.err(`size: the three limits are required.\n${USAGE}`);
+  const limits: Limits = { ...defaults, ...(given['config'] === undefined ? {} : (JSON.parse(readFileSync(resolve(given['config']), 'utf8')) as Limits)) };
+  const NUMBERS = ['initialBudget', 'chunkLimit', 'assetLimit', 'gzipLevel'] as const;
+  for (const k of NUMBERS) if (given[k] !== undefined) limits[k] = Number(given[k]);
+  if (given['base'] !== undefined) limits.base = given['base'];
+  if (given['follow'] !== undefined) limits.follow = given['follow'] === 'true';
+  if (NUMBERS.some((k) => limits[k] !== undefined && !Number.isFinite(limits[k])) || NUMBERS.slice(0, 3).every((k) => limits[k] === undefined)) {
+    io.err(`size: at least one limit is required, in bytes.\n${USAGE}`);
     return 2;
   }
   let dir = given['dir'] ?? null;
