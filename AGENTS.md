@@ -3,6 +3,8 @@
 For architects, build workers and reviewers of the owner's board-game adaptations. Read this, then the one catalogue entry and README of the component you touch. You should never need to read component source.
 
 ## What this is
+Open work: run `node kit.mjs state` for what is open; don't read PLAN.md.
+
 Private shared code for digital board-game builds: one best version of each reusable component (engine kernel, simulation, AI, saves, settings, UI frames, tooling, gates). Rules, card names, zones, texts and looks of any one game never live here. Index: [README.md](README.md). Catalogue of every component: [docs/CATALOG.md](docs/CATALOG.md) (generated). Task guides: [docs/recipes/](docs/recipes/README.md). Known gaps and wishes: [docs/GAPS.md](docs/GAPS.md). Build plan: [docs/PLAN.md](docs/PLAN.md).
 
 ## The locked copy (in a game)

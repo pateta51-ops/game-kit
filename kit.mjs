@@ -2,6 +2,7 @@
 // Run from a game's repo root.
 //   node <kit>/kit.mjs pull <path to game-kit checkout> <tag or commit> [component...]   copies components into ./kit and locks them
 //   node kit/kit.mjs list | search <word>                                              the catalogue of every component (pulled or not), from kit/CATALOG.md
+//   node kit.mjs state                                                                  (game-kit checkout) prints what is open (PLAN rows not done, waiting, watch)
 //   node kit.mjs next-id [n] [--from <PLAN.md>...]                                     (game-kit checkout) the next free K number(s): origin/main and every open PR's docs/PLAN.md
 //   node kit/kit.mjs check                                                              fails if ./kit differs from kit/kit.lock.json
 import { execFileSync as x } from 'node:child_process'
@@ -36,6 +37,8 @@ if (cmd === 'pull') {
   fs.writeFileSync(LOCK, JSON.stringify(lock, null, 1) + '\n')
   try { fs.writeFileSync('kit/CATALOG.md', x('git', ['-C', src, 'show', commit + ':docs/CATALOG.md'], { stdio: ['ignore', 'pipe', 'ignore'] })) } catch { /* a ref with no catalogue */ }
   console.log('pulled ' + Object.entries(lock.components).map(([n, c]) => n + '@' + c.ref).join(', '))
+} else if (cmd === 'state') {
+  x('node', [dirname(fileURLToPath(import.meta.url)) + '/scripts/state.mjs'], { stdio: 'inherit' })
 } else if (cmd === 'next-id') {
   const ff = a.indexOf('--from')
   const cnt = Number(a.find((v, i) => /^\d+$/.test(v) && (ff < 0 || i < ff)) ?? 1)
