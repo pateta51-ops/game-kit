@@ -70,6 +70,21 @@ def flatten(img: np.ndarray, grey: int = 128) -> np.ndarray:
     return (img[:, :, :3].astype(np.float32) * a + grey * (1.0 - a) + 0.5).astype(np.uint8)
 
 
+def descreen(img: np.ndarray, sigma_px: float) -> np.ndarray:
+    """Suppress the print's halftone dot screen (a light Gaussian sized to the dots) before the crop is downscaled and
+    encoded; a BGRA crop is blurred premultiplied, so its transparent margin never bleeds into the edge. Ported from
+    Imperium's imp_ingest/images.py."""
+    if sigma_px <= 0:
+        return img
+    if img.shape[2] == 4:
+        a = img[:, :, 3:4].astype(np.float32) / 255.0
+        num = cv2.GaussianBlur(img[:, :, :3].astype(np.float32) * a, (0, 0), sigma_px)
+        den = cv2.GaussianBlur(a, (0, 0), sigma_px)[..., None]
+        colour = np.where(den > 1e-3, num / np.maximum(den, 1e-3), img[:, :, :3].astype(np.float32))
+        return np.dstack([np.clip(colour + 0.5, 0, 255).astype(np.uint8), img[:, :, 3]])
+    return cv2.GaussianBlur(img, (0, 0), sigma_px)
+
+
 def resize_to_dpi(img_bgr: np.ndarray, src_dpi: float, dst_dpi: Optional[float]) -> np.ndarray:
     """Downscale a crop (BGR or BGRA) from the scan's resolution to ``dst_dpi`` (never upscales)."""
     if not dst_dpi or dst_dpi >= src_dpi:

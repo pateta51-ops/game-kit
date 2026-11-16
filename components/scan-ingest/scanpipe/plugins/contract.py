@@ -2,6 +2,8 @@
 ``assert contract.problems(MyGame()) == []``."""
 from __future__ import annotations
 
+import json
+import tempfile
 from pathlib import Path
 
 import numpy as np
@@ -71,4 +73,37 @@ def problems(p: Plugin) -> list[str]:
         out.append("file_for: two names give the same file")
     if not isinstance(p.preflight(None, [], []), list):
         out.append("preflight: a list of reasons (empty when the run may start)")
+    if not isinstance(p.descreen_mm, (int, float)) or not 0 <= p.descreen_mm < 1:
+        out.append("descreen_mm: millimetres, 0 (off) up to 1")
+    for attr in ("pair_backs", "rescans"):
+        if not isinstance(getattr(p, attr), bool):
+            out.append(f"{attr}: True or False")
+    if not isinstance(p.back_suffix, str) or not p.back_suffix or \
+            p.file_for(Path("out"), "a" + p.back_suffix, "png") == p.file_for(Path("out"), "a", "png"):
+        out.append("back_suffix: a non-empty text that gives a back its own file")
+    item = {"n": 1, "name": "b001-s01-a", "file": "out/b001-s01-a.png", "kind": next(iter(sizes)),
+            "sizeMm": list(next(iter(sizes.values()))), "turn": 0, "orientation": "", "pixels": [30, 40], "flags": [],
+            "region": {"cx": 20.0, "cy": 20.0, "w": 30.0, "h": 40.0}}
+    back = {**item, "n": 2, "name": "b001-s01-a" + str(p.back_suffix), "file": "out/b001-s01-a-b.png",
+            "pairOf": item["name"]}
+    entries = []
+    for b in (None, back):
+        man = {"scan": "s.tif", "dpi": 600.0, "plugin": p.name, "items": [{**item, **({"back": b["name"]} if b else {})}]}
+        try:
+            e = p.entry(man["items"][0], b, man)
+            if e is not None and not isinstance(e, dict):
+                out.append("entry: a dict (the content-pack entry) or None")
+            elif e is not None:
+                json.dumps(e)
+                entries.append(e)
+        except (TypeError, ValueError) as ex:
+            out.append(f"entry: not JSON ({ex})")
+        except Exception as ex:
+            out.append(f"entry: raised {type(ex).__name__}: {ex} on an item {'with' if b else 'without'} a back")
+    with tempfile.TemporaryDirectory() as d:
+        try:
+            if not isinstance(p.write_entries(None, Path(d), entries or [{"id": "x"}]), list):
+                out.append("write_entries: a list of problems")
+        except Exception as ex:
+            out.append(f"write_entries: raised {type(ex).__name__}: {ex}")
     return out

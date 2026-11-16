@@ -124,7 +124,10 @@ def process_scan(scan: Path, plugin: Plugin, out_dir: Path, review_dir: Path, na
             if not o.confident:
                 flags.append("ORIENTATION_UNREAD")
         name = names[i] if i < len(names) else f"{scan.stem}-{i + 1}"
-        upright = tone.apply(images.resize_to_dpi(detect.rotate_quarter(crop, turn), dpi, plugin.out_dpi), curve)
+        upright = detect.rotate_quarter(crop, turn)
+        if plugin.descreen_mm:
+            upright = images.descreen(upright, plugin.descreen_mm * px_per_mm)
+        upright = tone.apply(images.resize_to_dpi(upright, dpi, plugin.out_dpi), curve)
         if k is not None:
             out = plugin.file_for(out_dir, name, "png")
             images.save_png(upright, out, plugin.out_dpi or dpi)
@@ -146,7 +149,8 @@ def process_scan(scan: Path, plugin: Plugin, out_dir: Path, review_dir: Path, na
     manifest = {
         "scan": scan.name, "pixels": [int(full.shape[1]), int(full.shape[0])], "sha256": images.sha256_file(scan), "dpi": dpi, "plugin": plugin.name,
         "background": {**det.background.summary(), **({"keyed": True} if keyed else {})},
-        **({"tone": curve} if curve else {}), "items": items, "rejected": det.rejected,
+        **({"tone": curve} if curve else {}), **({"descreenMm": plugin.descreen_mm} if plugin.descreen_mm else {}),
+        "items": items, "rejected": det.rejected,
     }
     with open(review_dir / f"{scan.stem}.json", "w", encoding="utf-8") as f:
         json.dump(manifest, f, indent=2)

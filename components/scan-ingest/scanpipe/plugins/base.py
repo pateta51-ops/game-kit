@@ -49,6 +49,14 @@ class Plugin:
     # silhouette_spec overrides silhouette.DEFAULT_SPEC (canonical notch and tab sides, notch centre, variants, names).
     silhouette_kinds: frozenset = frozenset()
     silhouette_spec: dict = {}
+    # Optional: halftone removal, the Gaussian sigma in mm at the scan's resolution (Unstoppable uses 0.05); 0 is off.
+    descreen_mm = 0.0
+    # Optional: scans come as front, back, front, back...; each back scan's items (flipped in place like a page) are
+    # paired to the front's (scanpipe/pairs.py) and their crops named after the front's name plus back_suffix.
+    pair_backs = False
+    back_suffix = "-b"
+    # Optional: a later scan of an item with the same name supersedes the earlier crop (scanpipe/rescan.py).
+    rescans = False
     out_dpi: Optional[float] = 300.0  # crops are downscaled to this resolution (None keeps the scan's)
     jpeg_quality = 92
 
@@ -77,4 +85,13 @@ class Plugin:
 
     def finish(self, project: Optional[Path], out_dir: Path, manifests: list[dict]) -> list[str]:
         """After every scan of a run: write whatever the project needs besides the crops. Returns problems to report."""
+        return []
+
+    def entry(self, item: dict, back: Optional[dict], manifest: dict) -> Optional[dict]:
+        """Optional: the game's content-pack entry for one crop (``back`` is its paired back item, if any); None skips
+        it. Called after a run for every item of the run (every item no re-scan replaced, with ``rescans``)."""
+        return None
+
+    def write_entries(self, project: Optional[Path], out_dir: Path, entries: list[dict]) -> list[str]:
+        """Write the entries `entry` gave (only called when there is at least one). Returns problems to report."""
         return []

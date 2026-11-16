@@ -54,6 +54,27 @@ face's turn when an item is flipped like a page). Reading a game's printed codes
   `silhouette_spec` overrides `silhouette.DEFAULT_SPEC`: canonical notch and tab sides, `notchCentre`, `bevel`,
   `notchVariants`, and `names` (the game's word for each shape).
 
+## Backs, descreen, re-scans and pack entries (optional, off by default)
+
+- `pair_backs = True`: the scans are given as front, back, front, back... (an odd count is refused). A back scan has
+  every item flipped in place like a page; its items are matched to the front's by centre, then by size for one
+  that moved (`scanpipe/pairs.py`), and their crops renamed to the front's name plus `back_suffix` (default `-b`).
+  The front item records `back` and `pairDistancePx`, the back item `pairOf`; flags `PAIRED_FAR`, `NO_BACK_FOUND`,
+  `A_B_SIZE_MISMATCH`, `NO_FRONT_MATCH`. `--name` and `--turn` go to the fronts only.
+- `descreen_mm` (e.g. 0.05): the crops are blurred by a Gaussian of this sigma before downscaling, which removes the
+  print's halftone dots (`images.descreen`); the manifest records `descreenMm`.
+- `rescans = True`: scanning an item again under the same `--name` replaces its earlier crop: the earlier manifest's
+  item gets `replacedBy`, the new one `replaces` (`scanpipe/rescan.py`). A re-scan with a flag that asks for a look
+  replaces nothing: it is written as `<name>.held-<scan>` with `heldFor`, and the earlier crop stays. Crops are written
+  to `<out>/.staging` and moved only after `write_entries`, so an error there leaves the earlier crops in place.
+  Without `rescans`, a back crop never overwrites one of another run (flag `BACK_NAME_TAKEN`, it keeps its own name).
+  `python -m scanpipe rescan REVIEW_DIR
+  [--write RESCAN.md]` lists the items still worth scanning again (off the glass, or a flag that asks for a look),
+  by sheet and row and column; exit status 1 when there is one.
+- Hooks `entry(item, back, manifest) -> dict | None` and `write_entries(project, out_dir, entries) -> problems`: the
+  game turns each crop (with its paired back) into its content-pack entry, and writes them after the run. With
+  `rescans` every item no re-scan replaced is passed, otherwise the run's items.
+
 ## Two items scanned touching
 
     python -I kit/scan-ingest/scripts/split_touching.py SCAN OUT_A OUT_B h|v x0 y0 x1 y1
