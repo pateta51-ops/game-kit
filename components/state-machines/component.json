@@ -8,8 +8,13 @@
       "tests/unit/machine.test.ts",
       "scripts/machines.ts",
       "scripts/machines-doc.ts",
-      "src/test-utils/machines.ts"
+      "src/test-utils/machines.ts",
+      "src/ui/useMachine.ts (ui.ts)",
+      "src/engine/core/invariants.ts (INV-11 wrapper: fail, after, phaseWalk, phaseMove, as graph.ts; the tables of src/engine/core/machines.ts and the other checks stay in the game)"
     ]
   },
-  "needs": []
+  "needs": [],
+  "packages": [
+    "react"
+  ]
 }
