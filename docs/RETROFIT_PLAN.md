@@ -83,6 +83,45 @@ Result (16 Nov 2026, all seven at v0.25.0):
 
 Only Jarl's workflows could be rendered from the templates (K141). A third pass waits for wave 4.
 
+## Part D - Under Falling Skies (assessed 16 Nov 2026, kit v0.33.0)
+
+The eighth game, a solo game (no opponent AI: the aliens are engine rules). Read on `origin/main` 07238a4 (12 Oct 2026, the self-hosted CI merge); no open pull request. Phases 0 to 10 merged; Phase T (real tiles) under way; Phase 11 waits for it. Its two-player-only kit items (search driver, versus-Claude, Rust tooling) do not apply.
+
+**Its tooling today:** `npm run check` is a plain `&&` chain (lint, typecheck, `test -- --coverage`, `content:validate`, `trace`, `sim:smoke`, `plan:check`, build). `plan:check` is a Node wrapper around an older `plancheck.py` (254 lines, no session plan). `trace` is its own 55-line check. No repo gate, no size gate, no theme check, no full gate. `ci.yml` runs on pull requests and by hand only (decision 041), on `[self-hosted, linux]` (decision 043): `npm run check`, Playwright's Chromium (no `--with-deps` on the self-hosted PC), `npm run e2e`, the Playwright report uploaded on failure.
+
+**Kit to game** (each kit tool tried on the game's files where it could run without installing):
+
+| Component | Decision | Why |
+|---|---|---|
+| `plan-checker` | Pull | A superset of the game's copy. On the game's plan: the game's copy finds 221 ids, the kit's 230, both OK; the kit's needs `--sessions-optional` (the plan has no session plan) |
+| `traceability` | Keep own until K167 | The kit's is stricter in two ways (it also reads the §3.18 interpretation table, so `IR-32` has no test title; it can check the 109 scenarios) but lacks the game's rule that every engine handler file in `src/engine/phases`, `rules`, `abilities` cites a rule id. With the config in step 9 the kit's finds exactly `IR-32` |
+| `repo-gate` | Pull | The game has none |
+| `check-runner` | Pull | All failures in one run instead of the first; same checks |
+| `ci-templates` | Pull for the full gate and the runner scripts; `ci.yml` stays the game's until K141 | The kit's `ci.yml` runs only `npm run check` and moves e2e to the full gate, looser per pull request than the game's (check and e2e on every pull request) |
+| `bundle-size` | Pull | The game has none |
+| `theme-check` | Not pulled, noted | Its tokens sit in `src/ui/theme/tokens.css`, but 28 lines in 10 `.tsx` files hold colour literals (board glyphs, effects, die faces): the Part B rule skips it |
+| `lint-preset`, `e2e-helpers`, `tooling-scripts` | N/A | Engine lint (a red finding would need engine edits), test helpers the game has its own of, manual tools; pulled when a game plan asks |
+| `engine-core`, `sim-pool`, `replay-cli`, `perf`, `card-harness`, `card-patches` and the rest | N/A | Engine, card code and presentation are not retrofitted |
+
+**Game to kit:** rows K167 to K170 in `docs/PLAN.md` (wave 5): the per-file citation rule; the two-transcription and owner-verification pipeline of Phase T; the content gate's broken-pack, stale-file and feature-coverage checks; the coach (first-time tips and driver suggestions with reasons). Its browser-synth sound is already noted under Part A (Unstoppable); its proof sheet is the existing pattern.
+
+**Privacy guard found** (owner, 16 Nov 2026: removed from every game): `vite.config.ts:6-9` (`PUBLIC_BUILD=1` refuses a build while `public/packs/real` exists); `docs/BUILD_PLAN.md:92` (D3, "an optional placeholder-only public build fails if real assets are present") and `:143` (the `PUBLIC_BUILD=1` rule). No guard script, no Pages workflow. The `.gitignore` line for `public/packs/real/` stays: it keeps a local copy out of git, it guards nothing at build time.
+
+**RT8 - one batch (M), one Sonnet worker at medium effort, in a worktree of the game:**
+
+1. Branch `rt8-kit-tooling` from the game's `origin/main`; link `node_modules` from the main checkout (not committed).
+2. `git -C C:/projects/game-kit fetch --tags`, then from the game's root: `node C:/projects/game-kit/kit.mjs pull C:/projects/game-kit v0.33.0 plan-checker repo-gate check-runner ci-templates bundle-size`. Commit `kit/`.
+3. `eslint.config.js`: add `'kit/**'` to `ignores` (the kit's files are not the game's to lint). `tsconfig.json` and `vitest.config.ts` do not include `kit/`: leave them.
+4. Plan check: `"plan:check": "tsx kit/plan-checker/plancheck.ts --sessions-optional"` (the plan path defaults to `docs/BUILD_PLAN.md`). Delete `scripts/plan-check.mjs` and `scripts/plancheck.py`; change the `AGENTS.md` line "scripts/plancheck.py is committed with the plan" to name `kit/plan-checker/`. `ci.yml` keeps its `setup-python` step.
+5. Repo gate: copy `kit/repo-gate/repo-gate.config.example.json` to `repo-gate.config.json` with `artFolder: "public/art/"`, `engineFolders: ["src/engine/"]`, `engineAllowed: ["src/engine/types/"]`, `contentDir: "content"`, `skipText: ["docs/"]`, the rest as the example; copy `runners.example.json` to `tools/repogate/runners.json` with the machine name of the repository's runner (`gh api repos/pateta51-ops/under-falling-skies-fan-prototype/actions/runners -q '.runners[].name'`). `"repo-gate": "tsx kit/repo-gate/repo-gate.ts"`.
+6. Size: `"size": "tsx kit/bundle-size/check-bundle-size.ts --dir dist --initial-budget <n> --chunk-limit <n>"`. Measure once after `npm run build` (`--json`), set each limit to the measured size plus 10 % rounded up to 10 KB, and record the two numbers and the date in a new `docs/decisions/` file.
+7. Check runner: `"test:coverage": "vitest run --coverage"`, `"kit:check": "node kit/kit.mjs check"`, `"ci:render": "node kit/ci-templates/render.mjs --check"`; rename the chain to `"check:chain": "npm run lint && npm run typecheck && npm run test:coverage && npm run content:validate && npm run trace && npm run sim:smoke && npm run plan:check && npm run repo-gate && npm run kit:check && npm run ci:render && npm run build && npm run size"` and set `"check": "tsx kit/check-runner/check-runner.ts"`. `check-runner.config.json`: `{ "checkScript": "check:chain", "first": [], "lanes": [["lint"], ["typecheck", "build", "size"], ["test:coverage"], ["content:validate", "trace", "sim:smoke", "plan:check", "repo-gate", "kit:check", "ci:render"]], "timeoutMinutes": 15 }`. `ci.yml` still runs `npm run check`.
+8. Full gate: `ci.config.json` `{ "repo": "pateta51-ops/under-falling-skies-fan-prototype", "runnerLabel": "linux", "workflows": ["full-gate.yml"], "e2eScripts": ["e2e"] }`, then `node kit/ci-templates/render.mjs` and commit `.github/workflows/full-gate.yml`. Keep `ci.yml` as it is (pull requests and by hand only, e2e on every pull request). After K141 merges, a later pull renders `ci.yml` too with `"push": false` and its steps.
+9. Traceability stays the game's (`scripts/check-traceability.ts`, `scripts/trace.config.json`) until K167 is tagged. Then pull `traceability` at that tag, with `trace.config.json`: `idPattern` `\b[A-Z][A-Z0-9]*(?:-[A-Z][A-Z0-9]*)*-\d{2}\b`, `idsAtLineStart: true`, `deferredPrefixes` `CAMP-`, `CH1-` to `CH4-`, `L-` (§3.20 leads), `deferred` `{ "GEN-01": ... }`, `countDescribe`, `countSkipped`, `maxIdsPerTitle: 0`, `reportUnknown: false`, `requireComment: false` (16 ids have no code comment today), `scenarioPrefix: ""` (or `SC` with `scenarioDigits` `2,3`: all 109 are titled, one in two titles), `citeFiles` the three handler folders; `"trace": "tsx kit/traceability/check-traceability.ts --strict"`; add `IR-32` to the title of the test that proves END-04; delete the game's script.
+10. Remove the privacy guard listed above: the `PUBLIC_BUILD` block in `vite.config.ts` and its two plan lines (D3 keeps "Local only").
+11. Stays the game's: `content:validate`, `sim*`, `golden*`, `replay`, `real:*`, `proof`, `content:build`, `art:build`, `pack:link`, the e2e suite and its helpers, the engine lint in `eslint.config.js`, `ci.yml`, and everything under `src/`.
+12. Gate: CI on the game's runner (label `linux`), then the full gate once at merge. A red finding from a stricter kit tool: Part B's rule (S fixes outside the engine in the same pull request, the rest to the owner).
+
 ## Not retrofitted
 
 - `engine-core`, `state-machines`, `sim-pool`, random numbers, hashing: nothing a player would see, and a swap changes determinism, so replays, golden files and the every-card programmes would have to be proved again.

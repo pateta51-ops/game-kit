@@ -159,6 +159,17 @@ What still keeps a game on its own tool at kit v0.25.0. Details in the second-pa
 | K140 | `bundle-size`: `--follow true` exits 2 on an encoded `url(%23n)` in a stylesheet | STCC | S | proposed |
 | K141 | `ci-templates`: templates for a multi-step gate and a second job (Python), so EBR, Imperium, STCC, Warp's, Rome and Unstoppable can render theirs | six games | M | proposed |
 
+### Wave 5 - Under Falling Skies (16 Nov 2026)
+
+What the eighth game has that the kit lacks, from its assessment at kit v0.33.0 (`docs/RETROFIT_PLAN.md`, Part D). UFS is a solo game: its two-player-only items do not apply.
+
+| # | Batch | Found in | Size | State |
+|---|---|---|---|---|
+| K167 | `traceability`: `citeFiles` (folders): every non-test file under them cites at least one rule id in a comment, the finding lists the files (UFS: `src/engine/phases`, `rules`, `abilities`); the only thing keeping UFS on its own check | Under Falling Skies | S | proposed |
+| K168 | New component `transcription-check`: two transcriptions of each printed item made independently (A and B, each with transcriber, source picture and session), a field-by-field diff written to `DIFF.md` that fails while a difference is open, a generated progress table (item, picture, A, B, diff, verified), an owner verification ledger holding the hash of the agreed file (an edit after verification undoes it), and a gate listing the required items not yet verified, for the content check and the real-pack build; the game passes its item list and transcript schema | Under Falling Skies (`scripts/lib/real.ts`, BUILD_PLAN §12) | M | proposed |
+| K169 | `card-harness` content gate: a folder of broken packs, each with the issue code and severity it must report; generated files compared with what the generator writes now ("stale: run ..."); every card-language feature used at least once by the placeholder and test packs (`--require-all` fails on an unused one) | Under Falling Skies (`scripts/validate-content.ts`) | S each | proposed |
+| K170 | `tutorial` coach (compare first with K15): first-time tips as data (id, text, `when(events, state)`, held back during a guided lesson when situational), the first unseen tip the last action made relevant, seen ids kept per browser; a suggested move taken from the game's driver with its plain-word reasons and the places to spotlight, so it works on any pack | Under Falling Skies (decisions 036, 037) | M | proposed |
+
 ### Owner's word (size L or stage 4)
 
 Decided by the owner, 16 Nov 2026:

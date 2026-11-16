@@ -2,7 +2,7 @@
 
 Which game's version each kit component starts from. Judged on the code of each game's main branch on 14 Nov 2026 by seven read-only reviews; the evidence is in `docs/evaluation/`.
 
-Source commits: stcc `9fc59643`, warps `2af6937`, ebr `33b5abd3`, rome `1d0fd2e`, jarl `6f006a2`, imp `20a033a`, unst `9e666b4`.
+Source commits: stcc `9fc59643`, warps `2af6937`, ebr `33b5abd3`, rome `1d0fd2e`, jarl `6f006a2`, imp `20a033a`, unst `9e666b4`. Under Falling Skies (ufs `07238a4`) was assessed on 16 Nov 2026 (`docs/RETROFIT_PLAN.md`, Part D); it is the source of the rows below marked K167 to K170.
 
 ## Criteria
 
@@ -27,7 +27,7 @@ Source commits: stcc `9fc59643`, warps `2af6937`, ebr `33b5abd3`, rome `1d0fd2e`
 | Component | Base | Graft from others | Effort |
 |---|---|---|---|
 | Plan checker | Jarl (same file in Warp's, Rome, Imperium, EBR; Jarl's wrapper finds Python) | - | S |
-| Traceability check | Jarl | EBR's stricter title rules | M |
+| Traceability check | Jarl | EBR's stricter title rules; UFS's rule that every engine handler file cites a rule id (K167) | M |
 | Repo gate | Jarl | STCC's runner names kept as data | M |
 | Bundle-size check | EBR | - | S |
 | Privacy guard | EBR | - | M (dropped by the owner, 16 Nov 2026) |
@@ -55,7 +55,7 @@ Open check before the lift: the canonical JSON of the Jarl line and of STCC buil
 | Component | Base | Graft from others | Effort |
 |---|---|---|---|
 | Card-language interpreter | Pattern only: every interpreter is welded to its game's state, zones and phases. Reference: EBR for the dry run and the handler table, Jarl for the small validator and registry | | L if ever shared |
-| Card-language checks | Jarl's describe-check gate; the Rome and Jarl schema conformance test; the STCC and Imperium content validator | | S |
+| Card-language checks | Jarl's describe-check gate; the Rome and Jarl schema conformance test; the STCC and Imperium content validator | UFS's broken-pack expectations, stale generated files and feature coverage (K169) | S |
 | Card test harness | STCC (scenario builder, prompt-delivery harness, choice probe, synthetic pack, inventory with stale check, written programme) | EBR's clause-level inventory and before/after helper; Warp's compiler-based reading of operation types | M |
 
 ## In-game helpers
@@ -65,7 +65,8 @@ Open check before the lift: the canonical JSON of the Jarl line and of STCC buil
 | Bug reporter | Rome (has Jarl's fixes plus the memory-only notice, scrolled capture, floating button, fake GitHub for tests) | Jarl's dialog state machine; STCC's font embedding in captures | M |
 | Glossary | Warp's (pure matcher, newest, most tests, broadest check) | STCC's linking index; EBR's data-in interface | M |
 | Card patches | New (arkham.build design: one patch file per reason, applied on import) | | S |
-| Tutorial engine | STCC (most complete and tested, owner decision notes) | Jarl's pure state machine and placement; Rome's highlight; Warp's deck-order seed script | L |
+| Transcription check (K168) | UFS (the only one: two independent transcriptions, diff, owner verification by file hash, gate; generic once the item list and schema are passed in) | - | M |
+| Tutorial engine | STCC (most complete and tested, owner decision notes) | Jarl's pure state machine and placement; Rome's highlight; Warp's deck-order seed script; UFS's coach, first-time tips and driver suggestions with reasons (K170) | L |
 | Tutorial freeze | Pattern only | | |
 | Achievements (K160), K162 | New; ideas only from marvel-lcg (nothing stored, versioned summary) and ArkhamHorror (catalogue, checklists); builds on play-stats, which holds no summary | | M |
 
