@@ -56,8 +56,8 @@
     "not": "Card rules themselves; those stay in the game."
   },
   "card-language": {
-    "use": "A new game encodes card effects as data: verb table with handler and text slots, validator, every-verb test. Recipe: docs/recipes/card-effect.md.",
-    "not": "Shared verbs or an interpreter; each game writes its own verbs."
+    "use": "A new game encodes card effects as data: verb table with handler, resume and text slots, validator, every-verb test; the standard verb pack (cardPack) on card-zones: draw, discard, mill, move, putIntoPlay, setAside, recall, gain, refill, shuffle, search, destroy, attach, detach, reveal, lookAt, scout, flip, exhaust, ready, chooseCards, chooseOption, may, chooseNumber, chooseDestination, choosePlayer, choosePayment, orderEffects, gainResource, pay, convert, adjust, seq, if, forEach, eachPlayer, repeat, count, later, payThen, custom; every card move through timing would; words overridable. Recipe: docs/recipes/card-effect.md.",
+    "not": "The game's own rules and words: verbs the pack lacks, card text as printed (override the pack's words), when later effects fire."
   },
   "card-patches": {
     "use": "The card data needs corrections without editing the source data.",

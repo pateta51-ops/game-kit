@@ -28,6 +28,6 @@
     ],
     "compared": "Imperium src/engine/ops + text, Rome src/engine/ops, Unstoppable src/engine/effects, EBR src/engine/effects + describe: interpreters welded to their games; only the shell is shared (SELECTION.md)."
   },
-  "needs": ["engine-core", "card-harness", "plain-text"],
+  "needs": ["engine-core", "card-harness", "plain-text", "card-zones"],
   "packages": []
 }

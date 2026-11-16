@@ -22,6 +22,8 @@ export interface Verb<G extends GameTypes, S, E = unknown> {
   readonly run: ((ctx: Ctx<G>, step: S, env: E | undefined) => void) | null;
   /** The card's words for this step, from the same data the handler reads. `null`: not written yet. */
   readonly text: ((step: S) => string) | null;
+  /** K232: runs when the verb's own prompt is answered (`askVerb`): the task comes back with the answer. */
+  readonly resume?: (ctx: Ctx<G>, step: S, env: E | undefined, answer: readonly string[]) => void;
 }
 
 /** One row per verb of the game's step union: a missing verb fails to compile. */
@@ -123,10 +125,21 @@ export function describeEffect<T extends AnyVerbTable>(table: T, steps: readonly
 export const effectTasks = <S extends Step, E>(steps: readonly S[], env?: E): VerbTask<S, E>[] =>
   steps.map((step) => (env === undefined ? { kind: 'verb', step } : { kind: 'verb', step, env }));
 
+/** K232: a verb asks; the answer comes back to the same step through its `resume` (saves in the middle resume too). */
+export function askVerb<G extends GameTypes>(ctx: Ctx<G>, prompt: Omit<G['prompt'], 'id'>, step: Step, env?: unknown): void {
+  ctx.ask(prompt, effectTasks([step], env)[0]);
+}
+
 /** The `verb` task handler: spread `{ verb: verbHandler<G>(VERBS) }` into the game's handlers. */
 export function verbHandler<G extends GameTypes>(table: AnyVerbTable): (ctx: Ctx<G>, task: G['task']) => void {
   return (ctx, task) => {
     const t = task as unknown as VerbTask;
+    if (t.answer !== undefined) {
+      const resume = (verbOf(table, t.step) as { resume?: (ctx: Ctx<G>, s: Step, e: unknown, a: readonly string[]) => void }).resume;
+      if (typeof resume !== 'function') throw new EngineBugError(`verb ${t.step.op} was answered but has no resume`);
+      resume(ctx, t.step, t.env, t.answer);
+      return;
+    }
     const run = verbOf(table, t.step).run as ((ctx: Ctx<G>, s: Step, e: unknown) => void) | null;
     if (typeof run !== 'function') throw new EngineBugError(`verb ${t.step.op} has no handler`);
     run(ctx, t.step, t.env);
