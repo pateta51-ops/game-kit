@@ -141,6 +141,7 @@ What a game's own tool did that the kit's does not; each kept that game on its o
 | K72 | `tooling-scripts`, the rest of K64: picture re-encoder, font fetch and WOFF packer, mock capture, owner PC setup, dossier sync, simulation bundler | Jarl, Rome, Warp's, Imperium | M | proposed |
 | K73 | `ui-helpers`, the rest of K65: rule sheet search, icon words, prompt keys | Imperium | S | proposed |
 | K74 | `theme-check`: font-face and body-font checks, logo by folder, icon list cross-check, looser `font:` shorthand | Jarl | S | proposed |
+| K76 | `motion-frame`: clip capture from real seeded play at 1920 wide (`record.ts`, node only) and a six-frame stills sheet per clip (`stillTimes` from the spec) | 7th Inning Stretch | S | done |
 
 ### Owner's word (size L or stage 4)
 

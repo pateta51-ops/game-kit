@@ -9,6 +9,7 @@
       "src/ui/fx/cue.ts (the cue sink, Instant still cues; the cue names became the spec's own strings)"
     ],
     "grafts": [
+      { "game": "7th-inning-stretch", "paths": ["scripts/motion-clips.ts lines 85-104 (screencast frames, 30 fps webm, six-frame stills sheet from the spec's step ends; the seeded-play planner and the page replay stayed behind: they are the game's)"] },
       { "game": "ebr", "paths": ["the registry with one entry per event kind (as the BeatTable type) and reduced motion in the speed setting (withReducedMotion); idea only, no file taken"] },
       { "game": "rome", "paths": ["the queue with injected speed (speed read when a beat starts); idea only, no file taken"] },
       { "game": "ebr", "commit": "33b5abd3", "paths": ["src/ui/motion/speed.ts lines 20-66 (Off in an automated browser unless the user agent marker or ?motion=on; data-motion and --motion-scale on the page; the marker became a parameter, the store stayed behind)", "playwright.config.ts lines 19-27 (the second project with motion on: in the README)"] },
