@@ -1,6 +1,6 @@
 # Pattern: card-language validator, registry, text generator, dry run
 
-No component: every interpreter is welded to its game's state, zones and phases (SELECTION.md, "Cards"). Build the grammar's shape, not a shared interpreter.
+Component `card-language` holds the verb table (`fields`, `run`, `text` per op) and its checks; the interpreter around it stays the game's, welded to its state and phases. Recipe: [card-effect.md](../recipes/card-effect.md). Below: the shape the table follows.
 
 ## Example (read, never edit)
 - jarl `pateta51-ops/rise-of-a-jarl-fan-prototype` @ `6f006a2` (C:\projects\rise-of-a-jarl-fan-prototype):

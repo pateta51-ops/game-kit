@@ -1,6 +1,6 @@
 # Add an AI opponent
 
-**Hard rule (owner):** an opponent the player faces decides from the player's own view only. No hidden state of the real game. Use `redact(state, seat, view)` and `viewLeaks` in a test. A greedy driver that reads hidden state is a test pilot only, never shipped.
+**Hard rule (owner):** an opponent the player faces decides from the player's own view only. No hidden state of the real game. Use `redact(state, seat, view)` and `viewLeaks` in a test; the secrets list is `hiddenFrom(state, seat)` from `card-zones` ([card-table.md](card-table.md)). A greedy driver that reads hidden state is a test pilot only, never shipped.
 
 Pick by need:
 
@@ -17,6 +17,9 @@ Always start with `opponent`. Move to `learned-opponent` only when validated str
 2. One handler per effect verb (`judge`, `cost`); `handlerProblems(verbs, handlers)` must be empty.
 3. Give the game a `Candidate` list per prompt (aligned with the legal answers) and plug `opponentDriver(...)` into `sim-pool`.
 4. Tests assert the **reason** (`REASONS`), not the move. `decisionLines` shows why in tables and goldens.
+
+## The seat
+A prompt carries `seat`; a driver answers only prompts of its own seat, from `view(state, seat)`; `sim-pool` and `opponent` key drivers `bySeat`. In the live game the store answers that seat, paced and shown to the player: [game-store.md](game-store.md).
 
 ## Tuning with K200
 `tune({ space, setups, play | batch: poolBatch(...), out, tag, version })` evolves weights over the same seeds per setup; `<out>/best.json` is the result. A generation's best is optimistic, so always `validate({ candidate, baseline, setups, games, seed })` on fresh seeds (training seeds are refused). Use 3,000+ games per setup at low win rates. Check a claimed correlation by intervention (change a weight, validate).

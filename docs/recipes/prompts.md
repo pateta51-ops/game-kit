@@ -1,6 +1,6 @@
 # Show the engine's questions
 
-Use when the engine asks the player something (`ctx.ask`) and the screen must show it. Component: `prompt-host` (README). The kit gives the registry and the common widgets, unstyled; the game gives the look and any widget of its own kind. See it wired in `components/reference-game` (pick, amount, may by clicks).
+Use when the engine asks the player something (`ctx.ask`) and the screen must show it. Component: `prompt-host` (README). The kit gives the registry and the common widgets, unstyled; the game gives the look and any widget of its own kind. See it wired in `components/reference-game` (pick, amount, may by clicks; its store is the old loop, use step 5 and [game-store.md](game-store.md)). A card face as an option: [card-face-zoom.md](card-face-zoom.md).
 
 1. **One widget per prompt kind.** `Widgets<Prompt, PlayerView>` has a key for every `kind` of the game's prompt union; a missing or unknown kind fails to compile. Add a kind to the engine and the compiler lists the widget you owe.
 2. **Host it** with the player's own view (never the full state):

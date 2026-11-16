@@ -254,7 +254,7 @@ A small card query language (K107): lexer, parser, evaluator. The game supplies 
 
 Card zones as data on engine-core state (K223): decks, hands, discards and play areas, per seat or shared, each an ordered list of card ids (index 0 is the top) with who sees it, and `viewOf(state, seat)` that hides what a seat may not see. Needs `engine-core`.
 
-- **Use it when:** Decks, hands, discards and play areas as ordered id lists in engine state, with who sees what and a per-seat view for opponents and the UI.
+- **Use it when:** Decks, hands, discards and play areas as ordered id lists in engine state, with who sees what and a per-seat view for opponents and the UI. Hand, pile and drag UI parts are planned (K218-K220), not built: ask for them, do not build them in the game. Recipe: docs/recipes/card-table.md.
 - **Not for:** Boards and spaces (board-model), card faces, or rules about running out.
 - **Key exports:** `newZones`, `seatZone`, `cardsIn`, `locate`, `place`, `moveCard`, `draw`, `shuffleZone`, `reveal`, `canSee`, `viewOf`, `hiddenFrom`, `zoneProblems`, `Seen`, and 5 more
 - **Needs:** [`engine-core`](#engine-core)

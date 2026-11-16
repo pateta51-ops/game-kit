@@ -17,6 +17,10 @@ Short task guides for agents. Each names the components, the order, and the chec
 | Show the engine's questions (prompt host) | [prompts.md](prompts.md) |
 | Build a card face and its zoom | [card-face-zoom.md](card-face-zoom.md) |
 | Dice (tray, odds, 3D) | [dice.md](dice.md) |
+| Card table: zones, hand, piles, drag | [card-table.md](card-table.md) |
+| The game store: history, undo, forced answers, autosave, opponent seat | [game-store.md](game-store.md) |
+| Content: scans, transcription, patches, glossary | [content-pipeline.md](content-pipeline.md) |
+| Upgrade a game's kit tag | [upgrade-kit.md](upgrade-kit.md) |
 | Work as an agent in this repo (worktree, ids, finish) | [agent-workflow.md](agent-workflow.md) |
 
 All of these are wired together in `components/reference-game`, a small generated game that is the kit's contract test: read it to see the pieces fit.

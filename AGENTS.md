@@ -3,13 +3,13 @@
 For architects, build workers and reviewers of the owner's board-game adaptations. Read this, then the one catalogue entry and README of the component you touch. You should never need to read component source.
 
 ## What this is
-Private shared code for digital board-game builds: one best version of each reusable component (engine kernel, simulation, AI, saves, settings, UI frames, tooling, gates). Rules, card names, zones, texts and looks of any one game never live here. Index: [README.md](README.md). Catalogue of every component: [docs/CATALOG.md](docs/CATALOG.md) (generated). Task guides: [docs/recipes/](docs/recipes/README.md). Never read the build plan (`docs/PLAN.md`, 75 KB).
+Private shared code for digital board-game builds: one best version of each reusable component (engine kernel, simulation, AI, saves, settings, UI frames, tooling, gates). Rules, card names, zones, texts and looks of any one game never live here. Index: [README.md](README.md). Catalogue of every component: [docs/CATALOG.md](docs/CATALOG.md) (generated). Task guides: [docs/recipes/](docs/recipes/README.md). Never read the build plan (`docs/PLAN.md`, 61 KB) or `CATALOG.md` whole (60 KB): `node kit.mjs search <word>`, then the recipe, then the README.
 
 Open work: run `node kit.mjs state`.
 
 ## The locked copy (in a game)
 - A game holds `kit/`, a copy of named components at a tag. **Never edit `kit/`**, never copy a component into `src/`, never port from an older game what the kit has.
-- `node ../game-kit/kit.mjs pull ../game-kit <tag> <component...>` copies components (and their `needs`) and writes `kit/kit.lock.json` plus `kit/CATALOG.md`. `node kit/kit.mjs check` fails when `kit/` differs from the lock; every game runs it in its check chain.
+- A game holds one kit tag. `node ../game-kit/kit.mjs pull ../game-kit <tag> [component...]` copies components (and their `needs`), moves the whole kit to that tag, and writes `kit/kit.lock.json` plus `kit/CATALOG.md`. Run `node kit/kit.mjs outdated` first ([upgrade-kit](docs/recipes/upgrade-kit.md)). `node kit/kit.mjs check` fails when `kit/` differs from the lock; every game runs it in its check chain.
 - Inside a game, find what exists without the kit checkout: `node kit/kit.mjs list`, `node kit/kit.mjs search <word>`.
 - Before adding a row to `docs/PLAN.md`, take its id with `node kit.mjs next-id` (in the game-kit checkout); it reads main and every open PR.
 - Start a new game: `node kit.mjs new <dir> <id> "<Name>"` does it all (port block, repo, kit pull, first commit, GitHub repo).
@@ -20,7 +20,7 @@ Open work: run `node kit.mjs state`.
 ## Choose components for a new game
 1. `search` / [CATALOG.md](docs/CATALOG.md): each entry says when to use it and when not.
 2. Read the component's README (its "Use it in 10 lines" is real, type-checked code) and, for `engine-core`, its guides (`timing.md`, `undo.md`, `random.md`, `legal.md`, `debug.md`).
-3. Pull tooling first (plan-checker, repo-gate, traceability, check-runner, ci-templates). Recipe: [new-game](docs/recipes/new-game.md).
+3. `kit.mjs new` pulls the tooling (`--existing` for a repo that has files). Recipe: [new-game](docs/recipes/new-game.md).
 4. A need the kit lacks: change the kit (below) or write "Kit gap" in the PR; do not fork.
 
 ## Change the kit

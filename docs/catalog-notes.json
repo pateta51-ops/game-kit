@@ -64,7 +64,7 @@
     "not": "Card behaviour; patches change data only."
   },
   "card-zones": {
-    "use": "Decks, hands, discards and play areas as ordered id lists in engine state, with who sees what and a per-seat view for opponents and the UI.",
+    "use": "Decks, hands, discards and play areas as ordered id lists in engine state, with who sees what and a per-seat view for opponents and the UI. Hand, pile and drag UI parts are planned (K218-K220), not built: ask for them, do not build them in the game. Recipe: docs/recipes/card-table.md.",
     "not": "Boards and spaces (board-model), card faces, or rules about running out."
   },
   "card-query": {
