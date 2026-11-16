@@ -9,6 +9,7 @@ export interface FakeSource {
   buffer: FakeBuffer | null;
   loop: boolean;
   playbackRate?: FakeParam;
+  offset?: number;
   startedAt: number | null;
   stoppedAt: number | null;
   onended: (() => void) | null;
@@ -138,6 +139,7 @@ export class FakeAudioContext {
       buffer: null as FakeBuffer | null,
       loop: false,
       playbackRate: new FakeParam(1),
+      offset: 0,
       startedAt: null as number | null,
       stoppedAt: null as number | null,
       onended: null as (() => void) | null,
@@ -145,8 +147,9 @@ export class FakeAudioContext {
       connect(n: FakeGain) {
         s.out = n;
       },
-      start(when = 0) {
+      start(when = 0, offset = 0) {
         s.startedAt = when;
+        s.offset = offset;
       },
       stop(when = 0) {
         s.stoppedAt = when;

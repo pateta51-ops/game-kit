@@ -37,6 +37,8 @@ export interface MusicDef {
   states: Readonly<Record<string, Readonly<Record<string, number>>>>;
   /** State name to a file played once, on the music bus, when that state starts; it fades when the state is left. */
   once?: Readonly<Record<string, string>>;
+  /** `once` states that are temporary: entering one from a `once` track still playing shelves that track and its position; going back to it resumes there, going anywhere else drops the shelf. Looping layers keep their own clock and need no shelf. */
+  interludes?: readonly string[];
 }
 
 export interface SoundTable {
@@ -50,6 +52,23 @@ export interface SoundTable {
   lateMs?: number;
   music?: MusicDef;
   ambience?: Readonly<Record<string, string>>;
+  /** Ambience loops get their last `ambienceSeamMs` crossfaded into the head, so any recording loops without a tick (off: as recorded). */
+  ambienceSeamMs?: number;
+}
+
+/** A copy of `b` shorter by `ms`, its tail mixed (equal power) into its head: looped, the seam is continuous. */
+export function seamLoop(ctx: AudioContext, b: AudioBuffer, ms: number): AudioBuffer {
+  const x = Math.min(Math.round((ms * b.sampleRate) / 1000), b.length >> 1);
+  if (!(x > 0) || typeof b.getChannelData !== 'function') return b;
+  const n = b.length - x;
+  const out = ctx.createBuffer(b.numberOfChannels, n, b.sampleRate);
+  for (let c = 0; c < b.numberOfChannels; c += 1) {
+    const s = b.getChannelData(c);
+    const d = out.getChannelData(c);
+    d.set(s.subarray(0, n));
+    for (let i = 0; i < x; i += 1) d[i] = (s[i] ?? 0) * Math.sin((i / x) * Math.PI / 2) + (s[n + i] ?? 0) * Math.cos((i / x) * Math.PI / 2);
+  }
+  return out;
 }
 
 export interface Volumes {
@@ -366,7 +385,8 @@ export function createSoundPlayer(o: SoundPlayerOptions): SoundPlayer {
     let pending: { at: number } | null = null;
     let asked: string | null | undefined;
     const tunes = new Map<string, AudioBuffer>();
-    let once: { f: Fader; src: AudioBufferSourceNode; at: number } | null = null;
+    let once: { f: Fader; src: AudioBufferSourceNode; at: number; off: number; name: string } | null = null;
+    let shelf: { name: string; pos: number } | null = null;
     const schedule = (): void => {
       if (!m || !layers || wantState === asked) return;
       asked = wantState;
@@ -380,19 +400,24 @@ export function createSoundPlayer(o: SoundPlayerOptions): SoundPlayer {
       if (held) pending = { at };
       else held = { at };
       if (once) {
+        const len = tunes.get(once.name)?.duration ?? 0;
+        if (wantState !== null && wantState !== once.name && m.interludes?.includes(wantState) && !m.interludes.includes(once.name) && once.at < at && at - once.at + once.off < len) shelf = { name: once.name, pos: at - once.at + once.off };
         if (once.at <= now) once.f.ramp(0, at, fadeMs);
         once.src.stop(once.at <= now ? at + fadeMs / 1000 + 0.01 : now);
         once = null;
       }
+      if (shelf && shelf.name !== wantState && !(wantState !== null && m.interludes?.includes(wantState))) shelf = null;
       const tune = wantState === null ? undefined : tunes.get(wantState);
       if (tune) {
+        const pos = shelf?.name === wantState ? shelf.pos : 0;
+        if (pos > 0) shelf = null;
         const f = fader(ctx, 1, ducker.node);
         const src = ctx.createBufferSource();
         src.buffer = tune;
         src.connect(f.node);
         src.onended = () => f.node.disconnect();
-        src.start(at);
-        once = { f, src, at };
+        src.start(at, pos);
+        once = { f, src, at, off: pos, name: wantState ?? '' };
       }
     };
     const setState = (): void => {
@@ -445,7 +470,7 @@ export function createSoundPlayer(o: SoundPlayerOptions): SoundPlayer {
           if (b === null || wantAmb?.name !== w.name || amb) return;
           const f = fader(ctx, 0, bed);
           const src = ctx.createBufferSource();
-          src.buffer = b;
+          src.buffer = table.ambienceSeamMs ? seamLoop(ctx, b, table.ambienceSeamMs) : b;
           src.loop = true;
           src.connect(f.node);
           src.start(ctx.currentTime);
