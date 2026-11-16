@@ -2,7 +2,7 @@
 
 The mark for an option the player has picked, as tokens plus one small helper.
 
-Game passes in: for each option of one choice, whether it is picked. Spread `pickedAttrs(picked, anyPicked)` on the element (`data-picked="picked"` or `"unpicked"`; nothing before the first pick), or use `pickedStates(options, isPicked)`. Import `picked.css` once.
+Game passes in: for each option of one choice, whether it is picked. Spread `pickedAttrs(picked, anyPicked)` on the element (`data-picked="picked"` or `"unpicked"`; nothing before the first pick), or use `pickedStates(options, isPicked)`. `picked.css` ships no look; import one `looks/*.css` once (or write your own on `[data-picked]`).
 
 Rules
 - Used for nothing else. "Picked", "you can act" and "this just counted" are three different marks; picked is never the colour of the other two.
@@ -10,8 +10,10 @@ Rules
 - The tick sits above the option it marks (`z-index: 2`, top-right, half outside); nothing covers it. Give a clipped parent `overflow: visible`.
 - Text on a dimmed option must stay readable: raise `--unpicked-dim`, never drop the dimming.
 
-Look (variables a game sets)
-- `--picked` frame colour, `--picked-edge` the dark line outside it and round the tick, `--picked-width` frame width (8px; `:root[data-layout='phone']` sets 3px), `--tick` badge size (40px; phone 16px), `--tick-mark` the tick drawing, `--unpicked-dim` opacity of unpicked options (.65).
+Looks (opt-in, each keyed only to `[data-picked]`; the kit applies none by default)
+- `looks/kit-classic.css`: the former default (green frame, tick badge, unpicked dim .65; variables `--picked`, `--picked-edge`, `--picked-width`, `--tick`, `--tick-mark`, `--unpicked-dim`). A game that imported `picked.css` and wants today's look imports this file as well.
+- `looks/imperium.css`: gold glow and lift; unpicked greyed and darkened.
+- `looks/stcc.css`: white ring and glow; unpicked darkened.
 
 ## Use it in 10 lines
 

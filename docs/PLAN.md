@@ -214,6 +214,7 @@ Found by the third retrofit pass (`docs/RETROFIT_PLAN.md`, Part E).
 | K218 | Hand part: a row or fan of card slots that fits any number of cards in a width (overlap grows), lifts the card under the pointer or focus, marks legal, picked and barred cards from option ids, reports taps; the card is a slot (the game's face). Unstyled; arithmetic in node, React in `ui.ts` (owner decision 3b, 16 Nov 2026) | STCC, Imperium; Radiance is the first user (its plan phase GK218) | M | planned |
 | K219 | Pile part: a stack with its count, its top card as a slot (face, back or empty) and a browse list of the cards the game says are public (in phone-mode's sheet on a phone). Unstyled (owner decision 3b) | STCC, Imperium; Radiance is the first user (GK219) | S | planned |
 | K220 | Drag part: pointer dragging (mouse and touch, with a movement threshold) of a source onto a target, both option ids of the open prompt; legal targets marked while dragging; a drop answers exactly as tap source then tap target through `prompt-host`; no animation. Unstyled (owner decision 3b) | Imperium (`useHandDrag`, `play/drag`), STCC; Radiance is the first user (GK220) | M | planned |
+| K224 | Picked-state ships no look (owner decision 16 Nov): rule and attribute kept, default values removed; looks/kit-classic.css (former look), imperium.css and stcc.css saved as opt-in files | Imperium, STCC | S | done |
 
 ### Owner's word (size L or stage 4)
 

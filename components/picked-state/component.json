@@ -5,5 +5,10 @@
     "commit": "6c82d43",
     "paths": ["src/ui/theme/tokens.css (--picked, --picked-edge, --picked-width, --tick, --tick-mark, --unpicked-dim; the frame, the tick badge and the phone width 3 and tick 16)"]
   },
+  "looks": {
+    "looks/kit-classic.css": "the former default look, unchanged",
+    "looks/imperium.css": "imperium-horizon-fan-prototype src/ui/theme/play.css (.pickable.is-selected, .pickable.is-dim) and index.css (--pick-glow*, --pick-dim)",
+    "looks/stcc.css": "Star-trek-captains-chair-game src/ui/theme/interactions.css (.pickable.is-selected, .pickable.is-dim .card)"
+  },
   "needs": []
 }

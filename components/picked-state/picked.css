@@ -1,6 +1,1 @@
-:root{--picked:#a6f06a;--picked-edge:#163a25;--picked-width:8px;--tick:40px;--unpicked-dim:.65;--tick-mark:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M4 13l5 5L20 6' fill='none' stroke='%23163a25' stroke-width='4'/%3E%3C/svg%3E")}
-:root[data-layout='phone']{--picked-width:3px;--tick:16px}
-[data-picked]{position:relative}
-[data-picked='picked']{outline:var(--picked-width) solid var(--picked);outline-offset:-2px;box-shadow:0 0 0 calc(var(--picked-width) + 2px) var(--picked-edge)}
-[data-picked='picked']::after{content:'';position:absolute;z-index:2;top:calc(var(--tick) * -.45);right:calc(var(--tick) * -.45);width:var(--tick);height:var(--tick);border-radius:50%;background:var(--picked) var(--tick-mark) center/60% no-repeat;box-shadow:0 0 0 2px var(--picked-edge);pointer-events:none}
-[data-picked='unpicked']{opacity:var(--unpicked-dim)}
+/* picked-state ships no look: each game owns it. Rule: data-picked="picked" | "unpicked" (see README). Opt in: import looks/kit-classic.css, looks/imperium.css or looks/stcc.css. */

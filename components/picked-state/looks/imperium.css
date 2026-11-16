@@ -1,0 +1,2 @@
+[data-picked='picked']{transform:translateY(-6px);box-shadow:0 0 .6em .12em rgb(255 234 170/.95),0 0 1.6em .3em rgb(255 210 112/.6),0 0 3.3em .45em rgb(255 194 80/.3),0 .4rem 1rem rgb(0 0 0/.45)}
+[data-picked='unpicked']{filter:grayscale(.65) brightness(.55)}

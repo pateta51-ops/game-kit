@@ -1,0 +1,2 @@
+[data-picked='picked']{box-shadow:0 0 0 .32em #fff,0 0 1.8em .5em rgba(255,255,255,.7)}
+[data-picked='unpicked']{filter:brightness(.5) saturate(.6)}
