@@ -15,6 +15,10 @@ const cards = applyPatches(source, [
 - Returns new cards in source order, then added ones; the source array and its cards are not changed.
 - `log` (optional) receives `{reason, code, fields}` per row, for a review page that shows printed against as-played.
 
+## Zoomed card (K105)
+
+- `errata(source, played, fields?)`: per card and field that differs, `{code, field, printed, played, diff?}`; string fields carry `wordDiff` parts (`same`/`del`/`ins`, spaces kept). Added cards are skipped. Show printed, played or the diff.
+- `rulingsFor(rulings, code)`: the `{question, ruling, citation?, date?}` list of a card, newest first. The game keeps rulings in data keyed by code; card names inside them go through the card-link tooltip.
 ## compare (K109)
 
 - `diffCards(ours, theirs, fields, known)`: unknown / missing ids, field mismatches against a community database, and `staleKnown` (reviewed database-error entries that no longer differ).

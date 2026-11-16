@@ -3,6 +3,7 @@
   "source": {
     "game": "arkham.build (idea only, re-implemented; AGPL-3.0, no code copied)",
     "repo": "https://github.com/fspoettel/arkham.build",
+    "also": "netrunnerdb RulesTextUpdates page and arkham.build card-errata/card-faq (idea only, no code copied)",
     "commit": "main (not pinned; idea only)",
     "paths": ["backend/src/data/card-patches/index.ts (design read in docs/evaluation/outside/boardgameio-deckbuilders.md finding 2)"]
   },
