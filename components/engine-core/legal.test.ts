@@ -1,6 +1,6 @@
 // K88 (barred options with codes, only-option notice) and K89 (preview by probe, stopping at hidden information).
 import { describe, expect, it } from 'vitest';
-import { askOrTake, bar, blocked, createGame, draftOf, hashState, onlyOne, preview, setRngOverrides, validateAction, type Ctx, type GameRules, type OnlyOneNotice } from './index';
+import { askOrTake, bar, blocked, createGame, legalIn, legalTable, draftOf, hashState, onlyOne, preview, setRngOverrides, validateAction, type Ctx, type GameRules, type OnlyOneNotice } from './index';
 import { CONTENT, COUNTER, playGame, RULES, type Counter, type CounterState, type CounterTask } from './fake/counter';
 
 const notices: OnlyOneNotice[] = [];
@@ -125,5 +125,27 @@ describe('preview by probe (K89)', () => {
     const bad = preview(g, s, ['two'], CONTENT, { count });
     expect(bad.stop).toBe('rejected');
     expect(bad.error).toMatch(/NOT_LEGAL/);
+  });
+});
+
+describe('K119 legal table', () => {
+  it('groups options by verb and noun, barred ones kept', () => {
+    const t = legalTable({ options: [{ id: 'space:12', enabled: true }, bar('space:13', 'noTarget'), { id: 'piece:p1', enabled: true }, { id: 'pass', enabled: true }] });
+    expect(Object.keys(t)).toEqual(['space', 'piece', 'option']);
+    expect(t.space?.['13']?.reason).toBe('noTarget');
+    expect(legalIn(t, 'space', '12')?.id).toBe('space:12');
+    expect(legalIn(t, 'space', '13')).toBeUndefined();
+    expect(legalIn(t, 'card', '1')).toBeUndefined();
+    expect(legalIn(t, 'option', 'pass')?.id).toBe('pass');
+    expect(Object.keys(legalTable(null))).toEqual([]);
+    const u = legalTable({ options: [{ id: '__proto__:constructor', enabled: true }] });
+    expect(legalIn(u, '__proto__', 'constructor')?.id).toBe('__proto__:constructor');
+    expect(legalIn(t, 'constructor', 'x')).toBeUndefined();
+    const s = start(game(false));
+    const e = legalTable(s.prompt);
+    expect(Object.keys(e.option ?? {})).toEqual(['one', 'draw', 'roll', 'sub', 'two']);
+    expect(legalIn(e, 'option', 'two')).toBeUndefined();
+    expect(legalIn(e, 'option', 'one')?.id).toBe('one');
+    expect(Object.keys(legalTable({ options: [{ id: 'a.b', enabled: true }] }, (id) => id.split('.') as [string, string]).a ?? {})).toEqual(['b']);
   });
 });

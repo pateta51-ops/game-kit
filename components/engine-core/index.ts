@@ -79,7 +79,7 @@ export { clearLastKnown, clearLeft, hasLeft, isCurrent, lastKnown, lastKnownIn, 
 export { doesNothing, idleProblems, markIdle } from './idle';
 export { enumerateAnswers, expectEvents, firstPicks, playUntil, randomPicks, skipEmptyProblems, type Played } from './answers';
 export { causeProblems, currentCause, effectCause, inCause, ruleCause, type Cause, type CauseCheck } from './cause';
-export { askOrTake, bar, blocked, onlyOne, type Blocked, type OnlyOneNotice } from './legal';
+export { askOrTake, bar, blocked, legalIn, legalTable, onlyOne, type Blocked, type LegalTable, type OnlyOneNotice } from './legal';
 export { preview, type Preview, type PreviewOptions, type PreviewStop } from './preview';
 export { applyDebug, debugVerbs, KERNEL_VERBS } from './debug';
 export { batchOf, cancelBatch, changeOccurrence, DEFAULT_ORDER, ignoreBatch, inBatch, insteadOf, occurrenceOf, PASS, prevent, preventionWindow, sharedKeys, takeSettled, timingHandlers, would, type Batch, type Occurrence, type OccurrenceInput, type OccurrenceKeys, type Prevention, type PreventionOffer, type PreventionWindow, type SharedKey, type TimingConfig, type TimingPromptInfo, type TimingState, type TimingTask, type Window, type WindowTiming } from './timing';

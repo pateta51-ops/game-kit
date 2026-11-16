@@ -208,6 +208,15 @@
         "paths": [
           "src/clj/game/core/engine.clj (checkpoint, end-of-phase-checkpoint), src/clj/game/core/checkpoint.clj (fake-checkpoint pass cap); K95 design only"
         ]
+      },
+      {
+        "game": "rally-the-troops",
+        "url": "https://github.com/rzymek/rally-the-troops (mirror of git.rally-the-troops.com/common/server)",
+        "licence": "ISC",
+        "notice": "Copyright Tor Andersson (ISC)",
+        "paths": [
+          "public/common/framework.js (action, button: legal actions as one verb-to-ids table; K119 design only, written new)"
+        ]
       }
     ]
   },

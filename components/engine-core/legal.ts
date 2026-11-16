@@ -48,3 +48,25 @@ export function askOrTake<G extends GameTypes>(ctx: Ctx<G>, prompt: Omit<G['prom
   (s.stack as G['task'][])[s.stack.length - 1] = { ...top, answer: [n.taken] };
   return n;
 }
+
+/** K119 (Rally the Troops `framework.js` action/button, ISC; written new): every option of a prompt by verb, then noun; barred ones stay in with `enabled: false`. */
+export type LegalTable = Readonly<Record<string, Readonly<Record<string, KernelOption>>>>;
+
+/** The prompt's options as one table of verb to ids. `split` an option id into [verb, noun]; default: at the first ':' (no ':' gives verb `option`). */
+export function legalTable(p: Pick<KernelPrompt, 'options'> | null, split: (id: string) => readonly [string, string] = (id) => {
+  const i = id.indexOf(':');
+  return i < 0 ? ['option', id] : [id.slice(0, i), id.slice(i + 1)];
+}): LegalTable {
+  const t = Object.create(null) as Record<string, Record<string, KernelOption>>;
+  for (const o of p?.options ?? []) {
+    const [v, n] = split(o.id);
+    (t[v] ??= Object.create(null) as Record<string, KernelOption>)[n] = o;
+  }
+  return t;
+}
+
+/** The option for (verb, noun) when it is in the table and legal, else undefined. */
+export const legalIn = (t: LegalTable, verb: string, noun: string): KernelOption | undefined => {
+  const o = t[verb]?.[noun];
+  return o?.enabled ? o : undefined;
+};
