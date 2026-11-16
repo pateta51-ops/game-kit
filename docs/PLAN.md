@@ -110,22 +110,37 @@ A game's build plan lists the kit work it needs as phases named `GK<n>` for the 
 
 | Batch | Content | Sources | Effort | State |
 |---|---|---|---|---|
-| K51 | `replay-cli`: golden games (record, replay in CI, re-record); checkpoint goldens; record on one checkout and replay on another; worked examples as data | Imperium, EBR, STCC | M | proposed |
-| K52 | `sound-player`: synthesised cues without files; events of one action merged to a few cues; ducking test in a real browser | Unstoppable, Warp's | M | proposed |
-| K53 | `effect-library`: canvas particle kit; count-up and boxed particle ambience | Warp's, EBR | M | proposed |
-| K54 | `motion-frame`: motion Off in an automated browser, on by request; motion lab route and clip capture | EBR, Rome | M | proposed |
-| K55 | Resolution frame (`fitBox`, `shouldFrame`, the framed page); `offline` refuses inside a frame (with K38) | Rome | M | proposed |
-| K56 | `engine-core`: undo by step with kept snapshots | Imperium | M | proposed |
-| K57 | `engine-core`: fast-check property test of the kernel; copy-on-write helper for a game's own write paths | Warp's | S | proposed |
-| K58 | `state-machines`: `useMachine` hook; transition-graph invariants | Jarl | S | proposed |
-| K59 | `phone-mode`: full-height layer check; decision dock and short prompt | Jarl, Imperium | M | proposed |
-| K60 | `theme-check`: layout bounds in the browser (inside its zone, no overlap, no cut row, which is on top), beside K31 | STCC | M | proposed |
-| K61 | Prompt gallery and fixtures: one real game state per prompt kind and per ending, a dev route that shows each | EBR, Imperium, STCC, Jarl, Warp's | M | proposed |
-| K62 | Play statistics and high scores | Rome, Imperium | M | proposed |
-| K63 | `app-frame`: crash screen with save export | Imperium | M | proposed |
-| K64 | Tooling scripts (with K37): font fetch and WOFF packer, mock capture with a defect report, picture re-encoder, owner PC setup, art manifest check, dossier sync, node bundler for simulations, printed-text leak check, generated list from a plan table | Jarl, Rome, Warp's, Imperium, STCC | M | proposed |
-| K65 | Small UI helpers: hover held off after an overlay closes, hover-rest inspector, toast store, selection bound to a store version, obvious-answer rule (with K30), rule sheet search, icon words, prompt keys | EBR, Jarl, Imperium, Unstoppable, Warp's | M | proposed |
-| K66 | `voice`: paid speech client with a spending cap and a cost ledger | EBR | M | proposed |
+| K51 | `replay-cli`: golden games (record, replay in CI, re-record); checkpoint goldens; record on one checkout and replay on another; worked examples as data | Imperium, EBR, STCC | M | done (checkpoint goldens: K71) |
+| K52 | `sound-player`: synthesised cues without files; events of one action merged to a few cues; ducking test in a real browser | Unstoppable, Warp's | M | done |
+| K53 | `effect-library`: canvas particle kit; count-up and boxed particle ambience | Warp's, EBR | M | done |
+| K54 | `motion-frame`: motion Off in an automated browser, on by request; motion lab route and clip capture | EBR, Rome | M | done |
+| K55 | Resolution frame (`fitBox`, `shouldFrame`, the framed page); `offline` refuses inside a frame (with K38) | Rome | M | done |
+| K56 | `engine-core`: undo by step with kept snapshots | Imperium | M | done |
+| K57 | `engine-core`: fast-check property test of the kernel; copy-on-write helper for a game's own write paths | Warp's | S | done |
+| K58 | `state-machines`: `useMachine` hook; transition-graph invariants | Jarl | S | done |
+| K59 | `phone-mode`: full-height layer check; decision dock and short prompt | Jarl, Imperium | M | done |
+| K60 | `theme-check`: layout bounds in the browser (inside its zone, no overlap, no cut row, which is on top), beside K31 | STCC | M | done |
+| K61 | Prompt gallery and fixtures: one real game state per prompt kind and per ending, a dev route that shows each | EBR, Imperium, STCC, Jarl, Warp's | M | done |
+| K62 | Play statistics and high scores | Rome, Imperium | M | done |
+| K63 | `app-frame`: crash screen with save export | Imperium | M | done |
+| K64 | Tooling scripts (with K37): font fetch and WOFF packer, mock capture with a defect report, picture re-encoder, owner PC setup, art manifest check, dossier sync, node bundler for simulations, printed-text leak check, generated list from a plan table | Jarl, Rome, Warp's, Imperium, STCC | M | done in part: art manifest check, text leak check, generated list (rest: K72) |
+| K65 | Small UI helpers: hover held off after an overlay closes, hover-rest inspector, toast store, selection bound to a store version, obvious-answer rule (with K30), rule sheet search, icon words, prompt keys | EBR, Jarl, Imperium, Unstoppable, Warp's | M | done in part (rest: K73) |
+| K66 | `voice`: paid speech client with a spending cap and a cost ledger | EBR | M | done |
+
+### Wave 3 - gaps found by the retrofits (15 Nov 2026)
+
+What a game's own tool did that the kit's does not; each kept that game on its own tool. Details in the retrofit pull requests (Jarl 25, Rome 55, EBR 249, Imperium 131, STCC 294, Unstoppable 54).
+
+| # | Batch | Found in | Size | State |
+|---|---|---|---|---|
+| K67 | `traceability` options: `describe` titles count; a test title alone is enough (no code-comment rule); scenario check off or 2-digit ids; ids-per-title cap; id shapes with word suffixes, one digit or a sub-letter; phase and pending modes | Jarl, Rome, EBR, Imperium, STCC, Unstoppable | M | proposed |
+| K68 | `plan-checker`: session-plan heading optional; every rule id covered by a scenario; scenario catalogue read in full; skip with a notice when Python is missing | Unstoppable, EBR | S | proposed |
+| K69 | `bundle-size`: base path in addresses; follow static imports and stylesheet `url(...)`; an exported budget a test can import; limits that can be left out | STCC, Unstoppable | S | proposed |
+| K70 | `ci-templates` and `repo-gate`: workflow templates filled from a config, not placeholders; `full-gate.mjs`, `local-ci.sh`, `watch-run.sh` usable as pulled; skip reporter on vitest 2; runners file exempt from its own rule; no blob fetch in a partial clone; install command in READMEs with `RUNNER_REPO` and `RUNNER_LABEL` | Jarl, Rome, EBR, Imperium, STCC, Unstoppable | M | proposed |
+| K71 | `check-runner`: environment per lane; a phase after the lanes; pull-request mode holding a game's own scripts; gate-all error-code column; timeout and tree kill in `gate()`; `replay-cli` checkpoint goldens | EBR, STCC | M | proposed |
+| K72 | `tooling-scripts`, the rest of K64: picture re-encoder, font fetch and WOFF packer, mock capture, owner PC setup, dossier sync, simulation bundler | Jarl, Rome, Warp's, Imperium | M | proposed |
+| K73 | `ui-helpers`, the rest of K65: rule sheet search, icon words, prompt keys | Imperium | S | proposed |
+| K74 | `theme-check`: font-face and body-font checks, logo by folder, icon list cross-check, looser `font:` shorthand | Jarl | S | proposed |
 
 ### Owner's word (size L or stage 4)
 
