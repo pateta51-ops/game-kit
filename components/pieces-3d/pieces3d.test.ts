@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import { ID, apply, cube, front, mesh, rest, trapezohedron, tumble, turned } from './solids';
-import { SEAM, offRest, rolled, turnOf, twoArcSeam } from './ball';
+import { SEAM, chevronAt, offRest, rolled, turnOf, twoArcSeam } from './ball';
 
 const TILT = (15 * Math.PI) / 180;
 describe('pieces-3d: the code-built pieces', () => {
@@ -73,5 +73,17 @@ describe('pieces-3d: resting tilt', () => {
   it('p3-tilt tilts a static piece by --piece-tilt', () => {
     const css = readFileSync(new URL('./pieces3d.css', import.meta.url), 'utf8');
     expect(css).toMatch(/\.p3-tilt\{[^}]*rotateX\(var\(--piece-tilt,15deg\)\)/);
+  });
+  it('XD-63: chevron stitches are 28 V marks along the seam, none on a gap, all pointing the same way, with no line along it', () => {
+    const n = SEAM.length, at = (i: number) => chevronAt(SEAM, i, SEAM[i] as [number, number, number]);
+    const on = SEAM.map((_, i) => at(i) > 0.5), rises = on.filter((b, i) => b && !on[(i + n - 1) % n]).length;
+    expect(rises).toBe(28);
+    expect(on.filter(Boolean).length).toBeLessThan(n / 4); // marks, not a line
+    // off the seam by the half width, a stitch shows only where the V's arms end, again once per period, and not on the other side's vertex
+    const [p0, p1, p2] = SEAM[0] as [number, number, number], [q0, q1, q2] = SEAM[1] as [number, number, number], t0 = q0 - p0, t1 = q1 - p1, t2 = q2 - p2, h = Math.hypot(t0, t1, t2);
+    const s0 = (p1 * t2 - p2 * t1) / h, s1 = (p2 * t0 - p0 * t2) / h, s2 = (p0 * t1 - p1 * t0) / h;
+    const o = (u: number, w: number): [number, number, number] => { const r0 = p0 + u * s0 + (w * t0) / h, r1 = p1 + u * s1 + (w * t1) / h, r2 = p2 + u * s2 + (w * t2) / h, l = Math.hypot(r0, r1, r2); return [r0 / l, r1 / l, r2 / l]; };
+    const arm = (u: number) => Array.from({ length: 200 }, (_, k) => chevronAt(SEAM, 0, o(u, (k - 100) * 0.0015))).some((x) => x > 0.9);
+    expect(arm(0.14)).toBe(true); expect(arm(-0.14)).toBe(true); expect(arm(0.3)).toBe(false);
   });
 });
