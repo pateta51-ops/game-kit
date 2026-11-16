@@ -1,0 +1,14 @@
+{
+  "name": "e2e-helpers",
+  "source": {
+    "game": "imp",
+    "commit": "20a033a",
+    "paths": ["e2e/helpers.ts"]
+  },
+  "grafts": [
+    { "game": "stcc", "commit": "9fc59643", "paths": ["e2e/helpers.ts"], "what": "VIEWPORTS, shoot, motionsDone" },
+    { "game": "jarl", "commit": "6f006a2", "paths": ["e2e/lib/autosave.ts"], "what": "autosave-settled wait" },
+    { "game": "unst", "commit": "9e666b4", "paths": ["e2e/a11y.spec.ts"], "what": "finish animations before axe; fail on serious or critical" }
+  ],
+  "needs": []
+}
