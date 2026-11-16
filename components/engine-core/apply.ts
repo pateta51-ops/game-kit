@@ -135,7 +135,11 @@ export function applyActionWith<G extends GameTypes>(
     if (resume === undefined) {
       throw new EngineBugError(`prompt ${String(promptId)} was open with no resume task on the stack`);
     }
-    next.stack.push({ ...resume, answer: [...action.picks] });
+    // K222: the task bound to the prompt must be on top; with no task bound to it (old form, a save before K222) the top resumes, whatever stale tag it carries
+    if (resume.prompt !== promptId && next.stack.some((t) => t.prompt === promptId))
+      throw new EngineBugError(`prompt ${String(promptId)}: the task on top ("${resume.kind}") is not the one bound to it`);
+    const { prompt: _bound, ...task } = resume;
+    next.stack.push({ ...task, answer: [...action.picks] });
     try {
       run(ctx, table);
     } catch (e) {

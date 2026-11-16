@@ -10,7 +10,7 @@ export interface Rand {
 declare const SEAT: unique symbol;
 /** What one seat may know. Only `redact` makes one, so an opponent typed on it cannot read the full state. */
 export type Redacted<V> = V & { readonly [SEAT]: true };
-export const redact = <S, V>(state: S, seat: string, view: (s: S, seat: string) => V): Redacted<V> => view(state, seat) as Redacted<V>;
+export const redact = <S, V, K extends string | number = string>(state: S, seat: K, view: (s: S, seat: K) => V): Redacted<V> => view(state, seat) as Redacted<V>;
 /** The secrets (hidden card ids, names) found as JSON strings in a view: a test expects none. */
 export function viewLeaks(view: unknown, secrets: readonly string[]): string[] {
   const s = JSON.stringify(view);
@@ -419,7 +419,8 @@ export function lookAhead<S>(s: S, search: Search<S>, caps: { readonly depth?: n
 export function opponentDriver<St, A, V, P extends Profile>(
   o: Opponent<V, P>,
   game: {
-    view(state: St): Redacted<V>;
+    /** K222: `seat` is the open prompt's (`prompt.seat`), when it has one. */
+    view(state: St, seat?: string | number): Redacted<V>;
     candidates(view: Redacted<V>, answers: readonly A[]): readonly Candidate[];
     timing?(view: Redacted<V>): string;
     /** The undo step the record belongs to; default: this driver's count of choices. */
@@ -432,9 +433,10 @@ export function opponentDriver<St, A, V, P extends Profile>(
   return {
     name: o.name,
     choose(state, answers, rand) {
-      const view = game.view(state);
+      const open = (state as { prompt?: { id?: unknown; seat?: string | number } | null }).prompt;
+      const view = game.view(state, open?.seat);
       const t = game.timing?.(view);
-      const prompt = (state as { prompt?: { id?: unknown } | null }).prompt?.id;
+      const prompt = open?.id;
       const opts = { rand, step: game.step?.(state) ?? n, ...(typeof prompt === 'number' ? { prompt } : {}) };
       n += 1;
       last = pick(o, view, game.candidates(view, answers), t === undefined ? opts : { ...opts, timing: t });

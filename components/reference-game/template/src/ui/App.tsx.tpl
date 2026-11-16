@@ -27,7 +27,7 @@ function Play() {
           widgets={WIDGETS}
           prompt={state.prompt}
           view={view}
-          mine={state.prompt?.seat === seat}
+          seat={seat}
           answer={answer}
           auto={(p) => autoAnswer(p, obvious)}
           title={(p) => TITLES[p.kind]}

@@ -103,4 +103,21 @@ describe('PromptHost (K123)', () => {
     expect(screen.getByText('Waiting for the other player')).toBeInTheDocument();
     expect(screen.queryByRole('button')).toBeNull();
   });
+
+  it('K222: with `seat` and no `mine`, the prompt is mine only when its seat matches', () => {
+    const base = createGame(MARKET, { seed: 's' }, null, null).state.prompt as MarketPrompt;
+    const at = (seat: string, p: MarketPrompt & { seat?: string }) =>
+      render(<PromptHost widgets={WIDGETS} prompt={p} view={{ got: 0 }} seat={seat} waiting={<p>Waiting</p>} answer={() => undefined} />);
+    at('a', { ...base, seat: 'b' }).unmount();
+    at('a', { ...base, seat: 'b' });
+    expect(screen.getByText('Waiting')).toBeInTheDocument();
+    at('b', { ...base, seat: 'b' });
+    expect(screen.getAllByRole('button').length).toBeGreaterThan(0);
+  });
+
+  it('K222: seat 0 and seat "0" are one seat (seatKey)', () => {
+    const base = createGame(MARKET, { seed: 's' }, null, null).state.prompt as MarketPrompt;
+    render(<PromptHost widgets={WIDGETS} prompt={{ ...base, seat: '0' } as MarketPrompt} view={{ got: 0 }} seat={0} waiting={<p>Waiting</p>} answer={() => undefined} />);
+    expect(screen.queryByText('Waiting')).toBeNull();
+  });
 });

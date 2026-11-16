@@ -297,7 +297,7 @@ export function takeSettled<G extends GameTypes>(ctx: Ctx<G>): Occurrence[] {
 
 export const chooserOf = <G extends GameTypes>(cfg: TimingConfig<G>, s: G['state'], o: Occurrence): string => cfg.chooser?.(s, o) ?? o.keys.player ?? '';
 export const promptOf = <G extends GameTypes>(cfg: TimingConfig<G>, base: Pick<KernelPrompt, 'options' | 'min' | 'max'>, info: TimingPromptInfo): Omit<G['prompt'], 'id'> =>
-  cfg.prompt?.(base, info) ?? (base as Omit<G['prompt'], 'id'>);
+  cfg.prompt?.(base, info) ?? ({ ...base, kind: `timing.${info.why}`, seat: info.player } as Omit<G['prompt'], 'id'>);
 
 export function startTask<G extends GameTypes>(ctx: Ctx<G>, task: TimingTask): Occurrence {
   const o = occurrenceOf(ctx.s, task.occ);

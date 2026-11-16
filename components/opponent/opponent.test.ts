@@ -189,6 +189,14 @@ describe('opponent (K103, K115)', () => {
     expect(d.reasons()[0]).toBe('ai chose bolt (will-play) at main');
   });
 
+  it('K222: the driver passes the seat of the open prompt to view', () => {
+    const seen: (string | number | undefined)[] = [];
+    const d = opponentDriver(make(), { view: (s: State & { prompt: { id: number; seat?: string } }, seat?: string | number) => (seen.push(seat), redact(s, String(seat), view)), candidates: (_w, answers: readonly string[]) => answers.map((a) => C(a)) });
+    d.choose({ ...state, prompt: { id: 1, seat: 'ai' } }, ['a'], never);
+    d.choose({ ...state, prompt: { id: 2 } }, ['a'], never);
+    expect(seen).toEqual(['ai', undefined]);
+  });
+
   it('driver records carry step and prompt: own log ids, found by step', () => {
     const kept: DecisionRecord[] = [];
     const d = opponentDriver(make(), { view: (s: State & { prompt: { id: number } }) => redact(s, 'ai', view), candidates: (_w, answers: readonly string[]) => answers.map((a) => C(a)) }, (r) => kept.push(r));

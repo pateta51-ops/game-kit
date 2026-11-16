@@ -3,15 +3,31 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { afterAll, describe, expect, it } from 'vitest';
 import { CONTENT } from '../engine-core/fake/counter';
-import type { GameTypes } from '../engine-core/index';
+import type { AnswerAction, GameTypes } from '../engine-core/index';
 import { simGame } from './fake/game';
-import { DriverRng, legalAnswers, playOne, replayStep, runGames, runInThread, runResumable, type GameSpec, type SimGame, type SimRecord } from './index';
+import { bySeat, DriverRng, legalAnswers, playOne, replayStep, runGames, runInThread, runResumable, type Driver, type GameSpec, type SimGame, type SimRecord } from './index';
 const content = CONTENT;
 
 const module = new URL('./fake/game.ts', import.meta.url).href;
 const specs = (n: number, driver = 'random'): GameSpec[] => Array.from({ length: n }, (_, i) => ({ index: i, seed: `s${String(i)}`, driver }));
 const dir = mkdtempSync(path.join(tmpdir(), 'sim-pool-'));
 afterAll(() => rmSync(dir, { recursive: true, force: true }));
+
+describe('K222 bySeat', () => {
+  const fixed = (name: string): Driver => ({ name, reasons: () => [name], choose: (_s, a) => a[0] as AnswerAction });
+  const at = (seat?: string | number) => ({ prompt: { id: 1, options: [], min: 0, max: 0, ...(seat === undefined ? {} : { seat }) } }) as unknown as GameTypes['state'];
+  it('answers with the driver of the prompt seat, else `other`, else throws', () => {
+    const d = bySeat({ a: fixed('A'), 1: fixed('B') }, fixed('R'));
+    const ans = [{ kind: 'answer', promptId: 1, picks: [] }] as const;
+    d.choose(at('a'), ans, new DriverRng('x'));
+    expect(d.reasons()).toEqual(['A']);
+    d.choose(at(1), ans, new DriverRng('x'));
+    expect(d.reasons()).toEqual(['B']);
+    d.choose(at(), ans, new DriverRng('x'));
+    expect(d.reasons()).toEqual(['R']);
+    expect(() => bySeat({ a: fixed('A') }).choose(at('z'), ans, new DriverRng('x'))).toThrow(RangeError);
+  });
+});
 
 describe('driver random numbers', () => {
   it('are a function of the key only', () => {

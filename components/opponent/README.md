@@ -14,7 +14,7 @@ A rule-based opponent (K103, K115). Pure data and functions; the engine never im
 - **Evaluator**: `evaluate(view, terms, weights)` → `{ total, lines }`, one explain line per term; `fidelityProblems(state, copy, terms)` lists the lines that differ.
 - **Look-ahead**: `lookAhead(state, { moves, apply, score, key? }, { depth = 3, nodes = 5000 })` → `{ best, score, nodes, cut }`; the same move again without gain is cut; results cached by `key`.
 - **Decision record from the log**: `decisionLines(record)` (plain lines for a table or golden), `decisionPart(record)` (a game-log `ref('decision', id)` the game resolves to its stored record), `decisionsAt(records, step)`.
-- **sim-pool**: `opponentDriver(opponent, { view, candidates(view, answers), timing? }, keep?)` is a `Driver`; candidates line up with the answers; records carry `prompt` (from `state.prompt.id`) and `step` (game's `step(state)`, else the choice count); `reasons()` is the last record's lines.
+- **sim-pool**: `opponentDriver(opponent, { view, candidates(view, answers), timing? }, keep?)` is a `Driver` (K222: `view(state, seat)` gets the open prompt's `seat`; `redact` takes a string or number seat); candidates line up with the answers; records carry `prompt` (from `state.prompt.id`) and `step` (game's `step(state)`, else the choice count); `reasons()` is the last record's lines.
 
 Not here: alpha-beta over the other side's moves, hidden-card sampling, trained evaluators.
 

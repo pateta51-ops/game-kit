@@ -137,7 +137,7 @@ export function triggerHandlers<G extends GameTypes>(cfg: TimingConfig<G>): Hand
         const player = (mine[0] as PendingTrigger).player;
         ctx.then({ kind: 'timing.triggerPick', player } as TriggerTask);
         const base: Pick<KernelPrompt, 'options' | 'min' | 'max'> = { options: mine.map((p) => ({ id: String(p.id), enabled: true })), min: 1, max: 1 };
-        ctx.ask(cfg.orderPrompt?.(base, { player, triggers: mine }) ?? (base as Omit<G['prompt'], 'id'>));
+        ctx.ask(cfg.orderPrompt?.(base, { player, triggers: mine }) ?? ({ ...base, kind: 'timing.order', seat: player } as Omit<G['prompt'], 'id'>));
         return;
       }
       const table = cfg.priority ?? DEFAULT_PRIORITY;

@@ -2,7 +2,7 @@
 // every record carries the per-seat features at its decision points, then TD(lambda) updates the net and writes the file.
 import type { GameTypes } from '../engine-core/index';
 import { runGames, type GameSpec, type SimGame } from '../sim-pool/index';
-import type { Model } from './driver';
+import { actorOf, type Model } from './driver';
 import { readWeights, writeWeights, type Net } from './net';
 import { tdTrain, type TdOptions } from './td';
 
@@ -17,7 +17,7 @@ export function withTrace<G extends GameTypes, V>(game: SimGame<G>, model: Model
     ...game,
     observation: () => ({ steps: [], scores: null }),
     onPrompt(seen, state) {
-      for (const seat of record ? record(state) : [model.actor(state)]) seen.steps.push({ seat, x: [...model.encode(model.view(state, seat), seat)] });
+      for (const seat of record ? record(state) : [actorOf(model, state)]) seen.steps.push({ seat, x: [...model.encode(model.view(state, seat), seat)] });
     },
     summary: (state, _a, _c, seen) => ({ steps: seen.steps, scores: model.over(state) }),
   };

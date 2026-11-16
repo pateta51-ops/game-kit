@@ -376,7 +376,7 @@ The kernel of a game engine: seeded random numbers, canonical JSON and hashes, t
 
 - **Use it when:** Every game's engine: seeded random, tasks and prompts, copy on write, replay, undo, saves, timing windows and triggers.
 - **Not for:** A game's rules or content; the game writes its own `GameRules`.
-- **Key exports:** `claimEngineCore`, `canonicalJson`, `fnv1a64`, `copyJson`, `copyState`, `deepFreeze`, `freezeState`, `isFreezing`, `setStateFreezing`, `advance`, `applyAction`, `applyActionWith`, `createGame`, `isChecking`, and 225 more
+- **Key exports:** `claimEngineCore`, `canonicalJson`, `fnv1a64`, `copyJson`, `copyState`, `deepFreeze`, `freezeState`, `isFreezing`, `setStateFreezing`, `advance`, `applyAction`, `applyActionWith`, `createGame`, `isChecking`, and 226 more
 - **Needs:** nothing
 - **Games that pulled it:** 7th-inning-stretch
 - **Came from:** jarl
@@ -424,7 +424,7 @@ A learned opponent (K125): a value net, a one-horizon look-ahead on the game's o
 
 - **Use it when:** An AI opponent trained by self-play (value net, one-horizon look-ahead) when a scripted opponent is too weak.
 - **Not for:** A first opponent (start with `opponent`), or anything reading hidden state of the real game.
-- **Key exports:** `Inputs`, `behind`, `blank`, `present`, `seatOrder`, `setValue`, `thermo`, `Evaluator`, `forward`, `fromWeights`, `newNet`, `readWeights`, `toWeights`, `trainStep`, and 24 more
+- **Key exports:** `Inputs`, `behind`, `blank`, `present`, `seatOrder`, `setValue`, `thermo`, `Evaluator`, `forward`, `fromWeights`, `newNet`, `readWeights`, `toWeights`, `trainStep`, and 25 more
 - **Needs:** [`engine-core`](#engine-core), [`sim-pool`](#sim-pool)
 - **Games that pulled it:** none yet
 - **Came from:** outside: rftg (Keldon Jones's Race for the Galaxy AI), design only
@@ -712,7 +712,7 @@ Plays N whole games of any `GameRules<G>` with a driver, in this thread or on wo
 
 - **Use it when:** Playing many whole games with drivers on worker threads, fuzzing, sanity bands, sweeps, the K200 weight tuner and paired validation.
 - **Not for:** A driver's strategy (the game or opponent supplies it).
-- **Key exports:** `DriverRng`, `ANSWER_CAP`, `CRASH_HASH`, `breakAt`, `crashRecord`, `legalAnswers`, `playOne`, `randomDriver`, `replayStep`, `runGames`, `runInThread`, `findingOf`, `formatFuzz`, `fuzz`, and 51 more
+- **Key exports:** `DriverRng`, `ANSWER_CAP`, `CRASH_HASH`, `breakAt`, `bySeat`, `crashRecord`, `legalAnswers`, `playOne`, `randomDriver`, `replayStep`, `runGames`, `runInThread`, `findingOf`, `formatFuzz`, and 52 more
 - **Needs:** [`engine-core`](#engine-core)
 - **Games that pulled it:** 7th-inning-stretch
 - **Came from:** warps

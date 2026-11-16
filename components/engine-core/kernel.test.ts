@@ -82,7 +82,7 @@ describe('runner and ctx', () => {
   it('stops at a prompt, and a second prompt while one is open is an engine bug', () => {
     const table: HandlerTable<Counter> = {
       ask: (ctx) => {
-        ctx.ask(PROMPT);
+        ctx.ask(PROMPT, task('picked'));
       },
       twice: (ctx) => {
         ctx.ask(PROMPT);
@@ -95,7 +95,7 @@ describe('runner and ctx', () => {
     const s = bareState();
     runWith(table, s, task('ask'), task('never'));
     expect(s.prompt?.id).toBe(1);
-    expect(s.stack).toEqual([task('never')]);
+    expect(s.stack).toEqual([task('never'), { kind: 'picked', prompt: 1 }]);
     expect(() => runWith(table, bareState(), task('twice'))).toThrow(EngineBugError);
   });
 
@@ -104,7 +104,7 @@ describe('runner and ctx', () => {
       say: (ctx) => {
         ctx.emit({ type: 'added', n: 1 });
         ctx.emit({ type: 'added', n: 2 });
-        ctx.ask(PROMPT);
+        ctx.ask(PROMPT, task('picked'));
       },
     };
     const s = bareState();

@@ -67,8 +67,7 @@ const turn = (ctx: Ctx<Ref>): void => {
     s.result = { winner: a === b ? null : a > b ? 0 : 1 };
     return;
   }
-  ctx.then({ kind: 'played' });
-  ctx.ask({ kind: 'pick', seat: s.seat, min: 1, max: 1, options: hand.map((_, i) => ({ id: `h${String(i)}`, enabled: true })) });
+  ctx.ask({ kind: 'pick', seat: s.seat, min: 1, max: 1, options: hand.map((_, i) => ({ id: `h${String(i)}`, enabled: true })) }, { kind: 'played' });
 };
 
 const played = (ctx: Ctx<Ref>, task: RefTask): void => {
@@ -93,8 +92,7 @@ export const VERBS: VerbTable<Ref, RefStep> = {
   wild: {
     fields: { max: posInt },
     run: (ctx, step) => {
-      ctx.then({ kind: 'worth' });
-      ctx.ask({ kind: 'amount', seat: draftOf(ctx).seat, min: 1, max: 1, options: Array.from({ length: step.max }, (_, i) => ({ id: String(i + 1), enabled: true })) });
+      ctx.ask({ kind: 'amount', seat: draftOf(ctx).seat, min: 1, max: 1, options: Array.from({ length: step.max }, (_, i) => ({ id: String(i + 1), enabled: true })) }, { kind: 'worth' });
     },
     text: (step) => `Choose 1 to ${String(step.max)} and score that.`,
   },
@@ -110,8 +108,7 @@ const after = (ctx: Ctx<Ref>): void => {
     return;
   }
   if (s.deck.length === 0) return ctx.then({ kind: 'next' });
-  ctx.then({ kind: 'drawn' });
-  ctx.ask({ kind: 'may', seat: s.seat, min: 1, max: 1, options: [{ id: 'yes', enabled: (s.hands[s.seat] ?? []).length < 3, why: 'Your hand is full.' }, { id: 'no', enabled: true }] });
+  ctx.ask({ kind: 'may', seat: s.seat, min: 1, max: 1, options: [{ id: 'yes', enabled: (s.hands[s.seat] ?? []).length < 3, why: 'Your hand is full.' }, { id: 'no', enabled: true }] }, { kind: 'drawn' });
 };
 
 const drawn = (ctx: Ctx<Ref>, task: RefTask): void => {

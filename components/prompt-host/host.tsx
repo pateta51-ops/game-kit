@@ -4,7 +4,7 @@
 // (order by clicks, the rest follow in the engine's order), Jarl src/ui/prompts/autoAnswer.ts (`auto`). Unstyled: class
 // names come from `look.cls`, words and card faces from `look.label`.
 import { useEffect, useRef, useState, type ComponentType, type ReactNode } from 'react';
-import type { KernelOption, KernelPrompt } from '../engine-core/index';
+import { seatKey, type KernelOption, type KernelPrompt } from '../engine-core/index';
 import type { PromptSource } from '../prompt-source/index';
 import { defaultLook } from './look';
 
@@ -49,6 +49,8 @@ export interface HostProps<P extends Kinded, V> {
   readonly answer: Answer;
   /** False when the open prompt is another seat's: `waiting` shows and no option does. */
   readonly mine?: boolean;
+  /** K222: this screen's seat; with no `mine`, the prompt is mine when its `seat` is unset or equal (`seatKey`: 0 and '0' are one seat). */
+  readonly seat?: string | number;
   readonly waiting?: ReactNode;
   /** The picks to send without asking (e.g. `(p) => autoAnswer(p, setting, NEVER)`), or null to ask. */
   readonly auto?: (p: P) => readonly string[] | null;
@@ -57,7 +59,7 @@ export interface HostProps<P extends Kinded, V> {
   readonly look?: Partial<Look<P>>;
 }
 
-export function PromptHost<P extends Kinded, V>({ widgets, prompt, view, answer, mine = true, waiting = null, auto, title, look: part }: HostProps<P, V>) {
+export function PromptHost<P extends Kinded, V>({ widgets, prompt, view, answer, seat, mine = seat === undefined || prompt?.seat === undefined || seatKey(prompt.seat) === seatKey(seat), waiting = null, auto, title, look: part }: HostProps<P, V>) {
   const look = { ...(defaultLook as Look<P>), ...part };
   const id = prompt?.id ?? null;
   const open = useRef(id);

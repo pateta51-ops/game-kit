@@ -1,7 +1,7 @@
 // The guarded task loop (ported from Warp's Edge core/runner.ts). `run` pops tasks off the LIFO
 // stack and executes them until the stack is empty, a prompt is open, or the game is over. A runaway loop (a handler that
 // keeps scheduling itself) aborts with an EngineBugError instead of hanging the tab or a simulation.
-import { draftOf } from './ctx';
+import { draftOf, setHandlerBase } from './ctx';
 import type { Draft } from './draft';
 import { EngineBugError } from './errors';
 import type { Ctx, GameTypes, HandlerTable, KernelState } from './types';
@@ -17,6 +17,7 @@ export function run<G extends GameTypes>(ctx: Ctx<G>, table: HandlerTable<G>): v
     const task = s.stack.pop() as G['task'];
     const handler = table[task.kind];
     if (handler === undefined) throw new EngineBugError(`no handler for task kind "${task.kind}"`);
+    setHandlerBase(ctx, s.stack.length);
     handler(ctx, task);
     executed += 1;
     if (executed > MAX_TASKS_PER_ACTION) {
@@ -25,6 +26,7 @@ export function run<G extends GameTypes>(ctx: Ctx<G>, table: HandlerTable<G>): v
       );
     }
   }
+  setHandlerBase(ctx, -1);
   // once the game is over no task and no prompt remain
   if (s.result !== null) {
     s.stack = [];

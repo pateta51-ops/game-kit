@@ -5,7 +5,7 @@ import { afterAll, describe, expect, it } from 'vitest';
 import { createGame, type KernelPrompt } from '../engine-core/index';
 import { DriverRng, runGames, type SimRecord } from '../sim-pool/index';
 import { DUEL, INPUTS, MODEL, encodeEnd, type DuelState } from './fake/duel';
-import { Evaluator, Inputs, behind, blank, combos, deal, decide, expected, finalTarget, forward, fromWeights, newNet, predictorTarget, present, pretrain, readWeights, seatOrder, tdTrain, thermo, toWeights, trainSelfPlay, trainStep, writeWeights } from './index';
+import { actorOf, Evaluator, Inputs, behind, blank, combos, deal, decide, expected, finalTarget, forward, fromWeights, newNet, predictorTarget, present, pretrain, readWeights, seatOrder, tdTrain, thermo, toWeights, trainSelfPlay, trainStep, writeWeights } from './index';
 
 const dir = mkdtempSync(path.join(tmpdir(), 'learned-'));
 afterAll(() => rmSync(dir, { recursive: true, force: true }));
@@ -68,6 +68,15 @@ describe('network', () => {
 });
 
 describe('determinization and the decision driver', () => {
+  it('K222: the actor is the open prompt seat when the model has no actor', () => {
+    const s = createGame(DUEL, { seed: 'k222' }, {}, {}).state;
+    expect('actor' in MODEL).toBe(false);
+    expect(actorOf(MODEL, s)).toBe(s.actor);
+    expect(actorOf({ actor: () => 1 }, s)).toBe(1);
+    expect(actorOf({}, { ...s, prompt: { ...(s.prompt as KernelPrompt), seat: '1' } })).toBe(1);
+    expect(() => actorOf({}, { ...s, prompt: null })).toThrow(RangeError);
+  });
+
   it('deals the unseen cards, the rest as the deck', () => {
     const [a = [], rest = []] = deal([1, 2, 3, 4, 5], [2], new DriverRng('d'));
     expect(a).toHaveLength(2);

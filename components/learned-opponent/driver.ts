@@ -11,8 +11,8 @@ export interface Model<S, A, V> {
   view(state: S, seat: number): V;
   /** Determinization: a full state consistent with `view`, hidden cards and deck order drawn from what the seat cannot see (`deal`). */
   sample(view: V, seat: number, rng: DriverRng): S;
-  /** The seat answering the open prompt. */
-  actor(state: S): number;
+  /** The seat answering the open prompt. K222: optional; default the open prompt's `seat` (a number). */
+  actor?(state: S): number;
   legal(state: S): readonly A[];
   /** The game's pure reducer. */
   apply(state: S, action: A): S;
@@ -38,6 +38,15 @@ export interface DecideOptions extends TargetOptions {
   readonly seed?: string;
   /** Forward-play guard (default 10,000 actions). */
   readonly maxSteps?: number;
+}
+
+/** K222: the seat answering the open prompt: `model.actor`, else `prompt.seat`. */
+export function actorOf<S>(model: Pick<Model<S, unknown, unknown>, 'actor'>, state: S): number {
+  if (model.actor) return model.actor(state);
+  const raw = (state as { prompt?: { seat?: unknown } | null }).prompt?.seat;
+  const seat = typeof raw === 'string' && raw.trim() !== '' ? Number(raw) : raw;
+  if (typeof seat !== 'number' || !Number.isInteger(seat)) throw new RangeError('learned-opponent: the open prompt has no numeric seat and the model no actor');
+  return seat;
 }
 
 /** Shuffles `unseen` and deals `sizes` from it; the last part is the rest, in its sampled order (the deck). */
@@ -111,7 +120,7 @@ export function learnedDriver<G extends GameTypes, V>(model: Model<G['state'], G
         why = ['learned: move noise'];
         return rng.pick(answers);
       }
-      const seat = model.actor(state);
+      const seat = actorOf(model, state);
       const r = decide(model, net, model.view(state, seat), seat, answers, { ...o, seed: String(rng.nextUint32()) });
       why = [`learned: value ${r.values[r.index]?.toFixed(3) ?? '?'} best of ${String(answers.length)}`];
       return r.action;

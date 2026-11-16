@@ -1,7 +1,7 @@
 // A toy competitive game for the tests. Cards 1-10 shuffled, four dealt to each of two seats (hidden); prizes 1-4 shuffled,
 // one shown per round. The leader plays a card face up, then the other seat; the higher card takes the prize. Four rounds.
 import { applyAction, draftOf, hashValue, seedRng, type AnswerAction, type Ctx, type GameRules, type KernelPrompt, type KernelState, type KernelTask } from '../../engine-core/index';
-import { DriverRng, legalAnswers, randomDriver, type Driver, type SimGame } from '../../sim-pool/index';
+import { bySeat, DriverRng, legalAnswers, randomDriver, type Driver, type SimGame } from '../../sim-pool/index';
 import { Inputs, behind, blank, deal, learnedDriver, present, readWeights, relative, setValue, thermo, withTrace, type Model } from '../index';
 
 export interface DuelState extends KernelState {
@@ -35,8 +35,7 @@ const CARDS = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
 const PRIZES = [1, 2, 3, 4];
 
 const ask = (ctx: Ctx<Duel>, hand: readonly number[]): void => {
-  ctx.then({ kind: 'play' });
-  ctx.ask({ min: 1, max: 1, options: hand.map((c) => ({ id: String(c), enabled: true })) });
+  ctx.ask({ min: 1, max: 1, seat: ctx.s.actor, options: hand.map((c) => ({ id: String(c), enabled: true })) }, { kind: 'play' });
 };
 
 export const DUEL: GameRules<Duel> = {
@@ -131,7 +130,6 @@ export const MODEL: Model<DuelState, AnswerAction, DuelView> = {
     const prompt = p && v.pub.actor !== seat ? { ...p, options: (hands[v.pub.actor] as number[]).map((c) => ({ id: String(c), enabled: true })) } : p;
     return { ...v.pub, prompt, rng: { a, b, c, d }, hands, prizes: [...v.shown, ...later] };
   },
-  actor: (s) => s.actor,
   legal: (s) => legalAnswers(s.prompt as KernelPrompt, new DriverRng('legal')),
   apply: (s, a) => applyAction(DUEL, s, a, {}).state,
   over: (s) => s.result?.scores ?? null,
@@ -166,7 +164,7 @@ const base: SimGame<Duel> = {
     const learned = learnedDriver<Duel, DuelView>(MODEL, readWeights(String(spec.settings?.weights), INPUTS.names), { epsilon: Number(spec.settings?.epsilon ?? 0), samples: 3 });
     if (name === 'learned') return learned;
     const seat = Number(spec.settings?.seat ?? 0);
-    return { name, reasons: () => [], choose: (s, a, r) => (s.actor === seat ? learned : random).choose(s, a, r) };
+    return bySeat<Duel>({ [seat]: learned }, random);
   },
 };
 

@@ -16,6 +16,8 @@ export interface KernelTask {
   readonly answer?: readonly string[];
   /** K93: the batch this task belongs to (`cancelBatch` removes it). */
   readonly batch?: number;
+  /** K222: the id of the prompt whose answer this task resumes (set by `ctx.ask`). */
+  readonly prompt?: number;
 }
 
 export interface KernelOption {
@@ -38,6 +40,10 @@ export interface KernelPrompt {
   readonly options: readonly KernelOption[];
   readonly min: number;
   readonly max: number;
+  /** K222: what is asked (prompt-host picks the widget by it). */
+  readonly kind?: string;
+  /** K222: the seat that answers (sim-pool `bySeat`, opponent, learned-opponent and prompt-host read it). */
+  readonly seat?: string | number;
 }
 
 export interface KernelEvent {
@@ -136,7 +142,8 @@ export interface Ctx<G extends GameTypes> {
   readonly content: G['content'];
   readonly rng: CtxRng;
   then(...tasks: readonly G['task'][]): void; // pushed so the first runs first
-  ask(prompt: Omit<G['prompt'], 'id'>): void;
+  /** K222: `resume` is pushed and bound to the prompt; without it the handler must have pushed the resume task first. */
+  ask(prompt: Omit<G['prompt'], 'id'>, resume?: G['task']): void;
   emit(event: EventInput<G>): void;
 }
 

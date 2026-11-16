@@ -1,6 +1,7 @@
 // The driver contract and one simulated game (warps src/engine/drivers/{types,random}.ts and scripts/sim/core.ts, made
 // generic over GameRules<G>; the crash record from ebr scripts/sim/pool.ts).
 import {
+  seatKey,
   applyAction,
   createGame,
   hashValue,
@@ -137,6 +138,23 @@ export function randomDriver<G extends GameTypes>(weight?: (a: G['action'], stat
         if (x < 0) return answers[i] as G['action'];
       }
       return answers[answers.length - 1] as G['action'];
+    },
+  };
+}
+
+/** K222: one driver per seat, chosen by the open prompt's `seat`; `other` answers a prompt with no seat or an unlisted one (else it throws). */
+export function bySeat<G extends GameTypes>(drivers: Readonly<Record<string, Driver<G>>>, other?: Driver<G>): Driver<G> {
+  let last: Driver<G> | undefined;
+  return {
+    name: Object.entries(drivers).map(([k, d]) => `${k}:${d.name}`).join(','),
+    reasons: () => last?.reasons() ?? [],
+    choose(state, answers, rng) {
+      const seat = state.prompt?.seat;
+      const k = seatKey(seat);
+      const d = (k === undefined ? undefined : drivers[k]) ?? other;
+      if (d === undefined) throw new RangeError(`bySeat: no driver for seat ${String(seat)}`);
+      last = d;
+      return d.choose(state, answers, rng);
     },
   };
 }

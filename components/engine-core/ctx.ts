@@ -74,6 +74,8 @@ class RunCtx<G extends GameTypes> implements Ctx<G> {
   readonly rng: CtxRng;
   /** K100: set while a debug edit runs; its events carry `debug: true`. */
   debug = false;
+  /** K222: the stack depth when the running handler started (-1 outside the runner). */
+  base = -1;
   constructor(
     readonly s: G['state'],
     readonly content: G['content'],
@@ -88,18 +90,31 @@ class RunCtx<G extends GameTypes> implements Ctx<G> {
   then(...tasks: readonly G['task'][]): void {
     const s = this.s as Work;
     if (s.result !== null) return;
+    if (s.prompt !== null && !this.debug) throw new EngineBugError(`then: prompt ${String(s.prompt.id)} is open (its answer would resume this task instead)`);
     for (let i = tasks.length - 1; i >= 0; i -= 1) s.stack.push(tasks[i] as Draft<KernelTask>);
   }
 
   // open exactly one prompt and return; the runner stops while `prompt` is set and the answer resumes the task on
   // top of the stack.
-  ask(input: Omit<G['prompt'], 'id'>): void {
+  ask(input: Omit<G['prompt'], 'id'>, resume?: G['task']): void {
     const s = this.s as Work;
     if (s.result !== null) return;
     if (s.prompt !== null) {
       throw new EngineBugError(`ask: prompt ${s.prompt.id} is still open (a handler opened a second prompt)`);
     }
-    s.prompt = { ...input, id: takePromptSeq(s) } as Work['prompt'];
+    const on = input.options.filter((o) => o.enabled).length;
+    if (input.max < input.min || on < input.min) {
+      const named = [input.kind === undefined ? '' : `kind "${input.kind}"`, input.seat === undefined ? '' : `seat ${String(input.seat)}`, (s.stack.at(-1) ?? resume) === undefined ? '' : `resuming "${String((resume ?? s.stack.at(-1))?.kind)}"`].filter((x) => x !== '').join(', ');
+      const off = input.options.filter((o) => !o.enabled).map((o) => `${o.id}${o.why === undefined ? '' : ` (${o.why})`}`).join('; ');
+      const why = input.max < input.min ? `max ${String(input.max)} is below min ${String(input.min)}` : `it needs at least ${String(input.min)} pick(s) but only ${String(on)} of ${String(input.options.length)} option(s) are enabled${off === '' ? '' : `; disabled: ${off}`}`;
+      throw new EngineBugError(`ask: prompt ${String(s.promptSeq)}${named === '' ? '' : ` (${named})`} cannot be answered: ${why}. Give the player a legal option, or skip the prompt when there is none.`);
+    }
+    if (resume !== undefined) s.stack.push(resume as Draft<KernelTask>);
+    const top = s.stack.length - 1;
+    if (top < 0 || (resume === undefined && s.stack.length <= this.base)) throw new EngineBugError('ask: no resume task (pass it: ctx.ask(prompt, resume), or push it first)');
+    const id = takePromptSeq(s);
+    if (resume !== undefined) s.stack[top] = { ...resume, prompt: id } as Draft<KernelTask>;
+    s.prompt = { ...input, id } as Work['prompt'];
   }
 
   // stamped with the next sequence number and the game's stamp fields; recorded in the action's events and in
@@ -139,6 +154,11 @@ export function readCtx<G extends GameTypes>(
 
 /** The events emitted so far through a context `makeCtx` built (the full list, not the capped state log). */
 export const ctxEvents = <G extends GameTypes>(ctx: Ctx<G>): readonly G['event'][] => (ctx as RunCtx<G>).events;
+
+/** K222: the stack depth when a handler starts (the runner sets it). */
+export function setHandlerBase<G extends GameTypes>(ctx: Ctx<G>, n: number): void {
+  (ctx as RunCtx<G>).base = n;
+}
 
 /** K100: mark the events `ctx` emits as debug edits (true) or play (false). */
 export function setCtxDebug<G extends GameTypes>(ctx: Ctx<G>, on: boolean): void {

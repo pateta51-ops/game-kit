@@ -32,3 +32,6 @@ export function takePromptSeq(s: { promptSeq: number }): number {
   s.promptSeq = n + 1;
   return n;
 }
+
+/** K222: a seat as one type: prompts may carry a number or a string; compare seats through this (0 and '0' are one seat). */
+export const seatKey = (seat: string | number | undefined): string | undefined => (seat === undefined ? undefined : String(seat));
