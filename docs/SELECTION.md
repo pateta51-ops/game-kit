@@ -144,3 +144,4 @@ Components with no row above. Each starts from the game and commit in its `compo
 | `prompt-gallery` | EBR `33b5abd3` | M |
 | `picked-state` | 7th Inning Stretch `6c82d43` (K165) | S |
 | `scan-ingest` | scanning-pipeline `9ec2378` (K164) | L |
+| `scaffold` | 7th Inning Stretch `bb71c3fa` (K204; config files and scripts only) | M |

@@ -1,0 +1,11 @@
+{
+  "name": "scaffold",
+  "source": {
+    "game": "7is",
+    "commit": "bb71c3fa",
+    "paths": ["package.json", "tsconfig.json", "vite.config.ts", "vitest.config.ts", "eslint.config.js", "index.html", ".nvmrc", "scripts/check-runner.config.json"],
+    "note": "Config files and scripts only, no game code; stub rules adapted from engine-core/fake/counter.ts."
+  },
+  "needs": [],
+  "packages": []
+}
