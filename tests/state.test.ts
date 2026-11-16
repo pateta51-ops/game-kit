@@ -43,7 +43,10 @@ it('lists open PRs with the component each touches and each games oldest kit pin
   fs.mkdirSync(path.join(games, 'g1', 'kit'), { recursive: true });
   fs.writeFileSync(path.join(games, 'g1', 'kit', 'kit.lock.json'), JSON.stringify({ components: { a: { ref: 'v0.10.0' }, b: { ref: 'v0.9.2' } } }));
   fs.mkdirSync(path.join(games, 'none'));
-  const s = spawnSync('node', [SCRIPT, root, '--prs-json', prs, '--games', path.join(games, 'g1'), path.join(games, 'none')], { encoding: 'utf8' }).stdout;
+  fs.mkdirSync(path.join(games, 'g2', 'kit'), { recursive: true });
+  fs.writeFileSync(path.join(games, 'g2', 'kit', 'kit.lock.json'), JSON.stringify({ ref: 'v0.8.1', commit: 'abc', components: { a: { files: {} } } }));
+  const s = spawnSync('node', [SCRIPT, root, '--prs-json', prs, '--games', path.join(games, 'g1'), path.join(games, 'none'), path.join(games, 'g2')], { encoding: 'utf8' }).stdout;
+  expect(s).toContain('- g2: oldest pin v0.8.1 (latest none)');
   expect(s).toContain('- #7 (draft): K9 [alpha]');
   expect(s).toContain('- g1: oldest pin v0.9.2 (latest none)');
   expect(s).not.toContain('- none:');

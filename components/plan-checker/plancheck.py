@@ -292,7 +292,7 @@ def kit_warnings(path: Path, lines: list[str]) -> set[str]:
         lock = path.resolve().parent.parent / "kit" / "kit.lock.json"
         if lock.is_file():
             try:
-                refs = [c.get("ref", "") for c in json.loads(lock.read_text(encoding="utf-8")).get("components", {}).values()]
+                lk = json.loads(lock.read_text(encoding="utf-8")); refs = [lk["ref"]] if lk.get("ref") else [c.get("ref", "") for c in lk.get("components", {}).values()]
                 refs = [r for r in refs if re.fullmatch(r"v\d+\.\d+\.\d+", r)]
                 pin = min(refs, key=ver) if refs else None
             except (ValueError, AttributeError):

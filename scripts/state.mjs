@@ -53,7 +53,8 @@ const mainCo = path.dirname(path.resolve(top, spawnSync('git', ['-C', top, 'rev-
 const gdirs = gi >= 0 ? args.slice(gi + 1) : (() => { try { return fs.readdirSync(path.dirname(mainCo)).map((d) => path.join(path.dirname(mainCo), d)) } catch { return [] } })()
 const pins = []
 for (const d of gdirs) try {
-  const refs = Object.values(JSON.parse(fs.readFileSync(path.join(d, 'kit', 'kit.lock.json'), 'utf8')).components).map((c) => c.ref)
+  const lk = JSON.parse(fs.readFileSync(path.join(d, 'kit', 'kit.lock.json'), 'utf8'))
+  const refs = lk.ref ? [lk.ref] : Object.values(lk.components).map((c) => c.ref)
   const num = (r) => (r.match(/\d+/g) ?? []).map(Number)
   const old = refs.sort((x, y) => { const a = num(x), b = num(y); return (a[0] - b[0]) || (a[1] - b[1]) || (a[2] - b[2]) || 0 })[0]
   pins.push(`- ${path.basename(d)}: oldest pin ${old ?? 'none'} (latest ${tag || 'none'})`)

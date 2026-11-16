@@ -174,4 +174,10 @@ describe('plancheck.py kit warnings (K207)', () => {
     writeFileSync(join(dirname(dirname(f)), 'kit', 'kit.lock.json'), JSON.stringify({ components: { a: { ref: 'v0.3.0' } } }));
     expect(out(f, '--kit', kit)).toContain('WARN kit pin v0.3.0');
   });
+  it('K227: the one-tag lock shape (top-level ref) gives the pin', () => {
+    const f = plan('v0.9.0', 'Targets K26.');
+    mkdirSync(join(dirname(dirname(f)), 'kit'));
+    writeFileSync(join(dirname(dirname(f)), 'kit', 'kit.lock.json'), JSON.stringify({ ref: 'v0.3.0', commit: 'abc', components: { a: { files: {} } } }));
+    expect(out(f, '--kit', kit)).toContain('WARN kit pin v0.3.0');
+  });
 });

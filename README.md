@@ -23,7 +23,7 @@ The shared code for the owner's digital board-game builds: the best version of e
 
 ## Layout
 
-- `kit.mjs` - pull, check, list and search tool (no dependencies, Node 22+).
+- `kit.mjs` - pull, check, outdated, list and search tool (no dependencies, Node 22+).
 - `scripts/catalog.mjs` - writes `docs/CATALOG.md` (`--check` in `npm run check`; `--scan` refreshes `docs/catalog-games.json`).
 - `components/<name>/` - one folder per component: code, tests, `component.json`.
 - `docs/SELECTION.md` - which game each component comes from, and why.
@@ -49,7 +49,7 @@ node ../game-kit/kit.mjs pull ../game-kit v0.1.0 engine-core bug-reporter
 node kit/kit.mjs check
 ```
 
-`pull` also copies `docs/CATALOG.md` to `kit/CATALOG.md`; `node kit/kit.mjs list` and `search <word>` read it. `pull` with no component names re-pulls every component the game already has, at the new version. Commit the `kit/` folder.
+`pull` also copies `docs/CATALOG.md` to `kit/CATALOG.md`; `node kit/kit.mjs list` and `search <word>` read it. A game holds one kit tag (`kit/kit.lock.json` holds one `ref`): `pull <tag>` moves every component the game has to that tag, and component names after it add components at the same tag. An old per-component lock keeps working; the next pull converts it and says so. Pull is atomic: it builds a new `kit/` aside, verifies it, then swaps; a failed pull leaves `kit/` as it was and says what failed. `check` also fails on a stray folder or file in `kit/` that the lock does not list. `node kit/kit.mjs outdated [../game-kit]` shows the game's tag against the latest and the PLAN rows and `breaking` notes between them. Commit the `kit/` folder.
 
 - From a worktree this repo is not beside the game: give the checkout's full path (`C:/projects/game-kit`) in both places.
 - Run `git -C <kit checkout> fetch --tags` first when the tag is new.
@@ -66,6 +66,6 @@ A game that needs something the kit lacks changes the kit. It never edits its co
 3. **Who builds.** A worker started by the architect of the game that needs it, in a worktree of this repository, on a branch `k<n>-<name>`. One open pull request per component: look at the open ones first, and wait for, or continue, one that touches the same component.
 4. **How.** As "How a batch works" in `docs/PLAN.md`. Interfaces grow by addition, so a game that pulls a newer tag still compiles; a change that breaks callers says `breaking` in its title and lists what a game must change.
 5. **Done.** An independent review, CI green on the `kit` runner, squash-merge, the row in `docs/PLAN.md` marked done in the same pull request. Then a tag on main: the middle number goes up for a new component or feature, the last for a fix.
-6. **Back in the game.** Pull the components at the new tag, run the game's check, commit `kit/`. A game pulls a newer tag only when it needs something in it.
+6. **Back in the game.** Run `node kit/kit.mjs outdated` to see the rows and breaking notes since the game's tag, pull the one new tag (`pull <tag>` moves the whole kit; names add components), run the game's check, commit `kit/`. A game pulls a newer tag only when it needs something in it.
 
 A bug in a component is fixed the same way: a failing test here first, then the fix, a tag, a pull.

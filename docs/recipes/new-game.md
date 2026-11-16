@@ -7,7 +7,7 @@
    node ../game-kit/kit.mjs pull ../game-kit <tag> engine-core sim-pool saves settings app-frame
    node kit/kit.mjs check
    ```
-   `pull` adds each component's `needs`. Commit `kit/`. Never edit it (see [AGENTS.md](../../AGENTS.md)).
+   `pull` adds each component's `needs`; a game holds one kit tag (a later `pull <tag>` moves all of it; `outdated` shows what changed). Commit `kit/`. Never edit it (see [AGENTS.md](../../AGENTS.md)).
    **Ports** (by hand, if not using `new`): take the game's port block: `node ../game-kit/tools/game-server/server.mjs add <id> "<Name>" <repo path>`. Set vite `server.port`, `preview.port` and the Playwright port to what it prints; commit `ports.json` and `docs/PORTS.md` in game-kit. Never invent a port ([PORTS.md](../PORTS.md)).
 4. **Write the game's engine** against `engine-core`: a `GameTypes` bundle and one `GameRules<G>` (`handlers`, `blank`, `setup`, `contentHash`, optional `stamp`, `invariants`, `revealWords`). The model to copy is `components/engine-core/fake/counter.ts`. Import from `index.ts` only.
 5. **Wire the check chain** with `check-runner`: lanes for lint, types, tests, `kit.mjs check`, `repo-gate`, `traceability`, `bundle-size`. CI comes from `ci-templates` (`ci.config.json`, `render.mjs`), never hand-written.
