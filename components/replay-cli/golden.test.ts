@@ -6,8 +6,8 @@ import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
-import { restoreSave, type SaveFile } from '../engine-core/index';
-import type { Counter } from '../engine-core/fake/counter';
+import { inCause, restoreSave, ruleCause, type SaveFile, type TaskHandler } from '../engine-core/index';
+import { COUNTER, type Counter } from '../engine-core/fake/counter';
 import * as fake from './fake-golden';
 import { blankContentHashes, checkGoldens, GOLDEN_SAVED_AT, goldenGameSpec, playGolden, recordGames, replayGames, run, type CrossGame, type GoldenModule, type GoldenSpec } from './golden';
 import { pathDiff, type Io } from './replay';
@@ -363,4 +363,27 @@ describe('golden.ts command line', () => {
       rmSync(dir, { recursive: true, force: true });
     }
   }, 240_000);
+});
+
+describe('step causes (K79)', () => {
+  const chosen = COUNTER.handlers['chosen'] as TaskHandler<Counter>;
+  const caused = { ...fake.simGame, rules: { ...COUNTER, handlers: { ...COUNTER.handlers, chosen: (ctx, t) => inCause(ctx, ruleCause('C-ADD'), () => chosen(ctx, t)) } as typeof COUNTER.handlers } };
+  const causes = { counts: (e: Counter['event']) => e.type === 'added' || e.type === 'drawn' };
+
+  it('a module with causes refuses every golden whose counted events lack one, naming the action and the event', async () => {
+    const f = fakeIo(await recorded());
+    expect(await checkGoldens({ ...mod, causes }, DIR, f.io)).toBe(1);
+    expect(f.lines[0]).toMatch(/^FAIL g01-adds: \d+ number-changing event\(s\) with no cause$/);
+    expect(f.lines[1]).toMatch(/^ {2}NO CAUSE\n {2}action 0, event \d+ \(added\): no cause/);
+    expect(f.lines[f.lines.length - 1]).toBe('2 golden games, 2 failed, 2 no cause');
+  });
+
+  it('passes when every counted event has a cause; without causes nothing is checked; the command line reads the export', async () => {
+    const cmod: Mod = { simGame: caused, specs: fake.goldens, causes };
+    const f = fakeIo();
+    expect(await checkGoldens(cmod, DIR, f.io, { update: true })).toBe(0);
+    expect(await checkGoldens(cmod, DIR, f.io)).toBe(0);
+    expect(await checkGoldens(mod, DIR, fakeIo(await recorded()).io)).toBe(0);
+    expect(await run(['check', '/gold', '--game', 'm.ts'], fakeIo(await recorded(), { [P('m.ts')]: { ...fake, causes } }).io)).toBe(1);
+  });
 });

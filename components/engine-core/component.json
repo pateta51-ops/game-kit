@@ -91,6 +91,16 @@
         "paths": [
           "src/clj/game/core/engine.clj (change-in-game-state, does-nothing check; design only)"
         ]
+      },
+      {
+        "game": "middle-earth-player",
+        "url": "https://github.com/j-jmnz/middle-earth-player",
+        "commit": "4c29c95",
+        "licence": "MIT",
+        "notice": "Copyright the middle-earth-player authors (MIT)",
+        "paths": [
+          "src/rules/core/cause.ts (Cause, ruleCause, effectCause, inCause, currentCause)"
+        ]
       }
     ]
   },

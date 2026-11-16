@@ -11,7 +11,7 @@
   },
   "harvest": [
     { "game": "Rally the Troops", "paths": ["bin/rtt-test (three verdicts, object_diff)"], "licence": "ISC, copyright the Rally the Troops authors; lifted with the owner's written authorisation" },
-    { "game": "middle-earth-player", "paths": ["src/campaign/digest.ts", "scripts/release/reach.ts"], "licence": "MIT, copyright the middle-earth-player authors; lifted with the owner's written authorisation" }
+    { "game": "middle-earth-player", "paths": ["src/campaign/digest.ts", "scripts/release/reach.ts", "src/campaign/causes.test.ts (goldens refuse a number step with no cause)"], "licence": "MIT, copyright the middle-earth-player authors; lifted with the owner's written authorisation" }
   ],
   "needs": ["engine-core", "sim-pool"],
   "packages": ["tsx (the command lines run under it)"],

@@ -35,6 +35,8 @@ export interface KernelEvent {
   readonly seq: number;
   /** An action whose events reveal hidden information cannot be undone in Safe mode. */
   readonly reveal?: boolean;
+  /** K79: why a number moved (a rule id, or an effect record and its printed line); stamped by `inCause`. */
+  readonly cause?: { readonly rule: string } | { readonly effect: string; readonly line: string };
 }
 
 export interface AnswerAction {

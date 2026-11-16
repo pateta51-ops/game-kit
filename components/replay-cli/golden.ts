@@ -9,7 +9,7 @@
 // Exit codes: 0 all the same, 1 a golden or a game differs, 2 bad usage, an unreadable file or a module that does not load.
 import { join, resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
-import { applyAction, createGame, createSave, hashValue, restoreSave, type GameRules, type GameTypes, type SaveFile, type SaveFormat } from '../engine-core/index';
+import { applyAction, causeProblems, createGame, type CauseCheck, createSave, hashValue, restoreSave, type GameRules, type GameTypes, type SaveFile, type SaveFormat } from '../engine-core/index';
 import { DriverRng, legalAnswers, type GameSpec, type SimGame } from '../sim-pool/index';
 import { logText, nodeIo, pathDiff, viewDigest, type Io } from './replay';
 
@@ -98,23 +98,33 @@ export interface GoldenModule<G extends GameTypes = GameTypes, S = unknown> {
   readonly format?: SaveFormat;
   /** The curated table view: its digest after every action is pinned in `<name>.digests` beside the golden. */
   readonly view?: (state: G['state'], content: G['content']) => unknown;
+  /** K79, opt-in: the check refuses every counted event of a golden game (after createGame and each action) with no cause. */
+  readonly causes?: CauseCheck<G['event']>;
 }
 
-type Replayed<G extends GameTypes> = { state: G['state']; digests: string[] } | { error: string };
+type Replayed<G extends GameTypes> = { state: G['state']; digests: string[]; causes: string[] } | { error: string };
 
 /** Replay a save's options and actions; a refused action is the error. With `view`, a digest after createGame and each action. */
-function replayView<G extends GameTypes>(rules: GameRules<G>, save: { options: unknown; rules: unknown; actions: readonly unknown[] }, content: G['content'], view?: GoldenModule<G>['view']): Replayed<G> {
+function replayView<G extends GameTypes>(rules: GameRules<G>, save: { options: unknown; rules: unknown; actions: readonly unknown[] }, content: G['content'], view?: GoldenModule<G>['view'], causes?: GoldenModule<G>['causes']): Replayed<G> {
   const digests: string[] = [];
+  const bad: string[] = [];
   let at = -1;
+  const check = (events: readonly G['event'][]): void => {
+    if (causes) bad.push(...causeProblems(events, causes).map((p) => `${at < 0 ? 'setup' : `action ${String(at)}`}, ${p}`));
+  };
   try {
-    let s: G['state'] = createGame(rules, save.options as G['options'], save.rules as G['rules'], content).state;
+    const first = createGame(rules, save.options as G['options'], save.rules as G['rules'], content);
+    let s: G['state'] = first.state;
+    check(first.events);
     if (view) digests.push(viewDigest(view(s, content)));
     for (const [i, a] of save.actions.entries()) {
       at = i;
-      s = applyAction(rules, s, a as G['action'], content).state;
+      const r = applyAction(rules, s, a as G['action'], content);
+      s = r.state;
+      check(r.events);
       if (view) digests.push(viewDigest(view(s, content)));
     }
-    return { state: s, digests };
+    return { state: s, digests, causes: bad };
   } catch (e) {
     return { error: at < 0 ? `the options cannot start a game: ${msg(e)}` : `action ${String(at)} refused: ${msg(e)}` };
   }
@@ -147,8 +157,13 @@ export async function checkGoldens<G extends GameTypes, S>(mod: GoldenModule<G, 
       const save = recordGolden(mod.simGame, content, g, mod.format);
       const text = goldenText(save);
       const old = io.exists(file) ? io.read(file).replace(/\r\n/g, '\n') : null;
-      const now = replayView(mod.simGame.rules, save, content, mod.view);
+      const now = replayView(mod.simGame.rules, save, content, mod.view, mod.causes);
       if ('error' in now) throw new Error(now.error);
+      if (now.causes.length > 0) {
+        fail(`${g.name}: ${String(now.causes.length)} number-changing event(s) with no cause`);
+        io.out(`  NO CAUSE\n${now.causes.slice(0, 10).map((l) => `  ${l}`).join('\n')}`);
+        kinds['no cause'] = (kinds['no cause'] ?? 0) + 1;
+      }
       if (mod.view) {
         const dfile = join(dir, `${g.name}.digests`);
         const dtext = `${now.digests.join('\n')}\n`;
@@ -383,7 +398,7 @@ export async function run(args: readonly string[], io: Io = nodeIo): Promise<num
       io.err(`${game} exports no simGame or no ${list} list`);
       return 2;
     }
-    mod = { simGame: simGame as unknown as SimGame<GameTypes>, specs: specs as GoldenSpec[], ...(m['format'] !== undefined ? { format: m['format'] as SaveFormat } : {}), ...(typeof m['view'] === 'function' ? { view: m['view'] as NonNullable<GoldenModule['view']> } : {}) };
+    mod = { simGame: simGame as unknown as SimGame<GameTypes>, specs: specs as GoldenSpec[], ...(m['format'] !== undefined ? { format: m['format'] as SaveFormat } : {}), ...(typeof m['view'] === 'function' ? { view: m['view'] as NonNullable<GoldenModule['view']> } : {}), ...(typeof (m['causes'] as { counts?: unknown } | undefined)?.counts === 'function' ? { causes: m['causes'] as CauseCheck } : {}) };
   } catch (e) {
     io.err(`${game}: ${msg(e)}`);
     return 2;

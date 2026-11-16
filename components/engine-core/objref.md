@@ -1,0 +1,3 @@
+# engine-core: object references and last-known snapshots (K113, opt-in)
+
+A game that wants them keeps `objRefs: newObjectTrack()` in its state. `refOf(s, id)` is `{ id, zcc }` (zone changes); `leaveZone(draft, id, zone, snapshot)` stores the snapshot, bumps the counter and returns the new ref, so an old ref fails `isCurrent`. `lastKnown(s, ref)`, `lastKnownIn(s, id, zone)` read snapshots; `hasLeft` / `clearLeft` a short-living set (the game calls `clearLeft` at the start of every action), `clearLastKnown` forgets snapshots where the game's rules say. A snapshot of an object the action still writes to must be a copy. Source: XMage `MageObjectReference`, LKI.

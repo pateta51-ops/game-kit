@@ -4,6 +4,7 @@
 //
 // `s` is typed as the readonly state. Engine code that writes takes the working draft with `draftOf(ctx)` (the same
 // object, typed as a `Draft`) and writes below the top level only through the copy-on-write barrier of cow.ts.
+import { currentCause } from './cause';
 import { own } from './cow';
 import type { Draft } from './draft';
 import { EngineBugError } from './errors';
@@ -96,7 +97,9 @@ class RunCtx<G extends GameTypes> implements Ctx<G> {
   // the state's capped log.
   emit(input: EventInput<G>): void {
     const s = this.s as Work;
-    const stamped = { ...input, seq: takeSeq(s), ...this.stamp?.(this.s) } as KernelEvent;
+    const c = currentCause(this);
+    const given = (input as { cause?: unknown }).cause;
+    const stamped = { ...input, ...(given === undefined ? (c !== undefined ? { cause: c } : {}) : {}), seq: takeSeq(s), ...this.stamp?.(this.s) } as KernelEvent;
     this.events.push(stamped);
     const kept = s.log.length >= LOG_CAP ? s.log.slice(s.log.length - LOG_CAP + 1) : s.log;
     s.log = [...kept, stamped] as typeof s.log;
