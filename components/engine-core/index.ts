@@ -79,3 +79,5 @@ export { clearLastKnown, clearLeft, hasLeft, isCurrent, lastKnown, lastKnownIn, 
 export { doesNothing, idleProblems, markIdle } from './idle';
 export { enumerateAnswers, expectEvents, firstPicks, playUntil, randomPicks, skipEmptyProblems, type Played } from './answers';
 export { causeProblems, currentCause, effectCause, inCause, ruleCause, type Cause, type CauseCheck } from './cause';
+export { askOrTake, bar, blocked, onlyOne, type Blocked, type OnlyOneNotice } from './legal';
+export { preview, type Preview, type PreviewOptions, type PreviewStop } from './preview';

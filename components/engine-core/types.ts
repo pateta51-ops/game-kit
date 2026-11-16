@@ -22,6 +22,10 @@ export interface KernelOption {
   readonly why?: string;
   /** K91: legal, but choosing it changes nothing (the game's words why). Not read by `validateAction`; the UI warns, never hides. */
   readonly idle?: string;
+  /** K88: a barred option's reason code (the game's, e.g. condition, cannotChoose, cannotPay, noTarget). */
+  readonly reason?: string;
+  /** K88: for a missing target, what was missing, read when the prompt opened. */
+  readonly missing?: string;
 }
 
 export interface KernelPrompt {

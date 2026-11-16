@@ -101,6 +101,16 @@
         "paths": [
           "src/rules/core/cause.ts (Cause, ruleCause, effectCause, inCause, currentCause)"
         ]
+      },
+      {
+        "game": "marvel-champions-digital-game",
+        "url": "https://github.com/quincarter/marvel-champions-digital-game",
+        "licence": "AGPL-3.0 (idea only, no code copied)",
+        "paths": [
+          "packages/engine/src/legal.ts (blocked targets with reasons; design only)",
+          "packages/engine/src/choices.ts (unavailable options, only-option notice; design only)",
+          "packages/engine/src/preview.ts (outcome preview by probe; design only)"
+        ]
       }
     ]
   },

@@ -68,7 +68,7 @@ export function validateAction<G extends GameTypes>(state: G['state'], action: G
     const option = prompt.options.find((o) => o.id === id);
     if (option === undefined) return no('BAD_CHOICE', `"${id}" is not an option of this prompt.`);
     if (!option.enabled) {
-      return no('NOT_LEGAL', `"${id}" cannot be chosen${option.why === undefined ? '' : `: ${option.why}`}.`);
+      return no('NOT_LEGAL', `"${id}" cannot be chosen${option.reason === undefined ? '' : ` (${option.reason})`}${option.why === undefined ? '' : `: ${option.why}`}.`);
     }
   }
   const rs = (action as { reseed?: unknown }).reseed;
