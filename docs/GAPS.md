@@ -139,10 +139,10 @@ The kit has the parts around the host but not the host itself: `prompt-gallery` 
 
 7. **Known open gap [read].** 7th Inning Stretch's handoff records that sound-player's `playTrack` always plays a cue's first file. The game works around it.
 
-## State of these items (gap architect, 16 Nov 2026)
+## State of these items (updated 16 Nov 2026, kit v0.57.0)
 
-- A1: K202 (face), K203 (zoom). A2: K123 reopened. A3: K204. A4: K206. A5: done (K168, K169). A6: K170 done; K36 done. A7: K211 dice tray; K35 and K33 done.
-- B1, B2: done (K201). B3: K205. B4: K207 (the planner reference part is done). B5: K208. B6: K209. B7: K210.
+- A1: done as K202 `card-parts` and K203 `card-zoom`. Scope changed on the owner's word (16 Nov): no shared layout; the layout is game data. A2: done, K123 `prompt-host`. A3: done, K204 `scaffold` (`kit.mjs new`). A4: done, K206 `card-language`. A5: done (K168, K169). A6: done (K170, K36). A7: done, K211 `dice-tray`; K35 and K33 done.
+- B1, B2: done (K201). B3: done, K205 `reference-game`. B4: done, K207 plan-checker stale-pin warnings. B5: done, K208 `kit.mjs next-id`. B6: done, K209 `tooling-scripts` worktree-setup, worker-finish, worktree-teardown. B7: done, K210 `kit.mjs state`.
 - C1, C3, C4, C5, C6: **watch**. No merge or refactor now; revisit when a game's use shows the cost.
 - C2: **watch**. Radiance is the first card game on the card-timing engine; its gap reports become kit fix tasks.
-- C7: K212.
+- C7: done, K212 (`sound-player` playTrack fix).

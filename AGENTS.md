@@ -12,6 +12,9 @@ Private shared code for digital board-game builds: one best version of each reus
 - `node ../game-kit/kit.mjs pull ../game-kit <tag> <component...>` copies components (and their `needs`) and writes `kit/kit.lock.json` plus `kit/CATALOG.md`. `node kit/kit.mjs check` fails when `kit/` differs from the lock; every game runs it in its check chain.
 - Inside a game, find what exists without the kit checkout: `node kit/kit.mjs list`, `node kit/kit.mjs search <word>`.
 - Before adding a row to `docs/PLAN.md`, take its id with `node kit.mjs next-id` (in the game-kit checkout); it reads main and every open PR.
+- Start a new game: `node tools/game-server/server.mjs add ...`, then `node kit.mjs new <dir> <id> "<Name>"` (scaffold).
+- Workers: `worktree-setup` and `worker-finish` (tooling-scripts) set up and close a worktree; `worktree-teardown` removes it.
+- `reference-game` is the contract test of the kit's pieces; `card-parts` and `card-zoom`: the game owns its layout, the kit gives parts.
 - Pulling a newer tag happens only when the game needs something in it. Commit `kit/`.
 
 ## Choose components for a new game
