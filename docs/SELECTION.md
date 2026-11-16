@@ -68,6 +68,8 @@ Open check before the lift: the canonical JSON of the Jarl line and of STCC buil
 | Transcription check (K168) | UFS (the only one: two independent transcriptions, diff, owner verification by file hash, gate; generic once the item list and schema are passed in) | - | M |
 | Tutorial engine | STCC (most complete and tested, owner decision notes) | Jarl's pure state machine and placement; Rome's highlight; Warp's deck-order seed script; UFS's coach, first-time tips and driver suggestions with reasons (K170) | L |
 | Tutorial freeze | Pattern only | | |
+| Achievements (K160) | New; ideas only from marvel-lcg (nothing stored, versioned summary) and ArkhamHorror (catalogue, checklists); builds on play-stats, which holds no summary | | M |
+| Prompt source (K90) | New; idea only from marvel-champions-digital-game (choice frame, decision authority, stack view) | | S |
 | Story | Pattern only: Marvel and Arkham story code is AGPL or unlicensed, so written fresh (data shape, narrator fallback, sheet parts, picture note) | | S |
 | Campaign log (K156) | No game: a new design from ideas in ArkhamHorror, LordOfTheRings and Marvel Champions (see `docs/evaluation/outside/story-campaign-*.md`) | | S |
 | Game log | New (K86): the design of ArkhamHorror's narrator (no licence, so no code copied): one table from engine event to row, rows as data, append-only, grouped by id | Undo to a line, hover preview (K87); space and piece refs (K122) | M |

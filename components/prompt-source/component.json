@@ -1,0 +1,14 @@
+{
+  "name": "prompt-source",
+  "source": {
+    "game": "marvel-champions-digital-game (idea only, AGPL-3.0, no code copied)",
+    "repo": "https://github.com/quincarter/marvel-champions-digital-game",
+    "licence": "AGPL-3.0 (idea only)",
+    "commit": "ideas-only",
+    "paths": [
+      "docs/evaluation/outside/marvel-champions.md items 5 to 7 (packages/engine/src/stack-view.ts, packages/engine/src/choices.ts DecisionAuthority, packages/client/src/view/choice-source.ts; source not read, written new)"
+    ]
+  },
+  "needs": [],
+  "packages": []
+}
