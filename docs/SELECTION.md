@@ -79,6 +79,7 @@ Open check before the lift: the canonical JSON of the Jarl line and of STCC buil
 | Ghost card (K92) | No game: a new design from ArkhamHorror `ghostAbility.ts` (no licence, so no code copied): a choice whose source left play grouped under its last-known snapshot (engine-core K113) | | S |
 | Achievements (K160), K162 | New; ideas only from marvel-lcg (nothing stored, versioned summary) and ArkhamHorror (catalogue, checklists); builds on play-stats, which holds no summary | | M |
 | Challenges (K163) | New; idea only from marvel-lcg (a challenge as a content item: setup restriction plus triggered penalties) | | S |
+| Dice odds (`dice-odds`, K24) | New code from the K24 row (a finished build, 15 Nov 2026): multiset enumeration with multinomial weights, `chance(k, test)`, cached per thread | - | S |
 
 ## Menus shell and phone
 

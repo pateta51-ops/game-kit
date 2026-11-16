@@ -1,0 +1,10 @@
+{
+  "name": "dice-odds",
+  "source": {
+    "game": "outside",
+    "commit": "none (new code from the K24 row, a finished build of 15 Nov 2026)",
+    "paths": ["docs/PLAN.md row K24"]
+  },
+  "needs": [],
+  "packages": []
+}
