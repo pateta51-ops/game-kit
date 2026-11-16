@@ -3,6 +3,7 @@ export { rulingGroups, Scenario, scenarioLiteral, type ScenarioGame, type Scenar
 export { Delivery, type Delivered, type DeliveryGame } from './delivery';
 export { clauseIds, inventory, runInventory, testFiles, type Clause, type Inventory, type InventoryInput, type InventoryIo, type Piece, type Row, type TestFile } from './inventory';
 export { conforms, describeCheck, report, type DescribedCard, type DR, type Is, type Same } from './checks';
+export { diffPaths, roundTripCards } from './roundtrip';
 export { parseCsv } from './csv';
 export { expectResolved, traceAbilities, type AbilityTrace } from './trace';
 export { renderRecords, type Reading, type Render, type RenderedLine, type RenderInput, type Say } from './render';

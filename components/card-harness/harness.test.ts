@@ -5,6 +5,28 @@ import { clauseIds, conforms, createProbe, Delivery, describeCheck, expectResolv
 import { literalsOf } from './literals';
 import { DICE, DICE_GAME, PROBE, type DiceEvent, type Dice, type DiceState, type Note } from './fake/dice';
 import { applyAction } from '../engine-core';
+import { diffPaths, roundTripCards } from './roundtrip';
+
+describe('K124 cast and K114 round trip', () => {
+  it('cast returns the open prompt of that kind and names the kind otherwise', () => {
+    const base = new Scenario(DICE_GAME);
+    const s = { ...base.s, prompt: { id: 1, options: [], min: 0, max: 0, kind: 'pick' } };
+    const sc = new Scenario(DICE_GAME, { from: { state: s, events: [] } });
+    expect((sc.cast('pick') as { id: number }).id).toBe(1);
+    expect(() => sc.cast('order')).toThrow(/Expected a order prompt, found kind pick/);
+    expect(() => base.cast('pick')).toThrow(/found none/);
+  });
+  it('every card survives a JSON round trip and plays the same from the copy', () => {
+    const entries = ['twin', 'ladder', 'plain'].map((card) => ({ card, where: 'hand' as const, task: (id: string) => ({ kind: 'play', card: id }) }));
+    expect(roundTripCards(DICE_GAME, entries)).toEqual([]);
+  });
+  it('names the path of a non-plain value', () => {
+    expect(diffPaths({ a: new Set([1]) }, { a: {} })).toEqual(['$.a']);
+    expect(diffPaths({ a: undefined }, {})).toEqual(['$.a']);
+    const game = { ...DICE_GAME, start: () => ({ ...DICE_GAME.start(), when: new Date(0) }) };
+    expect(roundTripCards(game, [{ card: 'twin', where: 'hand' }])).toEqual(['twin: state is not plain JSON at $.when']);
+  });
+});
 
 describe('scenario', () => {
   it('builds a position, plays a card through the rules and records events', () => {

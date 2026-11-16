@@ -135,6 +135,12 @@ export class Scenario<G extends GameTypes, W, D = never> {
     const p = this.s.prompt;
     return p === null ? 'no prompt is open' : `open prompt ${String(p.id)}: ${JSON.stringify(p)}\noffered: ${this.options().join(', ') || 'none'}`;
   }
+  /** K124: the open prompt narrowed to its `kind`; throws naming the kind found (or none) otherwise. */
+  cast<K extends string>(kind: K): Extract<G['prompt'], { kind: K }> {
+    const p = this.s.prompt as { kind?: unknown } | null;
+    if (p === null || p.kind !== kind) throw new Error(`Expected a ${kind} prompt, found ${p === null ? 'none' : `kind ${String(p.kind)}`}\n${this.open()}`);
+    return p as Extract<G['prompt'], { kind: K }>;
+  }
   /** Fails when a prompt is still open, printing it (K102). */
   noPrompt(): this {
     if (this.s.prompt !== null) throw new Error(`A prompt is left open: ${this.open()}`);
