@@ -44,7 +44,7 @@ export interface VoiceOptions {
 
 export interface Voice {
   /** Asks for a line. True when it started or waits. */
-  play: (id: string, o?: { parts?: readonly string[] }) => boolean;
+  play: (id: string, o?: { parts?: readonly string[]; pieces?: readonly string[]; gapsMs?: readonly number[] }) => boolean;
   setEnabled: (on: boolean) => void;
   enabled: () => boolean;
   /** The voice bus volume, 0 to 1 (the sound player's own `setVolumes({ voice })`). */
@@ -70,9 +70,9 @@ export interface VoiceCue {
 }
 
 /** Cue entries for the sound table's `cues`: every file of every line and part, on the voice bus. */
-export function voiceCues(t: VoiceTable): Record<string, VoiceCue> {
+export function voiceCues(t: VoiceTable, extraFiles: readonly string[] = []): Record<string, VoiceCue> {
   const out: Record<string, VoiceCue> = {};
-  const files = [...Object.values(t.lines).flatMap((l) => l.files), ...Object.values(t.parts ?? {})];
+  const files = [...Object.values(t.lines).flatMap((l) => l.files), ...Object.values(t.parts ?? {}), ...extraFiles];
   for (const f of files) out[voiceCue(f)] = { files: [f], tier: 'normal', bus: 'voice' };
   return out;
 }
@@ -80,6 +80,7 @@ export function voiceCues(t: VoiceTable): Record<string, VoiceCue> {
 interface Item {
   id: string;
   files: string[];
+  gaps?: readonly number[] | undefined;
 }
 
 export function createVoice(o: VoiceOptions): Voice {
@@ -116,7 +117,7 @@ export function createVoice(o: VoiceOptions): Voice {
       timer = setTimeout(() => step(i + 1), timeout + g);
       let ended = false;
       o.player.play(voiceCue(f), {
-        delayMs: i === 0 ? 0 : g,
+        delayMs: i === 0 ? 0 : (item.gaps?.[i - 1] ?? g),
         onEnd: (how) => {
           if (ended) return;
           ended = true;
@@ -149,7 +150,7 @@ export function createVoice(o: VoiceOptions): Voice {
   const play: Voice['play'] = (id, opts = {}) => {
     const def = o.table.lines[id];
     if (dead || !on || def === undefined) return false;
-    const files = [...def.files];
+    const files = [...(opts.pieces ?? def.files)];
     for (const p of opts.parts ?? []) {
       const f = o.table.parts?.[p];
       if (f === undefined) return false;
@@ -161,11 +162,11 @@ export function createVoice(o: VoiceOptions): Voice {
     if (!limitOk(id, true)) return false;
     if (current === null && o.mayPlay?.(id) === false) return false;
     if (current !== null) {
-      queue.push({ id, files });
+      queue.push({ id, files, gaps: opts.gapsMs });
       while (queue.length > maxWaiting) queue.shift();
       return true;
     }
-    run({ id, files });
+    run({ id, files, gaps: opts.gapsMs });
     return true;
   };
 

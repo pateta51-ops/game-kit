@@ -186,6 +186,24 @@ describe('voice', () => {
     expect(voice.playing()).toBeNull();
   });
 
+  it('pieces play as one line of the id with their own gaps; limits count it once; a missing piece silences it', () => {
+    const { voice, started, files } = fake({ gapMs: 120, dead: ['bad.ogg'] });
+    expect(voice.play('once', { pieces: ['a.ogg', 'b.ogg', 'c.ogg'], gapsMs: [10] })).toBe(true);
+    started[0]!.end();
+    started[1]!.end();
+    started[2]!.end();
+    expect(files()).toEqual(['a.ogg', 'b.ogg', 'c.ogg']);
+    expect(started.map((s) => s.delayMs)).toEqual([0, 10, 120]);
+    expect(voice.counts()['once']).toBe(1);
+    expect(voice.play('once', { pieces: ['a.ogg'] })).toBe(false);
+    expect(voice.play('hello', { pieces: ['a.ogg', 'bad.ogg'] })).toBe(false);
+    expect(started).toHaveLength(3);
+  });
+
+  it('voiceCues accepts extra files', () => {
+    expect(voiceCues(table, ['x.ogg'])['voice:x.ogg']).toEqual({ files: ['x.ogg'], tier: 'normal', bus: 'voice' });
+  });
+
   it('voiceCues puts every file of the lines and parts on the voice bus', () => {
     const c = voiceCues(table);
     expect(c[voiceCue('hello.ogg')]).toEqual({ files: ['hello.ogg'], tier: 'normal', bus: 'voice' });

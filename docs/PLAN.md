@@ -171,6 +171,7 @@ Decided by the owner, 16 Nov 2026:
 | Row | Content | Sources | Effort | State |
 |---|---|---|---|---|
 | K164 | `scan-ingest`: flatbed scans to card crops and a content pack (Python) | scanning-pipeline, Unstoppable, Imperium | L | approved |
+| K167 | `voice`: `play(id, { pieces, gapsMs })` plays given files as one line of the id with a gap after each; `voiceCues(table, extraFiles)` | 7th Inning Stretch (ideas only) | S | done |
 | - | Information-set search driver; paired branch tester for AI variants | STCC | L | competitive two-player games only |
 | - | LLM opponent plumbing | STCC | L | competitive two-player games only |
 | - | Second-engine tooling (TypeScript and Rust twins) | Warp's | L | competitive two-player games only |
