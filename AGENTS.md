@@ -38,12 +38,19 @@ Private shared code for digital board-game builds: one best version of each reus
 - Unseeded randomness in an engine (`Math.random`, clock): only `ctx.rng`.
 - Editing `docs/CATALOG.md` by hand: run `node scripts/catalog.mjs`.
 - Running heavy tests locally on Windows.
+- Inventing a port, or hard-coding one that is not in `ports.json` (see "Ports" below).
 - Re-reading files or pictures already in context; repeating a failed call unchanged (three strikes, then stop and report).
 
 ## Where tests and CI run
 - Never heavy tests on local Windows. CI and the full gate run on the self-hosted runners (WSL, labelled per game; `kit` for this repo). Local checks: only the ones you touched (types, lint, the test file).
 - Here: `npm run check` = lint, typecheck, vitest, `components:check` (component rules and the catalogue is current). Worktrees lack `node_modules`: link them from another checkout, never commit them.
 - A game's gate comes from `ci-templates`; its check chain from `check-runner`.
+
+## Ports: one source of truth
+- Every port used by a game, tool, test or agent comes from [`ports.json`](ports.json) (readable view: [docs/PORTS.md](docs/PORTS.md), generated). Never invent one.
+- Each game owns a block of 10 from 6010: dev = block, preview = +1, e2e = +2, second e2e = +3, the rest spare. 4170-4199 is phone serving only; 5190-5299 is Codex worktree servers; CI picks a free port.
+- A new game gets its block with `node tools/game-server/server.mjs add <id> "<Name>" <repo path>`; it prints what to set in vite and Playwright. Commit `ports.json` and `docs/PORTS.md` here.
+- Any port change goes into `ports.json` first (validated on load by `validatePorts` in `tools/game-server/lib.mjs`), then into the game. More: [tools/game-server/README.md](tools/game-server/README.md).
 
 ## Owner's standing rules that touch code
 - **Never prettify**: no reformatting, tidy-ups, renames for style, decorative comments or docstrings. Shortest correct code; change only what the task needs.
