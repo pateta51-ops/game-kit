@@ -1,0 +1,20 @@
+{
+  "name": "lint-preset",
+  "source": {
+    "game": "jarl",
+    "commit": "6f006a2",
+    "paths": ["eslint.config.js (lines 40-63 copy-on-write selectors, 116-150 engine purity, 191-194 engine through its index)"],
+    "grafts": [
+      {
+        "game": "ebr",
+        "commit": "33b5abd3",
+        "paths": [
+          "eslint.config.js (lines 8-29 and 63-119: card-id pattern, import allow-list, timers and Intl, callers through the api file)",
+          "eslint.prefixes.js",
+          "tests/unit/lint-prefixes.test.ts"
+        ]
+      }
+    ]
+  },
+  "needs": []
+}
