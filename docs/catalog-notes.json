@@ -63,6 +63,10 @@
     "use": "The card data needs corrections without editing the source data.",
     "not": "Card behaviour; patches change data only."
   },
+  "card-zones": {
+    "use": "Decks, hands, discards and play areas as ordered id lists in engine state, with who sees what and a per-seat view for opponents and the UI.",
+    "not": "Boards and spaces (board-model), card faces, or rules about running out."
+  },
   "card-query": {
     "use": "Cards must be searched or filtered by a small text query.",
     "not": "Game-rule target selection inside the engine."

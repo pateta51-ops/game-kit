@@ -1,0 +1,33 @@
+{
+  "name": "card-zones",
+  "source": {
+    "game": "imperium",
+    "commit": "see note",
+    "paths": [
+      "src/engine/core/zones.ts (lists of card ids, index 0 top, no zone field, one-step move; shape only, written new)"
+    ],
+    "grafts": [
+      {
+        "game": "unstoppable",
+        "commit": "see note",
+        "paths": [
+          "src/engine/core/zones.ts (place at top or bottom)",
+          "src/engine/select/view.ts (INFO-04: count only, top only; as the per-seat visibility)"
+        ]
+      },
+      {
+        "game": "rome",
+        "commit": "see note",
+        "paths": ["src/engine/types/state.ts (deck, hand, discard per seat)"]
+      },
+      {
+        "game": "stcc",
+        "commit": "see note",
+        "paths": ["src/engine/types/cardlang.ts (discardTop, takeTop to deckTop or discard: the move verbs)"]
+      }
+    ],
+    "note": "K223 (GAPS D1): compared the four games' engine state, written new on engine-core; commits are the main checkouts of 16 Nov 2026."
+  },
+  "needs": ["engine-core"],
+  "packages": []
+}
