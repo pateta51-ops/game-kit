@@ -216,7 +216,7 @@ Sixteen public card- and board-game repositories were surveyed read-only; the fi
 | K95 | `engine-core`: one checkpoint step after every action in rulebook order, and a recompute-until-stable pass with a cap | netrunner | M | proposed |
 | K96 | Card language: continuous-effects registry with typed durations | netrunner, marvel-champions-digital-game | M | proposed |
 | K97 | `card-harness`: strict validator (unknown keys fail, variables bound before read, cited opt-outs stored as data); grammar reference generated from source | marvel-champions-digital-game, ArkhamHorror, netrunner | M | proposed |
-| K98 | `card-harness`: ability-fired trace (looked up against actually run); `expectResolved` | marvel-champions-digital-game | S | proposed |
+| K98 | `card-harness`: ability-fired trace (looked up against actually run); `expectResolved` | marvel-champions-digital-game | S | done |
 | K99 | `tooling-scripts`: `card <id>`, `dsl <word>` and `refs` lookup commands generated on each run | marvel-champions-digital-game | M | done |
 | K100 | Debug edits as engine actions (set a counter, summon a card, force the next random result, close a stuck prompt) and a console for them | ArkhamHorror, netrunner | M | proposed |
 | K101 | `sim-pool`: render the view on every step; hasten mode; one-answer replay of the failing step with timings | halogenandtoast MarvelChampions | S | proposed |

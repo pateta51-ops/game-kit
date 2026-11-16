@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { conforms, createProbe, Delivery, describeCheck, inventory, report, runInventory, Scenario, testFiles, type DeliveryGame, type Same } from './index';
+import { conforms, createProbe, Delivery, describeCheck, expectResolved, inventory, report, runInventory, Scenario, testFiles, traceAbilities, type DeliveryGame, type Same } from './index';
 import { literalsOf } from './literals';
 import { DICE, DICE_GAME, PROBE, type Dice, type DiceState, type Note } from './fake/dice';
 import { applyAction } from '../engine-core';
@@ -245,5 +245,30 @@ describe('index entries and strict citation', () => {
     expect(inventory({ titleOnly: true, pieces: [{ kind: 'p', id: 'pair' }], clauses: [{ id: 'CL-9', cards: [] }], tests }).uncited).toEqual(['p:pair', 'clause:CL-9']);
     const t2 = [{ path: 'a.test.ts', text: "it('pair works', () => {})" }];
     expect(inventory({ titleOnly: true, pieces: [{ kind: 'p', id: 'pair' }], tests: t2 }).uncited).toEqual([]);
+  });
+});
+
+describe('ability-fired trace (K98)', () => {
+  it('a card looked up but not run fails expectResolved; a run card passes', () => {
+    const t = traceAbilities(Object.freeze({ ...DICE_GAME.content }), 'gain');
+    const sc = new Scenario({ ...DICE_GAME, content: t.registry }).set((s) => void (s.dice = [1, 2, 3]));
+    const [twin] = sc.put('hand', 'twin');
+    sc.run({ kind: 'play', card: twin as string });
+    expect(sc.s.score).toBe(0);
+    expect(t.considered.has('twin')).toBe(true);
+    expect(() => expectResolved(t, 'twin', 'ladder')).toThrow('Not resolved: twin (looked up, not run), ladder (never looked up)');
+    t.clear();
+    sc.set((s) => void (s.dice = [2, 2, 5]));
+    const [twin2] = sc.put('hand', 'twin');
+    sc.run({ kind: 'play', card: twin2 as string });
+    expect(() => expectResolved(t, 'twin')).not.toThrow();
+    expect([...t.resolved]).toEqual(['twin']);
+  });
+  it('takes only a record of objects by id (an array or Map would break behind the copy)', () => {
+    // @ts-expect-error an array is not a record by id
+    expect(() => traceAbilities([{ id: 'a' }])).not.toThrow();
+    // @ts-expect-error a Map is not a record by id
+    expect(() => traceAbilities(new Map([['a', {}]]))).not.toThrow();
+    expect(traceAbilities({ a: { effects: [1] } }).registry.a?.effects).toEqual([1]);
   });
 });

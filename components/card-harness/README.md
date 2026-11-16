@@ -11,5 +11,7 @@ Card tests on real cards. Test code only; the engine imports nothing here but `c
 - **Scenario `{ from: { state, events } }`**: starts from a built state and its events; the state is trusted, not validated unless `validate` is on.
 - **Checks**: `describeCheck(cards, describe, validate?, tokens?)` (generated reading equals the printed text word for word, `[TOKENS]` both ways); `conforms<Same<A, B>>()` (schema type equals engine type, at compile time); `report(name, errors, log)` gives the exit code.
 - **Strict checks** (`new Scenario(game, { strict: true })`): `script([picks], …)` answers the prompts that open next; `check(label, fn)` fails mid-run naming label and step; `done()` fails on a leftover scripted answer, an open prompt (strict), or equal entries in the game's optional `effects(state)`. Strict `answer` with no open prompt throws.
+- **Ability trace** (`traceAbilities(registry, field = 'effects')`): pass `.registry` (the game's ability or card record, wrapped) as the content; `considered` holds ids looked up, `resolved` ids whose `field` was read to run. `expectResolved(trace, ...ids)` fails a test whose card never ran, saying looked up or never reached; `clear()` between parts.
+- Walking the whole registry (`Object.values`, hashing, validation) through `.registry` marks every id looked up, and run if it reads `field`: trace only the content the engine reads to play.
 
 Known bugs are pinned as `it.fails('EXPECTED FAILURE: â€¦')`.
