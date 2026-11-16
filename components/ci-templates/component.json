@@ -3,7 +3,14 @@
   "source": {
     "game": "jarl",
     "commit": "6f006a2",
-    "paths": [".github/workflows/ci.yml", ".github/workflows/full-gate.yml", ".github/scripts/full-gate.mjs", "tools/architect/local-ci.sh", "tools/architect/gate-slot.sh", "tools/runner/install-wsl.sh"]
+    "paths": [".github/workflows/ci.yml", ".github/workflows/full-gate.yml", ".github/scripts/full-gate.mjs", "tools/architect/local-ci.sh", "tools/architect/gate-slot.sh", "tools/runner/install-wsl.sh"],
+    "grafts": [
+      { "game": "rome", "commit": "1d0fd2e", "paths": ["tools/architect/watch-run.sh"] },
+      { "game": "imp", "commit": "20a033a", "paths": ["tools/architect/watch-run.sh", "tools/architect/gate-numbers.py"] },
+      { "game": "stcc", "commit": "9fc59643", "paths": ["tools/architect/gate-numbers.py"] },
+      { "game": "warps", "commit": "2af6937", "paths": [".github/workflows/nightly-fuzz.yml"] },
+      { "game": "ebr", "commit": "33b5abd3", "paths": ["tests/helpers/skipReporter.ts"] }
+    ]
   },
   "needs": []
 }

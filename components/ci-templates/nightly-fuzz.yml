@@ -1,0 +1,40 @@
+# The nightly fuzz run (`npm run fuzz:nightly`: many random games, the invariants after every action) on the self-hosted
+# runner (label {{RUNNER_LABEL}}). It fails on any failure; the log names each failed game's seed. Never on a PR.
+# - When: 10:23 UTC, when the runner's machine is idle (change the cron to suit); or by hand (workflow_dispatch).
+# - Never beside a gate: a runner that runs one job at a time makes a gate queued meanwhile wait. Its own concurrency
+#   group keeps a second nightly from starting while one runs; the gates keep their per-PR groups (a shared group would
+#   replace a queued gate).
+name: Nightly fuzz
+
+on:
+  schedule:
+    - cron: '23 10 * * *'
+  workflow_dispatch:
+
+concurrency:
+  group: nightly-fuzz
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  fuzz:
+    if: github.repository_owner == '{{OWNER_LOGIN}}'
+    name: Nightly fuzz
+    runs-on: [self-hosted, {{RUNNER_LABEL}}]
+    timeout-minutes: 45
+    # Its own directory, away from ci.yml's workspace and the full gate's checkout.
+    defaults:
+      run:
+        working-directory: nightly
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: main
+          path: nightly
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: nightly/.nvmrc
+      - run: npm ci --no-audit --no-fund
+      - run: npm run fuzz:nightly
