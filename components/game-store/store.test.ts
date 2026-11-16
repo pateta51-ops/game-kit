@@ -1,0 +1,132 @@
+import { describe, expect, it } from 'vitest';
+import { createSave, draftOf, exportSave, type SaveFile, hashState, hashValue, seedRng, type AnswerAction, type Ctx, type Draft, type GameRules, type History, type KernelPrompt, type KernelState } from '../engine-core/index.ts';
+import { autoAnswer } from '../prompt-host/index.ts';
+import { playOne } from '../sim-pool/index.ts';
+import { createGameStore, defineGame } from './index.ts';
+import { simGameOf } from './sim.ts';
+
+// A fake two-seat race (tests only): a turn asks `add` (1 or 2), then a `note` with one option; first to 6 wins.
+type Seat = 'a' | 'b';
+interface S extends KernelState {
+  readonly stack: readonly { readonly kind: string; readonly answer?: readonly string[] }[];
+  readonly prompt: (KernelPrompt & { readonly kind: string; readonly seat: Seat }) | null;
+  readonly turn: Seat;
+  readonly score: Readonly<Record<Seat, number>>;
+  readonly secret: Readonly<Record<Seat, string>>;
+  readonly log: readonly { readonly seq: number; readonly type: string; readonly reveal?: boolean }[];
+}
+interface G {
+  readonly state: S;
+  readonly action: AnswerAction;
+  readonly task: S['stack'][number];
+  readonly prompt: NonNullable<S['prompt']>;
+  readonly event: S['log'][number];
+  readonly stamped: never;
+  readonly content: { readonly target?: number };
+  readonly options: { readonly seed: string };
+  readonly rules: object;
+}
+const opt = (id: string) => ({ id, enabled: true });
+const RULES: GameRules<G> = {
+  handlers: {
+    turn: (ctx: Ctx<G>) => ctx.ask({ kind: 'add', seat: draftOf(ctx).turn, min: 1, max: 1, options: [opt('1'), opt('2')] }, { kind: 'added' }),
+    added: (ctx, t) => {
+      const s = draftOf(ctx);
+      s.score = { ...s.score, [s.turn]: s.score[s.turn] + Number(t.answer?.[0]) };
+      ctx.emit({ type: 'added', ...(t.answer?.[0] === '2' ? { reveal: true } : {}) });
+      ctx.ask({ kind: 'note', seat: s.turn, min: 1, max: 1, options: [opt('ok')] }, { kind: 'next' });
+    },
+    next: (ctx) => {
+      const s = draftOf(ctx);
+      if (s.score[s.turn] >= (ctx.content.target ?? 6)) return void (s.result = { winner: s.turn });
+      s.turn = s.turn === 'a' ? 'b' : 'a';
+      ctx.then({ kind: 'turn' });
+    },
+  },
+  blank: ({ seed }): Draft<S> => {
+    const [a, b, c, d] = seedRng(seed);
+    return { rng: { a, b, c, d }, stack: [], prompt: null, result: null, seq: 1, promptSeq: 1, log: [], turn: 'a', score: { a: 0, b: 0 }, secret: { a: 'sa', b: 'sb' } };
+  },
+  setup: (ctx) => ctx.then({ kind: 'turn' }),
+  contentHash: (c) => hashValue(c),
+};
+const def = defineGame<G, { seat: Seat; mine: string; score: S['score']; prompt: G['prompt'] | null }, Seat>({
+  rules: RULES,
+  content: {},
+  seats: ['a', 'b'],
+  start: (seed) => ({ options: { seed }, rules: {} }),
+  view: (s, seat) => ({ seat, mine: s.secret[seat], score: s.score, prompt: s.prompt?.seat === seat ? s.prompt : null }),
+  forced: (p) => autoAnswer(p, true),
+  opponent: (v, p) => [p.kind === 'note' ? 'ok' : v.mine === 'sb' ? '1' : '2'],
+});
+
+describe('game-store (K234)', () => {
+  it('one click is one undo step: the forced note and the opponent turn join it; paced once', () => {
+    const store = createGameStore(def, { seat: 'a', seed: 'x' });
+    const p = store.get().state.prompt;
+    expect(p?.kind).toBe('add');
+    expect(store.answer(['1'], p?.id ?? 0)).toBe(true);
+    const after = store.get();
+    expect(after.state.prompt?.seat).toBe('a');
+    expect(after.state.score).toEqual({ a: 1, b: 1 });
+    expect(after.history.steps.length).toBe(1);
+    expect(after.steps.queue.length).toBe(2);
+    store.advance();
+    expect(store.get().steps.queue.length).toBe(1);
+    expect(store.undo()).toBe(true);
+    expect(store.get().state.score).toEqual({ a: 0, b: 0 });
+    expect(store.redo()).toBe(true);
+    expect(store.get().state.score).toEqual({ a: 1, b: 1 });
+  });
+
+  it('drops a stale prompt id; safe undo refuses a step that revealed', () => {
+    const store = createGameStore(def, { seat: 'a', seed: 'y' });
+    const id = store.get().state.prompt?.id ?? 0;
+    expect(store.answer(['2'], id + 7)).toBe(false);
+    expect(store.answer(['2'], id)).toBe(true);
+    expect(store.canUndo().ok).toBe(false);
+    expect(store.undo()).toBe(false);
+  });
+
+  it('autosaves after each answer; load rebuilds the same state and its undo steps', async () => {
+    const saved: History<G>[] = [];
+    const saves = { writeAutosave: (h: History<never>) => Promise.resolve(saved.push(h as unknown as History<G>)) };
+    const store = createGameStore(def, { seat: 'a', seed: 'z', saves });
+    store.answer(['1'], store.get().state.prompt?.id ?? 0);
+    store.answer(['1'], store.get().state.prompt?.id ?? 0);
+    await store.autosaved();
+    expect(saved.length).toBe(2);
+    const h = saved[1] as History<G>;
+    const back = createGameStore(def, { seat: 'a' });
+    expect(back.load(createSave(RULES, { options: h.options, rules: h.rules, actions: h.actions, undoUsed: false, savedAt: '' }, {}))).toBeNull();
+    expect(hashState(back.get().state)).toBe(hashState(store.get().state));
+    expect(back.get().history.steps.length).toBe(2);
+    expect(back.undo()).toBe(true);
+    expect(back.get().state.score).toEqual({ a: 1, b: 1 });
+  });
+
+  it('the opponent reads its own view only; the same def drives sim-pool', () => {
+    expect(JSON.stringify(def.view(createGameStore(def, { seat: 'a' }).get().state, 'b'))).not.toContain('"sa"');
+    const rec = playOne(simGameOf(def, { summary: (s) => s.result }), {}, { index: 0, seed: 's', driver: 'opponent' });
+    expect(rec.result).toEqual({ winner: 'a' });
+  });
+
+  it('loads an older save through its migration and keeps its undo flag for the next autosave', () => {
+    const store = createGameStore(def, { seat: 'a', seed: 'm' });
+    store.answer(['1'], store.get().state.prompt?.id ?? 0);
+    const h = store.saved();
+    const v2 = createSave(RULES, { options: h.options, rules: h.rules, actions: h.actions, undoUsed: true, savedAt: '' }, {}, { version: 2 });
+    const v1 = { ...v2, version: 1, actions: v2.actions.map((a) => ({ ...a, picks: a.picks.map((x) => (x === '1' ? 'one' : x)) })) };
+    const fmt = { version: 2, steps: { 1: (r: Readonly<Record<string, unknown>>) => ({ ...r, actions: (r['actions'] as AnswerAction[]).map((a) => ({ ...a, picks: a.picks.map((x) => (x === 'one' ? '1' : x)) })) }) } };
+    const back = createGameStore({ ...def, format: fmt }, { seat: 'a' });
+    expect(back.load(JSON.parse(exportSave(v1 as SaveFile<G>)) as SaveFile<G>)).toBeNull();
+    expect(hashState(back.get().state)).toBe(hashState(store.get().state));
+    expect(back.saved().undoUsed).toBe(true);
+  });
+
+  it('reports the forced-answer cap and a settle that never stops', () => {
+    const endless = { ...def, content: { target: 1e9 }, forced: (p: G['prompt']) => [p.options[0]?.id ?? ''], opponent: (_v: unknown, p: G['prompt']) => [p.options[0]?.id ?? ''] };
+    expect(createGameStore({ rules: def.rules, seats: def.seats, start: def.start, view: def.view, content: endless.content, forced: endless.forced }, { seat: 'all' as Seat }).get().error).toMatch(/did not stop after 200/);
+    expect(createGameStore(endless, { seat: 'a' }).get().error).toMatch(/1000 rounds/);
+  });
+});

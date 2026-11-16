@@ -1,0 +1,18 @@
+{
+  "name": "game-store",
+  "source": {
+    "game": "imperium",
+    "commit": "see note",
+    "paths": [
+      "src/ui/store/gameStore.ts (dispatch, undo, redo, loadGame: shape only, written new)",
+      "src/ui/store/history.ts (rebuild with answeredBySettings: the undo steps of a loaded save)"
+    ],
+    "grafts": [
+      { "game": "unstoppable", "commit": "see note", "paths": ["src/ui/store (the store and undo.ts: shape only)"] },
+      { "game": "ebr", "commit": "see note", "paths": ["src/ui/store.ts (autosave after each answer, the opponent answering in the store: shape only)"] }
+    ],
+    "note": "K234 (GAPS-4 B2, GAPS-3 A3): written new over engine-core steps, prompt-host forced answers, paced-view and sim-pool; main checkouts of 16 Nov 2026."
+  },
+  "needs": ["engine-core", "prompt-host", "paced-view", "sim-pool", "replay-cli"],
+  "packages": []
+}

@@ -6,7 +6,7 @@ import { createRoot } from 'react-dom/client';
 import { afterEach, describe, expect, it } from 'vitest';
 import { CONTENT, createGame, GAME, RULES } from '../src/engine/api.ts';
 import { App } from '../src/ui/App.tsx';
-import { useGame, useSettings } from '../src/ui/store.ts';
+import { game, useSettings } from '../src/ui/store.ts';
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 window.scrollTo = () => undefined;
@@ -37,17 +37,21 @@ const click = (b: Element | null | undefined): void => {
 describe('reference app (K205)', () => {
   it('answers a pick, an amount and a may through the prompt host', () => {
     // a seed that deals a wild card to the first seat, so the amount prompt opens
-    const seed = Array.from({ length: 200 }, (_, i) => `ui${String(i)}`).find((s) => createGame(GAME, { seed: s }, RULES, CONTENT).state.hands[0]?.[0] === 0) ?? '';
+    const seed = Array.from({ length: 200 }, (_, i) => `ui${String(i)}`).find((s) => CONTENT.cards[createGame(GAME, { seed: s }, RULES, CONTENT).state.zones['hand:0']?.cards[0] ?? ''] === 0) ?? '';
     useSettings.getState().set('obvious', false);
-    useGame.getState().fresh(seed);
+    game.fresh(seed);
+    const first = game.get().state.zones['hand:0']?.cards[0] ?? '';
     const el = show('#/play');
-    click(el.querySelector('[data-kind="pick"] [data-option="h0"]'));
+    click(el.querySelector(`[data-kind="pick"] [data-option="${first}"]`));
     expect(el.querySelector('[data-kind="amount"]')).not.toBeNull();
     click(el.querySelector('.kp-done'));
-    expect(useGame.getState().state.scores[0]).toBeGreaterThan(0);
+    expect(game.get().state.scores[0]).toBeGreaterThan(0);
     click(el.querySelector('[data-kind="may"] [data-option="no"]'));
-    expect(useGame.getState().history.actions.length).toBeGreaterThanOrEqual(3);
-    expect(useGame.getState().state.prompt?.seat ?? 0).toBe(0);
+    expect(game.get().history.actions.length).toBeGreaterThanOrEqual(3);
+    expect(game.get().state.prompt?.seat ?? '0').toBe('0');
+    click(el.querySelector('[data-testid="undo"]'));
+    expect(game.get().state.prompt?.kind).toBe('may');
+    expect(el.querySelector('[data-part="log"], ol, ul')).not.toBeNull();
   });
 
   it('draws the settings and saves screens', () => {

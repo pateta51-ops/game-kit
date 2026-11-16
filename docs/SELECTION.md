@@ -149,6 +149,7 @@ Components with no row above. Each starts from the game and commit in its `compo
 | `card-parts` | STCC `8e6f55b` (face geometry as data, image cache, art provider, `[[token]]` icon text; the layout became named zones the game owns, as every game's faces differ; K202) | M |
 | `card-zoom` | STCC `8e6f55b` (CardDetail: printed text with icons and glossary links beside the card; preview facts for tokens); EBR `33b5abd3` Escape; legend, engine notes and rule-id strip new (K203) | M |
 | `card-zones` | none taken whole: Imperium and Unstoppable `core/zones.ts` (id lists, index 0 top, one-step move), Unstoppable `select/view.ts` (count and top only), Rome and STCC deck, hand, discard per seat; written new on engine-core with per-seat visibility and `viewOf` (K223) | M |
+| `game-store` | none taken whole: Imperium `gameStore.ts` + `history.ts` (rebuild with answeredBySettings), Unstoppable store + `undo.ts`, EBR `store.ts` (autosave, opponent in the store); written new over engine-core steps, prompt-host forced answers, paced-view and sim-pool, with one `defineGame` object (K234) | M |
 | `picked-state` | 7th Inning Stretch `6c82d43` (K165) | S |
 | `scan-ingest` | scanning-pipeline `9ec2378` (K164) | L |
 | `scaffold` | 7th Inning Stretch `bb71c3fa` (K204; config files and scripts only) | M |

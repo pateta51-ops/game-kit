@@ -1,12 +1,13 @@
 # The game store
 
-One store holds the history and answers every prompt; screens only read the view and call `answer`, `undo`. The reference game's store still loops `appendAction` itself and will move to this pattern later; follow this page, not its store.
+One store holds the history and answers every prompt; screens only read the view and call `answer`, `undo`. Use `game-store` (K234); the reference game's `src/ui/store.ts` is the worked example.
 
-1. **History** is engine-core's (`undo.md`): the store keeps `history`, never a copy of the state. Undo takes back one step (one click), via `undoStep`.
-2. **Answers** go through `answerWithForced(RULES, history, action, CONTENT, forced, { seat })`: the click and the forced answers after it are one undo step. At the start of the game, or when the turn reaches this seat, call `sendForced`. Code: [prompts.md](prompts.md) step 5.
-3. **Paced steps.** The returned `events` go to paced-view `pushSteps` once; the screen shows the folded view until the queue is empty. To skip pacing, pass paced-view's `instant` callback to `pushSteps` (see components/paced-view/README.md).
-4. **Autosave** after each accepted answer, through `saves` (`AUTO` slot); save the history, so undo survives a reload ([saves-settings-frame.md](saves-settings-frame.md)).
-5. **The opponent's seat.** When the open prompt's `seat` is the opponent's, the store asks the opponent driver for a choice from that seat's own view (`view(state, seat)`, never the full state) and answers it as that seat, paced like the player's so the player sees it. Drivers: [ai-opponent.md](ai-opponent.md).
-6. **Stale clicks:** compare the answer's prompt id with the open one and drop a mismatch.
+1. **One game object.** In `src/engine/`, `export const GAME_DEF = defineGame({ rules, content, seats, start: (seed) => ({ options, rules }), view, forced, opponent, words })`. `view(state, seat)` is that seat's own view, built from card-zones `viewOf` plus the seat's open prompt: no hidden state of the real game. `forced` is prompt-host `autoAnswer`; `opponent(view, prompt)` returns the picks.
+2. **The store.** In `src/ui/`: `createGameStore({ ...GAME_DEF, forced: (p) => autoAnswer(p, setting) }, { seat: () => mySeat, saves, undo: 'safe' })`. React reads it with `useSyncExternalStore(store.subscribe, store.get)`; pick stable values (`snap.state`, `snap.view`), never a new object per call.
+3. **Answers.** `store.answer(picks, prompt.id)`: a stale id is dropped (false). The click, the forced answers after it (`answerWithForced` with the store's seat) and every answer of the opponent's seat after them (`opponent(view(state, prompt.seat), prompt)`) are one undo step; their events go to paced-view `pushSteps` once. At a new game or a load the store sends the first forced and opponent answers itself.
+4. **Paced steps.** `snap.steps` is the paced-view queue: fold it with `foldView` for the table, call `store.advance()` at each step's end (`createStepper`), `store.skip()` to skip. `instant: () => setting === 'instant'` queues nothing.
+5. **Undo.** `store.undo()`, `store.redo()`, `store.canUndo()` (engine-core `undoStep`: Safe refuses a step that revealed, with the game's `revealWords`; Free allows it). After undo, redo or load the queue is empty.
+6. **Saves.** Pass `saves` (`makeSaves`): every accepted answer, undo and redo autosaves `store.saved()`. `SavesScreen history={store.saved()} onLoad={(save) => store.load(save) ?? undefined}`. `load` replays the save and rebuilds the undo steps: an answer of the store's seat that `forced` would not give starts a step.
+7. **Sims and replays.** `game-store/sim.ts` (node only): `simGame = simGameOf(GAME_DEF, { summary, maxActions })` (drivers `opponent`, from each seat's own view, and `random`), `replayEngineOf(GAME_DEF)`. Do not import `sim.ts` from the UI.
 
-Proof: tests for undo of a click with forced answers, a stale id, and save then load.
+Proof: `components/game-store/store.test.ts` (undo of a click with forced and opponent answers, a stale id, safe refusal, autosave, load with steps) and the reference game's `tests/smoke.test.ts` (a whole game, undo, save in the middle of a card effect, no hidden card in any seat's view).

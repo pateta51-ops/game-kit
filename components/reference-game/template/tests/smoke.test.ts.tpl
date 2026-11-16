@@ -1,4 +1,6 @@
-// K205 contract test: the reference game through engine-core, sim-pool, replay-cli, saves, settings, app-frame and prompt-host.
+// K205 / K234 contract test: the reference game through game-store (defineGame), engine-core step undo, card-zones,
+// card-language with the standard pack, prompt-host forced answers, paced-view, the opponent seat, sim-pool, replay-cli,
+// saves, settings and app-frame, played headless.
 import 'fake-indexeddb/auto';
 import fs from 'node:fs';
 import os from 'node:os';
@@ -8,15 +10,25 @@ import { parseHash, routeHref } from '../kit/app-frame/index.ts';
 import { replay, setInvariantChecking, type AnswerAction } from '../kit/engine-core/index.ts';
 import { autoAnswer } from '../kit/prompt-host/index.ts';
 import { expectVerbs, validateEffect } from '../kit/card-language/index.ts';
+import { hiddenFrom } from '../kit/card-zones/index.ts';
+import { createGameStore } from '../kit/game-store/index.ts';
+import { viewLeaks } from '../kit/opponent/index.ts';
 import { checkGoldens, recordGames, replayGames } from '../kit/replay-cli/golden.ts';
 import type { Io } from '../kit/replay-cli/replay.ts';
 import { playOne, runGames, type GameSpec } from '../kit/sim-pool/index.ts';
-import { applyAction, cardText, CONTENT, createGame, GAME, greedyPicks, hashState, newHistory, recordAction, RULES, VERBS, viewOf, type History, type Ref, type RefState } from '../src/engine/api.ts';
+import { gameResult, logLines } from '../kit/table-panels/index.ts';
+import { cardText, CONTENT, greedyPicks, hashState, REF, RULES, SEATS, VERBS, viewOf, WORDS, type RefState } from '../src/engine/api.ts';
 import { simGame, specs } from '../src/engine/sim.ts';
-import { saves, useGame, useSettings } from '../src/ui/store.ts';
+import { game, saves, useSettings } from '../src/ui/store.ts';
 
 setInvariantChecking(true);
-const greedy = (s: RefState): AnswerAction => ({ kind: 'answer', promptId: s.prompt?.id ?? 0, picks: greedyPicks(viewOf(s, s.prompt?.seat ?? 0)) });
+const mine = (seed: string) => createGameStore(REF, { seat: '0', seed, undo: 'free' });
+type Store = ReturnType<typeof mine>;
+const play = (st: Store): void => {
+  const s = st.get().state;
+  if (s.prompt === null) throw new Error('no prompt');
+  if (!st.answer(greedyPicks(viewOf(s, s.prompt.seat), s.prompt), s.prompt.id)) throw new Error(st.get().error ?? 'refused');
+};
 const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'ref-'));
 const lines: string[] = [];
 const io: Io = { out: (l) => lines.push(l), err: (l) => lines.push(l), read: (p) => fs.readFileSync(p, 'utf8'), write: (p, t) => {
@@ -24,39 +36,82 @@ const io: Io = { out: (l) => lines.push(l), err: (l) => lines.push(l), read: (p)
     fs.writeFileSync(p, t);
   }, exists: (p) => fs.existsSync(p), list: (d) => (fs.existsSync(d) ? fs.readdirSync(d) : []), load: (p) => import(p) };
 
-describe('reference game (K205)', () => {
-  it('engine-core: plays to a result; replay of its actions gives the same state', () => {
-    let { state } = createGame(GAME, { seed: 'r1' }, RULES, CONTENT);
-    const actions: AnswerAction[] = [];
-    const kinds = new Set<string>();
-    while (state.result === null && state.prompt !== null) {
-      kinds.add(state.prompt.kind);
-      const a = greedy(state);
-      actions.push(a);
-      state = applyAction(GAME, state, a, CONTENT).state;
+describe('reference game (K205, K234)', () => {
+  it('a full game through the store: the opponent seat answers itself, each click is paced once; replay gives the same state', () => {
+    const st = mine('r1');
+    const seen: RefState[] = [st.get().state];
+    let clicks = 0;
+    while (st.get().state.result === null) {
+      expect(st.get().state.prompt?.seat).toBe('0');
+      play(st);
+      clicks += 1;
+      seen.push(st.get().state);
+      expect(st.get().history.steps.length).toBe(clicks);
+      expect(st.get().steps.events.length).toBeGreaterThan(0);
+      st.skip();
     }
-    expect(state.result).not.toBeNull();
-    expect([...kinds]).toEqual(expect.arrayContaining(['may', 'pick']));
-    const r = replay(GAME, { seed: 'r1' }, RULES, actions, CONTENT);
-    expect(r.ok && hashState(r.state)).toBe(hashState(state));
+    const r = replay(REF.rules, { seed: 'r1' }, RULES, st.get().history.actions as AnswerAction[], CONTENT);
+    expect(r.ok && hashState(r.state)).toBe(hashState(st.get().state));
+    expect(logLines(st.get().state.log, WORDS).length).toBeGreaterThan(0);
+    expect(gameResult(st.get().state.scores).standings.length).toBe(2);
+    // the opponent never sees hidden cards: no hidden id is in either seat's view at any state of the game
+    for (const s of seen) for (const seat of SEATS) expect(viewLeaks(viewOf(s, seat), hiddenFrom(s, seat))).toEqual([]);
   });
 
-  it('card-language: every verb has a handler and words; every card effect is valid; the words come from the same data', () => {
-    expectVerbs(VERBS, [{ op: 'score', points: 2 }, { op: 'wild', max: 3 }]);
+  it('step undo: one undo takes back one click (the forced and the opponent answers after it too)', () => {
+    const st = mine('u1');
+    const before = hashState(st.get().state);
+    play(st);
+    expect(st.get().history.steps.length).toBe(1);
+    expect(st.undo()).toBe(true);
+    expect(hashState(st.get().state)).toBe(before);
+    expect(st.redo()).toBe(true);
+    expect(st.answer(['nope'], (st.get().state.prompt?.id ?? 0) + 5)).toBe(false);
+  });
+
+  it('save and load in the middle of a card effect: the same asking-verb prompt is open and answers', async () => {
+    const st = mine('s1');
+    while (st.get().state.prompt?.kind !== 'may') play(st);
+    expect(st.get().state.stack.some((t) => t.kind === 'verb')).toBe(true);
+    await saves.saveNamed('mid', st.saved());
+    const [, stored] = (await saves.listNamed())[0] ?? [];
+    if (stored === undefined) throw new Error('not saved');
+    const back = mine('other');
+    expect(back.load(stored.save)).toBeNull();
+    expect(hashState(back.get().state)).toBe(hashState(st.get().state));
+    expect(back.get().state.prompt).toEqual(st.get().state.prompt);
+    expect(back.get().history.steps.length).toBe(st.get().history.steps.length);
+    play(back);
+    expect(back.undo()).toBe(true);
+    expect(hashState(back.get().state)).toBe(hashState(st.get().state));
+  });
+
+  it('autosave after each answer; export and import', async () => {
+    const st = createGameStore(REF, { seat: '0', seed: 'a1', saves });
+    play(st);
+    await st.autosaved();
+    expect((await saves.readAutosave())?.[1].save.actions.length).toBe(st.get().history.actions.length);
+    expect((await saves.importNamed(saves.exportText({ name: 'mid', save: saves.saveOf(st.saved()) }), 'copy')).ok).toBe(true);
+  });
+
+  it('card-language: the game verbs (one asking) have words and examples; every effect is valid with the pack', () => {
+    expectVerbs({ score: VERBS.score, wild: VERBS.wild }, [{ op: 'score', points: 2 }, { op: 'wild', max: 3 }]);
     expect(Object.values(CONTENT.effects).flatMap((e) => validateEffect(VERBS, e))).toEqual([]);
-    expect(validateEffect(VERBS, [{ op: 'score', points: 0 }])).not.toEqual([]);
+    expect(validateEffect(VERBS, [{ op: 'may', then: [{ op: 'draw' }] }])).toEqual([]);
     expect([cardText(0), cardText(4)]).toEqual(['Choose 1 to 3 and score that.', 'Score 4.']);
   });
 
-  it('opponents decide from their own view: the hidden hand never changes the choice', () => {
-    const { state } = createGame(GAME, { seed: 'v1' }, RULES, CONTENT);
-    const other: RefState = { ...state, hands: [state.hands[0] ?? [], [5, 5, 5]] };
-    expect(viewOf(other, 0)).toEqual(viewOf(state, 0));
-    expect(greedyPicks(viewOf(other, 0))).toEqual(greedyPicks(viewOf(state, 0)));
+  it('the opponent decides from its own view: the hidden hand never changes the choice', () => {
+    const s = mine('v1').get().state;
+    const b = s.zones['hand:1'];
+    const other: RefState = { ...s, zones: { ...s.zones, 'hand:1': { ...b, cards: [...(b?.cards ?? [])].reverse() } } as RefState['zones'] };
+    expect(viewOf(other, '0')).toEqual(viewOf(s, '0'));
+    const p = s.prompt;
+    if (p !== null) expect(greedyPicks(viewOf(other, '0'), p)).toEqual(greedyPicks(viewOf(s, '0'), p));
   });
 
   it('sim-pool: a batch on two workers ends every game, the same as in this thread', async () => {
-    const list: GameSpec[] = Array.from({ length: 16 }, (_, i) => ({ index: i, seed: `b${String(i)}`, driver: i % 2 ? 'random' : 'greedy' }));
+    const list: GameSpec[] = Array.from({ length: 16 }, (_, i) => ({ index: i, seed: `b${String(i)}`, driver: i % 2 ? 'random' : 'opponent' }));
     const records = await runGames({ module: new URL('../src/engine/sim.ts', import.meta.url).href, specs: list }, 2);
     expect(records.map((r) => r.error ?? r.result !== null)).toEqual(list.map(() => true));
     expect(records.map((r) => r.hash)).toEqual(list.map((s) => playOne(simGame, CONTENT, s).hash));
@@ -71,33 +126,11 @@ describe('reference game (K205)', () => {
     expect(await replayGames(mod, file, io), lines.join('\n')).toBe(0);
   });
 
-  it('saves: save mid-prompt, load, resume the same prompt; autosave and file round-trip', async () => {
-    let h: History<Ref> = newHistory<Ref>({ seed: 's1' }, RULES);
-    let state = createGame(GAME, { seed: 's1' }, RULES, CONTENT).state;
-    while (state.prompt?.kind !== 'may') {
-      const r = recordAction(GAME, h, greedy(state), CONTENT);
-      h = r.history;
-      state = r.state ?? state;
-    }
-    await saves.saveNamed('mid', h);
-    const [key, stored] = (await saves.listNamed())[0] ?? [];
-    expect(key).toBeDefined();
-    const back = saves.restore(stored ?? { name: '', save: saves.saveOf(h) });
-    if (!back.ok) throw new Error(back.error);
-    expect(hashState(back.state)).toBe(hashState(state));
-    expect(back.state.prompt).toEqual(state.prompt);
-    expect(recordAction(GAME, saves.historyOf(back.save), greedy(back.state), CONTENT).ok).toBe(true);
-    await saves.writeAutosave(h, 'auto');
-    expect((await saves.readAutosave())?.[1].save.actions.length).toBe(h.actions.length);
-    const imported = await saves.importNamed(saves.exportText({ name: 'mid', save: saves.saveOf(h) }), 'copy');
-    expect(imported.ok).toBe(true);
-  });
-
   it('settings and the store: the chosen seat is the one asked; the other seat answers itself', () => {
     useSettings.getState().set('seat', 1);
-    useGame.getState().fresh('seat');
-    expect(useGame.getState().state.prompt?.seat).toBe(1);
-    expect(useGame.getState().history.actions.length).toBeGreaterThan(0);
+    game.fresh('seat');
+    expect(game.get().state.prompt?.seat).toBe('1');
+    expect(game.get().history.actions.length).toBeGreaterThan(0);
     useSettings.getState().reset();
     expect(useSettings.getState().values.seat).toBe(0);
   });

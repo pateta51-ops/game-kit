@@ -1,8 +1,9 @@
-import { create } from 'zustand';
+import { useSyncExternalStore } from 'react';
 import { makeSaves } from '../../kit/saves/index.ts';
 import { createSettingsStore, type SettingsSchema } from '../../kit/settings/index.ts';
-import type { SaveFile } from '../../kit/engine-core/index.ts';
-import { appendAction, CONTENT, createGame, GAME, greedyPicks, newHistory, RULES, viewOf, type History, type Ref, type RefState, type Seat } from '../engine/api.ts';
+import { autoAnswer } from '../../kit/prompt-host/index.ts';
+import { createGameStore, type GameSnap } from '../../kit/game-store/index.ts';
+import { CONTENT, GAME, REF, type Ref, type RefView, type Seat } from '../engine/api.ts';
 
 export const SCHEMA = {
   storageKey: '{{id}}-settings',
@@ -19,41 +20,8 @@ export const SCHEMA = {
 } as const satisfies SettingsSchema;
 export const useSettings = createSettingsStore(SCHEMA);
 export const saves = makeSaves({ game: GAME, content: CONTENT, database: '{{id}}', filePrefix: '{{id}}' });
+export const mySeat = (): Seat => String(useSettings.getState().values.seat) as Seat;
 
-interface Game {
-  readonly history: History<Ref>;
-  readonly state: RefState;
-}
-const me = (): Seat => useSettings.getState().values.seat;
-
-// the other seat answers at once with the simple driver, from its own view only
-function settle(g: Game): Game {
-  let { history, state } = g;
-  while (state.prompt !== null && state.prompt.seat !== me()) {
-    const r = appendAction(GAME, history, state, { kind: 'answer', promptId: state.prompt.id, picks: greedyPicks(viewOf(state, state.prompt.seat)) }, CONTENT);
-    if (!r.ok || r.state === null) throw new Error(r.error ?? 'refused');
-    history = r.history;
-    state = r.state;
-  }
-  return { history, state };
-}
-
-export const useGame = create<Game & { fresh: (seed: string) => void; answer: (picks: readonly string[], promptId?: number) => void; load: (save: SaveFile<Ref>) => string | void }>()((set, get) => ({
-  ...settle({ history: newHistory<Ref>({ seed: 'start' }, RULES), state: createGame(GAME, { seed: 'start' }, RULES, CONTENT).state }),
-  fresh: (seed) => set(settle({ history: newHistory<Ref>({ seed }, RULES), state: createGame(GAME, { seed }, RULES, CONTENT).state })),
-  answer: (picks, promptId) => {
-    const { history, state } = get();
-    if (state.prompt === null || state.prompt.id !== promptId) return;
-    const r = appendAction(GAME, history, state, { kind: 'answer', promptId, picks }, CONTENT);
-    if (!r.ok || r.state === null) return;
-    const g = settle({ history: r.history, state: r.state });
-    set(g);
-    void saves.writeAutosave(g.history, '{{name}}');
-  },
-  load: (save) => {
-    const r = saves.restore({ name: '', save });
-    if (!r.ok) return r.error;
-    set(settle({ history: saves.historyOf(save), state: r.state }));
-    return undefined;
-  },
-}));
+// the one game store: forced answers from the setting, the other seat answered by REF.opponent from its own view, autosave
+export const game = createGameStore({ ...REF, forced: (p) => autoAnswer(p, useSettings.getState().values.obvious) }, { seat: mySeat, saves, saveName: () => '{{name}}', undo: 'free' });
+export const useGame = <T = GameSnap<Ref, RefView>>(pick: (s: GameSnap<Ref, RefView>) => T = (s) => s as T): T => useSyncExternalStore(game.subscribe, () => pick(game.get()));

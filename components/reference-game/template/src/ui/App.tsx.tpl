@@ -1,56 +1,62 @@
 import { AppFrame, type RouteDef } from '../../kit/app-frame/ui.ts';
-import { autoAnswer } from '../../kit/prompt-host/index.ts';
 import { May, PickAmount, PickOptions, PromptHost, type Widgets } from '../../kit/prompt-host/ui.ts';
 import { SavesScreen } from '../../kit/saves/ui.ts';
 import { SettingsScreen } from '../../kit/settings/ui.ts';
-import { cardText, viewOf, type RefPrompt, type RefView } from '../engine/api.ts';
-import { saves, SCHEMA, useGame, useSettings } from './store.ts';
+import { gameResult, logLines } from '../../kit/table-panels/index.ts';
+import { GameOver, LogPanel } from '../../kit/table-panels/ui.tsx';
+import { cardText, CONTENT, WORDS, type RefPrompt, type RefView } from '../engine/api.ts';
+import { game, mySeat, saves, SCHEMA, useGame, useSettings } from './store.ts';
 
 type Name = 'menu' | 'play' | 'settings' | 'saves';
 const WIDGETS: Widgets<RefPrompt, RefView> = { pick: PickOptions, amount: PickAmount, may: May };
 const TITLES = { pick: 'Play a card', amount: 'How much is the wild card worth?', may: 'Draw a card?' };
-const card = (n: number | undefined): string => (n === 0 ? 'Wild' : String(n));
+const card = (id: string | undefined): string => {
+  const v = CONTENT.cards[id ?? ''] ?? 0;
+  return v === 0 ? 'Wild' : String(v);
+};
 
 function Play() {
-  const { state, answer } = useGame();
-  const seat = useSettings((x) => x.values.seat);
-  const obvious = useSettings((x) => x.values.obvious);
-  const view = viewOf(state, seat);
+  const snap = useGame();
+  useSettings((x) => x.values.seat);
+  const { state, view } = snap;
+  const seat = mySeat();
   const result = state.result;
   return (
     <main>
-      <p>Scores: {state.scores.join(' - ')}. Deck: {view.deck}. Your hand: {view.hand.map(card).join(', ')}. Their hand: {view.otherHand} cards.</p>
+      <p>Scores: {state.scores[0]} - {state.scores[1]}. Deck: {view.zones['deck']?.count}. Your hand: {view.hand.map(card).join(', ')}. Their hand: {view.zones[`hand:${seat === '0' ? '1' : '0'}`]?.count} cards.</p>
       {result !== null ? (
-        <p data-testid="result">{result.winner === null ? 'A draw.' : result.winner === seat ? 'You win.' : 'You lose.'}</p>
+        <div data-testid="result">
+          <GameOver result={gameResult(state.scores)} seatName={(s) => (s === seat ? 'You' : 'Them')} onRematch={() => game.fresh(String(Date.now()))} />
+        </div>
       ) : (
         <PromptHost
           widgets={WIDGETS}
           prompt={state.prompt}
           view={view}
           seat={seat}
-          answer={answer}
-          auto={(p) => autoAnswer(p, obvious)}
+          answer={(picks, id) => void (id !== undefined && game.answer(picks, id))}
           title={(p) => TITLES[p.kind]}
-          look={{ label: (o, p) => (p.kind === 'pick' ? `${card(view.hand[Number(o.id.slice(1))])}: ${cardText(view.hand[Number(o.id.slice(1))] ?? 0)}` : o.id === 'yes' ? 'Draw' : o.id === 'no' ? 'No' : o.id) }}
+          look={{ label: (o, p) => (p.kind === 'pick' ? `${card(o.id)}: ${cardText(CONTENT.cards[o.id] ?? 0)}` : o.id === 'yes' ? 'Draw' : o.id === 'no' ? 'No' : o.id) }}
         />
       )}
+      <button type="button" data-testid="undo" disabled={!game.canUndo().ok} onClick={() => game.undo()}>Undo</button>
+      <LogPanel lines={logLines(state.log, WORDS)} />
       <a href="#/">Menu</a>
     </main>
   );
 }
 
 function Menu() {
-  const fresh = useGame((g) => g.fresh);
   return (
     <nav>
-      <button type="button" onClick={() => fresh(String(Date.now()))}>New game</button> <a href="#/play">Play</a> <a href="#/settings">Settings</a> <a href="#/saves">Saves</a>
+      <button type="button" onClick={() => game.fresh(String(Date.now()))}>New game</button> <a href="#/play">Play</a> <a href="#/settings">Settings</a> <a href="#/saves">Saves</a>
     </nav>
   );
 }
 
 function Saves() {
-  const { history, load } = useGame();
-  return <SavesScreen saves={saves} history={history} summary={(s) => `Scores ${s.scores.join(' - ')}`} onLoad={(save) => load(save)} />;
+  useGame();
+  return <SavesScreen saves={saves} history={game.saved()} summary={(s) => `Scores ${String(s.scores[0])} - ${String(s.scores[1])}`} onLoad={(save) => game.load(save) ?? undefined} />;
 }
 
 const ROUTES: Record<Name, RouteDef<Name>> = {

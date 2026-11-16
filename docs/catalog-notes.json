@@ -296,5 +296,9 @@
   "voice": {
     "use": "Release 1.3 voice lines on the sound player's voice bus, never twice the same.",
     "not": "Sound effects (sound-player)."
+  },
+  "game-store": {
+    "use": "Every game with a screen: one store over the game's one `defineGame` object (rules, content, seats, start, view, forced, opponent, words): an answer, the forced answers and the opponent's turn after it are one undo step and one paced step; step undo and redo, autosave, load with the undo steps rebuilt; `sim.ts` makes the same object sim-pool's game module, the opponent driver and replay-cli's engine. Recipe: docs/recipes/game-store.md.",
+    "not": "A per-action undo (engine-core undo.ts); hot-seat play with no opponent (prompt-host answerWithForced with seat 'all' in the game's own store)."
   }
 }
