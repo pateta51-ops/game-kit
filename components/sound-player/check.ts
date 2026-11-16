@@ -17,7 +17,7 @@ export function checkSoundFiles(table: SoundTable, dir: string, o: SoundCheckOpt
   const missing = new Set(o.missing ?? []);
   const bad: string[] = [];
   const rows: { name: string; files: readonly string[]; max: number }[] = [
-    ...Object.entries(table.cues).map(([k, c]) => ({ name: k, files: c.files, max: o.maxCueBytes ?? 400_000 })),
+    ...Object.entries(table.cues).filter(([, c]) => c.files.length > 0 || !c.synth?.length).map(([k, c]) => ({ name: k, files: c.files, max: o.maxCueBytes ?? 400_000 })),
     ...Object.entries(table.music?.layers ?? {}).map(([k, f]) => ({ name: `layer:${k}`, files: [f], max: o.maxLoopBytes ?? 4_000_000 })),
     ...Object.entries(table.music?.once ?? {}).map(([k, f]) => ({ name: `once:${k}`, files: [f], max: o.maxLoopBytes ?? 4_000_000 })),
     ...Object.entries(table.ambience ?? {}).map(([k, f]) => ({ name: `ambience:${k}`, files: [f], max: o.maxLoopBytes ?? 4_000_000 })),

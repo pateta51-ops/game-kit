@@ -2,6 +2,8 @@
 //        layer / ambience loop -> its gain -> duck -> music bus
 // A cue is never cut: it plays out, or its gain ramps to zero over MIN_FADE_MS or more before its source stops.
 
+import { startSynthVoice, synthLength, type SynthVoice } from './synth';
+
 export type Tier = 'quiet' | 'normal' | 'loud';
 export type Bus = 'sounds' | 'voice' | 'music';
 export const MIN_FADE_MS = 150;
@@ -10,6 +12,8 @@ export type EndHow = 'ended' | 'faded' | 'dropped';
 export interface CueDef {
   /** The variations, paths under `base`. None: the cue is silent. */
   files: readonly string[];
+  /** Played when the cue has no file, or none that loads. */
+  synth?: readonly SynthVoice[];
   tier: Tier;
   gainDb?: number;
   bus?: Bus;
@@ -139,7 +143,7 @@ interface Voice {
   cue: string;
   rank: number;
   fade: Fader;
-  srcs: AudioBufferSourceNode[];
+  srcs: AudioScheduledSourceNode[];
   left: number;
   unduck: (() => void) | null;
   onEnd?: ((how: EndHow) => void) | undefined;
@@ -222,7 +226,7 @@ export function createSoundPlayer(o: SoundPlayerOptions): SoundPlayer {
       if (p === undefined) {
         p = Promise.all((table.cues[name]?.files ?? []).map((f) => decode(f, `cue ${name}`))).then((list) => {
           const ok = list.filter((b) => b !== null);
-          if (ok.length === 0) warn(`cue ${name}`, 'no file');
+          if (ok.length === 0 && !table.cues[name]?.synth?.length) warn(`cue ${name}`, 'no file');
           buffers.set(name, ok);
         });
         loading.set(name, p);
@@ -260,7 +264,7 @@ export function createSoundPlayer(o: SoundPlayerOptions): SoundPlayer {
       }
       done(v, 'faded');
     };
-    const canPlay = (name: string): boolean => table.cues[name] !== undefined && (buffers.get(name)?.length ?? 1) > 0;
+    const canPlay = (name: string): boolean => table.cues[name] !== undefined && ((buffers.get(name)?.length ?? 1) > 0 || !!table.cues[name]?.synth?.length);
     const play = (name: string, opts: { times?: number; delayMs?: number; onEnd?: (how: EndHow) => void } = {}): void => {
       let began = false;
       let deferred = false;
@@ -268,7 +272,7 @@ export function createSoundPlayer(o: SoundPlayerOptions): SoundPlayer {
         if (ctx.state !== 'running' || hidden) return;
         const def = table.cues[name];
         if (def === undefined) return warn(`cue ${name}`, 'not in the table');
-        const list = buffers.get(name);
+        const list = def.files.length === 0 && def.synth?.length ? [] : buffers.get(name);
         if (list === undefined) {
           const asked = ctx.currentTime;
           const delay = opts.delayMs ?? 0;
@@ -281,7 +285,8 @@ export function createSoundPlayer(o: SoundPlayerOptions): SoundPlayer {
             else opts.onEnd?.('dropped');
           }, () => opts.onEnd?.('dropped'));
         }
-        if (list.length === 0) return;
+        const synth = list.length === 0 ? (def.synth ?? []) : [];
+        if (list.length === 0 && synth.length === 0) return;
         const when = ctx.currentTime + Math.max(0, opts.delayMs ?? 0) / 1000;
         const last = lastAt.get(name);
         if (last !== undefined && Math.abs(when - last) < 0.04) return;
@@ -305,7 +310,20 @@ export function createSoundPlayer(o: SoundPlayerOptions): SoundPlayer {
           onEnd: opts.onEnd,
         };
         let t = when;
-        for (let i = 0; i < Math.max(1, Math.floor(opts.times ?? 1)); i += 1) {
+        const times = Math.max(1, Math.floor(opts.times ?? 1));
+        for (let i = 0; i < times; i += 1)
+          for (const s of synth) {
+            const src = startSynthVoice(ctx, v.fade.node, s, when + i * synthLength(synth));
+            if (src === null) continue;
+            src.onended = () => {
+              if ((v.left -= 1) > 0) return;
+              done(v, 'ended');
+              v.fade.node.disconnect();
+            };
+            v.srcs.push(src);
+            v.left += 1;
+          }
+        for (let i = 0; synth.length === 0 && i < times; i += 1) {
           let n = Math.floor(random() * (list.length - (list.length > 1 && lastPick.has(name) ? 1 : 0)));
           if (list.length > 1 && n >= (lastPick.get(name) ?? Infinity)) n += 1;
           lastPick.set(name, n);

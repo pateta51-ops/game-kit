@@ -11,7 +11,17 @@
       "src/ui/audio/fakeContext.ts (the fake context for tests; its gains now keep their schedule)"
     ],
     "grafts": [
-      { "game": "unst", "paths": ["the cap per cue name from its event-to-cue merge layer; idea only, no file taken"] }
+      { "game": "unst", "paths": ["the cap per cue name from its event-to-cue merge layer; idea only, no file taken"] },
+      {
+        "game": "unst",
+        "commit": "9e666b4",
+        "paths": [
+          "src/ui/sound/webAudio.ts (synth.ts: the tone and noise voices, the fixed-seed noise, the envelope, a failing voice skipped; its own context, limiter and unlock stayed behind: the player has them)",
+          "src/ui/sound/recipes.ts (the voice types only; no recipe taken)",
+          "src/ui/sound/cues.ts (events.ts cuesFor: merge with a count, rank, top N in order; the cue list, cueOf and the hide and end pairs became data the game passes)",
+          "src/ui/sound/player.ts (events.ts createEventSounds: spacing carried across actions, repeat, window and lag drops; the speed and volume settings stayed behind)"
+        ]
+      }
     ]
   },
   "needs": []

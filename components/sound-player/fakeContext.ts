@@ -19,13 +19,16 @@ export interface FakeGain {
   connected: boolean;
 }
 export class FakeParam {
-  events: { t: number; v: number; ramp: boolean }[] = [];
+  events: { t: number; v: number; ramp: boolean; exp?: boolean }[] = [];
   constructor(public value = 1) {}
   setValueAtTime(v: number, t: number): void {
     this.events.push({ t, v, ramp: false });
   }
   linearRampToValueAtTime(v: number, t: number): void {
     this.events.push({ t, v, ramp: true });
+  }
+  exponentialRampToValueAtTime(v: number, t: number): void {
+    this.events.push({ t, v, ramp: true, exp: true });
   }
   cancelScheduledValues(t: number): void {
     this.events = this.events.filter((e) => e.t < t);
@@ -37,7 +40,7 @@ export class FakeParam {
       if (e.t <= t) {
         v = e.v;
         at = e.t;
-      } else return e.ramp ? v + ((e.v - v) * (t - at)) / (e.t - at) : v;
+      } else return !e.ramp ? v : e.exp ? v * (e.v / v) ** ((t - at) / (e.t - at)) : v + ((e.v - v) * (t - at)) / (e.t - at);
     }
     return v;
   }
@@ -49,6 +52,9 @@ export class FakeAudioContext {
   readonly destination = { gain: new FakeParam(1), out: null, connected: true };
   readonly sources: FakeSource[] = [];
   readonly gains: FakeGain[] = [];
+  readonly sampleRate = 48000;
+  readonly oscillators: (FakeSource & { type: string; frequency: FakeParam })[] = [];
+  readonly filters: (FakeGain & { type: string; frequency: FakeParam; Q: FakeParam })[] = [];
 
   resume(): Promise<void> {
     this.state = 'running';
@@ -81,6 +87,50 @@ export class FakeAudioContext {
   createDynamicsCompressor() {
     const p = () => ({ value: 0 });
     return { ...this.createGain(), threshold: p(), ratio: p(), knee: p(), attack: p(), release: p() };
+  }
+  createOscillator() {
+    const s = {
+      buffer: null,
+      loop: false,
+      type: 'sine',
+      frequency: new FakeParam(440),
+      startedAt: null as number | null,
+      stoppedAt: null as number | null,
+      onended: null as (() => void) | null,
+      out: null as FakeGain | null,
+      connect(n: FakeGain) {
+        s.out = n;
+      },
+      start(when = 0) {
+        s.startedAt = when;
+      },
+      stop(when = 0) {
+        s.stoppedAt = when;
+      },
+    };
+    this.sources.push(s);
+    this.oscillators.push(s);
+    return s;
+  }
+  createBiquadFilter() {
+    const f = {
+      gain: new FakeParam(1),
+      out: null as FakeGain | null,
+      connected: false,
+      type: 'lowpass',
+      frequency: new FakeParam(350),
+      Q: new FakeParam(1),
+      connect(n: FakeGain) {
+        f.out = n;
+        f.connected = true;
+      },
+    };
+    this.filters.push(f);
+    return f;
+  }
+  createBuffer(_channels: number, length: number, rate: number) {
+    const data = new Float32Array(length);
+    return { id: 'noise', duration: length / rate, getChannelData: () => data };
   }
   createBufferSource() {
     const s = {
