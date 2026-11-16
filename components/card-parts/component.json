@@ -1,0 +1,19 @@
+{
+  "name": "card-parts",
+  "source": {
+    "game": "stcc",
+    "commit": "8e6f55b",
+    "paths": [
+      "src/content/faces.ts (the face geometry as data in photo pixels, a default merged with per-card values: mergeGeometry became mergeLayout; its fixed STCC fields became named zones and anchors of the game's own)",
+      "src/ui/cards/imageCache.ts (Cache Storage fill with quota stop, decode-ahead, displayUrl; the pack, game state and zustand status store left in the game; the cache prefix and address list are passed in)",
+      "src/ui/cards/ArtProvider.tsx, artContext.ts (the provider with decode-ahead and useArt; the art object is the game's own type)",
+      "src/ui/cards/iconTokens.ts, IconText.tsx (`[[token]]` markers, an icon at text height, a word chip for an unknown one; the syntax and icon set are passed in)",
+      "src/ui/cards/CardFace.tsx, Tokens.tsx (the face at the size of its container with tokens drawn over it; ship and resource tokens stay in the game)"
+    ],
+    "note": "Checked against Imperium (Icons.tsx inline SVG with currentColor), EBR (scanOverlay.ts boxes in scan pixels per frame, landscape locations), Unstoppable (ScanArt over/under layers), Rome (RichText [Icon] markers) and Jarl (CardFace illustration window under a frame layer)."
+  },
+  "needs": [],
+  "packages": [
+    "react"
+  ]
+}

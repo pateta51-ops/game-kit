@@ -43,6 +43,10 @@
     "use": "A campaign of linked scenarios kept as a plain log.",
     "not": "A single game's rules or story text (story)."
   },
+  "card-parts": {
+    "use": "Drawing card faces: the layout as the game's own data (zones, anchors per card type), art with a device cache and decode-ahead, printed text with SVG icons inline, tokens at anchors.",
+    "not": "A fixed face, the game's look, or the zoomed transcription (K203)."
+  },
   "card-harness": {
     "use": "Testing card effects on real cards with the scenario builder, prompt delivery, choice probe and inventory with stale check.",
     "not": "Card rules themselves; those stay in the game."

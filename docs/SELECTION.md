@@ -145,6 +145,7 @@ Components with no row above. Each starts from the game and commit in its `compo
 | `resolution-frame` | Rome `1d0fd2e` (K55) | M |
 | `prompt-gallery` | EBR `33b5abd3` | M |
 | `prompt-host` | Rome `e76d56f` (PromptHost and parts: the cleanest host, already a Record per kind with rule ids stripped); STCC `8e6f55b` order by clicks; Jarl `cf3ecfe` autoAnswer (K123) | M |
+| `card-parts` | STCC `8e6f55b` (face geometry as data, image cache, art provider, `[[token]]` icon text; the layout became named zones the game owns, as every game's faces differ; K202) | M |
 | `picked-state` | 7th Inning Stretch `6c82d43` (K165) | S |
 | `scan-ingest` | scanning-pipeline `9ec2378` (K164) | L |
 | `scaffold` | 7th Inning Stretch `bb71c3fa` (K204; config files and scripts only) | M |
