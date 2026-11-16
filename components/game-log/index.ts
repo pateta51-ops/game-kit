@@ -103,3 +103,24 @@ export function wordingProblems(e: Narrated): string[] {
   if (e.kind !== 'problem' && /(?<![A-Za-z])(undefined|null|NaN)(?![A-Za-z])|\[object/.test(line)) out.push('line shows a raw value');
   return out;
 }
+
+/** The undo point of a row (the step it was written under), or undefined when no row has that id. */
+export const stepOf = (log: readonly LogEntry[], id: number): number | undefined => log.find((r) => r.id === id)?.step;
+
+/** Undo back to a line: the log as it was before that line's action (`after: true`: just after it) and the step the game restores its snapshot for. Undefined for an unknown id. Rows stay append-only; this returns a shorter copy. */
+export function rewindLog(log: readonly LogEntry[], id: number, after = false): { log: LogEntry[]; step: number } | undefined {
+  const s = stepOf(log, id);
+  return s === undefined ? undefined : { log: log.filter((r) => (after ? r.step <= s : r.step < s)), step: after ? s : s - 1 };
+}
+
+/** Hover preview: the rows up to and including the hovered line's action, and its step (the game shows its snapshot for that step, read-only). */
+export function previewAt(log: readonly LogEntry[], id: number): { rows: LogEntry[]; step: number } | undefined {
+  const s = stepOf(log, id);
+  return s === undefined ? undefined : { rows: log.filter((r) => r.step <= s), step: s };
+}
+
+const pad = (r: LogEntry): string => (r.group?.role === 'member' ? '  ' : '');
+/** The log as plain text a golden can pin: one line per row, `step kind: line (cause type:id)`, group members indented, a marker for tone. Same log, same text. */
+export function exportText(log: readonly LogEntry[]): string {
+  return log.map((r) => `${r.step} ${r.kind}: ${pad(r)}${plainLine(r)}${r.tone ? ` <${r.tone}>` : ''}${r.cause ? ` (${r.cause.type}:${r.cause.id})` : ''}`).join('\n') + '\n';
+}

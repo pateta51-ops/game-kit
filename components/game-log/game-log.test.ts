@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { appendLog, blocks, delta, num, plainLine, ref, text, wordingProblems, type Narrator, type TypedEvent } from './index';
+import { appendLog, blocks, delta, exportText, num, previewAt, rewindLog, stepOf, plainLine, ref, text, wordingProblems, type Narrator, type TypedEvent } from './index';
 
 type Ev = (TypedEvent & { type: 'hurt'; who: string; n: number }) | (TypedEvent & { type: 'tick' }) | (TypedEvent & { type: 'boom' });
 const table: Narrator<Ev> = {
@@ -29,6 +29,15 @@ describe('game-log', () => {
   it('a narration may return several rows', () => {
     const t: Narrator<Ev> = { tick: () => [{ kind: 'notice', parts: [text('a')] }, { kind: 'notice', parts: [text('b')] }] };
     expect(appendLog([], evs, t, 0).map((r) => r.id)).toEqual([0, 1]);
+  });
+  it('undo to a line, preview, export', () => {
+    const log = appendLog(appendLog([], evs.slice(1, 2), table, 1), evs.slice(2, 3), table, 2);
+    expect(rewindLog(log, 1)).toEqual({ log: [log[0]], step: 1 });
+    expect(rewindLog(log, 0, true)?.log).toEqual([log[0]]);
+    expect(rewindLog(log, 9)).toBeUndefined();
+    expect(stepOf(log, 1)).toBe(2);
+    expect(previewAt(log, 0)).toEqual({ rows: [log[0]], step: 1 });
+    expect(exportText(log)).toBe('1 mechanic:   Ann loses 2 health <bad> (card:c1)\n2 mechanic:   Ann loses 1 health <bad> (card:c1)\n');
   });
   it('wording rules', () => {
     expect(wordingProblems({ kind: 'action', parts: [text('ok '), delta(2)] })).toEqual([]);
