@@ -225,7 +225,7 @@ Sixteen public card- and board-game repositories were surveyed read-only; the fi
 | K104 | Content build: card data patch layer, one file per reason, applied on import | arkham.build | S | done |
 | K105 | Zoomed card: errata as printed / as played / word diff; rulings (question, ruling, citation, date) keyed by card | arkham.build, netrunnerdb | M | done |
 | K106 | One delegated tooltip for every card link inside log lines, prompts, rulings and tutorial text | arkham.build | S | done |
-| K107 | Card query language: typed field table plus a small parser; the game supplies its fields | arkham.build | M to L | proposed |
+| K107 | Card query language: typed field table plus a small parser; the game supplies its fields | arkham.build | M to L | done |
 | K108 | `engine-core` random: named override in tests; a randomness-used flag that bars undo | boardgame.io | S | done |
 | K109 | Small: icon emitted with a hidden word; paired valid / invalid fixtures per setup-legality rule with typed errors; stale flow request dropped and a loop cap; related-cards index; emitted text keys resolve; card stats diff against a community database; missing-card stand-in | netrunnerdb, arkham.build, boardgame.io, ArkhamHorror | S each | done (`small-helpers`) |
 | K110 | `card-harness`: unused-answer check and strict-choose mode (an unanswered prompt fails, a scripted answer left over fails); mid-run check commands; tests of the harness's own error messages; no-duplicate-effects check at teardown | XMage | S to M | done |

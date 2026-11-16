@@ -1,0 +1,13 @@
+{
+  "name": "card-query",
+  "source": {
+    "game": "outside",
+    "commit": "main (not pinned; idea only)",
+    "paths": [
+      "docs/evaluation/outside/boardgameio-deckbuilders.md item 1 (arkham.build BuildQL, AGPL-3.0: ideas only, new code written, no source file copied)"
+    ],
+    "note": "Operators and field-table shape from the write-up; the kit had no card filter."
+  },
+  "needs": [],
+  "packages": []
+}
