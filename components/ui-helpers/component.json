@@ -29,6 +29,27 @@
         "paths": [
           "src/ui/play/obvious.ts (probedAnswer: only the probe-and-compare shape; `costOf` and the reveal checks are the game's)"
         ]
+      },
+      {
+        "game": "jarl",
+        "commit": "b9f150a",
+        "paths": [
+          "src/ui/screens/rulesSearch.ts (sheetWords, sheetMatching: the game's block kinds replaced by a level and a text the game supplies; any depth of heading; rule ids are not part of a block)"
+        ]
+      },
+      {
+        "game": "warps",
+        "commit": "230a307",
+        "paths": [
+          "src/ui/glossary/iconWords.ts (compileIconWords, iconizeSegments, withoutIconWords: the letters of {L} an argument; the segment type declared here, the same shape as the glossary's; the table and the proper names stay in the game)"
+        ]
+      },
+      {
+        "game": "imp",
+        "commit": "2f74f04",
+        "paths": [
+          "src/ui/a11y/shortcuts.ts (bindPromptKeys: no React; the prompt, the selection store and the game's keys replaced by `open`, `panel`, `keys`, `clear` and `back`)"
+        ]
       }
     ]
   },

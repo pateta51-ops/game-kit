@@ -11,6 +11,9 @@ Small screen helpers with no look and no game types. The stores are zustand vani
 | `createSelection<Id>()` | `toggle({ version, promptId, max }, id)`; read with `picksFor(selection, { version, promptId })`; call `reset()` when the game store's version changes. |
 | `onlyForcedAnswer(prompt, on, never?)` | The prompt's `min` and `options` (`id`, `enabled`), the setting, and whether this prompt is on the game's never-list. Gives the one pick or null. |
 | `probedAnswer(state, answer, apply, cost)` | A pure `apply` (null or a throw when refused) and a `cost(before, after)` that names what the player lost or learned, or null. Gives the answer or null. |
+| `sheetMatching(blocks, q, read = sheetWords)` | The rules screen's blocks as `{ level?, text }` (level 1, 2... for a heading). Gives the indexes to show: blocks holding every word, their headings, and the whole section of a heading that matches. |
+| `compileIconWords(file, names, letters)`, `iconizeSegments(table, text, segs, lead)` | The word-to-icon rules, the proper names inside which nothing is replaced, and the glossary matcher's segments. Gives the segments with `iconWord` ones (`code`, `style`, the words as label, the entry `id`). `withoutIconWords(text, match)` drops a word that follows its own icon. |
+| `bindPromptKeys(document, { open, panel, keys?, clear?, back?, overlay? })` | 1-9 click `[data-shortcut="n"]` in the panel; Escape runs `clear`, then `back`; `keys` holds the game's own. Returns the unbind. |
 
 ```ts
 const picks = createSelection<string>();
@@ -22,4 +25,6 @@ gameStore.subscribe((next, prev) => {
 The selection ignores picks of another version or prompt even before `reset()` runs, so a returning prompt id starts
 empty. `onlyForcedAnswer` is the screen side of the engine-core test that every auto-answered prompt has one legal answer.
 
-Not here: the drawing (toast list, inspector panel), the game's never-list, its cost function and its texts.
+The sheet search never searches or returns a rule id: a block is only its level and its printed words.
+Not here: the drawing (toast list, inspector panel, rules screen, icons), the game's never-list, its cost function, its
+icon table, its keys and its texts.
