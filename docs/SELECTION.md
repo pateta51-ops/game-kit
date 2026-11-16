@@ -64,6 +64,7 @@ Open check before the lift: the canonical JSON of the Jarl line and of STCC buil
 |---|---|---|---|
 | Bug reporter | Rome (has Jarl's fixes plus the memory-only notice, scrolled capture, floating button, fake GitHub for tests) | Jarl's dialog state machine; STCC's font embedding in captures | M |
 | Glossary | Warp's (pure matcher, newest, most tests, broadest check) | STCC's linking index; EBR's data-in interface | M |
+| Card patches | New (arkham.build design: one patch file per reason, applied on import) | | S |
 | Tutorial engine | STCC (most complete and tested, owner decision notes) | Jarl's pure state machine and placement; Rome's highlight; Warp's deck-order seed script | L |
 | Tutorial freeze | Pattern only | | |
 | Achievements (K160), K162 | New; ideas only from marvel-lcg (nothing stored, versioned summary) and ArkhamHorror (catalogue, checklists); builds on play-stats, which holds no summary | | M |

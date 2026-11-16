@@ -1,0 +1,11 @@
+{
+  "name": "card-patches",
+  "source": {
+    "game": "arkham.build (idea only, re-implemented; AGPL-3.0, no code copied)",
+    "repo": "https://github.com/fspoettel/arkham.build",
+    "commit": "main (not pinned; idea only)",
+    "paths": ["backend/src/data/card-patches/index.ts (design read in docs/evaluation/outside/boardgameio-deckbuilders.md finding 2)"]
+  },
+  "needs": [],
+  "packages": []
+}

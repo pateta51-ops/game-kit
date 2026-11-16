@@ -208,7 +208,7 @@ Sixteen public card- and board-game repositories were surveyed read-only; the fi
 | K101 | `sim-pool`: render the view on every step; hasten mode; one-answer replay of the failing step with timings | halogenandtoast MarvelChampions | S | proposed |
 | K102 | `card-harness` helpers: failures print the open prompt and its choices; no-prompt-left assertion; multi-delta `changed`; live state exported as a scenario literal; `errata` / `faq` test wrappers; `withRewind` | netrunner, chiriboga, ArkhamHorror | S | proposed |
 | K103 | Opponent pattern (when a game has a rule-based opponent): pick an index among legal options; per-card advice data beside the records; redacted view; plan record across prompts; decision record opened from the log | chiriboga, boardgame.io | M | proposed |
-| K104 | Content build: card data patch layer, one file per reason, applied on import | arkham.build | S | proposed |
+| K104 | Content build: card data patch layer, one file per reason, applied on import | arkham.build | S | done |
 | K105 | Zoomed card: errata as printed / as played / word diff; rulings (question, ruling, citation, date) keyed by card | arkham.build, netrunnerdb | M | proposed |
 | K106 | One delegated tooltip for every card link inside log lines, prompts, rulings and tutorial text | arkham.build | S | proposed |
 | K107 | Card query language: typed field table plus a small parser; the game supplies its fields | arkham.build | M to L | proposed |
