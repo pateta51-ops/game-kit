@@ -18,6 +18,7 @@ A Web Audio player driven by one table of data. It knows no game. No packages.
 - Ducking: the music (and the ambience when `duck.ambience`) drops by `loudDb` while a `loud` cue plays and by `voiceDb` while a `voice` bus cue plays; a cue's own `duckDb` replaces both (0: none). The deepest one playing counts. `duck(db?)` does the same until the function it returns is called.
 - `setVolumes({ music?, sounds?, voice?, muted? })`, `volumes()`: `onVolumes` gets the whole set after each change; the game stores it and passes it back as `volumes`.
 - Silent while the page is hidden. `silent: true` (tests): no audio context, every call is safe. With motion-frame: `onCue: (cue) => sound.play(cue)`.
+- `playTrack(cue, { fadeInMs = 0, loop?, onEnd? })` (K173): a whole track, a cue with `bus: 'music'`. Cues on the music bus are decoded on first play (or by `preload`), not after the first tap. Fade out with `stopCues(ms, cue)`. Crossfade: `stopCues(2000, 'menu'); playTrack('game', { fadeInMs: 2000 })`.
 
 ## Events to cues (`events.ts`, optional)
 - `cuesFor(events, plan)`: the events of one action as `{ cue, count }[]`. `plan`: `{ cueOf(event): cue | null, rank?: cue names, the most important first, max = 3, hides?: { cue: [cues it hides] }, alone?: [cues that sound alone] }`. Like events are one cue with a count; only the `max` best ranked stay, in the order they first happened.

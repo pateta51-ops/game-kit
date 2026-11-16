@@ -112,7 +112,9 @@ export interface SoundPlayer {
   volumes: () => Volumes;
   /** Ducks the music (by the table's voice depth, or `db`) until the returned function is called. */
   duck: (db?: number) => () => void;
-  /** Decodes these cues first (all cues are decoded after the first tap anyway). */
+  /** Plays a whole track: a cue on the music bus, loaded on its first play (never at the first tap), fading in over `fadeInMs` (default 0). It plays once (or loops with `loop`) and is never cut by the voice limit. Fade it out with `stopCues(ms, cue)`; `onEnd` as `play`. Crossfade: `stopCues(2000, a); playTrack(b, { fadeInMs: 2000 })`. */
+  playTrack: (cue: string, o?: { fadeInMs?: number; loop?: boolean; onEnd?: (how: EndHow) => void }) => void;
+  /** Decodes these cues first (cues not on the music bus are all decoded after the first tap anyway; music-bus cues only when listed here or played). */
   preload: (cues: readonly string[]) => Promise<void>;
   /** Cues playing now. */
   count: () => number;
@@ -161,6 +163,7 @@ function fader(ctx: AudioContext, v: number, out: AudioNode): Fader {
 interface Voice {
   cue: string;
   rank: number;
+  music?: boolean;
   fade: Fader;
   srcs: AudioScheduledSourceNode[];
   left: number;
@@ -256,7 +259,51 @@ export function createSoundPlayer(o: SoundPlayerOptions): SoundPlayer {
       await Promise.all(first.map(load));
     };
     const preloadAll = async (): Promise<void> => {
-      for (const k of Object.keys(table.cues)) await load(k);
+      for (const k of Object.keys(table.cues)) if (table.cues[k]?.bus !== 'music') await load(k);
+    };
+    const asking = new Map<string, { onEnd?: ((how: EndHow) => void) | undefined }>();
+    const playTrack = (name: string, opts: { fadeInMs?: number; loop?: boolean; onEnd?: (how: EndHow) => void } = {}): void => {
+      const def = table.cues[name];
+      if (def === undefined) {
+        warn(`cue ${name}`, 'not in the table');
+        return opts.onEnd?.('dropped');
+      }
+      if (asking.has(name) || voices.some((v) => v.cue === name && v.music)) return opts.onEnd?.('dropped');
+      const req = { onEnd: opts.onEnd };
+      asking.set(name, req);
+      void load(name).then(() => {
+        if (asking.get(name) !== req) return;
+        asking.delete(name);
+        let began = false;
+        try {
+          const buffer = buffers.get(name)?.[0];
+          if (buffer === undefined || ctx.state !== 'running' || hidden) return;
+          const level = lin((table.tierDb?.[def.tier] ?? TIER_DB[def.tier]) + (def.gainDb ?? 0));
+          const fin = Math.max(0, opts.fadeInMs ?? 0);
+          const v: Voice = { cue: name, rank: RANK[def.tier], music: true, fade: fader(ctx, fin > 0 ? 0 : level, buses.music.node), srcs: [], left: 1, unduck: null, onEnd: opts.onEnd };
+          const src = ctx.createBufferSource();
+          src.buffer = buffer;
+          if (opts.loop) src.loop = true;
+          src.connect(v.fade.node);
+          src.onended = () => {
+            done(v, 'ended');
+            v.fade.node.disconnect();
+          };
+          if (fin > 0) v.fade.ramp(level, ctx.currentTime, fin);
+          src.start(ctx.currentTime);
+          v.srcs.push(src);
+          voices.push(v);
+          began = true;
+        } catch (err) {
+          warn(`cue ${name}`, err);
+        } finally {
+          if (!began) opts.onEnd?.('dropped');
+        }
+      }, () => {
+        if (asking.get(name) !== req) return;
+        asking.delete(name);
+        opts.onEnd?.('dropped');
+      });
     };
     const voices: Voice[] = [];
     const lastAt = new Map<string, number>();
@@ -292,6 +339,7 @@ export function createSoundPlayer(o: SoundPlayerOptions): SoundPlayer {
         if (ctx.state !== 'running' || hidden) return;
         const def = table.cues[name];
         if (def === undefined) return warn(`cue ${name}`, 'not in the table');
+        if (def.bus === 'music' && buffers.get(name) === undefined) return (deferred = true), playTrack(name, opts.onEnd ? { onEnd: opts.onEnd } : {});
         const list = def.files.length === 0 && def.synth?.length ? [] : buffers.get(name);
         if (list === undefined) {
           const asked = ctx.currentTime;
@@ -313,7 +361,7 @@ export function createSoundPlayer(o: SoundPlayerOptions): SoundPlayer {
         const rank = RANK[def.tier];
         const same = voices.filter((v) => v.cue === name);
         const room = voices.length - (same.length >= (def.max ?? table.maxPerCue ?? 3) ? 1 : 0) < (table.maxVoices ?? 12);
-        const victim = room ? undefined : voices.filter((v) => v.rank <= rank).sort((x, y) => x.rank - y.rank)[0];
+        const victim = room ? undefined : voices.filter((v) => v.rank <= rank && !v.music).sort((x, y) => x.rank - y.rank)[0];
         if (!room && victim === undefined) return;
         if (same[0] !== undefined && same.length >= (def.max ?? table.maxPerCue ?? 3)) stop(same[0]);
         if (victim !== undefined && voices.includes(victim)) stop(victim);
@@ -323,6 +371,7 @@ export function createSoundPlayer(o: SoundPlayerOptions): SoundPlayer {
         const v: Voice = {
           cue: name,
           rank,
+          music: bus === 'music',
           fade: fader(ctx, lin((table.tierDb?.[def.tier] ?? TIER_DB[def.tier]) + (def.gainDb ?? 0)), buses[bus].node),
           srcs: [],
           left: 0,
@@ -485,6 +534,10 @@ export function createSoundPlayer(o: SoundPlayerOptions): SoundPlayer {
     return {
       play,
       stopCues: (ms?: number, cue?: string) => {
+        for (const [k, q] of [...asking]) if (cue === undefined || k === cue) {
+          asking.delete(k);
+          q.onEnd?.('faded');
+        }
         for (const v of [...voices]) if (cue === undefined || v.cue === cue) stop(v, ms);
       },
       setState,
@@ -493,6 +546,7 @@ export function createSoundPlayer(o: SoundPlayerOptions): SoundPlayer {
       duck,
       preload,
       preloadAll,
+      playTrack,
       count: () => voices.length,
       canPlay,
     };
@@ -544,6 +598,13 @@ export function createSoundPlayer(o: SoundPlayerOptions): SoundPlayer {
       const onEnd = opts?.onEnd;
       const o2 = onEnd ? { ...opts, onEnd: (h: EndHow) => { if (!fired) { fired = true; onEnd(h); } } } : opts;
       if (a) a.play(cue, o2);
+      else o2?.onEnd?.('dropped');
+    },
+    playTrack(cue, opts) {
+      let fired = false;
+      const onEnd = opts?.onEnd;
+      const o2 = onEnd ? { ...opts, onEnd: (h: EndHow) => { if (!fired) { fired = true; onEnd(h); } } } : opts;
+      if (a) a.playTrack(cue, o2);
       else o2?.onEnd?.('dropped');
     },
     canPlay: (cue) => a?.canPlay(cue) ?? table.cues[cue] !== undefined,
