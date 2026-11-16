@@ -6,7 +6,8 @@
     "paths": [
       "ArkhamHorror backend/arkham-api/library/Arkham/CampaignLog.hs, Campaign/Runner.hs (log shape, crossing out, count change history, XP breakdown per step); no licence, ideas described in words, nothing copied; owner's written authorisation",
       "LordOfTheRings src/LordOfTheRings/Helpers/Campaign.hs (pure helpers over a log); treated as no licence, ideas only",
-      "Marvel Champions packages/engine/src/campaign.ts (log fields with kind, label, scope, citation, hidden); ideas only"
+      "Marvel Champions packages/engine/src/campaign.ts (log fields with kind, label, scope, citation, hidden); ideas only",
+      "quincarter/marvel-champions-digital-game (AGPL-3.0) campaign-state.ts, CampaignLog, LossPolicy (frozen input, save shape, retry snapshot, version stamp); ideas only, written new"
     ]
   },
   "needs": [],
