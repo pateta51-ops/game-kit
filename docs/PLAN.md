@@ -202,7 +202,7 @@ Found by the third retrofit pass (`docs/RETROFIT_PLAN.md`, Part E).
 | K206 | (GAPS A4) Card-language starter: verb registry with handler and text-generator slots, a validator, and a test that every verb has a runner. The shell only; each game writes its own verbs | STCC, Imperium, Rome, Unstoppable, Jarl, EBR | M | proposed |
 | K207 | (GAPS B4) plan-checker warns when a game's kit pin is far behind the latest tag, and when a GK phase targets a row already done | Radiance plan | S | proposed |
 | K208 | (GAPS B5) `kit.mjs next-id`: reads origin/main and open PRs before handing out a row id | kit | S | done |
-| K209 | (GAPS B6) worktree-setup and worker-finish scripts: link node_modules, run the check in a WSL clone, refuse to finish with uncommitted changes | 7th Inning Stretch, Radiance | S | proposed |
+| K209 | (GAPS B6) worktree-setup and worker-finish scripts: link node_modules, run the check in a WSL clone, refuse to finish with uncommitted changes | 7th Inning Stretch, Radiance | S | done |
 | K210 | (GAPS B7) Generated one-page "state of the kit" from PLAN.md | kit | S | proposed |
 | K211 | (GAPS A7) Dice tray and roll window | 7th Inning Stretch | S | proposed |
 | K212 | (GAPS C7) sound-player: `playTrack` always plays a cue's first file (7th Inning Stretch works around it) | 7th Inning Stretch | S | done |

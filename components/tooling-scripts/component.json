@@ -17,6 +17,7 @@
     { "game": "warps", "commit": "6790200d", "paths": ["scripts/bundle-node.mjs"], "what": "bundle-node.ts: the entry list, output folder and target became flags" },
     { "game": "marvel-champions", "repo": "marvel-champions-digital-game", "commit": "unknown", "paths": ["packages/cards/tools/card-brief.test.ts", "dsl-index.test.ts", "refs-report.test.ts", "packages/mod-sdk/scripts/dsl-reference.mjs"], "what": "lookup.ts: card, dsl and refs commands over a game-supplied module (shape only, rewritten)" },
     { "game": "middle-earth-player", "repo": "https://github.com/j-jmnz/middle-earth-player", "licence": "MIT", "commit": "unknown", "paths": ["scripts/tools/move.ts", "scripts/docs/index.ts (headers only; written new from the described behaviour)"], "what": "move.ts, docs-index.ts: the repo-root paths, patterns and folders became flags" },
+    { "game": "7th-inning-stretch", "commit": "none", "paths": ["docs/SESSION_HANDOFF.md (Workers section, by hand)"], "what": "worktree-setup.ts, worker-finish.ts, worktree-teardown.ts: written new (K209) from the handoff notes of 7IS and Radiance; no code copied" },
     { "game": "kit", "commit": "none", "paths": [], "what": "home-screen.ts, contact-sheet.ts: written new (K37); no outside source" }
   ],
   "needs": []
