@@ -1,0 +1,24 @@
+{
+  "name": "plain-text",
+  "source": {
+    "game": "rome",
+    "commit": "1d0fd2e",
+    "paths": [
+      "src/ui/components/ruleIds.ts (RULE_ID_SOURCE, stripRuleIds, plainPrompt, plainView; the id families and the option fields passed in, the engine types replaced by shapes)",
+      "src/ui/components/ruleIds.test.tsx (the strip cases and the look-alikes on a fake game's families; `visible` as visibleText; the screen scans stay in the game)",
+      "src/ui/store/ruleIdsError.test.ts (not lifted: it tests the game's store)"
+    ],
+    "grafts": [
+      {
+        "game": "jarl",
+        "commit": "6f006a2",
+        "paths": [
+          "src/ui/identPattern.ts (IDENT as CODE_TEXT and forbiddenText; its D11 and INV-09 ids are passed in)",
+          "src/ui/plainText.ts, src/ui/plainText.test.ts (withoutRuleIds: only the dotted id RL-029.1 and its test cases)"
+        ]
+      }
+    ]
+  },
+  "needs": [],
+  "packages": []
+}
