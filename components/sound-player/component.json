@@ -24,5 +24,10 @@
       }
     ]
   },
+  "ideas": [
+    { "repo": "marvel-champions-digital-game (AGPL-3.0)", "paths": ["audio/sfx/README.md, scripts/trim-mp3.mjs: idea only, written new (trail-only cues, chain, front silence, whole-frame trim)"] },
+    { "repo": "netrunner (MIT)", "paths": ["src/cljs/nr/sounds.cljs: idea only (silent on first state)"] },
+    { "repo": "Forge (GPL-3.0)", "paths": ["forge/sound/EventVisualizer.java: idea only (own sound, then fallback)"] }
+  ],
   "needs": []
 }

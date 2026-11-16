@@ -99,3 +99,37 @@ export function createEventSounds<E>(o: EventSoundsOptions<E>): EventSounds<E> {
     playCue: (cue, count = 1) => play([{ cue, count }]),
   };
 }
+
+/** The first cue of the chain the player can play (the card's own, then its family, then the generic one); null: none. */
+export function resolveCue(chain: readonly (string | null | undefined)[], canPlay: (cue: string) => boolean): string | null {
+  for (const c of chain) if (c !== null && c !== undefined && canPlay(c)) return c;
+  return null;
+}
+
+export interface TrailSoundsOptions<A> {
+  /** Called with the actions added since the last feed, oldest first. */
+  onNew: (actions: readonly A[]) => void;
+  /** Tells a replaced action from the one seen last (default: same object); a different one resyncs silently. */
+  same?: (a: A, b: A) => boolean;
+}
+
+/** Cues only from the action trail: the first feed (load, resume), an undo or a rewritten trail is silent. */
+export function createTrailSounds<A>(o: TrailSoundsOptions<A>): { feed: (trail: readonly A[]) => void; reset: () => void } {
+  let mark = -1;
+  let last: A | undefined;
+  return {
+    feed(trail) {
+      const was = mark;
+      const prev = last;
+      mark = trail.length;
+      last = trail[mark - 1];
+      if (was < 0 || mark <= was) return;
+      if (was > 0 && prev !== undefined && !(o.same ?? Object.is)(trail[was - 1] as A, prev)) return;
+      o.onNew(trail.slice(was));
+    },
+    reset() {
+      mark = -1;
+      last = undefined;
+    },
+  };
+}
