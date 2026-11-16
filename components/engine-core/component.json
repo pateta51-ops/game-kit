@@ -63,6 +63,16 @@
           "src/testing/mock-random.ts (named override)",
           "src/plugins/random/random.ts (isUsed flag)"
         ]
+      },
+      {
+        "game": "XMage",
+        "url": "https://github.com/magefree/mage",
+        "licence": "MIT",
+        "notice": "Copyright (c) 2010 betasteward@gmail.com",
+        "paths": [
+          "Mage/src/main/java/mage/MageObjectReference.java (id plus zone-change counter)",
+          "Mage/src/main/java/mage/game/GameImpl.java (last-known information, short-living set; design only)"
+        ]
       }
     ]
   },

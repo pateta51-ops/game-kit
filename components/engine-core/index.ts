@@ -75,3 +75,4 @@ export { differentialApply, type DifferentialResult } from './cowcheck';
 export { hashValue } from './hash';
 export { drawRandom, drawRandomIndex, nextUint32, randomInt, seedRng, shuffleInPlace, type RngState } from './rng';
 export { freshWords } from './fresh';
+export { clearLastKnown, clearLeft, hasLeft, isCurrent, lastKnown, lastKnownIn, leaveZone, newObjectTrack, refOf, type LastKnown, type ObjectRef, type ObjectTrack, type Tracked } from './objref';

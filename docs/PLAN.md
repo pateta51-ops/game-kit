@@ -230,7 +230,7 @@ Sixteen public card- and board-game repositories were surveyed read-only; the fi
 | K110 | `card-harness`: unused-answer check and strict-choose mode (an unanswered prompt fails, a scripted answer left over fails); mid-run check commands; tests of the harness's own error messages; no-duplicate-effects check at teardown | XMage | S to M | done |
 | K111 | Card language: replacement loop (applied-set on the event, the affected player chooses among several, result codes including changed-but-still-happens) | XMage, Forge | M | proposed |
 | K112 | Card language: layered recompute in game-declared layers, timestamp set on activation, optional `after` dependency | XMage | M | proposed |
-| K113 | `engine-core`: object reference = id plus zone-change counter; last-known snapshots of objects that left a zone | XMage | S to M | proposed |
+| K113 | `engine-core`: object reference = id plus zone-change counter; last-known snapshots of objects that left a zone | XMage | S to M | done |
 | K114 | Small: batch events with declared shared keys; outcome tag (good or bad for the chooser) on every choice for automatic answers; every-card JSON round-trip check; script-format notes for the card-language pattern | XMage, Forge | S each | proposed |
 | K115 | Opponent pattern, added to K103: a handler per effect verb with one fixed pipeline and a conformance test; reason-coded decisions; profiles as data; a closed hint vocabulary and a cannot-use report; memory sets and a runaway guard; evaluator with explain lines, copy-fidelity check, bounded look-ahead | Forge, XMage | M | proposed |
 | K116 | New `board-layout`: a map drawn over the board picture in Inkscape, extracted as space rects and adjacency edges | Rally the Troops | S | done |
