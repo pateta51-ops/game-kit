@@ -10,6 +10,15 @@
     ],
     "grafts": [
       {
+        "game": "middle-earth-player",
+        "repo": "https://github.com/j-jmnz/middle-earth-player",
+        "licence": "MIT",
+        "commit": "main (not pinned; idea only)",
+        "paths": [
+          "src/play/reader-play.test.ts (idea only, source not read: every legal action sent by a labelled control, as checkActionCoverage)"
+        ]
+      },
+      {
         "game": "jarl",
         "commit": "6f006a2",
         "paths": [

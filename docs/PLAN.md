@@ -184,7 +184,7 @@ Sixteen public card- and board-game repositories were surveyed read-only; the fi
 | K77 | `card-harness`: spec rows (printed line, layout by zone, one act, an expectation), each run again with that line's records removed; a row that still passes fails | middle-earth-player | M | proposed |
 | K78 | `card-harness`: render effect records as English under their printed line; a read-only reading-judge step (ok / wrong / ambiguous / render-gap) before tests are written | middle-earth-player | M | proposed |
 | K79 | `engine-core`: a cause (rule id, or effect record plus printed line) on every step that changes a number; `replay-cli` test refuses a step without one | middle-earth-player | M | proposed |
-| K80 | `e2e-helpers` or `prompt-gallery`: over seeded games, every legal action and target is sent by some labelled control | middle-earth-player | M | proposed |
+| K80 | `e2e-helpers` or `prompt-gallery`: over seeded games, every legal action and target is sent by some labelled control | middle-earth-player | M | done (`prompt-gallery` `checkActionCoverage`) |
 | K81 | `replay-cli`: digest of a curated table view after each move, pinned in goldens; report the scenarios whose digests moved | middle-earth-player | S | done |
 | K82 | `check-runner`: test-cost budget (the list of test files that play whole games may not grow) | middle-earth-player | S | proposed |
 | K83 | `card-harness` inventory: every printed line owned by a record or listed open; record verbs checked against the engine's route lists | middle-earth-player | S | proposed |
