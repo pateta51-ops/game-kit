@@ -11,5 +11,5 @@
     ]
   },
   "needs": ["engine-core"],
-  "packages": []
+  "packages": ["react"]
 }

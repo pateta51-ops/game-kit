@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { boundaryFile, catalogueCheck, violationList } from './index.ts';
+import { boundaryFile, catalogueCheck, releaseCheck, violationList } from './index.ts';
 
+describe('K238 release', () => {  it('a 1.0 game importing motion code or sound is listed; a 1.1 game may use motion but not sound; an unknown release throws', () => {    const files = { 'a.ts': "import { x } from 'kit/motion-frame/index'", 'b.ts': "import('kit/sound-player/index')", 'c.ts': "import { y } from 'kit/theme/index'" };    expect(releaseCheck('1.0', files)).toEqual(['a.ts: imports kit/motion-frame (not before release 1.1)', 'b.ts: imports kit/sound-player (not before release 1.2)']);    expect(releaseCheck('1.1', files)).toEqual(['b.ts: imports kit/sound-player (not before release 1.2)']);    expect(releaseCheck('1.3', files)).toEqual([]);    expect(() => releaseCheck('2', files)).toThrow(/unknown release/);  });});
 describe('boundary-check', () => {
   it('writes one expect-error import per path', () => {
     const t = boundaryFile(['a/internal', 'b/x']);

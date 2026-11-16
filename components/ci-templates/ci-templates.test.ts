@@ -1,5 +1,5 @@
 // CI templates: every placeholder is where the README says, nothing is hard-coded, and the rendered scripts parse.
-import { spawnSync } from 'node:child_process';
+import { spawn, spawnSync } from 'node:child_process';
 import { chmodSync, cpSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -9,7 +9,7 @@ import YAML from 'yaml';
 const here = import.meta.dirname;
 const read = (f: string): string => readFileSync(join(here, f), 'utf8');
 const where: Record<string, string[]> = {
-  '{{REPO_SLUG}}': ['full-gate.mjs', 'local-ci.sh', 'watch-run.sh'],
+  '{{REPO_SLUG}}': ['full-gate.mjs', 'local-ci.sh', 'watch-run.sh', 'watch-run.mjs'],
   '{{RUNNER_LABEL}}': ['ci.yml', 'full-gate.yml', 'nightly-fuzz.yml'],
   '{{OWNER_LOGIN}}': ['ci.yml', 'full-gate.yml', 'nightly-fuzz.yml'],
 };
@@ -418,5 +418,39 @@ describe('K190: what the four games need (examples/<game>.json renders their wor
   });
   it('K221: concurrency never cancels main', () => {
     for (const f of ['ci.yml', 'full-gate.yml']) expect(render(f)).toContain("cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}");
+  });
+});
+
+describe('watch-run.mjs (K238)', () => {
+  const wdir = mkdtempSync(join(tmpdir(), 'ci-watch-'));
+  afterAll(() => rmSync(wdir, { recursive: true, force: true }));
+  it('prints the conclusion and each failed step in plain node, and gives up at its timeout', async () => {
+    const { createServer } = await import('node:http');
+    const srv = createServer((req, res) => {
+      res.setHeader('content-type', 'application/json');
+      if (req.url?.startsWith('/repos/acme/widget/actions/runs/7/jobs')) res.end('{"jobs":[{"name":"gate","conclusion":"failure","runner_name":"r1","started_at":"a","completed_at":"b","steps":[{"number":1,"name":"ok","conclusion":"success"},{"number":2,"name":"npm run check","conclusion":"failure"}]}]}');
+      else if (req.url === '/repos/acme/widget/actions/runs/7') res.end('{"status":"completed","conclusion":"failure"}');
+      else if (req.url === '/repos/acme/widget/actions/runs/8') res.end('{"status":"in_progress","conclusion":null}');
+      else res.end('{"message":"Not Found"}');
+    });
+    await new Promise<void>((r) => srv.listen(0, r));
+    const port = (srv.address() as { port: number }).port;
+    const f = join(wdir, 'watch-run.mjs');
+    writeFileSync(f, render('watch-run.mjs'));
+    const run = (id: string, env: Record<string, string> = {}) =>
+      new Promise<{ status: number | null; stdout: string }>((resolve) => {
+        let stdout = '';
+        const p = spawn(process.execPath, [f, id], { env: { ...process.env, GH_TOKEN: 'tok', WATCH_API: `http://127.0.0.1:${String(port)}`, WATCH_INTERVAL: '0', ...env } });
+        p.stdout.on('data', (d: Buffer) => (stdout += d.toString()));
+        p.on('close', (status) => resolve({ status, stdout }));
+      });
+    const done = await run('7');
+    expect(done.status).toBe(1);
+    expect(done.stdout).toContain('run 7: completed failure');
+    expect(done.stdout).toContain('   step 2 npm run check failure');
+    expect(done.stdout).not.toContain('step 1');
+    expect((await run('8', { WATCH_TIMEOUT: '0' })).status).toBe(3);
+    expect((await run('9')).status).toBe(2);
+    srv.close();
   });
 });

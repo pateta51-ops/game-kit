@@ -6,5 +6,6 @@
     "paths": ["scripts/check-traceability.ts", "tests/scripts/check-traceability.test.ts", "scripts/traceability-pending.json"],
     "grafts": [{ "game": "ebr", "commit": "33b5abd3", "paths": ["scripts/trace.ts", "scripts/testing/titles.ts"] }]
   },
-  "needs": []
+  "needs": [],
+  "packages": ["typescript"]
 }

@@ -41,3 +41,17 @@ import { parseScript } from '../kit/tutorial/index'
 const script = parseScript({ steps: [] }) // the script from JSON, or every problem as path: message
 console.log(script)
 ```
+
+```tsx
+import { TutorialPanel, TutorialHighlight } from '../kit/tutorial/ui'
+import type { TutorialLock, TutorialPhase } from '../kit/tutorial/index'
+
+declare const lock: TutorialLock
+declare const phase: TutorialPhase
+export const Tour = ({ close }: { close: () => void }) => (
+  <>
+    <TutorialPanel lock={lock} phase={phase} onNext={() => undefined} onLeave={close} onClose={close} />
+    <TutorialHighlight targets={['end-turn']} />
+  </>
+)
+```

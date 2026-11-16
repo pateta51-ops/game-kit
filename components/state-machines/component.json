@@ -15,6 +15,7 @@
   },
   "needs": [],
   "packages": [
-    "react"
+    "react",
+    "vitest"
   ]
 }

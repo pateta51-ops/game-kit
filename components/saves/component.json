@@ -17,6 +17,6 @@
       { "game": "unst", "commit": "9e666b4", "paths": ["src/ui/store/localData.ts, persistence.ts (localKeys, localData, clearLocalData, allData; as data.ts over the keys and stores the game lists)"] }
     ]
   },
-  "needs": ["engine-core", "bug-reporter"],
+  "needs": ["engine-core", "small-helpers"],
   "packages": ["idb-keyval", "react"]
 }

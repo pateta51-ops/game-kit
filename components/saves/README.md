@@ -1,6 +1,6 @@
 # saves
 
-Saved games in IndexedDB over engine-core's `SaveFile`, and a screen for them. `index.ts` draws nothing and loads in node; `ui/index.ts` (import `./ui`) holds the screen. Needs engine-core, bug-reporter (`downloadText`) and the packages `idb-keyval`, `react`.
+Saved games in IndexedDB over engine-core's `SaveFile`, and a screen for them. `index.ts` draws nothing and loads in node; `ui/index.ts` (import `./ui`) holds the screen. Needs engine-core, small-helpers (`downloadText`) and the packages `idb-keyval`, `react`.
 
 ## Store (`saves.ts`)
 

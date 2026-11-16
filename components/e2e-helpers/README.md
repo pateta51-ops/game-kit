@@ -22,7 +22,18 @@ Left in the games: starting a game, playing a turn, card-face checks and every l
 ## Use it in 10 lines
 
 ```ts
-import { VIEWPORTS } from '../kit/e2e-helpers/index'
+import { VIEWPORTS, expectNoHorizontalScroll, settle, shoot, watchErrors } from '../kit/e2e-helpers/index'
+import type { EvalPage, Info, ShotPage, WatchPage } from '../kit/e2e-helpers/index'
 
-for (const v of VIEWPORTS) console.log(v.name) // run each browser test at every named viewport
+// the body of one Playwright test: `page` and `testInfo` are Playwright's
+export async function homeScreen(page: WatchPage & EvalPage & ShotPage & { setViewportSize(v: { width: number; height: number }): Promise<void> }, testInfo: Info) {
+  const w = watchErrors(page)
+  for (const v of VIEWPORTS) {
+    await page.setViewportSize(v)
+    await settle(page)
+    await expectNoHorizontalScroll(page, v.name)
+    await shoot(page, testInfo, `home-${v.name}`)
+  }
+  w.check() // fails the test on an uncaught exception, a console error or a bad response
+}
 ```

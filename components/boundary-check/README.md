@@ -1,12 +1,13 @@
 # boundary-check
 
-Three small pure helpers from outside ideas (written new). No game types.
+Four small pure helpers from outside ideas (written new). No game types.
 
 | Helper | Use |
 |---|---|
 | `boundaryFile(forbidden)` | Text for a `*.check.ts` file: one `@ts-expect-error` import per internal path. Run `tsc` on it; if a path ever becomes importable, `tsc` reports the unused directive. For "UI never touches the engine" freezes. |
 | `violationList(vs)` | `{ rule, text, links?, severity? }[]` from the view: repeats dropped, errors first. The screen lists them with the links and never blocks the move. |
 | `catalogueCheck(cards, id, rules)` | Each card against each `{ name, fails(card) }`; returns `id: rule: why` lines. One test loops the whole catalogue (a card with victory points must show them). |
+| `releaseCheck(release, files)` | K238: the game's `release` (`1.0` to `1.3`, the release ladder) and its source files (path to text); lists each import of a kit component that comes later (1.0: motion-frame, effect-library, pieces-3d-verbs, sound-player, voice). `releaseForbidden(release)` names them. A game test loops its `src/` through it. |
 
 Its own component: the three checks need no card-language, scenario or gate runner types, so they fit neither card-harness nor check-runner.
 

@@ -1,6 +1,6 @@
 // "Export all data" and "Reset all data": everything the app keeps in the browser. The game lists its localStorage keys
 // and its other stores (IndexedDB tables: `saves.data`, imported packs). Storage that refuses reads as empty.
-import { downloadText } from '../bug-reporter/download.ts';
+import { downloadText } from '../small-helpers/download.ts';
 
 export interface AllDataConfig {
   /** The export's `format` field and the start of its file name (`<format>-YYYY-MM-DD.json`). */

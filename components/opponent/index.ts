@@ -1,5 +1,5 @@
 // A rule-based opponent (K103, K115). Ideas from chiriboga (GPL-3.0), Forge (GPL-3.0), boardgame.io (MIT) and XMage (MIT); written new.
-import { ref, type Part } from '../game-log/index.ts';
+// A log part: a game-log `ref`, written out so this component does not need game-log.
 
 /** The random numbers a decision may draw (sim-pool's `DriverRng` fits); never the game's `state.rng`. */
 export interface Rand {
@@ -10,7 +10,8 @@ export interface Rand {
 declare const SEAT: unique symbol;
 /** What one seat may know. Only `redact` makes one, so an opponent typed on it cannot read the full state. */
 export type Redacted<V> = V & { readonly [SEAT]: true };
-export const redact = <S, V, K extends string | number = string>(state: S, seat: K, view: (s: S, seat: K) => V): Redacted<V> => view(state, seat) as Redacted<V>;
+/** K238 (A10): a view type with an `rng` key does not type-check (`stack` may be a real zone, so it stays opt-in in viewLeaks keys). */
+export const redact = <S, V, K extends string | number = string>(state: S, seat: K, view: (s: S, seat: K) => V & ([Extract<keyof V, 'rng'>] extends [never] ? unknown : never)): Redacted<V> => view(state, seat) as Redacted<V>;
 /** A10: the secrets (hidden card ids, names) found in a view: an exact string value, an exact key name, or an id as a whole word inside a string ("card:42" holds "42"; "c10" does not hold "c1"). `opts.numbers`: secret numbers, matched as exact number values (only those the game marks). `opts.keys`: key names the view must not hold, listed as `key:<name>` (e.g. `['rng']`; opt-in, since `stack` may be a real zone). A test expects none. */
 export function viewLeaks(view: unknown, secrets: readonly string[], opts: { numbers?: readonly number[]; keys?: readonly string[] } = {}): string[] {
   const strs: string[] = [];
@@ -341,7 +342,7 @@ export function decisionLines(r: DecisionRecord): string[] {
   ];
 }
 /** A log part that opens the record: the game resolves `ref('decision', id)` to its stored record. */
-export const decisionPart = (r: DecisionRecord, label = 'why'): Part => ref('decision', `${String(r.step ?? '')}:${String(r.prompt ?? '')}:${r.opponent}`, label);
+export const decisionPart = (r: DecisionRecord, label = 'why') => ({ t: 'ref' as const, ref: { type: 'decision', id: `${String(r.step ?? '')}:${String(r.prompt ?? '')}:${r.opponent}` }, label });
 export const decisionsAt = (records: readonly DecisionRecord[], step: number): DecisionRecord[] => records.filter((r) => r.step === step);
 
 /** Conformance: every effect verb has a row (a handler, `always` or `never`), and no row names an unknown verb. */

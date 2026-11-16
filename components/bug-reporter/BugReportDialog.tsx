@@ -6,7 +6,7 @@ import { useEffect, useRef, useState } from 'react';
 import { bugConfig } from './config.ts';
 import { collectReport } from './collect.ts';
 import { openBugReport, useBugDialog } from './dialogStore.ts';
-import { downloadText } from './download.ts';
+import { downloadText } from '../small-helpers/download.ts';
 import { fileQueued } from './fileAll.ts';
 import { MarkupEditor } from './markup/MarkupEditor.tsx';
 import { flattenMarkup, type Markup } from './markup/model.ts';

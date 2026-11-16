@@ -87,7 +87,7 @@
   "ci-templates": {
     "use": "Rendering a game's CI workflows, full gate and local CI script from one `ci.config.json`.",
     "not": "Rules for what the gate contains (repo-gate, check-runner).",
-    "exports": "`render.mjs`, `ci.yml`, `full-gate.yml`, `nightly-fuzz.yml`, `local-ci.sh`, `install-wsl.sh`, `watch-run.sh`, `skip-reporter.ts`"
+    "exports": "`render.mjs`, `ci.yml`, `full-gate.yml`, `nightly-fuzz.yml`, `local-ci.sh`, `install-wsl.sh`, `watch-run.sh`, `watch-run.mjs`, `skip-reporter.ts`"
   },
   "debug-console": {
     "use": "A developer slash console over the engine-core debug edits.",

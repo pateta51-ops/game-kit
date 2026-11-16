@@ -19,5 +19,6 @@
     { "game": "middle-earth-player", "repo": "https://github.com/j-jmnz/middle-earth-player", "licence": "MIT", "commit": "unknown", "paths": ["scripts/tools/move.ts", "scripts/docs/index.ts (headers only; written new from the described behaviour)"], "what": "move.ts, docs-index.ts: the repo-root paths, patterns and folders became flags" },
     { "game": "kit", "commit": "none", "paths": [], "what": "home-screen.ts, contact-sheet.ts: written new (K37); no outside source" }
   ],
-  "needs": []
+  "needs": [],
+  "packages": ["esbuild"]
 }

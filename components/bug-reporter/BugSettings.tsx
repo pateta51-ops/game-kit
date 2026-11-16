@@ -5,7 +5,7 @@
 import { useEffect, useState } from 'react';
 import { bugConfig, bugRepo } from './config.ts';
 import { openBugReport } from './dialogStore.ts';
-import { downloadText } from './download.ts';
+import { downloadText } from '../small-helpers/download.ts';
 import { fileQueued, useFiling, type SendAllSummary } from './fileAll.ts';
 import { sendAllQueued, useSendAll } from './sendAll.ts';
 import { MEMORY_ONLY_NOTE, queueText, unqueueReport, useQueue, type QueuedReport } from './queue.ts';

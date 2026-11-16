@@ -43,6 +43,8 @@ beforeAll(() => {
   put(path.join(src, 'components/beta/component.json'), '{"needs":["alpha"]}');
   put(path.join(src, 'docs/CATALOG.md'), '# Component catalog\n\n## alpha\n\nThe first letter.\n\n- **Use it when:** you need letters.\n\n## beta\n\nDice maker. More text.\n\n- **Use it when:** you roll.\n');
   commit('v3');
+  put(path.join(src, 'components/gamma/component.json'), '{"needs":["beta"],"packages":["left-pad"]}');
+  commit('v4');
 });
 afterAll(() => fs.rmSync(tmp, { recursive: true, force: true }));
 
@@ -59,6 +61,15 @@ describe('kit.mjs', () => {
     expect(kit('search', 'withzones')).toBe('alpha: The first letter. (use when: you need letters.) [export: withZones]\n');
     expect(kit('search', 'renamed')).toContain('[export: renamed]');
     expect(kit('search', 'letter')).not.toContain('[export');
+  });
+
+  it('K238: check warns about packages the game lacks, and passes', () => {
+    const g = game();
+    put(path.join(g, 'package.json'), '{"dependencies":{}}');
+    expect(run(g, 'pull', src, 'v4', 'gamma').status).toBe(0);
+    const c = run(g, 'check');
+    expect(c.status).toBe(0);
+    expect(c.stderr).toContain('gamma needs package(s) this game lacks: left-pad');
   });
 
   it('pull then check passes', () => {

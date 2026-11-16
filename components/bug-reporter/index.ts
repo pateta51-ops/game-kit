@@ -11,4 +11,4 @@ export * from './issue.ts';
 export * from './fileAll.ts';
 export * from './sendAll.ts';
 export * from './transport.ts';
-export * from './download.ts';
+export * from '../small-helpers/download.ts';

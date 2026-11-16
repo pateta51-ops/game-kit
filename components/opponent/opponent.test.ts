@@ -260,3 +260,12 @@ describe('opponent (K103, K115)', () => {
     expect(drv.name).toBe('ai');
   });
 });
+
+describe("K238 A10 type-level: a view with an rng key is refused", () => {
+  it("does not compile", () => {
+    // @ts-expect-error a view holding `rng` cannot be redacted
+    redact(state, "ai", () => ({ rng: 1 }));
+    redact(state, "ai", () => ({ stack: [1] }));
+    expect(true).toBe(true);
+  });
+});

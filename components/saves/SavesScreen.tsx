@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState, type ReactNode } from 'react';
-import { downloadText } from '../bug-reporter/download.ts';
+import { downloadText } from '../small-helpers/download.ts';
 import type { GameTypes, History, SaveFile } from '../engine-core/index.ts';
 import type { Saves, StoredSave } from './saves.ts';
 import './saves.css';

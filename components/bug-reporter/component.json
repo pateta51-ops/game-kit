@@ -10,5 +10,6 @@
       "stcc:src/ui/bugs/capture.ts"
     ]
   },
-  "needs": ["state-machines"]
+  "needs": ["state-machines", "small-helpers"],
+  "packages": ["react", "zustand", "zod", "idb-keyval", "html-to-image"]
 }

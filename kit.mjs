@@ -125,6 +125,14 @@ if (cmd === 'pull') {
     console.error('kit/ differs from kit/kit.lock.json. Change the code in the game-kit repo and pull a new version; never edit this copy.\n' + bad.join('\n'))
     process.exit(1)
   }
+  if (fs.existsSync('package.json')) {
+    const pj = JSON.parse(fs.readFileSync('package.json', 'utf8')), have = { ...pj.dependencies, ...pj.devDependencies }
+    for (const n of Object.keys(lock.components)) {
+      const cj = 'kit/' + n + '/component.json'
+      const miss = fs.existsSync(cj) ? (JSON.parse(fs.readFileSync(cj, 'utf8')).packages ?? []).filter((m) => !(m in have)) : []
+      if (miss.length) console.warn('warning: ' + n + ' needs package(s) this game lacks: ' + miss.join(', '))
+    }
+  }
   const names = Object.keys(lock.components).join(', ') || 'no components'
   console.log(lock.ref ? 'kit ok at ' + lock.ref + ': ' + names : 'kit ok: ' + (Object.entries(lock.components).map(([n, c]) => n + '@' + c.ref).join(', ') || names) + (Object.keys(lock.components).length ? ' (per-component locks: the next pull converts them to one tag)' : ''))
 } else if (cmd === 'outdated') {

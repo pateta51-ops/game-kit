@@ -10,6 +10,6 @@
       "docs/evaluation/outside/forge-xmage.md F9 to F14 (forge-ai SpellApiToAi, SpellAbilityAi, AiPlayDecision, res/ai/*.ai, AiCardMemory, ComputerUtil runaway guard, simulation/GameSimulator, GameStateEvaluator; XMage ComputerPlayer6 caps and repeat cut)"
     ]
   },
-  "needs": ["game-log", "sim-pool"],
+  "needs": ["sim-pool"],
   "packages": []
 }

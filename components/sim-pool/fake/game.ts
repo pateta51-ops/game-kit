@@ -18,7 +18,12 @@ export const simGame: SimGame<Counter, { adds: number }> = {
     if (seed === 'view' && s.turn >= 2) throw new Error('view broke');
     const v: Record<string, unknown> = { turn: s.turn, counter: s.counter };
     if (seed === 'cyc') v.me = v;
+    if (seed === 'leak') v.hand = ['card:42'];
+    if (seed === 'leakkey') v.rng = 1;
+    if (seed === 'leakstack') v.stack = [1];
     return v;
   },
+  secrets: (s) => (s.options.seed.startsWith('leak') ? ['42'] : []),
+  leakKeys: (s) => (s.options.seed === 'leakkey' ? ['rng'] : []),
   hasten: (s) => (s.prompt ? { kind: 'answer', promptId: s.prompt.id, picks: ['add'] } : undefined),
 };

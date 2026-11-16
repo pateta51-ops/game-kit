@@ -145,6 +145,14 @@ describe('K101 view on every step, hasten, one-step replay', () => {
     expect(play('s1').viewBytes).toBeUndefined();
   });
 
+  it('K238 A10: a view holding a secret id or an rng key fails the game', () => {
+    expect(play('leak', undefined, { view: true }).error).toMatch(/^view after 0 action\(s\): view leak: 42$/);
+    expect(play('leakkey', undefined, { view: true }).error).toMatch(/view leak: key:rng$/);
+    expect(play('leakstack', undefined, { view: true }).error).toBeUndefined();
+    expect(play('leak').error).toBeUndefined();
+    expect(play('s1', undefined, { view: true }).error).toBeUndefined();
+  });
+
   it('hastens after every N actions, off by default, the same on worker threads', async () => {
     const plain = play('s2');
     const fast = play('s2', undefined, { hasten: 1 });

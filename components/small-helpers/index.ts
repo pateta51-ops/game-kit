@@ -78,3 +78,4 @@ export function keysIn(texts: Iterable<string>, pattern: RegExp): string[] {
 }
 export const missingKeys = (emitted: Iterable<string>, table: Readonly<Record<string, unknown>>): string[] =>
   [...new Set(emitted)].filter((k) => !Object.hasOwn(table, k)).sort();
+export * from './download.ts';

@@ -1,4 +1,5 @@
 # engine-core: timing (K93, K111, K94, K96, K112, K95, opt-in)
+A worked example (damage, a prevention, a trigger) is in [worked-example.md](worked-example.md).
 
 Built to `docs/patterns/timing-vocabulary.md`. Nothing changes for a game that never calls `would`: `state.timing` and `task.batch` stay absent.
 

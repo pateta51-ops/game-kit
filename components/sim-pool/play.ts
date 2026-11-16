@@ -56,8 +56,26 @@ export interface SimGame<G extends GameTypes, S = unknown, O = unknown> {
   promptProblem?(state: G['state'], content: G['content']): string | undefined;
   /** K101: the client view of a state; with `view: true` it is built and serialized after setup and every action, and a throw or a view that cannot be serialized fails the game. */
   view?(state: G['state'], content: G['content']): unknown;
+  /** K238 (GAPS-3 A10): with `view: true`, the strings the view must not show (hidden card ids, names); a view that holds one as a value, a key or a whole word fails the game (`view leak: ...`). */
+  secrets?(state: G['state'], content: G['content']): readonly string[];
+  /** K238: key names the view must not hold (opt-in, like viewLeaks `keys`: e.g. `['rng']`; `stack` may be a real zone); each fails the game as `key:<name>`. Works with or without `secrets`. */
+  leakKeys?(state: G['state'], content: G['content']): readonly string[];
   /** K101: the action that moves the game on fast (defeat the boss, fill a track) at the open prompt; with `hasten: N` it is applied instead of the driver's answer after every N actions, so late stages are reached. Return undefined to let the driver answer. */
   hasten?(state: G['state'], content: G['content']): G['action'] | undefined;
+}
+
+function leaks(view: unknown, secrets: readonly string[], keys: readonly string[]): string[] {
+  const out = new Set<string>();
+  const hit = (t: string): void => {
+    for (const x of secrets) if (x !== '' && (t === x || new RegExp(`(?<![A-Za-z0-9_])${x.replace(/\W/g, '\\$&')}(?![A-Za-z0-9_])`).test(t))) out.add(x);
+  };
+  const walk = (v: unknown): void => {
+    if (typeof v === 'string') hit(v);
+    else if (Array.isArray(v)) v.forEach(walk);
+    else if (v !== null && typeof v === 'object') for (const [k, x] of Object.entries(v)) { if (keys.includes(k)) out.add(`key:${k}`); hit(k); walk(x); }
+  };
+  walk(view);
+  return [...out];
 }
 
 /** K101 options of one game; both are off by default. */
@@ -180,7 +198,14 @@ export function playOne<G extends GameTypes, S, O = unknown>(game: SimGame<G, S,
     if (!opts.view || !game.view) return;
     const t = performance.now();
     try {
-      viewBytes = Math.max(viewBytes ?? 0, (JSON.stringify(game.view(st, content)) ?? '').length);
+      const v = game.view(st, content);
+      viewBytes = Math.max(viewBytes ?? 0, (JSON.stringify(v) ?? '').length);
+      const sec = game.secrets?.(st, content) ?? [];
+      const keys = game.leakKeys?.(st, content) ?? [];
+      if (sec.length || keys.length) {
+        const bad = leaks(v, sec, keys);
+        if (bad.length) throw new Error(`view leak: ${bad.join(', ')}`);
+      }
     } catch (e) {
       throw new Error(`view after ${String(actions.length)} action(s): ${e instanceof Error ? e.message : String(e)}`, { cause: e });
     } finally {

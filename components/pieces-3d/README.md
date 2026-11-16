@@ -24,3 +24,9 @@ import { rolled, turnOf } from '../kit/pieces-3d/index'
 console.log(turnOf(120)) // how far a ball turns for 120 px of travel; `rolled` applies it to a matrix
 console.log(typeof rolled)
 ```
+
+```tsx
+import { Ball } from '../kit/pieces-3d/ui'
+
+export const Pitch = () => <Ball look={{ leather: '#f6f3ea' }} width={96} height={96} />
+```

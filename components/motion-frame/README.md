@@ -33,3 +33,10 @@ import { placeOf } from '../kit/motion-frame/index'
 
 console.log(placeOf(1, 3)) // 'first': card 1 of 3 is the first of the row (lone | first | middle | last; the beat's place, not a fan position)
 ```
+
+```tsx
+import { mountMotionLab, type MotionLabOptions } from '../kit/motion-frame/index'
+
+declare const lab: MotionLabOptions // the catalog's specs and a player of its own
+const stop = mountMotionLab(document.body, lab) // one button per motion; call stop() to unmount
+```

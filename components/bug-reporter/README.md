@@ -33,3 +33,14 @@ import { configureBugReporter } from '../kit/bug-reporter/index'
 declare const cfg: Parameters<typeof configureBugReporter>[0] // id, repo, buildSha, snapshot()
 configureBugReporter(cfg) // once, before <BugReportHost /> renders
 ```
+
+```tsx
+import { BugReportHost, FloatingBugButton } from '../kit/bug-reporter/ui'
+
+export const BugTools = () => (
+  <>
+    <FloatingBugButton />
+    <BugReportHost />
+  </>
+)
+```

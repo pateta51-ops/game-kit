@@ -36,3 +36,11 @@ import { fixtureId } from '../kit/prompt-gallery/index'
 
 console.log(fixtureId('prompt', 'choose-one')) // one fixture per prompt kind; checkGallery fails on a kind with none
 ```
+
+```tsx
+import { Gallery } from '../kit/prompt-gallery/ui'
+import type { GallerySpec } from '../kit/prompt-gallery/index'
+
+declare const spec: GallerySpec<{ text: string }>
+export const Dev = () => <Gallery spec={spec} selected={null} href={(id) => `#/dev/${id}`} render={(s) => <p>{s.text}</p>} />
+```

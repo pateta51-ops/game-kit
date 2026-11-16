@@ -14,5 +14,5 @@
     ]
   },
   "needs": [],
-  "packages": ["react (ui.ts only)"]
+  "packages": ["react"]
 }
