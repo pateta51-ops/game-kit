@@ -206,6 +206,7 @@ Found by the third retrofit pass (`docs/RETROFIT_PLAN.md`, Part E).
 | K210 | (GAPS B7) Generated one-page "state of the kit" from PLAN.md | kit | S | done |
 | K211 | (GAPS A7) Dice tray and roll window | 7th Inning Stretch | S | done |
 | K212 | (GAPS C7) sound-player: `playTrack` always plays a cue's first file (7th Inning Stretch works around it) | 7th Inning Stretch | S | done |
+| K213 | sound-player: preload a subset (`autoPreload`, `preloadAll(filter)` by bus and/or cue), `release(filter)` frees decoded buffers, `playTrack` `take` index | game performance pass | S | done (`sound-player`) |
 
 ### Owner's word (size L or stage 4)
 

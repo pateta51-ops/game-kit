@@ -697,7 +697,7 @@ A Web Audio player driven by one table of data. It knows no game. No packages.
 
 - **Use it when:** Release 1.2 sound and music from one data table on Web Audio.
 - **Not for:** Voice lines (voice) or making audio (audio-gen).
-- **Key exports:** `MIN_FADE_MS`, `seamLoop`, `createSoundPlayer`, `synthLength`, `startSynthVoice`, `cuesFor`, `createEventSounds`, `resolveCue`, `createTrailSounds`, `mp3Frames`, `trimMp3`, `musicTracks`, `pickTrack`, `untitledTracks`, and 15 more
+- **Key exports:** `MIN_FADE_MS`, `seamLoop`, `createSoundPlayer`, `synthLength`, `startSynthVoice`, `cuesFor`, `createEventSounds`, `resolveCue`, `createTrailSounds`, `mp3Frames`, `trimMp3`, `musicTracks`, `pickTrack`, `untitledTracks`, and 16 more
 - **Needs:** nothing
 - **Games that pulled it:** 7th-inning-stretch
 - **Came from:** warps

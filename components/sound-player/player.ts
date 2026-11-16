@@ -80,8 +80,13 @@ export interface Volumes {
 
 type Listens = { addEventListener: (type: string, f: () => void) => void; removeEventListener: (type: string, f: () => void) => void };
 
+/** Picks cues: a function of the name and definition, or `buses` (a cue with no bus is on `sounds`) and/or `cues` (names); both given: both must match. */
+export type CueFilter = ((cue: string, def: CueDef) => boolean) | { buses?: readonly Bus[]; cues?: readonly string[] };
+
 export interface SoundPlayerOptions {
   table: SoundTable;
+  /** Which cues are decoded in the background after the first tap (default: every cue not on the music bus). Others still load when first played. */
+  autoPreload?: CueFilter;
   /** Prefix of every file (ends with `/`). */
   base?: string;
   volumes?: Partial<Volumes>;
@@ -112,10 +117,14 @@ export interface SoundPlayer {
   volumes: () => Volumes;
   /** Ducks the music (by the table's voice depth, or `db`) until the returned function is called. */
   duck: (db?: number) => () => void;
-  /** Plays a whole track: a cue on the music bus, loaded on its first play (never at the first tap), fading in over `fadeInMs` (default 0). It plays once (or loops with `loop`) and is never cut by the voice limit. Fade it out with `stopCues(ms, cue)`; `onEnd` as `play`. Crossfade: `stopCues(2000, a); playTrack(b, { fadeInMs: 2000 })`. */
-  playTrack: (cue: string, o?: { fadeInMs?: number; loop?: boolean; onEnd?: (how: EndHow) => void }) => void;
+  /** Plays a whole track (`take`: the index of the file to play, else one is picked at random): a cue on the music bus, loaded on its first play (never at the first tap), fading in over `fadeInMs` (default 0). It plays once (or loops with `loop`) and is never cut by the voice limit. Fade it out with `stopCues(ms, cue)`; `onEnd` as `play`. Crossfade: `stopCues(2000, a); playTrack(b, { fadeInMs: 2000 })`. */
+  playTrack: (cue: string, o?: { fadeInMs?: number; loop?: boolean; take?: number; onEnd?: (how: EndHow) => void }) => void;
   /** Decodes these cues first (cues not on the music bus are all decoded after the first tap anyway; music-bus cues only when listed here or played). */
   preload: (cues: readonly string[]) => Promise<void>;
+  /** Decodes every cue matching `filter` (default: all not on the music bus). */
+  preloadAll: (filter?: CueFilter) => Promise<void>;
+  /** Frees the decoded audio of every cue matching `filter` and returns how many were freed. Playing cues go on; a freed cue is decoded again when next played or preloaded. */
+  release: (filter: CueFilter) => number;
   /** Cues playing now. */
   count: () => number;
   dispose: () => void;
@@ -249,7 +258,7 @@ export function createSoundPlayer(o: SoundPlayerOptions): SoundPlayer {
         p = Promise.all((table.cues[name]?.files ?? []).map((f) => decode(f, `cue ${name}`))).then((list) => {
           const ok = list.filter((b) => b !== null);
           if (ok.length === 0 && !table.cues[name]?.synth?.length) warn(`cue ${name}`, 'no file');
-          buffers.set(name, ok);
+          if (loading.get(name) === p) buffers.set(name, ok);
         });
         loading.set(name, p);
       }
@@ -258,11 +267,25 @@ export function createSoundPlayer(o: SoundPlayerOptions): SoundPlayer {
     const preload = async (first: readonly string[]): Promise<void> => {
       await Promise.all(first.map(load));
     };
-    const preloadAll = async (): Promise<void> => {
-      for (const k of Object.keys(table.cues)) if (table.cues[k]?.bus !== 'music') await load(k);
+    const matches = (f: CueFilter, k: string): boolean => {
+      const d = table.cues[k];
+      if (d === undefined) return false;
+      if (typeof f === 'function') return f(k, d);
+      return (f.buses === undefined || f.buses.includes(d.bus ?? 'sounds')) && (f.cues === undefined || f.cues.includes(k));
+    };
+    const preloadAll = async (f?: CueFilter): Promise<void> => {
+      for (const k of Object.keys(table.cues)) if (f ? matches(f, k) : table.cues[k]?.bus !== 'music') await load(k);
+    };
+    const release = (f: CueFilter): number => {
+      let n = 0;
+      for (const k of Object.keys(table.cues)) if (matches(f, k) && (loading.delete(k) || buffers.has(k))) {
+        buffers.delete(k);
+        n++;
+      }
+      return n;
     };
     const asking = new Map<string, { onEnd?: ((how: EndHow) => void) | undefined }>();
-    const playTrack = (name: string, opts: { fadeInMs?: number; loop?: boolean; onEnd?: (how: EndHow) => void } = {}): void => {
+    const playTrack = (name: string, opts: { fadeInMs?: number; loop?: boolean; take?: number; onEnd?: (how: EndHow) => void } = {}): void => {
       const def = table.cues[name];
       if (def === undefined) {
         warn(`cue ${name}`, 'not in the table');
@@ -271,7 +294,7 @@ export function createSoundPlayer(o: SoundPlayerOptions): SoundPlayer {
       if (asking.has(name) || voices.some((v) => v.cue === name && v.music)) return opts.onEnd?.('dropped');
       const req = { onEnd: opts.onEnd };
       asking.set(name, req);
-      void load(name).then(() => {
+      void load(name).then(() => (buffers.has(name) ? undefined : load(name))).then(() => {
         if (asking.get(name) !== req) return;
         asking.delete(name);
         let began = false;
@@ -280,8 +303,9 @@ export function createSoundPlayer(o: SoundPlayerOptions): SoundPlayer {
           const skip = list.length > 2 && lastPick.has(name);
           let n = Math.floor(random() * (list.length - (skip ? 1 : 0)));
           if (skip && n >= (lastPick.get(name) ?? Infinity)) n += 1;
-          lastPick.set(name, n);
-          const buffer = list[n];
+          const tk = Number.isInteger(opts.take) && list[opts.take as number] ? (opts.take as number) : n;
+          lastPick.set(name, tk);
+          const buffer = list[tk];
           if (buffer === undefined || ctx.state !== 'running' || hidden) return;
           const level = lin((table.tierDb?.[def.tier] ?? TIER_DB[def.tier]) + (def.gainDb ?? 0));
           const fin = Math.max(0, opts.fadeInMs ?? 0);
@@ -551,6 +575,7 @@ export function createSoundPlayer(o: SoundPlayerOptions): SoundPlayer {
       duck,
       preload,
       preloadAll,
+      release,
       playTrack,
       count: () => voices.length,
       canPlay,
@@ -569,7 +594,7 @@ export function createSoundPlayer(o: SoundPlayerOptions): SoundPlayer {
       await c.resume();
       if (a || c.state !== 'running') return;
       a = live(c);
-      void a.preload(first).then(() => a?.preloadAll());
+      void a.preload(first).then(() => a?.preloadAll(o.autoPreload));
       a.setState();
       a.setAmbience();
     } catch (err) {
@@ -633,6 +658,8 @@ export function createSoundPlayer(o: SoundPlayerOptions): SoundPlayer {
       first = cues;
       return a?.preload(cues) ?? Promise.resolve();
     },
+    preloadAll: (f) => a?.preloadAll(f) ?? Promise.resolve(),
+    release: (f) => a?.release(f) ?? 0,
     count: () => a?.count() ?? 0,
     dispose() {
       off();
