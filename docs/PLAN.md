@@ -152,13 +152,13 @@ What still keeps a game on its own tool at kit v0.25.0. Details in the second-pa
 
 | # | Batch | Found in | Size | State |
 |---|---|---|---|---|
-| K127 | `theme-check`: a switch per rule (COLOR, RADIUS, SHADOW cannot be turned off; 312 findings in Jarl); the token file not exempt when a game wants it checked | Jarl | S | proposed |
-| K128 | `traceability`: a TypeScript parse of test titles in place of the text scan (ids in a fixture string count today); `idsAtLineStart` takes section 3 table rows as rules; the id pattern given whole as one regexp (STCC's plan regexp verbatim; Imperium's id after a dash or underscore); the dot required in `## 3.`; EBR's scenario report, rejected-title print and counts line | EBR, STCC, Imperium | M | proposed |
-| K129 | `repo-gate`: a PORT rule; CONTENT_NAME and RAW_SCAN switchable; CONTENT_ID not exempting engine test files; a blob missing from a sparse partial clone is skipped with a notice where the game says so; text not checked out, UTF-16, chat URLs, warn-only size | Warp's, STCC | M | proposed |
-| K130 | `check-runner`: streamed `[lane]` output, `npm --silent`, skip `last` once a lane failed | STCC | S | proposed |
-| K131 | `plan-checker`: `--tsc` over several sections in order plus a stub line | Unstoppable | S | proposed |
-| K132 | `bundle-size`: `--follow true` exits 2 on an encoded `url(%23n)` in a stylesheet | STCC | S | proposed |
-| K133 | `ci-templates`: templates for a multi-step gate and a second job (Python), so EBR, Imperium, STCC, Warp's, Rome and Unstoppable can render theirs | six games | M | proposed |
+| K135 | `theme-check`: a switch per rule (COLOR, RADIUS, SHADOW cannot be turned off; 312 findings in Jarl); the token file not exempt when a game wants it checked | Jarl | S | proposed |
+| K136 | `traceability`: a TypeScript parse of test titles in place of the text scan (ids in a fixture string count today); `idsAtLineStart` takes section 3 table rows as rules; the id pattern given whole as one regexp (STCC's plan regexp verbatim; Imperium's id after a dash or underscore); the dot required in `## 3.`; EBR's scenario report, rejected-title print and counts line | EBR, STCC, Imperium | M | proposed |
+| K137 | `repo-gate`: a PORT rule; CONTENT_NAME and RAW_SCAN switchable; CONTENT_ID not exempting engine test files; a blob missing from a sparse partial clone is skipped with a notice where the game says so; text not checked out, UTF-16, chat URLs, warn-only size | Warp's, STCC | M | proposed |
+| K138 | `check-runner`: streamed `[lane]` output, `npm --silent`, skip `last` once a lane failed | STCC | S | proposed |
+| K139 | `plan-checker`: `--tsc` over several sections in order plus a stub line | Unstoppable | S | proposed |
+| K140 | `bundle-size`: `--follow true` exits 2 on an encoded `url(%23n)` in a stylesheet | STCC | S | proposed |
+| K141 | `ci-templates`: templates for a multi-step gate and a second job (Python), so EBR, Imperium, STCC, Warp's, Rome and Unstoppable can render theirs | six games | M | proposed |
 
 ### Owner's word (size L or stage 4)
 

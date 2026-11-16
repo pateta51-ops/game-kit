@@ -73,15 +73,15 @@ Result (16 Nov 2026, all seven at v0.25.0):
 
 | Game | Newly from the kit | Still its own (row in `docs/PLAN.md`) |
 |---|---|---|
-| Jarl | workflows rendered from `ci.config.json`, the kit's full gate | theme check (K127) |
+| Jarl | workflows rendered from `ci.config.json`, the kit's full gate | theme check (K135) |
 | Rome | traceability | - |
-| EBR | - | traceability (K128) |
-| Imperium | - | traceability (K128) |
-| Warp's Edge | traceability | repo gate (K129) |
-| STCC | bundle-size | traceability (K128), repo gate (K129), check runner (K130) |
-| Unstoppable | traceability, bundle-size | plan checker (K131) |
+| EBR | - | traceability (K136) |
+| Imperium | - | traceability (K136) |
+| Warp's Edge | traceability | repo gate (K137) |
+| STCC | bundle-size | traceability (K136), repo gate (K137), check runner (K138) |
+| Unstoppable | traceability, bundle-size | plan checker (K139) |
 
-Only Jarl's workflows could be rendered from the templates (K133). A third pass waits for wave 4.
+Only Jarl's workflows could be rendered from the templates (K141). A third pass waits for wave 4.
 
 ## Not retrofitted
 
