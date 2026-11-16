@@ -2,7 +2,8 @@
 from __future__ import annotations
 
 # Flags that only tell how an item was found; they do not make the run a problem.
-INFORMATIONAL = {"SPLIT_FROM_TOUCHING_ITEMS", "NEAR_SCAN_EDGE", "FOUND_NEAR_PRIOR", "FOUND_BY_EDGES"}
+INFORMATIONAL = {"SPLIT_FROM_TOUCHING_ITEMS", "NEAR_SCAN_EDGE", "FOUND_NEAR_PRIOR", "FOUND_BY_EDGES",
+                 "SLEEVE_TRIMMED", "RECOVERED_FROM_PRIOR"}
 
 # An unknown size cut off by the scan's edge is the uncovered strip of glass along the edge of the bed, not an item.
 GLASS = {"UNKNOWN_SIZE", "CUT_OFF_AT_SCAN_EDGE"}

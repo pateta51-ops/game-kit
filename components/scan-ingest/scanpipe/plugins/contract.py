@@ -6,6 +6,7 @@ from pathlib import Path
 
 import numpy as np
 
+from .. import silhouette
 from .base import Orientation, Plugin
 
 
@@ -26,6 +27,14 @@ def problems(p: Plugin) -> list[str]:
     for attr in ("shaped_kinds", "thick_kinds", "printed_edge_kinds", "cast_kinds", "corner_radius_mm"):
         for kind in set(getattr(p, attr)) - set(sizes):
             out.append(f"{attr}: {kind!r} is not in item_sizes_mm")
+    for kind in set(p.silhouette_kinds) - set(sizes):
+        out.append(f"silhouette_kinds: {kind!r} is not in item_sizes_mm")
+    for k in set(p.silhouette_spec) - set(silhouette.DEFAULT_SPEC):
+        out.append(f"silhouette_spec: {k!r} is not a key of silhouette.DEFAULT_SPEC")
+    lo_hi = p.sleeve_plain_long_mm
+    if p.sleeve_min_short_mm is not None and p.sleeve_min_short_mm <= 0 or lo_hi is not None and not (
+            isinstance(lo_hi, tuple) and len(lo_hi) == 2 and 0 < lo_hi[0] < lo_hi[1]):
+        out.append("sleeve_min_short_mm, sleeve_plain_long_mm: millimetres above 0, (lo, hi) with lo < hi, or None")
     for attr in ("thick_kinds", "cast_kinds", "corner_radius_mm"):
         v = getattr(p, attr)
         if not isinstance(v, dict) or any(not isinstance(x, (int, float)) or x <= 0 for x in v.values()):

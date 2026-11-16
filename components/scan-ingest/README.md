@@ -43,6 +43,17 @@ it every caller gets None and one warning. `scanpipe.orient` has what any game's
 `osd_rotation(crop)` (Tesseract's turn of a whole face, with its confidence), `ROTATIONS` and `page_flip` (the other
 face's turn when an item is flipped like a page). Reading a game's printed codes or back designs stays in the game.
 
+## Sleeved cards and die-cut silhouettes (optional, off by default)
+
+- `unsleeve = True`: on a light backing, a region the size of a clear sleeve around the card (`card_kind`) is cut to
+  the card inside it (`scanpipe/sleeves.py`), with flag `SLEEVE_TRIMMED`. A sleeve is at least
+  `sleeve_min_short_mm` wide or `sleeve_plain_long_mm` (lo, hi) long; left None, they follow the card's size.
+- `silhouette_kinds`: the die-cut outline of these kinds is read (`scanpipe/silhouette.py`) and recorded as the item's
+  `silhouette` (shape notched / tabbed / plain / round / irregular, notch and tab, face, rotate, confidence,
+  variant). When the plug-in's `orient` is not confident and the silhouette is (high or medium), its turn is used.
+  `silhouette_spec` overrides `silhouette.DEFAULT_SPEC`: canonical notch and tab sides, `notchCentre`, `bevel`,
+  `notchVariants`, and `names` (the game's word for each shape).
+
 ## Two items scanned touching
 
     python -I kit/scan-ingest/scripts/split_touching.py SCAN OUT_A OUT_B h|v x0 y0 x1 y1

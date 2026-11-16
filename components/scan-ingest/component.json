@@ -8,6 +8,15 @@
       "tests/: synth.py and the black backing, cast shadow, chart cast shadow, flags, magenta backing and token tests, run against tests/fake_game.py instead of the two game plug-ins. plugins/imperium.py, plugins/under_falling_skies.py and test_imperium_plugin.py were left out: plug-ins live in the game."
     ]
   },
+  "alsoUnstoppable": {
+    "game": "unstoppable-fan-prototype",
+    "commit": "main of 16 Nov 2026 (tools/ingest; sleeves 4b5a820, 3d1b8ef; silhouette 0fda06a)",
+    "paths": [
+      "scanpipe/sleeves.py: the clear-sleeve block of ufp_ingest/detect.py (sleeve_sized, _component_at, _card_in_sleeve, unsleeve); the sleeve sizes in mm became plug-in attributes with defaults from the card's size.",
+      "scanpipe/silhouette.py: analyze and orient of ufp_ingest/silhouette.py; shapes core/upgrade renamed notched/tabbed (plug-in names them), scan side a/b replaced by an optional expected face, the game's notch centre and variants moved to the plug-in's silhouette_spec; load_spec, slot_flags, suggest_face, short_note left in the game.",
+      "tests/synth_sleeves.py: silhouette masks, bordered faces, backings, sleeve and paste of tests/synth.py; test_sleeves.py and test_silhouette.py without the batch, rescan and validate tests."
+    ]
+  },
   "also": {
     "game": "imperium-horizon-fan-prototype",
     "commit": "working tree of 15 Nov 2026, branch claude/commit-real-pack (tools/ingest)",

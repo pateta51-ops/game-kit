@@ -39,6 +39,16 @@ class Plugin:
     corner_radius_mm: dict[str, float] = {}  # per kind, the corner radius when none of an item's lit corners shows one
     card_kind: Optional[str] = None  # the standard card among the kinds (default: the smallest one)
     size_tolerance = 0.03  # a measured item within 3 % of a known size is that kind
+    # Optional: cards scanned in clear sleeves on a light backing are cut to the card inside (scanpipe/sleeves.py). A
+    # region is a sleeve when at least sleeve_min_short_mm wide, or sleeve_plain_long_mm (lo, hi) long; None takes
+    # them from the card's size (card_kind).
+    unsleeve = False
+    sleeve_min_short_mm: Optional[float] = None
+    sleeve_plain_long_mm: Optional[tuple[float, float]] = None
+    # Optional: kinds whose die-cut silhouette is read (scanpipe/silhouette.py, recorded as the item's "silhouette");
+    # silhouette_spec overrides silhouette.DEFAULT_SPEC (canonical notch and tab sides, notch centre, variants, names).
+    silhouette_kinds: frozenset = frozenset()
+    silhouette_spec: dict = {}
     out_dpi: Optional[float] = 300.0  # crops are downscaled to this resolution (None keeps the scan's)
     jpeg_quality = 92
 

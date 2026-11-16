@@ -10,8 +10,8 @@ import json
 from pathlib import Path
 from typing import Optional
 
-from . import detect, images, key, review, tone
-from .plugins.base import Plugin
+from . import detect, images, key, review, silhouette, sleeves, tone
+from .plugins.base import Orientation, Plugin
 
 MM_PER_IN = 25.4
 
@@ -45,7 +45,8 @@ def process_scan(scan: Path, plugin: Plugin, out_dir: Path, review_dir: Path, na
             raise SystemExit(f"{scan.name} does not record its resolution: add --dpi (e.g. --dpi 600).")
         dpi = read[0]
     full = images.load_bgr(scan)
-    det = detect.detect(full, params_for(plugin, dpi))
+    params = params_for(plugin, dpi)
+    det = detect.detect(full, params)
     keyed = key.keyable(det.background)
     curve = tone.resolve(tone_name, keyed)
     px_per_mm = dpi / MM_PER_IN
@@ -54,7 +55,11 @@ def process_scan(scan: Path, plugin: Plugin, out_dir: Path, review_dir: Path, na
     items, labels = [], []
     regions = []
     for i, r in enumerate(det.regions):
+        if plugin.unsleeve and not keyed:
+            r = sleeves.unsleeve(full, r, det.background, params, px_per_mm, plugin.sleeve_min_short_mm,
+                                 plugin.sleeve_plain_long_mm)
         flags = list(r.flags)
+        outline = None
         k = key.key_region(full, r, det.background, px_per_mm) if keyed else None
         if k is not None:
             r = k.region
@@ -62,7 +67,7 @@ def process_scan(scan: Path, plugin: Plugin, out_dir: Path, review_dir: Path, na
         else:
             if keyed:
                 flags.append("KEY_FAILED")
-            crop, _ = detect.rectify(full, r)
+            crop, outline = detect.rectify(full, r)
         w_mm, h_mm = r.w / dpi * MM_PER_IN, r.h / dpi * MM_PER_IN
         kind = plugin.classify(w_mm, h_mm)
         if k is not None and (plugin.thick_kinds.get(kind) or (kind is None and plugin.thick_kinds)):
@@ -102,7 +107,15 @@ def process_scan(scan: Path, plugin: Plugin, out_dir: Path, review_dir: Path, na
         regions.append(r)
         if kind is None:
             flags.append("UNKNOWN_SIZE")
+        sil = None
+        if kind in plugin.silhouette_kinds:
+            if crop.ndim == 3 and crop.shape[2] == 4:
+                outline = silhouette.outline_of(crop[:, :, 3])
+            sil = silhouette.read(outline, crop.shape[1], crop.shape[0], silhouette.spec_for(plugin.silhouette_spec))
+            flags.extend(f for f in sil["flags"] if f not in flags)
         o = plugin.orient(images.flatten(crop), kind)
+        if not o.confident and sil and sil["rotate"] is not None and sil["confidence"] in ("high", "medium"):
+            o = Orientation(sil["rotate"], True, f"silhouette: {sil['shape']} {sil['face'] or ''}".strip())
         turn = turns[i] if i < len(turns) and turns[i] is not None else o.turn
         if i < len(turns) and turns[i] is not None:
             why = "given with --turn"
@@ -123,6 +136,7 @@ def process_scan(scan: Path, plugin: Plugin, out_dir: Path, review_dir: Path, na
             "sizeMm": [round(w_mm, 1), round(h_mm, 1)], "turn": turn, "orientation": why,
             "pixels": [upright.shape[1], upright.shape[0]], "flags": flags, "region": r.to_json(),
             **({"keyed": True, "rimPx": k.rim_px} if k is not None else {}),
+            **({"silhouette": sil} if sil else {}),
             **({"cast": {kk: v for kk, v in k.cast.items() if kk != "flags"}} if k is not None and k.cast else {}),
         })
         labels.append(str(i + 1))
