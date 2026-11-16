@@ -3,16 +3,16 @@
 For architects, build workers and reviewers of the owner's board-game adaptations. Read this, then the one catalogue entry and README of the component you touch. You should never need to read component source.
 
 ## What this is
-Open work: run `node kit.mjs state` for what is open; don't read PLAN.md.
+Private shared code for digital board-game builds: one best version of each reusable component (engine kernel, simulation, AI, saves, settings, UI frames, tooling, gates). Rules, card names, zones, texts and looks of any one game never live here. Index: [README.md](README.md). Catalogue of every component: [docs/CATALOG.md](docs/CATALOG.md) (generated). Task guides: [docs/recipes/](docs/recipes/README.md). Never read the build plan (`docs/PLAN.md`, 75 KB).
 
-Private shared code for digital board-game builds: one best version of each reusable component (engine kernel, simulation, AI, saves, settings, UI frames, tooling, gates). Rules, card names, zones, texts and looks of any one game never live here. Index: [README.md](README.md). Catalogue of every component: [docs/CATALOG.md](docs/CATALOG.md) (generated). Task guides: [docs/recipes/](docs/recipes/README.md). Known gaps and wishes: [docs/GAPS.md](docs/GAPS.md). Build plan: [docs/PLAN.md](docs/PLAN.md).
+Open work: run `node kit.mjs state`.
 
 ## The locked copy (in a game)
 - A game holds `kit/`, a copy of named components at a tag. **Never edit `kit/`**, never copy a component into `src/`, never port from an older game what the kit has.
 - `node ../game-kit/kit.mjs pull ../game-kit <tag> <component...>` copies components (and their `needs`) and writes `kit/kit.lock.json` plus `kit/CATALOG.md`. `node kit/kit.mjs check` fails when `kit/` differs from the lock; every game runs it in its check chain.
 - Inside a game, find what exists without the kit checkout: `node kit/kit.mjs list`, `node kit/kit.mjs search <word>`.
 - Before adding a row to `docs/PLAN.md`, take its id with `node kit.mjs next-id` (in the game-kit checkout); it reads main and every open PR.
-- Start a new game: `node tools/game-server/server.mjs add ...`, then `node kit.mjs new <dir> <id> "<Name>"` (scaffold).
+- Start a new game: `node kit.mjs new <dir> <id> "<Name>"` does it all (port block, repo, kit pull, first commit, GitHub repo).
 - Workers: `worktree-setup` and `worker-finish` (tooling-scripts) set up and close a worktree; `worktree-teardown` removes it.
 - `reference-game` is the contract test of the kit's pieces; `card-parts` and `card-zoom`: the game owns its layout, the kit gives parts.
 - Pulling a newer tag happens only when the game needs something in it. Commit `kit/`.
@@ -25,7 +25,7 @@ Private shared code for digital board-game builds: one best version of each reus
 
 ## Change the kit
 1. Look at open PRs: **one open PR per component**. Wait for or continue the one touching yours.
-2. Branch `k<n>-<name>` from `origin/main` in a worktree of this repository. Add or find the row in [docs/PLAN.md](docs/PLAN.md) (next free K number; a new component also gets a line in `docs/SELECTION.md`). Mark the row done in the same PR.
+2. Branch `k<n>-<name>` from `origin/main` in a worktree of this repository. Add or find the row in `docs/PLAN.md` (open only the table you edit) (next free K number; a new component also gets a line in `docs/SELECTION.md`). Mark the row done in the same PR.
 3. A bug: failing test first, then the fix.
 4. Interfaces grow by addition; nothing breaking. A breaking change says `breaking` in its title and lists what a game must change.
 5. New component: `components/<name>/` with `component.json` (`name`, `source.game`, `source.commit`, `source.paths`, `needs`), README, tests, a line in `docs/SELECTION.md`, and an entry in `docs/catalog-notes.json` (`use`, `not`). `npm run check` fails without them.

@@ -1,4 +1,4 @@
-// Prints the state of the kit from docs/PLAN.md (rows not done, by section) and docs/GAPS.md (watch items).
+// Prints the state of the kit from docs/PLAN.md (rows not done, by section) and docs/evaluation/GAPS.md (watch items).
 //   node scripts/state.mjs [root]   prints the page (also: node kit.mjs state)
 import fs from 'node:fs'
 import path from 'node:path'
@@ -36,7 +36,7 @@ for (const line of rd('docs', 'PLAN.md').split(/\r?\n/)) {
 }
 
 let watch = []
-try { watch = rd('docs', 'GAPS.md').split(/\r?\n/).filter((l) => /\*\*watch\*\*/i.test(l)).map((l) => l.replace(/^\s*-\s*/, '- ').replace(/\*\*/g, '')) } catch { /* no GAPS.md */ }
+try { watch = rd('docs', 'evaluation', 'GAPS.md').split(/\r?\n/).filter((l) => /\*\*watch\*\*/i.test(l)).map((l) => l.replace(/^\s*-\s*/, '- ').replace(/\*\*/g, '')) } catch { /* no GAPS.md */ }
 
 let tag = ''
 const g = spawnSync('git', ['-C', top, 'describe', '--tags', '--abbrev=0'], { encoding: 'utf8' })
@@ -47,7 +47,7 @@ const nOpen = open.reduce((n, s) => n + s.rows.length, 0)
 const text = [
   '# State of the kit',
   '',
-  'From docs/PLAN.md and docs/GAPS.md (`node kit.mjs state`).',
+  'From docs/PLAN.md and docs/evaluation/GAPS.md (`node kit.mjs state`).',
   '',
   `Latest tag: ${tag || 'none'}`,
   `Rows done: ${done} of ${total}. Open: ${nOpen}.`,

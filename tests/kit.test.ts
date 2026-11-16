@@ -51,7 +51,7 @@ describe('kit.mjs', () => {
     const g = game();
     expect(run(g, 'pull', src, 'v3', 'alpha').status).toBe(0);
     const kit = (...a: string[]) => spawnSync('node', [path.join(g, 'kit/kit.mjs'), ...a], { cwd: g, encoding: 'utf8' }).stdout;
-    expect(kit('list')).toBe('alpha: The first letter. (use when: you need letters.)\nbeta: Dice maker. (use when: you roll.)\n');
+    expect(kit('list')).toBe('alpha: (use when: you need letters.)\nbeta: (use when: you roll.)\n');
     expect(kit('search', 'DICE')).toBe('beta: Dice maker. (use when: you roll.)\n');
   });
 

@@ -77,7 +77,7 @@ if (cmd === 'pull') {
   if (!f || (cmd === 'search' && !a.length)) { console.error(f ? 'usage: kit.mjs search <word>' : 'no CATALOG.md beside kit.mjs: pull again'); process.exit(2) }
   const secs = fs.readFileSync(f, 'utf8').split(/^## /m).slice(1).map((t) => t.split(/\r?\n/))
   const words = a.map((w) => w.toLowerCase())
-  for (const [n, , purpose, , use] of secs) if (cmd === 'list' || words.every((w) => (n + purpose + use).toLowerCase().includes(w))) console.log(n + ': ' + (purpose ?? '').split(/(?<=\.)\s/)[0].slice(0, 200) + ' ' + (use ?? '').replace('- **Use it when:** ', '(use when: ') + (use ? ')' : ''))
+  for (const [n, , purpose, , use] of secs) if (cmd === 'list' || words.every((w) => (n + purpose + use).toLowerCase().includes(w))) console.log(n + ': ' + (cmd === 'list' ? '' : (purpose ?? '').split(/(?<=\.)\s/)[0].slice(0, 200) + ' ') + (use ?? '').replace('- **Use it when:** ', '(use when: ') + (use ? ')' : ''))
 } else if (cmd === 'new') {
   // node <kit>/kit.mjs new <dir> <id> "<Name>" [--ref r] [--repo owner/name] [--runner label] [--link <node_modules>] [--no-install] [--no-remote] [--ports file]
   const flags = {}
@@ -89,6 +89,6 @@ if (cmd === 'pull') {
   const { newGame } = await import(pathToFileURL(d + '/components/scaffold/newgame.js').href)
   try { newGame({ dir, id, name, kit: d, ...flags, remote: flags.remote !== false }) } catch (e) { console.error(e.message); process.exit(1) }
 } else {
-  console.error('usage: kit.mjs pull <game-kit checkout> <ref> [component...] | kit.mjs check | kit.mjs next-id [n] | kit.mjs list | kit.mjs search <word> | kit.mjs new <dir> <id> "<Name>"')
+  console.error('usage: kit.mjs pull <game-kit checkout> <ref> [component...] | kit.mjs check | kit.mjs next-id [n] | kit.mjs list | kit.mjs state | kit.mjs search <word> | kit.mjs new <dir> <id> "<Name>"')
   process.exit(2)
 }

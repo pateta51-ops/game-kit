@@ -206,6 +206,7 @@ Found by the third retrofit pass (`docs/RETROFIT_PLAN.md`, Part E).
 | K210 | (GAPS B7) Generated one-page "state of the kit" from PLAN.md | kit | S | done |
 | K211 | (GAPS A7) Dice tray and roll window | 7th Inning Stretch | S | done |
 | K212 | (GAPS C7) sound-player: `playTrack` always plays a cue's first file (7th Inning Stretch works around it) | 7th Inning Stretch | S | done |
+| K217 | (agent-experience study C1-C8) Docs fixes: `new` as step 1 of new-game, README components list cut to a pointer, GAPS.md moved to `docs/evaluation/`, AGENTS.md reordered, `state` in the usage line, `list` prints name and use-when only | agent-experience study | S | done (C8, worktree place, left: it lives in agent-workflow.md and the game handoffs) |
 | K215 | Recipes for the gap-analysis components: prompt host, card face and zoom, dice, work as an agent in this repo; card-effect.md points at card-language; reference-game named as the wired example | kit | S | done (`docs/recipes/prompts.md`, `card-face-zoom.md`, `dice.md`, `agent-workflow.md`) |
 | K213 | sound-player: preload a subset (`autoPreload`, `preloadAll(filter)` by bus and/or cue), `release(filter)` frees decoded buffers, `playTrack` `take` index | game performance pass | S | done (`sound-player`) |
 | K214 | `kit.mjs new` does the whole start: registers the port block (`server.mjs add`, read-only use), `git init`, first commit, private GitHub repo, delete-branch-on-merge; re-run safe; `--no-remote`, `--no-install` (owner, 16 Nov 2026) | new-game start | S | done (`scaffold`) |

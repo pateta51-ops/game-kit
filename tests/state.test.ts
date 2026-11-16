@@ -15,7 +15,8 @@ fs.writeFileSync(path.join(root, 'docs', 'PLAN.md'), [
   '', '### Wave B', '', '| Batch | Content | Effort | State |', '|---|---|---|---|',
   '| K3 | Third | S | done (x) |', '| K4 | Fourth | S | waits for a game |', '',
 ].join('\n'));
-fs.writeFileSync(path.join(root, 'docs', 'GAPS.md'), '# G\n\n- C1: **watch**. Revisit later.\n- C2: done.\n');
+fs.mkdirSync(path.join(root, 'docs', 'evaluation'));
+fs.writeFileSync(path.join(root, 'docs', 'evaluation', 'GAPS.md'), '# G\n\n- C1: **watch**. Revisit later.\n- C2: done.\n');
 const run = () => spawnSync('node', [SCRIPT, root], { encoding: 'utf8' });
 
 it('lists open rows by section, counts done, lists watch rows', () => {
