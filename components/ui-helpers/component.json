@@ -1,0 +1,39 @@
+{
+  "name": "ui-helpers",
+  "source": {
+    "game": "jarl",
+    "commit": "6f006a2",
+    "paths": [
+      "src/ui/components/inspect.ts (createInspect: the hover-rest trigger only; timers and delays passed in; the game's `whereNow` line and its store subscription stay in the game)",
+      "src/ui/prompts/pick.ts, src/ui/prompts/pick.machine.ts (createSelection, picksFor: the prompt replaced by a scope of version, prompt id and max; the status is computed, no machine table; `clickOption` and the store subscription stay in the game)",
+      "src/ui/prompts/autoAnswer.ts (onlyForcedAnswer: the never-list of purposes replaced by a `never` flag the game computes)"
+    ],
+    "grafts": [
+      {
+        "game": "ebr",
+        "commit": "33b5abd3",
+        "paths": [
+          "src/ui/panel/hoverHold.ts (createHoverHold, bindHoverHold: the module state and the window listener replaced by an instance and a bind call)"
+        ]
+      },
+      {
+        "game": "imp",
+        "commit": "20a033a",
+        "paths": [
+          "src/ui/play/toasts.ts (createToasts: tones a type parameter; the self-clearing timer moved into the store, injected)"
+        ]
+      },
+      {
+        "game": "unst",
+        "commit": "9e666b4",
+        "paths": [
+          "src/ui/play/obvious.ts (probedAnswer: only the probe-and-compare shape; `costOf` and the reveal checks are the game's)"
+        ]
+      }
+    ]
+  },
+  "needs": [],
+  "packages": [
+    "zustand"
+  ]
+}

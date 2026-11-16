@@ -1,0 +1,25 @@
+# ui-helpers
+
+Small screen helpers with no look and no game types. The stores are zustand vanilla stores: read them in React with
+`useStore(store, selector)`. Every timer goes through an optional `timers: { set, clear }`, so tests need no real clock.
+
+| Helper | What the game passes in |
+|---|---|
+| `createHoverHold(movePx = 3)` | Nothing. `bindHoverHold(hold, window)` once; call `hold.start()` when an overlay closes; a piece ignores pointer-enter while `hold.held()`. |
+| `createInspect<T>({ openMs = 700, closeMs = 180, timers })` | `open(target)` on pointer-enter, `openNow(target)` on right-click, `close()` on leave, `hold()` when the pointer enters the inspector, `closeNow()` when the game changes. |
+| `createToasts<Tone>({ max = 4, ms = 6000, timers })` | `push({ text, tone, title? })` returns the id. A toast with a title stays until `dismiss(id)`; the others go after `ms`. |
+| `createSelection<Id>()` | `toggle({ version, promptId, max }, id)`; read with `picksFor(selection, { version, promptId })`; call `reset()` when the game store's version changes. |
+| `onlyForcedAnswer(prompt, on, never?)` | The prompt's `min` and `options` (`id`, `enabled`), the setting, and whether this prompt is on the game's never-list. Gives the one pick or null. |
+| `probedAnswer(state, answer, apply, cost)` | A pure `apply` (null or a throw when refused) and a `cost(before, after)` that names what the player lost or learned, or null. Gives the answer or null. |
+
+```ts
+const picks = createSelection<string>();
+gameStore.subscribe((next, prev) => {
+  if (next.version !== prev.version) picks.getState().reset();
+});
+```
+
+The selection ignores picks of another version or prompt even before `reset()` runs, so a returning prompt id starts
+empty. `onlyForcedAnswer` is the screen side of the engine-core test that every auto-answered prompt has one legal answer.
+
+Not here: the drawing (toast list, inspector panel), the game's never-list, its cost function and its texts.
