@@ -232,6 +232,53 @@ export function prefersReducedMotion(): boolean {
   return typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches;
 }
 
+export interface AutomationEnv {
+  navigator?: { webdriver?: boolean; userAgent?: string };
+  location?: { search?: string };
+}
+/** An automated browser (`navigator.webdriver`) that did not ask for motion: no `marker` in its user agent, no `?motion=on`. */
+export function automatedWithoutMotion(marker = 'KitMotion', env: AutomationEnv = globalThis): boolean {
+  if (env.navigator?.webdriver !== true) return false;
+  if (env.navigator.userAgent?.includes(marker) === true) return false;
+  return new URLSearchParams(env.location?.search ?? '').get('motion') !== 'on';
+}
+/** The speed, or instant in an automated browser that did not ask for motion. */
+export function withAutomationOff(speed: Speed, marker?: string, env?: AutomationEnv): Speed {
+  return automatedWithoutMotion(marker, env) ? 'instant' : speed;
+}
+/** Puts the speed on the page: `data-motion` (`off`, or `name`) and `--motion-scale` (0 when off). */
+export interface MotionSpeedTarget {
+  dataset: Record<string, string | undefined>;
+  style: { setProperty(k: string, v: string): void };
+}
+export function putMotionSpeed(
+  speed: Speed,
+  name = 'on',
+  el: MotionSpeedTarget | undefined = typeof document === 'undefined' ? undefined : document.documentElement,
+): void {
+  if (el === undefined) return;
+  const scale = speed === 'instant' || !(speed > 0) ? 0 : speed;
+  el.dataset.motion = scale === 0 ? 'off' : name;
+  el.style.setProperty('--motion-scale', String(scale));
+}
+/** Puts `speed()` on the page again whenever the system's reduced-motion setting changes. Returns the unbind. */
+export function bindMotionSpeed(
+  speed: () => Speed,
+  name: () => string = () => 'on',
+  el?: MotionSpeedTarget,
+  mm: ((q: string) => Pick<MediaQueryList, 'addEventListener' | 'removeEventListener'>) | undefined = typeof matchMedia === 'function' ? matchMedia : undefined,
+): () => void {
+  if (mm === undefined) return () => undefined;
+  const q = mm('(prefers-reduced-motion: reduce)');
+  const f = (): void => {
+    putMotionSpeed(speed(), name(), el);
+  };
+  q.addEventListener('change', f);
+  return () => {
+    q.removeEventListener('change', f);
+  };
+}
+
 /** Any press or key on `target` skips what plays; never swallows the input. Returns the unbind. */
 export function skipOnInput(player: MotionPlayer, target: Pick<EventTarget, 'addEventListener' | 'removeEventListener'>): () => void {
   const skip = (): void => {

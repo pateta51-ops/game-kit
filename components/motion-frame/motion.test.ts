@@ -2,13 +2,17 @@ import { readFileSync } from 'node:fs';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   buildTimeline,
+  automatedWithoutMotion,
   createMotionPlayer,
   createVerbs,
   prefersReducedMotion,
+  putMotionSpeed,
+  bindMotionSpeed,
   skipOnInput,
   stageFromLayout,
   validateSpec,
   validateSpecs,
+  withAutomationOff,
   withReducedMotion,
   type Layout,
   type MotionSpec,
@@ -315,5 +319,96 @@ describe('player', () => {
     expect(prefersReducedMotion()).toBe(true);
     expect(withReducedMotion(1)).toBe('instant');
     vi.unstubAllGlobals();
+  });
+
+  it('an automated browser plays instant unless its user agent carries the marker or the address asks for motion', () => {
+    const bot = (userAgent: string, search = '') => ({ navigator: { webdriver: true, userAgent }, location: { search } });
+    expect(automatedWithoutMotion()).toBe(false);
+    expect(automatedWithoutMotion(undefined, { navigator: { webdriver: false, userAgent: 'x' } })).toBe(false);
+    expect(automatedWithoutMotion(undefined, bot('Chrome'))).toBe(true);
+    expect(automatedWithoutMotion(undefined, { navigator: { webdriver: true } })).toBe(true);
+    expect(automatedWithoutMotion(undefined, bot('Chrome KitMotion'))).toBe(false);
+    expect(automatedWithoutMotion('MyGame', bot('Chrome KitMotion'))).toBe(true);
+    expect(automatedWithoutMotion('MyGame', bot('Chrome MyGame'))).toBe(false);
+    expect(automatedWithoutMotion(undefined, bot('Chrome', '?a=1&motion=on'))).toBe(false);
+    expect(automatedWithoutMotion(undefined, bot('Chrome', '?motion=off'))).toBe(true);
+    expect(withAutomationOff(0.5, undefined, bot('Chrome'))).toBe('instant');
+    expect(withAutomationOff(0.5, undefined, bot('Chrome', '?motion=on'))).toBe(0.5);
+    expect(withAutomationOff(0.5)).toBe(0.5);
+  });
+
+  it('putMotionSpeed writes data-motion and --motion-scale', () => {
+    const style: Record<string, string> = {};
+    const el = {
+      dataset: {} as Record<string, string | undefined>,
+      style: {
+        setProperty: (k: string, v: string) => {
+          style[k] = v;
+        },
+      },
+    };
+    putMotionSpeed(0.5, 'fast', el);
+    expect([el.dataset.motion, style['--motion-scale']]).toEqual(['fast', '0.5']);
+    putMotionSpeed(1, undefined, el);
+    expect([el.dataset.motion, style['--motion-scale']]).toEqual(['on', '1']);
+    putMotionSpeed('instant', 'fast', el);
+    expect([el.dataset.motion, style['--motion-scale']]).toEqual(['off', '0']);
+  });
+
+  it('putMotionSpeed and bindMotionSpeed do nothing without a document or matchMedia', () => {
+    expect(typeof document).toBe('undefined');
+    expect(() => {
+      putMotionSpeed(1);
+    }).not.toThrow();
+    const unbind = bindMotionSpeed(() => 1);
+    expect(() => {
+      unbind();
+    }).not.toThrow();
+  });
+
+  it('reduced motion wins over ?motion=on and over the automation marker', () => {
+    const bot = (userAgent: string, search = '') => ({ navigator: { webdriver: true, userAgent }, location: { search } });
+    expect(withReducedMotion(withAutomationOff(0.5, undefined, bot('Chrome', '?motion=on')), true)).toBe('instant');
+    expect(withReducedMotion(withAutomationOff(0.5, undefined, bot('Chrome KitMotion')), true)).toBe('instant');
+    expect(withReducedMotion(withAutomationOff(0.5, undefined, bot('Chrome', '?motion=on')), false)).toBe(0.5);
+    expect(withReducedMotion(withAutomationOff(0.5, undefined, bot('Chrome')), false)).toBe('instant');
+    expect(withReducedMotion(withAutomationOff(0.5, undefined, {}), false)).toBe(0.5);
+  });
+
+  it('bindMotionSpeed puts the speed again when the reduced-motion setting changes, until unbound', () => {
+    const style: Record<string, string> = {};
+    const el = {
+      dataset: {} as Record<string, string | undefined>,
+      style: {
+        setProperty: (k: string, v: string) => {
+          style[k] = v;
+        },
+      },
+    };
+    const heard = new Set<() => void>();
+    const asked: string[] = [];
+    let reduced = false;
+    const mm = (q: string) => {
+      asked.push(q);
+      return {
+        addEventListener: (_: string, f: unknown) => void heard.add(f as () => void),
+        removeEventListener: (_: string, f: unknown) => void heard.delete(f as () => void),
+      };
+    };
+    const unbind = bindMotionSpeed(() => withReducedMotion(0.5, reduced), () => 'fast', el, mm);
+    expect(asked).toEqual(['(prefers-reduced-motion: reduce)']);
+    expect(el.dataset.motion).toBeUndefined();
+    reduced = true;
+    heard.forEach((f) => {
+      f();
+    });
+    expect([el.dataset.motion, style['--motion-scale']]).toEqual(['off', '0']);
+    reduced = false;
+    heard.forEach((f) => {
+      f();
+    });
+    expect([el.dataset.motion, style['--motion-scale']]).toEqual(['fast', '0.5']);
+    unbind();
+    expect(heard.size).toBe(0);
   });
 });

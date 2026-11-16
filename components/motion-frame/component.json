@@ -10,7 +10,9 @@
     ],
     "grafts": [
       { "game": "ebr", "paths": ["the registry with one entry per event kind (as the BeatTable type) and reduced motion in the speed setting (withReducedMotion); idea only, no file taken"] },
-      { "game": "rome", "paths": ["the queue with injected speed (speed read when a beat starts); idea only, no file taken"] }
+      { "game": "rome", "paths": ["the queue with injected speed (speed read when a beat starts); idea only, no file taken"] },
+      { "game": "ebr", "commit": "33b5abd3", "paths": ["src/ui/motion/speed.ts lines 20-66 (Off in an automated browser unless the user agent marker or ?motion=on; data-motion and --motion-scale on the page; the marker became a parameter, the store stayed behind)", "playwright.config.ts lines 19-27 (the second project with motion on: in the README)"] },
+      { "game": "rome", "commit": "1d0fd2e", "paths": ["src/ui/motion/MotionLab.tsx (the lab that lists the catalog and plays one on request; idea only, rewritten on the player; the frame sampler scripts/motion-capture.mjs stayed behind: it seeks a pure frame function, which the timer player does not have)"] }
     ]
   },
   "needs": []
