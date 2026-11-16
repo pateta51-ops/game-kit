@@ -90,6 +90,7 @@ Open check before the lift: the canonical JSON of the Jarl line and of STCC buil
 | Sound player | Warp's (cue table as data, music, priorities, ducking, most fixes) | Unstoppable's event-to-cue merge layer | M |
 | Sound generator | Warp's (the only one) | - | S to M |
 | Voice-over | EBR (the only one). The player is generic; the scripts are tied to EBR's guide text and cast | - | M |
+| Board layout (K116: map drawn in Inkscape, extracted as space rects and adjacency edges) | Rally the Troops `parse-layout.js`, `new-layout.js` (ISC; ported to TypeScript) | - | S |
 | Visual replay | Pattern only: Rome's is welded to its screens and art | | L if ever shared |
 
 Generic effects: deal, move, flip, shake, highlight, beam, sparks, count-up, banner, crumple. One game's look, not shared: phaser, warp tunnel, coins, book, triumph.

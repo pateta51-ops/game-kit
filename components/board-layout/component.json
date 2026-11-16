@@ -1,0 +1,14 @@
+{
+  "name": "board-layout",
+  "source": {
+    "game": "rally-the-troops",
+    "commit": "mirror github.com/rzymek/rally-the-troops of the author's server repository, fetched 16 Nov 2026",
+    "paths": [
+      "tools/parse-layout.js (parseLayout; ported to TypeScript, returns data instead of printing a script, adds adjacency and spaceAt)",
+      "tools/new-layout.js (newLayoutSvg)"
+    ],
+    "licence": "ISC. The ISC licence applies to the Rally the Troops platform software (rally-the-troops.com), not the game titles. Notice: permission to use, copy, modify and distribute this software for any purpose with or without fee is granted, provided this notice appears in all copies."
+  },
+  "needs": [],
+  "packages": []
+}
