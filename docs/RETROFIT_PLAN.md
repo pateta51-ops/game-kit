@@ -51,6 +51,26 @@ After RT1 the owner sees what changed and what it cost, and says go or stop for 
 
 `theme-check` is pulled only by a game whose colours and fonts already sit in a token file; otherwise it is skipped and noted.
 
+## Part B result (16 Nov 2026, kit v0.22.0)
+
+All seven merged. A game took a kit tool only where it was at least as strict as its own.
+
+| Game | From the kit | Kept its own |
+|---|---|---|
+| Jarl | plan-checker, traceability, repo-gate, ci-templates | theme check |
+| Rome | plan-checker, repo-gate, ci-templates | traceability |
+| EBR | check-runner, bundle-size, plan-checker | traceability |
+| Imperium | plan-checker, bundle-size, ci-templates (gate slot) | traceability |
+| Warp's Edge | plan-checker, ci-templates (gate slot) | repo gate, traceability |
+| STCC | plan-checker, ci-templates (gate slot) | bundle size, traceability, repo gate, check runner |
+| Unstoppable | repo-gate, ci-templates | plan checker, traceability, bundle size |
+
+## Part C - second pass (owner, 15 Nov 2026: "go on wave 3")
+
+Wave 3 (K67 to K74 in `docs/PLAN.md`) gave the kit's tools the options the games' own tools had; tag v0.24.0. Each game then pulls that tag and replaces a tool it kept, one pull request per game, under the Part B rule: the kit's tool goes in only when, with the game's options, it passes and fails what the game's own does. A tool that still differs stays, and the difference is a new row.
+
+Known differences left after wave 3: `traceability` scans text where EBR parses TypeScript; `plan-checker --tsc` takes one section where Unstoppable compiles three; `bundle-size` flag names differ from Unstoppable's.
+
 ## Not retrofitted
 
 - `engine-core`, `state-machines`, `sim-pool`, random numbers, hashing: nothing a player would see, and a swap changes determinism, so replays, golden files and the every-card programmes would have to be proved again.
