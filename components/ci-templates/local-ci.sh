@@ -44,7 +44,14 @@ git -c user.name=local-ci -c user.email=local-ci@invalid merge -q --no-edit "$SH
 echo "tested $(git rev-parse --short HEAD) = origin/main $(git rev-parse --short origin/main) + $LABEL head ${SHA:0:7}" >> "$SUM"
 rc=0
 step "npm-ci" npm ci --no-audit --no-fund || rc=1                 # ci.yml
-step "check" "${GS[@]}" npm run check || rc=1                            # ci.yml and full-gate.yml
+# ci.steps then gate.steps of ci.config.json (the commands, in order; a step with "uses" or "if" is left out), else npm run check
+CMDS=()
+while IFS= read -r -d '' x; do CMDS+=("$x"); done < <(node -e 'const c=require("./ci.config.json");for(const s of [...(c.ci?.steps??[]),...(c.gate?.steps??[])]){const r=typeof s==="string"?s:s.if?"":s.run;if(!r)continue;const e=Object.entries(s.env??{}).filter(([,v])=>!String(v).includes("${{")).map(([k,v])=>"export "+k+"="+JSON.stringify(String(v))+"\n").join("");const d=s["working-directory"];process.stdout.write(e+(d?"cd "+JSON.stringify(d.replace(/^full-gate\//,""))+"\n":"")+r+"\0")}' 2>/dev/null)
+if [ ${#CMDS[@]} -gt 0 ]; then
+  i=0; for x in "${CMDS[@]}"; do i=$((i+1)); step "step-$i" "${GS[@]}" bash -c "$x" || rc=1; done
+else
+  step "check" "${GS[@]}" npm run check || rc=1                            # ci.yml and full-gate.yml
+fi
 if [ -n "$E2E" ]; then
   for s in ${E2E//,/ }; do step "$s" "${GS[@]}" env ${CHROMIUM:+PW_CHROMIUM_PATH=$CHROMIUM} E2E_PORT="$PORT" npm run "$s" || rc=1; done
 elif [ -n "$CHROMIUM" ]; then                                     # full-gate.yml

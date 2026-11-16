@@ -95,6 +95,115 @@ describe('rendered files', () => {
     expect(go('--check').status).toBe(0);
   });
 
+  it('render.mjs writes a gate of several steps, a second job, and the push and pull_request switches (K141)', () => {
+    const root = join(dir, 'steps');
+    mkdirSync(join(root, 'kit'), { recursive: true });
+    cpSync(here, join(root, 'kit/ci-templates'), { recursive: true });
+    const base = { repo: 'acme/widget', runnerLabel: 'widget' };
+    const go = (cfg: object): string => {
+      writeFileSync(join(root, 'ci.config.json'), JSON.stringify({ ...base, ...cfg }));
+      expect(spawnSync(process.execPath, ['kit/ci-templates/render.mjs'], { cwd: root }).status).toBe(0);
+      expect(spawnSync(process.execPath, ['kit/ci-templates/render.mjs', '--check'], { cwd: root }).status).toBe(0);
+      return readFileSync(join(root, '.github/workflows/ci.yml'), 'utf8');
+    };
+    const gate = (): string => readFileSync(join(root, '.github/workflows/full-gate.yml'), 'utf8');
+    const plainCi = go({});
+    const plainGate = gate();
+    const py = { uses: 'actions/setup-python@v7', if: 'failure()', with: { 'python-version': '3.13', cache: 'pip', 'retention-days': 7, cone: false } };
+    const ci = go({
+      ci: {
+        name: 'Node (lint, tests)',
+        timeoutMinutes: 25,
+        checkout: { 'sparse-checkout': '/*\n!/media/\n', 'fetch-depth': 2 },
+        node: { cache: 'npm' },
+        install: 'npm ci',
+        steps: ['npm run lint', { name: 'Tests: all', run: 'npm test', env: { PACK: '${{ runner.temp }}/pack.json', PORT: '4473' } }, { name: 'Browser', run: 'for a in 1 2; do\n  echo "$a"\ndone\n\nexit 1\n' }],
+      },
+      gate: { name: 'Full gate (check, sim, e2e)', timeoutMinutes: 90, node: { cache: 'npm' }, steps: [py, { name: 'npm run check', run: 'npm run check', env: { P: 'python' } }, 'npm run sim'] },
+      jobs: { python: { name: 'Python (tools)', steps: [py, { run: 'python -m pytest tests -q', 'working-directory': 'tools/ingest' }] }, extra: { timeoutMinutes: 5, steps: ['true'] } },
+    });
+    const guard = "    if: github.repository_owner == 'acme' && (github.event_name != 'pull_request' || !github.event.pull_request.draft)\n    runs-on: [self-hosted, widget]\n";
+    const pyYaml = '      - uses: actions/setup-python@v7\n        if: failure()\n        with:\n          python-version: "3.13"\n          cache: pip\n          retention-days: 7\n          cone: false\n';
+    expect(ci.slice(ci.indexOf('jobs:'))).toBe(
+      `jobs:\n  check:\n    name: Node (lint, tests)\n${guard}    timeout-minutes: 25\n    steps:\n      - uses: actions/checkout@v7\n        with:\n          sparse-checkout: |\n            /*\n            !/media/\n          fetch-depth: 2\n` +
+        '      - uses: actions/setup-node@v7\n        with:\n          node-version-file: .nvmrc\n          cache: npm\n      - run: npm ci\n      - run: npm run lint\n' +
+        '      - name: "Tests: all"\n        run: npm test\n        env:\n          PACK: ${{ runner.temp }}/pack.json\n          PORT: "4473"\n' +
+        '      - name: Browser\n        run: |\n          for a in 1 2; do\n            echo "$a"\n          done\n\n          exit 1\n' +
+        `\n  python:\n    name: Python (tools)\n${guard}    timeout-minutes: 15\n    steps:\n      - uses: actions/checkout@v7\n${pyYaml}      - run: python -m pytest tests -q\n        working-directory: tools/ingest\n` +
+        `\n  extra:\n    name: extra\n${guard}    timeout-minutes: 5\n    steps:\n      - uses: actions/checkout@v7\n      - run: "true"\n`,
+    );
+    expect(ci.slice(0, ci.indexOf('jobs:'))).toBe(plainCi.slice(0, plainCi.indexOf('jobs:')));
+    expect(gate()).toBe(
+      plainGate
+        .replace('Full gate (check, e2e) on PR head merged with main', 'Full gate (check, sim, e2e)')
+        .replace('timeout-minutes: 60', 'timeout-minutes: 90')
+        .replace('full-gate/.nvmrc\n', 'full-gate/.nvmrc\n          cache: npm\n')
+        .replace('      - run: npm run check\n', `${pyYaml}      - name: npm run check\n        run: npm run check\n        env:\n          P: python\n      - run: npm run sim\n`),
+    );
+    const on = go({ push: false, prTypes: ['opened', 'edited'], pathsIgnore: ['bugs/**'] });
+    expect(on).toContain('on:\n  pull_request:\n    types: [opened, edited]\n\nconcurrency:');
+    expect(go({ prTypes: ['opened', 'edited'], runDrafts: true })).toContain('    types: [opened, edited]\n\nconcurrency:');
+    expect(go({ prTypes: ['opened'], runDrafts: true })).toContain("    if: github.repository_owner == 'acme'\n");
+    expect(go({})).toBe(plainCi);
+    expect(gate()).toBe(plainGate);
+    // a setting with no place in the template, or a job without steps, stops the render
+    const stop = (cfg: object, msg: string): void => {
+      writeFileSync(join(root, 'ci.config.json'), JSON.stringify({ ...base, ...cfg }));
+      const r = spawnSync(process.execPath, ['kit/ci-templates/render.mjs'], { cwd: root, encoding: 'utf8' });
+      expect(r.stderr, msg).toContain(msg);
+      expect(r.status, msg).toBe(2);
+    };
+    stop({ gate: { checkout: { 'fetch-depth': 2 } } }, 'full-gate.yml: "checkout" of ci.config.json has no place');
+    stop({ ci: { steps: 'npm run lint' } }, 'ci.yml: "steps" of ci.config.json must be a list');
+    stop({ jobs: { python: { name: 'Python' } } }, 'job "python" needs "steps"');
+    stop({ jobs: { python: null } }, 'job "python" needs "steps"');
+    const tpl = join(root, 'kit/ci-templates/ci.yml');
+    const was = readFileSync(tpl, 'utf8');
+    const without = (re: RegExp, cfg: object, msg: string): void => {
+      writeFileSync(tpl, was.replace(re, ''));
+      stop(cfg, msg);
+    };
+    without(/ {6}- run: npm run check\r?\n/, { ci: { steps: ['npm run lint'] } }, 'ci.yml: "steps" of ci.config.json has no place');
+    without(/ {6}- run: npm ci.*\r?\n/, { ci: { install: 'npm ci' } }, '"install"');
+    without(/ {4}name: .*\r?\n/, { ci: { name: 'x' } }, '"name"');
+    without(/ {6}- uses: actions\/checkout@v7\r?\n/, { ci: { checkout: { 'fetch-depth': 2 } } }, '"checkout"');
+    without(/ {2}push:/, { push: false }, '"push": false');
+    without(/ {4}types: .*\r?\n/, { prTypes: ['opened'] }, '"prTypes"');
+    without(/ {4}if: .*\r?\n/, { jobs: { python: { steps: ['true'] } } }, 'no "if" and "runs-on" lines');
+    writeFileSync(tpl, was);
+    expect(go({ ci: { timeoutMinutes: 15 } })).toBe(plainCi);
+  });
+
+  it('local-ci.sh runs ci.steps then gate.steps of ci.config.json in order, instead of npm run check (Linux only)', () => {
+    if (process.platform !== 'linux') return;
+    const out = join(dir, 'local-out');
+    const run = (name: string, cfg: object): string => {
+      const root = join(dir, name);
+      mkdirSync(join(root, 'kit'), { recursive: true });
+      cpSync(here, join(root, 'kit/ci-templates'), { recursive: true });
+      writeFileSync(join(root, 'ci.config.json'), JSON.stringify({ repo: 'acme/widget', runnerLabel: 'widget', ...cfg }));
+      const git = (...a: string[]) => spawnSync('git', ['-c', 'user.name=t', '-c', 'user.email=t@invalid', ...a], { cwd: root, encoding: 'utf8' });
+      spawnSync('git', ['init', '-q', '--bare', '-b', 'main', join(dir, `${name}.git`)]);
+      git('init', '-q', '-b', 'main');
+      git('add', '-A');
+      git('commit', '-q', '-m', 'a');
+      git('remote', 'add', 'origin', join(dir, `${name}.git`));
+      git('push', '-q', 'origin', 'main', 'main:feat');
+      spawnSync('bash', ['kit/ci-templates/local-ci.sh', 'feat', git('rev-parse', 'HEAD').stdout.trim()], { cwd: root, encoding: 'utf8', env: { ...process.env, LOCAL_CI_DIR: out, GATE_DIR: join(dir, 'gates'), REPO_SLUG: 'acme/widget', E2E_SCRIPTS: 'none' } });
+      return readFileSync(join(out, 'feat.summary'), 'utf8') + readFileSync(join(out, 'feat.log'), 'utf8');
+    };
+    const s = run('local-steps', {
+      ci: { steps: ['echo one', { uses: 'actions/setup-python@v7' }, { name: 'two', run: 'echo "two $V in $(basename "$PWD")"\nexit 3\n', env: { V: 'v', W: '${{ runner.temp }}' }, 'working-directory': 'kit' }, { if: 'failure()', run: 'echo zzz-left-out' }] },
+      gate: { steps: [{ run: 'echo three', 'working-directory': 'full-gate/kit' }] },
+    });
+    expect(s).toMatch(/step-1 exit=0 \d+s\nstep-2 exit=3 \d+s\nstep-3 exit=0 \d+s\n/);
+    expect(s).not.toMatch(/^check exit|step-4|zzz-left-out/m);
+    for (const t of ['one\n', 'two v in kit\n', 'three\n', 'RESULT RED']) expect(s).toContain(t);
+    const plainRun = run('local-plain', {});
+    expect(plainRun).toMatch(/^check exit=\d+ /m);
+    expect(plainRun).not.toContain('step-1');
+  });
+
   it('local-ci.sh as pulled names its output folder after origin and uses the gate-slot.sh beside it (Linux only)', () => {
     if (process.platform !== 'linux') return;
     const root = join(dir, 'local');
