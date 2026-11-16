@@ -69,7 +69,19 @@ All seven merged. A game took a kit tool only where it was at least as strict as
 
 Wave 3 (K67 to K74 in `docs/PLAN.md`) gave the kit's tools the options the games' own tools had; tag v0.25.0. Each game then pulls that tag and replaces a tool it kept, one pull request per game, under the Part B rule: the kit's tool goes in only when, with the game's options, it passes and fails what the game's own does. A tool that still differs stays, and the difference is a new row.
 
-Known differences left after wave 3: `traceability` scans text where EBR parses TypeScript; `plan-checker --tsc` takes one section where Unstoppable compiles three; `bundle-size` flag names differ from Unstoppable's.
+Result (16 Nov 2026, all seven at v0.25.0):
+
+| Game | Newly from the kit | Still its own (row in `docs/PLAN.md`) |
+|---|---|---|
+| Jarl | workflows rendered from `ci.config.json`, the kit's full gate | theme check (K127) |
+| Rome | traceability | - |
+| EBR | - | traceability (K128) |
+| Imperium | - | traceability (K128) |
+| Warp's Edge | traceability | repo gate (K129) |
+| STCC | bundle-size | traceability (K128), repo gate (K129), check runner (K130) |
+| Unstoppable | traceability, bundle-size | plan checker (K131) |
+
+Only Jarl's workflows could be rendered from the templates (K133). A third pass waits for wave 4.
 
 ## Not retrofitted
 

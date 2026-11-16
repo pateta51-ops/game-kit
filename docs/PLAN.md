@@ -144,6 +144,20 @@ What a game's own tool did that the kit's does not; each kept that game on its o
 | K74 | `theme-check`: font-face and body-font checks, logo by folder, icon list cross-check, looser `font:` shorthand | Jarl | S | done |
 | K76 | `motion-frame`: clip capture from real seeded play at 1920 wide (`record.ts`, node only) and a six-frame stills sheet per clip (`stillTimes` from the spec) | 7th Inning Stretch | S | done |
 
+### Wave 4 - gaps left after the second pass (16 Nov 2026)
+
+What still keeps a game on its own tool at kit v0.25.0. Details in the second-pass pull requests (Jarl 27, Rome 57, EBR 251, Imperium 133, Warp's 142, STCC 296, Unstoppable 56).
+
+| # | Batch | Found in | Size | State |
+|---|---|---|---|---|
+| K127 | `theme-check`: a switch per rule (COLOR, RADIUS, SHADOW cannot be turned off; 312 findings in Jarl); the token file not exempt when a game wants it checked | Jarl | S | proposed |
+| K128 | `traceability`: a TypeScript parse of test titles in place of the text scan (ids in a fixture string count today); `idsAtLineStart` takes section 3 table rows as rules; the id pattern given whole as one regexp (STCC's plan regexp verbatim; Imperium's id after a dash or underscore); the dot required in `## 3.`; EBR's scenario report, rejected-title print and counts line | EBR, STCC, Imperium | M | proposed |
+| K129 | `repo-gate`: a PORT rule; CONTENT_NAME and RAW_SCAN switchable; CONTENT_ID not exempting engine test files; a blob missing from a sparse partial clone is skipped with a notice where the game says so; text not checked out, UTF-16, chat URLs, warn-only size | Warp's, STCC | M | proposed |
+| K130 | `check-runner`: streamed `[lane]` output, `npm --silent`, skip `last` once a lane failed | STCC | S | proposed |
+| K131 | `plan-checker`: `--tsc` over several sections in order plus a stub line | Unstoppable | S | proposed |
+| K132 | `bundle-size`: `--follow true` exits 2 on an encoded `url(%23n)` in a stylesheet | STCC | S | proposed |
+| K133 | `ci-templates`: templates for a multi-step gate and a second job (Python), so EBR, Imperium, STCC, Warp's, Rome and Unstoppable can render theirs | six games | M | proposed |
+
 ### Owner's word (size L or stage 4)
 
 | Content | Sources | Effort |
