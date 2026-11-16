@@ -4,11 +4,11 @@ on:
   push:
     branches: [main]
   pull_request:
-    types: [opened, reopened, ready_for_review, synchronize]
+    types: [opened, reopened, synchronize, ready_for_review]
 
 concurrency:
   group: ci-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
 
 permissions:
   contents: read
@@ -16,7 +16,6 @@ permissions:
 jobs:
   check:
     name: npm run check
-    if: github.event_name != 'pull_request' || !github.event.pull_request.draft
     runs-on: [self-hosted, kit]
     timeout-minutes: 15
     steps:
@@ -25,19 +24,25 @@ jobs:
         with:
           node-version-file: .nvmrc
       - run: npm ci --no-audit --no-fund
-      - run: npm run check
+      - run: npx tsx components/check-runner/check-runner.ts --config check-runner.config.json --keep-going
+        env:
+          NO_COLOR: '1'
 
   scan-ingest:
     name: pytest scan-ingest
-    if: github.event_name != 'pull_request' || !github.event.pull_request.draft
     runs-on: [self-hosted, kit]
     timeout-minutes: 20
-    defaults:
-      run:
-        working-directory: components/scan-ingest
     steps:
       - uses: actions/checkout@v7
-      - run: |
+        with:
+          fetch-depth: 0
+      - id: changed
+        run: |
+          if [ "${{ github.event_name }}" = pull_request ]; then BASE="origin/${{ github.base_ref }}"; else BASE="${{ github.event.before }}"; fi
+          if git rev-parse -q --verify "$BASE^{commit}" >/dev/null && git diff --quiet "$BASE" HEAD -- components/scan-ingest .github/workflows/ci.yml; then echo run=no >> "$GITHUB_OUTPUT"; else echo run=yes >> "$GITHUB_OUTPUT"; fi
+      - if: steps.changed.outputs.run == 'yes'
+        working-directory: components/scan-ingest
+        run: |
           python3 -m venv "$RUNNER_TEMP/scan-ingest-venv"
           PY="$RUNNER_TEMP/scan-ingest-venv/bin/python"
           "$PY" -m pip install -q -r requirements.txt

@@ -20,7 +20,7 @@ on:
 concurrency:
   # A draft's skipped run must never cancel the full gate that "ready for review" starts at the same moment.
   group: ci-${{ github.ref }}-${{ github.event.pull_request.draft && 'draft' || 'ready' }}
-  cancel-in-progress: true
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
 
 permissions:
   contents: read

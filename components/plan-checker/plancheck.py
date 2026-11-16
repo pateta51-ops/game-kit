@@ -575,7 +575,7 @@ def main() -> int:
                         cwd=tmp, capture_output=True, text=True, encoding="utf-8",
                     )
                     if r.returncode != 0:
-                        problems.append("type contract does not compile:\n" + (r.stdout + r.stderr)[:3000])
+                        problems.append("type contract does not compile:\n" + re.sub(r"\((\d+),(\d+)\): (error|warning) TS", r" line \1:\2 \3 TS", r.stdout + r.stderr)[:3000])  # no "file(1,2): error TS" form: CI's tsc matcher would annotate it as a build error
 
     notes |= kit_warnings(path, lines)
 
