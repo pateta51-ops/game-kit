@@ -95,7 +95,7 @@ Generic effects: deal, move, flip, shake, highlight, beam, sparks, count-up, ban
 ## Risks to carry into the lifts
 
 - The STCC, EBR and Rome motion code descends from an open-source LOTR LCG project (BSD-3). Its notice file travels with every file taken from it.
-- The sound generator's worker models have licences that were not checked.
+- `audio-gen` (K75): Stable Audio Open 1.0 (Stability AI Community License, gated weights), ACE-Step 1.5 (MIT), Kokoro-82M (Apache-2.0), a General MIDI soundfont the game supplies (GeneralUser GS: its own licence file). Checked from each project's page at lift time, 16 Nov 2026; a game re-checks before shipping anything made with them. No weights or generated audio are in the kit.
 - No secrets were found in the voice-over files that were scanned; `castElevenLabs.ts` and the Warp's audio key script were not scanned. Scan them at lift time.
 - Random numbers and hashing are determinism-critical: lift byte for byte, with their known-answer tests.
 

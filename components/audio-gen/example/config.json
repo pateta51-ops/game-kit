@@ -1,0 +1,26 @@
+{
+ "root": ".",
+ "outputDir": "~/audio-gen/out/example",
+ "manifest": "~/audio-gen/out/example/manifest.json",
+ "workDir": "~/audio-gen/work/example",
+ "sampleRate": 44100,
+ "sheet": {"header": "Cue"},
+ "prompt": {
+  "style": "Close microphone, dry, no reverb.",
+  "tail": "no music, no voice.",
+  "negativePrompt": "music, voice, speech, synth, beep, reverb, noise"
+ },
+ "categories": {
+  "quiet": {"kind": "sfx", "lufs": -24, "truePeak": -1, "channels": 1, "backend": "sao", "fadeInMs": 3, "fadeOutMs": 200, "trimSilence": true,
+   "tail": {"extraGenerateS": 2.0, "endBelowDbfs": -50, "minFadeMs": 150}, "peakBelowS": 3, "peakDbfs": -9, "opusKbps": 96, "aacKbps": 96, "layout": "{category}/{name}-{n}"},
+  "normal": {"kind": "sfx", "lufs": -20, "truePeak": -1, "channels": 1, "backend": "sao", "fadeInMs": 3, "fadeOutMs": 200, "trimSilence": true,
+   "tail": {"extraGenerateS": 2.0, "endBelowDbfs": -50, "minFadeMs": 150}, "peakBelowS": 3, "peakDbfs": -6, "opusKbps": 96, "aacKbps": 96, "layout": "{category}/{name}-{n}"},
+  "loud": {"kind": "sfx", "lufs": -16, "truePeak": -1, "channels": 1, "backend": "sao", "fadeInMs": 3, "fadeOutMs": 300, "trimSilence": true,
+   "tail": {"extraGenerateS": 2.0, "endBelowDbfs": -50, "minFadeMs": 150}, "peakBelowS": 3, "peakDbfs": -3, "opusKbps": 96, "aacKbps": 96, "layout": "{category}/{name}-{n}"},
+  "music": {"kind": "music", "lufs": -24, "truePeak": -1, "channels": 2, "backend": "ace", "fadeInMs": 50, "fadeOutMs": 500, "trimSilence": false, "opusKbps": 96, "aacKbps": 96, "layout": "{category}/{name}-{n}"}
+ },
+ "backends": {
+  "sao": {"type": "stable-audio-open", "licence": "Stability AI Community License", "model": "stabilityai/stable-audio-open-1.0", "python": "~/audio-gen/venv/bin/python"},
+  "ace": {"type": "acestep", "licence": "MIT", "python": "~/audio-gen/venv/bin/python", "repo": "~/audio-gen/ACE-Step-1.5", "checkpointsDir": "~/audio-gen/checkpoints"}
+ }
+}

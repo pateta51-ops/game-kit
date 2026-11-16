@@ -1,0 +1,13 @@
+{
+ "kinds": {
+  "announcer": {"voices": ["am_michael", "am_onyx"], "speed": 0.95, "filters": "highpass=f=300,lowpass=f=3400,aecho=0.8:0.6:140:0.35", "lufs": -22, "peakDbfs": -4},
+  "call": {"voices": ["am_fenrir", "am_puck"], "speed": 1.1, "shout": true, "lufs": -18.5, "peakDbfs": -2, "retryVoice": "am_eric"}
+ },
+ "lines": [
+  {"id": "greeting", "kind": "announcer", "text": "Welcome!", "when": "At the start."},
+  {"id": "call-done", "kind": "call", "text": "Done!", "when": "On every finish."}
+ ],
+ "parts": {
+  "number": [{"id": "one", "text": "one", "kind": "announcer"}, {"id": "two", "text": "two", "kind": "announcer"}]
+ }
+}

@@ -43,7 +43,7 @@ Known limit (engine-core): the single-copy guard stops two copies loaded from tw
 |---|---|---|---|
 | K11 | Motion frame (done) | M | 1.1 |
 | K12 | Effect library (done) | M | 1.1 |
-| K13 | Sound player (done); sound generator (not built) | M | 1.2 |
+| K13 | Sound player (done); sound generator (done: `components/audio-gen`, K75) | M | 1.2 |
 | K14 | Voice-over (done) | M | 1.3 |
 
 ## Stage 4 - only on the owner's word
@@ -128,6 +128,7 @@ A game's build plan lists the kit work it needs as phases named `GK<n>` for the 
 | K64 | Tooling scripts (with K37): font fetch and WOFF packer, mock capture with a defect report, picture re-encoder, owner PC setup, art manifest check, dossier sync, node bundler for simulations, printed-text leak check, generated list from a plan table | Jarl, Rome, Warp's, Imperium, STCC | M | done (rest in K72) |
 | K65 | Small UI helpers: hover held off after an overlay closes, hover-rest inspector, toast store, selection bound to a store version, obvious-answer rule (with K30), rule sheet search, icon words, prompt keys | EBR, Jarl, Imperium, Unstoppable, Warp's | M | done (rest in K73) |
 | K66 | `voice`: paid speech client with a spending cap and a cost ledger | EBR | M | done |
+| K75 | New `audio-gen`: the free local audio pipeline (installs in WSL under `~/audio-gen`, cue sheet to prompt specs, generation with a manifest per clip, the rings-out tail and loudness as code, music from MIDI stems with exact loops, voice lines with Kokoro, listening-page data, the sound player's format and size limits). No paid service | 7th Inning Stretch, game-sfx-review skill | M | done |
 
 ### Wave 3 - gaps found by the retrofits (15 Nov 2026)
 
