@@ -92,6 +92,7 @@ Open check before the lift: the canonical JSON of the Jarl line and of STCC buil
 | Voice-over | EBR (the only one). The player is generic; the scripts are tied to EBR's guide text and cast | - | M |
 | Board layout (K116: map drawn in Inkscape, extracted as space rects and adjacency edges) | Rally the Troops `parse-layout.js`, `new-layout.js` (ISC; ported to TypeScript) | - | S |
 | Visual replay | Pattern only: Rome's is welded to its screens and art | | L if ever shared |
+| Code-built 3D pieces (`pieces-3d`, K166) | 7th Inning Stretch, commit 4dcb9be: the only game with WebGL dice and a rolling ball, already free of its game's names | - | M |
 
 Generic effects: deal, move, flip, shake, highlight, beam, sparks, count-up, banner, crumple. One game's look, not shared: phaser, warp tunnel, coins, book, triumph.
 

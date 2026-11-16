@@ -1,0 +1,18 @@
+{
+  "name": "pieces-3d",
+  "source": {
+    "game": "7is",
+    "commit": "4dcb9be",
+    "paths": [
+      "src/ui/pieces3d/solids.ts",
+      "src/ui/pieces3d/diceGl.ts (the default `on` now sets `p3-gl` on <html>; classes and `data-die` carry the `p3-` prefix)",
+      "src/ui/pieces3d/ball.ts (the seam curve and the travel per turn are parameters)",
+      "src/ui/pieces3d/Pieces3d.tsx",
+      "src/ui/pieces3d/pieces3d.css",
+      "src/ui/pieces3d/pieces3d.test.ts",
+      "src/ui/motion/index.ts (the die and ball verbs, as `shake`, `flip`, `move`, `settle`; the clone repaint as `copyPieces`)"
+    ]
+  },
+  "needs": ["effect-library", "motion-frame"],
+  "packages": ["react (ui.ts only)"]
+}
