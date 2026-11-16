@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { conforms, createProbe, Delivery, describeCheck, expectResolved, inventory, report, runInventory, Scenario, testFiles, traceAbilities, type DeliveryGame, type Same } from './index';
+import { clauseIds, conforms, createProbe, Delivery, describeCheck, expectResolved, inventory, report, runInventory, Scenario, testFiles, traceAbilities, type DeliveryGame, type Same } from './index';
 import { literalsOf } from './literals';
 import { DICE, DICE_GAME, PROBE, type Dice, type DiceState, type Note } from './fake/dice';
 import { applyAction } from '../engine-core';
@@ -190,6 +190,16 @@ describe('inventory', () => {
     expect(log.some((l) => l.includes('stale'))).toBe(true);
     expect(log.some((l) => l.includes('baseline lists pattern:triple'))).toBe(true);
     expect(runInventory(input, 'x.md', false, io)).toBe(1);
+  });
+  it('owns printed lines, routes record verbs, builds clause ids (K83, K26)', () => {
+    const base = { pieces: [], tests: [] };
+    const a = inventory({ ...base, lines: [{ id: 'l1', records: ['r1'] }, { id: 'l2', records: [] }, { id: 'l3', records: [] }], openLines: ['l3', 'l1', 'gone'], records: [{ id: 'r1', verb: 'gain' }, { id: 'r2', verb: 'zap' }], routes: ['gain'] });
+    expect([a.unowned, a.staleOpen, a.unrouted]).toEqual([['l2'], ['gone', 'l1'], ['r2:zap']]);
+    const io = { read: () => null, write: () => undefined, log: () => undefined };
+    expect(runInventory({ ...base, lines: [{ id: 'l2', records: [] }] }, 'x.md', false, io)).toBe(1);
+    expect(runInventory({ ...base, lines: [{ id: 'l2', records: ['r'] }], records: [{ id: 'r', verb: 'gain' }], routes: ['gain'] }, 'x.md', false, io)).toBe(0);
+    expect(clauseIds([{ kind: 'on', text: 'Gain 2 coins.' }, { kind: 'on', text: 'Gain 3 coins.' }, { kind: 'on', text: 'Draw a card.' }, { kind: 'end', text: 'Gain 2 coins.' }, { kind: 'on', text: 'Draw' }, { kind: 'on', text: 'Draw' }]))
+      .toEqual(['on-gain-2', 'on-gain-3', 'on-draw-a', 'end-gain', 'on-draw', 'on-draw']);
   });
   it('collects test files', () => {
     const root = dirname(dirname(fileURLToPath(import.meta.url)));

@@ -33,6 +33,13 @@ export interface InventoryInput {
   /** Count an id only when it is in a test title (default: anywhere in the file). */
   readonly titleOnly?: boolean;
   readonly title?: string;
+  /** Printed lines, each with the ids of the records that own it. */
+  readonly lines?: readonly { readonly id: string; readonly records: readonly string[] }[];
+  /** Line ids allowed unowned for now. */
+  readonly openLines?: readonly string[];
+  /** Record verbs, checked against `routes` (the verbs the engine routes by). */
+  readonly records?: readonly { readonly id: string; readonly verb: string }[];
+  readonly routes?: readonly string[];
 }
 export interface Row {
   readonly key: string;
@@ -47,6 +54,9 @@ export interface Inventory {
   readonly rows: readonly Row[];
   readonly uncited: readonly string[];
   readonly staleBaseline: readonly string[];
+  readonly unowned: readonly string[];
+  readonly staleOpen: readonly string[];
+  readonly unrouted: readonly string[];
   readonly report: string;
 }
 
@@ -63,6 +73,18 @@ function cites(tests: readonly TestFile[], res: readonly RegExp[], titleOnly = f
     out.push(...(titles.length > 0 ? titles.map((x) => `${t.path} › ${x}`) : titleOnly ? [] : [t.path]));
   }
   return out;
+}
+
+/** Clause ids: `kind` plus the shortest word prefix of the printed text that no other text of the kind shares. */
+export function clauseIds(items: readonly { readonly kind: string; readonly text: string }[]): string[] {
+  const w = items.map((i) => ({ k: i.kind, w: i.text.toLowerCase().match(/[\p{L}\p{N}]+/gu) ?? [] }));
+  return w.map((a, i) => {
+    for (let n = 1; ; n++) {
+      const key = (x: string[]): string => x.slice(0, n).join(' ') + ' '.repeat(Math.max(0, n - x.length));
+      if (n > a.w.length || !w.some((b, j) => j !== i && b.k === a.k && b.w.join(' ') !== a.w.join(' ') && key(b.w) === key(a.w)))
+        return `${a.k}-${a.w.slice(0, n).join('-')}`;
+    }
+  });
 }
 
 export function inventory(input: InventoryInput): Inventory {
@@ -96,6 +118,14 @@ export function inventory(input: InventoryInput): Inventory {
   const uncited = rows.filter((r) => !cited(r) && !base.has(r.key)).map((r) => r.key);
   const staleBaseline = [...base].filter((k) => !seen.has(k) || cited(rows.find((r) => r.key === k) as Row)).sort();
 
+  const owned = new Set((input.lines ?? []).filter((l) => l.records.length > 0).map((l) => l.id));
+  const open = new Set(input.openLines ?? []);
+  const lineIds = new Set((input.lines ?? []).map((l) => l.id));
+  const unowned = [...lineIds].filter((id) => !owned.has(id) && !open.has(id));
+  const staleOpen = [...open].filter((id) => !lineIds.has(id) || owned.has(id)).sort();
+  const routes = new Set(input.routes ?? []);
+  const unrouted = (input.records ?? []).filter((r) => !routes.has(r.verb)).map((r) => `${r.id}:${r.verb}`);
+
   const kinds = [...new Set(rows.map((r) => r.kind))];
   const lines = [
     `# ${input.title ?? 'Card language: inventory and coverage'}`,
@@ -126,7 +156,7 @@ export function inventory(input: InventoryInput): Inventory {
       lines.push(`| \`${r.id}\` | ${String(r.cards)} | ${r.examples.join(', ')}${r.cards > 6 ? ', …' : ''} | ${r.direct.join('<br>')} | ${r.via.join('<br>')} |`);
     lines.push('');
   }
-  return { rows, uncited, staleBaseline, report: lines.join('\n') };
+  return { rows, uncited, staleBaseline, unowned, staleOpen, unrouted, report: lines.join('\n') };
 }
 
 /** The test files under `dirs` of `root` whose names match `re`, with paths relative to `root`. */
@@ -156,7 +186,10 @@ export function runInventory(input: InventoryInput, out: string, check: boolean,
   } else io.write(out, inv.report);
   for (const k of inv.uncited) io.log(`inventory: ${k} is cited by no test`);
   for (const k of inv.staleBaseline) io.log(`inventory: baseline lists ${k}, which is cited or gone`);
-  if (inv.uncited.length + inv.staleBaseline.length > 0) code = 1;
+  for (const k of inv.unowned) io.log(`inventory: printed line ${k} is owned by no record and not listed open`);
+  for (const k of inv.staleOpen) io.log(`inventory: open list has ${k}, which is owned or gone`);
+  for (const k of inv.unrouted) io.log(`inventory: record ${k} has a verb the engine does not route`);
+  if (inv.uncited.length + inv.staleBaseline.length + inv.unowned.length + inv.staleOpen.length + inv.unrouted.length > 0) code = 1;
   io.log(`inventory: ${String(inv.rows.length)} pieces and clauses, ${String(inv.uncited.length)} uncited${code === 0 ? '; ok' : ''}`);
   return code;
 }
