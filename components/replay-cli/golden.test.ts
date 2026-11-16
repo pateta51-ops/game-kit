@@ -10,7 +10,7 @@ import { restoreSave, type SaveFile } from '../engine-core/index';
 import type { Counter } from '../engine-core/fake/counter';
 import * as fake from './fake-golden';
 import { blankContentHashes, checkGoldens, GOLDEN_SAVED_AT, goldenGameSpec, playGolden, recordGames, replayGames, run, type CrossGame, type GoldenModule, type GoldenSpec } from './golden';
-import type { Io } from './replay';
+import { pathDiff, type Io } from './replay';
 
 type Mod = GoldenModule<Counter, { adds: number }>;
 const mod: Mod = { simGame: fake.simGame, specs: fake.goldens };
@@ -57,7 +57,7 @@ describe('golden games', () => {
   it('--update-golden writes one save per game with the fixed date; the check then passes and a second update writes nothing', async () => {
     const f = fakeIo();
     expect(await checkGoldens(mod, DIR, f.io, { update: true })).toBe(0);
-    expect(Object.keys(f.written).sort()).toEqual([at('g01-adds'), at('g02-draws-long')]);
+    expect(Object.keys(f.written).sort()).toEqual([at('g01-adds'), at('g02-draws-long'), join(DIR, 'g01-adds.final'), join(DIR, 'g02-draws-long.final')].sort());
     const save = JSON.parse(f.written[at('g02-draws-long')] as string) as SaveFile<Counter>;
     expect(save.savedAt).toBe(GOLDEN_SAVED_AT);
     expect(save.options).toEqual({ seed: 'golden-g02-draws-long' });
@@ -84,7 +84,9 @@ describe('golden games', () => {
     const driver = fakeIo({ ...files });
     const specs: GoldenSpec[] = [{ name: 'g01-adds', driver: 'draws' }, fake.goldens[1] as GoldenSpec];
     expect(await checkGoldens({ ...mod, specs }, DIR, driver.io)).toBe(1);
-    expect(driver.lines).toHaveLength(2);
+    expect(driver.lines).toHaveLength(3);
+    expect(driver.lines[1]).toMatch(/^ {2}CHANGED\n {2}- /);
+    expect(driver.lines.at(-1)).toBe('2 golden games, 1 failed, 1 changed');
     expect(driver.lines[0]).toMatch(/^FAIL g01-adds: the stored game replays, the driver now plays another; first difference at action 0: stored \{.*"add".*\}, now \{.*"draw".*\}$/);
     const whole = JSON.parse(files[at('g01-adds')] as string) as SaveFile<Counter>;
     const n = whole.actions.length;
@@ -116,6 +118,76 @@ describe('golden games', () => {
     const none = fakeIo();
     expect(await checkGoldens({ ...mod, specs: [] }, DIR, none.io)).toBe(0);
     expect(none.lines).toEqual(['0 golden games, 0 failed']);
+  });
+});
+
+describe('verdicts with a path diff (K121)', () => {
+  it('a thrown game is crashed, a stored move that is refused diverged, the same moves under another driver changed', async () => {
+    const files = await recorded();
+    const whole = JSON.parse(files[at('g01-adds')] as string) as SaveFile<Counter>;
+    const longer = fakeIo({ ...files, [at('g01-adds')]: JSON.stringify({ ...whole, actions: [...whole.actions, whole.actions[0]] }) });
+    expect(await checkGoldens(mod, DIR, longer.io)).toBe(1);
+    expect(longer.lines[1]).toBe('  DIVERGED');
+    expect(longer.lines.at(-1)).toBe('2 golden games, 1 failed, 1 diverged');
+    const broken = fakeIo({ ...files, [at('g01-adds')]: '{' });
+    await checkGoldens(mod, DIR, broken.io);
+    expect(broken.lines[1]).toBe('  CRASHED');
+    const endless = fakeIo({ ...files });
+    await checkGoldens({ ...mod, simGame: { ...fake.simGame, maxActions: 2 } }, DIR, endless.io);
+    expect(endless.lines).toContain('  CRASHED');
+    expect(endless.lines.at(-1)).toBe('2 golden games, 2 failed, 2 crashed');
+  });
+
+  it('the same actions ending in another final state are changed, with path lines; a golden without a pinned state still passes', async () => {
+    const files = await recorded();
+    const final = JSON.parse(files[join(DIR, 'g01-adds.final')] as string) as { counter: number };
+    const moved = fakeIo({ ...files, [join(DIR, 'g01-adds.final')]: JSON.stringify({ ...final, counter: final.counter + 1 }) });
+    expect(await checkGoldens(mod, DIR, moved.io)).toBe(1);
+    expect(moved.lines[0]).toBe('FAIL g01-adds: the same actions end in another final state');
+    expect(moved.lines[1]).toBe(`  CHANGED\n  - counter = ${String(final.counter + 1)}\n  + counter = ${String(final.counter)}`);
+    expect(moved.lines.at(-1)).toBe('2 golden games, 1 failed, 1 changed');
+    const bare = fakeIo(Object.fromEntries(Object.entries(files).filter(([k]) => !k.endsWith('.final'))));
+    expect(await checkGoldens(mod, DIR, bare.io)).toBe(0);
+  });
+
+  it('pathDiff names each leaf that differs and caps the list', () => {
+    expect(pathDiff({ a: { b: [1, 2] }, c: 1 }, { a: { b: [1, 3, 4] }, d: 1 })).toEqual(['- a.b[1] = 2', '+ a.b[1] = 3', '+ a.b[2] = 4', '- c = 1', '+ d = 1']);
+    expect(pathDiff({ a: 1 }, { a: 1 })).toEqual([]);
+    expect(pathDiff(1, 2)).toEqual(['- . = 1', '+ . = 2']);
+    expect(pathDiff([1, 2, 3, 4], [5, 6, 7, 8], 4)).toEqual(['- [0] = 1', '+ [0] = 5', '- [1] = 2', '+ [1] = 6', '... 4 more']);
+  });
+});
+
+describe('view digests (K81)', () => {
+  const view = (s: { counter: number; turn: number }): unknown => ({ counter: s.counter });
+  const vmod: Mod = { ...mod, view };
+  const digests = async (): Promise<Record<string, string>> => {
+    const f = fakeIo();
+    expect(await checkGoldens(vmod, DIR, f.io, { update: true })).toBe(0);
+    return f.files;
+  };
+
+  it('--update-golden pins a 32-bit digest per move beside each golden; the same view then passes', async () => {
+    const files = await digests();
+    const whole = JSON.parse(files[at('g01-adds')] as string) as SaveFile<Counter>;
+    const lines = (files[join(DIR, 'g01-adds.digests')] as string).trimEnd().split('\n');
+    expect(lines).toHaveLength(whole.actions.length + 1);
+    for (const l of lines) expect(l).toMatch(/^[0-9a-f]{8}$/);
+    const again = fakeIo({ ...files });
+    expect(await checkGoldens(vmod, DIR, again.io)).toBe(0);
+    expect(again.lines).toEqual(['2 golden games, 0 failed']);
+  });
+
+  it('a moved view fails (exit 1), naming the scenarios and the first move; a missing digest file fails', async () => {
+    const files = await digests();
+    const moved = fakeIo({ ...files });
+    expect(await checkGoldens({ ...vmod, view: (s) => ({ counter: s.counter, turn: s.turn }) }, DIR, moved.io)).toBe(1);
+    expect(moved.lines).toEqual([expect.stringMatching(/^MOVED g01-adds: the view digest first moves after action 0 \(\d+ stored, \d+ now\)$/), expect.stringMatching(/^MOVED g02-draws-long: /), '2 golden games, 2 failed', 'view digests moved: g01-adds, g02-draws-long']);
+    const none = fakeIo({ [at('g01-adds')]: files[at('g01-adds')] as string, [at('g02-draws-long')]: files[at('g02-draws-long')] as string });
+    expect(await checkGoldens(vmod, DIR, none.io, { only: 'g01' })).toBe(1);
+    expect(none.lines[0]).toBe('MOVED g01-adds: no digest file (record it with --update-golden)');
+    const same = fakeIo({ ...files });
+    expect(await checkGoldens({ ...vmod, view: (s) => ({ counter: s.counter, turn: s.turn }) }, DIR, same.io, { update: true })).toBe(0);
   });
 });
 

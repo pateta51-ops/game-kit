@@ -185,7 +185,7 @@ Sixteen public card- and board-game repositories were surveyed read-only; the fi
 | K78 | `card-harness`: render effect records as English under their printed line; a read-only reading-judge step (ok / wrong / ambiguous / render-gap) before tests are written | middle-earth-player | M | proposed |
 | K79 | `engine-core`: a cause (rule id, or effect record plus printed line) on every step that changes a number; `replay-cli` test refuses a step without one | middle-earth-player | M | proposed |
 | K80 | `e2e-helpers` or `prompt-gallery`: over seeded games, every legal action and target is sent by some labelled control | middle-earth-player | M | proposed |
-| K81 | `replay-cli`: digest of a curated table view after each move, pinned in goldens; report the scenarios whose digests moved | middle-earth-player | S | proposed |
+| K81 | `replay-cli`: digest of a curated table view after each move, pinned in goldens; report the scenarios whose digests moved | middle-earth-player | S | done |
 | K82 | `check-runner`: test-cost budget (the list of test files that play whole games may not grow) | middle-earth-player | S | proposed |
 | K83 | `card-harness` inventory: every printed line owned by a record or listed open; record verbs checked against the engine's route lists | middle-earth-player | S | proposed |
 | K84 | Pattern notes: mechanic-family manifests with a verb-has-runner test; results cached by immutable state | middle-earth-player | S | proposed |
@@ -225,7 +225,7 @@ Sixteen public card- and board-game repositories were surveyed read-only; the fi
 | K118 | New `board-model`: spaces as data, adjacency computed once, named placement kinds resolved by the board (cards never filter spaces), empty-board fixture | Terraforming Mars | M | proposed |
 | K119 | `engine-core` (compare first with steps and `state-machines`): legal actions as one table of verb to ids, shown-but-barred included; nested state stack with scopes kept in state; flow as a typed step list with a runaway cap | Rally the Troops | M | proposed |
 | K120 | `sim-pool`: bad-undo invariant (undo left open across a random draw or reveal); dead-end and placeholder-prompt failures; the game's state assertion after every step; a breakpoint that hands back an importable game | Rally the Troops | S each | proposed |
-| K121 | `replay-cli`: three verdicts (crashed, diverged, changed) with a path diff of the final state | Rally the Troops | S | proposed |
+| K121 | `replay-cli`: three verdicts (crashed, diverged, changed) with a path diff of the final state | Rally the Troops | S | done |
 | K122 | `game-log`: space and piece references that highlight and scroll the map; group boxes for a battle or an activation | Rally the Troops | S | proposed |
 | K123 | Prompts (compare first with the kit's prompt model): closed set of prompt kinds with and / or composition and a space kind; renderer registry that fails to compile for a missing kind; a warning on a playable card when part of it will do nothing | Terraforming Mars | M | proposed |
 | K124 | Small: type-level module-boundary check; query channel for derived data; rule-violation panel with links; prompt-kind `cast` in card tests; catalogue check of card face against behaviour | Lew Morski module, Rally the Troops, Paths of Glory module, Terraforming Mars | S each | proposed |

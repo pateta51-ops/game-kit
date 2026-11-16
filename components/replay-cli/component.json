@@ -9,6 +9,10 @@
       { "game": "stcc", "commit": "9fc59643", "paths": ["scripts/replay.ts (injected Io, async engine and content loading)"] }
     ]
   },
+  "harvest": [
+    { "game": "Rally the Troops", "paths": ["bin/rtt-test (three verdicts, object_diff)"], "licence": "ISC, copyright the Rally the Troops authors; lifted with the owner's written authorisation" },
+    { "game": "middle-earth-player", "paths": ["src/campaign/digest.ts", "scripts/release/reach.ts"], "licence": "MIT, copyright the middle-earth-player authors; lifted with the owner's written authorisation" }
+  ],
   "needs": ["engine-core", "sim-pool"],
   "packages": ["tsx (the command lines run under it)"],
   "imports": ["engine-core/fake/counter.ts and sim-pool/fake/game.ts (tests only, by fake-engine.ts and fake-golden.ts)"]

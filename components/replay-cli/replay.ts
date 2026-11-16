@@ -70,6 +70,28 @@ export function checkpointDiff(want: readonly Checkpoint[], got: readonly Checkp
   return null;
 }
 
+const show = (v: unknown): string => JSON.stringify(v) ?? 'undefined';
+
+/** The leaves that differ between two plain values, by path (`- a.b[2] = 4`, `+ a.b[2] = 5`), at most `max` lines. */
+export function pathDiff(a: unknown, b: unknown, max = 20): string[] {
+  const out: string[] = [];
+  const isObj = (v: unknown): v is object => v !== null && typeof v === 'object';
+  const walk = (x: unknown, y: unknown, path: string): void => {
+    if (isObj(x) && isObj(y) && Array.isArray(x) === Array.isArray(y)) {
+      const keys = new Set([...Object.keys(x), ...Object.keys(y)]);
+      for (const k of keys) walk((x as Record<string, unknown>)[k], (y as Record<string, unknown>)[k], Array.isArray(x) ? `${path}[${k}]` : `${path}${path === '' ? '' : '.'}${k}`);
+    } else if (show(x) !== show(y)) {
+      if (x !== undefined) out.push(`- ${path || '.'} = ${show(x)}`);
+      if (y !== undefined) out.push(`+ ${path || '.'} = ${show(y)}`);
+    }
+  };
+  walk(a, b, '');
+  return out.length > max ? [...out.slice(0, max), `... ${String(out.length - max)} more`] : out;
+}
+
+/** A 32-bit digest (8 hex digits) of a curated view of the table. */
+export const viewDigest = (view: unknown): string => hashValue(view).slice(0, 8);
+
 export interface Io {
   out(line: string): void;
   err(line: string): void;

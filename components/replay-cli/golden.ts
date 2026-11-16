@@ -9,9 +9,9 @@
 // Exit codes: 0 all the same, 1 a golden or a game differs, 2 bad usage, an unreadable file or a module that does not load.
 import { join, resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
-import { applyAction, createGame, createSave, hashValue, restoreSave, type GameTypes, type SaveFile, type SaveFormat } from '../engine-core/index';
+import { applyAction, createGame, createSave, hashValue, restoreSave, type GameRules, type GameTypes, type SaveFile, type SaveFormat } from '../engine-core/index';
 import { DriverRng, legalAnswers, type GameSpec, type SimGame } from '../sim-pool/index';
-import { logText, nodeIo, type Io } from './replay';
+import { logText, nodeIo, pathDiff, viewDigest, type Io } from './replay';
 
 const USAGE = 'usage: tsx golden.ts (check <dir> | record <out.json> | replay <in.json>) --game <module> [--only <prefix>] [--update-golden] [--games <export>] [--seedx <text>] [--cap <n>]';
 
@@ -96,6 +96,28 @@ export interface GoldenModule<G extends GameTypes = GameTypes, S = unknown> {
   readonly simGame: SimGame<G, S>;
   readonly specs: readonly GoldenSpec[];
   readonly format?: SaveFormat;
+  /** The curated table view: its digest after every action is pinned in `<name>.digests` beside the golden. */
+  readonly view?: (state: G['state'], content: G['content']) => unknown;
+}
+
+type Replayed<G extends GameTypes> = { state: G['state']; digests: string[] } | { error: string };
+
+/** Replay a save's options and actions; a refused action is the error. With `view`, a digest after createGame and each action. */
+function replayView<G extends GameTypes>(rules: GameRules<G>, save: { options: unknown; rules: unknown; actions: readonly unknown[] }, content: G['content'], view?: GoldenModule<G>['view']): Replayed<G> {
+  const digests: string[] = [];
+  let at = -1;
+  try {
+    let s: G['state'] = createGame(rules, save.options as G['options'], save.rules as G['rules'], content).state;
+    if (view) digests.push(viewDigest(view(s, content)));
+    for (const [i, a] of save.actions.entries()) {
+      at = i;
+      s = applyAction(rules, s, a as G['action'], content).state;
+      if (view) digests.push(viewDigest(view(s, content)));
+    }
+    return { state: s, digests };
+  } catch (e) {
+    return { error: at < 0 ? `the options cannot start a game: ${msg(e)}` : `action ${String(at)} refused: ${msg(e)}` };
+  }
 }
 
 function firstDiff(stored: readonly unknown[], now: readonly unknown[]): string {
@@ -113,6 +135,8 @@ export async function checkGoldens<G extends GameTypes, S>(mod: GoldenModule<G, 
   const content = await mod.simGame.content();
   const specs = picked(mod.specs, opts.only ?? null);
   let bad = 0;
+  const moved: string[] = [];
+  const kinds: Record<string, number> = {};
   const fail = (line: string): void => {
     io.out(`FAIL ${line}`);
     bad += 1;
@@ -123,32 +147,76 @@ export async function checkGoldens<G extends GameTypes, S>(mod: GoldenModule<G, 
       const save = recordGolden(mod.simGame, content, g, mod.format);
       const text = goldenText(save);
       const old = io.exists(file) ? io.read(file).replace(/\r\n/g, '\n') : null;
-      if (old === text) continue;
+      const now = replayView(mod.simGame.rules, save, content, mod.view);
+      if ('error' in now) throw new Error(now.error);
+      if (mod.view) {
+        const dfile = join(dir, `${g.name}.digests`);
+        const dtext = `${now.digests.join('\n')}\n`;
+        const dold = io.exists(dfile) ? io.read(dfile).replace(/\r\n/g, '\n') : null;
+        if (dold !== dtext) {
+          if (opts.update === true) {
+            io.write(dfile, dtext);
+            io.out(`recorded ${dfile}`);
+          } else {
+            const was = dold === null ? [] : dold.split('\n').slice(0, -1);
+            const i = now.digests.findIndex((d, k) => d !== was[k]);
+            io.out(`MOVED ${g.name}: ${dold === null ? 'no digest file (record it with --update-golden)' : `the view digest first moves after action ${String(i < 0 ? now.digests.length : i)} (${String(was.length)} stored, ${String(now.digests.length)} now)`}`);
+            moved.push(g.name);
+            bad += 1;
+          }
+        }
+      }
+      const ffile = join(dir, `${g.name}.final`);
+      const fnow = JSON.stringify(now.state, null, 1);
+      const fold = io.exists(ffile) ? io.read(ffile).replace(/\r\n/g, '\n') : null;
+      const fdiff = fold === null || opts.update === true ? [] : pathDiff(JSON.parse(fold), JSON.parse(fnow));
+      if (opts.update === true && fold !== fnow) {
+        io.write(ffile, fnow);
+        io.out(`recorded ${ffile}`);
+      }
+      if (old === text) {
+        if (fdiff.length > 0) {
+          fail(`${g.name}: the same actions end in another final state`);
+          io.out(`  CHANGED\n${fdiff.map((l) => `  ${l}`).join('\n')}`);
+          kinds['changed'] = (kinds['changed'] ?? 0) + 1;
+        }
+        continue;
+      }
       if (opts.update === true) {
         io.write(file, text);
         io.out(`recorded ${file}`);
       } else if (old === null) fail(`${g.name}: no golden file (record it with --update-golden)`);
       else {
         let why: string;
+        let verdict = 'crashed';
+        let diff: string[] = [];
         try {
-          const raw = JSON.parse(old) as { actions?: unknown } | null;
+          const raw = JSON.parse(old) as { actions?: unknown; options?: unknown; rules?: unknown } | null;
           const r = restoreSave(mod.simGame.rules, raw, content, mod.format);
           const stored = raw !== null && Array.isArray(raw.actions) ? (raw.actions as unknown[]) : [];
           why = `${r.ok ? 'the stored game replays, the driver now plays another' : `the stored game does not replay (${r.error})`}; ${firstDiff(stored, save.actions)}`;
+          const was = replayView(mod.simGame.rules, { options: raw?.options, rules: raw?.rules, actions: stored }, content);
+          verdict = 'error' in was ? 'diverged' : 'changed';
+          if (!('error' in was)) diff = fold === null ? pathDiff(was.state, now.state) : fdiff;
         } catch (e) {
           why = `not JSON: ${msg(e)}`;
         }
         fail(`${g.name}: ${why}`);
+        io.out(`  ${verdict.toUpperCase()}${diff.map((l) => `\n  ${l}`).join('')}`);
+        kinds[verdict] = (kinds[verdict] ?? 0) + 1;
       }
     } catch (e) {
       fail(`${g.name}: ${msg(e)}`);
+      io.out('  CRASHED');
+      kinds['crashed'] = (kinds['crashed'] ?? 0) + 1;
     }
   }
   if ((opts.only ?? null) === null && opts.update !== true) {
     const names = new Set(mod.specs.map((g) => `${g.name}.json`));
     for (const f of io.list?.(dir) ?? []) if (f.endsWith('.json') && !names.has(f)) fail(`${f}: no golden game of that name`);
   }
-  io.out(`${String(specs.length)} golden games, ${String(bad)} failed`);
+  io.out(`${String(specs.length)} golden games, ${String(bad)} failed${Object.entries(kinds).map(([k, n]) => `, ${String(n)} ${k}`).join('')}`);
+  if (moved.length > 0) io.out(`view digests moved: ${moved.join(', ')}`);
   return bad > 0 ? 1 : 0;
 }
 
@@ -315,7 +383,7 @@ export async function run(args: readonly string[], io: Io = nodeIo): Promise<num
       io.err(`${game} exports no simGame or no ${list} list`);
       return 2;
     }
-    mod = { simGame: simGame as unknown as SimGame<GameTypes>, specs: specs as GoldenSpec[], ...(m['format'] !== undefined ? { format: m['format'] as SaveFormat } : {}) };
+    mod = { simGame: simGame as unknown as SimGame<GameTypes>, specs: specs as GoldenSpec[], ...(m['format'] !== undefined ? { format: m['format'] as SaveFormat } : {}), ...(typeof m['view'] === 'function' ? { view: m['view'] as NonNullable<GoldenModule['view']> } : {}) };
   } catch (e) {
     io.err(`${game}: ${msg(e)}`);
     return 2;

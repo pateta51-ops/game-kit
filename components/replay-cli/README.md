@@ -11,9 +11,10 @@ Headless replays, golden games and a determinism check across two checkouts. Nee
 The game writes one module that exports `simGame` (the `sim-pool` contract), `goldens: GoldenSpec[]` and optionally `format` (its `SaveFormat`). A `GoldenSpec` is `{ name, driver, seed?, settings? }`; the seed is `golden-<name>` unless given; the list (which settings, which drivers) is the game's. Games are played as `sim-pool` plays them, so a golden equals the simulated game of the same seed and driver.
 
 Golden games, as saves in a folder (`<name>.json`, fixed `savedAt`, one action per line):
-
 - `tsx golden.ts check <dir> --game <module>`: plays every game again and compares the bytes. A failure says whether the stored game still replays (the driver changed) or not (the engine or the content changed) and names the first action that differs (stored and now); a missing file and a file with no game also fail. Run it in CI, or call `checkGoldens(mod, dir, nodeIo)` from a test.
 - `--update-golden`: writes the files that changed, after a deliberate rules change.
+- Each failure gets a verdict line: CRASHED (the game threw, or the file is not JSON), DIVERGED (a stored move is refused now), CHANGED (the stored moves replay; the driver plays another game) with `- path = old` / `+ path = new` lines (`pathDiff`) between the final states of the two games; the count line adds the totals. `--update-golden` also pins the final state in `<name>.final` (optional: a golden without it still passes), so the same actions ending in another state are CHANGED with the path lines.
+- Curated view: the module may export `view(state, content)`; the check then pins an 8-digit digest of it after createGame and every action in `<name>.digests` and reports `MOVED <name>` (first move that differs) and `view digests moved: a, b`. `--update-golden` writes the files.
 
 Record on one checkout, replay on another (a refactor or a performance change must replay the same):
 
@@ -24,7 +25,6 @@ Record on one checkout, replay on another (a refactor or a performance change mu
 - A base whose kit copy lacks `golden.ts` is recorded with the head's script and the base's `--game` module.
 
 Flags: `--only <name prefix>`; `--games <export>` (another spec list than `goldens`, for a larger record set); `--seedx <text>` (appended to every seed: another sample); `--cap <n>` (stop each recorded game after n actions; a game that stops early is still recorded and replayed).
-
 Exit codes: 0 all the same, 1 a golden or a game differs, 2 bad usage, an unreadable file or a module that does not load.
 
-Not here: a driver answering again at replay (checkpoint goldens replay a recorded log).
+Not here: a driver answering again at replay.
