@@ -287,6 +287,7 @@ Sixteen public card- and board-game repositories were surveyed read-only; the fi
 | K161 | `achievements`, feats inside a game: detection over the engine event stream; counters and seen-sets kept where undo rewinds them; an earn is stored outside the game state, once, after the save; checklists that fill across games ("win with every character"); brief centred call-outs for a feat (first defeat, a streak, a record) | ArkhamHorror (ideas only), marvel-lcg (ideas only) | M | done |
 | K162 | `achievements` screens: a list by family with progress bars, a locked row says how to earn it; a tab in the campaign log; a toast that stacks several earns into one counted toast, first run silent, hold time and off in settings (static at 1.0; motion with 1.1, sound with 1.2) | quincarter (ideas only), ArkhamHorror (ideas only) | M | done (the tab lands with K159: `CampaignLog` takes the list as a tab) |
 | K163 | Small: a challenge is a content item in the card language (a setup restriction plus triggered penalties) picked before a game | marvel-lcg (ideas only) | S | done |
+| K200 | Weight tuner + paired validation for tuned greedy opponents (from Warp's Edge minmax.py / validate) | warps-edge | M | done |
 
 ### Build order for the outside harvest (owner, 15 Nov 2026)
 

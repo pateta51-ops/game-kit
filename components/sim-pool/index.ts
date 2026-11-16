@@ -7,3 +7,4 @@ export { formatBands, type Band, type SanityBands } from './bands';
 export { codeVersion, gitShort, sourceHash } from './version';
 export { openCheckpoint, runResumable, specKey, type Checkpoint } from './resume';
 export { grid, spread, sweep, type Cell, type Spread, type Sweep, type SweepCell, type SweepOptions } from './sweep';
+export { fromWeights, inThread, poolBatch, toWeights, tune, validate, weightsFile, type Batch, type GenerationReport, type Job, type Outcome, type PlayFn, type SetupCheck, type TuneOptions, type Validation, type WeightDef, type Weights, type WeightSpace, type WeightsFile } from './tune';
