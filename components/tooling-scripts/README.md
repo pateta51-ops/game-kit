@@ -10,11 +10,11 @@ Small repo scripts a game runs with `npx tsx kit/tooling-scripts/<script>.ts`. E
 - `setup.ps1` (from Jarl): `-Name -RepoUrl -Dir [-Marker package.json] [-NodeMajor 22] [-Need a,b] [-Playwright] [-Python] [-PipModules a,b] [-Build a,b] [-Check check] [-RunnerRepo owner/repo -RunnerLabel x [-RunnerEnv 'K=V']] [-Ready 'text'] [-CheckOnly]`. The owner's Windows PC check-up; ends with a numbered to-do list.
 - `dossier-sync.ts` (from Rome): `--source <git checkout> --target <dir> [--exclude <path>]... [--name <text>]`. Replaces the target with the source's tracked files and writes `SYNC.md` with the commit; refuses a source with uncommitted changes.
 - `bundle-node.ts` (from Warp's Edge): `--entry <file>... --outdir .bundle/node [--root .] [--target node22]`. Simulator, worker and bench scripts as `.mjs` for plain `node`, without tsx's keep-names cost.
+- `lookup.ts` (from Marvel Champions): `--module <file> card <id> | dsl <word> | refs [--strict]`. The game module exports `lookup` (or default), a `Lookup` or a function returning one: `{ cards: [{ id, name?, pack?, text?, errata?, refs? }], resolve?(ref) => where|null, skipped?: { ref: reason }, vocabulary?: [{ name, signature?, doc? }] }`. `card` prints text, errata loudly, each ref resolved, skipped or NOT RESOLVED; `dsl` searches vocabulary; `refs` counts unscripted refs per pack with a paste-ready skip list. Keep it out of the test glob.
 
 ## art-check.ts (from Rome)
 
 `--manifest <json> --sources <dir> --out <dir> --ext webp [--source-id '^(F\d{3})-.+\.png$'] [--need <json array of ids>]... [--max-bytes <n>] [--max-file-bytes <n>]`
-
 The manifest is a record of id to `{ source, sha256, bytes, outSha256? }`: the source file name and its SHA-256, the output's size and (optional) SHA-256. An id's output is `<out>/<id>.<ext>`. Fails when no source matched, a source has no entry, a source changed, an output is missing or differs, an entry has no source, an id in a `--need` list has no output, or a file or the total is over its cap. Group 1 of `--source-id` is the id (default: the file name without its extension); files that do not match are ignored. It does not build the art and does not read pixel sizes.
 
 ## text-leak.ts (from Imperium)
