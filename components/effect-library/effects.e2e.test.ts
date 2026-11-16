@@ -15,6 +15,7 @@ interface Out {
   midShadow: string;
   midTransform: string;
   midOpacity: string;
+  midScale: string;
   veil: boolean | null;
   bg: string | null;
   label: string | null;
@@ -44,6 +45,9 @@ const CASES: [string, Record<string, unknown>, (o: Out) => void][] = [
   ['scale', { to: 1.5, pulse: true }, (o) => expect(o.style?.scale).toBe('none')],
   ['fade-out', { to: 0.6 }, (o) => expect(o.style?.opacity).toBe('0.6')],
   ['flip', { label: 'Pick 2 of 3' }, (o) => expect([o.flipped, o.label]).toEqual([true, 'Pick 2 of 3'])],
+  ['fade-in', { scale: 2 }, (o) => expect([o.style?.opacity, o.style?.scale]).toEqual(['1', ''])],
+  ['fade-in', { scale: [2, 1.5] }, (o) => expect(o.style?.scale).toBe('1.5')],
+  ['move', { to: 'b', scale: 2 }, (o) => expect([o.style?.left, o.style?.translate, o.style?.scale]).toEqual(['330px', '', ''])],
   ['move', { to: 'b', ease: 'out' }, (o) => expect(o.style?.left).toBe('330px')],
 ];
 
@@ -114,6 +118,14 @@ describe.skipIf(!HAVE && !process.env['CI'])('effect library in a browser', () =
     }
     const m = await page.evaluate(() => (window as unknown as { fxTest: Api }).fxTest.together(false, 'move'));
     expect(Number(m.mid.scale)).toBeGreaterThan(1);
+  });
+
+  it('entry scale on move and fade-in starts large and shrinks while it plays', async () => {
+    for (const verb of ['move', 'fade-in']) {
+      const o = await run(verb, { to: 'b', scale: 2, midScale: true }, false);
+      expect(Number(o.midScale), verb).toBeGreaterThan(1);
+      expect(Number(o.midScale), verb).toBeLessThan(2);
+    }
   });
 
   it('text is fully visible well before its rise ends', async () => {

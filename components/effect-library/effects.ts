@@ -18,6 +18,15 @@ export interface Fx {
 /** May return its own finish (a timer to clear, an end state to set); `animate`'s finishes run too. */
 export type Effect = (fx: Fx) => undefined | (() => void);
 
+/** Step `scale` on an entry verb: a number n = from n to 1, [a, b] = from a to b. */
+const entry = (call: VerbCall): [string, string] | undefined => {
+  const s = call.step['scale'];
+  const v = (n: unknown): string => (n === 1 ? 'none' : String(n));
+  if (typeof s === 'number') return [v(s), 'none'];
+  if (Array.isArray(s) && s.length === 2 && typeof s[0] === 'number' && typeof s[1] === 'number') return [v(s[0]), v(s[1])];
+  return undefined;
+};
+
 const css = (el: HTMLElement, s: Partial<CSSStyleDeclaration>): void => void Object.assign(el.style, s);
 
 /** Registers one effect, a built-in or a game's own, in the motion frame's verb registry. */
@@ -50,7 +59,11 @@ export const BUILT_IN: Readonly<Record<string, Effect>> = {
     const t = call.to;
     if (!t) return undefined;
     const f = call.from;
-    animate([{ translate: '0 0' }, { translate: `${String(t[0] - f[0])}px ${String(t[1] - f[1])}px` }], { translate: '' });
+    const e = entry(call);
+    animate(
+      [e ? { translate: '0 0', scale: e[0] } : { translate: '0 0' }, e ? { translate: `${String(t[0] - f[0])}px ${String(t[1] - f[1])}px`, scale: e[1] } : { translate: `${String(t[0] - f[0])}px ${String(t[1] - f[1])}px` }],
+      e ? { translate: '', scale: e[1] === 'none' ? '' : e[1] } : { translate: '' },
+    );
     return () => {
       place(el, t);
       if (call.step['then'] === 'hide') css(el, { visibility: 'hidden' });
@@ -73,8 +86,9 @@ export const BUILT_IN: Readonly<Record<string, Effect>> = {
     );
     return undefined;
   },
-  'fade-in': ({ animate }) => {
-    animate([{ opacity: 0 }, { opacity: 1 }], { opacity: '1', visibility: 'visible' });
+  'fade-in': ({ call, animate }) => {
+    const e = entry(call);
+    animate(e ? [{ opacity: 0, scale: e[0] }, { opacity: 1, scale: e[1] }] : [{ opacity: 0 }, { opacity: 1 }], e ? { opacity: '1', visibility: 'visible', scale: e[1] === 'none' ? '' : e[1] } : { opacity: '1', visibility: 'visible' });
     return undefined;
   },
   'fade-out': ({ call, animate }) => {
