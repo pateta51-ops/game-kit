@@ -4,3 +4,4 @@ export * from './canvas';
 export * from './count';
 export * from './ambience';
 export * as particles from './particles';
+export * from './feel';
