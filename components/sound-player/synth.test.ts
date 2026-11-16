@@ -81,6 +81,18 @@ describe('sound-player: synthesised cues', () => {
     expect(ctx.oscillators).toHaveLength(0);
   });
 
+  it('pitch (semitones) scales a synth cue and the rate of a file; without it nothing changes', async () => {
+    const { ctx, player } = await start();
+    player.play('blip', { pitch: 12 });
+    const o = ctx.oscillators[0]!;
+    expect(o.frequency.valueAt(1)).toBeCloseTo(880);
+    expect(o.frequency.valueAt(1.3)).toBeCloseTo(1760);
+    player.play('filed', { pitch: 12 });
+    expect(ctx.sources.at(-1)!.playbackRate!.value).toBeCloseTo(2);
+    player.play('filed', { pitch: 'x' as unknown as number, delayMs: 100 });
+    expect(ctx.sources.at(-1)!.playbackRate!.value).toBe(1);
+  });
+
   it('the synth is the fallback of a file that does not load, and is not used when the file is there', async () => {
     const { ctx, player } = await start();
     expect(player.canPlay('spare')).toBe(true);

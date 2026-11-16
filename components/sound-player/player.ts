@@ -82,7 +82,7 @@ export interface SoundPlayer {
   /** Called by the first tap or key; a game may call it from its own gesture handler. */
   unlock: () => Promise<void>;
   /** `onEnd(how)` is called exactly once: 'ended' (played out), 'faded' (stopped by a fade) or 'dropped' (never started, also before the first tap or when the file never loads). */
-  play: (cue: string, o?: { times?: number; delayMs?: number; onEnd?: (how: EndHow) => void }) => void;
+  play: (cue: string, o?: { times?: number; delayMs?: number; /** Semitones, 0 = as recorded; a file plays at that rate (shorter when higher), a synth cue's frequencies are scaled. */ pitch?: number; onEnd?: (how: EndHow) => void }) => void;
   /** False when the cue is not in the table or has no file that decoded; true when it can play or is not decoded yet. */
   canPlay: (cue: string) => boolean;
   /** Fades the playing cues (all, or one name) over `ms`, never less than MIN_FADE_MS. */
@@ -265,7 +265,8 @@ export function createSoundPlayer(o: SoundPlayerOptions): SoundPlayer {
       done(v, 'faded');
     };
     const canPlay = (name: string): boolean => table.cues[name] !== undefined && ((buffers.get(name)?.length ?? 1) > 0 || !!table.cues[name]?.synth?.length);
-    const play = (name: string, opts: { times?: number; delayMs?: number; onEnd?: (how: EndHow) => void } = {}): void => {
+    const play = (name: string, opts: { times?: number; delayMs?: number; pitch?: number; onEnd?: (how: EndHow) => void } = {}): void => {
+      const rate = Number.isFinite(opts.pitch) ? 2 ** ((opts.pitch as number) / 12) : 1;
       let began = false;
       let deferred = false;
       try {
@@ -313,7 +314,7 @@ export function createSoundPlayer(o: SoundPlayerOptions): SoundPlayer {
         const times = Math.max(1, Math.floor(opts.times ?? 1));
         for (let i = 0; i < times; i += 1)
           for (const s of synth) {
-            const src = startSynthVoice(ctx, v.fade.node, s, when + i * synthLength(synth));
+            const src = startSynthVoice(ctx, v.fade.node, s, when + i * synthLength(synth), rate);
             if (src === null) continue;
             src.onended = () => {
               if ((v.left -= 1) > 0) return;
@@ -332,6 +333,7 @@ export function createSoundPlayer(o: SoundPlayerOptions): SoundPlayer {
           if (buffer === undefined) continue;
           const src = ctx.createBufferSource();
           src.buffer = buffer;
+          if (rate !== 1) src.playbackRate.value = rate;
           src.connect(v.fade.node);
           src.onended = () => {
             if ((v.left -= 1) > 0) return;
@@ -339,7 +341,7 @@ export function createSoundPlayer(o: SoundPlayerOptions): SoundPlayer {
             v.fade.node.disconnect();
           };
           src.start(t);
-          t += buffer.duration;
+          t += buffer.duration / rate;
           v.srcs.push(src);
           v.left += 1;
         }

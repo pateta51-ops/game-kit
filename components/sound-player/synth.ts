@@ -28,7 +28,7 @@ function noise(ctx: AudioContext): AudioBuffer {
 export const synthLength = (voices: readonly SynthVoice[]): number => Math.max(0, ...voices.map((v) => (v.at ?? 0) + v.dur));
 
 /** Starts one voice into `out` at `at` (context seconds). Null when it cannot be made: nothing is left connected. */
-export function startSynthVoice(ctx: AudioContext, out: AudioNode, v: SynthVoice, at: number): AudioScheduledSourceNode | null {
+export function startSynthVoice(ctx: AudioContext, out: AudioNode, v: SynthVoice, at: number, rate = 1): AudioScheduledSourceNode | null {
   let g: GainNode | null = null;
   try {
     const t = at + (v.at ?? 0);
@@ -42,8 +42,8 @@ export function startSynthVoice(ctx: AudioContext, out: AudioNode, v: SynthVoice
     if (v.kind === 'tone') {
       const osc = ctx.createOscillator();
       osc.type = v.wave ?? 'sine';
-      osc.frequency.setValueAtTime(v.from, t);
-      if (v.to !== undefined && v.to !== v.from) osc.frequency.exponentialRampToValueAtTime(v.to, end);
+      osc.frequency.setValueAtTime(v.from * rate, t);
+      if (v.to !== undefined && v.to !== v.from) osc.frequency.exponentialRampToValueAtTime(v.to * rate, end);
       osc.connect(g);
       osc.start(t);
       src = osc;
@@ -53,7 +53,7 @@ export function startSynthVoice(ctx: AudioContext, out: AudioNode, v: SynthVoice
       s.loop = true;
       const f = ctx.createBiquadFilter();
       f.type = 'bandpass';
-      f.frequency.setValueAtTime(v.band, t);
+      f.frequency.setValueAtTime(v.band * rate, t);
       f.Q.setValueAtTime(v.q ?? 1, t);
       s.connect(f);
       f.connect(g);

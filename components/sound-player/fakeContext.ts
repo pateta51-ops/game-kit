@@ -8,6 +8,7 @@ export interface FakeBuffer {
 export interface FakeSource {
   buffer: FakeBuffer | null;
   loop: boolean;
+  playbackRate?: FakeParam;
   startedAt: number | null;
   stoppedAt: number | null;
   onended: (() => void) | null;
@@ -136,6 +137,7 @@ export class FakeAudioContext {
     const s = {
       buffer: null as FakeBuffer | null,
       loop: false,
+      playbackRate: new FakeParam(1),
       startedAt: null as number | null,
       stoppedAt: null as number | null,
       onended: null as (() => void) | null,
