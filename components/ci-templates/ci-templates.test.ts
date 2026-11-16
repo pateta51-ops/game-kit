@@ -4,6 +4,7 @@ import { chmodSync, cpSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, r
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterAll, describe, expect, it } from 'vitest';
+import YAML from 'yaml';
 
 const here = import.meta.dirname;
 const read = (f: string): string => readFileSync(join(here, f), 'utf8');
@@ -14,7 +15,7 @@ const where: Record<string, string[]> = {
 };
 const render = (f: string): string =>
   read(f).replaceAll('{{REPO_SLUG}}', 'acme/widget').replaceAll('{{RUNNER_LABEL}}', 'widget').replaceAll('{{OWNER_LOGIN}}', 'acme');
-const files = readdirSync(here).filter((f) => !f.endsWith('.test.ts') && f !== 'README.md' && f !== 'component.json' && f !== 'render.mjs');
+const files = readdirSync(here).filter((f) => !f.endsWith('.test.ts') && f !== 'README.md' && f !== 'component.json' && f !== 'render.mjs' && f !== 'examples');
 
 describe('placeholders', () => {
   it('appear in the files the README names, and leave none behind once replaced', () => {
@@ -347,5 +348,72 @@ esac
     );
     const r = spawnSync('bash', ['-c', 'python3 "$PY" "$LOG" "^packs: " "games [0-9]+, exceptions"'], { encoding: 'utf8', env: { ...process.env, PY: join(here, 'gate-numbers.py'), LOG: log } });
     expect(r.stdout.split('\n').filter(Boolean)).toEqual(['Tested abc1234 merged into main', ' Tests  412 passed (412)', 'games 200, exceptions 0', 'a line with a literal \\n inside: 3 failed', 'src/a.ts(1,2): error TS2322: no', '\u2716 2 problems (2 errors, 0 warnings)', 'check exit=0 41s', 'RESULT GREEN', '  31 passed (2.1m)', 'packs: 3 built']);
+  });
+});
+
+describe('K190: what the four games need (examples/<game>.json renders their workflows)', () => {
+  type Job = { steps: unknown[] } & Record<string, unknown>;
+  type Doc = { jobs: Record<string, Job> } & Record<string, unknown>;
+  const dir = mkdtempSync(join(tmpdir(), 'ci-k180-'));
+  afterAll(() => rmSync(dir, { recursive: true, force: true }));
+  const norm = (v: unknown): string => JSON.stringify(v, (_k, x: unknown) => (typeof x === 'string' ? x.replace(/\s+$/, '').replaceAll('kit/ci-templates/', '.github/scripts/') : x));
+  const mk = (name: string, cfg: object): ((f: string) => Doc) => {
+    const root = join(dir, name);
+    mkdirSync(join(root, 'kit'), { recursive: true });
+    cpSync(here, join(root, 'kit/ci-templates'), { recursive: true });
+    writeFileSync(join(root, 'ci.config.json'), JSON.stringify(cfg));
+    const r = spawnSync(process.execPath, ['kit/ci-templates/render.mjs'], { cwd: root, encoding: 'utf8' });
+    expect(r.stderr, name).toBe('');
+    expect(spawnSync(process.execPath, ['kit/ci-templates/render.mjs', '--check'], { cwd: root }).status).toBe(0);
+    return (f) => YAML.parse(readFileSync(join(root, '.github/workflows', f), 'utf8')) as Doc;
+  };
+  // the differences that stay: the kit's action versions, and a permission the kit's gate asks for and the game's does not
+  const left: Record<string, string[]> = { ebr: ['ci.yml step 0', 'ci.yml step 1'], imp: ['full-gate.yml permissions'], warps: [], stcc: [] };
+  const files: Record<string, string[]> = { ebr: ['ci.yml'], imp: ['ci.yml', 'full-gate.yml'], warps: ['full-gate.yml'], stcc: ['full-gate.yml'] };
+  for (const g of Object.keys(files))
+    it(`${g}: the rendered workflow equals the game's own, but for the listed differences`, () => {
+      const wf = mk(g, JSON.parse(read(`examples/${g}.json`)) as object);
+      const diffs: string[] = [];
+      for (const f of files[g]!) {
+        const a = wf(f);
+        const b = YAML.parse(read(`examples/${g}.${f}`)) as Doc;
+        const [ja, jb] = [Object.values(a.jobs)[0]!, Object.values(b.jobs)[0]!];
+        for (const k of ['name', 'on', 'concurrency', 'permissions']) if (norm(a[k]) !== norm(b[k])) diffs.push(`${f} ${k}`);
+        for (const k of Object.keys({ ...ja, ...jb })) if (k !== 'steps' && norm(ja[k]) !== norm(jb[k])) diffs.push(`${f} job.${k}`);
+        expect(ja.steps.length, `${g} ${f} steps`).toBe(jb.steps.length);
+        ja.steps.forEach((s, i) => norm(s) !== norm(jb.steps[i]) && diffs.push(`${f} step ${String(i)}`));
+      }
+      expect(diffs).toEqual(left[g]);
+    });
+
+  it('python, rust, a failure artifact, extra steps and the header follow their keys; the rest stays as it was', () => {
+    const base = { repo: 'acme/widget', runnerLabel: 'widget' };
+    const plain = mk('plain', base);
+    const ci = mk('keys-ci', { ...base, runDrafts: true, ci: { python: { version: '3.13', requirements: 'py/req.txt', venv: true }, rust: { components: 'clippy', commands: ['cargo test'], workingDirectory: 'rs' }, failureArtifact: { name: 'r', path: ['a/', 'b/'], retentionDays: 3 }, nodeVersion: '22', before: { check: 'echo b' }, after: { install: [{ run: 'echo a', 'timeout-minutes': 4, env: { X: '1' } }] }, dispatch: true } });
+    const doc = ci('ci.yml');
+    const s = JSON.stringify(doc.jobs.check!.steps);
+    expect(s).toMatch(/setup-python@v7.*node-version":"22".*npm ci.*"timeout-minutes":4,"env":{"X":"1"}.*echo b.*npm run check.*rust-toolchain@stable.*"working-directory":"rs".*"if":"failure\(\)".*"path":"a\/\\nb\/(\\n)?","retention-days":3/);
+    expect(s).toContain('PYTHON=$RUNNER_TEMP/venv/bin/python');
+    expect(Object.keys(doc.on as object)).toEqual(['push', 'pull_request', 'workflow_dispatch']);
+    expect(readFileSync(join(dir, 'keys-ci/.github/workflows/ci.yml'), 'utf8')).toContain('Draft pull requests run it too.');
+    expect(readFileSync(join(dir, 'plain/.github/workflows/ci.yml'), 'utf8')).toContain('Draft pull requests do not\n# run it');
+    expect(plain('ci.yml').jobs.check!.steps.length).toBe(4);
+    const stop = (cfg: object, msg: string): void => {
+      const root = join(dir, 'plain');
+      writeFileSync(join(root, 'ci.config.json'), JSON.stringify({ ...base, ...cfg }));
+      const r = spawnSync(process.execPath, ['kit/ci-templates/render.mjs'], { cwd: root, encoding: 'utf8' });
+      expect(r.stderr).toContain(msg);
+      expect(r.status).toBe(2);
+    };
+    stop({ ci: { foo: 1 } }, 'ci.yml: unknown key "foo" in ci');
+    stop({ gate: { foo: 1 } }, 'full-gate.yml: unknown key "foo" in gate');
+    // none of the new keys: byte for byte what the render before them wrote
+    for (const f of ['ci.yml', 'full-gate.yml']) expect(readFileSync(join(dir, 'plain/.github/workflows', f), 'utf8'), f).toBe(read(`examples/plain.${f}`));
+    const jobs = mk('jobs', { ...base, ci: { if: "github.actor == 'x'", runsOn: 'ubuntu-latest', timeoutMinutes: 5 }, jobs: { extra: { steps: ['true'] } } });
+    const x = jobs('ci.yml').jobs;
+    expect([x.check!.if, x.extra!.if, x.check!['runs-on'], x.extra!['runs-on']]).toEqual(["github.actor == 'x'", "github.actor == 'x'", 'ubuntu-latest', 'ubuntu-latest']);
+    stop({ ci: { after: { nowhere: ['true'] } } }, 'unknown step "nowhere"');
+    stop({ ci: { flat: true } }, '"flat" is for the gate only');
+    stop({ gate: { draftConcurrency: true } }, 'full-gate.yml: "draftConcurrency"');
   });
 });

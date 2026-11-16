@@ -1,0 +1,68 @@
+# BUILD_PLAN §4.12. Runs on pull requests only, to save Actions minutes on this private repo (owner, 2026-10-11:
+# no second run on main after a merge). It never deploys anything (D3).
+# D-X119 (owner, 2026-10-23: "Have my runner do as many checks and verifications as possible"): the runner's CI is THE
+# check of a pull request. It extracts the dossier and restores the card art first, so the real-data and art tests run
+# here instead of skipping, and it runs the content gate of every registry pack. The long checks (500-game simulations,
+# perf, goldens) are the on-demand workflow verify.yml.
+name: CI
+
+# No `push` trigger, on purpose: pushes to any branch start nothing, so the in-game bug reports that the game pushes to
+# the `bug-reports` branch (D-X122, docs/bug-reports.md) never start CI; that branch is never opened as a pull request.
+on:
+  # Owner, 2026-11-07: "Only run the full gate when merging the full batches." A draft pull request runs nothing;
+  # writers push their batch as a draft, and the architect marks it ready to merge, which runs the full gate once.
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+    branches-ignore: [bug-reports]
+  # R-59: run CI once on main by hand before a release tag (docs/release-checklist.md); it still never deploys.
+  workflow_dispatch:
+
+concurrency:
+  # A draft's skipped run must never cancel the full gate that "ready for review" starts at the same moment.
+  group: ci-${{ github.ref }}-${{ github.event.pull_request.draft && 'draft' || 'ready' }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    if: github.event_name != 'pull_request' || !github.event.pull_request.draft
+    runs-on: [self-hosted, linux]
+    # about 7 minutes with the art cache filled; the first run on a runner fills it from the web (about 12 more)
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      # R-62: no setup-python. plancheck (scripts/plancheck.py) uses only the standard library and runs on the
+      # runner's own python3, which docs/runner.md lists as a prerequisite.
+      - run: npm ci
+      # D-X119: offline, from the committed zip parts; the real-data tests that read .generated/ then run (R-34 lists
+      # what still skips, and why, in the job summary).
+      - name: npm run dossier:extract (offline)
+        run: npm run dossier:extract
+      # D-X119: the card art from a persistent folder in the runner user's home, outside the workspace (never GitHub's
+      # cache service: saving to it hung the job, docs/runner.md). Filled from the web once, then only copied.
+      - name: Card art (npm run art:ci-cache)
+        timeout-minutes: 30
+        run: npm run art:ci-cache
+      # CI speed-up: every check of `npm run check` plus content:gate:mvp and content:gate:all, side by side in lanes
+      # (scripts/ci-lanes.ts: the unit tests alone first, then real-data in one lane, the shorter checks in the others). Same scripts,
+      # same tests; each check's whole log is printed when it ends (a failing one open, with ::error::), every check
+      # runs even when another failed, and the step fails if any did. ci-lanes fails when its lanes and `npm run check`
+      # differ. The skipped real-data checks (R-34) and the gate of every pack (D-X119, KNOWN_FAILING in
+      # scripts/content-gate-all.ts) still go to the job summary, with a table of each check's time.
+      - name: CI checks side by side (lint, typecheck, unit, realdata, gates, trace, sim:smoke, guard-private, plancheck, inventory, content:gate:mvp, content:gate:all)
+        run: npm run ci:lanes
+      - name: Install Playwright Chromium
+        run: npx playwright install chromium
+      - run: npm run e2e
+      - name: Upload Playwright report on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: playwright-report/
+          retention-days: 7

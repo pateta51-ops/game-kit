@@ -1,0 +1,59 @@
+{
+  "repo": "acme/warps",
+  "runnerLabel": "warp",
+  "workflows": [
+    "full-gate.yml"
+  ],
+  "gate": {
+    "name": "Full gate (check, sim, e2e) on PR head merged with main",
+    "if": false,
+    "runsOn": "${{ inputs.runner == 'self-hosted' && fromJSON('[\"self-hosted\",\"warp\"]') || 'ubuntu-latest' }}",
+    "inputs": {
+      "runner": {
+        "description": "Where to run (self-hosted = the owner's runner, label warp)",
+        "type": "choice",
+        "options": [
+          "self-hosted",
+          "ubuntu-latest"
+        ],
+        "default": "self-hosted"
+      },
+      "bands": {
+        "description": "Also run npm run sim:bands (200 greedy games per 1-3 star pairing, about 4 minutes on 16 cores; BUILD_PLAN 10.6)",
+        "type": "boolean",
+        "default": false
+      }
+    },
+    "node": {
+      "cache": "${{ inputs.runner == 'ubuntu-latest' && 'npm' || '' }}",
+      "cache-dependency-path": "full-gate/package-lock.json"
+    },
+    "after": {
+      "check": [
+        {
+          "name": "Rust port (WSL)",
+          "if": "${{ inputs.runner == 'self-hosted' }}",
+          "run": "wsl -d Ubuntu -- bash engine-rs/scripts/gate.sh"
+        },
+        {
+          "name": "Rust port",
+          "if": "${{ inputs.runner != 'self-hosted' }}",
+          "run": "bash engine-rs/scripts/gate.sh"
+        },
+        {
+          "name": "Simulation with sanity bands",
+          "run": "npm run sim -- --games 500 --all --bands"
+        },
+        {
+          "name": "Per-pairing band run (200 greedy games per 1-3 star pairing)",
+          "if": "${{ inputs.bands }}",
+          "run": "npm run sim:bands"
+        },
+        {
+          "name": "Perf budget",
+          "run": "node .github/scripts/full-gate.mjs perf"
+        }
+      ]
+    }
+  }
+}

@@ -1,0 +1,139 @@
+# BUILD_PLAN §4.12: the Full gate before a merge: `npm run check` and `npm run test:e2e` on a pull request's head merged
+# into main, with a full checkout (e2e needs the pictures). Started by hand (workflow_dispatch) by the architect for a
+# pull request it is about to merge, never on a push. `runner` picks where: the owner's self-hosted runner (label stcc,
+# no hosted minutes) when it is online, else ubuntu-latest while the month's minutes allow; otherwise the architect runs
+# tools/architect/local-ci.sh in the container. It refuses a pull request whose head is not in this repository, so the
+# self-hosted runner only ever runs this repository's own code (no pull_request_target anywhere).
+name: Full gate
+
+on:
+  workflow_dispatch:
+    inputs:
+      pr:
+        description: Pull request number
+        required: true
+      sha:
+        description: The pull request's head commit (40 hex characters) that the gate must test
+        required: true
+      runner:
+        description: Where to run (self-hosted = the owner's runner, label stcc)
+        type: choice
+        options: [self-hosted, ubuntu-latest]
+        default: self-hosted
+
+concurrency:
+  group: full-gate-${{ inputs.pr }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  pull-requests: read
+
+jobs:
+  gate:
+    name: Full gate (check, e2e) on PR head merged with main
+    runs-on: ${{ inputs.runner == 'self-hosted' && fromJSON('["self-hosted","stcc"]') || 'ubuntu-latest' }}
+    timeout-minutes: 60
+    env:
+      PR: ${{ inputs.pr }}
+      SHA: ${{ inputs.sha }}
+    # The checkout lives in its own directory, not the workspace root: ci.yml shares this runner's workspace and leaves
+    # a sparse, blob-less partial clone there (no media/), which a checkout of the same path would reuse.
+    defaults:
+      run:
+        working-directory: full-gate
+    steps:
+      - name: Check the inputs and that the pull request's head is in this repository
+        working-directory: ${{ github.workspace }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          [[ "$PR" =~ ^[0-9]+$ && "$SHA" =~ ^[0-9a-f]{40}$ ]] || { echo "::error::bad inputs"; exit 1; }
+          curl -sSf -H "Authorization: Bearer $GH_TOKEN" -H "Accept: application/vnd.github+json" \
+            "https://api.github.com/repos/$GITHUB_REPOSITORY/pulls/$PR" > pr.json
+          python3 - "$GITHUB_REPOSITORY" "$SHA" <<'PY'
+          import json, sys
+          pr = json.load(open('pr.json', encoding='utf-8'))
+          repo, sha = sys.argv[1], sys.argv[2]
+          head = pr['head']
+          if (head.get('repo') or {}).get('full_name') != repo:
+              sys.exit(f"::error::the head of PR #{pr['number']} is not in {repo}: refused")
+          if head['sha'] != sha:
+              sys.exit(f"::error::PR #{pr['number']} head is {head['sha']}, expected {sha}")
+          PY
+          rm pr.json
+      - uses: actions/checkout@v7
+        with:
+          ref: main
+          fetch-depth: 0
+          path: full-gate
+      - name: Merge the pull request's head into main (what the pull_request event tests)
+        run: |
+          git fetch -q origin "pull/$PR/head:pr-head"
+          head=$(git rev-parse pr-head)
+          [ "$head" = "$SHA" ] || { echo "::error::PR #$PR head is $head, expected $SHA"; exit 1; }
+          git -c user.name=full-gate -c user.email=full-gate@invalid merge -q --no-edit pr-head
+          echo "Tested $(git rev-parse --short HEAD) = main $(git rev-parse --short origin/main) + PR #$PR head ${SHA:0:7}" | tee -a "$GITHUB_STEP_SUMMARY"
+      - name: Guard - media/photos is checked out in full (the pictures e2e needs)
+        run: |
+          want=$(git ls-files media/photos | wc -l)
+          have=$(find media/photos -type f 2>/dev/null | wc -l)
+          if [ ! -d media/photos ] || [ "$want" -eq 0 ] || [ "$have" -lt "$want" ]; then
+            echo "::error::media/photos is missing or incomplete ($have of $want files): the Full gate needs a full checkout (BUILD_PLAN 4.12)"
+            exit 1
+          fi
+          echo "media/photos: $have of $want files present"
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: full-gate/.nvmrc
+          cache: npm
+          cache-dependency-path: full-gate/package-lock.json
+      - run: npm ci --no-audit --no-fund
+      - run: npm run content:build
+      # The hybrid-face tests run measure.py and diffcheck.py on the real photos (numpy and Pillow): here they must run,
+      # not skip (FACES_REQUIRE_PYTHON below). The packages go into a virtual environment in the runner's temp folder,
+      # made with the runner's python3 when it has venv and is 3.12 or newer, else with actions/setup-python. No sudo.
+      - name: Python for the face tests - can the runner's python3 make the virtual environment?
+        id: faces-python
+        run: |
+          rm -rf "$RUNNER_TEMP/faces-venv"
+          if python3 -c 'import sys; sys.exit(sys.version_info < (3, 12))' 2>/dev/null &&
+            python3 -m venv "$RUNNER_TEMP/faces-venv" 2>/dev/null; then
+            echo "setup=false" >> "$GITHUB_OUTPUT"
+            echo "the runner's $(python3 --version)"
+          else
+            rm -rf "$RUNNER_TEMP/faces-venv"
+            echo "setup=true" >> "$GITHUB_OUTPUT"
+            echo "the runner's python3 is missing, older than 3.12 or has no venv: actions/setup-python"
+          fi
+      - uses: actions/setup-python@v7
+        if: steps.faces-python.outputs.setup == 'true'
+        with:
+          python-version: '3.13'
+      - name: Python for the face tests - numpy and Pillow (scripts/faces/requirements.txt)
+        run: |
+          venv="$RUNNER_TEMP/faces-venv"
+          [ -x "$venv/bin/python" ] || python3 -m venv "$venv"
+          "$venv/bin/python" -m pip install -q --disable-pip-version-check -r scripts/faces/requirements.txt
+          "$venv/bin/python" -c 'import sys, numpy, PIL; print(sys.version.split()[0], "numpy", numpy.__version__, "Pillow", PIL.__version__)'
+          echo "PYTHON=$venv/bin/python" >> "$GITHUB_ENV"
+      - name: npm run check
+        run: npm run check
+        env:
+          FACES_REQUIRE_PYTHON: '1'
+      # The browser is kept in the runner's cache after the first run. Its system libraries need root once: this never
+      # waits for a sudo password (on the owner's runner, `sudo npx playwright install-deps chromium` once if e2e reports
+      # missing libraries).
+      - name: Playwright's Chromium
+        run: |
+          if sudo -n true 2>/dev/null; then npx playwright install --with-deps chromium
+          else npx playwright install chromium
+          fi
+      - name: End-to-end tests
+        # A free port picked at run time: the owner's PC also runs another project's runner, whose Full gate used a fixed
+        # 4473, and Playwright must never reach that project's preview server.
+        run: |
+          E2E_PORT=$(python3 -c 'import socket;s=socket.socket();s.bind(("127.0.0.1",0));print(s.getsockname()[1])')
+          export E2E_PORT
+          echo "e2e port: $E2E_PORT"
+          npm run test:e2e

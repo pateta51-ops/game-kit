@@ -1,0 +1,59 @@
+# Written by kit/ci-templates/render.mjs from ci.config.json: change those, never this file.
+# The Full gate before a merge: `npm run check` and the Playwright e2e suites on a pull request's head merged into main,
+# with a full checkout. Started by hand (workflow_dispatch) by acme for a pull request about to be merged, never
+# on a push. It runs on the self-hosted runner (label widget); if that is offline run kit/ci-templates/local-ci.sh
+# on a Linux machine instead. It refuses a pull request whose head is not in this repository, so the self-hosted runner
+# only ever runs this repository's own code (no pull_request_target anywhere). The steps that need logic run in Node
+# (kit/ci-templates/full-gate.mjs).
+name: Full gate
+
+on:
+  workflow_dispatch:
+    inputs:
+      pr:
+        description: Pull request number
+        required: true
+      sha:
+        description: The pull request's head commit (40 hex characters) that the gate must test
+        required: true
+
+concurrency:
+  group: full-gate-${{ inputs.pr }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  pull-requests: read
+
+jobs:
+  gate:
+    if: github.actor == 'acme'
+    name: Full gate (check, e2e) on PR head merged with main
+    runs-on: [self-hosted, widget]
+    timeout-minutes: 60
+    env:
+      PR: ${{ inputs.pr }}
+      SHA: ${{ inputs.sha }}
+    # The checkout lives in its own directory, not the workspace root, which ci.yml shares on this runner.
+    defaults:
+      run:
+        working-directory: full-gate
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: main
+          fetch-depth: 0
+          path: full-gate
+      - name: Check the inputs and that the PR head is in this repository; merge it into main
+        run: node kit/ci-templates/full-gate.mjs prepare
+        env:
+          GH_TOKEN: ${{ github.token }}
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: full-gate/.nvmrc
+      - run: npm ci --no-audit --no-fund
+      - run: npm run check
+      - name: Playwright's Chromium
+        run: node kit/ci-templates/full-gate.mjs browsers
+      - name: End-to-end tests
+        run: node kit/ci-templates/full-gate.mjs e2e

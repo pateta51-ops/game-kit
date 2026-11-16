@@ -1,0 +1,75 @@
+# The full gate before a merge (owner, 2026-10-16, D-214): `npm run check`, the ingest tests and the end-to-end
+# tests on a pull request's head merged into main, on the owner's self-hosted runner, so that the cloud container runs
+# no merge gate. Started by hand (workflow_dispatch) by the architect session for a pull request it is about to merge;
+# never on every push, so ci.yml and ingest.yml stay the slim per-push gate (D-177). While the runner is off, the
+# architect runs tools/architect/local-ci.sh in the container instead (D-202).
+name: Full gate
+
+on:
+  workflow_dispatch:
+    inputs:
+      pr:
+        description: Pull request number
+        required: true
+      sha:
+        description: The pull request's head commit (40 hex characters) that the gate must test
+        required: true
+
+concurrency:
+  group: full-gate-${{ inputs.pr }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  gate:
+    name: Full gate (check, ingest, e2e) on PR head merged with main
+    runs-on: [self-hosted, Linux]
+    timeout-minutes: 60
+    env:
+      PR: ${{ inputs.pr }}
+      SHA: ${{ inputs.sha }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: main
+          fetch-depth: 0
+      - name: Merge the pull request's head into main (what the pull_request event tests)
+        run: |
+          [[ "$PR" =~ ^[0-9]+$ && "$SHA" =~ ^[0-9a-f]{40}$ ]] || { echo "::error::bad inputs"; exit 1; }
+          git fetch -q origin "pull/$PR/head:pr-head"
+          head=$(git rev-parse pr-head)
+          [ "$head" = "$SHA" ] || { echo "::error::PR #$PR head is $head, expected $SHA"; exit 1; }
+          git -c user.name=full-gate -c user.email=full-gate@invalid merge -q --no-edit pr-head
+          echo "Tested $(git rev-parse --short HEAD) = main $(git rev-parse --short origin/main) + PR #$PR head ${SHA:0:7}" | tee -a "$GITHUB_STEP_SUMMARY"
+      - uses: actions/setup-python@v7
+        with:
+          python-version: '3.13'
+          cache: pip
+          cache-dependency-path: tools/ingest/requirements.txt
+      - run: pip install -r tools/ingest/requirements.txt
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
+      - name: Ingest tests
+        run: python -m pytest tests -q
+        working-directory: tools/ingest
+      - name: npm run check
+        run: npm run check
+        env:
+          IMP_PYTHON: python
+      # The browser is kept in the runner's cache after the first run. Its system libraries need root once: like the
+      # Tesseract step of ingest.yml, this never waits for a sudo password (the owner runs
+      # `sudo npx playwright install-deps chromium` once if the e2e step reports missing libraries).
+      - name: Playwright's Chromium
+        run: |
+          if sudo -n true 2>/dev/null; then npx playwright install --with-deps chromium
+          else npx playwright install chromium
+          fi
+      - name: End-to-end tests
+        run: npm run test:e2e
+        env:
+          E2E_PORT: '4473'

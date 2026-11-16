@@ -1,0 +1,42 @@
+# BUILD_PLAN §4.12 (D-177). The repository is private and Actions minutes are metered, so CI is a slim gate that stays
+# under about 5 minutes: lint, types, the fast unit tests, the build and the bundle-size check. The full suite
+# (`npm run check`, which adds coverage, the 1,000 Bot games, the performance budgets, content checks, traceability and
+# the simulation smoke run, plus `npm run test:e2e`) runs before every merge in full-gate.yml, started by hand on the same
+# runner (D-214); agents run it as part of every phase.
+# The scanning tool has its own workflow (ingest.yml), which runs only when tools/ingest or the transcripts change.
+# Both run on the owner's self-hosted Linux runner (D-178), so they use no GitHub Actions minutes; a job waits in the
+# queue while that PC is off.
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  node:
+    name: Node (lint, types, fast unit tests, build, size)
+    runs-on: [self-hosted, Linux]
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
+      - run: npm run lint
+      - run: npm run typecheck
+      # Everything but the per-difficulty Bot games (tests/scenarios/bot-games) and the timing budgets (tests/perf),
+      # which are slow and timing-sensitive on shared runners; both run locally in `npm run check`.
+      - run: npm run test:ci
+      - run: npm run build
+      - run: npm run size

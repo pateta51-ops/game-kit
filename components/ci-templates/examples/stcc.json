@@ -1,0 +1,84 @@
+{
+  "repo": "acme/stcc",
+  "runnerLabel": "stcc",
+  "workflows": [
+    "full-gate.yml"
+  ],
+  "gate": {
+    "name": "Full gate (check, e2e) on PR head merged with main",
+    "if": false,
+    "runsOn": "${{ inputs.runner == 'self-hosted' && fromJSON('[\"self-hosted\",\"stcc\"]') || 'ubuntu-latest' }}",
+    "inputs": {
+      "runner": {
+        "description": "Where to run (self-hosted = the owner's runner, label stcc)",
+        "type": "choice",
+        "options": [
+          "self-hosted",
+          "ubuntu-latest"
+        ],
+        "default": "self-hosted"
+      }
+    },
+    "node": {
+      "cache": "npm",
+      "cache-dependency-path": "full-gate/package-lock.json"
+    },
+    "before": {
+      "checkout": {
+        "name": "Check the inputs and that the pull request's head is in this repository",
+        "working-directory": "${{ github.workspace }}",
+        "env": {
+          "GH_TOKEN": "${{ github.token }}"
+        },
+        "run": "[[ \"$PR\" =~ ^[0-9]+$ && \"$SHA\" =~ ^[0-9a-f]{40}$ ]] || { echo \"::error::bad inputs\"; exit 1; }\ncurl -sSf -H \"Authorization: Bearer $GH_TOKEN\" -H \"Accept: application/vnd.github+json\" \\\n  \"https://api.github.com/repos/$GITHUB_REPOSITORY/pulls/$PR\" > pr.json\npython3 - \"$GITHUB_REPOSITORY\" \"$SHA\" <<'PY'\nimport json, sys\npr = json.load(open('pr.json', encoding='utf-8'))\nrepo, sha = sys.argv[1], sys.argv[2]\nhead = pr['head']\nif (head.get('repo') or {}).get('full_name') != repo:\n    sys.exit(f\"::error::the head of PR #{pr['number']} is not in {repo}: refused\")\nif head['sha'] != sha:\n    sys.exit(f\"::error::PR #{pr['number']} head is {head['sha']}, expected {sha}\")\nPY\nrm pr.json\n"
+      }
+    },
+    "replace": {
+      "prepare": {
+        "name": "Merge the pull request's head into main (what the pull_request event tests)",
+        "run": "git fetch -q origin \"pull/$PR/head:pr-head\"\nhead=$(git rev-parse pr-head)\n[ \"$head\" = \"$SHA\" ] || { echo \"::error::PR #$PR head is $head, expected $SHA\"; exit 1; }\ngit -c user.name=full-gate -c user.email=full-gate@invalid merge -q --no-edit pr-head\necho \"Tested $(git rev-parse --short HEAD) = main $(git rev-parse --short origin/main) + PR #$PR head ${SHA:0:7}\" | tee -a \"$GITHUB_STEP_SUMMARY\"\n"
+      },
+      "browsers": {
+        "name": "Playwright's Chromium",
+        "run": "if sudo -n true 2>/dev/null; then npx playwright install --with-deps chromium\nelse npx playwright install chromium\nfi\n"
+      }
+    },
+    "after": {
+      "prepare": {
+        "name": "Guard - media/photos is checked out in full (the pictures e2e needs)",
+        "run": "want=$(git ls-files media/photos | wc -l)\nhave=$(find media/photos -type f 2>/dev/null | wc -l)\nif [ ! -d media/photos ] || [ \"$want\" -eq 0 ] || [ \"$have\" -lt \"$want\" ]; then\n  echo \"::error::media/photos is missing or incomplete ($have of $want files): the Full gate needs a full checkout (BUILD_PLAN 4.12)\"\n  exit 1\nfi\necho \"media/photos: $have of $want files present\"\n"
+      },
+      "install": [
+        {
+          "run": "npm run content:build"
+        },
+        {
+          "name": "Python for the face tests - can the runner's python3 make the virtual environment?",
+          "id": "faces-python",
+          "run": "rm -rf \"$RUNNER_TEMP/faces-venv\"\nif python3 -c 'import sys; sys.exit(sys.version_info < (3, 12))' 2>/dev/null &&\n  python3 -m venv \"$RUNNER_TEMP/faces-venv\" 2>/dev/null; then\n  echo \"setup=false\" >> \"$GITHUB_OUTPUT\"\n  echo \"the runner's $(python3 --version)\"\nelse\n  rm -rf \"$RUNNER_TEMP/faces-venv\"\n  echo \"setup=true\" >> \"$GITHUB_OUTPUT\"\n  echo \"the runner's python3 is missing, older than 3.12 or has no venv: actions/setup-python\"\nfi\n"
+        },
+        {
+          "uses": "actions/setup-python@v7",
+          "if": "steps.faces-python.outputs.setup == 'true'",
+          "with": {
+            "python-version": "3.13"
+          }
+        },
+        {
+          "name": "Python for the face tests - numpy and Pillow (scripts/faces/requirements.txt)",
+          "run": "venv=\"$RUNNER_TEMP/faces-venv\"\n[ -x \"$venv/bin/python\" ] || python3 -m venv \"$venv\"\n\"$venv/bin/python\" -m pip install -q --disable-pip-version-check -r scripts/faces/requirements.txt\n\"$venv/bin/python\" -c 'import sys, numpy, PIL; print(sys.version.split()[0], \"numpy\", numpy.__version__, \"Pillow\", PIL.__version__)'\necho \"PYTHON=$venv/bin/python\" >> \"$GITHUB_ENV\"\n"
+        }
+      ]
+    },
+    "steps": [
+      {
+        "name": "npm run check",
+        "run": "npm run check",
+        "env": {
+          "FACES_REQUIRE_PYTHON": "1"
+        }
+      }
+    ],
+    "e2ePort": "free"
+  }
+}

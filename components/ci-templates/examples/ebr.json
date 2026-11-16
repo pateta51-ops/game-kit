@@ -1,0 +1,54 @@
+{
+  "repo": "acme/ebr",
+  "runnerLabel": "linux",
+  "workflows": [
+    "ci.yml"
+  ],
+  "push": false,
+  "prTypes": [
+    "opened",
+    "synchronize",
+    "reopened",
+    "ready_for_review"
+  ],
+  "ci": {
+    "name": false,
+    "branchesIgnore": [
+      "bug-reports"
+    ],
+    "dispatch": true,
+    "draftConcurrency": true,
+    "if": "github.event_name != 'pull_request' || !github.event.pull_request.draft",
+    "timeoutMinutes": 45,
+    "nodeVersion": 22,
+    "install": "npm ci",
+    "steps": [
+      {
+        "name": "npm run dossier:extract (offline)",
+        "run": "npm run dossier:extract"
+      },
+      {
+        "name": "Card art (npm run art:ci-cache)",
+        "timeout-minutes": 30,
+        "run": "npm run art:ci-cache"
+      },
+      {
+        "name": "CI checks side by side (lint, typecheck, unit, realdata, gates, trace, sim:smoke, guard-private, plancheck, inventory, content:gate:mvp, content:gate:all)",
+        "run": "npm run ci:lanes"
+      },
+      {
+        "name": "Install Playwright Chromium",
+        "run": "npx playwright install chromium"
+      },
+      {
+        "run": "npm run e2e"
+      }
+    ],
+    "failureArtifact": {
+      "name": "playwright-report",
+      "stepName": "Upload Playwright report on failure",
+      "path": "playwright-report/",
+      "retentionDays": 7
+    }
+  }
+}

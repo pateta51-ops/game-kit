@@ -1,0 +1,33 @@
+# Written by kit/ci-templates/render.mjs from ci.config.json: change those, never this file.
+# PR CI on the owner's self-hosted runner (label widget, installed with install-wsl.sh). Draft pull requests do not
+# run it; marking one ready, or pushing to a ready one, does. Running pull_request jobs on a self-hosted runner is safe
+# only while the repository is private: if it ever goes public, this job moves to GitHub-hosted runners first (never
+# pull_request_target). The job is `npm run check` on a full checkout.
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    types: [opened, reopened, ready_for_review, synchronize]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    name: npm run check (lint, types, tests, traceability, repo gate, plancheck, build)
+    if: github.repository_owner == 'acme' && (github.event_name != 'pull_request' || !github.event.pull_request.draft)
+    runs-on: [self-hosted, widget]
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+      - run: npm ci --no-audit --no-fund
+      - run: npm run check

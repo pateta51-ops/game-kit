@@ -1,0 +1,62 @@
+{
+  "repo": "acme/imp",
+  "runnerLabel": "Linux",
+  "runDrafts": true,
+  "ci": {
+    "id": "node",
+    "name": "Node (lint, types, fast unit tests, build, size)",
+    "if": false,
+    "dispatch": true,
+    "timeoutMinutes": 15,
+    "node": {
+      "cache": "npm"
+    },
+    "install": "npm ci",
+    "steps": [
+      "npm run lint",
+      "npm run typecheck",
+      "npm run test:ci",
+      "npm run build",
+      "npm run size"
+    ]
+  },
+  "gate": {
+    "name": "Full gate (check, ingest, e2e) on PR head merged with main",
+    "if": false,
+    "flat": true,
+    "timeoutMinutes": 60,
+    "replace": {
+      "prepare": {
+        "name": "Merge the pull request's head into main (what the pull_request event tests)",
+        "run": "[[ \"$PR\" =~ ^[0-9]+$ && \"$SHA\" =~ ^[0-9a-f]{40}$ ]] || { echo \"::error::bad inputs\"; exit 1; }\ngit fetch -q origin \"pull/$PR/head:pr-head\"\nhead=$(git rev-parse pr-head)\n[ \"$head\" = \"$SHA\" ] || { echo \"::error::PR #$PR head is $head, expected $SHA\"; exit 1; }\ngit -c user.name=full-gate -c user.email=full-gate@invalid merge -q --no-edit pr-head\necho \"Tested $(git rev-parse --short HEAD) = main $(git rev-parse --short origin/main) + PR #$PR head ${SHA:0:7}\" | tee -a \"$GITHUB_STEP_SUMMARY\"\n"
+      },
+      "browsers": {
+        "name": "Playwright's Chromium",
+        "run": "if sudo -n true 2>/dev/null; then npx playwright install --with-deps chromium\nelse npx playwright install chromium\nfi\n"
+      }
+    },
+    "python": {
+      "version": "3.13",
+      "requirements": "tools/ingest/requirements.txt"
+    },
+    "node": {
+      "cache": "npm"
+    },
+    "install": "npm ci",
+    "steps": [
+      {
+        "name": "Ingest tests",
+        "run": "python -m pytest tests -q",
+        "working-directory": "tools/ingest"
+      },
+      {
+        "name": "npm run check",
+        "run": "npm run check",
+        "env": {
+          "IMP_PYTHON": "python"
+        }
+      }
+    ],
+    "e2ePort": 4473
+  }
+}
