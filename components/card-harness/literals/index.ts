@@ -32,3 +32,31 @@ export function literalsOf(file: string, typeName: string, prop?: string): strin
   });
   return [...out].sort();
 }
+
+/** Node kinds of a union read from the engine's types (K97): per value of `tag`, its other keys and the required ones.
+ * Throws when the file, type or tag is gone, so a generated grammar fails loudly when its anchor is renamed. */
+export function nodesOf(file: string, typeName: string, tag = 'op'): Record<string, { keys: string[]; required: string[] }> {
+  const program = ts.createProgram([file], { strict: true, noEmit: true, skipLibCheck: true });
+  const checker = program.getTypeChecker();
+  const src = program.getSourceFile(file);
+  if (src === undefined) throw new Error(`nodesOf: cannot read ${file}`);
+  let decl: ts.Node | undefined;
+  src.forEachChild((n) => {
+    if ((ts.isTypeAliasDeclaration(n) || ts.isInterfaceDeclaration(n)) && n.name.text === typeName) decl = n;
+  });
+  if (decl === undefined) throw new Error(`nodesOf: ${file} has no type ${typeName}`);
+  const d = decl;
+  const top = checker.getTypeAtLocation(d);
+  const out: Record<string, { keys: string[]; required: string[] }> = {};
+  for (const m of top.isUnion() ? top.types : [top]) {
+    const t = m.getProperty(tag);
+    const tt = t === undefined ? undefined : checker.getNonNullableType(checker.getTypeOfSymbolAtLocation(t, d));
+    for (const lit of tt === undefined ? [] : tt.isUnion() ? tt.types : [tt]) {
+      if (!lit.isStringLiteral()) continue;
+      const ps = m.getProperties().filter((p) => p.name !== tag);
+      out[lit.value] = { keys: ps.map((p) => p.name).sort(), required: ps.filter((p) => (p.flags & ts.SymbolFlags.Optional) === 0).map((p) => p.name).sort() };
+    }
+  }
+  if (Object.keys(out).length === 0) throw new Error(`nodesOf: ${typeName} has no member with a string ${tag}`);
+  return out;
+}
