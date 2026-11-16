@@ -16,4 +16,6 @@ const table: Narrator<Ev> = { hurt: (e) => ({ kind: 'mechanic', parts: [ref('pla
 log = appendLog(log, events, table, step);
 ```
 
-Open for later: `ref.type` is any word (space and piece refs, K122); more optional row fields can be added. The game keeps the log in its own state and decides when to call `appendLog`.
+- Map refs (K122, opt-in): `refsOf(row, withCause?)`; `refFocus(ref, mapTypes, on)` and `rowFocus(row, mapTypes, on)` (`on`: hover or click) give `{ highlight, scrollTo? }`: hover lights, click also scrolls, other ref types do nothing. `groupBox(block)` gives `{ id, header, members, summary }` for a battle or activation box. The client draws and scrolls.
+
+Open for later: more optional row fields can be added. The game keeps the log in its own state and decides when to call `appendLog`.

@@ -119,6 +119,42 @@ export function previewAt(log: readonly LogEntry[], id: number): { rows: LogEntr
   return s === undefined ? undefined : { rows: log.filter((r) => r.step <= s), step: s };
 }
 
+/** Every ref in a row's parts (lists included), in reading order; the cause last when `withCause`. */
+export function refsOf(e: Narrated, withCause = false): Ref[] {
+  const out: Ref[] = [];
+  const walk = (ps: readonly Part[]): void => { for (const p of ps) { if (p.t === 'ref') out.push(p.ref); else if (p.t === 'list') p.items.forEach(walk); } };
+  walk(e.parts);
+  if (withCause && e.cause) out.push(e.cause);
+  return out;
+}
+
+/** What the map does for a log reference: hover highlights it, click highlights and scrolls to it. `mapTypes` are the game's ref types that live on the map (space, piece...); other refs (card, player) do nothing. */
+export interface MapFocus { readonly highlight: readonly Ref[]; readonly scrollTo?: Ref }
+export function refFocus(r: Ref, mapTypes: readonly string[], on: 'hover' | 'click' = 'hover'): MapFocus {
+  if (!mapTypes.includes(r.type)) return { highlight: [] };
+  return on === 'click' ? { highlight: [r], scrollTo: r } : { highlight: [r] };
+}
+/** Hovering a whole row lights every map ref in it; clicking it scrolls to the first. */
+export function rowFocus(e: Narrated, mapTypes: readonly string[], on: 'hover' | 'click' = 'hover'): MapFocus {
+  const hit = refsOf(e).filter((r) => mapTypes.includes(r.type));
+  const first = hit[0];
+  return on === 'click' && first ? { highlight: hit, scrollTo: first } : { highlight: hit };
+}
+
+/** One block as a box (a battle, an activation): its header, members and summary rows. */
+export interface GroupBox { id?: string; header?: LogEntry; members: LogEntry[]; summary?: LogEntry }
+export function groupBox(block: readonly LogEntry[]): GroupBox {
+  const box: GroupBox = { members: [] };
+  const g = block[0]?.group;
+  if (g) box.id = g.id;
+  for (const r of block) {
+    if (r.group?.role === 'header') box.header = r;
+    else if (r.group?.role === 'summary') box.summary = r;
+    else box.members.push(r);
+  }
+  return box;
+}
+
 const pad = (r: LogEntry): string => (r.group?.role === 'member' ? '  ' : '');
 /** The log as plain text a golden can pin: one line per row, `step kind: line (cause type:id)`, group members indented, a marker for tone. Same log, same text. */
 export function exportText(log: readonly LogEntry[]): string {

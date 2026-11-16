@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { appendLog, blocks, delta, exportText, num, previewAt, rewindLog, stepOf, plainLine, ref, text, wordingProblems, type Narrator, type TypedEvent } from './index';
+import { appendLog, blocks, groupBox, refFocus, refsOf, rowFocus, delta, exportText, num, previewAt, rewindLog, stepOf, plainLine, ref, text, wordingProblems, type Narrator, type TypedEvent } from './index';
 
 type Ev = (TypedEvent & { type: 'hurt'; who: string; n: number }) | (TypedEvent & { type: 'tick' }) | (TypedEvent & { type: 'boom' });
 const table: Narrator<Ev> = {
@@ -38,6 +38,22 @@ describe('game-log', () => {
     expect(stepOf(log, 1)).toBe(2);
     expect(previewAt(log, 0)).toEqual({ rows: [log[0]], step: 1 });
     expect(exportText(log)).toBe('1 mechanic:   Ann loses 2 health <bad> (card:c1)\n2 mechanic:   Ann loses 1 health <bad> (card:c1)\n');
+  });
+  it('map refs and group boxes (K122)', () => {
+    const row = { kind: 'action' as const, parts: [ref('piece', 'p1'), text(' moves to '), { t: 'list' as const, items: [[ref('space', 's2')], [ref('card', 'c1')]] }], cause: { type: 'card', id: 'c9' } };
+    expect(refsOf(row).map((r) => r.id)).toEqual(['p1', 's2', 'c1']);
+    expect(refsOf(row, true).map((r) => r.id)).toEqual(['p1', 's2', 'c1', 'c9']);
+    const types = ['space', 'piece'];
+    expect(rowFocus(row, types).highlight.map((r) => r.id)).toEqual(['p1', 's2']);
+    expect(rowFocus(row, types).scrollTo).toBeUndefined();
+    expect(rowFocus(row, types, 'click').scrollTo?.id).toBe('p1');
+    expect(refFocus({ type: 'card', id: 'c1' }, types, 'click')).toEqual({ highlight: [] });
+    expect(refFocus({ type: 'space', id: 's2' }, types, 'click')).toEqual({ highlight: [{ type: 'space', id: 's2' }], scrollTo: { type: 'space', id: 's2' } });
+    const log = appendLog([], [{ seq: 1, type: 'hurt', who: 'a', n: 1 }], table, 1);
+    const box = groupBox(blocks(log)[0] ?? []);
+    expect(box.id).toBe('g1');
+    expect(box.members.length).toBe(1);
+    expect(box.header).toBeUndefined();
   });
   it('wording rules', () => {
     expect(wordingProblems({ kind: 'action', parts: [text('ok '), delta(2)] })).toEqual([]);
