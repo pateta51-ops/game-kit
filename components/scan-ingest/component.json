@@ -1,0 +1,12 @@
+{
+  "name": "scan-ingest",
+  "source": {
+    "game": "scanning-pipeline",
+    "commit": "9ec2378",
+    "paths": [
+      "scanpipe/: __main__, cast, detect, flags, images, key, pipeline, review, tone, tones/, plugins/base.py copied as they are. plugins/__init__.py rewritten: the registry that named games is replaced by --plugin module:Class loading.",
+      "tests/: synth.py and the black backing, cast shadow, chart cast shadow, flags, magenta backing and token tests, run against tests/fake_game.py instead of the two game plug-ins. plugins/imperium.py, plugins/under_falling_skies.py and test_imperium_plugin.py were left out: plug-ins live in the game."
+    ]
+  },
+  "needs": []
+}

@@ -1,0 +1,9 @@
+# Python 3.11 or later. Pinned (the versions Imperium's ingest passes with); raise them on purpose, in a PR.
+opencv-python-headless==5.0.0.93
+numpy==2.5.3
+Pillow==12.3.0
+scipy==1.18.1
+scikit-image==0.26.0
+pytest==9.1.1
+# Optional, for a game plug-in that reads print to turn an item upright: the Tesseract OCR program (not a Python
+# package). Linux: apt install tesseract-ocr.
