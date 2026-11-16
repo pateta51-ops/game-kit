@@ -77,13 +77,14 @@ export { drawRandom, drawRandomIndex, nextUint32, randomInt, seedRng, shuffleInP
 export { freshWords } from './fresh';
 export { clearLastKnown, clearLeft, hasLeft, isCurrent, lastKnown, lastKnownIn, leaveZone, newObjectTrack, refOf, type LastKnown, type ObjectRef, type ObjectTrack, type Tracked } from './objref';
 export { doesNothing, idleProblems, markIdle } from './idle';
-export { enumerateAnswers, expectEvents, firstPicks, playUntil, randomPicks, skipEmptyProblems, type Played } from './answers';
+export { enumerateAnswers, expectEvents, firstPicks, outcomePicks, playUntil, randomPicks, skipEmptyProblems, type Played } from './answers';
 export { causeProblems, currentCause, effectCause, inCause, ruleCause, type Cause, type CauseCheck } from './cause';
 export { askOrTake, bar, blocked, legalIn, legalTable, onlyOne, type Blocked, type LegalTable, type OnlyOneNotice } from './legal';
 export { preview, type Preview, type PreviewOptions, type PreviewStop } from './preview';
 export { applyDebug, debugVerbs, KERNEL_VERBS } from './debug';
-export { batchOf, cancelBatch, changeOccurrence, DEFAULT_ORDER, ignoreBatch, inBatch, insteadOf, occurrenceOf, PASS, prevent, preventionWindow, sharedKeys, takeSettled, timingHandlers, would, type Batch, type Occurrence, type OccurrenceInput, type OccurrenceKeys, type Prevention, type PreventionOffer, type PreventionWindow, type SharedKey, type TimingConfig, type TimingPromptInfo, type TimingState, type TimingTask, type Window, type WindowTiming } from './timing';
+export { batchGroups, batchOf, cancelBatch, changeOccurrence, DEFAULT_ORDER, ignoreBatch, inBatch, insteadOf, occurrenceOf, PASS, prevent, preventionWindow, sharedKeys, takeSettled, timingHandlers, would, type Batch, type Occurrence, type OccurrenceInput, type OccurrenceKeys, type Prevention, type PreventionOffer, type PreventionWindow, type SharedKey, type TimingConfig, type TimingPromptInfo, type TimingState, type TimingTask, type Window, type WindowTiming } from './timing';
 export { replacementCandidates, type Replacement, type ReplaceResult } from './replace';
 export { addEffect, allEffects, anyEffect, batchOver, bindEffect, boundary, effectsOf, expireEffects, layered, removeEffect, sourceLeft, stampActive, sumEffects, spendEffect, type Boundary, type ContinuousEffect, type Duration, type EffectInput, type EffectsConfig, type LayerConfig } from './durations';
 export { checkpointHandlers, RECOMPUTE_CAP, recompute, type CheckpointConfig, type StateCheck } from './checkpoint';
 export { collectTriggers, DEFAULT_PRIORITY, enteredPlay, pendingTriggers, simultaneously, TRIGGER_CAP, triggerHandlers, type PendingTrigger, type TriggerCandidate, type TriggerOrder, type TriggerPromptInfo } from './triggers';
+export { query } from './query';

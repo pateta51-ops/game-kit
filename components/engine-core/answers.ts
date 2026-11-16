@@ -26,6 +26,15 @@ export const firstPicks = (s: KernelState): string[] => {
   return p.options.filter((o) => o.enabled).slice(0, p.min).map((o) => o.id);
 };
 
+/** K114: an automatic answer from the outcome tags: every `good` option up to `max`, then untagged, then `bad` ones only to reach `min`. */
+export const outcomePicks = (s: KernelState): string[] => {
+  const p = s.prompt as KernelPrompt;
+  const on = p.options.filter((o) => o.enabled);
+  const good = on.filter((o) => o.outcome === 'good').slice(0, p.max);
+  const rest = [...on.filter((o) => o.outcome === undefined), ...on.filter((o) => o.outcome === 'bad')];
+  return [...good, ...rest.slice(0, Math.max(p.min - good.length, 0))].map((o) => o.id);
+};
+
 /** A seeded random answer from the seed and the prompt id (picks in random order). */
 export function randomPicks(s: KernelState, seed: string): string[] {
   const p = s.prompt as KernelPrompt;

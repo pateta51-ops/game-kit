@@ -29,6 +29,8 @@ export interface KernelOption {
   readonly reason?: string;
   /** K88: for a missing target, what was missing, read when the prompt opened. */
   readonly missing?: string;
+  /** K114: good or bad for the chooser, so an automatic answer (`outcomePicks`, a bot) can pick without per-card code. */
+  readonly outcome?: 'good' | 'bad';
 }
 
 export interface KernelPrompt {
@@ -167,4 +169,6 @@ export interface GameRules<G extends GameTypes> {
   randomWords?: string;
   /** K100: opt-in debug edits. Set (even `{}`) to accept `DebugAction`s: the kernel verbs plus these. Unset: refused. */
   readonly debug?: Readonly<Record<string, DebugHandler<G>>>;
+  /** K124: derived data read on demand by name (`query`), never stored in the state or the view. */
+  readonly queries?: Readonly<Record<string, (state: G['state'], content: G['content'], player?: string, arg?: unknown) => unknown>>;
 }

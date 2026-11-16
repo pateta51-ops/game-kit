@@ -136,6 +136,7 @@
         "notice": "Copyright (c) 2010 betasteward@gmail.com",
         "paths": [
           "Mage/src/main/java/mage/game/events/BatchEvent.java (shared batch keys; K93 design only)",
+          "Mage/src/main/java/mage/constants/Outcome.java (good-or-bad tag on a choice; K114 design only)",
           "Mage/src/main/java/mage/abilities/effects/ContinuousEffects.java (replacement loop, applied-set, chooser; K111 design only)"
         ]
       },
@@ -215,7 +216,8 @@
         "licence": "ISC",
         "notice": "Copyright Tor Andersson (ISC)",
         "paths": [
-          "public/common/framework.js (action, button: legal actions as one verb-to-ids table; K119 design only, written new)"
+          "public/common/framework.js (action, button: legal actions as one verb-to-ids table; K119 design only, written new)",
+          "docs/overview/module.md, public/common/framework.js (exports.query: derived data on demand; K124 design only, written new)"
         ]
       }
     ]

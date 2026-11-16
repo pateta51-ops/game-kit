@@ -160,6 +160,18 @@ export function sharedKeys(s: Timed, b: number): OccurrenceKeys {
 }
 
 /** The writable timing state (created on first use). */
+/** K114: the batch's occurrences grouped by one key (all damage per player, per source...), groups in first-seen order; an occurrence without the key is grouped under undefined. */
+export function batchGroups(s: Timed, b: number, by: SharedKey): { readonly key: string | undefined; readonly occurrences: readonly Occurrence[] }[] {
+  const out: { key: string | undefined; occurrences: Occurrence[] }[] = [];
+  for (const o of s.timing?.occurrences ?? []) {
+    if (o.batch !== b) continue;
+    const g = out.find((x) => x.key === o.keys[by]);
+    if (g) g.occurrences.push(o);
+    else out.push({ key: o.keys[by], occurrences: [o] });
+  }
+  return out;
+}
+
 export function timingOf<G extends GameTypes>(ctx: Ctx<G>): Draft<TimingState> {
   const s = draftOf(ctx) as Draft<Timed>;
   if (s.timing === undefined) s.timing = adopt({ next: 1, current: null, batches: [], occurrences: [], windows: [] });
