@@ -1,6 +1,6 @@
 # Pattern: scoreboards and totals
 
-No component: a rule for any screen that shows cells and a total of them. Kit part to use: K29 `foldView` (planned, not built yet) for the shown view.
+No component: a rule for any screen that shows cells and a total of them. Kit part to use: K29 `foldView` (built: `components/paced-view/`) for the shown view; the picked mark is `components/picked-state/`.
 
 ## Rules that held
 - A total changes at the same instant as the cell it sums, never before or after. Cell and total come from one shown view, not two timers.

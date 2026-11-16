@@ -44,3 +44,5 @@ Clone the state, run the steps, fork once per enabled option at each prompt, bre
 - Cost mini-grammar `Part<amount/type/description>`, third slot is display text; `CostDesc$` overrides the whole text.
 - Do not write default parameters; `Secondary$ True` marks a helper line that must not show in the card text.
 - Selector grammar `Type.restriction+restriction`, `!` negates, `,` is or.
+
+Code: `components/card-harness/` (scenario, inventory, `roundTripCards`), `components/card-patches/`, `components/card-query/`, `components/small-helpers/`, `components/ghost-card/`.

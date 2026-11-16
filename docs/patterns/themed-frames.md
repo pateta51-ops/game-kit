@@ -22,3 +22,5 @@ Per game: `dev` (Vite on the game's port), a phone dev run (host exposed, own ht
 
 ## Never copy
 Another game's logo, colours, fonts, panel names, screen list or ports.
+
+Code: `components/app-frame/` (routes, start-up, error boundary), `components/phone-mode/`, `components/resolution-frame/`, `components/settings/`; tokens checked by `components/theme-check/`.

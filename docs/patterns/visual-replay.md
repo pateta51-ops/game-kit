@@ -28,3 +28,5 @@ The game supplies `createGame`, `applyAction`, `getPlayerView`, the screen to mo
 ## Pitfalls
 - Record with a driver at a fixed seed; re-record only on a deliberate rules change.
 - Never import art or screens into the shared part.
+
+Code: `replay()` in `components/engine-core/replay.ts`, `components/replay-cli/`, `components/motion-frame/` and `components/paced-view/` (steps over a stage).

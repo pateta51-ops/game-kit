@@ -30,3 +30,5 @@ Lesson (warps 015): a one-option lookahead failed the win band; the beam search 
 
 ## Sanity bands
 A list of `{ name, ok, detail }` computed from the records; a failing band is an error (warps: since v1.0; warnings before). Seen in warps: every game ends (no `stalled`); average turns per game unit inside a range; no setup pairing with zero greedy wins in N games against easy opponents, judged only when a pairing has N games. A band that depends on a driver is "not judged" for runs without it (a random-only run measures the driver, not the game). Record the observed values in a decision file the batch writes.
+
+Code: `components/sim-pool/` (pool, driver contract, records, resume), `components/perf/` (speed budget over driver games), `components/replay-cli/` (golden games).

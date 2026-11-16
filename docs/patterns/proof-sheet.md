@@ -28,3 +28,5 @@ Every card of the real pack on one screen, so the owner checks faces, printed te
 - Owner rulings that remove things from the sheet (stcc: mission cards are not cards) live in `proofCards`, in one place.
 - Group and filter constants (box order, suit list, source list) are data the game supplies; a kit version takes them as parameters.
 - Test the pure functions on the real pack; the e2e only checks that the screen opens, filters and shows each face.
+
+Code nearby: `components/prompt-gallery/` (one state per prompt kind, action coverage) and `components/ui-helpers/`.

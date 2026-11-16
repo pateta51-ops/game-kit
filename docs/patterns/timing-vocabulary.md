@@ -123,3 +123,5 @@ Build in this order; each needs the ones above it.
 | 5 | K95 | `timing.checkpoint` with steps 1 to 5, `derive` and `RECOMPUTE_CAP`, state-check list | new `checkpoint.ts`, `types.ts` (optional `GameRules.derive`, `checks`), `index.ts`, README |
 
 Each row ships its tests on the fake game (`fake/`), a fixture card per piece, and a README section of a few lines (the whole README stays at most 30 lines, so sections stay short or a row adds `timing.md` beside it). Later rows that build on this note: K112 (layers), K113 (zone-change counter on `source`), K114 (batch keys as their own row), K92 (ghost sources for triggers).
+
+Code (all in `components/engine-core/`, guide `timing.md`): `timing.ts` (K93), `replace.ts` (K111), `triggers.ts` (K94), `durations.ts` (K96, with layers K112), `checkpoint.ts` (K95); outcome tags `KernelOption.outcome` (K114).

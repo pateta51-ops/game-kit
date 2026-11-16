@@ -24,3 +24,5 @@ The tutorial shows the text the owner approved. Live content may change after ap
 
 ## Kit version
 The game supplies the scenario type, the list of what to copy, and the reference walker. The kit supplies the closure queue, the prove step, the record, the refreeze rule and the CLI.
+
+Code: `components/tutorial/` (script format, headless play, lock, check); the freeze step itself stays in each game.

@@ -20,6 +20,70 @@ The shared code for the owner's digital board-game builds: the best version of e
 - `docs/evaluation/` - the evidence behind the selection.
 - `docs/patterns/` - things that are shared as a described pattern, not as code.
 
+## Components
+
+Every folder under `components/` (read its README, or `component.json`, before using it; `needs` are pulled with it). Where each one came from: `docs/SELECTION.md`.
+
+| Component | What it does | Needs |
+|---|---|---|
+| [`achievements`](components/achievements/README.md) | The catalogue as data, achievements as pure functions over finished-game summaries, and the small summary written when a game ends. | play-stats |
+| [`app-frame`](components/app-frame/README.md) | Hash routes, the screen of the address bar with an error boundary and lazy loading, and start-up. | state-machines |
+| [`audio-gen`](components/audio-gen/README.md) | Sounds, music and voice lines for a game, made with free local models in WSL and finished by rules in code. | - |
+| [`board-layout`](components/board-layout/README.md) | Draw the map once over the board picture in Inkscape; get the click areas (space rects) and the adjacency list from the drawing. | - |
+| [`board-model`](components/board-model/README.md) | Spaces as data, adjacency computed once, named placement kinds resolved by the board. | - |
+| [`board-registry`](components/board-registry/README.md) | The board UI's registry of things (space, piece, marker, stack), highlighted straight from the legal-action list, plus stack layout for pieces sharing a space. | effect-library |
+| [`boundary-check`](components/boundary-check/README.md) | Three small pure helpers: boundary file for `tsc`, rule-violation list, catalogue face check (written new). | - |
+| [`bug-reporter`](components/bug-reporter/README.md) | A bug report dialog: screenshot (scrolled areas, game fonts embedded), markup editor, explanation, an offline queue (IndexedDB), filing as a GitHub issue with files on a `bug-reports` branch (409 retry, one issue per ... | state-machines |
+| [`bundle-size`](components/bundle-size/README.md) | The size gate for a vite build: gzips `index.html` and what it loads at once, and fails over the game's limits. | - |
+| [`campaign`](components/campaign/README.md) | The campaign log as plain data and pure functions (release 1.0). | - |
+| [`card-harness`](components/card-harness/README.md) | Card tests on real cards: scenario builder, prompt-delivery harness, choice probe, inventory with stale check, `roundTripCards`. | engine-core |
+| [`card-patches`](components/card-patches/README.md) | Card data patch layer: corrections in small files, one per reason, applied on import; the source card data is never edited. | - |
+| [`card-query`](components/card-query/README.md) | A small card query language (K107): field table, lexer, parser, evaluator. | - |
+| [`challenges`](components/challenges/README.md) | A challenge is a content item picked before a game: a setup restriction plus triggered penalties, written in the game's own card language (release 1.0). | - |
+| [`check-runner`](components/check-runner/README.md) | Runs the checks of `npm run check` in lanes side by side, kills the whole process tree on timeout, and fails when its lanes drift from the check chain. | - |
+| [`ci-templates`](components/ci-templates/README.md) | Renders a game's CI workflows, full gate and local CI script from a small `ci.config.json`; nothing names a repository or runner. | - |
+| [`debug-console`](components/debug-console/README.md) | A slash-line console over the engine-core debug edits (K100). | engine-core |
+| [`dice-odds`](components/dice-odds/README.md) | Exact dice probabilities (K24): multiset outcomes with multinomial weights and `chance(k, test)`. | - |
+| [`e2e-helpers`](components/e2e-helpers/README.md) | Playwright helpers a game's browser tests share. | - |
+| [`effect-library`](components/effect-library/README.md) | The twelve verbs of the director's spec format as DOM effects for the motion frame: `move`, `lift`, `settle`, `fade-in`, `fade-out`, `show`, `hide`, `flip`, `scale`, `shake`, `glow`, `text`. | motion-frame |
+| [`engine-core`](components/engine-core/README.md) | The kernel of a game engine: seeded random numbers, canonical JSON and hashes, the task runner with prompts, copy on write, replay, undo and the save format. | - |
+| [`game-log`](components/game-log/README.md) | The game's log, derived from engine events by one table. | engine-core |
+| [`ghost-card`](components/ghost-card/README.md) | Groups the choices of a prompt whose source card left play under that card's last-known snapshot, so the screen can draw a ghost card (K92). | - |
+| [`glossary`](components/glossary/README.md) | Links every glossary term and icon code in the game's texts to a lookup, and checks the glossary covers what the game shows. | phone-mode, state-machines |
+| [`lint-preset`](components/lint-preset/README.md) | ESLint flat-config blocks for a game's engine folder. | - |
+| [`motion-frame`](components/motion-frame/README.md) | Plays motion specs in the director's format (one JSON per beat: `actors`, `steps` of `{t, dur, actor, do, to?}`, `sound` of `{t, cue}`, `maxMs`, `frequency`, `stage`). | - |
+| [`offline`](components/offline/README.md) | Offline install: a Vite plugin that writes a precaching service worker into the build, the rule for registering it, and the update line. | state-machines |
+| [`opponent`](components/opponent/README.md) | A rule-based opponent (K103, K115): picks an index among legal options through one fixed pipeline; advice, profiles and memory as data, decision records. | game-log, sim-pool |
+| [`paced-view`](components/paced-view/README.md) | What the table shows while an answer's events play one step at a time. | - |
+| [`perf`](components/perf/README.md) | The engine speed budget: plays whole driver games, times every `applyAction`, and fails when a percentile reaches its limit. | engine-core, sim-pool |
+| [`phone-mode`](components/phone-mode/README.md) | The mechanism of a phone layout: which layout a window gets, the fit zoom of the large screens, safe-area tokens, the one bottom sheet, folds, second-tap commit, the sideways panel. | state-machines |
+| [`picked-state`](components/picked-state/README.md) | The mark for an option the player has picked, as tokens plus one small helper. | - |
+| [`pieces-3d`](components/pieces-3d/README.md) | Pieces built in code, no model file: a rounded d6 and a ten-sided die (WebGL), a seamed ball that rolls by distance, a chip with thickness, card edge and cast shadow. | effect-library, motion-frame |
+| [`plain-text`](components/plain-text/README.md) | The owner's rule "no rule ids on screen" as code: rule, ruling and decision ids (`TURN-07`, `AR-12`, `D-044`) stay in data, engine output and tests, and every line a person reads goes through this filter first. | - |
+| [`plan-checker`](components/plan-checker/component.json) | The plan checker (`plancheck.py` with a TypeScript wrapper): checks a game plan and lists the line ranges of a batch. | - |
+| [`play-stats`](components/play-stats/README.md) | The records of finished games, the totals and best scores read from them, and a clock of playing time. | - |
+| [`prompt-gallery`](components/prompt-gallery/README.md) | One game state per prompt kind and per ending, a check that fails when a kind has none, and a dev route that shows each on the game's own components. | - |
+| [`prompt-source`](components/prompt-source/README.md) | Each prompt names its source frame (card and clause), a decision-authority tag when the player decides for the automated side, and a read-only stack view. | - |
+| [`replay-cli`](components/replay-cli/README.md) | Headless replays, golden games and a determinism check across two checkouts. | engine-core, sim-pool |
+| [`repo-gate`](components/repo-gate/README.md) | The repository gate: file sizes, raw scans, secrets, session URLs, tailnet hosts, runner names, card ids and names in rules code, art and repository budgets (the list is at the top of `repo-gate.ts`). | - |
+| [`resolution-frame`](components/resolution-frame/README.md) | A Resolution setting that works: on a PC the game is laid out as on a screen of the chosen size, then the whole picture is scaled to fill the browser window (letterboxed). | settings |
+| [`saves`](components/saves/README.md) | Saved games in IndexedDB over engine-core's `SaveFile`, and a screen for them. | engine-core, bug-reporter |
+| [`scan-ingest`](components/scan-ingest/README.md) | Python package `scanpipe`: flatbed scans to one upright, cropped image per item, a review overlay and a manifest. | - |
+| [`settings`](components/settings/README.md) | Settings declared as data, a persisted store of their values and a screen drawn from them. | - |
+| [`sim-pool`](components/sim-pool/README.md) | Plays N whole games of any `GameRules<G>` with a driver, in this thread or on worker threads, with crash-safe records and a resume file. | engine-core |
+| [`small-helpers`](components/small-helpers/README.md) | Small pure helpers from the outside harvest (K109): icon with hidden word, text-key check, paired legality fixtures, relation index. | - |
+| [`sound-player`](components/sound-player/README.md) | A Web Audio player driven by one table of data. | - |
+| [`state-machines`](components/state-machines/README.md) | Explicit state machines as plain tables. | - |
+| [`story`](components/story/README.md) | Story as data only (flavour: no rule lives in it; a missing line never blocks play). | engine-core |
+| [`theme-check`](components/theme-check/README.md) | Static check that a game's look lives in its token file. | - |
+| [`tooling-scripts`](components/tooling-scripts/README.md) | Small repo scripts a game runs with `npx tsx kit/tooling-scripts/<script>.ts`. | - |
+| [`traceability`](components/traceability/README.md) | Rule-citation gate: test titles must cite the rule ids of a game; config-driven (`trace.config.json`). | - |
+| [`tutorial`](components/tutorial/README.md) | The tutorial engine for any `GameRules<G>` game: a script format, headless play of a script on a seed, the lock that allows only the scripted answer, the phase table and session, the check, the readable script documen... | engine-core, state-machines |
+| [`ui-helpers`](components/ui-helpers/README.md) | Small screen helpers with no look and no game types. | - |
+| [`voice`](components/voice/README.md) | A line player on the sound player's `voice` bus. | sound-player |
+
+`engine-core` guides beside its README: `undo.md`, `random.md`, `helpers.md`, `cause.md`, `objref.md`, `legal.md` (reasons, legal table, preview), `debug.md`, `timing.md` (batches, cancel, instead, replacement, triggers, continuous effects and layers, checkpoint), `idle.md`. Patterns with the code that implements them: `docs/patterns/`.
+
 ## Using it in a game
 
 From the game's repo root, with this repo checked out beside it:

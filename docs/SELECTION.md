@@ -72,13 +72,10 @@ Open check before the lift: the canonical JSON of the Jarl line and of STCC buil
 | Tutorial freeze | Pattern only | | |
 | Story | Pattern only: Marvel and Arkham story code is AGPL or unlicensed, so written fresh (data shape, narrator fallback, sheet parts, picture note; page tree with valid/invalid branches and overlay; panel reader K154 and event splash K155 from quincarter, ideas only) | | S |
 | Achievements (K160), K161, K162 | New; ideas only from marvel-lcg (nothing stored, versioned summary) and ArkhamHorror (catalogue, checklists); builds on play-stats, which holds no summary | | M |
-| Achievements (K160) | New; ideas only from marvel-lcg (nothing stored, versioned summary) and ArkhamHorror (catalogue, checklists); builds on play-stats, which holds no summary | | M |
 | Prompt source (K90) | New; idea only from marvel-champions-digital-game (choice frame, decision authority, stack view) | | S |
-| Story | Pattern only: Marvel and Arkham story code is AGPL or unlicensed, so written fresh (data shape, narrator fallback, sheet parts, picture note) | | S |
 | Campaign log (K156) | No game: a new design from ideas in ArkhamHorror, LordOfTheRings and Marvel Champions (see `docs/evaluation/outside/story-campaign-*.md`) | | S |
 | Game log | New (K86): the design of ArkhamHorror's narrator (no licence, so no code copied): one table from engine event to row, rows as data, append-only, grouped by id | Undo to a line, hover preview (K87); space and piece refs (K122) | M |
 | Ghost card (K92) | No game: a new design from ArkhamHorror `ghostAbility.ts` (no licence, so no code copied): a choice whose source left play grouped under its last-known snapshot (engine-core K113) | | S |
-| Achievements (K160), K162 | New; ideas only from marvel-lcg (nothing stored, versioned summary) and ArkhamHorror (catalogue, checklists); builds on play-stats, which holds no summary | | M |
 | Challenges (K163) | New; idea only from marvel-lcg (a challenge as a content item: setup restriction plus triggered penalties) | | S |
 | Dice odds (`dice-odds`, K24) | New code from the K24 row (a finished build, 15 Nov 2026): multiset enumeration with multinomial weights, `chance(k, test)`, cached per thread | - | S |
 
@@ -128,3 +125,20 @@ Generic effects: deal, move, flip, shake, highlight, beam, sparks, count-up, ban
 ## Not checked by the reviews
 
 Nothing was run; tests were counted, not executed. Per-review gaps are listed at the end of each file in `docs/evaluation/`.
+
+## Other components (added to complete the index, 16 Nov 2026)
+
+Components with no row above. Each starts from the game and commit in its `component.json`; `README.md` lists every component with its `needs`.
+
+| Component | Base | Effort |
+|---|---|---|
+| `e2e-helpers` | Imperium `20a033a` (K48) | S |
+| `tooling-scripts` | Imperium `20a033a` | S |
+| `lint-preset` | Jarl `6f006a2` (K46) | S |
+| `ui-helpers` | Jarl `6f006a2` (K65, K73) | S |
+| `perf` | STCC `9fc59643` (K43) | M |
+| `plain-text` | Rome `1d0fd2e` (K47) | S |
+| `resolution-frame` | Rome `1d0fd2e` (K55) | M |
+| `prompt-gallery` | EBR `33b5abd3` | M |
+| `picked-state` | 7th Inning Stretch `6c82d43` (K165) | S |
+| `scan-ingest` | scanning-pipeline `9ec2378` (K164) | L |
