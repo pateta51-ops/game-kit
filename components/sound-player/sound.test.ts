@@ -148,6 +148,28 @@ describe('sound-player: cues', () => {
     for (let i = 1; i < ids.length; i += 1) expect(ids[i]).not.toBe(ids[i - 1]);
   });
 
+  it('with two files the same one may play twice in a row (XD-54)', async () => {
+    const { ctx, player, cues } = await start({ random: () => 0 });
+    for (let i = 0; i < 3; i += 1) {
+      ctx.currentTime = i;
+      player.play('step');
+      ctx.end(cues().at(-1)!);
+    }
+    const ids = cues().map((s) => s.buffer?.id);
+    expect(new Set(ids).size).toBe(1);
+  });
+
+  it('a one-file cue always plays its file', async () => {
+    const { ctx, player, cues } = await start({ random: () => 0.99 });
+    for (let i = 0; i < 3; i += 1) {
+      ctx.currentTime = i;
+      player.play('thud');
+      ctx.end(cues().at(-1)!);
+    }
+    expect(cues()).toHaveLength(3);
+    expect(new Set(cues().map((s) => s.buffer?.id)).size).toBe(1);
+  });
+
   it('a cue with no file, or whose file is not there, is silent and reported once', async () => {
     const { ctx, warn, player, cues } = await start();
     for (let i = 0; i < 3; i += 1) {
@@ -241,7 +263,6 @@ describe('sound-player: cues', () => {
     ctx.currentTime = 2;
     player.play('step', { times: 3 });
     expect(cues().map((s) => s.startedAt)).toEqual([2, 2.5, 3]);
-    expect(cues()[1]!.buffer?.id).not.toBe(cues()[0]!.buffer?.id);
     expect(player.count()).toBe(1);
     ctx.end(cues()[0]!);
     ctx.end(cues()[1]!);

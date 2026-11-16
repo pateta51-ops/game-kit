@@ -324,8 +324,9 @@ export function createSoundPlayer(o: SoundPlayerOptions): SoundPlayer {
             v.left += 1;
           }
         for (let i = 0; synth.length === 0 && i < times; i += 1) {
-          let n = Math.floor(random() * (list.length - (list.length > 1 && lastPick.has(name) ? 1 : 0)));
-          if (list.length > 1 && n >= (lastPick.get(name) ?? Infinity)) n += 1;
+          const skip = list.length > 2 && lastPick.has(name);
+          let n = Math.floor(random() * (list.length - (skip ? 1 : 0)));
+          if (skip && n >= (lastPick.get(name) ?? Infinity)) n += 1;
           lastPick.set(name, n);
           const buffer = list[n];
           if (buffer === undefined) continue;

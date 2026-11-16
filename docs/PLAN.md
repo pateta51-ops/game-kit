@@ -224,6 +224,7 @@ Sixteen public card- and board-game repositories were surveyed read-only; the fi
 | K123 | Prompts (compare first with the kit's prompt model): closed set of prompt kinds with and / or composition and a space kind; renderer registry that fails to compile for a missing kind; a warning on a playable card when part of it will do nothing | Terraforming Mars | M | proposed |
 | K124 | Small: type-level module-boundary check; query channel for derived data; rule-violation panel with links; prompt-kind `cast` in card tests; catalogue check of card face against behaviour | Lew Morski module, Rally the Troops, Paths of Glory module, Terraforming Mars | S each | proposed |
 | K126 | `engine-core`: optional `reseed` words on an answer (fresh randomness recorded with the action, replay exact); `freshWords()` app side | 7th Inning Stretch | S | done (asked as K79 in the game plan; K79 was taken) |
+| K127 | `sound-player`: the last played file is excluded from the random pick only when a cue has three or more files (XD-54) | 7th Inning Stretch | S | done (asked as K80 in the game plan; K80 was taken) |
 | K125 | Learned opponent (owner's word; STCC D-067 stands until then): value network with one-round look-ahead on the real engine and self-play training; study in `docs/evaluation/outside/rftg-opponent.md` | rftg (Keldon) | L | proposed |
 
 ### Build order for the outside harvest (owner, 15 Nov 2026)
