@@ -106,9 +106,20 @@ describe('kit.mjs new (K214)', () => {
     fs.writeFileSync(path.join(dir, 'package.json'), 'mine');
     fs.writeFileSync(path.join(dir, '.gitignore'), 'mine');
     fs.writeFileSync(path.join(r.tmp, 'kit/ports.json'), JSON.stringify({ games: { g: { block: 6000, serve: { local: 4100 } } } }));
-    expect(() => scaffold({ dir, id: 'g', name: 'G', kit: path.join(r.tmp, 'kit'), existing: true, ref: 'v0' })).toThrow(/(package.json.*.gitignore|.gitignore.*package.json)/);
+    expect(() => scaffold({ dir, id: 'g', name: 'G', kit: path.join(r.tmp, 'kit'), existing: true, ref: 'v0' })).toThrow(/package.json/);
     expect(fs.readFileSync(path.join(dir, 'package.json'), 'utf8')).toBe('mine');
     expect(fs.readdirSync(dir).sort()).toEqual(['.gitignore', 'package.json']);
+  });
+  it('--existing merges an existing kit/ and .gitignore, and still refuses on src/main.tsx (K233)', async () => {
+    const { existingCheck } = await import('./scaffold.js');
+    const r = rig();
+    const dir = path.join(r.tmp, 'g');
+    fs.mkdirSync(path.join(dir, 'kit'), { recursive: true });
+    fs.writeFileSync(path.join(dir, '.gitignore'), 'mine\ndist/');
+    expect(() => existingCheck({ dir })).not.toThrow();
+    fs.mkdirSync(path.join(dir, 'src'));
+    fs.writeFileSync(path.join(dir, 'src/main.tsx'), 'mine');
+    expect(() => existingCheck({ dir })).toThrow(/src.main\.tsx/);
   });
   it('commit trailer: default, custom, or none (K221)', () => {
     const msg = (extra = {}) => { const r = rig(); r.go(extra); return r.calls.find(([, a]) => a[0] === 'commit')![1].at(-1)!; };

@@ -12,6 +12,7 @@ Needs Node 22.18+: tools run with plain `node` (no tsx, no build); relative impo
 ## The locked copy (in a game)
 - A game holds `kit/`, a copy of named components at a tag. **Never edit `kit/`**, never copy a component into `src/`, never port from an older game what the kit has.
 - A game holds one kit tag. `node ../game-kit/kit.mjs pull ../game-kit <tag> [component...]` copies components (and their `needs`), moves the whole kit to that tag, and writes `kit/kit.lock.json` plus `kit/CATALOG.md`. Run `node kit/kit.mjs outdated` first ([upgrade-kit](docs/recipes/upgrade-kit.md)). `node kit/kit.mjs check` fails when `kit/` differs from the lock; every game runs it in its check chain.
+- Before writing anything in a game: `node kit/kit.mjs search <word>`, then `kit/recipes/`, then the component README. `pull` copies `docs/recipes/` to `kit/recipes/`; `check` guards it like the rest.
 - Inside a game, find what exists without the kit checkout: `node kit/kit.mjs list`, `node kit/kit.mjs search <word>`.
 - Before adding a row to `docs/PLAN.md`, take its id with `node kit.mjs next-id` (in the game-kit checkout); it reads main and every open PR.
 - Start a new game: `node kit.mjs new <dir> <id> "<Name>"` does it all (port block, repo, kit pull, first commit, GitHub repo).

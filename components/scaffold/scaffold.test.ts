@@ -55,4 +55,26 @@ describe('scaffold (K204)', () => {
     const r = spawnSync('node', [kitMjs, 'new', out, 'demo', 'Demo Game', '--ports', ports, '--no-remote'], { encoding: 'utf8' });
     expect(r.status).toBe(1);
   });
+
+  it('K233: --existing pulls over an existing kit/ with a lock and merges .gitignore; a second run changes nothing', () => {
+    const d = path.join(tmp, 'ex');
+    fs.mkdirSync(d);
+    fs.writeFileSync(path.join(d, '.gitignore'), 'mine\nnode_modules/');
+    expect(spawnSync('node', [kitMjs, 'pull', KIT, head, 'engine-core'], { cwd: d, encoding: 'utf8' }).status).toBe(0);
+    const go = () => spawnSync('node', [kitMjs, 'new', d, 'demo', 'Demo Game', '--existing', '--ref', head, '--ports', ports, '--no-install', '--no-remote'], { encoding: 'utf8' });
+    const r = go();
+    expect(r.stderr).toBe('');
+    expect(r.status).toBe(0);
+    const gi = fs.readFileSync(path.join(d, '.gitignore'), 'utf8').split('\n');
+    expect(gi.slice(0, 2)).toEqual(['mine', 'node_modules/']);
+    expect(gi).toContain('dist/');
+    expect(gi.filter((l) => l === 'node_modules/').length).toBe(1);
+    const lock = JSON.parse(fs.readFileSync(path.join(d, 'kit/kit.lock.json'), 'utf8')) as { ref: string; components: Record<string, unknown> };
+    expect(lock.ref).toBe(head);
+    expect(Object.keys(lock.components)).toContain('sim-pool');
+    expect(spawnSync('node', ['kit/kit.mjs', 'check'], { cwd: d, encoding: 'utf8' }).status).toBe(0);
+    const before = fs.readFileSync(path.join(d, '.gitignore'), 'utf8');
+    expect(go().status).toBe(1);
+    expect(fs.readFileSync(path.join(d, '.gitignore'), 'utf8')).toBe(before);
+  }, 120_000);
 });

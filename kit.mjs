@@ -51,6 +51,16 @@ if (cmd === 'pull') {
   try { fs.writeFileSync(NEW + '/kit.mjs', x('git', ['-C', src, 'show', commit + ':kit.mjs'], { stdio: ['ignore', 'pipe', 'pipe'] })) } catch { fail('no kit.mjs in ' + ref) }
   try { fs.writeFileSync(NEW + '/agent.mjs', x('git', ['-C', src, 'show', commit + ':scripts/agent.mjs'], { stdio: ['ignore', 'pipe', 'ignore'] })); lock.agent = sha(NEW + '/agent.mjs') } catch { /* a ref before the worker commands */ }
   try { fs.writeFileSync(NEW + '/CATALOG.md', x('git', ['-C', src, 'show', commit + ':docs/CATALOG.md'], { stdio: ['ignore', 'pipe', 'ignore'] })) } catch { /* a ref with no catalogue */ }
+  let hasRecipes = false
+  try { hasRecipes = !!x('git', ['-C', src, 'ls-tree', '-r', '--name-only', commit, 'docs/recipes'], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] }).trim() } catch (e) { fail('cannot list docs/recipes in ' + ref + ': ' + String(e.stderr ?? e.message).trim().split('\n')[0]) }
+  if (hasRecipes) {
+    try {
+      const tar = x('git', ['-C', src, 'archive', commit, 'docs/recipes'], { maxBuffer: 1 << 30, stdio: ['ignore', 'pipe', 'pipe'] })
+      fs.mkdirSync(NEW + '/recipes')
+      x('tar', ['-xf', '-', '--strip-components=2', '-C', NEW + '/recipes'], { input: tar, stdio: ['pipe', 'pipe', 'pipe'] })
+      lock.recipes = { files: Object.fromEntries(walk(NEW + '/recipes').map((f) => [f.replace(NEW + '/', 'kit/'), sha(f)])) }
+    } catch (e) { fail('docs/recipes did not copy: ' + String(e.stderr ?? e.message).trim().split('\n')[0]) }
+  }
   fs.writeFileSync(NEW + '/kit.lock.json', JSON.stringify(lock, null, 1) + '\n')
   const OLD = 'kit.old'
   fs.rmSync(OLD, { recursive: true, force: true })
@@ -104,8 +114,13 @@ if (cmd === 'pull') {
     const cj = 'kit/' + n + '/component.json'
     if (fs.existsSync(cj)) for (const m of JSON.parse(fs.readFileSync(cj, 'utf8')).needs ?? []) if (!lock.components[m]) bad.push(n + ' needs ' + m + ' (not pulled)')
   }
+  if (lock.recipes) {
+    const have = fs.existsSync('kit/recipes') ? walk('kit/recipes') : []
+    for (const f of have) if (lock.recipes.files[f] !== sha(f)) bad.push((f in lock.recipes.files ? 'changed ' : 'added   ') + f)
+    for (const f of Object.keys(lock.recipes.files)) if (!have.includes(f)) bad.push('missing ' + f)
+  }
   if (lock.agent && (!fs.existsSync('kit/agent.mjs') || sha('kit/agent.mjs') !== lock.agent)) bad.push('changed kit/agent.mjs')
-  if (fs.existsSync('kit')) for (const e of fs.readdirSync('kit')) if (!lock.components[e] && !['kit.lock.json', 'kit.mjs', 'agent.mjs', 'CATALOG.md'].includes(e)) bad.push('stray   kit/' + e + ' (not in the lock)')
+  if (fs.existsSync('kit')) for (const e of fs.readdirSync('kit')) if (!lock.components[e] && !(e === 'recipes' && lock.recipes) && !['kit.lock.json', 'kit.mjs', 'agent.mjs', 'CATALOG.md'].includes(e)) bad.push('stray   kit/' + e + ' (not in the lock)')
   if (bad.length) {
     console.error('kit/ differs from kit/kit.lock.json. Change the code in the game-kit repo and pull a new version; never edit this copy.\n' + bad.join('\n'))
     process.exit(1)

@@ -18,3 +18,5 @@ export interface ScaffoldOptions {
 export const BASE: string[]
 export const TEMPLATE: string
 export function scaffold(o: ScaffoldOptions): { dir: string; ref: string; ports: Record<string, string | number> }
+
+export function existingCheck(o: { dir: string; overlay?: string[]; link?: string }): void

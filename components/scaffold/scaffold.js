@@ -10,10 +10,10 @@ export const TEMPLATE = path.join(here, 'template')
 const walk = (d) => fs.readdirSync(d, { withFileTypes: true }).flatMap((e) => (e.isDirectory() ? walk(path.join(d, e.name)) : [path.join(d, e.name)]))
 
 const target = (o, t, f) => { const rel = path.relative(t, f).replace(/.tpl$/, ''); return path.join(o.dir, path.dirname(rel), RENAME[path.basename(rel)] ?? path.basename(rel)) }
-// --existing: throws, writing nothing, when a file would be overwritten (template files, kit/, rendered workflows)
+// --existing: throws, writing nothing, when a file would be overwritten (template files, rendered workflows); an existing kit/ is pulled over and an existing .gitignore gets its missing lines appended
 export function existingCheck(o) {
   const ts = [TEMPLATE, ...(o.overlay ?? [])]
-  const all = ts.flatMap((t) => walk(t).map((f) => target(o, t, f))).concat(path.join(o.dir, 'kit'), ...(o.link ? [path.join(o.dir, 'node_modules')] : []), ...['ci.yml', 'full-gate.yml'].map((w) => path.join(o.dir, '.github/workflows', w)))
+  const all = ts.flatMap((t) => walk(t).map((f) => target(o, t, f))).filter((f) => path.basename(f) !== '.gitignore').concat(...(o.link ? [path.join(o.dir, 'node_modules')] : []), ...['ci.yml', 'full-gate.yml'].map((w) => path.join(o.dir, '.github/workflows', w)))
   const clash = [...new Set(all.filter((f) => fs.existsSync(f)))]
   if (clash.length) throw new Error('--existing: these files already exist and would be overwritten; nothing was written: ' + clash.map((f) => path.relative(o.dir, f)).join(', '))
 }
@@ -38,7 +38,12 @@ export function scaffold(o) {
     for (const f of walk(t)) {
       const to = target(o, t, f)
       fs.mkdirSync(path.dirname(to), { recursive: true })
-      fs.writeFileSync(to, fs.readFileSync(f, 'utf8').replace(/\{\{(\w+)\}\}/g, (_, k) => { if (!(k in vars)) throw new Error(`unknown {{${k}}} in ${f}`); return String(vars[k]) }))
+      const text = fs.readFileSync(f, 'utf8').replace(/\{\{(\w+)\}\}/g, (_, k) => { if (!(k in vars)) throw new Error(`unknown {{${k}}} in ${f}`); return String(vars[k]) })
+      if (o.existing && fs.existsSync(to)) {
+        const have = fs.readFileSync(to, 'utf8')
+        const add = text.split(/\r?\n/).filter((l) => l && !have.split(/\r?\n/).includes(l))
+        if (add.length) fs.appendFileSync(to, (have.endsWith('\n') || !have ? '' : '\n') + add.join('\n') + '\n')
+      } else fs.writeFileSync(to, text)
     }
   const node = (...a) => x('node', a, { cwd: o.dir, stdio: 'inherit' })
   node(path.join(kit, 'kit.mjs'), 'pull', kit, ref, ...BASE, ...(o.components ?? []))

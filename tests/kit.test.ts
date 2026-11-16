@@ -205,6 +205,25 @@ describe('kit.mjs', () => {
     expect(o.stdout).not.toContain('PLAN rows');
   });
 
+  it('K233: pull copies docs/recipes to kit/recipes; check guards it', () => {
+    put(path.join(src, 'docs/recipes/r.md'), 'recipe');
+    commit('v-rec');
+    const g = game();
+    expect(run(g, 'pull', src, 'v-rec', 'alpha').status).toBe(0);
+    expect(fs.readFileSync(path.join(g, 'kit/recipes/r.md'), 'utf8')).toBe('recipe');
+    expect(run(g, 'check').status).toBe(0);
+    put(path.join(g, 'kit/recipes/r.md'), 'edited');
+    put(path.join(g, 'kit/recipes/new.md'), 'x');
+    const c = run(g, 'check');
+    expect(c.status).toBe(1);
+    expect(c.stderr).toContain('changed kit/recipes/r.md');
+    expect(c.stderr).toContain('added   kit/recipes/new.md');
+    const h = game();
+    run(h, 'pull', src, 'v1', 'alpha');
+    put(path.join(h, 'kit/recipes/r.md'), 'x');
+    expect(run(h, 'check').stderr).toContain('stray   kit/recipes');
+  });
+
   it('K227: check reports a stray folder or file in kit/', () => {
     const g = game();
     run(g, 'pull', src, 'v1', 'alpha');
