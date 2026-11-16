@@ -14,3 +14,8 @@ const cards = applyPatches(source, [
 - A row with `patch: true` replaces the named fields of the card with that `code`; a missing code throws. A row without it adds a card; a code already present throws.
 - Returns new cards in source order, then added ones; the source array and its cards are not changed.
 - `log` (optional) receives `{reason, code, fields}` per row, for a review page that shows printed against as-played.
+
+## compare (K109)
+
+- `diffCards(ours, theirs, fields, known)`: unknown / missing ids, field mismatches against a community database, and `staleKnown` (reviewed database-error entries that no longer differ).
+- `cardLookup(cards, standIn)`: returns a marked stand-in for a missing id and lists them in `.missing`, so one lost card costs that card, not the game.

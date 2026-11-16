@@ -22,3 +22,4 @@ export function applyPatches(cards: readonly Card[], files: PatchFile[], log?: P
   }
   return [...out.values()];
 }
+export * from './compare';

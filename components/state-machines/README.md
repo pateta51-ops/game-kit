@@ -19,3 +19,7 @@ For an engine whose rules code moves the state itself: keep its graph (stages, w
 - `recordingViolations(tracks, positions)`: for a whole recorded game.
 
 Both return `{ machine, index, from, to, message }[]`, empty when legal; a state the table lacks is one violation, at the step that arrives at it (the step that leaves it has no edge to judge); the message gives the legal moves and the table's file and line. Checks that tie a state to other data (a stack under a question, a flag set only in one stage) are rules and stay in the game.
+
+## FlowQueue (K109, idea from boardgame.io events.ts)
+
+End-turn / set-phase requests stamped with the turn or phase and the call site. `flush(now, same, run)` runs the current ones, returns the stale ones it dropped, and throws past `max` runs (default 100) naming the call site.
