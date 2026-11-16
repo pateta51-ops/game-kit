@@ -139,6 +139,7 @@ Components with no row above. Each starts from the game and commit in its `compo
 | `ui-helpers` | Jarl `6f006a2` (K65, K73) | S |
 | `perf` | STCC `9fc59643` (K43) | M |
 | `plain-text` | Rome `1d0fd2e` (K47) | S |
+| `transcription-check` | Under Falling Skies `07238a4` (K168) | M |
 | `resolution-frame` | Rome `1d0fd2e` (K55) | M |
 | `prompt-gallery` | EBR `33b5abd3` | M |
 | `picked-state` | 7th Inning Stretch `6c82d43` (K165) | S |

@@ -1,0 +1,15 @@
+{
+  "name": "transcription-check",
+  "source": {
+    "game": "under-falling-skies",
+    "repo": "https://github.com/pateta51-ops/under-falling-skies-fan-prototype",
+    "licence": "owner-authorised",
+    "commit": "07238a4",
+    "paths": [
+      "scripts/lib/real.ts (sha256, loadFaces, loadVerified, mvpVerificationIssues, jsonDiff, diffFaces, diffMarkdown, progressMarkdown; faces become items, the face schema and MVP list are passed in; buildRealPack and proofEntries stay in the game)",
+      "docs/BUILD_PLAN.md section 12 (Phase T: two transcriptions, diff, owner verification)"
+    ]
+  },
+  "needs": [],
+  "packages": []
+}
