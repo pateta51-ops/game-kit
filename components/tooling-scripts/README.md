@@ -1,6 +1,15 @@
 # tooling-scripts
 
-Small repo scripts a game runs with `npx tsx kit/tooling-scripts/<script>.ts`. Each takes its paths and patterns as flags, or the same names in `--config <json>` (flags win; a repeatable flag is an array). Exit 0 clean, 1 findings, 2 usage or a failed read or write. Each also exports `run(args, io)` and its pure parts. No dependency beyond Node.
+Small repo scripts a game runs with `npx tsx kit/tooling-scripts/<script>.ts`. Each takes its paths and patterns as flags, or the same names in `--config <json>` (flags win; a repeatable flag is an array). Exit 0 clean, 1 findings, 2 usage or a failed read or write. Each also exports `run(args, io)` and its pure parts. No dependency beyond Node, except the three below that load a package of the game (`sharp`, `playwright`, `esbuild`).
+
+## More scripts (each file's header says what it does)
+
+- `shrink-png.ts` (from Jarl): `--dir <dir> [--max-bytes 1900000] [--colours 256,192,128] [--sharp <module>]`. Re-encodes each PNG over the limit as a dithered palette PNG at the same size; exit 1 when one still does not fit.
+- `fonts-fetch.ts`, `woff.ts` (from Rome): `--roles <json> --out <dir> [--force]`. The JSON is `{ roles: [{ role, family, printed, ownerPrefix?, substitute: { family, licence, licenceFile, licenceUrl, files: [{ file, url }] } }], copy?: [{ from, note }] }`. Downloads from the URLs you list (a manual step, never in a check); a `.woff` name packs the TTF with `toWoff(bytes)`; writes `fonts.json` and `LICENSES.md`.
+- `mock-capture.ts` (from Jarl and Rome): `--list <json> --src <dir> --out <dir> [--only a,b] [--width 3840] [--height 2160] [--settle-ms 800] [--playwright <module>]`. The list is `[{ name, file, query?, width?, height?, deviceScaleFactor?, browser?, fullPage? }]`; writes `<out>/<name>.png` and `capture-report.json` (errors, failed requests, broken images, fonts, bytes). No callout boards.
+- `setup.ps1` (from Jarl): `-Name -RepoUrl -Dir [-Marker package.json] [-NodeMajor 22] [-Need a,b] [-Playwright] [-Python] [-PipModules a,b] [-Build a,b] [-Check check] [-RunnerRepo owner/repo -RunnerLabel x [-RunnerEnv 'K=V']] [-Ready 'text'] [-CheckOnly]`. The owner's Windows PC check-up; ends with a numbered to-do list.
+- `dossier-sync.ts` (from Rome): `--source <git checkout> --target <dir> [--exclude <path>]... [--name <text>]`. Replaces the target with the source's tracked files and writes `SYNC.md` with the commit; refuses a source with uncommitted changes.
+- `bundle-node.ts` (from Warp's Edge): `--entry <file>... --outdir .bundle/node [--root .] [--target node22]`. Simulator, worker and bench scripts as `.mjs` for plain `node`, without tsx's keep-names cost.
 
 ## art-check.ts (from Rome)
 

@@ -8,7 +8,13 @@
   "grafts": [
     { "game": "stcc", "commit": "9fc59643", "paths": ["scripts/gen-interpretations.ts"], "what": "gen-from-table.ts: a file written from a plan table, with --check" },
     { "game": "imp", "commit": "20a033a", "paths": ["tests/scripts/verify-sync.test.ts"], "what": "the row splitter that respects escaped pipes and code spans" },
-    { "game": "rome", "commit": "1d0fd2e", "paths": ["scripts/art-check.ts", "scripts/art-build.ts (the manifest shape)"], "what": "art-check.ts: manifest against sources and outputs, needed ids, byte caps" }
+    { "game": "rome", "commit": "1d0fd2e", "paths": ["scripts/art-check.ts", "scripts/art-build.ts (the manifest shape)"], "what": "art-check.ts: manifest against sources and outputs, needed ids, byte caps" },
+    { "game": "jarl", "commit": "b9f150a6", "paths": ["tools/shrink-shots.mjs", "tools/art/shrink-mocks.py (the fewer-colours retry)"], "what": "shrink-png.ts: PNGs over a byte limit re-encoded as palette PNGs" },
+    { "game": "rome", "commit": "29082f1b", "paths": ["scripts/lib/woff.ts", "scripts/lib/woff.test.ts", "scripts/fonts-fetch.ts"], "what": "woff.ts and fonts-fetch.ts: the roles table and the copied files became a JSON file" },
+    { "game": "jarl", "commit": "b9f150a6", "paths": ["tools/capture.mjs (adapted there from Rome's tools/b13-capture.mjs)"], "what": "mock-capture.ts: screenshots and the defect report; the phone callout boards stayed behind" },
+    { "game": "jarl", "commit": "b9f150a6", "paths": ["setup.ps1"], "what": "setup.ps1: the repository, folder, scripts, Python modules and runner became parameters" },
+    { "game": "rome", "commit": "29082f1b", "paths": ["scripts/dossier-sync.ts", "tests/scripts/dossier-sync.test.ts"], "what": "dossier-sync.ts: source, target and excluded files became flags" },
+    { "game": "warps", "commit": "6790200d", "paths": ["scripts/bundle-node.mjs"], "what": "bundle-node.ts: the entry list, output folder and target became flags" }
   ],
   "needs": []
 }
