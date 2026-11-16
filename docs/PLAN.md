@@ -195,7 +195,7 @@ Sixteen public card- and board-game repositories were surveyed read-only; the fi
 
 | Batch | Content | Sources | Effort | State |
 |---|---|---|---|---|
-| K77 | `card-harness`: spec rows (printed line, layout by zone, one act, an expectation), each run again with that line's records removed; a row that still passes fails | middle-earth-player | M | proposed |
+| K77 | `card-harness`: spec rows (printed line, layout by zone, one act, an expectation), each run again with that line's records removed; a row that still passes fails | middle-earth-player | M | done (`card-harness` `cardSpecs`, `specCoverage`) |
 | K78 | `card-harness`: render effect records as English under their printed line; a read-only reading-judge step (ok / wrong / ambiguous / render-gap) before tests are written | middle-earth-player | M | done (renderer, `renderRecords`; the judge step is the architect skill's) |
 | K79 | `engine-core`: a cause (rule id, or effect record plus printed line) on every step that changes a number; `replay-cli` test refuses a step without one | middle-earth-player | M | proposed |
 | K80 | `e2e-helpers` or `prompt-gallery`: over seeded games, every legal action and target is sent by some labelled control | middle-earth-player | M | done (`prompt-gallery` `checkActionCoverage`) |

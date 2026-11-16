@@ -6,3 +6,4 @@ export { conforms, describeCheck, report, type DescribedCard, type DR, type Is, 
 export { parseCsv } from './csv';
 export { expectResolved, traceAbilities, type AbilityTrace } from './trace';
 export { renderRecords, type Reading, type Render, type RenderedLine, type RenderInput, type Say } from './render';
+export { cardSpecs, specCoverage, specProblems, withoutLine, type SpecGame, type SpecRow } from './spec';
