@@ -205,7 +205,7 @@ Found by the third retrofit pass (`docs/RETROFIT_PLAN.md`, Part E).
 | K209 | (GAPS B6) worktree-setup and worker-finish scripts: link node_modules, run the check in a WSL clone, refuse to finish with uncommitted changes | 7th Inning Stretch, Radiance | S | proposed |
 | K210 | (GAPS B7) Generated one-page "state of the kit" from PLAN.md | kit | S | proposed |
 | K211 | (GAPS A7) Dice tray and roll window | 7th Inning Stretch | S | proposed |
-| K212 | (GAPS C7) sound-player: `playTrack` always plays a cue's first file (7th Inning Stretch works around it) | 7th Inning Stretch | S | proposed |
+| K212 | (GAPS C7) sound-player: `playTrack` always plays a cue's first file (7th Inning Stretch works around it) | 7th Inning Stretch | S | done |
 
 ### Owner's word (size L or stage 4)
 

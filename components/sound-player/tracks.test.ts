@@ -20,6 +20,41 @@ async function start() {
   return { ctx, net, player };
 }
 
+describe('K212 playTrack picks among files', () => {
+  it('plays a random file of the cue, not always the first', async () => {
+    const ctx = new FakeAudioContext();
+    const net = fakeFetch();
+    const t: SoundTable = { cues: { m: { files: ['a.ogg', 'b.ogg', 'c.ogg'], tier: 'loud', bus: 'music' } } };
+    const player = createSoundPlayer({ table: t, base: 'a/', context: () => ctx as unknown as AudioContext, fetch: net.fetch, random: () => 0.9 });
+    await player.unlock();
+    await tick();
+    player.playTrack('m');
+    await tick();
+    expect(ctx.sources.map((x) => x.buffer?.id)).toEqual(['a/c.ogg']);
+  });
+  const twice = async (files: string[]) => {
+    const ctx = new FakeAudioContext();
+    const t: SoundTable = { cues: { m: { files, tier: 'loud', bus: 'music' } } };
+    const player = createSoundPlayer({ table: t, base: 'a/', context: () => ctx as unknown as AudioContext, fetch: fakeFetch().fetch, random: () => 0.9 });
+    await player.unlock();
+    await tick();
+    for (let i = 0; i < 2; i += 1) {
+      player.playTrack('m');
+      await tick();
+      ctx.end(ctx.sources[i]!);
+    }
+    return ctx.sources.map((x) => x.buffer?.id);
+  };
+  it('3+ files: never the same file twice in a row', async () => {
+    const ids = await twice(['a.ogg', 'b.ogg', 'c.ogg']);
+    expect(ids).toHaveLength(2);
+    expect(ids[1]).not.toBe(ids[0]);
+  });
+  it('2 files: no repeat guard (same rule as the cue pick), a repeat is allowed', async () => {
+    expect(await twice(['a.ogg', 'b.ogg'])).toEqual(['a/b.ogg', 'a/b.ogg']);
+  });
+});
+
 describe('K173 music tracks', () => {
   it('music cues are not decoded at the first tap, other cues are', async () => {
     const { net } = await start();
