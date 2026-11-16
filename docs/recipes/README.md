@@ -14,3 +14,9 @@ Short task guides for agents. Each names the components, the order, and the chec
 | 1.1 effects, 1.2 sound, 1.3 voice | [effects-sound-voice.md](effects-sound-voice.md) |
 | Tutorials | [tutorial.md](tutorial.md) |
 | Replay and debug tools | [replay-debug.md](replay-debug.md) |
+| Show the engine's questions (prompt host) | [prompts.md](prompts.md) |
+| Build a card face and its zoom | [card-face-zoom.md](card-face-zoom.md) |
+| Dice (tray, odds, 3D) | [dice.md](dice.md) |
+| Work as an agent in this repo (worktree, ids, finish) | [agent-workflow.md](agent-workflow.md) |
+
+All of these are wired together in `components/reference-game`, a small generated game that is the kit's contract test: read it to see the pieces fit.

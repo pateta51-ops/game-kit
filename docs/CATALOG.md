@@ -205,7 +205,7 @@ Card tests on real cards. Test code only; the engine imports nothing here but `c
 
 The card-language shell (K206): card effects as data, one typed verb table where each verb has a field check, a handler that runs on engine-core and a text generator that prints the card's words from the same step. The game writes every verb; the kit holds none.
 
-- **Use it when:** A new game encodes card effects as data: verb table with handler and text slots, validator, every-verb test.
+- **Use it when:** A new game encodes card effects as data: verb table with handler and text slots, validator, every-verb test. Recipe: docs/recipes/card-effect.md.
 - **Not for:** Shared verbs or an interpreter; each game writes its own verbs.
 - **Key exports:** `posInt`, `int`, `str`, `bool`, `oneOf`, `listOf`, `optional`, `effectOf`, `grammarOf`, `validateStep`, `validateEffect`, `describeEffect`, `effectTasks`, `verbHandler`, and 11 more
 - **Needs:** [`engine-core`](#engine-core), [`card-harness`](#card-harness), [`plain-text`](#plain-text)
@@ -217,7 +217,7 @@ The card-language shell (K206): card effects as data, one typed verb table where
 
 The parts a game builds its own card face from: the layout as the game's data, art with a cache, printed text with SVG icons inline, tokens. No layout or look is fixed here. `index.ts` loads in node; `ui.ts` adds React.
 
-- **Use it when:** Drawing card faces: the layout as the game's own data (zones, anchors per card type), art with a device cache and decode-ahead, printed text with SVG icons inline, tokens at anchors.
+- **Use it when:** Drawing card faces: the layout as the game's own data (zones, anchors per card type), art with a device cache and decode-ahead, printed text with SVG icons inline, tokens at anchors. Recipe: docs/recipes/card-face-zoom.md.
 - **Not for:** A fixed face, the game's look, or the zoomed transcription (K203).
 - **Key exports:** `checkLayout`, `checkLayouts`, `mergeLayout`, `zoneBox`, `zonesInOrder`, `anchorOf`, `placeTokens`, `BRACKETS`, `parseIconText`, `plainOf`, `unknownIcons`, `cacheStorageStore`, `isQuotaError`, `cacheNameFor`, and 25 more
 - **Needs:** nothing
@@ -253,7 +253,7 @@ A small card query language (K107): lexer, parser, evaluator. The game supplies 
 
 A zoomed card as a full transcription: the printed text decoded with its icons, the engine's reading where it differs, the tokens on it, a legend of its icons and its glossary terms as links. No layout fixed: the game places and styles it. Needs `card-parts`, `glossary` and `plain-text`. `index.ts` loads in node; `ui.ts` adds React.
 
-- **Use it when:** The zoomed card as a full transcription: decoded printed text with icons, engine notes (errata, rulings), tokens, an icon legend and glossary links, rule ids stripped; unstyled sections with slots.
+- **Use it when:** The zoomed card as a full transcription: decoded printed text with icons, engine notes (errata, rulings), tokens, an icon legend and glossary links, rule ids stripped; unstyled sections with slots. Recipe: docs/recipes/card-face-zoom.md.
 - **Not for:** The card face (card-parts), the zoom's layout or look, or the glossary lookup itself (glossary).
 - **Key exports:** `SECTIONS`, `ZOOM_WORDS`, `zoomLine`, `plainSegs`, `transcribe`, `IconSeg`, `Seg`, `Block`, `ZoomSource`, `Section`, `ZoomOptions`, `Transcription`
 - **Needs:** [`card-parts`](#card-parts), [`glossary`](#glossary), [`plain-text`](#plain-text)
@@ -325,7 +325,7 @@ Exact dice probabilities (K24), opt-in. No packages; import from `index`.
 
 Pure logic of a dice tray and its roll window (K211), opt-in, unstyled; the game draws it (CSS, `pieces-3d`) and writes its own meanings. Import from `index`. Needs `state-machines`.
 
-- **Use it when:** Dice in play, held dice, rolling through ctx.rng and the roll window content.
+- **Use it when:** Dice in play, held dice, rolling through ctx.rng and the roll window content. Recipe: docs/recipes/dice.md.
 - **Not for:** Dice drawing or 3D (pieces-3d) and odds (dice-odds).
 - **Key exports:** `newTray`, `roll`, `hold`, `toggleHold`, `adjust`, `remove`, `values`, `heldDice`, `readRoll`, `rollWith`, `rollWindow`, `step`, `winStart`, `winPickToken`, and 18 more
 - **Needs:** [`state-machines`](#state-machines)
@@ -577,7 +577,7 @@ One game state per prompt kind and per ending, a check that fails when a kind ha
 
 Shows the engine's open question (an engine-core prompt) through a typed widget registry, with the common widgets built and unstyled. `index.ts` loads in node (`autoAnswer`); `ui.ts` is React.
 
-- **Use it when:** Showing the open engine-core prompt on screen: a widget per prompt kind (a missing one fails to compile), the common widgets (pick, amount, order, may, pay) unstyled, auto-answer of forced prompts, board picks with tap to confirm.
+- **Use it when:** Showing the open engine-core prompt on screen: a widget per prompt kind (a missing one fails to compile), the common widgets (pick, amount, order, may, pay) unstyled, auto-answer of forced prompts, board picks with tap to confirm. Recipe: docs/recipes/prompts.md.
 - **Not for:** The game's look or its own kind-specific widgets; board highlights (the game draws those from the option ids).
 - **Key exports:** `autoAnswer`
 - **Needs:** [`engine-core`](#engine-core), [`prompt-source`](#prompt-source)
@@ -769,7 +769,7 @@ Static check that a game's look lives in its token file. Lifted from Jarl's `scr
 
 Small repo scripts a game runs with `npx tsx kit/tooling-scripts/<script>.ts`. Each takes its paths and patterns as flags, or the same names in `--config <json>` (flags win; a repeatable flag is an array). Exit 0 clean, 1 findings, 2 usage or a failed read or write. Each also exports `run(args, io)` and its pure parts. No dependency beyond Node, except the three below that load a package of the game (`sharp`, `playwright`, `esbuild`).
 
-- **Use it when:** Small repo scripts run with `npx tsx kit/tooling-scripts/<script>.ts` (art check, shots, text-leak, home screen, docs index).
+- **Use it when:** Small repo scripts run with `npx tsx kit/tooling-scripts/<script>.ts` (art check, shots, text-leak, home screen, docs index). Recipe: docs/recipes/agent-workflow.md.
 - **Not for:** Game-specific scripts.
 - **Key exports:** Scripts: `text-leak`, `art-check`, `shrink-png`, `mock-capture`, `contact-sheet`, `gen-from-table`, `docs-index`, `dossier-sync`, `fonts-fetch`, `woff`, `bundle-node`, `home-screen`, `move`, `lookup`
 - **Needs:** nothing

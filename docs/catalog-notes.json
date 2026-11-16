@@ -44,11 +44,11 @@
     "not": "A single game's rules or story text (story)."
   },
   "card-parts": {
-    "use": "Drawing card faces: the layout as the game's own data (zones, anchors per card type), art with a device cache and decode-ahead, printed text with SVG icons inline, tokens at anchors.",
+    "use": "Drawing card faces: the layout as the game's own data (zones, anchors per card type), art with a device cache and decode-ahead, printed text with SVG icons inline, tokens at anchors. Recipe: docs/recipes/card-face-zoom.md.",
     "not": "A fixed face, the game's look, or the zoomed transcription (K203)."
   },
   "card-zoom": {
-    "use": "The zoomed card as a full transcription: decoded printed text with icons, engine notes (errata, rulings), tokens, an icon legend and glossary links, rule ids stripped; unstyled sections with slots.",
+    "use": "The zoomed card as a full transcription: decoded printed text with icons, engine notes (errata, rulings), tokens, an icon legend and glossary links, rule ids stripped; unstyled sections with slots. Recipe: docs/recipes/card-face-zoom.md.",
     "not": "The card face (card-parts), the zoom's layout or look, or the glossary lookup itself (glossary)."
   },
   "card-harness": {
@@ -56,7 +56,7 @@
     "not": "Card rules themselves; those stay in the game."
   },
   "card-language": {
-    "use": "A new game encodes card effects as data: verb table with handler and text slots, validator, every-verb test.",
+    "use": "A new game encodes card effects as data: verb table with handler and text slots, validator, every-verb test. Recipe: docs/recipes/card-effect.md.",
     "not": "Shared verbs or an interpreter; each game writes its own verbs."
   },
   "card-patches": {
@@ -90,7 +90,7 @@
     "not": "Player-facing UI; it is a dev tool."
   },
   "dice-tray": {
-    "use": "Dice in play, held dice, rolling through ctx.rng and the roll window content.",
+    "use": "Dice in play, held dice, rolling through ctx.rng and the roll window content. Recipe: docs/recipes/dice.md.",
     "not": "Dice drawing or 3D (pieces-3d) and odds (dice-odds)."
   },
   "dice-odds": {
@@ -182,7 +182,7 @@
     "not": "Runtime screens."
   },
   "prompt-host": {
-    "use": "Showing the open engine-core prompt on screen: a widget per prompt kind (a missing one fails to compile), the common widgets (pick, amount, order, may, pay) unstyled, auto-answer of forced prompts, board picks with tap to confirm.",
+    "use": "Showing the open engine-core prompt on screen: a widget per prompt kind (a missing one fails to compile), the common widgets (pick, amount, order, may, pay) unstyled, auto-answer of forced prompts, board picks with tap to confirm. Recipe: docs/recipes/prompts.md.",
     "not": "The game's look or its own kind-specific widgets; board highlights (the game draws those from the option ids)."
   },
   "prompt-source": {
@@ -262,7 +262,7 @@
     ]
   },
   "tooling-scripts": {
-    "use": "Small repo scripts run with `npx tsx kit/tooling-scripts/<script>.ts` (art check, shots, text-leak, home screen, docs index).",
+    "use": "Small repo scripts run with `npx tsx kit/tooling-scripts/<script>.ts` (art check, shots, text-leak, home screen, docs index). Recipe: docs/recipes/agent-workflow.md.",
     "not": "Game-specific scripts.",
     "exports": "Scripts: `text-leak`, `art-check`, `shrink-png`, `mock-capture`, `contact-sheet`, `gen-from-table`, `docs-index`, `dossier-sync`, `fonts-fetch`, `woff`, `bundle-node`, `home-screen`, `move`, `lookup`"
   },
