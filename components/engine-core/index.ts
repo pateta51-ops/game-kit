@@ -14,7 +14,7 @@ export {
 } from './apply';
 export { adopt, closeDraft, copyList, copyMode, openDraft, own, setCopyMode, setCowChecks } from './cow';
 export type { Draft } from './draft';
-export { draftOf, LOG_CAP, makeCtx, readCtx } from './ctx';
+export { draftOf, LOG_CAP, makeCtx, readCtx, setRngOverrides } from './ctx';
 export { cardInstanceId, parseCardInstanceId, takePromptSeq, takeSeq } from './ids';
 export { GameOver } from './gameOver';
 export { hashState, replay, type ReplayExpectation, type ReplayResult } from './replay';
@@ -45,6 +45,7 @@ export {
   recordAction,
   redo,
   revealReason,
+  randomReason,
   SOMETHING_REVEALED,
   stateAt,
   undo,

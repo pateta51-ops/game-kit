@@ -5,7 +5,7 @@
 // start (`h.steps.map((s) => s.start)`) and calls `replaySteps`.
 import { applyAction, createGame } from './apply';
 import type { GameRules, GameTypes } from './types';
-import { revealReason, type UndoMode } from './undo';
+import { randomReason, revealReason, type UndoMode } from './undo';
 
 export interface Step<G extends GameTypes> {
   /** Index in `actions` of the player's decision. */
@@ -92,8 +92,8 @@ function play<G extends GameTypes>(
   try {
     for (const a of actions) {
       const r = applyAction(game, state, a, content);
+      reason ??= revealReason(game, r.events) ?? randomReason(game, state, r.state);
       state = r.state;
-      reason ??= revealReason(game, r.events);
       for (const e of r.events) events.push(e);
     }
   } catch (e) {

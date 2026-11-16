@@ -74,7 +74,7 @@ const turn = (ctx: Ctx<Counter>): void => {
 const chosen = (ctx: Ctx<Counter>, task: CounterTask): void => {
   const s = draftOf(ctx);
   if (task.answer?.[0] === 'add') {
-    const n = 1 + ctx.rng.int(2);
+    const n = 1 + ctx.rng.int(2, 'add');
     s.counter += n;
     own(own(s, 'marks'), 'added').push(n);
     ctx.emit({ type: 'added', n });

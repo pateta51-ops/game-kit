@@ -88,8 +88,8 @@ export type EventInput<G extends GameTypes> = G['event'] extends infer E
 /** The random source of a context (sfc32 over `state.rng`). */
 export interface CtxRng {
   nextUint32(): number;
-  shuffle<T>(xs: readonly T[]): T[];
-  int(max: number): number;
+  shuffle<T>(xs: readonly T[], name?: string): T[];
+  int(max: number, name?: string): number;
 }
 
 export interface Ctx<G extends GameTypes> {
@@ -126,4 +126,6 @@ export interface GameRules<G extends GameTypes> {
   ): readonly InvariantViolation[];
   /** Why a revealing event cannot be undone in Safe mode, in the game's words. */
   revealWords?(event: G['event']): string | undefined;
+  /** When set, an action that used `state.rng` (the words changed) bars Safe undo like a reveal, with this reason (boardgame.io's randomness-used flag). */
+  randomWords?: string;
 }

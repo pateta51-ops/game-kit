@@ -40,6 +40,14 @@ export function revealReason<G extends GameTypes>(game: GameRules<G>, events: re
   return first === undefined ? null : (game.revealWords?.(first) ?? SOMETHING_REVEALED);
 }
 
+/** The reason an action cannot be undone in Safe mode because it used the rng (only when the game sets `randomWords`), else null. */
+export function randomReason<G extends GameTypes>(game: GameRules<G>, prev: G['state'], next: G['state']): string | null {
+  if (game.randomWords === undefined) return null;
+  const a = prev.rng;
+  const b = next.rng;
+  return a.a === b.a && a.b === b.b && a.c === b.c && a.d === b.d ? null : game.randomWords;
+}
+
 interface Rebuilt<G extends GameTypes> {
   readonly state: G['state'];
   /** The cursor just after the last revealing action (0 when none: the setup draw is not undoable anyway). */
@@ -57,8 +65,8 @@ function rebuild<G extends GameTypes>(game: GameRules<G>, h: History<G>, content
   let reason: string | null = null;
   for (let at = 0; at < h.cursor; at += 1) {
     const r = applyAction(game, state, h.actions[at] as G['action'], content);
+    const why = revealReason(game, r.events) ?? randomReason(game, state, r.state);
     state = r.state;
-    const why = revealReason(game, r.events);
     if (why !== null) {
       boundary = at + 1;
       reason = why;

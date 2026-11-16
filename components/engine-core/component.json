@@ -29,9 +29,41 @@
       "tests/scenarios/persistence.test.ts"
     ],
     "grafts": [
-      { "game": "warps", "commit": "2af6937", "paths": ["tests/property/cow.property.test.ts", "src/engine/replay/undo.ts (undo refusal reasons, canUndo)", "tests/property/kernel.property.test.ts", "tests/property/cow.paths.test.ts (the three-way check, as differentialApply)"] },
-      { "game": "imp", "commit": "20a033a", "paths": ["src/ui/store/history.ts (undo by step, kept snapshots)"] },
-      { "game": "ebr", "commit": "33b5abd3", "paths": ["src/engine/save.ts (migrateSave, appCommit)", "tests/realdata/b7-saves.test.ts (migration case)"] }
+      {
+        "game": "warps",
+        "commit": "2af6937",
+        "paths": [
+          "tests/property/cow.property.test.ts",
+          "src/engine/replay/undo.ts (undo refusal reasons, canUndo)",
+          "tests/property/kernel.property.test.ts",
+          "tests/property/cow.paths.test.ts (the three-way check, as differentialApply)"
+        ]
+      },
+      {
+        "game": "imp",
+        "commit": "20a033a",
+        "paths": [
+          "src/ui/store/history.ts (undo by step, kept snapshots)"
+        ]
+      },
+      {
+        "game": "ebr",
+        "commit": "33b5abd3",
+        "paths": [
+          "src/engine/save.ts (migrateSave, appCommit)",
+          "tests/realdata/b7-saves.test.ts (migration case)"
+        ]
+      },
+      {
+        "game": "boardgame.io",
+        "url": "https://github.com/boardgameio/boardgame.io",
+        "licence": "MIT",
+        "notice": "Copyright 2017 The boardgame.io Authors",
+        "paths": [
+          "src/testing/mock-random.ts (named override)",
+          "src/plugins/random/random.ts (isUsed flag)"
+        ]
+      }
     ]
   },
   "needs": []

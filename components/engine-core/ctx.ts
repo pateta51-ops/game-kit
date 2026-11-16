@@ -31,15 +31,27 @@ function withRng<T>(s: Work, f: (words: RngState) => T): T {
   return out;
 }
 
+type Override = (arg: never) => unknown;
+let overrides: Readonly<Record<string, Override>> | null = null;
+/** Test only (boardgame.io MockRandom): a named `ctx.rng.int(max, name)` or `shuffle(xs, name)` returns `f(max | xs)` and leaves the rng alone; unnamed or unlisted calls stay seeded. `null` clears. */
+export function setRngOverrides(o: Readonly<Record<string, (arg: never) => unknown>> | null): void {
+  overrides = o;
+}
+const over = (name: string | undefined): Override | undefined => (name === undefined ? undefined : overrides?.[name]);
+
 class StateRng implements CtxRng {
   constructor(private readonly s: Work) {}
   nextUint32(): number {
     return withRng(this.s, nextUint32);
   }
-  int(max: number): number {
+  int(max: number, name?: string): number {
+    const o = over(name);
+    if (o) return o(max as never) as number;
     return withRng(this.s, (w) => randomInt(w, max));
   }
-  shuffle<T>(xs: readonly T[]): T[] {
+  shuffle<T>(xs: readonly T[], name?: string): T[] {
+    const o = over(name);
+    if (o) return o(xs as never) as T[];
     const out = xs.slice();
     withRng(this.s, (w) => shuffleInPlace(w, out));
     return out;
