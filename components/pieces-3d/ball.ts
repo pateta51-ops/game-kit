@@ -3,17 +3,20 @@
 import { ID, mmul, rotAxis, transpose, type M3, type V3 } from './solids';
 
 /** `curve`: points on the unit sphere along the seam (default `twoArcSeam()`); `perTurn`: px of travel per turn for each px across. */
-export interface BallLook { leather: string; seam?: string; curve?: V3[] | undefined; stitch?: 'bars' | 'chevron'; stitchCount?: number }
+export interface BallLook { leather: string; seam?: string; curve?: V3[] | undefined; stitch?: 'bars' | 'chevron'; stitchCount?: number; stitchWidth?: number; stitchFlip?: boolean | [number, number]; seamLine?: string; seamLineWidth?: number }
+/** `stitchFlip: true` = [0.25, 0.75]: stitches whose seam position (curve index / curve length) lies in [from, to) point the other way. For `twoArcSeam()` these are the two points furthest from the viewer at rest, also after the curve is rotated about the view axis. */
+export const flipRange = (f: BallLook['stitchFlip']): [number, number] | undefined => (f === true ? [0.25, 0.75] : f || undefined);
 // V half width 0.14 (14% of the diameter across), depth so the opening angle is 75 degrees
 export const CHEV_HW = 0.14, CHEV_DEP = 0.14 / Math.tan((37.5 * Math.PI) / 180);
 const cross = (a: V3, b: V3): V3 => [a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0]];
 const unit = (v: V3): V3 => { const h = Math.hypot(...v); return [v[0] / h, v[1] / h, v[2] / h]; };
 export interface Chevron { A: V3; T: V3; N: V3 }
-const CH = new WeakMap<V3[], Map<number, { s: number[]; P: number; k: Chevron[] }>>();
+const CH = new WeakMap<V3[], Map<string, { s: number[]; P: number; k: Chevron[] }>>();
 /** Seam arc lengths (measured) and `count` evenly spaced stitches, each with an orthonormal frame: apex A on the seam, T along it, N = A x T across it. */
-export const chevrons = (S: V3[], count: number): { s: number[]; P: number; k: Chevron[] } => {
+export const chevrons = (S: V3[], count: number, flip?: [number, number]): { s: number[]; P: number; k: Chevron[] } => {
   let m = CH.get(S); if (!m) { m = new Map(); CH.set(S, m); }
-  let c = m.get(count);
+  const key = `${count}|${flip?.join() ?? ""}`;
+  let c = m.get(key);
   if (c) return c;
   const n = S.length, s = [0];
   for (let i = 1; i <= n; i += 1) { const a = S[i % n] as V3, b = S[i - 1] as V3; s.push((s[i - 1] ?? 0) + Math.hypot(a[0] - b[0], a[1] - b[1], a[2] - b[2])); }
@@ -23,29 +26,39 @@ export const chevrons = (S: V3[], count: number): { s: number[]; P: number; k: C
     const at = j * P; while ((s[i + 1] ?? L) < at) i += 1;
     const a = S[i] as V3, b = S[(i + 1) % n] as V3, f = (at - (s[i] ?? 0)) / ((s[i + 1] ?? L) - (s[i] ?? 0) || 1);
     const A = unit([a[0] + (b[0] - a[0]) * f, a[1] + (b[1] - a[1]) * f, a[2] + (b[2] - a[2]) * f]), d: V3 = [b[0] - a[0], b[1] - a[1], b[2] - a[2]], q = d[0] * A[0] + d[1] * A[1] + d[2] * A[2];
-    const T = unit([d[0] - q * A[0], d[1] - q * A[1], d[2] - q * A[2]]);
+    const u = (i + f) / n, sg = flip && u >= flip[0] && u < flip[1] ? -1 : 1, T = unit([sg * (d[0] - q * A[0]), sg * (d[1] - q * A[1]), sg * (d[2] - q * A[2])]);
     k.push({ A, T, N: cross(A, T) });
   }
-  c = { s, P, k }; m.set(count, c); return c;
+  c = { s, P, k }; m.set(key, c); return c;
 };
 /** The three points of stitch `j` on the unit sphere: apex, end of the +N arm, end of the -N arm. */
-export const chevronPoints = (st: Chevron): [V3, V3, V3] => {
-  const { A, T, N } = st, e = (sg: number): V3 => unit([A[0] + sg * CHEV_HW * N[0] - CHEV_DEP * T[0], A[1] + sg * CHEV_HW * N[1] - CHEV_DEP * T[1], A[2] + sg * CHEV_HW * N[2] - CHEV_DEP * T[2]]);
+export const chevronPoints = (st: Chevron, hw = CHEV_HW): [V3, V3, V3] => {
+  const { A, T, N } = st, dep = (hw * CHEV_DEP) / CHEV_HW, e = (sg: number): V3 => unit([A[0] + sg * hw * N[0] - dep * T[0], A[1] + sg * hw * N[1] - dep * T[1], A[2] + sg * hw * N[2] - dep * T[2]]);
   return [A, e(1), e(-1)];
 };
 /** Chevron stitch coverage (0..1) at unit-sphere point `o` whose nearest seam point is `at`: V stitches (XD-63), width 14% and stroke 2.5% of the diameter, `count` along the whole seam, all pointing along it, no line. Each V is drawn in its own stitch's tangent plane, so all are identical and symmetric. */
-export const chevronAt = (S: V3[], at: number, o: V3, count = 56): number => {
-  const c = chevrons(S, count), j0 = Math.floor((c.s[at] ?? 0) / c.P);
+export const chevronAt = (S: V3[], at: number, o: V3, count = 56, hw = CHEV_HW, flip?: [number, number]): number => {
+  const c = chevrons(S, count, flip), j0 = Math.floor((c.s[at] ?? 0) / c.P), dep = (hw * CHEV_DEP) / CHEV_HW, w = Math.ceil(dep / c.P) + 1;
   let best = 0;
-  for (let dj = -1; dj <= Math.ceil(CHEV_DEP / c.P) + 1; dj += 1) {
+  for (let dj = flip ? -w : -1; dj <= w; dj += 1) {
     const st = c.k[(((j0 + dj) % count) + count) % count] as Chevron, { A, T, N } = st;
     if (o[0] * A[0] + o[1] * A[1] + o[2] * A[2] < 0.9) continue;
     const px = Math.abs(o[0] * N[0] + o[1] * N[1] + o[2] * N[2]), py = o[0] * T[0] + o[1] * T[1] + o[2] * T[2];
     // V: apex (0, 0), ends (+-hw, -dep); distance to the nearer arm, antialiased over 0.012
-    const bx = CHEV_HW, by = -CHEV_DEP, f = Math.min(1, Math.max(0, (px * bx + py * by) / (bx * bx + by * by)));
+    const bx = hw, by = -dep, f = Math.min(1, Math.max(0, (px * bx + py * by) / (bx * bx + by * by)));
     best = Math.max(best, Math.min(1, Math.max(0, (0.025 + 0.006 - Math.hypot(px - bx * f, py - by * f)) / 0.012)));
   }
   return best;
+};
+/** Seam line coverage (0..1) at `o` whose nearest curve point is `at`: a line `w` of the diameter wide along the seam polyline, through every stitch apex. */
+export const seamLineAt = (S: V3[], at: number, o: V3, w: number): number => {
+  const n = S.length, a = S[at] as V3;
+  let dm = 2;
+  for (const b of [S[(at + 1) % n] as V3, S[(at + n - 1) % n] as V3]) {
+    const d: V3 = [b[0] - a[0], b[1] - a[1], b[2] - a[2]], f = Math.min(1, Math.max(0, ((o[0] - a[0]) * d[0] + (o[1] - a[1]) * d[1] + (o[2] - a[2]) * d[2]) / (d[0] * d[0] + d[1] * d[1] + d[2] * d[2] || 1)));
+    dm = Math.min(dm, Math.hypot(o[0] - a[0] - f * d[0], o[1] - a[1] - f * d[1], o[2] - a[2] - f * d[2]));
+  }
+  return Math.min(1, Math.max(0, (w - dm) / 0.006 + 0.5));
 };
 export const PER_TURN = 345 / 110;
 /** The turn of a ball `size` px across that rolls `px` without sliding: one full turn per `perTurn * size` px. */
@@ -75,7 +88,7 @@ export function paintBall(c: HTMLCanvasElement, m: M3 = ID, look: BallLook = { l
   let img = bufs.get(c);
   if (img?.width !== n) { img = g.createImageData(n, n); bufs.set(c, img); }
   const d = img.data, inv = transpose(m), L = [-0.45, 0.6, 0.66].map((x) => x / Math.hypot(0.45, 0.6, 0.66)) as unknown as V3;
-  const [lr, lg, lb] = rgb(look.leather), [sr, sg, sb] = rgb(look.seam ?? (look.stitch === 'chevron' ? '#e63a30' : '#c8202a')), R = n / 2, S = look.curve ?? SEAM, N = S.length;
+  const [lr0, lg0, lb0] = rgb(look.leather), [qr, qg, qb] = rgb(look.seamLine ?? '#000000'), fl = flipRange(look.stitchFlip), [sr, sg, sb] = rgb(look.seam ?? (look.stitch === 'chevron' ? '#e63a30' : '#c8202a')), R = n / 2, S = look.curve ?? SEAM, N = S.length;
   for (let py = 0; py < n; py += 1) for (let px = 0; px < n; px += 1) {
     const x = (px + 0.5 - R) / R, y = -(py + 0.5 - R) / R, r2 = x * x + y * y;
     if (r2 >= 1) continue;
@@ -84,7 +97,8 @@ export function paintBall(c: HTMLCanvasElement, m: M3 = ID, look: BallLook = { l
     for (let i = 0; i < N; i += 1) { const s = S[i] as V3, k = s[0] * o0 + s[1] * o1 + s[2] * o2; if (k > best) { best = k; at = i; } }
     const ang = Math.acos(Math.min(1, best));
     // the stitches: short bars across the seam, a thin groove along it
-    const stitch = look.stitch === 'chevron' ? (ang < 0.25 ? chevronAt(S, at, [o0, o1, o2], look.stitchCount) : 0) : ang < 0.012 ? 0.55 : ang < 0.1 && ang > 0.02 && at % 6 < 2 ? 1 : 0;
+    const sl = look.stitch === 'chevron' && look.seamLine && ang < 0.1 ? seamLineAt(S, at, [o0, o1, o2], look.seamLineWidth ?? 0.01) : 0, lr = lr0 + (qr - lr0) * sl, lg = lg0 + (qg - lg0) * sl, lb = lb0 + (qb - lb0) * sl;
+    const stitch = look.stitch === 'chevron' ? (ang < 0.25 ? chevronAt(S, at, [o0, o1, o2], look.stitchCount, look.stitchWidth, fl) : 0) : ang < 0.012 ? 0.55 : ang < 0.1 && ang > 0.02 && at % 6 < 2 ? 1 : 0;
     const lit = 0.62 + 0.5 * Math.max(0, x * L[0] + y * L[1] + z * L[2]), k = (py * n + px) * 4;
     d[k] = Math.min(255, (lr + (sr - lr) * stitch) * lit); d[k + 1] = Math.min(255, (lg + (sg - lg) * stitch) * lit); d[k + 2] = Math.min(255, (lb + (sb - lb) * stitch) * lit);
     d[k + 3] = 255 * Math.min(1, (1 - Math.sqrt(r2)) * R);

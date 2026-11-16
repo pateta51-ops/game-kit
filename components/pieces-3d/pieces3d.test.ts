@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import { ID, apply, cube, front, mesh, rest, trapezohedron, tumble, turned } from './solids';
-import { SEAM, chevronAt, chevronPoints, chevrons,offRest, rolled, turnOf, twoArcSeam } from './ball';
+import { SEAM, chevronAt, chevronPoints, chevrons, flipRange, seamLineAt, offRest, rolled, turnOf, twoArcSeam } from './ball';
 
 const TILT = (15 * Math.PI) / 180;
 describe('pieces-3d: the code-built pieces', () => {
@@ -102,5 +102,42 @@ describe('pieces-3d: resting tilt', () => {
     const far: [number, number, number] = [A[0] + 0.3 * k[5]!.N[0], A[1] + 0.3 * k[5]!.N[1], A[2] + 0.3 * k[5]!.N[2]];
     expect(chevronAt(SEAM, near(far), far)).toBe(0);
     expect(chevronAt(SEAM, 0, SEAM[0]!, 28)).toBeGreaterThanOrEqual(0); // count is a look option
+  });
+  it('XD-63: stitchFlip points the two seam halves opposite ways, switching at the far points; stitchWidth and seamLine honoured', () => {
+    const a = chevrons(SEAM, 56).k, fl = flipRange(true)!, b = chevrons(SEAM, 56, fl).k, n = SEAM.length;
+    expect(fl).toEqual([0.25, 0.75]);
+    // switch points are the seam points furthest from the viewer at rest
+    expect(SEAM[n / 4]![2]).toBeCloseTo(Math.min(...SEAM.map((p) => p[2])), 3);
+    expect(SEAM[(3 * n) / 4]![2]).toBeCloseTo(Math.min(...SEAM.map((p) => p[2])), 3);
+    let flipped = 0;
+    a.forEach((c, j) => {
+      const dot = c.T.reduce((m, x, i) => m + x * (b[j]!.T[i] ?? 0), 0);
+      expect(b[j]!.A).toEqual(c.A);
+      expect(Math.abs(Math.abs(dot) - 1)).toBeLessThan(1e-12);
+      if (dot < 0) flipped += 1;
+      // identical V apart from direction
+      const d = (p: readonly number[], q: readonly number[]) => Math.hypot(...p.map((x, i) => x - (q[i] ?? 0)));
+      const [A1, e1] = chevronPoints(c), [A2, e2] = chevronPoints(b[j]!);
+      expect(d(A2, e2)).toBeCloseTo(d(A1, e1), 9);
+    });
+    expect(flipped).toBe(28);
+    // the two visible arcs (around curve index 0 and n/2) now point the same screen way
+    const top = b[0]!, bot = b[28]!;
+    expect(top.T[0] * bot.T[0] + top.T[1] * bot.T[1]).toBeGreaterThan(0);
+    const ua = a[0]!, ub = a[28]!;
+    expect(ua.T[0] * ub.T[0] + ua.T[1] * ub.T[1]).toBeLessThan(0);
+    // drawn with the flip: arm ends inked
+    for (const j of [3, 20]) for (const p of chevronPoints(b[j]!)) { const at = SEAM.reduce((m, q, i) => (q[0] * p[0] + q[1] * p[1] + q[2] * p[2] > SEAM[m]![0] * p[0] + SEAM[m]![1] * p[1] + SEAM[m]![2] * p[2] ? i : m), 0); expect(chevronAt(SEAM, at, p, 56, undefined, fl)).toBeGreaterThan(0.9); }
+    // width: half-width 0.12, same opening
+    const [A, e1, e2] = chevronPoints(a[5]!, 0.12), [, f1] = chevronPoints(a[5]!);
+    const N = a[5]!.N, across = (e: readonly number[]) => Math.abs(e.reduce((m, x, i) => m + (x - (A[i] ?? 0)) * (N[i] ?? 0), 0));
+    expect(across(e1) / across(f1)).toBeCloseTo(0.12 / 0.14, 1); // projection onto the sphere bends it slightly
+    expect(across(e2)).toBeCloseTo(across(e1), 9);
+    // seam line: through the apex and between samples, not 0.05 off
+    expect(seamLineAt(SEAM, 0, a[0]!.A, 0.01)).toBe(1);
+    const m: [number, number, number] = [0, 1, 2].map((i) => (SEAM[10]![i]! + SEAM[11]![i]!) / 2) as [number, number, number];
+    expect(seamLineAt(SEAM, 10, m, 0.01)).toBe(1);
+    const off: [number, number, number] = [m[0] + 0.05 * a[0]!.N[0], m[1] + 0.05 * a[0]!.N[1], m[2] + 0.05 * a[0]!.N[2]];
+    expect(seamLineAt(SEAM, 10, off, 0.01)).toBe(0);
   });
 });
