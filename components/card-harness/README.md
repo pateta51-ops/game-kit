@@ -25,3 +25,4 @@ Card tests on real cards. Test code only; the engine imports nothing here but `c
 - **Round trip** (K114): `roundTripCards(game, [{ card, where, task? }])` puts each card in a minimal state; problems where the state is not plain JSON (`diffPaths`) or play from the JSON copy differs. `[]` passes.
 
 Known bugs are pinned as `it.fails('EXPECTED FAILURE: …')`.
+- **Content gate** (K169, `contentGate(input, log)`): the game script passes `packs` (`validate()` issues; warnings fail unless `allowWarnings`), `broken` packs each with the `code` and `severity` it must report, `generated` files compared with `readGenerated` ("stale: run `regenerate`"), and `features` `{ required, used }` (`requireAll` fails on an unused one). Returns `{ failed }`.
