@@ -47,7 +47,7 @@ describe('scaffold (K204)', () => {
     expect(run('kit/kit.mjs', 'check').status).toBe(0);
     expect(run('kit/ci-templates/render.mjs', '--check').status).toBe(0);
     const chk = spawnSync('npm', ['run', 'check'], { cwd: out, encoding: 'utf8', shell: true });
-    expect(chk.stdout + chk.stderr).toContain('1 passed');
+    expect(chk.stdout + chk.stderr).toContain('2 passed');
     expect(chk.status, chk.stdout + chk.stderr).toBe(0);
   }, 180_000);
 
@@ -72,6 +72,7 @@ describe('scaffold (K204)', () => {
     const lock = JSON.parse(fs.readFileSync(path.join(d, 'kit/kit.lock.json'), 'utf8')) as { ref: string; components: Record<string, unknown> };
     expect(lock.ref).toBe(head);
     expect(Object.keys(lock.components)).toContain('sim-pool');
+    expect(Object.keys(lock.components)).toContain('game-store');
     expect(spawnSync('node', ['kit/kit.mjs', 'check'], { cwd: d, encoding: 'utf8' }).status).toBe(0);
     const before = fs.readFileSync(path.join(d, '.gitignore'), 'utf8');
     expect(go().status).toBe(1);

@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { applyAction, createGame, CONTENT, RULES, STUB } from '../src/engine/api.ts';
+import { createGameStore } from '../kit/game-store/index.ts';
+import { applyAction, createGame, CONTENT, GAME_DEF, RULES, STUB } from '../src/engine/api.ts';
 
 describe('smoke', () => {
   it('plays the stub game to a win', () => {
@@ -11,5 +12,13 @@ describe('smoke', () => {
     }
     expect(state.result).toEqual({ kind: 'won' });
     expect(state.count).toBe(RULES.target);
+  });
+
+  it('plays through the game store, with undo', () => {
+    const store = createGameStore(GAME_DEF, { seat: 'me', seed: 'smoke', undo: 'free' });
+    store.answer(['step'], store.get().state.prompt?.id ?? 0);
+    expect(store.get().state.count).toBe(1);
+    store.undo();
+    expect(store.get().state.count).toBe(0);
   });
 });

@@ -5,7 +5,7 @@ import path from 'node:path'
 
 const here = import.meta.dirname
 const RENAME = { ignorefile: '.gitignore', nvmrc: '.nvmrc' }
-export const BASE = ['engine-core', 'sim-pool', 'state-machines', 'app-frame', 'settings', 'saves', 'lint-preset', 'ci-templates', 'check-runner']
+export const BASE = ['engine-core', 'game-store', 'sim-pool', 'state-machines', 'app-frame', 'settings', 'saves', 'lint-preset', 'ci-templates', 'check-runner']
 export const TEMPLATE = path.join(here, 'template')
 const walk = (d) => fs.readdirSync(d, { withFileTypes: true }).flatMap((e) => (e.isDirectory() ? walk(path.join(d, e.name)) : [path.join(d, e.name)]))
 

@@ -1,4 +1,5 @@
 // Stub game: one move ("step"); after `target` steps the game is won. Replace with the game's own rules.
+import { defineGame } from '../../kit/game-store/index.ts';
 import { draftOf, hashValue, seedRng, type AnswerAction, type Ctx, type Draft, type GameRules, type KernelPrompt, type KernelState } from '../../kit/engine-core/index.ts';
 
 export interface StubTask { readonly kind: string; readonly answer?: readonly string[] }
@@ -56,3 +57,6 @@ export const STUB: GameRules<Stub> = {
   },
   contentHash: (content) => hashValue(content),
 };
+
+// The one game object: the store, sims and replays read it. `view` is what the seat sees (here the whole state: no hidden information).
+export const GAME_DEF = defineGame<Stub, StubState, 'me'>({ rules: STUB, content: CONTENT, seats: ['me'], start: (seed) => ({ options: { seed }, rules: RULES }), view: (s) => s });

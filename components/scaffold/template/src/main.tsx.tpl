@@ -1,3 +1,4 @@
-import { createRoot } from 'react-dom/client';
+import { startApp } from '../kit/app-frame/ui.ts';
+import { App } from './ui/App.tsx';
 
-createRoot(document.getElementById('root') as HTMLElement).render(<h1>{{name}}</h1>);
+startApp(<App />);
