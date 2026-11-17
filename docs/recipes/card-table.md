@@ -10,3 +10,6 @@ Component: `card-zones` (README). Cards and their places are data in engine stat
 6. **Panels around the table** (`table-panels`, unstyled): `LogPanel` over `logLines(events, words)` (the game writes the words), `TurnBanner` over its phase list, `OpponentTurnPanel` over `opponentTurn(steps, ...)` with paced-view `skip`, `GameOver` over `gameResult(scores)`. The game owns layout and look.
 
 Proof: a test that moves every card through every zone with `zoneProblems` clean, and a `viewLeaks` test.
+
+## Piles (K219)
+A stack you may look through, with picks from it and a phone grid: `card-pile` (`Pile` over a `ZoneView`, marks from `useBoardPick`; README).

@@ -43,14 +43,6 @@
     "use": "A campaign of linked scenarios kept as a plain log.",
     "not": "A single game's rules or story text (story)."
   },
-  "card-parts": {
-    "use": "Drawing card faces: the layout as the game's own data (zones, anchors per card type), art with a device cache and decode-ahead, printed text with SVG icons inline, tokens at anchors. Recipe: docs/recipes/card-face-zoom.md.",
-    "not": "A fixed face, the game's look, or the zoomed transcription (K203)."
-  },
-  "card-zoom": {
-    "use": "The zoomed card as a full transcription: decoded printed text with icons, engine notes (errata, rulings), tokens, an icon legend and glossary links, rule ids stripped; unstyled sections with slots. Recipe: docs/recipes/card-face-zoom.md.",
-    "not": "The card face (card-parts), the zoom's layout or look, or the glossary lookup itself (glossary)."
-  },
   "card-harness": {
     "use": "Testing card effects on real cards with the scenario builder, prompt delivery, choice probe and inventory with stale check.",
     "not": "Card rules themselves; those stay in the game."
@@ -59,17 +51,29 @@
     "use": "A new game encodes card effects as data: verb table with handler, resume and text slots, validator, every-verb test; the standard verb pack (cardPack) on card-zones: draw, discard, mill, move, putIntoPlay, setAside, recall, gain, refill, shuffle, search, destroy, attach, detach, reveal, lookAt, scout, flip, exhaust, ready, chooseCards, chooseOption, may, chooseNumber, chooseDestination, choosePlayer, choosePayment, orderEffects, gainResource, pay, convert, adjust, seq, if, forEach, eachPlayer, repeat, count, later, payThen, custom; every card move through timing would; words overridable. Recipe: docs/recipes/card-effect.md.",
     "not": "The game's own rules and words: verbs the pack lacks, card text as printed (override the pack's words), when later effects fire."
   },
+  "card-parts": {
+    "use": "Drawing card faces: the layout as the game's own data (zones, anchors per card type), art with a device cache and decode-ahead, printed text with SVG icons inline, tokens at anchors. Recipe: docs/recipes/card-face-zoom.md.",
+    "not": "A fixed face, the game's look, or the zoomed transcription (K203)."
+  },
   "card-patches": {
     "use": "The card data needs corrections without editing the source data.",
     "not": "Card behaviour; patches change data only."
+  },
+  "card-pile": {
+    "use": "A pile on the table: stack at rest, an animated fan to look through it, picks from it, a grid in the phone sheet.",
+    "not": "A hand, dragging, card faces."
+  },
+  "card-query": {
+    "use": "Cards must be searched or filtered by a small text query.",
+    "not": "Game-rule target selection inside the engine."
   },
   "card-zones": {
     "use": "Decks, hands, discards and play areas as ordered id lists in engine state, with who sees what and a per-seat view for opponents and the UI. Hand, pile and drag UI parts are planned (K218-K220), not built: ask for them, do not build them in the game. Recipe: docs/recipes/card-table.md.",
     "not": "Boards and spaces (board-model), card faces, or rules about running out."
   },
-  "card-query": {
-    "use": "Cards must be searched or filtered by a small text query.",
-    "not": "Game-rule target selection inside the engine."
+  "card-zoom": {
+    "use": "The zoomed card as a full transcription: decoded printed text with icons, engine notes (errata, rulings), tokens, an icon legend and glossary links, rule ids stripped; unstyled sections with slots. Recipe: docs/recipes/card-face-zoom.md.",
+    "not": "The card face (card-parts), the zoom's layout or look, or the glossary lookup itself (glossary)."
   },
   "challenges": {
     "use": "Pre-game challenges: a setup restriction plus triggered penalties in the game's card language.",
@@ -93,13 +97,13 @@
     "use": "A developer slash console over the engine-core debug edits.",
     "not": "Player-facing UI; it is a dev tool."
   },
-  "dice-tray": {
-    "use": "Dice in play, held dice, rolling through ctx.rng and the roll window content. Recipe: docs/recipes/dice.md.",
-    "not": "Dice drawing or 3D (pieces-3d) and odds (dice-odds)."
-  },
   "dice-odds": {
     "use": "Exact dice probabilities for tests, sanity bands or AI.",
     "not": "Rolling dice in play; that is engine-core's seeded random."
+  },
+  "dice-tray": {
+    "use": "Dice in play, held dice, rolling through ctx.rng and the roll window content. Recipe: docs/recipes/dice.md.",
+    "not": "Dice drawing or 3D (pieces-3d) and odds (dice-odds)."
   },
   "e2e-helpers": {
     "use": "Playwright tests of a game that need shared helpers.",
@@ -116,6 +120,10 @@
   "game-log": {
     "use": "A readable game log derived from engine events through one table.",
     "not": "Engine event design (engine-core)."
+  },
+  "game-store": {
+    "use": "Every game with a screen: one store over the game's one `defineGame` object (rules, content, seats, start, view, forced, opponent, words): an answer, the forced answers and the opponent's turn after it are one undo step and one paced step; step undo and redo, autosave, load with the undo steps rebuilt; `sim.ts` makes the same object sim-pool's game module, the opponent driver and replay-cli's engine. Recipe: docs/recipes/game-store.md.",
+    "not": "A per-action undo (engine-core undo.ts); hot-seat play with no opponent (prompt-host answerWithForced with seat 'all' in the game's own store)."
   },
   "ghost-card": {
     "use": "A prompt's source card left play and the screen must show its last-known snapshot.",
@@ -189,10 +197,6 @@
     "use": "Showing one state per prompt kind and ending, with a check that no kind lacks one.",
     "not": "Runtime screens."
   },
-  "table-panels": {
-    "use": "The panels around the table, unstyled: log (event words with slots, by turn, seat filter), banner (turn, seat, phase, fires on change), game over (result, breakdown slot, rematch, review log, home), opponent turn (paced-view steps, what the viewer may see, skip to end).",
-    "not": "Any look, layout or game text; the log data itself (game-log); the opponent's decisions (opponent)."
-  },
   "prompt-host": {
     "use": "Showing the open engine-core prompt on screen: a widget per prompt kind (a missing one fails to compile), the common widgets (pick, amount, order, may, pay) unstyled, forced answers sent from the store in one undo step (answerWithForced), board picks with tap to confirm (one or several). Recipe: docs/recipes/prompts.md.",
     "not": "The game's look or its own kind-specific widgets; board highlights (the game draws those from the option ids)."
@@ -204,6 +208,11 @@
   "prompt-source": {
     "use": "Each prompt must name its source card and clause and who decides.",
     "not": "Prompt wording (the game's printed words)."
+  },
+  "reference-game": {
+    "use": "Kit CI only: a made-up game generated through the scaffold whose own check fails when a component interface drifts.",
+    "not": "Pulling into a game or copying as a starter; use scaffold for a new game.",
+    "exports": "`reference.test.ts`; template/ overlay for scaffold"
   },
   "replay-cli": {
     "use": "Headless replays, golden games and a determinism check across two checkouts.",
@@ -227,11 +236,6 @@
   "saves": {
     "use": "Saved games in IndexedDB over engine-core's save file and a saves screen.",
     "not": "Old-save migration work (the owner's rule: none until the game is complete)."
-  },
-  "reference-game": {
-    "use": "Kit CI only: a made-up game generated through the scaffold whose own check fails when a component interface drifts.",
-    "not": "Pulling into a game or copying as a starter; use scaffold for a new game.",
-    "exports": "`reference.test.ts`; template/ overlay for scaffold"
   },
   "scaffold": {
     "use": "Starting a new game: one command makes the empty working repo (Vite, ESLint, Vitest, tsconfig, CI, kit pull, stub GameRules).",
@@ -266,6 +270,10 @@
   "story": {
     "use": "Story, flavour text, panels and splash as data that never blocks play.",
     "not": "Rules text."
+  },
+  "table-panels": {
+    "use": "The panels around the table, unstyled: log (event words with slots, by turn, seat filter), banner (turn, seat, phase, fires on change), game over (result, breakdown slot, rematch, review log, home), opponent turn (paced-view steps, what the viewer may see, skip to end).",
+    "not": "Any look, layout or game text; the log data itself (game-log); the opponent's decisions (opponent)."
   },
   "theme-check": {
     "use": "Checking that the game's look lives in its token file, fonts and layout.",
@@ -304,9 +312,5 @@
   "voice": {
     "use": "Release 1.3 voice lines on the sound player's voice bus, never twice the same.",
     "not": "Sound effects (sound-player)."
-  },
-  "game-store": {
-    "use": "Every game with a screen: one store over the game's one `defineGame` object (rules, content, seats, start, view, forced, opponent, words): an answer, the forced answers and the opponent's turn after it are one undo step and one paced step; step undo and redo, autosave, load with the undo steps rebuilt; `sim.ts` makes the same object sim-pool's game module, the opponent driver and replay-cli's engine. Recipe: docs/recipes/game-store.md.",
-    "not": "A per-action undo (engine-core undo.ts); hot-seat play with no opponent (prompt-host answerWithForced with seat 'all' in the game's own store)."
   }
 }

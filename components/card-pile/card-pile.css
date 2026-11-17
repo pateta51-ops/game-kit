@@ -1,0 +1,122 @@
+/* K219: structure only (positions, stack edges, fan geometry, backdrop). The look is the game's, on the [data-part] hooks.
+   Sizes: --kp-card-w, --kp-card-h (the card), --kp-step (how far each edge peeks), --kp-u (one table unit). Zero specificity. */
+:where([data-part='stack']) {
+  --kp-step: calc(var(--kp-u, 1vh) * 0.22);
+  position: relative;
+  flex: none;
+  box-sizing: border-box;
+  width: var(--kp-card-w, 8em);
+  height: var(--kp-card-h, calc(var(--kp-card-w, 8em) * 1.4));
+}
+:where([data-part='stack'][data-landscape='true']) {
+  width: var(--kp-card-h, calc(var(--kp-card-w, 8em) * 1.4));
+  height: var(--kp-card-w, 8em);
+}
+:where([data-part='stack-card']) {
+  position: absolute;
+  inset: 0;
+  z-index: calc(20 - var(--k));
+  transform: translate(calc(var(--k) * var(--kp-step) * -1), calc(var(--k) * var(--kp-step) * -1));
+  pointer-events: none;
+}
+:where([data-part='stack-hit']) {
+  position: absolute;
+  left: calc(var(--edges) * var(--kp-step) * -1);
+  top: calc(var(--edges) * var(--kp-step) * -1);
+  right: 0;
+  bottom: 0;
+  z-index: 24;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+}
+:where([data-part='stack-hit']:disabled) {
+  cursor: default;
+}
+:where([data-part='fan']) {
+  position: fixed;
+  inset: 0;
+  z-index: var(--kp-z, 30);
+  pointer-events: none;
+}
+:where([data-part='fan'] > *) {
+  pointer-events: auto;
+}
+:where([data-part='backdrop']) {
+  position: fixed;
+  inset: 0;
+  background: rgb(8 10 14 / 0.3);
+  backdrop-filter: grayscale(0.9) brightness(0.45);
+}
+:where([data-part='fan-cards']) {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+:where([data-part='fan-card']) {
+  position: fixed;
+  width: var(--kp-card-w);
+  height: var(--kp-card-h);
+  transform-origin: 50% 100%;
+  pointer-events: none;
+  will-change: transform;
+}
+:where([data-part='fan-card'][data-lifted='true']) {
+  z-index: 1000 !important;
+}
+:where([data-part='fan-turn']) {
+  transform: translateX(var(--spread)) rotate(var(--turn));
+  transform-origin: 50% 100%;
+  transition: transform var(--kp-hover-ms, 0ms) ease-out;
+  pointer-events: auto;
+}
+:where([data-part='fan-lift']) {
+  transform-origin: 50% 100%;
+  transition: transform var(--kp-hover-ms, 0ms) ease-out;
+  pointer-events: none;
+}
+:where([data-part='fan-card'][data-lifted='true'] [data-part='fan-lift']) {
+  transform: rotate(calc(var(--turn) * -1)) translate(var(--lift-x), calc(var(--kp-u, 1vh) * -3 + var(--lift-y))) scale(var(--kp-lift-scale));
+}
+:where([data-part='fan-hit']) {
+  display: block;
+  width: var(--kp-card-w);
+  height: var(--kp-card-h);
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  pointer-events: auto;
+  cursor: default;
+}
+:where([data-part='fan-hit'][data-mark]:not([data-mark='barred'])) {
+  cursor: pointer;
+}
+:where([data-part='fan'][data-opening='true'] [data-part='fan-turn']),
+:where([data-part='fan'][data-mode='gather'] [data-part='fan-turn']) {
+  pointer-events: none;
+}
+:where([data-part='grid']) {
+  display: grid;
+  grid-template-columns: repeat(var(--kp-grid-cols, 3), 1fr);
+  gap: var(--kp-grid-gap, 0.5em);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+:where([data-part='grid-card']) {
+  position: relative;
+  display: block;
+  width: 100%;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+}
+:where([data-part='grid-top']) {
+  position: absolute;
+  top: 0;
+  left: 0;
+}

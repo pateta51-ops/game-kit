@@ -1,0 +1,24 @@
+{
+  "name": "card-pile",
+  "source": {
+    "game": "imperium-horizon-fan-prototype",
+    "commit": "main of 16 Nov 2026",
+    "paths": [
+      "src/ui/board/table/Stack.tsx, board/Piles.tsx (stack at rest: top card, edges, empty slot)",
+      "src/ui/board/table/fanLayout.ts (fan geometry)",
+      "src/ui/board/table/PeekPile.tsx (animated fan, backdrop, focus, picks)",
+      "src/ui/board/phone/sheet/PileGrid.tsx (grid in the sheet)",
+      "src/ui/theme/stacks.css (structure only)"
+    ],
+    "grafts": [
+      {
+        "game": "stcc",
+        "commit": "main of 16 Nov 2026",
+        "paths": ["src/ui/board/table/usePileFan.tsx (close on a changed pile, Escape, backdrop)", "src/ui/board/table/fanLayout.ts (same geometry)"]
+      }
+    ],
+    "note": "K219: faces, settings, previews and theme stripped; cards from a card-zones ZoneView, marks from prompt-host useBoardPick, phone grid in phone-mode's Sheet."
+  },
+  "needs": ["card-zones", "prompt-host", "picked-state", "phone-mode", "motion-frame"],
+  "packages": ["react", "react-dom"]
+}
