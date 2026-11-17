@@ -157,3 +157,29 @@ describe('drag-drop (K220)', () => {
     expect(document.querySelector('[data-part="ghost"]')).toBeNull();
   });
 });
+
+describe('drag-drop sourceLegal (K294)', () => {
+  const C = ({ answer, sl }: { answer: Answer; sl: boolean }) => {
+    const p = prompt(opts('slotA:c1'), 1);
+    const pick = useBoardPick(p, answer, { confirm: false });
+    const drag = useDragDrop({ pick, promptId: 1, speed: 'instant', taps: (s, t) => [t + ':' + s], ...(sl ? { sourceLegal: (id: string) => id === 'c1' } : {}) });
+    return <div><button data-testid="src" {...drag.sourceProps('c1')}>c1</button><div data-testid="t" data-drop="slotA" /></div>;
+  };
+  it('a card drags with sourceLegal and answers slotA:c1; without it does not start', () => {
+    const answer = vi.fn<Answer>();
+    const { getByTestId, unmount } = render(<C answer={answer} sl />);
+    stack(getByTestId('t'));
+    down(getByTestId('src'));
+    ptr('pointermove', 30, 0);
+    ptr('pointerup', 30, 0);
+    expect(answer).toHaveBeenCalledWith(['slotA:c1'], 1);
+    unmount();
+    answer.mockClear();
+    const r = render(<C answer={answer} sl={false} />);
+    stack(r.getByTestId('t'));
+    down(r.getByTestId('src'));
+    ptr('pointermove', 30, 0);
+    ptr('pointerup', 30, 0);
+    expect(answer).not.toHaveBeenCalled();
+  });
+});

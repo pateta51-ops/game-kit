@@ -100,6 +100,7 @@ A game's build plan lists the kit work it needs as phases named `GK<n>` for the 
 | K289 | `prompt-host` `PickOptions` and `Order`: an enabled `alone` option answers `[id]` on its click and never joins the selection | S |  | done |
 | K290 | `plan-checker` `--tsc` type blocks compile with the kit's lib (ES2023, DOM) and JSX, so imported kit files using `findLast` or DOM types pass | S |  | done |
 | K292 | `engine-core` held triggers: `cfg.held(s, t)` keeps a pending trigger waiting (an "after" response until its effect or game action ends) while "when" responses still fire at the checkpoint; the game pushes `timing.triggers` to release them, and simultaneous released ones order through the normal prompt. `card-language` `When.timing` (`when` / `after`) is carried onto the trigger | M |  | done |
+| K294 | `useDragDrop` takes optional `sourceLegal(id)`: decides who may start a drag and whether it stays legal, so composite option ids (`slot:card`) work without wrapping `pick` | S |  | done |
 
 ## Harvest from the existing games (owner, 15 Nov 2026)
 

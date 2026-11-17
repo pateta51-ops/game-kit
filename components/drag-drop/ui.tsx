@@ -25,6 +25,8 @@ export interface DragOptions {
   readonly enabled?: boolean;
   /** The taps a drop makes, in order (default: source then target). A game whose click on the source alone answers returns [source]. */
   readonly taps?: (source: string, target: string) => readonly string[];
+  /** Decides whether an element may start a drag and whether a drag under way is still legal (default: its own mark is legal). For composite option ids where the source is no option itself; `taps` still decides targets and the answer. */
+  readonly sourceLegal?: (id: string) => boolean;
   /** Animation speed factor (durations divide by it); 0 or 'instant' or reduced motion: none. */
   readonly speed?: Speed;
 }
@@ -51,7 +53,7 @@ const centre = (el: Element | null): { x: number; y: number } | null => {
 };
 const q = (attr: string, id: string): Element | null => [...document.querySelectorAll(`[${attr}]`)].find((e) => e.getAttribute(attr) === id) ?? null;
 
-export function useDragDrop({ pick, promptId = null, enabled = true, taps = (s, t) => [s, t], speed = 1 }: DragOptions): Drag {
+export function useDragDrop({ pick, promptId = null, enabled = true, taps = (s, t) => [s, t], sourceLegal, speed = 1 }: DragOptions): Drag {
   const [gesture, setGesture] = useState<DragGesture | null>(null);
   const [fly, setFly] = useState<Fly | null>(null);
   const live = useRef<DragGesture | null>(null);
@@ -61,6 +63,7 @@ export function useDragDrop({ pick, promptId = null, enabled = true, taps = (s, 
   const flyId = useRef(0);
 
   const legalMark = (id: string): boolean => pick.marks[id] === 'legal' || pick.marks[id] === 'armed';
+  const legalSource = (id: string): boolean => (sourceLegal ?? legalMark)(id);
   const legalTarget = (source: string, target: string): boolean => taps(source, target).every(legalMark);
   const duration = speed === 'instant' || speed <= 0 || prefersReducedMotion() ? 0 : BASE_MS / speed;
 
@@ -109,7 +112,7 @@ export function useDragDrop({ pick, promptId = null, enabled = true, taps = (s, 
     else if (ghostRef.current !== null) ghostRef.current.style.transform = ghostTransform(next);
   });
 
-  const stillDraggable = gesture === null || legalMark(gesture.source);
+  const stillDraggable = gesture === null || legalSource(gesture.source);
   useEffect(() => {
     if (live.current === null) return;
     if (pressedUnder.current !== promptId || !stillDraggable) feed({ type: 'cancel' });
@@ -168,7 +171,7 @@ export function useDragDrop({ pick, promptId = null, enabled = true, taps = (s, 
       'data-drag': id,
       onPointerDown: (e) => {
         if (e.button !== 0 || live.current !== null) return;
-        const g = pressSource(id, e.pointerId, e.clientX, e.clientY, legalMark(id), enabled);
+        const g = pressSource(id, e.pointerId, e.clientX, e.clientY, legalSource(id), enabled);
         if (g === null) return;
         pressedUnder.current = promptId;
         live.current = g;
