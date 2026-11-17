@@ -70,6 +70,10 @@ span[data-part='strip'] {
   pointer-events: none;
   transition: transform var(--hand-ms, 280ms) ease-out;
 }
+/* K253: `faceEvents` lets the face take the pointer (hover glow, badge); each card's strip stays above it (z-index 3) */
+[data-face-events] [data-part='face'] {
+  pointer-events: auto;
+}
 [data-part='face'] {
   width: 100%;
   height: 100%;

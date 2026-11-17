@@ -2,7 +2,7 @@
 // K218: the hand. Ported from Imperium src/ui/board/table/FloatingHand.tsx (the fan, strips, marks, tap, drag source, draw-in)
 // with Unstoppable's arc (fan.ts) and play glide (glide.ts, Hand.tsx noteFromHand/useGlideIn). The game's name, glossary,
 // settings, cost badges and words are gone: the face is a render prop, the marks come from useBoardPick and picked-state.
-import { useLayoutEffect, useRef, type CSSProperties, type ReactNode, type RefObject } from 'react';
+import { useLayoutEffect, useRef, type ButtonHTMLAttributes, type CSSProperties, type ReactNode, type RefObject } from 'react';
 import type { ZoneView } from '../card-zones/index.ts';
 import type { Drag } from '../drag-drop/ui.tsx';
 import type { Speed } from '../motion-frame/index.ts';
@@ -31,6 +31,24 @@ export interface CardHandProps {
   readonly cardLabel?: (id: string) => string;
   /** The slot above the lifted card (what a click does). */
   readonly hint?: (id: string) => ReactNode;
+  /** K253: the game's own props on a card's click target (title, aria-pressed/expanded, data-*, className, handlers). The kit's type, data-part, aria-label, aria-disabled, drag props and onClick win; a game `onClick` is composed (called first, then the kit's). */
+  readonly stripProps?: (id: string) => ButtonHTMLAttributes<HTMLButtonElement> & Record<`data-${string}`, string | number | undefined>;
+  /** K253: a tap with its event. Given, it replaces `pick.tap(id)` (call it yourself); the play-glide note is still made for a legal or armed card. A double-click's second click (`detail` > 1) is never reported. */
+  readonly onTap?: (id: string, info: TapInfo) => void;
+  /** K253: a mark and its reason per card, over the prompt's. `mark` replaces `data-mark` (any word: `dim` is dim but selectable, the kit only treats `barred` as disabled); `why` is `data-why` and the strip's title unless `stripProps` gives one. */
+  readonly markOf?: (id: string) => { readonly mark?: string; readonly why?: string } | undefined;
+  /** K253: the face slot takes pointer events (a hover glow or badge inside the face); the strip stays above it for the click. */
+  readonly faceEvents?: boolean;
+  /** K253: on a phone with `phoneTap: 'all'`, a tap on any card (named by the prompt or not) calls `onSheet(id)` and nothing else. */
+  readonly phone?: boolean;
+  readonly phoneTap?: 'all';
+  readonly onSheet?: (id: string) => void;
+}
+
+export interface TapInfo {
+  /** A key's click has `detail` 0. */
+  readonly via: 'pointer' | 'key';
+  readonly detail: number;
 }
 
 const animate = (el: Element | null | undefined, frames: Keyframe[], duration: number, easing: string): void => {
@@ -38,7 +56,7 @@ const animate = (el: Element | null | undefined, frames: Keyframe[], duration: n
   (el as HTMLElement).animate(frames, { duration, easing });
 };
 
-export function CardHand({ view, face, back, pick, drag, speed = 1, tilt, label, cardLabel, hint }: CardHandProps) {
+export function CardHand({ view, face, back, pick, drag, speed = 1, tilt, label, cardLabel, hint, stripProps, onTap, markOf, faceEvents, phone, phoneTap, onSheet }: CardHandProps) {
   const cards: readonly (string | null)[] = view.cards ?? Array.from({ length: view.count ?? 0 }, () => null);
   const n = cards.length;
   const keys = cards.map((c, i) => c ?? `back:${String(i)}`);
@@ -57,30 +75,39 @@ export function CardHand({ view, face, back, pick, drag, speed = 1, tilt, label,
   }, [keyList, rise]);
   const any = (pick?.picks.length ?? 0) > 0;
   return (
-    <div ref={root} data-part="hand" data-count={n} style={{ '--hand-ms': `${String(hand)}ms` } as CSSProperties} onClickCapture={drag?.onClickCapture}>
+    <div ref={root} data-part="hand" data-count={n} data-face-events={faceEvents === true ? '' : undefined} style={{ '--hand-ms': `${String(hand)}ms` } as CSSProperties} onClickCapture={drag?.onClickCapture}>
       <ol data-part="fan" data-drop-block="" aria-label={label} style={{ '--n': n } as CSSProperties}>
         {cards.map((id, i) => {
           const { k, angle, drop } = fanOf(i, n, tilt);
-          const mark = id === null ? undefined : pick?.marks[id];
+          const extra = id === null ? undefined : markOf?.(id);
+          const mark = id === null ? undefined : (extra?.mark ?? pick?.marks[id]);
+          const mine = id === null ? undefined : stripProps?.(id);
           const style = { '--i': i, '--k': k, '--rot': `${angle.toFixed(2)}deg`, '--drop': drop.toFixed(4) } as CSSProperties;
           return (
-            <li key={keys[i]} data-part="card" data-key={keys[i]} data-card={id ?? undefined} data-mark={mark} data-dragging={id !== null && drag?.dragging?.source === id ? '' : undefined} style={style} {...(id === null ? {} : pickedAttrs(pick?.picks.includes(id) === true, any))}>
+            <li key={keys[i]} data-part="card" data-key={keys[i]} data-card={id ?? undefined} data-mark={mark} data-why={extra?.why} data-dragging={id !== null && drag?.dragging?.source === id ? '' : undefined} style={style} {...(id === null ? {} : pickedAttrs(pick?.picks.includes(id) === true, any))}>
               {id === null ? (
                 <span data-part="strip" aria-hidden="true" />
               ) : (
                 <button
+                  title={extra?.why}
+                  {...mine}
                   type="button"
                   data-part="strip"
                   aria-label={cardLabel?.(id)}
                   aria-disabled={mark === 'barred' ? true : undefined}
                   {...(drag?.sourceProps(id) ?? {})}
+                  onPointerDown={mine?.onPointerDown === undefined && drag === undefined ? undefined : (e) => { mine?.onPointerDown?.(e); drag?.sourceProps(id).onPointerDown(e); }}
                   onClick={(e) => {
-                    if (pick === undefined) return;
-                    if ((mark === 'legal' || mark === 'armed') && msAt(PLAY_MS, speed) > 0) {
+                    mine?.onClick?.(e);
+                    if (onTap !== undefined && e.detail > 1) return;
+                    if (phone === true && phoneTap === 'all' && onSheet !== undefined) { onSheet(id); return; }
+                    if (pick === undefined && onTap === undefined) return;
+                    if ((mark === 'legal' || mark === 'armed') && msAt(PLAY_MS, speed) > 0 && (onTap === undefined || e.detail > 0)) {
                       const f = e.currentTarget.parentElement?.querySelector('[data-part="face"]');
                       if (f) noteLaunch(id, f.getBoundingClientRect());
                     }
-                    pick.tap(id);
+                    if (onTap !== undefined) onTap(id, { via: e.detail > 0 ? 'pointer' : 'key', detail: e.detail });
+                    else pick?.tap(id);
                   }}
                 />
               )}

@@ -1,3 +1,4 @@
+import type { ComponentProps } from 'react';
 import { fireEvent, render } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { KernelOption } from '../engine-core/index.ts';
@@ -11,6 +12,11 @@ const prompt = (options: KernelOption[]) => ({ id: 1, kind: 'k', options, min: 1
 function Hand({ cards, answer, speed = 'instant' }: { cards: (string | null)[]; answer: Answer; speed?: number | 'instant' }) {
   const pick = useBoardPick(prompt(opts('a', '-b')), answer, { confirm: false });
   return <CardHand view={{ cards }} face={(id) => <i>{id}</i>} pick={pick} speed={speed} />;
+}
+
+function Hand2({ answer, ...rest }: { answer: Answer } & Partial<ComponentProps<typeof CardHand>>) {
+  const pick = useBoardPick(prompt(opts('a', '-b')), answer, { confirm: false });
+  return <CardHand view={{ cards: ['a', '-b'] }} face={(id) => <i>{id}</i>} pick={pick} speed="instant" cardLabel={(id) => 'card ' + id} {...rest} />;
 }
 
 afterEach(() => { delete (HTMLElement.prototype as { animate?: unknown }).animate; });
@@ -79,5 +85,87 @@ describe('card-hand (K218)', () => {
     noteLaunch('z', { left: 0, top: 0, width: 10, height: 10 }, 0);
     expect(takeLaunch('z', 5000)).toBeNull();
     expect(playKeyframes({ left: 0, top: 0, width: 10, height: 10 }, { left: 100, top: 0, width: 20, height: 20 })).toHaveLength(3);
+  });
+  it('K253 stripProps: game props land on the strip, its onClick is composed, the kit aria-label wins', () => {
+    const answer = vi.fn<Answer>(); const mine = vi.fn();
+    const { container } = render(<Hand2 answer={answer} stripProps={(id) => ({ title: 't' + id, 'aria-pressed': true, 'data-testid': 'pick', className: 'x', 'aria-label': 'no', onClick: mine })} />);
+    const b = container.querySelector('button')!;
+    expect(b).toHaveAttribute('title', 'ta'); expect(b).toHaveAttribute('aria-pressed', 'true'); expect(b).toHaveAttribute('data-testid', 'pick'); expect(b).toHaveClass('x');
+    expect(b).toHaveAttribute('aria-label', 'card a');
+    fireEvent.click(b);
+    expect(mine).toHaveBeenCalledTimes(1); expect(answer).toHaveBeenCalledWith(['a'], 1);
+  });
+  it('K253 onTap: via and detail, replaces pick.tap, a double-click is ignored', () => {
+    const answer = vi.fn<Answer>(); const tap = vi.fn();
+    const { container } = render(<Hand2 answer={answer} onTap={tap} />);
+    const b = container.querySelector('button')!;
+    fireEvent.click(b, { detail: 0 });
+    fireEvent.click(b, { detail: 1 });
+    fireEvent.click(b, { detail: 2 });
+    expect(tap.mock.calls).toEqual([['a', { via: 'key', detail: 0 }], ['a', { via: 'pointer', detail: 1 }]]);
+    expect(answer).not.toHaveBeenCalled();
+  });
+  it('K253 markOf: mark and reason on the card and the strip title; dim stays selectable', () => {
+    const tap = vi.fn();
+    const { container } = render(<Hand2 answer={vi.fn()} onTap={tap} markOf={(id) => (id === '-b' ? { mark: 'dim', why: 'Not enough gold' } : undefined)} />);
+    const c = container.querySelectorAll('[data-part="card"]')[1]!;
+    expect(c).toHaveAttribute('data-mark', 'dim'); expect(c).toHaveAttribute('data-why', 'Not enough gold');
+    const b = c.querySelector('button')!;
+    expect(b).toHaveAttribute('title', 'Not enough gold'); expect(b).not.toHaveAttribute('aria-disabled');
+    fireEvent.click(b);
+    expect(tap).toHaveBeenCalledWith('-b', { via: 'key', detail: 0 });
+    expect(container.querySelector('[data-part="card"]')).toHaveAttribute('data-mark', 'legal');
+  });
+  it('K253 faceEvents: the hand carries the opt-in hook, off by default', () => {
+    const a = render(<CardHand view={{ cards: ['a'] }} face={() => 'x'} faceEvents />);
+    expect(a.container.querySelector('[data-part="hand"]')).toHaveAttribute('data-face-events');
+    const b = render(<CardHand view={{ cards: ['a'] }} face={() => 'x'} />);
+    expect(b.container.querySelector('[data-part="hand"]')).not.toHaveAttribute('data-face-events');
+  });
+  it('K253 phoneTap all: any card, named or not, opens the sheet and answers nothing', () => {
+    const answer = vi.fn<Answer>(); const sheet = vi.fn();
+    const { container } = render(<Hand2 answer={answer} phone phoneTap="all" onSheet={sheet} />);
+    const bs = container.querySelectorAll('button');
+    fireEvent.click(bs[1]!); fireEvent.click(bs[0]!);
+    expect(sheet.mock.calls).toEqual([['-b'], ['a']]);
+    expect(answer).not.toHaveBeenCalled();
+    const off = render(<Hand2 answer={answer} onSheet={sheet} />);
+    fireEvent.click(off.container.querySelector('button')!);
+    expect(answer).toHaveBeenCalledWith(['a'], 1);
+    const noPick = render(<CardHand view={{ cards: ['z'] }} face={() => 'x'} phone phoneTap="all" onSheet={sheet} />);
+    fireEvent.click(noPick.container.querySelector('button')!);
+    expect(sheet).toHaveBeenLastCalledWith('z');
+  });
+  it('K253 onPointerDown is composed with drag and without', () => {
+    const mine = vi.fn(); const down = vi.fn();
+    const drag = { dragging: null, sourceProps: () => ({ 'data-drag': 'a', onPointerDown: down }), onClickCapture: vi.fn() } as unknown as NonNullable<ComponentProps<typeof CardHand>['drag']>;
+    const a = render(<Hand2 answer={vi.fn()} drag={drag} stripProps={() => ({ onPointerDown: mine })} />);
+    fireEvent.pointerDown(a.container.querySelector('button')!);
+    expect(mine).toHaveBeenCalledTimes(1); expect(down).toHaveBeenCalledTimes(1);
+    const b = render(<Hand2 answer={vi.fn()} stripProps={() => ({ onPointerDown: mine })} />);
+    fireEvent.pointerDown(b.container.querySelector('button')!);
+    expect(mine).toHaveBeenCalledTimes(2);
+  });
+  it('K253 onTap on the phone path: a double click is ignored, a barred card still reaches onTap', () => {
+    const tap = vi.fn(); const sheet = vi.fn();
+    const { container } = render(<Hand2 answer={vi.fn()} onTap={tap} phone phoneTap="all" onSheet={sheet} />);
+    const b = container.querySelector('button')!;
+    fireEvent.click(b, { detail: 2 });
+    expect(sheet).not.toHaveBeenCalled();
+    fireEvent.click(b, { detail: 1 });
+    expect(sheet).toHaveBeenCalledTimes(1);
+    const r = render(<Hand2 answer={vi.fn()} onTap={tap} />);
+    fireEvent.click(r.container.querySelectorAll('button')[1]!, { detail: 1 });
+    expect(tap).toHaveBeenCalledWith('-b', { via: 'pointer', detail: 1 });
+  });
+  it('K253 faceEvents: a child in the face is reachable and the strip click still works; kit props beat game props', () => {
+    const hover = vi.fn(); const answer = vi.fn<Answer>();
+    const { container } = render(<Hand2 answer={answer} faceEvents face={() => <b onPointerEnter={hover}>f</b>} stripProps={() => ({ type: 'submit', 'data-part': 'x' } as never)} />);
+    fireEvent.pointerEnter(container.querySelector('b')!);
+    expect(hover).toHaveBeenCalled();
+    const b = container.querySelector('button')!;
+    expect(b).toHaveAttribute('type', 'button'); expect(b).toHaveAttribute('data-part', 'strip');
+    fireEvent.click(b);
+    expect(answer).toHaveBeenCalledWith(['a'], 1);
   });
 });

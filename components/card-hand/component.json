@@ -17,7 +17,7 @@
         ]
       }
     ],
-    "note": "K218: commits are the main checkouts of 16 Nov 2026."
+    "note": "K253: strip passthrough, tap info, markOf, faceEvents, phone tap-all from Imperium d277c96 src/ui/board/table/FloatingHand.tsx and src/ui/board/Pickable.tsx. K218: commits are the main checkouts of 16 Nov 2026."
   },
   "needs": ["engine-core", "card-zones", "drag-drop", "motion-frame", "picked-state", "prompt-host"],
   "packages": ["react", "react-dom"]

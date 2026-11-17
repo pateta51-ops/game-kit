@@ -234,6 +234,7 @@ Found by the third retrofit pass (`docs/RETROFIT_PLAN.md`, Part E).
 | K244 | `player-board`: a mat with named zones from a layout; each zone fits its cards (size, two rows, fan below the readable minimum); zones are motion anchors (Earthborne `geometry.ts` layRow, fitZone, handSink, generalised; attachments under hosts are K245) | owner, 16 Nov 2026 | M | done |
 | K247 | `target-arrow`: a curved arrow from the asking card to the pointer, snaps to legal targets, collapses into the chosen one, then a hit; holds token flights until the hit (Unstoppable `arrow`, `strike`, `TargetArrow`, generalised) | owner, 16 Nov 2026 | M | done |
 | K251 | `market-row`: the deck's top card as a face-up offer (`topOffer`); take/cycle by offer id incl. the top; Radiance is the first user | Radiance | S | done |
+| K253 | `card-hand`: strip passthrough (`stripProps`), tap info (`onTap`), marks with reason (`markOf`), `faceEvents`, phone tap-all (`phoneTap`, `onSheet`) | Imperium | S | done |
 
 ### Owner's word (size L or stage 4)
 
