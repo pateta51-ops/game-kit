@@ -1,4 +1,4 @@
-import { render } from '@testing-library/react';
+import { fireEvent, render } from '@testing-library/react';
 import { useRef } from 'react';
 import { afterEach, describe, expect, it } from 'vitest';
 import type { Drag } from '../drag-drop/ui.tsx';
@@ -68,5 +68,25 @@ describe('card-hand wiring (K218)', () => {
     expect(calls[0]!.frames[0]).toMatchObject({ translate: '100px 300px' });
     r.rerender(<Play ids={['x', 'y']} />);
     expect(calls).toHaveLength(1);
+  });
+  it('K262 grid: no fan or hint, header, empty, columns, marks, taps, phone sheet', () => {
+    const taps: string[] = [], sheets: string[] = [];
+    const pick = { marks: { a: 'legal', b: 'barred' }, picks: [], tap: (id: string) => taps.push(id) } as unknown as BoardPick;
+    const r = render(<CardHand layout="grid" columns={3} header={<b>Hand 2</b>} view={{ cards: ['a', 'b', null] }} face={face} pick={pick} speed="instant" cardLabel={(id) => id} hint={() => 'x'} />);
+    const hand = r.container.querySelector('[data-part="hand"]')!;
+    expect(hand).toHaveAttribute('data-layout', 'grid');
+    expect(hand.querySelector('[data-part="fan"]')).toBeNull();
+    expect(hand.querySelector('[data-part="hint"]')).toBeNull();
+    expect(hand.querySelector('[data-part="head"]')!.textContent).toBe('Hand 2');
+    expect(hand.querySelector<HTMLElement>('[data-part="grid"]')!.style.getPropertyValue('--cols')).toBe('3');
+    expect(hand.querySelector('[data-card="a"]')).toHaveAttribute('data-mark', 'legal');
+    fireEvent.click(r.getByLabelText('a'));
+    expect(taps).toEqual(['a']);
+    r.rerender(<CardHand layout="grid" phone phoneTap="all" onSheet={(id) => sheets.push(id)} view={{ cards: ['a'] }} face={face} pick={pick} speed="instant" cardLabel={(id) => id} />);
+    fireEvent.click(r.getByLabelText('a'));
+    expect(sheets).toEqual(['a']);
+    expect(taps).toEqual(['a']);
+    r.rerender(<CardHand layout="grid" empty="None" view={{ cards: [] }} face={face} />);
+    expect(r.container.querySelector('[data-part="empty"]')!.textContent).toBe('None');
   });
 });

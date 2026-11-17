@@ -210,7 +210,7 @@ Cards tucked under a host card (a visible L, slide out on hover) or fanned past 
 
 A hand of cards as a fan that fits any number of cards in a width, lifts the card under the pointer or focus, shows the prompt's marks, reports taps and is a drag source. Ships the fan geometry CSS (`card-hand.css`, imported by `ui.tsx`); shadows, glow, badges and colours are the game's, on `data-part` hooks.
 
-- **Use it when:** Showing a hand of cards (or an opponent's face-down hand) as a fan that fits any width, lifts on pointer or focus, marks legal, picked and barred cards from the prompt, reports taps, is a drag source, and animates draw-in and play glide.
+- **Use it when:** Showing a hand of cards (or an opponent's face-down hand) as a fan that fits any width, lifts on pointer or focus, marks legal, picked and barred cards from the prompt, reports taps, is a drag source, and animates draw-in and play glide; or, with layout=grid, the phone hand: whole cards in rows with a header slot.
 - **Not for:** The card face, shadows, glow, badges, colours (the game's, on data-part hooks); reordering a hand.
 - **Key exports:** `TILT`, `fanOf`, `stepOf`, `SPREAD`, `spreadOf`, `shiftOf`, `HAND_MS`, `RISE_MS`, `PLAY_MS`, `msAt`, `noteLaunch`, `takeLaunch`, `playKeyframes`, `riseKeyframes`, and 2 more
 - **Needs:** [`engine-core`](#engine-core), [`card-zones`](#card-zones), [`drag-drop`](#drag-drop), [`motion-frame`](#motion-frame), [`picked-state`](#picked-state), [`prompt-host`](#prompt-host)

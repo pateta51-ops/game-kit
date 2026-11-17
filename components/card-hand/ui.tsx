@@ -43,6 +43,16 @@ export interface CardHandProps {
   readonly phone?: boolean;
   readonly phoneTap?: 'all';
   readonly onSheet?: (id: string) => void;
+  /** K262: `grid` lays whole cards in rows inside a scrolling band (the phone hand); default `fan`. No fan geometry, lift or hint in the grid; marks, taps, strips, drag and draw-in are the same. */
+  readonly layout?: 'fan' | 'grid';
+  /** K262 grid: columns (default 2 as Imperium's phone; the game passes 3 or 5 when the dock or width asks). A height cap `--hand-band-h` (none by default) makes the band scroll inside; gaps `--hand-gap-x` 12px, `--hand-gap-y` 16px. */
+  readonly columns?: number;
+  /** K262 grid: a height cap for the band (any CSS length); the band then scrolls inside. Without it the hand grows and nothing scrolls or clips. Sets `--hand-band-h` and `data-scroll`. */
+  readonly bandHeight?: string;
+  /** K262 grid: the header above the cards, the game's words (the count and the hand size); `data-part="head"`. */
+  readonly header?: ReactNode;
+  /** K262 grid: shown instead of the band when the hand is empty (`data-part="empty"`). */
+  readonly empty?: ReactNode;
 }
 
 export interface TapInfo {
@@ -56,7 +66,7 @@ const animate = (el: Element | null | undefined, frames: Keyframe[], duration: n
   (el as HTMLElement).animate(frames, { duration, easing });
 };
 
-export function CardHand({ view, face, back, pick, drag, speed = 1, tilt, label, cardLabel, hint, stripProps, onTap, markOf, faceEvents, phone, phoneTap, onSheet }: CardHandProps) {
+export function CardHand({ view, face, back, pick, drag, speed = 1, tilt, label, cardLabel, hint, stripProps, onTap, markOf, faceEvents, phone, phoneTap, onSheet, layout, columns, bandHeight, header, empty }: CardHandProps) {
   const cards: readonly (string | null)[] = view.cards ?? Array.from({ length: view.count ?? 0 }, () => null);
   const n = cards.length;
   const keys = cards.map((c, i) => c ?? `back:${String(i)}`);
@@ -73,10 +83,12 @@ export function CardHand({ view, face, back, pick, drag, speed = 1, tilt, label,
       if (!before.has(key)) animate([...(root.current?.querySelectorAll('[data-part="card"]') ?? [])].find((e) => e.getAttribute('data-key') === key), riseKeyframes(), rise, 'ease-out');
     }
   }, [keyList, rise]);
+  const grid = layout === 'grid';
   const any = (pick?.picks.length ?? 0) > 0;
   return (
-    <div ref={root} data-part="hand" data-count={n} data-face-events={faceEvents === true ? '' : undefined} style={{ '--hand-ms': `${String(hand)}ms` } as CSSProperties} onClickCapture={drag?.onClickCapture}>
-      <ol data-part="fan" data-drop-block="" aria-label={label} style={{ '--n': n } as CSSProperties}>
+    <div ref={root} data-part="hand" data-count={n} data-layout={grid ? 'grid' : undefined} data-scroll={grid && bandHeight !== undefined ? '' : undefined} data-face-events={faceEvents === true ? '' : undefined} style={{ '--hand-ms': `${String(hand)}ms`, ...(grid && bandHeight !== undefined ? { '--hand-band-h': bandHeight } : {}) } as CSSProperties} onClickCapture={drag?.onClickCapture}>
+      {grid && header !== undefined ? <div data-part="head">{header}</div> : null}
+      {grid && n === 0 && empty !== undefined ? <div data-part="empty">{empty}</div> : <ol data-part={grid ? 'grid' : 'fan'} data-drop-block="" aria-label={label} style={{ '--n': n, ...(grid && columns !== undefined ? { '--cols': columns } : {}) } as CSSProperties}>
         {cards.map((id, i) => {
           const { k, angle, drop } = fanOf(i, n, tilt);
           const extra = id === null ? undefined : markOf?.(id);
@@ -112,11 +124,11 @@ export function CardHand({ view, face, back, pick, drag, speed = 1, tilt, label,
                 />
               )}
               <div data-part="face" aria-hidden={id === null ? true : undefined}>{id === null ? (back?.() ?? <div data-part="back" />) : face(id)}</div>
-              {id !== null && hint !== undefined ? <span data-part="hint">{hint(id)}</span> : null}
+              {!grid && id !== null && hint !== undefined ? <span data-part="hint">{hint(id)}</span> : null}
             </li>
           );
         })}
-      </ol>
+      </ol>}
     </div>
   );
 }

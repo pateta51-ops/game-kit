@@ -342,7 +342,7 @@
     "not": "Any rule, look, colour or word; turn banners (table-panels); the number itself (counter)."
   },
   "card-hand": {
-    "use": "Showing a hand of cards (or an opponent's face-down hand) as a fan that fits any width, lifts on pointer or focus, marks legal, picked and barred cards from the prompt, reports taps, is a drag source, and animates draw-in and play glide.",
+    "use": "Showing a hand of cards (or an opponent's face-down hand) as a fan that fits any width, lifts on pointer or focus, marks legal, picked and barred cards from the prompt, reports taps, is a drag source, and animates draw-in and play glide; or, with layout=grid, the phone hand: whole cards in rows with a header slot.",
     "not": "The card face, shadows, glow, badges, colours (the game's, on data-part hooks); reordering a hand."
   },
   "card-attachments": {

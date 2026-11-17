@@ -138,3 +138,51 @@ span[data-part='strip'] {
     transition: none;
   }
 }
+/* K262: the grid layout (Imperium Hand.tsx + phone.css `.card-row`: whole cards in rows in a band). Tokens: --cols (the `columns` prop; default 2, Imperium's phone: the game sets 3 or 5 as the dock or width asks),
+   --hand-gap-x (12px), --hand-gap-y (16px), --hand-band-h (set by `bandHeight`: max height, and the band scrolls inside only then, as Imperium has no inner scroll). */
+[data-layout='grid'][data-part='hand'] {
+  height: auto;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  max-height: var(--hand-band-h, none);
+}
+[data-layout='grid'] > [data-part='grid'] {
+  display: grid;
+  grid-template-columns: repeat(var(--cols, 2), minmax(0, 1fr));
+  gap: var(--hand-gap-y, 16px) var(--hand-gap-x, 12px);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  min-height: 0;
+  justify-items: center;
+  align-items: start;
+}
+[data-scroll] > [data-part='grid'] {
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+[data-layout='grid'] > [data-part='head'] {
+  margin: 0 0 0.35rem;
+}
+[data-layout='grid'] > [data-part='grid'] > [data-part='card'] {
+  position: relative;
+  left: auto;
+  bottom: auto;
+  z-index: auto;
+  width: 100%;
+  height: auto;
+  aspect-ratio: 1 / var(--hand-card-ratio, 1.4);
+  transform: none;
+  pointer-events: auto;
+}
+[data-layout='grid'] [data-part='strip'] {
+  width: 100%;
+}
+[data-layout='grid'] [data-part='face'] {
+  transform: none;
+  transition: none;
+}
+[data-layout='grid'] [data-part='card'][data-picked='picked'] {
+  z-index: auto;
+}

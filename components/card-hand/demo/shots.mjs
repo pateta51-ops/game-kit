@@ -11,7 +11,7 @@ const here = dirname(fileURLToPath(import.meta.url));
 const out = process.argv[2] ?? 'shots';
 mkdirSync(out, { recursive: true });
 await build({ entryPoints: [join(here, 'main.tsx')], bundle: true, outdir: join(out, 'site'), loader: { '.css': 'css' }, jsx: 'automatic', define: { 'process.env.NODE_ENV': '"production"' } });
-writeFileSync(join(out, 'site', 'index.html'), '<link rel=stylesheet href=main.css><div id=root></div><script src=main.js></script>');
+writeFileSync(join(out, 'site', 'index.html'), '<meta charset=utf-8><link rel=stylesheet href=main.css><div id=root></div><script src=main.js></script>');
 const url = (s) => `file://${join(out, 'site', 'index.html')}?${s}`;
 const b = await chromium.launch();
 const p = await b.newPage({ viewport: { width: 1920, height: 1080 }, deviceScaleFactor: 1 });
@@ -23,4 +23,6 @@ await shot('hover-7-mid', 'n=7', () => p.mouse.move(360 + 560, 380 + 150));
 await shot('focus-7-second', 'n=7', async () => { await p.keyboard.press('Tab'); await p.keyboard.press('Tab'); });
 await shot('backs-7', 'n=7&mode=back');
 await shot('picked-12', 'n=12&mode=picked');
+const m = await b.newPage({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 1 });
+for (const [name, s] of [['grid-rest', 'layout=grid&n=7'], ['grid-armed', 'layout=grid&n=7&mode=picked']]) { await m.goto(url(s)); await m.waitForTimeout(300); await m.screenshot({ path: join(out, `${name}.png`) }); }
 await b.close();
