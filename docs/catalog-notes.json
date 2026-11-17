@@ -372,5 +372,10 @@
   "turn-flow": {
     "use": "Rounds, turns per seat in seat order, and phases and steps inside a turn as one data table; the runner calls engine-core boundary() at each turn, phase and round edge, so endOfTurn / endOfRound / endOfPhase durations end with no manual call; whoseTurn and flowOf read the position from state. Recipe: docs/recipes/turn-flow.md.",
     "not": "What a step does, simultaneous or out-of-order turns (interrupts, reactions), step-long durations (engine-core has none), or the screen that shows the phase."
+  },
+  "app-icons": {
+    "use": "Generate opaque home-screen icons and a relative web manifest from game-owned art.",
+    "not": "Creating artwork or choosing a game’s visual identity.",
+    "exports": "buildIcons, headTags, insertHead (app-icons.mjs)"
   }
 }

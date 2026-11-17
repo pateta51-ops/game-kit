@@ -99,6 +99,7 @@ A game's build plan lists the kit work it needs as phases named `GK<n>` for the 
 | K288 | `sim-pool` `legalAnswers` honours `KernelOption.alone`: alone options leave the combinations and each enabled one is a single-pick answer | S |  | done |
 | K289 | `prompt-host` `PickOptions` and `Order`: an enabled `alone` option answers `[id]` on its click and never joins the selection | S |  | done |
 | K290 | `plan-checker` `--tsc` type blocks compile with the kit's lib (ES2023, DOM) and JSX, so imported kit files using `findLast` or DOM types pass | S |  | done |
+| K291 | `app-icons`: reusable opaque home-screen icon renderer, maskable safe zone, relative manifest and idempotent HTML tags; nine prototype icon proofs | S |  | done |
 | K292 | `engine-core` held triggers: `cfg.held(s, t)` keeps a pending trigger waiting (an "after" response until its effect or game action ends) while "when" responses still fire at the checkpoint; the game pushes `timing.triggers` to release them, and simultaneous released ones order through the normal prompt. `card-language` `When.timing` (`when` / `after`) is carried onto the trigger | M |  | done |
 | K293 | TurnBanner takes `turnName(turn)` so a game prints its own words; every kit `<button>` in table-panels, card-hand and card-pile carries `data-kit` so a theme can skip it | S |  | done |
 | K294 | `useDragDrop` takes optional `sourceLegal(id)`: decides who may start a drag and whether it stays legal, so composite option ids (`slot:card`) work without wrapping `pick` | S |  | done |
