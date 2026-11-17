@@ -576,15 +576,16 @@ def main() -> int:
                 with (contextlib.nullcontext(at) if at else tempfile.TemporaryDirectory()) as tmp:
                     f = Path(tmp) / f"plancheck-contract-{os.getpid()}.ts"
                     f.write_text(code, encoding="utf-8")
+                    cfg = Path(tmp) / f"plancheck-tsconfig-{os.getpid()}.json"
                     try:
-                        r = subprocess.run(
-                            [tsc, "--noEmit", "--strict", "--exactOptionalPropertyTypes", "--noUncheckedIndexedAccess",
-                             "--noImplicitOverride", "--target", "es2022", "--module", "esnext", "--moduleResolution", "bundler",
-                             "--allowImportingTsExtensions", "--skipLibCheck", f.name],
-                            cwd=tmp, capture_output=True, text=True, encoding="utf-8",
-                        )
+                        cfg.write_text(json.dumps({"compilerOptions": {"noEmit": True, "strict": True, "exactOptionalPropertyTypes": True,
+                            "noUncheckedIndexedAccess": True, "noImplicitOverride": True, "target": "es2022", "module": "esnext",
+                            "moduleResolution": "bundler", "allowImportingTsExtensions": True, "skipLibCheck": True},
+                            "files": [f.name]}), encoding="utf-8")  # a config of its own: TS 6 refuses command-line files beside a tsconfig.json
+                        r = subprocess.run([tsc, "-p", cfg.name], cwd=tmp, capture_output=True, text=True, encoding="utf-8")
                     finally:
-                        f.unlink()
+                        for x in (f, cfg):
+                            x.unlink(missing_ok=True)
                     if r.returncode != 0:
                         problems.append("type contract does not compile:\n" + re.sub(r"\((\d+),(\d+)\): (error|warning) TS", r" line \1:\2 \3 TS", r.stdout + r.stderr)[:3000])  # no "file(1,2): error TS" form: CI's tsc matcher would annotate it as a build error
 

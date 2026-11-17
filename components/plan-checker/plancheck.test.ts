@@ -135,11 +135,12 @@ describe('plancheck.py flags (K68)', () => {
     const typed = full + "\n## 12. Type definitions\n\n```ts\nimport type { Core } from './../../kit/core/index.ts';\nexport type GameState = Core;\n```\n";
     const at = join(game, 'src', 'engine');
     expect(run(typed, ...end, '--tsc')).toBe(1);
+    writeFileSync(join(at, 'tsconfig.json'), '{}');
     expect(run(typed, ...end, '--tsc', '--tsc-at', at)).toBe(0);
     const ok = full + "\n## 12. Type definitions\n\n```ts\nexport type Ok = 1;\n```\n";
     expect(run(ok, ...end, '--tsc')).toBe(0);
     expect(run(ok, ...end, '--tsc', '--tsc-at', join(game, 'nope'))).toBe(1);
-    expect(readdirSync(at)).toEqual([]);
+    expect(readdirSync(at)).toEqual(['tsconfig.json']);
   }, 300_000);
   it('--skip-without-python: no Python 3 is a notice and exit 0, but exit 2 in CI or without the flag', () => {
     vi.stubEnv('PATH', join(tmpdir(), 'no-such-dir'));

@@ -94,6 +94,7 @@ A game's build plan lists the kit work it needs as phases named `GK<n>` for the 
 | K283 | `card-pile` `hitTitle={false}` drops the native title on the stack button (STCC draws its own pile tooltip) | S |  | done |
 | K284 | `layout-editor` Reset button (in-page confirmation): restores the starting doc, backdrops (`LAYOUT_EDITOR_BG_INIT`), zoom and screen; `layoutEditor.reset()` | S |  | done |
 | K285 | `plan-checker` `--tsc-at DIR` compiles the plan's type blocks inside a game folder, so relative `kit/` imports resolve | S |  | done |
+| K286 | `plan-checker` `--tsc` compiles through a tsconfig of its own, so TypeScript 6 runs it beside a game's tsconfig.json | S |  | done |
 
 ## Harvest from the existing games (owner, 15 Nov 2026)
 
