@@ -1,0 +1,136 @@
+/* K218: the hand's fan geometry (Imperium src/ui/theme/table.css `.hand--floating`, `.hand__fan`, `.hand-card*`, with the arc from
+   fan.ts). Positions, overlap, lift, neighbour slide, strips only; shadows, glow, badges and colours are the game's, on the
+   data-part hooks: hand, fan, card (data-mark legal|barred|armed, data-picked, data-dragging), strip, face, hint, back.
+   Tokens the game sets on the hand or above it:
+   --hand-card-w (7rem)  --hand-card-ratio (1.4, height over width)  --hand-step-max (4rem, widest strip)
+   --hand-margin (2rem, kept free beside the fan)  --hand-lift (2rem, the lifted card's rise)  --hand-stand (1.3rem, a picked card's rise)
+   --hand-grow (1.5, the lifted card's scale)  --hand-ms (set by the component from the speed) */
+[data-part='hand'] {
+  --_w: var(--hand-card-w, 7rem);
+  --_ratio: var(--hand-card-ratio, 1.4);
+  position: relative;
+  height: calc(var(--_w) * var(--_ratio));
+}
+[data-part='fan'] {
+  position: absolute;
+  inset: 0;
+  container-type: inline-size;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+/* the strip: where the pointer finds a card, the part of it shown at rest (the whole card for the last one). It never moves. */
+[data-part='card'] {
+  --step: min(var(--hand-step-max, 4rem), calc((100cqw - var(--_w) - var(--hand-margin, 2rem)) / max(1, var(--n) - 1)));
+  --spread: 0;
+  --turn: 0deg;
+  --rise: 0px;
+  --grow: 1;
+  --shift: clamp(
+    calc(var(--_w) / 2 - var(--k) * var(--step) - 50cqw + 0.3rem),
+    calc(var(--spread) * var(--step)),
+    calc(50cqw - var(--_w) / 2 - var(--k) * var(--step) - 0.3rem)
+  );
+  --slide: rotate(calc(var(--rot) * -1)) translateX(var(--shift)) rotate(var(--rot));
+  --lift: rotate(var(--turn)) translateY(var(--rise)) scale(var(--grow));
+  position: absolute;
+  bottom: 0;
+  width: var(--_w);
+  height: calc(var(--_w) * var(--_ratio));
+  left: calc(50% - var(--_w) / 2 + var(--k) * var(--step));
+  z-index: calc(10 + var(--i));
+  transform: translateY(calc(var(--drop) * var(--_w))) rotate(var(--rot));
+  transform-origin: 50% 100%;
+  pointer-events: none;
+}
+[data-part='strip'] {
+  position: absolute;
+  z-index: 3;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: var(--step);
+  padding: 0;
+  border: 0;
+  background: none;
+  pointer-events: auto;
+}
+span[data-part='strip'] {
+  pointer-events: none;
+}
+/* the strip stays at rest while its card lifts: no focus ring there; the game marks the lifted card (`[data-part='card']:focus-within`) */
+[data-part='strip']:focus {
+  outline: none;
+}
+[data-part='card']:last-child > [data-part='strip'] {
+  width: 100%;
+}
+[data-part='face'],
+[data-part='hint'] {
+  pointer-events: none;
+  transition: transform var(--hand-ms, 280ms) ease-out;
+}
+[data-part='face'] {
+  width: 100%;
+  height: 100%;
+  transform: var(--slide) var(--lift);
+  transform-origin: 50% 100%;
+}
+/* the hint slot above the lifted card, hidden until it lifts */
+[data-part='hint'] {
+  position: absolute;
+  z-index: 6;
+  left: 50%;
+  bottom: calc(100% + 0.4rem);
+  visibility: hidden;
+  white-space: nowrap;
+  transform: var(--slide) translateX(-50%) var(--lift);
+  transform-origin: 0 calc(100% + 0.4rem + var(--_w) * var(--_ratio));
+}
+/* a picked card stands up a little out of the fan */
+[data-part='card'][data-picked='picked'] {
+  z-index: 40;
+  --turn: calc(var(--rot) * -1);
+  --rise: calc(var(--drop) * var(--_w) * -1 - var(--hand-stand, 1.3rem));
+}
+/* the lifted card: under the pointer, or holding the focus while none is under the pointer (one lifts at a time): straightens, rises, grows */
+[data-part='fan'] > [data-part='card']:hover,
+[data-part='fan']:not(:has(> [data-part='card']:hover)) > [data-part='card']:focus-within {
+  z-index: 50;
+  --spread: 0;
+  --turn: calc(var(--rot) * -1);
+  --rise: calc(var(--drop) * var(--_w) * -1 - var(--hand-lift, 2rem));
+  --grow: var(--hand-grow, 1.5);
+}
+[data-part='fan'] > [data-part='card']:hover > [data-part='hint'],
+[data-part='fan']:not(:has(> [data-part='card']:hover)) > [data-part='card']:focus-within > [data-part='hint'] {
+  visibility: visible;
+}
+/* the neighbours slide away from it, the nearest one step (SPREAD in fan.ts: 1, .65, .4, .2) */
+[data-part='fan'] > [data-part='card']:has(~ [data-part='card']:hover),
+[data-part='fan']:not(:has(> [data-part='card']:hover)) > [data-part='card']:has(~ [data-part='card']:focus-within) { --spread: -0.2; }
+[data-part='fan'] > [data-part='card']:has(+ [data-part='card'] + [data-part='card'] + [data-part='card']:hover),
+[data-part='fan']:not(:has(> [data-part='card']:hover)) > [data-part='card']:has(+ [data-part='card'] + [data-part='card'] + [data-part='card']:focus-within) { --spread: -0.4; }
+[data-part='fan'] > [data-part='card']:has(+ [data-part='card'] + [data-part='card']:hover),
+[data-part='fan']:not(:has(> [data-part='card']:hover)) > [data-part='card']:has(+ [data-part='card'] + [data-part='card']:focus-within) { --spread: -0.65; }
+[data-part='fan'] > [data-part='card']:has(+ [data-part='card']:hover),
+[data-part='fan']:not(:has(> [data-part='card']:hover)) > [data-part='card']:has(+ [data-part='card']:focus-within) { --spread: -1; }
+[data-part='fan'] > [data-part='card']:hover ~ [data-part='card'],
+[data-part='fan']:not(:has(> [data-part='card']:hover)) > [data-part='card']:focus-within ~ [data-part='card'] { --spread: 0.2; }
+[data-part='fan'] > [data-part='card']:hover + [data-part='card'] + [data-part='card'] + [data-part='card'],
+[data-part='fan']:not(:has(> [data-part='card']:hover)) > [data-part='card']:focus-within + [data-part='card'] + [data-part='card'] + [data-part='card'] { --spread: 0.4; }
+[data-part='fan'] > [data-part='card']:hover + [data-part='card'] + [data-part='card'],
+[data-part='fan']:not(:has(> [data-part='card']:hover)) > [data-part='card']:focus-within + [data-part='card'] + [data-part='card'] { --spread: 0.65; }
+[data-part='fan'] > [data-part='card']:hover + [data-part='card'],
+[data-part='fan']:not(:has(> [data-part='card']:hover)) > [data-part='card']:focus-within + [data-part='card'] { --spread: 1; }
+/* the card being dragged is empty in the fan (the game's ghost carries it) */
+[data-part='card'][data-dragging] > [data-part='face'],
+[data-part='card'][data-dragging] > [data-part='hint'] {
+  visibility: hidden;
+}
+@media (prefers-reduced-motion: reduce) {
+  [data-part='face'],
+  [data-part='hint'] {
+    transition: none;
+  }
+}

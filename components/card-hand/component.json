@@ -1,0 +1,24 @@
+{
+  "name": "card-hand",
+  "source": {
+    "game": "imperium",
+    "commit": "22736b2",
+    "paths": [
+      "src/ui/board/table/FloatingHand.tsx (the fan, strips, marks, tap, drag source, draw-in; names, glossary, settings and cost badges removed, the face a render prop)",
+      "src/ui/theme/table.css (.hand--floating, .hand__fan, .hand-card*: width-fit step, strips, lift, neighbour slide, hint slot; sizes became tokens)"
+    ],
+    "grafts": [
+      {
+        "game": "unstoppable",
+        "commit": "see note",
+        "paths": [
+          "src/ui/scanned/geometry.ts (fanOf: the true arc)",
+          "src/ui/board/playMotion.ts and Hand.tsx noteFromHand/useGlideIn (the play glide)"
+        ]
+      }
+    ],
+    "note": "K218: commits are the main checkouts of 16 Nov 2026."
+  },
+  "needs": ["engine-core", "card-zones", "drag-drop", "motion-frame", "picked-state", "prompt-host"],
+  "packages": ["react", "react-dom"]
+}
