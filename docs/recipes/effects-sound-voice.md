@@ -11,6 +11,8 @@ Components: [`motion-frame`](../../components/motion-frame/README.md) plays the 
 5. `token-flights`: tokens (coins, damage, discs) that moved between two views fly there; a ledger draws each in one place at a time.
 6. `target-arrow`: the curved arrow from the asking card to the pointer that snaps to a target, collapses into it and hits; `strikes.hold` makes token-flights wait for the hit.
 
+6. `token-bag`: a bag with its count; the draw is a 2D flight from `[data-bag]` or a 3D shake-and-draw (three.js loaded lazily, falls back to 2D); the engine has drawn already.
+
 ## 1.2 sound
 [`sound-player`](../../components/sound-player/README.md): one `SoundTable` of cues, tiers, music states, ambience. A cue is never cut (fades 150 ms). `createEventSounds` maps engine events to cues. The `check` lists missing files and over-size cues. Assets are made with [`audio-gen`](../../components/audio-gen/README.md) (free local models in WSL; paid voices only for EBR).
 

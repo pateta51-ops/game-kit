@@ -1,0 +1,18 @@
+{
+  "name": "token-bag",
+  "source": {
+    "game": "warps-edge-fan-prototype",
+    "commit": "6790200",
+    "paths": [
+      "src/ui/bag3d/timeline.ts (unchanged: the pure motion, seeded rest layout, assignDraws)",
+      "src/ui/bag3d/bagMode.ts (as mode.ts: webgl check, fps watch, texture budget, session fallback; the dock selector, bagMode, drawContents, rateFor are new)",
+      "src/ui/bag3d/bagScene.ts (as scene.ts: faces from faceUrl, the print and backdrop are options)",
+      "src/ui/bag3d/bagExterior.ts (as exterior.ts: the plain cloth and weave; the Warp logo patch stays in Warp's)",
+      "src/ui/bag3d/Bag3dRest.tsx, Bag3dDraw.tsx (as Rest.tsx, Draw.tsx; no root class: the dock canvas is hidden inline)",
+      "src/ui/table/BagDock.tsx, BagView.tsx, bagDraw.ts (as TokenBag.tsx: the data-bag anchor, 2D/3D choice; Warp's events and settings left out)",
+      "tests: timeline.test.ts, bagMode.test.ts (as mode.test.ts), generic token names"
+    ]
+  },
+  "needs": [],
+  "packages": ["react", "react-dom", "three"]
+}

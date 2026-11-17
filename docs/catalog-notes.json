@@ -63,10 +63,6 @@
     "use": "A pile on the table: stack at rest, an animated fan to look through it, picks from it, a grid in the phone sheet.",
     "not": "A hand, dragging, card faces."
   },
-  "player-board": {
-    "use": "A mat with named zones from a layout: each zone fits its cards (largest size, two rows, a fan below the readable minimum) and is a motion anchor; a pure plan plus a React board with slots the game fills.",
-    "not": "Where zones sit (the game's layout), card faces, tucked attachments (K245), piles."
-  },
   "card-query": {
     "use": "Cards must be searched or filtered by a small text query.",
     "not": "Game-rule target selection inside the engine."
@@ -147,6 +143,10 @@
     "entry": [
       "index.d.ts"
     ]
+  },
+  "market-row": {
+    "use": "A market of offer slots refilled from decks: buy/cycle options, refill at once or by slide, clear, deal animation.",
+    "not": "Payment, discounts, unlocks, where a bought card goes; a hand or a pile."
   },
   "motion-frame": {
     "use": "Playing the director's motion specs (JSON beats) on the screen.",
@@ -317,25 +317,29 @@
     "use": "Small screen helpers: hover hold, inspect, rule sheet, toasts, prompt keys. For an engine-core prompt use prompt-host instead of createSelection and onlyForcedAnswer.",
     "not": "Any look or game type."
   },
-  "deck-motions": {
-    "use": "Cards fly from a pile to their places (deal, refill turn-over, deck cycle) and a pile riffles; piles found by data-pile; timing pure.",
-    "not": "Which cards move (the game diffs its views), the card look, a market row slide or a fan (card-pile)."
+  "token-bag": {
+    "use": "A bag of tokens with its count; the engine's draw shown as a 2D flight from the bag or a 3D shake-and-draw (three.js by dynamic import) that never decides the draw and falls back to 2D.",
+    "not": "Which tokens are drawn (the engine), the token faces and the bag print (the game), a game's token tables."
   },
   "token-flights": {
     "use": "Tokens that moved between two views fly from where they were to where they are, with a ledger that draws each token in one place at a time.",
     "not": "Cards flying, motion specs (motion-frame) or the token look."
   },
-  "track": {
-    "use": "A row of spaces with a marker that glides (drawn row or spots on a mat image), per-space marks, labels from the game's words; a hop-and-fill bar with a badge pop; a step list with one lit step; unstyled.",
-    "not": "Any rule, look, colour or word; turn banners (table-panels); the number itself (counter)."
-  },
   "voice": {
     "use": "Release 1.3 voice lines on the sound player's voice bus, never twice the same.",
     "not": "Sound effects (sound-player)."
   },
-  "market-row": {
-    "use": "A market of offer slots refilled from decks: buy/cycle options, refill at once or by slide, clear, deal animation.",
-    "not": "Payment, discounts, unlocks, where a bought card goes; a hand or a pile."
+  "player-board": {
+    "use": "A mat with named zones from a layout: each zone fits its cards (largest size, two rows, a fan below the readable minimum) and is a motion anchor; a pure plan plus a React board with slots the game fills.",
+    "not": "Where zones sit (the game's layout), card faces, tucked attachments (K245), piles."
+  },
+  "deck-motions": {
+    "use": "Cards fly from a pile to their places (deal, refill turn-over, deck cycle) and a pile riffles; piles found by data-pile; timing pure.",
+    "not": "Which cards move (the game diffs its views), the card look, a market row slide or a fan (card-pile)."
+  },
+  "track": {
+    "use": "A row of spaces with a marker that glides (drawn row or spots on a mat image), per-space marks, labels from the game's words; a hop-and-fill bar with a badge pop; a step list with one lit step; unstyled.",
+    "not": "Any rule, look, colour or word; turn banners (table-panels); the number itself (counter)."
   },
   "card-hand": {
     "use": "Showing a hand of cards (or an opponent's face-down hand) as a fan that fits any width, lifts on pointer or focus, marks legal, picked and barred cards from the prompt, reports taps, is a drag source, and animates draw-in and play glide.",
