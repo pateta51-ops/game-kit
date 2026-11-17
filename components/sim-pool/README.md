@@ -5,7 +5,7 @@ Plays N whole games of any `GameRules<G>` with a driver, in this thread or on wo
 A game writes one module that exports `simGame: SimGame<G, S>`:
 
 - `rules`, `content()` (loaded once per thread), `start(spec, content)` → `{ options, rules }` for `createGame`.
-- `driver(name, spec, content)` → `Driver<G>`: `choose(state, answers, rng)` → action, `reasons()`. The game's greedy and planner drivers live in the game; `randomDriver(weight?)` is here. K222: `bySeat({ a: driverA, b: driverB }, other?)` answers each prompt with the driver of its `prompt.seat` (`other` for no seat or an unlisted one, else it throws).
+- `driver(name, spec, content)` → `Driver<G>`: `choose(state, answers, rng)` → action, `reasons()`. The game's greedy and planner drivers live in the game; `randomDriver(weight?)` is here. K271: `Bot<V, A>` (`name`, `choose(view, answers, rng)`, `reasons?()`) is one bot shape for the sim and game-store (`botOpponent`); `botDriver(bot, view)` makes it a `Driver` that sees `view(state, prompt.seat)` only. K222: `bySeat({ a: driverA, b: driverB }, other?)` answers each prompt with the driver of its `prompt.seat` (`other` for no seat or an unlisted one, else it throws).
 - `answers?(state, content, rng)`: the legal answers; default `legalAnswers(prompt, rng)` (subsets of enabled options, min..max; a prompt of kind `order` also gets every order; over 512, 512 samples).
 - `summary?(state, actions, content, seen)` → `S`: the game's own counters, stored on each record. `observation?(spec, content)` → a new `seen` per game; `onPrompt?(seen, state, answers)` at every open prompt before the driver answers (per-game notes go there, never in module variables).
 - `maxActions?` (default 100,000): a game with no result by then fails.

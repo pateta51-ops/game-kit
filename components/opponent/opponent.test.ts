@@ -17,6 +17,7 @@ import {
   loadProfile,
   lookAhead,
   newMemory,
+  opponentBot,
   opponentDriver,
   pick,
   recalls,
@@ -196,6 +197,12 @@ describe('opponent (K103, K115)', () => {
     const d = opponentDriver(make(), { view: (s: State) => redact(s, 'ai', view), candidates: (_w, answers: readonly string[]) => answers.map((a) => C(a, a, a === 'pass' ? ['pass'] : ['damage'])), timing: () => 'main' });
     expect(d.choose(state, ['pass', 'bolt'], never)).toBe('bolt');
     expect(d.reasons()[0]).toBe('ai chose bolt (will-play) at main');
+  });
+
+  it('K271: opponentBot is a Bot on the redacted view and the answers', () => {
+    const b = opponentBot(make(), { candidates: (_w, answers: readonly string[]) => answers.map((a) => C(a, a, a === 'pass' ? ['pass'] : ['damage'])), timing: () => 'main' });
+    expect(b.choose(v, ['pass', 'bolt'], new DriverRng('s'))).toBe('bolt');
+    expect(b.reasons?.()[0]).toBe('ai chose bolt (will-play) at main');
   });
 
   it('K222: the driver passes the seat of the open prompt to view', () => {

@@ -1,9 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import { createSave, draftOf, exportSave, type SaveFile, hashState, hashValue, seedRng, type AnswerAction, type Ctx, type Draft, type GameRules, type History, type KernelPrompt, type KernelState } from '../engine-core/index.ts';
 import { autoAnswer } from '../prompt-host/index.ts';
-import { playOne } from '../sim-pool/index.ts';
-import { createGameStore, defineGame } from './index.ts';
-import { simGameOf } from './sim.ts';
+import { DriverRng, legalAnswers, playOne, type Bot } from '../sim-pool/index.ts';
+import { botOpponent, createGameStore, defineGame } from './index.ts';
+import { botDriverOf, simGameOf } from './sim.ts';
 
 // A fake two-seat race (tests only): a turn asks `add` (1 or 2), then a `note` with one option; first to 6 wins.
 type Seat = 'a' | 'b';
@@ -109,6 +109,25 @@ describe('game-store (K234)', () => {
     expect(JSON.stringify(def.view(createGameStore(def, { seat: 'a' }).get().state, 'b'))).not.toContain('"sa"');
     const rec = playOne(simGameOf(def, { summary: (s) => s.result }), {}, { index: 0, seed: 's', driver: 'opponent' });
     expect(rec.result).toEqual({ winner: 'a' });
+  });
+
+  it('K271: one Bot plays a seat in the store to game over and in the sim; same seed, same answers; it sees only the view', () => {
+    type V = ReturnType<typeof def.view>;
+    const seen: { view: V; picks: readonly string[] }[] = [];
+    const bot: Bot<V> = { name: 'opponent', choose: (view, answers, rng) => { const a = answers[rng.int(answers.length)] as AnswerAction; seen.push({ view, picks: a.picks }); return a; } };
+    const def2 = { ...def, forced: () => null, opponent: botOpponent<V, G['prompt']>(bot) };
+    const store = createGameStore(def2, { seat: 'a', seed: 's' });
+    for (let p = store.get().state.prompt; p !== null && store.get().state.result === null; p = store.get().state.prompt) {
+      const rng = new DriverRng(`s|opponent|${String(p.id)}`);
+      store.answer(bot.choose(def.view(store.get().state, 'a'), legalAnswers(p, rng), rng).picks, p.id);
+    }
+    expect(store.get().state.result).not.toBeNull();
+    const live = seen.splice(0);
+    const rec = playOne(simGameOf(def2, { drivers: { opponent: botDriverOf(def2, bot) } }), {}, { index: 0, seed: 's', driver: 'opponent' });
+    expect(rec.hash).toBe(hashValue(store.saved().actions));
+    expect(seen).toEqual(live);
+    for (const s of seen.filter((x) => x.view.seat === 'b')) expect(Object.keys(s.view)).toEqual(['seat', 'mine', 'score', 'prompt']);
+    expect(JSON.stringify(seen.filter((x) => x.view.seat === 'b'))).not.toContain('"sa"');
   });
 
   it('loads an older save through its migration and keeps its undo flag for the next autosave', () => {

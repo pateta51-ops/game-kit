@@ -1,5 +1,6 @@
 export { DriverRng } from './rng.ts';
 export { ANSWER_CAP, CRASH_HASH, breakAt, bySeat, crashRecord, legalAnswers, playOne, randomDriver, type Driver, type GameSpec, type SimGame, type PlayOptions, type SimRecord, type StepMs } from './play.ts';
+export { botDriver, type Bot } from './bot.ts';
 export { replayStep, type StepReport } from './replay.ts';
 export { runGames, runInThread, type RunRequest } from './pool.ts';
 export { findingOf, formatFuzz, fuzz, fuzzMain, FUZZ_USAGE, type Finding, type FindingKind, type FuzzOptions, type FuzzRun } from './fuzz.ts';

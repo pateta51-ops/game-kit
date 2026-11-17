@@ -2,9 +2,12 @@
 // autosave, the opponent seat on its own view), and one `defineGame` object the store, sim-pool, replay-cli and the
 // opponent read. Shape from Imperium src/ui/store/gameStore.ts + history.ts (rebuild with answeredBySettings),
 // Unstoppable's store + undo.ts and EBR store.ts; written new.
-import { canUndoStep, createGame, extendStep, newSteps, redoStep, replaySteps, restoreSave, seatKey, undoStep, type AnswerAction, type GameRules, type GameTypes, type History, type SaveFile, type SaveFormat, type StepHistory, type UndoMode } from '../engine-core/index.ts';
+import { canUndoStep, createGame, extendStep, newSteps, redoStep, replaySteps, restoreSave, seatKey, undoStep, type AnswerAction, type GameRules, type GameTypes, type History, type KernelPrompt, type SaveFile, type SaveFormat, type StepHistory, type UndoMode } from '../engine-core/index.ts';
 import { answerWithForced, sendForced, type Forced } from '../prompt-host/index.ts';
 import { advance, noSteps, pushSteps, skip, type Steps } from '../paced-view/index.ts';
+import { legalAnswers } from '../sim-pool/play.ts';
+import { DriverRng } from '../sim-pool/rng.ts';
+import type { Bot } from '../sim-pool/bot.ts';
 
 export type SeatId = string | number;
 
@@ -19,8 +22,8 @@ export interface GameDef<G extends GameTypes, V, S extends SeatId = SeatId> {
   readonly view: (state: G['state'], seat: S) => V;
   /** Answers the settings give without asking (prompt-host `autoAnswer`), or null to ask. Default: always ask. */
   readonly forced?: Forced<G['prompt']>;
-  /** The opponent: picks for its open prompt from its own view only. */
-  readonly opponent?: (view: V, prompt: G['prompt']) => readonly string[];
+  /** The opponent: picks for its open prompt from its own view only. K271: `rng` is keyed `<options.seed>|opponent|<prompt id>`, as sim-pool's for driver `opponent`. */
+  readonly opponent?: (view: V, prompt: G['prompt'], rng: DriverRng) => readonly string[];
   /** Which events are paced as a step (default all). */
   readonly isStep?: (e: G['event']) => boolean;
   /** The game's log words per event type (table-panels `logLines`). */
@@ -29,6 +32,9 @@ export interface GameDef<G extends GameTypes, V, S extends SeatId = SeatId> {
 }
 
 export const defineGame = <G extends GameTypes, V, S extends SeatId = SeatId>(def: GameDef<G, V, S>): GameDef<G, V, S> => def;
+
+/** K271: a sim-pool `Bot` as `GameDef.opponent`: it gets the view and `legalAnswers(prompt, rng)`, as in the sim. */
+export const botOpponent = <V, P extends KernelPrompt>(bot: Bot<V>) => (view: V, prompt: P, rng: DriverRng): readonly string[] => bot.choose(view, legalAnswers(prompt, rng), rng).picks;
 
 export const answerOf = (promptId: number, picks: readonly string[]): AnswerAction => ({ kind: 'answer', promptId, picks: [...picks] });
 
@@ -87,14 +93,14 @@ export function createGameStore<G extends GameTypes, V, S extends SeatId>(def: G
   let snap: GameSnap<G, V>;
 
   // the opponent's prompts and the player's forced ones, each joined to the top step, until the player must answer
-  function settle(h: StepHistory<G>, evs: readonly G['event'][]): { h: StepHistory<G>; evs: G['event'][]; error: string | null } {
+  function settle(h: StepHistory<G>, evs: readonly G['event'][], options: G['options']): { h: StepHistory<G>; evs: G['event'][]; error: string | null } {
     const out = [...evs];
     for (let i = 0; i < 1000; i += 1) {
       const p = h.state.prompt as G['prompt'] | null;
       if (p === null) break;
       const theirs = p.seat !== undefined && seatKey(p.seat) !== seatKey(me());
       if (theirs && def.opponent !== undefined) {
-        const r = extendStep(def.rules, h, answerOf(p.id, def.opponent(def.view(h.state, p.seat as S), p)), def.content);
+        const r = extendStep(def.rules, h, answerOf(p.id, def.opponent(def.view(h.state, p.seat as S), p, new DriverRng(`${String((options as { seed?: string }).seed ?? '')}|opponent|${String(p.id)}`))), def.content);
         if (!r.ok) return { h, evs: out, error: r.error };
         h = r.history;
         out.push(...r.events);
@@ -123,7 +129,7 @@ export function createGameStore<G extends GameTypes, V, S extends SeatId>(def: G
   };
   function fresh(seed: string): void {
     const { options, rules } = def.start(seed);
-    const s = settle(newSteps<G>(createGame(def.rules, options, rules, def.content).state), []);
+    const s = settle(newSteps<G>(createGame(def.rules, options, rules, def.content).state), [], options);
     set(make(s.h, noSteps(), options, rules, s.error));
   }
   const mode = (): UndoMode => (typeof o.undo === 'function' ? o.undo() : (o.undo ?? 'safe'));
@@ -145,7 +151,7 @@ export function createGameStore<G extends GameTypes, V, S extends SeatId>(def: G
         set({ ...snap, error: r.error });
         return false;
       }
-      const s = r.capped ? { h: r.history, evs: [...r.events], error: r.error } : settle(r.history, r.events);
+      const s = r.capped ? { h: r.history, evs: [...r.events], error: r.error } : settle(r.history, r.events, snap.options);
       set(make(s.h, pushSteps(snap.steps, snap.view, s.evs, isStep, o.instant?.() ?? false), snap.options, snap.rules, s.error));
       autosave();
       return true;
@@ -172,7 +178,7 @@ export function createGameStore<G extends GameTypes, V, S extends SeatId>(def: G
         return a.kind === 'answer' && p !== null && (p.seat === undefined || seatKey(p.seat) === seatKey(me())) && forced(p) === null;
       });
       if (!r.ok) return r.error;
-      const s = settle({ ...r.history, undoUsed: m.undoUsed }, []);
+      const s = settle({ ...r.history, undoUsed: m.undoUsed }, [], m.options);
       set(make(s.h, noSteps(), m.options, m.rules, s.error));
       return null;
     },

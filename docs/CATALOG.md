@@ -468,7 +468,7 @@ One game store and one game object (K234): `defineGame` is what the game writes 
 
 - **Use it when:** Every game with a screen: one store over the game's one `defineGame` object (rules, content, seats, start, view, forced, opponent, words): an answer, the forced answers and the opponent's turn after it are one undo step and one paced step; step undo and redo, autosave, load with the undo steps rebuilt; `sim.ts` makes the same object sim-pool's game module, the opponent driver and replay-cli's engine. Recipe: docs/recipes/game-store.md.
 - **Not for:** A per-action undo (engine-core undo.ts); hot-seat play with no opponent (prompt-host answerWithForced with seat 'all' in the game's own store).
-- **Key exports:** `defineGame`, `answerOf`, `createGameStore`, `SeatId`, `GameDef`, `GameSnap`, `StoreOptions`, `GameStore`
+- **Key exports:** `defineGame`, `botOpponent`, `answerOf`, `createGameStore`, `SeatId`, `GameDef`, `GameSnap`, `StoreOptions`, `GameStore`
 - **Needs:** [`engine-core`](#engine-core), [`prompt-host`](#prompt-host), [`paced-view`](#paced-view), [`sim-pool`](#sim-pool), [`replay-cli`](#replay-cli)
 - **Came from:** imperium
 - **Docs:** [README](../components/game-store/README.md)
@@ -567,7 +567,7 @@ A rule-based opponent (K103, K115). Pure data and functions; the engine never im
 
 - **Use it when:** A rule-based AI opponent: advice, profiles and memory as data through a fixed pick pipeline, plus decision records.
 - **Not for:** Trained play (learned-opponent) or tuning weights (sim-pool tune).
-- **Key exports:** `redact`, `viewLeaks`, `REASONS`, `adviceProblems`, `discardOrder`, `PIPELINE`, `loadProfile`, `newMemory`, `remember`, `recalls`, `forget`, `forgetTurn`, `setPlan`, `evaluate`, and 32 more
+- **Key exports:** `redact`, `viewLeaks`, `REASONS`, `adviceProblems`, `discardOrder`, `PIPELINE`, `loadProfile`, `newMemory`, `remember`, `recalls`, `forget`, `forgetTurn`, `setPlan`, `evaluate`, and 33 more
 - **Needs:** [`sim-pool`](#sim-pool)
 - **Came from:** chiriboga, Forge (GPL-3.0, ideas only); boardgame.io, XMage (MIT, ideas only, no code ported)
 - **Docs:** [README](../components/opponent/README.md)
@@ -809,7 +809,7 @@ Plays N whole games of any `GameRules<G>` with a driver, in this thread or on wo
 
 - **Use it when:** Playing many whole games with drivers on worker threads, fuzzing, sanity bands, sweeps, the K200 weight tuner and paired validation.
 - **Not for:** A driver's strategy (the game or opponent supplies it).
-- **Key exports:** `DriverRng`, `ANSWER_CAP`, `CRASH_HASH`, `breakAt`, `bySeat`, `crashRecord`, `legalAnswers`, `playOne`, `randomDriver`, `replayStep`, `runGames`, `runInThread`, `findingOf`, `formatFuzz`, and 52 more
+- **Key exports:** `DriverRng`, `ANSWER_CAP`, `CRASH_HASH`, `breakAt`, `bySeat`, `crashRecord`, `legalAnswers`, `playOne`, `randomDriver`, `botDriver`, `replayStep`, `runGames`, `runInThread`, `findingOf`, and 54 more
 - **Needs:** [`engine-core`](#engine-core)
 - **Came from:** warps
 - **Docs:** [README](../components/sim-pool/README.md)

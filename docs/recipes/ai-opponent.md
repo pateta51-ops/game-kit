@@ -21,6 +21,9 @@ Always start with `opponent`. Move to `learned-opponent` only when validated str
 ## The seat
 A prompt carries `seat`; a driver answers only prompts of its own seat, from `view(state, seat)`; `sim-pool` and `opponent` key drivers `bySeat`. In the live game the store answers that seat, paced and shown to the player: [game-store.md](game-store.md).
 
+## One bot for the store and the sim (K271)
+Write the bot once as a sim-pool `Bot<V>`: `choose(view, answers, rng)` gets the seat's view (the game's `view`/`redact`, never the state), the legal answers and a `DriverRng`, and returns one answer (sync: the store and the pool are sync). The rule-based opponent becomes one with `opponentBot(opponent, { candidates, timing? })`. Plug it into the live store with `defineGame({ ..., opponent: botOpponent(bot) })` and into the sim with `simGameOf(def, { drivers: { opponent: botDriverOf(def, bot) } })`: both key the rng `<seed>|opponent|<prompt id>`, so one seed gives the same answers in both (proof: `store.test.ts`, K271).
+
 ## Tuning with K200
 `tune({ space, setups, play | batch: poolBatch(...), out, tag, version })` evolves weights over the same seeds per setup; `<out>/best.json` is the result. A generation's best is optimistic, so always `validate({ candidate, baseline, setups, games, seed })` on fresh seeds (training seeds are refused). Use 3,000+ games per setup at low win rates. Check a claimed correlation by intervention (change a weight, validate).
 

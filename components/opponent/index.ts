@@ -1,5 +1,6 @@
 // A rule-based opponent (K103, K115). Ideas from chiriboga (GPL-3.0), Forge (GPL-3.0), boardgame.io (MIT) and XMage (MIT); written new.
 // A log part: a game-log `ref`, written out so this component does not need game-log.
+import type { Bot } from '../sim-pool/bot.ts';
 
 /** The random numbers a decision may draw (sim-pool's `DriverRng` fits); never the game's `state.rng`. */
 export interface Rand {
@@ -460,4 +461,13 @@ export function opponentDriver<St, A, V, P extends Profile>(
     reasons: () => (last ? decisionLines(last) : []),
     last: () => last,
   };
+}
+
+/** K271: the opponent as a sim-pool `Bot` (store: game-store `botOpponent`; sim: `botDriver`/`botDriverOf`); it gets the redacted view and the answers only. */
+export function opponentBot<A, V, P extends Profile>(
+  o: Opponent<V, P>,
+  game: { candidates(view: Redacted<V>, answers: readonly A[]): readonly Candidate[]; timing?(view: Redacted<V>): string },
+  keep?: (r: DecisionRecord) => void,
+): Bot<Redacted<V>, A> & { last(): DecisionRecord | undefined } {
+  return opponentDriver<Redacted<V>, A, V, P>(o, { ...game, view: (v) => v }, keep);
 }
