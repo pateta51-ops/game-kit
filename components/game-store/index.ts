@@ -2,7 +2,7 @@
 // autosave, the opponent seat on its own view), and one `defineGame` object the store, sim-pool, replay-cli and the
 // opponent read. Shape from Imperium src/ui/store/gameStore.ts + history.ts (rebuild with answeredBySettings),
 // Unstoppable's store + undo.ts and EBR store.ts; written new.
-import { canUndoStep, createGame, extendStep, newSteps, redoStep, replaySteps, restoreSave, seatKey, undoStep, type AnswerAction, type GameRules, type GameTypes, type History, type KernelPrompt, type SaveFile, type SaveFormat, type StepHistory, type UndoMode } from '../engine-core/index.ts';
+import { addStep, canUndoStep, createGame, extendStep, newSteps, redoStep, replaySteps, restoreSave, seatKey, undoStep, type AnswerAction, type DebugAction, type GameRules, type GameTypes, type History, type KernelPrompt, type SaveFile, type SaveFormat, type StepHistory, type UndoMode } from '../engine-core/index.ts';
 import { answerWithForced, sendForced, type Forced } from '../prompt-host/index.ts';
 import { advance, noSteps, pushSteps, skip, type Steps } from '../paced-view/index.ts';
 import { legalAnswers } from '../sim-pool/play.ts';
@@ -73,6 +73,8 @@ export interface GameStore<G extends GameTypes, V> {
   readonly fresh: (seed: string) => void;
   /** The player's answer; a stale `promptId` (not the open prompt) is dropped. False when dropped or refused. */
   readonly answer: (picks: readonly string[], promptId: number) => boolean;
+  /** K302: an engine-core debug edit (`GameRules.debug`): its own undo step, recorded and saved like an answer, then settled, paced and autosaved. The refusal words, or undefined when applied (debug-console's `send`). */
+  readonly debug: (action: DebugAction) => string | undefined;
   readonly undo: () => boolean;
   readonly redo: () => boolean;
   readonly canUndo: () => { readonly ok: true; readonly peek: boolean } | { readonly ok: false; readonly reason: string };
@@ -159,6 +161,17 @@ export function createGameStore<G extends GameTypes, V, S extends SeatId>(def: G
       autosave();
       return true;
     },
+    debug(action) {
+      const r = addStep(def.rules, snap.history, action as G['action'], def.content);
+      if (!r.ok) {
+        set({ ...snap, error: r.error });
+        return r.error ?? 'refused';
+      }
+      const s = settle(r.history, r.events, snap.options);
+      set(make(s.h, pushSteps(snap.steps, snap.view, s.evs, isStep, o.instant?.() ?? false), snap.options, snap.rules, s.error));
+      autosave();
+      return undefined;
+    },
     undo() {
       const r = undoStep(def.rules, snap.history, mode(), def.content, undoOpts);
       set(r.ok ? make(r.history, noSteps(), snap.options, snap.rules, null) : { ...snap, error: r.error });
@@ -178,7 +191,7 @@ export function createGameStore<G extends GameTypes, V, S extends SeatId>(def: G
       const m = back.save;
       const r = replaySteps(def.rules, m.options, m.rules, m.actions, def.content, (state, a) => {
         const p = state.prompt as G['prompt'] | null;
-        return a.kind === 'answer' && p !== null && (p.seat === undefined || seatKey(p.seat) === seatKey(me())) && forced(p) === null;
+        return (a as { kind: string }).kind === 'debug' || (a.kind === 'answer' && p !== null && (p.seat === undefined || seatKey(p.seat) === seatKey(me())) && forced(p) === null);
       });
       if (!r.ok) return r.error;
       const s = settle({ ...r.history, undoUsed: m.undoUsed }, [], m.options);

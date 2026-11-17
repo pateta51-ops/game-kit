@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { createSave, draftOf, exportSave, type SaveFile, hashState, hashValue, seedRng, type AnswerAction, type Ctx, type Draft, type GameRules, type History, type KernelPrompt, type KernelState } from '../engine-core/index.ts';
+import { createSave, draftOf, exportSave, type SaveFile, hashState, hashValue, seedRng, type AnswerAction, type DebugAction, type Ctx, type Draft, type GameRules, type History, type KernelPrompt, type KernelState } from '../engine-core/index.ts';
 import { autoAnswer } from '../prompt-host/index.ts';
 import { DriverRng, legalAnswers, playOne, type Bot } from '../sim-pool/index.ts';
 import { botOpponent, createGameStore, defineGame } from './index.ts';
@@ -160,5 +160,33 @@ describe('game-store (K234)', () => {
     const endless = { ...def, content: { target: 1e9 }, forced: (p: G['prompt']) => [p.options[0]?.id ?? ''], opponent: (_v: unknown, p: G['prompt']) => [p.options[0]?.id ?? ''] };
     expect(createGameStore({ rules: def.rules, seats: def.seats, start: def.start, view: def.view, content: endless.content, forced: endless.forced }, { seat: 'all' as Seat }).get().error).toMatch(/did not stop after 200/);
     expect(createGameStore(endless, { seat: 'a' }).get().error).toMatch(/1000 rounds/);
+  });
+
+  it('K302: a debug edit through the store changes state, is its own undo step, survives a save/load round-trip, and is refused when the game has no debug verbs', async () => {
+    type D = Omit<G, 'action'> & { readonly action: AnswerAction | DebugAction };
+    const dbg = defineGame<D, ReturnType<typeof def.view>, Seat>({ ...def, rules: { ...RULES, debug: {} } });
+    const saved: History<D>[] = [];
+    const saves = { writeAutosave: (h: History<never>) => Promise.resolve(saved.push(h as unknown as History<D>)) };
+    const store = createGameStore(dbg, { seat: 'a', seed: 'd', saves, undo: 'free' });
+    store.answer(['1'], store.get().state.prompt?.id ?? 0);
+    const before = store.get().state;
+    expect(store.debug({ kind: 'debug', verb: 'set', args: { path: ['score', 'a'], value: 5 } })).toBeUndefined();
+    expect(store.get().state.score).toEqual({ a: 5, b: 1 });
+    expect(store.get().state.prompt).toEqual(before.prompt);
+    expect(store.get().history.steps.length).toBe(2);
+    await store.autosaved();
+    expect(saved.at(-1)?.actions.at(-1)).toEqual({ kind: 'debug', verb: 'set', args: { path: ['score', 'a'], value: 5 } });
+    expect(store.debug({ kind: 'debug', verb: 'set', args: { path: ['turn'], value: 1 } })).toMatch(/not a number/);
+    expect(store.get().state.score).toEqual({ a: 5, b: 1 });
+    const h = store.saved();
+    const back = createGameStore(dbg, { seat: 'a', undo: 'free' });
+    expect(back.load(createSave(dbg.rules, { options: h.options, rules: h.rules, actions: h.actions, undoUsed: false, savedAt: '' }, {}))).toBeNull();
+    expect(hashState(back.get().state)).toBe(hashState(store.get().state));
+    expect(back.get().history.steps.length).toBe(2);
+    expect(store.undo()).toBe(true);
+    expect(back.undo()).toBe(true);
+    expect(store.get().state).toEqual(before);
+    expect(hashState(back.get().state)).toBe(hashState(before));
+    expect(createGameStore(def as unknown as typeof dbg, { seat: 'a', seed: 'd' }).debug({ kind: 'debug', verb: 'close' })).toMatch(/DEBUG/);
   });
 });
