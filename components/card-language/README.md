@@ -11,6 +11,7 @@ The card-language shell (K206): card effects as data, one typed verb table where
 - Validate: `validateStep(VERBS, step)`, `validateEffect(VERBS, steps)`: card-harness `strictProblems` over `grammarOf(VERBS)` (unknown verb, missing, extra or misplaced key, nested steps), then the field checks. Field checks: `posInt`, `int`, `str`, `bool`, `oneOf`, `listOf`, `optional(f)`, `effectOf(() => VERBS)` for a nested effect.
 - Test: `expectVerbs(VERBS, examples?)` throws when a verb lacks a handler, a text generator or an example, an example is invalid, or its text is empty or holds a rule id (plain-text `ruleIdFilter`: pass the game's, default `RULE_IDS`); `verbProblems` returns the list. Steps are typed to the table (`StepOf<T>`).
 - Start a game: copy `template/verbs.ts` and `template/verbs.test.ts`. Printed text check: card-harness `describeCheck`. Pattern notes: `docs/patterns/card-language.md`.
+- Triggers on cards (K267, `when.ts`): `when: [{ on, if?, then, optional?, once?, order? }]` on card data; `cardTriggers(cfg)` compiles a pool into engine-core's `triggersFor`, `invalid` (source no longer active: default zone `play` / `play:<seat>`) and `resolveTrigger` (pushes `then` as verb tasks; `optional` runs as the pack's `may`). After-window only (occurrences that happened), ordered as engine-core's triggers. `validateWhen(VERBS, when, { kinds, tests })` checks keys, the event kind and the steps. `if` is checked when triggers are collected; only "source still active" is rechecked at resolve. `cardTriggers` throws at build for an `if` not in `tests` or an `optional` entry without `table` holding `may`.
 
 ## Use it in 10 lines
 
@@ -24,4 +25,12 @@ const VERBS: VerbTable<GameTypes, Step> = {
 }
 expectVerbs(VERBS, [{ op: 'gain', amount: 1 }]) // throws when a verb has no handler or text
 console.log(validateEffect(VERBS, [{ op: 'gain', amount: 0 }]), describeEffect(VERBS, [{ op: 'gain', amount: 2 }]))
+import { timingHandlers } from '../kit/engine-core/index'
+import { cardPack, type PackStep } from '../kit/card-language/pack'
+import { cardTriggers, validateWhen, type WhenCard } from '../kit/card-language/when'
+
+const pack = cardPack<GameTypes>()
+const POOL: Record<string, WhenCard<PackStep>> = { beta: { when: [{ on: 'discard', then: [{ op: 'gainResource', res: 'gold', amount: 1 }] }] } }
+console.log(validateWhen(pack.verbs, POOL.beta?.when, { kinds: ['discard'] })) // [] (K267)
+timingHandlers<GameTypes>({ happen: (ctx, o) => void pack.happen(ctx, o), ...cardTriggers<GameTypes>({ pool: POOL, player: () => 'a' }) })
 ```
