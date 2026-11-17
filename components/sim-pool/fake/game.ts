@@ -1,6 +1,9 @@
 // The engine-core fake counter as a simulation game. Seed `boom` throws in setup; seed `die` kills its worker thread.
 import { CONTENT, COUNTER, RULES, type Counter } from '../../engine-core/fake/counter.ts';
-import { randomDriver, type SimGame } from '../index.ts';
+import type { AnswerAction } from '../../engine-core/index.ts';
+import { botDriver, randomDriver, type Driver, type SimGame } from '../index.ts';
+
+const pick = (answers: readonly AnswerAction[], id: string): AnswerAction => answers.find((a) => a.picks[0] === id) ?? (answers[0] as AnswerAction);
 
 export const simGame: SimGame<Counter, { adds: number }> = {
   rules: COUNTER,
@@ -11,7 +14,20 @@ export const simGame: SimGame<Counter, { adds: number }> = {
     if (spec.seed === 'die') process.exit(3);
     return { options: { seed: spec.seed }, rules: { target: Number(spec.settings?.target ?? RULES.target) } };
   },
-  driver: (name) => (name === 'adder' ? randomDriver<Counter>((a) => (a.picks[0] === 'add' ? 3 : 1)) : randomDriver<Counter>()),
+  // K274: `peek` reads the hidden pile (a cheat); `honest` is a Bot over the view alone; `stateful` says it is not pure.
+  driver: (name) =>
+    name === 'peek'
+      ? ({ name, reasons: () => [], choose: (s, answers) => pick(answers, (s.pile[0] ?? 0) > 3 ? 'draw' : 'add') } satisfies Driver<Counter>)
+      : name === 'honest'
+        ? botDriver<Counter, { counter: number }>({ name, choose: (v, answers) => pick(answers, v.counter < 5 ? 'add' : 'draw') }, (s) => ({ counter: s.counter }))
+        : name === 'peekstateful'
+          ? ({ name, stateful: true, reasons: () => [], choose: (s, answers) => pick(answers, (s.pile[0] ?? 0) > 3 ? 'draw' : 'add') } satisfies Driver<Counter>)
+          : name === 'adder' ? randomDriver<Counter>((a) => (a.picks[0] === 'add' ? 3 : 1)) : randomDriver<Counter>(),
+  reshuffleHidden(s, _seat, rng) {
+    const pile = [...s.pile];
+    for (let i = pile.length - 1; i > 0; i -= 1) { const j = rng.int(i + 1); [pile[i], pile[j]] = [pile[j] as number, pile[i] as number]; }
+    return { ...s, pile };
+  },
   summary: (s) => ({ adds: s.marks.added.length }),
   // K101: seed `view` has a view that throws from turn 2; seed `cyc` one that cannot be serialized.
   view(s, _c) {

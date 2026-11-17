@@ -54,3 +54,22 @@ const simGame: SimGame<Counter> = {
 const record = playOne(simGame, CONTENT, { index: 0, seed: 's1', driver: 'random' })
 console.log(record.result, record.actions)
 ```
+
+## Hidden-shuffle check (K274, G06/T9)
+
+Hidden information is otherwise only a convention. A game gives `reshuffleHidden(state, seat, rng, content)` on `SimGame`: a copy of the state with everything hidden from `seat` randomised but consistent (opponent hand and deck order shuffled together). With `hidden: true` (or a share 0..1; also `fuzz({ hidden })` and the `hidden` request field) the pool asks the deciding driver twice before each checked decision, on the real state and on the reshuffled one, with the same fresh `DriverRng` and the same answers; a different answer fails the game as `hidden-info: at step N seat S ...` and `fuzz` reports a finding of kind `hidden-info` (seed, step, driver). An honest `Bot` sees only the view, so it always passes. The check never touches the game's rng or actions (records are identical on and off) and runs before the real `choose`. It needs a pure `choose`: a driver with `stateful: true` is skipped.
+
+```ts
+import { playOne, randomDriver, type SimGame } from '../kit/sim-pool/index'
+import { CONTENT, COUNTER, RULES, type Counter } from '../kit/engine-core/fake/counter'
+
+const game: SimGame<Counter> = {
+  rules: COUNTER,
+  content: () => CONTENT,
+  start: (spec) => ({ options: { seed: spec.seed }, rules: RULES }),
+  driver: () => randomDriver<Counter>(),
+  reshuffleHidden: (state) => ({ ...state, pile: [...state.pile].reverse() }),
+}
+const record = playOne(game, CONTENT, { index: 0, seed: 's1', driver: 'random' }, undefined, { hidden: true })
+console.log(record.error ?? 'no hidden-info finding')
+```

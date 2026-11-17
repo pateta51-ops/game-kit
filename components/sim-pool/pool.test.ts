@@ -5,7 +5,7 @@ import { afterAll, describe, expect, it } from 'vitest';
 import { CONTENT } from '../engine-core/fake/counter.ts';
 import type { AnswerAction, GameTypes } from '../engine-core/index.ts';
 import { simGame } from './fake/game.ts';
-import { bySeat, DriverRng, legalAnswers, playOne, replayStep, runGames, runInThread, report, formatReport, runResumable, type Driver, type GameSpec, type SimGame, type SimRecord } from './index.ts';
+import { bySeat, findingOf, formatFuzz, fuzz, DriverRng, legalAnswers, playOne, replayStep, runGames, runInThread, report, formatReport, runResumable, type Driver, type GameSpec, type SimGame, type SimRecord } from './index.ts';
 const content = CONTENT;
 
 const module = new URL('./fake/game.ts', import.meta.url).href;
@@ -209,5 +209,40 @@ describe('K101 view on every step, hasten, one-step replay', () => {
     expect(ok.record.actions).toBe(3);
     expect(ok.viewBytes).toBeGreaterThan(0);
     expect(ok.slowest).toHaveLength(3);
+  });
+});
+
+describe('K274 hidden-shuffle check (G06/T9)', () => {
+  const run = (driver: string, seed: string, hidden?: boolean | number): SimRecord => playOne(simGame as unknown as SimGame<GameTypes>, content, { index: 0, seed, driver }, undefined, { hidden });
+  const seeds = Array.from({ length: 40 }, (_, i) => `h-${String(i)}`);
+
+  it('reports a bot that reads the hidden pile, with seed and step', async () => {
+    const bad = seeds.map((s) => run('peek', s, true)).filter((r) => r.error?.startsWith('hidden-info:'));
+    expect(bad.length).toBeGreaterThan(0);
+    const f = findingOf(bad[0] as SimRecord);
+    expect(f?.kind).toBe('hidden-info');
+    expect(f?.seed).toBe(bad[0]?.seed);
+    const fz = await fuzz(module, { games: 20, prefix: 'h', driver: 'peek', hidden: true });
+    expect(fz.findings.length).toBeGreaterThan(0);
+    expect(fz.findings.every((x) => x.kind === 'hidden-info')).toBe(true);
+    expect(formatFuzz(fz).at(-1)).toMatch(/hidden-info \d+$/);
+    expect(seeds.map((s) => run('peek', s, 0.5)).some((r) => r.error?.startsWith('hidden-info:'))).toBe(true);
+  });
+
+  it('passes an honest bot over many seeds, skips a stateful driver, and leaves the records alone', () => {
+    for (const s of seeds) {
+      const on = run('honest', s, true);
+      expect(on.error).toBeUndefined();
+      expect(on).toEqual(run('honest', s));
+      expect(run('random', s, true)).toEqual(run('random', s));
+      expect(run('peek', s)).toEqual(run('peek', s, false));
+      expect(run('peekstateful', s, true).error).toBeUndefined();
+    }
+  });
+  it('fails the game when `hidden` is set but the game has no reshuffleHidden', () => {
+    const bare = { ...simGame, reshuffleHidden: undefined };
+    const r = playOne(bare as unknown as SimGame<GameTypes>, content, { index: 0, seed: 'h-0', driver: 'honest' }, undefined, { hidden: true });
+    expect(r.error).toMatch(/^hidden: the game has no reshuffleHidden/);
+    expect(r.result).toBeNull();
   });
 });

@@ -3,7 +3,7 @@
 import type { GameSpec, SimRecord } from './play.ts';
 import { runGames } from './pool.ts';
 
-export type FindingKind = 'violation' | 'runaway' | 'endless' | 'exception';
+export type FindingKind = 'violation' | 'runaway' | 'endless' | 'exception' | 'hidden-info';
 
 export interface Finding {
   readonly kind: FindingKind;
@@ -29,6 +29,8 @@ export interface FuzzOptions {
   readonly view?: boolean | undefined;
   /** K101: apply the game's `hasten` action after every N actions. */
   readonly hasten?: number | undefined;
+  /** K274: the hidden-shuffle check (see `PlayOptions.hidden`). */
+  readonly hidden?: boolean | number | undefined;
   /** The game's settings for a seed, from the seed alone (so a seed replays). */
   readonly settings?: ((seed: string, driver: string) => NonNullable<GameSpec['settings']>) | undefined;
 }
@@ -43,6 +45,7 @@ export function findingOf(r: SimRecord): Finding | undefined {
   if (r.violations?.length) kind = 'violation';
   else if (r.error === undefined) return undefined;
   else if (r.errorName === 'EngineBugError' && r.error.startsWith('runaway task loop')) kind = 'runaway';
+  else if (r.error.startsWith('hidden-info:')) kind = 'hidden-info';
   else if (/^no result after \d+ actions$/.test(r.error)) kind = 'endless';
   else kind = 'exception';
   const messages = [...(r.violations ?? []).map((v) => `${v.id}: ${v.message}`), ...(r.error === undefined ? [] : [r.error])];
@@ -54,7 +57,7 @@ export async function fuzz(module: string, o: FuzzOptions = {}): Promise<FuzzRun
   const driver = o.driver ?? 'random';
   const seeds = o.seed !== undefined ? [o.seed] : Array.from({ length: o.games ?? 500 }, (_, i) => `${o.prefix ?? 'fuzz'}-${String(i)}`);
   const specs = seeds.map((seed, index): GameSpec => ({ index, seed, driver, ...(o.settings ? { settings: o.settings(seed, driver) } : {}) }));
-  const records = await runGames({ module, specs, invariants: true, until: o.until, view: o.view, hasten: o.hasten, ...(o.worker !== undefined ? { worker: o.worker } : {}) }, o.workers ?? 1);
+  const records = await runGames({ module, specs, invariants: true, until: o.until, view: o.view, hasten: o.hasten, hidden: o.hidden, ...(o.worker !== undefined ? { worker: o.worker } : {}) }, o.workers ?? 1);
   return { records, findings: records.flatMap((r) => findingOf(r) ?? []) };
 }
 
@@ -68,7 +71,7 @@ export function formatFuzz(run: FuzzRun, shown = 20): string[] {
   const n = (k: FindingKind): string => String(run.findings.filter((f) => f.kind === k).length);
   lines.push(
     `${String(run.records.length)} game(s), ${String(run.records.reduce((s, r) => s + r.actions, 0))} actions checked: exceptions ${n('exception')}, ` +
-      `invariant violations ${n('violation')}, runaway guards ${n('runaway')}, never ended ${n('endless')}`,
+      `invariant violations ${n('violation')}, runaway guards ${n('runaway')}, never ended ${n('endless')}${run.findings.some((f) => f.kind === 'hidden-info') ? `, hidden-info ${n('hidden-info')}` : ''}`,
   );
   return lines;
 }

@@ -23,6 +23,8 @@ export interface Driver<G extends GameTypes = GameTypes> {
   choose(state: G['state'], answers: readonly G['action'][], rng: DriverRng): G['action'];
   /** Why the last `choose` answered as it did; empty before the first choice. */
   reasons(): string[];
+  /** K274: a driver that keeps state between `choose` calls says so; the hidden-shuffle check skips it (it needs a pure `choose`). */
+  readonly stateful?: boolean;
 }
 
 /** One game of a run. `settings` are the game's own (difficulty, variant...). */
@@ -62,6 +64,8 @@ export interface SimGame<G extends GameTypes, S = unknown, O = unknown> {
   leakKeys?(state: G['state'], content: G['content']): readonly string[];
   /** K101: the action that moves the game on fast (defeat the boss, fill a track) at the open prompt; with `hasten: N` it is applied instead of the driver's answer after every N actions, so late stages are reached. Return undefined to let the driver answer. */
   hasten?(state: G['state'], content: G['content']): G['action'] | undefined;
+  /** K274 (G06/T9): with `hidden` set, a copy of `state` in which everything hidden from `seat` is randomised but consistent (opponent hand and deck order shuffled together); draw only from `rng`. The driver must answer the same on it, else the game fails as `hidden-info: ...`. */
+  reshuffleHidden?(state: G['state'], seat: KernelPrompt['seat'], rng: DriverRng, content: G['content']): G['state'];
 }
 
 function leaks(view: unknown, secrets: readonly string[], keys: readonly string[]): string[] {
@@ -82,6 +86,8 @@ function leaks(view: unknown, secrets: readonly string[], keys: readonly string[
 export interface PlayOptions {
   readonly view?: boolean | undefined;
   readonly hasten?: number | undefined;
+  /** K274: ask the driver again on `reshuffleHidden`'s state at every decision (`true`) or at this share of them (0..1; chosen from the seed, never from the game's rng). A different answer fails the game as `hidden-info`. Off by default. */
+  readonly hidden?: boolean | number | undefined;
   /** Called after each step (also the one that threw) with its milliseconds and the largest view so far in JSON characters. */
   readonly onStep?: ((step: number, ms: StepMs, viewBytes?: number) => void) | undefined;
 }
@@ -213,6 +219,7 @@ export function playOne<G extends GameTypes, S, O = unknown>(game: SimGame<G, S,
     }
   };
   try {
+    if (opts.hidden && !game.reshuffleHidden) throw new Error('hidden: the game has no reshuffleHidden, so the hidden-shuffle check cannot run');
     const start = game.start(spec, content);
     seen = game.observation?.(spec, content);
     const first = createGame(game.rules, start.options, start.rules, content);
@@ -236,6 +243,13 @@ export function playOne<G extends GameTypes, S, O = unknown>(game: SimGame<G, S,
       game.onPrompt?.(seen as O, s, answers);
       ms.answers = performance.now() - t;
       t = performance.now();
+      if (opts.hidden && game.reshuffleHidden && !driver.stateful && (opts.hidden === true || new DriverRng(`${spec.seed}|${spec.driver}|hidden-sample|${String(actions.length)}`).chance(opts.hidden))) {
+        const key = `${spec.seed}|${spec.driver}|hidden|${String(p.id)}`;
+        const other = game.reshuffleHidden(s, p.seat, new DriverRng(`${key}|shuffle`), content);
+        const x = driver.choose(s, answers, new DriverRng(key));
+        const y = driver.choose(other, answers, new DriverRng(key));
+        if (hashValue(x) !== hashValue(y)) throw new Error(`hidden-info: at step ${String(actions.length)} seat ${String(p.seat)} prompt ${String(p.id)} the driver answered differently when only hidden state changed`);
+      }
       const fast = opts.hasten && actions.length > 0 && actions.length % opts.hasten === 0 ? game.hasten?.(s, content) : undefined;
       const a = fast ?? driver.choose(s, answers, rng);
       ms.choose = performance.now() - t;

@@ -24,6 +24,10 @@ A prompt carries `seat`; a driver answers only prompts of its own seat, from `vi
 ## One bot for the store and the sim (K271)
 Write the bot once as a sim-pool `Bot<V>`: `choose(view, answers, rng)` gets the seat's view (the game's `view`/`redact`, never the state), the legal answers and a `DriverRng`, and returns one answer (sync: the store and the pool are sync). The rule-based opponent becomes one with `opponentBot(opponent, { candidates, timing? })`. Plug it into the live store with `defineGame({ ..., opponent: botOpponent(bot) })` and into the sim with `simGameOf(def, { drivers: { opponent: botDriverOf(def, bot) } })`: both key the rng `<seed>|opponent|<prompt id>`, so one seed gives the same answers in both (proof: `store.test.ts`, K271).
 
+## Catch a bot that reads hidden state (K274)
+
+Give the game's `SimGame` a `reshuffleHidden(state, seat, rng, content)` (the seat's unseen cards and deck order shuffled together, rest unchanged) and run `fuzz(module, { hidden: true })` (or `hidden: 0.2` for a share of decisions). The pool asks the driver again on the reshuffled state; a different answer is a `hidden-info` finding with seed and step. Drivers must have a pure `choose` (or say `stateful: true` and are skipped). Details: sim-pool README.
+
 ## Tuning with K200
 `tune({ space, setups, play | batch: poolBatch(...), out, tag, version })` evolves weights over the same seeds per setup; `<out>/best.json` is the result. A generation's best is optimistic, so always `validate({ candidate, baseline, setups, games, seed })` on fresh seeds (training seeds are refused). Use 3,000+ games per setup at low win rates. Check a claimed correlation by intervention (change a weight, validate).
 
