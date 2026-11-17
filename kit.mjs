@@ -65,7 +65,32 @@ if (cmd === 'pull') {
   const OLD = 'kit.old'
   fs.rmSync(OLD, { recursive: true, force: true })
   const had = fs.existsSync('kit')
-  try { if (had) fs.renameSync('kit', OLD); if (process.env.KIT_TEST_FAULT === 'swap') throw new Error('forced'); fs.renameSync(NEW, 'kit') } catch (e) { if (had && fs.existsSync(OLD) && !fs.existsSync('kit')) fs.renameSync(OLD, 'kit'); fail('swap: ' + e.message) }
+  const F = process.env.KIT_TEST_FAULT ?? ''
+  const BUSY = ['EPERM', 'EACCES', 'EBUSY']
+  const rn = (a, b) => {
+    for (let i = 0; ; i++) {
+      try { if (F.includes('rename-eperm') || (F.includes('rename2') && a !== 'kit')) throw Object.assign(new Error('EPERM forced'), { code: 'EPERM' }); return fs.renameSync(a, b) } catch (e) { if (!BUSY.includes(e.code) || F || i >= 9) throw e; Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, 100) }
+    }
+  }
+  const fill = (from, to) => {
+    for (const f of walk(from)) { const r = f.slice(from.length + 1); fs.mkdirSync(dirname(to + '/' + r), { recursive: true }); fs.writeFileSync(to + '/' + r, fs.readFileSync(f)) }
+    for (const f of walk(to)) if (!fs.existsSync(from + '/' + f.slice(to.length + 1))) fs.rmSync(f, { force: true })
+  }
+  try { if (had) rn('kit', OLD); if (F === 'swap') throw new Error('forced'); rn(NEW, 'kit') } catch (e) {
+    if (had && fs.existsSync(OLD) && !fs.existsSync('kit')) { try { rn(OLD, 'kit') } catch { /* held open: the copy swap below rebuilds kit/ from OLD */ } }
+    if (!BUSY.includes(e.code)) fail('swap: ' + e.message)
+    let whole = false, lost = false
+    try {
+      if (had && !fs.existsSync(OLD)) fs.cpSync('kit', OLD, { recursive: true })
+      if (had && !fs.existsSync('kit')) { lost = true; fill(OLD, 'kit') }
+      whole = true
+      if (F.includes('fallback')) throw new Error('forced', { cause: e })
+      fill(NEW, 'kit'); fs.rmSync(NEW, { recursive: true, force: true }); console.log('kit/ replaced by copy (' + e.code + ')')
+    } catch (e2) {
+      try { if (had && lost && !whole) throw 0; if (had) { if (whole) fill(OLD, 'kit'); fs.rmSync(OLD, { recursive: true, force: true }) } else fs.rmSync('kit', { recursive: true, force: true }) } catch { /* kit.old stays as the backup */ }
+      fail('swap: ' + e2.message)
+    }
+  }
   fs.rmSync(OLD, { recursive: true, force: true })
   if (converted) console.log('converted the per-component locks to one tag: ' + ref)
   console.log('pulled ' + ref + ': ' + Object.keys(lock.components).join(', '))
