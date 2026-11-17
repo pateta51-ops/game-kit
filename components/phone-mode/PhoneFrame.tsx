@@ -1,7 +1,7 @@
 // Imperium's phone screen as parts (U11/U12): the frame (top bar, areas, prompt line, tab bar), the tab bar with a lit tab,
 // the prompt line that folds to one line with counts at its right, the menu, the sheet foot (primary action, Cancel).
 // The game supplies every word and every piece of content; the look is the game's (--pm-* variables, data-part hooks).
-import { useEffect, type ReactNode } from 'react';
+import { useEffect, type CSSProperties, type ReactNode } from 'react';
 import './phone-mode.css';
 import './phone-frame.css';
 
@@ -15,7 +15,7 @@ export interface PhoneTab {
 }
 
 /** One screen: top bar, areas (one per tab, each scrolling on its own), the prompt line, the tab bar. Landscape: the tabs a rail on the left, the open prompt a column on the right. */
-export function PhoneFrame({ top, banner, dock, tabs, dockOpen, tab, children, className = '' }: {
+export function PhoneFrame({ top, banner, dock, tabs, dockOpen, tab, children, className = '', testId, style }: {
   top: ReactNode;
   banner?: ReactNode;
   dock: ReactNode;
@@ -24,9 +24,11 @@ export function PhoneFrame({ top, banner, dock, tabs, dockOpen, tab, children, c
   tab: string;
   children: ReactNode;
   className?: string;
+  testId?: string;
+  style?: CSSProperties;
 }) {
   return (
-    <div className={className} data-part="frame" data-tab={tab} data-dock={dockOpen ? 'open' : 'folded'}>
+    <div className={className} style={style} data-testid={testId} data-part="frame" data-tab={tab} data-dock={dockOpen ? 'open' : 'folded'}>
       {top}
       {banner !== undefined && <div data-part="banner">{banner}</div>}
       <div data-part="main">{children}</div>
@@ -123,7 +125,8 @@ export function TopBar({ start, end, label, testId = 'phone-bar' }: { start?: Re
 }
 
 /** The menu layer under the top bar: scrim (tap closes), Escape closes, a press on any button or link inside does it, then folds. Kept in the page while folded (`hidden`). */
-export function PhoneMenu({ open, onClose, label, children, testId = 'phone-menu' }: {
+export function PhoneMenu({ open, onClose, label, children, testId = 'phone-menu', id }: {
+  id?: string;
   open: boolean;
   onClose: () => void;
   label: string;
@@ -141,7 +144,7 @@ export function PhoneMenu({ open, onClose, label, children, testId = 'phone-menu
   return (
     <div data-part="menu-layer" hidden={!open}>
       <div data-part="menu-scrim" aria-hidden="true" onClick={onClose} />
-      <nav data-part="menu" aria-label={label} data-testid={testId} onClick={(e) => { if ((e.target as HTMLElement).closest('button, a')) onClose(); }}>
+      <nav id={id} data-part="menu" aria-label={label} data-testid={testId} onClick={(e) => { if ((e.target as HTMLElement).closest('button, a')) onClose(); }}>
         {children}
       </nav>
     </div>
@@ -152,6 +155,7 @@ export interface SheetAction {
   id: string;
   label: ReactNode;
   primary?: boolean;
+  testId?: string;
   onPress: () => void;
 }
 
@@ -163,7 +167,7 @@ export function SheetActions({ actions, reason, note }: { actions: readonly Shee
       {note !== undefined && <p data-part="sheet-note">{note}</p>}
       <div data-part="sheet-actions">
         {actions.map((a) => (
-          <button key={a.id} type="button" data-part="sheet-action" data-primary={a.primary ? 'true' : undefined} onClick={a.onPress}>
+          <button key={a.id} type="button" data-part="sheet-action" data-testid={a.testId} data-primary={a.primary ? 'true' : undefined} onClick={a.onPress}>
             {a.label}
           </button>
         ))}

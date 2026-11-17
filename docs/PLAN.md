@@ -422,6 +422,7 @@ Tasks T1-T18 of `docs/evaluation/AUDIT-2026-11-16.md` section 13, run in the pha
 | K276 | T13 reference card game: turn-flow, declared trigger, replacement, duration, state check, automa via Bot, campaign step, screens menu and set-up, save mid-prompt (G01) | audit T13 | M | done |
 | K277 | G19 scaffold generated from the new reference game: menu, set-up, settings, saves, recipe gates wired | audit G19 | S | done |
 | K278 | T15 engine-core entry split: kernel, timing, tools entries; index stays the full re-export | audit T15 | S | done |
+| K279 | `phone-mode` Sheet `leaving`/`onLeft` (caller-driven slide-down), `closeButton`; PhoneFrame `testId`/`style`, PhoneMenu `id`, SheetAction `testId` | imperium #142 | S | done |
 
 ## Size
 

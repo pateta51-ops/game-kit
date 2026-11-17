@@ -21,6 +21,9 @@ export function Sheet({
   className = '',
   arriveMs = 0,
   leaveMs = 0,
+  leaving: leavingProp = false,
+  onLeft,
+  closeButton = true,
 }: {
   title: ReactNode;
   onClose: () => void;
@@ -39,21 +42,51 @@ export function Sheet({
   arriveMs?: number;
   /** Imperium's slide-down after a close request (it uses 240); the layer is `inert` meanwhile and `onClose` runs at its end. 0, `slideMs` 0 or reduced motion: closes at once. */
   leaveMs?: number;
+  /** The caller closes it from outside (a store): true plays the same slide-down and `inert`, then calls `onLeft`. Default false: unchanged. */
+  leaving?: boolean;
+  /** Runs at the end of a `leaving` slide (at once with `slideMs` 0, `leaveMs` 0 or reduced motion). */
+  onLeft?: () => void;
+  /** false hides the close button (the scrim, Escape and a swipe still close). */
+  closeButton?: boolean;
 }) {
   const id = useId();
   const layer = useRef<HTMLDivElement>(null);
   const box = useRef<HTMLElement>(null);
   const t0 = useRef(0);
   const drag = useRef<{ y0: number; dy: number } | null>(null);
-  const [leaving, setLeaving] = useState(false);
+  const [own, setLeaving] = useState(false);
+  const leaving = own || leavingProp;
+  const left = useRef(onLeft);
+  useEffect(() => { left.current = onLeft; });
+  useEffect(() => {
+    if (!leavingProp) return;
+    const still = slideMs === 0 || leaveMs === 0 || (typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches);
+    if (still) {
+      left.current?.();
+      return;
+    }
+    const t = setTimeout(() => left.current?.(), leaveMs);
+    return () => clearTimeout(t);
+  }, [leavingProp, slideMs, leaveMs]);
+  const ownTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  const wasLeaving = useRef(false);
+  useEffect(() => {
+    if (wasLeaving.current && !leavingProp) {
+      clearTimeout(ownTimer.current);
+      setLeaving(false);
+    }
+    wasLeaving.current = leavingProp;
+  }, [leavingProp]);
+  useEffect(() => () => clearTimeout(ownTimer.current), []);
   const req = useRef<() => void>(() => undefined);
   useEffect(() => {
     req.current = () => {
       if (leaving) return;
+      if (onLeft) return onClose();
       const still = slideMs === 0 || leaveMs === 0 || (typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches);
       if (still) return onClose();
       setLeaving(true);
-      setTimeout(onClose, leaveMs);
+      ownTimer.current = setTimeout(onClose, leaveMs);
     };
   });
   const request = () => req.current();
@@ -118,9 +151,11 @@ export function Sheet({
           <span className="kit-pm-sheet-title" id={id}>
             {title}
           </span>
-          <button type="button" className="kit-pm-x" aria-label={closeLabel} data-testid={`${testId}-close`} onClick={request}>
-            {closeText}
-          </button>
+          {closeButton && (
+            <button type="button" className="kit-pm-x" aria-label={closeLabel} data-testid={`${testId}-close`} onClick={request}>
+              {closeText}
+            </button>
+          )}
         </header>
         <div className="kit-pm-sheet-body">{children}</div>
         {foot !== undefined && <footer className="kit-pm-sheet-foot">{foot}</footer>}
