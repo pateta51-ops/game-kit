@@ -41,19 +41,29 @@ export function OpponentTurnPanel({ turn, onSkip, hidden = 'Something you cannot
   );
 }
 
-export function GameOver({ result, seatName = (s) => s, breakdown, onRematch, onReview, onHome, labels = {} }: {
-  result: GameResult; seatName?: (s: string) => ReactNode; breakdown?: (seat: string) => ReactNode;
-  onRematch?: () => void; onReview?: () => void; onHome?: () => void; labels?: { tie?: string; winner?: string; rematch?: string; review?: string; home?: string };
-}) {
+type OverActions = { onRematch?: (() => void) | undefined; onReview?: (() => void) | undefined; onHome?: (() => void) | undefined; labels?: { tie?: string; winner?: string; rematch?: string; review?: string; home?: string } };
+
+export function GameOverActions({ onRematch, onReview, onHome, labels = {} }: OverActions) {
+  return (
+    <div data-part="game-over-actions">
+      {onRematch ? <button data-kit type="button" data-action="rematch" onClick={onRematch}>{labels.rematch ?? 'Rematch'}</button> : null}
+      {onReview ? <button data-kit type="button" data-action="review" onClick={onReview}>{labels.review ?? 'Review log'}</button> : null}
+      {onHome ? <button data-kit type="button" data-action="home" onClick={onHome}>{labels.home ?? 'Home'}</button> : null}
+    </div>
+  );
+}
+
+// title replaces the default title; reason shows under it; standings={false} (or none) hides the list; actions={false} leaves the buttons to a <GameOverActions/> placed elsewhere
+export function GameOver({ result, seatName = (s) => s, breakdown, onRematch, onReview, onHome, labels = {}, title, reason, standings = true, actions = true }: {
+  result: Omit<GameResult, 'standings'> & { standings: readonly { seat: string; rank: number; score?: number }[] }; seatName?: (s: string) => ReactNode; breakdown?: (seat: string) => ReactNode;
+  title?: ReactNode; reason?: ReactNode; standings?: boolean; actions?: boolean;
+} & OverActions) {
   return (
     <section data-part="game-over" data-tied={result.tied}>
-      <h2>{result.tied ? (labels.tie ?? 'Tie') : <>{labels.winner ?? 'Winner'}: {seatName(result.winners[0] ?? '')}</>}</h2>
-      <ol>{result.standings.map((s) => <li key={s.seat} data-seat={s.seat} data-rank={s.rank}><span>{seatName(s.seat)}</span> <b>{s.score}</b>{breakdown ? <div data-part="breakdown">{breakdown(s.seat)}</div> : null}</li>)}</ol>
-      <div data-part="game-over-actions">
-        {onRematch ? <button data-kit type="button" data-action="rematch" onClick={onRematch}>{labels.rematch ?? 'Rematch'}</button> : null}
-        {onReview ? <button data-kit type="button" data-action="review" onClick={onReview}>{labels.review ?? 'Review log'}</button> : null}
-        {onHome ? <button data-kit type="button" data-action="home" onClick={onHome}>{labels.home ?? 'Home'}</button> : null}
-      </div>
+      <h2>{title ?? (result.tied ? (labels.tie ?? 'Tie') : <>{labels.winner ?? 'Winner'}: {seatName(result.winners[0] ?? '')}</>)}</h2>
+      {reason != null ? <p data-part="game-over-reason">{reason}</p> : null}
+      {standings && result.standings.length ? <ol>{result.standings.map((s) => <li key={s.seat} data-seat={s.seat} data-rank={s.rank}><span>{seatName(s.seat)}</span> {s.score != null ? <b>{s.score}</b> : null}{breakdown ? <div data-part="breakdown">{breakdown(s.seat)}</div> : null}</li>)}</ol> : null}
+      {actions ? <GameOverActions onRematch={onRematch} onReview={onReview} onHome={onHome} labels={labels} /> : null}
     </section>
   );
 }

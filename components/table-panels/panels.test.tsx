@@ -2,7 +2,7 @@ import { act, fireEvent, render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import { advance, noSteps, pushSteps } from '../paced-view/index.ts';
 import { banner, filterSeat, gameResult, groupByTurn, logLines, opponentTurn, phaseChanged } from './index.ts';
-import { GameOver, LogPanel, OpponentTurnPanel, TurnBanner } from './ui.tsx';
+import { GameOver, GameOverActions, LogPanel, OpponentTurnPanel, TurnBanner } from './ui.tsx';
 
 type Ev = { type: 'hit' | 'noise' | 'move'; seat?: string; turn?: number; n?: number };
 const words = { hit: '{seat} takes {n} damage', move: 'moves' };
@@ -60,6 +60,29 @@ describe('game over', () => {
     expect(screen.getByText('detail b')).toBeTruthy();
     fireEvent.click(screen.getByText('Home'));
     expect(onHome).toHaveBeenCalled();
+  });
+});
+
+describe('game over solo (K301)', () => {
+  const solo = { standings: [], winners: [], tied: false };
+  it('title slot, reason, no standings, detachable actions', () => {
+    const onHome = vi.fn();
+    const { container } = render(<><GameOver result={solo} title={<b>Defeat</b>} reason="The tower fell" actions={false} /><GameOverActions onHome={onHome} /></>);
+    expect(screen.getByText('Defeat')).toBeTruthy();
+    expect(container.querySelector('[data-part="game-over-reason"]')?.textContent).toBe('The tower fell');
+    expect(container.querySelector('ol')).toBeNull();
+    expect(container.querySelector('section [data-part="game-over-actions"]')).toBeNull();
+    fireEvent.click(screen.getByText('Home'));
+    expect(onHome).toHaveBeenCalled();
+    expect(container.querySelector('button')?.hasAttribute('data-kit')).toBe(true);
+  });
+  it('standing without score; standings={false}', () => {
+    const r = { standings: [{ seat: 'a', rank: 1 }], winners: ['a'], tied: false };
+    const { container, rerender } = render(<GameOver result={r} />);
+    expect(container.querySelector('li b')).toBeNull();
+    expect(screen.getByText('Winner: a')).toBeTruthy();
+    rerender(<GameOver result={gameResult({ a: 1 })} standings={false} />);
+    expect(container.querySelector('ol')).toBeNull();
   });
 });
 
