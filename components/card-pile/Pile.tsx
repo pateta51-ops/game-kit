@@ -51,6 +51,8 @@ export interface PileProps {
   /** Phone: a tap on a card that is not a pick (its detail). */
   onDetail?: (id: string) => void
   testId?: string
+  /** K283: false drops the native `title` on the stack button (a game that draws its own tooltip). Default true. */
+  hitTitle?: boolean
   /** Where the fan is drawn (default document.body). */
   host?: Element
   /** CSS selector of an element that stays lit and live through the backdrop while a pick is open (the decision panel). */
@@ -441,7 +443,7 @@ export function Pile(p: PileProps) {
           </div>
         )}
         {model.browsable ? (
-          <button ref={buttonRef} type="button" data-part="stack-hit" aria-expanded={isOpen || sheet} aria-label={picking && w.pick !== undefined ? w.pick(label, names.length) : (w.open ?? ((l) => `Look through the ${l}`))(label)} title={picking && w.pick !== undefined ? w.pick(label, names.length) : wordsOf} onClick={toggle} onPointerEnter={() => model.top != null && onPreview?.(model.top, 'top', buttonRef.current ?? undefined)} onPointerLeave={() => onPreview?.(null, 'top')} onFocus={() => model.top != null && buttonRef.current !== null && onFocusPreview(model.top, 'top', buttonRef.current)} onBlur={() => onPreview?.(null, 'top')} />
+          <button ref={buttonRef} type="button" data-part="stack-hit" aria-expanded={isOpen || sheet} aria-label={picking && w.pick !== undefined ? w.pick(label, names.length) : (w.open ?? ((l) => `Look through the ${l}`))(label)} title={p.hitTitle === false ? undefined : picking && w.pick !== undefined ? w.pick(label, names.length) : wordsOf} onClick={toggle} onPointerEnter={() => model.top != null && onPreview?.(model.top, 'top', buttonRef.current ?? undefined)} onPointerLeave={() => onPreview?.(null, 'top')} onFocus={() => model.top != null && buttonRef.current !== null && onFocusPreview(model.top, 'top', buttonRef.current)} onBlur={() => onPreview?.(null, 'top')} />
         ) : null}
         {picking && p.badge !== undefined ? <span data-part="pick-badge" aria-hidden="true">{p.badge(names.length)}</span> : null}
         {p.children}

@@ -91,6 +91,7 @@ A game's build plan lists the kit work it needs as phases named `GK<n>` for the 
 | K12e | `effect-library`: `onActor(source, clone, id, run)` layer option (copy a canvas's pixels into the clone); step `hold: true` keeps a number `scale` for the whole step | S | a game, 15 Nov 2026 | done |
 | K269 | New `layout-editor`: one-file wireframe editor in which the owner arranges a screen's zones (drag, resize, snap, nesting by id, card-fit warnings, mirror, undo, backdrop, screens, JSON in and out, host hooks); pure helpers in `index.ts`; `capture.mjs` records a running page's `[data-zone]` rects | M | owner, 16 Nov 2026 (Star Trek: Captain's Chair two-player table first) | done (`layout-editor`) |
 | K280 | `layout-editor` round 2: zoom and pan (Ctrl+wheel, pinch, +/-/Fit, Space/middle/two-finger drag, scrollbars), zone `kind` (cards, component dashed, pile, group), screen `pile` size, Consolidate / Split of piles, Snap to grid and Snap to zones toggles with grid lines, `mode/variant` screen tabs, copy zones from another screen | M | owner, 17 Nov 2026 (two-player table) | done (`layout-editor`) |
+| K283 | `card-pile` `hitTitle={false}` drops the native title on the stack button (STCC draws its own pile tooltip) | S |  | done |
 
 ## Harvest from the existing games (owner, 15 Nov 2026)
 
