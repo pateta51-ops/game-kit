@@ -45,6 +45,21 @@ A workflow whose `{{OWNER_LOGIN}}` is left unfilled skips its jobs silently (the
 - `nightly-fuzz.yml` runs `npm run fuzz:nightly` (the game writes it) on main, in its own concurrency group and its own `nightly/` checkout, so it never replaces or collides with a queued gate; set the cron to an idle hour.
 - `skip-reporter.ts`: `reporters: ['default', ['./tools/skip-reporter.ts', { inputs: [['<git-ignored path>', '<command that makes it>']] }]]` in the vitest config lists every skipped test by file at the end of a run and in the GitHub job summary.
 
+## What a game must set
+
+| Name | Where | What it is for |
+|---|---|---|
+| `repo` (`<owner>/<repo>`) | `ci.config.json`, required | slug the gate refuses to run outside of, the `local-ci.sh` output folder, `watch-run` |
+| `runnerLabel` | `ci.config.json`, required | the `runs-on: [self-hosted, <label>]` of every workflow, and `RUNNER_LABEL` of `install-wsl.sh` |
+| `ownerLogin` | `ci.config.json`, optional (default the repo's owner) | the login whose pushes and pull requests may start jobs; another login's jobs are skipped silently |
+| `e2eScripts`, `workflows`, `pathsIgnore`, `runDrafts`, `push`, `prTypes` | `ci.config.json`, optional | which npm scripts the full gate runs, which workflows are written, and when CI runs |
+| `GH_TOKEN` | the full gate sets it from `github.token`; nothing to create | the gate reads the pull request through the API; `watch-run` takes `GH_TOKEN`, `GITHUB_TOKEN` or `gh auth token` |
+| `RUNNER_REPO`, `RUNNER_LABEL`, `RUNNER_TOKEN` | environment of `install-wsl.sh` | registers the self-hosted runner; the token is valid one hour; `RUNNER_DIR`, `RUNNER_NAME` optional |
+| `REPO_SLUG` | environment of `local-ci.sh`, `watch-run` | only when the checkout's `origin` is not the repository |
+| `E2E_SCRIPTS`, `E2E_PORT`, `PW_CHROMIUM_PATH`, `PW_SKIP_WEBKIT`, `GATE_DIR`, `GATE_SLOTS`, `LOCAL_CI_DIR` | environment, optional | the e2e scripts, the free port the gate picks, a Chromium for Playwright, gate slots and output |
+
+The game sets no repository secrets or variables: the workflows use only the built-in `github.token`, and never `pull_request_target`.
+
 ## Use it in 10 lines
 
 ```sh

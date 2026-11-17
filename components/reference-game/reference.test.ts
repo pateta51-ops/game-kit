@@ -21,6 +21,6 @@ describe('reference game (K205)', () => {
     scaffold({ dir: out, id: 'reference', name: 'Reference', kit: KIT, ref, ports, link: path.join(KIT, 'node_modules'), install: false, overlay: [path.join(import.meta.dirname, 'template')], components: ['prompt-host', 'replay-cli', 'card-language', 'card-zones', 'game-store', 'table-panels', 'opponent', 'paced-view'] });
     const chk = spawnSync('npm', ['run', 'check'], { cwd: out, encoding: 'utf8', shell: true });
     expect(chk.status, chk.stdout + chk.stderr).toBe(0);
-    expect(chk.stdout + chk.stderr).toMatch(/12 passed/);
+    expect(chk.stdout + chk.stderr).toMatch(/15 passed/);
   }, 240_000);
 });

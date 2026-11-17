@@ -142,3 +142,47 @@ describe('reference game (K205, K234)', () => {
     expect(autoAnswer(may, true)).toEqual(['no']);
   });
 });
+
+describe('reference game: timing windows, opponent driver, golden (K239)', () => {
+  it('timing: a draw goes through one batch; no window or current occurrence is left open at a prompt', () => {
+    const st = mine('t1');
+    while (st.get().state.prompt?.kind !== 'may') play(st);
+    const before = st.get().state.timing?.occurrences.length ?? 0;
+    expect(st.answer(['yes'], st.get().state.prompt?.id ?? 0)).toBe(true);
+    for (let i = 0; i < 40 && st.get().state.result === null && st.get().state.prompt?.kind !== 'may'; i++) play(st);
+    const t = st.get().state.timing;
+    const draws = (t?.occurrences ?? []).filter((o) => o.kind === 'draw');
+    expect(draws.length).toBeGreaterThan(0);
+    expect(t?.occurrences.length).toBeGreaterThan(before);
+    expect(draws.every((o) => o.state === 'happened' || o.state === 'cancelled')).toBe(true);
+    expect(new Set(t?.batches.map((b) => b.id)).size).toBe(t?.batches.length);
+    expect(t?.windows).toEqual([]);
+    expect(t?.current ?? null).toBeNull();
+  });
+
+  it('opponent driver in sim-pool: every game ends, each acting seat sees only its own view (no hidden id, no rng key)', () => {
+    const watched = { ...simGame, view: (s: RefState) => viewOf(s, s.prompt?.seat ?? '0'), secrets: (s: RefState) => hiddenFrom(s, s.prompt?.seat ?? '0'), leakKeys: () => ['rng'] };
+    for (const driver of ['opponent', 'random']) {
+      const r = playOne(watched, CONTENT, { index: 0, seed: `o-${driver}`, driver }, undefined, { view: true });
+      expect(r.error, r.error).toBeUndefined();
+      expect(r.result).not.toBeNull();
+    }
+  });
+
+  it('golden: a pinned view digest per action; a moved digest and a changed game are reported', async () => {
+    const mod = { simGame, specs, view: (s: RefState) => viewOf(s, '0') };
+    const dir = path.join(tmp, 'goldens-view');
+    expect(await checkGoldens(mod, dir, io, { update: true }), lines.join('\n')).toBe(0);
+    expect(await checkGoldens(mod, dir, io)).toBe(0);
+    const file = fs.readdirSync(dir).find((f) => f.endsWith('.digests'));
+    if (file === undefined) throw new Error('no digests written');
+    const text = fs.readFileSync(path.join(dir, file), 'utf8');
+    fs.writeFileSync(path.join(dir, file), text.replace(/[0-9a-f]{8}/, (d) => (d === '00000000' ? '11111111' : '00000000')));
+    lines.length = 0;
+    expect(await checkGoldens(mod, dir, io)).not.toBe(0);
+    expect(lines.join('\n')).toMatch(/MOVED|moved/);
+    fs.writeFileSync(path.join(dir, file), text);
+    const other = { simGame, specs: specs.map((s) => ({ ...s, seed: `x-${s.name}` })), view: mod.view };
+    expect(await checkGoldens(other, dir, io)).not.toBe(0);
+  });
+});

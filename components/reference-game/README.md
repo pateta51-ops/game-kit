@@ -12,6 +12,8 @@ What the template's tests go through:
 - sim-pool and replay-cli from the same object (`game-store/sim.ts`): 16 games on two workers equal to the thread; goldens and recorded games replayed hash by hash.
 - settings, app-frame, prompt-host, table-panels (jsdom): `#/play` answers pick, amount and may by clicks, Undo, the log panel, game over; `#/settings` and `#/saves`.
 
+Timing, opponent-driver and golden tests (K239): a draw is one timing batch with no window left open, the `opponent` and `random` drivers play with sim-pool `view`, `secrets` and `leakKeys`; view-digest goldens report a moved digest and a changed game.
+
 Template files: `src/engine/rules.ts` (`REF`, `GAME`, `VERBS`, `cardText`, `viewOf`, `greedyPicks`), `src/engine/sim.ts` (`simGame`, `specs`), `src/engine/api.ts`, `src/ui/store.ts` (settings schema, saves, the game store), `src/ui/App.tsx` (routes menu, play, settings, saves), `src/main.tsx`, `tests/`. Unstyled: no look decisions.
 
 Adding a component to the contract: list it in `components`, use it in the template, cover it in `tests/`.
