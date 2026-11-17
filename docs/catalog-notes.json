@@ -184,6 +184,10 @@
     "use": "The game must install and run offline: service worker plugin, register rule, update line.",
     "not": "Saving game data (saves)."
   },
+  "automa": {
+    "use": "An official solo automa that does not play by player rules: seeded card deck as plain state data, an ordered priority table over the legal answers with fallbacks and declared tie-breaks, difficulty tiers as data, a sim-pool Bot.",
+    "not": "An opponent that plays by player rules with advice and scores (opponent) or a trained one (learned-opponent)."
+  },
   "opponent": {
     "use": "A rule-based AI opponent: advice, profiles and memory as data through a fixed pick pipeline, plus decision records.",
     "not": "Trained play (learned-opponent) or tuning weights (sim-pool tune)."

@@ -7,6 +7,7 @@ Short task guides for agents. Each names the components, the order, and the chec
 | Start a new game on the kit | [new-game.md](new-game.md) |
 | Add a card-language effect and test it on real cards | [card-effect.md](card-effect.md) |
 | Add an AI opponent (rule-based, K200 tuner, learned) | [ai-opponent.md](ai-opponent.md) |
+| An official solo automa (deck, priority table, difficulty) | [automa.md](automa.md) |
 | Run simulations and sanity bands | [simulations.md](simulations.md) |
 | Timing windows and triggers | [timing.md](timing.md) |
 | Rounds, turns and phases | [turn-flow.md](turn-flow.md) |

@@ -1,0 +1,12 @@
+{
+  "name": "automa",
+  "source": {
+    "game": "stcc",
+    "commit": "8e6f55bd",
+    "paths": [
+      "src/engine/bot/choices.ts (pickBy: ordered tie-break keys, first on ties; here the last tie-break is seeded random)",
+      "src/engine/bot/deck.ts (botRefillDeck: an empty Bot deck reshuffles its discard pile)"
+    ]
+  },
+  "needs": ["engine-core", "sim-pool"]
+}

@@ -7,6 +7,8 @@ graph LR
   achievements["achievements"] --> play_stats["play-stats"]
   app_frame["app-frame"] --> state_machines["state-machines"]
   audio_gen["audio-gen"]
+  automa["automa"] --> engine_core["engine-core"]
+  automa["automa"] --> sim_pool["sim-pool"]
   board_layout["board-layout"]
   board_model["board-model"]
   board_registry["board-registry"]
@@ -138,6 +140,7 @@ graph LR
 - `achievements`
 - `app-frame`
 - `audio-gen`
+- `automa`
 - `board-model`
 - `boundary-check`
 - `bug-reporter`
