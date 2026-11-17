@@ -3,13 +3,13 @@
 // the board greys behind a modal backdrop, focus moves in and returns, Tab cycles, Escape gathers, a pick from the pile marks the cards
 // the prompt names and a click answers, the fan closes when the prompt no longer names its cards). On a phone the cards open in
 // phone-mode's Sheet as a grid (PileGrid.tsx). Cards come from a card-zones ZoneView (null = a back); the faces are the game's.
-import { useCallback, useEffect, useLayoutEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useRef, useState, type ButtonHTMLAttributes, type CSSProperties, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
 import './card-pile.css'
 import type { ZoneView } from '../card-zones/index.ts'
 import { prefersReducedMotion } from '../motion-frame/player.ts'
 import { pickedAttrs } from '../picked-state/index.ts'
-import type { BoardPick } from '../prompt-host/pick.ts'
+import type { BoardPick, Mark } from '../prompt-host/pick.ts'
 import { PileGrid } from './PileGrid.tsx'
 import { Sheet } from '../phone-mode/Sheet.tsx'
 import {
@@ -22,6 +22,16 @@ export interface FaceInfo {
   where: 'top' | 'edge' | 'fan' | 'grid'
   /** True for the top card of the pile. */
   top: boolean
+  /** K254: the card's mark and reason while a pick or `markOf` names it (for a cost badge, a "Choose" badge, a dim face). */
+  mark?: string
+  why?: string
+}
+/** K254: the game's props on a card's click target (fan-hit, grid-card); its `onClick`, `onFocus`, `onBlur` are composed (called first). */
+export type CardProps = ButtonHTMLAttributes<HTMLButtonElement> & Record<`data-${string}`, string | number | undefined>
+export interface TapInfo {
+  /** A key's click has `detail` 0. */
+  via: 'pointer' | 'key'
+  detail: number
 }
 export interface PileProps {
   label: string
@@ -50,6 +60,16 @@ export interface PileProps {
   landscape?: boolean
   /** The game's words: the pile's name with its size, the pile button, the fan, the "top" word of the grid. */
   words?: { pile?: (label: string, count: number) => string; open?: (label: string) => string; pick?: (label: string, named: number) => string; fan?: (label: string) => string; top?: string; close?: string; empty?: string }
+  /** K254: a mark and a reason per card, over the prompt's: `mark` replaces `data-mark` (any word; only `barred` is disabled, `dim` stays selectable), `why` is `data-why` and the card's title. */
+  markOf?: (id: string) => { mark?: string; why?: string } | undefined
+  /** K254: a tap with its event; replaces `pick.tap(id)` (call it yourself); a double-click's second click is never reported. */
+  onTap?: (id: string, info: TapInfo) => void
+  /** K254: the game's props on each card's click target (fan and grid). */
+  cardProps?: (id: string, where: 'fan' | 'grid') => CardProps | undefined
+  /** K254: the large-preview hook: a card (the top of the stack, a fanned card, a grid card) is hovered or focused (`id`), then left (`null`). The game draws the preview. */
+  onPreview?: (id: string | null, where: 'top' | 'fan' | 'grid', el?: Element) => void
+  /** K254: drawn over the stack while the prompt names cards of the pile (the "Choose - N" badge), `data-part="pick-badge"`. */
+  badge?: (named: number) => ReactNode
   /** Over the stack (a count badge, a marker). */
   children?: ReactNode
 }
@@ -66,8 +86,18 @@ export function Pile(p: PileProps) {
   const { label, view, face, back, pick, speed = 1, browse = true, phone = false, testId, show, landscape = false } = p
   const motion = prefersReducedMotion() ? 0 : speed
   const unit = p.unit ?? defaultUnit
-  const marks = pick?.marks ?? NONE
   const model = pileModel(view, browse)
+  const { markOf, onTap, cardProps, onPreview } = p
+  const base = pick?.marks ?? NONE
+  const whys: Record<string, string | undefined> = {}
+  const marks: Record<string, Mark> = { ...base }
+  for (const c of model.cards) {
+    const x = c === null ? undefined : markOf?.(c)
+    if (c !== null && x !== undefined) {
+      if (x.mark !== undefined) marks[c] = x.mark as Mark
+      whys[c] = x.why
+    }
+  }
   const ids = model.cards.map((c) => c ?? '')
   const names = named(model.cards, marks)
   const picking = names.length > 0
@@ -84,7 +114,14 @@ export function Pile(p: PileProps) {
   const [sheet, setSheet] = useState(false)
   const n = model.cards.length
 
+  const previewRef = useRef(onPreview)
+  useEffect(() => {
+    previewRef.current = onPreview
+  })
+  useEffect(() => () => previewRef.current?.(null, 'top'), [model.browsable])
+  useEffect(() => () => { if (sheet) previewRef.current?.(null, 'grid') }, [sheet])
   const rest = useCallback(() => {
+    previewRef.current?.(null, 'fan')
     setMode('rest')
     setFan(null)
     setLifted(null)
@@ -264,11 +301,15 @@ export function Pile(p: PileProps) {
   const liftedPlace = lifted === null ? undefined : fan?.places[lifted]
   const anyArmed = model.cards.some((c) => c !== null && marks[c] === 'armed')
   const markAttrs = (c: string | null): Record<string, string | undefined> =>
-    c === null || !picking ? {} : { 'data-mark': marks[c], 'data-dim': marks[c] === undefined || marks[c] === 'barred' ? 'true' : undefined, ...pickedAttrs(marks[c] === 'armed', anyArmed) }
-  const tap = (c: string | null): void => {
-    if (mode !== 'fan' || !landed) return
-    if (c !== null && marks[c] !== undefined && marks[c] !== 'barred') pick?.tap(c)
+    c === null || !picking ? {} : { 'data-mark': marks[c], ...(whys[c] === undefined ? {} : { 'data-why': whys[c], title: whys[c] }), 'data-dim': marks[c] === undefined || marks[c] === 'barred' ? 'true' : undefined, ...pickedAttrs(marks[c] === 'armed', anyArmed) }
+  const tap = (c: string | null, e: { detail: number }): void => {
+    if (mode !== 'fan' || !landed || e.detail > 1) return
+    if (c !== null && marks[c] !== undefined && marks[c] !== 'barred') {
+      if (onTap === undefined) pick?.tap(c)
+      else onTap(c, { via: e.detail > 0 ? 'pointer' : 'key', detail: e.detail })
+    }
   }
+  const info = (where: FaceInfo['where'], top: boolean, c: string | null): FaceInfo => (c === null || marks[c] === undefined ? { where, top } : { where, top, mark: marks[c], ...(whys[c] === undefined ? {} : { why: whys[c] }) })
 
   const overlay =
     host === null || fan === null || mode === 'rest'
@@ -288,6 +329,7 @@ export function Pile(p: PileProps) {
           >
             <div
               data-part="backdrop"
+              data-holes={fan.holes.length}
               style={{ clipPath: holesPath(fan.holes) }}
               onClick={() => {
                 if (backdropCloses(mode, landed)) {
@@ -313,22 +355,43 @@ export function Pile(p: PileProps) {
                     <div
                       data-part="fan-turn"
                       style={{ '--turn': `${String(pl.turn)}deg`, '--spread': `${String(spreadOf(pl, liftedPlace, u))}px` } as CSSProperties}
-                      onPointerEnter={() => mode === 'fan' && setLifted(i)}
-                      onPointerLeave={() => setLifted((was) => (was === i ? null : was))}
+                      onPointerEnter={() => {
+                        if (mode !== 'fan') return
+                        setLifted(i)
+                        if (c !== null) onPreview?.(c, 'fan', overlayRef.current ?? undefined)
+                      }}
+                      onPointerLeave={() => {
+                        setLifted((was) => (was === i ? null : was))
+                        if (c !== null) onPreview?.(null, 'fan')
+                      }}
                     >
                       <div
                         data-part="fan-lift"
                         style={{ '--lift-x': `${String(lifted === i ? liftShift(pl, u, { width: window.innerWidth, height: window.innerHeight }).x : 0)}px`, '--lift-y': `${String(lifted === i ? liftShift(pl, u, { width: window.innerWidth, height: window.innerHeight }).y : 0)}px` } as CSSProperties}
                       >
                         <button
+                          {...(c === null ? {} : cardProps?.(c, 'fan'))}
                           type="button"
                           data-part="fan-hit"
                           disabled={!hit && picking}
                           aria-disabled={!hit}
-                          onClick={(e) => e.detail <= 1 && tap(c)}
+                          onFocus={(e) => {
+                            if (c === null) return
+                            onPreview?.(c, 'fan', e.currentTarget)
+                            cardProps?.(c, 'fan')?.onFocus?.(e)
+                          }}
+                          onBlur={(e) => {
+                            if (c === null) return
+                            onPreview?.(null, 'fan')
+                            cardProps?.(c, 'fan')?.onBlur?.(e)
+                          }}
+                          onClick={(e) => {
+                            if (c !== null) cardProps?.(c, 'fan')?.onClick?.(e)
+                            tap(c, e)
+                          }}
                           {...markAttrs(c)}
                         >
-                          {c === null ? back({ where: 'fan', top: i === 0 }) : face(c, { where: 'fan', top: i === 0 })}
+                          {c === null ? back(info('fan', i === 0, null)) : face(c, info('fan', i === 0, c))}
                         </button>
                       </div>
                     </div>
@@ -366,14 +429,15 @@ export function Pile(p: PileProps) {
           </div>
         )}
         {model.browsable ? (
-          <button ref={buttonRef} type="button" data-part="stack-hit" aria-expanded={isOpen || sheet} aria-label={picking && w.pick !== undefined ? w.pick(label, names.length) : (w.open ?? ((l) => `Look through the ${l}`))(label)} title={picking && w.pick !== undefined ? w.pick(label, names.length) : wordsOf} onClick={toggle} />
+          <button ref={buttonRef} type="button" data-part="stack-hit" aria-expanded={isOpen || sheet} aria-label={picking && w.pick !== undefined ? w.pick(label, names.length) : (w.open ?? ((l) => `Look through the ${l}`))(label)} title={picking && w.pick !== undefined ? w.pick(label, names.length) : wordsOf} onClick={toggle} onPointerEnter={() => model.top != null && onPreview?.(model.top, 'top', buttonRef.current ?? undefined)} onPointerLeave={() => onPreview?.(null, 'top')} onFocus={() => model.top != null && onPreview?.(model.top, 'top', buttonRef.current ?? undefined)} onBlur={() => onPreview?.(null, 'top')} />
         ) : null}
+        {picking && p.badge !== undefined ? <span data-part="pick-badge" aria-hidden="true">{p.badge(names.length)}</span> : null}
         {p.children}
       </div>
       {overlay}
       {sheet ? (
         <Sheet title={label} onClose={() => setSheet(false)} {...(motion === 0 ? { slideMs: 0 } : {})} {...(w.close === undefined ? {} : { closeLabel: w.close })}>
-          <PileGrid label={label} cards={model.cards} face={face} back={back} marks={marks} tap={(id) => pick?.tap(id)} onDetail={p.onDetail} topWord={w.top} emptyWord={w.empty} />
+          <PileGrid label={label} cards={model.cards} face={face} back={back} marks={marks} onTap={onTap !== undefined} tap={(id, e) => (onTap === undefined ? pick?.tap(id) : onTap(id, e))} whys={whys} cardProps={cardProps} onPreview={onPreview} onDetail={p.onDetail} topWord={w.top} emptyWord={w.empty} />
         </Sheet>
       ) : null}
     </div>

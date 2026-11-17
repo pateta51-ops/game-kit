@@ -3,15 +3,19 @@
 import type { ReactNode } from 'react'
 import { pickedAttrs } from '../picked-state/index.ts'
 import type { Mark } from '../prompt-host/pick.ts'
-import type { FaceInfo } from './Pile.tsx'
+import type { CardProps, FaceInfo, TapInfo } from './Pile.tsx'
 
-export function PileGrid({ label, cards, face, back, marks, tap, onDetail, topWord = 'Top', emptyWord = 'Empty' }: {
+export function PileGrid({ label, cards, face, back, marks, tap, onTap, whys, cardProps, onPreview, onDetail, topWord = 'Top', emptyWord = 'Empty' }: {
   label: string
   cards: readonly (string | null)[]
   face: (id: string, info: FaceInfo) => ReactNode
   back: (info: FaceInfo) => ReactNode
   marks: Readonly<Record<string, Mark>>
-  tap: (id: string) => void
+  tap: (id: string, info: TapInfo) => void
+  onTap?: boolean | undefined
+  whys?: Readonly<Record<string, string | undefined>> | undefined
+  cardProps?: ((id: string, where: 'fan' | 'grid') => CardProps | undefined) | undefined
+  onPreview?: ((id: string | null, where: 'top' | 'fan' | 'grid', el?: Element) => void) | undefined
   onDetail?: ((id: string) => void) | undefined
   topWord?: string | undefined
   emptyWord?: string | undefined
@@ -23,10 +27,13 @@ export function PileGrid({ label, cards, face, back, marks, tap, onDetail, topWo
     <ul data-part="grid" aria-label={label}>
       {cards.map((c, i) => {
         const m = c === null ? undefined : marks[c]
-        const info: FaceInfo = { where: 'grid', top: i === 0 }
+        const info: FaceInfo = { where: 'grid', top: i === 0, ...(m === undefined ? {} : { mark: m }), ...(c !== null && whys?.[c] !== undefined ? { why: whys[c] } : {}) }
+        const mine = c === null ? undefined : cardProps?.(c, 'grid')
         return (
           <li key={c ?? `back-${String(i)}`} data-part="grid-cell">
             <button
+              {...mine}
+              {...(c !== null && whys?.[c] !== undefined ? { title: whys[c], 'data-why': whys[c] } : {})}
               type="button"
               data-part="grid-card"
               data-card={c ?? undefined}
@@ -34,9 +41,19 @@ export function PileGrid({ label, cards, face, back, marks, tap, onDetail, topWo
               data-dim={picking && (m === undefined || m === 'barred') ? 'true' : undefined}
               {...(picking && c !== null ? pickedAttrs(m === 'armed', anyArmed) : {})}
               disabled={c === null}
-              onClick={() => {
+              onFocus={(e) => {
+                if (c !== null) onPreview?.(c, 'grid', e.currentTarget)
+                mine?.onFocus?.(e)
+              }}
+              onBlur={(e) => {
+                if (c !== null) onPreview?.(null, 'grid')
+                mine?.onBlur?.(e)
+              }}
+              onClick={(e) => {
                 if (c === null) return
-                if (m !== undefined && m !== 'barred') tap(c)
+                mine?.onClick?.(e)
+                if (onTap && e.detail > 1) return
+                if (m !== undefined && m !== 'barred') tap(c, { via: e.detail > 0 ? 'pointer' : 'key', detail: e.detail })
                 else onDetail?.(c)
               }}
             >

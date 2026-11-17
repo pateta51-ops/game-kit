@@ -17,7 +17,7 @@
         "paths": ["src/ui/board/table/usePileFan.tsx (close on a changed pile, Escape, backdrop)", "src/ui/board/table/fanLayout.ts (same geometry)"]
       }
     ],
-    "note": "K219: faces, settings, previews and theme stripped; cards from a card-zones ZoneView, marks from prompt-host useBoardPick, phone grid in phone-mode's Sheet."
+    "note": "K254: Imperium PeekPile.tsx/Pickable.tsx/pile-fans.spec.ts passthrough, marks, tap info, preview hook. K219: faces, settings, previews and theme stripped; cards from a card-zones ZoneView, marks from prompt-host useBoardPick, phone grid in phone-mode's Sheet."
   },
   "needs": ["card-zones", "prompt-host", "picked-state", "phone-mode", "motion-frame"],
   "packages": ["react", "react-dom"]
