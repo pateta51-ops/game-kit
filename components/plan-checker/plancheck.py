@@ -36,7 +36,8 @@ Checks, continued:
 - with --tsc: the ```ts blocks of the type-definitions section compile under strict flags (needs `tsc` on PATH or in
   ./node_modules/.bin). --types "A;B..C;D" compiles several sections as one file, in the order given; "B..C" runs
   from the heading for B up to the heading for C. --tsc-stub TEXT adds TEXT as a last line (a type the plan leaves
-  to the code).
+  to the code). --tsc-at DIR compiles the blocks as a file inside DIR (a folder of the game checkout, such as
+  src/engine/types) instead of a temp folder, so relative imports like ../../kit/engine-core/index.ts resolve.
 
 Sections are found by heading keywords (case-insensitive); override them if your plan names them differently:
   --scenarios "Scenario catalogue"  --phases "Implementation phases"  --types "Type definitions"
@@ -49,11 +50,12 @@ docs/PLAN.md marks done.
 
 Usage: python plancheck.py docs/BUILD_PLAN.md [--tsc] [--scenarios TEXT] [--phases TEXT] [--types TEXT] [--tsc-stub TEXT]
        [--sessions TEXT] [--sessions-optional] [--scenarios-end TEXT] [--cover TEXT] [--cover-rows A,B]
-       [--cover-skip A,B]
+       [--cover-skip A,B] [--tsc-at DIR]
 Exit code 0 when no problems were found.
 """
 from __future__ import annotations
 
+import contextlib
 import json
 import os
 import re
@@ -326,7 +328,7 @@ def main() -> int:
     safe_console()
     args = [a for a in sys.argv[1:] if not a.startswith("--")]
     for flag in ("--scenarios", "--phases", "--types", "--sessions", "--section", "--batch", "--scenarios-end", "--cover",
-                 "--cover-rows", "--cover-skip", "--tsc-stub", "--kit"):
+                 "--cover-rows", "--cover-skip", "--tsc-stub", "--kit", "--tsc-at"):
         if flag in sys.argv:
             v = opt(flag, "")
             if v in args:
@@ -567,14 +569,22 @@ def main() -> int:
             if not tsc:
                 problems.append("--tsc: TypeScript not found (npm i -D typescript, or install tsc globally)")
             else:
-                with tempfile.TemporaryDirectory() as tmp:
-                    f = Path(tmp) / "contract.ts"
+                at = opt("--tsc-at", "") if "--tsc-at" in sys.argv else ""
+                if at and not Path(at).is_dir():
+                    problems.append(f"--tsc-at: no folder {at}")
+                    at = None
+                with (contextlib.nullcontext(at) if at else tempfile.TemporaryDirectory()) as tmp:
+                    f = Path(tmp) / f"plancheck-contract-{os.getpid()}.ts"
                     f.write_text(code, encoding="utf-8")
-                    r = subprocess.run(
-                        [tsc, "--noEmit", "--strict", "--exactOptionalPropertyTypes", "--noUncheckedIndexedAccess",
-                         "--noImplicitOverride", "--target", "es2022", "--module", "esnext", f.name],
-                        cwd=tmp, capture_output=True, text=True, encoding="utf-8",
-                    )
+                    try:
+                        r = subprocess.run(
+                            [tsc, "--noEmit", "--strict", "--exactOptionalPropertyTypes", "--noUncheckedIndexedAccess",
+                             "--noImplicitOverride", "--target", "es2022", "--module", "esnext", "--moduleResolution", "bundler",
+                             "--allowImportingTsExtensions", "--skipLibCheck", f.name],
+                            cwd=tmp, capture_output=True, text=True, encoding="utf-8",
+                        )
+                    finally:
+                        f.unlink()
                     if r.returncode != 0:
                         problems.append("type contract does not compile:\n" + re.sub(r"\((\d+),(\d+)\): (error|warning) TS", r" line \1:\2 \3 TS", r.stdout + r.stderr)[:3000])  # no "file(1,2): error TS" form: CI's tsc matcher would annotate it as a build error
 

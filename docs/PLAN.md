@@ -93,6 +93,7 @@ A game's build plan lists the kit work it needs as phases named `GK<n>` for the 
 | K280 | `layout-editor` round 2: zoom and pan (Ctrl+wheel, pinch, +/-/Fit, Space/middle/two-finger drag, scrollbars), zone `kind` (cards, component dashed, pile, group), screen `pile` size, Consolidate / Split of piles, Snap to grid and Snap to zones toggles with grid lines, `mode/variant` screen tabs, copy zones from another screen | M | owner, 17 Nov 2026 (two-player table) | done (`layout-editor`) |
 | K283 | `card-pile` `hitTitle={false}` drops the native title on the stack button (STCC draws its own pile tooltip) | S |  | done |
 | K284 | `layout-editor` Reset button (in-page confirmation): restores the starting doc, backdrops (`LAYOUT_EDITOR_BG_INIT`), zoom and screen; `layoutEditor.reset()` | S |  | done |
+| K285 | `plan-checker` `--tsc-at DIR` compiles the plan's type blocks inside a game folder, so relative `kit/` imports resolve | S |  | done |
 
 ## Harvest from the existing games (owner, 15 Nov 2026)
 

@@ -1,6 +1,6 @@
 // BUILD_PLAN §10.1: npm run plancheck finds a Python 3 (python3 first on Linux, python and the py launcher on Windows).
 import { spawnSync } from 'node:child_process';
-import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -126,6 +126,20 @@ describe('plancheck.py flags (K68)', () => {
     expect(tsc('--types', 'Type definitions;')).toBe(1);
     expect(tsc('--types', 'Type definitions;;Effect DSL reference..Text generation')).toBe(1);
     expect(tsc('--types', 'Type definitions;Effect DSL reference..Text generation')).toBe(0);
+  }, 300_000);
+  it('--tsc-at (K285): blocks compile inside a game folder, so a relative kit import resolves', () => {
+    const game = tmp('plancheck-game-');
+    mkdirSync(join(game, 'kit', 'core'), { recursive: true });
+    mkdirSync(join(game, 'src', 'engine'), { recursive: true });
+    writeFileSync(join(game, 'kit', 'core', 'index.ts'), "export interface Core { status: 'on' | 'off' }\n");
+    const typed = full + "\n## 12. Type definitions\n\n```ts\nimport type { Core } from './../../kit/core/index.ts';\nexport type GameState = Core;\n```\n";
+    const at = join(game, 'src', 'engine');
+    expect(run(typed, ...end, '--tsc')).toBe(1);
+    expect(run(typed, ...end, '--tsc', '--tsc-at', at)).toBe(0);
+    const ok = full + "\n## 12. Type definitions\n\n```ts\nexport type Ok = 1;\n```\n";
+    expect(run(ok, ...end, '--tsc')).toBe(0);
+    expect(run(ok, ...end, '--tsc', '--tsc-at', join(game, 'nope'))).toBe(1);
+    expect(readdirSync(at)).toEqual([]);
   }, 300_000);
   it('--skip-without-python: no Python 3 is a notice and exit 0, but exit 2 in CI or without the flag', () => {
     vi.stubEnv('PATH', join(tmpdir(), 'no-such-dir'));
