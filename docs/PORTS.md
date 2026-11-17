@@ -10,7 +10,7 @@ Panel: local 4170, https://<host>:8440
 
 | Game | dev | preview | e2e | e2eAux | phone local | phone URL |
 |---|---|---|---|---|---|---|
-| Imperium Horizons | 6010 | 6011 | 6012 | 6013 | 4173 | https://<host> |
+| Imperium | 6010 | 6011 | 6012 | 6013 | 4173 | https://<host> |
 | Star Trek Captain's Chair | 6020 | 6021 | 6022 | 6023 | 4174 | https://<host>:8443 |
 | Warp's Edge | 6030 | 6031 | 6032 | 6033 | 4175 | https://<host>:8444 |
 | Rome: Fate of an Empire | 6040 | 6041 | 6042 | 6043 | 4176 | https://<host>:8445 |
