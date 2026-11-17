@@ -79,6 +79,13 @@ describe('widgets (K123 review)', () => {
     expect(a).toHaveBeenCalledWith(['2']);
   });
 
+  it('K305: PickAmount readout shows a preview of the current amount and follows the stepper', () => {
+    const { container } = render(<PickAmount prompt={pr(opts('1', '2'))} view={null} answer={vi.fn<Answer>()} look={look} readout={(o) => `XP ${Number(o.id) * 10}`} />);
+    expect(container.querySelector('[class*="readout"]')?.textContent).toBe('XP 10');
+    fireEvent.click(screen.getByRole('button', { name: '+' }));
+    expect(container.querySelector('[class*="readout"]')?.textContent).toBe('XP 20');
+  });
+
   it('idle words, title and look overrides', () => {
     const p = pr([{ id: 'a', enabled: true, idle: 'Changes nothing now' }, ...opts('b')], 1, 2);
     render(

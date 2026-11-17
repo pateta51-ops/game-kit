@@ -163,7 +163,7 @@ export function PickOptions<P extends Kinded, V>({ prompt, answer, look, confirm
 }
 
 /** Pick an amount: the options are the amounts in order; a stepper over them (from `start`, default the first), then Done. */
-export function PickAmount<P extends Kinded, V>({ prompt, answer, look, start = 0 }: WidgetProps<P, V> & { start?: number | 'last' }) {
+export function PickAmount<P extends Kinded, V>({ prompt, answer, look, start = 0, readout }: WidgetProps<P, V> & { start?: number | 'last'; readout?: (o: KernelOption, p: P) => ReactNode }) {
   const n = prompt.options.length;
   const [at, setAt] = useState(start === 'last' ? n - 1 : start);
   const o = prompt.options[at];
@@ -175,6 +175,7 @@ export function PickAmount<P extends Kinded, V>({ prompt, answer, look, start = 
       <span className={look.cls('value')} data-option={o?.id}>
         {o === undefined ? null : look.label(o, prompt)}
       </span>
+      {o !== undefined && readout ? <span className={look.cls('readout')}>{readout(o, prompt)}</span> : null}
       <button type="button" className={look.cls('more')} disabled={at >= n - 1} onClick={() => setAt(at + 1)}>
         {look.more}
       </button>

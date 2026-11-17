@@ -113,6 +113,7 @@ A game's build plan lists the kit work it needs as phases named `GK<n>` for the 
 | K302 | game-store `debug(action)`: an engine-core `DebugAction` through the store (own undo step, saved, replayed, settled, autosaved), so debug-console mounts on a store-driven game (`send={store.debug}`) | S |  | done |
 | K303 | kit.mjs pull: when the folder rename fails (EPERM/EACCES/EBUSY, an open handle on Windows), swap by copying; a failed swap restores kit/ | S |  | done |
 | K304 | table-panels `TurnBanner` `phaseName(banner)`: a game replaces the phase words, or returns null to drop the phase span (no CSS hiding) | S |  | done |
+| K305 | prompt-host `PickAmount` `readout(option, prompt)`: a preview of the current amount beside the stepper (class part `readout`), so a game need not wrap `look.label` | S |  | done |
 
 ## Harvest from the existing games (owner, 15 Nov 2026)
 
