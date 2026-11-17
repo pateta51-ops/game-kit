@@ -2,7 +2,7 @@
 
 1. **Start in one step:** `node ../game-kit/kit.mjs new <dir> <id> "<Name>"` registers the port block, writes the repo, pulls the kit, makes the first commit and creates the private GitHub repo with delete-branch-on-merge; re-running skips what is done, `--no-remote` skips git and GitHub; `--existing` is for a repo that already has files and history: it writes only new files, lists any clash and writes nothing, and commits nothing. Then commit `ports.json` and `docs/PORTS.md` in game-kit. Steps 3-4 below are then partly done: only add what `new` did not.
 2. **Find components.** `node ../game-kit/kit.mjs search <word>` or read [CATALOG.md](../CATALOG.md). Every game starts with `engine-core` (it is the engine), `game-store` (one `defineGame` object, one store: [game-store](game-store.md)), `state-machines`, `app-frame`, `settings`, `saves`, `sim-pool`, `card-harness` (tests on real cards).
-3. **Pull the tooling first** (by hand only if not using `new`; these shape the check chain): `plan-checker`, `repo-gate`, `traceability`, `check-runner`, `ci-templates`, `bundle-size`, `lint-preset`, `theme-check`, `plain-text`.
+3. **Pull the tooling.** `new` pulls `engine-core`, `game-store`, `sim-pool`, `state-machines`, `app-frame`, `settings`, `saves`, `lint-preset`, `ci-templates`, `check-runner` and their needs. It does not pull or wire `plan-checker`, `repo-gate`, `traceability`, `bundle-size`, `theme-check` or `plain-text`: pull them by hand with the command below and add their lanes to `scripts/check-runner.config.json` (each needs the game's own settings).
    ```bash
    node ../game-kit/kit.mjs pull ../game-kit <tag> engine-core sim-pool saves settings app-frame
    node kit/kit.mjs check

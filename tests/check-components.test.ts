@@ -8,12 +8,16 @@ const SCRIPT = path.resolve(import.meta.dirname, '..', 'scripts', 'check-compone
 const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'cc-test-'));
 afterAll(() => fs.rmSync(tmp, { recursive: true, force: true }));
 let n = 0;
-const make = (comps: Record<string, { needs?: string[]; packages?: string[]; files?: Record<string, string> }>) => {
+const make = (comps: Record<string, { needs?: string[]; packages?: string[]; files?: Record<string, string>; bare?: boolean }>) => {
   const root = path.join(tmp, 'r' + String(++n));
   for (const [name, c] of Object.entries(comps)) {
     const d = path.join(root, 'components', name);
     fs.mkdirSync(d, { recursive: true });
     fs.writeFileSync(path.join(d, 'component.json'), JSON.stringify({ name, source: { game: 'g', commit: 'c', paths: [] }, needs: c.needs ?? [], packages: c.packages ?? [] }));
+    if (!c.bare) {
+      fs.writeFileSync(path.join(d, 'README.md'), '# ' + name + '\n');
+      fs.writeFileSync(path.join(d, 'a.test.ts'), '');
+    }
     for (const [f, s] of Object.entries(c.files ?? {})) fs.writeFileSync(path.join(d, f), s);
   }
   return spawnSync('node', [SCRIPT, root], { encoding: 'utf8' });
@@ -38,6 +42,25 @@ describe('check-components', () => {
   });
   it('an import into a listed need passes', () => {
     expect(make({ a: { needs: ['b'], files: { 'x.ts': "import { y } from '../b/y'\n" } }, b: {} }).status).toBe(0);
+  });
+});
+
+describe('K256 README and tests', () => {
+  it('a component without README.md fails', () => {
+    const r = make({ a: { bare: true, files: { 'a.test.ts': '' } } });
+    expect(r.status).toBe(1);
+    expect(r.stderr).toContain('README.md missing');
+  });
+  it('an empty first README line fails', () => {
+    expect(make({ a: { files: { 'README.md': '\n' } } }).status).toBe(1);
+  });
+  it('a component without a test file fails', () => {
+    const r = make({ a: { bare: true, files: { 'README.md': '# a\n' } } });
+    expect(r.status).toBe(1);
+    expect(r.stderr).toContain('no test file');
+  });
+  it('a test_*.py counts as a test', () => {
+    expect(make({ a: { bare: true, files: { 'README.md': '# a\n', 'test_x.py': '' } } }).status).toBe(0);
   });
 });
 

@@ -30,6 +30,9 @@ for (const n of dirs) {
   for (const x of needs) if (!dirs.includes(x)) bad.push(`${n}: needs ${x}, which is not a component folder`)
   const pk = meta.packages ?? []
   if (!Array.isArray(pk) || pk.some((x) => typeof x !== 'string' || !/^(@[a-z0-9~._-]+\/)?[a-z0-9~._-]+$/.test(x))) bad.push(`${n}: packages must be bare package names`)
+  const rm = path.join(dir, 'README.md')
+  if (!fs.existsSync(rm) || !fs.readFileSync(rm, 'utf8').split(/\r?\n/)[0].trim()) bad.push(`${n}: README.md missing or its first line is empty`)
+  if (!walk(dir).some((f) => /(\.test\.[^\\/]+|[\\/]test_[^\\/]+\.py)$/.test(f))) bad.push(`${n}: no test file (*.test.* or test_*.py)`)
   const used = new Set()
   for (const f of walk(dir).filter((f) => CODE.test(f))) {
     if (!TESTISH.test(f)) for (const m of fs.readFileSync(f, 'utf8').matchAll(BARE)) if (!m[1].startsWith('node:') && !BUILTIN.has(m[1])) used.add(pkgOf(m[1]))
