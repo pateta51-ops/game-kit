@@ -5,7 +5,7 @@ import { afterAll, describe, expect, it } from 'vitest';
 import { CONTENT } from '../engine-core/fake/counter.ts';
 import type { AnswerAction, GameTypes } from '../engine-core/index.ts';
 import { simGame } from './fake/game.ts';
-import { bySeat, DriverRng, legalAnswers, playOne, replayStep, runGames, runInThread, runResumable, type Driver, type GameSpec, type SimGame, type SimRecord } from './index.ts';
+import { bySeat, DriverRng, legalAnswers, playOne, replayStep, runGames, runInThread, report, formatReport, runResumable, type Driver, type GameSpec, type SimGame, type SimRecord } from './index.ts';
 const content = CONTENT;
 
 const module = new URL('./fake/game.ts', import.meta.url).href;
@@ -95,6 +95,42 @@ describe('a module that fails to load', () => {
   it('gives crash records, not a thrown run', async () => {
     const r = await runGames({ module: new URL('./fake/broken.ts', import.meta.url).href, specs: specs(3) }, 2);
     expect(r.map((x) => x.error?.startsWith('crash in game'))).toEqual([true, true, true]);
+  });
+});
+
+describe('K273 watchdog and report', () => {
+  it('records a looping game as timeout and finishes the rest', async () => {
+    const list = specs(5);
+    list[2] = { index: 2, seed: 'loop', driver: 'random' };
+    const r = await runGames({ module, specs: list, gameTimeoutMs: 500 }, 2);
+    expect(r.map((x) => x.index)).toEqual([0, 1, 2, 3, 4]);
+    expect(r[2]?.errorName).toBe('timeout');
+    expect(r[2]?.error).toMatch(/^timeout in game 2 \(seed loop\)/);
+    expect(r.filter((x) => x.error === undefined)).toHaveLength(4);
+    expect(report(r).failures.timeout).toBe(1);
+  });
+
+  it('reports fixed records', () => {
+    const rec = (index: number, actions: number, result: unknown, extra: Partial<SimRecord> = {}): SimRecord => ({ index, seed: `s${String(index)}`, driver: 'd', result, actions, hash: 'h', ...extra });
+    const records = [
+      rec(0, 10, { winner: 'a' }),
+      rec(1, 20, { winner: 'b' }),
+      rec(2, 30, { winner: 'a' }),
+      rec(3, 40, {}),
+      rec(4, 0, null, { error: 'x', errorName: 'timeout', hash: 'crashed' }),
+      rec(5, 0, null, { error: 'crash in game 5', hash: 'crashed' }),
+      rec(6, 5, null, { error: 'boom' }),
+    ];
+    const r = report(records, { first: (x) => (x.index % 2 === 0 ? 'a' : 'b') });
+    expect(r.games).toBe(7);
+    expect(r.completed).toBe(4);
+    expect(r.completedShare).toBeCloseTo(4 / 7);
+    expect(r.failures).toEqual({ timeout: 1, crash: 1, violation: 0, error: 1 });
+    expect(r.length).toEqual({ min: 10, median: 25, max: 40 });
+    expect(r.winsBySeat).toEqual({ a: 2, b: 1 });
+    expect(r.winShareBySeat).toEqual({ a: 0.5, b: 0.25 });
+    expect(r.firstPlayer).toEqual({ a: { games: 2, wins: 2, share: 1 }, b: { games: 2, wins: 1, share: 0.5 } });
+    expect(formatReport(r).split('\n')).toHaveLength(5);
   });
 });
 

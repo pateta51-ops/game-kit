@@ -809,7 +809,7 @@ Plays N whole games of any `GameRules<G>` with a driver, in this thread or on wo
 
 - **Use it when:** Playing many whole games with drivers on worker threads, fuzzing, sanity bands, sweeps, the K200 weight tuner and paired validation.
 - **Not for:** A driver's strategy (the game or opponent supplies it).
-- **Key exports:** `DriverRng`, `ANSWER_CAP`, `CRASH_HASH`, `breakAt`, `bySeat`, `crashRecord`, `legalAnswers`, `playOne`, `randomDriver`, `botDriver`, `replayStep`, `runGames`, `runInThread`, `findingOf`, and 54 more
+- **Key exports:** `DriverRng`, `ANSWER_CAP`, `CRASH_HASH`, `breakAt`, `bySeat`, `crashRecord`, `legalAnswers`, `playOne`, `randomDriver`, `botDriver`, `replayStep`, `formatReport`, `report`, `runGames`, and 61 more
 - **Needs:** [`engine-core`](#engine-core)
 - **Came from:** warps
 - **Docs:** [README](../components/sim-pool/README.md)

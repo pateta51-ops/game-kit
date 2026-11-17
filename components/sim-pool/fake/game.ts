@@ -7,6 +7,7 @@ export const simGame: SimGame<Counter, { adds: number }> = {
   content: () => CONTENT,
   start(spec) {
     if (spec.seed === 'boom') throw new Error('boom');
+    if (spec.seed === 'loop') for (;;);
     if (spec.seed === 'die') process.exit(3);
     return { options: { seed: spec.seed }, rules: { target: Number(spec.settings?.target ?? RULES.target) } };
   },

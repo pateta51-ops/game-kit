@@ -28,6 +28,15 @@ const all = await runResumable(request, workers, 'run.jsonl', settingsLabel);
 - Sanity bands: the game writes `SanityBands<S>` (records → `Band[]`: id, text, target, actual, pass); `formatBands(bands, skipIds)` → `{ lines, failed }`; a skipped band prints as INFO and is not counted. Exit 1 when `failed > 0`.
 - Code version: `codeVersion(['src/engine', ...], root)` = git short id (or `nogit`) + a hash of those files and folders (uncommitted edits count, CRLF as LF, no `node_modules` or dot folders); `root` is the repository's top folder. Put it in the `runResumable` settings label and a resumed sweep refuses another version.
 - Workers run `worker.ts` on plain node (the game module is loaded the same way: `.ts` imports name their extension); a bundled game passes `worker: <bundle URL>`. K101, opt-in: `view?(state, content)` and `hasten?(state, content)` → action on `SimGame`; `secrets?(state, content)` (K238): with `view: true` a view that holds one of those strings (value, key or whole word) fails the game (`view leak: ...`); `leakKeys?(state, content)` names key names it must not hold (opt-in: `['rng']`; `stack` may be a real zone); `view: true` (request, `fuzz`, `playOne` options) builds and serializes the view after setup and every action (a throw fails the game: `view after N action(s): ...`; `viewBytes` on the record is the largest); `hasten: N` (also `--hasten N`) applies the game's hasten action instead of the driver's after every N actions so late stages are reached. `replayStep(game, content, spec, step, { view?, hasten? }, top = 15)` replays one game to a step and returns `lines`: that step's ms (answers, choose, apply, view), the view size, and the slowest steps.
+- K273 watchdog and report: `gameTimeoutMs` in the request (default off) stops a game that runs longer in wall-clock ms: its worker is terminated and the game becomes a failed record with `errorName: 'timeout'` (never checkpointed); the rest goes on. With it set, games always run on worker threads. `report(records, { winner?, first? })` → `{ games, completed, completedShare, failures: { timeout, crash, violation, error }, length: { min, median, max } (actions, completed games), winsBySeat, winShareBySeat, firstPlayer }`; `formatReport(r)` is the text. `winner` defaults to the result when a string or number, else `result.winner`.
+
+```ts
+import { formatReport, report, runGames } from '../kit/sim-pool/index'
+
+const specs = [{ index: 0, seed: 'a', driver: 'random' }]
+const records = await runGames({ module: new URL('./sim-game.ts', import.meta.url).href, specs, gameTimeoutMs: 60_000 }, 4)
+console.log(formatReport(report(records, { first: () => 0 })))
+```
 
 ## Use it in 10 lines
 
