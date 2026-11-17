@@ -63,6 +63,10 @@
     "use": "A pile on the table: stack at rest, an animated fan to look through it, picks from it, a grid in the phone sheet.",
     "not": "A hand, dragging, card faces."
   },
+  "player-board": {
+    "use": "A mat with named zones from a layout: each zone fits its cards (largest size, two rows, a fan below the readable minimum) and is a motion anchor; a pure plan plus a React board with slots the game fills.",
+    "not": "Where zones sit (the game's layout), card faces, tucked attachments (K245), piles."
+  },
   "card-query": {
     "use": "Cards must be searched or filtered by a small text query.",
     "not": "Game-rule target selection inside the engine."

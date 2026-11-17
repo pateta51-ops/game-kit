@@ -1,0 +1,5 @@
+/* K244: structure only. Zones and card slots are absolutely placed, in design pixels turned into rem. The look is the game's, on the [data-part] hooks. */
+:where([data-part='player-board']) { position: relative; }
+:where([data-part='mat']) { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: fill; pointer-events: none; }
+:where([data-part='zone']) { position: absolute; }
+:where([data-part='slot']) { position: absolute; }

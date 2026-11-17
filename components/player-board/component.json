@@ -1,0 +1,14 @@
+{
+  "name": "player-board",
+  "source": {
+    "game": "earthborne-rangers-fan-prototype",
+    "commit": "3d9c6887",
+    "paths": [
+      "src/ui/table/geometry.ts (layRow, fitZone, RowFit, MIN_CARD_WIDTH, handSink; made generic: any item, a footprint callback, no mats, tags, slides)",
+      "src/ui/table/Board.tsx (design pixels to rem, the mat under the zones, zone ids as anchors)"
+    ],
+    "note": "K244: Earthborne's mats, layouts, missions, piles and tags stay out; tucked attachments are K245 (footprint callback)."
+  },
+  "needs": ["card-zones", "board-layout", "card-attachments"],
+  "packages": ["react"]
+}
