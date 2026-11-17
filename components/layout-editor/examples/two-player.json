@@ -1,0 +1,444 @@
+{
+ "screens": {
+  "desktop": {
+   "w": 3840,
+   "h": 2160,
+   "card": [
+    180,
+    252
+   ],
+   "zones": {
+    "you": {
+     "r": [
+      0,
+      1400,
+      3200,
+      760
+     ],
+     "label": "Your side"
+    },
+    "you.name": {
+     "r": [
+      40,
+      1420,
+      400,
+      40
+     ],
+     "label": "Player plate"
+    },
+    "you.resources": {
+     "r": [
+      460,
+      1420,
+      700,
+      40
+     ],
+     "label": "Influence, dilithium, crew"
+    },
+    "you.staging": {
+     "r": [
+      40,
+      1480,
+      800,
+      300
+     ],
+     "label": "Staging area, 4 cards",
+     "cards": 4
+    },
+    "you.locations": {
+     "r": [
+      880,
+      1480,
+      1000,
+      300
+     ],
+     "label": "Locations, 5 cards",
+     "cards": 5
+    },
+    "you.fleet": {
+     "r": [
+      1920,
+      1480,
+      700,
+      300
+     ],
+     "label": "Fleet, 3 ships",
+     "cards": 3
+    },
+    "you.development": {
+     "r": [
+      2660,
+      1480,
+      500,
+      300
+     ],
+     "label": "Development, 3 cards",
+     "cards": 3
+    },
+    "you.hand": {
+     "r": [
+      40,
+      1820,
+      1500,
+      300
+     ],
+     "label": "Hand, 7 cards",
+     "cards": 7
+    },
+    "you.deck": {
+     "r": [
+      1580,
+      1820,
+      200,
+      300
+     ],
+     "label": "Draw deck",
+     "cards": 1,
+     "fan": "stack"
+    },
+    "you.discard": {
+     "r": [
+      1800,
+      1820,
+      200,
+      300
+     ],
+     "label": "Discard pile",
+     "cards": 1,
+     "fan": "stack"
+    },
+    "you.captain": {
+     "r": [
+      2040,
+      1820,
+      300,
+      300
+     ],
+     "label": "Captain",
+     "cards": 1
+    },
+    "you.duty": {
+     "r": [
+      2360,
+      1820,
+      260,
+      300
+     ],
+     "label": "Duty officer",
+     "cards": 1
+    },
+    "you.reserve": {
+     "r": [
+      2660,
+      1820,
+      500,
+      300
+     ],
+     "label": "Reserve, 2 cards",
+     "cards": 2
+    },
+    "shared": {
+     "r": [
+      0,
+      780,
+      3200,
+      600
+     ],
+     "label": "Shared table"
+    },
+    "shared.marketDecks": {
+     "r": [
+      40,
+      800,
+      420,
+      300
+     ],
+     "label": "Market decks",
+     "cards": 2
+    },
+    "shared.market": {
+     "r": [
+      500,
+      800,
+      1200,
+      300
+     ],
+     "label": "Market row, 6 cards",
+     "cards": 6
+    },
+    "shared.encounter": {
+     "r": [
+      1740,
+      800,
+      200,
+      300
+     ],
+     "label": "Encounter deck",
+     "cards": 1,
+     "fan": "stack"
+    },
+    "shared.locationDeck": {
+     "r": [
+      1980,
+      800,
+      200,
+      300
+     ],
+     "label": "Location deck",
+     "cards": 1,
+     "fan": "stack"
+    },
+    "shared.neutral": {
+     "r": [
+      2220,
+      800,
+      940,
+      300
+     ],
+     "label": "Neutral zones, 4 cards",
+     "cards": 4
+    },
+    "shared.stardate": {
+     "r": [
+      40,
+      1140,
+      3120,
+      200
+     ],
+     "label": "Stardate track"
+    },
+    "log": {
+     "r": [
+      3240,
+      0,
+      600,
+      1500
+     ],
+     "label": "Game log"
+    },
+    "round": {
+     "r": [
+      3240,
+      1520,
+      290,
+      180
+     ],
+     "label": "Round tracker"
+    },
+    "score": {
+     "r": [
+      3550,
+      1520,
+      290,
+      180
+     ],
+     "label": "Score tracker"
+    },
+    "menu": {
+     "r": [
+      3240,
+      1720,
+      290,
+      180
+     ],
+     "label": "Menu button"
+    },
+    "undo": {
+     "r": [
+      3550,
+      1720,
+      290,
+      180
+     ],
+     "label": "Undo button"
+    },
+    "endTurn": {
+     "r": [
+      3240,
+      1920,
+      600,
+      200
+     ],
+     "label": "End turn button"
+    },
+    "claude": {
+     "r": [
+      0,
+      0,
+      3200,
+      760
+     ],
+     "label": "Claude's side"
+    },
+    "claude.name": {
+     "r": [
+      40,
+      700,
+      400,
+      40
+     ],
+     "label": "Player plate"
+    },
+    "claude.resources": {
+     "r": [
+      460,
+      700,
+      700,
+      40
+     ],
+     "label": "Influence, dilithium, crew"
+    },
+    "claude.staging": {
+     "r": [
+      40,
+      380,
+      800,
+      300
+     ],
+     "label": "Staging area, 4 cards",
+     "cards": 4
+    },
+    "claude.locations": {
+     "r": [
+      880,
+      380,
+      1000,
+      300
+     ],
+     "label": "Locations, 5 cards",
+     "cards": 5
+    },
+    "claude.fleet": {
+     "r": [
+      1920,
+      380,
+      700,
+      300
+     ],
+     "label": "Fleet, 3 ships",
+     "cards": 3
+    },
+    "claude.development": {
+     "r": [
+      2660,
+      380,
+      500,
+      300
+     ],
+     "label": "Development, 3 cards",
+     "cards": 3
+    },
+    "claude.hand": {
+     "r": [
+      40,
+      40,
+      1500,
+      300
+     ],
+     "label": "Hand, 7 cards",
+     "cards": 7
+    },
+    "claude.deck": {
+     "r": [
+      1580,
+      40,
+      200,
+      300
+     ],
+     "label": "Draw deck",
+     "cards": 1,
+     "fan": "stack"
+    },
+    "claude.discard": {
+     "r": [
+      1800,
+      40,
+      200,
+      300
+     ],
+     "label": "Discard pile",
+     "cards": 1,
+     "fan": "stack"
+    },
+    "claude.captain": {
+     "r": [
+      2040,
+      40,
+      300,
+      300
+     ],
+     "label": "Captain",
+     "cards": 1
+    },
+    "claude.duty": {
+     "r": [
+      2360,
+      40,
+      260,
+      300
+     ],
+     "label": "Duty officer",
+     "cards": 1
+    },
+    "claude.reserve": {
+     "r": [
+      2660,
+      40,
+      500,
+      300
+     ],
+     "label": "Reserve, 2 cards",
+     "cards": 2
+    }
+   }
+  },
+  "phone": {
+   "w": 390,
+   "h": 664,
+   "card": [
+    60,
+    84
+   ],
+   "zones": {
+    "top": {
+     "r": [
+      0,
+      0,
+      390,
+      48
+     ],
+     "label": "Top bar"
+    },
+    "table": {
+     "r": [
+      0,
+      48,
+      390,
+      500
+     ],
+     "label": "Table"
+    },
+    "table.market": {
+     "r": [
+      8,
+      60,
+      374,
+      100
+     ],
+     "label": "Market row",
+     "cards": 6
+    },
+    "hand": {
+     "r": [
+      0,
+      548,
+      390,
+      116
+     ],
+     "label": "Hand",
+     "cards": 7
+    }
+   }
+  }
+ }
+}

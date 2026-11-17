@@ -1,0 +1,10 @@
+{
+  "name": "layout-editor",
+  "source": {
+    "game": "none (owner request)",
+    "commit": "new, owner request 16 Nov 2026",
+    "paths": []
+  },
+  "needs": ["board-layout"],
+  "packages": ["playwright-core"]
+}

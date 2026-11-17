@@ -1,0 +1,499 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Layout editor</title>
+<style>
+html,body{margin:0;height:100%;background:#15171c;color:#dde1ea;font:13px system-ui,sans-serif}
+#app{display:grid;grid-template-columns:1fr 376px;grid-template-rows:auto 1fr auto;height:100vh}
+#bar{grid-column:1/3;display:flex;flex-wrap:wrap;gap:4px;padding:4px 6px;border-bottom:1px solid #2c3040;align-items:center}
+#bar .sep{width:1px;align-self:stretch;background:#2c3040;margin:0 2px}
+button,select,input{font:inherit;color:inherit;background:#232734;border:1px solid #3a4052;border-radius:4px;padding:3px 7px}
+button:hover{background:#2e3446}button.on{background:#3b5bdb;border-color:#5c7cfa}
+input[type=number]{width:66px;box-sizing:border-box;padding:3px 4px}input[type=text]{width:100%;box-sizing:border-box}input[type=range]{padding:0}
+.tab{border-radius:4px 4px 0 0}.tab.on{background:#3b5bdb}
+#wrap{position:relative;overflow:hidden;touch-action:none;background:#0d0e12}
+#stage{position:absolute;background:#1b1e27;outline:1px solid #4a5068;touch-action:none;user-select:none}
+#bg{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
+.z{position:absolute;box-sizing:border-box;border:1.5px solid hsl(var(--h) 60% 60%);background:hsl(var(--h) 60% 50% / .13);cursor:move}
+.z.locked{cursor:default;border-style:dotted}.z.warn{border:2px dashed #f59f00}.z.bad{border:2.5px solid #fa5252}
+.z.sel{outline:2px solid #fff;outline-offset:1px}
+.t{position:absolute;left:1px;top:1px;max-width:calc(100% - 2px);max-height:calc(100% - 2px);overflow:hidden;background:#0d0e12d0;padding:0 3px;border-radius:3px;line-height:1.2;pointer-events:none;box-sizing:border-box}
+.t.one{white-space:nowrap}.t.brk{overflow-wrap:anywhere}.t.one br{display:none}.t.none{display:none}
+#ptags .t{max-width:none;max-height:none;transform:translateX(-100%);font-size:11px}
+.t b{color:#fff}.t i{color:#9aa3b8;font-style:normal}
+.c{position:absolute;box-sizing:border-box;border:1px dashed #b8c0d4;border-radius:3px;pointer-events:none}.c.out{border-color:#fa5252}
+.g{position:absolute;background:#e64980;pointer-events:none;z-index:99999}
+#selbox{position:absolute;pointer-events:none;z-index:100000}
+.h{position:absolute;width:12px;height:12px;background:#fff;border:1px solid #3b5bdb;pointer-events:auto;box-sizing:border-box}
+@media (pointer:coarse){.h{width:24px;height:24px}}
+#ptags{position:absolute;inset:0;pointer-events:none;z-index:99998}
+#marq{position:absolute;border:1px dashed #fff;background:#fff2;pointer-events:none;z-index:100001;display:none}
+#panel{grid-row:2/4;grid-column:2;overflow:auto;border-left:1px solid #2c3040;padding:6px 8px}
+#panel h3{margin:10px 0 4px;font-size:12px;text-transform:uppercase;color:#8d96ad;letter-spacing:.05em}
+.f{display:grid;grid-template-columns:70px 1fr;gap:4px 6px;align-items:center}
+.xywh{display:flex;gap:4px;flex-wrap:wrap}
+.row{display:flex;gap:4px;align-items:center;padding:1px 0;cursor:pointer;white-space:nowrap}.row.sel{background:#3b5bdb55}
+.row button{padding:0 4px;font-size:11px;color:#6b7387}.row button.on{color:#fff;background:#232734}
+.row span{overflow:hidden;text-overflow:ellipsis}
+#warns div{color:#ffa8a8;cursor:pointer;padding:1px 0}
+#status{grid-column:1;padding:3px 8px;border-top:1px solid #2c3040;color:#9aa3b8;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#dlg{position:fixed;inset:0;background:#000a;display:none;align-items:center;justify-content:center;z-index:200000}
+#dlg>div{background:#1b1e27;border:1px solid #3a4052;border-radius:6px;padding:10px;width:min(720px,94vw);display:flex;flex-direction:column;gap:6px}
+#dlg textarea{height:50vh;background:#0d0e12;color:#dde1ea;font:12px monospace;border:1px solid #3a4052}
+#msg{color:#ffd43b}
+@media (max-width:760px){
+#app{grid-template-columns:1fr;grid-template-rows:auto 42vh auto 1fr}
+#bar{grid-column:1}#panel{grid-row:4;grid-column:1;border-left:0;border-top:1px solid #2c3040}
+}
+</style>
+</head>
+<body>
+<div id="app">
+<div id="bar">
+  <span id="tabs"></span><button id="addScreen" title="Add a screen">+ screen</button><span class="sep"></span>
+  <button id="undo" title="Ctrl+Z">Undo</button><button id="redo" title="Ctrl+Y">Redo</button><span class="sep"></span>
+  <button id="add" title="Add a zone (inside the selected one)">+ Zone</button><button id="dup" title="Ctrl+D">Duplicate</button><button id="del" title="Delete">Delete</button>
+  <button id="fwd">Forward</button><button id="back">Back</button><span class="sep"></span>
+  <button data-al="left" title="Align left">⇤</button><button data-al="centre" title="Align centre">↔</button><button data-al="right" title="Align right">⇥</button>
+  <button data-al="top" title="Align top">⤒</button><button data-al="middle" title="Align middle">↕</button><button data-al="bottom" title="Align bottom">⤓</button>
+  <button data-dist="h" title="Distribute across">⋯</button><button data-dist="v" title="Distribute down">⋮</button><span class="sep"></span>
+  <button id="multi" title="Tap adds to the selection (touch)">Multi</button>
+  <label>Grid <select id="grid"><option value="0">off</option><option>8</option><option selected>16</option><option>32</option><option>64</option></select></label>
+  <button id="json">Import / Export</button>
+  <span id="msg"></span>
+</div>
+<div id="wrap"><div id="stage"><img id="bg" alt=""><div id="zones"></div><div id="ptags"></div><div id="guides"></div><div id="selbox"></div><div id="marq"></div></div></div>
+<div id="status"></div>
+<div id="panel">
+  <h3>Screen</h3>
+  <div class="f">
+    <span>Name</span><input id="sName" type="text">
+    <span>Size</span><span class="xywh"><input id="sW" type="number" min="1"><input id="sH" type="number" min="1"><button id="delScreen">Remove screen</button></span>
+    <span>Card</span><span class="xywh"><input id="cW" type="number" min="1"><input id="cH" type="number" min="1"></span>
+    <span>Card scale</span><input id="cS" type="range" min="25" max="200" value="100">
+    <span>Children</span><label><input id="keep" type="checkbox"> keep size when the parent is resized</label>
+    <span>Backdrop</span><span class="xywh"><input id="bgFile" type="file" accept="image/*" style="width:180px"><input id="bgUrl" type="text" placeholder="or picture URL, Enter"><input id="bgOp" type="range" min="0" max="100" value="50" title="Opacity"><button id="bgOff">No backdrop</button></span>
+  </div>
+  <h3>Zone</h3>
+  <div class="f" id="zf">
+    <span>Id</span><input id="zId" type="text">
+    <span>Label</span><input id="zLabel" type="text" placeholder="what it holds">
+    <span>x y w h</span><span class="xywh"><input id="zX" type="number"><input id="zY" type="number"><input id="zW" type="number" min="1"><input id="zH" type="number" min="1"></span>
+    <span>Cards</span><span class="xywh"><input id="zCards" type="number" min="0"><select id="zFan"><option>row</option><option>column</option><option>stack</option><option>grid</option></select></span>
+    <span>Mirror</span><span class="xywh"><button id="flipV">Flip ↕</button><button id="flipH">Flip ↔</button><input id="mirTo" type="text" placeholder="copy as id" style="width:110px"></span>
+  </div>
+  <h3>Warnings</h3><div id="warns"></div>
+  <h3>Zones</h3><div id="tree"></div>
+</div>
+</div>
+<div id="dlg"><div>
+  <b>Layout JSON</b>
+  <textarea id="txt" spellcheck="false"></textarea>
+  <div class="xywh"><button id="copy">Copy</button><button id="dl">Download</button><button id="loadTxt">Load this text</button><input id="file" type="file" accept=".json,application/json"><button id="close">Close</button></div>
+</div></div>
+<script>
+// <lib generated from index.ts by build.mjs>
+// K269: pure logic of the layout editor; editor.html carries a generated copy (build.mjs), checked by editor.test.ts.
+const FANS = ['row', 'column', 'stack', 'grid'];
+const num = (v , d ) => (typeof v === 'number' && isFinite(v) ? v : typeof v === 'string' && v.trim() !== '' && isFinite(Number(v)) ? Number(v) : d);
+const isObj = (v ) => !!v && typeof v === 'object' && !Array.isArray(v);
+function normalizeZone(v ) {
+const o = Array.isArray(v) ? { r: v } : isObj(v) ? v : null;
+if (!o || !Array.isArray(o.r)) return null;
+const r = o.r ;
+const { r: _r, label: _l, cards: _c, fan: _f, locked: _k, hidden: _h, ...rest } = o;
+const z = { r: [num(r[0], 0), num(r[1], 0), num(r[2], 0), num(r[3], 0)], ...rest };
+if (typeof o.label === 'string' && o.label) z.label = o.label;
+if (o.cards !== undefined && num(o.cards, 0) > 0) z.cards = Math.round(num(o.cards, 0));
+if (typeof o.fan === 'string' && FANS.includes(o.fan)) z.fan = o.fan ;
+if (o.locked === true) z.locked = true;
+if (o.hidden === true) z.hidden = true;
+return z;
+}
+function normalizeScreen(v ) {
+const o = isObj(v) ? v : {};
+const c = Array.isArray(o.card) ? (o.card ) : [];
+const { w: _w, h: _h, card: _c, zones: _z, ...rest } = o;
+const s = { ...rest, w: num(o.w, 3840), h: num(o.h, 2160), card: [num(c[0], 180), num(c[1], 252)], zones: {} };
+if (isObj(o.zones)) for (const [k, z] of Object.entries(o.zones)) { const n = normalizeZone(z); if (n) s.zones[k] = n; }
+return s;
+}
+function normalizeDoc(v ) {
+if (typeof v === 'string') v = JSON.parse(v);
+const o = isObj(v) ? v : {};
+const screens = {};
+if (isObj(o.screens)) for (const [k, s] of Object.entries(o.screens)) screens[k] = normalizeScreen(s);
+else if (isObj(o.zones)) screens.main = normalizeScreen(o);
+if (!Object.keys(screens).length) screens.desktop = normalizeScreen({});
+return { screens };
+}
+const screenLayout = (doc , name ) => doc.screens[name ?? ''] ?? Object.values(doc.screens)[0] ?? normalizeScreen({});
+const descendants = (s , id ) => Object.keys(s.zones).filter((k) => k.startsWith(id + '.'));
+const childrenOf = (doc , screen , id ) => descendants(screenLayout(doc, screen), id);
+function parentOf(s , id ) {
+for (let i = id.lastIndexOf('.'); i > 0; i = id.lastIndexOf('.', i - 1)) if (s.zones[id.slice(0, i)]) return id.slice(0, i);
+return undefined;
+}
+const setR = (s , rs ) => ({ ...s, zones: Object.fromEntries(Object.entries(s.zones).map(([k, z]) => [k, rs[k] ? { ...z, r: rs[k] } : z])) });
+function moveZone(s , id , dx , dy ) {
+const rs = {};
+for (const k of [id, ...descendants(s, id)]) { const z = s.zones[k]; if (z) rs[k] = [z.r[0] + dx, z.r[1] + dy, z.r[2], z.r[3]]; }
+return setR(s, rs);
+}
+function resizeZone(s , id , r , keepChildren = false) {
+const o = s.zones[id]?.r;
+if (!o) return s;
+const fx = o[2] ? r[2] / o[2] : 1, fy = o[3] ? r[3] / o[3] : 1;
+const rs = { [id]: r };
+for (const k of descendants(s, id)) {
+const c = s.zones[k] .r;
+if (keepChildren) rs[k] = [r[0] + (c[0] + c[2] / 2 - o[0]) * fx - c[2] / 2, r[1] + (c[1] + c[3] / 2 - o[1]) * fy - c[3] / 2, c[2], c[3]];
+else rs[k] = [r[0] + (c[0] - o[0]) * fx, r[1] + (c[1] - o[1]) * fy, c[2] * fx, c[3] * fy];
+}
+return setR(s, rs);
+}
+// Flip ids (and their children) inside the stage; with `to`, write the flipped copy under ids renamed from prefix to[0] to to[1].
+const idTaken = (s , id ) => !!s.zones[id] || Object.keys(s.zones).some((k) => k.startsWith(id + '.'));
+function mirrorZones(s , ids , axis , to ) {
+if (to && to[0] !== to[1] && idTaken(s, to[1])) return s;
+const all = [...new Set(ids.flatMap((id) => [id, ...descendants(s, id)]))].filter((k) => s.zones[k]);
+const zones = { ...s.zones };
+for (const k of all) {
+const z = s.zones[k] , [x, y, w, h] = z.r;
+const r = axis === 'v' ? [x, s.h - y - h, w, h] : [s.w - x - w, y, w, h];
+const nk = to && (k === to[0] || k.startsWith(to[0] + '.')) ? to[1] + k.slice(to[0].length) : k;
+zones[nk] = { ...z, r };
+}
+return { ...s, zones };
+}
+function renameZone(s , from , to ) {
+if (!to || to === from || idTaken(s, to) || !s.zones[from] || to.startsWith(from + '.')) return s;
+return { ...s, zones: Object.fromEntries(Object.entries(s.zones).map(([k, z]) => [k === from ? to : k.startsWith(from + '.') ? to + k.slice(from.length) : k, z])) };
+}
+// Snap the moving edges (`move`: the whole rect; else any of 'l', 'r', 't', 'b') to the others' edges and centres within tol, else to the grid.
+function snap(r , others , grid , tol , edges = 'move') {
+let [x, y, w, h] = r;
+const guides = [];
+const best = (pts , ts ) => {
+let b = null;
+for (const p of pts) for (const t of ts) if (Math.abs(t - p) <= tol && (!b || Math.abs(t - p) < Math.abs(b[0]))) b = [t - p, t];
+return b;
+};
+const g = (v ) => (grid > 0 ? Math.round(v / grid) * grid : v);
+const tx = others.flatMap((o) => [o[0], o[0] + o[2] / 2, o[0] + o[2]]), ty = others.flatMap((o) => [o[1], o[1] + o[3] / 2, o[1] + o[3]]);
+if (edges === 'move') {
+const bx = best([x, x + w / 2, x + w], tx), by = best([y, y + h / 2, y + h], ty);
+if (bx) { x += bx[0]; guides.push({ axis: 'x', at: bx[1] }); } else x = g(x);
+if (by) { y += by[0]; guides.push({ axis: 'y', at: by[1] }); } else y = g(y);
+return { r: [x, y, w, h], guides };
+}
+if (edges.includes('l')) { const b = best([x], tx), nx = b ? b[1] : g(x); if (b) guides.push({ axis: 'x', at: b[1] }); w += x - nx; x = nx; }
+if (edges.includes('r')) { const b = best([x + w], tx); if (b) guides.push({ axis: 'x', at: b[1] }); w = (b ? b[1] : g(x + w)) - x; }
+if (edges.includes('t')) { const b = best([y], ty), ny = b ? b[1] : g(y); if (b) guides.push({ axis: 'y', at: b[1] }); h += y - ny; y = ny; }
+if (edges.includes('b')) { const b = best([y + h], ty); if (b) guides.push({ axis: 'y', at: b[1] }); h = (b ? b[1] : g(y + h)) - y; }
+return { r: [x, y, w, h], guides };
+}
+// Cards side by side without overlap: row, column, stack (one pile) or grid. scale: the card size (<= 1) at which they fit.
+function cardFit(zone , card , cards = zone.cards ?? 0, fan = zone.fan ?? 'row') {
+const [, , w, h] = zone.r, [cw, ch] = card;
+if (cards <= 0 || cw <= 0 || ch <= 0) return { fits: true, perRow: 0, scale: 1 };
+let perRow = 1, s ;
+if (fan === 'row') { perRow = cards; s = Math.min(w / (cards * cw), h / ch); }
+else if (fan === 'column') s = Math.min(w / cw, h / (cards * ch));
+else if (fan === 'stack') s = Math.min(w / cw, h / ch);
+else {
+s = 0;
+for (let c = 1; c <= cards; c++) { const t = Math.min(w / (c * cw), h / (Math.ceil(cards / c) * ch)); if (t > s + 1e-9) { s = t; perRow = c; } }
+if (s >= 1) perRow = Math.min(cards, Math.max(1, Math.floor(w / cw)));
+}
+return { fits: s >= 0.999, perRow, scale: Math.min(1, s) };
+}
+const inside = (a , b ) => a[0] >= b[0] - 0.5 && a[1] >= b[1] - 0.5 && a[0] + a[2] <= b[0] + b[2] + 0.5 && a[1] + a[3] <= b[1] + b[3] + 0.5;
+const overlaps = (a , b ) => Math.min(a[0] + a[2], b[0] + b[2]) - Math.max(a[0], b[0]) > 0.5 && Math.min(a[1] + a[3], b[1] + b[3]) - Math.max(a[1], b[1]) > 0.5;
+function layoutWarnings(s ) {
+const out = [];
+const ids = Object.keys(s.zones).filter((k) => !s.zones[k] .hidden);
+for (const id of ids) {
+const z = s.zones[id] , p = parentOf(s, id);
+const f = cardFit(z, s.card);
+if (!f.fits) out.push({ id, kind: 'cards', text: `${id}: ${z.cards} cards fit only at ${Math.floor(f.scale * 100)}% of the card size` });
+if (!inside(z.r, [0, 0, s.w, s.h])) out.push({ id, kind: 'outside', text: `${id}: outside the screen` });
+else if (p && !inside(z.r, s.zones[p] .r)) out.push({ id, kind: 'outside', text: `${id}: outside ${p}` });
+for (const o of ids) if (o > id && parentOf(s, o) === p && overlaps(z.r, s.zones[o] .r)) out.push({ id, kind: 'overlap', text: `${id} overlaps ${o}` });
+}
+return out;
+}
+function alignZones(s , ids , how ) {
+const rs = ids.map((k) => s.zones[k]?.r).filter((r) => !!r);
+if (!rs.length) return s;
+const x0 = Math.min(...rs.map((r) => r[0])), x1 = Math.max(...rs.map((r) => r[0] + r[2])), y0 = Math.min(...rs.map((r) => r[1])), y1 = Math.max(...rs.map((r) => r[1] + r[3]));
+for (const k of ids) {
+const r = s.zones[k]?.r;
+if (!r) continue;
+const dx = how === 'left' ? x0 - r[0] : how === 'right' ? x1 - r[0] - r[2] : how === 'centre' ? (x0 + x1 - r[2]) / 2 - r[0] : 0;
+const dy = how === 'top' ? y0 - r[1] : how === 'bottom' ? y1 - r[1] - r[3] : how === 'middle' ? (y0 + y1 - r[3]) / 2 - r[1] : 0;
+s = moveZone(s, k, dx, dy);
+}
+return s;
+}
+// Equal gaps between the zones along x ('h') or y ('v'); the first and last stay.
+function distributeZones(s , ids , axis ) {
+const a = axis === 'h' ? 0 : 1;
+const ks = ids.filter((k) => s.zones[k]).sort((p, q) => s.zones[p] .r[a] - s.zones[q] .r[a]);
+if (ks.length < 3) return s;
+const r = (k ) => s.zones[k] .r;
+const first = r(ks[0] ), last = r(ks[ks.length - 1] );
+const gap = (last[a] + last[a + 2] - first[a] - ks.reduce((t, k) => t + r(k)[a + 2] , 0)) / (ks.length - 1);
+let at = first[a] + first[a + 2] + gap;
+for (const k of ks.slice(1, -1)) { const d = at - r(k)[a]; s = moveZone(s, k, a ? 0 : d, a ? d : 0); at += r(k)[a + 2] + gap; }
+return s;
+}
+// </lib>
+const KEY = 'layout-editor-doc', $ = (id) => document.getElementById(id)
+const store = (k, v) => { try { if (v === undefined) return localStorage.getItem(k); localStorage.setItem(k, v) } catch { return null } }
+let doc, cur, sel = new Set(), hist = [], fut = [], drag = null, guides = [], sc = 1, base = 100, mouse = [0, 0], cardSnap = null
+const listeners = [], fitCache = new Map(), ui = { grid: 16, keep: false, multi: false, bg: JSON.parse(store(KEY + '-bg') || '{}') }
+const S = () => doc.screens[cur]
+const round = (s, old) => ({ ...s, zones: Object.fromEntries(Object.entries(s.zones).map(([k, z]) => [k, z === old.zones[k] ? z : { ...z, r: z.r.map(Math.round) }])) })
+const snapDoc = () => JSON.stringify(doc)
+function changed() { if (window.LAYOUT_EDITOR_INIT === undefined) store(KEY, JSON.stringify(doc)); for (const f of listeners) f(api.get()) }
+function setDoc(d, keepHist) {
+  if (!keepHist) { hist.push(snapDoc()); fut = [] }
+  doc = d; if (!doc.screens[cur]) cur = Object.keys(doc.screens)[0]
+  sel = new Set([...sel].filter((k) => S().zones[k])); changed(); render()
+}
+function commit(s) { const d = { screens: { ...doc.screens, [cur]: round(s, S()) } }; setDoc(d) }
+function flash(t) { $('msg').textContent = t; clearTimeout(flash.t); flash.t = setTimeout(() => ($('msg').textContent = ''), 3000) }
+const tops = () => [...sel].filter((k) => S().zones[k] && ![...sel].some((p) => k.startsWith(p + '.')))
+const depth = (s, k) => { let d = 0; for (let p = parentOf(s, k); p; p = parentOf(s, p)) d++; return d }
+const hue = (k) => { let h = 0; for (const ch of k.split('.')[0]) h = (h * 31 + ch.charCodeAt(0)) % 360; return h }
+
+function fit() {
+  const w = $('wrap'), s = S(), m = 12
+  sc = Math.min((w.clientWidth - 2 * m) / s.w, (w.clientHeight - 2 * m) / s.h)
+  Object.assign($('stage').style, { width: s.w * sc + 'px', height: s.h * sc + 'px', left: (w.clientWidth - s.w * sc) / 2 + 'px', top: (w.clientHeight - s.h * sc) / 2 + 'px' })
+}
+const px = (v) => v * sc + 'px'
+function render() {
+  const s = S(); fit()
+  $('tabs').innerHTML = Object.keys(doc.screens).map((k) => `<button class="tab${k === cur ? ' on' : ''}" data-screen="${esc(k)}">${esc(k)}</button>`).join('')
+  const bg = ui.bg[cur]; $('bg').style.display = bg ? '' : 'none'; if (bg) { if ($('bg').getAttribute('src') !== bg.src) $('bg').src = bg.src; $('bg').style.opacity = bg.op }
+  const warns = layoutWarnings(s), bad = new Set(warns.filter((w) => w.kind === 'cards').map((w) => w.id)), warn = new Set(warns.map((w) => w.id))
+  const keys = Object.keys(s.zones), html = [], tags = [], kids = (k) => keys.some((c) => c.startsWith(k + '.'))
+  keys.forEach((k, i) => {
+    const z = s.zones[k]; if (z.hidden) return
+    const [x, y, w, h] = z.r, cls = ['z', sel.has(k) && 'sel', z.locked && 'locked', bad.has(k) ? 'bad' : warn.has(k) && 'warn'].filter(Boolean).join(' ')
+    let cards = ''
+    const chip = `<b>${esc(k)}</b>${z.label ? ' <br>' + esc(z.label) : ''}`
+    if (z.cards) {
+      const [cw, ch] = s.card, fan = z.fan || 'row', cols = Math.max(1, Math.floor(w / cw))
+      for (let j = 0; j < (fan === 'stack' ? 1 : Math.min(z.cards, 60)); j++) {
+        const cx = fan === 'row' ? j * cw : fan === 'grid' ? (j % cols) * cw : 0, cy = fan === 'column' ? j * ch : fan === 'grid' ? Math.floor(j / cols) * ch : 0
+        cards += `<div class="c${cx + cw > w + 0.5 || cy + ch > h + 0.5 ? ' out' : ''}" style="left:${px(cx)};top:${px(cy)};width:${px(cw)};height:${px(ch)}"></div>`
+      }
+    }
+    const info = z.cards ? ` <br><i>${z.cards} card${z.cards > 1 ? 's' : ''}, ${z.fan || 'row'}</i>` : ''
+    html.push(`<div class="${cls}" data-id="${esc(k)}" style="--h:${hue(k)};left:${px(x)};top:${px(y)};width:${px(w)};height:${px(h)};z-index:${depth(s, k) * 1000 + i}" title="${esc(k + (z.label ? ': ' + z.label : ''))}">${cards}${kids(k) ? '' : `<div class="t">${chip}${info}</div>`}</div>`)
+    if (kids(k)) tags.push(`<div class="t one" style="left:${px(x + w)};top:${px(y)}">${chip}${info}</div>`)
+  })
+  $('zones').innerHTML = html.join(''); $('ptags').innerHTML = tags.join('')
+  for (const t of $('zones').querySelectorAll('.t')) fitLabel(t)
+  $('guides').innerHTML = guides.map((g) => g.axis === 'x' ? `<div class="g" style="left:${px(g.at)};top:0;width:1px;height:100%"></div>` : `<div class="g" style="top:${px(g.at)};left:0;height:1px;width:100%"></div>`).join('')
+  const one = sel.size === 1 && s.zones[[...sel][0]], sb = $('selbox')
+  if (one && !one.hidden && !one.locked) {
+    const [x, y, w, h] = one.r; Object.assign(sb.style, { display: '', left: px(x), top: px(y), width: px(w), height: px(h) })
+    const hs = matchMedia('(pointer:coarse)').matches ? 24 : 12, f = (e, a, b) => (e.includes(a) ? 0 : e.includes(b) ? 100 : 50)
+    sb.innerHTML = ['tl', 't', 'tr', 'r', 'br', 'b', 'bl', 'l'].filter((e) => !(e.length === 1 && (/[tb]/.test(e) ? w * sc : h * sc) < 3 * hs)).map((e) => `<div class="h" data-h="${e}" style="left:${f(e, 'l', 'r')}%;top:${f(e, 't', 'b')}%;transform:translate(${-f(e, 'r', 'l')}%,${-f(e, 'b', 't')}%);cursor:${{ tl: 'nwse', br: 'nwse', tr: 'nesw', bl: 'nesw', t: 'ns', b: 'ns', l: 'ew', r: 'ew' }[e]}-resize"></div>`).join('')
+  } else sb.style.display = 'none'
+  $('warns').innerHTML = warns.length ? warns.map((w) => `<div data-id="${esc(w.id)}">${esc(w.text)}</div>`).join('') : '<span style="color:#8d96ad">none</span>'
+  $('tree').innerHTML = keys.map((k) => { const z = s.zones[k]; return `<div class="row${sel.has(k) ? ' sel' : ''}" data-id="${esc(k)}" style="padding-left:${depth(s, k) * 14}px"><button data-act="hidden" class="${z.hidden ? '' : 'on'}" title="Show or hide">${z.hidden ? 'hidden' : 'shown'}</button><button data-act="locked" class="${z.locked ? 'on' : ''}" title="Lock">${z.locked ? 'locked' : 'lock'}</button><span>${esc(k)}${z.label ? ' <i style="color:#8d96ad">' + esc(z.label) + '</i>' : ''}</span></div>` }).join('')
+  panel(); status()
+}
+function fitLabel(t) {
+  const key = t.innerHTML + '|' + t.parentElement.style.width + '|' + t.parentElement.style.height, f = fitCache.get(key)
+  const tries = [[0, 13], [0, 12], [0, 11], [0, 10], [1, 12], [1, 11], [1, 10], [0, 9], [1, 9], [1, 8], [2, 10], [2, 9], [2, 8]]
+  for (const [one, size] of f ? [f] : tries) {
+    t.classList.toggle('one', one === 1); t.classList.toggle('brk', one === 2); t.style.fontSize = size + 'px'
+    if (size && (f || (t.scrollHeight <= t.clientHeight + 1 && t.scrollWidth <= t.clientWidth + 1))) { if (!f) fitCache.set(key, [one, size]); return }
+  }
+  t.classList.add('none'); fitCache.set(key, [0, 0])
+}
+const esc = (v) => String(v).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c])
+function setVal(id, v) { const e = $(id); if (document.activeElement !== e) e.value = v }
+function panel() {
+  const s = S(); setVal('sName', cur); setVal('sW', s.w); setVal('sH', s.h); setVal('cW', s.card[0]); setVal('cH', s.card[1]); $('keep').checked = ui.keep
+  setVal('bgOp', Math.round((ui.bg[cur]?.op ?? 0.5) * 100))
+  const k = sel.size === 1 ? [...sel][0] : null, z = k && s.zones[k]
+  for (const e of $('zf').querySelectorAll('input,select,button')) e.disabled = !z && !(sel.size > 1 && e.tagName === 'BUTTON')
+  if (!z) { for (const id of ['zId', 'zLabel', 'zX', 'zY', 'zW', 'zH', 'zCards']) setVal(id, ''); return }
+  setVal('zId', k); setVal('zLabel', z.label || ''); ['zX', 'zY', 'zW', 'zH'].forEach((id, i) => setVal(id, Math.round(z.r[i]))); setVal('zCards', z.cards || ''); setVal('zFan', z.fan || 'row')
+}
+function status() {
+  const k = sel.size === 1 ? [...sel][0] : null, z = k && S().zones[k]
+  $('status').textContent = `x ${Math.round(mouse[0])}  y ${Math.round(mouse[1])}   |   ${z ? `${k}  [${z.r.map(Math.round).join(', ')}]` : sel.size ? sel.size + ' selected' : 'nothing selected'}   |   ${S().w}x${S().h} at ${Math.round(sc * 100)}%   |   Alt: no snap, arrows: 1 px, Shift+arrows: 10 px`
+}
+
+const toStage = (e) => { const b = $('stage').getBoundingClientRect(); return [(e.clientX - b.left) / sc, (e.clientY - b.top) / sc] }
+const others = (s, skip) => [[0, 0, s.w, s.h], ...Object.keys(s.zones).filter((k) => !s.zones[k].hidden && !skip.some((p) => k === p || k.startsWith(p + '.'))).map((k) => s.zones[k].r)]
+const bbox = (s, ids) => { const rs = ids.map((k) => s.zones[k].r), x = Math.min(...rs.map((r) => r[0])), y = Math.min(...rs.map((r) => r[1])); return [x, y, Math.max(...rs.map((r) => r[0] + r[2])) - x, Math.max(...rs.map((r) => r[1] + r[3])) - y] }
+$('stage').addEventListener('pointerdown', (e) => {
+  if (e.button > 0) return
+  const p = toStage(e), h = e.target.closest('.h'), zEl = e.target.closest('.z'), s = S(), add = e.shiftKey || ui.multi
+  $('stage').setPointerCapture(e.pointerId)
+  const id = zEl?.dataset.id
+  if (h) drag = { kind: 'resize', id: [...sel][0], edges: h.dataset.h, p, base: s, snap: snapDoc() }
+  else if (id && !s.zones[id].locked) {
+    if (add) { if (sel.has(id)) sel.delete(id); else sel.add(id) } else if (!sel.has(id)) sel = new Set([id])
+    const ids = tops().filter((k) => !s.zones[k].locked)
+    drag = ids.length ? { kind: 'move', ids, p, base: s, snap: snapDoc(), box: bbox(s, ids) } : null
+  } else {
+    if (!add) sel = new Set(id ? [id] : [])
+    drag = { kind: 'marq', p, prev: new Set(sel) }
+  }
+  render()
+})
+$('stage').addEventListener('pointermove', (e) => {
+  mouse = toStage(e)
+  if (!drag) return status()
+  const [x, y] = mouse, dx = Math.round(x - drag.p[0]), dy = Math.round(y - drag.p[1]), tol = 8 / sc
+  if (drag.kind === 'move') {
+    let r = [drag.box[0] + dx, drag.box[1] + dy, drag.box[2], drag.box[3]]
+    if (!e.altKey) { const o = snap(r, others(drag.base, drag.ids), ui.grid, tol); r = o.r; guides = o.guides } else guides = []
+    let s = drag.base; for (const k of drag.ids) s = moveZone(s, k, r[0] - drag.box[0], r[1] - drag.box[1])
+    doc.screens[cur] = s
+  } else if (drag.kind === 'resize') {
+    const o = drag.base.zones[drag.id].r, ed = drag.edges; let [rx, ry, rw, rh] = o
+    if (ed.includes('l')) { rx += dx; rw -= dx } if (ed.includes('r')) rw += dx
+    if (ed.includes('t')) { ry += dy; rh -= dy } if (ed.includes('b')) rh += dy
+    let r = [rx, ry, rw, rh]
+    if (!e.altKey) { const sn = snap(r, others(drag.base, [drag.id]), ui.grid, tol, ed); r = sn.r; guides = sn.guides } else guides = []
+    if (r[2] < 1) { if (ed.includes('l')) r[0] = o[0] + o[2] - 1; r[2] = 1 }
+    if (r[3] < 1) { if (ed.includes('t')) r[1] = o[1] + o[3] - 1; r[3] = 1 }
+    doc.screens[cur] = resizeZone(drag.base, drag.id, r, ui.keep)
+  } else {
+    const m = [Math.min(x, drag.p[0]), Math.min(y, drag.p[1]), Math.abs(x - drag.p[0]), Math.abs(y - drag.p[1])], s = S()
+    Object.assign($('marq').style, { display: 'block', left: px(m[0]), top: px(m[1]), width: px(m[2]), height: px(m[3]) })
+    if (m[2] * sc < 4 && m[3] * sc < 4) return
+    sel = new Set(drag.prev)
+    for (const [k, z] of Object.entries(s.zones)) if (!z.hidden && z.r[0] >= m[0] && z.r[1] >= m[1] && z.r[0] + z.r[2] <= m[0] + m[2] && z.r[1] + z.r[3] <= m[1] + m[3]) sel.add(k)
+  }
+  render()
+})
+const endDrag = () => {
+  if (!drag) return
+  if (drag.snap && drag.snap !== snapDoc()) { doc.screens[cur] = round(S(), drag.base ?? S()); hist.push(drag.snap); fut = []; changed() }
+  drag = null; guides = []; $('marq').style.display = 'none'; render()
+}
+$('stage').addEventListener('pointerup', endDrag); $('stage').addEventListener('pointercancel', endDrag)
+
+function undo(back) {
+  const from = back ? hist : fut, to = back ? fut : hist
+  if (!from.length) return flash(back ? 'Nothing to undo' : 'Nothing to redo')
+  to.push(snapDoc()); setDoc(JSON.parse(from.pop()), true)
+}
+function uniq(s, k) { let n = k, i = 2; while (s.zones[n]) n = k + '-' + i++; return n }
+function addZone() {
+  const s = S(), p = sel.size === 1 ? [...sel][0] : null, pr = p ? s.zones[p].r : [0, 0, s.w, s.h]
+  let n = 1; while (s.zones[(p ? p + '.' : '') + 'zone' + n]) n++
+  const id = (p ? p + '.' : '') + 'zone' + n
+  commit({ ...s, zones: { ...s.zones, [id]: { r: [pr[0] + pr[2] / 4, pr[1] + pr[3] / 4, pr[2] / 2, pr[3] / 2] } } }); sel = new Set([id]); render()
+}
+function duplicate() {
+  const s = S(), zones = { ...s.zones }, d = ui.grid || 16, ns = new Set()
+  for (const k of tops()) {
+    const n = uniq({ zones }, k + '-copy'); ns.add(n)
+    for (const c of [k, ...descendants(s, k)]) { const z = s.zones[c]; zones[n + c.slice(k.length)] = { ...z, r: [z.r[0] + d, z.r[1] + d, z.r[2], z.r[3]] } }
+  }
+  if (!ns.size) return flash('Select a zone first')
+  commit({ ...s, zones }); sel = ns; render()
+}
+function remove() {
+  const s = S(), gone = new Set(tops().flatMap((k) => [k, ...descendants(s, k)]))
+  if (!gone.size) return
+  sel = new Set(); commit({ ...s, zones: Object.fromEntries(Object.entries(s.zones).filter(([k]) => !gone.has(k))) })
+}
+function reorder(d) {
+  const s = S(), ks = Object.keys(s.zones), idx = [...ks.keys()]
+  for (const i of d > 0 ? idx.reverse() : idx) if (sel.has(ks[i]) && ks[i + d] !== undefined && !sel.has(ks[i + d])) [ks[i], ks[i + d]] = [ks[i + d], ks[i]]
+  commit({ ...s, zones: Object.fromEntries(ks.map((k) => [k, s.zones[k]])) })
+}
+function nudge(dx, dy) { let s = S(); for (const k of tops()) if (!s.zones[k].locked) s = moveZone(s, k, dx, dy); commit(s) }
+function editZone(f) { const k = [...sel][0], s = S(); if (sel.size !== 1 || !s.zones[k]) return; const z = { ...s.zones[k] }; f(z); commit({ ...s, zones: { ...s.zones, [k]: z } }) }
+function setBg(src) { ui.bg[cur] = src ? { src, op: ui.bg[cur]?.op ?? 0.5 } : undefined; if (!src) delete ui.bg[cur]; store(KEY + '-bg', JSON.stringify(ui.bg)); render() }
+function importText(t) {
+  try { const d = normalizeDoc(JSON.parse(t)); sel = new Set(); if (!d.screens[cur]) cur = Object.keys(d.screens)[0]; setDoc(d); flash('Loaded'); return true } catch (err) { flash('Not a layout: ' + err.message); return false }
+}
+const readFile = (f) => new Promise((res) => { const r = new FileReader(); r.onload = () => res(r.result); if (f.type.startsWith('image/')) r.readAsDataURL(f); else r.readAsText(f) })
+
+$('bar').addEventListener('click', (e) => {
+  const b = e.target.closest('button'); if (!b) return
+  if (b.dataset.screen) { cur = b.dataset.screen; sel = new Set(); fitCache.clear(); render() }
+  else if (b.dataset.al) commit(alignZones(S(), tops(), b.dataset.al))
+  else if (b.dataset.dist) commit(distributeZones(S(), tops(), b.dataset.dist))
+})
+$('addScreen').onclick = () => { let n = 2; while (doc.screens['screen' + n]) n++; const s = S(), k = 'screen' + n; setDoc({ screens: { ...doc.screens, [k]: { w: s.w, h: s.h, card: [...s.card], zones: {} } } }); cur = k; sel = new Set(); render() }
+$('delScreen').onclick = () => { if (Object.keys(doc.screens).length < 2) return flash('The last screen stays'); const d = { screens: { ...doc.screens } }; delete d.screens[cur]; setDoc(d) }
+$('undo').onclick = () => undo(true); $('redo').onclick = () => undo(false)
+$('add').onclick = addZone; $('dup').onclick = duplicate; $('del').onclick = remove; $('fwd').onclick = () => reorder(1); $('back').onclick = () => reorder(-1)
+$('multi').onclick = () => { ui.multi = !ui.multi; $('multi').classList.toggle('on', ui.multi) }
+$('grid').onchange = () => (ui.grid = Number($('grid').value))
+$('keep').onchange = () => (ui.keep = $('keep').checked)
+$('sName').onchange = () => { const n = $('sName').value.trim(); if (!n || doc.screens[n]) return render(); const old = cur; if (ui.bg[old]) { ui.bg[n] = ui.bg[old]; delete ui.bg[old]; store(KEY + '-bg', JSON.stringify(ui.bg)) } cur = n; setDoc({ screens: Object.fromEntries(Object.entries(doc.screens).map(([k, v]) => [k === old ? n : k, v])) }) }
+for (const [id, f] of [['sW', (s, v) => (s.w = v)], ['sH', (s, v) => (s.h = v)], ['cW', (s, v) => (s.card = [v, s.card[1]])], ['cH', (s, v) => (s.card = [s.card[0], v])]]) $(id).onchange = () => { const v = Number($(id).value); if (v > 0) { const s = { ...S() }; f(s, v); fitCache.clear(); commit(s) } }
+$('cS').oninput = () => { cardSnap ??= snapDoc(); const s = S(), f = $('cS').value / base; base = Number($('cS').value); doc.screens[cur] = { ...s, card: [Math.max(1, Math.round(s.card[0] * f)), Math.max(1, Math.round(s.card[1] * f))] }; render() }
+$('cS').onchange = () => { const sn = cardSnap ?? snapDoc(); cardSnap = null; if (sn !== snapDoc()) { hist.push(sn); fut = []; changed() } base = 100; $('cS').value = 100; render() }
+$('zId').onchange = () => { const k = [...sel][0], n = $('zId').value.trim(), s = S(), r = renameZone(s, k, n); if (r === s) { flash('That id is taken or empty'); return render() } sel = new Set([n]); commit(r) }
+$('zLabel').onchange = () => editZone((z) => { const v = $('zLabel').value.trim(); if (v) z.label = v; else delete z.label })
+$('zCards').onchange = () => editZone((z) => { const v = Math.round(Number($('zCards').value)); if (v > 0) z.cards = v; else delete z.cards })
+$('zFan').onchange = () => editZone((z) => (z.fan = $('zFan').value))
+for (const [id, i] of [['zX', 0], ['zY', 1], ['zW', 2], ['zH', 3]]) $(id).onchange = () => { const k = [...sel][0], s = S(), z = s.zones[k], v = Number($(id).value); if (!z || !isFinite(v)) return; const r = [...z.r]; r[i] = i > 1 ? Math.max(1, v) : v; commit(resizeZone(s, k, r, ui.keep)) }
+const mirror = (axis) => { const ids = tops(), to = $('mirTo').value.trim(); if (!ids.length) return; if (to && ids.length === 1) { if (idTaken(S(), to)) return flash(to + ' exists: pick a new id'); sel = new Set([to]); commit(mirrorZones(S(), ids, axis, [ids[0], to])) } else commit(mirrorZones(S(), ids, axis)) }
+$('flipV').onclick = () => mirror('v'); $('flipH').onclick = () => mirror('h')
+$('bgFile').onchange = async () => { const f = $('bgFile').files[0]; if (f) setBg(await readFile(f)) }
+$('bgUrl').onkeydown = (e) => { if (e.key === 'Enter' && $('bgUrl').value.trim()) setBg($('bgUrl').value.trim()) }
+$('bgOp').oninput = () => { if (ui.bg[cur]) { ui.bg[cur].op = $('bgOp').value / 100; store(KEY + '-bg', JSON.stringify(ui.bg)); render() } }
+$('bgOff').onclick = () => setBg(null)
+$('tree').addEventListener('click', (e) => {
+  const row = e.target.closest('.row'); if (!row) return
+  const k = row.dataset.id, act = e.target.closest('button')?.dataset.act
+  if (act) return editZoneById(k, act)
+  if (e.shiftKey || ui.multi) { if (sel.has(k)) sel.delete(k); else sel.add(k) } else sel = new Set([k])
+  render()
+})
+function editZoneById(k, f) { const s = S(), z = { ...s.zones[k] }; if (z[f]) delete z[f]; else z[f] = true; commit({ ...s, zones: { ...s.zones, [k]: z } }) }
+$('warns').addEventListener('click', (e) => { const k = e.target.closest('[data-id]')?.dataset.id; if (k) { sel = new Set([k]); render() } })
+$('json').onclick = () => { $('txt').value = JSON.stringify(doc, null, 1); $('dlg').style.display = 'flex' }
+$('close').onclick = () => ($('dlg').style.display = 'none')
+$('copy').onclick = async () => { $('txt').value = JSON.stringify(doc, null, 1); try { await navigator.clipboard.writeText($('txt').value); flash('Copied') } catch { $('txt').select(); flash(document.execCommand('copy') ? 'Copied' : 'Select the text and copy it') } }
+$('dl').onclick = () => { const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([JSON.stringify(doc, null, 1)], { type: 'application/json' })); a.download = 'layout.json'; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 1000) }
+$('loadTxt').onclick = () => { if (importText($('txt').value)) $('dlg').style.display = 'none' }
+$('file').onchange = async () => { const f = $('file').files[0]; if (f && importText(await readFile(f))) $('dlg').style.display = 'none' }
+document.addEventListener('dragover', (e) => e.preventDefault())
+document.addEventListener('drop', async (e) => { e.preventDefault(); const f = e.dataTransfer.files[0]; if (!f) return; const t = await readFile(f); if (f.type.startsWith('image/')) setBg(t); else importText(t) })
+const typing = (e) => /^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName) && e.target.type !== 'range' && e.target.type !== 'checkbox'
+document.addEventListener('paste', (e) => { if (typing(e)) return; const t = e.clipboardData.getData('text'); if (/"(zones|screens)"/.test(t)) importText(t) })
+document.addEventListener('keydown', (e) => {
+  if (typing(e)) return
+  const k = e.key.toLowerCase(), ctl = e.ctrlKey || e.metaKey, step = e.shiftKey ? 10 : 1
+  if (ctl && k === 'z') undo(!e.shiftKey); else if (ctl && k === 'y') undo(false); else if (ctl && k === 'd') duplicate()
+  else if (k === 'delete' || k === 'backspace') remove(); else if (k === 'escape') { sel = new Set(); render() }
+  else if (k.startsWith('arrow') && sel.size) nudge(k === 'arrowleft' ? -step : k === 'arrowright' ? step : 0, k === 'arrowup' ? -step : k === 'arrowdown' ? step : 0)
+  else return
+  e.preventDefault()
+})
+window.addEventListener('resize', () => { fitCache.clear(); render() })
+
+const api = {
+  load(d) { const n = normalizeDoc(d); sel = new Set(); if (!n.screens[cur]) cur = Object.keys(n.screens)[0]; setDoc(n) },
+  get() { return JSON.parse(JSON.stringify(doc)) },
+  onChange(fn) { listeners.push(fn) },
+}
+window.layoutEditor = api
+try { doc = normalizeDoc(window.LAYOUT_EDITOR_INIT ?? JSON.parse(store(KEY) || 'null')) } catch { doc = normalizeDoc(null) }
+cur = Object.keys(doc.screens)[0]
+render()
+</script>
+</body>
+</html>

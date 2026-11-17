@@ -69,6 +69,7 @@ graph LR
   ghost_card["ghost-card"]
   glossary["glossary"] --> phone_mode["phone-mode"]
   glossary["glossary"] --> state_machines["state-machines"]
+  layout_editor["layout-editor"] --> board_layout["board-layout"]
   learned_opponent["learned-opponent"] --> engine_core["engine-core"]
   learned_opponent["learned-opponent"] --> sim_pool["sim-pool"]
   lint_preset["lint-preset"]
@@ -158,6 +159,7 @@ graph LR
 - `e2e-helpers`
 - `game-store`
 - `ghost-card`
+- `layout-editor`
 - `learned-opponent`
 - `lint-preset`
 - `market-row`

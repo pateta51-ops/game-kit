@@ -161,6 +161,10 @@
     "use": "An AI opponent trained by self-play (value net, one-horizon look-ahead) when a scripted opponent is too weak.",
     "not": "A first opponent (start with `opponent`), or anything reading hidden state of the real game."
   },
+  "layout-editor": {
+    "use": "Arranging a screen's zones by hand (owner, or the director's wireframe gate): a one-file editor whose JSON is a board-layout zones layout per screen; capture.mjs takes a running page's [data-zone] rects as the start.",
+    "not": "Map click areas and adjacency (board-layout's Inkscape flow), or placing anything at run time (board-layout zone())."
+  },
   "lint-preset": {
     "use": "ESLint flat-config blocks for a game's engine folder.",
     "not": "UI lint settings.",

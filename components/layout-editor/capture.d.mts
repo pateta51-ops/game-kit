@@ -1,0 +1,1 @@
+export function capture(url: string, o?: { w?: number; h?: number; screen?: string; parts?: boolean; wait?: number }): Promise<{ screens: Record<string, { w: number; h: number; card: [number, number]; zones: Record<string, { r: [number, number, number, number] }> }> }>;
