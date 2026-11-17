@@ -1,0 +1,18 @@
+{
+  "name": "target-arrow",
+  "source": {
+    "game": "unstoppable-fan-prototype",
+    "commit": "e395a7c4",
+    "paths": [
+      "src/ui/play/arrow.ts (curveOf, pointOn, partOf, arrowShape, aimedZone, STRIKE_MS, strikePlan, untilHit, strikeFrame, ease; verbatim)",
+      "src/ui/play/strike.ts (announceStrike, onStrike, beginHold, endHold, afterStrike, MAX_HOLD_MS; the module globals became createStrikes, one per table; prompt kinds and the forfeit filter became the game's)",
+      "src/ui/board/TargetArrow.tsx (the layer drawn through refs once a frame, snapping, collapse, hit and glow, cancel on undo or a refused answer, touch, reduced motion, modal; prompt kinds, source card, board and panel lookup, settings and stores became props)",
+      "tests: TargetArrow.test.tsx (rewritten on a fake prompt)"
+    ]
+  },
+  "needs": [],
+  "packages": [
+    "react",
+    "react-dom"
+  ]
+}

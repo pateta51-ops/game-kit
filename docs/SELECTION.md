@@ -161,3 +161,4 @@ Components with no row above. Each starts from the game and commit in its `compo
 | `scaffold` | 7th Inning Stretch `bb71c3fa` (K204; config files and scripts only) | M |
 | `reference-game` | none: written new for the kit (K205; a made-up game generated through `scaffold` as a contract test) | M |
 | `token-flights` | Unstoppable `e395a7c4` (K241: flights.ts, flightLedger.ts, TokenFlights.tsx; places, art, lookup and hold became the game's) | M |
+| `target-arrow` | Unstoppable `e395a7c4` (K247: arrow.ts, strike.ts, TargetArrow.tsx; prompt kinds, source, lookup and damage predicate became the game's) | M |

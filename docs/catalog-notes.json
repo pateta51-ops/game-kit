@@ -325,6 +325,10 @@
     "use": "Tokens that moved between two views fly from where they were to where they are, with a ledger that draws each token in one place at a time.",
     "not": "Cards flying, motion specs (motion-frame) or the token look."
   },
+  "target-arrow": {
+    "use": "A curved targeting arrow from the card that asks to the pointer: snaps to legal targets, collapses into the chosen one, then a hit; holds token flights until the hit.",
+    "not": "Prompt kinds, which prompts are targets, the prompt panel (prompt-host) or the arrow's colours."
+  },
   "voice": {
     "use": "Release 1.3 voice lines on the sound player's voice bus, never twice the same.",
     "not": "Sound effects (sound-player)."

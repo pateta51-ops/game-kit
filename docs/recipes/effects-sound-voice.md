@@ -9,6 +9,7 @@ Components: [`motion-frame`](../../components/motion-frame/README.md) plays the 
 3. `speed` honours reduced motion (`withReducedMotion`) and automation (`withAutomationOff`). `paced-view` shows an answer's events one step at a time.
 4. `board-registry` `movements` gives piece moves between two registries.
 5. `token-flights`: tokens (coins, damage, discs) that moved between two views fly there; a ledger draws each in one place at a time.
+6. `target-arrow`: the curved arrow from the asking card to the pointer that snaps to a target, collapses into it and hits; `strikes.hold` makes token-flights wait for the hit.
 
 ## 1.2 sound
 [`sound-player`](../../components/sound-player/README.md): one `SoundTable` of cues, tiers, music states, ambience. A cue is never cut (fades 150 ms). `createEventSounds` maps engine events to cues. The `check` lists missing files and over-size cues. Assets are made with [`audio-gen`](../../components/audio-gen/README.md) (free local models in WSL; paid voices only for EBR).
