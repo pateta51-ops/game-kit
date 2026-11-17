@@ -1,0 +1,18 @@
+{
+  "name": "token-flights",
+  "source": {
+    "game": "unstoppable-fan-prototype",
+    "commit": "e395a7c4",
+    "paths": [
+      "src/ui/board/flights.ts (movesBetween: place by place, value by value, largest first, gone before come, MAX_PER_CHANGE; the credit/AP/threat/boss places became the game's string keys and a supplyOf function)",
+      "src/ui/board/flightLedger.ts (book, takeOff, land, shownTokens, shownCounts, shownCount; the module-global store became createFlightLedger, one per table)",
+      "src/ui/board/TokenFlights.tsx (portal layer, page coordinates, 700 ms arc, stagger, 24 in the air, settle on undo, speed 0, reduced motion; the art, scale, place lookup, settings, strike hold and counter bump became props)",
+      "tests: flights.test.ts, flightLedger.test.ts, TokenFlights.test.tsx (rewritten on a fake place map)"
+    ]
+  },
+  "needs": [],
+  "packages": [
+    "react",
+    "react-dom"
+  ]
+}

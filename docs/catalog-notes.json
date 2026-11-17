@@ -309,6 +309,10 @@
     "use": "Small screen helpers: hover hold, inspect, rule sheet, toasts, prompt keys. For an engine-core prompt use prompt-host instead of createSelection and onlyForcedAnswer.",
     "not": "Any look or game type."
   },
+  "token-flights": {
+    "use": "Tokens that moved between two views fly from where they were to where they are, with a ledger that draws each token in one place at a time.",
+    "not": "Cards flying, motion specs (motion-frame) or the token look."
+  },
   "voice": {
     "use": "Release 1.3 voice lines on the sound player's voice bus, never twice the same.",
     "not": "Sound effects (sound-player)."
