@@ -15,3 +15,6 @@ Proof: a test that moves every card through every zone with `zoneProblems` clean
 A resource number that counts up, bumps and tags its change, with a `data-res` anchor for flights: `counter` (`Counter`, `bumpCounter`; README).
 
 A stack you may look through, with picks from it and a phone grid: `card-pile` (`Pile` over a `ZoneView`, marks from `useBoardPick`; README).
+
+## Market (K243)
+Offer slots refilled from decks, buy and cycle options, slide refill and the deal animation: `market-row` (slots are card-zones zones; payment and rules stay the game's; README).

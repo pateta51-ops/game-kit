@@ -144,6 +144,10 @@
       "index.d.ts"
     ]
   },
+  "market-row": {
+    "use": "A market of offer slots refilled from decks: buy/cycle options, refill at once or by slide, clear, deal animation.",
+    "not": "Payment, discounts, unlocks, where a bought card goes; a hand or a pile."
+  },
   "motion-frame": {
     "use": "Playing the director's motion specs (JSON beats) on the screen.",
     "not": "The effects themselves (effect-library) or game logic."

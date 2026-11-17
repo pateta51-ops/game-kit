@@ -1,0 +1,18 @@
+{
+  "name": "market-row",
+  "source": {
+    "game": "rome-fate-of-an-empire-fan-prototype",
+    "commit": "main of 16 Nov 2026",
+    "paths": [
+      "src/engine/market/market.ts (slots, prices, cycle, options, slide refill, source choice, clear)",
+      "src/ui/motion/frames.ts, dealing.ts, catalog.ts (DEAL_MS, STAGGER_MS, slide 520; adapted from STCC dealing.ts, LotR BSD-3)"
+    ],
+    "grafts": [
+      { "game": "imperium-horizon-fan-prototype", "commit": "main of 16 Nov 2026", "paths": ["src/engine/market/refill.ts (per-slot source with fallback, refill at once)"] },
+      { "game": "unstoppable-fan-prototype", "commit": "main of 16 Nov 2026", "paths": ["src/ui/board/Market.tsx (slots, empty slot, deck size)"] }
+    ],
+    "note": "K243: leaders, discounts, unlocks, Unrest, destinations and payment stay in the games (hooks); slots are card-zones zones."
+  },
+  "needs": ["engine-core", "card-zones", "prompt-host", "picked-state", "motion-frame"],
+  "packages": ["react"]
+}
