@@ -112,14 +112,14 @@ export interface TimingConfig<G extends GameTypes> {
   chooser?(s: G['state'], occ: Occurrence): string;
   /** The game's prompt from the kit's options (default: those as they are). */
   prompt?(base: Pick<KernelPrompt, 'options' | 'min' | 'max'>, info: TimingPromptInfo): Omit<G['prompt'], 'id'>;
-  /** K94: the abilities that answer a happened occurrence. */
-  triggersFor?(s: G['state'], occ: Occurrence): readonly TriggerCandidate[];
+  /** K94: the abilities that answer a happened occurrence. K296: `content` is the game's content (`ctx.content`). */
+  triggersFor?(s: G['state'], occ: Occurrence, content: G['content']): readonly TriggerCandidate[];
   /** K94: resolves one trigger (may ask, push tasks). */
   resolveTrigger?(ctx: Ctx<G>, t: PendingTrigger): void;
   /** K94: why a trigger no longer resolves (source gone, blanked), or undefined. */
-  invalid?(s: G['state'], t: PendingTrigger): string | undefined;
+  invalid?(s: G['state'], t: PendingTrigger, content: G['content']): string | undefined;
   /** K292: true keeps a pending trigger waiting ("after" until the effect ends): `timing.triggers` skips it and the checkpoint does not open the after-window for it alone. The game pushes `timing.triggers` where it stops holding. */
-  held?(s: G['state'], t: PendingTrigger): boolean;
+  held?(s: G['state'], t: PendingTrigger, content: G['content']): boolean;
   /** K94: the event emitted when a trigger is dropped. */
   dropped?(t: PendingTrigger, why: string): EventInput<G> | undefined;
   /** K94: players, active player first, then turn order (default: by the first trigger). */

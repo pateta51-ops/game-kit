@@ -1,6 +1,6 @@
 // K94: triggers once per item / per instance, silent / interactive / automatic order, revalidation, entered-after, simultaneously.
 import { describe, expect, it } from 'vitest';
-import { addEffect, applyAction, cancelBatch, sumEffects, createSave, draftOf, exportSave, importSave, EngineBugError, enteredPlay, simultaneously, would, type Ctx, type GameRules, type PendingTrigger, type TimingConfig, type TriggerCandidate } from './index.ts';
+import { addEffect, applyAction, cancelBatch, createGame, sumEffects, createSave, draftOf, exportSave, importSave, EngineBugError, enteredPlay, simultaneously, would, type Ctx, type GameRules, type PendingTrigger, type TimingConfig, type TriggerCandidate } from './index.ts';
 import { answer, HIT, startTimed, timedGame, type Timed, type TimedState } from './fake/timed.ts';
 
 const record = (ctx: Ctx<Timed>, p: PendingTrigger): void => {
@@ -272,5 +272,22 @@ describe('held triggers (K292)', () => {
     const back = importSave(g, exportSave(createSave(g, { options: { seed: 'k93' }, rules: { items: [HIT] }, actions: [act], undoUsed: false, savedAt: 't' }, null)), null);
     expect(back.ok && back.state).toEqual(s1);
     if (back.ok) expect(order(applyAction(g, back.state, answer(back.state, 'go'), null).state)).toEqual(['when', 'B', 'after']);
+  });
+});
+
+describe('triggers read content (K296)', () => {
+  it('K296 triggersFor, invalid and held get the game content', () => {
+    const content = { triggers: { damage: [{ ability: 'fromContent', source: 'c1', player: 'p2' }] } };
+    const seen: unknown[] = [];
+    const g = game([], {
+      triggersFor: (_s, o, c) => c?.triggers[o.kind] ?? [],
+      invalid: (_s, _t, c) => (seen.push(c), undefined),
+      held: (_s, _t, c) => (seen.push(c), false),
+    });
+    const s0 = createGame(g, { seed: 'k296' }, { items: [HIT] }, content).state;
+    const s = applyAction(g, s0, answer(s0, 'hit'), content).state;
+    expect(order(s)).toEqual(['fromContent@7:2']);
+    expect(seen.length).toBeGreaterThan(0);
+    expect(seen.every((c) => c === content)).toBe(true);
   });
 });

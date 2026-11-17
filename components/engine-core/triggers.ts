@@ -50,7 +50,7 @@ interface TriggerTask extends KernelTask {
 
 export const pendingTriggers = (s: { readonly timing?: { readonly pending?: readonly PendingTrigger[] } }): readonly PendingTrigger[] => s.timing?.pending ?? [];
 /** K292: the pending triggers `cfg.held` does not hold back (all of them without `held`). */
-export const liveTriggers = <G extends GameTypes>(cfg: TimingConfig<G>, s: G['state']): readonly PendingTrigger[] => pendingTriggers(s).filter((p) => cfg.held?.(s, p) !== true);
+export const liveTriggers = <G extends GameTypes>(cfg: TimingConfig<G>, s: G['state'], content?: G['content']): readonly PendingTrigger[] => pendingTriggers(s).filter((p) => cfg.held?.(s, p, content) !== true);
 
 /** A card entered play: occurrences that already happened (not yet collected) do not trigger its abilities. */
 export function enteredPlay<G extends GameTypes>(ctx: Ctx<G>, source: string): void {
@@ -71,7 +71,7 @@ export function collectTriggers<G extends GameTypes>(ctx: Ctx<G>, cfg: TimingCon
   t.batches = t.batches.filter((b) => open.has(b.id));
   if (cfg.triggersFor === undefined) return out;
   for (const o of happened) {
-    for (const c of cfg.triggersFor(ctx.s, o)) {
+    for (const c of cfg.triggersFor(ctx.s, o, ctx.content)) {
       if ((o.enteredAfter ?? []).includes(c.source)) continue;
       const once: PendingTrigger['once'] = c.once ?? 'perItem';
       const same = once === 'perInstance' ? out.findIndex((p) => p.once === once && p.batch === o.batch && p.ability === c.ability && p.source === c.source && p.player === c.player) : -1;
@@ -120,7 +120,7 @@ export function triggerHandlers<G extends GameTypes>(cfg: TimingConfig<G>): Hand
         return;
       }
       collectTriggers(ctx, cfg);
-      const mine = nextGroup(cfg, ctx.s, liveTriggers(cfg, ctx.s));
+      const mine = nextGroup(cfg, ctx.s, liveTriggers(cfg, ctx.s, ctx.content));
       const fired = ctx.s.timing?.fired;
       if (mine.length === 0) {
         triggersOver(ctx, pendingTriggers(ctx.s).map((p) => p.batch));
@@ -128,7 +128,7 @@ export function triggerHandlers<G extends GameTypes>(cfg: TimingConfig<G>): Hand
         return;
       }
       if ((fired ?? 0) >= (cfg.triggerCap ?? TRIGGER_CAP)) {
-        const left = liveTriggers(cfg, ctx.s);
+        const left = liveTriggers(cfg, ctx.s, ctx.content);
         const t = timingOf(ctx);
         t.pending = pendingTriggers(ctx.s).filter((p) => !left.includes(p)) as never;
         delete t.fired;
@@ -154,7 +154,7 @@ export function triggerHandlers<G extends GameTypes>(cfg: TimingConfig<G>): Hand
     },
     'timing.fire': (ctx, t) => {
       const p = (t as TriggerTask).trigger as PendingTrigger;
-      const why = cfg.invalid?.(ctx.s, p);
+      const why = cfg.invalid?.(ctx.s, p, ctx.content);
       if (why === undefined) cfg.resolveTrigger?.(ctx, p);
       else {
         const e = cfg.dropped?.(p, why);

@@ -1,6 +1,6 @@
 // A tiny fake game for the timing tests (K93, K111): player p1 hits; the hit is one batch of occurrences (default 3 damage
 // to u1, owned by p2) with the kit's windows. Fixture cards: Shield (prevents 2 damage), Ward (prevents all, one use).
-import { createGame, draftOf, seedRng, timingHandlers, would, type AnswerAction, type Ctx, type Draft, type GameRules, type KernelPrompt, type KernelState, type KernelTask, type OccurrenceInput, type Prevention, type SharedKey, type TimingConfig } from '../index.ts';
+import { createGame, draftOf, seedRng, timingHandlers, would, type AnswerAction, type Ctx, type Draft, type GameRules, type KernelPrompt, type KernelState, type KernelTask, type OccurrenceInput, type Prevention, type SharedKey, type TimingConfig, type TriggerCandidate } from '../index.ts';
 
 export type TimedEvent =
   | { readonly type: 'damaged'; readonly n: number; readonly target: string; readonly seq: number; readonly batch?: number; readonly occurrence?: number }
@@ -28,7 +28,7 @@ export interface Timed {
   readonly prompt: KernelPrompt & { readonly player?: string };
   readonly event: TimedEvent;
   readonly stamped: never;
-  readonly content: null;
+  readonly content: { readonly triggers: Readonly<Record<string, readonly TriggerCandidate[]>> } | null;
   readonly options: { readonly seed: string };
   readonly rules: TimedRules;
 }

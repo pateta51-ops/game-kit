@@ -102,6 +102,7 @@ A game's build plan lists the kit work it needs as phases named `GK<n>` for the 
 | K292 | `engine-core` held triggers: `cfg.held(s, t)` keeps a pending trigger waiting (an "after" response until its effect or game action ends) while "when" responses still fire at the checkpoint; the game pushes `timing.triggers` to release them, and simultaneous released ones order through the normal prompt. `card-language` `When.timing` (`when` / `after`) is carried onto the trigger | M |  | done |
 | K293 | TurnBanner takes `turnName(turn)` so a game prints its own words; every kit `<button>` in table-panels, card-hand and card-pile carries `data-kit` so a theme can skip it | S |  | done |
 | K294 | `useDragDrop` takes optional `sourceLegal(id)`: decides who may start a drag and whether it stays legal, so composite option ids (`slot:card`) work without wrapping `pick` | S |  | done |
+| K296 | engine-core `TimingConfig.triggersFor`, `invalid` and `held` receive the game's content as an added last parameter, so a trigger table kept in content needs no module variable | S |  | done |
 
 ## Harvest from the existing games (owner, 15 Nov 2026)
 

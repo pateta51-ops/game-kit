@@ -77,7 +77,7 @@ export function checkpointHandlers<G extends GameTypes>(cfg: TimingConfig<G>): H
       const at = (t as CheckTask).at;
       const c = cp.checks?.[at];
       if (c === undefined) {
-        if (liveTriggers(cfg, ctx.s).length > 0 && !ctx.s.stack.some((x) => x.kind === 'timing.triggers')) ctx.then({ kind: 'timing.triggers' });
+        if (liveTriggers(cfg, ctx.s, ctx.content).length > 0 && !ctx.s.stack.some((x) => x.kind === 'timing.triggers')) ctx.then({ kind: 'timing.triggers' });
         return;
       }
       const n = ctx.s.stack.length;
