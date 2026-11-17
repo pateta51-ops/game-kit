@@ -1,14 +1,15 @@
 // Game server panel: update a game to origin/main and serve it over Tailscale. Node built-ins only.
 import { spawn, spawnSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
-import { appendFileSync, rmSync, cpSync, existsSync, mkdirSync, openSync, closeSync, readFileSync, writeFileSync } from 'node:fs';
+import { createReadStream, appendFileSync, rmSync, cpSync, existsSync, mkdirSync, openSync, closeSync, readFileSync, writeFileSync } from 'node:fs';
 import { createServer } from 'node:http';
 import { connect } from 'node:net';
-import { dirname, join } from 'node:path';
+import { dirname, extname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { cmdlineMatches, descendantOf, lockIsHeld, originAllowed, portsMd, SERVE_ROOT, clonePath, gitSteps, killArgs, logPath, mappingPresent, nextSlot, addGameText, publicUrl, startCommand, tailscaleServeArgs, validatePorts } from './lib.mjs';
 
 const PORTS = join(dirname(fileURLToPath(import.meta.url)), '..', '..', 'ports.json');
+const BOXES = JSON.parse(readFileSync(new URL('./boxes.json', import.meta.url), 'utf8'));
 const STATE = `${SERVE_ROOT}/state.json`;
 const TS = 'C:/Program Files/Tailscale/tailscale.exe';
 mkdirSync(SERVE_ROOT, { recursive: true });
@@ -156,24 +157,31 @@ async function adopt() {
   }
 }
 
-const PAGE = `<!doctype html><meta charset=utf-8><meta name=viewport content="width=device-width,initial-scale=1"><title>Game server</title>
-<style>body{margin:0;padding:12px;background:#111418;color:#e6e6e6;font:16px system-ui,sans-serif;max-width:640px;margin:auto}
-.g{background:#1b2027;border-radius:10px;padding:12px;margin:12px 0}h1{font-size:20px}h2{margin:0 0 4px;font-size:18px}
-.s{display:inline-block;padding:2px 8px;border-radius:8px;font-size:13px;background:#333}.serving{background:#1f6b3a}.failed{background:#8a2b2b}.updating,.building{background:#8a6b1f}
-button,a.b{display:block;box-sizing:border-box;width:100%;margin:6px 0;padding:14px;font-size:17px;border:0;border-radius:8px;background:#2f5fb3;color:#fff;text-align:center;text-decoration:none}
-button.x{background:#555}small{color:#9aa}pre{white-space:pre-wrap;word-break:break-all;font-size:12px;background:#0b0d10;padding:8px;border-radius:6px;max-height:260px;overflow:auto}
-.r{display:flex;gap:8px}</style>
-<h1>Game server</h1><button class=x onclick="act('/api/reload')">Reload ports.json</button><div id=m></div><div id=l></div>
+const PAGE = `<!doctype html><html lang=en><meta charset=utf-8><meta name=viewport content="width=device-width,initial-scale=1"><title>Game server</title>
+<style>
+*{box-sizing:border-box}body{margin:0;background:#101315;color:#eceee9;font:15px system-ui,sans-serif}main{max-width:1240px;margin:auto;padding:36px 24px 60px}header{display:flex;align-items:center;justify-content:space-between;gap:20px;margin-bottom:28px}.eyebrow{color:#b9c99c;font-size:11px;letter-spacing:.18em;text-transform:uppercase}h1{font-size:32px;letter-spacing:-.04em;margin:6px 0}header p{color:#8e9997;margin:0;font-size:13px}#l{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:24px}.g{min-width:0;background:#1a2022;border:1px solid #30383a;border-radius:16px;overflow:hidden;display:flex;flex-direction:column}.art{position:relative;display:flex;align-items:center;justify-content:center;height:340px;padding:24px;overflow:hidden;background:radial-gradient(ellipse at 50% 20%,hsl(var(--h) 22% 25%),#111718);color:#f2eee0;text-decoration:none;border-bottom:1px solid #30383a}.art img{position:relative;width:100%;height:100%;object-fit:contain;filter:drop-shadow(0 12px 12px #0008)}.fallback{position:absolute;inset:24px;display:flex;flex-direction:column;justify-content:space-between;padding:24px;border:1px solid #ffffff28;background:repeating-linear-gradient(135deg,transparent,transparent 28px,#ffffff06 29px,#ffffff06 30px),linear-gradient(150deg,hsl(var(--h) 32% 29%),hsl(var(--h) 25% 12%))}.fallback small{font-size:10px;letter-spacing:.2em;text-transform:uppercase;color:#d4dbc8}.fallback strong{font-family:Georgia,serif;font-weight:400;font-size:38px;line-height:1.08;max-width:240px;overflow-wrap:anywhere}.art:has(img) .fallback{display:none}.body{padding:20px;display:flex;flex-direction:column;flex:1}h2{font-size:20px;line-height:1.25;letter-spacing:-.025em;margin:12px 0 8px}.s{align-self:flex-start;display:inline-flex;align-items:center;gap:6px;padding:4px 9px;border:1px solid #4b5558;border-radius:20px;font-size:11px;text-transform:capitalize;color:#bbc4c5;background:#ffffff05}.s:before{content:'';width:5px;height:5px;border-radius:50%;background:currentColor}.serving{color:#b5df9c;border-color:#526948;background:#a5cf7b0b}.failed{color:#ffb1a5;border-color:#88564d}.updating,.building{color:#ecd08b;border-color:#7e704b}.commit{color:#a0aaa8;font-size:12px;line-height:1.6;min-height:39px;overflow-wrap:anywhere}.url{color:#798583;font-size:11px;overflow-wrap:anywhere;margin-top:6px}.error{color:#ffb1a5;font-size:13px;overflow-wrap:anywhere}.error:empty{display:none}.actions{margin-top:auto;padding-top:18px}button,a.b{display:flex;align-items:center;justify-content:center;min-height:44px;padding:11px 14px;border:1px solid transparent;border-radius:8px;background:#c6d9a7;color:#1b2718;font:600 13px system-ui,sans-serif;text-decoration:none;cursor:pointer;width:100%}button:hover,a.b:hover{filter:brightness(1.1)}button.x{background:transparent;color:#b9c2bf;border-color:#414c4c}header button.x{width:auto;white-space:nowrap;font-size:12px}.r{display:flex;gap:8px;margin-top:8px}.r a{background:#303c36;color:#d3dfcc;border-color:#4a594d}.r>*{flex:1}details{margin-top:16px;border-top:1px solid #313b3b;padding-top:12px}summary{cursor:pointer;color:#929f99;font-size:12px;min-height:28px}pre{white-space:pre-wrap;word-break:break-all;font-size:12px;background:#111718;padding:12px;border-radius:6px;max-height:260px;overflow:auto}#m{color:#ffb1a5;margin-bottom:16px}#m:empty{display:none}:focus-visible{outline:2px solid #d9edb9;outline-offset:3px}
+@media(max-width:1000px){#l{grid-template-columns:repeat(2,minmax(0,1fr))}}@media(max-width:600px){main{padding:24px 16px 40px}header{align-items:flex-start;flex-wrap:wrap;gap:16px;margin-bottom:24px}h1{font-size:30px}header button.x{min-height:40px}#l{grid-template-columns:1fr;gap:24px}.art{height:330px}.body{padding:20px}}
+</style>
+<main><header><div><div class=eyebrow>Private collection</div><h1>Game server</h1><p>Your prototypes, ready to play.</p></div><button class=x onclick="act('/api/reload')">Reload ports.json</button></header><div id=m role=status></div><div id=l></div></main>
 <script>
-const open=new Set();
-async function act(u){const r=await fetch(u,{method:'POST'});const j=await r.json();document.getElementById('m').textContent=j.error||'';load()}
-async function load(){const s=await (await fetch('/api/status')).json();const e=x=>String(x??'').replace(/[&<>]/g,c=>'&#'+c.charCodeAt(0)+';');
-document.getElementById('l').innerHTML=Object.values(s).map(g=>'<div class=g><h2>'+e(g.name)+' <span class="s '+g.status+'">'+g.status+'</span></h2><small>'+e(g.url)+'<br>'+(g.commit?e(g.commit)+' '+e((g.commitDate||'').slice(0,16))+' '+e(g.subject):'no build yet')+'</small>'
-+(g.error?'<p>'+e(g.error)+'</p>':'')+'<button onclick="act(\\'/api/update/'+g.id+'\\')">Update &amp; serve</button><div class=r><button class=x onclick="act(\\'/api/stop/'+g.id+'\\')">Stop</button><a class=b href="'+e(g.url)+'" target=_blank>Open</a></div>'
-+'<details data-id="'+g.id+'"'+(open.has(g.id)?' open':'')+'><summary>Log</summary><pre>'+e(g.log)+'</pre></details></div>').join('');
-document.querySelectorAll('details').forEach(d=>d.ontoggle=()=>d.open?open.add(d.dataset.id):open.delete(d.dataset.id))}
+const cards=new Map(),covers=${JSON.stringify(Object.keys(BOXES))};
+async function act(u){try{const r=await fetch(u,{method:'POST'});const j=await r.json();document.getElementById('m').textContent=j.error||'';await load()}catch(e){document.getElementById('m').textContent=e.message}}
+async function load(){try{const s=await (await fetch('/api/status')).json();
+for(const [id,c] of cards)if(!s[id]){c.remove();cards.delete(id)}
+for(const g of Object.values(s)){
+let c=cards.get(g.id);
+if(!c){c=document.createElement('article');c.className='g';c.style.setProperty('--h',Array.from(g.id).reduce((h,c)=>h*31+c.charCodeAt(0),0)>>>0);
+c.innerHTML='<a class=art target=_blank rel=noopener><span class=fallback><small>Private prototype</small><strong></strong><small>Board game collection</small></span></a><div class=body><span class=s></span><h2></h2><div class=commit></div><div class=url></div><p class=error></p><div class=actions><button class=update>Update &amp; serve</button><div class=r><button class=x>Stop</button><a class=b target=_blank rel=noopener>Open ↗</a></div></div><details><summary>Log</summary><pre></pre></details></div>';
+c.querySelector('.fallback strong').textContent=g.name;
+if(covers.includes(g.id)){const img=document.createElement('img');img.alt=g.name+' box';img.src='/box/'+encodeURIComponent(g.id);img.onerror=()=>img.remove();c.querySelector('.art').append(img)}
+c.querySelector('.update').onclick=()=>act('/api/update/'+encodeURIComponent(g.id));c.querySelector('.r button').onclick=()=>act('/api/stop/'+encodeURIComponent(g.id));cards.set(g.id,c);document.getElementById('l').append(c)}
+c.querySelector('h2').textContent=g.name;c.querySelector('.art').setAttribute('aria-label','Open '+g.name);for(const a of c.querySelectorAll('a'))a.href=g.url;
+const pill=c.querySelector('.s');pill.className='s '+g.status;pill.textContent=g.status;
+c.querySelector('.commit').textContent=g.commit?g.commit+' · '+(g.commitDate||'').slice(0,16).replace('T',' ')+' · '+(g.subject||''):'No build yet';
+c.querySelector('.url').textContent=g.url;c.querySelector('.error').textContent=g.error||'';const log=c.querySelector('pre');if(log.textContent!==(g.log||''))log.textContent=g.log||'';
+}}catch(e){document.getElementById('m').textContent=e.message}}
 load();setInterval(load,4000);
-</script>`;
+</script></html>`;
 
 const json = (res, code, o) => { res.writeHead(code, { 'content-type': 'application/json' }); res.end(JSON.stringify(o)); };
 function panel() {
@@ -181,6 +189,15 @@ function panel() {
     try {
       const u = new URL(req.url, 'http://x');
       if (req.method === 'GET' && u.pathname === '/') { res.writeHead(200, { 'content-type': 'text/html; charset=utf-8' }); return res.end(PAGE); }
+      if (req.method === 'GET' && u.pathname.startsWith('/box/')) {
+        const id = u.pathname.slice(5);
+        if (!Object.hasOwn(BOXES, id)) return json(res, 404, { error: 'not found' });
+        const file = createReadStream(BOXES[id]);
+        file.on('error', () => { if (!res.headersSent) json(res, 404, { error: 'not found' }); else res.destroy(); });
+        file.on('open', () => { res.writeHead(200, { 'content-type': { '.png': 'image/png', '.jpg': 'image/jpeg', '.webp': 'image/webp' }[extname(BOXES[id]).toLowerCase()] ?? 'application/octet-stream', 'cache-control': 'max-age=3600' }); file.pipe(res); });
+        res.on('close', () => file.destroy());
+        return;
+      }
       if (req.method === 'GET' && u.pathname === '/api/status') return json(res, 200, await status());
       if (req.method === 'POST') {
         if (!originAllowed(req.headers, cfg)) return json(res, 403, { error: 'forbidden origin' });
