@@ -18,6 +18,15 @@
     ],
     "grafts": [
       {
+        "game": "imperium",
+        "commit": "ba0eda4",
+        "paths": [
+          "src/ui/board/phone/PhoneBoard.tsx (K263: frame, tab bar, prompt line, top bar, menu, areas)",
+          "src/ui/board/phone/sheet/CardSheet.tsx, ActionRow.tsx (K263: swipe close, Escape, arrival guard, action row)",
+          "src/ui/theme/phone.css, sheet/phone-sheet.css (K263: structure only)"
+        ]
+      },
+      {
         "game": "middle-earth-player (MIT, https://github.com/pateta51-ops/middle-earth-player)",
         "commit": "4c29c95",
         "paths": [
@@ -41,6 +50,7 @@
   ],
   "packages": [
     "react",
+    "react-dom",
     "zustand"
   ]
 }

@@ -22,11 +22,21 @@ Page setup the source game learned on a real iPhone: the viewport meta is `width
 - `shortPrompt(table, prompt, fallback?)`: the folded dock's one line; the game's `table` is a `Record` of its prompt kinds (its words), with the helpers `bare`, `lead`, `fixPlurals` ("2 red tile(s)" to "2 red tiles", count 1 drops "(s)"; it only adds a plain "s", so the game words irregular plurals itself).
 - CSS checks for the game's own test (`layerCheck.ts`, pure, the test reads the files): `phoneLayerCheck([{ file, css }], { scope?, heightVar?, fixedBase?, allow? })` returns `unsized` (fixed layers anchored to the bottom that are not `top: 0` with `height: var(--pm-h)`), `directUnits` (dvh/vh outside the variable), `guarded`, and `faults` (all of it in lines, plus "nothing was guarded" when no rule matched: expect `[]`); quotes in selectors are normalised and nested rules are read under their parent; `bottomPadding(css, selector, inset, nth?, insetVar?)` evaluates a bar's `padding-bottom` at a safe-area inset (assert it at 0 and 34).
 
+## Imperium's phone screen (K263, `PhoneFrame.tsx`)
+
+Source: Imperium U11/U12 (the owner's most played phone game); its proportions and behaviour are the defaults. All words come from the game; hooks are `data-part` (no ids), the CSS is structure only (`phone-frame.css`, zero specificity).
+- `<PhoneFrame top banner? dock tabs dockOpen tab>` with `<PhoneArea id shown>` per tab (each scrolls on its own, hidden ones keep their place). Portrait: top bar, areas, prompt line, tab bar. Landscape (short, wide): tabs a rail on the left, the open prompt a column right (`--pm-dock-col`), folded one line under the areas. `--pm-tabs` sets the tab count (4).
+- `<TabBar tabs active onTab label>`: `PhoneTab { id, label, lit?, litNote? }`; the active one is `aria-pressed`; `lit` puts a pick light on the tab (`--pm-pick*`); a tap on the active tab scrolls its area to the top. Buttons stop 18 px above the screen's edge (`--sab - 16px`).
+- `<PromptLine open onToggle short counts? kicker label>{body}</PromptLine>`: folded, one line (chevron up, the short words, `counts` at the right); open, a head and the body (kept mounted, `hidden`). Pair with `dockWantsOpen`, `useDock`, `shortPrompt`.
+- `<TopBar start end>` and `<PhoneMenu open onClose label>` (scrim, Escape, a press inside closes).
+- Imperium's current dock behaviour: `dockWantsOpen` decides open or folded, `useDock(wants, dockKey(...))` holds the player's fold until the key changes, `pickTabs` lights the tabs; feed `open` to `PromptLine` and `PhoneFrame`.
+- `<Sheet>` now also: the layer behind it is `inert` while it is open and focus returns to the opener on close; `leaveMs` (Imperium 240; default 0) slides it down before `onClose`, `inert` and `data-state="leaving"` meanwhile, at once with `slideMs` 0 or reduced motion; Escape (capture phase) closes, a swipe down on the head past `SWIPE_CLOSE_PX` (70) closes and a shorter drag springs back, focus goes into the panel, the scrim fades in, `arriveMs` (Imperium's `ARRIVE_MS` 250; default 0) ignores scrim taps just after opening, reduced motion is still. `<SheetActions actions reason? note?>` as `foot`: the primary action grows, Cancel is plain.
+
 ## Look
 
 `phone-mode.css` (loaded by `Sheet.tsx`) sets neutral values at zero specificity; set the variables on `:root` or an ancestor: `--pm-h`, `--pm-z`, `--pm-scrim`, `--pm-sheet-bg`, `--pm-sheet-text`, `--pm-sheet-radius`, `--pm-sheet-max` (a fraction), `--pm-handle`, `--pm-head-font`, `--pm-close-font`, `--pm-foot-border`, `--pm-rotate-bg`, `--pm-rotate-text`, `--pm-rotate-z`; safe area `--sat --sar --sab --sal` (default `env(safe-area-inset-*)`). Classes: `kit-pm-layer`, `-scrim`, `-sheet`, `-sheet-hd`, `-sheet-title`, `-x`, `-sheet-body`, `-sheet-foot`, `-rotate`. Select phone tokens with `:root[data-layout='phone']`.
 
-Tests: `phone-mode.test.ts`, `dock.test.ts` (node), `ui.test.tsx` (jsdom), `haptics.test.ts`.
+Tests: `frame.test.tsx` (K263), `phone-mode.test.ts`, `dock.test.ts` (node), `ui.test.tsx` (jsdom), `haptics.test.ts`.
 
 ## Use it in 10 lines
 

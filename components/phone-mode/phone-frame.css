@@ -1,0 +1,245 @@
+/* K263: Imperium's phone screen (U11/U12). Structure only, zero specificity; the game sets colours, fonts and surfaces on the data-part hooks. */
+:where([data-part='frame']) {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: var(--pm-h, 100dvh);
+  z-index: 1;
+  display: grid;
+  grid-template-areas: 'top' 'banner' 'main' 'dock' 'tabs';
+  grid-template-rows: auto auto minmax(0, 1fr) auto auto;
+  grid-template-columns: minmax(0, 1fr);
+  overflow: hidden;
+}
+:where([data-part='frame'] > [data-part='top']) {
+  grid-area: top;
+  position: relative;
+  z-index: 30;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 46px;
+  padding: 4px 6px 4px 10px;
+}
+:where([data-part='top-start']) {
+  flex: 1 1 auto;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+:where([data-part='top-end']) {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+:where([data-part='banner']) {
+  grid-area: banner;
+}
+:where([data-part='main']) {
+  grid-area: main;
+  display: grid;
+  min-width: 0;
+  min-height: 0;
+}
+:where([data-part='area']) {
+  grid-area: 1 / 1;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-width: 0;
+  min-height: 0;
+  padding: 10px 8px 14px;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+:where([data-part='area'][data-shown='false']) {
+  visibility: hidden;
+  pointer-events: none;
+}
+:where([data-part='menu-layer']) {
+  position: absolute;
+  inset: 0;
+  z-index: 40;
+}
+:where([data-part='menu-layer'][hidden]) {
+  display: none;
+}
+:where([data-part='menu-scrim']) {
+  position: absolute;
+  inset: 0;
+  background: var(--pm-scrim, rgba(0, 0, 0, 0.6));
+}
+:where([data-part='menu']) {
+  position: absolute;
+  top: 48px;
+  right: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 200px;
+  padding: 8px;
+  background: var(--pm-sheet-bg, #fff);
+  color: var(--pm-sheet-text, #111);
+}
+:where([data-part='dock']) {
+  grid-area: dock;
+  position: relative;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+}
+:where([data-part='dock-line'], [data-part='dock-head']) {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  margin: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+}
+:where([data-part='dock-line']) {
+  min-height: 48px;
+  padding: 0 12px 0 10px;
+}
+:where([data-part='dock-head']) {
+  justify-content: space-between;
+  min-height: 44px;
+  padding: 4px 12px 0;
+}
+:where([data-part='chevron']) {
+  width: 20px;
+  height: 20px;
+  flex: none;
+}
+:where([data-part='dock-short']) {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+:where([data-part='dock-counts']) {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: 4px;
+}
+:where([data-part='dock-body']) {
+  min-height: 0;
+  max-height: calc(0.52 * var(--pm-h, 100dvh));
+  padding: 0 14px 10px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+:where([data-part='dock-body'][hidden]) {
+  display: none;
+}
+:where([data-part='tabs']) {
+  grid-area: tabs;
+  position: relative;
+  z-index: 3;
+  display: grid;
+  grid-template-columns: repeat(var(--pm-tabs, 4), minmax(0, 1fr));
+  gap: 6px;
+  padding: 6px 8px 8px;
+  /* the bar runs to the screen's edge; its buttons stop 18 px above it, clear of the home indicator */
+  padding-bottom: max(8px, calc(var(--sab, 0px) - 16px));
+}
+:where([data-part='tab']) {
+  position: relative;
+  min-width: 0;
+  min-height: 46px;
+  padding: 0 2px;
+  font: inherit;
+}
+:where([data-part='tab'][data-pick='true'])::after {
+  content: '';
+  position: absolute;
+  top: 5px;
+  right: 6px;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--pm-pick, #f4d58c);
+  box-shadow:
+    0 0 0 1px var(--pm-pick-edge, #a87b25),
+    0 0 6px 2px var(--pm-pick-glow, rgba(244, 213, 140, 0.6));
+}
+:where([data-part='sr-only']) {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+}
+@media (orientation: landscape) and (max-height: 500px) {
+  :where([data-part='frame']) {
+    grid-template-areas: 'tabs top top' 'tabs banner banner' 'tabs main dock';
+    grid-template-rows: auto auto minmax(0, 1fr);
+    grid-template-columns: calc(74px + var(--sal, 0px)) minmax(0, 1fr) var(--pm-dock-col, 270px);
+  }
+  :where([data-part='frame'][data-dock='folded']) {
+    grid-template-areas: 'tabs top' 'tabs banner' 'tabs main' 'tabs dock';
+    grid-template-rows: auto auto minmax(0, 1fr) auto;
+    grid-template-columns: calc(74px + var(--sal, 0px)) minmax(0, 1fr);
+  }
+  :where([data-part='tabs']) {
+    grid-template-columns: minmax(0, 1fr);
+    grid-auto-rows: minmax(0, 1fr);
+    padding: 8px 6px 8px calc(6px + var(--sal, 0px));
+  }
+  :where([data-part='tab']) {
+    min-height: 0;
+  }
+  :where([data-part='frame'][data-dock='open'] [data-part='dock-body']) {
+    flex: 1 1 auto;
+    max-height: none;
+  }
+}
+:where([data-part='sheet-actions']) {
+  display: flex;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+:where([data-part='sheet-action']) {
+  min-height: 42px;
+  padding: 0 16px;
+  font: inherit;
+}
+:where([data-part='sheet-action'][data-primary='true']) {
+  flex: 1 1 auto;
+}
+:where([data-part='sheet-reason'], [data-part='sheet-note']) {
+  margin: 0 0 8px;
+}
+:where(.kit-pm-scrim) {
+  animation: kit-pm-fade 0.24s ease both;
+}
+@keyframes kit-pm-fade {
+  from {
+    opacity: 0;
+  }
+}
+:where(.kit-pm-layer[data-state='leaving']) .kit-pm-scrim {
+  opacity: 0;
+  transition: opacity var(--pm-leave, 0ms) ease;
+}
+:where(.kit-pm-sheet-hd) {
+  touch-action: none;
+}
+@media (prefers-reduced-motion: reduce) {
+  :where(.kit-pm-scrim, .kit-pm-sheet) {
+    animation: none;
+    transition: none;
+  }
+}
