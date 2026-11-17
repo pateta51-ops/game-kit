@@ -1,8 +1,13 @@
 {
-  "imperium": "C:/projects/imperium-horizon-fan-prototype/src/ui/assets/covers/box-covers.webp",
-  "stcc": "C:/projects/Star-trek-captains-chair-game/media/title/base-box.png",
-  "warps": "C:/projects/warps-edge-fan-prototype/game-docs/warps-edge/raw/base/S204_img-3d-box.png",
-  "rome": "C:/projects/rome-fate-of-an-empire-fan-prototype/dossier/art/A013-box-front.png",
-  "7is": "C:/projects/7th-inning-stretch-fan-prototype/dossier/art/A147_BOX-front-flat.png",
-  "radiance": "C:/projects/radiance-fan-prototype/dossier/art/A005_bgg_box_cover.jpg"
+  "7is": "C:/projects/game-kit/tools/game-server/box-art/7is.png",
+  "ebr": "C:/projects/game-kit/tools/game-server/box-art/ebr.jpg",
+  "imperium": "C:/projects/game-kit/tools/game-server/box-art/imperium.jpg",
+  "jarl": "C:/projects/game-kit/tools/game-server/box-art/jarl.png",
+  "lotr": "C:/projects/game-kit/tools/game-server/box-art/lotr.jpg",
+  "radiance": "C:/projects/game-kit/tools/game-server/box-art/radiance.jpg",
+  "rome": "C:/projects/game-kit/tools/game-server/box-art/rome.png",
+  "stcc": "C:/projects/game-kit/tools/game-server/box-art/stcc.jpg",
+  "ufs": "C:/projects/game-kit/tools/game-server/box-art/ufs.jpg",
+  "unstoppable": "C:/projects/game-kit/tools/game-server/box-art/unstoppable.png",
+  "warps": "C:/projects/game-kit/tools/game-server/box-art/warps.png"
 }
