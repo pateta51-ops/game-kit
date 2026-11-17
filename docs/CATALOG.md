@@ -730,7 +730,7 @@ Each prompt names its source frame (card and clause), a decision-authority tag w
 
 ## reference-game
 
-A tiny made-up card game kept in the kit as a contract test (K205): when a component's interface drifts, the game stops compiling or its tests fail. Not pulled into games; it is generated, never copied.
+A small made-up card game kept in the kit as a contract test (K205, K276): when a component's interface drifts, the game stops compiling or its tests fail. Not pulled into games; it is generated, never copied.
 
 - **Use it when:** Kit CI only: a made-up game generated through the scaffold whose own check fails when a component interface drifts.
 - **Not for:** Pulling into a game or copying as a starter; use scaffold for a new game.

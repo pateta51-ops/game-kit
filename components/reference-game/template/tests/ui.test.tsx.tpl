@@ -1,12 +1,11 @@
 // @vitest-environment jsdom
-// K205: the app through app-frame, prompt-host (pick, amount, may), settings and saves screens.
+// K205 / K276: the app through app-frame, screens (menu, set-up form), prompt-host (pick, may), settings and saves screens.
 import 'fake-indexeddb/auto';
 import { act } from 'react';
 import { createRoot } from 'react-dom/client';
 import { afterEach, describe, expect, it } from 'vitest';
-import { CONTENT, createGame, GAME, RULES } from '../src/engine/api.ts';
 import { App } from '../src/ui/App.tsx';
-import { game, useSettings } from '../src/ui/store.ts';
+import { campaignNow, game, INITIAL, startGame, useSettings } from '../src/ui/store.ts';
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 window.scrollTo = () => undefined;
@@ -33,25 +32,46 @@ const click = (b: Element | null | undefined): void => {
   if (!(b instanceof HTMLElement)) throw new Error('no button');
   act(() => b.click());
 };
+const choose = (s: Element | null | undefined, value: string): void => {
+  if (!(s instanceof HTMLSelectElement)) throw new Error('no select');
+  act(() => {
+    s.value = value;
+    s.dispatchEvent(new Event('change', { bubbles: true }));
+  });
+};
 
-describe('reference app (K205)', () => {
-  it('answers a pick, an amount and a may through the prompt host', () => {
-    // a seed that deals a wild card to the first seat, so the amount prompt opens
-    const seed = Array.from({ length: 200 }, (_, i) => `ui${String(i)}`).find((s) => CONTENT.cards[createGame(GAME, { seed: s }, RULES, CONTENT).state.zones['hand:0']?.cards[0] ?? ''] === 0) ?? '';
+describe('reference app (K205, K276)', () => {
+  it('answers a may and a pick through the prompt host; undo goes back one click', () => {
     useSettings.getState().set('obvious', false);
-    game.fresh(seed);
-    const first = game.get().state.zones['hand:0']?.cards[0] ?? '';
+    startGame(INITIAL, 'ui1');
     const el = show('#/play');
-    click(el.querySelector(`[data-kind="pick"] [data-option="${first}"]`));
-    expect(el.querySelector('[data-kind="amount"]')).not.toBeNull();
-    click(el.querySelector('.kp-done'));
-    expect(game.get().state.scores[0]).toBeGreaterThan(0);
     click(el.querySelector('[data-kind="may"] [data-option="no"]'));
-    expect(game.get().history.actions.length).toBeGreaterThanOrEqual(3);
-    expect(game.get().state.prompt?.seat ?? '0').toBe('0');
+    const first = game.get().state.zones['hand:0']?.cards[0] ?? '';
+    click(el.querySelector(`[data-kind="pick"] [data-option="${first}"]`));
+    expect(game.get().history.steps.length).toBe(2);
+    expect(game.get().state.prompt?.seat).toBe('0');
     click(el.querySelector('[data-testid="undo"]'));
-    expect(game.get().state.prompt?.kind).toBe('may');
+    expect(game.get().state.prompt?.kind).toBe('pick');
     expect(el.querySelector('[data-part="log"], ol, ul')).not.toBeNull();
+  });
+
+  it('the set-up form starts the game it shows: seats, scenario and difficulty', () => {
+    const el = show('#/setup');
+    choose(el.querySelector('[data-seat="0"] select'), 'automa');
+    choose(el.querySelector('[data-seat="1"] select'), 'human');
+    choose(el.querySelector('[data-field="scenario"] select'), 'second');
+    choose(el.querySelector('[data-field="difficulty"] select'), 'hard');
+    click(el.querySelector('[data-part="setup"] button[type="submit"]'));
+    expect(game.get().state.options).toMatchObject({ bots: ['0'], scenario: 'second', level: 'hard' });
+    expect(game.get().state.prompt?.seat).toBe('1');
+  });
+
+  it('the main menu starts a campaign at its first scenario', () => {
+    const el = show('#/');
+    expect(el.querySelector('[data-part="menu"] [data-entry="setup"]')).not.toBeNull();
+    click(el.querySelector('[data-entry="campaign"]'));
+    expect(campaignNow()?.attempt?.step.id).toBe('first');
+    expect(game.get().state.options.scenario).toBe('first');
   });
 
   it('draws the settings and saves screens', () => {

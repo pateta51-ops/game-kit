@@ -1,30 +1,39 @@
-// Reference mini-game (kit K205, widened K234; no real game's content). Two seats, a shuffled deck of numbers (0 is wild)
-// in card-zones, hands of 3 kept hidden from the other seat. A turn: play a card (pick) to the discard; its effect runs
-// through card-language (a wild asks how much it is worth: an asking verb with resume); then you may draw (the pack's
-// `may` and `draw`). First to the target wins; a seat with no card to play ends the game: the higher score wins, a tie
-// is a draw. The game is one `defineGame` object the store, sims, replay-cli and the opponent read.
-import { draftOf, hashValue, seedRng, timingHandlers, type AnswerAction, type Ctx, type Draft, type GameRules, type KernelPrompt, type KernelState } from '../../kit/engine-core/index.ts';
-import { askVerb, describeEffect, effectTasks, posInt, verbHandler, type VerbTable, type VerbTask } from '../../kit/card-language/index.ts';
+// Reference card game (kit K205, K234, K276; no real game's content). Two seats with life; a turn (turn-flow) is phases
+// draw (you may draw 2), main (play a card) and end (strike 1). Cards: Jab and Blow hit, Rally boosts hits until end of
+// turn (a duration), Ward stays in play and replaces damage to you (a replacement), Mend stays in play and, when you
+// take damage, you may heal 1 (a card-declared trigger). State checks after each action: a seat at 0 life loses, a hand
+// over 4 sheds its last card. An automa seat flips a mode card each turn. After the last round the higher life wins.
+import { addEffect, draftOf, hashValue, seedRng, sumEffects, timingHandlers, would, type AnswerAction, type Ctx, type Draft, type GameRules, type KernelPrompt, type KernelState, type StateCheck, type TimingConfig } from '../../kit/engine-core/index.ts';
+import { describeEffect, effectTasks, posInt, verbHandler, type VerbTable, type VerbTask } from '../../kit/card-language/index.ts';
 import { cardPack, type PackEnv, type PackState, type PackStep } from '../../kit/card-language/pack.ts';
-import { cardsIn, moveCard, newZones, seatZone, viewOf as zonesOf, zoneProblems, type ZoneView } from '../../kit/card-zones/index.ts';
-import { autoAnswer } from '../../kit/prompt-host/index.ts';
-import { defineGame } from '../../kit/game-store/index.ts';
+import { cardTriggers, type When } from '../../kit/card-language/when.ts';
+import { cardsIn, locate, moveCard, newZones, seatZone, viewOf as zonesOf, zoneProblems, type ZoneView } from '../../kit/card-zones/index.ts';
+import { flowHandlers, startFlow, type FlowConfig, type FlowState } from '../../kit/turn-flow/index.ts';
+import { drawAutoma, newAutomaDeck, type AutomaDeck } from '../../kit/automa/index.ts';
 
 export type Seat = '0' | '1';
 export const SEATS: readonly Seat[] = ['0', '1'];
-export type RefPrompt = KernelPrompt & { readonly kind: 'pick' | 'amount' | 'may'; readonly seat: Seat };
+export type Level = 'easy' | 'normal' | 'hard';
+export type Mode = 'rush' | 'guard';
+export const MODES: readonly Mode[] = ['rush', 'guard'];
+export type RefPrompt = KernelPrompt & { readonly kind: 'pick' | 'may'; readonly seat: Seat };
 export interface RefTask { readonly kind: string; readonly answer?: readonly string[] }
-export type RefStep = { readonly op: 'score'; readonly points: number } | { readonly op: 'wild'; readonly max: number } | PackStep;
+export type RefStep = { readonly op: 'hit'; readonly n: number } | { readonly op: 'heal'; readonly n: number } | { readonly op: 'boost'; readonly n: number } | PackStep;
 export type RefEvent =
-  | { readonly type: 'played'; readonly seat: Seat; readonly card: number; readonly points: number; readonly seq: number }
+  | { readonly type: 'played'; readonly seat: Seat; readonly card: string; readonly seq: number }
+  | { readonly type: 'hurt'; readonly seat: string; readonly n: number; readonly seq: number; readonly batch?: number; readonly occurrence?: number }
+  | { readonly type: 'healed' | 'warded' | 'shed'; readonly seat: string; readonly seq: number }
+  | { readonly type: 'flip'; readonly seat: Seat; readonly mode: Mode; readonly seq: number }
   | { readonly type: 'drew'; readonly seat: Seat; readonly reveal: true; readonly seq: number };
+export interface CardDef { readonly name: string; readonly effect: readonly RefStep[]; readonly stay?: true; readonly when?: readonly When<RefStep>[]; readonly text?: string }
 export interface RefState extends KernelState, PackState {
   readonly v: 1;
-  readonly options: { readonly seed: string };
-  readonly rules: { readonly target: number };
-  readonly scores: Readonly<Record<Seat, number>>;
-  readonly seat: Seat;
-  readonly card: string;
+  readonly options: Ref['options'];
+  readonly rules: Ref['rules'];
+  readonly life: Readonly<Record<Seat, number>>;
+  readonly mode: Mode | null;
+  readonly automa: AutomaDeck<Mode> | null;
+  readonly flow?: FlowState;
   readonly stack: readonly (RefTask | VerbTask<RefStep, PackEnv>)[];
   readonly prompt: RefPrompt | null;
   readonly result: { readonly winner: Seat | null } | null;
@@ -37,133 +46,174 @@ export interface Ref {
   readonly prompt: RefPrompt;
   readonly event: RefEvent;
   readonly stamped: never;
-  readonly content: { readonly cards: Readonly<Record<string, number>>; readonly hand: number; readonly effects: Readonly<Record<string, readonly RefStep[]>> };
-  readonly options: { readonly seed: string };
-  readonly rules: { readonly target: number };
+  readonly content: { readonly cards: Readonly<Record<string, string>>; readonly defs: Readonly<Record<string, CardDef>>; readonly hand: number };
+  readonly options: { readonly seed: string; readonly level: Level; readonly bots: readonly Seat[]; readonly scenario: string };
+  readonly rules: { readonly life: Readonly<Record<Seat, number>>; readonly rounds: number };
 }
 
-const values = [0, 0, 1, 1, 2, 2, 3, 3, 4, 4, 5, 5];
-export const CONTENT: Ref['content'] = {
-  cards: Object.fromEntries(values.map((v, i) => [`c${String(i)}`, v])),
-  hand: 3,
-  effects: { 0: [{ op: 'wild', max: 3 }], 1: [{ op: 'score', points: 1 }], 2: [{ op: 'score', points: 2 }], 3: [{ op: 'score', points: 3 }], 4: [{ op: 'score', points: 4 }], 5: [{ op: 'score', points: 5 }] },
+const DEFS: Record<string, CardDef> = {
+  jab: { name: 'Jab', effect: [{ op: 'hit', n: 2 }] },
+  blow: { name: 'Blow', effect: [{ op: 'hit', n: 3 }] },
+  rally: { name: 'Rally', effect: [{ op: 'boost', n: 2 }] },
+  ward: { name: 'Ward', effect: [], stay: true, text: 'If you would take damage, instead discard this.' },
+  mend: { name: 'Mend', effect: [], stay: true, when: [{ on: 'damage', if: 'mine', optional: true, then: [{ op: 'heal', n: 1 }] }] },
 };
-export const RULES: Ref['rules'] = { target: 12 };
-const hand = (seat: Seat): string => seatZone('hand', seat);
-const other = (s: Seat): Seat => (s === '0' ? '1' : '0');
+const list = ['jab', 'blow', 'rally', 'ward', 'mend'].flatMap((d, i) => Array<string>([6, 4, 4, 3, 3][i] ?? 0).fill(d));
+export const CONTENT: Ref['content'] = { cards: Object.fromEntries(list.map((d, i) => [`c${String(i)}`, d])), defs: DEFS, hand: 3 };
+export const LIMIT = 4;
+export const defOf = (id: string): CardDef | undefined => CONTENT.defs[CONTENT.cards[id] ?? ''];
+const hand = (seat: string): string => seatZone('hand', seat);
+export const other = (s: string): Seat => (s === '0' ? '1' : '0');
 
 const pack = cardPack<Ref>({
   moved: (ctx, m) => void (m.op === 'draw' && ctx.emit({ type: 'drew', seat: m.seat as Seat, reveal: true })),
   prompt: (base) => base as Omit<RefPrompt, 'id'>,
   table: () => VERBS,
 });
-const score = (ctx: Ctx<Ref>, points: number): void => {
+const life = (ctx: Ctx<Ref>, seat: string, n: number): void => {
   const s = draftOf(ctx);
-  s.scores = { ...s.scores, [s.seat]: s.scores[s.seat] + points };
-  ctx.emit({ type: 'played', seat: s.seat, card: ctx.content.cards[s.card] ?? 0, points });
+  s.life = { ...s.life, [seat]: s.life[seat as Seat] + n };
 };
 export const VERBS: VerbTable<Ref, RefStep, PackEnv> = {
   ...pack.verbs,
-  score: { fields: { points: posInt }, run: (ctx, step) => score(ctx, step.points), text: (step) => `Score ${String(step.points)}.` },
-  wild: {
-    fields: { max: posInt },
-    run: (ctx, step, env) => askVerb(ctx, { kind: 'amount', seat: draftOf(ctx).seat, min: 1, max: 1, options: Array.from({ length: step.max }, (_, i) => ({ id: String(i + 1), enabled: true })) }, step, env),
-    resume: (ctx, _step, _env, answer) => score(ctx, Number(answer[0] ?? 1)),
-    text: (step) => `Choose 1 to ${String(step.max)} and score that.`,
+  hit: {
+    fields: { n: posInt },
+    run: (ctx, step, env) => void would(ctx, [{ kind: 'damage', keys: { player: other(env?.seat ?? '') }, amount: step.n + sumEffects(ctx.s, 'boost', (e) => e.target === env?.seat) }]),
+    text: (step) => `Deal ${String(step.n)} damage.`,
+  },
+  heal: {
+    fields: { n: posInt },
+    run: (ctx, step, env) => {
+      life(ctx, env?.seat ?? '', step.n);
+      ctx.emit({ type: 'healed', seat: env?.seat ?? '' });
+    },
+    text: (step) => `Heal ${String(step.n)}.`,
+  },
+  boost: {
+    fields: { n: posInt },
+    run: (ctx, step, env) => void addEffect(ctx, { kind: 'boost', source: env?.source ?? '', target: env?.seat ?? '', value: step.n, duration: { until: 'endOfTurn' } }),
+    text: (step) => `Until end of turn, your hits deal ${String(step.n)} more.`,
   },
 };
-export const cardText = (value: number): string => describeEffect(VERBS, CONTENT.effects[String(value)] ?? []);
-const DRAW: readonly RefStep[] = [{ op: 'may', then: [{ op: 'draw' }] }];
+export const cardText = (d: string): string => {
+  const c = CONTENT.defs[d];
+  if (c === undefined) return '';
+  const w = (c.when ?? []).map((x) => `When you take damage, ${x.optional === true ? 'you may: ' : ''}${describeEffect(VERBS, x.then)}`);
+  return [describeEffect(VERBS, c.effect), c.stay === true ? 'Stays in play.' : '', c.text ?? '', ...w].filter((x) => x !== '').join(' ');
+};
+const DRAW: readonly RefStep[] = [{ op: 'may', then: [{ op: 'draw', count: 2 }] }];
 
-const turn = (ctx: Ctx<Ref>): void => {
-  const s = draftOf(ctx);
-  if (cardsIn(s, hand(s.seat)).length === 0 && cardsIn(s, 'deck').length > 0) {
-    moveCard(s, cardsIn(s, 'deck')[0] ?? '', hand(s.seat), 'bottom');
-    ctx.emit({ type: 'drew', seat: s.seat, reveal: true });
-  }
-  const cards = cardsIn(s, hand(s.seat));
-  if (cards.length === 0) {
-    const { 0: a, 1: b } = s.scores;
-    s.result = { winner: a === b ? null : a > b ? '0' : '1' };
-    return;
-  }
-  ctx.ask({ kind: 'pick', seat: s.seat, min: 1, max: 1, options: cards.map((id) => ({ id, enabled: true })) }, { kind: 'played' });
+const FLOW: FlowConfig<Ref> = {
+  phases: [{ id: 'draw' }, { id: 'main' }, { id: 'end' }],
+  seats: () => SEATS,
+  step(ctx, pos) {
+    const s = draftOf(ctx);
+    const seat = pos.seat as Seat;
+    if (pos.phase === 'draw') {
+      if (s.options.bots.includes(seat) && s.automa !== null) {
+        const r = drawAutoma(s.automa as AutomaDeck<Mode>, ctx.rng);
+        s.automa = r.deck;
+        s.mode = r.card;
+        if (r.card !== null) ctx.emit({ type: 'flip', seat, mode: r.card });
+      }
+      if (cardsIn(s, 'deck').length > 0) ctx.then(...effectTasks(DRAW, { seat }));
+    } else if (pos.phase === 'main') {
+      const cards = cardsIn(s, hand(seat));
+      if (cards.length > 0) ctx.ask({ kind: 'pick', seat, min: 1, max: 1, options: cards.map((id) => ({ id, enabled: true })) }, { kind: 'played' });
+    } else ctx.then(...effectTasks([{ op: 'hit', n: 1 }], { seat }), ...(pos.round >= s.rules.rounds && seat === '1' ? [{ kind: 'final' }] : []));
+  },
 };
 
 const played = (ctx: Ctx<Ref>, task: RefTask): void => {
   const s = draftOf(ctx);
-  s.card = task.answer?.[0] ?? '';
-  moveCard(s, s.card, 'discard');
-  ctx.then(...effectTasks(ctx.content.effects[String(ctx.content.cards[s.card] ?? 0)] ?? [], { seat: s.seat, source: s.card }), { kind: 'after' });
+  const seat = (s.flow?.seat ?? '0') as Seat;
+  const id = task.answer?.[0] ?? '';
+  const d = defOf(id);
+  moveCard(s, id, d?.stay === true ? seatZone('play', seat) : 'discard');
+  ctx.emit({ type: 'played', seat, card: d?.name ?? '' });
+  ctx.then(...effectTasks(d?.effect ?? [], { seat, source: id }));
 };
-
-const after = (ctx: Ctx<Ref>): void => {
+const final = (ctx: Ctx<Ref>): void => {
   const s = draftOf(ctx);
-  if (s.scores[s.seat] >= s.rules.target) {
-    s.result = { winner: s.seat };
-    return;
-  }
-  ctx.then(...(cardsIn(s, 'deck').length > 0 && cardsIn(s, hand(s.seat)).length < 3 ? effectTasks(DRAW, { seat: s.seat }) : []), { kind: 'next' });
+  const { 0: a, 1: b } = s.life;
+  s.result = { winner: a === b ? null : a > b ? '0' : '1' };
 };
 
-const next = (ctx: Ctx<Ref>): void => {
-  const s = draftOf(ctx);
-  s.seat = other(s.seat);
-  ctx.then({ kind: 'turn' });
+export const CHECKS: readonly StateCheck<Ref>[] = [
+  {
+    name: 'life',
+    run(ctx) {
+      const s = draftOf(ctx);
+      const out = SEATS.filter((x) => s.life[x] <= 0);
+      if (out.length === 0 || s.result !== null) return false;
+      s.result = { winner: out.length === 2 ? null : other(out[0] ?? '0') };
+      return true;
+    },
+  },
+  {
+    name: 'hand',
+    run(ctx) {
+      const s = draftOf(ctx);
+      const seat = SEATS.find((x) => cardsIn(s, hand(x)).length > LIMIT);
+      if (seat === undefined) return false;
+      moveCard(s, cardsIn(s, hand(seat)).at(-1) ?? '', 'discard');
+      ctx.emit({ type: 'shed', seat });
+      return true;
+    },
+  },
+];
+const wardOf = (s: RefState, seat: string): string | undefined => cardsIn(s, seatZone('play', seat)).find((c) => CONTENT.cards[c] === 'ward');
+export const TIMING: TimingConfig<Ref> = {
+  happen: (ctx, o) => void (pack.happen(ctx, o) || (o.kind === 'damage' && life(ctx, o.keys.player ?? '', -(o.amount ?? 0)))),
+  event: (o) => (o.kind === 'damage' ? { type: 'hurt', seat: o.keys.player ?? '', n: o.amount ?? 0 } : undefined),
+  replacementsFor: (s, o) => {
+    const w = o.kind === 'damage' ? wardOf(s, o.keys.player ?? '') : undefined;
+    return w === undefined ? [] : [{ id: Number(w.slice(1)), controller: o.keys.player ?? '', cls: 1, label: 'Ward' }];
+  },
+  applyReplacement: (ctx, r) => {
+    moveCard(draftOf(ctx), `c${String(r.id)}`, 'discard');
+    ctx.emit({ type: 'warded', seat: r.controller });
+    return 'replaced';
+  },
+  ...cardTriggers<Ref>({ pool: DEFS, player: (s, c) => locate(s, c)?.zone.split(':')[1] ?? '', defOf: (_s, c) => CONTENT.cards[c] ?? '', tests: { mine: (_s, env, o) => o.keys.player === env.seat }, table: VERBS }),
+  checkpoint: { checks: CHECKS },
 };
 
+const zonesFor = (deck: readonly string[], h0: readonly string[] = [], h1: readonly string[] = []) =>
+  newZones({ deck: { seen: 'count', cards: deck }, [hand('0')]: { seen: 'owner', owner: '0', cards: h0 }, [hand('1')]: { seen: 'owner', owner: '1', cards: h1 }, 'play:0': { seen: 'all' }, 'play:1': { seen: 'all' }, discard: { seen: 'all' } });
 export const GAME: GameRules<Ref> = {
-  handlers: { turn, played, after, next, verb: verbHandler<Ref>(VERBS), ...timingHandlers<Ref>({ happen: (ctx, o) => void pack.happen(ctx, o) }) },
+  handlers: { ...flowHandlers(FLOW), played, final, verb: verbHandler<Ref>(VERBS), ...timingHandlers<Ref>(TIMING) },
   blank(options, rules, content): Draft<RefState> {
     const [a, b, c, d] = seedRng(options.seed);
-    const zones = newZones({ deck: { seen: 'count', cards: Object.keys(content.cards) }, [hand('0')]: { seen: 'owner', owner: '0' }, [hand('1')]: { seen: 'owner', owner: '1' }, discard: { seen: 'all' } });
-    return { v: 1, options, rules, rng: { a, b, c, d }, zones: zones as Draft<RefState['zones']>, scores: { 0: 0, 1: 0 }, seat: '0', card: '', stack: [], prompt: null, result: null, seq: 1, promptSeq: 1, log: [] };
+    return { v: 1, options, rules, rng: { a, b, c, d }, zones: zonesFor(Object.keys(content.cards)) as Draft<RefState['zones']>, life: rules.life, mode: null, automa: null, stack: [], prompt: null, result: null, seq: 1, promptSeq: 1, log: [] } as unknown as Draft<RefState>;
   },
   setup(ctx) {
     const s = draftOf(ctx);
     const deck = ctx.rng.shuffle(cardsIn(s, 'deck'), 'deal');
     const n = ctx.content.hand;
-    s.zones = newZones({ deck: { seen: 'count', cards: deck.slice(2 * n) }, [hand('0')]: { seen: 'owner', owner: '0', cards: deck.slice(0, n) }, [hand('1')]: { seen: 'owner', owner: '1', cards: deck.slice(n, 2 * n) }, discard: { seen: 'all' } }) as Draft<RefState['zones']>;
-    ctx.then({ kind: 'turn' });
+    s.zones = zonesFor(deck.slice(2 * n), deck.slice(0, n), deck.slice(n, 2 * n)) as Draft<RefState['zones']>;
+    s.automa = newAutomaDeck(MODES, ctx.rng);
+    startFlow(ctx);
   },
   contentHash: (content) => hashValue(content),
   invariants: (state, content) => zoneProblems(state, Object.keys(content.cards).length).map((message) => ({ id: 'REF-01', message })),
   revealWords: () => 'A card was drawn',
 };
 
-/** What one seat sees (card-zones `viewOf`: the other hand is backs), its scores and its own prompt. Opponents decide from this alone. */
+/** What one seat sees (card-zones `viewOf`: the other hand is backs), life, the automa's flipped mode and its own prompt. Opponents decide from this alone. */
 export interface RefView {
   readonly seat: Seat;
+  readonly level: Level;
   readonly zones: Readonly<Record<string, ZoneView>>;
   readonly hand: readonly string[];
-  readonly scores: RefState['scores'];
+  readonly life: RefState['life'];
+  readonly mode: Mode | null;
   readonly prompt: RefPrompt | null;
   readonly result: RefState['result'];
 }
 export const viewOf = (s: RefState, seat: Seat): RefView => {
   const zones = zonesOf(s, seat);
-  return { seat, zones, hand: (zones[hand(seat)]?.cards ?? []).filter((c): c is string => c !== null), scores: s.scores, prompt: s.prompt?.seat === seat ? s.prompt : null, result: s.result };
-};
-const worth = (id: string): number => {
-  const v = CONTENT.cards[id] ?? 0;
-  return v === 0 ? 3 : v;
+  return { seat, level: s.options.level, zones, hand: (zones[hand(seat)]?.cards ?? []).filter((c): c is string => c !== null), life: s.life, mode: s.mode, prompt: s.prompt?.seat === seat ? s.prompt : null, result: s.result };
 };
 
-/** The simple opponent: from the view only. Highest card, the most for a wild, always draw. */
-export function greedyPicks(v: RefView, p: RefPrompt): string[] {
-  if (p.kind === 'amount') return [p.options.at(-1)?.id ?? '1'];
-  if (p.kind === 'may') return ['yes'];
-  return [v.hand.reduce((best, c) => (worth(c) > worth(best) ? c : best), v.hand[0] ?? '')];
-}
-
-export const WORDS = { played: 'Seat {seat} scores {points}.', drew: 'Seat {seat} draws a card.' };
-export const REF = defineGame<Ref, RefView, Seat>({
-  rules: GAME,
-  content: CONTENT,
-  seats: SEATS,
-  start: (seed) => ({ options: { seed }, rules: RULES }),
-  view: viewOf,
-  forced: (p) => autoAnswer(p, true),
-  opponent: greedyPicks,
-  words: WORDS,
-});
+export const WORDS = { played: 'Seat {seat} plays {card}.', hurt: 'Seat {seat} takes {n} damage.', healed: 'Seat {seat} heals.', warded: 'Seat {seat} discards a Ward instead.', shed: 'Seat {seat} sheds a card.', flip: 'The automa flips {mode}.', drew: 'Seat {seat} draws a card.' };

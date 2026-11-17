@@ -419,6 +419,7 @@ Tasks T1-T18 of `docs/evaluation/AUDIT-2026-11-16.md` section 13, run in the pha
 | K264 | (audit T5, G03) `turn-flow`: data table of rounds, seat turns, phases and steps with skips; emits engine-core boundaries (turn begin, phase/turn/round end, also when the game ends); `whoseTurn`, `endTurn` for a pass | audit | M | done (`turn-flow`) |
 | K270 | `card-pile` `previewOn` ('hover' default, 'hover-focus'; no preview on focus return); pile and hand fan structural CSS scoped to own roots (`data-part='fan'` clash) | imperium #141 | S | done |
 | K275 | T14 screens: data-driven unstyled main menu and set-up form (G11) | audit T14 | S | done |
+| K276 | T13 reference card game: turn-flow, declared trigger, replacement, duration, state check, automa via Bot, campaign step, screens menu and set-up, save mid-prompt (G01) | audit T13 | M | done |
 
 ## Size
 
