@@ -35,13 +35,13 @@
 :where([data-part='stack-hit']:disabled) {
   cursor: default;
 }
-:where([data-part='fan']) {
+:where([data-pile-fan]) {
   position: fixed;
   inset: 0;
   z-index: var(--kp-z, 30);
   pointer-events: none;
 }
-:where([data-part='fan'] > *) {
+:where([data-pile-fan] > *) {
   pointer-events: auto;
 }
 :where([data-part='backdrop']) {
@@ -94,8 +94,8 @@
 :where([data-part='fan-hit'][data-mark]:not([data-mark='barred'])) {
   cursor: pointer;
 }
-:where([data-part='fan'][data-opening='true'] [data-part='fan-turn']),
-:where([data-part='fan'][data-mode='gather'] [data-part='fan-turn']) {
+:where([data-pile-fan][data-opening='true'] [data-part='fan-turn']),
+:where([data-pile-fan][data-mode='gather'] [data-part='fan-turn']) {
   pointer-events: none;
 }
 :where([data-part='grid']) {

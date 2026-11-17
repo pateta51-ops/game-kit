@@ -68,6 +68,8 @@ export interface PileProps {
   cardProps?: (id: string, where: 'fan' | 'grid') => CardProps | undefined
   /** K254: the large-preview hook: a card (the top of the stack, a fanned card, a grid card) is hovered or focused (`id`), then left (`null`). The game draws the preview. */
   onPreview?: (id: string | null, where: 'top' | 'fan' | 'grid', el?: Element) => void
+  /** K270: when `onPreview` fires with a card: `'hover'` (default, pointer only) or `'hover-focus'` (also keyboard focus; never on the focus return after the fan closes). */
+  previewOn?: 'hover' | 'hover-focus'
   /** K254: drawn over the stack while the prompt names cards of the pile (the "Choose - N" badge), `data-part="pick-badge"`. */
   badge?: (named: number) => ReactNode
   /** Over the stack (a count badge, a marker). */
@@ -88,6 +90,10 @@ export function Pile(p: PileProps) {
   const unit = p.unit ?? defaultUnit
   const model = pileModel(view, browse)
   const { markOf, onTap, cardProps, onPreview } = p
+  const returning = useRef(false)
+  const onFocusPreview = (id: string, where: 'top' | 'fan' | 'grid', el: Element) => {
+    if (p.previewOn === 'hover-focus' && !returning.current) onPreview?.(id, where, el)
+  }
   const base = pick?.marks ?? NONE
   const whys: Record<string, string | undefined> = {}
   const marks: Record<string, Mark> = { ...base }
@@ -112,6 +118,8 @@ export function Pile(p: PileProps) {
   const [landed, setLanded] = useState(false)
   const [host, setHost] = useState<Element | null>(null)
   const [sheet, setSheet] = useState(false)
+  const closeSheet = () => { returning.current = true; setSheet(false) }
+  useEffect(() => { returning.current = false })
   const n = model.cards.length
 
   const previewRef = useRef(onPreview)
@@ -164,7 +172,7 @@ export function Pile(p: PileProps) {
   }
   const toggle = (e: { detail: number }): void => {
     if (e.detail > 1) return
-    if (sheet) return setSheet(false)
+    if (sheet) return closeSheet()
     if (mode === 'rest') open()
     else send('toggle')
   }
@@ -178,7 +186,7 @@ export function Pile(p: PileProps) {
     if (picking) wasPicking.current = true
     else if (pickEnded(wasPicking.current, picking)) {
       wasPicking.current = false
-      setSheet(false)
+      closeSheet()
       setLifted(null)
       setMode((m) => step(m, 'pickEnded', n))
     }
@@ -221,7 +229,11 @@ export function Pile(p: PileProps) {
     if (mode === 'rest' && tookFocus.current) {
       tookFocus.current = false
       const a = document.activeElement
-      if (a === null || a === document.body || !document.contains(a)) buttonRef.current?.focus({ preventScroll: true })
+      if (a === null || a === document.body || !document.contains(a)) {
+        returning.current = true
+        buttonRef.current?.focus({ preventScroll: true })
+        returning.current = false
+      }
     }
   }, [mode])
 
@@ -377,7 +389,7 @@ export function Pile(p: PileProps) {
                           aria-disabled={!hit}
                           onFocus={(e) => {
                             if (c === null) return
-                            onPreview?.(c, 'fan', e.currentTarget)
+                            onFocusPreview(c, 'fan', e.currentTarget)
                             cardProps?.(c, 'fan')?.onFocus?.(e)
                           }}
                           onBlur={(e) => {
@@ -429,15 +441,15 @@ export function Pile(p: PileProps) {
           </div>
         )}
         {model.browsable ? (
-          <button ref={buttonRef} type="button" data-part="stack-hit" aria-expanded={isOpen || sheet} aria-label={picking && w.pick !== undefined ? w.pick(label, names.length) : (w.open ?? ((l) => `Look through the ${l}`))(label)} title={picking && w.pick !== undefined ? w.pick(label, names.length) : wordsOf} onClick={toggle} onPointerEnter={() => model.top != null && onPreview?.(model.top, 'top', buttonRef.current ?? undefined)} onPointerLeave={() => onPreview?.(null, 'top')} onFocus={() => model.top != null && onPreview?.(model.top, 'top', buttonRef.current ?? undefined)} onBlur={() => onPreview?.(null, 'top')} />
+          <button ref={buttonRef} type="button" data-part="stack-hit" aria-expanded={isOpen || sheet} aria-label={picking && w.pick !== undefined ? w.pick(label, names.length) : (w.open ?? ((l) => `Look through the ${l}`))(label)} title={picking && w.pick !== undefined ? w.pick(label, names.length) : wordsOf} onClick={toggle} onPointerEnter={() => model.top != null && onPreview?.(model.top, 'top', buttonRef.current ?? undefined)} onPointerLeave={() => onPreview?.(null, 'top')} onFocus={() => model.top != null && buttonRef.current !== null && onFocusPreview(model.top, 'top', buttonRef.current)} onBlur={() => onPreview?.(null, 'top')} />
         ) : null}
         {picking && p.badge !== undefined ? <span data-part="pick-badge" aria-hidden="true">{p.badge(names.length)}</span> : null}
         {p.children}
       </div>
       {overlay}
       {sheet ? (
-        <Sheet title={label} onClose={() => setSheet(false)} {...(motion === 0 ? { slideMs: 0 } : {})} {...(w.close === undefined ? {} : { closeLabel: w.close })}>
-          <PileGrid label={label} cards={model.cards} face={face} back={back} marks={marks} onTap={onTap !== undefined} tap={(id, e) => (onTap === undefined ? pick?.tap(id) : onTap(id, e))} whys={whys} cardProps={cardProps} onPreview={onPreview} onDetail={p.onDetail} topWord={w.top} emptyWord={w.empty} />
+        <Sheet title={label} onClose={() => closeSheet()} {...(motion === 0 ? { slideMs: 0 } : {})} {...(w.close === undefined ? {} : { closeLabel: w.close })}>
+          <PileGrid label={label} cards={model.cards} face={face} back={back} marks={marks} onTap={onTap !== undefined} tap={(id, e) => (onTap === undefined ? pick?.tap(id) : onTap(id, e))} whys={whys} cardProps={cardProps} onPreview={onPreview} onFocusPreview={onFocusPreview} onDetail={p.onDetail} topWord={w.top} emptyWord={w.empty} />
         </Sheet>
       ) : null}
     </div>

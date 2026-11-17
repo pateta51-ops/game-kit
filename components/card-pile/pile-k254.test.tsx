@@ -50,7 +50,7 @@ describe('K254 pile additions', () => {
   })
   it('onPreview: hover on the top card, focus on a fanned card, leave gives null', () => {
     const pv = vi.fn()
-    render(<Pile {...base} onPreview={pv} />)
+    render(<Pile {...base} previewOn="hover-focus" onPreview={pv} />)
     const hit = document.querySelector('[data-part="stack-hit"]')!
     fireEvent.pointerEnter(hit)
     fireEvent.pointerLeave(hit)
@@ -101,7 +101,7 @@ describe('K254 pile additions', () => {
   it('a key press in the fan reports via key; a face-down card sends no id', () => {
     const onTap = vi.fn()
     const pv = vi.fn()
-    render(<Pile {...base} view={{ count: 2, cards: ['a', null] }} pick={{ marks: { a: 'legal' }, tap: () => undefined }} onTap={onTap} onPreview={pv} />)
+    render(<Pile {...base} view={{ count: 2, cards: ['a', null] }} pick={{ marks: { a: 'legal' }, tap: () => undefined }} onTap={onTap} previewOn="hover-focus" onPreview={pv} />)
     open()
     pv.mockClear()
     fireEvent.click(hits()[0]!, { detail: 0 })
@@ -113,14 +113,14 @@ describe('K254 pile additions', () => {
   it('grid: onPreview on focus, null when the sheet closes; a double click acts without onTap, is dropped with it', () => {
     const pv = vi.fn()
     const detail = vi.fn()
-    const { rerender } = render(<Pile {...base} phone onPreview={pv} onDetail={detail} />)
+    const { rerender } = render(<Pile {...base} phone previewOn="hover-focus" onPreview={pv} onDetail={detail} />)
     open()
     const g = document.querySelector<HTMLElement>('[data-part="grid-card"]')!
     fireEvent.focus(g)
     expect(pv.mock.calls[0]!.slice(0, 2)).toEqual(['a', 'grid'])
     fireEvent.click(g, { detail: 2 })
     expect(detail).toHaveBeenCalledTimes(1)
-    rerender(<Pile {...base} phone onPreview={pv} onDetail={detail} onTap={() => undefined} />)
+    rerender(<Pile {...base} phone previewOn="hover-focus" onPreview={pv} onDetail={detail} onTap={() => undefined} />)
     fireEvent.click(document.querySelector('[data-part="grid-card"]')!, { detail: 2 })
     expect(detail).toHaveBeenCalledTimes(1)
     pv.mockClear()

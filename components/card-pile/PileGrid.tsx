@@ -5,7 +5,7 @@ import { pickedAttrs } from '../picked-state/index.ts'
 import type { Mark } from '../prompt-host/pick.ts'
 import type { CardProps, FaceInfo, TapInfo } from './Pile.tsx'
 
-export function PileGrid({ label, cards, face, back, marks, tap, onTap, whys, cardProps, onPreview, onDetail, topWord = 'Top', emptyWord = 'Empty' }: {
+export function PileGrid({ label, cards, face, back, marks, tap, onTap, whys, cardProps, onPreview, onFocusPreview, onDetail, topWord = 'Top', emptyWord = 'Empty' }: {
   label: string
   cards: readonly (string | null)[]
   face: (id: string, info: FaceInfo) => ReactNode
@@ -16,6 +16,7 @@ export function PileGrid({ label, cards, face, back, marks, tap, onTap, whys, ca
   whys?: Readonly<Record<string, string | undefined>> | undefined
   cardProps?: ((id: string, where: 'fan' | 'grid') => CardProps | undefined) | undefined
   onPreview?: ((id: string | null, where: 'top' | 'fan' | 'grid', el?: Element) => void) | undefined
+  onFocusPreview?: ((id: string, where: 'top' | 'fan' | 'grid', el: Element) => void) | undefined
   onDetail?: ((id: string) => void) | undefined
   topWord?: string | undefined
   emptyWord?: string | undefined
@@ -42,7 +43,7 @@ export function PileGrid({ label, cards, face, back, marks, tap, onTap, whys, ca
               {...(picking && c !== null ? pickedAttrs(m === 'armed', anyArmed) : {})}
               disabled={c === null}
               onFocus={(e) => {
-                if (c !== null) onPreview?.(c, 'grid', e.currentTarget)
+                if (c !== null) onFocusPreview?.(c, 'grid', e.currentTarget)
                 mine?.onFocus?.(e)
               }}
               onBlur={(e) => {

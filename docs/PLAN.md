@@ -416,6 +416,7 @@ Tasks T1-T18 of `docs/evaluation/AUDIT-2026-11-16.md` section 13, run in the pha
 | K261 | Lint ignores `.cache/`: the lint lane raced `components:check` writing `.cache/readme-examples` and failed on generated files | CI | S | done |
 | K263 | phone-mode takes Imperium's phone screen: frame, tab bar with lit tab, prompt line, top bar, menu, sheet swipe/Escape/arrival guard, sheet action row | imperium ba0eda4 | M | done (`phone-mode`) |
 | K264 | (audit T5, G03) `turn-flow`: data table of rounds, seat turns, phases and steps with skips; emits engine-core boundaries (turn begin, phase/turn/round end, also when the game ends); `whoseTurn`, `endTurn` for a pass | audit | M | done (`turn-flow`) |
+| K270 | `card-pile` `previewOn` ('hover' default, 'hover-focus'; no preview on focus return); pile and hand fan structural CSS scoped to own roots (`data-part='fan'` clash) | imperium #141 | S | done |
 
 ## Size
 

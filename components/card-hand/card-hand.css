@@ -11,7 +11,7 @@
   position: relative;
   height: calc(var(--_w) * var(--_ratio));
 }
-[data-part='fan'] {
+:where([data-part='hand'] [data-part='fan']) {
   position: absolute;
   inset: 0;
   container-type: inline-size;

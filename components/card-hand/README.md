@@ -22,3 +22,5 @@ export function Hand({ prompt, answer, cards }: { prompt: Parameters<typeof useB
   return <CardHand view={{ cards }} pick={pick} speed={1} label="Hand" face={(id) => <b>{id}</b>} hint={() => 'Play'} />
 }
 ```
+
+K270: the fan rule is `:where([data-part="hand"] [data-part="fan"])`, zero specificity on purpose, so a game can override it; card-pile has its own `[data-pile-fan]` rules.
