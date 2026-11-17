@@ -7,7 +7,7 @@ The panels every game writes around its table, as logic plus unstyled slots: log
 - `<LogPanel lines seats? seatName? turnName? renderLine? />`: grouped by turn, scrolled to the newest, seat filter buttons when `seats` is given.
 - `opponentTurn(steps, isStep, describe, viewer)`: from paced-view `Steps`: `{ done, current, left, total }`. `describe(e, viewer)` returns the text that seat may read, or `null` (hidden: shown as the `hidden` slot, never the event). `<OpponentTurnPanel turn onSkip renderStep? hidden? />` has the skip-to-end button (call paced-view `skip`).
 - `gameResult(scores, { lowWins })`: `{ standings, winners, tied }` from the game's scoring function; ties share a rank. `<GameOver result breakdown? onRematch? onReview? onHome? labels? />`. Solo or reasoned end (K301): `title` (ReactNode) replaces "Winner: seat", `reason` shows under it, `standings={false}` or an empty list hides the list, a standing's `score` is optional, `actions={false}` plus `<GameOverActions onRematch? onReview? onHome? labels? />` places the buttons elsewhere.
-- `banner(phases, turn, seat, phaseId)`, `phaseChanged(prev, next)`; `<TurnBanner phases turn seat phase seatName? turnName? onPhase />` (`turnName(turn)` replaces the printed "Turn n") fires `onPhase` on a change, not on first show.
+- `banner(phases, turn, seat, phaseId)`, `phaseChanged(prev, next)`; `<TurnBanner phases turn seat phase seatName? turnName? phaseName? onPhase />` (`turnName(turn)` replaces the printed "Turn n"; `phaseName(banner)` replaces the phase words, `null` drops the phase span) fires `onPhase` on a change, not on first show.
 - Every `<button>` carries `data-kit`, so a theme can write `:where(button:not([data-kit]))` (K293).
 
 ## Use it in 10 lines

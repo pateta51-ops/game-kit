@@ -108,6 +108,12 @@ describe('banner', () => {
     expect(container.textContent).not.toContain('Turn');
     expect(container.querySelector('[data-part="turn"]')?.textContent).toBe('Round 2');
   });
+  it('K304: phaseName replaces the phase words; null drops the phase span', () => {
+    const { container, rerender } = render(<TurnBanner phases={phases} turn={2} seat="a" phase="u1" phaseName={(b) => `${b.phase}!`} />);
+    expect(container.querySelector('[data-part="phase"]')?.textContent).toBe('Upkeep!');
+    rerender(<TurnBanner phases={phases} turn={2} seat="a" phase="u1" phaseName={() => null} />);
+    expect(container.querySelector('[data-part="phase"]')).toBeNull();
+  });
   it('K293: every button carries data-kit', () => {
     const { container } = render(<><LogPanel lines={[]} seats={['a']} /><GameOver result={gameResult({ a: 1, b: 2 })} onHome={() => {}} onRematch={() => {}} onReview={() => {}} /><OpponentTurnPanel turn={{ done: [], current: { index: 0, text: 'x', hidden: false }, left: 0, total: 1 }} onSkip={() => {}} /></>);
     const bs = [...container.querySelectorAll('button')];

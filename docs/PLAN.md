@@ -112,6 +112,7 @@ A game's build plan lists the kit work it needs as phases named `GK<n>` for the 
 | K301 | table-panels `GameOver`: `title` slot, `reason`, `standings={false}`, optional score, `actions={false}` with exported `GameOverActions`, for a solo game that ends with a printed reason | S |  | done |
 | K302 | game-store `debug(action)`: an engine-core `DebugAction` through the store (own undo step, saved, replayed, settled, autosaved), so debug-console mounts on a store-driven game (`send={store.debug}`) | S |  | done |
 | K303 | kit.mjs pull: when the folder rename fails (EPERM/EACCES/EBUSY, an open handle on Windows), swap by copying; a failed swap restores kit/ | S |  | done |
+| K304 | table-panels `TurnBanner` `phaseName(banner)`: a game replaces the phase words, or returns null to drop the phase span (no CSS hiding) | S |  | done |
 
 ## Harvest from the existing games (owner, 15 Nov 2026)
 

@@ -69,8 +69,8 @@ export function GameOver({ result, seatName = (s) => s, breakdown, onRematch, on
 }
 
 // fires onPhase(banner) when the phase, turn or seat changes, not on first show
-export function TurnBanner({ phases, turn, seat, phase, seatName = (s) => s, turnName, onPhase, children }: {
-  phases: readonly Phase[]; turn: number; seat: string; phase: string; seatName?: (s: string) => ReactNode; turnName?: (t: number) => ReactNode; onPhase?: (b: Banner) => void; children?: ReactNode;
+export function TurnBanner({ phases, turn, seat, phase, seatName = (s) => s, turnName, phaseName, onPhase, children }: {
+  phases: readonly Phase[]; turn: number; seat: string; phase: string; seatName?: (s: string) => ReactNode; turnName?: (t: number) => ReactNode; phaseName?: (b: Banner) => ReactNode; onPhase?: (b: Banner) => void; children?: ReactNode;
 }) {
   const b = banner(phases, turn, seat, phase);
   const prev = useRef<Banner | null>(null);
@@ -82,7 +82,7 @@ export function TurnBanner({ phases, turn, seat, phase, seatName = (s) => s, tur
   }, [b.turn, b.seat, b.phase]); // eslint-disable-line react-hooks/exhaustive-deps
   return (
     <header data-part="turn-banner" data-phase={phase} data-seat={seat}>
-      <span data-part="turn">{turnName ? turnName(turn) : <>Turn {turn}</>}</span> <span data-part="seat">{seatName(seat)}</span> <span data-part="phase" data-index={b.index}>{b.phase}</span>{children}
+      <span data-part="turn">{turnName ? turnName(turn) : <>Turn {turn}</>}</span> <span data-part="seat">{seatName(seat)}</span> {(phaseName ? phaseName(b) : b.phase) != null && <span data-part="phase" data-index={b.index}>{phaseName ? phaseName(b) : b.phase}</span>}{children}
     </header>
   );
 }
