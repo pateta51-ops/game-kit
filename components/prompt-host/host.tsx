@@ -148,7 +148,7 @@ export function PickOptions<P extends Kinded, V>({ prompt, answer, look, confirm
   return (
     <div className={look.cls('pick')}>
       {prompt.options.map((o, i) => (
-        <OptionButton key={o.id} option={o} prompt={prompt} look={look} pressed={picked.includes(o.id)} picked={mark(picked, o.id)} shortcut={key(i)} onPick={() => toggle(o.id)} />
+        <OptionButton key={o.id} option={o} prompt={prompt} look={look} pressed={picked.includes(o.id)} picked={mark(picked, o.id)} shortcut={key(i)} onPick={() => (o.alone === true ? answer([o.id]) : toggle(o.id))} />
       ))}
       {one ? null : (
         <>
@@ -190,7 +190,7 @@ export function PickAmount<P extends Kinded, V>({ prompt, answer, look, start = 
  * The ones not clicked follow in the engine's order; Done answers the whole order. */
 export function Order<P extends Kinded, V>({ prompt, answer, look }: WidgetProps<P, V>) {
   const [clicked, setClicked] = useState<string[]>([]);
-  const ids = prompt.options.filter((o) => o.enabled).map((o) => o.id);
+  const ids = prompt.options.filter((o) => o.enabled && o.alone !== true).map((o) => o.id);
   // all legal options fit: the ones not clicked follow in the engine's order; else the answer is the clicks alone
   const order = ids.length <= prompt.max ? [...clicked, ...ids.filter((id) => !clicked.includes(id))] : clicked;
   const ready = order.length >= prompt.min && order.length <= prompt.max;
@@ -209,7 +209,8 @@ export function Order<P extends Kinded, V>({ prompt, answer, look }: WidgetProps
             shortcut={key(i)}
             mark={at >= 0 ? at + 1 : undefined}
             onPick={() => {
-              if (at >= 0) setClicked(clicked.slice(0, at));
+              if (o.alone === true) answer([o.id]);
+              else if (at >= 0) setClicked(clicked.slice(0, at));
               else if (clicked.length < prompt.max) setClicked([...clicked, o.id]);
             }}
           />

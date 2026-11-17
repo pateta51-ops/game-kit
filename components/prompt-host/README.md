@@ -2,6 +2,8 @@
 Shows the engine's open question (an engine-core prompt) through a typed widget registry, with the common widgets built and unstyled. `index.ts` loads in node (`autoAnswer`); `ui.ts` is React.
 
 ## The game passes
+- K289, `alone` options (engine-core K287): in `PickOptions` and `Order` an enabled alone option (Back, Pass) answers `[id]` on its click and never joins the selection or the order; prompts without `alone` are unchanged.
+
 ```tsx
 const WIDGETS: Widgets<Prompt, PlayerView> = { pick: PickOptions, amount: (p) => <PickAmount {...p} start="last" />, order: Order, may: May, pay: PayCost, market: MarketPick };
 <PromptHost widgets={WIDGETS} prompt={view.prompt} view={view} answer={(picks, id) => store.answer(picks, id)} seat={me}

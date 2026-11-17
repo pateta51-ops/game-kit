@@ -97,6 +97,7 @@ A game's build plan lists the kit work it needs as phases named `GK<n>` for the 
 | K286 | `plan-checker` `--tsc` compiles through a tsconfig of its own, so TypeScript 6 runs it beside a game's tsconfig.json | S |  | done |
 | K287 | `engine-core` `KernelOption.alone`: an option answered only on its own (Back, Pass) in a pick-N prompt; validation, answers, defaults, ask check and `onlyOne` agree | S |  | done |
 | K288 | `sim-pool` `legalAnswers` honours `KernelOption.alone`: alone options leave the combinations and each enabled one is a single-pick answer | S |  | done |
+| K289 | `prompt-host` `PickOptions` and `Order`: an enabled `alone` option answers `[id]` on its click and never joins the selection | S |  | done |
 
 ## Harvest from the existing games (owner, 15 Nov 2026)
 

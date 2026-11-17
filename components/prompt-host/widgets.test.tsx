@@ -205,4 +205,34 @@ describe('board pick (K123, UFS tap to confirm)', () => {
     fireEvent.click(space('a'));
     expect(a).toHaveBeenCalledWith(['a'], 1);
   });
+
+  it('K289: an alone option answers on its click, alone, and never joins a selection (pick 3 or Back)', () => {
+    const a = vi.fn<Answer>();
+    const o: KernelOption[] = [...opts('a', 'b', 'c', 'd'), { id: 'back', enabled: true, alone: true }];
+    render(<PickOptions prompt={pr(o, 3, 3)} view={null} answer={a} look={look} />);
+    fireEvent.click(opt('a'));
+    fireEvent.click(opt('back'));
+    expect(a).toHaveBeenCalledWith(['back']);
+    expect(opt('back')).toHaveAttribute('aria-pressed', 'false');
+    expect(opt('a')).toHaveAttribute('aria-pressed', 'true');
+  });
+
+  it('K289: useBoardPick sends an alone option at once and never joins picks; Order answers it on click and leaves it out of the order', () => {
+    const a = vi.fn<Answer>();
+    const o: KernelOption[] = [...opts('a', 'b', 'c'), { id: 'back', enabled: true, alone: true }];
+    const Probe = () => {
+      const p = useBoardPick(pr(o, 2, 2), a);
+      return <button type="button" onClick={() => { p.tap('a'); p.tap('back'); }}>go</button>;
+    };
+    const { unmount } = render(<Probe />);
+    fireEvent.click(screen.getByText('go'));
+    expect(a).toHaveBeenCalledWith(['back'], 1);
+    unmount();
+    const b = vi.fn<Answer>();
+    render(<Order prompt={pr(o, 3, 3)} view={null} answer={b} look={look} />);
+    fireEvent.click(done());
+    expect(b).toHaveBeenLastCalledWith(['a', 'b', 'c']);
+    fireEvent.click(opt('back'));
+    expect(b).toHaveBeenLastCalledWith(['back']);
+  });
 });

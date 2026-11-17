@@ -49,6 +49,7 @@ export function useBoardPick(prompt: KernelPrompt | null, answer: Answer, { conf
       let cur: readonly string[] = picks;
       for (const id of ids) {
         if (!legal(id)) return;
+        if (prompt.options.some((o) => o.id === id && o.alone === true)) return send([id]);
         let next: readonly string[];
         let sends: boolean;
         if (max <= 1) {
