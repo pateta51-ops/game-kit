@@ -34,10 +34,10 @@ export function idleProblems<G extends GameTypes>(
   view: (s: G['state']) => unknown,
 ): string[] {
   const p = state.prompt;
-  if (p === null || p.min > 1 || p.max < 1) return [];
+  if (p === null) return [];
   const out: string[] = [];
   for (const o of p.options) {
-    if (!o.enabled) continue;
+    if (!o.enabled || (o.alone !== true && (p.min > 1 || p.max < 1))) continue;
     const none = doesNothing(game, state, [o.id], content, view);
     if (none && o.idle === undefined) out.push(`"${o.id}" changes nothing but is not marked idle`);
     if (!none && o.idle !== undefined) out.push(`"${o.id}" is marked idle (${o.idle}) but changes the game`);

@@ -113,8 +113,8 @@ class RunCtx<G extends GameTypes> implements Ctx<G> {
     if (s.prompt !== null) {
       throw new EngineBugError(`ask: prompt ${s.prompt.id} is still open (a handler opened a second prompt)`);
     }
-    const on = input.options.filter((o) => o.enabled).length;
-    if (input.max < input.min || on < input.min) {
+    const on = input.options.filter((o) => o.enabled && o.alone !== true).length;
+    if (input.max < input.min || (on < input.min && !input.options.some((o) => o.enabled && o.alone === true))) {
       const named = [input.kind === undefined ? '' : `kind "${input.kind}"`, input.seat === undefined ? '' : `seat ${String(input.seat)}`, (s.stack.at(-1) ?? resume) === undefined ? '' : `resuming "${String((resume ?? s.stack.at(-1))?.kind)}"`].filter((x) => x !== '').join(', ');
       const off = input.options.filter((o) => !o.enabled).map((o) => `${o.id}${o.why === undefined ? '' : ` (${o.why})`}`).join('; ');
       const why = input.max < input.min ? `max ${String(input.max)} is below min ${String(input.min)}` : `it needs at least ${String(input.min)} pick(s) but only ${String(on)} of ${String(input.options.length)} option(s) are enabled${off === '' ? '' : `; disabled: ${off}`}`;

@@ -69,7 +69,9 @@ export function validateAction<G extends GameTypes>(state: G['state'], input: G[
     return no('BAD_CHOICE', 'Answer with a list of option ids.');
   }
   const chosen = picks as string[];
-  if (chosen.length < prompt.min || chosen.length > prompt.max) {
+  if (chosen.some((id) => prompt.options.find((o) => o.id === id)?.alone === true)) {
+    if (chosen.length !== 1) return no('NOT_LEGAL', 'That option must be chosen on its own.');
+  } else if (chosen.length < prompt.min || chosen.length > prompt.max) {
     const range =
       prompt.min === prompt.max ? String(prompt.min) : `${String(prompt.min)} to ${String(prompt.max)}`;
     return no('BAD_CHOICE', `Choose ${range} option(s), not ${String(chosen.length)}.`);

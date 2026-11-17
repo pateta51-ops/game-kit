@@ -33,6 +33,8 @@ export interface KernelOption {
   readonly missing?: string;
   /** K114: good or bad for the chooser, so an automatic answer (`outcomePicks`, a bot) can pick without per-card code. */
   readonly outcome?: 'good' | 'bad';
+  /** K287: answered only on its own (Back, Pass), whatever min/max say; it does not count toward min..max. */
+  readonly alone?: true;
 }
 
 export interface KernelPrompt {

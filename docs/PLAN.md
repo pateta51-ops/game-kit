@@ -95,6 +95,7 @@ A game's build plan lists the kit work it needs as phases named `GK<n>` for the 
 | K284 | `layout-editor` Reset button (in-page confirmation): restores the starting doc, backdrops (`LAYOUT_EDITOR_BG_INIT`), zoom and screen; `layoutEditor.reset()` | S |  | done |
 | K285 | `plan-checker` `--tsc-at DIR` compiles the plan's type blocks inside a game folder, so relative `kit/` imports resolve | S |  | done |
 | K286 | `plan-checker` `--tsc` compiles through a tsconfig of its own, so TypeScript 6 runs it beside a game's tsconfig.json | S |  | done |
+| K287 | `engine-core` `KernelOption.alone`: an option answered only on its own (Back, Pass) in a pick-N prompt; validation, answers, defaults, ask check and `onlyOne` agree | S |  | done |
 
 ## Harvest from the existing games (owner, 15 Nov 2026)
 
