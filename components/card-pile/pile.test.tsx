@@ -16,6 +16,10 @@ describe('Pile', () => {
     expect(container.querySelectorAll('[data-face]')).toHaveLength(0)
     expect(screen.getByRole('group').getAttribute('aria-label')).toBe('Deck, 3 cards')
   })
+  it('the stack root carries data-pile (the deck-motions anchor)', () => {
+    const { container } = render(<Pile label="Deck" view={{ count: 3, cards }} face={face} back={back} testId="p1.deck" />)
+    expect(container.querySelector('[data-pile="p1.deck"]')).not.toBeNull()
+  })
   it('an empty pile shows an empty slot and no button', () => {
     const { container } = render(<Pile label="Deck" view={{ count: 0 }} face={face} back={back} />)
     expect(container.querySelector('[data-part="stack"]')!.getAttribute('data-empty')).toBe('true')

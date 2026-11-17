@@ -25,3 +25,4 @@ Cards tucked under or fanned past a host, with a pure `footprint` for the row la
 
 ## Market (K243)
 Offer slots refilled from decks, buy and cycle options, slide refill and the deal animation: `market-row` (slots are card-zones zones; payment and rules stay the game's; README).
+Cards dealt from a pile to places, refill turn-over, deck cycle and the riffle shuffle: `deck-motions` (piles by `data-pile`; the game says which cards move; README).

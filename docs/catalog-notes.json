@@ -317,6 +317,10 @@
     "use": "Small screen helpers: hover hold, inspect, rule sheet, toasts, prompt keys. For an engine-core prompt use prompt-host instead of createSelection and onlyForcedAnswer.",
     "not": "Any look or game type."
   },
+  "deck-motions": {
+    "use": "Cards fly from a pile to their places (deal, refill turn-over, deck cycle) and a pile riffles; piles found by data-pile; timing pure.",
+    "not": "Which cards move (the game diffs its views), the card look, a market row slide or a fan (card-pile)."
+  },
   "token-flights": {
     "use": "Tokens that moved between two views fly from where they were to where they are, with a ledger that draws each token in one place at a time.",
     "not": "Cards flying, motion specs (motion-frame) or the token look."

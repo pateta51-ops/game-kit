@@ -11,6 +11,8 @@ A market of offer slots refilled from decks: prices, buy and cycle options, refi
 - Not here: who may buy, discounts, unlocks, where a bought card goes, payment, what a reveal triggers.
 - UI (`ui.ts`): `MarketRow` with `name`, `label`, `row` (a `RowView`), `face(id, slot)`, `deck(zone, count)`, `empty(slot)`, `events`, `labels(slot, id)` (price and cost as the game writes them), `pick` from `useBoardPick` (`data-mark`, `data-picked`, `data-dim`; a click taps `optionFor(slot, id)`, default `buy:<name>:<slot>`), `speed`. When `row.slots` changes, survivors slide (520 ms), then new cards fly from the deck element (`dealFrom(slot, id)`, else the `from` of the card's `filled` event in `events` (the market events of the last step), else the first deck) 520 ms each, 90 ms apart, scaled by `speed`; none at 0 or reduced motion. `rowMotions`, `flyFrames` are the pure part. Parts: `market-row decks deck slots slot card` (`data-empty`). Timing ported from Rome via STCC from LordOfTheRings (BSD-3, `LICENSE-LordOfTheRings.txt`).
 
+Note (K250): the deal here animates the real card element from the deck's box; `deck-motions` `dealFrom` flies stand-ins between `data-pile` piles with the same timings, so it was not swapped in; use it for a turn-over refill.
+
 ## Use it in 10 lines
 
 ```ts

@@ -279,7 +279,7 @@ export function Pile(p: PileProps) {
             data-part="fan"
             data-mode={mode}
             data-opening={mode === 'fan' && !landed ? 'true' : undefined}
-            data-pile={testId}
+            data-pile-fan={testId}
             role="dialog"
             aria-modal="true"
             aria-label={(w.fan ?? ((l) => `${l}, fanned out`))(label)}
@@ -341,7 +341,7 @@ export function Pile(p: PileProps) {
         )
 
   return (
-    <div ref={pileRef} data-part="pile" data-testid={testId} data-count={model.count} data-mode={mode} data-picking={picking ? 'true' : undefined} data-named={names.length}>
+    <div ref={pileRef} data-part="pile" data-testid={testId} data-pile={testId} data-count={model.count} data-mode={mode} data-picking={picking ? 'true' : undefined} data-named={names.length}>
       <div
         data-part="stack"
         data-landscape={landscape ? 'true' : undefined}

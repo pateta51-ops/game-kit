@@ -163,5 +163,6 @@ Components with no row above. Each starts from the game and commit in its `compo
 | `reference-game` | none: written new for the kit (K205; a made-up game generated through `scaffold` as a contract test) | M |
 | `card-attachments` | Earthborne `b9b06107` (K245: table/geometry.ts tuck, Tokens.tsx rows and boxes) and Imperium `22736b2f` (Garrison stack; the token shapes and fonts became the game's render) | M |
 | `token-flights` | Unstoppable `e395a7c4` (K241: flights.ts, flightLedger.ts, TokenFlights.tsx; places, art, lookup and hold became the game's) | M |
+| `deck-motions` | STCC `8e6f55b` (`ui/motion/dealing.ts`: dealFrom, refill turn-over, riffle, shuffleDecks, deck cycle; from LordOfTheRings `a3f3c01`) (K250) | M |
 | `track` | Unstoppable `e395a7c4` (K242: DangerTrack spaces, states, labels, drawn and mat rendering; threatBuffs useMarkerGlide); STCC `8e6f55bd` crewTrack.ts (hop, fill, badge pop) and StepTrack.tsx (LotR PhaseTracker, BSD-3); danger rules, skull and colours left out | M |
 | `target-arrow` | Unstoppable `e395a7c4` (K247: arrow.ts, strike.ts, TargetArrow.tsx; prompt kinds, source, lookup and damage predicate became the game's) | M |
