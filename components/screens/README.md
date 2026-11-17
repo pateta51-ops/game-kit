@@ -17,3 +17,5 @@ console.log(setup, validateSetup(spec, setup))
 ```
 
 UI (`ui.ts`): `<MainMenu entries={[{ id: 'continue', label: 'Continue', disabled: true }]} onSelect={id => ...} />` and `<SetupForm spec={spec} onStart={setup => ...} />`. `onStart` gets `{ seats: [{ kind, name? }], scenario, difficulty, ...extra }`, only when valid; `validateSetup` returns the failing field names (`seats`, `seat-kind`, `scenario`, `difficulty`, or an extra key).
+
+Seams: a `MenuEntry.label` may be any `ReactNode` (two-line entry with an icon). `SetupForm` takes `value` + `onChange` for controlled use (uncontrolled stays default), and `renderField(field, value, set)` to draw a scenario, difficulty, extra or select-many field yourself (return `undefined` for the default). `SetupSpec.seats` is optional: leave it out for a solo game (no seat count or names; `setup.seats` is `[]`). `SetupSpec.many` lists select-many fields `{ key, label, options, min?, max?, default? }`: a checkbox group that keeps min/max, value `string[]`; `validateSetup` returns the key when out of range.

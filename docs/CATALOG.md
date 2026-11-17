@@ -823,7 +823,7 @@ Unstyled, data-driven main menu and new-game set-up form, with a pure default an
 
 - **Use it when:** Main menu and new-game set-up form (seats, scenario, difficulty, extras) from data, unstyled, with a pure default and validate.
 - **Not for:** Styled or game-specific screens, or settings (use settings).
-- **Key exports:** `defaultSetup`, `validateSetup`, `defaultWords`, `Option`, `SetupSpec`, `Setup`, `Words`
+- **Key exports:** `defaultSetup`, `validateSetup`, `defaultWords`, `Option`, `SetupSpec`, `Setup`, `Field`, `Words`
 - **Needs:** nothing
 - **Came from:** kit
 - **Docs:** [README](../components/screens/README.md)
