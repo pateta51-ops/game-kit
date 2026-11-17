@@ -105,6 +105,7 @@ A game's build plan lists the kit work it needs as phases named `GK<n>` for the 
 | K294 | `useDragDrop` takes optional `sourceLegal(id)`: decides who may start a drag and whether it stays legal, so composite option ids (`slot:card`) work without wrapping `pick` | S |  | done |
 | K295 | `validateEffect` / `validateStep` read only objects in a step position as steps, so value objects with an `op` key (`calc`, `cmp`) pass; `cardTriggers` `env` gets the trigger's occurrences | S |  | done |
 | K296 | engine-core `TimingConfig.triggersFor`, `invalid` and `held` receive the game's content as an added last parameter, so a trigger table kept in content needs no module variable | S |  | done |
+| K297 | game-store `openingSteps` option: `fresh(seed)` and the first game pace setup's events and the opening opponent answers as steps, based on the blank state's view (default off) | S |  | done |
 | K298 | `layout-editor` round 4: a plain-words tooltip on every control and kind option; **Take out** (one pile out of a consolidated box, full size, box shrinks, one undo step; `takeOut`); zone `scale` ("Card size here" 20-100%, `cardFit` takes the scale, label shows "cards at N%"); three owner how-tos in the README | S |  | done (`layout-editor`) |
 
 ## Harvest from the existing games (owner, 15 Nov 2026)

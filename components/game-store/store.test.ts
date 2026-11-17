@@ -79,6 +79,19 @@ describe('game-store (K234)', () => {
     expect(store.get().state.score).toEqual({ a: 1, b: 1 });
   });
 
+  it('K297: openingSteps paces the setup and opening opponent events of fresh(), from the blank view; instant and the default skip them', () => {
+    const dealt = { ...def, rules: { ...RULES, setup: (ctx: Ctx<G>) => { ctx.emit({ type: 'dealt' }); ctx.then({ kind: 'turn' }); } } };
+    const store = createGameStore(dealt, { seat: 'b', seed: 'x', openingSteps: true });
+    const snap = store.get();
+    expect(snap.state.log.map((e) => e.type)).toEqual(['dealt', 'added']);
+    expect(snap.steps.queue.map((e) => e.type)).toEqual(['dealt', 'added']);
+    expect(snap.steps.base?.score).toEqual({ a: 0, b: 0 });
+    store.fresh('y');
+    expect(store.get().steps.queue.length).toBe(2);
+    expect(createGameStore(dealt, { seat: 'b', seed: 'x', openingSteps: true, instant: () => true }).get().steps.queue).toEqual([]);
+    expect(createGameStore(dealt, { seat: 'b', seed: 'x' }).get().steps.queue).toEqual([]);
+  });
+
   it('drops a stale prompt id; safe undo refuses a step that revealed', () => {
     const store = createGameStore(def, { seat: 'a', seed: 'y' });
     const id = store.get().state.prompt?.id ?? 0;

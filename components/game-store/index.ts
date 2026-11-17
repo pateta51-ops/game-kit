@@ -59,6 +59,8 @@ export interface StoreOptions<S extends SeatId> {
   readonly afterGameOver?: boolean;
   /** Skip pacing (paced-view `instant`). */
   readonly instant?: () => boolean;
+  /** K297: `fresh` (and the first game) paces setup and the opening opponent answers as steps, from the blank state's view. Default off. */
+  readonly openingSteps?: boolean;
   /** saves' `makeSaves(...)` (or anything with `writeAutosave`): called after each accepted answer. */
   readonly saves?: { writeAutosave(h: History<GameTypes>, name: string): Promise<unknown> };
   /** The autosave's name (default the seed). */
@@ -129,8 +131,9 @@ export function createGameStore<G extends GameTypes, V, S extends SeatId>(def: G
   };
   function fresh(seed: string): void {
     const { options, rules } = def.start(seed);
-    const s = settle(newSteps<G>(createGame(def.rules, options, rules, def.content).state), [], options);
-    set(make(s.h, noSteps(), options, rules, s.error));
+    const g = createGame(def.rules, options, rules, def.content);
+    const s = settle(newSteps<G>(g.state), g.events, options);
+    set(make(s.h, o.openingSteps === true ? pushSteps(noSteps(), def.view(def.rules.blank(options, rules, def.content) as G['state'], me()), s.evs, isStep, o.instant?.() ?? false) : noSteps(), options, rules, s.error));
   }
   const mode = (): UndoMode => (typeof o.undo === 'function' ? o.undo() : (o.undo ?? 'safe'));
   const undoOpts = o.afterGameOver === undefined ? {} : { afterGameOver: o.afterGameOver };
