@@ -12,4 +12,6 @@ Component: `card-zones` (README). Cards and their places are data in engine stat
 Proof: a test that moves every card through every zone with `zoneProblems` clean, and a `viewLeaks` test.
 
 ## Piles (K219)
+A resource number that counts up, bumps and tags its change, with a `data-res` anchor for flights: `counter` (`Counter`, `bumpCounter`; README).
+
 A stack you may look through, with picks from it and a phone grid: `card-pile` (`Pile` over a `ZoneView`, marks from `useBoardPick`; README).

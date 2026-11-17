@@ -271,6 +271,10 @@
     "use": "Story, flavour text, panels and splash as data that never blocks play.",
     "not": "Rules text."
   },
+  "counter": {
+    "use": "A resource number with count-up, bump, +N tag, low warning and a data-res anchor for flights; unstyled.",
+    "not": "Any look, colour or word; the flight itself (token-flights); the stored value."
+  },
   "table-panels": {
     "use": "The panels around the table, unstyled: log (event words with slots, by turn, seat filter), banner (turn, seat, phase, fires on change), game over (result, breakdown slot, rematch, review log, home), opponent turn (paced-view steps, what the viewer may see, skip to end).",
     "not": "Any look, layout or game text; the log data itself (game-log); the opponent's decisions (opponent)."

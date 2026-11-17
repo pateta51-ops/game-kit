@@ -1,0 +1,38 @@
+{
+  "name": "counter",
+  "source": {
+    "game": "ebr",
+    "commit": "b9b06107",
+    "paths": [
+      "src/ui/motion/Count.tsx @ b9b06107 (HEAD of the game's checkout at the port; per-file log not readable from the worker sandbox)"
+    ],
+    "grafts": [
+      {
+        "game": "stcc",
+        "commit": "8e6f55bd",
+        "paths": [
+          "src/ui/motion/effects/resourceWarp.ts (bump, totalTag, T.BUMP_MS, T.TOTAL_MS: BUMP_FRAMES, showTag, tagAt; colours and fonts left to the game) @ 8e6f55bd (HEAD at the port)",
+          "src/ui/motion/effects/resources.ts (counterOf, rowRightOf) @ 8e6f55bd (HEAD at the port)",
+          "src/ui/CrewPanel.tsx:468 (the data-res anchor) @ 8e6f55bd (HEAD at the port)"
+        ]
+      },
+      {
+        "game": "imperium",
+        "commit": "22736b2f",
+        "paths": [
+          "src/ui/board/MarketBoard.tsx, derive.ts unrestLevel (amber and red by count: levelOf, data-level) @ 22736b2f (HEAD of branch claude/commit-real-pack at the port)"
+        ]
+      }
+    ],
+    "licence": "STCC's resourceWarp.ts follows halogenandtoast/LordOfTheRings riffle() (BSD-3-Clause, notice in LICENSE-LordOfTheRings.txt, kept here); no LotR file was copied, only STCC's own bump and total-tag code ported."
+  },
+  "needs": [
+    "effect-library",
+    "motion-frame",
+    "ui-helpers"
+  ],
+  "packages": [
+    "react",
+    "zustand"
+  ]
+}
