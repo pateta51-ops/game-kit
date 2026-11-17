@@ -32,7 +32,7 @@
 | choosePlayer | `others? then` | `cfg.seats`; `then` runs with that seat as env.seat; no seat to offer: `cfg.noPlayer(s, env)` gives the seat, default skip |
 | choosePayment | `ways` (effects) `then` | a way not payable is barred (`why: cannotPay`) |
 | orderEffects | `effects` | answer is the order run (min = max = all) |
-| gainResource, pay, convert, adjust | `res amount`; `res amount`; `res amount into get`; `key by min? max?` | `cfg.res` or `state.res[seat][key]`; pay stops at 0; convert only when payable |
+| gainResource, pay, convert, adjust | `res amount`; `res amount`; `res amount into get`; `key by min? max?` | `cfg.res` or `state.res[seat][key]`; pay and convert refuse (do nothing) when not payable |
 | seq, if, forEach, eachPlayer, repeat, count, later, payThen, custom | `steps`; `test then else?`; `then`; `then`; `times then`; `what then`; `at then`; `cost then`; `name n?` | `cfg.tests`, `cfg.counts`, `cfg.seats` (active seat first), `runLater(ctx, at)` at the game's moment, payThen only when every cost step is payable (resources; the cards a moving or marking step names exist, an exhausted card cannot be exhausted; nested; `cfg.custom[name].payable`), and `then` only when no cost occurrence was cancelled in its `would` window; choosePayment pays through payThen, `cfg.custom[name]` (`run`, `resume`, `text`) |
 
 ## Timing

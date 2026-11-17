@@ -424,7 +424,11 @@ export function cardPack<G extends GameTypes, E extends PackEnv = PackEnv>(cfg: 
       ask(ctx, st, e, 'orderEffects', list(st.effects.length), st.effects.length, st.effects.length);
     }, (ctx, st: Extract<PackStep, { op: 'orderEffects' }>, e, a) => go(ctx, a.flatMap((i) => st.effects[Number(i)] ?? []), e)),
     gainResource: flow({ res: str, amount }, (ctx, st: Extract<PackStep, { op: 'gainResource' }>, e) => resSet(ctx, e.seat, st.res, resGet(S(ctx), e.seat, st.res) + n(st.amount, e))),
-    pay: flow({ res: str, amount }, (ctx, st: Extract<PackStep, { op: 'pay' }>, e) => resSet(ctx, e.seat, st.res, Math.max(0, resGet(S(ctx), e.seat, st.res) - n(st.amount, e)))),
+    pay: flow({ res: str, amount }, (ctx, st: Extract<PackStep, { op: 'pay' }>, e) => {
+      const s = S(ctx);
+      if (!payable(s, st, e)) return;
+      resSet(ctx, e.seat, st.res, resGet(s, e.seat, st.res) - n(st.amount, e));
+    }),
     convert: flow({ res: str, amount, into: str, get: amount }, (ctx, st: Extract<PackStep, { op: 'convert' }>, e) => {
       const s = S(ctx);
       if (!payable(s, st, e)) return;

@@ -402,6 +402,14 @@ When a game with a campaign or a long story is planned (tier 3): K157, K159, K15
 
 **Tier 4 - owner's word:** K103, K115, K107, K125.
 
+## Audit roadmap (owner, 16 Nov 2026)
+
+Tasks T1-T18 of `docs/evaluation/AUDIT-2026-11-16.md` section 13, run in the phase order of its section 12.
+
+| Batch | Content | Sources | Effort | State |
+|---|---|---|---|---|
+| K255 | (audit T1, G08) card-language `pay` refuses (does nothing) when unaffordable instead of clamping at 0 | audit | S | done (`card-language`) |
+
 ## Size
 
 5 small lifts, about 18 worker batches of medium size, 2 large ones. Stage 1 is 4 batches. Work asked for by a game (the table above) comes on top.

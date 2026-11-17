@@ -189,6 +189,11 @@ describe('card-language verb pack (K232)', () => {
     expect(z(s, 'hand:a')).toEqual(hand);
   });
 
+  it('K255 pay refuses when unaffordable, leaving the resource unchanged and the later steps running', () => {
+    const s = play([{ op: 'pay', res: 'gold', amount: 9 }, { op: 'draw', count: 1 }]).s;
+    expect([gold(s), z(s, 'hand:a').length]).toEqual([3, 4]);
+  });
+
   it('K232 payThen: a cost move cancelled in its would window pays nothing, so then does not run', () => {
     const cost = (c: string): S => play([{ op: 'payThen', cost: [{ op: 'discard', count: 1 }], then: [{ op: 'draw', count: 1 }] }], [[c]]).s;
     expect(z(cost('h3'), 'hand:a')).toEqual(hand);
