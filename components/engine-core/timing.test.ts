@@ -1,6 +1,6 @@
 // K93: batches with cancel, ignore and instead; shared keys; the prevention window as card data.
 import { afterEach, describe, expect, it } from 'vitest';
-import { advance, applyAction, cancelBatch, createGame, draftOf, EngineBugError, ignoreBatch, insteadOf, prevent, setCowChecks, setStateFreezing, sharedKeys, would, type Ctx, type PreventionOffer } from './index.ts';
+import { advance, applyAction, batchGroups, cancelBatch, createGame, draftOf, EngineBugError, ignoreBatch, insteadOf, prevent, setCowChecks, setStateFreezing, sharedKeys, would, type Ctx, type PreventionOffer } from './index.ts';
 import { CONTENT, COUNTER, playGame, RULES } from './fake/counter.ts';
 import { answer, HIT, SHIELD, startTimed, timedGame, WARD, type Timed, type TimedState } from './fake/timed.ts';
 
@@ -121,6 +121,24 @@ describe('batches (K93)', () => {
     expect(r.hp).toBe(6);
     expect(sharedKeys(r, 1)).toEqual({ target: 'u1', player: 'p2' });
     const bad = startTimed(g, { items: [HIT, { ...HIT, keys: { target: 'u2' } }], shared: ['target'] });
+    expect(() => applyAction(g, bad, answer(bad, 'hit'), null)).toThrow(EngineBugError);
+  });
+
+  it('K299: a second key (other) keys a once-per-pair limit: one card on two hosts, not twice on one host', () => {
+    const g = timedGame({
+      happen: (ctx, o) => {
+        const k = `${o.keys.target ?? ''}>${o.keys.other ?? ''}`;
+        if (ctx.s.used[k] !== undefined) return;
+        draftOf(ctx).used = { ...ctx.s.used, [k]: 1 };
+        draftOf(ctx).hp -= 1;
+      },
+    });
+    const att = (other: string) => ({ kind: 'attach', keys: { player: 'p1', target: 'c1', other } });
+    const r = hit(g, startTimed(g, { items: [att('h1'), att('h2'), att('h1')], shared: ['target'] })).state;
+    expect(r.used).toEqual({ 'c1>h1': 1, 'c1>h2': 1 });
+    expect(r.hp).toBe(8);
+    expect(batchGroups(r, 1, 'other').map((x) => [x.key, x.occurrences.length])).toEqual([['h1', 2], ['h2', 1]]);
+    const bad = startTimed(g, { items: [att('h1'), att('h2')], shared: ['other'] });
     expect(() => applyAction(g, bad, answer(bad, 'hit'), null)).toThrow(EngineBugError);
   });
 });

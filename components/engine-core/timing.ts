@@ -12,11 +12,13 @@ import { replaceHandlers, type Replacement, type ReplaceResult } from './replace
 import { triggerHandlers, type PendingTrigger, type TriggerCandidate, type TriggerPromptInfo } from './triggers.ts';
 import type { Ctx, EventInput, GameTypes, HandlerTable, KernelPrompt, KernelTask } from './types.ts';
 
-export type SharedKey = 'player' | 'source' | 'target';
+export type SharedKey = 'player' | 'source' | 'target' | 'other';
 export interface OccurrenceKeys {
   readonly player?: string;
   readonly source?: string;
   readonly target?: string;
+  /** K299: the second object of a two-object action (attach card `target` to host `other`, move, swap). */
+  readonly other?: string;
 }
 export interface Occurrence {
   readonly id: number;
