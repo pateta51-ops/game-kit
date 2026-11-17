@@ -38,6 +38,13 @@ Needs Node 22.18 or newer: every kit tool runs with plain `node` (type stripping
 
 `node kit.mjs list` (one line each) or `search <word>`; full entries in [docs/CATALOG.md](docs/CATALOG.md). Read a component's README before using it; `needs` are pulled with it. Origin of each: `docs/SELECTION.md`.
 
+Card and board parts (v0.66.0): `card-hand`, `card-pile`, `drag-drop`, `deck-motions` ([card-table](docs/recipes/card-table.md)); `counter`, `token-flights`, `track`, `market-row`, `player-board`, `card-attachments`, `token-bag`, `target-arrow` ([board-pieces](docs/recipes/board-pieces.md)).
+
+What the kit is for (owner, 17 Nov 2026):
+- It is a catalogue of building blocks, not a game build. Animation is in scope: every motion part takes a `speed` factor, and 0 or prefers-reduced-motion means still. The 1.0 no-animation rule applies to game releases, not to the kit.
+- Hand, piles, card zones, resources, tracks and similar are shared kit parts. A game owns only its layout (its combination of zone positions) and its look, through `data-part` hooks. Parts are unstyled apart from structural CSS and put no hidden ids in the DOM.
+- New parts are ported from existing game code (STCC, Imperium, Unstoppable, Earthborne, Rome, Warp's Edge), not written from scratch.
+
 `engine-core` guides beside its README: `undo.md`, `random.md`, `helpers.md`, `cause.md`, `objref.md`, `legal.md` (reasons, legal table, preview), `debug.md`, `timing.md` (batches, cancel, instead, replacement, triggers, continuous effects and layers, checkpoint), `idle.md`. Patterns with the code that implements them: `docs/patterns/`.
 
 ## Using it in a game

@@ -18,6 +18,7 @@ Short task guides for agents. Each names the components, the order, and the chec
 | Build a card face and its zoom | [card-face-zoom.md](card-face-zoom.md) |
 | Dice (tray, odds, 3D) | [dice.md](dice.md) |
 | Card table: zones, hand, piles, drag | [card-table.md](card-table.md) |
+| Board pieces: counters, flights, tracks, market, player board, attachments, bag, target arrow | [board-pieces.md](board-pieces.md) |
 | The game store: history, undo, forced answers, autosave, opponent seat | [game-store.md](game-store.md) |
 | Content: scans, transcription, patches, glossary | [content-pipeline.md](content-pipeline.md) |
 | Upgrade a game's kit tag | [upgrade-kit.md](upgrade-kit.md) |

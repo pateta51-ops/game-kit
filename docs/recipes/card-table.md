@@ -6,12 +6,19 @@ Component: `card-zones` (README). Cards and their places are data in engine stat
 2. **View.** The game's player view is built from `viewOf(state, seat)`; a hidden card is `null` (draw a back). The same view feeds the opponent: `hiddenFrom(state, seat)` is the secrets list for its `viewLeaks` test ([ai-opponent.md](ai-opponent.md)).
 3. **Faces.** `card-parts` and `card-zoom` ([card-face-zoom.md](card-face-zoom.md)); the game owns the layout.
 4. **Choosing a card** is an engine prompt answered by option id ([prompts.md](prompts.md)); `look.label(o, p)` returns the card face for the option's card id.
-5. **Hand** is [card-hand](../../components/card-hand/README.md): `<CardHand view={viewOf(...)[zone]} face pick drag speed />` (a `null` card is a back; the same part draws an opponent's hand). Set the size tokens, style the `data-part` hooks (shadow, glow, badges). Drag: [drag-drop](../../components/drag-drop/README.md). Pile (K219) is planned: until it lands show a plain stack and write "Kit gap: pile" in the PR.
+5. **Hand** is [card-hand](../../components/card-hand/README.md): `<CardHand view={viewOf(...)[zone]} face pick drag speed />` (a `null` card is a back; the same part draws an opponent's hand). Set the size tokens, style the `data-part` hooks (shadow, glow, badges). Drag: [drag-drop](../../components/drag-drop/README.md). Piles: [card-pile](../../components/card-pile/README.md) (below).
 6. **Panels around the table** (`table-panels`, unstyled): `LogPanel` over `logLines(events, words)` (the game writes the words), `TurnBanner` over its phase list, `OpponentTurnPanel` over `opponentTurn(steps, ...)` with paced-view `skip`, `GameOver` over `gameResult(scores)`. The game owns layout and look.
 
 Proof: a test that moves every card through every zone with `zoneProblems` clean, and a `viewLeaks` test.
 
-## Piles (K219)
+## How the parts fit (K218, K219, K220, K250)
+- All of them read card-zones `ZoneView`s and show a hidden card as a back with no id in the DOM, so one part draws your hand and an opponent's.
+- Marks and taps come from prompt-host `useBoardPick`: pass the same `pick` to `CardHand` and `Pile`; a legal card is `data-mark="legal"`, a click calls `pick.tap(id)`. A prompt with `max > 1` toggles several.
+- Drag: one `useDragDrop` per table; the hand's cards and any element with `drag.sourceProps(id)` are sources, elements with `data-drop="<optionId>"` are targets. A drop answers as tap source then tap target, so one undo step. Draw `DragGhost` once.
+- Deck motions: `card-pile` draws `data-pile="<id>"`; `deck-motions` finds piles by it. The game diffs its old and new views and lists the `Move`s (deal, refill, cycle); the part flies the cards and riffles a shuffled deck.
+- Every motion takes `speed`; 0 or prefers-reduced-motion is still. The game owns the layout of the zones and the look (`data-part` hooks, size tokens).
+
+## Other table parts
 A resource number that counts up, bumps and tags its change, with a `data-res` anchor for flights: `counter` (`Counter`, `bumpCounter`; README).
 
 A row of spaces with a marker that glides, on a drawn row or on a mat image; a hop-and-fill bar with a multiplier badge; a step list with one lit step: `track` (`Track`, `HopTrack`, `StepTrack`; README).

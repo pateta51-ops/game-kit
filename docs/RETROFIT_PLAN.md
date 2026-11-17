@@ -1,6 +1,6 @@
 # Retrofit plan (15 Nov 2026)
 
-Status: approved by the owner, 15 Nov 2026. All seven games are active. Workers run on Fable at low effort.
+Status: approved by the owner, 15 Nov 2026. All seven games are active. No Fable workers: Sonnet for routine work, Opus at medium effort for engine work.
 
 Scope: the recommended retrofit only. Old games take the kit's tooling; the kit takes what the old games do better. Engines, card code and presentation layers stay as they are.
 
@@ -161,3 +161,7 @@ A game script a test imports stays in the repo unused by the check chain.
 - A game pins the tag it was retrofitted at and pulls a newer one only when it needs something.
 - STCC: no branch from before the 29 Oct history rewrite is merged.
 - Worktrees and branches are cleaned up in the same turn as the merge.
+
+## Card parts into the old games (owner, 17 Nov 2026)
+
+STCC, Imperium and Unstoppable are retrofitted onto `card-hand`, `card-pile` and `drag-drop`: Imperium first, then STCC, then Unstoppable. Each keeps its own look through the parts' `data-part` hooks and size tokens; its layout stays its own. Retrofitting the other new parts (counter, token-flights, track, market-row, player-board, card-attachments, token-bag, target-arrow, deck-motions) into those games waits for the owner.
