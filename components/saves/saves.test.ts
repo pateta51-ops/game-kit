@@ -1,7 +1,7 @@
 import 'fake-indexeddb/auto';
 import { del, entries, get, set, setMany } from 'idb-keyval';
 import { describe, expect, it, vi } from 'vitest';
-import { createGame, newHistory, OLDER_BUILD, DAMAGED, recordAction, type History } from '../engine-core/index.ts';
+import { appendAction, createGame, hashState, newHistory, undo, OLDER_BUILD, DAMAGED, recordAction, type History } from '../engine-core/index.ts';
 import { CONTENT, COUNTER, playGame, randomAnswer, RULES, type Counter } from '../engine-core/fake/counter.ts';
 import { keepStorage, makeSaves, SAVE_CLOCK_MAX_AHEAD_MS, type SavesConfig } from './index.ts';
 import { makeKv, type KvBackend } from './kv.ts';
@@ -296,5 +296,51 @@ describe('keepStorage', () => {
     expect(asked).toBe(2);
     expect(await keepStorage(undefined)).toBe(false);
     expect(await keepStorage({ persist: () => Promise.reject(new Error('x')) } as unknown as StorageManager)).toBe(false);
+  });
+});
+
+describe('K266: autosave without replay (T11, G10)', () => {
+  let applied = 0;
+  const chosen = COUNTER.handlers['chosen']!;
+  const game: typeof COUNTER = { ...COUNTER, handlers: { ...COUNTER.handlers, chosen: (ctx, t) => (applied++, chosen(ctx, t)) } };
+  const rules = { target: 1e9 };
+
+  it('a save after every action applies only the new action: the same cost at 100 and at 2,000 actions; the load is the live state', async () => {
+    const s = makeSaves(cfg({ game }));
+    let h = newHistory<Counter>({ seed: 'long' }, rules);
+    let state = createGame(game, { seed: 'long' }, rules, CONTENT).state;
+    const cost: Record<number, number> = {};
+    for (let i = 1; i <= 2000; i++) {
+      const r = appendAction(game, h, state, { kind: 'answer', promptId: state.prompt!.id, picks: ['add'] }, CONTENT);
+      h = r.history;
+      state = r.state as typeof state;
+      applied = 0;
+      if (i === 2000) await s.writeAutosave(h, 'long');
+      else s.saveOf(h);
+      cost[i] = applied;
+    }
+    expect(state.result).toBeNull();
+    expect([cost[100], cost[2000]]).toEqual([1, 1]);
+    applied = 0;
+    makeSaves(cfg({ game })).saveOf(h);
+    expect(applied).toBe(2000);
+    const r = s.restore((await s.readAutosave())![1]);
+    expect(r.ok).toBe(true);
+    if (r.ok) {
+      expect(r.state).toEqual(state);
+      expect(hashState(r.state)).toBe(hashState(state));
+    }
+  });
+
+  it('after an undo, or a history not extending the last one, the save replays and still loads', () => {
+    const s = makeSaves(cfg());
+    const h = played('u', 6);
+    s.saveOf(h);
+    const back = undo(COUNTER, h, 'free', CONTENT);
+    expect(back.ok).toBe(true);
+    const r1 = s.restore({ name: 'x', save: s.saveOf(back.history) });
+    expect(r1.ok && hashState(r1.state)).toBe(hashState(back.state));
+    const r2 = s.restore({ name: 'y', save: s.saveOf(played('v', 3)) });
+    expect(r2.ok).toBe(true);
   });
 });

@@ -50,17 +50,23 @@ export interface CreateSaveInput<G extends GameTypes> {
   readonly undoUsed: boolean;
   /** ISO time stamp from the caller. */
   readonly savedAt: string;
+  /** The state after `actions` when the caller has it: sealed as is, no replay. */
+  readonly state?: G['state'];
 }
 
-/** Replay the actions to get the final hash; throws when they do not replay (never save a broken game). */
+/** Replay the actions to get the final hash (unless `input.state` is given); throws when they do not replay (never save a broken game). */
 export function createSave<G extends GameTypes>(
   game: GameRules<G>,
   input: CreateSaveInput<G>,
   content: G['content'],
   format: SaveFormat = DEFAULT_SAVE_FORMAT,
 ): SaveFile<G> {
-  const r = replay(game, input.options, input.rules, input.actions, content);
-  if (!r.ok) throw new Error(r.error ?? 'Cannot save an invalid game.');
+  let state = input.state;
+  if (state === undefined) {
+    const r = replay(game, input.options, input.rules, input.actions, content);
+    if (!r.ok) throw new Error(r.error ?? 'Cannot save an invalid game.');
+    state = r.state as G['state'];
+  }
   return {
     version: format.version,
     appCommit: format.appCommit ?? UNKNOWN_COMMIT,
@@ -68,7 +74,7 @@ export function createSave<G extends GameTypes>(
     options: structuredClone(input.options),
     rules: structuredClone(input.rules),
     actions: structuredClone(input.actions),
-    finalHash: sealOf(r.state, input.undoUsed),
+    finalHash: sealOf(state, input.undoUsed),
     undoUsed: input.undoUsed,
     savedAt: input.savedAt,
   };

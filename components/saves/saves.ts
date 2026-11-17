@@ -2,6 +2,8 @@
 // kept, older ones pruned), named saves, export and import as JSON text. Loading replays the save (restoreSave), so a
 // save from another build says so and can only be deleted. The database name and the export file prefix come from the game.
 import {
+  applyAction,
+  createGame,
   createSave,
   DEFAULT_SAVE_FORMAT,
   exportSave,
@@ -62,14 +64,36 @@ export function makeSaves<G extends GameTypes>(cfg: SavesConfig<G>) {
   const list = async (prefix: string): Promise<[string, StoredSave<G>][]> =>
     (await kv.all()).filter(([k]) => k.startsWith(prefix)).sort(newest);
 
+  // The state at the cursor of the last history saved; a history that extends it applies only the new actions (K266).
+  let live: { options: G['options']; rules: G['rules']; actions: readonly G['action'][]; state: G['state'] } | undefined;
+  const stateOf = (h: History<G>, actions: readonly G['action'][]): G['state'] => {
+    const c = live;
+    let state: G['state'];
+    let at = 0;
+    if (c && c.options === h.options && c.rules === h.rules && c.actions.length <= actions.length && c.actions.every((a, i) => a === actions[i])) {
+      state = c.state;
+      at = c.actions.length;
+    } else state = createGame(cfg.game, h.options, h.rules, cfg.content).state;
+    for (; at < actions.length; at++) state = applyAction(cfg.game, state, actions[at] as G['action'], cfg.content).state;
+    live = { options: h.options, rules: h.rules, actions, state };
+    return state;
+  };
   /** The save of a history: the actions up to the cursor (an undone tail is not saved). Throws on a broken game. */
-  const fileOf = (h: History<G>, savedAt: string): SaveFile<G> =>
-    createSave(
+  const fileOf = (h: History<G>, savedAt: string): SaveFile<G> => {
+    const actions = h.actions.slice(0, h.cursor);
+    let state: G['state'] | undefined;
+    try {
+      state = stateOf(h, actions);
+    } catch {
+      live = undefined;
+    }
+    return createSave(
       cfg.game,
-      { options: h.options, rules: h.rules, actions: h.actions.slice(0, h.cursor), undoUsed: h.undoUsed, savedAt },
+      { options: h.options, rules: h.rules, actions, undoUsed: h.undoUsed, savedAt, ...(state === undefined ? {} : { state }) },
       cfg.content,
       format,
     );
+  };
   const saveOf = (h: History<G>): SaveFile<G> => fileOf(h, now().toISOString());
 
   // The time an autosave is stamped with: now, but never at or before the last autosave's, in this page, another tab or
