@@ -129,7 +129,12 @@ const choose = (n: number, k: number): number => {
 
 /** Every answer to `prompt` (subsets of its enabled options, in option order, of size min..max); over `cap`, `cap` samples. A prompt of kind `order` (A8) also gets every other order of each subset. */
 export function legalAnswers(prompt: KernelPrompt, rng: DriverRng, cap = ANSWER_CAP): AnswerAction[] {
-  const ids = prompt.options.filter((o) => o.enabled).map((o) => o.id);
+  const alone: AnswerAction[] = prompt.options.filter((o) => o.enabled && o.alone === true).map((o) => ({ kind: 'answer', promptId: prompt.id, picks: [o.id] }));
+  return [...combos(prompt, rng, cap), ...alone];
+}
+
+function combos(prompt: KernelPrompt, rng: DriverRng, cap: number): AnswerAction[] {
+  const ids = prompt.options.filter((o) => o.enabled && o.alone !== true).map((o) => o.id);
   const lo = Math.max(0, prompt.min);
   const hi = Math.min(prompt.max, ids.length);
   const of = (picks: string[]): AnswerAction => ({ kind: 'answer', promptId: prompt.id, picks });

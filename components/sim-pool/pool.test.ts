@@ -49,6 +49,8 @@ describe('driver random numbers', () => {
 
   it('list every answer of a multi-pick prompt, or cap samples of a huge one', () => {
     const options = ['a', 'b', 'c', 'x'].map((id) => ({ id, enabled: id !== 'x' }));
+    const alone = legalAnswers({ id: 8, options: [...'abcd'].map((id): { id: string; enabled: boolean; alone?: true } => ({ id, enabled: true })).concat([{ id: 'back', enabled: true, alone: true }]), min: 3, max: 3 }, new DriverRng('k')).map((a) => a.picks.join(''));
+    expect(alone).toEqual(['abc', 'abd', 'acd', 'bcd', 'back']);
     const all = legalAnswers({ id: 4, options, min: 1, max: 2 }, new DriverRng('k')).map((a) => a.picks.join(''));
     expect(all).toEqual(['a', 'ab', 'ac', 'b', 'bc', 'c']);
     const big = Array.from({ length: 20 }, (_, i) => ({ id: String(i), enabled: true }));
