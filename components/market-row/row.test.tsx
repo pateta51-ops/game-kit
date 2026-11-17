@@ -45,3 +45,15 @@ describe('MarketRow', () => {
     expect(String((animate.mock.calls[0]![0] as Keyframe[])[0]!.transform)).toContain('translate(500px')
   })
 })
+
+describe('MarketRow top offer (K251)', () => {
+  it('draws the top on the deck, pickable', () => {
+    const tap = vi.fn()
+    const { container } = render(<MarketRow name="a" label="Market" row={{ slots: ['c1', 'c2'], top: 'c3', decks: { A: 2 } }} face={face} speed={0} pick={{ marks: { 'buy:a:top': 'legal' }, tap }} />)
+    const t = container.querySelector('[data-offer="top"]')!
+    expect(t.getAttribute('data-card')).toBe('c3')
+    expect(container.querySelector('[data-part="deck"]')!.contains(t)).toBe(true)
+    fireEvent.click(t)
+    expect(tap).toHaveBeenCalledWith('buy:a:top')
+  })
+})

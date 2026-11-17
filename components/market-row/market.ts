@@ -15,6 +15,8 @@ export interface MarketRowDef {
   readonly prices?: readonly number[];
   /** Cycle cost of each slot; no cycle option without it. */
   readonly cycle?: readonly number[];
+  /** K251: the top card of the first deck is a face-up offer (offer id `'top'`); make that deck `seen: 'top'`. */
+  readonly topOffer?: boolean;
 }
 export interface MarketCfg<S extends Zoned = Zoned> {
   readonly rows: Readonly<Record<string, MarketRowDef>>;
@@ -36,8 +38,10 @@ export interface Slot {
 export type MarketEvent =
   | { readonly kind: 'filled'; readonly row: string; readonly slot: number; readonly card: string; readonly from: string }
   | { readonly kind: 'slid'; readonly row: string; readonly from: number; readonly to: number; readonly card: string }
-  | { readonly kind: 'taken'; readonly row: string; readonly slot: number; readonly card: string; readonly to: string }
-  | { readonly kind: 'returned'; readonly row: string; readonly slot: number; readonly card: string; readonly to: string };
+  | { readonly kind: 'taken'; readonly row: string; readonly slot: number; readonly card: string; readonly to: string; readonly offer?: Offer }
+  | { readonly kind: 'returned'; readonly row: string; readonly slot: number; readonly card: string; readonly to: string; readonly offer?: Offer };
+/** K251: an offer of a row: a slot index, or `'top'` (the deck's top card; its events say `slot: -1`, `offer: 'top'`). */
+export type Offer = number | 'top';
 /** A slot whose deck the player picks: `decks` in source order, `empty` ones to disable. */
 export interface Pending extends Slot {
   readonly decks: readonly { readonly zone: string; readonly empty: boolean }[];
@@ -196,6 +200,8 @@ export function clearMarket<S extends Zoned>(s: S, cfg: MarketCfg<S>): MarketEve
 
 export interface RowView {
   readonly slots: readonly (string | null)[];
+  /** K251: the top offer of a `topOffer` row (`null` when its deck is empty); absent on other rows. Never the cards below it. */
+  readonly top?: string | null;
   /** Size of each deck of the row (counts only). */
   readonly decks: Readonly<Record<string, number>>;
 }
@@ -203,5 +209,38 @@ export interface RowView {
 export const marketView = (view: Readonly<Record<string, ZoneView>>, rows: Readonly<Record<string, MarketRowDef>>): Record<string, RowView> =>
   Object.fromEntries(Object.entries(rows).map(([row, d]) => [row, {
     slots: Array.from({ length: d.slots }, (_, i) => view[slotZone(row, i)]?.cards?.[0] ?? null),
+    ...(d.topOffer ? { top: view[d.decks[0]!]?.cards?.[0] ?? null } : {}),
     decks: Object.fromEntries(d.decks.map((k) => [k, view[k]?.count ?? 0])),
   }]));
+
+const topCard = <S extends Zoned>(s: S, cfg: MarketCfg<S>, row: string): string | undefined => (rowOf(cfg, row).topOffer ? cardsIn(s, rowOf(cfg, row).decks[0]!)[0] : undefined);
+
+/** K251: the offers of a row now, from the state or from a seat's `RowView`: the filled slots, then `'top'` when the row has a `topOffer` and its deck shows a card. */
+export function offersOf<S extends Zoned>(src: S | RowView, cfg: MarketCfg<S>, row: string): Offer[] {
+  const v = 'slots' in src;
+  const slots = v ? src.slots : slotsOf(src, cfg, row);
+  const top = v ? src.top : topCard(src, cfg, row);
+  const out: Offer[] = [];
+  slots.forEach((c, i) => { if (c !== null) out.push(i); });
+  if (top != null) out.push('top');
+  return out;
+}
+
+/** K251: takes the offer (a slot index or `'top'`) to `to`. A slot behaves as `takeSlot`; the top leaves the next card as the new top, nothing is filled. The refill is the game's (`fillEmpty`). */
+export function takeOffer<S extends Zoned>(s: S, cfg: MarketCfg<S>, row: string, offer: Offer, to: string, at: At = 'top'): Result {
+  if (offer !== 'top') return takeSlot(s, cfg, row, offer, to, at);
+  const card = topCard(s, cfg, row);
+  if (card === undefined) throw new EngineBugError(`market-row: ${row} has no top offer`);
+  moveCard(s, card, to, at);
+  return { events: [{ kind: 'taken', row, slot: -1, card, to, offer: 'top' }] };
+}
+
+/** K251: the offer to the bottom of its home pile (the row's deck by default). A card cycled to the bottom of an empty deck is the new top offer. */
+export function cycleOffer<S extends Zoned>(s: S, cfg: MarketCfg<S>, row: string, offer: Offer): Result {
+  if (offer !== 'top') return cycleSlot(s, cfg, row, offer);
+  const card = topCard(s, cfg, row);
+  if (card === undefined) throw new EngineBugError(`market-row: ${row} has no top offer`);
+  const to = homeOf(s, cfg, row, card);
+  moveCard(s, card, to, 'bottom');
+  return { events: [{ kind: 'returned', row, slot: -1, card, to, offer: 'top' }] };
+}

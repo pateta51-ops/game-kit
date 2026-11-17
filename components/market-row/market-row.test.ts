@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { newZones, viewOf, zoneProblems, type Zoned } from '../card-zones/index.ts'
-import { clearMarket, cycleSlot, fillEmpty, fillSlot, marketOptions, marketView, marketZones, parseOption, refill, rowMotions, slideRight, slotsOf, takeSlot, flyFrames, type MarketCfg } from './index.ts'
+import { cardsIn } from '../card-zones/index.ts'
+import { cycleOffer, takeOffer, offersOf, clearMarket, cycleSlot, fillEmpty, fillSlot, marketOptions, marketView, marketZones, parseOption, refill, rowMotions, slideRight, slotsOf, takeSlot, flyFrames, type MarketCfg } from './index.ts'
 
 // A small fake game: row `a` (3 slots) from deck A; row `d` (2 slots) from its small deck S with a fallback to M.
 const ROWS = { a: { slots: 3, decks: ['A'], prices: [3, 2, 1], cycle: [2, 1, 0] }, d: { slots: 2, decks: ['S', 'M'], prices: [5, 4] } }
@@ -109,5 +110,76 @@ describe('market-row motion', () => {
     expect(rowMotions([null, null], ['x', 'y'], 0.5).map((x) => x.delay)).toEqual([0, 45])
     expect(rowMotions([null], ['x'], 0)).toEqual([])
     expect(flyFrames({ x: 0, y: 0, w: 50, h: 70 }, { x: 100, y: 10, w: 100, h: 140 })[0]!.transform).toBe('translate(-100px, -10px) scale(0.5, 0.5)')
+  })
+})
+
+describe('market-row top offer (K251)', () => {
+  const R = { r: { slots: 2, decks: ['D'], topOffer: true } }
+  const mk = (n: number): Zoned => ({ zones: newZones({ ...marketZones(R), D: { seen: 'top', cards: ['c1', 'c2', 'c3', 'c4', 'c5', 'c6'].slice(0, n) }, hand: { seen: 'all' } }) })
+  const cfg: MarketCfg = { rows: R, when: 'later' }
+  const top = (s: Zoned) => cardsIn(s, 'D')[0]
+  it('refill gives 2 slots and a top; the view shows the top and no other deck id', () => {
+    const s = mk(6)
+    refill(s, cfg)
+    expect(offersOf(s, cfg, 'r')).toEqual([0, 1, 'top'])
+    const v = marketView(viewOf(s, 'p1'), R).r!
+    expect(v).toMatchObject({ slots: ['c1', 'c2'], top: 'c3', decks: { D: 4 } })
+    expect(offersOf(v, cfg, 'r')).toEqual([0, 1, 'top'])
+    const text = JSON.stringify(viewOf(s, 'p1'))
+    for (const c of ['c4', 'c5', 'c6']) expect(text).not.toContain(c)
+  })
+  it('take the top, cycle a slot, refill to 2 and a new top', () => {
+    const s = mk(6)
+    refill(s, cfg)
+    const t = takeOffer(s, cfg, 'r', 'top', 'hand')
+    expect(t.events[0]).toMatchObject({ kind: 'taken', card: 'c3', slot: -1, offer: 'top' })
+    expect(cardsIn(s, 'hand')).toEqual(['c3'])
+    expect(top(s)).toBe('c4')
+    cycleOffer(s, cfg, 'r', 0)
+    expect(cardsIn(s, 'D').at(-1)).toBe('c1')
+    expect(slotsOf(s, cfg, 'r')).toEqual([null, 'c2'])
+    fillEmpty(s, cfg)
+    expect(slotsOf(s, cfg, 'r')).toEqual(['c4', 'c2'])
+    expect(top(s)).toBe('c5')
+    expect(zoneProblems(s, 6)).toEqual([])
+  })
+  it('take a slot, cycle the top', () => {
+    const s = mk(6)
+    refill(s, cfg)
+    takeOffer(s, cfg, 'r', 1, 'hand')
+    expect(cardsIn(s, 'hand')).toEqual(['c2'])
+    const e = cycleOffer(s, cfg, 'r', 'top').events[0]
+    expect(e).toMatchObject({ kind: 'returned', card: 'c3', offer: 'top', to: 'D' })
+    expect(cardsIn(s, 'D')).toEqual(['c4', 'c5', 'c6', 'c3'])
+    fillEmpty(s, cfg)
+    expect(slotsOf(s, cfg, 'r')).toEqual(['c1', 'c4'])
+    expect(top(s)).toBe('c5')
+  })
+  it('deck down to 2, 1, 0 cards; an empty offer throws', () => {
+    for (const [n, offers] of [[4, [0, 1, 'top']], [3, [0, 1, 'top']], [2, [0, 1]], [1, [0]], [0, []]] as const) {
+      const s = mk(n)
+      refill(s, cfg)
+      expect(offersOf(s, cfg, 'r')).toEqual(offers)
+    }
+    const s = mk(2)
+    refill(s, cfg)
+    expect(marketView(viewOf(s, 'p1'), R).r!.top).toBeNull()
+    expect(() => takeOffer(s, cfg, 'r', 'top', 'hand')).toThrow()
+    expect(() => cycleOffer(s, cfg, 'r', 'top')).toThrow()
+    expect(() => takeOffer(s, cfg, 'r', 1, 'hand')).not.toThrow()
+    expect(() => takeOffer(s, cfg, 'r', 1, 'hand')).toThrow()
+  })
+  it('a card cycled onto an empty deck becomes the top offer', () => {
+    const s = mk(2)
+    refill(s, cfg)
+    expect(cardsIn(s, 'D')).toEqual([])
+    cycleOffer(s, cfg, 'r', 0)
+    expect(top(s)).toBe('c1')
+    expect(offersOf(s, cfg, 'r')).toEqual([1, 'top'])
+    expect(marketView(viewOf(s, 'p1'), R).r!.top).toBe('c1')
+    const t = mk(1)
+    refill(t, cfg)
+    cycleOffer(t, cfg, 'r', 0)
+    expect(offersOf(t, cfg, 'r')).toEqual(['top'])
   })
 })

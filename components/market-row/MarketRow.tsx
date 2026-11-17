@@ -23,6 +23,8 @@ export interface MarketRowProps {
   pick?: Pick<BoardPick, 'marks' | 'tap'>
   /** The option a click on the slot taps; default `buy:<name>:<slot>`. */
   optionFor?: (slot: number, id: string) => string
+  /** K251: the option a click on the top offer taps; default `buy:<name>:top`. The top is drawn on the first deck, `face(id, -1)`, `data-offer="top"`. */
+  topOption?: (id: string) => string
   /** The deck a new card in this slot is dealt from; default the row's first deck. */
   dealFrom?: (slot: number, id: string) => string
   /** The market events of the last step: a `filled` card is dealt from its `from` deck. */
@@ -36,7 +38,7 @@ const boxOf = (el: Element): Box => {
   return { x: r.left, y: r.top, w: r.width, h: r.height }
 }
 
-export function MarketRow({ name, label, row, face, deck, empty, labels, pick, optionFor, dealFrom, events, speed = 1 }: MarketRowProps) {
+export function MarketRow({ name, label, row, face, deck, empty, labels, pick, optionFor, topOption, dealFrom, events, speed = 1 }: MarketRowProps) {
   const root = useRef<HTMLElement>(null)
   const prev = useRef(row.slots)
   const prevBoxes = useRef<Box[]>([])
@@ -61,12 +63,23 @@ export function MarketRow({ name, label, row, face, deck, empty, labels, pick, o
       card.animate(flyFrames(from, to), { duration: m.ms, delay: m.delay, easing: 'ease-in-out', fill: 'backwards' })
     }
   }, [row.slots]) // eslint-disable-line react-hooks/exhaustive-deps
+  const topCard = (id: string) => {
+    const opt = topOption?.(id) ?? `buy:${name}:top`
+    const mark = pick?.marks[opt]
+    return (
+      <div data-part="card" data-offer="top" data-card={id} {...(mark ? { 'data-mark': mark, ...pickedAttrs(mark === 'armed', anyPicked) } : pick ? { 'data-dim': 'true' } : {})}
+        {...(mark && mark !== 'barred' ? { role: 'button', tabIndex: 0, onClick: () => pick?.tap(opt), onKeyDown: (e: { key: string }) => { if (e.key === 'Enter' || e.key === ' ') pick?.tap(opt) } } : {})}>
+        {face(id, -1)}
+      </div>
+    )
+  }
   return (
     <section ref={root} data-part="market-row" data-row={name} aria-label={label}>
       <div data-part="decks">
         {decks.map((z) => (
           <div key={z} data-part="deck" data-deck={z} data-count={row.decks[z]}>
             {deck ? deck(z, row.decks[z] ?? 0) : row.decks[z]}
+            {z === decks[0] && row.top != null && topCard(row.top)}
           </div>
         ))}
       </div>

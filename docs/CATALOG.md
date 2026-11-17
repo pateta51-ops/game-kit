@@ -509,7 +509,7 @@ A market of offer slots refilled from decks: prices, buy and cycle options, refi
 
 - **Use it when:** A market of offer slots refilled from decks: buy/cycle options, refill at once or by slide, clear, deal animation.
 - **Not for:** Payment, discounts, unlocks, where a bought card goes; a hand or a pile.
-- **Key exports:** `DEAL_MS`, `STAGGER_MS`, `SLIDE_MS`, `rowMotions`, `flyFrames`, `slotZone`, `marketZones`, `slotsOf`, `priceOf`, `marketOptions`, `parseOption`, `fillSlot`, `takeSlot`, `cycleSlot`, and 15 more
+- **Key exports:** `DEAL_MS`, `STAGGER_MS`, `SLIDE_MS`, `rowMotions`, `flyFrames`, `slotZone`, `marketZones`, `slotsOf`, `priceOf`, `marketOptions`, `parseOption`, `fillSlot`, `takeSlot`, `cycleSlot`, and 19 more
 - **Needs:** [`engine-core`](#engine-core), [`card-zones`](#card-zones), [`prompt-host`](#prompt-host), [`picked-state`](#picked-state), [`motion-frame`](#motion-frame)
 - **Came from:** rome-fate-of-an-empire-fan-prototype
 - **Docs:** [README](../components/market-row/README.md)
