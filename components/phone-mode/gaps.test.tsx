@@ -125,4 +125,14 @@ describe('K279 phone-mode gaps (Imperium #142)', () => {
     fireEvent.click(screen.getByTestId('act-go'));
     expect(onPress).toHaveBeenCalled();
   });
+  it('the layer behind is live during a leave and inert again on a cancel', () => {
+    const W = ({ leaving }: { leaving: boolean }) => <div><button>board</button><Sheet title="T" onClose={vi.fn()} onLeft={vi.fn()} leaveMs={240} leaving={leaving}>b</Sheet></div>;
+    const { rerender } = render(<W leaving={false} />);
+    const board = screen.getByText('board');
+    expect(board.hasAttribute('inert')).toBe(true);
+    rerender(<W leaving />);
+    expect(board.hasAttribute('inert')).toBe(false);
+    rerender(<W leaving={false} />);
+    expect(board.hasAttribute('inert')).toBe(true);
+  });
 });

@@ -42,7 +42,7 @@ export function Sheet({
   arriveMs?: number;
   /** Imperium's slide-down after a close request (it uses 240); the layer is `inert` meanwhile and `onClose` runs at its end. 0, `slideMs` 0 or reduced motion: closes at once. */
   leaveMs?: number;
-  /** The caller closes it from outside (a store): true plays the same slide-down and `inert`, then calls `onLeft`. Default false: unchanged. */
+  /** The caller closes it from outside (a store): true plays the same slide-down and `inert` (the layer behind is live again at once, so a re-tap can reopen), then calls `onLeft`. Default false: unchanged. */
   leaving?: boolean;
   /** Runs at the end of a `leaving` slide (at once with `slideMs` 0, `leaveMs` 0 or reduced motion). */
   onLeft?: () => void;
@@ -90,11 +90,16 @@ export function Sheet({
     };
   });
   const request = () => req.current();
+  const behindRef = useRef<HTMLElement[]>([]);
+  useEffect(() => {
+    for (const c of behindRef.current) if (leaving) c.removeAttribute('inert'); else c.setAttribute('inert', '');
+  }, [leaving]);
   useEffect(() => {
     t0.current = performance.now();
     const from = document.activeElement as HTMLElement | null;
     const el = layer.current;
     const behind = [...(el?.parentElement?.children ?? [])].filter((c): c is HTMLElement => c !== el && c instanceof HTMLElement && !c.hasAttribute('inert'));
+    behindRef.current = behind;
     for (const c of behind) c.setAttribute('inert', '');
     box.current?.focus({ preventScroll: true });
     const key = (e: KeyboardEvent) => {
