@@ -16,7 +16,7 @@ The card-language shell (K206): card effects as data, one typed verb table where
 ## Use it in 10 lines
 
 ```ts
-import type { GameTypes } from '../kit/engine-core/index'
+import type { GameTypes } from '../kit/engine-core/kernel'
 import { describeEffect, expectVerbs, posInt, validateEffect, type VerbTable } from '../kit/card-language/index'
 
 type Step = { readonly op: 'gain'; readonly amount: number }
@@ -25,7 +25,7 @@ const VERBS: VerbTable<GameTypes, Step> = {
 }
 expectVerbs(VERBS, [{ op: 'gain', amount: 1 }]) // throws when a verb has no handler or text
 console.log(validateEffect(VERBS, [{ op: 'gain', amount: 0 }]), describeEffect(VERBS, [{ op: 'gain', amount: 2 }]))
-import { timingHandlers } from '../kit/engine-core/index'
+import { timingHandlers } from '../kit/engine-core/timed'
 import { cardPack, type PackStep } from '../kit/card-language/pack'
 import { cardTriggers, validateWhen, type WhenCard } from '../kit/card-language/when'
 

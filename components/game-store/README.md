@@ -30,7 +30,7 @@ One bot for the store and the sim (K271):
 import { botOpponent, defineGame } from '../kit/game-store/index'
 import { botDriverOf, simGameOf } from '../kit/game-store/sim'
 import type { Bot } from '../kit/sim-pool/index'
-import type { AnswerAction } from '../kit/engine-core/index'
+import type { AnswerAction } from '../kit/engine-core/kernel'
 import { CONTENT, COUNTER, type Counter, type CounterState } from '../kit/engine-core/fake/counter'
 
 const bot: Bot<CounterState> = { name: 'opponent', choose: (_view, answers, rng) => answers[rng.int(answers.length)] as AnswerAction }

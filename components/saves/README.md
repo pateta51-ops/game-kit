@@ -30,7 +30,7 @@ Long save names wrap (`overflow-wrap: anywhere`, `min-width: 0` on `.kit-sav-wha
 
 ```ts
 import { makeSaves } from '../kit/saves/index'
-import { newHistory } from '../kit/engine-core/index'
+import { newHistory } from '../kit/engine-core/kernel'
 import { CONTENT, COUNTER, RULES, type Counter } from '../kit/engine-core/fake/counter'
 
 const saves = makeSaves({ game: COUNTER, content: CONTENT, database: 'mygame', filePrefix: 'mygame' })

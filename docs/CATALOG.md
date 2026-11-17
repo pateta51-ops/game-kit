@@ -455,7 +455,7 @@ The twelve verbs of the director's spec format as DOM effects for the motion fra
 
 ## engine-core
 
-The kernel of a game engine: seeded random numbers, canonical JSON and hashes, the task runner with prompts, copy on write, replay, undo and the save format. A game passes one `GameTypes` bundle and a `GameRules<G>` (handlers, `blank`, `setup`, `contentHash`, optional `stamp`, `invariants`, `revealWords`); see `fake/counter.ts`. Import from `index.ts` only. Options legal but doing nothing (`idle`, K91): `idle.md`.
+The kernel of a game engine: seeded random numbers, canonical JSON and hashes, the task runner with prompts, copy on write, replay, undo and the save format. A game passes one `GameTypes` bundle and a `GameRules<G>` (handlers, `blank`, `setup`, `contentHash`, optional `stamp`, `invariants`, `revealWords`); see `fake/counter.ts`. Import from one of the entry files below, never from an implementation module. Options legal but doing nothing (`idle`, K91): `idle.md`.
 
 - **Use it when:** Every game's engine: seeded random, tasks and prompts, copy on write, replay, undo, saves, timing windows and triggers.
 - **Not for:** A game's rules or content; the game writes its own `GameRules`.

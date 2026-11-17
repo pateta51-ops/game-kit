@@ -1,6 +1,13 @@
 # engine-core
 
-The kernel of a game engine: seeded random numbers, canonical JSON and hashes, the task runner with prompts, copy on write, replay, undo and the save format. A game passes one `GameTypes` bundle and a `GameRules<G>` (handlers, `blank`, `setup`, `contentHash`, optional `stamp`, `invariants`, `revealWords`); see `fake/counter.ts`. Import from `index.ts` only. Options legal but doing nothing (`idle`, K91): `idle.md`.
+The kernel of a game engine: seeded random numbers, canonical JSON and hashes, the task runner with prompts, copy on write, replay, undo and the save format. A game passes one `GameTypes` bundle and a `GameRules<G>` (handlers, `blank`, `setup`, `contentHash`, optional `stamp`, `invariants`, `revealWords`); see `fake/counter.ts`. Import from one of the entry files below, never from an implementation module. Options legal but doing nothing (`idle`, K91): `idle.md`.
+
+## Entry files (K278)
+
+- `kernel.ts`: everything a game with no timing needs: `GameTypes` / `GameRules` and the other types, `createGame`, `applyAction`, `validateAction`, ctx, ids, RNG, copy on write, replay and hashes, undo by action and by step, saves, errors, object references, causes, legal tables and preview, `query`, `markIdle` (a handler marks an idle option).
+- `timed.ts`: timing (`timing.ts`, `replace.ts`, `durations.ts`, `checkpoint.ts`, `triggers.ts`): batches, prevention, replacement, triggers, continuous effects, the checkpoint. Named `timed` because `timing.ts` is the implementation module.
+- `tools.ts`: tests, sims and debugging: `answers.ts` (`enumerateAnswers`, `randomPicks`, `playUntil`, ...), `differentialApply`, `doesNothing` and `idleProblems`, debug actions.
+- `index.ts`: all three; no name is in two entries (`entries.test.ts`).
 
 ## Parts
 
@@ -19,7 +26,7 @@ The kernel of a game engine: seeded random numbers, canonical JSON and hashes, t
 ## Use it in 10 lines
 
 ```ts
-import { applyAction, createGame, hashState } from '../kit/engine-core/index'
+import { applyAction, createGame, hashState } from '../kit/engine-core/kernel'
 import { CONTENT, COUNTER, RULES } from '../kit/engine-core/fake/counter' // a tiny fake game; yours is a `GameRules<G>`
 
 let { state } = createGame(COUNTER, { seed: 'demo' }, RULES, CONTENT)
