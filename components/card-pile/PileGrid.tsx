@@ -33,6 +33,7 @@ export function PileGrid({ label, cards, face, back, marks, tap, onTap, whys, ca
         return (
           <li key={c ?? `back-${String(i)}`} data-part="grid-cell">
             <button
+              data-kit
               {...mine}
               {...(c !== null && whys?.[c] !== undefined ? { title: whys[c], 'data-why': whys[c] } : {})}
               type="button"

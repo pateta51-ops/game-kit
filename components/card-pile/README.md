@@ -11,6 +11,7 @@ A pile on the table: a stack at rest (top card, edges of the cards beneath, empt
 - `hitTitle` (K283, default true): `false` drops the native `title` on the stack button, for a game that draws its own tooltip; the aria-label stays.
 - Look: structural CSS only (`card-pile.css`, zero specificity), sizes from `--kp-card-w`, `--kp-card-h`, `--kp-step`, `--kp-u`, `--kp-z`, `--kp-grid-cols`. Style the `data-part` hooks: `pile stack stack-card stack-hit fan backdrop fan-cards fan-card fan-turn fan-lift fan-hit grid grid-cell grid-card grid-top`. English defaults for `words` are placeholders.
 - `index.ts` (fan geometry `fanPlaces`, `flight`, the pure `step` machine) loads in node; `ui.ts` holds the React parts.
+- Every `<button>` carries `data-kit`, so a theme can write `:where(button:not([data-kit]))` (K293).
 
 ## Use it in 10 lines
 

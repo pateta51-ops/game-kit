@@ -384,6 +384,7 @@ export function Pile(p: PileProps) {
                         style={{ '--lift-x': `${String(lifted === i ? liftShift(pl, u, { width: window.innerWidth, height: window.innerHeight }).x : 0)}px`, '--lift-y': `${String(lifted === i ? liftShift(pl, u, { width: window.innerWidth, height: window.innerHeight }).y : 0)}px` } as CSSProperties}
                       >
                         <button
+                          data-kit
                           {...(c === null ? {} : cardProps?.(c, 'fan'))}
                           type="button"
                           data-part="fan-hit"
@@ -443,7 +444,7 @@ export function Pile(p: PileProps) {
           </div>
         )}
         {model.browsable ? (
-          <button ref={buttonRef} type="button" data-part="stack-hit" aria-expanded={isOpen || sheet} aria-label={picking && w.pick !== undefined ? w.pick(label, names.length) : (w.open ?? ((l) => `Look through the ${l}`))(label)} title={p.hitTitle === false ? undefined : picking && w.pick !== undefined ? w.pick(label, names.length) : wordsOf} onClick={toggle} onPointerEnter={() => model.top != null && onPreview?.(model.top, 'top', buttonRef.current ?? undefined)} onPointerLeave={() => onPreview?.(null, 'top')} onFocus={() => model.top != null && buttonRef.current !== null && onFocusPreview(model.top, 'top', buttonRef.current)} onBlur={() => onPreview?.(null, 'top')} />
+          <button data-kit ref={buttonRef} type="button" data-part="stack-hit" aria-expanded={isOpen || sheet} aria-label={picking && w.pick !== undefined ? w.pick(label, names.length) : (w.open ?? ((l) => `Look through the ${l}`))(label)} title={p.hitTitle === false ? undefined : picking && w.pick !== undefined ? w.pick(label, names.length) : wordsOf} onClick={toggle} onPointerEnter={() => model.top != null && onPreview?.(model.top, 'top', buttonRef.current ?? undefined)} onPointerLeave={() => onPreview?.(null, 'top')} onFocus={() => model.top != null && buttonRef.current !== null && onFocusPreview(model.top, 'top', buttonRef.current)} onBlur={() => onPreview?.(null, 'top')} />
         ) : null}
         {picking && p.badge !== undefined ? <span data-part="pick-badge" aria-hidden="true">{p.badge(names.length)}</span> : null}
         {p.children}

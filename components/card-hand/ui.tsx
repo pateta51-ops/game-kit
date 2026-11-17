@@ -101,6 +101,7 @@ export function CardHand({ view, face, back, pick, drag, speed = 1, tilt, label,
                 <span data-part="strip" aria-hidden="true" />
               ) : (
                 <button
+                  data-kit
                   title={extra?.why}
                   {...mine}
                   type="button"

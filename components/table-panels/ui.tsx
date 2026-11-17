@@ -13,7 +13,7 @@ export function LogPanel({ lines, seats, seatName = (s) => s, turnName = (t) => 
     <section data-part="log">
       {seats ? (
         <div data-part="log-filter">
-          {[null, ...seats].map((s) => <button key={s ?? 'all'} type="button" data-seat={s ?? ''} aria-pressed={seat === s} onClick={() => setSeat(s)}>{s === null ? 'All' : seatName(s)}</button>)}
+          {[null, ...seats].map((s) => <button data-kit key={s ?? 'all'} type="button" data-seat={s ?? ''} aria-pressed={seat === s} onClick={() => setSeat(s)}>{s === null ? 'All' : seatName(s)}</button>)}
         </div>
       ) : null}
       <div data-part="log-lines" ref={box}>
@@ -36,7 +36,7 @@ export function OpponentTurnPanel({ turn, onSkip, hidden = 'Something you cannot
     <section data-part="opponent-turn" data-active={turn.current !== null}>
       {title ? <h4>{title}</h4> : null}
       <ol>{turn.done.map((s) => row(s, 'done'))}{turn.current ? row(turn.current, 'current') : null}</ol>
-      {turn.current ? <button type="button" data-action="skip" onClick={onSkip}>Skip to end ({turn.left + 1})</button> : null}
+      {turn.current ? <button data-kit type="button" data-action="skip" onClick={onSkip}>Skip to end ({turn.left + 1})</button> : null}
     </section>
   );
 }
@@ -50,17 +50,17 @@ export function GameOver({ result, seatName = (s) => s, breakdown, onRematch, on
       <h2>{result.tied ? (labels.tie ?? 'Tie') : <>{labels.winner ?? 'Winner'}: {seatName(result.winners[0] ?? '')}</>}</h2>
       <ol>{result.standings.map((s) => <li key={s.seat} data-seat={s.seat} data-rank={s.rank}><span>{seatName(s.seat)}</span> <b>{s.score}</b>{breakdown ? <div data-part="breakdown">{breakdown(s.seat)}</div> : null}</li>)}</ol>
       <div data-part="game-over-actions">
-        {onRematch ? <button type="button" data-action="rematch" onClick={onRematch}>{labels.rematch ?? 'Rematch'}</button> : null}
-        {onReview ? <button type="button" data-action="review" onClick={onReview}>{labels.review ?? 'Review log'}</button> : null}
-        {onHome ? <button type="button" data-action="home" onClick={onHome}>{labels.home ?? 'Home'}</button> : null}
+        {onRematch ? <button data-kit type="button" data-action="rematch" onClick={onRematch}>{labels.rematch ?? 'Rematch'}</button> : null}
+        {onReview ? <button data-kit type="button" data-action="review" onClick={onReview}>{labels.review ?? 'Review log'}</button> : null}
+        {onHome ? <button data-kit type="button" data-action="home" onClick={onHome}>{labels.home ?? 'Home'}</button> : null}
       </div>
     </section>
   );
 }
 
 // fires onPhase(banner) when the phase, turn or seat changes, not on first show
-export function TurnBanner({ phases, turn, seat, phase, seatName = (s) => s, onPhase, children }: {
-  phases: readonly Phase[]; turn: number; seat: string; phase: string; seatName?: (s: string) => ReactNode; onPhase?: (b: Banner) => void; children?: ReactNode;
+export function TurnBanner({ phases, turn, seat, phase, seatName = (s) => s, turnName, onPhase, children }: {
+  phases: readonly Phase[]; turn: number; seat: string; phase: string; seatName?: (s: string) => ReactNode; turnName?: (t: number) => ReactNode; onPhase?: (b: Banner) => void; children?: ReactNode;
 }) {
   const b = banner(phases, turn, seat, phase);
   const prev = useRef<Banner | null>(null);
@@ -72,7 +72,7 @@ export function TurnBanner({ phases, turn, seat, phase, seatName = (s) => s, onP
   }, [b.turn, b.seat, b.phase]); // eslint-disable-line react-hooks/exhaustive-deps
   return (
     <header data-part="turn-banner" data-phase={phase} data-seat={seat}>
-      <span data-part="turn">Turn {turn}</span> <span data-part="seat">{seatName(seat)}</span> <span data-part="phase" data-index={b.index}>{b.phase}</span>{children}
+      <span data-part="turn">{turnName ? turnName(turn) : <>Turn {turn}</>}</span> <span data-part="seat">{seatName(seat)}</span> <span data-part="phase" data-index={b.index}>{b.phase}</span>{children}
     </header>
   );
 }

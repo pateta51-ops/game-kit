@@ -147,4 +147,11 @@ describe('Pile review fixes', () => {
     render(<Pile {...base} view={{ count: 3, cards }} pick={{ marks: { b: 'legal' }, tap: () => undefined }} words={{ pick: (l, n) => `Choose from the ${l}: ${String(n)}` }} speed={0} />)
     expect(screen.getByRole('button', { name: 'Choose from the Discard: 1' })).toBeTruthy()
   })
+  it('K293: every button (stack hit, fan hits) carries data-kit', () => {
+    render(<Pile label="Discard" view={{ count: 3, cards }} face={face} back={back} speed={0} unit={() => 10} />)
+    fireEvent.click(screen.getByRole('button', { name: /Look through/ }))
+    const bs = [...document.querySelectorAll('button')]
+    expect(bs.length).toBeGreaterThan(1)
+    expect(bs.every((b) => b.hasAttribute('data-kit'))).toBe(true)
+  })
 })

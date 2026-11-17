@@ -77,4 +77,18 @@ describe('banner', () => {
     expect(on).toHaveBeenCalledTimes(1);
     expect(screen.getByText('Act')).toBeTruthy();
   });
+
+  it('K293: default banner prints Turn n; turnName replaces it', () => {
+    const { container, rerender } = render(<TurnBanner phases={phases} turn={2} seat="a" phase="u1" />);
+    expect(container.querySelector('[data-part="turn"]')?.textContent).toBe('Turn 2');
+    rerender(<TurnBanner phases={phases} turn={2} seat="a" phase="u1" turnName={(t) => `Round ${t}`} />);
+    expect(container.textContent).not.toContain('Turn');
+    expect(container.querySelector('[data-part="turn"]')?.textContent).toBe('Round 2');
+  });
+  it('K293: every button carries data-kit', () => {
+    const { container } = render(<><LogPanel lines={[]} seats={['a']} /><GameOver result={gameResult({ a: 1, b: 2 })} onHome={() => {}} onRematch={() => {}} onReview={() => {}} /><OpponentTurnPanel turn={{ done: [], current: { index: 0, text: 'x', hidden: false }, left: 0, total: 1 }} onSkip={() => {}} /></>);
+    const bs = [...container.querySelectorAll('button')];
+    expect(bs.length).toBeGreaterThan(4);
+    expect(bs.every((b) => b.hasAttribute('data-kit'))).toBe(true);
+  });
 });

@@ -89,4 +89,10 @@ describe('card-hand wiring (K218)', () => {
     r.rerender(<CardHand layout="grid" empty="None" view={{ cards: [] }} face={face} />);
     expect(r.container.querySelector('[data-part="empty"]')!.textContent).toBe('None');
   });
-});
+  it('K293: every button carries data-kit', () => {
+    const { container } = render(<CardHand view={{ cards: ['a', 'b'] }} face={face} />);
+    const bs = [...container.querySelectorAll('button')];
+    expect(bs.length).toBe(2);
+    expect(bs.every((b) => b.hasAttribute('data-kit'))).toBe(true);
+  });
+})
