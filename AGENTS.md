@@ -7,6 +7,8 @@ Private shared code for digital board-game builds: one best version of each reus
 
 Open work: run `node kit.mjs state`.
 
+Start by task ([recipe index](docs/recipes/README.md) has the paths): build a game: [new-game](docs/recipes/new-game.md), then [game-systems](docs/recipes/game-systems.md); change the kit: "Change the kit" below and [agent-workflow](docs/recipes/agent-workflow.md); checks, briefs and "done": [agent-workflow](docs/recipes/agent-workflow.md).
+
 Needs Node 22.18+: tools run with plain `node` (no tsx, no build); relative imports name the `.ts`/`.tsx` file; no enums, namespaces or parameter properties (`erasableSyntaxOnly`).
 
 ## The locked copy (in a game)
@@ -24,7 +26,7 @@ Needs Node 22.18+: tools run with plain `node` (no tsx, no build); relative impo
 ## Choose components for a new game
 1. `search` / [CATALOG.md](docs/CATALOG.md): each entry says when to use it and when not.
 2. Read the component's README (its "Use it in 10 lines" is real, type-checked code) and, for `engine-core`, its guides (`timing.md`, `undo.md`, `random.md`, `legal.md`, `debug.md`).
-3. `kit.mjs new` pulls the base set (engine-core, game-store, sim-pool, state-machines, app-frame, settings, saves, lint-preset, ci-templates, check-runner); other tooling is pulled by hand (`--existing` for a repo that has files). Recipe: [new-game](docs/recipes/new-game.md).
+3. `kit.mjs new` pulls the base set (`BASE` in `components/scaffold/scaffold.js`: engine-core, game-store, sim-pool, state-machines, app-frame, settings, saves, screens, lint-preset, ci-templates, check-runner, repo-gate, bundle-size); other tooling is pulled by hand (`--existing` for a repo that has files). Recipe: [new-game](docs/recipes/new-game.md).
 4. A need the kit lacks: change the kit (below) or write "Kit gap" in the PR; do not fork.
 
 ## Change the kit
@@ -38,13 +40,14 @@ Needs Node 22.18+: tools run with plain `node` (no tsx, no build); relative impo
 
 ## Rules agents break most
 - Editing `kit/` in a game, or copying kit code into `src/`.
-- A `'..'` or `'../x'` string in a component code file that leaves the component folder for a component not in its `needs` (the check flags it); use `dirname()`.
-- Importing a kit component from another without listing it in `needs`.
+- A `'..'` or `'../x'` string in a component code file that leaves the component folder for a component not in its `needs` (`scripts/check-components.mjs` flags it); use `dirname()`.
+- Importing a kit component from another without listing it in `needs` (same check).
 - `async` functions without `await` (lint `require-await`), tests included.
+- A "Use it in 10 lines" block that no longer compiles (`scripts/readme-examples.mjs`).
 - Deciding a game rule or a look yourself: ask the arbiter or director session, or write it in the PR ("Rules questions", "Look questions", "Kit gap").
 - Showing rule ids (`TURN-07`, `AR-12`) on screen: use `plain-text`.
 - Reading hidden state in an opponent (see below).
-- Unseeded randomness in an engine (`Math.random`, clock): only `ctx.rng`.
+- Unseeded randomness in an engine (`Math.random`, clock): only `ctx.rng` (a game's `lint-preset` fails it).
 - Editing `docs/CATALOG.md` or `docs/PLAN.md` by hand: run `node scripts/catalog.mjs` / `node scripts/plan.mjs` (`components:check` fails when stale).
 - Running heavy tests locally on Windows.
 - Inventing a port, or hard-coding one that is not in `ports.json` (see "Ports" below).
@@ -52,7 +55,7 @@ Needs Node 22.18+: tools run with plain `node` (no tsx, no build); relative impo
 
 ## Where tests and CI run
 - Never heavy tests on local Windows. CI and the full gate run on the self-hosted runners (WSL, labelled per game; `kit` for this repo). Local checks: only the ones you touched (types, lint, the test file).
-- Here: `npm run check` = lint, typecheck, vitest, `components:check` (component rules and the catalogue is current). Worktrees lack `node_modules`: link them from another checkout, never commit them.
+- Here: `npm run check` = lint, typecheck, vitest, `components:check` (component rules; `CATALOG.md`, `ARCHITECTURE.md` and `PLAN.md` current; README examples type-check). What each catches: [agent-workflow](docs/recipes/agent-workflow.md). Worktrees lack `node_modules`: link them from another checkout, never commit them.
 - A game's gate comes from `ci-templates`; its check chain from `check-runner`.
 
 ## Ports: one source of truth

@@ -425,6 +425,7 @@ Tasks T1-T18 of `docs/evaluation/AUDIT-2026-11-16.md` section 13, run in the pha
 | K278 | T15 engine-core entry split: kernel, timing, tools entries; index stays the full re-export | audit T15 | S | done |
 | K279 | `phone-mode` Sheet `leaving`/`onLeft` (caller-driven slide-down), `closeButton`; PhoneFrame `testId`/`style`, PhoneMenu `id`, SheetAction `testId`; layer behind live during a leave so a re-tap reopens | imperium #142 | S | done |
 | K281 | T16 plan rows as files: one file per row, table generated, ids from file names (G16) | audit T16 | M | done |
+| K282 | Docs pass for agentic development: AGENTS.md, recipe index and agent path, recipes for the new game systems, stale READMEs | owner, 17 Nov 2026 | M | done |
 
 ## Size
 

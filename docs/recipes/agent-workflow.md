@@ -10,10 +10,35 @@ Use when you are a worker given one batch. The order below is the order of use. 
 5. **Finish.** Run it from Windows node in the worktree (not from inside WSL: a Windows worktree's `.git` path does not resolve there). `node kit.mjs finish [--repo <worktree>] [--check 'npm run check'] [--comment]`: exit 1 on uncommitted changes or a detached HEAD, else it clones the branch in WSL (own TMPDIR beside the clone; no WSL means FAIL with the reason, never a local run), installs, runs the check there and prints `PASS <full sha>` or `FAIL <full sha>` first, then the tail; `--comment` posts that line on the PR. A reviewer compares the sha with the PR head (`gh pr view --json headRefOid`) and rejects a missing or older one. Then push and open the draft PR.
 6. **Teardown** after the merge: `node kit.mjs teardown --worktree <dir>` cuts the link (never its target), then removes the worktree. `--force` discards uncommitted changes: only on purpose.
 
+## Checks and what each catches
+In this repo `npm run check` (CI runs it through `check-runner`):
+- `lint`: ESLint with type-checked rules (`require-await`, no `any`, type imports).
+- `typecheck`: `tsc -b`, including components' tests.
+- `test`: vitest, every component's tests and `tests/` (the reference game is generated and checked by `components/reference-game/reference.test.ts`).
+- `components:check`: `scripts/check-components.mjs` (`component.json` fields, `needs` exist, README first line, a test file, no import outside the folder unless in `needs`, packages listed); `scripts/catalog.mjs --check` (`CATALOG.md`, `ARCHITECTURE.md`, `PLAN.md` current, a `catalog-notes.json` entry per component); `scripts/readme-examples.mjs` (every "Use it in 10 lines" block type-checks).
+
+In a game made by `kit.mjs new`, `npm run check` runs `scripts/check-runner.config.json`: tests, lint (`lint-preset`: pure engine, no `Math.random`, UI imports the engine only through `src/engine/api.ts`), types, `kit:check` (`kit/` equals the lock), `ci:check` (workflows equal the template), `repo-gate` (file sizes, secrets, hosts, card names in rules code), build, `size` (`bundle-size`). Added by hand per game: `traceability` (tests cite rule ids), `theme-check`, `plain-text`, `plan-checker`.
+
+## Brief a worker
+A worker starts with a fresh context. The brief stands alone when it names:
+- the repo, the branch `k<n>-<name>` (or the game batch id) and the row id, already reserved;
+- the files or plan line ranges to read (never "read the plan"), and the recipe;
+- what done looks like: the test that proves it, and `finish` printing `PASS <sha>`;
+- what is out of scope, the arbiter or director session for questions, and the size at which to stop and report.
+
+## Before you say done
+- `git status` clean, every change committed and pushed; the PR head equals the sha in the `PASS` line.
+- The behaviour is shown by a test that failed before (a bug) or by real data (a run, a screenshot), not by reading the code.
+- Generated files regenerated, not edited: `node scripts/catalog.mjs`, `node scripts/plan.mjs`.
+- The row file says `state: done`; open questions are in the PR body ("Rules questions", "Look questions", "Kit gap").
+
 Pitfalls
 - Never run the heavy check on local Windows; `kit.mjs finish` runs it in WSL.
 - Do not copy `node_modules` into the worktree and do not commit the link.
 - `next-id` needs `gh` signed in to see open PRs; re-run it just before you open the PR if the batch was long.
 - `kit/` in a game changes only by `kit.mjs pull` (see [new-game.md](new-game.md)).
+- Recipe links to `../../components/<name>/README.md` work in the kit checkout; in a game read `kit/<name>/README.md`.
+- Reading `docs/PLAN.md`, `CATALOG.md` or `SELECTION.md` whole burns the budget: `kit.mjs state`, `kit.mjs search`, then one entry.
+- `finish` clones the committed branch: uncommitted work is not checked, and it refuses to run on a dirty tree.
 
 Proof: `finish` prints `PASS <sha>` for the PR head.
