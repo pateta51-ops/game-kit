@@ -28,7 +28,8 @@ Screens named `mode/variant` (`solo/table`, `2p/rulebook`, `2p/columns`) show as
 
 ## Host page
 - `window.LAYOUT_EDITOR_INIT = doc` before the editor's script runs: start from that doc instead of localStorage.
-- `window.layoutEditor.load(doc)`, `.get()`, `.onChange(fn)` (called with the doc after every change), `.zoom(z?, clientX?, clientY?)` (sets the zoom around a point, 1 = fit; returns it).
+- `window.LAYOUT_EDITOR_BG_INIT = { "<screen>": { src, op } }` before the script runs: the starting backdrops (used when localStorage has none; Reset restores them; none when unset).
+- `window.layoutEditor.reset()` (no confirmation): the doc, backdrops, selection, zoom (Fit) and screen go back to the start, undo history and the localStorage keys are cleared, onChange fires once. Also `.load(doc)`, `.get()`, `.onChange(fn)` (called with the doc after every change), `.zoom(z?, clientX?, clientY?)` (sets the zoom around a point, 1 = fit; returns it).
 - Without a host it autosaves to localStorage (`layout-editor-doc`; backdrops in `layout-editor-doc-bg`).
 
 ## Helpers (`index.ts`)
@@ -62,6 +63,7 @@ console.log(style, fit.fits, layoutWarnings(L))
 11. **Mirror**: Flip turns the selection upside down (↕) or left-right (↔) inside the screen; type an id first (e.g. `claude`) to make a mirrored copy instead.
 12. Red edge: the cards do not fit. Orange dashes: the box overlaps a neighbour or sticks out.
 13. Send it back: **Import / Export**, then **Copy** (paste it in the chat) or **Download** (attach `layout.json`). **Load this text**, a file, or dropping a `.json` on the page brings one in; dropping a picture sets the backdrop.
+14. **Reset** (top bar) asks "Reset everything?"; **Reset** (red) puts every screen and backdrop back to the starting layout, **Cancel** or Escape keeps your work. Undo cannot bring it back.
 
 ## Does not do
 Rotation, non-rectangular zones, overlapping card fans (cards are drawn side by side), editing several zones' numbers at once.

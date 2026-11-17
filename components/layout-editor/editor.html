@@ -47,6 +47,8 @@ input[type=number]{width:66px;box-sizing:border-box;padding:3px 4px}input[type=t
 .row span{overflow:hidden;text-overflow:ellipsis}
 #warns div{color:#ffa8a8;cursor:pointer;padding:1px 0}
 #status{grid-column:1;padding:3px 8px;border-top:1px solid #2c3040;color:#9aa3b8;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#rdlg{position:fixed;inset:0;background:#000a;display:none;align-items:center;justify-content:center;z-index:200001}
+#rdlg>div{background:#1b1e27;border:1px solid #3a4052;border-radius:6px;padding:12px;width:min(420px,94vw);display:flex;flex-direction:column;gap:8px}
 #dlg{position:fixed;inset:0;background:#000a;display:none;align-items:center;justify-content:center;z-index:200000}
 #dlg>div{background:#1b1e27;border:1px solid #3a4052;border-radius:6px;padding:10px;width:min(720px,94vw);display:flex;flex-direction:column;gap:6px}
 #dlg textarea{height:50vh;background:#0d0e12;color:#dde1ea;font:12px monospace;border:1px solid #3a4052}
@@ -71,7 +73,7 @@ input[type=number]{width:66px;box-sizing:border-box;padding:3px 4px}input[type=t
   <button id="multi" title="Tap adds to the selection (touch)">Multi</button>
   <button id="snapGrid" class="on">Snap to grid</button><select id="grid" title="Grid size"><option>8</option><option selected>16</option><option>32</option><option>64</option></select><button id="snapZones" class="on" title="Snap to the edges and centres of other zones">Snap to zones</button><span class="sep"></span>
   <button id="zOut" title="Zoom out (Ctrl+wheel, pinch)">−</button><span id="zPct">100%</span><button id="zIn" title="Zoom in (Ctrl+wheel, pinch)">+</button><button id="zFit" title="Fit the screen in the window">Fit</button><span class="sep"></span>
-  <button id="json">Import / Export</button>
+  <button id="json">Import / Export</button><button id="reset" title="Back to the starting layout and backdrops">Reset</button>
   <span id="msg"></span>
 </div>
 <div id="wrap"><div id="pad"><div id="stage"><img id="bg" alt=""><div id="zones"></div><div id="ptags"></div><div id="guides"></div><div id="selbox"></div><div id="marq"></div></div></div></div>
@@ -101,6 +103,7 @@ input[type=number]{width:66px;box-sizing:border-box;padding:3px 4px}input[type=t
   <h3>Zones</h3><div id="tree"></div>
 </div>
 </div>
+<div id="rdlg"><div><p>Reset everything? All your changes to every screen, including the backdrops, go back to the starting layout.</p><div class="xywh"><button id="rGo" style="background:#c0392b;color:#fff">Reset</button><button id="rNo">Cancel</button></div></div></div>
 <div id="dlg"><div>
   <b>Layout JSON</b>
   <textarea id="txt" spellcheck="false"></textarea>
@@ -353,7 +356,8 @@ const keepPoint = (p , sc , off , at ) => off + p * sc - at;
 const KEY = 'layout-editor-doc', $ = (id) => document.getElementById(id)
 const store = (k, v) => { try { if (v === undefined) return localStorage.getItem(k); localStorage.setItem(k, v) } catch { return null } }
 let doc, cur, sel = new Set(), hist = [], fut = [], drag = null, guides = [], sc = 1, base = 100, mouse = [0, 0], cardSnap = null, pileSnap = null, view = null
-const listeners = [], fitCache = new Map(), ui = { grid: 16, snapGrid: true, snapZones: true, zoom: 1, keep: false, multi: false, bg: JSON.parse(store(KEY + '-bg') || '{}') }
+const listeners = [], fitCache = new Map(), ui = { grid: 16, snapGrid: true, snapZones: true, zoom: 1, keep: false, multi: false, bg: JSON.parse(store(KEY + '-bg') || JSON.stringify(window.LAYOUT_EDITOR_BG_INIT || {})) }
+const BG0 = JSON.stringify(window.LAYOUT_EDITOR_BG_INIT || {}); let DOC0
 const S = () => doc.screens[cur]
 const round = (s, old) => ({ ...s, zones: Object.fromEntries(Object.entries(s.zones).map(([k, z]) => [k, z === old.zones[k] ? z : { ...z, r: z.r.map(Math.round) }])) })
 const snapDoc = () => JSON.stringify(doc)
@@ -615,6 +619,9 @@ $('tree').addEventListener('click', (e) => {
 function editZoneById(k, f) { const s = S(), z = { ...s.zones[k] }; if (z[f]) delete z[f]; else z[f] = true; commit({ ...s, zones: { ...s.zones, [k]: z } }) }
 $('warns').addEventListener('click', (e) => { const k = e.target.closest('[data-id]')?.dataset.id; if (k) { sel = new Set([k]); render() } })
 $('json').onclick = () => { $('txt').value = JSON.stringify(doc, null, 1); $('dlg').style.display = 'flex' }
+const rAsk = (v) => { $('rdlg').style.display = v ? 'flex' : 'none'; if (v) $('rNo').focus() }
+$('reset').onclick = () => rAsk(true); $('rNo').onclick = () => rAsk(false); $('rGo').onclick = () => { rAsk(false); api.reset() }
+document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && $('rdlg').style.display === 'flex') { e.stopImmediatePropagation(); e.preventDefault(); rAsk(false) } }, true)
 $('close').onclick = () => ($('dlg').style.display = 'none')
 $('copy').onclick = async () => { $('txt').value = JSON.stringify(doc, null, 1); try { await navigator.clipboard.writeText($('txt').value); flash('Copied') } catch { $('txt').select(); flash(document.execCommand('copy') ? 'Copied' : 'Select the text and copy it') } }
 $('dl').onclick = () => { const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([JSON.stringify(doc, null, 1)], { type: 'application/json' })); a.download = 'layout.json'; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 1000) }
@@ -626,6 +633,7 @@ const typing = (e) => /^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName) && e.ta
 document.addEventListener('paste', (e) => { if (typing(e)) return; const t = e.clipboardData.getData('text'); if (/"(zones|screens)"/.test(t)) importText(t) })
 document.addEventListener('keydown', (e) => {
   if (typing(e)) return
+  if ($('rdlg').style.display === 'flex') return
   if (e.key === ' ' && e.target.tagName !== 'BUTTON') { space = true; $('wrap').classList.add('grab'); e.target.blur?.(); return e.preventDefault() }
   const k = e.key.toLowerCase(), ctl = e.ctrlKey || e.metaKey, step = e.shiftKey ? 10 : 1
   if (ctl && k === 'z') undo(!e.shiftKey); else if (ctl && k === 'y') undo(false); else if (ctl && k === 'd') duplicate()
@@ -638,12 +646,18 @@ window.addEventListener('resize', () => { fitCache.clear(); render() })
 
 const api = {
   load(d) { const n = normalizeDoc(d); sel = new Set(); if (!n.screens[cur]) cur = Object.keys(n.screens)[0]; setDoc(n) },
+  reset() {
+    doc = normalizeDoc(JSON.parse(DOC0)); hist = []; fut = []; sel = new Set(); cur = Object.keys(doc.screens)[0]; ui.zoom = 1; ui.bg = JSON.parse(BG0); fitCache.clear()
+    changed(); try { localStorage.removeItem(KEY); localStorage.removeItem(KEY + '-bg') } catch {}
+    render(); $('wrap').scrollTo(0, 0)
+  },
   get() { return JSON.parse(JSON.stringify(doc)) },
   onChange(fn) { listeners.push(fn) },
   zoom(z, x, y) { if (z !== undefined) zoomAt(z, x, y); return ui.zoom },
 }
 window.layoutEditor = api
 try { doc = normalizeDoc(window.LAYOUT_EDITOR_INIT ?? JSON.parse(store(KEY) || 'null')) } catch { doc = normalizeDoc(null) }
+DOC0 = JSON.stringify(normalizeDoc(window.LAYOUT_EDITOR_INIT ?? null))
 cur = Object.keys(doc.screens)[0]
 render()
 </script>

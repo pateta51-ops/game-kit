@@ -157,6 +157,41 @@ describe.skipIf(!HAVE)('K269 layout editor in Chromium', () => {
     await page.keyboard.press('Control+z');
     expect((await get()).screens['2p/rulebook']!.zones).toEqual({});
   });
+  it('Reset asks first, then restores the doc, backdrops and onChange fires once', async () => {
+    await load(SAMPLE); await zoom(1);
+    const ev = (f: string) => page.evaluate(f);
+    await ev('window.__n = 0; layoutEditor.onChange(() => window.__n++)');
+    const start = await get();
+    await dragBy(await centre('.z[data-id="menu"]'), 60, 0, true);
+    await page.fill('#bgUrl', 'data:image/gif;base64,R0lGODlhAQABAAAAACw='); await page.press('#bgUrl', 'Enter');
+    const moved = await get(), bg = () => page.evaluate(() => document.getElementById('bg')!.style.display);
+    expect(moved).not.toEqual(start); expect(await bg()).toBe('');
+    await page.click('#reset'); await page.click('#rNo');
+    expect(await get()).toEqual(moved);
+    await page.click('#reset'); await page.keyboard.press('Escape');
+    expect(await get()).toEqual(moved); expect(await page.locator('#rdlg').isVisible()).toBe(false);
+    const n0 = await ev('window.__n') as number;
+    await page.click('#reset'); await page.click('#rGo');
+    expect(await get()).toEqual(start);
+    expect(await bg()).toBe('none');
+    expect(await ev('window.__n')).toBe(n0 + 1);
+    expect(await page.evaluate(() => localStorage.getItem('layout-editor-doc-bg'))).toBeNull();
+  });
+  it('Reset starts from LAYOUT_EDITOR_INIT, not localStorage; editing keys do nothing while the dialog is open', async () => {
+    const p2 = await browser.newPage({ viewport: { width: 1920, height: 1080 } });
+    await p2.addInitScript(() => localStorage.setItem('layout-editor-doc', JSON.stringify({ w: 9, h: 9, zones: { z: [0, 0, 1, 1] } })));
+    await p2.goto(URL_);
+    const g2 = () => p2.evaluate(() => (window as unknown as { layoutEditor: { get(): Doc } }).layoutEditor.get());
+    expect(Object.keys((await g2()).screens.main!.zones)).toEqual(['z']);
+    await p2.click('#tree .row[data-id="z"] span');
+    await p2.click('#reset');
+    await p2.keyboard.press('Delete'); await p2.keyboard.press('ArrowRight'); await p2.keyboard.press('Control+d');
+    await p2.click('#rNo');
+    expect((await g2()).screens.main!.zones).toEqual({ z: { r: [0, 0, 1, 1] } });
+    await p2.click('#reset'); await p2.click('#rGo');
+    expect(Object.keys((await g2()).screens)).toEqual(['desktop']);
+    await p2.close();
+  });
   it('capture.mjs nests [data-zone] rects by DOM containment', async () => {
     const html = '<body style="margin:0"><div data-zone="you" style="position:absolute;left:10px;top:20px;width:300px;height:100px"><div data-zone="hand" style="margin:5px;width:50px;height:40px"></div><div data-zone="x.y" style="width:5px;height:5px"></div></div></body>';
     const d = await capture('data:text/html,' + encodeURIComponent(html), { w: 400, h: 300, screen: 'phone' });
