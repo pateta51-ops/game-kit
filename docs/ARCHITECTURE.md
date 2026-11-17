@@ -125,6 +125,7 @@ graph LR
   track["track"] --> counter["counter"]
   track["track"] --> motion_frame["motion-frame"]
   transcription_check["transcription-check"]
+  turn_flow["turn-flow"] --> engine_core["engine-core"]
   tutorial["tutorial"] --> engine_core["engine-core"]
   tutorial["tutorial"] --> state_machines["state-machines"]
   ui_helpers["ui-helpers"]
@@ -182,5 +183,6 @@ graph LR
 - `traceability`
 - `track`
 - `transcription-check`
+- `turn-flow`
 - `tutorial`
 - `voice`

@@ -168,3 +168,4 @@ Components with no row above. Each starts from the game and commit in its `compo
 | `deck-motions` | STCC `8e6f55b` (`ui/motion/dealing.ts`: dealFrom, refill turn-over, riffle, shuffleDecks, deck cycle; from LordOfTheRings `a3f3c01`) (K250) | M |
 | `track` | Unstoppable `e395a7c4` (K242: DangerTrack spaces, states, labels, drawn and mat rendering; threatBuffs useMarkerGlide); STCC `8e6f55bd` crewTrack.ts (hop, fill, badge pop) and StepTrack.tsx (LotR PhaseTracker, BSD-3); danger rules, skull and colours left out | M |
 | `target-arrow` | Unstoppable `e395a7c4` (K247: arrow.ts, strike.ts, TargetArrow.tsx; prompt kinds, source, lookup and damage predicate became the game's) | M |
+| `turn-flow` | 7th Inning Stretch `src/engine/rules.ts` `season.phase` chain (each phase task queues its work, then the next phase); Radiance has no engine yet; written new on engine-core with the phase table, seat order, skips and boundary calls (K264) | S |

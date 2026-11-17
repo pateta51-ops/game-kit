@@ -1,0 +1,12 @@
+{
+  "name": "turn-flow",
+  "source": {
+    "game": "7th-inning-stretch",
+    "commit": "see note",
+    "paths": [
+      "src/engine/rules.ts (season.phase: each phase task queues its work, then the next phase task; idea only, written new)"
+    ],
+    "note": "K264 (audit G03/T5): Radiance had no engine code to port; written new on engine-core boundary(). Commit: the main checkout of 16 Nov 2026."
+  },
+  "needs": ["engine-core"]
+}
