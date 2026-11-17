@@ -39,3 +39,5 @@ Pitfalls
 - Forced answers through the host's `auto` are each their own undo step and are paced apart from the click: in a game with undo use `answerWithForced` (step 5).
 
 Proof: a jsdom test (`components/prompt-host/widgets.test.tsx` shows clicks answering each kind), an `autoAnswer` test in node, `forced.test.ts` (forced answers sent once, one undo per click, none for the other seat), `npm run check`.
+
+Drag instead of two taps: [drag-drop](../../components/drag-drop/README.md) (`useDragDrop` over the same `useBoardPick`; a drop is `tapMany([source, target])`).

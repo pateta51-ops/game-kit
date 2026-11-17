@@ -1,0 +1,29 @@
+{
+  "name": "drag-drop",
+  "source": {
+    "game": "imperium",
+    "commit": "22736b2",
+    "paths": [
+      "src/ui/play/drag.ts (the gesture reducer: threshold 8px, escape, cancel, release, swallow the click; the card id became a source option id, `over` a target option id)",
+      "src/ui/board/table/useHandDrag.ts (window listeners, ghost follows the pointer without a render, prompt change and no button down cancel, prompt keys blocked while dragging, the fan excluded from the drop zone; the one `.table__play` zone became any `data-drop` element)"
+    ],
+    "grafts": [
+      {
+        "game": "stcc",
+        "commit": "8e6f55b",
+        "paths": [
+          "src/ui/play/drag.ts and src/ui/board/table/useHandDrag.ts (the same idea with a fixed drop zone: your Staging Area above the hand's band, which is the `data-drop-block` rule here)"
+        ]
+      }
+    ]
+  },
+  "needs": [
+    "prompt-host",
+    "motion-frame",
+    "engine-core",
+    "prompt-source"
+  ],
+  "packages": [
+    "react"
+  ]
+}

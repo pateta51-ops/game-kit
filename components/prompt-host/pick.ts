@@ -18,6 +18,8 @@ export interface BoardPick {
   /** K226: Confirm would answer now. */
   readonly ready: boolean;
   readonly tap: (id: string) => void;
+  /** K220: the taps in order as one gesture (a drop: source then target); an illegal id ends it with no change. */
+  readonly tapMany: (ids: readonly string[]) => void;
   readonly confirm: () => void;
   readonly cancel: () => void;
 }
@@ -41,16 +43,25 @@ export function useBoardPick(prompt: KernelPrompt | null, answer: Answer, { conf
     armed,
     picks,
     ready,
-    tap: (id) => {
-      if (!legal(id) || prompt === null) return;
-      if (max <= 1) {
-        if (!ask || id === armed) send([id]);
-        else setAt({ prompt: prompt.id, ids: [id] });
-        return;
+    tap: (id) => pick.tapMany([id]),
+    tapMany: (ids) => {
+      if (prompt === null) return;
+      let cur: readonly string[] = picks;
+      for (const id of ids) {
+        if (!legal(id)) return;
+        let next: readonly string[];
+        let sends: boolean;
+        if (max <= 1) {
+          sends = !ask || id === cur.at(-1);
+          next = [id];
+        } else {
+          next = cur.includes(id) ? cur.filter((x) => x !== id) : cur.length < max ? [...cur, id] : cur;
+          sends = !ask && next.length === max;
+        }
+        if (sends) return send(next);
+        cur = next;
       }
-      const next = picks.includes(id) ? picks.filter((x) => x !== id) : picks.length < max ? [...picks, id] : picks;
-      if (!ask && next.length === max) send(next);
-      else setAt({ prompt: prompt.id, ids: next });
+      setAt({ prompt: prompt.id, ids: cur });
     },
     confirm: () => {
       if (ready) send(picks);

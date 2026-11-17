@@ -197,6 +197,10 @@
     "use": "Showing the open engine-core prompt on screen: a widget per prompt kind (a missing one fails to compile), the common widgets (pick, amount, order, may, pay) unstyled, forced answers sent from the store in one undo step (answerWithForced), board picks with tap to confirm (one or several). Recipe: docs/recipes/prompts.md.",
     "not": "The game's look or its own kind-specific widgets; board highlights (the game draws those from the option ids)."
   },
+  "drag-drop": {
+    "use": "Dragging a source (hand card, pile) onto a target on the board, both option ids of the open prompt: a drop answers as tap source then tap target through prompt-host useBoardPick, with the ghost, legal-target marks and animation.",
+    "not": "Free dragging that answers nothing (reordering a hand, moving a panel); the look of the ghost and the targets."
+  },
   "prompt-source": {
     "use": "Each prompt must name its source card and clause and who decides.",
     "not": "Prompt wording (the game's printed words)."
