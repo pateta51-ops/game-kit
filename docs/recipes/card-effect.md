@@ -21,3 +21,5 @@ Pattern: [docs/patterns/card-language.md](../patterns/card-language.md). The car
 7. **Zoomed card text** is the full transcription (words, icons, tokens, glossary links), so add the clause to `glossary` coverage when it introduces a term.
 
 Proof: the card's test, `runInventory` clean, `traceability` clean.
+
+Card data: declare the game's record kinds, ids and references once in `content-pack` and `load` the CSV or JSON; it refuses duplicate ids, dangling references, schema failures and unknown verbs (it runs `validateEffect` on your effect fields) before any card reaches the engine.

@@ -43,6 +43,14 @@
     "use": "A campaign of linked scenarios kept as a plain log.",
     "not": "A single game's rules or story text (story)."
   },
+  "card-attachments": {
+    "use": "Cards tucked under or fanned past a host card with a pure footprint, and the tokens on a card: one per token, ×N past a cap, number boxes.",
+    "not": "Token shapes, colours or fonts; tokens at fixed face anchors (card-parts) or flying (token-flights)."
+  },
+  "card-hand": {
+    "use": "Showing a hand of cards (or an opponent's face-down hand) as a fan that fits any width, lifts on pointer or focus, marks legal, picked and barred cards from the prompt, reports taps, is a drag source, and animates draw-in and play glide; or, with layout=grid, the phone hand: whole cards in rows with a header slot.",
+    "not": "The card face, shadows, glow, badges, colours (the game's, on data-part hooks); reordering a hand."
+  },
   "card-harness": {
     "use": "Testing card effects on real cards with the scenario builder, prompt delivery, choice probe and inventory with stale check.",
     "not": "Card rules themselves; those stay in the game."
@@ -93,9 +101,21 @@
     "not": "Rules for what the gate contains (repo-gate, check-runner).",
     "exports": "`render.mjs`, `ci.yml`, `full-gate.yml`, `nightly-fuzz.yml`, `local-ci.sh`, `install-wsl.sh`, `watch-run.sh`, `watch-run.mjs`, `skip-reporter.ts`"
   },
+  "content-pack": {
+    "use": "Card, deck or scenario data (CSV or JSON) loads through a zod schema per record kind with id-uniqueness, dangling-reference and card-language verb checks, every problem listed at once.",
+    "not": "The game's record shapes, verbs or words; one effect checked at run time (card-language validateEffect)."
+  },
+  "counter": {
+    "use": "A resource number with count-up, bump, +N tag, low warning and a data-res anchor for flights; unstyled.",
+    "not": "Any look, colour or word; the flight itself (token-flights); the stored value."
+  },
   "debug-console": {
     "use": "A developer slash console over the engine-core debug edits.",
     "not": "Player-facing UI; it is a dev tool."
+  },
+  "deck-motions": {
+    "use": "Cards fly from a pile to their places (deal, refill turn-over, deck cycle) and a pile riffles; piles found by data-pile; timing pure.",
+    "not": "Which cards move (the game diffs its views), the card look, a market row slide or a fan (card-pile)."
   },
   "dice-odds": {
     "use": "Exact dice probabilities for tests, sanity bands or AI.",
@@ -104,6 +124,10 @@
   "dice-tray": {
     "use": "Dice in play, held dice, rolling through ctx.rng and the roll window content. Recipe: docs/recipes/dice.md.",
     "not": "Dice drawing or 3D (pieces-3d) and odds (dice-odds)."
+  },
+  "drag-drop": {
+    "use": "Dragging a source (hand card, pile) onto a target on the board, both option ids of the open prompt: a drop answers as tap source then tap target through prompt-host useBoardPick, with the ghost, legal-target marks and animation.",
+    "not": "Free dragging that answers nothing (reordering a hand, moving a panel); the look of the ghost and the targets."
   },
   "e2e-helpers": {
     "use": "Playwright tests of a game that need shared helpers.",
@@ -197,6 +221,10 @@
     "use": "Records of finished games, totals, best scores and a play-time clock.",
     "not": "Achievements (achievements)."
   },
+  "player-board": {
+    "use": "A mat with named zones from a layout: each zone fits its cards (largest size, two rows, a fan below the readable minimum) and is a motion anchor; a pure plan plus a React board with slots the game fills.",
+    "not": "Where zones sit (the game's layout), card faces, tucked attachments (K245), piles."
+  },
   "prompt-gallery": {
     "use": "Showing one state per prompt kind and ending, with a check that no kind lacks one.",
     "not": "Runtime screens."
@@ -204,10 +232,6 @@
   "prompt-host": {
     "use": "Showing the open engine-core prompt on screen: a widget per prompt kind (a missing one fails to compile), the common widgets (pick, amount, order, may, pay) unstyled, forced answers sent from the store in one undo step (answerWithForced), board picks with tap to confirm (one or several). Recipe: docs/recipes/prompts.md.",
     "not": "The game's look or its own kind-specific widgets; board highlights (the game draws those from the option ids)."
-  },
-  "drag-drop": {
-    "use": "Dragging a source (hand card, pile) onto a target on the board, both option ids of the open prompt: a drop answers as tap source then tap target through prompt-host useBoardPick, with the ghost, legal-target marks and animation.",
-    "not": "Free dragging that answers nothing (reordering a hand, moving a panel); the look of the ghost and the targets."
   },
   "prompt-source": {
     "use": "Each prompt must name its source card and clause and who decides.",
@@ -275,13 +299,13 @@
     "use": "Story, flavour text, panels and splash as data that never blocks play.",
     "not": "Rules text."
   },
-  "counter": {
-    "use": "A resource number with count-up, bump, +N tag, low warning and a data-res anchor for flights; unstyled.",
-    "not": "Any look, colour or word; the flight itself (token-flights); the stored value."
-  },
   "table-panels": {
     "use": "The panels around the table, unstyled: log (event words with slots, by turn, seat filter), banner (turn, seat, phase, fires on change), game over (result, breakdown slot, rematch, review log, home), opponent turn (paced-view steps, what the viewer may see, skip to end).",
     "not": "Any look, layout or game text; the log data itself (game-log); the opponent's decisions (opponent)."
+  },
+  "target-arrow": {
+    "use": "A curved targeting arrow from the card that asks to the pointer: snaps to legal targets, collapses into the chosen one, then a hit; holds token flights until the hit.",
+    "not": "Prompt kinds, which prompts are targets, the prompt panel (prompt-host) or the arrow's colours."
   },
   "theme-check": {
     "use": "Checking that the game's look lives in its token file, fonts and layout.",
@@ -292,6 +316,14 @@
       "fonts.ts",
       "layout.ts"
     ]
+  },
+  "token-bag": {
+    "use": "A bag of tokens with its count; the engine's draw shown as a 2D flight from the bag or a 3D shake-and-draw (three.js by dynamic import) that never decides the draw and falls back to 2D.",
+    "not": "Which tokens are drawn (the engine), the token faces and the bag print (the game), a game's token tables."
+  },
+  "token-flights": {
+    "use": "Tokens that moved between two views fly from where they were to where they are, with a ledger that draws each token in one place at a time.",
+    "not": "Cards flying, motion specs (motion-frame) or the token look."
   },
   "tooling-scripts": {
     "use": "Small repo scripts run with `node kit/tooling-scripts/<script>.ts` (art check, shots, text-leak, home screen, docs index). Recipe: docs/recipes/agent-workflow.md.",
@@ -305,6 +337,10 @@
       "check-traceability.ts"
     ]
   },
+  "track": {
+    "use": "A row of spaces with a marker that glides (drawn row or spots on a mat image), per-space marks, labels from the game's words; a hop-and-fill bar with a badge pop; a step list with one lit step; unstyled.",
+    "not": "Any rule, look, colour or word; turn banners (table-panels); the number itself (counter)."
+  },
   "transcription-check": {
     "use": "Printed items (cards, tiles, boards) are transcribed twice independently and the owner verifies them before they enter the real pack.",
     "not": "Card rules or card-language checks (card-harness); anything that reads no files."
@@ -317,40 +353,8 @@
     "use": "Small screen helpers: hover hold, inspect, rule sheet, toasts, prompt keys. For an engine-core prompt use prompt-host instead of createSelection and onlyForcedAnswer.",
     "not": "Any look or game type."
   },
-  "token-bag": {
-    "use": "A bag of tokens with its count; the engine's draw shown as a 2D flight from the bag or a 3D shake-and-draw (three.js by dynamic import) that never decides the draw and falls back to 2D.",
-    "not": "Which tokens are drawn (the engine), the token faces and the bag print (the game), a game's token tables."
-  },
-  "token-flights": {
-    "use": "Tokens that moved between two views fly from where they were to where they are, with a ledger that draws each token in one place at a time.",
-    "not": "Cards flying, motion specs (motion-frame) or the token look."
-  },
   "voice": {
     "use": "Release 1.3 voice lines on the sound player's voice bus, never twice the same.",
     "not": "Sound effects (sound-player)."
-  },
-  "player-board": {
-    "use": "A mat with named zones from a layout: each zone fits its cards (largest size, two rows, a fan below the readable minimum) and is a motion anchor; a pure plan plus a React board with slots the game fills.",
-    "not": "Where zones sit (the game's layout), card faces, tucked attachments (K245), piles."
-  },
-  "deck-motions": {
-    "use": "Cards fly from a pile to their places (deal, refill turn-over, deck cycle) and a pile riffles; piles found by data-pile; timing pure.",
-    "not": "Which cards move (the game diffs its views), the card look, a market row slide or a fan (card-pile)."
-  },
-  "track": {
-    "use": "A row of spaces with a marker that glides (drawn row or spots on a mat image), per-space marks, labels from the game's words; a hop-and-fill bar with a badge pop; a step list with one lit step; unstyled.",
-    "not": "Any rule, look, colour or word; turn banners (table-panels); the number itself (counter)."
-  },
-  "card-hand": {
-    "use": "Showing a hand of cards (or an opponent's face-down hand) as a fan that fits any width, lifts on pointer or focus, marks legal, picked and barred cards from the prompt, reports taps, is a drag source, and animates draw-in and play glide; or, with layout=grid, the phone hand: whole cards in rows with a header slot.",
-    "not": "The card face, shadows, glow, badges, colours (the game's, on data-part hooks); reordering a hand."
-  },
-  "card-attachments": {
-    "use": "Cards tucked under or fanned past a host card with a pure footprint, and the tokens on a card: one per token, ×N past a cap, number boxes.",
-    "not": "Token shapes, colours or fonts; tokens at fixed face anchors (card-parts) or flying (token-flights)."
-  },
-  "target-arrow": {
-    "use": "A curved targeting arrow from the card that asks to the pointer: snaps to legal targets, collapses into the chosen one, then a hit; holds token flights until the hit.",
-    "not": "Prompt kinds, which prompts are targets, the prompt panel (prompt-host) or the arrow's colours."
   }
 }

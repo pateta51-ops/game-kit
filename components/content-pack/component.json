@@ -1,0 +1,10 @@
+{
+  "name": "content-pack",
+  "source": {
+    "game": "7is",
+    "commit": "18fb28c",
+    "paths": ["src/content/validate.ts (duplicate-id and schema checks with stable messages)", "under-falling-skies:scripts/validate-content.ts", "stcc: content validator"]
+  },
+  "needs": ["card-harness", "card-language", "engine-core"],
+  "packages": ["zod"]
+}

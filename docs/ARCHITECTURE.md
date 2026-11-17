@@ -42,6 +42,9 @@ graph LR
   challenges["challenges"]
   check_runner["check-runner"]
   ci_templates["ci-templates"]
+  content_pack["content-pack"] --> card_harness["card-harness"]
+  content_pack["content-pack"] --> card_language["card-language"]
+  content_pack["content-pack"] --> engine_core["engine-core"]
   counter["counter"] --> effect_library["effect-library"]
   counter["counter"] --> motion_frame["motion-frame"]
   counter["counter"] --> ui_helpers["ui-helpers"]
@@ -139,7 +142,6 @@ graph LR
 - `bundle-size`
 - `campaign`
 - `card-hand`
-- `card-language`
 - `card-patches`
 - `card-pile`
 - `card-query`
@@ -147,6 +149,7 @@ graph LR
 - `challenges`
 - `check-runner`
 - `ci-templates`
+- `content-pack`
 - `debug-console`
 - `deck-motions`
 - `dice-odds`
