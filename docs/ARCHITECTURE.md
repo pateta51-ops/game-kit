@@ -111,6 +111,7 @@ graph LR
   saves["saves"] --> small_helpers["small-helpers"]
   scaffold["scaffold"]
   scan_ingest["scan-ingest"]
+  screens["screens"]
   settings["settings"]
   sim_pool["sim-pool"] --> engine_core["engine-core"]
   small_helpers["small-helpers"]
@@ -178,6 +179,7 @@ graph LR
 - `resolution-frame`
 - `saves`
 - `scan-ingest`
+- `screens`
 - `story`
 - `table-panels`
 - `target-arrow`

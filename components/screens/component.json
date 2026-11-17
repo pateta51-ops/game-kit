@@ -1,0 +1,6 @@
+{
+  "name": "screens",
+  "source": { "game": "kit", "commit": "audit T14", "paths": ["audit G11: main menu and new-game set-up written as data"] },
+  "needs": [],
+  "packages": ["react"]
+}

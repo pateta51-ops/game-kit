@@ -283,6 +283,10 @@
     "not": "Scanning crew boards or anything shipped in-game.",
     "exports": "Python package `scanpipe`, see its README"
   },
+  "screens": {
+    "use": "Main menu and new-game set-up form (seats, scenario, difficulty, extras) from data, unstyled, with a pure default and validate.",
+    "not": "Styled or game-specific screens, or settings (use settings)."
+  },
   "settings": {
     "use": "Settings declared as data, a persisted store and a screen drawn from them.",
     "not": "Game rules options that change the engine (declare them as settings, read them in setup)."

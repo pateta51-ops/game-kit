@@ -418,6 +418,7 @@ Tasks T1-T18 of `docs/evaluation/AUDIT-2026-11-16.md` section 13, run in the pha
 | K263 | phone-mode takes Imperium's phone screen: frame, tab bar with lit tab, prompt line, top bar, menu, sheet swipe/Escape/arrival guard, sheet action row | imperium ba0eda4 | M | done (`phone-mode`) |
 | K264 | (audit T5, G03) `turn-flow`: data table of rounds, seat turns, phases and steps with skips; emits engine-core boundaries (turn begin, phase/turn/round end, also when the game ends); `whoseTurn`, `endTurn` for a pass | audit | M | done (`turn-flow`) |
 | K270 | `card-pile` `previewOn` ('hover' default, 'hover-focus'; no preview on focus return); pile and hand fan structural CSS scoped to own roots (`data-part='fan'` clash) | imperium #141 | S | done |
+| K275 | T14 screens: data-driven unstyled main menu and set-up form (G11) | audit T14 | S | done |
 
 ## Size
 
