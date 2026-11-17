@@ -579,7 +579,7 @@ def main() -> int:
                     cfg = Path(tmp) / f"plancheck-tsconfig-{os.getpid()}.json"
                     try:
                         cfg.write_text(json.dumps({"compilerOptions": {"noEmit": True, "strict": True, "exactOptionalPropertyTypes": True,
-                            "noUncheckedIndexedAccess": True, "noImplicitOverride": True, "target": "es2022", "module": "esnext",
+                            "noUncheckedIndexedAccess": True, "noImplicitOverride": True, "target": "es2023", "lib": ["es2023", "dom", "dom.iterable"], "jsx": "react-jsx", "module": "esnext",
                             "moduleResolution": "bundler", "allowImportingTsExtensions": True, "skipLibCheck": True},
                             "files": [f.name]}), encoding="utf-8")  # a config of its own: TS 6 refuses command-line files beside a tsconfig.json
                         r = subprocess.run([tsc, "-p", cfg.name], cwd=tmp, capture_output=True, text=True, encoding="utf-8")

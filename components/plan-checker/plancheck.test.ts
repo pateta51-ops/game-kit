@@ -131,7 +131,7 @@ describe('plancheck.py flags (K68)', () => {
     const game = tmp('plancheck-game-');
     mkdirSync(join(game, 'kit', 'core'), { recursive: true });
     mkdirSync(join(game, 'src', 'engine'), { recursive: true });
-    writeFileSync(join(game, 'kit', 'core', 'index.ts'), "export interface Core { status: 'on' | 'off' }\n");
+    writeFileSync(join(game, 'kit', 'core', 'index.ts'), "export interface Core { status: 'on' | 'off' }\nexport const last = [1, 2].findLast((n) => n > 1);\nexport const el: HTMLElement | null = null;\n");
     const typed = full + "\n## 12. Type definitions\n\n```ts\nimport type { Core } from './../../kit/core/index.ts';\nexport type GameState = Core;\n```\n";
     const at = join(game, 'src', 'engine');
     expect(run(typed, ...end, '--tsc')).toBe(1);
