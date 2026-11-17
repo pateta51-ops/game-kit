@@ -104,4 +104,21 @@ describe('card-language when (K267)', () => {
     const t = cardTriggers<G>({ pool: POOL, player: () => 'a' });
     expect(() => t.resolveTrigger({ s: run([]) } as unknown as Ctx<G>, { id: 1, ability: 'beta#0009', source: 'beta', player: 'a', batch: 1, occurrences: [], once: 'perItem', order: 'silent' })).toThrow(/no when entry/);
   });
+
+  it('K295 resolveTrigger passes the trigger occurrences to env, so a response can name the triggering card', () => {
+    const got: unknown[] = [];
+    const occ = [{ id: 7, kind: 'discard', batch: 1 }] as never;
+    const t = cardTriggers<G, { seat: string; source: string; occ: unknown }>({ pool: POOL, player: () => 'a', env: (_s, source, seat, occurrences) => ({ seat, source, occ: occurrences }) });
+    t.resolveTrigger({ s: run([]), then: (...ts: unknown[]) => void got.push(...ts) } as unknown as Ctx<G>, { id: 1, ability: 'beta#0000', source: 'beta', player: 'a', batch: 1, occurrences: occ, once: 'perItem', order: 'silent' });
+    expect((got[0] as { env: { occ: unknown } }).env.occ).toBe(occ);
+  });
+
+  it('K296 triggersFor and invalid forward the game content to the game callbacks', () => {
+    const seen: unknown[] = [];
+    const content = { play: [] };
+    const t = cardTriggers<G>({ pool: POOL, player: (_s, _c, k) => (seen.push(k), 'a'), sources: (_s, k) => (seen.push(k), ['beta']), active: (_s, _c, k) => (seen.push(k), true) });
+    expect(t.triggersFor(run([]), { kind: 'discard' } as never, content)).toHaveLength(1);
+    expect(t.invalid(run([]), { source: 'beta' } as never, content)).toBeUndefined();
+    expect(seen).toEqual([content, content, content]);
+  });
 });

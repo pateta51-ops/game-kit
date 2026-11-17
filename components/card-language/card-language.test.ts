@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { applyAction, createGame, draftOf, EngineBugError, hashValue, seedRng, timingHandlers, would, type AnswerAction, type Ctx, type Draft, type GameRules, type KernelPrompt, type KernelState, type KernelTask } from '../engine-core/index.ts';
 import { ruleIdFilter } from '../plain-text/index.ts';
-import { describeEffect, effectOf, effectTasks, expectVerbs, oneOf, optional, posInt, validateEffect, validateStep, verbHandler, verbProblems, type AnyVerbTable, type VerbTable, type VerbTask } from './index.ts';
+import { describeEffect, effectOf, str, type Field, effectTasks, expectVerbs, oneOf, optional, posInt, validateEffect, validateStep, verbHandler, verbProblems, type AnyVerbTable, type VerbTable, type VerbTask } from './index.ts';
 
 // A tiny fake game with example verbs (tests only; the kit holds no game verbs).
 type Step =
@@ -124,6 +124,16 @@ describe('card-language (K206)', () => {
     const nested: AnyVerbTable = { ...VERBS, either: { fields: { a: effectOf(() => nested) }, run: null, text: null } };
     expect(validateStep(nested, { op: 'either', a: [{ op: 'gain' }] })).toEqual(['a[0]: gain needs amount']);
     expect(validateStep(nested, { op: 'either', a: [{ op: 'gain', amount: -1 }] })).toEqual(['a: either a must be [0].amount: gain amount must be a positive integer']);
+  });
+
+  it('K295 a value object with an op key (calc, cmp) in a field is a value, not a step; steps in effect lists still are', () => {
+    const any: Field = () => null;
+    const T: AnyVerbTable = { gain: { fields: { res: str, n: any }, run: null, text: null }, either: { fields: { a: effectOf(() => T), when: optional(any) }, run: null, text: null } };
+    expect(validateEffect(T, [{ op: 'gain', res: 'light', n: { a: 'calc', op: 'add', l: 1, r: 1 } }])).toEqual([]);
+    expect(validateEffect(T, [{ op: 'either', when: { c: 'cmp', op: '==', l: { a: 'calc', op: 'add', l: 1, r: 1 }, r: 2 }, a: [{ op: 'gain', res: 'x', n: 1 }] }])).toEqual([]);
+    expect(validateStep(T, { op: 'gain', res: 'light', n: { a: 'calc', op: 'add' } })).toEqual([]);
+    expect(validateEffect(T, [{ op: 'either', a: [{ op: 'fly' }] }])).toEqual(['[0].a[0].op: unknown op "fly"']);
+    expect(validateEffect(T, [{ op: 'either', a: [{ op: 'gain', res: 'x' }] }])).toEqual(['[0].a[0]: gain needs n']);
   });
 
   it('every verb has a handler, a text generator and an example with no rule id (plain-text filter)', () => {

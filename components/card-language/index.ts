@@ -82,6 +82,13 @@ function fieldProblems(table: AnyVerbTable, step: unknown, at: string): string[]
   return out;
 }
 
+// K295: only objects in a step position (the root, or an element of a list in a step's field) are steps; any other
+// object (a value expression such as `{ a: 'calc', op: 'add' }`) keeps its keys but hides its `op` from the grammar.
+const plain = (v: unknown): v is Record<string, unknown> => typeof v === 'object' && v !== null && !Array.isArray(v);
+const asValue = (v: unknown): unknown => (Array.isArray(v) ? v.map(asValue) : plain(v) ? Object.fromEntries(Object.entries(v).filter(([k]) => k !== 'op').map(([k, x]) => [k, asValue(x)])) : v);
+const inList = (v: unknown): unknown => (Array.isArray(v) ? v.map(inList) : plain(v) ? asStep(v) : v);
+const asStep = (v: unknown): unknown => (plain(v) ? Object.fromEntries(Object.entries(v).map(([k, x]) => [k, k === 'op' ? x : Array.isArray(x) ? inList(x) : asValue(x)])) : v);
+
 const shapeProblems = (table: AnyVerbTable, step: unknown, at: string): string[] => {
   if (typeof step !== 'object' || step === null || Array.isArray(step)) return [`${at || '(root)'}: a step must be an object`];
   const op = (step as Record<string, unknown>).op;
@@ -93,7 +100,7 @@ const shapeProblems = (table: AnyVerbTable, step: unknown, at: string): string[]
 export function validateStep(table: AnyVerbTable, step: unknown): string[] {
   const shape = shapeProblems(table, step, '');
   if (shape.length > 0) return shape;
-  return [...strictProblems(grammarOf(table), step).map((p) => p.message), ...fieldProblems(table, step, '')];
+  return [...strictProblems(grammarOf(table), asStep(step)).map((p) => p.message), ...fieldProblems(table, step, '')];
 }
 
 /** The problems of an effect (a non-empty list of steps); paths start with the step's index. */
@@ -101,7 +108,7 @@ export function validateEffect(table: AnyVerbTable, steps: unknown): string[] {
   if (!Array.isArray(steps) || steps.length === 0) return ['an effect must be a non-empty list of steps'];
   const shape = steps.flatMap((s, i) => shapeProblems(table, s, `[${String(i)}]`));
   if (shape.length > 0) return shape;
-  return [...strictProblems(grammarOf(table), steps).map((p) => p.message), ...steps.flatMap((s, i) => fieldProblems(table, s, `[${String(i)}]`))];
+  return [...strictProblems(grammarOf(table), inList(steps)).map((p) => p.message), ...steps.flatMap((s, i) => fieldProblems(table, s, `[${String(i)}]`))];
 }
 
 const verbOf = (table: AnyVerbTable, step: Step): AnyVerbTable[string] => {

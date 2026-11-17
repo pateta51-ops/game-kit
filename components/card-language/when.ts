@@ -26,17 +26,17 @@ export interface WhenConfig<G extends GameTypes, E> {
   /** Card data by card (definition) id. */
   readonly pool: Readonly<Record<string, WhenCard>>;
   /** The controller of a card. */
-  readonly player: (s: G['state'], card: string) => string;
+  readonly player: (s: G['state'], card: string, content: G['content']) => string;
   /** The definition id of a card (default the card id). */
-  readonly defOf?: (s: G['state'], card: string) => string;
+  readonly defOf?: (s: G['state'], card: string, content: G['content']) => string;
   /** Where a card's triggers are live (default: card-zones zone `play` or `play:<seat>`). */
-  readonly active?: (s: G['state'], card: string) => boolean;
+  readonly active?: (s: G['state'], card: string, content: G['content']) => boolean;
   /** The cards to look at (default every card of every zone that is `active`). */
-  readonly sources?: (s: G['state']) => readonly string[];
-  /** The env the steps run with (default `{ seat: player, source: card }`). */
-  readonly env?: (s: G['state'], card: string, player: string) => E;
+  readonly sources?: (s: G['state'], content: G['content']) => readonly string[];
+  /** The env the steps run with (default `{ seat: player, source: card }`). K295: `occurrences` = what triggered it (the one occurrence when testing `if`, the trigger's at resolve). */
+  readonly env?: (s: G['state'], card: string, player: string, occurrences: readonly Occurrence[], content: G['content']) => E;
   /** The game's tests named by `if`. */
-  readonly tests?: Readonly<Record<string, (s: G['state'], env: E, occ: Occurrence) => boolean>>;
+  readonly tests?: Readonly<Record<string, (s: G['state'], env: E, occ: Occurrence, content: G['content']) => boolean>>;
   /** The game's verb table: needed when an entry is `optional` (it must hold `may`). */
   readonly table?: AnyVerbTable;
 }
@@ -48,8 +48,8 @@ const inPlay = (s: unknown, card: string): boolean => {
 
 /** Spread into engine-core's `TimingConfig`: `triggersFor`, `invalid` (source no longer active) and `resolveTrigger` (pushes `then` as verb tasks). */
 export function cardTriggers<G extends GameTypes, E = { seat: string; source: string }>(cfg: WhenConfig<G, E>): {
-  triggersFor(s: G['state'], o: Occurrence): readonly TriggerCandidate[];
-  invalid(s: G['state'], t: PendingTrigger): string | undefined;
+  triggersFor(s: G['state'], o: Occurrence, content?: G['content']): readonly TriggerCandidate[];
+  invalid(s: G['state'], t: PendingTrigger, content?: G['content']): string | undefined;
   resolveTrigger(ctx: Ctx<G>, t: PendingTrigger): void;
 } {
   for (const [d, c] of Object.entries(cfg.pool))
@@ -60,24 +60,24 @@ export function cardTriggers<G extends GameTypes, E = { seat: string; source: st
   const active = cfg.active ?? inPlay;
   const def = cfg.defOf ?? ((_s, c) => c);
   const env = cfg.env ?? ((_s, card, seat) => ({ seat, source: card }) as E);
-  const sources = cfg.sources ?? ((s) => Object.values((s as unknown as Zoned).zones).flatMap((z) => z.cards).filter((c) => active(s, c)));
-  const entry = (s: G['state'], t: PendingTrigger): When | undefined => cfg.pool[def(s, t.source)]?.when?.[Number(t.ability.slice(t.ability.lastIndexOf('#') + 1))];
+  const sources = cfg.sources ?? ((s, k) => Object.values((s as unknown as Zoned).zones).flatMap((z) => z.cards).filter((c) => active(s, c, k)));
+  const entry = (s: G['state'], t: PendingTrigger, k: G['content']): When | undefined => cfg.pool[def(s, t.source, k)]?.when?.[Number(t.ability.slice(t.ability.lastIndexOf('#') + 1))];
   return {
-    triggersFor: (s, o) =>
-      sources(s).flatMap((card) => {
-        const d = def(s, card);
-        const player = cfg.player(s, card);
+    triggersFor: (s, o, k) =>
+      sources(s, k).flatMap((card) => {
+        const d = def(s, card, k);
+        const player = cfg.player(s, card, k);
         return (cfg.pool[d]?.when ?? []).flatMap((w, i): TriggerCandidate[] => {
           if (w.on !== o.kind) return [];
-          if (w.if !== undefined && !(cfg.tests?.[w.if] as NonNullable<typeof cfg.tests>[string])(s, env(s, card, player), o)) return [];
+          if (w.if !== undefined && !(cfg.tests?.[w.if] as NonNullable<typeof cfg.tests>[string])(s, env(s, card, player, [o], k), o, k)) return [];
           return [{ ability: `${d}#${String(i).padStart(4, '0')}`, source: card, player, ...(w.once ? { once: w.once } : {}), ...(w.order ? { order: w.order } : {}), ...(w.timing ? { timing: w.timing } : {}) }];
         });
       }),
-    invalid: (s, t) => (active(s, t.source) ? undefined : 'left play'),
+    invalid: (s, t, k) => (active(s, t.source, k) ? undefined : 'left play'),
     resolveTrigger: (ctx, t) => {
-      const w = entry(ctx.s, t);
+      const w = entry(ctx.s, t, ctx.content);
       if (w === undefined) throw new EngineBugError(`cardTriggers: no when entry for ${t.ability}`);
-      ctx.then(...(effectTasks(w.optional === true ? [{ op: 'may', then: w.then } as Step] : w.then, env(ctx.s, t.source, t.player)) as unknown as G['task'][]));
+      ctx.then(...(effectTasks(w.optional === true ? [{ op: 'may', then: w.then } as Step] : w.then, env(ctx.s, t.source, t.player, t.occurrences, ctx.content)) as unknown as G['task'][]));
     },
   };
 }
