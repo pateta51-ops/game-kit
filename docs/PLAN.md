@@ -413,6 +413,7 @@ Tasks T1-T18 of `docs/evaluation/AUDIT-2026-11-16.md` section 13, run in the pha
 | K258 | (audit T2, G14) Generated `docs/ARCHITECTURE.md`: Mermaid graph from `needs`, parts nothing needs; `catalog.mjs --check` fails when stale | audit | S | done |
 | K260 | (audit T18, G15 part) Coverage report in CI: per-component line-% table after the test lane, no threshold | audit | S | done |
 | K257 | (audit T4, G13) `kit check --source <game-kit>`: the locked tag still points at the locked commit and each locked component matches that tree; tags annotated from here on | audit | S | done |
+| K261 | Lint ignores `.cache/`: the lint lane raced `components:check` writing `.cache/readme-examples` and failed on generated files | CI | S | done |
 
 ## Size
 
