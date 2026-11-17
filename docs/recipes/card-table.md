@@ -14,6 +14,8 @@ Proof: a test that moves every card through every zone with `zoneProblems` clean
 ## Piles (K219)
 A resource number that counts up, bumps and tags its change, with a `data-res` anchor for flights: `counter` (`Counter`, `bumpCounter`; README).
 
+A row of spaces with a marker that glides, on a drawn row or on a mat image; a hop-and-fill bar with a multiplier badge; a step list with one lit step: `track` (`Track`, `HopTrack`, `StepTrack`; README).
+
 A stack you may look through, with picks from it and a phone grid: `card-pile` (`Pile` over a `ZoneView`, marks from `useBoardPick`; README).
 
 ## Attachments and card tokens (K245)

@@ -1,0 +1,24 @@
+{
+  "name": "track",
+  "source": {
+    "game": "unstoppable",
+    "commit": "e395a7c4",
+    "paths": [
+      "src/ui/board/DangerTrack.tsx (spaces, states, labels, drawn row and mat rendering; danger rules, difficulty and skull left out)",
+      "src/ui/board/threatBuffs.tsx useMarkerGlide (FLIP glide)"
+    ],
+    "grafts": [
+      {
+        "game": "stcc",
+        "commit": "8e6f55bd",
+        "paths": [
+          "src/ui/motion/effects/crewTrack.ts (hop, fill, badge pop, pulses, rise; colours left to the game)",
+          "src/ui/board/StepTrack.tsx (from LotR PhaseTracker)"
+        ]
+      }
+    ],
+    "licence": "StepTrack follows halogenandtoast/LordOfTheRings PhaseTracker.vue (BSD-3-Clause, notice in LICENSE-LordOfTheRings.txt, kept here)."
+  },
+  "needs": ["counter", "motion-frame"],
+  "packages": ["react"]
+}
