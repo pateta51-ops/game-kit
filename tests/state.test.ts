@@ -8,13 +8,18 @@ const SCRIPT = path.join(dirname(import.meta.dirname), 'scripts', 'state.mjs');
 const root = fs.mkdtempSync(path.join(os.tmpdir(), 'state-test-'));
 afterAll(() => fs.rmSync(root, { recursive: true, force: true }));
 fs.mkdirSync(path.join(root, 'docs'));
-fs.writeFileSync(path.join(root, 'docs', 'PLAN.md'), [
-  '# Plan', '', '## Stage A', '', '| # | Batch | Size | State |', '|---|---|---|---|',
-  '| K1 | (GAPS A1) First thing. More words | S | done |',
-  '| K2 | Second thing: details | M | proposed |',
-  '', '### Wave B', '', '| Batch | Content | Effort | State |', '|---|---|---|---|',
-  '| K3 | Third | S | done (x) |', '| K4 | Fourth | S | waits for a game |', '',
-].join('\n'));
+fs.mkdirSync(path.join(root, 'docs', 'plan'));
+const row = (id: string, section: string, order: number, content: string, state: string) => fs.writeFileSync(path.join(root, 'docs', 'plan', id + '.md'), `---
+section: ${section}
+order: ${order}
+state: ${state}
+---
+${content}
+`);
+row('K1', 'Stage A', 10, '(GAPS A1) First thing. More words', 'done');
+row('K2', 'Stage A', 20, 'Second thing: details', 'proposed');
+row('K3', 'Wave B', 30, 'Third', 'done (x)');
+row('K4', 'Wave B', 40, 'Fourth', 'waits for a game');
 fs.mkdirSync(path.join(root, 'docs', 'evaluation'));
 fs.writeFileSync(path.join(root, 'docs', 'evaluation', 'GAPS.md'), '# G\n\n- C1: **watch**. Revisit later.\n- C2: done.\n');
 const run = () => spawnSync('node', [SCRIPT, root, '--games'], { encoding: 'utf8' });
@@ -30,7 +35,7 @@ it('lists open rows by section, counts done, lists watch rows', () => {
 });
 
 it('reopened rows count nowhere', () => {
-  fs.appendFileSync(path.join(root, 'docs', 'PLAN.md'), '| K5 | Fifth | S | reopened as K9 |\n');
+  row('K5', 'Wave B', 50, 'Fifth', 'reopened as K9');
   const s = run().stdout;
   expect(s).toContain('of 4.');
   expect(s).not.toContain('K5');

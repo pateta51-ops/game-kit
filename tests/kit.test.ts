@@ -303,5 +303,8 @@ describe('kit.mjs', () => {
     put(path.join(d, 'b.md'), '| K210 | open PR row | S |\n');
     expect(run(d, 'next-id', '--from', 'a.md', 'b.md').stdout.trim()).toBe('K211');
     expect(run(d, 'next-id', '3', '--from', 'a.md').stdout.trim()).toBe('K208 K209 K210');
+    put(path.join(d, 'plan', 'K300.md'), '---\nsection: x\n---\nrow\n');
+    put(path.join(d, 'plan', 'K301-2.md'), '---\nid: K301\n---\nrow\n');
+    expect(run(d, 'next-id', '--from', 'plan').stdout.trim()).toBe('K302');
   });
 });

@@ -3,7 +3,7 @@
 //   node <kit>/kit.mjs pull <path to game-kit checkout> <tag or commit> [component...]   moves the whole kit to one tag (named components are added); atomic
 //   node kit/kit.mjs list | search <word>                                              the catalogue of every component (pulled or not), from kit/CATALOG.md
 //   node kit.mjs state                                                                  (game-kit checkout) prints what is open (PLAN rows not done, waiting, watch)
-//   node kit.mjs next-id [n] [--from <PLAN.md>...]                                     (game-kit checkout) the next free K number(s): origin/main and every open PR's docs/PLAN.md
+//   node kit.mjs next-id [n] [--from <docs/plan dir or file>...]                                (game-kit checkout) the next free K number(s): origin/main and every open PR's docs/plan/ file names
 //   node kit.mjs next-id [n] --reserve                                                 also reserves the ids on origin (refs/kit-reserved/K<n>) so no other session gets them
 //   node kit.mjs worktree --branch <b> | worktree --here | finish [--comment] | teardown --worktree <dir>   worker commands, plain node (scripts/agent.mjs, pulled as kit/agent.mjs); finish prints PASS|FAIL <sha>
 //   node kit/kit.mjs outdated [<game-kit checkout>]                                    the game's tag vs the latest, the PLAN rows and breaking notes between them
@@ -77,9 +77,10 @@ if (cmd === 'pull') {
   const ff = a.indexOf('--from')
   const cnt = Number(a.find((v, i) => /^\d+$/.test(v) && (ff < 0 || i < ff)) ?? 1)
   let texts
-  if (ff >= 0) texts = a.slice(ff + 1).map((f) => fs.readFileSync(f, 'utf8'))
+  if (ff >= 0) texts = a.slice(ff + 1).map((f) => fs.statSync(f).isDirectory() ? fs.readdirSync(f).map((n) => n.replace(/^(K\d+).*/, '| $1 |')).join('\n') : fs.readFileSync(f, 'utf8'))
   else {
-    const plan = (r) => x('git', ['show', r + ':docs/PLAN.md'], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] })
+    const sh = (...v) => { try { return x('git', v, { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] }) } catch { return '' } }
+    const plan = (r) => { const t = sh('show', r + ':docs/PLAN.md') + sh('ls-tree', '--name-only', r, 'docs/plan/').replace(/^docs\/plan\/(K\d+)\S*$/gm, '| $1 |'); if (!t) throw new Error('no plan'); return t }
     try { x('git', ['fetch', '-q', 'origin']) } catch { console.error('warning: fetch failed, using the local origin/main') }
     texts = [plan('origin/main')]
     try {

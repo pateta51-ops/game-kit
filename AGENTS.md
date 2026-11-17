@@ -14,7 +14,7 @@ Needs Node 22.18+: tools run with plain `node` (no tsx, no build); relative impo
 - A game holds one kit tag. `node ../game-kit/kit.mjs pull ../game-kit <tag> [component...]` copies components (and their `needs`), moves the whole kit to that tag, and writes `kit/kit.lock.json` plus `kit/CATALOG.md`. Run `node kit/kit.mjs outdated` first ([upgrade-kit](docs/recipes/upgrade-kit.md)). `node kit/kit.mjs check` fails when `kit/` differs from the lock; every game runs it in its check chain. `node kit/kit.mjs check --source ../game-kit` also proves `kit/` matches the game-kit tag it names (fails if the tag moved).
 - Before writing anything in a game: `node kit/kit.mjs search <word>`, then `kit/recipes/`, then the component README. `pull` copies `docs/recipes/` to `kit/recipes/`; `check` guards it like the rest.
 - Inside a game, find what exists without the kit checkout: `node kit/kit.mjs list`, `node kit/kit.mjs search <word>`.
-- Before adding a row to `docs/PLAN.md`, take its id with `node kit.mjs next-id` (in the game-kit checkout); it reads main and every open PR.
+- Before adding a plan row, take its id with `node kit.mjs next-id --reserve` (in the game-kit checkout); it reads main and every open PR. The row is the file `docs/plan/K<n>.md` (front matter: `section`, then the table's columns such as `sources`, `effort`, `state`; the content line below it; copy a neighbour). Then run `node scripts/plan.mjs`: it writes `docs/PLAN.md` (generated, committed; never edit it by hand; on a merge conflict in it, resolve the row files and regenerate).
 - Owner host and paths for phone serving live in an untracked `kit.local.json` (copy `kit.local.example.json`).
 - Start a new game: `node kit.mjs new <dir> <id> "<Name>"` does it all (port block, repo, kit pull, first commit, GitHub repo).
 - Workers: `node kit.mjs worktree` (or `worktree --here` when you already are in a worktree), `finish` (prints `PASS <sha>`; the reviewer checks it against the PR head) and `teardown`; no install needed. `next-id --reserve` holds the id.
@@ -29,7 +29,7 @@ Needs Node 22.18+: tools run with plain `node` (no tsx, no build); relative impo
 
 ## Change the kit
 1. Look at open PRs: **one open PR per component**. Wait for or continue the one touching yours.
-2. Branch `k<n>-<name>` from `origin/main` in a worktree of this repository. Add or find the row in `docs/PLAN.md` (open only the table you edit) (next free K number; a component taken from a game also gets a line in `docs/SELECTION.md`, not enforced). Mark the row done in the same PR.
+2. Branch `k<n>-<name>` from `origin/main` in a worktree of this repository. Add or find the row file `docs/plan/K<n>.md` (next free K number; set `state: done` in the same PR, then `node scripts/plan.mjs`; a component taken from a game also gets a line in `docs/SELECTION.md`, not enforced). Mark the row done in the same PR.
 3. A bug: failing test first, then the fix.
 4. Interfaces grow by addition; nothing breaking. A breaking change says `breaking` in its title and lists what a game must change.
 5. New component: `components/<name>/` with `component.json` (`name`, `source.game`, `source.commit`, `source.paths`, `needs`), a README (non-empty first line), tests (a `*.test.*` or `test_*.py` file in the folder), and an entry in `docs/catalog-notes.json` (`use`, `not`). `npm run check` fails without them.
@@ -45,7 +45,7 @@ Needs Node 22.18+: tools run with plain `node` (no tsx, no build); relative impo
 - Showing rule ids (`TURN-07`, `AR-12`) on screen: use `plain-text`.
 - Reading hidden state in an opponent (see below).
 - Unseeded randomness in an engine (`Math.random`, clock): only `ctx.rng`.
-- Editing `docs/CATALOG.md` by hand: run `node scripts/catalog.mjs`.
+- Editing `docs/CATALOG.md` or `docs/PLAN.md` by hand: run `node scripts/catalog.mjs` / `node scripts/plan.mjs` (`components:check` fails when stale).
 - Running heavy tests locally on Windows.
 - Inventing a port, or hard-coding one that is not in `ports.json` (see "Ports" below).
 - Re-reading files or pictures already in context; repeating a failed call unchanged (three strikes, then stop and report).

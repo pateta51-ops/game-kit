@@ -4,6 +4,7 @@
 import fs from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { render } from './plan.mjs'
 
 const top = path.dirname(path.dirname(fileURLToPath(import.meta.url)))
 const J = (...p) => path.join(top, ...p)
@@ -94,7 +95,7 @@ const arch =
   '```mermaid\ngraph LR\n' + names.filter((n) => deps[n]).map((n) => deps[n].length ? deps[n].map((d) => `  ${id(n)}["${n}"] --> ${id(d)}["${d}"]`).join('\n') : `  ${id(n)}["${n}"]`).join('\n') + '\n```\n\n' +
   '## Leaf parts nothing needs\n\n' + (names.filter((n) => deps[n] && !used.has(n)).map((n) => `- \`${n}\``).join('\n') || 'none') + '\n'
 let stale = 0
-for (const [f, text] of [['CATALOG.md', body], ['ARCHITECTURE.md', arch]]) {
+for (const [f, text] of [['CATALOG.md', body], ['ARCHITECTURE.md', arch], ['PLAN.md', render(top)]]) {
   const file = J('docs', f)
   if (arg === '--check') {
     if (!fs.existsSync(file) || rd(file).replace(/\r\n/g, '\n') !== text) { console.error(`docs/${f} is stale: run node scripts/catalog.mjs`); stale = 1 }

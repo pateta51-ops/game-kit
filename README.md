@@ -31,7 +31,7 @@ Needs Node 22.18 or newer: every kit tool runs with plain `node` (type stripping
 - `scripts/catalog.mjs` - writes `docs/CATALOG.md` (`--check` in `npm run check`).
 - `components/<name>/` - one folder per component: code, tests, `component.json`.
 - `docs/SELECTION.md` - which game each component comes from, and why.
-- `docs/PLAN.md` - the batches that build the kit, and their state.
+- `docs/PLAN.md` - the batches that build the kit, and their state (generated from `docs/plan/K<n>.md`, one file per row, and `docs/plan/_template.md`).
 - `docs/evaluation/` - the evidence behind the selection.
 - `docs/patterns/` - things that are shared as a described pattern, not as code.
 

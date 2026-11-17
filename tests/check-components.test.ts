@@ -90,7 +90,9 @@ describe('ARCHITECTURE.md', () => {
     fs.mkdirSync(path.join(root, 'scripts'));
     fs.mkdirSync(path.join(root, 'docs'));
     fs.copyFileSync(path.join(top, 'scripts', 'catalog.mjs'), path.join(root, 'scripts', 'catalog.mjs'));
-    for (const f of ['catalog-notes.json', 'CATALOG.md', 'ARCHITECTURE.md']) fs.copyFileSync(path.join(top, 'docs', f), path.join(root, 'docs', f));
+    fs.copyFileSync(path.join(top, 'scripts', 'plan.mjs'), path.join(root, 'scripts', 'plan.mjs'));
+    fs.cpSync(path.join(top, 'docs', 'plan'), path.join(root, 'docs', 'plan'), { recursive: true });
+    for (const f of ['catalog-notes.json', 'CATALOG.md', 'ARCHITECTURE.md', 'PLAN.md']) fs.copyFileSync(path.join(top, 'docs', f), path.join(root, 'docs', f));
     const run = () => spawnSync('node', [path.join(root, 'scripts', 'catalog.mjs'), '--check'], { encoding: 'utf8' });
     expect(run().status).toBe(0);
     const f = path.join(root, 'components', 'achievements', 'component.json');
