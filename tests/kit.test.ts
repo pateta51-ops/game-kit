@@ -1,4 +1,5 @@
 import { execFileSync, spawnSync } from 'node:child_process';
+import { createHash } from 'node:crypto';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
@@ -13,7 +14,7 @@ const git = (cwd: string, ...a: string[]) =>
 const commit = (msg: string) => {
   git(src, 'add', '-A');
   git(src, 'commit', '-qm', msg);
-  git(src, 'tag', '-f', msg);
+  git(src, 'tag', '-f', '-a', msg, '-m', msg);
 };
 const run = (cwd: string, ...a: string[]) => spawnSync('node', [KIT, ...a], { cwd, encoding: 'utf8' });
 const game = () => {
@@ -260,6 +261,31 @@ describe('kit.mjs', () => {
     expect(o.stdout).toContain('K900 alpha grows');
     expect(o.stdout).toContain('K901 breaking alpha rename   <- BREAKING');
     expect(o.stdout).toContain('README alpha: Breaking: a renamed.');
+  });
+
+  it('K257: check --source passes, then fails when the annotated tag moved or a file differs', () => {
+    git(src, 'tag', '-f', '-a', 'k257', '-m', 'k257');
+    const g = game();
+    expect(run(g, 'pull', src, 'k257', 'alpha').status).toBe(0);
+    expect(run(g, 'check', '--source', src).status).toBe(0);
+    put(path.join(src, 'components/alpha/moved.txt'), 'x\n');
+    git(src, 'add', '-A'); git(src, 'commit', '-qm', 'K257 later');
+    expect(run(g, 'check', '--source', src).status).toBe(0);
+    git(src, 'tag', '-f', '-a', 'k257', '-m', 'k257');
+    const m = run(g, 'check', '--source', src);
+    expect(m.status).toBe(1);
+    expect(m.stderr).toContain('tag k257 moved');
+    expect(run(g, 'check').status).toBe(0);
+    const h = game();
+    run(h, 'pull', src, 'k257', 'alpha');
+    const lf = path.join(h, 'kit/kit.lock.json');
+    const lock = JSON.parse(fs.readFileSync(lf, 'utf8')) as { components: { alpha: { files: Record<string, string> } } };
+    fs.writeFileSync(path.join(h, 'kit/alpha/a.txt'), 'edited\n');
+    lock.components.alpha.files['kit/alpha/a.txt'] = createHash('sha256').update('edited\n').digest('hex');
+    fs.writeFileSync(lf, JSON.stringify(lock));
+    const d = run(h, 'check', '--source', src);
+    expect(d.status).toBe(1);
+    expect(d.stderr).toContain('content differs from the tagged commit: kit/alpha/a.txt');
   });
 
   it('a cycle of needs ends', () => {

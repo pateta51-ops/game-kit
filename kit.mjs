@@ -7,7 +7,7 @@
 //   node kit.mjs next-id [n] --reserve                                                 also reserves the ids on origin (refs/kit-reserved/K<n>) so no other session gets them
 //   node kit.mjs worktree --branch <b> | worktree --here | finish [--comment] | teardown --worktree <dir>   worker commands, plain node (scripts/agent.mjs, pulled as kit/agent.mjs); finish prints PASS|FAIL <sha>
 //   node kit/kit.mjs outdated [<game-kit checkout>]                                    the game's tag vs the latest, the PLAN rows and breaking notes between them
-//   node kit/kit.mjs check                                                              fails if ./kit differs from kit/kit.lock.json
+//   node kit/kit.mjs check [--source <game-kit checkout>]                               fails if ./kit differs from kit/kit.lock.json; --source also fails if the tag moved off the locked commit or that commit holds other content
 import { execFileSync as x, spawnSync } from 'node:child_process'
 import { createHash } from 'node:crypto'
 import fs from 'node:fs'
@@ -124,6 +124,27 @@ if (cmd === 'pull') {
   if (bad.length) {
     console.error('kit/ differs from kit/kit.lock.json. Change the code in the game-kit repo and pull a new version; never edit this copy.\n' + bad.join('\n'))
     process.exit(1)
+  }
+  const si = a.indexOf('--source')
+  if (si >= 0) {
+    const src = a[si + 1], drift = []
+    if (!src || !lock.ref || !lock.commit) { console.error('check --source needs a game-kit checkout and a lock with ref and commit'); process.exit(1) }
+    const gs = (...c) => x('git', ['-C', src, ...c], { maxBuffer: 1 << 30, stdio: ['ignore', 'pipe', 'pipe'] })
+    let now
+    try { now = gs('rev-parse', lock.ref + '^{commit}').toString().trim() } catch { drift.push('tag ' + lock.ref + ' not found in ' + src + ' (run git fetch --tags in ' + src + ')') }
+    if (now && now !== lock.commit) drift.push('tag ' + lock.ref + ' moved: the lock has ' + lock.commit + ', ' + src + ' has ' + now)
+    if (!drift.length) for (const [n, c] of Object.entries(lock.components)) {
+      let names
+      try { names = gs('ls-tree', '-r', '--name-only', lock.commit, 'components/' + n).toString().split(/\r?\n/).filter(Boolean) } catch { drift.push('commit ' + lock.commit + ' not in ' + src); break }
+      const want = names.map((f) => f.replace('components/', 'kit/'))
+      for (const f of Object.keys(c.files)) if (!want.includes(f)) drift.push('not in the tagged commit: ' + f)
+      for (const f of want) {
+        if (!(f in c.files)) { drift.push('in the tagged commit, not in the lock: ' + f); continue }
+        const b = gs('show', lock.commit + ':' + f.replace('kit/', 'components/'))
+        if (createHash('sha256').update(b.includes(0) ? b : b.toString('utf8').replace(/\r\n/g, '\n')).digest('hex') !== c.files[f]) drift.push('content differs from the tagged commit: ' + f)
+      }
+    }
+    if (drift.length) { console.error('kit/ does not match ' + lock.ref + ' in ' + src + '\n' + drift.join('\n')); process.exit(1) }
   }
   if (fs.existsSync('package.json')) {
     const pj = JSON.parse(fs.readFileSync('package.json', 'utf8')), have = { ...pj.dependencies, ...pj.devDependencies }

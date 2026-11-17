@@ -412,6 +412,7 @@ Tasks T1-T18 of `docs/evaluation/AUDIT-2026-11-16.md` section 13, run in the pha
 | K259 | (audit T17, G20) Owner host and serve root move to untracked `kit.local.json` (example committed); generic defaults without it; plan-checker finds the kit without a fixed path | audit | S | done |
 | K258 | (audit T2, G14) Generated `docs/ARCHITECTURE.md`: Mermaid graph from `needs`, parts nothing needs; `catalog.mjs --check` fails when stale | audit | S | done |
 | K260 | (audit T18, G15 part) Coverage report in CI: per-component line-% table after the test lane, no threshold | audit | S | done |
+| K257 | (audit T4, G13) `kit check --source <game-kit>`: the locked tag still points at the locked commit and each locked component matches that tree; tags annotated from here on | audit | S | done |
 
 ## Size
 

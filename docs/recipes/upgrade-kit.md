@@ -4,6 +4,7 @@
 2. Upgrade only if a row you need is there. Read each README note marked breaking.
 3. `node kit/kit.mjs pull ../game-kit <tag>`: one tag per game; this moves the whole kit, not one component.
 4. `node kit/kit.mjs check`, then the game's `npm run check`; fix what a breaking row lists.
+   To also prove the tag was not moved and the content is what the tag holds: `node kit/kit.mjs check --source ../game-kit` (fails when the tag points at another commit or the locked files differ). Tag releases annotated: `git tag -a <v> -m <v>`.
 5. Commit `kit/` alone, with the tag in the message. Never edit `kit/` by hand.
 
 ## Upgrading past K229 (breaking: the kit runs on plain node)
