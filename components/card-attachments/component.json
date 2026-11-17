@@ -1,0 +1,17 @@
+{
+  "name": "card-attachments",
+  "source": {
+    "game": "earthborne-rangers-fan-prototype",
+    "commit": "b9b06107",
+    "paths": [
+      "src/ui/table/geometry.ts (TUCK, tuckOffset, tuckSpots, outSpots, outSpan, footprint, tuckedTurned, sideOut; CardView became a { turned } box and the host's attachments a list; tag, row and plan code left)",
+      "src/ui/cards/Tokens.tsx (TokenRow's one-each-then-xN, NumberBox's changed and zero marks; TokenSvg, ClearsTag, colours and fonts left to the game: it passes its own render)",
+      "src/ui/cards/numbers.ts (tokenRow, ROW_MAX, Direction; higherIsBad became changedDir)",
+      "imperium-horizon-fan-prototype 22736b2f: src/ui/board/PlayArea.tsx and GarrisonStack in src/ui/cards/Tokens.tsx (a stack fanned past its host, a tap reads one: fanSpots, onRead)"
+    ]
+  },
+  "needs": [],
+  "packages": [
+    "react"
+  ]
+}

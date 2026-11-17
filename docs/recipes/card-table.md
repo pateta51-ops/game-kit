@@ -16,5 +16,7 @@ A resource number that counts up, bumps and tags its change, with a `data-res` a
 
 A stack you may look through, with picks from it and a phone grid: `card-pile` (`Pile` over a `ZoneView`, marks from `useBoardPick`; README).
 
+## Attachments and card tokens (K245)
+Cards tucked under or fanned past a host, with a pure `footprint` for the row layout, and tokens on a card (a row, ×N past 5, number boxes): `card-attachments` (`HostStack`, `TokenRow`, `NumberBox`; README). The game passes its own token render.
 ## Market (K243)
 Offer slots refilled from decks, buy and cycle options, slide refill and the deal animation: `market-row` (slots are card-zones zones; payment and rules stay the game's; README).
