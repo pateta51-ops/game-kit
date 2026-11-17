@@ -174,8 +174,14 @@ function runScript(script: string, log: string, env: NodeJS.ProcessEnv = process
     };
     const out = reader();
     const err = reader();
-    child.stdout?.on('data', out);
-    child.stderr?.on('data', err);
+    let idle: NodeJS.Timeout | undefined;
+    let exited: (() => void) | undefined;
+    const wake = (f: (c?: Buffer) => void) => (c: Buffer) => {
+      f(c);
+      exited?.();
+    };
+    child.stdout?.on('data', wake(out));
+    child.stderr?.on('data', wake(err));
     let kill: NodeJS.Timeout | undefined;
     const timer = setTimeout(() => {
       appendFileSync(log, `\ncheck-runner: npm run ${script} passed the ${TIMEOUT_MS / 60_000} min limit; stopping it\n`);
@@ -199,6 +205,7 @@ function runScript(script: string, log: string, env: NodeJS.ProcessEnv = process
     const fin = (code: number | null, signal: NodeJS.Signals | null) => {
       if (ended) return;
       ended = true;
+      clearTimeout(idle);
       out();
       err();
       child.stdout?.destroy();
@@ -209,7 +216,14 @@ function runScript(script: string, log: string, env: NodeJS.ProcessEnv = process
     };
     child.on('close', fin);
     // streamed: `close` waits for every holder of the pipes (a background process the check left); `exit` does not
-    if (lane !== undefined) child.on('exit', (code, signal) => setTimeout(() => fin(code, signal), 1000));
+    if (lane !== undefined)
+      child.on('exit', (code, signal) => {
+        exited = () => {
+          clearTimeout(idle);
+          idle = setTimeout(() => fin(code, signal), 3000);
+        };
+        exited();
+      });
   });
 }
 
