@@ -2,8 +2,9 @@
   "checkScript": "check",
   "first": [],
   "lanes": [["lint"], ["typecheck"], ["test"], ["components:check"]],
-  "extra": [],
-  "pr": { "first": [], "lanes": [["lint"], ["typecheck"], ["test"], ["components:check"]] },
+  "last": ["coverage:table"],
+  "extra": ["coverage:table"],
+  "pr": { "first": [], "lanes": [["lint"], ["typecheck"], ["test"], ["components:check"]], "last": ["coverage:table"] },
   "timeoutMinutes": 15,
   "graceSeconds": 20
 }
