@@ -58,3 +58,24 @@ describe('catalog.mjs --check', () => {
     expect(spawnSync('node', [path.resolve(import.meta.dirname, '..', 'scripts', 'catalog.mjs'), '--check'], { encoding: 'utf8' }).status).toBe(0);
   });
 });
+
+describe('ARCHITECTURE.md', () => {
+  it('check fails when a component needs changes', () => {
+    const top = path.resolve(import.meta.dirname, '..');
+    const root = path.join(tmp, 'arch');
+    fs.cpSync(path.join(top, 'components'), path.join(root, 'components'), { recursive: true });
+    fs.mkdirSync(path.join(root, 'scripts'));
+    fs.mkdirSync(path.join(root, 'docs'));
+    fs.copyFileSync(path.join(top, 'scripts', 'catalog.mjs'), path.join(root, 'scripts', 'catalog.mjs'));
+    for (const f of ['catalog-notes.json', 'CATALOG.md', 'ARCHITECTURE.md']) fs.copyFileSync(path.join(top, 'docs', f), path.join(root, 'docs', f));
+    const run = () => spawnSync('node', [path.join(root, 'scripts', 'catalog.mjs'), '--check'], { encoding: 'utf8' });
+    expect(run().status).toBe(0);
+    const f = path.join(root, 'components', 'achievements', 'component.json');
+    const j = JSON.parse(fs.readFileSync(f, 'utf8')) as { needs: string[] };
+    j.needs = [];
+    fs.writeFileSync(f, JSON.stringify(j));
+    const r = run();
+    expect(r.status).toBe(1);
+    expect(r.stderr).toContain('ARCHITECTURE.md is stale');
+  });
+});
