@@ -2,7 +2,7 @@
 export type Rect = [number, number, number, number];
 export type Fan = 'row' | 'column' | 'stack' | 'grid';
 export type Kind = 'cards' | 'component' | 'pile' | 'group';
-export type Zone = { r: Rect; label?: string; cards?: number; fan?: Fan; kind?: Kind; full?: boolean; locked?: boolean; hidden?: boolean; [k: string]: unknown };
+export type Zone = { r: Rect; label?: string; cards?: number; fan?: Fan; kind?: Kind; full?: boolean; scale?: number; locked?: boolean; hidden?: boolean; [k: string]: unknown };
 export type Screen = { w: number; h: number; card: [number, number]; pile?: [number, number]; zones: Record<string, Zone>; [k: string]: unknown };
 export type Doc = { screens: Record<string, Screen> };
 export type Guide = { axis: 'x' | 'y'; at: number };
@@ -17,13 +17,14 @@ function normalizeZone(v: unknown): Zone | null {
   const o: Record<string, unknown> | null = Array.isArray(v) ? { r: v } : isObj(v) ? v : null;
   if (!o || !Array.isArray(o.r)) return null;
   const r = o.r as unknown[];
-  const { r: _r, label: _l, cards: _c, fan: _f, kind: _d, full: _u, locked: _k, hidden: _h, ...rest } = o;
+  const { r: _r, label: _l, cards: _c, fan: _f, kind: _d, full: _u, scale: _sc, locked: _k, hidden: _h, ...rest } = o;
   const z: Zone = { r: [num(r[0], 0), num(r[1], 0), num(r[2], 0), num(r[3], 0)], ...rest };
   if (typeof o.label === 'string' && o.label) z.label = o.label;
   if (o.cards !== undefined && num(o.cards, 0) > 0) z.cards = Math.round(num(o.cards, 0));
   if (typeof o.fan === 'string' && FANS.includes(o.fan)) z.fan = o.fan as Fan;
   if (typeof o.kind === 'string' && KINDS.includes(o.kind)) z.kind = o.kind as Kind;
   if (o.full === true) z.full = true;
+  if (o.scale !== undefined && num(o.scale, 1) < 1 && num(o.scale, 1) > 0) z.scale = Math.max(0.2, num(o.scale, 1));
   if (o.locked === true) z.locked = true;
   if (o.hidden === true) z.hidden = true;
   return z;
@@ -126,8 +127,8 @@ export function snap(r: Rect, others: Rect[], grid: number, tol: number, edges =
 }
 
 // Cards side by side without overlap: row, column, stack (one pile) or grid. scale: the card size (<= 1) at which they fit.
-export function cardFit(zone: Zone, card: [number, number], cards = zone.cards ?? 0, fan: Fan = zone.fan ?? 'row'): { fits: boolean; perRow: number; scale: number } {
-  const [, , w, h] = zone.r, [cw, ch] = card;
+export function cardFit(zone: Zone, card: [number, number], cards = zone.cards ?? 0, fan: Fan = zone.fan ?? 'row', zs = zone.scale ?? 1): { fits: boolean; perRow: number; scale: number } {
+  const [, , w, h] = zone.r, cw = card[0] * zs, ch = card[1] * zs;
   if (cards <= 0 || cw <= 0 || ch <= 0) return { fits: true, perRow: 0, scale: 1 };
   let perRow = 1, s: number;
   if (fan === 'row') { perRow = cards; s = Math.min(w / (cards * cw), h / ch); }
@@ -149,7 +150,7 @@ export function layoutWarnings(s: Screen): Warning[] {
   const ids = Object.keys(s.zones).filter((k) => !s.zones[k]!.hidden);
   for (const id of ids) {
     const z = s.zones[id]!, p = parentOf(s, id);
-    const k = kindOf(z), f = k === 'pile' ? cardFit(z, z.full ? s.card : pileSize(s), 1, 'stack') : k === 'component' || k === 'group' ? null : cardFit(z, s.card);
+    const k = kindOf(z), f = k === 'pile' ? cardFit(z, z.scale || z.full ? s.card : pileSize(s), 1, 'stack', z.scale ?? 1) : k === 'component' || k === 'group' ? null : cardFit(z, s.card);
     if (f && !f.fits) out.push({ id, kind: 'cards', text: k === 'pile' ? `${id}: the pile fits only at ${Math.floor(f.scale * 100)}% of its size` : `${id}: ${z.cards} cards fit only at ${Math.floor(f.scale * 100)}% of the card size` });
     if (!inside(z.r, [0, 0, s.w, s.h])) out.push({ id, kind: 'outside', text: `${id}: outside the screen` });
     else if (p && !inside(z.r, s.zones[p]!.r)) out.push({ id, kind: 'outside', text: `${id}: outside ${p}` });
@@ -246,6 +247,29 @@ export function split(s: Screen, id: string): { screen: Screen; ids: string[] } 
     shift(zones, s, k, nid, r);
   });
   return { screen: { ...s, zones }, ids };
+}
+
+// Take piles out of a consolidated box (a group with `from`): each goes back at full card size beside the box; the box shrinks to the piles left, or goes (split) when fewer than two are left.
+export function takeOut(s: Screen, ids: string[]): { screen: Screen; ids: string[] } {
+  const out: string[] = [];
+  for (const g of new Set(ids.map((k) => parentOf(s, k)).filter((p): p is string => !!p && isObj(s.zones[p]!.from)))) {
+    const take = ids.filter((k) => parentOf(s, k) === g), kids = Object.keys(s.zones).filter((k) => parentOf(s, k) === g), left = kids.filter((k) => !take.includes(k));
+    if (left.length < 2) { const r = split(s, g); s = r.screen; out.push(...r.ids); continue }
+    const p = s.zones[g]!, from = (p.from as Record<string, { id?: string } | undefined>), a = p.r[3] > p.r[2] ? 1 : 0, [pw, ph] = pileSize(s), gap = Math.max(1, Math.round(pw / 8)), [cw, ch] = s.card, cg = Math.max(1, Math.round(cw / 8)), pre = g.includes('.') ? g.slice(0, g.lastIndexOf('.') + 1) : '';
+    left.sort((m, n) => s.zones[m]!.r[a] - s.zones[n]!.r[a]);
+    const n = left.length, W = a ? pw + 2 * gap : n * pw + (n + 1) * gap, H = a ? n * ph + (n + 1) * gap : ph + 2 * gap;
+    const zones = Object.fromEntries(Object.entries(s.zones).filter(([k]) => !take.some((m) => k === m || k.startsWith(m + '.'))));
+    const nf = Object.fromEntries(Object.entries(from).filter(([k]) => !take.includes(k)));
+    zones[g] = { ...p, r: [p.r[0], p.r[1], W, H], from: nf };
+    left.forEach((k, i) => { const r: Rect = a ? [p.r[0] + gap, p.r[1] + gap + i * (ph + gap), pw, ph] : [p.r[0] + gap + i * (pw + gap), p.r[1] + gap, pw, ph]; zones[k] = { ...s.zones[k]!, r }; shift(zones, s, k, k, r); });
+    const y0 = Math.max(0, Math.min(p.r[1], s.h - ch)), m = Math.max(1, Math.floor((s.h - y0 + cg) / (ch + cg))), right = p.r[0] + W + Math.ceil(take.length / m) * (cw + cg) <= s.w;
+    take.forEach((k, i) => {
+      const nid = freeId({ ...s, zones }, from[k]?.id ?? pre + last(k)), r: Rect = [right ? p.r[0] + W + cg + Math.floor(i / m) * (cw + cg) : p.r[0] - cg - cw - Math.floor(i / m) * (cw + cg), y0 + (i % m) * (ch + cg), cw, ch];
+      const { scale: _s, ...zk } = s.zones[k]!; zones[nid] = { ...zk, r, kind: 'pile', full: true }; out.push(nid); shift(zones, s, k, nid, r);
+    });
+    s = { ...s, zones };
+  }
+  return { screen: s, ids: out };
 }
 
 // Copy a zone and its children from another screen; a taken id gets a -2 suffix.

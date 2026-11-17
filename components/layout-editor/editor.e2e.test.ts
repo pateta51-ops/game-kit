@@ -127,6 +127,28 @@ describe.skipIf(!HAVE)('K269 layout editor in Chromium', () => {
     const s = (await get()).screens.desktop!.zones;
     expect([s['you.piles'], s['you.deck']!.r.slice(2), s['you.captain']!.cards]).toEqual([undefined, [180, 252], 1]);
   });
+  it('K298 take out one pile of three, undo; zone card size 50% clears the warning and shows in the label; every control has a title', async () => {
+    await load(SAMPLE); await zoom(1);
+    await page.locator('#tree .row[data-id="you.deck"] span').click();
+    for (const k of ['you.discard', 'you.captain']) await page.locator(`#tree .row[data-id="${k}"] span`).click({ modifiers: ['Shift'] });
+    await page.click('#cons');
+    const cons = await get();
+    await page.locator('#tree .row[data-id="you.piles.discard"] span').click();
+    await page.click('#takeOut');
+    const z = (await get()).screens.desktop!.zones;
+    expect([z['you.discard']!.kind, z['you.discard']!.full, z['you.discard']!.r.slice(2), z['you.piles.discard'], Object.keys(z['you.piles']!.from as object)]).toEqual(['pile', true, [180, 252], undefined, ['you.piles.deck', 'you.piles.captain']]);
+    await page.keyboard.press('Control+z');
+    expect(await get()).toEqual(cons);
+    await load(JSON.stringify({ w: 1000, h: 1000, card: [100, 140], zones: { a: { r: [0, 0, 300, 140], cards: 4, fan: 'row' } } }));
+    expect(await page.locator('#warns').innerText()).toContain('4 cards');
+    await page.locator('#tree .row[data-id="a"] span').click();
+    await page.fill('#zSn', '50'); await page.press('#zSn', 'Enter');
+    expect((await get()).screens.main!.zones.a!.scale).toBe(0.5);
+    expect(await page.locator('#warns').innerText()).not.toContain('4 cards');
+    expect(await page.locator('.z[data-id="a"] .t').textContent()).toContain('cards at 50%');
+    const missing = await page.evaluate(() => [...document.querySelectorAll('button, input, select, #zKind option')].filter((e) => !e.getAttribute('title')?.trim()).map((e) => e.id || e.outerHTML.slice(0, 60)));
+    expect(missing).toEqual([]);
+  });
   it('K280 snap to grid and snap to zones toggle; grid lines show only with grid snap', async () => {
     await load(SAMPLE); await zoom(1);
     const bgi = () => page.evaluate(() => document.getElementById('stage')!.style.backgroundImage);

@@ -62,18 +62,18 @@ input[type=number]{width:66px;box-sizing:border-box;padding:3px 4px}input[type=t
 <body>
 <div id="app">
 <div id="bar">
-  <span id="tabs"></span><button id="addScreen" title="Add a screen">+ screen</button><span class="sep"></span>
-  <button id="undo" title="Ctrl+Z">Undo</button><button id="redo" title="Ctrl+Y">Redo</button><span class="sep"></span>
-  <button id="add" title="Add a zone (inside the selected one)">+ Zone</button><button id="dup" title="Ctrl+D">Duplicate</button><button id="del" title="Delete">Delete</button>
-  <button id="fwd">Forward</button><button id="back">Back</button><span class="sep"></span>
-  <button data-al="left" title="Align left">⇤</button><button data-al="centre" title="Align centre">↔</button><button data-al="right" title="Align right">⇥</button>
-  <button data-al="top" title="Align top">⤒</button><button data-al="middle" title="Align middle">↕</button><button data-al="bottom" title="Align bottom">⤓</button>
-  <button data-dist="h" title="Distribute across">⋯</button><button data-dist="v" title="Distribute down">⋮</button><span class="sep"></span>
-  <button id="cons" title="Put the selected piles in one compact column or row">Consolidate</button><select id="consDir"><option>column</option><option>row</option></select><button id="split" title="Back to full-size piles">Split</button><span class="sep"></span>
-  <button id="multi" title="Tap adds to the selection (touch)">Multi</button>
-  <button id="snapGrid" class="on">Snap to grid</button><select id="grid" title="Grid size"><option>8</option><option selected>16</option><option>32</option><option>64</option></select><button id="snapZones" class="on" title="Snap to the edges and centres of other zones">Snap to zones</button><span class="sep"></span>
-  <button id="zOut" title="Zoom out (Ctrl+wheel, pinch)">−</button><span id="zPct">100%</span><button id="zIn" title="Zoom in (Ctrl+wheel, pinch)">+</button><button id="zFit" title="Fit the screen in the window">Fit</button><span class="sep"></span>
-  <button id="json">Import / Export</button><button id="reset" title="Back to the starting layout and backdrops">Reset</button>
+  <span id="tabs"></span><button id="addScreen" title="Add a new empty screen (for example a phone layout) and switch to it.">+ screen</button><span class="sep"></span>
+  <button id="undo" title="Take back your last change. Shortcut: Ctrl+Z.">Undo</button><button id="redo" title="Put back the change you just undid. Shortcut: Ctrl+Y.">Redo</button><span class="sep"></span>
+  <button id="add" title="Add a new box. If a box is selected, the new one goes inside it.">+ Zone</button><button id="dup" title="Make a copy of the selected boxes. Shortcut: Ctrl+D.">Duplicate</button><button id="del" title="Delete the selected boxes and everything inside them. Shortcut: Delete.">Delete</button>
+  <button id="fwd" title="Draw the selected box in front of the others.">Forward</button><button id="back" title="Draw the selected box behind the others.">Back</button><span class="sep"></span>
+  <button data-al="left" title="Line up the selected boxes on their left edge (select two or more).">⇤</button><button data-al="centre" title="Line up the selected boxes on their centre, left to right (select two or more).">↔</button><button data-al="right" title="Line up the selected boxes on their right edge (select two or more).">⇥</button>
+  <button data-al="top" title="Line up the selected boxes on their top edge (select two or more).">⤒</button><button data-al="middle" title="Line up the selected boxes on their centre, top to bottom (select two or more).">↕</button><button data-al="bottom" title="Line up the selected boxes on their bottom edge (select two or more).">⤓</button>
+  <button data-dist="h" title="Space three or more selected boxes evenly from left to right.">⋯</button><button data-dist="v" title="Space three or more selected boxes evenly from top to bottom.">⋮</button><span class="sep"></span>
+  <button id="cons" title="Select two or more piles (Shift+click), pick column or row, then click: they become small tiles in one box.">Consolidate</button><select id="consDir" title="Whether the consolidated piles sit in a column or in a row."><option>column</option><option>row</option></select><button id="split" title="Select a consolidated box (…piles) and click to put all its piles back at full card size beside it. To take out only one pile, select that pile and use Take out.">Split</button><button id="takeOut" title="Select one or more piles inside a consolidated box and click: each goes back to a full-size card pile beside the box, and the box shrinks to fit the piles left.">Take out</button><span class="sep"></span>
+  <button id="multi" title="On a phone or tablet: tap adds boxes to the selection instead of replacing it (same as Shift+click).">Multi</button>
+  <button id="snapGrid" class="on" title="When on, boxes jump to the grid lines as you move or resize them. Hold Alt to move freely.">Snap to grid</button><select id="grid" title="How far apart the grid lines are, in pixels."><option>8</option><option selected>16</option><option>32</option><option>64</option></select><button id="snapZones" class="on" title="When on, boxes stick to the edges and centres of other boxes (pink lines). Hold Alt to move freely.">Snap to zones</button><span class="sep"></span>
+  <button id="zOut" title="Zoom out. Also Ctrl+wheel or pinch.">−</button><span id="zPct" title="The current zoom.">100%</span><button id="zIn" title="Zoom in. Also Ctrl+wheel or pinch.">+</button><button id="zFit" title="Zoom so the whole screen fits in the window.">Fit</button><span class="sep"></span>
+  <button id="json" title="Show the layout as text to copy or download, or paste a layout in to load it.">Import / Export</button><button id="reset" title="Go back to the layout you started with, on every screen. It asks first; Undo cannot bring your work back.">Reset</button>
   <span id="msg"></span>
 </div>
 <div id="wrap"><div id="pad"><div id="stage"><img id="bg" alt=""><div id="zones"></div><div id="ptags"></div><div id="guides"></div><div id="selbox"></div><div id="marq"></div></div></div></div>
@@ -81,33 +81,34 @@ input[type=number]{width:66px;box-sizing:border-box;padding:3px 4px}input[type=t
 <div id="panel">
   <h3>Screen</h3>
   <div class="f">
-    <span>Name</span><input id="sName" type="text">
-    <span>Size</span><span class="xywh"><input id="sW" type="number" min="1"><input id="sH" type="number" min="1"><button id="delScreen">Remove screen</button></span>
-    <span>Card</span><span class="xywh"><input id="cW" type="number" min="1"><input id="cH" type="number" min="1"></span>
-    <span>Card scale</span><input id="cS" type="range" min="25" max="200" value="100">
-    <span>Pile</span><span class="xywh"><input id="pW" type="number" min="1"><input id="pH" type="number" min="1"><input id="pS" type="range" min="10" max="100" title="Pile size, % of the card size" style="width:84px"><span id="pSv"></span></span>
-    <span>Copy zones</span><span class="xywh"><select id="cpScreen" title="From screen"></select><select id="cpZone" title="Zone (with its children)" style="max-width:130px"></select><button id="cpGo">Copy here</button></span>
-    <span>Children</span><label><input id="keep" type="checkbox"> keep size when the parent is resized</label>
-    <span>Backdrop</span><span class="xywh"><input id="bgFile" type="file" accept="image/*" style="width:180px"><input id="bgUrl" type="text" placeholder="or picture URL, Enter"><input id="bgOp" type="range" min="0" max="100" value="50" title="Opacity"><button id="bgOff">No backdrop</button></span>
+    <span>Name</span><input id="sName" type="text" title="The name of this screen. A name like solo/table makes a mode tab (solo) with a variant tab (table).">
+    <span>Size</span><span class="xywh"><input id="sW" type="number" min="1" title="Screen width in pixels."><input id="sH" type="number" min="1" title="Screen height in pixels."><button id="delScreen" title="Delete this whole screen and all its boxes.">Remove screen</button></span>
+    <span>Card</span><span class="xywh"><input id="cW" type="number" min="1" title="Card width in pixels on this screen."><input id="cH" type="number" min="1" title="Card height in pixels on this screen."></span>
+    <span>Card scale</span><input id="cS" type="range" min="25" max="200" value="100" title="Drag to make every card on this screen bigger or smaller at once.">
+    <span>Pile</span><span class="xywh"><input id="pW" type="number" min="1" title="Width of a pile tile in pixels (a pile is a small stack of cards)."><input id="pH" type="number" min="1" title="Height of a pile tile in pixels."><input id="pS" type="range" min="10" max="100" title="Pile size, as a percentage of the card size." style="width:84px"><span id="pSv"></span></span>
+    <span>Copy zones</span><span class="xywh"><select id="cpScreen" title="The screen to copy a box from."></select><select id="cpZone" title="The box to copy, with everything inside it." style="max-width:130px"></select><button id="cpGo" title="Copy that box into this screen.">Copy here</button></span>
+    <span>Children</span><label title="When on, resizing a box leaves the boxes inside it at their size instead of scaling them."><input id="keep" type="checkbox" title="Keep the boxes inside at their size when the outer box is resized."> keep size when the parent is resized</label>
+    <span>Backdrop</span><span class="xywh"><input id="bgFile" type="file" accept="image/*" style="width:180px" title="Pick a picture to show behind the boxes, to trace over."><input id="bgUrl" type="text" placeholder="or picture URL, Enter" title="Or type the address of a picture and press Enter."><input id="bgOp" type="range" min="0" max="100" value="50" title="How see-through the backdrop picture is."><button id="bgOff" title="Remove the backdrop picture from this screen.">No backdrop</button></span>
   </div>
   <h3>Zone</h3>
   <div class="f" id="zf">
-    <span>Id</span><input id="zId" type="text">
-    <span>Label</span><input id="zLabel" type="text" placeholder="what it holds">
-    <span>x y w h</span><span class="xywh"><input id="zX" type="number"><input id="zY" type="number"><input id="zW" type="number" min="1"><input id="zH" type="number" min="1"></span>
-    <span>Kind</span><span class="xywh"><select id="zKind"><option value="">auto</option><option>cards</option><option>component</option><option>pile</option><option>group</option></select><label><input id="zFull" type="checkbox"> full size</label></span>
-    <span>Cards</span><span class="xywh"><input id="zCards" type="number" min="0"><select id="zFan"><option>row</option><option>column</option><option>stack</option><option>grid</option></select></span>
-    <span>Mirror</span><span class="xywh"><button id="flipV">Flip ↕</button><button id="flipH">Flip ↔</button><input id="mirTo" type="text" placeholder="copy as id" style="width:110px"></span>
+    <span>Id</span><input id="zId" type="text" title="The box's name in the layout file. A box named you.hand sits inside the box you. Press Enter to rename.">
+    <span>Label</span><input id="zLabel" type="text" placeholder="what it holds" title="A note shown on the box about what it holds.">
+    <span>x y w h</span><span class="xywh"><input id="zX" type="number" title="Distance from the left edge of the screen, in pixels."><input id="zY" type="number" title="Distance from the top edge of the screen, in pixels."><input id="zW" type="number" min="1" title="Width of the box in pixels."><input id="zH" type="number" min="1" title="Height of the box in pixels."></span>
+    <span>Kind</span><span class="xywh"><select id="zKind" title="What the box is: cards, a digital part, a pile, or a band that holds other boxes."><option value="" title="Decided from the box: card outlines if it has a card count, else a plain box.">auto</option><option title="Shows card outlines, side by side.">cards</option><option title="A part that is not a card, such as a crew board, log or button: dashed box.">component</option><option title="One small stack of cards (draw or discard pile). To make it look like a card pile again, pick this and tick full size.">pile</option><option title="A container for other boxes, such as a player band.">group</option></select><label title="Draw the pile at the full card size instead of the small pile size."><input id="zFull" type="checkbox" title="Draw this pile at full card size instead of the small pile size."> full size</label></span>
+    <span>Cards</span><span class="xywh"><input id="zCards" type="number" min="0" title="How many cards this box holds. The red edge shows if they do not fit."><select id="zFan" title="How the cards lie: side by side in a row, in a column, as one pile, or in a grid."><option>row</option><option>column</option><option>stack</option><option>grid</option></select></span>
+    <span>Card size here</span><span class="xywh"><input id="zS" type="range" min="20" max="100" value="100" title="Shrink the cards in this box only, to fit them in less space. The game must draw them smaller here. 100% is the normal card size."><input id="zSn" type="number" min="20" max="100" title="Card size in this box, 20 to 100 percent of the normal card size."><span>%</span></span>
+    <span>Mirror</span><span class="xywh"><button id="flipV" title="Turn the selected boxes upside down inside the screen (a mirror image, top to bottom).">Flip ↕</button><button id="flipH" title="Turn the selected boxes left to right inside the screen (a mirror image).">Flip ↔</button><input id="mirTo" type="text" placeholder="copy as id" style="width:110px" title="Type a new name first, then Flip, to make a mirrored copy under that name instead of flipping the original."></span>
   </div>
   <h3>Warnings</h3><div id="warns"></div>
   <h3>Zones</h3><div id="tree"></div>
 </div>
 </div>
-<div id="rdlg"><div><p>Reset everything? All your changes to every screen, including the backdrops, go back to the starting layout.</p><div class="xywh"><button id="rGo" style="background:#c0392b;color:#fff">Reset</button><button id="rNo">Cancel</button></div></div></div>
+<div id="rdlg"><div><p>Reset everything? All your changes to every screen, including the backdrops, go back to the starting layout.</p><div class="xywh"><button id="rGo" style="background:#c0392b;color:#fff" title="Yes: throw away all my changes.">Reset</button><button id="rNo" title="No: keep my work.">Cancel</button></div></div></div>
 <div id="dlg"><div>
   <b>Layout JSON</b>
   <textarea id="txt" spellcheck="false"></textarea>
-  <div class="xywh"><button id="copy">Copy</button><button id="dl">Download</button><button id="loadTxt">Load this text</button><input id="file" type="file" accept=".json,application/json"><button id="close">Close</button></div>
+  <div class="xywh"><button id="copy" title="Copy the layout text, to paste it in the chat.">Copy</button><button id="dl" title="Save the layout as a layout.json file.">Download</button><button id="loadTxt" title="Replace the layout with the text above.">Load this text</button><input id="file" type="file" accept=".json,application/json" title="Pick a layout.json file to load."><button id="close" title="Close this window.">Close</button></div>
 </div></div>
 <script>
 // <lib generated from index.ts by build.mjs>
@@ -120,13 +121,14 @@ function normalizeZone(v ) {
 const o = Array.isArray(v) ? { r: v } : isObj(v) ? v : null;
 if (!o || !Array.isArray(o.r)) return null;
 const r = o.r ;
-const { r: _r, label: _l, cards: _c, fan: _f, kind: _d, full: _u, locked: _k, hidden: _h, ...rest } = o;
+const { r: _r, label: _l, cards: _c, fan: _f, kind: _d, full: _u, scale: _sc, locked: _k, hidden: _h, ...rest } = o;
 const z = { r: [num(r[0], 0), num(r[1], 0), num(r[2], 0), num(r[3], 0)], ...rest };
 if (typeof o.label === 'string' && o.label) z.label = o.label;
 if (o.cards !== undefined && num(o.cards, 0) > 0) z.cards = Math.round(num(o.cards, 0));
 if (typeof o.fan === 'string' && FANS.includes(o.fan)) z.fan = o.fan ;
 if (typeof o.kind === 'string' && KINDS.includes(o.kind)) z.kind = o.kind ;
 if (o.full === true) z.full = true;
+if (o.scale !== undefined && num(o.scale, 1) < 1 && num(o.scale, 1) > 0) z.scale = Math.max(0.2, num(o.scale, 1));
 if (o.locked === true) z.locked = true;
 if (o.hidden === true) z.hidden = true;
 return z;
@@ -217,8 +219,8 @@ if (edges.includes('b')) { const b = best([y + h], ty); if (b) guides.push({ axi
 return { r: [x, y, w, h], guides };
 }
 // Cards side by side without overlap: row, column, stack (one pile) or grid. scale: the card size (<= 1) at which they fit.
-function cardFit(zone , card , cards = zone.cards ?? 0, fan = zone.fan ?? 'row') {
-const [, , w, h] = zone.r, [cw, ch] = card;
+function cardFit(zone , card , cards = zone.cards ?? 0, fan = zone.fan ?? 'row', zs = zone.scale ?? 1) {
+const [, , w, h] = zone.r, cw = card[0] * zs, ch = card[1] * zs;
 if (cards <= 0 || cw <= 0 || ch <= 0) return { fits: true, perRow: 0, scale: 1 };
 let perRow = 1, s ;
 if (fan === 'row') { perRow = cards; s = Math.min(w / (cards * cw), h / ch); }
@@ -238,7 +240,7 @@ const out = [];
 const ids = Object.keys(s.zones).filter((k) => !s.zones[k] .hidden);
 for (const id of ids) {
 const z = s.zones[id] , p = parentOf(s, id);
-const k = kindOf(z), f = k === 'pile' ? cardFit(z, z.full ? s.card : pileSize(s), 1, 'stack') : k === 'component' || k === 'group' ? null : cardFit(z, s.card);
+const k = kindOf(z), f = k === 'pile' ? cardFit(z, z.scale || z.full ? s.card : pileSize(s), 1, 'stack', z.scale ?? 1) : k === 'component' || k === 'group' ? null : cardFit(z, s.card);
 if (f && !f.fits) out.push({ id, kind: 'cards', text: k === 'pile' ? `${id}: the pile fits only at ${Math.floor(f.scale * 100)}% of its size` : `${id}: ${z.cards} cards fit only at ${Math.floor(f.scale * 100)}% of the card size` });
 if (!inside(z.r, [0, 0, s.w, s.h])) out.push({ id, kind: 'outside', text: `${id}: outside the screen` });
 else if (p && !inside(z.r, s.zones[p] .r)) out.push({ id, kind: 'outside', text: `${id}: outside ${p}` });
@@ -331,6 +333,28 @@ shift(zones, s, k, nid, r);
 });
 return { screen: { ...s, zones }, ids };
 }
+// Take piles out of a consolidated box (a group with `from`): each goes back at full card size beside the box; the box shrinks to the piles left, or goes (split) when fewer than two are left.
+function takeOut(s , ids ) {
+const out = [];
+for (const g of new Set(ids.map((k) => parentOf(s, k)).filter((p) => !!p && isObj(s.zones[p] .from)))) {
+const take = ids.filter((k) => parentOf(s, k) === g), kids = Object.keys(s.zones).filter((k) => parentOf(s, k) === g), left = kids.filter((k) => !take.includes(k));
+if (left.length < 2) { const r = split(s, g); s = r.screen; out.push(...r.ids); continue }
+const p = s.zones[g] , from = (p.from ), a = p.r[3] > p.r[2] ? 1 : 0, [pw, ph] = pileSize(s), gap = Math.max(1, Math.round(pw / 8)), [cw, ch] = s.card, cg = Math.max(1, Math.round(cw / 8)), pre = g.includes('.') ? g.slice(0, g.lastIndexOf('.') + 1) : '';
+left.sort((m, n) => s.zones[m] .r[a] - s.zones[n] .r[a]);
+const n = left.length, W = a ? pw + 2 * gap : n * pw + (n + 1) * gap, H = a ? n * ph + (n + 1) * gap : ph + 2 * gap;
+const zones = Object.fromEntries(Object.entries(s.zones).filter(([k]) => !take.some((m) => k === m || k.startsWith(m + '.'))));
+const nf = Object.fromEntries(Object.entries(from).filter(([k]) => !take.includes(k)));
+zones[g] = { ...p, r: [p.r[0], p.r[1], W, H], from: nf };
+left.forEach((k, i) => { const r = a ? [p.r[0] + gap, p.r[1] + gap + i * (ph + gap), pw, ph] : [p.r[0] + gap + i * (pw + gap), p.r[1] + gap, pw, ph]; zones[k] = { ...s.zones[k] , r }; shift(zones, s, k, k, r); });
+const y0 = Math.max(0, Math.min(p.r[1], s.h - ch)), m = Math.max(1, Math.floor((s.h - y0 + cg) / (ch + cg))), right = p.r[0] + W + Math.ceil(take.length / m) * (cw + cg) <= s.w;
+take.forEach((k, i) => {
+const nid = freeId({ ...s, zones }, from[k]?.id ?? pre + last(k)), r = [right ? p.r[0] + W + cg + Math.floor(i / m) * (cw + cg) : p.r[0] - cg - cw - Math.floor(i / m) * (cw + cg), y0 + (i % m) * (ch + cg), cw, ch];
+const { scale: _s, ...zk } = s.zones[k] ; zones[nid] = { ...zk, r, kind: 'pile', full: true }; out.push(nid); shift(zones, s, k, nid, r);
+});
+s = { ...s, zones };
+}
+return { screen: s, ids: out };
+}
 // Copy a zone and its children from another screen; a taken id gets a -2 suffix.
 function copyZones(from , to , id ) {
 if (!from.zones[id]) return { screen: to, id: '' };
@@ -393,7 +417,7 @@ const px = (v) => v * sc + 'px'
 function render() {
   const s = S(); fit()
   const cm = cur.split('/')[0], modes = screenModes(Object.keys(doc.screens)), vs = modes.find(([m]) => m === cm)[1]
-  $('tabs').innerHTML = modes.map(([m, v]) => `<button class="tab${m === cm ? ' on' : ''}" data-screen="${esc(m === cm ? cur : v[0])}">${esc(m)}</button>`).join('') + (vs.length > 1 || cur.includes('/') ? '<span class="sep"></span>' + vs.map((v) => `<button class="tab var${v === cur ? ' on' : ''}" data-screen="${esc(v)}">${esc(v.slice(cm.length + 1) || v)}</button>`).join('') : '')
+  $('tabs').innerHTML = modes.map(([m, v]) => `<button title="Show this screen." class="tab${m === cm ? ' on' : ''}" data-screen="${esc(m === cm ? cur : v[0])}">${esc(m)}</button>`).join('') + (vs.length > 1 || cur.includes('/') ? '<span class="sep"></span>' + vs.map((v) => `<button title="Show this version of the screen." class="tab var${v === cur ? ' on' : ''}" data-screen="${esc(v)}">${esc(v.slice(cm.length + 1) || v)}</button>`).join('') : '')
   const bg = ui.bg[cur]; $('bg').style.display = bg ? '' : 'none'; if (bg) { if ($('bg').getAttribute('src') !== bg.src) $('bg').src = bg.src; $('bg').style.opacity = bg.op }
   const warns = layoutWarnings(s), bad = new Set(warns.filter((w) => w.kind === 'cards').map((w) => w.id)), warn = new Set(warns.map((w) => w.id))
   const keys = Object.keys(s.zones), html = [], tags = [], kids = (k) => keys.some((c) => c.startsWith(k + '.'))
@@ -402,15 +426,15 @@ function render() {
     const kd = kindOf(z), [x, y, w, h] = z.r, cls = ['z', kd && 'k-' + kd, sel.has(k) && 'sel', z.locked && 'locked', bad.has(k) ? 'bad' : warn.has(k) && 'warn'].filter(Boolean).join(' ')
     let cards = ''
     const chip = `<b>${esc(kd === 'pile' ? k.slice(k.lastIndexOf('.') + 1) : k)}</b>${z.label ? ' <br>' + esc(z.label) : ''}`
-    if (kd === 'pile') { const [tw, th] = z.full ? s.card : pileSize(s); cards = `<div class="pl" style="left:${px((w - tw) / 2)};top:${px((h - th) / 2)};width:${px(tw)};height:${px(th)}"><span class="cnt">#</span></div>` }
+    if (kd === 'pile') { const [tw, th] = z.scale ? [s.card[0] * z.scale, s.card[1] * z.scale] : z.full ? s.card : pileSize(s); cards = `<div class="pl" style="left:${px((w - tw) / 2)};top:${px((h - th) / 2)};width:${px(tw)};height:${px(th)}"><span class="cnt">#</span></div>` }
     else if (kd === 'cards' && z.cards) {
-      const [cw, ch] = s.card, fan = z.fan || 'row', cols = Math.max(1, Math.floor(w / cw))
+      const cw = s.card[0] * (z.scale ?? 1), ch = s.card[1] * (z.scale ?? 1), fan = z.fan || 'row', cols = Math.max(1, Math.floor(w / cw))
       for (let j = 0; j < (fan === 'stack' ? 1 : Math.min(z.cards, 60)); j++) {
         const cx = fan === 'row' ? j * cw : fan === 'grid' ? (j % cols) * cw : 0, cy = fan === 'column' ? j * ch : fan === 'grid' ? Math.floor(j / cols) * ch : 0
         cards += `<div class="c${cx + cw > w + 0.5 || cy + ch > h + 0.5 ? ' out' : ''}" style="left:${px(cx)};top:${px(cy)};width:${px(cw)};height:${px(ch)}"></div>`
       }
     }
-    const info = kd === 'cards' && z.cards ? ` <br><i>${z.cards} card${z.cards > 1 ? 's' : ''}, ${z.fan || 'row'}</i>` : ''
+    const info = (kd === 'cards' && z.cards ? ` <br><i>${z.cards} card${z.cards > 1 ? 's' : ''}, ${z.fan || 'row'}</i>` : '') + (z.scale ? ` <br><i>cards at ${Math.round(z.scale * 100)}%</i>` : '')
     html.push(`<div class="${cls}" data-id="${esc(k)}" style="--h:${hue(k)};left:${px(x)};top:${px(y)};width:${px(w)};height:${px(h)};z-index:${depth(s, k) * 1000 + i}" title="${esc(k + (z.label ? ': ' + z.label : ''))}">${cards}${kids(k) ? '' : `<div class="t">${chip}${info}</div>`}</div>`)
     if (kids(k)) tags.push(kd === 'group' ? `<div class="t one tab" style="left:${px(x)};top:${px(y)};max-width:${px(w)}">${chip}</div>` : `<div class="t one" style="left:${px(x + w)};top:${px(y)}">${chip}${info}</div>`)
   })
@@ -424,7 +448,7 @@ function render() {
     sb.innerHTML = ['tl', 't', 'tr', 'r', 'br', 'b', 'bl', 'l'].filter((e) => !(e.length === 1 && (/[tb]/.test(e) ? w * sc : h * sc) < 3 * hs)).map((e) => `<div class="h" data-h="${e}" style="left:${f(e, 'l', 'r')}%;top:${f(e, 't', 'b')}%;transform:translate(${-f(e, 'r', 'l')}%,${-f(e, 'b', 't')}%);cursor:${{ tl: 'nwse', br: 'nwse', tr: 'nesw', bl: 'nesw', t: 'ns', b: 'ns', l: 'ew', r: 'ew' }[e]}-resize"></div>`).join('')
   } else sb.style.display = 'none'
   $('warns').innerHTML = warns.length ? warns.map((w) => `<div data-id="${esc(w.id)}">${esc(w.text)}</div>`).join('') : '<span style="color:#8d96ad">none</span>'
-  $('tree').innerHTML = keys.map((k) => { const z = s.zones[k]; return `<div class="row${sel.has(k) ? ' sel' : ''}" data-id="${esc(k)}" style="padding-left:${depth(s, k) * 14}px"><button data-act="hidden" class="${z.hidden ? '' : 'on'}" title="Show or hide">${z.hidden ? 'hidden' : 'shown'}</button><button data-act="locked" class="${z.locked ? 'on' : ''}" title="Lock">${z.locked ? 'locked' : 'lock'}</button><span>${esc(k)}${kindOf(z) ? ' <i style="color:#74c0fc">' + kindOf(z) + (z.full ? ', full' : '') + '</i>' : ''}${z.label ? ' <i style="color:#8d96ad">' + esc(z.label) + '</i>' : ''}</span></div>` }).join('')
+  $('tree').innerHTML = keys.map((k) => { const z = s.zones[k]; return `<div class="row${sel.has(k) ? ' sel' : ''}" data-id="${esc(k)}" style="padding-left:${depth(s, k) * 14}px"><button data-act="hidden" class="${z.hidden ? '' : 'on'}" title="Show or hide this box in the editor.">${z.hidden ? 'hidden' : 'shown'}</button><button data-act="locked" class="${z.locked ? 'on' : ''}" title="Lock this box so it cannot be moved by accident.">${z.locked ? 'locked' : 'lock'}</button><span>${esc(k)}${kindOf(z) ? ' <i style="color:#74c0fc">' + kindOf(z) + (z.full ? ', full' : '') + '</i>' : ''}${z.label ? ' <i style="color:#8d96ad">' + esc(z.label) + '</i>' : ''}</span></div>` }).join('')
   panel(); status()
 }
 function fitLabel(t) {
@@ -446,8 +470,8 @@ function panel() {
   opts($('cpScreen'), Object.keys(doc.screens).filter((n) => n !== cur)); const cs = doc.screens[$('cpScreen').value]; opts($('cpZone'), cs ? Object.keys(cs.zones) : [])
   const k = sel.size === 1 ? [...sel][0] : null, z = k && s.zones[k]
   for (const e of $('zf').querySelectorAll('input,select,button')) e.disabled = !z && !(sel.size > 1 && e.tagName === 'BUTTON')
-  if (!z) { for (const id of ['zId', 'zLabel', 'zX', 'zY', 'zW', 'zH', 'zCards', 'zKind']) setVal(id, ''); $('zFull').checked = false; return }
-  setVal('zId', k); setVal('zLabel', z.label || ''); ['zX', 'zY', 'zW', 'zH'].forEach((id, i) => setVal(id, Math.round(z.r[i]))); setVal('zCards', z.cards || ''); setVal('zFan', z.fan || 'row'); setVal('zKind', z.kind || ''); $('zFull').checked = !!z.full; $('zFull').disabled = kindOf(z) !== 'pile'
+  if (!z) { for (const id of ['zId', 'zLabel', 'zX', 'zY', 'zW', 'zH', 'zCards', 'zKind', 'zSn']) setVal(id, ''); $('zFull').checked = false; return }
+  setVal('zId', k); setVal('zLabel', z.label || ''); ['zX', 'zY', 'zW', 'zH'].forEach((id, i) => setVal(id, Math.round(z.r[i]))); setVal('zCards', z.cards || ''); setVal('zFan', z.fan || 'row'); setVal('zKind', z.kind || ''); setVal('zS', Math.round((z.scale ?? 1) * 100)); setVal('zSn', Math.round((z.scale ?? 1) * 100)); $('zFull').checked = !!z.full; $('zFull').disabled = kindOf(z) !== 'pile'
 }
 function status() {
   const k = sel.size === 1 ? [...sel][0] : null, z = k && S().zones[k]
@@ -601,6 +625,11 @@ $('cS').onchange = () => { const sn = cardSnap ?? snapDoc(); cardSnap = null; if
 $('zId').onchange = () => { const k = [...sel][0], n = $('zId').value.trim(), s = S(), r = renameZone(s, k, n); if (r === s) { flash('That id is taken or empty'); return render() } sel = new Set([n]); commit(r) }
 $('zLabel').onchange = () => editZone((z) => { const v = $('zLabel').value.trim(); if (v) z.label = v; else delete z.label })
 $('zCards').onchange = () => editZone((z) => { const v = Math.round(Number($('zCards').value)); if (v > 0) z.cards = v; else delete z.cards })
+const zScale = (v) => editZone((z) => { v = Math.max(20, Math.min(100, Math.round(v))); if (v < 100) z.scale = v / 100; else delete z.scale })
+$('zS').oninput = () => setVal('zSn', $('zS').value)
+$('zS').onchange = () => zScale(Number($('zS').value))
+$('zSn').onchange = () => isFinite(Number($('zSn').value)) && $('zSn').value !== '' ? zScale(Number($('zSn').value)) : render()
+$('takeOut').onclick = () => { const r = takeOut(S(), tops()); if (!r.ids.length) return flash('Select a pile inside a consolidated box'); sel = new Set(r.ids); commit(r.screen) }
 $('zFan').onchange = () => editZone((z) => (z.fan = $('zFan').value))
 for (const [id, i] of [['zX', 0], ['zY', 1], ['zW', 2], ['zH', 3]]) $(id).onchange = () => { const k = [...sel][0], s = S(), z = s.zones[k], v = Number($(id).value); if (!z || !isFinite(v)) return; const r = [...z.r]; r[i] = i > 1 ? Math.max(1, v) : v; commit(resizeZone(s, k, r, ui.keep)) }
 const mirror = (axis) => { const ids = tops(), to = $('mirTo').value.trim(); if (!ids.length) return; if (to && ids.length === 1) { if (idTaken(S(), to)) return flash(to + ' exists: pick a new id'); sel = new Set([to]); commit(mirrorZones(S(), ids, axis, [ids[0], to])) } else commit(mirrorZones(S(), ids, axis)) }

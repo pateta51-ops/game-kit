@@ -2,7 +2,7 @@ import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import { slots, zone } from '../board-layout/index.ts';
 import { HTML, inline } from './build.mjs';
-import { alignZones, cardFit, childrenOf, clampZoom, commonPrefix, consolidate, copyZones, distributeZones, keepPoint, layoutWarnings, mirrorZones, moveZone, normalizeDoc, parentOf, pileSize, renameZone, resizeZone, screenLayout, screenModes, snap, split, stageView, type Screen } from './index.ts';
+import { alignZones, cardFit, childrenOf, clampZoom, commonPrefix, consolidate, copyZones, distributeZones, keepPoint, layoutWarnings, mirrorZones, moveZone, normalizeDoc, parentOf, pileSize, renameZone, resizeZone, screenLayout, screenModes, snap, split, takeOut, stageView, type Screen } from './index.ts';
 
 const scr = (zones: Record<string, [number, number, number, number]>, w = 1000, h = 1000): Screen => ({ w, h, card: [100, 140], zones: Object.fromEntries(Object.entries(zones).map(([k, r]) => [k, { r }])) });
 
@@ -136,6 +136,43 @@ describe('K269 layout-editor logic', () => {
     expect([z.sc, z.left, z.padW]).toEqual([1.5, 12, 1524]);
     expect(keepPoint(100, 1.5, 12, 50)).toBe(112);
     expect([clampZoom(0), clampZoom(99)]).toEqual([0.1, 20]);
+  });
+  it('K298 take out: piles leave the box at full size, the box shrinks, fewer than two left removes it', () => {
+    const s = scr({ 'you.a': [0, 0, 100, 140], 'you.b': [0, 200, 100, 140], 'you.c': [0, 400, 100, 140] }); for (const z of Object.values(s.zones)) z.kind = 'pile';
+    const c = consolidate(s, ['you.a', 'you.b', 'you.c'], 'column').screen, g = c.zones['you.piles']!;
+    const t = takeOut(c, ['you.piles.b']);
+    expect(t.ids).toEqual(['you.b']);
+    const z = t.screen.zones;
+    expect([z['you.b']!.kind, z['you.b']!.full, z['you.b']!.r.slice(2), z['you.b']!.r[0]]).toEqual(['pile', true, [100, 140], g.r[0] + g.r[2] + 13]);
+    expect(Object.keys(z).filter((k) => k.startsWith('you.piles.'))).toEqual(['you.piles.a', 'you.piles.c']);
+    expect(Object.keys(z['you.piles']!.from as object)).toEqual(['you.piles.a', 'you.piles.c']);
+    expect(z['you.piles']!.r[3]).toBeLessThan(g.r[3]);
+    expect(z['you.piles.c']!.r[1] + z['you.piles.c']!.r[3]).toBeLessThanOrEqual(z['you.piles']!.r[1] + z['you.piles']!.r[3]);
+    const u = takeOut(t.screen, ['you.piles.a']);
+    expect(u.screen.zones['you.piles']).toBeUndefined();
+    expect(['you.a', 'you.c', 'you.b'].map((k) => u.screen.zones[k]!.r.slice(2))).toEqual([[100, 140], [100, 140], [100, 140]]);
+    expect(takeOut(c, ['you.piles']).ids).toEqual([]);
+    expect(takeOut(s, ['you.a']).ids).toEqual([]);
+  });
+  it('K298 take out drops the zone scale and keeps the piles on the screen (wraps into the next column)', () => {
+    const s: Screen = { w: 1000, h: 500, card: [100, 140], zones: {} };
+    for (const k of 'abcde') s.zones['g.' + k] = { r: [0, 0, 100, 140], kind: 'pile', scale: 0.5 };
+    s.zones['g.f'] = { r: [0, 0, 100, 140], kind: 'pile' };
+    const c = consolidate(s, ['g.a', 'g.b', 'g.c', 'g.d', 'g.e', 'g.f'], 'column').screen;
+    const t = takeOut(c, ['g.piles.a', 'g.piles.b', 'g.piles.c', 'g.piles.d']);
+    expect(t.ids.length).toBe(4);
+    for (const k of t.ids) { const z = t.screen.zones[k]!; expect([z.scale, z.r.slice(2)]).toEqual([undefined, [100, 140]]); expect(z.r[1] + z.r[3]).toBeLessThanOrEqual(500); expect(z.r[0] + z.r[2]).toBeLessThanOrEqual(1000); }
+    expect(new Set(t.ids.map((k) => t.screen.zones[k]!.r[0])).size).toBe(2);
+  });
+  it('K298 zone scale: cardFit and the warnings use the scaled card size; no scale behaves as before', () => {
+    const z = { r: [0, 0, 300, 140] as [number, number, number, number], cards: 4, fan: 'row' as const };
+    expect(cardFit(z, [100, 140]).fits).toBe(false);
+    expect(cardFit({ ...z, scale: 0.5 }, [100, 140]).fits).toBe(true);
+    expect(cardFit(z, [100, 140], 4, 'row', 0.5).fits).toBe(true);
+    const s: Screen = { w: 1000, h: 1000, card: [100, 140], zones: { a: { ...z, kind: 'cards' }, p: { r: [400, 0, 40, 60], kind: 'pile' } } };
+    expect(layoutWarnings(s).map((w) => w.id)).toEqual(['a', 'p']);
+    expect(layoutWarnings({ ...s, zones: { a: { ...z, scale: 0.5 }, p: { r: [400, 0, 40, 60], kind: 'pile', scale: 0.4 } } })).toEqual([]);
+    expect(normalizeDoc({ zones: { a: { r: [0, 0, 1, 1], scale: 0.6 }, b: { r: [0, 0, 1, 1], scale: 7 }, c: { r: [0, 0, 1, 1], scale: 0.01 } } }).screens.main!.zones).toEqual({ a: { r: [0, 0, 1, 1], scale: 0.6 }, b: { r: [0, 0, 1, 1] }, c: { r: [0, 0, 1, 1], scale: 0.2 } });
   });
   it('editor.html carries the current index.ts (run node components/layout-editor/build.mjs)', () => {
     const html = readFileSync(HTML, 'utf8');

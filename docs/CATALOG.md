@@ -526,7 +526,7 @@ Arrange the zones of a game screen by hand (card zones, piles, hand, market, tra
 
 - **Use it when:** Arranging a screen's zones by hand (owner, or the director's wireframe gate): a one-file editor whose JSON is a board-layout zones layout per screen; capture.mjs takes a running page's [data-zone] rects as the start.
 - **Not for:** Map click areas and adjacency (board-layout's Inkscape flow), or placing anything at run time (board-layout zone()).
-- **Key exports:** `KINDS`, `normalizeDoc`, `screenLayout`, `descendants`, `childrenOf`, `parentOf`, `moveZone`, `resizeZone`, `idTaken`, `mirrorZones`, `renameZone`, `snap`, `cardFit`, `layoutWarnings`, and 21 more
+- **Key exports:** `KINDS`, `normalizeDoc`, `screenLayout`, `descendants`, `childrenOf`, `parentOf`, `moveZone`, `resizeZone`, `idTaken`, `mirrorZones`, `renameZone`, `snap`, `cardFit`, `layoutWarnings`, and 22 more
 - **Needs:** [`board-layout`](#board-layout)
 - **Came from:** none (owner request)
 - **Docs:** [README](../components/layout-editor/README.md)
