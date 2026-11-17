@@ -16,6 +16,8 @@ export interface When<S extends Step = Step> {
   readonly optional?: boolean;
   readonly once?: 'perItem' | 'perInstance';
   readonly order?: TriggerOrder;
+  /** K292: carried onto the trigger (`timing`) for engine-core's `cfg.held`: "when" interrupts, "after" waits. */
+  readonly timing?: 'when' | 'after';
 }
 export interface WhenCard<S extends Step = Step> {
   readonly when?: readonly When<S>[];
@@ -68,7 +70,7 @@ export function cardTriggers<G extends GameTypes, E = { seat: string; source: st
         return (cfg.pool[d]?.when ?? []).flatMap((w, i): TriggerCandidate[] => {
           if (w.on !== o.kind) return [];
           if (w.if !== undefined && !(cfg.tests?.[w.if] as NonNullable<typeof cfg.tests>[string])(s, env(s, card, player), o)) return [];
-          return [{ ability: `${d}#${String(i).padStart(4, '0')}`, source: card, player, ...(w.once ? { once: w.once } : {}), ...(w.order ? { order: w.order } : {}) }];
+          return [{ ability: `${d}#${String(i).padStart(4, '0')}`, source: card, player, ...(w.once ? { once: w.once } : {}), ...(w.order ? { order: w.order } : {}), ...(w.timing ? { timing: w.timing } : {}) }];
         });
       }),
     invalid: (s, t) => (active(s, t.source) ? undefined : 'left play'),
@@ -80,7 +82,7 @@ export function cardTriggers<G extends GameTypes, E = { seat: string; source: st
   };
 }
 
-const KEYS = ['on', 'if', 'then', 'optional', 'once', 'order'];
+const KEYS = ['on', 'if', 'then', 'optional', 'once', 'order', 'timing'];
 
 /** The problems of a card's `when` list: unknown keys, `on` not in `kinds` (when given), `if` not in `tests` (when given), invalid `then`. [] when valid. */
 export function validateWhen(table: AnyVerbTable, when: unknown, opts: { readonly kinds?: readonly string[]; readonly tests?: readonly string[] } = {}): string[] {
@@ -96,6 +98,7 @@ export function validateWhen(table: AnyVerbTable, when: unknown, opts: { readonl
     if (o.optional !== undefined && typeof o.optional !== 'boolean') out.push(`${at}.optional: must be true or false`);
     if (o.optional === true && !Object.hasOwn(table, 'may')) out.push(`${at}.optional: the verb table has no may`);
     if (o.once !== undefined && o.once !== 'perItem' && o.once !== 'perInstance') out.push(`${at}.once: must be perItem or perInstance`);
+    if (o.timing !== undefined && o.timing !== 'when' && o.timing !== 'after') out.push(`${at}.timing: must be when or after`);
     const r = o.order;
     if (r !== undefined && r !== 'silent' && r !== 'interactive' && !(typeof r === 'object' && r !== null && typeof (r as { auto?: unknown }).auto === 'string' && Object.keys(r).length === 1)) out.push(`${at}.order: must be silent, interactive or { auto }`);
     out.push(...validateEffect(table, o.then).map((p) => `${at}.then${p.startsWith('[') ? '' : ': '}${p}`));

@@ -133,9 +133,9 @@ export function batchOver<G extends GameTypes>(ctx: Ctx<G>, b: number, cancelled
   });
 }
 
-/** The `timing.triggers` chain is over: effects waiting for it (`over`) end. */
-export function triggersOver<G extends GameTypes>(ctx: Ctx<G>): void {
-  mark(ctx, (e) => (e.over === true ? end(e) : e));
+/** The `timing.triggers` chain is over: effects waiting for it (`over`) end, except those of `held` batches (K292: a held trigger of theirs is still pending). */
+export function triggersOver<G extends GameTypes>(ctx: Ctx<G>, held: readonly number[] = []): void {
+  mark(ctx, (e) => (e.over === true && !('batch' in e.duration && held.includes(e.duration.batch)) ? end(e) : e));
 }
 
 /** A waiting `endOfBatch` effect now lasts until batch `b` ends. */

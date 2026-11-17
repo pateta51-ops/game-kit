@@ -7,7 +7,7 @@ import { draftOf } from './ctx.ts';
 import { expireEffects, stampActive, type EffectsConfig } from './durations.ts';
 import { EngineBugError } from './errors.ts';
 import type { TimingConfig } from './timing.ts';
-import { collectTriggers, pendingTriggers } from './triggers.ts';
+import { collectTriggers, liveTriggers } from './triggers.ts';
 import type { Ctx, GameTypes, HandlerTable, KernelTask } from './types.ts';
 
 /** One state check (win/loss, uniqueness, limits, empty zones). Returns true when it changed something; asking or pushing tasks counts too. */
@@ -77,7 +77,7 @@ export function checkpointHandlers<G extends GameTypes>(cfg: TimingConfig<G>): H
       const at = (t as CheckTask).at;
       const c = cp.checks?.[at];
       if (c === undefined) {
-        if (pendingTriggers(ctx.s).length > 0 && !ctx.s.stack.some((x) => x.kind === 'timing.triggers')) ctx.then({ kind: 'timing.triggers' });
+        if (liveTriggers(cfg, ctx.s).length > 0 && !ctx.s.stack.some((x) => x.kind === 'timing.triggers')) ctx.then({ kind: 'timing.triggers' });
         return;
       }
       const n = ctx.s.stack.length;

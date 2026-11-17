@@ -1,6 +1,6 @@
 // K94: triggers once per item / per instance, silent / interactive / automatic order, revalidation, entered-after, simultaneously.
 import { describe, expect, it } from 'vitest';
-import { applyAction, cancelBatch, createSave, draftOf, exportSave, importSave, EngineBugError, enteredPlay, simultaneously, would, type Ctx, type GameRules, type PendingTrigger, type TimingConfig, type TriggerCandidate } from './index.ts';
+import { addEffect, applyAction, cancelBatch, sumEffects, createSave, draftOf, exportSave, importSave, EngineBugError, enteredPlay, simultaneously, would, type Ctx, type GameRules, type PendingTrigger, type TimingConfig, type TriggerCandidate } from './index.ts';
 import { answer, HIT, startTimed, timedGame, type Timed, type TimedState } from './fake/timed.ts';
 
 const record = (ctx: Ctx<Timed>, p: PendingTrigger): void => {
@@ -180,5 +180,97 @@ describe('triggers (K94)', () => {
     const back = importSave(g, exportSave(createSave(g, { options: { seed: 'k93' }, rules: { items: [HIT] }, actions: [act], undoUsed: false, savedAt: 't' }, null)), null);
     expect(back.ok && back.state).toEqual(s1);
     if (back.ok) expect(order(applyAction(g, back.state, answer(back.state, '3'), null).state).map((k) => k.split('@')[0])).toEqual(['x', 'y']);
+  });
+});
+
+describe('held triggers (K292)', () => {
+  const mark = (ctx: Ctx<Timed>, k: string): void => {
+    const s = draftOf(ctx);
+    s.used = { ...s.used, [k]: Object.keys(s.used).length + 1 };
+  };
+  // the running effect: the hit happens, stepB is the rest of the same effect, effectEnd releases held triggers
+  const effect = (cands: readonly TriggerCandidate[], held: boolean, cfg: Partial<TimingConfig<Timed>> = {}, extra: GameRules<Timed>['handlers'] = {}): GameRules<Timed> =>
+    timedGame({
+      checkpoint: { checks: [] },
+      triggersFor: (_s, o) => (o.kind === 'damage' ? cands : []),
+      resolveTrigger: (ctx, p) => mark(ctx, p.ability),
+      ...(held ? { held: (s: TimedState, t: PendingTrigger) => t.timing === 'after' && s.stack.some((x) => x.kind === 'effectEnd') } : {}),
+      ...cfg,
+    }, {
+      chosen: (ctx) => {
+        ctx.then({ kind: 'stepB' }, { kind: 'effectEnd' }, { kind: 'end' });
+        would(ctx, [HIT]);
+      },
+      stepB: (ctx) => mark(ctx, 'B'),
+      effectEnd: (ctx) => ctx.then({ kind: 'timing.triggers' }),
+      ...extra,
+    });
+  const WA: TriggerCandidate[] = [{ ability: 'when', source: 'c1', player: 'p2', timing: 'when' }, { ability: 'after', source: 'c2', player: 'p2', timing: 'after' }];
+
+  it('K292 without held every pending trigger fires at the checkpoint, before the rest of the effect', () => {
+    expect(order(hit(effect(WA, false)).state)).toEqual(['after', 'when', 'B']);
+  });
+
+  it('K292 a when response interrupts the effect, a held after response waits until the effect ends', () => {
+    const s = hit(effect(WA, true)).state;
+    expect(order(s)).toEqual(['when', 'B', 'after']);
+    expect(s.timing?.pending).toEqual([]);
+    expect(s.result).toEqual({ hp: 7 });
+  });
+
+  it('K292 two held triggers released together go through the normal order prompt', () => {
+    const two: TriggerCandidate[] = [{ ability: 'a1', source: 'c1', player: 'p2', timing: 'after', order: 'interactive' }, { ability: 'a2', source: 'c2', player: 'p2', timing: 'after', order: 'interactive' }];
+    const g = effect(two, true);
+    const r = hit(g).state;
+    expect(order(r)).toEqual(['B']);
+    expect(r.prompt?.kind).toBe('timing.order');
+    expect(r.prompt?.options.map((o) => o.id)).toEqual(['3', '4']);
+    expect(order(applyAction(g, r, answer(r, '4'), null).state)).toEqual(['B', 'a2', 'a1']);
+  });
+
+  it('K292 the cap drops only unheld triggers; the held one still resolves when released', () => {
+    const three: TriggerCandidate[] = [{ ability: 'w1', source: 'c1', player: 'p2', timing: 'when' }, { ability: 'w2', source: 'c2', player: 'p2', timing: 'when' }, { ability: 'after', source: 'c3', player: 'p2', timing: 'after' }];
+    const s = hit(effect(three, true, { triggerCap: 1, capped: (left) => ({ type: 'dropped', ability: left.map((p) => p.ability).join(','), why: 'cap' }) })).state;
+    expect(order(s)).toEqual(['w1', 'B', 'after']);
+    expect(s.log.filter((e) => e.type === 'dropped').map((e) => (e as { ability: string }).ability)).toEqual(['w2']);
+  });
+
+  it('K292 invalid drops a held trigger whose source left before it was released', () => {
+    const s = hit(effect(WA, true, { invalid: (st, t) => (t.source === 'c2' && st.used['B'] !== undefined ? 'left play' : undefined), dropped: (p, why) => ({ type: 'dropped', ability: p.ability, why }) })).state;
+    expect(order(s)).toEqual(['when', 'B']);
+    expect(s.log.filter((e) => e.type === 'dropped').map((e) => (e as { ability: string }).ability)).toEqual(['after']);
+    expect(s.timing?.pending).toEqual([]);
+  });
+
+  it('K292 with batchEndAfterTriggers the batch effect lasts until its held after-trigger has resolved', () => {
+    const armor: Record<string, number> = {};
+    const g = effect(WA, true, { batchEndAfterTriggers: true, resolveTrigger: (ctx, p) => { armor[p.ability] = sumEffects(ctx.s, 'armor'); mark(ctx, p.ability); } }, {
+      chosen: (ctx) => {
+        ctx.then({ kind: 'stepB' }, { kind: 'effectEnd' }, { kind: 'end' });
+        const b = would(ctx, [HIT]);
+        addEffect(ctx, { kind: 'armor', source: 'a', value: 1, duration: { until: 'endOfBatch', batch: b, ifCancelled: 'expire' } });
+      },
+    });
+    const s = hit(g).state;
+    expect(order(s)).toEqual(['when', 'B', 'after']);
+    expect(armor).toEqual({ when: 1, after: 1 });
+    expect(sumEffects(s, 'armor')).toBe(0);
+  });
+
+  it('K292 a save with a held trigger pending keeps it and releases it after load', () => {
+    const g = effect(WA, true, {}, {
+      stepB: (ctx) => {
+        ctx.then({ kind: 'stepB2' });
+        ctx.ask({ min: 1, max: 1, options: [{ id: 'go', enabled: true }], player: 'p1' });
+      },
+      stepB2: (ctx) => mark(ctx, 'B'),
+    });
+    const s0 = startTimed(g);
+    const act = answer(s0, 'hit');
+    const s1 = applyAction(g, s0, act, null).state;
+    expect(s1.timing?.pending?.map((p) => p.ability)).toEqual(['after']);
+    const back = importSave(g, exportSave(createSave(g, { options: { seed: 'k93' }, rules: { items: [HIT] }, actions: [act], undoUsed: false, savedAt: 't' }, null)), null);
+    expect(back.ok && back.state).toEqual(s1);
+    if (back.ok) expect(order(applyAction(g, back.state, answer(back.state, 'go'), null).state)).toEqual(['when', 'B', 'after']);
   });
 });

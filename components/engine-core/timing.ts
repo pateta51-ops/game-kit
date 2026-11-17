@@ -118,6 +118,8 @@ export interface TimingConfig<G extends GameTypes> {
   resolveTrigger?(ctx: Ctx<G>, t: PendingTrigger): void;
   /** K94: why a trigger no longer resolves (source gone, blanked), or undefined. */
   invalid?(s: G['state'], t: PendingTrigger): string | undefined;
+  /** K292: true keeps a pending trigger waiting ("after" until the effect ends): `timing.triggers` skips it and the checkpoint does not open the after-window for it alone. The game pushes `timing.triggers` where it stops holding. */
+  held?(s: G['state'], t: PendingTrigger): boolean;
   /** K94: the event emitted when a trigger is dropped. */
   dropped?(t: PendingTrigger, why: string): EventInput<G> | undefined;
   /** K94: players, active player first, then turn order (default: by the first trigger). */

@@ -94,6 +94,12 @@ describe('card-language when (K267)', () => {
     expect(() => cardTriggers<G>({ pool: { a: { when: [{ ...on, optional: true }] } }, player: () => 'a', table: VERBS })).not.toThrow();
   });
 
+  it('K292 timing is carried onto the trigger candidate and validated', () => {
+    const t = cardTriggers<G>({ pool: { w: { when: [{ on: 'discard', timing: 'after', then: [{ op: 'custom', name: 'mark' } as never] }] } }, player: () => 'a', sources: () => ['w'] });
+    expect(t.triggersFor(run([]), { kind: 'discard' } as never)[0]?.timing).toBe('after');
+    expect(validateWhen(VERBS, [{ on: 'discard', timing: 'later', then: [{ op: 'custom', name: 'mark' }] }])).toEqual(['when[0].timing: must be when or after']);
+  });
+
   it('K267 resolveTrigger throws for an entry the pool does not hold', () => {
     const t = cardTriggers<G>({ pool: POOL, player: () => 'a' });
     expect(() => t.resolveTrigger({ s: run([]) } as unknown as Ctx<G>, { id: 1, ability: 'beta#0009', source: 'beta', player: 'a', batch: 1, occurrences: [], once: 'perItem', order: 'silent' })).toThrow(/no when entry/);
