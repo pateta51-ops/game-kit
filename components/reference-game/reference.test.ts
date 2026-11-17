@@ -18,7 +18,7 @@ afterAll(() => fs.rmSync(tmp, { recursive: true, force: true }));
 describe('reference game (K205)', () => {
   it('generates through the scaffold and passes its own check', () => {
     const ref = execFileSync('git', ['rev-parse', 'HEAD'], { cwd: KIT, encoding: 'utf8' }).trim();
-    scaffold({ dir: out, id: 'reference', name: 'Reference', kit: KIT, ref, ports, link: path.join(KIT, 'node_modules'), install: false, overlay: [path.join(import.meta.dirname, 'template')], components: ['prompt-host', 'replay-cli', 'card-language', 'card-zones', 'game-store', 'table-panels', 'opponent', 'paced-view', 'turn-flow', 'automa', 'campaign', 'screens'] });
+    scaffold({ dir: out, id: 'reference', name: 'Reference', kit: KIT, ref, ports, link: path.join(KIT, 'node_modules'), install: false, overlay: [path.join(import.meta.dirname, 'template')], components: ['prompt-host', 'replay-cli', 'card-language', 'card-zones', 'game-store', 'table-panels', 'opponent', 'paced-view', 'turn-flow', 'automa', 'campaign'] });
     const chk = spawnSync('npm', ['run', 'check'], { cwd: out, encoding: 'utf8', shell: true });
     expect(chk.status, chk.stdout + chk.stderr).toBe(0);
     expect(chk.stdout + chk.stderr).toMatch(/25 passed/);

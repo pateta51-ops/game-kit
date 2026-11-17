@@ -14,7 +14,9 @@
     "test": "vitest run --passWithNoTests",
     "kit:check": "node kit/kit.mjs check",
     "ci:check": "node kit/ci-templates/render.mjs --check",
-    "check:chain": "npm run test && npm run lint && npm run typecheck && npm run kit:check && npm run ci:check && npm run build",
+    "repo-gate": "node kit/repo-gate/repo-gate.ts",
+    "size": "node kit/bundle-size/check-bundle-size.ts --dir dist --config size.config.json",
+    "check:chain": "npm run test && npm run lint && npm run typecheck && npm run kit:check && npm run ci:check && npm run repo-gate && npm run build && npm run size",
     "check": "node kit/check-runner/check-runner.ts --config scripts/check-runner.config.json"
   },
   "devDependencies": {

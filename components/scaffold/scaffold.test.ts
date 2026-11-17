@@ -43,11 +43,18 @@ describe('scaffold (K204)', () => {
     expect(fs.readFileSync(path.join(out, 'vite.config.ts'), 'utf8')).toContain('port: 6990');
     expect(fs.readFileSync(path.join(out, 'vite.config.ts'), 'utf8')).toContain('port: 6991');
     expect(fs.existsSync(path.join(out, '.github', 'workflows', 'ci.yml'))).toBe(true);
+    expect(pkg).toMatch(/"check:chain": ".*repo-gate.*build.*size"/);
+    expect(fs.readFileSync(path.join(out, 'scripts/check-runner.config.json'), 'utf8')).toContain('"repo-gate"');
+    expect(fs.existsSync(path.join(out, 'repo-gate.config.json'))).toBe(true);
+    expect(fs.readFileSync(path.join(out, 'CLAUDE.md'), 'utf8')).toContain('TODO');
+    const app = fs.readFileSync(path.join(out, 'src/ui/App.tsx'), 'utf8');
+    for (const r of ['MainMenu', 'SetupForm', 'SettingsScreen', 'SavesScreen']) expect(app).toContain(r);
+    expect(fs.existsSync(path.join(out, 'kit/screens/ui.tsx'))).toBe(true);
     const run = (...a: string[]) => spawnSync('node', a, { cwd: out, encoding: 'utf8' });
     expect(run('kit/kit.mjs', 'check').status).toBe(0);
     expect(run('kit/ci-templates/render.mjs', '--check').status).toBe(0);
     const chk = spawnSync('npm', ['run', 'check'], { cwd: out, encoding: 'utf8', shell: true });
-    expect(chk.stdout + chk.stderr).toContain('2 passed');
+    expect(chk.stdout + chk.stderr).toContain('4 passed');
     expect(chk.status, chk.stdout + chk.stderr).toBe(0);
   }, 180_000);
 

@@ -2,7 +2,7 @@
 
 A small made-up card game kept in the kit as a contract test (K205, K276): when a component's interface drifts, the game stops compiling or its tests fail. Not pulled into games; it is generated, never copied.
 
-`reference.test.ts` makes it with `scaffold({ overlay: [template/], components: [...] })` (prompt-host, replay-cli, card-language, card-zones, game-store, table-panels, opponent, paced-view, turn-flow, automa, campaign, screens) at the checkout's HEAD (into a temp folder, `node_modules` linked, fake ports in a temp ports file) and runs the game's own `npm run check` (tests, lint, typecheck, kit check, CI check, build).
+`reference.test.ts` makes it with `scaffold({ overlay: [template/], components: [...] })` (prompt-host, replay-cli, card-language, card-zones, game-store, table-panels, opponent, paced-view, turn-flow, automa, campaign) at the checkout's HEAD (into a temp folder, `node_modules` linked, fake ports in a temp ports file) and runs the game's own `npm run check` (tests, lint, typecheck, kit check, CI check, build).
 
 The game (K276, replaces the K234 toy; one `defineGame` object, `REF`): two seats with life, a shuffled deck of 20 in card-zones, hidden hands of 3. A turn (turn-flow) is phases draw (you may draw 2: the pack's `may` and `draw`), main (play a card: `pick`) and end (strike 1). Jab and Blow hit 2 and 3 (a `would` damage batch); Rally: until end of turn your hits deal 2 more (a duration); Ward stays in play: if you would take damage, instead discard it (a replacement); Mend stays in play: when you take damage, you may heal 1 (a `when` trigger). State checks after each action: a seat at 0 life loses, a hand over 4 sheds its last card. The other seat is the automa (a priority table, a mode deck flipped each of its turns, tiers easy / normal / hard). After the last round the higher life wins. A campaign of two scenarios: winning the first gives the player 3 more life in the second. Menu and set-up (screens): seats human or automa, scenario, difficulty.
 
@@ -25,6 +25,6 @@ Adding a component to the contract: list it in `components`, use it in the templ
 import { scaffold } from '../kit/scaffold/scaffold.js'
 // what reference.test.ts does (run it: npx vitest run components/reference-game), then `npm run check` in the folder
 const kit = 'C:/projects/game-kit'
-const made = scaffold({ dir: 'C:/tmp/reference', id: 'reference', name: 'Reference', kit, ref: 'HEAD', ports: 'C:/tmp/ports.json', install: false, overlay: [`${kit}/components/reference-game/template`], components: ['prompt-host', 'replay-cli', 'card-language', 'card-zones', 'game-store', 'table-panels', 'opponent', 'paced-view', 'turn-flow', 'automa', 'campaign', 'screens'] })
+const made = scaffold({ dir: 'C:/tmp/reference', id: 'reference', name: 'Reference', kit, ref: 'HEAD', ports: 'C:/tmp/ports.json', install: false, overlay: [`${kit}/components/reference-game/template`], components: ['prompt-host', 'replay-cli', 'card-language', 'card-zones', 'game-store', 'table-panels', 'opponent', 'paced-view', 'turn-flow', 'automa', 'campaign'] })
 console.log(made.dir)
 ```
