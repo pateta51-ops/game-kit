@@ -2,7 +2,7 @@ import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import { slots, zone } from '../board-layout/index.ts';
 import { HTML, inline } from './build.mjs';
-import { alignZones, cardFit, childrenOf, distributeZones, layoutWarnings, mirrorZones, moveZone, normalizeDoc, parentOf, renameZone, resizeZone, screenLayout, snap, type Screen } from './index.ts';
+import { alignZones, cardFit, childrenOf, clampZoom, commonPrefix, consolidate, copyZones, distributeZones, keepPoint, layoutWarnings, mirrorZones, moveZone, normalizeDoc, parentOf, pileSize, renameZone, resizeZone, screenLayout, screenModes, snap, split, stageView, type Screen } from './index.ts';
 
 const scr = (zones: Record<string, [number, number, number, number]>, w = 1000, h = 1000): Screen => ({ w, h, card: [100, 140], zones: Object.fromEntries(Object.entries(zones).map(([k, r]) => [k, { r }])) });
 
@@ -83,6 +83,59 @@ describe('K269 layout-editor logic', () => {
     expect(alignZones(s, ['a', 'b'], 'top').zones['b.x']!.r).toEqual([50, 0, 5, 5]);
     const d = distributeZones({ ...s, zones: { ...s.zones, b: { r: [20, 20, 20, 10] } } }, ['c', 'a', 'b'], 'h');
     expect(d.zones.b!.r).toEqual([45, 20, 20, 10]);
+  });
+  it('K280 normalizeDoc keeps kind, full and the pile size; old docs load unchanged', () => {
+    const d = normalizeDoc({ screens: { s: { w: 10, h: 10, pile: [40, '60'], zones: { a: { r: [0, 0, 1, 1], kind: 'pile', full: true }, b: { r: [0, 0, 1, 1], kind: 'bad', full: 1 } } } } });
+    expect(d.screens.s).toEqual({ w: 10, h: 10, card: [180, 252], pile: [40, 60], zones: { a: { r: [0, 0, 1, 1], kind: 'pile', full: true }, b: { r: [0, 0, 1, 1] } } });
+    expect(pileSize(normalizeDoc({ zones: {} }).screens.main!)).toEqual([90, 126]);
+  });
+  it('K280 warnings: a pile checks its tile, components and groups no cards', () => {
+    const s = scr({ p: [0, 0, 50, 70], f: [100, 0, 60, 80], c: [200, 0, 10, 10], g: [300, 0, 10, 10] });
+    Object.assign(s.zones.p!, { kind: 'pile' }); Object.assign(s.zones.f!, { kind: 'pile', full: true }); Object.assign(s.zones.c!, { kind: 'component', cards: 3 }); Object.assign(s.zones.g!, { kind: 'group', cards: 3 });
+    expect(layoutWarnings(s).map((w) => w.id)).toEqual(['f']);
+  });
+  it('K280 consolidate three piles into <prefix>.piles, then split them back', () => {
+    const s = scr({ you: [0, 0, 1000, 1000], 'you.deck': [100, 500, 100, 140], 'you.discard': [300, 500, 100, 140], 'you.captain': [500, 500, 100, 140], 'you.hand': [0, 800, 600, 140] });
+    s.zones['you.deck']!.fan = 'stack'; s.zones['you.discard']!.kind = 'pile'; s.zones['you.captain']!.cards = 1; s.zones['you.hand']!.cards = 4;
+    expect(commonPrefix(['you.deck', 'you.x.y'])).toBe('you');
+    const c = consolidate(s, ['you.captain', 'you.deck', 'you.discard', 'you.hand'], 'column');
+    expect(c.id).toBe('you.piles');
+    const z = c.screen.zones;
+    expect(Object.keys(z)).toEqual(['you', 'you.hand', 'you.piles', 'you.piles.deck', 'you.piles.discard', 'you.piles.captain']);
+    expect(z['you.piles']!.r).toEqual([100, 500, 50 + 12, 3 * 70 + 4 * 6]);
+    expect(z['you.piles.discard']).toEqual({ r: [106, 582, 50, 70], kind: 'pile' });
+    expect(consolidate(s, ['you.deck'], 'row', 'you').id).toBe('');
+    const sp = split(c.screen, 'you.piles');
+    expect(sp.ids).toEqual(['you.deck', 'you.discard', 'you.captain']);
+    expect(sp.screen.zones['you.deck']).toEqual({ r: [100, 500, 100, 140], fan: 'stack' });
+    expect(sp.screen.zones['you.discard']).toEqual({ r: [100, 653, 100, 140], kind: 'pile', full: true });
+    expect(sp.screen.zones['you.captain']!.cards).toBe(1);
+    expect(split(s, 'you.deck').ids).toEqual([]);
+  });
+  it('K280 consolidate in a row with a custom pile size; split refuses a parent that is not consolidated; a nested selection is not duplicated', () => {
+    const s = { ...scr({ a: [0, 0, 100, 140], 'b.c': [200, 0, 100, 140] }), pile: [20, 30] as [number, number] };
+    s.zones.a!.cards = 1; s.zones['b.c']!.cards = 1;
+    const c = consolidate(s, ['a', 'b.c'], 'row');
+    expect(c.id).toBe('piles');
+    expect(c.screen.zones.piles!.r).toEqual([0, 0, 2 * 20 + 3 * 3, 30 + 6]);
+    const t = { ...c.screen, zones: { ...c.screen.zones, piles: { ...c.screen.zones.piles!, from: undefined } } };
+    expect(split(t, 'piles')).toEqual({ screen: t, ids: [] });
+    expect(split(scr({ you: [0, 0, 500, 500], 'you.d': [0, 0, 50, 70] }), 'you').ids).toEqual([]);
+    const n = { ...s, zones: { ...s.zones, 'a.x': { r: [0, 0, 100, 140] as [number, number, number, number], cards: 1 } } };
+    expect(Object.keys(consolidate(n, ['a', 'a.x'], 'row').screen.zones)).toEqual(['b.c', 'piles', 'piles.a', 'piles.a.x']);
+  });
+  it('K280 copy zones from another screen, mode/variant names, zoom maths', () => {
+    const a = scr({ crew: [10, 10, 100, 100], 'crew.x': [20, 20, 5, 5] }), b = scr({ crew: [0, 0, 1, 1] });
+    const c = copyZones(a, b, 'crew');
+    expect(c.id).toBe('crew-2');
+    expect(c.screen.zones['crew-2.x']!.r).toEqual([20, 20, 5, 5]);
+    expect(screenModes(['solo/table', '2p/rulebook', 'solo/x', 'phone'])).toEqual([['solo', ['solo/table', 'solo/x']], ['2p', ['2p/rulebook']], ['phone', ['phone']]]);
+    const v = stageView(1000, 500, 524, 524, 500, 500, 1);
+    expect(v).toEqual({ sc: 0.5, left: 12, top: 125, padW: 524, padH: 500 });
+    const z = stageView(1000, 500, 524, 524, 500, 500, 3);
+    expect([z.sc, z.left, z.padW]).toEqual([1.5, 12, 1524]);
+    expect(keepPoint(100, 1.5, 12, 50)).toBe(112);
+    expect([clampZoom(0), clampZoom(99)]).toEqual([0.1, 20]);
   });
   it('editor.html carries the current index.ts (run node components/layout-editor/build.mjs)', () => {
     const html = readFileSync(HTML, 'utf8');

@@ -15,7 +15,8 @@
       3200,
       760
      ],
-     "label": "Your side"
+     "label": "Your side",
+     "kind": "group"
     },
     "you.name": {
      "r": [
@@ -24,7 +25,8 @@
       400,
       40
      ],
-     "label": "Player plate"
+     "label": "Player plate",
+     "kind": "component"
     },
     "you.resources": {
      "r": [
@@ -33,7 +35,8 @@
       700,
       40
      ],
-     "label": "Influence, dilithium, crew"
+     "label": "Influence, dilithium, crew",
+     "kind": "component"
     },
     "you.staging": {
      "r": [
@@ -144,7 +147,8 @@
       3200,
       600
      ],
-     "label": "Shared table"
+     "label": "Shared table",
+     "kind": "group"
     },
     "shared.marketDecks": {
      "r": [
@@ -205,7 +209,8 @@
       3120,
       200
      ],
-     "label": "Stardate track"
+     "label": "Stardate track",
+     "kind": "component"
     },
     "log": {
      "r": [
@@ -214,7 +219,8 @@
       600,
       1500
      ],
-     "label": "Game log"
+     "label": "Game log",
+     "kind": "component"
     },
     "round": {
      "r": [
@@ -223,7 +229,8 @@
       290,
       180
      ],
-     "label": "Round tracker"
+     "label": "Round tracker",
+     "kind": "component"
     },
     "score": {
      "r": [
@@ -232,7 +239,8 @@
       290,
       180
      ],
-     "label": "Score tracker"
+     "label": "Score tracker",
+     "kind": "component"
     },
     "menu": {
      "r": [
@@ -241,7 +249,8 @@
       290,
       180
      ],
-     "label": "Menu button"
+     "label": "Menu button",
+     "kind": "component"
     },
     "undo": {
      "r": [
@@ -250,7 +259,8 @@
       290,
       180
      ],
-     "label": "Undo button"
+     "label": "Undo button",
+     "kind": "component"
     },
     "endTurn": {
      "r": [
@@ -259,7 +269,8 @@
       600,
       200
      ],
-     "label": "End turn button"
+     "label": "End turn button",
+     "kind": "component"
     },
     "claude": {
      "r": [
@@ -268,7 +279,8 @@
       3200,
       760
      ],
-     "label": "Claude's side"
+     "label": "Claude's side",
+     "kind": "group"
     },
     "claude.name": {
      "r": [
@@ -277,7 +289,8 @@
       400,
       40
      ],
-     "label": "Player plate"
+     "label": "Player plate",
+     "kind": "component"
     },
     "claude.resources": {
      "r": [
@@ -286,7 +299,8 @@
       700,
       40
      ],
-     "label": "Influence, dilithium, crew"
+     "label": "Influence, dilithium, crew",
+     "kind": "component"
     },
     "claude.staging": {
      "r": [
@@ -407,7 +421,8 @@
       390,
       48
      ],
-     "label": "Top bar"
+     "label": "Top bar",
+     "kind": "component"
     },
     "table": {
      "r": [
@@ -416,7 +431,8 @@
       390,
       500
      ],
-     "label": "Table"
+     "label": "Table",
+     "kind": "group"
     },
     "table.market": {
      "r": [

@@ -13,8 +13,16 @@ button,select,input{font:inherit;color:inherit;background:#232734;border:1px sol
 button:hover{background:#2e3446}button.on{background:#3b5bdb;border-color:#5c7cfa}
 input[type=number]{width:66px;box-sizing:border-box;padding:3px 4px}input[type=text]{width:100%;box-sizing:border-box}input[type=range]{padding:0}
 .tab{border-radius:4px 4px 0 0}.tab.on{background:#3b5bdb}
-#wrap{position:relative;overflow:hidden;touch-action:none;background:#0d0e12}
-#stage{position:absolute;background:#1b1e27;outline:1px solid #4a5068;touch-action:none;user-select:none}
+#wrap{position:relative;overflow:auto;touch-action:none;background:#0d0e12}#wrap.grab,#wrap.grab *{cursor:grab!important}
+#pad{position:relative}
+#stage{position:absolute;background-color:#1b1e27;outline:1px solid #4a5068;touch-action:none;user-select:none}
+#zPct{display:inline-block;min-width:44px;text-align:center}
+.z.k-component{border-style:dashed;background:hsl(var(--h) 60% 50% / .06)}
+.z.k-component>.t,.z.k-pile>.t{left:50%;top:50%;transform:translate(-50%,-50%);text-align:center}
+.z.k-group{border-width:1px;background:hsl(var(--h) 60% 50% / .05)}
+#ptags .t.tab{transform:none;border-radius:0 0 3px 0}
+.pl{position:absolute;box-sizing:border-box;border:1px solid #b8c0d4;border-radius:3px;background:#1b1e27;pointer-events:none;box-shadow:3px -3px 0 -1px #1b1e27,3px -3px 0 0 #b8c0d4,6px -6px 0 -1px #1b1e27,6px -6px 0 0 #b8c0d4}
+.cnt{position:absolute;right:2px;bottom:1px;font-size:10px;color:#9aa3b8}
 #bg{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
 .z{position:absolute;box-sizing:border-box;border:1.5px solid hsl(var(--h) 60% 60%);background:hsl(var(--h) 60% 50% / .13);cursor:move}
 .z.locked{cursor:default;border-style:dotted}.z.warn{border:2px dashed #f59f00}.z.bad{border:2.5px solid #fa5252}
@@ -59,12 +67,14 @@ input[type=number]{width:66px;box-sizing:border-box;padding:3px 4px}input[type=t
   <button data-al="left" title="Align left">⇤</button><button data-al="centre" title="Align centre">↔</button><button data-al="right" title="Align right">⇥</button>
   <button data-al="top" title="Align top">⤒</button><button data-al="middle" title="Align middle">↕</button><button data-al="bottom" title="Align bottom">⤓</button>
   <button data-dist="h" title="Distribute across">⋯</button><button data-dist="v" title="Distribute down">⋮</button><span class="sep"></span>
+  <button id="cons" title="Put the selected piles in one compact column or row">Consolidate</button><select id="consDir"><option>column</option><option>row</option></select><button id="split" title="Back to full-size piles">Split</button><span class="sep"></span>
   <button id="multi" title="Tap adds to the selection (touch)">Multi</button>
-  <label>Grid <select id="grid"><option value="0">off</option><option>8</option><option selected>16</option><option>32</option><option>64</option></select></label>
+  <button id="snapGrid" class="on">Snap to grid</button><select id="grid" title="Grid size"><option>8</option><option selected>16</option><option>32</option><option>64</option></select><button id="snapZones" class="on" title="Snap to the edges and centres of other zones">Snap to zones</button><span class="sep"></span>
+  <button id="zOut" title="Zoom out (Ctrl+wheel, pinch)">−</button><span id="zPct">100%</span><button id="zIn" title="Zoom in (Ctrl+wheel, pinch)">+</button><button id="zFit" title="Fit the screen in the window">Fit</button><span class="sep"></span>
   <button id="json">Import / Export</button>
   <span id="msg"></span>
 </div>
-<div id="wrap"><div id="stage"><img id="bg" alt=""><div id="zones"></div><div id="ptags"></div><div id="guides"></div><div id="selbox"></div><div id="marq"></div></div></div>
+<div id="wrap"><div id="pad"><div id="stage"><img id="bg" alt=""><div id="zones"></div><div id="ptags"></div><div id="guides"></div><div id="selbox"></div><div id="marq"></div></div></div></div>
 <div id="status"></div>
 <div id="panel">
   <h3>Screen</h3>
@@ -73,6 +83,8 @@ input[type=number]{width:66px;box-sizing:border-box;padding:3px 4px}input[type=t
     <span>Size</span><span class="xywh"><input id="sW" type="number" min="1"><input id="sH" type="number" min="1"><button id="delScreen">Remove screen</button></span>
     <span>Card</span><span class="xywh"><input id="cW" type="number" min="1"><input id="cH" type="number" min="1"></span>
     <span>Card scale</span><input id="cS" type="range" min="25" max="200" value="100">
+    <span>Pile</span><span class="xywh"><input id="pW" type="number" min="1"><input id="pH" type="number" min="1"><input id="pS" type="range" min="10" max="100" title="Pile size, % of the card size" style="width:84px"><span id="pSv"></span></span>
+    <span>Copy zones</span><span class="xywh"><select id="cpScreen" title="From screen"></select><select id="cpZone" title="Zone (with its children)" style="max-width:130px"></select><button id="cpGo">Copy here</button></span>
     <span>Children</span><label><input id="keep" type="checkbox"> keep size when the parent is resized</label>
     <span>Backdrop</span><span class="xywh"><input id="bgFile" type="file" accept="image/*" style="width:180px"><input id="bgUrl" type="text" placeholder="or picture URL, Enter"><input id="bgOp" type="range" min="0" max="100" value="50" title="Opacity"><button id="bgOff">No backdrop</button></span>
   </div>
@@ -81,6 +93,7 @@ input[type=number]{width:66px;box-sizing:border-box;padding:3px 4px}input[type=t
     <span>Id</span><input id="zId" type="text">
     <span>Label</span><input id="zLabel" type="text" placeholder="what it holds">
     <span>x y w h</span><span class="xywh"><input id="zX" type="number"><input id="zY" type="number"><input id="zW" type="number" min="1"><input id="zH" type="number" min="1"></span>
+    <span>Kind</span><span class="xywh"><select id="zKind"><option value="">auto</option><option>cards</option><option>component</option><option>pile</option><option>group</option></select><label><input id="zFull" type="checkbox"> full size</label></span>
     <span>Cards</span><span class="xywh"><input id="zCards" type="number" min="0"><select id="zFan"><option>row</option><option>column</option><option>stack</option><option>grid</option></select></span>
     <span>Mirror</span><span class="xywh"><button id="flipV">Flip ↕</button><button id="flipH">Flip ↔</button><input id="mirTo" type="text" placeholder="copy as id" style="width:110px"></span>
   </div>
@@ -97,17 +110,20 @@ input[type=number]{width:66px;box-sizing:border-box;padding:3px 4px}input[type=t
 // <lib generated from index.ts by build.mjs>
 // K269: pure logic of the layout editor; editor.html carries a generated copy (build.mjs), checked by editor.test.ts.
 const FANS = ['row', 'column', 'stack', 'grid'];
+const KINDS = ['cards', 'component', 'pile', 'group'];
 const num = (v , d ) => (typeof v === 'number' && isFinite(v) ? v : typeof v === 'string' && v.trim() !== '' && isFinite(Number(v)) ? Number(v) : d);
 const isObj = (v ) => !!v && typeof v === 'object' && !Array.isArray(v);
 function normalizeZone(v ) {
 const o = Array.isArray(v) ? { r: v } : isObj(v) ? v : null;
 if (!o || !Array.isArray(o.r)) return null;
 const r = o.r ;
-const { r: _r, label: _l, cards: _c, fan: _f, locked: _k, hidden: _h, ...rest } = o;
+const { r: _r, label: _l, cards: _c, fan: _f, kind: _d, full: _u, locked: _k, hidden: _h, ...rest } = o;
 const z = { r: [num(r[0], 0), num(r[1], 0), num(r[2], 0), num(r[3], 0)], ...rest };
 if (typeof o.label === 'string' && o.label) z.label = o.label;
 if (o.cards !== undefined && num(o.cards, 0) > 0) z.cards = Math.round(num(o.cards, 0));
 if (typeof o.fan === 'string' && FANS.includes(o.fan)) z.fan = o.fan ;
+if (typeof o.kind === 'string' && KINDS.includes(o.kind)) z.kind = o.kind ;
+if (o.full === true) z.full = true;
 if (o.locked === true) z.locked = true;
 if (o.hidden === true) z.hidden = true;
 return z;
@@ -115,8 +131,10 @@ return z;
 function normalizeScreen(v ) {
 const o = isObj(v) ? v : {};
 const c = Array.isArray(o.card) ? (o.card ) : [];
-const { w: _w, h: _h, card: _c, zones: _z, ...rest } = o;
+const { w: _w, h: _h, card: _c, pile: _p, zones: _z, ...rest } = o;
 const s = { ...rest, w: num(o.w, 3840), h: num(o.h, 2160), card: [num(c[0], 180), num(c[1], 252)], zones: {} };
+const p = Array.isArray(o.pile) ? (o.pile ) : [];
+if (num(p[0], 0) > 0 && num(p[1], 0) > 0) s.pile = [num(p[0], 0), num(p[1], 0)];
 if (isObj(o.zones)) for (const [k, z] of Object.entries(o.zones)) { const n = normalizeZone(z); if (n) s.zones[k] = n; }
 return s;
 }
@@ -217,8 +235,8 @@ const out = [];
 const ids = Object.keys(s.zones).filter((k) => !s.zones[k] .hidden);
 for (const id of ids) {
 const z = s.zones[id] , p = parentOf(s, id);
-const f = cardFit(z, s.card);
-if (!f.fits) out.push({ id, kind: 'cards', text: `${id}: ${z.cards} cards fit only at ${Math.floor(f.scale * 100)}% of the card size` });
+const k = kindOf(z), f = k === 'pile' ? cardFit(z, z.full ? s.card : pileSize(s), 1, 'stack') : k === 'component' || k === 'group' ? null : cardFit(z, s.card);
+if (f && !f.fits) out.push({ id, kind: 'cards', text: k === 'pile' ? `${id}: the pile fits only at ${Math.floor(f.scale * 100)}% of its size` : `${id}: ${z.cards} cards fit only at ${Math.floor(f.scale * 100)}% of the card size` });
 if (!inside(z.r, [0, 0, s.w, s.h])) out.push({ id, kind: 'outside', text: `${id}: outside the screen` });
 else if (p && !inside(z.r, s.zones[p] .r)) out.push({ id, kind: 'outside', text: `${id}: outside ${p}` });
 for (const o of ids) if (o > id && parentOf(s, o) === p && overlaps(z.r, s.zones[o] .r)) out.push({ id, kind: 'overlap', text: `${id} overlaps ${o}` });
@@ -250,11 +268,92 @@ let at = first[a] + first[a + 2] + gap;
 for (const k of ks.slice(1, -1)) { const d = at - r(k)[a]; s = moveZone(s, k, a ? 0 : d, a ? d : 0); at += r(k)[a + 2] + gap; }
 return s;
 }
+// K280: kinds, compact piles, consolidate / split, copy between screens, mode/variant screen names, zoom maths.
+const kindOf = (z ) => z.kind ?? (z.cards ? 'cards' : undefined);
+const pileSize = (s ) => s.pile ?? [Math.round(s.card[0] / 2), Math.round(s.card[1] / 2)];
+const pileLike = (z ) => z.kind === 'pile' || ((!z.kind || z.kind === 'cards') && (z.cards === 1 || z.fan === 'stack'));
+function commonPrefix(ids ) {
+const ps = ids.map((k) => k.split('.').slice(0, -1)), out = [];
+for (let i = 0; ps.length && ps.every((p) => p[i] !== undefined && p[i] === ps[0] [i]); i++) out.push(ps[0] [i] );
+return out.join('.');
+}
+const last = (k ) => k.slice(k.lastIndexOf('.') + 1);
+const freeId = (s , id , skip = () => false) => {
+const taken = (n ) => Object.keys(s.zones).some((k) => !skip(k) && (k === n || k.startsWith(n + '.')));
+let n = id, i = 2; while (taken(n)) n = id + '-' + i++; return n;
+};
+const shift = (zones , s , k , nid , r ) => {
+const z = s.zones[k] ;
+for (const c of descendants(s, k)) { const cz = s.zones[c] ; zones[nid + c.slice(k.length)] = { ...cz, r: [cz.r[0] + r[0] - z.r[0], cz.r[1] + r[1] - z.r[1], cz.r[2], cz.r[3]] }; }
+};
+// Lay the pile-like ids out as compact pile tiles in a new group zone `<common prefix>.piles` (or `id`); one column or one row.
+function consolidate(s , ids , dir = 'column', id ) {
+const a = dir === 'row' ? 0 : 1;
+const ks = [...new Set(ids)].filter((k, _i, all) => s.zones[k] && pileLike(s.zones[k]) && !all.some((m) => k.startsWith(m + '.'))).sort((p, q) => s.zones[p] .r[a] - s.zones[q] .r[a] || s.zones[p] .r[1 - a] - s.zones[q] .r[1 - a] );
+if (!ks.length) return { screen: s, id: '' };
+const moving = (k ) => ks.some((m) => k === m || k.startsWith(m + '.'));
+const pre = commonPrefix(ks), pid = id ? id : freeId(s, pre ? pre + '.piles' : 'piles', moving);
+if (id && freeId(s, id, moving) !== id) return { screen: s, id: '' };
+const [pw, ph] = pileSize(s), gap = Math.max(1, Math.round(pw / 8));
+const n = ks.length, W = a ? pw + 2 * gap : n * pw + (n + 1) * gap, H = a ? n * ph + (n + 1) * gap : ph + 2 * gap, pp = parentOf(s, pid), B = pp ? s.zones[pp] .r : [0, 0, s.w, s.h];
+const x0 = Math.max(B[0], Math.min(B[0] + B[2] - W, ...ks.map((k) => s.zones[k] .r[0]))), y0 = Math.max(B[1], Math.min(B[1] + B[3] - H, ...ks.map((k) => s.zones[k] .r[1])));
+const zones = Object.fromEntries(Object.entries(s.zones).filter(([k]) => !moving(k)));
+const from = {};
+zones[pid] = { r: [x0, y0, W, H], kind: 'group', label: 'Piles', from };
+ks.forEach((k, i) => {
+const z = s.zones[k] , nid = freeId({ ...s, zones }, pid + '.' + last(k)), r = a ? [x0 + gap, y0 + gap + i * (ph + gap), pw, ph] : [x0 + gap + i * (pw + gap), y0 + gap, pw, ph];
+const { full: _f, ...rest } = z;
+zones[nid] = { ...rest, r, kind: 'pile' };
+from[nid] = z.kind ? { id: k, kind: z.kind } : { id: k };
+shift(zones, s, k, nid, r);
+});
+return { screen: { ...s, zones }, id: pid };
+}
+// Undo a consolidation (a group with `from`): the children of `id` go back to their old ids at full card size, in the parent's place.
+function split(s , id ) {
+const p = s.zones[id];
+const kids = p && isObj(p.from) ? Object.keys(s.zones).filter((k) => parentOf(s, k) === id) : [];
+if (!p || !kids.length) return { screen: s, ids: [] };
+const from = (isObj(p.from) ? p.from : {}) , pre = id.includes('.') ? id.slice(0, id.lastIndexOf('.') + 1) : '';
+const a = p.r[3] > p.r[2] ? 1 : 0, [cw, ch] = s.card, gap = Math.max(1, Math.round(cw / 8));
+const zones = Object.fromEntries(Object.entries(s.zones).filter(([k]) => k !== id && !k.startsWith(id + '.')));
+const ids = [];
+kids.forEach((k, i) => {
+const z = s.zones[k] , f = from[k], nid = freeId({ ...s, zones }, typeof f?.id === 'string' ? f.id : pre + last(k));
+const r = a ? [p.r[0], p.r[1] + i * (ch + gap), cw, ch] : [p.r[0] + i * (cw + gap), p.r[1], cw, ch];
+const { kind: _k, full: _f, ...rest } = z, kind = f ? f.kind : z.kind;
+zones[nid] = { ...rest, r, ...(kind ? { kind } : {}), ...(kind === 'pile' ? { full: true } : {}) };
+ids.push(nid);
+shift(zones, s, k, nid, r);
+});
+return { screen: { ...s, zones }, ids };
+}
+// Copy a zone and its children from another screen; a taken id gets a -2 suffix.
+function copyZones(from , to , id ) {
+if (!from.zones[id]) return { screen: to, id: '' };
+const nid = freeId(to, id), zones = { ...to.zones };
+for (const k of [id, ...descendants(from, id)]) zones[nid + k.slice(id.length)] = { ...from.zones[k] , r: [...from.zones[k] .r] };
+return { screen: { ...to, zones }, id: nid };
+}
+// Screens named `mode/variant` grouped by mode, in first-seen order.
+function screenModes(names ) {
+const m = new Map ();
+for (const n of names) { const k = n.split('/')[0] ; m.set(k, [...(m.get(k) ?? []), n]); }
+return [...m];
+}
+// Stage scale and offset at `zoom` (1 = the screen fits fitW x fitH with margin m) in a view of viewW x viewH; pad: the scrolled area.
+function stageView(sw , sh , fitW , fitH , viewW , viewH , zoom , m = 12) {
+const sc = Math.max(1e-3, Math.min((fitW - 2 * m) / sw, (fitH - 2 * m) / sh)) * zoom, w = sw * sc, h = sh * sc;
+return { sc, left: Math.max(m, (viewW - w) / 2), top: Math.max(m, (viewH - h) / 2), padW: Math.max(viewW, w + 2 * m), padH: Math.max(viewH, h + 2 * m) };
+}
+const clampZoom = (z ) => Math.min(20, Math.max(0.1, z));
+// The scroll that puts stage point p at view offset `at`, given the scale and the stage's offset in the scrolled area.
+const keepPoint = (p , sc , off , at ) => off + p * sc - at;
 // </lib>
 const KEY = 'layout-editor-doc', $ = (id) => document.getElementById(id)
 const store = (k, v) => { try { if (v === undefined) return localStorage.getItem(k); localStorage.setItem(k, v) } catch { return null } }
-let doc, cur, sel = new Set(), hist = [], fut = [], drag = null, guides = [], sc = 1, base = 100, mouse = [0, 0], cardSnap = null
-const listeners = [], fitCache = new Map(), ui = { grid: 16, keep: false, multi: false, bg: JSON.parse(store(KEY + '-bg') || '{}') }
+let doc, cur, sel = new Set(), hist = [], fut = [], drag = null, guides = [], sc = 1, base = 100, mouse = [0, 0], cardSnap = null, pileSnap = null, view = null
+const listeners = [], fitCache = new Map(), ui = { grid: 16, snapGrid: true, snapZones: true, zoom: 1, keep: false, multi: false, bg: JSON.parse(store(KEY + '-bg') || '{}') }
 const S = () => doc.screens[cur]
 const round = (s, old) => ({ ...s, zones: Object.fromEntries(Object.entries(s.zones).map(([k, z]) => [k, z === old.zones[k] ? z : { ...z, r: z.r.map(Math.round) }])) })
 const snapDoc = () => JSON.stringify(doc)
@@ -271,32 +370,45 @@ const depth = (s, k) => { let d = 0; for (let p = parentOf(s, k); p; p = parentO
 const hue = (k) => { let h = 0; for (const ch of k.split('.')[0]) h = (h * 31 + ch.charCodeAt(0)) % 360; return h }
 
 function fit() {
-  const w = $('wrap'), s = S(), m = 12
-  sc = Math.min((w.clientWidth - 2 * m) / s.w, (w.clientHeight - 2 * m) / s.h)
-  Object.assign($('stage').style, { width: s.w * sc + 'px', height: s.h * sc + 'px', left: (w.clientWidth - s.w * sc) / 2 + 'px', top: (w.clientHeight - s.h * sc) / 2 + 'px' })
+  const w = $('wrap'), s = S(), st = $('stage').style
+  view = stageView(s.w, s.h, w.offsetWidth, w.offsetHeight, w.clientWidth, w.clientHeight, ui.zoom); sc = view.sc
+  Object.assign($('pad').style, { width: view.padW + 'px', height: view.padH + 'px' })
+  Object.assign(st, { width: s.w * sc + 'px', height: s.h * sc + 'px', left: view.left + 'px', top: view.top + 'px' })
+  let g = ui.grid * sc; while (g > 0 && g < 6) g *= 2
+  st.backgroundImage = ui.snapGrid && g ? 'linear-gradient(#ffffff12 1px,transparent 1px),linear-gradient(90deg,#ffffff12 1px,transparent 1px)' : 'none'; st.backgroundSize = `${g}px ${g}px`
+  $('zPct').textContent = Math.round(ui.zoom * 100) + '%'
+}
+function zoomAt(z, cx, cy) {
+  const w = $('wrap'), b = w.getBoundingClientRect(), st = $('stage').getBoundingClientRect()
+  if (cx === undefined) { cx = b.left + w.clientWidth / 2; cy = b.top + w.clientHeight / 2 }
+  const p = [(cx - st.left) / sc, (cy - st.top) / sc]
+  ui.zoom = clampZoom(z); render()
+  w.scrollLeft = keepPoint(p[0], sc, view.left, cx - b.left); w.scrollTop = keepPoint(p[1], sc, view.top, cy - b.top)
 }
 const px = (v) => v * sc + 'px'
 function render() {
   const s = S(); fit()
-  $('tabs').innerHTML = Object.keys(doc.screens).map((k) => `<button class="tab${k === cur ? ' on' : ''}" data-screen="${esc(k)}">${esc(k)}</button>`).join('')
+  const cm = cur.split('/')[0], modes = screenModes(Object.keys(doc.screens)), vs = modes.find(([m]) => m === cm)[1]
+  $('tabs').innerHTML = modes.map(([m, v]) => `<button class="tab${m === cm ? ' on' : ''}" data-screen="${esc(m === cm ? cur : v[0])}">${esc(m)}</button>`).join('') + (vs.length > 1 || cur.includes('/') ? '<span class="sep"></span>' + vs.map((v) => `<button class="tab var${v === cur ? ' on' : ''}" data-screen="${esc(v)}">${esc(v.slice(cm.length + 1) || v)}</button>`).join('') : '')
   const bg = ui.bg[cur]; $('bg').style.display = bg ? '' : 'none'; if (bg) { if ($('bg').getAttribute('src') !== bg.src) $('bg').src = bg.src; $('bg').style.opacity = bg.op }
   const warns = layoutWarnings(s), bad = new Set(warns.filter((w) => w.kind === 'cards').map((w) => w.id)), warn = new Set(warns.map((w) => w.id))
   const keys = Object.keys(s.zones), html = [], tags = [], kids = (k) => keys.some((c) => c.startsWith(k + '.'))
   keys.forEach((k, i) => {
     const z = s.zones[k]; if (z.hidden) return
-    const [x, y, w, h] = z.r, cls = ['z', sel.has(k) && 'sel', z.locked && 'locked', bad.has(k) ? 'bad' : warn.has(k) && 'warn'].filter(Boolean).join(' ')
+    const kd = kindOf(z), [x, y, w, h] = z.r, cls = ['z', kd && 'k-' + kd, sel.has(k) && 'sel', z.locked && 'locked', bad.has(k) ? 'bad' : warn.has(k) && 'warn'].filter(Boolean).join(' ')
     let cards = ''
-    const chip = `<b>${esc(k)}</b>${z.label ? ' <br>' + esc(z.label) : ''}`
-    if (z.cards) {
+    const chip = `<b>${esc(kd === 'pile' ? k.slice(k.lastIndexOf('.') + 1) : k)}</b>${z.label ? ' <br>' + esc(z.label) : ''}`
+    if (kd === 'pile') { const [tw, th] = z.full ? s.card : pileSize(s); cards = `<div class="pl" style="left:${px((w - tw) / 2)};top:${px((h - th) / 2)};width:${px(tw)};height:${px(th)}"><span class="cnt">#</span></div>` }
+    else if (kd === 'cards' && z.cards) {
       const [cw, ch] = s.card, fan = z.fan || 'row', cols = Math.max(1, Math.floor(w / cw))
       for (let j = 0; j < (fan === 'stack' ? 1 : Math.min(z.cards, 60)); j++) {
         const cx = fan === 'row' ? j * cw : fan === 'grid' ? (j % cols) * cw : 0, cy = fan === 'column' ? j * ch : fan === 'grid' ? Math.floor(j / cols) * ch : 0
         cards += `<div class="c${cx + cw > w + 0.5 || cy + ch > h + 0.5 ? ' out' : ''}" style="left:${px(cx)};top:${px(cy)};width:${px(cw)};height:${px(ch)}"></div>`
       }
     }
-    const info = z.cards ? ` <br><i>${z.cards} card${z.cards > 1 ? 's' : ''}, ${z.fan || 'row'}</i>` : ''
+    const info = kd === 'cards' && z.cards ? ` <br><i>${z.cards} card${z.cards > 1 ? 's' : ''}, ${z.fan || 'row'}</i>` : ''
     html.push(`<div class="${cls}" data-id="${esc(k)}" style="--h:${hue(k)};left:${px(x)};top:${px(y)};width:${px(w)};height:${px(h)};z-index:${depth(s, k) * 1000 + i}" title="${esc(k + (z.label ? ': ' + z.label : ''))}">${cards}${kids(k) ? '' : `<div class="t">${chip}${info}</div>`}</div>`)
-    if (kids(k)) tags.push(`<div class="t one" style="left:${px(x + w)};top:${px(y)}">${chip}${info}</div>`)
+    if (kids(k)) tags.push(kd === 'group' ? `<div class="t one tab" style="left:${px(x)};top:${px(y)};max-width:${px(w)}">${chip}</div>` : `<div class="t one" style="left:${px(x + w)};top:${px(y)}">${chip}${info}</div>`)
   })
   $('zones').innerHTML = html.join(''); $('ptags').innerHTML = tags.join('')
   for (const t of $('zones').querySelectorAll('.t')) fitLabel(t)
@@ -308,7 +420,7 @@ function render() {
     sb.innerHTML = ['tl', 't', 'tr', 'r', 'br', 'b', 'bl', 'l'].filter((e) => !(e.length === 1 && (/[tb]/.test(e) ? w * sc : h * sc) < 3 * hs)).map((e) => `<div class="h" data-h="${e}" style="left:${f(e, 'l', 'r')}%;top:${f(e, 't', 'b')}%;transform:translate(${-f(e, 'r', 'l')}%,${-f(e, 'b', 't')}%);cursor:${{ tl: 'nwse', br: 'nwse', tr: 'nesw', bl: 'nesw', t: 'ns', b: 'ns', l: 'ew', r: 'ew' }[e]}-resize"></div>`).join('')
   } else sb.style.display = 'none'
   $('warns').innerHTML = warns.length ? warns.map((w) => `<div data-id="${esc(w.id)}">${esc(w.text)}</div>`).join('') : '<span style="color:#8d96ad">none</span>'
-  $('tree').innerHTML = keys.map((k) => { const z = s.zones[k]; return `<div class="row${sel.has(k) ? ' sel' : ''}" data-id="${esc(k)}" style="padding-left:${depth(s, k) * 14}px"><button data-act="hidden" class="${z.hidden ? '' : 'on'}" title="Show or hide">${z.hidden ? 'hidden' : 'shown'}</button><button data-act="locked" class="${z.locked ? 'on' : ''}" title="Lock">${z.locked ? 'locked' : 'lock'}</button><span>${esc(k)}${z.label ? ' <i style="color:#8d96ad">' + esc(z.label) + '</i>' : ''}</span></div>` }).join('')
+  $('tree').innerHTML = keys.map((k) => { const z = s.zones[k]; return `<div class="row${sel.has(k) ? ' sel' : ''}" data-id="${esc(k)}" style="padding-left:${depth(s, k) * 14}px"><button data-act="hidden" class="${z.hidden ? '' : 'on'}" title="Show or hide">${z.hidden ? 'hidden' : 'shown'}</button><button data-act="locked" class="${z.locked ? 'on' : ''}" title="Lock">${z.locked ? 'locked' : 'lock'}</button><span>${esc(k)}${kindOf(z) ? ' <i style="color:#74c0fc">' + kindOf(z) + (z.full ? ', full' : '') + '</i>' : ''}${z.label ? ' <i style="color:#8d96ad">' + esc(z.label) + '</i>' : ''}</span></div>` }).join('')
   panel(); status()
 }
 function fitLabel(t) {
@@ -322,13 +434,16 @@ function fitLabel(t) {
 }
 const esc = (v) => String(v).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c])
 function setVal(id, v) { const e = $(id); if (document.activeElement !== e) e.value = v }
+function opts(e, list) { const key = list.join('\n'); if (e.dataset.k === key) return; const v = e.value; e.innerHTML = list.map((n) => `<option>${esc(n)}</option>`).join(''); e.dataset.k = key; if (list.includes(v)) e.value = v }
 function panel() {
   const s = S(); setVal('sName', cur); setVal('sW', s.w); setVal('sH', s.h); setVal('cW', s.card[0]); setVal('cH', s.card[1]); $('keep').checked = ui.keep
   setVal('bgOp', Math.round((ui.bg[cur]?.op ?? 0.5) * 100))
+  const ps = pileSize(s); setVal('pW', ps[0]); setVal('pH', ps[1]); if (!pileSnap) setVal('pS', Math.round(ps[0] / s.card[0] * 100)); $('pSv').textContent = Math.round(ps[0] / s.card[0] * 100) + '%'
+  opts($('cpScreen'), Object.keys(doc.screens).filter((n) => n !== cur)); const cs = doc.screens[$('cpScreen').value]; opts($('cpZone'), cs ? Object.keys(cs.zones) : [])
   const k = sel.size === 1 ? [...sel][0] : null, z = k && s.zones[k]
   for (const e of $('zf').querySelectorAll('input,select,button')) e.disabled = !z && !(sel.size > 1 && e.tagName === 'BUTTON')
-  if (!z) { for (const id of ['zId', 'zLabel', 'zX', 'zY', 'zW', 'zH', 'zCards']) setVal(id, ''); return }
-  setVal('zId', k); setVal('zLabel', z.label || ''); ['zX', 'zY', 'zW', 'zH'].forEach((id, i) => setVal(id, Math.round(z.r[i]))); setVal('zCards', z.cards || ''); setVal('zFan', z.fan || 'row')
+  if (!z) { for (const id of ['zId', 'zLabel', 'zX', 'zY', 'zW', 'zH', 'zCards', 'zKind']) setVal(id, ''); $('zFull').checked = false; return }
+  setVal('zId', k); setVal('zLabel', z.label || ''); ['zX', 'zY', 'zW', 'zH'].forEach((id, i) => setVal(id, Math.round(z.r[i]))); setVal('zCards', z.cards || ''); setVal('zFan', z.fan || 'row'); setVal('zKind', z.kind || ''); $('zFull').checked = !!z.full; $('zFull').disabled = kindOf(z) !== 'pile'
 }
 function status() {
   const k = sel.size === 1 ? [...sel][0] : null, z = k && S().zones[k]
@@ -336,7 +451,7 @@ function status() {
 }
 
 const toStage = (e) => { const b = $('stage').getBoundingClientRect(); return [(e.clientX - b.left) / sc, (e.clientY - b.top) / sc] }
-const others = (s, skip) => [[0, 0, s.w, s.h], ...Object.keys(s.zones).filter((k) => !s.zones[k].hidden && !skip.some((p) => k === p || k.startsWith(p + '.'))).map((k) => s.zones[k].r)]
+const others = (s, skip) => !ui.snapZones ? [] : [[0, 0, s.w, s.h], ...Object.keys(s.zones).filter((k) => !s.zones[k].hidden && !skip.some((p) => k === p || k.startsWith(p + '.'))).map((k) => s.zones[k].r)]
 const bbox = (s, ids) => { const rs = ids.map((k) => s.zones[k].r), x = Math.min(...rs.map((r) => r[0])), y = Math.min(...rs.map((r) => r[1])); return [x, y, Math.max(...rs.map((r) => r[0] + r[2])) - x, Math.max(...rs.map((r) => r[1] + r[3])) - y] }
 $('stage').addEventListener('pointerdown', (e) => {
   if (e.button > 0) return
@@ -360,7 +475,7 @@ $('stage').addEventListener('pointermove', (e) => {
   const [x, y] = mouse, dx = Math.round(x - drag.p[0]), dy = Math.round(y - drag.p[1]), tol = 8 / sc
   if (drag.kind === 'move') {
     let r = [drag.box[0] + dx, drag.box[1] + dy, drag.box[2], drag.box[3]]
-    if (!e.altKey) { const o = snap(r, others(drag.base, drag.ids), ui.grid, tol); r = o.r; guides = o.guides } else guides = []
+    if (!e.altKey) { const o = snap(r, others(drag.base, drag.ids), ui.snapGrid ? ui.grid : 0, tol); r = o.r; guides = o.guides } else guides = []
     let s = drag.base; for (const k of drag.ids) s = moveZone(s, k, r[0] - drag.box[0], r[1] - drag.box[1])
     doc.screens[cur] = s
   } else if (drag.kind === 'resize') {
@@ -368,7 +483,7 @@ $('stage').addEventListener('pointermove', (e) => {
     if (ed.includes('l')) { rx += dx; rw -= dx } if (ed.includes('r')) rw += dx
     if (ed.includes('t')) { ry += dy; rh -= dy } if (ed.includes('b')) rh += dy
     let r = [rx, ry, rw, rh]
-    if (!e.altKey) { const sn = snap(r, others(drag.base, [drag.id]), ui.grid, tol, ed); r = sn.r; guides = sn.guides } else guides = []
+    if (!e.altKey) { const sn = snap(r, others(drag.base, [drag.id]), ui.snapGrid ? ui.grid : 0, tol, ed); r = sn.r; guides = sn.guides } else guides = []
     if (r[2] < 1) { if (ed.includes('l')) r[0] = o[0] + o[2] - 1; r[2] = 1 }
     if (r[3] < 1) { if (ed.includes('t')) r[1] = o[1] + o[3] - 1; r[3] = 1 }
     doc.screens[cur] = resizeZone(drag.base, drag.id, r, ui.keep)
@@ -387,6 +502,29 @@ const endDrag = () => {
   drag = null; guides = []; $('marq').style.display = 'none'; render()
 }
 $('stage').addEventListener('pointerup', endDrag); $('stage').addEventListener('pointercancel', endDrag)
+const pts = new Map(); let pan = null, space = false
+const pinch = () => { const [a, b] = [...pts.values()]; return b ? { c: [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2], d: Math.hypot(a[0] - b[0], a[1] - b[1]) } : { c: a, d: 0 } }
+$('wrap').addEventListener('pointerdown', (e) => {
+  pts.set(e.pointerId, [e.clientX, e.clientY])
+  if (!(e.button === 1 || space || (e.pointerType === 'touch' && pts.size === 2))) return
+  e.preventDefault(); e.stopPropagation(); if (e.pointerType !== 'touch') $('wrap').setPointerCapture(e.pointerId)
+  if (drag) { if (drag.base) doc.screens[cur] = drag.base; if (drag.prev) sel = drag.prev; drag = null; guides = []; $('marq').style.display = 'none'; render() }
+  pan = pinch()
+}, true)
+$('wrap').addEventListener('pointermove', (e) => {
+  if (!pts.has(e.pointerId)) return
+  pts.set(e.pointerId, [e.clientX, e.clientY])
+  if (!pan) return
+  e.stopPropagation()
+  const n = pinch(), w = $('wrap')
+  if (pan.d && n.d) zoomAt(ui.zoom * n.d / pan.d, n.c[0], n.c[1])
+  w.scrollLeft -= n.c[0] - pan.c[0]; w.scrollTop -= n.c[1] - pan.c[1]; pan = n
+}, true)
+const panEnd = (e) => { pts.delete(e.pointerId); if (pan && (!pts.size || pan.d)) { pan = null; e.stopPropagation() } }
+$('wrap').addEventListener('pointerup', panEnd, true); $('wrap').addEventListener('pointercancel', panEnd, true)
+$('wrap').addEventListener('mousedown', (e) => { if (e.button === 1) e.preventDefault() })
+$('wrap').addEventListener('wheel', (e) => { if (!e.ctrlKey && !e.metaKey) return; e.preventDefault(); zoomAt(ui.zoom * Math.exp(-e.deltaY / 300), e.clientX, e.clientY) }, { passive: false })
+document.addEventListener('keyup', (e) => { if (e.key === ' ') { space = false; $('wrap').classList.remove('grab') } })
 
 function undo(back) {
   const from = back ? hist : fut, to = back ? fut : hist
@@ -429,7 +567,7 @@ const readFile = (f) => new Promise((res) => { const r = new FileReader(); r.onl
 
 $('bar').addEventListener('click', (e) => {
   const b = e.target.closest('button'); if (!b) return
-  if (b.dataset.screen) { cur = b.dataset.screen; sel = new Set(); fitCache.clear(); render() }
+  if (b.dataset.screen) { if (cur !== b.dataset.screen) { cur = b.dataset.screen; sel = new Set(); ui.zoom = 1; fitCache.clear(); render(); $('wrap').scrollTo(0, 0) } }
   else if (b.dataset.al) commit(alignZones(S(), tops(), b.dataset.al))
   else if (b.dataset.dist) commit(distributeZones(S(), tops(), b.dataset.dist))
 })
@@ -438,7 +576,19 @@ $('delScreen').onclick = () => { if (Object.keys(doc.screens).length < 2) return
 $('undo').onclick = () => undo(true); $('redo').onclick = () => undo(false)
 $('add').onclick = addZone; $('dup').onclick = duplicate; $('del').onclick = remove; $('fwd').onclick = () => reorder(1); $('back').onclick = () => reorder(-1)
 $('multi').onclick = () => { ui.multi = !ui.multi; $('multi').classList.toggle('on', ui.multi) }
-$('grid').onchange = () => (ui.grid = Number($('grid').value))
+$('grid').onchange = () => { ui.grid = Number($('grid').value); render() }
+for (const id of ['snapGrid', 'snapZones']) $(id).onclick = () => { ui[id] = !ui[id]; $(id).classList.toggle('on', ui[id]); render() }
+$('zIn').onclick = () => zoomAt(ui.zoom * 1.25); $('zOut').onclick = () => zoomAt(ui.zoom / 1.25)
+$('zFit').onclick = () => { ui.zoom = 1; render(); $('wrap').scrollTo(0, 0) }
+$('cons').onclick = () => { const s = S(), ids = tops().filter((k) => pileLike(s.zones[k])); if (ids.length < 2) return flash('Select two or more piles (pile zones or one-card zones)'); const r = consolidate(s, ids, $('consDir').value); sel = new Set([r.id]); commit(r.screen) }
+$('split').onclick = () => { const r = sel.size === 1 ? split(S(), [...sel][0]) : { ids: [] }; if (!r.ids.length) return flash('Select a consolidated piles zone'); sel = new Set(r.ids); commit(r.screen) }
+$('pS').oninput = () => { pileSnap ??= snapDoc(); const s = S(), f = $('pS').value / 100; doc.screens[cur] = { ...s, pile: [Math.max(1, Math.round(s.card[0] * f)), Math.max(1, Math.round(s.card[1] * f))] }; render() }
+$('pS').onchange = () => { const sn = pileSnap ?? snapDoc(); pileSnap = null; if (sn !== snapDoc()) { hist.push(sn); fut = []; changed() } render() }
+for (const [id, i] of [['pW', 0], ['pH', 1]]) $(id).onchange = () => { const v = Number($(id).value), s = S(); if (v > 0) { const p = [...pileSize(s)]; p[i] = v; commit({ ...s, pile: p }) } }
+$('cpScreen').onchange = () => render()
+$('cpGo').onclick = () => { const f = doc.screens[$('cpScreen').value], r = f && copyZones(f, S(), $('cpZone').value); if (!r?.id) return flash('Pick a screen and a zone'); sel = new Set([r.id]); commit(r.screen) }
+$('zKind').onchange = () => editZone((z) => { const v = $('zKind').value; if (v) z.kind = v; else delete z.kind; if (kindOf(z) !== 'pile') delete z.full })
+$('zFull').onchange = () => editZone((z) => { if ($('zFull').checked) z.full = true; else delete z.full })
 $('keep').onchange = () => (ui.keep = $('keep').checked)
 $('sName').onchange = () => { const n = $('sName').value.trim(); if (!n || doc.screens[n]) return render(); const old = cur; if (ui.bg[old]) { ui.bg[n] = ui.bg[old]; delete ui.bg[old]; store(KEY + '-bg', JSON.stringify(ui.bg)) } cur = n; setDoc({ screens: Object.fromEntries(Object.entries(doc.screens).map(([k, v]) => [k === old ? n : k, v])) }) }
 for (const [id, f] of [['sW', (s, v) => (s.w = v)], ['sH', (s, v) => (s.h = v)], ['cW', (s, v) => (s.card = [v, s.card[1]])], ['cH', (s, v) => (s.card = [s.card[0], v])]]) $(id).onchange = () => { const v = Number($(id).value); if (v > 0) { const s = { ...S() }; f(s, v); fitCache.clear(); commit(s) } }
@@ -476,6 +626,7 @@ const typing = (e) => /^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName) && e.ta
 document.addEventListener('paste', (e) => { if (typing(e)) return; const t = e.clipboardData.getData('text'); if (/"(zones|screens)"/.test(t)) importText(t) })
 document.addEventListener('keydown', (e) => {
   if (typing(e)) return
+  if (e.key === ' ' && e.target.tagName !== 'BUTTON') { space = true; $('wrap').classList.add('grab'); e.target.blur?.(); return e.preventDefault() }
   const k = e.key.toLowerCase(), ctl = e.ctrlKey || e.metaKey, step = e.shiftKey ? 10 : 1
   if (ctl && k === 'z') undo(!e.shiftKey); else if (ctl && k === 'y') undo(false); else if (ctl && k === 'd') duplicate()
   else if (k === 'delete' || k === 'backspace') remove(); else if (k === 'escape') { sel = new Set(); render() }
@@ -489,6 +640,7 @@ const api = {
   load(d) { const n = normalizeDoc(d); sel = new Set(); if (!n.screens[cur]) cur = Object.keys(n.screens)[0]; setDoc(n) },
   get() { return JSON.parse(JSON.stringify(doc)) },
   onChange(fn) { listeners.push(fn) },
+  zoom(z, x, y) { if (z !== undefined) zoomAt(z, x, y); return ui.zoom },
 }
 window.layoutEditor = api
 try { doc = normalizeDoc(window.LAYOUT_EDITOR_INIT ?? JSON.parse(store(KEY) || 'null')) } catch { doc = normalizeDoc(null) }

@@ -1,13 +1,15 @@
 // K269: pure logic of the layout editor; editor.html carries a generated copy (build.mjs), checked by editor.test.ts.
 export type Rect = [number, number, number, number];
 export type Fan = 'row' | 'column' | 'stack' | 'grid';
-export type Zone = { r: Rect; label?: string; cards?: number; fan?: Fan; locked?: boolean; hidden?: boolean; [k: string]: unknown };
-export type Screen = { w: number; h: number; card: [number, number]; zones: Record<string, Zone>; [k: string]: unknown };
+export type Kind = 'cards' | 'component' | 'pile' | 'group';
+export type Zone = { r: Rect; label?: string; cards?: number; fan?: Fan; kind?: Kind; full?: boolean; locked?: boolean; hidden?: boolean; [k: string]: unknown };
+export type Screen = { w: number; h: number; card: [number, number]; pile?: [number, number]; zones: Record<string, Zone>; [k: string]: unknown };
 export type Doc = { screens: Record<string, Screen> };
 export type Guide = { axis: 'x' | 'y'; at: number };
 export type Warning = { id: string; kind: 'cards' | 'overlap' | 'outside'; text: string };
 
 const FANS = ['row', 'column', 'stack', 'grid'];
+export const KINDS = ['cards', 'component', 'pile', 'group'];
 const num = (v: unknown, d: number): number => (typeof v === 'number' && isFinite(v) ? v : typeof v === 'string' && v.trim() !== '' && isFinite(Number(v)) ? Number(v) : d);
 const isObj = (v: unknown): v is Record<string, unknown> => !!v && typeof v === 'object' && !Array.isArray(v);
 
@@ -15,11 +17,13 @@ function normalizeZone(v: unknown): Zone | null {
   const o: Record<string, unknown> | null = Array.isArray(v) ? { r: v } : isObj(v) ? v : null;
   if (!o || !Array.isArray(o.r)) return null;
   const r = o.r as unknown[];
-  const { r: _r, label: _l, cards: _c, fan: _f, locked: _k, hidden: _h, ...rest } = o;
+  const { r: _r, label: _l, cards: _c, fan: _f, kind: _d, full: _u, locked: _k, hidden: _h, ...rest } = o;
   const z: Zone = { r: [num(r[0], 0), num(r[1], 0), num(r[2], 0), num(r[3], 0)], ...rest };
   if (typeof o.label === 'string' && o.label) z.label = o.label;
   if (o.cards !== undefined && num(o.cards, 0) > 0) z.cards = Math.round(num(o.cards, 0));
   if (typeof o.fan === 'string' && FANS.includes(o.fan)) z.fan = o.fan as Fan;
+  if (typeof o.kind === 'string' && KINDS.includes(o.kind)) z.kind = o.kind as Kind;
+  if (o.full === true) z.full = true;
   if (o.locked === true) z.locked = true;
   if (o.hidden === true) z.hidden = true;
   return z;
@@ -28,8 +32,10 @@ function normalizeZone(v: unknown): Zone | null {
 function normalizeScreen(v: unknown): Screen {
   const o = isObj(v) ? v : {};
   const c = Array.isArray(o.card) ? (o.card as unknown[]) : [];
-  const { w: _w, h: _h, card: _c, zones: _z, ...rest } = o;
+  const { w: _w, h: _h, card: _c, pile: _p, zones: _z, ...rest } = o;
   const s: Screen = { ...rest, w: num(o.w, 3840), h: num(o.h, 2160), card: [num(c[0], 180), num(c[1], 252)], zones: {} };
+  const p = Array.isArray(o.pile) ? (o.pile as unknown[]) : [];
+  if (num(p[0], 0) > 0 && num(p[1], 0) > 0) s.pile = [num(p[0], 0), num(p[1], 0)];
   if (isObj(o.zones)) for (const [k, z] of Object.entries(o.zones)) { const n = normalizeZone(z); if (n) s.zones[k] = n; }
   return s;
 }
@@ -143,8 +149,8 @@ export function layoutWarnings(s: Screen): Warning[] {
   const ids = Object.keys(s.zones).filter((k) => !s.zones[k]!.hidden);
   for (const id of ids) {
     const z = s.zones[id]!, p = parentOf(s, id);
-    const f = cardFit(z, s.card);
-    if (!f.fits) out.push({ id, kind: 'cards', text: `${id}: ${z.cards} cards fit only at ${Math.floor(f.scale * 100)}% of the card size` });
+    const k = kindOf(z), f = k === 'pile' ? cardFit(z, z.full ? s.card : pileSize(s), 1, 'stack') : k === 'component' || k === 'group' ? null : cardFit(z, s.card);
+    if (f && !f.fits) out.push({ id, kind: 'cards', text: k === 'pile' ? `${id}: the pile fits only at ${Math.floor(f.scale * 100)}% of its size` : `${id}: ${z.cards} cards fit only at ${Math.floor(f.scale * 100)}% of the card size` });
     if (!inside(z.r, [0, 0, s.w, s.h])) out.push({ id, kind: 'outside', text: `${id}: outside the screen` });
     else if (p && !inside(z.r, s.zones[p]!.r)) out.push({ id, kind: 'outside', text: `${id}: outside ${p}` });
     for (const o of ids) if (o > id && parentOf(s, o) === p && overlaps(z.r, s.zones[o]!.r)) out.push({ id, kind: 'overlap', text: `${id} overlaps ${o}` });
@@ -178,3 +184,90 @@ export function distributeZones(s: Screen, ids: string[], axis: 'h' | 'v'): Scre
   for (const k of ks.slice(1, -1)) { const d = at - r(k)[a]; s = moveZone(s, k, a ? 0 : d, a ? d : 0); at += r(k)[a + 2]! + gap; }
   return s;
 }
+
+// K280: kinds, compact piles, consolidate / split, copy between screens, mode/variant screen names, zoom maths.
+export const kindOf = (z: Zone): Kind | undefined => z.kind ?? (z.cards ? 'cards' : undefined);
+export const pileSize = (s: Screen): [number, number] => s.pile ?? [Math.round(s.card[0] / 2), Math.round(s.card[1] / 2)];
+export const pileLike = (z: Zone): boolean => z.kind === 'pile' || ((!z.kind || z.kind === 'cards') && (z.cards === 1 || z.fan === 'stack'));
+export function commonPrefix(ids: string[]): string {
+  const ps = ids.map((k) => k.split('.').slice(0, -1)), out: string[] = [];
+  for (let i = 0; ps.length && ps.every((p) => p[i] !== undefined && p[i] === ps[0]![i]); i++) out.push(ps[0]![i]!);
+  return out.join('.');
+}
+const last = (k: string) => k.slice(k.lastIndexOf('.') + 1);
+const freeId = (s: Screen, id: string, skip: (k: string) => boolean = () => false): string => {
+  const taken = (n: string) => Object.keys(s.zones).some((k) => !skip(k) && (k === n || k.startsWith(n + '.')));
+  let n = id, i = 2; while (taken(n)) n = id + '-' + i++; return n;
+};
+const shift = (zones: Record<string, Zone>, s: Screen, k: string, nid: string, r: Rect) => {
+  const z = s.zones[k]!;
+  for (const c of descendants(s, k)) { const cz = s.zones[c]!; zones[nid + c.slice(k.length)] = { ...cz, r: [cz.r[0] + r[0] - z.r[0], cz.r[1] + r[1] - z.r[1], cz.r[2], cz.r[3]] }; }
+};
+
+// Lay the pile-like ids out as compact pile tiles in a new group zone `<common prefix>.piles` (or `id`); one column or one row.
+export function consolidate(s: Screen, ids: string[], dir: 'column' | 'row' = 'column', id?: string): { screen: Screen; id: string } {
+  const a = dir === 'row' ? 0 : 1;
+  const ks = [...new Set(ids)].filter((k, _i, all) => s.zones[k] && pileLike(s.zones[k]) && !all.some((m) => k.startsWith(m + '.'))).sort((p, q) => s.zones[p]!.r[a] - s.zones[q]!.r[a] || s.zones[p]!.r[1 - a]! - s.zones[q]!.r[1 - a]!);
+  if (!ks.length) return { screen: s, id: '' };
+  const moving = (k: string) => ks.some((m) => k === m || k.startsWith(m + '.'));
+  const pre = commonPrefix(ks), pid = id ? id : freeId(s, pre ? pre + '.piles' : 'piles', moving);
+  if (id && freeId(s, id, moving) !== id) return { screen: s, id: '' };
+  const [pw, ph] = pileSize(s), gap = Math.max(1, Math.round(pw / 8));
+  const n = ks.length, W = a ? pw + 2 * gap : n * pw + (n + 1) * gap, H = a ? n * ph + (n + 1) * gap : ph + 2 * gap, pp = parentOf(s, pid), B: Rect = pp ? s.zones[pp]!.r : [0, 0, s.w, s.h];
+  const x0 = Math.max(B[0], Math.min(B[0] + B[2] - W, ...ks.map((k) => s.zones[k]!.r[0]))), y0 = Math.max(B[1], Math.min(B[1] + B[3] - H, ...ks.map((k) => s.zones[k]!.r[1])));
+  const zones = Object.fromEntries(Object.entries(s.zones).filter(([k]) => !moving(k)));
+  const from: Record<string, { id: string; kind?: Kind }> = {};
+  zones[pid] = { r: [x0, y0, W, H], kind: 'group', label: 'Piles', from };
+  ks.forEach((k, i) => {
+    const z = s.zones[k]!, nid = freeId({ ...s, zones }, pid + '.' + last(k)), r: Rect = a ? [x0 + gap, y0 + gap + i * (ph + gap), pw, ph] : [x0 + gap + i * (pw + gap), y0 + gap, pw, ph];
+    const { full: _f, ...rest } = z;
+    zones[nid] = { ...rest, r, kind: 'pile' };
+    from[nid] = z.kind ? { id: k, kind: z.kind } : { id: k };
+    shift(zones, s, k, nid, r);
+  });
+  return { screen: { ...s, zones }, id: pid };
+}
+
+// Undo a consolidation (a group with `from`): the children of `id` go back to their old ids at full card size, in the parent's place.
+export function split(s: Screen, id: string): { screen: Screen; ids: string[] } {
+  const p = s.zones[id];
+  const kids = p && isObj(p.from) ? Object.keys(s.zones).filter((k) => parentOf(s, k) === id) : [];
+  if (!p || !kids.length) return { screen: s, ids: [] };
+  const from = (isObj(p.from) ? p.from : {}) as Record<string, { id?: string; kind?: Kind } | undefined>, pre = id.includes('.') ? id.slice(0, id.lastIndexOf('.') + 1) : '';
+  const a = p.r[3] > p.r[2] ? 1 : 0, [cw, ch] = s.card, gap = Math.max(1, Math.round(cw / 8));
+  const zones = Object.fromEntries(Object.entries(s.zones).filter(([k]) => k !== id && !k.startsWith(id + '.')));
+  const ids: string[] = [];
+  kids.forEach((k, i) => {
+    const z = s.zones[k]!, f = from[k], nid = freeId({ ...s, zones }, typeof f?.id === 'string' ? f.id : pre + last(k));
+    const r: Rect = a ? [p.r[0], p.r[1] + i * (ch + gap), cw, ch] : [p.r[0] + i * (cw + gap), p.r[1], cw, ch];
+    const { kind: _k, full: _f, ...rest } = z, kind = f ? f.kind : z.kind;
+    zones[nid] = { ...rest, r, ...(kind ? { kind } : {}), ...(kind === 'pile' ? { full: true } : {}) };
+    ids.push(nid);
+    shift(zones, s, k, nid, r);
+  });
+  return { screen: { ...s, zones }, ids };
+}
+
+// Copy a zone and its children from another screen; a taken id gets a -2 suffix.
+export function copyZones(from: Screen, to: Screen, id: string): { screen: Screen; id: string } {
+  if (!from.zones[id]) return { screen: to, id: '' };
+  const nid = freeId(to, id), zones = { ...to.zones };
+  for (const k of [id, ...descendants(from, id)]) zones[nid + k.slice(id.length)] = { ...from.zones[k]!, r: [...from.zones[k]!.r] as Rect };
+  return { screen: { ...to, zones }, id: nid };
+}
+
+// Screens named `mode/variant` grouped by mode, in first-seen order.
+export function screenModes(names: string[]): [string, string[]][] {
+  const m = new Map<string, string[]>();
+  for (const n of names) { const k = n.split('/')[0]!; m.set(k, [...(m.get(k) ?? []), n]); }
+  return [...m];
+}
+
+// Stage scale and offset at `zoom` (1 = the screen fits fitW x fitH with margin m) in a view of viewW x viewH; pad: the scrolled area.
+export function stageView(sw: number, sh: number, fitW: number, fitH: number, viewW: number, viewH: number, zoom: number, m = 12): { sc: number; left: number; top: number; padW: number; padH: number } {
+  const sc = Math.max(1e-3, Math.min((fitW - 2 * m) / sw, (fitH - 2 * m) / sh)) * zoom, w = sw * sc, h = sh * sc;
+  return { sc, left: Math.max(m, (viewW - w) / 2), top: Math.max(m, (viewH - h) / 2), padW: Math.max(viewW, w + 2 * m), padH: Math.max(viewH, h + 2 * m) };
+}
+export const clampZoom = (z: number): number => Math.min(20, Math.max(0.1, z));
+// The scroll that puts stage point p at view offset `at`, given the scale and the stage's offset in the scrolled area.
+export const keepPoint = (p: number, sc: number, off: number, at: number): number => off + p * sc - at;
