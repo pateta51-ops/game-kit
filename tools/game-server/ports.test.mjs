@@ -1,6 +1,9 @@
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
-import { allowedHosts, cmdlineMatches, descendantOf, lockIsHeld, originAllowed, safeRel, gitSteps, portsMd, killArgs, mappingPresent, publicUrl, startCommand, tailscaleServeArgs, validatePorts, nextSlot, addGameText } from './lib.mjs';
+import { writeFileSync, mkdtempSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { HOST, loadLocal, allowedHosts, cmdlineMatches, descendantOf, lockIsHeld, originAllowed, safeRel, gitSteps, portsMd, killArgs, mappingPresent, publicUrl, startCommand, tailscaleServeArgs, validatePorts, nextSlot, addGameText } from './lib.mjs';
 
 const cfg = JSON.parse(readFileSync(new URL('../../ports.json', import.meta.url), 'utf8'));
 const g = (block, local, https) => ({ name: 'X', repo: 'r', block, serve: { local, https, build: 'b', start: 'x {port}', copyIgnored: [] } });
@@ -25,7 +28,7 @@ describe('commands', () => {
     expect(startCommand({ start: 'v --port {port}', local: 4176 })).toBe('v --port 4176');
     expect(tailscaleServeArgs(8445, 4176)).toEqual(['serve', '--bg', '--https=8445', 'http://127.0.0.1:4176']);
     expect(killArgs('12; rm')).toEqual(['/PID', 'NaN', '/T', '/F']);
-    expect(publicUrl(443)).toBe('https://REDACTED');
+    expect(publicUrl(443)).toBe(`https://${HOST}`);
     expect(publicUrl(8445)).toMatch(/:8445$/);
     expect(mappingPresent({ Web: { 'h.ts.net:8445': { Handlers: { '/': { Proxy: 'http://127.0.0.1:4176' } } } } }, 8445, 4176)).toBe(true);
     expect(mappingPresent({ Web: { 'h.ts.net:8445': { Handlers: { '/': { Proxy: 'http://127.0.0.1:9999' } } } } }, 8445, 4176)).toBe(false);
@@ -59,7 +62,7 @@ describe('safety', () => {
     const c = { panel: P };
     expect(allowedHosts(c).size).toBe(2);
     expect(originAllowed({ host: '127.0.0.1:4170' }, c)).toBe(true);
-    expect(originAllowed({ host: 'REDACTED:8440', origin: 'https://REDACTED:8440' }, c)).toBe(true);
+    expect(originAllowed({ host: `${HOST}:8440`, origin: `https://${HOST}:8440` }, c)).toBe(true);
     expect(originAllowed({ host: '127.0.0.1:4170', origin: 'https://evil.example' }, c)).toBe(false);
     expect(originAllowed({ host: 'evil.example' }, c)).toBe(false);
   });
@@ -69,6 +72,15 @@ describe('safety', () => {
     const ps = [{ ProcessId: 2, ParentProcessId: 1 }, { ProcessId: 3, ParentProcessId: 2 }, { ProcessId: 9, ParentProcessId: 8 }];
     expect(descendantOf(ps, 3, 1)).toBe(true);
     expect(descendantOf(ps, 9, 1)).toBe(false);
+  });
+});
+
+describe('loadLocal (K259)', () => {
+  it('defaults when the file is absent, values when present', () => {
+    const f = join(mkdtempSync(join(tmpdir(), 'k259-')), 'kit.local.json');
+    expect(loadLocal(f)).toMatchObject({ host: 'localhost', serveRoot: expect.stringMatching(/\/_serve$/) });
+    writeFileSync(f, JSON.stringify({ host: 'h.ts.net', serveRoot: 'D:/s' }));
+    expect(loadLocal(f)).toEqual({ host: 'h.ts.net', serveRoot: 'D:/s' });
   });
 });
 

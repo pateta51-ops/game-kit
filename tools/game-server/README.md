@@ -10,10 +10,12 @@ For the phone to reach it before anyone logs in, Tailscale itself must stay up w
 
 ## Use
 
-Phone or PC: `https://REDACTED:8440` (panel port from `ports.json`). Per game: **Update & serve**, **Stop**, **Open**, expandable log. The panel listens on 127.0.0.1 only; Tailscale fronts it (tailnet only).
+Phone or PC: `https://<host>:8440` (host from `kit.local.json`) (panel port from `ports.json`). Per game: **Update & serve**, **Stop**, **Open**, expandable log. The panel listens on 127.0.0.1 only; Tailscale fronts it (tailnet only).
 
 CLI: `node tools/game-server/server.mjs update <id> | stop <id> | status`.
 
 ## Add a game
 
 `node tools/game-server/server.mjs add <id> "<Name>" <repo path> [app subfolder]` gives the game the next free 10-port block and the next free phone slot, appends one line to `ports.json`, validates it, regenerates `docs/PORTS.md`, tells a running panel to reload, and prints what to set in the game (its vite `server.port` = block, `preview.port` = block+1, `preview.allowedHosts: ['.ts.net']`, Playwright default block+2). Then commit `ports.json` and `docs/PORTS.md` in game-kit. Change `build` or `copyIgnored` in the new line by hand if the game needs private files (see Imperium and Unstoppable). Every port lives only in `ports.json`; it is validated on load (every port unique, `serve.local` in 4170-4199, blocks outside the reserved ranges): `validatePorts` in `lib.mjs`.
+
+Owner-specific values (tailnet host, serve root) live in an untracked `kit.local.json` at the kit root; copy `kit.local.example.json`. Absent: host `localhost`, serve root `_serve`.

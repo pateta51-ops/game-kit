@@ -1,4 +1,8 @@
 // Pure helpers: ports.json validation and command building (no processes).
+import { readFileSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
+export const loadLocal = (file = new URL('../../kit.local.json', import.meta.url)) => { let c = {}; try { c = JSON.parse(readFileSync(file, 'utf8')); } catch { /* absent: defaults */ } return { host: 'localhost', serveRoot: fileURLToPath(new URL('../../_serve', import.meta.url)).replaceAll('\\', '/'), ...c }; };
+const local = loadLocal();
 export const safeRel = (p) => typeof p === 'string' && p !== '' && !/^[\\/]/.test(p) && !p.includes(':') && !p.split(/[\\/]/).includes('..');
 export function validatePorts(cfg) {
   const errs = [];
@@ -40,8 +44,8 @@ export function validatePorts(cfg) {
   return errs;
 }
 
-export const HOST = 'REDACTED';
-export const SERVE_ROOT = 'REDACTED';
+export const HOST = local.host;
+export const SERVE_ROOT = local.serveRoot;
 export const publicUrl = (https) => `https://${HOST}${https === 443 ? '' : ':' + https}`;
 export const startCommand = (s) => s.start.replaceAll('{port}', String(s.local));
 export const tailscaleServeArgs = (https, local) => ['serve', '--bg', `--https=${https}`, `http://127.0.0.1:${local}`];
@@ -66,7 +70,7 @@ export const originAllowed = (h, cfg) => {
 };
 
 export function portsMd(cfg) {
-  const rows = Object.values(cfg.games).map((g) => `| ${g.name} | ${g.block} | ${g.block + 1} | ${g.block + 2} | ${g.block + 3} | ${g.serve.local} | ${publicUrl(g.serve.https)} |`);
+  const rows = Object.values(cfg.games).map((g) => `| ${g.name} | ${g.block} | ${g.block + 1} | ${g.block + 2} | ${g.block + 3} | ${g.serve.local} | ${publicUrl(g.serve.https).replace(HOST, "<host>")} |`);
   return `# Ports
 
 ${cfg.about}
@@ -75,7 +79,7 @@ Before using a port, look here; a new port = the game's block or an entry in \`p
 
 Generated from \`ports.json\` by \`node tools/game-server/server.mjs ports-md\`; a test fails when this file drifts.
 
-Panel: local ${cfg.panel.local}, ${publicUrl(cfg.panel.https)}
+Panel: local ${cfg.panel.local}, ${publicUrl(cfg.panel.https).replace(HOST, "<host>")}
 
 | Game | dev | preview | e2e | e2eAux | phone local | phone URL |
 |---|---|---|---|---|---|---|

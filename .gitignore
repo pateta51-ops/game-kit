@@ -6,3 +6,5 @@ __pycache__/
 .pytest_cache/
 scan-review/
 .cache/
+kit.local.json
+_serve/

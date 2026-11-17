@@ -42,7 +42,7 @@ Sections are found by heading keywords (case-insensitive); override them if your
   --scenarios "Scenario catalogue"  --phases "Implementation phases"  --types "Type definitions"
   --sessions "Session plan"
 
-Warnings (never fail; skipped quietly when no game-kit checkout is found: --kit PATH, else C:/projects/game-kit or
+Warnings (never fail; skipped quietly when no game-kit checkout is found: --kit PATH, else $KIT_DIR, the checkout holding this script, C:/projects/game-kit or
 ~/game-kit): the kit pin (kit/kit.lock.json beside the plan's docs folder, else a "kit ... pin ... vX.Y.Z" line) is 5+
 minor versions behind the latest kit tag; a "Phase GKnn" heading or its "targets" lines name a K row that the kit's
 docs/PLAN.md marks done.
@@ -55,6 +55,7 @@ Exit code 0 when no problems were found.
 from __future__ import annotations
 
 import json
+import os
 import re
 import shutil
 import subprocess
@@ -274,7 +275,7 @@ def extract(path: Path, lines: list[str], heads: list[tuple[int, int, str]]) -> 
 def kit_warnings(path: Path, lines: list[str]) -> set[str]:
     out: set[str] = set()
     kit = None
-    for c in ([Path(opt("--kit", ""))] if "--kit" in sys.argv else [Path("C:/projects/game-kit"), Path.home() / "game-kit"]):
+    for c in ([Path(opt("--kit", ""))] if "--kit" in sys.argv else ([Path(os.environ["KIT_DIR"])] if os.environ.get("KIT_DIR") else []) + [Path(__file__).resolve().parents[2], Path("C:/projects/game-kit"), Path.home() / "game-kit"]):
         if (c / "docs" / "PLAN.md").is_file():
             kit = c
             break
