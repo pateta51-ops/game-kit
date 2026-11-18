@@ -509,7 +509,7 @@ The kit holds every game's parts, then every game is retrofitted onto them (owne
 
 | Batch | Content | Sources | Effort | State |
 |---|---|---|---|---|
-| K359 | [1] Proof sheet: every card face beside its data, printed words and flags, filters kept in the URL hash, plus a CLI that writes it for a pack (new proof-sheet, or prompt-gallery card side) | docs/INVENTORY.md item 1; 7IS, STCC, ER, IH, Jarl, UFS, Unst, Warps | L | open |
+| K359 | [1] Proof sheet: every card face beside its data, printed words and flags, filters kept in the URL hash, plus a CLI that writes it for a pack (new proof-sheet, or prompt-gallery card side) | docs/INVENTORY.md item 1; 7IS, STCC, ER, IH, Jarl, UFS, Unst, Warps | L | done |
 | K360 | [3] Screen frame, footer line, fan-project disclaimer and light/dark toggle for non-table screens (extend screens) | docs/INVENTORY.md item 3; STCC, IH, UFS, Unst | M | done |
 | K361 | [4] Expansion choice with dependency ticking and base + expansion merge into one index (extend content-pack; no import or stored packs) | docs/INVENTORY.md item 4; ER, Unst, STCC, IH | M | open |
 | K362 | [6] Python vector tracing and icon/crop scripts: trace icons, emblems, logos and maps from scans to SVG, retrace, proof, B&W render (extend scan-ingest) | docs/INVENTORY.md item 6; 7IS, ER, Jarl, STCC, Astra | M | done |

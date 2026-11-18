@@ -1,0 +1,60 @@
+{
+  "name": "proof-sheet",
+  "source": {
+    "game": "Star-trek-captains-chair-game",
+    "commit": "a69c8dac",
+    "paths": [
+      "src/ui/screens/proofFilters.ts",
+      "src/ui/screens/proofGroups.ts",
+      "src/ui/screens/ProofSheet.tsx"
+    ],
+    "grafts": [
+      {
+        "game": "imperium-horizon-fan-prototype",
+        "commit": "b82d5cf",
+        "paths": [
+          "src/ui/screens/proofSections.ts",
+          "src/ui/screens/ProofSheet.tsx"
+        ]
+      },
+      {
+        "game": "warps-edge-fan-prototype",
+        "commit": "449af55",
+        "paths": [
+          "src/ui/screens/proofFilters.ts",
+          "src/ui/screens/ProofSheet.tsx"
+        ]
+      },
+      {
+        "game": "under-falling-skies-fan-prototype",
+        "commit": "f1042f8",
+        "paths": ["src/ui/screens/ProofSheet.tsx", "scripts/proof-sheet.ts"]
+      },
+      {
+        "game": "unstoppable-fan-prototype",
+        "commit": "e314b5f",
+        "paths": [
+          "src/ui/screens/ProofComponents.tsx",
+          "src/ui/screens/ProofSheet.tsx"
+        ]
+      },
+      {
+        "game": "7th-inning-stretch-fan-prototype",
+        "commit": "b3ef81b",
+        "paths": ["src/ui/screens/Proof.tsx"]
+      },
+      {
+        "game": "earthborne-rangers-fan-prototype",
+        "commit": "59e0ad1d",
+        "paths": ["src/ui/screens/Proof.tsx"]
+      },
+      {
+        "game": "rise-of-a-jarl-fan-prototype",
+        "commit": "82bb1d5",
+        "paths": ["src/ui/screens/ProofSheet.tsx"]
+      }
+    ]
+  },
+  "needs": [],
+  "packages": ["react", "react-dom"]
+}
