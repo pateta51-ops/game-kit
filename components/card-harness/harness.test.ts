@@ -260,6 +260,12 @@ describe('card-language checks', () => {
     expect(keysOf(f, 'Effect')).toEqual(want);
     expect(() => keysOf(f, 'Nope')).toThrow();
   });
+  it('K397 keysOf skips primitive members and can return only the first key', () => {
+    const f = fileURLToPath(new URL('./fake/lang.ts', import.meta.url));
+    expect(keysOf(f, 'Mixed')).toEqual(['gain', 'hit', 'miss', 'pa', 'pb']);
+    expect(keysOf(f, 'Mixed', { first: true })).toEqual(['gain', 'hit', 'pa']);
+    expect(literalsOf(f, 'Effect', { keys: 'first' })).toEqual(['discard', 'draw', 'gain', 'hit']);
+  });
   it('reads pieces from the game types', () => {
     const f = fileURLToPath(new URL('./fake/lang.ts', import.meta.url));
     expect(literalsOf(f, 'Formula')).toEqual(['hits', 'outs', 'runs']);
