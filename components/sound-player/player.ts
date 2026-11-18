@@ -1,5 +1,6 @@
 // Graph: source -> voice gain -> bus (sounds | voice | music) -> master -> limiter -> destination
-//        layer / ambience loop -> its gain -> duck -> music bus
+//        scheduled music -> music bus -> duck -> master
+//        immediate layers / ducked ambience -> its gain -> duck -> music bus
 // A cue is never cut: it plays out, or its gain ramps to zero over MIN_FADE_MS or more before its source stops.
 
 import { startSynthVoice, synthLength, type SynthVoice } from './synth.ts';
@@ -15,6 +16,7 @@ export interface CueDef {
   /** Played when the cue has no file, or none that loads. */
   synth?: readonly SynthVoice[];
   tier: Tier;
+  priority?: 1 | 2 | 3;
   gainDb?: number;
   bus?: Bus;
   /** How far the music drops while this cue plays (default: the table's `duck` for its tier or bus; 0: not at all). */
@@ -46,8 +48,10 @@ export interface SoundTable {
   tierDb?: Partial<Record<Tier, number>>;
   maxPerCue?: number;
   maxVoices?: number;
+  voicePolicy?: 'tier' | 'priority';
+  dedupeMs?: number;
   /** How far the music drops under a loud cue and under the voice bus (default 8 each); `ambience`: it drops too. */
-  duck?: { loudDb?: number; voiceDb?: number; ambience?: boolean };
+  duck?: { loudDb?: number; voiceDb?: number; ambience?: boolean; timing?: 'immediate' | 'scheduled' };
   /** A cue asked for before its file is decoded still plays when that takes no longer than this (default 200). */
   lateMs?: number;
   music?: MusicDef;
@@ -139,6 +143,7 @@ const lin = (db: number): number => 10 ** (db / 20);
 type Pt = readonly [number, number];
 interface Fader {
   node: GainNode;
+  at: (time: number) => number;
   ramp: (target: number, start: number, ms: number) => void;
 }
 function fader(ctx: AudioContext, v: number, out: AudioNode): Fader {
@@ -157,6 +162,7 @@ function fader(ctx: AudioContext, v: number, out: AudioNode): Fader {
   };
   return {
     node,
+    at,
     ramp(target, start, ms) {
       const now = ctx.currentTime;
       const s = Math.max(start, now);
@@ -172,6 +178,7 @@ function fader(ctx: AudioContext, v: number, out: AudioNode): Fader {
 interface Voice {
   cue: string;
   rank: number;
+  at?: number;
   music?: boolean;
   fade: Fader;
   srcs: AudioScheduledSourceNode[];
@@ -207,36 +214,58 @@ export function createSoundPlayer(o: SoundPlayerOptions): SoundPlayer {
     limiter.release.value = 0.1;
     limiter.connect(ctx.destination);
     const master = fader(ctx, vol.muted || hidden ? 0 : 1, limiter);
+    const scheduledDuck = table.duck?.timing === 'scheduled';
+    const scheduledDucker = scheduledDuck ? fader(ctx, 1, master.node) : null;
     const buses = {
       sounds: fader(ctx, clamp01(vol.sounds), master.node),
       voice: fader(ctx, clamp01(vol.voice), master.node),
-      music: fader(ctx, clamp01(vol.music), master.node),
+      music: fader(ctx, clamp01(vol.music), scheduledDucker?.node ?? master.node),
     };
-    const ducker = fader(ctx, 1, buses.music.node);
+    const ducker = scheduledDucker ?? fader(ctx, 1, buses.music.node);
+    const duckedMusic = scheduledDuck ? buses.music.node : ducker.node;
+    const unduckedAmbience = scheduledDuck && table.ambience && !table.duck?.ambience
+      ? fader(ctx, clamp01(vol.music), master.node) : null;
     const levels = (): void => {
       const now = ctx.currentTime;
       master.ramp(vol.muted || hidden ? 0 : 1, now, MIN_FADE_MS);
       for (const k of BUSES) buses[k].ramp(clamp01(vol[k]), now, MIN_FADE_MS);
+      unduckedAmbience?.ramp(clamp01(vol.music), now, MIN_FADE_MS);
     };
-    const ducks: { db: number }[] = [];
+    const ducks: { db: number; start: number; end: number }[] = [];
     let depth = 0;
     const reduck = (): void => {
-      const d = Math.max(0, ...ducks.map((x) => x.db));
-      if (d !== depth) ducker.ramp(lin(-d), ctx.currentTime, d > depth ? MIN_FADE_MS : 500);
-      depth = d;
+      const now = ctx.currentTime;
+      if (!scheduledDuck) {
+        const d = Math.max(0, ...ducks.map((x) => x.db));
+        if (d !== depth) ducker.ramp(lin(-d), now, d > depth ? MIN_FADE_MS : 500);
+        depth = d;
+        return;
+      }
+      const points = new Set([now]);
+      for (const { start, end } of ducks) {
+        if (start > now) points.add(start);
+        if (end > now && Number.isFinite(end)) points.add(end);
+      }
+      let previous: number | undefined;
+      for (const at of [...points].sort((a, b) => a - b)) {
+        const d = Math.max(0, ...ducks.filter((x) => x.start <= at && at < x.end).map((x) => x.db));
+        if (at === now || d !== previous) ducker.ramp(lin(-d), at, lin(-d) < ducker.at(at) ? 40 : 450);
+        previous = d;
+      }
     };
-    const duck = (db = table.duck?.voiceDb ?? 8): (() => void) => {
-      const e = { db };
+    const duck = (db = table.duck?.voiceDb ?? 8, start = ctx.currentTime, end = Infinity): (() => void) => {
+      if (!(db > 0)) return () => undefined;
+      const e = { db, start, end };
       ducks.push(e);
       reduck();
       return () => {
         const i = ducks.indexOf(e);
         if (i < 0) return;
         ducks.splice(i, 1);
-        reduck();
+        if (!scheduledDuck || end > ctx.currentTime) reduck();
       };
     };
-    const bed = table.duck?.ambience ? ducker.node : buses.music.node;
+    const bed = table.duck?.ambience ? duckedMusic : unduckedAmbience?.node ?? buses.music.node;
 
     const decode = async (file: string, what: string): Promise<AudioBuffer | null> => {
       try {
@@ -386,11 +415,14 @@ export function createSoundPlayer(o: SoundPlayerOptions): SoundPlayer {
         if (list.length === 0 && synth.length === 0) return;
         const when = ctx.currentTime + Math.max(0, opts.delayMs ?? 0) / 1000;
         const last = lastAt.get(name);
-        if (last !== undefined && Math.abs(when - last) < 0.04) return;
-        const rank = RANK[def.tier];
+        if (last !== undefined && Math.abs(when - last) < (table.dedupeMs ?? 40) / 1000) return;
+        const priority = table.voicePolicy === 'priority';
+        const rank = priority ? 4 - (def.priority ?? 2) : RANK[def.tier];
         const same = voices.filter((v) => v.cue === name);
         const room = voices.length - (same.length >= (def.max ?? table.maxPerCue ?? 3) ? 1 : 0) < (table.maxVoices ?? 12);
-        const victim = room ? undefined : voices.filter((v) => v.rank <= rank && !v.music).sort((x, y) => x.rank - y.rank)[0];
+        const victim = room ? undefined : voices
+          .filter((v) => !v.music && (v.rank < rank || (v.rank === rank && (!priority || rank > 1))))
+          .sort((x, y) => x.rank - y.rank || (priority ? (x.at ?? 0) - (y.at ?? 0) : 0))[0];
         if (!room && victim === undefined) return;
         if (same[0] !== undefined && same.length >= (def.max ?? table.maxPerCue ?? 3)) stop(same[0]);
         if (victim !== undefined && voices.includes(victim)) stop(victim);
@@ -400,11 +432,12 @@ export function createSoundPlayer(o: SoundPlayerOptions): SoundPlayer {
         const v: Voice = {
           cue: name,
           rank,
+          at: when,
           music: bus === 'music',
           fade: fader(ctx, lin((table.tierDb?.[def.tier] ?? TIER_DB[def.tier]) + (def.gainDb ?? 0)), buses[bus].node),
           srcs: [],
           left: 0,
-          unduck: db > 0 ? duck(db) : null,
+          unduck: !scheduledDuck && db > 0 ? duck(db) : null,
           onEnd: opts.onEnd,
         };
         let t = when;
@@ -441,6 +474,10 @@ export function createSoundPlayer(o: SoundPlayerOptions): SoundPlayer {
           t += buffer.duration / rate;
           v.srcs.push(src);
           v.left += 1;
+        }
+        if (scheduledDuck && db > 0 && bus !== 'music' && v.left > 0) {
+          const end = synth.length ? when + times * synthLength(synth) : t;
+          v.unduck = duck(db, when, Math.max(end, when + 0.04));
         }
         voices.push(v);
         began = true;
@@ -489,7 +526,7 @@ export function createSoundPlayer(o: SoundPlayerOptions): SoundPlayer {
       if (tune) {
         const pos = shelf?.name === wantState ? shelf.pos : 0;
         if (pos > 0) shelf = null;
-        const f = fader(ctx, 1, ducker.node);
+        const f = fader(ctx, 1, duckedMusic);
         const src = ctx.createBufferSource();
         src.buffer = tune;
         src.connect(f.node);
@@ -512,7 +549,7 @@ export function createSoundPlayer(o: SoundPlayerOptions): SoundPlayer {
           layers = new Map();
           for (const [k, b] of got) {
             if (b === null) continue;
-            const f = fader(ctx, 0, ducker.node);
+            const f = fader(ctx, 0, duckedMusic);
             const s = ctx.createBufferSource();
             s.buffer = b;
             s.loop = true;

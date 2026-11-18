@@ -467,7 +467,7 @@ Every game's animations are rebuilt on `motion-frame` and `effect-library`; game
 | K328 | M5 `motion-frame`: holds. `gate`/`afterGate` gain `holdUntil: 'press' | beatId` and an auto-continue delay the queue owns | 7IS B-41; Warp's `gate.ts`; Imperium die-wait, Bot auto-Next; Unstoppable `strike.ts` | M | done |
 | K329 | M6: per-actor `hideSourceUntil: 'start'` | Unstoppable `flightLedger`; 7IS `leave` | S | open |
 | K330 | M7 `effect-library`: shared WebGL canvas with a 2D fallback, like `registerCanvasEffect` | STCC `crumple.ts`; Warp's `power/coin.ts` | M | done |
-| K331 | M8 `sound-player`: check against Warp's `mixer.ts`/`engine.ts` (priority stealing, 40 ms dedupe, ducking, seeded playlist) and lift what it lacks | Warp's `fx/cue.ts`, `mixer.ts`, `engine.ts`; Unstoppable `cues.ts` | M | open |
+| K331 | M8 `sound-player`: check against Warp's `mixer.ts`/`engine.ts` (priority stealing, 40 ms dedupe, ducking, seeded playlist) and lift what it lacks | Warp's `fx/cue.ts`, `mixer.ts`, `engine.ts`; Unstoppable `cues.ts` | M | done |
 | K332 | Effects, flights and paths: `arc-move`, `multi-stop-path`, `trail`; lab demo, contact sheet, a preset per game look | study §3 | M | done |
 | K333 | Effects, beams and transfers: `warp-transfer`, `column-beam`, `rotating-beam`, `radial-streaks`, `collapse-jump` | study §3 | M | done |
 | K334 | Effects, combat: `projectile`, `dissolve`, `shatter`, `shimmer`, `shield-bubble`, `ring-pulse` | study §3 | M | done |

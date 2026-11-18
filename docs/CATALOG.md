@@ -867,7 +867,7 @@ A Web Audio player driven by one table of data. It knows no game. No packages.
 
 - **Use it when:** Release 1.2 sound and music from one data table on Web Audio.
 - **Not for:** Voice lines (voice) or making audio (audio-gen).
-- **Key exports:** `MIN_FADE_MS`, `seamLoop`, `createSoundPlayer`, `synthLength`, `startSynthVoice`, `cuesFor`, `createEventSounds`, `resolveCue`, `createTrailSounds`, `mp3Frames`, `trimMp3`, `musicTracks`, `pickTrack`, `untitledTracks`, and 16 more
+- **Key exports:** `MIN_FADE_MS`, `seamLoop`, `createSoundPlayer`, `synthLength`, `startSynthVoice`, `cuesFor`, `createEventSounds`, `resolveCue`, `createTrailSounds`, `mp3Frames`, `trimMp3`, `musicTracks`, `pickTrack`, `pickPlaylistTrack`, and 17 more
 - **Needs:** nothing
 - **Came from:** warps
 - **Docs:** [README](../components/sound-player/README.md)

@@ -22,6 +22,17 @@ export function pickTrack(tracks: readonly string[], last?: string, random: () =
   return rest[Math.min(rest.length - 1, Math.floor(random() * rest.length))];
 }
 
+/** A stable rotation from the game's seed and zero-based position. */
+export function pickPlaylistTrack<T>(tracks: readonly T[], seed: string, position = 0): T | undefined {
+  let hash = 0x811c9dc5;
+  for (let i = 0; i < seed.length; i += 1) {
+    hash ^= seed.charCodeAt(i);
+    hash = Math.imul(hash, 0x01000193);
+  }
+  const step = Number.isFinite(position) ? Math.max(0, Math.floor(position)) : 0;
+  return tracks[((hash >>> 0) + step) % tracks.length];
+}
+
 /** Slotted paths (not in `_pending/`) with no entry in `titles`: a game's test expects none. */
 export function untitledTracks(files: Readonly<Record<string, string>>, titles: Readonly<Record<string, string>>): string[] {
   return Object.keys(files).filter((p) => !p.includes('_pending/') && !titles[p]);

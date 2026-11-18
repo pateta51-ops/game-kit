@@ -21,9 +21,23 @@ A Web Audio player driven by one table of data. It knows no game. No packages.
 - `playTrack(cue, { fadeInMs = 0, loop?, take?, onEnd? })` (K173): a whole track, a cue with `bus: 'music'`. Cues on the music bus are decoded on first play (or by `preload`), not after the first tap. Fade out with `stopCues(ms, cue)`. Crossfade: `stopCues(2000, 'menu'); playTrack('game', { fadeInMs: 2000 })`. `take` (K213) plays that file index; none or out of range: a random one, as before.
 - Preload a subset, free memory (K213): `autoPreload` (option) decides what is decoded after the first tap, `preloadAll(filter?)` decodes more later, `release(filter)` drops the decoded audio of matching cues and returns how many (playing cues go on; a released cue loads again when played). A `filter` is `{ buses?, cues? }` (both given: both match; no bus means `sounds`) or `(cue, def) => boolean`. E.g. voice off: `autoPreload: { buses: ['sounds'] }`; leaving a level: `release({ cues: [...] })`.
 
+## Playback options
+- `voicePolicy: 'priority'` uses cue `priority` (1 highest, 3 lowest, default 2)
+  at the global cap. It fades the lowest eligible priority, earliest start first.
+  Priorities 1 and 2 may steal their own priority. The default policy uses tiers.
+- `dedupeMs` sets the scheduled-start duplicate window (default 40, 0 disables it).
+- `duck: { timing: 'scheduled' }` ducks from the cue's scheduled start, with a
+  40 ms attack and 450 ms release. It includes `playTrack` music. The default
+  starts the duck when the cue is queued.
+- `pickPlaylistTrack(tracks, seed, position)` rotates from a seed-based offset.
+  Pass a zero-based game position to get the same track after reload.
+
 ## Events to cues (`events.ts`, optional)
 - `cuesFor(events, plan)`: the events of one action as `{ cue, count }[]`. `plan`: `{ cueOf(event): cue | null, rank?: cue names, the most important first, max = 3, hides?: { cue: [cues it hides] }, alone?: [cues that sound alone] }`. Like events are one cue with a count; only the `max` best ranked stay, in the order they first happened.
 - `createEventSounds({ plan, play(hit, delayMs), ready?, gapMs = 130 (or a function), repeatMs = 120, windowMs = 1000, maxPerWindow = 6, maxLagMs = 1000, now? })` returns `playEvents(events)` and `playCue(cue, count?)`. Cues follow one another `gapMs` apart, and the spacing runs on into the next action; the same cue within `repeatMs`, a start over `maxPerWindow` in `windowMs` and a start more than `maxLagMs` late are dropped, but an `alone` cue never. With the player: `play: (h, delayMs) => sound.play(h.cue, { times: Math.min(h.count, 3), delayMs })`. Several cues of one action are already in sequence, a gap apart (never longer than `gapMs`, so a long cue is overlapped, not waited for). `createTrailSounds({ onNew(actions), same? })`: `feed(trail)` after each state change gives `onNew` only the actions added to the action trail. The first feed (load, resume), an undo and a rewritten trail are silent; `reset()` makes the next feed silent. `resolveCue([own, family, generic], sound.canPlay)`: the first cue that can play, else null.
+
+For a store with `lastEvents`, call `playEvents(next.lastEvents)` when the array
+changes and is nonempty.
 
 ## Check (`check.ts`, node only: import it by path, not from `index`)
 `checkSoundFiles(table, dir, { missing?, formats?, maxCueBytes?, maxLoopBytes? })` returns lines of problems: a cue, `layer:<name>`, `once:<name>` or `ambience:<name>` whose files are not all in `dir` and that is not in `missing`; a `missing` entry that has its files or is not in the table; a file not in `formats` (.ogg .opus .webm .mp3 .m4a), empty, or over the size (400 kB a cue file, 4 MB a loop); a state naming an unknown layer. `checkFrontSilence(table, dir, { maxMs = 60, threshold = 0.02, decode? })`: cue files that start silent too long (wav read here; other formats need `decode`). `trimMp3(bytes, front, back)` (index): cuts whole frames, no re-encode, drops ID3 and Xing. Tests: `cues2.test.ts`, `sound.test.ts`, `synth.test.ts`, `events.test.ts` (node) on `fakeContext.ts`, which a game's tests may use too.
