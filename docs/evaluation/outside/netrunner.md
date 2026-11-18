@@ -1,7 +1,7 @@
 # Survey: mtgred/netrunner and bobtheuberfish/chiriboga - ideas for game-kit
 
 Read-only survey, shallow clones, nothing built or run. Paths are relative to each repo root.
-Clones: `C:/Users/user/AppData/Local/Temp/claude/9919beaa12ed540b/c699a2b7-d212-4f36-8f5e-0e540f485c47/scratchpad/nr/netrunner` and `.../nr/chiriboga`.
+Clones: `<scratchpad>/nr/netrunner` and `.../nr/chiriboga`.
 
 ## Licences and maturity
 
