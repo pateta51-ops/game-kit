@@ -4,6 +4,9 @@ numpy==2.5.3
 Pillow==12.3.0
 scipy==1.18.1
 scikit-image==0.26.0
+potracer==0.0.4
+pymupdf==2.1
+vtracer==0.6.15
 pytest==9.1.1
 # Optional, for a game plug-in that reads print to turn an item upright: the Tesseract OCR program (not a Python
 # package). Linux: apt install tesseract-ocr.

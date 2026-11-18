@@ -507,7 +507,7 @@ The kit holds every game's parts, then every game is retrofitted onto them (owne
 | K359 | [1] Proof sheet: every card face beside its data, printed words and flags, filters kept in the URL hash, plus a CLI that writes it for a pack (new proof-sheet, or prompt-gallery card side) | docs/INVENTORY.md item 1; 7IS, STCC, ER, IH, Jarl, UFS, Unst, Warps | L | open |
 | K360 | [3] Screen frame, footer line, fan-project disclaimer and light/dark toggle for non-table screens (extend screens) | docs/INVENTORY.md item 3; STCC, IH, UFS, Unst | M | open |
 | K361 | [4] Expansion choice with dependency ticking and base + expansion merge into one index (extend content-pack; no import or stored packs) | docs/INVENTORY.md item 4; ER, Unst, STCC, IH | M | open |
-| K362 | [6] Python vector tracing and icon/crop scripts: trace icons, emblems, logos and maps from scans to SVG, retrace, proof, B&W render (extend scan-ingest) | docs/INVENTORY.md item 6; 7IS, ER, Jarl, STCC, Astra | M | open |
+| K362 | [6] Python vector tracing and icon/crop scripts: trace icons, emblems, logos and maps from scans to SVG, retrace, proof, B&W render (extend scan-ingest) | docs/INVENTORY.md item 6; 7IS, ER, Jarl, STCC, Astra | M | done |
 | K363 | [7] New-build check: detect a new build and reload once when safe, show the build commit, two-build offline e2e server (extend offline) | docs/INVENTORY.md item 7; 7IS, ER, Jarl | S | done |
 | K364 | [8] Coverage report: which card-language constructs the packs use and lack, as a page and a script (new coverage-report) | docs/INVENTORY.md item 8; ER, Jarl, UFS, Radiance | S | done |
 | K365 | [9] Modal and confirm dialog over the board: focus, Esc, close (new modal-dialog) | docs/INVENTORY.md item 9; IH, Unst | S | done |

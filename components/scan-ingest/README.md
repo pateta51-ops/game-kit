@@ -83,6 +83,34 @@ face's turn when an item is flipped like a page). Reading a game's printed codes
 Splits a magenta scan along the backing gap between two items (or takes one token out), so no re-scan is needed;
 then run `scanpipe` on both files.
 
+## Tracing icons, emblems, logos and map regions to SVG (optional)
+
+`scanpipe/vector.py`, run as `scripts/vtrace.py` (adds `potracer` and `pymupdf` to requirements). No game names,
+colours, icon lists or paths: a game passes them as arguments from its own config.
+
+    python kit/scan-ingest/scripts/vtrace.py trace CROP.png... --out OUT_DIR|OUT.svg
+        [--box x0,y0,x1,y1] [--mode threshold|quantise] [--level N] [--invert] [-k 4] [--colours "#111,#c33"]
+        [--fill "#231f20"] [--upscale 4] [--blur 0.5] [--min-area 0.002] [--drop-border] [--keep-light] [--no-trim]
+        [--sym 4m --centre x,y] [--engine vtracer --speckle 8 --color-precision 6 --layer-difference 12] [--tolerance 0.25] [--alphamax 1.0] [--turdsize 4] [--precision 2]
+    python kit/scan-ingest/scripts/vtrace.py retrace A.svg... --out DIR|OUT.svg --tolerance 2 [--res 8]
+    python kit/scan-ingest/scripts/vtrace.py proof CROP_DIR SVG_DIR --out proof.png [--cell 256] [--report fid.json]
+    python kit/scan-ingest/scripts/vtrace.py bw SCAN.png|BOOK.pdf --out DIR [--level N] [--dpi 300] [--pages 3 4]
+
+- `trace`: crop, Lanczos upscale, optional blur, then a dark-ink mask (Otsu or `--level`) or k-means colours (one
+  stacked layer per colour, the paper-white one dropped), specks and edge shapes cleaned, potrace curves, an even-odd
+  path per layer. The viewBox is trimmed to the shape unless `--no-trim`. `--sym N` / `Nm` averages the ink over N
+  rotations (and mirrors) about the centre first, to fill what print hides. `--engine vtracer` (adds `vtracer`) is a
+  colour trace that keeps subtle gradients; k-means plus potrace flattens them.
+- `retrace`: rasterises each fill colour of an existing SVG alone and traces it again at the new tolerance; layer
+  order, colours and viewBox stay; a higher `--tolerance` gives fewer points.
+- `proof`: a sheet with every source crop beside its rendered SVG, and with `--report` each pair's mean difference
+  and ink IoU. A trace made by `trace` carries `data-offset` (where its trimmed viewBox sits in the crop), so trimmed
+  or not it is compared in place; an SVG from elsewhere is stretched to the crop.
+- `bw`: every pixel 0 or 255, for an image or each PDF page; a `source.sha256` stamp skips a current render.
+
+In Python: `from scanpipe import vector as v` (`trace_array`, `retrace_svg`, `render_svg`, `fidelity`,
+`proof_sheet`, `render_bw`, `symmetrise`).
+
 ## Tests
 
     cd components/scan-ingest && OMP_THREAD_LIMIT=1 python -m pytest tests -q

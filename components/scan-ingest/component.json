@@ -27,5 +27,12 @@
       "tests/synth_cards.py: tests/synth.py as it is. tests/test_split_touching.py as it is; test_detect_edge_cases.py, test_orient.py and test_tesseract_optional.py without the tests that need the game's batch, codes, suggest and CLI."
     ]
   },
+  "alsoVectorTrace": {
+    "game": "7th-inning-stretch, earthborne-rangers, rise-of-a-jarl",
+    "commit": "5e0ad51, b9b06107, cf3ecfe",
+    "paths": [
+      "scanpipe/vector.py and scripts/vtrace.py: potrace of a thresholded or k-means-quantised crop (trace-icons.py of Jarl and ER maps, emtrace.py, trace_icons.py of 7IS), symmetry averaging (ER symm.py/symfill.py), SVG retrace per fill colour (7IS icons-retrace.py), proof sheet and fidelity (7IS trace_icons.py), B&W render of PDF pages (Jarl render-bw.py). vtracer, game icon lists, boxes, colours and paths left in the games; STCC repair-rulebook-icons.py is text repair, not tracing, left out."
+    ]
+  },
   "needs": []
 }
