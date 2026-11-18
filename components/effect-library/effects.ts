@@ -20,6 +20,10 @@ import { flicker } from './signal-flicker.ts';
 import { barFill } from './signal-bar.ts';
 import { rotate } from './rotation.ts';
 
+import { refresh } from './refresh.ts';
+import { pulseEffect } from './loops.ts';
+import { idle } from './idle.ts';
+
 export type { ArcMoveSettings } from './flight-effects.ts';
 export type EffectCtx = EffectLayer;
 export interface Fx {
@@ -273,5 +277,8 @@ export function registerEffects(verbs: VerbRegistry<EffectCtx>, o?: LayerOptions
   registerEffect(verbs, 'motes', motes);
   registerEffect(verbs, 'flicker', flicker);
   registerEffect(verbs, 'bar-fill', barFill);
+  registerEffect(verbs, 'refresh', refresh);
+  registerEffect(verbs, 'pulse', pulseEffect);
+  registerEffect(verbs, 'idle', idle);
   return createEffectLayer(o);
 }

@@ -15879,6 +15879,14 @@ var PIECES = (() => {
   }
 
   // components/effect-library/layer.ts
+  function decorativeCopy(el, deep = true) {
+    const copy = el.cloneNode(deep);
+    for (const node of [copy, ...copy.querySelectorAll("[id], [data-card-id]")]) {
+      node.removeAttribute("id");
+      node.removeAttribute("data-card-id");
+    }
+    return copy;
+  }
   var place2 = (el, r) => {
     const s = el.style;
     s.left = `${String(r[0])}px`;
@@ -16087,6 +16095,95 @@ var PIECES = (() => {
     ctx.fillStyle = g;
     ctx.fillRect(x - rad2, y - rad2, rad2 * 2, rad2 * 2);
     ctx.restore();
+  }
+  function arc(ctx, t, ax, ay, bx, by, o = {}, u = 1) {
+    const step = Math.floor(t / (o.hz ?? 45));
+    const r = rng((o.seed ?? 1) * 9973 + step * 31);
+    const n = o.segments ?? 10;
+    const jag = (o.jag ?? 14) * u;
+    const pts = [[ax, ay]];
+    const dx = bx - ax;
+    const dy = by - ay;
+    const len = Math.hypot(dx, dy) || 1;
+    const nx = -dy / len;
+    const ny = dx / len;
+    for (let i = 1; i < n; i += 1) {
+      const k = i / n;
+      const off = (r() - 0.5) * 2 * jag * Math.sin(Math.PI * k);
+      pts.push([ax + dx * k + nx * off, ay + dy * k + ny * off]);
+    }
+    pts.push([bx, by]);
+    const al = o.alpha ?? 1;
+    const rgb2 = o.rgb ?? "255,255,255";
+    const w = (o.width ?? 2) * u;
+    ctx.save();
+    ctx.globalCompositeOperation = "lighter";
+    ctx.lineJoin = "round";
+    ctx.lineCap = "round";
+    const path = () => {
+      ctx.beginPath();
+      pts.forEach(([x, y], i) => {
+        if (i === 0) ctx.moveTo(x, y);
+        else ctx.lineTo(x, y);
+      });
+    };
+    ctx.strokeStyle = `rgba(${rgb2},${String(0.28 * al)})`;
+    ctx.lineWidth = w * 5;
+    path();
+    ctx.stroke();
+    ctx.strokeStyle = `rgba(${rgb2},${String(0.8 * al)})`;
+    ctx.lineWidth = w * 1.8;
+    path();
+    ctx.stroke();
+    ctx.strokeStyle = `rgba(255,255,255,${String(al)})`;
+    ctx.lineWidth = w * 0.6;
+    path();
+    ctx.stroke();
+    const fork = pts[2 + Math.floor(r() * Math.max(1, n - 4))];
+    if (o.fork !== false && r() > 0.35 && fork !== void 0) {
+      const [fx, fy] = fork;
+      const fa = Math.atan2(dy, dx) + (r() > 0.5 ? 1 : -1) * (0.5 + r() * 0.7);
+      const fl = len * (0.12 + r() * 0.18);
+      ctx.strokeStyle = `rgba(${rgb2},${String(0.7 * al)})`;
+      ctx.lineWidth = w * 0.9;
+      ctx.beginPath();
+      ctx.moveTo(fx, fy);
+      ctx.lineTo(
+        fx + Math.cos(fa) * fl * 0.5 + (r() - 0.5) * 8 * u,
+        fy + Math.sin(fa) * fl * 0.5 + (r() - 0.5) * 8 * u
+      );
+      ctx.lineTo(fx + Math.cos(fa) * fl, fy + Math.sin(fa) * fl);
+      ctx.stroke();
+    }
+    ctx.restore();
+  }
+  function star(ctx, x, y, r, rot, a, rgb2 = "255,255,255", glowRgb = rgb2) {
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.rotate(rot);
+    ctx.beginPath();
+    for (let i = 0; i < 10; i += 1) {
+      const rr = i % 2 === 1 ? r * 0.42 : r;
+      const ang = Math.PI / 5 * i - Math.PI / 2;
+      ctx.lineTo(Math.cos(ang) * rr, Math.sin(ang) * rr);
+    }
+    ctx.closePath();
+    ctx.fillStyle = `rgba(${rgb2},${String(a)})`;
+    ctx.shadowColor = `rgba(${glowRgb},${String(a)})`;
+    ctx.shadowBlur = r * 0.8;
+    ctx.fill();
+    ctx.restore();
+  }
+  function edge(c, u, pad = 3) {
+    const P = 2 * (c.w + c.h);
+    let d = (u % 1 + 1) % 1 * P;
+    if (d < c.w) return [c.x + d, c.y - pad];
+    d -= c.w;
+    if (d < c.h) return [c.x + c.w + pad, c.y + d];
+    d -= c.h;
+    if (d < c.w) return [c.x + c.w - d, c.y + c.h + pad];
+    d -= c.w;
+    return [c.x - pad, c.y + c.h - d];
   }
   var canDraw = () => typeof window !== "undefined" && typeof window.requestAnimationFrame === "function" && typeof CanvasRenderingContext2D !== "undefined";
   function smoke(ctx, t, o, u = 1) {
@@ -16708,7 +16805,7 @@ var PIECES = (() => {
       rippleFrames,
       jolt,
       hitStops: [hot, tint, tintAt, clearAt] = [0.6, 0.3, 14, 34],
-      rimStops: [innerAt, bandAt, band, edgeAt, edge] = [72, 86, 0.18, 97, 0.65]
+      rimStops: [innerAt, bandAt, band, edgeAt, edge2] = [72, 86, 0.18, 97, 0.65]
     } = call.step;
     const [x, y, w, h2] = call.from;
     const p = w * pad;
@@ -16721,7 +16818,7 @@ var PIECES = (() => {
       borderRadius: "50%",
       mixBlendMode: "screen",
       opacity: "0",
-      background: `radial-gradient(circle at ${hx}% ${hy}%, rgb(${core} / ${hot}), rgb(${colour} / ${tint}) ${tintAt}%, rgb(${colour} / 0) ${clearAt}%), radial-gradient(closest-side, rgb(${colour} / 0) ${innerAt}%, rgb(${colour} / ${band}) ${bandAt}%, rgb(${rim} / ${edge}) ${edgeAt}%, rgb(${colour} / 0) 100%)`
+      background: `radial-gradient(circle at ${hx}% ${hy}%, rgb(${core} / ${hot}), rgb(${colour} / ${tint}) ${tintAt}%, rgb(${colour} / 0) ${clearAt}%), radial-gradient(closest-side, rgb(${colour} / 0) ${innerAt}%, rgb(${colour} / ${band}) ${bandAt}%, rgb(${rim} / ${edge2}) ${edgeAt}%, rgb(${colour} / 0) 100%)`
     });
     stage.play(bubble, frames2 ?? [
       { offset: 0, transform: "scale(.94)", opacity: 0, easing: "ease-out" },
@@ -17325,7 +17422,7 @@ var PIECES = (() => {
       rotation = 2,
       width = 1.4,
       cellScale = 0.73,
-      alpha: [floor, edge] = [0.4, 0.6]
+      alpha: [floor, edge2] = [0.4, 0.6]
     } = look.scatter ?? {};
     const pt = [cx + Math.cos(hitAngle) * rx * look.impactPointScale, cy + Math.sin(hitAngle) * ry * look.impactPointScale];
     const fading = seg(t, hit + fade[0], hit + fade[1]);
@@ -17384,7 +17481,7 @@ var PIECES = (() => {
       ctx.save();
       ctx.translate(x2, y2);
       ctx.rotate(noise(i, 5) * rotation * k);
-      ctx.strokeStyle = `rgba(${look.breakColour},${(1 - seg(sh, fadeAt, 1)) * (floor + edge * c.d ** 2)})`;
+      ctx.strokeStyle = `rgba(${look.breakColour},${(1 - seg(sh, fadeAt, 1)) * (floor + edge2 * c.d ** 2)})`;
       ctx.lineWidth = width * u;
       hex(ctx, 0, 0, B.hex * cellScale);
       ctx.stroke();
@@ -18616,6 +18713,318 @@ var PIECES = (() => {
     return void 0;
   };
 
+  // components/effect-library/refresh.ts
+  var refresh = ({ call, el }) => {
+    const {
+      banner,
+      face: face2,
+      filter = "grayscale(1)",
+      liftMs = 500,
+      drainMs = 400,
+      drainAt = 0.25,
+      liftEase = "ease-out",
+      drainEase = "ease-in-out",
+      liftMiddle = 0.35,
+      liftRise = [0.08, 0.2],
+      liftScale = [1.06, 1.12],
+      textShadow,
+      lineBackground = "#e0e0e0",
+      lineShadow = "none",
+      lineRadius = "0",
+      lineHeight = 0.01,
+      lineMinHeight = 1,
+      lineFade = [0.12, 0.85]
+    } = call.step;
+    const tag = banner === void 0 ? null : el.querySelector(banner);
+    if (typeof el.animate !== "function" || el.ownerDocument.defaultView?.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches) {
+      tag?.remove();
+      return void 0;
+    }
+    const overflow = ["overflow", "overflow-x", "overflow-y"].map((name) => ({
+      name,
+      value: el.style.getPropertyValue(name),
+      priority: el.style.getPropertyPriority(name)
+    }));
+    const radius = el.ownerDocument.defaultView?.getComputedStyle(el).borderRadius ?? "";
+    el.style.overflow = "visible";
+    const px2 = (n) => `${String(n)}px`;
+    const h2 = call.from[3];
+    const factor = call.dur / Math.max(1, call.step.dur);
+    const delay = tag === null ? 0 : liftMs * drainAt * factor;
+    const animations = [];
+    const overlay = el.ownerDocument.createElement("div");
+    overlay.setAttribute("aria-hidden", "true");
+    overlay.inert = true;
+    Object.assign(overlay.style, { position: "absolute", inset: "0", pointerEvents: "none" });
+    const grey = el.ownerDocument.createElement("div");
+    const cardBox = { position: "absolute", inset: "0", borderRadius: radius, overflow: "hidden" };
+    Object.assign(grey.style, cardBox);
+    if (face2 === void 0) {
+      const surface = decorativeCopy(el, false);
+      Object.assign(surface.style, { ...cardBox, width: "100%", height: "100%", boxShadow: "none", filter });
+      grey.append(surface);
+    } else {
+      for (const target of el.querySelectorAll(face2)) {
+        if (tag?.contains(target)) continue;
+        const copy = decorativeCopy(target);
+        if (banner !== void 0) copy.querySelector(banner)?.remove();
+        copy.style.filter = filter;
+        grey.append(copy);
+      }
+    }
+    const line = el.ownerDocument.createElement("div");
+    Object.assign(line.style, {
+      position: "absolute",
+      top: "100%",
+      width: "100%",
+      height: px2(Math.max(lineMinHeight, h2 * lineHeight)),
+      background: lineBackground,
+      boxShadow: lineShadow,
+      borderRadius: lineRadius,
+      zIndex: "2"
+    });
+    overlay.append(grey);
+    overlay.append(line);
+    el.append(overlay);
+    const finish2 = () => {
+      animations.forEach((a) => a.cancel());
+      tag?.remove();
+      overlay.remove();
+      el.style.removeProperty("overflow");
+      for (const { name, value, priority } of overflow) {
+        if (value) el.style.setProperty(name, value, priority);
+      }
+    };
+    const play = (target, frames2, duration, easing, delay2 = 0) => {
+      animations.push(target.animate(frames2, { duration, easing, delay: delay2, fill: "both" }));
+    };
+    if (tag !== null) {
+      const lift = el.ownerDocument.createElement("div");
+      Object.assign(lift.style, { ...cardBox, zIndex: "1" });
+      const copy = decorativeCopy(tag);
+      lift.append(copy);
+      overlay.insertBefore(lift, line);
+      tag.style.visibility = "hidden";
+      copy.style.overflow = "visible";
+      play(lift, [
+        { overflow: "visible", translate: "0 0", scale: "1", opacity: 1 },
+        { overflow: "visible", translate: `0 ${px2(-h2 * liftRise[0])}`, scale: String(liftScale[0]), opacity: 1, offset: liftMiddle },
+        { overflow: "visible", translate: `0 ${px2(-h2 * liftRise[1])}`, scale: String(liftScale[1]), opacity: 0 }
+      ], liftMs * factor, liftEase);
+      if (textShadow && copy.firstElementChild) {
+        play(copy.firstElementChild, textShadow.map((value) => ({ textShadow: value })), liftMs * factor, "linear");
+      }
+    }
+    play(grey, [{ clipPath: "inset(0 0 0% 0)" }, { clipPath: "inset(0 0 100% 0)" }], drainMs * factor, drainEase, delay);
+    play(line, [
+      { translate: "0 0", opacity: 0 },
+      { opacity: 1, offset: lineFade[0] },
+      { opacity: 1, offset: lineFade[1] },
+      { translate: `0 ${px2(-h2)}`, opacity: 0 }
+    ], drainMs * factor, drainEase, delay);
+    return finish2;
+  };
+
+  // components/effect-library/loops.ts
+  function startPulse(el, settings = {}, state = {}) {
+    const { frames: frames2 = [{ opacity: 1 }, { opacity: 0.5 }, { opacity: 1 }], period = 1500, easing = "ease-in-out" } = settings;
+    return startLoop(el, state, (speed) => {
+      const animation = el.animate(frames2.map((frame) => ({ easing, ...frame })), {
+        duration: period * speed,
+        iterations: Infinity
+      });
+      return () => animation.cancel();
+    });
+  }
+  function startLoop(el, { speed = 1, signal }, play) {
+    const media = el.ownerDocument.defaultView?.matchMedia?.("(prefers-reduced-motion: reduce)");
+    if (speed === "instant" || speed <= 0 || media?.matches || signal?.aborted || typeof el.animate !== "function") return () => {
+    };
+    const cancel = play(speed);
+    let stopped = false;
+    const stop = () => {
+      if (stopped) return;
+      stopped = true;
+      media?.removeEventListener("change", stop);
+      signal?.removeEventListener("abort", stop);
+      cancel();
+    };
+    media?.addEventListener("change", stop, { once: true });
+    signal?.addEventListener("abort", stop, { once: true });
+    return stop;
+  }
+  var pulseEffect = ({ call, el }) => {
+    const settings = call.step;
+    const target = settings.target === void 0 ? el : el.querySelector(settings.target);
+    if (target === null) return void 0;
+    return startPulse(target, settings, {
+      speed: call.dur / Math.max(1, call.step.dur),
+      ...settings.signal && { signal: settings.signal }
+    });
+  };
+
+  // components/effect-library/idle.ts
+  function startIdle(el, settings, state) {
+    const { kind, rise = 8, period, orbit } = settings;
+    if (kind === "orbit") return startLoop(el, state ?? {}, (speed) => orbitLoop(el, period ?? 2200, speed, orbit));
+    const frames2 = kind === "bob" ? [{}, { translate: `0 ${String(-rise)}px` }, {}] : [{ opacity: 0.5 }, { opacity: 1 }, { opacity: 0.5 }];
+    return startPulse(el, { period: 2400, ...settings, frames: settings.frames ?? frames2 }, state);
+  }
+  function drawCrackle(ctx, box, t, settings) {
+    const { period, at, duration, arc: arcSettings, sparkColour = "rgba(255,255,255,1)" } = settings;
+    const loop = Math.floor(t / period);
+    const start = loop * period + at;
+    const alpha = pulse(t, start, start + duration, 0.2);
+    if (alpha <= 0) return 0;
+    const random = rng(900 + loop);
+    const point2 = random();
+    const count = 1 + Math.floor(random() * 2);
+    for (let i = 0; i < count; i++) {
+      const [ax, ay] = edge(box, point2 + i * 0.03);
+      const [bx, by] = edge(box, point2 + 0.05 + i * 0.03 + random() * 0.03);
+      arc(ctx, t, ax, ay, bx, by, {
+        hz: 35,
+        jag: 7,
+        segments: 6,
+        width: 1.3,
+        fork: false,
+        ...arcSettings,
+        seed: (arcSettings?.seed ?? 80) + loop * 3 + i,
+        alpha: alpha * (arcSettings?.alpha ?? 1)
+      });
+    }
+    const [x, y] = edge(box, point2 + 0.03);
+    sparks(ctx, t, { seed: 300 + loop, n: 4, x, y, t0: start, life: 220, speed: 0.35, color: sparkColour, width: 1.4 });
+    return alpha;
+  }
+  function orbitLoop(el, period, speed, {
+    referenceWidth,
+    radii = [40, 12],
+    centerY = 0,
+    phaseMs = 0,
+    count = 3,
+    size = [6, 9],
+    alpha = [0.6, 1],
+    twinkle = [0.8, 0.2, 100, 2],
+    spin = 0,
+    track = "currentColor",
+    trackWidth = 1,
+    rgb: rgb2,
+    glowRgb,
+    crackle,
+    jitter = 0,
+    copySaturation,
+    popMs = 0
+  } = {}) {
+    if (!canDraw()) return () => {
+    };
+    const canvas = el.ownerDocument.createElement("canvas");
+    const ctx = canvas.getContext("2d");
+    const view = el.ownerDocument.defaultView;
+    if (!ctx || !view) return () => {
+    };
+    canvas.setAttribute("aria-hidden", "true");
+    const [rx, ry] = radii;
+    const pad = Math.max(...size) * 2 + trackWidth;
+    const top = Math.min(centerY - ry - pad, crackle ? -(crackle.margin ?? 44) : Infinity);
+    const twin = copySaturation === void 0 && jitter === 0 ? null : decorativeCopy(el);
+    if (twin !== null) {
+      twin.setAttribute("aria-hidden", "true");
+      twin.inert = true;
+      Object.assign(twin.style, {
+        position: "absolute",
+        inset: "0",
+        boxSizing: "border-box",
+        width: "100%",
+        height: "100%",
+        margin: "0",
+        pointerEvents: "none",
+        transition: "none",
+        transform: "none",
+        translate: "none"
+      });
+      el.append(twin);
+    }
+    Object.assign(canvas.style, { position: "absolute", pointerEvents: "none", left: "50%", transform: "translateX(-50%)" });
+    el.append(canvas);
+    const clock2 = canvas.animate([{}, {}], { duration: period * speed, iterations: Infinity });
+    let frame = 0;
+    let lastWidth = 0;
+    let lastHeight = 0;
+    let lastUnit = 0;
+    const draw = () => {
+      const u = referenceWidth ? el.offsetWidth / referenceWidth : 1;
+      if (u > 0) {
+        const width = el.offsetWidth / u;
+        const height = el.offsetHeight / u;
+        const margin = crackle ? crackle.margin ?? 44 : 0;
+        const w = Math.max((rx + pad) * 2, crackle ? width + 2 * margin : 0);
+        const h2 = Math.max(centerY + ry + pad, crackle ? height + margin : -Infinity) - top;
+        const dpr = view.devicePixelRatio || 1;
+        const nw = Math.ceil(w * u * dpr);
+        const nh = Math.ceil(h2 * u * dpr);
+        if (canvas.width !== nw || canvas.height !== nh) {
+          canvas.width = nw;
+          canvas.height = nh;
+        }
+        if (w !== lastWidth || h2 !== lastHeight || u !== lastUnit) {
+          lastWidth = w;
+          lastHeight = h2;
+          lastUnit = u;
+          canvas.style.width = `${String(w * u)}px`;
+          canvas.style.height = `${String(h2 * u)}px`;
+          canvas.style.top = `${String(top * u)}px`;
+        }
+        const t = Number(clock2.currentTime ?? 0) / speed;
+        ctx.setTransform(nw / w, 0, 0, nh / h2, 0, 0);
+        ctx.clearRect(0, 0, w, h2);
+        const alphaCrackle = crackle ? drawCrackle(ctx, { x: (w - width) / 2, y: -top, w: width, h: height }, t, crackle) : 0;
+        if (twin !== null) {
+          const flick = 1 + alphaCrackle * 0.35 * (noise(t / 18, 2) > 0 ? 1 : -0.6);
+          twin.style.filter = `brightness(${String(flick)}) saturate(${String(copySaturation ?? 1)})`;
+          twin.style.translate = alphaCrackle > 0 ? `${String(noise(t / 9, 1) * jitter * u)}px` : "";
+        }
+        const pop = popMs > 0 ? ease.back(seg(t, 0, popMs)) : 1;
+        const cy = centerY - top;
+        ctx.save();
+        ctx.globalCompositeOperation = "lighter";
+        ctx.strokeStyle = track === "currentColor" ? view.getComputedStyle(el).color : track;
+        ctx.lineWidth = trackWidth;
+        ctx.beginPath();
+        ctx.ellipse(w / 2, cy, rx, ry, 0, 0, Math.PI * 2);
+        if (trackWidth > 0 && pop > 0) {
+          ctx.globalAlpha = Math.min(1, pop);
+          ctx.stroke();
+        }
+        ctx.restore();
+        for (let i = 0; i < count; i++) {
+          const angle = ((t + phaseMs) / period + i / count) * Math.PI * 2;
+          const y = Math.sin(angle);
+          const side = y > 0 ? 1 : 0;
+          const tw = twinkle[0] + twinkle[1] * Math.sin(t / twinkle[2] + i * twinkle[3]);
+          if (size[side] * pop > 0.5) star(ctx, w / 2 + Math.cos(angle) * rx, cy + y * ry, size[side] * pop, angle * spin, alpha[side] * tw, rgb2, glowRgb);
+        }
+      }
+      frame = view.requestAnimationFrame(draw);
+    };
+    draw();
+    return () => {
+      view.cancelAnimationFrame(frame);
+      clock2.cancel();
+      canvas.remove();
+      twin?.remove();
+    };
+  }
+  var idle = ({ call, el }) => {
+    const settings = call.step;
+    const target = settings.target === void 0 ? el : el.querySelector(settings.target);
+    if (target === null) return void 0;
+    return startIdle(target, settings, {
+      speed: call.dur / Math.max(1, call.step.dur),
+      ...settings.signal && { signal: settings.signal }
+    });
+  };
+
   // components/effect-library/effects.ts
   var entry = (call) => {
     const s = call.step["scale"];
@@ -18721,19 +19130,19 @@ var PIECES = (() => {
         const transform = (degrees) => `perspective(${perspective}px) rotate${vertical ? "X" : "Y"}(${degrees}deg)`;
         const ease2 = call.step["ease"];
         const easing = typeof ease2 === "string" ? EASE[ease2] ?? ease2 : "ease-in-out";
-        const edge = call.dur > 0 ? mid / call.dur : 0.5;
+        const edge2 = call.dur > 0 ? mid / call.dur : 0.5;
         animate([
           { transform: transform(0), easing },
           ...h2 > 0 ? [{ transform: transform(0), offset: h2 / call.dur, easing }] : [],
-          { transform: transform(direction * 90), offset: edge },
-          { transform: transform(-direction * 90), offset: edge, easing },
+          { transform: transform(direction * 90), offset: edge2 },
+          { transform: transform(-direction * 90), offset: edge2, easing },
           { transform: transform(0) }
         ], { transform: "none" }, { easing: "linear" });
       } else {
         const scale = vertical ? "scaleY" : "scaleX";
         const rest2 = { transform: `${scale}(1)` };
-        const edge = { transform: `${scale}(0)` };
-        animate(h2 > 0 ? [rest2, { ...rest2, offset: h2 / call.dur }, { ...edge, offset: mid / call.dur }, rest2] : [rest2, edge, rest2], { transform: "none" });
+        const edge2 = { transform: `${scale}(0)` };
+        animate(h2 > 0 ? [rest2, { ...rest2, offset: h2 / call.dur }, { ...edge2, offset: mid / call.dur }, rest2] : [rest2, edge2, rest2], { transform: "none" });
       }
       return () => {
         clearTimeout(timer);
@@ -18838,6 +19247,9 @@ var PIECES = (() => {
     registerEffect(verbs, "motes", motes);
     registerEffect(verbs, "flicker", flicker);
     registerEffect(verbs, "bar-fill", barFill);
+    registerEffect(verbs, "refresh", refresh);
+    registerEffect(verbs, "pulse", pulseEffect);
+    registerEffect(verbs, "idle", idle);
     return createEffectLayer(o);
   }
 

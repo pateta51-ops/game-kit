@@ -154,3 +154,13 @@ Source `a69c8dac`, `src/ui/motion/effects/phaser.ts`, `attack.ts`, `destroy.ts`,
 The game resolves shooters, shots and permission prompts, orders targets and chained roots from events, pans the board, updates the occupied slots, and owns banners and labels. Source charging, target jolt, mission chip shine and sparks, flag drop, motes and card relocation are companion steps.
 
 For the source overlay, pass `sourceLight` with `background: 'radial-gradient(circle at 50% 42%, rgb(255 236 210 / .85), rgb(255 110 60 / .4) 30%, rgb(255 92 52 / 0) 70%)'` and `shadow: \`0 0 \${sourceWidth * .08}px \${sourceWidth * .02}px rgb(255 92 52 / .7)\``. The source actor must use the shooter's card rectangle. For the target jolt, pass `jolt.vector` in stage pixels and hide the live target while the clone plays.
+## Refresh and tutorial pulse (K352)
+
+Source at `a69c8dac` in `src/ui/motion/effects/refresh.ts:20–25,95–149,174–219` and `src/ui/theme/table.css`.
+
+- Resolve the ready card and supply the old banner in its clone. Set `banner: '[data-exhausted-tag]'`, `face: '.card__face, .standin'` and `filter: 'saturate(0.15) brightness(0.6)'`. The face selector supplies the artwork copied for the drain. Keep the game's banner markup and set the card radius on the actor. Start successive steps 120 ms apart (hold the outgoing appearance until each starts).
+- `liftMs: 560`, `drainMs: 480`, `drainAt: 0.25` (140 ms delay), `liftEase: 'cubic-bezier(.3,.1,.5,1)'`, `drainEase: 'cubic-bezier(.45,.1,.4,1)'`. Step duration is 620 ms with the banner or 480 ms without it.
+- `liftMiddle: 0.35`, `liftRise: [0.08, 0.2]`, `liftScale: [1.06, 1.12]`, `textShadow: ['0 2px 6px #000', '0 18px 22px #000']`.
+- `lineBackground: 'linear-gradient(90deg, transparent, rgba(220,240,255,.95) 20%, #fff 50%, rgba(220,240,255,.95) 80%, transparent)'`, `lineShadow: '0 0 <3% of card height in px> rgba(170,215,255,.9)'`, `lineRadius: '2px'`, `lineHeight: 0.012`, `lineMinHeight: 2`, `lineFade: [0.12, 0.85]`.
+
+From `src/ui/theme/tutorial.css:146–171` at the same commit. Keep the solid `#4de3d0` outline in CSS (width `calc(var(--u, 10px) * 0.28)`, offset `calc(var(--u) * 0.25)`). Pulse with `period: 1600`, `easing: 'ease-in-out'`, and outline-color keyframes `#4de3d0 → rgba(77,227,208,0.25) → #4de3d0` at 0%, 50%, and 100%.

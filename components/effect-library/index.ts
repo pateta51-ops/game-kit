@@ -25,3 +25,6 @@ export type { ProjectileSettings, RingPulseSettings, ShimmerSettings } from './c
 export type { BoltSettings } from './combat-canvas.ts';
 export type { DissolveSettings, ShatterSettings } from './break-effects.ts';
 export type { ShieldBubbleSettings } from './shield-bubble.ts';
+export type { RefreshSettings } from './refresh.ts';
+export { startPulse, type PulseSettings } from './loops.ts';
+export { startIdle, type CrackleSettings, type IdleSettings, type OrbitSettings } from './idle.ts';

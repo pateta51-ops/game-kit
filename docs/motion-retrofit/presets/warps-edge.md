@@ -161,3 +161,42 @@ For the shield recharge field, use `recharge: { assemble: [520,1080], hum: [1000
 ### End-screen rings
 
 At `449af55`, `src/ui/table/endscreen.css:650,897` brings vortex rings in from 320° and 1.3 scale over `3600 * k` ms with `cubic-bezier(.2,.6,.35,1)` and per-ring delays of `(200 + i * 350) * k` ms. For the ring’s relative entry rotation use `spin` with `turns: 320 / 360`, `direction: -1` and `scaleFrom: 1.3`. The separate vortex arms roll in from −540° over `5100 * k` ms with `cubic-bezier(.25,.6,.3,1)`. Both source animations are finite. For a continuous ring variant, use `endless: true`, `turns: 1` and a `period` in ms, with `dur` covering the time the ring is shown.
+## Menu pulse and idle (K352)
+
+All sources below are at `449af55`.
+
+- `src/ui/theme/menus.css:181–209`: use `pulse` with `period: 5000`, `easing: 'ease-in-out'`, and `frames: [{}, { opacity: 0.6 }, {}]`. For live use, give the animated highlight its own element with the game's pseudo-element look (5.875 × 0.4375 rem, right 2.6875 rem, top 1.375 rem, skewX −35°, repeating horizontal gradient `#7ae6fb 0 1.5rem, #122b38 1.5rem 2.125rem`, shadow `0 0 0.875rem #4bcae977`).
+- `src/ui/fx/idle.ts`, `looks.ts`, `kit.ts` and `timing.ts` supply the stun idle settings below. Apply the breathing keyframes to a separate glow element. The unit is card width ÷ 148, or min(width, height × 0.72) ÷ 148 for sections. The glow uses the original half-cosine curve, sampled into linear keyframes.
+
+```ts
+const breathe = (unit: number) => ({
+  kind: 'breathe',
+  period: 2400,
+  easing: 'linear',
+  frames: Array.from({ length: 25 }, (_, i) => {
+    const breath = (1 - Math.cos(2 * Math.PI * i / 24)) / 2;
+    const colour = `rgba(255,63,164,${String(0.3 + 0.3 * breath)})`;
+    return {
+      outline: `${String(2 * unit)}px solid ${colour}`,
+      boxShadow: `0 0 ${String((10 + 14 * breath) * unit)}px ${colour}`,
+    };
+  }),
+} as const);
+
+const stunIdle = {
+  kind: 'orbit', period: 2200,
+  orbit: {
+    referenceWidth: 148, radii: [70, 18], centerY: -4, phaseMs: 320, count: 3,
+    size: [10, 15], alpha: [0.6, 1], twinkle: [0.75, 0.25, 90, 2], spin: 0.6,
+    track: 'rgba(255,200,230,0.18)', trackWidth: 2, rgb: '255,236,150', glowRgb: '255,120,200',
+    crackle: {
+      period: 1700, at: 600, duration: 140, margin: 44,
+      arc: { hz: 35, rgb: '255,63,164', jag: 7, segments: 6, width: 1.3, fork: false },
+      sparkColour: 'rgba(255,200,240,1)',
+    },
+    copySaturation: 0.8, jitter: 0.8, popMs: 260,
+  },
+} as const;
+```
+
+Set `popMs: 0` when handing off from the 960 ms onset, which starts the stars at 640 ms and finishes their pop at 900 ms. For sections, use `count: 0` and `trackWidth: 0` and omit the copy and jitter settings. Warp’s 2D ships use their own arcs. Stop both idle loops when the stun ends.

@@ -1,6 +1,15 @@
 // The overlay layer: one element above the page that holds the clones and stand-ins the effects animate.
 import type { Actor, Rect, Run } from '../motion-frame/index.ts';
 
+export function decorativeCopy(el: HTMLElement, deep = true): HTMLElement {
+  const copy = el.cloneNode(deep) as HTMLElement;
+  for (const node of [copy, ...copy.querySelectorAll('[id], [data-card-id]')]) {
+    node.removeAttribute('id');
+    node.removeAttribute('data-card-id');
+  }
+  return copy;
+}
+
 export interface LayerOptions {
   /** the element that holds the layer (default `document.body`) */
   parent?: HTMLElement;

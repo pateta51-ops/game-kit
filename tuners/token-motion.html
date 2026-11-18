@@ -34494,7 +34494,7 @@ void main() {
         }
       };
       TorusGeometry = class _TorusGeometry extends BufferGeometry {
-        constructor(radius = 1, tube = 0.4, radialSegments = 12, tubularSegments = 48, arc = Math.PI * 2) {
+        constructor(radius = 1, tube = 0.4, radialSegments = 12, tubularSegments = 48, arc2 = Math.PI * 2) {
           super();
           this.type = "TorusGeometry";
           this.parameters = {
@@ -34502,7 +34502,7 @@ void main() {
             tube,
             radialSegments,
             tubularSegments,
-            arc
+            arc: arc2
           };
           radialSegments = Math.floor(radialSegments);
           tubularSegments = Math.floor(tubularSegments);
@@ -34515,7 +34515,7 @@ void main() {
           const normal = new Vector3();
           for (let j = 0; j <= radialSegments; j++) {
             for (let i = 0; i <= tubularSegments; i++) {
-              const u = i / tubularSegments * arc;
+              const u = i / tubularSegments * arc2;
               const v = j / radialSegments * Math.PI * 2;
               vertex2.x = (radius + tube * Math.cos(v)) * Math.cos(u);
               vertex2.y = (radius + tube * Math.cos(v)) * Math.sin(u);
@@ -36304,10 +36304,10 @@ void main() {
         tex.colorSpace = SRGBColorSpace;
         tex.anisotropy = Math.min(8, renderer.capabilities.getMaxAnisotropy());
         const front = keep(new MeshStandardMaterial({ map: tex, roughness: 0.45, metalness: 0.05 }));
-        const edge = keep(
+        const edge2 = keep(
           new MeshStandardMaterial({ color: rimColour(c), roughness: 0.4, metalness: 0.35 })
         );
-        const set = [edge, front, backMat];
+        const set = [edge2, front, backMat];
         return [face2, set];
       })
     ).then((all) => {

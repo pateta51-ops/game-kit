@@ -147,10 +147,11 @@ describe.skipIf(!HAVE && !process.env['CI'])('effect library in a browser', () =
   it('a game registers its own effect beside the built-in verbs', async () => {
     const r = await page.evaluate(() => (window as unknown as { fxTest: Api }).fxTest.own());
     expect(r.names).toEqual(expect.arrayContaining(['stamp', 'motes', 'flicker', 'bar-fill']));
-    expect(r.names).toHaveLength(36);
+    expect(r.names).toHaveLength(39);
     expect(r.names).toEqual(expect.arrayContaining(['spin', 'tap', 'untap']));
     expect(r.names).toEqual(expect.arrayContaining(['arc-move', 'shake-group', 'unroll', 'multi-stop-path', 'trail', 'warp-transfer', 'radial-streaks', 'collapse-jump', 'column-beam', 'rotating-beam', 'projectile', 'dissolve', 'shatter', 'shimmer', 'shield-bubble', 'ring-pulse']));
     expect(r.names).toContain('pop');
+    expect(r.names).toEqual(expect.arrayContaining(['refresh', 'pulse', 'idle']));
     expect(r.log).toEqual(['done fx-actor']);
   });
 
