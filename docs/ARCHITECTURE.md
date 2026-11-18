@@ -117,6 +117,9 @@ graph LR
   replay_cli["replay-cli"] --> sim_pool["sim-pool"]
   repo_gate["repo-gate"]
   resolution_frame["resolution-frame"] --> settings["settings"]
+  rules_screen["rules-screen"] --> glossary["glossary"]
+  rules_screen["rules-screen"] --> card_parts["card-parts"]
+  rules_screen["rules-screen"] --> screens["screens"]
   saves["saves"] --> engine_core["engine-core"]
   saves["saves"] --> small_helpers["small-helpers"]
   scaffold["scaffold"]
@@ -194,9 +197,9 @@ graph LR
 - `reference-game`
 - `repo-gate`
 - `resolution-frame`
+- `rules-screen`
 - `saves`
 - `scan-ingest`
-- `screens`
 - `story`
 - `table-panels`
 - `target-arrow`

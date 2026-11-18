@@ -290,6 +290,10 @@
     "use": "A Resolution setting that lays out for a chosen screen size and scales to the window.",
     "not": "Phone layouts (phone-mode)."
   },
+  "rules-screen": {
+    "use": "Show a game-owned rulebook with contents, ranked search, glossary links, annotated diagrams and reference sheets.",
+    "not": "Engine rules or deciding printed wording; the game owns the book and its assets."
+  },
   "saves": {
     "use": "Saved games in IndexedDB over engine-core's save file and a saves screen.",
     "not": "Old-save migration work (the owner's rule: none until the game is complete)."
