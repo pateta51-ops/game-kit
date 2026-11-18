@@ -24,7 +24,7 @@ export const toWsl = (p) => { const m = /^([A-Za-z]):[\\/](.*)$/.exec(p); return
 const q = (s) => `'${s.replace(/'/g, `'\\''`)}'`
 export const script = (src, branch, id, install, check) => {
   const d = `"$HOME/tmp/${id}"`
-  return `d=${d}; rm -rf "$d"; mkdir -p "$HOME/tmp"; git -c safe.directory='*' clone -q --depth 20 --branch ${q(branch)} ${q('file://' + src)} "$d" && cd "$d" && mkdir -p "$d-tmp" && export TMPDIR="$d-tmp" && { ${install}; } </dev/null && { ${check}; } </dev/null; rc=$?; cd "$HOME"; rm -rf "$d" "$d-tmp"; exit $rc`
+  return `d=${d}; rm -rf "$d"; mkdir -p "$HOME/tmp"; git -c safe.directory='*' clone -q --depth 20 --branch ${q(branch)} ${q('file://' + src)} "$d" && cd "$d" && mkdir -p "$d-tmp" && export TMPDIR="$d-tmp" && { ${install}; } </dev/null && { H=$(command -v heavy || { [ -x "$HOME/.local/bin/heavy" ] && echo "$HOME/.local/bin/heavy"; }); if [ -n "$H" ]; then "$H" run --label ${q('finish ' + branch)} -- bash -c ${q(check)}; else ${check}; fi; } </dev/null; rc=$?; cd "$HOME"; rm -rf "$d" "$d-tmp"; exit $rc`
 }
 export const mainOf = (repo) => path.dirname(path.resolve(repo, git(repo, ['rev-parse', '--git-common-dir'])))
 const link = (wt, target) => {

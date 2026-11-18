@@ -11,6 +11,10 @@ const P = { local: 4170, https: 8440 };
 
 describe('validatePorts', () => {
   it('accepts the real ports.json', () => expect(validatePorts(cfg)).toEqual([]));
+  it('checks tool ports (K399)', () => {
+    expect(validatePorts({ panel: P, tools: { q: 6015 }, games: { a: g(6010, 4176, 8445) } }).join()).toMatch(/already used/);
+    expect(validatePorts({ panel: P, tools: { q: 4175 }, games: {} }).join()).toMatch(/outside 4170-4199/);
+  });
   it('rejects overlapping blocks', () => {
     expect(validatePorts({ panel: P, games: { a: g(6010, 4176, 8445), b: g(6015, 4177, 8446) } }).length).toBeGreaterThan(0);
   });

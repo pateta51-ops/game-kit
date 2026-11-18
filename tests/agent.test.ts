@@ -75,6 +75,7 @@ describe('agent commands (K216): plain node, no tsx', () => {
     expect(finish(['--repo', main], io, (_c, _a, input) => (sent.push(input), { status: 0, output: 'all good' }), false)).toBe(0);
     expect(out[0]).toMatch(new RegExp(`^PASS ${sha} `));
     expect(sent[0]).toContain('npm run check');
+    expect(sent[0]).toContain(`"$H" run --label 'finish `); // K399: through the heavy queue when installed
     expect(finish(['--repo', main, '--check', 'echo hi'], io, () => ({ status: 3, output: 'boom' }), false)).toBe(1);
     expect(out[1]).toMatch(new RegExp(`^FAIL ${sha} .*exit 3[^]*boom`));
   });
