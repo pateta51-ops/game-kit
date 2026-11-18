@@ -20,6 +20,8 @@
       { "game": "warps", "commit": "449af55", "paths": ["src/ui/fx/warp.ts", "src/ui/fx/warpLook.ts", "src/ui/fx/power/pulseLook.ts", "src/ui/fx/power/blocks.ts", "src/ui/fx/tractor.ts", "src/ui/fx/timing.ts"] },
       { "game": "unstoppable", "commit": "52c19f6", "paths": ["src/ui/board/Hand.tsx", "src/ui/board/TokenFlights.tsx", "src/ui/board/threatBuffs.tsx"] },
       { "game": "imperium-horizon", "commit": "b82d5cf", "paths": ["src/ui/board/table/FlightLayer.tsx", "src/ui/play/flights.ts", "src/ui/theme/table.css"] },
+      { "game": "rome", "commit": "e76d56f", "paths": ["src/ui/motion/live/LiveMotion.tsx", "src/ui/motion/MotionLab.tsx"] },
+      { "game": "game-kit", "commit": "cb69479", "paths": ["components/card-attachments/HostStack.tsx (static turned pose)"] },
       { "game": "stcc", "commit": "a69c8dac", "paths": ["src/ui/motion/effects/phaser.ts", "src/ui/motion/effects/attack.ts", "src/ui/motion/effects/destroy.ts", "src/ui/motion/effects/missionComplete.ts", "src/ui/motion/effects/takeControl.ts"] },
       { "game": "warps", "commit": "449af55", "paths": ["src/ui/fx/attack.ts", "src/ui/fx/attackLook.ts", "src/ui/fx/attackPlan.ts", "src/ui/fx/power/blocks.ts", "src/ui/fx/blast.ts", "src/ui/fx/power/backlash.ts", "src/ui/fx/shield.ts", "src/ui/fx/shieldLook.ts", "src/ui/fx/timing.ts"] },
       { "game": "unstoppable", "commit": "52c19f6", "paths": ["src/ui/board/TargetArrow.tsx", "src/ui/theme/motion.css", "src/ui/play/arrow.ts"] }

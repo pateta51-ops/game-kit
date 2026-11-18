@@ -14,6 +14,7 @@ import { curvedBeam, radialStreaks } from './beam-canvas.ts';
 import { collapseJump } from './collapse.ts';
 import { warpTransfer } from './transfer.ts';
 import { spiralTransfer } from './spiral.ts';
+import { rotate } from './rotation.ts';
 
 export type { ArcMoveSettings } from './flight-effects.ts';
 export type EffectCtx = EffectLayer;
@@ -210,6 +211,9 @@ export const BUILT_IN: Readonly<Record<string, Effect>> = {
     animate([{ opacity: 0, transform: 'translateY(var(--fx-text-rise,12px))' }, { opacity: 1, offset: 0.25 }, { opacity: 1, transform: 'none' }], { opacity: '1', transform: 'none' });
     return undefined;
   },
+  spin: rotate,
+  tap: rotate,
+  untap: rotate,
 };
 
 /** The built-in verbs registered, and a layer made. Pass the registry to the motion player and the layer as its `context`. */

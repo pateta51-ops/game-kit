@@ -46,6 +46,10 @@
   .beam-panel .flight-target { left: 73%; width: 6%; border-radius: 50% }
   .beam-panel .card { height: 42%; width: 14%; top: 35%; left: 43% }
   .beam-panel .radial-origin { position: absolute; inset: 49% 49%; }
+  .rotation-panel { display: none }
+  .rotations-only main > :not(.rotation-panel) { display: none }
+  .rotations-only .rotation-panel { display: block }
+  .rotation-sample { left: 40%; top: 32%; width: 20%; height: 45%; background: #efede9; color: #1f2634; border: .3rem double; border-radius: .4rem; font: bold clamp(2rem, 4vw, 8rem) system-ui }
   .combat-panel { display: none; background: #292733; color: #ebe9f2 }
   .combat-only main > :not(.combat-panel) { display: none }
   .combat-only .combat-panel { display: block }
@@ -54,8 +58,13 @@
   .combat-panel .shot-target { left: 70%; top: 43% }
 </style>
 <script>if (new URLSearchParams(location.search).has('flights')) document.documentElement.classList.add('flights-only');if (new URLSearchParams(location.search).has('beams')) document.documentElement.classList.add('beams-only');if (new URLSearchParams(location.search).has('combat')) document.documentElement.classList.add('combat-only')</script>
+<script>if (new URLSearchParams(location.search).has('rotations')) document.documentElement.classList.add('rotations-only')</script>
 <header><h1>Effect library motion lab</h1><button type="button">Replay</button></header>
 <main>
+  <section class="field rotation-panel"><h2>Roll-in</h2><div id="spin-sample" class="sample rotation-sample">↑</div></section>
+  <section class="field rotation-panel"><h2>Looping spin</h2><div id="loop-sample" class="sample rotation-sample">↑</div></section>
+  <section class="field rotation-panel"><h2>Tap</h2><div id="tap-sample" class="sample rotation-sample">↑</div></section>
+  <section class="field rotation-panel"><h2>Untap</h2><div id="untap-sample" class="sample rotation-sample">↑</div></section>
   <section class="field flight-source"><h2>Arc move</h2><div id="ball" class="ball sample"></div><div id="landing" class="landing"></div></section>
   <section class="field"><h2>Glow with hold</h2><div id="card" class="card sample">Sample</div></section>
   <section class="field"><h2>Flip without squash</h2><div id="lamp" class="lamp sample" aria-label="Lamp"></div></section>
@@ -91,5 +100,6 @@
 <script type="module" src="./lab.ts"></script>
 <script type="module" src="./flights.ts"></script>
 <script type="module" src="./beams.ts"></script>
+<script type="module" src="./rotations.ts"></script>
 <script type="module" src="./combat.ts"></script>
 </html>

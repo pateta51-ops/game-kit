@@ -18247,6 +18247,43 @@ var PIECES = (() => {
     shipLayer(ctx, g, s, (u) => pose(u, g, s, p), t);
   };
 
+  // components/effect-library/rotation.ts
+  var rotate = ({ call, el, animate }) => {
+    const { angle = 90, turns = 1, direction, pivot, ease: ease2, overshoot, scaleFrom, endless, period } = call.step;
+    const sign = direction === -1 ? -1 : 1;
+    const held = el.style.rotate;
+    const degrees = (n) => `${String(n)}deg`;
+    const tapped = sign * (typeof angle === "number" ? angle : 90);
+    const untap = call.verb === "untap";
+    const spin = call.verb === "spin";
+    const loop = spin && endless === true;
+    const scaleIn = spin && typeof scaleFrom === "number" && Number.isFinite(scaleFrom);
+    const entry2 = scaleIn && !loop;
+    const rest2 = Number.parseFloat(held) || 0;
+    const delta = sign * 360 * (typeof turns === "number" ? turns : 1);
+    const from = held || degrees(untap ? tapped : 0);
+    const target = spin ? rest2 + delta : untap ? 0 : tapped;
+    const origin = el.style.transformOrigin;
+    const transformOrigin = typeof pivot === "string" ? pivot : origin || "center";
+    const restore = spin && (entry2 || loop || delta % 360 === 0);
+    const turnSign = Math.sign(target - Number.parseFloat(from));
+    const over = !spin && turnSign !== 0 && typeof overshoot === "number" && overshoot > 0;
+    const easing = ease2 === void 0 ? spin ? "linear" : over ? "cubic-bezier(.4,.1,.3,1)" : void 0 : void 0;
+    const scale = el.style.scale || "1";
+    const duration = typeof period === "number" && period > 0 && Number.isFinite(period) && call.step.dur > 0 ? Math.max(1, call.dur * period / call.step.dur) : Math.max(1, call.dur);
+    animate(
+      [
+        { rotate: entry2 ? degrees(rest2 - delta) : from, transformOrigin, ...entry2 ? { scale: String(scaleFrom) } : {} },
+        ...over ? [{ rotate: degrees(target + turnSign * overshoot), transformOrigin, offset: 0.78 }] : [],
+        { rotate: degrees(entry2 ? rest2 : target), transformOrigin, ...entry2 ? { scale } : {} }
+      ],
+      { rotate: restore ? held : degrees(target), transformOrigin: restore ? origin : transformOrigin },
+      { ...easing ? { easing } : {}, ...loop ? { duration, iterations: Infinity } : {} }
+    );
+    if (loop && scaleIn) animate([{ scale: String(scaleFrom) }, { scale }]);
+    return void 0;
+  };
+
   // components/effect-library/effects.ts
   var entry = (call) => {
     const s = call.step["scale"];
@@ -18415,7 +18452,10 @@ var PIECES = (() => {
       css(el, { color: "var(--fx-text,inherit)", font: "var(--fx-text-font,inherit)", textAlign: "center" });
       animate([{ opacity: 0, transform: "translateY(var(--fx-text-rise,12px))" }, { opacity: 1, offset: 0.25 }, { opacity: 1, transform: "none" }], { opacity: "1", transform: "none" });
       return void 0;
-    }
+    },
+    spin: rotate,
+    tap: rotate,
+    untap: rotate
   };
   function registerEffects(verbs, o) {
     for (const [name, fx] of Object.entries(BUILT_IN)) registerEffect(verbs, name, fx);

@@ -96,3 +96,7 @@ Source `449af55`, `src/ui/fx/attack.ts`, `attackLook.ts`, `attackPlan.ts`, `timi
 The game supplies the event-to-beat plan, audio cues, meters, stun and attack labels, geometry for the two board modes, scrolling anchors, and the discard and wreck destinations. Source lunge, vignette, hull scorch, breach overlays, recharge fill, the flash and tear anticipation, debris, and carry to the wreck pile remain companion drawing.
 
 For the shield recharge field, use `recharge: { assemble: [520,1080], hum: [1000,1400], settle: [1080,1600], scanColour: '160,255,200', scanCore: '200,255,230' }` and `unit: hex / 15`. The game still owns the source token, meter stream and position.
+
+### End-screen rings
+
+At `449af55`, `src/ui/table/endscreen.css:650,897` brings vortex rings in from 320° and 1.3 scale over `3600 * k` ms with `cubic-bezier(.2,.6,.35,1)` and per-ring delays of `(200 + i * 350) * k` ms. For the ring’s relative entry rotation use `spin` with `turns: 320 / 360`, `direction: -1` and `scaleFrom: 1.3`. The separate vortex arms roll in from −540° over `5100 * k` ms with `cubic-bezier(.25,.6,.3,1)`. Both source animations are finite. For a continuous ring variant, use `endless: true`, `turns: 1` and a `period` in ms, with `dur` covering the time the ring is shown.

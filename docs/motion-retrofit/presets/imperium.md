@@ -18,3 +18,7 @@ export const imperium = {
   staggerUnscaled: true,
 } as const;
 ```
+
+### Icon roll-in
+
+At `b82d5cf`, `src/ui/theme/play.css:900,988` rolls the icon from −540° and .6 scale to rest. Use `spin` with `turns: 1.5`, `scaleFrom: .6`, `ease: 'out'` and a base `dur: 1100` for normal speed. The original uses 2400 ms on slow, 500 ms on fast and 0 ms when off.

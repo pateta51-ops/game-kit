@@ -88,6 +88,15 @@ The [beam lab](fake/retrofit/index.html?beams) shows all five verbs. Coordinates
 - `column-beam` takes `way` (in or out), `colour` (space-separated RGB), `tuck` (pixels clipped from the bottom), optional `column` rectangle, `glitter` count, `speck` size multiplier, `core` toggle, `columnLight` and `coreLight` backgrounds, `speckColour` and `speckGlow`. With `curve`, the beam follows a quadratic to `to` using a stage `control` point, `unit`, comma-separated `colour` and `moteColour`, CSS `sparkColour`, optional `image`, start/end `size` and a boolean `tuck` for shrinking into the emitter. The curved sequence uses a 1,200 ms step.
 - `rotating-beam` takes `colour` (space-separated RGB), `turns`, `beamDeg` and `fadeMs`. The wedge is centred on the actor; use `dur` to set its turn rate.
 
+### Rotation settings
+
+The [rotation lab](fake/retrofit/index.html?rotations) shows all three verbs. They animate CSS `rotate` on the actor clone, alongside `move` and `scale`. Use `dur` for timing, `direction: 1` for clockwise (default) or `-1` for counterclockwise, and `pivot` for a CSS transform origin. The pivot defaults to the actor's inline origin or its centre.
+
+- `spin` takes `turns` (default 1, fractions allowed) and `ease` (default linear). It adds the signed turns to the actor's held rotation. Whole turns return to the starting pose. Fractional turns hold the new pose. Set `scaleFrom` for a roll-in that ends at the resting angle and scale.
+- Set `endless: true` to repeat until step end or skip, then restore the resting pose. `period` is the cycle duration in spec ms and defaults to `dur`. Use whole turns for a seamless ring. The motion player’s reduced-motion setting also governs loops.
+- `tap` holds the signed `angle` (default 90 degrees) for the rest of the beat. Set `ease` to override the shared ease-in-out default. Set `overshoot` in degrees to pass the target at offset .78 with EBR’s easing.
+- `untap` returns a held rotation to 0. For a fresh clone of upright artwork, `angle` and `direction` describe its starting pose. It accepts the same `ease` and `overshoot` as tap.
+
 ### Combat settings
 
 The [combat lab](fake/retrofit/index.html?combat) shows the six verbs. Coordinates are stage pixels and times are spec milliseconds. Set `dur` to include the last visible phase. The [game presets](../../docs/motion-retrofit/presets/) record the matching game values and choreography.
