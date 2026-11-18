@@ -62,7 +62,7 @@ export interface Blob extends Box {
 }
 
 /**
- * Isolated solid boxes of one colour in a region: windows of width `min`..`max` (heights 1, 0.85, 0.75 of the width) mostly
+ * Isolated solid boxes of one colour in a region: windows of width `min` to `max` (heights 1, 0.85, 0.75 of the width) mostly
  * of that colour while the margin around them is not, so a patch of the same colour in the art (no such edge) is not taken.
  * Integral image of the mask on a 2 px grid; best first, non-overlapping, at most 8; each grown while the strip beyond it
  * is still mostly the colour (a box with a big letter in it is first found as a window inside it).

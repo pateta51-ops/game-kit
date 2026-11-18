@@ -34,5 +34,16 @@
       "scanpipe/vector.py and scripts/vtrace.py: potrace of a thresholded or k-means-quantised crop (trace-icons.py of Jarl and ER maps, emtrace.py, trace_icons.py of 7IS), symmetry averaging (ER symm.py/symfill.py), SVG retrace per fill colour (7IS icons-retrace.py), proof sheet and fidelity (7IS trace_icons.py), B&W render of PDF pages (Jarl render-bw.py). vtracer, game icon lists, boxes, colours and paths left in the games; STCC repair-rulebook-icons.py is text repair, not tracing, left out."
     ]
   },
-  "needs": []
+  "alsoBoards": {
+    "game": "earthborne-rangers, unstoppable-fan-prototype, radiance-fan-prototype",
+    "commit": "59e0ad1d, e314b5f, fdc42d2",
+    "paths": [
+      "measure.ts: ER src/ui/cards/scanGeometry.ts (hsv, findBlobs, findRows, firstRun, rowFraction; ER's frames, colours and box slots became the game's BoxSpec list) and scanGeometryLoad.ts (canvas decode, cache per key, optional store; ER's ETag endpoint and idb-keyval left in the game).",
+      "board.ts: ER scanOverlay.ts (cover, the plan of boxes; frame offsets left in ER); Unstoppable src/ui/scanned/geometry.ts (clipPathOf, trimOutline, boxStyle, pointStyle, trackPoint, skewOf, uprightStyle), size.ts (mmOf, mmStyle, playmatMm as boardMm), outlines.ts (rasterize, overlap, uniformOutlines by a game's family key), table.ts (boxWithin). Sleeve layers, notch, tab, pile stacks and zoom left in Unstoppable.",
+      "ScanBoard.tsx: ER ScanBody.tsx (image plus boxes placed in scan proportions; ER's number boxes, tags and bands are the game's render) and Unstoppable Piece.tsx (clip, trim, mm size).",
+      "scanpipe/playmats.py: Unstoppable tools/ingest/ufp_ingest/playmats.py (check, shape check, find_image; schema, asset writing and ledger left in the game) and Radiance scripts/measure-mat-spots.py (ink by ground, enclosed boxes, rows, zigzag track fit; Radiance's mat names and counts left in the game). scanpipe/tone.py profile, fit, apply_curve, delta_e: the fit Unstoppable's README describes (four cards scanned both ways), written here."
+    ]
+  },
+  "needs": [],
+  "packages": ["react"]
 }

@@ -15,7 +15,18 @@ A bag of tokens with its count; the draw shown as a 2D flight from the bag or a 
 - Session fallback to 2D (`getFallback`, `FALLBACK_TEXT`): no WebGL, the scene throws, context lost, below 30 fps for 2 s.
 - Look: structure only (inline: fixed overlay, canvas size); style `data-part="token-bag"`, `token-bag-count`, `token-bag-n`, `token-bag-draw`, `token-bag-skip`. Not here: Warp's token tables, a game's draw events (the game maps them to `draw`).
 
+## Finite supply (K373)
+`supply.ts` (port of Unstoppable `src/ui/scanned/supply.ts`): the engine keeps integers, the table draws the box's real pieces. `placeTokens(places, box)` gives each place (in order) the change of its number out of what the ones before it left, largest values first, at most its `cap`; what the supply or the cap cannot draw is `short` (show it as a badge; the number beside it stays exact). Also `makeChange`, `countOf`, `valueOf`, `tokenSplit` (no supply limit), `heapOf` and `heapSpot` (the supply as a heap that keeps its shape), `discStack`, `heldAndAside`. A game's counts per kind and value are its own.
+
 ## Use it in 10 lines
+```ts
+import { placeTokens } from '../kit/token-bag/index'
+
+const box = { coin: { 3: 6, 1: 10 } } // the game's component list
+const { places, supply } = placeTokens([{ id: 'mat', kind: 'coin', amount: 7, cap: 7 }], box)
+console.log(places.mat, supply.coin) // { tokens: [3, 3, 1], short: 0 } and what is left
+```
+
 ```ts
 import { assignDraws, drawContents, rateFor } from '../kit/token-bag/index'
 

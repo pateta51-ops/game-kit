@@ -895,9 +895,9 @@ One command makes a working, empty game repo from the kit (K204). Run it from th
 
 Flatbed scans of a game's components to one upright, tightly cropped image per item, plus a review overlay and a
 
-- **Use it when:** Turning flatbed scans into one cropped upright image per item.
+- **Use it when:** Turning flatbed scans into one cropped upright image per item; a printed board scan with live state drawn into its boxes, die-cut pieces at true size, playmat box detection, tone profile.
 - **Not for:** Scanning crew boards or anything shipped in-game.
-- **Key exports:** Python package `scanpipe`, see its README
+- **Key exports:** Python package `scanpipe`; TS `index.ts` (measureBoxes, planOverlay, clipPathOf, mmStyle, uniformOutlines...), `ui.ts` (ScanBoard, Piece)
 - **Needs:** nothing
 - **Came from:** scanning-pipeline
 - **Docs:** [README](../components/scan-ingest/README.md)
@@ -1027,9 +1027,9 @@ Static check that a game's look lives in its token file. Lifted from Jarl's `scr
 
 A bag of tokens with its count; the draw shown as a 2D flight from the bag or a 3D shake-and-draw that never decides the draw, and falls back to 2D. Port of Warp's Edge `bag3d` (decision 017). `index.ts` is pure (loads in node); `ui.ts` adds React; `scene.ts` is the only file that imports three.js and is reached only through dynamic imports, so a game's main bundle does not carry it (the game depends on `three` and `@types/three` 0.170.0).
 
-- **Use it when:** A bag of tokens with its count; the engine's draw shown as a 2D flight from the bag or a 3D shake-and-draw (three.js by dynamic import) that never decides the draw and falls back to 2D.
+- **Use it when:** A bag of tokens with its count; the engine's draw shown as a 2D flight from the bag or a 3D shake-and-draw (three.js by dynamic import) that never decides the draw and falls back to 2D; a finite supply of pieces counted from the engine's integers (supply.ts).
 - **Not for:** Which tokens are drawn (the engine), the token faces and the bag print (the game), a game's token tables.
-- **Key exports:** `EXTERIOR_ACROSS`, `EXTERIOR_UP`, `CLOTH`, `COIN_RADIUS`, `COIN_HEIGHT`, `SHAKE_START`, `SHAKE_END`, `DRAW_START`, `STAGGER`, `DRAW_DURATION`, `pileLayout`, `shakeAmount`, `bagPose`, `slotPose`, and 30 more
+- **Key exports:** `EXTERIOR_ACROSS`, `EXTERIOR_UP`, `CLOTH`, `COIN_RADIUS`, `COIN_HEIGHT`, `SHAKE_START`, `SHAKE_END`, `DRAW_START`, `STAGGER`, `DRAW_DURATION`, `pileLayout`, `shakeAmount`, `bagPose`, `slotPose`, and 42 more
 - **Needs:** nothing
 - **Came from:** warps-edge-fan-prototype
 - **Docs:** [README](../components/token-bag/README.md)
