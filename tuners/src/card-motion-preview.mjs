@@ -29,6 +29,11 @@ export function art(id) {
   return node;
 }
 
+export function flipArt(node) {
+  node.classList.add('flip-art');
+  return node;
+}
+
 function face(id) {
   const { children: [icon, label], ...props } = artwork(id);
   return createElement('div', props, createElement('b', null, icon), label);

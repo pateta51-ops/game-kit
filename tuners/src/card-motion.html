@@ -52,12 +52,15 @@ body { margin: 0; }
 .card-back { background: repeating-linear-gradient(135deg, #263a56 0 5px, #314866 5px 10px); }
 #stage[data-offset] [data-part="stack"] { --kp-step: var(--edge-offset); }
 .ctl input[type="checkbox"] { width: auto; justify-self: start; }
+.ctl select { grid-column: 1 / -1; font: inherit; color: var(--fg); background: #232b2e; border: 1px solid var(--line); border-radius: 6px; padding: 4px 8px; }
+.card-art.flip-art { transform-style: preserve-3d; }
+.flip-art b { transform: translateZ(12px); }
 [hidden] { display: none !important; }
 </style>
 <div class="wrap">
   <header>
     <h1>Card Motion Tuner</h1>
-    <p class="sub">Preview the kit’s deck motions, pile and market row. Change a slider to replay the motion or update the stack.</p>
+    <p class="sub">Preview the kit’s deck motions, pile and market row. Change a setting to replay the motion or update the stack.</p>
   </header>
   <nav class="presets" aria-label="Effect" id="effects"></nav>
   <section class="table" aria-label="Preview">
@@ -92,14 +95,18 @@ const size = [
 ];
 const cards = (min) => ['count', 'Cards in pile', min, 14, 1, ' cards', 'The game supplies this in its pile view; the kit has no default.'];
 const offset = ['offset', 'Edge offset', 0, 8, .01, ' px', 'Each edge peeks this far up and left of the one above it.'];
+const flip = ['Turn-over', [
+  ['axis', 'Flip axis', [['', 'Horizontal'], ['y', 'Vertical']], 'Turn side to side or top to bottom.'],
+  ['direction', 'Flip direction', [['', 'Front'], ['-1', 'Back']], 'Reverse which edge comes forward.'],
+]];
 const effects = {
   deal: ['Deal', [['Timing', [speed]], ['Flight', [
     ['faceDown', 'Turn over while dealing', 'Start with the back showing; the kit has no default for this move option.'],
-  ]]]],
+  ]], flip]],
   refill: ['Refill turn-over', [['Timing', [speed,
     ['departs', 'Wait for departure', 'Pause after the departing card lands.'],
     ['far', 'Far refill', 'Increase the refill flight time and use the far slot.'],
-  ]]]],
+  ]], flip]],
   cycle: ['Deck cycle', [['Timing', [speed,
     ['shuffled', 'Riffle after cycling', 'Riffle the deck after the incoming cards land.'],
   ]]]],
@@ -139,6 +146,10 @@ let destinations = [];
 const ms = (value) => Math.round(value) + ' ms';
 const tokens = (values) => Object.entries(values).map(([key, value]) => key + ': ' + value + ';').join('\n');
 const options = (values) => JSON.stringify(values, null, 2).replace(/^  "(\w+)":/gm, '  $1:');
+const flipOptions = () => ({
+  ...(settings.axis ? { axis: settings.axis } : {}),
+  ...(settings.direction ? { direction: Number(settings.direction) } : {}),
+});
 const back = () => PREVIEW.art('back');
 const at = (index) => () => destinations[index];
 const out = (index, pile, flags) => ({ id: String(index), dir: 'out', pile, at: at(index), ...flags });
@@ -178,7 +189,13 @@ function replayDeck() {
       ...(departs ? [out(3, far ? 'far' : 'near', { faceDown: false })] : []),
       out(far ? 2 : 1, 'deck', { faceDown: true, refill: true, far }),
     ] : [1, 2, 3].map((i) => out(i, 'deck', { faceDown }));
-  const { plan } = DECK.dealFrom(moves, { speed, departs, shuffled: shuffled ? ['deck'] : [], back, face: (_, el) => el.cloneNode(true) });
+  const turns = effect === 'refill' || effect === 'deal' && faceDown;
+  const { plan } = DECK.dealFrom(moves, {
+    speed, departs, shuffled: shuffled ? ['deck'] : [], ...(turns ? flipOptions() : {}),
+    back: turns ? () => PREVIEW.flipArt(back()) : back,
+    face: (id, el) => turns && (effect === 'deal' || id !== '3')
+      ? PREVIEW.flipArt(el.cloneNode(true)) : el.cloneNode(true),
+  });
   for (const { move, delay, ms: duration } of plan.timed) {
     if (move.dir === 'in') {
       const source = DECK.topOf(DECK.pileElement(move.at));
@@ -220,8 +237,8 @@ function render(replay = true) {
   };
   $('note').textContent = notes[effect];
   const snippets = {
-    deal: options({ faceDown }) + '\n\n' + options({ speed }),
-    refill: options({ faceDown: true, refill: true, far }) + '\n\n' + options({ speed, departs }),
+    deal: options({ faceDown }) + '\n\n' + options({ speed, ...(faceDown ? flipOptions() : {}) }),
+    refill: options({ faceDown: true, refill: true, far }) + '\n\n' + options({ speed, departs, ...flipOptions() }),
     cycle: options({ speed, shuffled: shuffled ? ['deck'] : [] }),
     riffle: `riffle(deck, ${speed}, { unit: () => ${unit} })`,
     stack: `view={{ count: ${count}, cards }}
@@ -234,6 +251,10 @@ unit={() => ${fanUnit}}` : ''),
   };
   $('code').textContent = snippets[effect] + (pile && Object.keys(css).length ? '\n\n' + tokens(css) : '');
   $('play').hidden = effect === 'stack';
+  for (const [key] of flip[1]) {
+    const input = $('c-' + key);
+    if (input) input.disabled = effect === 'deal' && !faceDown;
+  }
   if (pile) PREVIEW.pile(stage, { count, speed, landscape, fanUnit }, effect === 'fan', replay && effect === 'fan', ++sequence);
   else if (effect === 'market') PREVIEW.market(stage, speed, replay, ++sequence);
   else if (replay) replayDeck();
@@ -251,19 +272,21 @@ function controls() {
       const ctl = document.createElement('div');
       ctl.className = 'ctl';
       const check = row.length === 3;
+      const select = Array.isArray(min);
       ctl.innerHTML = `<label for="c-${key}">${label}</label><output for="c-${key}"></output>` +
-        (check ? `<input id="c-${key}" type="checkbox">` : `<input id="c-${key}" type="range" min="${min}" max="${max}" step="${step}">`) +
-        `<small>${check ? min : help}</small>`;
-      const input = ctl.querySelector('input');
+        (select ? `<select id="c-${key}">${min.map(([value, text]) => `<option value="${value}">${text}</option>`).join('')}</select>` :
+          check ? `<input id="c-${key}" type="checkbox">` : `<input id="c-${key}" type="range" min="${min}" max="${max}" step="${step}">`) +
+        `<small>${select ? max : check ? min : help}</small>`;
+      const input = ctl.querySelector('input, select');
       const output = ctl.querySelector('output');
       ctl.querySelector('small').id = 'help-' + key;
       input.setAttribute('aria-describedby', 'help-' + key);
       if (check) input.checked = settings[key];
-      else input.value = settings[key];
-      const read = () => { output.textContent = check ? '' : key === 'fanUnit' && !settings[key] ? 'Auto' : settings[key] + unit; };
+      else input.value = settings[key] ?? '';
+      const read = () => { output.textContent = check || select ? '' : key === 'fanUnit' && !settings[key] ? 'Auto' : settings[key] + unit; };
       read();
       input.addEventListener('input', () => {
-        settings[key] = check ? input.checked : Number(input.value);
+        settings[key] = select ? input.value : check ? input.checked : Number(input.value);
         $('reset').setAttribute('aria-pressed', 'false');
         read();
         render();

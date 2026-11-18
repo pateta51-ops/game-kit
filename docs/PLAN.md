@@ -141,6 +141,7 @@ A game's build plan lists the kit work it needs as phases named `GK<n>` for the 
 | K351 | docs/motion-retrofit/INVENTORY.md: every animation and effect in 11 games, file:line, in kit / row / missing; the missing list feeds the effect batches | S |  | done |
 | K356 | game-store: `simGameOf` takes an optional `start(spec)` so a game with modes or settings starts its sims from the whole spec | S |  | done |
 | K357 | docs/INVENTORY.md: every reusable part of 11 games against the kit, a merged work list of 23 items, and the retrofit backlog (555 own copies) | S |  | done |
+| K358 | The card-motion tuner shows the turn-over axis and direction. | S |  | done |
 
 ## Harvest from the existing games (owner, 15 Nov 2026)
 
