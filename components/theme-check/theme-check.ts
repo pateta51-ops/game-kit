@@ -92,11 +92,11 @@ export function themeFindings(files: readonly SourceFile[], cfg: ThemeConfig): s
         const b = m[1] as string;
         const fam = /font-family\s*:\s*['"]?([^;'"]+)/.exec(b)?.[1]?.trim();
         const src = decodeURIComponent(/url\(\s*['"]?([^'")]+)/.exec(b)?.[1] ?? '');
-        const font = ff.find((x) => x.family === fam);
-        if (!font) out.push(`FONTFACE ${f.path}: @font-face for ${String(fam)}`);
-        else if (cfg.fontSrcPrefix ? !src.endsWith(cfg.fontSrcPrefix + font.file) : src !== font.file && !src.endsWith(`/${font.file}`))
-          out.push(`FONTFACE ${f.path}: ${font.family} loads ${src}, not ${(cfg.fontSrcPrefix ?? '') + font.file}`);
-        else faces.add(font.family);
+        const fits = ff.filter((x) => x.family === fam);
+        const font = fits.find((x) => (cfg.fontSrcPrefix ? src.endsWith(cfg.fontSrcPrefix + x.file) : src === x.file || src.endsWith(`/${x.file}`)));
+        if (fits.length === 0) out.push(`FONTFACE ${f.path}: @font-face for ${String(fam)}`);
+        else if (!font) out.push(`FONTFACE ${f.path}: ${String(fam)} loads ${src}, not ${fits.map((x) => (cfg.fontSrcPrefix ?? '') + x.file).join(' or ')}`);
+        else faces.add(`${font.family}\0${font.file}`);
       }
       const bv = (/(?:^|[},])\s*body\s*(?:,[^{]*)?{[^}]*?font-family\s*:\s*([^;}]+)/m.exec(css)?.[1] ?? '').trim();
       if (bv && !GENERIC.test(bv) && fontOk(bv) && (!cfg.bodyFontToken || (fv ? fv.some((n) => bv === `var(${n})`) : WHOLE_VAR.test(bv)))) body = true;
@@ -134,7 +134,8 @@ export function themeFindings(files: readonly SourceFile[], cfg: ThemeConfig): s
       else if (!re.test(f.text)) out.push(`LOGO ${p}: does not render <${cfg.logoComponent}>`);
     }
   }
-  for (const x of ff) if (!faces.has(x.family)) out.push(`FONTFACE no @font-face loads ${x.family}`);
+  for (const x of ff)
+    if (!faces.has(`${x.family}\0${x.file}`)) out.push(`FONTFACE no @font-face loads ${x.family}${ff.filter((y) => y.family === x.family).length > 1 ? ` (${x.file})` : ''}`);
   if (cfg.bodyFont && !body) out.push('BODY_FONT the body is not set in a theme family');
   const mc = cfg.menuComponent ?? cfg.logoComponent;
   const md = (cfg.menuDirs ?? []).map(norm);
@@ -181,7 +182,7 @@ export function assetFindings(root: string, a: ThemeAssets): string[] {
   }
   for (const p of a.svgs ?? []) {
     const t = existsSync(join(root, p)) ? readFileSync(join(root, p), 'utf8') : '';
-    if (!t.includes('<svg') || !/<path\s[^>]*\bd=/.test(t)) out.push(`SVG ${p} is missing or has no paths`);
+    if (!t.includes('<svg') || !/<path\s[^>]*\bd=|<(circle|rect|ellipse|polygon|polyline|line|use)\b/.test(t)) out.push(`SVG ${p} is missing or has no paths`);
   }
   for (const p of a.files ?? []) if (!existsSync(join(root, p))) out.push(`FILE ${p}: not found`);
   const ic = a.icons;

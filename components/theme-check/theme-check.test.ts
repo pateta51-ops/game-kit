@@ -151,7 +151,7 @@ describe('theme-check files mode and assets', () => {
     for (const f of ['arvo.woff2', 'stray.ttf', 'readme.txt']) writeFileSync(join(root, 'fonts', f), '');
     writeFileSync(join(root, 'fonts', 'LICENSES.md'), '## Arvo\nOFL');
     writeFileSync(join(root, 'logo.svg'), '<svg><path fill="x" d="M0 0"/></svg>');
-    writeFileSync(join(root, 'flat.svg'), '<svg><rect/></svg>');
+    writeFileSync(join(root, 'flat.svg'), '<svg><g><text>x</text></g></svg>');
     expect(assetFindings(root, assets)).toEqual([
       'FONT_MISSING fonts/bree.woff2 (Bree)',
       'FONT_UNREFERENCED fonts/stray.ttf',
@@ -161,6 +161,9 @@ describe('theme-check files mode and assets', () => {
       'FILE sky.webp: not found',
     ]);
     expect(assetFindings(root, {})).toEqual([]);
+    // K319: any drawable shape counts, not only a path
+    for (const [n, s] of [['dots.svg', '<svg><circle cx="1" cy="1" r="1"/></svg>'], ['box.svg', '<svg><rect width="1"/></svg>'], ['tri.svg', '<svg><polygon points="0,0 1,1"/></svg>']]) writeFileSync(join(root, n as string), s as string);
+    expect(assetFindings(root, { svgs: ['dots.svg', 'box.svg', 'tri.svg'] })).toEqual([]);
     const withAssets = { ...noMenu, assets: { files: ['sky.webp'] } };
     expect(themeCheck(root, withAssets)).toContain('FILE sky.webp: not found');
     expect(themeCheck(root, withAssets, ['ui/a.css'])).toEqual(['RADIUS ui/a.css: 9px']);
@@ -185,6 +188,19 @@ describe('theme-check K74 options', () => {
       run({ 'tokens.css': `@font-face{font-family:Arvo;src:url(arvo.woff2)}@font-face{font-family:Comic;src:url(c.woff2)}` }, { fontFaces }),
     ).toEqual(['FONTFACE tokens.css: @font-face for Comic']);
     expect(run({ 'tokens.css': ':root{}' }, {})).toEqual([]);
+  });
+  it('K319 fontFaces: a family with several faces lists one entry per file', () => {
+    const two = [{ family: 'Arvo', file: 'arvo.woff2' }, { family: 'Arvo', file: 'arvo-italic.woff2' }];
+    const css = `@font-face{font-family:Arvo;src:url(/fonts/arvo.woff2)}@font-face{font-family:Arvo;font-style:italic;src:url(/fonts/arvo-italic.woff2)}`;
+    expect(run({ 'tokens.css': css }, { fontFaces: two })).toEqual([]);
+    expect(run({ 'tokens.css': `@font-face{font-family:Arvo;src:url(/fonts/x.woff2)}` }, { fontFaces: two })).toEqual([
+      'FONTFACE tokens.css: Arvo loads /fonts/x.woff2, not arvo.woff2 or arvo-italic.woff2',
+      'FONTFACE no @font-face loads Arvo (arvo.woff2)',
+      'FONTFACE no @font-face loads Arvo (arvo-italic.woff2)',
+    ]);
+    expect(run({ 'tokens.css': `@font-face{font-family:Arvo;src:url(/fonts/arvo.woff2)}` }, { fontFaces: two })).toEqual([
+      'FONTFACE no @font-face loads Arvo (arvo-italic.woff2)',
+    ]);
   });
   it('bodyFont: the body is set in a token or an allowed family', () => {
     expect(run({ 'ui/a.css': 'body{margin:0;font-family:var(--f)}' }, { bodyFont: true })).toEqual([]);

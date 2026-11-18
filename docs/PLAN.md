@@ -121,6 +121,7 @@ A game's build plan lists the kit work it needs as phases named `GK<n>` for the 
 | K310 | card-hand: while a card is lifted under the pointer, its strip carries a hit area shaped like the grown, straightened face (a `::before` with the face's transform), so the pointer anywhere on the grown card keeps it lifted and a click there picks it; the rest strip still holds it (no flicker); hands with `faceEvents` keep their own face hit area | S |  | done |
 | K311 | card-hand: the default arc is the gentle one, `TILT = { step: 1.5, total: 14, radius: 20 }` (was 8, 32, 4); a game's `tilt` prop still overrides it | S |  | done |
 | K312 | tuners/: self-contained tuner pages built from `tuners/src/*.html` by `tuners/build.mjs`, which inlines the kit's own CSS and bundles its modules (`--check` in `components:check` keeps them current); the first is the card-hand tuner (the Hand Arc Tuner) | S |  | done |
+| K319 | theme-check: `fontFaces` takes several entries per family (one per face file, e.g. normal and italic) and an `@font-face` passes when it loads any of them; `assets.svgs` accepts any drawable shape (circle, rect, ellipse, polygon, polyline, line, use), not only a path | S |  | done |
 
 ## Harvest from the existing games (owner, 15 Nov 2026)
 
