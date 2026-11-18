@@ -4,14 +4,15 @@
 //   'click'  a press opens the entry (text that is not itself a control);
 //   'hold'   inside a control a press already answers: a press still does what the control does, and the entry opens on a
 //            right-click or a long press, so a lookup never answers a decision by accident.
-import { Fragment, useMemo, useRef, type KeyboardEvent, type MouseEvent, type ReactNode } from 'react';
+import { Fragment, useEffect, useLayoutEffect, useMemo, useRef, useState, type KeyboardEvent, type MouseEvent, type ReactNode } from 'react';
 import { buildIndex, matchText, type GlossaryEntry } from './match.ts';
 import { GlossaryContext, useGlossary, type Ctx, type RenderIcon } from './context.ts';
 import { openEntry } from './lookupStore.ts';
 import './glossary.css';
 
 export type OnTerm = (id: string, el: Element) => void;
-export type LinkMode = 'click' | 'hold';
+export type LinkMode = 'click' | 'hold' | 'auto';
+export const CONTROL = 'button, [role=button], label, [data-glossary-hold]';
 
 export const HOLD_MS = 500;
 
@@ -34,17 +35,36 @@ export function GlossaryProvider({
   return <GlossaryContext.Provider value={value}>{children}</GlossaryContext.Provider>;
 }
 
-export function GlossaryLink({ id, children, onTerm = openEntry, mode = 'click' }: { id: string; children: ReactNode; onTerm?: OnTerm; mode?: LinkMode }) {
+export function GlossaryLink({ id, children, onTerm = openEntry, mode = 'auto' }: { id: string; children: ReactNode; onTerm?: OnTerm; mode?: LinkMode }) {
   const timer = useRef<number | null>(null);
   const held = useRef(false);
+  const [inCtl, setInCtl] = useState(false);
+  const el = useRef<HTMLSpanElement | null>(null);
+  const reset = useRef<number | null>(null);
+  useLayoutEffect(() => {
+    if (mode === 'auto') setInCtl(el.current?.parentElement?.closest(CONTROL) != null);
+  });
+  useEffect(
+    () => () => {
+      if (timer.current !== null) window.clearTimeout(timer.current);
+      if (reset.current !== null) window.clearTimeout(reset.current);
+    },
+    [],
+  );
   const summary = useGlossary().index.entries.get(id)?.summary;
-  if (mode === 'hold') {
+  if (mode === 'hold' || (mode === 'auto' && inCtl)) {
     const cancel = (): void => {
       if (timer.current !== null) window.clearTimeout(timer.current);
       timer.current = null;
     };
+    const drop = (): void => {
+      if (reset.current !== null) window.clearTimeout(reset.current);
+      reset.current = null;
+      held.current = false;
+    };
     return (
       <span
+        ref={el}
         className="kit-glo-link kit-glo-link--hold"
         data-glossary={id}
         data-testid="glossary-link"
@@ -55,8 +75,8 @@ export function GlossaryLink({ id, children, onTerm = openEntry, mode = 'click' 
           onTerm(id, event.currentTarget);
         }}
         onPointerDown={(event) => {
+          drop();
           if (event.pointerType === 'mouse') return;
-          held.current = false;
           const el = event.currentTarget;
           cancel();
           timer.current = window.setTimeout(() => {
@@ -64,9 +84,15 @@ export function GlossaryLink({ id, children, onTerm = openEntry, mode = 'click' 
             onTerm(id, el);
           }, HOLD_MS);
         }}
-        onPointerUp={cancel}
+        onPointerUp={() => {
+          cancel();
+          if (held.current) reset.current = window.setTimeout(drop, 300);
+        }}
         onPointerLeave={cancel}
-        onPointerCancel={cancel}
+        onPointerCancel={() => {
+          cancel();
+          drop();
+        }}
         onClickCapture={(event) => {
           // the click that ends a long press opened the entry: it does not also press the control
           if (!held.current) return;
@@ -86,6 +112,7 @@ export function GlossaryLink({ id, children, onTerm = openEntry, mode = 'click' 
   };
   return (
     <span
+      ref={el}
       className="kit-glo-link"
       role="link"
       tabIndex={0}
@@ -106,7 +133,7 @@ export function GlossaryLink({ id, children, onTerm = openEntry, mode = 'click' 
   );
 }
 
-export function GlossaryText({ text, onTerm, mode = 'click' }: { text: string; onTerm?: OnTerm; mode?: LinkMode }) {
+export function GlossaryText({ text, onTerm, mode }: { text: string; onTerm?: OnTerm; mode?: LinkMode }) {
   const { index, renderIcon } = useGlossary();
   return (
     <>
@@ -117,7 +144,7 @@ export function GlossaryText({ text, onTerm, mode = 'click' }: { text: string; o
           seg.kind === 'term' ? seg.text : (renderIcon?.(seg.code, entry) ?? <span className="kit-glo-icon">{entry?.term ?? seg.code}</span>);
         if (seg.id === null) return <Fragment key={i}>{inner}</Fragment>;
         return (
-          <GlossaryLink key={i} id={seg.id} mode={mode} {...(onTerm === undefined ? {} : { onTerm })}>
+          <GlossaryLink key={i} id={seg.id} {...(mode === undefined ? {} : { mode })} {...(onTerm === undefined ? {} : { onTerm })}>
             {inner}
           </GlossaryLink>
         );

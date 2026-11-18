@@ -98,8 +98,11 @@ export function LookupHost({
   frame: Frame,
   prefer,
   avoid,
+  closeOn,
 }: {
   hideRules?: boolean;
+  /** Close the lookup when this value changes (a route, a path); popstate and hashchange always close it. */
+  closeOn?: unknown;
   /** The game's own wrapper for the popover's content (the head, body and buttons). */
   frame?: ComponentType<{ icon: ReactNode; name: string; children: ReactNode; kind?: string; entry: GlossaryEntry }>;
   /** Sides to try first, in order (default right, then left). */
@@ -126,6 +129,21 @@ export function LookupHost({
   const { index, renderIcon } = useGlossary();
   const entry = index.entries.get(id ?? '');
   const open = entry !== undefined;
+
+  useEffect(() => {
+    const shut = (): void => { useLookup.getState().close(); };
+    window.addEventListener('popstate', shut);
+    window.addEventListener('hashchange', shut);
+    return () => {
+      window.removeEventListener('popstate', shut);
+      window.removeEventListener('hashchange', shut);
+    };
+  }, []);
+  const first = useRef(true);
+  useEffect(() => {
+    if (first.current) first.current = false;
+    else useLookup.getState().close();
+  }, [closeOn]);
 
   // Escape closes the lookup first (before anything under it)
   useEffect(() => {

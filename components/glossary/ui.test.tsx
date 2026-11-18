@@ -125,6 +125,73 @@ describe('GlossaryText and LookupHost', () => {
     expect(screen.getByTestId('lookup-term').textContent).toBe('stun');
   });
 
+  it('K389: a link inside a control is hold by default, outside it stays click', () => {
+    const pressed = vi.fn();
+    render(
+      <GlossaryProvider entries={E}>
+        <button type="button" onClick={pressed}><GlossaryText text="stun" /></button>
+        <p><GlossaryText text="enemy" /></p>
+        <LookupHost phone={false} />
+      </GlossaryProvider>,
+    );
+    const [inBtn, outside] = screen.getAllByTestId('glossary-link');
+    fireEvent.click(inBtn!);
+    expect(pressed).toHaveBeenCalledTimes(1);
+    expect(screen.queryByTestId('lookup')).toBeNull();
+    fireEvent.click(outside!);
+    expect(screen.getByTestId('lookup-term').textContent).toBe('enemy');
+  });
+
+  it('K389: the lookup closes on hashchange, popstate and a changed closeOn', () => {
+    const { rerender } = render(app('stun', { closeOn: 'a' }));
+    for (const ev of ['hashchange', 'popstate']) {
+      fireEvent.click(screen.getByTestId('glossary-link'));
+      expect(screen.getByTestId('lookup')).toBeInTheDocument();
+      act(() => { window.dispatchEvent(new Event(ev)); });
+      expect(screen.queryByTestId('lookup')).toBeNull();
+    }
+    fireEvent.click(screen.getByTestId('glossary-link'));
+    rerender(app('stun', { closeOn: 'b' }));
+    expect(screen.queryByTestId('lookup')).toBeNull();
+  });
+
+  it('K389: hold inside a control under auto: long press opens and the click does not press; right-click opens; slide-off does not swallow the next click', () => {
+    vi.useFakeTimers();
+    const pressed = vi.fn();
+    render(
+      <GlossaryProvider entries={E}>
+        <button type="button" onClick={pressed}><GlossaryText text="stun" /></button>
+        <LookupHost phone={false} />
+      </GlossaryProvider>,
+    );
+    const link = screen.getByTestId('glossary-link');
+    expect(link).toHaveClass('kit-glo-link--hold');
+    fireEvent.contextMenu(link);
+    expect(screen.getByTestId('lookup-term').textContent).toBe('stun');
+    act(() => { useLookup.getState().close(); });
+    fireEvent.pointerDown(link, { pointerType: 'touch' });
+    act(() => { vi.advanceTimersByTime(HOLD_MS); });
+    expect(screen.getByTestId('lookup-term').textContent).toBe('stun');
+    fireEvent.pointerUp(link, { pointerType: 'touch' });
+    fireEvent.click(link);
+    expect(pressed).toHaveBeenCalledTimes(0);
+    act(() => { useLookup.getState().close(); });
+    fireEvent.pointerDown(link, { pointerType: 'touch' });
+    act(() => { vi.advanceTimersByTime(HOLD_MS); });
+    fireEvent.pointerCancel(link, { pointerType: 'touch' });
+    act(() => { useLookup.getState().close(); });
+    fireEvent.click(link);
+    expect(pressed).toHaveBeenCalledTimes(1);
+  });
+
+  it('K389: popstate and hashchange listeners are removed on unmount', () => {
+    const off = vi.spyOn(window, 'removeEventListener');
+    const { unmount } = render(app('stun'));
+    unmount();
+    expect(off.mock.calls.map((c) => c[0])).toEqual(expect.arrayContaining(['popstate', 'hashchange']));
+    off.mockRestore();
+  });
+
   it('without a provider nothing is linked', () => {
     render(<GlossaryText text="stun" />);
     expect(screen.queryByTestId('glossary-link')).toBeNull();

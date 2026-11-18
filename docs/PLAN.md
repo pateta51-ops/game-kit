@@ -148,6 +148,7 @@ A game's build plan lists the kit work it needs as phases named `GK<n>` for the 
 | K385 | phone-mode Sheet: siblings made inert are freed after close under React StrictMode (idempotent record and restore) | S |  | done |
 | K386 | screens MainMenu bare: entry buttons with no wrapping nav, so a game places each in its own layout zone | S |  | done |
 | K387 | saves, settings, bug-reporter: optional `buttonClass` / `plateClass` and a `renderButton` / `renderPlate` slot, so a game draws its own button and plate parts on the kit screens | S |  | done |
+| K389 | glossary: useLookup exported from ui.ts; the open lookup closes on route change (popstate, hashchange, closeOn); links inside a control hold by default (tap presses, long press opens) | S |  | done |
 
 ## Harvest from the existing games (owner, 15 Nov 2026)
 
