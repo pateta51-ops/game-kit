@@ -790,7 +790,7 @@ Saved games in IndexedDB over engine-core's `SaveFile`, and a screen for them. `
 
 - **Use it when:** Saved games in IndexedDB over engine-core's save file and a saves screen.
 - **Not for:** Old-save migration work (the owner's rule: none until the game is complete).
-- **Key exports:** `AUTO`, `keepStorage`, `makeSaves`, `NAMED`, `SAVE_CLOCK`, `SAVE_CLOCK_MAX_AHEAD_MS`, `makeKv`, `allData`, `exportAllData`, `resetAllData`, `Saves`, `SavesConfig`, `StoredSave`, `Kv`, and 2 more
+- **Key exports:** `AUTO`, `keepStorage`, `makeSaves`, `NAMED`, `SAVE_CLOCK`, `SAVE_CLOCK_MAX_AHEAD_MS`, `makeKv`, `allData`, `exportAllData`, `importAllData`, `resetAllData`, `Saves`, `SavesConfig`, `StoredSave`, and 3 more
 - **Needs:** [`engine-core`](#engine-core), [`small-helpers`](#small-helpers)
 - **Came from:** jarl
 - **Docs:** [README](../components/saves/README.md)

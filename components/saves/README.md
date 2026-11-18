@@ -12,7 +12,7 @@ Saved games in IndexedDB over engine-core's `SaveFile`, and a screen for them. `
 - `restore(stored)`: engine-core's `restoreSave` (replays; another build or an edited file gives the reason, never throws). `saveOf(history)` saves the actions up to the cursor; `historyOf(save)` gives the history back.
 - `keepStorage(storage?)`: asks `navigator.storage.persist()` unless the storage is already kept; false when refused or not offered.
 - `makeKv(database, table, backend?)`: the key-value table under it. When IndexedDB refuses, values last in memory for the page.
-- `allData(cfg)`, `exportAllData(cfg, download?)`, `resetAllData(cfg)` (`data.ts`) with `cfg = { format, keys, stores?, storage? }`: one JSON of every localStorage key the game lists, its string as stored (a whole key or a prefix `mygame.*`) and of each named store's `read()`, downloaded as `<format>-YYYY-MM-DD.json`; the reset removes those keys and calls each store's `clear()`. Pass `stores: { saves: saves.data }`. Before a reset, put the stores in memory (settings: `reset()`) back to their defaults.
+- `allData(cfg)`, `exportAllData(cfg, download?)`, `resetAllData(cfg)` (`data.ts`) with `cfg = { format, keys, stores?, storage? }`: one JSON of every localStorage key the game lists, its string as stored (a whole key or a prefix `mygame.*`) and of each named store's `read()`, downloaded as `<format>-YYYY-MM-DD.json`; the reset removes those keys and calls each store's `clear()`. Pass `stores: { saves: saves.data }`. `importAllData(cfg, text)` reads such a file back: refuses (`unreadable`, `wrong-format`, `newer-version` = version above 1), writes only listed keys (as the stored strings; listed keys missing from the file are left alone) and calls `write(value)` of each store that has one and is in the file; a failing write is skipped. Before a reset, put the stores in memory (settings: `reset()`) back to their defaults.
 
 ## Screen (`ui.ts`)
 
@@ -37,4 +37,15 @@ const saves = makeSaves({ game: COUNTER, content: CONTENT, database: 'mygame', f
 const history = newHistory<Counter>({ seed: 'demo' }, RULES)
 const text = saves.exportText({ name: 'slot', save: saves.saveOf(history) }) // a file to download
 console.log(text.length)
+```
+
+## Export and import all data
+
+```ts
+import { allData, importAllData, resetAllData } from '../kit/saves/index'
+
+const cfg = { format: 'mygame-data', keys: ['mygame.*'] }
+const text = JSON.stringify(await allData(cfg)) // what exportAllData downloads
+await resetAllData(cfg)
+console.log(await importAllData(cfg, text)) // { ok: true }; a store restores only if it has write()
 ```
