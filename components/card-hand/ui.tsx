@@ -10,6 +10,7 @@ import { pickedAttrs } from '../picked-state/index.ts';
 import type { BoardPick } from '../prompt-host/ui.ts';
 import './card-hand.css';
 import { fanOf, HAND_MS, msAt, PLAY_MS, RISE_MS, type Tilt } from './fan.ts';
+import { bindHoverTilt, type HoverTilt } from './hover-tilt.ts';
 import { noteLaunch, playKeyframes, riseKeyframes, takeLaunch } from './glide.ts';
 
 export interface CardHandProps {
@@ -26,6 +27,7 @@ export interface CardHandProps {
   /** Animation speed factor; 0, 'instant' or reduced motion: none. */
   readonly speed?: Speed;
   readonly tilt?: Partial<Tilt>;
+  readonly hoverTilt?: HoverTilt;
   /** The game's words: the fan's name and a card's button name. */
   readonly label?: string;
   readonly cardLabel?: (id: string) => string;
@@ -66,7 +68,7 @@ const animate = (el: Element | null | undefined, frames: Keyframe[], duration: n
   (el as HTMLElement).animate(frames, { duration, easing });
 };
 
-export function CardHand({ view, face, back, pick, drag, speed = 1, tilt, label, cardLabel, hint, stripProps, onTap, markOf, faceEvents, phone, phoneTap, onSheet, layout, columns, bandHeight, header, empty }: CardHandProps) {
+export function CardHand({ view, face, back, pick, drag, speed = 1, tilt, hoverTilt, label, cardLabel, hint, stripProps, onTap, markOf, faceEvents, phone, phoneTap, onSheet, layout, columns, bandHeight, header, empty }: CardHandProps) {
   const cards: readonly (string | null)[] = view.cards ?? Array.from({ length: view.count ?? 0 }, () => null);
   const n = cards.length;
   const keys = cards.map((c, i) => c ?? `back:${String(i)}`);
@@ -84,6 +86,14 @@ export function CardHand({ view, face, back, pick, drag, speed = 1, tilt, label,
     }
   }, [keyList, rise]);
   const grid = layout === 'grid';
+  const tiltSpeed = hand > 0 && hoverTilt !== undefined ? (hoverTilt.speed ?? speed) : 0;
+  const maxDeg = hoverTilt?.maxDeg;
+  const lift = hoverTilt?.lift;
+  const tiltEnabled = typeof tiltSpeed === 'number' && tiltSpeed > 0;
+  useLayoutEffect(() => {
+    if (root.current === null || !tiltEnabled) return;
+    return bindHoverTilt(root.current, { maxDeg: maxDeg ?? 6, lift: lift ?? 8, speed: tiltSpeed });
+  }, [tiltEnabled, tiltSpeed, maxDeg, lift, keyList, grid]);
   const any = (pick?.picks.length ?? 0) > 0;
   return (
     <div ref={root} data-part="hand" data-count={n} data-layout={grid ? 'grid' : undefined} data-scroll={grid && bandHeight !== undefined ? '' : undefined} data-face-events={faceEvents === true ? '' : undefined} style={{ '--hand-ms': `${String(hand)}ms`, ...(grid && bandHeight !== undefined ? { '--hand-band-h': bandHeight } : {}) } as CSSProperties} onClickCapture={drag?.onClickCapture}>
@@ -124,7 +134,7 @@ export function CardHand({ view, face, back, pick, drag, speed = 1, tilt, label,
                   }}
                 />
               )}
-              <div data-part="face" aria-hidden={id === null ? true : undefined}>{id === null ? (back?.() ?? <div data-part="back" />) : face(id)}</div>
+              <div data-part="face" aria-hidden={id === null ? true : undefined}>{id === null ? (back?.() ?? <div data-part="back" />) : hoverTilt !== undefined ? <div data-part="tilt">{face(id)}</div> : face(id)}</div>
               {!grid && id !== null && hint !== undefined ? <span data-part="hint">{hint(id)}</span> : null}
             </li>
           );

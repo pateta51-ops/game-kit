@@ -529,7 +529,7 @@ The kit holds every game's parts, then every game is retrofitted onto them (owne
 | K377 | [21] Test setup helpers: jsdom scroll stubs, UI fixtures for component tests, real-data suite setup (extend e2e-helpers) | docs/INVENTORY.md item 21; Unst, ER, STCC | S | done |
 | K378 | [22] Small UI helpers: base-aware asset path resolver, plural and number format (extend small-helpers) | docs/INVENTORY.md item 22; Rome, Unst | S | done |
 | K379 | [23] Launcher that reuses the production build until its inputs change (extend tooling-scripts) | docs/INVENTORY.md item 23; ER, 7IS | S | done |
-| K380 | Card-hand hover tilt toward the pointer, speed 0 = still (extend card-hand) | docs/motion-retrofit/INVENTORY.md (hover tilt) | S | open |
+| K380 | Card-hand hover tilt toward the pointer, speed 0 = still (extend card-hand) | docs/motion-retrofit/INVENTORY.md (hover tilt) | S | done |
 
 ## Audit roadmap (owner, 16 Nov 2026)
 
