@@ -111,6 +111,35 @@ colours, icon lists or paths: a game passes them as arguments from its own confi
 In Python: `from scanpipe import vector as v` (`trace_array`, `retrace_svg`, `render_svg`, `fidelity`,
 `proof_sheet`, `render_bw`, `symmetrise`).
 
+## Printed boards with live state (TypeScript, K373)
+
+`index.ts` (pure) and `ui.ts` (React). A game passes its scan, its box list and its state; no game's frames or colours
+are here (sources in component.json).
+
+- `measure.ts`: pixel tests (`hsv`, `hueTest`, `nearTest`), `findBlobs` (isolated solid boxes of one colour: integral
+  image, ring test, grow), `measureBoxes(w, h, rgba, specs)` for a list of `BoxSpec` (id, test, region, size, ratio,
+  usual place), `findRows` (colour rows in an asked order, or null), `firstRun`, `rowFraction`, `measureRgba`, and
+  `loadGeometry(url, key, asks, store?)` (decoded on a canvas once per key; an optional store keeps it across reloads).
+- `board.ts`: `planOverlay(list, geometry)` (found boxes covered by 4 %, the usual places before measuring, the boxes
+  the scan lacks in `missing` so the game draws its own face), `toScreen`, `normalise`, `boxStyle`, `pointStyle`,
+  `boxWithin`, `trackPoint`; die-cut pieces: `clipPathOf`, `trimOutline`, `mmOf`, `mmStyle`, `boardMm`, `skewOf` and
+  `uprightStyle` (a tilted sheet stood upright), `uniformOutlines` (one typical outline per die-cut shape).
+- `ScanBoard` draws the scan `width` px wide and puts `render(id, sizePx)` in each box (`data-scan-box`); `boardMm` sets
+  `--mm` (px per mm) so a `Piece` inside is drawn at its true size, cut to its outline. Style `data-part="scan-board"`,
+  `scan-piece`. The finite supply of pieces is in token-bag (`supply.ts`).
+- Left in the games: card frames and box colours, sleeve layers (upgrade layer, notch and tab windows), the zoom
+  views and pile volume.
+
+## Playmats, tone profile (Python, K373)
+
+- `scanpipe/playmats.py`: `check(mats)` (spaces running off the image, ids twice), `shape_problem(mat, w, h)` (the
+  image is not the shape the spaces were measured on), `find_image(folder, name)`; `detect_boxes(ink, size)` finds the
+  printed spaces as ground enclosed by ink (`ink_by_ground` samples the ground), `rows(boxes)` groups them, and
+  `fit_track(points, numbers, n)` fills a numbered (zigzag) track's hidden spots by a line.
+- `scanpipe/tone.py`: `profile(img)` (black point, median, white point per channel), `fit(flats, references, name)`
+  (a non-decreasing per-channel curve from items scanned both ways), `save`, `apply_curve`, `delta_e`.
+- Outline tracing: `silhouette.outline_of(mask)` (above).
+
 ## Tests
 
     cd components/scan-ingest && OMP_THREAD_LIMIT=1 python -m pytest tests -q
@@ -121,4 +150,19 @@ Run by the kit CI (job `pytest scan-ingest`, in a venv), about 2 minutes. The OC
 
 ```sh
 PYTHONPATH=kit/scan-ingest python -m scanpipe scan --plugin tools.ingest.plugin:MyGame --project . scans/*.tif
+```
+
+```ts
+import { hueTest, planOverlay, type BoxSpec, type Geometry } from '../kit/scan-ingest/index'
+
+const specs: BoxSpec[] = [{ id: 'score', test: hueTest([340, 20], [0.45, 1]), region: { x: 0.5, y: 0, w: 0.5, h: 0.3 }, size: [0.06, 0.14], usual: { x: 0.8, y: 0.1, w: 0.1, h: 0.1 } }]
+export const plan = (g: Geometry | null | undefined) => planOverlay(specs, g) // boxes to draw, and the ones the scan lacks
+```
+
+```tsx
+import { ScanBoard, type Box } from '../kit/scan-ingest/ui'
+
+export const Board = ({ score, boxes }: { score: number; boxes: Record<string, Box> }) => (
+  <ScanBoard src="/board.webp" scanW={2400} scanH={1600} width={1200} boardMm={600} boxes={boxes} render={(id) => (id === 'score' ? <b>{score}</b> : null)} />
+)
 ```
