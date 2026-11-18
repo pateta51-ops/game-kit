@@ -78,6 +78,7 @@ describe('rendered files', () => {
       expect(wf(f).split('\n').slice(1).join('\n'), f).toBe(render(f).replaceAll('.github/scripts/', 'kit/ci-templates/').replaceAll('tools/architect/', 'kit/ci-templates/'));
     }
     expect(wf('full-gate.yml')).toContain('run: node kit/ci-templates/full-gate.mjs prepare');
+    expect((YAML.parse(wf('full-gate.yml')) as Record<string, unknown>)['run-name']).toBe('Full gate PR #${{ inputs.pr }} ${{ inputs.sha }}');
     expect(go('--check').status).toBe(0);
     writeFileSync(join(root, '.github/workflows/ci.yml'), wf('ci.yml').replace('timeout-minutes: 15', 'timeout-minutes: 99'));
     const edited = go('--check');

@@ -5,7 +5,7 @@
 # only ever runs this repository's own code (no pull_request_target anywhere). The steps that need logic run in Node
 # (.github/scripts/full-gate.mjs).
 name: Full gate
-run-name: Full gate PR #${{ inputs.pr }} ${{ inputs.sha }}
+run-name: "Full gate PR #${{ inputs.pr }} ${{ inputs.sha }}"
 
 on:
   workflow_dispatch:

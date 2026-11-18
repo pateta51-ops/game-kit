@@ -130,6 +130,7 @@ A game's build plan lists the kit work it needs as phases named `GK<n>` for the 
 | K319 | theme-check: `fontFaces` takes several entries per family (one per face file, e.g. normal and italic) and an `@font-face` passes when it loads any of them; `assets.svgs` accepts any drawable shape (circle, rect, ellipse, polygon, polyline, line, use), not only a path | S |  | done |
 | K320 | turn-flow: `FlowConfig.roundEnds(s, pos)`, asked after each turn, ends the round when the game says so (a solo game's round ends when its deck runs out); seats keep cycling within the round; default unchanged (one turn per seat) | S |  | done |
 | K321 | ci-templates: the Full gate workflow has `run-name: Full gate PR #<pr> <sha>`, so the tested head is in the run's title | S |  | done |
+| K322 | ci-templates: the Full gate run-name is quoted, since an unquoted ` #` starts a YAML comment and cut the title to "Full gate PR" | S |  | done |
 
 ## Harvest from the existing games (owner, 15 Nov 2026)
 
