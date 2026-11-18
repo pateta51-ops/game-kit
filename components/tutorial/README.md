@@ -14,6 +14,8 @@ JSON: `seed`, optional `title`, `steps`, optional `end` (matched against `state.
 
 `rules`, `content`, `gameRules`, `options(seed)`. Optional: `human(state)` (is the open prompt the player's), `promptKind(state)`, `findOption(state, ref)`, `ordered(state)` (answer order matters), `optionWords(state, id)`, `eventWords(state, event)`, `same(state, want, actual)` (e.g. a card instance against its definition id).
 
+K390: a game with its own engine passes a `TutorialPort<G>` instead: engine-core's `EnginePort` (`start(seed)`, `apply`, `settle`, `prompt`, `events`, `result`) with the same optional hooks. `startRun`, `playStep`, `playScript`, `scriptedIds`, `missingEvents`, `lockAt`, `lockPrompt`, `refusal`, `tutorialCheck` and `stepHeadings` take either (`TutorialEngine<G>`); `run.actions` are `PortAnswer`s (the port's prompt ids). `buildScript`, `answerWords`, `lineDump`, `scriptLine` and `driverLine` stay `GameRules` only.
+
 ## Use
 
 - `playScript(game, script, { seed?, items?, evidence?, requireEnd?, noBareNumbers?, stopOnFailure? })`: every problem in one sentence. Step failures name the step, what was expected and what happened: `NO_PROMPT`, `WRONG_SEAT`, `WRONG_PROMPT`, `NO_SUCH_OPTION`, `DISABLED_OPTION`, `ILLEGAL`, `MISSING_EVENT`; then `UNCOVERED`, `UNTESTED` (a tagged item with none of its `evidence` event types expected), `BARE_NUMBER` (a digit outside `{{tokens}}`), `NO_END`, `NOT_OVER`, `END`. `stopOnFailure: false` and `seed` serve a seed search.

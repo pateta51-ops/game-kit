@@ -1,7 +1,7 @@
 // The lock as a pure model: at a step of the script and a game state, which option, control and answer is allowed, and
 // why not ("The tutorial asks for …"). The game's store holds the step and refuses any answer `accepts` refuses.
-import type { AnswerAction, GameTypes, KernelPrompt } from '../engine-core/index.ts';
-import type { TutorialGame } from './game.ts';
+import type { PortAnswer, PortPrompt, PortTypes } from '../engine-core/index.ts';
+import { drive, type TutorialEngine } from './game.ts';
 import { scriptedIds, type StepFailure } from './play.ts';
 import type { TutorialScript, TutorialStep } from './script.ts';
 
@@ -29,13 +29,13 @@ export interface TutorialLock {
   option(id: string): Verdict;
   button(b: TutorialButton): Verdict;
   /** Is `action` the step's answer (same prompt, same options; in order when the game says the order matters)? */
-  accepts(action: AnswerAction): boolean;
+  accepts(action: PortAnswer): boolean;
 }
 
 const free: Verdict = { enabled: true };
 const UNDO = 'Undo is off in the tutorial.';
 
-export function lockAt<G extends GameTypes>(game: TutorialGame<G>, script: TutorialScript, stepIndex: number, state: G['state']): TutorialLock {
+export function lockAt<G extends PortTypes>(game: TutorialEngine<G>, script: TutorialScript, stepIndex: number, state: G['state']): TutorialLock {
   const total = script.steps.length;
   const step = script.steps[stepIndex];
   if (step === undefined)
@@ -52,7 +52,8 @@ export function lockAt<G extends GameTypes>(game: TutorialGame<G>, script: Tutor
       button: (b) => (b === 'undo' || b === 'redo' ? { enabled: false, why: UNDO } : b === 'next' ? { enabled: false, why: 'The tutorial is over.' } : free),
       accepts: () => true,
     };
-  const prompt = state.prompt;
+  const d = drive(game);
+  const prompt = d.prompt(state);
   const chosen = scriptedIds(game, state, step, stepIndex + 1);
   const answer = chosen.ok ? chosen.ids : [];
   const asks =
@@ -63,7 +64,7 @@ export function lockAt<G extends GameTypes>(game: TutorialGame<G>, script: Tutor
         ? 'Next (the game plays on by itself)'
         : answer.length === 0
           ? 'no choice here (confirm with nothing chosen)'
-          : answer.map((id) => game.optionWords?.(state, id) ?? id).join(', then '));
+          : answer.map((id) => d.hooks.optionWords?.(state, id) ?? id).join(', then '));
   const why = `The tutorial asks for ${asks}.`;
   const allowed = new Set(step.do.kind === 'move' ? answer : []);
   return {
@@ -79,14 +80,14 @@ export function lockAt<G extends GameTypes>(game: TutorialGame<G>, script: Tutor
     button: (b) => (b === 'undo' || b === 'redo' ? { enabled: false, why: UNDO } : b !== 'next' ? free : chosen.ok && step.do.kind !== 'move' ? free : { enabled: false, why }),
     accepts: (a) => {
       if (!chosen.ok || step.do.kind !== 'move' || prompt === null || a.promptId !== prompt.id || a.picks.length !== answer.length) return false;
-      if (game.ordered?.(state) === true) return a.picks.every((id, i) => id === answer[i]);
+      if (d.hooks.ordered?.(state) === true) return a.picks.every((id, i) => id === answer[i]);
       return [...a.picks].sort().join('\n') === [...answer].sort().join('\n');
     },
   };
 }
 
 /** The open prompt as the lock leaves it: every option but the scripted ones disabled, with the reason. */
-export function lockPrompt<P extends KernelPrompt>(prompt: P, lock: TutorialLock): P {
+export function lockPrompt<P extends PortPrompt>(prompt: P, lock: TutorialLock): P {
   if (lock.phase === 'over') return prompt;
   return {
     ...prompt,
@@ -98,4 +99,4 @@ export function lockPrompt<P extends KernelPrompt>(prompt: P, lock: TutorialLock
 }
 
 /** Null when `action` may be applied, else the reason it is refused. */
-export const refusal = (lock: TutorialLock, action: AnswerAction): string | null => (lock.accepts(action) ? null : `The tutorial asks for ${lock.asks}.`);
+export const refusal = (lock: TutorialLock, action: PortAnswer): string | null => (lock.accepts(action) ? null : `The tutorial asks for ${lock.asks}.`);

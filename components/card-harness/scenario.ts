@@ -1,7 +1,7 @@
 // The scenario builder: an exact position put in place fast (given cards in given places, any other field set by the
 // test), then tasks run and prompts answered through the game's own rules, recording the events, the prompt left open
 // and every choice the engine settled without asking (the game's probe). Deterministic: the game's seed, no clock.
-import { advance, applyAction, type Draft, type GameRules, type GameTypes } from '../engine-core/index.ts';
+import { advance, applyAction, portAnswer, portOptions, portSettle, type Draft, type EnginePort, type GameRules, type GameTypes, type InvariantViolation, type PortTypes } from '../engine-core/index.ts';
 import type { Probe } from './probe.ts';
 
 /** What a game gives the builder. `W`: where a card can go; `D`: what the game's probe notes. */
@@ -17,30 +17,82 @@ export interface ScenarioGame<G extends GameTypes, W, D = never> {
   effects?(s: G['state']): readonly unknown[];
 }
 
-export interface ScenarioStep<G extends GameTypes, D> {
+/** K390: a game with its own engine passes a port (`put` and `push` for `put` and `run`). */
+export interface ScenarioPort<G extends PortTypes, W, D = never> extends EnginePort<G, W> {
+  readonly probe?: Probe<D>;
+  effects?(s: G['state']): readonly unknown[];
+}
+
+interface Driver<G extends PortTypes, W> {
+  settle(s: G['state']): { state: G['state']; events: readonly G['event'][] };
+  answer(s: G['state'], promptId: number | string, picks: string[]): { state: G['state']; events: readonly G['event'][] };
+  prompt(s: G['state']): G['prompt'] | null;
+  options(s: G['state']): readonly string[];
+  invariants(s: G['state']): readonly InvariantViolation[];
+  put(s: Draft<G['state']>, card: string, where: W): string;
+  push(s: Draft<G['state']>, tasks: readonly G['task'][]): void;
+}
+
+type K = GameTypes['state'];
+function driver<G extends PortTypes, W, D>(game: ScenarioGame<G & GameTypes, W, D> | ScenarioPort<G, W, D>): Driver<G, W> {
+  if ('rules' in game) {
+    const { rules, content } = game;
+    return {
+      settle: (s) => advance(rules, s as G['state'] & K, content),
+      answer: (s, promptId, picks) => applyAction(rules, s as G['state'] & K, { kind: 'answer', promptId: promptId as number, picks }, content),
+      prompt: (s) => (s as K).prompt,
+      options: (s) => ((s as K).prompt?.options ?? []).filter((o) => o.enabled).map((o) => o.id),
+      invariants: (s) => rules.invariants?.(s as G['state'] & K, content, []) ?? [],
+      put: (s, card, where) => game.put(s as Draft<G['state'] & K>, card, where),
+      push: (s, tasks) => {
+        for (let i = tasks.length - 1; i >= 0; i -= 1) (s as { stack: unknown[] }).stack.push(structuredClone(tasks[i]));
+      },
+    };
+  }
+  const port = game as unknown as EnginePort<G>;
+  return {
+    settle: (s) => portSettle(port, s),
+    answer: (s, promptId, picks) => portAnswer(port, s, { kind: 'answer', promptId, picks }),
+    prompt: (s) => game.prompt(s),
+    options: (s) => portOptions(port, s),
+    invariants: (s) => game.invariants?.(s, game.content) ?? [],
+    put: (s, card, where) => {
+      if (game.put === undefined) throw new Error('This engine port has no put');
+      return game.put(s, card, where);
+    },
+    push: (s, tasks) => {
+      if (game.push === undefined) throw new Error('This engine port has no push: run() takes no tasks');
+      game.push(s, tasks);
+    },
+  };
+}
+
+export interface ScenarioStep<G extends PortTypes, D> {
   readonly what: string;
   readonly prompt: G['prompt'] | null;
   readonly events: readonly G['event'][];
   readonly notes: readonly D[];
 }
 
-export class Scenario<G extends GameTypes, W, D = never> {
+export class Scenario<G extends PortTypes, W, D = never> {
   readonly history: ScenarioStep<G, D>[] = [];
   s: G['state'];
   private checked: boolean;
   private scripted: string[][] = [];
   private strict: boolean;
 
-  readonly game: ScenarioGame<G, W, D>;
+  readonly game: ScenarioGame<G & GameTypes, W, D> | ScenarioPort<G, W, D>;
+  private d: Driver<G, W>;
   constructor(
-    game: ScenarioGame<G, W, D>,
+    game: ScenarioGame<G & GameTypes, W, D> | ScenarioPort<G, W, D>,
     { validate = true, strict = false, from }: { validate?: boolean; strict?: boolean; from?: { state: G['state']; events: readonly G['event'][] } } = {},
   ) {
     this.game = game;
+    this.d = driver(game);
     this.s = from === undefined ? game.start() : structuredClone(from.state);
     this.checked = !validate;
     this.strict = strict;
-    if (from !== undefined) this.history.push({ what: 'start', prompt: this.s.prompt, events: from.events, notes: [] });
+    if (from !== undefined) this.history.push({ what: 'start', prompt: this.prompt, events: from.events, notes: [] });
   }
 
   /** Edit the position (a copy: earlier states stay as they were). */
@@ -55,14 +107,14 @@ export class Scenario<G extends GameTypes, W, D = never> {
   put(where: W, ...cards: string[]): string[] {
     const ids: string[] = [];
     this.set((s) => {
-      for (const c of cards) ids.push(this.game.put(s, c, where));
+      for (const c of cards) ids.push(this.d.put(s, c, where));
     });
     return ids;
   }
 
   /** The rules' invariants on the built position; throws naming each one broken. */
   validate(): this {
-    const v = this.game.rules.invariants?.(this.s, this.game.content, []) ?? [];
+    const v = this.d.invariants(this.s);
     if (v.length > 0) throw new Error(`Invalid scenario: ${v.map((x) => `${x.id}: ${x.message}`).join('; ')}`);
     this.checked = true;
     return this;
@@ -76,8 +128,8 @@ export class Scenario<G extends GameTypes, W, D = never> {
       return r.events;
     };
     const { result, notes } = this.game.probe?.trace(run) ?? { result: run(), notes: [] };
-    this.history.push({ what, prompt: this.s.prompt, events: result, notes });
-    const next = this.s.prompt === null ? undefined : this.scripted.shift();
+    this.history.push({ what, prompt: this.prompt, events: result, notes });
+    const next = this.prompt === null ? undefined : this.scripted.shift();
     return next === undefined ? this : this.answer(...next);
   }
 
@@ -98,10 +150,10 @@ export class Scenario<G extends GameTypes, W, D = never> {
   /** Teardown: fails on a scripted answer left over, an open prompt (strict), or two equal registered effects. */
   done(): this {
     if (this.scripted.length > 0) throw new Error(`Unused scripted answers: ${this.scripted.map((a) => `[${a.join(', ')}]`).join(' ')}`);
-    if (this.strict && this.s.prompt !== null)
-      throw new Error(`Unanswered prompt ${String(this.s.prompt.id)}: options ${this.options().join(', ')}`);
+    if (this.strict && this.prompt !== null)
+      throw new Error(`Unanswered prompt ${String(this.prompt.id)}: options ${this.options().join(', ')}`);
     const seen = new Set<string>();
-    for (const e of this.game.effects?.(this.s) ?? []) {
+    for (const e of (this.game as ScenarioPort<G, W, D>).effects?.(this.s) ?? []) {
       const k = JSON.stringify(e);
       if (seen.has(k)) throw new Error(`Duplicate effect: ${k}`);
       seen.add(k);
@@ -111,21 +163,17 @@ export class Scenario<G extends GameTypes, W, D = never> {
 
   /** Push `tasks` (the first runs first) and run the stack until a prompt opens: a card's effect resolved directly. */
   run(...tasks: G['task'][]): this {
-    this.set((s) => {
-      for (let i = tasks.length - 1; i >= 0; i -= 1) (s.stack as unknown[]).push(structuredClone(tasks[i]));
-    });
-    return this.record(`run ${tasks.map((t) => t.kind).join(', ')}`, () =>
-      advance(this.game.rules, this.s, this.game.content),
-    );
+    if (tasks.length > 0) this.set((s) => this.d.push(s, tasks));
+    return this.record(`run ${tasks.map((t) => (typeof t === 'string' ? t : String((t as { kind?: unknown }).kind))).join(', ')}`, () => this.d.settle(this.s));
   }
 
   /** Answer the open prompt with `picks` (option ids). Throws when the rules refuse. */
   answer(...picks: string[]): this {
-    if (this.strict && this.s.prompt === null) throw new Error(`Answer [${picks.join(', ')}] given but no prompt is open`);
-    const promptId = this.s.prompt?.id ?? -1;
+    if (this.strict && this.prompt === null) throw new Error(`Answer [${picks.join(', ')}] given but no prompt is open`);
+    const promptId = this.prompt?.id ?? -1;
     return this.record(`answer ${picks.join(', ')}`, () => {
       try {
-        return applyAction(this.game.rules, this.s, { kind: 'answer', promptId, picks }, this.game.content);
+        return this.d.answer(this.s, promptId, picks);
       } catch (e) {
         throw new Error(`Answer [${picks.join(', ')}] refused: ${e instanceof Error ? e.message : String(e)}\n${this.open()}`, { cause: e });
       }
@@ -134,18 +182,18 @@ export class Scenario<G extends GameTypes, W, D = never> {
 
   /** The open prompt and its enabled options as text (K102), for failure messages. */
   open(): string {
-    const p = this.s.prompt;
+    const p = this.prompt;
     return p === null ? 'no prompt is open' : `open prompt ${String(p.id)}: ${JSON.stringify(p)}\noffered: ${this.options().join(', ') || 'none'}`;
   }
   /** K124: the open prompt narrowed to its `kind`; throws naming the kind found (or none) otherwise. */
   cast<K extends string>(kind: K): Extract<G['prompt'], { kind: K }> {
-    const p = this.s.prompt as { kind?: unknown } | null;
+    const p = this.prompt as { kind?: unknown } | null;
     if (p === null || p.kind !== kind) throw new Error(`Expected a ${kind} prompt, found ${p === null ? 'none' : `kind ${String(p.kind)}`}\n${this.open()}`);
     return p as Extract<G['prompt'], { kind: K }>;
   }
   /** Fails when a prompt is still open, printing it (K102). */
   noPrompt(): this {
-    if (this.s.prompt !== null) throw new Error(`A prompt is left open: ${this.open()}`);
+    if (this.prompt !== null) throw new Error(`A prompt is left open: ${this.open()}`);
     return this;
   }
   /** Run `fn`, then check each `[label, read, delta]` moved by exactly `delta`; one failure lists every pair off (K102). */
@@ -180,11 +228,11 @@ export class Scenario<G extends GameTypes, W, D = never> {
   }
 
   get prompt(): G['prompt'] | null {
-    return this.s.prompt;
+    return this.d.prompt(this.s);
   }
   /** The enabled option ids of the open prompt. */
   options(): string[] {
-    return (this.s.prompt?.options ?? []).filter((o) => o.enabled).map((o) => o.id);
+    return [...this.d.options(this.s)];
   }
   /** Is option `id` offered and enabled? */
   offered(id: string): boolean {

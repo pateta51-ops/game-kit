@@ -80,3 +80,4 @@ export { askOrTake, bar, blocked, legalIn, legalTable, onlyOne, type Blocked, ty
 export { preview, type Preview, type PreviewOptions, type PreviewStop } from './preview.ts';
 export { query } from './query.ts';
 export { markIdle } from './idle.ts';
+export { kernelPort, portAnswer, portOptions, portResult, portSettle, type EnginePort, type PortAnswer, type PortOption, type PortPrompt, type PortStep, type PortTypes } from './port.ts';

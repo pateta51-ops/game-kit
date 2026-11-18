@@ -1,6 +1,6 @@
 // The readable script document the owner approves (generated, never edited by hand), and its up-to-date check.
-import type { GameTypes } from '../engine-core/index.ts';
-import type { TutorialGame } from './game.ts';
+import type { PortTypes } from '../engine-core/index.ts';
+import type { TutorialEngine } from './game.ts';
 import { playStep, startRun } from './play.ts';
 import type { ExpectedEvent, TutorialScript, TutorialStep } from './script.ts';
 
@@ -76,7 +76,7 @@ export function scriptDoc(script: TutorialScript, o: DocOptions): string {
 }
 
 /** The heading of each step from playing the script (`heading(state)` before the step); a failed step ends them. */
-export function stepHeadings<G extends GameTypes>(game: TutorialGame<G>, script: TutorialScript, heading: (state: G['state']) => string): string[] {
+export function stepHeadings<G extends PortTypes>(game: TutorialEngine<G>, script: TutorialScript, heading: (state: G['state']) => string): string[] {
   const out: string[] = [];
   let run = startRun(game, script.seed);
   for (const [i, step] of script.steps.entries()) {

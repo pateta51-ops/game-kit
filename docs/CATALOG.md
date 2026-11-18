@@ -254,7 +254,7 @@ Card tests on real cards. Test code only; the engine imports nothing here but `c
 
 - **Use it when:** Testing card effects on real cards with the scenario builder, prompt delivery, choice probe and inventory with stale check.
 - **Not for:** Card rules themselves; those stay in the game.
-- **Key exports:** `createProbe`, `rulingGroups`, `Scenario`, `scenarioLiteral`, `Delivery`, `clauseIds`, `inventory`, `runInventory`, `testFiles`, `conforms`, `describeCheck`, `report`, `diffPaths`, `roundTripCards`, and 42 more
+- **Key exports:** `createProbe`, `rulingGroups`, `Scenario`, `scenarioLiteral`, `Delivery`, `clauseIds`, `inventory`, `runInventory`, `testFiles`, `conforms`, `describeCheck`, `report`, `diffPaths`, `roundTripCards`, and 43 more
 - **Needs:** [`engine-core`](#engine-core)
 - **Came from:** stcc
 - **Docs:** [README](../components/card-harness/README.md)
@@ -485,7 +485,7 @@ The kernel of a game engine: seeded random numbers, canonical JSON and hashes, t
 
 - **Use it when:** Every game's engine: seeded random, tasks and prompts, copy on write, replay, undo, saves, timing windows and triggers.
 - **Not for:** A game's rules or content; the game writes its own `GameRules`.
-- **Key exports:** `claimEngineCore`, `canonicalJson`, `fnv1a64`, `copyJson`, `copyState`, `deepFreeze`, `freezeState`, `isFreezing`, `setStateFreezing`, `advance`, `applyAction`, `applyActionWith`, `createGame`, `isChecking`, and 227 more
+- **Key exports:** `claimEngineCore`, `canonicalJson`, `fnv1a64`, `copyJson`, `copyState`, `deepFreeze`, `freezeState`, `isFreezing`, `setStateFreezing`, `advance`, `applyAction`, `applyActionWith`, `createGame`, `isChecking`, and 238 more
 - **Needs:** nothing
 - **Came from:** jarl
 - **Docs:** [README](../components/engine-core/README.md)
@@ -1046,7 +1046,7 @@ The tutorial engine for any `GameRules<G>` game: a script format, headless play 
 
 - **Use it when:** A scripted tutorial on a seed with the lock that allows only the scripted answer.
 - **Not for:** Rules text or free-play hints.
-- **Key exports:** `parseScript`, `actionsOf`, `actionsBefore`, `stepAt`, `bareNumbers`, `formatFailure`, `startRun`, `scriptedIds`, `missingEvents`, `playStep`, `playScript`, `lockAt`, `lockPrompt`, `refusal`, and 63 more
+- **Key exports:** `parseScript`, `actionsOf`, `actionsBefore`, `stepAt`, `bareNumbers`, `drive`, `formatFailure`, `startRun`, `scriptedIds`, `missingEvents`, `playStep`, `playScript`, `lockAt`, `lockPrompt`, and 69 more
 - **Needs:** [`engine-core`](#engine-core), [`state-machines`](#state-machines)
 - **Came from:** stcc
 - **Docs:** [README](../components/tutorial/README.md)
