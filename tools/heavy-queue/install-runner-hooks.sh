@@ -1,11 +1,14 @@
 #!/usr/bin/env bash
-# K399: for every ~/actions-runner-*/ add the heavy-queue job hooks to its .env (idempotent) and restart its systemd unit
-# when the runner is idle (no Runner.Worker). A busy runner keeps running; run this again later to restart it.
-H=$(cd "$(dirname "$(readlink -f "$0")")" && pwd)
+# K399: for every ~/actions-runner-*/ add the heavy-queue job hooks (the installed copy, HEAVY_HOME, default
+# ~/.local/share/heavy-queue) to its .env (idempotent) and restart its systemd unit when the runner is idle (no Runner.Worker).
+# A busy runner keeps running; run this again later to restart it.
+H=${HEAVY_HOME:-$HOME/.local/share/heavy-queue}
+[ -x "$H/runner-job-started.sh" ] || { echo "no installed heavy-queue in $H: run install-wsl.sh first" >&2; exit 1; }
 SYSTEMCTL=${SYSTEMCTL:-sudo systemctl}
 for d in "$HOME"/actions-runner-*/; do
   [ -d "$d" ] || continue
   e=$d.env; touch "$e"; changed=0
+  [ -s "$e" ] && [ -n "$(tail -c1 "$e")" ] && echo >> "$e"
   for kv in "ACTIONS_RUNNER_HOOK_JOB_STARTED=$H/runner-job-started.sh" "ACTIONS_RUNNER_HOOK_JOB_COMPLETED=$H/runner-job-completed.sh"; do
     grep -qxF "$kv" "$e" && continue
     sed -i "/^${kv%%=*}=/d" "$e"; echo "$kv" >> "$e"; changed=1

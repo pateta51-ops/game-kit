@@ -1,9 +1,10 @@
 // Machine-wide queue for heavy runs (K399): N slots, high before normal, FIFO within; leases end on release, missed heartbeats or a dead pid.
 import http from 'node:http';
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { pathToFileURL } from 'node:url';
 
-export const defaultPort = () => Number(process.env.HEAVY_PORT) || JSON.parse(readFileSync(new URL('../../ports.json', import.meta.url), 'utf8')).tools['heavy-queue'];
+const PORTS = [new URL('./ports.json', import.meta.url), new URL('../../ports.json', import.meta.url)];
+export const defaultPort = () => Number(process.env.HEAVY_PORT) || JSON.parse(readFileSync(PORTS.find((u) => existsSync(u)), 'utf8')).tools['heavy-queue'];
 const alive = (pid) => { try { process.kill(pid, 0); return true; } catch (e) { return e.code === 'EPERM'; } };
 const esc = (s) => String(s).replace(/[&<>"]/g, (c) => `&#${c.charCodeAt(0)};`);
 const dur = (ms) => ms == null ? '' : `${Math.round(ms / 1000)} s`;
@@ -14,13 +15,13 @@ export function startServer({ port = defaultPort(), slots = Number(process.env.H
   let seq = 0;
   const end = (l, exit, reason) => {
     leases.delete(l.id);
-    history.unshift({ label: l.label, priority: l.priority, queuedAt: l.queuedAt, startedAt: l.startedAt, endedAt: Date.now(), exit, reason });
+    history.unshift({ id: l.id, label: l.label, priority: l.priority, queuedAt: l.queuedAt, startedAt: l.startedAt, endedAt: Date.now(), exit, reason });
     history.length = Math.min(history.length, 100);
   };
   const step = () => {
     const now = Date.now();
     for (const l of [...leases.values()]) {
-      if (now - l.lastBeat > ttl) end(l, null, 'no heartbeat');
+      if (performance.now() - l.lastBeat > ttl) end(l, null, 'no heartbeat');
       else if (l.pid && !alive(l.pid)) end(l, null, 'pid gone');
     }
     const all = [...leases.values()];
@@ -61,14 +62,15 @@ export function startServer({ port = defaultPort(), slots = Number(process.env.H
       if (req.method === 'GET' && path === '/status') return send(200, status());
       if (req.method !== 'POST') return send(404, { error: 'not found' });
       if (path === '/acquire') {
-        const l = { id: `${Date.now().toString(36)}-${++seq}`, seq, label: String(b.label ?? 'heavy'), priority: b.priority === 'high' ? 'high' : 'normal', pid: Number(b.pid) || 0, queuedAt: Date.now(), lastBeat: Date.now() };
+        const l = { id: `${Date.now().toString(36)}-${++seq}`, seq, label: String(b.label ?? 'heavy'), priority: b.priority === 'high' ? 'high' : 'normal', pid: Number(b.pid) || 0, queuedAt: Date.now(), lastBeat: performance.now() };
+        if (b.resume) l.startedAt = Date.now();
         leases.set(l.id, l);
         step();
         return send(200, view(l));
       }
       const l = leases.get(b.id);
-      if (!l) return send(404, { error: 'unknown lease' });
-      if (path === '/beat') { l.lastBeat = Date.now(); step(); return send(200, view(l)); }
+      if (!l) return history.some((h) => h.id === b.id) ? send(410, { error: 'lease ended' }) : send(404, { error: 'unknown lease' });
+      if (path === '/beat') { l.lastBeat = performance.now(); step(); return send(200, view(l)); }
       if (path === '/release') { end(l, b.exit ?? null, l.startedAt ? 'released' : 'cancelled'); step(); return send(200, { ok: true }); }
       send(404, { error: 'not found' });
     });
