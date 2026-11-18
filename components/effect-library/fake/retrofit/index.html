@@ -72,6 +72,14 @@
   .idle-bob { left: 12% }
   .idle-breathe { left: 39%; box-shadow: 0 0 0 .15rem #cab9d9 }
   .idle-orbit { left: 66% }
+  .staging-panel { display: none; background: #292934; color: #f2eef5 }
+  .staging-only main > :not(.staging-panel) { display: none }
+  .staging-only .staging-panel { display: block }
+  .staging-only h2 { z-index: 3 }
+  .staging-table { position: absolute; inset: 20% 7% 10%; border: 2px solid #aba4cb; border-radius: 1rem; background: repeating-linear-gradient(90deg,#423d57 0 18%,#292934 18% 20%); }
+  .staging-table .card { position: absolute; display: grid; place-items: center }
+  .staging-canvas, #camera-dim { position: absolute; inset: 0 }
+  #pile-sample { transform: rotate(-5deg); box-shadow: .35rem .6rem #afa7c2, .7rem 1.2rem #8276aa }
 </style>
 <script>if (new URLSearchParams(location.search).has('signals')) document.documentElement.classList.add('signals-only')</script>
   .lines-panel { display: none; background: #292733; color: #ebe9f2 }
@@ -89,8 +97,23 @@
 <script>if (new URLSearchParams(location.search).has('lines')) document.documentElement.classList.add('lines-only')</script>
 <script>if (new URLSearchParams(location.search).has('flights')) document.documentElement.classList.add('flights-only');if (new URLSearchParams(location.search).has('beams')) document.documentElement.classList.add('beams-only');if (new URLSearchParams(location.search).has('combat')) document.documentElement.classList.add('combat-only')</script>
 <script>if (new URLSearchParams(location.search).has('rotations')) document.documentElement.classList.add('rotations-only')</script>
+<style>
+  #crumple-lab { display: none }
+  .crumple-only main > section:not(#crumple-lab) { display: none }
+  .crumple-only #crumple-lab { display: grid; grid-template-columns: repeat(auto-fit,minmax(min(100%,320px),1fr)); gap: 2vw; grid-column: 1 / -1 }
+  #crumple-lab { height: auto; background: transparent; border: 0 }
+  #crumple-lab .field { position: relative; min-height: min(55vh,780px); overflow: hidden }
+  #crumple-lab canvas, #crumple-lab [id$="-target"] { position:absolute; top: 40%; width: min(18%, 24vh); aspect-ratio: 5 / 7; border-radius: 4% }
+  #crumple-lab canvas { left: 14% }
+  #crumple-lab [id$="-target"] { left: 64%; border: 1px dashed #9694a1 }
+</style>
 <header><h1>Effect library motion lab</h1><button type="button">Replay</button></header>
 <main>
+  <section class="staging-panel"><h2>Camera pull</h2><div id="camera-root" class="staging-table"><div class="card">A</div></div><div id="camera-dim"></div></section>
+  <section class="staging-panel"><h2>Letterbox banner</h2><div id="letterbox-root" class="staging-table"><div class="card">B</div></div></section>
+  <section class="staging-panel"><h2>Plasma orb</h2><div id="orb-sample" class="staging-canvas"></div></section>
+  <section class="staging-panel"><h2>Drift cloud</h2><div id="cloud-sample" class="staging-canvas"></div></section>
+  <section class="staging-panel"><h2>Pile lift</h2><div class="staging-table"><div id="pile-sample" class="card">C</div></div></section>
   <section class="field rotation-panel"><h2>Roll-in</h2><div id="spin-sample" class="sample rotation-sample">↑</div></section>
   <section class="field rotation-panel"><h2>Looping spin</h2><div id="loop-sample" class="sample rotation-sample">↑</div></section>
   <section class="field rotation-panel"><h2>Tap</h2><div id="tap-sample" class="sample rotation-sample">↑</div></section>
@@ -137,6 +160,10 @@
   <section class="lines-panel"><h2>Dash line</h2><div id="dash-a" class="node"></div><div id="dash-b" class="node"></div></section>
   <section class="lines-panel"><h2>Reticle</h2><div id="lock-target" class="node"></div></section>
   <section class="lines-panel"><h2>Debris</h2><div id="fall-origin"></div></section>
+  <section id="crumple-lab" aria-label="Crumple">
+    <div class="field"><h2>Crumple</h2><canvas id="fold-piece" width="250" height="350"></canvas><div id="fold-piece-target"></div></div>
+    <div class="field"><h2>Crumple with fade-out</h2><canvas id="fade-piece" width="250" height="350"></canvas><div id="fade-piece-target"></div></div>
+  </section>
 </main>
 <script type="module" src="./lab.ts"></script>
 <script type="module" src="./flights.ts"></script>
@@ -146,4 +173,6 @@
 <script type="module" src="./combat.ts"></script>
 <script type="module" src="./loops.ts"></script>
 <script type="module" src="./lines.ts"></script>
+<script type="module" src="./crumple.ts"></script>
+<script type="module" src="./staging.ts"></script>
 </html>

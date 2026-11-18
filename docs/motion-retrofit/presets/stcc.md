@@ -172,3 +172,44 @@ Use `dash-line` on a stage zone for the source element. Supply the disc and card
 In stage pixels for the game's unit `u`: `dash: 0.9 * u`, `gap: 0.6 * u`, `width: 0.24 * u`, `cap: 'round'`, `speed: 1.5 * u / 0.9` (one period every 900 ms). Use `colour: '#fff'` for the fallback, `'#cfe6ff'` for the player and `'#ffd0d0'` for the bot. The CSS `filter` is `drop-shadow(0 0 ${0.12 * u}px #000) drop-shadow(0 0 ${0.06 * u}px #000)`.
 
 Source: `src/ui/board/table/ShipLink.tsx` and `src/ui/theme/table.css` at `a69c8dac`.
+### Crumple and landed still (K330)
+
+Sources at `a69c8dac` are `src/ui/motion/effects/crumple.ts` (mesh and still pose),
+`src/ui/motion/effects/junk.ts` (flight, landing, shadow and pile response), and
+`src/ui/motion/effects/wad.ts` (cached pile artwork).
+
+Use the card face as `image`, the starting card bounds as the actor, and the
+pile top's bounds as `destination`. Hide the real card when the step starts.
+The pinned mesh and choreography use these settings.
+
+```ts
+const mesh = {
+  seed: 7, grid: [16, 22], creases: 9, jitter: .7,
+  creaseReach: 1.1, creaseSlope: [.55, .75], creaseWidth: [.07, .13],
+  creaseStart: [.02, .5, .06], creaseRamp: .42, creasePull: .55,
+  footprint: .56, cornerPull: [.8, .4], edgeDepth: .3, dent: [.035, .12], depthCap: .42,
+  perspective: 5, radius: .035, back: [.105, .165, .29], backGradient: .06,
+  light: [-.5, -.6, .8], diffuse: [.5, .6], shine: [28, .18], alphaCutoff: .5,
+} as const;
+const choreography = {
+  foldMs: 600, foldPower: 1.6, holdMs: 110, throwMs: 420, arc: .63,
+  tilt: [10, -14, -12], turn: [18, 25, -300], wobble: 3,
+  lift: [.05, 140], airScale: .1, squashMs: 150, squash: [.12, .2, .05],
+  settleDelay: 80, settleMs: 220, sink: [.04, .03], fadeOut: false,
+  shadow: { colour: 'rgb(0 0 0 / .7)', blur: .03, offset: [10 / 410, 70 / 410],
+    side: .4, alpha: [.85, .45], width: 1.05 },
+  jiggle: { ms: 520, frames: [[0, 0], [.3, 9 / 293.67], [.65, -4 / 293.67], [1, 0]] },
+} as const;
+```
+
+The desktop step lasts 1,650 ms. On phone set `throwMs: 470` and `arc: .59`.
+The game owns pan choreography and omits `jiggle` when landing on a row instead
+of a pile. Animate the live pile with the same 520 ms vertical offsets (scaled
+by pile width over 293.67) at contact. The original count bumps over 600 ms at
+scales 1.35, .92 (55%), and 1 with ease-out. Keep up to three legs as in the source.
+Before flight, cache `crumpleStill(image, targetWidth, targetHeight, { ...mesh,
+tilt: [10, -14, -312], sink: [.04, .03] })` for the incoming top card.
+### Camera pull and pile lift
+
+- `src/ui/motion/effects/closingScene.ts` at `a69c8dac`. Use `cameraPull` with `scale: 0.96`, `origin: '50% 45%'`, `pullMs: 2600`, `dim: 0.55`, `dimMs: 1300`, `releaseMs: 520`, and `dimBackground: 'radial-gradient(ellipse at 50% 45%, rgba(2,4,8,.55), rgba(2,4,8,.92))'`. Use the scene's speed. Start the existing signal banner after the dim fade and release the pull as the dialog rises. The game retains its dialog and optional prelude.
+- `src/ui/motion/effects/cardFx.ts` at `a69c8dac` (used by `bottomReturn.ts` and `logRecall.ts`). Use `pileLift` with `lift: '-0.4% -1.4%'`, `scale: 1.035`, `shadow: 'drop-shadow(0 34px 22px rgb(0 0 0 / 0.8))'`, `liftMs: 300`, `settleMs: 320`, `liftEase: 'ease-out'` and `settleEase: 'cubic-bezier(0.3, 1.3, 0.5, 1)'`. Pass the game's playback speed and cue settle at the original arrival beat.

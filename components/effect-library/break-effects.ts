@@ -149,7 +149,7 @@ export interface ShatterSettings {
   shadowSize?: Point;
 }
 
-function triangles(gx: number, gy: number, seed: number, [jx, jy]: Point): Point[][] {
+export function triangles(gx: number, gy: number, seed: number, [jx, jy]: Point): Point[][] {
   const r = rng(seed);
   const points: Point[] = [];
   for (let j = 0; j <= gy; j++) for (let i = 0; i <= gx; i++) {

@@ -215,3 +215,47 @@ In the piece's `paint` callback, draw the original image with centred contain si
 Source: `src/ui/table/endscreen.css` at `449af55` (ship styles, vortex variant, and `wend-fall`).
 
 The wreck shards use the separate `wend-burst` rule. For each authored delay `d`, group its shards into a `debris` step with `delay: d`, `backwards: true`, `ms: 1600`, and `fade: false`. Sample `cubic-bezier(0.12, 0.75, 0.3, 1)` for motion, with `gravity: 0`. Each shard starts at its original position and ends at its CSS `[--dx, --dy]` offset with `spin` set to `--rot` in degrees. Draw each clipped shard about the wreck box centre. Keep its constant opacity and retain the final pose in the live wreck when the overlay ends.
+
+### Camera, letterbox, orb and drift
+
+- `src/ui/fx/power/push.ts` and `power/frame.ts` at `449af55`. Sample `cameraScaleAt` with `enter: 500` and `exit: 300`, passing the action's signature zoom (1.03–1.07) as `scale`. Use the original table focus and shake. The game's scale-changed callback sets its measurement metadata and invalidates the token layer.
+- `src/ui/fx/power/frame.ts` at `449af55`. Pass the action's name as `text`, `barHeight: 54 * u`, `barBackground: 'linear-gradient(#000, #050402)'`, `lineWidth: 2 * u`, `lineColour: 'rgba(255,230,0,.55)'`, `vignetteBlur: 260 * u`, `vignetteSpread: 40 * u`, `vignetteColour: 'rgba(255,200,0,.28)'`. Set `textStyle` to the source font (800, 26 × u px, Roboto Mono then monospace), letter spacing `.3em`, colour `#ffe600` and shadows `0 0 <14 × u>px rgba(255,230,0,.8), 0 2px 3px #000`. Use `enter: 260`, `exit: 260`, `textIn: [80, 260]`, `textOut: [900, 1100]`, and pass the matching camera pose to counter-scale the HUD.
+- `src/ui/fx/portal.ts` and `timing.ts` at `449af55`. Use `arcCount: 7`, `filaments: 6`, `motes: 15`, `pulsePeriod: 3000`, `pulseAmount: 0.055`, `swell: 0.12` and `plasmaSwellAt(sinceLaunch, 100, 200)`. Pass the geometry below. The game supplies its existing canvas radius, plate, lit state and cadence (33 ms between paints while lit, 500 ms covered poll, 150 ms launch clear).
+- Orb geometry and palette from the same commit:
+
+```ts
+const geometry = {
+  haloRadius: 1.9, coreX: -0.1, coreY: -0.14,
+  ringWidth: 1.5, ringStroke: 0.045, ringRadius: 0.54, ringDash: 0.27,
+  referenceRadius: 34, filamentSamples: 110, filamentTwist: 0.18, filamentSpacing: 0.79,
+  filamentRadius: 0.73, filamentWave: 0.14, filamentLobes: 3, filamentAspect: 0.8,
+  filamentRotation: 0.45, brightEvery: 3, brightWidth: 1.2, filamentWidth: 0.6,
+  filamentBlur: 5, angleStep: 2.399, angleWave: 0.12, arcPoints: 8,
+  arcStart: 0.38, arcStride: 0.115, jagPoint: 7, jagArc: 9,
+  jagSize: 0.09, arcOpacity: 0.43, arcPulse: 0.22, arcBlur: 7,
+  forkPoint: 4, forkAngle: 0.7, forkLength: 0.22, moteRadius: 1.12,
+  moteBands: 4, moteStride: 0.12, moteSize: 0.55, moteSizes: 3,
+  moteSizeStride: 0.25,
+};
+const palette = {
+  ring: '#68818c',
+  halo: [[0, '#388abe88'], [0.35, '#188cc852'], [0.65, '#3152ad20'], [1, '#12244700']],
+  core: [[0, '#f1ffff'], [0.16, '#b4faff'], [0.46, '#328fbfc9'], [0.72, '#367be075'], [0.92, '#78e4ff70'], [1, '#469bff00']],
+  bright: '#baf5ffb0', filament: '#5aa7ff60', shadow: '#5ccaff', arc: '175,242,255', mote: '#a1edff80',
+};
+```
+
+- `src/ui/fx/wreck.ts`, `blast.ts` and `timing.ts` at `449af55`. Pass the shard geometry and survivor indices below, equivalent to `SHARDS` and the first eight `SURVIVORS` in the pinned `blast.ts`. The source image lookup returns each cohort's cutout with its drawing dimensions. Use `u: pileWidth * (2.45 / 92)` and the source pile clock and animation scale. Pass held ids to `syncDriftCloud`. Keep the plate and cadence in the game. The cloud settings use the kit’s `triangles` helper from `effect-library/break-effects.ts`:
+
+```ts
+{
+  shards: triangles(3, 4, 42, [22, 16]), survivors: [14, 9, 12, 8, 7, 23, 20, 11],
+  pieceCount: 6, cohortCount: 4, cohortPhase: 0.37, variation: 24, angleStep: 2.399,
+  life: 6000, emerge: 650, fade: [3300, 6000], firstGroup: 3, stagger: 120, secondPhase: 0.5,
+  speed: [2.5, 0.7], speedBands: 5, spin: [9.17, -12.61], firstSize: 25, size: 12, sizeBands: 3, sizeStep: 3,
+  startRadius: 7, aspect: 0.72, initialSpin: 0.4, shrink: 0.055, opacity: 0.85, cohortDim: 0.1,
+  cutoff: 0.004, edgeFade: 0.7, emberEvery: 3, emberColour: '#eeb17a', emberOpacity: 0.6,
+  emberSize: 0.5, minEmberSize: 1, ring: [26 * 0.41, 11 * 0.41, 3 * 0.41],
+  ringColour: '#526573', dashColour: '#728591', lineWidth: 0.5, minLineWidth: 1,
+}
+```

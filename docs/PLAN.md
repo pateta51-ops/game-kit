@@ -465,12 +465,12 @@ Every game's animations are rebuilt on `motion-frame` and `effect-library`; game
 | K327 | M4: deck riffle as a verb (`riffle`), wrapping `deck-motions` `riffleFrames` | STCC `dealing.ts`; Imperium `fx-shuffle` | S | done |
 | K328 | M5 `motion-frame`: holds. `gate`/`afterGate` gain `holdUntil: 'press' | beatId` and an auto-continue delay the queue owns | 7IS B-41; Warp's `gate.ts`; Imperium die-wait, Bot auto-Next; Unstoppable `strike.ts` | M | done |
 | K329 | M6: per-actor `hideSourceUntil: 'start'` | Unstoppable `flightLedger`; 7IS `leave` | S | open |
-| K330 | M7 `effect-library`: shared WebGL canvas with a 2D fallback, like `registerCanvasEffect` | STCC `crumple.ts`; Warp's `power/coin.ts` | M | open |
+| K330 | M7 `effect-library`: shared WebGL canvas with a 2D fallback, like `registerCanvasEffect` | STCC `crumple.ts`; Warp's `power/coin.ts` | M | done |
 | K331 | M8 `sound-player`: check against Warp's `mixer.ts`/`engine.ts` (priority stealing, 40 ms dedupe, ducking, seeded playlist) and lift what it lacks | Warp's `fx/cue.ts`, `mixer.ts`, `engine.ts`; Unstoppable `cues.ts` | M | open |
 | K332 | Effects, flights and paths: `arc-move`, `multi-stop-path`, `trail`; lab demo, contact sheet, a preset per game look | study §3 | M | done |
 | K333 | Effects, beams and transfers: `warp-transfer`, `column-beam`, `rotating-beam`, `radial-streaks`, `collapse-jump` | study §3 | M | done |
 | K334 | Effects, combat: `projectile`, `dissolve`, `shatter`, `shimmer`, `shield-bubble`, `ring-pulse` | study §3 | M | done |
-| K335 | Effects, signals and staging: `stamp`, `motes`, `flicker`, `bar-fill`, `camera-pull`, `letterbox-banner`, `unroll`, `shake-group`, `plasma-orb`, `drift-cloud`, `tumble-3d`, `pile-lift`, `crumple` (after K330); settings added to `glow`, `flip`, `scale`<br>part 1 (signals) done | study §3 | L | open |
+| K335 | Effects, signals and staging: `stamp`, `motes`, `flicker`, `bar-fill`, `camera-pull`, `letterbox-banner`, `unroll`, `shake-group`, `plasma-orb`, `drift-cloud`, `tumble-3d`, `pile-lift`, `crumple` (after K330); settings added to `glow`, `flip`, `scale`<br>part 1 (signals) done<br>part 2 (staging) done; tumble-3d goes to pieces-3d separately | study §3 | L | done |
 | K336 | Retrofit STCC: one beat per event or chunk in event order, log line on `onBeatStart`, `src/ui/motion` deleted; before/after recording of a full turn at 4K approved by the owner | STCC | L | open |
 | K337 | Retrofit Warp's Edge (same terms) | Warp's Edge | L | open |
 | K338 | Retrofit Imperium (same terms) | Imperium | M | open |

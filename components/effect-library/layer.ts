@@ -1,4 +1,5 @@
 // The overlay layer: one element above the page that holds the clones and stand-ins the effects animate.
+import { endGlEffects } from './gl.ts';
 import type { Actor, Rect, Run, Stage } from '../motion-frame/index.ts';
 
 export function decorativeCopy(el: HTMLElement, deep = true): HTMLElement {
@@ -132,6 +133,7 @@ export function createEffectLayer(o: LayerOptions = {}): EffectLayer {
       return a;
     },
     end(run) {
+      endGlEffects(self, run);
       runs.get(run.id)?.forEach((a) => {
         a.remove();
       });
@@ -139,6 +141,7 @@ export function createEffectLayer(o: LayerOptions = {}): EffectLayer {
       restore(run.id);
     },
     clear() {
+      endGlEffects(self);
       for (const id of sources.keys()) restore(id);
       runs.clear();
       el.replaceChildren();

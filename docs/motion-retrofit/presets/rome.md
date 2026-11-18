@@ -40,3 +40,26 @@ Supply the following `pieces`. Positions below are in the SVG's coordinates. Sub
 The descending scroll remains in the game. Its descent takes the first 30% of the 1800 ms cue and its unroll takes the next 30%.
 
 Source: `src/ui/motion/catalog.ts`, `src/ui/motion/live/LiveMotion.tsx` and `src/ui/motion/live/live.css` at `e76d56f`.
+
+### Crumple and disappear (K330)
+
+Sources at `e76d56f` are `src/ui/motion/crumple.ts` (mesh and alpha shader)
+and `src/ui/motion/TrashMotion.tsx` (clock, pose and transparency at 1,130 ms).
+Use the mesh values from the [STCC preset](stcc.md#crumple-and-landed-still-k330).
+Use a stage box around the preview with left and top `x, y` and dimensions
+`w, h`. The actor's centre is `[x + .18*w, y + .52*h]` and the destination
+centre is `[x + .82*w, y + .52*h]`.
+
+```ts
+const choreography = {
+  meshSize: [250, 435], foldMs: 600, foldPower: 1.6, holdMs: 110, throwMs: 420,
+  tilt: [10, -14, -12], initialTilt: true, turn: [0, 0, -300], wobble: 0,
+  lift: [0, 140], airScale: 0, endScale: .35,
+  arc: .38 * h / actorHeight, squash: [0, 0, 0], sink: [0, 0], fadeOut: true,
+  dur: 1130,
+} as const;
+```
+
+`actorHeight` is the actor rect height used for the arc calculation. The source
+renders at full opacity through the flight and drops to zero at the end. A
+longer step can hold the transparent endpoint.

@@ -32,3 +32,11 @@ export type { TypewriterSettings } from './typewriter.ts';
 export type { DashLineSettings } from './dash-line.ts';
 export type { ReticleSettings } from './reticle.ts';
 export type { DebrisSettings, DebrisPiece } from './debris.ts';
+export { registerGlEffect, type GlEffect, type GlFallback, type GlFx } from './gl.ts';
+export { crumpleStill, type CrumpleSettings } from './crumple.ts';
+
+export * from './camera-pull.ts';
+export * from './letterbox-banner.ts';
+export * from './pile-lift.ts';
+export * from './plasma-orb.ts';
+export * from './drift-cloud.ts';

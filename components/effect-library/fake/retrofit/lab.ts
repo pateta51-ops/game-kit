@@ -60,7 +60,7 @@ function play(): void {
     }
   }, 50);
 }
-if (!params.has('flights') && !params.has('beams') && !params.has('rotations') && !params.has('signals') && !params.has('combat') && !params.has('loops') && !params.has('lines')) {
+if (!params.has('crumple') && !params.has('flights') && !params.has('beams') && !params.has('rotations') && !params.has('signals') && !params.has('combat') && !params.has('loops') && !params.has('lines') && !params.has('staging')) {
   document.querySelector('button')?.addEventListener('click', play);
   if (params.get('frame') !== 'before') play();
 }
