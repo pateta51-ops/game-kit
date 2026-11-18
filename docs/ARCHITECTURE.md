@@ -54,6 +54,9 @@ graph LR
   coverage_report["coverage-report"]
   debug_console["debug-console"] --> engine_core["engine-core"]
   deck_motions["deck-motions"] --> motion_frame["motion-frame"]
+  dev_autoplay["dev-autoplay"] --> engine_core["engine-core"]
+  dev_autoplay["dev-autoplay"] --> game_store["game-store"]
+  dev_autoplay["dev-autoplay"] --> sim_pool["sim-pool"]
   dice_odds["dice-odds"]
   dice_tray["dice-tray"] --> state_machines["state-machines"]
   drag_drop["drag-drop"] --> prompt_host["prompt-host"]
@@ -165,10 +168,10 @@ graph LR
 - `coverage-report`
 - `debug-console`
 - `deck-motions`
+- `dev-autoplay`
 - `dice-odds`
 - `dice-tray`
 - `e2e-helpers`
-- `game-store`
 - `ghost-card`
 - `layout-editor`
 - `learned-opponent`

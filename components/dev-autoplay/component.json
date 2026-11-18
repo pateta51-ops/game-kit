@@ -1,0 +1,11 @@
+{
+  "name": "dev-autoplay",
+  "source": {
+    "game": "7is",
+    "commit": "5e0ad51",
+    "paths": ["src/ui/dev.ts (?dev=1&until=<kind>[*n]: play to the n-th prompt of a kind)"],
+    "grafts": [{ "game": "unstoppable", "commit": "8dc1224", "paths": ["src/ui/dev.ts (?dev=1 flag)", "src/ui/play/useAutoplay.ts (a bot answers from the store, seeded from the game seed)"] }]
+  },
+  "needs": ["engine-core", "game-store", "sim-pool"],
+  "packages": ["react"]
+}

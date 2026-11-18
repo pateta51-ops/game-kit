@@ -304,6 +304,10 @@
     "use": "Settings declared as data, a persisted store and a screen drawn from them.",
     "not": "Game rules options that change the engine (declare them as settings, read them in setup)."
   },
+  "dev-autoplay": {
+    "use": "A dev-only URL flag (?dev=1&autoplay=<prompt kind>[*n], steps=N, seat=S) that plays the game store with a sim-pool bot until the open prompt is of that kind, then stops so the developer lands on that screen; off in production builds.",
+    "not": "Playing for the player in a release, or animating the bot (it answers at once)."
+  },
   "sim-pool": {
     "use": "Playing many whole games with drivers on worker threads, fuzzing, sanity bands, sweeps, the K200 weight tuner and paired validation.",
     "not": "A driver's strategy (the game or opponent supplies it)."
