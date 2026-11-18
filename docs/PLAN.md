@@ -137,6 +137,7 @@ A game's build plan lists the kit work it needs as phases named `GK<n>` for the 
 | K346 | saves: importAllData reads back an exportAllData file (listed keys and stores with write; refuses unreadable, wrong format, newer version) | S |  | done |
 | K347 | `deck-motions` turn-over takes `axis: 'x' | 'y'` (side to side, default; or top to bottom). The effect-library `flip` gets the same option in K334's PR | S |  | done |
 | K348 | `deck-motions` turn-over takes `direction: 1 | -1` (front or back flip). The effect-library `flip` gets it in K334's PR | S |  | done |
+| K350 | card-parts: StateBanner, a game-free diagonal state word over a card (any card shape, clipped to it, optional grey-out of the face; look by CSS variables, no animation) | S |  | done |
 | K351 | docs/motion-retrofit/INVENTORY.md: every animation and effect in 11 games, file:line, in kit / row / missing; the missing list feeds the effect batches | S |  | done |
 | K356 | game-store: `simGameOf` takes an optional `start(spec)` so a game with modes or settings starts its sims from the whole spec | S |  | done |
 | K357 | docs/INVENTORY.md: every reusable part of 11 games against the kit, a merged work list of 23 items, and the retrofit backlog (555 own copies) | S |  | done |

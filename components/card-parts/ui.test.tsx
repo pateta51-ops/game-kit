@@ -1,6 +1,6 @@
 import { render, screen, waitFor } from '@testing-library/react'
-import { describe, expect, it } from 'vitest'
-import { ArtImage, ArtProvider, CardFace, IconText, iconRenderer, TokenLayer, useArt, type CardLayout } from './ui.ts'
+import { describe, expect, it, vi } from 'vitest'
+import { ArtImage, ArtProvider, CardFace, IconText, iconRenderer, StateBanner, bannerFit, TokenLayer, useArt, type CardLayout } from './ui.ts'
 
 const L: CardLayout = { w: 200, h: 100, zones: { art: { x: 0, y: 0, w: 100, h: 100 }, text: { x: 100, y: 0, w: 100, h: 50, kind: 'text' }, unused: { x: 0, y: 0, w: 1, h: 1 } }, anchors: { dmg: { x: 50, y: 50, dx: 20 } } }
 const icons = { gold: { label: 'gold', body: '<circle r="5"/>' }, act: { label: 'action', src: '/a.svg' } }
@@ -89,5 +89,46 @@ describe('IconText', () => {
   it('lets the game draw its icons', () => {
     const { container } = render(<IconText text="[[gold]]" icons={icons} renderIcon={(p) => <u>{p.label}!</u>} />)
     expect(container.querySelector('u')?.textContent).toBe('gold!')
+  })
+})
+
+describe('StateBanner (K350)', () => {
+  it('renders the word as the state-banner part, with the grey-out flag; no word, nothing', () => {
+    const { container, rerender } = render(<StateBanner word="Spent" grey />)
+    const b = container.querySelector('[data-part="state-banner"]') as HTMLElement
+    expect(b.textContent).toBe('SpentSpent')
+    expect(b.dataset.grey).toBe('')
+    expect(b.style.overflow).toBe('hidden')
+    rerender(<StateBanner word="Spent" />)
+    expect(container.querySelector('[data-part="state-banner"]')?.hasAttribute('data-grey')).toBe(false)
+    rerender(<StateBanner word="" />)
+    expect(container.querySelector('[data-part="state-banner"]')).toBeNull()
+    rerender(<StateBanner word={null} />)
+    expect(container.firstChild).toBeNull()
+  })
+  it('line variant: a stroke with no word, clipped, grey-out the same', () => {
+    const { container } = render(<StateBanner variant="line" grey />)
+    const b = container.querySelector('[data-part="state-banner"]') as HTMLElement
+    expect(b.dataset.variant).toBe('line')
+    expect(b.dataset.grey).toBe('')
+    expect(b.style.overflow).toBe('hidden')
+    expect(b.textContent).toBe('')
+    expect(b.querySelectorAll('span')).toHaveLength(1)
+  })
+  it('sizes the letters from the measured width of the word: both ends inside, wider word = smaller letters', () => {
+    for (const [w, h] of [[240, 336], [420, 240], [300, 300]] as const)
+      for (const em of [3, 5, 9]) {
+        const fs = bannerFit(w, h, em), t = Math.atan2(h, w), a = (em * fs) / 2, b = fs * 0.6
+        expect(a * Math.cos(t) + b * Math.sin(t)).toBeLessThan(w / 2)
+        expect(a * Math.sin(t) + b * Math.cos(t)).toBeLessThan(h / 2)
+      }
+    expect(bannerFit(240, 336, 9)).toBeLessThan(bannerFit(240, 336, 5))
+    const rect = vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockReturnValue({ width: 900 } as DOMRect)
+    const cw = vi.spyOn(HTMLElement.prototype, 'clientWidth', 'get').mockReturnValue(240)
+    const ch = vi.spyOn(HTMLElement.prototype, 'clientHeight', 'get').mockReturnValue(336)
+    const { container } = render(<StateBanner word="Exhausted" />)
+    const bar = container.querySelectorAll('span')[1] as HTMLElement
+    expect(parseFloat(bar.style.fontSize)).toBeCloseTo(bannerFit(240, 336, 9), 3)
+    rect.mockRestore(); cw.mockRestore(); ch.mockRestore()
   })
 })

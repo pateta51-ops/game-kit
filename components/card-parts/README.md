@@ -31,4 +31,17 @@ const layout: CardLayout = { w: 200, h: 100, zones: { text: { x: 0, y: 0, w: 200
 export const Face = () => <CardFace layout={layout} zones={{ text: <IconText text="Pay [[gold]]" icons={{ gold: { label: 'gold', body: '<circle r="5"/>' } }} /> }} />
 ```
 
+## State banner (K350)
+`<StateBanner word grey? />` (ui): the game's word (never fixed here) lying across a card from bottom-left to top-right, as long as the card's diagonal, turned by atan(h/w) of the card's own box (any shape), letters sized from the word's measured width (any word, any font) so both ends stay inside with a small margin; clipped to the card (`overflow: hidden`, `border-radius: inherit`). Put it last inside the positioned card. `grey` dims the face beneath (backdrop filter). Part: `data-part="state-banner"`, class `kc-state-banner`. Look by CSS variables on the card or above: `--kc-banner-bar`, `--kc-banner-text`, `--kc-banner-edge`, `--kc-banner-font`, `--kc-banner-grey` (a filter). `variant="line"` (default `"bar"`) is only a thin diagonal stroke across the card, no word (`--kc-banner-line`, `--kc-banner-line-width`); `grey` works the same. No word on a bar, nothing; no animation.
+
+```tsx
+import { StateBanner } from '../kit/card-parts/ui'
+
+export const Spent = ({ spent }: { spent: boolean }) => (
+  <div style={{ position: 'relative', width: 120, aspectRatio: '2 / 3', borderRadius: 8, ['--kc-banner-bar' as string]: '#223' }}>
+    <StateBanner word={spent ? 'Spent' : null} grey />
+  </div>
+)
+```
+
 Look file (opt-in, not imported by the component): `looks/icon-glow.css`, a glowing badge on every `[data-icon]`; variables `--kw` (icon colour, set per icon) or `--icon-glow` (default #c9ced8).

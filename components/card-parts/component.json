@@ -9,6 +9,7 @@
       "src/ui/cards/ArtProvider.tsx, artContext.ts (the provider with decode-ahead and useArt; the art object is the game's own type)",
       "src/ui/cards/iconTokens.ts, IconText.tsx (`[[token]]` markers, an icon at text height, a word chip for an unknown one; the syntax and icon set are passed in)",
       "src/ui/cards/CardFace.tsx, Tokens.tsx (the face at the size of its container with tokens drawn over it; ship and resource tokens stay in the game)"
+      ,"src/ui/theme/table.css lines 480-522 and src/ui/cards/ViewCard.tsx (K350 @a69c8dac: .tag--exhausted became StateBanner; the word, colours and font became variables)"
     ],
     "note": "Checked against Imperium (Icons.tsx inline SVG with currentColor), EBR (scanOverlay.ts boxes in scan pixels per frame, landscape locations), Unstoppable (ScanArt over/under layers), Rome (RichText [Icon] markers) and Jarl (CardFace illustration window under a frame layer)."
   },

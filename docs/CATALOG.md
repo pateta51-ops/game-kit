@@ -273,7 +273,7 @@ The parts a game builds its own card face from: the layout as the game's data, a
 
 - **Use it when:** Drawing card faces: the layout as the game's own data (zones, anchors per card type), art with a device cache and decode-ahead, printed text with SVG icons inline, tokens at anchors. Recipe: docs/recipes/card-face-zoom.md.
 - **Not for:** A fixed face, the game's look, or the zoomed transcription (K203).
-- **Key exports:** `checkLayout`, `checkLayouts`, `mergeLayout`, `zoneBox`, `zonesInOrder`, `anchorOf`, `placeTokens`, `BRACKETS`, `parseIconText`, `plainOf`, `unknownIcons`, `cacheStorageStore`, `isQuotaError`, `cacheNameFor`, and 29 more
+- **Key exports:** `checkLayout`, `checkLayouts`, `mergeLayout`, `zoneBox`, `zonesInOrder`, `anchorOf`, `placeTokens`, `BRACKETS`, `parseIconText`, `plainOf`, `unknownIcons`, `cacheStorageStore`, `isQuotaError`, `cacheNameFor`, and 31 more
 - **Needs:** nothing
 - **Came from:** stcc
 - **Docs:** [README](../components/card-parts/README.md)
