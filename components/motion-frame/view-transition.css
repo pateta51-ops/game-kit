@@ -1,0 +1,10 @@
+/* From STCC motion.css (a69c8dac), via LordOfTheRings (a3f3c01). */
+::view-transition-group(*),
+::view-transition-old(*),
+::view-transition-new(*) {
+  animation-duration: var(--motion-view-transition-duration, calc(280ms * var(--motion-scale, 1)));
+}
+
+[data-vt-clipped] {
+  view-transition-name: none !important;
+}

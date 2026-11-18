@@ -1,4 +1,6 @@
 // The pure half: a motion spec, a stage and a speed factor give a timeline. No DOM, no timers.
+import type { BoardSwap } from './swap.ts';
+
 export type Rect = readonly [number, number, number, number];
 export type Point = readonly [number, number];
 export type Stage = (zone: string) => Rect | undefined;
@@ -45,6 +47,7 @@ export interface MotionSpec {
   reduced?: SpecVariant;
   /** waits in the queue until the player's `visible()` is true; its clock starts then (K142) */
   whenVisible?: boolean;
+  swap?: BoardSwap;
   whenReady?: boolean;
   awaitRects?: readonly string[];
   holdUntil?: string;

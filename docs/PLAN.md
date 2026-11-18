@@ -457,7 +457,7 @@ Every game's animations are rebuilt on `motion-frame` and `effect-library`; game
 | Batch | Content | Sources | Effort | State |
 |---|---|---|---|---|
 | K323 | Rule change: presentation is retrofitted now (owner, 18 Nov 2026). `docs/MOTION_RETROFIT_STUDY.md` committed, `docs/RETROFIT_PLAN.md` and README say so, rows K324-K341 added | study | S | done |
-| K324 | M1 `motion-frame`: board swap. A beat carries the game's `commit` (show the state after this event) and per-beat `data` (`run.data`, so `onBeatStart` reveals that event's log line); the player measures keyed elements, commits, waits (M2), measures again and flies every moved element, staggered, entering ones hidden until they land, leaving ones as ghosts. The player still never touches state | STCC `viewTransition.ts`, `director.ts`; Warp's `table/motion.ts`; Imperium `FlightLayer.tsx` | M | open |
+| K324 | M1 `motion-frame`: board swap. A beat carries the game's `commit` (show the state after this event) and per-beat `data` (`run.data`, so `onBeatStart` reveals that event's log line); the player measures keyed elements, commits, waits (M2), measures again and flies every moved element, staggered, entering ones hidden until they land, leaving ones as ghosts. The player still never touches state | STCC `viewTransition.ts`, `director.ts`; Warp's `table/motion.ts`; Imperium `FlightLayer.tsx` | M | done |
 | K325 | M2 `motion-frame`: wait for render. Spec `whenReady` / `awaitRects(ids)` beside `whenVisible`: the beat waits until its zones resolve after the commit (frame poll with a cap, then `onProblem` and play) | STCC `nextFrame`; 7IS rAF poll; Imperium `useLayoutEffect` | S | done |
 | K326 | M3 `motion-frame`: phone pan. The game passes `pan(zone) => restore`; a beat with `pan` switches tab or scrolls to its actor before, comes back after (once per run) | STCC `pan.ts`; Warp's `gate.ts` tab follow | S | open |
 | K327 | M4: deck riffle as a verb (`riffle`), wrapping `deck-motions` `riffleFrames` | STCC `dealing.ts`; Imperium `fx-shuffle` | S | open |
@@ -480,7 +480,7 @@ Every game's animations are rebuilt on `motion-frame` and `effect-library`; game
 | K352 | Work list 2, 5, 6: refresh dissolve, one looping pulse verb, one idle verb (bob, breathe, orbit) | STCC a69c8dac, EBR 59e0ad1d, Under Falling Skies f1042f8, Warp's Edge 449af55 | M | done |
 | K353 | Work list 8-11: typewriter as a `text` option (EBR book.ts:106,189), marching dashed line between two elements (STCC ShipLink.tsx:65, table.css:699-710), lock-on reticle (Warp's blocks.ts:11), falling debris particles (Rome catalog.ts collapse, Warp's endscreen.css:897) | docs/motion-retrofit/INVENTORY.md | M | open |
 | K354 | Dropped after the inventory's work list merged repeats: the story and scene effects are built from existing verbs, particles and the ambience layer, or are game looks (owner, 18 Nov) | docs/motion-retrofit/INVENTORY.md | S | dropped |
-| K355 | Work list 12 with the board swap (K324): view-transition wrapper with speed scaling (STCC viewTransition.ts:13, motion.css:5-8; extend effect-library bands.ts `flight`), plus Warp's data-flip and Imperium FlightLayer | docs/motion-retrofit/INVENTORY.md | M | open |
+| K355 | Work list 12 with the board swap (K324): view-transition wrapper with speed scaling (STCC viewTransition.ts:13, motion.css:5-8; extend effect-library bands.ts `flight`), plus Warp's data-flip and Imperium FlightLayer | docs/motion-retrofit/INVENTORY.md | M | done |
 
 ## Audit roadmap (owner, 16 Nov 2026)
 

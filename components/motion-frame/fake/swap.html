@@ -1,0 +1,20 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Board swap lab</title>
+<style>
+  body { background: #101820; color: #f7f1e3; font: 24px system-ui; max-width: 1100px; margin: 8vh auto; padding: 24px; }
+  main { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 24px; margin: 32px 0; }
+  section { background: #243341; border-radius: 12px; padding: 16px; min-height: 180px; }
+  h2 { font-size: 20px; margin: 0 0 24px; }
+  .piece { display: grid; place-items: center; border-radius: 10px; width: 100%; height: 112px; background: #8bc4c1; color: #10232a; font-weight: 700; }
+  [data-motion-key="new"] { background: #e3ae74; }
+  button { font: inherit; padding: 8px 16px; margin-right: 8px; }
+</style>
+<h1>Board swap lab</h1>
+<button id="swap">Swap board</button><button id="skip">Skip</button>
+<p id="event" aria-live="polite">Ready</p>
+<main></main>
+<script type="module" src="./swap.ts"></script>
+</html>

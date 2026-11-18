@@ -14841,6 +14841,100 @@ var PIECES = (() => {
     };
   }
 
+  // components/motion-frame/swap.ts
+  function measureBoard(swap, clone = false) {
+    const seen = /* @__PURE__ */ new Map();
+    for (const node of document.querySelectorAll(swap.select ?? "[data-motion-key]")) {
+      const key = node.dataset.motionKey;
+      if (!key || node.closest("[data-motion-ghost]")) continue;
+      const rect = node.getBoundingClientRect();
+      if (rect.width <= 0 || rect.height <= 0) continue;
+      seen.set(key, { node, rect, ...clone && { ghost: node.cloneNode(true) } });
+    }
+    return seen;
+  }
+  function flyBoard(swap, before, factor, at, open) {
+    const after = measureBoard(swap);
+    const duration = (swap.dur ?? 420) * factor;
+    if (!(duration > 0)) return 0;
+    let count = 0;
+    let end = 0;
+    const fly = (node, frames2, cleanup) => {
+      const delay = Math.min(count++, swap.maxStagger ?? 8) * (swap.stagger ?? 70) * factor;
+      if (cleanup) open.add(cleanup);
+      const anim = node.animate(frames2, { duration, delay, fill: "backwards", easing: swap.ease ?? "cubic-bezier(.2,.8,.2,1)" });
+      if (cleanup) open.delete(cleanup);
+      const finish2 = () => {
+        open.delete(finish2);
+        try {
+          anim.cancel();
+        } finally {
+          cleanup?.();
+        }
+      };
+      open.add(finish2);
+      end = Math.max(end, duration + delay);
+      at(duration + delay, finish2);
+    };
+    const ghostAt = (ghost, rect) => {
+      ghost.removeAttribute("data-motion-key");
+      ghost.setAttribute("data-motion-ghost", "");
+      ghost.setAttribute("aria-hidden", "true");
+      ghost.inert = true;
+      ghost.removeAttribute("id");
+      for (const child of ghost.querySelectorAll("[id]")) child.removeAttribute("id");
+      Object.assign(ghost.style, {
+        position: "fixed",
+        left: `${rect.left}px`,
+        top: `${rect.top}px`,
+        width: `${rect.width}px`,
+        height: `${rect.height}px`,
+        boxSizing: "border-box",
+        margin: "0",
+        pointerEvents: "none",
+        zIndex: "60"
+      });
+      document.body.append(ghost);
+    };
+    for (const [key, { node, rect }] of after) {
+      if (typeof node.animate !== "function") continue;
+      const old = before.get(key);
+      const source = node.dataset.motionFrom;
+      const from = old?.rect ?? (swap.enter === "from" && source ? document.querySelector(source)?.getBoundingClientRect() : void 0);
+      const frames2 = [{ opacity: 0 }, { opacity: getComputedStyle(node).opacity || "1" }];
+      if (from !== void 0 && from.width > 0 && from.height > 0) {
+        const dx = from.left - rect.left;
+        const dy = from.top - rect.top;
+        const sx = from.width / rect.width;
+        const sy = from.height / rect.height;
+        if (old && dx === 0 && dy === 0 && sx === 1 && sy === 1) continue;
+        frames2[0] = { transformOrigin: "0 0", transform: `translate(${dx}px, ${dy}px) scale(${sx}, ${sy})` };
+        frames2[1] = { transformOrigin: "0 0", transform: "translate(0px, 0px) scale(1, 1)" };
+      }
+      if (old) {
+        fly(node, frames2);
+        continue;
+      }
+      const ghost = node.cloneNode(true);
+      const visibility = node.style.getPropertyValue("visibility");
+      const priority = node.style.getPropertyPriority("visibility");
+      ghostAt(ghost, rect);
+      node.setAttribute("data-motion-landing", "");
+      node.style.setProperty("visibility", "hidden", "important");
+      fly(ghost, frames2, () => {
+        ghost.remove();
+        node.removeAttribute("data-motion-landing");
+        node.style.setProperty("visibility", visibility, priority);
+      });
+    }
+    for (const [key, { rect, ghost }] of before) {
+      if (after.has(key) || ghost === void 0 || typeof ghost.animate !== "function") continue;
+      ghostAt(ghost, rect);
+      fly(ghost, [{ opacity: 1, transform: "scale(1)" }, { opacity: 0, transform: "scale(.4)" }], () => ghost.remove());
+    }
+    return end;
+  }
+
   // components/motion-frame/player.ts
   var placeOf = (k, of) => of <= 1 ? "lone" : k <= 1 ? "first" : k >= of ? "last" : "middle";
   function createVerbs() {
@@ -14883,6 +14977,8 @@ var PIECES = (() => {
     const frame = o.frame ?? ((f) => requestAnimationFrame(f));
     let runs = 0;
     let skipping = false;
+    let starting;
+    const snapping = [];
     const waiters = [];
     const gate = () => {
       const c = [...live].find((x) => x.item.gate !== void 0);
@@ -14909,12 +15005,66 @@ var PIECES = (() => {
     const cue = (c, beat) => {
       safe(`cue ${c}`, () => o.onCue?.(c, beat));
     };
+    const commit = (item) => {
+      const apply = item.commit;
+      delete item.commit;
+      if (apply) safe(`${item.spec.id} commit`, apply);
+    };
+    const makeRun = (item, timeline) => ({
+      id: ++runs,
+      timeline,
+      context: o.context,
+      ...item.place && { place: item.place },
+      ...item.data !== void 0 && { data: item.data }
+    });
+    const emptyTimeline = (id) => ({ id, ms: 0, calls: [], actors: [], cues: [] });
+    const snapStart = (item) => {
+      if (item.commit || item.data !== void 0)
+        safe(`${item.spec.id} start`, () => o.onBeatStart?.(makeRun(item, emptyTimeline(item.spec.id))));
+      commit(item);
+      if (item.problem) o.onProblem?.(item.problem);
+    };
+    const snapEnd = (item) => {
+      snapStart(item);
+      safe(`${item.spec.id} onEnd`, () => item.onEnd?.("skipped"));
+    };
+    const waitForRects = (spec, stage, ready, fail) => {
+      const zones = /* @__PURE__ */ new Set([...spec.whenReady ? requiredRects(spec) : [], ...spec.awaitRects ?? []]);
+      let left = 60;
+      let active = true;
+      let request;
+      const cancel = () => {
+        if (!active) return;
+        active = false;
+        if (typeof request === "function") request();
+        else if (typeof request === "number" && typeof cancelAnimationFrame === "function") cancelAnimationFrame(request);
+      };
+      const poll = () => {
+        if (!active) return;
+        try {
+          const missing = [...zones].filter((zone) => stage(zone) === void 0);
+          if (missing.length > 0 && --left > 0) {
+            request = frame(poll);
+            return;
+          }
+          if (missing.length > 0) o.onProblem?.(`motion-frame ${spec.id}: timed out waiting for ${missing.join(", ")}`);
+          if (!active) return;
+          active = false;
+          ready();
+        } catch (e) {
+          fail(e);
+        }
+      };
+      request = frame(poll);
+      return cancel;
+    };
     const finish2 = (c, how) => {
-      live.delete(c);
+      if (!live.delete(c)) return;
       if (cur === c) cur = null;
       c.timers.forEach((t) => {
         clearTimeout(t);
       });
+      commit(c.item);
       c.open.forEach((f) => {
         safe(`${c.run.timeline.id} finish`, f);
       });
@@ -14922,8 +15072,10 @@ var PIECES = (() => {
       safe(`${c.run.timeline.id} onEnd`, () => c.item.onEnd?.(how));
     };
     const start = (item, spec, stage, factor, parallel) => {
-      const timeline = buildTimeline(spec, stage, factor, o.pace?.(factor));
-      const run = { id: ++runs, timeline, context: o.context, ...item.place && { place: item.place } };
+      const swap = item.commit && typeof document !== "undefined" ? spec.swap : void 0;
+      const redraw = swap || item.commit && (spec.whenReady || spec.awaitRects !== void 0);
+      const build = () => buildTimeline(spec, stage, factor, o.pace?.(factor));
+      const run = makeRun(item, redraw ? emptyTimeline(spec.id) : build());
       const timers = /* @__PURE__ */ new Set();
       const open = /* @__PURE__ */ new Set();
       const me = { item, run, timers, open, leaving: false };
@@ -14938,64 +15090,106 @@ var PIECES = (() => {
       };
       safe(`${spec.id} start`, () => o.onBeatStart?.(run));
       if (!live.has(me)) return;
-      for (const call of run.timeline.calls) {
-        let done;
-        at(call.t, () => {
-          safe(`${spec.id} ${call.verb}`, () => {
-            done = o.verbs.get(call.verb)?.(call, run);
+      const schedule = () => {
+        for (const call of run.timeline.calls) {
+          let done;
+          at(call.t, () => {
+            safe(`${spec.id} ${call.verb}`, () => {
+              done = o.verbs.get(call.verb)?.(call, run);
+            });
+            if (done !== void 0) open.add(done);
           });
-          if (done !== void 0) open.add(done);
-        });
-        at(call.t + call.dur, () => {
-          const d = done;
-          if (d === void 0) return;
-          open.delete(d);
-          safe(`${spec.id} ${call.verb} finish`, d);
-        });
-      }
-      const leave = item.gate && run.timeline.calls.find((c) => c.step.leave === true);
-      if (leave)
-        at(leave.t, () => {
-          me.leaving = true;
+          at(call.t + call.dur, () => {
+            const d = done;
+            if (d === void 0) return;
+            open.delete(d);
+            safe(`${spec.id} ${call.verb} finish`, d);
+          });
+        }
+        const leave = item.gate && run.timeline.calls.find((c) => c.step.leave === true);
+        if (leave)
+          at(leave.t, () => {
+            me.leaving = true;
+            emit();
+          });
+        for (const c of run.timeline.cues)
+          at(c.t, () => {
+            cue(c.cue, spec.id);
+          });
+        at(Math.max(run.timeline.ms, ...run.timeline.cues.map((c) => swap ? c.t : 0)), () => {
+          if (!live.has(me)) return;
+          reached(spec.id);
+          const delay = (spec.autoContinueMs ?? 0) * factor;
+          if (spec.holdUntil !== void 0 || delay > 0) {
+            const timer = delay > 0 ? setTimeout(() => {
+              if (!holds.has(item)) return;
+              holds.delete(item);
+              next();
+              emit();
+            }, delay) : void 0;
+            holds.set(item, timer);
+          }
+          finish2(me, "done");
+          next();
           emit();
         });
-      for (const c of run.timeline.cues)
-        at(c.t, () => {
-          cue(c.cue, spec.id);
-        });
-      at(run.timeline.ms, () => {
+      };
+      if (!redraw) {
+        commit(item);
+        if (live.has(me)) schedule();
+        return;
+      }
+      const failRedraw = (e) => {
         if (!live.has(me)) return;
-        reached(spec.id);
-        const delay = (spec.autoContinueMs ?? 0) * factor;
-        if (spec.holdUntil !== void 0 || delay > 0) {
-          const timer = delay > 0 ? setTimeout(() => {
-            if (!holds.has(item)) return;
-            holds.delete(item);
-            next();
-            emit();
-          }, delay) : void 0;
-          holds.set(item, timer);
-        }
+        o.onProblem?.(e instanceof Error ? e.message : String(e));
         finish2(me, "done");
         next();
         emit();
-      });
+      };
+      try {
+        const before = swap && measureBoard(swap, swap.leave !== "none");
+        commit(item);
+        if (!live.has(me)) return;
+        const cancel = waitForRects(spec, stage, () => {
+          if (!live.has(me)) return;
+          run.timeline = build();
+          if (swap && before) run.timeline.ms = Math.max(run.timeline.ms, flyBoard(swap, before, factor, at, open));
+          schedule();
+        }, failRedraw);
+        if (live.has(me)) open.add(cancel);
+        else cancel();
+      } catch (e) {
+        failRedraw(e);
+      }
     };
     const next = () => {
-      while (cur === null && drawingHead === void 0 && !skipping) {
-        const index = holds.size === 0 ? 0 : queue.findIndex(({ spec }) => spec.id !== "press" && [...holds.keys()].some((i) => i.spec.holdUntil === spec.id));
+      while (cur === null && drawingHead === void 0 && !skipping && !starting) {
+        const index = holds.size === 0 || queue[0]?.skipped ? 0 : queue.findIndex(({ spec }) => spec.id !== "press" && [...holds.keys()].some((i) => i.spec.holdUntil === spec.id));
         const item = queue[index];
-        if (item === void 0 || item.spec.whenVisible === true && o.visible?.() === false) return;
+        if (item === void 0 || !item.skipped && item.spec.whenVisible === true && o.visible?.() === false) return;
+        if (item.commit && queue.slice(0, index).some((i) => i.commit)) return;
         queue.splice(index, 1);
-        begin(item, false);
+        starting = item;
+        try {
+          if (item.skipped) snapEnd(item);
+          else begin(item, false);
+        } finally {
+          starting = void 0;
+        }
       }
     };
     const begin = (item, parallel) => {
+      if (item.problem) {
+        snapStart(item);
+        safe(`${item.spec.id} onEnd`, () => item.onEnd?.("done"));
+        return;
+      }
       const speed = o.speed();
       const reduced = o.reduced?.() === true;
       const { spec: base } = item;
       const spec = reduced ? withVariant(base, base.reduced) : withVariant(base, item.place && base.places?.[item.place.at]);
       if (speed === "instant" || !(speed > 0) || reduced && base.reduced === void 0) {
+        snapStart(item);
         [...spec.sound ?? []].sort((a, b) => a.t - b.t).forEach((c) => {
           cue(c.cue, item.spec.id);
         });
@@ -15005,53 +15199,44 @@ var PIECES = (() => {
       }
       const fail = (e) => {
         reached(spec.id);
+        snapStart(item);
         o.onProblem?.(e instanceof Error ? e.message : String(e));
         safe(`${spec.id} onEnd`, () => item.onEnd?.("done"));
       };
-      const stage = o.stages[spec.stage ?? "default"];
+      const stage = o.stages[spec.stage ?? "default"] ?? (spec.swap && spec.stage === void 0 ? () => void 0 : void 0);
       if (stage === void 0) {
         fail(`motion-frame ${spec.id}: stage ${String(spec.stage)} is not known`);
         return;
       }
       const play = () => start(item, spec, stage, reduced ? 1 : speed, parallel);
-      const zones = /* @__PURE__ */ new Set([...spec.whenReady ? requiredRects(spec) : [], ...spec.awaitRects ?? []]);
+      const undraw = () => {
+        drawing.delete(item);
+        if (drawingHead === item) drawingHead = void 0;
+      };
       try {
-        if (!spec.whenReady && spec.awaitRects === void 0) {
+        if (item.commit || !spec.whenReady && spec.awaitRects === void 0) {
           play();
           return;
         }
-        let request;
-        const cancel = () => {
-          drawing.delete(item);
-          if (drawingHead === item) drawingHead = void 0;
-        };
-        drawing.set(item, () => {
-          cancel();
-          if (typeof request === "function") request();
-          else if (typeof request === "number" && typeof cancelAnimationFrame === "function") cancelAnimationFrame(request);
-        });
         if (!parallel) drawingHead = item;
-        let left = 60;
-        const poll = () => {
-          if (!drawing.has(item)) return;
-          try {
-            const missing = [...zones].filter((zone) => stage(zone) === void 0);
-            if (missing.length > 0 && --left > 0) {
-              request = frame(poll);
-              return;
-            }
-            if (missing.length > 0) o.onProblem?.(`motion-frame ${spec.id}: timed out waiting for ${missing.join(", ")}`);
-            if (!drawing.has(item)) return;
-            cancel();
-            play();
-          } catch (e) {
-            cancel();
-            fail(e);
-          }
+        let waiting = true;
+        const cancel = waitForRects(spec, stage, () => {
+          waiting = false;
+          undraw();
+          play();
           next();
           emit();
-        };
-        request = frame(poll);
+        }, (e) => {
+          waiting = false;
+          undraw();
+          fail(e);
+          next();
+          emit();
+        });
+        if (waiting) drawing.set(item, () => {
+          undraw();
+          cancel();
+        });
       } catch (e) {
         drawing.delete(item);
         if (drawingHead === item) drawingHead = void 0;
@@ -15059,17 +15244,38 @@ var PIECES = (() => {
       }
     };
     const skip = (snap) => {
-      const waiting = queue.filter(snap);
-      queue.splice(0, queue.length, ...queue.filter((i) => !snap(i)));
-      skipping = true;
-      endHolds(snap);
-      const drawingItems = [...drawing].filter(([item]) => snap(item));
-      for (const [, cancel] of drawingItems) cancel();
-      [...live].filter((c) => snap(c.item)).forEach((c) => {
-        finish2(c, "skipped");
+      const wasSkipping = skipping;
+      const current = cur?.item;
+      let blocked = Boolean(starting !== current && starting?.commit || current?.commit && !snap(current) || snapping.some((batch) => batch.some((i) => i.commit)));
+      const waiting = [];
+      const kept = queue.filter((item) => {
+        if (!snap(item)) {
+          if (item.commit) blocked = true;
+          return true;
+        }
+        if (blocked && item.commit) {
+          item.skipped = true;
+          return true;
+        }
+        waiting.push(item);
+        return false;
       });
-      for (const i of [...drawingItems.map(([item]) => item), ...waiting]) safe(`${i.spec.id} onEnd`, () => i.onEnd?.("skipped"));
-      skipping = false;
+      queue.splice(0, queue.length, ...kept);
+      skipping = true;
+      snapping.push(waiting);
+      try {
+        endHolds(snap);
+        const drawingItems = [...drawing].filter(([item]) => snap(item));
+        for (const [, cancel] of drawingItems) cancel();
+        for (const c of [...live]) {
+          if (snap(c.item)) finish2(c, "skipped");
+        }
+        for (const [item] of drawingItems) snapEnd(item);
+        for (const item of waiting) snapEnd(item);
+      } finally {
+        snapping.pop();
+        skipping = wasSkipping;
+      }
       next();
       emit();
     };
@@ -15088,16 +15294,27 @@ var PIECES = (() => {
     return {
       play(beat, opts) {
         const end = ender(opts);
-        const spec = lookup(beat, end);
-        if (spec === void 0) return;
-        if (opts?.parallel === true) {
-          if (skipping) safe(`${spec.id} onEnd`, () => end?.("skipped"));
-          else {
-            begin({ spec, onEnd: end, gate: opts.gate }, true);
+        const commit2 = opts?.commit;
+        const spec = typeof beat === "string" && commit2 ? o.specs[beat] : lookup(beat, end);
+        if (spec === void 0 && !commit2) return;
+        const item = {
+          spec: spec ?? { id: beat, steps: [] },
+          onEnd: end,
+          gate: opts?.gate,
+          commit: commit2,
+          data: opts?.data,
+          ...!spec && { problem: `motion-frame: no spec named ${beat}` }
+        };
+        if (opts?.parallel === true && !item.commit) {
+          if (skipping) {
+            snapStart(item);
+            safe(`${item.spec.id} onEnd`, () => end?.("skipped"));
+          } else {
+            begin(item, true);
             next();
           }
         } else {
-          queue.push({ spec, onEnd: end, gate: opts?.gate });
+          queue.push(item);
           next();
         }
         emit();

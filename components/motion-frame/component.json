@@ -15,7 +15,11 @@
       { "game": "ebr", "commit": "33b5abd3", "paths": ["src/ui/motion/speed.ts lines 20-66 (Off in an automated browser unless the user agent marker or ?motion=on; data-motion and --motion-scale on the page; the marker became a parameter, the store stayed behind)", "playwright.config.ts lines 19-27 (the second project with motion on: in the README)"] },
       { "game": "middle-earth-player", "repo": "https://github.com/j-jmnz/middle-earth-player", "licence": "MIT", "paths": ["src/ui/motion-tokens.ts paceScale and src/play/readouts/banner-time.ts (reading time apart from motion time: K142)", "src/play/spotlight/gate.ts, beats.ts and docs/design-system-table.md Motion 'Hurry' (gate that never holds input, hurry, a run of big beats by place: K143); idea from the survey write-up, written new on the player, no file copied"] },
       { "game": "marvel-champions-digital-game", "licence": "AGPL-3.0, idea only", "paths": ["packages/client/src/scenes/board/motion.ts (a reduced beat keeps its information held still; a band waits until the table is uncovered: K142); no code taken"] },
-      { "game": "rome", "commit": "1d0fd2e", "paths": ["src/ui/motion/MotionLab.tsx (the lab that lists the catalog and plays one on request; idea only, rewritten on the player; the frame sampler scripts/motion-capture.mjs stayed behind: it seeks a pure frame function, which the timer player does not have)"] }
+      { "game": "rome", "commit": "1d0fd2e", "paths": ["src/ui/motion/MotionLab.tsx (the lab that lists the catalog and plays one on request; idea only, rewritten on the player; the frame sampler scripts/motion-capture.mjs stayed behind: it seeks a pure frame function, which the timer player does not have)"] },
+      { "game": "stcc", "commit": "a69c8dac", "paths": ["src/ui/motion/director.ts", "src/ui/motion/viewTransition.ts"] },
+      { "game": "warps", "commit": "449af55", "paths": ["src/ui/table/motion.ts"] },
+      { "game": "imperium-horizon", "commit": "b82d5cf", "paths": ["src/ui/board/table/FlightLayer.tsx"] },
+      { "game": "LordOfTheRings", "repo": "https://github.com/halogenandtoast/LordOfTheRings", "commit": "a3f3c01", "licence": "BSD-3-Clause", "paths": ["frontend/src/composables/useViewTransition.ts (via STCC)"] }
     ]
   },
   "needs": []

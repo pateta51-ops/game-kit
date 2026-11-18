@@ -8,6 +8,19 @@ Plays motion specs in the director's format (one JSON per beat: `actors`, `steps
 `createVerbs()` is the registry the effect library and the game fill: `register(name, (call, run) => finish?)`. `run` is `{ id, timeline, context }`; the returned `finish` is called once, at the call's end or on a skip.
 `createMotionPlayer({ specs, stages, verbs, speed, context, onCue?, onBeatStart?, onBeatEnd?, onProblem? })`:
 - `play(beat, { onEnd? })`: a beat name, or a spec the game built from a template. Beats play in order, one at a time; with `parallel: true` a beat starts at once beside the one playing, outside the queue (for `constant` beats of one answer that overlap). `skipAll`, `pending()` and `busy()` count it.
+- `play(beat, { commit?, data? })`: commit applies the game's next state once, in queue order.
+  `onBeatStart` sees `run.data` before commit, including when a queued commit is snapped.
+- `swap: { select?, stagger?, dur?, ease?, enter?, leave?, maxStagger? }` measures before commit
+  and polls a frame after it. Use unique `data-motion-key` values. The optional selector limits the elements measured.
+  `whenReady` and `awaitRects` poll the committed board. A swap's started run gets its full timeline after redraw.
+  Defaults: 420 ms, 70 ms stagger capped at eight intervals, fade entries and shrinking exit ghosts.
+  With `enter: 'from'`, `data-motion-from` is a source selector. `leave: 'none'` drops exit ghosts.
+  Arrivals carry `data-motion-landing` until they land. Skip, hurry and instant speed snap commits and clear flights.
+- `withViewTransition(apply, speed)` uses the browser transition when enabled.
+  Supply a synchronous DOM update (React can wrap it in `flushSync`) or return the redraw promise.
+  Import `view-transition.css` to use the durations set by `putMotionSpeed`.
+  Mark a clipping panel with `data-vt-clip` to exclude its partially visible inline-named elements.
+  The helper is independent of the board swap.
 - `speed()` is read when a beat starts: a factor (1, 0.5) or `'instant'`. Instant builds no timeline: `onEnd` fires at once, and the cues are still called, in order.
 - `busy()`: a `rare` or `once` beat is playing or queued. `constant`, `often` and `each round` never set it. `pending()`, `subscribe(f)`.
 - `skipAll()`: everything playing and queued jumps to its end: open verbs finish, every `onEnd` fires, cues not yet due are dropped. `skipOnInput(player, window)` calls it on any press or key.
@@ -31,6 +44,7 @@ Plays motion specs in the director's format (one JSON per beat: `actors`, `steps
 The end state is the game's own screen: the player never touches game state.
 ## Look
 Open `components/motion-frame/fake/lab.html` through Vite to try the fake queue.
+Open `components/motion-frame/fake/swap.html` for the board swap lab.
 Choose the piece beat, draw the tray, then press to let the roll play.
 The lab is an unstyled `ul.motion-lab` of `button[data-beat]` (`data-playing` while it plays): the game styles it. Nothing else draws. Tests: `motion.test.ts` (node) and `lab.test.tsx` (jsdom), with the fake game in `fake/`.
 ## Review clips (`clips.ts`, `record.ts`)
