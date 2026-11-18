@@ -258,6 +258,10 @@
     "use": "Showing one state per prompt kind and ending, with a check that no kind lacks one.",
     "not": "Runtime screens."
   },
+  "proof-sheet": {
+    "use": "Review a pack’s faces beside fields, printed words, generated words and flags, with filters in the hash and a static export.",
+    "not": "Designing faces, loading packs or deciding which findings a game should flag."
+  },
   "prompt-host": {
     "use": "Showing the open engine-core prompt on screen: a widget per prompt kind (a missing one fails to compile), the common widgets (pick, amount, order, may, pay) unstyled, forced answers sent from the store in one undo step (answerWithForced), board picks with tap to confirm (one or several). Recipe: docs/recipes/prompts.md.",
     "not": "The game's look or its own kind-specific widgets; board highlights (the game draws those from the option ids)."
