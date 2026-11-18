@@ -112,6 +112,7 @@ graph LR
   prompt_host["prompt-host"] --> engine_core["engine-core"]
   prompt_host["prompt-host"] --> prompt_source["prompt-source"]
   prompt_source["prompt-source"]
+  proof_sheet["proof-sheet"]
   reference_game["reference-game"] --> scaffold["scaffold"]
   replay_cli["replay-cli"] --> engine_core["engine-core"]
   replay_cli["replay-cli"] --> sim_pool["sim-pool"]
@@ -194,6 +195,7 @@ graph LR
 - `plan-checker`
 - `player-board`
 - `prompt-gallery`
+- `proof-sheet`
 - `reference-game`
 - `repo-gate`
 - `resolution-frame`
