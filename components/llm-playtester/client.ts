@@ -1,0 +1,124 @@
+// The SDK client and prompt caching, ported from STCC server/opponent/client.ts, config.ts and ledger.ts (a69c8dac).
+export interface Usage {
+  input_tokens: number;
+  output_tokens: number;
+  cache_creation_input_tokens: number;
+  cache_read_input_tokens: number;
+  ephemeral_5m_input_tokens?: number;
+  ephemeral_1h_input_tokens?: number;
+}
+export interface Ask {
+  model: string;
+  system: string[];
+  prompt: string;
+}
+export interface Answer {
+  option: number;
+  reason: string;
+  usage: Usage;
+}
+export type Chooser = (ask: Ask) => Promise<Answer>;
+
+/** Dollars per million tokens: 5-minute writes 1.25x input, 1-hour writes 2x. */
+export interface Price {
+  input: number;
+  cacheWrite5m: number;
+  cacheWrite1h: number;
+  cacheRead: number;
+  output: number;
+}
+export const PRICES: Record<string, Price> = {
+  'claude-opus-5-5': { input: 4, cacheWrite5m: 5, cacheWrite1h: 8, cacheRead: 0.2, output: 20 },
+  'claude-sonnet-5-5': { input: 2, cacheWrite5m: 2.5, cacheWrite1h: 4, cacheRead: 0.1, output: 10 },
+};
+export const MAX_TOKENS = 1024;
+
+export function cost(usage: Usage, model: string): number {
+  const p = PRICES[model];
+  if (p === undefined) throw new Error(`No price for model ${model}`);
+  const short = usage.ephemeral_5m_input_tokens ?? 0;
+  const long = usage.ephemeral_1h_input_tokens ?? 0;
+  const unsplit = Math.max(0, usage.cache_creation_input_tokens - short - long);
+  return (
+    (usage.input_tokens * p.input +
+      (short + unsplit) * p.cacheWrite5m +
+      long * p.cacheWrite1h +
+      usage.cache_read_input_tokens * p.cacheRead +
+      usage.output_tokens * p.output) /
+    1_000_000
+  );
+}
+
+/** A ceiling for the next call before it is made: every prompt token at the cache-write price plus a full answer. */
+export function worstCost(ask: Ask): number {
+  const p = PRICES[ask.model];
+  if (p === undefined) throw new Error(`No price for model ${ask.model}`);
+  const chars = ask.system.reduce((n, s) => n + s.length, 0) + ask.prompt.length + 1000;
+  return ((chars / 3) * p.cacheWrite5m + MAX_TOKENS * p.output) / 1_000_000;
+}
+
+const TOOL = {
+  name: 'choose',
+  description: 'Pick one of the numbered options.',
+  input_schema: {
+    type: 'object' as const,
+    properties: {
+      option: { type: 'integer', description: 'The number of the chosen option.' },
+      reason: {
+        type: 'string',
+        description: 'Why, in one or two sentences; start with BUG: when the rules, the view or the options look wrong.',
+      },
+    },
+    required: ['option', 'reason'],
+  },
+};
+
+// The SDK is loaded only when a paid chooser is built, so --dummy and tests never need it. The key is passed
+// explicitly and the SDK's environment fallbacks are cut (authToken null, fixed base URL, no custom headers).
+export async function sdkChooser(apiKey: string): Promise<Chooser> {
+  const { default: Anthropic } = await import('@anthropic-ai/sdk');
+  const headers = process.env['ANTHROPIC_CUSTOM_HEADERS'];
+  delete process.env['ANTHROPIC_CUSTOM_HEADERS'];
+  let client: InstanceType<typeof Anthropic>;
+  try {
+    client = new Anthropic({
+      apiKey,
+      authToken: null,
+      baseURL: 'https://api.anthropic.com',
+      maxRetries: 2,
+      timeout: 120_000,
+      defaultHeaders: {},
+    });
+  } finally {
+    if (headers !== undefined) process.env['ANTHROPIC_CUSTOM_HEADERS'] = headers;
+  }
+  return async (ask) => {
+    const last = ask.system.length - 1;
+    const result = await client.messages.create({
+      model: ask.model,
+      max_tokens: MAX_TOKENS,
+      system: ask.system.map((text, i) =>
+        i === last
+          ? { type: 'text' as const, text, cache_control: { type: 'ephemeral' as const } }
+          : { type: 'text' as const, text },
+      ),
+      tools: [TOOL],
+      tool_choice: { type: 'tool', name: 'choose' },
+      messages: [{ role: 'user', content: ask.prompt }],
+    });
+    const use = result.content.find((b) => b.type === 'tool_use');
+    const input = (use?.input ?? {}) as { option?: unknown; reason?: unknown };
+    return {
+      option: typeof input.option === 'number' ? input.option : Number.NaN,
+      reason: typeof input.reason === 'string' ? input.reason : '',
+      usage: {
+        input_tokens: result.usage.input_tokens,
+        output_tokens: result.usage.output_tokens,
+        cache_creation_input_tokens: result.usage.cache_creation_input_tokens ?? 0,
+        cache_read_input_tokens: result.usage.cache_read_input_tokens ?? 0,
+        ephemeral_5m_input_tokens: result.usage.cache_creation?.ephemeral_5m_input_tokens ?? 0,
+        ephemeral_1h_input_tokens: result.usage.cache_creation?.ephemeral_1h_input_tokens ?? 0,
+      },
+    };
+  };
+}

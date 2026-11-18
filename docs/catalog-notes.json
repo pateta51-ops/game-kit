@@ -382,5 +382,12 @@
     "use": "Generate opaque home-screen icons and a relative web manifest from game-owned art.",
     "not": "Creating artwork or choosing a game’s visual identity.",
     "exports": "buildIcons, headTags, insertHead (app-icons.mjs)"
+  },
+  "llm-playtester": {
+    "use": "Headless whole-game playtests by Claude through a small game adapter (view, numbered options, choose): finds rules and screen bugs the model flags, adapter throws and illegal option lists, and saves each run's replay for a replay test; capped in dollars per run; --dummy plays the first option for free.",
+    "not": "The in-game Claude opponent (a game's own server code) or balance sims at volume; use sim-pool for many cheap games.",
+    "entry": [
+      "playtest.ts"
+    ]
   }
 }

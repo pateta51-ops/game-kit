@@ -76,6 +76,7 @@ graph LR
   learned_opponent["learned-opponent"] --> engine_core["engine-core"]
   learned_opponent["learned-opponent"] --> sim_pool["sim-pool"]
   lint_preset["lint-preset"]
+  llm_playtester["llm-playtester"]
   market_row["market-row"] --> engine_core["engine-core"]
   market_row["market-row"] --> card_zones["card-zones"]
   market_row["market-row"] --> prompt_host["prompt-host"]
@@ -169,6 +170,7 @@ graph LR
 - `layout-editor`
 - `learned-opponent`
 - `lint-preset`
+- `llm-playtester`
 - `market-row`
 - `modal-dialog`
 - `offline`

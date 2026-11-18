@@ -1,0 +1,10 @@
+{
+  "name": "llm-playtester",
+  "source": {
+    "game": "stcc",
+    "commit": "a69c8dac",
+    "paths": ["server/opponent/key.ts (key file, ANTHROPIC_API_KEY refused)", "server/opponent/client.ts (private SDK client)", "server/opponent/config.ts (price table)", "server/opponent/ledger.ts (cost per call incl. cache writes and reads)"]
+  },
+  "needs": [],
+  "packages": ["@anthropic-ai/sdk"]
+}
