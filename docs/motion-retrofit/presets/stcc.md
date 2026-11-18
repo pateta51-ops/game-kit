@@ -46,6 +46,101 @@ A resource gain drops the icon for 240 ms, holds for 60, starts the 420 ms sourc
 
 The game still owns event filtering and ordering, counter writes, action row selection and look snapshots, phone tabs and pans, chip counts, lifted and tucked card geometry, dismissal sequencing, and the incident preview flip and slide. Use the existing scale, fade, flip and move verbs to stage these around the beams.
 
+## Signals
+
+All files below are under `src/ui/motion/effects/` at `a69c8dac`. Measurements come from the game's current card, mark, flag or track.
+
+```ts
+// stardateResolved.ts. Stamp after the 520 ms lift, hold 900 ms, then move the
+// same actor so the stamp rides with it. Use the card height before the lift.
+const resolved = (h: number) => ({
+  dur: 280, text: 'RESOLVED', tilt: -6,
+  style: { top: '62%', height: '13%', zIndex: '5', border: `${Math.max(2, h * .012)}px solid #ffd36a`,
+    borderRadius: '8px', background: 'rgb(5 8 14 / .9)', color: '#ffd36a', fontFamily: 'var(--label-font)',
+    fontWeight: '700', fontSize: `${h * .075}px`, letterSpacing: '.2em', boxShadow: '0 0 18px rgb(255 211 106 / .6)' },
+});
+
+// traitMarked.ts. Place this actor at the measured mark box, centred on the mark.
+// Supply the source tick SVG as image. The chip give/tint and the ink drops are
+// separate layers starting at 216 ms. Reveal the board mark at completion.
+const trait = (d: number, colour: string, image: string) => ({
+  dur: 676, ms: 300, ease: 'cubic-bezier(.5,0,.75,1)', image,
+  style: { inset: '0', width: '100%', height: '100%', padding: '13%', borderRadius: '50%',
+    background: colour, border: `${Math.max(1, d * .075)}px solid rgb(255 255 255 / .92)`,
+    boxShadow: `0 0 ${d * .22}px color-mix(in srgb, ${colour} 70%, transparent)` },
+  frames: [
+    { transform: 'scale(2.6) rotate(-20deg)', opacity: 0, filter: `drop-shadow(0 ${d * .5}px ${d * .3}px #000a)` },
+    { transform: 'scale(1.5) rotate(-14deg)', opacity: .9, offset: .4 },
+    { transform: 'scale(.9) rotate(-8deg)', opacity: 1, offset: .72, filter: 'drop-shadow(0 0 0 #0000)' },
+    { transform: 'scale(1) rotate(-8deg)', opacity: 1, filter: 'drop-shadow(0 0 0 #0000)' },
+  ],
+  ring: { delay: 216, ms: 460,
+    style: { border: `${Math.max(1, d * .05)}px solid color-mix(in srgb, ${colour} 80%, transparent)` },
+    frames: [{ transform: 'scale(.9)', opacity: .9, easing: 'cubic-bezier(.2,.7,.4,1)' }, { transform: 'scale(1.9)', opacity: 0 }] },
+});
+
+// promotion.ts. Pass the badge art or omit it for the VP disc. Start moving at 710 ms (250 ms after the press), while the ring finishes.
+// Wait 400 ms in its slot before dissolving the badge.
+const promotion = (w: number, h: number, image?: string) => {
+  const s = w * .38;
+  return {
+    dur: 748, ms: 460, ease: 'linear', text: image ? '' : 'VP', image,
+    style: { left: `${(w - s) / 2}px`, top: `${h * .44 - s / 2}px`, width: `${s}px`, height: `${s}px`, zIndex: '5',
+      background: image ? 'transparent' : '#2a6f9b', borderRadius: image ? '0' : '50%', border: '0',
+      color: '#fff', fontSize: `${s * .4}px`, filter: `drop-shadow(0 ${s * .06}px ${s * .08}px rgb(0 0 0 / .75))` },
+    frames: [
+      { offset: 0, transform: `translateY(${-h * .3}px) scale(1.9) rotate(-14deg)`, opacity: 0, easing: 'cubic-bezier(.3,0,.7,1)' },
+      { offset: .7, transform: 'translateY(0) scale(1.12) rotate(0deg)', opacity: 1, easing: 'ease-out' },
+      { offset: .85, transform: 'scale(.84)', opacity: 1, easing: 'ease-out' },
+      { offset: 1, transform: 'scale(1)', opacity: 1 },
+    ],
+    press: { delay: 322, ms: 184, frames: [
+      { transform: 'scale(1)' }, { offset: .45, transform: 'scale(.97)' }, { transform: 'scale(1)' },
+    ] },
+    ring: { delay: 368, ms: 380, style: { border: `${Math.max(1.5, s * .04)}px solid rgb(230 247 253 / .95)` },
+      frames: [{ transform: 'scale(.7)', opacity: .95, easing: 'cubic-bezier(.2,.7,.4,1)' }, { transform: 'scale(1.9)', opacity: 0 }] },
+  };
+};
+
+// promotion.ts. Use the badge as the actor after its 400 ms hold in the slot.
+const promotionDissolve = (x: number, y: number, s: number) => ({
+  dur: 780, ms: 520, count: 18, z: 5, box: [x + s * .05, y + s * .15, s * .9, s * .7] as const,
+  colour: ['rgb(230 247 253)', 'rgb(149 210 235)'],
+  size: s * .05, minSize: 2, sizeJitter: [.6, 1], lifeJitter: [.8, .4],
+  rise: s, spread: s * .6, lag: .3, glow: 2, glowColour: 'rgb(149 210 235 / .9)',
+  startTransform: 'none', endScale: 1,
+  dissolve: [{ transform: 'scale(1)', opacity: 1 }, { transform: 'scale(1.2)', opacity: 0 }],
+});
+
+// takeControl.ts, fxKit.ts. Use the flag as the actor.
+const flagDissolve = (x: number, y: number, w: number, h: number, pole: number, mine: boolean, phone: boolean) => ({
+  dur: 1215, ms: 900, count: phone ? 26 : 40, z: 9, box: [x, y, w * .9, h * .45] as const,
+  colour: mine ? 'rgba(160,215,255,.95)' : 'rgba(255,170,150,.95)',
+  size: Math.max(3, pole / 14), rise: h * .45 * 1.4, lag: .35,
+  dissolve: [{ opacity: 1, filter: 'brightness(1)' }, { opacity: .9, filter: 'brightness(1.8)', offset: .3 },
+    { opacity: 0, filter: 'brightness(2.5) blur(2px)' }],
+});
+
+// continueResolution.ts. Play after the 1300 ms row light. Drop the gold layer
+// at 560 ms into the flicker, and wait 220 ms after it for the next match.
+const k = 560 / 920;
+const continueResolution = (pad: number) => ({
+  dur: 920, times: 3, colour: 'rgba(150,160,180,.5)',
+  grey: { brightness: .75 },
+  style: { borderRadius: `${pad}px`, boxShadow: `0 0 0 ${Math.max(1, pad * .4)}px rgba(190,200,220,.9)` },
+  frames: [0, 1, .15, 1, .2, 1, .85, 0].map((opacity, i) => ({
+    opacity, offset: [0, .12*k, .28*k, .45*k, .62*k, .8*k, k, 1][i],
+  })),
+});
+
+// crewTrack.ts. Register --v as a numeric CSS property and point selector at
+// the marker on the actor clone. The number bump, glow and badge follow the hop.
+const crewTrack = (from: number, to: number, dotHeight: number) => ({
+  from, to, dur: 360 + 120 * (Math.max(1, to - from) - 1), property: '--v' as const,
+  marker: { selector: '.track__bar i', lift: dotHeight * .45 },
+});
+```
+
 ### Combat
 
 Source `a69c8dac`, `src/ui/motion/effects/phaser.ts`, `attack.ts`, `destroy.ts`, `missionComplete.ts` and `takeControl.ts`.

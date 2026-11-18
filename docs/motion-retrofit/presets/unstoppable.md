@@ -28,6 +28,23 @@ export const unstoppable = {
 } as const;
 ```
 
+## Signals
+
+The threat buff at `52c19f6` uses `src/ui/board/threatBuffs.tsx` for scheduling,
+`src/ui/cards/threatOverlayData.ts` for duration and `src/ui/theme/polish.css`
+for its tint. The game supplies the counter and floating labels.
+
+```ts
+const threatBuff = {
+  dur: 1400, times: 2, colour: 'rgb(255 96 32 / .34)',
+  style: { borderRadius: '.5em' },
+  frames: [
+    { offset: 0, opacity: 0 }, { offset: .15, opacity: 1 }, { offset: .35, opacity: .25 },
+    { offset: .55, opacity: 1 }, { offset: 1, opacity: 0 },
+  ].map((frame) => ({ ...frame, easing: 'ease-out' })),
+};
+```
+
 ### Hit flash
 
 Source `52c19f6`, `src/ui/board/TargetArrow.tsx`, `src/ui/theme/motion.css`, `src/ui/play/arrow.ts`. Use `ring-pulse` at the target centre with a square side of `Math.max(48, Math.min(width,height)*.9)` px. Set `width: 0`, `dur: 420`, `count: 1`, `easing: 'ease-out'`, and:

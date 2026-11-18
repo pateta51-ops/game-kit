@@ -52,6 +52,10 @@ const CASES: [string, Record<string, unknown>, (o: Out) => void][] = [
   ['fade-in', { scale: [2, 2] }, (o) => expect(o.style?.scale).toBe('2')],
   ['move', { to: 'b', scale: 2 }, (o) => expect([o.style?.left, o.style?.translate, o.style?.scale]).toEqual(['330px', '', ''])],
   ['move', { to: 'b', ease: 'out' }, (o) => expect(o.style?.left).toBe('330px')],
+  ['stamp', { text: 'Ready', tilt: -8 }, (o) => expect(o.text).toBe('Ready')],
+  ['motes', { count: 4, dissolve: [{ opacity: 1 }, { opacity: 0 }] }, (o) => expect(o.style?.opacity).toBe('0')],
+  ['flicker', { times: 3, loop: true, period: 120 }, (o) => expect(o.anims).toBe(0)],
+  ['bar-fill', { from: 1, to: 4, pin: { delta: [40, 10] } }, (o) => expect([o.text, o.style?.translate]).toEqual(['4', '40px 10px'])],
 ];
 
 describe.skipIf(!HAVE && !process.env['CI'])('effect library in a browser', () => {
@@ -142,7 +146,8 @@ describe.skipIf(!HAVE && !process.env['CI'])('effect library in a browser', () =
 
   it('a game registers its own effect beside the built-in verbs', async () => {
     const r = await page.evaluate(() => (window as unknown as { fxTest: Api }).fxTest.own());
-    expect(r.names).toHaveLength(32);
+    expect(r.names).toEqual(expect.arrayContaining(['stamp', 'motes', 'flicker', 'bar-fill']));
+    expect(r.names).toHaveLength(36);
     expect(r.names).toEqual(expect.arrayContaining(['spin', 'tap', 'untap']));
     expect(r.names).toEqual(expect.arrayContaining(['arc-move', 'shake-group', 'unroll', 'multi-stop-path', 'trail', 'warp-transfer', 'radial-streaks', 'collapse-jump', 'column-beam', 'rotating-beam', 'projectile', 'dissolve', 'shatter', 'shimmer', 'shield-bubble', 'ring-pulse']));
     expect(r.names).toContain('pop');

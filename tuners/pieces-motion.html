@@ -16772,7 +16772,7 @@ var PIECES = (() => {
       miss,
       sourceLight,
       headFadeMs = 80,
-      flicker = [
+      flicker: flicker2 = [
         { at: 106, width: 0.8, opacity: 0.85 },
         { at: 190, width: 1.15, opacity: 1 },
         { at: 274, width: 0.85, opacity: 0.9 },
@@ -16805,7 +16805,7 @@ var PIECES = (() => {
     stage.play(beam, [
       { offset: 0, transform: rot(0), opacity: 1, clipPath },
       { offset: at(travel2), transform: rot(1), opacity: 1, clipPath, easing: miss ? "ease-in" : "linear" },
-      ...!miss ? flicker.filter(({ at: t }) => t > 0 && travel2 + t < ms).map((f) => ({
+      ...!miss ? flicker2.filter(({ at: t }) => t > 0 && travel2 + t < ms).map((f) => ({
         offset: at(travel2 + f.at),
         transform: rot(1, f.width),
         opacity: f.opacity,
@@ -18247,6 +18247,338 @@ var PIECES = (() => {
     shipLayer(ctx, g, s, (u) => pose(u, g, s, p), t);
   };
 
+  // components/effect-library/signal-stamp.ts
+  var stamp = ({ el, call }) => {
+    const { text = "", tilt = 0, image, ms, ease: ease2 = "ease-in", scales = [2.2, 0.95, 1], pressOffset = 0.8, style, frames: frames2, press, ring } = call.step;
+    const tag = el.ownerDocument.createElement(image === void 0 ? "div" : "img");
+    if (tag instanceof HTMLImageElement && image !== void 0) {
+      tag.src = image;
+      tag.alt = text;
+    } else tag.textContent = text;
+    Object.assign(tag.style, {
+      position: "absolute",
+      left: "8%",
+      top: "42%",
+      width: "84%",
+      height: "16%",
+      display: "grid",
+      placeItems: "center",
+      boxSizing: "border-box",
+      border: "2px solid currentColor",
+      background: "#222",
+      color: "#fff",
+      font: "700 1rem system-ui",
+      pointerEvents: "none"
+    }, style);
+    el.append(tag);
+    const rot = `rotate(${String(tilt)}deg)`;
+    const keys = frames2 ?? [
+      { transform: `${rot} scale(${String(scales[0])})`, opacity: 0 },
+      { transform: `${rot} scale(${String(scales[1])})`, opacity: 1, offset: pressOffset },
+      { transform: `${rot} scale(${String(scales[2])})`, opacity: 1 }
+    ];
+    const end = keys.at(-1);
+    const scale = call.dur / Number(call.step["dur"] ?? call.dur);
+    const animation = tag.animate([...keys], { duration: ms === void 0 ? call.dur : ms * scale, easing: ease2, fill: "both" });
+    const accent = (node, part, composite) => node.animate([...part.frames], { delay: part.delay * scale, duration: part.ms * scale, fill: "none", easing: part.ease ?? "linear", composite });
+    const give = press && accent(el, press, "add");
+    let halo;
+    let glint;
+    if (ring) {
+      halo = el.ownerDocument.createElement("div");
+      Object.assign(halo.style, {
+        zIndex: tag.style.zIndex,
+        position: "absolute",
+        left: tag.style.left,
+        top: tag.style.top,
+        width: tag.style.width,
+        height: tag.style.height,
+        boxSizing: "border-box",
+        borderRadius: "50%",
+        opacity: "0"
+      }, ring.style);
+      tag.before(halo);
+      glint = accent(halo, ring, "replace");
+    }
+    return () => {
+      if (end?.transform !== void 0) tag.style.transform = String(end.transform);
+      if (end?.opacity !== void 0) tag.style.opacity = String(end.opacity);
+      if (end?.filter !== void 0) tag.style.filter = String(end.filter);
+      animation.cancel();
+      give?.cancel();
+      glint?.cancel();
+      halo?.remove();
+      if (tag.style.opacity === "0") tag.remove();
+    };
+  };
+
+  // components/effect-library/signal-motes.ts
+  var rand2 = (i, k) => {
+    const j = Math.sin(i * 12.9898 + k * 78.233) * 43758.5453;
+    return j - Math.floor(j);
+  };
+  var motes = ({ el, call, animate }) => {
+    const { box, z } = call.step;
+    const [left, top, w, h2] = box ?? call.from;
+    const {
+      count = 16,
+      colour = "#fff",
+      size = 6,
+      rise = h2,
+      spread: spread2 = w,
+      lag = 0.35,
+      radius = "50%",
+      glow: glow2 = 1.5,
+      glowColour,
+      ms,
+      dissolve: dissolve2,
+      minSize = 0,
+      sizeJitter = [0.6, 0.8],
+      lifeJitter = [0.6, 0.4],
+      riseFactor = [0.4, 0.6],
+      peakOffset = 0.15,
+      startTransform = "translate(0,0) scale(1)",
+      endScale = 0.3,
+      ease: ease2 = "ease-out",
+      dissolveEase = "ease-in"
+    } = call.step;
+    const duration = ms === void 0 ? call.dur / (1 + lag) : call.dur * ms / Number(call.step["dur"]);
+    const parts = Array.from({ length: count }, (_, i) => {
+      const s = Math.max(minSize, size * (sizeJitter[0] + rand2(i, 7) * sizeJitter[1]));
+      const tint = typeof colour === "string" ? colour : colour[Math.floor(rand2(i, 14) * colour.length)] ?? "#fff";
+      const d = el.ownerDocument.createElement("div");
+      Object.assign(d.style, {
+        position: "absolute",
+        left: `${String(left + rand2(i, 8) * w - s / 2)}px`,
+        top: `${String(top + rand2(i, 9) * h2 - s / 2)}px`,
+        zIndex: z === void 0 ? "" : String(z),
+        width: `${String(s)}px`,
+        height: `${String(s)}px`,
+        borderRadius: radius,
+        background: tint,
+        boxShadow: `0 0 ${String(s * glow2)}px ${glowColour ?? tint}`
+      });
+      el.after(d);
+      const dx = (rand2(i, 10) - 0.5) * spread2;
+      const dy = -rise * (riseFactor[0] + rand2(i, 11) * riseFactor[1]);
+      const animation = d.animate([
+        { opacity: 0, transform: startTransform },
+        { opacity: 1, offset: peakOffset },
+        { opacity: 0, transform: `translate(${String(dx)}px, ${String(dy)}px) scale(${String(endScale)})` }
+      ], { duration: duration * (lifeJitter[0] + rand2(i, 12) * lifeJitter[1]), easing: ease2, delay: rand2(i, 13) * duration * lag, fill: "both" });
+      return () => {
+        animation.cancel();
+        d.remove();
+      };
+    });
+    if (dissolve2) animate([...dissolve2], { opacity: "0" }, { duration, easing: dissolveEase });
+    return () => {
+      parts.forEach((finish2) => {
+        finish2();
+      });
+    };
+  };
+
+  // components/effect-library/signal-flicker.ts
+  function buzzFrames(b, duration) {
+    const n = Math.max(1, Math.ceil(duration / (b.sampleMs ?? 4)));
+    const [start, end] = b.window;
+    const [jx, jy] = b.jitter ?? [0, 0];
+    const [xm, ym] = b.jitterMs ?? [9, 11];
+    return Array.from({ length: n + 1 }, (_, i) => {
+      const t = duration * i / n;
+      const local = b.period ? t % b.period : t;
+      const k = seg(local, start, end);
+      const amount = b.power === void 0 ? pulse(local, start, end, b.peak) : Math.sin(Math.PI * k) ** b.power;
+      const since = t + (b.timeOffset ?? 0);
+      const bright = b.brightness[noise(since / b.noiseMs, b.power === void 0 ? 2 : 5) > (b.threshold ?? 0) ? 1 : 0];
+      return {
+        filter: `brightness(${String(lerp(1, bright, b.power === void 0 ? amount : Number(k > 0 && k < 1)))}) saturate(${String(b.saturation ?? 1)}) hue-rotate(${String(amount * (b.hue ?? 0))}deg)`,
+        transform: `translate(${String(noise(since / xm, 1) * amount * jx)}px,${String(noise(since / ym, 3) * amount * jy)}px)`
+      };
+    });
+  }
+  var flicker = ({ el, call, animate }) => {
+    const { times = 2, colour = "rgb(255 255 255 / .25)", loop, period, style, frames: frames2, buzz, grey, ease: ease2 = "linear" } = call.step;
+    const duration = period ?? Number(call.step["dur"] ?? call.dur);
+    const options = {
+      duration: period === void 0 ? call.dur : call.dur * period / Number(call.step["dur"]),
+      easing: ease2,
+      iterations: loop ? Infinity : 1,
+      fill: "both"
+    };
+    if (buzz) {
+      animate(buzzFrames(buzz, duration), void 0, options);
+      return void 0;
+    }
+    const veil = el.ownerDocument.createElement("div");
+    Object.assign(veil.style, { position: "absolute", inset: "0", background: colour, pointerEvents: "none" }, style);
+    el.append(veil);
+    const keys = frames2 ?? Array.from({ length: 2 * Math.max(0, Math.floor(times)) + 1 }, (_, i) => ({ opacity: i % 2 }));
+    const animation = veil.animate([...keys], options);
+    const filter = grey && el.animate(keys.map(({ opacity, ...timing }) => ({
+      ...timing,
+      filter: `grayscale(${String(Number(opacity ?? 1) * (grey.grayscale ?? 1))}) brightness(${String(lerp(1, grey.brightness ?? 1, Number(opacity ?? 1)))})`
+    })), options);
+    return () => {
+      animation.cancel();
+      filter?.cancel();
+      veil.remove();
+    };
+  };
+
+  // components/effect-library/signal-bar.ts
+  function clock({ el, call }, draw) {
+    const ms = Number(call.step["dur"] ?? call.dur);
+    const timeline = el.animate([{}, {}], { duration: call.dur, fill: "both" });
+    let frame = 0;
+    const update = () => {
+      const t = typeof timeline.currentTime === "number" ? timeline.currentTime : 0;
+      draw(call.dur > 0 ? t * ms / call.dur : ms);
+      frame = requestAnimationFrame(update);
+    };
+    update();
+    return () => {
+      cancelAnimationFrame(frame);
+      timeline.cancel();
+    };
+  }
+  function pipFill(fx, p, from, to, colour) {
+    const { el, call } = fx;
+    const canvas = el.ownerDocument.createElement("canvas");
+    const margin = Math.ceil((p.flash?.blur ?? 0) * 2 + (p.flash?.width ?? 0));
+    const dpr = window.devicePixelRatio || 1;
+    const w = call.from[2] + 2 * margin;
+    const h2 = call.from[3] + 2 * margin;
+    canvas.width = Math.ceil(w * dpr);
+    canvas.height = Math.ceil(h2 * dpr);
+    canvas.style.cssText = `position:absolute;left:${String(-margin)}px;top:${String(-margin)}px;width:${String(w)}px;height:${String(h2)}px;`;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return () => void 0;
+    el.append(canvas);
+    ctx.setTransform(dpr, 0, 0, dpr, margin * dpr, margin * dpr);
+    const draw = (t) => {
+      ctx.clearRect(-margin, -margin, w, h2);
+      if (p.background) {
+        ctx.fillStyle = p.background;
+        ctx.fillRect(0, 0, call.from[2], call.from[3]);
+      }
+      p.boxes.forEach(([x, y, w2, h3], i) => {
+        const a = (i - Math.min(from, to)) * p.gap;
+        const sweeping = i >= Math.min(from, to) && i < Math.max(from, to);
+        const sweep = ease.out(seg(t, a, a + p.sweep));
+        const k = sweeping ? to < from ? 1 - sweep : sweep : Number(i < to);
+        const f = p.flash;
+        const fl = sweeping && f ? pulse(t, a + f.start, a + f.end, f.peak) : 0;
+        ctx.save();
+        ctx.beginPath();
+        ctx.roundRect(x, y, w2, h3, p.radius ?? 0);
+        ctx.clip();
+        ctx.fillStyle = p.empty;
+        ctx.fillRect(x, y, w2, h3);
+        if (k > 0) {
+          ctx.fillStyle = colour;
+          if (sweeping && p.edge && p.edgeColour) {
+            const g = ctx.createLinearGradient(x, 0, x + w2, 0);
+            g.addColorStop(0, colour);
+            g.addColorStop(clamp(k - p.edge[0]), colour);
+            g.addColorStop(clamp(k - p.edge[1]), p.edgeColour);
+            g.addColorStop(k, "transparent");
+            ctx.fillStyle = g;
+          }
+          ctx.fillRect(x, y, w2 * k, h3);
+        }
+        if (f && fl > 0) {
+          ctx.globalCompositeOperation = "lighter";
+          ctx.globalAlpha = fl;
+          ctx.fillStyle = f.colour;
+          ctx.fillRect(x, y, w2, h3);
+        }
+        ctx.restore();
+        if (f && fl > 0) {
+          ctx.save();
+          ctx.globalCompositeOperation = "lighter";
+          ctx.globalAlpha = fl;
+          ctx.shadowColor = f.outline;
+          ctx.shadowBlur = f.blur * dpr * fl;
+          ctx.strokeStyle = f.outline;
+          ctx.lineWidth = f.width * fl;
+          ctx.stroke();
+          ctx.restore();
+        }
+      });
+    };
+    const stop = clock(fx, draw);
+    return () => {
+      stop();
+      draw(Infinity);
+    };
+  }
+  function pinFill(fx, p, from, to, colour) {
+    const { el, call } = fx;
+    const [dx, dy] = p.delta;
+    const [a, b] = p.window ?? [0, Number(call.step["dur"])];
+    const glow2 = el.ownerDocument.createElement("div");
+    const ring = el.ownerDocument.createElement("div");
+    for (const node of [glow2, ring]) node.style.cssText = "position:absolute;left:50%;top:50%;translate:-50% -50%;border-radius:50%;pointer-events:none;";
+    if (p.glow) {
+      const diameter = `${String(p.glow.radius * 2)}px`;
+      Object.assign(glow2.style, { width: diameter, height: diameter, background: p.glow.gradient ?? `radial-gradient(${colour},transparent 70%)`, mixBlendMode: "plus-lighter" });
+    }
+    if (p.ring) ring.style.border = `${String(p.ring.width)}px solid ${p.ring.colour}`;
+    const text = el.ownerDocument.createTextNode("");
+    el.replaceChildren(glow2, ring, text);
+    const at = (x, y) => `${String(x)}px ${String(y)}px`;
+    const stop = clock(fx, (t) => {
+      const k = ease.inOut(seg(t, a, b));
+      text.data = String(t >= (a + b) / 2 ? to : from);
+      el.style.translate = at(dx * k, dy * k - Math.sin(k * Math.PI) * (p.lift ?? call.from[3] * (p.liftFactor ?? 0.25)));
+      if (p.glow) glow2.style.opacity = String(p.glow.alpha * pulse(t, a, b + p.glow.tail, p.glow.peak));
+      if (p.ring) {
+        const hr = seg(t, b + p.ring.start, b + p.ring.end);
+        ring.style.opacity = String(hr > 0 && hr < 1 ? 1 - hr : 0);
+        ring.style.width = ring.style.height = `${String(2 * lerp(p.ring.from, p.ring.to, ease.out(hr)))}px`;
+      }
+    });
+    return () => {
+      stop();
+      glow2.remove();
+      ring.remove();
+      text.data = String(to);
+      el.style.translate = at(dx, dy);
+    };
+  }
+  var barFill = (fx) => {
+    const { call, el } = fx;
+    const { from = 0, to = 1, colour = "currentColor", ease: ease2 = "ease-out", property, marker, pips, pin } = call.step;
+    if (pin) return pinFill(fx, pin, from, to, colour);
+    if (pips) return pipFill(fx, pips, from, to, colour);
+    const fill = property ? el : el.ownerDocument.createElement("div");
+    const key = property ?? "width";
+    const value = (n) => property ? String(n) : `${String(n * 100)}%`;
+    if (!property) {
+      fill.style.cssText = "position:absolute;left:0;top:0;height:100%;border-radius:inherit";
+      fill.style.background = colour;
+      el.append(fill);
+    }
+    const options = { duration: call.dur, easing: ease2, fill: "both" };
+    const sweep = fill.animate([{ [key]: value(from) }, { [key]: value(to) }], options);
+    const base = marker?.base ?? "translate(-50%, -50%)";
+    const [start, peak, dip, end] = marker?.scales ?? [1, 1.15, 0.94, 1];
+    const [up, down] = marker?.offsets ?? [0.45, 0.82];
+    const hop = marker && el.querySelector(marker.selector)?.animate([
+      { transform: `${base} translateY(0px) scale(${String(start)})` },
+      { transform: `${base} translateY(${String(-marker.lift)}px) scale(${String(peak)})`, offset: up },
+      { transform: `${base} translateY(0px) scale(${String(dip)})`, offset: down },
+      { transform: `${base} translateY(0px) scale(${String(end)})` }
+    ], { ...options, easing: marker.ease ?? ease2 });
+    return () => {
+      fill.style.setProperty(key, value(to));
+      sweep.cancel();
+      hop?.cancel();
+    };
+  };
+
   // components/effect-library/rotation.ts
   var rotate = ({ call, el, animate }) => {
     const { angle = 90, turns = 1, direction, pivot, ease: ease2, overshoot, scaleFrom, endless, period } = call.step;
@@ -18502,6 +18834,10 @@ var PIECES = (() => {
       })), { duration: Math.max(call.dur, 1) }));
       return () => animations.forEach((a) => a.cancel());
     });
+    registerEffect(verbs, "stamp", stamp);
+    registerEffect(verbs, "motes", motes);
+    registerEffect(verbs, "flicker", flicker);
+    registerEffect(verbs, "bar-fill", barFill);
     return createEffectLayer(o);
   }
 

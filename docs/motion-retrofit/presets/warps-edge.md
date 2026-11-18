@@ -82,6 +82,67 @@ Choose the curved beam control point halfway between the endpoints horizontally 
 
 The game assembles the departure, prompt hold, banner and arrival around the marker and streaks. Board and backdrop changes, flash and ring, banner, card flip and game-specific camera, marker and target selection stay in the game. Pulse rings, impact, damage and readout stay separate from its flight ribbon.
 
+## Signals
+
+Sources under `src/ui/fx/` at `449af55`. The frame and other stun layers use their own source timings.
+
+```ts
+// power/frame.ts. Place the actor over the 54u-high top bar. The stamp is
+// multiplied by the frame's opening/closing envelope.
+const powerName = (name: string, u: number, ms: number) => {
+  const seg = (t: number, a: number, b: number) => Math.min(1, Math.max(0, (t - a) / (b - a)));
+  const n = Math.ceil(ms / 4);
+  return {
+    dur: ms, ease: 'linear', text: name.toUpperCase(),
+    style: { inset: '0', width: '100%', height: '100%', border: 'none', background: 'transparent',
+      font: `800 ${26 * u}px "Roboto Mono",monospace`, letterSpacing: '.3em', color: '#ffe600',
+      textShadow: `0 0 ${14 * u}px rgba(255,230,0,.8),0 2px 3px #000` },
+    frames: Array.from({ length: n + 1 }, (_, i) => {
+      const t = ms * i / n;
+      const k = seg(t, ms - 260, ms);
+      const closing = k < .5 ? 4 * k ** 3 : 1 - (-2 * k + 2) ** 3 / 2;
+      const frame = (1 - (1 - seg(t, 0, 260)) ** 3) * (1 - closing);
+      return { opacity: seg(t, 80, 260) * (1 - seg(t, 900, 1100)) * frame };
+    }),
+  };
+};
+
+// idle.ts, timing.ts. Play for the duration of the stunned view.
+// For continuously evolving noise, set the internal period and omit loop.
+const idle = (dur: number, u: number) => ({
+  dur, buzz: { period: 1700, window: [600, 740], peak: .2, brightness: [.79, 1.35],
+    noiseMs: 18, saturation: .8, jitter: [.8 * u, 0] },
+});
+
+// looks.ts, timing.ts. Starts at 430 ms alongside the electrical arcs.
+const stun = (u: number) => ({
+  dur: 530, buzz: { window: [0, 530], power: .6, brightness: [.55, 1.9], threshold: .2,
+    noiseMs: 22, hue: 10, jitter: [2.5 * u, 2 * u], jitterMs: [9, 11], timeOffset: 430 },
+});
+
+// looks.ts, timing.ts. Use measured pip boxes local to the actor. Resolve
+// empty/lit/background from the skin, with #fe1a89, #07afea, #63bd04 as
+// the lasers, maneuvers and energy fallbacks for lit. Start at the first sweep.
+const fill = (from: number, to: number, boxes: readonly (readonly [number, number, number, number])[],
+    radius: number, empty: string, lit: string, background: string, rgb: string, gap = 70) => {
+  const u = (boxes[0]?.[3] ?? 12) / 12;
+  return {
+    from, to, dur: (Math.max(1, to - from) - 1) * gap + 323, colour: lit,
+    pips: { boxes, empty, background, radius, gap, sweep: 91, edge: [.12, .02], edgeColour: '#fff',
+      flash: { start: 63, end: 323, peak: .15, colour: 'rgba(255,255,255,.45)',
+        outline: `rgba(${rgb},.9)`, blur: 10 * u, width: 3 * u } },
+  };
+};
+
+// shield.ts, shieldLook.ts, timing.ts. The actor box is the pin centred on the
+// starting cell. Hide the destination pin while the stand-in plays.
+const shieldPin = (from: number, to: number, delta: readonly [number, number]) => ({
+  from, to, dur: 770, colour: to > from ? 'rgb(99,189,4)' : 'rgb(120,220,255)',
+  pin: { delta, window: [0, 420], glow: { radius: 46, alpha: .9, tail: 300, peak: .6 },
+    ring: to < from ? { start: -100, end: 350, from: 14, to: 40, colour: 'rgb(255,60,60)', width: 3 } : undefined },
+});
+```
+
 ### Combat
 
 Source `449af55`, `src/ui/fx/attack.ts`, `attackLook.ts`, `attackPlan.ts`, `timing.ts`, `blast.ts`, `shield.ts`, `shieldLook.ts`, and `power/{blocks,backlash,pulsePlan,sigPlan}.ts`.

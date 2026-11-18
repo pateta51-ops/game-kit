@@ -46,6 +46,11 @@
   .beam-panel .flight-target { left: 73%; width: 6%; border-radius: 50% }
   .beam-panel .card { height: 42%; width: 14%; top: 35%; left: 43% }
   .beam-panel .radial-origin { position: absolute; inset: 49% 49%; }
+  .signal-panel { display: none }
+  .signals-only main > :not(.signal-panel) { display: none }
+  .signals-only .signal-panel { display: block }
+  .signal-track { left: 20%; top: 48%; width: 60%; height: 7%; background: #474453; border-radius: 999px }
+  .signal-mark { color: #ebe9f2; background: #55486d; border-color: #242230 }
   .rotation-panel { display: none }
   .rotations-only main > :not(.rotation-panel) { display: none }
   .rotations-only .rotation-panel { display: block }
@@ -57,6 +62,7 @@
   .combat-panel .shot-source { left: 18%; top: 62% }
   .combat-panel .shot-target { left: 70%; top: 43% }
 </style>
+<script>if (new URLSearchParams(location.search).has('signals')) document.documentElement.classList.add('signals-only')</script>
 <script>if (new URLSearchParams(location.search).has('flights')) document.documentElement.classList.add('flights-only');if (new URLSearchParams(location.search).has('beams')) document.documentElement.classList.add('beams-only');if (new URLSearchParams(location.search).has('combat')) document.documentElement.classList.add('combat-only')</script>
 <script>if (new URLSearchParams(location.search).has('rotations')) document.documentElement.classList.add('rotations-only')</script>
 <header><h1>Effect library motion lab</h1><button type="button">Replay</button></header>
@@ -90,6 +96,10 @@
     <div id="via-rest" class="flight-target" style="left:45%;top:25%;width:15%"></div>
     <div id="via-target" class="flight-target" style="left:77%;top:58%;width:9%"></div>
   </section>
+  <section class="field signal-panel"><h2>Stamp</h2><div id="signal-stamp" class="card sample"></div></section>
+  <section class="field signal-panel"><h2>Motes</h2><div id="signal-motes" class="lamp signal-mark sample">✦</div></section>
+  <section class="field signal-panel"><h2>Flicker</h2><div id="signal-flicker" class="card signal-mark sample"></div></section>
+  <section class="field signal-panel"><h2>Bar fill</h2><div id="signal-bar" class="signal-track sample"></div></section>
   <section class="combat-panel"><h2>Projectile</h2><div id="shot-source" class="card shot-source"></div><div id="shot-target" class="card shot-target"></div></section>
   <section class="combat-panel"><h2>Dissolve</h2><div id="dissolve" class="card sample">Sample</div></section>
   <section class="combat-panel"><h2>Shatter</h2><div id="shatter" class="card sample">Sample</div></section>
@@ -100,6 +110,7 @@
 <script type="module" src="./lab.ts"></script>
 <script type="module" src="./flights.ts"></script>
 <script type="module" src="./beams.ts"></script>
+<script type="module" src="./signals.ts"></script>
 <script type="module" src="./rotations.ts"></script>
 <script type="module" src="./combat.ts"></script>
 </html>

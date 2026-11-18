@@ -14,6 +14,10 @@ import { curvedBeam, radialStreaks } from './beam-canvas.ts';
 import { collapseJump } from './collapse.ts';
 import { warpTransfer } from './transfer.ts';
 import { spiralTransfer } from './spiral.ts';
+import { stamp } from './signal-stamp.ts';
+import { motes } from './signal-motes.ts';
+import { flicker } from './signal-flicker.ts';
+import { barFill } from './signal-bar.ts';
 import { rotate } from './rotation.ts';
 
 export type { ArcMoveSettings } from './flight-effects.ts';
@@ -265,5 +269,9 @@ export function registerEffects(verbs: VerbRegistry<EffectCtx>, o?: LayerOptions
     })), { duration: Math.max(call.dur, 1) }));
     return () => animations.forEach((a) => a.cancel());
   });
+  registerEffect(verbs, 'stamp', stamp);
+  registerEffect(verbs, 'motes', motes);
+  registerEffect(verbs, 'flicker', flicker);
+  registerEffect(verbs, 'bar-fill', barFill);
   return createEffectLayer(o);
 }
