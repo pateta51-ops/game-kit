@@ -16,6 +16,7 @@ export interface Answer {
   option: number;
   reason: string;
   usage: Usage;
+  stop_reason?: string | null;
 }
 export type Chooser = (ask: Ask) => Promise<Answer>;
 
@@ -31,7 +32,7 @@ export const PRICES: Record<string, Price> = {
   'claude-opus-5-5': { input: 4, cacheWrite5m: 5, cacheWrite1h: 8, cacheRead: 0.2, output: 20 },
   'claude-sonnet-5-5': { input: 2, cacheWrite5m: 2.5, cacheWrite1h: 4, cacheRead: 0.1, output: 10 },
 };
-export const MAX_TOKENS = 1024;
+export const MAX_TOKENS = 16000;
 
 export function cost(usage: Usage, model: string): number {
   const p = PRICES[model];
@@ -50,11 +51,11 @@ export function cost(usage: Usage, model: string): number {
 }
 
 /** A ceiling for the next call before it is made: every prompt token at the cache-write price plus a full answer. */
-export function worstCost(ask: Ask): number {
+export function worstCost(ask: Ask, maxTokens = MAX_TOKENS): number {
   const p = PRICES[ask.model];
   if (p === undefined) throw new Error(`No price for model ${ask.model}`);
   const chars = ask.system.reduce((n, s) => n + s.length, 0) + ask.prompt.length + 1000;
-  return ((chars / 3) * p.cacheWrite5m + MAX_TOKENS * p.output) / 1_000_000;
+  return ((chars / 3) * p.cacheWrite5m + maxTokens * p.output) / 1_000_000;
 }
 
 const TOOL = {
@@ -75,7 +76,7 @@ const TOOL = {
 
 // The SDK is loaded only when a paid chooser is built, so --dummy and tests never need it. The key is passed
 // explicitly and the SDK's environment fallbacks are cut (authToken null, fixed base URL, no custom headers).
-export async function sdkChooser(apiKey: string): Promise<Chooser> {
+export async function sdkChooser(apiKey: string, maxTokens = MAX_TOKENS): Promise<Chooser> {
   const { default: Anthropic } = await import('@anthropic-ai/sdk');
   const headers = process.env['ANTHROPIC_CUSTOM_HEADERS'];
   delete process.env['ANTHROPIC_CUSTOM_HEADERS'];
@@ -92,7 +93,7 @@ export async function sdkChooser(apiKey: string): Promise<Chooser> {
   } finally {
     if (headers !== undefined) process.env['ANTHROPIC_CUSTOM_HEADERS'] = headers;
   }
-  return makeChooser(client as unknown as Messages);
+  return makeChooser(client as unknown as Messages, maxTokens);
 }
 
 export interface Body {
@@ -102,18 +103,19 @@ export interface Body {
 }
 export interface Reply {
   content: { type: string; input?: unknown }[];
+  stop_reason?: string | null;
   usage: { input_tokens: number; output_tokens: number; cache_creation_input_tokens?: number | null; cache_read_input_tokens?: number | null; cache_creation?: { ephemeral_5m_input_tokens?: number; ephemeral_1h_input_tokens?: number } | null };
 }
 export interface Messages {
   messages: { create(body: Body): Promise<Reply> };
 }
 // tool_choice is always auto: forced tool use (type tool or any) is refused by models that think.
-export function makeChooser(client: Messages): Chooser {
+export function makeChooser(client: Messages, maxTokens = MAX_TOKENS): Chooser {
   return async (ask) => {
     const last = ask.system.length - 1;
     const result = await client.messages.create({
       model: ask.model,
-      max_tokens: MAX_TOKENS,
+      max_tokens: maxTokens,
       system: ask.system.map((text, i) =>
         i === last
           ? { type: 'text' as const, text, cache_control: { type: 'ephemeral' as const } }
@@ -128,6 +130,7 @@ export function makeChooser(client: Messages): Chooser {
     return {
       option: typeof input.option === 'number' ? input.option : Number.NaN,
       reason: typeof input.reason === 'string' ? input.reason : '',
+      stop_reason: result.stop_reason ?? null,
       usage: {
         input_tokens: result.usage.input_tokens,
         output_tokens: result.usage.output_tokens,

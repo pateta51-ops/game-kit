@@ -7,7 +7,7 @@ import { createHash } from 'node:crypto';
 import { appendFileSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
-import { cost, PRICES, sdkChooser, worstCost, type Chooser, type Usage } from './client.ts';
+import { cost, MAX_TOKENS, PRICES, sdkChooser, worstCost, type Chooser, type Usage } from './client.ts';
 import { loadKey } from './key.ts';
 
 export interface GameAdapter {
@@ -27,6 +27,8 @@ export interface PlaytestOptions {
   model?: string;
   maxUsd?: number;
   maxDecisions?: number;
+  /** max_tokens per call (default 16000: thinking models need room before the tool call). */
+  maxTokens?: number;
   dummy?: boolean;
   /** Extra docs added to the system prompt after rulesText(). */
   docs?: string[];
@@ -74,9 +76,10 @@ export async function runPlaytest(adapter: GameAdapter, opts: PlaytestOptions): 
   let decisions = 0;
   let stop: PlaytestResult['stop'] = 'finding';
   let result: PlaytestResult['result'] = null;
+  const maxTokens = opts.maxTokens ?? MAX_TOKENS;
   const choose: Chooser | null = opts.dummy
     ? null
-    : (opts.client ?? (await sdkChooser(loadKey(adapter.name, opts.env ?? '.env.local'))));
+    : (opts.client ?? (await sdkChooser(loadKey(adapter.name, opts.env ?? '.env.local'), maxTokens)));
   const attempt = <T>(what: string, f: () => T): T | undefined => {
     try {
       return f();
@@ -123,7 +126,7 @@ export async function runPlaytest(adapter: GameAdapter, opts: PlaytestOptions): 
         for (let tries = 0; ; tries++) {
           const prompt = `${recent.length ? `Your last decisions:\n${recent.join('\n')}\n\n` : ''}Current view:\n${view}\n\nOptions:\n${options.map((o, i) => `${i}. ${o}`).join('\n')}${error}`;
           const ask = { model, system, prompt };
-          const worst = worstCost(ask);
+          const worst = worstCost(ask, maxTokens);
           if (decisions === 0 && tries === 0) {
             const say = opts.log ?? console.log;
             say(`Cost estimate: up to $${worst.toFixed(4)} per decision (${model}), cap $${maxUsd}`);
@@ -146,7 +149,7 @@ export async function runPlaytest(adapter: GameAdapter, opts: PlaytestOptions): 
           reason = a.reason;
           if (Number.isInteger(choice) && choice >= 0 && choice < options.length) break;
           const none = Number.isNaN(choice);
-          findings.push(none ? `step ${decisions}: reply had no choose tool call` : `step ${decisions}: invalid option ${String(choice)} of ${options.length}`);
+          findings.push(none ? `step ${decisions}: ${a.stop_reason === 'max_tokens' ? `reply cut off at max_tokens (${maxTokens}) before a choose tool call` : 'reply had no choose tool call'}` : `step ${decisions}: invalid option ${String(choice)} of ${options.length}`);
           if (tries >= 1) {
             appendFileSync(log, JSON.stringify({ step: decisions, view: short(view), options, choice, reason, usage, cost: paid }) + '\n');
             break play;
@@ -201,7 +204,7 @@ export async function main(argv: string[], log: (s: string) => void = console.lo
   }
   const path = flags.get('adapter');
   if (path === undefined) return usage(log);
-  for (const k of ['max-usd', 'max-decisions', 'runs']) {
+  for (const k of ['max-usd', 'max-decisions', 'runs', 'max-tokens']) {
     const v = flags.get(k);
     if (v !== undefined && !(Number.isFinite(Number(v)) && Number(v) > 0)) return usage(log);
   }
@@ -213,7 +216,7 @@ export async function main(argv: string[], log: (s: string) => void = console.lo
   let left = Number(flags.get('max-usd') ?? 5);
   let code = 0;
   const g = (k: string) => flags.get(k);
-  const client = flags.has('dummy') ? undefined : await sdkChooser(loadKey(adapter.name, g('env') ?? '.env.local'));
+  const client = flags.has('dummy') ? undefined : await sdkChooser(loadKey(adapter.name, g('env') ?? '.env.local'), g('max-tokens') === undefined ? undefined : Number(g('max-tokens')));
   for (let r = 0; r < runs; r++) {
     const o: PlaytestOptions = { seed: runs > 1 ? `${seed}-${r + 1}` : seed, maxUsd: left, dummy: flags.has('dummy') };
     for (const [k, f] of [['difficulty', 'difficulty'], ['scenario', 'scenario'], ['model', 'model'], ['env', 'env'], ['out', 'out']] as const) {
@@ -221,6 +224,7 @@ export async function main(argv: string[], log: (s: string) => void = console.lo
       if (v !== undefined) o[k] = v;
     }
     if (g('max-decisions') !== undefined) o.maxDecisions = Number(g('max-decisions'));
+    if (g('max-tokens') !== undefined) o.maxTokens = Number(g('max-tokens'));
     if (g('docs') !== undefined) o.docs = g('docs')!.split(',');
     if (client !== undefined) o.client = client;
     o.log = log;
