@@ -54,6 +54,10 @@ legend { font: 700 12px var(--display); text-transform: uppercase; letter-spacin
 .ctl :is(select, input[type=color], input[type=text]) { grid-column: 1 / -1; min-width: 0; box-sizing: border-box; }
 .ctl input[type=checkbox] { grid-column: auto; width: auto; justify-self: end; }
 .code { margin-bottom: 0; }
+.flight-token { box-sizing: border-box; width: 44px; height: 36px; border: 2px solid #ffe3a0; border-radius: 10px; background: #a97938; display: grid; place-items: center; box-shadow: 0 3px 9px #0e1f1b; }
+.flight-token::after { content: ''; width: 0; height: 0; border-block: 7px solid transparent; border-left: 12px solid #fff2c6; }
+.flight-mark { position: absolute; translate: -50% -50%; width: 24px; height: 18px; border: 1px dashed #9aa8a3; border-radius: 50%; box-sizing: border-box; }
+#token-source, .table[data-flight] > .slot, .table[data-flight] > #card { display: none; }
 @media (max-width: 480px) { .table { height: 270px; } }
 /*@kit-css components/effect-library/looks/rise-pulse.css*/
 </style>
@@ -61,10 +65,12 @@ legend { font: 700 12px var(--display); text-transform: uppercase; letter-spacin
 <main class="wrap">
   <header>
     <h1>Effect Library Tuner</h1>
-    <p class="sub">Preview the kit’s DOM effects on a felt table. The page uses effect-library and motion-frame directly. Changing a setting replays the preview.</p>
+    <p class="sub">Preview the kit’s DOM and canvas effects on a felt table. The page uses effect-library and motion-frame directly. Changing a setting replays the preview.</p>
   </header>
   <div class="table" id="table">
     <div class="note" id="note"></div>
+    <div id="flight-marks" aria-hidden="true"></div>
+    <div class="flight-token" id="token-source" aria-hidden="true"></div>
     <div class="slot"></div>
     <div class="slot" id="destination"></div>
     <div id="card" class="card" aria-hidden="true">
@@ -88,14 +94,14 @@ legend { font: 700 12px var(--display); text-transform: uppercase; letter-spacin
   </section>
 </main>
 
-<script type="text/plain" id="effect-source">/*@kit-css components/effect-library/effects.ts*/</script>
 <script>
+//@kit-js components/effect-library/paths.ts as PATHS
 //@kit-js components/effect-library/effects.ts as FX
 //@kit-js components/motion-frame/player.ts as MOTION
 const $ = (id) => document.getElementById(id);
 const table = $('table'), card = $('card');
 const verbs = MOTION.createVerbs();
-const layer = FX.registerEffects(verbs, { parent: table, resolve: (id) => id === 'card' ? card : undefined });
+const layer = FX.registerEffects(verbs, { parent: table, resolve: (id) => id === 'card' ? card : id === 'token' || id === 'token-two' ? $('token-source') : undefined });
 layer.el.style.position = 'absolute';
 
 // The verbs expose their defaults through their keyframes and CSS fallbacks.
@@ -107,9 +113,7 @@ function frames(verb) {
 function fallback(css, token) {
   return css.match(new RegExp('var\\(\\s*' + token + '\\s*,\\s*([^)]*)\\)'))[1];
 }
-// EASE is private to the verb registry. Read its keys from the inlined kit source.
-const easeTable = $('effect-source').textContent.match(/const EASE[^=]*=\s*\{([^}]+)\}/)[1];
-const easingNames = [...easeTable.matchAll(/(?:^|,)\s*['"]?([\w-]+)['"]?\s*:/g)].map(([, name]) => name);
+const easingNames = ['in', 'out', 'in-out', 'linear'];
 const easingProbe = document.createElement('div');
 let defaultEase;
 easingProbe.animate = (_, config) => {
@@ -189,15 +193,158 @@ const options = {
     row('cardW', 'Card width token', 40, 260, 1, 'px', 'Scales the halo around the stand-in card.'),
   ],
 };
+const demo = (key, label, value, min, max, step, unit, help) => {
+  KIT[key] = value;
+  return row(key, label, min, max, step, unit, help + ' The kit has no default.');
+};
+const threeKeyframes = 'arc-move: three keyframes';
+const waypoint = 'arc-move: via';
+const cubicFlight = 'arc-move: cubic';
+const quadraticFlight = 'arc-move: quadratic';
+const multiStop = 'multi-stop-path';
+const sampled = [
+  row('quadraticMs', 'Flight duration', 100, 2400, 1, ' ms', 'Length of the sampled pass. The kit has no default.'),
+];
+const quadraticGroups = [
+  ['Curve and heading', [
+    demo('controlX', 'Control offset across', -58, -160, 160, 1, 'px', 'Moves the curve’s control point left or right of the midpoint.'),
+    demo('controlY', 'Control offset down', 6, -140, 120, 1, 'px', 'Moves the control point up or down from the midpoint.'),
+    demo('blend', 'Easing blend', .85, 0, 1, .01, ' fraction', 'Blends steady progress at 0 into full easing at 1.'),
+    demo('lookAhead', 'Heading look-ahead', .02, .001, .2, .001, ' fraction', 'How far ahead on the curve to sample the heading.'),
+    demo('nose', 'Nose angle', 148, -180, 180, 1, '°', 'Facing angle of the artwork.'),
+  ]],
+  ['Roll and sideways motion', [
+    demo('rollStart', 'Roll starts', .35, 0, 1, .01, ' fraction', 'When the roll begins.'),
+    demo('rollEnd', 'Roll ends', .7, 0, 1, .01, ' fraction', 'When the roll ends.'),
+    demo('side', 'Roll side', 1, -1, 1, 2, '', 'Choose left (−1) or right (1).'),
+    demo('rollAxis', 'Roll axis', 148, -180, 180, 1, '°', 'Angle of the squash axis.'),
+    demo('rollSquash', 'Roll thickness', .15, 0, 1, .01, '×', 'Minimum thickness during the roll.'),
+    demo('reverseBrightness', 'Reverse brightness', .62, 0, 1, .01, '×', 'Brightness of the reversed face.'),
+    demo('juke', 'Sideways offset', 26, 0, 65, 1, 'px', 'Maximum sideways displacement during the roll.'),
+  ]],
+  ['Opacity and exit', [
+    demo('fadeSlope', 'Fade slope', 6, 0, 12, .1, '×', 'Opacity ramp rate when exit fade is off.'),
+    option('useExitScale', 'Use exit scale', 'checkbox', 'Enables the exit size and switches to exit easing.'),
+    demo('exitScale', 'Exit scale', .28, .1, 2, .01, '×', 'Final size when enabled.'),
+    option('useExitFade', 'Use exit fade', 'checkbox', 'Enables a fade at the end in place of the two-sided opacity ramp.'),
+    demo('exitFade', 'Exit fade starts', .85, 0, 1, .01, ' fraction', 'When the optional exit fade begins.'),
+  ]],
+  ['Afterimages', [
+    demo('afterCount', 'Afterimages', 4, 0, 12, 1, '', 'Number of fading actor copies.'),
+    demo('afterSpacing', 'Afterimage spacing', 28, 1, 120, 1, ' ms', 'Time between copies.'),
+    demo('afterOpacity', 'Afterimage opacity', .32, 0, 1, .01, '×', 'Opacity of the nearest copy at full flight opacity.'),
+    demo('afterBrightness', 'Afterimage brightness', .85, 0, 2, .01, '×', 'Brightness used in the copies’ CSS filter.'),
+  ]],
+];
+Object.assign(KIT, {
+  quadraticMs: 650, viaEase: '', staggerMax: -1, staggerUnscaled: false,
+  useExitScale: false, useExitFade: false, pathFlip: false,
+});
+const arcTiming = [
+  demo('arcMs', 'Flight duration', 620, 100, 2400, 1, ' ms', 'Time each token spends in flight.'),
+  demo('stagger', 'Stagger', 110, 0, 500, 1, ' ms', 'Gap between two tokens starting the same arc.'),
+  row('staggerMax', 'Stagger index cap', -1, 8, 1, '', 'None leaves stagger uncapped. This two-token demo has one stagger gap.'),
+  option('staggerUnscaled', 'Keep gap unscaled', 'checkbox', 'Measures the stagger gap before applying the motion scale.'),
+];
+const flightGroups = {
+  [threeKeyframes]: [
+    ['Flight timing', arcTiming],
+    ['Apex', [
+      demo('arcHeight', 'Arc height', 60, 0, 115, 1, 'px', 'Lift above the midpoint.'),
+      demo('arcBank', 'Bank offset', 0, -1, 1, .01, ' fraction', 'Moves the apex sideways by this share of vertical travel.'),
+      demo('arcLean', 'Lean offset', 0, -1, 1, .01, ' fraction', 'Moves the apex vertically by this share of vertical travel.'),
+      demo('apex', 'Apex time', .55, .01, .99, .01, ' fraction', 'When the actor reaches the middle keyframe.'),
+    ]],
+  ],
+  [waypoint]: [
+    ['Flight timing', [
+      demo('viaMs', 'Flight duration', 1710, 100, 2600, 1, ' ms', 'Time for both legs and the waypoint hold.'),
+      ...arcTiming.slice(1),
+      option('viaEase', 'Easing', 'select', 'Progress profile for each leg. Kit default leaves easing to the via effect.'),
+    ]],
+    ['Waypoint', [
+      demo('viaX', 'Waypoint offset across', 0, -85, 85, 1, 'px', 'Horizontal offset from the route midpoint.'),
+      demo('viaY', 'Waypoint offset down', -48, -75, 65, 1, 'px', 'Vertical offset from the route midpoint.'),
+      demo('viaArrival', 'Arrival time', .4, .01, .99, .01, ' fraction', 'When the token reaches the waypoint.'),
+      demo('viaDeparture', 'Departure time', .6, .01, .99, .01, ' fraction', 'When the token leaves the waypoint.'),
+      row('viaWidth', 'Waypoint width', 18, 80, 1, 'px', 'Token width at the hold. The kit falls back to the landing width.'),
+    ]],
+  ],
+  [cubicFlight]: [
+    ['Curve', [
+      demo('cubicMs', 'Flight duration', 700, 100, 2400, 1, ' ms', 'Length of the sampled arrival.'),
+      demo('firstX', 'First control X', .18, -1, 2, .01, ' fraction', 'Horizontal fraction of travel from the start.'),
+      demo('firstY', 'First control Y', .75, -2, 2, .01, '×', 'Vertical multiple of lift below the start.'),
+      demo('secondX', 'Second control X', .28, -1, 2, .01, ' fraction', 'Horizontal fraction of travel back from the finish.'),
+      demo('secondY', 'Second control Y', .7, -2, 2, .01, '×', 'Vertical multiple of lift above the finish.'),
+      demo('minLift', 'Minimum lift', 24, 0, 95, 1, 'px', 'Floor for lift, which otherwise follows the landing height.'),
+    ]],
+    ['Pose and arrival', [
+      demo('startScale', 'Start scale', .14, .01, 1.5, .01, '×', 'Starting size relative to the landing size.'),
+      demo('cubicBank', 'Bank limit', 65, 0, 180, 1, '°', 'Maximum turn in the screen plane.'),
+      demo('cubicLean', 'Lean limit', 32, 0, 90, 1, '°', 'Maximum turn around the vertical axis.'),
+      demo('curvature', 'Curvature gain', 14, 0, 60, 1, '×', 'How strongly the curve drives lean.'),
+      demo('leanIn', 'Lean buildup ends', .2, .01, 1, .01, ' fraction', 'When the lean buildup ends.'),
+      demo('fadeIn', 'Fade-in ends', .12, .01, 1, .01, ' fraction', 'When the actor becomes fully opaque.'),
+      demo('levelFrom', 'Leveling starts', .62, 0, .99, .01, ' fraction', 'When rotation begins returning to level.'),
+      demo('perspective', 'Perspective distance', 700, 100, 1600, 1, 'px', 'Smaller distances exaggerate the 3D lean.'),
+    ]],
+  ],
+  [quadraticFlight]: [['Flight timing', sampled], ...quadraticGroups],
+  [multiStop]: [
+    ['Leg timing', [
+      demo('launch', 'Launch wait', 640, 0, 1500, 1, ' ms', 'Wait at home before takeoff.'),
+      demo('travel', 'First leg', 300, 0, 1500, 1, ' ms', 'Time to reach the first stop.'),
+      demo('lap', 'Lap time', 560, 100, 1600, 1, ' ms', 'Time for one full orbit.'),
+      demo('hop', 'Between stops', 260, 0, 1500, 1, ' ms', 'Time to fly between stops.'),
+      demo('back', 'Return leg', 400, 0, 1500, 1, ' ms', 'Time to fly back home.'),
+    ]],
+    ['Stops', [
+      demo('laps1', 'First stop laps', 1, 0, 4, 1, '', 'Number of orbits around the first stop.'),
+      demo('dwell1', 'First stop dwell', 0, 0, 1200, 1, ' ms', 'Time to hold after the first stop’s laps.'),
+      demo('laps2', 'Second stop laps', 1, 0, 4, 1, '', 'Number of orbits around the second stop.'),
+      demo('dwell2', 'Second stop dwell', 0, 0, 1200, 1, ' ms', 'Time to hold after the second stop’s laps.'),
+      demo('paddingX', 'Orbit padding across', 52, 0, 80, 1, 'px', 'Added horizontal orbit radius.'),
+      demo('paddingY', 'Orbit padding down', 32, 0, 70, 1, 'px', 'Added vertical orbit radius.'),
+    ]],
+    ['Pose and ghosts', [
+      demo('pathNose', 'Nose angle', 0, -180, 180, 1, '°', 'Facing angle of the artwork.'),
+      option('pathFlip', 'Mirror the token', 'checkbox', 'Flips the artwork and adjusts the facing angle.'),
+      demo('headingSample', 'Heading look-back', 3, 1, 65, 1, ' ms', 'How far back to sample the path for heading.'),
+      demo('pathRoll', 'Roll squash', .28, 0, 1, .01, '×', 'Maximum horizontal squeeze during an orbit.'),
+      demo('ghostCount', 'Ghosts', 4, 0, 12, 1, '', 'Number of trailing copies.'),
+      demo('ghostSpacing', 'Ghost spacing', 24, 1, 120, 1, ' ms', 'Time between trailing copies.'),
+      demo('ghostOpacity', 'Ghost opacity', .18, 0, 1, .01, '×', 'Opacity of the nearest copy.'),
+    ]],
+  ],
+  trail: [
+    ['Flight timing', sampled],
+    ['Ribbon', [
+      demo('rear', 'Rear offset', 73.92, 0, 100, .01, 'px', 'How far behind the token the ribbon starts.'),
+      demo('width', 'Ribbon width', 12, 0, 36, 1, 'px', 'Extra stroke at the broad end.'),
+      demo('tipWidth', 'Tip width', 2, 0, 16, 1, 'px', 'Base stroke width, including the tapered end.'),
+      demo('fade', 'Ribbon opacity', .7, 0, 1, .01, '×', 'Multiplies the ribbon opacity.'),
+      option('colour', 'Ribbon colour', 'color', 'Colour of the ribbon. The kit has no default.'),
+      demo('samples', 'Maximum samples', 13, 2, 40, 1, '', 'Limits how many points the ribbon remembers.'),
+      demo('spacing', 'Sample spacing', 12, 1, 45, 1, ' ms', 'Time between points along the ribbon.'),
+    ]],
+    ...quadraticGroups,
+  ],
+};
+const tokenWidth = parseFloat(getComputedStyle($('token-source')).width);
+Object.assign(KIT, {
+  viaWidth: tokenWidth, colour: colorHex('200,208,224'),
+});
+
 let s = { ...KIT };
 const picker = $('verb');
-for (const key of Object.keys(options)) picker.add(new Option(key, key));
+for (const key of [...Object.keys(options), ...Object.keys(flightGroups)]) picker.add(new Option(key, key));
 
 function build() {
   const verb = picker.value;
   const instant = verb === 'show' || verb === 'hide';
   const timing = [row('speed', 'Motion scale', 0, 2, .05, '×', 'Multiplies time. 0 leaves the preview still.')];
-  if (!instant && verb !== 'rise-pulse') timing.unshift(
+  if (!instant && verb !== 'rise-pulse' && !flightGroups[verb]) timing.unshift(
     row('dur', 'Duration', 0, 1800, 1, ' ms', 'Base step time before applying the motion factor. The kit has no default.'),
     option('ease', 'Easing', 'select', 'How progress changes over the step.'),
   );
@@ -205,7 +352,7 @@ function build() {
     row('dur', 'Follow-up duration', 0, 1800, 1, ' ms', 'Base time of the glow after the visibility change. The kit has no default.'),
   );
   $('ctls').replaceChildren();
-  for (const [title, rows] of [['Timing', timing], ['Effect options', options[verb]]]) {
+  for (const [title, rows] of [['Timing', timing], ...(flightGroups[verb] ?? [['Effect options', options[verb]]])]) {
     if (!rows.length) continue;
     const group = document.createElement('fieldset');
     group.innerHTML = `<legend>${title}</legend>`;
@@ -216,19 +363,24 @@ function build() {
       const input = document.createElement(type === 'select' ? 'select' : 'input');
       input.id = 'c-' + key;
       if (type === 'select') {
-        for (const ease of [defaultEase, ...easingNames]) input.add(new Option(ease, ease));
+        if (key === 'viaEase') input.add(new Option('Kit default', ''));
+        for (const ease of [...new Set(key === 'viaEase' ? easingNames : [defaultEase, ...easingNames])]) input.add(new Option(ease, ease));
       } else {
         input.type = type;
         if (type === 'range') Object.assign(input, { min, max, step });
+        if (type === 'color') input.style.height = '24px';
         if (type === 'checkbox') input.checked = s[key];
         if (type === 'text') input.maxLength = 28;
       }
       input.value = s[key];
       const output = control.querySelector('output');
-      if (output) output.textContent = s[key] + unit;
+      const updateOutput = () => {
+        if (output) output.textContent = key === 'staggerMax' && s[key] < 0 ? 'None' : s[key] + unit;
+      };
+      updateOutput();
       input.addEventListener('input', () => {
         s[key] = type === 'range' ? Number(input.value) : type === 'checkbox' ? input.checked : input.value;
-        if (output) output.textContent = s[key] + unit;
+        updateOutput();
         markPreset();
         play();
       });
@@ -284,6 +436,85 @@ function settings(verb) {
   return { css, step };
 }
 
+function flightBeat(verb) {
+  const w = table.clientWidth, h = table.clientHeight;
+  const home = [w * .25, h * .69], to = [w * .75, h * .42];
+  const midpoint = (dx, dy) => [w / 2 + dx, (home[1] + to[1]) / 2 + dy];
+  const actor = (id, at, width = tokenWidth) => ({ id, at, w: width, h: width ? 36 : 0 });
+  const actors = [actor('token', home)];
+  let marks = [home, to];
+  const step = { t: 0, actor: 'token', do: 'arc-move', to };
+  let steps = [step];
+  let note;
+  if (verb === threeKeyframes || verb === waypoint) {
+    const via = verb === waypoint;
+    const flightMs = via ? s.viaMs : s.arcMs;
+    const { stagger, staggerMax, staggerUnscaled } = s;
+    const arc = via
+      ? { via: { point: midpoint(s.viaX, s.viaY), rest: ordered(s.viaArrival, s.viaDeparture), width: s.viaWidth }, ...(s.viaEase && { ease: s.viaEase }) }
+      : { arcHeight: s.arcHeight, bank: s.arcBank, lean: s.arcLean, apex: s.apex };
+    actors.push(actor('token-two', [home[0] - 28, home[1] - 38]));
+    Object.assign(step, arc, { flightMs, stagger, staggerUnscaled, dur: flightMs });
+    if (staggerMax >= 0) step.staggerMax = staggerMax;
+    // Leave room for the kit to schedule the gap, including unscaled gaps at the lowest motion scale.
+    const staggeredDur = stagger > 0 && staggerMax !== 0 ? flightMs + 10000 : flightMs;
+    steps.push({ ...step, actor: 'token-two', to: [to[0] - 28, to[1] - 38], dur: staggeredDur });
+    if (via) marks.push(arc.via.point);
+    note = via ? 'Two tokens pause at the waypoint on their way to the finish.'
+      : `Two tokens arc over the midpoint with ${s.arcHeight}px of lift.`;
+  } else if (verb === cubicFlight) {
+    Object.assign(step, {
+      dur: s.cubicMs,
+      cubic: {
+        controls: [s.firstX, s.firstY, s.secondX, s.secondY], minLift: s.minLift,
+        startScale: s.startScale, bank: s.cubicBank, lean: s.cubicLean, curvature: s.curvature,
+        leanIn: s.leanIn, fadeIn: s.fadeIn, levelFrom: s.levelFrom, perspective: s.perspective,
+      },
+    });
+    note = `The token grows from ${s.startScale}× its landing size and levels out at the finish.`;
+  } else if (verb === multiStop) {
+    const { launch, travel, lap, hop, back, headingSample } = s;
+    const path = {
+      stops: [
+        { box: [w * .39 - 12, h * .46 - 9, 24, 18], laps: s.laps1, dwell: s.dwell1 },
+        { box: [w * .72 - 12, h * .51 - 9, 24, 18], laps: s.laps2, dwell: s.dwell2 },
+      ],
+      launch, travel, lap, hop, back, headingSample,
+      padding: [s.paddingX, s.paddingY], nose: s.pathNose, flip: s.pathFlip, roll: s.pathRoll,
+      ghosts: { count: s.ghostCount, spacing: s.ghostSpacing, opacity: s.ghostOpacity },
+    };
+    steps = [{ t: 0, actor: 'token', do: multiStop, dur: PATHS.multiStopPath(home, path).finish, path }];
+    marks = [home, ...path.stops.map(({ box }) => PATHS.centre(box))];
+    note = `The token circles the first stop ${s.laps1}× and the second ${s.laps2}× before returning home.`;
+  } else {
+    const { blend, lookAhead, nose, rollAxis, rollSquash, reverseBrightness, side, juke, fadeSlope } = s;
+    const quadratic = {
+      control: midpoint(s.controlX, s.controlY), blend, lookAhead, nose, rollAxis, rollSquash, reverseBrightness,
+      roll: ordered(s.rollStart, s.rollEnd), side, juke, fadeSlope,
+      ...(s.useExitScale && { exitScale: s.exitScale }),
+      ...(s.useExitFade && { exitFade: s.exitFade }),
+      afterimages: { count: s.afterCount, spacing: s.afterSpacing, opacity: s.afterOpacity, filter: `brightness(${s.afterBrightness})` },
+    };
+    Object.assign(step, { dur: s.quadraticMs, quadratic, then: 'hide' });
+    note = `The token rolls through a curved pass with ${s.afterCount} afterimages.`;
+    if (verb === 'trail') {
+      const { rear, width, tipWidth, fade, samples, spacing } = s;
+      const colour = s.colour.slice(1).match(/../g).map((value) => parseInt(value, 16)).join(',');
+      actors.push(actor('ribbon', home, 0));
+      steps.unshift({ t: 0, actor: 'ribbon', do: 'trail', dur: step.dur, to, ribbon: {
+        quadratic, rear, width, tipWidth, fade, colour, samples, spacing,
+      } });
+      note = `The ribbon follows the rolling token and remembers up to ${samples} points.`;
+    }
+  }
+  const maxMs = Math.max(...steps.map(({ dur }) => dur));
+  return { note, marks, beat: { id: 'preview', frequency: 'once', maxMs, actors, steps } };
+}
+
+function ordered(start, end) {
+  return [Math.min(start, end), Math.max(start, end)];
+}
+
 let rects;
 const player = MOTION.createMotionPlayer({
   specs: {}, stages: { default: (id) => rects[id] }, verbs, speed: previewSpeed, context: layer,
@@ -303,6 +534,9 @@ function play() {
   card.querySelector('.fx-rise-pulse')?.remove();
   const verb = picker.value;
   const isPulse = verb === 'rise-pulse';
+  const isFlight = Boolean(flightGroups[verb]);
+  table.toggleAttribute('data-flight', isFlight);
+  $('flight-marks').replaceChildren();
   const { css, step } = settings(verb);
   const speed = previewSpeed();
   MOTION.putMotionSpeed(speed, 'on', table);
@@ -323,7 +557,19 @@ function play() {
 
   const lines = [`const speed = () => withReducedMotion(${s.speed || "'instant'"});`];
   let note;
-  if (isPulse) {
+  if (isFlight) {
+    const flight = flightBeat(verb);
+    for (const [x, y] of flight.marks) {
+      const mark = document.createElement('div');
+      mark.className = 'flight-mark';
+      mark.style.left = x + 'px';
+      mark.style.top = y + 'px';
+      $('flight-marks').append(mark);
+    }
+    player.play(flight.beat);
+    lines.push('', `const beat = ${JSON.stringify(flight.beat, null, 2)};`);
+    note = flight.note;
+  } else if (isPulse) {
     if (speed !== 'instant') {
       const pulseEl = document.createElement('div');
       pulseEl.className = 'fx-rise-pulse';
@@ -367,7 +613,7 @@ function markPreset() {
   $('reset').setAttribute('aria-pressed', String(Object.keys(KIT).every((key) => s[key] === KIT[key])));
 }
 picker.addEventListener('change', () => {
-  $('sequence').disabled = picker.value === 'rise-pulse';
+  $('sequence').disabled = picker.value === 'rise-pulse' || Boolean(flightGroups[picker.value]);
   build();
   play();
 });

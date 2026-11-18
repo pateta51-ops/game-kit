@@ -54,6 +54,10 @@ legend { font: 700 12px var(--display); text-transform: uppercase; letter-spacin
 .ctl :is(select, input[type=color], input[type=text]) { grid-column: 1 / -1; min-width: 0; box-sizing: border-box; }
 .ctl input[type=checkbox] { grid-column: auto; width: auto; justify-self: end; }
 .code { margin-bottom: 0; }
+.flight-token { box-sizing: border-box; width: 44px; height: 36px; border: 2px solid #ffe3a0; border-radius: 10px; background: #a97938; display: grid; place-items: center; box-shadow: 0 3px 9px #0e1f1b; }
+.flight-token::after { content: ''; width: 0; height: 0; border-block: 7px solid transparent; border-left: 12px solid #fff2c6; }
+.flight-mark { position: absolute; translate: -50% -50%; width: 24px; height: 18px; border: 1px dashed #9aa8a3; border-radius: 50%; box-sizing: border-box; }
+#token-source, .table[data-flight] > .slot, .table[data-flight] > #card { display: none; }
 @media (max-width: 480px) { .table { height: 270px; } }
 /* ===== game-kit components/effect-library/looks/rise-pulse.css, inlined by tuners/build.mjs ===== */
 /* opt-in look: a red and orange glowing pulse. Import once; put class fx-rise-pulse on an element laid over the card (its parent positioned; add it to play it).
@@ -103,10 +107,12 @@ legend { font: 700 12px var(--display); text-transform: uppercase; letter-spacin
 <main class="wrap">
   <header>
     <h1>Effect Library Tuner</h1>
-    <p class="sub">Preview the kit’s DOM effects on a felt table. The page uses effect-library and motion-frame directly. Changing a setting replays the preview.</p>
+    <p class="sub">Preview the kit’s DOM and canvas effects on a felt table. The page uses effect-library and motion-frame directly. Changing a setting replays the preview.</p>
   </header>
   <div class="table" id="table">
     <div class="note" id="note"></div>
+    <div id="flight-marks" aria-hidden="true"></div>
+    <div class="flight-token" id="token-source" aria-hidden="true"></div>
     <div class="slot"></div>
     <div class="slot" id="destination"></div>
     <div id="card" class="card" aria-hidden="true">
@@ -130,293 +136,180 @@ legend { font: 700 12px var(--display); text-transform: uppercase; letter-spacin
   </section>
 </main>
 
-<script type="text/plain" id="effect-source">/* ===== game-kit components/effect-library/effects.ts, inlined by tuners/build.mjs ===== */
-// The built-in verbs of the director's spec format as DOM effects (Web Animations API), plus the way a game adds its own.
-import type { Run, VerbCall, VerbRegistry } from '../motion-frame/index.ts';
-import { createEffectLayer, place, type EffectLayer, type LayerOptions } from './layer.ts';
-
-import { registerCanvasEffect } from './canvas.ts';
-import { arcMove, multiStopMove } from './flight-effects.ts';
-import { trail } from './trail.ts';
-import { columnBeam, rotatingBeam } from './beams.ts';
-import { projectile, ringPulse, shimmer } from './combat-dom.ts';
-import { bolt } from './combat-canvas.ts';
-import { dissolve, dissolveSmoke, shatter } from './break-effects.ts';
-import { shieldBubble } from './shield-bubble.ts';
-import { curvedBeam, radialStreaks } from './beam-canvas.ts';
-import { collapseJump } from './collapse.ts';
-import { warpTransfer } from './transfer.ts';
-import { spiralTransfer } from './spiral.ts';
-import { stamp } from './signal-stamp.ts';
-import { motes } from './signal-motes.ts';
-import { flicker } from './signal-flicker.ts';
-import { barFill } from './signal-bar.ts';
-import { rotate } from './rotation.ts';
-
-import { refresh } from './refresh.ts';
-import { pulseEffect } from './loops.ts';
-import { idle } from './idle.ts';
-
-export type { ArcMoveSettings } from './flight-effects.ts';
-export type EffectCtx = EffectLayer;
-export interface Fx {
-  call: VerbCall;
-  run: Run<EffectCtx>;
-  /** the layer's clone (or stand-in) of the actor */
-  el: HTMLElement;
-  layer: EffectLayer;
-  /**
-   * Plays keyframes over the call's duration. `end` is the inline style the element is left with when the call ends or is
-   * skipped (the jump to the end state); the animation is then cancelled.
-   */
-  animate: (keyframes: Keyframe[], end?: Partial<CSSStyleDeclaration>, opts?: KeyframeAnimationOptions) => void;
-}
-/** May return its own finish (a timer to clear, an end state to set); `animate`'s finishes run too. */
-export type Effect = (fx: Fx) => undefined | (() => void);
-
-/** Step `scale` on an entry verb: a number n = from n to 1 (with `hold: true`, n for the whole step), [a, b] = from a to b. */
-const entry = (call: VerbCall): [string, string] | undefined => {
-  const s = call.step['scale'];
-  const v = (n: unknown): string => (n === 1 ? 'none' : String(n));
-  if (typeof s === 'number') return [v(s), call.step['hold'] === true ? v(s) : 'none'];
-  if (Array.isArray(s) && s.length === 2 && typeof s[0] === 'number' && typeof s[1] === 'number') return [v(s[0]), v(s[1])];
-  return undefined;
-};
-
-const css = (el: HTMLElement, s: Partial<CSSStyleDeclaration>): void => void Object.assign(el.style, s);
-
-/** Registers one effect, a built-in or a game's own, in the motion frame's verb registry. */
-export function registerEffect(verbs: VerbRegistry<EffectCtx>, name: string, effect: Effect): void {
-  verbs.register(name, (call, run) => {
-    const layer = run.context;
-    const el = layer.actor(run, call.actor, call.from);
-    const done: (() => void)[] = [];
-    const animate: Fx['animate'] = (keyframes, end, opts) => {
-      const a = el.animate(keyframes, { duration: Math.max(call.dur, 1), fill: 'both', easing: EASE[String(call.step['ease'])] ?? (typeof call.step['ease'] === 'string' ? call.step['ease'] : 'ease-in-out'), ...opts });
-      done.push(() => {
-        if (end) css(el, end);
-        a.cancel();
-      });
-    };
-    const own = effect({ call, run, el, layer, animate });
-    if (own) done.push(own);
-    return () => {
-      done.forEach((f) => {
-        f();
-      });
-    };
-  });
-}
-
-const EASE: Readonly<Record<string, string>> = { in: 'ease-in', out: 'ease-out', 'in-out': 'ease-in-out', linear: 'linear' };
-
-export const BUILT_IN: Readonly<Record<string, Effect>> = {
-  move: ({ call, el, animate }) => {
-    const t = call.to;
-    if (!t) return undefined;
-    const f = call.from;
-    const e = entry(call);
-    animate(
-      [e ? { translate: '0 0', scale: e[0] } : { translate: '0 0' }, e ? { translate: `${String(t[0] - f[0])}px ${String(t[1] - f[1])}px`, scale: e[1] } : { translate: `${String(t[0] - f[0])}px ${String(t[1] - f[1])}px` }],
-      e ? { translate: '', scale: e[1] === 'none' ? '' : e[1] } : { translate: '' },
-    );
-    return () => {
-      place(el, t);
-      if (call.step['then'] === 'hide') css(el, { visibility: 'hidden' });
-    };
-  },
-  'arc-move': arcMove,
-  'multi-stop-path': multiStopMove,
-  lift: ({ call, animate }) => {
-    const end = { transform: `translateY(var(--fx-lift-rise,-6px)) scale(${String(call.value ?? 1.08)})`, boxShadow: 'var(--fx-lift-shadow,0 12px 24px)' };
-    animate([{ transform: 'none', boxShadow: 'none' }, end], end);
-    return undefined;
-  },
-  settle: ({ animate }) => {
-    const rest = { transform: 'none', boxShadow: 'var(--fx-settle-shadow,0 1px 3px)' };
-    animate(
-      [
-        { transform: 'translateY(var(--fx-lift-rise,-6px)) scale(1.08)', boxShadow: 'var(--fx-lift-shadow,0 12px 24px)' },
-        { transform: 'scale(.98)', boxShadow: rest.boxShadow, offset: 0.7 },
-        rest,
-      ],
-      rest,
-    );
-    return undefined;
-  },
-  'fade-in': ({ call, animate }) => {
-    const e = entry(call);
-    animate(e ? [{ opacity: 0, scale: e[0] }, { opacity: 1, scale: e[1] }] : [{ opacity: 0 }, { opacity: 1 }], e ? { opacity: '1', visibility: 'visible', scale: e[1] === 'none' ? '' : e[1] } : { opacity: '1', visibility: 'visible' });
-    return undefined;
-  },
-  'fade-out': ({ call, animate }) => {
-    const o = call.value ?? 0;
-    animate([{ opacity: 1 }, { opacity: o }], { opacity: String(o) });
-    return undefined;
-  },
-  show: ({ el }) => {
-    css(el, { opacity: '1', visibility: 'visible' });
-    return undefined;
-  },
-  hide: ({ el }) => {
-    css(el, { visibility: 'hidden' });
-    return undefined;
-  },
-  flip: ({ call, el, animate }) => {
-    const target = !el.hasAttribute('data-fx-flipped');
-    const label = call.step['label'];
-    const swap = (): void => {
-      el.toggleAttribute('data-fx-flipped', target);
-      if (typeof label === 'string') el.setAttribute('data-fx-label', label);
-    };
-    if (call.step['squash'] === false) {
-      swap();
-      return undefined;
-    }
-    const hm = call.step['holdMs'];
-    const h = typeof hm === 'number' && call.dur > 0 ? Math.min(Math.max(hm, 0), call.dur * 0.8) : 0;
-    const mid = h + (call.dur - h) / 2;
-    const timer = setTimeout(swap, mid);
-    const vertical = call.step['axis'] === 'y';
-    const direction = call.step['direction'];
-    if (direction === 1 || direction === -1) {
-      const perspective = typeof call.step['perspective'] === 'number' ? call.step['perspective'] : 800;
-      const transform = (degrees: number) => `perspective(${perspective}px) rotate${vertical ? 'X' : 'Y'}(${degrees}deg)`;
-      const ease = call.step['ease'];
-      const easing = typeof ease === 'string' ? EASE[ease] ?? ease : 'ease-in-out';
-      const edge = call.dur > 0 ? mid / call.dur : .5;
-      animate([
-        { transform: transform(0), easing },
-        ...(h > 0 ? [{ transform: transform(0), offset: h / call.dur, easing }] : []),
-        { transform: transform(direction * 90), offset: edge },
-        { transform: transform(-direction * 90), offset: edge, easing },
-        { transform: transform(0) },
-      ], { transform: 'none' }, { easing: 'linear' });
-    } else {
-      const scale = vertical ? 'scaleY' : 'scaleX';
-      const rest = { transform: `${scale}(1)` };
-      const edge = { transform: `${scale}(0)` };
-      animate(h > 0 ? [rest, { ...rest, offset: h / call.dur }, { ...edge, offset: mid / call.dur }, rest] : [rest, edge, rest], { transform: 'none' });
-    }
-    return () => {
-      clearTimeout(timer);
-      swap();
-    };
-  },
-  scale: ({ call, animate }) => {
-    const k = { scale: String(call.value ?? 1) };
-    const rest = { scale: 'none' };
-    if (call.step['pulse'] === true) animate([rest, k, rest], rest);
-    else animate([rest, k], k);
-    return undefined;
-  },
-  shake: ({ call, animate }) => {
-    const n = typeof call.step['times'] === 'number' ? call.step['times'] : 4;
-    const kf: Keyframe[] = [{ transform: 'translateX(0)' }];
-    for (let i = 0; i < n; i++) kf.push({ transform: `translateX(calc(var(--fx-shake,6px) * ${i % 2 ? '1' : '-1'}))` });
-    kf.push({ transform: 'translateX(0)' });
-    animate(kf, { transform: 'none' });
-    return undefined;
-  },
-  glow: ({ call, animate, el }) => {
-    const colour = call.step['colour'];
-    const shadows = call.step['shadows'];
-    const hold = call.step['hold'];
-    const off = typeof colour === 'string' ? '0 0 0 0 transparent' : 'var(--fx-glow-off,0 0 0 0)';
-    const on = typeof colour === 'string'
-      ? (Array.isArray(shadows) ? shadows.filter((s): s is string => typeof s === 'string') : ['0 0 24px 6px']).map((s) => `${s} ${colour}`).join(',')
-      : 'var(--fx-glow,0 0 24px 6px)';
-    const span = typeof hold === 'number' ? Math.max(0, Math.min(1, hold)) : 0;
-    const pulse = span > 0
-      ? [{ boxShadow: on, offset: (1 - span) / 2 }, { boxShadow: on, offset: (1 + span) / 2 }]
-      : [{ boxShadow: on }];
-    animate([{ boxShadow: off }, ...pulse, { boxShadow: off }], { boxShadow: el.style.boxShadow });
-    return undefined;
-  },
-  unroll: ({ call, el, animate }) => {
-    const axis = call.step['axis'] === 'x' ? 'X' : 'Y';
-    const origin = call.step['origin'];
-    const transformOrigin = typeof origin === 'string' ? origin : axis === 'X' ? 'left' : 'top';
-    el.style.opacity = '1';
-    animate(
-      [{ transform: `scale${axis}(0)`, transformOrigin }, { transform: `scale${axis}(1)`, transformOrigin }],
-      { transform: 'none', opacity: '1', visibility: 'visible' },
-      { easing: 'ease-out' },
-    );
-    return undefined;
-  },
-  text: ({ call, el, animate }) => {
-    const s = call.step['text'] ?? call.step['label'];
-    el.textContent = typeof s === 'string' ? s : call.value !== undefined ? String(call.value) : '';
-    css(el, { color: 'var(--fx-text,inherit)', font: 'var(--fx-text-font,inherit)', textAlign: 'center' });
-    animate([{ opacity: 0, transform: 'translateY(var(--fx-text-rise,12px))' }, { opacity: 1, offset: 0.25 }, { opacity: 1, transform: 'none' }], { opacity: '1', transform: 'none' });
-    return undefined;
-  },
-  spin: rotate,
-  tap: rotate,
-  untap: rotate,
-};
-
-/** The built-in verbs registered, and a layer made. Pass the registry to the motion player and the layer as its `context`. */
-export function registerEffects(verbs: VerbRegistry<EffectCtx>, o?: LayerOptions): EffectLayer {
-  for (const [name, fx] of Object.entries(BUILT_IN)) registerEffect(verbs, name, fx);
-  registerCanvasEffect(verbs, 'trail', trail);
-  registerCanvasEffect(verbs, 'radial-streaks', radialStreaks);
-  registerCanvasEffect(verbs, 'column-beam', curvedBeam);
-  const curve = verbs.get('column-beam');
-  registerEffect(verbs, 'column-beam', columnBeam);
-  const column = verbs.get('column-beam');
-  verbs.register('column-beam', (call, run) => (call.step['curve'] ? curve : column)?.(call, run));
-  registerEffect(verbs, 'collapse-jump', collapseJump);
-  registerEffect(verbs, 'rotating-beam', rotatingBeam);
-  registerEffect(verbs, 'projectile', projectile);
-  const beam = verbs.get('projectile');
-  registerCanvasEffect(verbs, 'projectile', bolt);
-  const shot = verbs.get('projectile');
-  verbs.register('projectile', (call, run) => (call.step['bolt'] ? shot : beam)?.(call, run));
-  registerCanvasEffect(verbs, 'dissolve', dissolveSmoke);
-  const smoke = verbs.get('dissolve');
-  registerEffect(verbs, 'dissolve', dissolve);
-  const burn = verbs.get('dissolve');
-  verbs.register('dissolve', (call, run) => {
-    const endBurn = burn?.(call, run);
-    const endSmoke = call.step['lift'] ? smoke?.(call, run) : undefined;
-    return () => {
-      endSmoke?.();
-      endBurn?.();
-    };
-  });
-  registerEffect(verbs, 'shatter', shatter);
-  registerEffect(verbs, 'shimmer', shimmer);
-  registerEffect(verbs, 'ring-pulse', ringPulse);
-  registerCanvasEffect(verbs, 'shield-bubble', shieldBubble);
-  registerCanvasEffect(verbs, 'warp-transfer', spiralTransfer);
-  const spiral = verbs.get('warp-transfer');
-  registerEffect(verbs, 'warp-transfer', warpTransfer);
-  const transfer = verbs.get('warp-transfer');
-  verbs.register('warp-transfer', (call, run) => (call.step['spiral'] ? spiral : transfer)?.(call, run));
-  verbs.register('shake-group', (call, run) => {
-    const { selector, actors, amplitude = 6, crossAmplitude = 1, frames = 9 } = call.step;
-    const targets = typeof selector === 'string'
-      ? Array.from(run.context.el.ownerDocument.querySelectorAll<HTMLElement>(selector))
-      : run.timeline.actors.filter((a) => Array.isArray(actors) ? actors.includes(a.id) : a.id === call.actor)
-        .map((a) => run.context.actor(run, a.id, a.rect));
-    const animations = targets.map((el, n) => el.animate(Array.from({ length: typeof frames === 'number' ? frames : 9 }, (_, j) => ({
-      transform: `translate(${String((j % 2 ? 1 : -1) * Number(amplitude))}px,${String(((j + n) % 3 - 1) * Number(crossAmplitude))}px)`,
-    })), { duration: Math.max(call.dur, 1) }));
-    return () => animations.forEach((a) => a.cancel());
-  });
-  registerEffect(verbs, 'stamp', stamp);
-  registerEffect(verbs, 'motes', motes);
-  registerEffect(verbs, 'flicker', flicker);
-  registerEffect(verbs, 'bar-fill', barFill);
-  registerEffect(verbs, 'refresh', refresh);
-  registerEffect(verbs, 'pulse', pulseEffect);
-  registerEffect(verbs, 'idle', idle);
-  return createEffectLayer(o);
-}
-</script>
 <script>
+"use strict";
+var PATHS = (() => {
+  var __defProp = Object.defineProperty;
+  var __getOwnPropDesc = Object.getOwnPropertyDescriptor;
+  var __getOwnPropNames = Object.getOwnPropertyNames;
+  var __hasOwnProp = Object.prototype.hasOwnProperty;
+  var __export = (target, all) => {
+    for (var name in all)
+      __defProp(target, name, { get: all[name], enumerable: true });
+  };
+  var __copyProps = (to, from, except, desc) => {
+    if (from && typeof from === "object" || typeof from === "function") {
+      for (let key of __getOwnPropNames(from))
+        if (!__hasOwnProp.call(to, key) && key !== except)
+          __defProp(to, key, { get: () => from[key], enumerable: !(desc = __getOwnPropDesc(from, key)) || desc.enumerable });
+    }
+    return to;
+  };
+  var __toCommonJS = (mod) => __copyProps(__defProp({}, "__esModule", { value: true }), mod);
+
+  // components/effect-library/paths.ts
+  var paths_exports = {};
+  __export(paths_exports, {
+    centre: () => centre,
+    flightPath: () => flightPath,
+    flightPose: () => flightPose,
+    multiStopPath: () => multiStopPath,
+    noseAlong: () => noseAlong,
+    pointAt: () => pointAt,
+    quadraticPose: () => quadraticPose,
+    tangentAt: () => tangentAt,
+    travel: () => travel
+  });
+
+  // components/effect-library/particles.ts
+  var clamp = (x, a = 0, b = 1) => Math.min(b, Math.max(a, x));
+  var lerp = (a, b, k) => a + (b - a) * k;
+  var seg = (t, a, b) => b <= a ? t >= b ? 1 : 0 : clamp((t - a) / (b - a));
+  var ease = {
+    linear: (k) => k,
+    out: (k) => 1 - (1 - k) ** 3,
+    in: (k) => k ** 3,
+    inOut: (k) => k < 0.5 ? 4 * k ** 3 : 1 - (-2 * k + 2) ** 3 / 2,
+    inQuad: (k) => k * k,
+    outQuad: (k) => 1 - (1 - k) ** 2,
+    outExpo: (k) => k >= 1 ? 1 : 1 - 2 ** (-10 * k),
+    /** overshoot like cubic-bezier(.3,1.4,.6,1) */
+    back: (k) => {
+      const c = 1.9;
+      return 1 + (c + 1) * (k - 1) ** 3 + c * (k - 1) ** 2;
+    }
+  };
+
+  // components/effect-library/paths.ts
+  function flightPath(from, to, lift, settings) {
+    const dx = to.x - from.x;
+    const h = Math.max(settings.minLift, lift);
+    return {
+      p0: from,
+      p1: { x: from.x + dx * settings.controls[0], y: from.y + h * settings.controls[1] },
+      p2: { x: to.x - dx * settings.controls[2], y: to.y - h * settings.controls[3] },
+      p3: to
+    };
+  }
+  var bez = (a, b, c, d, t) => {
+    const m = 1 - t;
+    return m * m * m * a + 3 * m * m * t * b + 3 * m * t * t * c + t * t * t * d;
+  };
+  var bez1 = (a, b, c, d, t) => {
+    const m = 1 - t;
+    return 3 * m * m * (b - a) + 6 * m * t * (c - b) + 3 * t * t * (d - c);
+  };
+  var bez2 = (a, b, c, d, t) => 6 * (1 - t) * (c - 2 * b + a) + 6 * t * (d - 2 * c + b);
+  var pointAt = (p, e) => ({
+    x: bez(p.p0.x, p.p1.x, p.p2.x, p.p3.x, e),
+    y: bez(p.p0.y, p.p1.y, p.p2.y, p.p3.y, e)
+  });
+  var tangentAt = (p, e) => ({
+    x: bez1(p.p0.x, p.p1.x, p.p2.x, p.p3.x, e),
+    y: bez1(p.p0.y, p.p1.y, p.p2.y, p.p3.y, e)
+  });
+  var travel = (k) => ease.inOut(clamp(k));
+  function noseAlong(dx, dy) {
+    const deg = Math.atan2(dy, dx) * 180 / Math.PI - 90;
+    return deg > 180 ? deg - 360 : deg <= -180 ? deg + 360 : deg;
+  }
+  function flightPose(p, k, settings) {
+    const u = clamp(k);
+    const e = travel(u);
+    const at = pointAt(p, e);
+    const v = tangentAt(p, e);
+    const a = {
+      x: bez2(p.p0.x, p.p1.x, p.p2.x, p.p3.x, e),
+      y: bez2(p.p0.y, p.p1.y, p.p2.y, p.p3.y, e)
+    };
+    const speed = Math.hypot(v.x, v.y);
+    const level = 1 - ease.inOut(seg(u, settings.levelFrom, 1));
+    const rot = speed < 1e-6 ? 0 : clamp(noseAlong(v.x, v.y), -settings.bank, settings.bank);
+    const span = Math.hypot(p.p3.x - p.p0.x, p.p3.y - p.p0.y) || 1;
+    const curv = speed < 1e-6 ? 0 : (v.x * a.y - v.y * a.x) / speed ** 3 * span;
+    const lean = clamp(curv * settings.curvature, -settings.lean, settings.lean) * seg(u, 0, settings.leanIn);
+    return {
+      x: at.x,
+      y: at.y,
+      scale: lerp(settings.startScale, 1, ease.out(u)),
+      rot: rot * level,
+      lean: lean * level,
+      opacity: seg(u, 0, settings.fadeIn)
+    };
+  }
+  function quadraticPose(from, to, k, path) {
+    const u = lerp(k, path.exitScale === void 0 ? ease.inOut(k) : ease.in(k), path.blend);
+    const at = (t) => {
+      const m = 1 - t;
+      return [
+        m * m * from[0] + 2 * m * t * path.control[0] + t * t * to[0],
+        m * m * from[1] + 2 * m * t * path.control[1] + t * t * to[1]
+      ];
+    };
+    const [x, y] = at(u);
+    const [x2, y2] = at(Math.min(1, u + path.lookAhead));
+    const heading = Math.atan2(y2 - y, x2 - x);
+    const rk = path.roll ? seg(k, ...path.roll) : 0;
+    const side = path.side ?? 1;
+    const juke = Math.sin(Math.PI * rk) * (path.juke ?? 0) * side;
+    const roll = Math.cos(ease.inOut(rk) * Math.PI * 2 * side);
+    return {
+      x: x + Math.cos(heading + Math.PI / 2) * juke,
+      y: y + Math.sin(heading + Math.PI / 2) * juke,
+      heading,
+      roll,
+      scale: lerp(1, path.exitScale ?? 1, ease.in(k)),
+      alpha: path.exitFade === void 0 ? Math.min(1, k * (path.fadeSlope ?? 1), (1 - k) * (path.fadeSlope ?? 1)) : 1 - seg(k, path.exitFade, 1)
+    };
+  }
+  var centre = (box) => [box[0] + box[2] / 2, box[1] + box[3] / 2];
+  var mix = (a, b, k) => [lerp(a[0], b[0], k), lerp(a[1], b[1], k)];
+  function multiStopPath(home, settings) {
+    const { stops, launch, travel: travel2, lap, hop, back, padding } = settings;
+    const lapEnd = launch + travel2 + stops.reduce((n, stop) => n + (stop.laps ?? 0) * lap + (stop.dwell ?? 0), 0) + Math.max(0, stops.length - 1) * hop;
+    const orbit = (stop, phase) => {
+      const c = centre(stop.box);
+      if (!stop.laps) return c;
+      const a = phase * Math.PI * 2 + Math.PI / 2;
+      return [
+        c[0] + Math.cos(a) * (stop.box[2] / 2 + padding[0]),
+        c[1] + Math.sin(a) * (stop.box[3] / 2 + padding[1])
+      ];
+    };
+    const finish = lapEnd + back;
+    return {
+      finish,
+      at(time) {
+        const first = stops[0];
+        if (time <= launch || !first) return home;
+        let start = launch + travel2;
+        if (time < start) return mix(home, orbit(first, 0), ease.inOut(seg(time, launch, start)));
+        for (const [i, stop] of stops.entries()) {
+          const lapsEnd = start + (stop.laps ?? 0) * lap;
+          const end = lapsEnd + (stop.dwell ?? 0);
+          if (time < lapsEnd) return orbit(stop, (time - start) / lap);
+          if (time <= end) return orbit(stop, 1);
+          const next = stops[i + 1];
+          if (next && time < end + hop) return mix(orbit(stop, 1), orbit(next, 0), ease.inOut(seg(time, end, end + hop)));
+          start = end + hop;
+        }
+        return mix(orbit(stops[stops.length - 1], 1), home, ease.out(seg(time, lapEnd, Math.max(lapEnd + 1, finish))));
+      }
+    };
+  }
+  return __toCommonJS(paths_exports);
+})();
+
 "use strict";
 var FX = (() => {
   var __defProp = Object.defineProperty;
@@ -4289,7 +4182,7 @@ var MOTION = (() => {
 const $ = (id) => document.getElementById(id);
 const table = $('table'), card = $('card');
 const verbs = MOTION.createVerbs();
-const layer = FX.registerEffects(verbs, { parent: table, resolve: (id) => id === 'card' ? card : undefined });
+const layer = FX.registerEffects(verbs, { parent: table, resolve: (id) => id === 'card' ? card : id === 'token' || id === 'token-two' ? $('token-source') : undefined });
 layer.el.style.position = 'absolute';
 
 // The verbs expose their defaults through their keyframes and CSS fallbacks.
@@ -4301,9 +4194,7 @@ function frames(verb) {
 function fallback(css, token) {
   return css.match(new RegExp('var\\(\\s*' + token + '\\s*,\\s*([^)]*)\\)'))[1];
 }
-// EASE is private to the verb registry. Read its keys from the inlined kit source.
-const easeTable = $('effect-source').textContent.match(/const EASE[^=]*=\s*\{([^}]+)\}/)[1];
-const easingNames = [...easeTable.matchAll(/(?:^|,)\s*['"]?([\w-]+)['"]?\s*:/g)].map(([, name]) => name);
+const easingNames = ['in', 'out', 'in-out', 'linear'];
 const easingProbe = document.createElement('div');
 let defaultEase;
 easingProbe.animate = (_, config) => {
@@ -4383,15 +4274,158 @@ const options = {
     row('cardW', 'Card width token', 40, 260, 1, 'px', 'Scales the halo around the stand-in card.'),
   ],
 };
+const demo = (key, label, value, min, max, step, unit, help) => {
+  KIT[key] = value;
+  return row(key, label, min, max, step, unit, help + ' The kit has no default.');
+};
+const threeKeyframes = 'arc-move: three keyframes';
+const waypoint = 'arc-move: via';
+const cubicFlight = 'arc-move: cubic';
+const quadraticFlight = 'arc-move: quadratic';
+const multiStop = 'multi-stop-path';
+const sampled = [
+  row('quadraticMs', 'Flight duration', 100, 2400, 1, ' ms', 'Length of the sampled pass. The kit has no default.'),
+];
+const quadraticGroups = [
+  ['Curve and heading', [
+    demo('controlX', 'Control offset across', -58, -160, 160, 1, 'px', 'Moves the curve’s control point left or right of the midpoint.'),
+    demo('controlY', 'Control offset down', 6, -140, 120, 1, 'px', 'Moves the control point up or down from the midpoint.'),
+    demo('blend', 'Easing blend', .85, 0, 1, .01, ' fraction', 'Blends steady progress at 0 into full easing at 1.'),
+    demo('lookAhead', 'Heading look-ahead', .02, .001, .2, .001, ' fraction', 'How far ahead on the curve to sample the heading.'),
+    demo('nose', 'Nose angle', 148, -180, 180, 1, '°', 'Facing angle of the artwork.'),
+  ]],
+  ['Roll and sideways motion', [
+    demo('rollStart', 'Roll starts', .35, 0, 1, .01, ' fraction', 'When the roll begins.'),
+    demo('rollEnd', 'Roll ends', .7, 0, 1, .01, ' fraction', 'When the roll ends.'),
+    demo('side', 'Roll side', 1, -1, 1, 2, '', 'Choose left (−1) or right (1).'),
+    demo('rollAxis', 'Roll axis', 148, -180, 180, 1, '°', 'Angle of the squash axis.'),
+    demo('rollSquash', 'Roll thickness', .15, 0, 1, .01, '×', 'Minimum thickness during the roll.'),
+    demo('reverseBrightness', 'Reverse brightness', .62, 0, 1, .01, '×', 'Brightness of the reversed face.'),
+    demo('juke', 'Sideways offset', 26, 0, 65, 1, 'px', 'Maximum sideways displacement during the roll.'),
+  ]],
+  ['Opacity and exit', [
+    demo('fadeSlope', 'Fade slope', 6, 0, 12, .1, '×', 'Opacity ramp rate when exit fade is off.'),
+    option('useExitScale', 'Use exit scale', 'checkbox', 'Enables the exit size and switches to exit easing.'),
+    demo('exitScale', 'Exit scale', .28, .1, 2, .01, '×', 'Final size when enabled.'),
+    option('useExitFade', 'Use exit fade', 'checkbox', 'Enables a fade at the end in place of the two-sided opacity ramp.'),
+    demo('exitFade', 'Exit fade starts', .85, 0, 1, .01, ' fraction', 'When the optional exit fade begins.'),
+  ]],
+  ['Afterimages', [
+    demo('afterCount', 'Afterimages', 4, 0, 12, 1, '', 'Number of fading actor copies.'),
+    demo('afterSpacing', 'Afterimage spacing', 28, 1, 120, 1, ' ms', 'Time between copies.'),
+    demo('afterOpacity', 'Afterimage opacity', .32, 0, 1, .01, '×', 'Opacity of the nearest copy at full flight opacity.'),
+    demo('afterBrightness', 'Afterimage brightness', .85, 0, 2, .01, '×', 'Brightness used in the copies’ CSS filter.'),
+  ]],
+];
+Object.assign(KIT, {
+  quadraticMs: 650, viaEase: '', staggerMax: -1, staggerUnscaled: false,
+  useExitScale: false, useExitFade: false, pathFlip: false,
+});
+const arcTiming = [
+  demo('arcMs', 'Flight duration', 620, 100, 2400, 1, ' ms', 'Time each token spends in flight.'),
+  demo('stagger', 'Stagger', 110, 0, 500, 1, ' ms', 'Gap between two tokens starting the same arc.'),
+  row('staggerMax', 'Stagger index cap', -1, 8, 1, '', 'None leaves stagger uncapped. This two-token demo has one stagger gap.'),
+  option('staggerUnscaled', 'Keep gap unscaled', 'checkbox', 'Measures the stagger gap before applying the motion scale.'),
+];
+const flightGroups = {
+  [threeKeyframes]: [
+    ['Flight timing', arcTiming],
+    ['Apex', [
+      demo('arcHeight', 'Arc height', 60, 0, 115, 1, 'px', 'Lift above the midpoint.'),
+      demo('arcBank', 'Bank offset', 0, -1, 1, .01, ' fraction', 'Moves the apex sideways by this share of vertical travel.'),
+      demo('arcLean', 'Lean offset', 0, -1, 1, .01, ' fraction', 'Moves the apex vertically by this share of vertical travel.'),
+      demo('apex', 'Apex time', .55, .01, .99, .01, ' fraction', 'When the actor reaches the middle keyframe.'),
+    ]],
+  ],
+  [waypoint]: [
+    ['Flight timing', [
+      demo('viaMs', 'Flight duration', 1710, 100, 2600, 1, ' ms', 'Time for both legs and the waypoint hold.'),
+      ...arcTiming.slice(1),
+      option('viaEase', 'Easing', 'select', 'Progress profile for each leg. Kit default leaves easing to the via effect.'),
+    ]],
+    ['Waypoint', [
+      demo('viaX', 'Waypoint offset across', 0, -85, 85, 1, 'px', 'Horizontal offset from the route midpoint.'),
+      demo('viaY', 'Waypoint offset down', -48, -75, 65, 1, 'px', 'Vertical offset from the route midpoint.'),
+      demo('viaArrival', 'Arrival time', .4, .01, .99, .01, ' fraction', 'When the token reaches the waypoint.'),
+      demo('viaDeparture', 'Departure time', .6, .01, .99, .01, ' fraction', 'When the token leaves the waypoint.'),
+      row('viaWidth', 'Waypoint width', 18, 80, 1, 'px', 'Token width at the hold. The kit falls back to the landing width.'),
+    ]],
+  ],
+  [cubicFlight]: [
+    ['Curve', [
+      demo('cubicMs', 'Flight duration', 700, 100, 2400, 1, ' ms', 'Length of the sampled arrival.'),
+      demo('firstX', 'First control X', .18, -1, 2, .01, ' fraction', 'Horizontal fraction of travel from the start.'),
+      demo('firstY', 'First control Y', .75, -2, 2, .01, '×', 'Vertical multiple of lift below the start.'),
+      demo('secondX', 'Second control X', .28, -1, 2, .01, ' fraction', 'Horizontal fraction of travel back from the finish.'),
+      demo('secondY', 'Second control Y', .7, -2, 2, .01, '×', 'Vertical multiple of lift above the finish.'),
+      demo('minLift', 'Minimum lift', 24, 0, 95, 1, 'px', 'Floor for lift, which otherwise follows the landing height.'),
+    ]],
+    ['Pose and arrival', [
+      demo('startScale', 'Start scale', .14, .01, 1.5, .01, '×', 'Starting size relative to the landing size.'),
+      demo('cubicBank', 'Bank limit', 65, 0, 180, 1, '°', 'Maximum turn in the screen plane.'),
+      demo('cubicLean', 'Lean limit', 32, 0, 90, 1, '°', 'Maximum turn around the vertical axis.'),
+      demo('curvature', 'Curvature gain', 14, 0, 60, 1, '×', 'How strongly the curve drives lean.'),
+      demo('leanIn', 'Lean buildup ends', .2, .01, 1, .01, ' fraction', 'When the lean buildup ends.'),
+      demo('fadeIn', 'Fade-in ends', .12, .01, 1, .01, ' fraction', 'When the actor becomes fully opaque.'),
+      demo('levelFrom', 'Leveling starts', .62, 0, .99, .01, ' fraction', 'When rotation begins returning to level.'),
+      demo('perspective', 'Perspective distance', 700, 100, 1600, 1, 'px', 'Smaller distances exaggerate the 3D lean.'),
+    ]],
+  ],
+  [quadraticFlight]: [['Flight timing', sampled], ...quadraticGroups],
+  [multiStop]: [
+    ['Leg timing', [
+      demo('launch', 'Launch wait', 640, 0, 1500, 1, ' ms', 'Wait at home before takeoff.'),
+      demo('travel', 'First leg', 300, 0, 1500, 1, ' ms', 'Time to reach the first stop.'),
+      demo('lap', 'Lap time', 560, 100, 1600, 1, ' ms', 'Time for one full orbit.'),
+      demo('hop', 'Between stops', 260, 0, 1500, 1, ' ms', 'Time to fly between stops.'),
+      demo('back', 'Return leg', 400, 0, 1500, 1, ' ms', 'Time to fly back home.'),
+    ]],
+    ['Stops', [
+      demo('laps1', 'First stop laps', 1, 0, 4, 1, '', 'Number of orbits around the first stop.'),
+      demo('dwell1', 'First stop dwell', 0, 0, 1200, 1, ' ms', 'Time to hold after the first stop’s laps.'),
+      demo('laps2', 'Second stop laps', 1, 0, 4, 1, '', 'Number of orbits around the second stop.'),
+      demo('dwell2', 'Second stop dwell', 0, 0, 1200, 1, ' ms', 'Time to hold after the second stop’s laps.'),
+      demo('paddingX', 'Orbit padding across', 52, 0, 80, 1, 'px', 'Added horizontal orbit radius.'),
+      demo('paddingY', 'Orbit padding down', 32, 0, 70, 1, 'px', 'Added vertical orbit radius.'),
+    ]],
+    ['Pose and ghosts', [
+      demo('pathNose', 'Nose angle', 0, -180, 180, 1, '°', 'Facing angle of the artwork.'),
+      option('pathFlip', 'Mirror the token', 'checkbox', 'Flips the artwork and adjusts the facing angle.'),
+      demo('headingSample', 'Heading look-back', 3, 1, 65, 1, ' ms', 'How far back to sample the path for heading.'),
+      demo('pathRoll', 'Roll squash', .28, 0, 1, .01, '×', 'Maximum horizontal squeeze during an orbit.'),
+      demo('ghostCount', 'Ghosts', 4, 0, 12, 1, '', 'Number of trailing copies.'),
+      demo('ghostSpacing', 'Ghost spacing', 24, 1, 120, 1, ' ms', 'Time between trailing copies.'),
+      demo('ghostOpacity', 'Ghost opacity', .18, 0, 1, .01, '×', 'Opacity of the nearest copy.'),
+    ]],
+  ],
+  trail: [
+    ['Flight timing', sampled],
+    ['Ribbon', [
+      demo('rear', 'Rear offset', 73.92, 0, 100, .01, 'px', 'How far behind the token the ribbon starts.'),
+      demo('width', 'Ribbon width', 12, 0, 36, 1, 'px', 'Extra stroke at the broad end.'),
+      demo('tipWidth', 'Tip width', 2, 0, 16, 1, 'px', 'Base stroke width, including the tapered end.'),
+      demo('fade', 'Ribbon opacity', .7, 0, 1, .01, '×', 'Multiplies the ribbon opacity.'),
+      option('colour', 'Ribbon colour', 'color', 'Colour of the ribbon. The kit has no default.'),
+      demo('samples', 'Maximum samples', 13, 2, 40, 1, '', 'Limits how many points the ribbon remembers.'),
+      demo('spacing', 'Sample spacing', 12, 1, 45, 1, ' ms', 'Time between points along the ribbon.'),
+    ]],
+    ...quadraticGroups,
+  ],
+};
+const tokenWidth = parseFloat(getComputedStyle($('token-source')).width);
+Object.assign(KIT, {
+  viaWidth: tokenWidth, colour: colorHex('200,208,224'),
+});
+
 let s = { ...KIT };
 const picker = $('verb');
-for (const key of Object.keys(options)) picker.add(new Option(key, key));
+for (const key of [...Object.keys(options), ...Object.keys(flightGroups)]) picker.add(new Option(key, key));
 
 function build() {
   const verb = picker.value;
   const instant = verb === 'show' || verb === 'hide';
   const timing = [row('speed', 'Motion scale', 0, 2, .05, '×', 'Multiplies time. 0 leaves the preview still.')];
-  if (!instant && verb !== 'rise-pulse') timing.unshift(
+  if (!instant && verb !== 'rise-pulse' && !flightGroups[verb]) timing.unshift(
     row('dur', 'Duration', 0, 1800, 1, ' ms', 'Base step time before applying the motion factor. The kit has no default.'),
     option('ease', 'Easing', 'select', 'How progress changes over the step.'),
   );
@@ -4399,7 +4433,7 @@ function build() {
     row('dur', 'Follow-up duration', 0, 1800, 1, ' ms', 'Base time of the glow after the visibility change. The kit has no default.'),
   );
   $('ctls').replaceChildren();
-  for (const [title, rows] of [['Timing', timing], ['Effect options', options[verb]]]) {
+  for (const [title, rows] of [['Timing', timing], ...(flightGroups[verb] ?? [['Effect options', options[verb]]])]) {
     if (!rows.length) continue;
     const group = document.createElement('fieldset');
     group.innerHTML = `<legend>${title}</legend>`;
@@ -4410,19 +4444,24 @@ function build() {
       const input = document.createElement(type === 'select' ? 'select' : 'input');
       input.id = 'c-' + key;
       if (type === 'select') {
-        for (const ease of [defaultEase, ...easingNames]) input.add(new Option(ease, ease));
+        if (key === 'viaEase') input.add(new Option('Kit default', ''));
+        for (const ease of [...new Set(key === 'viaEase' ? easingNames : [defaultEase, ...easingNames])]) input.add(new Option(ease, ease));
       } else {
         input.type = type;
         if (type === 'range') Object.assign(input, { min, max, step });
+        if (type === 'color') input.style.height = '24px';
         if (type === 'checkbox') input.checked = s[key];
         if (type === 'text') input.maxLength = 28;
       }
       input.value = s[key];
       const output = control.querySelector('output');
-      if (output) output.textContent = s[key] + unit;
+      const updateOutput = () => {
+        if (output) output.textContent = key === 'staggerMax' && s[key] < 0 ? 'None' : s[key] + unit;
+      };
+      updateOutput();
       input.addEventListener('input', () => {
         s[key] = type === 'range' ? Number(input.value) : type === 'checkbox' ? input.checked : input.value;
-        if (output) output.textContent = s[key] + unit;
+        updateOutput();
         markPreset();
         play();
       });
@@ -4478,6 +4517,85 @@ function settings(verb) {
   return { css, step };
 }
 
+function flightBeat(verb) {
+  const w = table.clientWidth, h = table.clientHeight;
+  const home = [w * .25, h * .69], to = [w * .75, h * .42];
+  const midpoint = (dx, dy) => [w / 2 + dx, (home[1] + to[1]) / 2 + dy];
+  const actor = (id, at, width = tokenWidth) => ({ id, at, w: width, h: width ? 36 : 0 });
+  const actors = [actor('token', home)];
+  let marks = [home, to];
+  const step = { t: 0, actor: 'token', do: 'arc-move', to };
+  let steps = [step];
+  let note;
+  if (verb === threeKeyframes || verb === waypoint) {
+    const via = verb === waypoint;
+    const flightMs = via ? s.viaMs : s.arcMs;
+    const { stagger, staggerMax, staggerUnscaled } = s;
+    const arc = via
+      ? { via: { point: midpoint(s.viaX, s.viaY), rest: ordered(s.viaArrival, s.viaDeparture), width: s.viaWidth }, ...(s.viaEase && { ease: s.viaEase }) }
+      : { arcHeight: s.arcHeight, bank: s.arcBank, lean: s.arcLean, apex: s.apex };
+    actors.push(actor('token-two', [home[0] - 28, home[1] - 38]));
+    Object.assign(step, arc, { flightMs, stagger, staggerUnscaled, dur: flightMs });
+    if (staggerMax >= 0) step.staggerMax = staggerMax;
+    // Leave room for the kit to schedule the gap, including unscaled gaps at the lowest motion scale.
+    const staggeredDur = stagger > 0 && staggerMax !== 0 ? flightMs + 10000 : flightMs;
+    steps.push({ ...step, actor: 'token-two', to: [to[0] - 28, to[1] - 38], dur: staggeredDur });
+    if (via) marks.push(arc.via.point);
+    note = via ? 'Two tokens pause at the waypoint on their way to the finish.'
+      : `Two tokens arc over the midpoint with ${s.arcHeight}px of lift.`;
+  } else if (verb === cubicFlight) {
+    Object.assign(step, {
+      dur: s.cubicMs,
+      cubic: {
+        controls: [s.firstX, s.firstY, s.secondX, s.secondY], minLift: s.minLift,
+        startScale: s.startScale, bank: s.cubicBank, lean: s.cubicLean, curvature: s.curvature,
+        leanIn: s.leanIn, fadeIn: s.fadeIn, levelFrom: s.levelFrom, perspective: s.perspective,
+      },
+    });
+    note = `The token grows from ${s.startScale}× its landing size and levels out at the finish.`;
+  } else if (verb === multiStop) {
+    const { launch, travel, lap, hop, back, headingSample } = s;
+    const path = {
+      stops: [
+        { box: [w * .39 - 12, h * .46 - 9, 24, 18], laps: s.laps1, dwell: s.dwell1 },
+        { box: [w * .72 - 12, h * .51 - 9, 24, 18], laps: s.laps2, dwell: s.dwell2 },
+      ],
+      launch, travel, lap, hop, back, headingSample,
+      padding: [s.paddingX, s.paddingY], nose: s.pathNose, flip: s.pathFlip, roll: s.pathRoll,
+      ghosts: { count: s.ghostCount, spacing: s.ghostSpacing, opacity: s.ghostOpacity },
+    };
+    steps = [{ t: 0, actor: 'token', do: multiStop, dur: PATHS.multiStopPath(home, path).finish, path }];
+    marks = [home, ...path.stops.map(({ box }) => PATHS.centre(box))];
+    note = `The token circles the first stop ${s.laps1}× and the second ${s.laps2}× before returning home.`;
+  } else {
+    const { blend, lookAhead, nose, rollAxis, rollSquash, reverseBrightness, side, juke, fadeSlope } = s;
+    const quadratic = {
+      control: midpoint(s.controlX, s.controlY), blend, lookAhead, nose, rollAxis, rollSquash, reverseBrightness,
+      roll: ordered(s.rollStart, s.rollEnd), side, juke, fadeSlope,
+      ...(s.useExitScale && { exitScale: s.exitScale }),
+      ...(s.useExitFade && { exitFade: s.exitFade }),
+      afterimages: { count: s.afterCount, spacing: s.afterSpacing, opacity: s.afterOpacity, filter: `brightness(${s.afterBrightness})` },
+    };
+    Object.assign(step, { dur: s.quadraticMs, quadratic, then: 'hide' });
+    note = `The token rolls through a curved pass with ${s.afterCount} afterimages.`;
+    if (verb === 'trail') {
+      const { rear, width, tipWidth, fade, samples, spacing } = s;
+      const colour = s.colour.slice(1).match(/../g).map((value) => parseInt(value, 16)).join(',');
+      actors.push(actor('ribbon', home, 0));
+      steps.unshift({ t: 0, actor: 'ribbon', do: 'trail', dur: step.dur, to, ribbon: {
+        quadratic, rear, width, tipWidth, fade, colour, samples, spacing,
+      } });
+      note = `The ribbon follows the rolling token and remembers up to ${samples} points.`;
+    }
+  }
+  const maxMs = Math.max(...steps.map(({ dur }) => dur));
+  return { note, marks, beat: { id: 'preview', frequency: 'once', maxMs, actors, steps } };
+}
+
+function ordered(start, end) {
+  return [Math.min(start, end), Math.max(start, end)];
+}
+
 let rects;
 const player = MOTION.createMotionPlayer({
   specs: {}, stages: { default: (id) => rects[id] }, verbs, speed: previewSpeed, context: layer,
@@ -4497,6 +4615,9 @@ function play() {
   card.querySelector('.fx-rise-pulse')?.remove();
   const verb = picker.value;
   const isPulse = verb === 'rise-pulse';
+  const isFlight = Boolean(flightGroups[verb]);
+  table.toggleAttribute('data-flight', isFlight);
+  $('flight-marks').replaceChildren();
   const { css, step } = settings(verb);
   const speed = previewSpeed();
   MOTION.putMotionSpeed(speed, 'on', table);
@@ -4517,7 +4638,19 @@ function play() {
 
   const lines = [`const speed = () => withReducedMotion(${s.speed || "'instant'"});`];
   let note;
-  if (isPulse) {
+  if (isFlight) {
+    const flight = flightBeat(verb);
+    for (const [x, y] of flight.marks) {
+      const mark = document.createElement('div');
+      mark.className = 'flight-mark';
+      mark.style.left = x + 'px';
+      mark.style.top = y + 'px';
+      $('flight-marks').append(mark);
+    }
+    player.play(flight.beat);
+    lines.push('', `const beat = ${JSON.stringify(flight.beat, null, 2)};`);
+    note = flight.note;
+  } else if (isPulse) {
     if (speed !== 'instant') {
       const pulseEl = document.createElement('div');
       pulseEl.className = 'fx-rise-pulse';
@@ -4561,7 +4694,7 @@ function markPreset() {
   $('reset').setAttribute('aria-pressed', String(Object.keys(KIT).every((key) => s[key] === KIT[key])));
 }
 picker.addEventListener('change', () => {
-  $('sequence').disabled = picker.value === 'rise-pulse';
+  $('sequence').disabled = picker.value === 'rise-pulse' || Boolean(flightGroups[picker.value]);
   build();
   play();
 });

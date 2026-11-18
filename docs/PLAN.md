@@ -133,6 +133,7 @@ A game's build plan lists the kit work it needs as phases named `GK<n>` for the 
 | K322 | ci-templates: the Full gate run-name is quoted, since an unquoted ` #` starts a YAML comment and cut the title to "Full gate PR" | S |  | done |
 | K343 | Tests that flake under runner load made robust: check-runner K138 stream order, ci-templates local-ci step lines, app-frame crash screen save-later | S |  | done (coverage crash: cause not found, left open) |
 | K344 | token-flights: a flying token keeps its size under a page's `img { max-width: 100% }` reset (the flight layer is 0 px wide, so the reset shrank every token to nothing) | S |  | done |
+| K345 | The effect-library tuner covers the K332 flights, multi-stop path and trail. | S |  | done |
 | K346 | saves: importAllData reads back an exportAllData file (listed keys and stores with write; refuses unreadable, wrong format, newer version) | S |  | done |
 | K347 | `deck-motions` turn-over takes `axis: 'x' | 'y'` (side to side, default; or top to bottom). The effect-library `flip` gets the same option in K334's PR | S |  | done |
 | K348 | `deck-motions` turn-over takes `direction: 1 | -1` (front or back flip). The effect-library `flip` gets it in K334's PR | S |  | done |
