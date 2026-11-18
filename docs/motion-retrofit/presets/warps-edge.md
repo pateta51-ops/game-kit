@@ -9,6 +9,10 @@ Source at `449af55`
 - `src/ui/fx/power/sortie.ts`
 
 The pass coordinates and start offsets below are lab fixtures. Resolve the corresponding points and timings from the game at runtime.
+Place each evasion actor at its fixture's `from` point and pass `to` and
+`quadratic` to `arc-move`. For `trail`, include that pass's `quadratic`
+inside `ribbon`. Combine the sortie settings and the selected timing
+profile with the game's `stops` inside the `multi-stop-path` step's `path`.
 
 ```ts
 const pass = {
@@ -50,35 +54,35 @@ Source at `449af55` under `src/ui/fx/`. Supply stage points, artwork, and the ru
 
 ```ts
 const streakPalette = ['255,140,210', '170,220,255', '235,245,255'] as const;
-const vortex = {
-  stroke: '#ff7ac4', strokeWidth: 2.2, phoneStrokeWidth: 1.6, alpha: .42,
+const vortex = (u: number, phone: boolean) => ({
+  size: phone ? 390 : 820 * u,
+  stroke: '#ff7ac4', strokeWidth: phone ? 1.6 : 2.2, alpha: .42,
   background: 'radial-gradient(circle, rgba(229,0,125,.34), rgba(229,0,125,.1) 42%, transparent 66%)',
-};
-export const beams = {
+});
+const iconSize = (u: number, phone: boolean) => phone ? 170 : 340 * u;
+export const beams = (u: number, phone: boolean, markerSize: number, flightMs: number) => ({
   // warpLook.ts, warp.ts and timing.ts
-  departStreaks: { t: 1880, dur: 440, count: 110, seed: 71, alpha: .9, palette: streakPalette },
-  arriveStreaks: { t: 0, dur: 320, count: 90, seed: 72, alpha: .85, inward: true, palette: streakPalette },
-  departMarker: { t: 1120, dur: 1200, mode: 'portal', glowColour: '#e5007d', liftAtUnit: 60,
-    portal: { travelMs: 300, elapsed: 300, alpha: .5, collapse: [540, 780], vortex: { ...vortex, open: [80, 480] } } },
-  arriveMarker: { t: 0, dur: 1800, mode: 'portal', glowColour: '#e5007d', liftAtUnit: 60,
-    portal: { outward: true, travelAt: 1400, travelMs: 400, alpha: .5, growth: [80, 480], collapse: [1400, 1650], vortex: { ...vortex, open: [80, 480] } }, },
+  departStreaks: { t: 1880, dur: 440, unit: u, count: 110, seed: 71, alpha: .9, palette: streakPalette },
+  arriveStreaks: { t: 0, dur: 320, unit: u, count: 90, seed: 72, alpha: .85, inward: true, palette: streakPalette },
+  departMarker: { t: 1120, dur: 1200, mode: 'portal', glowColour: '#e5007d', lift: 60 * u,
+    portal: { startSize: markerSize, endSize: iconSize(u, phone), travelMs: 300, elapsed: 300,
+      alpha: .5, collapse: [540, 780], vortex: { ...vortex(u, phone), open: [80, 480] } } },
+  arriveMarker: { t: 0, dur: 1800, mode: 'portal', glowColour: '#e5007d', lift: 60 * u,
+    portal: { startSize: iconSize(u, phone), endSize: markerSize, outward: true, travelAt: 1400, travelMs: 400,
+      alpha: .5, growth: [80, 480], collapse: [1400, 1650], vortex: { ...vortex(u, phone), open: [80, 480] } } },
   spiral: {
-    squash: .62, orbit: .2, liftAtUnit: 34, phoneSquash: 1, phoneLift: 14,
-    tail: [120, 220, 255], tip: [255, 90, 190], engine: '120,220,255', phoneRibbonReach: 1.4,
+    unit: u, squash: phone ? 1 : .62, orbit: .2, lift: phone ? 14 : 34 * u,
+    tail: [120, 220, 255], tip: [255, 90, 190], engine: '120,220,255', ribbonReach: phone ? 1.4 : 1,
     afterimageFilter: 'brightness(.7) sepia(1) hue-rotate(160deg) saturate(4)',
   },
   // power/pulseLook.ts and power/blocks.ts
-  pulse: { liftAtUnit: 180, colour: '143,230,42', core: '240,252,255', tailMs: 200 },
-  // tractor.ts and timing.ts
-  curved: { dur: 1200, stagger: 120, colour: '127,230,255', moteColour: '200,250,255',
-    sparkColour: 'rgba(170,240,255,1)', bag: { size: [40, 34], tuck: true, controlLift: 190 },
-    rest: { size: [40, 72], tuck: false, controlLift: 140 } },
-} as const;
+  pulse: { lift: 180 * u, flightMs, colour: '143,230,42', core: '240,252,255' },
+} as const);
 ```
 
-For the spiral, derive the parked box and heading from `shipOf` in `warpLook.ts` and the artwork nose, mirror and aspect ratio from `src/ui/table/shipBoard.ts`. Schedule departure at the departure origin and arrival at the arrival origin.
+For the `warp-transfer` step's `spiral`, derive `parked` and `heading` from `shipOf` in `warpLook.ts` and `image`, `nose` and `flip` from the artwork in `src/ui/table/shipBoard.ts`. Schedule departure at the departure origin and arrival at the arrival origin. Pass `pulse` inside a `radial-streaks` step with `unit: u` and `dur: flightMs + 200`.
 
-Choose the curved beam control point halfway between the endpoints horizontally and `controlLift` above the higher endpoint. The original delays in a curved ride are scan 0–220 ms, lock 150–320, carry 260–860, inhale 820–980 and retract 860–1040. Counter updates, bag and landing element transforms and source visibility stay with the game.
+For the tractor ride from `tractor.ts` and `timing.ts`, stagger the starts by 120 ms using step `t` and set `dur: 1200`. In the step's `curve` set `unit: u`, `colour: '127,230,255'`, `moteColour: '200,250,255'`, and `sparkColour: 'rgba(170,240,255,1)'`. Choose `control` halfway between the endpoints horizontally and 190 × u above the higher endpoint for the bag, or 140 × u otherwise. Use `size: [40, 34], tuck: true` for the bag and `size: [40, 72], tuck: false` otherwise. The original delays are scan 0–220 ms, lock 150–320, carry 260–860, inhale 820–980 and retract 860–1040. Counter updates, bag and landing element transforms and source visibility stay with the game.
 
 The game assembles the departure, prompt hold, banner and arrival around the marker and streaks. Board and backdrop changes, flash and ring, banner, card flip and game-specific camera, marker and target selection stay in the game. Pulse rings, impact, damage and readout stay separate from its flight ribbon.
 
@@ -259,3 +263,59 @@ const palette = {
   ringColour: '#526573', dashColour: '#728591', lineWidth: 0.5, minLineWidth: 1,
 }
 ```
+
+### Menu sheen and signature slashes
+
+From `src/ui/theme/menus.css` and `src/ui/fx/power/sigLook.ts`
+at `449af55`. The primary menu button holds before and after the sweep.
+
+```ts
+{ do: 'sheen', angle: 110, bandWidth: 100, stops: [35, 65],
+  colour: '#b6f6ff22', travel: [-110, 110], loop: true, period: 9000,
+  sweep: [.65, .95], easing: 'ease-in-out' }
+```
+
+Start the slash at 620 ms and allow 340 ms for all three strokes.
+Here `u` is the game's stage unit.
+
+```ts
+{ do: 'slash', count: 3, angle: Math.atan2(.9, .4) * 180 / Math.PI,
+  length: Math.hypot(.4, .9), spacing: .2, width: 16 * u,
+  colour: ['255,42,143', '255,230,0', '255,42,143'], coreColour: '240,252,255',
+  alpha: .32, coreWidth: .19, coreAlpha: .9, stagger: 40, drawMs: 100,
+  fade: [120, 260] }
+```
+
+For Overwhelm's secondary targets, draw one `particles.arc` per target
+from the blast centre. Stagger by 50 ms, grow toward each target with
+`ease.out(seg(t, start, start + 160))` and fade over 180–320 ms.
+Set `jag: 20`, `width: 4`, `seed: 13 + i * 5` and alternate `rgb`
+between the pink and gold above. The arc already draws a seeded side fork.
+
+### Entrap and Randomizer
+
+From `src/ui/fx/power/utilityLook.ts` and `utilityPlan.ts`
+at `449af55`.
+
+- Entrap. Move the card and a game-supplied hex-net actor together
+  during the 700–1180 ms haul. Use a `flip` on the card and a parallel
+  `scale` on the net for the closing cue. The grid has 5 columns by 7 rows,
+  radius `16*u`, hex vertices at `.9*radius`, horizontal spacing
+  `1.73*radius` and vertical spacing `1.5*radius`. Offset odd rows by
+  `.87*radius`. Use a `1.5*u` stroke in `rgba(191,230,255,.7)`.
+  Fade the net to zero from 1060 to 1180 ms. Rotate each hex around its
+  own centre. Set its starting angle in `style.rotate` to
+  `30 + (700 / 900) * (180 / Math.PI)` with a `deg` suffix, then give each hex the step
+  `{ do: 'spin', actor: hexId, t: 700, dur: 480, turns: 1, period: 2 * Math.PI * 900, endless: true }`.
+  Match their movement, scale and fade to the net.
+- Randomizer. Give the three game-supplied faces their own actors.
+  Use simultaneous `pulse` steps with sampled `translate` keyframes.
+  In spec time `t`, face `i` is centered at
+  `hub + [80*u*cos(a), 52*u*sin(a)]` with
+  `a = -Math.PI/2 + i*2.094 - t/160`. Sample one linear period
+  into `frames` with `period: 2 * Math.PI * 160` and
+  `easing: 'linear'`. Each face is `30*u` across.
+  Fade in from 520 to 640 ms and out from 940 to 1100 ms in the
+  choose beat. When the game has the result, sample the 160–300 ms
+  lock into the chosen angle, scale that actor to 1.4, add a gold
+  `glow` and fade the other faces to .3. Keep selection in the game.

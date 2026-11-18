@@ -213,3 +213,14 @@ tilt: [10, -14, -312], sink: [.04, .03] })` for the incoming top card.
 
 - `src/ui/motion/effects/closingScene.ts` at `a69c8dac`. Use `cameraPull` with `scale: 0.96`, `origin: '50% 45%'`, `pullMs: 2600`, `dim: 0.55`, `dimMs: 1300`, `releaseMs: 520`, and `dimBackground: 'radial-gradient(ellipse at 50% 45%, rgba(2,4,8,.55), rgba(2,4,8,.92))'`. Use the scene's speed. Start the existing signal banner after the dim fade and release the pull as the dialog rises. The game retains its dialog and optional prelude.
 - `src/ui/motion/effects/cardFx.ts` at `a69c8dac` (used by `bottomReturn.ts` and `logRecall.ts`). Use `pileLift` with `lift: '-0.4% -1.4%'`, `scale: 1.035`, `shadow: 'drop-shadow(0 34px 22px rgb(0 0 0 / 0.8))'`, `liftMs: 300`, `settleMs: 320`, `liftEase: 'ease-out'` and `settleEase: 'cubic-bezier(0.3, 1.3, 0.5, 1)'`. Pass the game's playback speed and cue settle at the original arrival beat.
+
+### Begin button sheen
+
+From `src/ui/theme/home.css` at `a69c8dac`. Use the button fill as
+the actor and play `sheen` on hover or focus-visible (650 ms) or touch
+activation (450 ms), scaled by motion speed.
+
+```ts
+{ do: 'sheen', angle: 100, bandWidth: 45, stops: [20, 80],
+  colour: 'rgba(255,255,255,.16)', travel: [-120, 260], easing: 'ease-out' }
+```

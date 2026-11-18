@@ -176,3 +176,22 @@ The [lab panels](fake/retrofit/index.html?lines) show the four effects. Times ar
 - `pileLift(el, settings)` holds the live pile at CSS `lift` (translate), `scale` and `shadow` (filter). Set `liftMs`, `settleMs`, `liftEase`, `settleEase` and playback `speed`. The controller exposes the `lift` animation during animated playback. The caller cues `settle()` when the card arrives and calls `end()` after settling or on skip.
 - For instant playback (`0` or `'instant'`), pass `speed` to the camera pull, camera scale sampler, letterbox, orb and pile settings, or as the third argument to `cameraPush` in `{ speed }`. The camera stays at rest, the HUD is skipped, the orb keeps its steady active or empty appearance, and the pile lifts and settles immediately. Pass the same value as the cloud playback `scale` to skip fragments while preserving the empty outline.
 - Use `createAmbience` to host the orb and cloud and `destroy()` to remove either canvas. Closing-scene callers can use the existing banner, stamp and particle helpers for the adjoining beats. See the [staging lab](fake/retrofit/index.html?staging).
+
+### Sheen, drift and slash
+
+- `sheen` sweeps a clipped gradient over the actor. Set `angle` in degrees,
+  `bandWidth` as a percentage of the actor and `colour` as CSS colour.
+  `stops` gives the two transparent gradient stops in percent. `travel`
+  gives the start and end translation along the gradient axis as percentages of the band.
+  Set `loop: true` and `period` in ms to repeat within the step.
+  `sweep` gives the start and end fractions of the cycle and `easing`
+  applies during the sweep. The game triggers the step.
+- `idle` with `kind: 'drift'` travels from rest to `drift: { x, y, scale }`
+  and back over `period` (default 40000 ms). Offsets are in pixels.
+- `slash` grows and fades `count` strokes over `to` or the actor's rect.
+  `angle` (degrees) and `length` use the normalized target box.
+  `spacing` is a fraction of its width. `colour` accepts an RGB triplet
+  string or a list of triplets, one per stroke, repeating as needed.
+  `width` is in pixels. Set `stagger`, `drawMs` and the two `fade`
+  times in ms. `coreColour`, `coreWidth` (a fraction of `width`),
+  `alpha` and `coreAlpha` set the two stroke passes.

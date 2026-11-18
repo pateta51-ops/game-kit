@@ -159,3 +159,59 @@ it('lets the game stop a live loop, preserving its still style', () => {
   expect(cancel).toHaveBeenCalledTimes(1);
   expect(el.style.opacity).toBe('0.8');
 });
+
+it.each([false, true])('sheen sweeps and removes its overlay (loop=%s)', (loop) => {
+  const { player, layer } = play({
+    do: 'sheen', angle: 110, bandWidth: 45, colour: 'white', stops: [25, 75],
+    travel: [-120, 260], sweep: [.65, .95], loop, period: 200,
+  }, 800, 2);
+  const clip = layer.el.querySelector('[aria-hidden]');
+  const band = clip?.querySelector<HTMLElement>(':scope > div > div');
+  expect(band?.style.backgroundImage).toBe('linear-gradient(90deg, transparent 25%, white 50%, transparent 75%)');
+  expect(band?.parentElement?.style.rotate).toBe('20deg');
+  expect(animate.mock.lastCall).toMatchObject([
+    [
+      { transform: 'translateX(-120%)', offset: 0 },
+      { transform: 'translateX(-120%)', offset: .65 },
+      { transform: 'translateX(260%)', offset: .95 },
+      { transform: 'translateX(260%)', offset: 1 },
+    ],
+    { duration: loop ? 400 : 1600, iterations: loop ? Infinity : 1 },
+  ]);
+  if (loop) player.hurry();
+  else player.skipAll();
+  expect(cancel).toHaveBeenCalledOnce();
+  expect(clip?.parentElement).toBeNull();
+  expect(layer.el.childElementCount).toBe(0);
+});
+
+it('sheen removes its overlay when animation setup throws', () => {
+  animate.mockImplementationOnce(() => { throw new Error('animation failed'); });
+  const { layer, player } = play({ do: 'sheen' });
+  expect(layer.el.querySelector('[aria-hidden]')).toBeNull();
+  player.skipAll();
+  expect(layer.el.childElementCount).toBe(0);
+});
+
+it('drift travels to its translated and scaled pose and returns', () => {
+  const { layer, player, source } = play({ do: 'idle', kind: 'drift', drift: { x: 8, y: -5, scale: 1.012 }, period: 48000 });
+  expect(animate.mock.lastCall).toEqual([
+    [{ easing: 'ease-in-out' }, { easing: 'ease-in-out', translate: '8px -5px', scale: '1.012' }, { easing: 'ease-in-out' }],
+    { duration: 48000, iterations: Infinity },
+  ]);
+  player.skipAll();
+  expect(cancel).toHaveBeenCalledOnce();
+  expect(layer.el.childElementCount).toBe(0);
+  expect(source.style.transform).toBe('');
+});
+
+it.each([{ do: 'sheen' }, { do: 'idle', kind: 'drift' }, { do: 'slash' }])('%o stays at rest at speed zero', (step) => {
+  const requestFrame = vi.fn();
+  vi.stubGlobal('requestAnimationFrame', requestFrame);
+  const { layer, source } = play(step, 800, 0);
+  expect(animate).not.toHaveBeenCalled();
+  expect(requestFrame).not.toHaveBeenCalled();
+  expect(layer.el.querySelector('canvas')).toBeNull();
+  expect(layer.el.childElementCount).toBe(0);
+  expect(source.style.transform).toBe('');
+});

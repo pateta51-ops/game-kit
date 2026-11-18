@@ -33,14 +33,22 @@ export interface OrbitSettings {
 }
 
 export interface IdleSettings extends PulseSettings {
-  kind: 'bob' | 'breathe' | 'orbit';
+  kind: 'bob' | 'breathe' | 'orbit' | 'drift';
   rise?: number;
+  drift?: { x?: number; y?: number; scale?: number };
   orbit?: OrbitSettings;
 }
 
 export function startIdle(el: HTMLElement, settings: IdleSettings, state?: Parameters<typeof startLoop>[1]): () => void {
   const { kind, rise = 8, period, orbit } = settings;
   if (kind === 'orbit') return startLoop(el, state ?? {}, (speed) => orbitLoop(el, period ?? 2200, speed, orbit));
+  if (kind === 'drift') {
+    const { x = 6, y = -4, scale = 1.02 } = settings.drift ?? {};
+    return startPulse(el, {
+      ...settings, period: period ?? 40000,
+      frames: settings.frames ?? [{}, { translate: `${x}px ${y}px`, scale: String(scale) }, {}],
+    }, state);
+  }
   const frames = kind === 'bob'
     ? [{}, { translate: `0 ${String(-rise)}px` }, {}]
     : [{ opacity: 0.5 }, { opacity: 1 }, { opacity: 0.5 }];

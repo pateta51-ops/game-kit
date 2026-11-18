@@ -16410,6 +16410,11 @@ var PIECES = (() => {
     return d > 0 && call.dur > 0 ? elapsed * d / call.dur : elapsed;
   }
   var boards = /* @__PURE__ */ new WeakMap();
+  function dispose(layer, b) {
+    cancelAnimationFrame(b.frame);
+    b.canvas.remove();
+    if (boards.get(layer) === b) boards.delete(layer);
+  }
   function board(layer) {
     const b = boards.get(layer);
     if (b?.canvas.isConnected) return b;
@@ -16437,7 +16442,8 @@ var PIECES = (() => {
           console.error(e);
         }
       }
-      made.frame = requestAnimationFrame(tick);
+      if (made.live.size) made.frame = requestAnimationFrame(tick);
+      else dispose(layer, made);
     };
     made.frame = requestAnimationFrame(tick);
     boards.set(layer, made);
@@ -16456,10 +16462,7 @@ var PIECES = (() => {
       b.live.add(f);
       return () => {
         b.live.delete(f);
-        if (b.live.size) return;
-        cancelAnimationFrame(b.frame);
-        b.canvas.remove();
-        if (boards.get(layer) === b) boards.delete(layer);
+        if (!b.live.size) dispose(layer, b);
       };
     });
   }
@@ -19332,6 +19335,14 @@ var PIECES = (() => {
   function startIdle(el, settings, state) {
     const { kind, rise = 8, period, orbit } = settings;
     if (kind === "orbit") return startLoop(el, state ?? {}, (speed) => orbitLoop(el, period ?? 2200, speed, orbit));
+    if (kind === "drift") {
+      const { x = 6, y = -4, scale = 1.02 } = settings.drift ?? {};
+      return startPulse(el, {
+        ...settings,
+        period: period ?? 4e4,
+        frames: settings.frames ?? [{}, { translate: `${x}px ${y}px`, scale: String(scale) }, {}]
+      }, state);
+    }
     const frames2 = kind === "bob" ? [{}, { translate: `0 ${String(-rise)}px` }, {}] : [{ opacity: 0.5 }, { opacity: 1 }, { opacity: 0.5 }];
     return startPulse(el, { period: 2400, ...settings, frames: settings.frames ?? frames2 }, state);
   }
@@ -19708,6 +19719,100 @@ var PIECES = (() => {
       board2.globalAlpha *= alpha;
       board2.drawImage(ctx.canvas, 0, 0);
       board2.restore();
+    }
+  };
+
+  // components/effect-library/sheen.ts
+  var sheen = ({ call, el }) => {
+    if (call.dur <= 0) return void 0;
+    const {
+      angle = 100,
+      bandWidth = 50,
+      colour = "rgba(255,255,255,.25)",
+      stops = [0, 100],
+      travel: travel2 = [-110, 220],
+      loop = false,
+      period = call.step.dur,
+      sweep = [0, 1],
+      easing = "linear"
+    } = call.step;
+    const clip = el.ownerDocument.createElement("div");
+    clip.setAttribute("aria-hidden", "true");
+    clip.style.cssText = "position:absolute;inset:0;overflow:hidden;border-radius:inherit;pointer-events:none;container-type:size";
+    const axis = el.ownerDocument.createElement("div");
+    axis.style.cssText = "position:absolute;inset:0";
+    axis.style.rotate = `${angle - 90}deg`;
+    const band = el.ownerDocument.createElement("div");
+    band.style.cssText = "position:absolute;left:0;top:50%;translate:0 -50%;height:calc(100cqw + 100cqh)";
+    band.style.width = `${bandWidth}%`;
+    band.style.backgroundImage = `linear-gradient(90deg, transparent ${stops[0]}%, ${colour} 50%, transparent ${stops[1]}%)`;
+    const from = { transform: `translateX(${travel2[0]}%)` };
+    const to = { transform: `translateX(${travel2[1]}%)` };
+    axis.append(band);
+    clip.append(axis);
+    el.append(clip);
+    try {
+      const animation = band.animate([
+        { ...from, offset: 0 },
+        { ...from, offset: sweep[0], easing },
+        { ...to, offset: sweep[1] },
+        { ...to, offset: 1 }
+      ], { duration: loop ? period * call.dur / call.step.dur : call.dur, iterations: loop ? Infinity : 1, fill: "both" });
+      return () => {
+        animation.cancel();
+        clip.remove();
+      };
+    } catch (error) {
+      clip.remove();
+      throw error;
+    }
+  };
+
+  // components/effect-library/slash.ts
+  var slash = (ctx, t, { call }) => {
+    const {
+      count = 3,
+      angle = 60,
+      spacing = 0.2,
+      length = 0.9,
+      colour = "255,255,255",
+      width = 8,
+      alpha = 0.32,
+      coreColour = "255,255,255",
+      coreWidth = 0.19,
+      coreAlpha = 0.9,
+      stagger = 40,
+      drawMs = 100,
+      fade = [120, 260]
+    } = call.step;
+    const [x, y, w, h2] = call.to ?? call.from;
+    const radians = angle * Math.PI / 180;
+    const dx = Math.cos(radians) * length * w;
+    const dy = Math.sin(radians) * length * h2;
+    ctx.save();
+    try {
+      ctx.globalCompositeOperation = "lighter";
+      ctx.lineCap = "round";
+      for (let i = 0; i < count; i++) {
+        const at = t - i * stagger;
+        if (at <= 0 || at >= fade[1]) continue;
+        const a = 1 - seg(at, ...fade);
+        const k = ease.out(seg(at, 0, drawMs));
+        const startX = x + w * (0.5 + (i - (count - 1) / 2) * spacing) - dx / 2;
+        const startY = y + (h2 - dy) / 2;
+        const rgb2 = typeof colour === "string" ? colour : colour[i % colour.length] ?? "255,255,255";
+        ctx.beginPath();
+        ctx.moveTo(startX, startY);
+        ctx.lineTo(startX + dx * k, startY + dy * k);
+        ctx.strokeStyle = `rgba(${rgb2},${a * alpha})`;
+        ctx.lineWidth = width;
+        ctx.stroke();
+        ctx.strokeStyle = `rgba(${coreColour},${a * coreAlpha})`;
+        ctx.lineWidth = width * coreWidth;
+        ctx.stroke();
+      }
+    } finally {
+      ctx.restore();
     }
   };
 
@@ -20353,6 +20458,8 @@ void main() {
     registerDashLine(verbs, o?.resolve, o?.stage);
     registerCanvasEffect(verbs, "reticle", reticle);
     registerCanvasEffect(verbs, "debris", debris);
+    registerEffect(verbs, "sheen", sheen);
+    registerCanvasEffect(verbs, "slash", slash);
     registerCrumple(verbs);
     return createEffectLayer(o);
   }

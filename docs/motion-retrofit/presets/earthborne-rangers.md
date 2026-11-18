@@ -14,3 +14,15 @@ Use `text` with `typewriter: { unit, progress, textAlign: 'inherit', rise: false
 Without narration, each paragraph's progress is elapsed reading time divided by `Math.max(700, wordCount * 60000 / 220)`. Use that duration per paragraph, or let the game provide the progress callback for a narration fallback or an adopted voice. The original book starts reading after the opening animation (700 ms at normal speed), advances one paragraph at a time, and retains full text after skip. The game owns paragraph order, voice, rich-text decorations, book opening, and the live end state.
 
 Source: `src/ui/motion/book.ts` at `59e0ad1d` (reading clock, unread highlight and paragraph sequencing).
+
+### Backdrop drift
+
+From `src/ui/motion/motion.css` at `59e0ad1d`. Call `startIdle`
+on the blurred backdrop alone, with the settings below. A 48000 ms
+round trip matches the 24000 ms alternating animation. Use speed 1
+in Normal and Fast, and stop the loop when motion is switched off.
+
+```ts
+{ kind: 'drift', drift: { x: 8, y: -5, scale: 1.012 },
+  period: 48000, easing: 'ease-in-out' }
+```

@@ -82,6 +82,7 @@
   #pile-sample { transform: rotate(-5deg); box-shadow: .35rem .6rem #afa7c2, .7rem 1.2rem #8276aa }
 </style>
 <script>if (new URLSearchParams(location.search).has('signals')) document.documentElement.classList.add('signals-only')</script>
+<style>
   .lines-panel { display: none; background: #292733; color: #ebe9f2 }
   .lines-only main { grid-template-columns: repeat(2, minmax(0, 1fr)) }
   @media (max-width: 640px) { .lines-only main { grid-template-columns: 1fr } }
@@ -107,8 +108,22 @@
   #crumple-lab canvas { left: 14% }
   #crumple-lab [id$="-target"] { left: 64%; border: 1px dashed #9694a1 }
 </style>
+<style>
+  .finish-panel { display: none; background: #262c39; color: #f0ede7 }
+  .finish-only main > :not(.finish-panel) { display: none }
+  .finish-only .finish-panel { display: block }
+  .finish-panel .sample { inset: 25% 20% 18% }
+  .finish-button, .finish-drift, .finish-slash { border-radius: 1rem }
+  .finish-button { color: #f0ede7; background: #39486b; border: 2px solid #8c9eca; font-size: 2rem }
+  .finish-drift { background: repeating-linear-gradient(130deg,#7181ad 0 40px,#323c56 40px 80px) }
+  .finish-slash { background: #374357; border: 2px solid #8c9eca }
+</style>
+<script>if (new URLSearchParams(location.search).has('finish')) document.documentElement.classList.add('finish-only')</script>
 <header><h1>Effect library motion lab</h1><button type="button">Replay</button></header>
 <main>
+  <section class="finish-panel"><h2>Sheen</h2><div id="finish-sheen" class="sample finish-button"><span style="position:relative;z-index:1">Continue</span></div></section>
+  <section class="finish-panel"><h2>Idle drift</h2><div id="finish-drift" class="sample finish-drift"></div></section>
+  <section class="finish-panel"><h2>Slash</h2><div id="finish-slash" class="sample finish-slash"></div></section>
   <section class="staging-panel"><h2>Camera pull</h2><div id="camera-root" class="staging-table"><div class="card">A</div></div><div id="camera-dim"></div></section>
   <section class="staging-panel"><h2>Letterbox banner</h2><div id="letterbox-root" class="staging-table"><div class="card">B</div></div></section>
   <section class="staging-panel"><h2>Plasma orb</h2><div id="orb-sample" class="staging-canvas"></div></section>
@@ -175,4 +190,5 @@
 <script type="module" src="./lines.ts"></script>
 <script type="module" src="./crumple.ts"></script>
 <script type="module" src="./staging.ts"></script>
+<script type="module" src="./finish.ts"></script>
 </html>

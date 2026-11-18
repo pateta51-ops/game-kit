@@ -40,3 +40,6 @@ export * from './letterbox-banner.ts';
 export * from './pile-lift.ts';
 export * from './plasma-orb.ts';
 export * from './drift-cloud.ts';
+
+export type { SheenSettings } from './sheen.ts';
+export type { SlashSettings } from './slash.ts';

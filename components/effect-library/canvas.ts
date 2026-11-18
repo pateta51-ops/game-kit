@@ -28,6 +28,12 @@ interface Board {
 }
 const boards = new WeakMap<EffectLayer, Board>();
 
+function dispose(layer: EffectLayer, b: Board): void {
+  cancelAnimationFrame(b.frame);
+  b.canvas.remove();
+  if (boards.get(layer) === b) boards.delete(layer);
+}
+
 function board(layer: EffectLayer): Board | undefined {
   const b = boards.get(layer);
   if (b?.canvas.isConnected) return b;
@@ -55,7 +61,8 @@ function board(layer: EffectLayer): Board | undefined {
         console.error(e);
       }
     }
-    made.frame = requestAnimationFrame(tick);
+    if (made.live.size) made.frame = requestAnimationFrame(tick);
+    else dispose(layer, made);
   };
   made.frame = requestAnimationFrame(tick);
   boards.set(layer, made);
@@ -76,10 +83,7 @@ export function registerCanvasEffect(verbs: VerbRegistry<EffectLayer>, name: str
     b.live.add(f);
     return () => {
       b.live.delete(f);
-      if (b.live.size) return;
-      cancelAnimationFrame(b.frame);
-      b.canvas.remove();
-      if (boards.get(layer) === b) boards.delete(layer);
+      if (!b.live.size) dispose(layer, b);
     };
   });
 }

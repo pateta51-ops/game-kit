@@ -9,10 +9,13 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
-function setup(layerEl: FakeEl | undefined) {
+function setup(layerEl: FakeEl | undefined, paint?: () => void) {
   const verbs = createVerbs<EffectLayer>();
   const drawn: string[] = [];
-  registerCanvasEffect(verbs, 'burst', (_ctx, _t, fx) => void drawn.push(fx.call.actor));
+  registerCanvasEffect(verbs, 'burst', (_ctx, _t, fx) => {
+    paint?.();
+    drawn.push(fx.call.actor);
+  });
   const layer = { el: layerEl } as unknown as EffectLayer;
   const run = { id: 1, context: layer } as unknown as Run<EffectLayer>;
   const start = (actor: string): undefined | (() => void) => verbs.get('burst')?.({ actor, dur: 100, from: [0, 0, 10, 10], step: { dur: 100 } } as unknown as VerbCall, run);
@@ -54,6 +57,23 @@ describe('canvas effects on a faked page', () => {
     expect([layerEl.children.length, s.drawn, dom.waiting()]).toEqual([1, ['a', 'b', 'b'], 1]);
     b?.();
     expect([layerEl.children.length, dom.waiting()]).toEqual([0, 0]);
+  });
+  it('releases the canvas and stops scheduling frames when the last draw throws', () => {
+    const dom = fakeDom();
+    const layerEl = dom.el('div');
+    const error = new Error('draw failed');
+    const report = vi.spyOn(console, 'error').mockImplementation(() => {});
+    try {
+      const s = setup(layerEl, () => { throw error; });
+      const end = s.start('a');
+      expect([layerEl.children.length, dom.waiting()]).toEqual([1, 1]);
+      dom.step();
+      expect(report).toHaveBeenCalledExactlyOnceWith(error);
+      expect([layerEl.children.length, dom.waiting()]).toEqual([0, 0]);
+      end?.();
+    } finally {
+      report.mockRestore();
+    }
   });
   it('an effect whose canvas was cleared away ends without touching the canvas made after it', () => {
     const dom = fakeDom();

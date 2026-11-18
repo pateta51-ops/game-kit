@@ -27,6 +27,8 @@ import { typewriter, type TypewriterSettings } from './typewriter.ts';
 import { registerDashLine } from './dash-line.ts';
 import { reticle } from './reticle.ts';
 import { debris } from './debris.ts';
+import { sheen } from './sheen.ts';
+import { slash } from './slash.ts';
 import { registerCrumple } from './crumple.ts';
 
 export type { ArcMoveSettings } from './flight-effects.ts';
@@ -298,6 +300,8 @@ export function registerEffects(verbs: VerbRegistry<EffectCtx>, o?: LayerOptions
   registerDashLine(verbs, o?.resolve, o?.stage);
   registerCanvasEffect(verbs, 'reticle', reticle);
   registerCanvasEffect(verbs, 'debris', debris);
+  registerEffect(verbs, 'sheen', sheen);
+  registerCanvasEffect(verbs, 'slash', slash);
   registerCrumple(verbs);
   return createEffectLayer(o);
 }
