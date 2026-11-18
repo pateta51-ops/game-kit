@@ -44,7 +44,7 @@ describe('heavy-queue server (K399)', () => {
     const d = await q.post('/acquire', { label: 'd', priority: 'high' });
     const e = await q.post('/acquire', { label: 'e', priority: 'high' });
     expect([a.granted, b.granted, c.granted, d.granted]).toEqual([true, true, false, false]);
-    expect([c.ahead, d.ahead, e.ahead]).toEqual([2, 0, 1]);
+    expect([(await q.post('/beat', { id: c.id })).ahead, d.ahead, e.ahead]).toEqual([2, 0, 1]);
     await q.post('/release', { id: a.id, exit: 0 });
     expect((await q.post('/beat', { id: d.id })).granted).toBe(true);
     expect((await q.post('/beat', { id: c.id })).granted).toBe(false);
