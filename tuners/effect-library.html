@@ -37,7 +37,7 @@ legend { font: 700 12px var(--display); text-transform: uppercase; letter-spacin
 
 .table { color: #f4db95; }
 #card, .slot { position: absolute; width: 86px; height: 118px; top: 54%; translate: -50% -50%; border-radius: 8px; }
-#card { left: 50%; }
+#card { left: var(--preview-card-x, 50%); top: var(--preview-card-y, 54%); }
 .slot { left: 50%; border: 1px dashed rgb(232 236 233 / .25); box-sizing: border-box; }
 #destination { display: none; }
 .card { border: 1px solid #a3bfae; border-radius: 8px; background: #294a40; box-shadow: 0 3px 12px #0e1f1b; }
@@ -47,17 +47,33 @@ legend { font: 700 12px var(--display); text-transform: uppercase; letter-spacin
 .card-back, [data-fx-flipped] .card-front { display: none; }
 [data-fx-flipped] .card-back { display: grid; background: #533f55; }
 [data-fx-label] .card-back::after { content: attr(data-fx-label); }
-#card.fx-source { visibility: hidden; }
+.table > .fx-source { visibility: hidden; }
+.table[data-route] > .slot { display: none; }
 .toolbar { display: flex; flex-wrap: wrap; gap: 8px 14px; align-items: center; }
 .toolbar select, .toolbar button { font: 600 13px var(--body); color: var(--fg); background: #232b2e; border: 1px solid var(--line); border-radius: 6px; padding: 7px 12px; }
 .toolbar #play { background: var(--accent); color: #1b1608; cursor: pointer; }
 .ctl :is(select, input[type=color], input[type=text]) { grid-column: 1 / -1; min-width: 0; box-sizing: border-box; }
+.ctl input[data-kit-default] { accent-color: var(--muted); }
+.ctl input[data-kit-default]::-webkit-slider-thumb { opacity: 0; }
+.ctl input[data-kit-default]::-moz-range-thumb { opacity: 0; }
 .ctl input[type=checkbox] { grid-column: auto; width: auto; justify-self: end; }
 .code { margin-bottom: 0; }
 .flight-token { box-sizing: border-box; width: 44px; height: 36px; border: 2px solid #ffe3a0; border-radius: 10px; background: #a97938; display: grid; place-items: center; box-shadow: 0 3px 9px #0e1f1b; }
 .flight-token::after { content: ''; width: 0; height: 0; border-block: 7px solid transparent; border-left: 12px solid #fff2c6; }
 .flight-mark { position: absolute; translate: -50% -50%; width: 24px; height: 18px; border: 1px dashed #9aa8a3; border-radius: 50%; box-sizing: border-box; }
 #token-source, .table[data-flight] > .slot, .table[data-flight] > #card { display: none; }
+.toolbar select { max-width: 100%; }
+#stop[hidden], #sequence:disabled, .toolbar label:has(#sequence:disabled) { display: none; }
+#token-source.demo-token, #target-card.demo-target { display: grid; position: absolute; translate: -50% -50%; }
+#token-source.demo-token { left: 28%; top: 61%; }
+#target-card { display: none; left: 72%; top: 46%; }
+#target-card.demo-target { width: 86px; height: 118px; opacity: .62; }
+#target-card.demo-target.demo-token { width: 44px; height: 36px; }
+.table[data-token] > #card, .table[data-token] > .slot { display: none; }
+.demo-banner { position: absolute; inset: auto 6px 6px; border-radius: 4px; background: #513e59; color: #fff; text-align: center; font: 600 12px/2 var(--body); }
+.demo-meter { display: grid; align-items: center; width: 100%; height: 100%; position: relative; overflow: hidden; border-radius: inherit; background: #294a40; }
+.demo-meter [data-part=fill] { height: 100%; width: 0; }
+.demo-marker { position: absolute; top: 50%; left: 50%; color: #fff; font: 600 13px var(--mono); }
 @media (max-width: 480px) { .table { height: 270px; } }
 /* ===== game-kit components/effect-library/looks/rise-pulse.css, inlined by tuners/build.mjs ===== */
 /* opt-in look: a red and orange glowing pulse. Import once; put class fx-rise-pulse on an element laid over the card (its parent positioned; add it to play it).
@@ -107,23 +123,25 @@ legend { font: 700 12px var(--display); text-transform: uppercase; letter-spacin
 <main class="wrap">
   <header>
     <h1>Effect Library Tuner</h1>
-    <p class="sub">Preview the kit’s DOM and canvas effects on a felt table. The page uses effect-library and motion-frame directly. Changing a setting replays the preview.</p>
+    <p class="sub">Adjust an effect to replay it. Use Start and Stop for loops. Kit default leaves the value unset.</p>
   </header>
   <div class="table" id="table">
     <div class="note" id="note"></div>
     <div id="flight-marks" aria-hidden="true"></div>
     <div class="flight-token" id="token-source" aria-hidden="true"></div>
+    <div class="card" id="target-card" aria-hidden="true"><div class="card-face"><b>◇</b> Target</div></div>
     <div class="slot"></div>
     <div class="slot" id="destination"></div>
     <div id="card" class="card" aria-hidden="true">
-      <div class="card-face card-front"><b>✦</b> Alder</div>
-      <div class="card-face card-back"><b>✧</b></div>
+      <div class="card-face card-front"><b>✦</b> Front</div>
+      <div class="card-face card-back"><b>✧</b> Back</div>
     </div>
   </div>
   <div class="toolbar">
     <label for="verb">Effect</label>
     <select id="verb"></select>
     <button type="button" id="play">Play</button>
+    <button type="button" id="stop" hidden>Stop</button>
     <label><input type="checkbox" id="sequence"> Play a sequence</label>
   </div>
   <div class="presets" role="group" aria-label="Presets">
@@ -330,15 +348,96 @@ var FX = (() => {
   };
   var __toCommonJS = (mod) => __copyProps(__defProp({}, "__esModule", { value: true }), mod);
 
-  // components/effect-library/effects.ts
-  var effects_exports = {};
-  __export(effects_exports, {
+  // components/effect-library/index.ts
+  var index_exports = {};
+  __export(index_exports, {
     BUILT_IN: () => BUILT_IN,
+    HOLD: () => HOLD,
+    afterimages: () => afterimages,
+    bannerAt: () => bannerAt,
+    beatsFromEvents: () => beatsFromEvents,
+    cameraPull: () => cameraPull,
+    cameraPush: () => cameraPush,
+    cameraScaleAt: () => cameraScaleAt,
+    centre: () => centre,
+    countAt: () => countAt,
+    countDeltas: () => countDeltas,
+    countUp: () => countUp,
+    createAmbience: () => createAmbience,
+    createBandSlots: () => createBandSlots,
+    createEffectLayer: () => createEffectLayer,
+    createFlashLimiter: () => createFlashLimiter,
+    createRingStore: () => createRingStore,
+    createSlotHold: () => createSlotHold,
+    crumpleStill: () => crumpleStill,
+    decorativeCopy: () => decorativeCopy,
+    drawDriftCloud: () => drawDriftCloud,
+    drawPlasmaOrb: () => drawPlasmaOrb,
+    driftPieces: () => driftPieces,
+    driftPoseAt: () => driftPoseAt,
+    entryMotions: () => entryMotions,
+    flashAt: () => flashAt,
+    flight: () => flight,
+    flightPath: () => flightPath,
+    flightPose: () => flightPose,
+    holdMs: () => holdMs,
+    letterboxBanner: () => letterboxBanner,
+    moveEnds: () => moveEnds,
+    movements: () => movements,
+    multiStopPath: () => multiStopPath,
+    noseAlong: () => noseAlong,
+    orbGeometry: () => orbGeometry,
+    particles: () => particles_exports,
+    phaseSweeps: () => phaseSweeps,
+    pileLift: () => pileLift,
+    place: () => place,
+    placements: () => placements,
+    plasmaOrbScale: () => plasmaOrbScale,
+    plasmaSwellAt: () => plasmaSwellAt,
+    pointAt: () => pointAt,
+    quadraticPose: () => quadraticPose,
+    registerCanvasEffect: () => registerCanvasEffect,
     registerEffect: () => registerEffect,
-    registerEffects: () => registerEffects
+    registerEffects: () => registerEffects,
+    registerGlEffect: () => registerGlEffect,
+    resolveRect: () => resolveRect,
+    shakeAt: () => shakeAt,
+    specTime: () => specTime,
+    startIdle: () => startIdle,
+    startPulse: () => startPulse,
+    stopTime: () => stopTime,
+    syncDriftCloud: () => syncDriftCloud,
+    tangentAt: () => tangentAt,
+    trauma: () => trauma,
+    traumaAt: () => traumaAt,
+    travel: () => travel
   });
 
   // components/effect-library/particles.ts
+  var particles_exports = {};
+  __export(particles_exports, {
+    BUDGET: () => BUDGET,
+    arc: () => arc,
+    canDraw: () => canDraw,
+    capN: () => capN,
+    clamp: () => clamp,
+    ease: () => ease,
+    edge: () => edge,
+    embers: () => embers,
+    glow: () => glow,
+    hash: () => hash,
+    impact: () => impact,
+    landing: () => landing,
+    lerp: () => lerp,
+    noise: () => noise,
+    pulse: () => pulse,
+    rng: () => rng,
+    seg: () => seg,
+    smoke: () => smoke,
+    sparkPoints: () => sparkPoints,
+    sparks: () => sparks,
+    star: () => star
+  });
   var clamp = (x, a = 0, b = 1) => Math.min(b, Math.max(a, x));
   var lerp = (a, b, k) => a + (b - a) * k;
   var seg = (t, a, b) => b <= a ? t >= b ? 1 : 0 : clamp((t - a) / (b - a));
@@ -384,6 +483,7 @@ var FX = (() => {
   var drift = (v, k, g, age) => (k > 0 ? v * (1 - Math.exp(-k * age)) / k : v * age) + 0.5 * g * age * age;
   var BUDGET = 70;
   var capN = (n, max = BUDGET) => Math.min(n, max);
+  var hash = (seed, i) => (Math.imul(seed * 31 + i, 2654435761) >>> 0) / 4294967296;
   function sparkPoints(t, o, u = 1) {
     const r = rng(o.seed);
     const out = [];
@@ -497,6 +597,43 @@ var FX = (() => {
     }
     ctx.restore();
   }
+  function impact(ctx, t, x, y, t0, rgb, seed, o = {}, u = 1) {
+    const p = pulse(t, t0, t0 + (o.ms ?? 240), 0.12);
+    const rad2 = (o.r ?? 46) * u;
+    glow(ctx, x, y, rad2 * (0.6 + 0.6 * p), rgb, 0.9 * p);
+    glow(ctx, x, y, rad2 * 0.35, "255,255,255", p);
+    sparks(
+      ctx,
+      t,
+      {
+        seed,
+        n: o.n ?? 14,
+        x,
+        y,
+        t0,
+        life: o.life ?? 320,
+        speed: o.speed ?? 0.55,
+        angle: o.angle ?? 0,
+        spread: o.spread ?? Math.PI * 2,
+        color: o.color,
+        width: 2,
+        drag: 6e-3
+      },
+      u
+    );
+  }
+  function landing(ctx, t, x, y, t0, rgb, u = 1) {
+    const k = seg(t, t0, t0 + 260);
+    if (k <= 0 || k >= 1) return;
+    ctx.save();
+    ctx.globalCompositeOperation = "lighter";
+    ctx.strokeStyle = `rgba(${rgb},${String(0.9 * (1 - k))})`;
+    ctx.lineWidth = 3 * u;
+    ctx.beginPath();
+    ctx.ellipse(x, y, (20 + 30 * ease.out(k)) * u, (20 + 22 * ease.out(k)) * u, 0, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.restore();
+  }
   function star(ctx, x, y, r, rot, a, rgb = "255,255,255", glowRgb = rgb) {
     ctx.save();
     ctx.translate(x, y);
@@ -526,6 +663,33 @@ var FX = (() => {
     return [c.x - pad, c.y + c.h - d];
   }
   var canDraw = () => typeof window !== "undefined" && typeof window.requestAnimationFrame === "function" && typeof CanvasRenderingContext2D !== "undefined";
+  function embers(ctx, t, o, u = 1) {
+    const r = rng(o.seed);
+    ctx.save();
+    ctx.globalCompositeOperation = "lighter";
+    for (let i = 0; i < o.n; i += 1) {
+      const a = (o.angle ?? -Math.PI / 2) + (r() - 0.5) * (o.spread ?? Math.PI * 2);
+      const sp = (o.speed ?? 0.12) * (0.3 + r()) * u;
+      const life = (o.life ?? 1e3) * (0.55 + r() * 0.6);
+      const t0 = o.t0 + r() * (o.stagger ?? 200);
+      const sz = (o.size ?? 2.4) * (0.5 + r()) * u;
+      const age = t - t0;
+      if (age <= 0 || age >= life) continue;
+      const k = 1 - age / life;
+      const wob2 = noise(age / 140 + i * 7.3, o.seed) * 10 * (1 - k) * u;
+      const x = o.x + drift(Math.cos(a) * sp, 2e-3, 0, age) + wob2;
+      const y = o.y + drift(Math.sin(a) * sp, 2e-3, -(o.lift ?? 6e-5) * u, age);
+      const flick = 0.65 + 0.35 * noise(age / 45 + i, 3);
+      const g = Math.round(lerp(70, 220, k));
+      const grad = ctx.createRadialGradient(x, y, 0, x, y, sz * 3);
+      grad.addColorStop(0, `rgba(255,${String(g + 30)},${String(Math.round(g / 3))},${String(k * flick)})`);
+      grad.addColorStop(0.35, `rgba(255,${String(g)},40,${String(k * flick * 0.5)})`);
+      grad.addColorStop(1, "rgba(255,60,0,0)");
+      ctx.fillStyle = grad;
+      ctx.fillRect(x - sz * 3, y - sz * 3, sz * 6, sz * 6);
+    }
+    ctx.restore();
+  }
   function smoke(ctx, t, o, u = 1) {
     const r = rng(o.seed);
     ctx.save();
@@ -1253,7 +1417,7 @@ var FX = (() => {
       filter: `blur(${px(Math.max(2, h / 70))})`
     });
     wrap.append(wedge);
-    const glow2 = stage.stand([x - w * 0.75, y - h * 0.675, w * 1.5, h * 1.35], {
+    const glow3 = stage.stand([x - w * 0.75, y - h * 0.675, w * 1.5, h * 1.35], {
       zIndex: "2",
       borderRadius: "50%",
       background: `radial-gradient(closest-side, ${rgb(0.55)}, ${rgb(0)})`,
@@ -1263,7 +1427,7 @@ var FX = (() => {
     const pulses = Math.max(2, Math.round(turns * 2));
     stage.play(wrap, [{ opacity: 0 }, { opacity: 1, offset: fade }, { opacity: 1, offset: 1 - fade }, { opacity: 0 }], ms);
     stage.play(wedge, [{ transform: "rotate(0deg)" }, { transform: `rotate(${String(360 * turns)}deg)` }], ms);
-    stage.play(glow2, Array.from({ length: pulses + 1 }, (_, k) => ({ offset: k / pulses, opacity: k % 2 ? 0.9 : 0.35 })), ms);
+    stage.play(glow3, Array.from({ length: pulses + 1 }, (_, k) => ({ offset: k / pulses, opacity: k % 2 ? 0.9 : 0.35 })), ms);
     return stage.end;
   };
   var columnBeam = (fx) => {
@@ -1652,12 +1816,12 @@ var FX = (() => {
       shown = h,
       cols = 8,
       hit = [0.5, 0.45],
-      embers = 16,
+      embers: embers2 = 16,
       heat = "255 255 255",
       emberColour = "230 230 230",
       core = "255 255 255",
-      glow: glow2 = "230 230 230",
-      heatEdge = glow2,
+      glow: glow3 = "230 230 230",
+      heatEdge = glow3,
       lift,
       cutAt = 0.55,
       heatTail = 0.6,
@@ -1737,7 +1901,7 @@ var FX = (() => {
         ...frames2.map((frame) => ({ ...frame, offset: (wait + (frame.offset ?? 0) * span) / (wait + span) }))
       ], wait + span, cut, "linear", "none");
     }
-    for (let i = 0; i < embers; i++) {
+    for (let i = 0; i < embers2; i++) {
       const s = Math.max(minEmber, w / emberDivisor * lerp(sizeMin, sizeMax, rand(i, 6)));
       const left = rand(i, 7) * w, top = rand(i, 8) * shown;
       const node = stage.stand([x + left - s / 2, y + top - s / 2, s, s], {
@@ -1745,7 +1909,7 @@ var FX = (() => {
         zIndex: "4",
         opacity: "0",
         background: `rgb(${rand(i, 9) < 0.35 ? core : emberColour})`,
-        boxShadow: `0 0 ${px(s * blur)} ${px(s * spread2)} rgb(${glow2} / .8)`
+        boxShadow: `0 0 ${px(s * blur)} ${px(s * spread2)} rgb(${glow3} / .8)`
       });
       const dx = (left - hx) * radialDrift + (rand(i, 10) - 0.5) * w * randomDrift;
       const dy = -h * lerp(riseMin, riseMax, rand(i, 11));
@@ -1786,7 +1950,7 @@ var FX = (() => {
       seed = 42,
       motionSeed = 7,
       direction,
-      impact = centre2(call.from),
+      impact: impact2 = centre2(call.from),
       clipSource,
       sourceBox,
       flip = false,
@@ -1836,7 +2000,7 @@ var FX = (() => {
       }
       wrap.append(face);
       holder.append(wrap);
-      const [dx, dy] = direction ?? [x + cx / 100 * w - impact[0], y + cy / 100 * h - impact[1]];
+      const [dx, dy] = direction ?? [x + cx / 100 * w - impact2[0], y + cy / 100 * h - impact2[1]];
       const d = Math.hypot(dx, dy) || 1;
       const sp = lerp(...speedRange, random());
       const rz = lerp(...rotateZ, random()), rx = lerp(...rotateX, random()), ry = lerp(...rotateY, random());
@@ -2143,12 +2307,12 @@ var FX = (() => {
   ];
   var radialStreaks = (ctx, t, { call }) => {
     const settings = call.step;
-    const { centre: c = centre2(call.from), pulse: flight, unit = 1 } = settings;
-    if (!flight) {
+    const { centre: c = centre2(call.from), pulse: flight2, unit = 1 } = settings;
+    if (!flight2) {
       streaks(ctx, c, seg(t, 0, call.step.dur), settings);
       return;
     }
-    const { lift, flightMs, colour = WHITE[0], core = WHITE[0] } = flight;
+    const { lift, flightMs, colour = WHITE[0], core = WHITE[0] } = flight2;
     const end = Math.min(t, flightMs);
     const alpha = 1 - seg(t, flightMs, flightMs + 200);
     if (alpha <= 0) return;
@@ -2388,7 +2552,7 @@ var FX = (() => {
     { offset: 0.88, col: "scaleX(0.15) scaleY(0.48)", colOp: 0.15, tok: "translateY(0) scale(1.05, 0.96)", tokOp: 1 },
     { offset: 1, col: "scaleX(0) scaleY(0.4)", colOp: 0, tok: "translateY(0) scale(1, 1)", tokOp: 1 }
   ];
-  function column(stage, token, box, start, out, light, glow2, settings = {}) {
+  function column(stage, token, box, start, out, light, glow3, settings = {}) {
     const [x, y] = centre2(box);
     const [, , bw, bh] = box;
     const {
@@ -2426,7 +2590,7 @@ var FX = (() => {
         const dot = stage.stand([x + (rnd() - 0.5) * w * 0.8, bottom - size - rnd() * h * 0.3, size, size], {
           borderRadius: "50%",
           background: "white",
-          boxShadow: `0 0 ${px(Math.max(6, size * 1.6))} ${glow2}`,
+          boxShadow: `0 0 ${px(Math.max(6, size * 1.6))} ${glow3}`,
           zIndex: "4"
         });
         stage.play(dot, [
@@ -2459,21 +2623,21 @@ var FX = (() => {
       stage.play(dot, path.map((frame) => ({ ...frame, opacity: frame.opacity * Math.max(0.1, 1 - k * 0.18) })), 420, start + k * 28);
     }
   }
-  function tokenOf(stage, el, box, image, glow2, blur, extra = "") {
+  function tokenOf(stage, el, box, image, glow3, blur, extra = "") {
     const content = image === void 0 ? el.cloneNode(true) : document.createElement("img");
     if (content instanceof HTMLImageElement && image !== void 0) {
       content.src = image;
       content.alt = "";
     }
     return stage.stand(box, {
-      filter: `${extra}drop-shadow(0 0 ${px(blur * box[2])} ${glow2})`,
+      filter: `${extra}drop-shadow(0 0 ${px(blur * box[2])} ${glow3})`,
       objectFit: "contain",
       opacity: "0",
       transformOrigin: "50% 100%",
       zIndex: "4"
     }, content);
   }
-  function zip(stage, make, from, to, start, glow2, index, settings) {
+  function zip(stage, make, from, to, start, glow3, index, settings) {
     const { zipGhosts = 3, zipSparks = 8, zipPopMs = 130 } = settings;
     const [sx, sy] = centre2(from);
     const [x, y] = centre2(to);
@@ -2496,16 +2660,16 @@ var FX = (() => {
     token.style.transformOrigin = "50% 50%";
     stage.play(token, frame(1), 200, start, "cubic-bezier(.45,.05,.55,1)");
     stage.play(token, [
-      { transform: at(1, 1), opacity: 1, filter: `brightness(1) drop-shadow(0 0 ${px(d * 0.16)} ${glow2})` },
-      { transform: at(1, 1.7), opacity: 0, filter: `brightness(2.2) drop-shadow(0 0 ${px(d * 0.4)} ${glow2})` }
+      { transform: at(1, 1), opacity: 1, filter: `brightness(1) drop-shadow(0 0 ${px(d * 0.16)} ${glow3})` },
+      { transform: at(1, 1.7), opacity: 0, filter: `brightness(2.2) drop-shadow(0 0 ${px(d * 0.4)} ${glow3})` }
     ], zipPopMs, start + 200, "ease-out", "forwards");
     for (let k = 0; k < zipSparks; k++) {
       const angle = k * Math.PI * 2 / zipSparks + index;
       const size = d * 0.13;
       const dot = stage.stand([x - size / 2, y - size / 2, size, size], {
         borderRadius: "50%",
-        background: glow2,
-        boxShadow: `0 0 ${px(size)} ${glow2}`,
+        background: glow3,
+        boxShadow: `0 0 ${px(size)} ${glow3}`,
         opacity: "0",
         zIndex: "5"
       });
@@ -2515,13 +2679,13 @@ var FX = (() => {
       ], 250, start + 200, "ease-out", "forwards");
     }
   }
-  function portalIcon(stage, make, from, to, o, ms, lift, start, image, glow2) {
+  function portalIcon(stage, make, from, to, o, ms, lift, start, image, glow3) {
     const { outward = false, startSize, endSize, alpha = 0.5, collapse: collapse2, elapsed = 0, travelMs = ms, travelAt = 0, growth, vortex } = o;
     const [sx, sy] = centre2(from);
     const [dx, dy] = centre2(to);
     const token = make([sx - startSize / 2, sy - startSize / 2, startSize, startSize], 0);
     token.style.transformOrigin = "50% 50%";
-    token.style.filter = `drop-shadow(0 0 16px ${glow2}) drop-shadow(0 0 3px white)`;
+    token.style.filter = `drop-shadow(0 0 16px ${glow3}) drop-shadow(0 0 3px white)`;
     const [spinRate, spinAccel] = o.spin ?? (outward ? [-1.25, 35e-5] : [0.25, 42e-5]);
     const spin = (t) => {
       const u = t + elapsed;
@@ -2586,7 +2750,7 @@ var FX = (() => {
       stroke,
       strokeWidth: String(strokeWidth),
       strokeLinecap: "round",
-      filter: `drop-shadow(0 0 6px ${glow2})`
+      filter: `drop-shadow(0 0 6px ${glow3})`
     });
     vx.append(arms);
     for (let i = 0; i < armCount; i++) {
@@ -2602,7 +2766,7 @@ var FX = (() => {
       const ring = document.createElement("img");
       ring.alt = "";
       ring.src = image;
-      Object.assign(ring.style, { position: "absolute", inset: "0", width: "100%", height: "100%", filter: `drop-shadow(0 0 14px ${glow2})` });
+      Object.assign(ring.style, { position: "absolute", inset: "0", width: "100%", height: "100%", filter: `drop-shadow(0 0 14px ${glow3})` });
       vx.append(ring);
       stage.play(ring, frames2((t) => {
         const dir = outward ? -1 : 1;
@@ -3039,7 +3203,7 @@ var FX = (() => {
       spread: spread2 = w,
       lag = 0.35,
       radius = "50%",
-      glow: glow2 = 1.5,
+      glow: glow3 = 1.5,
       glowColour,
       ms,
       dissolve: dissolve2,
@@ -3067,7 +3231,7 @@ var FX = (() => {
         height: `${String(s)}px`,
         borderRadius: radius,
         background: tint,
-        boxShadow: `0 0 ${String(s * glow2)}px ${glowColour ?? tint}`
+        boxShadow: `0 0 ${String(s * glow3)}px ${glowColour ?? tint}`
       });
       el.after(d);
       const dx = (rand2(i, 10) - 0.5) * spread2;
@@ -3229,22 +3393,22 @@ var FX = (() => {
     const { el, call } = fx;
     const [dx, dy] = p.delta;
     const [a, b] = p.window ?? [0, Number(call.step["dur"])];
-    const glow2 = el.ownerDocument.createElement("div");
+    const glow3 = el.ownerDocument.createElement("div");
     const ring = el.ownerDocument.createElement("div");
-    for (const node of [glow2, ring]) node.style.cssText = "position:absolute;left:50%;top:50%;translate:-50% -50%;border-radius:50%;pointer-events:none;";
+    for (const node of [glow3, ring]) node.style.cssText = "position:absolute;left:50%;top:50%;translate:-50% -50%;border-radius:50%;pointer-events:none;";
     if (p.glow) {
       const diameter = `${String(p.glow.radius * 2)}px`;
-      Object.assign(glow2.style, { width: diameter, height: diameter, background: p.glow.gradient ?? `radial-gradient(${colour},transparent 70%)`, mixBlendMode: "plus-lighter" });
+      Object.assign(glow3.style, { width: diameter, height: diameter, background: p.glow.gradient ?? `radial-gradient(${colour},transparent 70%)`, mixBlendMode: "plus-lighter" });
     }
     if (p.ring) ring.style.border = `${String(p.ring.width)}px solid ${p.ring.colour}`;
     const text = el.ownerDocument.createTextNode("");
-    el.replaceChildren(glow2, ring, text);
+    el.replaceChildren(glow3, ring, text);
     const at = (x, y) => `${String(x)}px ${String(y)}px`;
     const stop = clock(fx, (t) => {
       const k = ease.inOut(seg(t, a, b));
       text.data = String(t >= (a + b) / 2 ? to : from);
       el.style.translate = at(dx * k, dy * k - Math.sin(k * Math.PI) * (p.lift ?? call.from[3] * (p.liftFactor ?? 0.25)));
-      if (p.glow) glow2.style.opacity = String(p.glow.alpha * pulse(t, a, b + p.glow.tail, p.glow.peak));
+      if (p.glow) glow3.style.opacity = String(p.glow.alpha * pulse(t, a, b + p.glow.tail, p.glow.peak));
       if (p.ring) {
         const hr = seg(t, b + p.ring.start, b + p.ring.end);
         ring.style.opacity = String(hr > 0 && hr < 1 ? 1 - hr : 0);
@@ -3253,7 +3417,7 @@ var FX = (() => {
     });
     return () => {
       stop();
-      glow2.remove();
+      glow3.remove();
       ring.remove();
       text.data = String(to);
       el.style.translate = at(dx, dy);
@@ -4195,6 +4359,36 @@ void main() {
     ctx.rotate(pose.rz);
     ctx.drawImage(image, -w / 2, -h / 2, w, h);
   }
+  function crumpleStill(image, width, height, o = {}) {
+    if (width <= 0 || height <= 0) return void 0;
+    const doc = image.ownerDocument;
+    const art = texture(doc, image, o.radius ?? 0.035);
+    if (!art) return void 0;
+    const canvas = doc.createElement("canvas");
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    canvas.width = Math.max(1, Math.round(width * dpr));
+    canvas.height = Math.max(1, Math.round(height * dpr));
+    const gl = openGl(canvas, true);
+    const [rx, ry, rz] = o.tilt ?? [10, -14, -312];
+    const [sink, drop] = o.sink ?? [0.04, 0.03];
+    const pose = { p: 1, cx: width / 2, cy: height / 2 + drop * height, sx: 1 - sink, sy: 1 - sink, rx: rx * deg, ry: ry * deg, rz: rz * deg, alpha: 1 };
+    const release = [];
+    try {
+      if (gl) {
+        gl.viewport(0, 0, canvas.width, canvas.height);
+        crumpleMesh(gl, art, width, height, o, (fn) => release.push(fn))(pose, width, height);
+      } else {
+        const ctx = canvas.getContext("2d");
+        if (!ctx) return void 0;
+        ctx.scale(dpr, dpr);
+        flat(ctx, art, pose, width, height, o);
+      }
+      return canvas.toDataURL("image/png");
+    } finally {
+      for (const fn of release) fn();
+      closeGl(gl);
+    }
+  }
   function registerCrumple(verbs) {
     const states = /* @__PURE__ */ new WeakMap();
     function frame(t, fx) {
@@ -4505,7 +4699,1480 @@ void main() {
     registerCrumple(verbs);
     return createEffectLayer(o);
   }
-  return __toCommonJS(effects_exports);
+
+  // components/effect-library/count.ts
+  var countAt = (value, k, from = 0) => Math.round(from + (value - from) * (1 - (1 - Math.min(1, Math.max(0, k))) ** 3));
+  function countUp(o) {
+    const from = o.from ?? 0;
+    const s = o.speed();
+    const frame = o.frame ?? (typeof requestAnimationFrame === "function" ? (f) => requestAnimationFrame(f) : void 0);
+    const ms = (o.ms ?? 700) * (typeof s === "number" ? s : 0);
+    if (!frame || !(ms > 0) || from === o.value) {
+      o.show(o.value);
+      return () => void 0;
+    }
+    const cancel = o.cancel ?? (typeof cancelAnimationFrame === "function" ? (id2) => cancelAnimationFrame(id2) : void 0);
+    const now = o.now ?? (() => performance.now());
+    const start = now();
+    let id = 0;
+    let stopped = false;
+    const finish = () => {
+      if (stopped) return;
+      stopped = true;
+      cancel?.(id);
+      o.show(o.value);
+    };
+    const tick = (t) => {
+      if (stopped) return;
+      const k = (t - start) / ms;
+      if (k >= 1 || o.speed() === "instant") {
+        finish();
+        return;
+      }
+      o.show(countAt(o.value, k, from));
+      id = frame(tick);
+    };
+    o.show(from);
+    id = frame(tick);
+    return finish;
+  }
+
+  // components/effect-library/ambience.ts
+  function createAmbience(o) {
+    const el = document.createElement("div");
+    el.className = `fx-ambience${o.className ? ` ${o.className}` : ""}`;
+    el.setAttribute("aria-hidden", "true");
+    el.style.cssText = "position:fixed;overflow:hidden;pointer-events:none;display:none;z-index:var(--fx-ambience-z,auto)";
+    (o.parent ?? document.body).appendChild(el);
+    const canvas = o.draw && canDraw() ? document.createElement("canvas") : void 0;
+    const ctx = canvas?.getContext("2d") ?? void 0;
+    if (canvas && ctx) {
+      canvas.style.display = "block";
+      el.appendChild(canvas);
+    }
+    let frame = 0;
+    let last = 0;
+    let t = 0;
+    let seen;
+    const tick = (now) => {
+      frame = 0;
+      const s = o.speed();
+      if (!canvas || !ctx || typeof s !== "number" || !(s > 0)) {
+        update();
+        return;
+      }
+      t += (now - last) / s;
+      last = now;
+      const w = el.clientWidth;
+      const h = el.clientHeight;
+      if (canvas.width !== w || canvas.height !== h) {
+        canvas.width = w;
+        canvas.height = h;
+      }
+      ctx.clearRect(0, 0, w, h);
+      o.draw?.(ctx, t, w, h);
+      frame = requestAnimationFrame(tick);
+    };
+    const observer = typeof ResizeObserver === "function" ? new ResizeObserver(() => update()) : void 0;
+    function update() {
+      const target = o.target() ?? void 0;
+      if (target !== seen) {
+        observer?.disconnect();
+        if (target) observer?.observe(target);
+        seen = target;
+      }
+      const s = o.speed();
+      if (!target || typeof s !== "number" || !(s > 0)) {
+        el.style.display = "none";
+        cancelAnimationFrame(frame);
+        frame = 0;
+        return;
+      }
+      const r = target.getBoundingClientRect();
+      Object.assign(el.style, { display: "block", left: `${String(r.left)}px`, top: `${String(r.top)}px`, width: `${String(r.width)}px`, height: `${String(r.height)}px` });
+      if (ctx && !frame) {
+        last = performance.now();
+        frame = requestAnimationFrame(tick);
+      }
+    }
+    window.addEventListener("resize", update);
+    window.addEventListener("scroll", update, true);
+    update();
+    return {
+      el,
+      update,
+      destroy() {
+        observer?.disconnect();
+        cancelAnimationFrame(frame);
+        window.removeEventListener("resize", update);
+        window.removeEventListener("scroll", update, true);
+        el.remove();
+      }
+    };
+  }
+
+  // components/effect-library/feel.ts
+  var HOLD = { hold: 100, kill: 160 };
+  function holdMs(kill = false) {
+    return kill ? HOLD.kill : HOLD.hold;
+  }
+  function stopTime(t, contact, hold) {
+    return t <= contact ? t : t < contact + hold ? contact : t - hold;
+  }
+  function trauma(damage, o = {}) {
+    return o.kill ? 1 : o.blocked ? 0.35 : clamp(0.55 + 0.12 * damage);
+  }
+  var traumaAt = (t0, t, decayMs = 600) => clamp(t0 - t0 * Math.max(0, t) / decayMs, 0, 1);
+  var MAX_HZ = 25;
+  var wob = (t, hz, ph, speed) => Math.sin(2 * Math.PI * Math.min(hz * Math.max(speed, 0), MAX_HZ) * (t / 1e3) + ph);
+  function shakeAt(t, t0, o = {}) {
+    const { seed = 1, max = 12, rot = 2, decayMs = 600, speed = 1 } = o;
+    const k = traumaAt(t0, t, decayMs) ** 2;
+    const h = (n) => (Math.imul(seed * 31 + n, 2654435761) >>> 0) / 4294967296;
+    const f = (n, lo, hi) => lo + h(n) * (hi - lo);
+    const ax = (a) => wob(t, f(a, 5, 8), h(a + 1) * 6.28, speed) * 0.6 + wob(t, f(a + 2, 9, 13), h(a + 3) * 6.28, speed) * 0.4;
+    return { x: max * k * ax(1), y: max * k * ax(11), rot: rot * k * ax(21) };
+  }
+  function afterimages(poseAt, t, lags = [16, 32, 48]) {
+    return lags.map((lag, i) => ({ pose: poseAt(Math.max(0, t - lag)), alpha: (lags.length - i) / (lags.length + 1) }));
+  }
+  var flashAt = (t, start, ms = 160) => pulse(t, start, start + ms);
+  function createFlashLimiter(max = 2, windowMs = 1e3) {
+    const seen = /* @__PURE__ */ new Map();
+    return {
+      allow(target, now) {
+        const a = (seen.get(target) ?? []).filter((x) => now - x < windowMs);
+        const ok = a.length < max;
+        if (ok) a.push(now);
+        seen.set(target, a);
+        return ok;
+      }
+    };
+  }
+
+  // components/effect-library/slots.ts
+  function createSlotHold() {
+    const m = /* @__PURE__ */ new Map();
+    return {
+      hold: (id, latest) => void m.set(id, latest),
+      tighten(id, latest) {
+        const c = m.get(id);
+        if (c !== void 0 && latest < c) m.set(id, latest);
+      },
+      release: (id) => void m.delete(id),
+      held(id, now) {
+        const c = m.get(id);
+        if (c === void 0) return false;
+        if (now >= c) m.delete(id);
+        return now < c;
+      }
+    };
+  }
+  function resolveRect(id, a, depth = 4) {
+    const h = a.host(id);
+    return a.card(id) ?? a.pile(id) ?? (h !== void 0 && depth > 0 ? resolveRect(h, a, depth - 1) : void 0);
+  }
+  function moveEnds(id, from, to) {
+    const f = resolveRect(id, from);
+    const t = resolveRect(id, to);
+    if (f && t) return { kind: "move", from: f, to: t };
+    if (t) return { kind: "appear", to: t };
+    if (f) return { kind: "vanish", from: f };
+    return { kind: "none" };
+  }
+  function entryMotions(prev, next, o = {}) {
+    const moves = [];
+    let turn = 0;
+    for (const [id, n] of Object.entries(next)) {
+      const p = prev[id];
+      const same = p && p.faceUp === n.faceUp && p.rect.x === n.rect.x && p.rect.y === n.rect.y && p.rect.w === n.rect.w && p.rect.h === n.rect.h;
+      if (same) continue;
+      const from = p?.rect ?? o.origin;
+      moves.push({
+        id,
+        ...from ? { from } : {},
+        to: n.rect,
+        scale: from ? from.w / (n.rect.w || 1) : o.scale ?? 1,
+        flip: p !== void 0 && p.faceUp !== n.faceUp,
+        delay: Math.min(turn, (o.places ?? 5) - 1) * (o.stagger ?? 90),
+        arc: from ? o.arc ?? 24 : 0,
+        land: o.land?.(id) ?? "none"
+      });
+      turn += 1;
+    }
+    const ghosts = Object.entries(prev).filter(([id]) => !(id in next)).map(([id, p]) => ({ id, rect: p.rect, style: o.leave?.(id) ?? "fade" }));
+    return { moves, ghosts };
+  }
+
+  // components/effect-library/beats.ts
+  function beatsFromEvents(events, table, o = {}) {
+    const beats = [];
+    const skipped = [];
+    for (const e of events) {
+      const b = table[e.kind]?.(e) ?? o.fallback?.(e);
+      if (!b) continue;
+      const at = o.rectOf?.(b.anchor);
+      if (o.rectOf && !at) skipped.push(b);
+      else beats.push(at ? { ...b, at } : b);
+    }
+    return { beats, skipped };
+  }
+  function countDeltas(prev, next, o = {}) {
+    const out = [];
+    for (const [key, from] of Object.entries(prev)) {
+      const delta = (next[key] ?? 0) - from;
+      if (delta === 0) continue;
+      const bad = o.harmWhenUp?.(key) ? delta > 0 : delta < 0;
+      out.push({ key, delta, from, text: `${delta > 0 ? "+" : "\u2212"}${String(Math.abs(delta))}`, tone: bad ? "harm" : "gain" });
+    }
+    return out;
+  }
+
+  // components/effect-library/bands.ts
+  function phaseSweeps(order, prev, next, o = {}) {
+    if (o.quick === true || o.cardsMove === true) return false;
+    const a = prev === void 0 ? -1 : order.indexOf(prev);
+    const b = order.indexOf(next);
+    return !(a >= 0 && b >= 0 && b < a);
+  }
+  function createBandSlots() {
+    const m = /* @__PURE__ */ new Map();
+    return {
+      put(slot, band) {
+        const old = m.get(slot);
+        m.set(slot, band);
+        return old;
+      },
+      clear: (slot) => void m.delete(slot),
+      get: (slot) => m.get(slot),
+      all: () => [...m.entries()]
+    };
+  }
+  function bannerAt(lines, t, o = {}) {
+    const step = o.stepMs ?? 650;
+    const doneAt = o.tapped === true ? null : (o.holdMs ?? 4500) + step * lines.length;
+    const n = o.reduced === true ? lines.length : Math.min(lines.length, Math.max(0, Math.floor(t / step) + 1));
+    const shown = lines.slice(0, n);
+    return { shown, ring: o.reduced === true ? [] : shown[n - 1]?.cards ?? [], done: doneAt !== null && t >= doneAt, doneAt };
+  }
+  function createRingStore() {
+    let cur = [];
+    const subs = /* @__PURE__ */ new Set();
+    return {
+      set(ids) {
+        if (ids.length === cur.length && ids.every((x, i) => x === cur[i])) return;
+        cur = ids;
+        subs.forEach((f) => {
+          f(cur);
+        });
+      },
+      get: () => cur,
+      subscribe(f) {
+        subs.add(f);
+        return () => void subs.delete(f);
+      }
+    };
+  }
+  async function flight(doc, o) {
+    const start = doc.startViewTransition?.bind(doc);
+    const name = (el, v) => {
+      el.style.setProperty("view-transition-name", v);
+      if (o.className !== void 0) el.style.setProperty("view-transition-class", v === "none" ? "" : o.className);
+    };
+    name(o.from, o.name);
+    if (!start) {
+      o.swap?.();
+      name(o.from, "none");
+      return;
+    }
+    const t = start(() => {
+      name(o.from, "none");
+      name(o.to, o.name);
+      o.swap?.();
+    });
+    try {
+      await t.finished;
+    } finally {
+      name(o.to, "none");
+    }
+  }
+
+  // components/board-registry/index.ts
+  var inSpace = (r, space, type) => r.order.flatMap((k) => {
+    const t = r.things[k];
+    return t && t.space === space && (type === void 0 || t.type === type) ? [t] : [];
+  });
+  function stackLayout(n, o = {}) {
+    const open2 = o.expanded || n <= (o.threshold ?? 1);
+    const c = o.collapsed ?? { dx: 2, dy: -2 };
+    const M = o.major ?? { dx: 1, dy: 0 };
+    const m = o.minor ?? { dx: 0, dy: 1 };
+    const w = o.wrap && o.wrap > 0 ? o.wrap : Math.max(n, 1);
+    const out = Array.from({ length: n }, (_, i) => {
+      if (!open2) return { dx: c.dx * i, dy: c.dy * i };
+      const a = i % w;
+      const b = Math.floor(i / w);
+      return { dx: M.dx * a + m.dx * b, dy: M.dy * a + m.dy * b };
+    });
+    if (!o.bounds || !n) return out;
+    const [bx, by, bw, bh] = o.bounds;
+    const [ax, ay] = o.anchor ?? [0, 0];
+    const [sw, sh] = o.size ?? [0, 0];
+    const fix = (lo, hi, b0, b1) => hi - lo > b1 - b0 || lo < b0 ? b0 - lo : hi > b1 ? b1 - hi : 0;
+    const xs = out.map((p) => ax + p.dx);
+    const ys = out.map((p) => ay + p.dy);
+    const sx = fix(Math.min(...xs), Math.max(...xs) + sw, bx, bx + bw);
+    const sy = fix(Math.min(...ys), Math.max(...ys) + sh, by, by + bh);
+    return out.map((p) => ({ dx: p.dx + sx, dy: p.dy + sy }));
+  }
+
+  // components/effect-library/movement.ts
+  function placements(r, o) {
+    const out = {};
+    const types = o.types ?? ["piece", "marker"];
+    for (const k of r.order) {
+      const t = r.things[k];
+      if (!t || t.space === void 0 || !types.includes(t.type)) continue;
+      const a = o.rectOf(t.space);
+      if (!a) continue;
+      const group = inSpace(r, t.space).filter((g) => types.includes(g.type));
+      const [w, h] = o.size ?? [a.w, a.h];
+      const off = stackLayout(group.length, { anchor: [a.x, a.y], size: [w, h], ...o.stack })[group.findIndex((g) => g.type === t.type && g.id === t.id)];
+      out[k] = { rect: { x: a.x + (off?.dx ?? 0), y: a.y + (off?.dy ?? 0), w, h } };
+    }
+    return out;
+  }
+  var movements = (prev, next, o) => entryMotions(placements(prev, o), placements(next, o), o);
+
+  // components/effect-library/camera-pull.ts
+  function cameraScaleAt(t, at, end, { scale = 1.05, enter = 400, exit = 250, speed = 1 } = {}) {
+    if (speed === 0 || speed === "instant") return 1;
+    return 1 + (scale - 1) * ease.inOut(seg(t, at, at + enter)) * (1 - ease.inOut(seg(t, end - exit, end)));
+  }
+  function cameraPush(root, onChange, { speed = 1 } = {}) {
+    const { transform, transformOrigin } = root.style;
+    const end = () => {
+      Object.assign(root.style, { transform, transformOrigin });
+      onChange?.(1);
+    };
+    const instant = speed === 0 || speed === "instant";
+    if (instant) onChange?.(1);
+    return {
+      frame(scale, focus, [dx, dy] = [0, 0]) {
+        if (instant) return;
+        if (focus === null || !Number.isFinite(scale) || scale === 1 && dx === 0 && dy === 0) {
+          end();
+          return;
+        }
+        root.style.transformOrigin = `${String(focus[0] - root.scrollLeft)}px ${String(focus[1] - root.scrollTop)}px`;
+        const offset = dx === 0 && dy === 0 ? "" : `translate(${String(dx)}px,${String(dy)}px) `;
+        root.style.transform = `${offset}scale(${String(scale)})`;
+        onChange?.(scale);
+      },
+      end: instant ? () => {
+      } : end
+    };
+  }
+  function cameraPull(root, overlay, {
+    scale = 0.95,
+    origin = "center",
+    pullMs = 2e3,
+    dim = 0.5,
+    dimMs = pullMs / 2,
+    dimBackground = "#000",
+    releaseMs = 400,
+    speed = 1
+  } = {}) {
+    if (speed === 0 || speed === "instant") {
+      const done = Promise.resolve();
+      return Object.assign(() => {
+      }, { dimmed: done, release: () => done });
+    }
+    const original = root.style.transformOrigin;
+    const shade = overlay.ownerDocument.createElement("div");
+    Object.assign(shade.style, { position: "absolute", inset: "0", pointerEvents: "none", background: dimBackground });
+    overlay.append(shade);
+    root.style.transformOrigin = origin;
+    const scaled = `scale(${String(scale)})`;
+    const animations = [];
+    let release;
+    let ended = false;
+    const end = () => {
+      if (ended) return;
+      ended = true;
+      animations.forEach((animation) => animation.cancel());
+      root.style.transformOrigin = original;
+      shade.remove();
+    };
+    const play = (el, frames2, ms, easing) => {
+      try {
+        const animation = el.animate(frames2, { duration: ms * speed, easing, fill: "both" });
+        animations.push(animation);
+        return animation.finished.then(() => void 0, () => void 0);
+      } catch (error) {
+        end();
+        throw error;
+      }
+    };
+    void play(root, [{ transform: "scale(1)" }, { transform: scaled }], pullMs, "ease-in-out");
+    const dimmed = play(shade, [{ opacity: 0 }, { opacity: dim }], dimMs, "ease-in");
+    return Object.assign(end, {
+      dimmed,
+      release() {
+        if (ended) return Promise.resolve();
+        if (release) return release;
+        const returning = [
+          play(root, [{ transform: scaled }, { transform: "scale(1)" }], releaseMs, "ease-out"),
+          play(shade, [{ opacity: dim }, { opacity: 0 }], releaseMs, "ease-out")
+        ];
+        release = Promise.all(returning).then(end);
+        return release;
+      }
+    });
+  }
+
+  // components/effect-library/letterbox-banner.ts
+  function letterboxBanner(parent, {
+    speed = 1,
+    barHeight = 40,
+    barBackground = "#111",
+    lineWidth = 0,
+    lineColour = "transparent",
+    vignetteColour = "#0006",
+    vignetteBlur = 160,
+    vignetteSpread = 20,
+    text = "",
+    textStyle,
+    enter = 250,
+    exit = 250,
+    textIn = [60, enter],
+    textOut = [750, 1e3]
+  } = {}) {
+    if (speed === 0 || speed === "instant") return { frame: () => {
+    }, end: () => {
+    } };
+    const box = (host, style) => {
+      const el = host.ownerDocument.createElement("div");
+      Object.assign(el.style, { position: "absolute", left: "0", right: "0", pointerEvents: "none" }, style);
+      host.append(el);
+      return el;
+    };
+    const hud = box(parent, { inset: "0", opacity: "0" });
+    const vignette = box(hud, { inset: "0", boxShadow: `inset 0 0 ${String(vignetteBlur)}px ${String(vignetteSpread)}px ${vignetteColour}` });
+    const height = `${String(barHeight)}px`;
+    const top = box(hud, { top: "0", height, background: barBackground, boxShadow: `0 ${String(lineWidth)}px 0 ${lineColour}` });
+    const bottom = box(hud, { bottom: "0", height, background: barBackground, boxShadow: `0 ${String(-lineWidth)}px 0 ${lineColour}` });
+    const stamp2 = box(hud, { top: "0", height, display: "grid", placeItems: "center", color: "#fff", font: "700 1rem system-ui", ...textStyle });
+    stamp2.textContent = text.toUpperCase();
+    return {
+      frame(t, at, end, camera) {
+        const k = ease.out(seg(t, at, at + enter)) * (1 - ease.inOut(seg(t, end - exit, end)));
+        hud.style.opacity = k === 0 ? "0" : "1";
+        top.style.transform = `translateY(${String(-(1 - k) * barHeight)}px)`;
+        bottom.style.transform = `translateY(${String((1 - k) * barHeight)}px)`;
+        vignette.style.opacity = String(k);
+        stamp2.style.opacity = String(seg(t, at + textIn[0], at + textIn[1]) * (1 - seg(t, at + textOut[0], at + textOut[1])) * k);
+        const scale = camera?.scale ?? 1;
+        const [dx, dy] = camera?.shake ?? [0, 0];
+        hud.style.transformOrigin = camera ? `${String(camera.focus[0])}px ${String(camera.focus[1])}px` : "";
+        hud.style.transform = scale === 1 && dx === 0 && dy === 0 ? "" : `translate(${String(-dx / scale)}px,${String(-dy / scale)}px) scale(${String(1 / scale)})`;
+      },
+      end: () => hud.remove()
+    };
+  }
+
+  // components/effect-library/pile-lift.ts
+  function pileLift(el, {
+    lift = "0 -2%",
+    scale = 1.04,
+    shadow = "drop-shadow(0 12px 12px #0006)",
+    liftMs = 250,
+    settleMs = 300,
+    liftEase = "ease-out",
+    settleEase = "cubic-bezier(0.3, 1.3, 0.5, 1)",
+    speed = 1
+  } = {}) {
+    const rest = { translate: "0 0", scale: "1", filter: "drop-shadow(0 0 0 transparent)" };
+    const raised = { translate: lift, scale: String(scale), filter: shadow };
+    if (speed === 0 || speed === "instant") {
+      const { translate: translate2, scale: originalScale, filter } = el.style;
+      Object.assign(el.style, raised);
+      let restored = false;
+      const restore = () => {
+        if (!restored) Object.assign(el.style, { translate: translate2, scale: originalScale, filter });
+        restored = true;
+        return void 0;
+      };
+      return { lift: void 0, settle: restore, end: restore };
+    }
+    const liftAnimation = el.animate([rest, raised], { duration: liftMs * speed, easing: liftEase, fill: "forwards" });
+    let settleAnimation;
+    let ended = false;
+    return {
+      lift: liftAnimation,
+      settle() {
+        if (ended) return void 0;
+        settleAnimation ??= el.animate([raised, rest], { duration: settleMs * speed, easing: settleEase, fill: "forwards" });
+        return settleAnimation;
+      },
+      end() {
+        if (ended) return;
+        ended = true;
+        liftAnimation.cancel();
+        settleAnimation?.cancel();
+      }
+    };
+  }
+
+  // components/effect-library/plasma-orb.ts
+  var TAU3 = Math.PI * 2;
+  var orbGeometry = {
+    haloRadius: 2,
+    coreX: 0,
+    coreY: 0,
+    ringWidth: 1,
+    ringStroke: 0.05,
+    ringRadius: 0.5,
+    ringDash: 0.25,
+    referenceRadius: 30,
+    filamentSamples: 64,
+    filamentTwist: 0.2,
+    filamentSpacing: 1,
+    filamentRadius: 0.75,
+    filamentWave: 0.1,
+    filamentLobes: 2,
+    filamentAspect: 0.75,
+    filamentRotation: 0.5,
+    brightEvery: 2,
+    brightWidth: 1,
+    filamentWidth: 0.5,
+    filamentBlur: 4,
+    angleStep: 2,
+    angleWave: 0.1,
+    arcPoints: 6,
+    arcStart: 0.4,
+    arcStride: 0.1,
+    jagPoint: 6,
+    jagArc: 8,
+    jagSize: 0.1,
+    arcOpacity: 0.4,
+    arcPulse: 0.2,
+    arcBlur: 6,
+    forkPoint: 3,
+    forkAngle: 0.5,
+    forkLength: 0.25,
+    moteRadius: 1.1,
+    moteBands: 3,
+    moteStride: 0.1,
+    moteSize: 0.5,
+    moteSizes: 2,
+    moteSizeStride: 0.2
+  };
+  var neutralPalette = {
+    ring: "#888",
+    halo: [[0, "#aaa8"], [0.5, "#8883"], [1, "#8880"]],
+    core: [[0, "#fff"], [0.2, "#eee"], [0.6, "#aaa8"], [1, "#8880"]],
+    bright: "#eeeb",
+    filament: "#aaa6",
+    shadow: "#ddd",
+    arc: "230,230,230",
+    mote: "#ddd8"
+  };
+  var plasmaOrbScale = (t, boost = 0, { speed = 1, pulsePeriod = 2400, pulseAmount = 0.05, swell = 0.1 } = {}) => speed === 0 || speed === "instant" ? 1 : 1 + pulseAmount * Math.sin(t / pulsePeriod * TAU3) + boost * swell;
+  var plasmaSwellAt = (since, peak = 80, half = 180) => since < 0 ? 0 : clamp(1 - Math.abs(since - peak) / half);
+  function disc(c, x, y, r, fill) {
+    c.beginPath();
+    c.arc(x, y, r, 0, TAU3);
+    c.fillStyle = fill;
+    c.fill();
+  }
+  function glow2(c, x, y, r, stops) {
+    const g = c.createRadialGradient(x, y, 0, x, y, r);
+    for (const [p, col] of stops) g.addColorStop(p, col);
+    disc(c, x, y, r, g);
+  }
+  function drawPlasmaOrb(c, x, y, r, t, empty, boost = 0, settings = {}) {
+    const { palette = neutralPalette, arcCount = 5, filaments = 4, motes: motes2 = 10, geometry: geometry2 = orbGeometry } = settings;
+    c.save();
+    c.translate(x, y);
+    if (empty) {
+      c.strokeStyle = palette.ring;
+      c.lineWidth = Math.max(geometry2.ringWidth, r * geometry2.ringStroke);
+      c.beginPath();
+      c.arc(0, 0, r * geometry2.ringRadius, 0, TAU3);
+      c.stroke();
+      c.beginPath();
+      c.moveTo(-r * geometry2.ringDash, 0);
+      c.lineTo(r * geometry2.ringDash, 0);
+      c.stroke();
+      c.restore();
+      return;
+    }
+    const phase2 = settings.speed === 0 || settings.speed === "instant" ? 0 : t / (settings.pulsePeriod ?? 2400) * TAU3;
+    const size = plasmaOrbScale(t, boost, settings);
+    c.scale(size, size);
+    const lw = r / geometry2.referenceRadius;
+    c.globalCompositeOperation = "lighter";
+    glow2(c, 0, 0, r * geometry2.haloRadius, palette.halo);
+    glow2(c, r * geometry2.coreX, r * geometry2.coreY, r, palette.core);
+    c.lineCap = "round";
+    for (let j = 0; j < filaments; j++) {
+      c.beginPath();
+      for (let k = 0; k <= geometry2.filamentSamples; k++) {
+        const a = k / geometry2.filamentSamples * TAU3;
+        const twist = Math.sin(phase2) * geometry2.filamentTwist + j * geometry2.filamentSpacing;
+        const rr = r * (geometry2.filamentRadius + geometry2.filamentWave * Math.sin(a * geometry2.filamentLobes + j + phase2));
+        const xx = Math.cos(a + twist) * rr;
+        const yy = Math.sin(a + twist) * rr * geometry2.filamentAspect;
+        const rot = j * geometry2.filamentRotation;
+        const px2 = xx * Math.cos(rot) - yy * Math.sin(rot);
+        const py = xx * Math.sin(rot) + yy * Math.cos(rot);
+        if (k === 0) c.moveTo(px2, py);
+        else c.lineTo(px2, py);
+      }
+      c.strokeStyle = j % geometry2.brightEvery === 0 ? palette.bright : palette.filament;
+      c.lineWidth = (j % geometry2.brightEvery === 0 ? geometry2.brightWidth : geometry2.filamentWidth) * lw;
+      c.shadowColor = palette.shadow;
+      c.shadowBlur = geometry2.filamentBlur * lw;
+      c.stroke();
+    }
+    for (let j = 0; j < arcCount; j++) {
+      const a = j * geometry2.angleStep + Math.sin(phase2 + j) * geometry2.angleWave;
+      const pts = [];
+      for (let k = 0; k < geometry2.arcPoints; k++) {
+        const d = r * (geometry2.arcStart + k * geometry2.arcStride);
+        const jag = Math.sin(k * geometry2.jagPoint + j * geometry2.jagArc + phase2) * r * geometry2.jagSize;
+        pts.push([Math.cos(a) * d - Math.sin(a) * jag, Math.sin(a) * d + Math.cos(a) * jag]);
+      }
+      c.beginPath();
+      pts.forEach(([px2, py], i) => i === 0 ? c.moveTo(px2, py) : c.lineTo(px2, py));
+      c.strokeStyle = `rgba(${palette.arc},${String(geometry2.arcOpacity + geometry2.arcPulse * Math.sin(phase2 + j))})`;
+      c.lineWidth = lw;
+      c.shadowBlur = geometry2.arcBlur * lw;
+      c.stroke();
+      const fork = pts[geometry2.forkPoint];
+      if (fork !== void 0) {
+        c.beginPath();
+        c.moveTo(fork[0], fork[1]);
+        c.lineTo(fork[0] + Math.cos(a + geometry2.forkAngle) * r * geometry2.forkLength, fork[1] + Math.sin(a + geometry2.forkAngle) * r * geometry2.forkLength);
+        c.stroke();
+      }
+    }
+    c.shadowBlur = 0;
+    for (let j = 0; j < motes2; j++) {
+      const a = j * geometry2.angleStep + Math.sin(phase2) * geometry2.angleWave;
+      const d = r * (geometry2.moteRadius + j % geometry2.moteBands * geometry2.moteStride);
+      disc(c, Math.cos(a) * d, Math.sin(a) * d, (geometry2.moteSize + j % geometry2.moteSizes * geometry2.moteSizeStride) * lw, palette.mote);
+    }
+    c.restore();
+  }
+
+  // components/effect-library/drift-cloud.ts
+  var TAU4 = Math.PI * 2;
+  var driftLife = 5e3;
+  var defaultShards = triangles(2, 2, 1, [0, 0]);
+  var defaultSurvivors = [0, 1, 2, 3];
+  function syncDriftCloud(prev, ids, held, now, scale, still, settings = {}) {
+    if (scale === 0 || scale === "instant") return [];
+    const there = new Set(ids);
+    const life = (settings.life ?? driftLife) * Math.max(scale, 1e-3);
+    const out = prev.filter((c) => there.has(c.id));
+    const known = new Set(out.map((c) => c.id));
+    let k = 0;
+    for (const id of ids) {
+      if (known.has(id) || held.has(id)) continue;
+      out.push({ id, born: still ? now - life - k * (settings.cohortPhase ?? 0.25) * life % life : now });
+      k += 1;
+    }
+    const order = new Map(ids.map((id, i) => [id, i]));
+    const live = out.filter((c) => c.retired === void 0).sort((a, b) => (order.get(a.id) ?? 0) - (order.get(b.id) ?? 0));
+    const retire = new Set(live.slice(0, Math.max(0, live.length - (settings.cohortCount ?? 3))));
+    return out.map((c) => retire.has(c) ? { ...c, retired: still ? c.born : now } : c);
+  }
+  function hash2(s) {
+    let h = 2166136261;
+    for (const ch of s) h = Math.imul(h ^ ch.charCodeAt(0), 16777619) >>> 0;
+    return h;
+  }
+  function driftPieces(id, settings = {}, survivors = settings.survivors ?? defaultSurvivors) {
+    const h = hash2(id);
+    const [v0, dv] = settings.speed ?? [2, 0.6];
+    const { firstGroup = 3, stagger = 100, secondPhase = 0.5, emberEvery = 3 } = settings;
+    return Array.from({ length: settings.pieceCount ?? 5 }, (_, k) => {
+      const j = (h + k * 7) % (settings.variation ?? 20);
+      return {
+        triangle: survivors[(h + k) % survivors.length] ?? 0,
+        angle: h % 360 / 360 * TAU4 + k * (settings.angleStep ?? 2),
+        speed: v0 + j % (settings.speedBands ?? 5) * dv,
+        spin: (settings.spin ?? [8, -11])[k % 2],
+        size: k === 0 ? settings.firstSize ?? 22 : (settings.size ?? 11) + j % (settings.sizeBands ?? 3) * (settings.sizeStep ?? 3),
+        offset: k < firstGroup ? k * stagger : (settings.life ?? driftLife) * secondPhase + (k - firstGroup) * stagger,
+        ember: k % emberEvery === 0
+      };
+    });
+  }
+  function driftPoseAt(p, age, retiredAge, settings = {}) {
+    const since = age - p.offset;
+    if (since < 0) return null;
+    const life = settings.life ?? driftLife;
+    const a = since % life;
+    if (retiredAge !== void 0 && age - a >= retiredAge) return null;
+    const s = a / 1e3;
+    const r = (settings.startRadius ?? 6) + s * p.speed;
+    const alpha = seg(a, 0, settings.emerge ?? 500) * (1 - seg(a, ...settings.fade ?? [life * 0.5, life])) * (settings.opacity ?? 0.8);
+    return {
+      x: Math.cos(p.angle) * r,
+      y: Math.sin(p.angle) * r * (settings.aspect ?? 0.8),
+      rot: p.angle * (settings.initialSpin ?? 0.4) + s * p.spin * Math.PI / 180,
+      size: p.size * (1 - s * (settings.shrink ?? 0.05)),
+      alpha
+    };
+  }
+  function drawDriftCloud(c, o) {
+    const settings = o.settings ?? {};
+    const { ring = [10, 4, 1.2], ringColour = "#777", dashColour = "#888", lineWidth = 0.5, minLineWidth = 1 } = settings;
+    const cx = o.w / 2;
+    const cy = o.h / 2;
+    if (o.empty) {
+      c.save();
+      c.strokeStyle = ringColour;
+      c.lineWidth = Math.max(minLineWidth, o.u * lineWidth);
+      c.beginPath();
+      c.ellipse(cx, cy, ring[0] * o.u, ring[1] * o.u, 0, 0, TAU4);
+      c.stroke();
+      c.strokeStyle = dashColour;
+      c.beginPath();
+      c.moveTo(cx - ring[2] * o.u, cy);
+      c.lineTo(cx + ring[2] * o.u, cy);
+      c.stroke();
+      c.restore();
+      return 0;
+    }
+    if (o.scale === 0 || o.scale === "instant") return 0;
+    const scale = Math.max(o.scale, 1e-3);
+    let drawn = 0;
+    const n = o.cohorts.length;
+    const {
+      shards = defaultShards,
+      survivors = defaultSurvivors,
+      cohortDim = 0.1,
+      cutoff = 4e-3,
+      edgeFade = 0.7,
+      emberColour = "#ddd",
+      emberOpacity = 0.6,
+      emberSize = 0.5,
+      minEmberSize = 1
+    } = settings;
+    o.cohorts.forEach((co, rank) => {
+      const pic = o.art(co.id);
+      if (pic === null) return;
+      const age = (o.now - co.born) / scale;
+      const retiredAge = co.retired === void 0 ? void 0 : (co.retired - co.born) / scale;
+      const dim = 1 - cohortDim * (n - 1 - rank);
+      for (const p of driftPieces(co.id, settings, survivors)) {
+        const at = driftPoseAt(p, age, retiredAge, settings);
+        if (at === null || at.alpha <= cutoff) continue;
+        const x = cx + at.x * o.u;
+        const y = cy + at.y * o.u;
+        const size = at.size * o.u;
+        const edge2 = Math.max(Math.abs(x - cx) / (cx - size / 2 || 1), Math.abs(y - cy) / (cy - size / 2 || 1));
+        const alpha = at.alpha * dim * (1 - seg(edge2, edgeFade, 1));
+        if (alpha <= cutoff) continue;
+        drawDriftPiece(c, pic, shards, p.triangle, x, y, size, at.rot, alpha);
+        if (p.ember) {
+          c.save();
+          c.globalCompositeOperation = "lighter";
+          c.globalAlpha = clamp(alpha * emberOpacity);
+          c.fillStyle = emberColour;
+          c.fillRect(x, y, Math.max(minEmberSize, o.u * emberSize), Math.max(minEmberSize, o.u * emberSize));
+          c.restore();
+        }
+        drawn += 1;
+      }
+    });
+    return drawn;
+  }
+  function drawDriftPiece(c, pic, shards, triangle, x, y, size, rot, alpha) {
+    const t = shards[triangle];
+    if (t === void 0) return;
+    const xs = t.map(([px2]) => px2 / 100 * pic.w);
+    const ys = t.map(([, py]) => py / 100 * pic.h);
+    const x0 = Math.min(...xs);
+    const y0 = Math.min(...ys);
+    const bw = Math.max(...xs) - x0;
+    const bh = Math.max(...ys) - y0;
+    const k = size / Math.max(bw, bh, 1);
+    const mx = (xs.reduce((a, b) => a + b, 0) / 3 - x0) * k;
+    const my = (ys.reduce((a, b) => a + b, 0) / 3 - y0) * k;
+    c.save();
+    c.globalAlpha = clamp(alpha);
+    c.translate(x, y);
+    c.rotate(rot);
+    c.translate(-mx, -my);
+    c.beginPath();
+    t.forEach(([px2, py], i) => {
+      const X = (px2 / 100 * pic.w - x0) * k;
+      const Y = (py / 100 * pic.h - y0) * k;
+      if (i === 0) c.moveTo(X, Y);
+      else c.lineTo(X, Y);
+    });
+    c.closePath();
+    c.clip();
+    c.drawImage(pic.img, x0, y0, bw, bh, 0, 0, bw * k, bh * k);
+    c.restore();
+  }
+  return __toCommonJS(index_exports);
+})();
+
+"use strict";
+var DEMO = (() => {
+  var __defProp = Object.defineProperty;
+  var __getOwnPropDesc = Object.getOwnPropertyDescriptor;
+  var __getOwnPropNames = Object.getOwnPropertyNames;
+  var __hasOwnProp = Object.prototype.hasOwnProperty;
+  var __export = (target, all) => {
+    for (var name in all)
+      __defProp(target, name, { get: all[name], enumerable: true });
+  };
+  var __copyProps = (to, from, except, desc) => {
+    if (from && typeof from === "object" || typeof from === "function") {
+      for (let key of __getOwnPropNames(from))
+        if (!__hasOwnProp.call(to, key) && key !== except)
+          __defProp(to, key, { get: () => from[key], enumerable: !(desc = __getOwnPropDesc(from, key)) || desc.enumerable });
+    }
+    return to;
+  };
+  var __toCommonJS = (mod) => __copyProps(__defProp({}, "__esModule", { value: true }), mod);
+
+  // tuners/src/effect-library-settings.mjs
+  var effect_library_settings_exports = {};
+  __export(effect_library_settings_exports, {
+    neutralImage: () => neutralImage,
+    portalSizes: () => portalSizes,
+    previews: () => previews
+  });
+  var portalSizes = { startSize: 20, endSize: 44 };
+  var neutralImage = "data:image/svg+xml," + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 44 36"><rect x="1" y="1" width="42" height="34" rx="9" fill="#a97938" stroke="#ffe3a0" stroke-width="2"/><path d="M18 10l12 8-12 8z" fill="#fff2c6"/></svg>');
+  var number = (unit, min, max, step, help) => ({ value: void 0, unit, min, max, step, help });
+  var ms = (help) => number(" ms", 0, 5e3, 1, help);
+  var px = (help, min = 0, max = 160) => number(" px", min, max, 0.1, help);
+  var fraction = (help) => number("", 0, 1, 0.01, help);
+  var ratio = (help, min = 0, max = 4) => number("\xD7", min, max, 0.01, help);
+  var count = (help, max = 64, min = 0) => number("", min, max, 1, help);
+  var deg = (help) => number("\xB0", -360, 360, 1, help);
+  var rad = (help) => number(" rad", -6.29, 6.29, 0.01, help);
+  var pct = (help) => number("%", 0, 100, 1, help);
+  var signedMs = (help) => number(" ms", -1e3, 2e3, 1, help);
+  var choose = (choices, help) => ({ value: void 0, choices, help });
+  var flag = (help) => choose([[true, "On"], [false, "Off"]], help);
+  var direct = choose([[1, "Clockwise"], [-1, "Counterclockwise"]], "Direction of rotation.");
+  var ease = () => choose(["linear", "ease-in", "ease-out", "ease-in-out"].map((v) => [v, v]), "How the animation speeds up or slows down.");
+  var pair = (fn, first, second) => [fn(first), fn(second)];
+  var stageX = (help) => ({ ...px(help, -160), stage: true });
+  var point = () => [stageX("Horizontal position from the stage\u2019s left edge."), px("Vertical position from the stage\u2019s top edge.", -160)];
+  var rect = () => [...point(), px("Width of the box.", 1), px("Height of the box.", 1)];
+  var windowMs = () => pair(signedMs, "When this phase starts.", "When this phase ends.");
+  var offsets = () => pair(fraction, "First time fraction.", "Second time fraction.");
+  var fadeFrames = () => [
+    { opacity: fraction("Starting opacity.") },
+    { opacity: fraction("Middle opacity."), offset: fraction("Time fraction of the middle keyframe.") },
+    { opacity: fraction("Ending opacity.") }
+  ];
+  var group = (title, fields, path = "", enable) => ({ title, fields, path, enable });
+  var optional = (title, path, fields, required = {}) => group(title, fields, path, required);
+  var demo = (control, value) => ({ ...control, value, demo: true });
+  var effect = (dur, note, groups, config = {}) => ({ dur, note, groups, ...config });
+  var rotation = () => ({ direction: direct, ease: ease() });
+  var tap = [group("Rotation", {
+    ...rotation(),
+    angle: deg("How far the card turns."),
+    overshoot: deg("Extra rotation before the card settles.")
+  })];
+  var anchors = () => group("Endpoint overrides", { fromPoint: point(), toPoint: point() });
+  var shot = (spot) => group("Shot and timing", {
+    delay: ms("Wait before launch."),
+    travelMs: ms("Travel time when speed is zero or omitted."),
+    speed: number(" px/ms", 0, 5, 0.01, "Travel speed. Zero uses travel time."),
+    width: px("Width of the shot.", 0.1),
+    ...spot
+  });
+  var bar = [
+    group("Fill", { from: fraction("Starting fraction of the bar."), to: fraction("Ending fraction of the bar."), ease: ease() }),
+    optional("Marker hop", "marker", {
+      lift: px("Height of the marker hop."),
+      ease: ease(),
+      scales: Array.from({ length: 4 }, (_, i) => ratio("Marker scale at keyframe " + (i + 1) + ".")),
+      offsets: offsets()
+    }, { selector: ".demo-marker", lift: 24 }),
+    optional("Pips", "pips", {
+      boxes: [rect(), rect(), rect(), rect()],
+      sweep: ms("Time for the sweep across the row."),
+      gap: px("Gap between pips."),
+      radius: px("Corner radius."),
+      edge: offsets()
+    }, { boxes: [[0, 0, 18, 20], [23, 0, 18, 20], [46, 0, 18, 20], [69, 0, 18, 20]], sweep: 550, gap: 5, empty: "#294a40" }),
+    optional("Pip flash", "pips.flash", {
+      start: ms("When the flash begins."),
+      end: ms("When the flash ends."),
+      peak: fraction("Peak flash opacity."),
+      blur: px("Flash blur."),
+      width: px("Outline width.")
+    }, { start: 200, end: 800, colour: "#fff", outline: "#e9c46a", blur: 6, width: 2 }),
+    optional("Pin hop", "pin", {
+      delta: pair(px, "Horizontal travel.", "Vertical travel."),
+      lift: px("Peak lift in pixels."),
+      liftFactor: ratio("Share of actor height used when pixel lift is omitted."),
+      window: windowMs()
+    }, { delta: [48, 0] }),
+    optional("Pin glow", "pin.glow", {
+      radius: px("Glow radius."),
+      alpha: fraction("Glow opacity."),
+      tail: ms("How long the glow continues past landing."),
+      peak: fraction("Time fraction of peak glow.")
+    }, { radius: 24, alpha: 0.65, tail: 200, peak: 0.5 }),
+    optional("Landing ring", "pin.ring", {
+      start: signedMs("Start relative to landing."),
+      end: signedMs("End relative to landing."),
+      from: px("Starting radius."),
+      to: px("Ending radius."),
+      width: px("Stroke width.", 1)
+    }, { start: -40, end: 220, from: 7, to: 34, colour: "#e9c46a", width: 2 })
+  ];
+  var orbit = [
+    group("Loop", { period: ms("Time for one orbit.") }),
+    group("Orbit geometry", {
+      referenceWidth: demo(px("Card width at which the dimensions are measured.", 1), 86),
+      radii: pair(px, "Horizontal orbit radius.", "Vertical orbit radius."),
+      centerY: px("Vertical offset from the top of the card.", -70),
+      phaseMs: signedMs("Starting time offset."),
+      spin: ratio("Star rotation relative to the orbit angle.", -4),
+      trackWidth: px("Width of the orbit line.")
+    }, "orbit"),
+    group("Stars", {
+      count: count("Number of stars.", 24),
+      size: pair(px, "Size of a star at the back.", "Size of a star at the front."),
+      alpha: pair(fraction, "Opacity at the back.", "Opacity at the front."),
+      twinkle: [fraction("Base brightness."), fraction("Brightness variation."), ms("Milliseconds per radian of twinkle."), rad("Phase difference between adjacent stars.")],
+      popMs: ms("Time for stars to appear."),
+      jitter: px("Horizontal jitter of the decorative copy during a burst."),
+      copySaturation: demo(ratio("Colour saturation of the decorative copy."), 1)
+    }, "orbit")
+  ];
+  var crackle = [
+    group("Crackle burst", {
+      period: ms("Time between bursts."),
+      at: ms("Start of the burst within a cycle."),
+      duration: ms("Length of the burst."),
+      margin: px("Extra area above the card for sparks.")
+    }, "orbit.crackle"),
+    group("Electric arcs", {
+      seed: count("Changes the repeatable arc pattern.", 999),
+      hz: number(" ms", 1, 300, 1, "Time before a new arc is drawn."),
+      segments: count("Segments in each arc.", 40, 1),
+      jag: px("Sideways displacement of arc points."),
+      alpha: fraction("Arc opacity."),
+      width: px("Width of the arc.", 0.1),
+      fork: flag("Adds a branch to the arc.")
+    }, "orbit.crackle.arc")
+  ];
+  var previews = {
+    "shake-group": effect(640, "Shake two cards together.", [
+      group("Shake", { amplitude: px("Horizontal movement."), crossAmplitude: px("Vertical movement."), frames: count("Number of alternating keyframes.", 24, 2) })
+    ], { route: true, group: true, base: () => ({ actors: ["card", "target-card"] }) }),
+    unroll: effect(640, "Reveal the card across the selected axis.", [
+      group("Reveal", {
+        axis: choose([["x", "Horizontal"], ["y", "Vertical"]], "Which dimension grows from zero."),
+        origin: choose(["left", "right", "top", "bottom", "center"].map((v) => [v, v]), "Edge or centre from which the card opens.")
+      })
+    ]),
+    spin: effect(800, "Turn the card around its centre. Fractional turns hold their final pose.", [
+      group("Rotation", {
+        ...rotation(),
+        turns: ratio("Number of turns. Fractions are allowed."),
+        scaleFrom: demo(ratio("Starting size for a roll-in.", 0.1), 0.6),
+        endless: flag("Repeat up to the step end."),
+        period: ms("Time per turn cycle. The kit uses the step duration when omitted.")
+      })
+    ]),
+    tap: effect(450, "Turn a ready card and hold the tapped angle.", tap),
+    untap: effect(800, "Start from the tapped angle and return upright.", tap),
+    "column-beam": effect(1e3, "A column of light reveals or removes a card.", [
+      group("Column", {
+        way: choose([["out", "Out"], ["in", "In"]], "Whether the actor appears or vanishes."),
+        tuck: px("Amount hidden at the base of the card."),
+        column: rect(),
+        glitter: count("Number of specks.", 130),
+        speck: ratio("Size multiplier for specks."),
+        core: flag("Adds a bright central column.")
+      })
+    ]),
+    "rotating-beam": effect(1600, "Sweep a beam around the centre of the card.", [
+      group("Sweep", { turns: ratio("Number of revolutions."), beamDeg: deg("Angular width of the beam."), fadeMs: ms("Fade time at the ends.") })
+    ]),
+    "curved-beam": effect(1200, "A curved beam carries a token between the two anchors.", [
+      group("Curved path", {
+        control: [stageX("Curve control point across the stage."), px("Curve control point down the stage.")],
+        size: pair(px, "Starting token size.", "Ending token size."),
+        unit: ratio("Scales beam thickness and particles.", 0.05),
+        tuck: flag("Tucks the token away at arrival.")
+      }, "curve")
+    ], { verb: "column-beam", route: true, base: ({ x }) => ({ curve: { control: [x, 66], image: neutralImage } }) }),
+    "radial-streaks": effect(1700, "Streaks travel toward or away from the centre. Flight pulse uses the two anchors.", [
+      group("Streaks", {
+        centre: point(),
+        inward: flag("Draws the streaks toward the centre."),
+        seed: count("Changes the repeatable streak pattern.", 999),
+        count: count("Number of streaks.", 220),
+        alpha: fraction("Maximum streak opacity."),
+        unit: ratio("Scales streak travel and width.", 0.05)
+      }),
+      optional("Flight pulse", "pulse", { lift: px("Height of the flight curve."), flightMs: ms("Travel time of the flight pulse.") }, { lift: 40, flightMs: 550 })
+    ], { route: true }),
+    projectile: effect(1100, "A shot stretches to the target, then flickers at contact.", [
+      shot({ headScale: ratio("Head size in beam widths.", 0, 14), spotSize: px("Diameter of the contact spot."), headFadeMs: ms("Fade time of the shot head.") }),
+      anchors(),
+      group("Contact flicker", { flicker: Array.from({ length: 4 }, () => ({
+        at: ms("Time after arrival."),
+        width: ratio("Beam width multiplier."),
+        opacity: fraction("Opacity at this frame."),
+        easing: ease()
+      })) }),
+      optional("Miss", "miss", { past: ratio("Extra travel as a share of the path."), fadeMs: ms("Time to retract the missed shot.") }, { past: 0.3, fadeMs: 180 }),
+      optional("Source light", "sourceLight", { frames: fadeFrames() }, { background: "radial-gradient(circle, white, transparent 70%)" })
+    ], { route: true }),
+    bolt: effect(1e3, "A streak or ribbon travels between the anchors.", [
+      group("Bolt form", {
+        bolt: choose([["streak", "Streak"], ["ribbon", "Ribbon"]], "Streak follows the direct path. Ribbon curves and fades."),
+        unit: ratio("Scale of widths and glows.", 0.05),
+        tail: fraction("Streak tail as a share of the route."),
+        coreWidth: px("Width of the inner stroke.", 0.1),
+        alpha: fraction("Outer stroke opacity."),
+        coreAlpha: fraction("Inner stroke opacity.")
+      }),
+      shot({}),
+      anchors(),
+      group("Ribbon", {
+        lift: px("Height of the arc."),
+        launchMs: ms("Time before ribbon travel."),
+        fadeMs: ms("Time for the ribbon to fade."),
+        trailMs: ms("Time span of sampled poses."),
+        trailPoints: count("Number of samples in the ribbon.", 60, 2)
+      }),
+      group("Glow", {
+        sourceGlowRadius: px("Radius of the glow at launch."),
+        headGlowRadius: px("Radius of the moving glow."),
+        sourceGlowMs: ms("Duration of the launch glow."),
+        sourceGlowPeak: fraction("Peak launch glow opacity."),
+        headGlowAlpha: fraction("Moving glow opacity.")
+      })
+    ], { route: true, verb: "projectile", base: () => ({ bolt: "streak" }) })
+  };
+  Object.assign(previews, {
+    "ring-pulse": effect(1300, "Pulse a border around the card or send an expanding shockwave.", [
+      group("Outline pulse", {
+        box: rect(),
+        width: px("Width of the pulse border."),
+        delay: ms("Wait before the first pulse."),
+        ms: ms("Time for one pulse."),
+        count: count("Number of pulses.", 12),
+        period: ms("Time between pulse starts."),
+        easing: ease(),
+        frames: fadeFrames()
+      }),
+      optional("Shockwave", "shockwaves", [{
+        delay: ms("Wait for the wave."),
+        ms: ms("Expansion time."),
+        radius: px("Final radius."),
+        width: px("Ring width."),
+        alpha: fraction("Peak opacity."),
+        squash: ratio("Vertical compression.", 0.01),
+        borderWidth: px("Border width."),
+        outlineWidth: px("Outline width."),
+        outlineOffset: px("Outline inset or outset.", -40)
+      }], [{ delay: 0, ms: 550, radius: 110, width: 20, alpha: 0.8 }]),
+      group("Shockwave bounds", { unit: ratio("Scale of the wave stroke."), clip: rect() })
+    ]),
+    shimmer: effect(1200, "An elliptical shimmer and a ripple mark a hit on the card.", [
+      group("Hit and ripple", {
+        pad: fraction("Padding as a share of card width."),
+        hit: pair(fraction, "Contact across the card.", "Contact down the card."),
+        rippleSize: fraction("Ripple size as a share of card width."),
+        rippleWidth: px("Width of the ripple stroke."),
+        delay: ms("Wait before the hit."),
+        ms: ms("Time for the shimmer."),
+        rippleMs: ms("Time for the ripple."),
+        frames: fadeFrames(),
+        rippleFrames: fadeFrames()
+      }),
+      group("Gradient stops", {
+        hitStops: [fraction("Core opacity."), fraction("Tint opacity."), pct("Tint position."), pct("Clear position.")],
+        rimStops: [pct("Inner clear position."), pct("Colour band position."), fraction("Band opacity."), pct("Rim position."), fraction("Rim opacity.")]
+      }),
+      optional("Recoil", "jolt", {
+        vector: [px("Horizontal displacement.", -80), px("Vertical displacement.", -80)],
+        ms: ms("Time to jolt back and return.")
+      }, { vector: [12, -6] })
+    ]),
+    dissolve: effect(1550, "Heat the card at the contact point and break it into embers.", [
+      group("Heat and break", {
+        delay: ms("Wait before heating."),
+        heatMs: ms("Length of the heat phase."),
+        breakMs: ms("Length of the break phase."),
+        shown: px("Height of the visible part of the card.", 1),
+        cols: count("Columns in the break grid.", 28, 1),
+        hit: pair(fraction, "Contact across the card.", "Contact down the card."),
+        cutAt: fraction("Point in the heat phase at which the card breaks."),
+        heatTail: fraction("Heat fade as a share of break time."),
+        heatFrames: fadeFrames()
+      }),
+      group("Embers", {
+        embers: count("Number of embers.", 100),
+        emberSize: { min: px("Minimum ember size."), divisor: count("Card-width divisor for ember size.", 250, 1), range: pair(ratio, "Smallest size multiplier.", "Largest size multiplier.") },
+        emberDrift: pair(ratio, "Radial drift multiplier.", "Random drift multiplier."),
+        emberRise: pair(ratio, "Minimum rise multiplier.", "Maximum rise multiplier."),
+        emberSpan: pair(ratio, "Minimum lifetime multiplier.", "Maximum lifetime multiplier."),
+        emberShadow: pair(px, "Ember shadow blur.", "Ember shadow spread.")
+      }),
+      optional("Lift and fade", "lift", {
+        distance: px("Distance the card rises."),
+        spin: rad("Rotation as the card rises."),
+        fade: windowMs(),
+        ms: ms("Time for the lift."),
+        unit: ratio("Scale of smoke and glow.", 0.05),
+        glowRadius: px("Glow radius.")
+      }, { distance: 36, spin: 0.15, fade: [230, 620], ms: 620 }),
+      group("Lift smoke", {
+        seed: count("Changes the repeatable smoke pattern.", 999),
+        n: count("Number of puffs."),
+        x: px("Origin across the stage.", -160),
+        y: px("Origin down the stage.", -160),
+        t0: ms("When smoke starts."),
+        life: ms("Lifetime of a puff."),
+        stagger: ms("Variation in puff start time."),
+        radius: px("Radius around the origin."),
+        spread: px("Sideways drift."),
+        rise: px("Upward drift."),
+        size: px("Size of a puff."),
+        alpha: fraction("Puff opacity.")
+      }, "lift.smoke")
+    ]),
+    shatter: effect(1400, "Break the card into rotating triangles that travel away from the impact.", [
+      group("Mesh", {
+        count: count("Number of visible shards.", 160),
+        grid: pair((help) => count(help, 12, 1), "Mesh columns.", "Mesh rows."),
+        jitter: pair(pct, "Horizontal jitter of mesh points.", "Vertical jitter of mesh points."),
+        seed: count("Changes the repeatable mesh pattern.", 999),
+        motionSeed: count("Changes the repeatable movement pattern.", 999),
+        flip: flag("Mirrors the optional shard image vertically."),
+        sourceBox: rect()
+      }),
+      group("Travel", {
+        direction: [ratio("Horizontal component of parallel travel.", -4), ratio("Vertical component of parallel travel.", -4)],
+        impact: point(),
+        delay: ms("Wait before breaking."),
+        ms: ms("Travel time."),
+        unit: ratio("Scale of the travel and perspective.", 0.05),
+        perspective: px("Perspective distance.", 1, 2200),
+        drag: ms("Time constant for slowing down."),
+        travel: px("Base distance the shards travel.", 0, 760),
+        speedRange: pair(ratio, "Minimum travel multiplier.", "Maximum travel multiplier."),
+        zRange: pair((help) => px(help, 0, 560), "Minimum depth of travel.", "Maximum depth of travel.")
+      }),
+      group("Rotation and cooling", {
+        rotateX: pair(deg, "Minimum X rotation.", "Maximum X rotation."),
+        rotateY: pair(deg, "Minimum Y rotation.", "Maximum Y rotation."),
+        rotateZ: pair(deg, "Minimum Z rotation.", "Maximum Z rotation."),
+        coolMs: ms("Time for shards to cool."),
+        brightness: pair(ratio, "Brightness when cool.", "Brightness when hot."),
+        shadowSize: pair(px, "Shadow size when cool.", "Shadow size when hot.")
+      })
+    ], { base: () => ({ clipSource: neutralImage }) }),
+    "shield-bubble": effect(1500, "Show a hex shield taking a hit, breaking, or recharging.", [
+      group("Shield and contact", {
+        centre: point(),
+        radius: pair(px, "Horizontal field radius.", "Vertical field radius."),
+        hex: px("Hex cell size.", 1),
+        outline: ratio("Outline stroke multiplier."),
+        unit: ratio("Scale of particles and wave travel.", 0.05),
+        hitAngle: rad("Impact angle on the shield perimeter."),
+        hit: ms("Time of contact."),
+        breaks: flag("Scatters the field on contact."),
+        attack: flag("Uses shorter impact defaults."),
+        impactPointScale: ratio("Contact distance relative to the perimeter."),
+        visibleIn: windowMs()
+      }),
+      group("Impact timing", {
+        fade: windowMs(),
+        flashMs: ms("Length of impact flash."),
+        waveCount: count("Number of waves.", 16),
+        waveGap: ms("Gap between waves."),
+        waveSpeed: number(" units/ms", 0, 4, 0.01, "Speed of the expanding waves.")
+      }, "impact"),
+      group("Impact look", {
+        flashPeak: fraction("Peak flash intensity."),
+        flashRadius: px("Flash radius.", 1),
+        flashStrength: ratio("Flash intensity multiplier."),
+        fieldAlpha: fraction("Base hex field opacity."),
+        glowRadii: pair(px, "Outer glow radius.", "Core glow radius."),
+        glowAlpha: fraction("Glow opacity."),
+        waveWidth: px("Width of the wave band.", 1),
+        waveReach: px("Maximum wave reach.", 1, 1120),
+        waveStrength: pair(ratio, "Strength of the first wave.", "Strength of later waves.")
+      }),
+      group("Sparks", {
+        count: count("Sparks per direction."),
+        life: ms("Spark lifetime."),
+        speed: ratio("Spark speed multiplier."),
+        spread: rad("Angular spread."),
+        width: px("Spark width.")
+      }, "sparks"),
+      group("Hex field", {
+        gradientStart: fraction("Where the edge gradient begins."),
+        band: pair(fraction, "Band position.", "Band opacity."),
+        rim: pair(fraction, "Rim position.", "Rim opacity."),
+        cellScale: ratio("Hex scale."),
+        fresnel: [fraction("Minimum edge strength."), ratio("Exponent of edge brightening.")],
+        fillThreshold: fraction("Brightness threshold for filled cells."),
+        fillAlpha: fraction("Fill opacity.")
+      }, "field"),
+      group("Break scatter", {
+        cutMs: ms("Time after hit before the field breaks."),
+        ms: ms("Duration of the scatter."),
+        flashMs: ms("Duration of the break flash."),
+        flashPeak: fraction("Peak break flash."),
+        flashEnd: fraction("End of break flash."),
+        flashFloor: fraction("Flash floor."),
+        travelAt: fraction("Time fraction at which scatter begins."),
+        fadeAt: fraction("Time fraction at which shards start fading."),
+        stride: count("Interval between cells selected for scatter.", 12, 1),
+        expansion: ratio("Multiplier for outward movement."),
+        drift: pair(px, "Horizontal drift.", "Vertical drift."),
+        rotation: rad("Shard rotation."),
+        width: px("Shard stroke width."),
+        cellScale: ratio("Size multiplier of scattered cells."),
+        alpha: pair(fraction, "Minimum opacity.", "Edge opacity.")
+      }, "scatter"),
+      optional("Recharge", "recharge", {
+        assemble: windowMs(),
+        hum: windowMs(),
+        settle: windowMs(),
+        humPeak: fraction("Peak hum opacity."),
+        scanWidth: px("Width of the scan line."),
+        scanAlpha: fraction("Opacity of the scan line."),
+        snapDepth: px("Depth of the initial light-up band.", 1),
+        snapSpeed: ratio("Speed of the initial light-up."),
+        snapOvershoot: ratio("Extra intensity at light-up."),
+        strength: pair(fraction, "Strength at light-up.", "Strength during the hum.")
+      }, { assemble: [0, 520], hum: [420, 960], settle: [850, 1200] })
+    ]),
+    "collapse-jump": effect(1500, "Collapse a token at the source and rebuild it at the destination.", [
+      group("Streaks", { n: count("Number of streaks."), reach: ratio("Travel relative to token size."), length: ratio("Streak length relative to token size.") }),
+      group("Phases", { outMs: ms("Time to collapse."), gapMs: ms("Pause between locations."), inMs: ms("Time to rebuild.") })
+    ], { route: true, token: true }),
+    "warp-transfer": effect(2600, "Move neutral tokens between two anchors. Select a mode to change how they travel.", [
+      group("Transfer", {
+        mode: choose(["column", "zip", "rise", "portal", "crossing", "pop", "grey", "bump"].map((v) => [v, v]), "Chooses the transfer motion."),
+        count: count("Number of tokens.", 9, 1),
+        stagger: ms("Time between token departures."),
+        from: rect(),
+        destination: rect(),
+        crossing: flag("Draws a light across the two locations."),
+        crossingDots: count("Number of crossing dots."),
+        lift: px("Height of the lift.")
+      }),
+      ...["columnUp", "columnDown"].map((path, i) => group(i === 0 ? "Departure column" : "Arrival column", {
+        width: ratio("Width relative to the token width."),
+        height: ratio("Height relative to the token height.", 0, 9),
+        bottom: ratio("Offset of the column base in token heights.", -2),
+        sparks: count("Number of sparks."),
+        frames: Array.from({ length: 3 }, () => ({ offset: fraction("Frame time."), colOp: fraction("Column opacity."), tokOp: fraction("Token opacity.") }))
+      }, path)),
+      group("Zip, rise and pop", {
+        zipGhosts: count("Number of zip afterimages."),
+        zipSparks: count("Number of zip sparks."),
+        zipPopMs: ms("Arrival pop time."),
+        riseMs: ms("Time to rise."),
+        riseTravelMs: ms("Travel time after rising."),
+        popOffsets: offsets()
+      }),
+      group("Grey mode", {
+        beforeLook: { opacity: fraction("Starting opacity.") },
+        afterLook: { opacity: fraction("Ending opacity.") }
+      }),
+      group("Portal", {
+        outward: flag("Moves outward from the portal."),
+        startSize: demo(px("Starting token size.", 1), portalSizes.startSize),
+        endSize: demo(px("Ending token size.", 1), portalSizes.endSize),
+        alpha: fraction("Token opacity."),
+        collapse: windowMs(),
+        elapsed: ms("Time already elapsed."),
+        travelMs: ms("Travel time."),
+        travelAt: ms("When travel starts."),
+        growth: windowMs(),
+        spin: [ratio("Initial spin rate.", -4), number(" \xB0/ms\xB2", -2e-3, 2e-3, 1e-5, "Spin acceleration.")]
+      }, "portal"),
+      optional("Portal vortex", "portal.vortex", {
+        size: px("Diameter of the vortex.", 1),
+        open: windowMs(),
+        strokeWidth: px("Vortex stroke width.", 0.1),
+        alpha: fraction("Vortex opacity."),
+        armCount: count("Number of spiral arms.", 20, 1),
+        armSegments: count("Samples in each arm.", 90, 2),
+        armTurns: ratio("Number of turns of each arm."),
+        armRadius: px("Arm radius in SVG units."),
+        armExponent: ratio("Exponent of arm growth."),
+        armSpin: ratio("Arm rotation rate.", -4),
+        ringMs: ms("Time for the rings."),
+        ringTurns: ratio("Turns made by the rings.", -4),
+        ringSpacing: deg("Angle between rings."),
+        ringScale: pair(ratio, "Starting ring scale.", "Ending ring scale."),
+        ringAlpha: fraction("Ring opacity.")
+      }, { size: 110, open: [0, 400] }),
+      optional("Total label", "totalLabel", {
+        at: point(),
+        travel: px("Vertical label travel."),
+        ms: ms("Duration of the label."),
+        delay: ms("Wait before showing the label.")
+      }, { text: "+3", at: [235, 170] })
+    ], { route: true, token: true }),
+    spiral: effect(1800, "A token spirals into or out of a portal, leaving a luminous tail.", [
+      group("Path", {
+        outward: flag("Switches between arrival and departure."),
+        centre: point(),
+        parked: rect(),
+        lift: px("Lift height."),
+        squash: ratio("Vertical compression of the orbit."),
+        orbit: ratio("Share of travel used as orbit radius.", 0.01),
+        unit: ratio("Scale of particles and strokes.", 0.05)
+      }, "spiral"),
+      group("Token and trail", {
+        heading: deg("Heading when parked."),
+        nose: deg("Facing angle of the artwork."),
+        flip: flag("Mirrors the token."),
+        tail: [0, 1, 2].map((i) => count(["Red", "Green", "Blue"][i] + " channel of the tail.", 255)),
+        tip: [0, 1, 2].map((i) => count(["Red", "Green", "Blue"][i] + " channel of the tip.", 255)),
+        ribbonReach: ratio("Length multiplier of the ribbon.")
+      }, "spiral")
+    ], { route: true, token: true, verb: "warp-transfer", base: () => ({ spiral: { image: neutralImage } }) })
+  });
+  Object.assign(previews, {
+    stamp: effect(1e3, "Press a neutral stamp onto the card.", [
+      group("Stamp", {
+        tilt: deg("Angle of the stamp."),
+        ms: ms("Time for the stamp to settle."),
+        ease: ease(),
+        scales: Array.from({ length: 3 }, (_, i) => ratio("Stamp scale at keyframe " + (i + 1) + ".")),
+        pressOffset: fraction("Time fraction of the press keyframe."),
+        frames: fadeFrames()
+      }),
+      optional(
+        "Card press",
+        "press",
+        { ms: ms("Length of the card press."), delay: ms("Wait before the card press."), ease: ease(), frames: fadeFrames() },
+        { ms: 200, delay: 90, frames: [{ scale: "1" }, { scale: ".94" }, { scale: "1" }] }
+      ),
+      optional(
+        "Stamp ring",
+        "ring",
+        { ms: ms("Length of the ring."), delay: ms("Wait before the ring."), ease: ease(), frames: fadeFrames() },
+        { ms: 420, delay: 90, style: { inset: "0", border: "2px solid currentColor", borderRadius: "6px" }, frames: [{ opacity: 1, scale: ".85" }, { opacity: 0, scale: "1.4" }] }
+      )
+    ], { base: () => ({ text: "APPROVED", style: { height: "23%", background: "#242230", color: "#ded5ff", fontSize: "12px" } }) }),
+    motes: effect(1e3, "Small particles rise from the card. An optional dissolve fades the face behind them.", [
+      group("Particle size and light", {
+        count: count("Number of particles.", 120),
+        size: px("Base particle size."),
+        minSize: px("Minimum particle size."),
+        sizeJitter: pair(ratio, "Base size multiplier.", "Random size variation."),
+        glow: ratio("Shadow blur relative to particle size."),
+        z: demo(count("Layer order for the particles.", 12), 2)
+      }),
+      group("Travel and timing", {
+        box: rect(),
+        rise: px("Distance particles rise."),
+        spread: px("Horizontal spread."),
+        lag: ratio("Stagger relative to particle duration."),
+        ms: ms("Lifetime before applying stagger."),
+        lifeJitter: pair(ratio, "Base life multiplier.", "Random life variation."),
+        riseFactor: pair(ratio, "Base rise multiplier.", "Random rise variation."),
+        peakOffset: fraction("Time fraction at peak opacity."),
+        endScale: ratio("Ending particle size."),
+        ease: ease(),
+        dissolve: fadeFrames(),
+        dissolveEase: ease()
+      })
+    ]),
+    flicker: effect(1e3, "Blink a translucent overlay or apply seeded brightness changes and jitter.", [
+      group("Overlay", {
+        times: count("Number of blinks per cycle.", 20, 1),
+        ease: ease(),
+        loop: flag("Repeats the cycle until the step ends."),
+        period: ms("Time for a cycle."),
+        frames: fadeFrames()
+      }),
+      optional("Grey overlay", "grey", { grayscale: fraction("How much colour is removed at peak."), brightness: ratio("Actor brightness at peak.") }),
+      optional("Buzz", "buzz", {
+        window: windowMs(),
+        sampleMs: number(" ms", 1, 80, 1, "Time between jitter samples."),
+        timeOffset: signedMs("Offset of the noise clock."),
+        period: ms("Time for a noise cycle. Zero disables repeating."),
+        peak: fraction("Peak buzz envelope."),
+        brightness: pair(ratio, "Dim brightness.", "Bright brightness."),
+        noiseMs: number(" ms", 1, 300, 1, "Noise time scale."),
+        threshold: ratio("Threshold between dim and bright samples.", -1),
+        saturation: ratio("Colour saturation."),
+        hue: deg("Hue change at peak."),
+        power: ratio("Exponent of the sine envelope.", 0.01),
+        jitter: pair(px, "Horizontal jitter.", "Vertical jitter."),
+        jitterMs: [number(" ms", 1, 100, 1, "Horizontal jitter time scale."), number(" ms", 1, 100, 1, "Vertical jitter time scale.")]
+      }, { window: [100, 800], brightness: [0.7, 1.6], noiseMs: 40 })
+    ]),
+    "bar-fill": effect(
+      1e3,
+      "Fill a meter, sweep pips, or move a numbered pin.",
+      bar,
+      { base: () => ({ colour: "#c7b6ff" }), bar: true }
+    ),
+    refresh: effect(1300, "Lift the status banner and sweep the filtered face away to reveal a ready card.", [
+      group("Lift and sweep timing", {
+        liftMs: ms("Time to lift the banner."),
+        drainMs: ms("Time to sweep the face."),
+        drainAt: fraction("Share of the lift before the sweep starts."),
+        liftEase: ease(),
+        drainEase: ease(),
+        liftMiddle: fraction("Time of the middle lift keyframe.")
+      }),
+      group("Banner and sweep line", {
+        liftRise: pair(fraction, "Middle rise as a share of card height.", "Final rise as a share of card height."),
+        liftScale: pair(ratio, "Banner scale at the middle.", "Banner scale at the end."),
+        lineHeight: fraction("Line height as a share of card height."),
+        lineMinHeight: px("Minimum line height."),
+        lineFade: offsets()
+      })
+    ], { base: () => ({ banner: ".demo-banner" }) }),
+    pulse: effect(0, "Repeat a pulse on the live card until stopped.", [
+      group("Pulse loop", { period: ms("Time between pulses."), easing: ease(), frames: fadeFrames() })
+    ], { loop: "startPulse" }),
+    "idle: bob": effect(0, "Raise and lower the live card until stopped.", [
+      group("Bob loop", { period: ms("Time for one rise and return."), rise: px("Peak height above the resting card."), easing: ease(), frames: fadeFrames() })
+    ], { loop: "startIdle", base: () => ({ kind: "bob" }) }),
+    "idle: breathe": effect(0, "Fade the live card in and out until stopped.", [
+      group("Breathe loop", { period: ms("Time for one breath."), easing: ease(), frames: fadeFrames() })
+    ], { loop: "startIdle", base: () => ({ kind: "breathe" }) }),
+    "idle: orbit": effect(
+      0,
+      "Stars circle above the live card until stopped.",
+      orbit,
+      { loop: "startIdle", base: () => ({ kind: "orbit" }) }
+    ),
+    "idle: crackle": effect(
+      0,
+      "Stars circle the card and electric arcs fire at intervals until stopped.",
+      [...orbit, ...crackle],
+      { loop: "startIdle", base: () => ({ kind: "orbit", orbit: { crackle: { period: 1500, at: 150, duration: 480 } } }) }
+    )
+  });
+  return __toCommonJS(effect_library_settings_exports);
 })();
 
 "use strict";
@@ -5287,13 +6954,23 @@ var MOTION = (() => {
 const $ = (id) => document.getElementById(id);
 const table = $('table'), card = $('card');
 const verbs = MOTION.createVerbs();
-const layer = FX.registerEffects(verbs, { parent: table, resolve: (id) => id === 'card' ? card : id === 'token' || id === 'token-two' ? $('token-source') : undefined });
+const layer = FX.registerEffects(verbs, {
+  parent: table,
+  resolve: (id) => id === 'card' ? card : id === 'target-card' ? $('target-card') : id === 'token' || id === 'token-two' ? $('token-source') : undefined,
+  onActor: (_, clone) => {
+    if (picker.value !== 'refresh') return;
+    const banner = document.createElement('div');
+    banner.className = 'demo-banner';
+    banner.textContent = 'Spent';
+    clone.append(banner);
+  },
+});
 layer.el.style.position = 'absolute';
 
 // The verbs expose their defaults through their keyframes and CSS fallbacks.
-function frames(verb) {
+function frames(verb, step = {}) {
   let result;
-  FX.BUILT_IN[verb]({ call: { step: {} }, el: document.createElement('div'), animate: (value) => { result = value; } });
+  FX.BUILT_IN[verb]({ call: { dur: 1, step }, el: document.createElement('div'), animate: (value) => { result = value; } });
   return result;
 }
 function fallback(css, token) {
@@ -5326,6 +7003,9 @@ const KIT = {
   opacity: frames('fade-out')[1].opacity, holdMs: 0, label: '', scale: defaultScale, pulseScale: false,
   shake: parseFloat(fallback(frames('shake')[1].transform, '--fx-shake')), times: frames('shake').length - 2,
   blur: parseFloat(glow[2]), spread: parseFloat(glow[3]), glowColor: colorHex(tableStyle.color),
+  flipAxis: frames('flip').some(({ transform }) => transform.includes('scaleX')) ? 'x' : 'y',
+  flipDirection: '', flipFace: 'back', flipPerspective: Number(frames('flip', { direction: 1 })[0].transform.match(/perspective\((\d+)/)[1]),
+  flipSquash: Boolean(frames('flip')),
   text: '+3', textRise: parseFloat(fallback(frames('text')[0].transform, '--fx-text-rise')),
   textSize: parseFloat(tableStyle.fontSize), textColor: colorHex(tableStyle.color),
   buffMs: parseFloat(fallback(pulse.animation, '--buff-ms')),
@@ -5352,6 +7032,11 @@ const options = {
   show: [],
   hide: [],
   flip: [
+    { ...option('flipAxis', 'Axis', 'select', 'Horizontal flips left to right. Vertical flips top to bottom.'), choices: [['x', 'Horizontal'], ['y', 'Vertical']] },
+    { ...option('flipFace', 'Destination face', 'select', 'Sets the starting face so the kit’s toggle lands here.'), choices: [['back', 'Back'], ['front', 'Front']] },
+    { ...option('flipDirection', 'Rotation direction', 'select', 'Choose signed 3D rotation or the kit’s default flat squash.'), choices: [['', 'Flat squash'], ['1', 'Positive'], ['-1', 'Negative']] },
+    row('flipPerspective', 'Perspective', 100, 1600, 1, ' px', 'Distance used by the signed 3D rotation.'),
+    option('flipSquash', 'Animate the flip', 'checkbox', 'Turn off to switch faces immediately.'),
     row('holdMs', 'Hold first face', 0, 1200, 1, ' ms', 'The kit caps the hold at 80% of the scaled duration.'),
     option('label', 'Back label', 'text', 'Optional text exposed as data-fx-label.'),
   ],
@@ -5524,13 +7209,166 @@ Object.assign(KIT, {
 
 let s = { ...KIT };
 const picker = $('verb');
-for (const key of [...Object.keys(options), ...Object.keys(flightGroups)]) picker.add(new Option(key, key));
+for (const key of [...Object.keys(options), ...Object.keys(flightGroups), ...Object.keys(DEMO.previews)]) picker.add(new Option(key, key));
+
+const initialEffect = new URLSearchParams(location.search).get('effect');
+if ([...picker.options].some(({ value }) => value === initialEffect)) picker.value = initialEffect;
+
+const overrides = new Map();
+let stopLoop;
+let running = false;
+const isLoop = () => Boolean(DEMO.previews[picker.value]?.loop);
+const cardContent = card.innerHTML;
+const previewValues = () => {
+  if (!overrides.has(picker.value)) overrides.set(picker.value, {});
+  return overrides.get(picker.value);
+};
+
+const draftsByEffect = new Map();
+function previewDrafts() {
+  if (!draftsByEffect.has(picker.value)) draftsByEffect.set(picker.value, {});
+  return draftsByEffect.get(picker.value);
+}
+
+function at(object, path) {
+  return path.reduce((value, key) => value?.[key], object);
+}
+
+function put(object, path, value) {
+  const parent = path.slice(0, -1).reduce((node, key, i) => {
+    node[key] ??= typeof path[i + 1] === 'number' ? [] : {};
+    return node[key];
+  }, object);
+  parent[path.at(-1)] = value;
+}
+
+function entries(fields, prefix = []) {
+  if (Object.hasOwn(fields, 'value')) return [[prefix, fields]];
+  const children = Array.isArray(fields) ? fields.map((field, i) => [i, field]) : Object.entries(fields);
+  return children.flatMap(([key, field]) => entries(field, [...prefix, key]));
+}
+
+function label(path) {
+  const name = path.map((part) => typeof part === 'number' ? String(part + 1) :
+    part.replace(/([a-z])([A-Z])/g, '$1 $2').replace(/\bms\b/gi, 'time')).join(' ');
+  return name[0].toUpperCase() + name.slice(1);
+}
+
+function buildPreview(preview) {
+  const values = previewValues();
+  const drafts = previewDrafts();
+  const base = preview.base?.({ x: table.clientWidth / 2 });
+  for (const { title, fields, path, enable } of preview.groups) {
+    const prefix = path ? path.split('.') : [];
+    if (preview.groups.some((parent) => parent.enable !== undefined
+      && path.startsWith(parent.path + '.') && at(values, parent.path.split('.')) === undefined)) continue;
+    const group = document.createElement('fieldset');
+    const legend = document.createElement('legend');
+    legend.textContent = title;
+    group.append(legend);
+    if (enable !== undefined) {
+      const toggle = document.createElement('label');
+      const input = document.createElement('input');
+      input.type = 'checkbox';
+      input.checked = at(values, prefix) !== undefined;
+      toggle.append(input, ' Enable ' + title.toLowerCase());
+      group.append(toggle);
+      input.addEventListener('change', () => {
+        const draftParent = at(drafts, prefix.slice(0, -1));
+        if (draftParent) delete draftParent[prefix.at(-1)];
+        if (input.checked) put(values, prefix, structuredClone(enable));
+        else delete at(values, prefix.slice(0, -1))[prefix.at(-1)];
+        build();
+        markPreset();
+        play();
+      });
+      if (!input.checked) {
+        $('ctls').append(group);
+        continue;
+      }
+    }
+    for (const [parts, field] of entries(fields)) {
+      const keys = [...prefix, ...parts];
+      const id = 'c-preview-' + keys.join('-');
+      const control = document.createElement('div');
+      control.className = 'ctl';
+      const name = document.createElement('label');
+      name.htmlFor = id;
+      name.textContent = label(parts);
+      const input = document.createElement(field.choices ? 'select' : 'input');
+      input.id = id;
+      const arrayIndex = keys.findIndex((key) => typeof key === 'number');
+      const arrayPath = arrayIndex === -1 ? undefined : keys.slice(0, arrayIndex);
+      const arrayFields = arrayPath && entries(at(fields, parts.slice(0, arrayIndex - prefix.length)));
+      const currentValue = () => at(drafts, keys) ?? at(values, keys) ?? at(base, keys) ?? field.value;
+      const value = currentValue();
+      const output = document.createElement('output');
+      output.htmlFor = id;
+      if (field.choices) {
+        const unset = new Option('Kit default', '');
+        unset.disabled = true;
+        input.add(unset);
+        for (const [option, title] of field.choices) input.add(new Option(title, String(option)));
+        input.value = value === undefined ? '' : String(value);
+      } else {
+        input.type = 'range';
+        Object.assign(input, {
+          min: Math.min(field.min, value ?? field.min), max: Math.max(field.max, value ?? field.max, field.stage ? table.clientWidth : 0),
+          step: field.step,
+        });
+        input.valueAsNumber = value ?? (Number(input.min) + Number(input.max)) / 2;
+      }
+      const show = () => {
+        const current = currentValue();
+        if (input.type !== 'range') return;
+        output.textContent = current === undefined ? 'Kit default' : current + field.unit;
+        input.toggleAttribute('data-kit-default', current === undefined);
+        input.setAttribute('aria-valuetext', output.textContent);
+      };
+      show();
+      const help = document.createElement('small');
+      help.id = id + '-help';
+      help.textContent = field.help + (field.demo || enable !== undefined && at(enable, parts) !== undefined ? ' The kit has no default.' : '');
+      if (arrayPath && !at(values, arrayPath) && !at(base, arrayPath)) help.textContent += ' Set all values in this list to apply it.';
+      input.setAttribute('aria-describedby', help.id);
+      control.append(name, output, input, help);
+      group.append(control);
+      input.addEventListener('input', () => {
+        const next = input.type === 'range' ? input.valueAsNumber
+          : field.choices.find(([option]) => String(option) === input.value)[0];
+        if (arrayPath && !at(values, arrayPath)) {
+          put(drafts, keys, next);
+          const array = structuredClone(at(base, arrayPath) ?? []);
+          for (const [path, control] of arrayFields) {
+            const draft = at(drafts, [...arrayPath, ...path]) ?? at(array, path) ?? control.value;
+            if (draft === undefined) {
+              show();
+              markPreset();
+              return;
+            }
+            put(array, path, draft);
+          }
+          put(values, arrayPath, array);
+          delete at(drafts, arrayPath.slice(0, -1))[arrayPath.at(-1)];
+        } else {
+          put(values, keys, next);
+        }
+        show();
+        markPreset();
+        play();
+      });
+    }
+    $('ctls').append(group);
+  }
+}
 
 function build() {
   const verb = picker.value;
   const instant = verb === 'show' || verb === 'hide';
   const timing = [row('speed', 'Motion scale', 0, 2, .05, '×', 'Multiplies time. 0 leaves the preview still.')];
-  if (!instant && verb !== 'rise-pulse' && !flightGroups[verb]) timing.unshift(
+  const preview = DEMO.previews[verb];
+  if (preview && !preview.loop) timing.unshift(row('previewDur', 'Step duration', 1, 5000, 1, ' ms', 'Time available for the effect. The kit has no default.'));
+  if (!preview && !instant && verb !== 'rise-pulse' && !flightGroups[verb]) timing.unshift(
     row('dur', 'Duration', 0, 1800, 1, ' ms', 'Base step time before applying the motion factor. The kit has no default.'),
     option('ease', 'Easing', 'select', 'How progress changes over the step.'),
   );
@@ -5538,19 +7376,23 @@ function build() {
     row('dur', 'Follow-up duration', 0, 1800, 1, ' ms', 'Base time of the glow after the visibility change. The kit has no default.'),
   );
   $('ctls').replaceChildren();
-  for (const [title, rows] of [['Timing', timing], ...(flightGroups[verb] ?? [['Effect options', options[verb]]])]) {
+  for (const [title, rows] of [['Timing', timing], ...(preview ? [] : flightGroups[verb] ?? [['Effect options', options[verb]]])]) {
     if (!rows.length) continue;
     const group = document.createElement('fieldset');
     group.innerHTML = `<legend>${title}</legend>`;
-    for (const { key, label, type, min, max, step, unit = '', help } of rows) {
+    for (const { key, label, type, min, max, step, unit = '', help, choices } of rows) {
       const control = document.createElement('div');
       control.className = 'ctl';
       control.innerHTML = `<label for="c-${key}">${label}</label>${type === 'range' ? `<output for="c-${key}"></output>` : ''}`;
       const input = document.createElement(type === 'select' ? 'select' : 'input');
       input.id = 'c-' + key;
       if (type === 'select') {
-        if (key === 'viaEase') input.add(new Option('Kit default', ''));
-        for (const ease of [...new Set(key === 'viaEase' ? easingNames : [defaultEase, ...easingNames])]) input.add(new Option(ease, ease));
+        if (choices) {
+          for (const [value, title] of choices) input.add(new Option(title, value));
+        } else {
+          if (key === 'viaEase') input.add(new Option('Kit default', ''));
+          for (const ease of [...new Set(key === 'viaEase' ? easingNames : [defaultEase, ...easingNames])]) input.add(new Option(ease, ease));
+        }
       } else {
         input.type = type;
         if (type === 'range') Object.assign(input, { min, max, step });
@@ -5558,14 +7400,16 @@ function build() {
         if (type === 'checkbox') input.checked = s[key];
         if (type === 'text') input.maxLength = 28;
       }
-      input.value = s[key];
+      input.value = key === 'previewDur' ? previewValues().dur ?? preview.dur : s[key];
       const output = control.querySelector('output');
       const updateOutput = () => {
+        if (key === 'previewDur') { output.textContent = input.value + unit; return; }
         if (output) output.textContent = key === 'staggerMax' && s[key] < 0 ? 'None' : s[key] + unit;
       };
       updateOutput();
       input.addEventListener('input', () => {
-        s[key] = type === 'range' ? Number(input.value) : type === 'checkbox' ? input.checked : input.value;
+        if (key === 'previewDur') previewValues().dur = Number(input.value);
+        else s[key] = type === 'range' ? Number(input.value) : type === 'checkbox' ? input.checked : input.value;
         updateOutput();
         markPreset();
         play();
@@ -5579,6 +7423,7 @@ function build() {
     }
     $('ctls').append(group);
   }
+  if (preview) buildPreview(preview);
 }
 
 function settings(verb) {
@@ -5600,7 +7445,13 @@ function settings(verb) {
     case 'show':
     case 'hide': step.dur = 0; delete step.ease; break;
     case 'flip':
-      step.holdMs = s.holdMs;
+      if (s.holdMs !== KIT.holdMs) step.holdMs = s.holdMs;
+      if (s.flipAxis !== KIT.flipAxis) step.axis = s.flipAxis;
+      if (s.flipSquash !== KIT.flipSquash) step.squash = s.flipSquash;
+      if (s.flipDirection) {
+        step.direction = Number(s.flipDirection);
+        if (s.flipPerspective !== KIT.flipPerspective) step.perspective = s.flipPerspective;
+      }
       if (s.label) step.label = s.label;
       break;
     case 'scale': step.to = s.scale; step.pulse = s.pulseScale; break;
@@ -5705,7 +7556,11 @@ let rects;
 const player = MOTION.createMotionPlayer({
   specs: {}, stages: { default: (id) => rects[id] }, verbs, speed: previewSpeed, context: layer,
   onBeatStart: (run) => {
-    if (run.timeline.actors.some((actor) => actor.id === 'card')) card.classList.add('fx-source');
+    for (const actor of run.timeline.actors) {
+      if (actor.id === 'card' && !actor.hidden) card.classList.add('fx-source');
+      if (actor.id === 'target-card') $('target-card').classList.add('fx-source');
+      if (actor.id === 'token' && !actor.hidden && DEMO.previews[picker.value]?.token) $('token-source').classList.add('fx-source');
+    }
     layer.start(run);
   },
   onProblem: (problem) => console.error(problem),
@@ -5713,12 +7568,89 @@ const player = MOTION.createMotionPlayer({
 // Keep the finished clone visible for inspection. Each replay clears the previous beat.
 layer.el.style.zIndex = '1';
 
+function previewBeat(verb, preview, speed) {
+  const { dur = preview.dur, ...values } = structuredClone(previewValues());
+  const x = table.clientWidth / 2, y = table.clientHeight * .54;
+  const settings = preview.base?.({ x, y }) ?? {};
+  for (const [path, field] of entriesForOverrides(values)) put(settings, path, field);
+  if (settings.mode === 'portal' || settings.portal) settings.portal = { ...DEMO.portalSizes, ...settings.portal };
+  if (settings.flicker) settings.flicker.sort((a, b) => a.at - b.at);
+  if (settings.popOffsets) settings.popOffsets = ordered(...settings.popOffsets);
+  if (settings.marker?.offsets) settings.marker.offsets = ordered(...settings.marker.offsets);
+  for (const key of ['columnUp', 'columnDown']) {
+    if (!settings[key]?.frames) continue;
+    settings[key].frames.sort((a, b) => a.offset - b.offset);
+    for (const frame of settings[key].frames) {
+      frame.col = 'none';
+      frame.tok = 'none';
+    }
+  }
+  if (settings.beforeLook) settings.beforeLook.filter = 'saturate(.2)';
+  if (settings.afterLook) settings.afterLook.filter = 'none';
+  if (settings.marker) card.querySelector('.demo-marker').textContent = '3';
+
+  $('note').textContent = speed === 'instant' ? 'Motion is off.' : preview.note;
+  if (preview.loop) {
+    if (running && speed !== 'instant') stopLoop = FX[preview.loop](card, settings, { speed });
+    $('code').textContent = `const stop = ${preview.loop}(card, ${JSON.stringify(settings, null, 2)}, { speed: ${JSON.stringify(speed)} });`;
+    return;
+  }
+  const token = $('token-source');
+  const to = $('target-card');
+  const w = (preview.token ? token : card).offsetWidth;
+  const h = (preview.token ? token : card).offsetHeight;
+  const fromX = preview.route ? table.clientWidth * .28 : x;
+  const fromY = preview.route ? table.clientHeight * .61 : y;
+  rects = {
+    home: [fromX - w / 2, fromY - h / 2, w, h],
+    destination: [table.clientWidth * .72 - to.offsetWidth / 2, table.clientHeight * .46 - to.offsetHeight / 2, to.offsetWidth, to.offsetHeight],
+  };
+  const actor = preview.token ? 'token' : 'card';
+  const canvasOnly = ['curved-beam', 'radial-streaks', 'spiral'].includes(verb);
+  const actors = [{ id: actor, at: 'home', ...(canvasOnly && { hidden: true }) }];
+  if (preview.group) actors.push({ id: 'target-card', at: 'destination' });
+  const beat = {
+    id: 'preview', maxMs: dur, actors,
+    steps: [{ t: 0, dur, actor, do: preview.verb ?? verb, ...(preview.route && { to: 'destination' }), ...settings }],
+  };
+  player.play(beat);
+  $('code').textContent = `const beat = ${JSON.stringify(beat, null, 2)};
+--motion-scale: ${s.speed};`;
+}
+
+function entriesForOverrides(values, prefix = []) {
+  return Object.entries(values).flatMap(([key, value]) => {
+    const path = [...prefix, key];
+    return value && typeof value === 'object' && !Array.isArray(value) && Object.keys(value).length
+      ? entriesForOverrides(value, path) : [[path, value]];
+  });
+}
+
 function play() {
+  stopLoop?.();
+  stopLoop = undefined;
   player.skipAll();
   layer.clear();
   card.classList.remove('fx-source');
+  $('token-source').classList.remove('fx-source');
+  $('target-card').classList.remove('fx-source');
   card.querySelector('.fx-rise-pulse')?.remove();
   const verb = picker.value;
+  const preview = DEMO.previews[verb];
+  $('play').textContent = preview?.loop ? 'Start' : 'Play';
+  $('stop').hidden = !preview?.loop;
+  $('stop').disabled = !running;
+  card.innerHTML = preview?.bar ? '<div class="demo-meter"><div data-part="fill"></div><span class="demo-marker"></span></div>' : cardContent;
+  card.toggleAttribute('data-fx-flipped', verb === 'flip' && s.flipFace === 'front');
+  card.style.setProperty('--preview-card-x', preview?.route ? '28%' : '50%');
+  card.style.setProperty('--preview-card-y', preview?.route ? '61%' : '54%');
+  card.style.width = preview?.bar ? '92px' : '';
+  card.style.height = preview?.bar ? '22px' : '';
+  $('token-source').classList.toggle('demo-token', Boolean(preview?.token));
+  $('target-card').classList.toggle('demo-target', Boolean(preview?.route));
+  $('target-card').classList.toggle('demo-token', Boolean(preview?.token));
+  table.toggleAttribute('data-token', Boolean(preview?.token));
+  table.toggleAttribute('data-route', Boolean(preview?.route));
   const isPulse = verb === 'rise-pulse';
   const isFlight = Boolean(flightGroups[verb]);
   table.toggleAttribute('data-flight', isFlight);
@@ -5741,6 +7673,10 @@ function play() {
   destination.style.left = x + s.dx + 'px';
   destination.style.top = y + s.dy + 'px';
 
+  if (preview) {
+    previewBeat(verb, preview, speed);
+    return;
+  }
   const lines = [`const speed = () => withReducedMotion(${s.speed || "'instant'"});`];
   let note;
   if (isFlight) {
@@ -5796,16 +7732,20 @@ function play() {
 }
 
 function markPreset() {
-  $('reset').setAttribute('aria-pressed', String(Object.keys(KIT).every((key) => s[key] === KIT[key])));
+  $('reset').setAttribute('aria-pressed', String(DEMO.previews[picker.value] ? !Object.keys(previewValues()).length && !Object.keys(previewDrafts()).length && s.speed === KIT.speed : Object.keys(KIT).every((key) => s[key] === KIT[key])));
 }
-picker.addEventListener('change', () => {
-  $('sequence').disabled = picker.value === 'rise-pulse' || Boolean(flightGroups[picker.value]);
+function selectEffect() {
+  running = false;
+  markPreset();
+  $('sequence').disabled = Boolean(DEMO.previews[picker.value]) || picker.value === 'rise-pulse' || Boolean(flightGroups[picker.value]);
   build();
   play();
-});
+}
+picker.addEventListener('change', selectEffect);
 $('sequence').addEventListener('change', () => { build(); play(); });
-$('play').addEventListener('click', play);
-$('reset').addEventListener('click', () => { s = { ...KIT }; markPreset(); build(); play(); });
+$('play').addEventListener('click', () => { running = isLoop(); play(); });
+$('stop').addEventListener('click', () => { running = false; play(); });
+$('reset').addEventListener('click', () => { s = { ...KIT }; overrides.delete(picker.value); draftsByEffect.delete(picker.value); markPreset(); build(); play(); });
 $('copy').addEventListener('click', async () => {
   try { await navigator.clipboard.writeText($('code').textContent); $('copy').textContent = 'Copied'; }
   catch {
@@ -5818,7 +7758,7 @@ $('copy').addEventListener('click', async () => {
   setTimeout(() => { $('copy').textContent = 'Copy'; }, 1800);
 });
 matchMedia('(prefers-reduced-motion: reduce)').addEventListener('change', play);
-build();
+selectEffect();
 new ResizeObserver(play).observe(table);
 </script>
 </html>

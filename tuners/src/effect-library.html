@@ -37,7 +37,7 @@ legend { font: 700 12px var(--display); text-transform: uppercase; letter-spacin
 
 .table { color: #f4db95; }
 #card, .slot { position: absolute; width: 86px; height: 118px; top: 54%; translate: -50% -50%; border-radius: 8px; }
-#card { left: 50%; }
+#card { left: var(--preview-card-x, 50%); top: var(--preview-card-y, 54%); }
 .slot { left: 50%; border: 1px dashed rgb(232 236 233 / .25); box-sizing: border-box; }
 #destination { display: none; }
 .card { border: 1px solid #a3bfae; border-radius: 8px; background: #294a40; box-shadow: 0 3px 12px #0e1f1b; }
@@ -47,17 +47,33 @@ legend { font: 700 12px var(--display); text-transform: uppercase; letter-spacin
 .card-back, [data-fx-flipped] .card-front { display: none; }
 [data-fx-flipped] .card-back { display: grid; background: #533f55; }
 [data-fx-label] .card-back::after { content: attr(data-fx-label); }
-#card.fx-source { visibility: hidden; }
+.table > .fx-source { visibility: hidden; }
+.table[data-route] > .slot { display: none; }
 .toolbar { display: flex; flex-wrap: wrap; gap: 8px 14px; align-items: center; }
 .toolbar select, .toolbar button { font: 600 13px var(--body); color: var(--fg); background: #232b2e; border: 1px solid var(--line); border-radius: 6px; padding: 7px 12px; }
 .toolbar #play { background: var(--accent); color: #1b1608; cursor: pointer; }
 .ctl :is(select, input[type=color], input[type=text]) { grid-column: 1 / -1; min-width: 0; box-sizing: border-box; }
+.ctl input[data-kit-default] { accent-color: var(--muted); }
+.ctl input[data-kit-default]::-webkit-slider-thumb { opacity: 0; }
+.ctl input[data-kit-default]::-moz-range-thumb { opacity: 0; }
 .ctl input[type=checkbox] { grid-column: auto; width: auto; justify-self: end; }
 .code { margin-bottom: 0; }
 .flight-token { box-sizing: border-box; width: 44px; height: 36px; border: 2px solid #ffe3a0; border-radius: 10px; background: #a97938; display: grid; place-items: center; box-shadow: 0 3px 9px #0e1f1b; }
 .flight-token::after { content: ''; width: 0; height: 0; border-block: 7px solid transparent; border-left: 12px solid #fff2c6; }
 .flight-mark { position: absolute; translate: -50% -50%; width: 24px; height: 18px; border: 1px dashed #9aa8a3; border-radius: 50%; box-sizing: border-box; }
 #token-source, .table[data-flight] > .slot, .table[data-flight] > #card { display: none; }
+.toolbar select { max-width: 100%; }
+#stop[hidden], #sequence:disabled, .toolbar label:has(#sequence:disabled) { display: none; }
+#token-source.demo-token, #target-card.demo-target { display: grid; position: absolute; translate: -50% -50%; }
+#token-source.demo-token { left: 28%; top: 61%; }
+#target-card { display: none; left: 72%; top: 46%; }
+#target-card.demo-target { width: 86px; height: 118px; opacity: .62; }
+#target-card.demo-target.demo-token { width: 44px; height: 36px; }
+.table[data-token] > #card, .table[data-token] > .slot { display: none; }
+.demo-banner { position: absolute; inset: auto 6px 6px; border-radius: 4px; background: #513e59; color: #fff; text-align: center; font: 600 12px/2 var(--body); }
+.demo-meter { display: grid; align-items: center; width: 100%; height: 100%; position: relative; overflow: hidden; border-radius: inherit; background: #294a40; }
+.demo-meter [data-part=fill] { height: 100%; width: 0; }
+.demo-marker { position: absolute; top: 50%; left: 50%; color: #fff; font: 600 13px var(--mono); }
 @media (max-width: 480px) { .table { height: 270px; } }
 /*@kit-css components/effect-library/looks/rise-pulse.css*/
 </style>
@@ -65,23 +81,25 @@ legend { font: 700 12px var(--display); text-transform: uppercase; letter-spacin
 <main class="wrap">
   <header>
     <h1>Effect Library Tuner</h1>
-    <p class="sub">Preview the kit’s DOM and canvas effects on a felt table. The page uses effect-library and motion-frame directly. Changing a setting replays the preview.</p>
+    <p class="sub">Adjust an effect to replay it. Use Start and Stop for loops. Kit default leaves the value unset.</p>
   </header>
   <div class="table" id="table">
     <div class="note" id="note"></div>
     <div id="flight-marks" aria-hidden="true"></div>
     <div class="flight-token" id="token-source" aria-hidden="true"></div>
+    <div class="card" id="target-card" aria-hidden="true"><div class="card-face"><b>◇</b> Target</div></div>
     <div class="slot"></div>
     <div class="slot" id="destination"></div>
     <div id="card" class="card" aria-hidden="true">
-      <div class="card-face card-front"><b>✦</b> Alder</div>
-      <div class="card-face card-back"><b>✧</b></div>
+      <div class="card-face card-front"><b>✦</b> Front</div>
+      <div class="card-face card-back"><b>✧</b> Back</div>
     </div>
   </div>
   <div class="toolbar">
     <label for="verb">Effect</label>
     <select id="verb"></select>
     <button type="button" id="play">Play</button>
+    <button type="button" id="stop" hidden>Stop</button>
     <label><input type="checkbox" id="sequence"> Play a sequence</label>
   </div>
   <div class="presets" role="group" aria-label="Presets">
@@ -96,18 +114,29 @@ legend { font: 700 12px var(--display); text-transform: uppercase; letter-spacin
 
 <script>
 //@kit-js components/effect-library/paths.ts as PATHS
-//@kit-js components/effect-library/effects.ts as FX
+//@kit-js components/effect-library/index.ts as FX
+//@kit-js tuners/src/effect-library-settings.mjs as DEMO
 //@kit-js components/motion-frame/player.ts as MOTION
 const $ = (id) => document.getElementById(id);
 const table = $('table'), card = $('card');
 const verbs = MOTION.createVerbs();
-const layer = FX.registerEffects(verbs, { parent: table, resolve: (id) => id === 'card' ? card : id === 'token' || id === 'token-two' ? $('token-source') : undefined });
+const layer = FX.registerEffects(verbs, {
+  parent: table,
+  resolve: (id) => id === 'card' ? card : id === 'target-card' ? $('target-card') : id === 'token' || id === 'token-two' ? $('token-source') : undefined,
+  onActor: (_, clone) => {
+    if (picker.value !== 'refresh') return;
+    const banner = document.createElement('div');
+    banner.className = 'demo-banner';
+    banner.textContent = 'Spent';
+    clone.append(banner);
+  },
+});
 layer.el.style.position = 'absolute';
 
 // The verbs expose their defaults through their keyframes and CSS fallbacks.
-function frames(verb) {
+function frames(verb, step = {}) {
   let result;
-  FX.BUILT_IN[verb]({ call: { step: {} }, el: document.createElement('div'), animate: (value) => { result = value; } });
+  FX.BUILT_IN[verb]({ call: { dur: 1, step }, el: document.createElement('div'), animate: (value) => { result = value; } });
   return result;
 }
 function fallback(css, token) {
@@ -140,6 +169,9 @@ const KIT = {
   opacity: frames('fade-out')[1].opacity, holdMs: 0, label: '', scale: defaultScale, pulseScale: false,
   shake: parseFloat(fallback(frames('shake')[1].transform, '--fx-shake')), times: frames('shake').length - 2,
   blur: parseFloat(glow[2]), spread: parseFloat(glow[3]), glowColor: colorHex(tableStyle.color),
+  flipAxis: frames('flip').some(({ transform }) => transform.includes('scaleX')) ? 'x' : 'y',
+  flipDirection: '', flipFace: 'back', flipPerspective: Number(frames('flip', { direction: 1 })[0].transform.match(/perspective\((\d+)/)[1]),
+  flipSquash: Boolean(frames('flip')),
   text: '+3', textRise: parseFloat(fallback(frames('text')[0].transform, '--fx-text-rise')),
   textSize: parseFloat(tableStyle.fontSize), textColor: colorHex(tableStyle.color),
   buffMs: parseFloat(fallback(pulse.animation, '--buff-ms')),
@@ -166,6 +198,11 @@ const options = {
   show: [],
   hide: [],
   flip: [
+    { ...option('flipAxis', 'Axis', 'select', 'Horizontal flips left to right. Vertical flips top to bottom.'), choices: [['x', 'Horizontal'], ['y', 'Vertical']] },
+    { ...option('flipFace', 'Destination face', 'select', 'Sets the starting face so the kit’s toggle lands here.'), choices: [['back', 'Back'], ['front', 'Front']] },
+    { ...option('flipDirection', 'Rotation direction', 'select', 'Choose signed 3D rotation or the kit’s default flat squash.'), choices: [['', 'Flat squash'], ['1', 'Positive'], ['-1', 'Negative']] },
+    row('flipPerspective', 'Perspective', 100, 1600, 1, ' px', 'Distance used by the signed 3D rotation.'),
+    option('flipSquash', 'Animate the flip', 'checkbox', 'Turn off to switch faces immediately.'),
     row('holdMs', 'Hold first face', 0, 1200, 1, ' ms', 'The kit caps the hold at 80% of the scaled duration.'),
     option('label', 'Back label', 'text', 'Optional text exposed as data-fx-label.'),
   ],
@@ -338,13 +375,166 @@ Object.assign(KIT, {
 
 let s = { ...KIT };
 const picker = $('verb');
-for (const key of [...Object.keys(options), ...Object.keys(flightGroups)]) picker.add(new Option(key, key));
+for (const key of [...Object.keys(options), ...Object.keys(flightGroups), ...Object.keys(DEMO.previews)]) picker.add(new Option(key, key));
+
+const initialEffect = new URLSearchParams(location.search).get('effect');
+if ([...picker.options].some(({ value }) => value === initialEffect)) picker.value = initialEffect;
+
+const overrides = new Map();
+let stopLoop;
+let running = false;
+const isLoop = () => Boolean(DEMO.previews[picker.value]?.loop);
+const cardContent = card.innerHTML;
+const previewValues = () => {
+  if (!overrides.has(picker.value)) overrides.set(picker.value, {});
+  return overrides.get(picker.value);
+};
+
+const draftsByEffect = new Map();
+function previewDrafts() {
+  if (!draftsByEffect.has(picker.value)) draftsByEffect.set(picker.value, {});
+  return draftsByEffect.get(picker.value);
+}
+
+function at(object, path) {
+  return path.reduce((value, key) => value?.[key], object);
+}
+
+function put(object, path, value) {
+  const parent = path.slice(0, -1).reduce((node, key, i) => {
+    node[key] ??= typeof path[i + 1] === 'number' ? [] : {};
+    return node[key];
+  }, object);
+  parent[path.at(-1)] = value;
+}
+
+function entries(fields, prefix = []) {
+  if (Object.hasOwn(fields, 'value')) return [[prefix, fields]];
+  const children = Array.isArray(fields) ? fields.map((field, i) => [i, field]) : Object.entries(fields);
+  return children.flatMap(([key, field]) => entries(field, [...prefix, key]));
+}
+
+function label(path) {
+  const name = path.map((part) => typeof part === 'number' ? String(part + 1) :
+    part.replace(/([a-z])([A-Z])/g, '$1 $2').replace(/\bms\b/gi, 'time')).join(' ');
+  return name[0].toUpperCase() + name.slice(1);
+}
+
+function buildPreview(preview) {
+  const values = previewValues();
+  const drafts = previewDrafts();
+  const base = preview.base?.({ x: table.clientWidth / 2 });
+  for (const { title, fields, path, enable } of preview.groups) {
+    const prefix = path ? path.split('.') : [];
+    if (preview.groups.some((parent) => parent.enable !== undefined
+      && path.startsWith(parent.path + '.') && at(values, parent.path.split('.')) === undefined)) continue;
+    const group = document.createElement('fieldset');
+    const legend = document.createElement('legend');
+    legend.textContent = title;
+    group.append(legend);
+    if (enable !== undefined) {
+      const toggle = document.createElement('label');
+      const input = document.createElement('input');
+      input.type = 'checkbox';
+      input.checked = at(values, prefix) !== undefined;
+      toggle.append(input, ' Enable ' + title.toLowerCase());
+      group.append(toggle);
+      input.addEventListener('change', () => {
+        const draftParent = at(drafts, prefix.slice(0, -1));
+        if (draftParent) delete draftParent[prefix.at(-1)];
+        if (input.checked) put(values, prefix, structuredClone(enable));
+        else delete at(values, prefix.slice(0, -1))[prefix.at(-1)];
+        build();
+        markPreset();
+        play();
+      });
+      if (!input.checked) {
+        $('ctls').append(group);
+        continue;
+      }
+    }
+    for (const [parts, field] of entries(fields)) {
+      const keys = [...prefix, ...parts];
+      const id = 'c-preview-' + keys.join('-');
+      const control = document.createElement('div');
+      control.className = 'ctl';
+      const name = document.createElement('label');
+      name.htmlFor = id;
+      name.textContent = label(parts);
+      const input = document.createElement(field.choices ? 'select' : 'input');
+      input.id = id;
+      const arrayIndex = keys.findIndex((key) => typeof key === 'number');
+      const arrayPath = arrayIndex === -1 ? undefined : keys.slice(0, arrayIndex);
+      const arrayFields = arrayPath && entries(at(fields, parts.slice(0, arrayIndex - prefix.length)));
+      const currentValue = () => at(drafts, keys) ?? at(values, keys) ?? at(base, keys) ?? field.value;
+      const value = currentValue();
+      const output = document.createElement('output');
+      output.htmlFor = id;
+      if (field.choices) {
+        const unset = new Option('Kit default', '');
+        unset.disabled = true;
+        input.add(unset);
+        for (const [option, title] of field.choices) input.add(new Option(title, String(option)));
+        input.value = value === undefined ? '' : String(value);
+      } else {
+        input.type = 'range';
+        Object.assign(input, {
+          min: Math.min(field.min, value ?? field.min), max: Math.max(field.max, value ?? field.max, field.stage ? table.clientWidth : 0),
+          step: field.step,
+        });
+        input.valueAsNumber = value ?? (Number(input.min) + Number(input.max)) / 2;
+      }
+      const show = () => {
+        const current = currentValue();
+        if (input.type !== 'range') return;
+        output.textContent = current === undefined ? 'Kit default' : current + field.unit;
+        input.toggleAttribute('data-kit-default', current === undefined);
+        input.setAttribute('aria-valuetext', output.textContent);
+      };
+      show();
+      const help = document.createElement('small');
+      help.id = id + '-help';
+      help.textContent = field.help + (field.demo || enable !== undefined && at(enable, parts) !== undefined ? ' The kit has no default.' : '');
+      if (arrayPath && !at(values, arrayPath) && !at(base, arrayPath)) help.textContent += ' Set all values in this list to apply it.';
+      input.setAttribute('aria-describedby', help.id);
+      control.append(name, output, input, help);
+      group.append(control);
+      input.addEventListener('input', () => {
+        const next = input.type === 'range' ? input.valueAsNumber
+          : field.choices.find(([option]) => String(option) === input.value)[0];
+        if (arrayPath && !at(values, arrayPath)) {
+          put(drafts, keys, next);
+          const array = structuredClone(at(base, arrayPath) ?? []);
+          for (const [path, control] of arrayFields) {
+            const draft = at(drafts, [...arrayPath, ...path]) ?? at(array, path) ?? control.value;
+            if (draft === undefined) {
+              show();
+              markPreset();
+              return;
+            }
+            put(array, path, draft);
+          }
+          put(values, arrayPath, array);
+          delete at(drafts, arrayPath.slice(0, -1))[arrayPath.at(-1)];
+        } else {
+          put(values, keys, next);
+        }
+        show();
+        markPreset();
+        play();
+      });
+    }
+    $('ctls').append(group);
+  }
+}
 
 function build() {
   const verb = picker.value;
   const instant = verb === 'show' || verb === 'hide';
   const timing = [row('speed', 'Motion scale', 0, 2, .05, '×', 'Multiplies time. 0 leaves the preview still.')];
-  if (!instant && verb !== 'rise-pulse' && !flightGroups[verb]) timing.unshift(
+  const preview = DEMO.previews[verb];
+  if (preview && !preview.loop) timing.unshift(row('previewDur', 'Step duration', 1, 5000, 1, ' ms', 'Time available for the effect. The kit has no default.'));
+  if (!preview && !instant && verb !== 'rise-pulse' && !flightGroups[verb]) timing.unshift(
     row('dur', 'Duration', 0, 1800, 1, ' ms', 'Base step time before applying the motion factor. The kit has no default.'),
     option('ease', 'Easing', 'select', 'How progress changes over the step.'),
   );
@@ -352,19 +542,23 @@ function build() {
     row('dur', 'Follow-up duration', 0, 1800, 1, ' ms', 'Base time of the glow after the visibility change. The kit has no default.'),
   );
   $('ctls').replaceChildren();
-  for (const [title, rows] of [['Timing', timing], ...(flightGroups[verb] ?? [['Effect options', options[verb]]])]) {
+  for (const [title, rows] of [['Timing', timing], ...(preview ? [] : flightGroups[verb] ?? [['Effect options', options[verb]]])]) {
     if (!rows.length) continue;
     const group = document.createElement('fieldset');
     group.innerHTML = `<legend>${title}</legend>`;
-    for (const { key, label, type, min, max, step, unit = '', help } of rows) {
+    for (const { key, label, type, min, max, step, unit = '', help, choices } of rows) {
       const control = document.createElement('div');
       control.className = 'ctl';
       control.innerHTML = `<label for="c-${key}">${label}</label>${type === 'range' ? `<output for="c-${key}"></output>` : ''}`;
       const input = document.createElement(type === 'select' ? 'select' : 'input');
       input.id = 'c-' + key;
       if (type === 'select') {
-        if (key === 'viaEase') input.add(new Option('Kit default', ''));
-        for (const ease of [...new Set(key === 'viaEase' ? easingNames : [defaultEase, ...easingNames])]) input.add(new Option(ease, ease));
+        if (choices) {
+          for (const [value, title] of choices) input.add(new Option(title, value));
+        } else {
+          if (key === 'viaEase') input.add(new Option('Kit default', ''));
+          for (const ease of [...new Set(key === 'viaEase' ? easingNames : [defaultEase, ...easingNames])]) input.add(new Option(ease, ease));
+        }
       } else {
         input.type = type;
         if (type === 'range') Object.assign(input, { min, max, step });
@@ -372,14 +566,16 @@ function build() {
         if (type === 'checkbox') input.checked = s[key];
         if (type === 'text') input.maxLength = 28;
       }
-      input.value = s[key];
+      input.value = key === 'previewDur' ? previewValues().dur ?? preview.dur : s[key];
       const output = control.querySelector('output');
       const updateOutput = () => {
+        if (key === 'previewDur') { output.textContent = input.value + unit; return; }
         if (output) output.textContent = key === 'staggerMax' && s[key] < 0 ? 'None' : s[key] + unit;
       };
       updateOutput();
       input.addEventListener('input', () => {
-        s[key] = type === 'range' ? Number(input.value) : type === 'checkbox' ? input.checked : input.value;
+        if (key === 'previewDur') previewValues().dur = Number(input.value);
+        else s[key] = type === 'range' ? Number(input.value) : type === 'checkbox' ? input.checked : input.value;
         updateOutput();
         markPreset();
         play();
@@ -393,6 +589,7 @@ function build() {
     }
     $('ctls').append(group);
   }
+  if (preview) buildPreview(preview);
 }
 
 function settings(verb) {
@@ -414,7 +611,13 @@ function settings(verb) {
     case 'show':
     case 'hide': step.dur = 0; delete step.ease; break;
     case 'flip':
-      step.holdMs = s.holdMs;
+      if (s.holdMs !== KIT.holdMs) step.holdMs = s.holdMs;
+      if (s.flipAxis !== KIT.flipAxis) step.axis = s.flipAxis;
+      if (s.flipSquash !== KIT.flipSquash) step.squash = s.flipSquash;
+      if (s.flipDirection) {
+        step.direction = Number(s.flipDirection);
+        if (s.flipPerspective !== KIT.flipPerspective) step.perspective = s.flipPerspective;
+      }
       if (s.label) step.label = s.label;
       break;
     case 'scale': step.to = s.scale; step.pulse = s.pulseScale; break;
@@ -519,7 +722,11 @@ let rects;
 const player = MOTION.createMotionPlayer({
   specs: {}, stages: { default: (id) => rects[id] }, verbs, speed: previewSpeed, context: layer,
   onBeatStart: (run) => {
-    if (run.timeline.actors.some((actor) => actor.id === 'card')) card.classList.add('fx-source');
+    for (const actor of run.timeline.actors) {
+      if (actor.id === 'card' && !actor.hidden) card.classList.add('fx-source');
+      if (actor.id === 'target-card') $('target-card').classList.add('fx-source');
+      if (actor.id === 'token' && !actor.hidden && DEMO.previews[picker.value]?.token) $('token-source').classList.add('fx-source');
+    }
     layer.start(run);
   },
   onProblem: (problem) => console.error(problem),
@@ -527,12 +734,89 @@ const player = MOTION.createMotionPlayer({
 // Keep the finished clone visible for inspection. Each replay clears the previous beat.
 layer.el.style.zIndex = '1';
 
+function previewBeat(verb, preview, speed) {
+  const { dur = preview.dur, ...values } = structuredClone(previewValues());
+  const x = table.clientWidth / 2, y = table.clientHeight * .54;
+  const settings = preview.base?.({ x, y }) ?? {};
+  for (const [path, field] of entriesForOverrides(values)) put(settings, path, field);
+  if (settings.mode === 'portal' || settings.portal) settings.portal = { ...DEMO.portalSizes, ...settings.portal };
+  if (settings.flicker) settings.flicker.sort((a, b) => a.at - b.at);
+  if (settings.popOffsets) settings.popOffsets = ordered(...settings.popOffsets);
+  if (settings.marker?.offsets) settings.marker.offsets = ordered(...settings.marker.offsets);
+  for (const key of ['columnUp', 'columnDown']) {
+    if (!settings[key]?.frames) continue;
+    settings[key].frames.sort((a, b) => a.offset - b.offset);
+    for (const frame of settings[key].frames) {
+      frame.col = 'none';
+      frame.tok = 'none';
+    }
+  }
+  if (settings.beforeLook) settings.beforeLook.filter = 'saturate(.2)';
+  if (settings.afterLook) settings.afterLook.filter = 'none';
+  if (settings.marker) card.querySelector('.demo-marker').textContent = '3';
+
+  $('note').textContent = speed === 'instant' ? 'Motion is off.' : preview.note;
+  if (preview.loop) {
+    if (running && speed !== 'instant') stopLoop = FX[preview.loop](card, settings, { speed });
+    $('code').textContent = `const stop = ${preview.loop}(card, ${JSON.stringify(settings, null, 2)}, { speed: ${JSON.stringify(speed)} });`;
+    return;
+  }
+  const token = $('token-source');
+  const to = $('target-card');
+  const w = (preview.token ? token : card).offsetWidth;
+  const h = (preview.token ? token : card).offsetHeight;
+  const fromX = preview.route ? table.clientWidth * .28 : x;
+  const fromY = preview.route ? table.clientHeight * .61 : y;
+  rects = {
+    home: [fromX - w / 2, fromY - h / 2, w, h],
+    destination: [table.clientWidth * .72 - to.offsetWidth / 2, table.clientHeight * .46 - to.offsetHeight / 2, to.offsetWidth, to.offsetHeight],
+  };
+  const actor = preview.token ? 'token' : 'card';
+  const canvasOnly = ['curved-beam', 'radial-streaks', 'spiral'].includes(verb);
+  const actors = [{ id: actor, at: 'home', ...(canvasOnly && { hidden: true }) }];
+  if (preview.group) actors.push({ id: 'target-card', at: 'destination' });
+  const beat = {
+    id: 'preview', maxMs: dur, actors,
+    steps: [{ t: 0, dur, actor, do: preview.verb ?? verb, ...(preview.route && { to: 'destination' }), ...settings }],
+  };
+  player.play(beat);
+  $('code').textContent = `const beat = ${JSON.stringify(beat, null, 2)};
+--motion-scale: ${s.speed};`;
+}
+
+function entriesForOverrides(values, prefix = []) {
+  return Object.entries(values).flatMap(([key, value]) => {
+    const path = [...prefix, key];
+    return value && typeof value === 'object' && !Array.isArray(value) && Object.keys(value).length
+      ? entriesForOverrides(value, path) : [[path, value]];
+  });
+}
+
 function play() {
+  stopLoop?.();
+  stopLoop = undefined;
   player.skipAll();
   layer.clear();
   card.classList.remove('fx-source');
+  $('token-source').classList.remove('fx-source');
+  $('target-card').classList.remove('fx-source');
   card.querySelector('.fx-rise-pulse')?.remove();
   const verb = picker.value;
+  const preview = DEMO.previews[verb];
+  $('play').textContent = preview?.loop ? 'Start' : 'Play';
+  $('stop').hidden = !preview?.loop;
+  $('stop').disabled = !running;
+  card.innerHTML = preview?.bar ? '<div class="demo-meter"><div data-part="fill"></div><span class="demo-marker"></span></div>' : cardContent;
+  card.toggleAttribute('data-fx-flipped', verb === 'flip' && s.flipFace === 'front');
+  card.style.setProperty('--preview-card-x', preview?.route ? '28%' : '50%');
+  card.style.setProperty('--preview-card-y', preview?.route ? '61%' : '54%');
+  card.style.width = preview?.bar ? '92px' : '';
+  card.style.height = preview?.bar ? '22px' : '';
+  $('token-source').classList.toggle('demo-token', Boolean(preview?.token));
+  $('target-card').classList.toggle('demo-target', Boolean(preview?.route));
+  $('target-card').classList.toggle('demo-token', Boolean(preview?.token));
+  table.toggleAttribute('data-token', Boolean(preview?.token));
+  table.toggleAttribute('data-route', Boolean(preview?.route));
   const isPulse = verb === 'rise-pulse';
   const isFlight = Boolean(flightGroups[verb]);
   table.toggleAttribute('data-flight', isFlight);
@@ -555,6 +839,10 @@ function play() {
   destination.style.left = x + s.dx + 'px';
   destination.style.top = y + s.dy + 'px';
 
+  if (preview) {
+    previewBeat(verb, preview, speed);
+    return;
+  }
   const lines = [`const speed = () => withReducedMotion(${s.speed || "'instant'"});`];
   let note;
   if (isFlight) {
@@ -610,16 +898,20 @@ function play() {
 }
 
 function markPreset() {
-  $('reset').setAttribute('aria-pressed', String(Object.keys(KIT).every((key) => s[key] === KIT[key])));
+  $('reset').setAttribute('aria-pressed', String(DEMO.previews[picker.value] ? !Object.keys(previewValues()).length && !Object.keys(previewDrafts()).length && s.speed === KIT.speed : Object.keys(KIT).every((key) => s[key] === KIT[key])));
 }
-picker.addEventListener('change', () => {
-  $('sequence').disabled = picker.value === 'rise-pulse' || Boolean(flightGroups[picker.value]);
+function selectEffect() {
+  running = false;
+  markPreset();
+  $('sequence').disabled = Boolean(DEMO.previews[picker.value]) || picker.value === 'rise-pulse' || Boolean(flightGroups[picker.value]);
   build();
   play();
-});
+}
+picker.addEventListener('change', selectEffect);
 $('sequence').addEventListener('change', () => { build(); play(); });
-$('play').addEventListener('click', play);
-$('reset').addEventListener('click', () => { s = { ...KIT }; markPreset(); build(); play(); });
+$('play').addEventListener('click', () => { running = isLoop(); play(); });
+$('stop').addEventListener('click', () => { running = false; play(); });
+$('reset').addEventListener('click', () => { s = { ...KIT }; overrides.delete(picker.value); draftsByEffect.delete(picker.value); markPreset(); build(); play(); });
 $('copy').addEventListener('click', async () => {
   try { await navigator.clipboard.writeText($('code').textContent); $('copy').textContent = 'Copied'; }
   catch {
@@ -632,7 +924,7 @@ $('copy').addEventListener('click', async () => {
   setTimeout(() => { $('copy').textContent = 'Copy'; }, 1800);
 });
 matchMedia('(prefers-reduced-motion: reduce)').addEventListener('change', play);
-build();
+selectEffect();
 new ResizeObserver(play).observe(table);
 </script>
 </html>
