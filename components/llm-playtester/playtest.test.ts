@@ -71,7 +71,7 @@ describe('llm-playtester', () => {
       calls++;
       return Promise.resolve({ option: 0, reason: 'ok', usage: { ...usage, output_tokens: 1000 } });
     };
-    const r = await runPlaytest(createAdapter(), { seed: 's', client, out: tmp(), maxUsd: 0.05 });
+    const r = await runPlaytest(createAdapter(), { seed: 's', client, out: tmp(), maxUsd: 0.05, maxTokens: 1024 });
     expect(r.stop).toBe('max-usd');
     expect(calls).toBeGreaterThan(0);
     expect(r.costUsd).toBeLessThanOrEqual(0.05);
@@ -108,5 +108,37 @@ describe('llm-playtester', () => {
     const r = await runPlaytest(createAdapter(), { seed: 's', client, out: tmp(), maxUsd: 0.0001, log: (s) => lines.push(s) });
     expect(r.stop).toBe('max-usd');
     expect(lines.join('\n')).toContain('raise --max-usd');
+  });
+
+  it('K398: max_tokens defaults to 16000, is configurable, and a cut-off reply says so', async () => {
+    const bodies: Body[] = [];
+    const sdk = { messages: { create: (b: Body) => { bodies.push(b); return Promise.resolve({ content: [{ type: 'thinking' }], stop_reason: 'max_tokens', usage: { input_tokens: 1, output_tokens: 16000 } }); } } };
+    const r = await runPlaytest(createAdapter(), { seed: 's', client: makeChooser(sdk), out: tmp(), model: 'claude-sonnet-5-5', log: () => undefined });
+    expect(bodies[0]!.max_tokens).toBe(16000);
+    expect(r.findings[0]).toBe('step 0: reply cut off at max_tokens (16000) before a choose tool call');
+    await runPlaytest(createAdapter(), { seed: 's', client: makeChooser(sdk, 2000), maxTokens: 2000, out: tmp(), model: 'claude-sonnet-5-5', log: () => undefined });
+    expect(bodies.at(-1)!.max_tokens).toBe(2000);
+  });
+
+  it('K398: runPlaytest maxTokens changes the estimate, the finding and the request of an injected client', async () => {
+    const bodies: Body[] = [];
+    const sdk = { messages: { create: (b: Body) => { bodies.push(b); return Promise.resolve({ content: [], stop_reason: 'max_tokens', usage: { input_tokens: 1, output_tokens: 3 } }); } } };
+    const est = async (maxTokens?: number) => {
+      const lines: string[] = [];
+      const r = await runPlaytest(createAdapter(), { seed: 's', client: makeChooser(sdk), ...(maxTokens === undefined ? {} : { maxTokens }), out: tmp(), model: 'claude-sonnet-5-5', log: (s) => lines.push(s) });
+      return { line: lines[0]!, finding: r.findings[0]! };
+    };
+    const a = await est(3000);
+    const b = await est();
+    expect(a.line).not.toBe(b.line);
+    expect(a.finding).toContain('max_tokens (3000)');
+    expect(bodies[0]!.max_tokens).toBe(3000);
+  });
+
+  it('K398: the CLI accepts --max-tokens and rejects non-integers', async () => {
+    const adapter = join(import.meta.dirname, 'fake-adapter.ts');
+    expect(await main(['--adapter', adapter, '--dummy', '--max-tokens', '2000', '--out', tmp()], () => undefined)).toBe(0);
+    for (const bad of ['1.5', '0', 'abc', '-3'])
+      expect(await main(['--adapter', adapter, '--dummy', '--max-tokens', bad], () => undefined)).toBe(2);
   });
 });

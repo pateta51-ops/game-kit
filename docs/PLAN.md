@@ -157,6 +157,7 @@ A game's build plan lists the kit work it needs as phases named `GK<n>` for the 
 | K394 | card-hand: the lifted face no longer steals the pointer from neighbours' strips (hit area above the rest box only); tuners/card-hand-e2e/hit-area.sh real-mouse check | S |  | done |
 | K395 | llm-playtester: tool_choice auto (thinking models refuse forced tool use), one re-ask when no tool call, pre-call cost estimate and clear cap message | S |  | done |
 | K397 | card-harness keysOf skips primitive union members and takes { first: true } (literalsOf { keys: 'first' }) for the tag-like first key only | S |  | done |
+| K398 | llm-playtester: max_tokens default 16000 (a thinking model was cut off at 1024), `maxTokens` option and `--max-tokens`, finding says when a reply was cut off at max_tokens | S |  | done |
 
 ## Harvest from the existing games (owner, 15 Nov 2026)
 
