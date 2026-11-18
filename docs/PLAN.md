@@ -138,6 +138,7 @@ A game's build plan lists the kit work it needs as phases named `GK<n>` for the 
 | K347 | `deck-motions` turn-over takes `axis: 'x' | 'y'` (side to side, default; or top to bottom). The effect-library `flip` gets the same option in K334's PR | S |  | done |
 | K348 | `deck-motions` turn-over takes `direction: 1 | -1` (front or back flip). The effect-library `flip` gets it in K334's PR | S |  | done |
 | K351 | docs/motion-retrofit/INVENTORY.md: every animation and effect in 11 games, file:line, in kit / row / missing; the missing list feeds the effect batches | S |  | done |
+| K356 | game-store: `simGameOf` takes an optional `start(spec)` so a game with modes or settings starts its sims from the whole spec | S |  | done |
 
 ## Harvest from the existing games (owner, 15 Nov 2026)
 

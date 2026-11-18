@@ -10,7 +10,7 @@ One game store and one game object (K234): `defineGame` is what the game writes 
 - K302 `debug(action)`: an engine-core `DebugAction` (the game sets `GameRules.debug`) as its own undo step, recorded and saved like an answer (a loaded save starts a step at each one), then settled, paced (`pushSteps`) and autosaved; returns the refusal words or undefined, so debug-console mounts with `send={store.debug}`.
 - `undo()`, `redo()`, `canUndo()` (engine-core `undoStep`, mode `safe` by default), `advance()`, `skip()` (paced-view), `fresh(seed)`.
 - `load(save)`: `restoreSave`, then the undo steps rebuilt (`replaySteps`: an answer of the store's seat that `forced` would not give starts a step); `saved()` is the engine-core `History` for saves (`saveNamed`, `SavesScreen`).
-- `sim.ts` (node only): `simGameOf(def, { drivers?, summary?, maxActions? })` is sim-pool's game module (drivers `opponent` and `random`), `opponentDriverOf(def)`, `botDriverOf(def, bot)`, `replayEngineOf(def, describe?)`.
+- `sim.ts` (node only): `simGameOf(def, { drivers?, summary?, maxActions?, start? })` is sim-pool's game module (`start(spec)`: a game with settings starts from the spec's `settings` too, K356) (drivers `opponent` and `random`), `opponentDriverOf(def)`, `botDriverOf(def, bot)`, `replayEngineOf(def, describe?)`.
 - Proof: `store.test.ts`; the reference game plays a whole game, undo, save mid-effect and a view-leak check through it.
 
 ## Use it in 10 lines

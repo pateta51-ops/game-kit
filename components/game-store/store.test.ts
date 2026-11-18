@@ -124,6 +124,13 @@ describe('game-store (K234)', () => {
     expect(rec.result).toEqual({ winner: 'a' });
   });
 
+  it('K356: simGameOf starts from the whole spec when the game passes start (settings reach the game)', () => {
+    const seen: unknown[] = [];
+    const sim = simGameOf(def, { start: (spec) => { seen.push(spec.settings); return def.start(spec.seed); } });
+    playOne(sim, {}, { index: 0, seed: 's', driver: 'opponent', settings: { mode: 'campaign' } });
+    expect(seen).toEqual([{ mode: 'campaign' }]);
+  });
+
   it('K271: one Bot plays a seat in the store to game over and in the sim; same seed, same answers; it sees only the view', () => {
     type V = ReturnType<typeof def.view>;
     const seen: { view: V; picks: readonly string[] }[] = [];
