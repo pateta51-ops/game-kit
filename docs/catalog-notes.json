@@ -353,7 +353,7 @@
   "tooling-scripts": {
     "use": "Small repo scripts run with `node kit/tooling-scripts/<script>.ts` (art check, shots, text-leak, home screen, docs index). Recipe: docs/recipes/agent-workflow.md.",
     "not": "Game-specific scripts.",
-    "exports": "Scripts: `text-leak`, `art-check`, `shrink-png`, `mock-capture`, `contact-sheet`, `gen-from-table`, `docs-index`, `dossier-sync`, `fonts-fetch`, `woff`, `bundle-node`, `home-screen`, `move`, `lookup`"
+    "exports": "Scripts: `text-leak`, `art-check`, `shrink-png`, `mock-capture`, `contact-sheet`, `gen-from-table`, `docs-index`, `dossier-sync`, `fonts-fetch`, `woff`, `bundle-node`, `home-screen`, `move`, `lookup`, `launch`"
   },
   "traceability": {
     "use": "Test titles must cite the game's rule ids; gate configured in `trace.config.json`.",

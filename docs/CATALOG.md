@@ -1003,7 +1003,7 @@ Small repo scripts a game runs with `node kit/tooling-scripts/<script>.ts`. Each
 
 - **Use it when:** Small repo scripts run with `node kit/tooling-scripts/<script>.ts` (art check, shots, text-leak, home screen, docs index). Recipe: docs/recipes/agent-workflow.md.
 - **Not for:** Game-specific scripts.
-- **Key exports:** Scripts: `text-leak`, `art-check`, `shrink-png`, `mock-capture`, `contact-sheet`, `gen-from-table`, `docs-index`, `dossier-sync`, `fonts-fetch`, `woff`, `bundle-node`, `home-screen`, `move`, `lookup`
+- **Key exports:** Scripts: `text-leak`, `art-check`, `shrink-png`, `mock-capture`, `contact-sheet`, `gen-from-table`, `docs-index`, `dossier-sync`, `fonts-fetch`, `woff`, `bundle-node`, `home-screen`, `move`, `lookup`, `launch`
 - **Needs:** nothing
 - **Came from:** imp
 - **Docs:** [README](../components/tooling-scripts/README.md)

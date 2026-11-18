@@ -18,6 +18,7 @@
     { "game": "marvel-champions", "repo": "marvel-champions-digital-game", "commit": "unknown", "paths": ["packages/cards/tools/card-brief.test.ts", "dsl-index.test.ts", "refs-report.test.ts", "packages/mod-sdk/scripts/dsl-reference.mjs"], "what": "lookup.ts: card, dsl and refs commands over a game-supplied module (shape only, rewritten)" },
     { "game": "middle-earth-player", "repo": "https://github.com/j-jmnz/middle-earth-player", "licence": "MIT", "commit": "unknown", "paths": ["scripts/tools/move.ts", "scripts/docs/index.ts (headers only; written new from the described behaviour)"], "what": "move.ts, docs-index.ts: the repo-root paths, patterns and folders became flags" },
     { "game": "kit", "commit": "none", "paths": [], "what": "home-screen.ts, contact-sheet.ts: written new (K37); no outside source" }
+    ,{ "game": "er", "repo": "earthborne-rangers-fan-prototype", "commit": "b9b06107", "paths": ["scripts/play.mjs"], "what": "launch.ts: the input list, build and serve commands and port became flags; git hashing became a file hash" }
   ],
   "needs": [],
   "packages": ["esbuild"]
