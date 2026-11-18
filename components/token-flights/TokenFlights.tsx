@@ -174,6 +174,7 @@ function fly(
   el.style.left = `${String(from.x - art.size / 2)}px`;
   el.style.top = `${String(from.y - art.size / 2)}px`;
   el.style.width = `${String(art.size)}px`;
+  el.style.maxWidth = 'none';
   if (art.clip !== undefined) el.style.clipPath = art.clip;
   into.appendChild(el);
   const dx = to.x - from.x;

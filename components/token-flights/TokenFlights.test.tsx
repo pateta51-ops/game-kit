@@ -56,6 +56,7 @@ describe('TokenFlights', () => {
     expect(flights()).toHaveLength(0);
     r.rerender(<Table credits={[1]} />);
     expect(flights()).toHaveLength(1);
+    expect(flights()[0]?.style.maxWidth).toBe('none');
     expect(isEmpty(ledger.get())).toBe(false);
     landAll();
     expect(flights()).toHaveLength(0);
