@@ -125,7 +125,7 @@ describe('llm-playtester', () => {
     const sdk = { messages: { create: (b: Body) => { bodies.push(b); return Promise.resolve({ content: [], stop_reason: 'max_tokens', usage: { input_tokens: 1, output_tokens: 3 } }); } } };
     const est = async (maxTokens?: number) => {
       const lines: string[] = [];
-      const r = await runPlaytest(createAdapter(), { seed: 's', client: makeChooser(sdk), maxTokens, out: tmp(), model: 'claude-sonnet-5-5', log: (s) => lines.push(s) });
+      const r = await runPlaytest(createAdapter(), { seed: 's', client: makeChooser(sdk), ...(maxTokens === undefined ? {} : { maxTokens }), out: tmp(), model: 'claude-sonnet-5-5', log: (s) => lines.push(s) });
       return { line: lines[0]!, finding: r.findings[0]! };
     };
     const a = await est(3000);
