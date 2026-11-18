@@ -3,14 +3,11 @@ import { defaultSetup, defaultWords, validateSetup, type Field, type Option, typ
 
 export type MenuEntry = { id: string; label: ReactNode; disabled?: boolean };
 
-export function MainMenu({ entries, onSelect, className }: { entries: MenuEntry[]; onSelect: (id: string) => void; className?: string }) {
-  return (
-    <nav className={className} data-part="menu">
-      {entries.map((e) => (
-        <button key={e.id} type="button" data-entry={e.id} disabled={e.disabled} onClick={() => !e.disabled && onSelect(e.id)}>{e.label}</button>
-      ))}
-    </nav>
-  );
+export function MainMenu({ entries, onSelect, className, bare }: { entries: MenuEntry[]; onSelect: (id: string) => void; className?: string; bare?: boolean }) {
+  const items = entries.map((e) => (
+    <button key={e.id} type="button" className={bare ? className : undefined} data-entry={e.id} disabled={e.disabled} onClick={() => !e.disabled && onSelect(e.id)}>{e.label}</button>
+  ));
+  return bare ? <>{items}</> : <nav className={className} data-part="menu">{items}</nav>;
 }
 
 export function SetupForm({ spec, onStart, words, initial, value, onChange, renderField, className, id, submit = true }: { spec: SetupSpec; onStart: (setup: Setup) => void; words?: Partial<Words>; initial?: Setup; value?: Setup; onChange?: (setup: Setup) => void; renderField?: (field: Field, value: unknown, set: (v: unknown) => void) => ReactNode; className?: string; id?: string; submit?: boolean }) {

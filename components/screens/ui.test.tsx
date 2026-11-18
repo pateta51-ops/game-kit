@@ -25,6 +25,14 @@ describe('model', () => {
 });
 
 describe('MainMenu', () => {
+  it('bare: entries with no wrapping nav, each with data-entry', () => {
+    const f = vi.fn();
+    const { container } = render(<div data-testid="zones"><MainMenu bare entries={[{ id: 'new', label: 'New' }, { id: 'quit', label: 'Quit' }]} onSelect={f} /></div>);
+    expect(container.querySelector('nav')).toBeNull();
+    expect(container.querySelector('[data-testid=zones] > [data-entry=quit]')).not.toBeNull();
+    fireEvent.click(screen.getByText('New'));
+    expect(f).toHaveBeenCalledWith('new');
+  });
   it('selects enabled entries only', () => {
     const f = vi.fn();
     render(<MainMenu entries={[{ id: 'new', label: 'New' }, { id: 'cont', label: 'Continue', disabled: true }]} onSelect={f} />);
