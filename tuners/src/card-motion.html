@@ -1,0 +1,313 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Card Motion Tuner</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=Inter:wght@400;600&family=JetBrains+Mono:wght@400&display=swap">
+<style>
+/*@kit-css components/card-pile/card-pile.css*/
+/*@kit-css components/phone-mode/phone-mode.css*/
+:root {
+  --felt: #17302a; --felt-edge: #0e1f1b; --panel: #1b2124; --line: #2c3539; --fg: #e8ece9; --muted: #9aa8a3; --accent: #e9c46a;
+  --display: 'Space Grotesk', system-ui, sans-serif; --body: 'Inter', system-ui, sans-serif; --mono: 'JetBrains Mono', ui-monospace, monospace;
+  color-scheme: dark;
+}
+body { background: var(--panel); color: var(--fg); font: 14px/1.5 var(--body); }
+.wrap { max-width: 1180px; margin: 0 auto; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); padding-block: 18px 40px; display: grid; grid-template-columns: minmax(0, 1fr); gap: 18px; }
+h1 { font: 700 22px/1.2 var(--display); margin: 0; letter-spacing: .01em; }
+.sub { color: var(--muted); margin: 2px 0 0; max-width: 70ch; }
+.table { background: radial-gradient(120% 90% at 50% 100%, #1f4038, var(--felt) 60%, var(--felt-edge)); border-radius: 14px; border: 1px solid var(--line); padding: 12px 14px; overflow: hidden; position: relative; }
+.table .note { margin: 0; min-height: 2.8em; color: var(--muted); font-size: 12px; }
+.presets { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.presets span { color: var(--muted); font-size: 12px; text-transform: uppercase; letter-spacing: .08em; margin-right: 4px; }
+.presets button { font: 600 13px var(--body); color: var(--fg); background: #232b2e; border: 1px solid var(--line); border-radius: 999px; padding: 6px 14px; cursor: pointer; }
+.presets button[aria-pressed="true"] { background: var(--accent); color: #1b1608; border-color: var(--accent); }
+.presets button:focus-visible, .ctl input:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.ctls { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 10px 22px; }
+fieldset { align-content: start; border: 1px solid var(--line); border-radius: 10px; padding: 10px 14px 12px; margin: 0; min-width: 0; display: grid; gap: 8px; }
+legend { font: 700 12px var(--display); text-transform: uppercase; letter-spacing: .1em; color: var(--accent); padding: 0 6px; }
+.ctl { display: grid; grid-template-columns: 1fr auto; gap: 2px 10px; align-items: center; }
+.ctl label { font-size: 13px; }
+.ctl output { font: 12px var(--mono); color: var(--accent); font-variant-numeric: tabular-nums; }
+.ctl input { grid-column: 1 / -1; width: 100%; accent-color: var(--accent); }
+.ctl small { grid-column: 1 / -1; color: var(--muted); font-size: 11.5px; line-height: 1.35; }
+.code { background: #12171a; border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; font: 12.5px/1.6 var(--mono); color: #cfe3da; overflow-x: auto; white-space: pre; }
+.codebar { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; }
+.codebar h2 { font: 700 15px var(--display); margin: 0; }
+.codebar button { font: 600 12px var(--body); color: var(--fg); background: #232b2e; border: 1px solid var(--line); border-radius: 6px; padding: 5px 10px; cursor: pointer; }
+
+
+body { margin: 0; }
+.table { min-height: 300px; }
+.table header { display: flex; align-items: start; justify-content: space-between; gap: 12px; }
+#stage { --demo-w: clamp(40px, 14vw, 96px); --demo-h: calc(1.4 * var(--demo-w)); display: grid; place-items: center; min-height: 258px; }
+#stage[data-effect="riffle"] { align-items: end; padding: 24px 0 12px; }
+.board, [data-part="market-row"], [data-part="slots"] { display: flex; align-items: center; justify-content: center; gap: clamp(10px, 3vw, 38px); }
+[data-part="slots"] { list-style: none; padding: 0; margin: 0; }
+.place, [data-part="deck"], [data-part="slot"] { width: var(--demo-w); height: var(--demo-h); }
+.place, [data-part="slot"], [data-part="stack"][data-empty="true"] { border-radius: 8px; outline: 1px dashed #789188; outline-offset: -1px; }
+[data-part="slot"] [data-part="card"] { height: 100%; }
+.card-art { width: 100%; height: 100%; box-sizing: border-box; display: grid; place-content: center; text-align: center; gap: 3px; border: 2px solid #ffffff80; border-radius: 8%; box-shadow: 0 3px 8px #0006; background: linear-gradient(150deg, hsl(var(--hue) 42% 43%), hsl(var(--hue) 47% 20%)); color: #fff; font: 700 clamp(10px, 2vw, 16px) var(--display); }
+.card-art b { font-size: 1.7em; line-height: 1; }
+.card-back { background: repeating-linear-gradient(135deg, #263a56 0 5px, #314866 5px 10px); }
+#stage[data-offset] [data-part="stack"] { --kp-step: var(--edge-offset); }
+.ctl input[type="checkbox"] { width: auto; justify-self: start; }
+[hidden] { display: none !important; }
+</style>
+<div class="wrap">
+  <header>
+    <h1>Card Motion Tuner</h1>
+    <p class="sub">Preview the kit’s deck motions, pile and market row. Change a slider to replay the motion or update the stack.</p>
+  </header>
+  <nav class="presets" aria-label="Effect" id="effects"></nav>
+  <section class="table" aria-label="Preview">
+    <header>
+      <p class="note" id="note"></p>
+      <div class="presets"><button type="button" id="play">Play</button></div>
+    </header>
+    <div id="stage"></div>
+  </section>
+  <div class="presets" role="group" aria-label="Presets">
+    <span>Start from</span>
+    <button type="button" id="reset" aria-pressed="true">Kit default</button>
+  </div>
+  <div class="ctls" id="ctls"></div>
+  <div>
+    <div class="codebar"><h2>These settings in code</h2><button type="button" id="copy">Copy</button></div>
+    <pre class="code" id="code"></pre>
+  </div>
+</div>
+
+<script>
+//@kit-js components/deck-motions/ui.ts as DECK
+//@kit-js tuners/src/card-motion-preview.mjs as PREVIEW
+
+const $ = (id) => document.getElementById(id);
+const stage = $('stage');
+const speed = ['speed', 'Time factor', 0, 2.5, .05, '×', 'Higher makes the whole motion slower; 0 is instant.'];
+const size = [
+  ['width', 'Card width', 36, 154, .1, ' px', 'Portrait width, or the short side in landscape.'],
+  ['height', 'Card height', 48, 200, .1, ' px', 'Portrait height, or the long side in landscape.'],
+  ['landscape', 'Landscape cards', 'Swap the short and long sides.'],
+];
+const cards = (min) => ['count', 'Cards in pile', min, 14, 1, ' cards', 'The game supplies this in its pile view; the kit has no default.'];
+const offset = ['offset', 'Edge offset', 0, 8, .01, ' px', 'Each edge peeks this far up and left of the one above it.'];
+const effects = {
+  deal: ['Deal', [['Timing', [speed]], ['Flight', [
+    ['faceDown', 'Turn over while dealing', 'Start with the back showing; the kit has no default for this move option.'],
+  ]]]],
+  refill: ['Refill turn-over', [['Timing', [speed,
+    ['departs', 'Wait for departure', 'Pause after the departing card lands.'],
+    ['far', 'Far refill', 'Increase the refill flight time and use the far slot.'],
+  ]]]],
+  cycle: ['Deck cycle', [['Timing', [speed,
+    ['shuffled', 'Riffle after cycling', 'Riffle the deck after the incoming cards land.'],
+  ]]]],
+  riffle: ['Pile riffle', [['Timing', [speed]], ['Distance', [
+    ['unit', 'Riffle unit', 1, 28, .1, ' px', 'Scales vertical offsets. The split across the table follows card width.'],
+  ]]]],
+  stack: ['Stack at rest', [['Stack', [cards(0), offset]], ['Card size', size]]],
+  fan: ['Pile fan', [['Timing', [speed]], ['Pile and flight', [cards(1), offset,
+    ['fanUnit', 'Table unit override', 0, 8, .1, ' px', 'Scales the flight rise, screen margin and hover lift. At 0 the kit uses the viewport.'],
+  ]], ['Card size', size]]],
+  market: ['Market refill', [['Timing', [speed]]]],
+};
+
+const probe = document.createElement('div');
+probe.style.cssText = 'position:fixed;top:0;left:0;visibility:hidden;pointer-events:none';
+probe.innerHTML = '<div data-part="stack"><div data-part="stack-card" style="--k:1"></div></div>';
+document.body.append(probe);
+const defaultSpeed = DECK.planDeal([{ id: '', dir: 'out', pile: '', at: '', faceDown: false }]).total / DECK.DEAL_MS;
+const kitDefaults = () => {
+  const stack = probe.firstElementChild;
+  const geometry = getComputedStyle(stack);
+  const round = (value, scale) => Math.round(value * scale) / scale;
+  return {
+    speed: defaultSpeed, faceDown: true, departs: false, far: false, shuffled: false, unit: DECK.MOCK_U,
+    count: PREVIEW.EDGE_CAP + 1, width: round(parseFloat(geometry.width), 10),
+    height: round(parseFloat(geometry.height), 10), landscape: false,
+    offset: round(Math.abs(new DOMMatrix(getComputedStyle(stack.firstElementChild).transform).m41), 100),
+    fanUnit: 0,
+  };
+};
+
+let effect = 'deal';
+let settings = kitDefaults();
+let sequence = 0;
+let reveals = [];
+let destinations = [];
+const ms = (value) => Math.round(value) + ' ms';
+const tokens = (values) => Object.entries(values).map(([key, value]) => key + ': ' + value + ';').join('\n');
+const options = (values) => JSON.stringify(values, null, 2).replace(/^  "(\w+)":/gm, '  $1:');
+const back = () => PREVIEW.art('back');
+const at = (index) => () => destinations[index];
+const out = (index, pile, flags) => ({ id: String(index), dir: 'out', pile, at: at(index), ...flags });
+
+function stageDeck() {
+  const board = document.createElement('div');
+  board.className = 'board';
+  const places = effect === 'riffle' ? ['deck'] : effect === 'cycle' ? ['discard-a', 'deck', 'discard-b'] :
+    effect === 'refill' ? ['deck', 'near', 'far', 'exit'] : ['deck', '', '', ''];
+  destinations = places.map((pile, i) => {
+    const place = document.createElement('div');
+    place.className = 'place';
+    if (pile) place.dataset.pile = pile;
+    if (pile === 'deck' || pile.startsWith('discard') || effect === 'deal' && i > 0 ||
+        effect === 'refill' && (i === (settings.far ? 2 : 1) || i === 3 && settings.departs)) {
+      const card = effect === 'refill' && i > 0 ? (i === 3 ? '4' : '2') : pile ? 'back' : String(i);
+      place.append(PREVIEW.art(card));
+    }
+    board.append(place);
+    return place.firstElementChild ?? place;
+  });
+  stage.replaceChildren(board);
+}
+
+function replayDeck() {
+  DECK.finishDeckMotions();
+  reveals.forEach((animation) => animation.cancel());
+  reveals = [];
+  stageDeck();
+  const { speed, faceDown, departs, far, shuffled, unit } = settings;
+  if (effect === 'riffle') {
+    void DECK.riffle(stage.querySelector('[data-pile="deck"]'), speed, { back, unit: () => unit });
+    return;
+  }
+  const moves = effect === 'cycle' ? ['discard-a', 'discard-b'].map((pile) => DECK.cycleMove(pile, pile, 'deck')) :
+    effect === 'refill' ? [
+      ...(departs ? [out(3, far ? 'far' : 'near', { faceDown: false })] : []),
+      out(far ? 2 : 1, 'deck', { faceDown: true, refill: true, far }),
+    ] : [1, 2, 3].map((i) => out(i, 'deck', { faceDown }));
+  const { plan } = DECK.dealFrom(moves, { speed, departs, shuffled: shuffled ? ['deck'] : [], back, face: (_, el) => el.cloneNode(true) });
+  for (const { move, delay, ms: duration } of plan.timed) {
+    if (move.dir === 'in') {
+      const source = DECK.topOf(DECK.pileElement(move.at));
+      reveals.push(source.animate([{ visibility: 'hidden' }, { visibility: 'hidden' }], { delay, duration, fill: 'forwards' }));
+      continue;
+    }
+    reveals.push(move.at().animate([{ visibility: 'hidden' }, { visibility: 'hidden' }], { duration: delay + duration, fill: 'backwards' }));
+  }
+}
+
+function render(replay = true) {
+  const { speed, faceDown, departs, far, shuffled, unit, count, width, height, landscape, offset, fanUnit } = settings;
+  const pile = effect === 'stack' || effect === 'fan';
+  const defaults = kitDefaults();
+  stage.dataset.effect = effect;
+  stage.toggleAttribute('data-offset', offset !== defaults.offset);
+  stage.style.setProperty('--edge-offset', offset + 'px');
+  const css = {
+    ...(width === defaults.width ? {} : { '--kp-card-w': width + 'px' }),
+    ...(height === defaults.height && width === defaults.width ? {} : { '--kp-card-h': height + 'px' }),
+    ...(offset === defaults.offset ? {} : { '--kp-step': offset + 'px' }),
+    ...(fanUnit ? { '--kp-u': fanUnit + 'px' } : {}),
+  };
+  for (const token of ['--kp-card-w', '--kp-card-h', '--kp-u']) {
+    stage.style.removeProperty(token);
+    if (pile && css[token]) stage.style.setProperty(token, css[token]);
+  }
+
+  const flight = ms(DECK.DEAL_MS * speed);
+  const stagger = ms(DECK.STAGGER_MS * speed);
+  const notes = {
+    deal: `Cards take ${flight} to reach their slots and leave ${stagger} apart.`,
+    refill: `The refill starts ${departs ? ms((DECK.DEAL_MS * DECK.REFILL_AFTER + DECK.REFILL_GAP_MS) * speed) + ' after Play' : 'right away'} and takes ${ms(DECK.DEAL_MS * (far ? DECK.REFILL_FAR_SCALE : 1) * speed)}.`,
+    cycle: `Two cards return to the deck ${stagger} apart. ${shuffled ? 'Then the deck riffles for ' + ms(DECK.RIFFLE_MS * speed) + '.' : 'They fade into the pile.'}`,
+    riffle: `${DECK.RIFFLE_CARDS} cards split, drop in alternating order and square up in ${ms(DECK.RIFFLE_MS * speed)}.`,
+    stack: `${PREVIEW.edgesFor(count)} edges show beneath the top card, capped at ${PREVIEW.EDGE_CAP} by the kit.`,
+    fan: `Cards leave ${ms(PREVIEW.stepFor(count) * speed)} apart. Opening or gathering takes ${ms(PREVIEW.totalMs(count, speed))}. Hover after landing; tap outside or press Escape to gather.`,
+    market: `Surviving cards slide for ${ms(PREVIEW.SLIDE_MS * speed)}. Then new cards fly from the deck for ${ms(PREVIEW.DEAL_MS * speed)} each, ${ms(PREVIEW.STAGGER_MS * speed)} apart.`,
+  };
+  $('note').textContent = notes[effect];
+  const snippets = {
+    deal: options({ faceDown }) + '\n\n' + options({ speed }),
+    refill: options({ faceDown: true, refill: true, far }) + '\n\n' + options({ speed, departs }),
+    cycle: options({ speed, shuffled: shuffled ? ['deck'] : [] }),
+    riffle: `riffle(deck, ${speed}, { unit: () => ${unit} })`,
+    stack: `view={{ count: ${count}, cards }}
+landscape={${landscape}}`,
+    fan: `view={{ count: ${count}, cards }}
+landscape={${landscape}}
+speed={${speed}}` + (fanUnit ? `
+unit={() => ${fanUnit}}` : ''),
+    market: `speed={${speed}}`,
+  };
+  $('code').textContent = snippets[effect] + (pile && Object.keys(css).length ? '\n\n' + tokens(css) : '');
+  $('play').hidden = effect === 'stack';
+  if (pile) PREVIEW.pile(stage, { count, speed, landscape, fanUnit }, effect === 'fan', replay && effect === 'fan', ++sequence);
+  else if (effect === 'market') PREVIEW.market(stage, speed, replay, ++sequence);
+  else if (replay) replayDeck();
+  else stageDeck();
+}
+
+function controls() {
+  const [, groups] = effects[effect];
+  $('ctls').replaceChildren();
+  for (const [title, rows] of groups) {
+    const field = document.createElement('fieldset');
+    field.innerHTML = `<legend>${title}</legend>`;
+    for (const row of rows) {
+      const [key, label, min, max, step, unit, help] = row;
+      const ctl = document.createElement('div');
+      ctl.className = 'ctl';
+      const check = row.length === 3;
+      ctl.innerHTML = `<label for="c-${key}">${label}</label><output for="c-${key}"></output>` +
+        (check ? `<input id="c-${key}" type="checkbox">` : `<input id="c-${key}" type="range" min="${min}" max="${max}" step="${step}">`) +
+        `<small>${check ? min : help}</small>`;
+      const input = ctl.querySelector('input');
+      const output = ctl.querySelector('output');
+      ctl.querySelector('small').id = 'help-' + key;
+      input.setAttribute('aria-describedby', 'help-' + key);
+      if (check) input.checked = settings[key];
+      else input.value = settings[key];
+      const read = () => { output.textContent = check ? '' : key === 'fanUnit' && !settings[key] ? 'Auto' : settings[key] + unit; };
+      read();
+      input.addEventListener('input', () => {
+        settings[key] = check ? input.checked : Number(input.value);
+        $('reset').setAttribute('aria-pressed', 'false');
+        read();
+        render();
+      });
+      field.append(ctl);
+    }
+    $('ctls').append(field);
+  }
+}
+
+function select(next) {
+  DECK.finishDeckMotions();
+  PREVIEW.clear();
+  effect = next;
+  settings = kitDefaults();
+  $('reset').setAttribute('aria-pressed', 'true');
+  $('effects').querySelectorAll('button').forEach((button) => button.setAttribute('aria-pressed', String(button.dataset.effect === effect)));
+  controls();
+  render(false);
+}
+
+for (const [key, [label]] of Object.entries(effects)) {
+  const button = document.createElement('button');
+  button.type = 'button';
+  button.dataset.effect = key;
+  button.textContent = label;
+  button.onclick = () => select(key);
+  $('effects').append(button);
+}
+$('reset').onclick = () => { select(effect); render(); };
+$('play').onclick = () => render();
+$('copy').onclick = async () => {
+  try {
+    await navigator.clipboard.writeText($('code').textContent);
+    $('copy').textContent = 'Copied';
+  } catch {
+    const range = document.createRange();
+    range.selectNodeContents($('code'));
+    getSelection().removeAllRanges();
+    getSelection().addRange(range);
+    $('copy').textContent = 'Selected';
+  }
+  setTimeout(() => { $('copy').textContent = 'Copy'; }, 1800);
+};
+select(effect);
+</script>
+</html>

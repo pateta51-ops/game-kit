@@ -1,0 +1,392 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Effect Library Tuner</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=Inter:wght@400;600&family=JetBrains+Mono:wght@400&display=swap">
+<style>
+/* Layout: a felt table on top holding the live hand, the controls below in a wrapping grid; one dark look by choice. */
+:root {
+  --felt: #17302a; --felt-edge: #0e1f1b; --panel: #1b2124; --line: #2c3539; --fg: #e8ece9; --muted: #9aa8a3; --accent: #e9c46a;
+  --display: 'Space Grotesk', system-ui, sans-serif; --body: 'Inter', system-ui, sans-serif; --mono: 'JetBrains Mono', ui-monospace, monospace;
+  color-scheme: dark;
+}
+body { background: var(--panel); color: var(--fg); font: 14px/1.5 var(--body); }
+.wrap { max-width: 1180px; grid-template-columns: minmax(0, 1fr); margin: 0 auto; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); padding-block: 18px 40px; display: grid; gap: 18px; }
+h1 { font: 700 22px/1.2 var(--display); margin: 0; letter-spacing: .01em; }
+.sub { color: var(--muted); margin: 2px 0 0; max-width: 70ch; }
+.table { background: radial-gradient(120% 90% at 50% 100%, #1f4038, var(--felt) 60%, var(--felt-edge)); border-radius: 14px; border: 1px solid var(--line); height: 300px; overflow: hidden; position: relative; }
+.table .note { position: absolute; top: 12px; left: 14px; right: 14px; color: var(--muted); font-size: 12px; }
+.presets { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.presets span { color: var(--muted); font-size: 12px; text-transform: uppercase; letter-spacing: .08em; margin-right: 4px; }
+.presets button { font: 600 13px var(--body); color: var(--fg); background: #232b2e; border: 1px solid var(--line); border-radius: 999px; padding: 6px 14px; cursor: pointer; }
+.presets button[aria-pressed="true"] { background: var(--accent); color: #1b1608; border-color: var(--accent); }
+.presets button:focus-visible, .ctl input:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.ctls { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(260px, 100%), 1fr)); gap: 10px 22px; align-items: start; }
+fieldset { border: 1px solid var(--line); border-radius: 10px; padding: 10px 14px 12px; margin: 0; min-width: 0; display: grid; gap: 8px; }
+legend { font: 700 12px var(--display); text-transform: uppercase; letter-spacing: .1em; color: var(--accent); padding: 0 6px; }
+.ctl { display: grid; grid-template-columns: 1fr auto; gap: 2px 10px; align-items: center; }
+.ctl label { font-size: 13px; }
+.ctl output { font: 12px var(--mono); color: var(--accent); font-variant-numeric: tabular-nums; }
+.ctl input { grid-column: 1 / -1; width: 100%; accent-color: var(--accent); }
+.ctl small { grid-column: 1 / -1; color: var(--muted); font-size: 11.5px; line-height: 1.35; }
+.code { background: #12171a; border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; font: 12.5px/1.6 var(--mono); color: #cfe3da; overflow-x: auto; white-space: pre; }
+.codebar { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; }
+.codebar h2 { font: 700 15px var(--display); margin: 0; }
+.codebar button { font: 600 12px var(--body); color: var(--fg); background: #232b2e; border: 1px solid var(--line); border-radius: 6px; padding: 5px 10px; cursor: pointer; }
+
+.table { color: #f4db95; }
+#card, .slot { position: absolute; width: 86px; height: 118px; top: 54%; translate: -50% -50%; border-radius: 8px; }
+#card { left: 50%; }
+.slot { left: 50%; border: 1px dashed rgb(232 236 233 / .25); box-sizing: border-box; }
+#destination { display: none; }
+.card { border: 1px solid #a3bfae; border-radius: 8px; background: #294a40; box-shadow: 0 3px 12px #0e1f1b; }
+.card-face { position: absolute; inset: 6px; border: 1px solid rgb(244 219 149 / .4); border-radius: 4px; display: grid; place-content: center; text-align: center; font: 700 13px var(--display); }
+.card-face b { display: block; font-size: 30px; line-height: 1.15; }
+.fx-actor:not(.card) { overflow-wrap: anywhere; }
+.card-back, [data-fx-flipped] .card-front { display: none; }
+[data-fx-flipped] .card-back { display: grid; background: #533f55; }
+[data-fx-label] .card-back::after { content: attr(data-fx-label); }
+#card.fx-source { visibility: hidden; }
+.toolbar { display: flex; flex-wrap: wrap; gap: 8px 14px; align-items: center; }
+.toolbar select, .toolbar button { font: 600 13px var(--body); color: var(--fg); background: #232b2e; border: 1px solid var(--line); border-radius: 6px; padding: 7px 12px; }
+.toolbar #play { background: var(--accent); color: #1b1608; cursor: pointer; }
+.ctl :is(select, input[type=color], input[type=text]) { grid-column: 1 / -1; min-width: 0; box-sizing: border-box; }
+.ctl input[type=checkbox] { grid-column: auto; width: auto; justify-self: end; }
+.code { margin-bottom: 0; }
+@media (max-width: 480px) { .table { height: 270px; } }
+/*@kit-css components/effect-library/looks/rise-pulse.css*/
+</style>
+
+<main class="wrap">
+  <header>
+    <h1>Effect Library Tuner</h1>
+    <p class="sub">Preview the kit’s DOM effects on a felt table. The page uses effect-library and motion-frame directly. Changing a setting replays the preview.</p>
+  </header>
+  <div class="table" id="table">
+    <div class="note" id="note"></div>
+    <div class="slot"></div>
+    <div class="slot" id="destination"></div>
+    <div id="card" class="card" aria-hidden="true">
+      <div class="card-face card-front"><b>✦</b> Alder</div>
+      <div class="card-face card-back"><b>✧</b></div>
+    </div>
+  </div>
+  <div class="toolbar">
+    <label for="verb">Effect</label>
+    <select id="verb"></select>
+    <button type="button" id="play">Play</button>
+    <label><input type="checkbox" id="sequence"> Play a sequence</label>
+  </div>
+  <div class="presets" role="group" aria-label="Presets">
+    <span>Start from</span><button type="button" id="reset" aria-pressed="true">Kit default</button>
+  </div>
+  <div class="ctls" id="ctls"></div>
+  <section>
+    <div class="codebar"><h2>These settings in code</h2><button type="button" id="copy">Copy</button></div>
+    <pre class="code" id="code"></pre>
+  </section>
+</main>
+
+<script type="text/plain" id="effect-source">/*@kit-css components/effect-library/effects.ts*/</script>
+<script>
+//@kit-js components/effect-library/effects.ts as FX
+//@kit-js components/motion-frame/player.ts as MOTION
+const $ = (id) => document.getElementById(id);
+const table = $('table'), card = $('card');
+const verbs = MOTION.createVerbs();
+const layer = FX.registerEffects(verbs, { parent: table, resolve: (id) => id === 'card' ? card : undefined });
+layer.el.style.position = 'absolute';
+
+// The verbs expose their defaults through their keyframes and CSS fallbacks.
+function frames(verb) {
+  let result;
+  FX.BUILT_IN[verb]({ call: { step: {} }, el: document.createElement('div'), animate: (value) => { result = value; } });
+  return result;
+}
+function fallback(css, token) {
+  return css.match(new RegExp('var\\(\\s*' + token + '\\s*,\\s*([^)]*)\\)'))[1];
+}
+// EASE is private to the verb registry. Read its keys from the inlined kit source.
+const easeTable = $('effect-source').textContent.match(/const EASE[^=]*=\s*\{([^}]+)\}/)[1];
+const easingNames = [...easeTable.matchAll(/(?:^|,)\s*['"]?([\w-]+)['"]?\s*:/g)].map(([, name]) => name);
+const easingProbe = document.createElement('div');
+let defaultEase;
+easingProbe.animate = (_, config) => {
+  defaultEase = config.easing;
+  return { cancel() {} };
+};
+verbs.get('scale')({ dur: 1, step: {} }, { context: { actor: () => easingProbe } })();
+function colorHex(rgb) {
+  return '#' + rgb.match(/\d+/g).slice(0, 3).map((channel) => Number(channel).toString(16).padStart(2, '0')).join('');
+}
+const lift = frames('lift')[1].transform;
+const glow = fallback(frames('glow')[1].boxShadow, '--fx-glow').split(/\s+/);
+const pulse = [...document.styleSheets].filter((sheet) => !sheet.href)
+  .flatMap((sheet) => [...sheet.cssRules]).find((rule) => rule.selectorText === '.fx-rise-pulse').style;
+const previewSpeed = () => MOTION.withReducedMotion(s.speed || 'instant');
+const motionDefault = Number(fallback(pulse.animation, '--motion-scale'));
+const defaultScale = Number(frames('scale')[1].scale);
+const tableStyle = getComputedStyle(table);
+const textFont = { weight: tableStyle.fontWeight, lineHeight: tableStyle.lineHeight, family: tableStyle.fontFamily };
+const KIT = {
+  // A beat supplies its own timing, positions and text. These are preview examples.
+  dur: 640, dx: 72, dy: -16, entryFrom: 1, entryTo: 1, hideAfter: false,
+  liftRise: -parseFloat(fallback(lift, '--fx-lift-rise')), liftScale: Number(lift.match(/scale\(([^)]+)\)/)[1]),
+  opacity: frames('fade-out')[1].opacity, holdMs: 0, label: '', scale: defaultScale, pulseScale: false,
+  shake: parseFloat(fallback(frames('shake')[1].transform, '--fx-shake')), times: frames('shake').length - 2,
+  blur: parseFloat(glow[2]), spread: parseFloat(glow[3]), glowColor: colorHex(tableStyle.color),
+  text: '+3', textRise: parseFloat(fallback(frames('text')[0].transform, '--fx-text-rise')),
+  textSize: parseFloat(tableStyle.fontSize), textColor: colorHex(tableStyle.color),
+  buffMs: parseFloat(fallback(pulse.animation, '--buff-ms')),
+  cardW: parseFloat(fallback(pulse.boxShadow, '--card-w')) * parseFloat(getComputedStyle(document.documentElement).fontSize),
+  speed: motionDefault, ease: defaultEase,
+};
+const row = (key, label, min, max, step, unit, help) => ({ key, label, type: 'range', min, max, step, unit, help });
+const option = (key, label, type, help) => ({ key, label, type, help });
+const enter = [
+  row('entryFrom', 'Entry scale', .25, 2, .01, '×', 'Size at the start of the effect. The kit has no default entry scale.'),
+  row('entryTo', 'Exit scale', .25, 2, .01, '×', 'Size the card keeps. Match the entry scale to hold that size throughout. The kit has no default exit scale.'),
+];
+const rise = row('liftRise', 'Lift height', 0, 36, 1, 'px', 'How far above the slot the card sits.');
+const options = {
+  move: [
+    row('dx', 'Horizontal distance', -90, 90, 1, 'px', 'Positive moves right, negative moves left. The kit has no default.'),
+    row('dy', 'Vertical distance', -55, 55, 1, 'px', 'Positive moves down, negative moves up. The kit has no default.'),
+    ...enter, option('hideAfter', 'Hide on arrival', 'checkbox', 'Hides the card once it reaches the destination.'),
+  ],
+  lift: [rise, row('liftScale', 'Lifted scale', .5, 1.65, .01, '×', 'Size the card holds above its slot.')],
+  settle: [rise],
+  'fade-in': enter,
+  'fade-out': [row('opacity', 'Final opacity', 0, 1, .01, '', '0 is transparent and 1 is opaque.')],
+  show: [],
+  hide: [],
+  flip: [
+    row('holdMs', 'Hold first face', 0, 1200, 1, ' ms', 'The kit caps the hold at 80% of the scaled duration.'),
+    option('label', 'Back label', 'text', 'Optional text exposed as data-fx-label.'),
+  ],
+  scale: [
+    row('scale', 'Target scale', .25, 2, .01, '×', 'Size relative to the original card.'),
+    option('pulseScale', 'Return to original size', 'checkbox', 'Uses the target size at the middle of the pulse.'),
+  ],
+  shake: [
+    row('shake', 'Amplitude', 0, 42, 1, 'px', 'Distance from center at each side.'),
+    row('times', 'Shakes', 0, 20, 1, '', 'Number of alternating offsets before returning to center.'),
+  ],
+  glow: [
+    row('blur', 'Glow blur', 0, 52, 1, 'px', 'Softness of the halo.'),
+    row('spread', 'Glow spread', 0, 28, 1, 'px', 'How far the halo extends before blurring.'),
+    option('glowColor', 'Glow colour', 'color', 'Colour of the halo. The kit fallback follows currentColor.'),
+  ],
+  text: [
+    option('text', 'Message', 'text', 'Text displayed over the card. The kit has no default message.'),
+    row('textRise', 'Rise distance', 0, 65, 1, 'px', 'How far below the resting label it starts.'),
+    row('textSize', 'Text size', 10, 54, 1, 'px', 'Font size of the label.'),
+    option('textColor', 'Text colour', 'color', 'The kit fallback inherits the surrounding colour.'),
+  ],
+  'rise-pulse': [
+    row('buffMs', 'Pulse duration', 0, 2500, 1, ' ms', 'Base duration before the motion factor.'),
+    row('cardW', 'Card width token', 40, 260, 1, 'px', 'Scales the halo around the stand-in card.'),
+  ],
+};
+let s = { ...KIT };
+const picker = $('verb');
+for (const key of Object.keys(options)) picker.add(new Option(key, key));
+
+function build() {
+  const verb = picker.value;
+  const instant = verb === 'show' || verb === 'hide';
+  const timing = [row('speed', 'Motion scale', 0, 2, .05, '×', 'Multiplies time. 0 leaves the preview still.')];
+  if (!instant && verb !== 'rise-pulse') timing.unshift(
+    row('dur', 'Duration', 0, 1800, 1, ' ms', 'Base step time before applying the motion factor. The kit has no default.'),
+    option('ease', 'Easing', 'select', 'How progress changes over the step.'),
+  );
+  if (instant && $('sequence').checked) timing.unshift(
+    row('dur', 'Follow-up duration', 0, 1800, 1, ' ms', 'Base time of the glow after the visibility change. The kit has no default.'),
+  );
+  $('ctls').replaceChildren();
+  for (const [title, rows] of [['Timing', timing], ['Effect options', options[verb]]]) {
+    if (!rows.length) continue;
+    const group = document.createElement('fieldset');
+    group.innerHTML = `<legend>${title}</legend>`;
+    for (const { key, label, type, min, max, step, unit = '', help } of rows) {
+      const control = document.createElement('div');
+      control.className = 'ctl';
+      control.innerHTML = `<label for="c-${key}">${label}</label>${type === 'range' ? `<output for="c-${key}"></output>` : ''}`;
+      const input = document.createElement(type === 'select' ? 'select' : 'input');
+      input.id = 'c-' + key;
+      if (type === 'select') {
+        for (const ease of [defaultEase, ...easingNames]) input.add(new Option(ease, ease));
+      } else {
+        input.type = type;
+        if (type === 'range') Object.assign(input, { min, max, step });
+        if (type === 'checkbox') input.checked = s[key];
+        if (type === 'text') input.maxLength = 28;
+      }
+      input.value = s[key];
+      const output = control.querySelector('output');
+      if (output) output.textContent = s[key] + unit;
+      input.addEventListener('input', () => {
+        s[key] = type === 'range' ? Number(input.value) : type === 'checkbox' ? input.checked : input.value;
+        if (output) output.textContent = s[key] + unit;
+        markPreset();
+        play();
+      });
+      const description = document.createElement('small');
+      description.id = 'help-' + key;
+      description.textContent = help;
+      input.setAttribute('aria-describedby', description.id);
+      control.append(input, description);
+      group.append(control);
+    }
+    $('ctls').append(group);
+  }
+}
+
+function settings(verb) {
+  const css = {};
+  const step = { dur: s.dur, actor: 'card', do: verb, ease: s.ease };
+  switch (verb) {
+    case 'move':
+    case 'fade-in':
+      if (s.entryFrom !== KIT.entryFrom || s.entryTo !== KIT.entryTo) step.scale = [s.entryFrom, s.entryTo];
+      if (verb === 'move') {
+        step.to = 'destination';
+        if (s.hideAfter) step.then = 'hide';
+      }
+      break;
+    case 'lift': step.to = s.liftScale;
+    // fall through: settle reads the same rise token
+    case 'settle': css['--fx-lift-rise'] = -s.liftRise + 'px'; break;
+    case 'fade-out': step.to = s.opacity; break;
+    case 'show':
+    case 'hide': step.dur = 0; delete step.ease; break;
+    case 'flip':
+      step.holdMs = s.holdMs;
+      if (s.label) step.label = s.label;
+      break;
+    case 'scale': step.to = s.scale; step.pulse = s.pulseScale; break;
+    case 'shake': step.times = s.times; css['--fx-shake'] = s.shake + 'px'; break;
+    case 'glow':
+      if (s.blur !== KIT.blur || s.spread !== KIT.spread || s.glowColor !== KIT.glowColor) {
+        css['--fx-glow'] = `0 0 ${s.blur}px ${s.spread}px ${s.glowColor}`;
+      }
+      break;
+    case 'text':
+      step.actor = 'caption';
+      step.text = s.text;
+      if (s.textColor !== KIT.textColor) css['--fx-text'] = s.textColor;
+      if (s.textSize !== KIT.textSize) css['--fx-text-font'] = `${textFont.weight} ${s.textSize}px/${textFont.lineHeight} ${textFont.family}`;
+      css['--fx-text-rise'] = s.textRise + 'px';
+      break;
+    case 'rise-pulse': css['--buff-ms'] = s.buffMs + 'ms'; css['--card-w'] = s.cardW + 'px'; break;
+  }
+  return { css, step };
+}
+
+let rects;
+const player = MOTION.createMotionPlayer({
+  specs: {}, stages: { default: (id) => rects[id] }, verbs, speed: previewSpeed, context: layer,
+  onBeatStart: (run) => {
+    if (run.timeline.actors.some((actor) => actor.id === 'card')) card.classList.add('fx-source');
+    layer.start(run);
+  },
+  onProblem: (problem) => console.error(problem),
+});
+// Keep the finished clone visible for inspection. Each replay clears the previous beat.
+layer.el.style.zIndex = '1';
+
+function play() {
+  player.skipAll();
+  layer.clear();
+  card.classList.remove('fx-source');
+  card.querySelector('.fx-rise-pulse')?.remove();
+  const verb = picker.value;
+  const isPulse = verb === 'rise-pulse';
+  const { css, step } = settings(verb);
+  const speed = previewSpeed();
+  MOTION.putMotionSpeed(speed, 'on', table);
+  for (const key of [...table.style]) if (key.startsWith('--fx-') || key === '--buff-ms' || key === '--card-w') table.style.removeProperty(key);
+  for (const [key, value] of Object.entries(css)) table.style.setProperty(key, value);
+
+  const x = table.clientWidth / 2, y = table.clientHeight * .54;
+  const w = card.offsetWidth, h = card.offsetHeight;
+  rects = {
+    home: [x - w / 2, y - h / 2, w, h],
+    destination: [x + s.dx - w / 2, y + s.dy - h / 2, w, h],
+    caption: [x - 130, y - 30, 260, 60],
+  };
+  const destination = $('destination');
+  destination.style.display = verb === 'move' ? 'block' : 'none';
+  destination.style.left = x + s.dx + 'px';
+  destination.style.top = y + s.dy + 'px';
+
+  const lines = [`const speed = () => withReducedMotion(${s.speed || "'instant'"});`];
+  let note;
+  if (isPulse) {
+    if (speed !== 'instant') {
+      const pulseEl = document.createElement('div');
+      pulseEl.className = 'fx-rise-pulse';
+      card.append(pulseEl);
+    }
+    lines.push('', '// Place inside a positioned card and mount to replay.', '<div class="fx-rise-pulse"></div>');
+    note = `The warm halo pulses for ${Math.round(s.buffMs * s.speed)} ms at this motion scale.`;
+  } else {
+    const sequence = $('sequence').checked;
+    const actors = step.actor === 'caption'
+      ? [{ id: 'caption', at: 'caption' }]
+      : [{ id: 'card', at: 'home', hidden: verb === 'show' || verb === 'fade-in' }];
+    const steps = [{ t: 0, ...step }];
+    if (sequence) {
+      if (step.actor === 'caption') actors.unshift({ id: 'card', at: 'home' });
+      if (verb === 'hide' || (verb === 'move' && s.hideAfter) || verb === 'fade-out') {
+        steps.push({ t: step.dur + 140, dur: 0, actor: 'card', do: 'show' });
+      }
+      steps.push({ t: steps.at(-1).t + steps.at(-1).dur + 140, dur: s.dur, actor: 'card', do: verb === 'glow' ? 'shake' : 'glow' });
+    }
+    const maxMs = Math.max(1, steps.at(-1).t + steps.at(-1).dur);
+    const beat = { id: 'preview', frequency: 'once', maxMs, actors, steps };
+    player.play(beat);
+    lines.push('', `const beat = ${JSON.stringify(beat, null, 2)};`);
+    if (verb === 'move') lines.push('', '// Rect for the destination in the stage resolver:', `const destination = [home[0] + (${s.dx}), home[1] + (${s.dy}), home[2], home[3]];`);
+    const names = steps.map((item) => item.do).join(' → ');
+    note = sequence ? `${names}. The beat takes ${Math.round(maxMs * s.speed)} ms including the gaps.`
+      : step.dur ? `${verb} takes ${Math.round(step.dur * s.speed)} ms at this motion scale.`
+      : `${verb} plays immediately.`;
+    if (verb === 'move') note += ` Offset: ${s.dx}px across, ${s.dy}px down.`;
+    if (verb === 'settle') note += ' The kit fixes the starting scale and rebound.';
+  }
+
+  $('note').textContent = speed === 'instant' ? 'Motion is off. The card stays still.' : note;
+  $('code').textContent = lines.join('\n') + '\n\n/* On the effect layer or an ancestor (on the card for rise-pulse). */\n'
+    + Object.entries(css).map(([key, value]) => `${key}: ${value};\n`).join('')
+    + `--motion-scale: ${s.speed};`;
+}
+
+function markPreset() {
+  $('reset').setAttribute('aria-pressed', String(Object.keys(KIT).every((key) => s[key] === KIT[key])));
+}
+picker.addEventListener('change', () => {
+  $('sequence').disabled = picker.value === 'rise-pulse';
+  build();
+  play();
+});
+$('sequence').addEventListener('change', () => { build(); play(); });
+$('play').addEventListener('click', play);
+$('reset').addEventListener('click', () => { s = { ...KIT }; markPreset(); build(); play(); });
+$('copy').addEventListener('click', async () => {
+  try { await navigator.clipboard.writeText($('code').textContent); $('copy').textContent = 'Copied'; }
+  catch {
+    const range = document.createRange();
+    range.selectNodeContents($('code'));
+    getSelection().removeAllRanges();
+    getSelection().addRange(range);
+    $('copy').textContent = 'Selected for copying';
+  }
+  setTimeout(() => { $('copy').textContent = 'Copy'; }, 1800);
+});
+matchMedia('(prefers-reduced-motion: reduce)').addEventListener('change', play);
+build();
+new ResizeObserver(play).observe(table);
+</script>
+</html>

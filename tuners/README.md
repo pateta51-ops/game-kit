@@ -5,6 +5,12 @@ Interactive pages that show one kit part live, with sliders for its tunable valu
 | Tuner | Component | What it tunes | Artifact |
 | --- | --- | --- | --- |
 | [card-hand.html](card-hand.html) | card-hand | the fan's arc, spacing, lift, grow, stand-up, motion time | (link removed) |
+| [effect-library.html](effect-library.html) | effect-library, motion-frame | the twelve motion verbs, rise-pulse, motion scale, sequences | to publish |
+| [target-arrow.html](target-arrow.html) | target-arrow | arrow colours, stroke, dash flow, head, curve, snap and strike timing | to publish |
+| [glows.html](glows.html) | picked-state, prompt-host, card-parts, counter | picked marks, legal glows, inline icon glow, counter motion and thresholds | to publish |
+| [card-motion.html](card-motion.html) | deck-motions, card-pile, market-row | deal, refill turn-over, deck cycle, riffle, pile edges and fan, market refill by slide | to publish |
+| [token-motion.html](token-motion.html) | token-flights, token-bag, track | token flights, 2D and 3D bag draws, marker glide, hop-and-fill, and lit steps | to publish |
+| [pieces-motion.html](pieces-motion.html) | pieces-3d, pieces-3d-verbs, drag-drop | d6 and d10 rolls, ball roll and settle, chip depth and shadows, drag ghost | to publish |
 
 ## How a tuner is made
 

@@ -1,0 +1,284 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Token Motion Tuner</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=Inter:wght@400;600&family=JetBrains+Mono:wght@400&display=swap">
+<style>
+/* Layout: a felt table on top holding the live hand, the controls below in a wrapping grid; one dark look by choice. */
+:root {
+  --felt: #17302a; --felt-edge: #0e1f1b; --panel: #1b2124; --line: #2c3539; --fg: #e8ece9; --muted: #9aa8a3; --accent: #e9c46a;
+  --display: 'Space Grotesk', system-ui, sans-serif; --body: 'Inter', system-ui, sans-serif; --mono: 'JetBrains Mono', ui-monospace, monospace;
+  color-scheme: dark;
+}
+body { background: var(--panel); color: var(--fg); font: 14px/1.5 var(--body); }
+.wrap { max-width: 1180px; margin: 0 auto; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); padding-block: 18px 40px; display: grid; gap: 18px; }
+h1 { font: 700 22px/1.2 var(--display); margin: 0; letter-spacing: .01em; }
+.sub { color: var(--muted); margin: 2px 0 0; max-width: 70ch; }
+.table { background: radial-gradient(120% 90% at 50% 100%, #1f4038, var(--felt) 60%, var(--felt-edge)); border-radius: 14px; border: 1px solid var(--line); padding: 14px 18px; position: sticky; top: 8px; z-index: 1; display: grid; gap: 12px; }
+.table .note { margin: 0; color: var(--muted); font-size: 12px; }
+.presets { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.presets span { color: var(--muted); font-size: 12px; text-transform: uppercase; letter-spacing: .08em; margin-right: 4px; }
+.presets button { font: 600 13px var(--body); color: var(--fg); background: #232b2e; border: 1px solid var(--line); border-radius: 999px; padding: 6px 14px; cursor: pointer; }
+.presets button[aria-pressed="true"] { background: var(--accent); color: #1b1608; border-color: var(--accent); }
+.presets button:focus-visible, .ctl input:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.ctls { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 230px), 1fr)); gap: 10px 22px; }
+fieldset { border: 1px solid var(--line); border-radius: 10px; padding: 10px 14px 12px; margin: 0; min-width: 0; display: grid; align-content: start; gap: 8px; }
+legend { font: 700 12px var(--display); text-transform: uppercase; letter-spacing: .1em; color: var(--accent); padding: 0 6px; }
+.ctl { display: grid; grid-template-columns: 1fr auto; gap: 2px 10px; align-items: center; }
+.ctl label { font-size: 13px; }
+.ctl output { font: 12px var(--mono); color: var(--accent); font-variant-numeric: tabular-nums; }
+.ctl input { grid-column: 1 / -1; width: 100%; accent-color: var(--accent); }
+.ctl small { grid-column: 1 / -1; color: var(--muted); font-size: 11.5px; line-height: 1.35; }
+.code { background: #12171a; border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; font: 12.5px/1.6 var(--mono); color: #cfe3da; white-space: pre-wrap; overflow-wrap: anywhere; }
+.codebar { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; }
+.codebar h2 { font: 700 15px var(--display); margin: 0; }
+.codebar button { font: 600 12px var(--body); color: var(--fg); background: #232b2e; border: 1px solid var(--line); border-radius: 6px; padding: 5px 10px; cursor: pointer; }
+
+.wrap { grid-template-columns: minmax(0, 1fr); }
+.picker { flex-wrap: nowrap; }
+select { font: inherit; color: var(--fg); background: #232b2e; border: 1px solid var(--muted); border-radius: 6px; padding: 5px 8px; min-width: 0; max-width: 100%; }
+.stage { min-height: 132px; display: grid; place-items: center; }
+.transfer { display: flex; justify-content: space-between; align-items: center; width: min(100%, 720px); gap: 16px; }
+.counter, .bag-face { display: grid; place-items: center; align-content: center; gap: 4px; width: clamp(78px, 26vw, 112px); min-height: 102px; border: 1px solid #526960; border-radius: 10px; background: #10221e; font: 700 13px var(--display); }
+.counter strong, [data-part="token-bag-count"], .bag-face strong { color: var(--accent); }
+.coins { display: flex; justify-content: center; align-items: center; height: 24px; padding-left: 8px; }
+.coins img { margin-left: -8px; max-width: 27px; height: auto; }
+.bag-face { border-radius: 32% 32% 42% 42%; background: #304b54; }
+[data-part="token-bag"][data-mode="3d"] { width: clamp(78px, 26vw, 112px); height: 112px; display: grid; grid-template-rows: minmax(0, 1fr) auto; text-align: center; }
+[data-part="token-bag-skip"] { text-shadow: 0 1px 3px black; }
+[data-part="track"], [data-part="steps"] { padding: 0; margin: 0; list-style: none; width: min(100%, 720px); display: grid; gap: 5px; }
+[data-part="track"] { grid-template-columns: repeat(8, minmax(0, 1fr)); padding-top: 30px; }
+[data-part="space"], [data-part="step"] { position: relative; display: grid; place-items: center; min-height: 38px; border-radius: 6px; border: 1px solid #526960; background: #10221e; }
+[data-part="space"][data-state="past"] { background: #26473d; }
+[data-part="marker"] { position: absolute; bottom: calc(100% + 6px); left: 50%; transform: translateX(-50%); width: 21px; height: 21px; background: var(--accent); border-radius: 50%; color: transparent; font-size: 0; box-shadow: 0 0 0 3px #92763e; }
+[data-part="steps"] { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+[data-part="step"] { font-size: 12px; }
+[data-part="step"][data-lit] { background: var(--accent); color: #1b1608; border-color: var(--accent); font-weight: 700; }
+[data-part="hop-track"] { width: min(92%, 650px); display: grid; grid-template-columns: minmax(0, 1fr) 2ch 32px; align-items: center; gap: 14px; }
+[data-part="bar"] { --max: 8; height: 12px; position: relative; border-radius: 8px; background: linear-gradient(to right, var(--accent) calc(100% * var(--v) / var(--max)), #10221e 0); }
+[data-part="dot"] { position: absolute; top: 50%; left: calc(100% * var(--v) / var(--max)); transform: translate(-50%, -50%); width: 22px; height: 22px; border: 2px solid #fcdda0; border-radius: 50%; background: #99743a; }
+[data-part="number"], [data-part="badge"] { position: relative; text-align: center; color: var(--accent); font: 700 16px var(--display); }
+[data-part="badge"] { border: 1px solid currentColor; border-radius: 6px; }
+[data-part="pulse"] { border: 1px solid currentColor; border-radius: inherit; }
+[data-part="rise"] { margin-bottom: 4px; }
+@media (max-width: 450px) {
+  .wrap { padding-inline: 10px; }
+  .table { padding-inline: 12px; }
+}
+</style>
+
+<main class="wrap">
+  <header>
+    <h1>Token Motion Tuner</h1>
+    <p class="sub">Preview the kit’s token flights, bag draws and track markers. The stage mounts the same React components a game uses.</p>
+  </header>
+
+  <div class="picker presets">
+    <label for="effect">Effect</label>
+    <select id="effect">
+      <option value="flight">Token flight</option>
+      <option value="bag2d">Bag draw · 2D flight</option>
+      <option value="bag3d">Bag draw · 3D shake</option>
+      <option value="glide">Track · marker glide</option>
+      <option value="hop">Track · hop and fill</option>
+      <option value="steps">Track · lit step</option>
+    </select>
+    <button type="button" id="play">Play</button>
+  </div>
+
+  <div class="table">
+    <p class="note" id="note"></p>
+    <div class="stage" id="stage"></div>
+  </div>
+
+  <div class="presets" role="group" aria-label="Presets">
+    <span>Start from</span>
+    <button type="button" id="kit" aria-pressed="true">Kit default</button>
+    <button type="button" id="slow" aria-pressed="false">Slow motion</button>
+    <button type="button" id="badge" aria-pressed="false" hidden>Badge pop</button>
+  </div>
+
+  <div class="ctls" id="ctls"></div>
+
+  <div>
+    <div class="codebar"><h2>These settings in code</h2><button type="button" id="copy">Copy</button></div>
+    <pre class="code" id="code"></pre>
+  </div>
+</main>
+
+<script>
+//@kit-js tuners/src/token-motion-stage.mjs as MOTION
+const $ = (id) => document.getElementById(id);
+const stage = MOTION.mount($('stage'));
+const { FLIGHT_MS, STAGGER_MS, GLIDE_MS, glideMs, hopPlan, totalDuration, steps } = MOTION;
+const rate = (help) => ['speed', 'Speed factor', 0, 3, .05, '×', help];
+const requiredSpeed = rate('Scale the motion time. 2 is twice as long and 0 settles immediately. The kit has no default for this required prop.');
+const trackSpeed = rate('Scale the motion time. 2 is twice as long and 0 jumps to the new value.');
+const art = ['size', 'Flying token size', 12, 64, 1, ' px', 'Image width from render(move). The kit has no default.'];
+const timing = [
+  ['flightMs', 'Flight time', 0, 2000, 10, ' ms', 'Time in the air per token at speed 1.'],
+  ['staggerMs', 'Take-off gap', 0, 600, 5, ' ms', 'Added delay between each pair of tokens at speed 1.'],
+  ['holdMs', 'Hold before launch', 0, 1200, 10, ' ms', 'Wait before calling launch; 0 uses the kit’s immediate launch.'],
+  ['maxFlying', 'Flight cap', -1, 30, 1, ' tokens', 'Caps scheduled and airborne flights together. Use Kit cap to omit the prop.'],
+];
+const drawCount = ['count', 'Draw size', 1, 5, 1, ' tokens', 'Tokens supplied in draw order. The kit has no default.'];
+const trackControls = [
+  ['distance', 'Travel', 1, 7, 1, ' spaces', 'Distance between the starting and ending values. The kit has no default.'],
+  ['reverse', 'Direction', 0, 1, 1, '', 'Replay from the higher value to see a backward move. The kit has no default for the input values.'],
+  ['backward', 'Animate backward', 0, 1, 1, '', 'Allow the animation while moving to a lower value.'],
+];
+const groups = {
+  flight: [['Timing', [requiredSpeed, ...timing]], ['Tokens', [
+    ['count', 'Transfer size', 1, 30, 1, ' tokens', 'Move this many distinct tokens. The kit has no default.'], art,
+  ]]],
+  bag2d: [['Timing', [requiredSpeed, ...timing]], ['Draw', [drawCount, art]]],
+  bag3d: [['Playback', [requiredSpeed, drawCount]]],
+  glide: [['Playback', [trackSpeed]], ['Movement', trackControls]],
+  hop: [['Playback', [trackSpeed]], ['Movement', trackControls], ['Badge', [
+    ['mult', 'Multiplier', 1, 5, 1, '×', 'A new multiplier above 1 triggers the badge and sparks on a forward hop.'],
+  ]]],
+  steps: [['Highlight', [
+    ['current', 'Lit step', 0, steps.length, 1, '', 'Set the current step, or select None to clear the highlight. The kit has no default.'],
+  ]]],
+};
+const trackDefault = { speed: glideMs(0, 1) / GLIDE_MS, distance: 3, reverse: 0, backward: 0 };
+const flightDefaults = { speed: 1, flightMs: FLIGHT_MS, staggerMs: STAGGER_MS, holdMs: 0, maxFlying: -1, size: 30, count: 3 };
+const defaults = {
+  flight: flightDefaults,
+  bag2d: flightDefaults,
+  bag3d: { speed: 1, count: 3 },
+  glide: trackDefault,
+  hop: { ...trackDefault, mult: 1 },
+  steps: { current: 1 },
+};
+const settings = Object.fromEntries(Object.entries(defaults).map(([effect, values]) => [effect, { ...values }]));
+const presets = Object.fromEntries(Object.keys(defaults).map((effect) => [effect, 'kit']));
+let effect = $('effect').value;
+
+function valueLabel(key, value, unit) {
+  if (key === 'maxFlying' && value < 0) return 'Kit cap';
+  if (key === 'reverse') return value ? 'Backward' : 'Forward';
+  if (key === 'backward') return value ? 'On' : 'Off';
+  if (key === 'current') return steps[value - 1]?.name ?? 'None';
+  return value + unit;
+}
+
+function build() {
+  $('ctls').replaceChildren();
+  for (const [title, rows] of groups[effect]) {
+    const field = document.createElement('fieldset');
+    field.innerHTML = `<legend>${title}</legend>`;
+    for (const [key, label, min, max, step, unit, help] of rows) {
+      const control = document.createElement('div');
+      control.className = 'ctl';
+      control.innerHTML = `<label for="c-${key}">${label}</label><output id="o-${key}" for="c-${key}"></output><input id="c-${key}" type="range" min="${min}" max="${max}" step="${step}" aria-describedby="h-${key}"><small id="h-${key}">${help}</small>`;
+      const inp = control.querySelector('input');
+      inp.addEventListener('input', () => {
+        settings[effect][key] = Number(inp.value);
+        presets[effect] = null;
+        render(effect !== 'bag3d', effect !== 'bag3d');
+      });
+      if (effect === 'bag3d') inp.addEventListener('change', () => render(true));
+      field.append(control);
+    }
+    $('ctls').append(field);
+  }
+  $('play').hidden = $('slow').hidden = effect === 'steps';
+  $('badge').hidden = effect !== 'hop';
+}
+
+function flightCode(s) {
+  return `speed={${s.speed}}
+flightMs={${s.flightMs}}
+staggerMs={${s.staggerMs}}` +
+    (s.maxFlying >= 0 ? `\nmaxFlying={${s.maxFlying}}` : '') +
+    `\nrender={() => ({ src: tokenUrl, size: ${s.size} })}` +
+    (s.holdMs ? `\nhold={(_, launch) => setTimeout(launch, ${s.holdMs})}` : '');
+}
+
+function bagCode(s, mode) {
+  return `chosen="${mode}"
+speed={${s.speed}}
+draw={{ key, left, drawn: drawn.slice(0, ${s.count}) }}`;
+}
+
+function describe() {
+  const s = settings[effect];
+  if (effect === 'flight' || effect === 'bag2d') {
+    const note = s.speed === 0 ? 'Tokens settle immediately.' :
+      `${Math.round(s.flightMs * s.speed)} ms in the air, ${Math.round(s.staggerMs * s.speed)} ms between take-offs${s.holdMs ? ` after a ${s.holdMs} ms hold` : ''}. The kit fixes the arc, easing and mid-flight scale.`;
+    return { note, code: effect === 'flight' ?
+      `// Destination placement after the transfer\nplacement={{ tray: [${Array.from({ length: s.count }, (_, i) => i + 1).join(', ')}] }}\n${flightCode(s)}` :
+      `// TokenBag\n${bagCode(s, '2d')}\n\n// TokenFlights\n${flightCode(s)}` };
+  }
+  if (effect === 'bag3d') {
+    const reason = MOTION.getFallback();
+    const note = reason ? `${MOTION.FALLBACK_TEXT[reason]} The draw uses a 2D flight.` : s.speed === 0 ?
+      'The draw settles immediately.' :
+      `Shake and reveal run for about ${(totalDuration(s.count) * s.speed).toFixed(1)} s before the bag returns. Speed scales the kit’s 3D timeline.`;
+    return { note, code: bagCode(s, '3d') };
+  }
+  if (effect === 'steps') {
+    const current = steps[s.current - 1];
+    return { note: current ? `${current.name} is the current step. The highlight changes immediately.` : 'No step is selected.',
+      code: `current={${JSON.stringify(current?.id ?? null)}}` };
+  }
+  const from = s.reverse ? s.distance : 0;
+  const to = s.reverse ? 0 : s.distance;
+  const options = { speed: s.speed, backward: Boolean(s.backward) };
+  const pace = `speed={() => ${s.speed}}\nbackward={${options.backward}}`;
+  if (effect === 'glide') {
+    const ms = glideMs(from, to, options);
+    return { note: ms ? `The marker glides ${s.distance} spaces in ${Math.round(ms)} ms.` : 'The marker jumps to the destination.',
+      code: `// Previous index: ${from}\nindex={${to}}\n${pace}` };
+  }
+  const multFrom = s.reverse ? s.mult : 1;
+  const multTo = s.reverse ? 1 : s.mult;
+  const hop = hopPlan(from, to, multFrom, multTo, options);
+  return { note: hop.ms ? `The dot hops and fills the bar in ${Math.round(hop.ms)} ms. ${hop.badge ? 'The new multiplier pops on landing.' : 'The number bumps on landing.'}` : 'The bar jumps to the destination.',
+    code: `// Previous value: ${from}, previous multiplier: ${multFrom}\nvalue={${to}}\nmax={8}\nmult={${multTo}}\n${pace}` };
+}
+
+function render(play, updateStage = true) {
+  const s = settings[effect];
+  for (const [, rows] of groups[effect]) for (const [key, , , , , unit] of rows) {
+    const input = $('c-' + key);
+    input.value = s[key];
+    const label = valueLabel(key, s[key], unit);
+    input.setAttribute('aria-valuetext', label);
+    $('o-' + key).textContent = label;
+  }
+  for (const preset of ['kit', 'slow', 'badge']) $(preset).setAttribute('aria-pressed', String(presets[effect] === preset));
+  const { note, code } = describe();
+  $('note').textContent = note;
+  $('code').textContent = code;
+  if (updateStage) stage(effect, s, play);
+}
+
+$('effect').addEventListener('change', () => { effect = $('effect').value; build(); render(false); });
+$('play').addEventListener('click', () => render(true));
+for (const preset of ['kit', 'slow', 'badge']) $(preset).addEventListener('click', () => {
+  settings[effect] = { ...defaults[effect], ...(preset === 'slow' ? { speed: 2 } : {}), ...(preset === 'badge' ? { mult: 2 } : {}) };
+  presets[effect] = preset;
+  render(true);
+});
+MOTION.subscribeFallback(() => { $('note').textContent = describe().note; });
+$('copy').addEventListener('click', async () => {
+  try {
+    await navigator.clipboard.writeText($('code').textContent);
+    $('copy').textContent = 'Copied';
+  } catch {
+    const range = document.createRange();
+    range.selectNodeContents($('code'));
+    const selection = getSelection();
+    selection.removeAllRanges();
+    selection.addRange(range);
+    $('copy').textContent = 'Selected. Copy with your keyboard.';
+  }
+  setTimeout(() => { $('copy').textContent = 'Copy'; }, 1800);
+});
+build();
+render(false);
+</script>
+</html>

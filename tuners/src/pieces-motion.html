@@ -1,0 +1,369 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Pieces &amp; Drag Motion Tuner</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=Inter:wght@400;600&family=JetBrains+Mono:wght@400&display=swap">
+<style>
+:root {
+  --felt: #17302a; --felt-edge: #0e1f1b; --panel: #1b2124; --line: #2c3539; --fg: #e8ece9; --muted: #9aa8a3; --accent: #e9c46a;
+  --display: 'Space Grotesk', system-ui, sans-serif; --body: 'Inter', system-ui, sans-serif; --mono: 'JetBrains Mono', ui-monospace, monospace;
+  color-scheme: dark;
+}
+body { background: var(--panel); color: var(--fg); font: 14px/1.5 var(--body); }
+.wrap { max-width: 1180px; margin: 0 auto; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); padding-block: 18px 40px; display: grid; gap: 18px; }
+h1 { font: 700 22px/1.2 var(--display); margin: 0; letter-spacing: .01em; }
+.sub { color: var(--muted); margin: 2px 0 0; max-width: 70ch; }
+.table { background: radial-gradient(120% 90% at 50% 100%, #1f4038, var(--felt) 60%, var(--felt-edge)); border-radius: 14px; border: 1px solid var(--line); padding: 210px 12px 60px; overflow: hidden; position: relative; }
+.table .note { position: absolute; top: 12px; left: 14px; right: 14px; color: var(--muted); font-size: 12px; }
+.presets { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.presets span { color: var(--muted); font-size: 12px; text-transform: uppercase; letter-spacing: .08em; margin-right: 4px; }
+.presets button { font: 600 13px var(--body); color: var(--fg); background: #232b2e; border: 1px solid var(--line); border-radius: 999px; padding: 6px 14px; cursor: pointer; }
+.presets button[aria-pressed="true"] { background: var(--accent); color: #1b1608; border-color: var(--accent); }
+.presets button:focus-visible, .ctl input:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.ctls { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 10px 22px; }
+fieldset { border: 1px solid var(--line); border-radius: 10px; padding: 10px 14px 12px; margin: 0; min-width: 0; display: grid; gap: 8px; }
+legend { font: 700 12px var(--display); text-transform: uppercase; letter-spacing: .1em; color: var(--accent); padding: 0 6px; }
+.ctl { display: grid; grid-template-columns: 1fr auto; gap: 2px 10px; align-items: center; }
+.ctl label { font-size: 13px; }
+.ctl output { font: 12px var(--mono); color: var(--accent); font-variant-numeric: tabular-nums; }
+.ctl input { grid-column: 1 / -1; width: 100%; accent-color: var(--accent); }
+.ctl small { grid-column: 1 / -1; color: var(--muted); font-size: 11.5px; line-height: 1.35; }
+.code { background: #12171a; border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; font: 12.5px/1.6 var(--mono); color: #cfe3da; overflow-x: auto; white-space: pre; }
+.codebar { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; }
+.codebar h2 { font: 700 15px var(--display); margin: 0; }
+.codebar button { font: 600 12px var(--body); color: var(--fg); background: #232b2e; border: 1px solid var(--line); border-radius: 6px; padding: 5px 10px; cursor: pointer; }
+
+.wrap { grid-template-columns: minmax(0, 1fr); }
+.ctls { grid-template-columns: repeat(auto-fit, minmax(min(100%, 230px), 1fr)); align-items: start; }
+.table { position: sticky; top: 8px; z-index: 1; padding: 14px; display: grid; gap: 8px; overflow: visible; }
+.table .note { position: static; margin: 0; }
+.stage { display: grid; align-items: center; min-height: 132px; padding: 0 16px; }
+.stage.playing #actor { visibility: hidden; }
+.ctl input { box-sizing: border-box; margin: 0; }
+.ctl input[type="color"] { height: 24px; border: 0; padding: 0; background: transparent; }
+select, .ctl input[type="text"] { font: inherit; color: var(--fg); background: #232b2e; border: 1px solid var(--line); border-radius: 6px; padding: 5px 8px; min-width: 0; }
+.dice-actor, .p3-ball { width: 72px; height: 72px; }
+.dice-actor { display: grid; place-items: center; margin: auto; }
+.dice-actor [data-p3-die] { width: 100%; height: 100%; }
+.flat { display: grid; place-items: center; height: 100%; border-radius: inherit; color: var(--sample-die-ink); background: var(--sample-die-body); font: 700 32px var(--display); }
+.p3-ball { display: block; }
+.chip-board, .drag-board { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); align-items: center; justify-items: center; gap: 10px; text-align: center; }
+.chip-board img { width: 64px; display: block; }
+.sample-label { display: block; margin-top: 9px; font-size: 12px; }
+.sample-card, .slot { width: min(18vw, 62px); height: 80px; border-radius: 7px; display: grid; place-items: center; box-sizing: border-box; font: 700 12px var(--display); color: var(--fg); }
+.sample-card { border: 1px solid #b4c7e6; background: linear-gradient(155deg, #435e83, #2a3655); }
+.source { cursor: grab; touch-action: none; user-select: none; }
+.slot { border: 1px dashed #81978e; }
+.slot[data-drop-state="legal"] { border-color: var(--sample-target-legal); }
+.slot[data-drop-state="over"] { background: var(--sample-target-over); border-color: var(--accent); }
+[data-part="ghost"] { z-index: 2; }
+.ghost-card { transform: translateY(calc(-1 * var(--sample-ghost-lift))) scale(var(--sample-ghost-scale)); box-shadow: var(--sample-ghost-shadow); opacity: var(--sample-ghost-opacity); }
+.drop-result { grid-column: 1 / -1; color: var(--muted); min-height: 1.5em; font-size: 12px; }
+.code { margin-bottom: 0; }
+</style>
+<style id="pieces-css">/*@kit-css components/pieces-3d/pieces3d.css*/</style>
+
+<main class="wrap">
+  <header>
+    <h1>Pieces &amp; Drag Motion Tuner</h1>
+    <p class="sub">Preview the kit’s WebGL dice, rolling ball, chip depth, and React drag ghost. Choose an effect and change its settings to see it live.</p>
+  </header>
+
+  <div class="table">
+    <div class="presets">
+      <label for="effect">Effect</label>
+      <select id="effect">
+        <option value="d6">D6 roll</option>
+        <option value="d10">D10 roll</option>
+        <option value="ball">Ball roll</option>
+        <option value="chip">Chip and card shadows</option>
+        <option value="ghost">Drag ghost</option>
+      </select>
+      <button type="button" id="play">Play</button>
+      <label id="flat-toggle" hidden><input id="flat" type="checkbox"> Flat dice</label>
+    </div>
+    <div class="stage" id="stage"></div>
+    <p class="note" id="note"></p>
+  </div>
+
+  <div class="presets" role="group" aria-label="Presets">
+    <span>Start from</span><button type="button" id="kit" aria-pressed="true">Kit default</button>
+  </div>
+
+  <div class="ctls" id="ctls"></div>
+
+  <section>
+    <div class="codebar"><h2>These settings in code</h2><button type="button" id="copy">Copy</button></div>
+    <pre class="code" id="code"></pre>
+  </section>
+</main>
+
+<script>
+//@kit-js tuners/src/pieces-motion-preview.mjs as PIECES
+const $ = (id) => document.getElementById(id);
+const { PER_TURN, CHEV_HW, chevronAt, paintBall, twoArcSeam, startDiceLayer, dragSpeed } = PIECES;
+const kitCSS = $('pieces-css').textContent;
+const cssNumber = (token) => Number(kitCSS.match(new RegExp(`var\\(${token},\\s*([\\d.]+)`))[1]);
+const ballSource = paintBall.toString();
+const ballLeather = ballSource.match(/leather: "(#[\da-f]+)"/i)[1];
+const ballSeams = ballSource.match(/look\.stitch === "chevron" \? "(#[\da-f]+)" : "(#[\da-f]+)"/i).slice(1);
+const stitchCount = Number(chevronAt.toString().match(/\bcount = (\d+)/)[1]);
+const seamShape = twoArcSeam.toString().match(/\bn = (\d+), a = ([\d.]+)/).slice(1).map(Number);
+const seamLineWidth = Number(ballSource.match(/look\.seamLineWidth \?\? ([\d.]+)/)[1]);
+const sample = (help) => help + ' The kit has no default.';
+const range = (key, label, value, min, max, step, unit, help) => ({ key, label, value, min, max, step, unit, help });
+const field = (key, label, value, type, help) => ({ key, label, value, type, help });
+const choice = (key, label, value, choices, help) => ({ key, label, value, choices, help });
+const token = (key, label, value, type, help) => field(key, label, value, type, sample(help));
+const dice = (sides) => [
+  ['Roll', [
+    range('dur', 'Roll time', 850, 50, 2400, 10, 'ms', sample('How long the die tumbles before landing.')),
+    range('value', 'Landing face', sides === 6 ? 5 : 8, 1, sides, 1, '', sample('The face shown when the roll ends.')),
+    range('tilt', 'Resting tilt', 15, -35, 45, 1, '°', sample('Tilts the 3D die towards the viewer.')),
+  ]],
+  ['Die look', [
+    field('body', 'Body colour', '#f4efe2', 'color', sample('The die’s base colour.')),
+    field('ink', 'Marking colour', '#1b1b1b', 'color', sample('The pips or numerals on the die.')),
+    ...(sides === 10 ? [field('font', 'Numeral font', '700 54px serif', 'text', sample('Canvas font for the d10’s numerals.'))] : []),
+    token('--die-depth', 'Flat die shadow', '0 5px 0 #9e907b, 0 9px 12px #0008', 'text', 'CSS box-shadow when WebGL is off.'),
+    token('--die-radius', 'Flat die corners', '12px', 'text', 'CSS border-radius when WebGL is off.'),
+  ]],
+];
+const groups = {
+  d6: dice(6), d10: dice(10),
+  ball: [
+    ['Travel and settle', [
+      range('dur', 'Roll time', 720, 50, 2400, 10, 'ms', sample('How long the ball takes to cross the stage.')),
+      range('settle', 'Settle time', 420, 0, 1600, 10, 'ms', sample('How long the ball takes to rock back to its resting view.')),
+      range('perTurn', 'Distance per turn', PER_TURN, 0.5, 8, .001, 'ball widths', 'Higher values make the ball rotate less over the same distance.'),
+      field('ease', 'Travel easing', '', 'text', 'CSS easing for translation. Leave blank for the kit easing.'),
+    ]],
+    ['Ball surface', [
+      field('leather', 'Leather', ballLeather, 'color', 'Base colour of the ball.'),
+      range('seamShape', 'Seam curvature', seamShape[1], .15, .9, .01, 'rad', 'Sets the shape of the two curved seam arcs.'),
+      field('seam', 'Seam colour', '', 'color', 'Uses the kit colour for the current stitch style until edited.'),
+      choice('stitch', 'Stitch style', 'bars', ['bars', 'chevron'], 'Switch between bars and V-shaped stitches.'),
+      range('stitchCount', 'Chevron count', stitchCount, 8, 100, 1, '', 'Number of V stitches around the seam.'),
+      range('stitchWidth', 'Chevron half-width', CHEV_HW, .02, .3, .01, 'fraction', 'Half the width of each V.'),
+      choice('stitchFlip', 'Reverse chevrons', 'off', ['off', 'on', 'custom'], 'Turns stitches in part of the seam so the visible rows can face the same way.'),
+      field('flipRange', 'Custom reverse interval', '0.25, 0.75', 'text', 'Two fractions from 0 to 1 for the start and end of the reversed section.'),
+    ]],
+    ['Seam line and shadow', [
+      choice('line', 'Chevron seam line', 'off', ['off', 'on'], 'Draws a line through the tips of the V stitches.'),
+      field('seamLine', 'Seam line colour', '#291718', 'color', sample('Colour used when the seam line is enabled.')),
+      range('seamLineWidth', 'Seam line width', seamLineWidth, .001, .05, .001, 'fraction', 'Line width as a fraction of ball diameter.'),
+      range('seamLineDash', 'Seam dash length', 0, 0, 1, .01, 'fraction', 'Fraction of the stitch spacing. Zero draws a solid line.'),
+      token('--ball-radius', 'Canvas corners', '50%', 'text', 'CSS border-radius for the ball canvas.'),
+      token('--piece-shadow', 'Ball shadow', 'drop-shadow(4px 6px 4px #0009)', 'text', 'CSS filter for the ball canvas.'),
+    ]],
+  ],
+  chip: [
+    ['Chip depth', [
+      range('--chip-thickness', 'Thickness', cssNumber('--chip-thickness'), 0, 28, 1, 'px', 'Height of the printed face and the layered near edge.'),
+      range('--piece-tilt', 'Tilt', cssNumber('--piece-tilt'), 0, 65, 1, 'deg', 'Angle of the chip and the card samples.'),
+      range('--piece-perspective', 'Perspective', cssNumber('--piece-perspective'), 150, 1200, 10, 'px', 'Viewing distance for the tilted card samples.'),
+      token('--chip-depth', 'Flat chip shadow', 'drop-shadow(0 6px 3px #0009)', 'text', 'CSS filter for browsers without 3D transforms.'),
+    ]],
+    ['Board core and shadows', [
+      token('--chip-core-1', 'Top core layer', '#eedbbc', 'color', 'Colour of the upper layer of board.'),
+      token('--chip-core-2', 'Middle core layer', '#aa7953', 'color', 'Colour of the middle layer of board.'),
+      token('--chip-core-3', 'Bottom core layer', '#6a4536', 'color', 'Colour of the lower layer of board.'),
+      token('--piece-shadow-ink', 'Chip shadow ink', '#0009', 'text', 'CSS colour for the shadow beneath the chip.'),
+      token('--card-shadow', 'Resting card shadow', '0 3px 6px #0008', 'text', 'CSS box-shadow for a card on the table.'),
+      token('--card-shadow-lifted', 'Lifted card shadow', '0 12px 20px #000b', 'text', 'CSS box-shadow for a card held above the table.'),
+    ]],
+  ],
+  ghost: [
+    ['Return and settle', [
+      range('speed', 'Flight speed', dragSpeed, 0, 3, .05, '×', 'Scales drop and return speed together. Zero skips both flights.'),
+    ]],
+    ['Example ghost look', [
+      range('--sample-ghost-lift', 'Lift', 0, 0, 32, 1, 'px', sample('Vertical offset on the card rendered inside DragGhost.')),
+      range('--sample-ghost-scale', 'Scale', 1, .6, 1.5, .01, '×', sample('Size of the rendered card relative to the source.')),
+      range('--sample-ghost-opacity', 'Opacity', .9, 0, 1, .01, '×', sample('Opacity of the card drawn inside the ghost.')),
+      token('--sample-ghost-shadow', 'Shadow', '0 8px 18px #000a', 'text', 'CSS box-shadow on the ghost card.'),
+      token('--sample-target-legal', 'Legal target border', '#e9c46a', 'color', 'Border colour on both eligible targets while dragging.'),
+      token('--sample-target-over', 'Hovered target fill', '#57492e', 'color', 'Fill colour of the eligible target under the pointer.'),
+    ]],
+  ],
+};
+
+const stage = $('stage');
+const mount = PIECES.mountPreview(stage);
+const defaults = (id) => Object.fromEntries(groups[id].flatMap(([, fields]) => fields.map(({ key, value }) => [key, value])));
+const settings = Object.fromEntries(Object.keys(groups).map((id) => [id, defaults(id)]));
+let effect = $('effect').value;
+let s = settings[effect];
+let gl, glKey, player;
+let schedule = 0;
+const applied = new Set();
+const isDie = () => effect === 'd6' || effect === 'd10';
+const json = (value) => JSON.stringify(value, null, 2);
+const ballLook = () => {
+  const range = s.flipRange.split(',').map(Number);
+  const stitchFlip = s.stitchFlip === 'custom' && range.length === 2 && range[0] >= 0 && range[0] < range[1] && range[1] <= 1 ? range : s.stitchFlip !== 'off';
+  return {
+    leather: s.leather,
+    ...(s.seam && { seam: s.seam }),
+    stitch: s.stitch,
+    ...(s.seamShape !== seamShape[1] && { curve: twoArcSeam(seamShape[0], s.seamShape) }),
+    ...(s.stitch === 'chevron' && {
+      stitchCount: s.stitchCount, stitchWidth: s.stitchWidth, stitchFlip,
+      ...(s.line === 'on' && { seamLine: s.seamLine, seamLineWidth: s.seamLineWidth, seamLineDash: s.seamLineDash }),
+    }),
+  };
+};
+const diceLook = () => ({ body: s.body, ink: s.ink, font: s.font || '700 54px serif', tilt: s.tilt * Math.PI / 180 });
+const cssValue = (c) => s[c.key] + (['px', 'deg'].includes(c.unit) ? c.unit : '');
+
+function build() {
+  $('ctls').replaceChildren();
+  for (const [title, fields] of groups[effect]) {
+    const fs = document.createElement('fieldset');
+    fs.innerHTML = `<legend>${title}</legend>`;
+    for (const c of fields) {
+      const d = document.createElement('div');
+      d.className = 'ctl';
+      const input = c.choices ? `<select id="c-${c.key}">${c.choices.map((v) => `<option>${v}</option>`).join('')}</select>`
+        : `<input id="c-${c.key}" ${c.type ? `type="${c.type}"` : `type="range" min="${c.min}" max="${c.max}" step="${c.step}"`}>`;
+      d.innerHTML = `<label for="c-${c.key}">${c.label}</label><output id="o-${c.key}" for="c-${c.key}"></output>${input}<small id="h-${c.key}">${c.help}</small>`;
+      const el = d.querySelector('input, select');
+      el.setAttribute('aria-describedby', 'h-' + c.key);
+      el.addEventListener('input', () => {
+        s[c.key] = c.min === undefined ? el.value : el.valueAsNumber;
+        $('kit').setAttribute('aria-pressed', 'false');
+        queuePreview();
+      });
+      fs.appendChild(d);
+    }
+    $('ctls').appendChild(fs);
+  }
+}
+
+function queuePreview() {
+  cancelAnimationFrame(schedule);
+  schedule = requestAnimationFrame(() => render(true));
+}
+
+function motion(actor) {
+  const box = actor.getBoundingClientRect();
+  const pos = { id: 'piece', at: [box.left + box.width / 2, box.top + box.height / 2], w: box.width, h: box.height };
+  const track = stage.getBoundingClientRect();
+  const end = [Math.min(track.right - box.width - 16, box.left + 310), box.top, box.width, box.height];
+  const steps = isDie() ? [{ t: 0, dur: s.dur, actor: 'piece', do: 'shake' }] : [
+    { t: 0, dur: s.dur, actor: 'piece', do: 'move', to: 'finish', ...(s.ease && CSS.supports('animation-timing-function', s.ease) && { ease: s.ease }) },
+    ...(s.settle ? [{ t: s.dur, dur: s.settle, actor: 'piece', do: 'settle' }] : []),
+  ];
+  return { end, spec: { id: effect, maxMs: s.dur + (isDie() ? 0 : s.settle), actors: [pos], steps } };
+}
+
+function play() {
+  player?.skipAll();
+  if (effect === 'ghost') {
+    const source = stage.querySelector('[data-drag]');
+    const target = stage.querySelector('[data-drop="right"]');
+    PIECES.previewDrop(source, target);
+    return;
+  }
+  const actor = $('actor');
+  if (!isDie()) actor.style.marginLeft = '';
+  const { end: finish, spec } = motion(actor);
+  const verbs = PIECES.createVerbs();
+  const look = isDie() ? undefined : ballLook();
+  const layer = PIECES.registerEffects(verbs, { parent: stage, resolve: () => actor, onActor: PIECES.copyPieces(() => look) });
+  PIECES.registerPieceVerbs(verbs, { ballLook: () => look, perTurn: s.perTurn });
+  player = PIECES.createMotionPlayer({
+    specs: {}, stages: { default: () => finish }, verbs, speed: () => 1, context: layer,
+    onBeatStart: (run) => { layer.start(run); stage.classList.add('playing'); },
+    onBeatEnd: (run) => {
+      if (effect === 'ball') {
+        actor.style.marginLeft = Math.max(0, finish[0] - stage.getBoundingClientRect().left - 16) + 'px';
+        const clone = layer.el.querySelector('canvas[data-ball]');
+        const ctx = actor.getContext('2d');
+        if (clone && ctx) { ctx.clearRect(0, 0, actor.width, actor.height); ctx.drawImage(clone, 0, 0); }
+      }
+      layer.end(run);
+      layer.el.remove();
+      stage.classList.remove('playing');
+    },
+    onProblem: (message) => console.error(message),
+  });
+  player.play(spec);
+}
+
+function render(replay = false) {
+  player?.skipAll();
+  const fields = groups[effect].flatMap(([, rows]) => rows);
+  const tokens = fields.filter((c) => c.key.startsWith('--'));
+  const root = document.documentElement.style;
+  for (const key of applied) root.removeProperty(key);
+  applied.clear();
+  for (const c of tokens) { root.setProperty(c.key, cssValue(c)); applied.add(c.key); }
+  for (const c of fields) {
+    const value = c.key === 'seam' && !s.seam ? ballSeams[s.stitch === 'chevron' ? 0 : 1] : s[c.key];
+    $('c-' + c.key).value = value;
+    $('o-' + c.key).textContent = c.min === undefined ? '' : Number(value.toFixed(3)) + (c.unit ? ' ' + c.unit : '');
+  }
+
+  const look = isDie() ? diceLook() : effect === 'ball' ? ballLook() : undefined;
+  mount(effect, { look, value: s.value, speed: s.speed });
+  const key = isDie() && !$('flat').checked ? json(look) : '';
+  if (key !== glKey) {
+    gl?.stop();
+    gl = key ? startDiceLayer(look) : null;
+    glKey = key;
+  }
+  $('play').hidden = effect === 'chip';
+  $('flat-toggle').hidden = !isDie();
+  let code = '';
+  if (isDie()) {
+    root.setProperty('--sample-die-body', s.body);
+    root.setProperty('--sample-die-ink', s.ink);
+    $('note').textContent = gl
+      ? `The die lands on ${s.value} after ${s.dur} ms. The WebGL hop, spin and cast shadow are fixed.`
+      : `The flat die uses the effect library’s shake for ${s.dur} ms. Flat dice show the CSS depth and corner tokens.`;
+    code = `data-v="${s.value}"\n\n// startDiceLayer look\n${json(look)}\n\n// Motion step\n${json({ do: 'shake', dur: s.dur })}`;
+  } else if (effect === 'ball') {
+    $('note').textContent = `The ball rolls for ${s.dur} ms and takes one turn per ${s.perTurn.toFixed(2)} ball widths. ${s.settle ? `It rocks back to rest over ${s.settle} ms.` : 'It keeps its landing orientation.'}`;
+    const { spec } = motion($('actor'));
+    const { curve, ...surface } = look;
+    const lookCode = curve ? json(surface).replace(/\n}$/, `,\n  curve: twoArcSeam(${seamShape[0]}, ${s.seamShape})\n}`) : json(surface);
+    code = `// Ball look prop\n${lookCode}\n\n// registerPieceVerbs options\n{ ballLook: () => look, perTurn: ${s.perTurn} }\n\n// Motion steps\n${json(spec.steps)}`;
+  } else if (effect === 'chip') {
+    $('note').textContent = `The chip has a ${s['--chip-thickness']} px edge. The card samples show both shadow tokens at ${s['--piece-tilt']}°.`;
+  } else {
+    $('note').textContent = `Drag to either target, or drop outside to see the return. ${s.speed ? `Both flights run at ${s.speed}× speed.` : 'The ghost disappears on release.'}`;
+    code = `// useDragDrop option and DragGhost prop\n{ speed: ${s.speed} }`;
+  }
+  $('code').textContent = [code, tokens.filter((c) => !c.key.startsWith('--sample-')).map((c) => `${c.key}: ${cssValue(c)};`).join('\n')].filter(Boolean).join('\n\n');
+  if (replay && effect !== 'chip') play();
+}
+
+$('effect').addEventListener('change', () => {
+  cancelAnimationFrame(schedule);
+  player?.skipAll();
+  effect = $('effect').value;
+  s = settings[effect];
+  $('kit').setAttribute('aria-pressed', String(json(s) === json(defaults(effect))));
+  build();
+  render();
+});
+$('kit').addEventListener('click', () => {
+  cancelAnimationFrame(schedule);
+  s = settings[effect] = defaults(effect);
+  $('flat').checked = false;
+  $('kit').setAttribute('aria-pressed', 'true');
+  render(true);
+});
+$('play').addEventListener('click', () => { cancelAnimationFrame(schedule); render(true); });
+$('flat').addEventListener('change', () => render(true));
+$('copy').addEventListener('click', async () => {
+  try { await navigator.clipboard.writeText($('code').textContent); $('copy').textContent = 'Copied'; }
+  catch { const r = document.createRange(); r.selectNodeContents($('code')); const sel = getSelection(); sel.removeAllRanges(); sel.addRange(r); $('copy').textContent = 'Selected: press Ctrl+C'; }
+  setTimeout(() => { $('copy').textContent = 'Copy'; }, 1800);
+});
+build();
+render();
+</script>
+</html>

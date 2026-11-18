@@ -121,6 +121,12 @@ A game's build plan lists the kit work it needs as phases named `GK<n>` for the 
 | K310 | card-hand: while a card is lifted under the pointer, its strip carries a hit area shaped like the grown, straightened face (a `::before` with the face's transform), so the pointer anywhere on the grown card keeps it lifted and a click there picks it; the rest strip still holds it (no flicker); hands with `faceEvents` keep their own face hit area | S |  | done |
 | K311 | card-hand: the default arc is the gentle one, `TILT = { step: 1.5, total: 14, radius: 20 }` (was 8, 32, 4); a game's `tilt` prop still overrides it | S |  | done |
 | K312 | tuners/: self-contained tuner pages built from `tuners/src/*.html` by `tuners/build.mjs`, which inlines the kit's own CSS and bundles its modules (`--check` in `components:check` keeps them current); the first is the card-hand tuner (the Hand Arc Tuner) | S |  | done |
+| K313 | tuners/effect-library.html previews all twelve effect-library verbs, the rise-pulse look and motion-frame sequences with live settings and copyable code. | S |  | done |
+| K314 | Target arrow tuner with controls for colours, glow, stroke, dash flow, head size, curve, snap, strike timing and motion scale. | S |  | done |
+| K315 | tuners/glows.html: tunes picked marks, legal highlights, inline icon glows and counter motion and warnings on live stand-ins. | S |  | done |
+| K316 | Card motion tuner for dealing, refill turn-over, deck cycling and riffles, pile stacks and fans, and the market refill slide. | S |  | done |
+| K317 | Token Motion Tuner for token flights, 2D and 3D bag draws, marker glide, hop-and-fill with a multiplier badge, and the lit step list. | S |  | done |
+| K318 | tuners/pieces-motion.html: tune WebGL d6 and d10 rolls, ball roll and settle, chip depth and piece shadows, and the drag ghost across two targets | S |  | done |
 | K319 | theme-check: `fontFaces` takes several entries per family (one per face file, e.g. normal and italic) and an `@font-face` passes when it loads any of them; `assets.svgs` accepts any drawable shape (circle, rect, ellipse, polygon, polyline, line, use), not only a path | S |  | done |
 | K320 | turn-flow: `FlowConfig.roundEnds(s, pos)`, asked after each turn, ends the round when the game says so (a solo game's round ends when its deck runs out); seats keep cycling within the round; default unchanged (one turn per seat) | S |  | done |
 | K321 | ci-templates: the Full gate workflow has `run-name: Full gate PR #<pr> <sha>`, so the tested head is in the run's title | S |  | done |

@@ -1,0 +1,1169 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Effect Library Tuner</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=Inter:wght@400;600&family=JetBrains+Mono:wght@400&display=swap">
+<style>
+/* Layout: a felt table on top holding the live hand, the controls below in a wrapping grid; one dark look by choice. */
+:root {
+  --felt: #17302a; --felt-edge: #0e1f1b; --panel: #1b2124; --line: #2c3539; --fg: #e8ece9; --muted: #9aa8a3; --accent: #e9c46a;
+  --display: 'Space Grotesk', system-ui, sans-serif; --body: 'Inter', system-ui, sans-serif; --mono: 'JetBrains Mono', ui-monospace, monospace;
+  color-scheme: dark;
+}
+body { background: var(--panel); color: var(--fg); font: 14px/1.5 var(--body); }
+.wrap { max-width: 1180px; grid-template-columns: minmax(0, 1fr); margin: 0 auto; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); padding-block: 18px 40px; display: grid; gap: 18px; }
+h1 { font: 700 22px/1.2 var(--display); margin: 0; letter-spacing: .01em; }
+.sub { color: var(--muted); margin: 2px 0 0; max-width: 70ch; }
+.table { background: radial-gradient(120% 90% at 50% 100%, #1f4038, var(--felt) 60%, var(--felt-edge)); border-radius: 14px; border: 1px solid var(--line); height: 300px; overflow: hidden; position: relative; }
+.table .note { position: absolute; top: 12px; left: 14px; right: 14px; color: var(--muted); font-size: 12px; }
+.presets { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.presets span { color: var(--muted); font-size: 12px; text-transform: uppercase; letter-spacing: .08em; margin-right: 4px; }
+.presets button { font: 600 13px var(--body); color: var(--fg); background: #232b2e; border: 1px solid var(--line); border-radius: 999px; padding: 6px 14px; cursor: pointer; }
+.presets button[aria-pressed="true"] { background: var(--accent); color: #1b1608; border-color: var(--accent); }
+.presets button:focus-visible, .ctl input:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.ctls { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(260px, 100%), 1fr)); gap: 10px 22px; align-items: start; }
+fieldset { border: 1px solid var(--line); border-radius: 10px; padding: 10px 14px 12px; margin: 0; min-width: 0; display: grid; gap: 8px; }
+legend { font: 700 12px var(--display); text-transform: uppercase; letter-spacing: .1em; color: var(--accent); padding: 0 6px; }
+.ctl { display: grid; grid-template-columns: 1fr auto; gap: 2px 10px; align-items: center; }
+.ctl label { font-size: 13px; }
+.ctl output { font: 12px var(--mono); color: var(--accent); font-variant-numeric: tabular-nums; }
+.ctl input { grid-column: 1 / -1; width: 100%; accent-color: var(--accent); }
+.ctl small { grid-column: 1 / -1; color: var(--muted); font-size: 11.5px; line-height: 1.35; }
+.code { background: #12171a; border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; font: 12.5px/1.6 var(--mono); color: #cfe3da; overflow-x: auto; white-space: pre; }
+.codebar { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; }
+.codebar h2 { font: 700 15px var(--display); margin: 0; }
+.codebar button { font: 600 12px var(--body); color: var(--fg); background: #232b2e; border: 1px solid var(--line); border-radius: 6px; padding: 5px 10px; cursor: pointer; }
+
+.table { color: #f4db95; }
+#card, .slot { position: absolute; width: 86px; height: 118px; top: 54%; translate: -50% -50%; border-radius: 8px; }
+#card { left: 50%; }
+.slot { left: 50%; border: 1px dashed rgb(232 236 233 / .25); box-sizing: border-box; }
+#destination { display: none; }
+.card { border: 1px solid #a3bfae; border-radius: 8px; background: #294a40; box-shadow: 0 3px 12px #0e1f1b; }
+.card-face { position: absolute; inset: 6px; border: 1px solid rgb(244 219 149 / .4); border-radius: 4px; display: grid; place-content: center; text-align: center; font: 700 13px var(--display); }
+.card-face b { display: block; font-size: 30px; line-height: 1.15; }
+.fx-actor:not(.card) { overflow-wrap: anywhere; }
+.card-back, [data-fx-flipped] .card-front { display: none; }
+[data-fx-flipped] .card-back { display: grid; background: #533f55; }
+[data-fx-label] .card-back::after { content: attr(data-fx-label); }
+#card.fx-source { visibility: hidden; }
+.toolbar { display: flex; flex-wrap: wrap; gap: 8px 14px; align-items: center; }
+.toolbar select, .toolbar button { font: 600 13px var(--body); color: var(--fg); background: #232b2e; border: 1px solid var(--line); border-radius: 6px; padding: 7px 12px; }
+.toolbar #play { background: var(--accent); color: #1b1608; cursor: pointer; }
+.ctl :is(select, input[type=color], input[type=text]) { grid-column: 1 / -1; min-width: 0; box-sizing: border-box; }
+.ctl input[type=checkbox] { grid-column: auto; width: auto; justify-self: end; }
+.code { margin-bottom: 0; }
+@media (max-width: 480px) { .table { height: 270px; } }
+/* ===== game-kit components/effect-library/looks/rise-pulse.css, inlined by tuners/build.mjs ===== */
+/* opt-in look: a red and orange glowing pulse. Import once; put class fx-rise-pulse on an element laid over the card (its parent positioned; add it to play it).
+   Variables: --buff-ms (length, default 1400ms), --card-w (default 11rem), --motion-scale (the kit's speed). */
+.fx-rise-pulse {
+  position: absolute;
+  inset: -3%;
+  border-radius: 0.8em;
+  pointer-events: none;
+  background: radial-gradient(ellipse at center, rgb(255 140 40 / 0.32), rgb(229 50 40 / 0.16) 58%, transparent 76%);
+  box-shadow:
+    0 0 calc(var(--card-w, 11rem) * 0.12) calc(var(--card-w, 11rem) * 0.03) rgb(255 96 32 / 0.85),
+    inset 0 0 calc(var(--card-w, 11rem) * 0.1) rgb(255 60 40 / 0.6);
+  opacity: 0;
+  animation: fx-rise-pulse max(1ms, calc(var(--buff-ms, 1400ms) * var(--motion-scale, 1))) ease-out both;
+}
+@keyframes fx-rise-pulse {
+  0% {
+    opacity: 0;
+    transform: scale(0.97);
+  }
+  18% {
+    opacity: 1;
+    transform: scale(1.03);
+  }
+  40% {
+    opacity: 0.55;
+    transform: scale(1);
+  }
+  60% {
+    opacity: 0.95;
+    transform: scale(1.02);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(1);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .fx-rise-pulse {
+    animation: none;
+  }
+}
+
+</style>
+
+<main class="wrap">
+  <header>
+    <h1>Effect Library Tuner</h1>
+    <p class="sub">Preview the kit’s DOM effects on a felt table. The page uses effect-library and motion-frame directly. Changing a setting replays the preview.</p>
+  </header>
+  <div class="table" id="table">
+    <div class="note" id="note"></div>
+    <div class="slot"></div>
+    <div class="slot" id="destination"></div>
+    <div id="card" class="card" aria-hidden="true">
+      <div class="card-face card-front"><b>✦</b> Alder</div>
+      <div class="card-face card-back"><b>✧</b></div>
+    </div>
+  </div>
+  <div class="toolbar">
+    <label for="verb">Effect</label>
+    <select id="verb"></select>
+    <button type="button" id="play">Play</button>
+    <label><input type="checkbox" id="sequence"> Play a sequence</label>
+  </div>
+  <div class="presets" role="group" aria-label="Presets">
+    <span>Start from</span><button type="button" id="reset" aria-pressed="true">Kit default</button>
+  </div>
+  <div class="ctls" id="ctls"></div>
+  <section>
+    <div class="codebar"><h2>These settings in code</h2><button type="button" id="copy">Copy</button></div>
+    <pre class="code" id="code"></pre>
+  </section>
+</main>
+
+<script type="text/plain" id="effect-source">/* ===== game-kit components/effect-library/effects.ts, inlined by tuners/build.mjs ===== */
+// The twelve verbs of the director's spec format as DOM effects (Web Animations API), plus the way a game adds its own.
+import type { Run, VerbCall, VerbRegistry } from '../motion-frame/index.ts';
+import { createEffectLayer, place, type EffectLayer, type LayerOptions } from './layer.ts';
+
+export type EffectCtx = EffectLayer;
+export interface Fx {
+  call: VerbCall;
+  run: Run<EffectCtx>;
+  /** the layer's clone (or stand-in) of the actor */
+  el: HTMLElement;
+  layer: EffectLayer;
+  /**
+   * Plays keyframes over the call's duration. `end` is the inline style the element is left with when the call ends or is
+   * skipped (the jump to the end state); the animation is then cancelled.
+   */
+  animate: (keyframes: Keyframe[], end?: Partial<CSSStyleDeclaration>, opts?: KeyframeAnimationOptions) => void;
+}
+/** May return its own finish (a timer to clear, an end state to set); `animate`'s finishes run too. */
+export type Effect = (fx: Fx) => undefined | (() => void);
+
+/** Step `scale` on an entry verb: a number n = from n to 1 (with `hold: true`, n for the whole step), [a, b] = from a to b. */
+const entry = (call: VerbCall): [string, string] | undefined => {
+  const s = call.step['scale'];
+  const v = (n: unknown): string => (n === 1 ? 'none' : String(n));
+  if (typeof s === 'number') return [v(s), call.step['hold'] === true ? v(s) : 'none'];
+  if (Array.isArray(s) && s.length === 2 && typeof s[0] === 'number' && typeof s[1] === 'number') return [v(s[0]), v(s[1])];
+  return undefined;
+};
+
+const css = (el: HTMLElement, s: Partial<CSSStyleDeclaration>): void => void Object.assign(el.style, s);
+
+/** Registers one effect, a built-in or a game's own, in the motion frame's verb registry. */
+export function registerEffect(verbs: VerbRegistry<EffectCtx>, name: string, effect: Effect): void {
+  verbs.register(name, (call, run) => {
+    const layer = run.context;
+    const el = layer.actor(run, call.actor, call.from);
+    const done: (() => void)[] = [];
+    const animate: Fx['animate'] = (keyframes, end, opts) => {
+      const a = el.animate(keyframes, { duration: Math.max(call.dur, 1), fill: 'both', easing: EASE[String(call.step['ease'])] ?? (typeof call.step['ease'] === 'string' ? call.step['ease'] : 'ease-in-out'), ...opts });
+      done.push(() => {
+        if (end) css(el, end);
+        a.cancel();
+      });
+    };
+    const own = effect({ call, run, el, layer, animate });
+    if (own) done.push(own);
+    return () => {
+      done.forEach((f) => {
+        f();
+      });
+    };
+  });
+}
+
+const EASE: Readonly<Record<string, string>> = { in: 'ease-in', out: 'ease-out', 'in-out': 'ease-in-out', linear: 'linear' };
+
+export const BUILT_IN: Readonly<Record<string, Effect>> = {
+  move: ({ call, el, animate }) => {
+    const t = call.to;
+    if (!t) return undefined;
+    const f = call.from;
+    const e = entry(call);
+    animate(
+      [e ? { translate: '0 0', scale: e[0] } : { translate: '0 0' }, e ? { translate: `${String(t[0] - f[0])}px ${String(t[1] - f[1])}px`, scale: e[1] } : { translate: `${String(t[0] - f[0])}px ${String(t[1] - f[1])}px` }],
+      e ? { translate: '', scale: e[1] === 'none' ? '' : e[1] } : { translate: '' },
+    );
+    return () => {
+      place(el, t);
+      if (call.step['then'] === 'hide') css(el, { visibility: 'hidden' });
+    };
+  },
+  lift: ({ call, animate }) => {
+    const end = { transform: `translateY(var(--fx-lift-rise,-6px)) scale(${String(call.value ?? 1.08)})`, boxShadow: 'var(--fx-lift-shadow,0 12px 24px)' };
+    animate([{ transform: 'none', boxShadow: 'none' }, end], end);
+    return undefined;
+  },
+  settle: ({ animate }) => {
+    const rest = { transform: 'none', boxShadow: 'var(--fx-settle-shadow,0 1px 3px)' };
+    animate(
+      [
+        { transform: 'translateY(var(--fx-lift-rise,-6px)) scale(1.08)', boxShadow: 'var(--fx-lift-shadow,0 12px 24px)' },
+        { transform: 'scale(.98)', boxShadow: rest.boxShadow, offset: 0.7 },
+        rest,
+      ],
+      rest,
+    );
+    return undefined;
+  },
+  'fade-in': ({ call, animate }) => {
+    const e = entry(call);
+    animate(e ? [{ opacity: 0, scale: e[0] }, { opacity: 1, scale: e[1] }] : [{ opacity: 0 }, { opacity: 1 }], e ? { opacity: '1', visibility: 'visible', scale: e[1] === 'none' ? '' : e[1] } : { opacity: '1', visibility: 'visible' });
+    return undefined;
+  },
+  'fade-out': ({ call, animate }) => {
+    const o = call.value ?? 0;
+    animate([{ opacity: 1 }, { opacity: o }], { opacity: String(o) });
+    return undefined;
+  },
+  show: ({ el }) => {
+    css(el, { opacity: '1', visibility: 'visible' });
+    return undefined;
+  },
+  hide: ({ el }) => {
+    css(el, { visibility: 'hidden' });
+    return undefined;
+  },
+  flip: ({ call, el, animate }) => {
+    const target = !el.hasAttribute('data-fx-flipped');
+    const label = call.step['label'];
+    const swap = (): void => {
+      el.toggleAttribute('data-fx-flipped', target);
+      if (typeof label === 'string') el.setAttribute('data-fx-label', label);
+    };
+    const hm = call.step['holdMs'];
+    const h = typeof hm === 'number' && call.dur > 0 ? Math.min(Math.max(hm, 0), call.dur * 0.8) : 0;
+    const mid = h + (call.dur - h) / 2;
+    const timer = setTimeout(swap, mid);
+    animate(h > 0 ? [{ transform: 'scaleX(1)' }, { transform: 'scaleX(1)', offset: h / call.dur }, { transform: 'scaleX(0)', offset: mid / call.dur }, { transform: 'scaleX(1)' }] : [{ transform: 'scaleX(1)' }, { transform: 'scaleX(0)' }, { transform: 'scaleX(1)' }], { transform: 'none' });
+    return () => {
+      clearTimeout(timer);
+      swap();
+    };
+  },
+  scale: ({ call, animate }) => {
+    const k = { scale: String(call.value ?? 1) };
+    const rest = { scale: 'none' };
+    if (call.step['pulse'] === true) animate([rest, k, rest], rest);
+    else animate([rest, k], k);
+    return undefined;
+  },
+  shake: ({ call, animate }) => {
+    const n = typeof call.step['times'] === 'number' ? call.step['times'] : 4;
+    const kf: Keyframe[] = [{ transform: 'translateX(0)' }];
+    for (let i = 0; i < n; i++) kf.push({ transform: `translateX(calc(var(--fx-shake,6px) * ${i % 2 ? '1' : '-1'}))` });
+    kf.push({ transform: 'translateX(0)' });
+    animate(kf, { transform: 'none' });
+    return undefined;
+  },
+  glow: ({ animate, el }) => {
+    const off = 'var(--fx-glow-off,0 0 0 0)';
+    animate([{ boxShadow: off }, { boxShadow: 'var(--fx-glow,0 0 24px 6px)' }, { boxShadow: off }], { boxShadow: el.style.boxShadow });
+    return undefined;
+  },
+  text: ({ call, el, animate }) => {
+    const s = call.step['text'] ?? call.step['label'];
+    el.textContent = typeof s === 'string' ? s : call.value !== undefined ? String(call.value) : '';
+    css(el, { color: 'var(--fx-text,inherit)', font: 'var(--fx-text-font,inherit)', textAlign: 'center' });
+    animate([{ opacity: 0, transform: 'translateY(var(--fx-text-rise,12px))' }, { opacity: 1, offset: 0.25 }, { opacity: 1, transform: 'none' }], { opacity: '1', transform: 'none' });
+    return undefined;
+  },
+};
+
+/** The twelve verbs registered, and a layer made. Pass the registry to the motion player and the layer as its `context`. */
+export function registerEffects(verbs: VerbRegistry<EffectCtx>, o?: LayerOptions): EffectLayer {
+  for (const [name, fx] of Object.entries(BUILT_IN)) registerEffect(verbs, name, fx);
+  return createEffectLayer(o);
+}
+</script>
+<script>
+"use strict";
+var FX = (() => {
+  var __defProp = Object.defineProperty;
+  var __getOwnPropDesc = Object.getOwnPropertyDescriptor;
+  var __getOwnPropNames = Object.getOwnPropertyNames;
+  var __hasOwnProp = Object.prototype.hasOwnProperty;
+  var __export = (target, all) => {
+    for (var name in all)
+      __defProp(target, name, { get: all[name], enumerable: true });
+  };
+  var __copyProps = (to, from, except, desc) => {
+    if (from && typeof from === "object" || typeof from === "function") {
+      for (let key of __getOwnPropNames(from))
+        if (!__hasOwnProp.call(to, key) && key !== except)
+          __defProp(to, key, { get: () => from[key], enumerable: !(desc = __getOwnPropDesc(from, key)) || desc.enumerable });
+    }
+    return to;
+  };
+  var __toCommonJS = (mod) => __copyProps(__defProp({}, "__esModule", { value: true }), mod);
+
+  // components/effect-library/effects.ts
+  var effects_exports = {};
+  __export(effects_exports, {
+    BUILT_IN: () => BUILT_IN,
+    registerEffect: () => registerEffect,
+    registerEffects: () => registerEffects
+  });
+
+  // components/effect-library/layer.ts
+  var place = (el, r) => {
+    const s = el.style;
+    s.left = `${String(r[0])}px`;
+    s.top = `${String(r[1])}px`;
+    s.width = `${String(r[2])}px`;
+    s.height = `${String(r[3])}px`;
+  };
+  function createEffectLayer(o = {}) {
+    const parent = o.parent ?? document.body;
+    const el = document.createElement("div");
+    el.className = "fx-layer";
+    el.style.cssText = "position:fixed;inset:0;overflow:visible;pointer-events:none;z-index:var(--fx-z,1000)";
+    parent.appendChild(el);
+    const runs = /* @__PURE__ */ new Map();
+    const self = {
+      el,
+      start(run) {
+        for (const a of run.timeline.actors) self.actor(run, a.id, a.rect);
+      },
+      actor(run, id, from) {
+        let m = runs.get(run.id);
+        if (m === void 0) runs.set(run.id, m = /* @__PURE__ */ new Map());
+        let a = m.get(id);
+        if (a === void 0) {
+          const src = o.resolve?.(id, run);
+          a = src ? src.cloneNode(true) : document.createElement("div");
+          a.classList.add("fx-actor");
+          a.removeAttribute("id");
+          const s = a.style;
+          s.position = "absolute";
+          s.boxSizing = "border-box";
+          s.margin = "0";
+          s.transform = "";
+          place(a, from);
+          const spec = run.timeline.actors.find((x) => x.id === id);
+          if (spec?.hidden) s.opacity = "0";
+          else if (spec?.opacity !== void 0) s.opacity = String(spec.opacity);
+          if (spec?.veil) {
+            a.classList.add("fx-veil");
+            s.background = "var(--fx-veil)";
+          }
+          el.appendChild(a);
+          m.set(id, a);
+          if (src) o.onActor?.(src, a, id, run);
+        }
+        return a;
+      },
+      end(run) {
+        runs.get(run.id)?.forEach((a) => {
+          a.remove();
+        });
+        runs.delete(run.id);
+      },
+      clear() {
+        runs.clear();
+        el.replaceChildren();
+      }
+    };
+    return self;
+  }
+
+  // components/effect-library/effects.ts
+  var entry = (call) => {
+    const s = call.step["scale"];
+    const v = (n) => n === 1 ? "none" : String(n);
+    if (typeof s === "number") return [v(s), call.step["hold"] === true ? v(s) : "none"];
+    if (Array.isArray(s) && s.length === 2 && typeof s[0] === "number" && typeof s[1] === "number") return [v(s[0]), v(s[1])];
+    return void 0;
+  };
+  var css = (el, s) => void Object.assign(el.style, s);
+  function registerEffect(verbs, name, effect) {
+    verbs.register(name, (call, run) => {
+      const layer = run.context;
+      const el = layer.actor(run, call.actor, call.from);
+      const done = [];
+      const animate = (keyframes, end, opts) => {
+        const a = el.animate(keyframes, { duration: Math.max(call.dur, 1), fill: "both", easing: EASE[String(call.step["ease"])] ?? (typeof call.step["ease"] === "string" ? call.step["ease"] : "ease-in-out"), ...opts });
+        done.push(() => {
+          if (end) css(el, end);
+          a.cancel();
+        });
+      };
+      const own = effect({ call, run, el, layer, animate });
+      if (own) done.push(own);
+      return () => {
+        done.forEach((f) => {
+          f();
+        });
+      };
+    });
+  }
+  var EASE = { in: "ease-in", out: "ease-out", "in-out": "ease-in-out", linear: "linear" };
+  var BUILT_IN = {
+    move: ({ call, el, animate }) => {
+      const t = call.to;
+      if (!t) return void 0;
+      const f = call.from;
+      const e = entry(call);
+      animate(
+        [e ? { translate: "0 0", scale: e[0] } : { translate: "0 0" }, e ? { translate: `${String(t[0] - f[0])}px ${String(t[1] - f[1])}px`, scale: e[1] } : { translate: `${String(t[0] - f[0])}px ${String(t[1] - f[1])}px` }],
+        e ? { translate: "", scale: e[1] === "none" ? "" : e[1] } : { translate: "" }
+      );
+      return () => {
+        place(el, t);
+        if (call.step["then"] === "hide") css(el, { visibility: "hidden" });
+      };
+    },
+    lift: ({ call, animate }) => {
+      const end = { transform: `translateY(var(--fx-lift-rise,-6px)) scale(${String(call.value ?? 1.08)})`, boxShadow: "var(--fx-lift-shadow,0 12px 24px)" };
+      animate([{ transform: "none", boxShadow: "none" }, end], end);
+      return void 0;
+    },
+    settle: ({ animate }) => {
+      const rest = { transform: "none", boxShadow: "var(--fx-settle-shadow,0 1px 3px)" };
+      animate(
+        [
+          { transform: "translateY(var(--fx-lift-rise,-6px)) scale(1.08)", boxShadow: "var(--fx-lift-shadow,0 12px 24px)" },
+          { transform: "scale(.98)", boxShadow: rest.boxShadow, offset: 0.7 },
+          rest
+        ],
+        rest
+      );
+      return void 0;
+    },
+    "fade-in": ({ call, animate }) => {
+      const e = entry(call);
+      animate(e ? [{ opacity: 0, scale: e[0] }, { opacity: 1, scale: e[1] }] : [{ opacity: 0 }, { opacity: 1 }], e ? { opacity: "1", visibility: "visible", scale: e[1] === "none" ? "" : e[1] } : { opacity: "1", visibility: "visible" });
+      return void 0;
+    },
+    "fade-out": ({ call, animate }) => {
+      const o = call.value ?? 0;
+      animate([{ opacity: 1 }, { opacity: o }], { opacity: String(o) });
+      return void 0;
+    },
+    show: ({ el }) => {
+      css(el, { opacity: "1", visibility: "visible" });
+      return void 0;
+    },
+    hide: ({ el }) => {
+      css(el, { visibility: "hidden" });
+      return void 0;
+    },
+    flip: ({ call, el, animate }) => {
+      const target = !el.hasAttribute("data-fx-flipped");
+      const label = call.step["label"];
+      const swap = () => {
+        el.toggleAttribute("data-fx-flipped", target);
+        if (typeof label === "string") el.setAttribute("data-fx-label", label);
+      };
+      const hm = call.step["holdMs"];
+      const h = typeof hm === "number" && call.dur > 0 ? Math.min(Math.max(hm, 0), call.dur * 0.8) : 0;
+      const mid = h + (call.dur - h) / 2;
+      const timer = setTimeout(swap, mid);
+      animate(h > 0 ? [{ transform: "scaleX(1)" }, { transform: "scaleX(1)", offset: h / call.dur }, { transform: "scaleX(0)", offset: mid / call.dur }, { transform: "scaleX(1)" }] : [{ transform: "scaleX(1)" }, { transform: "scaleX(0)" }, { transform: "scaleX(1)" }], { transform: "none" });
+      return () => {
+        clearTimeout(timer);
+        swap();
+      };
+    },
+    scale: ({ call, animate }) => {
+      const k = { scale: String(call.value ?? 1) };
+      const rest = { scale: "none" };
+      if (call.step["pulse"] === true) animate([rest, k, rest], rest);
+      else animate([rest, k], k);
+      return void 0;
+    },
+    shake: ({ call, animate }) => {
+      const n = typeof call.step["times"] === "number" ? call.step["times"] : 4;
+      const kf = [{ transform: "translateX(0)" }];
+      for (let i = 0; i < n; i++) kf.push({ transform: `translateX(calc(var(--fx-shake,6px) * ${i % 2 ? "1" : "-1"}))` });
+      kf.push({ transform: "translateX(0)" });
+      animate(kf, { transform: "none" });
+      return void 0;
+    },
+    glow: ({ animate, el }) => {
+      const off = "var(--fx-glow-off,0 0 0 0)";
+      animate([{ boxShadow: off }, { boxShadow: "var(--fx-glow,0 0 24px 6px)" }, { boxShadow: off }], { boxShadow: el.style.boxShadow });
+      return void 0;
+    },
+    text: ({ call, el, animate }) => {
+      const s = call.step["text"] ?? call.step["label"];
+      el.textContent = typeof s === "string" ? s : call.value !== void 0 ? String(call.value) : "";
+      css(el, { color: "var(--fx-text,inherit)", font: "var(--fx-text-font,inherit)", textAlign: "center" });
+      animate([{ opacity: 0, transform: "translateY(var(--fx-text-rise,12px))" }, { opacity: 1, offset: 0.25 }, { opacity: 1, transform: "none" }], { opacity: "1", transform: "none" });
+      return void 0;
+    }
+  };
+  function registerEffects(verbs, o) {
+    for (const [name, fx] of Object.entries(BUILT_IN)) registerEffect(verbs, name, fx);
+    return createEffectLayer(o);
+  }
+  return __toCommonJS(effects_exports);
+})();
+
+"use strict";
+var MOTION = (() => {
+  var __defProp = Object.defineProperty;
+  var __getOwnPropDesc = Object.getOwnPropertyDescriptor;
+  var __getOwnPropNames = Object.getOwnPropertyNames;
+  var __hasOwnProp = Object.prototype.hasOwnProperty;
+  var __export = (target, all) => {
+    for (var name in all)
+      __defProp(target, name, { get: all[name], enumerable: true });
+  };
+  var __copyProps = (to, from, except, desc) => {
+    if (from && typeof from === "object" || typeof from === "function") {
+      for (let key of __getOwnPropNames(from))
+        if (!__hasOwnProp.call(to, key) && key !== except)
+          __defProp(to, key, { get: () => from[key], enumerable: !(desc = __getOwnPropDesc(from, key)) || desc.enumerable });
+    }
+    return to;
+  };
+  var __toCommonJS = (mod) => __copyProps(__defProp({}, "__esModule", { value: true }), mod);
+
+  // components/motion-frame/player.ts
+  var player_exports = {};
+  __export(player_exports, {
+    automatedWithoutMotion: () => automatedWithoutMotion,
+    bindMotionSpeed: () => bindMotionSpeed,
+    createMotionPlayer: () => createMotionPlayer,
+    createVerbs: () => createVerbs,
+    hurryOnInput: () => hurryOnInput,
+    placeOf: () => placeOf,
+    prefersReducedMotion: () => prefersReducedMotion,
+    putMotionSpeed: () => putMotionSpeed,
+    skipOnInput: () => skipOnInput,
+    withAutomationOff: () => withAutomationOff,
+    withReducedMotion: () => withReducedMotion
+  });
+
+  // components/motion-frame/timeline.ts
+  function withVariant(spec, v) {
+    if (v === void 0) return spec;
+    const { reduced: _r, places: _p, sound: _s, ...rest } = spec;
+    const out = { ...rest, steps: v.steps };
+    if (v.sound !== void 0) out.sound = v.sound;
+    if (v.maxMs !== void 0) out.maxMs = v.maxMs;
+    return out;
+  }
+  var isPoint = (v) => Array.isArray(v) && v.length === 2 && v.every((n) => typeof n === "number");
+  var centred = (c, w, h) => [c[0] - w / 2, c[1] - h / 2, w, h];
+  var centreOf = (r) => [r[0] + r[2] / 2, r[1] + r[3] / 2];
+  function place(at, stage, w, h) {
+    if (isPoint(at)) return centred(at, w ?? 0, h ?? 0);
+    const z = stage(at);
+    return z && centred(centreOf(z), w ?? z[2], h ?? z[3]);
+  }
+  function buildTimeline(spec, stage, factor = 1, pace = Math.max(1, factor)) {
+    const reads = [];
+    for (const s of [...spec.steps].filter((x) => x.read === true).sort((a, b) => a.t - b.t)) {
+      const l = reads.at(-1);
+      if (l !== void 0 && s.t <= l[1]) l[1] = Math.max(l[1], s.t + s.dur);
+      else reads.push([s.t, s.t + s.dur]);
+    }
+    const ms = (n) => {
+      const r = reads.reduce((a, [x, y]) => a + Math.max(0, Math.min(n, y) - x), 0);
+      return Math.round((n - r) * factor + r * pace);
+    };
+    const fail = (m) => {
+      throw new Error(`motion-frame ${spec.id}: ${m}`);
+    };
+    const now = /* @__PURE__ */ new Map();
+    const actors = (spec.actors ?? []).map((a) => {
+      const rect = place(a.at, stage, a.w, a.h) ?? fail(`actor ${a.id}: zone ${String(a.at)} is not on the stage`);
+      now.set(a.id, rect);
+      return { id: a.id, label: a.label ?? a.id, rect, hidden: a.hidden === true, ...a.opacity !== void 0 && { opacity: a.opacity }, ...a.veil && { veil: true } };
+    });
+    const calls = spec.steps.map((s, i) => ({ s, i })).sort((a, b) => a.s.t - b.s.t || a.i - b.i).map(({ s }) => {
+      const own = now.get(s.actor);
+      const from = own ?? stage(s.actor) ?? fail(`step actor ${s.actor} is neither an actor nor a zone`);
+      const call = { t: ms(s.t), dur: reads.length > 0 ? ms(s.t + s.dur) - ms(s.t) : Math.round(s.dur * factor), actor: s.actor, zone: own === void 0, verb: s.do, from, step: s };
+      if (typeof s.to === "number") call.value = s.to;
+      else if (s.to !== void 0) {
+        const to = place(s.to, stage, from[2], from[3]) ?? fail(`step target ${String(s.to)} is not on the stage`);
+        call.to = to;
+        if (own !== void 0) now.set(s.actor, to);
+      }
+      return call;
+    });
+    return {
+      id: spec.id,
+      ms: calls.reduce((m, c) => Math.max(m, c.t + c.dur), 0),
+      actors,
+      calls,
+      cues: [...spec.sound ?? []].sort((a, b) => a.t - b.t).map((c) => ({ t: ms(c.t), cue: c.cue }))
+    };
+  }
+
+  // components/motion-frame/player.ts
+  var placeOf = (k, of) => of <= 1 ? "lone" : k <= 1 ? "first" : k >= of ? "last" : "middle";
+  function createVerbs() {
+    const m = /* @__PURE__ */ new Map();
+    return {
+      register: (name, verb) => void m.set(name, verb),
+      has: (name) => m.has(name),
+      get: (name) => m.get(name),
+      names: () => [...m.keys()]
+    };
+  }
+  var blocks = (s) => s.frequency === "rare" || s.frequency === "once";
+  function createMotionPlayer(o) {
+    const queue = [];
+    const subs = /* @__PURE__ */ new Set();
+    let cur = null;
+    const live = /* @__PURE__ */ new Set();
+    let runs = 0;
+    let skipping = false;
+    const waiters = [];
+    const gate = () => {
+      const c = [...live].find((x) => x.item.gate !== void 0);
+      const i = c?.item ?? queue.find((x) => x.gate !== void 0);
+      if (i?.gate === void 0) return null;
+      return { ...i.gate, beat: i.spec.id, leaving: c?.leaving ?? false, ...i.place && { place: i.place } };
+    };
+    const emit = () => {
+      subs.forEach((f) => {
+        f();
+      });
+      while (waiters.length > 0 && gate() === null) {
+        const f = waiters.shift();
+        if (f) safe("afterGate", f);
+      }
+    };
+    const safe = (what, f) => {
+      try {
+        f();
+      } catch (e) {
+        o.onProblem?.(`${what}: ${e instanceof Error ? e.message : String(e)}`);
+      }
+    };
+    const cue = (c, beat) => {
+      safe(`cue ${c}`, () => o.onCue?.(c, beat));
+    };
+    const finish = (c, how) => {
+      live.delete(c);
+      if (cur === c) cur = null;
+      c.timers.forEach((t) => {
+        clearTimeout(t);
+      });
+      c.open.forEach((f) => {
+        safe(`${c.run.timeline.id} finish`, f);
+      });
+      safe(`${c.run.timeline.id} end`, () => o.onBeatEnd?.(c.run));
+      safe(`${c.run.timeline.id} onEnd`, () => c.item.onEnd?.(how));
+    };
+    const start = (item, spec, factor, parallel = false) => {
+      const stage = o.stages[spec.stage ?? "default"];
+      if (stage === void 0) throw new Error(`motion-frame ${spec.id}: stage ${String(spec.stage)} is not known`);
+      const timeline = buildTimeline(spec, stage, factor, o.pace?.(factor));
+      const run = { id: ++runs, timeline, context: o.context, ...item.place && { place: item.place } };
+      const timers = /* @__PURE__ */ new Set();
+      const open = /* @__PURE__ */ new Set();
+      const me = { item, run, timers, open, leaving: false };
+      live.add(me);
+      if (!parallel) cur = me;
+      const at = (ms, f) => {
+        const t = setTimeout(() => {
+          timers.delete(t);
+          f();
+        }, ms);
+        timers.add(t);
+      };
+      safe(`${spec.id} start`, () => o.onBeatStart?.(run));
+      for (const call of run.timeline.calls) {
+        let done;
+        at(call.t, () => {
+          safe(`${spec.id} ${call.verb}`, () => {
+            done = o.verbs.get(call.verb)?.(call, run);
+          });
+          if (done !== void 0) open.add(done);
+        });
+        at(call.t + call.dur, () => {
+          const d = done;
+          if (d === void 0) return;
+          open.delete(d);
+          safe(`${spec.id} ${call.verb} finish`, d);
+        });
+      }
+      const leave = item.gate && run.timeline.calls.find((c) => c.step.leave === true);
+      if (leave)
+        at(leave.t, () => {
+          me.leaving = true;
+          emit();
+        });
+      for (const c of run.timeline.cues)
+        at(c.t, () => {
+          cue(c.cue, spec.id);
+        });
+      at(run.timeline.ms, () => {
+        if (!live.has(me)) return;
+        finish(me, "done");
+        next();
+        emit();
+      });
+    };
+    const next = () => {
+      while (cur === null && !skipping) {
+        if (queue[0]?.spec.whenVisible === true && o.visible?.() === false) return;
+        const item = queue.shift();
+        if (item === void 0) return;
+        begin(item, false);
+      }
+    };
+    const begin = (item, parallel) => {
+      const speed = o.speed();
+      const reduced = o.reduced?.() === true;
+      const { spec: base } = item;
+      const spec = reduced ? withVariant(base, base.reduced) : withVariant(base, item.place && base.places?.[item.place.at]);
+      if (speed === "instant" || !(speed > 0) || reduced && base.reduced === void 0) {
+        [...spec.sound ?? []].sort((a, b) => a.t - b.t).forEach((c) => {
+          cue(c.cue, item.spec.id);
+        });
+        safe(`${item.spec.id} onEnd`, () => item.onEnd?.("done"));
+        return;
+      }
+      try {
+        start(item, spec, reduced ? 1 : speed, parallel);
+      } catch (e) {
+        if (!parallel) cur = null;
+        o.onProblem?.(e instanceof Error ? e.message : String(e));
+        safe(`${item.spec.id} onEnd`, () => item.onEnd?.("done"));
+      }
+    };
+    const skip = (snap) => {
+      const waiting = queue.filter(snap);
+      queue.splice(0, queue.length, ...queue.filter((i) => !snap(i)));
+      skipping = true;
+      [...live].filter((c) => snap(c.item)).forEach((c) => {
+        finish(c, "skipped");
+      });
+      for (const i of waiting) safe(`${i.spec.id} onEnd`, () => i.onEnd?.("skipped"));
+      skipping = false;
+      next();
+      emit();
+    };
+    const ender = (p) => p?.onEnd || p?.onEnded ? (how) => {
+      p.onEnd?.();
+      p.onEnded?.(how);
+    } : void 0;
+    const lookup = (beat, onEnd) => {
+      const spec = typeof beat === "string" ? o.specs[beat] : beat;
+      if (spec === void 0) {
+        o.onProblem?.(`motion-frame: no spec named ${beat}`);
+        safe("onEnd", () => onEnd?.("done"));
+      }
+      return spec;
+    };
+    return {
+      play(beat, opts) {
+        const end = ender(opts);
+        const spec = lookup(beat, end);
+        if (spec === void 0) return;
+        if (opts?.parallel === true) {
+          if (skipping) safe(`${spec.id} onEnd`, () => end?.("skipped"));
+          else begin({ spec, onEnd: end, gate: opts.gate }, true);
+        } else {
+          queue.push({ spec, onEnd: end, gate: opts?.gate });
+          next();
+        }
+        emit();
+      },
+      playRun(beats, opts) {
+        const end = ender(opts);
+        const specs = beats.flatMap((b) => lookup(b, void 0) ?? []);
+        if (specs.length === 0) safe("onEnd", () => end?.("done"));
+        specs.forEach((spec, k) => {
+          queue.push({ spec, onEnd: k === specs.length - 1 ? end : void 0, gate: opts?.gate, place: { at: placeOf(k + 1, specs.length), k: k + 1, of: specs.length } });
+        });
+        next();
+        emit();
+      },
+      hurry() {
+        skip((i) => i.spec.hurry !== "keep");
+      },
+      gate,
+      afterGate(f) {
+        waiters.push(f);
+        emit();
+      },
+      visibilityChanged() {
+        next();
+        emit();
+      },
+      busy: () => [...live].some((c) => blocks(c.item.spec)) || queue.some((i) => blocks(i.spec)),
+      pending: () => live.size + queue.length,
+      skipAll() {
+        skip(() => true);
+      },
+      subscribe(f) {
+        subs.add(f);
+        return () => void subs.delete(f);
+      }
+    };
+  }
+  function withReducedMotion(speed, reduced = prefersReducedMotion()) {
+    return reduced ? "instant" : speed;
+  }
+  function prefersReducedMotion() {
+    return typeof matchMedia === "function" && matchMedia("(prefers-reduced-motion: reduce)").matches;
+  }
+  function automatedWithoutMotion(marker = "KitMotion", env = globalThis) {
+    if (env.navigator?.webdriver !== true) return false;
+    if (env.navigator.userAgent?.includes(marker) === true) return false;
+    return new URLSearchParams(env.location?.search ?? "").get("motion") !== "on";
+  }
+  function withAutomationOff(speed, marker, env) {
+    return automatedWithoutMotion(marker, env) ? "instant" : speed;
+  }
+  function putMotionSpeed(speed, name = "on", el = typeof document === "undefined" ? void 0 : document.documentElement) {
+    if (el === void 0) return;
+    const scale = speed === "instant" || !(speed > 0) ? 0 : speed;
+    el.dataset.motion = scale === 0 ? "off" : name;
+    el.style.setProperty("--motion-scale", String(scale));
+  }
+  function bindMotionSpeed(speed, name = () => "on", el, mm = typeof matchMedia === "function" ? matchMedia : void 0) {
+    if (mm === void 0) return () => void 0;
+    const q = mm("(prefers-reduced-motion: reduce)");
+    const f = () => {
+      putMotionSpeed(speed(), name(), el);
+    };
+    q.addEventListener("change", f);
+    return () => {
+      q.removeEventListener("change", f);
+    };
+  }
+  function hurryOnInput(player, target) {
+    const f = () => {
+      if (player.pending() > 0) player.hurry();
+    };
+    target.addEventListener("pointerdown", f, { capture: true });
+    target.addEventListener("keydown", f, { capture: true });
+    return () => {
+      target.removeEventListener("pointerdown", f, { capture: true });
+      target.removeEventListener("keydown", f, { capture: true });
+    };
+  }
+  function skipOnInput(player, target) {
+    const skip = () => {
+      if (player.pending() > 0) player.skipAll();
+    };
+    target.addEventListener("pointerdown", skip, { capture: true });
+    target.addEventListener("keydown", skip, { capture: true });
+    return () => {
+      target.removeEventListener("pointerdown", skip, { capture: true });
+      target.removeEventListener("keydown", skip, { capture: true });
+    };
+  }
+  return __toCommonJS(player_exports);
+})();
+
+const $ = (id) => document.getElementById(id);
+const table = $('table'), card = $('card');
+const verbs = MOTION.createVerbs();
+const layer = FX.registerEffects(verbs, { parent: table, resolve: (id) => id === 'card' ? card : undefined });
+layer.el.style.position = 'absolute';
+
+// The verbs expose their defaults through their keyframes and CSS fallbacks.
+function frames(verb) {
+  let result;
+  FX.BUILT_IN[verb]({ call: { step: {} }, el: document.createElement('div'), animate: (value) => { result = value; } });
+  return result;
+}
+function fallback(css, token) {
+  return css.match(new RegExp('var\\(\\s*' + token + '\\s*,\\s*([^)]*)\\)'))[1];
+}
+// EASE is private to the verb registry. Read its keys from the inlined kit source.
+const easeTable = $('effect-source').textContent.match(/const EASE[^=]*=\s*\{([^}]+)\}/)[1];
+const easingNames = [...easeTable.matchAll(/(?:^|,)\s*['"]?([\w-]+)['"]?\s*:/g)].map(([, name]) => name);
+const easingProbe = document.createElement('div');
+let defaultEase;
+easingProbe.animate = (_, config) => {
+  defaultEase = config.easing;
+  return { cancel() {} };
+};
+verbs.get('scale')({ dur: 1, step: {} }, { context: { actor: () => easingProbe } })();
+function colorHex(rgb) {
+  return '#' + rgb.match(/\d+/g).slice(0, 3).map((channel) => Number(channel).toString(16).padStart(2, '0')).join('');
+}
+const lift = frames('lift')[1].transform;
+const glow = fallback(frames('glow')[1].boxShadow, '--fx-glow').split(/\s+/);
+const pulse = [...document.styleSheets].filter((sheet) => !sheet.href)
+  .flatMap((sheet) => [...sheet.cssRules]).find((rule) => rule.selectorText === '.fx-rise-pulse').style;
+const previewSpeed = () => MOTION.withReducedMotion(s.speed || 'instant');
+const motionDefault = Number(fallback(pulse.animation, '--motion-scale'));
+const defaultScale = Number(frames('scale')[1].scale);
+const tableStyle = getComputedStyle(table);
+const textFont = { weight: tableStyle.fontWeight, lineHeight: tableStyle.lineHeight, family: tableStyle.fontFamily };
+const KIT = {
+  // A beat supplies its own timing, positions and text. These are preview examples.
+  dur: 640, dx: 72, dy: -16, entryFrom: 1, entryTo: 1, hideAfter: false,
+  liftRise: -parseFloat(fallback(lift, '--fx-lift-rise')), liftScale: Number(lift.match(/scale\(([^)]+)\)/)[1]),
+  opacity: frames('fade-out')[1].opacity, holdMs: 0, label: '', scale: defaultScale, pulseScale: false,
+  shake: parseFloat(fallback(frames('shake')[1].transform, '--fx-shake')), times: frames('shake').length - 2,
+  blur: parseFloat(glow[2]), spread: parseFloat(glow[3]), glowColor: colorHex(tableStyle.color),
+  text: '+3', textRise: parseFloat(fallback(frames('text')[0].transform, '--fx-text-rise')),
+  textSize: parseFloat(tableStyle.fontSize), textColor: colorHex(tableStyle.color),
+  buffMs: parseFloat(fallback(pulse.animation, '--buff-ms')),
+  cardW: parseFloat(fallback(pulse.boxShadow, '--card-w')) * parseFloat(getComputedStyle(document.documentElement).fontSize),
+  speed: motionDefault, ease: defaultEase,
+};
+const row = (key, label, min, max, step, unit, help) => ({ key, label, type: 'range', min, max, step, unit, help });
+const option = (key, label, type, help) => ({ key, label, type, help });
+const enter = [
+  row('entryFrom', 'Entry scale', .25, 2, .01, '×', 'Size at the start of the effect. The kit has no default entry scale.'),
+  row('entryTo', 'Exit scale', .25, 2, .01, '×', 'Size the card keeps. Match the entry scale to hold that size throughout. The kit has no default exit scale.'),
+];
+const rise = row('liftRise', 'Lift height', 0, 36, 1, 'px', 'How far above the slot the card sits.');
+const options = {
+  move: [
+    row('dx', 'Horizontal distance', -90, 90, 1, 'px', 'Positive moves right, negative moves left. The kit has no default.'),
+    row('dy', 'Vertical distance', -55, 55, 1, 'px', 'Positive moves down, negative moves up. The kit has no default.'),
+    ...enter, option('hideAfter', 'Hide on arrival', 'checkbox', 'Hides the card once it reaches the destination.'),
+  ],
+  lift: [rise, row('liftScale', 'Lifted scale', .5, 1.65, .01, '×', 'Size the card holds above its slot.')],
+  settle: [rise],
+  'fade-in': enter,
+  'fade-out': [row('opacity', 'Final opacity', 0, 1, .01, '', '0 is transparent and 1 is opaque.')],
+  show: [],
+  hide: [],
+  flip: [
+    row('holdMs', 'Hold first face', 0, 1200, 1, ' ms', 'The kit caps the hold at 80% of the scaled duration.'),
+    option('label', 'Back label', 'text', 'Optional text exposed as data-fx-label.'),
+  ],
+  scale: [
+    row('scale', 'Target scale', .25, 2, .01, '×', 'Size relative to the original card.'),
+    option('pulseScale', 'Return to original size', 'checkbox', 'Uses the target size at the middle of the pulse.'),
+  ],
+  shake: [
+    row('shake', 'Amplitude', 0, 42, 1, 'px', 'Distance from center at each side.'),
+    row('times', 'Shakes', 0, 20, 1, '', 'Number of alternating offsets before returning to center.'),
+  ],
+  glow: [
+    row('blur', 'Glow blur', 0, 52, 1, 'px', 'Softness of the halo.'),
+    row('spread', 'Glow spread', 0, 28, 1, 'px', 'How far the halo extends before blurring.'),
+    option('glowColor', 'Glow colour', 'color', 'Colour of the halo. The kit fallback follows currentColor.'),
+  ],
+  text: [
+    option('text', 'Message', 'text', 'Text displayed over the card. The kit has no default message.'),
+    row('textRise', 'Rise distance', 0, 65, 1, 'px', 'How far below the resting label it starts.'),
+    row('textSize', 'Text size', 10, 54, 1, 'px', 'Font size of the label.'),
+    option('textColor', 'Text colour', 'color', 'The kit fallback inherits the surrounding colour.'),
+  ],
+  'rise-pulse': [
+    row('buffMs', 'Pulse duration', 0, 2500, 1, ' ms', 'Base duration before the motion factor.'),
+    row('cardW', 'Card width token', 40, 260, 1, 'px', 'Scales the halo around the stand-in card.'),
+  ],
+};
+let s = { ...KIT };
+const picker = $('verb');
+for (const key of Object.keys(options)) picker.add(new Option(key, key));
+
+function build() {
+  const verb = picker.value;
+  const instant = verb === 'show' || verb === 'hide';
+  const timing = [row('speed', 'Motion scale', 0, 2, .05, '×', 'Multiplies time. 0 leaves the preview still.')];
+  if (!instant && verb !== 'rise-pulse') timing.unshift(
+    row('dur', 'Duration', 0, 1800, 1, ' ms', 'Base step time before applying the motion factor. The kit has no default.'),
+    option('ease', 'Easing', 'select', 'How progress changes over the step.'),
+  );
+  if (instant && $('sequence').checked) timing.unshift(
+    row('dur', 'Follow-up duration', 0, 1800, 1, ' ms', 'Base time of the glow after the visibility change. The kit has no default.'),
+  );
+  $('ctls').replaceChildren();
+  for (const [title, rows] of [['Timing', timing], ['Effect options', options[verb]]]) {
+    if (!rows.length) continue;
+    const group = document.createElement('fieldset');
+    group.innerHTML = `<legend>${title}</legend>`;
+    for (const { key, label, type, min, max, step, unit = '', help } of rows) {
+      const control = document.createElement('div');
+      control.className = 'ctl';
+      control.innerHTML = `<label for="c-${key}">${label}</label>${type === 'range' ? `<output for="c-${key}"></output>` : ''}`;
+      const input = document.createElement(type === 'select' ? 'select' : 'input');
+      input.id = 'c-' + key;
+      if (type === 'select') {
+        for (const ease of [defaultEase, ...easingNames]) input.add(new Option(ease, ease));
+      } else {
+        input.type = type;
+        if (type === 'range') Object.assign(input, { min, max, step });
+        if (type === 'checkbox') input.checked = s[key];
+        if (type === 'text') input.maxLength = 28;
+      }
+      input.value = s[key];
+      const output = control.querySelector('output');
+      if (output) output.textContent = s[key] + unit;
+      input.addEventListener('input', () => {
+        s[key] = type === 'range' ? Number(input.value) : type === 'checkbox' ? input.checked : input.value;
+        if (output) output.textContent = s[key] + unit;
+        markPreset();
+        play();
+      });
+      const description = document.createElement('small');
+      description.id = 'help-' + key;
+      description.textContent = help;
+      input.setAttribute('aria-describedby', description.id);
+      control.append(input, description);
+      group.append(control);
+    }
+    $('ctls').append(group);
+  }
+}
+
+function settings(verb) {
+  const css = {};
+  const step = { dur: s.dur, actor: 'card', do: verb, ease: s.ease };
+  switch (verb) {
+    case 'move':
+    case 'fade-in':
+      if (s.entryFrom !== KIT.entryFrom || s.entryTo !== KIT.entryTo) step.scale = [s.entryFrom, s.entryTo];
+      if (verb === 'move') {
+        step.to = 'destination';
+        if (s.hideAfter) step.then = 'hide';
+      }
+      break;
+    case 'lift': step.to = s.liftScale;
+    // fall through: settle reads the same rise token
+    case 'settle': css['--fx-lift-rise'] = -s.liftRise + 'px'; break;
+    case 'fade-out': step.to = s.opacity; break;
+    case 'show':
+    case 'hide': step.dur = 0; delete step.ease; break;
+    case 'flip':
+      step.holdMs = s.holdMs;
+      if (s.label) step.label = s.label;
+      break;
+    case 'scale': step.to = s.scale; step.pulse = s.pulseScale; break;
+    case 'shake': step.times = s.times; css['--fx-shake'] = s.shake + 'px'; break;
+    case 'glow':
+      if (s.blur !== KIT.blur || s.spread !== KIT.spread || s.glowColor !== KIT.glowColor) {
+        css['--fx-glow'] = `0 0 ${s.blur}px ${s.spread}px ${s.glowColor}`;
+      }
+      break;
+    case 'text':
+      step.actor = 'caption';
+      step.text = s.text;
+      if (s.textColor !== KIT.textColor) css['--fx-text'] = s.textColor;
+      if (s.textSize !== KIT.textSize) css['--fx-text-font'] = `${textFont.weight} ${s.textSize}px/${textFont.lineHeight} ${textFont.family}`;
+      css['--fx-text-rise'] = s.textRise + 'px';
+      break;
+    case 'rise-pulse': css['--buff-ms'] = s.buffMs + 'ms'; css['--card-w'] = s.cardW + 'px'; break;
+  }
+  return { css, step };
+}
+
+let rects;
+const player = MOTION.createMotionPlayer({
+  specs: {}, stages: { default: (id) => rects[id] }, verbs, speed: previewSpeed, context: layer,
+  onBeatStart: (run) => {
+    if (run.timeline.actors.some((actor) => actor.id === 'card')) card.classList.add('fx-source');
+    layer.start(run);
+  },
+  onProblem: (problem) => console.error(problem),
+});
+// Keep the finished clone visible for inspection. Each replay clears the previous beat.
+layer.el.style.zIndex = '1';
+
+function play() {
+  player.skipAll();
+  layer.clear();
+  card.classList.remove('fx-source');
+  card.querySelector('.fx-rise-pulse')?.remove();
+  const verb = picker.value;
+  const isPulse = verb === 'rise-pulse';
+  const { css, step } = settings(verb);
+  const speed = previewSpeed();
+  MOTION.putMotionSpeed(speed, 'on', table);
+  for (const key of [...table.style]) if (key.startsWith('--fx-') || key === '--buff-ms' || key === '--card-w') table.style.removeProperty(key);
+  for (const [key, value] of Object.entries(css)) table.style.setProperty(key, value);
+
+  const x = table.clientWidth / 2, y = table.clientHeight * .54;
+  const w = card.offsetWidth, h = card.offsetHeight;
+  rects = {
+    home: [x - w / 2, y - h / 2, w, h],
+    destination: [x + s.dx - w / 2, y + s.dy - h / 2, w, h],
+    caption: [x - 130, y - 30, 260, 60],
+  };
+  const destination = $('destination');
+  destination.style.display = verb === 'move' ? 'block' : 'none';
+  destination.style.left = x + s.dx + 'px';
+  destination.style.top = y + s.dy + 'px';
+
+  const lines = [`const speed = () => withReducedMotion(${s.speed || "'instant'"});`];
+  let note;
+  if (isPulse) {
+    if (speed !== 'instant') {
+      const pulseEl = document.createElement('div');
+      pulseEl.className = 'fx-rise-pulse';
+      card.append(pulseEl);
+    }
+    lines.push('', '// Place inside a positioned card and mount to replay.', '<div class="fx-rise-pulse"></div>');
+    note = `The warm halo pulses for ${Math.round(s.buffMs * s.speed)} ms at this motion scale.`;
+  } else {
+    const sequence = $('sequence').checked;
+    const actors = step.actor === 'caption'
+      ? [{ id: 'caption', at: 'caption' }]
+      : [{ id: 'card', at: 'home', hidden: verb === 'show' || verb === 'fade-in' }];
+    const steps = [{ t: 0, ...step }];
+    if (sequence) {
+      if (step.actor === 'caption') actors.unshift({ id: 'card', at: 'home' });
+      if (verb === 'hide' || (verb === 'move' && s.hideAfter) || verb === 'fade-out') {
+        steps.push({ t: step.dur + 140, dur: 0, actor: 'card', do: 'show' });
+      }
+      steps.push({ t: steps.at(-1).t + steps.at(-1).dur + 140, dur: s.dur, actor: 'card', do: verb === 'glow' ? 'shake' : 'glow' });
+    }
+    const maxMs = Math.max(1, steps.at(-1).t + steps.at(-1).dur);
+    const beat = { id: 'preview', frequency: 'once', maxMs, actors, steps };
+    player.play(beat);
+    lines.push('', `const beat = ${JSON.stringify(beat, null, 2)};`);
+    if (verb === 'move') lines.push('', '// Rect for the destination in the stage resolver:', `const destination = [home[0] + (${s.dx}), home[1] + (${s.dy}), home[2], home[3]];`);
+    const names = steps.map((item) => item.do).join(' → ');
+    note = sequence ? `${names}. The beat takes ${Math.round(maxMs * s.speed)} ms including the gaps.`
+      : step.dur ? `${verb} takes ${Math.round(step.dur * s.speed)} ms at this motion scale.`
+      : `${verb} plays immediately.`;
+    if (verb === 'move') note += ` Offset: ${s.dx}px across, ${s.dy}px down.`;
+    if (verb === 'settle') note += ' The kit fixes the starting scale and rebound.';
+  }
+
+  $('note').textContent = speed === 'instant' ? 'Motion is off. The card stays still.' : note;
+  $('code').textContent = lines.join('\n') + '\n\n/* On the effect layer or an ancestor (on the card for rise-pulse). */\n'
+    + Object.entries(css).map(([key, value]) => `${key}: ${value};\n`).join('')
+    + `--motion-scale: ${s.speed};`;
+}
+
+function markPreset() {
+  $('reset').setAttribute('aria-pressed', String(Object.keys(KIT).every((key) => s[key] === KIT[key])));
+}
+picker.addEventListener('change', () => {
+  $('sequence').disabled = picker.value === 'rise-pulse';
+  build();
+  play();
+});
+$('sequence').addEventListener('change', () => { build(); play(); });
+$('play').addEventListener('click', play);
+$('reset').addEventListener('click', () => { s = { ...KIT }; markPreset(); build(); play(); });
+$('copy').addEventListener('click', async () => {
+  try { await navigator.clipboard.writeText($('code').textContent); $('copy').textContent = 'Copied'; }
+  catch {
+    const range = document.createRange();
+    range.selectNodeContents($('code'));
+    getSelection().removeAllRanges();
+    getSelection().addRange(range);
+    $('copy').textContent = 'Selected for copying';
+  }
+  setTimeout(() => { $('copy').textContent = 'Copy'; }, 1800);
+});
+matchMedia('(prefers-reduced-motion: reduce)').addEventListener('change', play);
+build();
+new ResizeObserver(play).observe(table);
+</script>
+</html>
