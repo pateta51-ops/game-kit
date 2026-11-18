@@ -158,6 +158,7 @@ A game's build plan lists the kit work it needs as phases named `GK<n>` for the 
 | K395 | llm-playtester: tool_choice auto (thinking models refuse forced tool use), one re-ask when no tool call, pre-call cost estimate and clear cap message | S |  | done |
 | K397 | card-harness keysOf skips primitive union members and takes { first: true } (literalsOf { keys: 'first' }) for the tag-like first key only | S |  | done |
 | K398 | llm-playtester: max_tokens default 16000 (a thinking model was cut off at 1024), `maxTokens` option and `--max-tokens`, finding says when a reply was cut off at max_tokens | S |  | done |
+| K399 | heavy-queue (owner approved 18 Nov): `tools/heavy-queue/`, one machine-wide queue for heavy runs on the WSL PC (server with N slots, high before normal, leases freed on missed heartbeats or a dead pid, status page; `heavy run` client with flock fallback and `HEAVY_HELD` pass-through; self-hosted runner job hooks and their installer; systemd install), port in `ports.json`; `kit.mjs finish` and `gate-slot.sh` run through it when installed | L |  | done |
 
 ## Harvest from the existing games (owner, 15 Nov 2026)
 

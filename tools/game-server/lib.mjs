@@ -18,6 +18,7 @@ export function validatePorts(cfg) {
   phone(cfg.panel.local, 'panel.local');
   const https = new Map([[cfg.panel.https, 'panel.https']]);
   if (!Number.isInteger(cfg.panel.https)) errs.push('panel.https: bad port');
+  for (const [k, n] of Object.entries(cfg.tools ?? {})) { take(n, `tools.${k}`); if ((n >= 4170 && n <= 4199) || (n >= 5190 && n <= 5299)) errs.push(`tools.${k}: ${n} must be outside 4170-4199 and 5190-5299`); }
   const blocks = [];
   for (const [id, g] of Object.entries(cfg.games)) {
     if (!/^[a-z0-9][a-z0-9-]*$/.test(id)) errs.push(`${id}: id must be lowercase letters, digits, dashes`);
@@ -80,6 +81,8 @@ Before using a port, look here; a new port = the game's block or an entry in \`p
 Generated from \`ports.json\` by \`node tools/game-server/server.mjs ports-md\`; a test fails when this file drifts.
 
 Panel: local ${cfg.panel.local}, ${publicUrl(cfg.panel.https).replace(HOST, "<host>")}
+${Object.entries(cfg.tools ?? {}).map(([k, n]) => `
+Tool ${k}: local ${n}`).join('')}
 
 | Game | dev | preview | e2e | e2eAux | phone local | phone URL |
 |---|---|---|---|---|---|---|

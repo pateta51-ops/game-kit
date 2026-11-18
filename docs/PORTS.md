@@ -8,6 +8,8 @@ Generated from `ports.json` by `node tools/game-server/server.mjs ports-md`; a t
 
 Panel: local 4170, https://<host>:8440
 
+Tool heavy-queue: local 6005
+
 | Game | dev | preview | e2e | e2eAux | phone local | phone URL |
 |---|---|---|---|---|---|---|
 | Imperium | 6010 | 6011 | 6012 | 6013 | 4173 | https://<host> |

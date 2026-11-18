@@ -4,6 +4,9 @@
 # files in GATE_DIR, so the limit holds across every repository on the machine that uses the same GATE_DIR. Waits for a free
 # slot, then runs the command in the current directory and exits with its code.
 # Usage (from any worktree of this repository): bash tools/architect/gate-slot.sh npm run check
+# With the kit's heavy queue installed (`heavy` on PATH or in ~/.local/bin, K399) the run waits in its machine-wide queue instead.
+H=$(command -v heavy || { [ -x "$HOME/.local/bin/heavy" ] && echo "$HOME/.local/bin/heavy"; })
+[ -n "$H" ] && exec "$H" run --priority "${HEAVY_PRIORITY:-high}" --label "$(basename "$PWD"): $*" -- "$@"
 D=${GATE_DIR:-/tmp/game-gates}
 N=${GATE_SLOTS:-2}
 mkdir -p "$D"
