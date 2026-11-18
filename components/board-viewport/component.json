@@ -1,0 +1,17 @@
+{
+  "name": "board-viewport",
+  "source": {
+    "game": "earthborne-rangers",
+    "commit": "b9b06107",
+    "paths": ["src/ui/map/ZoomView.tsx", "src/ui/map/drawing.ts (sheet bounds)"],
+    "grafts": [
+      {
+        "game": "under-falling-skies",
+        "commit": "07238a4",
+        "paths": ["src/ui/board/pan.ts", "src/ui/board/useTween.ts"]
+      }
+    ]
+  },
+  "needs": [],
+  "packages": ["react"]
+}

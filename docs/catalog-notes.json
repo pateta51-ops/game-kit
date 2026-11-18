@@ -24,6 +24,10 @@
     "use": "The board UI needs to highlight things (spaces, pieces, markers, stacks) straight from the legal-action list.",
     "not": "Rules for what is legal; the engine decides that."
   },
+  "board-viewport": {
+    "use": "Fit a large SVG or DOM board, zoom about a pointer, drag to pan, or move the camera to an action rect.",
+    "not": "Phone app layout (phone-mode) or scrolling a target into view during a beat (motion-frame)."
+  },
   "boundary-check": {
     "use": "Checking a game's layering rules (engine does not import UI) and that a catalogue's faces exist.",
     "not": "General lint; use lint-preset."
