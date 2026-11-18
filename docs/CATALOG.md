@@ -1093,7 +1093,7 @@ Small screen helpers with no look and no game types. The stores are zustand vani
 
 - **Use it when:** Small screen helpers: hover hold, inspect, rule sheet, toasts, prompt keys. For an engine-core prompt use prompt-host instead of createSelection and onlyForcedAnswer.
 - **Not for:** Any look or game type.
-- **Key exports:** `realTimers`, `bindHoverHold`, `createHoverHold`, `createInspect`, `createToasts`, `createSelection`, `picksFor`, `onlyForcedAnswer`, `probedAnswer`, `sheetMatching`, `sheetWords`, `compileIconWords`, `iconizeSegments`, `withoutIconWords`, and 30 more
+- **Key exports:** `realTimers`, `bindHoverHold`, `createHoverHold`, `createInspect`, `createToasts`, `createSelection`, `picksFor`, `onlyForcedAnswer`, `probedAnswer`, `sheetMatching`, `sheetWords`, `compileIconWords`, `iconizeSegments`, `withoutIconWords`, and 41 more
 - **Needs:** nothing
 - **Came from:** jarl
 - **Docs:** [README](../components/ui-helpers/README.md)

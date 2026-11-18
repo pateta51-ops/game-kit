@@ -513,7 +513,7 @@ The kit holds every game's parts, then every game is retrofitted onto them (owne
 | K363 | [7] New-build check: detect a new build and reload once when safe, show the build commit, two-build offline e2e server (extend offline) | docs/INVENTORY.md item 7; 7IS, ER, Jarl | S | done |
 | K364 | [8] Coverage report: which card-language constructs the packs use and lack, as a page and a script (new coverage-report) | docs/INVENTORY.md item 8; ER, Jarl, UFS, Radiance | S | done |
 | K365 | [9] Modal and confirm dialog over the board: focus, Esc, close (new modal-dialog) | docs/INVENTORY.md item 9; IH, Unst | S | done |
-| K366 | [10] Keyboard play: keys 1-9, Enter, Esc, arrow-key option lists and a help overlay (extend ui-helpers) | docs/INVENTORY.md item 10; Unst, UFS | S | open |
+| K366 | [10] Keyboard play: keys 1-9, Enter, Esc, arrow-key option lists and a help overlay (extend ui-helpers) | docs/INVENTORY.md item 10; Unst, UFS | S | done |
 | K367 | [11] Board viewport: SVG zoom about the pointer, drag pan, fit, auto-pan camera that follows the action (extend board-layout) | docs/INVENTORY.md item 11; ER, UFS | M | open |
 | K368 | [12] Zoom and hover-preview placement: right/left/below/above with margin, kept on screen (extend card-zoom) | docs/INVENTORY.md item 12; Warps, Unst | S | done |
 | K369 | [13] Looked-at cards: memory of cards the player peeked at plus the large look-at view (new looked-at) | docs/INVENTORY.md item 13; ER, IH | S | open |

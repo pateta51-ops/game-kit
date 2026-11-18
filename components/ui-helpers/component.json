@@ -57,6 +57,20 @@
         "paths": [
           "src/ui/a11y/shortcuts.ts (bindPromptKeys: no React; the prompt, the selection store and the game's keys replaced by `open`, `panel`, `keys`, `clear` and `back`)"
         ]
+      },
+      {
+        "game": "unst",
+        "commit": "a9b3dfb",
+        "paths": [
+          "src/ui/play/useBoardKeys.ts, src/ui/play/ShortcutHelp.tsx (playKeys.ts: bindPlayKeys, createShortcutHelp, shortcutHelpElement: no React; the game's keys and rows passed in)"
+        ]
+      },
+      {
+        "game": "ufs",
+        "commit": "07238a4",
+        "paths": [
+          "src/ui/prompts/common.tsx (playKeys.ts: the arrow-key option list, as bindPlayKeys' list roving focus)"
+        ]
       }
     ]
   },

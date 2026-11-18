@@ -24,4 +24,17 @@ export {
   type PromptKeyTools,
   type PromptKeysOptions,
 } from './promptKeys.ts';
+export {
+  bindPlayKeys,
+  createShortcutHelp,
+  shortcutHelpElement,
+  type FocusItem,
+  type HelpDoc,
+  type HelpNode,
+  type ListElement,
+  type PlayKeyPress,
+  type PlayKeysOptions,
+  type ShortcutHelpState,
+  type ShortcutRow,
+} from './playKeys.ts';
 export { bindLinkTooltip, type LinkPointerEvent, type LinkRoot, type LinkTooltipOptions } from './linkTooltip.ts';

@@ -37,6 +37,8 @@ export interface PromptKeysOptions {
   panel: () => KeyRoot | null;
   /** What has its own keys while it is there. */
   overlay?: string;
+  /** True while something else owns the keys (e.g. `() => help.getState().open` of bindPlayKeys): nothing runs, whatever the bind order. */
+  paused?: () => boolean;
   /** The game's keys by `event.key` (a letter in lower case answers both cases); true when the key did something. */
   keys?: Readonly<Record<string, (tools: PromptKeyTools) => boolean>>;
   /** Escape, first: clears a selection or a confirmation; true when there was one. */
@@ -50,11 +52,11 @@ const tag = (target: unknown): string => {
   return typeof t === 'string' ? t.toUpperCase() : '';
 };
 
-const isTyping = (target: unknown): boolean =>
+export const isTyping = (target: unknown): boolean =>
   (target as { isContentEditable?: unknown } | null)?.isContentEditable === true ||
   ['INPUT', 'TEXTAREA', 'SELECT'].includes(tag(target));
 
-const isControl = (target: unknown): boolean => {
+export const isControl = (target: unknown): boolean => {
   if (['BUTTON', 'A'].includes(tag(target))) return true;
   const get = (target as { getAttribute?: unknown } | null)?.getAttribute;
   return typeof get === 'function' && (get as (n: string) => unknown).call(target, 'role') === 'button';
@@ -64,7 +66,7 @@ const isControl = (target: unknown): boolean => {
 export function bindPromptKeys(target: KeyTarget, options: PromptKeysOptions): () => void {
   const { overlay = '[role="dialog"]', keys = {} } = options;
   const fn: KeyListener = (e) => {
-    if (e.defaultPrevented || !options.open()) return;
+    if (e.defaultPrevented || options.paused?.() === true || !options.open()) return;
     if (e.ctrlKey || e.metaKey || e.altKey || isTyping(e.target)) return;
     if (target.querySelector(overlay) != null) return;
     const root = options.panel();

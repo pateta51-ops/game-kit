@@ -29,6 +29,19 @@ empty. `onlyForcedAnswer` is the screen side of the engine-core test that every 
 The sheet search never searches or returns a rule id: a block is only its level and its printed words. Not here: the drawing (toast list, inspector panel, rules screen, icons), the game's never-list, its cost function, its
 icon table, its keys and its texts.
 
+## Keyboard play
+
+`bindPlayKeys(document, { enabled?, panel?, confirm = '[data-confirm]', list = '[data-key-list]', item?, board?, help?, overlay? })`: Enter clicks the panel's confirm control (not when a button has focus); arrows move focus through the items of a list the game marks `data-key-list` (wrapping); `board` maps `event.key` to an action (false = did nothing); `?` opens the `help` store (`createShortcutHelp()`), Escape closes it. Ignored while typing, with a modifier, under a dialog, with `enabled` false, and on key repeat. `board` throws on reserved keys: 1-9, Enter, Escape, `?` and the arrows. Beside `bindPromptKeys`, pass it `paused: () => help.getState().open` so Escape closes the help first in either bind order. Returns the unbind. `shortcutHelpElement(document, rows, title)` builds an unstyled dialog of `{ keys, what }` rows, or draw the store yourself. Play convenience only; keys and labels are the game's.
+
+```ts
+import { bindPlayKeys, createShortcutHelp } from '../kit/ui-helpers/index'
+
+declare function endPhase(): boolean
+const help = createShortcutHelp() // the game draws it while help.getState().open
+const unbind = bindPlayKeys(document, { panel: () => document.querySelector('#prompt'), board: { e: () => endPhase() }, help })
+unbind()
+```
+
 ## Use it in 10 lines
 
 ```ts
