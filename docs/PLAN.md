@@ -522,7 +522,7 @@ The kit holds every game's parts, then every game is retrofitted onto them (owne
 | K373 | [17] Scan-based board parts: state drawn over a printed scan's boxes, die-cut pieces at true size, playmat box detection, outline tracing, tone profile, finite supply (extend scan-ingest and token-bag) | docs/INVENTORY.md item 17; ER, Unst, Radiance | L | open |
 | K374 | [18] Art pipeline: one chosen image per card, fetch, extract, CI cache, faces rendered from PnP PDFs, copy to public with a manifest (new art-pipeline) | docs/INVENTORY.md item 18; 7IS, ER, Astra | L | open |
 | K375 | [19] Face fit check and tuning: printed text fits the face at a pixel floor, autotune/fit/measure scripts, crop sheets with grid (extend transcription-check) | docs/INVENTORY.md item 19; STCC, 7IS | M | done |
-| K376 | [20] Dev component sheet route: every theme component or board view on one page (extend theme-check) | docs/INVENTORY.md item 20; 7IS, STCC | S | open |
+| K376 | [20] Dev component sheet route: every theme component or board view on one page (extend theme-check) | docs/INVENTORY.md item 20; 7IS, STCC | S | done |
 | K377 | [21] Test setup helpers: jsdom scroll stubs, UI fixtures for component tests, real-data suite setup (extend e2e-helpers) | docs/INVENTORY.md item 21; Unst, ER, STCC | S | done |
 | K378 | [22] Small UI helpers: base-aware asset path resolver, plural and number format (extend small-helpers) | docs/INVENTORY.md item 22; Rome, Unst | S | done |
 | K379 | [23] Launcher that reuses the production build until its inputs change (extend tooling-scripts) | docs/INVENTORY.md item 23; ER, 7IS | S | done |

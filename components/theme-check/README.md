@@ -27,8 +27,20 @@ Browser step (`coverage.ts`): `coverageFindings(page, { area?, items?, minSpan?,
 
 Browser step (`fonts.ts`), the phone font floor (`phoneFontFindings(page, routes, minPx = 26, size = 390x844)` sets the viewport, then runs it): `fontSizeFindings(page, routes, minPx)` from a game's e2e run (Playwright `page`; routes are what `page.goto` takes) visits each route and returns `route: "text" (Npx)` for every visible text node whose computed font size is under `minPx`; empty is clean. Needs a DOM; the static check is unchanged.
 
+Dev sheet (`Sheet.tsx`, K376): the `dev` prop is required and the route renders nothing unless it is true (pass `isDevMode(undefined, import.meta.env.DEV)` from prompt-gallery). A width toggle sets the body to `narrowPx` (390); an entry with `variants: { side: ['basic','advanced'] }` gets a toggle per key and `render(picks)` receives the choice; an index of section links sits above. The filter follows `hashchange`. every component or board view the game registers on one dev page, each in a labelled section (`<h2>` label, then one `<h3>` per state), no look. The game passes `entries` of `{ id, label, render(), states?: { label, render() }[] }`; `states` are further looks (sample props). The filter box matches id or label and is kept in the hash as `q=` (`#/dev/sheet?q=button`, or `#q=button`), read on load and written with `replaceState`; pass `hash` to fix it (tests). A render that throws shows its message in that section only (`sheet-error`). Prompts and endings stay in `prompt-gallery`; this is the theme's parts. Pure helpers in `sheet.ts`: `filterFromHash`, `hashWithFilter`, `filterEntries`. For e2e: `[data-testid="sheet-entry"]` with `data-id`.
+
 ## Use it in 10 lines
 
 ```sh
 node kit/theme-check/theme-check.ts --config theme-check.config.json   # exit 0 clean, 1 findings, 2 usage
+```
+
+```tsx
+import { Sheet } from '../kit/theme-check/Sheet'
+import type { SheetEntry } from '../kit/theme-check/sheet'
+
+const entries: SheetEntry[] = [
+  { id: 'button', label: 'Button', render: () => <button type="button">Go</button>, states: [{ label: 'disabled', render: () => <button type="button" disabled>Go</button> }] },
+]
+export const DevSheet = () => <Sheet dev entries={entries} />
 ```

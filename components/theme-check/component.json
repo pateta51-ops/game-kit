@@ -7,7 +7,10 @@
   },
   "grafts": [
     { "game": "stcc", "commit": "9fc59643", "paths": ["e2e/layout-bounds.spec.ts", "e2e/table-text-under-cards.spec.ts"], "what": "layout.ts: inside its zone, no overlap, no cut row, onTop" },
-    { "game": "jarl", "commit": "6f006a2", "paths": ["scripts/theme-check.ts"], "what": "assets: font files, licences, svgs and files in place" }
+    { "game": "jarl", "commit": "6f006a2", "paths": ["scripts/theme-check.ts"], "what": "assets: font files, licences, svgs and files in place" },
+    { "game": "7is", "commit": "5e0ad51", "paths": ["src/ui/theme/ThemePage.tsx"], "what": "Sheet.tsx: every component in one labelled section on one page" },
+    { "game": "stcc", "commit": "a69c8dac", "paths": ["src/ui/dev/BoardGallery.tsx", "src/ui/dev/samples.ts"], "what": "Sheet.tsx: views with sample states, shown on a dev route" }
   ],
-  "needs": []
+  "needs": [],
+  "packages": ["react"]
 }

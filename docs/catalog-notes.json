@@ -337,13 +337,15 @@
     "not": "Prompt kinds, which prompts are targets, the prompt panel (prompt-host) or the arrow's colours."
   },
   "theme-check": {
-    "use": "Checking that the game's look lives in its token file, fonts and layout.",
+    "use": "Checking that the game's look lives in its token file, fonts and layout, and one dev page (Sheet) showing every registered component or view with its states and a hash filter.",
     "not": "Choosing the look; the director's wireframes and themes do that.",
     "entry": [
       "theme-check.ts",
       "coverage.ts",
       "fonts.ts",
-      "layout.ts"
+      "layout.ts",
+      "sheet.ts",
+      "Sheet.tsx"
     ]
   },
   "token-bag": {
