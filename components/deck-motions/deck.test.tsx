@@ -29,6 +29,16 @@ describe('deck-motions DOM', () => {
     await d.done;
     expect(document.querySelectorAll('[data-motion-standin]')).toHaveLength(0);
   });
+  it('turns over side to side by default and top to bottom with axis y', () => {
+    setup();
+    dealFrom([{ id: 'c1', dir: 'out', pile: 'deck', at: slot, faceDown: true }], { speed: 1 });
+    expect(String(made[0]?.frames[1]?.transform)).toContain('rotateY(90deg)');
+    made.length = 0;
+    dealFrom([{ id: 'c1', dir: 'out', pile: 'deck', at: slot, faceDown: true }], { speed: 1, axis: 'y' });
+    expect(String(made[0]?.frames[1]?.transform)).toContain('rotateX(90deg)');
+    expect(String(made[1]?.frames[0]?.transform)).toContain('rotateX(-90deg)');
+    finishDeckMotions();
+  });
   it('plays nothing at speed 0', async () => {
     setup();
     await dealFrom([{ id: 'c1', dir: 'out', pile: 'deck', at: slot, faceDown: false }], { speed: 0 }).done;

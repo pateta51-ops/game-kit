@@ -132,6 +132,7 @@ A game's build plan lists the kit work it needs as phases named `GK<n>` for the 
 | K321 | ci-templates: the Full gate workflow has `run-name: Full gate PR #<pr> <sha>`, so the tested head is in the run's title | S |  | done |
 | K322 | ci-templates: the Full gate run-name is quoted, since an unquoted ` #` starts a YAML comment and cut the title to "Full gate PR" | S |  | done |
 | K343 | Tests that flake under runner load made robust: check-runner K138 stream order, ci-templates local-ci step lines, app-frame crash screen save-later | S |  | done (coverage crash: cause not found, left open) |
+| K347 | `deck-motions` turn-over takes `axis: 'x' | 'y'` (side to side, default; or top to bottom). The effect-library `flip` gets the same option in K334's PR | S |  | done |
 
 ## Harvest from the existing games (owner, 15 Nov 2026)
 

@@ -13,6 +13,8 @@ export interface DeckMotionOpts {
   face?: (id: string, el: HTMLElement) => HTMLElement;
   /** The game's unit in px for the riffle's offsets (default: `--u` on the pile, else MOCK_U). */
   unit?: (pile: HTMLElement) => number;
+  /** Turn-over axis: 'x' turns side to side (rotateY, default), 'y' top to bottom (rotateX). */
+  axis?: 'x' | 'y';
 }
 
 const live = new Set<Animation>();
@@ -109,10 +111,11 @@ export function dealFrom(moves: readonly Move[], o: DeckMotionOpts & { shuffled?
       ends.push(track(el.animate(frames, { duration: t.ms, delay: t.delay, fill: 'both', easing: 'ease-in-out' }), el));
     };
     if (move.faceDown && move.dir === 'out') {
+      const rot = o.axis === 'y' ? 'rotateX' : 'rotateY';
       const b = stand((o.back ?? cardBack)(move.pile, from));
       const f = stand(face(move.id, atEl));
-      fly(b, [{ transform: `${start} rotateY(0deg)`, offset: 0 }, { transform: `${REST} rotateY(90deg)`, offset: 0.5 }, { transform: `${REST} rotateY(90deg)`, offset: 1 }]);
-      fly(f, [{ transform: `${start} rotateY(-90deg)`, offset: 0 }, { transform: `${start} rotateY(-90deg)`, offset: 0.5 }, { transform: `${REST} rotateY(0deg)`, offset: 1 }]);
+      fly(b, [{ transform: `${start} ${rot}(0deg)`, offset: 0 }, { transform: `${REST} ${rot}(90deg)`, offset: 0.5 }, { transform: `${REST} ${rot}(90deg)`, offset: 1 }]);
+      fly(f, [{ transform: `${start} ${rot}(-90deg)`, offset: 0 }, { transform: `${start} ${rot}(-90deg)`, offset: 0.5 }, { transform: `${REST} ${rot}(0deg)`, offset: 1 }]);
       continue
     }
     const el = stand(move.faceDown ? (o.back ?? cardBack)(move.pile, from) : face(move.id, atEl));
