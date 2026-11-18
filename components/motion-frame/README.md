@@ -15,10 +15,23 @@ Plays motion specs in the director's format (one JSON per beat: `actors`, `steps
 - `withReducedMotion(speed)`: `'instant'` when the system asks for reduced motion. `BeatTable<Kind>`: type for the game's event-kind to beat-names table, so a kind without an entry fails the type check.
 - `withAutomationOff(speed, marker = 'KitMotion')`: `'instant'` in an automated browser (`navigator.webdriver`), unless the user agent carries `marker` or the address has `?motion=on`; a real player is untouched. Use `speed: () => withReducedMotion(withAutomationOff(setting))`. The e2e suite then runs fast and steady; a second Playwright project runs the flows again with motion on: `{ name: 'chromium-motion', use: { ...devices['Desktop Chrome'], userAgent: devices['Desktop Chrome'].userAgent + ' KitMotion' }, testMatch: /(flows|motion)\.spec\.ts$/ }`. `putMotionSpeed(speed, name = 'on')`: `<html data-motion>` (`off`, or `name`, e.g. `fast`) and `--motion-scale` (the factor, 0 when off) for the game's CSS; call it at start and when the setting changes; `bindMotionSpeed(() => speed, () => name)` calls it again when the system's reduced-motion setting changes (returns the unbind). Without a `document` it does nothing.
 - Opt-in pacing (K142): a step with `read: true` is a hold for reading, timed by `pace(factor)` (default `max(1, factor)`: Slow lengthens it, Quick does not shorten it). With `reduced: () => boolean` a reduced-motion player plays the spec's `reduced` variant (`{ steps, sound?, maxMs? }`: the information held still) at factor 1, instant without one. A spec with `whenVisible: true` waits at the head of the queue while `visible()` is false; call `visibilityChanged()` when it turns true.
+- `whenReady: true` waits for the actor, step and target zones the beat uses.
+  `awaitRects: ['tray']` waits for the listed zones. Use both to wait for all of them.
+  The player polls its stage on `frame(callback)` (default `requestAnimationFrame`).
+  A custom scheduler can return a cancel function. After 60 frames the player reports
+  missing zones to `onProblem` and tries to play. Instant speed skips the wait.
+- `holdUntil: 'press'` holds the queue after the beat ends, until `player.release()`.
+  `releaseOnInput(player, window)` wires pointer and key presses and returns the unbind.
+  Use a beat id to let the next matching beat through the hold and resume when it ends.
+  `autoContinueMs` sets a delay on its own or a fallback for either hold, scaled
+  by the beat's speed; without it a hold lasts until `release()` or `skipAll()`. Instant beats open no hold. Read `held()` for the hold state.
+  `skipAll()` cancels waits and holds, for example on undo, load or leaving the screen.
 - Big beats (K143): `play(beat, { gate: { before, after } })` opens `gate()` (`{ beat, before, after, leaving, place? }`, `leaving` from the first `leave: true` step) while it plays or waits; `afterGate(f)` runs `f` once it closes; input is never held. `hurry()` (`hurryOnInput(player, target)`) is `skipAll` except beats whose spec says `hurry: 'keep'`. `playRun(beats, opts)` plays several beats under one stage: each its `places` variant (`lone`, `first`, `middle`, `last`), `run.place` is `{ at, k, of }` for a "2 of 3" chip, `onEnd` after the last. `onEnded(how)` beside `onEnd` says `done` or `skipped`. `validateSpec` checks the variants.
 - Lab (`lab.ts`): `mountMotionLab(root, { specs, player })` lists every motion of the catalog as a button (name, `maxMs`, frequency); a press calls `skipAll()` and plays that one on the game's stage, so give the lab its own player: on the game's player a press would end the game's beats too. Mounting again on a root replaces its list. Mount it on a route for the owner's review (in an automated browser, with `?motion=on`); returns the unmount.
 The end state is the game's own screen: the player never touches game state.
 ## Look
+Open `components/motion-frame/fake/lab.html` through Vite to try the fake queue.
+Choose the piece beat, draw the tray, then press to let the roll play.
 The lab is an unstyled `ul.motion-lab` of `button[data-beat]` (`data-playing` while it plays): the game styles it. Nothing else draws. Tests: `motion.test.ts` (node) and `lab.test.tsx` (jsdom), with the fake game in `fake/`.
 ## Review clips (`clips.ts`, `record.ts`)
 For the owner's motion review: a clip of the beat on the real screen and a stills sheet to judge it without playing the video.

@@ -14852,18 +14852,41 @@ var PIECES = (() => {
       names: () => [...m.keys()]
     };
   }
+  function requiredRects(spec) {
+    const actors = spec.actors ?? [];
+    const zones = actors.flatMap((a) => typeof a.at === "string" ? [a.at] : []);
+    for (const step of spec.steps) {
+      if (!actors.some((a) => a.id === step.actor)) zones.push(step.actor);
+      if (typeof step.to === "string") zones.push(step.to);
+    }
+    return zones;
+  }
   var blocks = (s) => s.frequency === "rare" || s.frequency === "once";
   function createMotionPlayer(o) {
     const queue = [];
     const subs = /* @__PURE__ */ new Set();
     let cur = null;
     const live = /* @__PURE__ */ new Set();
+    const drawing = /* @__PURE__ */ new Map();
+    let drawingHead;
+    const holds = /* @__PURE__ */ new Map();
+    const endHolds = (match) => {
+      for (const [item, timer] of holds) {
+        if (!match(item)) continue;
+        clearTimeout(timer);
+        holds.delete(item);
+      }
+    };
+    const reached = (id) => {
+      if (id !== "press") endHolds((item) => item.spec.holdUntil === id);
+    };
+    const frame = o.frame ?? ((f) => requestAnimationFrame(f));
     let runs = 0;
     let skipping = false;
     const waiters = [];
     const gate = () => {
       const c = [...live].find((x) => x.item.gate !== void 0);
-      const i = c?.item ?? queue.find((x) => x.gate !== void 0);
+      const i = c?.item ?? [...drawing.keys()].find((x) => x.gate !== void 0) ?? queue.find((x) => x.gate !== void 0);
       if (i?.gate === void 0) return null;
       return { ...i.gate, beat: i.spec.id, leaving: c?.leaving ?? false, ...i.place && { place: i.place } };
     };
@@ -14898,9 +14921,7 @@ var PIECES = (() => {
       safe(`${c.run.timeline.id} end`, () => o.onBeatEnd?.(c.run));
       safe(`${c.run.timeline.id} onEnd`, () => c.item.onEnd?.(how));
     };
-    const start = (item, spec, factor, parallel = false) => {
-      const stage = o.stages[spec.stage ?? "default"];
-      if (stage === void 0) throw new Error(`motion-frame ${spec.id}: stage ${String(spec.stage)} is not known`);
+    const start = (item, spec, stage, factor, parallel) => {
       const timeline = buildTimeline(spec, stage, factor, o.pace?.(factor));
       const run = { id: ++runs, timeline, context: o.context, ...item.place && { place: item.place } };
       const timers = /* @__PURE__ */ new Set();
@@ -14916,6 +14937,7 @@ var PIECES = (() => {
         timers.add(t);
       };
       safe(`${spec.id} start`, () => o.onBeatStart?.(run));
+      if (!live.has(me)) return;
       for (const call of run.timeline.calls) {
         let done;
         at(call.t, () => {
@@ -14943,16 +14965,28 @@ var PIECES = (() => {
         });
       at(run.timeline.ms, () => {
         if (!live.has(me)) return;
+        reached(spec.id);
+        const delay = (spec.autoContinueMs ?? 0) * factor;
+        if (spec.holdUntil !== void 0 || delay > 0) {
+          const timer = delay > 0 ? setTimeout(() => {
+            if (!holds.has(item)) return;
+            holds.delete(item);
+            next();
+            emit();
+          }, delay) : void 0;
+          holds.set(item, timer);
+        }
         finish2(me, "done");
         next();
         emit();
       });
     };
     const next = () => {
-      while (cur === null && !skipping) {
-        if (queue[0]?.spec.whenVisible === true && o.visible?.() === false) return;
-        const item = queue.shift();
-        if (item === void 0) return;
+      while (cur === null && drawingHead === void 0 && !skipping) {
+        const index = holds.size === 0 ? 0 : queue.findIndex(({ spec }) => spec.id !== "press" && [...holds.keys()].some((i) => i.spec.holdUntil === spec.id));
+        const item = queue[index];
+        if (item === void 0 || item.spec.whenVisible === true && o.visible?.() === false) return;
+        queue.splice(index, 1);
         begin(item, false);
       }
     };
@@ -14965,25 +14999,76 @@ var PIECES = (() => {
         [...spec.sound ?? []].sort((a, b) => a.t - b.t).forEach((c) => {
           cue(c.cue, item.spec.id);
         });
+        reached(spec.id);
         safe(`${item.spec.id} onEnd`, () => item.onEnd?.("done"));
         return;
       }
-      try {
-        start(item, spec, reduced ? 1 : speed, parallel);
-      } catch (e) {
-        if (!parallel) cur = null;
+      const fail = (e) => {
+        reached(spec.id);
         o.onProblem?.(e instanceof Error ? e.message : String(e));
-        safe(`${item.spec.id} onEnd`, () => item.onEnd?.("done"));
+        safe(`${spec.id} onEnd`, () => item.onEnd?.("done"));
+      };
+      const stage = o.stages[spec.stage ?? "default"];
+      if (stage === void 0) {
+        fail(`motion-frame ${spec.id}: stage ${String(spec.stage)} is not known`);
+        return;
+      }
+      const play = () => start(item, spec, stage, reduced ? 1 : speed, parallel);
+      const zones = /* @__PURE__ */ new Set([...spec.whenReady ? requiredRects(spec) : [], ...spec.awaitRects ?? []]);
+      try {
+        if (!spec.whenReady && spec.awaitRects === void 0) {
+          play();
+          return;
+        }
+        let request;
+        const cancel = () => {
+          drawing.delete(item);
+          if (drawingHead === item) drawingHead = void 0;
+        };
+        drawing.set(item, () => {
+          cancel();
+          if (typeof request === "function") request();
+          else if (typeof request === "number" && typeof cancelAnimationFrame === "function") cancelAnimationFrame(request);
+        });
+        if (!parallel) drawingHead = item;
+        let left = 60;
+        const poll = () => {
+          if (!drawing.has(item)) return;
+          try {
+            const missing = [...zones].filter((zone) => stage(zone) === void 0);
+            if (missing.length > 0 && --left > 0) {
+              request = frame(poll);
+              return;
+            }
+            if (missing.length > 0) o.onProblem?.(`motion-frame ${spec.id}: timed out waiting for ${missing.join(", ")}`);
+            if (!drawing.has(item)) return;
+            cancel();
+            play();
+          } catch (e) {
+            cancel();
+            fail(e);
+          }
+          next();
+          emit();
+        };
+        request = frame(poll);
+      } catch (e) {
+        drawing.delete(item);
+        if (drawingHead === item) drawingHead = void 0;
+        fail(e);
       }
     };
     const skip = (snap) => {
       const waiting = queue.filter(snap);
       queue.splice(0, queue.length, ...queue.filter((i) => !snap(i)));
       skipping = true;
+      endHolds(snap);
+      const drawingItems = [...drawing].filter(([item]) => snap(item));
+      for (const [, cancel] of drawingItems) cancel();
       [...live].filter((c) => snap(c.item)).forEach((c) => {
         finish2(c, "skipped");
       });
-      for (const i of waiting) safe(`${i.spec.id} onEnd`, () => i.onEnd?.("skipped"));
+      for (const i of [...drawingItems.map(([item]) => item), ...waiting]) safe(`${i.spec.id} onEnd`, () => i.onEnd?.("skipped"));
       skipping = false;
       next();
       emit();
@@ -15007,7 +15092,10 @@ var PIECES = (() => {
         if (spec === void 0) return;
         if (opts?.parallel === true) {
           if (skipping) safe(`${spec.id} onEnd`, () => end?.("skipped"));
-          else begin({ spec, onEnd: end, gate: opts.gate }, true);
+          else {
+            begin({ spec, onEnd: end, gate: opts.gate }, true);
+            next();
+          }
         } else {
           queue.push({ spec, onEnd: end, gate: opts?.gate });
           next();
@@ -15036,8 +15124,16 @@ var PIECES = (() => {
         next();
         emit();
       },
-      busy: () => [...live].some((c) => blocks(c.item.spec)) || queue.some((i) => blocks(i.spec)),
-      pending: () => live.size + queue.length,
+      busy: () => [...live].some((c) => blocks(c.item.spec)) || [...drawing.keys(), ...holds.keys(), ...queue].some((i) => blocks(i.spec)),
+      pending: () => live.size + drawing.size + holds.size + queue.length,
+      held: () => holds.size > 0,
+      release() {
+        const size = holds.size;
+        endHolds((i) => i.spec.holdUntil === "press");
+        if (size === holds.size) return;
+        next();
+        emit();
+      },
       skipAll() {
         skip(() => true);
       },

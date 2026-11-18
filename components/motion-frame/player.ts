@@ -70,6 +70,7 @@ export interface PlayerOptions<C = undefined> {
   visible?: () => boolean;
   /** factor for `read` steps, from the motion factor; default never under 1 (Slow lengthens, Quick keeps) */
   pace?: (factor: number) => number;
+  frame?: (callback: FrameRequestCallback) => number | (() => void) | void;
 }
 export interface PlayOptions {
   onEnd?: () => void;
@@ -89,6 +90,8 @@ export interface MotionPlayer {
   pending(): number;
   /** everything playing and queued jumps to its end state: verbs finish, end callbacks fire, cues not yet due are dropped */
   skipAll(): void;
+  release(): void;
+  held(): boolean;
   subscribe(listener: () => void): () => void;
   /** like skipAll, but beats whose spec says `hurry: 'keep'` play on (and queued ones still play) */
   hurry(): void;
@@ -117,6 +120,16 @@ interface Current<C> {
   leaving: boolean;
 }
 
+function requiredRects(spec: MotionSpec): string[] {
+  const actors = spec.actors ?? [];
+  const zones = actors.flatMap((a) => typeof a.at === 'string' ? [a.at] : []);
+  for (const step of spec.steps) {
+    if (!actors.some((a) => a.id === step.actor)) zones.push(step.actor);
+    if (typeof step.to === 'string') zones.push(step.to);
+  }
+  return zones;
+}
+
 const blocks = (s: MotionSpec): boolean => s.frequency === 'rare' || s.frequency === 'once';
 
 export function createMotionPlayer<C = undefined>(o: PlayerOptions<C>): MotionPlayer {
@@ -124,12 +137,26 @@ export function createMotionPlayer<C = undefined>(o: PlayerOptions<C>): MotionPl
   const subs = new Set<() => void>();
   let cur: Current<C> | null = null;
   const live = new Set<Current<C>>();
+  const drawing = new Map<Item, () => void>();
+  let drawingHead: Item | undefined;
+  const holds = new Map<Item, Timer | undefined>();
+  const endHolds = (match: (item: Item) => boolean): void => {
+    for (const [item, timer] of holds) {
+      if (!match(item)) continue;
+      clearTimeout(timer);
+      holds.delete(item);
+    }
+  };
+  const reached = (id: string): void => {
+    if (id !== 'press') endHolds((item) => item.spec.holdUntil === id);
+  };
+  const frame = o.frame ?? ((f: FrameRequestCallback) => requestAnimationFrame(f));
   let runs = 0;
   let skipping = false;
   const waiters: (() => void)[] = [];
   const gate = (): GateState | null => {
     const c = [...live].find((x) => x.item.gate !== undefined);
-    const i = c?.item ?? queue.find((x) => x.gate !== undefined);
+    const i = c?.item ?? [...drawing.keys()].find((x) => x.gate !== undefined) ?? queue.find((x) => x.gate !== undefined);
     if (i?.gate === undefined) return null;
     return { ...i.gate, beat: i.spec.id, leaving: c?.leaving ?? false, ...(i.place && { place: i.place }) };
   };
@@ -166,9 +193,7 @@ export function createMotionPlayer<C = undefined>(o: PlayerOptions<C>): MotionPl
     safe(`${c.run.timeline.id} onEnd`, () => c.item.onEnd?.(how));
   };
 
-  const start = (item: Item, spec: MotionSpec, factor: number, parallel = false): void => {
-    const stage = o.stages[spec.stage ?? 'default'];
-    if (stage === undefined) throw new Error(`motion-frame ${spec.id}: stage ${String(spec.stage)} is not known`);
+  const start = (item: Item, spec: MotionSpec, stage: Stage, factor: number, parallel: boolean): void => {
     const timeline = buildTimeline(spec, stage, factor, o.pace?.(factor));
     const run: Run<C> = { id: ++runs, timeline, context: o.context, ...(item.place && { place: item.place }) };
     const timers = new Set<Timer>();
@@ -184,6 +209,7 @@ export function createMotionPlayer<C = undefined>(o: PlayerOptions<C>): MotionPl
       timers.add(t);
     };
     safe(`${spec.id} start`, () => o.onBeatStart?.(run));
+    if (!live.has(me)) return;
     for (const call of run.timeline.calls) {
       // both timers are set now, so a step's finish comes before the start of the step that follows it
       let done: (() => void) | undefined;
@@ -212,6 +238,17 @@ export function createMotionPlayer<C = undefined>(o: PlayerOptions<C>): MotionPl
       });
     at(run.timeline.ms, () => {
       if (!live.has(me)) return;
+      reached(spec.id);
+      const delay = (spec.autoContinueMs ?? 0) * factor;
+      if (spec.holdUntil !== undefined || delay > 0) {
+        const timer = delay > 0 ? setTimeout(() => {
+          if (!holds.has(item)) return;
+          holds.delete(item);
+          next();
+          emit();
+        }, delay) : undefined;
+        holds.set(item, timer);
+      }
       finish(me, 'done');
       next();
       emit();
@@ -219,10 +256,12 @@ export function createMotionPlayer<C = undefined>(o: PlayerOptions<C>): MotionPl
   };
 
   const next = (): void => {
-    while (cur === null && !skipping) {
-      if (queue[0]?.spec.whenVisible === true && o.visible?.() === false) return;
-      const item = queue.shift();
-      if (item === undefined) return;
+    while (cur === null && drawingHead === undefined && !skipping) {
+      const index = holds.size === 0 ? 0 : queue.findIndex(({ spec }) =>
+        spec.id !== 'press' && [...holds.keys()].some((i) => i.spec.holdUntil === spec.id));
+      const item = queue[index];
+      if (item === undefined || (item.spec.whenVisible === true && o.visible?.() === false)) return;
+      queue.splice(index, 1);
       begin(item, false);
     }
   };
@@ -238,15 +277,63 @@ export function createMotionPlayer<C = undefined>(o: PlayerOptions<C>): MotionPl
         .forEach((c) => {
           cue(c.cue, item.spec.id);
         });
+      reached(spec.id);
       safe(`${item.spec.id} onEnd`, () => item.onEnd?.('done'));
       return;
     }
-    try {
-      start(item, spec, reduced ? 1 : speed, parallel);
-    } catch (e) {
-      if (!parallel) cur = null;
+    const fail = (e: unknown): void => {
+      reached(spec.id);
       o.onProblem?.(e instanceof Error ? e.message : String(e));
-      safe(`${item.spec.id} onEnd`, () => item.onEnd?.('done'));
+      safe(`${spec.id} onEnd`, () => item.onEnd?.('done'));
+    };
+    const stage = o.stages[spec.stage ?? 'default'];
+    if (stage === undefined) {
+      fail(`motion-frame ${spec.id}: stage ${String(spec.stage)} is not known`);
+      return;
+    }
+    const play = (): void => start(item, spec, stage, reduced ? 1 : speed, parallel);
+    const zones = new Set([...(spec.whenReady ? requiredRects(spec) : []), ...(spec.awaitRects ?? [])]);
+    try {
+      if (!spec.whenReady && spec.awaitRects === undefined) {
+        play();
+        return;
+      }
+      let request: ReturnType<typeof frame>;
+      const cancel = (): void => {
+        drawing.delete(item);
+        if (drawingHead === item) drawingHead = undefined;
+      };
+      drawing.set(item, () => {
+        cancel();
+        if (typeof request === 'function') request();
+        else if (typeof request === 'number' && typeof cancelAnimationFrame === 'function') cancelAnimationFrame(request);
+      });
+      if (!parallel) drawingHead = item;
+      let left = 60;
+      const poll = (): void => {
+        if (!drawing.has(item)) return;
+        try {
+          const missing = [...zones].filter((zone) => stage(zone) === undefined);
+          if (missing.length > 0 && --left > 0) {
+            request = frame(poll);
+            return;
+          }
+          if (missing.length > 0) o.onProblem?.(`motion-frame ${spec.id}: timed out waiting for ${missing.join(', ')}`);
+          if (!drawing.has(item)) return;
+          cancel();
+          play();
+        } catch (e) {
+          cancel();
+          fail(e);
+        }
+        next();
+        emit();
+      };
+      request = frame(poll);
+    } catch (e) {
+      drawing.delete(item);
+      if (drawingHead === item) drawingHead = undefined;
+      fail(e);
     }
   };
 
@@ -255,12 +342,15 @@ export function createMotionPlayer<C = undefined>(o: PlayerOptions<C>): MotionPl
     const waiting = queue.filter(snap);
     queue.splice(0, queue.length, ...queue.filter((i) => !snap(i)));
     skipping = true;
+    endHolds(snap);
+    const drawingItems = [...drawing].filter(([item]) => snap(item));
+    for (const [, cancel] of drawingItems) cancel();
     [...live]
       .filter((c) => snap(c.item))
       .forEach((c) => {
         finish(c, 'skipped');
       });
-    for (const i of waiting) safe(`${i.spec.id} onEnd`, () => i.onEnd?.('skipped'));
+    for (const i of [...drawingItems.map(([item]) => item), ...waiting]) safe(`${i.spec.id} onEnd`, () => i.onEnd?.('skipped'));
     skipping = false;
     next();
     emit();
@@ -289,7 +379,10 @@ export function createMotionPlayer<C = undefined>(o: PlayerOptions<C>): MotionPl
       if (opts?.parallel === true) {
         // during a skip it jumps to its end at once, like everything else
         if (skipping) safe(`${spec.id} onEnd`, () => end?.('skipped'));
-        else begin({ spec, onEnd: end, gate: opts.gate }, true);
+        else {
+          begin({ spec, onEnd: end, gate: opts.gate }, true);
+          next();
+        }
       }
       else {
         queue.push({ spec, onEnd: end, gate: opts?.gate });
@@ -319,8 +412,16 @@ export function createMotionPlayer<C = undefined>(o: PlayerOptions<C>): MotionPl
       next();
       emit();
     },
-    busy: () => [...live].some((c) => blocks(c.item.spec)) || queue.some((i) => blocks(i.spec)),
-    pending: () => live.size + queue.length,
+    busy: () => [...live].some((c) => blocks(c.item.spec)) || [...drawing.keys(), ...holds.keys(), ...queue].some((i) => blocks(i.spec)),
+    pending: () => live.size + drawing.size + holds.size + queue.length,
+    held: () => holds.size > 0,
+    release() {
+      const size = holds.size;
+      endHolds((i) => i.spec.holdUntil === 'press');
+      if (size === holds.size) return;
+      next();
+      emit();
+    },
     skipAll() {
       skip(() => true);
     },
@@ -408,5 +509,17 @@ export function skipOnInput(player: MotionPlayer, target: Pick<EventTarget, 'add
   return () => {
     target.removeEventListener('pointerdown', skip, { capture: true });
     target.removeEventListener('keydown', skip, { capture: true });
+  };
+}
+
+export function releaseOnInput(player: MotionPlayer, target: Pick<EventTarget, 'addEventListener' | 'removeEventListener'>): () => void {
+  const release = (): void => {
+    player.release();
+  };
+  target.addEventListener('pointerdown', release, { capture: true });
+  target.addEventListener('keydown', release, { capture: true });
+  return () => {
+    target.removeEventListener('pointerdown', release, { capture: true });
+    target.removeEventListener('keydown', release, { capture: true });
   };
 }

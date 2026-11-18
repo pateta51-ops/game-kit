@@ -9,6 +9,7 @@ import {
   putMotionSpeed,
   bindMotionSpeed,
   skipOnInput,
+  releaseOnInput,
   stageFromLayout,
   validateSpec,
   validateSpecs,
@@ -101,6 +102,104 @@ describe('player', () => {
   });
   afterEach(() => {
     vi.useRealTimers();
+  });
+
+  it.each([{ whenReady: true }, { awaitRects: ['tray'] }])('waits for the fake stage to draw (%j)', (wait) => {
+    const frames: FrameRequestCallback[] = [];
+    const started = vi.fn();
+    let drawn = false;
+    const p = createMotionPlayer({
+      specs, stages: { table: (z) => z === 'tray' && !drawn ? undefined : stage(z) },
+      verbs: createVerbs(), speed: () => 1, context: undefined,
+      frame: (f) => { frames.push(f); }, onBeatStart: started,
+    });
+    p.play({ ...gain, ...wait });
+    expect(p.pending()).toBe(1);
+    frames.shift()?.(16);
+    expect(started).not.toHaveBeenCalled();
+    drawn = true;
+    frames.shift()?.(32);
+    expect(started).toHaveBeenCalledOnce();
+  });
+
+  it('caps the frame poll, skips a waiting beat, and bypasses the poll at instant speed', () => {
+    const frames: FrameRequestCallback[] = [];
+    const problem = vi.fn();
+    const start = vi.fn();
+    const end = vi.fn();
+    let speed: Speed = 1;
+    const p = createMotionPlayer({
+      specs, stages: { table: stage }, verbs: createVerbs(), speed: () => speed, context: undefined,
+      frame: (f) => { frames.push(f); }, onProblem: problem, onBeatStart: start,
+    });
+    const beat = { ...gain, awaitRects: ['unmounted'] };
+    p.play(beat);
+    for (let i = 0; i < 59; i++) frames.shift()?.(i * 16);
+    expect(problem).not.toHaveBeenCalled();
+    frames.shift()?.(960);
+    expect(problem).toHaveBeenCalledOnce();
+    expect(start).toHaveBeenCalledOnce();
+    p.skipAll();
+    p.play(beat, { onEnded: end, parallel: true });
+    p.skipAll();
+    frames.shift()?.(976);
+    expect(end).toHaveBeenCalledWith('skipped');
+    speed = 'instant';
+    p.play(beat, { onEnded: end });
+    expect(end).toHaveBeenLastCalledWith('done');
+    expect(start).toHaveBeenCalledOnce();
+    expect(frames).toHaveLength(0);
+  });
+
+  it('holds the queue for input, with a scaled fallback and skip cleanup', () => {
+    const start = vi.fn();
+    const p = createMotionPlayer({
+      specs, stages: { table: stage }, verbs: createVerbs(), speed: () => 0.5, context: undefined, onBeatStart: start,
+    });
+    const target = new EventTarget();
+    const unbind = releaseOnInput(p, target);
+    const beat = { ...gain, holdUntil: 'press', autoContinueMs: 800 };
+    p.play(beat);
+    p.play('roll');
+    target.dispatchEvent(new Event('pointerdown'));
+    vi.advanceTimersByTime(400);
+    expect(p.held()).toBe(true);
+    expect(start).toHaveBeenCalledOnce();
+    target.dispatchEvent(new Event('keydown'));
+    expect(p.held()).toBe(false);
+    expect(start).toHaveBeenCalledTimes(2);
+    p.skipAll();
+    p.play(beat);
+    vi.advanceTimersByTime(799);
+    expect(p.held()).toBe(true);
+    vi.advanceTimersByTime(1);
+    expect(p.held()).toBe(false);
+    p.play(beat);
+    vi.advanceTimersByTime(400);
+    unbind();
+    target.dispatchEvent(new Event('pointerdown'));
+    expect(p.held()).toBe(true);
+    p.skipAll();
+    expect(p.held()).toBe(false);
+    expect(vi.getTimerCount()).toBe(0);
+  });
+
+  it('plays the named beat through the hold before resuming the queue', () => {
+    const started: string[] = [];
+    const p = createMotionPlayer({
+      specs, stages: { table: stage }, verbs: createVerbs(), speed: () => 1, context: undefined,
+      onBeatStart: (run) => started.push(run.timeline.id),
+    });
+    p.play({ ...gain, holdUntil: call.id });
+    p.play('roll');
+    vi.advanceTimersByTime(800);
+    expect(p.held()).toBe(true);
+    expect(started).toEqual([gain.id]);
+    p.play('call');
+    expect(started).toEqual([gain.id, call.id]);
+    vi.runAllTimers();
+    expect(p.held()).toBe(false);
+    expect(started).toEqual([gain.id, call.id, roll.id]);
   });
 
   const setup = (first: Speed = 1) => {

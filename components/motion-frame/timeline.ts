@@ -45,6 +45,10 @@ export interface MotionSpec {
   reduced?: SpecVariant;
   /** waits in the queue until the player's `visible()` is true; its clock starts then (K142) */
   whenVisible?: boolean;
+  whenReady?: boolean;
+  awaitRects?: readonly string[];
+  holdUntil?: string;
+  autoContinueMs?: number;
   /** `keep`: `hurry()` lets it run (small feedback); otherwise hurry snaps it (K143) */
   hurry?: 'snap' | 'keep';
   /** variants by place in a run of this beat (K143) */
