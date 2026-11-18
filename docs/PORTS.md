@@ -21,3 +21,4 @@ Panel: local 4170, https://<host>:8440
 | Under Falling Skies | 6090 | 6091 | 6092 | 6093 | 4181 | https://<host>:8450 |
 | Unstoppable | 6100 | 6101 | 6102 | 6103 | 4182 | https://<host>:8451 |
 | LotR LCG | 6110 | 6111 | 6112 | 6113 | 4183 | https://<host>:8452 |
+| Astra Imperium | 6120 | 6121 | 6122 | 6123 | 4171 | https://<host>:8441 |
