@@ -1,0 +1,25 @@
+/* opt-in look: a dark pill with a glowing icon. Import once. Variable: --counter-icon (icon colour, default #ff4d5e). */
+[data-part='counter'] {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.22em;
+  padding: 0.1em 0.45em 0.1em 0.3em;
+  border-radius: 999px;
+  background: rgb(12 14 18 / 0.86);
+  color: #f6f7fa;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.15;
+  letter-spacing: 0.01em;
+  white-space: nowrap;
+  box-shadow:
+    0 1px 3px rgb(0 0 0 / 0.55),
+    inset 0 0 0 1px rgb(255 255 255 / 0.14);
+}
+[data-part='counter'] [data-part='icon'] {
+  width: 1.05em;
+  height: 1.05em;
+  flex: none;
+  color: var(--counter-icon, #ff4d5e);
+  filter: drop-shadow(0 0 0.12em rgb(255 77 94 / 0.55));
+}

@@ -26,6 +26,9 @@
     ],
     "licence": "STCC's resourceWarp.ts follows halogenandtoast/LordOfTheRings riffle() (BSD-3-Clause, notice in LICENSE-LordOfTheRings.txt, kept here); no LotR file was copied, only STCC's own bump and total-tag code ported."
   },
+  "looks": {
+    "looks/health-glow.css": "Unstoppable (unstoppable-fan-prototype) src/ui/theme/polish.css at eede48e and PR #66 head ba64496 (D-159, D-166): .threat-hp, .threat-hp__heart"
+  },
   "needs": [
     "effect-library",
     "motion-frame",

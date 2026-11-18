@@ -25,3 +25,5 @@ export const Gold = ({ gold }: { gold: number }) => (
 const el = counterOf('seat1.gold')
 if (el) bumpCounter(el, 1)
 ```
+
+Look file (opt-in): `looks/health-glow.css`, a dark pill on `[data-part=counter]` and a glowing `[data-part=icon]`; variable `--counter-icon` (default #ff4d5e).

@@ -1,0 +1,6 @@
+/* opt-in look: a glow on every playable (legal) option. Import once. Variables: --focus, --glow. Box shadow only (a filter crashed iPhone pinch-zoom); no hover needed, so it shows on touch. */
+[data-mark='legal'] {
+  box-shadow:
+    0 0 0 2px var(--focus, #8ab4ff),
+    0 0 14px 2px var(--glow, rgb(138 180 255 / 0.55));
+}

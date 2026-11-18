@@ -12,6 +12,9 @@
     ],
     "note": "Checked against Imperium (Icons.tsx inline SVG with currentColor), EBR (scanOverlay.ts boxes in scan pixels per frame, landscape locations), Unstoppable (ScanArt over/under layers), Rome (RichText [Icon] markers) and Jarl (CardFace illustration window under a frame layer)."
   },
+  "looks": {
+    "looks/icon-glow.css": "Unstoppable (unstoppable-fan-prototype) src/ui/theme/polish.css at eede48e and PR #66 head ba64496 (D-159, D-166): .threat-kw__badge, .threat-kw__icon"
+  },
   "needs": [],
   "packages": [
     "react"

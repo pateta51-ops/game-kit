@@ -39,3 +39,5 @@ const layer = createEffectLayer() // the DOM layer the motion frame draws the tw
 document.body.append(layer.el)
 layer.clear() // empties it between beats
 ```
+
+Look file (opt-in): `looks/rise-pulse.css`, class `fx-rise-pulse` on a positioned element over a card plays a red-orange pulse once (none under reduced motion); variables `--buff-ms`, `--card-w`, `--motion-scale`.

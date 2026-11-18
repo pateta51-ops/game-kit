@@ -39,3 +39,5 @@ type P = { id: number; kind: 'pick'; min: number; max: number; options: { id: st
 const W: Widgets<P, null> = { pick: PickOptions }
 export const Ask = ({ prompt, send }: { prompt: P | null; send: (picks: readonly string[], id?: number) => void }) => <PromptHost widgets={W} prompt={prompt} view={null} answer={send} look={{ label: (o) => o.id.toUpperCase(), done: 'Fertig' }} />
 ```
+
+Look file (opt-in): `looks/legal-glow.css`, a box-shadow glow on `[data-mark="legal"]` (touch included, no filter); variables `--focus`, `--glow`.

@@ -17,5 +17,8 @@
       { "game": "warps", "commit": "2af6937", "paths": ["src/ui/fx/kit.ts (particles.ts; the colour table left out, arc and star take their colours)", "src/ui/fx/looks.test.tsx (the kit's cases, in particles.test.ts)"] }
     ]
   },
+  "looks": {
+    "looks/rise-pulse.css": "Unstoppable (unstoppable-fan-prototype) src/ui/theme/polish.css at eede48e and PR #66 head ba64496 (D-159, D-166): .threat-buff__pulse and its keyframes"
+  },
   "needs": ["motion-frame", "board-registry"]
 }

@@ -41,6 +41,9 @@
       }
     ]
   },
+  "looks": {
+    "looks/legal-glow.css": "Unstoppable scanned.css at PR #66 head ba64496 (D-166): the playable glow as a box shadow"
+  },
   "needs": [
     "engine-core",
     "prompt-source"

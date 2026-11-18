@@ -116,6 +116,7 @@ A game's build plan lists the kit work it needs as phases named `GK<n>` for the 
 | K305 | prompt-host `PickAmount` `readout(option, prompt)`: a preview of the current amount beside the stepper (class part `readout`), so a game need not wrap `look.label` | S |  | done |
 | K306 | target-arrow default look: the glowing dashed arrow (Unstoppable D-129) in `target-arrow.css`, part `target-arrow-glow` (was `-edge`), gold glow pulse on a glow-only target, red glow on the aimed place | S |  | done |
 | K307 | target-arrow: the dash flow duration has a floor (`max(--motion-scale, 0.05)`), so a scale of 0 never gives a 0 s infinite animation; data-motion="off" is what stops the flow | S |  | done |
+| K308 | four opt-in glow looks from Unstoppable (never defaults): card-parts `looks/icon-glow.css`, counter `looks/health-glow.css`, effect-library `looks/rise-pulse.css` (class `fx-rise-pulse`), prompt-host `looks/legal-glow.css` | M |  | done |
 
 ## Harvest from the existing games (owner, 15 Nov 2026)
 

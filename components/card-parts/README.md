@@ -30,3 +30,5 @@ import { CardFace, IconText, type CardLayout } from '../kit/card-parts/ui'
 const layout: CardLayout = { w: 200, h: 100, zones: { text: { x: 0, y: 0, w: 200, h: 100, kind: 'text' } } }
 export const Face = () => <CardFace layout={layout} zones={{ text: <IconText text="Pay [[gold]]" icons={{ gold: { label: 'gold', body: '<circle r="5"/>' } }} /> }} />
 ```
+
+Look file (opt-in, not imported by the component): `looks/icon-glow.css`, a glowing badge on every `[data-icon]`; variables `--kw` (icon colour, set per icon) or `--icon-glow` (default #c9ced8).
