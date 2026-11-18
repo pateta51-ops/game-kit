@@ -1,0 +1,14 @@
+{
+  "name": "coverage-report",
+  "source": {
+    "game": "earthborne-rangers-fan-prototype",
+    "commit": "b9b06107",
+    "paths": ["src/content/coverage.ts", "scripts/coverage.ts", "src/ui/screens/Coverage.tsx"],
+    "grafts": [
+      { "game": "rise-of-a-jarl-fan-prototype", "commit": "cf3ecfe", "paths": ["scripts/coverage.ts"] },
+      { "game": "under-falling-skies-fan-prototype", "commit": "07238a4", "paths": ["src/content/coverage.ts"] }
+    ]
+  },
+  "needs": [],
+  "packages": ["react"]
+}

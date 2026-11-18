@@ -105,6 +105,10 @@
     "use": "Card, deck or scenario data (CSV or JSON) loads through a zod schema per record kind with id-uniqueness, dangling-reference and card-language verb checks, every problem listed at once.",
     "not": "The game's record shapes, verbs or words; one effect checked at run time (card-language validateEffect)."
   },
+  "coverage-report": {
+    "use": "Which card-language constructs a pack uses, lacks, or has no handler for: function, CLI (--strict exit code) and unstyled page.",
+    "not": "Checking rules or card text; the game says how to walk its cards and lists its handlers."
+  },
   "counter": {
     "use": "A resource number with count-up, bump, +N tag, low warning and a data-res anchor for flights; unstyled.",
     "not": "Any look, colour or word; the flight itself (token-flights); the stored value."

@@ -51,6 +51,7 @@ graph LR
   counter["counter"] --> effect_library["effect-library"]
   counter["counter"] --> motion_frame["motion-frame"]
   counter["counter"] --> ui_helpers["ui-helpers"]
+  coverage_report["coverage-report"]
   debug_console["debug-console"] --> engine_core["engine-core"]
   deck_motions["deck-motions"] --> motion_frame["motion-frame"]
   dice_odds["dice-odds"]
@@ -160,6 +161,7 @@ graph LR
 - `check-runner`
 - `ci-templates`
 - `content-pack`
+- `coverage-report`
 - `debug-console`
 - `deck-motions`
 - `dice-odds`

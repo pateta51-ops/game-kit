@@ -506,7 +506,7 @@ The kit holds every game's parts, then every game is retrofitted onto them (owne
 | K361 | [4] Expansion choice with dependency ticking and base + expansion merge into one index (extend content-pack; no import or stored packs) | docs/INVENTORY.md item 4; ER, Unst, STCC, IH | M | open |
 | K362 | [6] Python vector tracing and icon/crop scripts: trace icons, emblems, logos and maps from scans to SVG, retrace, proof, B&W render (extend scan-ingest) | docs/INVENTORY.md item 6; 7IS, ER, Jarl, STCC, Astra | M | open |
 | K363 | [7] New-build check: detect a new build and reload once when safe, show the build commit, two-build offline e2e server (extend offline) | docs/INVENTORY.md item 7; 7IS, ER, Jarl | S | done |
-| K364 | [8] Coverage report: which card-language constructs the packs use and lack, as a page and a script (new coverage-report) | docs/INVENTORY.md item 8; ER, Jarl, UFS, Radiance | S | open |
+| K364 | [8] Coverage report: which card-language constructs the packs use and lack, as a page and a script (new coverage-report) | docs/INVENTORY.md item 8; ER, Jarl, UFS, Radiance | S | done |
 | K365 | [9] Modal and confirm dialog over the board: focus, Esc, close (new modal-dialog) | docs/INVENTORY.md item 9; IH, Unst | S | done |
 | K366 | [10] Keyboard play: keys 1-9, Enter, Esc, arrow-key option lists and a help overlay (extend ui-helpers) | docs/INVENTORY.md item 10; Unst, UFS | S | open |
 | K367 | [11] Board viewport: SVG zoom about the pointer, drag pan, fit, auto-pan camera that follows the action (extend board-layout) | docs/INVENTORY.md item 11; ER, UFS | M | open |
