@@ -1,0 +1,1015 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Riffle</title>
+<style>
+:root { color-scheme: dark; font: 15px/1.5 system-ui, sans-serif; color: #eae5db; background: #141719; accent-color: #e6b788; }
+* { box-sizing: border-box; }
+body { margin: 0; }
+main { width: min(1120px, calc(100% - 40px)); margin: 38px auto; }
+header { margin-bottom: 25px; }
+h1, h2, p { margin: 0; }
+h1 { font: 500 clamp(42px, 7vw, 68px)/1 Georgia, serif; letter-spacing: -.055em; }
+h2 { font: 500 24px/1.2 Georgia, serif; letter-spacing: -.02em; }
+p, label { color: #b9b4aa; }
+header p { margin-top: 10px; }
+.stages { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; align-items: start; }
+section { border: 1px solid #393c3d; border-radius: 14px; background: #1b1f21; overflow: hidden; }
+.heading, .controls { padding: 16px 18px; }
+.heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+button { font: inherit; font-weight: 650; color: #201915; background: #e6b788; border: 0; border-radius: 6px; padding: 7px 18px; cursor: pointer; }
+select { font: inherit; color: inherit; background: #252a2c; border: 1px solid #484b4c; border-radius: 5px; padding: 3px 6px; }
+.stage { position: relative; height: clamp(218px, 32vw, 315px); overflow: hidden; display: grid; place-items: center; border-block: 1px solid #353a3d; background: radial-gradient(ellipse at 50% 46%, #343b3d, #222729 62%, #191d20); }
+.back { color: #e4b58b; background-color: #7c4840; background-image:
+  radial-gradient(circle at center, #e4b58b 1px, transparent 2px),
+  repeating-linear-gradient(45deg, transparent 0 8px, #e7b28728 8px 9px, transparent 9px 16px),
+  repeating-linear-gradient(-45deg, transparent 0 8px, #e7b28728 8px 9px, transparent 9px 16px);
+  background-size: var(--back-width) var(--back-height); }
+.back { border: 2px solid #e3c3a0; border-radius: 7px; box-shadow: inset 0 0 0 4px #7c4840, inset 0 0 0 5px #dbab7d; }
+.motion-back { background-size: 100% 100%; }
+.stage { --short: min(88px, 22vw); --long: min(124px, 31vw); }
+.pile { --back-width: var(--short); --back-height: var(--long); width: var(--back-width); height: var(--back-height); box-shadow: 0 4px #b39577, 0 8px #615042, 0 14px 20px #111a; }
+.pile[data-landscape] { --back-width: var(--long); --back-height: var(--short); }
+#top-stage { --short: min(68px, 16.7vw); --long: min(96px, 23.6vw); height: 280px; }
+#top-deck { margin-top: 100px; }
+#top-stage { isolation: isolate; }
+#top-deck { position: relative; border: 0; background: none; box-shadow: none; }
+#top-deck > canvas { position: absolute; left: 0; top: 0; }
+#top-deck > i { display: block; height: 100%; }
+#top-deck::before, #top-deck::after { content: ''; position: absolute; z-index: -1; left: -19%; top: -11%; width: 138%; height: 132%; background: radial-gradient(ellipse closest-side, #080809df 35%, transparent); opacity: .93; }
+.controls { display: grid; gap: 14px; }
+.primary, .timings { display: grid; gap: 10px 16px; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+label { display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 3px 5px; font-size: 13px; }
+label.orientation { grid-column: 1 / -1; grid-template-columns: auto auto; justify-content: start; column-gap: 10px; }
+input[type=range] { grid-column: 1 / -1; width: 100%; margin: 2px 0; cursor: pointer; }
+output { color: #f2d3b3; font-variant-numeric: tabular-nums; }
+.note { font-size: 13px; }
+code { display: block; font: 12px/1.45 ui-monospace, monospace; color: #d9cfc2; background: #15191b; border: 1px solid #353a3d; border-radius: 6px; padding: 8px 10px; white-space: pre-wrap; word-break: break-word; }
+.kit { justify-self: start; padding: 4px 12px; color: inherit; background: #2b3133; border: 1px solid #484b4c; }
+@media (max-width: 720px) {
+  main { width: calc(100% - 28px); margin-block: 24px; }
+  .stages { grid-template-columns: minmax(0, 1fr); }
+}
+</style>
+<body>
+<main>
+<header><h1>Riffle</h1><p>Top and side views of the deck-motions riffle. Each view has its own settings.</p></header>
+<div class="stages">
+  <section aria-labelledby="top-title">
+    <div class="heading"><h2 id="top-title">Top-view riffle</h2><button id="top-play" type="button">Play</button></div>
+    <div class="stage" id="top-stage" aria-hidden="true"><div id="top-deck" class="back pile" data-pile="new"><canvas></canvas><i></i></div></div>
+    <div class="controls" data-view="top">
+      <div class="primary">
+        <label>Speed <output></output><input data-k="speed" type="range" min="0" max="2" step=".1" value="1"></label>
+        <label>Cards <output></output><input data-k="cards" type="range" min="8" max="36" step="1" value="20"></label>
+        <label class="orientation">Orientation <select data-k="orientation"><option>Portrait</option><option>Landscape</option></select></label>
+      </div>
+      <div class="timings">
+        <label>Split <output></output><input data-k="d0" type="range" min=".1" max="1.5" step=".05" value=".45"></label>
+        <label>Riffle <output></output><input data-k="d1" type="range" min=".4" max="2.5" step=".05" value="1.35"></label>
+        <label>Bridge <output></output><input data-k="d2" type="range" min=".2" max="2" step=".05" value=".75"></label>
+        <label>Square up <output></output><input data-k="d3" type="range" min=".1" max="1.5" step=".05" value=".45"></label>
+      </div>
+      <button class="kit" type="button">Kit default timings</button>
+      <p class="note"></p>
+      <code></code>
+    </div>
+  </section>
+  <section aria-labelledby="side-title">
+    <div class="heading"><h2 id="side-title">Side-view riffle</h2><button id="play" type="button">Play</button></div>
+    <div class="stage" id="side" aria-hidden="true"><div id="side-deck" class="back pile" data-pile="side"></div></div>
+    <div class="controls" data-view="side">
+      <div class="primary">
+        <label>Speed <output></output><input data-k="speed" type="range" min="0" max="2" step=".1" value="1"></label>
+        <label>Cards <output></output><input data-k="cards" type="range" min="8" max="36" step="1" value="20"></label>
+        <label class="orientation">Orientation <select data-k="orientation"><option>Portrait</option><option>Landscape</option></select></label>
+      </div>
+      <div class="timings">
+        <label>Tilt in / split <output></output><input data-k="d0" type="range" min=".1" max="1.5" step=".05" value=".45"></label>
+        <label>Riffle <output></output><input data-k="d1" type="range" min=".4" max="2.5" step=".05" value="1.35"></label>
+        <label>Bridge <output></output><input data-k="d2" type="range" min=".2" max="2" step=".05" value=".75"></label>
+        <label>Tilt out / square <output></output><input data-k="d3" type="range" min=".1" max="1.5" step=".05" value=".45"></label>
+      </div>
+      <button class="kit" type="button">Kit default timings</button>
+      <p class="note"></p>
+      <code></code>
+    </div>
+  </section>
+</div>
+</main>
+<script>
+"use strict";
+var DM = (() => {
+  var __defProp = Object.defineProperty;
+  var __getOwnPropDesc = Object.getOwnPropertyDescriptor;
+  var __getOwnPropNames = Object.getOwnPropertyNames;
+  var __hasOwnProp = Object.prototype.hasOwnProperty;
+  var __export = (target, all) => {
+    for (var name in all)
+      __defProp(target, name, { get: all[name], enumerable: true });
+  };
+  var __copyProps = (to, from, except, desc) => {
+    if (from && typeof from === "object" || typeof from === "function") {
+      for (let key of __getOwnPropNames(from))
+        if (!__hasOwnProp.call(to, key) && key !== except)
+          __defProp(to, key, { get: () => from[key], enumerable: !(desc = __getOwnPropDesc(from, key)) || desc.enumerable });
+    }
+    return to;
+  };
+  var __toCommonJS = (mod) => __copyProps(__defProp({}, "__esModule", { value: true }), mod);
+
+  // components/deck-motions/ui.ts
+  var ui_exports = {};
+  __export(ui_exports, {
+    DEAL_MS: () => DEAL_MS,
+    MOCK_U: () => MOCK_U,
+    REFILL_AFTER: () => REFILL_AFTER,
+    REFILL_FAR_SCALE: () => REFILL_FAR_SCALE,
+    REFILL_GAP_MS: () => REFILL_GAP_MS,
+    REFILL_LIFT: () => REFILL_LIFT,
+    RIFFLE_CARDS: () => RIFFLE_CARDS,
+    RIFFLE_DECK_CARDS: () => RIFFLE_DECK_CARDS,
+    RIFFLE_MS: () => RIFFLE_MS,
+    RIFFLE_PHASES_MS: () => RIFFLE_PHASES_MS,
+    RIFFLE_STUDY_MS: () => RIFFLE_STUDY_MS,
+    STAGGER_MS: () => STAGGER_MS,
+    cardBack: () => cardBack,
+    cycleMove: () => cycleMove,
+    dealFrom: () => dealFrom,
+    drawNeutralBack: () => drawNeutralBack,
+    finishDeckMotions: () => finishDeckMotions,
+    finishOnInput: () => finishOnInput,
+    pileElement: () => pileElement,
+    planDeal: () => planDeal,
+    registerRiffle: () => registerRiffle,
+    riffle: () => riffle,
+    riffleFrames: () => riffleFrames,
+    riffleSide: () => riffleSide,
+    riffleTop: () => riffleTop,
+    shuffleDecks: () => shuffleDecks,
+    topOf: () => topOf
+  });
+
+  // components/deck-motions/plan.ts
+  var DEAL_MS = 520;
+  var STAGGER_MS = 90;
+  var REFILL_AFTER = 1;
+  var REFILL_GAP_MS = 160;
+  var REFILL_FAR_SCALE = 1.5;
+  var REFILL_LIFT = 1.06;
+  var RIFFLE_MS = 2200;
+  var RIFFLE_CARDS = 12;
+  var RIFFLE_STUDY_MS = [450, 1350, 750, 450];
+  var RIFFLE_PHASES_MS = RIFFLE_STUDY_MS.map((ms) => ms * RIFFLE_MS / 3e3);
+  var RIFFLE_DECK_CARDS = 20;
+  var MOCK_U = 21.6;
+  var cycleMove = (id, discard, deck) => ({ id, dir: "in", pile: deck, at: discard, faceDown: true });
+  function planDeal(moves, opts = {}) {
+    const speed = opts.speed ?? 1;
+    if (speed <= 0 || moves.length === 0) return { timed: [], shuffling: [], shuffleAt: 0, dealAt: 0, total: 0 };
+    const deal = DEAL_MS * speed;
+    const stagger = STAGGER_MS * speed;
+    const ins = moves.filter((m) => m.dir === "in");
+    const outs = moves.filter((m) => m.dir === "out");
+    const shuffling = [...new Set((opts.shuffled ?? []).filter((p) => ins.some((m) => m.pile === p)))];
+    const shuffleAt = ins.length ? (ins.length - 1) * stagger + deal : 0;
+    const dealAt = shuffling.length ? shuffleAt + (opts.riffleMs ?? RIFFLE_MS) * speed : 0;
+    const refillAt = opts.departs ? deal * REFILL_AFTER + REFILL_GAP_MS * speed : 0;
+    const timed = ins.map((move, i) => ({ move, delay: i * stagger, ms: deal, lift: 1, vanish: move.faceDown }));
+    let dealt = 0;
+    for (const move of outs) {
+      if (move.refill) timed.push({ move, delay: refillAt, ms: deal * (move.far ? REFILL_FAR_SCALE : 1), lift: REFILL_LIFT, vanish: false });
+      else {
+        timed.push({ move, delay: dealAt + dealt * stagger, ms: deal, lift: 1, vanish: false });
+        dealt += 1;
+      }
+    }
+    const total = Math.max(...timed.map((t) => t.delay + t.ms), shuffling.length ? dealAt : 0);
+    return { timed, shuffling, shuffleAt, dealAt, total };
+  }
+  function riffleFrames(n, width, k) {
+    const half = RIFFLE_CARDS / 2;
+    const side = n < half ? -1 : 1;
+    const level = n % half;
+    const rank = level * 2 + (side < 0 ? 0 : 1);
+    const px = (v) => `${String(v * k)}px`;
+    const held = `translate(${String(side * width * 1)}px, ${px(-52 - (half - 1 - level) * 2.6)}) rotate(${String(side * 11)}deg)`;
+    const inAir = `translate(${String(side * width * 0.5)}px, ${px(-130 - level * 6)}) rotate(${String(side * 4)}deg)`;
+    const landed = `translate(${String(side * width * 0.16)}px, ${px(-rank * 3.8)}) rotate(${String(side * 2.6)}deg)`;
+    const squared = `translate(0, ${px(-rank * 1)}) rotate(0deg)`;
+    const drop = 0.3 + rank * 0.032;
+    const land = drop + 0.075;
+    return [
+      { offset: 0, transform: `translate(0, ${px(-n * 0.9)})`, easing: "ease-out" },
+      { offset: 0.2, transform: held, easing: "linear" },
+      { offset: drop, transform: held, easing: "cubic-bezier(0.3, 0.1, 0.6, 1)" },
+      { offset: drop + 0.04, transform: inAir, easing: "cubic-bezier(0.5, 0, 0.75, 0.6)" },
+      { offset: land, transform: landed, easing: "linear" },
+      { offset: 0.8, transform: landed, easing: "cubic-bezier(0.4, 0, 0.2, 1)" },
+      { offset: 0.88, transform: squared, easing: "linear" },
+      { offset: 0.9, transform: `translate(0, ${px(-rank * 1 - 16)})`, easing: "cubic-bezier(0.5, 0, 0.9, 0.5)" },
+      { offset: 0.94, transform: `translate(0, ${px(-rank * 1)})`, easing: "ease-out" },
+      { offset: 0.97, transform: `translate(0, ${px(-rank * 1 - 5)})`, easing: "ease-in" },
+      { offset: 1, transform: "none" }
+    ];
+  }
+
+  // components/deck-motions/riffle-surface.ts
+  var ease = (value) => {
+    const t = Math.max(0, Math.min(1, value));
+    return t * t * (3 - 2 * t);
+  };
+  var phase = (time, length) => length > 0 ? Math.max(0, Math.min(1, time / length)) : Number(time >= 0);
+  var mix = (a, b, t) => a + (b - a) * t;
+  var active = /* @__PURE__ */ new WeakMap();
+  function animatePile(deck, { speed, durations, tag = "div", trackPosition = true }, setup) {
+    active.get(deck)?.();
+    const top = deck.lastElementChild ?? deck;
+    const rect = top.getBoundingClientRect();
+    const view = deck.ownerDocument.defaultView;
+    const total = durations.reduce((sum2, phase2) => sum2 + phase2, 0);
+    if (!(speed > 0 && total > 0 && rect.width && rect.height) || typeof view.matchMedia === "function" && view.matchMedia("(prefers-reduced-motion: reduce)").matches) return { done: Promise.resolve() };
+    const layer = deck.ownerDocument.createElement(tag);
+    layer.setAttribute("aria-hidden", "true");
+    layer.dataset["riffleMotion"] = deck.dataset["pile"] ?? "";
+    Object.assign(layer.style, { position: "fixed", pointerEvents: "none", zIndex: "1000" });
+    const draw = setup(layer, rect, top);
+    const visibility = deck.style.getPropertyValue("visibility");
+    const priority = deck.style.getPropertyPriority("visibility");
+    let frame = 0;
+    let resolve;
+    const done = new Promise((finish2) => {
+      resolve = finish2;
+    });
+    const finish = () => {
+      if (active.get(deck) !== finish) return;
+      view.cancelAnimationFrame(frame);
+      if (!trackPosition) {
+        view.removeEventListener("resize", invalidatePosition);
+        view.removeEventListener("scroll", invalidatePosition, true);
+      }
+      layer.remove();
+      deck.style.setProperty("visibility", visibility, priority);
+      if (deck.getAttribute("style") === "") deck.removeAttribute("style");
+      active.delete(deck);
+      resolve();
+    };
+    let positioned = false;
+    function invalidatePosition() {
+      positioned = false;
+    }
+    function tick(now) {
+      const elapsed = (now - start) * speed / 1e3;
+      const current = trackPosition || !positioned ? top.getBoundingClientRect() : rect;
+      if (elapsed >= total || !deck.isConnected || current.width !== rect.width || current.height !== rect.height) {
+        finish();
+        return;
+      }
+      if (trackPosition || !positioned) {
+        layer.style.left = `${String(current.left + current.width / 2)}px`;
+        layer.style.top = `${String(current.top + current.height / 2)}px`;
+        positioned = true;
+      }
+      draw(elapsed);
+      frame = view.requestAnimationFrame(tick);
+    }
+    const start = view.performance.now();
+    deck.ownerDocument.body.append(layer);
+    deck.style.setProperty("visibility", "hidden", "important");
+    active.set(deck, finish);
+    if (!trackPosition) {
+      view.addEventListener("resize", invalidatePosition);
+      view.addEventListener("scroll", invalidatePosition, true);
+    }
+    tick(start);
+    return { done, finish };
+  }
+  function cloneBack(el) {
+    const face = el.cloneNode(false);
+    face.removeAttribute("id");
+    face.removeAttribute("data-pile");
+    return face;
+  }
+  function makeSurface(layer, top, back, width, height, segments2) {
+    const card = layer.ownerDocument.createElement("div");
+    card.style.position = "absolute";
+    const step = width / segments2;
+    const strips = Array.from({ length: segments2 }, (_, index) => {
+      const strip = layer.ownerDocument.createElement("div");
+      Object.assign(strip.style, {
+        position: "absolute",
+        top: `${String(-height / 2)}px`,
+        overflow: "hidden",
+        width: `${String(step + (index === segments2 - 1 ? 0 : 0.35))}px`,
+        height: `${String(height)}px`,
+        transformOrigin: "left center"
+      });
+      const face = back(top);
+      Object.assign(face.style, {
+        position: "absolute",
+        boxSizing: "border-box",
+        left: `${String(-index * step)}px`,
+        top: "0",
+        width: `${String(width)}px`,
+        height: `${String(height)}px`,
+        margin: "0"
+      });
+      strip.append(face);
+      card.append(strip);
+      return strip;
+    });
+    layer.append(card);
+    return { card, strips, step };
+  }
+
+  // components/deck-motions/riffle-side.ts
+  function riffleSide(deck, {
+    speed = 1,
+    cards = 20,
+    orientation,
+    durations = [0.45, 1.35, 0.75, 0.45],
+    back = cloneBack
+  } = {}) {
+    const [enter = 0, riffleTime = 0, bridgeTime = 0, exit = 0] = durations;
+    return animatePile(deck, { speed, durations }, (layer, { width, height }, top) => {
+      const landscape = orientation ? orientation.toLowerCase() === "landscape" : width > height;
+      const length = Math.max(width, height);
+      const depth = Math.min(width, height);
+      const unit = length / 132;
+      const pitch = 1.2;
+      const segments2 = 7;
+      const sliceWidth = 132 / segments2;
+      const count = Math.max(2, Math.round(cards));
+      const plane = layer.ownerDocument.createElement("div");
+      const packet = layer.ownerDocument.createElement("div");
+      const shadow = layer.ownerDocument.createElement("div");
+      layer.style.perspective = `${String(850 * unit)}px`;
+      plane.style.transformStyle = packet.style.transformStyle = "preserve-3d";
+      Object.assign(shadow.style, {
+        position: "absolute",
+        width: `${String(290 * unit)}px`,
+        height: `${String(135 * unit)}px`,
+        translate: "-50% -50%",
+        background: "radial-gradient(ellipse, #070809be, transparent 69%)"
+      });
+      plane.append(shadow, packet);
+      layer.append(plane);
+      let seed = 82;
+      const packetCards = Array.from({ length: count }, (_, index) => {
+        seed = Math.imul(seed, 1664525) + 1013904223 >>> 0;
+        const { card, strips } = makeSurface(packet, top, back, length, depth, segments2);
+        return { card, slices: strips, index, jitter: seed / 4294967296 - 0.5 };
+      });
+      return (time) => {
+        const tilt = ease(phase(time, enter)) * (1 - ease(phase(time - enter - riffleTime - bridgeTime, exit)));
+        const riffle2 = phase(time - enter, riffleTime);
+        const bridge = phase(time - enter - riffleTime, bridgeTime);
+        plane.style.transform = `rotateX(${String(tilt * 79)}deg)`;
+        packet.style.transform = `rotateZ(${String(landscape ? 0 : (1 - tilt) * 90)}deg)`;
+        const split = ease(riffle2 / 0.24);
+        const square = ease((bridge - 0.7) / 0.22);
+        const tap = Math.sin(Math.PI * ease((bridge - 0.91) / 0.09));
+        for (const { card, slices, index, jitter } of packetCards) {
+          const rank = Math.floor(index / 2);
+          const direction = index % 2 === 0 ? -1 : 1;
+          const releaseStart = 0.28 + 0.52 * (index + jitter * 0.66) / count;
+          const release = ease((riffle2 - releaseStart) / 0.17);
+          const arch = ease(bridge / 0.29) * (1 - ease((bridge - 0.32 - 0.19 * index / count) / 0.23));
+          const x = direction * split * mix(78, 22, release) * (1 - square) + 2 * tap;
+          const z = mix(index, rank, split * (1 - release)) * pitch;
+          const curl = split * (1 - release) * (24 + rank * 0.65);
+          const flutter = Math.sin(release * Math.PI * 2) * Math.sin(release * Math.PI) * (3 + 2 * jitter);
+          card.style.transformStyle = "preserve-3d";
+          card.style.transform = `translate3d(${String(x * unit)}px, ${String((count - index - 1) * 0.17 * (1 - tilt) * unit)}px, ${String(z * unit)}px)`;
+          const bend2 = (localX) => {
+            const inner = 0.5 - direction * localX / 132;
+            const crown = Math.max(0, 1 - ((x + localX) / (132 / 2 + 22)) ** 2);
+            return curl * inner ** 3 + flutter * inner ** 2 + 39 * arch * crown;
+          };
+          let left = -132 / 2;
+          for (const [segment, slice] of slices.entries()) {
+            const start = -132 / 2 + segment * sliceWidth;
+            const z0 = bend2(start);
+            const angle = Math.asin(Math.max(-0.86, Math.min(0.86, (bend2(start + sliceWidth) - z0) / sliceWidth)));
+            slice.style.transform = `translate3d(${String(left * unit)}px, 0, ${String(z0 * unit)}px) rotateY(${String(-angle)}rad)`;
+            left += sliceWidth * Math.cos(angle);
+          }
+        }
+      };
+    });
+  }
+
+  // components/deck-motions/riffle-top.ts
+  var segments = 10;
+  function dealOrder(count) {
+    let seed = 82;
+    const random = () => {
+      seed = Math.imul(seed, 1664525) + 1013904223 >>> 0;
+      return seed / 4294967296;
+    };
+    const remaining = [Math.ceil(count / 2), Math.floor(count / 2)];
+    const levels = [0, 0];
+    let hand = 1;
+    let beat = 0;
+    const order = [];
+    while (order.length < count) {
+      hand = 1 - hand;
+      const run = Math.min(remaining[hand], random() < 0.36 ? 2 : 1);
+      remaining[hand] -= run;
+      for (let i = 0; i < run; i++) {
+        order.push({ hand, level: levels[hand]++, beat });
+        beat += 0.55 + random() * 0.9;
+      }
+    }
+    return order.map((entry) => ({ ...entry, beat: entry.beat / beat }));
+  }
+  function riffleTop(deck, {
+    speed = 1,
+    cards = 20,
+    orientation,
+    durations = [0.45, 1.35, 0.75, 0.45],
+    back = drawNeutralBack
+  } = {}) {
+    const [enter = 0, release = 0, bridge = 0, exit = 0] = durations;
+    return animatePile(deck, { speed, durations, trackPosition: false }, (layer, rect) => {
+      const dpr = layer.ownerDocument.defaultView.devicePixelRatio;
+      const width = Math.round(rect.width * dpr) / dpr;
+      const height = Math.round(rect.height * dpr) / dpr;
+      const cx = rect.left + rect.width / 2;
+      const cy = rect.top + rect.height / 2;
+      const shiftX = Math.round(rect.left) + width / 2 - cx;
+      const shiftY = Math.round(rect.top) + height / 2 - cy;
+      const landscape = orientation ? orientation.toLowerCase() === "landscape" : width > height;
+      const unit = Math.min(width, height);
+      const tilt = landscape ? 9 : 14;
+      const count = Math.max(2, Math.round(cards));
+      const pitch = unit * 0.092 / (count - 1);
+      const document2 = layer.ownerDocument;
+      const pad = 2;
+      const face = bitmap(document2, width + 2 * pad, height + 2 * pad, dpr, (paint) => {
+        paint.translate(pad, pad);
+        if (typeof back === "function") back(paint, width, height);
+        else paint.drawImage(back, 0, 0, width, height);
+      });
+      const shadows = [0, 1].map(() => {
+        const el = document2.createElement("div");
+        Object.assign(el.style, {
+          position: "absolute",
+          width: `${String(width * 1.38)}px`,
+          height: `${String(height * 1.32)}px`,
+          left: `${String(shiftX - width * 0.69)}px`,
+          top: `${String(shiftY - height * 0.61)}px`,
+          background: "radial-gradient(ellipse closest-side, #080809df 35%, transparent)",
+          willChange: "transform, opacity"
+        });
+        layer.append(el);
+        return el;
+      });
+      const packet = dealOrder(count);
+      const step = width / segments;
+      const radius = width * 0.62;
+      const archHeight = height * 0.39;
+      const bounds = [Infinity, Infinity, -Infinity, -Infinity];
+      const corner = (px, py) => {
+        bounds[0] = Math.min(bounds[0], px);
+        bounds[1] = Math.min(bounds[1], py);
+        bounds[2] = Math.max(bounds[2], px);
+        bounds[3] = Math.max(bounds[3], py);
+      };
+      let draw = {
+        quad(x, y, dx, dy, vx, vy) {
+          corner(x, y);
+          corner(x + dx, y + dy);
+          corner(x + vx, y + vy);
+          corner(x + dx + vx, y + dy + vy);
+        },
+        flush() {
+        }
+      };
+      const total = durations.reduce((sum2, value) => sum2 + value, 0);
+      for (let sample = 0; sample <= 240; sample++) frame(total * sample / 240);
+      const left = Math.floor(cx + shiftX + bounds[0] - pad - 2) - cx;
+      const top = Math.floor(cy + shiftY + bounds[1] - pad - 2) - cy;
+      const overlayWidth = Math.ceil(cx + shiftX + bounds[2] + pad + 2) - cx - left;
+      const overlayHeight = Math.ceil(cy + shiftY + bounds[3] + pad + 2) - cy - top;
+      const canvas = document2.createElement("canvas");
+      canvas.width = Math.round(overlayWidth * dpr);
+      canvas.height = Math.round(overlayHeight * dpr);
+      Object.assign(canvas.style, { position: "absolute", left: `${String(left)}px`, top: `${String(top)}px`, width: `${String(overlayWidth)}px`, height: `${String(overlayHeight)}px` });
+      layer.append(canvas);
+      draw = stripRenderer(canvas, left - shiftX, top - shiftY, overlayWidth, overlayHeight, face, count * segments, width, height, pad);
+      return frame;
+      function frame(time) {
+        draw.clear?.();
+        const split = ease(phase(time, enter));
+        const drop = phase(time - enter, release);
+        const archTime = phase(time - enter - release, bridge);
+        const settle = phase(time - enter - release - bridge, exit);
+        const press = ease(archTime / 0.32);
+        const square = ease(settle / 0.52);
+        const tapTime = phase(settle - 0.52, 0.48);
+        const tap = Math.sin(Math.PI * tapTime) * Math.cos(2 * Math.PI * tapTime);
+        const offset = width * split * mix(0.53, 0.16, ease(drop)) * (1 - square);
+        for (let hand = 0; hand < 2; hand++) {
+          shadows[hand].style.transform = `translate(${String((hand * 2 - 1) * offset)}px, ${String(unit * 0.08 * press * (1 - square))}px)`;
+          shadows[hand].style.opacity = String(mix(0.93, 0.66, press * (1 - square)));
+        }
+        for (let index = 0; index < count; index++) {
+          const { hand, level, beat } = packet[index];
+          const side = hand * 2 - 1;
+          const fall = ease((drop - 0.04 - beat * 0.72) / 0.22);
+          const roll = 1 - ease((archTime - 0.34 - beat * 0.41) / 0.24);
+          const arch = press * roll;
+          const curl = split * (1 - fall) * unit * (0.29 + 0.1 * level / count);
+          const flutter = unit * 0.045 * Math.sin(fall * Math.PI * 2) * Math.sin(fall * Math.PI);
+          const x = side * width * split * mix(0.53, mix(0.2, 0.115, press), fall) * (1 - square);
+          const stack = mix(index, level, split * (1 - fall)) * pitch;
+          const shear = (index / (count - 1) - 0.5) * unit * 0.25 * arch;
+          const y = (count - 1) * pitch - stack + (split * mix(height * 0.045, height * 0.019, fall) * side + shear) * (1 - square);
+          const angle = -side * tilt * split * mix(1, 0.21, fall) * (1 - press * 0.7) * (1 - square);
+          const radians = angle * Math.PI / 180;
+          const cos = Math.cos(radians);
+          const sin = Math.sin(radians);
+          const tx = x + tap * unit * 0.029;
+          const ty = y + tap * unit * 0.042;
+          if (Math.abs(curl + flutter) < 1e-8 && arch === 0) {
+            draw.quad(
+              tx - cos * width / 2 + sin * height / 2,
+              ty - sin * width / 2 - cos * height / 2,
+              cos * width,
+              sin * width,
+              -sin * height,
+              cos * height,
+              0,
+              1,
+              0,
+              0
+            );
+            continue;
+          }
+          const curve = curl + flutter;
+          const crown = archHeight * arch;
+          let left2 = -width / 2;
+          let z = bend(left2, side, width, x, radius, curve, crown);
+          let halfBefore = bend(left2 - step / 2, side, width, x, radius, curve, crown);
+          let half = bend(left2 + step / 2, side, width, x, radius, curve, crown);
+          for (let segment = 0; segment < segments; segment++) {
+            const local = -width / 2 + segment * step;
+            const next = bend(local + step, side, width, x, radius, curve, crown);
+            const halfAfter = bend(local + step * 1.5, side, width, x, radius, curve, crown);
+            const rise = next - z;
+            const span = Math.sqrt(step ** 2 - Math.min(step * 0.86, Math.abs(rise)) ** 2);
+            const slant = -rise * 0.49 / step;
+            const squash = span / step;
+            const lift = -z * 0.49;
+            const slice = step + (segment === segments - 1 ? 0 : 0.35);
+            draw.quad(
+              tx + cos * left2 - sin * (lift - height / 2),
+              ty + sin * left2 + cos * (lift - height / 2),
+              (cos * squash - sin * slant) * slice,
+              (sin * squash + cos * slant) * slice,
+              -sin * height,
+              cos * height,
+              segment / segments,
+              segment / segments + slice / width,
+              shade((half - halfBefore) / step, z / height),
+              shade((halfAfter - half) / step, next / height)
+            );
+            halfBefore = half;
+            half = halfAfter;
+            left2 += span;
+            z = next;
+          }
+        }
+        draw.flush();
+      }
+    });
+  }
+  function bend(local, side, width, x, radius, curve, arch) {
+    const inner = 0.5 - side * local / width;
+    const crown = Math.max(0, 1 - ((x + local) / radius) ** 2);
+    return curve * inner ** 3 + arch * crown;
+  }
+  function shade(slope, lift) {
+    return Math.max(-0.55, Math.min(0.39, slope * -0.58 + lift * 0.14));
+  }
+  function stripRenderer(canvas, originX, originY, width, height, face, capacity, cardWidth, cardHeight, pad) {
+    const gl = canvas.getContext("webgl2", { depth: false, antialias: false });
+    if (!gl) return canvasStrips(canvas, originX, originY, width, height, face, cardWidth, cardHeight, pad);
+    const program = gl.createProgram();
+    function attach(type, source) {
+      const shader = gl.createShader(type);
+      gl.shaderSource(shader, source);
+      gl.compileShader(shader);
+      if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) throw new Error(gl.getShaderInfoLog(shader) ?? "");
+      gl.attachShader(program, shader);
+      gl.deleteShader(shader);
+    }
+    attach(gl.VERTEX_SHADER, `#version 300 es
+    layout(location=0) in vec2 position;
+    layout(location=1) in vec2 uv;
+    layout(location=2) in vec4 shade;
+    out vec2 texCoord;
+    out vec4 tint;
+    void main() {
+      gl_Position = vec4(position, 0, 1);
+      texCoord = uv;
+      tint = shade;
+    }`);
+    attach(gl.FRAGMENT_SHADER, `#version 300 es
+    precision mediump float;
+    uniform sampler2D faceTexture;
+    in vec2 texCoord;
+    in vec4 tint;
+    out vec4 color;
+    void main() {
+      vec4 base = texture(faceTexture, texCoord);
+      color = base * (1.0 - tint.a) + tint * base.a;
+    }`);
+    gl.linkProgram(program);
+    if (!gl.getProgramParameter(program, gl.LINK_STATUS)) throw new Error(gl.getProgramInfoLog(program) ?? "");
+    gl.useProgram(program);
+    gl.enable(gl.BLEND);
+    gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
+    gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL, true);
+    gl.bindTexture(gl.TEXTURE_2D, gl.createTexture());
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, face);
+    const stride = 8;
+    const vertices = new Float32Array(capacity * 4 * stride);
+    const indices = new Uint16Array(capacity * 6);
+    for (let i = 0; i < capacity; i++) {
+      const first = 4 * i;
+      indices.set([first, first + 1, first + 2, first + 2, first + 1, first + 3], 6 * i);
+    }
+    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, gl.createBuffer());
+    gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, indices, gl.STATIC_DRAW);
+    gl.bindBuffer(gl.ARRAY_BUFFER, gl.createBuffer());
+    gl.bufferData(gl.ARRAY_BUFFER, vertices.byteLength, gl.DYNAMIC_DRAW);
+    for (const [index, size, offset] of [[0, 2, 0], [1, 2, 2], [2, 4, 4]]) {
+      gl.enableVertexAttribArray(index);
+      gl.vertexAttribPointer(index, size, gl.FLOAT, false, stride * 4, offset * 4);
+    }
+    let length = 0;
+    function vertex(x, y, u, v, light) {
+      const amount = Math.abs(light) / 255;
+      vertices[length++] = (x - originX) * 2 / width - 1;
+      vertices[length++] = 1 - (y - originY) * 2 / height;
+      vertices[length++] = u;
+      vertices[length++] = v;
+      vertices[length++] = amount * (light < 0 ? 19 : 255);
+      vertices[length++] = amount * (light < 0 ? 11 : 223);
+      vertices[length++] = amount * (light < 0 ? 10 : 173);
+      vertices[length++] = Math.abs(light);
+    }
+    return {
+      quad(x, y, dx, dy, vx, vy, u0, u1, left, right) {
+        {
+          const along = pad / ((u1 - u0) * cardWidth);
+          const before = u0 === 0 ? along : 0;
+          const after = u1 > 0.999 ? along : 0;
+          const down = pad / cardHeight;
+          x -= dx * before + vx * down;
+          y -= dy * before + vy * down;
+          u0 = before ? 0 : (pad + u0 * cardWidth) / (cardWidth + 2 * pad);
+          u1 = after ? 1 : (pad + u1 * cardWidth) / (cardWidth + 2 * pad);
+          dx *= 1 + before + after;
+          dy *= 1 + before + after;
+          vx *= 1 + 2 * down;
+          vy *= 1 + 2 * down;
+        }
+        vertex(x, y, u0, 0, left);
+        vertex(x + dx, y + dy, u1, 0, right);
+        vertex(x + vx, y + vy, u0, 1, left);
+        vertex(x + dx + vx, y + dy + vy, u1, 1, right);
+      },
+      flush() {
+        gl.clear(gl.COLOR_BUFFER_BIT);
+        gl.bufferSubData(gl.ARRAY_BUFFER, 0, vertices, 0, length);
+        gl.drawElements(gl.TRIANGLES, length / (4 * stride) * 6, gl.UNSIGNED_SHORT, 0);
+        length = 0;
+      }
+    };
+  }
+  function canvasStrips(canvas, originX, originY, width, height, face, cardWidth, cardHeight, pad) {
+    const ctx = canvas.getContext("2d");
+    const scaleX = canvas.width / width;
+    const scaleY = canvas.height / height;
+    const color = (light) => light < 0 ? `rgba(19,11,10,${String(-light)})` : `rgba(255,223,173,${String(light)})`;
+    return {
+      quad(x, y, dx, dy, vx, vy, u0, u1, left, right) {
+        const image = face;
+        ctx.setTransform(
+          dx * scaleX,
+          dy * scaleY,
+          vx * scaleX,
+          vy * scaleY,
+          (x - originX) * scaleX,
+          (y - originY) * scaleY
+        );
+        const scale = image.width / (cardWidth + 2 * pad);
+        ctx.drawImage(image, (pad + u0 * cardWidth) * scale, pad * scale, (u1 - u0) * cardWidth * scale, cardHeight * scale, 0, 0, 1, 1);
+        if (left || right) {
+          const gradient = ctx.createLinearGradient(0, 0, 1, 0);
+          gradient.addColorStop(0, color(left));
+          gradient.addColorStop(1, color(right));
+          ctx.fillStyle = gradient;
+          ctx.fillRect(0, 0, 1, 1);
+        }
+      },
+      flush() {
+      },
+      clear() {
+        ctx.resetTransform();
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+      }
+    };
+  }
+  function bitmap(document2, width, height, dpr, draw) {
+    const canvas = document2.createElement("canvas");
+    canvas.width = Math.ceil(width * dpr);
+    canvas.height = Math.ceil(height * dpr);
+    const ctx = canvas.getContext("2d");
+    ctx.scale(canvas.width / width, canvas.height / height);
+    draw(ctx);
+    return canvas;
+  }
+  function drawNeutralBack(ctx, width, height) {
+    ctx.save();
+    ctx.beginPath();
+    ctx.roundRect(0, 0, width, height, 7);
+    ctx.clip();
+    ctx.fillStyle = "#7c4840";
+    ctx.fillRect(0, 0, width, height);
+    ctx.strokeStyle = "#e7b28728";
+    ctx.lineWidth = 1;
+    for (const direction of [-1, 1]) {
+      ctx.beginPath();
+      for (let offset = -height; offset <= width + height; offset += 16 * Math.SQRT2) {
+        const band = offset + 8.5 * Math.SQRT2;
+        const x = direction === 1 ? width + height - 4 - band : 4 - height + band;
+        ctx.moveTo(x, 0);
+        ctx.lineTo(x - direction * height, height);
+      }
+      ctx.stroke();
+    }
+    const dot = ctx.createRadialGradient(width / 2, height / 2, 0, width / 2, height / 2, 2);
+    dot.addColorStop(0.5, "#e4b58b");
+    dot.addColorStop(1, "#e4b58b00");
+    ctx.fillStyle = dot;
+    ctx.fillRect(width / 2 - 2, height / 2 - 2, 4, 4);
+    for (const [inset, color, lineWidth, radius] of [[1, "#e3c3a0", 2, 6], [4, "#7c4840", 4, 3], [6.5, "#dbab7d", 1, 0.5]]) {
+      ctx.beginPath();
+      ctx.roundRect(inset, inset, width - 2 * inset, height - 2 * inset, radius);
+      ctx.strokeStyle = color;
+      ctx.lineWidth = lineWidth;
+      ctx.stroke();
+    }
+    ctx.restore();
+  }
+
+  // components/deck-motions/ui.ts
+  var live = /* @__PURE__ */ new Set();
+  var timers = /* @__PURE__ */ new Set();
+  var riffling = /* @__PURE__ */ new WeakMap();
+  var riffles = /* @__PURE__ */ new Set();
+  var sum = (d) => d.reduce((a, b) => a + b, 0);
+  var reduced = () => typeof matchMedia === "function" && matchMedia("(prefers-reduced-motion: reduce)").matches;
+  var pileElement = (pile) => document.querySelector(`[data-pile="${pile}"]`);
+  var topOf = (at) => at.lastElementChild ?? at;
+  var resolveAt = (at) => {
+    if (typeof at !== "string") return at();
+    const p = pileElement(at);
+    return p === null ? null : topOf(p);
+  };
+  var cardBack = (pile, rect) => {
+    const b = document.createElement("div");
+    b.dataset["pileBack"] = pile;
+    b.dataset["motionStandin"] = "";
+    b.style.setProperty("--h", `${String(rect.height)}px`);
+    return b;
+  };
+  var lay = (el, r) => {
+    Object.assign(el.style, { position: "fixed", left: `${String(r.left)}px`, top: `${String(r.top)}px`, width: `${String(r.width)}px`, height: `${String(r.height)}px`, margin: "0", pointerEvents: "none", zIndex: "1000" });
+    el.setAttribute("aria-hidden", "true");
+    document.body.append(el);
+  };
+  var track = (a, el) => {
+    live.add(a);
+    return a.finished.catch(() => void 0).then(() => {
+      live.delete(a);
+      el.remove();
+    });
+  };
+  var finishDeckMotions = () => {
+    for (const x of [...timers]) {
+      window.clearTimeout(x.t);
+      timers.delete(x);
+      x.r();
+    }
+    for (const a of [...live]) a.finish();
+    for (const r of [...riffles]) r.finish();
+  };
+  var finishOnInput = (target = window) => {
+    const f = () => {
+      finishDeckMotions();
+    };
+    for (const e of ["pointerdown", "keydown"]) target.addEventListener(e, f, true);
+    return () => {
+      for (const e of ["pointerdown", "keydown"]) target.removeEventListener(e, f, true);
+    };
+  };
+  var REST = "translate(0px, 0px) scale(1, 1)";
+  function dealFrom(moves, o = {}) {
+    const speed = reduced() ? 0 : o.speed ?? 1;
+    const plan = planDeal(moves, { speed, shuffled: o.shuffled, departs: o.departs, riffleMs: o.durations ? sum(o.durations) : void 0 });
+    const face = o.face ?? ((_id, el) => el.cloneNode(true));
+    const ends = [];
+    for (const t of plan.timed) {
+      const { move } = t;
+      const pileEl = resolveAt(move.pile);
+      const atEl = resolveAt(move.at);
+      if (!pileEl || !atEl || typeof atEl.animate !== "function") continue;
+      const pr = pileEl.getBoundingClientRect();
+      const ar = atEl.getBoundingClientRect();
+      const [from, to] = move.dir === "out" ? [pr, ar] : [ar, pr];
+      const start = `translate(${String(from.left - to.left)}px, ${String(from.top - to.top)}px) scale(${String(from.width / (to.width || 1))}, ${String(from.height / (to.height || 1))})`;
+      const stand = (el2) => {
+        el2.removeAttribute("data-card-id");
+        el2.dataset["motionStandin"] = "";
+        lay(el2, to);
+        return el2;
+      };
+      const fly = (el2, frames) => {
+        ends.push(track(el2.animate(frames, { duration: t.ms, delay: t.delay, fill: "both", easing: "ease-in-out" }), el2));
+      };
+      if (move.faceDown && move.dir === "out") {
+        const rot = o.axis === "y" ? "rotateX" : "rotateY";
+        const sg = o.direction ?? 1;
+        const b = stand((o.back ?? cardBack)(move.pile, from));
+        const f = stand(face(move.id, atEl));
+        fly(b, [{ transform: `${start} ${rot}(0deg)`, offset: 0 }, { transform: `${REST} ${rot}(${String(90 * sg)}deg)`, offset: 0.5 }, { transform: `${REST} ${rot}(${String(90 * sg)}deg)`, offset: 1 }]);
+        fly(f, [{ transform: `${start} ${rot}(${String(-90 * sg)}deg)`, offset: 0 }, { transform: `${start} ${rot}(${String(-90 * sg)}deg)`, offset: 0.5 }, { transform: `${REST} ${rot}(0deg)`, offset: 1 }]);
+        continue;
+      }
+      const el = stand(move.faceDown ? (o.back ?? cardBack)(move.pile, from) : face(move.id, atEl));
+      const mid = t.lift !== 1 ? [{ transform: `${REST} scale(${String(t.lift)})`, offset: 0.5 }] : [];
+      fly(el, [{ transform: start, offset: 0 }, ...mid, { transform: REST, offset: 1, ...t.vanish ? { opacity: 0 } : {} }]);
+    }
+    const rif = plan.shuffling.length ? new Promise((r) => {
+      const x = { t: 0, r };
+      x.t = window.setTimeout(() => {
+        timers.delete(x);
+        void shuffleDecks(plan.shuffling, speed, o).then(r);
+      }, plan.shuffleAt);
+      timers.add(x);
+    }) : Promise.resolve();
+    return { plan, done: Promise.all([...ends, rif]).then(() => void 0) };
+  }
+  var riffle = (deck, speed = 1, o = {}) => startRiffle(deck, sum(o.durations ?? RIFFLE_PHASES_MS) * speed, o)?.done ?? Promise.resolve();
+  function startRiffle(deck, duration, o, shake) {
+    const running = riffling.get(deck);
+    if (running !== void 0) return running;
+    if (!(duration > 0) || reduced()) return void 0;
+    let ended;
+    let stop;
+    if (shake) {
+      const top = topOf(deck);
+      if (typeof top.animate !== "function") return void 0;
+      const a = top.animate([
+        { transform: "none" },
+        { transform: `rotate(${String(-shake.degrees)}deg) translateX(${String(-shake.pixels)}px)` },
+        { transform: `rotate(${String(shake.degrees)}deg) translateX(${String(shake.pixels)}px)` },
+        { transform: `rotate(${String(-shake.degrees / 2)}deg)` },
+        { transform: "none" }
+      ].map((frame) => ({ ...frame, easing: "ease-in-out" })), { duration });
+      ended = a.finished.catch(() => void 0);
+      stop = () => {
+        a.finish();
+      };
+    } else {
+      const d = o.durations ?? RIFFLE_PHASES_MS;
+      const pile = deck.getAttribute("data-pile") ?? "";
+      const back = o.back;
+      const opts = { speed: sum(d) / duration, cards: o.cards ?? RIFFLE_DECK_CARDS, orientation: o.orientation, durations: d.map((ms) => ms / 1e3) };
+      const m = o.view === "side" ? riffleSide(deck, { ...opts, ...back ? { back: (top) => back(pile, top.getBoundingClientRect()) } : {} }) : riffleTop(deck, { ...opts, ...o.topBack ? { back: o.topBack } : {} });
+      if (!m.finish) return void 0;
+      ended = m.done;
+      stop = m.finish;
+    }
+    const clean = () => {
+      riffles.delete(motion);
+      if (riffling.get(deck) === motion) riffling.delete(deck);
+    };
+    const motion = { done: ended.then(clean), finish: () => {
+      stop();
+      clean();
+    } };
+    riffling.set(deck, motion);
+    riffles.add(motion);
+    return motion;
+  }
+  function registerRiffle(verbs, opts = {}) {
+    verbs.register("riffle", (call) => {
+      const deck = (opts.resolvePile ?? pileElement)(call.actor);
+      if (!deck) return void 0;
+      return startRiffle(deck, call.step["natural"] === true ? sum(opts.durations ?? RIFFLE_PHASES_MS) : call.dur, opts, opts.shake)?.finish;
+    });
+  }
+  var shuffleDecks = (piles, speed = 1, o = {}) => Promise.all([...new Set(piles)].flatMap((p) => {
+    const at = pileElement(p);
+    return at === null ? [] : [riffle(at, speed, o)];
+  })).then(() => void 0);
+  return __toCommonJS(ui_exports);
+})();
+
+</script>
+<script>
+const byId = (id) => document.getElementById(id);
+const topDeck = byId('top-deck');
+const sideDeck = byId('side-deck');
+const panels = { top: document.querySelector('[data-view=top]'), side: document.querySelector('[data-view=side]') };
+const get = (view, k) => panels[view].querySelector(`[data-k=${k}]`);
+
+function options(view) {
+  const speed = get(view, 'speed').valueAsNumber;
+  const cards = get(view, 'cards').valueAsNumber;
+  const orientation = get(view, 'orientation').value.toLowerCase();
+  const durations = ['d0', 'd1', 'd2', 'd3'].map((k) => get(view, k).valueAsNumber);
+  return { speed, cards, orientation, durations };
+}
+
+function previewBack() {
+  const card = document.createElement('div');
+  card.className = 'back motion-back';
+  return card;
+}
+
+function kitOptions(view) {
+  const { speed, cards, orientation, durations } = options(view);
+  return [speed > 0 ? 1 / speed : 0, { view, cards, orientation, durations: durations.map((s) => Math.round(s * 1000)) }];
+}
+
+function update() {
+  for (const view of ['top', 'side']) {
+    const panel = panels[view];
+    const { speed, orientation, durations } = options(view);
+    for (const input of panel.querySelectorAll('input')) {
+      const k = input.dataset.k;
+      input.previousElementSibling.value = input.valueAsNumber + (k === 'speed' ? '×' : k === 'cards' ? '' : ' s');
+    }
+    panel.querySelector('.note').textContent = speed === 0 ? 'Still at 0×. Phase times are set at 1×.' :
+      `Phase times are set at 1×. A full play takes ${(durations.reduce((a, b) => a + b, 0) / speed).toFixed(2)} s. The kit default is ${DM.RIFFLE_MS / 1000} s at 1×.`;
+    const [time, o] = kitOptions(view);
+    panel.querySelector('code').textContent = `riffle(deck, ${+time.toFixed(3)}, ${JSON.stringify(o).replace(/"(\w+)":/g, '$1: ').replace(/,/g, ', ').replace(/"/g, "'")})`;
+    (view === 'top' ? topDeck : sideDeck).toggleAttribute('data-landscape', orientation === 'landscape');
+  }
+  const rect = topDeck.getBoundingClientRect();
+  const dpr = devicePixelRatio;
+  const face = document.createElement('canvas');
+  const [w, h] = [Math.round(rect.width * dpr) / dpr, Math.round(rect.height * dpr) / dpr];
+  face.width = Math.round((w + 4) * dpr);
+  face.height = Math.round((h + 4) * dpr);
+  const cards = Math.max(2, Math.round(get('top', 'cards').valueAsNumber));
+  const pitch = Math.min(w, h) * 0.092 / (cards - 1) * dpr;
+  const facePaint = face.getContext('2d');
+  facePaint.scale(dpr, dpr);
+  facePaint.translate(2, 2);
+  DM.drawNeutralBack(facePaint, w, h);
+  const back = topDeck.firstElementChild;
+  back.width = Math.round(Math.ceil(w) * dpr);
+  back.height = Math.round(Math.ceil(h + (cards - 1) * pitch / dpr) * dpr);
+  Object.assign(back.style, { left: Math.round(rect.left) - rect.left + 'px', top: Math.round(rect.top) - rect.top + 'px', width: Math.ceil(w) + 'px', height: back.height / dpr + 'px' });
+  const paint = back.getContext('2d');
+  for (let index = 0; index < cards; index++) paint.drawImage(face, -2 * dpr, (cards - 1 - index) * pitch - 2 * dpr);
+}
+
+function play(view) {
+  DM.finishDeckMotions();
+  const [time, o] = kitOptions(view);
+  void DM.riffle(view === 'top' ? topDeck : sideDeck, time, view === 'top' ? o : { ...o, back: previewBack });
+}
+
+byId('top-play').addEventListener('click', () => play('top'));
+byId('play').addEventListener('click', () => play('side'));
+for (const view of ['top', 'side']) {
+  panels[view].addEventListener('input', () => {
+    DM.finishDeckMotions();
+    update();
+    play(view);
+  });
+  panels[view].querySelector('.kit').addEventListener('click', () => {
+    DM.RIFFLE_PHASES_MS.forEach((ms, i) => { get(view, 'd' + i).value = ms / 1000; });
+    panels[view].dispatchEvent(new Event('input'));
+  });
+}
+update();
+addEventListener('resize', update);
+</script>
+</body>
+</html>

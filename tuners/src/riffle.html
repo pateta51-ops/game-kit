@@ -1,0 +1,188 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Riffle</title>
+<style>
+:root { color-scheme: dark; font: 15px/1.5 system-ui, sans-serif; color: #eae5db; background: #141719; accent-color: #e6b788; }
+* { box-sizing: border-box; }
+body { margin: 0; }
+main { width: min(1120px, calc(100% - 40px)); margin: 38px auto; }
+header { margin-bottom: 25px; }
+h1, h2, p { margin: 0; }
+h1 { font: 500 clamp(42px, 7vw, 68px)/1 Georgia, serif; letter-spacing: -.055em; }
+h2 { font: 500 24px/1.2 Georgia, serif; letter-spacing: -.02em; }
+p, label { color: #b9b4aa; }
+header p { margin-top: 10px; }
+.stages { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; align-items: start; }
+section { border: 1px solid #393c3d; border-radius: 14px; background: #1b1f21; overflow: hidden; }
+.heading, .controls { padding: 16px 18px; }
+.heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+button { font: inherit; font-weight: 650; color: #201915; background: #e6b788; border: 0; border-radius: 6px; padding: 7px 18px; cursor: pointer; }
+select { font: inherit; color: inherit; background: #252a2c; border: 1px solid #484b4c; border-radius: 5px; padding: 3px 6px; }
+.stage { position: relative; height: clamp(218px, 32vw, 315px); overflow: hidden; display: grid; place-items: center; border-block: 1px solid #353a3d; background: radial-gradient(ellipse at 50% 46%, #343b3d, #222729 62%, #191d20); }
+.back { color: #e4b58b; background-color: #7c4840; background-image:
+  radial-gradient(circle at center, #e4b58b 1px, transparent 2px),
+  repeating-linear-gradient(45deg, transparent 0 8px, #e7b28728 8px 9px, transparent 9px 16px),
+  repeating-linear-gradient(-45deg, transparent 0 8px, #e7b28728 8px 9px, transparent 9px 16px);
+  background-size: var(--back-width) var(--back-height); }
+.back { border: 2px solid #e3c3a0; border-radius: 7px; box-shadow: inset 0 0 0 4px #7c4840, inset 0 0 0 5px #dbab7d; }
+.motion-back { background-size: 100% 100%; }
+.stage { --short: min(88px, 22vw); --long: min(124px, 31vw); }
+.pile { --back-width: var(--short); --back-height: var(--long); width: var(--back-width); height: var(--back-height); box-shadow: 0 4px #b39577, 0 8px #615042, 0 14px 20px #111a; }
+.pile[data-landscape] { --back-width: var(--long); --back-height: var(--short); }
+#top-stage { --short: min(68px, 16.7vw); --long: min(96px, 23.6vw); height: 280px; }
+#top-deck { margin-top: 100px; }
+#top-stage { isolation: isolate; }
+#top-deck { position: relative; border: 0; background: none; box-shadow: none; }
+#top-deck > canvas { position: absolute; left: 0; top: 0; }
+#top-deck > i { display: block; height: 100%; }
+#top-deck::before, #top-deck::after { content: ''; position: absolute; z-index: -1; left: -19%; top: -11%; width: 138%; height: 132%; background: radial-gradient(ellipse closest-side, #080809df 35%, transparent); opacity: .93; }
+.controls { display: grid; gap: 14px; }
+.primary, .timings { display: grid; gap: 10px 16px; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+label { display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 3px 5px; font-size: 13px; }
+label.orientation { grid-column: 1 / -1; grid-template-columns: auto auto; justify-content: start; column-gap: 10px; }
+input[type=range] { grid-column: 1 / -1; width: 100%; margin: 2px 0; cursor: pointer; }
+output { color: #f2d3b3; font-variant-numeric: tabular-nums; }
+.note { font-size: 13px; }
+code { display: block; font: 12px/1.45 ui-monospace, monospace; color: #d9cfc2; background: #15191b; border: 1px solid #353a3d; border-radius: 6px; padding: 8px 10px; white-space: pre-wrap; word-break: break-word; }
+.kit { justify-self: start; padding: 4px 12px; color: inherit; background: #2b3133; border: 1px solid #484b4c; }
+@media (max-width: 720px) {
+  main { width: calc(100% - 28px); margin-block: 24px; }
+  .stages { grid-template-columns: minmax(0, 1fr); }
+}
+</style>
+<body>
+<main>
+<header><h1>Riffle</h1><p>Top and side views of the deck-motions riffle. Each view has its own settings.</p></header>
+<div class="stages">
+  <section aria-labelledby="top-title">
+    <div class="heading"><h2 id="top-title">Top-view riffle</h2><button id="top-play" type="button">Play</button></div>
+    <div class="stage" id="top-stage" aria-hidden="true"><div id="top-deck" class="back pile" data-pile="new"><canvas></canvas><i></i></div></div>
+    <div class="controls" data-view="top">
+      <div class="primary">
+        <label>Speed <output></output><input data-k="speed" type="range" min="0" max="2" step=".1" value="1"></label>
+        <label>Cards <output></output><input data-k="cards" type="range" min="8" max="36" step="1" value="20"></label>
+        <label class="orientation">Orientation <select data-k="orientation"><option>Portrait</option><option>Landscape</option></select></label>
+      </div>
+      <div class="timings">
+        <label>Split <output></output><input data-k="d0" type="range" min=".1" max="1.5" step=".05" value=".45"></label>
+        <label>Riffle <output></output><input data-k="d1" type="range" min=".4" max="2.5" step=".05" value="1.35"></label>
+        <label>Bridge <output></output><input data-k="d2" type="range" min=".2" max="2" step=".05" value=".75"></label>
+        <label>Square up <output></output><input data-k="d3" type="range" min=".1" max="1.5" step=".05" value=".45"></label>
+      </div>
+      <button class="kit" type="button">Kit default timings</button>
+      <p class="note"></p>
+      <code></code>
+    </div>
+  </section>
+  <section aria-labelledby="side-title">
+    <div class="heading"><h2 id="side-title">Side-view riffle</h2><button id="play" type="button">Play</button></div>
+    <div class="stage" id="side" aria-hidden="true"><div id="side-deck" class="back pile" data-pile="side"></div></div>
+    <div class="controls" data-view="side">
+      <div class="primary">
+        <label>Speed <output></output><input data-k="speed" type="range" min="0" max="2" step=".1" value="1"></label>
+        <label>Cards <output></output><input data-k="cards" type="range" min="8" max="36" step="1" value="20"></label>
+        <label class="orientation">Orientation <select data-k="orientation"><option>Portrait</option><option>Landscape</option></select></label>
+      </div>
+      <div class="timings">
+        <label>Tilt in / split <output></output><input data-k="d0" type="range" min=".1" max="1.5" step=".05" value=".45"></label>
+        <label>Riffle <output></output><input data-k="d1" type="range" min=".4" max="2.5" step=".05" value="1.35"></label>
+        <label>Bridge <output></output><input data-k="d2" type="range" min=".2" max="2" step=".05" value=".75"></label>
+        <label>Tilt out / square <output></output><input data-k="d3" type="range" min=".1" max="1.5" step=".05" value=".45"></label>
+      </div>
+      <button class="kit" type="button">Kit default timings</button>
+      <p class="note"></p>
+      <code></code>
+    </div>
+  </section>
+</div>
+</main>
+<script>
+//@kit-js components/deck-motions/ui.ts as DM
+</script>
+<script>
+const byId = (id) => document.getElementById(id);
+const topDeck = byId('top-deck');
+const sideDeck = byId('side-deck');
+const panels = { top: document.querySelector('[data-view=top]'), side: document.querySelector('[data-view=side]') };
+const get = (view, k) => panels[view].querySelector(`[data-k=${k}]`);
+
+function options(view) {
+  const speed = get(view, 'speed').valueAsNumber;
+  const cards = get(view, 'cards').valueAsNumber;
+  const orientation = get(view, 'orientation').value.toLowerCase();
+  const durations = ['d0', 'd1', 'd2', 'd3'].map((k) => get(view, k).valueAsNumber);
+  return { speed, cards, orientation, durations };
+}
+
+function previewBack() {
+  const card = document.createElement('div');
+  card.className = 'back motion-back';
+  return card;
+}
+
+function kitOptions(view) {
+  const { speed, cards, orientation, durations } = options(view);
+  return [speed > 0 ? 1 / speed : 0, { view, cards, orientation, durations: durations.map((s) => Math.round(s * 1000)) }];
+}
+
+function update() {
+  for (const view of ['top', 'side']) {
+    const panel = panels[view];
+    const { speed, orientation, durations } = options(view);
+    for (const input of panel.querySelectorAll('input')) {
+      const k = input.dataset.k;
+      input.previousElementSibling.value = input.valueAsNumber + (k === 'speed' ? '×' : k === 'cards' ? '' : ' s');
+    }
+    panel.querySelector('.note').textContent = speed === 0 ? 'Still at 0×. Phase times are set at 1×.' :
+      `Phase times are set at 1×. A full play takes ${(durations.reduce((a, b) => a + b, 0) / speed).toFixed(2)} s. The kit default is ${DM.RIFFLE_MS / 1000} s at 1×.`;
+    const [time, o] = kitOptions(view);
+    panel.querySelector('code').textContent = `riffle(deck, ${+time.toFixed(3)}, ${JSON.stringify(o).replace(/"(\w+)":/g, '$1: ').replace(/,/g, ', ').replace(/"/g, "'")})`;
+    (view === 'top' ? topDeck : sideDeck).toggleAttribute('data-landscape', orientation === 'landscape');
+  }
+  const rect = topDeck.getBoundingClientRect();
+  const dpr = devicePixelRatio;
+  const face = document.createElement('canvas');
+  const [w, h] = [Math.round(rect.width * dpr) / dpr, Math.round(rect.height * dpr) / dpr];
+  face.width = Math.round((w + 4) * dpr);
+  face.height = Math.round((h + 4) * dpr);
+  const cards = Math.max(2, Math.round(get('top', 'cards').valueAsNumber));
+  const pitch = Math.min(w, h) * 0.092 / (cards - 1) * dpr;
+  const facePaint = face.getContext('2d');
+  facePaint.scale(dpr, dpr);
+  facePaint.translate(2, 2);
+  DM.drawNeutralBack(facePaint, w, h);
+  const back = topDeck.firstElementChild;
+  back.width = Math.round(Math.ceil(w) * dpr);
+  back.height = Math.round(Math.ceil(h + (cards - 1) * pitch / dpr) * dpr);
+  Object.assign(back.style, { left: Math.round(rect.left) - rect.left + 'px', top: Math.round(rect.top) - rect.top + 'px', width: Math.ceil(w) + 'px', height: back.height / dpr + 'px' });
+  const paint = back.getContext('2d');
+  for (let index = 0; index < cards; index++) paint.drawImage(face, -2 * dpr, (cards - 1 - index) * pitch - 2 * dpr);
+}
+
+function play(view) {
+  DM.finishDeckMotions();
+  const [time, o] = kitOptions(view);
+  void DM.riffle(view === 'top' ? topDeck : sideDeck, time, view === 'top' ? o : { ...o, back: previewBack });
+}
+
+byId('top-play').addEventListener('click', () => play('top'));
+byId('play').addEventListener('click', () => play('side'));
+for (const view of ['top', 'side']) {
+  panels[view].addEventListener('input', () => {
+    DM.finishDeckMotions();
+    update();
+    play(view);
+  });
+  panels[view].querySelector('.kit').addEventListener('click', () => {
+    DM.RIFFLE_PHASES_MS.forEach((ms, i) => { get(view, 'd' + i).value = ms / 1000; });
+    panels[view].dispatchEvent(new Event('input'));
+  });
+}
+update();
+addEventListener('resize', update);
+</script>
+</body>
+</html>

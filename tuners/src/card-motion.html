@@ -230,7 +230,7 @@ function render(replay = true) {
     deal: `Cards take ${flight} to reach their slots and leave ${stagger} apart.`,
     refill: `The refill starts ${departs ? ms((DECK.DEAL_MS * DECK.REFILL_AFTER + DECK.REFILL_GAP_MS) * speed) + ' after Play' : 'right away'} and takes ${ms(DECK.DEAL_MS * (far ? DECK.REFILL_FAR_SCALE : 1) * speed)}.`,
     cycle: `Two cards return to the deck ${stagger} apart. ${shuffled ? 'Then the deck riffles for ' + ms(DECK.RIFFLE_MS * speed) + '.' : 'They fade into the pile.'}`,
-    riffle: `${DECK.RIFFLE_CARDS} cards split, drop in alternating order and square up in ${ms(DECK.RIFFLE_MS * speed)}.`,
+    riffle: `${DECK.RIFFLE_DECK_CARDS} cards split, riffle in, bridge and square up in ${ms(DECK.RIFFLE_MS * speed)}.`,
     stack: `${PREVIEW.edgesFor(count)} edges show beneath the top card, capped at ${PREVIEW.EDGE_CAP} by the kit.`,
     fan: `Cards leave ${ms(PREVIEW.stepFor(count) * speed)} apart. Opening or gathering takes ${ms(PREVIEW.totalMs(count, speed))}. Hover after landing; tap outside or press Escape to gather.`,
     market: `Surviving cards slide for ${ms(PREVIEW.SLIDE_MS * speed)}. Then new cards fly from the deck for ${ms(PREVIEW.DEAL_MS * speed)} each, ${ms(PREVIEW.STAGGER_MS * speed)} apart.`,

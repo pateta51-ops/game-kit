@@ -5,11 +5,11 @@ Cards fly from a pile to their places (deal, refill turn-over, deck cycle) and a
 - The game diffs its views and lists `Move`s: `{ id, dir: 'out' | 'in', pile, at, faceDown, refill?, far? }`. `at` is a pile id or `() => element` (where the card is drawn). `out`: pile to place; `in`: place to pile (a face-down card vanishes into it). `cycleMove(id, discard, deck)`: the top of the discard carried into the deck.
 - `planDeal(moves, { speed, shuffled, departs })`: cards going in (90 ms apart, 520 ms each), then a riffle (2200 ms) for the `shuffled` piles that received one, then cards out in turn. Refills (`refill`) start together once the departing card landed (`departs`) plus 160 ms, lift 1.06, `far` flies 1.5x longer. Speed 0 or less: an empty plan.
 - `dealFrom(moves, { speed, back, face, unit, shuffled, departs })`: lays stand-ins on `document.body` (call after the new view is rendered), plays them with Web Animations, returns `{ plan, done }`. `back(pile, rect)` is the game's card back (default an empty `div[data-pile-back]`), `face(id, el)` the face (default a clone of the place's element), `unit(pile)` the px unit the riffle's offsets follow (default `--u`, else 21.6, the 4K table); `axis` the turn-over: `'x'` side to side (default), `'y'` top to bottom; `direction` `1` a front flip (default), `-1` a back flip.
-- `riffle(deck, speed, opts)`, `shuffleDecks(piles, speed, opts)`: the owner-approved shuffle v2 (STCC D-428: 12 cards, halves a card width apart, zigzag drops, square-up, tap), constants and keyframes unchanged; the deck is hidden meanwhile; one riffle per deck at a time.
-- `registerRiffle(verbs, { resolvePile?, back?, unit?, shake? })` adds the
+- `riffle(deck, speed, opts)`, `shuffleDecks(piles, speed, opts)` (K396): the owner-approved riffle study (18 Nov 2026). `view: 'top'` (default) splits, riffles, bridges and squares a stack drawn on one canvas (WebGL2 strips, 2D canvas strips without WebGL2); `view: 'side'` tilts edge-on, riffles thumb-bent halves, bridges and tilts back (DOM strips). Options: `orientation` `'portrait' | 'landscape'` (default from the deck's shape), `cards` (default `RIFFLE_DECK_CARDS` 20), `durations` the four phases in ms at speed 1 (split or tilt in, riffle, bridge, square or tilt out; default `RIFFLE_PHASES_MS`, the study's `RIFFLE_STUDY_MS` 450/1350/750/450 scaled to `RIFFLE_MS` 2200 so `planDeal` still matches; `dealFrom` passes custom ones to `planDeal` as `riffleMs`), `topBack` the top view's back (a draw function `(ctx, w, h)` or an image; default `drawNeutralBack`), `back(pile, rect)` the side view's back element (default a clone of the top card). Speed is a time factor (2 = twice as long). The deck is hidden meanwhile and restored after; one riffle per deck at a time; a deck with no size, speed 0 or reduced motion: none. `riffleFrames` (the v2 keyframes, STCC D-428) stays exported but nothing plays it.
+- `registerRiffle(verbs, { resolvePile?, back?, topBack?, view?, orientation?, cards?, durations?, shake? })` adds the
   `riffle` verb. The step's actor or zone id names the pile. By default it
   resolves via `[data-pile="<id>"]`. The riffle runs for the scaled step duration.
-  With `natural: true` it uses 2200 ms, so give the step at least that much
+  With `natural: true` it uses the sum of `durations` (2200 ms by default), so give the step at least that much
   scaled time for the full riffle. Step end or skip restores the pile immediately.
   The player skips the verb at instant speed.
 - Pass `shake: { degrees: 4, pixels: 3 }` for Imperium's smaller stack motion.
@@ -39,4 +39,17 @@ import { registerRiffle } from '../kit/deck-motions/ui'
 
 const verbs = createVerbs()
 registerRiffle(verbs)
+```
+
+```ts
+import { drawNeutralBack, finishDeckMotions, riffle, shuffleDecks } from '../kit/deck-motions/ui'
+
+const deck = document.querySelector<HTMLElement>('[data-pile="p1.deck"]')
+const back = () => Object.assign(document.createElement('div'), { className: 'card-back' })
+if (deck) {
+  void riffle(deck, 1, { cards: 16, orientation: 'landscape', topBack: drawNeutralBack })
+  finishDeckMotions()
+  void riffle(deck, 1.5, { view: 'side', durations: [450, 1350, 750, 450], back })
+}
+void shuffleDecks(['p1.deck', 'p2.deck'], 0.5)
 ```

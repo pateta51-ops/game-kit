@@ -14,6 +14,7 @@ graph LR
   board_layout["board-layout"]
   board_model["board-model"]
   board_registry["board-registry"]
+  board_viewport["board-viewport"]
   boundary_check["boundary-check"]
   bug_reporter["bug-reporter"] --> state_machines["state-machines"]
   bug_reporter["bug-reporter"] --> small_helpers["small-helpers"]
@@ -155,6 +156,7 @@ graph LR
 - `audio-gen`
 - `automa`
 - `board-model`
+- `board-viewport`
 - `boundary-check`
 - `bug-reporter`
 - `bundle-size`

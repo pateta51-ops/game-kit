@@ -154,6 +154,7 @@ A game's build plan lists the kit work it needs as phases named `GK<n>` for the 
 | K391 | saves: `savedLine={false}` drops the repeated "saved <date>" line in SavesScreen rows | S |  | done |
 | K392 | card-harness literalsOf(file, type, { keys: true }) and keysOf(file, type): property names of each member of an untagged union | S |  | done |
 | K393 | tutorial TutorialHighlight scroll={false} (mark only) and stage (placement inside a CSS-scaled box); TutorialPanel pacing + onSkip (Next usable while paced steps play) | S |  | done |
+| K394 | card-hand: the lifted face no longer steals the pointer from neighbours' strips (hit area above the rest box only); tuners/card-hand-e2e/hit-area.sh real-mouse check | S |  | done |
 | K395 | llm-playtester: tool_choice auto (thinking models refuse forced tool use), one re-ask when no tool call, pre-call cost estimate and clear cap message | S |  | done |
 
 ## Harvest from the existing games (owner, 15 Nov 2026)
@@ -500,6 +501,7 @@ Every game's animations are rebuilt on `motion-frame` and `effect-library`; game
 | K354 | Dropped after the inventory's work list merged repeats: the story and scene effects are built from existing verbs, particles and the ambience layer, or are game looks (owner, 18 Nov) | docs/motion-retrofit/INVENTORY.md | S | dropped |
 | K355 | Work list 12 with the board swap (K324): view-transition wrapper with speed scaling (STCC viewTransition.ts:13, motion.css:5-8; extend effect-library bands.ts `flight`), plus Warp's data-flip and Imperium FlightLayer | docs/motion-retrofit/INVENTORY.md | M | done |
 | K384 | Port the menu sheen sweep, decorative backdrop drift and staggered slash strokes to effect-library. Record the source settings and recipes for forked lightning, the closing net and roulette faces. | docs/motion-retrofit/INVENTORY.md | M | done |
+| K396 | deck-motions: the approved top-view riffle replaces riffle(); side-view riffle and landscape toggle as options; riffle tuner page with full controls for each view | riffle study (branch riffle-preview, preview approved 18 Nov 2026) | M | done |
 
 ## Parts retrofit (owner, 18 Nov 2026)
 
@@ -515,7 +517,7 @@ The kit holds every game's parts, then every game is retrofitted onto them (owne
 | K364 | [8] Coverage report: which card-language constructs the packs use and lack, as a page and a script (new coverage-report) | docs/INVENTORY.md item 8; ER, Jarl, UFS, Radiance | S | done |
 | K365 | [9] Modal and confirm dialog over the board: focus, Esc, close (new modal-dialog) | docs/INVENTORY.md item 9; IH, Unst | S | done |
 | K366 | [10] Keyboard play: keys 1-9, Enter, Esc, arrow-key option lists and a help overlay (extend ui-helpers) | docs/INVENTORY.md item 10; Unst, UFS | S | done |
-| K367 | [11] Board viewport: SVG zoom about the pointer, drag pan, fit, auto-pan camera that follows the action (extend board-layout) | docs/INVENTORY.md item 11; ER, UFS | M | open |
+| K367 | [11] Board viewport: SVG zoom about the pointer, drag pan, fit, auto-pan camera that follows the action (board-viewport) | docs/INVENTORY.md item 11; ER, UFS | M | done |
 | K368 | [12] Zoom and hover-preview placement: right/left/below/above with margin, kept on screen (extend card-zoom) | docs/INVENTORY.md item 12; Warps, Unst | S | done |
 | K369 | [13] Looked-at cards: memory of cards the player peeked at plus the large look-at view (new looked-at) | docs/INVENTORY.md item 13; ER, IH | S | done |
 | K370 | [14] Rules screen: rulebook as data, word search, headings, rule diagrams over card faces and icons (new rules-screen) | docs/INVENTORY.md item 14; Jarl, UFS, Unst | M | open |
@@ -528,7 +530,7 @@ The kit holds every game's parts, then every game is retrofitted onto them (owne
 | K377 | [21] Test setup helpers: jsdom scroll stubs, UI fixtures for component tests, real-data suite setup (extend e2e-helpers) | docs/INVENTORY.md item 21; Unst, ER, STCC | S | done |
 | K378 | [22] Small UI helpers: base-aware asset path resolver, plural and number format (extend small-helpers) | docs/INVENTORY.md item 22; Rome, Unst | S | done |
 | K379 | [23] Launcher that reuses the production build until its inputs change (extend tooling-scripts) | docs/INVENTORY.md item 23; ER, 7IS | S | done |
-| K380 | Card-hand hover tilt toward the pointer, speed 0 = still (extend card-hand) | docs/motion-retrofit/INVENTORY.md (hover tilt) | S | open |
+| K380 | Card-hand hover tilt toward the pointer, speed 0 = still (extend card-hand) | docs/motion-retrofit/INVENTORY.md (hover tilt) | S | done |
 
 ## Audit roadmap (owner, 16 Nov 2026)
 

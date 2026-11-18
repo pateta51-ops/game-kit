@@ -107,16 +107,14 @@ span[data-part='strip'] {
 [data-part='card']:last-child > [data-part='strip'] {
   width: 100%;
 }
-/* K310: the lifted card keeps the pointer anywhere on its grown face, not only on its rest strip */
+/* K310/K394: the lifted card keeps the pointer on the part of its grown face above the card's rest box (never over a neighbour's strip, which must answer for itself) */
 [data-part='hand']:not([data-face-events]) > [data-part='fan'] > [data-part='card']:hover > button[data-part='strip']::before {
   content: '';
   position: absolute;
-  top: 0;
-  bottom: 0;
+  bottom: 100%;
   left: 0;
   width: var(--_w);
-  transform: var(--slide) var(--lift);
-  transform-origin: 50% 100%;
+  height: calc(var(--hand-lift, 2rem) + var(--_w) * var(--_ratio) * (var(--hand-grow, 1.5) - 1) + 0.5rem);
 }
 [data-part='face'],
 [data-part='hint'] {
@@ -240,6 +238,33 @@ span[data-part='strip'] {
   z-index: auto;
 }
 
+/* ===== game-kit components/card-hand/looks/tilt.css, inlined by tuners/build.mjs ===== */
+:where([data-part="face"] > [data-part="tilt"]) {
+  width: 100%;
+  height: 100%;
+}
+
+@media (hover: hover) and (prefers-reduced-motion: no-preference) {
+  :where([data-part="face"] > [data-part="tilt"]) {
+    transition:
+      transform var(--hand-tilt-ms, 0ms) ease-out,
+      filter var(--hand-tilt-ms, 0ms) ease-out;
+  }
+
+  :where([data-part="face"] > [data-part="tilt"][data-tilting]) {
+    position: relative;
+    z-index: 1;
+    transform: perspective(var(--hand-tilt-perspective, 900px))
+      rotateX(var(--hand-tilt-x)) rotateY(calc(-1 * var(--hand-tilt-y)));
+    filter: drop-shadow(
+      calc(var(--hand-tilt-nx, 0) * -5px)
+        calc(var(--hand-tilt-lift, 8px) - var(--hand-tilt-ny, 0) * 3px)
+        var(--hand-tilt-shadow-blur, 9px)
+        var(--hand-tilt-shadow-color, rgb(0 0 0 / 42%))
+    );
+  }
+}
+
 </style>
 
 <div class="wrap">
@@ -287,6 +312,11 @@ const CTLS = [
     ['grow', 'Hovered card grows', 1, 2.2, 0.05, '×', ''],
     ['stand', 'Picked card stands up', 0, 60, 1, 'px', ''],
     ['ms', 'Motion time', 0, 900, 10, ' ms', 'Lift and slide; 0 is instant.'],
+  ]],
+  ['Hover tilt', [
+    ['maxDeg', 'Maximum angle', 0, 20, 0.5, '°', ''],
+    ['tiltLift', 'Shadow offset', 0, 24, 1, 'px', ''],
+    ['tiltSpeed', 'Tilt speed', 0, 3, 0.1, '×', '0 turns off tilt.'],
   ]],
 ];
 "use strict";
@@ -357,18 +387,149 @@ var FAN = (() => {
   return __toCommonJS(fan_exports);
 })();
 
+"use strict";
+var HOVER_TILT = (() => {
+  var __defProp = Object.defineProperty;
+  var __getOwnPropDesc = Object.getOwnPropertyDescriptor;
+  var __getOwnPropNames = Object.getOwnPropertyNames;
+  var __hasOwnProp = Object.prototype.hasOwnProperty;
+  var __export = (target, all) => {
+    for (var name in all)
+      __defProp(target, name, { get: all[name], enumerable: true });
+  };
+  var __copyProps = (to, from, except, desc) => {
+    if (from && typeof from === "object" || typeof from === "function") {
+      for (let key of __getOwnPropNames(from))
+        if (!__hasOwnProp.call(to, key) && key !== except)
+          __defProp(to, key, { get: () => from[key], enumerable: !(desc = __getOwnPropDesc(from, key)) || desc.enumerable });
+    }
+    return to;
+  };
+  var __toCommonJS = (mod) => __copyProps(__defProp({}, "__esModule", { value: true }), mod);
+
+  // components/card-hand/hover-tilt.ts
+  var hover_tilt_exports = {};
+  __export(hover_tilt_exports, {
+    bindHoverTilt: () => bindHoverTilt
+  });
+  var CARD = '[data-part="card"]';
+  var KEEP_PX = 6;
+  var clamp = (value) => Math.max(-1, Math.min(1, value));
+  function bindHoverTilt(root, { maxDeg = 6, lift = 8, speed = 1 }) {
+    if (speed <= 0 || window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches)
+      return () => void 0;
+    let face = null;
+    let leaner = null;
+    let rect = null;
+    let x = 0;
+    let y = 0;
+    let frame = null;
+    const settle = () => {
+      if (frame !== null) window.cancelAnimationFrame(frame);
+      frame = null;
+      leaner?.removeAttribute("data-tilting");
+      for (const name of [
+        "--hand-tilt-x",
+        "--hand-tilt-y",
+        "--hand-tilt-lift",
+        "--hand-tilt-nx",
+        "--hand-tilt-ny"
+      ])
+        leaner?.style.removeProperty(name);
+      face = leaner = rect = null;
+    };
+    const apply = () => {
+      frame = null;
+      if (face === null || leaner === null) return;
+      if (!root.contains(face)) {
+        settle();
+        return;
+      }
+      rect ??= face.getBoundingClientRect();
+      if (rect.width <= 0 || rect.height <= 0) return;
+      const nx = clamp((x - rect.left) / rect.width * 2 - 1);
+      const ny = clamp((y - rect.top) / rect.height * 2 - 1);
+      const scale = Math.max(0, maxDeg) / Math.max(1, Math.hypot(nx, ny));
+      leaner.style.setProperty("--hand-tilt-x", `${String(ny * scale)}deg`);
+      leaner.style.setProperty("--hand-tilt-y", `${String(nx * scale)}deg`);
+      leaner.style.setProperty("--hand-tilt-nx", String(nx));
+      leaner.style.setProperty("--hand-tilt-ny", String(ny));
+      leaner.style.setProperty(
+        "--hand-tilt-lift",
+        `${String(Math.max(0, lift))}px`
+      );
+      leaner.setAttribute("data-tilting", "");
+    };
+    const schedule = () => {
+      frame ??= window.requestAnimationFrame(apply);
+    };
+    const cardOf = (target) => target instanceof Element ? target.closest(CARD) : null;
+    const move = (event) => {
+      if (event.pointerType === "touch" || event.buttons !== 0) return;
+      const targetCard = cardOf(event.target);
+      const card = targetCard?.parentElement?.parentElement === root ? targetCard : null;
+      x = event.clientX;
+      y = event.clientY;
+      const kept = card === null && face !== null && root.contains(face) && rect !== null && x >= rect.left - KEEP_PX && x <= rect.left + rect.width + KEEP_PX && y >= rect.top - KEEP_PX && y <= rect.top + rect.height + KEEP_PX;
+      if (card !== face?.parentElement && !kept) {
+        settle();
+        if (card === null || card.hasAttribute("data-dragging")) return;
+        face = card.querySelector(':scope > [data-part="face"]');
+        leaner = face?.querySelector(':scope > [data-part="tilt"]') ?? null;
+      }
+      if (leaner === null) return;
+      schedule();
+    };
+    const invalidate = () => {
+      rect = null;
+      if (face !== null) schedule();
+    };
+    const transitioned = (event) => {
+      if (event.target === face && event.propertyName === "transform")
+        invalidate();
+    };
+    root.style.setProperty("--hand-tilt-ms", `${String(160 / speed)}ms`);
+    document.addEventListener("pointermove", move, { passive: true });
+    document.documentElement.addEventListener("pointerleave", settle);
+    root.addEventListener("pointerdown", settle);
+    root.addEventListener("pointercancel", settle);
+    root.addEventListener("transitionend", transitioned);
+    window.addEventListener("resize", invalidate);
+    window.addEventListener("scroll", invalidate, {
+      capture: true,
+      passive: true
+    });
+    window.addEventListener("blur", settle);
+    return () => {
+      settle();
+      root.style.removeProperty("--hand-tilt-ms");
+      document.removeEventListener("pointermove", move);
+      document.documentElement.removeEventListener("pointerleave", settle);
+      root.removeEventListener("pointerdown", settle);
+      root.removeEventListener("pointercancel", settle);
+      root.removeEventListener("transitionend", transitioned);
+      window.removeEventListener("resize", invalidate);
+      window.removeEventListener("scroll", invalidate, true);
+      window.removeEventListener("blur", settle);
+    };
+  }
+  return __toCommonJS(hover_tilt_exports);
+})();
+
+const { bindHoverTilt } = HOVER_TILT;
 const { fanOf, TILT } = FAN;
 // Kit default: fan.ts TILT and the card-hand.css fallbacks at 16px a rem. Imperium before 18 Nov: its own TILT and tokens at u = 7px.
-const KIT = { step: TILT.step, total: TILT.total, radius: TILT.radius, n: 7, w: 112, stepMax: 64, margin: 32, lift: 32, grow: 1.5, stand: 21, ms: 280 };
+const KIT = { step: TILT.step, total: TILT.total, radius: TILT.radius, n: 7, w: 112, stepMax: 64, margin: 32, lift: 32, grow: 1.5, stand: 21, ms: 280, hoverTilt: false, maxDeg: 6, tiltLift: 8, tiltSpeed: 1 };
 const PRESETS = {
   kit: KIT,
   flat: { ...KIT, step: 0, total: 0 },
-  imperium: { step: 2.6, total: 28, radius: 14.6, n: 7, w: 140, stepMax: 72, margin: 31, lift: 24, grow: 1.5, stand: 15, ms: 280 },
+  imperium: { ...KIT, step: 2.6, total: 28, radius: 14.6, n: 7, w: 140, stepMax: 72, margin: 31, lift: 24, grow: 1.5, stand: 15, ms: 280 },
   old: { ...KIT, step: 8, total: 32, radius: 4 },
 };
 const NAMES = ['Ignition', 'Vanguard', 'Outpost', 'Salvage', 'Embassy', 'Raid', 'Refinery', 'Comet', 'Envoy', 'Bastion', 'Signal', 'Harbor', 'Relic', 'Drift'];
 const HUES = [210, 28, 150, 330, 45, 270, 190, 0, 95, 240, 310, 175, 60, 120];
 let s = { ...PRESETS.kit };
+let unbindTilt;
 const picked = new Set();
 const $ = (id) => document.getElementById(id);
 
@@ -377,6 +538,10 @@ function build() {
   for (const [title, rows] of CTLS) {
     const fs = document.createElement('fieldset');
     fs.innerHTML = `<legend>${title}</legend>`;
+    if (title === 'Hover tilt') {
+      fs.insertAdjacentHTML('beforeend', '<label><input type="checkbox" id="c-hoverTilt"> Enable hover tilt</label>');
+      fs.querySelector('input').addEventListener('change', (event) => { s.hoverTilt = event.target.checked; mark(null); render(); });
+    }
     for (const [key, label, min, max, step, unit, help] of rows) {
       const d = document.createElement('div'); d.className = 'ctl';
       d.innerHTML = `<label for="c-${key}">${label}</label><output id="o-${key}" for="c-${key}"></output><input id="c-${key}" type="range" min="${min}" max="${max}" step="${step}">${help ? `<small>${help}</small>` : ''}`;
@@ -398,6 +563,8 @@ function build() {
 function mark(p) { document.querySelectorAll('[data-preset]').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.preset === p))); }
 
 function render() {
+  unbindTilt?.();
+  $('c-hoverTilt').checked = s.hoverTilt;
   for (const [, rows] of CTLS) for (const [key, , , , step] of rows) {
     const inp = $('c-' + key); inp.value = s[key];
     $('o-' + key).textContent = (step < 1 ? Number(s[key]).toFixed(step < 0.1 ? 2 : 1) : s[key]) + inp.dataset.unit;
@@ -419,18 +586,19 @@ function render() {
     if (picked.size) li.dataset.picked = picked.has(i) ? 'picked' : 'unpicked';
     const h = HUES[i % HUES.length];
     li.innerHTML = `<button type="button" data-part="strip" aria-label="${NAMES[i]}${picked.has(i) ? ', picked' : ''}"></button>
-      <div data-part="face"><div class="cf" style="background:linear-gradient(160deg,hsl(${h} 45% 46%),hsl(${h} 40% 24%))">${NAMES[i]}<i>Card ${i + 1}</i></div></div>
+      <div data-part="face">${s.hoverTilt ? '<div data-part="tilt">' : ''}<div class="cf" style="background:linear-gradient(160deg,hsl(${h} 45% 46%),hsl(${h} 40% 24%))">${NAMES[i]}<i>Card ${i + 1}</i></div>${s.hoverTilt ? '</div>' : ''}</div>
       <div data-part="hint">Play ${NAMES[i]}</div>`;
     li.querySelector('button').addEventListener('click', () => { picked.has(i) ? picked.delete(i) : picked.add(i); render(); fan.children[i]?.querySelector('button')?.focus(); });
     fan.appendChild(li);
   }
+  unbindTilt = s.hoverTilt && s.ms > 0 ? bindHoverTilt(hand, { maxDeg: s.maxDeg, lift: s.tiltLift, speed: s.tiltSpeed }) : undefined;
   const spread = Math.abs(edge) * 2;
   const sink = s.n > 1 ? s.radius * (1 - Math.cos(edge * Math.PI / 180)) * s.w : 0;
   $('note').textContent = spread === 0 ? `Flat: ${s.n} cards in a straight row.` : `Edge cards turn ${Math.abs(edge).toFixed(1)}° each way (${spread.toFixed(1)}° across) and sit ${Math.round(sink)}px lower than the middle.`;
   for (const i of [...picked]) if (i >= s.n) picked.delete(i);
   $('code').textContent =
-`// the game's hand component (kit card-hand)
-<CardHand ... tilt={{ step: ${s.step}, total: ${s.total}, radius: ${s.radius} }} speed={${s.ms === 0 ? 0 : +(280 / s.ms).toFixed(2)}} />
+`${s.hoverTilt ? "import '../kit/card-hand/looks/tilt.css'\n\n" : ''}// the game's hand component (kit card-hand)
+<CardHand ... tilt={{ step: ${s.step}, total: ${s.total}, radius: ${s.radius} }} speed={${s.ms === 0 ? 0 : +(280 / s.ms).toFixed(2)}}${s.hoverTilt ? ` hoverTilt={{ maxDeg: ${s.maxDeg}, lift: ${s.tiltLift}, speed: ${s.tiltSpeed} }}` : ''} />
 
 /* the game's CSS, on the hand or above it */
 --hand-card-w: ${s.w}px;

@@ -4,7 +4,7 @@
     "game": "stcc",
     "commit": "8e6f55b",
     "paths": ["src/ui/motion/dealing.ts (dealFrom, refill turn-over, riffle v2, shuffleDecks, finishRiffles, cardBack; from LordOfTheRings frontend/src/composables/dealing.ts a3f3c01, BSD-3)"],
-    "note": "K250: piles by data-pile, back image, faces, unit and moves come from the game; the view-transition CSS became Web Animations on stand-ins; STCC deck names and view types stripped."
+    "note": "K396: riffle-top.ts, riffle-side.ts, riffle-surface.ts ported from game-kit branch riffle-preview 610c8d6 (the approved riffle study, tuners/src/riffle-*.mjs). K250: piles by data-pile, back image, faces, unit and moves come from the game; the view-transition CSS became Web Animations on stand-ins; STCC deck names and view types stripped."
   },
   "needs": ["motion-frame"],
   "packages": []

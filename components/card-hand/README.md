@@ -25,3 +25,18 @@ export function Hand({ prompt, answer, cards }: { prompt: Parameters<typeof useB
 ```
 
 K270: the fan rule is `:where([data-part="hand"] [data-part="fan"])`, zero specificity on purpose, so a game can override it; card-pile has its own `[data-pile-fan]` rules.
+
+## Hover tilt (K380)
+
+Set `hoverTilt` and import the optional look to let a hovering pointer lean the card and lift its shadow. The options default to 6° maximum rotation and 8px shadow offset. Tilt inherits the hand's animation speed unless you pass a tilt speed. Speed 0 on either option, instant hand motion, and reduced motion disable the effect. Touch and keyboard focus leave the tilt flat.
+
+Set `--hand-tilt-perspective`, `--hand-tilt-shadow-color` or `--hand-tilt-shadow-blur` on the hand or an ancestor to tune the look.
+
+```tsx
+import { CardHand } from '../kit/card-hand/ui'
+import '../kit/card-hand/looks/tilt.css'
+
+export function LeaningHand({ cards }: { cards: string[] }) {
+  return <CardHand view={{ cards }} face={(id) => <b>{id}</b>} hoverTilt={{ maxDeg: 6, lift: 8, speed: 1 }} />
+}
+```
