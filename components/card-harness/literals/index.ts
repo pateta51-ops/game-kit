@@ -2,8 +2,8 @@
 // of each member of a union (`literalsOf(file, 'Step', 'op')`). Feeds the inventory's piece list; any shape works.
 import ts from 'typescript';
 
-export function literalsOf(file: string, typeName: string, prop?: string | { keys: true }): string[] {
-  if (typeof prop === 'object') return keysOf(file, typeName);
+export function literalsOf(file: string, typeName: string, prop?: string | { keys: true | 'first' }): string[] {
+  if (typeof prop === 'object') return keysOf(file, typeName, { first: prop.keys === 'first' });
   const program = ts.createProgram([file], { strict: true, noEmit: true, skipLibCheck: true });
   const checker = program.getTypeChecker();
   const src = program.getSourceFile(file);
@@ -34,8 +34,8 @@ export function literalsOf(file: string, typeName: string, prop?: string | { key
   return [...out].sort();
 }
 
-/** Property names of each member of an untagged union (`{ gain: number } | { draw: Draw }` gives gain, draw), sorted; a member with several keys contributes all of them. */
-export function keysOf(file: string, typeName: string): string[] {
+/** Property names of each member of an untagged union (`{ gain: number } | { draw: Draw }` gives gain, draw), sorted; a member with several keys contributes all of them (`{ first: true }`: only its first declared key); primitive members are skipped. */
+export function keysOf(file: string, typeName: string, opt?: { first?: boolean }): string[] {
   const program = ts.createProgram([file], { strict: true, noEmit: true, skipLibCheck: true });
   const checker = program.getTypeChecker();
   const src = program.getSourceFile(file);
@@ -46,7 +46,7 @@ export function keysOf(file: string, typeName: string): string[] {
   });
   if (decl === undefined) throw new Error(`keysOf: ${file} has no type ${typeName}`);
   const top = checker.getTypeAtLocation(decl);
-  return [...new Set((top.isUnion() ? top.types : [top]).flatMap((m) => m.getProperties().map((p) => p.name)))].sort();
+  return [...new Set((top.isUnion() ? top.types : [top]).filter((m) => m.flags & ts.TypeFlags.Object).flatMap((m) => m.getProperties().slice(0, opt?.first === true ? 1 : undefined).map((p) => p.name)))].sort();
 }
 
 /** Node kinds of a union read from the engine's types (K97): per value of `tag`, its other keys and the required ones.
