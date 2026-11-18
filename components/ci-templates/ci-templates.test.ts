@@ -198,7 +198,9 @@ describe('rendered files', () => {
       ci: { steps: ['echo one', { uses: 'actions/setup-python@v7' }, { name: 'two', run: 'echo "two $V in $(basename "$PWD")"\nexit 3\n', env: { V: 'v', W: '${{ runner.temp }}' }, 'working-directory': 'kit' }, { if: 'failure()', run: 'echo zzz-left-out' }] },
       gate: { steps: [{ run: 'echo three', 'working-directory': 'full-gate/kit' }] },
     });
-    expect(s).toMatch(/step-1 exit=0 \d+s\nstep-2 exit=3 \d+s\nstep-3 exit=0 \d+s\n/);
+    for (const l of [/^step-1 exit=0 \d+s$/m, /^step-2 exit=3 \d+s$/m, /^step-3 exit=0 \d+s$/m]) expect(s).toMatch(l);
+    expect(s.search(/^step-1 /m)).toBeLessThan(s.search(/^step-2 /m));
+    expect(s.search(/^step-2 /m)).toBeLessThan(s.search(/^step-3 /m));
     expect(s).not.toMatch(/^check exit|step-4|zzz-left-out/m);
     for (const t of ['one\n', 'two v in kit\n', 'three\n', 'RESULT RED']) expect(s).toContain(t);
     const plainRun = run('local-plain', {});

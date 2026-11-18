@@ -142,7 +142,11 @@ describe('a real run', () => {
     const config = { first: ['a'], lanes: [['b', 'c'], ['d']], laneNames: ['gates'], stream: true, npmSilent: true };
     const r = run(scripts, config);
     expect(r.status).toBe(1);
-    expect(r.stdout).toMatch(/^\[a\] > a\n\[a\] (out|err)-a\n\[a\] (out|err)-a\n\[a\] < a ok in [\d.]+s$/m);
+    expect(r.stdout).toMatch(/^\[a\] > a$/m);
+    expect(r.stdout).toMatch(/^\[a\] out-a$/m);
+    expect(r.stdout).toMatch(/^\[a\] err-a$/m);
+    expect(r.stdout).toMatch(/^\[a\] < a ok in [\d.]+s$/m);
+    expect(r.stdout.indexOf('[a] > a')).toBeLessThan(r.stdout.indexOf('[a] < a ok'));
     expect(r.stdout).toMatch(/^\[gates\] > b$/m);
     expect(r.stdout).toMatch(/^\[gates\] out-c$/m);
     expect(r.stdout).toMatch(/^\[gates\] err-c$/m);

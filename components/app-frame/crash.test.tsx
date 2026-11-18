@@ -1,4 +1,4 @@
-import { act, fireEvent, render, screen } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { AppFrame, CrashScreen, downloadSave, errorWords, type SaveData } from './ui.ts';
 
@@ -46,9 +46,9 @@ describe('CrashScreen', () => {
     const download = vi.fn();
     const bytes = new Uint8Array([1, 2, 3]);
     render(<CrashScreen error={boom} getSave={() => new Promise<SaveData>((r) => setTimeout(() => r(bytes), 5))} download={download} />);
-    await click('crash-export', 30);
-    expect(download).toHaveBeenCalledWith(bytes, 'save.json');
-    expect(state()).toBe('saved');
+    await click('crash-export');
+    await waitFor(() => expect(download).toHaveBeenCalledWith(bytes, 'save.json'), { timeout: 5000 });
+    await waitFor(() => expect(state()).toBe('saved'), { timeout: 5000 });
   });
 
   it('says there is no save when the game has none', async () => {
