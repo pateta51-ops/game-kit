@@ -4,6 +4,7 @@ import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-libra
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { startTestGame } from './test-utils.ts';
 import { BugReportHost } from './BugReportDialog.tsx';
+import { createElement } from 'react';
 import { BugSettings, QueueBar } from './BugSettings.tsx';
 import { collectReport } from './collect.ts';
 import { useBugDialog } from './dialogStore.ts';
@@ -37,6 +38,25 @@ beforeEach(async () => {
 afterEach(() => {
   cleanup();
   (window as unknown as { bugReports?: { real: () => void } }).bugReports?.real();
+});
+
+describe('K387: BugSettings button slots', () => {
+  it('buttonClass lands on every .bug-btn; renderButton replaces them and still wires onClick and disabled', async () => {
+    await queueReport(collectReport('Slot case', SHOT), null);
+    const { unmount } = render(<BugSettings buttonClass="mine" />);
+    await screen.findByTestId('bug-queue-item');
+    const btns = document.querySelectorAll('.bug-btn');
+    expect(btns.length).toBeGreaterThan(4);
+    btns.forEach((b) => { expect(b.className).toContain('mine'); });
+    unmount();
+    render(<BugSettings renderButton={(b) => createElement('a', { className: b.className, 'data-testid': b.testId, 'data-kind': b.kind, 'aria-disabled': b.disabled, onClick: b.onClick }, b.label)} />);
+    await screen.findByTestId('bug-queue-item');
+    expect(screen.getByTestId('bug-queue-delete').tagName).toBe('A');
+    expect(screen.getByTestId('bug-token-save').getAttribute('data-kind')).toBe('save');
+    fireEvent.click(screen.getByTestId('bug-queue-delete'));
+    await waitFor(() => { expect(screen.queryByTestId('bug-queue-item')).toBeNull(); });
+    expect(screen.getByTestId('bug-queue-download-all').getAttribute('aria-disabled')).toBe('true');
+  });
 });
 
 describe('bug reports: Settings and Send all', () => {

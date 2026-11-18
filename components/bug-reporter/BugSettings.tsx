@@ -2,7 +2,7 @@
 // of reports not filed yet with "Send all bug reports" (one at a time, never the same report twice, failures stay queued
 // with their reason, then a summary), and per report Send, Download and Delete. QueueBar is the same count and Send all
 // for Home; BugButton is the table's button.
-import { useEffect, useState } from 'react';
+import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
 import { bugConfig, bugRepo } from './config.ts';
 import { openBugReport } from './dialogStore.ts';
 import { downloadText } from '../small-helpers/download.ts';
@@ -13,6 +13,39 @@ import { reportFileName, reportHeadline } from './report.ts';
 import { useToken } from './token.ts';
 import { sendDeps } from './transport.ts';
 import './bugs.css';
+
+export interface BugBtnProps {
+  readonly label: ReactNode;
+  readonly onClick: (() => void) | undefined;
+  readonly disabled: boolean;
+  /** Which button: send-all, report, download-all, send, download, delete, forget, save. */
+  readonly kind: string;
+  /** `bug-btn` (and `primary`) plus the settings' `buttonClass`. */
+  readonly className: string;
+  readonly type: 'button' | 'submit';
+  readonly testId: string;
+}
+export interface BugBtnSlots {
+  /** Added to the class of every `.bug-btn` in Settings > Bug reports. */
+  readonly buttonClass?: string;
+  /** Draws a button instead of the default `<button>`; wire `onClick`, `disabled`, `type` and `testId` through. */
+  readonly renderButton?: (b: BugBtnProps) => ReactNode;
+}
+const Slots = createContext<BugBtnSlots>({});
+
+function Btn(o: { kind: string; testId: string; label: ReactNode; primary?: boolean; submit?: boolean; disabled?: boolean; onClick?: () => void }) {
+  const { buttonClass, renderButton } = useContext(Slots);
+  const b: BugBtnProps = {
+    kind: o.kind, testId: o.testId, label: o.label, onClick: o.onClick, disabled: o.disabled === true, type: o.submit === true ? 'submit' : 'button',
+    className: `bug-btn${o.primary === true ? ' primary' : ''}${buttonClass === undefined ? '' : ` ${buttonClass}`}`,
+  };
+  if (renderButton) return <>{renderButton(b)}</>;
+  return (
+    <button type={b.type} className={b.className} data-testid={b.testId} disabled={b.disabled} onClick={b.onClick}>
+      {b.label}
+    </button>
+  );
+}
 
 const plural = (n: number, word: string): string => `${String(n)} ${word}${n === 1 ? '' : 's'}`;
 
@@ -84,17 +117,7 @@ export function QueueBar({ compact = false }: { compact?: boolean }) {
         <span className="bug-count" data-testid="bug-queue-count">
           {items.length === 0 ? 'No bug reports queued' : `${plural(items.length, 'bug report')} queued`}
         </span>
-        <button
-          type="button"
-          className="bug-btn primary"
-          data-testid="bug-send-all"
-          disabled={inFlight || items.length === 0}
-          onClick={() => {
-            void sendAllQueued();
-          }}
-        >
-          {progress ?? `Send all bug reports${items.length > 0 ? ` (${String(items.length)})` : ''}`}
-        </button>
+        <Btn kind="send-all" testId="bug-send-all" primary disabled={inFlight || items.length === 0} onClick={() => { void sendAllQueued(); }} label={progress ?? `Send all bug reports${items.length > 0 ? ` (${String(items.length)})` : ''}`} />
         {compact && (
           <a className="bug-link" href="#/settings">
             Details
@@ -137,43 +160,20 @@ function QueueRow({ item }: { item: QueuedReport }) {
         {note !== null && <span className={note.bad ? 'bug-bad' : 'bug-ok'}>{note.text}</span>}
       </div>
       <div className="bug-row__btns">
-        <button
-          type="button"
-          className="bug-btn"
-          data-testid="bug-queue-send"
-          disabled={busy}
-          onClick={() => {
+        <Btn kind="send" testId="bug-queue-send" disabled={busy} label={busy ? 'Sending…' : 'Send'} onClick={() => {
             void fileQueued(report, sendDeps()).then((r) => {
               if (r.outcome === 'failed') setNote({ bad: true, text: r.message ?? 'Filing failed.' });
               if (r.outcome === 'busy') setNote({ bad: false, text: 'Already being sent.' });
               // sent with a note (filed without the screenshot): the row may stay only when the download failed
               if (r.outcome === 'sent' && r.message !== undefined) setNote({ bad: true, text: r.message });
             });
-          }}
-        >
-          {busy ? 'Sending…' : 'Send'}
-        </button>
-        <button
-          type="button"
-          className="bug-btn"
-          data-testid="bug-queue-download"
-          onClick={() => {
+          }} />
+        <Btn kind="download" testId="bug-queue-download" label="Download" onClick={() => {
             downloadText(JSON.stringify(report), reportFileName(report));
-          }}
-        >
-          Download
-        </button>
-        <button
-          type="button"
-          className="bug-btn"
-          data-testid="bug-queue-delete"
-          disabled={busy}
-          onClick={() => {
+          }} />
+        <Btn kind="delete" testId="bug-queue-delete" disabled={busy} label="Delete" onClick={() => {
             void unqueueReport(report.id);
-          }}
-        >
-          Delete
-        </button>
+          }} />
       </div>
     </li>
   );
@@ -197,9 +197,7 @@ function TokenRow() {
           <span className="bug-ok" data-testid="bug-token-state">
             Token saved (hidden)
           </span>
-          <button type="button" className="bug-btn" data-testid="bug-token-forget" onClick={forget}>
-            Forget the token
-          </button>
+          <Btn kind="forget" testId="bug-token-forget" label="Forget the token" onClick={forget} />
         </div>
       ) : (
         <form
@@ -223,9 +221,7 @@ function TokenRow() {
               setEntry(e.target.value);
             }}
           />
-          <button type="submit" className="bug-btn" data-testid="bug-token-save">
-            Save the token
-          </button>
+          <Btn kind="save" testId="bug-token-save" submit label="Save the token" />
           {bad && <span className="bug-bad">That is not a token (empty, or it has spaces).</span>}
         </form>
       )}
@@ -234,28 +230,19 @@ function TokenRow() {
 }
 
 /** Settings > Bug reports. */
-export function BugSettings() {
+export function BugSettings(slots: BugBtnSlots = {}) {
   const items = useQueue((s) => s.items);
   return (
+    <Slots.Provider value={slots}>
     <section className="book bug-book" data-testid="bug-settings">
       <h2>Bug reports</h2>
       <div className="bug-book__top">
         <QueueBar />
         <div className="bug-book__more">
-          <button type="button" className="bug-btn" data-testid="bug-report-open" onClick={openBugReport}>
-            Report a bug (F8)
-          </button>
-          <button
-            type="button"
-            className="bug-btn"
-            data-testid="bug-queue-download-all"
-            disabled={items.length === 0}
-            onClick={() => {
+          <Btn kind="report" testId="bug-report-open" label="Report a bug (F8)" onClick={openBugReport} />
+          <Btn kind="download-all" testId="bug-queue-download-all" disabled={items.length === 0} label="Download all" onClick={() => {
               downloadText(queueText(items), `${bugConfig().id}-bug-queue-${new Date().toISOString().slice(0, 10)}.json`);
-            }}
-          >
-            Download all
-          </button>
+            }} />
         </div>
       </div>
       {items.length > 0 && (
@@ -267,6 +254,7 @@ export function BugSettings() {
       )}
       <TokenRow />
     </section>
+    </Slots.Provider>
   );
 }
 

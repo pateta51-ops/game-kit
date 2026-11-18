@@ -147,6 +147,7 @@ A game's build plan lists the kit work it needs as phases named `GK<n>` for the 
 | K383 | screens SetupForm: submit={false} leaves out its Start button; id lets a game's own button elsewhere start the game | S |  | done |
 | K385 | phone-mode Sheet: siblings made inert are freed after close under React StrictMode (idempotent record and restore) | S |  | done |
 | K386 | screens MainMenu bare: entry buttons with no wrapping nav, so a game places each in its own layout zone | S |  | done |
+| K387 | saves, settings, bug-reporter: optional `buttonClass` / `plateClass` and a `renderButton` / `renderPlate` slot, so a game draws its own button and plate parts on the kit screens | S |  | done |
 
 ## Harvest from the existing games (owner, 15 Nov 2026)
 
@@ -503,9 +504,9 @@ The kit holds every game's parts, then every game is retrofitted onto them (owne
 | K360 | [3] Screen frame, footer line, fan-project disclaimer and light/dark toggle for non-table screens (extend screens) | docs/INVENTORY.md item 3; STCC, IH, UFS, Unst | M | open |
 | K361 | [4] Expansion choice with dependency ticking and base + expansion merge into one index (extend content-pack; no import or stored packs) | docs/INVENTORY.md item 4; ER, Unst, STCC, IH | M | open |
 | K362 | [6] Python vector tracing and icon/crop scripts: trace icons, emblems, logos and maps from scans to SVG, retrace, proof, B&W render (extend scan-ingest) | docs/INVENTORY.md item 6; 7IS, ER, Jarl, STCC, Astra | M | open |
-| K363 | [7] New-build check: detect a new build and reload once when safe, show the build commit, two-build offline e2e server (extend offline) | docs/INVENTORY.md item 7; 7IS, ER, Jarl | S | open |
+| K363 | [7] New-build check: detect a new build and reload once when safe, show the build commit, two-build offline e2e server (extend offline) | docs/INVENTORY.md item 7; 7IS, ER, Jarl | S | done |
 | K364 | [8] Coverage report: which card-language constructs the packs use and lack, as a page and a script (new coverage-report) | docs/INVENTORY.md item 8; ER, Jarl, UFS, Radiance | S | open |
-| K365 | [9] Modal and confirm dialog over the board: focus, Esc, close (new modal-dialog) | docs/INVENTORY.md item 9; IH, Unst | S | open |
+| K365 | [9] Modal and confirm dialog over the board: focus, Esc, close (new modal-dialog) | docs/INVENTORY.md item 9; IH, Unst | S | done |
 | K366 | [10] Keyboard play: keys 1-9, Enter, Esc, arrow-key option lists and a help overlay (extend ui-helpers) | docs/INVENTORY.md item 10; Unst, UFS | S | open |
 | K367 | [11] Board viewport: SVG zoom about the pointer, drag pan, fit, auto-pan camera that follows the action (extend board-layout) | docs/INVENTORY.md item 11; ER, UFS | M | open |
 | K368 | [12] Zoom and hover-preview placement: right/left/below/above with margin, kept on screen (extend card-zoom) | docs/INVENTORY.md item 12; Warps, Unst | S | open |
@@ -518,7 +519,7 @@ The kit holds every game's parts, then every game is retrofitted onto them (owne
 | K375 | [19] Face fit check and tuning: printed text fits the face at a pixel floor, autotune/fit/measure scripts, crop sheets with grid (extend transcription-check) | docs/INVENTORY.md item 19; STCC, 7IS | M | open |
 | K376 | [20] Dev component sheet route: every theme component or board view on one page (extend theme-check) | docs/INVENTORY.md item 20; 7IS, STCC | S | open |
 | K377 | [21] Test setup helpers: jsdom scroll stubs, UI fixtures for component tests, real-data suite setup (extend e2e-helpers) | docs/INVENTORY.md item 21; Unst, ER, STCC | S | open |
-| K378 | [22] Small UI helpers: base-aware asset path resolver, plural and number format (extend small-helpers) | docs/INVENTORY.md item 22; Rome, Unst | S | open |
+| K378 | [22] Small UI helpers: base-aware asset path resolver, plural and number format (extend small-helpers) | docs/INVENTORY.md item 22; Rome, Unst | S | done |
 | K379 | [23] Launcher that reuses the production build until its inputs change (extend tooling-scripts) | docs/INVENTORY.md item 23; ER, 7IS | S | open |
 | K380 | Card-hand hover tilt toward the pointer, speed 0 = still (extend card-hand) | docs/motion-retrofit/INVENTORY.md (hover tilt) | S | open |
 

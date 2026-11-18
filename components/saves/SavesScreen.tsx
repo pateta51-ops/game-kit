@@ -1,10 +1,22 @@
-import { useCallback, useEffect, useState, type ReactNode } from 'react';
+import { Fragment, useCallback, useEffect, useState, type ReactNode } from 'react';
 import { downloadText } from '../small-helpers/download.ts';
 import type { GameTypes, History, SaveFile } from '../engine-core/index.ts';
 import type { Saves, StoredSave } from './saves.ts';
 import './saves.css';
 import { SAVES_WORDS, type SavesWords } from './words.ts';
 
+
+export type SavesButtonKind = 'load' | 'export' | 'rename' | 'delete' | 'save';
+export interface SavesButtonProps {
+  readonly label: string;
+  readonly onClick: (() => void) | undefined;
+  readonly disabled: boolean;
+  readonly kind: SavesButtonKind;
+  /** The default classes plus the screen's `buttonClass`. */
+  readonly className: string;
+  readonly type: 'button' | 'submit';
+  readonly testId: string;
+}
 
 export interface SavesScreenProps<G extends GameTypes> {
   readonly saves: Saves<G>;
@@ -23,6 +35,10 @@ export interface SavesScreenProps<G extends GameTypes> {
   readonly rename?: boolean;
   /** Draws the import control; call `open` to pick a file (the file input stays hidden). Default: the bare file input. */
   readonly renderImport?: (open: () => void, label: string) => ReactNode;
+  /** Added to the class of every button the screen draws. */
+  readonly buttonClass?: string;
+  /** Draws a button instead of the default `<button>`; wire `onClick`, `disabled`, `type` and `testId` through. */
+  readonly renderButton?: (b: SavesButtonProps) => ReactNode;
   readonly download?: (text: string, name: string) => boolean;
 }
 
@@ -54,6 +70,18 @@ export function SavesScreen<G extends GameTypes>(p: SavesScreenProps<G>) {
       .catch(() => undefined);
   }, [saves]);
   useEffect(refresh, [refresh]);
+  const btn = (kind: SavesButtonKind, label: string, testId: string, o: { primary?: boolean; disabled?: boolean; submit?: boolean; onClick?: () => void }) => {
+    const b: SavesButtonProps = {
+      label, kind, testId, onClick: o.onClick, disabled: o.disabled === true, type: o.submit === true ? 'submit' : 'button',
+      className: `kit-sav-btn${o.primary === true ? ' kit-sav-primary' : ''}${p.buttonClass === undefined ? '' : ` ${p.buttonClass}`}`,
+    };
+    if (p.renderButton) return <Fragment key={kind}>{p.renderButton(b)}</Fragment>;
+    return (
+      <button key={kind} type={b.type} className={b.className} disabled={b.disabled} data-testid={testId} onClick={b.onClick}>
+        {label}
+      </button>
+    );
+  };
   const canSave = p.history !== null && p.canSave !== false;
   const row = ([key, stored]: [string, StoredSave<G>], first: boolean, isNamed = false) => {
     const r = restored(stored);
@@ -79,63 +107,42 @@ export function SavesScreen<G extends GameTypes>(p: SavesScreenProps<G>) {
             {w.savedAt} {when(stored.save.savedAt)}
           </span>
         </div>
-        {r.ok && (
-          <button
-            type="button"
-            className="kit-sav-btn kit-sav-primary"
-            data-testid="save-load"
-            onClick={() => {
+        {r.ok &&
+          btn('load', first ? w.continue : w.load, 'save-load', {
+            primary: true,
+            onClick: () => {
               const e = p.onLoad(stored.save, key);
               if (typeof e === 'string') setNote(e);
-            }}
-          >
-            {first ? w.continue : w.load}
-          </button>
-        )}
-        {r.ok && (
-          <button
-            type="button"
-            className="kit-sav-btn"
-            data-testid="save-export"
-            onClick={() => {
+            },
+          })}
+        {r.ok &&
+          btn('export', w.export, 'save-export', {
+            onClick: () => {
               (p.download ?? downloadText)(saves.exportText(stored), saves.exportName(stored));
-            }}
-          >
-            {w.export}
-          </button>
-        )}
-        {isNamed && p.rename === true && (
-          <button
-            type="button"
-            className="kit-sav-btn"
-            data-testid="save-rename"
-            onClick={() => {
+            },
+          })}
+        {isNamed &&
+          p.rename === true &&
+          btn('rename', edit ? w.save : w.rename, 'save-rename', {
+            onClick: () => {
               if (edit === null) {
                 setEditing({ key, name: stored.name });
                 return;
               }
               setEditing(null);
               void saves.rename(key, edit.name).then(refresh);
-            }}
-          >
-            {edit ? w.save : w.rename}
-          </button>
-        )}
-        <button
-          type="button"
-          className="kit-sav-btn"
-          data-testid="save-delete"
-          onClick={() => {
+            },
+          })}
+        {btn('delete', p.confirmDelete === true && armed === key ? w.confirmDelete : w.delete, 'save-delete', {
+          onClick: () => {
             if (p.confirmDelete === true && armed !== key) {
               setArmed(key);
               return;
             }
             setArmed(null);
             void saves.remove(key).then(refresh);
-          }}
-        >
-          {p.confirmDelete === true && armed === key ? w.confirmDelete : w.delete}
-        </button>
+          },
+        })}
       </li>
     );
   };
@@ -181,9 +188,7 @@ export function SavesScreen<G extends GameTypes>(p: SavesScreenProps<G>) {
               setName(e.target.value);
             }}
           />
-          <button type="submit" className="kit-sav-btn kit-sav-primary" disabled={!canSave} data-testid="save-new">
-            {w.save}
-          </button>
+          {btn('save', w.save, 'save-new', { primary: true, submit: true, disabled: !canSave })}
         </form>
         {!canSave && <p className="kit-sav-muted">{w.cannotSave}</p>}
         {note !== null && (

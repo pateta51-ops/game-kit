@@ -100,4 +100,20 @@ describe('SettingsScreen', () => {
     fireEvent.keyUp(screen.getByTestId('setting-vol'), { key: 'ArrowRight' });
     expect(seen.length).toBe(2);
   });
+
+  it('K387: plateClass lands on every section; renderPlate replaces the container and keeps the settings inside', () => {
+    localStorage.clear();
+    const store = createSettingsStore(schema);
+    const { container, unmount } = render(<SettingsScreen schema={schema} store={store} plateClass="mine" />);
+    expect(container.querySelectorAll('.kit-set-section.mine')).toHaveLength(1);
+    unmount();
+    render(
+      <SettingsScreen schema={schema} store={store} plateClass="mine"
+        renderPlate={(p) => <section data-testid="plate" className={p.className}><h3 id={p.titleId}>{p.title}</h3>{p.children}</section>} />,
+    );
+    expect(screen.getByTestId('plate').className).toBe('kit-set-section mine');
+    expect(screen.getByText('Section A').tagName).toBe('H3');
+    fireEvent.click(screen.getByTestId('setting-flagA'));
+    expect(store.getState().values.flagA).toBe(true);
+  });
 });

@@ -1,12 +1,21 @@
 // The settings form drawn from the schema: one fieldset per section (named by its heading), a checkbox per toggle, a
 // radio group or a drop-down per choice. Each change writes the store at once. Dev settings show only with `dev`.
-import { useId, type ReactNode } from 'react';
+import { Fragment, useId, type ReactNode } from 'react';
 import type { StoreApi, UseBoundStore } from 'zustand';
 import type { SettingDef, SettingsSchema } from './schema.ts';
 import type { SettingsState } from './store.ts';
 import './settings.css';
 
 type Any = UseBoundStore<StoreApi<SettingsState<Record<string, unknown>>>>;
+
+export interface SettingsPlateProps {
+  readonly title: string;
+  readonly children: ReactNode;
+  /** `kit-set-section` plus the screen's `plateClass`. */
+  readonly className: string;
+  /** The id the title element must carry (the section is labelled by it). */
+  readonly titleId: string;
+}
 
 export interface SettingsScreenProps {
   schema: SettingsSchema;
@@ -24,6 +33,10 @@ export interface SettingsScreenProps {
   /** Drawn after the last section. */
   children?: ReactNode;
   className?: string;
+  /** Added to every section container. */
+  plateClass?: string;
+  /** Draws a section container instead of the default fieldset; put `className` on it and `titleId` on the title. */
+  renderPlate?: (p: SettingsPlateProps) => ReactNode;
   /** Called when a slider is let go (pointer up or a key up), with its value: the game plays a sample at that level. */
   onRelease?: (key: string, value: number) => void;
 }
@@ -148,7 +161,7 @@ function Setting({ def, store, id, plates, onOff, showLine, onRelease }: { def: 
   );
 }
 
-export function SettingsScreen({ schema, store, dev = false, look, showLine = false, onOff = ['On', 'Off'], extra, children, className, onRelease }: SettingsScreenProps) {
+export function SettingsScreen({ schema, store, dev = false, look, showLine = false, onOff = ['On', 'Off'], extra, children, className, plateClass, renderPlate, onRelease }: SettingsScreenProps) {
   const id = useId();
   return (
     <div className={className === undefined ? 'kit-set' : `kit-set ${className}`}>
@@ -156,15 +169,22 @@ export function SettingsScreen({ schema, store, dev = false, look, showLine = fa
         const shown = sec.settings.filter((d) => dev || d.dev !== true);
         const more = extra?.[sec.id];
         if (shown.length === 0 && (more === undefined || more === null)) return null;
-        return (
-          <fieldset key={sec.id} className="kit-set-section" aria-labelledby={`${id}-${sec.id}`}>
-            <h2 className="kit-set-title" id={`${id}-${sec.id}`}>
-              {sec.title}
-            </h2>
+        const body = (
+          <>
             {shown.map((d) => (
               <Setting key={d.key} def={d} store={store as Any} id={`${id}-${d.key}`} plates={look === 'plates'} showLine={showLine} onOff={onOff} onRelease={onRelease} />
             ))}
             {more}
+          </>
+        );
+        const cls = plateClass === undefined ? 'kit-set-section' : `kit-set-section ${plateClass}`;
+        if (renderPlate) return <Fragment key={sec.id}>{renderPlate({ title: sec.title, children: body, className: cls, titleId: `${id}-${sec.id}` })}</Fragment>;
+        return (
+          <fieldset key={sec.id} className={cls} aria-labelledby={`${id}-${sec.id}`}>
+            <h2 className="kit-set-title" id={`${id}-${sec.id}`}>
+              {sec.title}
+            </h2>
+            {body}
           </fieldset>
         );
       })}

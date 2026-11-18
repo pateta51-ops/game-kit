@@ -39,6 +39,21 @@ const text = saves.exportText({ name: 'slot', save: saves.saveOf(history) }) // 
 console.log(text.length)
 ```
 
+## Button slots
+
+```tsx
+import { SavesScreen } from '../kit/saves/ui'
+import type { Counter } from '../kit/engine-core/fake/counter'
+
+export const Mine = (p: { saves: Parameters<typeof SavesScreen<Counter>>[0]['saves'] }) => (
+  <SavesScreen<Counter> saves={p.saves} history={null} summary={(s) => String(s.counter)} onLoad={() => undefined}
+    buttonClass="my-btn"
+    renderButton={(b) => <button type={b.type} className={b.className} disabled={b.disabled} data-testid={b.testId} onClick={b.onClick}>{b.label}</button>} />
+)
+```
+
+`buttonClass` is added to every button; `renderButton({ label, onClick, disabled, kind, className, type, testId })` draws a button instead (kind: load, export, rename, delete, save). Without them the screen is unchanged.
+
 ## Export and import all data
 
 ```ts

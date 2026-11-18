@@ -5,6 +5,7 @@ import { createGame, newHistory, recordAction, type History } from '../engine-co
 import { CONTENT, COUNTER, randomAnswer, RULES, type Counter } from '../engine-core/fake/counter.ts';
 import { makeSaves } from './index.ts';
 import { SavesScreen } from './ui.ts';
+import { createElement } from 'react';
 
 let db = 0;
 const mk = () => makeSaves<Counter>({ game: COUNTER, content: CONTENT, database: `ui-saves-${String(db++)}`, filePrefix: 'neutral' });
@@ -108,5 +109,26 @@ describe('SavesScreen', () => {
     expect(screen.getByText('One')).toBeInTheDocument();
     fireEvent.click(screen.getByTestId('save-delete'));
     await waitFor(() => expect(screen.queryByText('One')).toBeNull());
+  });
+
+  it('K387: buttonClass lands on every button; renderButton replaces each and still wires onClick and disabled', async () => {
+    const saves = mk();
+    await saves.writeAutosave(played('k', 2), 'Current game');
+    const onLoad = vi.fn();
+    const { unmount } = render(<SavesScreen saves={saves} history={null} summary={summary} onLoad={onLoad} rename buttonClass="mine" />);
+    await screen.findByTestId('save-row');
+    for (const id of ['save-load', 'save-export', 'save-delete', 'save-new']) expect(screen.getByTestId(id).className).toContain('mine');
+    expect(screen.getByTestId('save-load').className).toContain('kit-sav-btn');
+    unmount();
+    render(
+      <SavesScreen saves={saves} history={null} summary={summary} onLoad={onLoad}
+        renderButton={(b) => createElement('a', { className: b.className, 'data-testid': b.testId, 'data-kind': b.kind, 'aria-disabled': b.disabled, onClick: b.onClick }, b.label)} />,
+    );
+    await screen.findByTestId('save-row');
+    expect(screen.getByTestId('save-load').tagName).toBe('A');
+    expect(screen.getByTestId('save-load').getAttribute('data-kind')).toBe('load');
+    expect(screen.getByTestId('save-new').getAttribute('aria-disabled')).toBe('true');
+    fireEvent.click(screen.getByTestId('save-load'));
+    expect(onLoad).toHaveBeenCalledTimes(1);
   });
 });

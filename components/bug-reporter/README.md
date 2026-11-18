@@ -44,3 +44,15 @@ export const BugTools = () => (
   </>
 )
 ```
+
+## Button slots
+
+```tsx
+import { BugSettings } from '../kit/bug-reporter/ui'
+
+export const Mine = () => (
+  <BugSettings buttonClass="my-btn" renderButton={(b) => <button type={b.type} className={b.className} disabled={b.disabled} data-testid={b.testId} onClick={b.onClick}>{b.label}</button>} />
+)
+```
+
+`buttonClass` is added to every `.bug-btn` in Settings > Bug reports (Send all, Report, Send, Download, Delete, Save and Forget the token); `renderButton({ label, onClick, disabled, kind, className, type, testId })` draws a button instead. Without them nothing changes.

@@ -1,1 +1,1 @@
-export { SettingsScreen } from '../SettingsScreen.tsx';
+export { SettingsScreen, type SettingsPlateProps, type SettingsScreenProps } from '../SettingsScreen.tsx';

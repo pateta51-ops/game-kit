@@ -41,3 +41,19 @@ const useSettings = createSettingsStore(schema)
 useSettings.getState().set('music', false)
 console.log(defaults(schema).music, useSettings.getState().values.music)
 ```
+
+## Plate slots
+
+```tsx
+import { SettingsScreen } from '../kit/settings/ui'
+import { createSettingsStore, type SettingsSchema } from '../kit/settings/index'
+
+const schema = { storageKey: 'mine', sections: [{ id: 'a', title: 'Sound', settings: [{ kind: 'toggle', key: 'music', default: true, label: 'Music' }] }] } as const satisfies SettingsSchema
+const store = createSettingsStore(schema)
+export const Mine = () => (
+  <SettingsScreen schema={schema} store={store} plateClass="my-plate"
+    renderPlate={(p) => <section className={p.className}><h2 id={p.titleId}>{p.title}</h2>{p.children}</section>} />
+)
+```
+
+`plateClass` is added to each section container; `renderPlate({ title, children, className, titleId })` draws the container instead (the title element must carry `titleId`). Without them the screen is unchanged.
