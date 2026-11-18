@@ -6,6 +6,36 @@
     "paths": [
       "scanpipe/: __main__, cast, detect, flags, images, key, pipeline, review, tone, tones/, plugins/base.py copied as they are. plugins/__init__.py rewritten: the registry that named games is replaced by --plugin module:Class loading.",
       "tests/: synth.py and the black backing, cast shadow, chart cast shadow, flags, magenta backing and token tests, run against tests/fake_game.py instead of the two game plug-ins. plugins/imperium.py, plugins/under_falling_skies.py and test_imperium_plugin.py were left out: plug-ins live in the game."
+    ],
+    "grafts": [
+      {
+        "game": "earthborne-rangers-fan-prototype",
+        "commit": "59e0ad1d",
+        "paths": [
+          "src/ui/cards/scanGeometry.ts as measure.ts (hsv, findBlobs, findRows, firstRun, rowFraction; the frames, colours and box slots became the game's BoxSpec list)",
+          "src/ui/cards/scanGeometryLoad.ts in measure.ts (canvas decode, cache per key, optional store; the ETag endpoint and idb-keyval left in the game)",
+          "src/ui/cards/scanOverlay.ts in board.ts (cover, the plan of boxes; frame offsets left in the game)",
+          "src/ui/cards/ScanBody.tsx as ScanBoard (image plus boxes placed in scan proportions; number boxes, tags and bands are the game's render)"
+        ]
+      },
+      {
+        "game": "unstoppable-fan-prototype",
+        "commit": "e314b5f",
+        "paths": [
+          "src/ui/scanned/geometry.ts in board.ts (clipPathOf, trimOutline, boxStyle, pointStyle, trackPoint, skewOf, uprightStyle; sleeve layers, notch and tab left in the game)",
+          "src/ui/scanned/size.ts, outlines.ts, table.ts in board.ts (mmOf, mmStyle, playmatMm as boardMm, rasterize, overlap, uniformOutlines by family key, boxWithin)",
+          "src/ui/scanned/Piece.tsx in ScanBoard.tsx (clip, trim, mm size)",
+          "tools/ingest/ufp_ingest/playmats.py in scanpipe/playmats.py (check, shape check, find_image; schema, asset writing and ledger left in the game)",
+          "tools/ingest/README.md tone-curve fitting written as scanpipe/tone.py profile, fit, apply_curve, delta_e"
+        ]
+      },
+      {
+        "game": "radiance-fan-prototype",
+        "commit": "fdc42d2",
+        "paths": [
+          "scripts/measure-mat-spots.py in scanpipe/playmats.py (ink by ground, enclosed boxes, rows, zigzag track fit; mat names and counts left in the game)"
+        ]
+      }
     ]
   },
   "alsoUnstoppable": {
@@ -34,16 +64,8 @@
       "scanpipe/vector.py and scripts/vtrace.py: potrace of a thresholded or k-means-quantised crop (trace-icons.py of Jarl and ER maps, emtrace.py, trace_icons.py of 7IS), symmetry averaging (ER symm.py/symfill.py), SVG retrace per fill colour (7IS icons-retrace.py), proof sheet and fidelity (7IS trace_icons.py), B&W render of PDF pages (Jarl render-bw.py). vtracer, game icon lists, boxes, colours and paths left in the games; STCC repair-rulebook-icons.py is text repair, not tracing, left out."
     ]
   },
-  "alsoBoards": {
-    "game": "earthborne-rangers, unstoppable-fan-prototype, radiance-fan-prototype",
-    "commit": "59e0ad1d, e314b5f, fdc42d2",
-    "paths": [
-      "measure.ts: ER src/ui/cards/scanGeometry.ts (hsv, findBlobs, findRows, firstRun, rowFraction; ER's frames, colours and box slots became the game's BoxSpec list) and scanGeometryLoad.ts (canvas decode, cache per key, optional store; ER's ETag endpoint and idb-keyval left in the game).",
-      "board.ts: ER scanOverlay.ts (cover, the plan of boxes; frame offsets left in ER); Unstoppable src/ui/scanned/geometry.ts (clipPathOf, trimOutline, boxStyle, pointStyle, trackPoint, skewOf, uprightStyle), size.ts (mmOf, mmStyle, playmatMm as boardMm), outlines.ts (rasterize, overlap, uniformOutlines by a game's family key), table.ts (boxWithin). Sleeve layers, notch, tab, pile stacks and zoom left in Unstoppable.",
-      "ScanBoard.tsx: ER ScanBody.tsx (image plus boxes placed in scan proportions; ER's number boxes, tags and bands are the game's render) and Unstoppable Piece.tsx (clip, trim, mm size).",
-      "scanpipe/playmats.py: Unstoppable tools/ingest/ufp_ingest/playmats.py (check, shape check, find_image; schema, asset writing and ledger left in the game) and Radiance scripts/measure-mat-spots.py (ink by ground, enclosed boxes, rows, zigzag track fit; Radiance's mat names and counts left in the game). scanpipe/tone.py profile, fit, apply_curve, delta_e: the fit Unstoppable's README describes (four cards scanned both ways), written here."
-    ]
-  },
   "needs": [],
-  "packages": ["react"]
+  "packages": [
+    "react"
+  ]
 }

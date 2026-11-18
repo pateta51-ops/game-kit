@@ -114,8 +114,7 @@ In Python: `from scanpipe import vector as v` (`trace_array`, `retrace_svg`, `re
 ## Printed boards with live state (TypeScript, K373)
 
 `index.ts` (pure) and `ui.ts` (React). A game passes its scan, its box list and its state; no game's frames or colours
-are here. Ported from ER (`scanGeometry.ts`, `scanOverlay.ts`, `scanGeometryLoad.ts`, `ScanBody.tsx`) and Unstoppable
-(`src/ui/scanned/` geometry, size, outlines, table, Piece).
+are here (sources in component.json).
 
 - `measure.ts`: pixel tests (`hsv`, `hueTest`, `nearTest`), `findBlobs` (isolated solid boxes of one colour: integral
   image, ring test, grow), `measureBoxes(w, h, rgba, specs)` for a list of `BoxSpec` (id, test, region, size, ratio,
@@ -128,15 +127,15 @@ are here. Ported from ER (`scanGeometry.ts`, `scanOverlay.ts`, `scanGeometryLoad
 - `ScanBoard` draws the scan `width` px wide and puts `render(id, sizePx)` in each box (`data-scan-box`); `boardMm` sets
   `--mm` (px per mm) so a `Piece` inside is drawn at its true size, cut to its outline. Style `data-part="scan-board"`,
   `scan-piece`. The finite supply of pieces is in token-bag (`supply.ts`).
-- Left in the games: ER's card frames and box colours, Unstoppable's sleeve layers (upgrade layer, notch and tab
-  windows), the zoom views and pile volume.
+- Left in the games: card frames and box colours, sleeve layers (upgrade layer, notch and tab windows), the zoom
+  views and pile volume.
 
 ## Playmats, tone profile (Python, K373)
 
 - `scanpipe/playmats.py`: `check(mats)` (spaces running off the image, ids twice), `shape_problem(mat, w, h)` (the
   image is not the shape the spaces were measured on), `find_image(folder, name)`; `detect_boxes(ink, size)` finds the
   printed spaces as ground enclosed by ink (`ink_by_ground` samples the ground), `rows(boxes)` groups them, and
-  `fit_track(points, numbers, n)` fills a numbered (zigzag) track's hidden spots by a line (Radiance's mat spots).
+  `fit_track(points, numbers, n)` fills a numbered (zigzag) track's hidden spots by a line.
 - `scanpipe/tone.py`: `profile(img)` (black point, median, white point per channel), `fit(flats, references, name)`
   (a non-decreasing per-channel curve from items scanned both ways), `save`, `apply_curve`, `delta_e`.
 - Outline tracing: `silhouette.outline_of(mask)` (above).

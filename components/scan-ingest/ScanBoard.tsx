@@ -1,6 +1,5 @@
-// A printed scan with the game's state drawn into its boxes (port of ER ScanBody.tsx: the image, then one absolutely
-// placed element per box in the scan's own proportions), and one scanned die-cut piece at true size (port of Unstoppable
-// scanned/Piece.tsx). Structure only: the game draws what goes in a box and styles `data-part`.
+// A printed scan with the game's state drawn into its boxes (the image, then one absolutely placed element per box in
+// the scan's own proportions), and one scanned die-cut piece at true size. Structure only: the game draws what goes in a box and styles `data-part`.
 import type { CSSProperties, ReactNode } from 'react';
 import { boxStyle, clipPathOf, mmStyle, trimOutline, type Box, type Outline } from './board.ts';
 
@@ -61,7 +60,6 @@ export function Piece(p: {
       data-part="scan-piece"
       src={p.src}
       alt=""
-      aria-hidden="true"
       draggable={false}
       decoding="async"
       style={{ ...mm, ...sized, ...p.style, ...(clip ? { clipPath: clip } : {}) }}

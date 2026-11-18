@@ -1,6 +1,6 @@
 // Finding a printed board's boxes and colour rows on its scan, from RGBA pixels (a canvas in the browser, napi canvas or
-// a synthetic array in tests). Port of ER src/ui/cards/scanGeometry.ts and scanGeometryLoad.ts: the frames, colours and
-// offsets of ER's cards became the game's box list (`BoxSpec`) and pixel tests. Coordinates are in the scan's pixels.
+// a synthetic array in tests).
+// The game passes its box list (`BoxSpec`) and pixel tests; sources in component.json. Coordinates are in the scan's pixels.
 import type { Box } from './board.ts';
 
 export type Px = Uint8ClampedArray | Uint8Array;
@@ -296,7 +296,7 @@ export function measureRgba(w: number, h: number, d: Px, asks: Asks): Geometry {
   };
 }
 
-/** Somewhere to keep measured geometry across reloads (ER kept it in the game's IndexedDB store under one key). */
+/** Somewhere to keep measured geometry across reloads (an IndexedDB key, say). */
 export interface GeometryStore {
   get(key: string): Promise<Geometry | undefined>;
   set(key: string, g: Geometry): Promise<void>;

@@ -1,7 +1,5 @@
 // Pure geometry of a printed board scan with live state drawn over it, and of scans used as die-cut pieces at true size.
-// Port of ER src/ui/cards/scanOverlay.ts (cover, the plan of boxes in scan pixels) and Unstoppable src/ui/scanned/
-// geometry.ts, size.ts, outlines.ts, table.ts (clip paths, trim, box and point styles, tracks, skew, mm sizes, the most
-// typical outline per die-cut). Coordinates: `Box` in scan pixels where a function says so, otherwise normalised (0..1).
+// Sources in component.json. Coordinates: `Box` in scan pixels where a function says so, otherwise normalised (0..1).
 import type { CSSProperties } from 'react';
 import type { Geometry } from './measure.ts';
 

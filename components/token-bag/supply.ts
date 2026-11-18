@@ -1,5 +1,5 @@
-// A finite supply of physical pieces counted from the engine's plain integers (port of Unstoppable src/ui/scanned/
-// supply.ts and geometry.ts tokenSplit/discStack). The engine keeps numbers; the table draws the box's real tokens: each
+// A finite supply of physical pieces counted from the engine's plain integers.
+// The engine keeps numbers; the table draws the box's real tokens: each
 // place takes the change of its number (largest values first, as far as the supply has them, at most its cap), and the
 // supply holds what is left. What a place cannot draw is `short` (a badge); the number itself is always written beside it.
 

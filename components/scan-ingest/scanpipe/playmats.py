@@ -1,8 +1,8 @@
 """Playmats and boards: their printed spaces as normalised boxes, found on the image or listed by the game.
 
-Port of Unstoppable's ufp_ingest/playmats.py (the spaces file's checks, the shape check against the image the spaces
-were measured on, the image lookup) and Radiance's scripts/measure-mat-spots.py (printed spots found as enclosed
-background regions of the ink, grouped in rows, a numbered zigzag track fitted by a line). No game's spaces, files or
+The spaces file's checks, the shape check against the image the spaces
+were measured on, the image lookup; printed spots found as enclosed
+background regions of the ink, grouped in rows, a numbered zigzag track fitted by a line. Sources in component.json. No game's spaces, files or
 colours: the game passes them.
 """
 from __future__ import annotations
