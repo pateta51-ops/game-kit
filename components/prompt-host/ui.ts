@@ -2,3 +2,4 @@ export { May, Order, OptionButton, OptionList, PayCost, PickAmount, PickOptions,
 export { defaultLook } from './look.ts';
 export { BoardBar } from './board.tsx';
 export { useBoardPick, type BoardPick, type Mark } from './pick.ts';
+export { useOverflow, type HostOverflowOpts, type OverflowOpts, type OverflowRect } from './overflow.ts';

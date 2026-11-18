@@ -8,6 +8,7 @@ import { seatKey, type KernelOption, type KernelPrompt } from '../engine-core/in
 import type { PromptSource } from '../prompt-source/index.ts';
 import { defaultLook } from './look.ts';
 import { warnLook } from './lookCheck.ts';
+import { useOverflow, type HostOverflowOpts } from './overflow.ts';
 
 export type Kinded = KernelPrompt & { readonly kind: string; readonly source?: PromptSource };
 /** `promptId`: the prompt the picks answer (the host always sends it); a store drops an answer whose prompt is no longer open. */
@@ -58,16 +59,20 @@ export interface HostProps<P extends Kinded, V> {
   /** The question's words. Default: the source's printed clause when a card asks (prompt-source), else nothing. */
   readonly title?: (p: P) => ReactNode;
   readonly look?: Partial<Look<P>>;
+  readonly overflow?: HostOverflowOpts;
 }
 
-export function PromptHost<P extends Kinded, V>({ widgets, prompt, view, answer, seat, mine = seat === undefined || prompt?.seat === undefined || seatKey(prompt.seat) === seatKey(seat), waiting = null, auto, title, look: part }: HostProps<P, V>) {
+export function PromptHost<P extends Kinded, V>({ widgets, prompt, view, answer, seat, mine = seat === undefined || prompt?.seat === undefined || seatKey(prompt.seat) === seatKey(seat), waiting = null, auto, title, look: part, overflow }: HostProps<P, V>) {
   const look = { ...(defaultLook as Look<P>), ...part };
   warnLook(part);
   const id = prompt?.id ?? null;
+  const host = useRef<HTMLElement>(null);
   const open = useRef(id);
   const sent = useRef<number | null>(null);
   const [tried, setTried] = useState<number | null>(null);
   const picks = prompt !== null && mine && tried !== prompt.id ? (auto?.(prompt) ?? null) : null;
+  const shown = prompt !== null && mine && picks === null;
+  useOverflow(shown && overflow ? { ...overflow, answers: overflow.answers ?? '[data-prompt-answers]', ref: host } : undefined, [shown, id, overflow && JSON.stringify([overflow.answers, overflow.floor, overflow.frac, overflow.stage, overflow.zone, overflow.keepOut, overflow.gap])]);
   useEffect(() => {
     open.current = id;
     if (id === null || picks === null) return;
@@ -86,7 +91,7 @@ export function PromptHost<P extends Kinded, V>({ widgets, prompt, view, answer,
     if (open.current === prompt.id) answer(p, prompt.id);
   };
   return (
-    <section className={look.cls('host')} data-testid="prompt" data-kind={prompt.kind}>
+    <section ref={host} className={look.cls('host')} data-testid="prompt" data-kind={prompt.kind}>
       {head === null || head === '' ? null : <h2 className={look.cls('title')}>{head}</h2>}
       <W key={prompt.id} prompt={prompt} view={view} answer={send} look={look} />
     </section>
@@ -123,7 +128,7 @@ export function OptionButton<P extends Kinded>({ option: o, prompt, look, onPick
 /** Every option a button; a click answers with it. As `May` (yes / no) and `PayCost` (one option per way to pay). */
 export function OptionList<P extends Kinded, V>({ prompt, answer, look, part = 'list' }: WidgetProps<P, V> & { part?: string }) {
   return (
-    <div className={look.cls(part)}>
+    <div className={look.cls(part)} data-prompt-answers="">
       {prompt.options.map((o, i) => (
         <OptionButton key={o.id} option={o} prompt={prompt} look={look} shortcut={key(i)} onPick={() => answer([o.id])} />
       ))}
@@ -146,7 +151,7 @@ export function PickOptions<P extends Kinded, V>({ prompt, answer, look, confirm
   };
   const ready = picked.length >= prompt.min && picked.length <= prompt.max;
   return (
-    <div className={look.cls('pick')}>
+    <div className={look.cls('pick')} data-prompt-answers="">
       {prompt.options.map((o, i) => (
         <OptionButton key={o.id} option={o} prompt={prompt} look={look} pressed={picked.includes(o.id)} picked={mark(picked, o.id)} shortcut={key(i)} onPick={() => (o.alone === true ? answer([o.id]) : toggle(o.id))} />
       ))}
@@ -196,7 +201,7 @@ export function Order<P extends Kinded, V>({ prompt, answer, look }: WidgetProps
   const order = ids.length <= prompt.max ? [...clicked, ...ids.filter((id) => !clicked.includes(id))] : clicked;
   const ready = order.length >= prompt.min && order.length <= prompt.max;
   return (
-    <div className={look.cls('order')}>
+    <div className={look.cls('order')} data-prompt-answers="">
       {prompt.options.map((o, i) => {
         const at = clicked.indexOf(o.id);
         return (

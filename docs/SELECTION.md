@@ -147,7 +147,7 @@ Components with no row above. Each starts from the game and commit in its `compo
 | `transcription-check` | Under Falling Skies `07238a4` (K168) | M |
 | `resolution-frame` | Rome `1d0fd2e` (K55) | M |
 | `prompt-gallery` | EBR `33b5abd3` | M |
-| `prompt-host` | Rome `e76d56f` (PromptHost and parts: the cleanest host, already a Record per kind with rule ids stripped); STCC `8e6f55b` order by clicks; Jarl `cf3ecfe` autoAnswer (K123) | M |
+| `prompt-host` | Rome `e76d56f` (PromptHost and parts: the cleanest host, already a Record per kind with rule ids stripped); STCC `8e6f55b` order by clicks; Jarl `cf3ecfe` autoAnswer (K123); Astra Imperium `0f98c72` scrolling overflow (K388) | M |
 | `card-hand` | Imperium `22736b2` (`FloatingHand.tsx`, `table.css` hand rules); Unstoppable `fanOf` and `playMotion.ts` (K218) | M |
 | `drag-drop` | Imperium `22736b2` (`play/drag.ts`, `useHandDrag.ts`); STCC `8e6f55b` the fixed drop zone (K220) | M |
 | `counter` | EBR `Count.tsx` (count-up of the shown number); STCC `resourceWarp.ts` bump and totalTag, `resources.ts` counterOf, rowRightOf, CrewPanel `data-res`; Imperium `MarketBoard.tsx` Unrest levels (K240; no colours or words) | S |

@@ -1,0 +1,13 @@
+:is([data-overflow='cols'], [data-overflow='panel']) [data-overflow-answers] {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+[data-overflow-answers] > * {
+  min-width: 0;
+}
+
+[data-overflow] .kp-board-bar {
+  position: sticky;
+  bottom: 0;
+}

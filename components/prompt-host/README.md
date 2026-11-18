@@ -23,6 +23,33 @@ const WIDGETS: Widgets<Prompt, PlayerView> = { pick: PickOptions, amount: (p) =>
 
 ## Look
 Unstyled. `look.cls(part)` gives class names (default `kp-<part>`: host, title, option, mark, why, idle, count, done, cancel, pick, amount, less, more, value, readout, order, list, may, pay, board-bar). `look.label(o, p)` draws an option (words or a card face: `label: (o) => cardOf(o.id) ? <CardFace card={cardOf(o.id)} /> : <>{o.label}</>`, the face from card-parts, see [card-face-zoom.md](../../docs/recipes/card-face-zoom.md)); `count`, `done`, `less`, `more`, `confirm`, `cancel` are the game's words; K235: the defaults (label = the option id, English Done) are placeholders: the host warns once in dev, and `checkLook(look)` (node) lists them for a game's test, which expects `[]`. `aria-pressed` marks picks, `data-option` the option id, `data-kind` the prompt kind. K226: `data-picked` (picked-state: `picked` / `unpicked`, nothing before the first pick) and `data-shortcut` 1-9 (ui-helpers `bindPromptKeys`) on the option buttons. Recipe wiring every prompt part: [prompts.md](../../docs/recipes/prompts.md).
+## Overflow (K388)
+
+Give the host its normal fixed size inside a positioned zone. The hook tries the normal layout, shrinks the answer container by one CSS pixel at a time down to `floor`, then tries two columns. If they still overflow, it opens a scrolling panel downward. The cap is `frac * stage[1]` and the panel stops `gap` pixels (12 by default) before an overlapping keep-out. Pass `stage` as `[width, height]` and the zone and keep-outs as `[x, y, width, height]` in the same stage coordinates.
+
+```tsx
+import { PickOptions, PromptHost } from '../kit/prompt-host/ui'
+
+type Pick = { id: number; kind: 'pick'; min: number; max: number; options: { id: string; enabled: boolean }[] }
+
+export function AskWithOverflow({ prompt, send }: { prompt: Pick | null; send: (picks: readonly string[], id?: number) => void }) {
+  return (
+    <PromptHost
+      widgets={{ pick: PickOptions }}
+      prompt={prompt}
+      view={null}
+      answer={send}
+      look={{ label: (o) => o.id, done: 'Done' }}
+      overflow={{ floor: 28, frac: 0.5, stage: [960, 600], zone: [40, 80, 480, 140], keepOut: [[40, 380, 480, 160]] }}
+    />
+  )
+}
+```
+
+Import `looks/overflow.css` for the two-column grid and sticky default `.kp-board-bar`. Make answer controls inherit the container font size. With custom widgets, mark the answers container with `data-prompt-answers` or pass its selector as `overflow.answers`. Use `useOverflow({ ref, answers, floor, frac, stage, zone, keepOut }, deps)` for your own host, or replace `ref` with `find: () => element`. Include the prompt identity and layout changes in `deps`. The hook also refits when descendants are added or removed. PromptHost handles prompt changes and refits when the overflow options object changes.
+
+A panel stops only before keep-outs that overlap the zone horizontally and end below its top. The host carries `data-overflow="cols"` for two columns in the zone, or `data-overflow="panel"` for the expanded panel. In either mode, `data-overflow-answers` marks the measured container. Scrolling hosts expose `data-more="1"` while more content lies below and `data-more="0"` at the end.
+
 ## Use it in 10 lines
 ```ts
 import { autoAnswer } from '../kit/prompt-host/index'
