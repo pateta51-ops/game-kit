@@ -107,16 +107,14 @@ span[data-part='strip'] {
 [data-part='card']:last-child > [data-part='strip'] {
   width: 100%;
 }
-/* K310: the lifted card keeps the pointer anywhere on its grown face, not only on its rest strip */
+/* K310/K394: the lifted card keeps the pointer on the part of its grown face above the card's rest box (never over a neighbour's strip, which must answer for itself) */
 [data-part='hand']:not([data-face-events]) > [data-part='fan'] > [data-part='card']:hover > button[data-part='strip']::before {
   content: '';
   position: absolute;
-  top: 0;
-  bottom: 0;
+  bottom: 100%;
   left: 0;
   width: var(--_w);
-  transform: var(--slide) var(--lift);
-  transform-origin: 50% 100%;
+  height: calc(var(--hand-lift, 2rem) + var(--_w) * var(--_ratio) * (var(--hand-grow, 1.5) - 1) + 0.5rem);
 }
 [data-part='face'],
 [data-part='hint'] {

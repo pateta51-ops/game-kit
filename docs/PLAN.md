@@ -154,6 +154,7 @@ A game's build plan lists the kit work it needs as phases named `GK<n>` for the 
 | K391 | saves: `savedLine={false}` drops the repeated "saved <date>" line in SavesScreen rows | S |  | done |
 | K392 | card-harness literalsOf(file, type, { keys: true }) and keysOf(file, type): property names of each member of an untagged union | S |  | done |
 | K393 | tutorial TutorialHighlight scroll={false} (mark only) and stage (placement inside a CSS-scaled box); TutorialPanel pacing + onSkip (Next usable while paced steps play) | S |  | done |
+| K394 | card-hand: the lifted face no longer steals the pointer from neighbours' strips (hit area above the rest box only); tuners/card-hand-e2e/hit-area.sh real-mouse check | S |  | done |
 | K395 | llm-playtester: tool_choice auto (thinking models refuse forced tool use), one re-ask when no tool call, pre-call cost estimate and clear cap message | S |  | done |
 
 ## Harvest from the existing games (owner, 15 Nov 2026)
