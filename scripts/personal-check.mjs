@@ -25,6 +25,10 @@ for (const f of git('ls-files', '-z').split('\0').filter(Boolean)) {
     for (const [name, re, keep] of rules) for (const m of line.matchAll(re)) if (keep(m[0], m[1] ?? '')) hits.push(`${f}:${i + 1}: ${name}`);
   });
 }
+const ev = process.env.GITHUB_EVENT_PATH && existsSync(process.env.GITHUB_EVENT_PATH) ? JSON.parse(readFileSync(process.env.GITHUB_EVENT_PATH, 'utf8')) : {};
+for (const [where, text] of [['PR title', ev.pull_request?.title], ['PR body', ev.pull_request?.body]]) {
+  for (const [name, re, keep] of rules) for (const m of (text ?? '').matchAll(re)) if (keep(m[0], m[1] ?? '')) hits.push(`${where}: ${name}`);
+}
 let range = '';
 try { git('rev-parse', '-q', '--verify', 'origin/main'); range = 'origin/main..HEAD'; } catch { /* shallow CI checkout */ }
 if (range) for (const l of git('log', range, '--format=%h %an <%ae> | %cn <%ce>').split('\n').filter(Boolean)) {
