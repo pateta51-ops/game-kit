@@ -152,6 +152,7 @@ A game's build plan lists the kit work it needs as phases named `GK<n>` for the 
 | K388 | prompt-host overflow mode: shrink answers to a font floor, use two columns, then open a scrolling panel within stage and keep-out limits | M |  | done |
 | K389 | glossary: useLookup exported from ui.ts; the open lookup closes on route change (popstate, hashchange, closeOn); links inside a control hold by default (tap presses, long press opens) | S |  | done |
 | K391 | saves: `savedLine={false}` drops the repeated "saved <date>" line in SavesScreen rows | S |  | done |
+| K392 | card-harness literalsOf(file, type, { keys: true }) and keysOf(file, type): property names of each member of an untagged union | S |  | done |
 
 ## Harvest from the existing games (owner, 15 Nov 2026)
 

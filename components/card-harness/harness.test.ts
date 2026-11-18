@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { clauseIds, conforms, createProbe, Delivery, describeCheck, expectResolved, inventory, renderRecords, report, runInventory, Scenario, scenarioLiteral, rulingGroups, testFiles, traceAbilities, type DeliveryGame, type Same } from './index.ts';
-import { literalsOf } from './literals.ts';
+import { keysOf, literalsOf } from './literals.ts';
 import { DICE, DICE_GAME, PROBE, type DiceEvent, type Dice, type DiceState, type Note } from './fake/dice.ts';
 import { applyAction } from '../engine-core/index.ts';
 import { diffPaths, roundTripCards } from './roundtrip.ts';
@@ -252,6 +252,13 @@ describe('card-language checks', () => {
     // @ts-expect-error the types differ
     conforms<Same<{ a: 1 }, { a: 2 }>>();
     expect(true).toBe(true);
+  });
+  it('reads the keys of an untagged union (K392)', () => {
+    const f = fileURLToPath(new URL('./fake/lang.ts', import.meta.url));
+    const want = ['discard', 'draw', 'gain', 'hit', 'miss'];
+    expect(literalsOf(f, 'Effect', { keys: true })).toEqual(want);
+    expect(keysOf(f, 'Effect')).toEqual(want);
+    expect(() => keysOf(f, 'Nope')).toThrow();
   });
   it('reads pieces from the game types', () => {
     const f = fileURLToPath(new URL('./fake/lang.ts', import.meta.url));
