@@ -8,3 +8,5 @@ scan-review/
 .cache/
 kit.local.json
 _serve/
+
+/tuners/perf/out/

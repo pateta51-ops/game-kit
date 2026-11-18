@@ -892,11 +892,11 @@ Flatbed scans of a game's components to one upright, tightly cropped image per i
 
 ## screens
 
-Unstyled, data-driven main menu and new-game set-up form, with a pure default and validate model.
+Unstyled, data-driven main menu and new-game set-up form, with a pure default and validate model, plus reusable frames for non-table screens.
 
-- **Use it when:** Main menu and new-game set-up form (seats, scenario, difficulty, extras) from data, unstyled, with a pure default and validate.
+- **Use it when:** Main menu and new-game set-up form (seats, scenario, difficulty, extras) from data, unstyled, with a pure default and validate. Non-table screen frame, footer, disclaimer and persistent theme toggle.
 - **Not for:** Styled or game-specific screens, or settings (use settings).
-- **Key exports:** `defaultSetup`, `validateSetup`, `defaultWords`, `Option`, `SetupSpec`, `Setup`, `Field`, `Words`
+- **Key exports:** `createThemeStore`, `disclaimer`, `defaultSetup`, `validateSetup`, `defaultWords`, `Theme`, `Option`, `SetupSpec`, `Setup`, `Field`, `Words`
 - **Needs:** nothing
 - **Came from:** kit
 - **Docs:** [README](../components/screens/README.md)
