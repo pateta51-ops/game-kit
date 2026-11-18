@@ -14990,6 +14990,12 @@ var COUNTER = (() => {
   // components/counter/ui.tsx
   var import_react = __toESM(require_react(), 1);
 
+  // components/effect-library/beam-canvas.ts
+  var TAU = Math.PI * 2;
+
+  // components/effect-library/spiral.ts
+  var TAU2 = Math.PI * 2;
+
   // components/effect-library/count.ts
   var countAt = (value, k, from = 0) => Math.round(from + (value - from) * (1 - (1 - Math.min(1, Math.max(0, k))) ** 3));
   function countUp(o) {
@@ -15077,20 +15083,20 @@ var COUNTER = (() => {
     const text = tagText(delta);
     if (ms <= 0 || !text) return () => void 0;
     const box = boxOf(el);
-    const px = parseFloat(getComputedStyle(el).fontSize) || 16;
+    const px2 = parseFloat(getComputedStyle(el).fontSize) || 16;
     const right = rowRightOf(el);
     const tag = document.createElement("span");
     tag.dataset["part"] = "tag";
     tag.dataset["sign"] = delta < 0 ? "-" : "+";
     tag.textContent = text;
-    Object.assign(tag.style, { position: "fixed", left: "0", top: `${String(right === null ? box.y + box.h + px * (0.35 + 1.35 * row) : box.y + box.h / 2 - px * 0.65)}px`, pointerEvents: "none", whiteSpace: "nowrap", zIndex: "90" });
+    Object.assign(tag.style, { position: "fixed", left: "0", top: `${String(right === null ? box.y + box.h + px2 * (0.35 + 1.35 * row) : box.y + box.h / 2 - px2 * 0.65)}px`, pointerEvents: "none", whiteSpace: "nowrap", zIndex: "90" });
     document.body.append(tag);
-    const want = right === null ? box.x : right + px * 0.6 + row * (tag.offsetWidth + px * 0.5);
-    tag.style.left = `${String(Math.min(window.innerWidth - tag.offsetWidth - px * 0.3, Math.max(px * 0.3, want)))}px`;
+    const want = right === null ? box.x : right + px2 * 0.6 + row * (tag.offsetWidth + px2 * 0.5);
+    tag.style.left = `${String(Math.min(window.innerWidth - tag.offsetWidth - px2 * 0.3, Math.max(px2 * 0.3, want)))}px`;
     const dir = right === null ? 1 : -1;
     const at = (k) => {
       const f = tagAt(k);
-      return { opacity: f.opacity, transform: `translateY(${String(dir * px * f.y)}px)`, offset: k };
+      return { opacity: f.opacity, transform: `translateY(${String(dir * px2 * f.y)}px)`, offset: k };
     };
     const gone = () => tag.remove();
     if (typeof tag.animate === "function") void tag.animate([at(0), at(0.08), at(0.8), at(1)], { duration: ms, easing: "ease-out", fill: "forwards" }).finished.then(gone, gone);

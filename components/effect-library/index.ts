@@ -11,3 +11,8 @@ export * from './bands.ts';
 export * from './movement.ts';
 export * from './paths.ts';
 export type { TrailSettings } from './trail.ts';
+export type { ColumnBeamSettings, RotatingBeamSettings } from './beams.ts';
+export type { CurvedBeamSettings, RadialSettings } from './beam-canvas.ts';
+export type { CollapseSettings } from './collapse.ts';
+export type { TransferSettings } from './transfer.ts';
+export type { SpiralSettings } from './spiral.ts';

@@ -5,6 +5,11 @@ import { createEffectLayer, place, type EffectLayer, type LayerOptions } from '.
 import { registerCanvasEffect } from './canvas.ts';
 import { arcMove, multiStopMove } from './flight-effects.ts';
 import { trail } from './trail.ts';
+import { columnBeam, rotatingBeam } from './beams.ts';
+import { curvedBeam, radialStreaks } from './beam-canvas.ts';
+import { collapseJump } from './collapse.ts';
+import { warpTransfer } from './transfer.ts';
+import { spiralTransfer } from './spiral.ts';
 
 export type { ArcMoveSettings } from './flight-effects.ts';
 export type EffectCtx = EffectLayer;
@@ -187,6 +192,19 @@ export const BUILT_IN: Readonly<Record<string, Effect>> = {
 export function registerEffects(verbs: VerbRegistry<EffectCtx>, o?: LayerOptions): EffectLayer {
   for (const [name, fx] of Object.entries(BUILT_IN)) registerEffect(verbs, name, fx);
   registerCanvasEffect(verbs, 'trail', trail);
+  registerCanvasEffect(verbs, 'radial-streaks', radialStreaks);
+  registerCanvasEffect(verbs, 'column-beam', curvedBeam);
+  const curve = verbs.get('column-beam');
+  registerEffect(verbs, 'column-beam', columnBeam);
+  const column = verbs.get('column-beam');
+  verbs.register('column-beam', (call, run) => (call.step['curve'] ? curve : column)?.(call, run));
+  registerEffect(verbs, 'collapse-jump', collapseJump);
+  registerEffect(verbs, 'rotating-beam', rotatingBeam);
+  registerCanvasEffect(verbs, 'warp-transfer', spiralTransfer);
+  const spiral = verbs.get('warp-transfer');
+  registerEffect(verbs, 'warp-transfer', warpTransfer);
+  const transfer = verbs.get('warp-transfer');
+  verbs.register('warp-transfer', (call, run) => (call.step['spiral'] ? spiral : transfer)?.(call, run));
   verbs.register('shake-group', (call, run) => {
     const { selector, actors, amplitude = 6, crossAmplitude = 1, frames = 9 } = call.step;
     const targets = typeof selector === 'string'

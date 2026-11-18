@@ -123,7 +123,7 @@ function play(): void {
   player.play({ id: 'flight-lab', maxMs: 3500, actors: [...actors, ...tableActors], steps });
 }
 
-if (!new URLSearchParams(location.search).has('frame')) {
+if (!new URLSearchParams(location.search).has('frame') && !new URLSearchParams(location.search).has('beams')) {
   document.querySelector('button')?.addEventListener('click', play);
   play();
 }

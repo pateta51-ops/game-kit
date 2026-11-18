@@ -60,7 +60,7 @@ function play(): void {
     }
   }, 50);
 }
-if (!params.has('flights')) {
+if (!params.has('flights') && !params.has('beams')) {
   document.querySelector('button')?.addEventListener('click', play);
   if (params.get('frame') !== 'before') play();
 }

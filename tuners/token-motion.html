@@ -14911,7 +14911,7 @@ var MOTION = (() => {
       TEXTURE_BUDGET = 32 * 1024 * 1024;
       EXTERIOR_WIDTH = 2048;
       EXTERIOR_HEIGHT = 512;
-      rgbaMip = (px2) => Math.round(px2 * px2 * 4 * (4 / 3));
+      rgbaMip = (px3) => Math.round(px3 * px3 * 4 * (4 / 3));
       FIXED_TEXTURE_BYTES = rgbaMip(256) + rgbaMip(512) + 1024 * 1024 * 4 + Math.ceil(EXTERIOR_WIDTH * EXTERIOR_HEIGHT * 4 * (4 / 3)) + rgbaMip(64);
       textureBytes = (faces, size) => FIXED_TEXTURE_BYTES + faces * rgbaMip(size);
       fallback = null;
@@ -15491,17 +15491,17 @@ var MOTION = (() => {
     let currentBackground = null;
     let currentBackgroundVersion = 0;
     let currentTonemapping = null;
-    function getBackground(scene) {
-      let background = scene.isScene === true ? scene.background : null;
+    function getBackground(scene2) {
+      let background = scene2.isScene === true ? scene2.background : null;
       if (background && background.isTexture) {
-        const usePMREM = scene.backgroundBlurriness > 0;
+        const usePMREM = scene2.backgroundBlurriness > 0;
         background = (usePMREM ? cubeuvmaps : cubemaps).get(background);
       }
       return background;
     }
-    function render(scene) {
+    function render(scene2) {
       let forceClear = false;
-      const background = getBackground(scene);
+      const background = getBackground(scene2);
       if (background === null) {
         setClear(clearColor, clearAlpha);
       } else if (background && background.isColor) {
@@ -15521,8 +15521,8 @@ var MOTION = (() => {
         renderer.clear(renderer.autoClearColor, renderer.autoClearDepth, renderer.autoClearStencil);
       }
     }
-    function addToRenderList(renderList, scene) {
-      const background = getBackground(scene);
+    function addToRenderList(renderList, scene2) {
+      const background = getBackground(scene2);
       if (background && (background.isCubeTexture || background.mapping === CubeUVReflectionMapping)) {
         if (boxMesh === void 0) {
           boxMesh = new Mesh(
@@ -15540,7 +15540,7 @@ var MOTION = (() => {
           );
           boxMesh.geometry.deleteAttribute("normal");
           boxMesh.geometry.deleteAttribute("uv");
-          boxMesh.onBeforeRender = function(renderer2, scene2, camera) {
+          boxMesh.onBeforeRender = function(renderer2, scene3, camera) {
             this.matrixWorld.copyPosition(camera.matrixWorld);
           };
           Object.defineProperty(boxMesh.material, "envMap", {
@@ -15550,7 +15550,7 @@ var MOTION = (() => {
           });
           objects.update(boxMesh);
         }
-        _e1$1.copy(scene.backgroundRotation);
+        _e1$1.copy(scene2.backgroundRotation);
         _e1$1.x *= -1;
         _e1$1.y *= -1;
         _e1$1.z *= -1;
@@ -15560,8 +15560,8 @@ var MOTION = (() => {
         }
         boxMesh.material.uniforms.envMap.value = background;
         boxMesh.material.uniforms.flipEnvMap.value = background.isCubeTexture && background.isRenderTargetTexture === false ? -1 : 1;
-        boxMesh.material.uniforms.backgroundBlurriness.value = scene.backgroundBlurriness;
-        boxMesh.material.uniforms.backgroundIntensity.value = scene.backgroundIntensity;
+        boxMesh.material.uniforms.backgroundBlurriness.value = scene2.backgroundBlurriness;
+        boxMesh.material.uniforms.backgroundIntensity.value = scene2.backgroundIntensity;
         boxMesh.material.uniforms.backgroundRotation.value.setFromMatrix4(_m1$1.makeRotationFromEuler(_e1$1));
         boxMesh.material.toneMapped = ColorManagement.getTransfer(background.colorSpace) !== SRGBTransfer;
         if (currentBackground !== background || currentBackgroundVersion !== background.version || currentTonemapping !== renderer.toneMapping) {
@@ -15596,7 +15596,7 @@ var MOTION = (() => {
           objects.update(planeMesh);
         }
         planeMesh.material.uniforms.t2D.value = background;
-        planeMesh.material.uniforms.backgroundIntensity.value = scene.backgroundIntensity;
+        planeMesh.material.uniforms.backgroundIntensity.value = scene2.backgroundIntensity;
         planeMesh.material.toneMapped = ColorManagement.getTransfer(background.colorSpace) !== SRGBTransfer;
         if (background.matrixAutoUpdate === true) {
           background.updateMatrix();
@@ -18208,10 +18208,10 @@ var MOTION = (() => {
       if (value === 0) return "uv";
       return `uv${value}`;
     }
-    function getParameters(material, lights, shadows, scene, object) {
-      const fog = scene.fog;
+    function getParameters(material, lights, shadows, scene2, object) {
+      const fog = scene2.fog;
       const geometry = object.geometry;
-      const environment = material.isMeshStandardMaterial ? scene.environment : null;
+      const environment = material.isMeshStandardMaterial ? scene2.environment : null;
       const envMap = (material.isMeshStandardMaterial ? cubeuvmaps : cubemaps).get(material.envMap || environment);
       const envMapCubeUVHeight = !!envMap && envMap.mapping === CubeUVReflectionMapping ? envMap.image.height : null;
       const shaderID = shaderIDs[material.type];
@@ -18784,12 +18784,12 @@ var MOTION = (() => {
   }
   function WebGLRenderLists() {
     let lists = /* @__PURE__ */ new WeakMap();
-    function get(scene, renderCallDepth) {
-      const listArray = lists.get(scene);
+    function get(scene2, renderCallDepth) {
+      const listArray = lists.get(scene2);
       let list;
       if (listArray === void 0) {
         list = new WebGLRenderList();
-        lists.set(scene, [list]);
+        lists.set(scene2, [list]);
       } else {
         if (renderCallDepth >= listArray.length) {
           list = new WebGLRenderList();
@@ -19207,12 +19207,12 @@ var MOTION = (() => {
   }
   function WebGLRenderStates(extensions) {
     let renderStates = /* @__PURE__ */ new WeakMap();
-    function get(scene, renderCallDepth = 0) {
-      const renderStateArray = renderStates.get(scene);
+    function get(scene2, renderCallDepth = 0) {
+      const renderStateArray = renderStates.get(scene2);
       let renderState;
       if (renderStateArray === void 0) {
         renderState = new WebGLRenderState(extensions);
-        renderStates.set(scene, [renderState]);
+        renderStates.set(scene2, [renderState]);
       } else {
         if (renderCallDepth >= renderStateArray.length) {
           renderState = new WebGLRenderState(extensions);
@@ -19264,7 +19264,7 @@ var MOTION = (() => {
     this.needsUpdate = false;
     this.type = PCFShadowMap;
     let _previousType = this.type;
-    this.render = function(lights, scene, camera) {
+    this.render = function(lights, scene2, camera) {
       if (scope.enabled === false) return;
       if (scope.autoUpdate === false && scope.needsUpdate === false) return;
       if (lights.length === 0) return;
@@ -19325,7 +19325,7 @@ var MOTION = (() => {
           _state.viewport(_viewport);
           shadow.updateMatrices(light, vp);
           _frustum = shadow.getFrustum();
-          renderObject(scene, camera, shadow.camera, light, this.type);
+          renderObject(scene2, camera, shadow.camera, light, this.type);
         }
         if (shadow.isPointLightShadow !== true && this.type === VSMShadowMap) {
           VSMPass(shadow, camera);
@@ -29347,7 +29347,7 @@ var MOTION = (() => {
             camera.updateMatrixWorld();
           }
         }
-        update(renderer, scene) {
+        update(renderer, scene2) {
           if (this.parent === null) this.updateMatrixWorld();
           const { renderTarget, activeMipmapLevel } = this;
           if (this.coordinateSystem !== renderer.coordinateSystem) {
@@ -29363,18 +29363,18 @@ var MOTION = (() => {
           const generateMipmaps = renderTarget.texture.generateMipmaps;
           renderTarget.texture.generateMipmaps = false;
           renderer.setRenderTarget(renderTarget, 0, activeMipmapLevel);
-          renderer.render(scene, cameraPX);
+          renderer.render(scene2, cameraPX);
           renderer.setRenderTarget(renderTarget, 1, activeMipmapLevel);
-          renderer.render(scene, cameraNX);
+          renderer.render(scene2, cameraNX);
           renderer.setRenderTarget(renderTarget, 2, activeMipmapLevel);
-          renderer.render(scene, cameraPY);
+          renderer.render(scene2, cameraPY);
           renderer.setRenderTarget(renderTarget, 3, activeMipmapLevel);
-          renderer.render(scene, cameraNY);
+          renderer.render(scene2, cameraNY);
           renderer.setRenderTarget(renderTarget, 4, activeMipmapLevel);
-          renderer.render(scene, cameraPZ);
+          renderer.render(scene2, cameraPZ);
           renderTarget.texture.generateMipmaps = generateMipmaps;
           renderer.setRenderTarget(renderTarget, 5, activeMipmapLevel);
-          renderer.render(scene, cameraNZ);
+          renderer.render(scene2, cameraNZ);
           renderer.setRenderTarget(currentRenderTarget, currentActiveCubeFace, currentActiveMipmapLevel);
           renderer.xr.enabled = currentXrEnabled;
           renderTarget.texture.needsPMREMUpdate = true;
@@ -30602,7 +30602,7 @@ var MOTION = (() => {
          * and far planes ensure the scene is rendered in its entirety (the cubeCamera
          * is placed at the origin).
          */
-        fromScene(scene, sigma = 0, near = 0.1, far = 100) {
+        fromScene(scene2, sigma = 0, near = 0.1, far = 100) {
           _oldTarget = this._renderer.getRenderTarget();
           _oldActiveCubeFace = this._renderer.getActiveCubeFace();
           _oldActiveMipmapLevel = this._renderer.getActiveMipmapLevel();
@@ -30611,7 +30611,7 @@ var MOTION = (() => {
           this._setSize(256);
           const cubeUVRenderTarget = this._allocateTargets();
           cubeUVRenderTarget.depthBuffer = true;
-          this._sceneToCubeUV(scene, near, far, cubeUVRenderTarget);
+          this._sceneToCubeUV(scene2, near, far, cubeUVRenderTarget);
           if (sigma > 0) {
             this._blur(cubeUVRenderTarget, 0, 0, sigma);
           }
@@ -30730,7 +30730,7 @@ var MOTION = (() => {
           const tmpMesh = new Mesh(this._lodPlanes[0], material);
           this._renderer.compile(tmpMesh, _flatCamera);
         }
-        _sceneToCubeUV(scene, near, far, cubeUVRenderTarget) {
+        _sceneToCubeUV(scene2, near, far, cubeUVRenderTarget) {
           const fov2 = 90;
           const aspect2 = 1;
           const cubeCamera = new PerspectiveCamera(fov2, aspect2, near, far);
@@ -30750,11 +30750,11 @@ var MOTION = (() => {
           });
           const backgroundBox = new Mesh(new BoxGeometry(), backgroundMaterial);
           let useSolidColor = false;
-          const background = scene.background;
+          const background = scene2.background;
           if (background) {
             if (background.isColor) {
               backgroundMaterial.color.copy(background);
-              scene.background = null;
+              scene2.background = null;
               useSolidColor = true;
             }
           } else {
@@ -30779,13 +30779,13 @@ var MOTION = (() => {
             if (useSolidColor) {
               renderer.render(backgroundBox, cubeCamera);
             }
-            renderer.render(scene, cubeCamera);
+            renderer.render(scene2, cubeCamera);
           }
           backgroundBox.geometry.dispose();
           backgroundBox.material.dispose();
           renderer.toneMapping = toneMapping;
           renderer.autoClear = originalAutoClear;
-          scene.background = background;
+          scene2.background = background;
         }
         _textureToCubeUV(texture, cubeUVRenderTarget) {
           const renderer = this._renderer;
@@ -32254,10 +32254,10 @@ void main() {
               }
             }
           }
-          this.renderBufferDirect = function(camera, scene, geometry, material, object, group) {
-            if (scene === null) scene = _emptyScene;
+          this.renderBufferDirect = function(camera, scene2, geometry, material, object, group) {
+            if (scene2 === null) scene2 = _emptyScene;
             const frontFaceCW = object.isMesh && object.matrixWorld.determinant() < 0;
-            const program = setProgram(camera, scene, geometry, material, object);
+            const program = setProgram(camera, scene2, geometry, material, object);
             state.setMaterial(material, frontFaceCW);
             let index = geometry.index;
             let rangeFactor = 1;
@@ -32342,21 +32342,21 @@ void main() {
               renderer.render(drawStart, drawCount);
             }
           };
-          function prepareMaterial(material, scene, object) {
+          function prepareMaterial(material, scene2, object) {
             if (material.transparent === true && material.side === DoubleSide && material.forceSinglePass === false) {
               material.side = BackSide;
               material.needsUpdate = true;
-              getProgram(material, scene, object);
+              getProgram(material, scene2, object);
               material.side = FrontSide;
               material.needsUpdate = true;
-              getProgram(material, scene, object);
+              getProgram(material, scene2, object);
               material.side = DoubleSide;
             } else {
-              getProgram(material, scene, object);
+              getProgram(material, scene2, object);
             }
           }
-          this.compile = function(scene, camera, targetScene = null) {
-            if (targetScene === null) targetScene = scene;
+          this.compile = function(scene2, camera, targetScene = null) {
+            if (targetScene === null) targetScene = scene2;
             currentRenderState = renderStates.get(targetScene);
             currentRenderState.init(camera);
             renderStateStack.push(currentRenderState);
@@ -32368,8 +32368,8 @@ void main() {
                 }
               }
             });
-            if (scene !== targetScene) {
-              scene.traverseVisible(function(object) {
+            if (scene2 !== targetScene) {
+              scene2.traverseVisible(function(object) {
                 if (object.isLight && object.layers.test(camera.layers)) {
                   currentRenderState.pushLight(object);
                   if (object.castShadow) {
@@ -32380,7 +32380,7 @@ void main() {
             }
             currentRenderState.setupLights();
             const materials2 = /* @__PURE__ */ new Set();
-            scene.traverse(function(object) {
+            scene2.traverse(function(object) {
               if (!(object.isMesh || object.isPoints || object.isLine || object.isSprite)) {
                 return;
               }
@@ -32402,8 +32402,8 @@ void main() {
             currentRenderState = null;
             return materials2;
           };
-          this.compileAsync = function(scene, camera, targetScene = null) {
-            const materials2 = this.compile(scene, camera, targetScene);
+          this.compileAsync = function(scene2, camera, targetScene = null) {
+            const materials2 = this.compile(scene2, camera, targetScene);
             return new Promise((resolve) => {
               function checkMaterialsReady() {
                 materials2.forEach(function(material) {
@@ -32414,7 +32414,7 @@ void main() {
                   }
                 });
                 if (materials2.size === 0) {
-                  resolve(scene);
+                  resolve(scene2);
                   return;
                 }
                 setTimeout(checkMaterialsReady, 10);
@@ -32446,27 +32446,27 @@ void main() {
           };
           xr.addEventListener("sessionstart", onXRSessionStart);
           xr.addEventListener("sessionend", onXRSessionEnd);
-          this.render = function(scene, camera) {
+          this.render = function(scene2, camera) {
             if (camera !== void 0 && camera.isCamera !== true) {
               console.error("THREE.WebGLRenderer.render: camera is not an instance of THREE.Camera.");
               return;
             }
             if (_isContextLost === true) return;
-            if (scene.matrixWorldAutoUpdate === true) scene.updateMatrixWorld();
+            if (scene2.matrixWorldAutoUpdate === true) scene2.updateMatrixWorld();
             if (camera.parent === null && camera.matrixWorldAutoUpdate === true) camera.updateMatrixWorld();
             if (xr.enabled === true && xr.isPresenting === true) {
               if (xr.cameraAutoUpdate === true) xr.updateCamera(camera);
               camera = xr.getCamera();
             }
-            if (scene.isScene === true) scene.onBeforeRender(_this, scene, camera, _currentRenderTarget);
-            currentRenderState = renderStates.get(scene, renderStateStack.length);
+            if (scene2.isScene === true) scene2.onBeforeRender(_this, scene2, camera, _currentRenderTarget);
+            currentRenderState = renderStates.get(scene2, renderStateStack.length);
             currentRenderState.init(camera);
             renderStateStack.push(currentRenderState);
             _projScreenMatrix2.multiplyMatrices(camera.projectionMatrix, camera.matrixWorldInverse);
             _frustum.setFromProjectionMatrix(_projScreenMatrix2);
             _localClippingEnabled = this.localClippingEnabled;
             _clippingEnabled = clipping.init(this.clippingPlanes, _localClippingEnabled);
-            currentRenderList = renderLists.get(scene, renderListStack.length);
+            currentRenderList = renderLists.get(scene2, renderListStack.length);
             currentRenderList.init();
             renderListStack.push(currentRenderList);
             if (xr.enabled === true && xr.isPresenting === true) {
@@ -32475,19 +32475,19 @@ void main() {
                 projectObject(depthSensingMesh, camera, -Infinity, _this.sortObjects);
               }
             }
-            projectObject(scene, camera, 0, _this.sortObjects);
+            projectObject(scene2, camera, 0, _this.sortObjects);
             currentRenderList.finish();
             if (_this.sortObjects === true) {
               currentRenderList.sort(_opaqueSort, _transparentSort);
             }
             _renderBackground = xr.enabled === false || xr.isPresenting === false || xr.hasDepthSensing() === false;
             if (_renderBackground) {
-              background.addToRenderList(currentRenderList, scene);
+              background.addToRenderList(currentRenderList, scene2);
             }
             this.info.render.frame++;
             if (_clippingEnabled === true) clipping.beginShadows();
             const shadowsArray = currentRenderState.state.shadowsArray;
-            shadowMap.render(shadowsArray, scene, camera);
+            shadowMap.render(shadowsArray, scene2, camera);
             if (_clippingEnabled === true) clipping.endShadows();
             if (this.info.autoReset === true) this.info.reset();
             const opaqueObjects = currentRenderList.opaque;
@@ -32498,24 +32498,24 @@ void main() {
               if (transmissiveObjects.length > 0) {
                 for (let i = 0, l = cameras.length; i < l; i++) {
                   const camera2 = cameras[i];
-                  renderTransmissionPass(opaqueObjects, transmissiveObjects, scene, camera2);
+                  renderTransmissionPass(opaqueObjects, transmissiveObjects, scene2, camera2);
                 }
               }
-              if (_renderBackground) background.render(scene);
+              if (_renderBackground) background.render(scene2);
               for (let i = 0, l = cameras.length; i < l; i++) {
                 const camera2 = cameras[i];
-                renderScene(currentRenderList, scene, camera2, camera2.viewport);
+                renderScene(currentRenderList, scene2, camera2, camera2.viewport);
               }
             } else {
-              if (transmissiveObjects.length > 0) renderTransmissionPass(opaqueObjects, transmissiveObjects, scene, camera);
-              if (_renderBackground) background.render(scene);
-              renderScene(currentRenderList, scene, camera);
+              if (transmissiveObjects.length > 0) renderTransmissionPass(opaqueObjects, transmissiveObjects, scene2, camera);
+              if (_renderBackground) background.render(scene2);
+              renderScene(currentRenderList, scene2, camera);
             }
             if (_currentRenderTarget !== null) {
               textures.updateMultisampleRenderTarget(_currentRenderTarget);
               textures.updateRenderTargetMipmap(_currentRenderTarget);
             }
-            if (scene.isScene === true) scene.onAfterRender(_this, scene, camera);
+            if (scene2.isScene === true) scene2.onAfterRender(_this, scene2, camera);
             bindingStates.resetDefaultState();
             _currentMaterialId = -1;
             _currentCamera = null;
@@ -32591,23 +32591,23 @@ void main() {
               projectObject(children[i], camera, groupOrder, sortObjects);
             }
           }
-          function renderScene(currentRenderList2, scene, camera, viewport) {
+          function renderScene(currentRenderList2, scene2, camera, viewport) {
             const opaqueObjects = currentRenderList2.opaque;
             const transmissiveObjects = currentRenderList2.transmissive;
             const transparentObjects = currentRenderList2.transparent;
             currentRenderState.setupLightsView(camera);
             if (_clippingEnabled === true) clipping.setGlobalState(_this.clippingPlanes, camera);
             if (viewport) state.viewport(_currentViewport.copy(viewport));
-            if (opaqueObjects.length > 0) renderObjects(opaqueObjects, scene, camera);
-            if (transmissiveObjects.length > 0) renderObjects(transmissiveObjects, scene, camera);
-            if (transparentObjects.length > 0) renderObjects(transparentObjects, scene, camera);
+            if (opaqueObjects.length > 0) renderObjects(opaqueObjects, scene2, camera);
+            if (transmissiveObjects.length > 0) renderObjects(transmissiveObjects, scene2, camera);
+            if (transparentObjects.length > 0) renderObjects(transparentObjects, scene2, camera);
             state.buffers.depth.setTest(true);
             state.buffers.depth.setMask(true);
             state.buffers.color.setMask(true);
             state.setPolygonOffset(false);
           }
-          function renderTransmissionPass(opaqueObjects, transmissiveObjects, scene, camera) {
-            const overrideMaterial = scene.isScene === true ? scene.overrideMaterial : null;
+          function renderTransmissionPass(opaqueObjects, transmissiveObjects, scene2, camera) {
+            const overrideMaterial = scene2.isScene === true ? scene2.overrideMaterial : null;
             if (overrideMaterial !== null) {
               return;
             }
@@ -32632,14 +32632,14 @@ void main() {
             _currentClearAlpha = _this.getClearAlpha();
             if (_currentClearAlpha < 1) _this.setClearColor(16777215, 0.5);
             _this.clear();
-            if (_renderBackground) background.render(scene);
+            if (_renderBackground) background.render(scene2);
             const currentToneMapping = _this.toneMapping;
             _this.toneMapping = NoToneMapping;
             const currentCameraViewport = camera.viewport;
             if (camera.viewport !== void 0) camera.viewport = void 0;
             currentRenderState.setupLightsView(camera);
             if (_clippingEnabled === true) clipping.setGlobalState(_this.clippingPlanes, camera);
-            renderObjects(opaqueObjects, scene, camera);
+            renderObjects(opaqueObjects, scene2, camera);
             textures.updateMultisampleRenderTarget(transmissionRenderTarget);
             textures.updateRenderTargetMipmap(transmissionRenderTarget);
             if (extensions.has("WEBGL_multisampled_render_to_texture") === false) {
@@ -32654,7 +32654,7 @@ void main() {
                   const currentSide = material.side;
                   material.side = BackSide;
                   material.needsUpdate = true;
-                  renderObject(object, scene, camera, geometry, material, group);
+                  renderObject(object, scene2, camera, geometry, material, group);
                   material.side = currentSide;
                   material.needsUpdate = true;
                   renderTargetNeedsUpdate = true;
@@ -32670,8 +32670,8 @@ void main() {
             if (currentCameraViewport !== void 0) camera.viewport = currentCameraViewport;
             _this.toneMapping = currentToneMapping;
           }
-          function renderObjects(renderList, scene, camera) {
-            const overrideMaterial = scene.isScene === true ? scene.overrideMaterial : null;
+          function renderObjects(renderList, scene2, camera) {
+            const overrideMaterial = scene2.isScene === true ? scene2.overrideMaterial : null;
             for (let i = 0, l = renderList.length; i < l; i++) {
               const renderItem = renderList[i];
               const object = renderItem.object;
@@ -32679,41 +32679,41 @@ void main() {
               const material = overrideMaterial === null ? renderItem.material : overrideMaterial;
               const group = renderItem.group;
               if (object.layers.test(camera.layers)) {
-                renderObject(object, scene, camera, geometry, material, group);
+                renderObject(object, scene2, camera, geometry, material, group);
               }
             }
           }
-          function renderObject(object, scene, camera, geometry, material, group) {
-            object.onBeforeRender(_this, scene, camera, geometry, material, group);
+          function renderObject(object, scene2, camera, geometry, material, group) {
+            object.onBeforeRender(_this, scene2, camera, geometry, material, group);
             object.modelViewMatrix.multiplyMatrices(camera.matrixWorldInverse, object.matrixWorld);
             object.normalMatrix.getNormalMatrix(object.modelViewMatrix);
-            material.onBeforeRender(_this, scene, camera, geometry, object, group);
+            material.onBeforeRender(_this, scene2, camera, geometry, object, group);
             if (material.transparent === true && material.side === DoubleSide && material.forceSinglePass === false) {
               material.side = BackSide;
               material.needsUpdate = true;
-              _this.renderBufferDirect(camera, scene, geometry, material, object, group);
+              _this.renderBufferDirect(camera, scene2, geometry, material, object, group);
               material.side = FrontSide;
               material.needsUpdate = true;
-              _this.renderBufferDirect(camera, scene, geometry, material, object, group);
+              _this.renderBufferDirect(camera, scene2, geometry, material, object, group);
               material.side = DoubleSide;
             } else {
-              _this.renderBufferDirect(camera, scene, geometry, material, object, group);
+              _this.renderBufferDirect(camera, scene2, geometry, material, object, group);
             }
-            object.onAfterRender(_this, scene, camera, geometry, material, group);
+            object.onAfterRender(_this, scene2, camera, geometry, material, group);
           }
-          function getProgram(material, scene, object) {
-            if (scene.isScene !== true) scene = _emptyScene;
+          function getProgram(material, scene2, object) {
+            if (scene2.isScene !== true) scene2 = _emptyScene;
             const materialProperties = properties.get(material);
             const lights = currentRenderState.state.lights;
             const shadowsArray = currentRenderState.state.shadowsArray;
             const lightsStateVersion = lights.state.version;
-            const parameters2 = programCache.getParameters(material, lights.state, shadowsArray, scene, object);
+            const parameters2 = programCache.getParameters(material, lights.state, shadowsArray, scene2, object);
             const programCacheKey = programCache.getProgramCacheKey(parameters2);
             let programs = materialProperties.programs;
-            materialProperties.environment = material.isMeshStandardMaterial ? scene.environment : null;
-            materialProperties.fog = scene.fog;
+            materialProperties.environment = material.isMeshStandardMaterial ? scene2.environment : null;
+            materialProperties.fog = scene2.fog;
             materialProperties.envMap = (material.isMeshStandardMaterial ? cubeuvmaps : cubemaps).get(material.envMap || materialProperties.environment);
-            materialProperties.envMapRotation = materialProperties.environment !== null && material.envMap === null ? scene.environmentRotation : material.envMapRotation;
+            materialProperties.envMapRotation = materialProperties.environment !== null && material.envMap === null ? scene2.environmentRotation : material.envMapRotation;
             if (programs === void 0) {
               material.addEventListener("dispose", onMaterialDispose);
               programs = /* @__PURE__ */ new Map();
@@ -32790,11 +32790,11 @@ void main() {
             materialProperties.vertexTangents = parameters2.vertexTangents;
             materialProperties.toneMapping = parameters2.toneMapping;
           }
-          function setProgram(camera, scene, geometry, material, object) {
-            if (scene.isScene !== true) scene = _emptyScene;
+          function setProgram(camera, scene2, geometry, material, object) {
+            if (scene2.isScene !== true) scene2 = _emptyScene;
             textures.resetTextureUnits();
-            const fog = scene.fog;
-            const environment = material.isMeshStandardMaterial ? scene.environment : null;
+            const fog = scene2.fog;
+            const environment = material.isMeshStandardMaterial ? scene2.environment : null;
             const colorSpace = _currentRenderTarget === null ? _this.outputColorSpace : _currentRenderTarget.isXRRenderTarget === true ? _currentRenderTarget.texture.colorSpace : LinearSRGBColorSpace;
             const envMap = (material.isMeshStandardMaterial ? cubeuvmaps : cubemaps).get(material.envMap || environment);
             const vertexAlphas = material.vertexColors === true && !!geometry.attributes.color && geometry.attributes.color.itemSize === 4;
@@ -32875,7 +32875,7 @@ void main() {
             }
             let program = materialProperties.currentProgram;
             if (needsProgramChange === true) {
-              program = getProgram(material, scene, object);
+              program = getProgram(material, scene2, object);
             }
             let refreshProgram = false;
             let refreshMaterial = false;
@@ -32952,8 +32952,8 @@ void main() {
               m_uniforms.envMap.value = envMap;
               m_uniforms.flipEnvMap.value = envMap.isCubeTexture && envMap.isRenderTargetTexture === false ? -1 : 1;
             }
-            if (material.isMeshStandardMaterial && material.envMap === null && scene.environment !== null) {
-              m_uniforms.envMapIntensity.value = scene.environmentIntensity;
+            if (material.isMeshStandardMaterial && material.envMap === null && scene2.environment !== null) {
+              m_uniforms.envMapIntensity.value = scene2.environmentIntensity;
             }
             if (refreshMaterial) {
               p_uniforms.setValue(_gl, "toneMappingExposure", _this.toneMappingExposure);
@@ -36168,11 +36168,11 @@ void main() {
     };
     canvas.addEventListener("webglcontextlost", lost);
     const rate = opts.rate !== void 0 && opts.rate > 0 ? opts.rate : 1;
-    const scene = new Scene();
+    const scene2 = new Scene();
     const backdrop = new Color(opts.backdrop ?? "#0a121a");
-    scene.fog = new Fog(opts.backdrop ?? "#0a121a", 20, 35);
+    scene2.fog = new Fog(opts.backdrop ?? "#0a121a", 20, 35);
     const camera = new PerspectiveCamera(FOV, 1, NEAR, FAR);
-    scene.add(new HemisphereLight("#9fc3d6", "#0b1218", 0.9));
+    scene2.add(new HemisphereLight("#9fc3d6", "#0b1218", 0.9));
     const key = new DirectionalLight("#fff1dc", 2.6);
     key.position.set(3.5, 7, 4.5);
     key.castShadow = true;
@@ -36185,10 +36185,10 @@ void main() {
     key.shadow.camera.far = 20;
     key.shadow.bias = -8e-4;
     key.shadow.normalBias = 0.02;
-    scene.add(key);
+    scene2.add(key);
     const rim = new DirectionalLight("#7fd3c4", 1.4);
     rim.position.set(-4, 3, -5);
-    scene.add(rim);
+    scene2.add(rim);
     const disposables = [];
     let disposed = false;
     let broken = false;
@@ -36206,15 +36206,15 @@ void main() {
     table.rotation.x = -Math.PI / 2;
     table.receiveShadow = true;
     table.visible = !rest;
-    scene.add(table);
+    scene2.add(table);
     const bag = new Group();
-    scene.add(bag);
+    scene2.add(bag);
     const body = new Group();
     body.scale.set(1, 0.82, 1);
     bag.add(body);
-    const glow = new PointLight("#ffe2b8", 2.2, 3.2, 1.6);
-    glow.position.set(0, 2.25, 0.35);
-    bag.add(glow);
+    const glow2 = new PointLight("#ffe2b8", 2.2, 3.2, 1.6);
+    glow2.position.set(0, 2.25, 0.35);
+    bag.add(glow2);
     const clothGeo = keep(bagGeometry());
     const weave = keep(new CanvasTexture(weaveCanvas()));
     weave.wrapS = weave.wrapT = RepeatWrapping;
@@ -36393,7 +36393,7 @@ void main() {
       if (disposed || broken) return;
       renders += 1;
       try {
-        renderer.render(scene, camera);
+        renderer.render(scene2, camera);
       } catch (e) {
         fail(e);
       }
@@ -36420,7 +36420,7 @@ void main() {
     ro.observe(canvas);
     fit();
     pose(0);
-    renderer.render(scene, camera);
+    renderer.render(scene2, camera);
     let started = 0;
     let stats = { frames: 0, seconds: 0, fps: 0, worstFrameMs: 0 };
     let last = 0;
@@ -37202,6 +37202,14 @@ void main() {
 
   // components/counter/ui.tsx
   var import_react7 = __toESM(require_react(), 1);
+
+  // components/effect-library/beam-canvas.ts
+  var TAU = Math.PI * 2;
+
+  // components/effect-library/spiral.ts
+  var TAU2 = Math.PI * 2;
+
+  // components/counter/ui.tsx
   var import_jsx_runtime5 = __toESM(require_jsx_runtime(), 1);
 
   // components/track/ups.ts
@@ -37327,11 +37335,11 @@ void main() {
         }
         if (plan.badge && badge.current) {
           setHold(false);
-          const sparks = landingEffects(badge.current, sp, { light: false, sparks: true });
-          fx.push(...sparks.els);
+          const sparks2 = landingEffects(badge.current, sp, { light: false, sparks: true });
+          fx.push(...sparks2.els);
           play(badge.current, BADGE_FRAMES, { duration: BADGE_IN_MS * sp, easing: "cubic-bezier(0.3, 1.4, 0.5, 1)" });
           setRising(plan.mult);
-          await Promise.all([sparks.done, wait(RISE_MS * sp)]);
+          await Promise.all([sparks2.done, wait(RISE_MS * sp)]);
           if (live) setRising(null);
         } else await wait(QUIET_MS * sp);
       })();

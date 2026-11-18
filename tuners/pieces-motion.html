@@ -15515,9 +15515,9 @@ var PIECES = (() => {
     for (let dj = flip ? -w : -1; dj <= w; dj += 1) {
       const st = c.k[((j0 + dj) % count + count) % count], { A, T, N } = st;
       if (o[0] * A[0] + o[1] * A[1] + o[2] * A[2] < 0.9) continue;
-      const px = Math.abs(o[0] * N[0] + o[1] * N[1] + o[2] * N[2]), py = o[0] * T[0] + o[1] * T[1] + o[2] * T[2];
-      const bx = hw, by = -dep, f = Math.min(1, Math.max(0, (px * bx + py * by) / (bx * bx + by * by)));
-      best = Math.max(best, Math.min(1, Math.max(0, (0.025 + 6e-3 - Math.hypot(px - bx * f, py - by * f)) / 0.012)));
+      const px2 = Math.abs(o[0] * N[0] + o[1] * N[1] + o[2] * N[2]), py = o[0] * T[0] + o[1] * T[1] + o[2] * T[2];
+      const bx = hw, by = -dep, f = Math.min(1, Math.max(0, (px2 * bx + py * by) / (bx * bx + by * by)));
+      best = Math.max(best, Math.min(1, Math.max(0, (0.025 + 6e-3 - Math.hypot(px2 - bx * f, py - by * f)) / 0.012)));
     }
     return best;
   };
@@ -15540,7 +15540,7 @@ var PIECES = (() => {
     return Math.min(1, Math.max(0, (w - Math.hypot(dm, e)) / 6e-3 + 0.5));
   };
   var PER_TURN = 345 / 110;
-  var turnOf = (px, size = 110, perTurn = PER_TURN) => 2 * Math.PI * px / (perTurn * size);
+  var turnOf = (px2, size = 110, perTurn = PER_TURN) => 2 * Math.PI * px2 / (perTurn * size);
   var rolled = (from, dx, dy, size = 110, perTurn = PER_TURN) => {
     const d = Math.hypot(dx, dy);
     return d ? mmul(rotAxis([dy / d, dx / d, 0], turnOf(d, size, perTurn)), from) : from;
@@ -15569,9 +15569,9 @@ var PIECES = (() => {
       bufs.set(c, img);
     }
     const d = img.data, inv = transpose(m), L = [-0.45, 0.6, 0.66].map((x) => x / Math.hypot(0.45, 0.6, 0.66));
-    const [lr0, lg0, lb0] = rgb(look.leather), [qr, qg, qb] = rgb(look.seamLine ?? "#000000"), fl = flipRange(look.stitchFlip), [sr, sg, sb] = rgb(look.seam ?? (look.stitch === "chevron" ? "#e63a30" : "#c8202a")), R = n / 2, S = look.curve ?? SEAM, N = S.length;
-    for (let py = 0; py < n; py += 1) for (let px = 0; px < n; px += 1) {
-      const x = (px + 0.5 - R) / R, y = -(py + 0.5 - R) / R, r2 = x * x + y * y;
+    const [lr0, lg0, lb0] = rgb(look.leather), [qr, qg, qb2] = rgb(look.seamLine ?? "#000000"), fl = flipRange(look.stitchFlip), [sr, sg, sb] = rgb(look.seam ?? (look.stitch === "chevron" ? "#e63a30" : "#c8202a")), R = n / 2, S = look.curve ?? SEAM, N = S.length;
+    for (let py = 0; py < n; py += 1) for (let px2 = 0; px2 < n; px2 += 1) {
+      const x = (px2 + 0.5 - R) / R, y = -(py + 0.5 - R) / R, r2 = x * x + y * y;
       if (r2 >= 1) continue;
       const z = Math.sqrt(1 - r2), o0 = (inv[0] ?? 0) * x + (inv[1] ?? 0) * y + (inv[2] ?? 0) * z, o1 = (inv[3] ?? 0) * x + (inv[4] ?? 0) * y + (inv[5] ?? 0) * z, o2 = (inv[6] ?? 0) * x + (inv[7] ?? 0) * y + (inv[8] ?? 0) * z;
       let best = -2, at = 0;
@@ -15583,9 +15583,9 @@ var PIECES = (() => {
         }
       }
       const ang = Math.acos(Math.min(1, best));
-      const sl = look.stitch === "chevron" && look.seamLine && ang < 0.1 ? seamLineAt(S, at, [o0, o1, o2], look.seamLineWidth ?? 0.01, look.seamLineDash, look.stitchCount) : 0, lr = lr0 + (qr - lr0) * sl, lg = lg0 + (qg - lg0) * sl, lb = lb0 + (qb - lb0) * sl;
+      const sl = look.stitch === "chevron" && look.seamLine && ang < 0.1 ? seamLineAt(S, at, [o0, o1, o2], look.seamLineWidth ?? 0.01, look.seamLineDash, look.stitchCount) : 0, lr = lr0 + (qr - lr0) * sl, lg = lg0 + (qg - lg0) * sl, lb = lb0 + (qb2 - lb0) * sl;
       const stitch = look.stitch === "chevron" ? ang < 0.25 ? chevronAt(S, at, [o0, o1, o2], look.stitchCount, look.stitchWidth, fl) : 0 : ang < 0.012 ? 0.55 : ang < 0.1 && ang > 0.02 && at % 6 < 2 ? 1 : 0;
-      const lit = 0.62 + 0.5 * Math.max(0, x * L[0] + y * L[1] + z * L[2]), k = (py * n + px) * 4;
+      const lit = 0.62 + 0.5 * Math.max(0, x * L[0] + y * L[1] + z * L[2]), k = (py * n + px2) * 4;
       d[k] = Math.min(255, (lr + (sr - lr) * stitch) * lit);
       d[k + 1] = Math.min(255, (lg + (sg - lg) * stitch) * lit);
       d[k + 2] = Math.min(255, (lb + (sb - lb) * stitch) * lit);
@@ -15635,8 +15635,8 @@ var PIECES = (() => {
         g.fillText(String(i + 1), x, y + ch * 0.06);
         return;
       }
-      for (const [px, py] of PIPS[i + 1] ?? []) {
-        const cx = x + px * k * 0.25, cy = y + py * ch * 0.25, r = k * 0.085;
+      for (const [px2, py] of PIPS[i + 1] ?? []) {
+        const cx = x + px2 * k * 0.25, cy = y + py * ch * 0.25, r = k * 0.085;
         g.beginPath();
         g.arc(cx, cy, r, 0, 7);
         g.fill();
@@ -16008,6 +16008,86 @@ var PIECES = (() => {
       return 1 + (c + 1) * (k - 1) ** 3 + c * (k - 1) ** 2;
     }
   };
+  function pulse(t, a, b, peak = 0.25) {
+    if (t <= a || t >= b) return 0;
+    const k = (t - a) / (b - a);
+    return k < peak ? ease.out(k / peak) : 1 - ease.inQuad((k - peak) / (1 - peak));
+  }
+  function rng(seed) {
+    let a = seed >>> 0;
+    return () => {
+      a = a + 1831565813 >>> 0;
+      let t = a;
+      t = Math.imul(t ^ t >>> 15, t | 1);
+      t ^= t + Math.imul(t ^ t >>> 7, t | 61);
+      return ((t ^ t >>> 14) >>> 0) / 4294967296;
+    };
+  }
+  function noise(x, seed = 1) {
+    const h2 = (n) => {
+      const s = Math.sin(n * 127.1 + seed * 311.7) * 43758.5453;
+      return s - Math.floor(s);
+    };
+    const i = Math.floor(x);
+    const f = x - i;
+    const u = f * f * (3 - 2 * f);
+    return lerp(h2(i), h2(i + 1), u) * 2 - 1;
+  }
+  var drift = (v, k, g, age) => (k > 0 ? v * (1 - Math.exp(-k * age)) / k : v * age) + 0.5 * g * age * age;
+  var BUDGET = 70;
+  var capN = (n, max = BUDGET) => Math.min(n, max);
+  function sparkPoints(t, o, u = 1) {
+    const r = rng(o.seed);
+    const out = [];
+    const n = o.max === void 0 ? o.n : capN(o.n, o.max);
+    for (let i = 0; i < n; i += 1) {
+      const a = (o.angle ?? 0) + (r() - 0.5) * (o.spread ?? Math.PI * 2);
+      const sp = (o.speed ?? 0.8) * (0.35 + r() * 0.9) * u;
+      const life = (o.life ?? 400) * (0.5 + r() * 0.7);
+      const t0 = o.t0 + r() * (o.stagger ?? 0);
+      const w = (o.width ?? 2) * (0.6 + r() * 0.8) * u;
+      const g = r();
+      const age = t - t0;
+      if (age <= 0 || age >= life) continue;
+      const k = o.drag ?? 4e-3;
+      const grav = (o.gravity ?? 0) * u;
+      const p = (ag) => [
+        o.x + drift(Math.cos(a) * sp, k, 0, ag),
+        o.y + drift(Math.sin(a) * sp, k, grav, ag)
+      ];
+      const [x1, y1] = p(age);
+      const [x0, y0] = p(Math.max(0, age - (o.len ?? 28)));
+      out.push({ x0, y0, x1, y1, fade: 1 - age / life, w, g });
+    }
+    return out;
+  }
+  function sparks(ctx, t, o, u = 1) {
+    ctx.save();
+    ctx.globalCompositeOperation = "lighter";
+    ctx.lineCap = "round";
+    for (const { x0, y0, x1, y1, fade, w, g } of sparkPoints(t, o, u)) {
+      ctx.strokeStyle = o.color ?? `rgba(255,${String(180 + g * 60)},${String(90 + g * 60)},1)`;
+      ctx.globalAlpha = fade;
+      ctx.lineWidth = w * (0.5 + fade * 0.5);
+      ctx.beginPath();
+      ctx.moveTo(x0, y0);
+      ctx.lineTo(x1, y1);
+      ctx.stroke();
+    }
+    ctx.restore();
+  }
+  function glow(ctx, x, y, rad2, rgb2, alpha, mode = "lighter") {
+    if (alpha <= 1e-3 || rad2 <= 0) return;
+    ctx.save();
+    ctx.globalCompositeOperation = mode;
+    const g = ctx.createRadialGradient(x, y, 0, x, y, rad2);
+    g.addColorStop(0, `rgba(${rgb2},${String(alpha)})`);
+    g.addColorStop(0.35, `rgba(${rgb2},${String(alpha * 0.45)})`);
+    g.addColorStop(1, `rgba(${rgb2},0)`);
+    ctx.fillStyle = g;
+    ctx.fillRect(x - rad2, y - rad2, rad2 * 2, rad2 * 2);
+    ctx.restore();
+  }
   var canDraw = () => typeof window !== "undefined" && typeof window.requestAnimationFrame === "function" && typeof CanvasRenderingContext2D !== "undefined";
 
   // components/effect-library/canvas.ts
@@ -16208,8 +16288,8 @@ var PIECES = (() => {
     const [ox, oy] = anchored ? [tx, ty] : [x, y];
     const width = anchored ? t[2] : f[2];
     const n = (value) => g?.round ? Math.round(value * g.round) / g.round : value;
-    const key = (px, py, scale, offset) => ({
-      transform: `${translate(n(px - ox), n(py - oy))}${g?.plainEnds && offset === void 0 ? "" : ` scale(${String(n(scale))})`}${g?.baseTransform ? ` ${g.baseTransform}` : ""}`,
+    const key = (px2, py, scale, offset) => ({
+      transform: `${translate(n(px2 - ox), n(py - oy))}${g?.plainEnds && offset === void 0 ? "" : ` scale(${String(n(scale))})`}${g?.baseTransform ? ` ${g.baseTransform}` : ""}`,
       ...offset !== void 0 && { offset },
       ...g?.opaque && { opacity: 1 }
     });
@@ -16385,6 +16465,995 @@ var PIECES = (() => {
     ctx.restore();
   };
 
+  // components/effect-library/beam-dom.ts
+  var px = (n) => `${String(n)}px`;
+  var centre3 = ([x, y, w, h2]) => [x + w / 2, y + h2 / 2];
+  var rand = (i, k) => {
+    const j = Math.sin(i * 12.9898 + k * 78.233) * 43758.5453;
+    return j - Math.floor(j);
+  };
+  function scene({ call, layer }) {
+    const nodes = [];
+    const animations = [];
+    const scale = call.dur / Math.max(1, Number(call.step.dur));
+    return {
+      stand(box, style, content = document.createElement("div")) {
+        Object.assign(content.style, { position: "absolute", margin: "0", pointerEvents: "none", boxSizing: "border-box" }, style);
+        place2(content, box);
+        layer.el.append(content);
+        nodes.push(content);
+        return content;
+      },
+      play(el, frames2, duration, delay = 0, easing = "linear", fill = "both") {
+        animations.push(el.animate(frames2, { duration: duration * scale, delay: delay * scale, easing, fill }));
+      },
+      end() {
+        for (const animation of animations) animation.cancel();
+        for (const node of nodes) node.remove();
+      }
+    };
+  }
+
+  // components/effect-library/beams.ts
+  var rotatingBeam = (fx) => {
+    const { call } = fx;
+    const { colour = "255 255 255", turns = 2, beamDeg = 46, fadeMs = 160 } = call.step;
+    const stage = scene(fx);
+    const ms = call.step.dur;
+    const [x, y] = centre3(call.from);
+    const [, , w, h2] = call.from;
+    const size = Math.max(w, h2) * 3.6;
+    const mask = "radial-gradient(circle closest-side, transparent 0 10%, #000 26%, #000 46%, rgb(0 0 0 / .45) 72%, transparent 100%)";
+    const wrap = stage.stand([x - size / 2, y - size / 2, size, size], { zIndex: "4", mixBlendMode: "screen", maskImage: mask, opacity: "0" });
+    wrap.style.setProperty("-webkit-mask-image", mask);
+    const half = beamDeg / 2;
+    const wedge = document.createElement("div");
+    const rgb2 = (a) => `rgb(${colour} / ${String(a)})`;
+    Object.assign(wedge.style, {
+      position: "absolute",
+      inset: "0",
+      background: `conic-gradient(from ${String(-half)}deg, ${rgb2(0.9)} 0deg, ${rgb2(0.55)} ${String(half * 0.6)}deg, ${rgb2(0.95)} ${String(half)}deg, ${rgb2(0.55)} ${String(half * 1.4)}deg, ${rgb2(0)} ${String(beamDeg)}deg, ${rgb2(0)} 352deg, ${rgb2(0.9)} 360deg)`,
+      filter: `blur(${px(Math.max(2, h2 / 70))})`
+    });
+    wrap.append(wedge);
+    const glow2 = stage.stand([x - w * 0.75, y - h2 * 0.675, w * 1.5, h2 * 1.35], {
+      zIndex: "2",
+      borderRadius: "50%",
+      background: `radial-gradient(closest-side, ${rgb2(0.55)}, ${rgb2(0)})`,
+      opacity: "0"
+    });
+    const fade = Math.min(0.5, fadeMs / Math.max(1, ms));
+    const pulses = Math.max(2, Math.round(turns * 2));
+    stage.play(wrap, [{ opacity: 0 }, { opacity: 1, offset: fade }, { opacity: 1, offset: 1 - fade }, { opacity: 0 }], ms);
+    stage.play(wedge, [{ transform: "rotate(0deg)" }, { transform: `rotate(${String(360 * turns)}deg)` }], ms);
+    stage.play(glow2, Array.from({ length: pulses + 1 }, (_, k) => ({ offset: k / pulses, opacity: k % 2 ? 0.9 : 0.35 })), ms);
+    return stage.end;
+  };
+  var columnBeam = (fx) => {
+    const { call, el, animate } = fx;
+    const {
+      colour = "255 255 255",
+      way = "out",
+      tuck = 0,
+      column: column2 = call.from,
+      glitter = 56,
+      speck = 1,
+      core = false,
+      columnLight = `radial-gradient(ellipse 46% 50% at 50% 55%, rgb(${colour} / .9), rgb(${colour} / .45) 45%, rgb(${colour} / .12) 70%, transparent 85%)`,
+      coreLight = `radial-gradient(ellipse 50% 50% at 50% 55%, rgb(255 255 255 / .95), rgb(${colour} / .6) 40%, transparent 80%)`,
+      speckColour = "white",
+      speckGlow = `rgb(${colour} / .85)`
+    } = call.step;
+    const stage = scene(fx);
+    const [x, y, w, h2] = column2;
+    const [ax, ay, aw, ah] = call.from;
+    const shown = Math.max(0, ah - tuck);
+    const ms = call.step.dur;
+    const out = way === "out";
+    const frames2 = out ? [
+      { offset: 0, transform: "scaleX(0.2)", opacity: 0, easing: "ease-out" },
+      { offset: 0.2, transform: "scaleX(1)", opacity: 1 },
+      { offset: 0.6, transform: "scaleX(.85)", opacity: 0.9, easing: "ease-in" },
+      { offset: 1, transform: "scaleX(.04)", opacity: 0 }
+    ] : [
+      { offset: 0, transform: "scaleX(.04)", opacity: 0, easing: "ease-out" },
+      { offset: 0.25, transform: "scaleX(1)", opacity: 1 },
+      { offset: 0.72, transform: "scaleX(.9)", opacity: 0.85, easing: "ease-in" },
+      { offset: 1, transform: "scaleX(.2)", opacity: 0 }
+    ];
+    const col = stage.stand([x - w * 0.1, y - h2 * 0.45, w * 1.2, h2 * 1.7], { background: columnLight, mixBlendMode: "screen", zIndex: "1" });
+    stage.play(col, frames2, ms);
+    if (core) stage.play(stage.stand([x + w * 0.3, y - h2 * 0.3, w * 0.4, h2 * 1.45], { background: coreLight, mixBlendMode: "screen", zIndex: "2" }), frames2, ms);
+    for (let i = 0; i < glitter; i++) {
+      const size = Math.max(2, aw / 90 * (0.7 + rand(i, 6) * 0.6) * speck);
+      const sx = ax + rand(i, 1) * aw;
+      const sy = ay + rand(i, 2) * shown;
+      const dot2 = stage.stand([sx - size / 2, sy - size / 2, size, size], {
+        borderRadius: "50%",
+        background: speckColour,
+        boxShadow: `0 0 ${px(size * 2)} ${px(size * 0.6)} ${speckGlow}`,
+        zIndex: "3"
+      });
+      const dx = (ax + aw / 2 - sx) * 0.6;
+      const dy2 = -(0.35 + rand(i, 3) * 0.65) * 0.9 * ah;
+      const twinkle = [0, 1, 0.35, 1, 0.5, 0].map((opacity, k) => {
+        const t = k / 5;
+        const q2 = (out ? t : 1 - t) ** 2;
+        return { offset: t, opacity, transform: `translate(${px(dx * q2)}, ${px(dy2 * q2)})` };
+      });
+      const span = ms * (0.5 + rand(i, 5) * 0.18);
+      stage.play(dot2, twinkle, span, rand(i, 4) * (ms - span));
+    }
+    const dy = `translateY(${px(-ah * 0.06)})`;
+    const clipPath = tuck > 0 ? `inset(0 0 ${px(tuck)} 0)` : el.style.clipPath;
+    animate((out ? [
+      { offset: 0, opacity: 1, transform: "none", filter: "brightness(1)", easing: "ease-in" },
+      { offset: 0.25, opacity: 1, transform: "none", filter: "brightness(1.7)" },
+      { offset: 0.7, opacity: 0, transform: dy, filter: "brightness(2.4)" },
+      { offset: 1, opacity: 0, transform: dy, filter: "brightness(2.4)" }
+    ] : [
+      { offset: 0, opacity: 0, filter: "brightness(2.4)" },
+      { offset: 0.35, opacity: 0, filter: "brightness(2.4)", easing: "ease-out" },
+      { offset: 0.8, opacity: 1, filter: "brightness(1.5)", easing: "ease-in-out" },
+      { offset: 1, opacity: 1, filter: "brightness(1)" }
+    ]).map((frame) => ({ ...frame, clipPath, zIndex: "2" })), { opacity: out ? "0" : "1", clipPath }, { easing: "linear" });
+    return stage.end;
+  };
+
+  // components/effect-library/beam-canvas.ts
+  var TAU = Math.PI * 2;
+  var WHITE = ["255,255,255", "255,255,255", "255,255,255"];
+  function streaks(ctx, c, k, { inward = false, seed = 71, count = 110, alpha = 0.9, unit: u = 1, palette = WHITE }) {
+    if (k <= 0 || k >= 1) return;
+    const R = rng(seed);
+    ctx.save();
+    ctx.globalCompositeOperation = "lighter";
+    ctx.lineCap = "round";
+    for (let i = 0; i < count; i += 1) {
+      const a = R() * TAU;
+      const r0 = (20 + R() * 160) * u;
+      const sp = 0.6 + R() * 0.8;
+      const lag = R() * 0.3;
+      const kk = clamp((k - lag) / (1 - lag));
+      const width = 1 + R() * 2.2;
+      const t1 = R();
+      const t2 = R();
+      if (kk <= 0 || kk >= 1) continue;
+      const e = inward ? 1 - ease.out(kk) : ease.in(kk) * 0.5 + kk * 0.5;
+      const head = r0 + 1150 * u * sp * e;
+      const tail = inward ? head + (260 * sp * (1 - kk) + 40) * u : head * (0.55 + 0.25 * (1 - kk));
+      const al = alpha * Math.sin(Math.PI * kk);
+      const tint = t1 > 0.7 ? palette[0] : t2 > 0.5 ? palette[1] : palette[2];
+      ctx.strokeStyle = `rgba(${tint},${String(al)})`;
+      ctx.lineWidth = width * Math.max(0.7, u);
+      ctx.beginPath();
+      ctx.moveTo(c[0] + Math.cos(a) * tail, c[1] + Math.sin(a) * tail * 0.8);
+      ctx.lineTo(c[0] + Math.cos(a) * head, c[1] + Math.sin(a) * head * 0.8);
+      ctx.stroke();
+    }
+    ctx.restore();
+  }
+  var qb = (a, c, b, k) => [
+    (1 - k) ** 2 * a[0] + 2 * (1 - k) * k * c[0] + k ** 2 * b[0],
+    (1 - k) ** 2 * a[1] + 2 * (1 - k) * k * c[1] + k ** 2 * b[1]
+  ];
+  var radialStreaks = (ctx, t, { call }) => {
+    const settings = call.step;
+    const { centre: c = centre3(call.from), pulse: flight, unit: unit2 = 1 } = settings;
+    if (!flight) {
+      streaks(ctx, c, seg(t, 0, call.step.dur), settings);
+      return;
+    }
+    const { lift, flightMs, colour = WHITE[0], core = WHITE[0] } = flight;
+    const end = Math.min(t, flightMs);
+    const alpha = 1 - seg(t, flightMs, flightMs + 200);
+    if (alpha <= 0) return;
+    const to = centre3(call.to ?? call.from);
+    ctx.save();
+    ctx.globalCompositeOperation = "lighter";
+    ctx.lineCap = "round";
+    ctx.lineJoin = "round";
+    ctx.beginPath();
+    for (let i = 0; i < 12; i++) {
+      const k = seg(Math.max(0, end - 180 + i * 180 / 11), 0, flightMs);
+      const e = ease.inOut(k);
+      const p = [lerp(c[0], to[0], e), lerp(c[1] - lift, to[1], e) - Math.sin(e * Math.PI) * lift];
+      if (i === 0) ctx.moveTo(...p);
+      else ctx.lineTo(...p);
+    }
+    ctx.strokeStyle = `rgba(${colour},${String(alpha * 0.32)})`;
+    ctx.lineWidth = 12 * unit2;
+    ctx.stroke();
+    ctx.strokeStyle = `rgba(${core},${String(alpha * 0.9)})`;
+    ctx.lineWidth *= 0.19;
+    ctx.stroke();
+    ctx.restore();
+  };
+  var images = /* @__PURE__ */ new WeakMap();
+  function imageFor(call, src) {
+    const existing = images.get(call);
+    if (existing) return existing;
+    const image = new Image();
+    image.src = src;
+    images.set(call, image);
+    return image;
+  }
+  var curvedBeam = (ctx, t, { call }) => {
+    const o = call.step["curve"];
+    if (!o) return;
+    const {
+      colour = WHITE[0],
+      moteColour = WHITE[0],
+      sparkColour = "white",
+      unit: unit2 = 1,
+      image,
+      size = [40, 34],
+      tuck = true
+    } = o;
+    const src = centre3(call.from);
+    const dst = centre3(call.to ?? call.from);
+    const c = o.control;
+    ctx.save();
+    ctx.translate(src[0], src[1]);
+    ctx.scale(unit2, unit2);
+    ctx.translate(-src[0], -src[1]);
+    const a = src;
+    const local = ([x, y]) => [a[0] + (x - a[0]) / unit2, a[1] + (y - a[1]) / unit2];
+    const b = local(dst);
+    const control = local(c);
+    const carry = seg(t, 260, 860);
+    const lock = ease.out(seg(t, 150, 320));
+    const ret = ease.in(seg(t, 860, 1040));
+    const uTok = ease.inOut(carry);
+    const tok = qb(a, control, b, uTok);
+    glow(ctx, ...a, 46, colour, 0.6 * pulse(t, 0, 420, 0.4));
+    if (lock > 0 && ret < 1) {
+      const start = lerp(lerp(1, uTok, lock), 1, ret);
+      const pts = Array.from({ length: 41 }, (_, i) => qb(a, control, b, lerp(start, 1, i / 40)));
+      ctx.save();
+      ctx.globalCompositeOperation = "lighter";
+      ctx.lineCap = "round";
+      for (const [w, alpha] of [[30, 0.12], [14, 0.25], [4, 0.6]]) {
+        ctx.strokeStyle = `rgba(${colour},${String(alpha * (1 - ret))})`;
+        ctx.lineWidth = w;
+        ctx.beginPath();
+        pts.forEach(([x, y], i) => i ? ctx.lineTo(x, y) : ctx.moveTo(x, y));
+        ctx.stroke();
+      }
+      for (let m = 0; m < 14; m++) {
+        const ph = (t / 420 + m / 14) % 1;
+        const [x, y] = pts[Math.floor((1 - ph) * 40)];
+        glow(ctx, x + noise(m, t / 200) * 5, y, 7, moteColour, 0.9 * (1 - ret) * Math.sin(Math.PI * ph));
+      }
+      ctx.strokeStyle = `rgba(${colour},${String(0.8 * lock * (1 - ret))})`;
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.ellipse(...b, 34 * lock, 10 * lock, 0, 0, TAU);
+      ctx.stroke();
+      ctx.restore();
+    }
+    const scan = seg(t, 0, 220);
+    const inh = ease.in(seg(t, 820, 980));
+    const img = image && imageFor(call, image);
+    if (scan > 0 && img && img.naturalWidth && inh < 1) {
+      const d = lerp(...size, uTok) * (1 - (tuck ? inh : 0));
+      ctx.save();
+      ctx.translate(...tok);
+      ctx.scale(Math.abs(Math.cos(carry * Math.PI * 4)) * 0.85 + 0.15, 1);
+      glow(ctx, 0, 0, d, colour, 0.5);
+      for (let i = 0; i < 10; i++) {
+        const k = clamp(scan * 1.6 - i / 10);
+        if (k <= 0) continue;
+        ctx.globalAlpha = Math.min(1, k * 2);
+        ctx.drawImage(img, 0, img.height * i / 10, img.width, img.height / 10, -d / 2, -d / 2 + d * i / 10, d, d / 10 + 0.5);
+      }
+      ctx.restore();
+      if (scan < 1) {
+        ctx.save();
+        ctx.globalCompositeOperation = "lighter";
+        ctx.fillStyle = `rgba(${moteColour},.9)`;
+        ctx.fillRect(tok[0] - 24, tok[1] - 20 + 40 * scan, 48, 2);
+        ctx.restore();
+      }
+    }
+    glow(ctx, ...b, 70, colour, 0.9 * pulse(t, 940, 1240, 0.2));
+    sparks(ctx, t, { seed: 5, n: 14, x: b[0], y: b[1], t0: 960, life: 380, speed: 0.35, angle: -Math.PI / 2, spread: Math.PI * 1.2, color: sparkColour, width: 1.6 });
+    ctx.restore();
+  };
+
+  // components/effect-library/collapse.ts
+  var spread = (n) => Array.from({ length: n }, (_, i) => {
+    const r = rand(i, 0);
+    return { angle: i / n * 360 + (r - 0.5) * (300 / n), reach: 0.7 + r * 0.3, delay: r * 0.12 };
+  });
+  function streaks2(stage, cx, cy, size, way, duration, start, n, colour, reachScale, length) {
+    spread(n).forEach(({ angle, reach, delay }) => {
+      const len = size * length;
+      const thick = Math.max(1, size * 0.03);
+      const streak = stage.stand([cx, cy - thick / 2, len, thick], {
+        zIndex: "1",
+        transformOrigin: "0 50%",
+        borderRadius: px(thick),
+        background: `linear-gradient(to ${way === "in" ? "right" : "left"}, ${colour}, transparent)`
+      });
+      const far2 = size * reachScale * reach;
+      const at = (d, s) => `rotate(${String(angle)}deg) translateX(${String(d)}px) scaleX(${String(s)})`;
+      const frames2 = [
+        { offset: 0, transform: at(far2, 0.02), opacity: 0, easing: "ease-in" },
+        { offset: 0.3, transform: at(far2 * 0.7, 0.55), opacity: 1, easing: "cubic-bezier(0.5, 0, 0.9, 0.5)" },
+        { offset: 0.8, transform: at(size * 0.05, 0.25), opacity: 1, easing: "linear" },
+        { offset: 1, transform: at(0, 0), opacity: 0 }
+      ];
+      if (way === "out")
+        frames2.reverse().forEach((f, i, all) => {
+          f.offset = 1 - (f.offset ?? 0);
+          f.easing = all[i + 1]?.easing ?? "linear";
+        });
+      stage.play(streak, frames2, duration, start + delay * duration);
+    });
+  }
+  function point(stage, cx, cy, size, way, duration, start, background) {
+    const d = size * 0.9;
+    const dot2 = stage.stand([cx - d / 2, cy - d / 2, d, d], { zIndex: "3", borderRadius: "50%", background });
+    const frames2 = [
+      { offset: 0, transform: "scale(0)", opacity: 0 },
+      { offset: 0.62, transform: "scale(0.2)", opacity: 0.6, easing: "ease-out" },
+      { offset: 0.86, transform: "scale(1)", opacity: 1, easing: "ease-in" },
+      { offset: 1, transform: "scale(0.05)", opacity: 0 }
+    ];
+    if (way === "out")
+      frames2.reverse().forEach((f) => {
+        f.offset = 1 - (f.offset ?? 0);
+      });
+    stage.play(dot2, frames2, duration, start);
+  }
+  var collapse = [
+    { offset: 0, transform: "scale(1)", filter: "brightness(1)", easing: "ease-out" },
+    {
+      offset: 0.22,
+      transform: "scale(1.06)",
+      filter: "brightness(1.4)",
+      easing: "cubic-bezier(0.6, 0, 0.9, 0.4)"
+    },
+    { offset: 0.84, transform: "scale(0.04)", filter: "brightness(3)", opacity: 1, easing: "linear" },
+    { offset: 1, transform: "scale(0)", filter: "brightness(3)", opacity: 0 }
+  ];
+  var expand = [
+    { offset: 0, transform: "scale(0)", filter: "brightness(3)", opacity: 0 },
+    {
+      offset: 0.16,
+      transform: "scale(0.04)",
+      filter: "brightness(3)",
+      opacity: 1,
+      easing: "cubic-bezier(0.1, 0.6, 0.4, 1)"
+    },
+    { offset: 0.78, transform: "scale(1.06)", filter: "brightness(1.4)", easing: "ease-in-out" },
+    { offset: 1, transform: "scale(1)", filter: "brightness(1)" }
+  ];
+  var collapseJump = ({ call, el, layer, run, animate }) => {
+    const {
+      colour = "rgb(255 255 255 / .95)",
+      n = 16,
+      reach = 2.4,
+      length = 1.5,
+      pointLight = "radial-gradient(circle, white 0 12%, rgb(255 255 255 / .75) 26%, transparent 62%)",
+      outMs = 640,
+      gapMs = 140,
+      inMs = 640
+    } = call.step;
+    const stage = scene({ call, el, layer, run, animate });
+    const to = call.to ?? call.from;
+    const inAt = outMs + gapMs;
+    const dx = to[0] - call.from[0];
+    const dy = to[1] - call.from[1];
+    stage.play(el, collapse, outMs);
+    const incoming = expand.map(({ transform, ...frame }) => ({
+      ...frame,
+      transform: `translate(${px(dx)}, ${px(dy)}) ${transform}`
+    }));
+    stage.play(el, incoming, inMs, inAt, "linear", "forwards");
+    for (const [box, way, ms, start] of [[call.from, "in", outMs, 0], [to, "out", inMs, inAt]]) {
+      const [x, y] = centre3(box);
+      const size = Math.max(box[2], box[3]);
+      streaks2(stage, x, y, size, way, ms, start, n, colour, reach, length);
+      point(stage, x, y, size, way, ms, start, pointLight);
+    }
+    return () => {
+      stage.end();
+      place2(el, to);
+      el.style.opacity = "1";
+    };
+  };
+
+  // components/effect-library/transfer.ts
+  var COL_UP = [
+    { offset: 0, col: "scaleX(0) scaleY(0.2)", colOp: 0, tok: "translateY(0) scale(1, 1)", tokOp: 1 },
+    { offset: 0.14, col: "scaleX(0.55) scaleY(0.6)", colOp: 0.7, tok: "translateY(0) scale(1.12, 0.9)", tokOp: 1 },
+    { offset: 0.28, col: "scaleX(0.9) scaleY(0.9)", colOp: 1, tok: "translateY(-4%) scale(0.86, 1.18)", tokOp: 1 },
+    { offset: 0.42, col: "scaleX(1) scaleY(1)", colOp: 1, tok: "translateY(-10%) scale(0.98, 1.06)", tokOp: 1 },
+    { offset: 0.6, col: "scaleX(0.75) scaleY(1.04)", colOp: 0.9, tok: "translateY(-22%) scale(0.55, 1.45)", tokOp: 0.9 },
+    { offset: 0.8, col: "scaleX(0.45) scaleY(1.08)", colOp: 0.55, tok: "translateY(-40%) scale(0.28, 1.8)", tokOp: 0.5 },
+    { offset: 1, col: "scaleX(0.2) scaleY(1.1)", colOp: 0, tok: "translateY(-60%) scale(0.1, 2.1)", tokOp: 0 }
+  ];
+  var COL_DOWN = [
+    { offset: 0, col: "scaleX(0.2) scaleY(1)", colOp: 0, tok: "translateY(-55%) scale(0.1, 2.1)", tokOp: 0 },
+    { offset: 0.2, col: "scaleX(0.7) scaleY(1)", colOp: 0.8, tok: "translateY(-35%) scale(0.3, 1.75)", tokOp: 0.6 },
+    { offset: 0.38, col: "scaleX(1) scaleY(1)", colOp: 1, tok: "translateY(-12%) scale(0.7, 1.35)", tokOp: 1 },
+    { offset: 0.56, col: "scaleX(0.8) scaleY(0.85)", colOp: 0.8, tok: "translateY(0) scale(1.3, 0.82)", tokOp: 1 },
+    { offset: 0.74, col: "scaleX(0.4) scaleY(0.6)", colOp: 0.45, tok: "translateY(0) scale(0.9, 1.1)", tokOp: 1 },
+    { offset: 0.88, col: "scaleX(0.15) scaleY(0.48)", colOp: 0.15, tok: "translateY(0) scale(1.05, 0.96)", tokOp: 1 },
+    { offset: 1, col: "scaleX(0) scaleY(0.4)", colOp: 0, tok: "translateY(0) scale(1, 1)", tokOp: 1 }
+  ];
+  function column(stage, token, box, start, out, light, glow2, settings = {}) {
+    const [x, y] = centre3(box);
+    const [, , bw, bh] = box;
+    const {
+      width = out ? 1.44 : 1.45,
+      height = out ? 4.23 : 4.3,
+      bottom: bottomShare = out ? 0.65 : 0.72,
+      frames: frames2 = out ? COL_UP : COL_DOWN,
+      sparks: sparks2 = out ? 16 : 8
+    } = settings;
+    const w = bw * width;
+    const h2 = bh * height;
+    const bottom = y + bh * bottomShare;
+    const ms = out ? 420 : 320;
+    const ease2 = out ? "ease-out" : "ease-in-out";
+    if (light !== false) {
+      const mask = "linear-gradient(to right, transparent, #000 35%, #000 65%, transparent)";
+      const c = stage.stand([x - w / 2, bottom - h2, w, h2], {
+        zIndex: "3",
+        transformOrigin: "50% 100%",
+        borderRadius: "40% 40% 0 0 / 8% 8% 0 0",
+        background: light,
+        mask,
+        filter: "blur(1.5px) brightness(1.4)",
+        mixBlendMode: "screen"
+      });
+      c.style.setProperty("-webkit-mask-image", mask);
+      stage.play(c, frames2.map((f) => ({ offset: f.offset, transform: f.col, opacity: f.colOp })), ms, start, ease2);
+      let seed = 1;
+      const rnd2 = () => {
+        const r = Math.sin(++seed * 91.7) * 1e4;
+        return r - Math.floor(r);
+      };
+      for (let k = 0; k < sparks2; k++) {
+        const size = Math.max(3, w * 0.07);
+        const dot2 = stage.stand([x + (rnd2() - 0.5) * w * 0.8, bottom - size - rnd2() * h2 * 0.3, size, size], {
+          borderRadius: "50%",
+          background: "white",
+          boxShadow: `0 0 ${px(Math.max(6, size * 1.6))} ${glow2}`,
+          zIndex: "4"
+        });
+        stage.play(dot2, [
+          { transform: "translateY(0) scale(1)", opacity: 0 },
+          { opacity: 1, offset: 0.2 },
+          { transform: `translateY(${px(-h2 * (0.4 + rnd2() * 0.6))}) scale(.3)`, opacity: 0 }
+        ], ms * (0.7 + rnd2() * 0.4), start + rnd2() * ms * 0.25, "ease-out");
+      }
+    }
+    stage.play(token, frames2.map((f) => ({ offset: f.offset, transform: f.tok, opacity: f.tokOp })), ms, start, ease2, out ? "forwards" : "both");
+  }
+  function crossingLight(stage, a, b, size, start, colour, light, dots = 5) {
+    const lift = Math.abs(b[0] - a[0]) * 0.12 + size * 2;
+    const path = Array.from({ length: 19 }, (_, i) => {
+      const t = i / 18;
+      const e = t < 0.5 ? 2 * t * t : 1 - (-2 * t + 2) ** 2 / 2;
+      const x = a[0] + (b[0] - a[0]) * e - size / 2;
+      const y = a[1] + (b[1] - a[1]) * e - Math.sin(Math.PI * e) * lift - size / 2;
+      return { offset: t, transform: `translate(${px(x)}, ${px(y)})`, opacity: t < 0.1 ? t * 10 : t > 0.9 ? (1 - t) * 10 : 1 };
+    });
+    for (let k = 0; k < dots; k++) {
+      const d = Math.max(0.1, 1 - k * 0.15) * size;
+      const dot2 = stage.stand([0, 0, d, d], {
+        borderRadius: "50%",
+        background: light,
+        opacity: "0",
+        zIndex: "6",
+        boxShadow: `0 0 ${px(size)} ${px(size * 0.4)} rgb(${colour} / ${String(Math.max(0.1, 0.8 - k * 0.14))})`
+      });
+      stage.play(dot2, path.map((frame) => ({ ...frame, opacity: frame.opacity * Math.max(0.1, 1 - k * 0.18) })), 420, start + k * 28);
+    }
+  }
+  function tokenOf(stage, el, box, image, glow2, blur, extra = "") {
+    const content = image === void 0 ? el.cloneNode(true) : document.createElement("img");
+    if (content instanceof HTMLImageElement && image !== void 0) {
+      content.src = image;
+      content.alt = "";
+    }
+    return stage.stand(box, {
+      filter: `${extra}drop-shadow(0 0 ${px(blur * box[2])} ${glow2})`,
+      objectFit: "contain",
+      opacity: "0",
+      transformOrigin: "50% 100%",
+      zIndex: "4"
+    }, content);
+  }
+  function zip(stage, make, from, to, start, glow2, index, settings) {
+    const { zipGhosts = 3, zipSparks = 8, zipPopMs = 130 } = settings;
+    const [sx, sy] = centre3(from);
+    const [x, y] = centre3(to);
+    const d = to[2];
+    const box = [sx - d / 2, sy - d / 2, d, to[3]];
+    const scale = from[2] / d;
+    const at = (k, s) => `translate(${px((x - sx) * k)}, ${px((y - sy) * k)}) scale(${String(s)})`;
+    const frame = (opacity) => [
+      { transform: at(0, scale), opacity: 0 },
+      { transform: at(0.06, scale * 1.2), opacity, offset: 0.12 },
+      { transform: at(1, 1), opacity }
+    ];
+    for (let k = zipGhosts; k >= 1; k--) {
+      const opacity = [0.45, 0.28, 0.14][k - 1] ?? 0.14;
+      const ghost = make(box, 0.16);
+      ghost.style.transformOrigin = "50% 50%";
+      stage.play(ghost, frame(opacity), 200, start + k * 22, "cubic-bezier(.45,.05,.55,1)", "backwards");
+    }
+    const token = make(box, 0.16);
+    token.style.transformOrigin = "50% 50%";
+    stage.play(token, frame(1), 200, start, "cubic-bezier(.45,.05,.55,1)");
+    stage.play(token, [
+      { transform: at(1, 1), opacity: 1, filter: `brightness(1) drop-shadow(0 0 ${px(d * 0.16)} ${glow2})` },
+      { transform: at(1, 1.7), opacity: 0, filter: `brightness(2.2) drop-shadow(0 0 ${px(d * 0.4)} ${glow2})` }
+    ], zipPopMs, start + 200, "ease-out", "forwards");
+    for (let k = 0; k < zipSparks; k++) {
+      const angle = k * Math.PI * 2 / zipSparks + index;
+      const size = d * 0.13;
+      const dot2 = stage.stand([x - size / 2, y - size / 2, size, size], {
+        borderRadius: "50%",
+        background: glow2,
+        boxShadow: `0 0 ${px(size)} ${glow2}`,
+        opacity: "0",
+        zIndex: "5"
+      });
+      stage.play(dot2, [
+        { transform: "translate(0,0) scale(1)", opacity: 1 },
+        { transform: `translate(${px(Math.cos(angle) * d * 0.9)}, ${px(Math.sin(angle) * d * 0.9)}) scale(.2)`, opacity: 0 }
+      ], 250, start + 200, "ease-out", "forwards");
+    }
+  }
+  function portalIcon(stage, make, from, to, o, ms, lift, start, image, glow2) {
+    const { outward = false, startSize, endSize, alpha = 0.5, collapse: collapse2, elapsed = 0, travelMs = ms, travelAt = 0, growth, vortex } = o;
+    const [sx, sy] = centre3(from);
+    const [dx, dy] = centre3(to);
+    const token = make([sx - startSize / 2, sy - startSize / 2, startSize, startSize], 0);
+    token.style.transformOrigin = "50% 50%";
+    token.style.filter = `drop-shadow(0 0 16px ${glow2}) drop-shadow(0 0 3px white)`;
+    const [spinRate, spinAccel] = o.spin ?? (outward ? [-1.25, 35e-5] : [0.25, 42e-5]);
+    const spin = (t) => {
+      const u = t + elapsed;
+      return spinRate * u + spinAccel * u * u;
+    };
+    const collapseAt = (t) => collapse2 ? 1 - ease.in(seg(t, ...collapse2)) : 1;
+    const growthAt = (t) => growth ? ease.out(seg(t, ...growth)) : 1;
+    const frames2 = (frame) => {
+      const n = Math.max(1, Math.ceil(ms / 16));
+      return Array.from({ length: n + 1 }, (_, i) => ({ ...frame(i / n * ms), offset: i / n }));
+    };
+    stage.play(token, frames2((t) => {
+      const k = seg(t, travelAt, travelAt + travelMs);
+      const e = ease.inOut(k);
+      const q2 = outward ? ease.out(k) * 0.5 + e * 0.5 : ease.in(k) * 0.4 + e * 0.6;
+      const grow = growthAt(t);
+      const d = outward ? lerp(startSize * grow, endSize, q2) : lerp(startSize, endSize, q2) * collapseAt(t);
+      return {
+        opacity: outward ? k < 1 ? lerp(alpha * grow, 0.95, e) : 0 : lerp(0.95, alpha, e),
+        transform: `translate(${px((dx - sx) * e)}, ${px((dy - sy) * e - lift * Math.sin(Math.PI * e))}) scale(${String(d / startSize)}) rotate(${String(spin(t))}deg)`
+      };
+    }), ms, start, "linear", "forwards");
+    if (!vortex) return;
+    const [x, y] = outward ? [sx, sy] : [dx, dy];
+    const {
+      size,
+      open,
+      background = "radial-gradient(circle,rgb(255 255 255 / .34),rgb(255 255 255 / .1) 42%,transparent 66%)",
+      stroke = "white",
+      strokeWidth = 2.2,
+      alpha: vortexAlpha = 0.42,
+      armCount = 4,
+      armSegments = 50,
+      armTurns = 1.6,
+      armRadius = 48,
+      armExponent = 1.6,
+      armSpin = 0.7,
+      ringMs = 1100,
+      ringTurns = 2 / 3,
+      ringSpacing = 60,
+      ringScale = [1.15, 0.05],
+      ringAlpha = 0.5
+    } = vortex;
+    const mask = "radial-gradient(closest-side,#000 52%,transparent)";
+    const vx = stage.stand([x - size / 2, y - size / 2, size, size], {
+      borderRadius: "50%",
+      opacity: "0",
+      background,
+      maskImage: mask,
+      zIndex: "3"
+    });
+    vx.style.setProperty("-webkit-mask-image", mask);
+    const ns = "http://www.w3.org/2000/svg";
+    const arms = document.createElementNS(ns, "svg");
+    arms.setAttribute("viewBox", "0 0 100 100");
+    Object.assign(arms.style, {
+      position: "absolute",
+      inset: "0",
+      width: "100%",
+      height: "100%",
+      fill: "none",
+      stroke,
+      strokeWidth: String(strokeWidth),
+      strokeLinecap: "round",
+      filter: `drop-shadow(0 0 6px ${glow2})`
+    });
+    vx.append(arms);
+    for (let i = 0; i < armCount; i++) {
+      const line = document.createElementNS(ns, "polyline");
+      line.setAttribute("points", Array.from({ length: armSegments + 1 }, (_, k) => {
+        const t = k / armSegments;
+        const a = i * Math.PI * 2 / armCount + t * Math.PI * (2 * armTurns);
+        const r = armRadius * t ** armExponent;
+        return `${(50 + r * Math.cos(a)).toFixed(1)},${(50 + r * Math.sin(a)).toFixed(1)}`;
+      }).join(" "));
+      arms.append(line);
+      if (!image) continue;
+      const ring = document.createElement("img");
+      ring.alt = "";
+      ring.src = image;
+      Object.assign(ring.style, { position: "absolute", inset: "0", width: "100%", height: "100%", filter: `drop-shadow(0 0 14px ${glow2})` });
+      vx.append(ring);
+      stage.play(ring, frames2((t) => {
+        const dir = outward ? -1 : 1;
+        const phase = (Math.max(0, t - (outward ? 0 : open[0])) / ringMs + i / armCount) % 1;
+        const k = outward ? 1 - phase : phase;
+        return { opacity: ringAlpha * Math.sin(Math.PI * k), transform: `scale(${String(lerp(...ringScale, k))}) rotate(${String(-k * (ringTurns * 360) * dir - i * ringSpacing)}deg)` };
+      }), ms, start);
+    }
+    stage.play(arms, frames2((t) => ({ transform: `rotate(${String(spin(t) * armSpin)}deg)` })), ms, start);
+    stage.play(vx, frames2((t) => {
+      const v = (outward && growth ? growthAt(t) : ease.out(seg(t, ...open))) * collapseAt(t);
+      return { opacity: Math.min(1, v * 1.3) * vortexAlpha, transform: `scale(${String(0.15 + 0.85 * v)})` };
+    }), ms, start);
+  }
+  function totalTag(stage, o, delay) {
+    const { text, at, font = "700 24px/1.15 sans-serif", colour = "white", travel: travel2 = 24, ms = 1700, image } = o;
+    const tag = stage.stand([...at, 0, 0], {
+      display: "flex",
+      alignItems: "center",
+      gap: ".15em",
+      whiteSpace: "nowrap",
+      font,
+      color: colour,
+      zIndex: "7",
+      textShadow: "0 0 6px #000"
+    });
+    tag.style.width = "max-content";
+    tag.style.height = "auto";
+    const label = document.createElement("span");
+    label.textContent = text;
+    tag.append(label);
+    if (image !== void 0) {
+      const icon = document.createElement("img");
+      icon.src = image;
+      icon.alt = "";
+      icon.style.height = ".85em";
+      tag.append(icon);
+    }
+    stage.play(tag, [
+      { opacity: 0, transform: "translateY(0)" },
+      { opacity: 1, transform: `translateY(${px(travel2 * 0.25)})`, offset: 0.08 },
+      { opacity: 1, transform: `translateY(${px(travel2 * 0.4)})`, offset: 0.8 },
+      { opacity: 0, transform: `translateY(${px(travel2 * 0.8)})` }
+    ], ms, o.delay ?? delay, "ease-out");
+  }
+  var warpTransfer = (fx) => {
+    const { call, el } = fx;
+    const settings = call.step;
+    const {
+      from = call.from,
+      destination: to = call.to ?? call.from,
+      mode = "column",
+      count = 1,
+      stagger = mode === "zip" ? 60 : 110,
+      image,
+      colour = "255 255 255",
+      glowColour = `rgb(${colour})`,
+      lightColour = "white",
+      crossing = true,
+      totalLabel,
+      lift = 60,
+      portal,
+      columnUp,
+      columnDown,
+      crossingDots,
+      riseMs = 260,
+      riseTravelMs = 300,
+      columnLight = `linear-gradient(to top, transparent, rgb(${colour} / .75) 22%, rgb(255 255 255 / .95) 50%, rgb(${colour} / .6) 80%, transparent)`
+    } = settings;
+    const { counterColour, beforeLook, afterLook, popOffsets = [0.45, 0.75] } = settings;
+    if (mode === "pop" || mode === "grey" || mode === "bump") {
+      const before = beforeLook ?? { opacity: 1, filter: "none" };
+      const after = afterLook ?? { opacity: 1, filter: "none" };
+      const frames2 = mode === "pop" ? [
+        { transform: "scale(0)", opacity: 0 },
+        { transform: "scale(1.35)", opacity: 1, offset: popOffsets[0] },
+        { transform: "scale(.92)", offset: popOffsets[1] },
+        { transform: "scale(1)" }
+      ] : mode === "grey" ? [
+        { transform: "scale(1.35)", opacity: before.opacity, filter: before.filter === "none" ? "brightness(1.4)" : before.filter },
+        { transform: "scale(.92)", opacity: before.opacity, filter: "none", offset: 0.5 },
+        { transform: "scale(1)", ...after }
+      ] : [
+        { transform: "scale(1.35)", color: counterColour },
+        { transform: "scale(.92)", color: counterColour, offset: 0.5 },
+        { transform: "scale(1)" }
+      ];
+      const end = mode === "grey" ? { opacity: String(after.opacity), filter: after.filter } : mode === "pop" ? { opacity: "1" } : void 0;
+      fx.animate(frames2, end, { easing: "ease-out" });
+      return void 0;
+    }
+    const stage = scene(fx);
+    const visibility = el.style.visibility;
+    const make = (box, blur, extra) => tokenOf(stage, el, box, image, glowColour, blur, extra);
+    const arrive2 = from === null ? 0 : 510 + (crossing ? 336 : 0);
+    for (let i = 0; i < count; i++) {
+      const start = i * stagger;
+      if (from && mode === "portal" && portal) {
+        portalIcon(stage, make, from, to, portal, call.step.dur - start, lift, start, image, glowColour);
+      } else if (from && mode === "crossing") {
+        crossingLight(stage, centre3(from), centre3(to), from[2], start, colour, lightColour, crossingDots);
+      } else if (from && mode === "zip") {
+        zip(stage, make, from, to, start, glowColour, i, settings);
+      } else if (from && mode === "rise") {
+        const [x, y] = centre3(from);
+        const [tx, ty] = centre3(to);
+        const token = make(from, 0.16);
+        token.style.transformOrigin = "50% 50%";
+        const raised = { opacity: 1, transform: `translateY(${px(-lift)}) scale(1.1)` };
+        stage.play(token, [{ opacity: 0, transform: "translateY(0) scale(.3)" }, raised], riseMs, start, "cubic-bezier(.2,.8,.3,1)");
+        stage.play(token, [raised, { opacity: 1, transform: `translate(${px(tx - x)}, ${px(ty - y)}) scale(1)` }], riseTravelMs, start + riseMs, "ease-in", "forwards");
+      } else {
+        if (from) {
+          const [x, y, w, h2] = from;
+          const box = [x + (i - (count - 1) / 2) * w * 0.95, y - i % 2 * w * 0.2, w, h2];
+          const token = make(box, 0.12, "drop-shadow(0 2px 3px rgba(0,0,0,.55)) ");
+          stage.play(token, [{ opacity: 0, translate: "0 -60%", scale: 1.6 }, { opacity: 1, translate: "0 0", scale: 1 }], 240, start, "cubic-bezier(0.3, 1.4, 0.5, 1)");
+          column(stage, token, box, start + 300, true, columnLight, glowColour, columnUp);
+          if (crossing) crossingLight(stage, [box[0] + w / 2, box[1] + h2 / 2 - w * 1.2], [to[0] + to[2] / 2, to[1] - to[3] * 0.8], Math.max(6, w * 0.3), start + 510, colour, lightColour, crossingDots);
+        }
+        const icon = make(to, 0.25);
+        column(stage, icon, to, start + arrive2, false, columnLight, glowColour, columnDown);
+        stage.play(icon, [{ opacity: 1 }, { opacity: 1, filter: "none", offset: 0.999 }, { opacity: 0 }], 200, start + arrive2 + 320, "linear", "forwards");
+      }
+    }
+    el.style.visibility = "hidden";
+    if (totalLabel) totalTag(stage, totalLabel, mode === "column" ? arrive2 + 320 * 0.56 : 0);
+    return () => {
+      stage.end();
+      el.style.visibility = visibility;
+    };
+  };
+
+  // components/effect-library/spiral.ts
+  var TAU2 = Math.PI * 2;
+  var white = [255, 255, 255];
+  var depart = { lift: [300, 520], approach: [520, 1120], revolve: [1120, 1720] };
+  var arrive = { revolve: [380, 880], emerge: [880, 1380], land: [1380, 1520] };
+  var ad = (a, b) => Math.atan2(Math.sin(b - a), Math.cos(b - a));
+  var angBlend = (a, b, k) => a + ad(a, b) * k;
+  var rad = (d) => d * Math.PI / 180;
+  function pathOf(g, s) {
+    const p1 = [s.p0[0], s.p0[1] - g.lift];
+    const r0 = Math.hypot(p1[0] - g.c[0], (p1[1] - g.c[1]) / g.sq);
+    const th0 = Math.atan2((p1[1] - g.c[1]) / g.sq, p1[0] - g.c[0]);
+    const ro = g.orbit * r0;
+    const turn = -TAU2 * 0.92;
+    return {
+      at(e) {
+        let r;
+        let th;
+        if (e <= 1) {
+          r = ro + (r0 - ro) * (1 - e) ** 1.25;
+          th = th0 + turn * e;
+        } else {
+          const k = Math.min(1, e - 1);
+          r = ro * (1 - k) ** 1.3;
+          th = th0 + turn - TAU2 * k;
+        }
+        return [g.c[0] + r * Math.cos(th), g.c[1] + g.sq * r * Math.sin(th)];
+      }
+    };
+  }
+  var tangent = (p, e, back = false) => {
+    const [x0, y0] = p.at(Math.max(0, e - 4e-3));
+    const [x1, y1] = p.at(Math.min(1.999, e + 4e-3));
+    return Math.atan2(y1 - y0, x1 - x0) + (back ? Math.PI : 0);
+  };
+  function departShip(u, g, s, p) {
+    const h0 = rad(s.h0);
+    if (u >= depart.lift[0] && u < depart.approach[0]) {
+      const k = ease.out(seg(u, depart.lift[0], depart.lift[1]));
+      return {
+        x: s.p0[0],
+        y: s.p0[1] - g.lift * k,
+        h: h0 - 0.12 * k,
+        sc: 1 + 0.22 * k,
+        a: 1,
+        boost: 0.35 * k,
+        phase: "lift"
+      };
+    }
+    if (u >= depart.approach[0] && u < depart.revolve[0]) {
+      const k = seg(u, depart.approach[0], depart.approach[1]);
+      const e = ease.in(k) * 0.5 + k * 0.5;
+      const [x, y] = p.at(e);
+      const h2 = angBlend(h0 - 0.12, tangent(p, e), ease.out(seg(k, 0, 0.3)));
+      return { x, y, h: h2, sc: lerp(1.22, 0.62, e), a: 1, boost: 1, phase: "in" };
+    }
+    if (u >= depart.revolve[0] && u < depart.revolve[1]) {
+      const k = seg(u, depart.revolve[0], depart.revolve[1]);
+      const e = 1 + ease.inQuad(k) * 0.4 + k * 0.6;
+      const [x, y] = p.at(e);
+      const h2 = tangent(p, e) + TAU2 * 0.6 * ease.in(k);
+      return { x, y, h: h2, sc: 0.62 * (1 - (e - 1)) ** 0.9, a: 1 - seg(k, 0.86, 1), boost: 1, phase: "in" };
+    }
+    return null;
+  }
+  function arriveShip(u, g, s, p) {
+    const h0 = rad(s.h0);
+    if (u >= arrive.revolve[0] && u < arrive.revolve[1]) {
+      const k = seg(u, arrive.revolve[0], arrive.revolve[1]);
+      const kk = 1 - k;
+      const e = 1 + ease.inQuad(kk) * 0.4 + kk * 0.6;
+      const [x, y] = p.at(e);
+      const h2 = tangent(p, e, true) - TAU2 * 0.6 * ease.in(kk);
+      return { x, y, h: h2, sc: 0.62 * (1 - (e - 1)) ** 0.9, a: seg(k, 0, 0.12), boost: 1, phase: "out" };
+    }
+    if (u >= arrive.emerge[0] && u < arrive.emerge[1]) {
+      const k = seg(u, arrive.emerge[0], arrive.emerge[1]);
+      const kk = 1 - k;
+      const e = ease.in(kk) * 0.5 + kk * 0.5;
+      const [x, y] = p.at(e);
+      const h2 = angBlend(tangent(p, e, true), h0 - 0.12, ease.inOut(seg(k, 0.62, 1)));
+      return { x, y, h: h2, sc: lerp(1.22, 0.62, e), a: 1, boost: 1, phase: "out" };
+    }
+    if (u >= arrive.land[0] && u < arrive.land[1]) {
+      const k = ease.out(seg(u, arrive.land[0], arrive.land[1]));
+      const sq = 1 - 0.04 * Math.sin(Math.PI * k);
+      return {
+        x: s.p0[0],
+        y: s.p0[1] - g.lift * (1 - k),
+        h: h0 - 0.12 * (1 - k),
+        sc: lerp(1.22, 1, k) * sq,
+        a: 1,
+        boost: 0.35 * (1 - k),
+        phase: "land"
+      };
+    }
+    return null;
+  }
+  function drawShip(ctx, s, st, alpha, tint) {
+    if (alpha <= 1e-3 || st.sc <= 5e-3) return;
+    ctx.save();
+    ctx.globalAlpha = alpha;
+    if (tint && s.afterimageFilter) {
+      ctx.globalCompositeOperation = "lighter";
+      ctx.filter = s.afterimageFilter;
+    }
+    ctx.translate(st.x, st.y);
+    ctx.rotate(st.h - rad(s.nose));
+    if (s.flip) ctx.scale(-1, 1);
+    const w = s.dw * st.sc;
+    const h2 = s.dh * st.sc;
+    ctx.drawImage(s.img, -w / 2, -h2 / 2, w, h2);
+    ctx.restore();
+  }
+  var rearOf = (s, st) => {
+    const back = st.h + Math.PI;
+    const len = Math.max(s.dw, s.dh) * 0.42 * st.sc;
+    return [st.x + Math.cos(back) * len, st.y + Math.sin(back) * len];
+  };
+  function shipLayer(ctx, g, s, at, u) {
+    const st = at(u);
+    if (st === null) return;
+    if (st.phase === "lift" || st.phase === "land") {
+      const k2 = (st.sc - 1) / 0.22;
+      ctx.save();
+      ctx.globalAlpha = 0.5 * clamp(k2);
+      ctx.filter = `blur(${String(8 * g.u)}px)`;
+      ctx.fillStyle = "#000";
+      ctx.beginPath();
+      ctx.ellipse(s.p0[0] + 6 * g.u, s.p0[1] + 10 * g.u, s.dw * 0.42, s.dh * 0.3, -0.5, 0, TAU2);
+      ctx.fill();
+      ctx.restore();
+    }
+    if (st.phase === "in" || st.phase === "out") {
+      const pts = [];
+      for (let j = 0; j <= 16; j += 1) {
+        const ps = at(u - j * 14);
+        if (ps === null || ps.phase !== st.phase) break;
+        pts.push(rearOf(s, ps));
+      }
+      if (pts.length > 2) {
+        const [hx, hy] = pts[0] ?? [0, 0];
+        const [tx, ty] = pts[pts.length - 1] ?? [0, 0];
+        const core = clamp(1 - Math.hypot(hx - g.c[0], hy - g.c[1]) / (420 * g.u * g.ribbonReach));
+        const rgb2 = g.tail.map((v, i) => Math.round(lerp(v, g.tip[i], core))).join(",");
+        ctx.save();
+        ctx.globalCompositeOperation = "lighter";
+        ctx.lineCap = "round";
+        ctx.lineJoin = "round";
+        const w = Math.max(0.3, st.sc) * Math.max(0.6, g.u);
+        for (const [lw, al] of [
+          [16, 0.3],
+          [6, 0.75],
+          [2, 0.95]
+        ]) {
+          const grad = ctx.createLinearGradient(hx, hy, tx, ty);
+          grad.addColorStop(0, `rgba(${lw === 2 ? "255,255,255" : rgb2},${String(al * st.a)})`);
+          grad.addColorStop(1, `rgba(${rgb2},0)`);
+          ctx.strokeStyle = grad;
+          ctx.lineWidth = lw * w;
+          ctx.beginPath();
+          pts.forEach(([x, y], j) => j === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y));
+          ctx.stroke();
+        }
+        ctx.restore();
+      }
+      for (let j = 3; j >= 1; j -= 1) {
+        const ps = at(u - j * 30);
+        if (ps !== null && ps.phase === st.phase) drawShip(ctx, s, ps, 0.28 / j * st.a, true);
+      }
+    }
+    drawShip(ctx, s, st, st.a, false);
+    const [rx, ry] = rearOf(s, st);
+    const fl = (0.55 + 0.45 * st.boost + 0.15 * noise(u / 18, 2)) * st.a;
+    const k = Math.max(0.3, st.sc) * Math.max(0.6, g.u);
+    glow(ctx, rx, ry, (24 + 30 * st.boost) * k, g.engine, fl);
+    glow(ctx, rx, ry, 9 * k, "255,255,255", fl);
+  }
+  var images2 = /* @__PURE__ */ new WeakMap();
+  var geometry = /* @__PURE__ */ new WeakMap();
+  var spiralTransfer = (ctx, t, { call }) => {
+    const o = call.step["spiral"];
+    let entry2 = geometry.get(call);
+    if (!entry2) {
+      let img = images2.get(call);
+      if (!img) {
+        img = new Image();
+        img.src = o.image;
+        images2.set(call, img);
+      }
+      if (!img.naturalWidth) return;
+      const parked = o.parked ?? (o.outward ? call.to ?? call.from : call.from);
+      const endpoint = o.outward ? call.from : call.to ?? call.from;
+      const g2 = {
+        c: o.centre ?? centre3(endpoint),
+        lift: o.lift ?? 34,
+        sq: o.squash ?? 0.62,
+        orbit: o.orbit ?? 0.2,
+        u: o.unit ?? 1,
+        tail: o.tail ?? white,
+        tip: o.tip ?? white,
+        engine: o.engine ?? "255,255,255",
+        ribbonReach: o.ribbonReach ?? 1
+      };
+      const s2 = {
+        img,
+        p0: centre3(parked),
+        dw: parked[2],
+        dh: parked[3],
+        h0: o.heading ?? 0,
+        nose: o.nose ?? 0,
+        flip: o.flip ?? false,
+        afterimageFilter: o.afterimageFilter
+      };
+      entry2 = { g: g2, s: s2, p: pathOf(g2, s2) };
+      geometry.set(call, entry2);
+    }
+    const { g, s, p } = entry2;
+    const pose = o.outward ? arriveShip : departShip;
+    shipLayer(ctx, g, s, (u) => pose(u, g, s, p), t);
+  };
+
   // components/effect-library/effects.ts
   var entry = (call) => {
     const s = call.step["scale"];
@@ -16538,6 +17607,19 @@ var PIECES = (() => {
   function registerEffects(verbs, o) {
     for (const [name, fx] of Object.entries(BUILT_IN)) registerEffect(verbs, name, fx);
     registerCanvasEffect(verbs, "trail", trail);
+    registerCanvasEffect(verbs, "radial-streaks", radialStreaks);
+    registerCanvasEffect(verbs, "column-beam", curvedBeam);
+    const curve = verbs.get("column-beam");
+    registerEffect(verbs, "column-beam", columnBeam);
+    const column2 = verbs.get("column-beam");
+    verbs.register("column-beam", (call, run) => (call.step["curve"] ? curve : column2)?.(call, run));
+    registerEffect(verbs, "collapse-jump", collapseJump);
+    registerEffect(verbs, "rotating-beam", rotatingBeam);
+    registerCanvasEffect(verbs, "warp-transfer", spiralTransfer);
+    const spiral = verbs.get("warp-transfer");
+    registerEffect(verbs, "warp-transfer", warpTransfer);
+    const transfer = verbs.get("warp-transfer");
+    verbs.register("warp-transfer", (call, run) => (call.step["spiral"] ? spiral : transfer)?.(call, run));
     verbs.register("shake-group", (call, run) => {
       const { selector, actors, amplitude = 6, crossAmplitude = 1, frames: frames2 = 9 } = call.step;
       const targets = typeof selector === "string" ? Array.from(run.context.el.ownerDocument.querySelectorAll(selector)) : run.timeline.actors.filter((a) => Array.isArray(actors) ? actors.includes(a.id) : a.id === call.actor).map((a) => run.context.actor(run, a.id, a.rect));
@@ -16680,14 +17762,14 @@ var PIECES = (() => {
     ));
   }
   function previewDrop(source, target) {
-    const point = (el) => {
+    const point2 = (el) => {
       const { x, y, width, height } = el.getBoundingClientRect();
       return { clientX: x + width / 2, clientY: y + height / 2 };
     };
     const send = (el, type, at, buttons) => (0, import_react_dom.flushSync)(() => el.dispatchEvent(
       new globalThis.PointerEvent(type, { bubbles: true, pointerId: -1, buttons, ...at })
     ));
-    const from = point(source), to = point(target);
+    const from = point2(source), to = point2(target);
     to.clientX -= target.clientWidth / 3;
     if (Math.hypot(to.clientX - from.clientX, to.clientY - from.clientY) < DRAG_THRESHOLD_PX) return;
     send(source, "pointerdown", from, 1);

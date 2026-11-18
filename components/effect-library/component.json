@@ -16,6 +16,8 @@
       { "game": "marvel-champions-digital-game", "commit": "idea only (AGPL)", "paths": ["second band slot (bands.ts; no file taken)"] },
       { "game": "warps", "commit": "2af6937", "paths": ["src/ui/fx/kit.ts (particles.ts; the colour table left out, arc and star take their colours)", "src/ui/fx/looks.test.tsx (the kit's cases, in particles.test.ts)"] },
       { "game": "warps", "commit": "449af55", "paths": ["src/ui/fx/flight.ts", "src/ui/fx/warpIn.ts", "src/ui/fx/timing.ts", "src/ui/fx/evasion.ts", "src/ui/fx/power/sortie.ts"] },
+      { "game": "stcc", "commit": "a69c8dac", "paths": ["src/ui/motion/effects/resourceWarp.ts", "src/ui/motion/effects/resources.ts", "src/ui/motion/effects/actionIcons.ts", "src/ui/motion/effects/gloryPlaced.ts", "src/ui/motion/effects/dismissed.ts", "src/ui/motion/effects/warp.ts", "src/ui/motion/effects/beam.ts", "src/ui/motion/effects/awayTeams.ts", "src/ui/motion/effects/incidentBeacon.ts"] },
+      { "game": "warps", "commit": "449af55", "paths": ["src/ui/fx/warp.ts", "src/ui/fx/warpLook.ts", "src/ui/fx/power/pulseLook.ts", "src/ui/fx/power/blocks.ts", "src/ui/fx/tractor.ts", "src/ui/fx/timing.ts"] },
       { "game": "unstoppable", "commit": "52c19f6", "paths": ["src/ui/board/Hand.tsx", "src/ui/board/TokenFlights.tsx", "src/ui/board/threatBuffs.tsx"] },
       { "game": "imperium-horizon", "commit": "b82d5cf", "paths": ["src/ui/board/table/FlightLayer.tsx", "src/ui/play/flights.ts", "src/ui/theme/table.css"] }
     ]

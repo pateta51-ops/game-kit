@@ -39,8 +39,15 @@
   .flight-target { width: 12%; aspect-ratio: 2/3; border: 1px dashed #a5a49a }
   .token { top: 50%; width: 6%; background: #eebe5f }
   .marker { width: 6%; border-radius: 50%; background: #df7a50 }
+  .beam-panel { display: none; background: #292733; color: #ebe9f2 }
+  .beams-only main > :not(.beam-panel) { display: none }
+  .beams-only .beam-panel { display: block }
+  .beam-panel .flight-actor, .beam-panel .flight-target { top: 54%; left: 22% }
+  .beam-panel .flight-target { left: 73%; width: 6%; border-radius: 50% }
+  .beam-panel .card { height: 42%; width: 14%; top: 35%; left: 43% }
+  .beam-panel .radial-origin { position: absolute; inset: 49% 49%; }
 </style>
-<script>if (new URLSearchParams(location.search).has('flights')) document.documentElement.classList.add('flights-only')</script>
+<script>if (new URLSearchParams(location.search).has('flights')) document.documentElement.classList.add('flights-only');if (new URLSearchParams(location.search).has('beams')) document.documentElement.classList.add('beams-only')</script>
 <header><h1>Effect library motion lab</h1><button type="button">Replay</button></header>
 <main>
   <section class="field flight-source"><h2>Arc move</h2><div id="ball" class="ball sample"></div><div id="landing" class="landing"></div></section>
@@ -49,6 +56,11 @@
   <section class="field"><h2>Shake group</h2><div id="plates" class="demo-grid"><div class="demo-tile">3</div><div class="demo-tile">2</div><div class="demo-tile">1</div></div></section>
   <section class="field pennant-source"><h2>Unroll</h2><div id="pennant" class="pennant sample">Sample</div></section>
   <section class="field"><h2>Hide source</h2><div class="slot sample"></div><div id="die" class="die sample">⚄</div><div id="tray" class="tray slot sample"></div></section>
+  <section class="beam-panel"><h2>Warp transfer</h2><div id="transfer" class="flight-actor marker"></div><div id="transfer-to" class="flight-target"></div></section>
+  <section class="beam-panel"><h2>Radial streaks</h2><div id="radial" class="radial-origin"></div></section>
+  <section class="beam-panel"><h2>Collapse jump</h2><div id="collapse" class="flight-actor marker"></div><div id="collapse-to" class="flight-target"></div></section>
+  <section class="beam-panel"><h2>Column beam</h2><div id="column" class="card sample flight-actor">Sample</div></section>
+  <section class="beam-panel"><h2>Rotating beam</h2><div id="beacon" class="card sample">Sample</div></section>
   <section id="flight-curves" class="flight-panel"><h2>Curves and loops</h2><div id="arrival-ship" class="flight-actor ship"></div><div id="sortie-ship" class="flight-actor ship"></div><div id="pass-ship-0" class="flight-actor ship"></div><div id="pass-ship-1" class="flight-actor ship"></div><div id="pass-ship-2" class="flight-actor ship"></div><div id="pass-ship-3" class="flight-actor ship"></div></section>
   <section class="flight-panel"><h2>Glides and stagger</h2>
     <div id="hand-card" class="flight-actor flight-card" style="left:10%;top:70%;width:9%"></div>
@@ -66,4 +78,5 @@
 </main>
 <script type="module" src="./lab.ts"></script>
 <script type="module" src="./flights.ts"></script>
+<script type="module" src="./beams.ts"></script>
 </html>
