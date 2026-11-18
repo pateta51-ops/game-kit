@@ -350,6 +350,7 @@ var DECK = (() => {
     finishOnInput: () => finishOnInput,
     pileElement: () => pileElement,
     planDeal: () => planDeal,
+    registerRiffle: () => registerRiffle,
     riffle: () => riffle,
     riffleFrames: () => riffleFrames,
     shuffleDecks: () => shuffleDecks,
@@ -517,34 +518,63 @@ var DECK = (() => {
     }) : Promise.resolve();
     return { plan, done: Promise.all([...ends, rif]).then(() => void 0) };
   }
-  var riffle = (deck, speed = 1, o = {}) => {
+  var riffle = (deck, speed = 1, o = {}) => startRiffle(deck, RIFFLE_MS * speed, o)?.done ?? Promise.resolve();
+  function startRiffle(deck, duration, o, shake) {
     const running = riffling.get(deck);
     if (running !== void 0) return running;
     const top = topOf(deck);
-    if (typeof top.animate !== "function" || speed <= 0 || reduced()) return Promise.resolve();
-    const { left, top: y, width, height } = top.getBoundingClientRect();
-    const k = unitOf(top, o) / MOCK_U;
-    const half = RIFFLE_CARDS / 2;
-    deck.style.visibility = "hidden";
-    const cards = Array.from({ length: RIFFLE_CARDS }, (_, n) => {
-      const card = (o.back ?? cardBack)(deck.getAttribute("data-pile") ?? "", { width, height });
-      lay(card, { left, top: y, width, height });
-      card.style.zIndex = String(1e3 + n % half * 2 + (n < half ? 0 : 1));
-      return card.animate(riffleFrames(n, width, k), { duration: RIFFLE_MS * speed, fill: "both" });
-    });
-    cards.forEach((a) => live.add(a));
-    const done = Promise.all(cards.map((a) => a.finished.catch(() => void 0))).then(() => {
-      cards.forEach((a) => {
-        live.delete(a);
-        a.effect?.target?.remove();
+    if (typeof top.animate !== "function" || duration <= 0 || reduced()) return void 0;
+    const standIns = [];
+    const visibility = deck.style.visibility;
+    const priority = deck.style.getPropertyPriority("visibility");
+    let cards;
+    if (shake) cards = [top.animate([
+      { transform: "none" },
+      { transform: `rotate(${String(-shake.degrees)}deg) translateX(${String(-shake.pixels)}px)` },
+      { transform: `rotate(${String(shake.degrees)}deg) translateX(${String(shake.pixels)}px)` },
+      { transform: `rotate(${String(-shake.degrees / 2)}deg)` },
+      { transform: "none" }
+    ].map((frame) => ({ ...frame, easing: "ease-in-out" })), { duration })];
+    else {
+      const { left, top: y, width, height } = top.getBoundingClientRect();
+      const k = unitOf(top, o) / MOCK_U;
+      const half = RIFFLE_CARDS / 2;
+      deck.style.visibility = "hidden";
+      cards = Array.from({ length: RIFFLE_CARDS }, (_, n) => {
+        const card = (o.back ?? cardBack)(deck.getAttribute("data-pile") ?? "", { width, height });
+        lay(card, { left, top: y, width, height });
+        standIns.push(card);
+        card.style.zIndex = String(1e3 + n % half * 2 + (n < half ? 0 : 1));
+        return card.animate(riffleFrames(n, width, k), { duration, fill: "both" });
       });
-      deck.style.removeProperty("visibility");
-      if (deck.getAttribute("style") === "") deck.removeAttribute("style");
+    }
+    cards.forEach((a) => live.add(a));
+    const clean = () => {
+      if (riffling.get(deck) !== motion) return;
       riffling.delete(deck);
+      cards.forEach((a) => live.delete(a));
+      standIns.forEach((card) => card.remove());
+      if (!shake) {
+        deck.style.setProperty("visibility", visibility, priority);
+        if (deck.getAttribute("style") === "") deck.removeAttribute("style");
+      }
+    };
+    const done = Promise.all(cards.map((a) => a.finished.catch(() => void 0))).then(clean);
+    const motion = { done, finish: () => {
+      if (riffling.get(deck) !== motion) return;
+      cards.forEach((a) => a.finish());
+      clean();
+    } };
+    riffling.set(deck, motion);
+    return motion;
+  }
+  function registerRiffle(verbs, opts = {}) {
+    verbs.register("riffle", (call) => {
+      const deck = (opts.resolvePile ?? pileElement)(call.actor);
+      if (!deck) return void 0;
+      return startRiffle(deck, call.step["natural"] === true ? RIFFLE_MS : call.dur, opts, opts.shake)?.finish;
     });
-    riffling.set(deck, done);
-    return done;
-  };
+  }
   var shuffleDecks = (piles, speed = 1, o = {}) => Promise.all([...new Set(piles)].flatMap((p) => {
     const at = pileElement(p);
     return at === null ? [] : [riffle(at, speed, o)];

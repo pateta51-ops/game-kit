@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { dealFrom, finishDeckMotions, riffle } from './ui.ts';
+import { createMotionPlayer, createVerbs } from '../motion-frame/player.ts';
+import { dealFrom, finishDeckMotions, registerRiffle, riffle, type RiffleVerbOpts } from './ui.ts';
 
 const rect = { left: 0, top: 0, width: 10, height: 14 } as DOMRect;
 const made: { frames: Keyframe[]; opts: KeyframeAnimationOptions }[] = [];
@@ -74,5 +75,76 @@ describe('deck-motions DOM', () => {
     await p;
     expect(deck.style.visibility).toBe('');
     expect(document.querySelectorAll('[data-motion-standin]')).toHaveLength(0);
+  });
+});
+
+describe('riffle verb', () => {
+  const play = (opts?: RiffleVerbOpts, natural = false, speed: number | 'instant' = 0.5, actor = 'deck') => {
+    const verbs = createVerbs();
+    registerRiffle(verbs, opts);
+    const player = createMotionPlayer({
+      verbs, stages: { default: () => [0, 0, 10, 14] }, speed: () => speed, context: undefined,
+      specs: { shuffle: { id: 'shuffle', steps: [{ t: 0, dur: 1000, actor, do: 'riffle', natural }] } },
+    });
+    player.play('shuffle');
+    vi.advanceTimersByTime(0);
+    return player;
+  };
+  const deck = () => document.querySelector<HTMLElement>('[data-pile=deck]')!;
+  const atRest = () => {
+    expect(deck().style.visibility).toBe('');
+    expect(document.querySelectorAll('[data-motion-standin]')).toHaveLength(0);
+  };
+
+  afterEach(() => { vi.useRealTimers(); });
+
+  it('riffles the pile for the scaled call duration and restores it at the step end', () => {
+    vi.useFakeTimers();
+    setup();
+    play();
+    expect(made.map(({ opts }) => opts.duration)).toEqual(Array<number>(12).fill(500));
+    expect(deck().style.visibility).toBe('hidden');
+    vi.advanceTimersByTime(500);
+    atRest();
+  });
+
+  it('uses natural timing with a custom pile resolver and restores the pile on skip', () => {
+    vi.useFakeTimers();
+    setup();
+    const resolvePile = vi.fn(deck);
+    const player = play({ resolvePile }, true, 1, 'draw');
+    expect(resolvePile).toHaveBeenCalledWith('draw');
+    expect(made[0]?.opts.duration).toBe(2200);
+    expect(deck().style.visibility).toBe('hidden');
+    player.skipAll();
+    atRest();
+  });
+
+  it('does nothing at instant speed', () => {
+    vi.useFakeTimers();
+    setup();
+    const resolvePile = vi.fn(deck);
+    play({ resolvePile }, true, 'instant');
+    expect(resolvePile).not.toHaveBeenCalled();
+    expect(made).toHaveLength(0);
+    atRest();
+  });
+
+  it('can shake the visible stack with Imperium offsets', () => {
+    vi.useFakeTimers();
+    setup();
+    const player = play({ shake: { degrees: 4, pixels: 3 } });
+    expect(made).toEqual([{
+      frames: [
+        { transform: 'none' },
+        { transform: 'rotate(-4deg) translateX(-3px)' },
+        { transform: 'rotate(4deg) translateX(3px)' },
+        { transform: 'rotate(-2deg)' },
+        { transform: 'none' },
+      ].map((frame) => ({ ...frame, easing: 'ease-in-out' })),
+      opts: { duration: 500 },
+    }]);
+    player.skipAll();
+    atRest();
   });
 });

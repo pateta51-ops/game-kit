@@ -52,7 +52,7 @@ graph LR
   counter["counter"] --> motion_frame["motion-frame"]
   counter["counter"] --> ui_helpers["ui-helpers"]
   debug_console["debug-console"] --> engine_core["engine-core"]
-  deck_motions["deck-motions"]
+  deck_motions["deck-motions"] --> motion_frame["motion-frame"]
   dice_odds["dice-odds"]
   dice_tray["dice-tray"] --> state_machines["state-machines"]
   drag_drop["drag-drop"] --> prompt_host["prompt-host"]

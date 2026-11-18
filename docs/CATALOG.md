@@ -401,12 +401,12 @@ A console line for the engine-core debug edits (K100). Needs `engine-core`. Test
 
 ## deck-motions
 
-Cards fly from a pile to their places (deal, refill turn-over, deck cycle) and a pile riffles, anchored on piles found by `[data-pile="<id>"]` (the attribute card-pile draws). No needs, no packages. `index.ts` is the pure timing (node); `ui.ts` the DOM.
+Cards fly from a pile to their places (deal, refill turn-over, deck cycle) and a pile riffles, anchored on piles found by `[data-pile="<id>"]` (the attribute card-pile draws). Uses motion-frame types for verb registration. `index.ts` is the pure timing (node); `ui.ts` the DOM.
 
 - **Use it when:** Cards fly from a pile to their places (deal, refill turn-over, deck cycle) and a pile riffles; piles found by data-pile; timing pure.
 - **Not for:** Which cards move (the game diffs its views), the card look, a market row slide or a fan (card-pile).
 - **Key exports:** `DEAL_MS`, `STAGGER_MS`, `REFILL_AFTER`, `REFILL_GAP_MS`, `REFILL_FAR_SCALE`, `REFILL_LIFT`, `RIFFLE_MS`, `RIFFLE_CARDS`, `MOCK_U`, `cycleMove`, `planDeal`, `riffleFrames`, `At`, `Move`, and 2 more
-- **Needs:** nothing
+- **Needs:** [`motion-frame`](#motion-frame)
 - **Came from:** stcc
 - **Docs:** [README](../components/deck-motions/README.md)
 

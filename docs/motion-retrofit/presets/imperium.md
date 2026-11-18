@@ -22,3 +22,12 @@ export const imperium = {
 ### Icon roll-in
 
 At `b82d5cf`, `src/ui/theme/play.css:900,988` rolls the icon from −540° and .6 scale to rest. Use `spin` with `turns: 1.5`, `scaleFrom: .6`, `ease: 'out'` and a base `dur: 1100` for normal speed. The original uses 2400 ms on slow, 500 ms on fast and 0 ms when off.
+
+### Deck shuffle
+
+At `b82d5cf`, `src/ui/theme/play.css` applies `fx-shuffle` to
+`.pile__stack`. Register `riffle` with `shake: { degrees: 4, pixels: 3 }`
+and a base `dur: 1100`. The stack rests at 0% and 100%, rotates −4° and
+shifts −3 px at 25%, rotates 4° and shifts 3 px at 50%, and rotates −2°
+at 75%. Each interval uses ease-in-out. Slow uses 2400 ms, fast 500 ms,
+and off is instant.

@@ -6,6 +6,6 @@
     "paths": ["src/ui/motion/dealing.ts (dealFrom, refill turn-over, riffle v2, shuffleDecks, finishRiffles, cardBack; from LordOfTheRings frontend/src/composables/dealing.ts a3f3c01, BSD-3)"],
     "note": "K250: piles by data-pile, back image, faces, unit and moves come from the game; the view-transition CSS became Web Animations on stand-ins; STCC deck names and view types stripped."
   },
-  "needs": [],
+  "needs": ["motion-frame"],
   "packages": []
 }

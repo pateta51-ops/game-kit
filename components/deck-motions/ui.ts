@@ -1,5 +1,6 @@
 // K250: the DOM side of deck-motions: flights of stand-in cards between piles and places, the riffle. Ported from STCC
 // src/ui/motion/dealing.ts (main 8e6f55b), from LordOfTheRings (a3f3c01, BSD-3: LICENSE-LordOfTheRings.txt).
+import type { VerbRegistry } from '../motion-frame/player.ts';
 import { MOCK_U, RIFFLE_CARDS, RIFFLE_MS, planDeal, riffleFrames, type At, type DealPlan, type Move } from './plan.ts';
 
 export * from './plan.ts';
@@ -21,7 +22,7 @@ export interface DeckMotionOpts {
 
 const live = new Set<Animation>();
 const timers = new Set<{ t: number; r: () => void }>();
-const riffling = new WeakMap<HTMLElement, Promise<void>>();
+const riffling = new WeakMap<HTMLElement, { done: Promise<void>; finish: () => void }>();
 const reduced = () => typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches;
 
 /** The element of a pile: `[data-pile="<id>"]`, the anchor card-pile draws. */
@@ -143,34 +144,71 @@ export function dealFrom(moves: readonly Move[], o: DeckMotionOpts & { shuffled?
  * apart, falls back in from the bottom of each half in turn, squares up and is tapped. The deck is hidden meanwhile; a deck
  * already riffling is not riffled again. With no Web Animations (jsdom), speed 0 or reduced motion it resolves at once.
  */
-export const riffle = (deck: HTMLElement, speed = 1, o: DeckMotionOpts = {}): Promise<void> => {
+export const riffle = (deck: HTMLElement, speed = 1, o: DeckMotionOpts = {}): Promise<void> =>
+  startRiffle(deck, RIFFLE_MS * speed, o)?.done ?? Promise.resolve();
+
+function startRiffle(deck: HTMLElement, duration: number, o: DeckMotionOpts, shake?: RiffleVerbOpts['shake']) {
   const running = riffling.get(deck);
   if (running !== undefined) return running;
   const top = topOf(deck);
-  if (typeof top.animate !== 'function' || speed <= 0 || reduced()) return Promise.resolve();
-  const { left, top: y, width, height } = top.getBoundingClientRect();
-  const k = unitOf(top, o) / MOCK_U;
-  const half = RIFFLE_CARDS / 2;
-  deck.style.visibility = 'hidden';
-  const cards = Array.from({ length: RIFFLE_CARDS }, (_, n) => {
-    const card = (o.back ?? cardBack)(deck.getAttribute('data-pile') ?? '', { width, height });
-    lay(card, { left, top: y, width, height });
-    card.style.zIndex = String(1000 + (n % half) * 2 + (n < half ? 0 : 1));
-    return card.animate(riffleFrames(n, width, k), { duration: RIFFLE_MS * speed, fill: 'both' });
-  });
-  cards.forEach((a) => live.add(a));
-  const done = Promise.all(cards.map((a) => a.finished.catch(() => undefined))).then(() => {
-    cards.forEach((a) => {
-      live.delete(a);
-      (a.effect as KeyframeEffect | null)?.target?.remove();
+  if (typeof top.animate !== 'function' || duration <= 0 || reduced()) return undefined;
+  const standIns: HTMLElement[] = [];
+  const visibility = deck.style.visibility;
+  const priority = deck.style.getPropertyPriority('visibility');
+  let cards: Animation[];
+  if (shake) cards = [top.animate([
+    { transform: 'none' },
+    { transform: `rotate(${String(-shake.degrees)}deg) translateX(${String(-shake.pixels)}px)` },
+    { transform: `rotate(${String(shake.degrees)}deg) translateX(${String(shake.pixels)}px)` },
+    { transform: `rotate(${String(-shake.degrees / 2)}deg)` },
+    { transform: 'none' },
+  ].map((frame) => ({ ...frame, easing: 'ease-in-out' })), { duration })];
+  else {
+    const { left, top: y, width, height } = top.getBoundingClientRect();
+    const k = unitOf(top, o) / MOCK_U;
+    const half = RIFFLE_CARDS / 2;
+    deck.style.visibility = 'hidden';
+    cards = Array.from({ length: RIFFLE_CARDS }, (_, n) => {
+      const card = (o.back ?? cardBack)(deck.getAttribute('data-pile') ?? '', { width, height });
+      lay(card, { left, top: y, width, height });
+      standIns.push(card);
+      card.style.zIndex = String(1000 + (n % half) * 2 + (n < half ? 0 : 1));
+      return card.animate(riffleFrames(n, width, k), { duration, fill: 'both' });
     });
-    deck.style.removeProperty('visibility');
-    if (deck.getAttribute('style') === '') deck.removeAttribute('style');
+  }
+  cards.forEach((a) => live.add(a));
+  const clean = () => {
+    if (riffling.get(deck) !== motion) return;
     riffling.delete(deck);
+    cards.forEach((a) => live.delete(a));
+    standIns.forEach((card) => card.remove());
+    if (!shake) {
+      deck.style.setProperty('visibility', visibility, priority);
+      if (deck.getAttribute('style') === '') deck.removeAttribute('style');
+    }
+  };
+  const done = Promise.all(cards.map((a) => a.finished.catch(() => undefined))).then(clean);
+  const motion = { done, finish: () => {
+    if (riffling.get(deck) !== motion) return;
+    cards.forEach((a) => a.finish());
+    clean();
+  } };
+  riffling.set(deck, motion);
+  return motion;
+}
+
+export interface RiffleVerbOpts extends Pick<DeckMotionOpts, 'back' | 'unit'> {
+  resolvePile?: (id: string) => HTMLElement | null | undefined;
+  shake?: { degrees: number; pixels: number };
+}
+
+export function registerRiffle<C>(verbs: Pick<VerbRegistry<C>, 'register'>, opts: RiffleVerbOpts = {}): void {
+  verbs.register('riffle', (call) => {
+    const deck = (opts.resolvePile ?? pileElement)(call.actor);
+    if (!deck) return undefined;
+    return startRiffle(deck, call.step['natural'] === true ? RIFFLE_MS : call.dur, opts, opts.shake)?.finish;
   });
-  riffling.set(deck, done);
-  return done;
-};
+}
 
 /** Shuffle the named piles the screen draws, resolving when they have settled. */
 export const shuffleDecks = (piles: readonly string[], speed = 1, o: DeckMotionOpts = {}): Promise<void> =>
