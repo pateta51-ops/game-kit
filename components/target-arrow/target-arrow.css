@@ -1,0 +1,15 @@
+/* K306: the default look (Unstoppable's D-129 arrow, owner 17 Nov 2026): a dashed gold body whose dashes flow, over a soft wide
+   glow, gold while it aims at nothing, red on a target; the aimed target brightens with a red glow. Zero specificity: a game
+   restyles any part. Speed: --motion-scale (motion-frame; 0 or data-motion="off" stops the flow). */
+:where([data-part='target-arrow-glow']) { fill: none; stroke: rgb(255 170 60 / 0.3); stroke-width: 15; stroke-linecap: round; }
+:where([data-part='target-arrow-body']) {
+  fill: none; stroke: #ffc35a; stroke-width: 6; stroke-linecap: round; stroke-dasharray: 13 7;
+  animation: target-arrow-flow calc(0.55s * var(--motion-scale, 1)) linear infinite;
+}
+:where([data-part='target-arrow-head']) { fill: #ffc35a; stroke: rgb(70 30 0 / 0.65); stroke-width: 1.5; stroke-linejoin: round; }
+:where([data-part='target-arrow'][data-snapped='true'] [data-part='target-arrow-glow']) { stroke: rgb(255 70 50 / 0.36); }
+:where([data-part='target-arrow'][data-snapped='true'] [data-part='target-arrow-body']) { stroke: #ff5a45; }
+:where([data-part='target-arrow'][data-snapped='true'] [data-part='target-arrow-head']) { fill: #ff5a45; stroke: rgb(70 0 0 / 0.65); }
+:where([data-part='target-arrow'][data-motion='off'] [data-part='target-arrow-body']) { animation: none; }
+@keyframes target-arrow-flow { to { stroke-dashoffset: -20; } }
+:where([data-arrow-aim]) { filter: brightness(1.14) drop-shadow(0 0 6px rgb(255 90 60 / 0.75)); }

@@ -47,6 +47,7 @@ describe('TargetArrow', () => {
     await move(300, 300);
     expect(arrow()).toHaveAttribute('data-state', 'follow');
     expect(arrow().querySelector('[data-part="target-arrow-body"]')?.getAttribute('d')).toMatch(/^M 50 570 Q /);
+    expect(arrow().querySelector('[data-part="target-arrow-glow"]')?.getAttribute('d')).toMatch(/^M 50 570 Q /);
   });
 
   it('snaps to a legal target and brightens it; a disabled option is no target', async () => {

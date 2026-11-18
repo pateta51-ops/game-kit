@@ -9,6 +9,7 @@ import { useEffect, useLayoutEffect, useRef, useState, type CSSProperties } from
 import { createPortal } from 'react-dom';
 import { aimedZone, arrowShape, centreOf, curveOf, strikeFrame, strikePlan, untilHit, type Point, type Quad, type Zone } from './arrow.ts';
 import type { Strike, StrikeStore } from './strike.ts';
+import './target-arrow.css';
 
 export const AIM_ATTR = 'data-arrow-aim';
 
@@ -320,7 +321,7 @@ export function TargetArrow<P extends ArrowPrompt>(props: TargetArrowProps<P>) {
   return createPortal(
     <>
       <svg ref={svg} style={SVG} aria-hidden="true" focusable="false" data-part="target-arrow" data-state="hidden" data-snapped="false" data-motion={factor > 0 ? 'on' : 'off'}>
-        <path data-part="target-arrow-edge" fill="none" d="" />
+        <path data-part="target-arrow-glow" fill="none" d="" />
         <path data-part="target-arrow-body" fill="none" d="" />
         <polygon data-part="target-arrow-head" points="" />
       </svg>
@@ -330,10 +331,10 @@ export function TargetArrow<P extends ArrowPrompt>(props: TargetArrowProps<P>) {
   );
 }
 
-/** A target that takes no damage: a short brightening of its place. */
+/** A target that takes no damage: its place brightens with a short gold glow. */
 function glow(el: HTMLElement | null, ms: number): void {
   if (el?.isConnected !== true || typeof el.animate !== 'function') return;
-  el.animate([{ filter: 'brightness(1)' }, { filter: 'brightness(1.25)', offset: 0.35 }, { filter: 'brightness(1)' }], { duration: ms, easing: 'ease-out' });
+  el.animate([{ filter: 'brightness(1) drop-shadow(0 0 0 rgb(255 200 90 / 0))' }, { filter: 'brightness(1.18) drop-shadow(0 0 10px rgb(255 200 90 / 0.85))', offset: 0.35 }, { filter: 'brightness(1) drop-shadow(0 0 0 rgb(255 200 90 / 0))' }], { duration: ms, easing: 'ease-out' });
 }
 
 /** The hit on a damage target: a flash over its middle, in the window, and its place shaken. */
