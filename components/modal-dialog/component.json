@@ -1,0 +1,17 @@
+{
+  "name": "modal-dialog",
+  "source": {
+    "game": "unstoppable",
+    "commit": "98256767bb164d0ec9bf4f4ae6d545730f69bfd0",
+    "paths": ["src/ui/components/Modal.tsx", "src/ui/play/ConfirmDialog.tsx"],
+    "grafts": [
+      {
+        "game": "imperium",
+        "commit": "22736b2f2a8c14ba34dcb912b139ddede93ba7f9",
+        "paths": ["src/ui/components/Modal.tsx"]
+      }
+    ]
+  },
+  "needs": [],
+  "packages": ["react", "react-dom"]
+}

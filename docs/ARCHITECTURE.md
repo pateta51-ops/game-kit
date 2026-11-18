@@ -81,6 +81,7 @@ graph LR
   market_row["market-row"] --> prompt_host["prompt-host"]
   market_row["market-row"] --> picked_state["picked-state"]
   market_row["market-row"] --> motion_frame["motion-frame"]
+  modal_dialog["modal-dialog"]
   motion_frame["motion-frame"]
   offline["offline"] --> state_machines["state-machines"]
   opponent["opponent"] --> sim_pool["sim-pool"]
@@ -169,6 +170,7 @@ graph LR
 - `learned-opponent`
 - `lint-preset`
 - `market-row`
+- `modal-dialog`
 - `offline`
 - `opponent`
 - `perf`

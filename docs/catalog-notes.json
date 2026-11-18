@@ -176,6 +176,11 @@
     "use": "A market of offer slots refilled from decks: buy/cycle options, refill at once or by slide, clear, deal animation.",
     "not": "Payment, discounts, unlocks, where a bought card goes; a hand or a pile."
   },
+  "modal-dialog": {
+    "use": "Show a dialog or confirm a choice over the board, with focus return and a scroll lock.",
+    "entry": ["ui.tsx"],
+    "not": "Rules for deciding when a game prompts the player."
+  },
   "motion-frame": {
     "use": "Playing the director's motion specs (JSON beats) on the screen.",
     "not": "The effects themselves (effect-library) or game logic."

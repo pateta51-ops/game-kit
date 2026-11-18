@@ -1,0 +1,77 @@
+.kc-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: var(--kc-modal-z-index, 1000);
+  display: grid;
+  grid-template: minmax(0, 1fr) / minmax(0, 1fr);
+  place-items: center;
+  box-sizing: border-box;
+  padding: var(--kc-modal-gutter, 1rem);
+  background: var(--kc-modal-backdrop, rgb(0 0 0 / 58%));
+  opacity: 1;
+  transition: opacity calc(var(--kc-modal-duration, 160ms) * var(--kc-modal-speed, 1)),
+    display calc(var(--kc-modal-duration, 160ms) * var(--kc-modal-speed, 1)) allow-discrete;
+}
+
+.kc-modal-backdrop[hidden] {
+  display: none;
+  opacity: 0;
+  pointer-events: none;
+}
+
+@starting-style {
+  .kc-modal-backdrop:not([hidden]) {
+    opacity: 0;
+  }
+}
+
+.kc-modal {
+  box-sizing: border-box;
+  display: grid;
+  gap: var(--kc-modal-gap, 1rem);
+  width: min(100%, var(--kc-modal-width, 32rem));
+  max-height: 100%;
+  overflow: auto;
+  overflow-wrap: anywhere;
+  padding: var(--kc-modal-padding, 1.25rem);
+  border: var(--kc-modal-border, 1px solid #d4d4d4);
+  border-radius: var(--kc-modal-radius, 0.75rem);
+  background: var(--kc-modal-surface, #fff);
+  color: var(--kc-modal-text, #222);
+  box-shadow: var(--kc-modal-shadow, 0 12px 32px rgb(0 0 0 / 28%));
+  font: var(--kc-modal-font, 1rem / 1.5 system-ui, sans-serif);
+}
+
+.kc-modal-title {
+  margin: 0;
+  font: var(--kc-modal-title-font, 650 1.25rem / 1.25 system-ui, sans-serif);
+}
+
+.kc-modal-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: var(--kc-modal-action-gap, 0.5rem);
+}
+
+.kc-modal-button {
+  max-width: 100%;
+  overflow-wrap: anywhere;
+  padding: var(--kc-modal-button-padding, 0.5rem 0.875rem);
+  border: var(--kc-modal-button-border, 1px solid transparent);
+  border-radius: var(--kc-modal-button-radius, 0.375rem);
+  background: var(--kc-modal-button-surface, #e8e8e8);
+  color: var(--kc-modal-button-text, #222);
+  font: inherit;
+  cursor: pointer;
+}
+
+.kc-modal-confirm {
+  background: var(--kc-modal-confirm-surface, #333);
+  color: var(--kc-modal-confirm-text, #fff);
+}
+
+.kc-modal-danger {
+  background: var(--kc-modal-danger-surface, #a12b2b);
+  color: var(--kc-modal-danger-text, #fff);
+}

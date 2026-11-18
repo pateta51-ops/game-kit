@@ -154,6 +154,7 @@ Components with no row above. Each starts from the game and commit in its `compo
 | `table-panels` | Imperium `formatEvent.ts`, `LogPanel`, `botTurn.ts`; STCC `BotTurnPanel`; Unstoppable log and game over (K231; shape only, no game text, no look) | M |
 | `card-parts` | STCC `8e6f55b` (face geometry as data, image cache, art provider, `[[token]]` icon text; the layout became named zones the game owns, as every game's faces differ; K202) | M |
 | `card-zoom` | STCC `8e6f55b` (CardDetail: printed text with icons and glossary links beside the card; preview facts for tokens); EBR `33b5abd3` Escape; legend, engine notes and rule-id strip new (K203) | M |
+| `modal-dialog` | Unstoppable modal and confirmation; Imperium modal focus and Escape handling (K365) | M |
 | `card-pile` | Imperium fan prototype `Stack.tsx`, `PeekPile.tsx`, `fanLayout.ts`, `PileGrid.tsx`; STCC `usePileFan.tsx` (K219) | S |
 | `player-board` | Earthborne fan prototype `table/geometry.ts` (layRow, fitZone, MIN_CARD_WIDTH, handSink) and `Board.tsx` (rem units, mat, zone anchors); no mats, layouts or tags (K244) | M |
 | `market-row` | Rome `src/engine/market/market.ts` (slots, prices, cycle, slide refill, source choice, clear) and `ui/motion/dealing.ts`, `frames.ts` (timing); Imperium `market/refill.ts` (source fallback, refill at once); Unstoppable `board/Market.tsx` (view) (K243) | M |

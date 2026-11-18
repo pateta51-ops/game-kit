@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Practice board</title>
+  <style>
+    body { margin: 0; background: #eae7df; color: #27302b; font: 1rem/1.5 system-ui, sans-serif; }
+    main { width: min(48rem, calc(100% - 2rem)); margin: 3rem auto; }
+    button { font: inherit; }
+    .fake-board {
+      margin-top: 1.5rem;
+      height: min(70vh, 32rem);
+      border: 1px solid #a3a998;
+      border-radius: 0.5rem;
+      background: repeating-conic-gradient(#c5cbb9 0% 25%, #dbe0d1 0% 50%) 0 0 / 8rem 8rem;
+    }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+  <script type="module" src="./main.tsx"></script>
+</body>
+</html>
