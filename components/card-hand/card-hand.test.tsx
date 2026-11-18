@@ -24,10 +24,11 @@ afterEach(() => { delete (HTMLElement.prototype as { animate?: unknown }).animat
 describe('card-hand (K218)', () => {
   it('fan arithmetic: arc capped, symmetric, drop = radius (1 - cos)', () => {
     expect(fanOf(0, 1)).toEqual({ k: 0, angle: 0, drop: 0 });
-    expect(fanOf(0, 3).angle).toBe(-8);
-    expect(fanOf(0, 9).angle).toBeCloseTo(-16);
+    expect(fanOf(0, 3).angle).toBe(-1.5);
+    expect(fanOf(0, 9).angle).toBeCloseTo(-6);
+    expect(fanOf(0, 15).angle).toBeCloseTo(-7);
     expect(fanOf(2, 5).drop).toBe(0);
-    expect(fanOf(4, 5).drop).toBeCloseTo(4 * (1 - Math.cos((16 * Math.PI) / 180)));
+    expect(fanOf(4, 5).drop).toBeCloseTo(20 * (1 - Math.cos((3 * Math.PI) / 180)));
     expect(fanOf(0, 3, { step: 2 }).angle).toBe(-2);
   });
   it('width fit, neighbour spread and clamp', () => {

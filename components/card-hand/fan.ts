@@ -10,7 +10,8 @@ export interface Tilt {
   /** The arc's radius, in card widths: a card sits `radius * (1 - cos angle)` card widths below the middle one. */
   readonly radius: number;
 }
-export const TILT: Tilt = { step: 8, total: 32, radius: 4 };
+/** K311 (owner, 18 Nov): the gentle arc is the default. */
+export const TILT: Tilt = { step: 1.5, total: 14, radius: 20 };
 
 /** Card `i` of `n`: `k` its place from the middle (-2..2 for 5), `angle` degrees, `drop` in card widths. */
 export function fanOf(i: number, n: number, tilt: Partial<Tilt> = {}): { k: number; angle: number; drop: number } {
