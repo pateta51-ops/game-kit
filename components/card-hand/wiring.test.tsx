@@ -26,6 +26,10 @@ describe('card-hand wiring (K218)', () => {
     const css = (await import('node:fs')).readFileSync(`${import.meta.dirname}/card-hand.css`, 'utf8');
     expect(css).toMatch(/\[data-dragging\] > \[data-part='face'\][^{]*\{[^}]*visibility: hidden/);
   });
+  it('K310 the lifted card keeps the pointer on its grown face: the strip carries a face-shaped hit area', async () => {
+    const css = (await import('node:fs')).readFileSync(`${import.meta.dirname}/card-hand.css`, 'utf8');
+    expect(css).toMatch(/:not\(\[data-face-events\]\)[^{]*\[data-part='card'\]:hover > button\[data-part='strip'\]::before \{[^}]*transform: var\(--slide\) var\(--lift\)/);
+  });
   it('a picked card has data-picked, the others unpicked; no pick: none', () => {
     const { container, rerender } = render(<CardHand view={{ cards: ['a', 'b'] }} face={face} pick={fakePick(['a'])} />);
     const cards = container.querySelectorAll('[data-part="card"]');

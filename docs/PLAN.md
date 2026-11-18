@@ -118,6 +118,7 @@ A game's build plan lists the kit work it needs as phases named `GK<n>` for the 
 | K307 | target-arrow: the dash flow duration has a floor (`max(--motion-scale, 0.05)`), so a scale of 0 never gives a 0 s infinite animation; data-motion="off" is what stops the flow | S |  | done |
 | K308 | four opt-in glow looks from Unstoppable (never defaults): card-parts `looks/icon-glow.css`, counter `looks/health-glow.css`, effect-library `looks/rise-pulse.css` (class `fx-rise-pulse`), prompt-host `looks/legal-glow.css` | M |  | done |
 | K309 | prompt-host `looks/imperium-legal.css`: Imperium's playable glow (three-layer gold bloom) on `[data-mark="legal"]`, opt-in, beside the Unstoppable `legal-glow.css` | S |  | done |
+| K310 | card-hand: while a card is lifted under the pointer, its strip carries a hit area shaped like the grown, straightened face (a `::before` with the face's transform), so the pointer anywhere on the grown card keeps it lifted and a click there picks it; the rest strip still holds it (no flicker); hands with `faceEvents` keep their own face hit area | S |  | done |
 
 ## Harvest from the existing games (owner, 15 Nov 2026)
 
