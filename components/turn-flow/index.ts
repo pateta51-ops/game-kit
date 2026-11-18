@@ -26,6 +26,8 @@ export interface FlowConfig<G extends GameTypes> {
   step(ctx: Ctx<G>, pos: FlowPos): void;
   skip?(s: G['state'], level: FlowLevel, pos: FlowPos): boolean;
   readonly rounds?: number;
+  /** K320: the round ends after a turn when this says so (a solo game's round ends when its deck runs out); seats keep cycling within the round. Default: after one turn per seat. */
+  roundEnds?(s: G['state'], pos: FlowPos): boolean;
   over?(s: G['state']): boolean;
 }
 
@@ -68,7 +70,8 @@ export function flowHandlers<G extends GameTypes>(cfg: FlowConfig<G>): HandlerTa
           break;
         }
         const seats = cfg.seats(ctx.s);
-        if (!inTurn && turn >= seats.length) {
+        const wrap = !inTurn && turn >= seats.length;
+        if (!inTurn && (cfg.roundEnds === undefined ? wrap : (wrap && (!inRound || seats.length === 0)) || (inRound && cfg.roundEnds(ctx.s, { round, turn, seat, phase: '', step: null })))) {
           boundary(ctx, { kind: 'roundEnd' });
           inRound = false;
           round += 1;
@@ -76,6 +79,7 @@ export function flowHandlers<G extends GameTypes>(cfg: FlowConfig<G>): HandlerTa
           if (cfg.rounds !== undefined && round > cfg.rounds) break;
           continue;
         }
+        if (wrap) turn = 0;
         if (!inTurn) {
           seat = seats[turn] as string;
           if (skip('turn', seat)) {

@@ -85,6 +85,22 @@ describe('turn-flow (K264)', () => {
     expect(s.prompt).toBeNull();
   });
 
+  it('K320 roundEnds: the game ends the round (here after 3 turns); seats keep cycling inside it, and the next round starts at the first seat', () => {
+    const s = play(game({ rounds: 2, roundEnds: (st) => st.seen.length % 12 === 0 }));
+    const turns = s.seen.filter((x) => x.endsWith(':start')).map((x) => x.slice(0, 3));
+    expect(turns).toEqual(['1:a', '1:b', '1:a', '2:a', '2:b', '2:a']);
+    expect(flowOf(s)?.done).toBe(true);
+    const solo = play(game({ rounds: 2, roundEnds: (st) => st.seen.length % 8 === 0 }), () => 'add', ['a']);
+    expect(solo.seen.filter((x) => x.endsWith(':start'))).toEqual(['1:a:start', '1:a:start', '2:a:start', '2:a:start']);
+    // a round where every turn is skipped, or with no seats, still ends (no hang) and the cap stops the game
+    const never = (st: CState): boolean => st.seen.length < 0;
+    const skipped = play(game({ rounds: 2, roundEnds: never, skip: (_, level) => level === 'turn' }));
+    expect(skipped.seen).toEqual([]);
+    expect(flowOf(skipped)?.done).toBe(true);
+    const empty = play(game({ rounds: 2, roundEnds: never }), () => 'add', []);
+    expect(flowOf(empty)?.done).toBe(true);
+  });
+
   it('an end-of-turn duration expires with no manual boundary() call; end-of-round lasts the round', () => {
     const g = game();
     let s = createGame(g, { seed: 'k264' }, { rounds: 3 }, null).state;
