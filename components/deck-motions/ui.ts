@@ -15,6 +15,8 @@ export interface DeckMotionOpts {
   unit?: (pile: HTMLElement) => number;
   /** Turn-over axis: 'x' turns side to side (rotateY, default), 'y' top to bottom (rotateX). */
   axis?: 'x' | 'y';
+  /** Turn-over direction: 1 front flip (default), -1 back flip (the opposite sign). */
+  direction?: 1 | -1;
 }
 
 const live = new Set<Animation>();
@@ -112,10 +114,11 @@ export function dealFrom(moves: readonly Move[], o: DeckMotionOpts & { shuffled?
     };
     if (move.faceDown && move.dir === 'out') {
       const rot = o.axis === 'y' ? 'rotateX' : 'rotateY';
+      const sg = o.direction ?? 1;
       const b = stand((o.back ?? cardBack)(move.pile, from));
       const f = stand(face(move.id, atEl));
-      fly(b, [{ transform: `${start} ${rot}(0deg)`, offset: 0 }, { transform: `${REST} ${rot}(90deg)`, offset: 0.5 }, { transform: `${REST} ${rot}(90deg)`, offset: 1 }]);
-      fly(f, [{ transform: `${start} ${rot}(-90deg)`, offset: 0 }, { transform: `${start} ${rot}(-90deg)`, offset: 0.5 }, { transform: `${REST} ${rot}(0deg)`, offset: 1 }]);
+      fly(b, [{ transform: `${start} ${rot}(0deg)`, offset: 0 }, { transform: `${REST} ${rot}(${String(90 * sg)}deg)`, offset: 0.5 }, { transform: `${REST} ${rot}(${String(90 * sg)}deg)`, offset: 1 }]);
+      fly(f, [{ transform: `${start} ${rot}(${String(-90 * sg)}deg)`, offset: 0 }, { transform: `${start} ${rot}(${String(-90 * sg)}deg)`, offset: 0.5 }, { transform: `${REST} ${rot}(0deg)`, offset: 1 }]);
       continue
     }
     const el = stand(move.faceDown ? (o.back ?? cardBack)(move.pile, from) : face(move.id, atEl));

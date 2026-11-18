@@ -39,6 +39,13 @@ describe('deck-motions DOM', () => {
     expect(String(made[1]?.frames[0]?.transform)).toContain('rotateX(-90deg)');
     finishDeckMotions();
   });
+  it('turns the other way with direction -1', () => {
+    setup();
+    dealFrom([{ id: 'c1', dir: 'out', pile: 'deck', at: slot, faceDown: true }], { speed: 1, direction: -1 });
+    expect(String(made[0]?.frames[1]?.transform)).toContain('rotateY(-90deg)');
+    expect(String(made[1]?.frames[0]?.transform)).toContain('rotateY(90deg)');
+    finishDeckMotions();
+  });
   it('plays nothing at speed 0', async () => {
     setup();
     await dealFrom([{ id: 'c1', dir: 'out', pile: 'deck', at: slot, faceDown: false }], { speed: 0 }).done;
