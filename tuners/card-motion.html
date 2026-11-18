@@ -15253,6 +15253,7 @@ var PREVIEW = (() => {
   var import_react = __toESM(require_react(), 1);
   var import_jsx_runtime2 = __toESM(require_jsx_runtime(), 1);
   var SWIPE_CLOSE_PX = 70;
+  var holds = /* @__PURE__ */ new WeakMap();
   function Sheet({
     title,
     onClose,
@@ -15314,17 +15315,29 @@ var PREVIEW = (() => {
     });
     const request = () => req.current();
     const behindRef = (0, import_react.useRef)([]);
-    (0, import_react.useEffect)(() => {
-      for (const c of behindRef.current) if (leaving) c.removeAttribute("inert");
-      else c.setAttribute("inert", "");
-    }, [leaving]);
+    const held = (0, import_react.useRef)(false);
+    const hold = (on) => {
+      if (held.current === on) return;
+      held.current = on;
+      for (const c of behindRef.current) {
+        const n = (holds.get(c) ?? 0) + (on ? 1 : -1);
+        if (n > 0) {
+          holds.set(c, n);
+          c.setAttribute("inert", "");
+        } else {
+          holds.delete(c);
+          c.removeAttribute("inert");
+        }
+      }
+    };
+    (0, import_react.useEffect)(() => hold(!leaving), [leaving]);
     (0, import_react.useEffect)(() => {
       t0.current = performance.now();
       const from = document.activeElement;
       const el = layer.current;
-      const behind = [...el?.parentElement?.children ?? []].filter((c) => c !== el && c instanceof HTMLElement && !c.hasAttribute("inert"));
-      behindRef.current = behind;
-      for (const c of behind) c.setAttribute("inert", "");
+      hold(false);
+      behindRef.current = [...el?.parentElement?.children ?? []].filter((c) => c !== el && c instanceof HTMLElement && (!c.hasAttribute("inert") || holds.has(c)));
+      hold(true);
       box.current?.focus({ preventScroll: true });
       const key = (e) => {
         if (e.key !== "Escape") return;
@@ -15334,7 +15347,7 @@ var PREVIEW = (() => {
       document.addEventListener("keydown", key, true);
       return () => {
         document.removeEventListener("keydown", key, true);
-        for (const c of behind) c.removeAttribute("inert");
+        hold(false);
         from?.focus?.({ preventScroll: true });
       };
     }, []);

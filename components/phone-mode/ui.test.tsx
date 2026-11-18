@@ -1,3 +1,4 @@
+import { StrictMode } from 'react';
 import { act, fireEvent, render, renderHook, screen } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { setSafeArea, useViewport, type LayoutSetting } from './index.ts';
@@ -94,6 +95,37 @@ describe('the viewport store', () => {
 });
 
 describe('Sheet and RotatePanel', () => {
+  it('StrictMode: siblings made inert are freed when the sheet closes (K385)', () => {
+    const ui = (open: boolean) => (
+      <StrictMode>
+        <div>
+          <div data-testid="stage">stage</div>
+          {open && <Sheet title="S" onClose={() => {}} slideMs={0}>x</Sheet>}
+        </div>
+      </StrictMode>
+    );
+    const r = render(ui(true));
+    expect(screen.getByTestId('stage').hasAttribute('inert')).toBe(true);
+    r.rerender(ui(false));
+    expect(screen.getByTestId('stage').hasAttribute('inert')).toBe(false);
+  });
+  it('stacked sheets: the stage stays inert until the last one closes (K385)', () => {
+    const ui = (one: boolean, two: boolean) => (
+      <StrictMode>
+        <div>
+          <div data-testid="stage">stage</div>
+          {one && <Sheet title="A" onClose={() => {}} slideMs={0}>a</Sheet>}
+          {two && <Sheet title="B" onClose={() => {}} slideMs={0}>b</Sheet>}
+        </div>
+      </StrictMode>
+    );
+    const r = render(ui(true, false));
+    r.rerender(ui(true, true));
+    r.rerender(ui(true, false));
+    expect(screen.getByTestId('stage').hasAttribute('inert')).toBe(true);
+    r.rerender(ui(false, false));
+    expect(screen.getByTestId('stage').hasAttribute('inert')).toBe(false);
+  });
   it('title labels the dialog with a per-instance id; close button and scrim close; foot shows', () => {
     const onClose = vi.fn();
     render(

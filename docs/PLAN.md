@@ -145,6 +145,7 @@ A game's build plan lists the kit work it needs as phases named `GK<n>` for the 
 | K381 | Effect-library tuner shows every effect: flip axis and direction, spin and tap, beams, combat, signals, refresh, pulse and idle loops | S |  | open |
 | K382 | llm-playtester: headless Claude playtests of whole games through a game adapter, with a dollar cap, findings and a replay per run. | M |  | done |
 | K383 | screens SetupForm: submit={false} leaves out its Start button; id lets a game's own button elsewhere start the game | S |  | done |
+| K385 | phone-mode Sheet: siblings made inert are freed after close under React StrictMode (idempotent record and restore) | S |  | done |
 
 ## Harvest from the existing games (owner, 15 Nov 2026)
 
