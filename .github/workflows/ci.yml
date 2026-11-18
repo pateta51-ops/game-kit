@@ -16,7 +16,7 @@ permissions:
 jobs:
   check:
     name: npm run check
-    runs-on: [self-hosted, kit]
+    runs-on: ${{ fromJSON(vars.KIT_RUNS_ON || '"ubuntu-latest"') }}
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v7
@@ -25,13 +25,14 @@ jobs:
           node-version-file: .nvmrc
       - run: echo "::remove-matcher owner=tsc::"
       - run: npm ci --no-audit --no-fund
+      - run: npx playwright install --with-deps chromium
       - run: node components/check-runner/check-runner.ts --config check-runner.config.json --keep-going
         env:
           NO_COLOR: '1'
 
   scan-ingest:
     name: pytest scan-ingest
-    runs-on: [self-hosted, kit]
+    runs-on: ${{ fromJSON(vars.KIT_RUNS_ON || '"ubuntu-latest"') }}
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@v7
@@ -41,6 +42,12 @@ jobs:
         run: |
           if [ "${{ github.event_name }}" = pull_request ]; then BASE="origin/${{ github.base_ref }}"; else BASE="${{ github.event.before }}"; fi
           if git rev-parse -q --verify "$BASE^{commit}" >/dev/null && git diff --quiet "$BASE" HEAD -- components/scan-ingest .github/workflows/ci.yml; then echo run=no >> "$GITHUB_OUTPUT"; else echo run=yes >> "$GITHUB_OUTPUT"; fi
+      - if: steps.changed.outputs.run == 'yes'
+        uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+      - if: steps.changed.outputs.run == 'yes'
+        run: sudo apt-get install -y -q tesseract-ocr
       - if: steps.changed.outputs.run == 'yes'
         working-directory: components/scan-ingest
         run: |

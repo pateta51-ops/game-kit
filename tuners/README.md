@@ -4,14 +4,14 @@ Interactive pages that show one kit part live, with sliders for its tunable valu
 
 | Tuner | Component | What it tunes | Artifact |
 | --- | --- | --- | --- |
-| [card-hand.html](card-hand.html) | card-hand | the fan's arc, spacing, lift, grow, stand-up, motion time | (link removed) |
+| [card-hand.html](card-hand.html) | card-hand | the fan's arc, spacing, lift, grow, stand-up, motion time | (link removed)> |
 | [effect-library.html](effect-library.html) | effect-library, motion-frame | motion verbs, flights and trails, rotations, beams, combat, transfers, signals, refresh and live loops | to publish |
-| [target-arrow.html](target-arrow.html) | target-arrow | arrow colours, stroke, dash flow, head, curve, snap and strike timing | (link removed) |
-| [glows.html](glows.html) | picked-state, prompt-host, card-parts, counter | picked marks, legal glows, inline icon glow, counter motion and thresholds | (link removed) |
-| [card-motion.html](card-motion.html) | deck-motions, card-pile, market-row | deal, refill turn-over, deck cycle, riffle, pile edges and fan, market refill by slide | (link removed) |
+| [target-arrow.html](target-arrow.html) | target-arrow | arrow colours, stroke, dash flow, head, curve, snap and strike timing | (link removed)> |
+| [glows.html](glows.html) | picked-state, prompt-host, card-parts, counter | picked marks, legal glows, inline icon glow, counter motion and thresholds | (link removed)> |
+| [card-motion.html](card-motion.html) | deck-motions, card-pile, market-row | deal, refill turn-over, deck cycle, riffle, pile edges and fan, market refill by slide | (link removed)> |
 | [riffle.html](riffle.html) | deck-motions | top-view and side-view riffle, each with speed, cards, orientation and the four phase timings | to publish |
-| [token-motion.html](token-motion.html) | token-flights, token-bag, track | token flights, 2D and 3D bag draws, marker glide, hop-and-fill, and lit steps | (link removed) |
-| [pieces-motion.html](pieces-motion.html) | pieces-3d, pieces-3d-verbs, drag-drop | d6 and d10 rolls, ball roll and settle, chip depth and shadows, drag ghost | (link removed) |
+| [token-motion.html](token-motion.html) | token-flights, token-bag, track | token flights, 2D and 3D bag draws, marker glide, hop-and-fill, and lit steps | (link removed)> |
+| [pieces-motion.html](pieces-motion.html) | pieces-3d, pieces-3d-verbs, drag-drop | d6 and d10 rolls, ball roll and settle, chip depth and shadows, drag ghost | (link removed)> |
 
 ## How a tuner is made
 

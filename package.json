@@ -13,7 +13,8 @@
     "coverage": "vitest run --coverage && npm run coverage:table",
     "coverage:table": "node scripts/coverage-table.mjs",
     "components:check": "node scripts/check-components.mjs && node scripts/catalog.mjs --check && node scripts/readme-examples.mjs && node tuners/build.mjs --check",
-    "check": "npm run lint && npm run typecheck && npm run test && npm run components:check"
+    "check": "npm run lint && npm run typecheck && npm run test && npm run components:check && npm run personal",
+    "personal": "node scripts/personal-check.mjs"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",

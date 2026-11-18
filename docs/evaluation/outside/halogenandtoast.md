@@ -1,7 +1,7 @@
 # halogenandtoast repos: what the game-kit could take
 
 Survey date 15 Nov 2026. Read-only; nothing was built or run. Paths are relative to
-`C:/Users/user/AppData/Local/Temp/claude/9919beaa12ed540b/c699a2b7-d212-4f36-8f5e-0e540f485c47/scratchpad/hat/`.
+`<scratchpad>/hat/`.
 
 ## Licences
 
