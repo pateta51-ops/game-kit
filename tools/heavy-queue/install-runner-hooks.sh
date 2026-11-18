@@ -14,6 +14,7 @@ for d in "$HOME"/actions-runner-*/; do
     sed -i "/^${kv%%=*}=/d" "$e"; echo "$kv" >> "$e"; changed=1
   done
   n=$(basename "$d"); unit=$(cat "$d.service" 2>/dev/null)
+  [ $changed = 0 ] && [ -n "$unit" ] && t=$($SYSTEMCTL show -p ActiveEnterTimestamp --value "$unit" 2>/dev/null) && [ -n "$t" ] && [ "$(date -d "$t" +%s)" -lt "$(stat -c %Y "$e")" ] && changed=1
   if [ $changed = 0 ]; then echo "$n: hooks already set"
   elif [ -z "$unit" ]; then echo "$n: hooks set; no .service file, restart it by hand"
   elif pgrep -f "${d}bin/Runner.Worker" >/dev/null; then echo "$n: hooks set; busy, run this again to restart $unit"
