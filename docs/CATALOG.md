@@ -399,10 +399,10 @@ Pull this component and use it where it is: a game never edits or copies its `ki
 
 ## content-pack
 
-Card and scenario data as a checked pack: the game names its record kinds, each with a zod schema, an id field and the fields that refer to other kinds; `load` refuses with every problem at once (duplicate ids, dangling references, schema failures, unknown verbs, your own extra checks). Not here: the game's record shapes, verbs or words; checking one effect at run time (card-language `validateEffect`, used here for `effects` fields).
+Card and scenario data as a checked pack: the game names its record kinds, each with a zod schema, an id field and the fields that refer to other kinds; `load` refuses with every problem at once (duplicate ids, dangling references, schema failures, unknown verbs, your own extra checks). Also the expansion choice (`expansion.ts`, `ui.ts`): a registry of products with `dependsOn`, tick/untick with dependencies, a serialisable `Choice`, and `mergePacks` of a base plus its expansions into one index. Not here: importing or storing packs, the game's record shapes, verbs or words; checking one effect at run time (card-language `validateEffect`, used here for `effects` fields).
 
-- **Use it when:** Card, deck or scenario data (CSV or JSON) loads through a zod schema per record kind with id-uniqueness, dangling-reference and card-language verb checks, every problem listed at once.
-- **Not for:** The game's record shapes, verbs or words; one effect checked at run time (card-language validateEffect).
+- **Use it when:** Card, deck or scenario data (CSV or JSON) loads through a zod schema per record kind with id-uniqueness, dangling-reference and card-language verb checks, every problem listed at once; also a base + expansions pick list with dependency ticking and a merge into one index.
+- **Not for:** The game's record shapes, verbs or words; one effect checked at run time (card-language validateEffect); importing or storing packs.
 - **Key exports:** `load`, `rowsOf`, `loadText`, `loadOrThrow`, `Kind`, `PackDef`, `Loaded`, `LoadResult`, `Source`
 - **Needs:** [`card-harness`](#card-harness), [`card-language`](#card-language), [`engine-core`](#engine-core)
 - **Came from:** 7is
