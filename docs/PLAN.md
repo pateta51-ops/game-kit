@@ -501,6 +501,7 @@ Every game's animations are rebuilt on `motion-frame` and `effect-library`; game
 | K354 | Dropped after the inventory's work list merged repeats: the story and scene effects are built from existing verbs, particles and the ambience layer, or are game looks (owner, 18 Nov) | docs/motion-retrofit/INVENTORY.md | S | dropped |
 | K355 | Work list 12 with the board swap (K324): view-transition wrapper with speed scaling (STCC viewTransition.ts:13, motion.css:5-8; extend effect-library bands.ts `flight`), plus Warp's data-flip and Imperium FlightLayer | docs/motion-retrofit/INVENTORY.md | M | done |
 | K384 | Port the menu sheen sweep, decorative backdrop drift and staggered slash strokes to effect-library. Record the source settings and recipes for forked lightning, the closing net and roulette faces. | docs/motion-retrofit/INVENTORY.md | M | done |
+| K396 | deck-motions: the approved top-view riffle replaces riffle(); side-view riffle and landscape toggle as options; riffle tuner page with full controls for each view | riffle study (branch riffle-preview, preview approved 18 Nov 2026) | M | done |
 
 ## Parts retrofit (owner, 18 Nov 2026)
 

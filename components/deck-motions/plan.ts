@@ -12,6 +12,12 @@ export const REFILL_LIFT = 1.06;
 /** The owner-approved riffle (STCC D-428, #83). */
 export const RIFFLE_MS = 2200;
 export const RIFFLE_CARDS = 12;
+/** K396: the approved riffle study's phases (ms at speed 1: split/tilt in, riffle, bridge, square/tilt out), 3000 ms in all. */
+export const RIFFLE_STUDY_MS = [450, 1350, 750, 450] as const;
+/** The default phases: the study's, scaled to RIFFLE_MS so planDeal's dealAt still matches. */
+export const RIFFLE_PHASES_MS: readonly number[] = RIFFLE_STUDY_MS.map((ms) => ms * RIFFLE_MS / 3000);
+/** Cards drawn in the top-view and side-view riffles. */
+export const RIFFLE_DECK_CARDS = 20;
 /** The unit (px) at which the riffle's pixel offsets were measured (3840x2160). */
 export const MOCK_U = 21.6;
 
@@ -55,7 +61,7 @@ export const cycleMove = (id: string, discard: string, deck: string): Move => ({
  * coming out in turn; refills start together after the departing card (`departs`) has landed, never waiting for a shuffle.
  * `speed` scales every time; at 0 (or less) nothing moves: the plan is empty.
  */
-export function planDeal(moves: readonly Move[], opts: { speed?: number | undefined; shuffled?: readonly string[] | undefined; departs?: boolean | undefined } = {}): DealPlan {
+export function planDeal(moves: readonly Move[], opts: { speed?: number | undefined; shuffled?: readonly string[] | undefined; departs?: boolean | undefined; riffleMs?: number | undefined } = {}): DealPlan {
   const speed = opts.speed ?? 1;
   if (speed <= 0 || moves.length === 0) return { timed: [], shuffling: [], shuffleAt: 0, dealAt: 0, total: 0 };
   const deal = DEAL_MS * speed;
@@ -64,7 +70,7 @@ export function planDeal(moves: readonly Move[], opts: { speed?: number | undefi
   const outs = moves.filter((m) => m.dir === 'out');
   const shuffling = [...new Set((opts.shuffled ?? []).filter((p) => ins.some((m) => m.pile === p)))];
   const shuffleAt = ins.length ? (ins.length - 1) * stagger + deal : 0;
-  const dealAt = shuffling.length ? shuffleAt + RIFFLE_MS * speed : 0;
+  const dealAt = shuffling.length ? shuffleAt + (opts.riffleMs ?? RIFFLE_MS) * speed : 0;
   const refillAt = opts.departs ? deal * REFILL_AFTER + REFILL_GAP_MS * speed : 0;
   const timed: Timed[] = ins.map((move, i) => ({ move, delay: i * stagger, ms: deal, lift: 1, vanish: move.faceDown }));
   let dealt = 0;

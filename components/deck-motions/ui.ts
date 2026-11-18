@@ -1,9 +1,13 @@
 // K250: the DOM side of deck-motions: flights of stand-in cards between piles and places, the riffle. Ported from STCC
 // src/ui/motion/dealing.ts (main 8e6f55b), from LordOfTheRings (a3f3c01, BSD-3: LICENSE-LordOfTheRings.txt).
 import type { VerbRegistry } from '../motion-frame/player.ts';
-import { MOCK_U, RIFFLE_CARDS, RIFFLE_MS, planDeal, riffleFrames, type At, type DealPlan, type Move } from './plan.ts';
+import { RIFFLE_DECK_CARDS, RIFFLE_PHASES_MS, planDeal, type At, type DealPlan, type Move } from './plan.ts';
+import { riffleSide } from './riffle-side.ts';
+import { riffleTop, type TopBack } from './riffle-top.ts';
 
 export * from './plan.ts';
+export { drawNeutralBack, riffleTop, type RiffleTopOpts, type TopBack } from './riffle-top.ts';
+export { riffleSide, type RiffleSideOpts } from './riffle-side.ts';
 
 export interface DeckMotionOpts {
   /** Time factor from the game's setting; 0 = none. Reduced motion is none too. */
@@ -12,8 +16,18 @@ export interface DeckMotionOpts {
   back?: (pile: string, rect: { width: number; height: number }) => HTMLElement;
   /** The face laid in place when a face-down card turns up, or flies into a pile (default: a clone of the place's element). */
   face?: (id: string, el: HTMLElement) => HTMLElement;
-  /** The game's unit in px for the riffle's offsets (default: `--u` on the pile, else MOCK_U). */
+  /** The game's unit in px for the v2 riffle's offsets; unused since K396 (the riffle sizes itself from the deck). */
   unit?: (pile: HTMLElement) => number;
+  /** K396: the riffle seen from above ('top', default) or edge-on ('side'). */
+  view?: 'top' | 'side';
+  /** Card shape (default: from the deck's shape). */
+  orientation?: 'portrait' | 'landscape';
+  /** Cards drawn in the riffle (default RIFFLE_DECK_CARDS). */
+  cards?: number;
+  /** The four phases in ms at speed 1: split (tilt in), riffle, bridge, square (tilt out). Default RIFFLE_PHASES_MS (RIFFLE_MS in all). */
+  durations?: readonly number[];
+  /** The top view's card back: a draw function or an image (default drawNeutralBack). The side view uses `back`, else a clone of the top card. */
+  topBack?: TopBack;
   /** Turn-over axis: 'x' turns side to side (rotateY, default), 'y' top to bottom (rotateX). */
   axis?: 'x' | 'y';
   /** Turn-over direction: 1 front flip (default), -1 back flip (the opposite sign). */
@@ -23,6 +37,8 @@ export interface DeckMotionOpts {
 const live = new Set<Animation>();
 const timers = new Set<{ t: number; r: () => void }>();
 const riffling = new WeakMap<HTMLElement, { done: Promise<void>; finish: () => void }>();
+const riffles = new Set<{ finish: () => void }>();
+const sum = (d: readonly number[]) => d.reduce((a, b) => a + b, 0);
 const reduced = () => typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches;
 
 /** The element of a pile: `[data-pile="<id>"]`, the anchor card-pile draws. */
@@ -44,12 +60,6 @@ export const cardBack = (pile: string, rect: { width: number; height: number }):
   return b;
 };
 
-const unitOf = (top: HTMLElement, o: DeckMotionOpts): number => {
-  if (o.unit) return o.unit(top);
-  const u = parseFloat(getComputedStyle(top).getPropertyValue('--u'));
-  return Number.isFinite(u) && u > 0 ? u : MOCK_U;
-};
-
 const lay = (el: HTMLElement, r: { left: number; top: number; width: number; height: number }) => {
   Object.assign(el.style, { position: 'fixed', left: `${String(r.left)}px`, top: `${String(r.top)}px`, width: `${String(r.width)}px`, height: `${String(r.height)}px`, margin: '0', pointerEvents: 'none', zIndex: '1000' });
   el.setAttribute('aria-hidden', 'true');
@@ -68,6 +78,7 @@ const track = (a: Animation, el: HTMLElement): Promise<void> => {
 export const finishDeckMotions = (): void => {
   for (const x of [...timers]) { window.clearTimeout(x.t); timers.delete(x); x.r(); }
   for (const a of [...live]) a.finish();
+  for (const r of [...riffles]) r.finish();
 };
 /** Any press or key finishes the motions at once. Returns the unbind. */
 export const finishOnInput = (target: Pick<Window, 'addEventListener' | 'removeEventListener'> = window): (() => void) => {
@@ -92,7 +103,7 @@ const REST = 'translate(0px, 0px) scale(1, 1)';
  */
 export function dealFrom(moves: readonly Move[], o: DeckMotionOpts & { shuffled?: readonly string[]; departs?: boolean } = {}): Dealing {
   const speed = reduced() ? 0 : (o.speed ?? 1);
-  const plan = planDeal(moves, { speed, shuffled: o.shuffled, departs: o.departs });
+  const plan = planDeal(moves, { speed, shuffled: o.shuffled, departs: o.departs, riffleMs: o.durations ? sum(o.durations) : undefined });
   const face = o.face ?? ((_id: string, el: HTMLElement) => el.cloneNode(true) as HTMLElement);
   const ends: Promise<void>[] = [];
   for (const t of plan.timed) {
@@ -140,64 +151,53 @@ export function dealFrom(moves: readonly Move[], o: DeckMotionOpts & { shuffled?
 }
 
 /**
- * A riffle over a deck (the owner-approved shuffle v2, STCC D-428): a stack of backs on it splits in two halves a card width
- * apart, falls back in from the bottom of each half in turn, squares up and is tapped. The deck is hidden meanwhile; a deck
- * already riffling is not riffled again. With no Web Animations (jsdom), speed 0 or reduced motion it resolves at once.
+ * A riffle over a deck (K396, the owner-approved riffle study): the top view by default, `view: 'side'` edge-on. The deck is
+ * hidden meanwhile; a deck already riffling is not riffled again. Speed 0, reduced motion or a deck with no size: resolves at once.
  */
 export const riffle = (deck: HTMLElement, speed = 1, o: DeckMotionOpts = {}): Promise<void> =>
-  startRiffle(deck, RIFFLE_MS * speed, o)?.done ?? Promise.resolve();
+  startRiffle(deck, sum(o.durations ?? RIFFLE_PHASES_MS) * speed, o)?.done ?? Promise.resolve();
 
 function startRiffle(deck: HTMLElement, duration: number, o: DeckMotionOpts, shake?: RiffleVerbOpts['shake']) {
   const running = riffling.get(deck);
   if (running !== undefined) return running;
-  const top = topOf(deck);
-  if (typeof top.animate !== 'function' || duration <= 0 || reduced()) return undefined;
-  const standIns: HTMLElement[] = [];
-  const visibility = deck.style.visibility;
-  const priority = deck.style.getPropertyPriority('visibility');
-  let cards: Animation[];
-  if (shake) cards = [top.animate([
-    { transform: 'none' },
-    { transform: `rotate(${String(-shake.degrees)}deg) translateX(${String(-shake.pixels)}px)` },
-    { transform: `rotate(${String(shake.degrees)}deg) translateX(${String(shake.pixels)}px)` },
-    { transform: `rotate(${String(-shake.degrees / 2)}deg)` },
-    { transform: 'none' },
-  ].map((frame) => ({ ...frame, easing: 'ease-in-out' })), { duration })];
-  else {
-    const { left, top: y, width, height } = top.getBoundingClientRect();
-    const k = unitOf(top, o) / MOCK_U;
-    const half = RIFFLE_CARDS / 2;
-    deck.style.visibility = 'hidden';
-    cards = Array.from({ length: RIFFLE_CARDS }, (_, n) => {
-      const card = (o.back ?? cardBack)(deck.getAttribute('data-pile') ?? '', { width, height });
-      lay(card, { left, top: y, width, height });
-      standIns.push(card);
-      card.style.zIndex = String(1000 + (n % half) * 2 + (n < half ? 0 : 1));
-      return card.animate(riffleFrames(n, width, k), { duration, fill: 'both' });
-    });
+  if (!(duration > 0) || reduced()) return undefined;
+  let ended: Promise<unknown>;
+  let stop: () => void;
+  if (shake) {
+    const top = topOf(deck);
+    if (typeof top.animate !== 'function') return undefined;
+    const a = top.animate([
+      { transform: 'none' },
+      { transform: `rotate(${String(-shake.degrees)}deg) translateX(${String(-shake.pixels)}px)` },
+      { transform: `rotate(${String(shake.degrees)}deg) translateX(${String(shake.pixels)}px)` },
+      { transform: `rotate(${String(-shake.degrees / 2)}deg)` },
+      { transform: 'none' },
+    ].map((frame) => ({ ...frame, easing: 'ease-in-out' })), { duration });
+    ended = a.finished.catch(() => undefined);
+    stop = () => { a.finish(); };
+  } else {
+    const d = o.durations ?? RIFFLE_PHASES_MS;
+    const pile = deck.getAttribute('data-pile') ?? '';
+    const back = o.back;
+    const opts = { speed: sum(d) / duration, cards: o.cards ?? RIFFLE_DECK_CARDS, orientation: o.orientation, durations: d.map((ms) => ms / 1000) };
+    const m = o.view === 'side'
+      ? riffleSide(deck, { ...opts, ...(back ? { back: (top: HTMLElement) => back(pile, top.getBoundingClientRect()) } : {}) })
+      : riffleTop(deck, { ...opts, ...(o.topBack ? { back: o.topBack } : {}) });
+    if (!m.finish) return undefined;
+    ended = m.done;
+    stop = m.finish;
   }
-  cards.forEach((a) => live.add(a));
   const clean = () => {
-    if (riffling.get(deck) !== motion) return;
-    riffling.delete(deck);
-    cards.forEach((a) => live.delete(a));
-    standIns.forEach((card) => card.remove());
-    if (!shake) {
-      deck.style.setProperty('visibility', visibility, priority);
-      if (deck.getAttribute('style') === '') deck.removeAttribute('style');
-    }
+    riffles.delete(motion);
+    if (riffling.get(deck) === motion) riffling.delete(deck);
   };
-  const done = Promise.all(cards.map((a) => a.finished.catch(() => undefined))).then(clean);
-  const motion = { done, finish: () => {
-    if (riffling.get(deck) !== motion) return;
-    cards.forEach((a) => a.finish());
-    clean();
-  } };
+  const motion = { done: ended.then(clean), finish: () => { stop(); clean(); } };
   riffling.set(deck, motion);
+  riffles.add(motion);
   return motion;
 }
 
-export interface RiffleVerbOpts extends Pick<DeckMotionOpts, 'back' | 'unit'> {
+export interface RiffleVerbOpts extends Pick<DeckMotionOpts, 'back' | 'unit' | 'view' | 'orientation' | 'cards' | 'durations' | 'topBack'> {
   resolvePile?: (id: string) => HTMLElement | null | undefined;
   shake?: { degrees: number; pixels: number };
 }
@@ -206,7 +206,7 @@ export function registerRiffle<C>(verbs: Pick<VerbRegistry<C>, 'register'>, opts
   verbs.register('riffle', (call) => {
     const deck = (opts.resolvePile ?? pileElement)(call.actor);
     if (!deck) return undefined;
-    return startRiffle(deck, call.step['natural'] === true ? RIFFLE_MS : call.dur, opts, opts.shake)?.finish;
+    return startRiffle(deck, call.step['natural'] === true ? sum(opts.durations ?? RIFFLE_PHASES_MS) : call.dur, opts, opts.shake)?.finish;
   });
 }
 

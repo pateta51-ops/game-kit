@@ -446,7 +446,7 @@ Cards fly from a pile to their places (deal, refill turn-over, deck cycle) and a
 
 - **Use it when:** Cards fly from a pile to their places (deal, refill turn-over, deck cycle) and a pile riffles; piles found by data-pile; timing pure.
 - **Not for:** Which cards move (the game diffs its views), the card look, a market row slide or a fan (card-pile).
-- **Key exports:** `DEAL_MS`, `STAGGER_MS`, `REFILL_AFTER`, `REFILL_GAP_MS`, `REFILL_FAR_SCALE`, `REFILL_LIFT`, `RIFFLE_MS`, `RIFFLE_CARDS`, `MOCK_U`, `cycleMove`, `planDeal`, `riffleFrames`, `At`, `Move`, and 2 more
+- **Key exports:** `DEAL_MS`, `STAGGER_MS`, `REFILL_AFTER`, `REFILL_GAP_MS`, `REFILL_FAR_SCALE`, `REFILL_LIFT`, `RIFFLE_MS`, `RIFFLE_CARDS`, `RIFFLE_STUDY_MS`, `RIFFLE_PHASES_MS`, `RIFFLE_DECK_CARDS`, `MOCK_U`, `cycleMove`, `planDeal`, and 5 more
 - **Needs:** [`motion-frame`](#motion-frame)
 - **Came from:** stcc
 - **Docs:** [README](../components/deck-motions/README.md)

@@ -16,6 +16,26 @@ const setup = () => {
     return a;
   };
 };
+// K396: a fake frame clock and canvas (jsdom has neither WebGL2 nor a 2D context): `frame(ms)` draws the riffle at ms.
+let next: FrameRequestCallback | undefined;
+const asked: string[] = [];
+const drawn: unknown[] = [];
+const frame = (ms: number) => { const f = next; next = undefined; f?.(ms); };
+const fakeCanvas = () => {
+  next = undefined;
+  asked.length = 0;
+  drawn.length = 0;
+  vi.spyOn(window.performance, 'now').mockReturnValue(0);
+  window.requestAnimationFrame = (f) => { next = f; return 1; };
+  window.cancelAnimationFrame = () => { next = undefined; };
+  vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockImplementation(function (this: HTMLCanvasElement, type: string) {
+    asked.push(type);
+    if (type !== '2d') return null;
+    const target = { canvas: this, drawImage: (...a: unknown[]) => { drawn.push(a); } } as Record<string, unknown>;
+    return new Proxy(target, { get: (t, k: string) => k in t ? t[k] : () => ({ addColorStop: () => undefined }), set: () => true }) as never;
+  } as never);
+};
+const layer = () => document.querySelector('[data-riffle-motion="deck"]');
 afterEach(() => { made.length = 0; vi.restoreAllMocks(); });
 
 const slot = () => document.getElementById('slot');
@@ -63,18 +83,83 @@ describe('deck-motions DOM', () => {
     expect(made).toHaveLength(n);
     vi.useRealTimers();
   });
-  it('riffles with 12 backs, hides the deck, and restores it', async () => {
+  it('K396: riffles the top view by default: 20 cards, RIFFLE_MS in all, the deck hidden then restored', async () => {
     setup();
+    fakeCanvas();
     const deck = document.querySelector<HTMLElement>('[data-pile=deck]')!;
-    const p = riffle(deck, 1);
-    expect(riffle(deck, 1)).toBe(p);
-    expect(made).toHaveLength(12);
-    expect(made[0]!.opts.duration).toBe(2200);
+    let over = false;
+    const p = riffle(deck, 1).then(() => { over = true; });
+    expect(layer()?.querySelector('canvas')).not.toBeNull();
+    expect(drawn).toHaveLength(20);
     expect(deck.style.visibility).toBe('hidden');
+    frame(2199);
+    expect(layer()).not.toBeNull();
+    frame(2200);
+    await p;
+    expect(over).toBe(true);
+    expect(layer()).toBeNull();
+    expect(deck.hasAttribute('style')).toBe(false);
+  });
+  it('K396: takes cards, durations and speed', () => {
+    setup();
+    fakeCanvas();
+    const deck = document.querySelector<HTMLElement>('[data-pile=deck]')!;
+    void riffle(deck, 2, { cards: 8, durations: [100, 200, 300, 400] });
+    expect(drawn).toHaveLength(8);
+    frame(1999);
+    expect(layer()).not.toBeNull();
+    frame(2000);
+    expect(layer()).toBeNull();
+  });
+  it('K396: one riffle per deck at a time; finishDeckMotions restores the deck at once', async () => {
+    setup();
+    fakeCanvas();
+    const deck = document.querySelector<HTMLElement>('[data-pile=deck]')!;
+    deck.style.color = 'red';
+    const p = riffle(deck, 1);
+    expect(riffle(deck, 1, { view: 'side' })).toBe(p);
+    expect(document.querySelectorAll('[data-riffle-motion]')).toHaveLength(1);
     finishDeckMotions();
     await p;
+    expect(layer()).toBeNull();
     expect(deck.style.visibility).toBe('');
-    expect(document.querySelectorAll('[data-motion-standin]')).toHaveLength(0);
+    expect(deck.style.color).toBe('red');
+    expect(next).toBeUndefined();
+  });
+  it('K396: still at speed 0 and under reduced motion', async () => {
+    setup();
+    fakeCanvas();
+    const deck = document.querySelector<HTMLElement>('[data-pile=deck]')!;
+    await riffle(deck, 0);
+    window.matchMedia = ((q: string) => ({ matches: q.includes('reduce') })) as never;
+    await riffle(deck, 1);
+    Reflect.deleteProperty(window, 'matchMedia');
+    expect(asked).toHaveLength(0);
+    expect(layer()).toBeNull();
+  });
+  it('K396: the side view turns a portrait deck, not a landscape one, and draws the game back', () => {
+    setup();
+    fakeCanvas();
+    const deck = document.querySelector<HTMLElement>('[data-pile=deck]')!;
+    const back = vi.fn(() => Object.assign(document.createElement('b'), { className: 'mine' }));
+    void riffle(deck, 1, { view: 'side', back });
+    expect(back).toHaveBeenCalledWith('deck', rect);
+    expect(layer()?.querySelectorAll('b.mine')).toHaveLength(20 * 7);
+    expect(layer()?.innerHTML).toContain('rotateZ(90deg)');
+    finishDeckMotions();
+    void riffle(deck, 1, { view: 'side', orientation: 'landscape' });
+    expect(layer()?.innerHTML).toContain('rotateZ(0deg)');
+    expect(layer()?.querySelector('canvas')).toBeNull();
+    finishDeckMotions();
+  });
+  it('K396: the top view falls back to 2D canvas strips without WebGL2', () => {
+    setup();
+    fakeCanvas();
+    void riffle(document.querySelector<HTMLElement>('[data-pile=deck]')!, 1);
+    expect(asked).toContain('webgl2');
+    expect(asked.at(-1)).toBe('2d');
+    expect(drawn.length).toBeGreaterThan(0);
+    finishDeckMotions();
   });
 });
 
@@ -93,17 +178,22 @@ describe('riffle verb', () => {
   const deck = () => document.querySelector<HTMLElement>('[data-pile=deck]')!;
   const atRest = () => {
     expect(deck().style.visibility).toBe('');
-    expect(document.querySelectorAll('[data-motion-standin]')).toHaveLength(0);
+    expect(document.querySelectorAll('[data-motion-standin], [data-riffle-motion]')).toHaveLength(0);
   };
 
   afterEach(() => { vi.useRealTimers(); });
 
-  it('riffles the pile for the scaled call duration and restores it at the step end', () => {
+  it('K396: riffles the pile for the scaled call duration and restores it at the step end', () => {
     vi.useFakeTimers();
     setup();
+    fakeCanvas();
     play();
-    expect(made.map(({ opts }) => opts.duration)).toEqual(Array<number>(12).fill(500));
     expect(deck().style.visibility).toBe('hidden');
+    frame(499);
+    expect(layer()).not.toBeNull();
+    frame(500);
+    expect(layer()).toBeNull();
+    play();
     vi.advanceTimersByTime(500);
     atRest();
   });
@@ -112,9 +202,11 @@ describe('riffle verb', () => {
     vi.useFakeTimers();
     setup();
     const resolvePile = vi.fn(deck);
+    fakeCanvas();
     const player = play({ resolvePile }, true, 1, 'draw');
     expect(resolvePile).toHaveBeenCalledWith('draw');
-    expect(made[0]?.opts.duration).toBe(2200);
+    frame(2199);
+    expect(layer()).not.toBeNull();
     expect(deck().style.visibility).toBe('hidden');
     player.skipAll();
     atRest();
