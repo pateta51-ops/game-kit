@@ -1,5 +1,5 @@
 // The overlay layer: one element above the page that holds the clones and stand-ins the effects animate.
-import type { Rect, Run } from '../motion-frame/index.ts';
+import type { Actor, Rect, Run } from '../motion-frame/index.ts';
 
 export interface LayerOptions {
   /** the element that holds the layer (default `document.body`) */
@@ -9,12 +9,16 @@ export interface LayerOptions {
   /** called once per actor right after its clone is made and placed in the layer, only when `resolve` found a source (a clone does not copy a canvas's pixels: draw them here, or swap the content) */
   onActor?: (source: HTMLElement, clone: HTMLElement, id: string, run: Run<EffectLayer>) => void;
 }
+export interface EffectActor extends Actor {
+  hideSource?: 'start' | 'step';
+}
+
 export interface EffectLayer {
   el: HTMLElement;
   /** the clone (or stand-in) of an actor in this run, made at `from` on first use */
   actor(run: Run<EffectLayer>, id: string, from: Rect): HTMLElement;
   /** makes the stand-ins of all the beat's actors now, at its start (call it from the player's `onBeatStart`); otherwise each is made at its first verb */
-  start(run: Run<EffectLayer>): void;
+  start(run: Run<EffectLayer>, actors?: readonly EffectActor[]): void;
   /** removes the run's clones: call it from the player's `onBeatEnd` */
   end(run: Run<EffectLayer>): void;
   clear(): void;
@@ -35,10 +39,53 @@ export function createEffectLayer(o: LayerOptions = {}): EffectLayer {
   el.style.cssText = 'position:fixed;inset:0;overflow:visible;pointer-events:none;z-index:var(--fx-z,1000)';
   parent.appendChild(el);
   const runs = new Map<number, Map<string, HTMLElement>>();
+  const originals = new WeakMap<HTMLElement, HTMLElement>();
+  const sources = new Map<number, Map<string, HTMLElement>>();
+  const pending = new Map<number, ReturnType<typeof setTimeout>[]>();
+  const hidden = new Map<HTMLElement, { count: number; value: string; priority: string }>();
+  const restore = (id: number): void => {
+    for (const timer of pending.get(id) ?? []) clearTimeout(timer);
+    pending.delete(id);
+    for (const src of sources.get(id)?.values() ?? []) {
+      const saved = hidden.get(src);
+      if (saved && --saved.count === 0) {
+        src.style.setProperty('visibility', saved.value, saved.priority);
+        hidden.delete(src);
+      }
+    }
+    sources.delete(id);
+  };
   const self: EffectLayer = {
     el,
-    start(run) {
+    start(run, actors) {
       for (const a of run.timeline.actors) self.actor(run, a.id, a.rect);
+      if (sources.has(run.id)) return;
+      const held = new Map<string, HTMLElement>();
+      const timers: ReturnType<typeof setTimeout>[] = [];
+      const scheduled = new Set<string>();
+      for (const a of actors ?? []) {
+        const clone = runs.get(run.id)?.get(a.id);
+        const src = clone && originals.get(clone);
+        if (!a.hideSource || !src || scheduled.has(a.id)) continue;
+        const hide = (): void => {
+          const saved = hidden.get(src);
+          if (saved) saved.count++;
+          else {
+            hidden.set(src, { count: 1, value: src.style.visibility, priority: src.style.getPropertyPriority('visibility') });
+            src.style.setProperty('visibility', 'hidden', 'important');
+          }
+          held.set(a.id, src);
+        };
+        if (a.hideSource === 'start') hide();
+        else {
+          const first = run.timeline.calls.find((call) => call.actor === a.id);
+          if (!first) continue;
+          timers.push(setTimeout(hide, first.t));
+        }
+        scheduled.add(a.id);
+      }
+      if (scheduled.size > 0) sources.set(run.id, held);
+      if (timers.length > 0) pending.set(run.id, timers);
     },
     actor(run, id, from) {
       let m = runs.get(run.id);
@@ -64,7 +111,12 @@ export function createEffectLayer(o: LayerOptions = {}): EffectLayer {
         }
         el.appendChild(a);
         m.set(id, a);
-        if (src) o.onActor?.(src, a, id, run);
+        if (src) {
+          originals.set(a, src);
+          const saved = hidden.get(src);
+          if (saved) s.setProperty('visibility', saved.value, saved.priority);
+          o.onActor?.(src, a, id, run);
+        }
       }
       return a;
     },
@@ -73,8 +125,10 @@ export function createEffectLayer(o: LayerOptions = {}): EffectLayer {
         a.remove();
       });
       runs.delete(run.id);
+      restore(run.id);
     },
     clear() {
+      for (const id of sources.keys()) restore(id);
       runs.clear();
       el.replaceChildren();
     },

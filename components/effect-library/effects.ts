@@ -1,4 +1,4 @@
-// The twelve verbs of the director's spec format as DOM effects (Web Animations API), plus the way a game adds its own.
+// The built-in verbs of the director's spec format as DOM effects (Web Animations API), plus the way a game adds its own.
 import type { Run, VerbCall, VerbRegistry } from '../motion-frame/index.ts';
 import { createEffectLayer, place, type EffectLayer, type LayerOptions } from './layer.ts';
 
@@ -54,6 +54,18 @@ export function registerEffect(verbs: VerbRegistry<EffectCtx>, name: string, eff
 
 const EASE: Readonly<Record<string, string>> = { in: 'ease-in', out: 'ease-out', 'in-out': 'ease-in-out', linear: 'linear' };
 
+export interface ArcMoveSettings {
+  /** Pixels above the path's midpoint. */
+  arcHeight?: number;
+  /** Horizontal and vertical offsets at the apex, as fractions of vertical travel. */
+  bank?: number;
+  lean?: number;
+  apex?: number;
+  /** Milliseconds between simultaneous flights, within their scheduled duration. */
+  stagger?: number;
+  [more: string]: unknown;
+}
+
 export const BUILT_IN: Readonly<Record<string, Effect>> = {
   move: ({ call, el, animate }) => {
     const t = call.to;
@@ -68,6 +80,20 @@ export const BUILT_IN: Readonly<Record<string, Effect>> = {
       place(el, t);
       if (call.step['then'] === 'hide') css(el, { visibility: 'hidden' });
     };
+  },
+  'arc-move': ({ call, run, el, animate }) => {
+    const t = call.to, f = call.from;
+    if (!t) return undefined;
+    const { arcHeight = 0, bank = 0, lean = 0, apex = 0.5, stagger = 0 } = call.step as ArcMoveSettings;
+    const dx = t[0] - f[0], dy = t[1] - f[1];
+    const index = run.timeline.calls.filter((c) => c.verb === call.verb && c.t === call.t).indexOf(call);
+    const delay = call.step.dur > 0 ? Math.min(Math.max(0, call.dur - 1), Math.max(0, index * stagger * call.dur / call.step.dur)) : 0;
+    animate([
+      { translate: '0 0' },
+      { translate: `${String(dx / 2 + dy * bank)}px ${String(dy * (0.5 + lean) - arcHeight)}px`, offset: apex },
+      { translate: `${String(dx)}px ${String(dy)}px` },
+    ], { translate: '' }, { easing: 'ease-out', delay, duration: Math.max(1, call.dur - delay) });
+    return () => place(el, t);
   },
   lift: ({ call, animate }) => {
     const end = { transform: `translateY(var(--fx-lift-rise,-6px)) scale(${String(call.value ?? 1.08)})`, boxShadow: 'var(--fx-lift-shadow,0 12px 24px)' };
@@ -111,6 +137,10 @@ export const BUILT_IN: Readonly<Record<string, Effect>> = {
       el.toggleAttribute('data-fx-flipped', target);
       if (typeof label === 'string') el.setAttribute('data-fx-label', label);
     };
+    if (call.step['squash'] === false) {
+      swap();
+      return undefined;
+    }
     const hm = call.step['holdMs'];
     const h = typeof hm === 'number' && call.dur > 0 ? Math.min(Math.max(hm, 0), call.dur * 0.8) : 0;
     const mid = h + (call.dur - h) / 2;
@@ -136,9 +166,31 @@ export const BUILT_IN: Readonly<Record<string, Effect>> = {
     animate(kf, { transform: 'none' });
     return undefined;
   },
-  glow: ({ animate, el }) => {
-    const off = 'var(--fx-glow-off,0 0 0 0)';
-    animate([{ boxShadow: off }, { boxShadow: 'var(--fx-glow,0 0 24px 6px)' }, { boxShadow: off }], { boxShadow: el.style.boxShadow });
+  glow: ({ call, animate, el }) => {
+    const colour = call.step['colour'];
+    const shadows = call.step['shadows'];
+    const hold = call.step['hold'];
+    const off = typeof colour === 'string' ? '0 0 0 0 transparent' : 'var(--fx-glow-off,0 0 0 0)';
+    const on = typeof colour === 'string'
+      ? (Array.isArray(shadows) ? shadows.filter((s): s is string => typeof s === 'string') : ['0 0 24px 6px']).map((s) => `${s} ${colour}`).join(',')
+      : 'var(--fx-glow,0 0 24px 6px)';
+    const span = typeof hold === 'number' ? Math.max(0, Math.min(1, hold)) : 0;
+    const pulse = span > 0
+      ? [{ boxShadow: on, offset: (1 - span) / 2 }, { boxShadow: on, offset: (1 + span) / 2 }]
+      : [{ boxShadow: on }];
+    animate([{ boxShadow: off }, ...pulse, { boxShadow: off }], { boxShadow: el.style.boxShadow });
+    return undefined;
+  },
+  unroll: ({ call, el, animate }) => {
+    const axis = call.step['axis'] === 'x' ? 'X' : 'Y';
+    const origin = call.step['origin'];
+    const transformOrigin = typeof origin === 'string' ? origin : axis === 'X' ? 'left' : 'top';
+    el.style.opacity = '1';
+    animate(
+      [{ transform: `scale${axis}(0)`, transformOrigin }, { transform: `scale${axis}(1)`, transformOrigin }],
+      { transform: 'none', opacity: '1', visibility: 'visible' },
+      { easing: 'ease-out' },
+    );
     return undefined;
   },
   text: ({ call, el, animate }) => {
@@ -150,8 +202,19 @@ export const BUILT_IN: Readonly<Record<string, Effect>> = {
   },
 };
 
-/** The twelve verbs registered, and a layer made. Pass the registry to the motion player and the layer as its `context`. */
+/** The built-in verbs registered, and a layer made. Pass the registry to the motion player and the layer as its `context`. */
 export function registerEffects(verbs: VerbRegistry<EffectCtx>, o?: LayerOptions): EffectLayer {
   for (const [name, fx] of Object.entries(BUILT_IN)) registerEffect(verbs, name, fx);
+  verbs.register('shake-group', (call, run) => {
+    const { selector, actors, amplitude = 6, crossAmplitude = 1, frames = 9 } = call.step;
+    const targets = typeof selector === 'string'
+      ? Array.from(run.context.el.ownerDocument.querySelectorAll<HTMLElement>(selector))
+      : run.timeline.actors.filter((a) => Array.isArray(actors) ? actors.includes(a.id) : a.id === call.actor)
+        .map((a) => run.context.actor(run, a.id, a.rect));
+    const animations = targets.map((el, n) => el.animate(Array.from({ length: typeof frames === 'number' ? frames : 9 }, (_, j) => ({
+      transform: `translate(${String((j % 2 ? 1 : -1) * Number(amplitude))}px,${String(((j + n) % 3 - 1) * Number(crossAmplitude))}px)`,
+    })), { duration: Math.max(call.dur, 1) }));
+    return () => animations.forEach((a) => a.cancel());
+  });
   return createEffectLayer(o);
 }

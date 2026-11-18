@@ -469,6 +469,7 @@ Every game's animations are rebuilt on `motion-frame` and `effect-library`; game
 | K339 | Retrofit Unstoppable (same terms) | Unstoppable | M | open |
 | K340 | Retrofit 7th Inning Stretch: swap its own effects for the kit's | 7IS | M | open |
 | K341 | Harvest study of EBR, Rome, Radiance, Rise of a Jarl and Under Falling Skies; their rows added here | study §6.5 | M | open |
+| K342 | 7th Inning Stretch's own effects into effect-library: arc-move, glow colour and hold, flip without squash, shake-group, unroll, hideSource; its look as a preset | 7IS b3ef81b src/ui/motion/index.ts | M | done |
 
 ## Audit roadmap (owner, 16 Nov 2026)
 

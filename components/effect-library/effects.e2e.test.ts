@@ -140,9 +140,10 @@ describe.skipIf(!HAVE && !process.env['CI'])('effect library in a browser', () =
     expect(await page.evaluate(() => (window as unknown as { fxTest: Api }).fxTest.early(true))).toBe(1);
   });
 
-  it('a game registers its own effect beside the twelve', async () => {
+  it('a game registers its own effect beside the built-in verbs', async () => {
     const r = await page.evaluate(() => (window as unknown as { fxTest: Api }).fxTest.own());
-    expect(r.names).toHaveLength(13);
+    expect(r.names).toHaveLength(16);
+    expect(r.names).toEqual(expect.arrayContaining(['arc-move', 'shake-group', 'unroll']));
     expect(r.names).toContain('pop');
     expect(r.log).toEqual(['done fx-actor']);
   });

@@ -1,6 +1,6 @@
 # effect-library
 
-The twelve verbs of the director's spec format as DOM effects for the motion frame: `move`, `lift`, `settle`, `fade-in`, `fade-out`, `show`, `hide`, `flip`, `scale`, `shake`, `glow`, `text`. Web Animations API; browser only. Beside them: canvas effects with a particle kit, a count-up and a boxed ambience layer.
+Fifteen verbs for the director's spec format as DOM effects for the motion frame: `move`, `arc-move`, `lift`, `settle`, `fade-in`, `fade-out`, `show`, `hide`, `flip`, `scale`, `shake`, `shake-group`, `glow`, `unroll`, `text`. Web Animations API; browser only. Beside them: canvas effects with a particle kit, a count-up and a boxed ambience layer.
 
 ```ts
 const verbs = createVerbs<EffectCtx>();
@@ -41,3 +41,14 @@ layer.clear() // empties it between beats
 ```
 
 Look file (opt-in): `looks/rise-pulse.css`, class `fx-rise-pulse` on a positioned element over a card plays a red-orange pulse once (none under reduced motion); variables `--buff-ms`, `--card-w`, `--motion-scale`.
+
+## Additional DOM effects and settings
+
+- `arc-move` uses `to` like `move`. `arcHeight` raises the midpoint in pixels, `bank` and `lean` offset it horizontally and vertically as fractions of vertical travel, and `apex` places the midpoint keyframe at a fraction of the flight. `stagger` delays successive simultaneous flights in ms within the scheduled step duration. A separate `scale` step can run alongside it.
+- `glow` accepts a CSS `colour` and a centred `hold` fraction from 0 to 1. With a colour, optional `shadows` lists CSS shadow geometry without colour.
+- `flip` with `squash: false` swaps the face and label as soon as the step starts.
+- `shake-group` accepts `actors` (ids of beat actors, animated as clones) or a CSS `selector` (live elements). `amplitude` and `crossAmplitude` are horizontal and vertical offsets in pixels, and `frames` sets the number of keyframes.
+- `unroll` reveals an actor from scale zero on `axis: 'x'` or `'y'` with a CSS `origin` (left for x, top for y by default).
+- Pass the actors to `layer.start(run, actors)` in `onBeatStart`. An `EffectActor` with `hideSource: 'start'` hides its resolved source at beat start. With `hideSource: 'step'`, it hides the source at the actor's first step. `layer.end(run)` or `layer.clear()` restores the source.
+
+The [motion lab](fake/retrofit/index.html) plays these effects with the plain-data preset in `presets/seventh-inning.ts`.
