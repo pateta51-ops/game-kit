@@ -1,0 +1,13 @@
+/* opt-in look: Imperium's playable glow, a three-layer warm gold bloom on every playable (legal) option, sized from --pick-edge-size
+   (default 3px; Imperium uses max(2px, card unit * 0.3)). Import once; pair with picked-state looks/imperium.css for the chosen card.
+   Variables: --pick-glow-core, --pick-glow, --pick-glow-far, --pick-edge-size. Box shadow only; shows on touch (the hover lift is extra). */
+[data-mark='legal'] {
+  --pick-e: var(--pick-edge-size, 3px);
+  box-shadow:
+    0 0 calc(var(--pick-e) * 0.9) calc(var(--pick-e) * 0.2) var(--pick-glow-core, rgb(255 234 170 / 0.95)),
+    0 0 calc(var(--pick-e) * 2.4) calc(var(--pick-e) * 0.45) var(--pick-glow, rgb(255 210 112 / 0.6)),
+    0 0 calc(var(--pick-e) * 5) calc(var(--pick-e) * 0.7) var(--pick-glow-far, rgb(255 194 80 / 0.3));
+}
+@media (hover: hover) {
+  [data-mark='legal']:hover { transform: translateY(-2px); }
+}

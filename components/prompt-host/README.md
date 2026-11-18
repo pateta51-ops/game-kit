@@ -40,4 +40,4 @@ const W: Widgets<P, null> = { pick: PickOptions }
 export const Ask = ({ prompt, send }: { prompt: P | null; send: (picks: readonly string[], id?: number) => void }) => <PromptHost widgets={W} prompt={prompt} view={null} answer={send} look={{ label: (o) => o.id.toUpperCase(), done: 'Fertig' }} />
 ```
 
-Look file (opt-in): `looks/legal-glow.css`, a box-shadow glow on `[data-mark="legal"]` (touch included, no filter); variables `--focus`, `--glow`.
+Look file (opt-in): `looks/legal-glow.css`, a box-shadow glow on `[data-mark="legal"]` (touch included, no filter); variables `--focus`, `--glow`. Or `looks/imperium-legal.css` (K309): Imperium's three-layer gold bloom on the same marks, sized by `--pick-edge-size`; variables `--pick-glow-core`, `--pick-glow`, `--pick-glow-far`; pair it with picked-state `looks/imperium.css` for the chosen card.

@@ -18,3 +18,14 @@ describe('K308 look legal-glow', () => {
     expect(css).not.toContain(':hover')
   })
 })
+const imp = readFileSync(join(here, 'looks', 'imperium-legal.css'), 'utf8')
+describe('K309 look imperium-legal', () => {
+  it('balanced, no filter, glow not behind :hover, not imported', () => {
+    const c = imp.replace(/\/\*[\s\S]*?\*\//g, '')
+    expect(c.match(/\{/g)?.length).toBe(c.match(/\}/g)?.length)
+    expect(c).not.toMatch(/filter/)
+    expect(c.split('@media')[0]).toContain("[data-mark='legal'] {")
+    for (const f of readdirSync(here).filter((x) => /\.(tsx?|css)$/.test(x) && !x.includes('.test.')))
+      expect(readFileSync(join(here, f), 'utf8')).not.toContain('looks/imperium-legal')
+  })
+})

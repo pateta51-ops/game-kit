@@ -42,7 +42,8 @@
     ]
   },
   "looks": {
-    "looks/legal-glow.css": "Unstoppable scanned.css at PR #66 head ba64496 (D-166): the playable glow as a box shadow"
+    "looks/legal-glow.css": "Unstoppable scanned.css at PR #66 head ba64496 (D-166): the playable glow as a box shadow",
+    "looks/imperium-legal.css": "imperium-horizon-fan-prototype src/ui/theme/play.css at 22736b2 (.pickable.is-selectable, index.css --pick-glow-*): the playable gold bloom"
   },
   "needs": [
     "engine-core",
