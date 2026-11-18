@@ -137,6 +137,10 @@
     "use": "Playwright tests of a game that need shared helpers.",
     "not": "Unit tests (vitest)."
   },
+  "test-setup": {
+    "use": "vitest setup in a game: jsdom stubs (scroll, matchMedia, observers), a fake pack and fake art for card components, a once-per-run real-pack cache that skips without the private pack.",
+    "not": "Playwright tests (e2e-helpers)."
+  },
   "effect-library": {
     "use": "Release 1.1 visual effects: the twelve motion verbs, particles, ambience, canvas layers.",
     "not": "Deciding which effect plays (the game's motion specs and motion-frame)."

@@ -1,0 +1,13 @@
+{
+  "name": "test-setup",
+  "source": {
+    "game": "unst",
+    "commit": "bcacbf1",
+    "paths": ["src/test-utils/setup-dom.ts", "src/ui/testing/artPack.ts", "src/ui/testing/fixtures.tsx"],
+    "grafts": [
+      { "game": "ebr", "commit": "b9b06107", "paths": ["tests/helpers/realdataSetup.ts"] },
+      { "game": "stcc", "commit": "a69c8dac", "paths": ["src/test-utils/realPack.ts"] }
+    ]
+  },
+  "needs": []
+}

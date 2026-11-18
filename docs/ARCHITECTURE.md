@@ -125,6 +125,7 @@ graph LR
   table_panels["table-panels"] --> game_log["game-log"]
   table_panels["table-panels"] --> paced_view["paced-view"]
   target_arrow["target-arrow"]
+  test_setup["test-setup"]
   theme_check["theme-check"]
   token_bag["token-bag"]
   token_flights["token-flights"]
@@ -191,6 +192,7 @@ graph LR
 - `story`
 - `table-panels`
 - `target-arrow`
+- `test-setup`
 - `theme-check`
 - `token-bag`
 - `token-flights`
