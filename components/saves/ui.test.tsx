@@ -131,4 +131,13 @@ describe('SavesScreen', () => {
     fireEvent.click(screen.getByTestId('save-load'));
     expect(onLoad).toHaveBeenCalledTimes(1);
   });
+  it('K391: savedLine={false} drops the saved date line; default keeps it', async () => {
+    const saves = mk();
+    await saves.writeAutosave(played('k', 2), 'Current game');
+    const { unmount } = render(<SavesScreen saves={saves} history={null} summary={summary} onLoad={vi.fn()} />);
+    expect((await screen.findByTestId('save-row')).textContent).toContain('saved ');
+    unmount();
+    render(<SavesScreen saves={saves} history={null} summary={summary} onLoad={vi.fn()} savedLine={false} />);
+    expect((await screen.findByTestId('save-row')).textContent).not.toContain('saved ');
+  });
 });

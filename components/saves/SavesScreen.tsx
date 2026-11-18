@@ -39,6 +39,8 @@ export interface SavesScreenProps<G extends GameTypes> {
   readonly buttonClass?: string;
   /** Draws a button instead of the default `<button>`; wire `onClick`, `disabled`, `type` and `testId` through. */
   readonly renderButton?: (b: SavesButtonProps) => ReactNode;
+  /** K391: false drops the "saved <date>" line (when the game's summary already shows the date). */
+  readonly savedLine?: boolean;
   readonly download?: (text: string, name: string) => boolean;
 }
 
@@ -103,9 +105,11 @@ export function SavesScreen<G extends GameTypes>(p: SavesScreenProps<G>) {
             <b>{stored.name}</b>
           )}
           {r.ok ? <span>{p.summary(r.state, r.save)}</span> : <span className="kit-sav-bad">{r.error} {w.broken}</span>}
-          <span className="kit-sav-muted">
-            {w.savedAt} {when(stored.save.savedAt)}
-          </span>
+          {p.savedLine !== false && (
+            <span className="kit-sav-muted">
+              {w.savedAt} {when(stored.save.savedAt)}
+            </span>
+          )}
         </div>
         {r.ok &&
           btn('load', first ? w.continue : w.load, 'save-load', {

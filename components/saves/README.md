@@ -53,6 +53,7 @@ export const Mine = (p: { saves: Parameters<typeof SavesScreen<Counter>>[0]['sav
 ```
 
 `buttonClass` is added to every button; `renderButton({ label, onClick, disabled, kind, className, type, testId })` draws a button instead (kind: load, export, rename, delete, save). Without them the screen is unchanged.
+K391: `savedLine={false}` drops each row's "saved <date>" line, for a game whose summary already shows the date.
 
 ## Export and import all data
 

@@ -151,6 +151,7 @@ A game's build plan lists the kit work it needs as phases named `GK<n>` for the 
 | K387 | saves, settings, bug-reporter: optional `buttonClass` / `plateClass` and a `renderButton` / `renderPlate` slot, so a game draws its own button and plate parts on the kit screens | S |  | done |
 | K388 | prompt-host overflow mode: shrink answers to a font floor, use two columns, then open a scrolling panel within stage and keep-out limits | M |  | done |
 | K389 | glossary: useLookup exported from ui.ts; the open lookup closes on route change (popstate, hashchange, closeOn); links inside a control hold by default (tap presses, long press opens) | S |  | done |
+| K391 | saves: `savedLine={false}` drops the repeated "saved <date>" line in SavesScreen rows | S |  | done |
 
 ## Harvest from the existing games (owner, 15 Nov 2026)
 
