@@ -106,8 +106,8 @@
     "exports": "`render.mjs`, `ci.yml`, `full-gate.yml`, `nightly-fuzz.yml`, `local-ci.sh`, `install-wsl.sh`, `watch-run.sh`, `watch-run.mjs`, `skip-reporter.ts`"
   },
   "content-pack": {
-    "use": "Card, deck or scenario data (CSV or JSON) loads through a zod schema per record kind with id-uniqueness, dangling-reference and card-language verb checks, every problem listed at once.",
-    "not": "The game's record shapes, verbs or words; one effect checked at run time (card-language validateEffect)."
+    "use": "Card, deck or scenario data (CSV or JSON) loads through a zod schema per record kind with id-uniqueness, dangling-reference and card-language verb checks, every problem listed at once; also a base + expansions pick list with dependency ticking and a merge into one index.",
+    "not": "The game's record shapes, verbs or words; one effect checked at run time (card-language validateEffect); importing or storing packs."
   },
   "coverage-report": {
     "use": "Which card-language constructs a pack uses, lacks, or has no handler for: function, CLI (--strict exit code) and unstyled page.",
@@ -258,6 +258,10 @@
     "use": "Showing one state per prompt kind and ending, with a check that no kind lacks one.",
     "not": "Runtime screens."
   },
+  "proof-sheet": {
+    "use": "Review a pack’s faces beside fields, printed words, generated words and flags, with filters in the hash and a static export.",
+    "not": "Designing faces, loading packs or deciding which findings a game should flag."
+  },
   "prompt-host": {
     "use": "Showing the open engine-core prompt on screen: a widget per prompt kind (a missing one fails to compile), the common widgets (pick, amount, order, may, pay) unstyled, forced answers sent from the store in one undo step (answerWithForced), board picks with tap to confirm (one or several). Recipe: docs/recipes/prompts.md.",
     "not": "The game's look or its own kind-specific widgets; board highlights (the game draws those from the option ids)."
@@ -289,6 +293,10 @@
   "resolution-frame": {
     "use": "A Resolution setting that lays out for a chosen screen size and scales to the window.",
     "not": "Phone layouts (phone-mode)."
+  },
+  "rules-screen": {
+    "use": "Show a game-owned rulebook with contents, ranked search, glossary links, annotated diagrams and reference sheets.",
+    "not": "Engine rules or deciding printed wording; the game owns the book and its assets."
   },
   "saves": {
     "use": "Saved games in IndexedDB over engine-core's save file and a saves screen.",

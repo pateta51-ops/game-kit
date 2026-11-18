@@ -3,8 +3,8 @@
   "source": {
     "game": "7is",
     "commit": "18fb28c",
-    "paths": ["src/content/validate.ts (duplicate-id and schema checks with stable messages)", "under-falling-skies:scripts/validate-content.ts", "stcc: content validator"]
+    "paths": ["src/content/validate.ts (duplicate-id and schema checks with stable messages)", "under-falling-skies:scripts/validate-content.ts", "stcc: content validator", "earthborne-rangers-fan-prototype@59e0ad1d: src/engine/pack/merge.ts, src/ui/screens/Products.tsx (dependency closure, merge, ticking)", "unstoppable-fan-prototype@e314b5f: src/ui/screens/Packs.tsx (picker states only)"]
   },
   "needs": ["card-harness", "card-language", "engine-core"],
-  "packages": ["zod"]
+  "packages": ["zod", "react"]
 }
