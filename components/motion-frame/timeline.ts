@@ -48,6 +48,7 @@ export interface MotionSpec {
   /** waits in the queue until the player's `visible()` is true; its clock starts then (K142) */
   whenVisible?: boolean;
   swap?: BoardSwap;
+  pan?: unknown;
   whenReady?: boolean;
   awaitRects?: readonly string[];
   holdUntil?: string;

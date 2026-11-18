@@ -16,13 +16,27 @@ Plays motion specs in the director's format (one JSON per beat: `actors`, `steps
   Defaults: 420 ms, 70 ms stagger capped at eight intervals, fade entries and shrinking exit ghosts.
   With `enter: 'from'`, `data-motion-from` is a source selector. `leave: 'none'` drops exit ghosts.
   Arrivals carry `data-motion-landing` until they land. Skip, hurry and instant speed snap commits and clear flights.
+- A spec's `pan` is the target passed to the optional `pan(scale, signal)` session factory's
+  `ensure(target)` method. It runs before rect polling, the start hook and commit.
+  Panned beats use the ordered queue. One session spans the queue, and its async
+  `back()` returns the view when the queue drains. A factory may return null off phone.
+  Pointer, touch, wheel and key input abort the signal and leave the view where it is.
+  A held beat keeps the session open. `hurry()` and `skipAll()` cancel it.
+  Each ensure and return times out after `panTimeoutMs` (default 2000 ms).
+  Instant and reduced beats start no pan.
+  Custom adapters should stop any movement when the signal aborts.
+- `scrollPan({ scroller, tabs?, activeTab?, inView? })` makes a session factory.
+  Pass a selector as the target and return the current scroll container from `scroller`.
+  For tabbed views, supply the destination button via `tabs(selector)` and the
+  current button via `activeTab()`. Buttons should stay mounted during the session.
+  The default checks the scroller bounds. Pans ease over 350 ms times the motion scale.
 - `withViewTransition(apply, speed)` uses the browser transition when enabled.
   Supply a synchronous DOM update (React can wrap it in `flushSync`) or return the redraw promise.
   Import `view-transition.css` to use the durations set by `putMotionSpeed`.
   Mark a clipping panel with `data-vt-clip` to exclude its partially visible inline-named elements.
   The helper is independent of the board swap.
 - `speed()` is read when a beat starts: a factor (1, 0.5) or `'instant'`. Instant builds no timeline: `onEnd` fires at once, and the cues are still called, in order.
-- `busy()`: a `rare` or `once` beat is playing or queued. `constant`, `often` and `each round` never set it. `pending()`, `subscribe(f)`.
+- `busy()`: a `rare` or `once` beat is playing or queued. `constant`, `often` and `each round` never set it. A pan return counts in both `busy()` and `pending()`. `subscribe(f)`.
 - `skipAll()`: everything playing and queued jumps to its end: open verbs finish, every `onEnd` fires, cues not yet due are dropped. `skipOnInput(player, window)` calls it on any press or key.
 - `onCue(cue, beatId)` at the cue's time. A verb, hook or cue that throws goes to `onProblem`; the queue goes on.
 - `withReducedMotion(speed)`: `'instant'` when the system asks for reduced motion. `BeatTable<Kind>`: type for the game's event-kind to beat-names table, so a kind without an entry fails the type check.
@@ -44,6 +58,7 @@ Plays motion specs in the director's format (one JSON per beat: `actors`, `steps
 The end state is the game's own screen: the player never touches game state.
 ## Look
 Open `components/motion-frame/fake/lab.html` through Vite to try the fake queue.
+Open `components/motion-frame/fake/pan.html` for the phone pan lab.
 Open `components/motion-frame/fake/swap.html` for the board swap lab.
 Choose the piece beat, draw the tray, then press to let the roll play.
 The lab is an unstyled `ul.motion-lab` of `button[data-beat]` (`data-playing` while it plays): the game styles it. Nothing else draws. Tests: `motion.test.ts` (node) and `lab.test.tsx` (jsdom), with the fake game in `fake/`.

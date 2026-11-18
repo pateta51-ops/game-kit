@@ -4736,10 +4736,37 @@ var MOTION = (() => {
     const reached = (id) => {
       if (id !== "press") endHolds((item) => item.spec.holdUntil === id);
     };
+    let pan;
+    let returning = false;
+    const closePan = () => {
+      const active = pan;
+      pan = void 0;
+      returning = false;
+      active?.controller.abort();
+    };
+    const startPan = (scale) => {
+      if (pan) return pan.controller.signal.aborted ? null : pan.session;
+      const controller = new AbortController();
+      const session = o.pan?.(scale, controller.signal);
+      if (!session) return null;
+      pan = { session, controller };
+      if (typeof window !== "undefined") {
+        for (const event of ["pointerdown", "touchstart", "wheel", "keydown"])
+          window.addEventListener(event, () => {
+            controller.abort();
+          }, {
+            capture: true,
+            passive: true,
+            signal: controller.signal
+          });
+      }
+      return session;
+    };
     const frame = o.frame ?? ((f) => requestAnimationFrame(f));
     let runs = 0;
     let skipping = false;
     let starting;
+    let committing = false;
     const snapping = [];
     const waiters = [];
     const gate = () => {
@@ -4759,9 +4786,10 @@ var MOTION = (() => {
     };
     const safe = (what, f) => {
       try {
-        f();
+        return f();
       } catch (e) {
         o.onProblem?.(`${what}: ${e instanceof Error ? e.message : String(e)}`);
+        return void 0;
       }
     };
     const cue = (c, beat) => {
@@ -4770,7 +4798,13 @@ var MOTION = (() => {
     const commit = (item) => {
       const apply = item.commit;
       delete item.commit;
-      if (apply) safe(`${item.spec.id} commit`, apply);
+      if (!apply) return;
+      committing = true;
+      try {
+        safe(`${item.spec.id} commit`, apply);
+      } finally {
+        committing = false;
+      }
     };
     const makeRun = (item, timeline) => ({
       id: ++runs,
@@ -4925,7 +4959,21 @@ var MOTION = (() => {
       }
     };
     const next = () => {
-      while (cur === null && drawingHead === void 0 && !skipping && !starting) {
+      while (cur === null && drawingHead === void 0 && !skipping && !starting && !committing && !returning) {
+        if (queue.length === 0 && live.size === 0 && drawing.size === 0 && holds.size === 0 && pan) {
+          const { session, controller } = pan;
+          if (controller.signal.aborted) closePan();
+          else {
+            returning = true;
+            void panWork(() => session.back(), controller).finally(() => {
+              if (pan?.controller !== controller) return;
+              closePan();
+              next();
+              emit();
+            });
+            return;
+          }
+        }
         const index = holds.size === 0 || queue[0]?.skipped ? 0 : queue.findIndex(({ spec }) => spec.id !== "press" && [...holds.keys()].some((i) => i.spec.holdUntil === spec.id));
         const item = queue[index];
         if (item === void 0 || !item.skipped && item.spec.whenVisible === true && o.visible?.() === false) return;
@@ -4938,6 +4986,28 @@ var MOTION = (() => {
         } finally {
           starting = void 0;
         }
+      }
+    };
+    const panWork = async (work, controller) => {
+      const { signal } = controller;
+      if (signal.aborted) return;
+      let stop;
+      const aborted = new Promise((resolve) => {
+        stop = resolve;
+      });
+      signal.addEventListener("abort", stop, { once: true });
+      const ms = o.panTimeoutMs ?? 2e3;
+      const timer = setTimeout(() => {
+        controller.abort();
+        o.onProblem?.(`pan: timed out after ${ms} ms`);
+      }, ms);
+      try {
+        await Promise.race([work(), aborted]);
+      } catch (e) {
+        o.onProblem?.(`pan: ${e instanceof Error ? e.message : String(e)}`);
+      } finally {
+        clearTimeout(timer);
+        signal.removeEventListener("abort", stop);
       }
     };
     const begin = (item, parallel) => {
@@ -4975,7 +5045,7 @@ var MOTION = (() => {
         drawing.delete(item);
         if (drawingHead === item) drawingHead = void 0;
       };
-      try {
+      const prepare = () => {
         if (item.commit || !spec.whenReady && spec.awaitRects === void 0) {
           play();
           return;
@@ -4999,17 +5069,42 @@ var MOTION = (() => {
           undraw();
           cancel();
         });
-      } catch (e) {
-        drawing.delete(item);
-        if (drawingHead === item) drawingHead = void 0;
-        fail(e);
+      };
+      const ready = () => {
+        try {
+          prepare();
+        } catch (e) {
+          undraw();
+          fail(e);
+        }
+      };
+      const session = o.pan && !reduced && spec.pan !== void 0 ? safe(`${spec.id} pan`, () => startPan(speed)) : null;
+      const active = pan;
+      if (!session || !active) {
+        ready();
+        return;
       }
+      drawingHead = item;
+      drawing.set(item, undraw);
+      void panWork(() => session.ensure(spec.pan), active.controller).then(() => {
+        if (!drawing.has(item)) return;
+        undraw();
+        starting = item;
+        try {
+          ready();
+        } finally {
+          starting = void 0;
+        }
+        next();
+        emit();
+      });
     };
     const skip = (snap) => {
       const wasSkipping = skipping;
       const current = cur?.item;
-      let blocked = Boolean(starting !== current && starting?.commit || current?.commit && !snap(current) || snapping.some((batch) => batch.some((i) => i.commit)));
-      const waiting = [];
+      const drawingItems = [...drawing].filter(([item]) => snap(item));
+      let blocked = Boolean(committing || [...drawing.keys()].some((item) => item.commit && !snap(item)) || starting !== current && starting?.commit || current?.commit && !snap(current) || snapping.some((batch) => batch.some((i) => i.commit)));
+      const waiting = drawingItems.map(([item]) => item);
       const kept = queue.filter((item) => {
         if (!snap(item)) {
           if (item.commit) blocked = true;
@@ -5027,12 +5122,11 @@ var MOTION = (() => {
       snapping.push(waiting);
       try {
         endHolds(snap);
-        const drawingItems = [...drawing].filter(([item]) => snap(item));
         for (const [, cancel] of drawingItems) cancel();
+        closePan();
         for (const c of [...live]) {
           if (snap(c.item)) finish(c, "skipped");
         }
-        for (const [item] of drawingItems) snapEnd(item);
         for (const item of waiting) snapEnd(item);
       } finally {
         snapping.pop();
@@ -5067,7 +5161,7 @@ var MOTION = (() => {
           data: opts?.data,
           ...!spec && { problem: `motion-frame: no spec named ${beat}` }
         };
-        if (opts?.parallel === true && !item.commit) {
+        if (opts?.parallel === true && !item.commit && (!o.pan || item.spec.pan === void 0)) {
           if (skipping) {
             snapStart(item);
             safe(`${item.spec.id} onEnd`, () => end?.("skipped"));
@@ -5103,8 +5197,8 @@ var MOTION = (() => {
         next();
         emit();
       },
-      busy: () => [...live].some((c) => blocks(c.item.spec)) || [...drawing.keys(), ...holds.keys(), ...queue].some((i) => blocks(i.spec)),
-      pending: () => live.size + drawing.size + holds.size + queue.length,
+      busy: () => returning || [...live].some((c) => blocks(c.item.spec)) || [...drawing.keys(), ...holds.keys(), ...queue].some((i) => blocks(i.spec)),
+      pending: () => live.size + drawing.size + holds.size + queue.length + Number(returning),
       held: () => holds.size > 0,
       release() {
         const size = holds.size;

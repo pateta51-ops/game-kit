@@ -1,6 +1,7 @@
 // The playing half: a queue of beats, each a timeline run on timers. It draws nothing itself: the verbs do.
 import { buildTimeline, withVariant, type MotionSpec, type Place, type Stage, type Timeline, type VerbCall } from './timeline.ts';
 
+import type { PanFactory, PanSession } from './pan.ts';
 import { flyBoard, measureBoard } from './swap.ts';
 
 export type Speed = number | 'instant';
@@ -73,6 +74,9 @@ export interface PlayerOptions<C = undefined> {
   visible?: () => boolean;
   /** factor for `read` steps, from the motion factor; default never under 1 (Slow lengthens, Quick keeps) */
   pace?: (factor: number) => number;
+  pan?: PanFactory;
+  /** max time for each pan ensure or return, in milliseconds (default 2000) */
+  panTimeoutMs?: number;
   frame?: (callback: FrameRequestCallback) => number | (() => void) | void;
 }
 export interface PlayOptions {
@@ -89,9 +93,9 @@ export interface PlayOptions {
 export interface MotionPlayer {
   /** queue a beat by name, or a spec built by the game (a template filled with live actors) */
   play(beat: string | MotionSpec, opts?: PlayOptions): void;
-  /** a rare or once beat is playing or queued */
+  /** a rare or once beat is playing or queued, or a pan is returning */
   busy(): boolean;
-  /** beats playing (parallel ones too) or queued */
+  /** beats playing (parallel ones too) or queued, plus a pan return */
   pending(): number;
   /** everything playing and queued jumps to its end state: verbs finish, end callbacks fire, cues not yet due are dropped */
   skipAll(): void;
@@ -159,10 +163,33 @@ export function createMotionPlayer<C = undefined>(o: PlayerOptions<C>): MotionPl
   const reached = (id: string): void => {
     if (id !== 'press') endHolds((item) => item.spec.holdUntil === id);
   };
+  let pan: { session: PanSession; controller: AbortController } | undefined;
+  let returning = false;
+  const closePan = (): void => {
+    const active = pan;
+    pan = undefined;
+    returning = false;
+    active?.controller.abort();
+  };
+  const startPan = (scale: number): PanSession | null => {
+    if (pan) return pan.controller.signal.aborted ? null : pan.session;
+    const controller = new AbortController();
+    const session = o.pan?.(scale, controller.signal);
+    if (!session) return null;
+    pan = { session, controller };
+    if (typeof window !== 'undefined') {
+      for (const event of ['pointerdown', 'touchstart', 'wheel', 'keydown'])
+        window.addEventListener(event, () => { controller.abort(); }, {
+          capture: true, passive: true, signal: controller.signal,
+        });
+    }
+    return session;
+  };
   const frame = o.frame ?? ((f: FrameRequestCallback) => requestAnimationFrame(f));
   let runs = 0;
   let skipping = false;
   let starting: Item | undefined;
+  let committing = false;
   const snapping: Item[][] = [];
   const waiters: (() => void)[] = [];
   const gate = (): GateState | null => {
@@ -180,11 +207,12 @@ export function createMotionPlayer<C = undefined>(o: PlayerOptions<C>): MotionPl
       if (f) safe('afterGate', f);
     }
   };
-  const safe = (what: string, f: () => void): void => {
+  const safe = <T>(what: string, f: () => T): T | undefined => {
     try {
-      f();
+      return f();
     } catch (e) {
       o.onProblem?.(`${what}: ${e instanceof Error ? e.message : String(e)}`);
+      return undefined;
     }
   };
   const cue = (c: string, beat: string): void => {
@@ -194,7 +222,13 @@ export function createMotionPlayer<C = undefined>(o: PlayerOptions<C>): MotionPl
   const commit = (item: Item): void => {
     const apply = item.commit;
     delete item.commit;
-    if (apply) safe(`${item.spec.id} commit`, apply);
+    if (!apply) return;
+    committing = true;
+    try {
+      safe(`${item.spec.id} commit`, apply);
+    } finally {
+      committing = false;
+    }
   };
   const makeRun = (item: Item, timeline: Timeline): Run<C> => ({
     id: ++runs, timeline, context: o.context, ...(item.place && { place: item.place }),
@@ -350,7 +384,21 @@ export function createMotionPlayer<C = undefined>(o: PlayerOptions<C>): MotionPl
   };
 
   const next = (): void => {
-    while (cur === null && drawingHead === undefined && !skipping && !starting) {
+    while (cur === null && drawingHead === undefined && !skipping && !starting && !committing && !returning) {
+      if (queue.length === 0 && live.size === 0 && drawing.size === 0 && holds.size === 0 && pan) {
+        const { session, controller } = pan;
+        if (controller.signal.aborted) closePan();
+        else {
+          returning = true;
+          void panWork(() => session.back(), controller).finally(() => {
+            if (pan?.controller !== controller) return;
+            closePan();
+            next();
+            emit();
+          });
+          return;
+        }
+      }
       const index = holds.size === 0 || queue[0]?.skipped ? 0 : queue.findIndex(({ spec }) =>
         spec.id !== 'press' && [...holds.keys()].some((i) => i.spec.holdUntil === spec.id));
       const item = queue[index];
@@ -364,6 +412,26 @@ export function createMotionPlayer<C = undefined>(o: PlayerOptions<C>): MotionPl
       } finally {
         starting = undefined;
       }
+    }
+  };
+  const panWork = async (work: () => Promise<void>, controller: AbortController): Promise<void> => {
+    const { signal } = controller;
+    if (signal.aborted) return;
+    let stop!: () => void;
+    const aborted = new Promise<void>((resolve) => { stop = resolve; });
+    signal.addEventListener('abort', stop, { once: true });
+    const ms = o.panTimeoutMs ?? 2000;
+    const timer = setTimeout(() => {
+      controller.abort();
+      o.onProblem?.(`pan: timed out after ${ms} ms`);
+    }, ms);
+    try {
+      await Promise.race([work(), aborted]);
+    } catch (e) {
+      o.onProblem?.(`pan: ${e instanceof Error ? e.message : String(e)}`);
+    } finally {
+      clearTimeout(timer);
+      signal.removeEventListener('abort', stop);
     }
   };
   const begin = (item: Item, parallel: boolean): void => {
@@ -404,7 +472,7 @@ export function createMotionPlayer<C = undefined>(o: PlayerOptions<C>): MotionPl
       drawing.delete(item);
       if (drawingHead === item) drawingHead = undefined;
     };
-    try {
+    const prepare = (): void => {
       if (item.commit || (!spec.whenReady && spec.awaitRects === undefined)) {
         play();
         return;
@@ -428,19 +496,46 @@ export function createMotionPlayer<C = undefined>(o: PlayerOptions<C>): MotionPl
         undraw();
         cancel();
       });
-    } catch (e) {
-      drawing.delete(item);
-      if (drawingHead === item) drawingHead = undefined;
-      fail(e);
+    };
+    const ready = (): void => {
+      try {
+        prepare();
+      } catch (e) {
+        undraw();
+        fail(e);
+      }
+    };
+    const session = o.pan && !reduced && spec.pan !== undefined
+      ? safe(`${spec.id} pan`, () => startPan(speed)) : null;
+    const active = pan;
+    if (!session || !active) {
+      ready();
+      return;
     }
+    drawingHead = item;
+    drawing.set(item, undraw);
+    void panWork(() => session.ensure(spec.pan), active.controller).then(() => {
+      if (!drawing.has(item)) return;
+      undraw();
+      starting = item;
+      try {
+        ready();
+      } finally {
+        starting = undefined;
+      }
+      next();
+      emit();
+    });
   };
 
   const skip = (snap: (i: Item) => boolean): void => {
     const wasSkipping = skipping;
     const current = cur?.item;
-    let blocked = Boolean((starting !== current && starting?.commit) ||
+    const drawingItems = [...drawing].filter(([item]) => snap(item));
+    let blocked = Boolean(committing || [...drawing.keys()].some((item) => item.commit && !snap(item)) ||
+      (starting !== current && starting?.commit) ||
       (current?.commit && !snap(current)) || snapping.some((batch) => batch.some((i) => i.commit)));
-    const waiting: Item[] = [];
+    const waiting = drawingItems.map(([item]) => item);
     const kept = queue.filter((item) => {
       if (!snap(item)) {
         if (item.commit) blocked = true;
@@ -458,12 +553,11 @@ export function createMotionPlayer<C = undefined>(o: PlayerOptions<C>): MotionPl
     snapping.push(waiting);
     try {
       endHolds(snap);
-      const drawingItems = [...drawing].filter(([item]) => snap(item));
       for (const [, cancel] of drawingItems) cancel();
+      closePan();
       for (const c of [...live]) {
         if (snap(c.item)) finish(c, 'skipped');
       }
-      for (const [item] of drawingItems) snapEnd(item);
       for (const item of waiting) snapEnd(item);
     } finally {
       snapping.pop();
@@ -499,7 +593,7 @@ export function createMotionPlayer<C = undefined>(o: PlayerOptions<C>): MotionPl
         onEnd: end, gate: opts?.gate, commit, data: opts?.data,
         ...(!spec && { problem: `motion-frame: no spec named ${beat as string}` }),
       };
-      if (opts?.parallel === true && !item.commit) {
+      if (opts?.parallel === true && !item.commit && (!o.pan || item.spec.pan === undefined)) {
         // during a skip it jumps to its end at once, like everything else
         if (skipping) {
           snapStart(item);
@@ -538,8 +632,8 @@ export function createMotionPlayer<C = undefined>(o: PlayerOptions<C>): MotionPl
       next();
       emit();
     },
-    busy: () => [...live].some((c) => blocks(c.item.spec)) || [...drawing.keys(), ...holds.keys(), ...queue].some((i) => blocks(i.spec)),
-    pending: () => live.size + drawing.size + holds.size + queue.length,
+    busy: () => returning || [...live].some((c) => blocks(c.item.spec)) || [...drawing.keys(), ...holds.keys(), ...queue].some((i) => blocks(i.spec)),
+    pending: () => live.size + drawing.size + holds.size + queue.length + Number(returning),
     held: () => holds.size > 0,
     release() {
       const size = holds.size;

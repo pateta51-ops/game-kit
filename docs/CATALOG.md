@@ -570,7 +570,7 @@ Plays motion specs in the director's format (one JSON per beat: `actors`, `steps
 
 - **Use it when:** Playing the director's motion specs (JSON beats) on the screen.
 - **Not for:** The effects themselves (effect-library) or game logic.
-- **Key exports:** `withViewTransition`, `withVariant`, `stageFromLayout`, `buildTimeline`, `validateSpec`, `validateSpecs`, `placeOf`, `createVerbs`, `createMotionPlayer`, `withReducedMotion`, `prefersReducedMotion`, `automatedWithoutMotion`, `withAutomationOff`, `putMotionSpeed`, and 38 more
+- **Key exports:** `withViewTransition`, `withVariant`, `stageFromLayout`, `buildTimeline`, `validateSpec`, `validateSpecs`, `placeOf`, `createVerbs`, `createMotionPlayer`, `withReducedMotion`, `prefersReducedMotion`, `automatedWithoutMotion`, `withAutomationOff`, `putMotionSpeed`, and 42 more
 - **Needs:** nothing
 - **Came from:** warps
 - **Docs:** [README](../components/motion-frame/README.md)
