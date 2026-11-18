@@ -356,6 +356,11 @@
     "use": "Tokens that moved between two views fly from where they were to where they are, with a ledger that draws each token in one place at a time.",
     "not": "Cards flying, motion specs (motion-frame) or the token look."
   },
+  "art-pipeline": {
+    "use": "Game-free scripts for a card game's art, driven by the game's config: an index of one chosen image per card (order, overrides, degraded rule), fetch with sha256, sheet cells and crops, PDF pages as faces, a CI cache keyed on input hashes, publish to public with a manifest art-check reads.",
+    "not": "Mapping card ids to files, the sources' URLs and parsing a dossier: those stay in the game and go in as config.",
+    "exports": "Scripts: `art-index`, `art-fetch`, `art-extract`, `art-render-pdf`, `art-ci-cache`, `art-publish`; `lib`: `cellBox`, `decodePng`, `encodePng`, `imageSize`, `codec`"
+  },
   "tooling-scripts": {
     "use": "Small repo scripts run with `node kit/tooling-scripts/<script>.ts` (art check, shots, text-leak, home screen, docs index). Recipe: docs/recipes/agent-workflow.md.",
     "not": "Game-specific scripts.",

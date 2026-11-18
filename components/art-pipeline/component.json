@@ -1,0 +1,14 @@
+{
+  "name": "art-pipeline",
+  "source": {
+    "game": "earthborne-rangers",
+    "repo": "earthborne-rangers-fan-prototype",
+    "commit": "b9b06107",
+    "paths": ["scripts/lib/artIndex.ts", "scripts/art-fetch.ts", "scripts/art-extract.ts", "scripts/art-ci-cache.ts", "scripts/art-render-pdf.ts", "tests/unit/art-extract.test.ts", "tests/realdata/art-render-pdf.test.ts"]
+  },
+  "grafts": [
+    { "game": "7is", "repo": "7th-inning-stretch-fan-prototype", "commit": "5e0ad51", "paths": ["scripts/art-build.ts"], "what": "art-publish.ts: faces copied to public with a manifest (and the pixel size of each); the game's icon, glyph and content checks stayed behind" }
+  ],
+  "needs": ["tooling-scripts"],
+  "packages": ["pdfjs-dist", "@napi-rs/canvas", "sharp"]
+}

@@ -7,6 +7,7 @@ graph LR
   achievements["achievements"] --> play_stats["play-stats"]
   app_frame["app-frame"] --> state_machines["state-machines"]
   app_icons["app-icons"]
+  art_pipeline["art-pipeline"] --> tooling_scripts["tooling-scripts"]
   audio_gen["audio-gen"]
   automa["automa"] --> engine_core["engine-core"]
   automa["automa"] --> sim_pool["sim-pool"]
@@ -149,6 +150,7 @@ graph LR
 - `achievements`
 - `app-frame`
 - `app-icons`
+- `art-pipeline`
 - `audio-gen`
 - `automa`
 - `board-model`
@@ -199,7 +201,6 @@ graph LR
 - `theme-check`
 - `token-bag`
 - `token-flights`
-- `tooling-scripts`
 - `traceability`
 - `track`
 - `transcription-check`
