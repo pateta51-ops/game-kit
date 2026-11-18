@@ -3,6 +3,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import type { Chooser } from './client.ts';
+import { makeChooser, type Body } from './client.ts';
 import { createAdapter } from './fake-adapter.ts';
 import { keyName, loadKey } from './key.ts';
 import { main, runPlaytest } from './playtest.ts';
@@ -86,5 +87,26 @@ describe('llm-playtester', () => {
     expect(() => loadKey('fakeGame', join(dir, 'none'), { ANTHROPIC_API_KEY: 'sk-wrong' })).toThrow(/refused/);
     writeFileSync(file, 'ANTHROPIC_API_KEY=sk-wrong\nFAKE_GAME_CLAUDE_API_KEY="sk-right" # mine\n');
     expect(loadKey('fakeGame', file, { ANTHROPIC_API_KEY: 'sk-wrong' })).toBe('sk-right');
+  });
+
+  it('K395: never forces tool_choice, re-asks once when no tool call, prints the estimate', async () => {
+    const bodies: Body[] = [];
+    const sdk = { messages: { create: (b: Body) => { bodies.push(b); return Promise.resolve({ content: [{ type: 'text', text: 'hi' }], usage: { input_tokens: 1, output_tokens: 1 } }); } } };
+    const lines: string[] = [];
+    const r = await runPlaytest(createAdapter(), { seed: 's', client: makeChooser(sdk), out: tmp(), model: 'claude-sonnet-5-5', log: (s) => lines.push(s) });
+    expect(bodies).toHaveLength(2);
+    for (const b of bodies) expect(b.tool_choice).toEqual({ type: 'auto' });
+    expect(bodies[1]!.messages[0]!.content).toContain('Reminder');
+    expect(r.findings).toHaveLength(2);
+    expect(r.findings[0]).toContain('no choose tool call');
+    expect(lines[0]).toContain('Cost estimate');
+  });
+
+  it('K395: says so when the first call alone exceeds the cap', async () => {
+    const lines: string[] = [];
+    const client: Chooser = () => Promise.reject(new Error('no call expected'));
+    const r = await runPlaytest(createAdapter(), { seed: 's', client, out: tmp(), maxUsd: 0.0001, log: (s) => lines.push(s) });
+    expect(r.stop).toBe('max-usd');
+    expect(lines.join('\n')).toContain('raise --max-usd');
   });
 });

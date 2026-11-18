@@ -92,6 +92,23 @@ export async function sdkChooser(apiKey: string): Promise<Chooser> {
   } finally {
     if (headers !== undefined) process.env['ANTHROPIC_CUSTOM_HEADERS'] = headers;
   }
+  return makeChooser(client as unknown as Messages);
+}
+
+export interface Body {
+  tool_choice: { type: string };
+  messages: { role: string; content: string }[];
+  [k: string]: unknown;
+}
+export interface Reply {
+  content: { type: string; input?: unknown }[];
+  usage: { input_tokens: number; output_tokens: number; cache_creation_input_tokens?: number | null; cache_read_input_tokens?: number | null; cache_creation?: { ephemeral_5m_input_tokens?: number; ephemeral_1h_input_tokens?: number } | null };
+}
+export interface Messages {
+  messages: { create(body: Body): Promise<Reply> };
+}
+// tool_choice is always auto: forced tool use (type tool or any) is refused by models that think.
+export function makeChooser(client: Messages): Chooser {
   return async (ask) => {
     const last = ask.system.length - 1;
     const result = await client.messages.create({
@@ -103,7 +120,7 @@ export async function sdkChooser(apiKey: string): Promise<Chooser> {
           : { type: 'text' as const, text },
       ),
       tools: [TOOL],
-      tool_choice: { type: 'tool', name: 'choose' },
+      tool_choice: { type: 'auto' },
       messages: [{ role: 'user', content: ask.prompt }],
     });
     const use = result.content.find((b) => b.type === 'tool_use');

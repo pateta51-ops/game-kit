@@ -37,6 +37,8 @@ export interface PlaytestOptions {
   out?: string;
   /** Past decisions sent with each view (default 6), so the prompt stays flat. */
   history?: number;
+  /** Where the pre-call cost estimate is printed (default console.log). */
+  log?: (s: string) => void;
 }
 export interface PlaytestResult {
   runId: string;
@@ -49,7 +51,7 @@ export interface PlaytestResult {
 }
 
 const HOW =
-  'You are playtesting a board game adaptation. Each turn you get the current view and numbered options; answer with the choose tool: the option number and a short reason. Play to win. When the view, the options or the rules look wrong (an illegal option offered, a legal one missing, a wrong count, unclear text), start the reason with BUG: and say what.';
+  'You are playtesting a board game adaptation. Each turn you get the current view and numbered options; you must answer by calling the choose tool (always call it, never reply in plain text): the option number and a short reason. Play to win. When the view, the options or the rules look wrong (an illegal option offered, a legal one missing, a wrong count, unclear text), start the reason with BUG: and say what.';
 
 const short = (s: string, n = 200) => (s.length > n ? `${s.slice(0, n)}…` : s);
 
@@ -121,7 +123,17 @@ export async function runPlaytest(adapter: GameAdapter, opts: PlaytestOptions): 
         for (let tries = 0; ; tries++) {
           const prompt = `${recent.length ? `Your last decisions:\n${recent.join('\n')}\n\n` : ''}Current view:\n${view}\n\nOptions:\n${options.map((o, i) => `${i}. ${o}`).join('\n')}${error}`;
           const ask = { model, system, prompt };
-          if (spent + worstCost(ask) > maxUsd) {
+          const worst = worstCost(ask);
+          if (decisions === 0 && tries === 0) {
+            const say = opts.log ?? console.log;
+            say(`Cost estimate: up to $${worst.toFixed(4)} per decision (${model}), cap $${maxUsd}`);
+            if (worst > maxUsd) {
+              const m = `the first call alone could cost $${worst.toFixed(4)}, over the cap of $${maxUsd}: raise --max-usd`;
+              say(m);
+              findings.push(m);
+            }
+          }
+          if (spent + worst > maxUsd) {
             stop = 'max-usd';
             break play;
           }
@@ -133,12 +145,15 @@ export async function runPlaytest(adapter: GameAdapter, opts: PlaytestOptions): 
           choice = a.option;
           reason = a.reason;
           if (Number.isInteger(choice) && choice >= 0 && choice < options.length) break;
-          findings.push(`step ${decisions}: invalid option ${String(choice)} of ${options.length}`);
+          const none = Number.isNaN(choice);
+          findings.push(none ? `step ${decisions}: reply had no choose tool call` : `step ${decisions}: invalid option ${String(choice)} of ${options.length}`);
           if (tries >= 1) {
             appendFileSync(log, JSON.stringify({ step: decisions, view: short(view), options, choice, reason, usage, cost: paid }) + '\n');
             break play;
           }
-          error = `\n\nYour answer ${String(choice)} is not an option: answer a number from 0 to ${options.length - 1}.`;
+          error = none
+            ? `\n\nReminder: you must call the choose tool with option (0 to ${options.length - 1}) and reason.`
+            : `\n\nYour answer ${String(choice)} is not an option: answer a number from 0 to ${options.length - 1}.`;
         }
       }
       const viewHash = createHash('sha1').update(view).digest('hex').slice(0, 12);
@@ -208,6 +223,7 @@ export async function main(argv: string[], log: (s: string) => void = console.lo
     if (g('max-decisions') !== undefined) o.maxDecisions = Number(g('max-decisions'));
     if (g('docs') !== undefined) o.docs = g('docs')!.split(',');
     if (client !== undefined) o.client = client;
+    o.log = log;
     const res = await runPlaytest(adapter, o);
     left -= res.costUsd;
     log(`${res.runId}: ${res.result === null ? `stopped (${res.stop})` : res.result.won ? 'won' : 'lost'}, ${res.decisions} decisions, $${res.costUsd.toFixed(4)}, ${res.findings.length} findings -> ${res.dir}`);

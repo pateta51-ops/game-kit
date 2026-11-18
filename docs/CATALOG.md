@@ -595,7 +595,7 @@ ESLint flat-config blocks for a game's engine folder. Spread them after the game
 
 ## llm-playtester
 
-The game writes one adapter; Claude (or `--dummy`, the first option, no client built) picks one numbered option per step by a forced `choose` tool call `{option, reason}`. The system prompt is `rulesText()` plus `--docs` files, cached (`cache_control` ephemeral on the last block); each call sends only the current view, the options and the last 6 decisions, so cost per call stays flat.
+The game writes one adapter; Claude (or `--dummy`, the first option, no client built) picks one numbered option per step by a `choose` tool call (tool_choice auto, never forced: models that think refuse it; a reply without a tool call is re-asked once, then logged as a finding) `{option, reason}`. The system prompt is `rulesText()` plus `--docs` files, cached (`cache_control` ephemeral on the last block); each call sends only the current view, the options and the last 6 decisions, so cost per call stays flat.
 
 - **Use it when:** Headless whole-game playtests by Claude through a small game adapter (view, numbered options, choose): finds rules and screen bugs the model flags, adapter throws and illegal option lists, and saves each run's replay for a replay test; capped in dollars per run; --dummy plays the first option for free.
 - **Not for:** The in-game Claude opponent (a game's own server code) or balance sims at volume; use sim-pool for many cheap games.
