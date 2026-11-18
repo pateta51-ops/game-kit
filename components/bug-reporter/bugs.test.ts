@@ -267,7 +267,7 @@ describe('bug reports: Send all', () => {
 
   it('files every report one at a time; a failure stays queued with its reason; the summary counts both', async () => {
     const gh = fakeGitHub(failing('[fail]'));
-    const reports = [report('First'), report('Second [fail]'), report('Third')];
+    const reports = [report('First'), report('Second [fail]'), report('Third')].map((r, i) => ({ ...r, createdAt: new Date(Date.UTC(2026, 0, 1, 0, 0, i)).toISOString() }));
     for (const r of reports) await queueReport(r, null);
     const progress: number[] = [];
     const summary = await fileAll(useQueue.getState().items, { send: gh.send, compress: jpg('J') }, (d) =>
