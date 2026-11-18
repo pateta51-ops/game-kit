@@ -14,6 +14,14 @@ The worker answers every stored file from the cache (query and hash ignored, pat
 
 The manifest, icons and iOS meta are the game's own files in its `public/` and `index.html`.
 
+## New build check (`fresh.ts`)
+
+`watchBuild({ build, safe, flush?, url? })` (the game passes its build id, e.g. a commit): fetches `build.json` (`{ "build": "<id>" }`, written by `buildInfoPlugin()` in `vite.config.ts` (`import { buildInfoPlugin } from '../kit/offline/buildInfo.ts'`, node only, not in `index.ts`; node: `{ build: id ?? git short sha, commit }`, `unknown` outside git; `writeBuildInfo(outDir)` does it on any folder); `no-store`) at start, back online, on `pageshow` and when the page returns to the front. A different id, `safe()` true, `flush` awaited and `safe()` true again: it reloads once. The id it reloaded for is kept in sessionStorage, so a reload that lands on the same old build is not repeated. Returns `{ check, stop }`; call `check` when what `safe` reads changes. A failed fetch or a throwing `flush` does nothing; `stop()` also cancels a run in flight. `build.json` is never precached. `buildStamp(define)` returns the first 7 characters of the build's commit (the game's define) or `unknown`, for display. Test seams: `fetch`, `reload`, `store`.
+
+## Two-build server (`twoBuilds.ts`, node, tests only)
+
+`serveTwoBuilds(dir, { port?, mark?, precache? })`: serves the build in `dir` as A and a copy as B (index.html gets `mark`, sw.js rewritten with `precache`), on one origin; `GET /__build/a` or `/__build/b` switches what later requests get. Returns `{ url, a, b, close }`.
+
 ## Update line (`ui.ts`)
 
 `<UpdateLine words? className?>`: shown only in `ready` (and `reloading`, its button disabled). `UPDATE_WORDS` holds the default words. Test ids: `update-line`, `update-reload`.
@@ -38,4 +46,12 @@ console.log(shouldRegister(env, { hostname: 'localhost', protocol: 'http:' }, tr
 import { UpdateLine } from '../kit/offline/ui'
 
 export const Top = () => <UpdateLine words={{ line: 'A new version is ready' }} />
+```
+
+```ts
+import { buildStamp, watchBuild } from '../kit/offline/index'
+
+declare const __BUILD__: string | undefined
+export const stamp = buildStamp(__BUILD__)
+export const stop = watchBuild({ build: stamp, safe: () => true, flush: () => Promise.resolve() }).stop
 ```

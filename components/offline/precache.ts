@@ -23,7 +23,7 @@ export interface PrecacheOptions {
 
 export const SW_FILE = 'sw.js';
 export const PLACEHOLDER = /\/\*PRECACHE\*\/[^]*?\/\*END\*\//;
-const ALWAYS_OUT = [/^sw\.js$/, /^\.vite\//];
+const ALWAYS_OUT = [/^sw\.js$/, /^\.vite\//, /^build\.json$/];
 
 export interface Precache {
   readonly prefix: string;

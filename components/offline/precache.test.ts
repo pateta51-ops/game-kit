@@ -44,6 +44,9 @@ const BUILD: Record<string, string> = {
 const O = { prefix: 'game-' };
 
 describe('the offline precache', () => {
+  it('never precaches build.json (the new-build check must reach the network)', () => {
+    expect(precacheList(['index.html', 'build.json'], O)).toEqual(['index.html']);
+  });
   it('keeps every file of the build but sw.js and .vite/, sorted, POSIX; the game excludes more', () => {
     expect(precacheList(['sw.js', 'index.html', './assets/a.js', '.vite/manifest.json', 'index.html', 'x/y.png'], O)).toEqual([
       'assets/a.js',

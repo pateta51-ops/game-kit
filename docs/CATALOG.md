@@ -593,7 +593,7 @@ Offline install: a Vite plugin that writes a precaching service worker into the 
 
 - **Use it when:** The game must install and run offline: service worker plugin, register rule, update line.
 - **Not for:** Saving game data (saves).
-- **Key exports:** `applyUpdate`, `autoApply`, `pageHost`, `registerServiceWorker`, `RELOAD_FALLBACK_MS`, `shouldRegister`, `UPDATE_MACHINE`, `useUpdate`, `AutoApply`, `PageHost`, `SwEnv`, `UpdateEvent`, `UpdateState`
+- **Key exports:** `applyUpdate`, `autoApply`, `pageHost`, `registerServiceWorker`, `RELOAD_FALLBACK_MS`, `shouldRegister`, `UPDATE_MACHINE`, `useUpdate`, `buildStamp`, `BUILD_FILE`, `FRESH_KEY`, `watchBuild`, `AutoApply`, `PageHost`, and 6 more
 - **Needs:** [`state-machines`](#state-machines)
 - **Came from:** jarl
 - **Docs:** [README](../components/offline/README.md)

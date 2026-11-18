@@ -14,6 +14,9 @@
       "src/ui/screens/Home.tsx (its update line, as UpdateLine)"
     ],
     "grafts": [
+      { "game": "7is", "commit": "b3ef81b", "paths": ["vite.config.ts (git rev-parse --short HEAD: gitCommit, buildInfoPlugin)", "src/ui/freshBuild.ts (safe-to-reload, flush, once at a time; the game's screens became `safe`)"] },
+      { "game": "ebr", "commit": "59e0ad1d", "paths": ["vite.config.ts appCommit (git sha or unknown)", "src/ui/build.ts (the build commit for display: buildStamp)"] },
+      { "game": "jarl", "commit": "82bb1d5", "paths": ["e2e/phone/lib/offline-server.ts (serveTwoBuilds)"] },
       { "game": "warps", "commit": "2af6937", "paths": ["src/ui/game/saves.ts (askPersistence: in saves as keepStorage)"] },
       { "game": "rome", "commit": "1d0fd2e", "paths": ["src/ui/offline.ts, src/ui/offline.test.ts (pageHost and framed: no service worker inside a frame)"] }
     ]
