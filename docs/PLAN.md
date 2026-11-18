@@ -516,7 +516,7 @@ The kit holds every game's parts, then every game is retrofitted onto them (owne
 | K366 | [10] Keyboard play: keys 1-9, Enter, Esc, arrow-key option lists and a help overlay (extend ui-helpers) | docs/INVENTORY.md item 10; Unst, UFS | S | done |
 | K367 | [11] Board viewport: SVG zoom about the pointer, drag pan, fit, auto-pan camera that follows the action (extend board-layout) | docs/INVENTORY.md item 11; ER, UFS | M | open |
 | K368 | [12] Zoom and hover-preview placement: right/left/below/above with margin, kept on screen (extend card-zoom) | docs/INVENTORY.md item 12; Warps, Unst | S | done |
-| K369 | [13] Looked-at cards: memory of cards the player peeked at plus the large look-at view (new looked-at) | docs/INVENTORY.md item 13; ER, IH | S | open |
+| K369 | [13] Looked-at cards: memory of cards the player peeked at plus the large look-at view (new looked-at) | docs/INVENTORY.md item 13; ER, IH | S | done |
 | K370 | [14] Rules screen: rulebook as data, word search, headings, rule diagrams over card faces and icons (new rules-screen) | docs/INVENTORY.md item 14; Jarl, UFS, Unst | M | open |
 | K371 | [15] Browser and runtime perf capture: load timing, render counters, exact compare, dispatch cost (extend perf) | docs/INVENTORY.md item 15; 7IS, Rome | M | done |
 | K372 | [16] Dev autoplay: ?dev=1 plays the store with a bot up to a chosen prompt kind (new dev-autoplay, uses sim-pool drivers) | docs/INVENTORY.md item 16; 7IS, Unst | S | done |

@@ -82,6 +82,7 @@ graph LR
   learned_opponent["learned-opponent"] --> sim_pool["sim-pool"]
   lint_preset["lint-preset"]
   llm_playtester["llm-playtester"]
+  looked_at["looked-at"] --> card_zoom["card-zoom"]
   market_row["market-row"] --> engine_core["engine-core"]
   market_row["market-row"] --> card_zones["card-zones"]
   market_row["market-row"] --> prompt_host["prompt-host"]
@@ -162,7 +163,6 @@ graph LR
 - `card-patches`
 - `card-pile`
 - `card-query`
-- `card-zoom`
 - `challenges`
 - `check-runner`
 - `ci-templates`
@@ -179,6 +179,7 @@ graph LR
 - `learned-opponent`
 - `lint-preset`
 - `llm-playtester`
+- `looked-at`
 - `market-row`
 - `modal-dialog`
 - `offline`

@@ -1,0 +1,17 @@
+{
+  "name": "looked-at",
+  "source": {
+    "game": "earthborne-rangers-fan-prototype",
+    "commit": "b9b06107",
+    "paths": ["src/ui/table/LookedAt.tsx"],
+    "grafts": [
+      {
+        "game": "imperium-horizon-fan-prototype",
+        "commit": "22736b2",
+        "paths": ["src/ui/play/lookedAt.ts", "src/ui/play/lookedAt.test.ts"]
+      }
+    ]
+  },
+  "needs": ["card-zoom"],
+  "packages": ["react"]
+}
