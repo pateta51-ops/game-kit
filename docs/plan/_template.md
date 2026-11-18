@@ -197,6 +197,14 @@ Every game's animations are rebuilt on `motion-frame` and `effect-library`; game
 |---|---|---|---|---|
 <!-- rows: Motion retrofit (owner, 18 Nov 2026) -->
 
+## Parts retrofit (owner, 18 Nov 2026)
+
+The kit holds every game's parts, then every game is retrofitted onto them (owner, 18 Nov 2026). Work list: `docs/INVENTORY.md` section 1, item number in brackets; its paths and commits are the sources. Item 2 (no accessibility, ever), item 5 and pack import (item 4) are dropped.
+
+| Batch | Content | Sources | Effort | State |
+|---|---|---|---|---|
+<!-- rows: Parts retrofit (owner, 18 Nov 2026) -->
+
 ## Audit roadmap (owner, 16 Nov 2026)
 
 Tasks T1-T18 of `docs/evaluation/AUDIT-2026-11-16.md` section 13, run in the phase order of its section 12.

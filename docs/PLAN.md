@@ -142,6 +142,7 @@ A game's build plan lists the kit work it needs as phases named `GK<n>` for the 
 | K356 | game-store: `simGameOf` takes an optional `start(spec)` so a game with modes or settings starts its sims from the whole spec | S |  | done |
 | K357 | docs/INVENTORY.md: every reusable part of 11 games against the kit, a merged work list of 23 items, and the retrofit backlog (555 own copies) | S |  | done |
 | K358 | The card-motion tuner shows the turn-over axis and direction. | S |  | done |
+| K381 | Effect-library tuner shows every effect: flip axis and direction, spin and tap, beams, combat, signals, refresh, pulse and idle loops | S |  | open |
 
 ## Harvest from the existing games (owner, 15 Nov 2026)
 
@@ -486,6 +487,35 @@ Every game's animations are rebuilt on `motion-frame` and `effect-library`; game
 | K353 | Work list 8-11: typewriter as a `text` option (EBR book.ts:106,189), marching dashed line between two elements (STCC ShipLink.tsx:65, table.css:699-710), lock-on reticle (Warp's blocks.ts:11), falling debris particles (Rome catalog.ts collapse, Warp's endscreen.css:897) | docs/motion-retrofit/INVENTORY.md | M | done |
 | K354 | Dropped after the inventory's work list merged repeats: the story and scene effects are built from existing verbs, particles and the ambience layer, or are game looks (owner, 18 Nov) | docs/motion-retrofit/INVENTORY.md | S | dropped |
 | K355 | Work list 12 with the board swap (K324): view-transition wrapper with speed scaling (STCC viewTransition.ts:13, motion.css:5-8; extend effect-library bands.ts `flight`), plus Warp's data-flip and Imperium FlightLayer | docs/motion-retrofit/INVENTORY.md | M | done |
+
+## Parts retrofit (owner, 18 Nov 2026)
+
+The kit holds every game's parts, then every game is retrofitted onto them (owner, 18 Nov 2026). Work list: `docs/INVENTORY.md` section 1, item number in brackets; its paths and commits are the sources. Item 2 (no accessibility, ever), item 5 and pack import (item 4) are dropped.
+
+| Batch | Content | Sources | Effort | State |
+|---|---|---|---|---|
+| K359 | [1] Proof sheet: every card face beside its data, printed words and flags, filters kept in the URL hash, plus a CLI that writes it for a pack (new proof-sheet, or prompt-gallery card side) | docs/INVENTORY.md item 1; 7IS, STCC, ER, IH, Jarl, UFS, Unst, Warps | L | open |
+| K360 | [3] Screen frame, footer line, fan-project disclaimer and light/dark toggle for non-table screens (extend screens) | docs/INVENTORY.md item 3; STCC, IH, UFS, Unst | M | open |
+| K361 | [4] Expansion choice with dependency ticking and base + expansion merge into one index (extend content-pack; no import or stored packs) | docs/INVENTORY.md item 4; ER, Unst, STCC, IH | M | open |
+| K362 | [6] Python vector tracing and icon/crop scripts: trace icons, emblems, logos and maps from scans to SVG, retrace, proof, B&W render (extend scan-ingest) | docs/INVENTORY.md item 6; 7IS, ER, Jarl, STCC, Astra | M | open |
+| K363 | [7] New-build check: detect a new build and reload once when safe, show the build commit, two-build offline e2e server (extend offline) | docs/INVENTORY.md item 7; 7IS, ER, Jarl | S | open |
+| K364 | [8] Coverage report: which card-language constructs the packs use and lack, as a page and a script (new coverage-report) | docs/INVENTORY.md item 8; ER, Jarl, UFS, Radiance | S | open |
+| K365 | [9] Modal and confirm dialog over the board: focus, Esc, close (new modal-dialog) | docs/INVENTORY.md item 9; IH, Unst | S | open |
+| K366 | [10] Keyboard play: keys 1-9, Enter, Esc, arrow-key option lists and a help overlay (extend ui-helpers) | docs/INVENTORY.md item 10; Unst, UFS | S | open |
+| K367 | [11] Board viewport: SVG zoom about the pointer, drag pan, fit, auto-pan camera that follows the action (extend board-layout) | docs/INVENTORY.md item 11; ER, UFS | M | open |
+| K368 | [12] Zoom and hover-preview placement: right/left/below/above with margin, kept on screen (extend card-zoom) | docs/INVENTORY.md item 12; Warps, Unst | S | open |
+| K369 | [13] Looked-at cards: memory of cards the player peeked at plus the large look-at view (new looked-at) | docs/INVENTORY.md item 13; ER, IH | S | open |
+| K370 | [14] Rules screen: rulebook as data, word search, headings, rule diagrams over card faces and icons (new rules-screen) | docs/INVENTORY.md item 14; Jarl, UFS, Unst | M | open |
+| K371 | [15] Browser and runtime perf capture: load timing, render counters, exact compare, dispatch cost (extend perf) | docs/INVENTORY.md item 15; 7IS, Rome | M | open |
+| K372 | [16] Dev autoplay: ?dev=1 plays the store with a bot up to a chosen prompt kind (new dev-autoplay, uses sim-pool drivers) | docs/INVENTORY.md item 16; 7IS, Unst | S | open |
+| K373 | [17] Scan-based board parts: state drawn over a printed scan's boxes, die-cut pieces at true size, playmat box detection, outline tracing, tone profile, finite supply (extend scan-ingest and token-bag) | docs/INVENTORY.md item 17; ER, Unst, Radiance | L | open |
+| K374 | [18] Art pipeline: one chosen image per card, fetch, extract, CI cache, faces rendered from PnP PDFs, copy to public with a manifest (new art-pipeline) | docs/INVENTORY.md item 18; 7IS, ER, Astra | L | open |
+| K375 | [19] Face fit check and tuning: printed text fits the face at a pixel floor, autotune/fit/measure scripts, crop sheets with grid (extend transcription-check) | docs/INVENTORY.md item 19; STCC, 7IS | M | open |
+| K376 | [20] Dev component sheet route: every theme component or board view on one page (extend theme-check) | docs/INVENTORY.md item 20; 7IS, STCC | S | open |
+| K377 | [21] Test setup helpers: jsdom scroll stubs, UI fixtures for component tests, real-data suite setup (extend e2e-helpers) | docs/INVENTORY.md item 21; Unst, ER, STCC | S | open |
+| K378 | [22] Small UI helpers: base-aware asset path resolver, plural and number format (extend small-helpers) | docs/INVENTORY.md item 22; Rome, Unst | S | open |
+| K379 | [23] Launcher that reuses the production build until its inputs change (extend tooling-scripts) | docs/INVENTORY.md item 23; ER, 7IS | S | open |
+| K380 | Card-hand hover tilt toward the pointer, speed 0 = still (extend card-hand) | docs/motion-retrofit/INVENTORY.md (hover tilt) | S | open |
 
 ## Audit roadmap (owner, 16 Nov 2026)
 
