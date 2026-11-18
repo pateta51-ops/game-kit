@@ -510,9 +510,9 @@ The kit holds every game's parts, then every game is retrofitted onto them (owne
 
 | Batch | Content | Sources | Effort | State |
 |---|---|---|---|---|
-| K359 | [1] Proof sheet: every card face beside its data, printed words and flags, filters kept in the URL hash, plus a CLI that writes it for a pack (new proof-sheet, or prompt-gallery card side) | docs/INVENTORY.md item 1; 7IS, STCC, ER, IH, Jarl, UFS, Unst, Warps | L | open |
+| K359 | [1] Proof sheet: every card face beside its data, printed words and flags, filters kept in the URL hash, plus a CLI that writes it for a pack (new proof-sheet, or prompt-gallery card side) | docs/INVENTORY.md item 1; 7IS, STCC, ER, IH, Jarl, UFS, Unst, Warps | L | done |
 | K360 | [3] Screen frame, footer line, fan-project disclaimer and light/dark toggle for non-table screens (extend screens) | docs/INVENTORY.md item 3; STCC, IH, UFS, Unst | M | done |
-| K361 | [4] Expansion choice with dependency ticking and base + expansion merge into one index (extend content-pack; no import or stored packs) | docs/INVENTORY.md item 4; ER, Unst, STCC, IH | M | open |
+| K361 | [4] Expansion choice with dependency ticking and base + expansion merge into one index (extend content-pack; no import or stored packs) | docs/INVENTORY.md item 4; ER, Unst, STCC, IH | M | done |
 | K362 | [6] Python vector tracing and icon/crop scripts: trace icons, emblems, logos and maps from scans to SVG, retrace, proof, B&W render (extend scan-ingest) | docs/INVENTORY.md item 6; 7IS, ER, Jarl, STCC, Astra | M | done |
 | K363 | [7] New-build check: detect a new build and reload once when safe, show the build commit, two-build offline e2e server (extend offline) | docs/INVENTORY.md item 7; 7IS, ER, Jarl | S | done |
 | K364 | [8] Coverage report: which card-language constructs the packs use and lack, as a page and a script (new coverage-report) | docs/INVENTORY.md item 8; ER, Jarl, UFS, Radiance | S | done |
@@ -521,7 +521,7 @@ The kit holds every game's parts, then every game is retrofitted onto them (owne
 | K367 | [11] Board viewport: SVG zoom about the pointer, drag pan, fit, auto-pan camera that follows the action (board-viewport) | docs/INVENTORY.md item 11; ER, UFS | M | done |
 | K368 | [12] Zoom and hover-preview placement: right/left/below/above with margin, kept on screen (extend card-zoom) | docs/INVENTORY.md item 12; Warps, Unst | S | done |
 | K369 | [13] Looked-at cards: memory of cards the player peeked at plus the large look-at view (new looked-at) | docs/INVENTORY.md item 13; ER, IH | S | done |
-| K370 | [14] Rules screen: rulebook as data, word search, headings, rule diagrams over card faces and icons (new rules-screen) | docs/INVENTORY.md item 14; Jarl, UFS, Unst | M | open |
+| K370 | [14] Rules screen: rulebook as data, word search, headings, rule diagrams over card faces and icons (new rules-screen) | docs/INVENTORY.md item 14; Jarl, UFS, Unst | M | done |
 | K371 | [15] Browser and runtime perf capture: load timing, render counters, exact compare, dispatch cost (extend perf) | docs/INVENTORY.md item 15; 7IS, Rome | M | done |
 | K372 | [16] Dev autoplay: ?dev=1 plays the store with a bot up to a chosen prompt kind (new dev-autoplay, uses sim-pool drivers) | docs/INVENTORY.md item 16; 7IS, Unst | S | done |
 | K373 | [17] Scan-based board parts: state drawn over a printed scan's boxes, die-cut pieces at true size, playmat box detection, outline tracing, tone profile, finite supply (extend scan-ingest and token-bag) | docs/INVENTORY.md item 17; ER, Unst, Radiance | L | open |

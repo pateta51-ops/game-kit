@@ -1,0 +1,35 @@
+{
+  "name": "rules-screen",
+  "source": {
+    "game": "rise-of-a-jarl-fan-prototype",
+    "commit": "82bb1d5",
+    "paths": [
+      "src/ui/screens/RulesScreen.tsx",
+      "src/ui/screens/rulebook.ts",
+      "src/ui/screens/rulesSearch.ts",
+      "src/ui/screens/diagrams/RuleDiagram.tsx",
+      "src/ui/screens/diagrams/scene.ts",
+      "src/ui/screens/diagrams/scenes.ts",
+      "src/ui/screens/diagrams/figures.ts"
+    ],
+    "grafts": [
+      {
+        "game": "under-falling-skies-fan-prototype",
+        "commit": "f1042f8",
+        "paths": [
+          "src/ui/screens/Rules.tsx (disclosure sections and illustrated list items)"
+        ]
+      },
+      {
+        "game": "unstoppable-fan-prototype",
+        "commit": "e314b5f",
+        "paths": [
+          "src/ui/screens/Rules.tsx (summary followed by sheets)",
+          "src/ui/screens/RulesSheets.tsx (labeled sides, accessible transcript and full-size view)"
+        ]
+      }
+    ]
+  },
+  "needs": ["glossary", "card-parts", "screens"],
+  "packages": ["react", "react-dom", "zod"]
+}

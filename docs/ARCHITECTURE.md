@@ -112,11 +112,15 @@ graph LR
   prompt_host["prompt-host"] --> engine_core["engine-core"]
   prompt_host["prompt-host"] --> prompt_source["prompt-source"]
   prompt_source["prompt-source"]
+  proof_sheet["proof-sheet"]
   reference_game["reference-game"] --> scaffold["scaffold"]
   replay_cli["replay-cli"] --> engine_core["engine-core"]
   replay_cli["replay-cli"] --> sim_pool["sim-pool"]
   repo_gate["repo-gate"]
   resolution_frame["resolution-frame"] --> settings["settings"]
+  rules_screen["rules-screen"] --> glossary["glossary"]
+  rules_screen["rules-screen"] --> card_parts["card-parts"]
+  rules_screen["rules-screen"] --> screens["screens"]
   saves["saves"] --> engine_core["engine-core"]
   saves["saves"] --> small_helpers["small-helpers"]
   scaffold["scaffold"]
@@ -191,12 +195,13 @@ graph LR
 - `plan-checker`
 - `player-board`
 - `prompt-gallery`
+- `proof-sheet`
 - `reference-game`
 - `repo-gate`
 - `resolution-frame`
+- `rules-screen`
 - `saves`
 - `scan-ingest`
-- `screens`
 - `story`
 - `table-panels`
 - `target-arrow`

@@ -147,6 +147,7 @@ Components with no row above. Each starts from the game and commit in its `compo
 | `transcription-check` | Under Falling Skies `07238a4` (K168) | M |
 | `resolution-frame` | Rome `1d0fd2e` (K55) | M |
 | `prompt-gallery` | EBR `33b5abd3` | M |
+| `proof-sheet` | STCC `a69c8dac` (K359), with seven grafts | L |
 | `prompt-host` | Rome `e76d56f` (PromptHost and parts: the cleanest host, already a Record per kind with rule ids stripped); STCC `8e6f55b` order by clicks; Jarl `cf3ecfe` autoAnswer (K123); Astra Imperium `0f98c72` scrolling overflow (K388) | M |
 | `card-hand` | Imperium `22736b2` (`FloatingHand.tsx`, `table.css` hand rules); Unstoppable `fanOf` and `playMotion.ts` (K218) | M |
 | `drag-drop` | Imperium `22736b2` (`play/drag.ts`, `useHandDrag.ts`); STCC `8e6f55b` the fixed drop zone (K220) | M |
@@ -156,6 +157,7 @@ Components with no row above. Each starts from the game and commit in its `compo
 | `card-zoom` | STCC `8e6f55b` (CardDetail: printed text with icons and glossary links beside the card; preview facts for tokens); EBR `33b5abd3` Escape; legend, engine notes and rule-id strip new (K203) | M |
 | `looked-at` | Earthborne Rangers `b9b06107` (reopening the large view); Imperium Horizon `22736b2` (zone context); serialisable peek memory new (K369) | S |
 | `modal-dialog` | Unstoppable modal and confirmation; Imperium modal focus and Escape handling (K365) | M |
+| `rules-screen` | Rise of a Jarl `82bb1d5` (rulebook, search, diagrams); Under Falling Skies `f1042f8` (disclosures and illustrated items); Unstoppable `e314b5f` (reference sheets) (K370) | M |
 | `board-viewport` | Earthborne Rangers `b9b06107` (pointer zoom and sheet bounds); Under Falling Skies `07238a4` (camera targets and tween scheduling) (K367) | M |
 | `card-pile` | Imperium fan prototype `Stack.tsx`, `PeekPile.tsx`, `fanLayout.ts`, `PileGrid.tsx`; STCC `usePileFan.tsx` (K219) | S |
 | `player-board` | Earthborne fan prototype `table/geometry.ts` (layRow, fitZone, MIN_CARD_WIDTH, handSink) and `Board.tsx` (rem units, mat, zone anchors); no mats, layouts or tags (K244) | M |
