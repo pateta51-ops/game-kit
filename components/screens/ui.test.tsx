@@ -35,6 +35,13 @@ describe('MainMenu', () => {
 });
 
 describe('SetupForm', () => {
+  it('submit={false} leaves out Start; a button elsewhere with form={id} starts the game', () => {
+    const f = vi.fn();
+    render(<><SetupForm spec={spec} onStart={f} id="setup" submit={false} /><button type="submit" form="setup">Go</button></>);
+    expect(screen.queryByText('Start')).toBeNull();
+    fireEvent.click(screen.getByText('Go'));
+    expect(f).toHaveBeenCalledTimes(1);
+  });
   it('starts with the chosen seats, scenario, difficulty and extra', () => {
     const f = vi.fn();
     render(<SetupForm spec={spec} onStart={f} />);

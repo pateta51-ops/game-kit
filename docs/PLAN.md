@@ -143,6 +143,7 @@ A game's build plan lists the kit work it needs as phases named `GK<n>` for the 
 | K357 | docs/INVENTORY.md: every reusable part of 11 games against the kit, a merged work list of 23 items, and the retrofit backlog (555 own copies) | S |  | done |
 | K358 | The card-motion tuner shows the turn-over axis and direction. | S |  | done |
 | K381 | Effect-library tuner shows every effect: flip axis and direction, spin and tap, beams, combat, signals, refresh, pulse and idle loops | S |  | open |
+| K383 | screens SetupForm: submit={false} leaves out its Start button; id lets a game's own button elsewhere start the game | S |  | done |
 
 ## Harvest from the existing games (owner, 15 Nov 2026)
 

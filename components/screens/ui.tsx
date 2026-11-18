@@ -13,7 +13,7 @@ export function MainMenu({ entries, onSelect, className }: { entries: MenuEntry[
   );
 }
 
-export function SetupForm({ spec, onStart, words, initial, value, onChange, renderField, className }: { spec: SetupSpec; onStart: (setup: Setup) => void; words?: Partial<Words>; initial?: Setup; value?: Setup; onChange?: (setup: Setup) => void; renderField?: (field: Field, value: unknown, set: (v: unknown) => void) => ReactNode; className?: string }) {
+export function SetupForm({ spec, onStart, words, initial, value, onChange, renderField, className, id, submit = true }: { spec: SetupSpec; onStart: (setup: Setup) => void; words?: Partial<Words>; initial?: Setup; value?: Setup; onChange?: (setup: Setup) => void; renderField?: (field: Field, value: unknown, set: (v: unknown) => void) => ReactNode; className?: string; id?: string; submit?: boolean }) {
   const w = { ...defaultWords, ...words };
   const [own, setOwn] = useState<Setup>(() => initial ?? defaultSetup(spec));
   const s = value ?? own;
@@ -55,7 +55,7 @@ export function SetupForm({ spec, onStart, words, initial, value, onChange, rend
     );
   };
   return (
-    <form className={className} data-part="setup" onSubmit={(e) => { e.preventDefault(); if (!errors.length) onStart({ ...s, seats: s.seats.map(({ name, ...x }) => (name ? { ...x, name } : x)) }); }}>
+    <form id={id} className={className} data-part="setup" onSubmit={(e) => { e.preventDefault(); if (!errors.length) onStart({ ...s, seats: s.seats.map(({ name, ...x }) => (name ? { ...x, name } : x)) }); }}>
       {sp && <label data-field="seat-count">{w.seats}
         <input type="number" min={sp.min} max={sp.max} value={s.seats.length} onChange={(e) => setCount(Number(e.target.value))} />
       </label>}
@@ -73,7 +73,7 @@ export function SetupForm({ spec, onStart, words, initial, value, onChange, rend
       {spec.extra?.map((e) => <span key={e.key}>{pick(e.label, e.key, e.options)}</span>)}
       {spec.many?.map((e) => <span key={e.key}>{many(e)}</span>)}
       {errors.length > 0 && <p role="alert">{w.invalid}</p>}
-      <button type="submit" disabled={errors.length > 0}>{w.start}</button>
+      {submit && <button type="submit" disabled={errors.length > 0}>{w.start}</button>}
     </form>
   );
 }
