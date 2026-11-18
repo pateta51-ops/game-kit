@@ -2,7 +2,7 @@
 
 Status: approved by the owner, 15 Nov 2026. All seven games are active. No Fable workers: Sonnet for routine work, Opus at medium effort for engine work.
 
-Scope: the recommended retrofit only. Old games take the kit's tooling; the kit takes what the old games do better. Engines, card code and presentation layers stay as they are.
+Scope: the recommended retrofit only. Old games take the kit's tooling; the kit takes what the old games do better. Engines and card code stay as they are. Presentation is retrofitted since 18 Nov 2026 (section "Motion retrofit" below).
 
 Games: Jarl, Rome, EBR, Warp's Edge, STCC, Unstoppable, Imperium. Each batch pulls the newest kit tag (v0.21.0 on 15 Nov 2026).
 
@@ -165,3 +165,9 @@ A game script a test imports stays in the repo unused by the check chain.
 ## Card parts into the old games (owner, 17 Nov 2026)
 
 STCC, Imperium and Unstoppable are retrofitted onto `card-hand`, `card-pile` and `drag-drop`: Imperium first, then STCC, then Unstoppable. Each keeps its own look through the parts' `data-part` hooks and size tokens; its layout stays its own. Retrofitting the other new parts (counter, token-flights, track, market-row, player-board, card-attachments, token-bag, target-arrow, deck-motions) into those games waits for the owner.
+
+## Motion retrofit (owner, 18 Nov 2026)
+
+Replaces the 15 Nov "tooling only" rule for presentation. Every game's animations are rebuilt on `motion-frame` (ordered beat queue) and `effect-library`; effects first made for one game go into the kit under neutral names with the game's look as settings, and the game's own motion code is deleted, so a fix in one game reaches all. Trigger: STCC plays the animations after End turn grouped by kind, not in the order the cards resolved, and its log jumps ahead. Every retrofitted game plays one beat per event (or chunk) in event order and reveals each log line when its beat starts.
+
+Study: `docs/MOTION_RETROFIT_STUDY.md`. Rows K323-K341 in `docs/PLAN.md`: mechanism gaps first (M1, M2, M5, then M3, M4, M6, M7, M8), then four effect batches, then the games one at a time (STCC, Warp's Edge, Imperium, Unstoppable, 7th Inning Stretch), each after asking its architect and ending with the owner's approval of a before/after recording of a full turn at 4K. Then the same study for EBR, Rome, Radiance, Rise of a Jarl and Under Falling Skies.

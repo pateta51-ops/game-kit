@@ -443,6 +443,32 @@ When a game with a campaign or a long story is planned (tier 3): K157, K159, K15
 
 **Tier 4 - owner's word:** K103, K115, K107, K125.
 
+## Motion retrofit (owner, 18 Nov 2026)
+
+Every game's animations are rebuilt on `motion-frame` and `effect-library`; game effects come into the kit under neutral names with each game's look as settings; each game's own motion code is deleted. Study and sources: `docs/MOTION_RETROFIT_STUDY.md`. Every retrofitted game plays one beat per event (or chunk) in event order and reveals each log line when its beat starts.
+
+| Batch | Content | Sources | Effort | State |
+|---|---|---|---|---|
+| K323 | Rule change: presentation is retrofitted now (owner, 18 Nov 2026). `docs/MOTION_RETROFIT_STUDY.md` committed, `docs/RETROFIT_PLAN.md` and README say so, rows K324-K341 added | study | S | done |
+| K324 | M1 `motion-frame`: board swap. A beat carries the game's `commit` (show the state after this event) and per-beat `data` (`run.data`, so `onBeatStart` reveals that event's log line); the player measures keyed elements, commits, waits (M2), measures again and flies every moved element, staggered, entering ones hidden until they land, leaving ones as ghosts. The player still never touches state | STCC `viewTransition.ts`, `director.ts`; Warp's `table/motion.ts`; Imperium `FlightLayer.tsx` | M | open |
+| K325 | M2 `motion-frame`: wait for render. Spec `whenReady` / `awaitRects(ids)` beside `whenVisible`: the beat waits until its zones resolve after the commit (frame poll with a cap, then `onProblem` and play) | STCC `nextFrame`; 7IS rAF poll; Imperium `useLayoutEffect` | S | open |
+| K326 | M3 `motion-frame`: phone pan. The game passes `pan(zone) => restore`; a beat with `pan` switches tab or scrolls to its actor before, comes back after (once per run) | STCC `pan.ts`; Warp's `gate.ts` tab follow | S | open |
+| K327 | M4: deck riffle as a verb (`riffle`), wrapping `deck-motions` `riffleFrames` | STCC `dealing.ts`; Imperium `fx-shuffle` | S | open |
+| K328 | M5 `motion-frame`: holds. `gate`/`afterGate` gain `holdUntil: 'press' | beatId` and an auto-continue delay the queue owns | 7IS B-41; Warp's `gate.ts`; Imperium die-wait, Bot auto-Next; Unstoppable `strike.ts` | M | open |
+| K329 | M6: per-actor `hideSourceUntil: 'start'` | Unstoppable `flightLedger`; 7IS `leave` | S | open |
+| K330 | M7 `effect-library`: shared WebGL canvas with a 2D fallback, like `registerCanvasEffect` | STCC `crumple.ts`; Warp's `power/coin.ts` | M | open |
+| K331 | M8 `sound-player`: check against Warp's `mixer.ts`/`engine.ts` (priority stealing, 40 ms dedupe, ducking, seeded playlist) and lift what it lacks | Warp's `fx/cue.ts`, `mixer.ts`, `engine.ts`; Unstoppable `cues.ts` | M | open |
+| K332 | Effects, flights and paths: `arc-move`, `multi-stop-path`, `trail`; lab demo, contact sheet, a preset per game look | study §3 | M | open |
+| K333 | Effects, beams and transfers: `warp-transfer`, `column-beam`, `rotating-beam`, `radial-streaks`, `collapse-jump` | study §3 | M | open |
+| K334 | Effects, combat: `projectile`, `dissolve`, `shatter`, `shimmer`, `shield-bubble`, `ring-pulse` | study §3 | M | open |
+| K335 | Effects, signals and staging: `stamp`, `motes`, `flicker`, `bar-fill`, `camera-pull`, `letterbox-banner`, `unroll`, `shake-group`, `plasma-orb`, `drift-cloud`, `tumble-3d`, `pile-lift`, `crumple` (after K330); settings added to `glow`, `flip`, `scale` | study §3 | L | open |
+| K336 | Retrofit STCC: one beat per event or chunk in event order, log line on `onBeatStart`, `src/ui/motion` deleted; before/after recording of a full turn at 4K approved by the owner | STCC | L | open |
+| K337 | Retrofit Warp's Edge (same terms) | Warp's Edge | L | open |
+| K338 | Retrofit Imperium (same terms) | Imperium | M | open |
+| K339 | Retrofit Unstoppable (same terms) | Unstoppable | M | open |
+| K340 | Retrofit 7th Inning Stretch: swap its own effects for the kit's | 7IS | M | open |
+| K341 | Harvest study of EBR, Rome, Radiance, Rise of a Jarl and Under Falling Skies; their rows added here | study §6.5 | M | open |
+
 ## Audit roadmap (owner, 16 Nov 2026)
 
 Tasks T1-T18 of `docs/evaluation/AUDIT-2026-11-16.md` section 13, run in the phase order of its section 12.

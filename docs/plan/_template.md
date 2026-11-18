@@ -189,6 +189,14 @@ When a game with a campaign or a long story is planned (tier 3): K157, K159, K15
 
 **Tier 4 - owner's word:** K103, K115, K107, K125.
 
+## Motion retrofit (owner, 18 Nov 2026)
+
+Every game's animations are rebuilt on `motion-frame` and `effect-library`; game effects come into the kit under neutral names with each game's look as settings; each game's own motion code is deleted. Study and sources: `docs/MOTION_RETROFIT_STUDY.md`. Every retrofitted game plays one beat per event (or chunk) in event order and reveals each log line when its beat starts.
+
+| Batch | Content | Sources | Effort | State |
+|---|---|---|---|---|
+<!-- rows: Motion retrofit (owner, 18 Nov 2026) -->
+
 ## Audit roadmap (owner, 16 Nov 2026)
 
 Tasks T1-T18 of `docs/evaluation/AUDIT-2026-11-16.md` section 13, run in the phase order of its section 12.
