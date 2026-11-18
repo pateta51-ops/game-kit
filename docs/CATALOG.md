@@ -332,7 +332,7 @@ A zoomed card as a full transcription: the printed text decoded with its icons, 
 
 - **Use it when:** The zoomed card as a full transcription: decoded printed text with icons, engine notes (errata, rulings), tokens, an icon legend and glossary links, rule ids stripped; unstyled sections with slots. Recipe: docs/recipes/card-face-zoom.md.
 - **Not for:** The card face (card-parts), the zoom's layout or look, or the glossary lookup itself (glossary).
-- **Key exports:** `SECTIONS`, `ZOOM_WORDS`, `zoomLine`, `plainSegs`, `transcribe`, `untranscribed`, `IconSeg`, `Seg`, `Block`, `ZoomSource`, `Section`, `ZoomOptions`, `Transcription`
+- **Key exports:** `placeZoom`, `zoomRoom`, `SECTIONS`, `ZOOM_WORDS`, `zoomLine`, `plainSegs`, `transcribe`, `untranscribed`, `PlaceRect`, `PlaceSide`, `PlaceOpts`, `Placed`, `IconSeg`, `Seg`, and 5 more
 - **Needs:** [`card-parts`](#card-parts), [`glossary`](#glossary), [`plain-text`](#plain-text)
 - **Came from:** stcc
 - **Docs:** [README](../components/card-zoom/README.md)
