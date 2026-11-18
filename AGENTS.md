@@ -54,7 +54,7 @@ Needs Node 22.18+: tools run with plain `node` (no tsx, no build); relative impo
 - Re-reading files or pictures already in context; repeating a failed call unchanged (three strikes, then stop and report).
 
 ## Where tests and CI run
-- Never heavy tests on local Windows. CI and the full gate run on the self-hosted runners (WSL, labelled per game; `kit` for this repo). Local checks: only the ones you touched (types, lint, the test file).
+- Never heavy tests on local Windows. CI and the full gate run on the self-hosted runners (WSL, labelled per game); this repo is public and its CI runs on GitHub-hosted ubuntu-latest. Local checks: only the ones you touched (types, lint, the test file).
 - Here: `npm run check` = lint, typecheck, vitest, `components:check` (component rules; `CATALOG.md`, `ARCHITECTURE.md` and `PLAN.md` current; README examples type-check). What each catches: [agent-workflow](docs/recipes/agent-workflow.md). Worktrees lack `node_modules`: link them from another checkout, never commit them.
 - A game's gate comes from `ci-templates`; its check chain from `check-runner`.
 
