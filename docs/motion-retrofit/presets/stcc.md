@@ -164,3 +164,11 @@ Source at `a69c8dac` in `src/ui/motion/effects/refresh.ts:20–25,95–149,174�
 - `lineBackground: 'linear-gradient(90deg, transparent, rgba(220,240,255,.95) 20%, #fff 50%, rgba(220,240,255,.95) 80%, transparent)'`, `lineShadow: '0 0 <3% of card height in px> rgba(170,215,255,.9)'`, `lineRadius: '2px'`, `lineHeight: 0.012`, `lineMinHeight: 2`, `lineFade: [0.12, 0.85]`.
 
 From `src/ui/theme/tutorial.css:146–171` at the same commit. Keep the solid `#4de3d0` outline in CSS (width `calc(var(--u, 10px) * 0.28)`, offset `calc(var(--u) * 0.25)`). Pulse with `period: 1600`, `easing: 'ease-in-out'`, and outline-color keyframes `#4de3d0 → rgba(77,227,208,0.25) → #4de3d0` at 0%, 50%, and 100%.
+
+## Running link
+
+Use `dash-line` on a stage zone for the source element. Supply the disc and card ids as `from` and `to` through the layer's live resolver, and keep the step running for the hover window. It reads both boxes each frame, starts and ends at their edges and, with `hideInsideTarget: true`, clears the path when the disc's centre is over its own card (the guard in the pinned ShipLink). Cancel the run when the hover ends.
+
+In stage pixels for the game's unit `u`: `dash: 0.9 * u`, `gap: 0.6 * u`, `width: 0.24 * u`, `cap: 'round'`, `speed: 1.5 * u / 0.9` (one period every 900 ms). Use `colour: '#fff'` for the fallback, `'#cfe6ff'` for the player and `'#ffd0d0'` for the bot. The CSS `filter` is `drop-shadow(0 0 ${0.12 * u}px #000) drop-shadow(0 0 ${0.06 * u}px #000)`.
+
+Source: `src/ui/board/table/ShipLink.tsx` and `src/ui/theme/table.css` at `a69c8dac`.

@@ -124,7 +124,7 @@ function play(): void {
 }
 
 const params = new URLSearchParams(location.search);
-if (!params.has('frame') && !params.has('beams') && !params.has('rotations') && !params.has('signals') && !params.has('loops')) {
+if (!params.has('frame') && !params.has('beams') && !params.has('rotations') && !params.has('signals') && !params.has('loops') && !params.has('lines')) {
   document.querySelector('button')?.addEventListener('click', play);
   play();
 }

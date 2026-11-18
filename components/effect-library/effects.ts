@@ -23,6 +23,10 @@ import { rotate } from './rotation.ts';
 import { refresh } from './refresh.ts';
 import { pulseEffect } from './loops.ts';
 import { idle } from './idle.ts';
+import { typewriter, type TypewriterSettings } from './typewriter.ts';
+import { registerDashLine } from './dash-line.ts';
+import { reticle } from './reticle.ts';
+import { debris } from './debris.ts';
 
 export type { ArcMoveSettings } from './flight-effects.ts';
 export type EffectCtx = EffectLayer;
@@ -212,11 +216,21 @@ export const BUILT_IN: Readonly<Record<string, Effect>> = {
     );
     return undefined;
   },
-  text: ({ call, el, animate }) => {
+  text: (fx) => {
+    const { call, el, animate } = fx;
     const s = call.step['text'] ?? call.step['label'];
     el.textContent = typeof s === 'string' ? s : call.value !== undefined ? String(call.value) : '';
-    css(el, { color: 'var(--fx-text,inherit)', font: 'var(--fx-text-font,inherit)', textAlign: 'center' });
-    animate([{ opacity: 0, transform: 'translateY(var(--fx-text-rise,12px))' }, { opacity: 1, offset: 0.25 }, { opacity: 1, transform: 'none' }], { opacity: '1', transform: 'none' });
+    const rise = 'translateY(var(--fx-text-rise,12px))';
+    css(el, { color: 'var(--fx-text,inherit)', font: 'var(--fx-text-font,inherit)' });
+    const reveal = call.step['typewriter'];
+    if (reveal === true || (reveal && typeof reveal === 'object')) {
+      const settings = reveal === true ? {} : reveal as TypewriterSettings;
+      el.style.textAlign = settings.textAlign ?? 'center';
+      if (settings.rise !== false) animate([{ transform: rise }, { transform: 'none' }], { transform: 'none' });
+      return typewriter(fx, settings);
+    }
+    el.style.textAlign = 'center';
+    animate([{ opacity: 0, transform: rise }, { opacity: 1, offset: 0.25 }, { opacity: 1, transform: 'none' }], { opacity: '1', transform: 'none' });
     return undefined;
   },
   spin: rotate,
@@ -280,5 +294,8 @@ export function registerEffects(verbs: VerbRegistry<EffectCtx>, o?: LayerOptions
   registerEffect(verbs, 'refresh', refresh);
   registerEffect(verbs, 'pulse', pulseEffect);
   registerEffect(verbs, 'idle', idle);
+  registerDashLine(verbs, o?.resolve, o?.stage);
+  registerCanvasEffect(verbs, 'reticle', reticle);
+  registerCanvasEffect(verbs, 'debris', debris);
   return createEffectLayer(o);
 }

@@ -7,7 +7,7 @@
       "the idea of its generic effect set (overlay layer with clones, one registered effect per name); rewritten as the twelve verbs of the director's spec format on the Web Animations API, no file taken"
     ],
     "grafts": [
-      { "game": "ebr", "commit": "33b5abd3", "paths": ["the overlay layer above the page; idea only, no file taken", "src/ui/motion/Count.tsx (count.ts, without React or the store)", "src/ui/motion/Ambience.tsx (ambience.ts: the box-confined layer only; the choice of kind from card ids and the response glow stay in the game)"] },
+      { "game": "earthborne-rangers", "commit": "33b5abd3", "paths": ["the overlay layer above the page; idea only, no file taken", "src/ui/motion/Count.tsx (count.ts, without React or the store)", "src/ui/motion/Ambience.tsx (ambience.ts: the box-confined layer only; the choice of kind from card ids and the response glow stay in the game)"] },
       { "game": "middle-earth-player", "commit": "design only (MIT)", "paths": ["spotlight hit stop, trauma shake, afterimages, flash limit (feel.ts; written new from the write-up docs/evaluation/outside/motion-sound.md, no file taken)"] },
       { "game": "middle-earth-player", "commit": "design only (MIT)", "paths": ["entry description, token deltas, closed-form effects and particle budget (slots.ts, beats.ts, particles.ts sparkPoints; written new from the write-up, no file taken)"] },
       { "game": "marvel-champions-digital-game", "commit": "idea only (AGPL)", "paths": ["slot held until its ghost lands, pile and host anchors, beats from events by one table (slots.ts, beats.ts; no file taken)"] },
@@ -29,9 +29,13 @@
       { "game": "warps", "commit": "449af55", "paths": ["src/ui/fx/attack.ts", "src/ui/fx/attackLook.ts", "src/ui/fx/attackPlan.ts", "src/ui/fx/power/blocks.ts", "src/ui/fx/blast.ts", "src/ui/fx/power/backlash.ts", "src/ui/fx/shield.ts", "src/ui/fx/shieldLook.ts", "src/ui/fx/timing.ts"] },
       { "game": "unstoppable", "commit": "52c19f6", "paths": ["src/ui/board/TargetArrow.tsx", "src/ui/theme/motion.css", "src/ui/play/arrow.ts"] },
       { "game": "stcc", "commit": "a69c8dac", "paths": ["src/ui/motion/effects/refresh.ts", "src/ui/theme/tutorial.css"] },
-      { "game": "ebr", "commit": "59e0ad1d", "paths": ["src/ui/index.css", "src/ui/motion/motion.css"] },
+      { "game": "earthborne-rangers", "commit": "59e0ad1d", "paths": ["src/ui/index.css", "src/ui/motion/motion.css"] },
       { "game": "under-falling-skies", "commit": "f1042f8", "paths": ["src/ui/anim/anim.css"] },
-      { "game": "warps", "commit": "449af55", "paths": ["src/ui/theme/menus.css", "src/ui/fx/idle.ts", "src/ui/fx/looks.ts", "src/ui/fx/timing.ts"] }
+      { "game": "warps", "commit": "449af55", "paths": ["src/ui/theme/menus.css", "src/ui/fx/idle.ts", "src/ui/fx/looks.ts", "src/ui/fx/timing.ts"] },
+      { "game": "earthborne-rangers", "commit": "59e0ad1d", "paths": ["src/ui/motion/book.ts (typewriter.ts)"] },
+      { "game": "stcc", "commit": "a69c8dac", "paths": ["src/ui/board/table/ShipLink.tsx", "src/ui/theme/table.css (dash-line.ts)"] },
+      { "game": "warps", "commit": "449af55", "paths": ["src/ui/fx/power/blocks.ts (reticle.ts)", "src/ui/table/endscreen.css (debris transform settings)"] },
+      { "game": "rome", "commit": "e76d56f", "paths": ["src/ui/motion/catalog.ts", "src/ui/motion/live/LiveMotion.tsx (debris.ts)"] }
     ]
   },
   "looks": {

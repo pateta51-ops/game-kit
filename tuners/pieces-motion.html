@@ -19242,6 +19242,227 @@ var PIECES = (() => {
     });
   };
 
+  // components/effect-library/typewriter.ts
+  function revealEnds(text, byWord, proportional) {
+    if (byWord && !proportional) return [...text.matchAll(/\S+/gu)].map((m) => m.index + m[0].length);
+    const letters = [...text.matchAll(/\S/gu)];
+    const words = byWord ? [...text.matchAll(/\S+/gu)] : [];
+    let word = 0;
+    return letters.map((m) => {
+      const end = m.index + m[0].length;
+      if (!byWord) return end;
+      while (end > words[word].index + words[word][0].length) word++;
+      return words[word].index + words[word][0].length;
+    });
+  }
+  var nextHighlight = 0;
+  function typewriter({ call, el }, settings) {
+    Object.assign(el.style, { opacity: "1", visibility: "visible" });
+    const text = el.textContent ?? "";
+    const node = el.firstChild;
+    const doc = el.ownerDocument;
+    const highlights = globalThis.CSS?.highlights;
+    if (!node || !highlights || typeof Highlight === "undefined" || call.dur <= 0) return void 0;
+    const name = `fx-unread-${++nextHighlight}`;
+    const style = doc.createElement("style");
+    style.textContent = `::highlight(${name}) { color: transparent; text-shadow: none; }`;
+    doc.head.append(style);
+    const range = doc.createRange();
+    range.setStart(node, 0);
+    range.setEnd(node, text.length);
+    highlights.set(name, new Highlight(range));
+    const pace = typeof settings.pace === "number" && settings.pace > 0 ? settings.pace : void 0;
+    const timed = revealEnds(text, settings.unit !== "letter", pace === void 0);
+    const proportional = pace === void 0 ? timed : revealEnds(text, settings.unit !== "letter", true);
+    const start = performance.now();
+    let frame = 0;
+    let shown = 0;
+    const finish2 = () => {
+      cancelAnimationFrame(frame);
+      highlights.delete(name);
+      style.remove();
+    };
+    const tick = (now) => {
+      const t = specTime(now - start, call);
+      const duration = specTime(call.dur, call);
+      const progress = settings.progress?.() ?? (pace === void 0 ? t / duration : void 0);
+      const ends = progress === void 0 ? timed : proportional;
+      const due = Math.floor(progress === void 0 ? t / pace : progress * ends.length);
+      shown = Math.max(shown, due >= ends.length ? text.length : ends[due - 1] ?? 0);
+      if (shown === text.length) finish2();
+      else {
+        range.setStart(node, shown);
+        frame = requestAnimationFrame(tick);
+      }
+    };
+    tick(start);
+    return finish2;
+  }
+
+  // components/effect-library/dash-line.ts
+  var centre4 = ([x, y, w, h2]) => [x + w / 2, y + h2 / 2];
+  function edgeToward(rect, point2) {
+    const [x, y] = centre4(rect);
+    const dx = point2[0] - x;
+    const dy = point2[1] - y;
+    if (dx === 0 && dy === 0) return [x, y];
+    const k = Math.min(1, Math.abs(rect[2] / 2 / (dx || 1e-9)), Math.abs(rect[3] / 2 / (dy || 1e-9)));
+    return [x + dx * k, y + dy * k];
+  }
+  function registerDashLine(verbs, resolve, stage) {
+    verbs.register("dash-line", (call, run) => {
+      const { from = call.actor, to, dash = 9, gap = 6, speed = 20, width = 2, colour = "currentColor", cap = "round", filter, hideInsideTarget = false } = call.step;
+      if (typeof to !== "string" || call.dur <= 0) return void 0;
+      const rect = (id) => run.timeline.actors.find((actor) => actor.id === id)?.rect ?? stage?.(id);
+      const ar = from === call.actor ? call.from : rect(from);
+      const br = rect(to) ?? call.to;
+      const layer = run.context.el;
+      const doc = layer.ownerDocument;
+      const ns = "http://www.w3.org/2000/svg";
+      const svg = doc.createElementNS(ns, "svg");
+      const path = doc.createElementNS(ns, "path");
+      svg.classList.add("fx-dash-line");
+      svg.setAttribute("aria-hidden", "true");
+      svg.style.cssText = "position:absolute;inset:0;width:100%;height:100%;overflow:visible;pointer-events:none";
+      path.setAttribute("fill", "none");
+      path.setAttribute("stroke", colour);
+      path.setAttribute("stroke-width", String(width));
+      path.setAttribute("stroke-linecap", cap);
+      path.setAttribute("stroke-dasharray", `${dash} ${gap}`);
+      if (filter) path.style.filter = filter;
+      svg.append(path);
+      layer.append(svg);
+      const start = performance.now();
+      const paint = (now) => {
+        const a = resolve?.(from, run)?.getBoundingClientRect();
+        const b = resolve?.(to, run)?.getBoundingClientRect();
+        const box = layer.getBoundingClientRect();
+        const sx = layer.clientWidth ? box.width / layer.clientWidth || 1 : 1;
+        const sy = layer.clientHeight ? box.height / layer.clientHeight || 1 : 1;
+        const local = (r) => [(r.left - box.left) / sx, (r.top - box.top) / sy, r.width / sx, r.height / sy];
+        const source = resolve ? a && local(a) : ar;
+        const target = resolve ? b && local(b) : br;
+        if (source && target) {
+          const p = centre4(source);
+          if (hideInsideTarget && p[0] >= target[0] && p[0] <= target[0] + target[2] && p[1] >= target[1] && p[1] <= target[1] + target[3]) path.removeAttribute("d");
+          else {
+            const point2 = (xy) => xy.map((n) => n.toFixed(1)).join(" ");
+            path.setAttribute("d", `M ${point2(edgeToward(source, centre4(target)))} L ${point2(edgeToward(target, p))}`);
+          }
+        } else path.removeAttribute("d");
+        path.setAttribute("stroke-dashoffset", String(-speed * specTime(now - start, call) / 1e3 % (dash + gap || 1)));
+      };
+      paint(start);
+      const tick = (now) => {
+        paint(now);
+        frame = requestAnimationFrame(tick);
+      };
+      let frame = requestAnimationFrame(tick);
+      return () => {
+        cancelAnimationFrame(frame);
+        svg.remove();
+      };
+    });
+  }
+
+  // components/effect-library/reticle.ts
+  var reticle = (ctx, t, { call }) => {
+    const {
+      box = call.from,
+      unit: unit2 = 1,
+      colour = "255,255,255",
+      padding = [18, 6],
+      length = 16,
+      width = 2,
+      closeMs = 220,
+      fade = [520, 660]
+    } = call.step;
+    if (t >= fade[1]) return;
+    const u = ease.out(seg(t, 0, closeMs));
+    const d = lerp(padding[0], padding[1], u) * unit2;
+    const n = length * unit2;
+    ctx.save();
+    ctx.strokeStyle = `rgba(${colour},${u * (1 - seg(t, ...fade))})`;
+    ctx.lineWidth = width * unit2;
+    for (const sx of [-1, 1])
+      for (const sy of [-1, 1]) {
+        const x = box[0] + (sx > 0 ? box[2] : 0) + sx * d;
+        const y = box[1] + (sy > 0 ? box[3] : 0) + sy * d;
+        ctx.beginPath();
+        ctx.moveTo(x - sx * n, y);
+        ctx.lineTo(x, y);
+        ctx.lineTo(x, y - sy * n);
+        ctx.stroke();
+      }
+    ctx.restore();
+  };
+
+  // components/effect-library/debris.ts
+  var buffers = /* @__PURE__ */ new WeakMap();
+  function fadeBuffer(ctx) {
+    let buffer = buffers.get(ctx);
+    if (!buffer) {
+      buffer = ctx.canvas.ownerDocument.createElement("canvas").getContext("2d") ?? void 0;
+      if (!buffer) return void 0;
+      buffers.set(ctx, buffer);
+    }
+    const { width, height } = ctx.canvas;
+    if (buffer.canvas.width !== width) buffer.canvas.width = width;
+    if (buffer.canvas.height !== height) buffer.canvas.height = height;
+    buffer.clearRect(0, 0, width, height);
+    return buffer;
+  }
+  var debris = (board2, t, { call, x, y }) => {
+    const {
+      pieces,
+      count = pieces?.length ?? 12,
+      seed = 1,
+      unit: unit2 = 1,
+      spread: spread2 = [60, 24],
+      gravity = 100,
+      spin = 140,
+      size = [12, 8],
+      colour = "#b0b0b0",
+      delay = 0,
+      backwards = false,
+      ms = 900,
+      fade = [ms * 0.7, ms],
+      easeMotion = (p2) => p2,
+      groupFade = false
+    } = call.step;
+    const local = t - delay;
+    if (!backwards && local < 0 || fade && local >= fade[1]) return;
+    const p = seg(local, 0, ms);
+    const k = easeMotion(p);
+    const alpha = fade ? 1 - seg(local, ...fade) : 1;
+    const ctx = (groupFade && alpha < 1 ? fadeBuffer(board2) : void 0) ?? board2;
+    const random = rng(seed);
+    for (let i = 0; i < capN(count); i++) {
+      const piece = pieces?.[i];
+      const [px2, py] = piece?.at ?? [0, 0];
+      const [ox, oy] = piece?.offset ?? [0, 0];
+      const [dx, dy] = piece?.travel ?? [(random() * 2 - 1) * spread2[0], -random() * spread2[1]];
+      const turn = piece?.spin ?? (random() * 2 - 1) * spin;
+      const scale = piece?.scale ? lerp(...piece.scale, k) : 1;
+      ctx.save();
+      ctx.globalAlpha *= (ctx === board2 ? alpha : 1) * (piece?.growOpacity ? p : 1);
+      ctx.translate(x + (px2 + ox * (1 - k) + dx * k) * unit2, y + (py + oy * (1 - k) + dy * k + gravity * k * k) * unit2);
+      ctx.rotate(turn * k * Math.PI / 180);
+      ctx.scale(unit2 * scale, unit2 * scale);
+      ctx.fillStyle = piece?.colour ?? colour;
+      if (piece?.paint) piece.paint(ctx, k);
+      else if (piece?.shape) ctx.fill(new Path2D(piece.shape));
+      else ctx.fillRect(-size[0] / 2, -size[1] / 2, ...size);
+      ctx.restore();
+    }
+    if (ctx !== board2) {
+      board2.save();
+      board2.globalAlpha *= alpha;
+      board2.drawImage(ctx.canvas, 0, 0);
+      board2.restore();
+    }
+  };
+
   // components/effect-library/effects.ts
   var entry = (call) => {
     const s = call.step["scale"];
@@ -19404,11 +19625,21 @@ var PIECES = (() => {
       );
       return void 0;
     },
-    text: ({ call, el, animate }) => {
+    text: (fx) => {
+      const { call, el, animate } = fx;
       const s = call.step["text"] ?? call.step["label"];
       el.textContent = typeof s === "string" ? s : call.value !== void 0 ? String(call.value) : "";
-      css(el, { color: "var(--fx-text,inherit)", font: "var(--fx-text-font,inherit)", textAlign: "center" });
-      animate([{ opacity: 0, transform: "translateY(var(--fx-text-rise,12px))" }, { opacity: 1, offset: 0.25 }, { opacity: 1, transform: "none" }], { opacity: "1", transform: "none" });
+      const rise = "translateY(var(--fx-text-rise,12px))";
+      css(el, { color: "var(--fx-text,inherit)", font: "var(--fx-text-font,inherit)" });
+      const reveal = call.step["typewriter"];
+      if (reveal === true || reveal && typeof reveal === "object") {
+        const settings = reveal === true ? {} : reveal;
+        el.style.textAlign = settings.textAlign ?? "center";
+        if (settings.rise !== false) animate([{ transform: rise }, { transform: "none" }], { transform: "none" });
+        return typewriter(fx, settings);
+      }
+      el.style.textAlign = "center";
+      animate([{ opacity: 0, transform: rise }, { opacity: 1, offset: 0.25 }, { opacity: 1, transform: "none" }], { opacity: "1", transform: "none" });
       return void 0;
     },
     spin: rotate,
@@ -19467,6 +19698,9 @@ var PIECES = (() => {
     registerEffect(verbs, "refresh", refresh);
     registerEffect(verbs, "pulse", pulseEffect);
     registerEffect(verbs, "idle", idle);
+    registerDashLine(verbs, o?.resolve, o?.stage);
+    registerCanvasEffect(verbs, "reticle", reticle);
+    registerCanvasEffect(verbs, "debris", debris);
     return createEffectLayer(o);
   }
 

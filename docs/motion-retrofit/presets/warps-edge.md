@@ -200,3 +200,18 @@ const stunIdle = {
 ```
 
 Set `popMs: 0` when handing off from the 960 ms onset, which starts the stars at 640 ms and finishes their pop at 900 ms. For sections, use `count: 0` and `trackWidth: 0` and omit the copy and jitter settings. Warp’s 2D ships use their own arcs. Stop both idle loops when the stun ends.
+## Target lock
+
+Use `reticle` over the target box with `padding: [18, 6]`, `length: 16`, `width: 2`, `closeMs: 220`, `fade: [520, 660]`, and `dur: 660`. The original scales the bracket dimensions with the caller's unit. For the standard power look the unit clamps source box width divided by 148 to the range 0.45–2.5. Its RGB is `61,155,255` for Electro Bot, `25,195,255` for maneuver, and `255,42,143` for other tones. The signature look uses `255,230,0` and offsets the step start to its own lock cue.
+
+Source: `src/ui/fx/power/blocks.ts`, `src/ui/fx/power/look.ts` and `src/ui/fx/power/sigLook.ts` at `449af55`.
+
+## Endscreen fall
+
+The cited keyframe at this revision moves one ship image. Use `debris` with one authored piece anchored at the centre of the fitted element. Set `delay: 600`, `backwards: true`, `ms: 4500`, `dur: 5100`, `spread: [0, 0]`, `gravity: 0`, `fade: false`, and a sampler for CSS `cubic-bezier(0.55, 0, 0.75, 1)` as `easeMotion`. The same eased progress drives translation, rotation, and scale. Set the piece's `offset` to `[-0.14 * width, -0.10 * height]`, `travel: [0, 0]`, `spin: -28`, and `scale: [1, 0.55]`.
+
+In the piece's `paint` callback, draw the original image with centred contain sizing. Interpolate saturation from 1 to 0.7 and drop shadow from transparent `#e5007d00` to `#e5007d88` with blur of one endscreen unit. Backwards fill shows the initial pose during the delay. Resume the live image at its final transform and filter when the overlay ends. Its original opacity stays constant through the 600 ms hold and the full 4500 ms fall. The separate vortex spin takes 5100 ms from −540° with `cubic-bezier(0.25, 0.6, 0.3, 1)` and belongs to the game.
+
+Source: `src/ui/table/endscreen.css` at `449af55` (ship styles, vortex variant, and `wend-fall`).
+
+The wreck shards use the separate `wend-burst` rule. For each authored delay `d`, group its shards into a `debris` step with `delay: d`, `backwards: true`, `ms: 1600`, and `fade: false`. Sample `cubic-bezier(0.12, 0.75, 0.3, 1)` for motion, with `gravity: 0`. Each shard starts at its original position and ends at its CSS `[--dx, --dy]` offset with `spin` set to `--rot` in degrees. Draw each clipped shard about the wreck box centre. Keep its constant opacity and retain the final pose in the live wreck when the overlay ends.

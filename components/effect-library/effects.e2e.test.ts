@@ -58,6 +58,8 @@ const CASES: [string, Record<string, unknown>, (o: Out) => void][] = [
   ['bar-fill', { from: 1, to: 4, pin: { delta: [40, 10] } }, (o) => expect([o.text, o.style?.translate]).toEqual(['4', '40px 10px'])],
 ];
 
+CASES.push(['text', { text: 'Text reveal', typewriter: { unit: 'letter', pace: 100 } }, (o) => expect([o.text, o.style?.opacity]).toEqual(['Text reveal', '1'])]);
+
 describe.skipIf(!HAVE && !process.env['CI'])('effect library in a browser', () => {
   let browser: Browser;
   let page: Page;
@@ -147,8 +149,9 @@ describe.skipIf(!HAVE && !process.env['CI'])('effect library in a browser', () =
   it('a game registers its own effect beside the built-in verbs', async () => {
     const r = await page.evaluate(() => (window as unknown as { fxTest: Api }).fxTest.own());
     expect(r.names).toEqual(expect.arrayContaining(['stamp', 'motes', 'flicker', 'bar-fill']));
-    expect(r.names).toHaveLength(39);
+    expect(r.names).toHaveLength(42);
     expect(r.names).toEqual(expect.arrayContaining(['spin', 'tap', 'untap']));
+    expect(r.names).toEqual(expect.arrayContaining(['dash-line', 'reticle', 'debris']));
     expect(r.names).toEqual(expect.arrayContaining(['arc-move', 'shake-group', 'unroll', 'multi-stop-path', 'trail', 'warp-transfer', 'radial-streaks', 'collapse-jump', 'column-beam', 'rotating-beam', 'projectile', 'dissolve', 'shatter', 'shimmer', 'shield-bubble', 'ring-pulse']));
     expect(r.names).toContain('pop');
     expect(r.names).toEqual(expect.arrayContaining(['refresh', 'pulse', 'idle']));

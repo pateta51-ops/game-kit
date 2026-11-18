@@ -74,6 +74,19 @@
   .idle-orbit { left: 66% }
 </style>
 <script>if (new URLSearchParams(location.search).has('signals')) document.documentElement.classList.add('signals-only')</script>
+  .lines-panel { display: none; background: #292733; color: #ebe9f2 }
+  .lines-only main { grid-template-columns: repeat(2, minmax(0, 1fr)) }
+  @media (max-width: 640px) { .lines-only main { grid-template-columns: 1fr } }
+  .lines-only main > :not(.lines-panel) { display: none }
+  .lines-only .lines-panel { display: block }
+  .lines-panel .node { position: absolute; width: 14%; aspect-ratio: 1; border: 2px solid #aaa4be; border-radius: 16%; background: #403b50 }
+  #dash-a { left: 17%; top: 55% }
+  #dash-b { right: 17%; top: 33% }
+  #lock-target { left: 43%; top: 42% }
+  #fall-origin { position: absolute; left: 50%; top: 40% }
+  #type-source, .type-sample { position: absolute; inset: 36% 12% auto; margin: 0; text-align: center; font: 500 clamp(1rem, 2vw, 2.75rem)/1.35 system-ui; --fx-text-font: 500 clamp(1rem, 2vw, 2.75rem)/1.35 system-ui; --fx-text: #ebe9f2 }
+</style>
+<script>if (new URLSearchParams(location.search).has('lines')) document.documentElement.classList.add('lines-only')</script>
 <script>if (new URLSearchParams(location.search).has('flights')) document.documentElement.classList.add('flights-only');if (new URLSearchParams(location.search).has('beams')) document.documentElement.classList.add('beams-only');if (new URLSearchParams(location.search).has('combat')) document.documentElement.classList.add('combat-only')</script>
 <script>if (new URLSearchParams(location.search).has('rotations')) document.documentElement.classList.add('rotations-only')</script>
 <header><h1>Effect library motion lab</h1><button type="button">Replay</button></header>
@@ -120,6 +133,10 @@
   <section class="combat-panel"><h2>Shimmer</h2><div id="shimmer" class="card"></div></section>
   <section class="combat-panel"><h2>Shield bubble</h2><div id="shield-bubble" class="card"></div></section>
   <section class="combat-panel"><h2>Ring pulse</h2><div id="ring-pulse" class="card"></div></section>
+  <section class="lines-panel"><h2>Typewriter</h2><p id="type-source" class="type-sample">The first line appears, word by word, without moving the rest of the text.</p></section>
+  <section class="lines-panel"><h2>Dash line</h2><div id="dash-a" class="node"></div><div id="dash-b" class="node"></div></section>
+  <section class="lines-panel"><h2>Reticle</h2><div id="lock-target" class="node"></div></section>
+  <section class="lines-panel"><h2>Debris</h2><div id="fall-origin"></div></section>
 </main>
 <script type="module" src="./lab.ts"></script>
 <script type="module" src="./flights.ts"></script>
@@ -128,4 +145,5 @@
 <script type="module" src="./rotations.ts"></script>
 <script type="module" src="./combat.ts"></script>
 <script type="module" src="./loops.ts"></script>
+<script type="module" src="./lines.ts"></script>
 </html>

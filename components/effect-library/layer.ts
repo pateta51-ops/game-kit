@@ -1,5 +1,5 @@
 // The overlay layer: one element above the page that holds the clones and stand-ins the effects animate.
-import type { Actor, Rect, Run } from '../motion-frame/index.ts';
+import type { Actor, Rect, Run, Stage } from '../motion-frame/index.ts';
 
 export function decorativeCopy(el: HTMLElement, deep = true): HTMLElement {
   const copy = el.cloneNode(deep) as HTMLElement;
@@ -15,6 +15,8 @@ export interface LayerOptions {
   parent?: HTMLElement;
   /** the page element an actor or zone id stands for; the layer animates a clone of it, never the original. None found: a plain box. */
   resolve?: (id: string, run: Run<EffectLayer>) => HTMLElement | undefined;
+  /** Stage geometry for dash-line endpoints, including their original sizes. */
+  stage?: Stage;
   /** called once per actor right after its clone is made and placed in the layer, only when `resolve` found a source (a clone does not copy a canvas's pixels: draw them here, or swap the content) */
   onActor?: (source: HTMLElement, clone: HTMLElement, id: string, run: Run<EffectLayer>) => void;
 }
