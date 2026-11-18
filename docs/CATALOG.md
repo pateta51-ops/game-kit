@@ -1046,9 +1046,9 @@ A row of spaces with a marker that glides, on a drawn row or on spots of a mat i
 
 Every printed item (card, tile, board) is transcribed twice, independently, then the owner checks it against the physical item. Nothing enters the real pack before that. Node only (reads files); no packages.
 
-- **Use it when:** Printed items (cards, tiles, boards) are transcribed twice independently and the owner verifies them before they enter the real pack.
+- **Use it when:** Printed items (cards, tiles, boards) are transcribed twice independently and the owner verifies them before they enter the real pack; also the face fit check (printed text fits its box at a pixel floor) and Python tools to measure, fit, autotune and crop-sheet faces.
 - **Not for:** Card rules or card-language checks (card-harness); anything that reads no files.
-- **Key exports:** `sha256`, `jsonDiff`, `transcriptionCheck`, `Transcript`, `Verification`, `Loaded`, `ItemDiff`, `Gap`, `Options`
+- **Key exports:** `sha256`, `jsonDiff`, `transcriptionCheck`, `wrapMeasure`, `faceFitCheck`, `TOLERANCE`, `RADIUS`, `patternValue`, `median`, `wordFailures`, `lineBreakFailures`, `faceFindings`, `judgeFace`, `Transcript`, and 16 more
 - **Needs:** nothing
 - **Came from:** under-falling-skies
 - **Docs:** [README](../components/transcription-check/README.md)

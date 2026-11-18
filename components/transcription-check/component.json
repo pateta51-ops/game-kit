@@ -7,7 +7,8 @@
     "commit": "07238a4",
     "paths": [
       "scripts/lib/real.ts (sha256, loadFaces, loadVerified, mvpVerificationIssues, jsonDiff, diffFaces, diffMarkdown, progressMarkdown; faces become items, the face schema and MVP list are passed in; buildRealPack and proofEntries stay in the game)",
-      "docs/BUILD_PLAN.md section 12 (Phase T: two transcriptions, diff, owner verification)"
+      "docs/BUILD_PLAN.md section 12 (Phase T: two transcriptions, diff, owner verification)",
+      "Face fit (K375): from Star Trek Captains Chair a69c8dac: src/content/faceCheck.ts (only the idea of a per-card check; its wording check stays in the game) and scripts/faces/measure.py (smooth1d, edge, runs, ncc), iconfit.py (ncc_all, best_shift), calibrate.py, autotune.py (rounds), evaluate.ts (policy tables, word and line checks), fontfit.py (size fit idea); 7th Inning Stretch 5e0ad51 tools/runner-faces-sheet.py, team-sides-sheet.py (crop sheet). Rewritten game-free: boxes, fonts and floors come from the game."
     ]
   },
   "needs": [],

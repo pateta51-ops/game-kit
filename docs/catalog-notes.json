@@ -371,7 +371,7 @@
     "not": "Any rule, look, colour or word; turn banners (table-panels); the number itself (counter)."
   },
   "transcription-check": {
-    "use": "Printed items (cards, tiles, boards) are transcribed twice independently and the owner verifies them before they enter the real pack.",
+    "use": "Printed items (cards, tiles, boards) are transcribed twice independently and the owner verifies them before they enter the real pack; also the face fit check (printed text fits its box at a pixel floor) and Python tools to measure, fit, autotune and crop-sheet faces.",
     "not": "Card rules or card-language checks (card-harness); anything that reads no files."
   },
   "tutorial": {

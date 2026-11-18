@@ -163,3 +163,5 @@ ${p ? sha256(readFileSync(join(pictureDir, p)).toString('latin1')) : ''}`);
 
   return { writeDiff, check, loadA, loadB, verifications, diff, diffMarkdown, openCount, progressMarkdown, gate, verify };
 }
+export * from './face-fit.ts';
+export * from './face-judge.ts';

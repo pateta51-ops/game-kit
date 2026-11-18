@@ -1,0 +1,4 @@
+# Python 3.11 or later; numpy and Pillow only (pytest to run the tests). Raise on purpose, in a PR.
+numpy==2.5.3
+Pillow==12.3.0
+pytest==9.1.1
