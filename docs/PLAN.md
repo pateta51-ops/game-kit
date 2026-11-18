@@ -460,7 +460,7 @@ Every game's animations are rebuilt on `motion-frame` and `effect-library`; game
 | K329 | M6: per-actor `hideSourceUntil: 'start'` | Unstoppable `flightLedger`; 7IS `leave` | S | open |
 | K330 | M7 `effect-library`: shared WebGL canvas with a 2D fallback, like `registerCanvasEffect` | STCC `crumple.ts`; Warp's `power/coin.ts` | M | open |
 | K331 | M8 `sound-player`: check against Warp's `mixer.ts`/`engine.ts` (priority stealing, 40 ms dedupe, ducking, seeded playlist) and lift what it lacks | Warp's `fx/cue.ts`, `mixer.ts`, `engine.ts`; Unstoppable `cues.ts` | M | open |
-| K332 | Effects, flights and paths: `arc-move`, `multi-stop-path`, `trail`; lab demo, contact sheet, a preset per game look | study §3 | M | open |
+| K332 | Effects, flights and paths: `arc-move`, `multi-stop-path`, `trail`; lab demo, contact sheet, a preset per game look | study §3 | M | done |
 | K333 | Effects, beams and transfers: `warp-transfer`, `column-beam`, `rotating-beam`, `radial-streaks`, `collapse-jump` | study §3 | M | open |
 | K334 | Effects, combat: `projectile`, `dissolve`, `shatter`, `shimmer`, `shield-bubble`, `ring-pulse` | study §3 | M | open |
 | K335 | Effects, signals and staging: `stamp`, `motes`, `flicker`, `bar-fill`, `camera-pull`, `letterbox-banner`, `unroll`, `shake-group`, `plasma-orb`, `drift-cloud`, `tumble-3d`, `pile-lift`, `crumple` (after K330); settings added to `glow`, `flip`, `scale` | study §3 | L | open |

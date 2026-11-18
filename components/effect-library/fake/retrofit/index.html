@@ -11,31 +11,59 @@
   main { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(max(24rem, 26vw),100%),1fr)); gap: 2vw }
   section { position: relative; height: max(15rem, 20vw); background: white; overflow: hidden; border: 1px solid #b9b9b0 }
   h2 { position: absolute; z-index: 1; left: 1rem; margin: 1rem 0; font-size: 1.2rem }
-  .field { background: var(--board); color: var(--chalk) }
+  .field { background: var(--demo-surface); color: var(--demo-ink) }
   .sample { display: grid; place-items: center }
-  section > .sample, .landing, .score-grid { position: absolute }
-  .ball { left: 15%; top: 72%; width: 6%; aspect-ratio: 1; border-radius: 50%; background: var(--chalk); border: 3px dashed var(--red) }
+  section > .sample, .landing, .demo-grid { position: absolute }
+  .ball { left: 15%; top: 72%; width: 6%; aspect-ratio: 1; border-radius: 50%; background: var(--demo-ink); border: 3px dashed var(--demo-accent) }
   .landing { left: 82%; top: 28%; width: 6%; aspect-ratio: 1; border: 1px dashed; border-radius: 50% }
-  .card { left: 38%; top: 24%; width: 24%; height: 64%; background: var(--chalk); color: var(--board); border: .3rem double var(--board); border-radius: .3rem; font: bold clamp(1rem, 1.5vw, 3rem) Georgia }
+  .card { left: 38%; top: 24%; width: 24%; height: 64%; background: var(--demo-ink); color: var(--demo-surface); border: .3rem double var(--demo-surface); border-radius: .3rem; font: bold clamp(1rem, 1.5vw, 3rem) Georgia }
   .lamp { left: 40%; top: 38%; width: 20%; aspect-ratio: 1; border-radius: 50%; background: #151515; border: .4rem solid #555 }
-  .lamp[data-fx-flipped] { background: var(--red) }
-  .score-grid { inset: 35% 15% auto; display: grid; grid-template-columns: repeat(3, 1fr); gap: 1vw }
-  .tin-plate { padding: .25em; text-align: center; font: bold clamp(1.2rem, 4vw, 6rem) Georgia; border: .2rem solid; background: var(--chalk); color: var(--board) }
-  .pennant { left: 12%; top: 20%; width: 76%; height: 70%; background: var(--red); color: var(--chalk); clip-path: polygon(0 0,100% 0,100% 60%,50% 100%,0 60%); padding-bottom: 60px; font: 700 clamp(1.25rem, 2.1vw, 150px) Arvo, serif }
+  .lamp[data-fx-flipped] { background: var(--demo-accent) }
+  .demo-grid { inset: 35% 15% auto; display: grid; grid-template-columns: repeat(3, 1fr); gap: 1vw }
+  .demo-tile { padding: .25em; text-align: center; font: bold clamp(1.2rem, 4vw, 6rem) Georgia; border: .2rem solid; background: var(--demo-ink); color: var(--demo-surface) }
+  .pennant { left: 12%; top: 20%; width: 76%; height: 70%; background: var(--demo-accent); color: var(--demo-ink); clip-path: polygon(0 0,100% 0,100% 60%,50% 100%,0 60%); padding-bottom: 60px; font: 700 clamp(1.25rem, 2.1vw, 150px) Arvo, serif }
   .die, .slot { left: 18%; top: 48%; width: 13%; aspect-ratio: 1; border-radius: .5rem }
-  .die { background: var(--chalk); color: var(--board); font: bold clamp(1rem, 3vw, 5rem) Georgia }
+  .die { background: var(--demo-ink); color: var(--demo-surface); font: bold clamp(1rem, 3vw, 5rem) Georgia }
   .slot { border: 1px dashed }
   .tray { left: 70% }
   .flight-source .ball, .pennant-source .pennant { visibility: hidden }
+  .flights-only main > :not(.flight-panel) { display: none }
+  .flight-panel { background: #232630; color: #fff }
+  .flight-panel:nth-last-child(2) { background: #39311e }
+  .flight-panel:last-child { background: #263635 }
+  .flight-actor, .flight-target { position: absolute }
+  .flight-actor { width: 9%; aspect-ratio: 1; background: #decba4; border: 3px solid #5b4524 }
+  .flight-actor:not(.fx-actor) { visibility: hidden }
+  .ship { background: #b9def0; clip-path: polygon(0 50%,45% 34%,65% 6%,67% 36%,100% 49%,67% 62%,65% 92%,45% 65%) }
+  .flight-card { width: 12%; aspect-ratio: 2/3; border: 4px double #998252; border-radius: 6%; background: repeating-linear-gradient(45deg,#decba4 0 8px,#c9ad78 8px 16px) }
+  .flight-target { width: 12%; aspect-ratio: 2/3; border: 1px dashed #a5a49a }
+  .token { top: 50%; width: 6%; background: #eebe5f }
+  .marker { width: 6%; border-radius: 50%; background: #df7a50 }
 </style>
+<script>if (new URLSearchParams(location.search).has('flights')) document.documentElement.classList.add('flights-only')</script>
 <header><h1>Effect library motion lab</h1><button type="button">Replay</button></header>
 <main>
   <section class="field flight-source"><h2>Arc move</h2><div id="ball" class="ball sample"></div><div id="landing" class="landing"></div></section>
-  <section class="field"><h2>Glow with hold</h2><div id="card" class="card sample">Pitcher</div></section>
+  <section class="field"><h2>Glow with hold</h2><div id="card" class="card sample">Sample</div></section>
   <section class="field"><h2>Flip without squash</h2><div id="lamp" class="lamp sample" aria-label="Lamp"></div></section>
-  <section class="field"><h2>Shake group</h2><div id="plates" class="score-grid"><div class="tin-plate">3</div><div class="tin-plate">2</div><div class="tin-plate">1</div></div></section>
-  <section class="field pennant-source"><h2>Unroll</h2><div id="pennant" class="pennant sample">Champions</div></section>
+  <section class="field"><h2>Shake group</h2><div id="plates" class="demo-grid"><div class="demo-tile">3</div><div class="demo-tile">2</div><div class="demo-tile">1</div></div></section>
+  <section class="field pennant-source"><h2>Unroll</h2><div id="pennant" class="pennant sample">Sample</div></section>
   <section class="field"><h2>Hide source</h2><div class="slot sample"></div><div id="die" class="die sample">⚄</div><div id="tray" class="tray slot sample"></div></section>
+  <section id="flight-curves" class="flight-panel"><h2>Curves and loops</h2><div id="arrival-ship" class="flight-actor ship"></div><div id="sortie-ship" class="flight-actor ship"></div><div id="pass-ship-0" class="flight-actor ship"></div><div id="pass-ship-1" class="flight-actor ship"></div><div id="pass-ship-2" class="flight-actor ship"></div><div id="pass-ship-3" class="flight-actor ship"></div></section>
+  <section class="flight-panel"><h2>Glides and stagger</h2>
+    <div id="hand-card" class="flight-actor flight-card" style="left:10%;top:70%;width:9%"></div>
+    <div id="hand-target" class="flight-target" style="left:76%;top:18%"></div>
+    <div id="token-a" class="flight-actor token" style="left:12%"></div><div id="token-b" class="flight-actor token" style="left:20%"></div><div id="token-c" class="flight-actor token" style="left:28%"></div>
+    <div id="token-target" class="flight-target" style="left:82%;top:49%;width:6%;aspect-ratio:1"></div>
+    <div id="glide-marker" class="flight-actor marker" style="left:38%;top:80%"></div><div id="marker-target" class="flight-target" style="left:78%;top:80%;width:6%;aspect-ratio:1;border-radius:50%"></div>
+  </section>
+  <section class="flight-panel"><h2>Waypoint holds</h2>
+    <div id="via-a" class="flight-actor flight-card" style="left:10%;top:57%"></div>
+    <div id="via-b" class="flight-actor flight-card" style="left:25%;top:57%"></div>
+    <div id="via-rest" class="flight-target" style="left:45%;top:25%;width:15%"></div>
+    <div id="via-target" class="flight-target" style="left:77%;top:58%;width:9%"></div>
+  </section>
 </main>
 <script type="module" src="./lab.ts"></script>
+<script type="module" src="./flights.ts"></script>
 </html>

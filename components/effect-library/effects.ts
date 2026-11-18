@@ -2,6 +2,11 @@
 import type { Run, VerbCall, VerbRegistry } from '../motion-frame/index.ts';
 import { createEffectLayer, place, type EffectLayer, type LayerOptions } from './layer.ts';
 
+import { registerCanvasEffect } from './canvas.ts';
+import { arcMove, multiStopMove } from './flight-effects.ts';
+import { trail } from './trail.ts';
+
+export type { ArcMoveSettings } from './flight-effects.ts';
 export type EffectCtx = EffectLayer;
 export interface Fx {
   call: VerbCall;
@@ -54,18 +59,6 @@ export function registerEffect(verbs: VerbRegistry<EffectCtx>, name: string, eff
 
 const EASE: Readonly<Record<string, string>> = { in: 'ease-in', out: 'ease-out', 'in-out': 'ease-in-out', linear: 'linear' };
 
-export interface ArcMoveSettings {
-  /** Pixels above the path's midpoint. */
-  arcHeight?: number;
-  /** Horizontal and vertical offsets at the apex, as fractions of vertical travel. */
-  bank?: number;
-  lean?: number;
-  apex?: number;
-  /** Milliseconds between simultaneous flights, within their scheduled duration. */
-  stagger?: number;
-  [more: string]: unknown;
-}
-
 export const BUILT_IN: Readonly<Record<string, Effect>> = {
   move: ({ call, el, animate }) => {
     const t = call.to;
@@ -81,20 +74,8 @@ export const BUILT_IN: Readonly<Record<string, Effect>> = {
       if (call.step['then'] === 'hide') css(el, { visibility: 'hidden' });
     };
   },
-  'arc-move': ({ call, run, el, animate }) => {
-    const t = call.to, f = call.from;
-    if (!t) return undefined;
-    const { arcHeight = 0, bank = 0, lean = 0, apex = 0.5, stagger = 0 } = call.step as ArcMoveSettings;
-    const dx = t[0] - f[0], dy = t[1] - f[1];
-    const index = run.timeline.calls.filter((c) => c.verb === call.verb && c.t === call.t).indexOf(call);
-    const delay = call.step.dur > 0 ? Math.min(Math.max(0, call.dur - 1), Math.max(0, index * stagger * call.dur / call.step.dur)) : 0;
-    animate([
-      { translate: '0 0' },
-      { translate: `${String(dx / 2 + dy * bank)}px ${String(dy * (0.5 + lean) - arcHeight)}px`, offset: apex },
-      { translate: `${String(dx)}px ${String(dy)}px` },
-    ], { translate: '' }, { easing: 'ease-out', delay, duration: Math.max(1, call.dur - delay) });
-    return () => place(el, t);
-  },
+  'arc-move': arcMove,
+  'multi-stop-path': multiStopMove,
   lift: ({ call, animate }) => {
     const end = { transform: `translateY(var(--fx-lift-rise,-6px)) scale(${String(call.value ?? 1.08)})`, boxShadow: 'var(--fx-lift-shadow,0 12px 24px)' };
     animate([{ transform: 'none', boxShadow: 'none' }, end], end);
@@ -205,6 +186,7 @@ export const BUILT_IN: Readonly<Record<string, Effect>> = {
 /** The built-in verbs registered, and a layer made. Pass the registry to the motion player and the layer as its `context`. */
 export function registerEffects(verbs: VerbRegistry<EffectCtx>, o?: LayerOptions): EffectLayer {
   for (const [name, fx] of Object.entries(BUILT_IN)) registerEffect(verbs, name, fx);
+  registerCanvasEffect(verbs, 'trail', trail);
   verbs.register('shake-group', (call, run) => {
     const { selector, actors, amplitude = 6, crossAmplitude = 1, frames = 9 } = call.step;
     const targets = typeof selector === 'string'

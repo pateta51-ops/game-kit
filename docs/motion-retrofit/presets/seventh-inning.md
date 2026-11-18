@@ -1,3 +1,10 @@
+# 7th Inning Stretch motion settings
+
+Source at `b3ef81b`
+
+- `src/ui/motion/index.ts`
+
+```ts
 export const seventhInning = {
   arcMove: { bank: 1 / 5, lean: 0.2, apex: 0.55 },
   glow: {
@@ -15,3 +22,4 @@ export const seventhInning = {
     board: '#163a25',
   },
 } as const;
+```

@@ -9,3 +9,5 @@ export * from './slots.ts';
 export * from './beats.ts';
 export * from './bands.ts';
 export * from './movement.ts';
+export * from './paths.ts';
+export type { TrailSettings } from './trail.ts';

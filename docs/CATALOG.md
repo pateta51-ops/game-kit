@@ -456,11 +456,11 @@ Playwright helpers a game's browser tests share. Lifted from Imperium's `e2e/hel
 
 ## effect-library
 
-Fifteen verbs for the director's spec format as DOM effects for the motion frame: `move`, `arc-move`, `lift`, `settle`, `fade-in`, `fade-out`, `show`, `hide`, `flip`, `scale`, `shake`, `shake-group`, `glow`, `unroll`, `text`. Web Animations API; browser only. Beside them: canvas effects with a particle kit, a count-up and a boxed ambience layer.
+Sixteen verbs for the director's spec format as DOM effects for the motion frame: `move`, `arc-move`, `lift`, `settle`, `fade-in`, `fade-out`, `show`, `hide`, `flip`, `scale`, `shake`, `shake-group`, `glow`, `unroll`, `multi-stop-path`, `text`. Web Animations API; browser only. Beside them: canvas effects with a particle kit and `trail`, a count-up and a boxed ambience layer.
 
 - **Use it when:** Release 1.1 visual effects: the twelve motion verbs, particles, ambience, canvas layers.
 - **Not for:** Deciding which effect plays (the game's motion specs and motion-frame).
-- **Key exports:** `place`, `createEffectLayer`, `registerEffect`, `BUILT_IN`, `registerEffects`, `specTime`, `registerCanvasEffect`, `countAt`, `countUp`, `createAmbience`, `HOLD`, `holdMs`, `stopTime`, `trauma`, and 44 more
+- **Key exports:** `place`, `createEffectLayer`, `registerEffect`, `BUILT_IN`, `registerEffects`, `specTime`, `registerCanvasEffect`, `countAt`, `countUp`, `createAmbience`, `HOLD`, `holdMs`, `stopTime`, `trauma`, and 61 more
 - **Needs:** [`motion-frame`](#motion-frame), [`board-registry`](#board-registry)
 - **Came from:** stcc
 - **Docs:** [README](../components/effect-library/README.md)

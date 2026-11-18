@@ -1,6 +1,6 @@
 # effect-library
 
-Fifteen verbs for the director's spec format as DOM effects for the motion frame: `move`, `arc-move`, `lift`, `settle`, `fade-in`, `fade-out`, `show`, `hide`, `flip`, `scale`, `shake`, `shake-group`, `glow`, `unroll`, `text`. Web Animations API; browser only. Beside them: canvas effects with a particle kit, a count-up and a boxed ambience layer.
+Sixteen verbs for the director's spec format as DOM effects for the motion frame: `move`, `arc-move`, `lift`, `settle`, `fade-in`, `fade-out`, `show`, `hide`, `flip`, `scale`, `shake`, `shake-group`, `glow`, `unroll`, `multi-stop-path`, `text`. Web Animations API; browser only. Beside them: canvas effects with a particle kit and `trail`, a count-up and a boxed ambience layer.
 
 ```ts
 const verbs = createVerbs<EffectCtx>();
@@ -44,11 +44,24 @@ Look file (opt-in): `looks/rise-pulse.css`, class `fx-rise-pulse` on a positione
 
 ## Additional DOM effects and settings
 
-- `arc-move` uses `to` like `move`. `arcHeight` raises the midpoint in pixels, `bank` and `lean` offset it horizontally and vertically as fractions of vertical travel, and `apex` places the midpoint keyframe at a fraction of the flight. `stagger` delays successive simultaneous flights in ms within the scheduled step duration. A separate `scale` step can run alongside it.
 - `glow` accepts a CSS `colour` and a centred `hold` fraction from 0 to 1. With a colour, optional `shadows` lists CSS shadow geometry without colour.
 - `flip` with `squash: false` swaps the face and label as soon as the step starts.
 - `shake-group` accepts `actors` (ids of beat actors, animated as clones) or a CSS `selector` (live elements). `amplitude` and `crossAmplitude` are horizontal and vertical offsets in pixels, and `frames` sets the number of keyframes.
 - `unroll` reveals an actor from scale zero on `axis: 'x'` or `'y'` with a CSS `origin` (left for x, top for y by default).
 - Pass the actors to `layer.start(run, actors)` in `onBeatStart`. An `EffectActor` with `hideSource: 'start'` hides its resolved source at beat start. With `hideSource: 'step'`, it hides the source at the actor's first step. `layer.end(run)` or `layer.clear()` restores the source.
 
-The [motion lab](fake/retrofit/index.html) plays these effects with the plain-data preset in `presets/seventh-inning.ts`.
+The game passes its flight and look settings with each step. The defaults are game-free. The [motion lab](fake/retrofit/index.html?flights) supplies neutral demo values.
+
+### Flight settings
+
+- `arc-move` uses `to` like `move`. A separate `scale` step can run alongside the three-keyframe arc. Sampled cubic and quadratic flights accept `then: hide` to hide the clone at landing. The three-keyframe arc uses `arcHeight` (pixels above the midpoint), `bank` and `lean` (apex offsets as fractions of vertical travel), and `apex` (time fraction, default 0.5) for a three-keyframe arc. The offsets default to zero.
+- `clipPath` applies a CSS clip to the clone during the flight and restores its previous clip on finish or skip. `landingWidth` changes the destination width in pixels, keeping the source aspect ratio.
+- `glide.anchor: 'destination'` positions the clone at the landing box before animating and otherwise keeps transforms are relative to the source. `liftRatio` sets lift as a fraction of distance, capped by `arcHeight` when supplied. `progress` sets midpoint progress along the path (default 0.5). `swell` adds to the midpoint scale, and `relativeSwell` uses the mean of the endpoint scales as its base instead of 1. `round` rounds transform numbers to multiples of its reciprocal. `baseTransform` appends a CSS transform and retains it at landing. `opaque` makes the keyframes fully opaque. `plainEnds` omits the scale function at the endpoints.
+- `via: { point, rest: [arrival, departure], width? }` holds the flight at a stage point. The rest times are fractions of flight duration and the optional width is in pixels. The step's `ease` applies to each leg.
+- `stagger` sets the gap in ms between simultaneous arcs. `staggerMax` caps the stagger index, `staggerGroup` scopes it, and `staggerUnscaled` keeps the gap fixed at any player speed. `flightMs` sets the individual flight duration. Set `dur` to cover the flight plus its stagger.
+- `cubic.controls` gives the two horizontal fractions of travel and the two vertical multiples of lift as `[firstX, firstY, secondX, secondY]`. Lift is the destination height with a floor of `minLift` pixels. `startScale` is relative to the landing size. `bank` limits the screen-plane rotation in degrees, and `lean` limits the Y rotation in degrees. `curvature` multiplies signed curvature scaled by the path span. `leanIn` and `fadeIn` are time fractions marking the end of lean and opacity buildup, and `levelFrom` is the time fraction when leveling begins. `perspective` is the CSS perspective distance in stage pixels. The cubic curve and pose come from Warp’s Edge `src/ui/fx/flight.ts`, and the CSS transform order and perspective come from `src/ui/fx/warpIn.ts` at `449af55`.
+- `quadratic.control` is a stage point. `blend` mixes linear time with the eased profile. `lookAhead` is the curve parameter increment used to estimate heading. `nose` is the artwork's facing and `rollAxis` is the squash axis, both in degrees. `rollSquash` sets the minimum thickness during a roll, and `reverseBrightness` sets brightness on the reverse face. `roll` is the start and end time fractions, `side` selects its direction (default 1), and `juke` is the sideways displacement in pixels. `fadeSlope` sets the opacity ramp rate. `exitScale` sets the final relative scale and switches to exit easing, and `exitFade` sets the time fraction when the exit fade begins. `afterimages` supplies `count`, `spacing` in ms, `opacity` and a CSS `filter`.
+- `multi-stop-path` takes `path` with ordered `stops` (stage `box` rectangles, optional `laps` and `dwell` in ms). `launch`, `travel`, `lap`, `hop` and `back` are ms for the launch wait, first leg, each lap, travel between stops and return home. `padding` expands the orbit radii in stage pixels. `nose` sets the artwork facing in degrees, `flip` mirrors it, `headingSample` sets the heading look-back in ms, and `roll` sets the amount of horizontal squash. `ghosts` supplies `count`, `spacing` in ms and `opacity`.
+- `trail` takes `to` and `ribbon` with the flight's `quadratic` settings, `rear` offset, `width` and `tipWidth` in pixels, `fade` as an opacity multiplier, `colour` as a comma-separated RGB string, `samples` as the maximum sample count, and `spacing` in ms. Use a separate actor at the same origin so both steps share the same path.
+
+From `power/sortie.ts` and `evasion.ts`, these effects carry the flight paths, clone afterimages and quadratic ribbon. Launch and return bursts, glow, speed lines, home-image hiding, thruster flare, sparks, bolts, stamp and ring are left to later effect batches.
