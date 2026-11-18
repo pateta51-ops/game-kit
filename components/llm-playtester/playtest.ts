@@ -125,7 +125,7 @@ export async function runPlaytest(adapter: GameAdapter, opts: PlaytestOptions): 
         let error = '';
         for (let tries = 0; ; tries++) {
           const prompt = `${recent.length ? `Your last decisions:\n${recent.join('\n')}\n\n` : ''}Current view:\n${view}\n\nOptions:\n${options.map((o, i) => `${i}. ${o}`).join('\n')}${error}`;
-          const ask = { model, system, prompt };
+          const ask = { model, system, prompt, maxTokens };
           const worst = worstCost(ask, maxTokens);
           if (decisions === 0 && tries === 0) {
             const say = opts.log ?? console.log;
@@ -206,7 +206,7 @@ export async function main(argv: string[], log: (s: string) => void = console.lo
   if (path === undefined) return usage(log);
   for (const k of ['max-usd', 'max-decisions', 'runs', 'max-tokens']) {
     const v = flags.get(k);
-    if (v !== undefined && !(Number.isFinite(Number(v)) && Number(v) > 0)) return usage(log);
+    if (v !== undefined && !(Number.isFinite(Number(v)) && Number(v) > 0 && (k !== 'max-tokens' || Number.isInteger(Number(v))))) return usage(log);
   }
   const mod = (await import(pathToFileURL(resolve(path)).href)) as { createAdapter?: () => GameAdapter; default?: GameAdapter | (() => GameAdapter) };
   const adapter = mod.createAdapter?.() ?? (typeof mod.default === 'function' ? mod.default() : mod.default);

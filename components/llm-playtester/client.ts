@@ -11,6 +11,7 @@ export interface Ask {
   model: string;
   system: string[];
   prompt: string;
+  maxTokens?: number;
 }
 export interface Answer {
   option: number;
@@ -115,7 +116,7 @@ export function makeChooser(client: Messages, maxTokens = MAX_TOKENS): Chooser {
     const last = ask.system.length - 1;
     const result = await client.messages.create({
       model: ask.model,
-      max_tokens: maxTokens,
+      max_tokens: ask.maxTokens ?? maxTokens,
       system: ask.system.map((text, i) =>
         i === last
           ? { type: 'text' as const, text, cache_control: { type: 'ephemeral' as const } }
