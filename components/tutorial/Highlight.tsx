@@ -15,6 +15,11 @@ export interface TutorialHighlightProps {
   readonly area?: () => Rect;
   readonly gap?: number;
   readonly docked?: boolean;
+  /** Docked: false marks the targets without scrolling the first into view (a fitted, scaled stage must not move). Default true. */
+  readonly scroll?: boolean;
+  /** The element the panel sits inside when a CSS transform scales it (a fitted stage): the panel is placed in its coordinate
+      space (window rects divided by its measured scale, from its corner). Default: the window. */
+  readonly stage?: () => Element | null;
   /** Where to watch for changes that move targets (default: the body). */
   readonly root?: () => Element | null;
   /** Re-run when this changes (e.g. the step, the prompt id). */
@@ -49,12 +54,18 @@ export function TutorialHighlight(p: TutorialHighlightProps) {
       const w = window.innerWidth;
       const h = window.innerHeight;
       const targets = [...marked].filter((el) => !panel.contains(el)).map(rectOf);
-      const area = p.area?.() ?? { x: 24, y: 24, w: w - 48, h: h - 48 };
-      const at = placePanel(targets, { w: panel.offsetWidth, h: panel.offsetHeight }, area, p.gap);
+      const st = p.stage?.();
+      const sr = st?.getBoundingClientRect();
+      const kx = st && sr && st.clientWidth > 0 && sr.width > 0 ? sr.width / st.clientWidth : 1;
+      const ky = st && sr && st.clientHeight > 0 && sr.height > 0 ? sr.height / st.clientHeight : 1;
+      const o = sr ? { x: sr.left, y: sr.top } : { x: 0, y: 0 };
+      const loc = (r: Rect): Rect => ({ x: (r.x - o.x) / kx, y: (r.y - o.y) / ky, w: r.w / kx, h: r.h / ky });
+      const area = loc(p.area?.() ?? { x: 24, y: 24, w: w - 48, h: h - 48 });
+      const at = placePanel(targets.map(loc), { w: panel.offsetWidth, h: panel.offsetHeight }, area, p.gap);
       panel.dataset['placed'] = '';
       panel.style.left = `${String(at.x)}px`;
       panel.style.top = `${String(at.y)}px`;
-      const c = { x: at.x, y: at.y, w: panel.offsetWidth, h: panel.offsetHeight };
+      const c = { x: o.x + at.x * kx, y: o.y + at.y * ky, w: panel.offsetWidth * kx, h: panel.offsetHeight * ky };
       const hole = (r: Rect, m: number) => `<rect x="${String(r.x - m)}" y="${String(r.y - m)}" width="${String(r.w + 2 * m)}" height="${String(r.h + 2 * m)}" rx="12" fill="black"/>`;
       const t = targets[0];
       let leader = '';
@@ -78,7 +89,7 @@ export function TutorialHighlight(p: TutorialHighlightProps) {
         marked.add(el);
       }
       const first = [...marked][0];
-      if (p.docked === true && first !== undefined && first !== last) first.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+      if (p.docked === true && p.scroll !== false && first !== undefined && first !== last) first.scrollIntoView({ block: 'nearest', inline: 'nearest' });
       last = first;
       layout();
     };

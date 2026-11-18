@@ -170,3 +170,100 @@ describe('TutorialHighlight', () => {
     expect(scroll).toHaveBeenCalled();
   });
 });
+
+describe('K393 stage, scroll and pacing', () => {
+  const box = (el: HTMLElement, x: number, y: number, w: number, h: number) => {
+    el.getBoundingClientRect = () => ({ left: x, top: y, width: w, height: h, x, y, right: x + w, bottom: y + h, toJSON: () => ({}) });
+    el.getClientRects = () => [el.getBoundingClientRect()] as unknown as DOMRectList;
+  };
+  it('docked scroll={false}: marks, never scrolls', () => {
+    const scroll = vi.fn();
+    const { getByText } = render(<button data-tutorial-target="add">t</button>);
+    const t = getByText('t');
+    box(t, 0, 0, 10, 10);
+    t.scrollIntoView = scroll;
+    render(<TutorialHighlight targets={['add']} docked scroll={false} />);
+    expect(t).toHaveClass('kit-tutorial-target');
+    expect(scroll).not.toHaveBeenCalled();
+  });
+
+  it('pacing: Next is usable with no prompt and calls onSkip', () => {
+    const f = fns();
+    const onSkip = vi.fn();
+    const lock = lockAt(GAME, SCRIPT, 0, state);
+    const lockedLock = { ...lock, button: () => ({ enabled: false, why: 'x' }) };
+    const { rerender } = render(<TutorialPanel lock={lockedLock} phase="guided" {...f} onSkip={onSkip} />);
+    expect(screen.getByRole('button', { name: 'Next' })).toBeDisabled();
+    rerender(<TutorialPanel lock={lockedLock} phase="guided" {...f} onSkip={onSkip} pacing />);
+    expect(screen.getByRole('button', { name: 'Next' })).toBeEnabled();
+    fireEvent.click(screen.getByRole('button', { name: 'Next' }));
+    expect(onSkip).toHaveBeenCalled();
+    expect(f.onNext).not.toHaveBeenCalled();
+  });
+
+  it("stage: the panel is placed in the scaled box's own units, clear of the target", () => {
+    Object.assign(window, { innerWidth: 390, innerHeight: 664 });
+    const stage = document.createElement('div');
+    Object.defineProperties(stage, { clientWidth: { value: 800 }, clientHeight: { value: 1400 } });
+    box(stage, 10, 20, 400, 700);
+    document.body.append(stage);
+    const target = document.createElement('div');
+    target.dataset['tutorialTarget'] = 'hand';
+    box(target, 110, 520, 100, 50);
+    stage.append(target);
+    const panel = document.createElement('div');
+    panel.dataset['tutorialPanel'] = '';
+    Object.defineProperties(panel, { offsetWidth: { value: 300 }, offsetHeight: { value: 100 } });
+    stage.append(panel);
+    const { unmount } = render(<TutorialHighlight targets={['hand']} stage={() => stage} area={() => ({ x: 10, y: 20, w: 400, h: 700 })} />);
+    expect(panel.style.top).toBe('860px');
+    expect(panel.style.left).toBe('150px');
+    unmount();
+    stage.remove();
+  });
+});
+
+describe('K393 review fixes', () => {
+  const box = (el: HTMLElement, x: number, y: number, w: number, h: number) => {
+    el.getBoundingClientRect = () => ({ left: x, top: y, width: w, height: h, x, y, right: x + w, bottom: y + h, toJSON: () => ({}) });
+    el.getClientRects = () => [el.getBoundingClientRect()] as unknown as DOMRectList;
+  };
+  const place = (stageBox: [number, number, number, number], client: [number, number]) => {
+    Object.assign(window, { innerWidth: 390, innerHeight: 664 });
+    const stage = document.createElement('div');
+    Object.defineProperties(stage, { clientWidth: { value: client[0] }, clientHeight: { value: client[1] } });
+    box(stage, ...stageBox);
+    document.body.append(stage);
+    const target = document.createElement('div');
+    target.dataset['tutorialTarget'] = 'hand';
+    box(target, 110, 520, 100, 50);
+    stage.append(target);
+    const panel = document.createElement('div');
+    panel.dataset['tutorialPanel'] = '';
+    Object.defineProperties(panel, { offsetWidth: { value: 300 }, offsetHeight: { value: 100 } });
+    stage.append(panel);
+    const { unmount } = render(<TutorialHighlight targets={['hand']} stage={() => stage} area={() => ({ x: 10, y: 20, w: 400, h: 700 })} />);
+    const at = { left: panel.style.left, top: panel.style.top };
+    unmount();
+    stage.remove();
+    return at;
+  };
+  it('unscaled offset stage: the stage corner is subtracted', () => {
+    expect(place([10, 20, 400, 700], [400, 700])).toEqual({ left: '0px', top: '360px' });
+  });
+  it('non-uniform scale: each axis measured on its own', () => {
+    // x scale 0.5, y scale 1: target local (200,500) 200x50; above: y = 500-40-100
+    expect(place([10, 20, 400, 700], [800, 700])).toEqual({ left: '150px', top: '360px' });
+  });
+  it('pacing without onSkip keeps Next disabled; a move step keeps it disabled while pacing', () => {
+    const f = fns();
+    const locked = { ...lockAt(GAME, SCRIPT, 0, state), button: () => ({ enabled: false, why: 'x' }) };
+    const { rerender } = render(<TutorialPanel lock={locked} phase="guided" {...f} pacing />);
+    expect(screen.getByRole('button', { name: 'Next' })).toBeDisabled();
+    const move = lockAt(GAME, SCRIPT, 1, state);
+    rerender(<TutorialPanel lock={move} phase="guided" {...f} pacing onSkip={vi.fn()} />);
+    expect(move.waitFor).toBe('move');
+    expect(screen.queryByRole('button', { name: 'Next' })).toBeNull();
+    expect(move.button('next').enabled).toBe(false);
+  });
+});

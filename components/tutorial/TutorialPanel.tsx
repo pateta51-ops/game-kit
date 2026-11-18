@@ -27,6 +27,10 @@ export interface TutorialPanelProps {
   /** The closing words shown after the last step (default `words.over`). */
   readonly outro?: string;
   readonly onNext: () => void;
+  /** Paced steps still play (no prompt open yet): while `pacing` and `onSkip` are given, Next on an explaining or auto step is
+      enabled and calls `onSkip` (the game's skip-pacing) instead of `onNext`. */
+  readonly pacing?: boolean;
+  readonly onSkip?: () => void;
   readonly onBack?: () => void;
   readonly onLeave: () => void;
   readonly onClose: () => void;
@@ -70,7 +74,9 @@ export function TutorialPanel(p: TutorialPanelProps) {
   const closing = p.phase === 'closing';
   const step = closing ? null : lock.step;
   const isFolded = folded === lock.stepNo;
-  const next = lock.button('next');
+  const skip = p.pacing === true && p.onSkip !== undefined && lock.phase === 'guided' && lock.waitFor !== 'move';
+  const next = skip ? { enabled: true } : lock.button('next');
+  const onNext = skip && p.onSkip ? p.onSkip : p.onNext;
   return (
     <section className="kit-tutorial-panel" data-tutorial-panel data-step={lock.stepNo} data-docked={p.docked === true || side !== undefined ? '' : undefined} data-side={side} ref={box} aria-label={typeof p.title === 'string' ? p.title : 'Tutorial'}>
       <header className="kit-tutorial-head">
@@ -119,11 +125,11 @@ export function TutorialPanel(p: TutorialPanelProps) {
             {text(lock.asks)}
           </p>
         ) : B !== undefined ? (
-          <B kind="next" data-tutorial-next="" onClick={p.onNext} disabled={!next.enabled} title={next.why}>
+          <B kind="next" data-tutorial-next="" onClick={onNext} disabled={!next.enabled} title={next.why}>
             {w.next}
           </B>
         ) : (
-          <button type="button" data-tutorial-next onClick={p.onNext} disabled={!next.enabled} title={next.why}>
+          <button type="button" data-tutorial-next onClick={onNext} disabled={!next.enabled} title={next.why}>
             {w.next}
           </button>
         )}
