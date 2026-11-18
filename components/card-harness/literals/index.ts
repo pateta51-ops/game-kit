@@ -46,7 +46,7 @@ export function keysOf(file: string, typeName: string, opt?: { first?: boolean }
   });
   if (decl === undefined) throw new Error(`keysOf: ${file} has no type ${typeName}`);
   const top = checker.getTypeAtLocation(decl);
-  return [...new Set((top.isUnion() ? top.types : [top]).filter((m) => m.flags & ts.TypeFlags.Object).flatMap((m) => m.getProperties().slice(0, opt?.first === true ? 1 : undefined).map((p) => p.name)))].sort();
+  return [...new Set((top.isUnion() ? top.types : [top]).filter((m) => (m.flags & (ts.TypeFlags.Object | ts.TypeFlags.Intersection)) !== 0).flatMap((m) => m.getProperties().slice(0, opt?.first === true ? 1 : undefined).map((p) => p.name)))].sort();
 }
 
 /** Node kinds of a union read from the engine's types (K97): per value of `tag`, its other keys and the required ones.
