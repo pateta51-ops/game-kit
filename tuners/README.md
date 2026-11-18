@@ -1,0 +1,14 @@
+# tuners
+
+Interactive pages that show one kit part live, with sliders for its tunable values, so the owner can settle its defaults by eye. Each page is one self-contained HTML file: open it in a browser from this folder, or use its published Artifact link below.
+
+| Tuner | Component | What it tunes | Artifact |
+| --- | --- | --- | --- |
+| [card-hand.html](card-hand.html) | card-hand | the fan's arc, spacing, lift, grow, stand-up, motion time | (link removed) |
+
+## How a tuner is made
+
+- The source is `src/<name>.html`. `node tuners/build.mjs` writes `<name>.html`, inlining the kit's own code: `/*@kit-css <path>*/` becomes that CSS file, and `//@kit-js <path> as NAME` becomes that module bundled as the global `NAME`. A tuner never copies kit code by hand, so it always shows what games ship.
+- `npm run components:check` runs `node tuners/build.mjs --check`. It fails when a built page is older than its source or than the kit code it inlines. After changing a component that a tuner inlines, run `node tuners/build.mjs` and commit the page.
+- The page layout: a stage on top with the live effect, then presets ("Kit default" first, read from the kit's own constants, never typed in again), then sliders grouped by what they change, each with its unit and a one-line help, then "These settings in code": the exact props and CSS tokens a game sets, with a Copy button. An effect that plays once has a Play button and replays on every slider change. The page works at phone width, has no game names except in a preset that shows a game's current values, and loads nothing beyond Google Fonts.
+- The steward publishes each page as a private Artifact (republishing to the same link after a change) and records the link in the table above.

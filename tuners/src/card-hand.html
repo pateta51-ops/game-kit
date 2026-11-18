@@ -1,0 +1,177 @@
+<title>Hand Arc Tuner</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=Inter:wght@400;600&family=JetBrains+Mono:wght@400&display=swap">
+<style>
+/* Layout: a felt table on top holding the live hand, the controls below in a wrapping grid; one dark look by choice. */
+:root {
+  --felt: #17302a; --felt-edge: #0e1f1b; --panel: #1b2124; --line: #2c3539; --fg: #e8ece9; --muted: #9aa8a3; --accent: #e9c46a;
+  --display: 'Space Grotesk', system-ui, sans-serif; --body: 'Inter', system-ui, sans-serif; --mono: 'JetBrains Mono', ui-monospace, monospace;
+  color-scheme: dark;
+}
+body { background: var(--panel); color: var(--fg); font: 14px/1.5 var(--body); }
+.wrap { max-width: 1180px; margin: 0 auto; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); padding-block: 18px 40px; display: grid; gap: 18px; }
+h1 { font: 700 22px/1.2 var(--display); margin: 0; letter-spacing: .01em; }
+.sub { color: var(--muted); margin: 2px 0 0; max-width: 70ch; }
+.table { background: radial-gradient(120% 90% at 50% 100%, #1f4038, var(--felt) 60%, var(--felt-edge)); border-radius: 14px; border: 1px solid var(--line); padding: 210px 12px 60px; overflow: hidden; position: relative; }
+.table .note { position: absolute; top: 12px; left: 14px; right: 14px; color: var(--muted); font-size: 12px; }
+.presets { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.presets span { color: var(--muted); font-size: 12px; text-transform: uppercase; letter-spacing: .08em; margin-right: 4px; }
+.presets button { font: 600 13px var(--body); color: var(--fg); background: #232b2e; border: 1px solid var(--line); border-radius: 999px; padding: 6px 14px; cursor: pointer; }
+.presets button[aria-pressed="true"] { background: var(--accent); color: #1b1608; border-color: var(--accent); }
+.presets button:focus-visible, .ctl input:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.ctls { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 10px 22px; }
+fieldset { border: 1px solid var(--line); border-radius: 10px; padding: 10px 14px 12px; margin: 0; min-width: 0; display: grid; gap: 8px; }
+legend { font: 700 12px var(--display); text-transform: uppercase; letter-spacing: .1em; color: var(--accent); padding: 0 6px; }
+.ctl { display: grid; grid-template-columns: 1fr auto; gap: 2px 10px; align-items: center; }
+.ctl label { font-size: 13px; }
+.ctl output { font: 12px var(--mono); color: var(--accent); font-variant-numeric: tabular-nums; }
+.ctl input { grid-column: 1 / -1; width: 100%; accent-color: var(--accent); }
+.ctl small { grid-column: 1 / -1; color: var(--muted); font-size: 11.5px; line-height: 1.35; }
+.code { background: #12171a; border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; font: 12.5px/1.6 var(--mono); color: #cfe3da; overflow-x: auto; white-space: pre; }
+.codebar { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; }
+.codebar h2 { font: 700 15px var(--display); margin: 0; }
+.codebar button { font: 600 12px var(--body); color: var(--fg); background: #232b2e; border: 1px solid var(--line); border-radius: 6px; padding: 5px 10px; cursor: pointer; }
+
+/* the card face (stand-in art) */
+.cf { width: 100%; height: 100%; border-radius: 7%; box-sizing: border-box; border: 2px solid rgb(255 255 255 / .55); box-shadow: 0 4px 10px rgb(0 0 0 / .45); display: flex; flex-direction: column; justify-content: space-between; padding: 8% 9%; font: 700 15px var(--display); color: #fff; text-shadow: 0 1px 2px rgb(0 0 0 / .5); }
+.cf i { font-style: normal; font-size: 12px; opacity: .85; }
+[data-part='hint'] { background: #12171a; color: var(--accent); font: 600 12px var(--body); padding: 3px 8px; border-radius: 5px; border: 1px solid var(--line); }
+[data-part='card'][data-picked='picked'] .cf { outline: 3px solid var(--accent); outline-offset: 2px; }
+
+[data-part='strip'] { cursor: pointer; }
+/*@kit-css components/card-hand/card-hand.css*/
+</style>
+
+<div class="wrap">
+  <header>
+    <h1>Hand Arc Tuner</h1>
+    <p class="sub">The game-kit hand (card-hand): its CSS and fan.ts are inlined from the kit by tuners/build.mjs, so this is the code games ship. Move the sliders and the hand changes at once. Hover a card (or tap it on a phone) to see the lift and the neighbours slide; click to pick it.</p>
+  </header>
+
+  <div class="presets" role="group" aria-label="Presets">
+    <span>Start from</span>
+    <button type="button" data-preset="kit">Kit default</button>
+    <button type="button" data-preset="flat">Flat</button>
+    <button type="button" data-preset="imperium">Imperium before 18 Nov</button>
+    <button type="button" data-preset="old">Kit before K311</button>
+  </div>
+
+  <div class="table">
+    <div class="note" id="note"></div>
+    <div data-part="hand" id="hand"><ol data-part="fan" id="fan"></ol></div>
+  </div>
+
+  <div class="ctls" id="ctls"></div>
+
+  <div>
+    <div class="codebar"><h2>These settings in code</h2><button type="button" id="copy">Copy</button></div>
+    <pre class="code" id="code"></pre>
+  </div>
+</div>
+
+<script>
+const CTLS = [
+  ['Arc', [
+    ['step', 'Angle between cards', 0, 12, 0.1, '°', 'Largest turn from one card to the next.'],
+    ['total', 'Widest angle across the hand', 0, 60, 0.5, '°', 'Caps the whole fan; a big hand gets a smaller step.'],
+    ['radius', 'Arc radius', 1, 30, 0.1, ' cards', 'How far the edge cards sink. Bigger is a gentler curve; it has no effect on a flat hand.'],
+  ]],
+  ['Hand', [
+    ['n', 'Cards in hand', 1, 14, 1, '', ''],
+    ['w', 'Card width', 60, 200, 1, 'px', ''],
+    ['stepMax', 'Widest gap between cards', 16, 160, 1, 'px', 'Cards spread up to this, then close up to fit the width.'],
+    ['margin', 'Space kept at the sides', 0, 120, 1, 'px', ''],
+  ]],
+  ['Lift', [
+    ['lift', 'Hovered card rises', 0, 80, 1, 'px', ''],
+    ['grow', 'Hovered card grows', 1, 2.2, 0.05, '×', ''],
+    ['stand', 'Picked card stands up', 0, 60, 1, 'px', ''],
+    ['ms', 'Motion time', 0, 900, 10, ' ms', 'Lift and slide; 0 is instant.'],
+  ]],
+];
+//@kit-js components/card-hand/fan.ts as FAN
+const { fanOf, TILT } = FAN;
+// Kit default: fan.ts TILT and the card-hand.css fallbacks at 16px a rem. Imperium before 18 Nov: its own TILT and tokens at u = 7px.
+const KIT = { step: TILT.step, total: TILT.total, radius: TILT.radius, n: 7, w: 112, stepMax: 64, margin: 32, lift: 32, grow: 1.5, stand: 21, ms: 280 };
+const PRESETS = {
+  kit: KIT,
+  flat: { ...KIT, step: 0, total: 0 },
+  imperium: { step: 2.6, total: 28, radius: 14.6, n: 7, w: 140, stepMax: 72, margin: 31, lift: 24, grow: 1.5, stand: 15, ms: 280 },
+  old: { ...KIT, step: 8, total: 32, radius: 4 },
+};
+const NAMES = ['Ignition', 'Vanguard', 'Outpost', 'Salvage', 'Embassy', 'Raid', 'Refinery', 'Comet', 'Envoy', 'Bastion', 'Signal', 'Harbor', 'Relic', 'Drift'];
+const HUES = [210, 28, 150, 330, 45, 270, 190, 0, 95, 240, 310, 175, 60, 120];
+let s = { ...PRESETS.kit };
+const picked = new Set();
+const $ = (id) => document.getElementById(id);
+
+function build() {
+  const ctls = $('ctls');
+  for (const [title, rows] of CTLS) {
+    const fs = document.createElement('fieldset');
+    fs.innerHTML = `<legend>${title}</legend>`;
+    for (const [key, label, min, max, step, unit, help] of rows) {
+      const d = document.createElement('div'); d.className = 'ctl';
+      d.innerHTML = `<label for="c-${key}">${label}</label><output id="o-${key}" for="c-${key}"></output><input id="c-${key}" type="range" min="${min}" max="${max}" step="${step}">${help ? `<small>${help}</small>` : ''}`;
+      const inp = d.querySelector('input');
+      inp.addEventListener('input', () => { s[key] = Number(inp.value); mark(null); render(); });
+      inp.dataset.unit = unit; fs.appendChild(d);
+    }
+    ctls.appendChild(fs);
+  }
+  document.querySelectorAll('[data-preset]').forEach((b) => b.addEventListener('click', () => { s = { ...PRESETS[b.dataset.preset] }; mark(b.dataset.preset); render(); }));
+  $('copy').addEventListener('click', async () => {
+    try { await navigator.clipboard.writeText($('code').textContent); $('copy').textContent = 'Copied'; }
+    catch { const r = document.createRange(); r.selectNodeContents($('code')); const sel = getSelection(); sel.removeAllRanges(); sel.addRange(r); $('copy').textContent = 'Selected: press Ctrl+C'; }
+    setTimeout(() => { $('copy').textContent = 'Copy'; }, 1800);
+  });
+  mark('kit');
+}
+
+function mark(p) { document.querySelectorAll('[data-preset]').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.preset === p))); }
+
+function render() {
+  for (const [, rows] of CTLS) for (const [key, , , , step] of rows) {
+    const inp = $('c-' + key); inp.value = s[key];
+    $('o-' + key).textContent = (step < 1 ? Number(s[key]).toFixed(step < 0.1 ? 2 : 1) : s[key]) + inp.dataset.unit;
+  }
+  const hand = $('hand'), fan = $('fan');
+  const st = hand.style;
+  st.setProperty('--hand-card-w', s.w + 'px'); st.setProperty('--hand-step-max', s.stepMax + 'px'); st.setProperty('--hand-margin', s.margin + 'px');
+  st.setProperty('--hand-lift', s.lift + 'px'); st.setProperty('--hand-grow', s.grow); st.setProperty('--hand-stand', s.stand + 'px'); st.setProperty('--hand-ms', s.ms + 'ms');
+  fan.style.setProperty('--n', s.n);
+  const tilt = { step: s.step, total: s.total, radius: s.radius };
+  fan.textContent = '';
+  let edge = 0;
+  for (let i = 0; i < s.n; i++) {
+    const { k, angle, drop } = fanOf(i, s.n, tilt);
+    if (i === 0) edge = angle;
+    const li = document.createElement('li');
+    li.dataset.part = 'card';
+    li.style.cssText = `--i:${i};--k:${k};--rot:${angle.toFixed(2)}deg;--drop:${drop.toFixed(4)}`;
+    if (picked.size) li.dataset.picked = picked.has(i) ? 'picked' : 'unpicked';
+    const h = HUES[i % HUES.length];
+    li.innerHTML = `<button type="button" data-part="strip" aria-label="${NAMES[i]}${picked.has(i) ? ', picked' : ''}"></button>
+      <div data-part="face"><div class="cf" style="background:linear-gradient(160deg,hsl(${h} 45% 46%),hsl(${h} 40% 24%))">${NAMES[i]}<i>Card ${i + 1}</i></div></div>
+      <div data-part="hint">Play ${NAMES[i]}</div>`;
+    li.querySelector('button').addEventListener('click', () => { picked.has(i) ? picked.delete(i) : picked.add(i); render(); fan.children[i]?.querySelector('button')?.focus(); });
+    fan.appendChild(li);
+  }
+  const spread = Math.abs(edge) * 2;
+  const sink = s.n > 1 ? s.radius * (1 - Math.cos(edge * Math.PI / 180)) * s.w : 0;
+  $('note').textContent = spread === 0 ? `Flat: ${s.n} cards in a straight row.` : `Edge cards turn ${Math.abs(edge).toFixed(1)}° each way (${spread.toFixed(1)}° across) and sit ${Math.round(sink)}px lower than the middle.`;
+  for (const i of [...picked]) if (i >= s.n) picked.delete(i);
+  $('code').textContent =
+`// the game's hand component (kit card-hand)
+<CardHand ... tilt={{ step: ${s.step}, total: ${s.total}, radius: ${s.radius} }} speed={${s.ms === 0 ? 0 : +(280 / s.ms).toFixed(2)}} />
+
+/* the game's CSS, on the hand or above it */
+--hand-card-w: ${s.w}px;
+--hand-step-max: ${s.stepMax}px;
+--hand-margin: ${s.margin}px;
+--hand-lift: ${s.lift}px;
+--hand-grow: ${s.grow};
+--hand-stand: ${s.stand}px;`;
+}
+build(); render();
+</script>
