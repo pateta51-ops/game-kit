@@ -45,7 +45,9 @@ Look file (opt-in): `looks/rise-pulse.css`, class `fx-rise-pulse` on a positione
 ## Additional DOM effects and settings
 
 - `glow` accepts a CSS `colour` and a centred `hold` fraction from 0 to 1. With a colour, optional `shadows` lists CSS shadow geometry without colour.
-- `flip` with `squash: false` swaps the face and label as soon as the step starts.
+- `flip` squashes horizontally with `axis: 'x'` (default) or vertically with `axis: 'y'`.
+- Set `direction: 1` or `-1` for a 3D turn with `perspective` in pixels (default 800).
+  `holdMs` delays the turn and the face swaps at the edge. `squash: false` swaps immediately.
 - `shake-group` accepts `actors` (ids of beat actors, animated as clones) or a CSS `selector` (live elements). `amplitude` and `crossAmplitude` are horizontal and vertical offsets in pixels, and `frames` sets the number of keyframes.
 - `unroll` reveals an actor from scale zero on `axis: 'x'` or `'y'` with a CSS `origin` (left for x, top for y by default).
 - Pass the actors to `layer.start(run, actors)` in `onBeatStart`. An `EffectActor` with `hideSource: 'start'` hides its resolved source at beat start. With `hideSource: 'step'`, it hides the source at the actor's first step. `layer.end(run)` or `layer.clear()` restores the source.
@@ -85,3 +87,34 @@ The [beam lab](fake/retrofit/index.html?beams) shows all five verbs. Coordinates
 - `collapse-jump` collapses the actor and expands it at `to`. `colour` is a CSS streak colour, `n` sets the streak count, and `reach` and `length` are multiples of the larger actor dimension. `pointLight` is the flash background. `outMs`, `gapMs` and `inMs` default to 640, 140 and 640. Allow up to another 12% of `inMs` for the delayed streaks.
 - `column-beam` takes `way` (in or out), `colour` (space-separated RGB), `tuck` (pixels clipped from the bottom), optional `column` rectangle, `glitter` count, `speck` size multiplier, `core` toggle, `columnLight` and `coreLight` backgrounds, `speckColour` and `speckGlow`. With `curve`, the beam follows a quadratic to `to` using a stage `control` point, `unit`, comma-separated `colour` and `moteColour`, CSS `sparkColour`, optional `image`, start/end `size` and a boolean `tuck` for shrinking into the emitter. The curved sequence uses a 1,200 ms step.
 - `rotating-beam` takes `colour` (space-separated RGB), `turns`, `beamDeg` and `fadeMs`. The wedge is centred on the actor; use `dur` to set its turn rate.
+
+### Combat settings
+
+The [combat lab](fake/retrofit/index.html?combat) shows the six verbs. Coordinates are stage pixels and times are spec milliseconds. Set `dur` to include the last visible phase. The [game presets](../../docs/motion-retrofit/presets/) record the matching game values and choreography.
+
+- `projectile` uses the actor and `to` as anchors, with optional absolute `fromPoint` and `toPoint`. Set `speed` in pixels per ms or `travelMs`, and `delay` before launch. The sustained beam accepts space-separated RGB `colour`, `core`, `headColour`, `spotColour`, and pixel `width` and `spotSize`. `headScale` is in beam widths. `flicker` entries give time after arrival, width multiplier, opacity and easing. `miss` extends travel by `past` times its original length, retracts in `fadeMs` and accepts a CSS `mask`.
+- `projectile` with `bolt: 'streak'` draws the travelling tail and hot head, and `bolt: 'ribbon'` draws a curved, trailing shot with `lift` in pixels, `launchMs` and `fadeMs`. Both take `unit` for width scaling, `coreWidth`, `alpha`, comma-separated RGB `colour`, `headColour` and `spotColour`, and CSS `core`. `tail` is the streak length as a fraction of the path.
+- `dissolve` heats and breaks its actor. `shown` clips to the visible height, `cols` sets the grid width, `hit` is a pair of fractions from the visible top-left, and `embers` sets the particle count. Set `delay`, `heatMs`, `breakMs`, and space-separated RGB `heat`, `emberColour`, `core`, and `glow`. With `lift`, set `distance` in pixels, `spin` in radians, `fade` as a pair of ms and `ms` for the lift. The lift also accepts `unit`, comma-separated RGB `colour` and `smoke` overrides from the particle kit.
+- `shatter` hides the actor under triangular shards. `count`, `grid` (columns and rows), `jitter` (percentage points), `seed` and `motionSeed` set the mesh and scatter. Use an absolute `impact` point for radial travel or a `direction` vector for parallel travel. `clipSource` is the image URL, `sourceBox` is its actor-local placement, and `flip` mirrors it vertically. Set `delay`, `ms`, `unit`, `perspective` in pixels, `drag` and `coolMs`, and space-separated RGB `hotColour` and `coolColour`. For both destructive verbs, `hideSource: 'step'` on the actor lets the stand-in cover the live source until beat end.
+- `shimmer` draws an elliptical shimmer and a ring. `pad` and `rippleSize` are fractions of target width, `hit` is an actor-relative fractional point, and `rippleWidth` is in pixels. Set `delay`, `ms` and `rippleMs`, space-separated RGB `colour`, `rim`, `core` and CSS `rippleColour`. `frames` and `rippleFrames` can replace the keyframes.
+- `shield-bubble` draws the hex field and waves around `centre` with two pixel `radius` values, `hex` cell size, `outline` stroke multiplier, `hitAngle` in radians and `hit` in ms. `breaks` scatters the field and `attack` selects shorter impact timing. `unit` scales the particles and wave travel. Set comma-separated RGB `colour`, `rimColour`, `cellColour`, `breakColour`, `glowColour`, `core` and two `sparkColours`.
+- `ring-pulse` accepts a stage `box`, CSS border `radius`, spaced RGB `colour`, pixel border `width`, CSS `shadow` and `background`, `frames`, `easing`, `delay`, `ms`, `count` and repeat `period`. Alternatively pass `shockwaves` with per-wave delay, ms, radius and width in pixels, alpha and squash. Shockwaves use the same colour plus a spaced RGB `outline`, `unit` and optional stage `clip`.
+
+- Optional `projectile.sourceLight` adds the source overlay with CSS `background`, `shadow`, `radius` and replacement `frames`. `headFadeMs` sets the fade after contact.
+- `dissolve.heatEdge` sets the outer heat colour. `shimmer.jolt` takes a stage-pixel `vector` and optional `ms` for the actor's recoil.
+- `shield-bubble.recharge` builds the hex field with `assemble`, `hum` and `settle` time pairs and comma-separated RGB `scanColour` and `scanCore`.
+
+- Bolt `sourceGlowRadius` and `headGlowRadius` are scaled by `unit`; set `sourceGlowMs`, `sourceGlowPeak`, and `headGlowAlpha` for the flashes.
+  Ribbon `trailMs` and `trailPoints` set the sampling window and count. `coreAlpha` controls the inner stroke. `lift` defaults to 70 px.
+- Shimmer `hitStops` and `rimStops` take alpha fractions and stop positions in percent.
+  Shockwave entries take `borderWidth`, `outlineWidth` and `outlineOffset` scaled by `unit`.
+- Dissolve `cutAt` and `heatTail` are fractions of `heatMs` and `breakMs`. Use `heatFrames` and `heatBackground` to replace the overlay look.
+  `emberSize` takes `min` pixels, a width `divisor` and multiplier `range`. `emberDrift`, `emberRise`, `emberSpan` and `emberShadow` are pairs for radial/random drift, rise range, duration range and blur/spread. `lift.glowRadius` scales with `unit`.
+- Shatter `travel` and `zRange` are scaled by `unit`. `speedRange` multiplies travel.
+  `rotateX`, `rotateY` and `rotateZ` are degree ranges. `brightness` and `shadowSize` run from cool to hot.
+- Shield `sparks` takes `count` per direction, `life` in ms, `speed`, `spread` in radians and `width`.
+  `glowRadii` gives outer/core radii scaled by `unit`. `visibleIn` and `impact.fade` are ms pairs relative to hit.
+  `impact` also takes `flashMs`, `waveCount`, `waveGap` in ms and `waveSpeed` in units/ms.
+  `flashPeak`, `flashRadius`, `flashStrength`, `glowAlpha`, `fieldAlpha` and `impactPointScale` tune the hit.
+  `waveWidth`, `waveReach` and `waveStrength` tune the wave band, reach and first/later strengths.
+  `field` tunes gradient and hexes, `scatter` tunes the break, and `recharge` tunes the sweep.

@@ -139,6 +139,10 @@ import { registerCanvasEffect } from './canvas.ts';
 import { arcMove, multiStopMove } from './flight-effects.ts';
 import { trail } from './trail.ts';
 import { columnBeam, rotatingBeam } from './beams.ts';
+import { projectile, ringPulse, shimmer } from './combat-dom.ts';
+import { bolt } from './combat-canvas.ts';
+import { dissolve, dissolveSmoke, shatter } from './break-effects.ts';
+import { shieldBubble } from './shield-bubble.ts';
 import { curvedBeam, radialStreaks } from './beam-canvas.ts';
 import { collapseJump } from './collapse.ts';
 import { warpTransfer } from './transfer.ts';
@@ -264,7 +268,27 @@ export const BUILT_IN: Readonly<Record<string, Effect>> = {
     const h = typeof hm === 'number' && call.dur > 0 ? Math.min(Math.max(hm, 0), call.dur * 0.8) : 0;
     const mid = h + (call.dur - h) / 2;
     const timer = setTimeout(swap, mid);
-    animate(h > 0 ? [{ transform: 'scaleX(1)' }, { transform: 'scaleX(1)', offset: h / call.dur }, { transform: 'scaleX(0)', offset: mid / call.dur }, { transform: 'scaleX(1)' }] : [{ transform: 'scaleX(1)' }, { transform: 'scaleX(0)' }, { transform: 'scaleX(1)' }], { transform: 'none' });
+    const vertical = call.step['axis'] === 'y';
+    const direction = call.step['direction'];
+    if (direction === 1 || direction === -1) {
+      const perspective = typeof call.step['perspective'] === 'number' ? call.step['perspective'] : 800;
+      const transform = (degrees: number) => `perspective(${perspective}px) rotate${vertical ? 'X' : 'Y'}(${degrees}deg)`;
+      const ease = call.step['ease'];
+      const easing = typeof ease === 'string' ? EASE[ease] ?? ease : 'ease-in-out';
+      const edge = call.dur > 0 ? mid / call.dur : .5;
+      animate([
+        { transform: transform(0), easing },
+        ...(h > 0 ? [{ transform: transform(0), offset: h / call.dur, easing }] : []),
+        { transform: transform(direction * 90), offset: edge },
+        { transform: transform(-direction * 90), offset: edge, easing },
+        { transform: transform(0) },
+      ], { transform: 'none' }, { easing: 'linear' });
+    } else {
+      const scale = vertical ? 'scaleY' : 'scaleX';
+      const rest = { transform: `${scale}(1)` };
+      const edge = { transform: `${scale}(0)` };
+      animate(h > 0 ? [rest, { ...rest, offset: h / call.dur }, { ...edge, offset: mid / call.dur }, rest] : [rest, edge, rest], { transform: 'none' });
+    }
     return () => {
       clearTimeout(timer);
       swap();
@@ -333,6 +357,27 @@ export function registerEffects(verbs: VerbRegistry<EffectCtx>, o?: LayerOptions
   verbs.register('column-beam', (call, run) => (call.step['curve'] ? curve : column)?.(call, run));
   registerEffect(verbs, 'collapse-jump', collapseJump);
   registerEffect(verbs, 'rotating-beam', rotatingBeam);
+  registerEffect(verbs, 'projectile', projectile);
+  const beam = verbs.get('projectile');
+  registerCanvasEffect(verbs, 'projectile', bolt);
+  const shot = verbs.get('projectile');
+  verbs.register('projectile', (call, run) => (call.step['bolt'] ? shot : beam)?.(call, run));
+  registerCanvasEffect(verbs, 'dissolve', dissolveSmoke);
+  const smoke = verbs.get('dissolve');
+  registerEffect(verbs, 'dissolve', dissolve);
+  const burn = verbs.get('dissolve');
+  verbs.register('dissolve', (call, run) => {
+    const endBurn = burn?.(call, run);
+    const endSmoke = call.step['lift'] ? smoke?.(call, run) : undefined;
+    return () => {
+      endSmoke?.();
+      endBurn?.();
+    };
+  });
+  registerEffect(verbs, 'shatter', shatter);
+  registerEffect(verbs, 'shimmer', shimmer);
+  registerEffect(verbs, 'ring-pulse', ringPulse);
+  registerCanvasEffect(verbs, 'shield-bubble', shieldBubble);
   registerCanvasEffect(verbs, 'warp-transfer', spiralTransfer);
   const spiral = verbs.get('warp-transfer');
   registerEffect(verbs, 'warp-transfer', warpTransfer);
@@ -592,6 +637,32 @@ var FX = (() => {
     ctx.restore();
   }
   var canDraw = () => typeof window !== "undefined" && typeof window.requestAnimationFrame === "function" && typeof CanvasRenderingContext2D !== "undefined";
+  function smoke(ctx, t, o, u = 1) {
+    const r = rng(o.seed);
+    ctx.save();
+    for (let i = 0; i < o.n; i += 1) {
+      const a = (r() - 0.5) * Math.PI * 2;
+      const d = r() * (o.radius ?? 30) * u;
+      const life = (o.life ?? 1300) * (0.7 + r() * 0.5);
+      const t0 = o.t0 + r() * (o.stagger ?? 250);
+      const age = t - t0;
+      if (age <= 0 || age >= life) continue;
+      const k = age / life;
+      const spread2 = (o.spread ?? 40) * u;
+      const x = o.x + Math.cos(a) * (d + k * spread2) + noise(age / 300 + i, 9) * 6 * u;
+      const y = o.y + Math.sin(a) * (d + k * spread2) * 0.8 - k * (o.rise ?? 30) * u;
+      const rad2 = (o.size ?? 26) * (0.6 + r() * 0.6) * (0.5 + k * 1.3) * u;
+      const al = (o.alpha ?? 0.5) * Math.sin(Math.PI * Math.min(1, k * 1.6)) * (1 - k);
+      const grad = ctx.createRadialGradient(x, y, 0, x, y, rad2);
+      const c = o.rgb ?? "40,38,46";
+      grad.addColorStop(0, `rgba(${c},${String(al)})`);
+      grad.addColorStop(0.6, `rgba(${c},${String(al * 0.55)})`);
+      grad.addColorStop(1, `rgba(${c},0)`);
+      ctx.fillStyle = grad;
+      ctx.fillRect(x - rad2, y - rad2, rad2 * 2, rad2 * 2);
+    }
+    ctx.restore();
+  }
 
   // components/effect-library/canvas.ts
   function specTime(elapsed, call) {
@@ -1101,6 +1172,773 @@ var FX = (() => {
       { offset: 1, opacity: 1, filter: "brightness(1)" }
     ]).map((frame) => ({ ...frame, clipPath, zIndex: "2" })), { opacity: out ? "0" : "1", clipPath }, { easing: "linear" });
     return stage.end;
+  };
+
+  // components/effect-library/combat-dom.ts
+  var pulseFrames = [
+    { opacity: 0, transform: "scale(1)" },
+    { opacity: 1, transform: "scale(1.03)", offset: 0.3 },
+    { opacity: 0, transform: "scale(1.12)" }
+  ];
+  var ringPulse = (fx) => {
+    const { call } = fx;
+    const {
+      box = call.from,
+      radius = "50%",
+      colour = "255 255 255",
+      width = 2,
+      shadow,
+      background,
+      frames: frames2 = pulseFrames,
+      easing = "ease-out",
+      delay = 0,
+      count = 1,
+      ms = (call.step.dur - delay) / Math.max(1, count),
+      period = ms,
+      shockwaves,
+      outline = "255 255 255",
+      unit = 1,
+      clip
+    } = call.step;
+    const stage = scene(fx);
+    if (shockwaves) {
+      const [x, y] = centre2(box);
+      const holder = clip && stage.stand(clip, { overflow: "hidden" });
+      for (const wave of shockwaves) {
+        const max = wave.radius * unit;
+        const ring = stage.stand([x - max - (clip?.[0] ?? 0), y - max - (clip?.[1] ?? 0), 2 * max, 2 * max], { borderRadius: radius });
+        holder?.append(ring);
+        stage.play(ring, Array.from({ length: 61 }, (_, i) => {
+          const k = i / 60;
+          const s = Math.max(ease.outExpo(k), 1 / Math.max(1, max));
+          const a = wave.alpha * (1 - k) ** 3;
+          const w = wave.width * (1 - k * 0.5) * unit;
+          const size = (v) => px(v / s);
+          return {
+            transform: `scale(${s},${s * (wave.squash ?? 1)})`,
+            border: `${size((wave.borderWidth ?? 7) * unit)} solid rgb(${colour} / ${a * 0.5})`,
+            outline: `${size((wave.outlineWidth ?? 2.2) * unit)} solid rgb(${outline} / ${a})`,
+            outlineOffset: size((wave.outlineOffset ?? -4.6) * unit),
+            boxShadow: `inset 0 0 ${size(w)} ${size(w / 3)} rgb(${colour} / ${a * 0.22})`,
+            opacity: i ? 1 : 0
+          };
+        }), wave.ms, delay + wave.delay, "linear", "none");
+      }
+    } else {
+      for (let i = 0; i < count; i++) {
+        const ring = stage.stand(box, {
+          borderRadius: radius,
+          opacity: "0",
+          background: background ?? "",
+          boxShadow: shadow ?? "",
+          border: `${px(width)} solid rgb(${colour})`
+        });
+        stage.play(ring, frames2, ms, delay + i * period, easing, "none");
+      }
+    }
+    return stage.end;
+  };
+  var shimmer = (fx) => {
+    const { call } = fx;
+    const {
+      colour = "255 255 255",
+      rim = colour,
+      core = "255 255 255",
+      rippleColour = "rgb(255 255 255 / .9)",
+      pad = 0.14,
+      hit = [0.5, 0.45],
+      rippleSize = 0.3,
+      rippleWidth,
+      delay = 0,
+      ms = call.step.dur - delay,
+      rippleMs = ms * 0.8,
+      frames: frames2,
+      rippleFrames,
+      jolt,
+      hitStops: [hot, tint, tintAt, clearAt] = [0.6, 0.3, 14, 34],
+      rimStops: [innerAt, bandAt, band, edgeAt, edge] = [72, 86, 0.18, 97, 0.65]
+    } = call.step;
+    const [x, y, w, h] = call.from;
+    const p = w * pad;
+    const bw = w + 2 * p, bh = h + 2 * p;
+    if (bw <= 0 || bh <= 0) return;
+    const dx = w * hit[0], dy = h * hit[1];
+    const hx = (dx + p) * 100 / bw, hy = (dy + p) * 100 / bh;
+    const stage = scene(fx);
+    const bubble = stage.stand([x - p, y - p, bw, bh], {
+      borderRadius: "50%",
+      mixBlendMode: "screen",
+      opacity: "0",
+      background: `radial-gradient(circle at ${hx}% ${hy}%, rgb(${core} / ${hot}), rgb(${colour} / ${tint}) ${tintAt}%, rgb(${colour} / 0) ${clearAt}%), radial-gradient(closest-side, rgb(${colour} / 0) ${innerAt}%, rgb(${colour} / ${band}) ${bandAt}%, rgb(${rim} / ${edge}) ${edgeAt}%, rgb(${colour} / 0) 100%)`
+    });
+    stage.play(bubble, frames2 ?? [
+      { offset: 0, transform: "scale(.94)", opacity: 0, easing: "ease-out" },
+      { offset: 0.12, transform: "scale(1)", opacity: 1 },
+      { offset: 0.3, opacity: 0.6 },
+      { offset: 0.45, opacity: 0.9 },
+      { offset: 0.7, transform: "scale(1.02)", opacity: 0.55, easing: "ease-in" },
+      { offset: 1, transform: "scale(1.06)", opacity: 0 }
+    ], ms, delay);
+    const d = w * rippleSize;
+    const ring = stage.stand([x + dx - d / 2, y + dy - d / 2, d, d], {
+      borderRadius: "50%",
+      border: `${px(rippleWidth ?? Math.max(1.5, w * 8e-3))} solid ${rippleColour}`,
+      opacity: "0"
+    });
+    stage.play(ring, rippleFrames ?? [
+      { transform: "scale(.2)", opacity: 1, easing: "cubic-bezier(.2,.7,.4,1)" },
+      { transform: "scale(3.2)", opacity: 0 }
+    ], rippleMs, delay, "linear", "none");
+    if (jolt) {
+      const [jx, jy] = jolt.vector;
+      stage.play(fx.el, [
+        { transform: "none", easing: "ease-out" },
+        { offset: 0.25, transform: `translate(${px(jx)}, ${px(jy)})`, easing: "ease-in-out" },
+        { offset: 0.6, transform: `translate(${px(-jx * 0.35)}, ${px(-jy * 0.35)})` },
+        { transform: "none" }
+      ], jolt.ms ?? 300, delay, "linear", "none");
+    }
+    return stage.end;
+  };
+  var projectile = (fx) => {
+    const { call } = fx;
+    if (!call.to) return;
+    const [tx, ty, tw, th] = call.to;
+    const {
+      fromPoint: [x, y] = centre2(call.from),
+      toPoint: [ax, ay] = [tx + tw / 2, ty + th * 0.45],
+      colour = "255 255 255",
+      core = "255 255 255",
+      headColour = colour,
+      spotColour = colour,
+      width = Math.max(3, tw * 0.04),
+      speed,
+      travelMs = 200,
+      delay = 0,
+      headScale = 7,
+      spotSize = tw * 0.55,
+      miss,
+      sourceLight,
+      headFadeMs = 80,
+      flicker = [
+        { at: 106, width: 0.8, opacity: 0.85 },
+        { at: 190, width: 1.15, opacity: 1 },
+        { at: 274, width: 0.85, opacity: 0.9 },
+        { at: 386, width: 1.1, opacity: 1, easing: "ease-in" }
+      ]
+    } = call.step;
+    const past = 1 + (miss?.past ?? 0);
+    const dx = (ax - x) * past, dy = (ay - y) * past;
+    const length = Math.hypot(dx, dy);
+    const duration = Math.max(1, call.step.dur - delay);
+    const travel2 = Math.min(duration, speed && speed > 0 ? length / speed : travelMs * past);
+    const ms = miss ? Math.min(duration, travel2 + miss.fadeMs) : duration;
+    const angle = Math.atan2(dy, dx);
+    const rot = (a, b = 1) => `rotate(${angle}rad) scale(${a}, ${b})`;
+    const move = (k, scale) => `translate(${px(dx * k)}, ${px(dy * k)}) scale(${scale})`;
+    const at = (t) => seg(t, 0, ms);
+    const stage = scene(fx);
+    const beam = stage.stand([x, y - width / 2, length, width], {
+      transformOrigin: "0 50%",
+      borderRadius: px(width),
+      zIndex: "4",
+      background: `linear-gradient(to bottom, rgb(${colour} / 0), rgb(${colour}) 22%, rgb(${core}) 42% 58%, rgb(${colour}) 78%, rgb(${colour} / 0))`,
+      boxShadow: `0 0 ${px(width * 1.4)} ${px(width * 0.4)} rgb(${colour} / .65)`
+    });
+    if (miss?.mask) {
+      beam.style.maskImage = miss.mask;
+      beam.style.setProperty("-webkit-mask-image", miss.mask);
+    }
+    const clipPath = miss ? "inset(0)" : void 0;
+    stage.play(beam, [
+      { offset: 0, transform: rot(0), opacity: 1, clipPath },
+      { offset: at(travel2), transform: rot(1), opacity: 1, clipPath, easing: miss ? "ease-in" : "linear" },
+      ...!miss ? flicker.filter(({ at: t }) => t > 0 && travel2 + t < ms).map((f) => ({
+        offset: at(travel2 + f.at),
+        transform: rot(1, f.width),
+        opacity: f.opacity,
+        easing: f.easing ?? "linear"
+      })) : [],
+      { offset: 1, transform: rot(1, miss ? 0.3 : 0.1), opacity: miss ? 0.2 : 0, clipPath: miss ? "inset(0 0 0 100%)" : void 0 }
+    ], ms, delay);
+    const hd = width * headScale;
+    const head = stage.stand([x - hd / 2, y - hd / 2, hd, hd], {
+      borderRadius: "50%",
+      opacity: "0",
+      zIndex: "6",
+      background: `radial-gradient(circle, rgb(${core}) 0 18%, rgb(${headColour} / .9) 32%, rgb(${colour} / .45) 52%, rgb(${colour} / 0) 70%)`
+    });
+    stage.play(head, [
+      { offset: 0, transform: move(0, 0.6), opacity: 1 },
+      { offset: miss ? 1 / past : travel2 / Math.min(ms, travel2 + headFadeMs), transform: move(1 / past, 1), opacity: 1, easing: miss ? "linear" : "ease-out" },
+      { offset: 1, transform: move(1, miss ? 0.7 : 1.6), opacity: 0 }
+    ], miss ? travel2 : Math.min(ms, travel2 + headFadeMs), delay, "linear", "forwards");
+    if (!miss) {
+      const spot = stage.stand([ax - spotSize / 2, ay - spotSize / 2, spotSize, spotSize], {
+        borderRadius: "50%",
+        zIndex: "5",
+        background: `radial-gradient(circle, rgb(${core}) 0 10%, rgb(${spotColour} / .8) 26%, rgb(${colour} / 0) 62%)`
+      });
+      stage.play(spot, [
+        { offset: 0, transform: "scale(0)", opacity: 0 },
+        { offset: at(travel2), transform: "scale(.3)", opacity: 1, easing: "ease-out" },
+        { offset: at(travel2 + 190), transform: "scale(1)", opacity: 1 },
+        { offset: at(travel2 + 330), transform: "scale(.8)", opacity: 1, easing: "ease-in" },
+        { offset: 1, transform: "scale(1.3)", opacity: 0 }
+      ], ms, delay);
+    }
+    if (sourceLight) {
+      const lamp = stage.stand(call.from, {
+        mixBlendMode: "screen",
+        zIndex: "3",
+        background: sourceLight.background,
+        boxShadow: sourceLight.shadow ?? "",
+        borderRadius: sourceLight.radius ?? getComputedStyle(fx.el).borderRadius
+      });
+      stage.play(lamp, sourceLight.frames ?? (miss ? [
+        { opacity: 0 },
+        { offset: 0.2, opacity: 1 },
+        { offset: 0.6, opacity: 0.8 },
+        { opacity: 0 }
+      ] : [
+        { opacity: 0.6 },
+        { offset: Math.min(0.12, at(travel2)), opacity: 1 },
+        { offset: at(travel2 + 190), opacity: 0.75 },
+        { offset: at(travel2 + 386), opacity: 0.9, easing: "ease-in" },
+        { opacity: 0 }
+      ]), miss ? ms + delay : ms, miss ? 0 : delay);
+    }
+    return stage.end;
+  };
+
+  // components/effect-library/combat-canvas.ts
+  var mix2 = (a, b, k) => [lerp(a[0], b[0], k), lerp(a[1], b[1], k)];
+  var bolt = (ctx, t, { call }) => {
+    if (!call.to) return;
+    const {
+      bolt: mode,
+      fromPoint = centre2(call.from),
+      toPoint = centre2(call.to),
+      delay = 0,
+      unit = 1,
+      speed,
+      travelMs = 170,
+      colour = "255,255,255",
+      core = "#fff",
+      tail = 0.25,
+      width = mode === "ribbon" ? 12 : 13,
+      coreWidth = mode === "ribbon" ? width * 0.19 : 3.5,
+      alpha = mode === "ribbon" ? 0.32 : 0.6,
+      lift = 70,
+      launchMs = 220,
+      fadeMs = 200,
+      headColour = colour,
+      spotColour = colour,
+      sourceGlowRadius = 46,
+      headGlowRadius = 34,
+      sourceGlowMs = 120,
+      sourceGlowPeak = 0.15,
+      headGlowAlpha = 0.8,
+      coreAlpha = mode === "ribbon" ? 0.9 : 1,
+      trailMs = 180,
+      trailPoints = 12
+    } = call.step;
+    const ms = speed && speed > 0 ? Math.hypot(toPoint[0] - fromPoint[0], toPoint[1] - fromPoint[1]) / speed : travelMs;
+    const start = delay + (mode === "ribbon" ? launchMs : 0);
+    const k = seg(t, start, start + ms);
+    if (mode === "streak") glow(ctx, ...fromPoint, sourceGlowRadius * unit, spotColour, pulse(t, start, start + sourceGlowMs, sourceGlowPeak));
+    if (t <= start || t >= start + ms + (mode === "ribbon" ? fadeMs : 0)) return;
+    const e = ease.in(k);
+    const head = mix2(fromPoint, toPoint, e);
+    const pose = (at) => {
+      const p = ease.inOut(seg(at, start, start + ms));
+      const [x, y] = mix2([fromPoint[0], fromPoint[1] - lift], toPoint, p);
+      return [x, y - Math.sin(p * Math.PI) * lift];
+    };
+    const time = Math.min(t, start + ms);
+    const samples = Math.max(2, Math.floor(trailPoints));
+    const points = mode === "ribbon" ? Array.from({ length: samples }, (_, i) => pose(Math.max(start, time - trailMs + i * trailMs / (samples - 1)))) : [mix2(fromPoint, toPoint, clamp(e - tail)), head];
+    const fade = mode === "ribbon" ? 1 - seg(t, start + ms, start + ms + fadeMs) : 1;
+    ctx.save();
+    ctx.globalCompositeOperation = "lighter";
+    ctx.lineCap = ctx.lineJoin = "round";
+    ctx.beginPath();
+    points.forEach(([x, y], i) => {
+      if (i === 0) ctx.moveTo(x, y);
+      else ctx.lineTo(x, y);
+    });
+    ctx.strokeStyle = `rgba(${colour},${alpha * fade})`;
+    ctx.lineWidth = width * unit;
+    ctx.stroke();
+    ctx.globalAlpha *= fade * coreAlpha;
+    ctx.strokeStyle = core;
+    ctx.lineWidth = coreWidth * unit;
+    ctx.stroke();
+    ctx.restore();
+    if (mode === "streak") glow(ctx, ...head, headGlowRadius * unit, headColour, headGlowAlpha);
+  };
+
+  // components/effect-library/break-effects.ts
+  var dissolve = (fx) => {
+    const { call, el, animate } = fx;
+    const [x, y, w, h] = call.from;
+    const {
+      delay = 0,
+      breakMs = 900,
+      heatMs = 520,
+      shown = h,
+      cols = 8,
+      hit = [0.5, 0.45],
+      embers = 16,
+      heat = "255 255 255",
+      emberColour = "230 230 230",
+      core = "255 255 255",
+      glow: glow2 = "230 230 230",
+      heatEdge = glow2,
+      lift,
+      cutAt = 0.55,
+      heatTail = 0.6,
+      heatFrames,
+      heatBackground,
+      emberSize: { min: minEmber = 2, divisor: emberDivisor = 110, range: [sizeMin, sizeMax] = [0.6, 1.6] } = {},
+      emberDrift: [radialDrift, randomDrift] = [0.5, 0.3],
+      emberRise: [riseMin, riseMax] = [0.2, 0.65],
+      emberSpan: [spanMin, spanMax] = [0.6, 0.9],
+      emberShadow: [blur, spread2] = [2, 0.5]
+    } = call.step;
+    const stage = scene(fx);
+    const hidden = { opacity: "0" };
+    if (lift) {
+      const { distance, spin, fade, ms } = lift;
+      const sample = (t) => ({
+        transform: `translateY(${px(-distance * seg(t, 0, ms))}) rotate(${spin * seg(t, 0, ms)}rad)`,
+        opacity: 1 - seg(t, fade[0], fade[1]) ** 3
+      });
+      stage.play(el, Array.from({ length: 51 }, (_, i) => i === 50 ? { ...sample(ms), opacity: 0 } : sample(ms * i / 50)), ms, delay);
+      return () => {
+        stage.end();
+        el.style.opacity = "0";
+      };
+    }
+    if (w <= 0 || shown <= 0 || cols < 1) {
+      el.style.opacity = "0";
+      return;
+    }
+    const hx = w * hit[0], hy = shown * hit[1];
+    const far = Math.hypot(w, shown);
+    const cut = delay + heatMs * cutAt;
+    const cw = w / cols, rows = Math.max(1, Math.round(shown / cw)), ch = shown / rows;
+    const opacity = el.style.opacity || "1";
+    const at = seg(cut, 0, call.step.dur);
+    animate([{ opacity }, { offset: at, opacity, easing: "steps(1, jump-start)" }, { offset: at, opacity: 0 }, { opacity: 0 }], hidden, { easing: "linear" });
+    const overlay = stage.stand([x, y, w, shown], {
+      borderRadius: getComputedStyle(el).borderRadius,
+      mixBlendMode: "screen",
+      zIndex: "3",
+      background: heatBackground ?? `radial-gradient(circle at ${px(hx)} ${px(hy)}, rgb(${core} / .9), rgb(${heat} / .55) 35%, rgb(${heatEdge} / .25) 75%)`
+    });
+    stage.play(overlay, heatFrames ?? [
+      { opacity: 0 },
+      { offset: 0.35, opacity: 0.8, easing: "ease-in" },
+      { offset: 0.55, opacity: 1, easing: "ease-out" },
+      { opacity: 0 }
+    ], heatMs + breakMs * heatTail, delay);
+    for (let r = 0; r < rows; r++) for (let c = 0; c < cols; c++) {
+      const n = r * cols + c;
+      const left = c * cw, top = r * ch;
+      const tile = stage.stand([x + left, y + top, cw + 0.5, ch + 0.5], { overflow: "hidden", zIndex: "2", opacity: "0" });
+      const copy = el.cloneNode(true);
+      Object.assign(copy.style, {
+        position: "absolute",
+        left: px(-left),
+        top: px(-top),
+        width: px(w),
+        height: px(h),
+        visibility: "visible",
+        transform: "none"
+      });
+      tile.append(copy);
+      const ox = (left + cw / 2 - hx) / far, oy = (top + ch / 2 - hy) / far;
+      const dx = ox * w * (0.25 + rand(n, 1) * 0.35) + (rand(n, 2) - 0.5) * cw;
+      const dy = oy * h * 0.2 - h * (0.08 + rand(n, 3) * 0.18);
+      const spin = (rand(n, 4) - 0.5) * 140;
+      const span = breakMs * 0.6, wait = Math.hypot(ox, oy) * breakMs * 0.4;
+      const frames2 = [
+        { offset: 0, transform: "none", opacity: 1, easing: "ease-out" },
+        { offset: 0.12, transform: `translate(${px((rand(n, 5) - 0.5) * cw * 0.15)}, ${px(-ch * 0.05)})`, opacity: 1, easing: "cubic-bezier(.4,0,.9,.6)" },
+        { offset: 0.55, opacity: 0.85 },
+        { offset: 1, transform: `translate(${px(dx)}, ${px(dy)}) rotate(${spin}deg) scale(.15)`, opacity: 0 }
+      ];
+      stage.play(tile, [
+        { offset: 0, transform: "none", opacity: 1 },
+        ...frames2.map((frame) => ({ ...frame, offset: (wait + (frame.offset ?? 0) * span) / (wait + span) }))
+      ], wait + span, cut, "linear", "none");
+    }
+    for (let i = 0; i < embers; i++) {
+      const s = Math.max(minEmber, w / emberDivisor * lerp(sizeMin, sizeMax, rand(i, 6)));
+      const left = rand(i, 7) * w, top = rand(i, 8) * shown;
+      const node = stage.stand([x + left - s / 2, y + top - s / 2, s, s], {
+        borderRadius: "50%",
+        zIndex: "4",
+        opacity: "0",
+        background: `rgb(${rand(i, 9) < 0.35 ? core : emberColour})`,
+        boxShadow: `0 0 ${px(s * blur)} ${px(s * spread2)} rgb(${glow2} / .8)`
+      });
+      const dx = (left - hx) * radialDrift + (rand(i, 10) - 0.5) * w * randomDrift;
+      const dy = -h * lerp(riseMin, riseMax, rand(i, 11));
+      stage.play(node, [
+        { transform: "none", opacity: 0 },
+        { offset: 0.1, transform: "none", opacity: 1, easing: "cubic-bezier(.2,.6,.4,1)" },
+        { offset: 0.6, opacity: 0.9 },
+        { transform: `translate(${px(dx)}, ${px(dy)}) scale(.3)`, opacity: 0 }
+      ], breakMs * lerp(spanMin, spanMax, rand(i, 12)), cut + Math.hypot(left - hx, top - hy) / far * breakMs * 0.4, "linear", "none");
+    }
+    return stage.end;
+  };
+  function triangles(gx, gy, seed, [jx, jy]) {
+    const r = rng(seed);
+    const points = [];
+    for (let j = 0; j <= gy; j++) for (let i = 0; i <= gx; i++) {
+      points.push([
+        i / gx * 100 + (i === 0 || i === gx ? 0 : (r() - 0.5) * jx),
+        j / gy * 100 + (j === 0 || j === gy ? 0 : (r() - 0.5) * jy)
+      ]);
+    }
+    const v = (i, j) => points[j * (gx + 1) + i] ?? [0, 0];
+    const out = [];
+    for (let j = 0; j < gy; j++) for (let i = 0; i < gx; i++) {
+      const a = v(i, j), b = v(i + 1, j), c = v(i + 1, j + 1), d = v(i, j + 1);
+      if (r() > 0.5) out.push([a, b, c], [a, c, d]);
+      else out.push([a, b, d], [b, c, d]);
+    }
+    return out;
+  }
+  var shatter = (fx) => {
+    const { call, el, animate } = fx;
+    const [x, y, w, h] = call.from;
+    const {
+      grid = [3, 4],
+      count = grid[0] * grid[1] * 2,
+      jitter = [22, 16],
+      seed = 42,
+      motionSeed = 7,
+      direction,
+      impact = centre2(call.from),
+      clipSource,
+      sourceBox,
+      flip = false,
+      delay = 0,
+      ms = call.step.dur - delay,
+      unit = 1,
+      hotColour = "255 255 255",
+      coolColour = "150 150 150",
+      perspective = 1100,
+      drag = 380,
+      coolMs = 420,
+      travel: travel2 = 380,
+      speedRange = [0.32, 0.74],
+      zRange = [60, 280],
+      rotateX = [-150, 150],
+      rotateY = [-150, 150],
+      rotateZ = [-260, 260],
+      brightness = [0.45, 1.5],
+      shadowSize = [2, 7]
+    } = call.step;
+    const stage = scene(fx);
+    const holder = stage.stand(call.from, { perspective: px(perspective * unit) });
+    const at = seg(delay, 0, call.step.dur);
+    const opacity = el.style.opacity || "1";
+    animate([{ opacity }, { offset: at, opacity }, { offset: at, opacity: 0 }, { opacity: 0 }], { opacity: "0" }, { easing: "linear" });
+    const random = rng(motionSeed);
+    const gx = Math.max(1, Math.floor(grid[0]));
+    const gy = Math.max(1, Math.floor(grid[1]), Math.ceil(count / (2 * gx)));
+    for (const tri of triangles(gx, gy, seed, jitter).slice(0, Math.max(0, count))) {
+      const cx = tri.reduce((a, p) => a + p[0], 0) / 3, cy = tri.reduce((a, p) => a + p[1], 0) / 3;
+      const wrap = document.createElement("div");
+      Object.assign(wrap.style, { position: "absolute", inset: "0", opacity: "0", transformOrigin: `${cx}% ${cy}%` });
+      const face = clipSource ? document.createElement("div") : el.cloneNode(true);
+      Object.assign(face.style, {
+        position: "absolute",
+        inset: "0",
+        width: "100%",
+        height: "100%",
+        transform: flip ? "scaleY(-1)" : "",
+        visibility: "visible",
+        clipPath: `polygon(${tri.map(([vx, vy]) => `${vx}% ${flip ? 100 - vy : vy}%`).join(",")})`
+      });
+      if (clipSource) {
+        const [sx, sy, sw, sh] = sourceBox ?? [0, 0, w, h];
+        const url = clipSource.replace(/["\\]/g, "\\$&");
+        face.style.background = `url("${url}") ${px(sx)} ${px(flip ? h - sy - sh : sy)} / ${px(sw)} ${px(sh)} no-repeat`;
+      }
+      wrap.append(face);
+      holder.append(wrap);
+      const [dx, dy] = direction ?? [x + cx / 100 * w - impact[0], y + cy / 100 * h - impact[1]];
+      const d = Math.hypot(dx, dy) || 1;
+      const sp = lerp(...speedRange, random());
+      const rz = lerp(...rotateZ, random()), rx = lerp(...rotateX, random()), ry = lerp(...rotateY, random());
+      const z = lerp(...zRange, random());
+      stage.play(wrap, Array.from({ length: 61 }, (_, i) => {
+        const age = ms * i / 60;
+        const k = 1 - Math.exp(-age / drag);
+        const distance = sp * travel2 * k * unit;
+        const hot = 1 - seg(age, 0, coolMs);
+        const light = `color-mix(in srgb, rgb(${hotColour}) ${hot * 100}%, rgb(${coolColour}))`;
+        return {
+          transform: `translate3d(${px(dx / d * distance)}, ${px(dy / d * distance)}, ${px(z * k * unit)}) rotateX(${rx * k}deg) rotateY(${ry * k}deg) rotateZ(${rz * k}deg)`,
+          filter: `drop-shadow(0 0 ${px(lerp(...shadowSize, hot) * unit)} color-mix(in srgb, ${light} ${(hot * 0.95 + 0.05) * 100}%, transparent)) brightness(${lerp(...brightness, hot)})`,
+          opacity: 1 - ease.inQuad(seg(i / 60, 0.55, 1))
+        };
+      }), ms, delay, "linear", "forwards");
+    }
+    return stage.end;
+  };
+  var dissolveSmoke = (ctx, t, { call, x, y }) => {
+    const { delay = 0, lift } = call.step;
+    if (!lift || t < delay) return;
+    const { distance, ms, unit = 1, colour = "220,220,220", glowRadius = 46 } = lift;
+    const k = seg(t, delay, delay + ms);
+    glow(ctx, x, y - distance * k, glowRadius * unit, colour, Math.sin(k * Math.PI));
+    smoke(ctx, t, {
+      seed: 91,
+      n: 6,
+      x,
+      y: y - 30 * unit,
+      t0: delay + 220,
+      life: 500,
+      stagger: 40,
+      radius: 6,
+      spread: 16,
+      rise: 30,
+      size: 10,
+      alpha: 0.25,
+      rgb: "70,70,70",
+      ...lift.smoke
+    }, unit);
+  };
+
+  // components/effect-library/shield-bubble.ts
+  function cells(B) {
+    const out = [];
+    const w = B.hex * Math.sqrt(3);
+    for (let row = -Math.ceil(B.ry / (B.hex * 1.5)); row <= Math.ceil(B.ry / (B.hex * 1.5)); row++)
+      for (let col = -Math.ceil(B.rx / w) - 1; col <= Math.ceil(B.rx / w) + 1; col++) {
+        const x = B.cx + col * w + (row & 1 ? w / 2 : 0), y = B.cy + row * B.hex * 1.5;
+        const d = Math.hypot((x - B.cx) / B.rx, (y - B.cy) / B.ry);
+        if (d < 1) out.push({ x, y, d, r: Math.sin(x * 12.9898 + y * 78.233) * 0.5 + 0.5 });
+      }
+    return out;
+  }
+  function hex(ctx, x, y, s) {
+    ctx.beginPath();
+    for (let i = 0; i < 6; i++) {
+      const a = Math.PI / 3 * i + Math.PI / 6;
+      const px2 = x + Math.cos(a) * s, py = y + Math.sin(a) * s;
+      if (i) ctx.lineTo(px2, py);
+      else ctx.moveTo(px2, py);
+    }
+    ctx.closePath();
+  }
+  function drawBubble(ctx, B, alpha, rim, look) {
+    const {
+      gradientStart = 0.55,
+      band: [bandAt, bandAlpha] = [0.85, 0.18],
+      rim: [rimAt, rimAlpha] = [0.98, 0.55],
+      cellScale = 0.9,
+      fresnel: [fresnelFloor, fresnelPower] = [0.35, 3],
+      fillThreshold = 0.6,
+      fillAlpha = 0.35
+    } = look.field ?? {};
+    ctx.save();
+    ctx.globalCompositeOperation = "lighter";
+    ctx.translate(B.cx, B.cy);
+    ctx.scale(B.rx, B.ry);
+    const g = ctx.createRadialGradient(0, 0, gradientStart, 0, 0, 1);
+    g.addColorStop(0, `rgba(${look.colour},0)`);
+    g.addColorStop(bandAt, `rgba(${look.colour},${bandAlpha * rim})`);
+    g.addColorStop(rimAt, `rgba(${look.rimColour},${Math.min(1, rimAlpha * rim)})`);
+    g.addColorStop(1, `rgba(${look.rimColour},0)`);
+    ctx.fillStyle = g;
+    ctx.beginPath();
+    ctx.arc(0, 0, 1, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+    ctx.save();
+    ctx.globalCompositeOperation = "lighter";
+    ctx.lineWidth = look.outline * B.hex / 15;
+    for (const c of cells(B)) {
+      const a = alpha(c), fres = fresnelFloor + (1 - fresnelFloor) * c.d ** fresnelPower;
+      if (a <= 0.01) continue;
+      ctx.strokeStyle = `rgba(${look.cellColour},${Math.min(1, a * fres)})`;
+      hex(ctx, c.x, c.y, B.hex * cellScale);
+      ctx.stroke();
+      if (a > fillThreshold) {
+        ctx.fillStyle = `rgba(${look.cellColour},${Math.min(1, (a - fillThreshold) * fillAlpha * fres)})`;
+        ctx.fill();
+      }
+    }
+    ctx.restore();
+  }
+  var shieldBubble = (ctx, t, { call, x, y }) => {
+    const [, , w, h] = call.from;
+    const look = {
+      centre: [x, y],
+      radius: [w * 0.58, h * 0.58],
+      hex: Math.max(6, Math.min(w, h) / 22),
+      hitAngle: Math.PI,
+      hit: 0,
+      unit: 1,
+      breaks: false,
+      attack: false,
+      outline: 1.4,
+      colour: "220,220,220",
+      rimColour: "255,255,255",
+      cellColour: "240,240,240",
+      breakColour: "240,240,240",
+      glowColour: "220,220,220",
+      core: "255,255,255",
+      sparkColours: ["240,240,240", "255,255,255"],
+      glowRadii: [110, 34],
+      glowAlpha: 0.7,
+      impactPointScale: 0.97,
+      visibleIn: [-20, 40],
+      flashPeak: 0.1,
+      flashRadius: 110,
+      flashStrength: 1.4,
+      fieldAlpha: 0.14,
+      waveWidth: 30,
+      waveReach: 560,
+      waveStrength: [2.2, 1.2],
+      ...call.step
+    };
+    const { centre: [cx, cy], radius: [rx, ry], hex: size, hitAngle, hit, unit: u, breaks, attack } = look;
+    if (rx <= 0 || ry <= 0 || size <= 0 || u <= 0) return;
+    const B = { cx, cy, rx, ry, hex: size };
+    if (look.recharge) {
+      const {
+        assemble,
+        hum: humTime,
+        settle: settleTime,
+        scanColour = "220,220,220",
+        scanCore = "255,255,255",
+        humPeak = 0.3,
+        scanWidth = 4,
+        scanAlpha = 0.95,
+        snapDepth = 60,
+        snapSpeed = 3,
+        snapOvershoot = 1.6,
+        strength: [snapAlpha, humAlpha] = [0.32, 0.35]
+      } = look.recharge;
+      const as = seg(t, ...assemble);
+      const hum = pulse(t, ...humTime, humPeak);
+      const settle = ease.inQuad(seg(t, ...settleTime));
+      if (as <= 0 || settle >= 1) return;
+      const scan = cy + ry * (1 - 2 * ease.out(as));
+      drawBubble(ctx, B, (c) => {
+        if (c.y < scan) return 0;
+        const since = (c.y - scan) / (snapDepth * u);
+        const snap = clamp(since * snapSpeed) * (1 + snapOvershoot * clamp(1 - since));
+        return (snapAlpha * snap + humAlpha * hum) * (1 - settle) * (0.75 + 0.25 * c.r);
+      }, as * (1 - settle) * (1 + hum), look);
+      if (as < 1) {
+        const half = rx * Math.sqrt(Math.max(0, 1 - ((scan - cy) / ry) ** 2));
+        const gradient = ctx.createLinearGradient(cx - half, 0, cx + half, 0);
+        gradient.addColorStop(0, `rgba(${scanColour},0)`);
+        gradient.addColorStop(0.5, `rgba(${scanCore},${scanAlpha})`);
+        gradient.addColorStop(1, `rgba(${scanColour},0)`);
+        ctx.fillStyle = gradient;
+        ctx.fillRect(cx - half, scan - scanWidth * u / 2, half * 2, scanWidth * u);
+      }
+      return;
+    }
+    const {
+      fade = attack ? [380, 640] : [500, 850],
+      flashMs = attack ? 260 : 300,
+      waveCount = attack ? 2 : 3,
+      waveGap = attack ? 100 : 110,
+      waveSpeed = attack ? 0.6 : 0.55
+    } = look.impact ?? {};
+    const {
+      cutMs = 62,
+      ms = 520,
+      flashMs: breakFlashMs = 160,
+      flashPeak: breakFlashPeak = 0.2,
+      flashEnd = 0.12,
+      flashFloor = 0.6,
+      travelAt = 0.1,
+      fadeAt = 0.3,
+      stride = 2,
+      expansion = 0.35,
+      drift: [driftX, driftY] = [10, 20],
+      rotation = 2,
+      width = 1.4,
+      cellScale = 0.73,
+      alpha: [floor, edge] = [0.4, 0.6]
+    } = look.scatter ?? {};
+    const pt = [cx + Math.cos(hitAngle) * rx * look.impactPointScale, cy + Math.sin(hitAngle) * ry * look.impactPointScale];
+    const fading = seg(t, hit + fade[0], hit + fade[1]);
+    const vis = seg(t, hit + look.visibleIn[0], hit + look.visibleIn[1]) * (1 - (attack ? fading : ease.inQuad(fading)));
+    const fp = pulse(t, hit, hit + flashMs, look.flashPeak);
+    if (vis > 0 && (!breaks || t < hit + cutMs))
+      drawBubble(
+        ctx,
+        B,
+        (c) => {
+          const d = Math.hypot(c.x - pt[0], c.y - pt[1]) / u;
+          let a = look.fieldAlpha * vis + fp * clamp(1 - d / look.flashRadius) * look.flashStrength;
+          for (let k2 = 0; k2 < waveCount; k2++) {
+            const R = (t - hit - k2 * waveGap) * waveSpeed;
+            if (R > 0) a += clamp(1 - Math.abs(d - R) / look.waveWidth) * (1 - clamp(R / look.waveReach)) * look.waveStrength[k2 === 0 ? 0 : 1];
+          }
+          return a * (0.75 + 0.25 * c.r);
+        },
+        vis * (1 + fp),
+        look
+      );
+    glow(ctx, ...pt, look.glowRadii[0] * u, look.glowColour, look.glowAlpha * fp);
+    glow(ctx, ...pt, look.glowRadii[1] * u, look.core, fp);
+    const tangent2 = Math.atan2(pt[1] - B.cy, pt[0] - B.cx) + Math.PI / 2;
+    const { count = 16, life = 380, speed = 0.7, spread: spread2 = 0.7, width: sparkWidth = 2 } = look.sparks ?? {};
+    for (let k2 = 0; k2 < 2; k2++)
+      sparks(
+        ctx,
+        t,
+        {
+          seed: 4 + k2,
+          n: count,
+          x: pt[0],
+          y: pt[1],
+          t0: hit,
+          life,
+          speed,
+          angle: tangent2 + k2 * Math.PI,
+          spread: spread2,
+          color: `rgba(${look.sparkColours[k2]},1)`,
+          width: sparkWidth
+        },
+        u
+      );
+    if (!breaks) return;
+    const sh = seg(t, hit, hit + ms);
+    if (sh <= 0 || sh >= 1) return;
+    const flash = pulse(t, hit, hit + breakFlashMs, breakFlashPeak);
+    drawBubble(ctx, B, () => sh < flashEnd ? flashFloor + flash : 0, (1 + flash) * (1 - sh), look);
+    ctx.save();
+    ctx.globalCompositeOperation = "lighter";
+    const k = ease.out(seg(sh, travelAt, 1));
+    cells(B).forEach((c, i) => {
+      if (i % stride) return;
+      const x2 = c.x + (c.x - B.cx) * expansion * k + noise(i, 2) * driftX * u * k, y2 = c.y + (c.y - B.cy) * expansion * k + driftY * u * k * k;
+      ctx.save();
+      ctx.translate(x2, y2);
+      ctx.rotate(noise(i, 5) * rotation * k);
+      ctx.strokeStyle = `rgba(${look.breakColour},${(1 - seg(sh, fadeAt, 1)) * (floor + edge * c.d ** 2)})`;
+      ctx.lineWidth = width * u;
+      hex(ctx, 0, 0, B.hex * cellScale);
+      ctx.stroke();
+      ctx.restore();
+    });
+    ctx.restore();
   };
 
   // components/effect-library/beam-canvas.ts
@@ -2055,7 +2893,27 @@ var FX = (() => {
       const h = typeof hm === "number" && call.dur > 0 ? Math.min(Math.max(hm, 0), call.dur * 0.8) : 0;
       const mid = h + (call.dur - h) / 2;
       const timer = setTimeout(swap, mid);
-      animate(h > 0 ? [{ transform: "scaleX(1)" }, { transform: "scaleX(1)", offset: h / call.dur }, { transform: "scaleX(0)", offset: mid / call.dur }, { transform: "scaleX(1)" }] : [{ transform: "scaleX(1)" }, { transform: "scaleX(0)" }, { transform: "scaleX(1)" }], { transform: "none" });
+      const vertical = call.step["axis"] === "y";
+      const direction = call.step["direction"];
+      if (direction === 1 || direction === -1) {
+        const perspective = typeof call.step["perspective"] === "number" ? call.step["perspective"] : 800;
+        const transform = (degrees) => `perspective(${perspective}px) rotate${vertical ? "X" : "Y"}(${degrees}deg)`;
+        const ease2 = call.step["ease"];
+        const easing = typeof ease2 === "string" ? EASE[ease2] ?? ease2 : "ease-in-out";
+        const edge = call.dur > 0 ? mid / call.dur : 0.5;
+        animate([
+          { transform: transform(0), easing },
+          ...h > 0 ? [{ transform: transform(0), offset: h / call.dur, easing }] : [],
+          { transform: transform(direction * 90), offset: edge },
+          { transform: transform(-direction * 90), offset: edge, easing },
+          { transform: transform(0) }
+        ], { transform: "none" }, { easing: "linear" });
+      } else {
+        const scale = vertical ? "scaleY" : "scaleX";
+        const rest = { transform: `${scale}(1)` };
+        const edge = { transform: `${scale}(0)` };
+        animate(h > 0 ? [rest, { ...rest, offset: h / call.dur }, { ...edge, offset: mid / call.dur }, rest] : [rest, edge, rest], { transform: "none" });
+      }
       return () => {
         clearTimeout(timer);
         swap();
@@ -2118,6 +2976,27 @@ var FX = (() => {
     verbs.register("column-beam", (call, run) => (call.step["curve"] ? curve : column2)?.(call, run));
     registerEffect(verbs, "collapse-jump", collapseJump);
     registerEffect(verbs, "rotating-beam", rotatingBeam);
+    registerEffect(verbs, "projectile", projectile);
+    const beam = verbs.get("projectile");
+    registerCanvasEffect(verbs, "projectile", bolt);
+    const shot = verbs.get("projectile");
+    verbs.register("projectile", (call, run) => (call.step["bolt"] ? shot : beam)?.(call, run));
+    registerCanvasEffect(verbs, "dissolve", dissolveSmoke);
+    const smoke2 = verbs.get("dissolve");
+    registerEffect(verbs, "dissolve", dissolve);
+    const burn = verbs.get("dissolve");
+    verbs.register("dissolve", (call, run) => {
+      const endBurn = burn?.(call, run);
+      const endSmoke = call.step["lift"] ? smoke2?.(call, run) : void 0;
+      return () => {
+        endSmoke?.();
+        endBurn?.();
+      };
+    });
+    registerEffect(verbs, "shatter", shatter);
+    registerEffect(verbs, "shimmer", shimmer);
+    registerEffect(verbs, "ring-pulse", ringPulse);
+    registerCanvasEffect(verbs, "shield-bubble", shieldBubble);
     registerCanvasEffect(verbs, "warp-transfer", spiralTransfer);
     const spiral = verbs.get("warp-transfer");
     registerEffect(verbs, "warp-transfer", warpTransfer);

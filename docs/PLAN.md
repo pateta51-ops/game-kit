@@ -464,7 +464,7 @@ Every game's animations are rebuilt on `motion-frame` and `effect-library`; game
 | K331 | M8 `sound-player`: check against Warp's `mixer.ts`/`engine.ts` (priority stealing, 40 ms dedupe, ducking, seeded playlist) and lift what it lacks | Warp's `fx/cue.ts`, `mixer.ts`, `engine.ts`; Unstoppable `cues.ts` | M | open |
 | K332 | Effects, flights and paths: `arc-move`, `multi-stop-path`, `trail`; lab demo, contact sheet, a preset per game look | study §3 | M | done |
 | K333 | Effects, beams and transfers: `warp-transfer`, `column-beam`, `rotating-beam`, `radial-streaks`, `collapse-jump` | study §3 | M | done |
-| K334 | Effects, combat: `projectile`, `dissolve`, `shatter`, `shimmer`, `shield-bubble`, `ring-pulse` | study §3 | M | open |
+| K334 | Effects, combat: `projectile`, `dissolve`, `shatter`, `shimmer`, `shield-bubble`, `ring-pulse` | study §3 | M | done |
 | K335 | Effects, signals and staging: `stamp`, `motes`, `flicker`, `bar-fill`, `camera-pull`, `letterbox-banner`, `unroll`, `shake-group`, `plasma-orb`, `drift-cloud`, `tumble-3d`, `pile-lift`, `crumple` (after K330); settings added to `glow`, `flip`, `scale` | study §3 | L | open |
 | K336 | Retrofit STCC: one beat per event or chunk in event order, log line on `onBeatStart`, `src/ui/motion` deleted; before/after recording of a full turn at 4K approved by the owner | STCC | L | open |
 | K337 | Retrofit Warp's Edge (same terms) | Warp's Edge | L | open |

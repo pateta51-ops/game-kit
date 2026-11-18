@@ -6,6 +6,10 @@ import { registerCanvasEffect } from './canvas.ts';
 import { arcMove, multiStopMove } from './flight-effects.ts';
 import { trail } from './trail.ts';
 import { columnBeam, rotatingBeam } from './beams.ts';
+import { projectile, ringPulse, shimmer } from './combat-dom.ts';
+import { bolt } from './combat-canvas.ts';
+import { dissolve, dissolveSmoke, shatter } from './break-effects.ts';
+import { shieldBubble } from './shield-bubble.ts';
 import { curvedBeam, radialStreaks } from './beam-canvas.ts';
 import { collapseJump } from './collapse.ts';
 import { warpTransfer } from './transfer.ts';
@@ -131,7 +135,27 @@ export const BUILT_IN: Readonly<Record<string, Effect>> = {
     const h = typeof hm === 'number' && call.dur > 0 ? Math.min(Math.max(hm, 0), call.dur * 0.8) : 0;
     const mid = h + (call.dur - h) / 2;
     const timer = setTimeout(swap, mid);
-    animate(h > 0 ? [{ transform: 'scaleX(1)' }, { transform: 'scaleX(1)', offset: h / call.dur }, { transform: 'scaleX(0)', offset: mid / call.dur }, { transform: 'scaleX(1)' }] : [{ transform: 'scaleX(1)' }, { transform: 'scaleX(0)' }, { transform: 'scaleX(1)' }], { transform: 'none' });
+    const vertical = call.step['axis'] === 'y';
+    const direction = call.step['direction'];
+    if (direction === 1 || direction === -1) {
+      const perspective = typeof call.step['perspective'] === 'number' ? call.step['perspective'] : 800;
+      const transform = (degrees: number) => `perspective(${perspective}px) rotate${vertical ? 'X' : 'Y'}(${degrees}deg)`;
+      const ease = call.step['ease'];
+      const easing = typeof ease === 'string' ? EASE[ease] ?? ease : 'ease-in-out';
+      const edge = call.dur > 0 ? mid / call.dur : .5;
+      animate([
+        { transform: transform(0), easing },
+        ...(h > 0 ? [{ transform: transform(0), offset: h / call.dur, easing }] : []),
+        { transform: transform(direction * 90), offset: edge },
+        { transform: transform(-direction * 90), offset: edge, easing },
+        { transform: transform(0) },
+      ], { transform: 'none' }, { easing: 'linear' });
+    } else {
+      const scale = vertical ? 'scaleY' : 'scaleX';
+      const rest = { transform: `${scale}(1)` };
+      const edge = { transform: `${scale}(0)` };
+      animate(h > 0 ? [rest, { ...rest, offset: h / call.dur }, { ...edge, offset: mid / call.dur }, rest] : [rest, edge, rest], { transform: 'none' });
+    }
     return () => {
       clearTimeout(timer);
       swap();
@@ -200,6 +224,27 @@ export function registerEffects(verbs: VerbRegistry<EffectCtx>, o?: LayerOptions
   verbs.register('column-beam', (call, run) => (call.step['curve'] ? curve : column)?.(call, run));
   registerEffect(verbs, 'collapse-jump', collapseJump);
   registerEffect(verbs, 'rotating-beam', rotatingBeam);
+  registerEffect(verbs, 'projectile', projectile);
+  const beam = verbs.get('projectile');
+  registerCanvasEffect(verbs, 'projectile', bolt);
+  const shot = verbs.get('projectile');
+  verbs.register('projectile', (call, run) => (call.step['bolt'] ? shot : beam)?.(call, run));
+  registerCanvasEffect(verbs, 'dissolve', dissolveSmoke);
+  const smoke = verbs.get('dissolve');
+  registerEffect(verbs, 'dissolve', dissolve);
+  const burn = verbs.get('dissolve');
+  verbs.register('dissolve', (call, run) => {
+    const endBurn = burn?.(call, run);
+    const endSmoke = call.step['lift'] ? smoke?.(call, run) : undefined;
+    return () => {
+      endSmoke?.();
+      endBurn?.();
+    };
+  });
+  registerEffect(verbs, 'shatter', shatter);
+  registerEffect(verbs, 'shimmer', shimmer);
+  registerEffect(verbs, 'ring-pulse', ringPulse);
+  registerCanvasEffect(verbs, 'shield-bubble', shieldBubble);
   registerCanvasEffect(verbs, 'warp-transfer', spiralTransfer);
   const spiral = verbs.get('warp-transfer');
   registerEffect(verbs, 'warp-transfer', warpTransfer);

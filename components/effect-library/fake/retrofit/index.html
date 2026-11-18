@@ -46,8 +46,14 @@
   .beam-panel .flight-target { left: 73%; width: 6%; border-radius: 50% }
   .beam-panel .card { height: 42%; width: 14%; top: 35%; left: 43% }
   .beam-panel .radial-origin { position: absolute; inset: 49% 49%; }
+  .combat-panel { display: none; background: #292733; color: #ebe9f2 }
+  .combat-only main > :not(.combat-panel) { display: none }
+  .combat-only .combat-panel { display: block }
+  .combat-panel .card { position: absolute; top: 38%; width: 18%; height: 35%; left: 41% }
+  .combat-panel .shot-source { left: 18%; top: 62% }
+  .combat-panel .shot-target { left: 70%; top: 43% }
 </style>
-<script>if (new URLSearchParams(location.search).has('flights')) document.documentElement.classList.add('flights-only');if (new URLSearchParams(location.search).has('beams')) document.documentElement.classList.add('beams-only')</script>
+<script>if (new URLSearchParams(location.search).has('flights')) document.documentElement.classList.add('flights-only');if (new URLSearchParams(location.search).has('beams')) document.documentElement.classList.add('beams-only');if (new URLSearchParams(location.search).has('combat')) document.documentElement.classList.add('combat-only')</script>
 <header><h1>Effect library motion lab</h1><button type="button">Replay</button></header>
 <main>
   <section class="field flight-source"><h2>Arc move</h2><div id="ball" class="ball sample"></div><div id="landing" class="landing"></div></section>
@@ -75,8 +81,15 @@
     <div id="via-rest" class="flight-target" style="left:45%;top:25%;width:15%"></div>
     <div id="via-target" class="flight-target" style="left:77%;top:58%;width:9%"></div>
   </section>
+  <section class="combat-panel"><h2>Projectile</h2><div id="shot-source" class="card shot-source"></div><div id="shot-target" class="card shot-target"></div></section>
+  <section class="combat-panel"><h2>Dissolve</h2><div id="dissolve" class="card sample">Sample</div></section>
+  <section class="combat-panel"><h2>Shatter</h2><div id="shatter" class="card sample">Sample</div></section>
+  <section class="combat-panel"><h2>Shimmer</h2><div id="shimmer" class="card"></div></section>
+  <section class="combat-panel"><h2>Shield bubble</h2><div id="shield-bubble" class="card"></div></section>
+  <section class="combat-panel"><h2>Ring pulse</h2><div id="ring-pulse" class="card"></div></section>
 </main>
 <script type="module" src="./lab.ts"></script>
 <script type="module" src="./flights.ts"></script>
 <script type="module" src="./beams.ts"></script>
+<script type="module" src="./combat.ts"></script>
 </html>

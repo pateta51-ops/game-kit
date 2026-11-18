@@ -16,3 +16,7 @@ export type { CurvedBeamSettings, RadialSettings } from './beam-canvas.ts';
 export type { CollapseSettings } from './collapse.ts';
 export type { TransferSettings } from './transfer.ts';
 export type { SpiralSettings } from './spiral.ts';
+export type { ProjectileSettings, RingPulseSettings, ShimmerSettings } from './combat-dom.ts';
+export type { BoltSettings } from './combat-canvas.ts';
+export type { DissolveSettings, ShatterSettings } from './break-effects.ts';
+export type { ShieldBubbleSettings } from './shield-bubble.ts';

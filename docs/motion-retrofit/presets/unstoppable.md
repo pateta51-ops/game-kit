@@ -27,3 +27,20 @@ export const unstoppable = {
   },
 } as const;
 ```
+
+### Hit flash
+
+Source `52c19f6`, `src/ui/board/TargetArrow.tsx`, `src/ui/theme/motion.css`, `src/ui/play/arrow.ts`. Use `ring-pulse` at the target centre with a square side of `Math.max(48, Math.min(width,height)*.9)` px. Set `width: 0`, `dur: 420`, `count: 1`, `easing: 'ease-out'`, and:
+
+```ts
+const flash = {
+  background: 'radial-gradient(circle, rgb(255 250 220 / .95) 0, rgb(255 180 70 / .75) 30%, rgb(255 70 40 / .35) 52%, rgb(255 60 30 / 0) 70%)',
+  frames: [
+    { transform: 'scale(.25)', opacity: 1 },
+    { transform: 'scale(1)', opacity: .85, offset: .35 },
+    { transform: 'scale(1.35)', opacity: 0 },
+  ],
+};
+```
+
+The game resolves the arrow, target, damage and timing of the damage tokens. The target shake is a companion step lasting 75% of the flash.
