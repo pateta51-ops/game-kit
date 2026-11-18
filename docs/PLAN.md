@@ -516,7 +516,7 @@ The kit holds every game's parts, then every game is retrofitted onto them (owne
 | K368 | [12] Zoom and hover-preview placement: right/left/below/above with margin, kept on screen (extend card-zoom) | docs/INVENTORY.md item 12; Warps, Unst | S | done |
 | K369 | [13] Looked-at cards: memory of cards the player peeked at plus the large look-at view (new looked-at) | docs/INVENTORY.md item 13; ER, IH | S | open |
 | K370 | [14] Rules screen: rulebook as data, word search, headings, rule diagrams over card faces and icons (new rules-screen) | docs/INVENTORY.md item 14; Jarl, UFS, Unst | M | open |
-| K371 | [15] Browser and runtime perf capture: load timing, render counters, exact compare, dispatch cost (extend perf) | docs/INVENTORY.md item 15; 7IS, Rome | M | open |
+| K371 | [15] Browser and runtime perf capture: load timing, render counters, exact compare, dispatch cost (extend perf) | docs/INVENTORY.md item 15; 7IS, Rome | M | done |
 | K372 | [16] Dev autoplay: ?dev=1 plays the store with a bot up to a chosen prompt kind (new dev-autoplay, uses sim-pool drivers) | docs/INVENTORY.md item 16; 7IS, Unst | S | open |
 | K373 | [17] Scan-based board parts: state drawn over a printed scan's boxes, die-cut pieces at true size, playmat box detection, outline tracing, tone profile, finite supply (extend scan-ingest and token-bag) | docs/INVENTORY.md item 17; ER, Unst, Radiance | L | open |
 | K374 | [18] Art pipeline: one chosen image per card, fetch, extract, CI cache, faces rendered from PnP PDFs, copy to public with a manifest (new art-pipeline) | docs/INVENTORY.md item 18; 7IS, ER, Astra | L | open |

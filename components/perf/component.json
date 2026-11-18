@@ -11,7 +11,9 @@
     "grafts": [
       { "game": "imp", "commit": "20a033a", "paths": ["scripts/perf.ts (measure and formatReport apart from the command line, the output function passed in)"] },
       { "game": "unst", "commit": "9e666b4", "paths": ["scripts/bench-apply.ts (--budget, the clock passed in, several warm-up games, a budget with no timed call fails)"] },
-      { "game": "ebr", "commit": "33b5abd3", "paths": ["scripts/perf.ts:18-60 (the ten slowest actions with game, index and prompt kind)"] }
+      { "game": "ebr", "commit": "33b5abd3", "paths": ["scripts/perf.ts:18-60 (the ten slowest actions with game, index and prompt kind)"] },
+      { "game": "7is", "commit": "5e0ad51", "paths": ["scripts/perf-dispatch.mjs", "scripts/perf-browser.mjs"] },
+      { "game": "rome", "commit": "e76d56f", "paths": ["scripts/perf/browser.mjs", "scripts/perf/runtime.mjs", "scripts/perf/compare.mjs"] }
     ]
   },
   "needs": ["engine-core", "sim-pool"],

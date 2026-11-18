@@ -649,9 +649,9 @@ What the table shows while an answer's events play one step at a time. Pure, no 
 
 The engine speed budget: plays whole driver games, times every `applyAction`, and fails when a percentile reaches its limit. Needs `engine-core` and `sim-pool` (the game and driver contract is sim-pool's `SimGame<G>`).
 
-- **Use it when:** A speed budget for `applyAction` over whole driver games.
+- **Use it when:** A speed budget for `applyAction` over whole driver games; browser load, render and dispatch capture; exact compare of two results.
 - **Not for:** Bundle size (bundle-size).
-- **Key exports:** `REPEATS`, `SLOWEST`, `distribution`, `expectBudgets`, `formatReport`, `measure`, `overBudget`, `percentile`, `reportOf`, `timeGame`, `run`, `Budgets`, `Distribution`, `PerfGame`, and 4 more
+- **Key exports:** `REPEATS`, `SLOWEST`, `distribution`, `expectBudgets`, `formatReport`, `measure`, `overBudget`, `percentile`, `reportOf`, `timeGame`, `run`, `OBSERVE`, `capture`, `compare`, and 22 more
 - **Needs:** [`engine-core`](#engine-core), [`sim-pool`](#sim-pool)
 - **Came from:** stcc
 - **Docs:** [README](../components/perf/README.md)

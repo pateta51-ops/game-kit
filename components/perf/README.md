@@ -40,3 +40,43 @@ const specs = [0, 1, 2].map((index) => ({ index, seed: `perf-${String(index)}`, 
 // throws when the 95th percentile of applyAction goes over 5 ms
 expectBudgets(() => measure(perfGame, CONTENT, specs), { apply: { p95: 5 } })
 ```
+
+## Browser and runtime capture
+
+The same component also measures a built app in a browser (Playwright, run in WSL or CI; the unit tests use a fake page) and compares two results. Bundle sizes are not measured here: use `bundle-size`.
+
+`capture-cli.ts` opens the game's URL `runs` times (default 3) and writes one JSON: load timing (time to first byte, DOMContentLoaded, load end, first paint, first contentful paint, long tasks: count, total and longest ms; the median of the runs), `counters` (numbers the game exposes, read after load), and `dispatch`: for each action, the synchronous cost of the dispatch and the time to the paint after it (two frames), as n/p50/p95/max, plus how much each counter grew over all actions.
+
+```
+node kit/perf/capture-cli.ts --config perf-capture.json --out perf-after.json
+```
+
+```json
+{
+  "url": "http://localhost:6011/?seed=perf#/game",
+  "ready": "window.__game !== undefined",
+  "counters": "window.__perfCounters()",
+  "dispatch": "window.__game.getState().dispatch",
+  "actions": [{ "type": "answer", "choice": 0 }],
+  "runs": 3, "viewport": { "width": 1280, "height": 800 }, "cpuThrottle": 4
+}
+```
+
+`ready`, `counters` and `dispatch` are page expressions (`counters` returns an object of numbers, `dispatch` a function taking one action); `actions` are passed as JSON. A game without a store exposes a hook and names it in `dispatch`. Playwright is the game's own dependency: the CLI resolves `playwright` from the game's node_modules (`kit/` sits inside the game), so run it from the game; `NODE_PATH` does not apply to ESM. Without `--out` the JSON goes to stdout. A number present before and missing after is a regression (a lost measurement); a new one is only listed as changed.
+
+`compare-cli.ts` diffs two results number by number (exit 0 no regression, 1 regression, 2 bad usage):
+
+```
+node kit/perf/compare-cli.ts perf-before.json perf-after.json [--threshold 10] [--min-ms 1] [--limit dispatch.paintMs.p95=25]
+```
+
+Counters and counts (`counters.*`, `dispatch.counters.*`, `dispatch.actions`, any `.n`) are exact: any increase is a regression, a decrease is listed as changed. Timings regress when they grow by more than `--threshold` percent and at least `--min-ms`; `--limit path=pct` sets one path. Every difference is printed.
+
+```ts
+import { compare, formatComparison } from '../kit/perf/index'
+
+const before = { load: { loadEnd: 100 }, counters: { renders: 10 } }
+const after = { load: { loadEnd: 150 }, counters: { renders: 10 } }
+const result = compare(before, after, { thresholdPct: 10 })
+console.log(formatComparison(result)) // REGRESSION load.loadEnd: 100 -> 150 (+50%)
+```
