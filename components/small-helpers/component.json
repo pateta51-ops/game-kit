@@ -6,6 +6,8 @@
     "paths": [
       "docs/evaluation/outside/boardgameio-deckbuilders.md items 6, 7, 11 (arkham.build deck-validation.spec.ts and lookup-tables.types.ts, boardgame.io src/plugins/events/events.ts, netrunnerdb web/js/nrdb.format.js)",
       "docs/evaluation/outside/halogenandtoast.md items 14, 17 (ArkhamHorror validate/Main.hs, tests/Arkham/MissingCustomCardSpec.hs)"
+      ,"rome-fate-of-an-empire-fan-prototype src/ui/components/assets.ts @399ab2d (pub, cssUrl, icon/face URLs; generalised)",
+      "unstoppable-fan-prototype src/ui/format.ts (plural)"
     ],
     "note": "New code written from the write-ups; no source file was copied. Ideas from boardgame.io (MIT), netrunnerdb (MIT), arkham.build and ArkhamHorror."
   },

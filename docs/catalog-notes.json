@@ -296,7 +296,7 @@
     "not": "A driver's strategy (the game or opponent supplies it)."
   },
   "small-helpers": {
-    "use": "Icon with hidden word, text-key check, paired legality fixtures, relation index.",
+    "use": "Icon with hidden word, text-key check, paired legality fixtures, relation index, base-aware asset paths, plural and number formats.",
     "not": "Anything with its own component."
   },
   "sound-player": {

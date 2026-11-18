@@ -1,4 +1,6 @@
 // Small helpers from the outside harvest (K109). Pure functions, no packages.
+export * from './assets.ts';
+export * from './format.ts';
 
 // Icon emitted with a hidden word (netrunnerdb nrdb.format.js idea): copy, search and text assertions see the word.
 const esc = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
