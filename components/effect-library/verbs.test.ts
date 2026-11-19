@@ -17,7 +17,7 @@ function setup(step: Partial<Step> & Pick<Step, 'do'>) {
   const context = registerEffects(verbs);
   const timeline = buildTimeline({
     id: 'k435', actors: [{ id: 'piece', at: [50, 50], w: 20, h: 40 }],
-    steps: [{ t: 0, actor: 'piece', dur: 100, to: [150, 80], ...step }],
+    steps: [{ t: 0, actor: 'piece', dur: 100, to: [150, 80], ...step }, { t: 100, actor: 'piece', dur: 100, do: 'show' }],
   }, () => undefined);
   const call = timeline.calls[0]!;
   const run = { id: 1, context, timeline };
@@ -44,7 +44,7 @@ describe('K435 effect verb options', () => {
     await Promise.resolve();
     expect(f.a.cancel).toHaveBeenCalledTimes(1);
   });
-  it('K435-0 a skip (the layer ends the run in the same turn) still ends at once', () => {
+  it('K435-0 the layer ending the run (a skip, the beat end) ends a waiting step at once', () => {
     const f = fakeAnim(true);
     animate.mockReturnValue(f.a as unknown as Animation);
     const { end, context, run } = setup({ do: 'fade-in' });

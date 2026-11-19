@@ -1,6 +1,6 @@
 // The built-in verbs of the director's spec format as DOM effects (Web Animations API), plus the way a game adds its own.
 import type { Run, VerbCall, VerbRegistry } from '../motion-frame/index.ts';
-import { createEffectLayer, place, type EffectLayer, type LayerOptions } from './layer.ts';
+import { createEffectLayer, endOnFinished, place, type EffectLayer, type LayerOptions } from './layer.ts';
 
 import { registerCanvasEffect } from './canvas.ts';
 import { arcMove, multiStopMove } from './flight-effects.ts';
@@ -65,19 +65,26 @@ export function registerEffect(verbs: VerbRegistry<EffectCtx>, name: string, eff
     const layer = run.context;
     const el = layer.actor(run, call.actor, call.from);
     const done: (() => void)[] = [];
+    const anims = new Set<Animation>();
+    const all = (): Animation[] => (typeof el.getAnimations === 'function' ? el.getAnimations({ subtree: true }) : []);
+    const before = new Set(all());
     const animate: Fx['animate'] = (keyframes, end, opts) => {
       const a = el.animate(keyframes, { duration: Math.max(call.dur, 1), fill: 'both', easing: EASE[String(call.step['ease'])] ?? (typeof call.step['ease'] === 'string' ? call.step['ease'] : 'ease-in-out'), ...opts });
       done.push(() => {
         if (end) css(el, end);
         a.cancel();
       });
+      anims.add(a);
     };
     const own = effect({ call, run, el, layer, animate });
     if (own) done.push(own);
+    for (const a of all()) if (!before.has(a)) anims.add(a);
     return () => {
-      done.forEach((f) => {
-        f();
-      });
+      endOnFinished(layer, run, [...anims], () => {
+        done.forEach((f) => {
+          f();
+        });
+      }, call.dur, call.t + call.dur >= run.timeline.ms);
     };
   });
 }

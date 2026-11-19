@@ -40,6 +40,41 @@ export interface EffectLayer {
   clear(): void;
 }
 
+const waits = new WeakMap<object, Map<number, Set<() => void>>>();
+const left = (a: Animation): number => {
+  const c = a.effect?.getComputedTiming();
+  return (Number(c?.endTime ?? 0) - Number(c?.localTime ?? 0)) / Math.abs(a.playbackRate || 1);
+};
+/**
+ * K435-0: a step end that comes while its animations still run for at most `min(250 ms, 40% of dur)` (they started late: a slow
+ * frame) waits for their `finished` (a timer of their time left + 100 ms as the fallback); earlier (a skip), or at the beat's
+ * end (`last`), it ends at once. The layer's `end(run)` or `clear()` flushes a waiting end.
+ */
+export function endOnFinished(layer: object, run: { id: number }, anims: readonly Animation[], end: () => void, dur = Infinity, last = false): void {
+  const running = anims.filter((a) => a.playState === 'running' && Number.isFinite(Number(a.effect?.getComputedTiming().endTime ?? 0)));
+  if (last || running.length === 0 || Math.max(...running.map(left)) > Math.min(250, dur * 0.4)) return end();
+  let m = waits.get(layer);
+  if (!m) waits.set(layer, (m = new Map<number, Set<() => void>>()));
+  let set = m.get(run.id);
+  if (!set) m.set(run.id, (set = new Set()));
+  const s = set;
+  const flush = (): void => {
+    if (!s.delete(flush)) return;
+    clearTimeout(timer);
+    end();
+  };
+  s.add(flush);
+  const timer = setTimeout(flush, Math.max(0, ...running.map(left)) + 100);
+  Promise.all(running.map((a) => a.finished)).then(flush, flush);
+}
+/** K435-0: ends the run's (all runs': no run) step ends still waiting on their animations */
+export function flushEnds(layer: object, run?: { id: number }): void {
+  const m = waits.get(layer);
+  for (const set of run ? [m?.get(run.id)] : [...(m?.values() ?? [])]) for (const f of [...(set ?? [])]) f();
+  if (run) m?.delete(run.id);
+  else waits.delete(layer);
+}
+
 export const place = (el: HTMLElement, r: Rect): void => {
   const s = el.style;
   s.left = `${String(r[0])}px`;
@@ -138,6 +173,7 @@ export function createEffectLayer(o: LayerOptions = {}): EffectLayer {
       return a;
     },
     end(run) {
+      flushEnds(self, run);
       endGlEffects(self, run);
       runs.get(run.id)?.forEach((a) => {
         a.remove();
@@ -146,6 +182,7 @@ export function createEffectLayer(o: LayerOptions = {}): EffectLayer {
       restore(run.id);
     },
     clear() {
+      flushEnds(self);
       endGlEffects(self);
       for (const id of sources.keys()) restore(id);
       runs.clear();
