@@ -1,7 +1,9 @@
+import type { Rect } from '../motion-frame/index.ts';
 import type { Effect } from './effects.ts';
 import { place } from './layer.ts';
 import { centre, px, rand, scene } from './beam-dom.ts';
 
+import { COLLAPSE_DEFAULTS as D } from './defaults.ts';
 type Scene = ReturnType<typeof scene>;
 const spread = (n: number) =>
   Array.from({ length: n }, (_, i) => {
@@ -90,12 +92,14 @@ export interface CollapseSettings {
   outMs?: number;
   gapMs?: number;
   inMs?: number;
+  /** called once, when the collapse has ended and the hold begins (the actor is invisible: swap content or move the real piece); on a skip it is called at the end if it has not run */
+  holdBetween?: (info: { el: HTMLElement; from: Rect; to: Rect }) => void;
 }
 
 export const collapseJump: Effect = ({ call, el, layer, run, animate }) => {
-  const { colour = 'rgb(255 255 255 / .95)', n = 16, reach = 2.4, length = 1.5,
+  const { colour = D.colour, n = D.n, reach = D.reach, length = D.length,
     pointLight = 'radial-gradient(circle, white 0 12%, rgb(255 255 255 / .75) 26%, transparent 62%)',
-    outMs = 640, gapMs = 140, inMs = 640 } = call.step as CollapseSettings;
+    outMs = D.outMs, gapMs = D.gapMs, inMs = D.inMs, holdBetween } = call.step as CollapseSettings;
   const stage = scene({ call, el, layer, run, animate });
   const to = call.to ?? call.from;
   const inAt = outMs + gapMs;
@@ -112,7 +116,16 @@ export const collapseJump: Effect = ({ call, el, layer, run, animate }) => {
     streaks(stage, x, y, size, way, ms, start, n, colour, reach, length);
     point(stage, x, y, size, way, ms, start, pointLight);
   }
+  let held = holdBetween === undefined;
+  const hold = (): void => {
+    if (held) return;
+    held = true;
+    holdBetween?.({ el, from: call.from, to });
+  };
+  const timer = setTimeout(hold, outMs * (call.dur / Math.max(1, Number(call.step.dur))));
   return () => {
+    clearTimeout(timer);
+    hold();
     stage.end();
     place(el, to);
     el.style.opacity = '1';

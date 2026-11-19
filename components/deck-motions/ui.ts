@@ -37,6 +37,10 @@ export interface DeckMotionOpts {
   perspective?: number;
   flipStart?: number;
   flipEnd?: number;
+  /** K443: the lift's shape (0..1 across the turn gives the share of the lift; default a sine), and the flight's timing in ms at speed 1 (default DEAL_MS 520, STAGGER_MS 90). */
+  liftCurve?: (u: number) => number;
+  dealMs?: number;
+  staggerMs?: number;
 }
 
 const live = new Set<Animation>();
@@ -116,7 +120,7 @@ export const turnsOver = (move: Move): boolean => {
 export function dealFrom(given: readonly Move[], o: DeckMotionOpts & { shuffled?: readonly string[]; departs?: boolean; onCardStart?: (index: number, id: string) => void; signal?: AbortSignal | undefined } = {}): Dealing {
   const speed = reduced() ? 0 : (o.speed ?? 1);
   const moves = given.map((m) => ({ ...m, faceDown: turnsOver(m) }));
-  const plan = planDeal(moves, { speed, shuffled: o.shuffled, departs: o.departs, riffleMs: o.durations ? sum(o.durations) : undefined });
+  const plan = planDeal(moves, { speed, shuffled: o.shuffled, departs: o.departs, riffleMs: o.durations ? sum(o.durations) : undefined, dealMs: o.dealMs, staggerMs: o.staggerMs });
   const face = o.face ?? ((_id: string, el: HTMLElement) => el.cloneNode(true) as HTMLElement);
   const ends: Promise<void>[] = [];
   const mine: Animation[] = [];
@@ -139,7 +143,14 @@ export function dealFrom(given: readonly Move[], o: DeckMotionOpts & { shuffled?
     const pr = pileEl.getBoundingClientRect();
     const ar = atEl.getBoundingClientRect();
     const [from, to] = move.dir === 'out' ? [pr, ar] : [ar, pr];
-    const start = `translate(${String(from.left - to.left)}px, ${String(from.top - to.top)}px) scale(${String(from.width / (to.width || 1))}, ${String(from.height / (to.height || 1))})`;
+    const f0 = move.from;
+    const dx = from.left - to.left + (f0?.x ?? 0);
+    const dy = from.top - to.top + (f0?.y ?? 0);
+    const sx = from.width / (to.width || 1) * (f0?.scale ?? 1);
+    const sy = from.height / (to.height || 1) * (f0?.scale ?? 1);
+    const rest = move.turn ? `rotate(${String(move.turn)}deg)` : '';
+    const start = `translate(${String(dx)}px, ${String(dy)}px) scale(${String(sx)}, ${String(sy)})${f0?.tilt ? ` rotate(${String(f0.tilt)}deg)` : ''}`;
+    const end = rest ? `${REST} ${rest}` : REST;
     const stand = (el: HTMLElement) => {
       el.removeAttribute('data-card-id');
       el.dataset['motionStandin'] = '';
@@ -155,16 +166,16 @@ export function dealFrom(given: readonly Move[], o: DeckMotionOpts & { shuffled?
       const back = stand((o.back ?? cardBack)(move.pile, from));
       const card = stand(face(move.id, atEl));
       const [first, second] = move.dir === 'out' ? [back, card] : [card, back];
-      const fr = flipFrames({ x: from.left - to.left, y: from.top - to.top, sx: from.width / (to.width || 1), sy: from.height / (to.height || 1) }, {
-        lift: o.flipLift ?? (t.lift !== 1 ? t.lift : FLIP_LIFT), perspective: o.perspective, start: o.flipStart, end: o.flipEnd, axis: o.axis, direction: o.direction, vanish: t.vanish,
+      const fr = flipFrames({ x: dx, y: dy, sx, sy, rot: f0?.tilt, rest: move.turn }, {
+        lift: o.flipLift ?? (t.lift !== 1 ? t.lift : FLIP_LIFT), perspective: o.perspective, start: o.flipStart, end: o.flipEnd, axis: o.axis, direction: o.direction, vanish: t.vanish, liftCurve: o.liftCurve,
       });
       fly(first, fr.first);
       fly(second, fr.second);
       continue;
     }
     const el = stand(move.faceDown ? (o.back ?? cardBack)(move.pile, from) : face(move.id, atEl));
-    const mid = t.lift !== 1 ? [{ transform: `${REST} scale(${String(t.lift)})`, offset: 0.5 }] : [];
-    fly(el, [{ transform: start, offset: 0 }, ...mid, { transform: REST, offset: 1, ...(t.vanish ? { opacity: 0 } : {}) }]);
+    const mid = t.lift !== 1 ? [{ transform: `${end} scale(${String(t.lift)})`, offset: 0.5 }] : [];
+    fly(el, [{ transform: start, offset: 0 }, ...mid, { transform: end, offset: 1, ...(t.vanish ? { opacity: 0 } : {}) }]);
   }
   let stopRif = () => undefined as void;
   const rif = plan.shuffling.length

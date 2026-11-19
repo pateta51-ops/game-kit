@@ -1,5 +1,6 @@
 import type { Rect } from '../motion-frame/index.ts';
 import type { Effect } from './effects.ts';
+import { COLUMN_BEAM_DEFAULTS as C, ROTATING_BEAM_DEFAULTS as R } from './defaults.ts';
 import { centre, px, rand, scene } from './beam-dom.ts';
 
 export interface RotatingBeamSettings {
@@ -11,7 +12,7 @@ export interface RotatingBeamSettings {
 
 export const rotatingBeam: Effect = (fx) => {
   const { call } = fx;
-  const { colour = '255 255 255', turns = 2, beamDeg = 46, fadeMs = 160 } = call.step as RotatingBeamSettings;
+  const { colour = R.colour, turns = R.turns, beamDeg = R.beamDeg, fadeMs = R.fadeMs } = call.step as RotatingBeamSettings;
   const stage = scene(fx);
   const ms = call.step.dur;
   const [x, y] = centre(call.from);
@@ -53,14 +54,16 @@ export interface ColumnBeamSettings {
   coreLight?: string;
   speckColour?: string;
   speckGlow?: string;
+  /** z-index of the actor over the core light (default 2: under the core; 3 puts it above the core, under the specks) */
+  actorZ?: number;
 }
 
 export const columnBeam: Effect = (fx) => {
   const { call, el, animate } = fx;
-  const { colour = '255 255 255', way = 'out', tuck = 0, column = call.from, glitter = 56, speck = 1, core = false,
+  const { colour = C.colour, way = C.way, tuck = C.tuck, column = call.from, glitter = C.glitter, speck = C.speck, core = C.core,
     columnLight = `radial-gradient(ellipse 46% 50% at 50% 55%, rgb(${colour} / .9), rgb(${colour} / .45) 45%, rgb(${colour} / .12) 70%, transparent 85%)`,
     coreLight = `radial-gradient(ellipse 50% 50% at 50% 55%, rgb(255 255 255 / .95), rgb(${colour} / .6) 40%, transparent 80%)`,
-    speckColour = 'white', speckGlow = `rgb(${colour} / .85)` } = call.step as ColumnBeamSettings;
+    speckColour = C.speckColour, speckGlow = `rgb(${colour} / .85)`, actorZ = C.actorZ } = call.step as ColumnBeamSettings;
   const stage = scene(fx);
   const [x, y, w, h] = column;
   const [ax, ay, aw, ah] = call.from;
@@ -110,6 +113,6 @@ export const columnBeam: Effect = (fx) => {
     { offset: .35, opacity: 0, filter: 'brightness(2.4)', easing: 'ease-out' },
     { offset: .8, opacity: 1, filter: 'brightness(1.5)', easing: 'ease-in-out' },
     { offset: 1, opacity: 1, filter: 'brightness(1)' },
-  ]).map((frame) => ({ ...frame, clipPath, zIndex: '2' })), { opacity: out ? '0' : '1', clipPath }, { easing: 'linear' });
+  ]).map((frame) => ({ ...frame, clipPath, zIndex: String(actorZ) })), { opacity: out ? '0' : '1', clipPath }, { easing: 'linear' });
   return stage.end;
 };
