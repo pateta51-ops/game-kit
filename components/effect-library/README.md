@@ -133,7 +133,7 @@ The [beam lab](fake/retrofit/index.html?beams) shows all five verbs. Coordinates
 - `radial-streaks` takes `count`, `centre`, `inward`, `unit`, `seed`, `alpha` and a three-colour RGB `palette` (comma-separated triplets). Optional `pulse` draws a flight ribbon from `centre` to `to` with `lift`, `flightMs`, `colour` and `core`.
 - `collapse-jump` collapses the actor and expands it at `to`. `colour` is a CSS streak colour, `n` sets the streak count, and `reach` and `length` are multiples of the larger actor dimension. `pointLight` is the flash background. `outMs`, `gapMs` and `inMs` default to 640, 140 and 640. Allow up to another 12% of `inMs` for the delayed streaks.
 - `column-beam` takes `way` (in or out), `colour` (space-separated RGB), `tuck` (pixels clipped from the bottom), optional `column` rectangle, `glitter` count, `speck` size multiplier, `core` toggle, `columnLight` and `coreLight` backgrounds, `speckColour` and `speckGlow`. With `curve`, the beam follows a quadratic to `to` using a stage `control` point, `unit`, comma-separated `colour` and `moteColour`, CSS `sparkColour`, optional `image`, start/end `size` and a boolean `tuck` for shrinking into the emitter. The curved sequence uses a 1,200 ms step.
-- `rotating-beam` takes `colour` (space-separated RGB), `turns`, `beamDeg` and `fadeMs`. The wedge is centred on the actor; use `dur` to set its turn rate.
+- `rotating-beam` takes `colour` (space-separated RGB), `turns`, `beamDeg` and `fadeMs`. The wedge is centred on the actor; use `dur` to set its turn rate. `clip: true` (K462) keeps the wedge and glow inside the actor's box; off by default.
 
 ### Signals
 
