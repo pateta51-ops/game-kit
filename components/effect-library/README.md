@@ -30,6 +30,15 @@ CSS variables a game sets (fallbacks carry no colour): `--fx-z`, `--fx-lift-rise
 
 Tests: `particles.test.ts`, `count.test.ts` (node); `effects.e2e.test.ts` (Chromium via Playwright; skipped off CI when it is not installed).
 
+### Hooks and defaults (K412)
+
+- `collapse-jump` takes `holdBetween({ el, from, to })`: called once when the collapse ends and the hold begins (called at the end if the call is skipped first).
+- `column-beam` takes `actorZ` (default 2; 3 puts the actor above the core, under the specks).
+- `createEffectLayer({ zIndex, position })`: `zIndex` replaces `--fx-z`; `position: 'absolute'` fills a positioned `parent`.
+- `registerCanvasEffect(verbs, name, draw, { host, zIndex })`: the canvas is made in `host` (default the layer's element) and sized to it; effects with one host share one canvas.
+- `sheen` takes `background`, a CSS background for the band instead of the `colour`/`stops` gradient (the tuners and Warp's menu sheen: 110deg, 35/50/65%, #b6f6ff22).
+- Defaults, exported: `GLITCH_DEFAULTS`, `COLUMN_BEAM_DEFAULTS`, `ROTATING_BEAM_DEFAULTS`, `RETICLE_DEFAULTS`, `PLASMA_ORB_DEFAULTS`, `DRIFT_CLOUD_DEFAULTS`, `COLLAPSE_DEFAULTS`, `SHEEN_DEFAULTS`; the effects read them.
+
 ## Use it in 10 lines
 
 ```ts

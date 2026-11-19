@@ -1,5 +1,6 @@
 import type { Rect } from '../motion-frame/index.ts';
 import type { CanvasEffect } from './canvas.ts';
+import { RETICLE_DEFAULTS as D } from './defaults.ts';
 import { ease, lerp, seg } from './particles.ts';
 
 export interface ReticleSettings {
@@ -15,8 +16,8 @@ export interface ReticleSettings {
 }
 
 export const reticle: CanvasEffect = (ctx, t, { call }) => {
-  const { box = call.from, unit = 1, colour = '255,255,255', padding = [18, 6], length = 16, width = 2,
-    closeMs = 220, fade = [520, 660] } = call.step as ReticleSettings;
+  const { box = call.from, unit = D.unit, colour = D.colour, padding = D.padding, length = D.length, width = D.width,
+    closeMs = D.closeMs, fade = D.fade } = call.step as ReticleSettings;
   if (t >= fade[1]) return;
   const u = ease.out(seg(t, 0, closeMs));
   const d = lerp(padding[0], padding[1], u) * unit;

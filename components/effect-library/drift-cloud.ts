@@ -4,6 +4,7 @@ import { clamp, seg } from './particles.ts';
 const TAU = Math.PI * 2;
 const driftLife = 5000;
 type Triangle = readonly (readonly [number, number])[];
+import { DRIFT_CLOUD_DEFAULTS as D } from './defaults.ts';
 const defaultShards = triangles(2, 2, 1, [0, 0]);
 const defaultSurvivors = [0, 1, 2, 3];
 
@@ -185,8 +186,8 @@ export function drawDriftCloud(
   const scale = Math.max(o.scale, 0.001);
   let drawn = 0;
   const n = o.cohorts.length;
-  const { shards = defaultShards, survivors = defaultSurvivors, cohortDim = 0.1, cutoff = 0.004, edgeFade = 0.7,
-    emberColour = '#ddd', emberOpacity = 0.6, emberSize = 0.5, minEmberSize = 1 } = settings;
+  const { shards = defaultShards, survivors = defaultSurvivors, cohortDim = D.cohortDim, cutoff = D.cutoff, edgeFade = D.edgeFade,
+    emberColour = D.emberColour, emberOpacity = D.emberOpacity, emberSize = D.emberSize, minEmberSize = D.minEmberSize } = settings;
   o.cohorts.forEach((co, rank) => {
     const pic = o.art(co.id);
     if (pic === null) return;
