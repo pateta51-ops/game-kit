@@ -10,6 +10,7 @@ import { isHeavy, procScan, startServer } from './server.mjs';
 
 const HEAVY = fileURLToPath(new URL('./heavy.mjs', import.meta.url));
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+const until = async (f, ms = 20000) => { const t = Date.now(); while (!(await f())) { if (Date.now() - t > ms) throw new Error('timed out waiting'); await sleep(25); } };
 const servers = [];
 afterEach(() => { for (const s of servers.splice(0)) s.close(); });
 async function serve(o) {
@@ -111,13 +112,14 @@ describe('heavy run (K399)', () => {
   });
   it.skipIf(process.platform === 'win32')('falls back to flock on the lock file when the server is down', async () => {
     const lock = join(mkdtempSync(join(tmpdir(), 'k399-')), 'q.lock');
-    const holder = spawn('flock', [lock, 'sleep', '1']);
-    await sleep(200);
-    const t = Date.now();
+    const holder = spawn('flock', [lock, 'sh', '-c', 'echo held; sleep 2']);
+    let held = '';
+    holder.stdout.on('data', (d) => (held += d));
+    await until(() => held.includes('held'));
     const r = await heavy(['run', '--', process.execPath, '-e', 'process.exit(3)'], { HEAVY_URL: await deadUrl(), HEAVY_LOCK: lock });
     expect(r.code).toBe(3);
     expect(r.err).toContain(`holding ${lock}`);
-    expect(Date.now() - t).toBeGreaterThan(500);
+    expect(holder.exitCode).not.toBeNull();
     holder.kill();
   });
 });
@@ -144,7 +146,8 @@ describe('heavy-queue review fixes (K399)', () => {
     await q.post('/acquire', { label: 'other' });
     const lock = join(mkdtempSync(join(tmpdir(), 'k399-')), 'q.lock');
     const run = heavy(['run', '--', process.execPath, '-e', 'process.exit(3)'], { HEAVY_URL: q.url, HEAVY_LOCK: lock, HEAVY_GIVEUP: '300' });
-    await sleep(300);
+    await until(async () => (await q.status()).waiting.length === 1);
+    await sleep(100);
     stop(q.s);
     const r = await run;
     expect(r.code).toBe(3);
