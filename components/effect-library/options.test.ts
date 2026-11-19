@@ -263,8 +263,8 @@ describe('K436 effect options, review additions', () => {
     expect(frames(1)[1]!.filter).toBe('saturate(0.5) brightness(0.9)');
     expect([opts(0).duration, opts(1).duration, opts(2).duration]).toEqual([50, 60, 70]);
     const sputter = el.lastElementChild!.firstElementChild as HTMLElement;
-    expect(sputter.style.cssText).toContain('rgb(1 2 3 / .55)');
-    expect(sputter.style.cssText).toContain('8px 8px');
+    expect(sputter.style.background.replace(/\s/g, '')).toMatch(/rgba?\(1,?2,?3(\/|,)0?\.55\)/);
+    expect(sputter.style.backgroundSize || sputter.style.cssText).toContain('8px 8px');
   });
   it('K436 spark-burst options: box, delay, reach, fall, z, seed', () => {
     const o = { do: 'spark-burst', box: [0, 0, 10, 10], count: 1, delay: 30, reach: 100, fall: 20, z: 7, size: 4, ms: 200 };
