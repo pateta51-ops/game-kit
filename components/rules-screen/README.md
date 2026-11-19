@@ -31,3 +31,18 @@ export const Rules = () => <RulesScreen book={book} />;
 ## Theme
 
 Style by `data-part` on the screen, contents, results, chapters, sections, blocks, diagram cells and callouts. The view provides only positioning and sizing for diagram geometry. Use `--rules-line` and `--rules-area` for diagram strokes and filled zones. Size the enlargement through `data-part="enlarged-content"`.
+
+## Navigation column
+
+`nav` adds a left column: the search field on top, the section headings below as links that jump to each section, and a body column of at most 80ch. `bodyAs="div"` renders the frame body as a `div` when the game's own frame already has a `<main>`. With neither set the screen is unchanged. At phone widths the column collapses behind a "Contents" button (`data-part="nav-toggle"`, `aria-expanded`; the screen carries `data-nav="open"` or `"closed"`). Import the optional `looks/nav.css` for the layout (breakpoint 40em).
+
+```tsx
+import { RulesScreen, type Rulebook } from "../kit/rules-screen/ui";
+
+const book: Rulebook = [
+  { kind: "h2", id: "start", text: "Start" },
+  { kind: "p", text: "Place a marker." },
+];
+
+export const RulesWithNav = () => <RulesScreen book={book} nav bodyAs="div" />;
+```

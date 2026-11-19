@@ -48,6 +48,8 @@ export interface RulesScreenProps {
   target?: string;
   collapsible?: boolean;
   enlargeDiagrams?: boolean;
+  bodyAs?: "main" | "div";
+  nav?: boolean;
 }
 
 function reveal(id: string) {
@@ -143,7 +145,10 @@ export function RulesScreen({
   target,
   collapsible = false,
   enlargeDiagrams = false,
+  bodyAs = "main",
+  nav = false,
 }: RulesScreenProps) {
+  const [navOpen, setNavOpen] = useState(false);
   const words = { ...defaults, ...labels };
   const scope = useId();
   const [query, setQuery] = useState("");
@@ -425,8 +430,26 @@ export function RulesScreen({
   }
 
   return (
-    <ScreenFrame title={words.title} back={back} actions={actions}>
-      <div data-part="rules-screen">
+    <ScreenFrame
+      title={words.title}
+      back={back}
+      actions={actions}
+      bodyAs={bodyAs}
+    >
+      <div
+        data-part="rules-screen"
+        data-nav={nav ? (navOpen ? "open" : "closed") : undefined}
+      >
+        {nav && (
+          <button
+            type="button"
+            data-part="nav-toggle"
+            aria-expanded={navOpen}
+            onClick={() => setNavOpen(!navOpen)}
+          >
+            {words.contents}
+          </button>
+        )}
         <input
           type="search"
           data-part="search"
