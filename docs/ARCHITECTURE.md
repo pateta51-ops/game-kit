@@ -89,6 +89,7 @@ graph LR
   market_row["market-row"] --> prompt_host["prompt-host"]
   market_row["market-row"] --> picked_state["picked-state"]
   market_row["market-row"] --> motion_frame["motion-frame"]
+  market_row["market-row"] --> deck_motions["deck-motions"]
   modal_dialog["modal-dialog"]
   motion_frame["motion-frame"]
   offline["offline"] --> state_machines["state-machines"]
@@ -175,7 +176,6 @@ graph LR
 - `content-pack`
 - `coverage-report`
 - `debug-console`
-- `deck-motions`
 - `dev-autoplay`
 - `dice-odds`
 - `dice-tray`

@@ -285,8 +285,6 @@ body { margin: 0; }
 #stage[data-offset] [data-part="stack"] { --kp-step: var(--edge-offset); }
 .ctl input[type="checkbox"] { width: auto; justify-self: start; }
 .ctl select { grid-column: 1 / -1; font: inherit; color: var(--fg); background: #232b2e; border: 1px solid var(--line); border-radius: 6px; padding: 4px 8px; }
-.card-art.flip-art { transform-style: preserve-3d; }
-.flip-art b { transform: translateZ(12px); }
 [hidden] { display: none !important; }
 </style>
 <div class="wrap">
@@ -338,6 +336,10 @@ var DECK = (() => {
   var ui_exports = {};
   __export(ui_exports, {
     DEAL_MS: () => DEAL_MS,
+    FLIP_END: () => FLIP_END,
+    FLIP_LIFT: () => FLIP_LIFT,
+    FLIP_PERSPECTIVE: () => FLIP_PERSPECTIVE,
+    FLIP_START: () => FLIP_START,
     MOCK_U: () => MOCK_U,
     REFILL_AFTER: () => REFILL_AFTER,
     REFILL_FAR_SCALE: () => REFILL_FAR_SCALE,
@@ -355,6 +357,7 @@ var DECK = (() => {
     drawNeutralBack: () => drawNeutralBack,
     finishDeckMotions: () => finishDeckMotions,
     finishOnInput: () => finishOnInput,
+    flipFrames: () => flipFrames,
     pileElement: () => pileElement,
     planDeal: () => planDeal,
     registerRiffle: () => registerRiffle,
@@ -363,7 +366,8 @@ var DECK = (() => {
     riffleSide: () => riffleSide,
     riffleTop: () => riffleTop,
     shuffleDecks: () => shuffleDecks,
-    topOf: () => topOf
+    topOf: () => topOf,
+    turnsOver: () => turnsOver
   });
 
   // components/deck-motions/plan.ts
@@ -379,6 +383,10 @@ var DECK = (() => {
   var RIFFLE_PHASES_MS = RIFFLE_STUDY_MS.map((ms) => ms * RIFFLE_MS / 3e3);
   var RIFFLE_DECK_CARDS = 20;
   var MOCK_U = 21.6;
+  var FLIP_LIFT = 1.08;
+  var FLIP_PERSPECTIVE = 800;
+  var FLIP_START = 0.25;
+  var FLIP_END = 0.75;
   var cycleMove = (id, discard, deck) => ({ id, dir: "in", pile: deck, at: discard, faceDown: true });
   function planDeal(moves, opts = {}) {
     const speed = opts.speed ?? 1;
@@ -391,7 +399,7 @@ var DECK = (() => {
     const shuffleAt = ins.length ? (ins.length - 1) * stagger + deal : 0;
     const dealAt = shuffling.length ? shuffleAt + (opts.riffleMs ?? RIFFLE_MS) * speed : 0;
     const refillAt = opts.departs ? deal * REFILL_AFTER + REFILL_GAP_MS * speed : 0;
-    const timed = ins.map((move, i) => ({ move, delay: i * stagger, ms: deal, lift: 1, vanish: move.faceDown }));
+    const timed = ins.map((move, i) => ({ move, delay: i * stagger, ms: deal, lift: 1, vanish: move.faceDown === true }));
     let dealt = 0;
     for (const move of outs) {
       if (move.refill) timed.push({ move, delay: refillAt, ms: deal * (move.far ? REFILL_FAR_SCALE : 1), lift: REFILL_LIFT, vanish: false });
@@ -402,6 +410,26 @@ var DECK = (() => {
     }
     const total = Math.max(...timed.map((t) => t.delay + t.ms), shuffling.length ? dealAt : 0);
     return { timed, shuffling, shuffleAt, dealAt, total };
+  }
+  function flipFrames(from, o = {}) {
+    const s = Math.min(Math.max(o.start ?? FLIP_START, 0), 1);
+    const e = Math.max(Math.min(Math.max(o.end ?? FLIP_END, 0), 1), s);
+    const m = (s + e) / 2;
+    const eps = 1e-4;
+    const lift = o.lift ?? FLIP_LIFT;
+    const rot = o.axis === "y" ? "rotateX" : "rotateY";
+    const sg = o.direction ?? 1;
+    const n = (v) => String(Math.round(v * 1e4) / 1e4);
+    const at = (p, deg) => {
+      const q = 1 - p;
+      const l = e > s && p > s && p < e ? 1 + (lift - 1) * Math.sin(Math.PI * (p - s) / (e - s)) : 1;
+      return `translate(${n(from.x * q)}px, ${n(from.y * q)}px) scale(${n(from.sx * q + p)}, ${n(from.sy * q + p)}) scale(${n(l)}) perspective(${n(o.perspective ?? FLIP_PERSPECTIVE)}px) ${rot}(${n(deg * sg)}deg)`;
+    };
+    const offs = [.../* @__PURE__ */ new Set([0, s, (s + m) / 2, m, Math.min(m + eps, 1), (m + e) / 2, e, 1])].sort((a, b) => a - b);
+    const turn = (p, a, b) => b > a ? Math.min(Math.max((p - a) / (b - a), 0), 1) : p >= b ? 1 : 0;
+    const first = offs.map((p) => ({ offset: p, transform: at(p, 90 * turn(p, s, m)), opacity: p <= m ? 1 : 0 }));
+    const second = offs.map((p) => ({ offset: p, transform: at(p, p <= m ? -90 : -90 + 90 * turn(p, m, e)), opacity: p <= m ? 0 : o.vanish && p === 1 ? 0 : 1 }));
+    return { first, second };
   }
   function riffleFrames(n, width, k) {
     const half = RIFFLE_CARDS / 2;
@@ -1039,8 +1067,14 @@ var DECK = (() => {
     };
   };
   var REST = "translate(0px, 0px) scale(1, 1)";
-  function dealFrom(moves, o = {}) {
+  var turnsOver = (move) => {
+    const p = typeof move.pile === "string" ? pileElement(move.pile) : null;
+    const f = p?.getAttribute("data-face");
+    return f === "down" || (move.faceDown ?? f !== "up");
+  };
+  function dealFrom(given, o = {}) {
     const speed = reduced() ? 0 : o.speed ?? 1;
+    const moves = given.map((m) => ({ ...m, faceDown: turnsOver(m) }));
     const plan = planDeal(moves, { speed, shuffled: o.shuffled, departs: o.departs, riffleMs: o.durations ? sum(o.durations) : void 0 });
     const face = o.face ?? ((_id, el) => el.cloneNode(true));
     const ends = [];
@@ -1085,13 +1119,21 @@ var DECK = (() => {
         mine.push(a);
         ends.push(track(a, el2));
       };
-      if (move.faceDown && move.dir === "out") {
-        const rot = o.axis === "y" ? "rotateX" : "rotateY";
-        const sg = o.direction ?? 1;
-        const b = stand((o.back ?? cardBack)(move.pile, from));
-        const f = stand(face(move.id, atEl));
-        fly(b, [{ transform: `${start} ${rot}(0deg)`, offset: 0 }, { transform: `${REST} ${rot}(${String(90 * sg)}deg)`, offset: 0.5 }, { transform: `${REST} ${rot}(${String(90 * sg)}deg)`, offset: 1 }]);
-        fly(f, [{ transform: `${start} ${rot}(${String(-90 * sg)}deg)`, offset: 0 }, { transform: `${start} ${rot}(${String(-90 * sg)}deg)`, offset: 0.5 }, { transform: `${REST} ${rot}(0deg)`, offset: 1 }]);
+      if (move.faceDown) {
+        const back = stand((o.back ?? cardBack)(move.pile, from));
+        const card = stand(face(move.id, atEl));
+        const [first, second] = move.dir === "out" ? [back, card] : [card, back];
+        const fr = flipFrames({ x: from.left - to.left, y: from.top - to.top, sx: from.width / (to.width || 1), sy: from.height / (to.height || 1) }, {
+          lift: o.flipLift ?? (t.lift !== 1 ? t.lift : FLIP_LIFT),
+          perspective: o.perspective,
+          start: o.flipStart,
+          end: o.flipEnd,
+          axis: o.axis,
+          direction: o.direction,
+          vanish: t.vanish
+        });
+        fly(first, fr.first);
+        fly(second, fr.second);
         continue;
       }
       const el = stand(move.faceDown ? (o.back ?? cardBack)(move.pile, from) : face(move.id, atEl));
@@ -16494,7 +16536,7 @@ var PREVIEW = (() => {
       ),
       host
     );
-    return /* @__PURE__ */ (0, import_jsx_runtime3.jsxs)("div", { ref: pileRef, "data-part": "pile", "data-testid": testId, "data-pile": testId, "data-count": model.count, "data-mode": mode, "data-picking": picking ? "true" : void 0, "data-named": names.length, children: [
+    return /* @__PURE__ */ (0, import_jsx_runtime3.jsxs)("div", { ref: pileRef, "data-part": "pile", "data-testid": testId, "data-pile": testId, "data-face": browse ? void 0 : "down", "data-count": model.count, "data-mode": mode, "data-picking": picking ? "true" : void 0, "data-named": names.length, children: [
       /* @__PURE__ */ (0, import_jsx_runtime3.jsxs)(
         "div",
         {
@@ -16526,6 +16568,35 @@ var PREVIEW = (() => {
   // components/market-row/MarketRow.tsx
   var import_react3 = __toESM(require_react(), 1);
 
+  // components/deck-motions/plan.ts
+  var RIFFLE_MS = 2200;
+  var RIFFLE_STUDY_MS = [450, 1350, 750, 450];
+  var RIFFLE_PHASES_MS = RIFFLE_STUDY_MS.map((ms) => ms * RIFFLE_MS / 3e3);
+  var FLIP_LIFT = 1.08;
+  var FLIP_PERSPECTIVE = 800;
+  var FLIP_START = 0.25;
+  var FLIP_END = 0.75;
+  function flipFrames(from, o = {}) {
+    const s = Math.min(Math.max(o.start ?? FLIP_START, 0), 1);
+    const e = Math.max(Math.min(Math.max(o.end ?? FLIP_END, 0), 1), s);
+    const m = (s + e) / 2;
+    const eps = 1e-4;
+    const lift = o.lift ?? FLIP_LIFT;
+    const rot = o.axis === "y" ? "rotateX" : "rotateY";
+    const sg = o.direction ?? 1;
+    const n = (v) => String(Math.round(v * 1e4) / 1e4);
+    const at = (p, deg) => {
+      const q = 1 - p;
+      const l = e > s && p > s && p < e ? 1 + (lift - 1) * Math.sin(Math.PI * (p - s) / (e - s)) : 1;
+      return `translate(${n(from.x * q)}px, ${n(from.y * q)}px) scale(${n(from.sx * q + p)}, ${n(from.sy * q + p)}) scale(${n(l)}) perspective(${n(o.perspective ?? FLIP_PERSPECTIVE)}px) ${rot}(${n(deg * sg)}deg)`;
+    };
+    const offs = [.../* @__PURE__ */ new Set([0, s, (s + m) / 2, m, Math.min(m + eps, 1), (m + e) / 2, e, 1])].sort((a, b) => a - b);
+    const turn = (p, a, b) => b > a ? Math.min(Math.max((p - a) / (b - a), 0), 1) : p >= b ? 1 : 0;
+    const first = offs.map((p) => ({ offset: p, transform: at(p, 90 * turn(p, s, m)), opacity: p <= m ? 1 : 0 }));
+    const second = offs.map((p) => ({ offset: p, transform: at(p, p <= m ? -90 : -90 + 90 * turn(p, m, e)), opacity: p <= m ? 0 : o.vanish && p === 1 ? 0 : 1 }));
+    return { first, second };
+  }
+
   // components/market-row/deal.ts
   var DEAL_MS = 520;
   var STAGGER_MS = 90;
@@ -16551,6 +16622,11 @@ var PREVIEW = (() => {
     { transform: `translate(${String(from.x - to.x)}px, ${String(from.y - to.y)}px) scale(${String(from.w / to.w)}, ${String(from.h / to.h)})`, transformOrigin: "top left" },
     { transform: "translate(0px, 0px) scale(1, 1)", transformOrigin: "top left" }
   ];
+  var dealFlipFrames = (from, to, o = {}) => {
+    const f = flipFrames({ x: from.x + from.w / 2 - to.x - to.w / 2, y: from.y + from.h / 2 - to.y - to.h / 2, sx: from.w / to.w, sy: from.h / to.h }, o);
+    const c = (k) => k.map((x) => ({ ...x, transformOrigin: "center" }));
+    return { back: c(f.first), face: c(f.second) };
+  };
 
   // components/market-row/MarketRow.tsx
   var import_jsx_runtime4 = __toESM(require_jsx_runtime(), 1);
@@ -16558,7 +16634,7 @@ var PREVIEW = (() => {
     const r = el.getBoundingClientRect();
     return { x: r.left, y: r.top, w: r.width, h: r.height };
   };
-  function MarketRow({ name, label, row, face: face2, deck, empty, labels, pick, optionFor, topOption, dealFrom, events, speed = 1 }) {
+  function MarketRow({ name, label, row, face: face2, deck, empty, labels, pick, optionFor, topOption, dealFrom, events, speed = 1, flip }) {
     const root2 = (0, import_react3.useRef)(null);
     const prev = (0, import_react3.useRef)(row.slots);
     const prevBoxes = (0, import_react3.useRef)([]);
@@ -16580,6 +16656,22 @@ var PREVIEW = (() => {
         const from = m.from === void 0 ? src ? boxOf2(src) : void 0 : old[m.from];
         const to = boxOf2(card);
         if (!from || from.w === 0 || to.w === 0) continue;
+        const turn = flip ?? row.top == null;
+        if (src && turn !== false) {
+          const fr = dealFlipFrames(from, to, turn === true ? {} : turn);
+          const back = (src.firstElementChild ?? src).cloneNode(true);
+          back.removeAttribute("data-part");
+          back.dataset["motionStandin"] = "";
+          Object.assign(back.style, { position: "fixed", left: `${String(to.x)}px`, top: `${String(to.y)}px`, width: `${String(to.w)}px`, height: `${String(to.h)}px`, margin: "0", pointerEvents: "none", zIndex: "1000", boxSizing: "border-box" });
+          document.body.append(back);
+          const opts = { duration: m.ms, delay: m.delay, easing: "ease-in-out", fill: "both" };
+          const a = back.animate(fr.back, opts);
+          void a?.finished.catch(() => void 0).then(() => {
+            back.remove();
+          });
+          card.animate(fr.face, { ...opts, fill: "backwards" });
+          continue;
+        }
         card.animate(flyFrames(from, to), { duration: m.ms, delay: m.delay, easing: "ease-in-out", fill: "backwards" });
       }
     }, [row.slots]);
@@ -16682,7 +16774,7 @@ var PREVIEW = (() => {
     }));
     if (play) stage.querySelector('[data-part="stack-hit"]')?.click();
   }
-  function market(stage, speed, play, key) {
+  function market(stage, speed, play, key, flip) {
     const row = { decks: { deck: 12 }, slots: ["1", "2", "3"] };
     const render = (view) => draw(stage, (0, import_react4.createElement)(import_react4.Fragment, { key }, (0, import_react4.createElement)(MarketRow, {
       name: "market",
@@ -16690,7 +16782,8 @@ var PREVIEW = (() => {
       row: view,
       face,
       deck: () => face("back"),
-      speed
+      speed,
+      flip
     })));
     render(row);
     if (play) render({ ...row, slots: ["4", "5", "1"] });
@@ -16712,10 +16805,14 @@ const offset = ['offset', 'Edge offset', 0, 8, .01, ' px', 'Each edge peeks this
 const flip = ['Turn-over', [
   ['axis', 'Flip axis', [['', 'Horizontal'], ['y', 'Vertical']], 'Turn side to side or top to bottom.'],
   ['direction', 'Flip direction', [['', 'Front'], ['-1', 'Back']], 'Reverse which edge comes forward.'],
+  ['flipLift', 'Flip lift', 1, 1.3, .01, '×', 'How much the card grows as it stands edge-on. A refill uses its own lift unless this moves.'],
+  ['perspective', 'Perspective distance', 200, 2400, 10, ' px', 'Smaller makes the near edge loom larger as the card turns.'],
+  ['flipStart', 'Turn starts at', 0, 1, .01, '', 'Share of the travel done when the card starts to turn.'],
+  ['flipEnd', 'Turn ends at', 0, 1, .01, '', 'Share of the travel done when the face is fully up.'],
 ]];
 const effects = {
   deal: ['Deal', [['Timing', [speed]], ['Flight', [
-    ['faceDown', 'Turn over while dealing', 'Start with the back showing; the kit has no default for this move option.'],
+    ['faceDown', 'Face-down deck', 'A face-down deck deals with a turn-over by default. Off: a face-up deck (faceDown: false, data-face="up").'],
   ]], flip]],
   refill: ['Refill turn-over', [['Timing', [speed,
     ['departs', 'Wait for departure', 'Pause after the departing card lands.'],
@@ -16723,7 +16820,7 @@ const effects = {
   ]], flip]],
   cycle: ['Deck cycle', [['Timing', [speed,
     ['shuffled', 'Riffle after cycling', 'Riffle the deck after the incoming cards land.'],
-  ]]]],
+  ]], flip]],
   riffle: ['Pile riffle', [['Timing', [speed]], ['Distance', [
     ['unit', 'Riffle unit', 1, 28, .1, ' px', 'Scales vertical offsets. The split across the table follows card width.'],
   ]]]],
@@ -16731,7 +16828,7 @@ const effects = {
   fan: ['Pile fan', [['Timing', [speed]], ['Pile and flight', [cards(1), offset,
     ['fanUnit', 'Table unit override', 0, 8, .1, ' px', 'Scales the flight rise, screen margin and hover lift. At 0 the kit uses the viewport.'],
   ]], ['Card size', size]]],
-  market: ['Market refill', [['Timing', [speed]]]],
+  market: ['Market refill', [['Timing', [speed]], ['Turn-over', [['marketFlip', 'Face-down deck', 'New cards turn over as they leave the deck. Off: flip={false}, a face-up deck.'], ...flip[1]]]]],
 };
 
 const probe = document.createElement('div');
@@ -16748,7 +16845,8 @@ const kitDefaults = () => {
     count: PREVIEW.EDGE_CAP + 1, width: round(parseFloat(geometry.width), 10),
     height: round(parseFloat(geometry.height), 10), landscape: false,
     offset: round(Math.abs(new DOMMatrix(getComputedStyle(stack.firstElementChild).transform).m41), 100),
-    fanUnit: 0,
+    fanUnit: 0, marketFlip: true,
+    flipLift: DECK.FLIP_LIFT, perspective: DECK.FLIP_PERSPECTIVE, flipStart: DECK.FLIP_START, flipEnd: DECK.FLIP_END,
   };
 };
 
@@ -16760,10 +16858,13 @@ let destinations = [];
 const ms = (value) => Math.round(value) + ' ms';
 const tokens = (values) => Object.entries(values).map(([key, value]) => key + ': ' + value + ';').join('\n');
 const options = (values) => JSON.stringify(values, null, 2).replace(/^  "(\w+)":/gm, '  $1:');
-const flipOptions = () => ({
+const flipOptions = (names = {}) => ({
   ...(settings.axis ? { axis: settings.axis } : {}),
   ...(settings.direction ? { direction: Number(settings.direction) } : {}),
+  ...Object.fromEntries([['flipLift', DECK.FLIP_LIFT], ['perspective', DECK.FLIP_PERSPECTIVE], ['flipStart', DECK.FLIP_START], ['flipEnd', DECK.FLIP_END]]
+    .filter(([key, value]) => settings[key] !== value).map(([key]) => [names[key] ?? key, settings[key]])),
 });
+const marketNames = { flipLift: 'lift', flipStart: 'start', flipEnd: 'end' };
 const back = () => PREVIEW.art('back');
 const at = (index) => () => destinations[index];
 const out = (index, pile, flags) => ({ id: String(index), dir: 'out', pile, at: at(index), ...flags });
@@ -16779,8 +16880,9 @@ function stageDeck() {
     if (pile) place.dataset.pile = pile;
     if (pile === 'deck' || pile.startsWith('discard') || effect === 'deal' && i > 0 ||
         effect === 'refill' && (i === (settings.far ? 2 : 1) || i === 3 && settings.departs)) {
-      const card = effect === 'refill' && i > 0 ? (i === 3 ? '4' : '2') : pile ? 'back' : String(i);
+      const card = effect === 'refill' && i > 0 ? (i === 3 ? '4' : '2') : pile === 'deck' && effect === 'deal' && !settings.faceDown ? '0' : pile.startsWith('discard') ? String(i + 5) : pile ? 'back' : String(i);
       place.append(PREVIEW.art(card));
+      if (pile === 'deck' && effect === 'deal' && !settings.faceDown) place.dataset.face = 'up';
     }
     board.append(place);
     return place.firstElementChild ?? place;
@@ -16802,12 +16904,12 @@ function replayDeck() {
     effect === 'refill' ? [
       ...(departs ? [out(3, far ? 'far' : 'near', { faceDown: false })] : []),
       out(far ? 2 : 1, 'deck', { faceDown: true, refill: true, far }),
-    ] : [1, 2, 3].map((i) => out(i, 'deck', { faceDown }));
-  const turns = effect === 'refill' || effect === 'deal' && faceDown;
+    ] : [1, 2, 3].map((i) => out(i, 'deck', faceDown ? {} : { faceDown: false }));
+  const turns = effect === 'refill' || effect === 'cycle' || effect === 'deal' && faceDown;
   const { plan } = DECK.dealFrom(moves, {
     speed, departs, shuffled: shuffled ? ['deck'] : [], ...(turns ? flipOptions() : {}),
     back: turns ? () => PREVIEW.flipArt(back()) : back,
-    face: (id, el) => turns && (effect === 'deal' || id !== '3')
+    face: (id, el) => turns && effect !== 'cycle' && (effect === 'deal' || id !== '3')
       ? PREVIEW.flipArt(el.cloneNode(true)) : el.cloneNode(true),
   });
   for (const { move, delay, ms: duration } of plan.timed) {
@@ -16821,7 +16923,7 @@ function replayDeck() {
 }
 
 function render(replay = true) {
-  const { speed, faceDown, departs, far, shuffled, unit, count, width, height, landscape, offset, fanUnit } = settings;
+  const { speed, faceDown, departs, far, shuffled, unit, count, width, height, landscape, offset, fanUnit, marketFlip } = settings;
   const pile = effect === 'stack' || effect === 'fan';
   const defaults = kitDefaults();
   stage.dataset.effect = effect;
@@ -16851,9 +16953,9 @@ function render(replay = true) {
   };
   $('note').textContent = notes[effect];
   const snippets = {
-    deal: options({ faceDown }) + '\n\n' + options({ speed, ...(faceDown ? flipOptions() : {}) }),
+    deal: options(faceDown ? {} : { faceDown: false }) + '\n\n' + options({ speed, ...(faceDown ? flipOptions() : {}) }),
     refill: options({ faceDown: true, refill: true, far }) + '\n\n' + options({ speed, departs, ...flipOptions() }),
-    cycle: options({ speed, shuffled: shuffled ? ['deck'] : [] }),
+    cycle: options({ speed, shuffled: shuffled ? ['deck'] : [], ...flipOptions() }),
     riffle: `riffle(deck, ${speed}, { unit: () => ${unit} })`,
     stack: `view={{ count: ${count}, cards }}
 landscape={${landscape}}`,
@@ -16861,16 +16963,16 @@ landscape={${landscape}}`,
 landscape={${landscape}}
 speed={${speed}}` + (fanUnit ? `
 unit={() => ${fanUnit}}` : ''),
-    market: `speed={${speed}}`,
+    market: `speed={${speed}}` + (marketFlip ? (Object.keys(flipOptions(marketNames)).length ? `\nflip={${JSON.stringify(flipOptions(marketNames))}}` : '') : '\nflip={false}'),
   };
   $('code').textContent = snippets[effect] + (pile && Object.keys(css).length ? '\n\n' + tokens(css) : '');
   $('play').hidden = effect === 'stack';
   for (const [key] of flip[1]) {
     const input = $('c-' + key);
-    if (input) input.disabled = effect === 'deal' && !faceDown;
+    if (input) input.disabled = effect === 'deal' && !faceDown || effect === 'market' && !marketFlip;
   }
   if (pile) PREVIEW.pile(stage, { count, speed, landscape, fanUnit }, effect === 'fan', replay && effect === 'fan', ++sequence);
-  else if (effect === 'market') PREVIEW.market(stage, speed, replay, ++sequence);
+  else if (effect === 'market') PREVIEW.market(stage, speed, replay, ++sequence, marketFlip ? flipOptions(marketNames) : false);
   else if (replay) replayDeck();
   else stageDeck();
 }

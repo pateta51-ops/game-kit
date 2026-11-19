@@ -1,7 +1,7 @@
 // K250: the DOM side of deck-motions: flights of stand-in cards between piles and places, the riffle. Ported from STCC
 // src/ui/motion/dealing.ts (main 8e6f55b), from LordOfTheRings (a3f3c01, BSD-3: LICENSE-LordOfTheRings.txt).
 import type { VerbRegistry } from '../motion-frame/player.ts';
-import { RIFFLE_DECK_CARDS, RIFFLE_PHASES_MS, planDeal, type At, type DealPlan, type Move } from './plan.ts';
+import { FLIP_LIFT, RIFFLE_DECK_CARDS, RIFFLE_PHASES_MS, flipFrames, planDeal, type At, type DealPlan, type Move } from './plan.ts';
 import { riffleSide } from './riffle-side.ts';
 import { riffleTop, type TopBack } from './riffle-top.ts';
 
@@ -32,6 +32,11 @@ export interface DeckMotionOpts {
   axis?: 'x' | 'y';
   /** Turn-over direction: 1 front flip (default), -1 back flip (the opposite sign). */
   direction?: 1 | -1;
+  /** K406: the turn-over's lift at edge-on (default a refill's lift, else FLIP_LIFT), perspective in px, and where in the travel it starts and ends (0..1). */
+  flipLift?: number;
+  perspective?: number;
+  flipStart?: number;
+  flipEnd?: number;
 }
 
 const live = new Set<Animation>();
@@ -95,20 +100,28 @@ export interface Dealing {
 
 const REST = 'translate(0px, 0px) scale(1, 1)';
 
+/** K406: whether a move turns over: a pile marked `data-face="down"` always; else `faceDown`, unset = face down unless the pile says `data-face="up"`. */
+export const turnsOver = (move: Move): boolean => {
+  const p = typeof move.pile === 'string' ? pileElement(move.pile) : null;
+  const f = p?.getAttribute('data-face');
+  return f === 'down' || (move.faceDown ?? f !== 'up');
+};
+
 /**
  * Cards fly between a pile and their places: stand-ins are laid on the page and fly with their delays; a face-down card turns
  * over on the way (back first, then the face at the place); a refill lifts; a card going face down into a pile vanishes; then
  * the piles in `shuffled` riffle. Call once the new view is rendered (the places exist). Which moves is the game's call from
  * its view diff; `planDeal` and `cycleMove` give the timing and the deck cycle.
  */
-export function dealFrom(moves: readonly Move[], o: DeckMotionOpts & { shuffled?: readonly string[]; departs?: boolean; onCardStart?: (index: number, id: string) => void; signal?: AbortSignal | undefined } = {}): Dealing {
+export function dealFrom(given: readonly Move[], o: DeckMotionOpts & { shuffled?: readonly string[]; departs?: boolean; onCardStart?: (index: number, id: string) => void; signal?: AbortSignal | undefined } = {}): Dealing {
   const speed = reduced() ? 0 : (o.speed ?? 1);
+  const moves = given.map((m) => ({ ...m, faceDown: turnsOver(m) }));
   const plan = planDeal(moves, { speed, shuffled: o.shuffled, departs: o.departs, riffleMs: o.durations ? sum(o.durations) : undefined });
   const face = o.face ?? ((_id: string, el: HTMLElement) => el.cloneNode(true) as HTMLElement);
   const ends: Promise<void>[] = [];
   const mine: Animation[] = [];
   const mineTimers = new Set<{ t: number; r: () => void }>();
-  const began = (move: Move) => { if (!o.signal?.aborted) o.onCardStart?.(moves.indexOf(move), move.id); };
+  const began = (move: Move) => { if (!o.signal?.aborted) o.onCardStart?.(moves.indexOf(move as typeof moves[number]), move.id); };
   if (!plan.timed.length) for (const m of moves) began(m);
   for (const t of plan.timed) {
     const { move } = t;
@@ -138,14 +151,16 @@ export function dealFrom(moves: readonly Move[], o: DeckMotionOpts & { shuffled?
       mine.push(a);
       ends.push(track(a, el));
     };
-    if (move.faceDown && move.dir === 'out') {
-      const rot = o.axis === 'y' ? 'rotateX' : 'rotateY';
-      const sg = o.direction ?? 1;
-      const b = stand((o.back ?? cardBack)(move.pile, from));
-      const f = stand(face(move.id, atEl));
-      fly(b, [{ transform: `${start} ${rot}(0deg)`, offset: 0 }, { transform: `${REST} ${rot}(${String(90 * sg)}deg)`, offset: 0.5 }, { transform: `${REST} ${rot}(${String(90 * sg)}deg)`, offset: 1 }]);
-      fly(f, [{ transform: `${start} ${rot}(${String(-90 * sg)}deg)`, offset: 0 }, { transform: `${start} ${rot}(${String(-90 * sg)}deg)`, offset: 0.5 }, { transform: `${REST} ${rot}(0deg)`, offset: 1 }]);
-      continue
+    if (move.faceDown) {
+      const back = stand((o.back ?? cardBack)(move.pile, from));
+      const card = stand(face(move.id, atEl));
+      const [first, second] = move.dir === 'out' ? [back, card] : [card, back];
+      const fr = flipFrames({ x: from.left - to.left, y: from.top - to.top, sx: from.width / (to.width || 1), sy: from.height / (to.height || 1) }, {
+        lift: o.flipLift ?? (t.lift !== 1 ? t.lift : FLIP_LIFT), perspective: o.perspective, start: o.flipStart, end: o.flipEnd, axis: o.axis, direction: o.direction, vanish: t.vanish,
+      });
+      fly(first, fr.first);
+      fly(second, fr.second);
+      continue;
     }
     const el = stand(move.faceDown ? (o.back ?? cardBack)(move.pile, from) : face(move.id, atEl));
     const mid = t.lift !== 1 ? [{ transform: `${REST} scale(${String(t.lift)})`, offset: 0.5 }] : [];

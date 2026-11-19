@@ -1,6 +1,8 @@
 // K243: the motion of a market row, pure. Timing from Rome src/ui/motion/frames.ts and dealing.ts (DEAL_MS 520, STAGGER_MS 90;
 // the market slide 520 from its catalog.ts), adapted there from STCC dealing.ts, a port of halogenandtoast/LordOfTheRings
 // (commit a3f3c01). BSD-3 notice: LICENSE-LordOfTheRings.txt in this folder.
+import { flipFrames, type FlipOpts } from '../deck-motions/plan.ts';
+
 export const DEAL_MS = 520;
 export const STAGGER_MS = 90;
 export const SLIDE_MS = 520;
@@ -45,3 +47,10 @@ export const flyFrames = (from: Box, to: Box): Keyframe[] => [
   { transform: `translate(${String(from.x - to.x)}px, ${String(from.y - to.y)}px) scale(${String(from.w / to.w)}, ${String(from.h / to.h)})`, transformOrigin: 'top left' },
   { transform: 'translate(0px, 0px) scale(1, 1)', transformOrigin: 'top left' },
 ];
+
+/** K406: a deal from a face-down deck turns over on the way: `back` (a stand-in of the deck's back) and `face` (the new card) fly one path about the card's centre. */
+export const dealFlipFrames = (from: Box, to: Box, o: FlipOpts = {}): { back: Keyframe[]; face: Keyframe[] } => {
+  const f = flipFrames({ x: from.x + from.w / 2 - to.x - to.w / 2, y: from.y + from.h / 2 - to.y - to.h / 2, sx: from.w / to.w, sy: from.h / to.h }, o);
+  const c = (k: Keyframe[]) => k.map((x) => ({ ...x, transformOrigin: 'center' }));
+  return { back: c(f.first), face: c(f.second) };
+};
