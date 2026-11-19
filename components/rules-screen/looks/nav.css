@@ -1,4 +1,5 @@
 [data-part="rules-screen"][data-nav] {
+  display: grid;
   grid-template-columns: minmax(12em, 20em) minmax(0, 1fr);
   grid-template-rows: auto minmax(0, 1fr);
   gap: 0.4em 1.2em;
