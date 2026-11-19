@@ -244,3 +244,29 @@ describe('heavy-queue process matching (K418)', () => {
     ]);
   });
 });
+
+describe('heavy-queue worker cap and load (K454)', () => {
+  it('reports workers = cores / slots (at least 1) and a job gets HEAVY_WORKERS', async () => {
+    const q = await serve({ slots: 2, cores: 16 });
+    const s = await q.status();
+    expect([s.cores, s.workers]).toEqual([16, 8]);
+    expect((await q.post('/acquire', { label: 'a' })).workers).toBe(8);
+    expect((await (await serve({ slots: 4, cores: 2 })).status()).workers).toBe(1);
+    const r = await heavy(['run', '--', process.execPath, '-e', 'process.exit(Number(process.env.HEAVY_WORKERS))'], { HEAVY_URL: q.url });
+    expect(r.code).toBe(8);
+  });
+  it('heavy load prints one line', async () => {
+    const q = await serve({ slots: 2, cores: 16, scan: () => [{ pid: 9, cmd: 'chrome --headless', cwd: '/x' }], sweepMs: 30, log: join(mkdtempSync(join(tmpdir(), 'hq-load-')), 'b.log'), renice: () => {} });
+    await q.post('/acquire', { label: 'a' });
+    await q.post('/acquire', { label: 'b' });
+    await q.post('/acquire', { label: 'c' });
+    await until(async () => (await q.status()).unqueued.length === 1);
+    const r = heavy(['load'], { HEAVY_URL: q.url });
+    expect((await r).code).toBe(0);
+    expect(r.out()).toMatch(/^load \d+\.\d\d \d+\.\d\d \d+\.\d\d \| cores 16 \| slots 2\/2 \| queued 1 \| unqueued 1\n$/);
+  });
+  it('flags playwright-launched chromium without --headless and puppeteer scripts', () => {
+    for (const c of ['/c/chrome --remote-debugging-pipe --no-sandbox', '/c/chrome --enable-automation', '/c/chrome --user-data-dir=/tmp/playwright_chromiumdev_profile-x', 'node /g/node_modules/puppeteer/lib/cli.js']) expect(isHeavy(c.split(' ')), c).toBe(true);
+    expect(isHeavy('/c/chrome --user-data-dir=/home/user/.config/chrome'.split(' '))).toBe(false);
+  });
+});

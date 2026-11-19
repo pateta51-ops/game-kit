@@ -2,7 +2,7 @@
 import http from 'node:http';
 import { appendFileSync, existsSync, readFileSync, readdirSync, readlinkSync } from 'node:fs';
 import { spawnSync } from 'node:child_process';
-import { homedir } from 'node:os';
+import { availableParallelism, homedir } from 'node:os';
 import { join } from 'node:path';
 import { pathToFileURL } from 'node:url';
 
@@ -17,12 +17,12 @@ const stem = (p) => (p ?? '').split('/').pop().replace(/\.(c|m)?js$/, '');
 // Only node/python running a test or build tool script, and headless chromium; editors, git, language servers and MCP servers never match.
 export function isHeavy(args) {
   const exe = stem(args[0]);
-  if (/^(chrome|chromium|chromium-browser|headless_shell|chrome-headless-shell)$/.test(exe)) return args.some((a) => a.startsWith('--headless'));
+  if (/^(chrome|chromium|chromium-browser|headless_shell|chrome-headless-shell)$/.test(exe)) return args.some((a) => a.startsWith('--headless') || a === '--remote-debugging-pipe' || a === '--enable-automation' || /^--user-data-dir=.*(playwright|puppeteer)/.test(a));
   const py = /^python[\d.]*$/.test(exe);
   if (!py && !/^node(js)?$/.test(exe)) return false;
   const s = py && args[1] === '-m' ? args[2] : args[1];
   const t = stem(s);
-  if (/^(vitest|playwright|pytest)$/.test(t)) return true;
+  if (/^(vitest|playwright|pytest|puppeteer)$/.test(t)) return true;
   if (/(^|\/)(vitest|playwright)\/(bin|cli|dist)/.test(s ?? '')) return true;
   if (t === 'vite' || /(^|\/)vite\/bin\//.test(s ?? '')) return args.includes('build');
   if (t === 'tsc' || /(^|\/)typescript\/bin\/tsc/.test(s ?? '')) return args.includes('-b') || args.includes('--build');
@@ -55,7 +55,8 @@ export function procScan(root = '/proc') {
 }
 const reniceProc = (pid) => { spawnSync('renice', ['-n', '19', '-p', String(pid)], { stdio: 'ignore' }); };
 
-export function startServer({ scan = procScan, renice = reniceProc, sweepMs = process.env.HEAVY_SWEEP_MS === undefined ? 20000 : Number(process.env.HEAVY_SWEEP_MS), log = join(process.env.HEAVY_HOME || join(homedir(), '.local/share/heavy-queue'), 'bypass.log'), port = defaultPort(), slots = Number(process.env.HEAVY_SLOTS) || 1, ttl = Number(process.env.HEAVY_TTL) || 30000, tick = 1000, age = Number(process.env.HEAVY_AGE_MS) || 600000 } = {}) {
+export function startServer({ scan = procScan, renice = reniceProc, sweepMs = process.env.HEAVY_SWEEP_MS === undefined ? 20000 : Number(process.env.HEAVY_SWEEP_MS), log = join(process.env.HEAVY_HOME || join(homedir(), '.local/share/heavy-queue'), 'bypass.log'), port = defaultPort(), slots = Number(process.env.HEAVY_SLOTS) || 1, cores = Number(process.env.HEAVY_CORES) || availableParallelism(), ttl = Number(process.env.HEAVY_TTL) || 30000, tick = 1000, age = Number(process.env.HEAVY_AGE_MS) || 600000 } = {}) {
+  const workers = Math.max(1, Math.floor(cores / slots));
   const hi = (x) => x.priority === 'high' || Date.now() - x.queuedAt >= age;
   const leases = new Map();
   const history = [];
@@ -96,12 +97,12 @@ export function startServer({ scan = procScan, renice = reniceProc, sweepMs = pr
   };
   const view = (l) => {
     const ahead = l.startedAt ? 0 : [...leases.values()].filter((x) => !x.startedAt && (hi(x) && !hi(l) || (hi(x) === hi(l) && x.seq < l.seq))).length;
-    return { id: l.id, granted: !!l.startedAt, ahead };
+    return { id: l.id, granted: !!l.startedAt, ahead, workers };
   };
   const status = () => {
     const now = Date.now();
     const ls = [...leases.values()].map((l) => ({ id: l.id, label: l.label, priority: l.priority, pid: l.pid, queuedAt: l.queuedAt, startedAt: l.startedAt, waitedMs: (l.startedAt ?? now) - l.queuedAt, runningMs: l.startedAt ? now - l.startedAt : null }));
-    return { slots, running: ls.filter((l) => l.startedAt), waiting: ls.filter((l) => !l.startedAt), history, unqueued: [...unqueued.values()] };
+    return { slots, cores, workers, running: ls.filter((l) => l.startedAt), waiting: ls.filter((l) => !l.startedAt), history, unqueued: [...unqueued.values()] };
   };
   const page = () => {
     const s = status();
@@ -109,7 +110,7 @@ export function startServer({ scan = procScan, renice = reniceProc, sweepMs = pr
     const t = (h, rows) => `<table border=1 cellpadding=4><tr>${h.map((x) => `<th>${x}</th>`).join('')}</tr>${rows.join('')}</table>`;
     const when = (ms) => ms ? new Date(ms).toLocaleTimeString() : '';
     return `<!doctype html><meta charset=utf-8><meta http-equiv=refresh content=5><title>heavy-queue</title><body style="font-family:sans-serif">
-<h2>Running (${s.running.length}/${s.slots})</h2>${t(['Label', 'Priority', 'Started', 'Running', 'Waited'], s.running.map((l) => row([l.label, l.priority, when(l.startedAt), dur(l.runningMs), dur(l.waitedMs)])))}
+<h2>Running (${s.running.length}/${s.slots}) - ${s.workers} workers per job on ${s.cores} cores</h2>${t(['Label', 'Priority', 'Started', 'Running', 'Waited'], s.running.map((l) => row([l.label, l.priority, when(l.startedAt), dur(l.runningMs), dur(l.waitedMs)])))}
 <h2>Waiting (${s.waiting.length})</h2>${t(['Label', 'Priority', 'Queued', 'Waiting'], s.waiting.map((l) => row([l.label, l.priority, when(l.queuedAt), dur(l.waitedMs)])))}
 ${s.unqueued.length ? `<h2 style="color:#c00">Unqueued (${s.unqueued.length})</h2>${t(['PID', 'Command', 'Folder', 'First seen'], s.unqueued.map((u) => row([u.pid, u.cmd, u.cwd, when(u.firstSeen)]))).replace('<table', '<table style="border-color:#c00;color:#c00"')}` : ''}
 <h2>Recent</h2>${t(['Label', 'Priority', 'Ended', 'Waited', 'Ran', 'Exit'], s.history.map((h) => row([h.label, h.priority, when(h.endedAt), dur((h.startedAt ?? h.endedAt) - h.queuedAt), h.startedAt ? dur(h.endedAt - h.startedAt) : 'never ran', h.exit ?? h.reason])))}`;

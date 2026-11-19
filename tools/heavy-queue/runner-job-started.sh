@@ -5,7 +5,7 @@
 H=$(dirname "$(readlink -f "$0")")
 p=$$; while [ "${p:-0}" -gt 1 ] && [ "$(cat /proc/$p/comm 2>/dev/null)" != Runner.Worker ]; do p=$(awk '{print $4}' /proc/$p/stat 2>/dev/null); done
 [ "${p:-0}" -gt 1 ] || p=$PPID
-held() { [ -n "${GITHUB_ENV:-}" ] && echo HEAVY_HELD=1 >> "$GITHUB_ENV"; exit 0; }
+held() { if [ -n "${GITHUB_ENV:-}" ]; then echo HEAVY_HELD=1 >> "$GITHUB_ENV"; w=$(node "$H/heavy.mjs" workers 2>/dev/null); [ -n "$w" ] && echo "HEAVY_WORKERS=$w" >> "$GITHUB_ENV"; fi; exit 0; }
 if ! command -v node >/dev/null; then echo "[heavy] node not found: using the flock fallback" >&2
 elif id=$(node "$H/heavy.mjs" hold --priority high --pid "$p" --label "${RUNNER_NAME:-runner} ${GITHUB_REPOSITORY:-} ${GITHUB_WORKFLOW:-}"); then
   mkdir -p /tmp/heavy-queue-runners && echo "$id" > "/tmp/heavy-queue-runners/${RUNNER_NAME:-none}"
