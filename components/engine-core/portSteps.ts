@@ -2,7 +2,8 @@
 // `isDecision` accepts; default: any) to the next; answers at other prompts, or given by `extendPortStep`, fold into it.
 // Undo replays the answers with `portAnswer` from the nearest kept state (at worst the start), so it lands on a decision point.
 import { portAnswer, portResult, portSettle, type EnginePort, type PortAnswer, type PortTypes } from './port.ts';
-import type { UndoMode } from './undo.ts';
+import { canonicalJson } from './canonical.ts';
+import { SOMETHING_REVEALED, type UndoMode } from './undo.ts';
 import { CHECKPOINT_EVERY, KEEP_STEPS, type UndoStepOptions } from './steps.ts';
 
 type AnyPort<G extends PortTypes> = EnginePort<G, never>;
@@ -19,8 +20,8 @@ export interface PortStepOptions<G extends PortTypes> {
   readonly every?: number;
   /** Is the open prompt a player's decision (a new step)? Default: every prompt. */
   readonly isDecision?: (s: G['state'], prompt: G['prompt']) => boolean;
-  /** Why an answer cannot be undone in Safe mode (it revealed something), from the state before and its events; default null. */
-  readonly reason?: (before: G['state'], events: readonly G['event'][]) => string | null;
+  /** Why an answer cannot be undone in Safe mode; default as `undoStep`: a `reveal: true` event (`revealWords`), or, with `randomWords`, a moved rng. */
+  readonly reason?: (before: G['state'], after: G['state'], events: readonly G['event'][]) => string | null;
 }
 
 export interface PortStepHistory<G extends PortTypes> {
@@ -70,6 +71,12 @@ function capped<G extends PortTypes>(h: PortStepHistory<G>, steps: PortStepEntry
   return steps;
 }
 
+export function portStepReason<G extends PortTypes>(port: AnyPort<G>, before: G['state'], after: G['state'], events: readonly G['event'][]): string | null {
+  const first = events.find((e) => (e as { reveal?: unknown } | null)?.reveal === true);
+  if (first !== undefined) return port.revealWords?.(first) ?? SOMETHING_REVEALED;
+  return port.randomWords === undefined || canonicalJson(port.rng?.(before)) === canonicalJson(port.rng?.(after)) ? null : port.randomWords;
+}
+
 const decides = <G extends PortTypes>(port: AnyPort<G>, h: PortStepHistory<G>): boolean => {
   const p = port.prompt(h.state);
   return p === null || h.isDecision === undefined || h.isDecision(h.state, p);
@@ -83,7 +90,7 @@ function play<G extends PortTypes>(port: AnyPort<G>, h: PortStepHistory<G>, answ
   try {
     for (const a of answers) {
       const r = portAnswer(port, state, a);
-      reason ??= h.reason?.(state, r.events) ?? null;
+      reason ??= (h.reason ?? ((b, a, e) => portStepReason(port, b, a, e)))(state, r.state, r.events);
       state = r.state;
       for (const e of r.events) events.push(e);
     }

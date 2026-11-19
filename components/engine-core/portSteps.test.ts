@@ -42,7 +42,9 @@ describe('K404 undo by step over an engine port', () => {
       expect(r.error).toBeNull();
       p = r.history;
       expect(hashState(p.state)).toBe(hashState(k.state));
+      expect(canUndoPortStep(PORT, p, 'safe')).toEqual(canUndoStep(k, 'safe'));
     }
+    expect(p.steps.map((s) => s.reason)).toEqual(k.steps.map((s) => s.reason));
     expect(bounds(p)).toEqual(bounds(k));
     expect(p.answers).toEqual(k.actions);
     for (let i = 0; i < 3; i += 1) {
@@ -50,7 +52,7 @@ describe('K404 undo by step over an engine port', () => {
       const u = undoPortStep(PORT, p, 'free');
       expect(u.ok).toBe(true);
       p = u.history;
-      expect([hashState(p.state), bounds(p), p.redo]).toEqual([hashState(k.state), bounds(k), k.redo]);
+      expect([hashState(p.state), bounds(p), p.redo, p.peeked, canUndoPortStep(PORT, p, 'safe')]).toEqual([hashState(k.state), bounds(k), k.redo, k.peeked, canUndoStep(k, 'safe')]);
     }
     for (let i = 0; i < 3; i += 1) {
       k = redoStep(COUNTER, k, CONTENT).history;
@@ -58,6 +60,25 @@ describe('K404 undo by step over an engine port', () => {
       expect([hashState(p.state), bounds(p), p.redo]).toEqual([hashState(k.state), bounds(k), k.redo]);
     }
     expect(redoPortStep(PORT, p)).toMatchObject({ ok: false, error: 'Nothing to redo.' });
+  });
+
+  it('Safe mode refuses what the GameRules path refuses: a reveal, and with randomWords a step that moved the rng', () => {
+    const game = { ...COUNTER, randomWords: 'Dice were rolled' };
+    const port = kernelPort(game, CONTENT, { gameRules: LONG });
+    let k = newSteps<Counter>(createGame(game, { seed: 'steps' }, LONG, CONTENT).state);
+    let p = newPortSteps<Counter>(portSettle(port, port.start('steps')).state);
+    const seen: unknown[] = [];
+    for (const id of ['add', 'draw', 'add']) {
+      k = addStep(game, k, pick(k.state, id), CONTENT).history;
+      p = addPortStep(port, p, pick(p.state, id)).history;
+      expect(canUndoPortStep(port, p, 'safe')).toEqual(canUndoStep(k, 'safe'));
+      seen.push(canUndoPortStep(port, p, 'safe'));
+    }
+    expect(seen).toEqual([{ ok: false, reason: 'Dice were rolled' }, { ok: false, reason: 'A card was drawn' }, { ok: false, reason: 'Dice were rolled' }]);
+    expect(undoPortStep(port, p, 'safe')).toMatchObject({ ok: false, history: p, error: 'Dice were rolled' });
+    const bare = kernelPort({ ...COUNTER, revealWords: () => undefined }, CONTENT, { gameRules: LONG });
+    const r = addPortStep(bare, pStart(), pick(pStart().state, 'draw')).history;
+    expect(canUndoPortStep(bare, r, 'safe')).toEqual({ ok: false, reason: 'Something hidden was revealed' });
   });
 
   it('with isDecision skipping some prompts, their answers fold into the step; undo lands on a decision point', () => {
@@ -110,17 +131,17 @@ describe('K404 undo by step over an engine port', () => {
     expect(none.ok && [none.history.steps, none.history.answers]).toEqual([[], []]);
   });
 
-  it('Safe refuses a step the game says revealed something; replay by starts rebuilds the same steps', () => {
-    const reason = (_s: CounterState, events: readonly Counter['event'][]): string | null => (events.some((x) => x.type === 'drawn') ? 'A card was drawn' : null);
+  it('a reason option overrides the default; replay by starts rebuilds the same steps', () => {
+    const reason = (_s: CounterState, _a: CounterState, events: readonly Counter['event'][]): string | null => (events.some((x) => x.type === 'drawn') ? 'Drawn' : null);
     let p = pStart({ reason });
     p = addPortStep(PORT, p, pick(p.state, 'add')).history;
     p = addPortStep(PORT, p, pick(p.state, 'add')).history;
     p = extendPortStep(PORT, p, pick(p.state, 'draw')).history;
-    expect(canUndoPortStep(PORT, p, 'safe')).toEqual({ ok: false, reason: 'A card was drawn' });
+    expect(canUndoPortStep(PORT, p, 'safe')).toEqual({ ok: false, reason: 'Drawn' });
     const u = undoPortStep(PORT, p, 'free').history;
     expect([u.undoUsed, u.peeked, u.answers.length]).toEqual([true, true, 1]);
     const r = replayPortSteps(PORT, 'steps', p.answers, { starts: p.steps.map((s) => s.start), reason });
-    expect(r.ok && [bounds(r.history), hashState(r.history.state), r.history.steps[1]?.reason]).toEqual([bounds(p), hashState(p.state), 'A card was drawn']);
+    expect(r.ok && [bounds(r.history), hashState(r.history.state), r.history.steps[1]?.reason]).toEqual([bounds(p), hashState(p.state), 'Drawn']);
     expect(replayPortSteps(PORT, 'steps', [{ ...(p.answers[0] as AnswerAction), picks: ['nope'] }])).toMatchObject({ ok: false, failedAt: 0 });
   });
 });
