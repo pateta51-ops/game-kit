@@ -1,6 +1,6 @@
 import 'fake-indexeddb/auto';
 import { describe, expect, it } from 'vitest';
-import { DAMAGED, kernelPort, newHistory, OLDER_BUILD, recordAction, type History } from '../engine-core/index.ts';
+import { DAMAGED, kernelPort, type EnginePort, newHistory, OLDER_BUILD, recordAction, type History } from '../engine-core/index.ts';
 import { CONTENT, COUNTER, randomAnswer, RULES, type Counter } from '../engine-core/fake/counter.ts';
 import { makeSaves, type SavesConfig } from './index.ts';
 
@@ -86,5 +86,33 @@ describe('K403 saves over an engine port', () => {
   it('a broken history is never saved', () => {
     const h = played('h', 2);
     expect(() => viaPort().saveOf({ ...h, actions: [{ kind: 'answer', promptId: 999, picks: ['nope'] }], cursor: 1 })).toThrow();
+  });
+});
+
+// K419: a game on EnginePort (its state is no KernelState) builds SavesConfig with no cast
+interface Fake {
+  state: { n: number };
+  prompt: { id: string; options: { id: string; enabled: boolean }[] };
+  event: unknown;
+  task: unknown;
+  content: { v: number };
+}
+describe('K419 saves over a port game types', () => {
+  it('SavesConfig takes EnginePort<Fake> with no cast, and saves and restores', async () => {
+    const fake: EnginePort<Fake> = {
+      content: { v: 1 },
+      start: () => ({ n: 0 }),
+      apply: (s) => ({ n: s.n + 1 }),
+      settle: (s) => s,
+      prompt: (s) => ({ id: 'p', options: [{ id: 'go', enabled: s.n < 9 }] }),
+      events: () => [],
+      result: (s) => (s.n >= 2 ? 'done' : null),
+    };
+    const c: SavesConfig<Fake> = { game: fake, content: { v: 1 }, database: 'k419', filePrefix: 'fake', now: () => new Date((clock += 1000)) };
+    const saves = makeSaves(c);
+    const answer = { kind: 'answer', promptId: 'p', picks: ['go'] } as const;
+    const key = await saves.saveNamed('a', { options: { seed: 's' }, rules: {}, actions: [answer], cursor: 1, undoUsed: false });
+    const r = saves.restore((await saves.get(key))!);
+    expect(r.ok ? r.state.n : r.error).toBe(1);
   });
 });
