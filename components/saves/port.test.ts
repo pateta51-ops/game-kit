@@ -19,7 +19,7 @@ const cfg = (more: Partial<SavesConfig<Counter>> = {}): SavesConfig<Counter> => 
 const viaPort = (more: Partial<SavesConfig<Counter>> = {}) => makeSaves<Counter>(cfg({ game: port, ...more }));
 function played(seed: string, n: number): History<Counter> {
   let h = newHistory<Counter>({ seed }, RULES);
-  let state = port.settle(port.start(seed)) as Parameters<typeof randomAnswer>[0];
+  let state = port.settle(port.start(seed));
   for (let i = 0; i < n && state.result === null; i++) {
     const r = recordAction(COUNTER, h, randomAnswer(state, seed), CONTENT);
     h = r.history;
