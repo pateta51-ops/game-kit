@@ -13,10 +13,14 @@ export interface TrailSettings {
   spacing: number;
 }
 
-export const trail: CanvasEffect = (ctx, t, { call }) => {
-  const s = call.step['ribbon'] as TrailSettings | undefined;
-  if (!s || !call.to) return;
+export const trail: CanvasEffect = (ctx, t, { call, run }) => {
+  const r = call.step['ribbon'] as Partial<TrailSettings> | undefined;
+  if (!r || !call.to) return;
   const from = centre(call.from), to = centre(call.to);
+  const arc = run?.timeline.calls.find((c) => c.verb === 'arc-move' && c.t === call.t && c.to?.join() === call.to?.join());
+  const lift = Number(arc?.step['arcHeight'] ?? 0);
+  const s: TrailSettings = { rear: 0, samples: 24, spacing: 28, width: 4, tipWidth: 1, fade: 0.8, colour: '255,255,255', ...r,
+    quadratic: r.quadratic ?? { control: [(from[0] + to[0]) / 2, (from[1] + to[1]) / 2 - 2 * lift], blend: 0, lookAhead: 0.02, nose: 0, rollAxis: 0, rollSquash: 0, reverseBrightness: 0 } };
   const sample = (time: number) => quadraticPose(from, to, seg(time, 0, call.step.dur), s.quadratic);
   if (t <= 0 || t >= call.step.dur) return;
   const current = sample(t);
