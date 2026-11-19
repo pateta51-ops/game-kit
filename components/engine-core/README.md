@@ -37,3 +37,5 @@ state = applyAction(COUNTER, state, { kind: 'answer', promptId: prompt.id, picks
 console.log(state.counter, hashState(state)) // same seed and answers: same state and hash
 console.log(enumerateAnswers(state, (_s, a) => !a.picks.includes('draw'))) // every legal answer (every order when the prompt is `ordered`), minus those `valid` refuses
 ```
+
+Cost: an `ordered` prompt lists every order of every pick set (about 110k answers for 8 options, 9.8M for 10), and `valid` filters after the list is built. Keep ordered prompts small or enumerate in the game.
