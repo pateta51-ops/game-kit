@@ -4,6 +4,8 @@ export interface StampSettings {
   text?: string;
   tilt?: number;
   image?: string;
+  /** K460: `'bare'` is lettering over the actor, no box (default: the boxed label) */
+  look?: 'bare';
   ms?: number;
   ease?: string;
   scales?: readonly [number, number, number];
@@ -65,7 +67,7 @@ export const stamp: Effect = ({ el, call }) => {
     halo = el.ownerDocument.createElement('div');
     Object.assign(halo.style, {
       zIndex: ringZ === undefined ? tag.style.zIndex : String(ringZ), position: 'absolute', left: tag.style.left, top: tag.style.top, width: tag.style.width, height: tag.style.height,
-      boxSizing: 'border-box', borderRadius: '50%', opacity: '0', border: '3px solid currentColor',
+      boxSizing: 'border-box', borderRadius: '50%', opacity: '0', ...(ring.style ? {} : { border: '3px solid currentColor' }),
     }, ring.style);
     halo.dataset['fxPart'] = 'ring';
     tag.before(halo);
