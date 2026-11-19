@@ -126,7 +126,7 @@ async function main([cmd, ...a]) {
   if (cmd === 'release') { await post('/release', { id: a[0], exit: a[1] === undefined ? null : Number(a[1]) }).catch(() => {}); return 0; }
   if (cmd === 'status') { try { console.log(JSON.stringify(await (await fetch(URL_ + '/status')).json(), null, 2)); return 0; } catch { say(`no queue at ${URL_}`); return 3; } }
   say('usage: heavy run [--priority high|normal] [--label <text>] -- <cmd...> | heavy status | heavy hold --pid <pid> [--priority] [--label] | heavy release <id> [exit]');
-  return 2;
+  return cmd === '--help' || cmd === '-h' ? 0 : 2;
 }
 
 process.exitCode = await main(process.argv.slice(2));
