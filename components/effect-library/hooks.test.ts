@@ -79,7 +79,7 @@ describe('K412 hooks', () => {
     expect(hostEl.children.length).toBe(0);
   });
   it('sheen takes a caller-supplied background', () => {
-    const band = (extra: object): HTMLElement => setup({ do: 'sheen', ...extra }).context.el.querySelector('div > div > div > div') as HTMLElement;
+    const band = (extra: object): HTMLElement => setup({ do: 'sheen', ...extra }).context.el.querySelector('div > div > div > div > div') as HTMLElement;
     expect(band({}).style.width).toBe('50%');
     document.body.replaceChildren();
     const custom = band({ background: 'red' });
