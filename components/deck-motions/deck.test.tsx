@@ -107,6 +107,29 @@ describe('deck-motions DOM', () => {
     expect(String(back.find((k) => k.offset === 0.3)!.transform)).toMatch(/scale\(1\.2\) perspective\(500px\) rotateY\(90deg\)/);
     finishDeckMotions();
   });
+  it('K443: dealFrom takes its timing; defaults stay 520/90', () => {
+    setup();
+    const two = [{ id: 'a', dir: 'out' as const, pile: 'deck', at: slot, faceDown: false }, { id: 'b', dir: 'out' as const, pile: 'deck', at: slot, faceDown: false }];
+    dealFrom(two, { speed: 1 });
+    expect(made.map((x) => [x.opts.duration, x.opts.delay])).toEqual([[520, 0], [520, 90]]);
+    made.length = 0;
+    dealFrom(two, { speed: 1, dealMs: 680, staggerMs: 190 });
+    expect(made.map((x) => [x.opts.duration, x.opts.delay])).toEqual([[680, 0], [680, 190]]);
+    finishDeckMotions();
+  });
+  it('K443: a move starts from a tilt and a scale and rests at its own turn (flat and turning)', () => {
+    setup();
+    dealFrom([{ id: 'a', dir: 'out', pile: 'deck', at: slot, faceDown: false, from: { x: 5, y: -4, tilt: 9, scale: 0.9 }, turn: -4 }], { speed: 1 });
+    const fr = made[0]!.frames;
+    expect(String(fr[0]!.transform)).toBe('translate(5px, -4px) scale(0.9, 0.9) rotate(9deg)');
+    expect(String(fr.at(-1)!.transform)).toBe('translate(0px, 0px) scale(1, 1) rotate(-4deg)');
+    made.length = 0;
+    dealFrom([{ id: 'a', dir: 'out', pile: 'deck', at: slot, faceDown: true, from: { tilt: 9, scale: 0.9 }, turn: -4 }], { speed: 1, liftCurve: () => 1, flipLift: 1.07 });
+    expect(String(made[0]!.frames[0]!.transform)).toContain('rotate(9deg)');
+    expect(String(made[1]!.frames.at(-1)!.transform)).toContain('rotate(-4deg)');
+    expect(String(made[0]!.frames.find((k) => k.offset === 0.5)!.transform)).toContain('scale(1.07)');
+    finishDeckMotions();
+  });
   it('plays nothing at speed 0', async () => {
     setup();
     await dealFrom([{ id: 'c1', dir: 'out', pile: 'deck', at: slot, faceDown: false }], { speed: 0 }).done;

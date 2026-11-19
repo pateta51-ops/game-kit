@@ -68,3 +68,25 @@ describe('K406 flipFrames', () => {
     expect(String(y.first.at(-1)!.transform)).toContain('rotateX(-90deg)');
   });
 });
+
+describe('K443', () => {
+  const m = (id: string) => out(id);
+  it('K443: planDeal takes flight and stagger timing; defaults unchanged', () => {
+    const p = planDeal([m('a'), m('b')], { dealMs: 680, staggerMs: 190 });
+    expect(p.timed.map((x) => x.delay)).toEqual([0, 190]);
+    expect(p.timed[0]!.ms).toBe(680);
+    expect(planDeal([m('a'), m('b')], { dealMs: 680, staggerMs: 190, speed: 0 }).timed).toEqual([]);
+    expect(planDeal([m('a'), m('b')]).timed.map((x) => x.delay)).toEqual([0, STAGGER_MS]);
+  });
+  it('K443: flipFrames takes a lift curve and peak', () => {
+    const f = flipFrames({ x: 0, y: 0, sx: 1, sy: 1 }, { lift: 1.07, start: 0, end: 1, liftCurve: (u) => 1 - Math.abs(2 * u - 1) });
+    expect(String(f.first.find((k) => k.offset === 0.25)!.transform)).toContain('scale(1.035)');
+    expect(String(f.first.find((k) => k.offset === 0.5)!.transform)).toContain('scale(1.07)');
+  });
+  it('K443: flipFrames starts from a tilt and ends at a resting turn', () => {
+    const f = flipFrames({ x: 10, y: 0, sx: 0.9, sy: 0.9, rot: 8, rest: -3 });
+    expect(String(f.first[0]!.transform)).toContain('rotate(8deg)');
+    expect(String(f.second.at(-1)!.transform)).toContain('rotate(-3deg)');
+    expect(String(flipFrames({ x: 10, y: 0, sx: 1, sy: 1 }).first[0]!.transform)).not.toContain('rotate(');
+  });
+});
