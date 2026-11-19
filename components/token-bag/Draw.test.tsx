@@ -110,4 +110,19 @@ describe('Draw', () => {
     expect(css).toContain('env(safe-area-inset-bottom)');
     expect(css).toContain('clamp(34px,3.2vmin,96px)');
   });
+
+  it('positions the count and hint from the stylesheet, not inline styles (K446)', () => {
+    fake(() => Promise.resolve());
+    render(<Draw {...props} onDone={() => undefined} onFail={() => undefined} />);
+    for (const part of ['token-bag-count', 'token-bag-skip']) {
+      const el = document.querySelector(`[data-part="${part}"]`) as HTMLElement;
+      expect(el.style.top).toBe('');
+      expect(el.style.bottom).toBe('');
+      expect(el.style.position).toBe('');
+    }
+    const css = document.getElementById('token-bag-draw-style')?.textContent ?? '';
+    expect(css).toContain('position:absolute');
+    expect(css).toContain('var(--token-bag-inset');
+    expect(css).not.toContain('!important');
+  });
 });

@@ -90,3 +90,34 @@ describe('K443', () => {
     expect(String(flipFrames({ x: 10, y: 0, sx: 1, sy: 1 }).first[0]!.transform)).not.toContain('rotate(');
   });
 });
+
+describe('K445 flipFrames resize box', () => {
+  const box = { from: { left: 100, top: 50, width: 80, height: 112 }, to: { left: 400, top: 300, width: 200, height: 280 } };
+  const f = flipFrames({ x: 0, y: 0, sx: 1, sy: 1 }, { box });
+  const px = (k: Keyframe, key: string) => Number(String((k as Record<string, unknown>)[key]).replace('px', ''));
+  const deg = (k: Keyframe) => Number(/rotateY\((-?[\d.]+)deg\)/.exec(String(k.transform))?.[1]);
+  it('K445: both sides animate one box from the pile size to the fan size, no jump', () => {
+    expect(f.first.map((k) => k.offset)).toEqual(f.second.map((k) => k.offset));
+    f.first.forEach((k, i) => { for (const key of ['left', 'top', 'width', 'height']) expect(px(k, key)).toBe(px(f.second[i]!, key)); });
+    expect([px(f.first[0]!, 'width'), px(f.first[0]!, 'height'), px(f.first[0]!, 'left')]).toEqual([80, 112, 100]);
+    expect([px(f.second.at(-1)!, 'width'), px(f.second.at(-1)!, 'height'), px(f.second.at(-1)!, 'top')]).toEqual([200, 280, 300]);
+    expect(px(f.first.find((k) => k.offset === 0.5)!, 'width')).toBe(140);
+  });
+  it("K445: the swap is exactly edge-on, the perspective is the parent's (4x the start height), none in the transform", () => {
+    const i = f.first.findIndex((k) => k.opacity === 0);
+    expect(deg(f.first[i - 1]!)).toBe(90);
+    expect(deg(f.second[i - 1]!)).toBe(-90);
+    expect(deg(f.second[i]!)).toBeLessThan(-89.9);
+    expect(f.first[i - 1]!.offset).toBe(0.5);
+    expect(f.perspective).toBe(448);
+    for (const k of [...f.first, ...f.second]) expect(String(k.transform)).not.toContain('perspective(');
+    expect(deg(f.first[0]!)).toBe(0);
+    expect(deg(f.second.at(-1)!)).toBe(0);
+  });
+  it('K445: defaults unchanged without a box', () => {
+    const d = flipFrames({ x: 3, y: 4, sx: 1, sy: 1 });
+    expect(d.perspective).toBe(800);
+    expect(String(d.first[0]!.transform)).toContain('perspective(800px)');
+    expect(d.first[0]).not.toHaveProperty('left');
+  });
+});

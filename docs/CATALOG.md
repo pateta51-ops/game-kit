@@ -1064,7 +1064,7 @@ Tokens that moved between two views fly from where they were to where they are, 
 
 - **Use it when:** Tokens that moved between two views fly from where they were to where they are, with a ledger that draws each token in one place at a time.
 - **Not for:** Cards flying, motion specs (motion-frame) or the token look.
-- **Key exports:** `MAX_PER_CHANGE`, `movesBetween`, `EMPTY_LEDGER`, `book`, `createFlightLedger`, `isEmpty`, `land`, `shownCount`, `shownCounts`, `shownTokens`, `takeOff`, `Move`, `Placement`, `SupplyOf`, and 2 more
+- **Key exports:** `MAX_PER_CHANGE`, `movesBetween`, `EMPTY_LEDGER`, `book`, `createFlightLedger`, `isEmpty`, `land`, `shownCount`, `shownCounts`, `shownTokens`, `takeOff`, `WARP_FLIGHTS_3D`, `applyPose`, `flight3dMs`, and 17 more
 - **Needs:** nothing
 - **Came from:** unstoppable-fan-prototype
 - **Docs:** [README](../components/token-flights/README.md)

@@ -6982,9 +6982,14 @@ var MOTION = (() => {
       target.removeEventListener("keydown", f, { capture: true });
     };
   }
-  function skipOnInput(player, target) {
-    const skip = () => {
-      if (player.pending() > 0) player.skipAll();
+  function skipOnInput(player, target, options = {}) {
+    const skip = (e) => {
+      if (player.pending() <= 0) return;
+      player.skipAll();
+      if (options.consume) {
+        e.preventDefault();
+        e.stopPropagation();
+      }
     };
     target.addEventListener("pointerdown", skip, { capture: true });
     target.addEventListener("keydown", skip, { capture: true });
