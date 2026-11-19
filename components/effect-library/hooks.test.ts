@@ -31,7 +31,7 @@ describe('K412 hooks', () => {
   it('collapse-jump holdBetween fires once when the collapse ends, with the two rects', () => {
     vi.useFakeTimers();
     const hold = vi.fn();
-    const { end } = setup({ do: 'collapse-jump', n: 2, holdBetween: hold } as never);
+    const { end } = setup({ do: 'collapse-jump', n: 2, holdBetween: hold });
     expect(hold).not.toHaveBeenCalled();
     vi.advanceTimersByTime(639);
     expect(hold).not.toHaveBeenCalled();
@@ -44,7 +44,7 @@ describe('K412 hooks', () => {
   it('collapse-jump holdBetween still runs when the call is skipped before the hold', () => {
     vi.useFakeTimers();
     const hold = vi.fn();
-    const { end } = setup({ do: 'collapse-jump', n: 2, holdBetween: hold } as never);
+    const { end } = setup({ do: 'collapse-jump', n: 2, holdBetween: hold });
     end?.();
     expect(hold).toHaveBeenCalledTimes(1);
   });
@@ -53,7 +53,7 @@ describe('K412 hooks', () => {
     const z = (): unknown => (animate.mock.calls.at(-1)![0] as Keyframe[])[0]!['zIndex'];
     expect(z()).toBe('2');
     animate.mockClear();
-    setup({ do: 'column-beam', core: true, actorZ: 3 } as never);
+    setup({ do: 'column-beam', core: true, actorZ: 3 });
     expect(z()).toBe('3');
   });
   it('the layer takes a z-index and a position, and holds inside its parent', () => {
@@ -78,7 +78,7 @@ describe('K412 hooks', () => {
     expect(hostEl.children.length).toBe(0);
   });
   it('sheen takes a caller-supplied background', () => {
-    const band = (extra: object): HTMLElement => setup({ do: 'sheen', ...extra } as never).context.el.querySelector('div > div > div > div') as HTMLElement;
+    const band = (extra: object): HTMLElement => setup({ do: 'sheen', ...extra }).context.el.querySelector('div > div > div > div') as HTMLElement;
     expect(band({}).style.backgroundImage).toContain('transparent 0%');
     document.body.replaceChildren();
     const custom = band({ background: 'linear-gradient(110deg, transparent 35%, rgba(182,246,255,.2) 50%, transparent 65%)' });
