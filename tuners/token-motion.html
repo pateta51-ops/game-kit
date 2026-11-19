@@ -14930,7 +14930,23 @@ var MOTION = (() => {
   });
 
   // components/token-bag/exterior.ts
-  async function exteriorCanvas(print) {
+  function exteriorCanvas(exterior) {
+    if (exterior instanceof HTMLCanvasElement) return Promise.resolve(exterior);
+    if (exterior === void 0) return plain ??= paint().catch((e) => {
+      plain = void 0;
+      throw e;
+    });
+    let p = painted.get(exterior);
+    if (p === void 0) {
+      p = paint(exterior).catch((e) => {
+        painted.delete(exterior);
+        throw e;
+      });
+      painted.set(exterior, p);
+    }
+    return p;
+  }
+  async function paint(print) {
     const canvas = document.createElement("canvas");
     canvas.width = EXTERIOR_WIDTH;
     canvas.height = EXTERIOR_HEIGHT;
@@ -14973,11 +14989,12 @@ var MOTION = (() => {
     }
     return canvas;
   }
-  var EXTERIOR_ACROSS, EXTERIOR_UP, CLOTH;
+  var painted, plain, EXTERIOR_ACROSS, EXTERIOR_UP, CLOTH;
   var init_exterior = __esm({
     "components/token-bag/exterior.ts"() {
       "use strict";
       init_mode();
+      painted = /* @__PURE__ */ new WeakMap();
       EXTERIOR_ACROSS = EXTERIOR_WIDTH / (2 * Math.PI * 1.38);
       EXTERIOR_UP = EXTERIOR_HEIGHT / (2.14 * 0.82);
       CLOTH = "#334b59";
@@ -36635,9 +36652,14 @@ void main() {
       let alive = true;
       let closing = 0;
       const hideDock = (hide) => {
-        const d = dockCanvas();
-        if (d !== null) d.style.visibility = hide ? "hidden" : "";
+        document.documentElement.classList.toggle("token-bag-drawing", hide);
       };
+      if (document.getElementById("token-bag-draw-style") === null) {
+        const st = document.createElement("style");
+        st.id = "token-bag-draw-style";
+        st.textContent = STYLE;
+        document.head.appendChild(st);
+      }
       const from = () => dockCanvas()?.getBoundingClientRect() ?? null;
       const at = from();
       hideDock(true);
@@ -36658,9 +36680,10 @@ void main() {
               if (!alive) return;
               setPhase("back");
               hideDock(false);
-              void s.back().then(() => {
+              const end = () => {
                 if (alive) cb.current.onDone();
-              });
+              };
+              s.back().then(end, end);
             }, 450 / rate);
           },
           onSlow: () => {
@@ -36678,6 +36701,9 @@ void main() {
         cb.current.onFail("error");
         return;
       }
+      const w = window;
+      w.__bag3dStats = () => ({ ...s.stats(), faceSize: s.faceSize, textureBytes: s.textureBytes });
+      w.__bag3dSeek = (t) => s.seek(t);
       s.ready.then(
         () => {
           if (!alive) return;
@@ -36692,6 +36718,8 @@ void main() {
         alive = false;
         window.clearTimeout(closing);
         hideDock(false);
+        delete w.__bag3dStats;
+        delete w.__bag3dSeek;
         s.dispose();
       };
     }, []);
@@ -36735,7 +36763,7 @@ void main() {
       }
     );
   }
-  var import_react4, import_jsx_runtime3;
+  var import_react4, import_jsx_runtime3, STYLE;
   var init_Draw = __esm({
     "components/token-bag/Draw.tsx"() {
       "use strict";
@@ -36743,6 +36771,11 @@ void main() {
       init_scene();
       init_mode();
       import_jsx_runtime3 = __toESM(require_jsx_runtime(), 1);
+      STYLE = `html.token-bag-drawing canvas[data-part="token-bag-canvas"]{visibility:hidden}
+[data-part="token-bag-draw"] [data-part="token-bag-count"]{top:max(16px,env(safe-area-inset-top))}
+[data-part="token-bag-draw"] [data-part="token-bag-n"]{font-size:clamp(34px,3.2vmin,96px)}
+[data-part="token-bag-draw"] [data-part="token-bag-label"]{font-size:clamp(12px,1.2vmin,36px)}
+[data-part="token-bag-draw"] [data-part="token-bag-skip"]{bottom:max(16px,env(safe-area-inset-bottom));font-size:clamp(15px,1.4vmin,40px)}`;
     }
   });
 
