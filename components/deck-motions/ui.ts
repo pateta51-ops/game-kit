@@ -108,10 +108,18 @@ export function dealFrom(moves: readonly Move[], o: DeckMotionOpts & { shuffled?
   const ends: Promise<void>[] = [];
   const mine: Animation[] = [];
   const mineTimers = new Set<{ t: number; r: () => void }>();
-  const began = (move: Move) => { o.onCardStart?.(moves.indexOf(move), move.id); };
+  const began = (move: Move) => { if (!o.signal?.aborted) o.onCardStart?.(moves.indexOf(move), move.id); };
   if (!plan.timed.length) for (const m of moves) began(m);
   for (const t of plan.timed) {
     const { move } = t;
+    if (o.onCardStart) {
+      if (t.delay > 0) {
+        const x = { t: 0, r: () => { mineTimers.delete(x); began(move); } };
+        x.t = window.setTimeout(() => { timers.delete(x); mineTimers.delete(x); began(move); }, t.delay);
+        timers.add(x);
+        mineTimers.add(x);
+      } else began(move);
+    }
     const pileEl = resolveAt(move.pile);
     const atEl = resolveAt(move.at);
     if (!pileEl || !atEl || typeof atEl.animate !== 'function') continue;
@@ -119,14 +127,6 @@ export function dealFrom(moves: readonly Move[], o: DeckMotionOpts & { shuffled?
     const ar = atEl.getBoundingClientRect();
     const [from, to] = move.dir === 'out' ? [pr, ar] : [ar, pr];
     const start = `translate(${String(from.left - to.left)}px, ${String(from.top - to.top)}px) scale(${String(from.width / (to.width || 1))}, ${String(from.height / (to.height || 1))})`;
-    if (o.onCardStart) {
-      if (t.delay > 0) {
-        const x = { t: 0, r: () => { began(move); } };
-        x.t = window.setTimeout(() => { timers.delete(x); mineTimers.delete(x); began(move); }, t.delay);
-        timers.add(x);
-        mineTimers.add(x);
-      } else began(move);
-    }
     const stand = (el: HTMLElement) => {
       el.removeAttribute('data-card-id');
       el.dataset['motionStandin'] = '';
@@ -171,7 +171,7 @@ export function dealFrom(moves: readonly Move[], o: DeckMotionOpts & { shuffled?
   };
   if (o.signal?.aborted) abort();
   else o.signal?.addEventListener('abort', abort, { once: true });
-  return { plan, done: Promise.all([...ends, rif]).then(() => undefined) };
+  return { plan, done: Promise.all([...ends, rif]).then(() => { o.signal?.removeEventListener('abort', abort); }) };
 }
 
 /**

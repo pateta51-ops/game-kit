@@ -11,6 +11,7 @@ export async function withViewTransition(apply: () => void | Promise<void>, spee
     return;
   }
   const marked = new Set<Element>();
+  let skip = (): void => undefined;
   const unnameClipped = (): void => {
     for (const el of document.querySelectorAll('[data-vt-clip] [style*="view-transition-name"]')) {
       const panel = el.closest('[data-vt-clip]');
@@ -30,12 +31,13 @@ export async function withViewTransition(apply: () => void | Promise<void>, spee
       await apply();
       unnameClipped();
     });
-    const skip = () => { transition.skipTransition?.(); };
+    skip = () => { transition.skipTransition?.(); };
     if (o.signal?.aborted) skip(); else o.signal?.addEventListener('abort', skip, { once: true });
     void transition.ready?.then(started, () => undefined);
     await transition.finished.catch(() => undefined);
     await transition.updateCallbackDone;
   } finally {
+    o.signal?.removeEventListener('abort', skip);
     for (const el of marked) el.removeAttribute('data-vt-clipped');
   }
 }

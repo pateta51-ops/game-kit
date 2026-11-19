@@ -49,4 +49,24 @@ describe('K402 onCardStart and signal', () => {
     await d.done;
     expect(document.querySelectorAll('[data-motion-standin]')).toHaveLength(0);
   });
+  it('fires no start with a signal already aborted, at speed 1 or 0', () => {
+    for (const speed of [1, 0]) {
+      const ac = new AbortController();
+      ac.abort();
+      const { got, d } = run(speed, ac.signal);
+      vi.advanceTimersByTime(d.plan.total + 10);
+      expect(got).toEqual([]);
+    }
+  });
+  it('still fires the start of a move whose place is missing, at its planned time', () => {
+    vi.useFakeTimers();
+    setup();
+    const got: [number, number][] = [];
+    const t0 = Date.now();
+    const ms = [{ ...moves(1)[0]!, at: () => null }, ...moves(2).map((m, i) => ({ ...m, id: `d${String(i)}` }))];
+    const d = dealFrom(ms, { speed: 1, onCardStart: (i) => { got.push([i, Date.now() - t0]); } });
+    vi.advanceTimersByTime(d.plan.total + 10);
+    expect(got).toEqual(d.plan.timed.map((t, i) => [i, t.delay]));
+    expect(got).toHaveLength(3);
+  });
 });
