@@ -124,4 +124,14 @@ describe('K435 effect verb options', () => {
     expect(String(kf[30]!.outline)).toContain('/ 0.5)');
     expect(String(kf[60]!.boxShadow)).toMatch(/^inset 0 0 24px 8px/);
   });
+  it('K435-7 debris in DOM mode makes one element per piece in the layer, with its z, and no canvas', () => {
+    animate.mockReturnValue(fakeAnim(false).a as unknown as Animation);
+    const { context, end } = setup({ do: 'debris', dom: true, count: 3, z: 4, ms: 300 });
+    const kids = [...context.el.children] as HTMLElement[];
+    expect(context.el.querySelector('canvas')).toBeNull();
+    expect(kids.filter((k) => k.style.zIndex === '4')).toHaveLength(3);
+    expect((animate.mock.calls.at(-1)![0] as Keyframe[])).toHaveLength(31);
+    end?.();
+    expect([...context.el.children].map((k) => k.className)).toEqual(['fx-actor']);
+  });
 });
