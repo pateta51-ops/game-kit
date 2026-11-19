@@ -267,3 +267,29 @@ it('K439 live flights are cleared on skip', () => {
   p.skipAll();
   expect(cancel).toHaveBeenCalledTimes(2);
 });
+
+it.each([0, 'instant'] as const)('K439 live flight at speed %s starts no animation and leaves the nodes bare', (speed) => {
+  document.body.replaceChildren();
+  const commit = vi.fn(() => { drawLive(3); });
+  const p = player({ specs: { live: liveSpec }, speed: () => speed });
+  p.play('live', { commit });
+  vi.advanceTimersByTime(100);
+  expect(commit).toHaveBeenCalledOnce();
+  expect(animate).not.toHaveBeenCalled();
+  expect(document.querySelectorAll('[data-motion-key]')).toHaveLength(3);
+  expect([...document.querySelectorAll('[data-motion-key]')].every((n) => !n.hasAttribute('style'))).toBe(true);
+});
+
+it.each(['finish', 'cancel'] as const)('K439 live nodes keep an empty style attribute after the flight and after a %s', (how) => {
+  document.body.replaceChildren();
+  const p = player({ specs: { live: liveSpec } });
+  p.play('live', { commit: () => { drawLive(3); } });
+  vi.advanceTimersByTime(16);
+  expect(animate).toHaveBeenCalledTimes(3);
+  const nodes = [...document.querySelectorAll<HTMLElement>('[data-motion-key]')];
+  if (how === 'cancel') p.skipAll();
+  else vi.advanceTimersByTime(1000);
+  expect(p.pending()).toBe(0);
+  expect(nodes).toHaveLength(3);
+  expect(nodes.every((n) => (n.getAttribute('style') ?? '') === '')).toBe(true);
+});
