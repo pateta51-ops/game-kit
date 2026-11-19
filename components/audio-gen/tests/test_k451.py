@@ -1,6 +1,7 @@
 """K451: Stable Audio 3 and YuE2 defaults, the YuE2 instrumental recipe (7th Inning Stretch round6i), with fakes."""
 import importlib.util
 import json
+import os
 import sys
 import tempfile
 import types
@@ -100,7 +101,7 @@ class Arr:
 
 
 class Yue2Worker(unittest.TestCase):
-    def run_worker(self, version="0.1.6", cuda=True):
+    def run_worker(self, version="0.1.6", cuda=True, keep=None):
         seen = {"calls": [], "demucs": []}
 
         class Pipe:
@@ -117,11 +118,11 @@ class Yue2Worker(unittest.TestCase):
                 seen["calls"].append(("render", kw))
                 return types.SimpleNamespace(save=lambda p: Path(p).write_bytes(b"x"))
 
-        def read(p):  # the first seed sings, the second (8919) does not
+        def read(p):  # the first seed (1000) sings, the next ones do not
             p = str(p)
             if p.endswith("no_vocals.wav"):
                 return Arr([1.0] * 40), 20
-            return Arr([0.001 if "8919" in p else 1.0] * 40), 20
+            return Arr([1.0 if "-1000" in p else 0.001] * 40), 20
 
         def demucs(cmd, **kw):
             seen["demucs"].append(cmd)
@@ -137,7 +138,7 @@ class Yue2Worker(unittest.TestCase):
         with tempfile.TemporaryDirectory() as t:
             t = Path(t)
             (t / "job.json").write_text(json.dumps({
-                "options": {"modelDir": str(t / "none"), "tries": 3}, "result": str(t / "r.json"),
+                "options": {"modelDir": str(t / "none"), "tries": 3, **({"keep": keep} if keep else {})}, "result": str(t / "r.json"),
                 "items": [{"out": str(t / "o" / "a.wav"), "prompt": "calm ballpark organ", "seconds": 20, "seed": 1000, "label": "a#1"}]}))
             with mock.patch.object(sys, "argv", ["w", str(t / "job.json")]), mock.patch.dict(sys.modules, mods), \
                     mock.patch.object(w.subprocess, "run", demucs):
@@ -146,10 +147,11 @@ class Yue2Worker(unittest.TestCase):
                 except SystemExit as e:
                     code = e.code
             res = json.loads((t / "r.json").read_text())["items"] if (t / "r.json").exists() else []
-            return code, seen, res, (t / "o" / "a.wav").exists()
+            return code, seen, res, (t / "o" / "a.wav").exists(), (t / "o" / "a-keep2.wav").exists()
 
     def test_recipe_and_next_seed(self):
-        code, seen, res, made = self.run_worker()
+        code, seen, res, made, alt = self.run_worker()
+        self.assertFalse(alt)
         self.assertEqual(code, 0)
         self.assertTrue(made)
         self.assertEqual(seen["load"], ("m-a-p/YuE2-3B", {"revision": "8f24312f", "device": "cuda"}))
@@ -167,3 +169,75 @@ class Yue2Worker(unittest.TestCase):
     def test_pinned_version_and_no_cuda(self):
         self.assertEqual(self.run_worker(version="0.1.5")[0], 3)
         self.assertEqual(self.run_worker(cuda=False)[0], 3)
+
+    def test_keep_several_passing_seeds(self):
+        code, seen, res, made, alt = self.run_worker(keep=2)
+        self.assertEqual((code, made, alt), (0, True, True))
+        self.assertEqual(res[0]["seed"], 8919)
+        self.assertEqual([a["seed"] for a in res[0]["extra"]["alternates"]], [16838])
+        self.assertEqual(len(res[0]["extra"]["tried"]), 3)
+
+
+class Sa3Retry(unittest.TestCase):
+    def test_reject_rule(self):
+        from audiogen.recipe import sa3_bad
+        self.assertFalse(sa3_bad(0.4, 0.2, 0.99))
+        self.assertTrue(sa3_bad(0.41, 0.0, 0.5))
+        self.assertTrue(sa3_bad(0.1, 0.21, 0.5))
+        self.assertTrue(sa3_bad(0.1, 0.0, 0.999))
+
+    def test_retry_next_seed(self):
+        from audiogen.recipe import first_good
+        made = []
+        take = lambda s: made.append(s) or s  # noqa: E731
+        self.assertEqual(first_good(take, lambda s: s < 12, 10, 4), (12, 12, 3))
+        self.assertEqual(made, [10, 11, 12])
+        with self.assertRaises(RuntimeError):
+            first_good(take, lambda s: True, 10, 2)
+
+
+class AceDefaults(unittest.TestCase):
+    def params(self, model):
+        seen = {}
+
+        class Handler:
+            def initialize_service(self, **kw):
+                self.vae = types.SimpleNamespace(decode=lambda z: "wav")
+                return "", True
+
+        def music(dit, llm, params, cfg, save_dir):
+            seen["p"] = params
+            p = Path(save_dir) / "x.wav"
+            p.write_bytes(b"x")
+            return types.SimpleNamespace(success=True, audios=[{"path": str(p), "params": {"seed": 1}}], error=None)
+
+        torch = types.SimpleNamespace(cuda=types.SimpleNamespace(
+            is_available=lambda: True, reset_peak_memory_stats=lambda: None, memory_allocated=lambda: 5,
+            max_memory_allocated=lambda: 6), set_num_threads=lambda n: None)
+        mods = {"torch": torch, "acestep": types.ModuleType("acestep"), "acestep.handler": types.SimpleNamespace(AceStepHandler=Handler),
+                "acestep.inference": types.SimpleNamespace(GenerationConfig=lambda **k: None, generate_music=music, GenerationParams=lambda **k: k),
+                "acestep.llm_inference": types.SimpleNamespace(LLMHandler=lambda: None),
+                "acestep.model_downloader": types.SimpleNamespace(
+                    check_main_model_exists=lambda c: True, check_model_exists=lambda m, c: True, ensure_dit_model=None,
+                    ensure_lm_model=None, ensure_main_model=None, get_checkpoints_dir=lambda: "ckpt")}
+        spec = importlib.util.spec_from_file_location("acestep_worker", HERE / "workers" / "acestep_worker.py")
+        w = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(w)
+        cwd = os.getcwd()
+        with tempfile.TemporaryDirectory() as t:
+            t = Path(t)
+            (t / "repo" / "acestep").mkdir(parents=True)
+            (t / "job.json").write_text(json.dumps({"options": {"repo": str(t / "repo"), "model": model}, "result": str(t / "r.json"),
+                                                    "items": [{"out": str(t / "a.wav"), "prompt": "p", "seconds": 1, "seed": 1, "label": "a#1"}]}))
+            try:
+                with mock.patch.object(sys, "argv", ["w", str(t / "job.json")]), mock.patch.dict(sys.modules, mods):
+                    self.assertEqual(w.main(), 0)
+            finally:
+                os.chdir(cwd)
+        return seen["p"]
+
+    def test_xl_sft_and_turbo(self):
+        xl = self.params("acestep-v15-xl-sft")
+        self.assertEqual((xl["inference_steps"], xl["guidance_scale"]), (50, 7.0))
+        turbo = self.params("acestep-v15-turbo")
+        self.assertEqual((turbo["inference_steps"], "guidance_scale" in turbo), (8, False))

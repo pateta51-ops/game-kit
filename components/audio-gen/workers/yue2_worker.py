@@ -9,7 +9,8 @@ next seed (seed + 7919 k), up to `tries` seeds; none passing fails the item.
 Usage: <venv python> yue2_worker.py job.json     (written by audiogen; see audiogen/backends.py)
 Job options (config backends.<name>): modelDir (local snapshot, default ~/audio-gen/models/yue2; when missing the hub
 model is used), model ("m-a-p/YuE2-3B"), revision ("8f24312f"), version (yue2 code, "0.1.6"), demucsPython,
-tries (4), maxVocalDb (-25), maxLoudWindows (0.03), cot ("full"), lyrics ("[Instrumental]").
+tries (4), keep (1: passing takes kept per item; the first is the item's file, the others
+<out>-keep2.wav, ... listed in extra.alternates; raise tries with it), maxVocalDb (-25), maxLoudWindows (0.03), cot ("full"), lyrics ("[Instrumental]").
 Per item: prompt (the style text), seed, options.lyrics / options.tries. YuE2 sets its own length: the pipeline cuts.
 Exit 3 = cannot start (wrong yue2 version, no CUDA, or a first generation that did not use the GPU).
 Weights: CC BY-NC 4.0 (non-commercial).
@@ -72,7 +73,7 @@ def main() -> int:
         o = item.get("options") or {}
         lyrics = str(o.get("lyrics", opts.get("lyrics", "[Instrumental]")))
         cot = str(opts.get("cot", "full"))
-        tried = []
+        tried, kept, keep = [], [], int(o.get("keep", opts.get("keep", 1)))
         for s in recipe.seeds(int(item["seed"]), int(o.get("tries", opts.get("tries", 4)))):
             plan = pipe.plan(style=item["prompt"], lyrics=lyrics, cot=cot, seed=s)
             abc, nv = recipe.novocal(plan.abc)
@@ -83,13 +84,19 @@ def main() -> int:
             print(f"yue2 worker: {item['label']} seed {s}: vocal {db} dB, {loud:.1%} loud windows", file=sys.stderr, flush=True)
             if recipe.passes(db, loud, float(opts.get("maxVocalDb", recipe.MAX_VOCAL_DB)),
                              float(opts.get("maxLoudWindows", recipe.MAX_LOUD_WINDOWS))):  # fmt: skip
-                shutil.move(tmp, out)
-                print(f"yue2 worker: {item['label']} in {time.time() - t0:.0f} s", file=sys.stderr, flush=True)
-                return {"out": str(out), "seed": s, "model": f"{hub}@{rev} (yue2 {want})",
-                        "extra": {"recipe": "instrumental: plan cot full, Vocal voice to rests, render abc=, demucs gate",
-                                  "tried": tried}}  # fmt: skip
-            tmp.unlink(missing_ok=True)
-        raise RuntimeError(f"no take passed the vocal gate: {tried}")
+                dest = out if not kept else out.with_name(f"{out.stem}-keep{len(kept) + 1}{out.suffix}")
+                shutil.move(tmp, dest)
+                kept.append({"seed": s, "file": str(dest)})
+                if len(kept) >= keep:
+                    break
+            else:
+                tmp.unlink(missing_ok=True)
+        if not kept:
+            raise RuntimeError(f"no take passed the vocal gate: {tried}")
+        print(f"yue2 worker: {item['label']} {len(kept)} take(s) in {time.time() - t0:.0f} s", file=sys.stderr, flush=True)
+        return {"out": str(out), "seed": kept[0]["seed"], "model": f"{hub}@{rev} (yue2 {want})",
+                "extra": {"recipe": "instrumental: plan cot full, Vocal voice to rests, render abc=, demucs gate",
+                          "tried": tried, "alternates": kept[1:]}}  # fmt: skip
 
     results = []
     for item in job["items"]:

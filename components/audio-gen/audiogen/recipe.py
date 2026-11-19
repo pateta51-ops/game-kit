@@ -50,3 +50,19 @@ def passes(db: float, loud: float, max_db: float = MAX_VOCAL_DB, max_loud: float
 def seeds(seed: int, tries: int, step: int = 7919) -> list[int]:
     """The seeds tried for one take, in order: the take's seed, then a step apart (round6i's candidates)."""
     return [seed + step * k for k in range(tries)]
+
+
+def sa3_bad(flatness: float, high: float, peak: float) -> bool:
+    """7th Inning Stretch round 8: a Stable Audio 3 take is noise (spectral flatness > 0.4), hiss (over 20 % of its
+    energy above 8 kHz) or clipped (peak 1.0)."""
+    return flatness > 0.4 or high > 0.2 or peak >= 0.999
+
+
+def first_good(make, bad, seed: int, tries: int):
+    """make(seed) -> take; the first take `bad` passes, trying seed, seed + 1, ... Returns (take, seed, tries used);
+    raises RuntimeError when every try was bad."""
+    for tr in range(tries):
+        a = make(seed + tr)
+        if not bad(a):
+            return a, seed + tr, tr + 1
+    raise RuntimeError("every try was noise, hiss or clipped")

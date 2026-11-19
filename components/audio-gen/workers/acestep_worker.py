@@ -125,7 +125,7 @@ def main() -> int:
             timesignature=str(item.get("beatsPerBar") or ""),
             duration=float(item["seconds"]),
             inference_steps=int(o.get("steps", opts.get("steps", 8 if "turbo" in model else 50))),
-            guidance_scale=float(o.get("guidance", opts.get("guidance", 7.0))),
+            **({} if "turbo" in model else {"guidance_scale": float(o.get("guidance", opts.get("guidance", 7.0)))}),
             seed=int(item["seed"]),
             thinking=thinking,
             use_cot_metas=False,

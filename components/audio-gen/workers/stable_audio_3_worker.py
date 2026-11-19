@@ -18,7 +18,7 @@ import time
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
-from audiogen import gpu  # noqa: E402
+from audiogen import gpu, recipe  # noqa: E402
 
 
 def main() -> int:
@@ -41,7 +41,7 @@ def main() -> int:
         fq = np.fft.rfftfreq(len(x), 1 / rate)
         fl = float(np.exp(np.mean(np.log(sp + 1e-20))) / (sp.mean() + 1e-20))
         hi = float(sp[fq > 8000].sum() / (sp.sum() + 1e-20))
-        return fl > 0.4 or hi > 0.2 or float(np.abs(a).max()) >= 0.999
+        return recipe.sa3_bad(fl, hi, float(np.abs(a).max()))
 
     def one(item: dict) -> dict:
         t0 = time.time()
@@ -49,22 +49,18 @@ def main() -> int:
         out.parent.mkdir(parents=True, exist_ok=True)
         o = item.get("options") or {}
         sec = max(float(opts.get("minSeconds", 7.0)), float(item["seconds"]))
-        for tr in range(int(o.get("tries", opts.get("tries", 4)))):
-            seed = int(item["seed"]) + tr
+        def make(seed):
             a = m.generate(prompt=item["prompt"], negative_prompt=item.get("negativePrompt") or None, duration=sec,
                            steps=int(o.get("steps", opts.get("steps", 8))), cfg_scale=float(o.get("cfg", opts.get("cfg", 1.0))),
                            seed=seed)  # fmt: skip
-            a = a[0] if a.dim() == 3 else a
-            a = a.float().cpu().numpy()
-            if not bad(a):
-                break
-        else:
-            raise RuntimeError("every try was noise, hiss or clipped")
+            return (a[0] if a.dim() == 3 else a).float().cpu().numpy()
+
+        a, seed, tr = recipe.first_good(make, bad, int(item["seed"]), int(o.get("tries", opts.get("tries", 4))))
         sf.write(str(out), a.T, rate, subtype="FLOAT")
         print(f"stable-audio-3 worker: {item['label']} {sec:.1f} s in {time.time() - t0:.1f} s (seed {seed})",
               file=sys.stderr, flush=True)  # fmt: skip
         return {"out": str(out), "seed": seed, "model": f"stabilityai/stable-audio-3-{name}",
-                "extra": {"generatedSeconds": sec, "tries": tr + 1}}  # fmt: skip
+                "extra": {"generatedSeconds": sec, "tries": tr}}  # fmt: skip
 
     results = []
     for item in job["items"]:
