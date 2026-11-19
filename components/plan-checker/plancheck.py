@@ -19,6 +19,12 @@ Checks:
   not a problem, when an older plan lacks a column);
 - every experience feature (XP-nn) defined in the plan names an existing phase or "Roadmap" in the last cell of its
   table row, or is cited in the phases section or under a Roadmap heading;
+- test depth (problems prefixed "depth:"; with --depth-optional they are NOTEs, for a plan written before 18 Nov 2026):
+  the card-test section ("Card-language test programme") names expectNotOffered and has a depth table (columns
+  Family, Full resolve, Poor setup) whose every row has a full-resolve depth and names expectNotOffered or
+  expectNotFired in its Poor setup cell; the Definition of Done names expectNotOffered, "default-off" and
+  "LLM playtest"; the test-layers section ("Layers") names "LLM playtest"; a phase block in the phases section names
+  llm-playtester; the shared preamble names e2e and heavy (the machine queue);
 
 Extraction (prints and exits, no checks):
   --section 5.3   one numbered section
@@ -41,7 +47,7 @@ Checks, continued:
 
 Sections are found by heading keywords (case-insensitive); override them if your plan names them differently:
   --scenarios "Scenario catalogue"  --phases "Implementation phases"  --types "Type definitions"
-  --sessions "Session plan"
+  --sessions "Session plan"  --cards "Card-language test programme"  --done "Definition of Done"  --layers "Layers"
 
 Warnings (never fail; skipped quietly when no game-kit checkout is found: --kit PATH, else $KIT_DIR, the checkout holding this script, C:/projects/game-kit or
 ~/game-kit): the kit pin (kit/kit.lock.json beside the plan's docs folder, else a "kit ... pin ... vX.Y.Z" line) is 5+
@@ -50,7 +56,7 @@ docs/PLAN.md marks done.
 
 Usage: python plancheck.py docs/BUILD_PLAN.md [--tsc] [--scenarios TEXT] [--phases TEXT] [--types TEXT] [--tsc-stub TEXT]
        [--sessions TEXT] [--sessions-optional] [--scenarios-end TEXT] [--cover TEXT] [--cover-rows A,B]
-       [--cover-skip A,B] [--tsc-at DIR]
+       [--cover-skip A,B] [--tsc-at DIR] [--cards TEXT] [--done TEXT] [--layers TEXT] [--depth-optional]
 Exit code 0 when no problems were found.
 """
 from __future__ import annotations
@@ -328,7 +334,7 @@ def main() -> int:
     safe_console()
     args = [a for a in sys.argv[1:] if not a.startswith("--")]
     for flag in ("--scenarios", "--phases", "--types", "--sessions", "--section", "--batch", "--scenarios-end", "--cover",
-                 "--cover-rows", "--cover-skip", "--tsc-stub", "--kit", "--tsc-at"):
+                 "--cover-rows", "--cover-skip", "--tsc-stub", "--kit", "--tsc-at", "--cards", "--done", "--layers"):
         if flag in sys.argv:
             v = opt(flag, "")
             if v in args:
@@ -541,6 +547,54 @@ def main() -> int:
             if "roadmap" in last.lower() or any(x in phase_ids for x in phase_tokens(last)):
                 continue
             problems.append(f"{d} has no phase and no roadmap entry")
+
+    # --- test depth: card tests per clause, default-off paths, the LLM playtest, e2e before review ---
+    depth: list[str] = []
+    cards = section(lines, heads, opt("--cards", "Card-language test programme"))
+    if not cards:
+        depth.append(f"no heading contains {opt('--cards', 'Card-language test programme')!r} (use --cards)")
+    else:
+        if "expectNotOffered" not in cards:
+            depth.append("card tests: the poor-setup helper expectNotOffered is not named")
+        nrows, hdr = 0, None
+        for l in cards.split("\n"):
+            cells = [c.strip() for c in table_cells(l)] if l.strip().startswith("|") else []
+            if not cells:
+                hdr = None
+            elif hdr is None:
+                hdr = tuple(next((k for k, c in enumerate(cells) if w in c.lower()), None) for w in ("family", "full", "poor"))
+            elif None not in hdr and len(cells) > max(hdr) and not re.fullmatch(r"[\s:-]*", cells[0]):
+                nrows += 1
+                if not cells[hdr[1]].strip("-—– "):
+                    depth.append(f"card tests: family {cells[0]!r} has no full-resolve depth")
+                if not re.search(r"expectNot(Offered|Fired)", cells[hdr[2]]):
+                    depth.append(f"card tests: family {cells[0]!r} names no poor-setup helper (expectNotOffered or expectNotFired); no family is exempt")
+        if not nrows:
+            depth.append("card tests: no depth table (columns Family, Full resolve, Poor setup)")
+    done = section(lines, heads, opt("--done", "Definition of Done"))
+    if not done:
+        depth.append(f"no heading contains {opt('--done', 'Definition of Done')!r} (use --done)")
+    for need, what in (("expectNotOffered", "the card-test depth gate (a poor test that calls expectNotOffered)"),
+                       ("default-off", "the default-off paths"), ("llm playtest", "the LLM playtest")):
+        if done and need.lower() not in done.lower():
+            depth.append(f"the Definition of Done lacks {what}")
+    if "llm playtest" not in section(lines, heads, opt("--layers", "Layers")).lower():
+        depth.append(f"the test layers ({opt('--layers', 'Layers')!r}, use --layers) do not name the LLM playtest")
+    kph = find_heading(heads, opt("--phases", "Implementation phases"))
+    if kph is not None:
+        a, b = span_of(lines, heads, kph)
+        if not any("llm-playtester" in "\n".join(lines[slice(*span_of(lines, heads, k))])
+                   for k, (i, _, t) in enumerate(heads) if a < i < b and re.match(r"Phase\s+\w", t)):
+            depth.append("no phase builds the LLM playtest (the kit's llm-playtester)")
+    kpre = find_heading(heads, "Shared preamble")
+    pre = "\n".join(lines[slice(*span_of(lines, heads, kpre))]) if kpre is not None else ""
+    if "e2e" not in pre.lower() or "heavy" not in pre:
+        depth.append("the shared preamble does not send a changed flow through the e2e suites and the machine queue (e2e, heavy run)"
+                     if pre else "no heading contains 'Shared preamble'")
+    if "--depth-optional" in sys.argv:
+        notes |= {f"depth: {d}" for d in depth}
+    else:
+        problems += [f"depth: {d}" for d in depth]
 
     # --- the type contract ---
     if "--tsc" in sys.argv:

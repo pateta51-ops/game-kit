@@ -134,7 +134,15 @@ for (const f of c.workflows ?? ['ci.yml', 'full-gate.yml']) {
     fs.mkdirSync('.github/workflows', { recursive: true });
     fs.writeFileSync(to, out);
     console.log(`wrote ${to}`);
-  } else if (!fs.existsSync(to) || fs.readFileSync(to, 'utf8').replaceAll('\r\n', '\n') !== out) bad.push(to);
+  } else if (!fs.existsSync(to) || fs.readFileSync(to, 'utf8').replaceAll('\r\n', '\n') !== out) {
+    bad.push(to);
+    if (fs.existsSync(to)) {
+      const have = fs.readFileSync(to, 'utf8').replaceAll('\r\n', '\n').split('\n'), want = out.split('\n');
+      const key = (l) => l.trim().replace(/^- /, '').match(/^[\w-]+(?=:)/)?.[0];
+      for (let i = 0; i < Math.min(have.length, want.length); i++) if (have[i] !== want[i]) console.error(`render: warning: ${to} line ${i + 1}, field ${key(want[i]) ?? key(have[i]) ?? 'line'}: the file has "${have[i].trim()}", ci.config.json renders "${want[i].trim()}" (hand edits are overwritten: change ci.config.json)`);
+      if (have.length !== want.length) console.error(`render: warning: ${to} has ${have.length} lines, ci.config.json renders ${want.length}`);
+    }
+  }
 }
 if (bad.length) {
   console.error(`render: ${bad.join(', ')} differ from the templates and ci.config.json: run node ${dir}/render.mjs`);

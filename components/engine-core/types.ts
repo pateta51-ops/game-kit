@@ -46,6 +46,8 @@ export interface KernelPrompt {
   readonly kind?: string;
   /** K222: the seat that answers (sim-pool `bySeat`, opponent, learned-opponent and prompt-host read it). */
   readonly seat?: string | number;
+  /** K407: the order of the picks matters (`enumerateAnswers` lists every order). */
+  readonly ordered?: boolean;
 }
 
 export interface KernelEvent {

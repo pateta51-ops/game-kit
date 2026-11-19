@@ -21,6 +21,6 @@
  },
  "backends": {
   "sao": {"type": "stable-audio-open", "licence": "Stability AI Community License", "model": "stabilityai/stable-audio-open-1.0", "python": "~/audio-gen/venv/bin/python"},
-  "ace": {"type": "acestep", "licence": "MIT", "python": "~/audio-gen/venv/bin/python", "repo": "~/audio-gen/ACE-Step-1.5", "checkpointsDir": "~/audio-gen/checkpoints"}
+  "ace": {"type": "acestep", "licence": "MIT", "python": "~/audio-gen/venv/bin/python", "repo": "~/audio-gen/ACE-Step-1.5", "checkpointsDir": "~/audio-gen/checkpoints", "thinking": false}
  }
 }

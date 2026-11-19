@@ -78,7 +78,7 @@ describe('plancheck.py flags (K68)', () => {
     writeFileSync(f, text, 'utf-8');
     return f;
   };
-  const run = (text: string, ...flags: string[]): number => main(['--plan', plan(text), ...flags]);
+  const run = (text: string, ...flags: string[]): number => main(['--plan', plan(text), '--depth-optional', ...flags]);
   const full = PLAN.replace('\nSC-01\n', '\nSC-01, SC-02\n');
   const end = ['--sessions-optional', '--scenarios-end', 'Property tests'];
   afterEach(() => vi.unstubAllEnvs());
@@ -170,7 +170,7 @@ describe('plancheck.py kit warnings (K207)', () => {
   };
   const py = candidates(process.env, process.platform)[0] ?? ['python'];
   const out = (f: string, ...a: string[]): string =>
-    spawnSync(py[0] ?? 'python', [...py.slice(1), fileURLToPath(new URL('./plancheck.py', import.meta.url)), f, '--sessions-optional', ...a], { encoding: 'utf-8' }).stdout;
+    spawnSync(py[0] ?? 'python', [...py.slice(1), fileURLToPath(new URL('./plancheck.py', import.meta.url)), f, '--sessions-optional', '--depth-optional', ...a], { encoding: 'utf-8' }).stdout;
   it('warns on a pin 5+ minor versions behind and on a done K row, without failing', () => {
     const o = out(plan('v0.3.0', 'Targets K25 and K26.'), '--kit', kit);
     expect(o).toContain('WARN kit pin v0.3.0 is far behind the latest kit tag v0.9.0');
@@ -194,5 +194,95 @@ describe('plancheck.py kit warnings (K207)', () => {
     mkdirSync(join(dirname(dirname(f)), 'kit'));
     writeFileSync(join(dirname(dirname(f)), 'kit', 'kit.lock.json'), JSON.stringify({ ref: 'v0.3.0', commit: 'abc', components: { a: { files: {} } } }));
     expect(out(f, '--kit', kit)).toContain('WARN kit pin v0.3.0');
+  });
+});
+
+describe('plancheck depth checks (K414)', () => {
+  const GOOD = `${PLAN.replace('\nSC-01\n', '\nSC-01, SC-02\n')}
+#### Phase 1 - playtest
+
+Build llm-playtester.
+
+## 12. Shared preamble
+
+Run e2e through heavy run.
+
+## 13. Card-language test programme
+
+| Family | Full resolve | Poor setup |
+|---|---|---|
+| Events | one per clause | expectNotOffered |
+| Triggers | one per clause | expectNotFired |
+
+## 14. Definition of Done
+
+A poor test calls expectNotOffered; default-off paths covered; LLM playtest run.
+
+## 15. Layers
+
+Unit, e2e, LLM playtest.
+`;
+  const dir = tmp('plancheck-depth-');
+  let n = 0;
+  const py = candidates(process.env, process.platform)[0] ?? ['python'];
+  // the .ts wrapper and the .py must agree on the same plan
+  const direct = (text: string, ...flags: string[]): { code: number | null; out: string } => {
+    const f = join(dir, `p${n++}.md`);
+    writeFileSync(f, text, 'utf-8');
+    const base = ['--sessions-optional', '--scenarios-end', 'Property tests', ...flags];
+    const r = spawnSync(py[0] ?? 'python', [...py.slice(1), fileURLToPath(new URL('./plancheck.py', import.meta.url)), f, ...base], { encoding: 'utf-8' });
+    expect(main(['--plan', f, ...base])).toBe(r.status);
+    return { code: r.status, out: r.stdout };
+  };
+  const bad = (text: string, ...flags: string[]): string => {
+    const r = direct(text, ...flags);
+    expect(r.code).toBe(1);
+    return r.out;
+  };
+  const without = (from: string, to = ''): string => {
+    expect(GOOD).toContain(from);
+    return GOOD.replace(from, to);
+  };
+  it('a plan with every depth element passes, with and without --depth-optional', () => {
+    expect(direct(GOOD).code).toBe(0);
+    const o = direct(GOOD, '--depth-optional');
+    expect(o.code).toBe(0);
+    expect(o.out).not.toContain('depth:');
+  });
+  it('card tests: expectNotOffered is named', () => {
+    const t = without('| expectNotOffered |', '| expectNotFired |').replace('A poor test calls expectNotOffered; ', '');
+    expect(bad(t)).toContain('depth: card tests: the poor-setup helper expectNotOffered is not named');
+  });
+  it('card tests: a family with no full-resolve depth, and one with no poor helper', () => {
+    expect(bad(without('| Triggers | one per clause |', '| Triggers | - |'))).toContain("family 'Triggers' has no full-resolve depth");
+    expect(bad(without('| expectNotFired |', '| none |'))).toContain("family 'Triggers' names no poor-setup helper");
+  });
+  it('card tests: no depth table, no section, a renamed section with --cards', () => {
+    expect(bad(without('| Family | Full resolve | Poor setup |', '| Kind | Count | Note |'))).toContain('no depth table');
+    expect(bad(without('Card-language test programme', 'Cards'))).toContain("no heading contains 'Card-language test programme'");
+    expect(direct(without('Card-language test programme', 'Cards'), '--cards', 'Cards').code).toBe(0);
+  });
+  it('Definition of Done: each of the three is needed', () => {
+    expect(bad(without('default-off', 'x'))).toContain('the Definition of Done lacks the default-off paths');
+    expect(bad(without('LLM playtest run', 'x'))).toContain('the Definition of Done lacks the LLM playtest');
+    expect(bad(without('A poor test calls expectNotOffered; ', ''))).toContain('the Definition of Done lacks the card-test depth gate');
+    expect(bad(without('Definition of Done', 'Done'))).toContain("no heading contains 'Definition of Done'");
+  });
+  it('layers, phases and shared preamble', () => {
+    expect(bad(without('Unit, e2e, LLM playtest.', 'Unit.'))).toContain('the test layers');
+    expect(bad(without('Build llm-playtester.', 'Nothing.'))).toContain('no phase builds the LLM playtest');
+    expect(bad(without('Run e2e through heavy run.', 'Nothing.'))).toContain('the shared preamble does not send a changed flow');
+    expect(bad(without('Shared preamble', 'Intro'))).toContain("no heading contains 'Shared preamble'");
+  });
+  it('--depth-optional turns every depth problem into a NOTE and exits 0; without it they fail', () => {
+    const old = PLAN.replace('\nSC-01\n', '\nSC-01, SC-02\n');
+    const o = direct(old, '--depth-optional');
+    expect(o.code).toBe(0);
+    expect(o.out).toContain('NOTE depth: ');
+    expect(o.out).not.toContain('PROBLEM');
+    expect(bad(old)).toContain('PROBLEM depth: ');
+  });
+  it('the old checks give the same result with the depth flag', () => {
+    expect(bad(PLAN, '--depth-optional')).toContain('SC-02');
   });
 });

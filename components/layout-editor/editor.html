@@ -380,7 +380,7 @@ const keepPoint = (p , sc , off , at ) => off + p * sc - at;
 const KEY = 'layout-editor-doc', $ = (id) => document.getElementById(id)
 const store = (k, v) => { try { if (v === undefined) return localStorage.getItem(k); localStorage.setItem(k, v) } catch { return null } }
 let doc, cur, sel = new Set(), hist = [], fut = [], drag = null, guides = [], sc = 1, base = 100, mouse = [0, 0], cardSnap = null, pileSnap = null, view = null
-const listeners = [], fitCache = new Map(), ui = { grid: 16, snapGrid: true, snapZones: true, zoom: 1, keep: false, multi: false, bg: JSON.parse(store(KEY + '-bg') || JSON.stringify(window.LAYOUT_EDITOR_BG_INIT || {})) }
+const listeners = [], fitCache = new Map(), ui = { grid: 16, snapGrid: true, snapZones: true, zoom: 1, keep: false, multi: false, bg: Object.assign({}, window.LAYOUT_EDITOR_BG_INIT || {}, JSON.parse(store(KEY + '-bg') || '{}')) }
 const BG0 = JSON.stringify(window.LAYOUT_EDITOR_BG_INIT || {}); let DOC0
 const S = () => doc.screens[cur]
 const round = (s, old) => ({ ...s, zones: Object.fromEntries(Object.entries(s.zones).map(([k, z]) => [k, z === old.zones[k] ? z : { ...z, r: z.r.map(Math.round) }])) })

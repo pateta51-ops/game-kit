@@ -1,6 +1,7 @@
 import { Fragment, useCallback, useEffect, useState, type ReactNode } from 'react';
 import { downloadText } from '../small-helpers/download.ts';
-import type { GameTypes, History, SaveFile } from '../engine-core/index.ts';
+import type { PortTypes } from '../engine-core/index.ts';
+import type { HistoryOf, SaveOf } from './types.ts';
 import type { Saves, StoredSave } from './saves.ts';
 import './saves.css';
 import { SAVES_WORDS, type SavesWords } from './words.ts';
@@ -18,15 +19,15 @@ export interface SavesButtonProps {
   readonly testId: string;
 }
 
-export interface SavesScreenProps<G extends GameTypes> {
+export interface SavesScreenProps<G extends PortTypes> {
   readonly saves: Saves<G>;
   /** The game being played; null or `canSave` false disables Save. */
-  readonly history: History<G> | null;
+  readonly history: HistoryOf<G> | null;
   readonly canSave?: boolean;
   /** The game's line for a save that loads ("Game 4, 5 Season Points"). */
-  readonly summary: (state: G['state'], save: SaveFile<G>) => string;
+  readonly summary: (state: G['state'], save: SaveOf<G>) => string;
   /** Load a save; a string is the reason it failed, shown on the status line. */
-  readonly onLoad: (save: SaveFile<G>, key: string) => string | void;
+  readonly onLoad: (save: SaveOf<G>, key: string) => string | void;
   readonly words?: Partial<SavesWords>;
   readonly className?: string;
   /** Delete needs a second tap on the same row (the button then reads `words.confirmDelete`). */
@@ -46,7 +47,7 @@ export interface SavesScreenProps<G extends GameTypes> {
 
 const when = (iso: string): string => iso.slice(0, 16).replace('T', ' ');
 
-export function SavesScreen<G extends GameTypes>(p: SavesScreenProps<G>) {
+export function SavesScreen<G extends PortTypes>(p: SavesScreenProps<G>) {
   const w = { ...SAVES_WORDS, ...p.words };
   const { saves } = p;
   const [auto, setAuto] = useState<[string, StoredSave<G>][]>([]);

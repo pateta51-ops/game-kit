@@ -13,6 +13,6 @@
     ],
     "note": "K243: leaders, discounts, unlocks, Unrest, destinations and payment stay in the games (hooks); slots are card-zones zones."
   },
-  "needs": ["engine-core", "card-zones", "prompt-host", "picked-state", "motion-frame"],
+  "needs": ["engine-core", "card-zones", "prompt-host", "picked-state", "motion-frame", "deck-motions"],
   "packages": ["react"]
 }

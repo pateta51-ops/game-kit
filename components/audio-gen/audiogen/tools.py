@@ -117,6 +117,8 @@ def status() -> dict[str, bool]:
         "sao (Stable Audio Open: diffusers)": probe("venv", "diffusers"),
         "ace (ACE-Step 1.5 checkout)": (home / "ACE-Step-1.5").is_dir(),
         "kokoro (voice)": probe("venv-kokoro", "kokoro"),
+        "CUDA in venv (sao, ace)": probe("venv", "torch; assert torch.cuda.is_available()"),
+        "CUDA in venv-kokoro (voice)": probe("venv-kokoro", "torch; assert torch.cuda.is_available()"),
     }
 
 

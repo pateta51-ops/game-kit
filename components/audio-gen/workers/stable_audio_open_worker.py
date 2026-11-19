@@ -1,4 +1,5 @@
 """Stable Audio Open worker (diffusers StableAudioPipeline): runs in a venv with CUDA PyTorch, diffusers and torchsde.
+GPU only: no CPU fallback.
 
 Usage: <venv python> stable_audio_open_worker.py job.json     (written by audiogen; see audiogen/backends.py)
 Needs a Hugging Face token, HF_TOKEN or the standard login (`hf auth login`): the weights are gated (accept the
@@ -6,7 +7,8 @@ licence on the model page first).
 Job options (config backends.<name>): model (default "stabilityai/stable-audio-open-1.0"), steps (default 100),
 guidance (default 7.0), cacheDir (Hugging Face cache, outside any game repo).
 Per item: prompt, negativePrompt, seconds (up to 47), seed.
-Exit 3 = cannot start (no token, the licence not accepted, no GPU); the pipeline turns it into a skip.
+Exit 3 = cannot start (no token, the licence not accepted, no CUDA, or a first generation that did not use the GPU);
+the pipeline turns it into a skip.
 """
 
 from __future__ import annotations
@@ -16,6 +18,9 @@ import os
 import sys
 import time
 from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+from audiogen import gpu  # noqa: E402
 
 
 def main() -> int:
@@ -29,12 +34,9 @@ def main() -> int:
     if not token:
         print("stable-audio-open worker: no Hugging Face token (HF_TOKEN or `hf auth login`)", file=sys.stderr)
         return 3
-    import torch
+    torch = gpu.cuda("stable-audio-open worker")
     from diffusers import StableAudioPipeline
 
-    if not torch.cuda.is_available():
-        print("stable-audio-open worker: CUDA is not available", file=sys.stderr)
-        return 3
     model = str(opts.get("model", "stabilityai/stable-audio-open-1.0"))
     cache = opts.get("cacheDir")
     try:
@@ -76,7 +78,8 @@ def main() -> int:
     results = []
     for item in job["items"]:
         try:
-            results.append(one(item))
+            results.append(one(item) if any("error" not in r for r in results)
+                           else gpu.first(torch, "stable-audio-open worker", lambda: one(item)))  # fmt: skip
         except Exception as e:  # noqa: BLE001 - one bad item must not stop the rest
             msg = f"{type(e).__name__}: {e}".replace(token, "***")[:500]
             print(f"stable-audio-open worker: {item['label']} failed: {msg}", file=sys.stderr, flush=True)

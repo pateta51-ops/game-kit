@@ -1,0 +1,233 @@
+<title>Screen and Camera Tuner</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=Inter:wght@400;600&family=JetBrains+Mono:wght@400&display=swap">
+<style>
+:root {
+  --panel: #1b2124; --line: #2c3539; --fg: #e8ece9; --muted: #9aa8a3; --accent: #e9c46a;
+  --display: 'Space Grotesk', system-ui, sans-serif; --body: 'Inter', system-ui, sans-serif; --mono: 'JetBrains Mono', ui-monospace, monospace;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--panel); color: var(--fg); font: 14px/1.5 var(--body); }
+.wrap { max-width: 1180px; margin: 0 auto; padding: 18px max(16px, env(safe-area-inset-left, 0px)) 40px; display: grid; gap: 26px; }
+h1 { font: 700 22px/1.2 var(--display); margin: 0; }
+h2 { font: 700 18px var(--display); margin: 0; }
+.sub { color: var(--muted); margin: 2px 0 0; max-width: 72ch; }
+nav { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+nav a { color: var(--fg); background: #232b2e; border: 1px solid var(--line); border-radius: 999px; padding: 3px 11px; font-size: 12.5px; text-decoration: none; }
+section.part { display: grid; gap: 12px; border-top: 1px solid var(--line); padding-top: 18px; scroll-margin-top: 8px; }
+.what { color: var(--muted); margin: 0; max-width: 80ch; }
+.stage { position: relative; height: 240px; overflow: hidden; border-radius: 12px; border: 1px solid var(--line); background: radial-gradient(120% 90% at 50% 100%, #1f4038, #17302a 60%, #0e1f1b); transform: translateZ(0); }
+.bar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.bar span { color: var(--muted); font-size: 12px; text-transform: uppercase; letter-spacing: .08em; margin-right: 4px; }
+button { font: 600 13px var(--body); color: var(--fg); background: #232b2e; border: 1px solid var(--line); border-radius: 999px; padding: 6px 14px; cursor: pointer; }
+button.play { background: var(--accent); color: #1b1608; border-color: var(--accent); }
+button:focus-visible, input:focus-visible, select:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.ctls { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 10px 22px; }
+.ctl { display: grid; grid-template-columns: 1fr auto; gap: 2px 10px; align-items: center; border: 1px solid var(--line); border-radius: 10px; padding: 8px 12px; }
+.ctl label { font-size: 13px; }
+.ctl output { font: 12px var(--mono); color: var(--accent); }
+.ctl input[type=range], .ctl select, .ctl input[type=color] { grid-column: 1 / -1; width: 100%; accent-color: var(--accent); }
+.ctl select { background: #232b2e; color: var(--fg); border: 1px solid var(--line); border-radius: 6px; padding: 4px; }
+.ctl small { grid-column: 1 / -1; color: var(--muted); font-size: 11.5px; line-height: 1.35; }
+.codebar { display: flex; justify-content: space-between; align-items: center; gap: 10px; }
+.codebar h3 { font: 700 14px var(--display); margin: 0; }
+.codebar button { border-radius: 6px; font-size: 12px; padding: 5px 10px; }
+.code { background: #12171a; border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; font: 12.5px/1.6 var(--mono); color: #cfe3da; overflow-x: auto; white-space: pre; margin: 6px 0 0; }
+.note { color: var(--muted); font-size: 12px; margin: 0; }
+
+/* stage props (stand-in art) */
+.fill { position: absolute; inset: 0; display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; padding: 18px; align-content: center; }
+.fill i { display: block; height: 70px; border-radius: 8px; background: hsl(calc(var(--k) * 60 + 150) 40% 38%); border: 1px solid #fff4; }
+.fill b { grid-column: 1 / -1; text-align: center; font: 700 18px var(--display); }
+.tw { position: absolute; inset: 0; display: grid; place-items: center; padding: 24px; text-align: center; font: 600 20px/1.4 var(--display); }
+.pile { position: absolute; left: 50%; top: 50%; width: 100px; height: 140px; margin: -70px 0 0 -50px; }
+.pile i { position: absolute; inset: 0; border-radius: 8px; background: hsl(calc(var(--k) * 40 + 20) 40% 40%); border: 1px solid #fff6; box-shadow: 0 1px 0 #0006; }
+.scr { position: absolute; inset: 0; overflow: auto; padding: 0 14px; }
+.scr div { height: 56px; margin: 6px 0; border-radius: 8px; background: #26443b; display: grid; place-items: center; }
+.scr div.t { background: var(--accent); color: #1b1608; font-weight: 700; }
+.pg { position: absolute; inset: 0; padding: 18px; color: var(--muted); }
+.phone { width: min(100%, 340px); height: 440px; margin: 0 auto; }
+.anc { position: absolute; width: 56px; height: 78px; margin: -39px 0 0 -28px; border-radius: 6px; background: #5b9bd9; border: 2px solid #fff8; cursor: grab; touch-action: none; }
+.zb { position: absolute; overflow: auto; background: #f4efe2; color: #222; border-radius: 8px; border: 1px solid #0008; padding: 8px; font-size: 11px; line-height: 1.3; box-shadow: 0 6px 18px #0008; }
+.zb .kz-title { font-weight: 700; font-size: 14px; }
+.zb .kz-heading, .zb .kz-label { font-weight: 700; }
+.cd { width: 100%; height: 100%; border-radius: 7px; background: hsl(var(--h) 45% 42%); border: 2px solid #fff8; display: grid; place-items: center; font: 700 18px var(--display); }
+.cd.back { background: repeating-linear-gradient(45deg, #34445a, #34445a 6px, #2a3748 6px, #2a3748 12px); }
+.centre { position: absolute; inset: 0; display: grid; place-items: center; overflow: auto; }
+/*@kit-css components/modal-dialog/modal-dialog.css*/
+/*@kit-css components/phone-mode/phone-mode.css*/
+/*@kit-css components/achievements/achievements.css*/
+</style>
+
+<div class="wrap">
+  <header>
+    <h1>Screen and Camera Tuner</h1>
+    <p class="sub">The kit's camera moves, banners, board viewport, dialogs, sheet, card zoom, achievement toast and card stacks, each on a small stage. Every stage runs the kit's own code (inlined by tuners/build.mjs). Press Play for a one-shot motion; it replays when a slider moves.</p>
+    <nav id="nav"></nav>
+  </header>
+  <div id="parts" style="display:grid;gap:26px"></div>
+</div>
+
+<script>
+//@kit-js tuners/src/screen-preview.mjs as K
+const $ = (s, r = document) => r.querySelector(s);
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+const fmt = (v) => +(+v).toFixed(3);
+const loop = (total, fn, done) => { let id; const t0 = performance.now(); const f = (now) => { const t = now - t0; fn(Math.min(t, total)); if (t < total) id = requestAnimationFrame(f); else done?.(); }; id = requestAnimationFrame(f); return () => cancelAnimationFrame(id); };
+const SPEED = ['speed', 'Speed', 0, 4, 0.1, '×', 'Multiplies every duration; 0 is instant.'];
+const fill = (t) => `<div class="fill">${[0, 1, 2, 3, 4, 5, 6, 7].map((k) => `<i style="--k:${k}"></i>`).join('')}<b>${t}</b></div>`;
+const P = [];
+// A control row: [key, label, min, max, step, unit, help]; a select: [key, label, 'select', [[value, text]...], help]; a colour: [key, label, 'color', '', help].
+
+P.push({ id: 'camera-pull', title: 'Camera pull', parts: 'effect-library cameraPull', about: 'The board eases in (or out) about a point while a shade dims it; release returns both. Games call it for a slow, heavy beat.',
+  html: `<div class="stage"><div data-r>${fill('Board')}</div></div>`,
+  kit: { scale: 0.95, ox: 50, oy: 50, pullMs: 2000, dim: 0.5, dimMs: 1000, releaseMs: 400, speed: 1 },
+  ctls: [['scale', 'Scale', 0.6, 1.4, 0.01, '×', 'Below 1 pulls the camera back, above 1 pushes in.'], ['ox', 'Origin across', 0, 100, 1, '%', 'Where the scale pivots, left to right.'], ['oy', 'Origin down', 0, 100, 1, '%', 'Where the scale pivots, top to bottom.'], ['pullMs', 'Pull time', 100, 4000, 50, ' ms', 'How long the scale takes at speed 1.'], ['dim', 'Shade strength', 0, 1, 0.05, '', 'Opacity the shade reaches.'], ['dimMs', 'Shade time', 0, 4000, 50, ' ms', 'Kit default is half the pull time.'], ['releaseMs', 'Release time', 50, 2000, 50, ' ms', 'How long the board and shade take to return.'], SPEED],
+  mount(el) { const board = $('[data-r]', el), st = $('.stage', el); let pull, cancel = () => {};
+    return { apply() {}, play(s) { cancel(); pull?.(); pull = K.cameraPull(board, st, { scale: s.scale, origin: `${s.ox}% ${s.oy}%`, pullMs: s.pullMs, dim: s.dim, dimMs: s.dimMs, releaseMs: s.releaseMs, speed: s.speed || 'instant' }); const p = pull; let dead = false; cancel = () => { dead = true; }; sleep(s.pullMs * s.speed + 500).then(() => { if (!dead) p.release(); }); } }; },
+  code: (s) => `const pull = cameraPull(board, overlay, { scale: ${s.scale}, origin: '${s.ox}% ${s.oy}%', pullMs: ${s.pullMs}, dim: ${s.dim}, dimMs: ${s.dimMs}, releaseMs: ${s.releaseMs}, speed: ${s.speed} })\nawait pull.dimmed // cue the next beat\nawait pull.release()` });
+
+P.push({ id: 'camera-push', title: 'Camera push', parts: 'effect-library cameraPush, cameraScaleAt', about: 'A short push-in that returns to 1: a rise, a hold, a fall. cameraScaleAt gives the scale at a time; cameraPush applies it about a focus point.',
+  html: `<div class="stage"><div data-r>${fill('Board')}</div></div>`,
+  kit: { scale: 1.05, enter: 400, exit: 250, hold: 600, fx: 50, fy: 50 },
+  ctls: [['scale', 'Peak scale', 1, 1.6, 0.01, '×', 'How far in the camera goes.'], ['enter', 'Rise', 0, 2000, 10, ' ms', 'Time to reach the peak.'], ['hold', 'Hold at the peak (this page only)', 0, 3000, 50, ' ms', 'Time between the rise and the fall.'], ['exit', 'Fall', 0, 2000, 10, ' ms', 'Time to return to 1.'], ['fx', 'Focus across', 0, 100, 1, '%', 'Pivot, left to right.'], ['fy', 'Focus down', 0, 100, 1, '%', 'Pivot, top to bottom.']],
+  mount(el) { const board = $('[data-r]', el), st = $('.stage', el); let cancel = () => {}, push;
+    return { apply() {}, play(s) { cancel(); push?.end(); push = K.cameraPush(board); const p = push, total = s.enter + s.hold + s.exit, f = [st.clientWidth * s.fx / 100, st.clientHeight * s.fy / 100];
+      cancel = loop(total, (t) => p.frame(K.cameraScaleAt(t, 0, total, { scale: s.scale, enter: s.enter, exit: s.exit }), f), () => p.end()); } }; },
+  code: (s) => `const push = cameraPush(root)\n// each frame, t in ms since the beat began, end = ${s.enter + s.hold + s.exit}\npush.frame(cameraScaleAt(t, 0, end, { scale: ${s.scale}, enter: ${s.enter}, exit: ${s.exit} }), [focusX, focusY])\npush.end()` });
+
+P.push({ id: 'letterbox', title: 'Letterbox banner', parts: 'effect-library letterboxBanner', about: 'Two bars slide in, a vignette fades up and a banner line reads in the top bar, then all leave.',
+  html: `<div class="stage"><div>${fill('Board')}</div></div>`,
+  kit: { barHeight: 40, lineWidth: 0, vignetteBlur: 160, vignetteSpread: 20, enter: 250, exit: 250, textInEnd: 250, textOutA: 750, textOutB: 1000, hold: 1500 },
+  ctls: [['barHeight', 'Bar height', 0, 90, 1, 'px', 'Height of each bar.'], ['lineWidth', 'Edge line', 0, 6, 1, 'px', 'A coloured line on the inner edge of each bar.'], ['vignetteBlur', 'Vignette blur', 0, 300, 5, 'px', 'Softness of the screen-edge shade.'], ['vignetteSpread', 'Vignette spread', 0, 80, 1, 'px', 'How far it reaches in.'], ['enter', 'Bars in', 0, 1500, 10, ' ms', 'Time for the bars and vignette to arrive.'], ['exit', 'Bars out', 0, 1500, 10, ' ms', 'Time for them to leave, at the end.'], ['textInEnd', 'Text fully in at', 60, 1500, 10, ' ms', 'The text starts at 60 ms.'], ['textOutA', 'Text starts to fade at', 0, 3000, 10, ' ms', 'After the beat starts.'], ['textOutB', 'Text gone at', 0, 3000, 10, ' ms', ''], ['hold', 'Beat length (this page only)', 500, 4000, 50, ' ms', 'Total time the beat lasts.']],
+  mount(el) { const st = $('.stage', el); let cancel = () => {}, lb;
+    return { apply() {}, play(s) { cancel(); lb?.end(); lb = K.letterboxBanner(st, { speed: 1, barHeight: s.barHeight, lineWidth: s.lineWidth, lineColour: '#e9c46a', vignetteBlur: s.vignetteBlur, vignetteSpread: s.vignetteSpread, text: 'Round 3', enter: s.enter, exit: s.exit, textIn: [60, s.textInEnd], textOut: [s.textOutA, s.textOutB] }); const l = lb;
+      cancel = loop(s.hold, (t) => l.frame(t, 0, s.hold), () => l.end()); } }; },
+  code: (s) => `const hud = letterboxBanner(parent, { barHeight: ${s.barHeight}, lineWidth: ${s.lineWidth}, lineColour: '#e9c46a', vignetteBlur: ${s.vignetteBlur}, vignetteSpread: ${s.vignetteSpread}, text: 'Round 3', enter: ${s.enter}, exit: ${s.exit}, textIn: [60, ${s.textInEnd}], textOut: [${s.textOutA}, ${s.textOutB}] })\n// each frame: hud.frame(t, 0, ${s.hold}); at the end: hud.end()` });
+
+P.push({ id: 'typewriter', title: 'Typewriter', parts: 'effect-library typewriter', about: 'Text is revealed word by word or letter by letter. Browsers without CSS Custom Highlights show it whole.',
+  html: `<div class="stage"><div class="tw" data-r></div></div>`,
+  kit: { dur: 3000, unit: 'word', pace: 0 },
+  ctls: [['dur', 'Duration', 200, 8000, 100, ' ms', 'Time the whole text takes when pace is 0.'], ['unit', 'Reveal by', 'select', [['word', 'Word'], ['letter', 'Letter']], ''], ['pace', 'Fixed pace', 0, 600, 10, ' ms', 'Milliseconds per word or letter; 0 fits the text to the duration.']],
+  mount(el) { const box = $('[data-r]', el); let fin; box.textContent = 'The harbour lights flicker, and a long-forgotten bell begins to toll.';
+    return { apply() {}, play(s) { fin?.(); box.textContent = 'The harbour lights flicker, and a long-forgotten bell begins to toll.'; fin = K.typewriter({ call: { dur: s.dur, step: { dur: s.dur } }, el: box }, { unit: s.unit, pace: s.pace || undefined }); } }; },
+  code: (s) => `typewriter: { unit: '${s.unit}'${s.pace ? `, pace: ${s.pace}` : ''} }  // in the text step; its dur is ${s.dur} ms` });
+
+P.push({ id: 'pile-lift', title: 'Pile lift', parts: 'effect-library pileLift', about: 'A pile rises with a shadow when a card leaves it, then settles with a small bounce when the card arrives.',
+  html: `<div class="stage"><div class="pile" data-r>${[0, 1, 2, 3, 4].map((k) => `<i style="--k:${k};transform:translate(${k * 1.5}px,${-k * 2}px)"></i>`).join('')}</div></div>`,
+  kit: { ly: -2, scale: 1.04, sy: 12, sb: 12, sa: 0.4, liftMs: 250, settleMs: 300, liftEase: 'ease-out', settleEase: 'cubic-bezier(0.3, 1.3, 0.5, 1)', hold: 600, speed: 1 },
+  ctls: [['ly', 'Lift', -40, 10, 1, '%', 'Vertical move, as a share of the pile height; negative is up.'], ['scale', 'Scale', 1, 1.3, 0.01, '×', ''], ['sy', 'Shadow drop', 0, 40, 1, 'px', ''], ['sb', 'Shadow blur', 0, 40, 1, 'px', ''], ['sa', 'Shadow strength', 0, 1, 0.05, '', ''], ['liftMs', 'Lift time', 0, 1200, 10, ' ms', ''], ['settleMs', 'Settle time', 0, 1200, 10, ' ms', ''], ['liftEase', 'Lift easing', 'select', [['ease-out', 'ease-out'], ['ease-in-out', 'ease-in-out'], ['linear', 'linear'], ['ease', 'ease']], ''], ['settleEase', 'Settle easing', 'select', [['cubic-bezier(0.3, 1.3, 0.5, 1)', 'bounce (kit)'], ['ease-out', 'ease-out'], ['ease-in-out', 'ease-in-out']], ''], ['hold', 'Wait before settling (this page only)', 0, 2000, 50, ' ms', 'Stands for the card travelling.'], SPEED],
+  mount(el) { const pile = $('[data-r]', el); let cancel = () => {}, c;
+    return { apply() {}, play(s) { cancel(); c?.end(); const sp = s.speed || 'instant'; c = K.pileLift(pile, { lift: `0 ${s.ly}%`, scale: s.scale, shadow: `drop-shadow(0 ${s.sy}px ${s.sb}px rgb(0 0 0 / ${s.sa}))`, liftMs: s.liftMs, settleMs: s.settleMs, liftEase: s.liftEase, settleEase: s.settleEase, speed: sp }); const k = c; let dead = false; cancel = () => { dead = true; };
+      sleep(s.liftMs * s.speed + s.hold).then(() => { if (dead) return; k.settle(); return sleep(s.settleMs * s.speed + 150); }).then(() => { if (!dead) k.end(); }); } }; },
+  code: (s) => `const lift = pileLift(pileEl, { lift: '0 ${s.ly}%', scale: ${s.scale}, shadow: 'drop-shadow(0 ${s.sy}px ${s.sb}px rgb(0 0 0 / ${s.sa}))', liftMs: ${s.liftMs}, settleMs: ${s.settleMs}, liftEase: '${s.liftEase}', settleEase: '${s.settleEase}', speed: ${s.speed} })\nlift.settle() // when the card arrives\nlift.end()` });
+
+P.push({ id: 'scroll-pan', title: 'Scroll pan', parts: 'motion-frame scrollPan', about: 'A beat whose actor is out of view scrolls the panel to centre it, then scrolls back. Used on phones where the board scrolls.',
+  html: `<div class="stage"><div class="scr" data-r>${Array.from({ length: 14 }, (_, i) => `<div${i === 11 ? ' id="pan-target" class="t"' : ''}>${i === 11 ? 'Target' : 'Row ' + (i + 1)}</div>`).join('')}</div></div>`,
+  kit: { scale: 1, hold: 800 },
+  ctls: [['scale', 'Motion scale', 0.1, 4, 0.1, '×', 'Each scroll takes 350 ms times this.'], ['hold', 'Wait at the target (this page only)', 0, 3000, 50, ' ms', 'Stands for the beat itself.']],
+  mount(el) { const sc = $('[data-r]', el); let ab = new AbortController();
+    return { apply() {}, async play(s) { ab.abort(); ab = new AbortController(); const my = ab; sc.scrollTop = 0; const ses = K.scrollPan({ scroller: () => sc })(s.scale, my.signal); if (!ses) return; await ses.ensure('#pan-target'); if (my.signal.aborted) return; await sleep(s.hold); if (!my.signal.aborted) await ses.back(); } }; },
+  code: (s) => `const pan = scrollPan({ scroller: () => document.querySelector('.board-scroll') })\n// motion-frame calls pan(scale, signal); scale ${s.scale} gives scrolls of ${Math.round(350 * s.scale)} ms\nconst session = pan(${s.scale}, signal)\nawait session.ensure('#target'); await session.back()` });
+
+P.push({ id: 'board-viewport', title: 'Board viewport', parts: 'board-viewport zoom and pan', about: 'Wheel or pinch zooms, a drag pans. Play eases the camera to a board rectangle and back; the ease lasts 350 ms times speed.',
+  html: `<div class="stage" style="height:280px"><div data-r style="position:absolute;inset:0"></div></div>`,
+  kit: { speed: 1, minX: 1, maxX: 8, focus: 200 },
+  ctls: [['speed', 'Speed', 0, 4, 0.1, '×', 'Scales the focus ease (350 ms); 0 is instant.'], ['minX', 'Furthest out', 0.25, 1, 0.05, '× whole board', '1 is the whole board fitting the view.'], ['maxX', 'Closest in', 1, 16, 0.5, '× whole board', 'Kit default is 8 times the fitting scale.'], ['focus', 'Focus area (this page only)', 60, 600, 10, ' units', 'Side of the square Play eases to, centred at 500, 400.']],
+  mount(el) { const host = $('[data-r]', el), v = K.mountBoard(host); let cancel = () => {};
+    const fit = (st) => Math.min(host.clientWidth / 1200, host.clientHeight / 800);
+    return { apply(s) { const f = fit(); v.render({ speed: s.speed, minScale: f * s.minX, maxScale: f * s.maxX }); }, play(s) { cancel(); const h = v.ref.current; if (!h) return; const z = s.focus; h.focus([500 - z / 2, 400 - z / 2, z, z]); let dead = false; cancel = () => { dead = true; }; sleep(350 * s.speed + 900).then(() => { if (!dead) h.fit(); }); } }; },
+  replay: false,
+  code: (s) => `<BoardViewport bounds={[0, 0, 1200, 800]} speed={${s.speed}} minScale={${s.minX} * fitScale} maxScale={${s.maxX} * fitScale}>\n  {board}\n</BoardViewport>\n// fitScale is the scale that fits the whole board; leave minScale and maxScale out for the kit default (1 and 8 times)\ncamera.current.focus([x, y, w, h]) // eased fit to a board rectangle` });
+
+P.push({ id: 'modal', title: 'Modal dialog', parts: 'modal-dialog', about: 'The dialog fades in over a backdrop. This stage draws the kit\'s own modal classes and CSS inside the stage (the kit\'s Modal portals to the page body).',
+  html: `<div class="stage" style="height:300px" data-r><div class="pg">The board sits here behind the dialog.${fill('Board')}</div><div class="kc-modal-backdrop" hidden inert><div class="kc-modal" tabindex="-1"><h2 class="kc-modal-title">Reset board?</h2><div class="kc-modal-body">Your current turn will be cleared.</div><div class="kc-modal-actions"><button class="kc-modal-button" type="button">Cancel</button><button class="kc-modal-button kc-modal-danger" type="button">Reset</button></div></div></div></div>`,
+  kit: { duration: 160, speed: 1, width: 32, padding: 1.25, radius: 0.75, gutter: 1, backdrop: 58 },
+  ctls: [['duration', 'Fade time', 0, 1000, 10, ' ms', '--kc-modal-duration'], ['speed', 'Speed', 0, 6, 0.1, '×', 'The speed prop; scales the fade, 0 is instant.'], ['width', 'Panel width', 14, 40, 1, ' rem', '--kc-modal-width'], ['padding', 'Panel padding', 0.5, 3, 0.05, ' rem', '--kc-modal-padding'], ['radius', 'Corner radius', 0, 2, 0.05, ' rem', '--kc-modal-radius'], ['gutter', 'Edge gutter', 0, 3, 0.1, ' rem', '--kc-modal-gutter'], ['backdrop', 'Backdrop darkness', 0, 100, 1, '%', '--kc-modal-backdrop, black at this opacity']],
+  mount(el) { const st = $('[data-r]', el), bd = $('.kc-modal-backdrop', st); let cancel = () => {};
+    const set = (o) => { bd.hidden = !o; bd.inert = !o; };
+    return { apply(s) { const v = (k, x) => st.style.setProperty('--kc-modal-' + k, x); v('duration', s.duration + 'ms'); v('speed', s.speed); v('width', s.width + 'rem'); v('padding', s.padding + 'rem'); v('radius', s.radius + 'rem'); v('gutter', s.gutter + 'rem'); v('backdrop', `rgb(0 0 0 / ${s.backdrop}%)`); }, play(s) { cancel(); set(false); let dead = false; cancel = () => { dead = true; };
+      requestAnimationFrame(() => { set(true); sleep(Math.max(1400, s.duration * s.speed + 900)).then(() => { if (!dead) set(false); }); }); } }; },
+  code: (s) => `/* the game's CSS, on body or an ancestor */\n--kc-modal-duration: ${s.duration}ms;\n--kc-modal-width: ${s.width}rem;\n--kc-modal-padding: ${s.padding}rem;\n--kc-modal-radius: ${s.radius}rem;\n--kc-modal-gutter: ${s.gutter}rem;\n--kc-modal-backdrop: rgb(0 0 0 / ${s.backdrop}%);\n\n<Modal open={open} onClose={close} title="Reset board?" speed={${s.speed}}>...</Modal>` });
+
+P.push({ id: 'sheet', title: 'Phone sheet', parts: 'phone-mode Sheet', about: 'The bottom sheet slides up with a scrim, and slides down when closed from outside (leaving). Tap the dim area, drag down on the title, or press Done to close it.',
+  html: `<div class="stage phone" data-r style="--pm-h:100%"><div class="pg">The phone screen behind the sheet.${fill('Screen')}</div><div data-m></div></div>`,
+  kit: { slideMs: 220, leaveMs: 0, arriveMs: 0, max: 0.88, scrim: 0.6, hold: 1500 },
+  presets: [['imperium', 'Imperium', { leaveMs: 240, arriveMs: K.ARRIVE_MS }]],
+  ctls: [['slideMs', 'Slide-in time', 0, 1000, 10, ' ms', 'slideMs; 0 is no motion.'], ['leaveMs', 'Slide-down time', 0, 1000, 10, ' ms', 'leaveMs; kit default 0 closes at once, Imperium uses 240.'], ['arriveMs', 'Ignore scrim taps for', 0, 600, 10, ' ms', 'arriveMs; Imperium uses 250.'], ['max', 'Tallest', 0.3, 1, 0.01, '× screen', '--pm-sheet-max'], ['scrim', 'Scrim darkness', 0, 1, 0.05, '', '--pm-scrim, black at this opacity'], ['hold', 'Stay open (this page only)', 300, 4000, 100, ' ms', 'Play closes it by itself after this.']],
+  mount(el) { const st = $('[data-r]', el), draw = K.mountSheet($('[data-m]', el)); let t, S = {};
+    const st2 = { open: false, leaving: false };
+    const r = () => draw({ ...st2, slideMs: S.slideMs, leaveMs: S.leaveMs, arriveMs: S.arriveMs, onClose: () => { st2.leaving = true; r(); }, onLeft: () => { st2.open = false; st2.leaving = false; r(); } });
+    return { apply(s) { S = s; st.style.setProperty('--pm-sheet-max', s.max); st.style.setProperty('--pm-scrim', `rgb(0 0 0 / ${s.scrim})`); st.style.setProperty('--pm-sheet-bg', '#fff'); }, play(s) { clearTimeout(t); S = s; st2.open = false; r(); st2.open = true; st2.leaving = false; r(); t = setTimeout(() => { st2.leaving = true; r(); }, s.hold + s.slideMs); } }; },
+  code: (s) => `/* on :root or an ancestor */\n--pm-sheet-max: ${s.max};\n--pm-scrim: rgb(0 0 0 / ${s.scrim});\n\n<Sheet title="Help" onClose={close} slideMs={${s.slideMs}} leaveMs={${s.leaveMs}} arriveMs={${s.arriveMs}}>...</Sheet>\n// a swipe down on the title past ${K.SWIPE_CLOSE_PX} px closes it` });
+
+P.push({ id: 'card-zoom', title: 'Card zoom', parts: 'card-zoom placeZoom, CardZoom', about: 'A zoom or hover preview is placed beside the card it came from, on the first side with room. Drag the blue card, or press Play to slide it across. The content is the kit\'s CardZoom, unstyled except for this page\'s text sizes.',
+  html: `<div class="stage" style="height:320px" data-r><div class="anc"></div><div class="zb"></div><div class="note" style="position:absolute;left:10px;bottom:6px" data-o></div></div>`,
+  kit: { gap: 12, margin: 8, order: 'right,left,below,above', align: 'center', pw: 200, ph: 150 },
+  ctls: [['gap', 'Gap to the card', 0, 60, 1, 'px', 'gap'], ['margin', 'Margin to the edge', 0, 60, 1, 'px', 'margin'], ['order', 'Sides tried', 'select', [['right,left,below,above', 'right, left, below, above (kit)'], ['above,below,right,left', 'above, below, right, left'], ['left,right,below,above', 'left, right, below, above']], 'order; the first side with room wins.'], ['align', 'Along the other side', 'select', [['center', 'centred (kit)'], ['start', 'level with the card top']], 'align'], ['pw', 'Preview width', 80, 360, 5, 'px', ''], ['ph', 'Preview height', 60, 300, 5, 'px', '']],
+  mount(el) { const st = $('[data-r]', el), anc = $('.anc', el), zb = $('.zb', el), out = $('[data-o]', el); K.mountZoom(zb); let ax = 70, ay = 160, S, cancel = () => {};
+    const draw = () => { if (!S) return; const w = st.clientWidth, h = st.clientHeight; ax = Math.max(28, Math.min(w - 28, ax)); ay = Math.max(39, Math.min(h - 39, ay)); anc.style.left = ax + 'px'; anc.style.top = ay + 'px';
+      const p = K.placeZoom({ left: ax - 28, top: ay - 39, right: ax + 28, bottom: ay + 39 }, { width: S.pw, height: S.ph }, { width: w, height: h }, { gap: S.gap, margin: S.margin, order: S.order.split(','), align: S.align });
+      Object.assign(zb.style, { left: p.left + 'px', top: p.top + 'px', width: S.pw + 'px', height: S.ph + 'px' }); out.textContent = `side: ${p.side}, fits: ${p.fits}`; };
+    st.addEventListener('pointerdown', (e) => { cancel(); const mv = (ev) => { const b = st.getBoundingClientRect(); ax = ev.clientX - b.left; ay = ev.clientY - b.top; draw(); }; mv(e); window.addEventListener('pointermove', mv); window.addEventListener('pointerup', () => window.removeEventListener('pointermove', mv), { once: true }); });
+    return { apply(s) { S = s; draw(); }, play() { cancel(); const w = st.clientWidth; cancel = loop(4000, (t) => { ax = 30 + (w - 60) * (t / 4000); ay = st.clientHeight / 2; draw(); }); } }; },
+  replay: false,
+  code: (s) => `const at = placeZoom(anchorRect, { width: ${s.pw}, height: ${s.ph} }, { width: viewW, height: viewH }, { gap: ${s.gap}, margin: ${s.margin}, order: [${s.order.split(',').map((x) => `'${x}'`).join(', ')}], align: '${s.align}' })\n// at = { left, top, side, fits }: the game applies left and top` });
+
+P.push({ id: 'achievement', title: 'Achievement pop-up', parts: 'achievements toast', about: 'The kit toast is static (motion arrives with release 1.1): it appears, holds, and the game removes it after the hold time. Play shows that cycle.',
+  html: `<div class="stage" style="height:200px" data-r><div class="pg">${fill('Game over')}</div><div data-m></div></div>`,
+  kit: { count: 1, hold: K.DEFAULT_HOLD_MS, bg: '#ffffff', border: '#9aa0a6' },
+  ctls: [['count', 'Earned this game', 1, 3, 1, '', 'One shows its name, more show a count.'], ['hold', 'Hold', 1000, 10000, 500, ' ms', 'DEFAULT_HOLD_MS; the settings offer 3, 5 or 8 seconds.'], ['bg', 'Background', 'color', '', '--ach-toast-bg'], ['border', 'Border', 'color', '', '--ach-toast-border']],
+  mount(el) { const st = $('[data-r]', el), draw = K.mountToast($('[data-m]', el)); let t;
+    return { apply(s) { st.style.setProperty('--ach-toast-bg', s.bg); st.style.setProperty('--ach-toast-border', s.border); st.style.color = '#222'; draw(0, 0); }, play(s) { clearTimeout(t); draw(0, 0); requestAnimationFrame(() => { draw(s.count, s.hold); t = setTimeout(() => draw(0, 0), s.hold); }); } }; },
+  code: (s) => `/* on :root or an ancestor */\n--ach-toast-bg: ${s.bg};\n--ach-toast-border: ${s.border};\n\nconst toast = toastFor(defs, newlyEarnedIds, { holdMs: ${s.hold} })\n// show <AchievementToast toast={toast} /> and remove it after toast.holdMs` });
+
+P.push({ id: 'attachments', title: 'Card attachments', parts: 'card-attachments HostStack', about: 'Cards tucked under a host show an L and slide out on hover or tap; in fan mode they peek out past it. Hover the stack, or press Play.',
+  html: `<div class="stage" style="height:300px"><div class="centre" data-r style="justify-content:start;padding:20px"><div data-m></div></div></div>`,
+  kit: { n: 2, w: 90, mode: 'tuck', side: 'right', ms: 160, dx: K.TUCK.dx, dy: K.TUCK.dy, fanStep: 0.12, fanDir: 'up' },
+  ctls: [['n', 'Cards under', 1, 5, 1, '', ''], ['w', 'Card width', 60, 140, 2, 'px', 'Height is 1.4 times this.'], ['mode', 'Mode', 'select', [['tuck', 'tuck'], ['fan', 'fan']], ''], ['side', 'Slides out to', 'select', [['right', 'right'], ['left', 'left']], 'side (tuck mode)'], ['ms', 'Slide time', 0, 800, 10, ' ms', 'ms; 0 is no slide.'], ['dx', 'Tuck across', 0, 0.5, 0.01, '× width', 'TUCK.dx, per card'], ['dy', 'Tuck down', 0, 0.5, 0.01, '× height', 'TUCK.dy, per card'], ['fanStep', 'Fan step', 0, 0.5, 0.01, '× size', 'fanStep (fan mode)'], ['fanDir', 'Fan direction', 'select', [['up', 'up'], ['down', 'down'], ['left', 'left'], ['right', 'right']], 'fanDir (fan mode)']],
+  mount(el) { const draw = K.mountStack($('[data-m]', el)); let S, open, t;
+    const r = () => draw({ n: S.n, w: S.w, hh: Math.round(S.w * 1.4), mode: S.mode, side: S.side, ms: S.ms, tuck: { dx: S.dx, dy: S.dy }, fanStep: S.fanStep, fanDir: S.fanDir, open });
+    return { apply(s) { S = s; r(); }, play(s) { clearTimeout(t); S = s; open = false; r(); requestAnimationFrame(() => { open = true; r(); t = setTimeout(() => { open = undefined; r(); }, 1400 + s.ms); }); } }; },
+  code: (s) => `<HostStack host={hostCard} attachments={[${Array.from({ length: s.n }, (_, i) => `{ key: ${i}, node: card${i + 1} }`).join(', ')}]} w={${s.w}} h={${Math.round(s.w * 1.4)}} mode="${s.mode}" ${s.mode === 'tuck' ? `side="${s.side}" tuck={{ dx: ${s.dx}, dy: ${s.dy} }}` : `fanDir="${s.fanDir}" fanStep={${s.fanStep}}`} ms={${s.ms}} />` });
+
+const root = $('#parts'), nav = $('#nav');
+for (const p of P) {
+  p.s = { ...p.kit };
+  nav.insertAdjacentHTML('beforeend', `<a href="#${p.id}">${p.title}</a>`);
+  const sec = document.createElement('section'); sec.className = 'part'; sec.id = p.id;
+  sec.innerHTML = `<h2>${p.title}</h2><p class="what">${p.about} <span class="note">(${p.parts})</span></p>${p.html}
+  <div class="bar"><span>Start from</span><button type="button" data-p="kit" aria-pressed="true">Kit default</button>${(p.presets || []).map((x) => `<button type="button" data-p="${x[0]}">${x[1]}</button>`).join('')}${p.replay === false && p.id === 'card-zoom' ? '' : ''}<button type="button" class="play">Play</button></div>
+  <div class="ctls"></div>
+  <div><div class="codebar"><h3>These settings in code</h3><button type="button" data-copy>Copy</button></div><pre class="code"></pre></div>`;
+  root.append(sec);
+  p.api = p.mount(sec);
+  const ctls = $('.ctls', sec), code = $('.code', sec);
+  const refresh = () => {
+    for (const c of p.ctls) { const [k, , a, , , unit] = c; const inp = $('#c-' + p.id + '-' + k); inp.value = p.s[k]; $('#o-' + p.id + '-' + k).textContent = a === 'select' || a === 'color' ? '' : fmt(p.s[k]) + unit; }
+    p.api.apply(p.s); code.textContent = p.code(p.s);
+  };
+  let timer;
+  const act = (replay) => { refresh(); if (replay && p.replay !== false) { clearTimeout(timer); timer = setTimeout(() => p.api.play(p.s), 150); } };
+  for (const c of p.ctls) {
+    const [k, label, a, b, step, unit, help] = c, id = `c-${p.id}-${k}`, d = document.createElement('div'); d.className = 'ctl';
+    const kind = a === 'select' ? 'select' : a === 'color' ? 'color' : 'range';
+    d.innerHTML = `<label for="${id}">${label}</label><output id="o-${p.id}-${k}" for="${id}"></output>` +
+      (kind === 'select' ? `<select id="${id}">${b.map(([v, t]) => `<option value="${v}">${t}</option>`).join('')}</select><small>${step || ''}</small>` : kind === 'color' ? `<input id="${id}" type="color"><small>${help}</small>` : `<input id="${id}" type="range" min="${a}" max="${b}" step="${step}"><small>${help}</small>`);
+    ctls.append(d);
+    $('input,select', d).addEventListener('input', (e) => { p.s[k] = kind === 'range' ? Number(e.target.value) : e.target.value; sec.querySelectorAll('[data-p]').forEach((x) => x.setAttribute('aria-pressed', 'false')); act(true); });
+  }
+  sec.querySelectorAll('[data-p]').forEach((b) => b.addEventListener('click', () => { p.s = { ...p.kit, ...(p.presets || []).find((x) => x[0] === b.dataset.p)?.[2] }; sec.querySelectorAll('[data-p]').forEach((x) => x.setAttribute('aria-pressed', String(x === b))); act(true); }));
+  $('.play', sec).addEventListener('click', () => p.api.play(p.s));
+  $('[data-copy]', sec).addEventListener('click', async (e) => {
+    const btn = e.currentTarget;
+    try { await navigator.clipboard.writeText(code.textContent); btn.textContent = 'Copied'; }
+    catch { const r = document.createRange(); r.selectNodeContents(code); const sel = getSelection(); sel.removeAllRanges(); sel.addRange(r); btn.textContent = 'Selected: press Ctrl+C'; }
+    setTimeout(() => { btn.textContent = 'Copy'; }, 1800);
+  });
+  refresh();
+}
+window.__parts = Object.fromEntries(P.map((p) => [p.id, p]));
+</script>
