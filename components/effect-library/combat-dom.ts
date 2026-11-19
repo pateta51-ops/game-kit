@@ -20,7 +20,9 @@ interface PulseLook {
 export interface RingPulseSettings extends PulseLook {
   count?: number;
   period?: number;
-  shockwaves?: readonly { delay: number; ms: number; radius: number; width: number; alpha: number; squash?: number; borderWidth?: number; outlineWidth?: number; outlineOffset?: number }[];
+  shockwaves?: readonly { delay: number; ms: number; radius: number; width: number; alpha: number; squash?: number; borderWidth?: number; outlineWidth?: number; outlineOffset?: number;
+    /** K435-6: alpha share at time k in 0..1 (default (1-k)^3), radius in px before `unit` (default radius * outExpo(k)), width in px before `unit` (default width * (1 - k/2)) */
+    alphaAt?: (k: number) => number; radiusAt?: (k: number) => number; widthAt?: (k: number) => number }[];
   outline?: string;
   unit?: number;
   clip?: Rect;
@@ -42,14 +44,14 @@ export const ringPulse: Effect = (fx) => {
     const [x, y] = centre(box);
     const holder = clip && stage.stand(clip, { overflow: 'hidden' });
     for (const wave of shockwaves) {
-      const max = wave.radius * unit;
+      const max = wave.radiusAt ? Math.max(...Array.from({ length: 61 }, (_, i) => wave.radiusAt?.(i / 60) ?? 0)) * unit : wave.radius * unit;
       const ring = stage.stand([x - max - (clip?.[0] ?? 0), y - max - (clip?.[1] ?? 0), 2 * max, 2 * max], { borderRadius: radius });
       holder?.append(ring);
       stage.play(ring, Array.from({ length: 61 }, (_, i): Keyframe => {
         const k = i / 60;
-        const s = Math.max(ease.outExpo(k), 1 / Math.max(1, max));
-        const a = wave.alpha * (1 - k) ** 3;
-        const w = wave.width * (1 - k * .5) * unit;
+        const s = Math.max(wave.radiusAt ? wave.radiusAt(k) * unit / Math.max(1, max) : ease.outExpo(k), 1 / Math.max(1, max));
+        const a = wave.alpha * (wave.alphaAt ? wave.alphaAt(k) : (1 - k) ** 3);
+        const w = (wave.widthAt ? wave.widthAt(k) : wave.width * (1 - k * .5)) * unit;
         const size = (v: number) => px(v / s);
         return {
           transform: `scale(${s},${s * (wave.squash ?? 1)})`,

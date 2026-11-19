@@ -115,4 +115,13 @@ describe('K435 effect verb options', () => {
     pileLift(el, { speed: 'instant', shadow: null });
     expect(el.style.filter).toBe('');
   });
+  it('K435-6 ring-pulse shockwaves take caller alpha, radius and width curves (breach)', () => {
+    animate.mockReturnValue(fakeAnim(false).a as unknown as Animation);
+    const outExpo = (k: number): number => (k >= 1 ? 1 : 1 - 2 ** (-10 * k));
+    setup({ do: 'ring-pulse', unit: 1, shockwaves: [{ delay: 0, ms: 100, radius: 1, width: 1, alpha: 1, alphaAt: (k: number) => 1 - k, radiusAt: (k: number) => 30 + 330 * outExpo(k), widthAt: () => 24 }] });
+    const kf = animate.mock.calls.at(-1)![0] as Keyframe[];
+    expect(kf[0]!.transform).toBe(`scale(${String(30 / 360)},${String(30 / 360)})`);
+    expect(String(kf[30]!.outline)).toContain('/ 0.5)');
+    expect(String(kf[60]!.boxShadow)).toMatch(/^inset 0 0 24px 8px/);
+  });
 });
