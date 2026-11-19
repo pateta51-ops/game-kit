@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # K399: copy the heavy queue to ~/.local/share/heavy-queue (HEAVY_HOME), install it as the always-on systemd service
 # heavy-queue.service (as the invoking user) and link `heavy` into ~/.local/bin; the unit, the link and the runner hooks use
-# the copy, never a checkout. Idempotent: run it again to update the copy. HEAVY_SLOTS=<n> sets the slots (default 1).
+# the copy, never a checkout. Idempotent: run it again to update the copy. HEAVY_SLOTS=<n> sets the slots (default 2).
 set -e
 S=$(cd "$(dirname "$(readlink -f "$0")")" && pwd)
 D=${HEAVY_HOME:-$HOME/.local/share/heavy-queue}
@@ -18,7 +18,7 @@ After=network.target
 
 [Service]
 User=$U
-Environment=HEAVY_SLOTS=${HEAVY_SLOTS:-1}
+Environment=HEAVY_SLOTS=${HEAVY_SLOTS:-2}
 ExecStart=$NODE $D/server.mjs
 Restart=always
 RestartSec=2
