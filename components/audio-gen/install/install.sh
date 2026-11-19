@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Install the local models under ~/audio-gen (WSL or Linux). Each group is optional:
-#   install.sh core sao ace kokoro midi        (no argument: core only)
+#   install.sh core sa3 yue2 ace sao kokoro midi        (no argument: core only)
 # Nothing paid is installed or called. Weights are downloaded by the tools on first use into ~/audio-gen or the
 # Hugging Face cache and are never committed. `python3 audiogen/tools.py status` says what is installed.
 set -euo pipefail
@@ -25,6 +25,20 @@ if has ace; then
   # ACE-Step 1.5 (MIT), music from a prompt.
   [ -d "$H/ACE-Step-1.5" ] || git clone https://github.com/ace-step/ACE-Step-1.5.git "$H/ACE-Step-1.5"
   "$H/venv/bin/pip" install -q -e "$H/ACE-Step-1.5"
+fi
+if has sa3; then
+  # Stable Audio 3 Small SFX (Stability AI Community License), the default for sounds; weights go to the HF cache.
+  venv venv-sa3
+  "$H/venv-sa3/bin/pip" install -q torch torchaudio stable-audio-3==0.1.0 soundfile numpy
+fi
+if has yue2; then
+  # YuE2-3B (weights CC BY-NC 4.0), the default for music: code pinned to release yue2-v0.1.6, weights to rev 8f24312f.
+  venv venv-yue
+  "$H/venv-yue/bin/pip" install -q "yue2-infer @ git+https://github.com/multimodal-art-projection/YuE@yue2-v0.1.6"
+  "$H/venv-yue/bin/hf" download m-a-p/YuE2-3B --revision 8f24312f --local-dir "$H/models/yue2"
+  # demucs htdemucs for the vocal gate, in its own venv
+  venv venv-demucs
+  "$H/venv-demucs/bin/pip" install -q torch torchaudio demucs==4.1.0 soundfile
 fi
 if has kokoro; then
   # Kokoro-82M, free local voice lines (needs espeak-ng for English: sudo apt install espeak-ng).

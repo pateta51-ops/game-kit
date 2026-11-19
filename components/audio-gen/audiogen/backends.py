@@ -23,7 +23,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
-from .spec import Cue, expand
+from .spec import DEFAULTS, Cue, expand  # noqa: F401 - DEFAULTS is read from here too
 
 WORKERS = Path(__file__).resolve().parent.parent / "workers"
 
@@ -212,7 +212,31 @@ class StableAudioOpen(WorkerBackend):
         super().check()
 
 
-KINDS: dict[str, type[Backend]] = {b.id: b for b in (AceStep, StableAudioOpen)}
+class StableAudio3(WorkerBackend):
+    """Stable Audio 3 Small SFX (Stability AI Community License), local SFX; the default for sounds."""
+
+    id = "stable-audio-3"
+    tool = "Stable Audio 3 Small SFX"
+    script = "stable_audio_3_worker.py"
+    pass_env = ("HF_TOKEN",)
+
+
+class YuE2(WorkerBackend):
+    """YuE2-3B (weights CC BY-NC 4.0), instrumental music by the 7th Inning Stretch recipe; the default for music."""
+
+    id = "yue2"
+    tool = "YuE2-3B"
+    script = "yue2_worker.py"
+    pass_env = ("HF_TOKEN",)
+
+    def check(self) -> None:
+        super().check()
+        dm = expand(str(self.opts.get("demucsPython", "~/audio-gen/venv-demucs/bin/python")), self.base)
+        if not dm.exists():
+            raise Skip(f"{self.name}: no demucs Python at {dm} for the vocal gate (install.sh yue2, or set demucsPython).")
+
+
+KINDS: dict[str, type[Backend]] = {b.id: b for b in (AceStep, StableAudioOpen, StableAudio3, YuE2)}
 
 
 def make(name: str, opts: dict[str, Any], base: Path) -> Backend:
