@@ -69,4 +69,14 @@ describe('K435 effect verb options', () => {
     expect(el.style.opacity).toBe('0');
     expect(await h.done).toBe('skipped');
   });
+  it('K435-2 stamp hands over its label and ring, holds the ring past its end, and gives the ring its own z', () => {
+    animate.mockReturnValue(fakeAnim(false).a as unknown as Animation);
+    const onParts = vi.fn();
+    const { end } = setup({ do: 'stamp', text: 'Hit', style: { zIndex: '5' }, ringZ: 2, holdRing: true, onParts, ring: { ms: 50, delay: 0, style: {}, frames: [{ opacity: 0 }, { opacity: 0.8 }] } });
+    const parts = onParts.mock.calls[0]![0] as { label: HTMLElement; ring: HTMLElement };
+    expect([parts.label.dataset['fxPart'], parts.ring.dataset['fxPart'], parts.label.style.zIndex, parts.ring.style.zIndex]).toEqual(['label', 'ring', '5', '2']);
+    end?.();
+    expect(parts.ring.isConnected).toBe(true);
+    expect(parts.ring.style.opacity).toBe('0.8');
+  });
 });
