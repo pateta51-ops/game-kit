@@ -70,11 +70,11 @@ describe('heavy-queue server (K399)', () => {
     expect((await q.post('/beat', { id: h.id })).granted).toBe(false);
   });
   it('frees a lease whose heartbeats stop', async () => {
-    const q = await serve({ ttl: 200 });
+    const q = await serve({ ttl: 1000 });
     const a = await q.post('/acquire', { label: 'a' });
     const b = await q.post('/acquire', { label: 'b' });
     expect(b.granted).toBe(false);
-    for (let i = 0; i < 8; i++) { await sleep(60); await q.post('/beat', { id: b.id }); }
+    await until(async () => { await sleep(50); return (await q.post('/beat', { id: b.id })).granted; });
     expect((await q.post('/beat', { id: b.id })).granted).toBe(true);
     expect((await q.post('/beat', { id: a.id })).error).toBe('lease ended');
     expect((await q.post('/beat', { id: 'nope' })).error).toBe('unknown lease');
@@ -87,7 +87,7 @@ describe('heavy-queue server (K399)', () => {
     expect((await q.status()).running).toHaveLength(1);
     c.kill();
     await once(c, 'exit');
-    await sleep(200);
+    await until(async () => (await q.status()).running.length === 0);
     expect((await q.status()).running).toHaveLength(0);
     expect((await q.status()).history[0]).toMatchObject({ label: 'job', reason: 'pid gone' });
   });
@@ -98,7 +98,7 @@ describe('heavy run (K399)', () => {
     const q = await serve({});
     const hold = await q.post('/acquire', { label: 'other' });
     const run = heavy(['run', '--label', 'mine', '--', process.execPath, '-e', 'process.exit(process.env.HEAVY_HELD === "1" ? 5 : 1)'], { HEAVY_URL: q.url });
-    await sleep(300);
+    await until(async () => (await q.status()).waiting.length === 1);
     expect((await q.status()).waiting.map((l) => l.label)).toEqual(['mine']);
     await q.post('/release', { id: hold.id });
     const r = await run;
@@ -130,13 +130,13 @@ describe('heavy-queue review fixes (K399)', () => {
   it('a running client takes its lease again after the queue restarts', async () => {
     const q = await serve({});
     const port = q.s.address().port;
-    const run = heavy(['run', '--label', 'long', '--', process.execPath, '-e', 'setTimeout(() => {}, 1500)'], { HEAVY_URL: q.url });
-    await sleep(400);
+    const run = heavy(['run', '--label', 'long', '--', process.execPath, '-e', 'setTimeout(() => {}, 4000)'], { HEAVY_URL: q.url });
+    await until(async () => (await q.status()).running.length === 1);
     stop(q.s);
     const s2 = startServer({ port, tick: 50 });
     servers.push(s2);
     await once(s2, 'listening');
-    await sleep(400);
+    await until(async () => (await (await fetch(q.url + '/status')).json()).running.length === 1);
     expect((await (await fetch(q.url + '/status')).json()).running.map((l) => l.label)).toEqual(['long']);
     expect((await run).code).toBe(0);
     expect((await (await fetch(q.url + '/status')).json()).history[0]).toMatchObject({ label: 'long', exit: 0 });
@@ -197,15 +197,14 @@ describe('heavy-queue sweep (K418)', () => {
     ];
     const reniced = [];
     const { status } = await serve({ scan: () => procs, renice: (p) => reniced.push(p), sweepMs: 30, log: join(dir, 'bypass.log') });
-    await sleep(200);
+    await until(async () => (await status()).unqueued.length === 1);
     const s = await status();
     expect(s.unqueued.map((u) => u.pid)).toEqual([13]);
     expect(s.unqueued[0].cwd).toBe('/g/c');
     expect(reniced).toEqual([13]);
     expect(readFileSync(join(dir, 'bypass.log'), 'utf8')).toContain('pid 13 cwd /g/c');
     procs = procs.filter((p) => p.pid !== 13);
-    await sleep(200);
-    expect((await status()).unqueued).toEqual([]);
+    await until(async () => (await status()).unqueued.length === 0);
     expect(reniced).toEqual([13]);
   });
   it('HEAVY_SWEEP_MS 0 turns the sweep off', async () => {
