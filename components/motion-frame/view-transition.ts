@@ -26,7 +26,7 @@ export async function withViewTransition(apply: () => void | Promise<void>, spee
     let clock: Animation | undefined;
     const tick = (): void => {
       if (stopped) return;
-      if (o.clock) clock ??= document.getAnimations().find((a) => (a as CSSAnimation).animationName === o.clock);
+      if (o.clock) clock ??= document.getAnimations?.().find((a) => (a as CSSAnimation).animationName === o.clock);
       const e = o.clock ? clock?.currentTime : performance.now() - t0;
       if (typeof e === 'number') fireTo(e);
       if (next < cards!.length) frame = requestAnimationFrame(tick);
