@@ -4,16 +4,18 @@
 // tokens land face up in a row, any tap or key skips to the end. Reports a failure so the dock falls back to 2D.
 // Reached only by a dynamic import (TokenBag.tsx).
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
-import { createBagScene, ZOOM_BACK, type BagScene } from './scene.ts';
-import type { ExteriorPrint } from './exterior.ts';
+import { createBagScene, ZOOM_BACK, type BagScene, type FrameStats } from './scene.ts';
+import type { Exterior } from './exterior.ts';
 import { dockCanvas, type FallbackReason } from './mode.ts';
 
 export interface DrawProps {
   contents: readonly string[];
   drawn: readonly string[];
   faceUrl: (kind: string) => string;
-  exterior?: ExteriorPrint | undefined;
+  exterior?: Exterior | undefined;
   backdrop?: string | undefined;
+  /** set window.__bag3dStats / __bag3dSeek for e2e (default off) */
+  e2eHooks?: boolean | undefined;
   /** the scene's rate (1 = as approved; 2 = twice as fast) */
   rate: number;
   countLabel: string;
@@ -22,9 +24,22 @@ export interface DrawProps {
   onFail: (reason: FallbackReason) => void;
 }
 
+// Hides every dock bag while a draw plays, found whenever it is shown (the game may mount a new dock mid-draw); the
+// count and hint keep clear of the notch and grow with the screen. e2e hooks: window.__bag3dStats / __bag3dSeek.
+const STYLE = `html.token-bag-drawing canvas[data-part="token-bag-canvas"]{visibility:hidden}
+[data-part="token-bag-draw"] [data-part="token-bag-count"]{top:max(16px,env(safe-area-inset-top))}
+[data-part="token-bag-draw"] [data-part="token-bag-n"]{font-size:clamp(34px,3.2vmin,96px)}
+[data-part="token-bag-draw"] [data-part="token-bag-label"]{font-size:clamp(12px,1.2vmin,36px)}
+[data-part="token-bag-draw"] [data-part="token-bag-skip"]{bottom:max(16px,env(safe-area-inset-bottom));font-size:clamp(15px,1.4vmin,40px)}`;
+
+interface Hooks {
+  __bag3dStats?: () => FrameStats & { faceSize: number; textureBytes: number };
+  __bag3dSeek?: (t: number) => void;
+}
+
 type Phase = 'loading' | 'playing' | 'done' | 'back';
 
-export function Draw({ contents, drawn, faceUrl, exterior, backdrop, rate, countLabel, skipText, onDone, onFail }: DrawProps) {
+export function Draw({ contents, drawn, faceUrl, exterior, backdrop, e2eHooks, rate, countLabel, skipText, onDone, onFail }: DrawProps) {
   const canvas = useRef<HTMLCanvasElement>(null);
   const [count, setCount] = useState(contents.length);
   const [phase, setPhase] = useState<Phase>('loading');
@@ -41,9 +56,14 @@ export function Draw({ contents, drawn, faceUrl, exterior, backdrop, rate, count
     let closing = 0;
     // the dock's bag hides while this one plays from its place, and shows again as this one returns to it
     const hideDock = (hide: boolean): void => {
-      const d = dockCanvas();
-      if (d !== null) d.style.visibility = hide ? 'hidden' : '';
+      document.documentElement.classList.toggle('token-bag-drawing', hide);
     };
+    if (document.getElementById('token-bag-draw-style') === null) {
+      const st = document.createElement('style');
+      st.id = 'token-bag-draw-style';
+      st.textContent = STYLE;
+      document.head.appendChild(st);
+    }
     const from = (): DOMRect | null => dockCanvas()?.getBoundingClientRect() ?? null;
     const at = from();
     hideDock(true);
@@ -64,9 +84,10 @@ export function Draw({ contents, drawn, faceUrl, exterior, backdrop, rate, count
             if (!alive) return;
             setPhase('back');
             hideDock(false);
-            void s.back().then(() => {
+            const end = (): void => {
               if (alive) cb.current.onDone();
-            });
+            };
+            s.back().then(end, end);
           }, 450 / rate);
         },
         onSlow: () => {
@@ -84,6 +105,13 @@ export function Draw({ contents, drawn, faceUrl, exterior, backdrop, rate, count
       cb.current.onFail('error');
       return;
     }
+    const w = window as unknown as Hooks;
+    const stats: Hooks['__bag3dStats'] = () => ({ ...s.stats(), faceSize: s.faceSize, textureBytes: s.textureBytes });
+    const seek: Hooks['__bag3dSeek'] = (t: number) => s.seek(t);
+    if (e2eHooks === true) {
+      w.__bag3dStats = stats;
+      w.__bag3dSeek = seek;
+    }
     s.ready.then(
       () => {
         if (!alive) return;
@@ -98,6 +126,8 @@ export function Draw({ contents, drawn, faceUrl, exterior, backdrop, rate, count
       alive = false;
       window.clearTimeout(closing);
       hideDock(false);
+      if (w.__bag3dStats === stats) delete w.__bag3dStats;
+      if (w.__bag3dSeek === seek) delete w.__bag3dSeek;
       s.dispose();
     };
     // one scene per draw: the parent keys this component by the draw
