@@ -61,7 +61,7 @@ const entry = (call: VerbCall): [string, string] | undefined => {
 const css = (el: HTMLElement, s: Partial<CSSStyleDeclaration>): void => void Object.assign(el.style, s);
 
 // K436: a curve (numbers spread evenly over 0..1) at k; caller `frames` with the last one as the end style
-const nums = (v: unknown): number[] | undefined => (Array.isArray(v) && v.length > 0 && v.every((n) => typeof n === 'number') ? v as number[] : undefined);
+const nums = (v: unknown): number[] | undefined => (Array.isArray(v) && v.length > 0 && v.every((n) => typeof n === 'number') ? v : undefined);
 const at = (c: readonly number[], k: number): number => {
   const i = k * (c.length - 1);
   const j = Math.min(c.length - 2, Math.floor(i));
@@ -73,7 +73,7 @@ function callerFrames(call: VerbCall): [Keyframe[], Partial<CSSStyleDeclaration>
   const last = { ...(frames.at(-1) as Keyframe) };
   delete last.offset;
   delete last.easing;
-  return [frames as Keyframe[], Object.fromEntries(Object.entries(last).map(([k, v]) => [k, String(v)])) as Partial<CSSStyleDeclaration>];
+  return [frames as Keyframe[], Object.fromEntries(Object.entries(last).map(([k, v]) => [k, String(v)]))];
 }
 /** K436: step `scaleX` / `scaleY` curves as `scale` keyframes (with `base` [sx, sy] at k multiplied in), sampled over the step */
 function scaleCurves(call: VerbCall, base?: (k: number) => [number, number]): Keyframe[] | undefined {
@@ -98,7 +98,8 @@ export function registerEffect(verbs: VerbRegistry<EffectCtx>, name: string, eff
     const layer = run.context;
     const el = layer.actor(run, call.actor, call.from);
     // K436: a step's own z-index and blend for its actor's clone
-    if (call.step['zIndex'] !== undefined) el.style.zIndex = String(call.step['zIndex']);
+    const zi = call.step['zIndex'];
+    if (typeof zi === 'number' || typeof zi === 'string') el.style.zIndex = String(zi);
     if (typeof call.step['blend'] === 'string') el.style.mixBlendMode = call.step['blend'];
     const done: (() => void)[] = [];
     const anims = new Set<Animation>();
@@ -162,7 +163,7 @@ function moveMore({ call, el, animate }: Fx, t: Rect): () => void {
     const sc = String(curves?.[i]?.['scale'] ?? '1 1').replace(' ', ', ');
     const deg = rot ? rot[0] + (rot[1] - rot[0]) * k : 0;
     if (tf) return { transform: `translate(${tr(k).replace(' ', ', ')}) rotate(${String(deg)}deg) scale(${sc})` };
-    return { translate: tr(k), ...(rot ? { rotate: `${String(deg)}deg` } : {}), ...(curves ? { scale: curves[i]?.['scale'] as string } : {}) };
+    return { translate: tr(k), ...(rot ? { rotate: `${String(deg)}deg` } : {}), ...(curves ? { scale: curves[i]?.['scale'] } : {}) };
   });
   const last = frames.at(-1)!;
   const end: Partial<CSSStyleDeclaration> = tf ? { transform: String(last.transform) } : { translate: '', ...(rot ? { rotate: rot[1] ? `${String(rot[1])}deg` : '' } : {}), ...(curves ? { scale: lastScale(scaleCurves(call, () => [ent?.[1] ?? 1, ent?.[1] ?? 1])) } : {}) };
@@ -315,7 +316,7 @@ export const BUILT_IN: Readonly<Record<string, Effect>> = {
       const k = T > 0 ? (mid - D) / T : .5;
       animate([{ boxShadow: 'none' }, { boxShadow: glow, offset: k }, { boxShadow: 'none' }], { boxShadow: el.style.boxShadow }, { easing: 'linear', ...turn });
     }
-    const fl = call.step['filter'] as unknown;
+    const fl = call.step['filter'];
     const ff = Array.isArray(fl) ? { frames: fl as string[] } : fl && typeof fl === 'object' ? fl as { frames: string[]; ms?: number; delay?: number; easing?: string } : undefined;
     if (ff?.frames.length) {
       animate(ff.frames.map((filter) => ({ filter })), { filter: el.style.filter }, {
