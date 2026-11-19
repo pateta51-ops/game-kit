@@ -3,6 +3,7 @@ import { clamp } from './particles.ts';
 const TAU = Math.PI * 2;
 type Stops = readonly (readonly [number, string])[];
 
+import { PLASMA_ORB_DEFAULTS as D } from './defaults.ts';
 export const orbGeometry = {
   haloRadius: 2, coreX: 0, coreY: 0,
   ringWidth: 1, ringStroke: 0.05, ringRadius: 0.5, ringDash: 0.25,
@@ -46,7 +47,7 @@ export interface PlasmaOrbSettings {
   geometry?: typeof orbGeometry;
 }
 
-export const plasmaOrbScale = (t: number, boost = 0, { speed = 1, pulsePeriod = 2400, pulseAmount = 0.05, swell = 0.1 }: PlasmaOrbSettings = {}): number =>
+export const plasmaOrbScale = (t: number, boost = 0, { speed = D.speed, pulsePeriod = D.pulsePeriod, pulseAmount = D.pulseAmount, swell = D.swell }: PlasmaOrbSettings = {}): number =>
   speed === 0 || speed === 'instant' ? 1 : 1 + pulseAmount * Math.sin((t / pulsePeriod) * TAU) + boost * swell;
 
 export const plasmaSwellAt = (since: number, peak = 80, half = 180): number =>

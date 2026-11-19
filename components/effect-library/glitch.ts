@@ -1,5 +1,6 @@
 // Glitch: a broadcast-style burst and tear on a wordmark. Look in looks/glitch.css; timers exist only while motion is on.
 import type { Speed } from '../motion-frame/index.ts';
+import { GLITCH_DEFAULTS } from './defaults.ts';
 import { rng } from './particles.ts';
 
 export interface GlitchOptions {
@@ -40,9 +41,9 @@ export interface Glitch {
 export function createGlitch(el: HTMLElement, o: GlitchOptions): Glitch {
   const rand = rng(o.seed ?? Math.floor(Math.random() * 4294967296));
   const between = (r: [number, number]): number => r[0] + rand() * (r[1] - r[0]);
-  const idle = o.idleMs ?? [3500, 7000];
-  const gap = o.repeatGapMs ?? [100, 140];
-  const ms = { burst: o.burstMs ?? 200, tear: o.tearMs ?? 600 };
+  const idle = o.idleMs ?? GLITCH_DEFAULTS.idleMs;
+  const gap = o.repeatGapMs ?? GLITCH_DEFAULTS.repeatGapMs;
+  const ms = { burst: o.burstMs ?? GLITCH_DEFAULTS.burstMs, tear: o.tearMs ?? GLITCH_DEFAULTS.tearMs };
   const set = (k: string, v: string | number): void => el.style.setProperty(k, String(v));
   el.classList.add('fx-glitch');
   if (o.mask) set('--glitch-mask', o.mask);
@@ -66,7 +67,7 @@ export function createGlitch(el: HTMLElement, o: GlitchOptions): Glitch {
   };
   const layers = [layer('fx-glitch-copy fx-glitch-copy--a'), layer('fx-glitch-copy fx-glitch-copy--b')];
   const slices: HTMLElement[] = [];
-  for (let i = 0; i < (o.slices ?? 3); i++) slices.push(layer(`fx-glitch-slice${i % 2 ? ' fx-glitch-slice--b' : ''}`));
+  for (let i = 0; i < (o.slices ?? GLITCH_DEFAULTS.slices); i++) slices.push(layer(`fx-glitch-slice${i % 2 ? ' fx-glitch-slice--b' : ''}`));
   let timer: ReturnType<typeof setTimeout> | undefined;
   let endTimer: ReturnType<typeof setTimeout> | undefined;
   let dead = false;
@@ -83,7 +84,7 @@ export function createGlitch(el: HTMLElement, o: GlitchOptions): Glitch {
   function schedule(): void {
     const f = factor();
     if (dead || !f) return;
-    timer = setTimeout(() => play('burst', rand() < (o.repeat ?? 0.25)), between(idle) * f);
+    timer = setTimeout(() => play('burst', rand() < (o.repeat ?? GLITCH_DEFAULTS.repeat)), between(idle) * f);
   }
   function play(kind: 'burst' | 'tear', again: boolean): void {
     const f = factor();

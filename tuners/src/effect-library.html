@@ -958,11 +958,11 @@ document.body.append(probe);
 const cs = getComputedStyle(probe);
 const hex = (c) => '#' + c.match(/\d+/g).slice(0, 3).map((n) => Number(n).toString(16).padStart(2, '0')).join('');
 const colour = (v) => { probe.style.color = cs.getPropertyValue(v); return hex(getComputedStyle(probe).color); };
-// Colours, offsets, dropout and burst time come from looks/glitch.css; the rest are createGlitch's own defaults, which the component does not export (kit gap).
+// Colours, offsets, dropout and burst time come from looks/glitch.css; the rest are GLITCH_DEFAULTS.
 const KIT = {
   a: colour('--glitch-a'), b: colour('--glitch-b'), split: parseFloat(cs.getPropertyValue('--glitch-split')), jump: parseFloat(cs.getPropertyValue('--glitch-jump')),
   dropout: parseFloat(cs.getPropertyValue('--glitch-dropout')), burstMs: parseFloat(cs.getPropertyValue('--glitch-ms')),
-  tearMs: 600, idleMin: 3500, idleMax: 7000, slices: 3, repeat: .25,
+  tearMs: FX.GLITCH_DEFAULTS.tearMs, idleMin: FX.GLITCH_DEFAULTS.idleMs[0], idleMax: FX.GLITCH_DEFAULTS.idleMs[1], slices: FX.GLITCH_DEFAULTS.slices, repeat: FX.GLITCH_DEFAULTS.repeat,
 };
 probe.remove();
 const rows = [

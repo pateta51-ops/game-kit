@@ -1,4 +1,5 @@
 import type { Effect } from './effects.ts';
+import { SHEEN_DEFAULTS as D } from './defaults.ts';
 
 export interface SheenSettings {
   angle?: number;
@@ -10,13 +11,15 @@ export interface SheenSettings {
   period?: number;
   sweep?: readonly [number, number];
   easing?: string;
+  /** a caller-supplied CSS background for the band, instead of the colour gradient (`colour` and `stops` are then unused) */
+  background?: string;
 }
 
 export const sheen: Effect = ({ call, el }) => {
   if (call.dur <= 0) return undefined;
   const {
-    angle = 100, bandWidth = 50, colour = 'rgba(255,255,255,.25)', stops = [0, 100],
-    travel = [-110, 220], loop = false, period = call.step.dur, sweep = [0, 1], easing = 'linear',
+    angle = D.angle, bandWidth = D.bandWidth, colour = D.colour, stops = D.stops,
+    travel = D.travel, background, loop = false, period = call.step.dur, sweep = D.sweep, easing = D.easing,
   } = call.step as SheenSettings;
   const clip = el.ownerDocument.createElement('div');
   clip.setAttribute('aria-hidden', 'true');
@@ -27,7 +30,8 @@ export const sheen: Effect = ({ call, el }) => {
   const band = el.ownerDocument.createElement('div');
   band.style.cssText = 'position:absolute;left:0;top:50%;translate:0 -50%;height:calc(100cqw + 100cqh)';
   band.style.width = `${bandWidth}%`;
-  band.style.backgroundImage = `linear-gradient(90deg, transparent ${stops[0]}%, ${colour} 50%, transparent ${stops[1]}%)`;
+  if (background) band.style.background = background;
+  else band.style.backgroundImage = `linear-gradient(90deg, transparent ${stops[0]}%, ${colour} 50%, transparent ${stops[1]}%)`;
   const from = { transform: `translateX(${travel[0]}%)` };
   const to = { transform: `translateX(${travel[1]}%)` };
   axis.append(band);

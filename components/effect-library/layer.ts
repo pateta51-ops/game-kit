@@ -14,6 +14,10 @@ export function decorativeCopy(el: HTMLElement, deep = true): HTMLElement {
 export interface LayerOptions {
   /** the element that holds the layer (default `document.body`) */
   parent?: HTMLElement;
+  /** z-index of the layer (default `var(--fx-z, 1000)`) */
+  zIndex?: number | string;
+  /** `absolute` fills `parent` (a positioned board layer) instead of the page (default `fixed`) */
+  position?: 'fixed' | 'absolute';
   /** the page element an actor or zone id stands for; the layer animates a clone of it, never the original. None found: a plain box. */
   resolve?: (id: string, run: Run<EffectLayer>) => HTMLElement | undefined;
   /** Stage geometry for dash-line endpoints, including their original sizes. */
@@ -48,7 +52,8 @@ export function createEffectLayer(o: LayerOptions = {}): EffectLayer {
   const parent = o.parent ?? document.body;
   const el = document.createElement('div');
   el.className = 'fx-layer';
-  el.style.cssText = 'position:fixed;inset:0;overflow:visible;pointer-events:none;z-index:var(--fx-z,1000)';
+  el.style.cssText = `position:${o.position ?? 'fixed'};inset:0;overflow:visible;pointer-events:none;z-index:var(--fx-z,1000)`;
+  if (o.zIndex !== undefined) el.style.zIndex = String(o.zIndex);
   parent.appendChild(el);
   const runs = new Map<number, Map<string, HTMLElement>>();
   const originals = new WeakMap<HTMLElement, HTMLElement>();

@@ -26,28 +26,36 @@ interface Board {
   live: Set<(now: number) => void>;
   frame: number;
 }
-const boards = new WeakMap<EffectLayer, Board>();
+const boards = new WeakMap<HTMLElement, Board>();
 
-function dispose(layer: EffectLayer, b: Board): void {
-  cancelAnimationFrame(b.frame);
-  b.canvas.remove();
-  if (boards.get(layer) === b) boards.delete(layer);
+export interface CanvasHost {
+  /** the element the canvas is drawn in and sized to (default: the layer's element); it must be positioned. Effects sharing a host share one canvas. */
+  host?: HTMLElement;
+  /** z-index of the canvas */
+  zIndex?: number | string;
 }
 
-function board(layer: EffectLayer): Board | undefined {
-  const b = boards.get(layer);
+function dispose(host: HTMLElement, b: Board): void {
+  cancelAnimationFrame(b.frame);
+  b.canvas.remove();
+  if (boards.get(host) === b) boards.delete(host);
+}
+
+function board(host: HTMLElement, zIndex?: number | string): Board | undefined {
+  const b = boards.get(host);
   if (b?.canvas.isConnected) return b;
   if (b) cancelAnimationFrame(b.frame);
   const canvas = document.createElement('canvas');
   canvas.className = 'fx-canvas';
   canvas.style.cssText = 'position:absolute;left:0;top:0;pointer-events:none';
+  if (zIndex !== undefined) canvas.style.zIndex = String(zIndex);
   const ctx = canvas.getContext('2d');
   if (!ctx) return undefined;
-  layer.el.appendChild(canvas);
+  host.appendChild(canvas);
   const made: Board = { canvas, ctx, live: new Set(), frame: 0 };
   const tick = (now: number): void => {
-    const w = layer.el.clientWidth;
-    const h = layer.el.clientHeight;
+    const w = host.clientWidth;
+    const h = host.clientHeight;
     if (canvas.width !== w || canvas.height !== h) {
       canvas.width = w;
       canvas.height = h;
@@ -62,18 +70,19 @@ function board(layer: EffectLayer): Board | undefined {
       }
     }
     if (made.live.size) made.frame = requestAnimationFrame(tick);
-    else dispose(layer, made);
+    else dispose(host, made);
   };
   made.frame = requestAnimationFrame(tick);
-  boards.set(layer, made);
+  boards.set(host, made);
   return made;
 }
 
 /** Registers a canvas effect as a verb. It draws no clone; where the page cannot draw (`canDraw`), the verb does nothing. */
-export function registerCanvasEffect(verbs: VerbRegistry<EffectLayer>, name: string, draw: CanvasEffect): void {
+export function registerCanvasEffect(verbs: VerbRegistry<EffectLayer>, name: string, draw: CanvasEffect, opts: CanvasHost = {}): void {
   verbs.register(name, (call, run) => {
     const layer = run.context;
-    const b = canDraw() ? board(layer) : undefined;
+    const host = opts.host ?? layer.el;
+    const b = canDraw() ? board(host, opts.zIndex) : undefined;
     if (!b) return undefined;
     const t0 = performance.now();
     const fx: CanvasFx = { call, run, layer, x: call.from[0] + call.from[2] / 2, y: call.from[1] + call.from[3] / 2 };
@@ -83,7 +92,7 @@ export function registerCanvasEffect(verbs: VerbRegistry<EffectLayer>, name: str
     b.live.add(f);
     return () => {
       b.live.delete(f);
-      if (!b.live.size) dispose(layer, b);
+      if (!b.live.size) dispose(host, b);
     };
   });
 }
