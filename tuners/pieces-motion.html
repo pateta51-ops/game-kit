@@ -16466,25 +16466,26 @@ var PIECES = (() => {
     return d > 0 && call.dur > 0 ? elapsed * d / call.dur : elapsed;
   }
   var boards = /* @__PURE__ */ new WeakMap();
-  function dispose(layer, b) {
+  function dispose(host, b) {
     cancelAnimationFrame(b.frame);
     b.canvas.remove();
-    if (boards.get(layer) === b) boards.delete(layer);
+    if (boards.get(host) === b) boards.delete(host);
   }
-  function board(layer) {
-    const b = boards.get(layer);
+  function board(host, zIndex) {
+    const b = boards.get(host);
     if (b?.canvas.isConnected) return b;
     if (b) cancelAnimationFrame(b.frame);
     const canvas = document.createElement("canvas");
     canvas.className = "fx-canvas";
     canvas.style.cssText = "position:absolute;left:0;top:0;pointer-events:none";
+    if (zIndex !== void 0) canvas.style.zIndex = String(zIndex);
     const ctx = canvas.getContext("2d");
     if (!ctx) return void 0;
-    layer.el.appendChild(canvas);
+    host.appendChild(canvas);
     const made = { canvas, ctx, live: /* @__PURE__ */ new Set(), frame: 0 };
     const tick = (now) => {
-      const w = layer.el.clientWidth;
-      const h2 = layer.el.clientHeight;
+      const w = host.clientWidth;
+      const h2 = host.clientHeight;
       if (canvas.width !== w || canvas.height !== h2) {
         canvas.width = w;
         canvas.height = h2;
@@ -16499,16 +16500,17 @@ var PIECES = (() => {
         }
       }
       if (made.live.size) made.frame = requestAnimationFrame(tick);
-      else dispose(layer, made);
+      else dispose(host, made);
     };
     made.frame = requestAnimationFrame(tick);
-    boards.set(layer, made);
+    boards.set(host, made);
     return made;
   }
-  function registerCanvasEffect(verbs, name, draw) {
+  function registerCanvasEffect(verbs, name, draw, opts = {}) {
     verbs.register(name, (call, run) => {
       const layer = run.context;
-      const b = canDraw() ? board(layer) : void 0;
+      const host = opts.host ?? layer.el;
+      const b = canDraw() ? board(host, opts.zIndex) : void 0;
       if (!b) return void 0;
       const t0 = performance.now();
       const fx = { call, run, layer, x: call.from[0] + call.from[2] / 2, y: call.from[1] + call.from[3] / 2 };
@@ -16518,7 +16520,7 @@ var PIECES = (() => {
       b.live.add(f);
       return () => {
         b.live.delete(f);
-        if (!b.live.size) dispose(layer, b);
+        if (!b.live.size) dispose(host, b);
       };
     });
   }
@@ -16695,7 +16697,8 @@ var PIECES = (() => {
     const parent = o.parent ?? document.body;
     const el = document.createElement("div");
     el.className = "fx-layer";
-    el.style.cssText = "position:fixed;inset:0;overflow:visible;pointer-events:none;z-index:var(--fx-z,1000)";
+    el.style.cssText = `position:${o.position ?? "fixed"};inset:0;overflow:visible;pointer-events:none;z-index:var(--fx-z,1000)`;
+    if (o.zIndex !== void 0) el.style.zIndex = String(o.zIndex);
     parent.appendChild(el);
     const runs = /* @__PURE__ */ new Map();
     const originals = /* @__PURE__ */ new WeakMap();
@@ -17112,6 +17115,13 @@ var PIECES = (() => {
     ctx.restore();
   };
 
+  // components/effect-library/defaults.ts
+  var COLUMN_BEAM_DEFAULTS = { colour: "255 255 255", way: "out", tuck: 0, glitter: 56, speck: 1, core: false, speckColour: "white", actorZ: 2 };
+  var ROTATING_BEAM_DEFAULTS = { colour: "255 255 255", turns: 2, beamDeg: 46, fadeMs: 160 };
+  var RETICLE_DEFAULTS = { unit: 1, colour: "255,255,255", padding: [18, 6], length: 16, width: 2, closeMs: 220, fade: [520, 660] };
+  var COLLAPSE_DEFAULTS = { colour: "rgb(255 255 255 / .95)", n: 16, reach: 2.4, length: 1.5, outMs: 640, gapMs: 140, inMs: 640 };
+  var SHEEN_DEFAULTS = { angle: 100, bandWidth: 50, colour: "rgba(255,255,255,.25)", stops: [0, 100], travel: [-110, 220], sweep: [0, 1], easing: "linear" };
+
   // components/effect-library/beam-dom.ts
   var px = (n) => `${String(n)}px`;
   var centre3 = ([x, y, w, h2]) => [x + w / 2, y + h2 / 2];
@@ -17144,7 +17154,7 @@ var PIECES = (() => {
   // components/effect-library/beams.ts
   var rotatingBeam = (fx) => {
     const { call } = fx;
-    const { colour = "255 255 255", turns = 2, beamDeg = 46, fadeMs = 160 } = call.step;
+    const { colour = ROTATING_BEAM_DEFAULTS.colour, turns = ROTATING_BEAM_DEFAULTS.turns, beamDeg = ROTATING_BEAM_DEFAULTS.beamDeg, fadeMs = ROTATING_BEAM_DEFAULTS.fadeMs } = call.step;
     const stage = scene(fx);
     const ms = call.step.dur;
     const [x, y] = centre3(call.from);
@@ -17179,17 +17189,18 @@ var PIECES = (() => {
   var columnBeam = (fx) => {
     const { call, el, animate } = fx;
     const {
-      colour = "255 255 255",
-      way = "out",
-      tuck = 0,
+      colour = COLUMN_BEAM_DEFAULTS.colour,
+      way = COLUMN_BEAM_DEFAULTS.way,
+      tuck = COLUMN_BEAM_DEFAULTS.tuck,
       column: column2 = call.from,
-      glitter = 56,
-      speck = 1,
-      core = false,
+      glitter = COLUMN_BEAM_DEFAULTS.glitter,
+      speck = COLUMN_BEAM_DEFAULTS.speck,
+      core = COLUMN_BEAM_DEFAULTS.core,
       columnLight = `radial-gradient(ellipse 46% 50% at 50% 55%, rgb(${colour} / .9), rgb(${colour} / .45) 45%, rgb(${colour} / .12) 70%, transparent 85%)`,
       coreLight = `radial-gradient(ellipse 50% 50% at 50% 55%, rgb(255 255 255 / .95), rgb(${colour} / .6) 40%, transparent 80%)`,
-      speckColour = "white",
-      speckGlow = `rgb(${colour} / .85)`
+      speckColour = COLUMN_BEAM_DEFAULTS.speckColour,
+      speckGlow = `rgb(${colour} / .85)`,
+      actorZ = COLUMN_BEAM_DEFAULTS.actorZ
     } = call.step;
     const stage = scene(fx);
     const [x, y, w, h2] = column2;
@@ -17243,7 +17254,7 @@ var PIECES = (() => {
       { offset: 0.35, opacity: 0, filter: "brightness(2.4)", easing: "ease-out" },
       { offset: 0.8, opacity: 1, filter: "brightness(1.5)", easing: "ease-in-out" },
       { offset: 1, opacity: 1, filter: "brightness(1)" }
-    ]).map((frame) => ({ ...frame, clipPath, zIndex: "2" })), { opacity: out ? "0" : "1", clipPath }, { easing: "linear" });
+    ]).map((frame) => ({ ...frame, clipPath, zIndex: String(actorZ) })), { opacity: out ? "0" : "1", clipPath }, { easing: "linear" });
     return stage.end;
   };
 
@@ -18246,14 +18257,15 @@ var PIECES = (() => {
   ];
   var collapseJump = ({ call, el, layer, run, animate }) => {
     const {
-      colour = "rgb(255 255 255 / .95)",
-      n = 16,
-      reach = 2.4,
-      length = 1.5,
+      colour = COLLAPSE_DEFAULTS.colour,
+      n = COLLAPSE_DEFAULTS.n,
+      reach = COLLAPSE_DEFAULTS.reach,
+      length = COLLAPSE_DEFAULTS.length,
       pointLight = "radial-gradient(circle, white 0 12%, rgb(255 255 255 / .75) 26%, transparent 62%)",
-      outMs = 640,
-      gapMs = 140,
-      inMs = 640
+      outMs = COLLAPSE_DEFAULTS.outMs,
+      gapMs = COLLAPSE_DEFAULTS.gapMs,
+      inMs = COLLAPSE_DEFAULTS.inMs,
+      holdBetween
     } = call.step;
     const stage = scene({ call, el, layer, run, animate });
     const to = call.to ?? call.from;
@@ -18272,7 +18284,16 @@ var PIECES = (() => {
       streaks2(stage, x, y, size, way, ms, start, n, colour, reach, length);
       point(stage, x, y, size, way, ms, start, pointLight);
     }
+    let held = holdBetween === void 0;
+    const hold = () => {
+      if (held) return;
+      held = true;
+      holdBetween?.({ el, from: call.from, to });
+    };
+    const timer = setTimeout(hold, outMs * (call.dur / Math.max(1, Number(call.step.dur))));
     return () => {
+      clearTimeout(timer);
+      hold();
       stage.end();
       place2(el, to);
       el.style.opacity = "1";
@@ -19684,13 +19705,13 @@ var PIECES = (() => {
   var reticle = (ctx, t, { call }) => {
     const {
       box = call.from,
-      unit: unit2 = 1,
-      colour = "255,255,255",
-      padding = [18, 6],
-      length = 16,
-      width = 2,
-      closeMs = 220,
-      fade = [520, 660]
+      unit: unit2 = RETICLE_DEFAULTS.unit,
+      colour = RETICLE_DEFAULTS.colour,
+      padding = RETICLE_DEFAULTS.padding,
+      length = RETICLE_DEFAULTS.length,
+      width = RETICLE_DEFAULTS.width,
+      closeMs = RETICLE_DEFAULTS.closeMs,
+      fade = RETICLE_DEFAULTS.fade
     } = call.step;
     if (t >= fade[1]) return;
     const u = ease.out(seg(t, 0, closeMs));
@@ -19782,15 +19803,16 @@ var PIECES = (() => {
   var sheen = ({ call, el }) => {
     if (call.dur <= 0) return void 0;
     const {
-      angle = 100,
-      bandWidth = 50,
-      colour = "rgba(255,255,255,.25)",
-      stops = [0, 100],
-      travel: travel2 = [-110, 220],
+      angle = SHEEN_DEFAULTS.angle,
+      bandWidth = SHEEN_DEFAULTS.bandWidth,
+      colour = SHEEN_DEFAULTS.colour,
+      stops = SHEEN_DEFAULTS.stops,
+      travel: travel2 = SHEEN_DEFAULTS.travel,
+      background,
       loop = false,
       period = call.step.dur,
-      sweep = [0, 1],
-      easing = "linear"
+      sweep = SHEEN_DEFAULTS.sweep,
+      easing = SHEEN_DEFAULTS.easing
     } = call.step;
     const clip = el.ownerDocument.createElement("div");
     clip.setAttribute("aria-hidden", "true");
@@ -19801,7 +19823,8 @@ var PIECES = (() => {
     const band = el.ownerDocument.createElement("div");
     band.style.cssText = "position:absolute;left:0;top:50%;translate:0 -50%;height:calc(100cqw + 100cqh)";
     band.style.width = `${bandWidth}%`;
-    band.style.backgroundImage = `linear-gradient(90deg, transparent ${stops[0]}%, ${colour} 50%, transparent ${stops[1]}%)`;
+    if (background) band.style.background = background;
+    else band.style.backgroundImage = `linear-gradient(90deg, transparent ${stops[0]}%, ${colour} 50%, transparent ${stops[1]}%)`;
     const from = { transform: `translateX(${travel2[0]}%)` };
     const to = { transform: `translateX(${travel2[1]}%)` };
     axis.append(band);

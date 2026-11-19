@@ -110,7 +110,15 @@ var FX = (() => {
   var index_exports = {};
   __export(index_exports, {
     BUILT_IN: () => BUILT_IN,
+    COLLAPSE_DEFAULTS: () => COLLAPSE_DEFAULTS,
+    COLUMN_BEAM_DEFAULTS: () => COLUMN_BEAM_DEFAULTS,
+    DRIFT_CLOUD_DEFAULTS: () => DRIFT_CLOUD_DEFAULTS,
+    GLITCH_DEFAULTS: () => GLITCH_DEFAULTS,
     HOLD: () => HOLD,
+    PLASMA_ORB_DEFAULTS: () => PLASMA_ORB_DEFAULTS,
+    RETICLE_DEFAULTS: () => RETICLE_DEFAULTS,
+    ROTATING_BEAM_DEFAULTS: () => ROTATING_BEAM_DEFAULTS,
+    SHEEN_DEFAULTS: () => SHEEN_DEFAULTS,
     afterimages: () => afterimages,
     bannerAt: () => bannerAt,
     beatsFromEvents: () => beatsFromEvents,
@@ -482,25 +490,26 @@ var FX = (() => {
     return d > 0 && call.dur > 0 ? elapsed * d / call.dur : elapsed;
   }
   var boards = /* @__PURE__ */ new WeakMap();
-  function dispose(layer, b) {
+  function dispose(host, b) {
     cancelAnimationFrame(b.frame);
     b.canvas.remove();
-    if (boards.get(layer) === b) boards.delete(layer);
+    if (boards.get(host) === b) boards.delete(host);
   }
-  function board(layer) {
-    const b = boards.get(layer);
+  function board(host, zIndex) {
+    const b = boards.get(host);
     if (b?.canvas.isConnected) return b;
     if (b) cancelAnimationFrame(b.frame);
     const canvas = document.createElement("canvas");
     canvas.className = "fx-canvas";
     canvas.style.cssText = "position:absolute;left:0;top:0;pointer-events:none";
+    if (zIndex !== void 0) canvas.style.zIndex = String(zIndex);
     const ctx = canvas.getContext("2d");
     if (!ctx) return void 0;
-    layer.el.appendChild(canvas);
+    host.appendChild(canvas);
     const made = { canvas, ctx, live: /* @__PURE__ */ new Set(), frame: 0 };
     const tick = (now) => {
-      const w = layer.el.clientWidth;
-      const h = layer.el.clientHeight;
+      const w = host.clientWidth;
+      const h = host.clientHeight;
       if (canvas.width !== w || canvas.height !== h) {
         canvas.width = w;
         canvas.height = h;
@@ -515,16 +524,17 @@ var FX = (() => {
         }
       }
       if (made.live.size) made.frame = requestAnimationFrame(tick);
-      else dispose(layer, made);
+      else dispose(host, made);
     };
     made.frame = requestAnimationFrame(tick);
-    boards.set(layer, made);
+    boards.set(host, made);
     return made;
   }
-  function registerCanvasEffect(verbs, name, draw) {
+  function registerCanvasEffect(verbs, name, draw, opts = {}) {
     verbs.register(name, (call, run) => {
       const layer = run.context;
-      const b = canDraw() ? board(layer) : void 0;
+      const host = opts.host ?? layer.el;
+      const b = canDraw() ? board(host, opts.zIndex) : void 0;
       if (!b) return void 0;
       const t0 = performance.now();
       const fx = { call, run, layer, x: call.from[0] + call.from[2] / 2, y: call.from[1] + call.from[3] / 2 };
@@ -534,7 +544,7 @@ var FX = (() => {
       b.live.add(f);
       return () => {
         b.live.delete(f);
-        if (!b.live.size) dispose(layer, b);
+        if (!b.live.size) dispose(host, b);
       };
     });
   }
@@ -711,7 +721,8 @@ var FX = (() => {
     const parent = o.parent ?? document.body;
     const el = document.createElement("div");
     el.className = "fx-layer";
-    el.style.cssText = "position:fixed;inset:0;overflow:visible;pointer-events:none;z-index:var(--fx-z,1000)";
+    el.style.cssText = `position:${o.position ?? "fixed"};inset:0;overflow:visible;pointer-events:none;z-index:var(--fx-z,1000)`;
+    if (o.zIndex !== void 0) el.style.zIndex = String(o.zIndex);
     parent.appendChild(el);
     const runs = /* @__PURE__ */ new Map();
     const originals = /* @__PURE__ */ new WeakMap();
@@ -1128,6 +1139,23 @@ var FX = (() => {
     ctx.restore();
   };
 
+  // components/effect-library/defaults.ts
+  var GLITCH_DEFAULTS = {
+    slices: 3,
+    idleMs: [3500, 7e3],
+    burstMs: 200,
+    tearMs: 600,
+    repeat: 0.25,
+    repeatGapMs: [100, 140]
+  };
+  var COLUMN_BEAM_DEFAULTS = { colour: "255 255 255", way: "out", tuck: 0, glitter: 56, speck: 1, core: false, speckColour: "white", actorZ: 2 };
+  var ROTATING_BEAM_DEFAULTS = { colour: "255 255 255", turns: 2, beamDeg: 46, fadeMs: 160 };
+  var RETICLE_DEFAULTS = { unit: 1, colour: "255,255,255", padding: [18, 6], length: 16, width: 2, closeMs: 220, fade: [520, 660] };
+  var PLASMA_ORB_DEFAULTS = { speed: 1, pulsePeriod: 2400, pulseAmount: 0.05, swell: 0.1 };
+  var DRIFT_CLOUD_DEFAULTS = { cohortDim: 0.1, cutoff: 4e-3, edgeFade: 0.7, emberColour: "#ddd", emberOpacity: 0.6, emberSize: 0.5, minEmberSize: 1 };
+  var COLLAPSE_DEFAULTS = { colour: "rgb(255 255 255 / .95)", n: 16, reach: 2.4, length: 1.5, outMs: 640, gapMs: 140, inMs: 640 };
+  var SHEEN_DEFAULTS = { angle: 100, bandWidth: 50, colour: "rgba(255,255,255,.25)", stops: [0, 100], travel: [-110, 220], sweep: [0, 1], easing: "linear" };
+
   // components/effect-library/beam-dom.ts
   var px = (n) => `${String(n)}px`;
   var centre2 = ([x, y, w, h]) => [x + w / 2, y + h / 2];
@@ -1160,7 +1188,7 @@ var FX = (() => {
   // components/effect-library/beams.ts
   var rotatingBeam = (fx) => {
     const { call } = fx;
-    const { colour = "255 255 255", turns = 2, beamDeg = 46, fadeMs = 160 } = call.step;
+    const { colour = ROTATING_BEAM_DEFAULTS.colour, turns = ROTATING_BEAM_DEFAULTS.turns, beamDeg = ROTATING_BEAM_DEFAULTS.beamDeg, fadeMs = ROTATING_BEAM_DEFAULTS.fadeMs } = call.step;
     const stage = scene(fx);
     const ms = call.step.dur;
     const [x, y] = centre2(call.from);
@@ -1195,17 +1223,18 @@ var FX = (() => {
   var columnBeam = (fx) => {
     const { call, el, animate } = fx;
     const {
-      colour = "255 255 255",
-      way = "out",
-      tuck = 0,
+      colour = COLUMN_BEAM_DEFAULTS.colour,
+      way = COLUMN_BEAM_DEFAULTS.way,
+      tuck = COLUMN_BEAM_DEFAULTS.tuck,
       column: column2 = call.from,
-      glitter = 56,
-      speck = 1,
-      core = false,
+      glitter = COLUMN_BEAM_DEFAULTS.glitter,
+      speck = COLUMN_BEAM_DEFAULTS.speck,
+      core = COLUMN_BEAM_DEFAULTS.core,
       columnLight = `radial-gradient(ellipse 46% 50% at 50% 55%, rgb(${colour} / .9), rgb(${colour} / .45) 45%, rgb(${colour} / .12) 70%, transparent 85%)`,
       coreLight = `radial-gradient(ellipse 50% 50% at 50% 55%, rgb(255 255 255 / .95), rgb(${colour} / .6) 40%, transparent 80%)`,
-      speckColour = "white",
-      speckGlow = `rgb(${colour} / .85)`
+      speckColour = COLUMN_BEAM_DEFAULTS.speckColour,
+      speckGlow = `rgb(${colour} / .85)`,
+      actorZ = COLUMN_BEAM_DEFAULTS.actorZ
     } = call.step;
     const stage = scene(fx);
     const [x, y, w, h] = column2;
@@ -1259,7 +1288,7 @@ var FX = (() => {
       { offset: 0.35, opacity: 0, filter: "brightness(2.4)", easing: "ease-out" },
       { offset: 0.8, opacity: 1, filter: "brightness(1.5)", easing: "ease-in-out" },
       { offset: 1, opacity: 1, filter: "brightness(1)" }
-    ]).map((frame) => ({ ...frame, clipPath, zIndex: "2" })), { opacity: out ? "0" : "1", clipPath }, { easing: "linear" });
+    ]).map((frame) => ({ ...frame, clipPath, zIndex: String(actorZ) })), { opacity: out ? "0" : "1", clipPath }, { easing: "linear" });
     return stage.end;
   };
 
@@ -2262,14 +2291,15 @@ var FX = (() => {
   ];
   var collapseJump = ({ call, el, layer, run, animate }) => {
     const {
-      colour = "rgb(255 255 255 / .95)",
-      n = 16,
-      reach = 2.4,
-      length = 1.5,
+      colour = COLLAPSE_DEFAULTS.colour,
+      n = COLLAPSE_DEFAULTS.n,
+      reach = COLLAPSE_DEFAULTS.reach,
+      length = COLLAPSE_DEFAULTS.length,
       pointLight = "radial-gradient(circle, white 0 12%, rgb(255 255 255 / .75) 26%, transparent 62%)",
-      outMs = 640,
-      gapMs = 140,
-      inMs = 640
+      outMs = COLLAPSE_DEFAULTS.outMs,
+      gapMs = COLLAPSE_DEFAULTS.gapMs,
+      inMs = COLLAPSE_DEFAULTS.inMs,
+      holdBetween
     } = call.step;
     const stage = scene({ call, el, layer, run, animate });
     const to = call.to ?? call.from;
@@ -2288,7 +2318,16 @@ var FX = (() => {
       streaks2(stage, x, y, size, way, ms, start, n, colour, reach, length);
       point(stage, x, y, size, way, ms, start, pointLight);
     }
+    let held = holdBetween === void 0;
+    const hold = () => {
+      if (held) return;
+      held = true;
+      holdBetween?.({ el, from: call.from, to });
+    };
+    const timer = setTimeout(hold, outMs * (call.dur / Math.max(1, Number(call.step.dur))));
     return () => {
+      clearTimeout(timer);
+      hold();
       stage.end();
       place(el, to);
       el.style.opacity = "1";
@@ -3700,13 +3739,13 @@ var FX = (() => {
   var reticle = (ctx, t, { call }) => {
     const {
       box = call.from,
-      unit = 1,
-      colour = "255,255,255",
-      padding = [18, 6],
-      length = 16,
-      width = 2,
-      closeMs = 220,
-      fade = [520, 660]
+      unit = RETICLE_DEFAULTS.unit,
+      colour = RETICLE_DEFAULTS.colour,
+      padding = RETICLE_DEFAULTS.padding,
+      length = RETICLE_DEFAULTS.length,
+      width = RETICLE_DEFAULTS.width,
+      closeMs = RETICLE_DEFAULTS.closeMs,
+      fade = RETICLE_DEFAULTS.fade
     } = call.step;
     if (t >= fade[1]) return;
     const u = ease.out(seg(t, 0, closeMs));
@@ -3798,15 +3837,16 @@ var FX = (() => {
   var sheen = ({ call, el }) => {
     if (call.dur <= 0) return void 0;
     const {
-      angle = 100,
-      bandWidth = 50,
-      colour = "rgba(255,255,255,.25)",
-      stops = [0, 100],
-      travel: travel2 = [-110, 220],
+      angle = SHEEN_DEFAULTS.angle,
+      bandWidth = SHEEN_DEFAULTS.bandWidth,
+      colour = SHEEN_DEFAULTS.colour,
+      stops = SHEEN_DEFAULTS.stops,
+      travel: travel2 = SHEEN_DEFAULTS.travel,
+      background,
       loop = false,
       period = call.step.dur,
-      sweep = [0, 1],
-      easing = "linear"
+      sweep = SHEEN_DEFAULTS.sweep,
+      easing = SHEEN_DEFAULTS.easing
     } = call.step;
     const clip = el.ownerDocument.createElement("div");
     clip.setAttribute("aria-hidden", "true");
@@ -3817,7 +3857,8 @@ var FX = (() => {
     const band = el.ownerDocument.createElement("div");
     band.style.cssText = "position:absolute;left:0;top:50%;translate:0 -50%;height:calc(100cqw + 100cqh)";
     band.style.width = `${bandWidth}%`;
-    band.style.backgroundImage = `linear-gradient(90deg, transparent ${stops[0]}%, ${colour} 50%, transparent ${stops[1]}%)`;
+    if (background) band.style.background = background;
+    else band.style.backgroundImage = `linear-gradient(90deg, transparent ${stops[0]}%, ${colour} 50%, transparent ${stops[1]}%)`;
     const from = { transform: `translateX(${travel2[0]}%)` };
     const to = { transform: `translateX(${travel2[1]}%)` };
     axis.append(band);
@@ -4681,9 +4722,9 @@ void main() {
   function createGlitch(el, o) {
     const rand3 = rng(o.seed ?? Math.floor(Math.random() * 4294967296));
     const between = (r) => r[0] + rand3() * (r[1] - r[0]);
-    const idle2 = o.idleMs ?? [3500, 7e3];
-    const gap = o.repeatGapMs ?? [100, 140];
-    const ms = { burst: o.burstMs ?? 200, tear: o.tearMs ?? 600 };
+    const idle2 = o.idleMs ?? GLITCH_DEFAULTS.idleMs;
+    const gap = o.repeatGapMs ?? GLITCH_DEFAULTS.repeatGapMs;
+    const ms = { burst: o.burstMs ?? GLITCH_DEFAULTS.burstMs, tear: o.tearMs ?? GLITCH_DEFAULTS.tearMs };
     const set = (k, v) => el.style.setProperty(k, String(v));
     el.classList.add("fx-glitch");
     if (o.mask) set("--glitch-mask", o.mask);
@@ -4707,7 +4748,7 @@ void main() {
     };
     const layers = [layer("fx-glitch-copy fx-glitch-copy--a"), layer("fx-glitch-copy fx-glitch-copy--b")];
     const slices = [];
-    for (let i = 0; i < (o.slices ?? 3); i++) slices.push(layer(`fx-glitch-slice${i % 2 ? " fx-glitch-slice--b" : ""}`));
+    for (let i = 0; i < (o.slices ?? GLITCH_DEFAULTS.slices); i++) slices.push(layer(`fx-glitch-slice${i % 2 ? " fx-glitch-slice--b" : ""}`));
     let timer;
     let endTimer;
     let dead = false;
@@ -4724,7 +4765,7 @@ void main() {
     function schedule() {
       const f = factor();
       if (dead || !f) return;
-      timer = setTimeout(() => play("burst", rand3() < (o.repeat ?? 0.25)), between(idle2) * f);
+      timer = setTimeout(() => play("burst", rand3() < (o.repeat ?? GLITCH_DEFAULTS.repeat)), between(idle2) * f);
     }
     function play(kind, again) {
       const f = factor();
@@ -5237,7 +5278,7 @@ void main() {
     arc: "230,230,230",
     mote: "#ddd8"
   };
-  var plasmaOrbScale = (t, boost = 0, { speed = 1, pulsePeriod = 2400, pulseAmount = 0.05, swell = 0.1 } = {}) => speed === 0 || speed === "instant" ? 1 : 1 + pulseAmount * Math.sin(t / pulsePeriod * TAU3) + boost * swell;
+  var plasmaOrbScale = (t, boost = 0, { speed = PLASMA_ORB_DEFAULTS.speed, pulsePeriod = PLASMA_ORB_DEFAULTS.pulsePeriod, pulseAmount = PLASMA_ORB_DEFAULTS.pulseAmount, swell = PLASMA_ORB_DEFAULTS.swell } = {}) => speed === 0 || speed === "instant" ? 1 : 1 + pulseAmount * Math.sin(t / pulsePeriod * TAU3) + boost * swell;
   var plasmaSwellAt = (since, peak = 80, half = 180) => since < 0 ? 0 : clamp(1 - Math.abs(since - peak) / half);
   function disc(c, x, y, r, fill) {
     c.beginPath();
@@ -5414,13 +5455,13 @@ void main() {
     const {
       shards = defaultShards,
       survivors = defaultSurvivors,
-      cohortDim = 0.1,
-      cutoff = 4e-3,
-      edgeFade = 0.7,
-      emberColour = "#ddd",
-      emberOpacity = 0.6,
-      emberSize = 0.5,
-      minEmberSize = 1
+      cohortDim = DRIFT_CLOUD_DEFAULTS.cohortDim,
+      cutoff = DRIFT_CLOUD_DEFAULTS.cutoff,
+      edgeFade = DRIFT_CLOUD_DEFAULTS.edgeFade,
+      emberColour = DRIFT_CLOUD_DEFAULTS.emberColour,
+      emberOpacity = DRIFT_CLOUD_DEFAULTS.emberOpacity,
+      emberSize = DRIFT_CLOUD_DEFAULTS.emberSize,
+      minEmberSize = DRIFT_CLOUD_DEFAULTS.minEmberSize
     } = settings;
     o.cohorts.forEach((co, rank) => {
       const pic = o.art(co.id);
@@ -6999,12 +7040,12 @@ const OG = (k, label, min, max, step, help) => P('Shape', 'geometry.' + k, label
 
 const E = {
   'column-beam': { verb: 'column-beam', dur: 1000, note: 'A column of light reveals or removes the card.', params: [
-    SEL('Column', 'way', 'Direction', [['out', 'Out (card vanishes)'], ['in', 'In (card appears)']], 'Whether the card is revealed or removed.', 'out'),
-    P('Column', 'tuck', 'Tuck', 0, 80, 1, 'px', 'Amount of the card hidden at its base.', 0),
-    CHK('Column', 'core', 'Bright core', 'Adds a white column inside the beam.', false),
-    RGB('Colour', 'colour', 'Beam colour', 'Colour of the column and specks.', '255 255 255'),
-    P('Specks', 'glitter', 'Specks', 0, 130, 1, '', 'Number of rising specks.', 56),
-    P('Specks', 'speck', 'Speck size', .2, 4, .05, '×', 'Size multiplier for the specks.', 1),
+    SEL('Column', 'way', 'Direction', [['out', 'Out (card vanishes)'], ['in', 'In (card appears)']], 'Whether the card is revealed or removed.', FX.COLUMN_BEAM_DEFAULTS.way),
+    P('Column', 'tuck', 'Tuck', 0, 80, 1, 'px', 'Amount of the card hidden at its base.', FX.COLUMN_BEAM_DEFAULTS.tuck),
+    CHK('Column', 'core', 'Bright core', 'Adds a white column inside the beam.', FX.COLUMN_BEAM_DEFAULTS.core),
+    RGB('Colour', 'colour', 'Beam colour', 'Colour of the column and specks.', FX.COLUMN_BEAM_DEFAULTS.colour),
+    P('Specks', 'glitter', 'Specks', 0, 130, 1, '', 'Number of rising specks.', FX.COLUMN_BEAM_DEFAULTS.glitter),
+    P('Specks', 'speck', 'Speck size', .2, 4, .05, '×', 'Size multiplier for the specks.', FX.COLUMN_BEAM_DEFAULTS.speck),
   ] },
   'curved-beam': { verb: 'column-beam', dur: 1200, route: true, token: true, canvas: true, note: 'A curved beam carries a token between the two anchors.',
     base: (c) => ({ curve: { control: [c.w / 2, 66], image: DEMO.neutralImage } }),
@@ -7019,9 +7060,9 @@ const E = {
       RGB('Colour', 'curve.moteColour', 'Mote colour', 'Colour of the motes riding the beam.', '255,255,255', true),
     ] },
   'rotating-beam': { verb: 'rotating-beam', dur: 1600, note: 'A beam sweeps around the centre of the card.', params: [
-    P('Sweep', 'turns', 'Turns', .5, 6, .1, '×', 'Number of revolutions.', 2),
-    P('Sweep', 'beamDeg', 'Beam width', 5, 180, 1, '°', 'Angular width of the beam.', 46),
-    P('Sweep', 'fadeMs', 'Fade time', 0, 800, 1, ' ms', 'Fade in and out at the ends of the sweep.', 160),
+    P('Sweep', 'turns', 'Turns', .5, 6, .1, '×', 'Number of revolutions.', FX.ROTATING_BEAM_DEFAULTS.turns),
+    P('Sweep', 'beamDeg', 'Beam width', 5, 180, 1, '°', 'Angular width of the beam.', FX.ROTATING_BEAM_DEFAULTS.beamDeg),
+    P('Sweep', 'fadeMs', 'Fade time', 0, 800, 1, ' ms', 'Fade in and out at the ends of the sweep.', FX.ROTATING_BEAM_DEFAULTS.fadeMs),
     RGB('Colour', 'colour', 'Beam colour', 'Colour of the beam and glow.', '255 255 255'),
   ] },
   'warp-transfer': { verb: 'warp-transfer', dur: 2600, route: true, token: true, note: 'Tokens move from one anchor to the other.',
@@ -7086,14 +7127,14 @@ const E = {
       RGB('Colour', 'rimColour', 'Rim colour', 'Colour of the rim.', '255,255,255', true),
     ] },
   reticle: { verb: 'reticle', dur: 1000, note: 'Corner brackets close in on the card.', params: [
-    P('Brackets', 'length', 'Arm length', 4, 60, 1, 'px', 'Length of each bracket arm.', 16),
-    P('Brackets', 'width', 'Line width', .5, 8, .1, 'px', 'Stroke width.', 2),
-    P('Brackets', 'padding.0', 'Outer gap', 0, 60, 1, 'px', 'Distance from the card before closing.', 18),
-    P('Brackets', 'padding.1', 'Locked gap', 0, 60, 1, 'px', 'Distance from the card once locked.', 6),
+    P('Brackets', 'length', 'Arm length', 4, 60, 1, 'px', 'Length of each bracket arm.', FX.RETICLE_DEFAULTS.length),
+    P('Brackets', 'width', 'Line width', .5, 8, .1, 'px', 'Stroke width.', FX.RETICLE_DEFAULTS.width),
+    P('Brackets', 'padding.0', 'Outer gap', 0, 60, 1, 'px', 'Distance from the card before closing.', FX.RETICLE_DEFAULTS.padding[0]),
+    P('Brackets', 'padding.1', 'Locked gap', 0, 60, 1, 'px', 'Distance from the card once locked.', FX.RETICLE_DEFAULTS.padding[1]),
     P('Brackets', 'unit', 'Scale', .5, 3, .05, '×', 'Scales gaps, length and width.', 1),
-    P('Timing', 'closeMs', 'Close time', 20, 800, 1, ' ms', 'Time to close to the locked gap.', 220),
-    P('Timing', 'fade.0', 'Fade starts', 0, 1000, 1, ' ms', 'When the fade begins.', 520),
-    P('Timing', 'fade.1', 'Fade ends', 0, 1000, 1, ' ms', 'When the brackets are gone.', 660),
+    P('Timing', 'closeMs', 'Close time', 20, 800, 1, ' ms', 'Time to close to the locked gap.', FX.RETICLE_DEFAULTS.closeMs),
+    P('Timing', 'fade.0', 'Fade starts', 0, 1000, 1, ' ms', 'When the fade begins.', FX.RETICLE_DEFAULTS.fade[0]),
+    P('Timing', 'fade.1', 'Fade ends', 0, 1000, 1, ' ms', 'When the brackets are gone.', FX.RETICLE_DEFAULTS.fade[1]),
     RGB('Colour', 'colour', 'Colour', 'Colour of the brackets.', '255,255,255', true),
   ] },
   'plasma-orb': { custom: 'orb', note: 'A live plasma orb. Play launches it: the orb swells once.', params: [
@@ -7102,10 +7143,10 @@ const E = {
     P('Orb', 'arcCount', 'Arcs', 0, 12, 1, '', 'Lightning arcs.', 5),
     P('Orb', 'filaments', 'Filaments', 0, 10, 1, '', 'Swirling filaments.', 4),
     P('Orb', 'motes', 'Motes', 0, 24, 1, '', 'Motes around the orb.', 10),
-    P('Pulse', 'speed', 'Speed', 0, 3, .05, '×', 'Zero freezes the orb.', 1),
-    P('Pulse', 'pulsePeriod', 'Pulse period', 400, 6000, 10, ' ms', 'Time for one pulse.', 2400),
-    P('Pulse', 'pulseAmount', 'Pulse size', 0, .3, .005, '×', 'How much the orb grows and shrinks in a pulse.', .05),
-    P('Pulse', 'swell', 'Launch swell', 0, .6, .01, '×', 'Extra growth at the launch swell.', .1),
+    P('Pulse', 'speed', 'Speed', 0, 3, .05, '×', 'Zero freezes the orb.', FX.PLASMA_ORB_DEFAULTS.speed),
+    P('Pulse', 'pulsePeriod', 'Pulse period', 400, 6000, 10, ' ms', 'Time for one pulse.', FX.PLASMA_ORB_DEFAULTS.pulsePeriod),
+    P('Pulse', 'pulseAmount', 'Pulse size', 0, .3, .005, '×', 'How much the orb grows and shrinks in a pulse.', FX.PLASMA_ORB_DEFAULTS.pulseAmount),
+    P('Pulse', 'swell', 'Launch swell', 0, .6, .01, '×', 'Extra growth at the launch swell.', FX.PLASMA_ORB_DEFAULTS.swell),
     OG('haloRadius', 'Halo radius', .5, 4, .05, 'Halo size in ball radii.'),
     OG('filamentRadius', 'Filament radius', .2, 1.5, .01, 'Filament size in ball radii.'),
     OG('filamentWave', 'Filament wave', 0, .6, .01, 'Wobble of the filaments.'),
@@ -7121,7 +7162,7 @@ const E = {
     P('Cloud', 'life', 'Life', 1000, 12000, 100, ' ms', 'Time a shard drifts before it fades out.', 5000),
     P('Cloud', 'emerge', 'Emerge', 0, 2000, 10, ' ms', 'Fade-in time.', 500),
     P('Cloud', 'opacity', 'Opacity', 0, 1, .01, '', 'Peak opacity.', .8),
-    P('Cloud', 'cohortDim', 'Cohort dimming', 0, .4, .01, '', 'How much older cohorts dim.', .1),
+    P('Cloud', 'cohortDim', 'Cohort dimming', 0, .4, .01, '', 'How much older cohorts dim.', FX.DRIFT_CLOUD_DEFAULTS.cohortDim),
     P('Motion', 'speed.0', 'Base speed', 0, 6, .1, ' units/s', 'Slowest drift speed.', 2),
     P('Motion', 'speed.1', 'Speed steps', 0, 3, .05, ' units/s', 'Speed added per band.', .6),
     P('Motion', 'startRadius', 'Start radius', 0, 40, .5, ' units', 'Distance from the centre at birth.', 6),
