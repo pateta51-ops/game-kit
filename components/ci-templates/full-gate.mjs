@@ -76,8 +76,7 @@ async function e2e() {
     // Playwright's own globalTimeout fires first; the kill 30 s later is for a hung runner
     const r = spawnSync('npm', ['run', script], { stdio: 'inherit', env, shell: isWindows, timeout: left + (Number(process.env.E2E_KILL_GRACE_MS) || 30_000), killSignal: 'SIGKILL' });
     if (r.error || r.signal) {
-      const running = existsSync(runningFile) ? readFileSync(runningFile, 'utf8').split('
-').filter(Boolean) : [];
+      const running = existsSync(runningFile) ? readFileSync(runningFile, 'utf8').split('\n').filter(Boolean) : [];
       console.error(`::error::e2e ${script} capped after ${String(Math.round((Date.now() - start) / 1000))} s; running: ${running.join('; ') || 'unknown'}`);
       return 124;
     }

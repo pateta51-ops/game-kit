@@ -139,7 +139,7 @@ describe('rendered files', () => {
     expect(gate()).toBe(
       plainGate
         .replace('Full gate (check, e2e) on PR head merged with main', 'Full gate (check, sim, e2e)')
-        .replace('timeout-minutes: 60', 'timeout-minutes: 90')
+        .replace('timeout-minutes: 30', 'timeout-minutes: 90')
         .replace('full-gate/.nvmrc\n', 'full-gate/.nvmrc\n          cache: npm\n')
         .replace('      - run: npm run check\n', `${pyYaml}      - name: npm run check\n        run: npm run check\n        env:\n          P: python\n      - run: npm run sim\n`),
     );
@@ -482,9 +482,9 @@ describe('K190: what the four games need (examples/<game>.json renders their wor
     const root = join(dir, 'cap-run');
     mkdirSync(root);
     writeFileSync(join(root, 'ci.config.json'), JSON.stringify({ repo: 'acme/widget', runnerLabel: 'widget' }));
-    writeFileSync(join(root, 'hang.js'), "require('fs').writeFileSync(process.env.E2E_RUNNING_FILE, 'a.spec.ts:3 slow test');setTimeout(() => {}, 60000);");
+    writeFileSync(join(root, 'hang.js'), "require('fs').writeFileSync(process.env.E2E_RUNNING_FILE, 'a.spec.ts:3 slow test');setTimeout(() => {}, 9000);");
     writeFileSync(join(root, 'package.json'), JSON.stringify({ scripts: { 'test:e2e': 'node hang.js' } }));
-    const r = spawnSync(process.execPath, [join(here, 'full-gate.mjs'), 'e2e'], { cwd: root, encoding: 'utf8', timeout: 60_000, env: { ...process.env, E2E_CAP_MS: '1000', E2E_KILL_GRACE_MS: '300' } });
+    const r = spawnSync(process.execPath, [join(here, 'full-gate.mjs'), 'e2e'], { cwd: root, encoding: 'utf8', timeout: 60_000, env: { ...process.env, E2E_CAP_MS: '4000', E2E_KILL_GRACE_MS: '300' } });
     expect(r.status).toBe(1);
     expect(r.stderr).toContain('capped after');
     expect(r.stderr).toContain('running: a.spec.ts:3 slow test');
