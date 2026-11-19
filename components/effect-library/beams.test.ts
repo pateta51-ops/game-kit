@@ -74,6 +74,14 @@ it('rotates the wedge through every requested turn', () => {
   expect(context.el.children).toHaveLength(1);
 });
 
+it('clips the rotating beam to the actor only when asked', () => {
+  const clipped = setup({ do: 'rotating-beam', clip: true }).context.el.children;
+  expect([...clipped].map((e) => (e as HTMLElement).style.clipPath).filter(Boolean)).toEqual(['inset(52px 62px)', 'inset(7px 5px)']);
+  document.body.replaceChildren();
+  const plain = setup({ do: 'rotating-beam' }).context.el.children;
+  expect([...plain].every((e) => !(e as HTMLElement).style.clipPath)).toBe(true);
+});
+
 it('draws deterministic radial streaks at the specified centre', () => {
   const { call, run, context } = setup({ do: 'unused', count: 4, centre: [100, 300], alpha: .2, palette: ['1,2,3', '4,5,6', '7,8,9'] });
   const ctx = { save: vi.fn(), restore: vi.fn(), beginPath: vi.fn(), moveTo: vi.fn(), lineTo: vi.fn(), stroke: vi.fn(), strokeStyle: '' };

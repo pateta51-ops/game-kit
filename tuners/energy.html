@@ -1280,7 +1280,7 @@ var FX = (() => {
   // components/effect-library/beams.ts
   var rotatingBeam = (fx) => {
     const { call } = fx;
-    const { colour = ROTATING_BEAM_DEFAULTS.colour, turns = ROTATING_BEAM_DEFAULTS.turns, beamDeg = ROTATING_BEAM_DEFAULTS.beamDeg, fadeMs = ROTATING_BEAM_DEFAULTS.fadeMs } = call.step;
+    const { colour = ROTATING_BEAM_DEFAULTS.colour, turns = ROTATING_BEAM_DEFAULTS.turns, beamDeg = ROTATING_BEAM_DEFAULTS.beamDeg, fadeMs = ROTATING_BEAM_DEFAULTS.fadeMs, clip = false } = call.step;
     const stage = scene(fx);
     const ms = call.step.dur;
     const [x, y] = centre2(call.from);
@@ -1289,6 +1289,7 @@ var FX = (() => {
     const mask = "radial-gradient(circle closest-side, transparent 0 10%, #000 26%, #000 46%, rgb(0 0 0 / .45) 72%, transparent 100%)";
     const wrap = stage.stand([x - size / 2, y - size / 2, size, size], { zIndex: "4", mixBlendMode: "screen", maskImage: mask, opacity: "0" });
     wrap.style.setProperty("-webkit-mask-image", mask);
+    if (clip) wrap.style.clipPath = `inset(${px((size - h) / 2)} ${px((size - w) / 2)})`;
     const half = beamDeg / 2;
     const wedge = document.createElement("div");
     const rgb = (a) => `rgb(${colour} / ${String(a)})`;
@@ -1305,6 +1306,7 @@ var FX = (() => {
       background: `radial-gradient(closest-side, ${rgb(0.55)}, ${rgb(0)})`,
       opacity: "0"
     });
+    if (clip) glow3.style.clipPath = `inset(${px(h * 0.175)} ${px(w * 0.25)})`;
     const fade = Math.min(0.5, fadeMs / Math.max(1, ms));
     const pulses = Math.max(2, Math.round(turns * 2));
     stage.play(wrap, [{ opacity: 0 }, { opacity: 1, offset: fade }, { opacity: 1, offset: 1 - fade }, { opacity: 0 }], ms);
