@@ -162,8 +162,8 @@ async function tools() {
   const out = [];
   for (const [id, https] of Object.entries(cfg.toolsHttps ?? {})) {
     const t = { id, name: TOOL_NAMES[id] ?? id, url: publicUrl(https), up: false };
-    try { const r = await fetch(`http://127.0.0.1:${cfg.tools[id]}/status`, { signal: AbortSignal.timeout(1500) }); const j = await r.json(); Object.assign(t, { up: true, slots: j.slots, running: (j.running ?? []).map((x) => x.label), waiting: (j.waiting ?? []).length, unqueued: (j.unqueued ?? []).length }); } catch { t.up = false; }
-    try { t.load = Math.round(parseFloat(readFileSync('//wsl.localhost/Ubuntu/proc/loadavg', 'utf8')) / 16 * 100); } catch { t.load = null; }
+    try { const r = await fetch(`http://127.0.0.1:${cfg.tools[id]}/status`, { signal: AbortSignal.timeout(1500) }); const j = await r.json(); Object.assign(t, { up: true, slots: j.slots, running: (j.running ?? []).map((x) => x.label), waiting: (j.waiting ?? []).length, unqueued: (j.unqueued ?? []).length, load1: j.load1 }); } catch { t.up = false; }
+    try { const l = t.load1 ?? parseFloat(readFileSync('//wsl.localhost/Ubuntu/proc/loadavg', 'utf8')); t.load = Number.isFinite(l) ? Math.round(l / 16 * 100) : null; } catch { t.load = null; }
     out.push(t);
   }
   return out;
