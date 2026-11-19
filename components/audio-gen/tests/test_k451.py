@@ -38,8 +38,24 @@ class Yue2Recipe(unittest.TestCase):
         lines = novocal(ABC)[0].split("\n")
         self.assertEqual(novocal(ABC)[1], 2)
         self.assertEqual(lines[2], '"C"z16|z16|"G"z16|')
-        self.assertEqual(lines[5], "c2 d2 e4|c16|G8 A8|")
+        self.assertEqual(lines[5], "\"C\" C4 E4 G8|c16|G8 A8|")  # own notes kept under the vocal bar; the longer Vocal voice is appended
         self.assertEqual(novocal("X:1\nV:Vocal\nc4 |\n")[0], "X:1\nV:Vocal\nz16|\n")
+
+    def test_move_targets_ins_by_name_and_pairs_by_bar(self):
+        s = "X:1\nV:Vocal\nV:Ins\nV:Pad\nK:C\nV:Vocal\n\"C\" c2 d2 | z16 |\nV:Pad\nA16 | A16 |\nV:Ins\nz16 | z16 |\nV:Vocal\ne8 | f8 |\nV:Ins\nz16 | z16 |\n"
+        o = novocal(s)[0].split("\n")
+        self.assertEqual((o[8], o[10], o[14]), ("A16 | A16 |", "c2 d2|z16|", "e8|f8|"))
+
+    def test_move_ties_chords_and_unequal_lengths(self):
+        s = "X:1\nV:Vocal\nV:Ins\nK:C\nV:Vocal\nc8- | c8 | [CEG]8- | d8 |\nV:Ins\nz16 | C16 |\n"
+        o = novocal(s)[0].split("\n")
+        self.assertEqual(o[5], "z16|z16|z16|z16|")
+        self.assertEqual(o[7], "c8|C16|[CEG]8-|d8|")  # the tie from a moved bar into an own bar is dropped; the Vocal voice is longer; a [CEG] tie between moved bars stays
+
+    def test_move_leaves_repeats_and_inline_fields_alone(self):
+        for bad in ("|: c8 :|", "c8 |]", "c8 | [K:D] d8 |"):
+            s = f"X:1\nV:Vocal\nV:Ins\nK:C\nV:Vocal\n{bad}\nV:Ins\nz16 |\n"
+            self.assertEqual(novocal(s)[0].split("\n")[7], "z16 |", bad)
 
     def test_offload_ar_auto_under_24_gib(self):
         from audiogen.recipe import offload_ar
@@ -108,7 +124,16 @@ class Defaults(unittest.TestCase):
     def test_yue2_needs_demucs(self):
         with self.assertRaises(B.Skip):
             B.make("y", {"type": "yue2", "licence": "x", "python": sys.executable, "demucsPython": "/nope/python"}, Path(".")).check()
-        B.make("y", {"type": "yue2", "licence": "x", "python": sys.executable, "demucsPython": sys.executable}, Path(".")).check()
+        B.make("y", {"type": "yue2", "licence": "x", "python": sys.executable, "demucsPython": sys.executable, "queue": False}, Path(".")).check()
+
+    def test_yue2_check_needs_heavy_unless_queue_off(self):
+        o = {"type": "yue2", "licence": "x", "python": sys.executable, "demucsPython": sys.executable}
+        with mock.patch.object(B.YuE2, "queue_tool", return_value=None):
+            with self.assertRaises(B.Skip):
+                B.make("y", o, Path(".")).check()
+            B.make("y", {**o, "queue": False}, Path(".")).check()
+        with mock.patch.object(B.YuE2, "queue_tool", return_value="/x/heavy"):
+            B.make("y", o, Path(".")).check()
 
 
 class Arr:
@@ -187,7 +212,7 @@ class Yue2Worker(unittest.TestCase):
         self.assertEqual([p["seed"] for p in plans], [1000, 8919])
         self.assertEqual({(p["lyrics"], p["cot"]) for p in plans + renders}, {("[Instrumental]", "full")})
         self.assertIn('"C"z16|z16|"G"z16|', renders[0]["abc"])
-        self.assertIn("c2 d2 e4|c16|G8 A8|", renders[0]["abc"])
+        self.assertIn("G8 A8|", renders[0]["abc"])
         self.assertEqual(res[0]["seed"], 8919)
         self.assertEqual([x["vocalDb"] > -25 for x in res[0]["extra"]["tried"]], [True, False])
         d = seen["demucs"][0]

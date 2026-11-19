@@ -10,47 +10,74 @@ MAX_LOUD_WINDOWS = 0.03
 LOUD_WINDOW_DB = -14.0
 
 
-def novocal(abc: str, vocal: str = "move") -> tuple[str, int]:
-    """The "Vocal" voice is silenced bar by bar (chord symbols stay, as the native format keeps harmony in Vocal even
-    when it rests). vocal="move" (default) first moves each bar's notes, chords dropped, into the same bar of the first
-    other voice (the instrumental part), as the YuE repo's yue2-music skill does ("moves the vocal melody into the
-    instrumental part", release yue2-v0.1.6, skills/yue2-music/references/abc-editing.md: the `Ins` part "can carry an
-    instrumental theme or solo"); a bar with no vocal notes keeps the instrumental bar. With no other voice, or
-    vocal="rests", the notes are dropped. Returns the score and the number of Vocal bars that had notes."""
+_CH = re.compile(r'"[^"]*"')
+_NOTE = re.compile(r"[A-Ga-g]")
+_FANCY = re.compile(r"\|:|:\||\|\]|\[\||\|\||\[[A-Za-z]:")  # repeats, double and final bars, inline fields
+
+
+def _voice(ln: str):
+    t = ln[2:].split()
+    return t[0] if t else None
+
+
+def novocal(abc: str, vocal: str = "move", ins: str = "Ins") -> tuple[str, int]:
+    """The "Vocal" voice is silenced bar by bar (whole-bar rests, chord symbols kept: the native format keeps harmony in
+    Vocal). Returns the score and the number of Vocal bars that had notes.
+    vocal="rests": the notes are dropped. This is what the YuE yue2-music skill does (release yue2-v0.1.6,
+    skills/yue2-music/references/abc-editing.md): "If the cover should preserve only one part ... `--keep-voice Ins` ...
+    The unselected voice is replaced with rests on the same time grid".
+    vocal="move" (default, the kit's reading of the 7th Inning Stretch audit; the skill itself never moves notes):
+    first each Vocal bar with notes (chords dropped) is put in the same bar index of the voice named `ins` (else the
+    first other voice), but only where that bar has no notes of its own: an instrumental bar with notes is kept as it
+    is (a voice is monophonic), vocal bars past the end of the instrumental voice are appended, and a tie that would
+    dangle is dropped. A score with repeats, double or final bar lines or inline fields (`[K:..]`) is only silenced."""
     lines = abc.split(chr(10))
-    q = lambda b: re.sub(r'"[^"]*"', "", b)  # noqa: E731
     music = lambda ln: "|" in ln and not ln.startswith(("%", "w:"))  # noqa: E731
-    ins, cur = None, None
+    names, cur = [], None
     for ln in lines:
         if ln.startswith("V:"):
-            cur = "vocal" if ln.startswith(("V: Vocal", "V:Vocal")) else ln[2:].split()[0] if ln[2:].split() else None
-            if cur != "vocal" and ins is None:
-                ins = cur
-    cur, moved, n, queue = None, vocal == "move" and ins is not None, 0, []
+            cur = _voice(ln)
+            if cur != "Vocal" and cur not in names:
+                names.append(cur)
+    tgt = ins if ins in names else (names[0] if names else None)
+    vb, ib, il, cur = [], [], [], None  # Vocal bars; target bars; target line -> bar count
     for ln in lines:
         if ln.startswith("V:"):
-            cur = "vocal" if ln.startswith(("V: Vocal", "V:Vocal")) else (ln[2:].split() or [None])[0]
-        elif cur == "vocal" and music(ln):
-            queue.append([b.strip() for b in ln.split("|") if b.strip()])
-    out, cur, k = [], None, 0
+            cur = _voice(ln)
+        elif music(ln) and cur == "Vocal":
+            vb += [b.strip() for b in ln.split("|") if b.strip()]
+        elif music(ln) and cur == tgt and tgt:
+            bs = [b.strip() for b in ln.split("|") if b.strip()]
+            ib += bs
+            il.append(len(bs))
+    fancy = any(_FANCY.search(ln) for ln in lines if music(ln))
+    new = None
+    if vocal == "move" and il and not fancy:
+        new = list(ib) + ["z16"] * max(0, len(vb) - len(ib))
+        mv = [False] * len(new)
+        for i, v in enumerate(vb):
+            if _NOTE.search(_CH.sub("", v)) and not _NOTE.search(_CH.sub("", ib[i] if i < len(ib) else "")):
+                new[i], mv[i] = _CH.sub("", v).strip(), True
+        for i, x in enumerate(new):  # no tie into or out of a bar that was swapped
+            if x.endswith("-") and (i + 1 >= len(new) or mv[i] != mv[i + 1]):
+                new[i] = x[:-1].rstrip()
+        il[-1] += len(new) - len(ib)
+    out, cur, k, n = [], None, 0, 0
     for ln in lines:
         if ln.startswith("V:"):
-            cur = "vocal" if ln.startswith(("V: Vocal", "V:Vocal")) else (ln[2:].split() or [None])[0]
+            cur = _voice(ln)
             out.append(ln)
-        elif cur == "vocal" and music(ln):
+        elif music(ln) and cur == "Vocal":
             nb = []
             for b in [b for b in ln.split("|") if b.strip()]:
-                if re.search(r"[A-Ga-g]", q(b)):
+                if _NOTE.search(_CH.sub("", b)):
                     n += 1
-                nb.append("".join(re.findall(r'"[^"]*"', b)) + "z16")
+                nb.append("".join(_CH.findall(b)) + "z16")
             out.append("|".join(nb) + "|")
-        elif moved and cur == ins and music(ln) and k < len(queue):
-            own = [b.strip() for b in ln.split("|") if b.strip()]
-            vb = queue[k]
-            k += 1
-            res = [q(v).strip() if re.search(r"[A-Ga-g]", q(v)) else (own[i] if i < len(own) else "z16") for i, v in enumerate(vb)]
-            res += own[len(vb):]
-            out.append("|".join(res) + "|")
+        elif new is not None and music(ln) and cur == tgt:
+            c = il.pop(0)
+            out.append("|".join(new[k:k + c]) + "|")
+            k += c
         else:
             out.append(ln)
     return chr(10).join(out), n
