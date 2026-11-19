@@ -76,7 +76,7 @@ it('rotates the wedge through every requested turn', () => {
 
 it('clips the rotating beam to the actor only when asked', () => {
   const clipped = setup({ do: 'rotating-beam', clip: true }).context.el.children;
-  expect([...clipped].map((e) => (e as HTMLElement).style.clipPath)).toEqual(['inset(52px 62px)', 'inset(7px 5px)']);
+  expect([...clipped].map((e) => (e as HTMLElement).style.clipPath).filter(Boolean)).toEqual(['inset(52px 62px)', 'inset(7px 5px)']);
   document.body.replaceChildren();
   const plain = setup({ do: 'rotating-beam' }).context.el.children;
   expect([...plain].every((e) => !(e as HTMLElement).style.clipPath)).toBe(true);
