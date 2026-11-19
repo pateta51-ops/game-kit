@@ -26,7 +26,31 @@ function restoreStyle(style: CSSStyleDeclaration, properties: readonly string[])
 function fit(box: HTMLElement, o: OverflowOpts): (() => void) | undefined {
   const answers = box.querySelector<HTMLElement>(o.answers);
   const fits = () => box.scrollHeight <= box.clientHeight + 1;
-  if (!answers || fits()) return undefined;
+  if (!answers) return undefined;
+  const cs = getComputedStyle(answers);
+  const row = cs.display.includes('flex') && cs.flexDirection === 'row';
+  if (fits() && !(row && answers.scrollWidth > box.clientWidth + 1)) return undefined;
+
+  if (row) {
+    const restoreWrap = restoreStyle(answers.style, ['flex-wrap']);
+    const restoreOy = restoreStyle(box.style, ['overflow-y']);
+    answers.style.flexWrap = 'wrap';
+    if (fits()) return restoreWrap;
+    box.dataset['overflow'] = 'rows';
+    box.style.overflowY = 'auto';
+    const more = () => {
+      box.dataset['more'] = box.scrollTop + box.clientHeight < box.scrollHeight - 1 ? '1' : '0';
+    };
+    more();
+    box.addEventListener('scroll', more, { passive: true });
+    return () => {
+      box.removeEventListener('scroll', more);
+      box.removeAttribute('data-overflow');
+      box.removeAttribute('data-more');
+      restoreWrap();
+      restoreOy();
+    };
+  }
 
   const restoreFont = restoreStyle(answers.style, ['font-size']);
   let font = parseFloat(getComputedStyle(answers).fontSize);
