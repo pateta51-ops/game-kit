@@ -22,5 +22,8 @@ Already wired in: `node kit.mjs finish` runs its check through `heavy` (normal) 
 
 Rollout (after `install-wsl.sh`): `bash ~/.local/share/heavy-queue/install-runner-hooks.sh` sets `ACTIONS_RUNNER_HOOK_JOB_STARTED` and `ACTIONS_RUNNER_HOOK_JOB_COMPLETED` in the `.env` of every `~/actions-runner-*/` and restarts its unit (named in its `.service` file) when the runner is idle; it prints one line per runner. A busy runner is left alone: run it again later. To undo, delete the two lines from each `.env` and restart the unit.
 
+## Unqueued runs (K418)
+Every `HEAVY_SWEEP_MS` (default 20 s, 0 = off) the server scans `/proc` for heavy test processes (vitest, playwright, `vite build`, `tsc -b`, pytest, headless chromium) whose environment lacks `HEAVY_HELD=1` and that are not under a GitHub `Runner.Worker`. Each is reniced to 19 once, listed as `unqueued: [{pid, cmd, cwd, firstSeen}]` in `/status` (so `heavy status` shows it) and in a red "Unqueued" table on the page, and appended to `bypass.log` in `HEAVY_HOME` (the folder in `cwd` names the game or worktree). It drops off the list when its pid ends. Nothing is killed.
+
 ## API (127.0.0.1 only, JSON)
 `POST /acquire {label, priority, pid?}` -> `{id, granted, ahead}`; `POST /beat {id}` (heartbeat and poll) -> same; `POST /release {id, exit?}` (`/beat` answers 404 for a lease the queue never knew, as after a restart, and 410 for one that ended); `/acquire` with `resume: true` takes a running lease back; `GET /status`; `GET /` the page.

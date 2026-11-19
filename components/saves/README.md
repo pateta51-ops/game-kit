@@ -41,7 +41,7 @@ console.log(text.length)
 
 ## A game behind an engine port
 
-`game` also takes an engine-core `EnginePort` (K403): a save holds the seed (`options.seed`), the content hash (`contentHash` option, default engine-core's `hashValue` of the content) and the `PortAnswer`s in order. Restore is `start(seed)`, settle, then `portAnswer` for each; same slots, autosave, export/import and errors as with a `GameRules`. Tests: `port.test.ts`.
+`game` also takes an engine-core `EnginePort` (K403; K419: any `PortTypes` game, its state no `KernelState`, needs no cast; `options`, `rules`, `action` default to `{ seed }`, `unknown`, `PortAnswer`; types `SaveOf`, `HistoryOf`): a save holds the seed (`options.seed`), the content hash (`contentHash` option, default engine-core's `hashValue` of the content) and the `PortAnswer`s in order. Restore is `start(seed)`, settle, then `portAnswer` for each; same slots, autosave, export/import and errors as with a `GameRules`. Tests: `port.test.ts`.
 
 ```ts
 import { makeSaves } from '../kit/saves/index'
