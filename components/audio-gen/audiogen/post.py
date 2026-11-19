@@ -446,7 +446,7 @@ def deliver(final: Path, stem: Path, cat: Category, channels: int, rate: int, lo
             tol = max(2, round(0.001 * s.rate))
             if abs(s.samples - round(expected * s.rate)) > tol:
                 raise PostError(f"{s.path.name}: decodes to {s.seconds:.4f} s, expected {expected:.4f} s")
-            if abs(s.lag) > tol:
+            if loop_len is not None and abs(s.lag) > tol:  # only loops need alignment
                 raise PostError(f"{s.path.name}: the decoded audio is offset {1000 * s.lag / s.rate:.2f} ms from the "
                                 f"source (over 1 ms), so loop points would be wrong")  # fmt: skip
         return shipped[0], shipped[1], headroom
