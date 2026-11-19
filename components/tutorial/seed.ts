@@ -1,6 +1,6 @@
 // Seed search: try seeds until a line of play on one shows what the game wants (a predicate over its events). The line
 // is the script played on the seed, or a game's driver playing from the setup.
-import type { PortAnswer, PortTypes } from '../engine-core/index.ts';
+import type { PortTypes } from '../engine-core/index.ts';
 import { drive, type TutorialAction, type TutorialEngine } from './game.ts';
 import { formatFailure, playStep, startRun } from './play.ts';
 import type { TutorialScript } from './script.ts';
