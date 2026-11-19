@@ -259,9 +259,10 @@ export function createMotionPlayer<C = undefined>(o: PlayerOptions<C>): MotionPl
   });
   const emptyTimeline = (id: string): Timeline => ({ id, ms: 0, calls: [], actors: [], cues: [] });
   const snapStart = (item: Item): void => {
-    if (item.commit || item.data !== undefined)
-      safe(`${item.spec.id} start`, () => o.onBeatStart?.(makeRun(item, emptyTimeline(item.spec.id))));
+    const run = item.commit || item.data !== undefined ? makeRun(item, emptyTimeline(item.spec.id)) : undefined;
+    if (run) safe(`${item.spec.id} start`, () => o.onBeatStart?.(run));
     commit(item);
+    if (run) safe(`${item.spec.id} end`, () => o.onBeatEnd?.(run));
     if (item.problem) o.onProblem?.(item.problem);
   };
   const snapEnd = (item: Item): void => {

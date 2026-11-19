@@ -150,6 +150,7 @@ Failing test first for each. | M | Astra Imperium V1 (PR #71) and V2 (PR #72), 1
 - `nav` option: a left column of clickable section headings with the search field at its top; body column at most 80ch.
 - on phone widths that nav collapses into a "Contents" button that opens it.
 Port from Unstoppable PR #144 (RulesPage.tsx, screens.css, e2e/screens.spec.ts). Tests on a fake game; README example. | M | Unstoppable architect, 19 Nov 2026 (game PR #144, branch rules-lookup-layout, commit ec3eaadc); built in game CSS, nothing waits | done |
+| K464 | motion-frame player: a snapped beat (skipped while still queued) got onBeatStart but never onBeatEnd, so state a game set in onBeatStart stayed set. A snapped beat now gets onBeatEnd with the same run, after its commit. Test: start and end pair up on skip. | S | Astra Imperium FIX-R11-F3 (game PR #78), 19 Nov 2026; worked around, not blocking | done |
 | K283 | `card-pile` `hitTitle={false}` drops the native title on the stack button (STCC draws its own pile tooltip) | S |  | done |
 | K284 | `layout-editor` Reset button (in-page confirmation): restores the starting doc, backdrops (`LAYOUT_EDITOR_BG_INIT`), zoom and screen; `layoutEditor.reset()` | S |  | done |
 | K285 | `plan-checker` `--tsc-at DIR` compiles the plan's type blocks inside a game folder, so relative `kit/` imports resolve | S |  | done |
