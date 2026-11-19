@@ -40,6 +40,8 @@
       { "game": "warps", "commit": "449af55", "paths": ["src/ui/fx/power/coin.ts", "src/ui/tokens3d/TokenLayer.tsx"] },
       { "game": "rome", "commit": "e76d56f", "paths": ["src/ui/motion/crumple.ts", "src/ui/motion/TrashMotion.tsx"] },
       { "game": "stcc", "commit": "a69c8dac", "paths": ["src/ui/motion/effects/closingScene.ts", "src/ui/motion/effects/cardFx.ts"] },
+      { "game": "stcc", "commit": "f93ba2e7", "paths": ["src/ui/motion/effects/kitFx.ts (playOn, play-on.ts)", "src/ui/motion/effects/dismissed.ts (pileLift liftShare and transform)"] },
+      { "game": "warps", "commit": "6790200d", "paths": ["src/ui/fx/blast.ts (breach ring curves and shake, as options)"] },
       { "game": "warps", "commit": "449af55", "paths": ["src/ui/fx/power/push.ts", "src/ui/fx/power/frame.ts", "src/ui/fx/portal.ts", "src/ui/fx/wreck.ts", "src/ui/fx/timing.ts", "src/ui/fx/blast.ts"] }
     ]
   },

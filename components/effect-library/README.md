@@ -39,6 +39,21 @@ Tests: `particles.test.ts`, `count.test.ts` (node); `effects.e2e.test.ts` (Chrom
 - `sheen` takes `background`, a CSS background for the band instead of the `colour`/`stops` gradient (the tuners and Warp's menu sheen: 110deg, 35/50/65%, #b6f6ff22).
 - Defaults, exported: `GLITCH_DEFAULTS`, `COLUMN_BEAM_DEFAULTS`, `ROTATING_BEAM_DEFAULTS`, `RETICLE_DEFAULTS`, `PLASMA_ORB_DEFAULTS`, `DRIFT_CLOUD_DEFAULTS`, `COLLAPSE_DEFAULTS`, `SHEEN_DEFAULTS`; the effects read them.
 
+### Verb options (K435)
+
+- Step ends: a step whose animations started late (a slow frame) and still run for at most `min(250 ms, 40% of dur)` when the player ends it waits for their `finished` (time left + 100 ms as the fallback); a skip earlier, and the beat's last step, end at once as before; `layer.end(run)` and `layer.clear()` end a waiting step. `endOnFinished` and `flushEnds` are exported for a game's own context. Not here (motion-frame's player): the beat's end waiting on its last step, and start times free of timer drift.
+- `playOn(el, steps, { speed, kind, register })` plays steps (actor `el`) on the page element itself, no layer and no clone, so a view transition carries it; returns `{ done, cancel }` (`cancel` jumps every verb to its end state; `done` resolves `done` or `skipped`). `kind` is written as `data-motion-fx` on each element a verb adds. `stamp`'s `press` then squeezes the real chip.
+- `stamp`: `onParts({ label, ring })` hands over its parts (`data-fx-part` `label` and `ring`); `holdRing: true` leaves the ring at its last frame for the game to remove (across a later pan); `ringZ` gives the ring its own z-index; `target` (an element, or a selector in the actor, else the page) stamps an existing element: no default look, never removed.
+- `motes`: `easings: [toPeak, toEnd]`, `holdStart` (offset the start transform is held to), `seed`, `direction` (degrees, 90 = down; default up), `gravity` (px added downward).
+- `settle`: `frames` (the last is the end state), or `fromScale`, `rise` (px), `dip`, `dipAt`.
+- `lift`: `scale: false`, `shadow: false`. `pileLift`: `scale: null`, `shadow: null` (no inline filter), `transform: true` (one transform instead of translate and scale), `liftShare` (lift in px = share of the measured height; STCC dismissed: 0.06, `liftMs` 160, no settle, `end()` when the game is done).
+- `ring-pulse` shockwaves: `alphaAt(k)`, `radiusAt(k)` (px before `unit`), `widthAt(k)` (Warp's breach: `1 - k`, `30 + 330 * outExpo(k)`, `24`).
+- `debris` with `dom: true`: one element per piece in the layer (`z`; a piece `shape` is its clip-path, `paint` is canvas only).
+- `shakeAt(t, t0, { sine: { amplitude, frequency, decay }, decayMs })`: x = amplitude * (1 - t/decayMs)^decay * sin(2 pi f t); y and rot 0.
+- `hideSource` with `hideParts` (a selector, `.class`): hides only those descendants of the source.
+- `startPulse` / `pulse`: `pseudo` (`::before`, `::after`), `delay`, `once`, `keepReduced`.
+- `bannerAt(lines, t, { frames })` adds the newest line's `opacity` and `scale` (`frames`: `{ at, opacity, scale }`, `at` ms since it appeared); `letterboxBanner({ textFrames })` drives the text the same way from the banner's start. `bannerKeyAt(frames, t)` is the interpolation.
+
 ## Use it in 10 lines
 
 ```ts

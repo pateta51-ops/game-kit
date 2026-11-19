@@ -1,5 +1,7 @@
 import type { Point } from '../motion-frame/index.ts';
 import type { CanvasEffect } from './canvas.ts';
+import type { Effect } from './effects.ts';
+import { centre, scene } from './beam-dom.ts';
 import { capN, lerp, rng, seg } from './particles.ts';
 
 export interface DebrisPiece {
@@ -32,6 +34,10 @@ export interface DebrisSettings {
   groupFade?: boolean;
   easeMotion?: (progress: number) => number;
   pieces?: readonly DebrisPiece[];
+  /** K435-7: pieces are elements in the layer (a piece's `shape` is its clip-path; `paint` is canvas only), not canvas pixels */
+  dom?: boolean;
+  /** K435-7: z-index of the DOM pieces */
+  z?: number;
 }
 
 const buffers = new WeakMap<CanvasRenderingContext2D, CanvasRenderingContext2D>();
@@ -85,4 +91,40 @@ export const debris: CanvasEffect = (board, t, { call, x, y }) => {
     board.drawImage(ctx.canvas, 0, 0);
     board.restore();
   }
+};
+
+/** K435-7: the DOM mode: one element per piece, the same paths as the canvas, sampled in 31 keyframes */
+export const debrisDom: Effect = (fx) => {
+  const { call } = fx;
+  const { pieces, count = pieces?.length ?? 12, seed = 1, unit = 1, spread = [60, 24], gravity = 100,
+    spin = 140, size = [12, 8], colour = '#b0b0b0', delay = 0, ms = 900, fade = [ms * 0.7, ms],
+    easeMotion = (p: number) => p, z } = call.step as DebrisSettings;
+  const [x, y] = centre(call.from);
+  const stage = scene(fx);
+  const random = rng(seed);
+  const end = fade ? fade[1] : ms;
+  for (let i = 0; i < capN(count); i++) {
+    const piece = pieces?.[i];
+    const [px, py] = piece?.at ?? [0, 0];
+    const [ox, oy] = piece?.offset ?? [0, 0];
+    const [dx, dy] = piece?.travel ?? [(random() * 2 - 1) * spread[0], -random() * spread[1]];
+    const turn = piece?.spin ?? (random() * 2 - 1) * spin;
+    const node = stage.stand([x - size[0] / 2, y - size[1] / 2, size[0], size[1]], {
+      background: piece?.colour ?? colour, transformOrigin: '50% 50%', ...(z === undefined ? {} : { zIndex: String(z) }),
+      ...(piece?.shape ? { clipPath: `path('${piece.shape}')`, left: `${String(x)}px`, top: `${String(y)}px`, transformOrigin: '0 0' } : {}),
+    });
+    stage.play(node, Array.from({ length: 31 }, (_, j): Keyframe => {
+      const local = end * j / 30;
+      const p = seg(local, 0, ms);
+      const k = easeMotion(p);
+      const scale = piece?.scale ? lerp(...piece.scale, k) : 1;
+      const tx = (px + ox * (1 - k) + dx * k) * unit;
+      const ty = (py + oy * (1 - k) + dy * k + gravity * k * k) * unit;
+      return {
+        transform: `translate(${String(tx)}px, ${String(ty)}px) rotate(${String(turn * k)}deg) scale(${String(unit * scale)})`,
+        opacity: (fade ? 1 - seg(local, ...fade) : 1) * (piece?.growOpacity ? p : 1),
+      };
+    }), end, delay, 'linear', 'none');
+  }
+  return stage.end;
 };

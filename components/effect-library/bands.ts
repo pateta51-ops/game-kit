@@ -26,15 +26,27 @@ export function createBandSlots<T>(): { put(slot: string, band: T): T | undefine
 }
 
 export interface BannerLine { text: string; cards?: readonly string[] }
-export interface BannerOpts { stepMs?: number; holdMs?: number; tapped?: boolean; reduced?: boolean }
+export interface BannerKey { at: number; opacity: number; scale: number }
+/** K435: opacity and scale at `t` ms between caller keyframes (`at` in ms, rising), held before the first and after the last */
+export function bannerKeyAt(frames: readonly BannerKey[], t: number): { opacity: number; scale: number } {
+  const i = frames.findIndex((f) => f.at > t);
+  const a = frames[i < 0 ? frames.length - 1 : Math.max(0, i - 1)];
+  const b = frames[i < 0 ? frames.length - 1 : i];
+  if (!a || !b) return { opacity: 1, scale: 1 };
+  const k = b.at === a.at ? 1 : Math.min(1, Math.max(0, (t - a.at) / (b.at - a.at)));
+  return { opacity: a.opacity + (b.opacity - a.opacity) * k, scale: a.scale + (b.scale - a.scale) * k };
+}
+/** K435: `frames` gives the newest line's `opacity` and `scale`, `at` in ms since it appeared */
+export interface BannerOpts { stepMs?: number; holdMs?: number; tapped?: boolean; reduced?: boolean; frames?: readonly BannerKey[] }
 /** The banner at `t` ms: lines appear one every `stepMs` (650); the newest rings the cards it names. Reduced motion
  * shows every line at once and rings none. `doneAt` is `holdMs` (4500) plus one beat per line, or null when it stays until tapped. */
-export function bannerAt(lines: readonly BannerLine[], t: number, o: BannerOpts = {}): { shown: BannerLine[]; ring: readonly string[]; done: boolean; doneAt: number | null } {
+export function bannerAt(lines: readonly BannerLine[], t: number, o: BannerOpts = {}): { shown: BannerLine[]; ring: readonly string[]; done: boolean; doneAt: number | null; opacity: number; scale: number } {
   const step = o.stepMs ?? 650;
   const doneAt = o.tapped === true ? null : (o.holdMs ?? 4500) + step * lines.length;
   const n = o.reduced === true ? lines.length : Math.min(lines.length, Math.max(0, Math.floor(t / step) + 1));
   const shown = lines.slice(0, n);
-  return { shown, ring: o.reduced === true ? [] : shown[n - 1]?.cards ?? [], done: doneAt !== null && t >= doneAt, doneAt };
+  const look = o.frames && o.reduced !== true ? bannerKeyAt(o.frames, t - step * (n - 1)) : { opacity: 1, scale: 1 };
+  return { shown, ring: o.reduced === true ? [] : shown[n - 1]?.cards ?? [], done: doneAt !== null && t >= doneAt, doneAt, ...look };
 }
 
 /** A tiny store only the table reads: which cards are ringed now. */

@@ -1,6 +1,6 @@
 // The built-in verbs of the director's spec format as DOM effects (Web Animations API), plus the way a game adds its own.
 import type { Run, VerbCall, VerbRegistry } from '../motion-frame/index.ts';
-import { createEffectLayer, place, type EffectLayer, type LayerOptions } from './layer.ts';
+import { createEffectLayer, endOnFinished, place, type EffectLayer, type LayerOptions } from './layer.ts';
 
 import { registerCanvasEffect } from './canvas.ts';
 import { arcMove, multiStopMove } from './flight-effects.ts';
@@ -26,7 +26,7 @@ import { idle } from './idle.ts';
 import { typewriter, type TypewriterSettings } from './typewriter.ts';
 import { registerDashLine } from './dash-line.ts';
 import { reticle } from './reticle.ts';
-import { debris } from './debris.ts';
+import { debris, debrisDom } from './debris.ts';
 import { sheen } from './sheen.ts';
 import { slash } from './slash.ts';
 import { registerCrumple } from './crumple.ts';
@@ -65,19 +65,26 @@ export function registerEffect(verbs: VerbRegistry<EffectCtx>, name: string, eff
     const layer = run.context;
     const el = layer.actor(run, call.actor, call.from);
     const done: (() => void)[] = [];
+    const anims = new Set<Animation>();
+    const all = (): Animation[] => (typeof el.getAnimations === 'function' ? el.getAnimations({ subtree: true }) : []);
+    const before = new Set(all());
     const animate: Fx['animate'] = (keyframes, end, opts) => {
       const a = el.animate(keyframes, { duration: Math.max(call.dur, 1), fill: 'both', easing: EASE[String(call.step['ease'])] ?? (typeof call.step['ease'] === 'string' ? call.step['ease'] : 'ease-in-out'), ...opts });
       done.push(() => {
         if (end) css(el, end);
         a.cancel();
       });
+      anims.add(a);
     };
     const own = effect({ call, run, el, layer, animate });
     if (own) done.push(own);
+    for (const a of all()) if (!before.has(a)) anims.add(a);
     return () => {
-      done.forEach((f) => {
-        f();
-      });
+      endOnFinished(layer, run, [...anims], () => {
+        done.forEach((f) => {
+          f();
+        });
+      }, call.dur, call.t + call.dur >= run.timeline.ms);
     };
   });
 }
@@ -102,16 +109,30 @@ export const BUILT_IN: Readonly<Record<string, Effect>> = {
   'arc-move': arcMove,
   'multi-stop-path': multiStopMove,
   lift: ({ call, animate }) => {
-    const end = { transform: `translateY(var(--fx-lift-rise,-6px)) scale(${String(call.value ?? 1.08)})`, boxShadow: 'var(--fx-lift-shadow,0 12px 24px)' };
-    animate([{ transform: 'none', boxShadow: 'none' }, end], end);
+    // K435-5: step `scale: false` lifts with no scale, `shadow: false` with no shadow
+    const sc = call.step['scale'] === false ? '' : ` scale(${String(call.value ?? 1.08)})`;
+    const sh = call.step['shadow'] !== false;
+    const end = { transform: `translateY(var(--fx-lift-rise,-6px))${sc}`, ...(sh ? { boxShadow: 'var(--fx-lift-shadow,0 12px 24px)' } : {}) };
+    animate([{ transform: 'none', ...(sh ? { boxShadow: 'none' } : {}) }, end], end);
     return undefined;
   },
-  settle: ({ animate }) => {
+  settle: ({ call, animate }) => {
     const rest = { transform: 'none', boxShadow: 'var(--fx-settle-shadow,0 1px 3px)' };
+    // K435-4: caller `frames` (the last is the end state), or the curve: `fromScale`, `rise` px, `dip` scale at `dipAt`
+    const frames = call.step['frames'];
+    if (Array.isArray(frames) && frames.length > 0) {
+      const last = { ...(frames.at(-1) as Keyframe) };
+      delete last.offset;
+      delete last.easing;
+      animate(frames as Keyframe[], Object.fromEntries(Object.entries(last).map(([k, v]) => [k, String(v)])));
+      return undefined;
+    }
+    const n = (k: string): number | undefined => (typeof call.step[k] === 'number' ? call.step[k] : undefined);
+    const rise = n('rise');
     animate(
       [
-        { transform: 'translateY(var(--fx-lift-rise,-6px)) scale(1.08)', boxShadow: 'var(--fx-lift-shadow,0 12px 24px)' },
-        { transform: 'scale(.98)', boxShadow: rest.boxShadow, offset: 0.7 },
+        { transform: `translateY(${rise === undefined ? 'var(--fx-lift-rise,-6px)' : `${String(rise)}px`}) scale(${String(n('fromScale') ?? 1.08)})`, boxShadow: 'var(--fx-lift-shadow,0 12px 24px)' },
+        { transform: `scale(${String(n('dip') ?? 0.98)})`, boxShadow: rest.boxShadow, offset: n('dipAt') ?? 0.7 },
         rest,
       ],
       rest,
@@ -299,7 +320,11 @@ export function registerEffects(verbs: VerbRegistry<EffectCtx>, o?: LayerOptions
   registerEffect(verbs, 'idle', idle);
   registerDashLine(verbs, o?.resolve, o?.stage);
   registerCanvasEffect(verbs, 'reticle', reticle);
+  registerEffect(verbs, 'debris', debrisDom);
+  const pieces = verbs.get('debris');
   registerCanvasEffect(verbs, 'debris', debris);
+  const pixels = verbs.get('debris');
+  verbs.register('debris', (call, run) => (call.step['dom'] ? pieces : pixels)?.(call, run));
   registerEffect(verbs, 'sheen', sheen);
   registerCanvasEffect(verbs, 'slash', slash);
   registerCrumple(verbs);
