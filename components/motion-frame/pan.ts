@@ -10,6 +10,10 @@ export interface ScrollPanOptions {
   tabs?: (target: string) => HTMLElement | null;
   activeTab?: () => HTMLElement | null;
   inView?: (element: Element, scroller: HTMLElement) => boolean;
+  /** K444: press the tab, then wait this many ms (default: three frames, at most 150 ms). */
+  tabWaitMs?: number;
+  /** K444: ease length in ms before the motion scale (default 350). */
+  panMs?: number;
 }
 
 const PAN_MS = 350;
@@ -25,7 +29,7 @@ function inView(element: Element, scroller: HTMLElement): boolean {
 }
 
 // STCC a69c8dac: follow the tab's own button, centre the target, then restore the starting tab and scroll.
-export function scrollPan({ scroller, tabs, activeTab, inView: shown = inView }: ScrollPanOptions): PanFactory {
+export function scrollPan({ scroller, tabs, activeTab, inView: shown = inView, tabWaitMs, panMs = PAN_MS }: ScrollPanOptions): PanFactory {
   return (scale, signal) => {
     const main = scroller();
     if (!main || !(scale > 0) || main.ownerDocument.visibilityState === 'hidden') return null;
@@ -61,6 +65,10 @@ export function scrollPan({ scroller, tabs, activeTab, inView: shown = inView }:
     const goTab = async (tab: HTMLElement | null | undefined): Promise<void> => {
       if (!tab || signal.aborted || tab === activeTab?.()) return;
       tab.click();
+      if (tabWaitMs !== undefined) {
+        await wait(() => false, tabWaitMs, () => {});
+        return;
+      }
       let left = 3;
       await wait(() => --left === 0, 150, () => {});
     };
@@ -73,7 +81,7 @@ export function scrollPan({ scroller, tabs, activeTab, inView: shown = inView }:
         return Promise.resolve();
       }
       const start = win.performance.now();
-      const ms = PAN_MS * scale;
+      const ms = panMs * scale;
       return wait((now) => {
         const k = Math.max(0, Math.min(1, (now - start) / ms));
         const eased = k < 0.5 ? 2 * k * k : 1 - (-2 * k + 2) ** 2 / 2;

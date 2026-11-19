@@ -780,10 +780,15 @@ export function hurryOnInput(player: MotionPlayer, target: Pick<EventTarget, 'ad
     target.removeEventListener('keydown', f, { capture: true });
   };
 }
-/** Any press or key on `target` skips what plays; never swallows the input. Returns the unbind. */
-export function skipOnInput(player: MotionPlayer, target: Pick<EventTarget, 'addEventListener' | 'removeEventListener'>): () => void {
-  const skip = (): void => {
-    if (player.pending() > 0) player.skipAll();
+/** Any press or key on `target` skips what plays; never swallows the input unless `consume` (K444: then the skipping input gets preventDefault and stopPropagation). Returns the unbind. */
+export function skipOnInput(player: MotionPlayer, target: Pick<EventTarget, 'addEventListener' | 'removeEventListener'>, options: { consume?: boolean } = {}): () => void {
+  const skip = (e: Event): void => {
+    if (player.pending() <= 0) return;
+    player.skipAll();
+    if (options.consume) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
   };
   target.addEventListener('pointerdown', skip, { capture: true });
   target.addEventListener('keydown', skip, { capture: true });
