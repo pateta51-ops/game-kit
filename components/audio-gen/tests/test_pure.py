@@ -311,5 +311,28 @@ class GpuOnly(unittest.TestCase):
         self.assertEqual((seen["dit"]["device"], seen["dit"]["offload_to_cpu"], seen["thinking"], "lm" in seen), ("cuda", False, False, False))
 
 
+class DeliverSeam(unittest.TestCase):
+    def _run(self, loop_len):
+        import tempfile
+        from unittest import mock
+        from audiogen import post as P
+        from audiogen.spec import Category
+        sh = lambda f: P.Shipped(path=Path(f), rate=48000, samples=4800, true_peak=-3.0, integrated=-20.0, priming=0, lag=100)
+        with tempfile.TemporaryDirectory() as t, mock.patch.object(P, "ship_source", return_value=0.1), \
+                mock.patch.object(P, "encode", return_value=(Path("a.webm"), Path("a.m4a"))), mock.patch.object(P, "inspect", side_effect=lambda f, s: sh(f)):
+            src = Path(t) / "f.wav"
+            src.write_bytes(b"")
+            with mock.patch.object(P.shutil, "copyfile"):
+                return P.deliver(src, Path(t) / "o", Category(name="c", kind="sfx", lufs=-20), 1, 48000, loop_len, Path(t) / "tmp")
+
+    def test_one_shot_skips_loop_offset_check(self):
+        self._run(None)
+
+    def test_loop_keeps_loop_offset_check(self):
+        from audiogen import post as P
+        with self.assertRaises(P.PostError):
+            self._run(2.0)
+
+
 if __name__ == "__main__":
     unittest.main()
