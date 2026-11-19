@@ -5,8 +5,10 @@ import type { PanFactory, PanSession } from './pan.ts';
 import { flyBoard, measureBoard } from './swap.ts';
 
 export type Speed = number | 'instant';
+/** K448: a finish may carry `finished`, a promise of the verb's animations: the step ends when both its time and that promise are done (100 ms grace after the time if it never settles) */
+export type Finish = (() => void) & { finished?: Promise<unknown> };
 /** Starts a verb call; may return its finish (called once: at the call's end, or early on a skip). */
-export type Verb<C = undefined> = (call: VerbCall, run: Run<C>) => undefined | (() => void);
+export type Verb<C = undefined> = (call: VerbCall, run: Run<C>) => undefined | Finish;
 export interface Run<C = undefined> {
   /** counts up, one per beat played */
   id: number;
@@ -140,6 +142,8 @@ interface Current<C> {
   timers: Set<Timer>;
   open: Set<() => void>;
   leaving: boolean;
+  waiting: Set<() => void>;
+  after?: () => void;
   cut?: () => boolean;
 }
 
@@ -298,6 +302,8 @@ export function createMotionPlayer<C = undefined>(o: PlayerOptions<C>): MotionPl
   const finish = (c: Current<C>, how: Ended): void => {
     if (!live.delete(c)) return;
     if (cur === c) cur = null;
+    c.waiting.clear();
+    delete c.after;
     c.timers.forEach((t) => {
       clearTimeout(t);
     });
@@ -316,7 +322,7 @@ export function createMotionPlayer<C = undefined>(o: PlayerOptions<C>): MotionPl
     const run = makeRun(item, redraw ? emptyTimeline(spec.id) : build());
     const timers = new Set<Timer>();
     const open = new Set<() => void>();
-    const me: Current<C> = { item, run, timers, open, leaving: false };
+    const me: Current<C> = { item, run, timers, open, leaving: false, waiting: new Set() };
     live.add(me);
     if (!parallel) cur = me;
     const at = (ms: number, f: () => void): Timer => {
@@ -330,12 +336,13 @@ export function createMotionPlayer<C = undefined>(o: PlayerOptions<C>): MotionPl
     safe(`${spec.id} start`, () => o.onBeatStart?.(run));
     if (!live.has(me)) return;
     const schedule = (): void => {
-      const t0 = Date.now();
+      const t0 = performance.now();
+      const atT = (ms: number, f: () => void): Timer => at(Math.max(0, t0 + ms - performance.now()), f);
       type S = { call: Timeline['calls'][number]; end: number; timer?: Timer; started: boolean };
       const steps: S[] = [];
       me.cut = () => {
         delete me.cut;
-        const elapsed = Date.now() - t0;
+        const elapsed = performance.now() - t0;
         const going = steps.filter((s) => s.started && (s.timer === undefined || timers.has(s.timer)) && s.end > elapsed);
         const keepT = new Set(going.map((s) => s.timer));
         timers.forEach((t) => {
@@ -347,7 +354,7 @@ export function createMotionPlayer<C = undefined>(o: PlayerOptions<C>): MotionPl
         if (going.length === 0 && runs.length === 0) return false;
         const e = Math.max(elapsed, ...going.map((s) => s.end));
         const base = e - elapsed - Math.min(...runs.map((s) => s.call.t));
-        const ends = runs.map((s) => put(s.call, base, s));
+        const ends = runs.map((s) => put(s.call, base, s, elapsed));
         at(Math.max(e - elapsed, ...ends), () => {
           finish(me, 'skipped');
           next();
@@ -355,23 +362,53 @@ export function createMotionPlayer<C = undefined>(o: PlayerOptions<C>): MotionPl
         });
         return true;
       };
-      const put = (call: S['call'], base: number, step: S): number => {
-        // both timers are set now, so a step's finish comes before the start of the step that follows it
-        let done: (() => void) | undefined;
-        step.end = call.t + call.dur + base + Date.now() - t0;
-        at(call.t + base, () => {
+      const settle = (): void => {
+        if (me.waiting.size > 0 || !me.after) return;
+        const a = me.after;
+        delete me.after;
+        a();
+      };
+      const put = (call: S['call'], base: number, step: S, off = 0): number => {
+        // all times are offsets from the one clock read at play start (t0)
+        let done: Finish | undefined;
+        step.end = off + call.t + call.dur + base;
+        atT(off + call.t + base, () => {
           step.started = true;
           safe(`${spec.id} ${call.verb}`, () => {
             done = o.verbs.get(call.verb)?.(call, run);
           });
-          if (done !== undefined) open.add(done);
+          if (done === undefined) return;
+          open.add(done);
+          if (timed && done.finished) {
+            me.waiting.add(fire);
+            const seen = (): void => {
+              res = true;
+              if (up) fire();
+            };
+            done.finished.then(seen, seen);
+          }
         });
-        if (!(item.keep && call.t + call.dur >= run.timeline.ms))
-          step.timer = at(call.t + call.dur + base, () => {
-            const d = done;
-            if (d === undefined) return;
-            open.delete(d);
-            safe(`${spec.id} ${call.verb} finish`, d);
+        const end = (): void => {
+          const d = done;
+          if (d === undefined) return;
+          open.delete(d);
+          safe(`${spec.id} ${call.verb} finish`, d);
+        };
+        const fire = (): void => {
+          if (!me.waiting.delete(fire)) return;
+          end();
+          settle();
+        };
+        let up = false;
+        let res = false;
+        const timed = !(item.keep && call.t + call.dur >= run.timeline.ms);
+        if (timed)
+          step.timer = atT(off + call.t + call.dur + base, () => {
+            up = true;
+            if (!done) return;
+            if (!done.finished) return end();
+            if (res) fire();
+            else at(100, fire);
           });
         return call.t + call.dur + base;
       };
@@ -382,15 +419,23 @@ export function createMotionPlayer<C = undefined>(o: PlayerOptions<C>): MotionPl
       }
       const leave = item.gate && run.timeline.calls.find((c) => c.step.leave === true);
       if (leave)
-        at(leave.t, () => {
+        atT(leave.t, () => {
           me.leaving = true;
           emit();
         });
       for (const c of run.timeline.cues)
-        at(c.t, () => {
+        atT(c.t, () => {
           cue(c.cue, spec.id);
         });
-      at(Math.max(run.timeline.ms, ...run.timeline.cues.map((c) => swap ? c.t : 0)), () => {
+      atT(Math.max(run.timeline.ms, ...run.timeline.cues.map((c) => swap ? c.t : 0)), () => {
+        if (!live.has(me)) return;
+        if (me.waiting.size > 0) {
+          me.after = endBeat;
+          return;
+        }
+        endBeat();
+      });
+      const endBeat = (): void => {
         if (!live.has(me)) return;
         reached(spec.id);
         const delay = (spec.autoContinueMs ?? 0) * factor;
@@ -411,7 +456,7 @@ export function createMotionPlayer<C = undefined>(o: PlayerOptions<C>): MotionPl
         finish(me, 'done');
         next();
         emit();
-      });
+      };
     };
     if (!redraw) {
       commit(item);
