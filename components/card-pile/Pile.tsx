@@ -419,7 +419,7 @@ export function Pile(p: PileProps) {
         )
 
   return (
-    <div ref={pileRef} data-part="pile" data-testid={testId} data-pile={testId} data-count={model.count} data-mode={mode} data-picking={picking ? 'true' : undefined} data-named={names.length}>
+    <div ref={pileRef} data-part="pile" data-testid={testId} data-pile={testId} data-face={browse ? undefined : 'down'} data-count={model.count} data-mode={mode} data-picking={picking ? 'true' : undefined} data-named={names.length}>
       <div
         data-part="stack"
         data-landscape={landscape ? 'true' : undefined}

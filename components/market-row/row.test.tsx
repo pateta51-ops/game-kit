@@ -29,7 +29,7 @@ describe('MarketRow', () => {
     vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockReturnValue({ left: 0, top: 0, width: 10, height: 14 } as DOMRect)
     const { rerender } = render(<MarketRow name="a" label="Market" row={{ slots: ['c1', null], decks: { A: 2 } }} face={face} />)
     rerender(<MarketRow name="a" label="Market" row={{ slots: ['c2', 'c1'], decks: { A: 1 } }} face={face} />)
-    expect(animate).toHaveBeenCalledTimes(2)
+    expect(animate).toHaveBeenCalledTimes(3)
     expect(animate.mock.calls[1]![1]).toMatchObject({ delay: 520, duration: 520 })
   })
   it('deals a card from the deck its filled event names (a fallback deck)', () => {
@@ -41,8 +41,37 @@ describe('MarketRow', () => {
     const { rerender } = render(<MarketRow name="d" label="Market" row={{ slots: [null], decks: { S: 0, M: 2 } }} face={face} />)
     rerender(<MarketRow name="d" label="Market" row={{ slots: ['m1'], decks: { S: 0, M: 1 } }} face={face}
       events={[{ kind: 'filled', row: 'd', slot: 0, card: 'm1', from: 'M' }]} />)
-    expect(animate).toHaveBeenCalledTimes(1)
+    expect(animate).toHaveBeenCalledTimes(2)
     expect(String((animate.mock.calls[0]![0] as Keyframe[])[0]!.transform)).toContain('translate(500px')
+  })
+})
+
+describe('MarketRow refill turn-over (K406)', () => {
+  const calls = (flip?: false) => {
+    const animate = vi.fn()
+    HTMLElement.prototype.animate = animate
+    vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockImplementation(function (this: HTMLElement) {
+      return { left: this.closest('[data-deck]') ? 0 : 300, top: 0, width: 10, height: 14 } as DOMRect
+    })
+    const deck = () => <i data-back>back</i>
+    const { rerender } = render(<MarketRow name="a" label="Market" row={{ slots: [null], decks: { A: 2 } }} face={face} deck={deck} flip={flip} />)
+    rerender(<MarketRow name="a" label="Market" row={{ slots: ['c9'], decks: { A: 1 } }} face={face} deck={deck} flip={flip} />)
+    return animate.mock.calls as [Keyframe[], KeyframeAnimationOptions][]
+  }
+  it('K406: no new card shows face up on the deck: it waits hidden, a back leaves the deck and turns over', () => {
+    const c = calls()
+    expect(c).toHaveLength(2)
+    const [back, card] = c
+    expect(back![0][0]).toMatchObject({ opacity: 1 })
+    expect(String(back![0][0]!.transform)).toContain('perspective(')
+    expect(card![0][0]).toMatchObject({ opacity: 0 })
+    expect(card![1]).toMatchObject({ fill: 'backwards' })
+    expect(card![0].at(-1)).toMatchObject({ opacity: 1 })
+    expect(String(card![0][0]!.transform)).toBe(String(back![0][0]!.transform).replace('rotateY(0deg)', 'rotateY(-90deg)'))
+    document.querySelectorAll('[data-motion-standin]').forEach((e) => { e.remove() })
+  })
+  it('K406: flip false flies the card face up (a face-up deck)', () => {
+    expect(calls(false)).toHaveLength(1)
   })
 })
 
