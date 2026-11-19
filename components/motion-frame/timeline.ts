@@ -128,7 +128,7 @@ export function buildTimeline(spec: MotionSpec, stage: Stage, factor = 1, pace =
   }
   const ms = (n: number): number => {
     const r = reads.reduce((a, [x, y]) => a + Math.max(0, Math.min(n, y) - x), 0);
-    return Math.round((n - r) * factor + r * pace);
+    return (n - r) * factor + r * pace;
   };
   const fail = (m: string): never => {
     throw new Error(`motion-frame ${spec.id}: ${m}`);
@@ -145,7 +145,7 @@ export function buildTimeline(spec: MotionSpec, stage: Stage, factor = 1, pace =
     .map(({ s }): VerbCall => {
       const own = now.get(s.actor);
       const from = own ?? stage(s.actor) ?? fail(`step actor ${s.actor} is neither an actor nor a zone`);
-      const call: VerbCall = { t: ms(s.t), dur: reads.length > 0 ? ms(s.t + s.dur) - ms(s.t) : Math.round(s.dur * factor), actor: s.actor, zone: own === undefined, verb: s.do, from, step: s };
+      const call: VerbCall = { t: ms(s.t), dur: reads.length > 0 ? ms(s.t + s.dur) - ms(s.t) : s.dur * factor, actor: s.actor, zone: own === undefined, verb: s.do, from, step: s };
       if (typeof s.to === 'number') call.value = s.to;
       else if (s.to !== undefined) {
         const to = place(s.to, stage, from[2], from[3]) ?? fail(`step target ${String(s.to)} is not on the stage`);
