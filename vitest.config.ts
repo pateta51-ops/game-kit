@@ -7,6 +7,7 @@ const UI = ['components/**/*.test.tsx', 'components/bug-reporter/**/*.test.ts'];
 export default defineConfig({
   test: {
     reporters: ['default', './components/ci-templates/skip-reporter.ts'],
+    ...(process.env.HEAVY_WORKERS ? { maxWorkers: Number(process.env.HEAVY_WORKERS) } : {}),
     coverage: { enabled: !!process.env.CI, provider: 'v8', include: ['components/**/*.{ts,tsx}'], exclude: ['**/*.test.*', '**/node_modules/**'], reporter: ['text-summary', 'json-summary'] },
     projects: [
       {

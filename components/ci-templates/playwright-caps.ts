@@ -2,14 +2,15 @@
 //   import { gateCaps } from './kit/ci-templates/playwright-caps';
 //   export default defineConfig({ ...gateCaps(), reporter: [['list'], ['./kit/ci-templates/playwright-caps.ts']] });
 // gateCaps: per-test timeout (E2E_TEST_TIMEOUT_MS, default 90 s: set it near the suite's measured worst case) and an overall
-// cap (E2E_GLOBAL_TIMEOUT_MS, default 10 min, or 3x the suite's measured time). The reporter (default export) prints the
+// cap (E2E_GLOBAL_TIMEOUT_MS, default 10 min, or 3x the suite's measured time), and workers = HEAVY_WORKERS when the heavy queue sets it (K454). The reporter (default export) prints the
 // tests that were running when the cap hit or a test timed out, and, when E2E_RUNNING_FILE is set, keeps that file
 // listing the running tests so full-gate.mjs can print them if it has to kill the run.
 import { writeFileSync } from 'node:fs';
 
-export const gateCaps = (env: Record<string, string | undefined> = process.env): { timeout: number; globalTimeout: number } => ({
+export const gateCaps = (env: Record<string, string | undefined> = process.env): { timeout: number; globalTimeout: number; workers?: number } => ({
   timeout: Number(env.E2E_TEST_TIMEOUT_MS) || 90_000,
   globalTimeout: Number(env.E2E_GLOBAL_TIMEOUT_MS) || 600_000,
+  ...(Number(env.HEAVY_WORKERS) ? { workers: Number(env.HEAVY_WORKERS) } : {}),
 });
 
 interface T {

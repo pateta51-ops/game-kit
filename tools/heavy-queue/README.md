@@ -27,3 +27,6 @@ Every `HEAVY_SWEEP_MS` (default 20 s, 0 = off) the server scans `/proc` for heav
 
 ## API (127.0.0.1 only, JSON)
 `POST /acquire {label, priority, pid?}` -> `{id, granted, ahead}`; `POST /beat {id}` (heartbeat and poll) -> same; `POST /release {id, exit?}` (`/beat` answers 404 for a lease the queue never knew, as after a restart, and 410 for one that ended); `/acquire` with `resume: true` takes a running lease back; `GET /status`; `GET /` the page.
+
+## Worker cap, load, more unqueued (K454)
+Cores (`HEAVY_CORES`, default the machine's) divided by slots, at least 1, is the worker cap: it is in `/status` (`cores`, `workers`, shown on the page) and every `heavy run` job gets `HEAVY_WORKERS` set to it (the runner hook writes it to `$GITHUB_ENV` too). The kit's vitest config template reads it for `maxWorkers`; a Playwright config uses `workers: Number(process.env.HEAVY_WORKERS) || undefined`. Slots and WSL memory are unchanged. The sweep also flags node/python puppeteer scripts (headless chromium only; a normal browser is never listed, and processes carrying `HEAVY_HELD=1` never are). `heavy load` prints one line: `load <1m 5m 15m> | cores N | slots used/total | queued N | unqueued N`. Update the live service with `install-wsl.sh`.

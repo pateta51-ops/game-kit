@@ -526,6 +526,11 @@ describe('K190: what the four games need (examples/<game>.json renders their wor
     expect(again[0]).toMatch(/^\/Create \/F /);
     expect(go('--remove-keepalive', '1')).toEqual(['/Delete /F /TN WSL keepalive Dist']);
   });
+  it('K454: gateCaps takes workers from HEAVY_WORKERS, and leaves it out when unset', async () => {
+    const { gateCaps } = await import('./playwright-caps');
+    expect(gateCaps({ HEAVY_WORKERS: '8' })).toEqual({ timeout: 90_000, globalTimeout: 600_000, workers: 8 });
+    expect(gateCaps({})).toEqual({ timeout: 90_000, globalTimeout: 600_000 });
+  });
   it('K453: the reporter names the test that was interrupted by the cap, and the ones still running', async () => {
     const { default: Reporter } = await import('./playwright-caps');
     const seen: string[] = [];

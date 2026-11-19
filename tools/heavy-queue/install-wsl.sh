@@ -8,7 +8,7 @@ D=${HEAVY_HOME:-$HOME/.local/share/heavy-queue}
 U=${SUDO_USER:-$(id -un)}
 NODE=$(command -v node)
 mkdir -p "$D" "$HOME/.local/bin"
-cp "$S"/server.mjs "$S"/heavy.mjs "$S"/heavy "$S"/runner-job-started.sh "$S"/runner-job-completed.sh "$S"/install-runner-hooks.sh "$D"/
+cp "$S"/server.mjs "$S"/heavy.mjs "$S"/heavy "$S"/runner-job-started.sh "$S"/runner-job-completed.sh "$S"/install-runner-hooks.sh "$S"/icon.png "$S"/logo.svg "$D"/
 cp "$S/../../ports.json" "$D/ports.json"
 chmod +x "$D/heavy" "$D"/*.sh
 sudo tee /etc/systemd/system/heavy-queue.service >/dev/null <<UNIT

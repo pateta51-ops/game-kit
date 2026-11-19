@@ -2,7 +2,7 @@
 import http from 'node:http';
 import { appendFileSync, existsSync, readFileSync, readdirSync, readlinkSync } from 'node:fs';
 import { spawnSync } from 'node:child_process';
-import { homedir } from 'node:os';
+import { availableParallelism, homedir, loadavg } from 'node:os';
 import { join } from 'node:path';
 import { pathToFileURL } from 'node:url';
 
@@ -22,8 +22,8 @@ export function isHeavy(args) {
   if (!py && !/^node(js)?$/.test(exe)) return false;
   const s = py && args[1] === '-m' ? args[2] : args[1];
   const t = stem(s);
-  if (/^(vitest|playwright|pytest)$/.test(t)) return true;
-  if (/(^|\/)(vitest|playwright)\/(bin|cli|dist)/.test(s ?? '')) return true;
+  if (/^(vitest|playwright|pytest|puppeteer)$/.test(t)) return true;
+  if (/(^|\/)(vitest|playwright|puppeteer)\/(bin|cli|dist|lib)/.test(s ?? '')) return true;
   if (t === 'vite' || /(^|\/)vite\/bin\//.test(s ?? '')) return args.includes('build');
   if (t === 'tsc' || /(^|\/)typescript\/bin\/tsc/.test(s ?? '')) return args.includes('-b') || args.includes('--build');
   return false;
@@ -55,7 +55,8 @@ export function procScan(root = '/proc') {
 }
 const reniceProc = (pid) => { spawnSync('renice', ['-n', '19', '-p', String(pid)], { stdio: 'ignore' }); };
 
-export function startServer({ scan = procScan, renice = reniceProc, sweepMs = process.env.HEAVY_SWEEP_MS === undefined ? 20000 : Number(process.env.HEAVY_SWEEP_MS), log = join(process.env.HEAVY_HOME || join(homedir(), '.local/share/heavy-queue'), 'bypass.log'), port = defaultPort(), slots = Number(process.env.HEAVY_SLOTS) || 1, ttl = Number(process.env.HEAVY_TTL) || 30000, tick = 1000, age = Number(process.env.HEAVY_AGE_MS) || 600000 } = {}) {
+export function startServer({ scan = procScan, renice = reniceProc, sweepMs = process.env.HEAVY_SWEEP_MS === undefined ? 20000 : Number(process.env.HEAVY_SWEEP_MS), log = join(process.env.HEAVY_HOME || join(homedir(), '.local/share/heavy-queue'), 'bypass.log'), port = defaultPort(), slots = Number(process.env.HEAVY_SLOTS) || 1, cores = Number(process.env.HEAVY_CORES) || availableParallelism(), ttl = Number(process.env.HEAVY_TTL) || 30000, tick = 1000, age = Number(process.env.HEAVY_AGE_MS) || 600000 } = {}) {
+  const workers = Math.max(1, Math.floor(cores / slots));
   const hi = (x) => x.priority === 'high' || Date.now() - x.queuedAt >= age;
   const leases = new Map();
   const history = [];
@@ -96,20 +97,20 @@ export function startServer({ scan = procScan, renice = reniceProc, sweepMs = pr
   };
   const view = (l) => {
     const ahead = l.startedAt ? 0 : [...leases.values()].filter((x) => !x.startedAt && (hi(x) && !hi(l) || (hi(x) === hi(l) && x.seq < l.seq))).length;
-    return { id: l.id, granted: !!l.startedAt, ahead };
+    return { id: l.id, granted: !!l.startedAt, ahead, workers };
   };
   const status = () => {
     const now = Date.now();
     const ls = [...leases.values()].map((l) => ({ id: l.id, label: l.label, priority: l.priority, pid: l.pid, queuedAt: l.queuedAt, startedAt: l.startedAt, waitedMs: (l.startedAt ?? now) - l.queuedAt, runningMs: l.startedAt ? now - l.startedAt : null }));
-    return { slots, running: ls.filter((l) => l.startedAt), waiting: ls.filter((l) => !l.startedAt), history, unqueued: [...unqueued.values()] };
+    return { slots, cores, workers, load1: loadavg()[0], running: ls.filter((l) => l.startedAt), waiting: ls.filter((l) => !l.startedAt), history, unqueued: [...unqueued.values()] };
   };
   const page = () => {
     const s = status();
     const row = (cells) => `<tr>${cells.map((c) => `<td>${esc(c ?? '')}</td>`).join('')}</tr>`;
     const t = (h, rows) => `<table border=1 cellpadding=4><tr>${h.map((x) => `<th>${x}</th>`).join('')}</tr>${rows.join('')}</table>`;
     const when = (ms) => ms ? new Date(ms).toLocaleTimeString() : '';
-    return `<!doctype html><meta charset=utf-8><meta http-equiv=refresh content=5><title>heavy-queue</title><body style="font-family:sans-serif">
-<h2>Running (${s.running.length}/${s.slots})</h2>${t(['Label', 'Priority', 'Started', 'Running', 'Waited'], s.running.map((l) => row([l.label, l.priority, when(l.startedAt), dur(l.runningMs), dur(l.waitedMs)])))}
+    return `<!doctype html><meta charset=utf-8><meta http-equiv=refresh content=5><meta name=viewport content="width=device-width,initial-scale=1"><title>heavy-queue</title><link rel=icon href=/logo.svg><link rel=apple-touch-icon href=/icon.png><link rel=manifest href=/manifest.json><meta name=apple-mobile-web-app-title content="Heavy queue"><meta name=theme-color content="#111718"><body style="font-family:sans-serif">
+<h2>Running (${s.running.length}/${s.slots}) - ${s.workers} workers per job on ${s.cores} cores</h2>${t(['Label', 'Priority', 'Started', 'Running', 'Waited'], s.running.map((l) => row([l.label, l.priority, when(l.startedAt), dur(l.runningMs), dur(l.waitedMs)])))}
 <h2>Waiting (${s.waiting.length})</h2>${t(['Label', 'Priority', 'Queued', 'Waiting'], s.waiting.map((l) => row([l.label, l.priority, when(l.queuedAt), dur(l.waitedMs)])))}
 ${s.unqueued.length ? `<h2 style="color:#c00">Unqueued (${s.unqueued.length})</h2>${t(['PID', 'Command', 'Folder', 'First seen'], s.unqueued.map((u) => row([u.pid, u.cmd, u.cwd, when(u.firstSeen)]))).replace('<table', '<table style="border-color:#c00;color:#c00"')}` : ''}
 <h2>Recent</h2>${t(['Label', 'Priority', 'Ended', 'Waited', 'Ran', 'Exit'], s.history.map((h) => row([h.label, h.priority, when(h.endedAt), dur((h.startedAt ?? h.endedAt) - h.queuedAt), h.startedAt ? dur(h.endedAt - h.startedAt) : 'never ran', h.exit ?? h.reason])))}`;
@@ -124,6 +125,9 @@ ${s.unqueued.length ? `<h2 style="color:#c00">Unqueued (${s.unqueued.length})</h
       const path = req.url.split('?')[0];
       if (req.method === 'GET' && path === '/') { res.writeHead(200, { 'content-type': 'text/html; charset=utf-8' }); return res.end(page()); }
       if (req.method === 'GET' && path === '/status') return send(200, status());
+      const asset = { '/icon.png': 'image/png', '/logo.svg': 'image/svg+xml' }[path];
+      if (req.method === 'GET' && asset) { try { const f = readFileSync(new URL('.' + path, import.meta.url)); res.writeHead(200, { 'content-type': asset, 'cache-control': 'max-age=86400' }); return res.end(f); } catch { return send(404, { error: 'not found' }); } }
+      if (req.method === 'GET' && path === '/manifest.json') return send(200, { name: 'Heavy queue', short_name: 'Heavy queue', start_url: '/', display: 'standalone', background_color: '#111718', theme_color: '#111718', icons: [{ src: '/icon.png', sizes: '512x512', type: 'image/png', purpose: 'any maskable' }] });
       if (req.method !== 'POST') return send(404, { error: 'not found' });
       if (path === '/acquire') {
         const l = { id: `${Date.now().toString(36)}-${++seq}`, seq, label: String(b.label ?? 'heavy'), priority: b.priority === 'high' ? 'high' : 'normal', pid: Number(b.pid) || 0, queuedAt: Date.now(), lastBeat: performance.now() };

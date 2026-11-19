@@ -74,3 +74,5 @@ The game sets no repository secrets or variables: the workflows use only the bui
 node kit/ci-templates/render.mjs          # writes .github/workflows/ from ci.config.json
 node kit/ci-templates/render.mjs --check  # in the game's check: fails when the workflows are stale
 ```
+
+Worker cap (K454): a `heavy run` job gets `HEAVY_WORKERS` (cores divided by slots, at least 1; runner jobs get it too through the hook), so slots times workers stays within the core count. The vitest config template sets `maxWorkers: Number(process.env.HEAVY_WORKERS) || undefined`; `gateCaps()` from `playwright-caps.ts` adds `workers` from it for a game's Playwright config (unset: Playwright's own default).

@@ -1,6 +1,6 @@
 // heavy run [--priority high|normal] [--label t] -- cmd...  |  hold --pid p [--priority] [--label]  |  release <id> [exit]  |  status   (K399)
 import { spawn } from 'node:child_process';
-import { constants } from 'node:os';
+import { availableParallelism, constants, loadavg } from 'node:os';
 import { basename } from 'node:path';
 import { defaultPort } from './server.mjs';
 
@@ -17,6 +17,7 @@ const alive = (pid) => { try { process.kill(pid, 0); return true; } catch (e) { 
 const sigCode = (code, sig) => code ?? 128 + (constants.signals[sig] ?? 1);
 const listen = (on) => { for (const [s, h] of Object.entries(on)) process.on(s, h); return () => { for (const [s, h] of Object.entries(on)) process.off(s, h); }; };
 
+const loadLine = (s, la = loadavg(), cores = s.cores ?? availableParallelism()) => `load ${la.map((x) => x.toFixed(2)).join(' ')} | cores ${cores} | slots ${s.running.length}/${s.slots} | queued ${s.waiting.length} | unqueued ${s.unqueued.length}`;
 function flags(a) {
   const f = { priority: 'normal' };
   let i = 0;
@@ -55,6 +56,7 @@ async function acquire(f, pid, resume = false) {
     if (r.code === 404) { off(); say('lease lost (queue restarted): queueing again'); return acquire(f, pid); }
   }
   off();
+  f.workers = r.workers;
   return r.id;
 }
 
@@ -93,7 +95,7 @@ async function run(f) {
   if (!id) return fallback(f.cmd);
   const lease = { id };
   const stop = beat(f, pid, lease);
-  const code = await exec(f.cmd, { HEAVY_LEASE: id });
+  const code = await exec(f.cmd, { HEAVY_LEASE: id, ...(f.workers ? { HEAVY_WORKERS: String(f.workers) } : {}) });
   stop();
   await post('/release', { id: lease.id, exit: code }).catch(() => {});
   return code;
@@ -123,9 +125,11 @@ async function main([cmd, ...a]) {
     try { process.kill(-pgid, 'SIGTERM'); } catch { /* gone */ }
     return 0;
   }
+  if (cmd === 'workers') { try { console.log((await (await fetch(URL_ + '/status')).json()).workers ?? ''); return 0; } catch { return 3; } }
+  if (cmd === 'load') { try { console.log(loadLine(await (await fetch(URL_ + '/status')).json())); return 0; } catch { say(`no queue at ${URL_}`); return 3; } }
   if (cmd === 'release') { await post('/release', { id: a[0], exit: a[1] === undefined ? null : Number(a[1]) }).catch(() => {}); return 0; }
   if (cmd === 'status') { try { console.log(JSON.stringify(await (await fetch(URL_ + '/status')).json(), null, 2)); return 0; } catch { say(`no queue at ${URL_}`); return 3; } }
-  say('usage: heavy run [--priority high|normal] [--label <text>] -- <cmd...> | heavy status | heavy hold --pid <pid> [--priority] [--label] | heavy release <id> [exit]');
+  say('usage: heavy run [--priority high|normal] [--label <text>] -- <cmd...> | heavy status | heavy load | heavy hold --pid <pid> [--priority] [--label] | heavy release <id> [exit]');
   return cmd === '--help' || cmd === '-h' ? 0 : 2;
 }
 

@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it } from 'vitest';
 import { spawn, spawnSync } from 'node:child_process';
 import { once } from 'node:events';
-import { chmodSync, mkdirSync, mkdtempSync, readFileSync, symlinkSync, writeFileSync } from 'node:fs';
+import { chmodSync, mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
 import { createServer } from 'node:net';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -242,5 +242,66 @@ describe('heavy-queue process matching (K418)', () => {
       { pid: 300, held: true, runner: false, cmd: 'node /g/node_modules/.bin/vitest' },
       { pid: 400, held: false, runner: false, cmd: 'node /g/node_modules/.bin/playwright test' },
     ]);
+  });
+});
+
+describe('heavy-queue worker cap and load (K454)', () => {
+  it('reports workers = cores / slots (at least 1) and a job gets HEAVY_WORKERS', async () => {
+    const q = await serve({ slots: 2, cores: 16 });
+    const s = await q.status();
+    expect([s.cores, s.workers]).toEqual([16, 8]);
+    expect((await q.post('/acquire', { label: 'a' })).workers).toBe(8);
+    expect((await (await serve({ slots: 4, cores: 2 })).status()).workers).toBe(1);
+    const r = await heavy(['run', '--', process.execPath, '-e', 'process.exit(Number(process.env.HEAVY_WORKERS))'], { HEAVY_URL: q.url });
+    expect(r.code).toBe(8);
+  });
+  it('serves its icon, logo and manifest, linked from the page, and status reports load1', async () => {
+    const q = await serve({ slots: 2, cores: 16 });
+    expect(typeof (await q.status()).load1).toBe('number');
+    const page = await (await fetch(q.url + '/')).text();
+    expect(page).toContain('rel=apple-touch-icon href=/icon.png');
+    for (const [p, t] of [['/icon.png', 'image/png'], ['/logo.svg', 'image/svg+xml']]) expect((await fetch(q.url + p)).headers.get('content-type')).toBe(t);
+    expect((await (await fetch(q.url + '/manifest.json')).json()).icons[0].src).toBe('/icon.png');
+  });
+  it('heavy load prints one line', async () => {
+    const q = await serve({ slots: 2, cores: 16, scan: () => [{ pid: 9, cmd: 'chrome --headless', cwd: '/x' }], sweepMs: 30, log: join(mkdtempSync(join(tmpdir(), 'hq-load-')), 'b.log'), renice: () => {} });
+    await q.post('/acquire', { label: 'a' });
+    await q.post('/acquire', { label: 'b' });
+    await q.post('/acquire', { label: 'c' });
+    await until(async () => (await q.status()).unqueued.length === 1);
+    const r = heavy(['load'], { HEAVY_URL: q.url });
+    expect((await r).code).toBe(0);
+    expect(r.out()).toMatch(/^load \d+\.\d\d \d+\.\d\d \d+\.\d\d \| cores 16 \| slots 2\/2 \| queued 1 \| unqueued 1\n$/);
+  });
+  it('flags headless chromium and puppeteer scripts, never a normal browser', () => {
+    for (const c of ['/c/chrome --headless --user-data-dir=/tmp/playwright_chromiumdev_profile-x', 'node /g/node_modules/puppeteer/lib/cli.js']) expect(isHeavy(c.split(' ')), c).toBe(true);
+    for (const c of ['/c/chrome --remote-debugging-pipe --no-sandbox', '/c/chrome --enable-automation', '/c/chrome --user-data-dir=/home/user/.config/chrome']) expect(isHeavy(c.split(' ')), c).toBe(false);
+  });
+  it.skipIf(process.platform === 'win32')('procScan: queued headless chromium is held, an outside one is not, a normal Chrome is not listed', () => {
+    const root = mkdtempSync(join(tmpdir(), 'hq-proc2-'));
+    const mk = (pid, args, env) => {
+      mkdirSync(join(root, String(pid)));
+      writeFileSync(join(root, String(pid), 'cmdline'), args.join('\0') + '\0');
+      writeFileSync(join(root, String(pid), 'stat'), `${pid} (chrome) S 1 0 0`);
+      writeFileSync(join(root, String(pid), 'environ'), env.join('\0') + '\0');
+    };
+    mk(10, ['/c/chrome', '--headless=new', '--user-data-dir=/tmp/playwright_chromiumdev_profile-a'], ['HEAVY_HELD=1']);
+    mk(20, ['/c/chrome', '--headless=new', '--user-data-dir=/tmp/puppeteer_dev_profile-b'], ['A=1']);
+    mk(30, ['/c/chrome', '--user-data-dir=/home/user/.config/chrome', '--remote-debugging-pipe'], ['A=1']);
+    const r = procScan(root).sort((a, b) => a.pid - b.pid).map(({ pid, held }) => ({ pid, held }));
+    expect(r).toEqual([{ pid: 10, held: true }, { pid: 20, held: false }]);
+  });
+  it('HEAVY_WORKERS reaches maxWorkers in vitest.config.ts and the scaffold template; unset leaves it out', async () => {
+    const tpl = join(import.meta.dirname, 'tpl-config.tmp.ts');
+    writeFileSync(tpl, readFileSync(join(import.meta.dirname, '../../components/scaffold/template/vitest.config.ts.tpl'), 'utf8'));
+    const old = process.env.HEAVY_WORKERS;
+    try {
+      for (const f of ['../../vitest.config.ts', './tpl-config.tmp.ts']) {
+        process.env.HEAVY_WORKERS = '3';
+        expect((await import(`${f}?on${Math.random()}`)).default.test.maxWorkers, f).toBe(3);
+        delete process.env.HEAVY_WORKERS;
+        expect('maxWorkers' in (await import(`${f}?off${Math.random()}`)).default.test, f).toBe(false);
+      }
+    } finally { if (old === undefined) delete process.env.HEAVY_WORKERS; else process.env.HEAVY_WORKERS = old; rmSync(tpl); }
   });
 });
