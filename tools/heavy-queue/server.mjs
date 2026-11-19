@@ -2,7 +2,7 @@
 import http from 'node:http';
 import { appendFileSync, existsSync, readFileSync, readdirSync, readlinkSync } from 'node:fs';
 import { spawnSync } from 'node:child_process';
-import { availableParallelism, homedir } from 'node:os';
+import { availableParallelism, homedir, loadavg } from 'node:os';
 import { join } from 'node:path';
 import { pathToFileURL } from 'node:url';
 
@@ -102,7 +102,7 @@ export function startServer({ scan = procScan, renice = reniceProc, sweepMs = pr
   const status = () => {
     const now = Date.now();
     const ls = [...leases.values()].map((l) => ({ id: l.id, label: l.label, priority: l.priority, pid: l.pid, queuedAt: l.queuedAt, startedAt: l.startedAt, waitedMs: (l.startedAt ?? now) - l.queuedAt, runningMs: l.startedAt ? now - l.startedAt : null }));
-    return { slots, cores, workers, running: ls.filter((l) => l.startedAt), waiting: ls.filter((l) => !l.startedAt), history, unqueued: [...unqueued.values()] };
+    return { slots, cores, workers, load1: loadavg()[0], running: ls.filter((l) => l.startedAt), waiting: ls.filter((l) => !l.startedAt), history, unqueued: [...unqueued.values()] };
   };
   const page = () => {
     const s = status();
