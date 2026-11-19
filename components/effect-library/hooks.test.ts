@@ -80,10 +80,43 @@ describe('K412 hooks', () => {
   });
   it('sheen takes a caller-supplied background', () => {
     const band = (extra: object): HTMLElement => setup({ do: 'sheen', ...extra }).context.el.querySelector('div > div > div > div > div') as HTMLElement;
-    expect(band({}).style.width).toBe('50%');
+    const plain = band({});
+    expect([plain.style.width, plain.style.backgroundImage]).toEqual(['50%', expect.stringContaining('linear-gradient')]);
     document.body.replaceChildren();
     const custom = band({ background: 'red' });
-    expect([custom.style.width, custom.style.background]).toEqual(['50%', 'red']);
+    expect([custom.style.width, custom.style.background, custom.style.backgroundImage]).toEqual(['50%', 'red', '']);
+  });
+  it('a canvas host removed mid-play: the tick goes on without throwing and the end leaves nothing', () => {
+    const dom = fakeDom();
+    const hostEl = dom.el('div');
+    const verbs = createVerbs<EffectLayer>();
+    registerCanvasEffect(verbs, 'ring', () => {}, { host: hostEl as unknown as HTMLElement });
+    const layer = { el: dom.el('div') } as unknown as EffectLayer;
+    const run = { id: 1, context: layer } as unknown as Run<EffectLayer>;
+    const end = verbs.get('ring')?.({ actor: 'a', dur: 100, from: [0, 0, 10, 10], step: { dur: 100 } } as unknown as VerbCall, run);
+    dom.step();
+    const canvas = hostEl.children[0]!;
+    hostEl.remove();
+    canvas.isConnected = false;
+    expect(() => { dom.step(); }).not.toThrow();
+    expect(() => end?.()).not.toThrow();
+    expect([hostEl.children.length, dom.waiting()]).toEqual([0, 0]);
+  });
+  it('a play layer with zIndex and position, removed mid-play: ending the call throws nothing and leaves no stand-ins', () => {
+    vi.useFakeTimers();
+    Object.defineProperty(Element.prototype, 'animate', { configurable: true, value: animate });
+    animate.mockReturnValue({ cancel: vi.fn() } as unknown as Animation);
+    const parent = document.createElement('div');
+    document.body.append(parent);
+    const verbs = createVerbs<EffectCtx>();
+    const context = registerEffects(verbs, { parent, zIndex: 60, position: 'absolute' });
+    const timeline = buildTimeline({ id: 'h', actors: [{ id: 'piece', at: [50, 50], w: 20, h: 40 }], steps: [{ t: 0, actor: 'piece', dur: 1600, to: [150, 80], do: 'collapse-jump', n: 2 }] }, () => undefined);
+    const call = timeline.calls[0]!;
+    const end = verbs.get(call.verb)?.(call, { id: 1, context, timeline });
+    expect(context.el.children.length).toBeGreaterThan(0);
+    context.el.remove();
+    expect(() => end?.()).not.toThrow();
+    expect([context.el.style.zIndex, context.el.style.position, context.el.children.length]).toEqual(['60', 'absolute', 1]);
   });
   it('exports the defaults the effects use', () => {
     expect(GLITCH_DEFAULTS).toMatchObject({ slices: 3, idleMs: [3500, 7000], burstMs: 200, tearMs: 600, repeat: 0.25, repeatGapMs: [100, 140] });
