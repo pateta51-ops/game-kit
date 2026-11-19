@@ -84,6 +84,7 @@ describe('rendered files', () => {
     const edited = go('--check');
     expect(edited.status).toBe(1);
     expect(edited.stderr).toContain('.github/workflows/ci.yml differ');
+    expect(edited.stderr).toMatch(/warning: .*ci\.yml.*timeout-minutes.*99.*15/);
     writeFileSync(join(root, 'ci.config.json'), JSON.stringify({ repo: 'acme/widget', runnerLabel: 'widget', ownerLogin: 'boss', workflows: ['nightly-fuzz.yml'] }));
     expect(go().status).toBe(0);
     expect(wf('nightly-fuzz.yml')).toContain("github.repository_owner == 'boss'");
