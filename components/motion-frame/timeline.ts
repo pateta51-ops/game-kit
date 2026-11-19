@@ -26,6 +26,8 @@ export interface Step {
   read?: boolean;
   /** the gate's `leaving` turns true when the first such step starts (K143) */
   leave?: boolean;
+  /** K437: a `finishStep` cut still plays this step in full, after the steps in progress (a restore: the shrink back) */
+  onCut?: 'run';
   [more: string]: unknown;
 }
 /** Replaces the spec's steps, sound and maxMs: under reduced motion, or at a place in a run. */
