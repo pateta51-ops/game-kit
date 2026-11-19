@@ -16255,7 +16255,7 @@ var K = (() => {
     const inside = r.height <= m.height ? r.top >= m.top - 2 && r.bottom <= m.bottom + 2 : middle >= m.top && middle <= m.bottom;
     return r.width > 0 && r.height > 0 && inside && r.right > m.left && r.left < m.right;
   }
-  function scrollPan({ scroller, tabs, activeTab, inView: shown = inView }) {
+  function scrollPan({ scroller, tabs, activeTab, inView: shown = inView, tabWaitMs, panMs = PAN_MS }) {
     return (scale, signal) => {
       const main = scroller();
       if (!main || !(scale > 0) || main.ownerDocument.visibilityState === "hidden") return null;
@@ -16288,6 +16288,11 @@ var K = (() => {
       const goTab = async (tab) => {
         if (!tab || signal.aborted || tab === activeTab?.()) return;
         tab.click();
+        if (tabWaitMs !== void 0) {
+          await wait(() => false, tabWaitMs, () => {
+          });
+          return;
+        }
         let left = 3;
         await wait(() => --left === 0, 150, () => {
         });
@@ -16300,7 +16305,7 @@ var K = (() => {
           return Promise.resolve();
         }
         const start = win.performance.now();
-        const ms = PAN_MS * scale;
+        const ms = panMs * scale;
         return wait((now) => {
           const k = Math.max(0, Math.min(1, (now - start) / ms));
           const eased = k < 0.5 ? 2 * k * k : 1 - (-2 * k + 2) ** 2 / 2;

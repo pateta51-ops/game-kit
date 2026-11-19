@@ -14809,7 +14809,7 @@ var PIECES = (() => {
     }
     const ms = (n) => {
       const r = reads.reduce((a, [x, y]) => a + Math.max(0, Math.min(n, y) - x), 0);
-      return Math.round((n - r) * factor + r * pace);
+      return (n - r) * factor + r * pace;
     };
     const fail = (m) => {
       throw new Error(`motion-frame ${spec.id}: ${m}`);
@@ -14823,7 +14823,7 @@ var PIECES = (() => {
     const calls = spec.steps.map((s, i) => ({ s, i })).sort((a, b) => a.s.t - b.s.t || a.i - b.i).map(({ s }) => {
       const own = now.get(s.actor);
       const from = own ?? stage(s.actor) ?? fail(`step actor ${s.actor} is neither an actor nor a zone`);
-      const call = { t: ms(s.t), dur: reads.length > 0 ? ms(s.t + s.dur) - ms(s.t) : Math.round(s.dur * factor), actor: s.actor, zone: own === void 0, verb: s.do, from, step: s };
+      const call = { t: ms(s.t), dur: reads.length > 0 ? ms(s.t + s.dur) - ms(s.t) : s.dur * factor, actor: s.actor, zone: own === void 0, verb: s.do, from, step: s };
       if (typeof s.to === "number") call.value = s.to;
       else if (s.to !== void 0) {
         const to = place(s.to, stage, from[2], from[3]) ?? fail(`step target ${String(s.to)} is not on the stage`);
@@ -15110,6 +15110,8 @@ var PIECES = (() => {
     const finish2 = (c, how) => {
       if (!live.delete(c)) return;
       if (cur === c) cur = null;
+      c.waiting.clear();
+      delete c.after;
       c.timers.forEach((t) => {
         clearTimeout(t);
       });
@@ -15127,7 +15129,7 @@ var PIECES = (() => {
       const run = makeRun(item, redraw ? emptyTimeline(spec.id) : build());
       const timers = /* @__PURE__ */ new Set();
       const open2 = /* @__PURE__ */ new Set();
-      const me = { item, run, timers, open: open2, leaving: false };
+      const me = { item, run, timers, open: open2, leaving: false, waiting: /* @__PURE__ */ new Set() };
       live.add(me);
       if (!parallel) cur = me;
       const at2 = (ms, f) => {
@@ -15141,11 +15143,12 @@ var PIECES = (() => {
       safe(`${spec.id} start`, () => o.onBeatStart?.(run));
       if (!live.has(me)) return;
       const schedule = () => {
-        const t0 = Date.now();
+        const t0 = performance.now();
+        const atT = (ms, f) => at2(Math.max(0, t0 + ms - performance.now()), f);
         const steps = [];
         me.cut = () => {
           delete me.cut;
-          const elapsed = Date.now() - t0;
+          const elapsed = performance.now() - t0;
           const going = steps.filter((s) => s.started && (s.timer === void 0 || timers.has(s.timer)) && s.end > elapsed);
           const keepT = new Set(going.map((s) => s.timer));
           timers.forEach((t) => {
@@ -15157,7 +15160,7 @@ var PIECES = (() => {
           if (going.length === 0 && runs2.length === 0) return false;
           const e = Math.max(elapsed, ...going.map((s) => s.end));
           const base = e - elapsed - Math.min(...runs2.map((s) => s.call.t));
-          const ends = runs2.map((s) => put(s.call, base, s));
+          const ends = runs2.map((s) => put(s.call, base, s, elapsed));
           at2(Math.max(e - elapsed, ...ends), () => {
             finish2(me, "skipped");
             next();
@@ -15165,22 +15168,52 @@ var PIECES = (() => {
           });
           return true;
         };
-        const put = (call, base, step) => {
+        const settle = () => {
+          if (me.waiting.size > 0 || !me.after) return;
+          const a = me.after;
+          delete me.after;
+          a();
+        };
+        const put = (call, base, step, off = 0) => {
           let done;
-          step.end = call.t + call.dur + base + Date.now() - t0;
-          at2(call.t + base, () => {
+          step.end = off + call.t + call.dur + base;
+          atT(off + call.t + base, () => {
             step.started = true;
             safe(`${spec.id} ${call.verb}`, () => {
               done = o.verbs.get(call.verb)?.(call, run);
             });
-            if (done !== void 0) open2.add(done);
+            if (done === void 0) return;
+            open2.add(done);
+            if (timed && done.finished) {
+              me.waiting.add(fire);
+              const seen = () => {
+                res = true;
+                if (up) fire();
+              };
+              done.finished.then(seen, seen);
+            }
           });
-          if (!(item.keep && call.t + call.dur >= run.timeline.ms))
-            step.timer = at2(call.t + call.dur + base, () => {
-              const d = done;
-              if (d === void 0) return;
-              open2.delete(d);
-              safe(`${spec.id} ${call.verb} finish`, d);
+          const end = () => {
+            const d = done;
+            if (d === void 0) return;
+            open2.delete(d);
+            safe(`${spec.id} ${call.verb} finish`, d);
+          };
+          const fire = () => {
+            if (!me.waiting.delete(fire)) return;
+            end();
+            settle();
+          };
+          let up = false;
+          let res = false;
+          const timed = !(item.keep && call.t + call.dur >= run.timeline.ms);
+          if (timed)
+            step.timer = atT(off + call.t + call.dur + base, () => {
+              up = true;
+              if (!done) return;
+              if (!done.finished) return end();
+              if (res) fire();
+              else at2(100, fire);
             });
           return call.t + call.dur + base;
         };
@@ -15191,15 +15224,23 @@ var PIECES = (() => {
         }
         const leave = item.gate && run.timeline.calls.find((c) => c.step.leave === true);
         if (leave)
-          at2(leave.t, () => {
+          atT(leave.t, () => {
             me.leaving = true;
             emit();
           });
         for (const c of run.timeline.cues)
-          at2(c.t, () => {
+          atT(c.t, () => {
             cue(c.cue, spec.id);
           });
-        at2(Math.max(run.timeline.ms, ...run.timeline.cues.map((c) => swap ? c.t : 0)), () => {
+        atT(Math.max(run.timeline.ms, ...run.timeline.cues.map((c) => swap ? c.t : 0)), () => {
+          if (!live.has(me)) return;
+          if (me.waiting.size > 0) {
+            me.after = endBeat;
+            return;
+          }
+          endBeat();
+        });
+        const endBeat = () => {
           if (!live.has(me)) return;
           reached(spec.id);
           const delay = (spec.autoContinueMs ?? 0) * factor;
@@ -15220,7 +15261,7 @@ var PIECES = (() => {
           finish2(me, "done");
           next();
           emit();
-        });
+        };
       };
       if (!redraw) {
         commit(item);
