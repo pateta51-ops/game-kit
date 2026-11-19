@@ -13,26 +13,26 @@ import {
   type EnginePort,
   type GameRules,
   type GameTypes,
+  type PortTypes,
   type PortAnswer,
-  type RestoreResult,
-  type SaveFile,
   type SaveFormat,
 } from '../engine-core/index.ts';
+import type { ActionOf, RestoreOf, SaveOf } from './types.ts';
 
-export const isPort = <G extends GameTypes>(g: GameRules<G> | EnginePort<G>): g is EnginePort<G> => 'settle' in g && 'start' in g;
+export const isPort = <G extends PortTypes>(g: GameRules<G & GameTypes> | EnginePort<G>): g is EnginePort<G> => 'settle' in g && 'start' in g;
 
-export const portStart = <G extends GameTypes>(port: EnginePort<G>, seed: string): G['state'] => portSettle(port, port.start(seed)).state;
-export const portStep = <G extends GameTypes>(port: EnginePort<G>, state: G['state'], action: G['action']): G['state'] =>
+export const portStart = <G extends PortTypes>(port: EnginePort<G>, seed: string): G['state'] => portSettle(port, port.start(seed)).state;
+export const portStep = <G extends PortTypes>(port: EnginePort<G>, state: G['state'], action: ActionOf<G>): G['state'] =>
   portAnswer(port, state, action as PortAnswer).state;
 
 const isObj = (x: unknown): x is Record<string, unknown> => x !== null && typeof x === 'object' && !Array.isArray(x);
 
-export function portRestore<G extends GameTypes>(
+export function portRestore<G extends PortTypes>(
   port: EnginePort<G>,
   raw: unknown,
   hash: string,
   format: SaveFormat = DEFAULT_SAVE_FORMAT,
-): RestoreResult<G> {
+): RestoreOf<G> {
   try {
     if (!isObj(raw)) return { ok: false, error: 'This is not a save file.' };
     const m = migrateSave(raw, format);
@@ -50,7 +50,7 @@ export function portRestore<G extends GameTypes>(
     ) {
       return { ok: false, error: DAMAGED };
     }
-    const save = structuredClone({ appCommit: UNKNOWN_COMMIT, ...input }) as unknown as SaveFile<G>;
+    const save = structuredClone({ appCommit: UNKNOWN_COMMIT, ...input }) as unknown as SaveOf<G>;
     if (save.contentHash !== hash) return { ok: false, error: OLDER_BUILD };
     const otherBuild = save.appCommit !== (format.appCommit ?? UNKNOWN_COMMIT) && save.appCommit !== UNKNOWN_COMMIT && format.appCommit !== undefined;
     let state: G['state'];

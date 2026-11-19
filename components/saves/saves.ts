@@ -14,22 +14,21 @@ import {
   type EnginePort,
   type GameRules,
   type GameTypes,
-  type History,
-  type RestoreResult,
-  type SaveFile,
+  type PortTypes,
   type SaveFormat,
 } from '../engine-core/index.ts';
+import type { ActionOf, HistoryOf, RestoreOf, SaveOf } from './types.ts';
 import { isPort, portHash, portRestore, portStart, portStep } from './port.ts';
 import { makeKv, type KvBackend } from './kv.ts';
 
-export interface StoredSave<G extends GameTypes> {
+export interface StoredSave<G extends PortTypes> {
   readonly name: string;
-  readonly save: SaveFile<G>;
+  readonly save: SaveOf<G>;
 }
 
-export interface SavesConfig<G extends GameTypes> {
+export interface SavesConfig<G extends PortTypes> {
   /** A `GameRules`, or an engine-core `EnginePort` (K403: the save holds seed, content hash and answers). */
-  readonly game: GameRules<G> | EnginePort<G>;
+  readonly game: GameRules<G & GameTypes> | EnginePort<G>;
   /** The content hash a port save carries (default: engine-core's hashValue of the content). Rules games use their own. */
   readonly contentHash?: (content: G['content']) => string;
   readonly content: G['content'];
@@ -56,12 +55,12 @@ export const SAVE_CLOCK = 'save-clock';
 export const SAVE_CLOCK_MAX_AHEAD_MS = 24 * 60 * 60 * 1000;
 const isTime = (t: unknown): t is number => typeof t === 'number' && Number.isFinite(t) && t >= 0 && t <= 8.64e15;
 
-export type Saves<G extends GameTypes> = ReturnType<typeof makeSaves<G>>;
+export type Saves<G extends PortTypes> = ReturnType<typeof makeSaves<G>>;
 
-export function makeSaves<G extends GameTypes>(cfg: SavesConfig<G>) {
+export function makeSaves<G extends PortTypes>(cfg: SavesConfig<G>) {
   const game = cfg.game;
   const port = isPort(game) ? game : undefined;
-  const rules = isPort(game) ? undefined : game;
+  const rules = (isPort(game) ? undefined : game) as GameRules<GameTypes> | undefined;
   const kv = makeKv<StoredSave<G>>(cfg.database, cfg.table ?? 'saves', cfg.backend, cfg.onError);
   const format = cfg.format ?? DEFAULT_SAVE_FORMAT;
   const keep = Math.max(1, cfg.autosaves ?? 1);
@@ -75,21 +74,21 @@ export function makeSaves<G extends GameTypes>(cfg: SavesConfig<G>) {
     (await kv.all()).filter(([k]) => k.startsWith(prefix)).sort(newest);
 
   // The state at the cursor of the last history saved; a history that extends it applies only the new actions (K266).
-  let live: { options: G['options']; rules: G['rules']; actions: readonly G['action'][]; state: G['state'] } | undefined;
-  const stateOf = (h: History<G>, actions: readonly G['action'][]): G['state'] => {
+  let live: { options: HistoryOf<G>['options']; rules: HistoryOf<G>['rules']; actions: readonly ActionOf<G>[]; state: G['state'] } | undefined;
+  const stateOf = (h: HistoryOf<G>, actions: readonly ActionOf<G>[]): G['state'] => {
     const c = live;
     let state: G['state'];
     let at = 0;
     if (c && c.options === h.options && c.rules === h.rules && c.actions.length <= actions.length && c.actions.every((a, i) => a === actions[i])) {
       state = c.state;
       at = c.actions.length;
-    } else state = port ? portStart(port, (h.options as { seed: string }).seed) : createGame(rules!, h.options, h.rules, cfg.content).state;
-    for (; at < actions.length; at++) state = port ? portStep(port, state, actions[at] as G['action']) : applyAction(rules!, state, actions[at] as G['action'], cfg.content).state;
+    } else state = port ? portStart(port, (h.options as { seed: string }).seed) : createGame(rules!, h.options as never, h.rules, cfg.content).state;
+    for (; at < actions.length; at++) state = port ? portStep(port, state, actions[at] as ActionOf<G>) : applyAction(rules!, state as never, actions[at] as never, cfg.content).state;
     live = { options: h.options, rules: h.rules, actions, state };
     return state;
   };
   /** The save of a history: the actions up to the cursor (an undone tail is not saved). Throws on a broken game. */
-  const fileOf = (h: History<G>, savedAt: string): SaveFile<G> => {
+  const fileOf = (h: HistoryOf<G>, savedAt: string): SaveOf<G> => {
     const actions = h.actions.slice(0, h.cursor);
     let state: G['state'] | undefined;
     try {
@@ -113,12 +112,12 @@ export function makeSaves<G extends GameTypes>(cfg: SavesConfig<G>) {
     }
     return createSave(
       rules!,
-      { options: h.options, rules: h.rules, actions, undoUsed: h.undoUsed, savedAt, ...(state === undefined ? {} : { state }) },
+      { options: h.options as never, rules: h.rules, actions: actions as never, undoUsed: h.undoUsed, savedAt, ...(state === undefined ? {} : { state: state as never }) },
       cfg.content,
       format,
-    );
+    ) as unknown as SaveOf<G>;
   };
-  const saveOf = (h: History<G>): SaveFile<G> => fileOf(h, now().toISOString());
+  const saveOf = (h: HistoryOf<G>): SaveOf<G> => fileOf(h, now().toISOString());
 
   // The time an autosave is stamped with: now, but never at or before the last autosave's, in this page, another tab or
   // an earlier visit (the stored clock, read at every autosave; with none stored, the latest autosave's savedAt).
@@ -145,7 +144,7 @@ export function makeSaves<G extends GameTypes>(cfg: SavesConfig<G>) {
   return {
     saveOf,
     /** The history a save loads as (the cursor at the end). */
-    historyOf: (save: SaveFile<G>): History<G> => ({
+    historyOf: (save: SaveOf<G>): HistoryOf<G> => ({
       options: save.options,
       rules: save.rules,
       actions: save.actions,
@@ -155,7 +154,7 @@ export function makeSaves<G extends GameTypes>(cfg: SavesConfig<G>) {
     /** Write a new autosave slot named `name`, stamped later than every earlier autosave, then delete the slots past the
      *  newest `autosaves`. Returns its key. The clock and the slot go in one transaction (IndexedDB, or a backend with
      *  `setMany`); a backend without it writes the clock first, so a failed slot write leaves the clock ahead, never behind. */
-    async writeAutosave(h: History<G>, name: string): Promise<string> {
+    async writeAutosave(h: HistoryOf<G>, name: string): Promise<string> {
       const t = await stampAutosave();
       const key = AUTO + stamp(t);
       await kv.putMany([
@@ -171,15 +170,15 @@ export function makeSaves<G extends GameTypes>(cfg: SavesConfig<G>) {
     async clearAutosaves(): Promise<void> {
       for (const [k] of await listAutosaves()) await kv.remove(k);
     },
-    async saveNamed(name: string, h: History<G>): Promise<string> {
+    async saveNamed(name: string, h: HistoryOf<G>): Promise<string> {
       const key = NAMED + stamp();
       await kv.put(key, { name, save: saveOf(h) });
       return key;
     },
     /** Store an imported save file's text as a named save; the reason when it does not load. */
     async importNamed(text: string, name: string): Promise<{ ok: true; key: string } | { ok: false; error: string }> {
-      let r: RestoreResult<G>;
-      if (!port) r = importSave(rules!, text, cfg.content, format);
+      let r: RestoreOf<G>;
+      if (!port) r = importSave(rules!, text, cfg.content, format) as unknown as RestoreOf<G>;
       else {
         let parsed: unknown;
         try {
@@ -214,12 +213,12 @@ export function makeSaves<G extends GameTypes>(cfg: SavesConfig<G>) {
         last = 0;
       },
     },
-    exportText: (s: StoredSave<G>): string => exportSave(s.save),
+    exportText: (s: StoredSave<G>): string => exportSave(s.save as never),
     exportName: (s: StoredSave<G>): string =>
       `${cfg.filePrefix}-${s.save.savedAt.slice(0, 16).replace(/[:T]/g, '-')}.json`,
     /** Replay a stored save: its state, or why it cannot load (never throws). */
-    restore: (s: StoredSave<G>): RestoreResult<G> =>
-      port ? portRestore(port, s.save, portHash(cfg.content, cfg.contentHash), format) : restoreSave(rules!, s.save, cfg.content, format),
+    restore: (s: StoredSave<G>): RestoreOf<G> =>
+      port ? portRestore(port, s.save, portHash(cfg.content, cfg.contentHash), format) : restoreSave(rules!, s.save as never, cfg.content, format) as unknown as RestoreOf<G>,
   };
 }
 
