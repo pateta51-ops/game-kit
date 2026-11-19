@@ -125,7 +125,7 @@ describe('PromptHost (K123)', () => {
 describe('PickOptions at the maximum (K408)', () => {
   it('choose 2 of 5: unpicked options disable at 2 picks and enable on undo', () => {
     const prompt = { id: 'p', kind: 'pick', options: ['a', 'b', 'c', 'd', 'e'].map((id) => ({ id, enabled: true })), min: 2, max: 2 } as unknown as MarketPrompt;
-    render(<PromptHost widgets={WIDGETS} prompt={prompt} view={{ got: 0 }} mine waiting={null} auto={() => undefined} answer={() => {}} look={{ text: strip }} />);
+    render(<PromptHost widgets={WIDGETS} prompt={prompt} view={{ got: 0 }} mine waiting={null} auto={() => null} answer={() => {}} look={{ text: strip }} />);
     const dis = (id: string): boolean => opt(id).getAttribute('aria-disabled') === 'true';
     fireEvent.click(opt('a'));
     expect(['b', 'c', 'd', 'e'].some(dis)).toBe(false);
