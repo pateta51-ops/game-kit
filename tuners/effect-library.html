@@ -367,6 +367,7 @@ var FX = (() => {
     createBandSlots: () => createBandSlots,
     createEffectLayer: () => createEffectLayer,
     createFlashLimiter: () => createFlashLimiter,
+    createGlitch: () => createGlitch,
     createRingStore: () => createRingStore,
     createSlotHold: () => createSlotHold,
     crumpleStill: () => crumpleStill,
@@ -4914,6 +4915,93 @@ void main() {
         window.removeEventListener("resize", update);
         window.removeEventListener("scroll", update, true);
         el.remove();
+      }
+    };
+  }
+
+  // components/effect-library/glitch.ts
+  function createGlitch(el, o) {
+    const rand3 = rng(o.seed ?? Math.floor(Math.random() * 4294967296));
+    const between = (r) => r[0] + rand3() * (r[1] - r[0]);
+    const idle2 = o.idleMs ?? [3500, 7e3];
+    const gap = o.repeatGapMs ?? [100, 140];
+    const ms = { burst: o.burstMs ?? 200, tear: o.tearMs ?? 600 };
+    const set = (k, v) => el.style.setProperty(k, String(v));
+    el.classList.add("fx-glitch");
+    if (o.mask) set("--glitch-mask", o.mask);
+    if (o.colours) {
+      set("--glitch-a", o.colours[0]);
+      set("--glitch-b", o.colours[1]);
+    }
+    if (o.dropout !== void 0) set("--glitch-dropout", o.dropout);
+    if (o.split !== void 0) set("--glitch-split", `${String(o.split)}%`);
+    if (o.jump !== void 0) set("--glitch-jump", o.jump);
+    const slices = [];
+    for (let i = 0; i < (o.slices ?? 3); i++) {
+      const s = document.createElement("i");
+      s.className = "fx-glitch-slice";
+      s.setAttribute("aria-hidden", "true");
+      el.appendChild(s);
+      slices.push(s);
+    }
+    let timer;
+    let endTimer;
+    let dead = false;
+    const factor = () => {
+      const s = o.speed();
+      return typeof s === "number" && s > 0 ? s : 0;
+    };
+    const stop = () => {
+      clearTimeout(timer);
+      clearTimeout(endTimer);
+      timer = endTimer = void 0;
+    };
+    const clearClasses = () => el.classList.remove("fx-glitch--burst", "fx-glitch--tear");
+    function schedule() {
+      const f = factor();
+      if (dead || !f) return;
+      timer = setTimeout(() => play("burst", rand3() < (o.repeat ?? 0.25)), between(idle2) * f);
+    }
+    function play(kind, again) {
+      const f = factor();
+      if (dead || !f) return;
+      stop();
+      clearClasses();
+      for (const s of slices) {
+        const top = rand3() * 72;
+        const h = 8 + rand3() * 18;
+        s.style.setProperty("--top", `${String(top)}%`);
+        s.style.setProperty("--bottom", `${String(100 - top - h)}%`);
+        s.style.setProperty("--jump", String((rand3() < 0.5 ? -1 : 1) * (0.6 + rand3() * 0.8)));
+      }
+      set("--glitch-ms", `${String(ms[kind] * f)}ms`);
+      void el.offsetWidth;
+      el.classList.add(`fx-glitch--${kind}`);
+      endTimer = setTimeout(() => {
+        endTimer = void 0;
+        clearClasses();
+        if (again) timer = setTimeout(() => play("burst", false), between(gap) * f);
+        else schedule();
+      }, ms[kind] * f);
+    }
+    function update() {
+      if (dead) return;
+      if (!factor()) {
+        stop();
+        clearClasses();
+      } else if (!timer && !endTimer) schedule();
+    }
+    update();
+    return {
+      burst: () => play("burst", false),
+      tear: () => play("tear", false),
+      update,
+      destroy() {
+        dead = true;
+        stop();
+        clearClasses();
+        el.classList.remove("fx-glitch");
+        for (const s of slices) s.remove();
       }
     };
   }
