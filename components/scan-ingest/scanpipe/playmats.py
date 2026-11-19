@@ -59,20 +59,21 @@ def ink_by_ground(rgb: np.ndarray, tol: int = 90, corner: int = 10) -> np.ndarra
 
 
 def detect_boxes(ink: np.ndarray, size: tuple[float, float], ratio: tuple[float, float] = (0.7, 1.4),
-                 fill: float = 0.5, close: int = 2, bars: Optional[tuple[float, float]] = None,
+                 fill: float = 0.5, close: int = 2, bars: Optional[tuple[float, float, float]] = None,
                  edge: bool = False) -> list[dict]:
     """The printed spaces of a mat: regions of ground enclosed by ink (the ink closed ``close`` times first, so a broken
     outline still encloses), ``size`` (lo, hi) of the image's width wide, width over height in ``ratio``, and filling at
     least ``fill`` of their bounding box. Each as normalised ``{x, y, w, h, cx, cy}``, top to bottom then left to right.
-    ``edge``: the image border counts as ink, so a space running off the edge encloses. ``bars`` (gap, thick), fractions
-    of the width, is spaces from bars (LCARS-style panels): the ink closed over gaps up to ``gap`` (label letters, bar
-    segments), then opened to keep only parts at least ``thick`` thick (bars, not stars or grid lines); art left inside
-    a panel is filled over. ``close`` is ignored then."""
+    ``edge``: the image border counts as ink, so a space running off the edge encloses. ``bars`` (across, down, thick),
+    fractions of the width, is spaces from bars (LCARS-style panels): the ink closed across over gaps up to ``across``
+    (label words, bar segments) and down over gaps up to ``down``, then opened to keep only parts at least ``thick``
+    thick (bars, not stars or grid lines); art left inside a panel is filled over. ``close`` is ignored then."""
     H, W = ink.shape
     if bars:
-        k = lambda f: cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (max(1, round(f * W)) | 1,) * 2)
-        m = cv2.morphologyEx(ink.astype(np.uint8), cv2.MORPH_CLOSE, k(bars[0]))
-        solid = cv2.morphologyEx(m, cv2.MORPH_OPEN, k(bars[1])) > 0
+        o, u = lambda f: max(1, round(f * W)) | 1, ink.astype(np.uint8)
+        m = cv2.morphologyEx(u, cv2.MORPH_CLOSE, np.ones((1, o(bars[0])), np.uint8)) | cv2.morphologyEx(
+            u, cv2.MORPH_CLOSE, np.ones((o(bars[1]), 1), np.uint8))
+        solid = cv2.morphologyEx(m, cv2.MORPH_OPEN, cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (o(bars[2]),) * 2)) > 0
         if edge:
             solid[[0, -1], :] = solid[:, [0, -1]] = True
     else:

@@ -12,8 +12,9 @@ def lcars():
     img = np.zeros((360, 600, 3), np.uint8)
     cv2.rectangle(img, (250, 0), (290, 359), BAR, -1)                  # column, top edge to bottom edge
     cv2.rectangle(img, (0, 150), (55, 165), BAR, -1)                   # bar, label gap 56..144
-    for x in range(60, 140, 12):
-        cv2.rectangle(img, (x, 152), (x + 7, 163), (90, 150, 240), -1)  # label letters in the gap
+    for x in (60, 72, 84, 103, 115, 127):
+        cv2.rectangle(img, (x, 148), (x + 7, 167), (90, 150, 240), -1)  # two label words, taller than the bar, in the gap
+    cv2.circle(img, (97, 157), 1, (90, 150, 240), -1)                   # a bullet between the words
     cv2.rectangle(img, (145, 150), (250, 165), BAR, -1)
     for x in range(290, 600, 80):
         cv2.rectangle(img, (x, 250), (x + 76, 262), BAR, -1)            # bar in segments with 3 px gaps
@@ -23,7 +24,7 @@ def lcars():
         cv2.circle(img, (x, y), 1, (220, 220, 200), -1)                  # stars
     for x in range(300, 595, 9):
         cv2.line(img, (x, 120), (x + 5, 120), (120, 80, 40), 1)          # dashed grid line across the panel
-    cv2.rectangle(img, (330, 280), (560, 340), (200, 120, 40), 1)       # an outline inside a panel (ship window)
+    cv2.rectangle(img, (298, 268), (592, 354), (200, 120, 40), 1)       # an outline inside a panel (ship window)
     return img
 
 
@@ -32,7 +33,7 @@ PANELS = [(0, 0, 250, 150), (291, 0, 600, 250), (0, 166, 250, 360), (291, 263, 6
 
 def test_K433_spaces_from_bars_finds_every_panel():
     ink = P.ink_by_ground(lcars()[:, :, ::-1])
-    found = P.detect_boxes(ink, (0.2, 1.0), ratio=(0.3, 5), bars=(0.01, 0.01), edge=True)
+    found = P.detect_boxes(ink, (0.2, 1.0), ratio=(0.3, 5), bars=(0.02, 0.006, 0.01), edge=True)
     assert len(found) == 4
     for b, (x0, y0, x1, y1) in zip(found, PANELS):
         assert abs(b["x"] * 600 - x0) <= 4 and abs(b["y"] * 360 - y0) <= 4
