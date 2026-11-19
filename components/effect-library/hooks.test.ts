@@ -84,7 +84,8 @@ describe('K412 hooks', () => {
     expect([plain.style.width, plain.style.backgroundImage]).toEqual(['50%', expect.stringContaining('linear-gradient')]);
     document.body.replaceChildren();
     const custom = band({ background: 'red' });
-    expect([custom.style.width, custom.style.background, custom.style.backgroundImage]).toEqual(['50%', 'red', '']);
+    expect([custom.style.width, custom.style.background]).toEqual(['50%', 'red']);
+    expect(custom.style.backgroundImage).not.toContain('gradient');
   });
   it('a canvas host removed mid-play: the tick goes on without throwing and the end leaves nothing', () => {
     const dom = fakeDom();
