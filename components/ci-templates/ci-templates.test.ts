@@ -430,7 +430,7 @@ describe('K190: what the four games need (examples/<game>.json renders their wor
     for (const s of runs) expect(s['timeout-minutes'], JSON.stringify(s)).toBe(15);
     const b = jobs('qw-custom', { queueWaitMinutes: 30, ci: { timeoutMinutes: 20, steps: ['npm test', { run: 'x', 'timeout-minutes': 3 }] } });
     expect(b.check!['timeout-minutes']).toBe(50);
-    expect(b.check!.steps.filter((s) => 'run' in s).map((s) => s['timeout-minutes'])).toEqual([20, 20, 3]);
+    expect(b.check!.steps.filter((s) => 'run' in s).map((s) => s['timeout-minutes'] as number)).toEqual([20, 20, 3]);
     const g = mk('qw-gate', base)('full-gate.yml').jobs.gate!;
     expect(g['timeout-minutes']).toBe(120);
     expect(g.steps.filter((s) => 'run' in s).every((s) => s['timeout-minutes'] === 60)).toBe(true);
