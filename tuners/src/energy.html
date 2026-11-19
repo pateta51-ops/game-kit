@@ -1,0 +1,414 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Energy and Transfers Tuner</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=Inter:wght@400;600&family=JetBrains+Mono:wght@400&display=swap">
+<style>
+:root {
+  --felt: #17302a; --felt-edge: #0e1f1b; --panel: #1b2124; --line: #2c3539; --fg: #e8ece9; --muted: #9aa8a3; --accent: #e9c46a;
+  --display: 'Space Grotesk', system-ui, sans-serif; --body: 'Inter', system-ui, sans-serif; --mono: 'JetBrains Mono', ui-monospace, monospace;
+  color-scheme: dark;
+}
+body { background: var(--panel); color: var(--fg); font: 14px/1.5 var(--body); margin: 0; }
+.wrap { max-width: 1180px; grid-template-columns: minmax(0, 1fr); margin: 0 auto; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); padding-block: 18px 40px; display: grid; gap: 18px; }
+h1 { font: 700 22px/1.2 var(--display); margin: 0; letter-spacing: .01em; }
+.sub { color: var(--muted); margin: 2px 0 0; max-width: 70ch; }
+.table { background: radial-gradient(120% 90% at 50% 100%, #1f4038, var(--felt) 60%, var(--felt-edge)); border-radius: 14px; border: 1px solid var(--line); height: 300px; overflow: hidden; position: relative; color: #f4db95; }
+.table .note { position: absolute; top: 12px; left: 14px; right: 14px; color: var(--muted); font-size: 12px; }
+.presets { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.presets span { color: var(--muted); font-size: 12px; text-transform: uppercase; letter-spacing: .08em; margin-right: 4px; }
+.presets button { font: 600 13px var(--body); color: var(--fg); background: #232b2e; border: 1px solid var(--line); border-radius: 999px; padding: 6px 14px; cursor: pointer; }
+.presets button[aria-pressed="true"] { background: var(--accent); color: #1b1608; border-color: var(--accent); }
+.ctls { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(260px, 100%), 1fr)); gap: 10px 22px; align-items: start; }
+fieldset { border: 1px solid var(--line); border-radius: 10px; padding: 10px 14px 12px; margin: 0; min-width: 0; display: grid; gap: 8px; }
+legend { font: 700 12px var(--display); text-transform: uppercase; letter-spacing: .1em; color: var(--accent); padding: 0 6px; }
+.ctl { display: grid; grid-template-columns: 1fr auto; gap: 2px 10px; align-items: center; }
+.ctl label { font-size: 13px; }
+.ctl output { font: 12px var(--mono); color: var(--accent); font-variant-numeric: tabular-nums; }
+.ctl output.kit { color: var(--muted); }
+.ctl input[type=range] { grid-column: 1 / -1; width: 100%; accent-color: var(--accent); }
+.ctl input.kit { accent-color: var(--muted); }
+.ctl :is(select, input[type=color]) { grid-column: 1 / -1; min-width: 0; box-sizing: border-box; }
+.ctl input[type=checkbox] { grid-column: auto; justify-self: end; }
+.ctl small { grid-column: 1 / -1; color: var(--muted); font-size: 11.5px; line-height: 1.35; }
+.code { background: #12171a; border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; font: 12.5px/1.6 var(--mono); color: #cfe3da; overflow-x: auto; white-space: pre; margin: 0; }
+.codebar { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 8px; }
+.codebar h2 { font: 700 15px var(--display); margin: 0; }
+.codebar button { font: 600 12px var(--body); color: var(--fg); background: #232b2e; border: 1px solid var(--line); border-radius: 6px; padding: 5px 10px; cursor: pointer; }
+.toolbar { display: flex; flex-wrap: wrap; gap: 8px 14px; align-items: center; }
+.toolbar select, .toolbar button { font: 600 13px var(--body); color: var(--fg); background: #232b2e; border: 1px solid var(--line); border-radius: 6px; padding: 7px 12px; max-width: 100%; }
+.toolbar #play { background: var(--accent); color: #1b1608; cursor: pointer; }
+button:focus-visible, input:focus-visible, select:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+#card, #slot, #cv { position: absolute; }
+#card { width: 86px; height: 118px; left: var(--cx, 50%); top: var(--cy, 54%); translate: -50% -50%; border-radius: 8px; border: 1px solid #a3bfae; background: #294a40; box-shadow: 0 3px 12px #0e1f1b; }
+.card-face { position: absolute; inset: 6px; border: 1px solid rgb(244 219 149 / .4); border-radius: 4px; display: grid; place-content: center; text-align: center; font: 700 13px var(--display); }
+.card-face b { display: block; font-size: 30px; line-height: 1.15; }
+.table > .fx-source { visibility: hidden; }
+.flight-token { box-sizing: border-box; width: 44px; height: 36px; border: 2px solid #ffe3a0; border-radius: 10px; background: #a97938; display: none; place-items: center; box-shadow: 0 3px 9px #0e1f1b; position: absolute; translate: -50% -50%; }
+.flight-token::after { content: ''; width: 0; height: 0; border-block: 7px solid transparent; border-left: 12px solid #fff2c6; }
+#token-source { left: 28%; top: 61%; }
+#target { display: none; position: absolute; left: 72%; top: 46%; translate: -50% -50%; opacity: .62; border: 1px solid #a3bfae; background: #294a40; border-radius: 8px; width: 86px; height: 118px; }
+#target.tok { width: 44px; height: 36px; }
+.table[data-route] #target, .table[data-token] #token-source { display: grid; }
+.table[data-token] #card { display: none; }
+.table[data-custom] :is(#card, #target, #token-source) { display: none; }
+#cv { inset: 0; width: 100%; height: 100%; display: none; }
+.table[data-custom] #cv { display: block; }
+@media (max-width: 480px) { .table { height: 270px; } }
+</style>
+
+<main class="wrap">
+  <header>
+    <h1>Energy and Transfers Tuner</h1>
+    <p class="sub">Beams, transfers, shots, shields, orbs, reticles and drifting shards. Move a slider to replay. Kit default leaves every value unset, so the code block shows only what you changed.</p>
+  </header>
+  <div class="table" id="table">
+    <div class="note" id="note"></div>
+    <div class="flight-token" id="token-source" aria-hidden="true"></div>
+    <div id="target" aria-hidden="true"></div>
+    <div id="card" aria-hidden="true"><div class="card-face"><b>✦</b> Card</div></div>
+    <canvas id="cv"></canvas>
+  </div>
+  <div class="toolbar">
+    <label for="verb">Effect</label>
+    <select id="verb"></select>
+    <button type="button" id="play">Play</button>
+  </div>
+  <div class="presets" role="group" aria-label="Presets">
+    <span>Start from</span><button type="button" id="reset" aria-pressed="true">Kit default</button>
+  </div>
+  <div class="ctls" id="ctls"></div>
+  <section>
+    <div class="codebar"><h2>These settings in code</h2><button type="button" id="copy">Copy</button></div>
+    <pre class="code" id="code"></pre>
+  </section>
+</main>
+
+<script>
+//@kit-js components/effect-library/index.ts as FX
+//@kit-js tuners/src/effect-library-settings.mjs as DEMO
+//@kit-js components/motion-frame/player.ts as MOTION
+const $ = (id) => document.getElementById(id);
+const table = $('table'), card = $('card'), cv = $('cv');
+const verbs = MOTION.createVerbs();
+const layer = FX.registerEffects(verbs, {
+  parent: table,
+  resolve: (id) => id === 'card' ? card : id === 'target' ? $('target') : id === 'token' ? $('token-source') : undefined,
+});
+layer.el.style.position = 'absolute';
+layer.el.style.zIndex = '1';
+let rects;
+const player = MOTION.createMotionPlayer({
+  specs: {}, stages: { default: (id) => rects[id] }, verbs, speed: () => 1, context: layer,
+  onBeatStart: (run) => {
+    for (const a of run.timeline.actors) {
+      if (a.id === 'card' && !a.hidden) card.classList.add('fx-source');
+      if (a.id === 'token' && !a.hidden) $('token-source').classList.add('fx-source');
+    }
+    layer.start(run);
+  },
+  onProblem: (problem) => console.error(problem),
+});
+
+// Parameters. def is the kit's own default, copied from the effect's destructuring (the components export few constants); undefined is omitted from the code.
+const P = (g, k, label, min, max, step, unit, help, def, o = {}) => ({ g, k, label, min, max, step, unit, help, def, type: 'range', ...o });
+const SEL = (g, k, label, choices, help, def) => ({ g, k, label, choices, help, def, type: 'select' });
+const CHK = (g, k, label, help, def, o = {}) => ({ g, k, label, help, def, type: 'check', ...o });
+const RGB = (g, k, label, help, def, comma) => ({ g, k, label, help, def, type: 'rgb', comma });
+const G = DEMO.portalSizes;
+const orb = FX.orbGeometry;
+const OG = (k, label, min, max, step, help) => P('Shape', 'geometry.' + k, label, min, max, step, '×', help, orb[k]);
+
+const E = {
+  'column-beam': { verb: 'column-beam', dur: 1000, note: 'A column of light reveals or removes the card.', params: [
+    SEL('Column', 'way', 'Direction', [['out', 'Out (card vanishes)'], ['in', 'In (card appears)']], 'Whether the card is revealed or removed.', 'out'),
+    P('Column', 'tuck', 'Tuck', 0, 80, 1, 'px', 'Amount of the card hidden at its base.', 0),
+    CHK('Column', 'core', 'Bright core', 'Adds a white column inside the beam.', false),
+    RGB('Colour', 'colour', 'Beam colour', 'Colour of the column and specks.', '255 255 255'),
+    P('Specks', 'glitter', 'Specks', 0, 130, 1, '', 'Number of rising specks.', 56),
+    P('Specks', 'speck', 'Speck size', .2, 4, .05, '×', 'Size multiplier for the specks.', 1),
+  ] },
+  'curved-beam': { verb: 'column-beam', dur: 1200, route: true, token: true, canvas: true, note: 'A curved beam carries a token between the two anchors.',
+    base: (c) => ({ curve: { control: [c.w / 2, 66], image: DEMO.neutralImage } }),
+    params: [
+      P('Curve', 'curve.control.0', 'Control across', 0, 600, 1, 'px', 'Left to right position of the curve’s control point.', (c) => c.w / 2),
+      P('Curve', 'curve.control.1', 'Control down', -100, 300, 1, 'px', 'Height of the control point from the stage top.', 66),
+      P('Curve', 'curve.unit', 'Beam scale', .25, 3, .05, '×', 'Scales beam thickness and particles.', 1),
+      P('Token', 'curve.size.0', 'Token start size', 10, 100, 1, 'px', 'Size of the token at the source.', 40),
+      P('Token', 'curve.size.1', 'Token end size', 10, 100, 1, 'px', 'Size of the token at the target.', 34),
+      CHK('Token', 'curve.tuck', 'Tuck at arrival', 'Shrinks the token away as it lands.', true),
+      RGB('Colour', 'curve.colour', 'Beam colour', 'Colour of the beam and glow.', '255,255,255', true),
+      RGB('Colour', 'curve.moteColour', 'Mote colour', 'Colour of the motes riding the beam.', '255,255,255', true),
+    ] },
+  'rotating-beam': { verb: 'rotating-beam', dur: 1600, note: 'A beam sweeps around the centre of the card.', params: [
+    P('Sweep', 'turns', 'Turns', .5, 6, .1, '×', 'Number of revolutions.', 2),
+    P('Sweep', 'beamDeg', 'Beam width', 5, 180, 1, '°', 'Angular width of the beam.', 46),
+    P('Sweep', 'fadeMs', 'Fade time', 0, 800, 1, ' ms', 'Fade in and out at the ends of the sweep.', 160),
+    RGB('Colour', 'colour', 'Beam colour', 'Colour of the beam and glow.', '255 255 255'),
+  ] },
+  'warp-transfer': { verb: 'warp-transfer', dur: 2600, route: true, token: true, note: 'Tokens move from one anchor to the other.',
+    fix: (s) => { if (s.mode === 'portal') s.portal = { ...G }; },
+    params: [
+      SEL('Transfer', 'mode', 'Mode', ['column', 'zip', 'rise', 'portal', 'crossing', 'pop', 'grey', 'bump'].map((v) => [v, v]), 'How the tokens travel.', 'column'),
+      P('Transfer', 'count', 'Tokens', 1, 9, 1, '', 'Number of tokens sent.', 1),
+      P('Transfer', 'stagger', 'Stagger', 0, 400, 1, ' ms', 'Gap between departures. The kit uses 60 for zip and 110 otherwise.', 110),
+      P('Transfer', 'lift', 'Lift', 0, 160, 1, 'px', 'Height of the rise and portal lift.', 60),
+      CHK('Light', 'crossing', 'Crossing light', 'Draws a light across the two anchors in column mode.', true),
+      P('Light', 'crossingDots', 'Crossing dots', 0, 12, 1, '', 'Dots in the crossing light.', 5),
+      RGB('Light', 'colour', 'Glow colour', 'Colour of columns, glow and crossing light.', '255 255 255'),
+      P('Zip', 'zipGhosts', 'Zip afterimages', 0, 3, 1, '', 'Fading copies behind a zipping token.', 3),
+      P('Zip', 'zipSparks', 'Zip sparks', 0, 24, 1, '', 'Sparks at the end of a zip.', 8),
+      P('Zip', 'zipPopMs', 'Zip pop', 0, 600, 1, ' ms', 'Time of the arrival pop.', 130),
+      P('Rise', 'riseMs', 'Rise time', 0, 1000, 1, ' ms', 'Time to rise above the source.', 260),
+      P('Rise', 'riseTravelMs', 'Rise travel', 0, 1000, 1, ' ms', 'Time to cross to the target after rising.', 300),
+    ] },
+  'spiral-transfer': { verb: 'warp-transfer', dur: 1800, route: true, token: true, canvas: true, note: 'A token spirals into or out of a portal and leaves a tail.',
+    base: () => ({ spiral: { image: DEMO.neutralImage } }),
+    params: [
+      CHK('Path', 'spiral.outward', 'Outward', 'Switches between leaving and arriving.', false),
+      P('Path', 'spiral.lift', 'Lift', 0, 120, 1, 'px', 'Height the token rises before spiralling.', 34),
+      P('Path', 'spiral.squash', 'Squash', .2, 1.2, .01, '×', 'Vertical compression of the orbit.', .62),
+      P('Path', 'spiral.orbit', 'Orbit size', .05, 1, .01, '×', 'Orbit radius as a share of the start distance.', .2),
+      P('Path', 'spiral.unit', 'Scale', .3, 3, .05, '×', 'Scales particles and strokes.', 1),
+      P('Token', 'spiral.heading', 'Heading', -180, 180, 1, '°', 'Direction the token faces when parked.', 0),
+      P('Token', 'spiral.nose', 'Nose angle', -180, 180, 1, '°', 'Facing angle of the artwork.', 0),
+      CHK('Token', 'spiral.flip', 'Mirror', 'Mirrors the token.', false),
+      P('Trail', 'spiral.ribbonReach', 'Ribbon length', 0, 3, .05, '×', 'Length multiplier of the tail ribbon.', 1),
+    ] },
+  projectile: { verb: 'projectile', dur: 1100, route: true, note: 'A shot stretches to the target and flickers at contact.',
+    fix: (s) => { if (s.miss === true) s.miss = { past: .3, fadeMs: 180 }; },
+    params: [
+      P('Shot', 'width', 'Width', 1, 30, .1, 'px', 'Thickness of the beam. The kit uses 4% of the target width, at least 3.', 3.4),
+      P('Shot', 'travelMs', 'Travel time', 50, 1000, 1, ' ms', 'Time to reach the target when speed is zero.', 200),
+      P('Shot', 'speed', 'Speed', 0, 5, .01, ' px/ms', 'Travel speed. Zero uses the travel time.', 0),
+      P('Shot', 'delay', 'Delay', 0, 500, 1, ' ms', 'Wait before launch.', 0),
+      CHK('Shot', 'miss', 'Miss', 'The shot flies past and retracts without a contact spot.', false),
+      P('Head', 'headScale', 'Head size', 1, 14, .1, '×', 'Head size in beam widths.', 7),
+      P('Head', 'headFadeMs', 'Head fade', 0, 500, 1, ' ms', 'Fade time of the shot head.', 80),
+      P('Contact', 'spotSize', 'Contact spot', 0, 120, 1, 'px', 'Diameter of the contact spot. The kit uses 55% of the target width.', 47),
+      RGB('Colour', 'colour', 'Beam colour', 'Colour of the beam, head and spot.', '255 255 255'),
+      RGB('Colour', 'core', 'Core colour', 'Colour of the bright centre.', '255 255 255'),
+    ] },
+  'shield-bubble': { verb: 'shield-bubble', dur: 1500, note: 'A hex shield takes a hit and can break. The page hits at 300 ms so the shield shows first; the kit hits at 0.',
+    base: () => ({ hit: 300 }), params: [
+      P('Hit', 'hit', 'Hit time', 0, 1200, 1, ' ms', 'When contact happens.', 300),
+      P('Hit', 'hitAngle', 'Hit angle', -6.28, 6.28, .01, ' rad', 'Where on the rim the hit lands.', Math.PI),
+      CHK('Hit', 'breaks', 'Breaks', 'Scatters the field on contact.', false),
+      CHK('Hit', 'attack', 'Attack timing', 'Uses the shorter impact timing.', false),
+      P('Hit', 'impactPointScale', 'Contact distance', .5, 1.5, .01, '×', 'Contact point relative to the rim.', .97),
+      P('Shield', 'radius.0', 'Radius across', 20, 160, 1, 'px', 'Horizontal field radius. The kit uses 58% of the actor width.', 50),
+      P('Shield', 'radius.1', 'Radius down', 20, 160, 1, 'px', 'Vertical field radius. The kit uses 58% of the actor height.', 68),
+      P('Shield', 'hex', 'Hex size', 4, 30, .5, 'px', 'Hex cell size. The kit uses the smaller side over 22, at least 6.', 6),
+      P('Shield', 'outline', 'Outline', .2, 4, .05, '×', 'Outline stroke multiplier.', 1.4),
+      P('Shield', 'fieldAlpha', 'Field opacity', 0, 1, .01, '', 'Base opacity of the hex field.', .14),
+      P('Impact', 'unit', 'Scale', .3, 3, .05, '×', 'Scales particles and wave travel.', 1),
+      P('Impact', 'glowAlpha', 'Glow opacity', 0, 1, .01, '', 'Opacity of the contact glow.', .7),
+      P('Impact', 'sparks.count', 'Sparks', 0, 64, 1, '', 'Sparks in each direction.', 16),
+      RGB('Colour', 'colour', 'Field colour', 'Colour of the field band.', '220,220,220', true),
+      RGB('Colour', 'rimColour', 'Rim colour', 'Colour of the rim.', '255,255,255', true),
+    ] },
+  reticle: { verb: 'reticle', dur: 1000, note: 'Corner brackets close in on the card.', params: [
+    P('Brackets', 'length', 'Arm length', 4, 60, 1, 'px', 'Length of each bracket arm.', 16),
+    P('Brackets', 'width', 'Line width', .5, 8, .1, 'px', 'Stroke width.', 2),
+    P('Brackets', 'padding.0', 'Outer gap', 0, 60, 1, 'px', 'Distance from the card before closing.', 18),
+    P('Brackets', 'padding.1', 'Locked gap', 0, 60, 1, 'px', 'Distance from the card once locked.', 6),
+    P('Brackets', 'unit', 'Scale', .5, 3, .05, '×', 'Scales gaps, length and width.', 1),
+    P('Timing', 'closeMs', 'Close time', 20, 800, 1, ' ms', 'Time to close to the locked gap.', 220),
+    P('Timing', 'fade.0', 'Fade starts', 0, 1000, 1, ' ms', 'When the fade begins.', 520),
+    P('Timing', 'fade.1', 'Fade ends', 0, 1000, 1, ' ms', 'When the brackets are gone.', 660),
+    RGB('Colour', 'colour', 'Colour', 'Colour of the brackets.', '255,255,255', true),
+  ] },
+  'plasma-orb': { custom: 'orb', note: 'A live plasma orb. Play launches it: the orb swells once.', params: [
+    P('Orb', 'r', 'Ball radius', 10, 90, 1, 'px', 'Radius of the ball, passed to drawPlasmaOrb. The page’s own size.', 40, { arg: true }),
+    CHK('Orb', 'empty', 'Exhausted ring', 'Draws the empty ring instead of the orb.', false, { arg: true }),
+    P('Orb', 'arcCount', 'Arcs', 0, 12, 1, '', 'Lightning arcs.', 5),
+    P('Orb', 'filaments', 'Filaments', 0, 10, 1, '', 'Swirling filaments.', 4),
+    P('Orb', 'motes', 'Motes', 0, 24, 1, '', 'Motes around the orb.', 10),
+    P('Pulse', 'speed', 'Speed', 0, 3, .05, '×', 'Zero freezes the orb.', 1),
+    P('Pulse', 'pulsePeriod', 'Pulse period', 400, 6000, 10, ' ms', 'Time for one pulse.', 2400),
+    P('Pulse', 'pulseAmount', 'Pulse size', 0, .3, .005, '×', 'How much the orb grows and shrinks in a pulse.', .05),
+    P('Pulse', 'swell', 'Launch swell', 0, .6, .01, '×', 'Extra growth at the launch swell.', .1),
+    OG('haloRadius', 'Halo radius', .5, 4, .05, 'Halo size in ball radii.'),
+    OG('filamentRadius', 'Filament radius', .2, 1.5, .01, 'Filament size in ball radii.'),
+    OG('filamentWave', 'Filament wave', 0, .6, .01, 'Wobble of the filaments.'),
+    OG('filamentTwist', 'Filament twist', 0, 1, .01, 'How far the filaments twist during a pulse.'),
+    OG('arcStart', 'Arc start', 0, 1, .01, 'Where arcs start, in ball radii.'),
+    OG('jagSize', 'Arc jag', 0, .5, .01, 'Sideways kink of arcs.'),
+    OG('moteRadius', 'Mote distance', .5, 2.5, .01, 'Mote orbit in ball radii.'),
+  ] },
+  'drift-cloud': { custom: 'drift', note: 'Shards drift out from the centre in cohorts. Play restarts the cloud.', params: [
+    P('Cloud', 'u', 'Unit size', 2, 14, .5, 'px', 'Pixels per drawing unit, passed to drawDriftCloud. The page’s own size.', 6, { arg: true }),
+    P('Cloud', 'pieceCount', 'Pieces', 1, 16, 1, '', 'Shards per cohort.', 5),
+    P('Cloud', 'cohortCount', 'Cohorts', 1, 6, 1, '', 'Cohorts alive at once.', 3),
+    P('Cloud', 'life', 'Life', 1000, 12000, 100, ' ms', 'Time a shard drifts before it fades out.', 5000),
+    P('Cloud', 'emerge', 'Emerge', 0, 2000, 10, ' ms', 'Fade-in time.', 500),
+    P('Cloud', 'opacity', 'Opacity', 0, 1, .01, '', 'Peak opacity.', .8),
+    P('Cloud', 'cohortDim', 'Cohort dimming', 0, .4, .01, '', 'How much older cohorts dim.', .1),
+    P('Motion', 'speed.0', 'Base speed', 0, 6, .1, ' units/s', 'Slowest drift speed.', 2),
+    P('Motion', 'speed.1', 'Speed steps', 0, 3, .05, ' units/s', 'Speed added per band.', .6),
+    P('Motion', 'startRadius', 'Start radius', 0, 40, .5, ' units', 'Distance from the centre at birth.', 6),
+    P('Motion', 'aspect', 'Aspect', .2, 1.5, .01, '×', 'Vertical squash of the drift.', .8),
+    P('Motion', 'shrink', 'Shrink', 0, .2, .005, '× per s', 'How fast shards shrink.', .05),
+    P('Shards', 'firstSize', 'First shard size', 2, 60, 1, ' units', 'Size of the first shard.', 22),
+    P('Shards', 'size', 'Other shard size', 2, 40, 1, ' units', 'Base size of the other shards.', 11),
+    P('Shards', 'emberEvery', 'Ember every', 1, 8, 1, ' shards', 'Every Nth shard carries a spark.', 3),
+  ] },
+};
+const ORDER = ['column-beam', 'curved-beam', 'rotating-beam', 'warp-transfer', 'spiral-transfer', 'projectile', 'shield-bubble', 'plasma-orb', 'reticle', 'drift-cloud'];
+for (const id of ORDER) $('verb').append(new Option(id, id));
+const initial = new URLSearchParams(location.search).get('fx');
+if (E[initial]) $('verb').value = initial;
+
+const setp = (o, path, v) => {
+  const ks = path.split('.');
+  let c = o;
+  ks.forEach((k, i) => { if (i === ks.length - 1) c[k] = v; else c = c[k] ??= /^\d+$/.test(ks[i + 1]) ? [] : {}; });
+};
+const getp = (o, path) => path.split('.').reduce((c, k) => c?.[k], o);
+const ctx = () => ({ w: table.clientWidth, h: table.clientHeight });
+const defOf = (p) => typeof p.def === 'function' ? p.def(ctx()) : p.def;
+let vals = {}, stop;
+
+function settingsFor(e, only) {
+  const step = e.base ? structuredClone(e.base(ctx())) : {};
+  for (const [k, v] of Object.entries(vals)) if (!e.params.find((p) => p.k === k)?.arg) setp(step, k, v);
+  for (const p of e.params) {
+    const m = p.k.match(/^(.*)\.(\d+)$/);
+    const arr = m && getp(step, m[1]);
+    if (Array.isArray(arr)) for (const q of e.params) if (q.k.startsWith(m[1] + '.') && !(q.k.slice(m[1].length + 1) in arr)) arr[+q.k.slice(m[1].length + 1)] ??= defOf(q);
+  }
+  e.fix?.(step);
+  return step;
+}
+
+function code(e, id, step) {
+  if (e.custom === 'orb') {
+    const s = JSON.stringify(step, null, 2).replace('"geometry": {', '"geometry": {\n    ...orbGeometry,');
+    return `drawPlasmaOrb(ctx, x, y, ${vals.r ?? 40}, t, ${vals.empty ?? false}, boost, ${s});`;
+  }
+  if (e.custom === 'drift') return `const settings = ${JSON.stringify(step, null, 2)};\nconst cohorts = syncDriftCloud(prev, ids, new Set(), now, 1, false, settings);\ndrawDriftCloud(ctx, { w, h, u: ${vals.u ?? 6}, now, scale: 1, cohorts, art, empty: false, settings });`;
+  const beat = { t: 0, dur: e.dur, actor: e.token ? 'token' : 'card', do: e.verb, ...(e.route && { to: 'destination' }), ...step };
+  return `const step = ${JSON.stringify(beat, null, 2)};`;
+}
+
+function render() {
+  const e = E[$('verb').value];
+  $('reset').setAttribute('aria-pressed', String(Object.keys(vals).length === 0));
+  const out = $('ctls');
+  out.replaceChildren();
+  const groups = new Map();
+  for (const p of e.params) {
+    const box = groups.get(p.g) ?? out.appendChild(Object.assign(document.createElement('fieldset'), { innerHTML: `<legend>${p.g}</legend>` }));
+    groups.set(p.g, box);
+    const d = document.createElement('div');
+    d.className = 'ctl';
+    const id = 'p-' + p.k.replaceAll('.', '-');
+    const v = vals[p.k], def = defOf(p), cur = v ?? def, kit = v === undefined;
+    const fmt = (x) => p.type === 'check' ? (x ? 'On' : 'Off') : p.type === 'select' ? '' : p.type === 'rgb' ? x : `${Math.round(x * 1000) / 1000}${p.unit}`;
+    let inner = `<label for="${id}">${p.label}</label><output id="o-${id}" class="${kit ? 'kit' : ''}">${fmt(cur)}${kit ? ' · kit' : ''}</output>`;
+    if (p.type === 'range') inner += `<input id="${id}" class="${kit ? 'kit' : ''}" type="range" min="${p.min}" max="${p.max}" step="${p.step}" value="${cur}">`;
+    if (p.type === 'select') inner += `<select id="${id}">${p.choices.map(([c, l]) => `<option value="${c}"${String(c) === String(cur) ? ' selected' : ''}>${l}</option>`).join('')}</select>`;
+    if (p.type === 'check') inner += `<input id="${id}" type="checkbox"${cur ? ' checked' : ''}>`;
+    if (p.type === 'rgb') inner += `<input id="${id}" type="color" value="#${String(cur).split(/[ ,]/).map((n) => Number(n).toString(16).padStart(2, '0')).join('')}">`;
+    inner += `<small>${p.help}</small>`;
+    d.innerHTML = inner;
+    box.append(d);
+    const input = d.querySelector('input,select');
+    input.addEventListener('input', () => {
+      let x = input.value;
+      if (p.type === 'range') x = Number(x);
+      if (p.type === 'check') x = input.checked;
+      if (p.type === 'select') x = isNaN(Number(x)) ? x : Number(x);
+      if (p.type === 'rgb') x = [1, 3, 5].map((i) => parseInt(x.slice(i, i + 2), 16)).join(p.comma ? ',' : ' ');
+      vals[p.k] = x;
+      const o = $('o-' + id);
+      o.className = '';
+      o.textContent = fmt(x);
+      input.classList.remove('kit');
+      $('reset').setAttribute('aria-pressed', 'false');
+      if (p.k === 'mode') render();
+      replay();
+    });
+  }
+}
+
+let queued = 0;
+const replay = () => { cancelAnimationFrame(queued); queued = requestAnimationFrame(play); };
+
+function play() {
+  stop?.();
+  stop = undefined;
+  player.skipAll();
+  layer.clear();
+  for (const n of [card, $('token-source')]) n.classList.remove('fx-source');
+  const id = $('verb').value, e = E[id];
+  $('note').textContent = e.note;
+  const step = settingsFor(e);
+  $('code').textContent = code(e, id, step);
+  table.toggleAttribute('data-custom', Boolean(e.custom));
+  table.toggleAttribute('data-route', Boolean(e.route));
+  table.toggleAttribute('data-token', Boolean(e.token));
+  $('target').classList.toggle('tok', Boolean(e.token));
+  card.style.setProperty('--cx', e.route ? '28%' : '50%');
+  card.style.setProperty('--cy', e.route ? '61%' : '54%');
+  if (e.custom) {
+    const w = cv.width = table.clientWidth, h = cv.height = table.clientHeight;
+    stop = CUSTOM[e.custom](cv.getContext('2d'), w, h, step);
+    return;
+  }
+  const src = e.token ? $('token-source') : card, to = $('target');
+  const w = src.offsetWidth, h = src.offsetHeight, tw = table.clientWidth, th = table.clientHeight;
+  const fx = e.route ? tw * .28 : tw / 2, fy = e.route ? th * .61 : th * .54;
+  rects = { home: [fx - w / 2, fy - h / 2, w, h], destination: [tw * .72 - to.offsetWidth / 2, th * .46 - to.offsetHeight / 2, to.offsetWidth, to.offsetHeight] };
+  const actor = e.token ? 'token' : 'card';
+  player.play({ id: 'preview', maxMs: e.dur, actors: [{ id: actor, at: 'home', ...(e.canvas && { hidden: true }) }],
+    steps: [{ t: 0, dur: e.dur, actor, do: e.verb, ...(e.route && { to: 'destination' }), ...step }] });
+}
+
+const art = (() => {
+  const c = document.createElement('canvas');
+  c.width = c.height = 64;
+  const g = c.getContext('2d');
+  const grad = g.createLinearGradient(0, 0, 64, 64);
+  grad.addColorStop(0, '#f4db95'); grad.addColorStop(1, '#a97938');
+  g.fillStyle = grad; g.fillRect(0, 0, 64, 64);
+  g.strokeStyle = '#17302a'; g.lineWidth = 3;
+  for (let i = 0; i < 64; i += 16) { g.beginPath(); g.moveTo(i, 0); g.lineTo(64, 64 - i); g.stroke(); }
+  return { img: c, w: 64, h: 64 };
+})();
+
+const CUSTOM = {
+  orb(c, w, h, s) {
+    const t0 = performance.now();
+    let raf;
+    const frame = (now) => {
+      c.clearRect(0, 0, w, h);
+      FX.drawPlasmaOrb(c, w / 2, h / 2, vals.r ?? 40, now - t0, vals.empty ?? false, FX.plasmaSwellAt(now - t0, 80, 180), { ...s, ...(s.geometry && { geometry: { ...orb, ...s.geometry } }) });
+      raf = requestAnimationFrame(frame);
+    };
+    raf = requestAnimationFrame(frame);
+    return () => cancelAnimationFrame(raf);
+  },
+  drift(c, w, h, s) {
+    const t0 = performance.now();
+    const ids = ['a', 'b', 'c', 'd', 'e', 'f'].slice(0, s.cohortCount ?? 3);
+    const cohorts = FX.syncDriftCloud([], ids, new Set(), t0, 1, false, s);
+    let raf;
+    const frame = (now) => {
+      c.clearRect(0, 0, w, h);
+      FX.drawDriftCloud(c, { w, h, u: vals.u ?? 6, now, scale: 1, cohorts, art: () => art, empty: false, settings: s });
+      raf = requestAnimationFrame(frame);
+    };
+    raf = requestAnimationFrame(frame);
+    return () => cancelAnimationFrame(raf);
+  },
+};
+
+$('verb').addEventListener('change', () => { vals = {}; render(); play(); });
+$('play').addEventListener('click', play);
+$('reset').addEventListener('click', () => { vals = {}; render(); play(); });
+$('copy').addEventListener('click', () => navigator.clipboard?.writeText($('code').textContent));
+render();
+play();
+</script>

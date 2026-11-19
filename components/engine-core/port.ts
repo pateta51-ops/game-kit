@@ -49,6 +49,12 @@ export interface EnginePort<G extends PortTypes, W = never> {
   put?(s: Draft<G['state']>, card: string, where: W): string;
   /** Put `tasks` on `s` to run next, the first first (Scenario `run`). */
   push?(s: Draft<G['state']>, tasks: readonly G['task'][]): void;
+  /** K404: words for an event marked `reveal: true` (Safe undo refuses its step). */
+  revealWords?(event: G['event']): string | undefined;
+  /** K404: set, Safe undo also refuses a step that moved the rng (`rng`), with these words. */
+  readonly randomWords?: string;
+  /** K404: the rng state, compared before and after a step when `randomWords` is set. */
+  rng?(s: G['state']): unknown;
 }
 
 export interface PortStep<G extends PortTypes> {
@@ -97,5 +103,7 @@ export function kernelPort<G extends GameTypes, W = never>(
       for (let i = tasks.length - 1; i >= 0; i -= 1) (s.stack as unknown[]).push(structuredClone(tasks[i]));
     },
     ...(o.put === undefined ? {} : { put: o.put }),
+    ...(rules.revealWords === undefined ? {} : { revealWords: (e: G['event']) => rules.revealWords?.(e) }),
+    ...(rules.randomWords === undefined ? {} : { randomWords: rules.randomWords, rng: (s: G['state']) => s.rng }),
   };
 }

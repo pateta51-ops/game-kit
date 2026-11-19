@@ -76,6 +76,15 @@ legend { font: 700 12px var(--display); text-transform: uppercase; letter-spacin
 .demo-marker { position: absolute; top: 50%; left: 50%; color: #fff; font: 600 13px var(--mono); }
 @media (max-width: 480px) { .table { height: 270px; } }
 /*@kit-css components/effect-library/looks/rise-pulse.css*/
+.gl-stage { background: radial-gradient(120% 90% at 50% 100%, #1f4038, var(--felt) 60%, var(--felt-edge)); border-radius: 14px; border: 1px solid var(--line); height: 200px; display: grid; place-items: center; overflow: hidden; }
+#gl-word { font: 700 clamp(36px, 12vw, 84px)/1 var(--display); letter-spacing: .06em; color: #f4db95; margin: 0; }
+.gl-bar { display: flex; flex-wrap: wrap; gap: 8px 14px; align-items: center; }
+.gl-bar button, .gl-bar input { font: 600 13px var(--body); color: var(--fg); background: #232b2e; border: 1px solid var(--line); border-radius: 6px; padding: 7px 12px; }
+.gl-bar input { width: 9ch; font-weight: 400; }
+.gl-sec { display: grid; gap: 12px; margin-top: 18px; }
+.gl-sec > h2 { font: 700 18px var(--display); margin: 0; }
+.ctl input[type=color] { height: 34px; padding: 2px; }
+/*@kit-css components/effect-library/looks/glitch.css*/
 </style>
 
 <main class="wrap">
@@ -101,6 +110,7 @@ legend { font: 700 12px var(--display); text-transform: uppercase; letter-spacin
     <button type="button" id="play">Play</button>
     <button type="button" id="stop" hidden>Stop</button>
     <label><input type="checkbox" id="sequence"> Play a sequence</label>
+    <a href="#glitch">Glitch (wordmark) ↓</a>
   </div>
   <div class="presets" role="group" aria-label="Presets">
     <span>Start from</span><button type="button" id="reset" aria-pressed="true">Kit default</button>
@@ -109,6 +119,19 @@ legend { font: 700 12px var(--display); text-transform: uppercase; letter-spacin
   <section>
     <div class="codebar"><h2>These settings in code</h2><button type="button" id="copy">Copy</button></div>
     <pre class="code" id="code"></pre>
+  </section>
+  <section class="gl-sec" id="glitch">
+    <h2>Glitch</h2>
+    <p class="sub">createGlitch on a wordmark: a two-colour split, slices, a dropout frame and an optional repeat. Burst plays one now; Tear is the longer victory or defeat version.</p>
+    <div class="gl-stage"><h1 id="gl-word">SIGNAL</h1></div>
+    <div class="gl-bar">
+      <button type="button" id="gl-burst">Burst</button><button type="button" id="gl-tear">Tear</button>
+      <label>Seed <input type="number" id="gl-seed" value="7" step="1"></label>
+    </div>
+    <div class="presets" role="group" aria-label="Glitch presets"><span>Start from</span><button type="button" id="gl-reset" aria-pressed="true">Kit default</button></div>
+    <div class="ctls" id="gl-ctls"></div>
+    <div class="codebar"><h2>These settings in code</h2><button type="button" id="gl-copy">Copy</button></div>
+    <pre class="code" id="gl-code"></pre>
   </section>
 </main>
 
@@ -926,5 +949,74 @@ $('copy').addEventListener('click', async () => {
 matchMedia('(prefers-reduced-motion: reduce)').addEventListener('change', play);
 selectEffect();
 new ResizeObserver(play).observe(table);
+</script>
+<script>
+{
+const probe = document.createElement('div');
+probe.className = 'fx-glitch';
+document.body.append(probe);
+const cs = getComputedStyle(probe);
+const hex = (c) => '#' + c.match(/\d+/g).slice(0, 3).map((n) => Number(n).toString(16).padStart(2, '0')).join('');
+const colour = (v) => { probe.style.color = cs.getPropertyValue(v); return hex(getComputedStyle(probe).color); };
+// Colours, offsets, dropout and burst time come from looks/glitch.css; the rest are createGlitch's own defaults, which the component does not export (kit gap).
+const KIT = {
+  a: colour('--glitch-a'), b: colour('--glitch-b'), split: parseFloat(cs.getPropertyValue('--glitch-split')), jump: parseFloat(cs.getPropertyValue('--glitch-jump')),
+  dropout: parseFloat(cs.getPropertyValue('--glitch-dropout')), burstMs: parseFloat(cs.getPropertyValue('--glitch-ms')),
+  tearMs: 600, idleMin: 3500, idleMax: 7000, slices: 3, repeat: .25,
+};
+probe.remove();
+const rows = [
+  ['Colours', [['a', 'Colour A', 'color', 0, 0, '', 'Colour of the first copy and the even slices.'], ['b', 'Colour B', 'color', 0, 0, '', 'Colour of the second copy and the odd slices.']]],
+  ['Offsets', [['split', 'Colour split', 0, 5, .1, '%', 'How far the two colour copies sit from the word, as a share of its width.'], ['jump', 'Slice jump', 0, 10, .1, '%', 'How far the slices slide sideways, as a share of the width.']]],
+  ['Timing', [['burstMs', 'Burst frame time', 50, 1000, 10, ' ms', 'How long one burst lasts.'], ['tearMs', 'Tear frame time', 100, 2000, 10, ' ms', 'How long a tear lasts.'], ['idleMin', 'Idle gap, shortest', 0, 15000, 100, ' ms', 'Shortest still time between automatic bursts.'], ['idleMax', 'Idle gap, longest', 0, 15000, 100, ' ms', 'Longest still time between automatic bursts.']]],
+  ['Shape', [['slices', 'Slice count', 0, 8, 1, '', 'Horizontal strips that slide during a burst.'], ['dropout', 'Dropout opacity', 0, 1, .01, '', 'How faint the word gets at the dropout frame; 1 shows no dropout.'], ['repeat', 'Repeat chance', 0, 1, .01, '', 'Chance that an automatic burst plays twice.']]],
+];
+let g = { ...KIT }, glitch, seed = 7;
+const word = document.getElementById('gl-word'), box = document.getElementById('gl-ctls');
+const fixed = (v) => Number(v.toFixed(2));
+const start = () => {
+  glitch?.destroy();
+  glitch = FX.createGlitch(word, { speed: () => 1, seed, colours: [g.a, g.b], split: g.split, jump: g.jump, dropout: g.dropout, burstMs: g.burstMs, tearMs: g.tearMs,
+    idleMs: [Math.min(g.idleMin, g.idleMax), Math.max(g.idleMin, g.idleMax)], slices: g.slices, repeat: g.repeat });
+};
+const code = () => {
+  const o = [`seed: ${seed}`];
+  const diff = (k, text) => { if (g[k] !== KIT[k]) o.push(text); };
+  if (g.a !== KIT.a || g.b !== KIT.b) o.push(`colours: ['${g.a}', '${g.b}']`);
+  diff('split', `split: ${fixed(g.split)}`); diff('jump', `jump: ${fixed(g.jump)}`); diff('dropout', `dropout: ${fixed(g.dropout)}`);
+  diff('burstMs', `burstMs: ${g.burstMs}`); diff('tearMs', `tearMs: ${g.tearMs}`);
+  if (g.idleMin !== KIT.idleMin || g.idleMax !== KIT.idleMax) o.push(`idleMs: [${Math.min(g.idleMin, g.idleMax)}, ${Math.max(g.idleMin, g.idleMax)}]`);
+  diff('slices', `slices: ${g.slices}`); diff('repeat', `repeat: ${fixed(g.repeat)}`);
+  document.getElementById('gl-code').textContent = `const glitch = createGlitch(logo, {\n  speed: () => 1,\n  ${o.join(',\n  ')},\n})\nglitch.burst() // or glitch.tear()\n\n/* looks/glitch.css, imported once */`;
+  document.getElementById('gl-reset').setAttribute('aria-pressed', String(Object.keys(KIT).every((k) => g[k] === KIT[k]) && seed === 7));
+};
+const inputs = {};
+for (const [title, fields] of rows) {
+  const fs = document.createElement('fieldset');
+  fs.innerHTML = `<legend>${title}</legend>`;
+  for (const [key, label, min, max, step, unit, help] of fields) {
+    const c = document.createElement('div');
+    c.className = 'ctl';
+    const color = min === 'color';
+    c.innerHTML = `<label for="gl-${key}">${label}</label><output></output><input id="gl-${key}" type="${color ? 'color' : 'range'}" ${color ? '' : `min="${min}" max="${max}" step="${step}"`}><small>${help}</small>`;
+    const input = c.querySelector('input'), out = c.querySelector('output');
+    inputs[key] = () => { input.value = g[key]; out.textContent = color ? g[key] : fixed(g[key]) + unit; };
+    input.addEventListener('input', () => { g[key] = color ? input.value : Number(input.value); inputs[key](); start(); code(); glitch.burst(); });
+    fs.append(c);
+  }
+  box.append(fs);
+}
+const sync = () => { for (const f of Object.values(inputs)) f(); code(); };
+document.getElementById('gl-burst').addEventListener('click', () => glitch.burst());
+document.getElementById('gl-tear').addEventListener('click', () => glitch.tear());
+document.getElementById('gl-seed').addEventListener('input', (e) => { seed = Math.trunc(Number(e.target.value)) || 0; start(); code(); glitch.burst(); });
+document.getElementById('gl-reset').addEventListener('click', () => { g = { ...KIT }; seed = 7; document.getElementById('gl-seed').value = 7; sync(); start(); glitch.burst(); });
+document.getElementById('gl-copy').addEventListener('click', async () => {
+  const b = document.getElementById('gl-copy');
+  try { await navigator.clipboard.writeText(document.getElementById('gl-code').textContent); b.textContent = 'Copied'; } catch { b.textContent = 'Select and copy'; }
+  setTimeout(() => { b.textContent = 'Copy'; }, 1800);
+});
+sync(); start();
+}
 </script>
 </html>
