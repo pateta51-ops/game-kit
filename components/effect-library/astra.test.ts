@@ -35,10 +35,23 @@ describe('K460 effect-library defaults', () => {
     const img = el.querySelector<HTMLElement>('[data-fx-part="label"]')!;
     expect([img.style.left, img.style.width, img.style.height, img.style.background, img.style.objectFit]).toEqual(['0px', '100%', '100%', 'none', 'contain']);
   });
-  it('K460 stamp with text has a default look: bare lettering, no #222 box', () => {
+  it('K460 stamp with text keeps the boxed #222 label by default', () => {
     const { el } = setup({ do: 'stamp', text: 'Victory' });
     const t = el.querySelector<HTMLElement>('[data-fx-part="label"]')!;
-    expect([t.style.background, t.style.borderWidth, t.style.width]).toEqual(['none', '0px', '100%']);
+    expect([t.style.left, t.style.width, t.style.background]).toEqual(['8%', '84%', 'rgb(34, 34, 34)']);
+  });
+  it('K460 stamp look bare: lettering over the actor with font parts set separately', () => {
+    const { el } = setup({ do: 'stamp', text: 'Victory', look: 'bare' });
+    const t = el.querySelector<HTMLElement>('[data-fx-part="label"]')!;
+    expect([t.style.background, t.style.borderWidth, t.style.width, t.style.fontWeight, t.style.fontSize, t.style.lineHeight]).toEqual(['none', '0px', '100%', '700', '4em', '1']);
+  });
+  it('K460 stamp ring with its own style gains no border', () => {
+    const { el } = setup({ do: 'stamp', text: 'x', ring: { ms: 50, delay: 0, style: { background: 'red' }, frames: [{ opacity: 0 }, { opacity: 1 }] } });
+    expect(el.querySelector<HTMLElement>('[data-fx-part="ring"]')!.style.borderWidth).toBe('');
+  });
+  it('K460 stamp ring with no style gets a currentColor border', () => {
+    const { el } = setup({ do: 'stamp', text: 'x', ring: { ms: 50, delay: 0 } });
+    expect(el.querySelector<HTMLElement>('[data-fx-part="ring"]')!.style.borderWidth).toBe('3px');
   });
   it('K460 stamp style still overrides the default look', () => {
     const { el } = setup({ do: 'stamp', text: 'x', style: { background: '#222' } });
