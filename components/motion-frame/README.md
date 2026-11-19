@@ -7,6 +7,7 @@ Plays motion specs in the director's format (one JSON per beat: `actors`, `steps
 ## Player (`player.ts`)
 `createVerbs()` is the registry the effect library and the game fill: `register(name, (call, run) => finish?)`. `run` is `{ id, timeline, context }`; the returned `finish` is called once, at the call's end or on a skip.
 `createMotionPlayer({ specs, stages, verbs, speed, context, onCue?, onBeatStart?, onBeatEnd?, onProblem? })`:
+- K448 timing: steps start and end at offsets from one `performance.now()` read at play start (no drift); step times and lengths keep fractional ms. A verb's returned finish may carry `finished` (a promise of its animations, type `Finish`): the step ends when its time is up and the promise settled (100 ms grace after the time if it never settles), and the beat end (`onBeatEnd`, `layer.end`, `onEnd`) waits for those; a skip ends everything at once. Not done from the row: Warp's multi-target beats, never-click-tabs, horizontal scrollPan, `back()` to a given tab, run at commit.
 - `play(beat, { onEnd? })`: a beat name, or a spec the game built from a template. Beats play in order, one at a time; with `parallel: true` a beat starts at once beside the one playing, outside the queue (for `constant` beats of one answer that overlap). `skipAll`, `pending()` and `busy()` count it.
 - `play(beat, { commit?, data? })`: commit applies the game's next state once, in queue order.
   `onBeatStart` sees `run.data` before commit, including when a queued commit is snapped.
