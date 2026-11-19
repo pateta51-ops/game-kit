@@ -4404,6 +4404,7 @@ var FX = (() => {
       colour = "200 210 228",
       grain = "calc(var(--u, 4px) * 6)"
     } = call.step;
+    if (call.dur <= 0) return void 0;
     const sc = call.dur / Math.max(1, Number(call.step.dur));
     const offsets = [0.12, 0.3, 0.48, 0.66];
     animate([
@@ -4450,6 +4451,7 @@ var FX = (() => {
   var sparkBurst = (fx) => {
     const { call } = fx;
     const { box = call.from, count = 34, colour = "white", ms = Number(call.step.dur), delay = 0, size = 8, fall = 0, z = 5, seed = 0 } = call.step;
+    if (call.dur <= 0) return void 0;
     const reach = call.step.reach ?? Math.max(box[2], box[3]) * 0.8;
     const x = box[0] + box[2] / 2, y = box[1] + box[3] / 2;
     const stage = scene(fx);
@@ -5047,16 +5049,19 @@ void main() {
         if (call.step["then"] === "hide") css(el, { visibility: "hidden" });
       };
     }
-    const resize = call.step["resize"] === true;
+    const rs = nums(call.step["resize"]);
+    const resize = call.step["resize"] === true || rs?.length === 2;
     const dx = resize ? t[0] + t[2] / 2 - f[0] - f[2] / 2 : t[0] - f[0];
     const dy = resize ? t[1] + t[3] / 2 - f[1] - f[3] / 2 : t[1] - f[1];
+    const [sw, sh] = rs?.length === 2 ? rs : [t[2], t[3]];
+    const land = resize ? [t[0] + t[2] / 2 - sw / 2, t[1] + t[3] / 2 - sh / 2, sw, sh] : t;
     const pc = call.step["percent"] === true;
     const tr = (k) => pc ? `${String(dx * k / Math.max(1, f[2]) * 100)}% ${String(dy * k / Math.max(1, f[3]) * 100)}%` : `${String(dx * k)}px ${String(dy * k)}px`;
     const rv = call.step["rotate"];
     const rot = typeof rv === "number" ? [0, rv] : nums(rv)?.length === 2 ? nums(rv) : void 0;
     const sv = call.step["scale"];
     const ent = typeof sv === "number" ? [sv, call.step["hold"] === true ? sv : 1] : nums(sv)?.length === 2 ? nums(sv) : void 0;
-    const kx = resize ? t[2] / Math.max(1, f[2]) : 1, ky = resize ? t[3] / Math.max(1, f[3]) : 1;
+    const kx = resize ? sw / Math.max(1, f[2]) : 1, ky = resize ? sh / Math.max(1, f[3]) : 1;
     const sizeAt = (k) => {
       const s = ent ? ent[0] + (ent[1] - ent[0]) * k : 1;
       return [s * (1 + (kx - 1) * k), s * (1 + (ky - 1) * k)];
@@ -5074,7 +5079,7 @@ void main() {
     const end = tf ? { transform: String(last.transform) } : { translate: "", ...rot ? { rotate: rot[1] ? `${String(rot[1])}deg` : "" } : {}, ...curves ? { scale: lastScale(scaleCurves(call, () => [ent?.[1] ?? 1, ent?.[1] ?? 1])) } : {} };
     animate(frames2, end, { easing: EASE[String(call.step["ease"])] ?? (typeof call.step["ease"] === "string" ? call.step["ease"] : "ease-in-out") });
     return () => {
-      if (!tf) place(el, t);
+      if (!tf) place(el, land);
       if (call.step["then"] === "hide") css(el, { visibility: "hidden" });
     };
   }

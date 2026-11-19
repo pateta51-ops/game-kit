@@ -4,9 +4,12 @@
 //                                                 into main (what the pull_request event tests)
 //   node .github/scripts/full-gate.mjs browsers  install Playwright's Chromium and WebKit (with system libraries where
 //                                                 sudo works)
-//   node .github/scripts/full-gate.mjs e2e       run each npm script of E2E_SCRIPTS (default test:e2e) on a free port, in order
-import { execFileSync, spawnSync } from 'node:child_process';
-import { appendFileSync, existsSync, readFileSync } from 'node:fs';
+//   node .github/scripts/full-gate.mjs e2e       run each npm script of E2E_SCRIPTS (default test:e2e) on a free port, in order, within an overall
+//                                                 cap (E2E_CAP_MS, default 10 min; playwright-caps.ts reads E2E_GLOBAL_TIMEOUT_MS and E2E_RUNNING_FILE); a capped run prints the tests that were running
+import { execFileSync, spawn, spawnSync } from 'node:child_process';
+import { appendFileSync, existsSync, readFileSync, rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { createServer } from 'node:net';
 
 const isWindows = process.platform === 'win32';
@@ -63,9 +66,39 @@ async function e2e() {
     });
   });
   console.log(`e2e port: ${port}`);
-  const env = { ...process.env, E2E_PORT: String(port) };
-  // every suite always runs, in order, so a later failure never hides an earlier one
-  const codes = E2E_SCRIPTS.map((script) => spawnSync('npm', ['run', script], { stdio: 'inherit', env, shell: isWindows }).status);
+  const cap = Number(process.env.E2E_CAP_MS) || 600_000;
+  const runningFile = join(tmpdir(), `e2e-running-${String(process.pid)}.txt`);
+  const start = Date.now();
+  // every suite always runs, in order, so a later failure never hides an earlier one; the cap is shared by all of them
+  const codes = [];
+  for (const script of E2E_SCRIPTS) {
+    const left = Math.max(cap - (Date.now() - start), 1000);
+    const env = { ...process.env, E2E_PORT: String(port), E2E_RUNNING_FILE: runningFile, E2E_GLOBAL_TIMEOUT_MS: String(left) };
+    // Playwright's own globalTimeout fires first; the kill of the whole process tree later is for a hung runner
+    const child = spawn('npm', ['run', script], { stdio: 'inherit', env, shell: isWindows, detached: !isWindows });
+    let capped = false;
+    const timer = setTimeout(() => {
+      capped = true;
+      if (isWindows) spawnSync('taskkill', ['/T', '/F', '/PID', String(child.pid)]);
+      else
+        try {
+          process.kill(-child.pid, 'SIGKILL');
+        } catch {
+          child.kill('SIGKILL');
+        }
+    }, left + (Number(process.env.E2E_KILL_GRACE_MS) || 30_000));
+    const status = await new Promise((resolve) => {
+      child.once('error', () => resolve(1));
+      child.once('close', (code) => resolve(code));
+    });
+    clearTimeout(timer);
+    if (capped) {
+      const running = existsSync(runningFile) ? readFileSync(runningFile, 'utf8').split('\n').filter(Boolean) : [];
+      console.error(`::error::e2e ${script} capped after ${String(Math.round((Date.now() - start) / 1000))} s; running: ${running.join('; ') || 'unknown'}`);
+      codes.push(124);
+    } else codes.push(status);
+  }
+  rmSync(runningFile, { force: true });
   if (codes.some((c) => c !== 0)) fail(`e2e: ${E2E_SCRIPTS.map((s, i) => `${s} exit ${String(codes[i])}`).join(', ')}`);
 }
 

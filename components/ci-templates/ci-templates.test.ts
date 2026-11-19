@@ -3,7 +3,7 @@ import { spawn, spawnSync } from 'node:child_process';
 import { chmodSync, cpSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { afterAll, describe, expect, it } from 'vitest';
+import { afterAll, describe, expect, it, vi } from 'vitest';
 import YAML from 'yaml';
 
 const here = import.meta.dirname;
@@ -66,7 +66,7 @@ describe('rendered files', () => {
     expect(go().status).toBe(2);
     writeFileSync(join(root, 'ci.config.json'), JSON.stringify({ repo: 'acme/widget' }));
     expect(go().status).toBe(2);
-    writeFileSync(join(root, 'ci.config.json'), JSON.stringify({ repo: 'acme/widget', runnerLabel: 'widget', queueWaitMinutes: false }));
+    writeFileSync(join(root, 'ci.config.json'), JSON.stringify({ repo: 'acme/widget', runnerLabel: 'widget', queueWaitMinutes: false, docsSkip: false }));
     expect(go('--check').status).toBe(1);
     expect(go().status).toBe(0);
     const wf = (f: string): string => readFileSync(join(root, '.github/workflows', f), 'utf8');
@@ -89,7 +89,7 @@ describe('rendered files', () => {
     expect(go().status).toBe(0);
     expect(wf('nightly-fuzz.yml')).toContain("github.repository_owner == 'boss'");
     // a game's extras: paths a push to main ignores, and CI on draft pull requests too
-    writeFileSync(join(root, 'ci.config.json'), JSON.stringify({ repo: 'acme/widget', runnerLabel: 'widget', pathsIgnore: ['bugs/**', 'notes/**'], runDrafts: true }));
+    writeFileSync(join(root, 'ci.config.json'), JSON.stringify({ repo: 'acme/widget', runnerLabel: 'widget', pathsIgnore: ['bugs/**', 'notes/**'], runDrafts: true, docsSkip: false }));
     expect(go().status).toBe(0);
     expect(wf('ci.yml')).toContain('  push:\n    branches: [main]\n    paths-ignore: ["bugs/**", "notes/**"]\n  pull_request:\n\nconcurrency:');
     expect(wf('ci.yml')).toContain("    if: github.repository_owner == 'acme'\n");
@@ -102,7 +102,7 @@ describe('rendered files', () => {
     const root = join(dir, 'steps');
     mkdirSync(join(root, 'kit'), { recursive: true });
     cpSync(here, join(root, 'kit/ci-templates'), { recursive: true });
-    const base = { repo: 'acme/widget', runnerLabel: 'widget', queueWaitMinutes: false };
+    const base = { repo: 'acme/widget', runnerLabel: 'widget', queueWaitMinutes: false, docsSkip: false };
     const go = (cfg: object): string => {
       writeFileSync(join(root, 'ci.config.json'), JSON.stringify({ ...base, ...cfg }));
       expect(spawnSync(process.execPath, ['kit/ci-templates/render.mjs'], { cwd: root }).status).toBe(0);
@@ -139,7 +139,7 @@ describe('rendered files', () => {
     expect(gate()).toBe(
       plainGate
         .replace('Full gate (check, e2e) on PR head merged with main', 'Full gate (check, sim, e2e)')
-        .replace('timeout-minutes: 60', 'timeout-minutes: 90')
+        .replace('timeout-minutes: 30', 'timeout-minutes: 90')
         .replace('full-gate/.nvmrc\n', 'full-gate/.nvmrc\n          cache: npm\n')
         .replace('      - run: npm run check\n', `${pyYaml}      - name: npm run check\n        run: npm run check\n        env:\n          P: python\n      - run: npm run sim\n`),
     );
@@ -391,7 +391,7 @@ describe('K190: what the four games need (examples/<game>.json renders their wor
     });
 
   it('python, rust, a failure artifact, extra steps and the header follow their keys; the rest stays as it was', () => {
-    const base = { repo: 'acme/widget', runnerLabel: 'widget', queueWaitMinutes: false };
+    const base = { repo: 'acme/widget', runnerLabel: 'widget', queueWaitMinutes: false, docsSkip: false };
     const plain = mk('plain', base);
     const ci = mk('keys-ci', { ...base, runDrafts: true, ci: { python: { version: '3.13', requirements: 'py/req.txt', venv: true }, rust: { components: 'clippy', commands: ['cargo test'], workingDirectory: 'rs' }, failureArtifact: { name: 'r', path: ['a/', 'b/'], retentionDays: 3 }, nodeVersion: '22', before: { check: 'echo b' }, after: { install: [{ run: 'echo a', 'timeout-minutes': 4, env: { X: '1' } }] }, dispatch: true } });
     const doc = ci('ci.yml');
@@ -421,7 +421,7 @@ describe('K190: what the four games need (examples/<game>.json renders their wor
     stop({ gate: { draftConcurrency: true } }, 'full-gate.yml: "draftConcurrency"');
   });
   it('K434: a self-hosted job gets timeoutMinutes + queueWaitMinutes, its run steps timeoutMinutes; hosted is unchanged', () => {
-    const base = { repo: 'acme/widget', runnerLabel: 'widget' };
+    const base = { repo: 'acme/widget', runnerLabel: 'widget', docsSkip: false };
     const jobs = (n: string, cfg: object) => mk(n, { ...base, ...cfg })('ci.yml').jobs;
     const st = (j: { steps: unknown[] }) => j.steps as Record<string, unknown>[];
     const a = jobs('qw-default', {});
@@ -433,12 +433,116 @@ describe('K190: what the four games need (examples/<game>.json renders their wor
     expect(b.check!['timeout-minutes']).toBe(50);
     expect(st(b.check!).filter((s) => 'run' in s).map((s) => s['timeout-minutes'])).toEqual([20, 20, 3]);
     const g = mk('qw-gate', base)('full-gate.yml').jobs.gate!;
-    expect(g['timeout-minutes']).toBe(120);
-    expect(st(g).filter((s) => 'run' in s).every((s) => s['timeout-minutes'] === 60)).toBe(true);
+    expect(g['timeout-minutes']).toBe(90);
+    expect(st(g).filter((s) => 'run' in s).every((s) => s['timeout-minutes'] === 30)).toBe(true);
     expect(jobs('qw-off', { queueWaitMinutes: false }).check!['timeout-minutes']).toBe(15);
     const c = jobs('qw-hosted', { ci: { runsOn: 'ubuntu-latest' } });
     expect(c.check!['timeout-minutes']).toBe(15);
     expect(st(c.check!).some((s) => 'timeout-minutes' in s)).toBe(false);
+  });
+  it('K453: a docs-only diff renders the skip (hosted changes job, check needs it); docsSkip false renders none; docs-only.mjs tells docs from code', () => {
+    const base = { repo: 'acme/widget', runnerLabel: 'widget' };
+    const on = mk('docs-on', { ...base, docsSteps: ['npm run plancheck'], docsPaths: ['docs/**', '*.md'] })('ci.yml').jobs;
+    expect(on.changes!.name).toBe('Docs-only change?');
+    expect(on.changes!['runs-on']).toBe('ubuntu-latest');
+    expect(on.check!.needs).toBe('changes');
+    expect(on.check!.if).toBe("(github.repository_owner == 'acme' && (github.event_name != 'pull_request' || !github.event.pull_request.draft)) && !cancelled() && needs.changes.outputs.docs != 'true'");
+    expect(on.check!['runs-on']).toEqual(['self-hosted', 'widget']);
+    expect(on.docs!.if).toBe("needs.changes.outputs.docs == 'true'");
+    expect(JSON.stringify(on.changes!.steps)).toContain('DOCS_PATHS');
+    const off = mk('docs-off', { ...base, docsSkip: false })('ci.yml').jobs;
+    expect(Object.keys(off)).toEqual(['check']);
+    expect(off.check!.needs).toBeUndefined();
+    expect(Object.keys(mk('docs-def', base)('ci.yml').jobs)).toEqual(['check', 'changes']);
+    const repo = join(dir, 'docs-repo');
+    mkdirSync(join(repo, 'docs'), { recursive: true });
+    const vcs = (...a: string[]) => spawnSync('git', ['-c', 'user.name=t', '-c', 'user.email=t@invalid', ...a], { cwd: repo, encoding: 'utf8' });
+    vcs('init', '-q');
+    writeFileSync(join(repo, 'a.ts'), '1');
+    vcs('add', '-A');
+    vcs('commit', '-qm', 'base');
+    const sha = vcs('rev-parse', 'HEAD').stdout.trim();
+    const docs = (extra: Record<string, string> = {}) => spawnSync(process.execPath, [join(here, 'docs-only.mjs')], { cwd: repo, encoding: 'utf8', env: { ...process.env, BASE: sha, ...extra } }).stdout.trim();
+    writeFileSync(join(repo, 'docs/x.md'), 'x');
+    writeFileSync(join(repo, 'NOTES.md'), 'x');
+    vcs('add', '-A');
+    vcs('commit', '-qm', 'docs');
+    expect(docs()).toBe('docs=true');
+    expect(docs({ DOCS_PATHS: 'docs/**' })).toBe('docs=false');
+    expect(docs({ BASE: '0'.repeat(40) })).toBe('docs=false');
+    writeFileSync(join(repo, 'a.ts'), '2');
+    vcs('add', '-A');
+    vcs('commit', '-qm', 'code');
+    expect(docs()).toBe('docs=false');
+  });
+  it('K453: the gate keeps its run title and a 30 minute job cap; a capped e2e prints the running test', () => {
+    const gate = mk('cap-gate', { repo: 'acme/widget', runnerLabel: 'widget', queueWaitMinutes: false })('full-gate.yml');
+    expect(gate['run-name']).toBe('Full gate PR #${{ inputs.pr }} ${{ inputs.sha }}');
+    expect(gate.jobs.gate!['timeout-minutes']).toBe(30);
+    const root = join(dir, 'cap-run');
+    mkdirSync(root);
+    writeFileSync(join(root, 'ci.config.json'), JSON.stringify({ repo: 'acme/widget', runnerLabel: 'widget' }));
+    writeFileSync(join(root, 'hang.js'), "require('fs').writeFileSync(process.env.E2E_RUNNING_FILE, 'a.spec.ts:3 slow test');setTimeout(() => {}, 9000);");
+    writeFileSync(join(root, 'package.json'), JSON.stringify({ scripts: { 'test:e2e': 'node hang.js' } }));
+    const r = spawnSync(process.execPath, [join(here, 'full-gate.mjs'), 'e2e'], { cwd: root, encoding: 'utf8', timeout: 60_000, env: { ...process.env, E2E_CAP_MS: '4000', E2E_KILL_GRACE_MS: '300' } });
+    expect(r.status).toBe(1);
+    expect(r.stderr).toContain('capped after');
+    expect(r.stderr).toContain('running: a.spec.ts:3 slow test');
+  });
+  it('K453: a code file moved into docs/ is not docs-only (--no-renames)', () => {
+    const repo = join(dir, 'ren-repo');
+    mkdirSync(join(repo, 'docs'), { recursive: true });
+    const vcs = (...a: string[]) => spawnSync('git', ['-c', 'user.name=t', '-c', 'user.email=t@invalid', ...a], { cwd: repo, encoding: 'utf8' });
+    vcs('init', '-q');
+    writeFileSync(join(repo, 'a.ts'), 'export const a = 1;\n'.repeat(20));
+    vcs('add', '-A');
+    vcs('commit', '-qm', 'base');
+    const sha = vcs('rev-parse', 'HEAD').stdout.trim();
+    vcs('mv', 'a.ts', 'docs/a.md');
+    vcs('commit', '-qm', 'move');
+    const r = spawnSync(process.execPath, [join(here, 'docs-only.mjs')], { cwd: repo, encoding: 'utf8', env: { ...process.env, BASE: sha } });
+    expect(r.stdout.trim()).toBe('docs=false');
+  });
+  it('K453: install-wsl.sh keepalive: task command text, one task and one sleep on a re-run, removal (fake schtasks.exe and pgrep)', () => {
+    if (spawnSync('bash', ['--version']).status !== 0) return;
+    const bin = join(dir, 'fakebin');
+    mkdirSync(bin, { recursive: true });
+    const log = join(dir, 'schtasks.log');
+    writeFileSync(join(bin, 'schtasks.exe'), `#!/bin/bash\necho "$*" >> "${log.replaceAll('\\', '/')}"\n`);
+    writeFileSync(join(bin, 'pgrep'), '#!/bin/bash\n[ "$FAKE_SLEEP" = 1 ]\n');
+    chmodSync(join(bin, 'schtasks.exe'), 0o755);
+    chmodSync(join(bin, 'pgrep'), 0o755);
+    const go = (flag: string, sleeping: string) => {
+      writeFileSync(log, '');
+      const r = spawnSync('bash', [join(here, 'install-wsl.sh'), flag], { encoding: 'utf8', env: { ...process.env, PATH: `${bin}:${process.env.PATH ?? ''}`, RUNNER_REPO: 'x/y', RUNNER_LABEL: 'test', WSL_DISTRO_NAME: 'Dist', FAKE_SLEEP: sleeping } });
+      expect(r.status, r.stdout + r.stderr).toBe(0);
+      return readFileSync(log, 'utf8').trim().split('\n').filter(Boolean);
+    };
+    const first = go('--keepalive', '0');
+    expect(first[0]).toBe('/Create /F /SC ONLOGON /RL LIMITED /TN WSL keepalive Dist /TR conhost.exe --headless wsl.exe -d Dist -- sleep infinity');
+    expect(first[1]).toBe('/Run /TN WSL keepalive Dist');
+    const again = go('--keepalive', '1');
+    expect(again).toHaveLength(1);
+    expect(again[0]).toMatch(/^\/Create \/F /);
+    expect(go('--remove-keepalive', '1')).toEqual(['/Delete /F /TN WSL keepalive Dist']);
+  });
+  it('K453: the reporter names the test that was interrupted by the cap, and the ones still running', async () => {
+    const { default: Reporter } = await import('./playwright-caps');
+    const seen: string[] = [];
+    const spy = vi.spyOn(console, 'error').mockImplementation((m: unknown) => void seen.push(String(m)));
+    const rep = new Reporter();
+    const a = { title: 'slow one', location: { file: 'a.spec.ts', line: 3 } };
+    const b = { title: 'other', location: { file: 'b.spec.ts', line: 9 } };
+    const c = { title: 'done', location: { file: 'c.spec.ts', line: 1 } };
+    rep.onTestBegin(c);
+    rep.onTestEnd(c, { status: 'passed' });
+    rep.onTestBegin(a);
+    rep.onTestBegin(b);
+    rep.onTestEnd(a, { status: 'interrupted' });
+    rep.onEnd({ status: 'timedout' });
+    spy.mockRestore();
+    expect(seen.join('\n')).toBe('e2e: capped (timedout); running: b.spec.ts:9 other; a.spec.ts:3 slow one');
+    expect(seen.join('\n')).not.toContain('done');
   });
   it('K221: concurrency never cancels main', () => {
     for (const f of ['ci.yml', 'full-gate.yml']) expect(render(f)).toContain("cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}");
