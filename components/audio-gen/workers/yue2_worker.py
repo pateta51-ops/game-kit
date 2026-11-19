@@ -4,12 +4,12 @@
 Per take: plan the song (lyrics "[Instrumental]", cot "full", the seed), turn every note of the ABC "Vocal" voice into
 rests, render with that score (abc=), then split it with demucs htdemucs two-stem on cuda (in `demucsPython`) and keep
 it only when vocal/mix <= -25 dB and at most 3 % of 0.5 s windows are loud. A take that fails is tried again with the
-next seed (seed + 7919 k), up to `tries` seeds; none passing fails the item.
+next seed (seed + 7919 k), up to `tries` seeds (default 6); none passing fails the item.
 
 Usage: <venv python> yue2_worker.py job.json     (written by audiogen; see audiogen/backends.py)
 Job options (config backends.<name>): modelDir (local snapshot, default ~/audio-gen/models/yue2; when missing the hub
 model is used), model ("m-a-p/YuE2-3B"), revision ("8f24312f"), version (yue2 code, "0.1.6"), demucsPython,
-tries (4), keep (1: passing takes kept per item; the first is the item's file, the others
+tries (6), keep (1: passing takes kept per item; the first is the item's file, the others
 <out>-keep2.wav, ... listed in extra.alternates; raise tries with it), maxVocalDb (-25), maxLoudWindows (0.03), cot ("full"), lyrics ("[Instrumental]").
 Per item: prompt (the style text), seed, options.lyrics / options.tries. YuE2 sets its own length: the pipeline cuts.
 Exit 3 = cannot start (wrong yue2 version, no CUDA, or a first generation that did not use the GPU).
@@ -74,7 +74,7 @@ def main() -> int:
         lyrics = str(o.get("lyrics", opts.get("lyrics", "[Instrumental]")))
         cot = str(opts.get("cot", "full"))
         tried, kept, keep = [], [], int(o.get("keep", opts.get("keep", 1)))
-        for s in recipe.seeds(int(item["seed"]), int(o.get("tries", opts.get("tries", 4)))):
+        for s in recipe.seeds(int(item["seed"]), int(o.get("tries", opts.get("tries", 6)))):
             plan = pipe.plan(style=item["prompt"], lyrics=lyrics, cot=cot, seed=s)
             abc, nv = recipe.novocal(plan.abc)
             tmp = out.parent / f"_yue_{out.stem}-{s}.wav"

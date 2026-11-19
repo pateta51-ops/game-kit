@@ -48,7 +48,7 @@ def main() -> int:
         out = Path(item["out"])
         out.parent.mkdir(parents=True, exist_ok=True)
         o = item.get("options") or {}
-        sec = max(float(opts.get("minSeconds", 7.0)), float(item["seconds"]))
+        sec = max(float(opts.get("minSeconds", 7.0)), float(item["seconds"]) + float(opts.get("padSeconds", 2.0)))  # SA3 Small SFX gives full-scale noise under 7 s
         def make(seed):
             a = m.generate(prompt=item["prompt"], negative_prompt=item.get("negativePrompt") or None, duration=sec,
                            steps=int(o.get("steps", opts.get("steps", 8))), cfg_scale=float(o.get("cfg", opts.get("cfg", 1.0))),

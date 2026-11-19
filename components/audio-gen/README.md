@@ -23,14 +23,14 @@ A category or cue with no `backend` gets the default of its kind (`spec.DEFAULTS
 
 | Name in the example | Type | Model | Licence |
 |---|---|---|---|
-| `sa3` (sounds, default) | `stable-audio-3` | Stable Audio 3 Small SFX (`small-sfx`, hf stabilityai/stable-audio-3-small-sfx), venv-sa3; 8 steps, cfg 1; a cue shorter than 7 s is made at 7 s and cut; a take that is noise, hiss or clipped is made again (`tries`) | Stability AI Community License |
+| `sa3` (sounds, default) | `stable-audio-3` | Stable Audio 3 Small SFX (`small-sfx`, hf stabilityai/stable-audio-3-small-sfx), venv-sa3; 8 steps, cfg 1; every cue is made at its length + 2 s and at least 7 s (shorter asks give full-scale noise), then cut; a take that is noise, hiss or clipped is made again (`tries`) | Stability AI Community License |
 | `yue2` (music, default) | `yue2` | YuE2-3B, code pinned to release yue2-v0.1.6 (the worker refuses another version), weights m-a-p/YuE2-3B rev 8f24312f in `models/yue2`, venv-yue | **CC BY-NC 4.0**: non-commercial only |
 | `ace-xl` | `acestep` | ACE-Step 1.5 XL SFT (`acestep-v15-xl-sft`, 50 steps, guidance 7) | MIT |
 | `ace` | `acestep` | ACE-Step 1.5 turbo (`acestep-v15-turbo`, 8 steps) | MIT |
 | `sao` | `stable-audio-open` | Stable Audio Open 1.0 | Stability AI Community License |
 | written notes | `tools.py music` | MIDI through fluidsynth | the soundfont's |
 
-YuE2 makes instrumental music by the 7th Inning Stretch recipe (its shipped music): plan the song with lyrics `[Instrumental]`, `cot` full and the take's seed; every note of the score's "Vocal" voice becomes a rest (`recipe.novocal`); render with that score (`abc=`); split the take with demucs htdemucs two-stem on cuda (`demucsPython`, venv-demucs) and keep it only when vocal/mix is at most -25 dB and at most 3 % of its 0.5 s windows have the vocal above -14 dB (`recipe.measure`). A take that fails is made again with the next seed (seed + 7919 k) up to `tries` (4); each manifest entry keeps every seed tried with its measures. YuE2 sets its own length (40 s and more); the pipeline cuts to the cue's length. The loudness and file finishing are the pipeline's, as for every backend.
+YuE2 makes instrumental music by the 7th Inning Stretch recipe (its shipped music): plan the song with lyrics `[Instrumental]`, `cot` full and the take's seed; every note of the score's "Vocal" voice becomes a rest (`recipe.novocal`); render with that score (`abc=`); split the take with demucs htdemucs two-stem on cuda (`demucsPython`, venv-demucs) and keep it only when vocal/mix is at most -25 dB and at most 3 % of its 0.5 s windows have the vocal above -14 dB (`recipe.measure`). A take that fails is made again with the next seed (seed + 7919 k) up to `tries` (6); each manifest entry keeps every seed tried with its measures. Name no choir, voice or singing in a YuE2 music style: such takes fail the vocal gate on every seed. YuE2 sets its own length (40 s and more); the pipeline cuts to the cue's length. The loudness and file finishing are the pipeline's, as for every backend.
 
 ## GPU only
 
