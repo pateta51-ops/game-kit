@@ -514,7 +514,7 @@ Sixteen verbs for the director's spec format as DOM effects for the motion frame
 
 - **Use it when:** Release 1.1 visual effects: the twelve motion verbs, particles, ambience, canvas layers, an opt-in logo glitch.
 - **Not for:** Deciding which effect plays (the game's motion specs and motion-frame).
-- **Key exports:** `startPulse`, `startIdle`, `registerGlEffect`, `crumpleStill`, `decorativeCopy`, `place`, `createEffectLayer`, `registerEffect`, `BUILT_IN`, `registerEffects`, `specTime`, `registerCanvasEffect`, `countAt`, `countUp`, and 137 more
+- **Key exports:** `startPulse`, `startIdle`, `registerGlEffect`, `crumpleStill`, `decorativeCopy`, `endOnFinished`, `flushEnds`, `place`, `createEffectLayer`, `registerEffect`, `BUILT_IN`, `registerEffects`, `specTime`, `registerCanvasEffect`, and 144 more
 - **Needs:** [`motion-frame`](#motion-frame), [`board-registry`](#board-registry)
 - **Came from:** stcc
 - **Docs:** [README](../components/effect-library/README.md)
