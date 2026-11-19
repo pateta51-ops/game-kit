@@ -15147,32 +15147,41 @@ var PIECES = (() => {
             clearTimeout(t);
             timers.delete(t);
           });
-          if (going.length === 0) return false;
-          at(Math.max(...going.map((s) => s.end)) - elapsed, () => {
+          const runs2 = steps.filter((s) => !s.started && s.call.step.onCut === "run");
+          if (going.length === 0 && runs2.length === 0) return false;
+          const e = Math.max(elapsed, ...going.map((s) => s.end));
+          const base = e - elapsed - Math.min(...runs2.map((s) => s.call.t));
+          const ends = runs2.map((s) => put(s.call, base, s));
+          at(Math.max(e - elapsed, ...ends), () => {
             finish2(me, "skipped");
             next();
             emit();
           });
           return true;
         };
-        for (const call of run.timeline.calls) {
+        const put = (call, base, step) => {
           let done;
-          const step = { end: call.t + call.dur, started: false };
-          steps.push(step);
-          at(call.t, () => {
+          step.end = call.t + call.dur + base + Date.now() - t0;
+          at(call.t + base, () => {
             step.started = true;
             safe(`${spec.id} ${call.verb}`, () => {
               done = o.verbs.get(call.verb)?.(call, run);
             });
             if (done !== void 0) open2.add(done);
           });
-          if (item.keep && call.t + call.dur >= run.timeline.ms) continue;
-          step.timer = at(call.t + call.dur, () => {
-            const d = done;
-            if (d === void 0) return;
-            open2.delete(d);
-            safe(`${spec.id} ${call.verb} finish`, d);
-          });
+          if (!(item.keep && call.t + call.dur >= run.timeline.ms))
+            step.timer = at(call.t + call.dur + base, () => {
+              const d = done;
+              if (d === void 0) return;
+              open2.delete(d);
+              safe(`${spec.id} ${call.verb} finish`, d);
+            });
+          return call.t + call.dur + base;
+        };
+        for (const call of run.timeline.calls) {
+          const step = { call, end: 0, started: false };
+          steps.push(step);
+          put(call, 0, step);
         }
         const leave = item.gate && run.timeline.calls.find((c) => c.step.leave === true);
         if (leave)

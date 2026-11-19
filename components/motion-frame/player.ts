@@ -331,7 +331,8 @@ export function createMotionPlayer<C = undefined>(o: PlayerOptions<C>): MotionPl
     if (!live.has(me)) return;
     const schedule = (): void => {
       const t0 = Date.now();
-      const steps: { end: number; timer?: Timer; started: boolean }[] = [];
+      type S = { call: Timeline['calls'][number]; end: number; timer?: Timer; started: boolean };
+      const steps: S[] = [];
       me.cut = () => {
         delete me.cut;
         const elapsed = Date.now() - t0;
@@ -342,33 +343,42 @@ export function createMotionPlayer<C = undefined>(o: PlayerOptions<C>): MotionPl
           clearTimeout(t);
           timers.delete(t);
         });
-        if (going.length === 0) return false;
-        at(Math.max(...going.map((s) => s.end)) - elapsed, () => {
+        const runs = steps.filter((s) => !s.started && s.call.step.onCut === 'run');
+        if (going.length === 0 && runs.length === 0) return false;
+        const e = Math.max(elapsed, ...going.map((s) => s.end));
+        const base = e - elapsed - Math.min(...runs.map((s) => s.call.t));
+        const ends = runs.map((s) => put(s.call, base, s));
+        at(Math.max(e - elapsed, ...ends), () => {
           finish(me, 'skipped');
           next();
           emit();
         });
         return true;
       };
-      for (const call of run.timeline.calls) {
+      const put = (call: S['call'], base: number, step: S): number => {
         // both timers are set now, so a step's finish comes before the start of the step that follows it
         let done: (() => void) | undefined;
-        const step: { end: number; timer?: Timer; started: boolean } = { end: call.t + call.dur, started: false };
-        steps.push(step);
-        at(call.t, () => {
+        step.end = call.t + call.dur + base + Date.now() - t0;
+        at(call.t + base, () => {
           step.started = true;
           safe(`${spec.id} ${call.verb}`, () => {
             done = o.verbs.get(call.verb)?.(call, run);
           });
           if (done !== undefined) open.add(done);
         });
-        if (item.keep && call.t + call.dur >= run.timeline.ms) continue;
-        step.timer = at(call.t + call.dur, () => {
-          const d = done;
-          if (d === undefined) return;
-          open.delete(d);
-          safe(`${spec.id} ${call.verb} finish`, d);
-        });
+        if (!(item.keep && call.t + call.dur >= run.timeline.ms))
+          step.timer = at(call.t + call.dur + base, () => {
+            const d = done;
+            if (d === undefined) return;
+            open.delete(d);
+            safe(`${spec.id} ${call.verb} finish`, d);
+          });
+        return call.t + call.dur + base;
+      };
+      for (const call of run.timeline.calls) {
+        const step: S = { call, end: 0, started: false };
+        steps.push(step);
+        put(call, 0, step);
       }
       const leave = item.gate && run.timeline.calls.find((c) => c.step.leave === true);
       if (leave)
