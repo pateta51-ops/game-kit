@@ -139,7 +139,7 @@ it('checks the host again when answers are added and removed', async () => {
   await waitFor(() => expect(box).not.toHaveAttribute('data-overflow'));
 });
 
-function Row({ rows }: { rows?: boolean } = {}) {
+function Row({ rows = true }: { rows?: boolean } = {}) {
   useOverflow({ ...layout, rows, answers: '.answers', find: () => document.querySelector<HTMLElement>('#prompt-box') }, []);
   return (
     <section id="prompt-box" data-testid="box" style={{ height: 100, position: 'relative' }}>
