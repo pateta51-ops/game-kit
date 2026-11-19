@@ -117,6 +117,8 @@ def main() -> int:
         out = Path(item["out"])
         out.parent.mkdir(parents=True, exist_ok=True)
         o = item.get("options") or {}
+        if float(item["seconds"]) > 600:
+            raise ValueError(f"ACE-Step makes 10 to 600 s a take (docs/en/INFERENCE.md: duration 10-600); asked for {item['seconds']} s")
         params = GenerationParams(
             caption=item["prompt"],
             lyrics=str(o.get("lyrics", "[Instrumental]")),
@@ -124,7 +126,7 @@ def main() -> int:
             bpm=int(round(item["tempo"])) if item.get("tempo") else None,
             keyscale=str(item.get("key") or ""),
             timesignature=str(item.get("beatsPerBar") or ""),
-            duration=min(600.0, max(10.0, float(item["seconds"]))),  # the model takes 10 to 600 s
+            duration=max(10.0, float(item["seconds"])),  # under 10 s: made at 10 s, the pipeline cuts to the cue's length (post.clean)
             inference_steps=int(o.get("steps", opts.get("steps", 8 if "turbo" in model else 50))),
             **({"shift": float(o.get("shift", opts.get("shift", 3.0)))} if "turbo" in model else
                {"guidance_scale": float(o.get("guidance", opts.get("guidance", 7.0)))}),

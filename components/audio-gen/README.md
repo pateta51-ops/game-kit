@@ -39,7 +39,7 @@ Their own paragraphs above (K459): doc links, doc-backed settings and the kit's 
 
 ### ACE-Step 1.5 (`ace`, `ace-xl`)
 Docs: [repo](https://github.com/ace-step/ACE-Step-1.5) (README, `docs/en/INFERENCE.md`, `docs/en/Tutorial.md`). Code is the repo checkout in `~/audio-gen/ACE-Step-1.5` (1.5.0), run in `venv`; the install script clones it unpinned.
-- Doc-backed: turbo takes 8 steps and no CFG (the package forces `guidance_scale` to 1.0) and wants `shift=3.0` (the kit sets it; option `shift`); base/SFT/XL-SFT take 32-64 steps (kit 50) and CFG 5-9 (kit 7.0), shift default 1.0 (the kit passes none); `duration` is 10-600 s (the kit clamps to it; the pipeline cuts to the cue's length); lyrics `[Instrumental]` for music with no singing; weights bf16 as the package loads them.
+- Doc-backed: turbo takes 8 steps and no CFG (the package forces `guidance_scale` to 1.0) and wants `shift=3.0`: INFERENCE.md says "the only timestep/guidance parameter you need to set manually for turbo is `shift=3.0`" and, in the `shift` row, "Recommended 3.0 for turbo models" (the kit sets it; option `shift`); base/SFT/XL-SFT take 32-64 steps (kit 50) and CFG 5-9 (kit 7.0), shift default 1.0 (the kit passes none); `duration` is, in INFERENCE.md, "Target audio length in seconds (10-600)": a cue under 10 s is made at 10 s and the pipeline cuts it to the cue's length (`post.clean`: `atrim=end=<length>` for one-shots, `loop_seam` for loops; tested), a cue over 600 s fails its item with that limit in the message; lyrics `[Instrumental]` for music with no singing; weights bf16 as the package loads them.
 - Hardware (docs): XL (4B) needs 20 GB or more without CPU offload (12 GB with offload and quantisation). Offload is not allowed here (GPU only), so `ace-xl` belongs on a 24 GB card; on 16 GB use `ace`.
 - Kit's own: the VAE decode fails the item instead of moving to the CPU; `thinking` is off unless set; the caption should stay under 512 characters and lyrics under 4096 (the docs' limits; the kit does not cut).
 
@@ -49,7 +49,7 @@ Docs: [model card](https://huggingface.co/stabilityai/stable-audio-open-1.0), di
 - Kit's own: a negative prompt is passed only when the cue has one; weights are gated (licence, `hf auth login`).
 
 ### Kokoro-82M (voice, `tools.py voice`)
-Docs: [model card](https://huggingface.co/hexgrad/Kokoro-82M), [repo](https://github.com/hexgrad/kokoro) (kokoro 0.9.4, misaki 0.9.4; the install script now pins `kokoro==0.9.4`, needs espeak-ng).
+Docs: [model card](https://huggingface.co/hexgrad/Kokoro-82M), [repo](https://github.com/hexgrad/kokoro) (kokoro 0.9.4, misaki 0.9.4; pinned in the install script as `kokoro==0.9.4`, which pulls `misaki[en]>=0.9.4`; needs espeak-ng).
 - Doc-backed: 24 kHz mono; one `KPipeline` per language, the language code matching the voice (`af_`, `am_` = `a` American; `bf_`, `bm_` = `b` British; the kit now picks it from the voice's first letter, sharing one model); `repo_id` `hexgrad/Kokoro-82M` passed explicitly; `speed` 1 by default; at most 510 phonemes a chunk (the package splits English text itself); CUDA device.
 - Kit's own: the retry rule (silent, under 0.25 s or clipped take is remade with `retryVoice`), `shout` shaping and the per-kind filters.
 - No other voice backend exists in the kit (no Chatterbox or MOSS adapter); a new one gets its own subsection and its own tests.

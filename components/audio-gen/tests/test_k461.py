@@ -109,7 +109,8 @@ class AceWorker(unittest.TestCase):
                     self.assertEqual(w.main(), 0)
             finally:
                 os.chdir(cwd)
-        return seen["p"]
+            self.result = json.loads((t / "r.json").read_text())["items"][0]
+        return seen.get("p")
 
     def test_turbo_shift_3(self):  # docs/en/INFERENCE.md: "set shift=3.0 for turbo" (not auto-corrected)
         self.assertEqual(self.params("acestep-v15-turbo")["shift"], 3.0)
@@ -122,10 +123,33 @@ class AceWorker(unittest.TestCase):
             self.assertNotIn("shift", p)
             self.assertEqual((p["inference_steps"], p["guidance_scale"]), (50, 7.0))
 
-    def test_duration_limits(self):  # duration is 10 to 600 s
+    def test_duration_limits(self):  # duration is 10 to 600 s: under 10 is made at 10 (cut later), over 600 fails the item
         self.assertEqual(self.params("acestep-v15-turbo", seconds=4)["duration"], 10.0)
-        self.assertEqual(self.params("acestep-v15-turbo", seconds=900)["duration"], 600.0)
         self.assertEqual(self.params("acestep-v15-turbo", seconds=45)["duration"], 45.0)
+        self.assertEqual(self.params("acestep-v15-turbo", seconds=600)["duration"], 600.0)
+        self.assertIsNone(self.params("acestep-v15-turbo", seconds=900))
+        self.assertIn("600", self.result["error"])
+        self.assertIn("10 to 600", self.result["error"])
+
+
+class CutToCueLength(unittest.TestCase):
+    def cut(self, mode):  # a take made at 10 s for a 4 s cue comes back 4 s (post.clean: atrim for one-shots, loop_seam for loops)
+        from audiogen import post as P
+        from audiogen.spec import Category, parse_cue
+        if not P.have_ffmpeg():
+            self.skipTest("no ffmpeg")
+        c = parse_cue({"name": "a", "prompt": "p", "category": "music", "length": 4, "mode": mode}, None)
+        with tempfile.TemporaryDirectory() as t:
+            src, dst = Path(t) / "s.wav", Path(t) / "d.wav"
+            P.ff("-f", "lavfi", "-i", "sine=frequency=440:duration=10", "-ar", "48000", str(src))
+            P.clean(src, dst, c, Category(name="c", kind="music", lufs=-20, trim_silence=False, fade_in_ms=0, fade_out_ms=0), 48000, 1)
+            return P.duration(dst)
+
+    def test_one_shot_is_cut_to_length(self):
+        self.assertAlmostEqual(self.cut("oneshot"), 4.0, delta=0.01)
+
+    def test_loop_is_cut_to_length(self):
+        self.assertAlmostEqual(self.cut("loop"), 4.0, delta=0.01)
 
 
 class np:
@@ -175,8 +199,9 @@ class KokoroVoice(unittest.TestCase):
 
     def test_repo_pinned_and_one_model_shared(self):  # a KModel is reused across pipelines
         made, _ = self.run_gen(["af_heart", "bf_emma"])
-        self.assertTrue(all(m["repo"] == "hexgrad/Kokoro-82M" and m["device"] == "cuda" for m in made[:1]))
-        self.assertEqual(made[1]["repo"], "hexgrad/Kokoro-82M")
+        self.assertEqual(len(made), 2)
+        for m in made:
+            self.assertEqual((m["repo"], m["device"]), ("hexgrad/Kokoro-82M", "cuda"))
         self.assertIs(made[0]["model"], made[1]["model"])
 
 
