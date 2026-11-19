@@ -255,6 +255,14 @@ describe('heavy-queue worker cap and load (K454)', () => {
     const r = await heavy(['run', '--', process.execPath, '-e', 'process.exit(Number(process.env.HEAVY_WORKERS))'], { HEAVY_URL: q.url });
     expect(r.code).toBe(8);
   });
+  it('serves its icon, logo and manifest, linked from the page, and status reports load1', async () => {
+    const q = await serve({ slots: 2, cores: 16 });
+    expect(typeof (await q.status()).load1).toBe('number');
+    const page = await (await fetch(q.url + '/')).text();
+    expect(page).toContain('rel=apple-touch-icon href=/icon.png');
+    for (const [p, t] of [['/icon.png', 'image/png'], ['/logo.svg', 'image/svg+xml']]) expect((await fetch(q.url + p)).headers.get('content-type')).toBe(t);
+    expect((await (await fetch(q.url + '/manifest.json')).json()).icons[0].src).toBe('/icon.png');
+  });
   it('heavy load prints one line', async () => {
     const q = await serve({ slots: 2, cores: 16, scan: () => [{ pid: 9, cmd: 'chrome --headless', cwd: '/x' }], sweepMs: 30, log: join(mkdtempSync(join(tmpdir(), 'hq-load-')), 'b.log'), renice: () => {} });
     await q.post('/acquire', { label: 'a' });

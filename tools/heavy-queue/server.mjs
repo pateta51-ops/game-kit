@@ -109,7 +109,7 @@ export function startServer({ scan = procScan, renice = reniceProc, sweepMs = pr
     const row = (cells) => `<tr>${cells.map((c) => `<td>${esc(c ?? '')}</td>`).join('')}</tr>`;
     const t = (h, rows) => `<table border=1 cellpadding=4><tr>${h.map((x) => `<th>${x}</th>`).join('')}</tr>${rows.join('')}</table>`;
     const when = (ms) => ms ? new Date(ms).toLocaleTimeString() : '';
-    return `<!doctype html><meta charset=utf-8><meta http-equiv=refresh content=5><title>heavy-queue</title><body style="font-family:sans-serif">
+    return `<!doctype html><meta charset=utf-8><meta http-equiv=refresh content=5><meta name=viewport content="width=device-width,initial-scale=1"><title>heavy-queue</title><link rel=icon href=/logo.svg><link rel=apple-touch-icon href=/icon.png><link rel=manifest href=/manifest.json><meta name=apple-mobile-web-app-title content="Heavy queue"><meta name=theme-color content="#111718"><body style="font-family:sans-serif">
 <h2>Running (${s.running.length}/${s.slots}) - ${s.workers} workers per job on ${s.cores} cores</h2>${t(['Label', 'Priority', 'Started', 'Running', 'Waited'], s.running.map((l) => row([l.label, l.priority, when(l.startedAt), dur(l.runningMs), dur(l.waitedMs)])))}
 <h2>Waiting (${s.waiting.length})</h2>${t(['Label', 'Priority', 'Queued', 'Waiting'], s.waiting.map((l) => row([l.label, l.priority, when(l.queuedAt), dur(l.waitedMs)])))}
 ${s.unqueued.length ? `<h2 style="color:#c00">Unqueued (${s.unqueued.length})</h2>${t(['PID', 'Command', 'Folder', 'First seen'], s.unqueued.map((u) => row([u.pid, u.cmd, u.cwd, when(u.firstSeen)]))).replace('<table', '<table style="border-color:#c00;color:#c00"')}` : ''}
@@ -125,6 +125,9 @@ ${s.unqueued.length ? `<h2 style="color:#c00">Unqueued (${s.unqueued.length})</h
       const path = req.url.split('?')[0];
       if (req.method === 'GET' && path === '/') { res.writeHead(200, { 'content-type': 'text/html; charset=utf-8' }); return res.end(page()); }
       if (req.method === 'GET' && path === '/status') return send(200, status());
+      const asset = { '/icon.png': 'image/png', '/logo.svg': 'image/svg+xml' }[path];
+      if (req.method === 'GET' && asset) { try { const f = readFileSync(new URL('.' + path, import.meta.url)); res.writeHead(200, { 'content-type': asset, 'cache-control': 'max-age=86400' }); return res.end(f); } catch { return send(404, { error: 'not found' }); } }
+      if (req.method === 'GET' && path === '/manifest.json') return send(200, { name: 'Heavy queue', short_name: 'Heavy queue', start_url: '/', display: 'standalone', background_color: '#111718', theme_color: '#111718', icons: [{ src: '/icon.png', sizes: '512x512', type: 'image/png', purpose: 'any maskable' }] });
       if (req.method !== 'POST') return send(404, { error: 'not found' });
       if (path === '/acquire') {
         const l = { id: `${Date.now().toString(36)}-${++seq}`, seq, label: String(b.label ?? 'heavy'), priority: b.priority === 'high' ? 'high' : 'normal', pid: Number(b.pid) || 0, queuedAt: Date.now(), lastBeat: performance.now() };
