@@ -3,11 +3,10 @@
 <title>effect-library glitch</title>
 <style>
   body { margin: 0; background: #101820; color: #eee; font: 14px sans-serif; display: grid; place-items: center; gap: 24px; min-height: 100vh; }
-  #logo { width: 480px; height: 120px; color: #cfd8e3; }
-  #logo svg { width: 100%; height: 100%; display: block; }
+  #logo { margin: 0; font: 900 96px sans-serif; color: #cfd8e3; }
   button { font: inherit; padding: 6px 14px; }
 </style>
 <link rel="stylesheet" href="../../looks/glitch.css">
-<div id="logo"><svg viewBox="0 0 400 100"><text x="200" y="76" text-anchor="middle" font-family="sans-serif" font-weight="900" font-size="80" fill="currentColor">SIGNAL</text></svg></div>
+<h1 id="logo">SIGNAL</h1>
 <p><button id="burst">burst</button> <button id="tear">tear</button> <label><input id="off" type="checkbox"> motion off</label></p>
 <script type="module" src="./demo.ts"></script>

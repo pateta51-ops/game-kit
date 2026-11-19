@@ -53,14 +53,20 @@ export function createGlitch(el: HTMLElement, o: GlitchOptions): Glitch {
   if (o.dropout !== undefined) set('--glitch-dropout', o.dropout);
   if (o.split !== undefined) set('--glitch-split', `${String(o.split)}%`);
   if (o.jump !== undefined) set('--glitch-jump', o.jump);
+  if (o.mask) el.classList.add('fx-glitch--masked');
+  const face = Array.from(el.childNodes);
+  const layer = (cls: string): HTMLElement => {
+    const d = document.createElement('div');
+    d.className = `fx-glitch-layer ${cls}`;
+    d.setAttribute('aria-hidden', 'true');
+    for (const n of face) d.appendChild(n.cloneNode(true));
+    d.querySelectorAll('[id]').forEach((x) => x.removeAttribute('id'));
+    el.appendChild(d);
+    return d;
+  };
+  const layers = [layer('fx-glitch-copy fx-glitch-copy--a'), layer('fx-glitch-copy fx-glitch-copy--b')];
   const slices: HTMLElement[] = [];
-  for (let i = 0; i < (o.slices ?? 3); i++) {
-    const s = document.createElement('i');
-    s.className = 'fx-glitch-slice';
-    s.setAttribute('aria-hidden', 'true');
-    el.appendChild(s);
-    slices.push(s);
-  }
+  for (let i = 0; i < (o.slices ?? 3); i++) slices.push(layer(`fx-glitch-slice${i % 2 ? ' fx-glitch-slice--b' : ''}`));
   let timer: ReturnType<typeof setTimeout> | undefined;
   let endTimer: ReturnType<typeof setTimeout> | undefined;
   let dead = false;
@@ -118,7 +124,7 @@ export function createGlitch(el: HTMLElement, o: GlitchOptions): Glitch {
       stop();
       clearClasses();
       el.classList.remove('fx-glitch');
-      for (const s of slices) s.remove();
+      for (const l of [...layers, ...slices]) l.remove();
     },
   };
 }
