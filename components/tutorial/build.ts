@@ -52,7 +52,7 @@ export function buildScript<G extends PortTypes>(game: TutorialEngine<G>, action
       s = r.state;
     }
     at += st.n;
-    const expect = events.filter((e) => o.keep?.(e) ?? false).map((e) => o.strip?.(e) ?? (e as unknown as ExpectedEvent));
+    const expect = events.filter((e) => o.keep?.(e) ?? false).map((e) => o.strip?.(e) ?? (e as ExpectedEvent));
     const first = moves[0] ?? [];
     return {
       id: st.id,

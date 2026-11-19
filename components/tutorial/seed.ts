@@ -42,12 +42,12 @@ export const driverLine =
       const a = choose(state, seed);
       if (a === null) break;
       try {
-        const r = d.answer(state, a as PortAnswer);
+        const r = d.answer(state, a);
         state = r.state;
         events.push(...r.events);
         actions.push(a);
       } catch (e) {
-        return { events, state, actions, stopped: `the engine refused ${(a as PortAnswer).picks.join(', ')} (${e instanceof Error ? e.message : String(e)})` };
+        return { events, state, actions, stopped: `the engine refused ${a.picks.join(', ')} (${e instanceof Error ? e.message : String(e)})` };
       }
     }
     return { events, state, actions };
