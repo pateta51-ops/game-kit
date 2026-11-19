@@ -9,7 +9,7 @@ let docs = false;
 const base = process.env.BASE ?? '';
 if (/^[0-9a-f]{40}$/.test(base) && !/^0+$/.test(base)) {
   try {
-    const files = execFileSync('git', ['diff', '--name-only', base, process.argv[2] ?? 'HEAD'], { encoding: 'utf8' }).split('\n').filter(Boolean);
+    const files = execFileSync('git', ['diff', '--name-only', '--no-renames', base, process.argv[2] ?? 'HEAD'], { encoding: 'utf8' }).split('\n').filter(Boolean);
     const globs = process.env.DOCS_PATHS?.split(',').map((s) => s.trim()).filter(Boolean) ?? ['docs/**', '**/*.md', '*.md'];
     docs = files.length > 0 && files.every((f) => globs.some((g) => glob(g).test(f)));
   } catch {

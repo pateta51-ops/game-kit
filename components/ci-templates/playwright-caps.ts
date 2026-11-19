@@ -18,6 +18,7 @@ interface T {
 }
 export default class RunningReporter {
   private running = new Map<T, string>();
+  private interrupted: string[] = [];
   private mark(): void {
     if (process.env.E2E_RUNNING_FILE) writeFileSync(process.env.E2E_RUNNING_FILE, [...this.running.values()].join('\n'));
   }
@@ -27,11 +28,12 @@ export default class RunningReporter {
   }
   onTestEnd(t: T, r: { status: string }): void {
     if (r.status === 'timedOut') console.error(`e2e: test timed out: ${this.running.get(t) ?? t.title}`);
+    if (r.status === 'interrupted') this.interrupted.push(this.running.get(t) ?? t.title);
     this.running.delete(t);
     this.mark();
   }
   onEnd(r: { status: string }): void {
-    if (r.status === 'timedout' || r.status === 'interrupted') console.error(`e2e: capped (${r.status}); running: ${[...this.running.values()].join('; ') || 'none'}`);
+    if (r.status === 'timedout' || r.status === 'interrupted') console.error(`e2e: capped (${r.status}); running: ${[...this.running.values(), ...this.interrupted].join('; ') || 'none'}`);
   }
   printsToStdio(): boolean {
     return false;

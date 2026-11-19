@@ -13,7 +13,7 @@
 #   $t = gh api -X POST repos/<owner>/<repo>/actions/runners/registration-token -q .token; if ($LASTEXITCODE -ne 0 -or -not $t) { "no token: run again" } else { wsl -d Ubuntu -e env RUNNER_REPO=<owner>/<repo> RUNNER_LABEL=<label> RUNNER_TOKEN=$t bash <path>/install-wsl.sh }
 # A token that is given (RUNNER_TOKEN set, even empty, or an argument) is checked before anything is downloaded.
 # K453: it also keeps WSL itself up (WSL shuts the machine down when no Windows process holds it, and the runner dies with it):
-# a Windows scheduled task "WSL keepalive <distro>" (at logon, hidden) runs `wsl -d <distro> -- sleep infinity`, created through
+# a Windows scheduled task "WSL keepalive <distro>" (at logon, no console window via conhost --headless) runs `wsl -d <distro> -- sleep infinity`; `--keepalive` does only that, `--remove-keepalive` deletes it, created through
 # interop (schtasks.exe) and started at once. KEEPALIVE=0 skips it. Without interop it says so and carries on.
 # It needs sudo -n, curl, tar and systemd in the WSL machine. It never
 # prints the token. Exit codes: 0 the service is active and the runner is online (or --check found it so), 1 it is not,
@@ -27,11 +27,15 @@ NAME="${RUNNER_NAME:-$LABEL-wsl}"
 TOKEN="${RUNNER_TOKEN:-}"
 GIVEN="${RUNNER_TOKEN+1}"
 CHECK_ONLY=0
+REMOVE=0
+KA_ONLY=0
 
 usage() { echo "usage: install-wsl.sh [--check] [--token <registration token> | <registration token>]" >&2; exit 2; }
 while [ $# -gt 0 ]; do
   case "$1" in
     --check) CHECK_ONLY=1 ;;
+    --remove-keepalive) REMOVE=1 ;;
+    --keepalive) KA_ONLY=1 ;;
     --token) shift; [ $# -gt 0 ] || usage; TOKEN="$1"; GIVEN=1 ;;
     -h|--help) usage ;;
     -*) usage ;;
@@ -61,11 +65,11 @@ get_token() {
   fi
   check_token
 }
-if [ "$CHECK_ONLY" = 0 ] && [ ! -f "$DIR/.runner" ]; then get_token; fi
+if [ "$CHECK_ONLY" = 0 ] && [ "$REMOVE" = 0 ] && [ "$KA_ONLY" = 0 ] && [ ! -f "$DIR/.runner" ]; then get_token; fi
 
-need curl "sudo apt-get install -y curl"
-need tar "sudo apt-get install -y tar"
-need systemctl "WSL needs systemd: add [boot] systemd=true to /etc/wsl.conf, then run wsl --shutdown in PowerShell"
+[ "$REMOVE$KA_ONLY" != 00 ] || need curl "sudo apt-get install -y curl"
+[ "$REMOVE$KA_ONLY" != 00 ] || need tar "sudo apt-get install -y tar"
+[ "$REMOVE$KA_ONLY" != 00 ] || need systemctl "WSL needs systemd: add [boot] systemd=true to /etc/wsl.conf, then run wsl --shutdown in PowerShell"
 
 # --- gate prerequisites: set RUNNER_WANT_PYMUPDF=1 when a build step renders PDFs with PyMuPDF -------------------------
 if [ "${RUNNER_WANT_PYMUPDF:-0}" = 1 ] && ! python3 -c 'import pymupdf' >/dev/null 2>&1; then
@@ -121,18 +125,24 @@ keepalive() {
     say "no Windows interop (schtasks.exe): WSL may shut down when idle; run on Windows: wsl -d $distro -- sleep infinity, hidden, at logon"
     return 0
   fi
+  if [ "$REMOVE" = 1 ]; then
+    schtasks.exe /Delete /F /TN "$task" >/dev/null 2>&1 && say "keepalive task \"$task\" removed (stop its sleep with: pkill -f 'sleep infinity')" || say "no keepalive task \"$task\" to remove"
+    return 0
+  fi
   if [ "$CHECK_ONLY" = 1 ]; then
     schtasks.exe /Query /TN "$task" >/dev/null 2>&1 && say "keepalive task \"$task\" exists" || say "no keepalive task \"$task\": WSL may shut down when idle (run install-wsl.sh again)"
     return 0
   fi
-  if schtasks.exe /Create /F /SC ONLOGON /RL LIMITED /TN "$task" /TR "powershell.exe -NoProfile -WindowStyle Hidden -Command wsl.exe -d $distro -- sleep infinity" >/dev/null 2>&1; then
-    schtasks.exe /Run /TN "$task" >/dev/null 2>&1 || true
-    say "keepalive task \"$task\" installed and started (keeps WSL up while idle)"
+  # conhost --headless: no console window; /F replaces the task, so a re-run keeps one task
+  if schtasks.exe /Create /F /SC ONLOGON /RL LIMITED /TN "$task" /TR "conhost.exe --headless wsl.exe -d $distro -- sleep infinity" >/dev/null 2>&1; then
+    if pgrep -f 'sleep infinity' >/dev/null 2>&1; then say "keepalive task \"$task\" installed; its sleep is already running"
+    else schtasks.exe /Run /TN "$task" >/dev/null 2>&1 || true; say "keepalive task \"$task\" installed and started (keeps WSL up while idle)"; fi
   else
     say "could not create the keepalive task \"$task\": WSL may shut down when idle"
   fi
 }
 
+if [ "$REMOVE" = 1 ] || [ "$KA_ONLY" = 1 ]; then keepalive; exit 0; fi
 if [ "$CHECK_ONLY" = 1 ]; then keepalive; verify && exit 0 || exit 1; fi
 
 # --- sudo, the token ----------------------------------------------------------------------------------------------------

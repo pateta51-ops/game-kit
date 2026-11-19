@@ -3,7 +3,7 @@ import { spawn, spawnSync } from 'node:child_process';
 import { chmodSync, cpSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { afterAll, describe, expect, it } from 'vitest';
+import { afterAll, describe, expect, it, vi } from 'vitest';
 import YAML from 'yaml';
 
 const here = import.meta.dirname;
@@ -488,6 +488,61 @@ describe('K190: what the four games need (examples/<game>.json renders their wor
     expect(r.status).toBe(1);
     expect(r.stderr).toContain('capped after');
     expect(r.stderr).toContain('running: a.spec.ts:3 slow test');
+  });
+  it('K453: a code file moved into docs/ is not docs-only (--no-renames)', () => {
+    const repo = join(dir, 'ren-repo');
+    mkdirSync(join(repo, 'docs'), { recursive: true });
+    const vcs = (...a: string[]) => spawnSync('git', ['-c', 'user.name=t', '-c', 'user.email=t@invalid', ...a], { cwd: repo, encoding: 'utf8' });
+    vcs('init', '-q');
+    writeFileSync(join(repo, 'a.ts'), 'export const a = 1;\n'.repeat(20));
+    vcs('add', '-A');
+    vcs('commit', '-qm', 'base');
+    const sha = vcs('rev-parse', 'HEAD').stdout.trim();
+    vcs('mv', 'a.ts', 'docs/a.md');
+    vcs('commit', '-qm', 'move');
+    const r = spawnSync(process.execPath, [join(here, 'docs-only.mjs')], { cwd: repo, encoding: 'utf8', env: { ...process.env, BASE: sha } });
+    expect(r.stdout.trim()).toBe('docs=false');
+  });
+  it('K453: install-wsl.sh keepalive: task command text, one task and one sleep on a re-run, removal (fake schtasks.exe and pgrep)', () => {
+    if (spawnSync('bash', ['--version']).status !== 0) return;
+    const bin = join(dir, 'fakebin');
+    mkdirSync(bin, { recursive: true });
+    const log = join(dir, 'schtasks.log');
+    writeFileSync(join(bin, 'schtasks.exe'), `#!/bin/bash\necho "$*" >> "${log.replaceAll('\\', '/')}"\n`);
+    writeFileSync(join(bin, 'pgrep'), '#!/bin/bash\n[ "$FAKE_SLEEP" = 1 ]\n');
+    chmodSync(join(bin, 'schtasks.exe'), 0o755);
+    chmodSync(join(bin, 'pgrep'), 0o755);
+    const go = (flag: string, sleeping: string) => {
+      writeFileSync(log, '');
+      const r = spawnSync('bash', [join(here, 'install-wsl.sh'), flag], { encoding: 'utf8', env: { ...process.env, PATH: `${bin}:${process.env.PATH ?? ''}`, RUNNER_REPO: 'x/y', RUNNER_LABEL: 'test', WSL_DISTRO_NAME: 'Dist', FAKE_SLEEP: sleeping } });
+      expect(r.status, r.stdout + r.stderr).toBe(0);
+      return readFileSync(log, 'utf8').trim().split('\n').filter(Boolean);
+    };
+    const first = go('--keepalive', '0');
+    expect(first[0]).toBe('/Create /F /SC ONLOGON /RL LIMITED /TN WSL keepalive Dist /TR conhost.exe --headless wsl.exe -d Dist -- sleep infinity');
+    expect(first[1]).toBe('/Run /TN WSL keepalive Dist');
+    const again = go('--keepalive', '1');
+    expect(again).toHaveLength(1);
+    expect(again[0]).toMatch(/^\/Create \/F /);
+    expect(go('--remove-keepalive', '1')).toEqual(['/Delete /F /TN WSL keepalive Dist']);
+  });
+  it('K453: the reporter names the test that was interrupted by the cap, and the ones still running', async () => {
+    const { default: Reporter } = await import('./playwright-caps');
+    const seen: string[] = [];
+    const spy = vi.spyOn(console, 'error').mockImplementation((m: unknown) => void seen.push(String(m)));
+    const rep = new Reporter();
+    const a = { title: 'slow one', location: { file: 'a.spec.ts', line: 3 } };
+    const b = { title: 'other', location: { file: 'b.spec.ts', line: 9 } };
+    const c = { title: 'done', location: { file: 'c.spec.ts', line: 1 } };
+    rep.onTestBegin(c);
+    rep.onTestEnd(c, { status: 'passed' });
+    rep.onTestBegin(a);
+    rep.onTestBegin(b);
+    rep.onTestEnd(a, { status: 'interrupted' });
+    rep.onEnd({ status: 'timedout' });
+    spy.mockRestore();
+    expect(seen.join('\n')).toBe('e2e: capped (timedout); running: b.spec.ts:9 other; a.spec.ts:3 slow one');
+    expect(seen.join('\n')).not.toContain('done');
   });
   it('K221: concurrency never cancels main', () => {
     for (const f of ['ci.yml', 'full-gate.yml']) expect(render(f)).toContain("cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}");
