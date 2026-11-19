@@ -10,6 +10,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Optional
 
+import cv2
 import numpy as np
 from scipy import ndimage as nd
 
@@ -58,18 +59,36 @@ def ink_by_ground(rgb: np.ndarray, tol: int = 90, corner: int = 10) -> np.ndarra
 
 
 def detect_boxes(ink: np.ndarray, size: tuple[float, float], ratio: tuple[float, float] = (0.7, 1.4),
-                 fill: float = 0.5, close: int = 2) -> list[dict]:
+                 fill: float = 0.5, close: int = 2, bars: Optional[tuple[float, float]] = None,
+                 edge: bool = False) -> list[dict]:
     """The printed spaces of a mat: regions of ground enclosed by ink (the ink closed ``close`` times first, so a broken
     outline still encloses), ``size`` (lo, hi) of the image's width wide, width over height in ``ratio``, and filling at
-    least ``fill`` of their bounding box. Each as normalised ``{x, y, w, h, cx, cy}``, top to bottom then left to right."""
+    least ``fill`` of their bounding box. Each as normalised ``{x, y, w, h, cx, cy}``, top to bottom then left to right.
+    ``edge``: the image border counts as ink, so a space running off the edge encloses. ``bars`` (gap, thick), fractions
+    of the width, is spaces from bars (LCARS-style panels): the ink closed over gaps up to ``gap`` (label letters, bar
+    segments), then opened to keep only parts at least ``thick`` thick (bars, not stars or grid lines); art left inside
+    a panel is filled over. ``close`` is ignored then."""
     H, W = ink.shape
-    lab, _ = nd.label(~nd.binary_closing(ink, iterations=close) if close else ~ink)
+    if bars:
+        k = lambda f: cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (max(1, round(f * W)) | 1,) * 2)
+        m = cv2.morphologyEx(ink.astype(np.uint8), cv2.MORPH_CLOSE, k(bars[0]))
+        solid = cv2.morphologyEx(m, cv2.MORPH_OPEN, k(bars[1])) > 0
+        if edge:
+            solid[[0, -1], :] = solid[:, [0, -1]] = True
+    else:
+        p = close if edge else 0
+        solid = nd.binary_closing(np.pad(ink, p, constant_values=True), iterations=close)[p:p + H, p:p + W] if close \
+            else ink.copy()
+        if edge and not close:
+            solid[[0, -1], :] = solid[:, [0, -1]] = True
+    lab, _ = nd.label(~solid)
     out = []
     for i, sl in enumerate(nd.find_objects(lab), 1):
         if sl is None:
             continue
         h, w = sl[0].stop - sl[0].start, sl[1].stop - sl[1].start
-        if size[0] * W < w < size[1] * W and ratio[0] < w / h < ratio[1] and (lab[sl] == i).sum() > fill * w * h:
+        area = (nd.binary_fill_holes(lab[sl] == i) if bars else lab[sl] == i).sum()
+        if size[0] * W < w < size[1] * W and ratio[0] < w / h < ratio[1] and area > fill * w * h:
             out.append({"x": sl[1].start / W, "y": sl[0].start / H, "w": w / W, "h": h / H,
                         "cx": (sl[1].start + sl[1].stop) / 2 / W, "cy": (sl[0].start + sl[0].stop) / 2 / H})
     return sorted(out, key=lambda b: (b["cy"], b["cx"]))

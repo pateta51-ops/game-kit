@@ -136,6 +136,9 @@ are here (sources in component.json).
   image is not the shape the spaces were measured on), `find_image(folder, name)`; `detect_boxes(ink, size)` finds the
   printed spaces as ground enclosed by ink (`ink_by_ground` samples the ground), `rows(boxes)` groups them, and
   `fit_track(points, numbers, n)` fills a numbered (zigzag) track's hidden spots by a line.
+  `detect_boxes(ink, size, bars=(gap, thick), edge=True)` (K433) finds spaces from bars on LCARS-style mats: open-sided
+  panels between thick bars, labels in bar gaps, panels running to the edge (`edge`: the image border counts as ink;
+  also usable on boxed mats). Boxed mats keep `close` (e.g. 6 for cards, 2 for wide areas).
 - `scanpipe/tone.py`: `profile(img)` (black point, median, white point per channel), `fit(flats, references, name)`
   (a non-decreasing per-channel curve from items scanned both ways), `save`, `apply_curve`, `delta_e`.
 - Outline tracing: `silhouette.outline_of(mask)` (above).
