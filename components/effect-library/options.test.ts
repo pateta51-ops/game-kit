@@ -223,7 +223,7 @@ describe('K436 effect options', () => {
     expect(context.el.querySelectorAll('div[style*="border-radius: 50%"]')).toHaveLength(0);
   });
   it('K436 the energy tuner reads the exported defaults instead of retyping them', () => {
-    const html = fs.readFileSync(path.join(import.meta.dirname, '../../tuners/src/energy.html'), 'utf8');
+    const html = fs.readFileSync(path.join(path.dirname(path.dirname(import.meta.dirname)), 'tuners', 'src', 'energy.html'), 'utf8');
     for (const d of ['WARP_TRANSFER_DEFAULTS', 'SPIRAL_DEFAULTS', 'PROJECTILE_DEFAULTS', 'SHIELD_BUBBLE_DEFAULTS', 'CURVED_BEAM_DEFAULTS']) expect(html).toContain(`FX.${d}.`);
     expect(html).not.toContain("'Number of tokens sent.', 1)");
   });
