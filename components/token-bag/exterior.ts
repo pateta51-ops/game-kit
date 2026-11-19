@@ -9,13 +9,31 @@ import { EXTERIOR_HEIGHT, EXTERIOR_WIDTH } from './mode.ts';
  */
 export type ExteriorPrint = (canvas: HTMLCanvasElement, ctx: CanvasRenderingContext2D) => void | Promise<void>;
 
+/** A print function (painted once per function, then cached) or a canvas the game pre-painted (EXTERIOR_WIDTH x EXTERIOR_HEIGHT, used as is). */
+export type Exterior = ExteriorPrint | HTMLCanvasElement;
+
+const painted = new WeakMap<ExteriorPrint, Promise<HTMLCanvasElement>>();
+let plain: Promise<HTMLCanvasElement> | undefined;
+
+
 export const EXTERIOR_ACROSS = EXTERIOR_WIDTH / (2 * Math.PI * 1.38);
 export const EXTERIOR_UP = EXTERIOR_HEIGHT / (2.14 * 0.82);
 
 /** The cloth's colour; a game paints its own patch over it. */
 export const CLOTH = '#334b59';
 
-export async function exteriorCanvas(print?: ExteriorPrint): Promise<HTMLCanvasElement> {
+export function exteriorCanvas(exterior?: Exterior): Promise<HTMLCanvasElement> {
+  if (exterior instanceof HTMLCanvasElement) return Promise.resolve(exterior);
+  if (exterior === undefined) return (plain ??= paint().catch((e: unknown) => { plain = undefined; throw e; }));
+  let p = painted.get(exterior);
+  if (p === undefined) {
+    p = paint(exterior).catch((e: unknown) => { painted.delete(exterior); throw e; });
+    painted.set(exterior, p);
+  }
+  return p;
+}
+
+async function paint(print?: ExteriorPrint): Promise<HTMLCanvasElement> {
   const canvas = document.createElement('canvas');
   canvas.width = EXTERIOR_WIDTH;
   canvas.height = EXTERIOR_HEIGHT;

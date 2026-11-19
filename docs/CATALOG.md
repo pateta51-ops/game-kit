@@ -657,7 +657,7 @@ Plays motion specs in the director's format (one JSON per beat: `actors`, `steps
 
 - **Use it when:** Playing the director's motion specs (JSON beats) on the screen.
 - **Not for:** The effects themselves (effect-library) or game logic.
-- **Key exports:** `withViewTransition`, `withVariant`, `stageFromLayout`, `buildTimeline`, `validateSpec`, `validateSpecs`, `placeOf`, `createVerbs`, `createMotionPlayer`, `withReducedMotion`, `prefersReducedMotion`, `automatedWithoutMotion`, `withAutomationOff`, `putMotionSpeed`, and 42 more
+- **Key exports:** `withViewTransition`, `withVariant`, `stageFromLayout`, `buildTimeline`, `validateSpec`, `validateSpecs`, `placeOf`, `createVerbs`, `createMotionPlayer`, `withReducedMotion`, `prefersReducedMotion`, `automatedWithoutMotion`, `withAutomationOff`, `putMotionSpeed`, and 46 more
 - **Needs:** nothing
 - **Came from:** warps
 - **Docs:** [README](../components/motion-frame/README.md)
@@ -1053,7 +1053,7 @@ A bag of tokens with its count; the draw shown as a 2D flight from the bag or a 
 
 - **Use it when:** A bag of tokens with its count; the engine's draw shown as a 2D flight from the bag or a 3D shake-and-draw (three.js by dynamic import) that never decides the draw and falls back to 2D; a finite supply of pieces counted from the engine's integers (supply.ts).
 - **Not for:** Which tokens are drawn (the engine), the token faces and the bag print (the game), a game's token tables.
-- **Key exports:** `EXTERIOR_ACROSS`, `EXTERIOR_UP`, `CLOTH`, `COIN_RADIUS`, `COIN_HEIGHT`, `SHAKE_START`, `SHAKE_END`, `DRAW_START`, `STAGGER`, `DRAW_DURATION`, `pileLayout`, `shakeAmount`, `bagPose`, `slotPose`, and 42 more
+- **Key exports:** `EXTERIOR_ACROSS`, `EXTERIOR_UP`, `CLOTH`, `COIN_RADIUS`, `COIN_HEIGHT`, `SHAKE_START`, `SHAKE_END`, `DRAW_START`, `STAGGER`, `DRAW_DURATION`, `pileLayout`, `shakeAmount`, `bagPose`, `slotPose`, and 43 more
 - **Needs:** nothing
 - **Came from:** warps-edge-fan-prototype
 - **Docs:** [README](../components/token-bag/README.md)

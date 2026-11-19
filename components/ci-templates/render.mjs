@@ -6,6 +6,7 @@
 //                   "workflows": ["ci.yml", "full-gate.yml"], "e2eScripts": ["test:e2e"],
 //                   "pathsIgnore": [<paths a push to main does not run CI for>], "runDrafts": <true: CI on draft pull requests too>,
 //                   "push": <false: no CI on a push to main>, "prTypes": [<pull_request types instead of the template's>],
+//                   "queueWaitMinutes": <default 60, false for none: self-hosted jobs get timeoutMinutes + this; their run steps get timeoutMinutes>,
 //                   "ci": { "name", "timeoutMinutes", "checkout": {<with>}, "node": {<more with>}, "install": <step>, "steps": [<steps instead of npm run check>] },
 //                   "gate": { the same keys, for full-gate.yml }, "jobs": { "<id>": { "name", "timeoutMinutes", "steps": [...] } } (more jobs in ci.yml) }
 // More keys of ci / gate (K190, see README): id, if, runsOn, nodeVersion, before/after/replace (by step), python, rust, failureArtifact, e2ePort, flat; ci: dispatch, inputs, branchesIgnore, draftConcurrency; gate: inputs.
@@ -128,6 +129,16 @@ for (const f of c.workflows ?? ['ci.yml', 'full-gate.yml']) {
       if (!g) die(`ci.yml: no "if" and "runs-on" lines in the template to give job "${id}"`);
       out += `\n  ${id}:\n    name:${val(j.name ?? id)}\n${g[0]}    timeout-minutes: ${j.timeoutMinutes ?? 15}\n    steps:\n      - uses: actions/checkout@v7\n${steps(j.steps)}`;
     }
+  }
+  if (f !== 'nightly-fuzz.yml' && c.queueWaitMinutes !== false) {
+    const q = c.queueWaitMinutes ?? 60;
+    const j0 = out.indexOf('\njobs:\n');
+    out = out.slice(0, j0) + out.slice(j0).split(/(?=^ {2}[\w-]+:\n)/m).map((b) => {
+      const n = b.match(/^ {4}timeout-minutes: (\d+)$/m);
+      if (!n || !/^ {4}runs-on: .*self-hosted/m.test(b)) return b;
+      const i = b.indexOf('\n    steps:\n');
+      return b.slice(0, i).replace(n[0], `    timeout-minutes: ${+n[1] + q}`) + b.slice(i).split(/(?=^ {6}- )/m).map((t) => (/^(?: {6}- | {8})run:/m.test(t) && !/^(?: {6}- | {8})timeout-minutes:/m.test(t) ? `${t.replace(/\n+$/, '')}\n        timeout-minutes: ${n[1]}\n${t.match(/\n*$/)[0].slice(1)}` : t)).join('');
+    }).join('');
   }
   const to = `.github/workflows/${f}`;
   if (!process.argv.includes('--check')) {

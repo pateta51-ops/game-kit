@@ -224,3 +224,72 @@ it('uses the native update callback and respects instant and unsupported transit
   expect(apply).toHaveBeenCalledTimes(3);
   expect(start).toHaveBeenCalledOnce();
 });
+
+const liveSpec: MotionSpec = { id: 'live', steps: [], swap: { dur: 220, stagger: 30, enter: 'live', ease: 'ease-out' } };
+const drawLive = (n: number): void => {
+  document.body.innerHTML = '<div id="source" data-x="5"></div>' + Array.from({ length: n }, (_, i) =>
+    `<div data-motion-key="c${String(i)}" data-x="${String(100 + i * 30)}" data-motion-from="#source"></div>`).join('');
+};
+
+it('K439 enter live flies the arriving nodes themselves from the source, uncapped, faded in from 0.2', () => {
+  document.body.replaceChildren();
+  const p = player({ specs: { live: liveSpec } });
+  p.play('live', { commit: () => { drawLive(11); } });
+  vi.advanceTimersByTime(16);
+  expect(animate).toHaveBeenCalledTimes(11);
+  const nodes = [...document.querySelectorAll<HTMLElement>('[data-motion-key]')];
+  expect(animate.mock.contexts.every((c, i) => c === nodes[i])).toBe(true);
+  expect(document.querySelectorAll('[data-motion-ghost], [data-motion-landing]')).toHaveLength(0);
+  expect(nodes.every((n) => n.style.visibility === '')).toBe(true);
+  const [frames, options] = animate.mock.calls[0]!;
+  expect(frames[0]).toMatchObject({ opacity: 0.2, transform: 'translate(-95px, 0px) scale(1, 1)' });
+  expect(frames[1]).toMatchObject({ transform: 'translate(0px, 0px) scale(1, 1)' });
+  expect(options).toMatchObject({ duration: 220, delay: 0, easing: 'ease-out' });
+  expect(animate.mock.calls[10]![1].delay).toBe(300);
+});
+
+it('K439 enter from keeps the capped stagger and the stretched copy', () => {
+  document.body.replaceChildren();
+  const p = player({ specs: { live: { ...liveSpec, swap: { ...liveSpec.swap, enter: 'from' } } } });
+  p.play('live', { commit: () => { drawLive(11); } });
+  vi.advanceTimersByTime(16);
+  expect(animate.mock.calls[10]![1].delay).toBe(240);
+  expect(document.querySelectorAll('[data-motion-ghost]')).toHaveLength(11);
+});
+
+it('K439 live flights are cleared on skip', () => {
+  const cancel = vi.fn();
+  animate.mockImplementation(() => ({ cancel }));
+  document.body.replaceChildren();
+  const p = player({ specs: { live: liveSpec } });
+  p.play('live', { commit: () => { drawLive(2); } });
+  vi.advanceTimersByTime(16);
+  p.skipAll();
+  expect(cancel).toHaveBeenCalledTimes(2);
+});
+
+it.each([0, 'instant'] as const)('K439 live flight at speed %s starts no animation and leaves the nodes bare', (speed) => {
+  document.body.replaceChildren();
+  const commit = vi.fn(() => { drawLive(3); });
+  const p = player({ specs: { live: liveSpec }, speed: () => speed });
+  p.play('live', { commit });
+  vi.advanceTimersByTime(100);
+  expect(commit).toHaveBeenCalledOnce();
+  expect(animate).not.toHaveBeenCalled();
+  expect(document.querySelectorAll('[data-motion-key]')).toHaveLength(3);
+  expect([...document.querySelectorAll('[data-motion-key]')].every((n) => !n.hasAttribute('style'))).toBe(true);
+});
+
+it.each(['finish', 'cancel'] as const)('K439 live nodes keep an empty style attribute after the flight and after a %s', (how) => {
+  document.body.replaceChildren();
+  const p = player({ specs: { live: liveSpec } });
+  p.play('live', { commit: () => { drawLive(3); } });
+  vi.advanceTimersByTime(16);
+  expect(animate).toHaveBeenCalledTimes(3);
+  const nodes = [...document.querySelectorAll<HTMLElement>('[data-motion-key]')];
+  if (how === 'cancel') p.skipAll();
+  else vi.advanceTimersByTime(1000);
+  expect(p.pending()).toBe(0);
+  expect(nodes).toHaveLength(3);
+  expect(nodes.every((n) => (n.getAttribute('style') ?? '') === '')).toBe(true);
+});

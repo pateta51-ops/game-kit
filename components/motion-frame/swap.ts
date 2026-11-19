@@ -3,7 +3,8 @@ export interface BoardSwap {
   stagger?: number;
   dur?: number;
   ease?: string;
-  enter?: 'fade' | 'from';
+  enter?: 'fade' | 'from' | 'live';
+  fromOpacity?: number;
   leave?: 'ghost' | 'none';
   maxStagger?: number;
 }
@@ -33,8 +34,8 @@ export function flyBoard(
   if (!(duration > 0)) return 0;
   let count = 0;
   let end = 0;
-  const fly = (node: HTMLElement, frames: Keyframe[], cleanup?: () => void): void => {
-    const delay = Math.min(count++, swap.maxStagger ?? 8) * (swap.stagger ?? 70) * factor;
+  const fly = (node: HTMLElement, frames: Keyframe[], cleanup?: () => void, live = false): void => {
+    const delay = Math.min(count++, live ? Infinity : swap.maxStagger ?? 8) * (swap.stagger ?? 70) * factor;
     if (cleanup) open.add(cleanup);
     const anim = node.animate(frames, { duration, delay, fill: 'backwards', easing: swap.ease ?? 'cubic-bezier(.2,.8,.2,1)' });
     if (cleanup) open.delete(cleanup);
@@ -68,7 +69,7 @@ export function flyBoard(
     if (typeof node.animate !== 'function') continue;
     const old = before.get(key);
     const source = node.dataset.motionFrom;
-    const from = old?.rect ?? (swap.enter === 'from' && source
+    const from = old?.rect ?? ((swap.enter === 'from' || swap.enter === 'live') && source
       ? document.querySelector(source)?.getBoundingClientRect() : undefined);
     const frames: Keyframe[] = [{ opacity: 0 }, { opacity: getComputedStyle(node).opacity || '1' }];
     if (from !== undefined && from.width > 0 && from.height > 0) {
@@ -82,6 +83,12 @@ export function flyBoard(
     }
     if (old) {
       fly(node, frames);
+      continue;
+    }
+    if (swap.enter === 'live' && from !== undefined) {
+      frames[0] = { ...frames[0], opacity: swap.fromOpacity ?? 0.2 };
+      frames[1] = { ...frames[1], opacity: getComputedStyle(node).opacity || '1' };
+      fly(node, frames, undefined, true);
       continue;
     }
     const ghost = node.cloneNode(true) as HTMLElement;

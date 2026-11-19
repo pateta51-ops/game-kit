@@ -3,7 +3,7 @@
 // disc, and the scripted shake-and-draw of timeline.ts. three.js is imported only here; this file is reached only
 // through the dynamic imports of TokenBag.tsx, so a game's main bundle does not carry it.
 import * as THREE from 'three';
-import { exteriorCanvas, weaveCanvas, type ExteriorPrint } from './exterior.ts';
+import { exteriorCanvas, weaveCanvas, type Exterior } from './exterior.ts';
 import {
   COIN_HEIGHT,
   COIN_RADIUS,
@@ -29,7 +29,7 @@ export interface BagSceneOptions {
   /** the image (SVG or raster) of a token kind: the coin's face */
   faceUrl: (kind: string) => string;
   /** the game's print on the bag's cloth (drawn over the plain weave, see exterior.ts); none: plain cloth */
-  exterior?: ExteriorPrint;
+  exterior?: Exterior;
   /** the clear colour, fog and table edge (default #0a121a) */
   backdrop?: string;
   onCount?: (n: number) => void;

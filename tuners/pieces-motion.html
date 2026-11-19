@@ -156,9 +156,9 @@ var PIECES = (() => {
   ));
   var __toCommonJS = (mod) => __copyProps(__defProp({}, "__esModule", { value: true }), mod);
 
-  // node_modules/react/cjs/react.production.js
+  // ../../../node_modules/react/cjs/react.production.js
   var require_react_production = __commonJS({
-    "node_modules/react/cjs/react.production.js"(exports) {
+    "../../../node_modules/react/cjs/react.production.js"(exports) {
       "use strict";
       var REACT_ELEMENT_TYPE = /* @__PURE__ */ Symbol.for("react.transitional.element");
       var REACT_PORTAL_TYPE = /* @__PURE__ */ Symbol.for("react.portal");
@@ -608,9 +608,9 @@ var PIECES = (() => {
     }
   });
 
-  // node_modules/react/index.js
+  // ../../../node_modules/react/index.js
   var require_react = __commonJS({
-    "node_modules/react/index.js"(exports, module) {
+    "../../../node_modules/react/index.js"(exports, module) {
       "use strict";
       if (true) {
         module.exports = require_react_production();
@@ -620,9 +620,9 @@ var PIECES = (() => {
     }
   });
 
-  // node_modules/scheduler/cjs/scheduler.production.js
+  // ../../../node_modules/scheduler/cjs/scheduler.production.js
   var require_scheduler_production = __commonJS({
-    "node_modules/scheduler/cjs/scheduler.production.js"(exports) {
+    "../../../node_modules/scheduler/cjs/scheduler.production.js"(exports) {
       "use strict";
       function push(heap, node) {
         var index = heap.length;
@@ -893,9 +893,9 @@ var PIECES = (() => {
     }
   });
 
-  // node_modules/scheduler/index.js
+  // ../../../node_modules/scheduler/index.js
   var require_scheduler = __commonJS({
-    "node_modules/scheduler/index.js"(exports, module) {
+    "../../../node_modules/scheduler/index.js"(exports, module) {
       "use strict";
       if (true) {
         module.exports = require_scheduler_production();
@@ -905,9 +905,9 @@ var PIECES = (() => {
     }
   });
 
-  // node_modules/react-dom/cjs/react-dom.production.js
+  // ../../../node_modules/react-dom/cjs/react-dom.production.js
   var require_react_dom_production = __commonJS({
-    "node_modules/react-dom/cjs/react-dom.production.js"(exports) {
+    "../../../node_modules/react-dom/cjs/react-dom.production.js"(exports) {
       "use strict";
       var React = require_react();
       function formatProdErrorMessage(code) {
@@ -1062,9 +1062,9 @@ var PIECES = (() => {
     }
   });
 
-  // node_modules/react-dom/index.js
+  // ../../../node_modules/react-dom/index.js
   var require_react_dom = __commonJS({
-    "node_modules/react-dom/index.js"(exports, module) {
+    "../../../node_modules/react-dom/index.js"(exports, module) {
       "use strict";
       function checkDCE() {
         if (typeof __REACT_DEVTOOLS_GLOBAL_HOOK__ === "undefined" || typeof __REACT_DEVTOOLS_GLOBAL_HOOK__.checkDCE !== "function") {
@@ -1088,9 +1088,9 @@ var PIECES = (() => {
     }
   });
 
-  // node_modules/react-dom/cjs/react-dom-client.production.js
+  // ../../../node_modules/react-dom/cjs/react-dom-client.production.js
   var require_react_dom_client_production = __commonJS({
-    "node_modules/react-dom/cjs/react-dom-client.production.js"(exports) {
+    "../../../node_modules/react-dom/cjs/react-dom-client.production.js"(exports) {
       "use strict";
       var Scheduler = require_scheduler();
       var React = require_react();
@@ -14632,9 +14632,9 @@ var PIECES = (() => {
     }
   });
 
-  // node_modules/react-dom/client.js
+  // ../../../node_modules/react-dom/client.js
   var require_client = __commonJS({
-    "node_modules/react-dom/client.js"(exports, module) {
+    "../../../node_modules/react-dom/client.js"(exports, module) {
       "use strict";
       function checkDCE() {
         if (typeof __REACT_DEVTOOLS_GLOBAL_HOOK__ === "undefined" || typeof __REACT_DEVTOOLS_GLOBAL_HOOK__.checkDCE !== "function") {
@@ -14658,9 +14658,9 @@ var PIECES = (() => {
     }
   });
 
-  // node_modules/react/cjs/react-jsx-runtime.production.js
+  // ../../../node_modules/react/cjs/react-jsx-runtime.production.js
   var require_react_jsx_runtime_production = __commonJS({
-    "node_modules/react/cjs/react-jsx-runtime.production.js"(exports) {
+    "../../../node_modules/react/cjs/react-jsx-runtime.production.js"(exports) {
       "use strict";
       var REACT_ELEMENT_TYPE = /* @__PURE__ */ Symbol.for("react.transitional.element");
       var REACT_FRAGMENT_TYPE = /* @__PURE__ */ Symbol.for("react.fragment");
@@ -14688,9 +14688,9 @@ var PIECES = (() => {
     }
   });
 
-  // node_modules/react/jsx-runtime.js
+  // ../../../node_modules/react/jsx-runtime.js
   var require_jsx_runtime = __commonJS({
-    "node_modules/react/jsx-runtime.js"(exports, module) {
+    "../../../node_modules/react/jsx-runtime.js"(exports, module) {
       "use strict";
       if (true) {
         module.exports = require_react_jsx_runtime_production();
@@ -14859,8 +14859,8 @@ var PIECES = (() => {
     if (!(duration > 0)) return 0;
     let count = 0;
     let end = 0;
-    const fly = (node, frames2, cleanup) => {
-      const delay = Math.min(count++, swap.maxStagger ?? 8) * (swap.stagger ?? 70) * factor;
+    const fly = (node, frames2, cleanup, live = false) => {
+      const delay = Math.min(count++, live ? Infinity : swap.maxStagger ?? 8) * (swap.stagger ?? 70) * factor;
       if (cleanup) open2.add(cleanup);
       const anim = node.animate(frames2, { duration, delay, fill: "backwards", easing: swap.ease ?? "cubic-bezier(.2,.8,.2,1)" });
       if (cleanup) open2.delete(cleanup);
@@ -14900,7 +14900,7 @@ var PIECES = (() => {
       if (typeof node.animate !== "function") continue;
       const old = before.get(key);
       const source = node.dataset.motionFrom;
-      const from = old?.rect ?? (swap.enter === "from" && source ? document.querySelector(source)?.getBoundingClientRect() : void 0);
+      const from = old?.rect ?? ((swap.enter === "from" || swap.enter === "live") && source ? document.querySelector(source)?.getBoundingClientRect() : void 0);
       const frames2 = [{ opacity: 0 }, { opacity: getComputedStyle(node).opacity || "1" }];
       if (from !== void 0 && from.width > 0 && from.height > 0) {
         const dx = from.left - rect.left;
@@ -14913,6 +14913,12 @@ var PIECES = (() => {
       }
       if (old) {
         fly(node, frames2);
+        continue;
+      }
+      if (swap.enter === "live" && from !== void 0) {
+        frames2[0] = { ...frames2[0], opacity: swap.fromOpacity ?? 0.2 };
+        frames2[1] = { ...frames2[1], opacity: getComputedStyle(node).opacity || "1" };
+        fly(node, frames2, void 0, true);
         continue;
       }
       const ghost = node.cloneNode(true);
@@ -14964,11 +14970,20 @@ var PIECES = (() => {
     const drawing = /* @__PURE__ */ new Map();
     let drawingHead;
     const holds = /* @__PURE__ */ new Map();
+    const kept = /* @__PURE__ */ new Map();
+    const unkeep = (item) => {
+      const fs = kept.get(item);
+      kept.delete(item);
+      fs?.forEach((f) => {
+        safe(`${item.spec.id} finish`, f);
+      });
+    };
     const endHolds = (match) => {
       for (const [item, timer] of holds) {
         if (!match(item)) continue;
         clearTimeout(timer);
         holds.delete(item);
+        unkeep(item);
       }
     };
     const reached = (id) => {
@@ -15108,7 +15123,7 @@ var PIECES = (() => {
     const start = (item, spec, stage, factor, parallel) => {
       const swap = item.commit && typeof document !== "undefined" ? spec.swap : void 0;
       const redraw = swap || item.commit && (spec.whenReady || spec.awaitRects !== void 0);
-      const build = () => buildTimeline(spec, stage, factor, o.pace?.(factor));
+      const build = () => buildTimeline(spec, stage, factor, o.pace?.(factor) ?? (o.readFollowsSpeed ? factor : void 0));
       const run = makeRun(item, redraw ? emptyTimeline(spec.id) : build());
       const timers = /* @__PURE__ */ new Set();
       const open2 = /* @__PURE__ */ new Set();
@@ -15121,24 +15136,58 @@ var PIECES = (() => {
           f();
         }, ms);
         timers.add(t);
+        return t;
       };
       safe(`${spec.id} start`, () => o.onBeatStart?.(run));
       if (!live.has(me)) return;
       const schedule = () => {
-        for (const call of run.timeline.calls) {
+        const t0 = Date.now();
+        const steps = [];
+        me.cut = () => {
+          delete me.cut;
+          const elapsed = Date.now() - t0;
+          const going = steps.filter((s) => s.started && (s.timer === void 0 || timers.has(s.timer)) && s.end > elapsed);
+          const keepT = new Set(going.map((s) => s.timer));
+          timers.forEach((t) => {
+            if (keepT.has(t)) return;
+            clearTimeout(t);
+            timers.delete(t);
+          });
+          const runs2 = steps.filter((s) => !s.started && s.call.step.onCut === "run");
+          if (going.length === 0 && runs2.length === 0) return false;
+          const e = Math.max(elapsed, ...going.map((s) => s.end));
+          const base = e - elapsed - Math.min(...runs2.map((s) => s.call.t));
+          const ends = runs2.map((s) => put(s.call, base, s));
+          at(Math.max(e - elapsed, ...ends), () => {
+            finish2(me, "skipped");
+            next();
+            emit();
+          });
+          return true;
+        };
+        const put = (call, base, step) => {
           let done;
-          at(call.t, () => {
+          step.end = call.t + call.dur + base + Date.now() - t0;
+          at(call.t + base, () => {
+            step.started = true;
             safe(`${spec.id} ${call.verb}`, () => {
               done = o.verbs.get(call.verb)?.(call, run);
             });
             if (done !== void 0) open2.add(done);
           });
-          at(call.t + call.dur, () => {
-            const d = done;
-            if (d === void 0) return;
-            open2.delete(d);
-            safe(`${spec.id} ${call.verb} finish`, d);
-          });
+          if (!(item.keep && call.t + call.dur >= run.timeline.ms))
+            step.timer = at(call.t + call.dur + base, () => {
+              const d = done;
+              if (d === void 0) return;
+              open2.delete(d);
+              safe(`${spec.id} ${call.verb} finish`, d);
+            });
+          return call.t + call.dur + base;
+        };
+        for (const call of run.timeline.calls) {
+          const step = { call, end: 0, started: false };
+          steps.push(step);
+          put(call, 0, step);
         }
         const leave = item.gate && run.timeline.calls.find((c) => c.step.leave === true);
         if (leave)
@@ -15158,10 +15207,15 @@ var PIECES = (() => {
             const timer = delay > 0 ? setTimeout(() => {
               if (!holds.has(item)) return;
               holds.delete(item);
+              unkeep(item);
               next();
               emit();
             }, delay) : void 0;
             holds.set(item, timer);
+            if (item.keep) {
+              kept.set(item, [...open2]);
+              open2.clear();
+            }
           }
           finish2(me, "done");
           next();
@@ -15337,13 +15391,14 @@ var PIECES = (() => {
         emit();
       });
     };
-    const skip = (snap) => {
+    const skip = (snap, opts) => {
       const wasSkipping = skipping;
+      const cutting = new Set(opts?.finishStep ? [...live].filter((c) => snap(c.item) && c.cut?.() === true) : []);
       const current = cur?.item;
       const drawingItems = [...drawing].filter(([item]) => snap(item));
       let blocked = Boolean(committing || [...drawing.keys()].some((item) => item.commit && !snap(item)) || starting !== current && starting?.commit || current?.commit && !snap(current) || snapping.some((batch) => batch.some((i) => i.commit)));
       const waiting = drawingItems.map(([item]) => item);
-      const kept = queue.filter((item) => {
+      const kept2 = queue.filter((item) => {
         if (!snap(item)) {
           if (item.commit) blocked = true;
           return true;
@@ -15355,7 +15410,7 @@ var PIECES = (() => {
         waiting.push(item);
         return false;
       });
-      queue.splice(0, queue.length, ...kept);
+      queue.splice(0, queue.length, ...kept2);
       skipping = true;
       snapping.push(waiting);
       try {
@@ -15363,7 +15418,7 @@ var PIECES = (() => {
         for (const [, cancel] of drawingItems) cancel();
         closePan();
         for (const c of [...live]) {
-          if (snap(c.item)) finish2(c, "skipped");
+          if (snap(c.item) && !cutting.has(c)) finish2(c, "skipped");
         }
         for (const item of waiting) snapEnd(item);
       } finally {
@@ -15397,6 +15452,7 @@ var PIECES = (() => {
           gate: opts?.gate,
           commit: commit2,
           data: opts?.data,
+          ...opts?.keepUntilReleased && { keep: true },
           ...!spec && { problem: `motion-frame: no spec named ${beat}` }
         };
         if (opts?.parallel === true && !item.commit && (!o.pan || item.spec.pan === void 0)) {
@@ -15423,8 +15479,8 @@ var PIECES = (() => {
         next();
         emit();
       },
-      hurry() {
-        skip((i) => i.spec.hurry !== "keep");
+      hurry(opts) {
+        skip((i) => i.spec.hurry !== "keep", opts);
       },
       gate,
       afterGate(f) {
@@ -15445,8 +15501,8 @@ var PIECES = (() => {
         next();
         emit();
       },
-      skipAll() {
-        skip(() => true);
+      skipAll(opts) {
+        skip(() => true, opts);
       },
       subscribe(f) {
         subs.add(f);

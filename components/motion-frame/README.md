@@ -15,6 +15,7 @@ Plays motion specs in the director's format (one JSON per beat: `actors`, `steps
   `whenReady` and `awaitRects` poll the committed board. A swap's started run gets its full timeline after redraw.
   Defaults: 420 ms, 70 ms stagger capped at eight intervals, fade entries and shrinking exit ghosts.
   With `enter: 'from'`, `data-motion-from` is a source selector. `leave: 'none'` drops exit ghosts.
+  With `enter: 'live'` (K439) an arrival with `data-motion-from` flies the live node itself (no copy, no hold) from the source box, fading in from `fromOpacity` (default 0.2), with `ease`/`dur`/`stagger` as given and no stagger cap (Warp's skill fan: `dur: 220, stagger: 30`).
   Arrivals carry `data-motion-landing` until they land. Skip, hurry and instant speed snap commits and clear flights.
 - A spec's `pan` is the target passed to the optional `pan(scale, signal)` session factory's
   `ensure(target)` method. It runs before rect polling, the start hook and commit.
@@ -53,9 +54,18 @@ Plays motion specs in the director's format (one JSON per beat: `actors`, `steps
   `autoContinueMs` sets a delay on its own or a fallback for either hold, scaled
   by the beat's speed; without it a hold lasts until `release()` or `skipAll()`. Instant beats open no hold. Read `held()` for the hold state.
   `skipAll()` cancels waits and holds, for example on undo, load or leaving the screen.
+- Stand-ins and soft skips (K437, all opt-in): `play(beat, { keepUntilReleased: true })` keeps the verbs of the steps that last to the beat's end (an enlarged card, a row light, a flicker) until the beat's hold ends (`release()`, `autoContinueMs`, the named beat, a skip); without a hold they finish at the beat's end as before. `skipAll({ finishStep: true })` and `hurry({ finishStep: true })` let the steps in progress play to their end (a grown card shrinks back), then end the beat as `skipped`; later steps and cues never start (so a grow-then-shrink must be one step for the shrink to play, unless the shrink step says `onCut: 'run'`: such an unstarted step plays in full after the steps in progress, holds before it dropped), queued beats snap at once; a second plain skip snaps it. `hurryOnInput(player, target, { pointerOnly: true, finishStep: true })` listens to pointer presses only (capture phase) and passes `finishStep`. `readFollowsSpeed: true` on the player scales `read` holds with the speed (halved at Fast); a `pace` given wins.
 - Big beats (K143): `play(beat, { gate: { before, after } })` opens `gate()` (`{ beat, before, after, leaving, place? }`, `leaving` from the first `leave: true` step) while it plays or waits; `afterGate(f)` runs `f` once it closes; input is never held. `hurry()` (`hurryOnInput(player, target)`) is `skipAll` except beats whose spec says `hurry: 'keep'`. `playRun(beats, opts)` plays several beats under one stage: each its `places` variant (`lone`, `first`, `middle`, `last`), `run.place` is `{ at, k, of }` for a "2 of 3" chip, `onEnd` after the last. `onEnded(how)` beside `onEnd` says `done` or `skipped`. `validateSpec` checks the variants.
 - Lab (`lab.ts`): `mountMotionLab(root, { specs, player })` lists every motion of the catalog as a button (name, `maxMs`, frequency); a press calls `skipAll()` and plays that one on the game's stage, so give the lab its own player: on the game's player a press would end the game's beats too. Mounting again on a root replaces its list. Mount it on a route for the owner's review (in an automated browser, with `?motion=on`); returns the unmount.
 The end state is the game's own screen: the player never touches game state.
+- `classToggle(el, cls, { dur = 200, ease = 'ease', prop = 'transform' })` (K439, Warp's attack lift) puts a class on with an eased transition and returns `off()`, which drops it at once. `classToggleVerb(find, cls, opts?)` is a verb for `register`: `find(call)` returns the element; its `finish` drops the class.
+```ts
+import { classToggle, classToggleVerb, createVerbs } from './index.ts';
+const verbs = createVerbs();
+verbs.register('lift', classToggleVerb((call) => document.getElementById(call.actor), 'is-attacking'));
+const off = classToggle(document.body, 'is-attacking');
+off();
+```
 ## Look
 Open `components/motion-frame/fake/lab.html` through Vite to try the fake queue.
 Open `components/motion-frame/fake/pan.html` for the phone pan lab.
@@ -74,6 +84,15 @@ For the owner's motion review: a clip of the beat on the real screen and a still
 import { placeOf } from '../kit/motion-frame/index'
 
 console.log(placeOf(1, 3)) // 'first': card 1 of 3 is the first of the row (lone | first | middle | last; the beat's place, not a fan position)
+```
+
+```ts
+import { hurryOnInput, type MotionPlayer } from '../kit/motion-frame/index'
+
+declare const player: MotionPlayer // made with readFollowsSpeed: true, so read holds halve at Fast
+player.play('bot-reveal', { keepUntilReleased: true }) // its row light stays lit through the beat's hold
+const unbind = hurryOnInput(player, window, { pointerOnly: true, finishStep: true }) // a tap lets the step in progress finish
+unbind()
 ```
 
 ```tsx

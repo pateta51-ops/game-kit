@@ -66,7 +66,7 @@ describe('rendered files', () => {
     expect(go().status).toBe(2);
     writeFileSync(join(root, 'ci.config.json'), JSON.stringify({ repo: 'acme/widget' }));
     expect(go().status).toBe(2);
-    writeFileSync(join(root, 'ci.config.json'), JSON.stringify({ repo: 'acme/widget', runnerLabel: 'widget' }));
+    writeFileSync(join(root, 'ci.config.json'), JSON.stringify({ repo: 'acme/widget', runnerLabel: 'widget', queueWaitMinutes: false }));
     expect(go('--check').status).toBe(1);
     expect(go().status).toBe(0);
     const wf = (f: string): string => readFileSync(join(root, '.github/workflows', f), 'utf8');
@@ -102,7 +102,7 @@ describe('rendered files', () => {
     const root = join(dir, 'steps');
     mkdirSync(join(root, 'kit'), { recursive: true });
     cpSync(here, join(root, 'kit/ci-templates'), { recursive: true });
-    const base = { repo: 'acme/widget', runnerLabel: 'widget' };
+    const base = { repo: 'acme/widget', runnerLabel: 'widget', queueWaitMinutes: false };
     const go = (cfg: object): string => {
       writeFileSync(join(root, 'ci.config.json'), JSON.stringify({ ...base, ...cfg }));
       expect(spawnSync(process.execPath, ['kit/ci-templates/render.mjs'], { cwd: root }).status).toBe(0);
@@ -376,7 +376,7 @@ describe('K190: what the four games need (examples/<game>.json renders their wor
   const files: Record<string, string[]> = { ebr: ['ci.yml'], imp: ['ci.yml', 'full-gate.yml'], warps: ['full-gate.yml'], stcc: ['full-gate.yml'] };
   for (const g of Object.keys(files))
     it(`${g}: the rendered workflow equals the game's own, but for the listed differences`, () => {
-      const wf = mk(g, JSON.parse(read(`examples/${g}.json`)) as object);
+      const wf = mk(g, { ...(JSON.parse(read(`examples/${g}.json`)) as object), queueWaitMinutes: false });
       const diffs: string[] = [];
       for (const f of files[g]!) {
         const a = wf(f);
@@ -391,7 +391,7 @@ describe('K190: what the four games need (examples/<game>.json renders their wor
     });
 
   it('python, rust, a failure artifact, extra steps and the header follow their keys; the rest stays as it was', () => {
-    const base = { repo: 'acme/widget', runnerLabel: 'widget' };
+    const base = { repo: 'acme/widget', runnerLabel: 'widget', queueWaitMinutes: false };
     const plain = mk('plain', base);
     const ci = mk('keys-ci', { ...base, runDrafts: true, ci: { python: { version: '3.13', requirements: 'py/req.txt', venv: true }, rust: { components: 'clippy', commands: ['cargo test'], workingDirectory: 'rs' }, failureArtifact: { name: 'r', path: ['a/', 'b/'], retentionDays: 3 }, nodeVersion: '22', before: { check: 'echo b' }, after: { install: [{ run: 'echo a', 'timeout-minutes': 4, env: { X: '1' } }] }, dispatch: true } });
     const doc = ci('ci.yml');
@@ -419,6 +419,26 @@ describe('K190: what the four games need (examples/<game>.json renders their wor
     stop({ ci: { after: { nowhere: ['true'] } } }, 'unknown step "nowhere"');
     stop({ ci: { flat: true } }, '"flat" is for the gate only');
     stop({ gate: { draftConcurrency: true } }, 'full-gate.yml: "draftConcurrency"');
+  });
+  it('K434: a self-hosted job gets timeoutMinutes + queueWaitMinutes, its run steps timeoutMinutes; hosted is unchanged', () => {
+    const base = { repo: 'acme/widget', runnerLabel: 'widget' };
+    const jobs = (n: string, cfg: object) => mk(n, { ...base, ...cfg })('ci.yml').jobs;
+    const st = (j: { steps: unknown[] }) => j.steps as Record<string, unknown>[];
+    const a = jobs('qw-default', {});
+    expect(a.check!['timeout-minutes']).toBe(75);
+    const runs = st(a.check!).filter((s) => 'run' in s);
+    expect(runs.length).toBeGreaterThan(0);
+    for (const s of runs) expect(s['timeout-minutes'], JSON.stringify(s)).toBe(15);
+    const b = jobs('qw-custom', { queueWaitMinutes: 30, ci: { timeoutMinutes: 20, steps: ['npm test', { run: 'x', 'timeout-minutes': 3 }] } });
+    expect(b.check!['timeout-minutes']).toBe(50);
+    expect(st(b.check!).filter((s) => 'run' in s).map((s) => s['timeout-minutes'])).toEqual([20, 20, 3]);
+    const g = mk('qw-gate', base)('full-gate.yml').jobs.gate!;
+    expect(g['timeout-minutes']).toBe(120);
+    expect(st(g).filter((s) => 'run' in s).every((s) => s['timeout-minutes'] === 60)).toBe(true);
+    expect(jobs('qw-off', { queueWaitMinutes: false }).check!['timeout-minutes']).toBe(15);
+    const c = jobs('qw-hosted', { ci: { runsOn: 'ubuntu-latest' } });
+    expect(c.check!['timeout-minutes']).toBe(15);
+    expect(st(c.check!).some((s) => 'timeout-minutes' in s)).toBe(false);
   });
   it('K221: concurrency never cancels main', () => {
     for (const f of ['ci.yml', 'full-gate.yml']) expect(render(f)).toContain("cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}");

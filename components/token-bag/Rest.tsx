@@ -2,12 +2,12 @@
 // never in a loop. Reached only by a dynamic import (TokenBag.tsx), so a game's main bundle carries no three.js.
 import { useEffect, useLayoutEffect, useRef } from 'react';
 import { createBagScene } from './scene.ts';
-import type { ExteriorPrint } from './exterior.ts';
+import type { Exterior } from './exterior.ts';
 import type { FallbackReason } from './mode.ts';
 
 export interface RestProps {
   faceUrl: (kind: string) => string;
-  exterior?: ExteriorPrint | undefined;
+  exterior?: Exterior | undefined;
   backdrop?: string | undefined;
   onFail: (reason: FallbackReason) => void;
 }
