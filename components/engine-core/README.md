@@ -28,10 +28,12 @@ The kernel of a game engine: seeded random numbers, canonical JSON and hashes, t
 
 ```ts
 import { applyAction, createGame, hashState } from '../kit/engine-core/kernel'
+import { enumerateAnswers } from '../kit/engine-core/tools'
 import { CONTENT, COUNTER, RULES } from '../kit/engine-core/fake/counter' // a tiny fake game; yours is a `GameRules<G>`
 
 let { state } = createGame(COUNTER, { seed: 'demo' }, RULES, CONTENT)
 const prompt = state.prompt! // the engine always waits on one prompt
 state = applyAction(COUNTER, state, { kind: 'answer', promptId: prompt.id, picks: ['add'] }, CONTENT).state
 console.log(state.counter, hashState(state)) // same seed and answers: same state and hash
+console.log(enumerateAnswers(state, (_s, a) => !a.picks.includes('draw'))) // every legal answer (every order when the prompt is `ordered`), minus those `valid` refuses
 ```

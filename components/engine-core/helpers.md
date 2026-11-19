@@ -7,7 +7,7 @@
 
 ## Answers and play helpers (K25, K30)
 
-- `enumerateAnswers(state)`: every answer `validateAction` accepts (each set of enabled ids from `min` to `max`, in option order); none when no prompt is open or the game is over.
+- `enumerateAnswers(state, valid?)`: every answer `validateAction` accepts (each set of enabled ids from `min` to `max`, in option order; K407: a prompt with `ordered: true` lists every order of each set); none when no prompt is open or the game is over. K407: `valid(state, answer)` drops answers the game's engine would refuse (an illegal pick set); without it the list is unchanged.
 - `firstPicks(state)`, `randomPicks(state, seed)` (seeded by the seed and prompt id), `playUntil(game, { state, events? }, content, stop, pick?, cap?)` (answers until `stop`, the end or `cap`; events accumulate), `expectEvents(events, key, ...types)` (throws unless the types occur in that order).
 - `skipEmptyProblems(game, starts, content, auto, seed?, cap?)`: plays each start with `randomPicks`; at every prompt the game's skip-empty function `auto` answers (non-null), the answer must be the only legal one. Returns `{ autos, problems }`; a game's test expects `problems` empty and `autos` above zero.
 - `outcomePicks(state)` (K114, idea from XMage `Outcome`): a game tags options `outcome: 'good' | 'bad'` (for the chooser); the answer takes every good option up to `max`, then untagged, then bad ones only to reach `min`. A harness auto-answer, a `sim-pool` driver or `playUntil` uses it as `pick`; untagged games are unchanged.
