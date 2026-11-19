@@ -6,14 +6,15 @@ import { createServer } from 'node:net';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { startServer } from './server.mjs';
+import { isHeavy, procScan, startServer } from './server.mjs';
 
 const HEAVY = fileURLToPath(new URL('./heavy.mjs', import.meta.url));
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+const until = async (f, ms = 20000) => { const t = Date.now(); while (!(await f())) { if (Date.now() - t > ms) throw new Error('timed out waiting'); await sleep(25); } };
 const servers = [];
 afterEach(() => { for (const s of servers.splice(0)) s.close(); });
 async function serve(o) {
-  const s = startServer({ port: 0, tick: 50, ...o });
+  const s = startServer({ port: 0, tick: 50, sweepMs: 0, ...o });
   servers.push(s);
   await once(s, 'listening');
   const url = `http://127.0.0.1:${s.address().port}`;
@@ -69,11 +70,11 @@ describe('heavy-queue server (K399)', () => {
     expect((await q.post('/beat', { id: h.id })).granted).toBe(false);
   });
   it('frees a lease whose heartbeats stop', async () => {
-    const q = await serve({ ttl: 200 });
+    const q = await serve({ ttl: 1000 });
     const a = await q.post('/acquire', { label: 'a' });
     const b = await q.post('/acquire', { label: 'b' });
     expect(b.granted).toBe(false);
-    for (let i = 0; i < 8; i++) { await sleep(60); await q.post('/beat', { id: b.id }); }
+    await until(async () => { await sleep(50); return (await q.post('/beat', { id: b.id })).granted; });
     expect((await q.post('/beat', { id: b.id })).granted).toBe(true);
     expect((await q.post('/beat', { id: a.id })).error).toBe('lease ended');
     expect((await q.post('/beat', { id: 'nope' })).error).toBe('unknown lease');
@@ -86,7 +87,7 @@ describe('heavy-queue server (K399)', () => {
     expect((await q.status()).running).toHaveLength(1);
     c.kill();
     await once(c, 'exit');
-    await sleep(200);
+    await until(async () => (await q.status()).running.length === 0);
     expect((await q.status()).running).toHaveLength(0);
     expect((await q.status()).history[0]).toMatchObject({ label: 'job', reason: 'pid gone' });
   });
@@ -97,7 +98,7 @@ describe('heavy run (K399)', () => {
     const q = await serve({});
     const hold = await q.post('/acquire', { label: 'other' });
     const run = heavy(['run', '--label', 'mine', '--', process.execPath, '-e', 'process.exit(process.env.HEAVY_HELD === "1" ? 5 : 1)'], { HEAVY_URL: q.url });
-    await sleep(300);
+    await until(async () => (await q.status()).waiting.length === 1);
     expect((await q.status()).waiting.map((l) => l.label)).toEqual(['mine']);
     await q.post('/release', { id: hold.id });
     const r = await run;
@@ -111,13 +112,14 @@ describe('heavy run (K399)', () => {
   });
   it.skipIf(process.platform === 'win32')('falls back to flock on the lock file when the server is down', async () => {
     const lock = join(mkdtempSync(join(tmpdir(), 'k399-')), 'q.lock');
-    const holder = spawn('flock', [lock, 'sleep', '1']);
-    await sleep(200);
-    const t = Date.now();
+    const holder = spawn('flock', [lock, 'sh', '-c', 'echo held; sleep 2']);
+    let held = '';
+    holder.stdout.on('data', (d) => (held += d));
+    await until(() => held.includes('held'));
     const r = await heavy(['run', '--', process.execPath, '-e', 'process.exit(3)'], { HEAVY_URL: await deadUrl(), HEAVY_LOCK: lock });
     expect(r.code).toBe(3);
     expect(r.err).toContain(`holding ${lock}`);
-    expect(Date.now() - t).toBeGreaterThan(500);
+    expect(holder.exitCode).not.toBeNull();
     holder.kill();
   });
 });
@@ -128,13 +130,13 @@ describe('heavy-queue review fixes (K399)', () => {
   it('a running client takes its lease again after the queue restarts', async () => {
     const q = await serve({});
     const port = q.s.address().port;
-    const run = heavy(['run', '--label', 'long', '--', process.execPath, '-e', 'setTimeout(() => {}, 1500)'], { HEAVY_URL: q.url });
-    await sleep(400);
+    const run = heavy(['run', '--label', 'long', '--', process.execPath, '-e', 'setTimeout(() => {}, 4000)'], { HEAVY_URL: q.url });
+    await until(async () => (await q.status()).running.length === 1);
     stop(q.s);
     const s2 = startServer({ port, tick: 50 });
     servers.push(s2);
     await once(s2, 'listening');
-    await sleep(400);
+    await until(async () => (await (await fetch(q.url + '/status')).json()).running.length === 1);
     expect((await (await fetch(q.url + '/status')).json()).running.map((l) => l.label)).toEqual(['long']);
     expect((await run).code).toBe(0);
     expect((await (await fetch(q.url + '/status')).json()).history[0]).toMatchObject({ label: 'long', exit: 0 });
@@ -144,7 +146,8 @@ describe('heavy-queue review fixes (K399)', () => {
     await q.post('/acquire', { label: 'other' });
     const lock = join(mkdtempSync(join(tmpdir(), 'k399-')), 'q.lock');
     const run = heavy(['run', '--', process.execPath, '-e', 'process.exit(3)'], { HEAVY_URL: q.url, HEAVY_LOCK: lock, HEAVY_GIVEUP: '300' });
-    await sleep(300);
+    await until(async () => (await q.status()).waiting.length === 1);
+    await sleep(100);
     stop(q.s);
     const r = await run;
     expect(r.code).toBe(3);
@@ -181,5 +184,63 @@ describe('heavy-queue review fixes (K399)', () => {
     expect(readFileSync(join(d, '.env'), 'utf8')).toBe(env);
     expect(go()).toBe('actions-runner-a: hooks already set\n');
     expect(readFileSync(join(d, '.env'), 'utf8')).toBe(env);
+  });
+});
+
+describe('heavy-queue sweep (K418)', () => {
+  it('lists and renices unqueued heavy runs once; ignores held and runner ones; drops ended', async () => {
+    const dir = mkdtempSync(join(tmpdir(), 'hq-sweep-'));
+    let procs = [
+      { pid: 11, cmd: 'vitest run', cwd: '/g/a', held: true },
+      { pid: 12, cmd: 'playwright test', cwd: '/g/b', runner: true },
+      { pid: 13, cmd: 'pytest', cwd: '/g/c' },
+    ];
+    const reniced = [];
+    const { status } = await serve({ scan: () => procs, renice: (p) => reniced.push(p), sweepMs: 30, log: join(dir, 'bypass.log') });
+    await until(async () => (await status()).unqueued.length === 1);
+    const s = await status();
+    expect(s.unqueued.map((u) => u.pid)).toEqual([13]);
+    expect(s.unqueued[0].cwd).toBe('/g/c');
+    expect(reniced).toEqual([13]);
+    expect(readFileSync(join(dir, 'bypass.log'), 'utf8')).toContain('pid 13 cwd /g/c');
+    procs = procs.filter((p) => p.pid !== 13);
+    await until(async () => (await status()).unqueued.length === 0);
+    expect(reniced).toEqual([13]);
+  });
+  it('HEAVY_SWEEP_MS 0 turns the sweep off', async () => {
+    let calls = 0;
+    const { status } = await serve({ scan: () => { calls++; return []; }, sweepMs: 0 });
+    await sleep(150);
+    expect(calls).toBe(0);
+    expect((await status()).unqueued).toEqual([]);
+  });
+});
+
+describe('heavy-queue process matching (K418)', () => {
+  const sp = (s) => s.split(' ');
+  it('flags only node/python test tools and headless chromium', () => {
+    for (const c of ['node /g/node_modules/.bin/vitest run', 'node /g/node_modules/playwright/cli.js test', 'python3 -m pytest -q', 'node /g/node_modules/vite/bin/vite.js build', 'node /g/node_modules/typescript/bin/tsc -b', '/opt/chrome/chrome --headless=new --no-sandbox']) expect(isHeavy(sp(c)), c).toBe(true);
+    for (const c of ['vim vitest.config.ts', 'git commit -m fix-vitest', 'node /g/node_modules/typescript/lib/tsserver.js', 'pylsp', 'node /g/node_modules/@playwright/mcp/cli.js', 'node /g/node_modules/vite/bin/vite.js dev', 'bash -c vitest', '/opt/chrome/chrome --no-sandbox']) expect(isHeavy(sp(c)), c).toBe(false);
+  });
+  it.skipIf(process.platform === 'win32')('procScan reads a fake /proc: NUL split, runner ancestor, unreadable environ', () => {
+    const root = mkdtempSync(join(tmpdir(), 'hq-proc-'));
+    const mk = (pid, ppid, args, env) => {
+      mkdirSync(join(root, String(pid)));
+      writeFileSync(join(root, String(pid), 'cmdline'), args.join('\0') + '\0');
+      writeFileSync(join(root, String(pid), 'stat'), `${pid} (node) S ${ppid} 0 0`);
+      if (env !== null) writeFileSync(join(root, String(pid), 'environ'), env.join('\0') + '\0');
+    };
+    mk(50, 1, ['Runner.Worker'], null);
+    mk(100, 50, ['node', '/g/node_modules/.bin/vitest', 'run'], ['A=1']);
+    mk(200, 1, ['node', '/g/node_modules/.bin/vitest'], null);
+    mk(300, 1, ['node', '/g/node_modules/.bin/vitest'], ['HEAVY_HELD=1', 'B=2']);
+    mk(400, 1, ['node', '/g/node_modules/.bin/playwright', 'test'], ['B=2']);
+    mk(500, 1, ['vim', 'vitest.config.ts'], ['B=2']);
+    const r = procScan(root).sort((a, b) => a.pid - b.pid).map(({ pid, held, runner, cmd }) => ({ pid, held, runner, cmd }));
+    expect(r).toEqual([
+      { pid: 100, held: false, runner: true, cmd: 'node /g/node_modules/.bin/vitest run' },
+      { pid: 300, held: true, runner: false, cmd: 'node /g/node_modules/.bin/vitest' },
+      { pid: 400, held: false, runner: false, cmd: 'node /g/node_modules/.bin/playwright test' },
+    ]);
   });
 });
