@@ -16070,6 +16070,16 @@ var K = (() => {
     });
   }
 
+  // components/effect-library/bands.ts
+  function bannerKeyAt(frames, t) {
+    const i = frames.findIndex((f) => f.at > t);
+    const a = frames[i < 0 ? frames.length - 1 : Math.max(0, i - 1)];
+    const b = frames[i < 0 ? frames.length - 1 : i];
+    if (!a || !b) return { opacity: 1, scale: 1 };
+    const k = b.at === a.at ? 1 : Math.min(1, Math.max(0, (t - a.at) / (b.at - a.at)));
+    return { opacity: a.opacity + (b.opacity - a.opacity) * k, scale: a.scale + (b.scale - a.scale) * k };
+  }
+
   // components/effect-library/letterbox-banner.ts
   function letterboxBanner(parent, {
     speed = 1,
@@ -16085,7 +16095,8 @@ var K = (() => {
     enter = 250,
     exit = 250,
     textIn = [60, enter],
-    textOut = [750, 1e3]
+    textOut = [750, 1e3],
+    textFrames
   } = {}) {
     if (speed === 0 || speed === "instant") return { frame: () => {
     }, end: () => {
@@ -16110,7 +16121,9 @@ var K = (() => {
         top.style.transform = `translateY(${String(-(1 - k) * barHeight)}px)`;
         bottom.style.transform = `translateY(${String((1 - k) * barHeight)}px)`;
         vignette.style.opacity = String(k);
-        stamp.style.opacity = String(seg(t, at + textIn[0], at + textIn[1]) * (1 - seg(t, at + textOut[0], at + textOut[1])) * k);
+        const look = textFrames && bannerKeyAt(textFrames, t - at);
+        stamp.style.opacity = String((look ? look.opacity : seg(t, at + textIn[0], at + textIn[1]) * (1 - seg(t, at + textOut[0], at + textOut[1]))) * k);
+        if (look) stamp.style.transform = `scale(${String(look.scale)})`;
         const scale = camera?.scale ?? 1;
         const [dx, dy] = camera?.shake ?? [0, 0];
         hud.style.transformOrigin = camera ? `${String(camera.focus[0])}px ${String(camera.focus[1])}px` : "";
@@ -16192,16 +16205,23 @@ var K = (() => {
     settleMs = 300,
     liftEase = "ease-out",
     settleEase = "cubic-bezier(0.3, 1.3, 0.5, 1)",
-    speed = 1
+    speed = 1,
+    transform,
+    liftShare
   } = {}) {
-    const rest = { translate: "0 0", scale: "1", filter: "drop-shadow(0 0 0 transparent)" };
-    const raised = { translate: lift, scale: String(scale), filter: shadow };
+    const up = liftShare === void 0 ? lift : `0 ${String(-el.getBoundingClientRect().height * liftShare)}px`;
+    const rest = transform ? { transform: "none" } : { translate: "0 0", ...scale === null ? {} : { scale: "1" } };
+    const raised = transform ? { transform: `translate(${up.trim().split(/\s+/).join(", ")})${scale === null ? "" : ` scale(${String(scale)})`}` } : { translate: up, ...scale === null ? {} : { scale: String(scale) } };
+    if (shadow !== null) {
+      rest["filter"] = "drop-shadow(0 0 0 transparent)";
+      raised["filter"] = shadow;
+    }
     if (speed === 0 || speed === "instant") {
-      const { translate, scale: originalScale, filter } = el.style;
+      const saved = Object.fromEntries(Object.keys(raised).map((k) => [k, el.style.getPropertyValue(k)]));
       Object.assign(el.style, raised);
       let restored = false;
       const restore = () => {
-        if (!restored) Object.assign(el.style, { translate, scale: originalScale, filter });
+        if (!restored) Object.assign(el.style, saved);
         restored = true;
         return void 0;
       };
@@ -16235,7 +16255,7 @@ var K = (() => {
     const inside = r.height <= m.height ? r.top >= m.top - 2 && r.bottom <= m.bottom + 2 : middle >= m.top && middle <= m.bottom;
     return r.width > 0 && r.height > 0 && inside && r.right > m.left && r.left < m.right;
   }
-  function scrollPan({ scroller, tabs, activeTab, inView: shown = inView }) {
+  function scrollPan({ scroller, tabs, activeTab, inView: shown = inView, tabWaitMs, panMs = PAN_MS }) {
     return (scale, signal) => {
       const main = scroller();
       if (!main || !(scale > 0) || main.ownerDocument.visibilityState === "hidden") return null;
@@ -16268,6 +16288,11 @@ var K = (() => {
       const goTab = async (tab) => {
         if (!tab || signal.aborted || tab === activeTab?.()) return;
         tab.click();
+        if (tabWaitMs !== void 0) {
+          await wait(() => false, tabWaitMs, () => {
+          });
+          return;
+        }
         let left = 3;
         await wait(() => --left === 0, 150, () => {
         });
@@ -16280,7 +16305,7 @@ var K = (() => {
           return Promise.resolve();
         }
         const start = win.performance.now();
-        const ms = PAN_MS * scale;
+        const ms = panMs * scale;
         return wait((now) => {
           const k = Math.max(0, Math.min(1, (now - start) / ms));
           const eased = k < 0.5 ? 2 * k * k : 1 - (-2 * k + 2) ** 2 / 2;

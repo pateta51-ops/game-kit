@@ -643,9 +643,9 @@ var PIECES = (() => {
         if (last !== first) {
           heap[0] = last;
           a: for (var index = 0, length = heap.length, halfLength = length >>> 1; index < halfLength; ) {
-            var leftIndex = 2 * (index + 1) - 1, left = heap[leftIndex], rightIndex = leftIndex + 1, right = heap[rightIndex];
-            if (0 > compare(left, last))
-              rightIndex < length && 0 > compare(right, left) ? (heap[index] = right, heap[rightIndex] = last, index = rightIndex) : (heap[index] = left, heap[leftIndex] = last, index = leftIndex);
+            var leftIndex = 2 * (index + 1) - 1, left2 = heap[leftIndex], rightIndex = leftIndex + 1, right = heap[rightIndex];
+            if (0 > compare(left2, last))
+              rightIndex < length && 0 > compare(right, left2) ? (heap[index] = right, heap[rightIndex] = last, index = rightIndex) : (heap[index] = left2, heap[leftIndex] = last, index = leftIndex);
             else if (rightIndex < length && 0 > compare(right, last))
               heap[index] = right, heap[rightIndex] = last, index = rightIndex;
             else break a;
@@ -14809,7 +14809,7 @@ var PIECES = (() => {
     }
     const ms = (n) => {
       const r = reads.reduce((a, [x, y]) => a + Math.max(0, Math.min(n, y) - x), 0);
-      return Math.round((n - r) * factor + r * pace);
+      return (n - r) * factor + r * pace;
     };
     const fail = (m) => {
       throw new Error(`motion-frame ${spec.id}: ${m}`);
@@ -14823,7 +14823,7 @@ var PIECES = (() => {
     const calls = spec.steps.map((s, i) => ({ s, i })).sort((a, b) => a.s.t - b.s.t || a.i - b.i).map(({ s }) => {
       const own = now.get(s.actor);
       const from = own ?? stage(s.actor) ?? fail(`step actor ${s.actor} is neither an actor nor a zone`);
-      const call = { t: ms(s.t), dur: reads.length > 0 ? ms(s.t + s.dur) - ms(s.t) : Math.round(s.dur * factor), actor: s.actor, zone: own === void 0, verb: s.do, from, step: s };
+      const call = { t: ms(s.t), dur: reads.length > 0 ? ms(s.t + s.dur) - ms(s.t) : s.dur * factor, actor: s.actor, zone: own === void 0, verb: s.do, from, step: s };
       if (typeof s.to === "number") call.value = s.to;
       else if (s.to !== void 0) {
         const to = place(s.to, stage, from[2], from[3]) ?? fail(`step target ${String(s.to)} is not on the stage`);
@@ -15079,7 +15079,7 @@ var PIECES = (() => {
     };
     const waitForRects = (spec, stage, ready, fail) => {
       const zones = /* @__PURE__ */ new Set([...spec.whenReady ? requiredRects(spec) : [], ...spec.awaitRects ?? []]);
-      let left = 60;
+      let left2 = 60;
       let active = true;
       let request;
       const cancel = () => {
@@ -15092,7 +15092,7 @@ var PIECES = (() => {
         if (!active) return;
         try {
           const missing = [...zones].filter((zone) => stage(zone) === void 0);
-          if (missing.length > 0 && --left > 0) {
+          if (missing.length > 0 && --left2 > 0) {
             request = frame(poll);
             return;
           }
@@ -15110,6 +15110,8 @@ var PIECES = (() => {
     const finish2 = (c, how) => {
       if (!live.delete(c)) return;
       if (cur === c) cur = null;
+      c.waiting.clear();
+      delete c.after;
       c.timers.forEach((t) => {
         clearTimeout(t);
       });
@@ -15127,7 +15129,7 @@ var PIECES = (() => {
       const run = makeRun(item, redraw ? emptyTimeline(spec.id) : build());
       const timers = /* @__PURE__ */ new Set();
       const open2 = /* @__PURE__ */ new Set();
-      const me = { item, run, timers, open: open2, leaving: false };
+      const me = { item, run, timers, open: open2, leaving: false, waiting: /* @__PURE__ */ new Set() };
       live.add(me);
       if (!parallel) cur = me;
       const at = (ms, f) => {
@@ -15141,11 +15143,12 @@ var PIECES = (() => {
       safe(`${spec.id} start`, () => o.onBeatStart?.(run));
       if (!live.has(me)) return;
       const schedule = () => {
-        const t0 = Date.now();
+        const t0 = performance.now();
+        const atT = (ms, f) => at(Math.max(0, t0 + ms - performance.now()), f);
         const steps = [];
         me.cut = () => {
           delete me.cut;
-          const elapsed = Date.now() - t0;
+          const elapsed = performance.now() - t0;
           const going = steps.filter((s) => s.started && (s.timer === void 0 || timers.has(s.timer)) && s.end > elapsed);
           const keepT = new Set(going.map((s) => s.timer));
           timers.forEach((t) => {
@@ -15157,7 +15160,7 @@ var PIECES = (() => {
           if (going.length === 0 && runs2.length === 0) return false;
           const e = Math.max(elapsed, ...going.map((s) => s.end));
           const base = e - elapsed - Math.min(...runs2.map((s) => s.call.t));
-          const ends = runs2.map((s) => put(s.call, base, s));
+          const ends = runs2.map((s) => put(s.call, base, s, elapsed));
           at(Math.max(e - elapsed, ...ends), () => {
             finish2(me, "skipped");
             next();
@@ -15165,22 +15168,52 @@ var PIECES = (() => {
           });
           return true;
         };
-        const put = (call, base, step) => {
+        const settle = () => {
+          if (me.waiting.size > 0 || !me.after) return;
+          const a = me.after;
+          delete me.after;
+          a();
+        };
+        const put = (call, base, step, off = 0) => {
           let done;
-          step.end = call.t + call.dur + base + Date.now() - t0;
-          at(call.t + base, () => {
+          step.end = off + call.t + call.dur + base;
+          atT(off + call.t + base, () => {
             step.started = true;
             safe(`${spec.id} ${call.verb}`, () => {
               done = o.verbs.get(call.verb)?.(call, run);
             });
-            if (done !== void 0) open2.add(done);
+            if (done === void 0) return;
+            open2.add(done);
+            if (timed && done.finished) {
+              me.waiting.add(fire);
+              const seen = () => {
+                res = true;
+                if (up) fire();
+              };
+              done.finished.then(seen, seen);
+            }
           });
-          if (!(item.keep && call.t + call.dur >= run.timeline.ms))
-            step.timer = at(call.t + call.dur + base, () => {
-              const d = done;
-              if (d === void 0) return;
-              open2.delete(d);
-              safe(`${spec.id} ${call.verb} finish`, d);
+          const end = () => {
+            const d = done;
+            if (d === void 0) return;
+            open2.delete(d);
+            safe(`${spec.id} ${call.verb} finish`, d);
+          };
+          const fire = () => {
+            if (!me.waiting.delete(fire)) return;
+            end();
+            settle();
+          };
+          let up = false;
+          let res = false;
+          const timed = !(item.keep && call.t + call.dur >= run.timeline.ms);
+          if (timed)
+            step.timer = atT(off + call.t + call.dur + base, () => {
+              up = true;
+              if (!done) return;
+              if (!done.finished) return end();
+              if (res) fire();
+              else at(100, fire);
             });
           return call.t + call.dur + base;
         };
@@ -15191,15 +15224,23 @@ var PIECES = (() => {
         }
         const leave = item.gate && run.timeline.calls.find((c) => c.step.leave === true);
         if (leave)
-          at(leave.t, () => {
+          atT(leave.t, () => {
             me.leaving = true;
             emit();
           });
         for (const c of run.timeline.cues)
-          at(c.t, () => {
+          atT(c.t, () => {
             cue(c.cue, spec.id);
           });
-        at(Math.max(run.timeline.ms, ...run.timeline.cues.map((c) => swap ? c.t : 0)), () => {
+        atT(Math.max(run.timeline.ms, ...run.timeline.cues.map((c) => swap ? c.t : 0)), () => {
+          if (!live.has(me)) return;
+          if (me.waiting.size > 0) {
+            me.after = endBeat;
+            return;
+          }
+          endBeat();
+        });
+        const endBeat = () => {
           if (!live.has(me)) return;
           reached(spec.id);
           const delay = (spec.autoContinueMs ?? 0) * factor;
@@ -15220,7 +15261,7 @@ var PIECES = (() => {
           finish2(me, "done");
           next();
           emit();
-        });
+        };
       };
       if (!redraw) {
         commit(item);
@@ -15832,9 +15873,9 @@ var PIECES = (() => {
     return x - Math.floor(x);
   };
   function tumble(s, value, tilt, p, seed = 1, turns = 2) {
-    const q2 = Math.min(1, Math.max(0, p)), left = (1 - q2) ** 2;
+    const q2 = Math.min(1, Math.max(0, p)), left2 = (1 - q2) ** 2;
     const axis = [rnd(seed, 1) - 0.5, rnd(seed, 2) - 0.5, (rnd(seed, 3) - 0.5) * 0.6];
-    return mmul(rotX(-tilt), mmul(rotAxis(axis, left * turns * 2 * Math.PI), faceUp(s, value)));
+    return mmul(rotX(-tilt), mmul(rotAxis(axis, left2 * turns * 2 * Math.PI), faceUp(s, value)));
   }
   var turned = (s, value, tilt, a) => mmul(rotX(-tilt), mmul(rotY(a), faceUp(s, value)));
 
@@ -16686,6 +16727,34 @@ var PIECES = (() => {
     }
     return copy;
   }
+  var waits = /* @__PURE__ */ new WeakMap();
+  var left = (a) => {
+    const c = a.effect?.getComputedTiming();
+    return (Number(c?.endTime ?? 0) - Number(c?.localTime ?? 0)) / Math.abs(a.playbackRate || 1);
+  };
+  function endOnFinished(layer, run, anims, end, dur = Infinity, last = false) {
+    const running = anims.filter((a) => a.playState === "running" && Number.isFinite(Number(a.effect?.getComputedTiming().endTime ?? 0)));
+    if (last || running.length === 0 || Math.max(...running.map(left)) > Math.min(250, dur * 0.4)) return end();
+    let m = waits.get(layer);
+    if (!m) waits.set(layer, m = /* @__PURE__ */ new Map());
+    let set = m.get(run.id);
+    if (!set) m.set(run.id, set = /* @__PURE__ */ new Set());
+    const s = set;
+    const flush = () => {
+      if (!s.delete(flush)) return;
+      clearTimeout(timer);
+      end();
+    };
+    s.add(flush);
+    const timer = setTimeout(flush, Math.max(0, ...running.map(left)) + 100);
+    Promise.all(running.map((a) => a.finished)).then(flush, flush);
+  }
+  function flushEnds(layer, run) {
+    const m = waits.get(layer);
+    for (const set of run ? [m?.get(run.id)] : [...m?.values() ?? []]) for (const f of [...set ?? []]) f();
+    if (run) m?.delete(run.id);
+    else waits.delete(layer);
+  }
   var place2 = (el, r) => {
     const s = el.style;
     s.left = `${String(r[0])}px`;
@@ -16708,7 +16777,7 @@ var PIECES = (() => {
     const restore = (id) => {
       for (const timer of pending.get(id) ?? []) clearTimeout(timer);
       pending.delete(id);
-      for (const src of sources.get(id)?.values() ?? []) {
+      for (const src of [...sources.get(id)?.values() ?? []].flat()) {
         const saved = hidden.get(src);
         if (saved && --saved.count === 0) {
           src.style.setProperty("visibility", saved.value, saved.priority);
@@ -16730,13 +16799,16 @@ var PIECES = (() => {
           const src = clone && originals.get(clone);
           if (!a.hideSource || !src || scheduled.has(a.id)) continue;
           const hide = () => {
-            const saved = hidden.get(src);
-            if (saved) saved.count++;
-            else {
-              hidden.set(src, { count: 1, value: src.style.visibility, priority: src.style.getPropertyPriority("visibility") });
-              src.style.setProperty("visibility", "hidden", "important");
+            const els = a.hideParts ? [...src.querySelectorAll(a.hideParts)] : [src];
+            for (const e of els) {
+              const saved = hidden.get(e);
+              if (saved) saved.count++;
+              else {
+                hidden.set(e, { count: 1, value: e.style.visibility, priority: e.style.getPropertyPriority("visibility") });
+                e.style.setProperty("visibility", "hidden", "important");
+              }
             }
-            held.set(a.id, src);
+            held.set(a.id, els);
           };
           if (a.hideSource === "start") hide();
           else {
@@ -16783,6 +16855,7 @@ var PIECES = (() => {
         return a;
       },
       end(run) {
+        flushEnds(self, run);
         endGlEffects(self, run);
         runs.get(run.id)?.forEach((a) => {
           a.remove();
@@ -16791,6 +16864,7 @@ var PIECES = (() => {
         restore(run.id);
       },
       clear() {
+        flushEnds(self);
         endGlEffects(self);
         for (const id of sources.keys()) restore(id);
         runs.clear();
@@ -17289,14 +17363,14 @@ var PIECES = (() => {
       const [x, y] = centre3(box);
       const holder = clip && stage.stand(clip, { overflow: "hidden" });
       for (const wave of shockwaves) {
-        const max = wave.radius * unit2;
+        const max = wave.radiusAt ? Math.max(...Array.from({ length: 61 }, (_, i) => wave.radiusAt?.(i / 60) ?? 0)) * unit2 : wave.radius * unit2;
         const ring = stage.stand([x - max - (clip?.[0] ?? 0), y - max - (clip?.[1] ?? 0), 2 * max, 2 * max], { borderRadius: radius });
         holder?.append(ring);
         stage.play(ring, Array.from({ length: 61 }, (_, i) => {
           const k = i / 60;
-          const s = Math.max(ease.outExpo(k), 1 / Math.max(1, max));
-          const a = wave.alpha * (1 - k) ** 3;
-          const w = wave.width * (1 - k * 0.5) * unit2;
+          const s = Math.max(wave.radiusAt ? wave.radiusAt(k) * unit2 / Math.max(1, max) : ease.outExpo(k), 1 / Math.max(1, max));
+          const a = wave.alpha * (wave.alphaAt ? wave.alphaAt(k) : (1 - k) ** 3);
+          const w = (wave.widthAt ? wave.widthAt(k) : wave.width * (1 - k * 0.5)) * unit2;
           const size = (v) => px(v / s);
           return {
             transform: `scale(${s},${s * (wave.squash ?? 1)})`,
@@ -17629,12 +17703,12 @@ var PIECES = (() => {
     ], heatMs + breakMs * heatTail, delay);
     for (let r = 0; r < rows; r++) for (let c = 0; c < cols; c++) {
       const n = r * cols + c;
-      const left = c * cw, top = r * ch;
-      const tile = stage.stand([x + left, y + top, cw + 0.5, ch + 0.5], { overflow: "hidden", zIndex: "2", opacity: "0" });
+      const left2 = c * cw, top = r * ch;
+      const tile = stage.stand([x + left2, y + top, cw + 0.5, ch + 0.5], { overflow: "hidden", zIndex: "2", opacity: "0" });
       const copy = el.cloneNode(true);
       Object.assign(copy.style, {
         position: "absolute",
-        left: px(-left),
+        left: px(-left2),
         top: px(-top),
         width: px(w),
         height: px(h2),
@@ -17642,7 +17716,7 @@ var PIECES = (() => {
         transform: "none"
       });
       tile.append(copy);
-      const ox = (left + cw / 2 - hx) / far2, oy = (top + ch / 2 - hy) / far2;
+      const ox = (left2 + cw / 2 - hx) / far2, oy = (top + ch / 2 - hy) / far2;
       const dx = ox * w * (0.25 + rand(n, 1) * 0.35) + (rand(n, 2) - 0.5) * cw;
       const dy = oy * h2 * 0.2 - h2 * (0.08 + rand(n, 3) * 0.18);
       const spin = (rand(n, 4) - 0.5) * 140;
@@ -17660,22 +17734,22 @@ var PIECES = (() => {
     }
     for (let i = 0; i < embers; i++) {
       const s = Math.max(minEmber, w / emberDivisor * lerp(sizeMin, sizeMax, rand(i, 6)));
-      const left = rand(i, 7) * w, top = rand(i, 8) * shown;
-      const node = stage.stand([x + left - s / 2, y + top - s / 2, s, s], {
+      const left2 = rand(i, 7) * w, top = rand(i, 8) * shown;
+      const node = stage.stand([x + left2 - s / 2, y + top - s / 2, s, s], {
         borderRadius: "50%",
         zIndex: "4",
         opacity: "0",
         background: `rgb(${rand(i, 9) < 0.35 ? core : emberColour})`,
         boxShadow: `0 0 ${px(s * blur)} ${px(s * spread2)} rgb(${glow2} / .8)`
       });
-      const dx = (left - hx) * radialDrift + (rand(i, 10) - 0.5) * w * randomDrift;
+      const dx = (left2 - hx) * radialDrift + (rand(i, 10) - 0.5) * w * randomDrift;
       const dy = -h2 * lerp(riseMin, riseMax, rand(i, 11));
       stage.play(node, [
         { transform: "none", opacity: 0 },
         { offset: 0.1, transform: "none", opacity: 1, easing: "cubic-bezier(.2,.6,.4,1)" },
         { offset: 0.6, opacity: 0.9 },
         { transform: `translate(${px(dx)}, ${px(dy)}) scale(.3)`, opacity: 0 }
-      ], breakMs * lerp(spanMin, spanMax, rand(i, 12)), cut + Math.hypot(left - hx, top - hy) / far2 * breakMs * 0.4, "linear", "none");
+      ], breakMs * lerp(spanMin, spanMax, rand(i, 12)), cut + Math.hypot(left2 - hx, top - hy) / far2 * breakMs * 0.4, "linear", "none");
     }
     return stage.end;
   };
@@ -18891,28 +18965,33 @@ var PIECES = (() => {
 
   // components/effect-library/signal-stamp.ts
   var stamp = ({ el, call }) => {
-    const { text = "", tilt = 0, image, ms, ease: ease2 = "ease-in", scales = [2.2, 0.95, 1], pressOffset = 0.8, style, frames: frames2, press, ring } = call.step;
-    const tag = el.ownerDocument.createElement(image === void 0 ? "div" : "img");
-    if (tag instanceof HTMLImageElement && image !== void 0) {
-      tag.src = image;
-      tag.alt = text;
-    } else tag.textContent = text;
-    Object.assign(tag.style, {
-      position: "absolute",
-      left: "8%",
-      top: "42%",
-      width: "84%",
-      height: "16%",
-      display: "grid",
-      placeItems: "center",
-      boxSizing: "border-box",
-      border: "2px solid currentColor",
-      background: "#222",
-      color: "#fff",
-      font: "700 1rem system-ui",
-      pointerEvents: "none"
-    }, style);
-    el.append(tag);
+    const { text = "", tilt = 0, image, ms, ease: ease2 = "ease-in", scales = [2.2, 0.95, 1], pressOffset = 0.8, style, frames: frames2, press, ring, onParts, holdRing, ringZ, target } = call.step;
+    const found = typeof target === "string" ? el.querySelector(target) ?? el.ownerDocument.querySelector(target) : target;
+    const tag = found ?? el.ownerDocument.createElement(image === void 0 ? "div" : "img");
+    if (found) Object.assign(tag.style, style);
+    else {
+      if (tag instanceof HTMLImageElement && image !== void 0) {
+        tag.src = image;
+        tag.alt = text;
+      } else tag.textContent = text;
+      Object.assign(tag.style, {
+        position: "absolute",
+        left: "8%",
+        top: "42%",
+        width: "84%",
+        height: "16%",
+        display: "grid",
+        placeItems: "center",
+        boxSizing: "border-box",
+        border: "2px solid currentColor",
+        background: "#222",
+        color: "#fff",
+        font: "700 1rem system-ui",
+        pointerEvents: "none"
+      }, style);
+      el.append(tag);
+    }
+    tag.dataset["fxPart"] = "label";
     const rot = `rotate(${String(tilt)}deg)`;
     const keys = frames2 ?? [
       { transform: `${rot} scale(${String(scales[0])})`, opacity: 0 },
@@ -18929,7 +19008,7 @@ var PIECES = (() => {
     if (ring) {
       halo = el.ownerDocument.createElement("div");
       Object.assign(halo.style, {
-        zIndex: tag.style.zIndex,
+        zIndex: ringZ === void 0 ? tag.style.zIndex : String(ringZ),
         position: "absolute",
         left: tag.style.left,
         top: tag.style.top,
@@ -18939,9 +19018,11 @@ var PIECES = (() => {
         borderRadius: "50%",
         opacity: "0"
       }, ring.style);
+      halo.dataset["fxPart"] = "ring";
       tag.before(halo);
       glint = accent(halo, ring, "replace");
     }
+    onParts?.(halo ? { label: tag, ring: halo } : { label: tag });
     return () => {
       if (end?.transform !== void 0) tag.style.transform = String(end.transform);
       if (end?.opacity !== void 0) tag.style.opacity = String(end.opacity);
@@ -18949,19 +19030,20 @@ var PIECES = (() => {
       animation.cancel();
       give?.cancel();
       glint?.cancel();
-      halo?.remove();
-      if (tag.style.opacity === "0") tag.remove();
+      if (holdRing && halo && ring) Object.assign(halo.style, Object.fromEntries(Object.entries(ring.frames.at(-1) ?? {}).filter(([k]) => k !== "offset" && k !== "easing" && k !== "composite").map(([k, v]) => [k, String(v)])));
+      else halo?.remove();
+      if (!found && tag.style.opacity === "0") tag.remove();
     };
   };
 
   // components/effect-library/signal-motes.ts
-  var rand2 = (i, k) => {
+  var noise2 = (i, k) => {
     const j = Math.sin(i * 12.9898 + k * 78.233) * 43758.5453;
     return j - Math.floor(j);
   };
   var motes = ({ el, call, animate }) => {
     const { box, z } = call.step;
-    const [left, top, w, h2] = box ?? call.from;
+    const [left2, top, w, h2] = box ?? call.from;
     const {
       count = 16,
       colour = "#fff",
@@ -18982,8 +19064,15 @@ var PIECES = (() => {
       startTransform = "translate(0,0) scale(1)",
       endScale = 0.3,
       ease: ease2 = "ease-out",
-      dissolveEase = "ease-in"
+      dissolveEase = "ease-in",
+      easings,
+      holdStart,
+      seed = 0,
+      direction = -90,
+      gravity = 0
     } = call.step;
+    const rand2 = (i, k) => noise2(i + seed * 1e3, k);
+    const turn = (direction + 90) * Math.PI / 180;
     const duration = ms === void 0 ? call.dur / (1 + lag) : call.dur * ms / Number(call.step["dur"]);
     const parts = Array.from({ length: count }, (_, i) => {
       const s = Math.max(minSize, size * (sizeJitter[0] + rand2(i, 7) * sizeJitter[1]));
@@ -18991,7 +19080,7 @@ var PIECES = (() => {
       const d = el.ownerDocument.createElement("div");
       Object.assign(d.style, {
         position: "absolute",
-        left: `${String(left + rand2(i, 8) * w - s / 2)}px`,
+        left: `${String(left2 + rand2(i, 8) * w - s / 2)}px`,
         top: `${String(top + rand2(i, 9) * h2 - s / 2)}px`,
         zIndex: z === void 0 ? "" : String(z),
         width: `${String(s)}px`,
@@ -19001,11 +19090,16 @@ var PIECES = (() => {
         boxShadow: `0 0 ${String(s * glow2)}px ${glowColour ?? tint}`
       });
       el.after(d);
-      const dx = (rand2(i, 10) - 0.5) * spread2;
-      const dy = -rise * (riseFactor[0] + rand2(i, 11) * riseFactor[1]);
+      const ux = (rand2(i, 10) - 0.5) * spread2;
+      const uy = -rise * (riseFactor[0] + rand2(i, 11) * riseFactor[1]);
+      const dx = turn === 0 ? ux : ux * Math.cos(turn) - uy * Math.sin(turn);
+      const dy = (turn === 0 ? uy : ux * Math.sin(turn) + uy * Math.cos(turn)) + gravity;
+      const e = (k) => easings ? { easing: easings[k] ?? "linear" } : {};
       const animation = d.animate([
-        { opacity: 0, transform: startTransform },
-        { opacity: 1, offset: peakOffset },
+        { opacity: 0, transform: startTransform, ...e(0) },
+        ...holdStart === void 0 ? [] : holdStart < peakOffset ? [{ transform: startTransform, offset: holdStart, ...e(0) }] : [],
+        holdStart !== void 0 && holdStart >= peakOffset ? { opacity: 1, transform: startTransform, offset: peakOffset, ...e(1) } : { opacity: 1, offset: peakOffset, ...e(1) },
+        ...holdStart !== void 0 && holdStart > peakOffset ? [{ transform: startTransform, offset: holdStart, ...e(1) }] : [],
         { opacity: 0, transform: `translate(${String(dx)}px, ${String(dy)}px) scale(${String(endScale)})` }
       ], { duration: duration * (lifeJitter[0] + rand2(i, 12) * lifeJitter[1]), easing: ease2, delay: rand2(i, 13) * duration * lag, fill: "both" });
       return () => {
@@ -19372,17 +19466,19 @@ var PIECES = (() => {
 
   // components/effect-library/loops.ts
   function startPulse(el, settings = {}, state = {}) {
-    const { frames: frames2 = [{ opacity: 1 }, { opacity: 0.5 }, { opacity: 1 }], period = 1500, easing = "ease-in-out" } = settings;
-    return startLoop(el, state, (speed) => {
+    const { frames: frames2 = [{ opacity: 1 }, { opacity: 0.5 }, { opacity: 1 }], period = 1500, easing = "ease-in-out", pseudo, delay, once, keepReduced } = settings;
+    return startLoop(el, keepReduced ? { ...state, keepReduced } : state, (speed) => {
       const animation = el.animate(frames2.map((frame) => ({ easing, ...frame })), {
         duration: period * speed,
-        iterations: Infinity
+        iterations: once ? 1 : Infinity,
+        ...pseudo && { pseudoElement: pseudo },
+        ...delay && { delay: delay * speed }
       });
       return () => animation.cancel();
     });
   }
-  function startLoop(el, { speed = 1, signal }, play) {
-    const media = el.ownerDocument.defaultView?.matchMedia?.("(prefers-reduced-motion: reduce)");
+  function startLoop(el, { speed = 1, signal, keepReduced }, play) {
+    const media = keepReduced ? void 0 : el.ownerDocument.defaultView?.matchMedia?.("(prefers-reduced-motion: reduce)");
     if (speed === "instant" || speed <= 0 || media?.matches || signal?.aborted || typeof el.animate !== "function") return () => {
     };
     const cancel = play(speed);
@@ -19797,6 +19893,55 @@ var PIECES = (() => {
       board2.drawImage(ctx.canvas, 0, 0);
       board2.restore();
     }
+  };
+  var debrisDom = (fx) => {
+    const { call } = fx;
+    const {
+      pieces,
+      count = pieces?.length ?? 12,
+      seed = 1,
+      unit: unit2 = 1,
+      spread: spread2 = [60, 24],
+      gravity = 100,
+      spin = 140,
+      size = [12, 8],
+      colour = "#b0b0b0",
+      delay = 0,
+      ms = 900,
+      fade = [ms * 0.7, ms],
+      easeMotion = (p) => p,
+      z
+    } = call.step;
+    const [x, y] = centre3(call.from);
+    const stage = scene(fx);
+    const random = rng(seed);
+    const end = fade ? fade[1] : ms;
+    for (let i = 0; i < capN(count); i++) {
+      const piece = pieces?.[i];
+      const [px2, py] = piece?.at ?? [0, 0];
+      const [ox, oy] = piece?.offset ?? [0, 0];
+      const [dx, dy] = piece?.travel ?? [(random() * 2 - 1) * spread2[0], -random() * spread2[1]];
+      const turn = piece?.spin ?? (random() * 2 - 1) * spin;
+      const node = stage.stand([x - size[0] / 2, y - size[1] / 2, size[0], size[1]], {
+        background: piece?.colour ?? colour,
+        transformOrigin: "50% 50%",
+        ...z === void 0 ? {} : { zIndex: String(z) },
+        ...piece?.shape ? { clipPath: `path('${piece.shape}')`, left: `${String(x)}px`, top: `${String(y)}px`, transformOrigin: "0 0" } : {}
+      });
+      stage.play(node, Array.from({ length: 31 }, (_, j) => {
+        const local = end * j / 30;
+        const p = seg(local, 0, ms);
+        const k = easeMotion(p);
+        const scale = piece?.scale ? lerp(...piece.scale, k) : 1;
+        const tx = (px2 + ox * (1 - k) + dx * k) * unit2;
+        const ty = (py + oy * (1 - k) + dy * k + gravity * k * k) * unit2;
+        return {
+          transform: `translate(${String(tx)}px, ${String(ty)}px) rotate(${String(turn * k)}deg) scale(${String(unit2 * scale)})`,
+          opacity: (fade ? 1 - seg(local, ...fade) : 1) * (piece?.growOpacity ? p : 1)
+        };
+      }), end, delay, "linear", "none");
+    }
+    return stage.end;
   };
 
   // components/effect-library/sheen.ts
@@ -20313,19 +20458,26 @@ void main() {
       const layer = run.context;
       const el = layer.actor(run, call.actor, call.from);
       const done = [];
+      const anims = /* @__PURE__ */ new Set();
+      const all = () => typeof el.getAnimations === "function" ? el.getAnimations({ subtree: true }) : [];
+      const before = new Set(all());
       const animate = (keyframes2, end, opts) => {
         const a = el.animate(keyframes2, { duration: Math.max(call.dur, 1), fill: "both", easing: EASE[String(call.step["ease"])] ?? (typeof call.step["ease"] === "string" ? call.step["ease"] : "ease-in-out"), ...opts });
         done.push(() => {
           if (end) css(el, end);
           a.cancel();
         });
+        anims.add(a);
       };
       const own = effect({ call, run, el, layer, animate });
       if (own) done.push(own);
+      for (const a of all()) if (!before.has(a)) anims.add(a);
       return () => {
-        done.forEach((f) => {
-          f();
-        });
+        endOnFinished(layer, run, [...anims], () => {
+          done.forEach((f) => {
+            f();
+          });
+        }, call.dur, call.t + call.dur >= run.timeline.ms);
       };
     });
   }
@@ -20348,16 +20500,28 @@ void main() {
     "arc-move": arcMove,
     "multi-stop-path": multiStopMove,
     lift: ({ call, animate }) => {
-      const end = { transform: `translateY(var(--fx-lift-rise,-6px)) scale(${String(call.value ?? 1.08)})`, boxShadow: "var(--fx-lift-shadow,0 12px 24px)" };
-      animate([{ transform: "none", boxShadow: "none" }, end], end);
+      const sc = call.step["scale"] === false ? "" : ` scale(${String(call.value ?? 1.08)})`;
+      const sh = call.step["shadow"] !== false;
+      const end = { transform: `translateY(var(--fx-lift-rise,-6px))${sc}`, ...sh ? { boxShadow: "var(--fx-lift-shadow,0 12px 24px)" } : {} };
+      animate([{ transform: "none", ...sh ? { boxShadow: "none" } : {} }, end], end);
       return void 0;
     },
-    settle: ({ animate }) => {
+    settle: ({ call, animate }) => {
       const rest2 = { transform: "none", boxShadow: "var(--fx-settle-shadow,0 1px 3px)" };
+      const frames2 = call.step["frames"];
+      if (Array.isArray(frames2) && frames2.length > 0) {
+        const last = { ...frames2.at(-1) };
+        delete last.offset;
+        delete last.easing;
+        animate(frames2, Object.fromEntries(Object.entries(last).map(([k, v]) => [k, String(v)])));
+        return void 0;
+      }
+      const n = (k) => typeof call.step[k] === "number" ? call.step[k] : void 0;
+      const rise = n("rise");
       animate(
         [
-          { transform: "translateY(var(--fx-lift-rise,-6px)) scale(1.08)", boxShadow: "var(--fx-lift-shadow,0 12px 24px)" },
-          { transform: "scale(.98)", boxShadow: rest2.boxShadow, offset: 0.7 },
+          { transform: `translateY(${rise === void 0 ? "var(--fx-lift-rise,-6px)" : `${String(rise)}px`}) scale(${String(n("fromScale") ?? 1.08)})`, boxShadow: "var(--fx-lift-shadow,0 12px 24px)" },
+          { transform: `scale(${String(n("dip") ?? 0.98)})`, boxShadow: rest2.boxShadow, offset: n("dipAt") ?? 0.7 },
           rest2
         ],
         rest2
@@ -20536,7 +20700,11 @@ void main() {
     registerEffect(verbs, "idle", idle);
     registerDashLine(verbs, o?.resolve, o?.stage);
     registerCanvasEffect(verbs, "reticle", reticle);
+    registerEffect(verbs, "debris", debrisDom);
+    const pieces = verbs.get("debris");
     registerCanvasEffect(verbs, "debris", debris);
+    const pixels = verbs.get("debris");
+    verbs.register("debris", (call, run) => (call.step["dom"] ? pieces : pixels)?.(call, run));
     registerEffect(verbs, "sheen", sheen);
     registerCanvasEffect(verbs, "slash", slash);
     registerCrumple(verbs);

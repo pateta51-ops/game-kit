@@ -45,3 +45,4 @@ export * from './drift-cloud.ts';
 
 export type { SheenSettings } from './sheen.ts';
 export type { SlashSettings } from './slash.ts';
+export * from './play-on.ts';

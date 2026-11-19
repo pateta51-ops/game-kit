@@ -23,9 +23,19 @@ export interface MotesSettings {
   radius?: string;
   glow?: number;
   dissolve?: readonly Keyframe[];
+  /** K435-3: easing per keyframe: [start to peak, peak to end] */
+  easings?: readonly [string, string];
+  /** K435-3: the start transform is held to this offset of each mote's life (default none) */
+  holdStart?: number;
+  /** K435-3: another seed gives other motes (default 0) */
+  seed?: number;
+  /** K435-3: travel direction in degrees (0 right, 90 down; default up, -90) */
+  direction?: number;
+  /** K435-3: px added downward to each mote's travel (drops that fall) */
+  gravity?: number;
 }
 
-const rand = (i: number, k: number): number => {
+const noise = (i: number, k: number): number => {
   const j = Math.sin(i * 12.9898 + k * 78.233) * 43758.5453;
   return j - Math.floor(j);
 };
@@ -38,8 +48,10 @@ export const motes: Effect = ({ el, call, animate }) => {
     radius = '50%', glow = 1.5, glowColour, ms, dissolve, minSize = 0,
     sizeJitter = [0.6, 0.8], lifeJitter = [0.6, 0.4], riseFactor = [0.4, 0.6],
     peakOffset = 0.15, startTransform = 'translate(0,0) scale(1)', endScale = 0.3,
-    ease = 'ease-out', dissolveEase = 'ease-in',
+    ease = 'ease-out', dissolveEase = 'ease-in', easings, holdStart, seed = 0, direction = -90, gravity = 0,
   } = call.step as MotesSettings;
+  const rand = (i: number, k: number): number => noise(i + seed * 1000, k);
+  const turn = (direction + 90) * Math.PI / 180;
   const duration = ms === undefined ? call.dur / (1 + lag) : call.dur * ms / Number(call.step['dur']);
   const parts = Array.from({ length: count }, (_, i) => {
     const s = Math.max(minSize, size * (sizeJitter[0] + rand(i, 7) * sizeJitter[1]));
@@ -53,11 +65,16 @@ export const motes: Effect = ({ el, call, animate }) => {
     });
     // Siblings keep the source's dissolve filter and opacity off the particles.
     el.after(d);
-    const dx = (rand(i, 10) - 0.5) * spread;
-    const dy = -rise * (riseFactor[0] + rand(i, 11) * riseFactor[1]);
+    const ux = (rand(i, 10) - 0.5) * spread;
+    const uy = -rise * (riseFactor[0] + rand(i, 11) * riseFactor[1]);
+    const dx = turn === 0 ? ux : ux * Math.cos(turn) - uy * Math.sin(turn);
+    const dy = (turn === 0 ? uy : ux * Math.sin(turn) + uy * Math.cos(turn)) + gravity;
+    const e = (k: number): { easing?: string } => (easings ? { easing: easings[k] ?? 'linear' } : {});
     const animation = d.animate([
-      { opacity: 0, transform: startTransform },
-      { opacity: 1, offset: peakOffset },
+      { opacity: 0, transform: startTransform, ...e(0) },
+      ...(holdStart === undefined ? [] : holdStart < peakOffset ? [{ transform: startTransform, offset: holdStart, ...e(0) }] : []),
+      holdStart !== undefined && holdStart >= peakOffset ? { opacity: 1, transform: startTransform, offset: peakOffset, ...e(1) } : { opacity: 1, offset: peakOffset, ...e(1) },
+      ...(holdStart !== undefined && holdStart > peakOffset ? [{ transform: startTransform, offset: holdStart, ...e(1) }] : []),
       { opacity: 0, transform: `translate(${String(dx)}px, ${String(dy)}px) scale(${String(endScale)})` },
     ], { duration: duration * (lifeJitter[0] + rand(i, 12) * lifeJitter[1]), easing: ease, delay: rand(i, 13) * duration * lag, fill: 'both' });
     return () => {
