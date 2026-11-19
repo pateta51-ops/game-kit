@@ -9,7 +9,7 @@ it('K278: index exports exactly the union of kernel, timed and tools, with no na
   const union = parts.flat();
   expect(new Set(union).size).toBe(union.length);
   expect(Object.keys(index).sort()).toEqual(union.sort());
-  expect(union.length).toBe(165);
+  expect(union.length).toBe(172);
 });
 
 // K278: tsc fails if index stops exporting a type an entry has
