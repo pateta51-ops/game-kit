@@ -30,9 +30,9 @@ export async function withViewTransition(apply: () => void | Promise<void>, spee
       await apply();
       unnameClipped();
     });
-    const skip = () => { transition.skipTransition(); };
+    const skip = () => { transition.skipTransition?.(); };
     if (o.signal?.aborted) skip(); else o.signal?.addEventListener('abort', skip, { once: true });
-    void transition.ready.then(started, () => undefined);
+    void transition.ready?.then(started, () => undefined);
     await transition.finished.catch(() => undefined);
     await transition.updateCallbackDone;
   } finally {
