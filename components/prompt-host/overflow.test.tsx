@@ -138,3 +138,37 @@ it('checks the host again when answers are added and removed', async () => {
   added.remove();
   await waitFor(() => expect(box).not.toHaveAttribute('data-overflow'));
 });
+
+function Row() {
+  useOverflow({ ...layout, answers: '.answers', find: () => document.querySelector<HTMLElement>('#prompt-box') }, []);
+  return (
+    <section id="prompt-box" data-testid="box" style={{ height: 100, position: 'relative' }}>
+      <div className="answers" style={{ fontSize: '31.5px', display: 'flex', flexDirection: 'row', flexWrap: 'nowrap' }}>
+        <button type="button">An answer</button>
+      </div>
+    </section>
+  );
+}
+
+it('K442 a row that fits once wrapped stays in its zone with its font', () => {
+  fakeLayout((box) => (box.querySelector<HTMLElement>('.answers')?.style.flexWrap === 'wrap' ? 100 : 240));
+  render(<Row />);
+  const box = screen.getByTestId('box');
+  expect(box.querySelector<HTMLElement>('.answers')?.style.flexWrap).toBe('wrap');
+  expect(box).not.toHaveAttribute('data-overflow');
+  expect(box.querySelector<HTMLElement>('.answers')?.style.fontSize).toBe('31.5px');
+});
+
+it('K442 a wrapped row that still overflows scrolls in the zone: no panel, no shrunken font', () => {
+  fakeLayout(() => 300);
+  render(<Row />);
+  const box = screen.getByTestId('box');
+  const answers = box.querySelector<HTMLElement>('.answers');
+  expect(box).toHaveAttribute('data-overflow', 'rows');
+  expect(box.style.overflowY).toBe('auto');
+  expect(box.style.position).toBe('relative');
+  expect(box.style.height).toBe('100px');
+  expect(answers?.style.fontSize).toBe('31.5px');
+  expect(answers?.style.flexWrap).toBe('wrap');
+  expect(box).toHaveAttribute('data-more', '1');
+});
