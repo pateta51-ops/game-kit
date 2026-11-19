@@ -1047,21 +1047,15 @@ var DECK = (() => {
     const mine = [];
     const mineTimers = /* @__PURE__ */ new Set();
     const began = (move) => {
-      o.onCardStart?.(moves.indexOf(move), move.id);
+      if (!o.signal?.aborted) o.onCardStart?.(moves.indexOf(move), move.id);
     };
     if (!plan.timed.length) for (const m of moves) began(m);
     for (const t of plan.timed) {
       const { move } = t;
-      const pileEl = resolveAt(move.pile);
-      const atEl = resolveAt(move.at);
-      if (!pileEl || !atEl || typeof atEl.animate !== "function") continue;
-      const pr = pileEl.getBoundingClientRect();
-      const ar = atEl.getBoundingClientRect();
-      const [from, to] = move.dir === "out" ? [pr, ar] : [ar, pr];
-      const start = `translate(${String(from.left - to.left)}px, ${String(from.top - to.top)}px) scale(${String(from.width / (to.width || 1))}, ${String(from.height / (to.height || 1))})`;
       if (o.onCardStart) {
         if (t.delay > 0) {
           const x = { t: 0, r: () => {
+            mineTimers.delete(x);
             began(move);
           } };
           x.t = window.setTimeout(() => {
@@ -1073,6 +1067,13 @@ var DECK = (() => {
           mineTimers.add(x);
         } else began(move);
       }
+      const pileEl = resolveAt(move.pile);
+      const atEl = resolveAt(move.at);
+      if (!pileEl || !atEl || typeof atEl.animate !== "function") continue;
+      const pr = pileEl.getBoundingClientRect();
+      const ar = atEl.getBoundingClientRect();
+      const [from, to] = move.dir === "out" ? [pr, ar] : [ar, pr];
+      const start = `translate(${String(from.left - to.left)}px, ${String(from.top - to.top)}px) scale(${String(from.width / (to.width || 1))}, ${String(from.height / (to.height || 1))})`;
       const stand = (el2) => {
         el2.removeAttribute("data-card-id");
         el2.dataset["motionStandin"] = "";
@@ -1126,7 +1127,9 @@ var DECK = (() => {
     };
     if (o.signal?.aborted) abort();
     else o.signal?.addEventListener("abort", abort, { once: true });
-    return { plan, done: Promise.all([...ends, rif]).then(() => void 0) };
+    return { plan, done: Promise.all([...ends, rif]).then(() => {
+      o.signal?.removeEventListener("abort", abort);
+    }) };
   }
   var riffle = (deck, speed = 1, o = {}) => startRiffle(deck, sum(o.durations ?? RIFFLE_PHASES_MS) * speed, o)?.done ?? Promise.resolve();
   function startRiffle(deck, duration, o, shake) {
