@@ -179,8 +179,8 @@ var DM = (() => {
   function planDeal(moves, opts = {}) {
     const speed = opts.speed ?? 1;
     if (speed <= 0 || moves.length === 0) return { timed: [], shuffling: [], shuffleAt: 0, dealAt: 0, total: 0 };
-    const deal = DEAL_MS * speed;
-    const stagger = STAGGER_MS * speed;
+    const deal = (opts.dealMs ?? DEAL_MS) * speed;
+    const stagger = (opts.staggerMs ?? STAGGER_MS) * speed;
     const ins = moves.filter((m) => m.dir === "in");
     const outs = moves.filter((m) => m.dir === "out");
     const shuffling = [...new Set((opts.shuffled ?? []).filter((p) => ins.some((m) => m.pile === p)))];
@@ -210,8 +210,8 @@ var DM = (() => {
     const n = (v) => String(Math.round(v * 1e4) / 1e4);
     const at = (p, deg) => {
       const q = 1 - p;
-      const l = e > s && p > s && p < e ? 1 + (lift - 1) * Math.sin(Math.PI * (p - s) / (e - s)) : 1;
-      return `translate(${n(from.x * q)}px, ${n(from.y * q)}px) scale(${n(from.sx * q + p)}, ${n(from.sy * q + p)}) scale(${n(l)}) perspective(${n(o.perspective ?? FLIP_PERSPECTIVE)}px) ${rot}(${n(deg * sg)}deg)`;
+      const l = e > s && p > s && p < e ? 1 + (lift - 1) * (o.liftCurve ? o.liftCurve((p - s) / (e - s)) : Math.sin(Math.PI * (p - s) / (e - s))) : 1;
+      return `translate(${n(from.x * q)}px, ${n(from.y * q)}px) scale(${n(from.sx * q + p)}, ${n(from.sy * q + p)}) scale(${n(l)})${from.rot || from.rest ? ` rotate(${n((from.rot ?? 0) * q + (from.rest ?? 0) * p)}deg)` : ""} perspective(${n(o.perspective ?? FLIP_PERSPECTIVE)}px) ${rot}(${n(deg * sg)}deg)`;
     };
     const offs = [.../* @__PURE__ */ new Set([0, s, (s + m) / 2, m, Math.min(m + eps, 1), (m + e) / 2, e, 1])].sort((a, b) => a - b);
     const turn = (p, a, b) => b > a ? Math.min(Math.max((p - a) / (b - a), 0), 1) : p >= b ? 1 : 0;
@@ -863,7 +863,7 @@ var DM = (() => {
   function dealFrom(given, o = {}) {
     const speed = reduced() ? 0 : o.speed ?? 1;
     const moves = given.map((m) => ({ ...m, faceDown: turnsOver(m) }));
-    const plan = planDeal(moves, { speed, shuffled: o.shuffled, departs: o.departs, riffleMs: o.durations ? sum(o.durations) : void 0 });
+    const plan = planDeal(moves, { speed, shuffled: o.shuffled, departs: o.departs, riffleMs: o.durations ? sum(o.durations) : void 0, dealMs: o.dealMs, staggerMs: o.staggerMs });
     const face = o.face ?? ((_id, el) => el.cloneNode(true));
     const ends = [];
     const mine = [];
@@ -895,7 +895,14 @@ var DM = (() => {
       const pr = pileEl.getBoundingClientRect();
       const ar = atEl.getBoundingClientRect();
       const [from, to] = move.dir === "out" ? [pr, ar] : [ar, pr];
-      const start = `translate(${String(from.left - to.left)}px, ${String(from.top - to.top)}px) scale(${String(from.width / (to.width || 1))}, ${String(from.height / (to.height || 1))})`;
+      const f0 = move.from;
+      const dx = from.left - to.left + (f0?.x ?? 0);
+      const dy = from.top - to.top + (f0?.y ?? 0);
+      const sx = from.width / (to.width || 1) * (f0?.scale ?? 1);
+      const sy = from.height / (to.height || 1) * (f0?.scale ?? 1);
+      const rest = move.turn ? `rotate(${String(move.turn)}deg)` : "";
+      const start = `translate(${String(dx)}px, ${String(dy)}px) scale(${String(sx)}, ${String(sy)})${f0?.tilt ? ` rotate(${String(f0.tilt)}deg)` : ""}`;
+      const end = rest ? `${REST} ${rest}` : REST;
       const stand = (el2) => {
         el2.removeAttribute("data-card-id");
         el2.dataset["motionStandin"] = "";
@@ -911,22 +918,23 @@ var DM = (() => {
         const back = stand((o.back ?? cardBack)(move.pile, from));
         const card = stand(face(move.id, atEl));
         const [first, second] = move.dir === "out" ? [back, card] : [card, back];
-        const fr = flipFrames({ x: from.left - to.left, y: from.top - to.top, sx: from.width / (to.width || 1), sy: from.height / (to.height || 1) }, {
+        const fr = flipFrames({ x: dx, y: dy, sx, sy, rot: f0?.tilt, rest: move.turn }, {
           lift: o.flipLift ?? (t.lift !== 1 ? t.lift : FLIP_LIFT),
           perspective: o.perspective,
           start: o.flipStart,
           end: o.flipEnd,
           axis: o.axis,
           direction: o.direction,
-          vanish: t.vanish
+          vanish: t.vanish,
+          liftCurve: o.liftCurve
         });
         fly(first, fr.first);
         fly(second, fr.second);
         continue;
       }
       const el = stand(move.faceDown ? (o.back ?? cardBack)(move.pile, from) : face(move.id, atEl));
-      const mid = t.lift !== 1 ? [{ transform: `${REST} scale(${String(t.lift)})`, offset: 0.5 }] : [];
-      fly(el, [{ transform: start, offset: 0 }, ...mid, { transform: REST, offset: 1, ...t.vanish ? { opacity: 0 } : {} }]);
+      const mid = t.lift !== 1 ? [{ transform: `${end} scale(${String(t.lift)})`, offset: 0.5 }] : [];
+      fly(el, [{ transform: start, offset: 0 }, ...mid, { transform: end, offset: 1, ...t.vanish ? { opacity: 0 } : {} }]);
     }
     let stopRif = () => void 0;
     const rif = plan.shuffling.length ? new Promise((r) => {
