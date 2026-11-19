@@ -79,4 +79,19 @@ describe('K435 effect verb options', () => {
     expect(parts.ring.isConnected).toBe(true);
     expect(parts.ring.style.opacity).toBe('0.8');
   });
+  it('K435-3 motes take per-keyframe easing, a held start, a seed and a direction with gravity', () => {
+    animate.mockReturnValue(fakeAnim(false).a as unknown as Animation);
+    const kf = (): Keyframe[][] => animate.mock.calls.map((c) => c[0] as Keyframe[]);
+    setup({ do: 'motes', count: 1, box: [0, 0, 10, 10], rise: 100, startTransform: 'scale(2)', holdStart: 0.5, easings: ['ease-in', 'linear'], direction: 90, gravity: 40 });
+    const [m] = kf();
+    expect(m!.map((k) => k.easing)).toEqual(['ease-in', 'linear', 'linear', undefined]);
+    expect(m![2]).toMatchObject({ transform: 'scale(2)', offset: 0.5 });
+    expect(Number(/, (-?[\d.]+)px\)/.exec(String(m!.at(-1)!.transform))![1])).toBeGreaterThan(40);
+    animate.mockClear();
+    setup({ do: 'motes', count: 1, box: [0, 0, 10, 10], seed: 3 });
+    const a = String(kf()[0]!.at(-1)!.transform);
+    animate.mockClear();
+    setup({ do: 'motes', count: 1, box: [0, 0, 10, 10] });
+    expect(String(kf()[0]!.at(-1)!.transform)).not.toBe(a);
+  });
 });
