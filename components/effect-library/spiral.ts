@@ -2,6 +2,7 @@ import type { Rect } from '../motion-frame/index.ts';
 import type { CanvasEffect } from './canvas.ts';
 import { centre } from './beam-dom.ts';
 import { clamp, ease, glow, lerp, noise, seg } from './particles.ts';
+import { SPIRAL_DEFAULTS as SP } from './defaults.ts';
 
 type Ctx = CanvasRenderingContext2D;
 type RGB = readonly [number, number, number];
@@ -266,11 +267,11 @@ export const spiralTransfer: CanvasEffect = (ctx, t, { call }) => {
     if (!img.naturalWidth) return;
     const parked = o.parked ?? (o.outward ? call.to ?? call.from : call.from);
     const endpoint: Rect = o.outward ? call.from : call.to ?? call.from;
-    const g: Geo = { c: o.centre ?? centre(endpoint), lift: o.lift ?? 34, sq: o.squash ?? .62,
-      orbit: o.orbit ?? .2, u: o.unit ?? 1, tail: o.tail ?? white, tip: o.tip ?? white,
-      engine: o.engine ?? '255,255,255', ribbonReach: o.ribbonReach ?? 1 };
-    const s: Ship = { img, p0: centre(parked), dw: parked[2], dh: parked[3], h0: o.heading ?? 0,
-      nose: o.nose ?? 0, flip: o.flip ?? false, afterimageFilter: o.afterimageFilter };
+    const g: Geo = { c: o.centre ?? centre(endpoint), lift: o.lift ?? SP.lift, sq: o.squash ?? SP.squash,
+      orbit: o.orbit ?? SP.orbit, u: o.unit ?? SP.unit, tail: o.tail ?? white, tip: o.tip ?? white,
+      engine: o.engine ?? SP.engine, ribbonReach: o.ribbonReach ?? SP.ribbonReach };
+    const s: Ship = { img, p0: centre(parked), dw: parked[2], dh: parked[3], h0: o.heading ?? SP.heading,
+      nose: o.nose ?? SP.nose, flip: o.flip ?? SP.flip, afterimageFilter: o.afterimageFilter };
     entry = { g, s, p: pathOf(g, s) };
     geometry.set(call, entry);
   }

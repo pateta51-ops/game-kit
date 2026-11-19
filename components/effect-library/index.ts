@@ -44,5 +44,6 @@ export * from './plasma-orb.ts';
 export * from './drift-cloud.ts';
 
 export type { SheenSettings } from './sheen.ts';
+export { MISSION_SHINE, MISSION_MS, missionSparks, type FizzleSettings, type SparkBurstSettings } from './fizzle.ts';
 export type { SlashSettings } from './slash.ts';
 export * from './play-on.ts';

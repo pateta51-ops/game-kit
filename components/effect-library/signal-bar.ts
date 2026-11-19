@@ -22,6 +22,14 @@ interface Pin {
   window?: readonly [number, number];
   glow?: { radius: number; alpha: number; tail: number; peak: number; gradient?: string };
   ring?: { start: number; end: number; from: number; to: number; colour: string; width: number };
+  /** K436: the glow draws under the number (default over it) */
+  glowUnder?: boolean;
+  /** K436: the ring's radius is the middle of its stroke (default its inner edge) */
+  ringCentred?: boolean;
+  /** K436: the caller's frame clock: called with the draw (step ms), returns its stop; default the kit's own rAF */
+  clock?: (draw: (t: number) => void) => () => void;
+  /** K436: called once when the pin ends (natural end or skip) */
+  onEnd?: () => void;
 }
 
 export interface BarFillSettings {
@@ -140,10 +148,14 @@ function pinFill(fx: Fx, p: Pin, from: number, to: number, colour: string): () =
     Object.assign(glow.style, { width: diameter, height: diameter, background: p.glow.gradient ?? `radial-gradient(${colour},transparent 70%)`, mixBlendMode: 'plus-lighter' });
   }
   if (p.ring) ring.style.border = `${String(p.ring.width)}px solid ${p.ring.colour}`;
+  if (p.ringCentred) ring.style.boxSizing = 'border-box';
   const text = el.ownerDocument.createTextNode('');
-  el.replaceChildren(glow, ring, text);
+  const over = el.ownerDocument.createElement('span');
+  over.style.cssText = 'position:relative;z-index:1';
+  over.append(text);
+  el.replaceChildren(glow, ring, p.glowUnder ? over : text);
   const at = (x: number, y: number): string => `${String(x)}px ${String(y)}px`;
-  const stop = clock(fx, (t) => {
+  const draw = (t: number): void => {
     const k = ease.inOut(seg(t, a, b));
     text.data = String(t >= (a + b) / 2 ? to : from);
     el.style.translate = at(dx * k, dy * k - Math.sin(k * Math.PI) * (p.lift ?? call.from[3] * (p.liftFactor ?? 0.25)));
@@ -151,15 +163,18 @@ function pinFill(fx: Fx, p: Pin, from: number, to: number, colour: string): () =
     if (p.ring) {
       const hr = seg(t, b + p.ring.start, b + p.ring.end);
       ring.style.opacity = String(hr > 0 && hr < 1 ? 1 - hr : 0);
-      ring.style.width = ring.style.height = `${String(2 * lerp(p.ring.from, p.ring.to, ease.out(hr)))}px`;
+      ring.style.width = ring.style.height = `${String(2 * lerp(p.ring.from, p.ring.to, ease.out(hr)) + (p.ringCentred ? p.ring.width : 0))}px`;
     }
-  });
+  };
+  const stop = p.clock ? p.clock(draw) : clock(fx, draw);
   return () => {
     stop();
     glow.remove();
     ring.remove();
+    if (p.glowUnder) el.replaceChildren(text);
     text.data = String(to);
     el.style.translate = at(dx, dy);
+    p.onEnd?.();
   };
 }
 

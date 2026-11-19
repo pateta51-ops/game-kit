@@ -1,5 +1,6 @@
 import type { CanvasEffect } from './canvas.ts';
 import { clamp, ease, glow, noise, pulse, seg, sparks } from './particles.ts';
+import { SHIELD_BUBBLE_DEFAULTS as SB } from './defaults.ts';
 
 type Ctx = CanvasRenderingContext2D;
 type Point = readonly [number, number];
@@ -154,12 +155,7 @@ export const shieldBubble: CanvasEffect = (ctx, t, { call, x, y }) => {
   const [, , w, h] = call.from;
   const look: ShieldLook = {
     centre: [x, y], radius: [w * .58, h * .58], hex: Math.max(6, Math.min(w, h) / 22),
-    hitAngle: Math.PI, hit: 0, unit: 1, breaks: false, attack: false, outline: 1.4,
-    colour: '220,220,220', rimColour: '255,255,255', cellColour: '240,240,240',
-    breakColour: '240,240,240', glowColour: '220,220,220', core: '255,255,255',
-    sparkColours: ['240,240,240', '255,255,255'], glowRadii: [110, 34], glowAlpha: .7, impactPointScale: .97,
-    visibleIn: [-20, 40], flashPeak: .1, flashRadius: 110, flashStrength: 1.4, fieldAlpha: .14,
-    waveWidth: 30, waveReach: 560, waveStrength: [2.2, 1.2],
+    ...SB,
     ...call.step as ShieldBubbleSettings,
   };
   const { centre: [cx, cy], radius: [rx, ry], hex: size, hitAngle, hit, unit: u, breaks, attack } = look;
@@ -224,7 +220,7 @@ export const shieldBubble: CanvasEffect = (ctx, t, { call, x, y }) => {
   glow(ctx, ...pt, look.glowRadii[0] * u, look.glowColour, look.glowAlpha * fp);
   glow(ctx, ...pt, look.glowRadii[1] * u, look.core, fp);
   const tangent = Math.atan2(pt[1] - B.cy, pt[0] - B.cx) + Math.PI / 2;
-  const { count = 16, life = 380, speed = .7, spread = .7, width: sparkWidth = 2 } = look.sparks ?? {};
+  const { count = SB.sparks.count, life = SB.sparks.life, speed = SB.sparks.speed, spread = SB.sparks.spread, width: sparkWidth = SB.sparks.width } = look.sparks ?? {};
   for (let k = 0; k < 2; k++)
     sparks(
       ctx,

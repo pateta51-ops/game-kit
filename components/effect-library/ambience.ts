@@ -10,6 +10,12 @@ export interface AmbienceOptions {
   draw?: (ctx: CanvasRenderingContext2D, t: number, w: number, h: number) => void;
   className?: string;
   parent?: HTMLElement;
+  /** K436: at most this many drawn frames per second */
+  fps?: number;
+  /** K436: while it returns true (the box is covered), no frame is drawn and `t` does not advance */
+  covered?: () => boolean;
+  /** K436: at speed 'instant' the layer shows one still frame drawn at t = 0 and stops (default hidden) */
+  still?: boolean;
 }
 export interface Ambience {
   el: HTMLElement;
@@ -41,8 +47,18 @@ export function createAmbience(o: AmbienceOptions): Ambience {
       update();
       return;
     }
+    frame = requestAnimationFrame(tick);
+    if (o.fps && now - last < 1000 / o.fps - 1) return;
+    if (o.covered?.()) {
+      last = now;
+      return;
+    }
     t += (now - last) / s;
     last = now;
+    paint(t);
+  };
+  const paint = (at: number): void => {
+    if (!canvas || !ctx) return;
     const w = el.clientWidth;
     const h = el.clientHeight;
     if (canvas.width !== w || canvas.height !== h) {
@@ -50,8 +66,7 @@ export function createAmbience(o: AmbienceOptions): Ambience {
       canvas.height = h;
     }
     ctx.clearRect(0, 0, w, h);
-    o.draw?.(ctx, t, w, h);
-    frame = requestAnimationFrame(tick);
+    o.draw?.(ctx, at, w, h);
   };
   const observer = typeof ResizeObserver === 'function' ? new ResizeObserver(() => update()) : undefined;
   function update(): void {
@@ -62,7 +77,8 @@ export function createAmbience(o: AmbienceOptions): Ambience {
       seen = target;
     }
     const s = o.speed();
-    if (!target || typeof s !== 'number' || !(s > 0)) {
+    const still = typeof s !== 'number' || !(s > 0);
+    if (!target || (still && !(o.still === true && s === 'instant'))) {
       el.style.display = 'none';
       cancelAnimationFrame(frame);
       frame = 0;
@@ -70,6 +86,13 @@ export function createAmbience(o: AmbienceOptions): Ambience {
     }
     const r = target.getBoundingClientRect();
     Object.assign(el.style, { display: 'block', left: `${String(r.left)}px`, top: `${String(r.top)}px`, width: `${String(r.width)}px`, height: `${String(r.height)}px` });
+    if (still) {
+      cancelAnimationFrame(frame);
+      frame = 0;
+      t = 0;
+      paint(0);
+      return;
+    }
     if (ctx && !frame) {
       last = performance.now();
       frame = requestAnimationFrame(tick);
