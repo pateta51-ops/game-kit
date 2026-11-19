@@ -2,7 +2,7 @@
 // K435: verb options so games drop their own copies (STCC batches 9-23, Warp batches 13 and 31).
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { buildTimeline, createVerbs, type Step } from '../motion-frame/index.ts';
-import { playOn, registerEffects, type EffectCtx } from './index.ts';
+import { pileLift, playOn, registerEffects, type EffectCtx } from './index.ts';
 
 const animate = vi.fn<HTMLElement['animate']>();
 const fakeAnim = (running: boolean) => {
@@ -103,5 +103,16 @@ describe('K435 effect verb options', () => {
     expect((context.el.querySelector('.fx-actor') as HTMLElement).style.opacity).toBe('0.5');
     setup({ do: 'settle', rise: -12, fromScale: 1.2, dip: 0.9, dipAt: 0.6 });
     expect([kf()[0]!.transform, kf()[1]!.transform, kf()[1]!.offset]).toEqual(['translateY(-12px) scale(1.2)', 'scale(0.9)', 0.6]);
+  });
+  it('K435-5 lift and pileLift make scale and shadow optional; pileLift animates transform by a share of the height', () => {
+    animate.mockReturnValue(fakeAnim(false).a as unknown as Animation);
+    setup({ do: 'lift', scale: false, shadow: false });
+    expect(animate.mock.calls.at(-1)![0]).toEqual([{ transform: 'none' }, { transform: 'translateY(var(--fx-lift-rise,-6px))' }]);
+    const el = document.createElement('div');
+    el.getBoundingClientRect = () => ({ height: 200 }) as DOMRect;
+    pileLift(el, { transform: true, liftShare: 0.06, scale: null, shadow: null, liftMs: 160 });
+    expect(animate.mock.calls.at(-1)![0]).toEqual([{ transform: 'none' }, { transform: 'translate(0, -12px)' }]);
+    pileLift(el, { speed: 'instant', shadow: null });
+    expect(el.style.filter).toBe('');
   });
 });

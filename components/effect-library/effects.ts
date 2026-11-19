@@ -109,8 +109,11 @@ export const BUILT_IN: Readonly<Record<string, Effect>> = {
   'arc-move': arcMove,
   'multi-stop-path': multiStopMove,
   lift: ({ call, animate }) => {
-    const end = { transform: `translateY(var(--fx-lift-rise,-6px)) scale(${String(call.value ?? 1.08)})`, boxShadow: 'var(--fx-lift-shadow,0 12px 24px)' };
-    animate([{ transform: 'none', boxShadow: 'none' }, end], end);
+    // K435-5: step `scale: false` lifts with no scale, `shadow: false` with no shadow
+    const sc = call.step['scale'] === false ? '' : ` scale(${String(call.value ?? 1.08)})`;
+    const sh = call.step['shadow'] !== false;
+    const end = { transform: `translateY(var(--fx-lift-rise,-6px))${sc}`, ...(sh ? { boxShadow: 'var(--fx-lift-shadow,0 12px 24px)' } : {}) };
+    animate([{ transform: 'none', ...(sh ? { boxShadow: 'none' } : {}) }, end], end);
     return undefined;
   },
   settle: ({ call, animate }) => {
