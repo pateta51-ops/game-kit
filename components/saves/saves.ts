@@ -112,7 +112,7 @@ export function makeSaves<G extends PortTypes>(cfg: SavesConfig<G>) {
     }
     return createSave(
       rules!,
-      { options: h.options as never, rules: h.rules, actions: actions as never, undoUsed: h.undoUsed, savedAt, ...(state === undefined ? {} : { state: state as never }) },
+      { options: h.options, rules: h.rules, actions: actions as never, undoUsed: h.undoUsed, savedAt, ...(state === undefined ? {} : { state: state as never }) },
       cfg.content,
       format,
     ) as unknown as SaveOf<G>;
