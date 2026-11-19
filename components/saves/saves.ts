@@ -9,6 +9,9 @@ import {
   exportSave,
   importSave,
   restoreSave,
+  sealOf,
+  UNKNOWN_COMMIT,
+  type EnginePort,
   type GameRules,
   type GameTypes,
   type History,
@@ -16,6 +19,7 @@ import {
   type SaveFile,
   type SaveFormat,
 } from '../engine-core/index.ts';
+import { isPort, portHash, portRestore, portStart, portStep } from './port.ts';
 import { makeKv, type KvBackend } from './kv.ts';
 
 export interface StoredSave<G extends GameTypes> {
@@ -24,7 +28,10 @@ export interface StoredSave<G extends GameTypes> {
 }
 
 export interface SavesConfig<G extends GameTypes> {
-  readonly game: GameRules<G>;
+  /** A `GameRules`, or an engine-core `EnginePort` (K403: the save holds seed, content hash and answers). */
+  readonly game: GameRules<G> | EnginePort<G>;
+  /** The content hash a port save carries (default: engine-core's hashValue of the content). Rules games use their own. */
+  readonly contentHash?: (content: G['content']) => string;
   readonly content: G['content'];
   readonly format?: SaveFormat;
   /** IndexedDB database name, one per game. */
@@ -52,6 +59,9 @@ const isTime = (t: unknown): t is number => typeof t === 'number' && Number.isFi
 export type Saves<G extends GameTypes> = ReturnType<typeof makeSaves<G>>;
 
 export function makeSaves<G extends GameTypes>(cfg: SavesConfig<G>) {
+  const game = cfg.game;
+  const port = isPort(game) ? game : undefined;
+  const rules = isPort(game) ? undefined : game;
   const kv = makeKv<StoredSave<G>>(cfg.database, cfg.table ?? 'saves', cfg.backend, cfg.onError);
   const format = cfg.format ?? DEFAULT_SAVE_FORMAT;
   const keep = Math.max(1, cfg.autosaves ?? 1);
@@ -73,8 +83,8 @@ export function makeSaves<G extends GameTypes>(cfg: SavesConfig<G>) {
     if (c && c.options === h.options && c.rules === h.rules && c.actions.length <= actions.length && c.actions.every((a, i) => a === actions[i])) {
       state = c.state;
       at = c.actions.length;
-    } else state = createGame(cfg.game, h.options, h.rules, cfg.content).state;
-    for (; at < actions.length; at++) state = applyAction(cfg.game, state, actions[at] as G['action'], cfg.content).state;
+    } else state = port ? portStart(port, (h.options as { seed: string }).seed) : createGame(rules!, h.options, h.rules, cfg.content).state;
+    for (; at < actions.length; at++) state = port ? portStep(port, state, actions[at] as G['action']) : applyAction(rules!, state, actions[at] as G['action'], cfg.content).state;
     live = { options: h.options, rules: h.rules, actions, state };
     return state;
   };
@@ -87,8 +97,22 @@ export function makeSaves<G extends GameTypes>(cfg: SavesConfig<G>) {
     } catch {
       live = undefined;
     }
+    if (port) {
+      if (state === undefined) throw new Error('Cannot save an invalid game.');
+      return {
+        version: format.version,
+        appCommit: format.appCommit ?? UNKNOWN_COMMIT,
+        contentHash: portHash(cfg.content, cfg.contentHash),
+        options: structuredClone(h.options),
+        rules: structuredClone(h.rules),
+        actions: structuredClone(actions),
+        finalHash: sealOf(state, h.undoUsed),
+        undoUsed: h.undoUsed,
+        savedAt,
+      };
+    }
     return createSave(
-      cfg.game,
+      rules!,
       { options: h.options, rules: h.rules, actions, undoUsed: h.undoUsed, savedAt, ...(state === undefined ? {} : { state }) },
       cfg.content,
       format,
@@ -154,7 +178,17 @@ export function makeSaves<G extends GameTypes>(cfg: SavesConfig<G>) {
     },
     /** Store an imported save file's text as a named save; the reason when it does not load. */
     async importNamed(text: string, name: string): Promise<{ ok: true; key: string } | { ok: false; error: string }> {
-      const r = importSave(cfg.game, text, cfg.content, format);
+      let r: RestoreResult<G>;
+      if (!port) r = importSave(rules!, text, cfg.content, format);
+      else {
+        let parsed: unknown;
+        try {
+          parsed = JSON.parse(text);
+        } catch {
+          return { ok: false, error: 'This is not a save file.' };
+        }
+        r = portRestore(port, parsed, portHash(cfg.content, cfg.contentHash), format);
+      }
       if (!r.ok) return { ok: false, error: r.error };
       const key = NAMED + stamp();
       await kv.put(key, { name, save: r.save });
@@ -184,7 +218,8 @@ export function makeSaves<G extends GameTypes>(cfg: SavesConfig<G>) {
     exportName: (s: StoredSave<G>): string =>
       `${cfg.filePrefix}-${s.save.savedAt.slice(0, 16).replace(/[:T]/g, '-')}.json`,
     /** Replay a stored save: its state, or why it cannot load (never throws). */
-    restore: (s: StoredSave<G>): RestoreResult<G> => restoreSave(cfg.game, s.save, cfg.content, format),
+    restore: (s: StoredSave<G>): RestoreResult<G> =>
+      port ? portRestore(port, s.save, portHash(cfg.content, cfg.contentHash), format) : restoreSave(rules!, s.save, cfg.content, format),
   };
 }
 

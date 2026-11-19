@@ -30,7 +30,7 @@ Plays motion specs in the director's format (one JSON per beat: `actors`, `steps
   For tabbed views, supply the destination button via `tabs(selector)` and the
   current button via `activeTab()`. Buttons should stay mounted during the session.
   The default checks the scroller bounds. Pans ease over 350 ms times the motion scale.
-- `withViewTransition(apply, speed)` uses the browser transition when enabled.
+- `withViewTransition(apply, speed, { onCardStart, id, signal })` uses the browser transition when enabled. K402: `onCardStart(0, id)` is called once when the flight takes off (at once under instant); an aborted `signal` skips the transition to its end state with no start.
   Supply a synchronous DOM update (React can wrap it in `flushSync`) or return the redraw promise.
   Import `view-transition.css` to use the durations set by `putMotionSpeed`.
   Mark a clipping panel with `data-vt-clip` to exclude its partially visible inline-named elements.

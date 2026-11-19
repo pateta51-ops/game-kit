@@ -31,7 +31,11 @@ const moves: Move[] = [
 console.log(planDeal(moves, { shuffled: ['p1.deck'] }).total)
 finishOnInput()
 void dealFrom(moves, { speed: 1, shuffled: ['p1.deck'], back: (pile) => Object.assign(document.createElement('div'), { className: `back ${pile}` }) }).done
+const stop = new AbortController()
+void dealFrom(moves, { onCardStart: (index, id) => console.log('takes off', index, id), signal: stop.signal }).done
 ```
+
+`onCardStart(index, id)` (K402): called when each card takes off, after its stagger delay at the speed in force (the plan's `delay`; `index` is its place in `moves`); under speed 0 or reduced motion every call fires at once, in order. `finishDeckMotions` fires the starts still waiting. `signal`: on abort the flight finishes at its end state and no further `onCardStart` is called.
 
 ```ts
 import { createVerbs } from '../kit/motion-frame/player'

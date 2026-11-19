@@ -39,6 +39,20 @@ const text = saves.exportText({ name: 'slot', save: saves.saveOf(history) }) // 
 console.log(text.length)
 ```
 
+## A game behind an engine port
+
+`game` also takes an engine-core `EnginePort` (K403): a save holds the seed (`options.seed`), the content hash (`contentHash` option, default engine-core's `hashValue` of the content) and the `PortAnswer`s in order. Restore is `start(seed)`, settle, then `portAnswer` for each; same slots, autosave, export/import and errors as with a `GameRules`. Tests: `port.test.ts`.
+
+```ts
+import { makeSaves } from '../kit/saves/index'
+import { kernelPort, newHistory } from '../kit/engine-core/kernel'
+import { CONTENT, COUNTER, RULES, type Counter } from '../kit/engine-core/fake/counter'
+
+const port = kernelPort(COUNTER, CONTENT, { options: (seed) => ({ seed }), gameRules: RULES })
+const saves = makeSaves<Counter>({ game: port, content: CONTENT, database: 'portgame', filePrefix: 'portgame' })
+console.log(saves.saveOf(newHistory<Counter>({ seed: 'demo' }, RULES)).options)
+```
+
 ## Button slots
 
 ```tsx
