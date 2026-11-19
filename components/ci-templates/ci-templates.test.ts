@@ -423,21 +423,22 @@ describe('K190: what the four games need (examples/<game>.json renders their wor
   it('K434: a self-hosted job gets timeoutMinutes + queueWaitMinutes, its run steps timeoutMinutes; hosted is unchanged', () => {
     const base = { repo: 'acme/widget', runnerLabel: 'widget' };
     const jobs = (n: string, cfg: object) => mk(n, { ...base, ...cfg })('ci.yml').jobs;
+    const st = (j: { steps: unknown[] }) => j.steps as Record<string, unknown>[];
     const a = jobs('qw-default', {});
     expect(a.check!['timeout-minutes']).toBe(75);
-    const runs = a.check!.steps.filter((s) => 'run' in s);
+    const runs = st(a.check!).filter((s) => 'run' in s);
     expect(runs.length).toBeGreaterThan(0);
     for (const s of runs) expect(s['timeout-minutes'], JSON.stringify(s)).toBe(15);
     const b = jobs('qw-custom', { queueWaitMinutes: 30, ci: { timeoutMinutes: 20, steps: ['npm test', { run: 'x', 'timeout-minutes': 3 }] } });
     expect(b.check!['timeout-minutes']).toBe(50);
-    expect(b.check!.steps.filter((s) => 'run' in s).map((s) => s['timeout-minutes'] as number)).toEqual([20, 20, 3]);
+    expect(st(b.check!).filter((s) => 'run' in s).map((s) => s['timeout-minutes'])).toEqual([20, 20, 3]);
     const g = mk('qw-gate', base)('full-gate.yml').jobs.gate!;
     expect(g['timeout-minutes']).toBe(120);
-    expect(g.steps.filter((s) => 'run' in s).every((s) => s['timeout-minutes'] === 60)).toBe(true);
+    expect(st(g).filter((s) => 'run' in s).every((s) => s['timeout-minutes'] === 60)).toBe(true);
     expect(jobs('qw-off', { queueWaitMinutes: false }).check!['timeout-minutes']).toBe(15);
     const c = jobs('qw-hosted', { ci: { runsOn: 'ubuntu-latest' } });
     expect(c.check!['timeout-minutes']).toBe(15);
-    expect(c.check!.steps.some((s) => 'timeout-minutes' in s)).toBe(false);
+    expect(st(c.check!).some((s) => 'timeout-minutes' in s)).toBe(false);
   });
   it('K221: concurrency never cancels main', () => {
     for (const f of ['ci.yml', 'full-gate.yml']) expect(render(f)).toContain("cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}");
