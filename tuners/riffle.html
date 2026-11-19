@@ -124,6 +124,10 @@ var DM = (() => {
   var ui_exports = {};
   __export(ui_exports, {
     DEAL_MS: () => DEAL_MS,
+    FLIP_END: () => FLIP_END,
+    FLIP_LIFT: () => FLIP_LIFT,
+    FLIP_PERSPECTIVE: () => FLIP_PERSPECTIVE,
+    FLIP_START: () => FLIP_START,
     MOCK_U: () => MOCK_U,
     REFILL_AFTER: () => REFILL_AFTER,
     REFILL_FAR_SCALE: () => REFILL_FAR_SCALE,
@@ -141,6 +145,7 @@ var DM = (() => {
     drawNeutralBack: () => drawNeutralBack,
     finishDeckMotions: () => finishDeckMotions,
     finishOnInput: () => finishOnInput,
+    flipFrames: () => flipFrames,
     pileElement: () => pileElement,
     planDeal: () => planDeal,
     registerRiffle: () => registerRiffle,
@@ -149,7 +154,8 @@ var DM = (() => {
     riffleSide: () => riffleSide,
     riffleTop: () => riffleTop,
     shuffleDecks: () => shuffleDecks,
-    topOf: () => topOf
+    topOf: () => topOf,
+    turnsOver: () => turnsOver
   });
 
   // components/deck-motions/plan.ts
@@ -165,6 +171,10 @@ var DM = (() => {
   var RIFFLE_PHASES_MS = RIFFLE_STUDY_MS.map((ms) => ms * RIFFLE_MS / 3e3);
   var RIFFLE_DECK_CARDS = 20;
   var MOCK_U = 21.6;
+  var FLIP_LIFT = 1.08;
+  var FLIP_PERSPECTIVE = 800;
+  var FLIP_START = 0.25;
+  var FLIP_END = 0.75;
   var cycleMove = (id, discard, deck) => ({ id, dir: "in", pile: deck, at: discard, faceDown: true });
   function planDeal(moves, opts = {}) {
     const speed = opts.speed ?? 1;
@@ -177,7 +187,7 @@ var DM = (() => {
     const shuffleAt = ins.length ? (ins.length - 1) * stagger + deal : 0;
     const dealAt = shuffling.length ? shuffleAt + (opts.riffleMs ?? RIFFLE_MS) * speed : 0;
     const refillAt = opts.departs ? deal * REFILL_AFTER + REFILL_GAP_MS * speed : 0;
-    const timed = ins.map((move, i) => ({ move, delay: i * stagger, ms: deal, lift: 1, vanish: move.faceDown }));
+    const timed = ins.map((move, i) => ({ move, delay: i * stagger, ms: deal, lift: 1, vanish: move.faceDown === true }));
     let dealt = 0;
     for (const move of outs) {
       if (move.refill) timed.push({ move, delay: refillAt, ms: deal * (move.far ? REFILL_FAR_SCALE : 1), lift: REFILL_LIFT, vanish: false });
@@ -188,6 +198,26 @@ var DM = (() => {
     }
     const total = Math.max(...timed.map((t) => t.delay + t.ms), shuffling.length ? dealAt : 0);
     return { timed, shuffling, shuffleAt, dealAt, total };
+  }
+  function flipFrames(from, o = {}) {
+    const s = Math.min(Math.max(o.start ?? FLIP_START, 0), 1);
+    const e = Math.max(Math.min(Math.max(o.end ?? FLIP_END, 0), 1), s);
+    const m = (s + e) / 2;
+    const eps = 1e-4;
+    const lift = o.lift ?? FLIP_LIFT;
+    const rot = o.axis === "y" ? "rotateX" : "rotateY";
+    const sg = o.direction ?? 1;
+    const n = (v) => String(Math.round(v * 1e4) / 1e4);
+    const at = (p, deg) => {
+      const q = 1 - p;
+      const l = e > s && p > s && p < e ? 1 + (lift - 1) * Math.sin(Math.PI * (p - s) / (e - s)) : 1;
+      return `translate(${n(from.x * q)}px, ${n(from.y * q)}px) scale(${n(from.sx * q + p)}, ${n(from.sy * q + p)}) scale(${n(l)}) perspective(${n(o.perspective ?? FLIP_PERSPECTIVE)}px) ${rot}(${n(deg * sg)}deg)`;
+    };
+    const offs = [.../* @__PURE__ */ new Set([0, s, (s + m) / 2, m, Math.min(m + eps, 1), (m + e) / 2, e, 1])].sort((a, b) => a - b);
+    const turn = (p, a, b) => b > a ? Math.min(Math.max((p - a) / (b - a), 0), 1) : p >= b ? 1 : 0;
+    const first = offs.map((p) => ({ offset: p, transform: at(p, 90 * turn(p, s, m)), opacity: p <= m ? 1 : 0 }));
+    const second = offs.map((p) => ({ offset: p, transform: at(p, p <= m ? -90 : -90 + 90 * turn(p, m, e)), opacity: p <= m ? 0 : o.vanish && p === 1 ? 0 : 1 }));
+    return { first, second };
   }
   function riffleFrames(n, width, k) {
     const half = RIFFLE_CARDS / 2;
@@ -825,8 +855,14 @@ var DM = (() => {
     };
   };
   var REST = "translate(0px, 0px) scale(1, 1)";
-  function dealFrom(moves, o = {}) {
+  var turnsOver = (move) => {
+    const p = typeof move.pile === "string" ? pileElement(move.pile) : null;
+    const f = p?.getAttribute("data-face");
+    return f === "down" || (move.faceDown ?? f !== "up");
+  };
+  function dealFrom(given, o = {}) {
     const speed = reduced() ? 0 : o.speed ?? 1;
+    const moves = given.map((m) => ({ ...m, faceDown: turnsOver(m) }));
     const plan = planDeal(moves, { speed, shuffled: o.shuffled, departs: o.departs, riffleMs: o.durations ? sum(o.durations) : void 0 });
     const face = o.face ?? ((_id, el) => el.cloneNode(true));
     const ends = [];
@@ -871,13 +907,21 @@ var DM = (() => {
         mine.push(a);
         ends.push(track(a, el2));
       };
-      if (move.faceDown && move.dir === "out") {
-        const rot = o.axis === "y" ? "rotateX" : "rotateY";
-        const sg = o.direction ?? 1;
-        const b = stand((o.back ?? cardBack)(move.pile, from));
-        const f = stand(face(move.id, atEl));
-        fly(b, [{ transform: `${start} ${rot}(0deg)`, offset: 0 }, { transform: `${REST} ${rot}(${String(90 * sg)}deg)`, offset: 0.5 }, { transform: `${REST} ${rot}(${String(90 * sg)}deg)`, offset: 1 }]);
-        fly(f, [{ transform: `${start} ${rot}(${String(-90 * sg)}deg)`, offset: 0 }, { transform: `${start} ${rot}(${String(-90 * sg)}deg)`, offset: 0.5 }, { transform: `${REST} ${rot}(0deg)`, offset: 1 }]);
+      if (move.faceDown) {
+        const back = stand((o.back ?? cardBack)(move.pile, from));
+        const card = stand(face(move.id, atEl));
+        const [first, second] = move.dir === "out" ? [back, card] : [card, back];
+        const fr = flipFrames({ x: from.left - to.left, y: from.top - to.top, sx: from.width / (to.width || 1), sy: from.height / (to.height || 1) }, {
+          lift: o.flipLift ?? (t.lift !== 1 ? t.lift : FLIP_LIFT),
+          perspective: o.perspective,
+          start: o.flipStart,
+          end: o.flipEnd,
+          axis: o.axis,
+          direction: o.direction,
+          vanish: t.vanish
+        });
+        fly(first, fr.first);
+        fly(second, fr.second);
         continue;
       }
       const el = stand(move.faceDown ? (o.back ?? cardBack)(move.pile, from) : face(move.id, atEl));

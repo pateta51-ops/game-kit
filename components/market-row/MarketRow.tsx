@@ -5,7 +5,8 @@ import { useLayoutEffect, useRef, type ReactNode } from 'react'
 import { prefersReducedMotion } from '../motion-frame/player.ts'
 import { pickedAttrs } from '../picked-state/index.ts'
 import type { BoardPick } from '../prompt-host/pick.ts'
-import { flyFrames, rowMotions, type Box } from './deal.ts'
+import type { FlipOpts } from '../deck-motions/plan.ts'
+import { dealFlipFrames, flyFrames, rowMotions, type Box } from './deal.ts'
 import type { MarketEvent, RowView } from './market.ts'
 
 export interface MarketRowProps {
@@ -31,6 +32,8 @@ export interface MarketRowProps {
   events?: readonly MarketEvent[]
   /** Animation speed factor (1 normal, 0 none). */
   speed?: number
+  /** K406: a new card turns over from the face-down deck (default; options tune it); false: the deck is face up. Default false when the row shows a top offer. */
+  flip?: boolean | FlipOpts | undefined
 }
 
 const boxOf = (el: Element): Box => {
@@ -38,7 +41,7 @@ const boxOf = (el: Element): Box => {
   return { x: r.left, y: r.top, w: r.width, h: r.height }
 }
 
-export function MarketRow({ name, label, row, face, deck, empty, labels, pick, optionFor, topOption, dealFrom, events, speed = 1 }: MarketRowProps) {
+export function MarketRow({ name, label, row, face, deck, empty, labels, pick, optionFor, topOption, dealFrom, events, speed = 1, flip }: MarketRowProps) {
   const root = useRef<HTMLElement>(null)
   const prev = useRef(row.slots)
   const prevBoxes = useRef<Box[]>([])
@@ -60,6 +63,20 @@ export function MarketRow({ name, label, row, face, deck, empty, labels, pick, o
       const from = m.from === undefined ? (src ? boxOf(src) : undefined) : old[m.from]
       const to = boxOf(card)
       if (!from || from.w === 0 || to.w === 0) continue
+      const turn = flip ?? row.top == null
+      if (src && turn !== false) {
+        const fr = dealFlipFrames(from, to, turn === true ? {} : turn)
+        const back = ((src.firstElementChild ?? src).cloneNode(true)) as HTMLElement
+        back.removeAttribute('data-part')
+        back.dataset['motionStandin'] = ''
+        Object.assign(back.style, { position: 'fixed', left: `${String(to.x)}px`, top: `${String(to.y)}px`, width: `${String(to.w)}px`, height: `${String(to.h)}px`, margin: '0', pointerEvents: 'none', zIndex: '1000', boxSizing: 'border-box' })
+        document.body.append(back)
+        const opts = { duration: m.ms, delay: m.delay, easing: 'ease-in-out', fill: 'both' as const }
+        const a = back.animate(fr.back, opts)
+        void (a as Animation | undefined)?.finished.catch(() => undefined).then(() => { back.remove() })
+        card.animate(fr.face, { ...opts, fill: 'backwards' })
+        continue
+      }
       card.animate(flyFrames(from, to), { duration: m.ms, delay: m.delay, easing: 'ease-in-out', fill: 'backwards' })
     }
   }, [row.slots]) // eslint-disable-line react-hooks/exhaustive-deps
