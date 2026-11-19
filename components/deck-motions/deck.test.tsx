@@ -53,18 +53,58 @@ describe('deck-motions DOM', () => {
   it('turns over side to side by default and top to bottom with axis y', () => {
     setup();
     dealFrom([{ id: 'c1', dir: 'out', pile: 'deck', at: slot, faceDown: true }], { speed: 1 });
-    expect(String(made[0]?.frames[1]?.transform)).toContain('rotateY(90deg)');
+    expect(String(made[0]?.frames.at(-1)?.transform)).toContain('rotateY(90deg)');
     made.length = 0;
     dealFrom([{ id: 'c1', dir: 'out', pile: 'deck', at: slot, faceDown: true }], { speed: 1, axis: 'y' });
-    expect(String(made[0]?.frames[1]?.transform)).toContain('rotateX(90deg)');
+    expect(String(made[0]?.frames.at(-1)?.transform)).toContain('rotateX(90deg)');
     expect(String(made[1]?.frames[0]?.transform)).toContain('rotateX(-90deg)');
     finishDeckMotions();
   });
   it('turns the other way with direction -1', () => {
     setup();
     dealFrom([{ id: 'c1', dir: 'out', pile: 'deck', at: slot, faceDown: true }], { speed: 1, direction: -1 });
-    expect(String(made[0]?.frames[1]?.transform)).toContain('rotateY(-90deg)');
+    expect(String(made[0]?.frames.at(-1)?.transform)).toContain('rotateY(-90deg)');
     expect(String(made[1]?.frames[0]?.transform)).toContain('rotateY(90deg)');
+    finishDeckMotions();
+  });
+  it('K406: a face-down pile deals face down, then turns over (faceDown unset)', () => {
+    setup();
+    dealFrom([{ id: 'c1', dir: 'out', pile: 'deck', at: slot }], { speed: 1 });
+    expect(made).toHaveLength(2);
+    const [back, face] = made.map((m) => m.frames);
+    expect(back![0]).toMatchObject({ opacity: 1 });
+    expect(String(back![0]!.transform)).toContain('rotateY(0deg)');
+    expect(face![0]).toMatchObject({ opacity: 0 });
+    expect(face!.at(-1)).toMatchObject({ opacity: 1 });
+    expect(String(face!.at(-1)!.transform)).toContain('rotateY(0deg)');
+    finishDeckMotions();
+  });
+  it('K406: a pile marked face down turns even with faceDown false; one marked face up opts out', () => {
+    setup();
+    document.querySelector('[data-pile=deck]')!.setAttribute('data-face', 'down');
+    dealFrom([{ id: 'c1', dir: 'out', pile: 'deck', at: slot, faceDown: false }], { speed: 1 });
+    expect(made).toHaveLength(2);
+    made.length = 0;
+    document.querySelector('[data-pile=deck]')!.setAttribute('data-face', 'up');
+    dealFrom([{ id: 'c1', dir: 'out', pile: 'deck', at: slot }], { speed: 1 });
+    expect(made).toHaveLength(1);
+    finishDeckMotions();
+  });
+  it('K406: the deck cycle turns the card face down on its way in, then it vanishes', () => {
+    setup();
+    dealFrom([{ id: 'c1', dir: 'in', pile: 'deck', at: slot, faceDown: true }], { speed: 1 });
+    expect(made).toHaveLength(2);
+    expect(made[0]!.frames[0]).toMatchObject({ opacity: 1 });
+    expect(made[1]!.frames.at(-1)).toMatchObject({ opacity: 0 });
+    expect(String(made[1]!.frames.at(-1)!.transform)).toContain('rotateY(0deg)');
+    finishDeckMotions();
+  });
+  it('K406: the flip takes lift, perspective and its share of the travel', () => {
+    setup();
+    dealFrom([{ id: 'c1', dir: 'out', pile: 'deck', at: slot }], { speed: 1, flipLift: 1.2, perspective: 500, flipStart: 0.1, flipEnd: 0.5 });
+    const back = made[0]!.frames;
+    expect(back.map((k) => k.offset)).toContain(0.1);
+    expect(String(back.find((k) => k.offset === 0.3)!.transform)).toMatch(/scale\(1\.2\) perspective\(500px\) rotateY\(90deg\)/);
     finishDeckMotions();
   });
   it('plays nothing at speed 0', async () => {

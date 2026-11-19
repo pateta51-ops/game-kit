@@ -1,7 +1,8 @@
 """Backend adapters: each turns jobs (prompt, seconds, seed) into raw audio files.
 
-Local GPU backends run a worker script in their own Python (the config's `python`, usually a venv with CUDA
-PyTorch), so this package needs only the standard library. No hosted (paid) backend is part of the kit.
+Local GPU backends run a worker script in their own Python (the config's `python`, a venv with CUDA PyTorch) under
+`nice -n 19`, so this package needs only the standard library. Workers run on the GPU only (`gpu.py`). No hosted
+(paid) backend is part of the kit.
 
 Keys are read from the environment only and never printed, logged or written to the manifest. A worker gets only
 the key it needs (`pass_env`); every other key variable is removed from its environment.
@@ -141,7 +142,7 @@ class WorkerBackend(Backend):
             "result": str(res_file),
         }
         job_file.write_text(json.dumps(payload, indent=2), encoding="utf-8")
-        cmd = [str(self.python()), str(WORKERS / self.script), str(job_file)]
+        cmd = ["nice", "-n", "19", str(self.python()), str(WORKERS / self.script), str(job_file)]
         print(f"  [{self.name}] {len(jobs)} item(s) -> {self.python()} {self.script}", flush=True)
         t0 = time.time()
         p = subprocess.run(cmd, env=worker_env(self.pass_env))  # the worker's progress goes straight to the console

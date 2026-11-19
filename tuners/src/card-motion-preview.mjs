@@ -59,10 +59,10 @@ export function pile(stage, { count, speed, landscape, fanUnit }, browse, play, 
   if (play) stage.querySelector('[data-part="stack-hit"]')?.click();
 }
 
-export function market(stage, speed, play, key) {
+export function market(stage, speed, play, key, flip) {
   const row = { decks: { deck: 12 }, slots: ['1', '2', '3'] };
   const render = (view) => draw(stage, createElement(Fragment, { key }, createElement(MarketRow, {
-    name: 'market', label: 'Market', row: view, face, deck: () => face('back'), speed,
+    name: 'market', label: 'Market', row: view, face, deck: () => face('back'), speed, flip,
   })));
   render(row);
   if (play) render({ ...row, slots: ['4', '5', '1'] });

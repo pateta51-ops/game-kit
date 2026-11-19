@@ -5,8 +5,8 @@ import { applyAction } from './apply.ts';
 import { nextUint32, seedRng } from './rng.ts';
 import type { AnswerAction, GameRules, GameTypes, KernelOption, KernelPrompt, KernelState } from './types.ts';
 
-/** Every answer `validateAction` accepts: each set of enabled option ids of size min..max, in option order (an ordered prompt is listed once per set). */
-export function enumerateAnswers(state: KernelState): AnswerAction[] {
+/** Every answer `validateAction` accepts: each set of enabled option ids of size min..max, in option order; K407: an `ordered` prompt lists every order, and `valid` drops answers the game would refuse. */
+export function enumerateAnswers<S extends KernelState>(state: S, valid?: (state: S, answer: AnswerAction) => boolean): AnswerAction[] {
   const p = state.prompt;
   if (p === null || state.result !== null) return [];
   const ids = p.options.filter((o) => o.enabled && o.alone !== true).map((o) => o.id);
@@ -15,11 +15,11 @@ export function enumerateAnswers(state: KernelState): AnswerAction[] {
   const pick = (from: number, acc: string[]): void => {
     if (acc.length >= p.min) out.push({ kind: 'answer', promptId: p.id, picks: acc });
     if (acc.length === p.max) return;
-    for (let i = from; i < ids.length; i += 1) pick(i + 1, [...acc, ids[i] as string]);
+    for (let i = p.ordered === true ? 0 : from; i < ids.length; i += 1) if (!acc.includes(ids[i] as string)) pick(i + 1, [...acc, ids[i] as string]);
   };
   if (ids.length > 0 || p.min === 0) pick(0, []);
   for (const o of p.options) if (o.enabled && o.alone === true) out.push({ kind: 'answer', promptId: p.id, picks: [o.id] });
-  return out;
+  return valid === undefined ? out : out.filter((a) => valid(state, a));
 }
 
 // K287: the enabled options that count toward min..max, or the first enabled alone option when they cannot reach min.

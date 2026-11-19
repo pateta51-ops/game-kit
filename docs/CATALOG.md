@@ -448,7 +448,7 @@ Cards fly from a pile to their places (deal, refill turn-over, deck cycle) and a
 
 - **Use it when:** Cards fly from a pile to their places (deal, refill turn-over, deck cycle) and a pile riffles; piles found by data-pile; timing pure.
 - **Not for:** Which cards move (the game diffs its views), the card look, a market row slide or a fan (card-pile).
-- **Key exports:** `DEAL_MS`, `STAGGER_MS`, `REFILL_AFTER`, `REFILL_GAP_MS`, `REFILL_FAR_SCALE`, `REFILL_LIFT`, `RIFFLE_MS`, `RIFFLE_CARDS`, `RIFFLE_STUDY_MS`, `RIFFLE_PHASES_MS`, `RIFFLE_DECK_CARDS`, `MOCK_U`, `cycleMove`, `planDeal`, and 5 more
+- **Key exports:** `DEAL_MS`, `STAGGER_MS`, `REFILL_AFTER`, `REFILL_GAP_MS`, `REFILL_FAR_SCALE`, `REFILL_LIFT`, `RIFFLE_MS`, `RIFFLE_CARDS`, `RIFFLE_STUDY_MS`, `RIFFLE_PHASES_MS`, `RIFFLE_DECK_CARDS`, `MOCK_U`, `FLIP_LIFT`, `FLIP_PERSPECTIVE`, and 11 more
 - **Needs:** [`motion-frame`](#motion-frame)
 - **Came from:** stcc
 - **Docs:** [README](../components/deck-motions/README.md)
@@ -636,7 +636,7 @@ A market of offer slots refilled from decks: prices, buy and cycle options, refi
 - **Use it when:** A market of offer slots refilled from decks: buy/cycle options, refill at once or by slide, clear, deal animation.
 - **Not for:** Payment, discounts, unlocks, where a bought card goes; a hand or a pile.
 - **Key exports:** `DEAL_MS`, `STAGGER_MS`, `SLIDE_MS`, `rowMotions`, `flyFrames`, `slotZone`, `marketZones`, `slotsOf`, `priceOf`, `marketOptions`, `parseOption`, `fillSlot`, `takeSlot`, `cycleSlot`, and 19 more
-- **Needs:** [`engine-core`](#engine-core), [`card-zones`](#card-zones), [`prompt-host`](#prompt-host), [`picked-state`](#picked-state), [`motion-frame`](#motion-frame)
+- **Needs:** [`engine-core`](#engine-core), [`card-zones`](#card-zones), [`prompt-host`](#prompt-host), [`picked-state`](#picked-state), [`motion-frame`](#motion-frame), [`deck-motions`](#deck-motions)
 - **Came from:** rome-fate-of-an-empire-fan-prototype
 - **Docs:** [README](../components/market-row/README.md)
 
