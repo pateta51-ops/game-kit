@@ -57,6 +57,17 @@ describe('heavy-queue server (K399)', () => {
     expect(s.history.map((h) => h.exit)).toEqual([1, 0]);
     expect(await (await fetch(q.url + '/')).text()).toContain('Running (2/2)');
   });
+  it('a normal run that waited past age ranks with high ones', async () => {
+    const q = await serve({ slots: 1, age: 150 });
+    const a = await q.post('/acquire', { label: 'a' });
+    const n = await q.post('/acquire', { label: 'n' });
+    await sleep(200);
+    const h = await q.post('/acquire', { label: 'h', priority: 'high' });
+    expect([a.granted, n.granted, h.granted, h.ahead]).toEqual([true, false, false, 1]);
+    await q.post('/release', { id: a.id, exit: 0 });
+    expect((await q.post('/beat', { id: n.id })).granted).toBe(true);
+    expect((await q.post('/beat', { id: h.id })).granted).toBe(false);
+  });
   it('frees a lease whose heartbeats stop', async () => {
     const q = await serve({ ttl: 200 });
     const a = await q.post('/acquire', { label: 'a' });
