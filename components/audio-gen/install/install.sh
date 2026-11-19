@@ -19,7 +19,7 @@ fi
 if has sao; then
   # Stable Audio Open 1.0 (Stability AI Community License). The weights are gated: accept the licence on its
   # Hugging Face page, then run `hf auth login` once.
-  "$H/venv/bin/pip" install -q torch torchaudio diffusers transformers accelerate huggingface_hub
+  "$H/venv/bin/pip" install -q torch torchaudio diffusers torchsde transformers accelerate huggingface_hub
 fi
 if has ace; then
   # ACE-Step 1.5 (MIT), music from a prompt.
@@ -43,7 +43,7 @@ fi
 if has kokoro; then
   # Kokoro-82M, free local voice lines (needs espeak-ng for English: sudo apt install espeak-ng).
   venv venv-kokoro
-  "$H/venv-kokoro/bin/pip" install -q kokoro soundfile numpy
+  "$H/venv-kokoro/bin/pip" install -q kokoro==0.9.4 soundfile numpy
 fi
 if has midi; then
   command -v fluidsynth >/dev/null || { echo "install fluidsynth: sudo apt install fluidsynth"; exit 1; }

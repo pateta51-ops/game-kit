@@ -10,6 +10,7 @@ Job options (config backends.<name>, all optional except repo):
   lmBackend       "pt" (default) or "vllm"
   steps           diffusion steps, default 8 for a turbo model, else 50 (acestep-v15-xl-sft)
   guidance        guidance scale (non-turbo models only), default 7.0
+  shift           timestep shift, turbo models only, default 3.0 (docs/en/INFERENCE.md: set 3.0 for turbo)
   offload         ignored: the models stay on the card (it moved them to the CPU between stages)
 Per item: prompt, seconds, seed, tempo, key, beatsPerBar, options.lyrics (default "[Instrumental]").
 Exit 3 = cannot start (missing checkout, no CUDA, or a first generation that did not use the GPU); the pipeline
@@ -116,6 +117,8 @@ def main() -> int:
         out = Path(item["out"])
         out.parent.mkdir(parents=True, exist_ok=True)
         o = item.get("options") or {}
+        if float(item["seconds"]) > 600:
+            raise ValueError(f"ACE-Step makes 10 to 600 s a take (docs/en/INFERENCE.md: duration 10-600); asked for {item['seconds']} s")
         params = GenerationParams(
             caption=item["prompt"],
             lyrics=str(o.get("lyrics", "[Instrumental]")),
@@ -123,9 +126,10 @@ def main() -> int:
             bpm=int(round(item["tempo"])) if item.get("tempo") else None,
             keyscale=str(item.get("key") or ""),
             timesignature=str(item.get("beatsPerBar") or ""),
-            duration=float(item["seconds"]),
+            duration=max(10.0, float(item["seconds"])),  # under 10 s: made at 10 s, the pipeline cuts to the cue's length (post.clean)
             inference_steps=int(o.get("steps", opts.get("steps", 8 if "turbo" in model else 50))),
-            **({} if "turbo" in model else {"guidance_scale": float(o.get("guidance", opts.get("guidance", 7.0)))}),
+            **({"shift": float(o.get("shift", opts.get("shift", 3.0)))} if "turbo" in model else
+               {"guidance_scale": float(o.get("guidance", opts.get("guidance", 7.0)))}),
             seed=int(item["seed"]),
             thinking=thinking,
             use_cot_metas=False,

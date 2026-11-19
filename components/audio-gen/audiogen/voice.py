@@ -16,6 +16,7 @@ from .spec import Category
 from .tail import TailRule, apply_tail
 
 KOKORO_RATE = 24000
+KOKORO_REPO = "hexgrad/Kokoro-82M"
 
 
 def jobs(table: dict) -> list[dict]:
@@ -64,10 +65,16 @@ def generate(table: dict, out: Path, only: set[str] | None = None) -> dict:
     from kokoro import KPipeline
 
     out.mkdir(parents=True, exist_ok=True)
-    pipe, used = KPipeline(lang_code="a", device="cuda"), {}
+    pipes, used = {}, {}
+
+    def pipe_for(voice: str):  # one KPipeline per language (Kokoro README); the voice's first letter is its language
+        lang = voice[0]
+        if lang not in pipes:
+            pipes[lang] = KPipeline(lang_code=lang, repo_id=KOKORO_REPO, device="cuda", **({"model": next(iter(pipes.values())).model} if pipes else {}))
+        return pipes[lang]
 
     def say(j: dict, voice: str):
-        return np.concatenate([np.asarray(g[2].cpu() if hasattr(g[2], "cpu") else g[2]) for g in pipe(j["text"], voice=voice, speed=j["speed"])])
+        return np.concatenate([np.asarray(g[2].cpu() if hasattr(g[2], "cpu") else g[2]) for g in pipe_for(voice)(j["text"], voice=voice, speed=j["speed"])])
 
     for j in jobs(table):
         if only and j["id"] not in only:
