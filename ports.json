@@ -2,6 +2,7 @@
   "about": "Single source of truth for every local port used by the owner's games and tools. Read docs/PORTS.md before choosing a port. block = dev server, block+1 = vite preview, block+2 = e2e (Playwright webServer default, env E2E_PORT overrides), block+3 = second e2e server, block+4..+9 = spare for that game (proof sheets, clip renderers). serve.local (4170-4199) is only for the phone build behind tailscale serve; nothing else may use 4170-4199. CI always picks a free port. 5190-5299 is for Codex worktree servers.",
   "panel": { "local": 4170, "https": 8440 },
   "tools": { "heavy-queue": 6005 },
+  "toolsHttps": { "heavy-queue": 8453 },
   "games": {
     "imperium":    { "name": "Imperium",       "repo": "C:/projects/imperium-horizon-fan-prototype",       "block": 6010, "serve": { "local": 4173, "https": 443,  "build": "npm run pack:link && npm run build", "start": "npx vite preview --host 127.0.0.1 --port {port} --strictPort", "copyIgnored": ["content/real/assets", "content/real/pack.json"], "env": {} } },
     "stcc":        { "name": "Star Trek Captain's Chair","repo": "C:/projects/Star-trek-captains-chair-game",        "block": 6020, "serve": { "local": 4174, "https": 8443, "build": "npm run content:build && npm run build", "start": "npx vite preview --host 127.0.0.1 --port {port} --strictPort", "copyIgnored": [], "env": {} } },
