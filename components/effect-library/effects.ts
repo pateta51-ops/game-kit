@@ -1,5 +1,5 @@
 // The built-in verbs of the director's spec format as DOM effects (Web Animations API), plus the way a game adds its own.
-import type { Run, VerbCall, VerbRegistry } from '../motion-frame/index.ts';
+import type { Rect, Run, VerbCall, VerbRegistry } from '../motion-frame/index.ts';
 import { createEffectLayer, endOnFinished, place, type EffectLayer, type LayerOptions } from './layer.ts';
 
 import { registerCanvasEffect } from './canvas.ts';
@@ -28,6 +28,7 @@ import { registerDashLine } from './dash-line.ts';
 import { reticle } from './reticle.ts';
 import { debris, debrisDom } from './debris.ts';
 import { sheen } from './sheen.ts';
+import { fizzle, sparkBurst } from './fizzle.ts';
 import { slash } from './slash.ts';
 import { registerCrumple } from './crumple.ts';
 
@@ -59,11 +60,47 @@ const entry = (call: VerbCall): [string, string] | undefined => {
 
 const css = (el: HTMLElement, s: Partial<CSSStyleDeclaration>): void => void Object.assign(el.style, s);
 
+// K436: a curve (numbers spread evenly over 0..1) at k; caller `frames` with the last one as the end style
+const nums = (v: unknown): number[] | undefined => (Array.isArray(v) && v.length > 0 && v.every((n) => typeof n === 'number') ? v : undefined);
+const at = (c: readonly number[], k: number): number => {
+  const i = k * (c.length - 1);
+  const j = Math.min(c.length - 2, Math.floor(i));
+  return c.length === 1 ? c[0]! : c[j]! + (c[j + 1]! - c[j]!) * (i - j);
+};
+function callerFrames(call: VerbCall): [Keyframe[], Partial<CSSStyleDeclaration>] | undefined {
+  const frames = call.step['frames'];
+  if (!Array.isArray(frames) || frames.length === 0) return undefined;
+  const last = { ...(frames.at(-1) as Keyframe) };
+  delete last.offset;
+  delete last.easing;
+  return [frames as Keyframe[], Object.fromEntries(Object.entries(last).map(([k, v]) => [k, String(v)]))];
+}
+/** K436: step `scaleX` / `scaleY` curves as `scale` keyframes (with `base` [sx, sy] at k multiplied in), sampled over the step */
+function scaleCurves(call: VerbCall, base?: (k: number) => [number, number]): Keyframe[] | undefined {
+  const x = nums(call.step['scaleX']);
+  const y = nums(call.step['scaleY']);
+  if (!x && !y && !base) return undefined;
+  const n = Math.max(2, x?.length ?? 0, y?.length ?? 0, base ? 25 : 0);
+  return Array.from({ length: n }, (_, i) => {
+    const k = i / (n - 1);
+    const [bx, by] = base?.(k) ?? [1, 1];
+    return { scale: `${String((x ? at(x, k) : 1) * bx)} ${String((y ? at(y, k) : 1) * by)}` };
+  });
+}
+const lastScale = (kf: Keyframe[] | undefined): string => {
+  const s = String(kf?.at(-1)?.['scale'] ?? '');
+  return s === '1 1' ? '' : s;
+};
+
 /** Registers one effect, a built-in or a game's own, in the motion frame's verb registry. */
 export function registerEffect(verbs: VerbRegistry<EffectCtx>, name: string, effect: Effect): void {
   verbs.register(name, (call, run) => {
     const layer = run.context;
     const el = layer.actor(run, call.actor, call.from);
+    // K436: a step's own z-index and blend for its actor's clone
+    const zi = call.step['zIndex'];
+    if (typeof zi === 'number' || typeof zi === 'string') el.style.zIndex = String(zi);
+    if (typeof call.step['blend'] === 'string') el.style.mixBlendMode = call.step['blend'];
     const done: (() => void)[] = [];
     const anims = new Set<Animation>();
     const all = (): Animation[] => (typeof el.getAnimations === 'function' ? el.getAnimations({ subtree: true }) : []);
@@ -89,12 +126,65 @@ export function registerEffect(verbs: VerbRegistry<EffectCtx>, name: string, eff
   });
 }
 
+/**
+ * K436 `move` options: caller `frames` (the last is the end style); `scaleX` / `scaleY` curves; `percent: true` translates in % of
+ * the actor's own size; `rotate` (deg, to; or [from, to]); `resize: true` lands at the target's size (centre to centre);
+ * `output: 'transform'` writes only `transform` (never left/top, translate, rotate or scale), so a separate CSS `scale` composes.
+ */
+function moveMore({ call, el, animate }: Fx, t: Rect): () => void {
+  const f = call.from;
+  const tf = call.step['output'] === 'transform';
+  const own = callerFrames(call);
+  if (own) {
+    animate(own[0], own[1]);
+    return () => {
+      if (!tf) place(el, t);
+      if (call.step['then'] === 'hide') css(el, { visibility: 'hidden' });
+    };
+  }
+  const rs = nums(call.step['resize']);
+  const resize = call.step['resize'] === true || rs?.length === 2;
+  const dx = resize ? t[0] + t[2] / 2 - f[0] - f[2] / 2 : t[0] - f[0];
+  const dy = resize ? t[1] + t[3] / 2 - f[1] - f[3] / 2 : t[1] - f[1];
+  const [sw, sh] = rs?.length === 2 ? rs : [t[2], t[3]];
+  const land: Rect = resize ? [t[0] + t[2] / 2 - sw! / 2, t[1] + t[3] / 2 - sh! / 2, sw!, sh!] : t;
+  const pc = call.step['percent'] === true;
+  const tr = (k: number): string => pc ? `${String(dx * k / Math.max(1, f[2]) * 100)}% ${String(dy * k / Math.max(1, f[3]) * 100)}%` : `${String(dx * k)}px ${String(dy * k)}px`;
+  const rv = call.step['rotate'];
+  const rot: readonly [number, number] | undefined = typeof rv === 'number' ? [0, rv] : nums(rv)?.length === 2 ? nums(rv) as [number, number] : undefined;
+  const sv = call.step['scale'];
+  const ent: readonly [number, number] | undefined = typeof sv === 'number' ? [sv, call.step['hold'] === true ? sv : 1] : nums(sv)?.length === 2 ? nums(sv) as [number, number] : undefined;
+  const kx = resize ? sw! / Math.max(1, f[2]) : 1, ky = resize ? sh! / Math.max(1, f[3]) : 1;
+  const sizeAt = (k: number): [number, number] => {
+    const s = ent ? ent[0] + (ent[1] - ent[0]) * k : 1;
+    return [s * (1 + (kx - 1) * k), s * (1 + (ky - 1) * k)];
+  };
+  const curves = scaleCurves(call, ent || resize ? sizeAt : undefined);
+  const n = Math.max(2, curves?.length ?? 0);
+  const frames = Array.from({ length: n }, (_, i): Keyframe => {
+    const k = i / (n - 1);
+    const sc = String(curves?.[i]?.['scale'] ?? '1 1').replace(' ', ', ');
+    const deg = rot ? rot[0] + (rot[1] - rot[0]) * k : 0;
+    if (tf) return { transform: `translate(${tr(k).replace(' ', ', ')}) rotate(${String(deg)}deg) scale(${sc})` };
+    return { translate: tr(k), ...(rot ? { rotate: `${String(deg)}deg` } : {}), ...(curves ? { scale: curves[i]?.['scale'] } : {}) };
+  });
+  const last = frames.at(-1)!;
+  const end: Partial<CSSStyleDeclaration> = tf ? { transform: String(last.transform) } : { translate: '', ...(rot ? { rotate: rot[1] ? `${String(rot[1])}deg` : '' } : {}), ...(curves ? { scale: lastScale(scaleCurves(call, () => [ent?.[1] ?? 1, ent?.[1] ?? 1])) } : {}) };
+  animate(frames, end, { easing: EASE[String(call.step['ease'])] ?? (typeof call.step['ease'] === 'string' ? call.step['ease'] : 'ease-in-out') });
+  return () => {
+    if (!tf) place(el, land);
+    if (call.step['then'] === 'hide') css(el, { visibility: 'hidden' });
+  };
+}
+
 const EASE: Readonly<Record<string, string>> = { in: 'ease-in', out: 'ease-out', 'in-out': 'ease-in-out', linear: 'linear' };
 
 export const BUILT_IN: Readonly<Record<string, Effect>> = {
-  move: ({ call, el, animate }) => {
+  move: (fx) => {
+    const { call, el, animate } = fx;
     const t = call.to;
     if (!t) return undefined;
+    if (['frames', 'scaleX', 'scaleY', 'percent', 'rotate', 'resize'].some((k) => call.step[k] !== undefined) || call.step['output'] === 'transform') return moveMore(fx, t);
     const f = call.from;
     const e = entry(call);
     animate(
@@ -160,38 +250,82 @@ export const BUILT_IN: Readonly<Record<string, Effect>> = {
   flip: ({ call, el, animate }) => {
     const target = !el.hasAttribute('data-fx-flipped');
     const label = call.step['label'];
+    // K436: `faces` [front, back] selectors in the actor: the front shows until the swap, then the back
+    const faces = Array.isArray(call.step['faces']) ? (call.step['faces'] as unknown[]).map((s) => (typeof s === 'string' ? el.querySelector<HTMLElement>(s) : null)) : [];
+    const show = (back: boolean): void => {
+      if (faces[0]) faces[0].style.visibility = back ? 'hidden' : 'visible';
+      if (faces[1]) faces[1].style.visibility = back ? 'visible' : 'hidden';
+    };
+    if (faces.length > 0) show(!target);
     const swap = (): void => {
       el.toggleAttribute('data-fx-flipped', target);
       if (typeof label === 'string') el.setAttribute('data-fx-label', label);
+      if (faces.length > 0) show(target);
     };
     if (call.step['squash'] === false) {
       swap();
       return undefined;
     }
+    // K436: the turn's own `turnMs` and `turnDelay` (spec ms) inside the step, a `pivot` (transform-origin)
+    const sc = call.dur / Math.max(1, Number(call.step.dur));
+    const tm = call.step['turnMs'];
+    const T = typeof tm === 'number' ? Math.min(tm * sc, call.dur) : call.dur;
+    const D = typeof call.step['turnDelay'] === 'number' ? call.step['turnDelay'] * sc : 0;
+    const turn = T === call.dur && D === 0 ? undefined : { duration: Math.max(T, 1), delay: D };
+    const pivot = call.step['pivot'];
+    const origin = typeof pivot === 'string' ? { transformOrigin: pivot } : {};
     const hm = call.step['holdMs'];
-    const h = typeof hm === 'number' && call.dur > 0 ? Math.min(Math.max(hm, 0), call.dur * 0.8) : 0;
-    const mid = h + (call.dur - h) / 2;
+    const h = typeof hm === 'number' && T > 0 ? Math.min(Math.max(hm, 0), T * 0.8) : 0;
+    const mid = D + h + (T - h) / 2;
     const timer = setTimeout(swap, mid);
     const vertical = call.step['axis'] === 'y';
     const direction = call.step['direction'];
-    if (direction === 1 || direction === -1) {
+    const own = callerFrames(call);
+    if (own) animate(own[0], { transform: 'none', ...own[1] }, turn);
+    else if (direction === 1 || direction === -1) {
       const perspective = typeof call.step['perspective'] === 'number' ? call.step['perspective'] : 800;
       const transform = (degrees: number) => `perspective(${perspective}px) rotate${vertical ? 'X' : 'Y'}(${degrees}deg)`;
       const ease = call.step['ease'];
       const easing = typeof ease === 'string' ? EASE[ease] ?? ease : 'ease-in-out';
-      const edge = call.dur > 0 ? mid / call.dur : .5;
-      animate([
-        { transform: transform(0), easing },
-        ...(h > 0 ? [{ transform: transform(0), offset: h / call.dur, easing }] : []),
-        { transform: transform(direction * 90), offset: edge },
-        { transform: transform(-direction * 90), offset: edge, easing },
-        { transform: transform(0) },
-      ], { transform: 'none' }, { easing: 'linear' });
+      // K436: `eases` [first half, second half]; `overshoot` degrees past flat before it settles; `continuous`: one ease 0 to 180
+      const eases = Array.isArray(call.step['eases']) ? (call.step['eases'] as unknown[]).map((e) => (typeof e === 'string' ? EASE[e] ?? e : easing)) : [];
+      const [e1 = easing, e2 = easing] = eases;
+      const over = typeof call.step['overshoot'] === 'number' ? call.step['overshoot'] : 0;
+      const edge = T > 0 ? (mid - D) / T : .5;
+      const o = edge + (1 - edge) * 0.8;
+      animate(call.step['continuous'] === true ? [
+        { transform: transform(0), easing, ...origin },
+        ...(h > 0 ? [{ transform: transform(0), offset: h / T, easing, ...origin }] : []),
+        { transform: transform(direction * 180), ...origin },
+      ] : [
+        { transform: transform(0), easing: e1, ...origin },
+        ...(h > 0 ? [{ transform: transform(0), offset: h / T, easing: e1, ...origin }] : []),
+        { transform: transform(direction * 90), offset: edge, ...origin },
+        { transform: transform(-direction * 90), offset: edge, easing: e2, ...origin },
+        ...(over ? [{ transform: transform(direction * over), offset: o, easing: 'ease-in-out', ...origin }] : []),
+        { transform: transform(0), ...origin },
+      ], { transform: call.step['continuous'] === true ? transform(direction * 180) : 'none' }, { easing: 'linear', ...turn });
     } else {
       const scale = vertical ? 'scaleY' : 'scaleX';
-      const rest = { transform: `${scale}(1)` };
-      const edge = { transform: `${scale}(0)` };
-      animate(h > 0 ? [rest, { ...rest, offset: h / call.dur }, { ...edge, offset: mid / call.dur }, rest] : [rest, edge, rest], { transform: 'none' });
+      const rest = { transform: `${scale}(1)`, ...origin };
+      const edge = { transform: `${scale}(0)`, ...origin };
+      animate(h > 0 ? [rest, { ...rest, offset: h / T }, { ...edge, offset: (mid - D) / T }, rest] : [rest, edge, rest], { transform: 'none' }, turn);
+    }
+    // K436: `scaleX` / `scaleY` curves (on `scale`), `glow` (a CSS box-shadow peaking edge-on), `filter` (CSS filters over the turn, or { frames, ms, delay, easing })
+    const curves = scaleCurves(call);
+    if (curves) animate(curves, { scale: lastScale(curves) }, { easing: 'linear' });
+    const glow = call.step['glow'];
+    if (typeof glow === 'string') {
+      const k = T > 0 ? (mid - D) / T : .5;
+      animate([{ boxShadow: 'none' }, { boxShadow: glow, offset: k }, { boxShadow: 'none' }], { boxShadow: el.style.boxShadow }, { easing: 'linear', ...turn });
+    }
+    const fl = call.step['filter'];
+    const ff = Array.isArray(fl) ? { frames: fl as string[] } : fl && typeof fl === 'object' ? fl as { frames: string[]; ms?: number; delay?: number; easing?: string } : undefined;
+    if (ff?.frames.length) {
+      animate(ff.frames.map((filter) => ({ filter })), { filter: el.style.filter }, {
+        ...(turn ?? {}), ...(ff.ms !== undefined ? { duration: Math.max(1, ff.ms * sc) } : {}), ...(ff.delay !== undefined ? { delay: ff.delay * sc } : {}),
+        ...(ff.easing ? { easing: EASE[ff.easing] ?? ff.easing } : {}),
+      });
     }
     return () => {
       clearTimeout(timer);
@@ -221,6 +355,15 @@ export const BUILT_IN: Readonly<Record<string, Effect>> = {
     const on = typeof colour === 'string'
       ? (Array.isArray(shadows) ? shadows.filter((s): s is string => typeof s === 'string') : ['0 0 24px 6px']).map((s) => `${s} ${colour}`).join(',')
       : 'var(--fx-glow,0 0 24px 6px)';
+    // K436: `latch: true` turns the glow on and keeps it at the end; a later glow step with `release: true` fades it out
+    if (call.step['latch'] === true) {
+      animate([{ boxShadow: off }, { boxShadow: on }], { boxShadow: on });
+      return undefined;
+    }
+    if (call.step['release'] === true) {
+      animate([{ boxShadow: el.style.boxShadow || on }, { boxShadow: off }], { boxShadow: '' });
+      return undefined;
+    }
     const span = typeof hold === 'number' ? Math.max(0, Math.min(1, hold)) : 0;
     const pulse = span > 0
       ? [{ boxShadow: on, offset: (1 - span) / 2 }, { boxShadow: on, offset: (1 + span) / 2 }]
@@ -326,6 +469,8 @@ export function registerEffects(verbs: VerbRegistry<EffectCtx>, o?: LayerOptions
   const pixels = verbs.get('debris');
   verbs.register('debris', (call, run) => (call.step['dom'] ? pieces : pixels)?.(call, run));
   registerEffect(verbs, 'sheen', sheen);
+  registerEffect(verbs, 'fizzle', fizzle);
+  registerEffect(verbs, 'spark-burst', sparkBurst);
   registerCanvasEffect(verbs, 'slash', slash);
   registerCrumple(verbs);
   return createEffectLayer(o);

@@ -30,6 +30,8 @@ export interface OrbitSettings {
   jitter?: number;
   copySaturation?: number;
   popMs?: number;
+  /** K436: ms added to the twinkle's clock only (a start offset; the pop and orbit keep theirs) */
+  twinkleMs?: number;
 }
 
 export interface IdleSettings extends PulseSettings {
@@ -79,7 +81,7 @@ function drawCrackle(ctx: Ctx, box: Box, t: number, settings: CrackleSettings): 
 
 function orbitLoop(el: HTMLElement, period: number, speed: number, {
   referenceWidth, radii = [40, 12], centerY = 0, phaseMs = 0, count = 3, size = [6, 9], alpha = [0.6, 1],
-  twinkle = [0.8, 0.2, 100, 2], spin = 0, track = 'currentColor', trackWidth = 1, rgb, glowRgb, crackle, jitter = 0, copySaturation, popMs = 0,
+  twinkle = [0.8, 0.2, 100, 2], spin = 0, track = 'currentColor', trackWidth = 1, rgb, glowRgb, crackle, jitter = 0, copySaturation, popMs = 0, twinkleMs = 0,
 }: OrbitSettings = {}): () => void {
   if (!canDraw()) return () => {};
   const canvas = el.ownerDocument.createElement('canvas');
@@ -156,7 +158,7 @@ function orbitLoop(el: HTMLElement, period: number, speed: number, {
         const angle = ((t + phaseMs) / period + i / count) * Math.PI * 2;
         const y = Math.sin(angle);
         const side = y > 0 ? 1 : 0;
-        const tw = twinkle[0] + twinkle[1] * Math.sin(t / twinkle[2] + i * twinkle[3]);
+        const tw = twinkle[0] + twinkle[1] * Math.sin((t + twinkleMs) / twinkle[2] + i * twinkle[3]);
         if (size[side] * pop > 0.5) star(ctx, w / 2 + Math.cos(angle) * rx, cy + y * ry, size[side] * pop, angle * spin, alpha[side] * tw, rgb, glowRgb);
       }
     }
