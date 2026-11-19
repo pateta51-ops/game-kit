@@ -1,3 +1,4 @@
+// @vitest-environment jsdom
 // K412: the hooks games need to drop their own copies of effects, on the fake game.
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { buildTimeline, createVerbs, type Run, type Step, type VerbCall } from '../motion-frame/index.ts';
