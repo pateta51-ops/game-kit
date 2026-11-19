@@ -10,9 +10,14 @@ export interface RestProps {
   exterior?: Exterior | undefined;
   backdrop?: string | undefined;
   onFail: (reason: FallbackReason) => void;
+  className?: string | undefined;
+  /** leave the canvas size to the host's CSS (default: inline 100% x 100%) */
+  hostSized?: boolean | undefined;
+  /** set window.__bagDockFrames (frames rendered so far) for e2e (default off) */
+  e2eHooks?: boolean | undefined;
 }
 
-export function Rest({ faceUrl, exterior, backdrop, onFail }: RestProps) {
+export function Rest({ faceUrl, exterior, backdrop, onFail, className, hostSized, e2eHooks }: RestProps) {
   const canvas = useRef<HTMLCanvasElement>(null);
   const cb = useRef(onFail);
   useLayoutEffect(() => {
@@ -47,12 +52,16 @@ export function Rest({ faceUrl, exterior, backdrop, onFail }: RestProps) {
       },
       () => fail('error'),
     );
+    const w = window as unknown as { __bagDockFrames?: () => number };
+    const frames = (): number => s.renders();
+    if (e2eHooks === true) w.__bagDockFrames = frames;
     return () => {
       alive = false;
+      if (w.__bagDockFrames === frames) delete w.__bagDockFrames;
       s.dispose();
     };
     // one scene per mount
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
-  return <canvas ref={canvas} data-part="token-bag-canvas" aria-hidden="true" style={{ display: 'block', width: '100%', height: '100%' }} />;
+  return <canvas ref={canvas} data-part="token-bag-canvas" aria-hidden="true" {...(className === undefined ? {} : { className })} {...(hostSized === true ? {} : { style: { display: 'block', width: '100%', height: '100%' } })} />;
 }

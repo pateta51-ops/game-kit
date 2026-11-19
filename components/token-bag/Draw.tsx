@@ -25,12 +25,13 @@ export interface DrawProps {
 }
 
 // Hides every dock bag while a draw plays, found whenever it is shown (the game may mount a new dock mid-draw); the
-// count and hint keep clear of the notch and grow with the screen. e2e hooks: window.__bag3dStats / __bag3dSeek.
+// count and hint are placed by this stylesheet (override --token-bag-inset, default 16px), keep clear of the notch and grow with the screen. e2e hooks: window.__bag3dStats / __bag3dSeek.
+const I = 'var(--token-bag-inset,16px)';
 const STYLE = `html.token-bag-drawing canvas[data-part="token-bag-canvas"]{visibility:hidden}
-[data-part="token-bag-draw"] [data-part="token-bag-count"]{top:max(16px,env(safe-area-inset-top))}
+[data-part="token-bag-draw"] [data-part="token-bag-count"]{position:absolute;left:${I};top:max(${I},env(safe-area-inset-top));pointer-events:none}
 [data-part="token-bag-draw"] [data-part="token-bag-n"]{font-size:clamp(34px,3.2vmin,96px)}
 [data-part="token-bag-draw"] [data-part="token-bag-label"]{font-size:clamp(12px,1.2vmin,36px)}
-[data-part="token-bag-draw"] [data-part="token-bag-skip"]{bottom:max(16px,env(safe-area-inset-bottom));font-size:clamp(15px,1.4vmin,40px)}`;
+[data-part="token-bag-draw"] [data-part="token-bag-skip"]{position:absolute;left:${I};right:${I};bottom:max(${I},env(safe-area-inset-bottom));margin:0;text-align:center;font-size:clamp(15px,1.4vmin,40px)}`;
 
 interface Hooks {
   __bag3dStats?: () => FrameStats & { faceSize: number; textureBytes: number };
@@ -166,10 +167,10 @@ export function Draw({ contents, drawn, faceUrl, exterior, backdrop, e2eHooks, r
       }}
     >
       <canvas ref={canvas} data-part="token-bag-scene" style={{ display: 'block', width: '100%', height: '100%', touchAction: 'none' }} />
-      <div data-part="token-bag-count" aria-label={`${String(count)} ${countLabel}`} style={{ position: 'absolute', top: 16, left: 16, pointerEvents: 'none' }}>
+      <div data-part="token-bag-count" aria-label={`${String(count)} ${countLabel}`}>
         <span data-part="token-bag-n">{count}</span> <span data-part="token-bag-label">{countLabel}</span>
       </div>
-      <p data-part="token-bag-skip" style={{ position: 'absolute', left: 16, right: 16, bottom: 16, margin: 0, textAlign: 'center' }}>{skipText}</p>
+      <p data-part="token-bag-skip">{skipText}</p>
     </div>
   );
 }
