@@ -2,7 +2,7 @@
 // K435: verb options so games drop their own copies (STCC batches 9-23, Warp batches 13 and 31).
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { buildTimeline, createVerbs, type Step } from '../motion-frame/index.ts';
-import { registerEffects, type EffectCtx } from './index.ts';
+import { playOn, registerEffects, type EffectCtx } from './index.ts';
 
 const animate = vi.fn<HTMLElement['animate']>();
 const fakeAnim = (running: boolean) => {
@@ -51,5 +51,22 @@ describe('K435 effect verb options', () => {
     end?.();
     context.end(run);
     expect(f.a.cancel).toHaveBeenCalledTimes(1);
+  });
+  it('K435-1 playOn animates the real element and cancel stops it mid-play', async () => {
+    vi.useFakeTimers();
+    const f = fakeAnim(true);
+    animate.mockReturnValue(f.a as unknown as Animation);
+    Object.defineProperty(Element.prototype, 'animate', { configurable: true, value: animate });
+    const el = document.createElement('div');
+    document.body.append(el);
+    const h = playOn(el, [{ t: 0, dur: 400, actor: 'el', do: 'stamp', text: 'Done' }, { t: 0, dur: 400, actor: 'el', do: 'fade-out' }], { kind: 'won' });
+    vi.advanceTimersByTime(100);
+    expect(animate.mock.contexts).toContain(el);
+    expect(el.querySelector('[data-motion-fx="won"]')?.textContent).toBe('Done');
+    expect(f.a.cancel).not.toHaveBeenCalled();
+    h.cancel();
+    expect(f.a.cancel).toHaveBeenCalled();
+    expect(el.style.opacity).toBe('0');
+    expect(await h.done).toBe('skipped');
   });
 });
