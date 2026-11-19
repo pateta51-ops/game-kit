@@ -3,7 +3,7 @@
 // token-flights leave from in 2D. The 3D side is loaded by dynamic import so a game's main bundle has no three.js.
 import { lazy, Suspense, useEffect, useRef, useSyncExternalStore, type ComponentType, type ReactNode } from 'react';
 import { bagMode, drawContents, getFallback, hasWebgl, rateFor, setFallback, subscribeFallback, type FallbackReason } from './mode.ts';
-import type { ExteriorPrint } from './exterior.ts';
+import type { Exterior } from './exterior.ts';
 import type { RestProps } from './Rest.tsx';
 import type { DrawProps } from './Draw.tsx';
 
@@ -35,7 +35,7 @@ export interface TokenBagProps {
   /** the image of a token kind: the coin's face */
   faceUrl: (kind: string) => string;
   /** the game's print on the cloth (default: plain cloth) */
-  exterior?: ExteriorPrint;
+  exterior?: Exterior;
   backdrop?: string;
   /** the settings' factor (1 normal, 2 slow, 0 none: no scene) */
   speed: number;

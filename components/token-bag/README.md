@@ -3,7 +3,7 @@ A bag of tokens with its count; the draw shown as a 2D flight from the bag or a 
 
 ## The game passes
 - `faceUrl(kind)`: the image (SVG or raster) of a token kind; it is rasterised once per session and size onto the coin's face (512 px, stepping down to keep GPU textures inside 32 MB).
-- `exterior` (optional): `(canvas, ctx) => void | Promise<void>` paints the game's print on the cloth over the plain weave (`EXTERIOR_ACROSS`, `EXTERIOR_UP` give the texel scale; front of the bag at canvas x = W / 2). `backdrop`: clear colour (default `#0a121a`).
+- `exterior` (optional): a pre-painted `HTMLCanvasElement` (`EXTERIOR_WIDTH` x `EXTERIOR_HEIGHT`, used as is) or `(canvas, ctx) => void | Promise<void>`, painted once per function and cached (never repainted per scene mount); it paints the game's print on the cloth over the plain weave (`EXTERIOR_ACROSS`, `EXTERIOR_UP` give the texel scale; front of the bag at canvas x = W / 2). `backdrop`: clear colour (default `#0a121a`).
 - `count`, `chosen` (`'2d' | '3d'` from settings), `speed` (the settings' factor: 1 normal, 2 slow, 0 none), `reduced()` (default `prefers-reduced-motion`).
 - `draw`: `{ key, left, drawn }`, set when an answer drew: `left` is the view's unordered contents after the draw, `drawn` the tokens in draw order (the scene shows the bag before the draw: `drawContents`). Clear it in `onDrawDone(key)`.
 - `children`: the 2D bag's face (the game's look); default is the count.
@@ -14,6 +14,8 @@ A bag of tokens with its count; the draw shown as a 2D flight from the bag or a 
 - The engine has drawn already; the scene never waits the game. Which coin rises comes from the drawn kinds alone (`assignDraws`); its only randomness is a seeded layout of the pile (decoration, never `ctx.rng`).
 - Session fallback to 2D (`getFallback`, `FALLBACK_TEXT`): no WebGL, the scene throws, context lost, below 30 fps for 2 s.
 - Look: structure only (inline: fixed overlay, canvas size); style `data-part="token-bag"`, `token-bag-count`, `token-bag-n`, `token-bag-draw`, `token-bag-skip`. Not here: Warp's token tables, a game's draw events (the game maps them to `draw`).
+
+- K441: the Draw hides every dock bag at any time (class `token-bag-drawing` on `<html>`, one injected style), keeps the count and hint inside the safe area and grows them with `clamp()`, ends when `back()` rejects, and sets `window.__bag3dStats()` / `window.__bag3dSeek(t)` for e2e while it plays.
 
 ## Finite supply (K373)
 `supply.ts`: the engine keeps integers, the table draws the box's real pieces. `placeTokens(places, box)` gives each place (in order) the change of its number out of what the ones before it left, largest values first, at most its `cap`; what the supply or the cap cannot draw is `short` (show it as a badge; the number beside it stays exact). Also `makeChange`, `countOf`, `valueOf`, `tokenSplit` (no supply limit), `heapOf` and `heapSpot` (the supply as a heap that keeps its shape), `discStack`, `heldAndAside`. A game's counts per kind and value are its own.
