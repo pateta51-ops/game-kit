@@ -3,6 +3,7 @@ export * from './effects.ts';
 export * from './canvas.ts';
 export * from './count.ts';
 export * from './ambience.ts';
+export * from './glitch.ts';
 export * as particles from './particles.ts';
 export * from './feel.ts';
 export * from './slots.ts';
