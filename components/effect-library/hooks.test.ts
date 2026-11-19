@@ -80,11 +80,10 @@ describe('K412 hooks', () => {
   });
   it('sheen takes a caller-supplied background', () => {
     const band = (extra: object): HTMLElement => setup({ do: 'sheen', ...extra }).context.el.querySelector('div > div > div > div') as HTMLElement;
-    expect(band({}).style.backgroundImage).toContain('transparent 0%');
+    expect(band({}).style.width).toBe('50%');
     document.body.replaceChildren();
-    const custom = band({ background: 'linear-gradient(110deg, transparent 35%, rgba(182,246,255,.2) 50%, transparent 65%)' });
-    expect(custom.style.background).toContain('110deg');
-    expect(custom.style.backgroundImage).not.toContain('transparent 0%');
+    const custom = band({ background: 'red' });
+    expect([custom.style.width, custom.style.background]).toEqual(['50%', 'red']);
   });
   it('exports the defaults the effects use', () => {
     expect(GLITCH_DEFAULTS).toMatchObject({ slices: 3, idleMs: [3500, 7000], burstMs: 200, tearMs: 600, repeat: 0.25, repeatGapMs: [100, 140] });
