@@ -39,6 +39,10 @@ export interface Move {
   /** A refill: waits for the departing card, may fly far, lifts. */
   refill?: boolean;
   far?: boolean;
+  /** K443: start from a computed place: `x`,`y` px added to the pile-derived offset, `tilt` start rotation (deg), `scale` times the pile-derived start scale. */
+  from?: { x?: number; y?: number; tilt?: number; scale?: number };
+  /** K443: resting rotation in degrees (the card's own turn); default 0. */
+  turn?: number;
 }
 export interface Timed {
   move: Move;
@@ -66,11 +70,11 @@ export const cycleMove = (id: string, discard: string, deck: string): Move => ({
  * coming out in turn; refills start together after the departing card (`departs`) has landed, never waiting for a shuffle.
  * `speed` scales every time; at 0 (or less) nothing moves: the plan is empty.
  */
-export function planDeal(moves: readonly Move[], opts: { speed?: number | undefined; shuffled?: readonly string[] | undefined; departs?: boolean | undefined; riffleMs?: number | undefined } = {}): DealPlan {
+export function planDeal(moves: readonly Move[], opts: { speed?: number | undefined; shuffled?: readonly string[] | undefined; departs?: boolean | undefined; riffleMs?: number | undefined; dealMs?: number | undefined; staggerMs?: number | undefined } = {}): DealPlan {
   const speed = opts.speed ?? 1;
   if (speed <= 0 || moves.length === 0) return { timed: [], shuffling: [], shuffleAt: 0, dealAt: 0, total: 0 };
-  const deal = DEAL_MS * speed;
-  const stagger = STAGGER_MS * speed;
+  const deal = (opts.dealMs ?? DEAL_MS) * speed;
+  const stagger = (opts.staggerMs ?? STAGGER_MS) * speed;
   const ins = moves.filter((m) => m.dir === 'in');
   const outs = moves.filter((m) => m.dir === 'out');
   const shuffling = [...new Set((opts.shuffled ?? []).filter((p) => ins.some((m) => m.pile === p)))];
@@ -102,13 +106,15 @@ export interface FlipOpts {
   direction?: 1 | -1 | undefined;
   /** The second side fades out at the end (a card going into a pile). */
   vanish?: boolean | undefined;
+  /** K443: the lift's shape: 0..1 across the turn gives the share of the lift (default a sine: 0, 1 at the middle, 0). */
+  liftCurve?: ((u: number) => number) | undefined;
 }
 
 /**
  * K406: a real turn-over from `from` (offset and scale of the start against the rest place) to rest. Both sides fly the same
  * path; the first turns 0 to 90 degrees about its own axis with perspective, the second -90 to 0; they swap at edge-on, lifting.
  */
-export function flipFrames(from: { x: number; y: number; sx: number; sy: number }, o: FlipOpts = {}): { first: Keyframe[]; second: Keyframe[] } {
+export function flipFrames(from: { x: number; y: number; sx: number; sy: number; rot?: number | undefined; rest?: number | undefined }, o: FlipOpts = {}): { first: Keyframe[]; second: Keyframe[] } {
   const s = Math.min(Math.max(o.start ?? FLIP_START, 0), 1);
   const e = Math.max(Math.min(Math.max(o.end ?? FLIP_END, 0), 1), s);
   const m = (s + e) / 2;
@@ -119,8 +125,8 @@ export function flipFrames(from: { x: number; y: number; sx: number; sy: number 
   const n = (v: number) => String(Math.round(v * 1e4) / 1e4);
   const at = (p: number, deg: number) => {
     const q = 1 - p;
-    const l = e > s && p > s && p < e ? 1 + (lift - 1) * Math.sin(Math.PI * (p - s) / (e - s)) : 1;
-    return `translate(${n(from.x * q)}px, ${n(from.y * q)}px) scale(${n(from.sx * q + p)}, ${n(from.sy * q + p)}) scale(${n(l)}) perspective(${n(o.perspective ?? FLIP_PERSPECTIVE)}px) ${rot}(${n(deg * sg)}deg)`;
+    const l = e > s && p > s && p < e ? 1 + (lift - 1) * (o.liftCurve ? o.liftCurve((p - s) / (e - s)) : Math.sin(Math.PI * (p - s) / (e - s))) : 1;
+    return `translate(${n(from.x * q)}px, ${n(from.y * q)}px) scale(${n(from.sx * q + p)}, ${n(from.sy * q + p)}) scale(${n(l)})${from.rot || from.rest ? ` rotate(${n((from.rot ?? 0) * q + (from.rest ?? 0) * p)}deg)` : ''} perspective(${n(o.perspective ?? FLIP_PERSPECTIVE)}px) ${rot}(${n(deg * sg)}deg)`;
   };
   const offs = [...new Set([0, s, (s + m) / 2, m, Math.min(m + eps, 1), (m + e) / 2, e, 1])].sort((a, b) => a - b);
   const turn = (p: number, a: number, b: number) => (b > a ? Math.min(Math.max((p - a) / (b - a), 0), 1) : p >= b ? 1 : 0);
