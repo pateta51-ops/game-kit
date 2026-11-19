@@ -33,6 +33,18 @@ describe('K25 enumerateAnswers and the test helpers', () => {
     expect(enumerateAnswers(bareState())).toEqual([]);
   });
 
+  it('K407: an ordered prompt lists every order of each set', () => {
+    const s = prompt(2, 2), o: CounterState = { ...s, prompt: { ...s.prompt!, ordered: true } };
+    expect(enumerateAnswers(o).map((a) => a.picks)).toEqual([['a', 'c'], ['a', 'd'], ['c', 'a'], ['c', 'd'], ['d', 'a'], ['d', 'c']]);
+    expect(enumerateAnswers(s).map((a) => a.picks)).toEqual([['a', 'c'], ['a', 'd'], ['c', 'd']]);
+  });
+
+  it('K407: valid drops answers; without it the list is unchanged', () => {
+    const s = prompt(1, 2);
+    expect(enumerateAnswers(s, (_st, a) => !a.picks.includes('c')).map((a) => a.picks)).toEqual([['a'], ['a', 'd'], ['d']]);
+    expect(enumerateAnswers(s, () => true)).toEqual(enumerateAnswers(s));
+  });
+
   it('K25: randomPicks is seeded and legal', () => {
     const s = prompt(1, 3);
     expect(randomPicks(s, 'x')).toEqual(randomPicks(s, 'x'));
