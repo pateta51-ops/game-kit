@@ -74,6 +74,8 @@ export interface PlayerOptions<C = undefined> {
   visible?: () => boolean;
   /** factor for `read` steps, from the motion factor; default never under 1 (Slow lengthens, Quick keeps) */
   pace?: (factor: number) => number;
+  /** K437: `read` steps scale with the speed like the rest (halved at Fast); `pace` wins when given */
+  readFollowsSpeed?: boolean;
   pan?: PanFactory;
   /** max time for each pan ensure or return, in milliseconds (default 2000) */
   panTimeoutMs?: number;
@@ -89,6 +91,12 @@ export interface PlayOptions {
   gate?: GateData;
   /** starts at once, alongside what plays, outside the queue (for `constant` beats that overlap); `skipAll` still ends it */
   parallel?: boolean;
+  /** K437: the verbs of steps that last to the beat's end finish when its hold ends (release, autoContinueMs, the named beat, a skip), not at the beat's end */
+  keepUntilReleased?: boolean;
+}
+/** K437: `finishStep` lets the steps in progress play to their end, then ends the beat as skipped; later steps and cues never start */
+export interface SkipOptions {
+  finishStep?: boolean;
 }
 export interface MotionPlayer {
   /** queue a beat by name, or a spec built by the game (a template filled with live actors) */
@@ -98,12 +106,12 @@ export interface MotionPlayer {
   /** beats playing (parallel ones too) or queued, plus a pan return */
   pending(): number;
   /** everything playing and queued jumps to its end state: verbs finish, end callbacks fire, cues not yet due are dropped */
-  skipAll(): void;
+  skipAll(opts?: SkipOptions): void;
   release(): void;
   held(): boolean;
   subscribe(listener: () => void): () => void;
   /** like skipAll, but beats whose spec says `hurry: 'keep'` play on (and queued ones still play) */
-  hurry(): void;
+  hurry(opts?: SkipOptions): void;
   /** the open gate: the first playing or queued beat played with `gate` */
   gate(): GateState | null;
   /** calls `f` now when no gate is open, else when the gate closes */
@@ -123,6 +131,7 @@ interface Item {
   onEnd: ((how: Ended) => void) | undefined;
   gate?: GateData | undefined;
   place?: RunPlace;
+  keep?: boolean;
 }
 type Timer = ReturnType<typeof setTimeout>;
 interface Current<C> {
@@ -131,6 +140,7 @@ interface Current<C> {
   timers: Set<Timer>;
   open: Set<() => void>;
   leaving: boolean;
+  cut?: () => boolean;
 }
 
 function requiredRects(spec: MotionSpec): string[] {
@@ -153,11 +163,20 @@ export function createMotionPlayer<C = undefined>(o: PlayerOptions<C>): MotionPl
   const drawing = new Map<Item, () => void>();
   let drawingHead: Item | undefined;
   const holds = new Map<Item, Timer | undefined>();
+  const kept = new Map<Item, (() => void)[]>();
+  const unkeep = (item: Item): void => {
+    const fs = kept.get(item);
+    kept.delete(item);
+    fs?.forEach((f) => {
+      safe(`${item.spec.id} finish`, f);
+    });
+  };
   const endHolds = (match: (item: Item) => boolean): void => {
     for (const [item, timer] of holds) {
       if (!match(item)) continue;
       clearTimeout(timer);
       holds.delete(item);
+      unkeep(item);
     }
   };
   const reached = (id: string): void => {
@@ -293,38 +312,73 @@ export function createMotionPlayer<C = undefined>(o: PlayerOptions<C>): MotionPl
   const start = (item: Item, spec: MotionSpec, stage: Stage, factor: number, parallel: boolean): void => {
     const swap = item.commit && typeof document !== 'undefined' ? spec.swap : undefined;
     const redraw = swap || (item.commit && (spec.whenReady || spec.awaitRects !== undefined));
-    const build = (): Timeline => buildTimeline(spec, stage, factor, o.pace?.(factor));
+    const build = (): Timeline => buildTimeline(spec, stage, factor, o.pace?.(factor) ?? (o.readFollowsSpeed ? factor : undefined));
     const run = makeRun(item, redraw ? emptyTimeline(spec.id) : build());
     const timers = new Set<Timer>();
     const open = new Set<() => void>();
     const me: Current<C> = { item, run, timers, open, leaving: false };
     live.add(me);
     if (!parallel) cur = me;
-    const at = (ms: number, f: () => void): void => {
+    const at = (ms: number, f: () => void): Timer => {
       const t = setTimeout(() => {
         timers.delete(t);
         f();
       }, ms);
       timers.add(t);
+      return t;
     };
     safe(`${spec.id} start`, () => o.onBeatStart?.(run));
     if (!live.has(me)) return;
     const schedule = (): void => {
-      for (const call of run.timeline.calls) {
+      const t0 = Date.now();
+      type S = { call: Timeline['calls'][number]; end: number; timer?: Timer; started: boolean };
+      const steps: S[] = [];
+      me.cut = () => {
+        delete me.cut;
+        const elapsed = Date.now() - t0;
+        const going = steps.filter((s) => s.started && (s.timer === undefined || timers.has(s.timer)) && s.end > elapsed);
+        const keepT = new Set(going.map((s) => s.timer));
+        timers.forEach((t) => {
+          if (keepT.has(t)) return;
+          clearTimeout(t);
+          timers.delete(t);
+        });
+        const runs = steps.filter((s) => !s.started && s.call.step.onCut === 'run');
+        if (going.length === 0 && runs.length === 0) return false;
+        const e = Math.max(elapsed, ...going.map((s) => s.end));
+        const base = e - elapsed - Math.min(...runs.map((s) => s.call.t));
+        const ends = runs.map((s) => put(s.call, base, s));
+        at(Math.max(e - elapsed, ...ends), () => {
+          finish(me, 'skipped');
+          next();
+          emit();
+        });
+        return true;
+      };
+      const put = (call: S['call'], base: number, step: S): number => {
         // both timers are set now, so a step's finish comes before the start of the step that follows it
         let done: (() => void) | undefined;
-        at(call.t, () => {
+        step.end = call.t + call.dur + base + Date.now() - t0;
+        at(call.t + base, () => {
+          step.started = true;
           safe(`${spec.id} ${call.verb}`, () => {
             done = o.verbs.get(call.verb)?.(call, run);
           });
           if (done !== undefined) open.add(done);
         });
-        at(call.t + call.dur, () => {
-          const d = done;
-          if (d === undefined) return;
-          open.delete(d);
-          safe(`${spec.id} ${call.verb} finish`, d);
-        });
+        if (!(item.keep && call.t + call.dur >= run.timeline.ms))
+          step.timer = at(call.t + call.dur + base, () => {
+            const d = done;
+            if (d === undefined) return;
+            open.delete(d);
+            safe(`${spec.id} ${call.verb} finish`, d);
+          });
+        return call.t + call.dur + base;
+      };
+      for (const call of run.timeline.calls) {
+        const step: S = { call, end: 0, started: false };
+        steps.push(step);
+        put(call, 0, step);
       }
       const leave = item.gate && run.timeline.calls.find((c) => c.step.leave === true);
       if (leave)
@@ -344,10 +398,15 @@ export function createMotionPlayer<C = undefined>(o: PlayerOptions<C>): MotionPl
           const timer = delay > 0 ? setTimeout(() => {
             if (!holds.has(item)) return;
             holds.delete(item);
+            unkeep(item);
             next();
             emit();
           }, delay) : undefined;
           holds.set(item, timer);
+          if (item.keep) {
+            kept.set(item, [...open]);
+            open.clear();
+          }
         }
         finish(me, 'done');
         next();
@@ -528,8 +587,9 @@ export function createMotionPlayer<C = undefined>(o: PlayerOptions<C>): MotionPl
     });
   };
 
-  const skip = (snap: (i: Item) => boolean): void => {
+  const skip = (snap: (i: Item) => boolean, opts?: SkipOptions): void => {
     const wasSkipping = skipping;
+    const cutting = new Set(opts?.finishStep ? [...live].filter((c) => snap(c.item) && c.cut?.() === true) : []);
     const current = cur?.item;
     const drawingItems = [...drawing].filter(([item]) => snap(item));
     let blocked = Boolean(committing || [...drawing.keys()].some((item) => item.commit && !snap(item)) ||
@@ -556,7 +616,7 @@ export function createMotionPlayer<C = undefined>(o: PlayerOptions<C>): MotionPl
       for (const [, cancel] of drawingItems) cancel();
       closePan();
       for (const c of [...live]) {
-        if (snap(c.item)) finish(c, 'skipped');
+        if (snap(c.item) && !cutting.has(c)) finish(c, 'skipped');
       }
       for (const item of waiting) snapEnd(item);
     } finally {
@@ -590,7 +650,7 @@ export function createMotionPlayer<C = undefined>(o: PlayerOptions<C>): MotionPl
       if (spec === undefined && !commit) return;
       const item: Item = {
         spec: spec ?? { id: beat as string, steps: [] },
-        onEnd: end, gate: opts?.gate, commit, data: opts?.data,
+        onEnd: end, gate: opts?.gate, commit, data: opts?.data, ...(opts?.keepUntilReleased && { keep: true }),
         ...(!spec && { problem: `motion-frame: no spec named ${beat as string}` }),
       };
       if (opts?.parallel === true && !item.commit && (!o.pan || item.spec.pan === undefined)) {
@@ -620,8 +680,8 @@ export function createMotionPlayer<C = undefined>(o: PlayerOptions<C>): MotionPl
       next();
       emit();
     },
-    hurry() {
-      skip((i) => i.spec.hurry !== 'keep');
+    hurry(opts) {
+      skip((i) => i.spec.hurry !== 'keep', opts);
     },
     gate,
     afterGate(f) {
@@ -642,8 +702,8 @@ export function createMotionPlayer<C = undefined>(o: PlayerOptions<C>): MotionPl
       next();
       emit();
     },
-    skipAll() {
-      skip(() => true);
+    skipAll(opts) {
+      skip(() => true, opts);
     },
     subscribe(f) {
       subs.add(f);
@@ -708,13 +768,13 @@ export function bindMotionSpeed(
   };
 }
 
-/** Any press or key on `target` hurries what plays (`hurry()`); never swallows the input. Returns the unbind. */
-export function hurryOnInput(player: MotionPlayer, target: Pick<EventTarget, 'addEventListener' | 'removeEventListener'>): () => void {
+/** Any press or key on `target` hurries what plays (`hurry()`); never swallows the input. Returns the unbind. K437: `pointerOnly` ignores keys; `finishStep` is passed to `hurry`. */
+export function hurryOnInput(player: MotionPlayer, target: Pick<EventTarget, 'addEventListener' | 'removeEventListener'>, opts?: SkipOptions & { pointerOnly?: boolean }): () => void {
   const f = (): void => {
-    if (player.pending() > 0) player.hurry();
+    if (player.pending() > 0) player.hurry(opts?.finishStep ? { finishStep: true } : undefined);
   };
   target.addEventListener('pointerdown', f, { capture: true });
-  target.addEventListener('keydown', f, { capture: true });
+  if (!opts?.pointerOnly) target.addEventListener('keydown', f, { capture: true });
   return () => {
     target.removeEventListener('pointerdown', f, { capture: true });
     target.removeEventListener('keydown', f, { capture: true });
