@@ -6247,8 +6247,8 @@ var MOTION = (() => {
     if (!(duration > 0)) return 0;
     let count = 0;
     let end = 0;
-    const fly = (node, frames, cleanup) => {
-      const delay = Math.min(count++, swap.maxStagger ?? 8) * (swap.stagger ?? 70) * factor;
+    const fly = (node, frames, cleanup, live = false) => {
+      const delay = Math.min(count++, live ? Infinity : swap.maxStagger ?? 8) * (swap.stagger ?? 70) * factor;
       if (cleanup) open.add(cleanup);
       const anim = node.animate(frames, { duration, delay, fill: "backwards", easing: swap.ease ?? "cubic-bezier(.2,.8,.2,1)" });
       if (cleanup) open.delete(cleanup);
@@ -6288,7 +6288,7 @@ var MOTION = (() => {
       if (typeof node.animate !== "function") continue;
       const old = before.get(key);
       const source = node.dataset.motionFrom;
-      const from = old?.rect ?? (swap.enter === "from" && source ? document.querySelector(source)?.getBoundingClientRect() : void 0);
+      const from = old?.rect ?? ((swap.enter === "from" || swap.enter === "live") && source ? document.querySelector(source)?.getBoundingClientRect() : void 0);
       const frames = [{ opacity: 0 }, { opacity: getComputedStyle(node).opacity || "1" }];
       if (from !== void 0 && from.width > 0 && from.height > 0) {
         const dx = from.left - rect.left;
@@ -6301,6 +6301,12 @@ var MOTION = (() => {
       }
       if (old) {
         fly(node, frames);
+        continue;
+      }
+      if (swap.enter === "live" && from !== void 0) {
+        frames[0] = { ...frames[0], opacity: swap.fromOpacity ?? 0.2 };
+        frames[1] = { ...frames[1], opacity: getComputedStyle(node).opacity || "1" };
+        fly(node, frames, void 0, true);
         continue;
       }
       const ghost = node.cloneNode(true);
