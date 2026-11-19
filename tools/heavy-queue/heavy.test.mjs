@@ -6,7 +6,7 @@ import { createServer } from 'node:net';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { startServer } from './server.mjs';
+import { isHeavy, procScan, startServer } from './server.mjs';
 
 const HEAVY = fileURLToPath(new URL('./heavy.mjs', import.meta.url));
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -211,5 +211,34 @@ describe('heavy-queue sweep (K418)', () => {
     await sleep(150);
     expect(calls).toBe(0);
     expect((await status()).unqueued).toEqual([]);
+  });
+});
+
+describe('heavy-queue process matching (K418)', () => {
+  const sp = (s) => s.split(' ');
+  it('flags only node/python test tools and headless chromium', () => {
+    for (const c of ['node /g/node_modules/.bin/vitest run', 'node /g/node_modules/playwright/cli.js test', 'python3 -m pytest -q', 'node /g/node_modules/vite/bin/vite.js build', 'node /g/node_modules/typescript/bin/tsc -b', '/opt/chrome/chrome --headless=new --no-sandbox']) expect(isHeavy(sp(c)), c).toBe(true);
+    for (const c of ['vim vitest.config.ts', 'git commit -m fix-vitest', 'node /g/node_modules/typescript/lib/tsserver.js', 'pylsp', 'node /g/node_modules/@playwright/mcp/cli.js', 'node /g/node_modules/vite/bin/vite.js dev', 'bash -c vitest', '/opt/chrome/chrome --no-sandbox']) expect(isHeavy(sp(c)), c).toBe(false);
+  });
+  it.skipIf(process.platform === 'win32')('procScan reads a fake /proc: NUL split, runner ancestor, unreadable environ', () => {
+    const root = mkdtempSync(join(tmpdir(), 'hq-proc-'));
+    const mk = (pid, ppid, args, env) => {
+      mkdirSync(join(root, String(pid)));
+      writeFileSync(join(root, String(pid), 'cmdline'), args.join('\0') + '\0');
+      writeFileSync(join(root, String(pid), 'stat'), `${pid} (node) S ${ppid} 0 0`);
+      if (env !== null) writeFileSync(join(root, String(pid), 'environ'), env.join('\0') + '\0');
+    };
+    mk(50, 1, ['Runner.Worker'], null);
+    mk(100, 50, ['node', '/g/node_modules/.bin/vitest', 'run'], ['A=1']);
+    mk(200, 1, ['node', '/g/node_modules/.bin/vitest'], null);
+    mk(300, 1, ['node', '/g/node_modules/.bin/vitest'], ['HEAVY_HELD=1', 'B=2']);
+    mk(400, 1, ['node', '/g/node_modules/.bin/playwright', 'test'], ['B=2']);
+    mk(500, 1, ['vim', 'vitest.config.ts'], ['B=2']);
+    const r = procScan(root).sort((a, b) => a.pid - b.pid).map(({ pid, held, runner, cmd }) => ({ pid, held, runner, cmd }));
+    expect(r).toEqual([
+      { pid: 100, held: false, runner: true, cmd: 'node /g/node_modules/.bin/vitest run' },
+      { pid: 300, held: true, runner: false, cmd: 'node /g/node_modules/.bin/vitest' },
+      { pid: 400, held: false, runner: false, cmd: 'node /g/node_modules/.bin/playwright test' },
+    ]);
   });
 });
