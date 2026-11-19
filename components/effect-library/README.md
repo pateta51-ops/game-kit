@@ -195,3 +195,22 @@ The [lab panels](fake/retrofit/index.html?lines) show the four effects. Times ar
   `width` is in pixels. Set `stagger`, `drawMs` and the two `fade`
   times in ms. `coreColour`, `coreWidth` (a fraction of `width`),
   `alpha` and `coreAlpha` set the two stroke passes.
+
+## Glitch (opt-in)
+
+`createGlitch(el, opts)` plays a broadcast-style burst (a two-colour split, slices at random positions per burst from `seed`, a dropout frame, an optional repeat) on a wordmark every few seconds, and a longer `tear` (8 frames) by hand for victory or defeat. Look: `looks/glitch.css` (class `fx-glitch` is added to `el`); the shape comes from `--glitch-mask` or the `mask` option (an image the colour copies and slices are cut to). Options: `colours`, `slices`, `idleMs`, `burstMs`, `tearMs`, `dropout`, `repeat`, `repeatGapMs`, `split`, `jump`, all also CSS variables (`--glitch-a`, `--glitch-b`, `--glitch-split`, `--glitch-jump`, `--glitch-dropout`). While `speed()` is `'instant'` no timer is scheduled at all and `burst()` / `tear()` do nothing; call `update()` when the setting changes and it restarts. Under `prefers-reduced-motion` the CSS shows nothing. `destroy()` clears everything.
+
+```ts
+import { createGlitch } from '../kit/effect-library/index'
+
+const logo = document.querySelector<HTMLElement>('#logo')!
+const glitch = createGlitch(logo, {
+  speed: () => 1, // the player's speed; 'instant' stops every timer
+  mask: 'url(logo.svg)',
+  colours: ['#e5484d', '#74b9e5'],
+  seed: 7,
+})
+glitch.tear() // victory or defeat; glitch.burst() plays one on demand
+glitch.update() // after the speed setting changed
+glitch.destroy()
+```

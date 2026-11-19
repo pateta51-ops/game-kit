@@ -1,0 +1,70 @@
+/* Opt-in look for createGlitch(el, opts). Set --glitch-mask (or the `mask` option) to url(shape.svg). Variables: --glitch-a, --glitch-b, --glitch-split, --glitch-jump (number, % of width), --glitch-dropout (opacity), --glitch-ms (set by the scheduler). */
+.fx-glitch {
+  --glitch-a: #fff;
+  --glitch-b: #888;
+  --glitch-split: .6%;
+  --glitch-jump: 2.4;
+  --glitch-dropout: .3;
+  --glitch-ms: 200ms;
+  position: relative;
+  isolation: isolate;
+}
+.fx-glitch::before, .fx-glitch::after, .fx-glitch-slice {
+  content: "";
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  pointer-events: none;
+  mask: var(--glitch-mask, none) center / 100% 100% no-repeat;
+  mix-blend-mode: screen;
+  background: var(--glitch-a);
+}
+.fx-glitch::before { --offset: calc(-1 * var(--glitch-split)); }
+.fx-glitch::after { --offset: var(--glitch-split); background: var(--glitch-b); }
+.fx-glitch-slice { --top: 20%; --bottom: 60%; --jump: 1; clip-path: inset(var(--top) 0 var(--bottom)); }
+.fx-glitch-slice:nth-of-type(even) { background: var(--glitch-b); }
+
+@media (prefers-reduced-motion: no-preference) {
+  .fx-glitch--burst {
+    animation: fx-glitch-dropout var(--glitch-ms) steps(1, end);
+    &::before, &::after { animation: fx-glitch-split var(--glitch-ms) steps(1, end); }
+    .fx-glitch-slice { animation: fx-glitch-slices var(--glitch-ms) steps(1, end); }
+  }
+  .fx-glitch--tear {
+    --glitch-split: 2%;
+    animation: fx-glitch-tear-dropout var(--glitch-ms) steps(1, end);
+    &::before, &::after { animation: fx-glitch-tear-split var(--glitch-ms) steps(1, end); }
+    .fx-glitch-slice { animation: fx-glitch-tear-slices var(--glitch-ms) steps(1, end); }
+  }
+}
+
+@keyframes fx-glitch-dropout { 0%, 75% { opacity: 1; } 50% { opacity: var(--glitch-dropout); } }
+@keyframes fx-glitch-split {
+  0% { opacity: .82; transform: translateX(var(--offset)); }
+  25% { opacity: .5; transform: translateX(calc(1.6 * var(--offset))); }
+  50% { opacity: 0; }
+  75% { opacity: .44; transform: translateX(var(--offset)); }
+}
+@keyframes fx-glitch-slices {
+  0%, 50% { opacity: 0; }
+  25% { opacity: .9; transform: translateX(calc(var(--jump) * var(--glitch-jump) * 1%)); }
+  75% { opacity: .65; transform: translateX(calc(-1 * var(--jump) * var(--glitch-jump) * 1%)); }
+}
+@keyframes fx-glitch-tear-dropout { 0%, 50% { opacity: 1; } 37.5% { opacity: var(--glitch-dropout); } }
+@keyframes fx-glitch-tear-split {
+  0%, 50% { opacity: .9; transform: translateX(var(--offset)); }
+  12.5%, 62.5% { opacity: .85; transform: translateX(calc(-1 * var(--offset))); }
+  25% { opacity: .8; transform: translateX(var(--offset)); }
+  37.5%, 87.5% { opacity: 0; }
+  75% { opacity: .55; transform: translateX(calc(.4 * var(--offset))); }
+}
+@keyframes fx-glitch-tear-slices {
+  0%, 37.5%, 87.5% { opacity: 0; }
+  12.5%, 50% { opacity: .9; transform: translateX(calc(var(--jump) * var(--glitch-jump) * 1%)); }
+  25%, 62.5% {
+    opacity: 1;
+    clip-path: inset(calc(var(--top) - 8%) 0 calc(var(--bottom) - 5%));
+    transform: translateX(calc(-1 * var(--jump) * var(--glitch-jump) * 1%));
+  }
+  75% { opacity: .7; transform: translateX(calc(var(--jump) * var(--glitch-jump) * 1%)); }
+}

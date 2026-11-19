@@ -44,6 +44,7 @@
     ]
   },
   "looks": {
+    "looks/glitch.css": "Unstoppable (unstoppable-fan-prototype) 54d397bf docs/experience/motion/logo-glitch/glitch.css and glitch.js, generalised (no world, subtitle or fonts)",
     "looks/rise-pulse.css": "Unstoppable (unstoppable-fan-prototype) src/ui/theme/polish.css at eede48e and PR #66 head ba64496 (D-159, D-166): .threat-buff__pulse and its keyframes"
   },
   "needs": ["motion-frame", "board-registry"]
