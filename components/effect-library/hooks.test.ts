@@ -38,7 +38,7 @@ describe('K412 hooks', () => {
     expect(hold).not.toHaveBeenCalled();
     vi.advanceTimersByTime(2);
     expect(hold).toHaveBeenCalledTimes(1);
-    expect(hold.mock.calls[0]![0]).toMatchObject({ from: [50, 50, 20, 40], to: [150, 80, 20, 40] });
+    expect(hold.mock.calls[0]![0]).toMatchObject({ from: [40, 30, 20, 40], to: [140, 60, 20, 40] });
     end?.();
     expect(hold).toHaveBeenCalledTimes(1);
   });
