@@ -77,3 +77,38 @@ it("jumps through contents and shows two marked results with their section", () 
   expect(container.querySelectorAll("mark")).toHaveLength(2);
   expect(screen.queryByRole("heading", { name: "Scoring" })).toBeNull();
 });
+
+it("default render has no nav toggle and keeps main", () => {
+  const { container } = render(<RulesScreen book={book} />);
+  expect(container.querySelector("[data-nav]")).toBeNull();
+  expect(container.querySelector("[data-part=nav-toggle]")).toBeNull();
+  expect(container.querySelector("main")).not.toBeNull();
+});
+
+it("bodyAs reaches the frame", () => {
+  const { container } = render(<RulesScreen book={book} bodyAs="div" />);
+  expect(container.querySelector("main")).toBeNull();
+});
+
+it("nav lists every heading, jumps, holds the search first, and the phone toggle opens and closes", () => {
+  const scrollIntoView = vi.fn();
+  HTMLElement.prototype.scrollIntoView = scrollIntoView;
+  const { container } = render(<RulesScreen book={book} nav />);
+  const root = container.querySelector("[data-part=rules-screen]")!;
+  const nav = screen.getByRole("navigation", { name: "Contents" });
+  for (const name of ["Play", "Setup", "Scoring"])
+    expect(within(nav).getByRole("link", { name })).toBeTruthy();
+  const parts = [...root.children].map((c) => c.getAttribute("data-part"));
+  expect(parts.indexOf("search")).toBeLessThan(parts.indexOf("contents"));
+  fireEvent.click(within(nav).getByRole("link", { name: "Scoring" }));
+  expect(scrollIntoView).toHaveBeenCalled();
+  expect(document.activeElement?.id).toBe("scoring");
+  const toggle = screen.getByRole("button", { name: "Contents" });
+  expect(root.getAttribute("data-nav")).toBe("closed");
+  expect(toggle.getAttribute("aria-expanded")).toBe("false");
+  fireEvent.click(toggle);
+  expect(root.getAttribute("data-nav")).toBe("open");
+  expect(toggle.getAttribute("aria-expanded")).toBe("true");
+  fireEvent.click(toggle);
+  expect(root.getAttribute("data-nav")).toBe("closed");
+});

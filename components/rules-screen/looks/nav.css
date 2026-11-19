@@ -1,0 +1,68 @@
+[data-part="rules-screen"][data-nav] {
+  grid-template-columns: minmax(12em, 20em) minmax(0, 1fr);
+  grid-template-rows: auto minmax(0, 1fr);
+  gap: 0.4em 1.2em;
+}
+[data-part="rules-screen"][data-nav] > [data-part="nav-toggle"] {
+  display: none;
+}
+[data-part="rules-screen"][data-nav] > [data-part="search"] {
+  grid-column: 1;
+  grid-row: 1;
+  min-width: 0;
+}
+[data-part="rules-screen"][data-nav] > [data-part="contents"],
+[data-part="rules-screen"][data-nav] > [data-part="results"] {
+  grid-column: 1;
+  grid-row: 2;
+  overflow: auto;
+}
+[data-part="rules-screen"][data-nav] [data-part="contents"] ol,
+[data-part="rules-screen"][data-nav] [data-part="results"] ol {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+[data-part="rules-screen"][data-nav] [data-part="contents"] li ol {
+  padding-left: 1em;
+}
+[data-part="rules-screen"][data-nav] [data-part="contents"] a,
+[data-part="rules-screen"][data-nav] [data-part="results"] a {
+  display: block;
+  padding: 0.15em 0;
+}
+[data-part="rules-screen"][data-nav] > [data-part="rulebook"] {
+  grid-column: 2;
+  grid-row: 1 / span 2;
+  overflow: auto;
+}
+[data-part="rules-screen"][data-nav] > [data-part="rulebook"] > * {
+  max-width: 80ch;
+}
+@media (max-width: 40em) {
+  [data-part="rules-screen"][data-nav] {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: auto auto auto minmax(0, 1fr);
+  }
+  [data-part="rules-screen"][data-nav] > [data-part="nav-toggle"] {
+    display: block;
+    grid-column: 1;
+    grid-row: 1;
+    justify-self: start;
+  }
+  [data-part="rules-screen"][data-nav] > [data-part="search"] {
+    grid-row: 2;
+  }
+  [data-part="rules-screen"][data-nav] > [data-part="contents"],
+  [data-part="rules-screen"][data-nav] > [data-part="results"] {
+    grid-row: 3;
+    max-height: 30vh;
+  }
+  [data-part="rules-screen"][data-nav] > [data-part="rulebook"] {
+    grid-column: 1;
+    grid-row: 4;
+  }
+  [data-part="rules-screen"][data-nav="closed"] > [data-part="contents"] {
+    display: none;
+  }
+}
