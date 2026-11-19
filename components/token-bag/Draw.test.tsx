@@ -59,10 +59,28 @@ describe('Draw', () => {
     expect(onDone).toHaveBeenCalledTimes(1);
   });
 
-  it('exposes __bag3dStats and __bag3dSeek while it plays, and removes them after (K441)', () => {
+  it('sets no __bag3d hooks by default (K441)', () => {
+    fake(() => Promise.resolve());
+    render(<Draw {...props} onDone={() => undefined} onFail={() => undefined} />);
+    expect((window as unknown as { __bag3dStats?: unknown }).__bag3dStats).toBeUndefined();
+  });
+
+  it("unmounting draw A keeps draw B's hooks (K441)", () => {
+    fake(() => Promise.resolve());
+    const a = render(<Draw {...props} e2eHooks onDone={() => undefined} onFail={() => undefined} />);
+    const b = render(<Draw {...props} e2eHooks onDone={() => undefined} onFail={() => undefined} />);
+    const w = window as unknown as { __bag3dStats?: () => unknown };
+    expect(w.__bag3dStats).toBeDefined();
+    a.unmount();
+    expect(w.__bag3dStats).toBeDefined();
+    b.unmount();
+    expect(w.__bag3dStats).toBeUndefined();
+  });
+
+  it('exposes __bag3dStats and __bag3dSeek with e2eHooks, and removes them after (K441)', () => {
     const seek = vi.fn();
     fake(() => Promise.resolve(), { seek });
-    const { unmount } = render(<Draw {...props} onDone={() => undefined} onFail={() => undefined} />);
+    const { unmount } = render(<Draw {...props} e2eHooks onDone={() => undefined} onFail={() => undefined} />);
     const w = window as unknown as { __bag3dStats?: () => unknown; __bag3dSeek?: (t: number) => void };
     expect(w.__bag3dStats?.()).toEqual({ fps: 60, faceSize: 256, textureBytes: 9 });
     w.__bag3dSeek?.(1.5);

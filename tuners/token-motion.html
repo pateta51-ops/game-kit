@@ -36637,7 +36637,7 @@ void main() {
   __export(Draw_exports, {
     Draw: () => Draw
   });
-  function Draw({ contents, drawn, faceUrl: faceUrl2, exterior, backdrop, rate, countLabel, skipText, onDone, onFail }) {
+  function Draw({ contents, drawn, faceUrl: faceUrl2, exterior, backdrop, e2eHooks, rate, countLabel, skipText, onDone, onFail }) {
     const canvas = (0, import_react4.useRef)(null);
     const [count, setCount] = (0, import_react4.useState)(contents.length);
     const [phase, setPhase] = (0, import_react4.useState)("loading");
@@ -36702,8 +36702,12 @@ void main() {
         return;
       }
       const w = window;
-      w.__bag3dStats = () => ({ ...s.stats(), faceSize: s.faceSize, textureBytes: s.textureBytes });
-      w.__bag3dSeek = (t) => s.seek(t);
+      const stats = () => ({ ...s.stats(), faceSize: s.faceSize, textureBytes: s.textureBytes });
+      const seek = (t) => s.seek(t);
+      if (e2eHooks === true) {
+        w.__bag3dStats = stats;
+        w.__bag3dSeek = seek;
+      }
       s.ready.then(
         () => {
           if (!alive) return;
@@ -36718,8 +36722,8 @@ void main() {
         alive = false;
         window.clearTimeout(closing);
         hideDock(false);
-        delete w.__bag3dStats;
-        delete w.__bag3dSeek;
+        if (w.__bag3dStats === stats) delete w.__bag3dStats;
+        if (w.__bag3dSeek === seek) delete w.__bag3dSeek;
         s.dispose();
       };
     }, []);
@@ -37092,6 +37096,7 @@ void main() {
           faceUrl: p.faceUrl,
           exterior: p.exterior,
           backdrop: p.backdrop,
+          e2eHooks: p.e2eHooks,
           rate,
           countLabel: p.countLabel ?? "in the bag",
           skipText: p.skipText ?? "Tap to skip",

@@ -14,6 +14,8 @@ export interface DrawProps {
   faceUrl: (kind: string) => string;
   exterior?: Exterior | undefined;
   backdrop?: string | undefined;
+  /** set window.__bag3dStats / __bag3dSeek for e2e (default off) */
+  e2eHooks?: boolean | undefined;
   /** the scene's rate (1 = as approved; 2 = twice as fast) */
   rate: number;
   countLabel: string;
@@ -37,7 +39,7 @@ interface Hooks {
 
 type Phase = 'loading' | 'playing' | 'done' | 'back';
 
-export function Draw({ contents, drawn, faceUrl, exterior, backdrop, rate, countLabel, skipText, onDone, onFail }: DrawProps) {
+export function Draw({ contents, drawn, faceUrl, exterior, backdrop, e2eHooks, rate, countLabel, skipText, onDone, onFail }: DrawProps) {
   const canvas = useRef<HTMLCanvasElement>(null);
   const [count, setCount] = useState(contents.length);
   const [phase, setPhase] = useState<Phase>('loading');
@@ -104,8 +106,12 @@ export function Draw({ contents, drawn, faceUrl, exterior, backdrop, rate, count
       return;
     }
     const w = window as unknown as Hooks;
-    w.__bag3dStats = () => ({ ...s.stats(), faceSize: s.faceSize, textureBytes: s.textureBytes });
-    w.__bag3dSeek = (t: number) => s.seek(t);
+    const stats: Hooks['__bag3dStats'] = () => ({ ...s.stats(), faceSize: s.faceSize, textureBytes: s.textureBytes });
+    const seek: Hooks['__bag3dSeek'] = (t: number) => s.seek(t);
+    if (e2eHooks === true) {
+      w.__bag3dStats = stats;
+      w.__bag3dSeek = seek;
+    }
     s.ready.then(
       () => {
         if (!alive) return;
@@ -120,8 +126,8 @@ export function Draw({ contents, drawn, faceUrl, exterior, backdrop, rate, count
       alive = false;
       window.clearTimeout(closing);
       hideDock(false);
-      delete w.__bag3dStats;
-      delete w.__bag3dSeek;
+      if (w.__bag3dStats === stats) delete w.__bag3dStats;
+      if (w.__bag3dSeek === seek) delete w.__bag3dSeek;
       s.dispose();
     };
     // one scene per draw: the parent keys this component by the draw
