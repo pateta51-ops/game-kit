@@ -9,7 +9,8 @@ const alive = (pid) => { try { process.kill(pid, 0); return true; } catch (e) { 
 const esc = (s) => String(s).replace(/[&<>"]/g, (c) => `&#${c.charCodeAt(0)};`);
 const dur = (ms) => ms == null ? '' : `${Math.round(ms / 1000)} s`;
 
-export function startServer({ port = defaultPort(), slots = Number(process.env.HEAVY_SLOTS) || 1, ttl = Number(process.env.HEAVY_TTL) || 30000, tick = 1000 } = {}) {
+export function startServer({ port = defaultPort(), slots = Number(process.env.HEAVY_SLOTS) || 1, ttl = Number(process.env.HEAVY_TTL) || 30000, tick = 1000, age = Number(process.env.HEAVY_AGE_MS) || 600000 } = {}) {
+  const hi = (x) => x.priority === 'high' || Date.now() - x.queuedAt >= age;
   const leases = new Map();
   const history = [];
   let seq = 0;
@@ -26,13 +27,13 @@ export function startServer({ port = defaultPort(), slots = Number(process.env.H
     }
     const all = [...leases.values()];
     let free = slots - all.filter((l) => l.startedAt).length;
-    for (const l of all.filter((x) => !x.startedAt).sort((a, b) => (a.priority === 'high' ? 0 : 1) - (b.priority === 'high' ? 0 : 1) || a.seq - b.seq)) {
+    for (const l of all.filter((x) => !x.startedAt).sort((a, b) => (hi(a) ? 0 : 1) - (hi(b) ? 0 : 1) || a.seq - b.seq)) {
       if (free-- <= 0) break;
       l.startedAt = now;
     }
   };
   const view = (l) => {
-    const ahead = l.startedAt ? 0 : [...leases.values()].filter((x) => !x.startedAt && (x.priority === 'high' && l.priority !== 'high' || (x.priority === l.priority && x.seq < l.seq))).length;
+    const ahead = l.startedAt ? 0 : [...leases.values()].filter((x) => !x.startedAt && (hi(x) && !hi(l) || (hi(x) === hi(l) && x.seq < l.seq))).length;
     return { id: l.id, granted: !!l.startedAt, ahead };
   };
   const status = () => {
