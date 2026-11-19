@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { DEAL_MS, REFILL_GAP_MS, RIFFLE_MS, STAGGER_MS, cycleMove, planDeal, riffleFrames, type Move } from './index.ts';
+import { DEAL_MS, FLIP_START, REFILL_GAP_MS, RIFFLE_MS, STAGGER_MS, cycleMove, flipFrames, planDeal, riffleFrames, type Move } from './index.ts';
 
 const out = (id: string, extra: Partial<Move> = {}): Move => ({ id, dir: 'out', pile: 'deck', at: () => null, faceDown: true, ...extra });
 
@@ -33,5 +33,38 @@ describe('planDeal', () => {
       expect(f).toHaveLength(11);
       expect(f.at(-1)!.transform).toBe('none');
     }
+  });
+});
+
+describe('K406 flipFrames', () => {
+  const fr = flipFrames({ x: -134, y: 20, sx: 1, sy: 1 });
+  const pos = (k: Keyframe) => String(k.transform).split(' perspective')[0];
+  const deg = (k: Keyframe) => Number(/rotate[XY]\((-?[\d.]+)deg\)/.exec(String(k.transform))?.[1]);
+  it('K406: both sides fly one path: no position jump at the swap', () => {
+    expect(fr.first.map((k) => k.offset)).toEqual(fr.second.map((k) => k.offset));
+    fr.first.forEach((k, i) => { expect(pos(k)).toBe(pos(fr.second[i]!)); });
+    const swap = fr.first.findIndex((k) => k.opacity === 0);
+    const x = (k: Keyframe) => Number(/translate\((-?[\d.]+)px/.exec(String(k.transform))?.[1]);
+    expect(Math.abs(x(fr.second[swap]!) - x(fr.first[swap - 1]!))).toBeLessThan(1);
+  });
+  it('K406: every frame has perspective, and the card lifts at edge-on', () => {
+    for (const k of [...fr.first, ...fr.second]) expect(String(k.transform)).toContain('perspective(800px)');
+    const edge = fr.first.find((k) => deg(k) === 90)!;
+    expect(String(edge.transform)).toContain('scale(1.08)');
+  });
+  it('K406: the face is hidden before 90 degrees and shown after; the back the other way', () => {
+    for (let i = 0; i < fr.first.length; i++) {
+      const b = fr.first[i]!;
+      const f = fr.second[i]!;
+      if (b.opacity === 1) { expect(deg(b)).toBeLessThanOrEqual(90); expect(f.opacity).toBe(0); expect(deg(f)).toBe(-90); }
+      else { expect(f.opacity).toBe(1); expect(deg(f)).toBeGreaterThanOrEqual(-90); }
+    }
+    expect(deg(fr.first[0]!)).toBe(0);
+    expect(deg(fr.second.at(-1)!)).toBe(0);
+    expect(fr.first.find((k) => k.offset === FLIP_START)?.opacity).toBe(1);
+  });
+  it('K406: turns about rotateX with axis y and the other way with direction -1', () => {
+    const y = flipFrames({ x: 0, y: 0, sx: 1, sy: 1 }, { axis: 'y', direction: -1 });
+    expect(String(y.first.at(-1)!.transform)).toContain('rotateX(-90deg)');
   });
 });
