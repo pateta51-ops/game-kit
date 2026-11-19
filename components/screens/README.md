@@ -22,7 +22,7 @@ Seams: `MainMenu bare` renders the entry buttons with no wrapping `nav` (each ke
 
 ## Screen frame (K360)
 
-Pass the back link or button, header actions and footer as nodes. Each part has a `kit-scr-*` class. Override frame classes by part with `cls`, or pass a class string to the footer or toggle. Import `looks/frame.css` for an optional layout with `--scr-gap`, `--scr-width`, `--scr-height`, `--scr-pad` and `--scr-footer-border`.
+Pass the back link or button, header actions and footer as nodes. Each part has a `kit-scr-*` class. Pass `bodyAs="div"` when the screen sits inside the game's own `<main>` (default `"main"`). Override frame classes by part with `cls`, or pass a class string to the footer or toggle. Import `looks/frame.css` for an optional layout with `--scr-gap`, `--scr-width`, `--scr-height`, `--scr-pad` and `--scr-footer-border`.
 
 Create one theme store at app startup with a game-specific storage key. It applies the saved choice or the fallback (default `system`) to `html[data-theme]` and keeps the choice in memory if storage fails. A third argument renames the attribute (default `data-theme`). In system mode the store also sets `data-theme-resolved` (`light` or `dark`, the attribute name plus `-resolved`), follows OS changes, and `store.destroy()` removes the OS listener; the optional CSS keys on the resolved value. The footer passes extra props (e.g. `data-testid`) to the disclaimer paragraph; the back action has no default, the game passes it. The toggle cycles system → light → dark → system and shows the next choice. Footer text and toggle labels come from the game. Use the disclaimer helper for neutral English wording or pass your own text.
 

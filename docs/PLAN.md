@@ -127,16 +127,11 @@ Owner ruling (19 Nov): YuE2 with the 7IS instrumental recipe is the default musi
 Pin the yue2 code to release yue2-v0.1.6 (github.com/multimodal-art-projection/YuE; WSL venv-yue has 0.1.5: upgrade it) and the weights to m-a-p/YuE2-3B rev 8f24312f. Licence CC BY-NC 4.0, noted in the README. | L | owner, via the Astra Imperium experience director (19 Nov 2026): "the sounds in the kit need to be updated to the latest model" | done |
 | K453 | ci-templates: (1) a change touching only docs runs the docs lanes alone (plancheck and traceability if they read the changed file) and never takes a heavy slot, on push and pull_request; the required check still reports so a docs PR can merge. (2) The playwright config template and `full-gate.mjs e2e` get an overall cap (globalTimeout about 10 min, or 3x the suite's measured time) and a per-test timeout near the measured worst case (not 400 s); the gate job's timeout-minutes drops to match; a capped run prints which test was running. Keep the gate run title `Full gate PR #<n> <sha>` (land.sh finds its run by it). (4) install-wsl.sh (or the runner unit) keeps WSL up on its own (Radiance's runner died when WSL idled out; hand fix was a hidden `wsl -d Ubuntu -- sleep infinity`). Interfaces grow by addition. | M | owner-approved review of the Radiance build delays (19 Nov 2026); evidence and exact asks in C:/projects/_skills/kit-steward-requests-2026-11-19.md, sections 1, 2 and 4 | done |
 | K454 | tools/heavy-queue: a worker cap per queued job (an env the queue sets, read by the kit's vitest and playwright configs) so slots x workers <= core count (2 slots gave load 42 on 16 cores); find what runs outside the queue (49 headless Chrome seen) and list it on the status page beside K418's unqueued list; a one-line `heavy load` summary command. Do not raise slots or WSL memory. Interfaces grow by addition. | M | owner-approved review of the Radiance build delays (19 Nov 2026); evidence and exact asks in C:/projects/_skills/kit-steward-requests-2026-11-19.md, section 3 | done |
-| K460 | effect-library bugs and missing defaults found by Astra Imperium. Fix each by addition; defaults that throw today get working defaults.
-From Astra Imperium V1 (PR #71):
-- `stamp`: a `ring` step without `frames`/`style` throws `part.frames is not iterable`. Give ring default frames and style.
-- `stamp`: no label box (the #222 default at 8%/42%, 84%x16%) when the actor is an image.
-- `text` verb: honour a spec's `colour` and `rise: false`.
-From Astra Imperium V2 (PR #72):
-- `trail`: given only `ribbon {width, tipWidth, colour, fade}` it throws (`exitScale` of undefined). Default `ribbon.quadratic`, `rear`, `samples`, `spacing`, or derive the flight from the paired arc-move.
-- `stamp` with `text`: give it a default look (today a #222 label box).
-- `shake-group`: declare the spec's named `actors` (e.g. ["map","invader"]) itself instead of moving only actors the game declared.
-Failing test first for each. | M | Astra Imperium V1 (PR #71) and V2 (PR #72), 19 Nov 2026; worked around, not blocking | done |
+| K458 | Three small gaps, each by addition:
+1. prompt-host: K442's row mode has no opt-out. Add `rows: false` so a game whose accepted look is the old panel keeps it without pointing `answers` at a non-flex element.
+2. deck-motions: `registerRiffle` reads `shake` once at registration. Read it from each step (registration value stays the default).
+3. screens: `frame.tsx` always wraps its body in `<main>`, so a game that puts a kit screen (the rules screen) inside its own page frame gets nested `<main>` (Unstoppable PR #138). Add a `bodyAs` prop (`"main"` default, or `"div"`).
+Failing test first for each. | S | Astra Imperium V1 and Unstoppable (PR #138) (PR #71, kit v0.171.1), 19 Nov 2026; worked around, not blocking | done |
 | K283 | `card-pile` `hitTitle={false}` drops the native title on the stack button (STCC draws its own pile tooltip) | S |  | done |
 | K284 | `layout-editor` Reset button (in-page confirmation): restores the starting doc, backdrops (`LAYOUT_EDITOR_BG_INIT`), zoom and screen; `layoutEditor.reset()` | S |  | done |
 | K285 | `plan-checker` `--tsc-at DIR` compiles the plan's type blocks inside a game folder, so relative `kit/` imports resolve | S |  | done |

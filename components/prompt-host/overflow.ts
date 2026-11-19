@@ -10,6 +10,7 @@ export interface HostOverflowOpts {
   zone: OverflowRect;
   keepOut: readonly OverflowRect[];
   gap?: number;
+  rows?: boolean;
 }
 
 export type OverflowOpts = HostOverflowOpts &
@@ -28,7 +29,7 @@ function fit(box: HTMLElement, o: OverflowOpts): (() => void) | undefined {
   const fits = () => box.scrollHeight <= box.clientHeight + 1;
   if (!answers) return undefined;
   const cs = getComputedStyle(answers);
-  const row = cs.display.includes('flex') && cs.flexDirection === 'row';
+  const row = o.rows !== false && cs.display.includes('flex') && cs.flexDirection === 'row';
   if (fits() && !(row && answers.scrollWidth > box.clientWidth + 1)) return undefined;
 
   if (row) {

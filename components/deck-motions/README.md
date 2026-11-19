@@ -15,7 +15,7 @@ Cards fly from a pile to their places (deal, refill turn-over, deck cycle) and a
   With `natural: true` it uses the sum of `durations` (2200 ms by default), so give the step at least that much
   scaled time for the full riffle. Step end or skip restores the pile immediately.
   The player skips the verb at instant speed.
-- Pass `shake: { degrees: 4, pixels: 3 }` for Imperium's smaller stack motion.
+- Pass `shake: { degrees: 4, pixels: 3 }` for Imperium's smaller stack motion. A step may carry its own `shake` (`{ t, dur, actor, do: 'riffle', shake: {...} }`); the registration value is the default.
   It animates the pile's last child, or the pile itself when it has no children.
 - None at speed 0, reduced motion or without Web Animations. `finishDeckMotions()` ends everything now; `finishOnInput()` does so on any press or key (call `finishDeckMotions` on undo and leaving the screen too).
 - Not here: which cards move, the look, a market row slide. `market-row` keeps its own deal (`rowMotions`, same 520/90 timing): it is one flight from the deck element and needs no riffle or cycle; since K406 it turns its new cards over with `flipFrames`.
