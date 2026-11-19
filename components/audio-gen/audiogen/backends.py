@@ -16,6 +16,7 @@ from __future__ import annotations
 import json
 import os
 import socket
+import shutil
 import subprocess
 import sys
 import time
@@ -110,6 +111,9 @@ class WorkerBackend(Backend):
         if not py.exists():
             raise Skip(f"{self.name}: its Python {py} does not exist (see scripts/audio/README.md, Setup).")
 
+    def wrap(self, cmd: list[str]) -> list[str]:
+        return cmd
+
     def worker_options(self) -> dict[str, Any]:
         return {k: v for k, v in self.opts.items() if k not in ("python", "licence", "tool", "type")}
 
@@ -142,7 +146,7 @@ class WorkerBackend(Backend):
             "result": str(res_file),
         }
         job_file.write_text(json.dumps(payload, indent=2), encoding="utf-8")
-        cmd = ["nice", "-n", "19", str(self.python()), str(WORKERS / self.script), str(job_file)]
+        cmd = self.wrap(["nice", "-n", "19", str(self.python()), str(WORKERS / self.script), str(job_file)])
         print(f"  [{self.name}] {len(jobs)} item(s) -> {self.python()} {self.script}", flush=True)
         t0 = time.time()
         p = subprocess.run(cmd, env=worker_env(self.pass_env))  # the worker's progress goes straight to the console
@@ -228,6 +232,21 @@ class YuE2(WorkerBackend):
     tool = "YuE2-3B"
     script = "yue2_worker.py"
     pass_env = ("HF_TOKEN",)
+
+    def queue_tool(self) -> str | None:
+        return shutil.which("heavy") or next((str(p) for p in [Path.home() / ".local" / "bin" / "heavy"] if p.exists()), None)
+
+    def wrap(self, cmd: list[str]) -> list[str]:
+        """Every YuE2 run goes through the machine's heavy queue (owner, 19 Nov 2026), unless `queue` is false."""
+        if self.opts.get("queue", True) is False:
+            return cmd
+        h = self.queue_tool()
+        if not h:
+            raise Skip(f"{self.name}: YuE2 runs go through the heavy queue and `heavy` was not found (tools/heavy-queue/install-wsl.sh), or set queue: false.")
+        return [h, "run", "--label", f"audio-gen {self.name}", "--"] + cmd
+
+    def worker_options(self) -> dict[str, Any]:
+        return {k: v for k, v in super().worker_options().items() if k != "queue"}
 
     def check(self) -> None:
         super().check()

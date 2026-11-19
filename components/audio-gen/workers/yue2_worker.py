@@ -1,8 +1,8 @@
 """YuE2-3B worker, the 7th Inning Stretch instrumental recipe (round6i): runs in the YuE2 Python (venv-yue, yue2-infer
 0.1.6, CUDA PyTorch). GPU only.
 
-Per take: plan the song (lyrics "[Instrumental]", cot "full", the seed), turn every note of the ABC "Vocal" voice into
-rests, render with that score (abc=), then split it with demucs htdemucs two-stem on cuda (in `demucsPython`) and keep
+Per take: plan the song (lyrics "[Instrumental]", cot "full", the seed), silence every note of the ABC "Vocal" voice:
+silent (its notes move into the instrumental voice; `vocal: "rests"` drops them), render with that score (abc=), then split it with demucs htdemucs two-stem on cuda (in `demucsPython`) and keep
 it only when vocal/mix <= -25 dB and at most 3 % of 0.5 s windows are loud. A take that fails is tried again with the
 next seed (seed + 7919 k), up to `tries` seeds (default 6); when none passes, the best take (lowest vocal dB) is kept with extra.failedGate true for a human to judge.
 
@@ -10,7 +10,8 @@ Usage: <venv python> yue2_worker.py job.json     (written by audiogen; see audio
 Job options (config backends.<name>): modelDir (local snapshot, default ~/audio-gen/models/yue2; when missing the hub
 model is used), model ("m-a-p/YuE2-3B"), revision ("8f24312f"), version (yue2 code, "0.1.6"), demucsPython,
 tries (6), keep (1: passing takes kept per item; the first is the item's file, the others
-<out>-keep2.wav, ... listed in extra.alternates; raise tries with it), maxVocalDb (-25), maxLoudWindows (0.03), cot ("full"), lyrics ("[Instrumental]").
+<out>-keep2.wav, ... listed in extra.alternates; raise tries with it), maxVocalDb (-25), maxLoudWindows (0.03), cot ("full"), lyrics ("[Instrumental]"),
+vocal ("move" | "rests"), offloadAr (true | false | "auto": on when the card has under 24 GB; YuE2 only, the one exception to GPU only).
 Per item: prompt (the style text), seed, options.lyrics / options.tries. YuE2 sets its own length: the pipeline cuts.
 Exit 3 = cannot start (wrong yue2 version, no CUDA, or a first generation that did not use the GPU).
 Weights: CC BY-NC 4.0 (non-commercial).
@@ -46,10 +47,14 @@ def main() -> int:
     local = Path(str(opts.get("modelDir", "~/audio-gen/models/yue2"))).expanduser()
     hub = str(opts.get("model", "m-a-p/YuE2-3B"))
     rev = str(opts.get("revision", "8f24312f"))
+    total = torch.cuda.get_device_properties(0).total_memory / 2**30
+    off = recipe.offload_ar(opts.get("offloadAr", "auto"), total)
+    extra = {"offload_ar": True} if off else {}  # YuE2 only: the package's own low-memory option, see README
+    print(f"yue2 worker: {total:.1f} GiB card, offload_ar {off}", file=sys.stderr, flush=True)
     if (local / "config.json").is_file():
-        pipe = YuE2Pipeline.from_pretrained(str(local), device="cuda")
+        pipe = YuE2Pipeline.from_pretrained(str(local), device="cuda", **extra)
     else:
-        pipe = YuE2Pipeline.from_pretrained(hub, revision=rev, device="cuda")
+        pipe = YuE2Pipeline.from_pretrained(hub, revision=rev, device="cuda", **extra)
     demucs = str(Path(str(opts.get("demucsPython", "~/audio-gen/venv-demucs/bin/python"))).expanduser())
     env = {**os.environ, "OMP_NUM_THREADS": "2", "MKL_NUM_THREADS": "2"}
 
@@ -76,7 +81,7 @@ def main() -> int:
         best, tried, kept, keep = None, [], [], int(o.get("keep", opts.get("keep", 1)))
         for s in recipe.seeds(int(item["seed"]), int(o.get("tries", opts.get("tries", 6)))):
             plan = pipe.plan(style=item["prompt"], lyrics=lyrics, cot=cot, seed=s)
-            abc, nv = recipe.novocal(plan.abc)
+            abc, nv = recipe.novocal(plan.abc, str(opts.get("vocal", "move")))
             tmp = out.parent / f"_yue_{out.stem}-{s}.wav"
             pipe(style=item["prompt"], lyrics=lyrics, cot=cot, seed=s, abc=abc).save(tmp)
             db, loud = gate(tmp)

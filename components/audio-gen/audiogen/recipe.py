@@ -10,26 +10,61 @@ MAX_LOUD_WINDOWS = 0.03
 LOUD_WINDOW_DB = -14.0
 
 
-def novocal(abc: str) -> tuple[str, int]:
-    """Every bar of the Vocal voice becomes a whole-bar rest (chord symbols kept). Returns the score and the number
-    of bars that had notes."""
-    out, inv, n = [], False, 0
-    for ln in abc.split("\n"):
+def novocal(abc: str, vocal: str = "move") -> tuple[str, int]:
+    """The "Vocal" voice is silenced bar by bar (chord symbols stay, as the native format keeps harmony in Vocal even
+    when it rests). vocal="move" (default) first moves each bar's notes, chords dropped, into the same bar of the first
+    other voice (the instrumental part), as the YuE repo's yue2-music skill does ("moves the vocal melody into the
+    instrumental part", release yue2-v0.1.6, skills/yue2-music/references/abc-editing.md: the `Ins` part "can carry an
+    instrumental theme or solo"); a bar with no vocal notes keeps the instrumental bar. With no other voice, or
+    vocal="rests", the notes are dropped. Returns the score and the number of Vocal bars that had notes."""
+    lines = abc.split("
+")
+    q = lambda b: re.sub(r'"[^"]*"', "", b)  # noqa: E731
+    music = lambda ln: "|" in ln and not ln.startswith(("%", "w:"))  # noqa: E731
+    ins, cur = None, None
+    for ln in lines:
         if ln.startswith("V:"):
-            inv = ln.startswith(("V: Vocal", "V:Vocal"))
+            cur = "vocal" if ln.startswith(("V: Vocal", "V:Vocal")) else ln[2:].split()[0] if ln[2:].split() else None
+            if cur != "vocal" and ins is None:
+                ins = cur
+    cur, moved, n, queue = None, vocal == "move" and ins is not None, 0, []
+    for ln in lines:
+        if ln.startswith("V:"):
+            cur = "vocal" if ln.startswith(("V: Vocal", "V:Vocal")) else (ln[2:].split() or [None])[0]
+        elif cur == "vocal" and music(ln):
+            queue.append([b.strip() for b in ln.split("|") if b.strip()])
+    out, cur, k = [], None, 0
+    for ln in lines:
+        if ln.startswith("V:"):
+            cur = "vocal" if ln.startswith(("V: Vocal", "V:Vocal")) else (ln[2:].split() or [None])[0]
             out.append(ln)
-            continue
-        if inv and "|" in ln and not ln.startswith(("%", "w:")):
+        elif cur == "vocal" and music(ln):
             nb = []
             for b in [b for b in ln.split("|") if b.strip()]:
-                ch = "".join(re.findall(r'"[^"]*"', b))
-                if re.search(r"[A-Ga-g]", re.sub(r'"[^"]*"', "", b)):
+                if re.search(r"[A-Ga-g]", q(b)):
                     n += 1
-                nb.append(ch + "z16")
+                nb.append("".join(re.findall(r'"[^"]*"', b)) + "z16")
             out.append("|".join(nb) + "|")
+        elif moved and cur == ins and music(ln) and k < len(queue):
+            own = [b.strip() for b in ln.split("|") if b.strip()]
+            vb = queue[k]
+            k += 1
+            res = [q(v).strip() if re.search(r"[A-Ga-g]", q(v)) else (own[i] if i < len(own) else "z16") for i, v in enumerate(vb)]
+            res += own[len(vb):]
+            out.append("|".join(res) + "|")
         else:
             out.append(ln)
-    return "\n".join(out), n
+    return "
+".join(out), n
+
+
+YUE2_DOC_GIB = 24  # YuE2 docs (README, docs/generation.md): "a BF16-capable NVIDIA GPU with 24 GB VRAM, one request at a time"
+
+
+def offload_ar(opt, total_gib: float) -> bool:
+    """YuE2 only (owner, 19 Nov 2026: the one exception to GPU only): the package's `offload_ar` option moves the AR
+    weights to host memory between stages. opt true/false, or "auto" (default): on when the card has under 24 GB."""
+    return total_gib < YUE2_DOC_GIB if opt in (None, "auto") else bool(opt)
 
 
 def measure(v2: list[float], m2: list[float], w: int) -> tuple[float, float]:

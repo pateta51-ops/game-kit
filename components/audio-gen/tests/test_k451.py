@@ -74,11 +74,25 @@ class Defaults(unittest.TestCase):
         c = parse_cue({"name": "a", "prompt": "p", "category": "music", "length": 1}, None)
         for kind, script in (("stable-audio-3", "stable_audio_3_worker.py"), ("yue2", "yue2_worker.py")):
             with tempfile.TemporaryDirectory() as t, mock.patch.object(B.subprocess, "run", return_value=mock.Mock(returncode=0)) as run:
-                B.make("x", {"type": kind, "licence": "x", "python": sys.executable}, Path(t)).generate(
+                B.make("x", {"type": kind, "licence": "x", "python": sys.executable, "queue": False}, Path(t)).generate(
                     [B.Job(cue=c, n=1, seed=1, seconds=1.0, out=Path(t) / "a.wav")])
             cmd = run.call_args[0][0]
             self.assertEqual(cmd[:3], ["nice", "-n", "19"])
             self.assertTrue(cmd[4].endswith(script))
+
+    def test_yue2_runs_through_heavy_queue_only_yue2(self):
+        c = parse_cue({"name": "a", "prompt": "p", "category": "music", "length": 1}, None)
+        for kind, queued in (("yue2", True), ("stable-audio-3", False), ("acestep", False), ("stable-audio-open", False)):
+            with tempfile.TemporaryDirectory() as t, mock.patch.object(B.subprocess, "run", return_value=mock.Mock(returncode=0)) as run,                     mock.patch.object(B.YuE2, "queue_tool", return_value="/x/heavy"):
+                B.make("x", {"type": kind, "licence": "x", "python": sys.executable}, Path(t)).generate(
+                    [B.Job(cue=c, n=1, seed=1, seconds=1.0, out=Path(t) / "a.wav")])
+            cmd = run.call_args[0][0]
+            self.assertEqual(cmd[:5] == ["/x/heavy", "run", "--label", "audio-gen x", "--"], queued)
+            self.assertEqual(cmd[5 if queued else 0:8 if queued else 3], ["nice", "-n", "19"])
+        with tempfile.TemporaryDirectory() as t, mock.patch.object(B.YuE2, "queue_tool", return_value=None):
+            with self.assertRaises(B.Skip):
+                B.make("x", {"type": "yue2", "licence": "x", "python": sys.executable}, Path(t)).generate(
+                    [B.Job(cue=c, n=1, seed=1, seconds=1.0, out=Path(t) / "a.wav")])
 
     def test_yue2_needs_demucs(self):
         with self.assertRaises(B.Skip):
@@ -101,7 +115,7 @@ class Arr:
 
 
 class Yue2Worker(unittest.TestCase):
-    def run_worker(self, version="0.1.6", cuda=True, keep=None, quiet=0.001):
+    def run_worker(self, version="0.1.6", cuda=True, keep=None, quiet=0.001, gib=16, offload=None, vocal=None):
         seen = {"calls": [], "demucs": []}
 
         class Pipe:
@@ -130,7 +144,8 @@ class Yue2Worker(unittest.TestCase):
 
         torch = types.SimpleNamespace(cuda=types.SimpleNamespace(
             is_available=lambda: cuda, reset_peak_memory_stats=lambda: None, memory_allocated=lambda: 5,
-            max_memory_allocated=lambda: 6), set_num_threads=lambda n: None)
+            max_memory_allocated=lambda: 6, get_device_properties=lambda i: types.SimpleNamespace(total_memory=gib * 2**30)),
+            set_num_threads=lambda n: None)
         mods = {"yue2": types.SimpleNamespace(__version__=version, YuE2Pipeline=Pipe), "soundfile": types.SimpleNamespace(read=read), "torch": torch}
         spec = importlib.util.spec_from_file_location("yue2_worker", HERE / "workers" / "yue2_worker.py")
         w = importlib.util.module_from_spec(spec)
@@ -138,7 +153,8 @@ class Yue2Worker(unittest.TestCase):
         with tempfile.TemporaryDirectory() as t:
             t = Path(t)
             (t / "job.json").write_text(json.dumps({
-                "options": {"modelDir": str(t / "none"), "tries": 3, **({"keep": keep} if keep else {})}, "result": str(t / "r.json"),
+                "options": {"modelDir": str(t / "none"), "tries": 3, **({"keep": keep} if keep else {}),
+                            **({"offloadAr": offload} if offload is not None else {}), **({"vocal": vocal} if vocal else {})}, "result": str(t / "r.json"),
                 "items": [{"out": str(t / "o" / "a.wav"), "prompt": "calm ballpark organ", "seconds": 20, "seed": 1000, "label": "a#1"}]}))
             with mock.patch.object(sys, "argv", ["w", str(t / "job.json")]), mock.patch.dict(sys.modules, mods), \
                     mock.patch.object(w.subprocess, "run", demucs):
@@ -154,17 +170,28 @@ class Yue2Worker(unittest.TestCase):
         self.assertFalse(alt)
         self.assertEqual(code, 0)
         self.assertTrue(made)
-        self.assertEqual(seen["load"], ("m-a-p/YuE2-3B", {"revision": "8f24312f", "device": "cuda"}))
+        self.assertEqual(seen["load"], ("m-a-p/YuE2-3B", {"revision": "8f24312f", "device": "cuda", "offload_ar": True}))
         plans = [kw for k, kw in seen["calls"] if k == "plan"]
         renders = [kw for k, kw in seen["calls"] if k == "render"]
         self.assertEqual([p["seed"] for p in plans], [1000, 8919])
         self.assertEqual({(p["lyrics"], p["cot"]) for p in plans + renders}, {("[Instrumental]", "full")})
         self.assertIn('"C"z16|z16|"G"z16|', renders[0]["abc"])
+        self.assertIn("c2 d2 e4|c16|G8 A8|", renders[0]["abc"])
         self.assertEqual(res[0]["seed"], 8919)
         self.assertEqual([x["vocalDb"] > -25 for x in res[0]["extra"]["tried"]], [True, False])
         d = seen["demucs"][0]
         self.assertEqual((d[:3], d[d.index("-d") + 1], d[d.index("-n", 3) + 1], "--two-stems=vocals" in d),
                          (["nice", "-n", "19"], "cuda", "htdemucs", True))
+
+    def test_offload_only_under_24_gib_unless_set(self):
+        self.assertTrue(self.run_worker(gib=16)[1]["load"][1]["offload_ar"])
+        self.assertNotIn("offload_ar", self.run_worker(gib=24)[1]["load"][1])
+        self.assertNotIn("offload_ar", self.run_worker(gib=16, offload=False)[1]["load"][1])
+        self.assertTrue(self.run_worker(gib=48, offload=True)[1]["load"][1]["offload_ar"])
+
+    def test_vocal_rests_option(self):
+        renders = [kw for k, kw in self.run_worker(vocal="rests")[1]["calls"] if k == "render"]
+        self.assertNotIn("c2 d2 e4", renders[0]["abc"])
 
     def test_pinned_version_and_no_cuda(self):
         self.assertEqual(self.run_worker(version="0.1.5")[0], 3)
@@ -248,3 +275,55 @@ class AceDefaults(unittest.TestCase):
         self.assertEqual((xl["inference_steps"], xl["guidance_scale"]), (50, 7.0))
         turbo = self.params("acestep-v15-turbo")
         self.assertEqual((turbo["inference_steps"], "guidance_scale" in turbo), (8, False))
+
+
+class Sa3Sampler(unittest.TestCase):
+    def sampler(self, opts):
+        seen = {}
+
+        class T:
+            def __init__(self, a):
+                self.a = a
+                self.dim = lambda: 2
+
+            def float(self):
+                return self
+
+            def cpu(self):
+                return self
+
+            def numpy(self):
+                return self.a
+
+        class Model:
+            model_config = {"sample_rate": 44100}
+
+            @classmethod
+            def from_pretrained(cls, name, **kw):
+                return cls()
+
+            def generate(self, **kw):
+                seen["kw"] = kw
+                return T(np.sin(np.arange(44100 * 8) * 0.05)[None, :].repeat(2, 0) * 0.3)
+
+        import numpy as np
+        torch = types.SimpleNamespace(cuda=types.SimpleNamespace(
+            is_available=lambda: True, reset_peak_memory_stats=lambda: None, memory_allocated=lambda: 5,
+            max_memory_allocated=lambda: 6), set_num_threads=lambda n: None)
+        mods = {"torch": torch, "soundfile": types.SimpleNamespace(write=lambda *a, **k: None),
+                "stable_audio_3": types.SimpleNamespace(StableAudioModel=Model)}
+        spec = importlib.util.spec_from_file_location("sa3_worker", HERE / "workers" / "stable_audio_3_worker.py")
+        w = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(w)
+        with tempfile.TemporaryDirectory() as t:
+            t = Path(t)
+            (t / "job.json").write_text(json.dumps({"options": opts, "result": str(t / "r.json"), "items": [
+                {"out": str(t / "a.wav"), "prompt": "p", "seconds": 1, "seed": 1, "label": "a#1"}]}))
+            with mock.patch.object(sys, "argv", ["w", str(t / "job.json")]), mock.patch.dict(sys.modules, mods):
+                self.assertEqual(w.main(), 0)
+            self.assertNotIn("error", json.loads((t / "r.json").read_text())["items"][0])
+        return seen["kw"]
+
+    def test_pingpong_sampler_by_default(self):
+        self.assertEqual(self.sampler({})["sampler_type"], "pingpong")
+        self.assertEqual(self.sampler({"sampler": "euler"})["sampler_type"], "euler")

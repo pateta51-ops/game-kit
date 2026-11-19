@@ -34,7 +34,7 @@ fi
 if has yue2; then
   # YuE2-3B (weights CC BY-NC 4.0), the default for music: code pinned to release yue2-v0.1.6, weights to rev 8f24312f.
   venv venv-yue
-  "$H/venv-yue/bin/pip" install -q "yue2-infer @ git+https://github.com/multimodal-art-projection/YuE@yue2-v0.1.6"
+  "$H/venv-yue/bin/pip" install -q "yue2-infer @ git+https://github.com/multimodal-art-projection/YuE@yue2-v0.1.6" "huggingface-hub==0.36.2"
   "$H/venv-yue/bin/hf" download m-a-p/YuE2-3B --revision 8f24312f --local-dir "$H/models/yue2"
   # demucs htdemucs for the vocal gate, in its own venv
   venv venv-demucs
