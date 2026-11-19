@@ -149,7 +149,7 @@ describe.skipIf(!HAVE && !process.env['CI'])('effect library in a browser', () =
   it('a game registers its own effect beside the built-in verbs', async () => {
     const r = await page.evaluate(() => (window as unknown as { fxTest: Api }).fxTest.own());
     expect(r.names).toEqual(expect.arrayContaining(['stamp', 'motes', 'flicker', 'bar-fill']));
-    expect(r.names).toHaveLength(45);
+    expect(r.names).toHaveLength(47);
     expect(r.names).toContain('crumple');
     expect(r.names).toEqual(expect.arrayContaining(['spin', 'tap', 'untap']));
     expect(r.names).toEqual(expect.arrayContaining(['dash-line', 'reticle', 'debris']));

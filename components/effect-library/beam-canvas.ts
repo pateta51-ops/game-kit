@@ -2,6 +2,7 @@ import type { VerbCall } from '../motion-frame/index.ts';
 import type { CanvasEffect } from './canvas.ts';
 import { centre } from './beam-dom.ts';
 import { clamp, ease, glow, lerp, noise, rng, seg, pulse, sparks } from './particles.ts';
+import { CURVED_BEAM_DEFAULTS as CB } from './defaults.ts';
 
 type Point = readonly [number, number];
 type Ctx = CanvasRenderingContext2D;
@@ -113,8 +114,8 @@ function imageFor(call: VerbCall, src: string): HTMLImageElement {
 export const curvedBeam: CanvasEffect = (ctx, t, { call }) => {
   const o = call.step['curve'] as CurvedBeamSettings | undefined;
   if (!o) return;
-  const { colour = WHITE[0], moteColour = WHITE[0], sparkColour = 'white', unit = 1,
-    image, size = [40, 34], tuck = true } = o;
+  const { colour = CB.colour, moteColour = CB.moteColour, sparkColour = CB.sparkColour, unit = CB.unit,
+    image, size = CB.size, tuck = CB.tuck } = o;
   const src = centre(call.from);
   const dst = centre(call.to ?? call.from);
   const c = o.control;

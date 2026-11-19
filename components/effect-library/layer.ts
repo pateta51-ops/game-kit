@@ -24,11 +24,16 @@ export interface LayerOptions {
   stage?: Stage;
   /** called once per actor right after its clone is made and placed in the layer, only when `resolve` found a source (a clone does not copy a canvas's pixels: draw them here, or swap the content) */
   onActor?: (source: HTMLElement, clone: HTMLElement, id: string, run: Run<EffectLayer>) => void;
+  /** K436: `false` makes the layer no stacking context (`display: contents`, no z-index), so its parts' z-index and mix-blend-mode reach the board under it; the parts then place against `parent`'s box */
+  isolate?: boolean;
 }
 export interface EffectActor extends Actor {
   hideSource?: 'start' | 'step';
   /** K435-10: hides only the source's descendants matching this selector (a class: `.name`), not the whole source */
   hideParts?: string;
+  /** K436: the clone's own z-index and mix-blend-mode (e.g. `screen` with the board, under a layer with `isolate: false`); set by `start(run, actors)`, or per step with step `zIndex` and `blend` */
+  zIndex?: number | string;
+  blend?: string;
 }
 
 export interface EffectLayer {
@@ -91,6 +96,7 @@ export function createEffectLayer(o: LayerOptions = {}): EffectLayer {
   el.className = 'fx-layer';
   el.style.cssText = `position:${o.position ?? 'fixed'};inset:0;overflow:visible;pointer-events:none;z-index:var(--fx-z,1000)`;
   if (o.zIndex !== undefined) el.style.zIndex = String(o.zIndex);
+  if (o.isolate === false) el.style.cssText = 'display:contents;pointer-events:none';
   parent.appendChild(el);
   const runs = new Map<number, Map<string, HTMLElement>>();
   const originals = new WeakMap<HTMLElement, HTMLElement>();
@@ -119,6 +125,8 @@ export function createEffectLayer(o: LayerOptions = {}): EffectLayer {
       const scheduled = new Set<string>();
       for (const a of actors ?? []) {
         const clone = runs.get(run.id)?.get(a.id);
+        if (clone && a.zIndex !== undefined) clone.style.zIndex = String(a.zIndex);
+        if (clone && a.blend) clone.style.mixBlendMode = a.blend;
         const src = clone && originals.get(clone);
         if (!a.hideSource || !src || scheduled.has(a.id)) continue;
         const hide = (): void => {

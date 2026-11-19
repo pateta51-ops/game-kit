@@ -7,6 +7,7 @@
   "gate": {
     "name": "Full gate (check, sim, e2e) on PR head merged with main",
     "if": false,
+    "timeoutMinutes": 60,
     "runsOn": "${{ inputs.runner == 'self-hosted' && fromJSON('[\"self-hosted\",\"warp\"]') || 'ubuntu-latest' }}",
     "inputs": {
       "runner": {

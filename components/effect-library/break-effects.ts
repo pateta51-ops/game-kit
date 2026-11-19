@@ -23,6 +23,8 @@ export interface DissolveSettings {
   heatTail?: number;
   heatFrames?: Keyframe[];
   heatBackground?: string;
+  /** K436: ms from the step start before the stand-in (the clone) shows; until then it is hidden, so the live piece shows to the break */
+  standInAt?: number;
   emberSize?: { min?: number; divisor?: number; range?: Point };
   emberDrift?: Point;
   emberRise?: Point;
@@ -36,7 +38,7 @@ export const dissolve: Effect = (fx) => {
   const [x, y, w, h] = call.from;
   const { delay = 0, breakMs = 900, heatMs = 520, shown = h, cols = 8, hit = [.5, .45], embers = 16,
     heat = '255 255 255', emberColour = '230 230 230', core = '255 255 255', glow = '230 230 230', heatEdge = glow, lift,
-    cutAt = .55, heatTail = .6, heatFrames, heatBackground,
+    cutAt = .55, heatTail = .6, heatFrames, heatBackground, standInAt,
     emberSize: { min: minEmber = 2, divisor: emberDivisor = 110, range: [sizeMin, sizeMax] = [.6, 1.6] } = {},
     emberDrift: [radialDrift, randomDrift] = [.5, .3], emberRise: [riseMin, riseMax] = [.2, .65],
     emberSpan: [spanMin, spanMax] = [.6, .9], emberShadow: [blur, spread] = [2, .5],
@@ -65,7 +67,8 @@ export const dissolve: Effect = (fx) => {
   const cw = w / cols, rows = Math.max(1, Math.round(shown / cw)), ch = shown / rows;
   const opacity = el.style.opacity || '1';
   const at = seg(cut, 0, call.step.dur);
-  animate([{ opacity }, { offset: at, opacity, easing: 'steps(1, jump-start)' }, { offset: at, opacity: 0 }, { opacity: 0 }], hidden, { easing: 'linear' });
+  const shows = standInAt === undefined ? 0 : Math.min(at, seg(standInAt, 0, call.step.dur));
+  animate([...(shows > 0 ? [{ opacity: 0 }, { offset: shows, opacity: 0 }, { offset: shows, opacity }] : [{ opacity }]), { offset: at, opacity, easing: 'steps(1, jump-start)' }, { offset: at, opacity: 0 }, { opacity: 0 }], hidden, { easing: 'linear' });
   const overlay = stage.stand([x, y, w, shown], {
     borderRadius: getComputedStyle(el).borderRadius, mixBlendMode: 'screen', zIndex: '3',
     background: heatBackground ?? `radial-gradient(circle at ${px(hx)} ${px(hy)}, rgb(${core} / .9), rgb(${heat} / .55) 35%, rgb(${heatEdge} / .25) 75%)`,

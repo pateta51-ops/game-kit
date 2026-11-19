@@ -14,6 +14,9 @@ export interface DashLineSettings {
   cap?: 'round' | 'butt' | 'square';
   filter?: string;
   hideInsideTarget?: boolean;
+  /** K436: the line stays (and its dashes keep moving) after the step ends, until `signal` aborts or the layer is cleared */
+  loop?: boolean;
+  signal?: AbortSignal;
 }
 
 const centre = ([x, y, w, h]: Rect): Point => [x + w / 2, y + h / 2];
@@ -29,7 +32,7 @@ function edgeToward(rect: Rect, point: Point): Point {
 
 export function registerDashLine(verbs: VerbRegistry<EffectLayer>, resolve: LayerOptions['resolve'], stage?: Stage): void {
   verbs.register('dash-line', (call, run) => {
-    const { from = call.actor, to, dash = 9, gap = 6, speed = 20, width = 2, colour = 'currentColor', cap = 'round', filter, hideInsideTarget = false } =
+    const { from = call.actor, to, dash = 9, gap = 6, speed = 20, width = 2, colour = 'currentColor', cap = 'round', filter, hideInsideTarget = false, loop = false, signal } =
       call.step as unknown as DashLineSettings;
     if (typeof to !== 'string' || call.dur <= 0) return undefined;
     const rect = (id: string): Rect | undefined =>
@@ -74,14 +77,20 @@ export function registerDashLine(verbs: VerbRegistry<EffectLayer>, resolve: Laye
       path.setAttribute('stroke-dashoffset', String(-speed * specTime(now - start, call) / 1000 % (dash + gap || 1)));
     };
     paint(start);
+    const stop = (): void => {
+      cancelAnimationFrame(frame);
+      svg.remove();
+    };
     const tick = (now: number): void => {
+      if (loop && !svg.isConnected) return;
       paint(now);
       frame = requestAnimationFrame(tick);
     };
     let frame = requestAnimationFrame(tick);
-    return () => {
-      cancelAnimationFrame(frame);
-      svg.remove();
-    };
+    if (loop) {
+      signal?.addEventListener('abort', stop, { once: true });
+      return () => undefined;
+    }
+    return stop;
   });
 }

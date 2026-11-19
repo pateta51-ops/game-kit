@@ -9,6 +9,8 @@ export interface CameraPullSettings {
   dimBackground?: string;
   releaseMs?: number;
   speed?: number | 'instant';
+  /** K436: a cut (the returned function) still eases back over `releaseMs`, so the dim eases out (default it ends at once) */
+  easeOnCut?: boolean;
 }
 
 export interface CameraPushSettings {
@@ -49,7 +51,7 @@ export function cameraPush(root: HTMLElement, onChange?: (scale: number) => void
 
 export function cameraPull(root: HTMLElement, overlay: HTMLElement, {
   scale = 0.95, origin = 'center', pullMs = 2000, dim = 0.5, dimMs = pullMs / 2,
-  dimBackground = '#000', releaseMs = 400, speed = 1,
+  dimBackground = '#000', releaseMs = 400, speed = 1, easeOnCut = false,
 }: CameraPullSettings = {}): (() => void) & { dimmed: Promise<void>; release: () => Promise<void> } {
   if (speed === 0 || speed === 'instant') {
     const done = Promise.resolve();
@@ -83,17 +85,16 @@ export function cameraPull(root: HTMLElement, overlay: HTMLElement, {
   };
   void play(root, [{ transform: 'scale(1)' }, { transform: scaled }], pullMs, 'ease-in-out');
   const dimmed = play(shade, [{ opacity: 0 }, { opacity: dim }], dimMs, 'ease-in');
-  return Object.assign(end, {
-    dimmed,
-    release() {
-      if (ended) return Promise.resolve();
-      if (release) return release;
-      const returning = [
-        play(root, [{ transform: scaled }, { transform: 'scale(1)' }], releaseMs, 'ease-out'),
-        play(shade, [{ opacity: dim }, { opacity: 0 }], releaseMs, 'ease-out'),
-      ];
-      release = Promise.all(returning).then(end);
-      return release;
-    },
-  });
+  const back = (): Promise<void> => {
+    if (ended) return Promise.resolve();
+    if (release) return release;
+    const from = (el: HTMLElement, prop: 'transform' | 'opacity', fallback: string): string => (easeOnCut ? getComputedStyle(el)[prop] : '') || fallback;
+    const returning = [
+      play(root, [{ transform: from(root, 'transform', scaled) }, { transform: 'scale(1)' }], releaseMs, 'ease-out'),
+      play(shade, [{ opacity: from(shade, 'opacity', String(dim)) }, { opacity: 0 }], releaseMs, 'ease-out'),
+    ];
+    release = Promise.all(returning).then(end);
+    return release;
+  };
+  return Object.assign(easeOnCut ? () => void back() : end, { dimmed, release: back });
 }

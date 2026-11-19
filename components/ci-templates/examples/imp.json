@@ -1,5 +1,6 @@
 {
   "repo": "acme/imp",
+  "docsSkip": false,
   "runnerLabel": "Linux",
   "runDrafts": true,
   "ci": {

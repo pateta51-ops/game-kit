@@ -2,6 +2,7 @@ import type { Rect } from '../motion-frame/index.ts';
 import type { Effect } from './effects.ts';
 import { centre, px, scene } from './beam-dom.ts';
 import { ease, seg } from './particles.ts';
+import { PROJECTILE_DEFAULTS as PJ } from './defaults.ts';
 
 type Point = readonly [number, number];
 interface PulseLook {
@@ -26,6 +27,8 @@ export interface RingPulseSettings extends PulseLook {
   outline?: string;
   unit?: number;
   clip?: Rect;
+  /** K436: the rings' CSS box-sizing (default border-box) */
+  boxSizing?: string;
 }
 
 const pulseFrames = [
@@ -38,14 +41,14 @@ export const ringPulse: Effect = (fx) => {
   const { call } = fx;
   const { box = call.from, radius = '50%', colour = '255 255 255', width = 2, shadow, background, frames = pulseFrames,
     easing = 'ease-out', delay = 0, count = 1, ms = (call.step.dur - delay) / Math.max(1, count), period = ms,
-    shockwaves, outline = '255 255 255', unit = 1, clip } = call.step as RingPulseSettings;
+    shockwaves, outline = '255 255 255', unit = 1, clip, boxSizing } = call.step as RingPulseSettings;
   const stage = scene(fx);
   if (shockwaves) {
     const [x, y] = centre(box);
     const holder = clip && stage.stand(clip, { overflow: 'hidden' });
     for (const wave of shockwaves) {
       const max = wave.radiusAt ? Math.max(...Array.from({ length: 61 }, (_, i) => wave.radiusAt?.(i / 60) ?? 0)) * unit : wave.radius * unit;
-      const ring = stage.stand([x - max - (clip?.[0] ?? 0), y - max - (clip?.[1] ?? 0), 2 * max, 2 * max], { borderRadius: radius });
+      const ring = stage.stand([x - max - (clip?.[0] ?? 0), y - max - (clip?.[1] ?? 0), 2 * max, 2 * max], { borderRadius: radius, ...(boxSizing ? { boxSizing } : {}) });
       holder?.append(ring);
       stage.play(ring, Array.from({ length: 61 }, (_, i): Keyframe => {
         const k = i / 60;
@@ -67,7 +70,7 @@ export const ringPulse: Effect = (fx) => {
     for (let i = 0; i < count; i++) {
       const ring = stage.stand(box, {
         borderRadius: radius, opacity: '0', background: background ?? '', boxShadow: shadow ?? '',
-        border: `${px(width)} solid rgb(${colour})`,
+        border: `${px(width)} solid rgb(${colour})`, ...(boxSizing ? { boxSizing } : {}),
       });
       stage.play(ring, frames, ms, delay + i * period, easing, 'none');
     }
@@ -92,13 +95,15 @@ export interface ShimmerSettings {
   hitStops?: readonly [coreAlpha: number, colourAlpha: number, colourAt: number, clearAt: number];
   rimStops?: readonly [clearAt: number, colourAt: number, colourAlpha: number, rimAt: number, rimAlpha: number];
   jolt?: { vector: Point; ms?: number };
+  /** K436: the ripple ring shows its first frame during `delay` (default hidden until it starts) */
+  rippleEarly?: boolean;
 }
 
 export const shimmer: Effect = (fx) => {
   const { call } = fx;
   const { colour = '255 255 255', rim = colour, core = '255 255 255', rippleColour = 'rgb(255 255 255 / .9)',
     pad = .14, hit = [.5, .45], rippleSize = .3, rippleWidth, delay = 0, ms = call.step.dur - delay, rippleMs = ms * .8,
-    frames, rippleFrames, jolt, hitStops: [hot, tint, tintAt, clearAt] = [.6, .3, 14, 34],
+    frames, rippleFrames, jolt, rippleEarly = false, hitStops: [hot, tint, tintAt, clearAt] = [.6, .3, 14, 34],
     rimStops: [innerAt, bandAt, band, edgeAt, edge] = [72, 86, .18, 97, .65] } = call.step as ShimmerSettings;
   const [x, y, w, h] = call.from;
   const p = w * pad;
@@ -126,7 +131,7 @@ export const shimmer: Effect = (fx) => {
   stage.play(ring, rippleFrames ?? [
     { transform: 'scale(.2)', opacity: 1, easing: 'cubic-bezier(.2,.7,.4,1)' },
     { transform: 'scale(3.2)', opacity: 0 },
-  ], rippleMs, delay, 'linear', 'none');
+  ], rippleMs, delay, 'linear', rippleEarly ? 'backwards' : 'none');
   if (jolt) {
     const [jx, jy] = jolt.vector;
     stage.play(fx.el, [
@@ -153,6 +158,8 @@ export interface ProjectileSettings {
   headScale?: number;
   spotSize?: number;
   headFadeMs?: number;
+  /** K436: the head shows at the source during `delay` (default hidden until launch) */
+  headEarly?: boolean;
   sourceLight?: { background: string; shadow?: string; radius?: string; frames?: Keyframe[] };
   miss?: { past: number; fadeMs: number; mask?: string };
   flicker?: readonly { at: number; width: number; opacity: number; easing?: string }[];
@@ -163,9 +170,9 @@ export const projectile: Effect = (fx) => {
   if (!call.to) return;
   const [tx, ty, tw, th] = call.to;
   const { fromPoint: [x, y] = centre(call.from), toPoint: [ax, ay] = [tx + tw / 2, ty + th * .45],
-    colour = '255 255 255', core = '255 255 255', headColour = colour, spotColour = colour,
-    width = Math.max(3, tw * .04), speed, travelMs = 200, delay = 0, headScale = 7, spotSize = tw * .55,
-    miss, sourceLight, headFadeMs = 80, flicker = [{ at: 106, width: .8, opacity: .85 }, { at: 190, width: 1.15, opacity: 1 },
+    colour = PJ.colour, core = PJ.core, headColour = colour, spotColour = colour,
+    width = Math.max(3, tw * .04), speed, travelMs = PJ.travelMs, delay = PJ.delay, headScale = PJ.headScale, spotSize = tw * .55,
+    miss, sourceLight, headFadeMs = PJ.headFadeMs, headEarly = false, flicker = [{ at: 106, width: .8, opacity: .85 }, { at: 190, width: 1.15, opacity: 1 },
       { at: 274, width: .85, opacity: .9 }, { at: 386, width: 1.1, opacity: 1, easing: 'ease-in' }],
   } = call.step as ProjectileSettings;
   const past = 1 + (miss?.past ?? 0);
@@ -206,7 +213,7 @@ export const projectile: Effect = (fx) => {
     { offset: 0, transform: move(0, .6), opacity: 1 },
     { offset: miss ? 1 / past : travel / Math.min(ms, travel + headFadeMs), transform: move(1 / past, 1), opacity: 1, easing: miss ? 'linear' : 'ease-out' },
     { offset: 1, transform: move(1, miss ? .7 : 1.6), opacity: 0 },
-  ], miss ? travel : Math.min(ms, travel + headFadeMs), delay, 'linear', 'forwards');
+  ], miss ? travel : Math.min(ms, travel + headFadeMs), delay, 'linear', headEarly ? 'both' : 'forwards');
   if (!miss) {
     const spot = stage.stand([ax - spotSize / 2, ay - spotSize / 2, spotSize, spotSize], {
       borderRadius: '50%', zIndex: '5',

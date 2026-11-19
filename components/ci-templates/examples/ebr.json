@@ -1,5 +1,6 @@
 {
   "repo": "acme/ebr",
+  "docsSkip": false,
   "runnerLabel": "linux",
   "workflows": [
     "ci.yml"
