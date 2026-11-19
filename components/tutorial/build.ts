@@ -1,7 +1,7 @@
 // Tooling for writing a script: build it from a seed's line of play (a seed search's driver line) and the game's narration,
 // list each step's answers in the words on screen, and dump a line for reading.
-import { applyAction, type AnswerAction, type GameTypes } from '../engine-core/index.ts';
-import type { TutorialGame } from './game.ts';
+import type { PortAnswer, PortTypes } from '../engine-core/index.ts';
+import { drive, type TutorialAction, type TutorialEngine } from './game.ts';
 import { startRun } from './play.ts';
 import type { ExpectedEvent, TutorialScript, TutorialStep } from './script.ts';
 
@@ -15,7 +15,7 @@ export interface StepPlan {
   readonly items?: readonly string[];
 }
 
-export interface BuildOptions<G extends GameTypes> {
+export interface BuildOptions<G extends PortTypes> {
   readonly seed: string;
   readonly title?: string;
   /** The events a step expects (default none). */
@@ -24,29 +24,30 @@ export interface BuildOptions<G extends GameTypes> {
   readonly strip?: (event: G['event']) => ExpectedEvent;
 }
 
-const answerOf = <G extends GameTypes>(game: TutorialGame<G>, state: G['state'], ref: string): string => game.findOption?.(state, ref) ?? ref;
-const wordsOf = <G extends GameTypes>(game: TutorialGame<G>, state: G['state'], picks: readonly string[], words: (w: string) => string): string =>
-  picks.map((id) => words(game.optionWords?.(state, answerOf(game, state, id)) ?? id)).join(', ');
+const answerOf = <G extends PortTypes>(game: TutorialEngine<G>, state: G['state'], ref: string): string => drive(game).hooks.findOption?.(state, ref) ?? ref;
+const wordsOf = <G extends PortTypes>(game: TutorialEngine<G>, state: G['state'], picks: readonly string[], words: (w: string) => string): string =>
+  picks.map((id) => words(drive(game).hooks.optionWords?.(state, answerOf(game, state, id)) ?? id)).join(', ');
 
 /** The script: each step takes the next `n` answers of `actions` (from the seed's setup), its expected events read from playing them.
  * Throws when a step finds no prompt or the steps do not take the whole line. */
-export function buildScript<G extends GameTypes>(game: TutorialGame<G>, actions: readonly AnswerAction[], plan: readonly StepPlan[], o: BuildOptions<G>): TutorialScript {
+export function buildScript<G extends PortTypes>(game: TutorialEngine<G>, actions: readonly TutorialAction<G>[], plan: readonly StepPlan[], o: BuildOptions<G>): TutorialScript {
+  const d = drive(game);
   let s = startRun(game, o.seed).state;
   let at = 0;
   const steps = plan.map((st): TutorialStep => {
-    const moves = actions.slice(at, at + st.n).map((a) => [...a.picks]);
+    const moves = (actions as readonly PortAnswer[]).slice(at, at + st.n).map((a) => [...a.picks]);
     if (moves.length < st.n) throw new Error(`${st.id}: the line has only ${String(actions.length)} answers`);
     const events: G['event'][] = [];
     let asks: string | undefined;
     let kind: string | undefined;
     for (const m of moves) {
-      const p = s.prompt;
+      const p = d.prompt(s);
       if (p === null) throw new Error(`${st.id}: no prompt`);
       if (st.n === 1) {
-        kind = game.promptKind?.(s);
+        kind = d.hooks.promptKind?.(s);
         asks = wordsOf(game, s, m, (w) => w);
       }
-      const r = applyAction(game.rules, s, { kind: 'answer', promptId: p.id, picks: m.map((r) => answerOf(game, s, r)) }, game.content);
+      const r = d.answer(s, { kind: 'answer', promptId: p.id, picks: m.map((r) => answerOf(game, s, r)) });
       events.push(...r.events);
       s = r.state;
     }
@@ -69,18 +70,19 @@ export function buildScript<G extends GameTypes>(game: TutorialGame<G>, actions:
 
 /** Each step's answers in the words on screen (the game's `optionWords`, then `words`, e.g. icon tokens to names); a Next step has none.
  * A step whose answer finds no prompt or is refused ends the list. */
-export function answerWords<G extends GameTypes>(game: TutorialGame<G>, script: TutorialScript, words: (w: string) => string = (w) => w): string[][] {
+export function answerWords<G extends PortTypes>(game: TutorialEngine<G>, script: TutorialScript, words: (w: string) => string = (w) => w): string[][] {
+  const d = drive(game);
   let s = startRun(game, script.seed).state;
   const out: string[][] = [];
   for (const step of script.steps) {
     const got: string[] = [];
     const moves = step.do.kind === 'auto' ? step.do.moves : step.do.kind === 'move' ? [step.do.choose] : [];
     for (const m of moves) {
-      const p = s.prompt;
+      const p = d.prompt(s);
       if (p === null) return [...out, got];
       got.push(wordsOf(game, s, m, words));
       try {
-        s = applyAction(game.rules, s, { kind: 'answer', promptId: p.id, picks: m.map((r) => answerOf(game, s, r)) }, game.content).state;
+        s = d.answer(s, { kind: 'answer', promptId: p.id, picks: m.map((r) => answerOf(game, s, r)) }).state;
       } catch {
         return [...out, got];
       }
@@ -92,16 +94,17 @@ export function answerWords<G extends GameTypes>(game: TutorialGame<G>, script: 
 
 /** A line of play in words: per answer, where the game is (`where`), the prompt's kind, the picks and the options (`(x)` disabled);
  * then its events. For reading a seed before writing its narration. */
-export function lineDump<G extends GameTypes>(game: TutorialGame<G>, seed: string, actions: readonly AnswerAction[], where: (state: G['state']) => string = () => ''): string[] {
+export function lineDump<G extends PortTypes>(game: TutorialEngine<G>, seed: string, actions: readonly TutorialAction<G>[], where: (state: G['state']) => string = () => ''): string[] {
+  const d = drive(game);
   let s = startRun(game, seed).state;
   const out: string[] = [];
-  for (const [i, a] of actions.entries()) {
-    const p = s.prompt;
-    const opts = (p?.options ?? []).map((o) => `${o.id}${o.enabled ? '' : '(x)'}=${game.optionWords?.(s, o.id) ?? o.id}`).join(' | ');
-    out.push(`#${String(i)} [${where(s)}] ${game.promptKind?.(s) ?? ''}: ${a.picks.join(', ')}  {${opts}}`);
+  for (const [i, a] of (actions as readonly PortAnswer[]).entries()) {
+    const p = d.prompt(s);
+    const opts = (p?.options ?? []).map((o) => `${o.id}${o.enabled ? '' : '(x)'}=${drive(game).hooks.optionWords?.(s, o.id) ?? o.id}`).join(' | ');
+    out.push(`#${String(i)} [${where(s)}] ${d.hooks.promptKind?.(s) ?? ''}: ${a.picks.join(', ')}  {${opts}}`);
     if (p === null) break;
-    const r = applyAction(game.rules, s, { ...a, promptId: p.id }, game.content);
-    for (const e of r.events) out.push(`    ${game.eventWords?.(s, e) ?? JSON.stringify(e)}`);
+    const r = d.answer(s, { ...a, promptId: p.id });
+    for (const e of r.events) out.push(`    ${d.hooks.eventWords?.(s, e) ?? JSON.stringify(e)}`);
     s = r.state;
   }
   return out;
