@@ -18,24 +18,30 @@ export interface StampSettings {
   holdRing?: boolean;
   /** K435-2: the ring's z-index (default the label's), so drops can draw between ring and label */
   ringZ?: number | string;
+  /** K435-9: stamps this existing element (or the first match of a selector in the actor, else the page) instead of a new label: no default look, never removed */
+  target?: HTMLElement | string;
 }
 
 /** A pressed label can ride on the same stand-in during subsequent steps. */
 export const stamp: Effect = ({ el, call }) => {
-  const { text = '', tilt = 0, image, ms, ease = 'ease-in', scales = [2.2, 0.95, 1], pressOffset = 0.8, style, frames, press, ring, onParts, holdRing, ringZ } = call.step as StampSettings;
-  const tag = el.ownerDocument.createElement(image === undefined ? 'div' : 'img');
-  if (tag instanceof HTMLImageElement && image !== undefined) {
-    tag.src = image;
-    tag.alt = text;
-  } else tag.textContent = text;
-  Object.assign(tag.style, {
-    position: 'absolute', left: '8%', top: '42%', width: '84%', height: '16%',
-    display: 'grid', placeItems: 'center', boxSizing: 'border-box',
-    border: '2px solid currentColor', background: '#222', color: '#fff',
-    font: '700 1rem system-ui', pointerEvents: 'none',
-  }, style);
+  const { text = '', tilt = 0, image, ms, ease = 'ease-in', scales = [2.2, 0.95, 1], pressOffset = 0.8, style, frames, press, ring, onParts, holdRing, ringZ, target } = call.step as StampSettings;
+  const found = typeof target === 'string' ? el.querySelector<HTMLElement>(target) ?? el.ownerDocument.querySelector<HTMLElement>(target) : target;
+  const tag = found ?? el.ownerDocument.createElement(image === undefined ? 'div' : 'img');
+  if (found) Object.assign(tag.style, style);
+  else {
+    if (tag instanceof HTMLImageElement && image !== undefined) {
+      tag.src = image;
+      tag.alt = text;
+    } else tag.textContent = text;
+    Object.assign(tag.style, {
+      position: 'absolute', left: '8%', top: '42%', width: '84%', height: '16%',
+      display: 'grid', placeItems: 'center', boxSizing: 'border-box',
+      border: '2px solid currentColor', background: '#222', color: '#fff',
+      font: '700 1rem system-ui', pointerEvents: 'none',
+    }, style);
+    el.append(tag);
+  }
   tag.dataset['fxPart'] = 'label';
-  el.append(tag);
   const rot = `rotate(${String(tilt)}deg)`;
   const keys = frames ?? [
     { transform: `${rot} scale(${String(scales[0])})`, opacity: 0 },
@@ -70,6 +76,6 @@ export const stamp: Effect = ({ el, call }) => {
     glint?.cancel();
     if (holdRing && halo && ring) Object.assign(halo.style, Object.fromEntries(Object.entries(ring.frames.at(-1) ?? {}).filter(([k]) => k !== 'offset' && k !== 'easing' && k !== 'composite').map(([k, v]) => [k, String(v)])));
     else halo?.remove();
-    if (tag.style.opacity === '0') tag.remove();
+    if (!found && tag.style.opacity === '0') tag.remove();
   };
 };

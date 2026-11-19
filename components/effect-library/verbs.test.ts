@@ -140,4 +140,16 @@ describe('K435 effect verb options', () => {
     expect(shakeAt(150, 1, o).x).toBeCloseTo(-8.5);
     expect(Math.abs(shakeAt(1000, 1, o).x)).toBe(0);
   });
+  it('K435-9 stamp animates an existing element and leaves it in place', () => {
+    animate.mockReturnValue(fakeAnim(false).a as unknown as Animation);
+    const chip = document.createElement('span');
+    chip.className = 'chip';
+    chip.textContent = '3';
+    document.body.append(chip);
+    const { end } = setup({ do: 'stamp', target: '.chip', text: 'ignored' });
+    expect(animate.mock.contexts.at(-1)).toBe(chip);
+    expect([chip.textContent, chip.style.position]).toEqual(['3', '']);
+    end?.();
+    expect(chip.isConnected).toBe(true);
+  });
 });
