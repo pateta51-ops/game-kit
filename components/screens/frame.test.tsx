@@ -32,6 +32,12 @@ it('renders the frame slots and invokes the back action', () => {
   expect(back).toHaveBeenCalledOnce();
 });
 
+it('K458 bodyAs="div" renders the body without a main landmark', () => {
+  render(<ScreenFrame title="Rules" bodyAs="div"><p>Text</p></ScreenFrame>);
+  expect(screen.queryByRole('main')).toBeNull();
+  expect(screen.getByText('Text').parentElement).toHaveClass('kit-scr-main');
+});
+
 it('renders the supplied footer words and optional link', () => {
   const { rerender } = render(<Footer gameName="Example" stamp="Build 12" disclaimer={{ text: 'Fan project' }} />);
   expect(screen.getByRole('contentinfo')).toHaveTextContent('Example Build 12');

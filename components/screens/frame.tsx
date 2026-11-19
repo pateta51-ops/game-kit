@@ -8,6 +8,7 @@ export function ScreenFrame({
   children,
   footer,
   cls,
+  bodyAs = 'main',
 }: {
   title: ReactNode;
   back?: ReactNode;
@@ -15,7 +16,9 @@ export function ScreenFrame({
   children: ReactNode;
   footer?: ReactNode;
   cls?: Partial<Record<'frame' | 'header' | 'title' | 'main', string>>;
+  bodyAs?: 'main' | 'div';
 }) {
+  const Body = bodyAs;
   return (
     <div className={cls?.frame ?? 'kit-scr-frame'}>
       <header className={cls?.header ?? 'kit-scr-header'}>
@@ -23,7 +26,7 @@ export function ScreenFrame({
         <h1 className={cls?.title ?? 'kit-scr-title'}>{title}</h1>
         {actions}
       </header>
-      <main className={cls?.main ?? 'kit-scr-main'}>{children}</main>
+      <Body className={cls?.main ?? 'kit-scr-main'}>{children}</Body>
       {footer}
     </div>
   );

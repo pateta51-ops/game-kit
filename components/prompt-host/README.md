@@ -50,7 +50,7 @@ Import `looks/overflow.css` for the two-column grid and sticky default `.kp-boar
 
 A panel stops only before keep-outs that overlap the zone horizontally and end below its top. The host carries `data-overflow="cols"` for two columns in the zone, or `data-overflow="panel"` for the expanded panel. In either mode, `data-overflow-answers` marks the measured container. Scrolling hosts expose `data-more="1"` while more content lies below and `data-more="0"` at the end.
 
-Row mode (K442): when the answers container is a flex row, the hook first sets `flex-wrap: wrap` (font untouched). If it still overflows the zone, the host carries `data-overflow="rows"` and scrolls inside the zone: no panel, no font shrink. Vertical lists are unchanged.
+Row mode (K442): when the answers container is a flex row, the hook first sets `flex-wrap: wrap` (font untouched). If it still overflows the zone, the host carries `data-overflow="rows"` and scrolls inside the zone: no panel, no font shrink. Vertical lists are unchanged. Pass `rows: false` in the overflow options to opt out: a flex row then shrinks and uses columns or the panel like a list.
 
 ## Use it in 10 lines
 ```ts
