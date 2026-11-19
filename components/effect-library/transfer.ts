@@ -2,6 +2,7 @@ import type { Rect } from '../motion-frame/index.ts';
 import type { Effect } from './effects.ts';
 import { centre, px, scene } from './beam-dom.ts';
 import { ease, lerp, seg } from './particles.ts';
+import { WARP_TRANSFER_DEFAULTS as WT } from './defaults.ts';
 
 interface Frame {
   offset: number;
@@ -150,7 +151,7 @@ function tokenOf(stage: Scene, el: HTMLElement, box: Rect, image: string | undef
 }
 
 function zip(stage: Scene, make: (box: Rect, blur: number) => HTMLElement, from: Rect, to: Rect, start: number, glow: string, index: number, settings: TransferSettings): void {
-  const { zipGhosts = 3, zipSparks = 8, zipPopMs = 130 } = settings;
+  const { zipGhosts = WT.zipGhosts, zipSparks = WT.zipSparks, zipPopMs = WT.zipPopMs } = settings;
   const [sx, sy] = centre(from);
   const [x, y] = centre(to);
   const d = to[2];
@@ -291,9 +292,9 @@ function totalTag(stage: Scene, o: NonNullable<TransferSettings['totalLabel']>, 
 export const warpTransfer: Effect = (fx) => {
   const { call, el } = fx;
   const settings = call.step as TransferSettings;
-  const { from = call.from, destination: to = call.to ?? call.from, mode = 'column', count = 1, stagger = mode === 'zip' ? 60 : 110,
-    image, colour = '255 255 255', glowColour = `rgb(${colour})`, lightColour = 'white', crossing = true, totalLabel,
-    lift = 60, portal, columnUp, columnDown, crossingDots, riseMs = 260, riseTravelMs = 300,
+  const { from = call.from, destination: to = call.to ?? call.from, mode = WT.mode, count = WT.count, stagger = mode === 'zip' ? WT.zipStagger : WT.stagger,
+    image, colour = WT.colour, glowColour = `rgb(${colour})`, lightColour = 'white', crossing = WT.crossing, totalLabel,
+    lift = WT.lift, portal, columnUp, columnDown, crossingDots = WT.crossingDots, riseMs = WT.riseMs, riseTravelMs = WT.riseTravelMs,
     columnLight = `linear-gradient(to top, transparent, rgb(${colour} / .75) 22%, rgb(255 255 255 / .95) 50%, rgb(${colour} / .6) 80%, transparent)`,
   } = settings;
   const { counterColour, beforeLook, afterLook, popOffsets = [.45, .75] } = settings;

@@ -64,6 +64,9 @@ export function registerEffect(verbs: VerbRegistry<EffectCtx>, name: string, eff
   verbs.register(name, (call, run) => {
     const layer = run.context;
     const el = layer.actor(run, call.actor, call.from);
+    // K436: a step's own z-index and blend for its actor's clone
+    if (call.step['zIndex'] !== undefined) el.style.zIndex = String(call.step['zIndex']);
+    if (typeof call.step['blend'] === 'string') el.style.mixBlendMode = call.step['blend'];
     const done: (() => void)[] = [];
     const anims = new Set<Animation>();
     const all = (): Animation[] => (typeof el.getAnimations === 'function' ? el.getAnimations({ subtree: true }) : []);
