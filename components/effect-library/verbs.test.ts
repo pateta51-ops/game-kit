@@ -2,7 +2,7 @@
 // K435: verb options so games drop their own copies (STCC batches 9-23, Warp batches 13 and 31).
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { buildTimeline, createVerbs, type Step } from '../motion-frame/index.ts';
-import { createEffectLayer, startPulse, pileLift, playOn, shakeAt, registerEffects, type EffectCtx } from './index.ts';
+import { bannerAt, letterboxBanner, createEffectLayer, startPulse, pileLift, playOn, shakeAt, registerEffects, type EffectCtx } from './index.ts';
 
 const animate = vi.fn<HTMLElement['animate']>();
 const fakeAnim = (running: boolean) => {
@@ -175,5 +175,17 @@ describe('K435 effect verb options', () => {
     startPulse(el, { period: 450, once: true, pseudo: '::after', delay: 100, keepReduced: true });
     expect(animate.mock.calls[0]![1]).toMatchObject({ duration: 450, iterations: 1, pseudoElement: '::after', delay: 100 });
     vi.unstubAllGlobals();
+  });
+  it('K435 bannerAt and letterboxBanner take caller keyframes for fade and scale', () => {
+    const frames = [{ at: 0, opacity: 0, scale: 1.4 }, { at: 100, opacity: 1, scale: 0.95 }, { at: 200, opacity: 1, scale: 1 }, { at: 600, opacity: 0, scale: 1 }];
+    const b = bannerAt([{ text: 'a' }, { text: 'b' }], 650 + 50, { frames });
+    expect(b.opacity).toBe(0.5);
+    expect(b.scale).toBeCloseTo(1.175);
+    expect(bannerAt([{ text: 'a' }], 50)).toMatchObject({ opacity: 1, scale: 1 });
+    const parent = document.createElement('div');
+    const lb = letterboxBanner(parent, { text: 'x', enter: 10, exit: 10, textFrames: frames });
+    lb.frame(400, 0, 1000);
+    const text = parent.firstElementChild!.lastElementChild as HTMLElement;
+    expect([text.style.opacity, text.style.transform]).toEqual(['0.5', 'scale(1)']);
   });
 });
