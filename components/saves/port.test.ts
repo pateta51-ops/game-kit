@@ -111,8 +111,8 @@ describe('K419 saves over a port game types', () => {
     const c: SavesConfig<Fake> = { game: fake, content: { v: 1 }, database: 'k419', filePrefix: 'fake', now: () => new Date((clock += 1000)) };
     const saves = makeSaves(c);
     const answer = { kind: 'answer', promptId: 'p', picks: ['go'] } as const;
-    const key = await saves.saveNamed('a', { options: { seed: 's' }, rules: undefined, actions: [answer], cursor: 1, undoUsed: false });
+    const key = await saves.saveNamed('a', { options: { seed: 's' }, rules: {}, actions: [answer], cursor: 1, undoUsed: false });
     const r = saves.restore((await saves.get(key))!);
-    expect(r.ok && r.state.n).toBe(1);
+    expect(r.ok ? r.state.n : r.error).toBe(1);
   });
 });
