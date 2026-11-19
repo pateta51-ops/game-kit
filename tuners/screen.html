@@ -16020,7 +16020,8 @@ var K = (() => {
     dimMs = pullMs / 2,
     dimBackground = "#000",
     releaseMs = 400,
-    speed = 1
+    speed = 1,
+    easeOnCut = false
   } = {}) {
     if (speed === 0 || speed === "instant") {
       const done = Promise.resolve();
@@ -16055,19 +16056,18 @@ var K = (() => {
     };
     void play(root, [{ transform: "scale(1)" }, { transform: scaled }], pullMs, "ease-in-out");
     const dimmed = play(shade, [{ opacity: 0 }, { opacity: dim }], dimMs, "ease-in");
-    return Object.assign(end, {
-      dimmed,
-      release() {
-        if (ended) return Promise.resolve();
-        if (release) return release;
-        const returning = [
-          play(root, [{ transform: scaled }, { transform: "scale(1)" }], releaseMs, "ease-out"),
-          play(shade, [{ opacity: dim }, { opacity: 0 }], releaseMs, "ease-out")
-        ];
-        release = Promise.all(returning).then(end);
-        return release;
-      }
-    });
+    const back = () => {
+      if (ended) return Promise.resolve();
+      if (release) return release;
+      const from = (el, prop, fallback) => (easeOnCut ? getComputedStyle(el)[prop] : "") || fallback;
+      const returning = [
+        play(root, [{ transform: from(root, "transform", scaled) }, { transform: "scale(1)" }], releaseMs, "ease-out"),
+        play(shade, [{ opacity: from(shade, "opacity", String(dim)) }, { opacity: 0 }], releaseMs, "ease-out")
+      ];
+      release = Promise.all(returning).then(end);
+      return release;
+    };
+    return Object.assign(easeOnCut ? () => void back() : end, { dimmed, release: back });
   }
 
   // components/effect-library/bands.ts

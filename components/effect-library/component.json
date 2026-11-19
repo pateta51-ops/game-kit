@@ -42,7 +42,9 @@
       { "game": "stcc", "commit": "a69c8dac", "paths": ["src/ui/motion/effects/closingScene.ts", "src/ui/motion/effects/cardFx.ts"] },
       { "game": "stcc", "commit": "f93ba2e7", "paths": ["src/ui/motion/effects/kitFx.ts (playOn, play-on.ts)", "src/ui/motion/effects/dismissed.ts (pileLift liftShare and transform)"] },
       { "game": "warps", "commit": "6790200d", "paths": ["src/ui/fx/blast.ts (breach ring curves and shake, as options)"] },
-      { "game": "warps", "commit": "449af55", "paths": ["src/ui/fx/power/push.ts", "src/ui/fx/power/frame.ts", "src/ui/fx/portal.ts", "src/ui/fx/wreck.ts", "src/ui/fx/timing.ts", "src/ui/fx/blast.ts"] }
+      { "game": "warps", "commit": "449af55", "paths": ["src/ui/fx/power/push.ts", "src/ui/fx/power/frame.ts", "src/ui/fx/portal.ts", "src/ui/fx/wreck.ts", "src/ui/fx/timing.ts", "src/ui/fx/blast.ts"] },
+      { "game": "stcc", "commit": "working tree 19 Nov 2026", "paths": ["src/ui/motion/effects/fizzle.ts and src/ui/theme/fizzle.css (fizzle.ts fizzle)", "src/ui/motion/effects/fxKit.ts sparks and shine, src/ui/motion/effects/missionComplete.ts (spark-burst, missionSparks, MISSION_SHINE)", "src/ui/motion/effects/chartSwitched.ts (flip filter brightness 0.6)"] },
+      { "game": "warps", "commit": "working tree 19 Nov 2026", "paths": ["src/ui/fx/warpLook.ts (flip pivot, ease per half, overshoot, glow, two faces)", "src/ui/fx/idle.ts (orbit twinkle clock apart from the pop)"] }
     ]
   },
   "looks": {

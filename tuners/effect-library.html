@@ -452,13 +452,20 @@ var FX = (() => {
     BUILT_IN: () => BUILT_IN,
     COLLAPSE_DEFAULTS: () => COLLAPSE_DEFAULTS,
     COLUMN_BEAM_DEFAULTS: () => COLUMN_BEAM_DEFAULTS,
+    CURVED_BEAM_DEFAULTS: () => CURVED_BEAM_DEFAULTS,
     DRIFT_CLOUD_DEFAULTS: () => DRIFT_CLOUD_DEFAULTS,
     GLITCH_DEFAULTS: () => GLITCH_DEFAULTS,
     HOLD: () => HOLD,
+    MISSION_MS: () => MISSION_MS,
+    MISSION_SHINE: () => MISSION_SHINE,
     PLASMA_ORB_DEFAULTS: () => PLASMA_ORB_DEFAULTS,
+    PROJECTILE_DEFAULTS: () => PROJECTILE_DEFAULTS,
     RETICLE_DEFAULTS: () => RETICLE_DEFAULTS,
     ROTATING_BEAM_DEFAULTS: () => ROTATING_BEAM_DEFAULTS,
     SHEEN_DEFAULTS: () => SHEEN_DEFAULTS,
+    SHIELD_BUBBLE_DEFAULTS: () => SHIELD_BUBBLE_DEFAULTS,
+    SPIRAL_DEFAULTS: () => SPIRAL_DEFAULTS,
+    WARP_TRANSFER_DEFAULTS: () => WARP_TRANSFER_DEFAULTS,
     afterimages: () => afterimages,
     bannerAt: () => bannerAt,
     bannerKeyAt: () => bannerKeyAt,
@@ -492,6 +499,7 @@ var FX = (() => {
     flushEnds: () => flushEnds,
     holdMs: () => holdMs,
     letterboxBanner: () => letterboxBanner,
+    missionSparks: () => missionSparks,
     moveEnds: () => moveEnds,
     movements: () => movements,
     multiStopPath: () => multiStopPath,
@@ -1095,6 +1103,7 @@ var FX = (() => {
     el.className = "fx-layer";
     el.style.cssText = `position:${o.position ?? "fixed"};inset:0;overflow:visible;pointer-events:none;z-index:var(--fx-z,1000)`;
     if (o.zIndex !== void 0) el.style.zIndex = String(o.zIndex);
+    if (o.isolate === false) el.style.cssText = "display:contents;pointer-events:none";
     parent.appendChild(el);
     const runs = /* @__PURE__ */ new Map();
     const originals = /* @__PURE__ */ new WeakMap();
@@ -1123,6 +1132,8 @@ var FX = (() => {
         const scheduled = /* @__PURE__ */ new Set();
         for (const a of actors ?? []) {
           const clone = runs.get(run.id)?.get(a.id);
+          if (clone && a.zIndex !== void 0) clone.style.zIndex = String(a.zIndex);
+          if (clone && a.blend) clone.style.mixBlendMode = a.blend;
           const src = clone && originals.get(clone);
           if (!a.hideSource || !src || scheduled.has(a.id)) continue;
           const hide = () => {
@@ -1237,7 +1248,7 @@ var FX = (() => {
   function flightPose(p, k, settings) {
     const u = clamp(k);
     const e = travel(u);
-    const at = pointAt(p, e);
+    const at2 = pointAt(p, e);
     const v = tangentAt(p, e);
     const a = {
       x: bez2(p.p0.x, p.p1.x, p.p2.x, p.p3.x, e),
@@ -1250,8 +1261,8 @@ var FX = (() => {
     const curv = speed < 1e-6 ? 0 : (v.x * a.y - v.y * a.x) / speed ** 3 * span;
     const lean = clamp(curv * settings.curvature, -settings.lean, settings.lean) * seg(u, 0, settings.leanIn);
     return {
-      x: at.x,
-      y: at.y,
+      x: at2.x,
+      y: at2.y,
       scale: lerp(settings.startScale, 1, ease.out(u)),
       rot: rot * level,
       lean: lean * level,
@@ -1260,15 +1271,15 @@ var FX = (() => {
   }
   function quadraticPose(from, to, k, path) {
     const u = lerp(k, path.exitScale === void 0 ? ease.inOut(k) : ease.in(k), path.blend);
-    const at = (t) => {
+    const at2 = (t) => {
       const m = 1 - t;
       return [
         m * m * from[0] + 2 * m * t * path.control[0] + t * t * to[0],
         m * m * from[1] + 2 * m * t * path.control[1] + t * t * to[1]
       ];
     };
-    const [x, y] = at(u);
-    const [x2, y2] = at(Math.min(1, u + path.lookAhead));
+    const [x, y] = at2(u);
+    const [x2, y2] = at2(Math.min(1, u + path.lookAhead));
     const heading = Math.atan2(y2 - y, x2 - x);
     const rk = path.roll ? seg(k, ...path.roll) : 0;
     const side = path.side ?? 1;
@@ -1532,6 +1543,37 @@ var FX = (() => {
   var DRIFT_CLOUD_DEFAULTS = { cohortDim: 0.1, cutoff: 4e-3, edgeFade: 0.7, emberColour: "#ddd", emberOpacity: 0.6, emberSize: 0.5, minEmberSize: 1 };
   var COLLAPSE_DEFAULTS = { colour: "rgb(255 255 255 / .95)", n: 16, reach: 2.4, length: 1.5, outMs: 640, gapMs: 140, inMs: 640 };
   var SHEEN_DEFAULTS = { angle: 100, bandWidth: 50, colour: "rgba(255,255,255,.25)", stops: [0, 100], travel: [-110, 220], sweep: [0, 1], easing: "linear" };
+  var WARP_TRANSFER_DEFAULTS = { mode: "column", count: 1, stagger: 110, zipStagger: 60, lift: 60, crossing: true, crossingDots: 5, colour: "255 255 255", zipGhosts: 3, zipSparks: 8, zipPopMs: 130, riseMs: 260, riseTravelMs: 300 };
+  var SPIRAL_DEFAULTS = { outward: false, lift: 34, squash: 0.62, orbit: 0.2, unit: 1, heading: 0, nose: 0, flip: false, ribbonReach: 1, engine: "255,255,255" };
+  var PROJECTILE_DEFAULTS = { colour: "255 255 255", core: "255 255 255", travelMs: 200, delay: 0, headScale: 7, headFadeMs: 80 };
+  var SHIELD_BUBBLE_DEFAULTS = {
+    hitAngle: Math.PI,
+    hit: 0,
+    unit: 1,
+    breaks: false,
+    attack: false,
+    outline: 1.4,
+    colour: "220,220,220",
+    rimColour: "255,255,255",
+    cellColour: "240,240,240",
+    breakColour: "240,240,240",
+    glowColour: "220,220,220",
+    core: "255,255,255",
+    sparkColours: ["240,240,240", "255,255,255"],
+    glowRadii: [110, 34],
+    glowAlpha: 0.7,
+    impactPointScale: 0.97,
+    visibleIn: [-20, 40],
+    flashPeak: 0.1,
+    flashRadius: 110,
+    flashStrength: 1.4,
+    fieldAlpha: 0.14,
+    waveWidth: 30,
+    waveReach: 560,
+    waveStrength: [2.2, 1.2],
+    sparks: { count: 16, life: 380, speed: 0.7, spread: 0.7, width: 2 }
+  };
+  var CURVED_BEAM_DEFAULTS = { colour: "255,255,255", moteColour: "255,255,255", sparkColour: "white", unit: 1, size: [40, 34], tuck: true };
 
   // components/effect-library/beam-dom.ts
   var px = (n) => `${String(n)}px`;
@@ -1693,7 +1735,8 @@ var FX = (() => {
       shockwaves,
       outline = "255 255 255",
       unit = 1,
-      clip
+      clip,
+      boxSizing
     } = call.step;
     const stage = scene(fx);
     if (shockwaves) {
@@ -1701,7 +1744,7 @@ var FX = (() => {
       const holder = clip && stage.stand(clip, { overflow: "hidden" });
       for (const wave of shockwaves) {
         const max = wave.radiusAt ? Math.max(...Array.from({ length: 61 }, (_, i) => wave.radiusAt?.(i / 60) ?? 0)) * unit : wave.radius * unit;
-        const ring = stage.stand([x - max - (clip?.[0] ?? 0), y - max - (clip?.[1] ?? 0), 2 * max, 2 * max], { borderRadius: radius });
+        const ring = stage.stand([x - max - (clip?.[0] ?? 0), y - max - (clip?.[1] ?? 0), 2 * max, 2 * max], { borderRadius: radius, ...boxSizing ? { boxSizing } : {} });
         holder?.append(ring);
         stage.play(ring, Array.from({ length: 61 }, (_, i) => {
           const k = i / 60;
@@ -1726,7 +1769,8 @@ var FX = (() => {
           opacity: "0",
           background: background ?? "",
           boxShadow: shadow ?? "",
-          border: `${px(width)} solid rgb(${colour})`
+          border: `${px(width)} solid rgb(${colour})`,
+          ...boxSizing ? { boxSizing } : {}
         });
         stage.play(ring, frames2, ms, delay + i * period, easing, "none");
       }
@@ -1750,6 +1794,7 @@ var FX = (() => {
       frames: frames2,
       rippleFrames,
       jolt,
+      rippleEarly = false,
       hitStops: [hot, tint, tintAt, clearAt] = [0.6, 0.3, 14, 34],
       rimStops: [innerAt, bandAt, band, edgeAt, edge2] = [72, 86, 0.18, 97, 0.65]
     } = call.step;
@@ -1783,7 +1828,7 @@ var FX = (() => {
     stage.play(ring, rippleFrames ?? [
       { transform: "scale(.2)", opacity: 1, easing: "cubic-bezier(.2,.7,.4,1)" },
       { transform: "scale(3.2)", opacity: 0 }
-    ], rippleMs, delay, "linear", "none");
+    ], rippleMs, delay, "linear", rippleEarly ? "backwards" : "none");
     if (jolt) {
       const [jx, jy] = jolt.vector;
       stage.play(fx.el, [
@@ -1802,19 +1847,20 @@ var FX = (() => {
     const {
       fromPoint: [x, y] = centre2(call.from),
       toPoint: [ax, ay] = [tx + tw / 2, ty + th * 0.45],
-      colour = "255 255 255",
-      core = "255 255 255",
+      colour = PROJECTILE_DEFAULTS.colour,
+      core = PROJECTILE_DEFAULTS.core,
       headColour = colour,
       spotColour = colour,
       width = Math.max(3, tw * 0.04),
       speed,
-      travelMs = 200,
-      delay = 0,
-      headScale = 7,
+      travelMs = PROJECTILE_DEFAULTS.travelMs,
+      delay = PROJECTILE_DEFAULTS.delay,
+      headScale = PROJECTILE_DEFAULTS.headScale,
       spotSize = tw * 0.55,
       miss,
       sourceLight,
-      headFadeMs = 80,
+      headFadeMs = PROJECTILE_DEFAULTS.headFadeMs,
+      headEarly = false,
       flicker: flicker2 = [
         { at: 106, width: 0.8, opacity: 0.85 },
         { at: 190, width: 1.15, opacity: 1 },
@@ -1831,7 +1877,7 @@ var FX = (() => {
     const angle = Math.atan2(dy, dx);
     const rot = (a, b = 1) => `rotate(${angle}rad) scale(${a}, ${b})`;
     const move = (k, scale) => `translate(${px(dx * k)}, ${px(dy * k)}) scale(${scale})`;
-    const at = (t) => seg(t, 0, ms);
+    const at2 = (t) => seg(t, 0, ms);
     const stage = scene(fx);
     const beam = stage.stand([x, y - width / 2, length, width], {
       transformOrigin: "0 50%",
@@ -1847,9 +1893,9 @@ var FX = (() => {
     const clipPath = miss ? "inset(0)" : void 0;
     stage.play(beam, [
       { offset: 0, transform: rot(0), opacity: 1, clipPath },
-      { offset: at(travel2), transform: rot(1), opacity: 1, clipPath, easing: miss ? "ease-in" : "linear" },
+      { offset: at2(travel2), transform: rot(1), opacity: 1, clipPath, easing: miss ? "ease-in" : "linear" },
       ...!miss ? flicker2.filter(({ at: t }) => t > 0 && travel2 + t < ms).map((f) => ({
-        offset: at(travel2 + f.at),
+        offset: at2(travel2 + f.at),
         transform: rot(1, f.width),
         opacity: f.opacity,
         easing: f.easing ?? "linear"
@@ -1867,7 +1913,7 @@ var FX = (() => {
       { offset: 0, transform: move(0, 0.6), opacity: 1 },
       { offset: miss ? 1 / past : travel2 / Math.min(ms, travel2 + headFadeMs), transform: move(1 / past, 1), opacity: 1, easing: miss ? "linear" : "ease-out" },
       { offset: 1, transform: move(1, miss ? 0.7 : 1.6), opacity: 0 }
-    ], miss ? travel2 : Math.min(ms, travel2 + headFadeMs), delay, "linear", "forwards");
+    ], miss ? travel2 : Math.min(ms, travel2 + headFadeMs), delay, "linear", headEarly ? "both" : "forwards");
     if (!miss) {
       const spot = stage.stand([ax - spotSize / 2, ay - spotSize / 2, spotSize, spotSize], {
         borderRadius: "50%",
@@ -1876,9 +1922,9 @@ var FX = (() => {
       });
       stage.play(spot, [
         { offset: 0, transform: "scale(0)", opacity: 0 },
-        { offset: at(travel2), transform: "scale(.3)", opacity: 1, easing: "ease-out" },
-        { offset: at(travel2 + 190), transform: "scale(1)", opacity: 1 },
-        { offset: at(travel2 + 330), transform: "scale(.8)", opacity: 1, easing: "ease-in" },
+        { offset: at2(travel2), transform: "scale(.3)", opacity: 1, easing: "ease-out" },
+        { offset: at2(travel2 + 190), transform: "scale(1)", opacity: 1 },
+        { offset: at2(travel2 + 330), transform: "scale(.8)", opacity: 1, easing: "ease-in" },
         { offset: 1, transform: "scale(1.3)", opacity: 0 }
       ], ms, delay);
     }
@@ -1897,9 +1943,9 @@ var FX = (() => {
         { opacity: 0 }
       ] : [
         { opacity: 0.6 },
-        { offset: Math.min(0.12, at(travel2)), opacity: 1 },
-        { offset: at(travel2 + 190), opacity: 0.75 },
-        { offset: at(travel2 + 386), opacity: 0.9, easing: "ease-in" },
+        { offset: Math.min(0.12, at2(travel2)), opacity: 1 },
+        { offset: at2(travel2 + 190), opacity: 0.75 },
+        { offset: at2(travel2 + 386), opacity: 0.9, easing: "ease-in" },
         { opacity: 0 }
       ]), miss ? ms + delay : ms, miss ? 0 : delay);
     }
@@ -1945,8 +1991,8 @@ var FX = (() => {
     if (t <= start || t >= start + ms + (mode === "ribbon" ? fadeMs : 0)) return;
     const e = ease.in(k);
     const head = mix2(fromPoint, toPoint, e);
-    const pose = (at) => {
-      const p = ease.inOut(seg(at, start, start + ms));
+    const pose = (at2) => {
+      const p = ease.inOut(seg(at2, start, start + ms));
       const [x, y] = mix2([fromPoint[0], fromPoint[1] - lift], toPoint, p);
       return [x, y - Math.sin(p * Math.PI) * lift];
     };
@@ -1995,6 +2041,7 @@ var FX = (() => {
       heatTail = 0.6,
       heatFrames,
       heatBackground,
+      standInAt,
       emberSize: { min: minEmber = 2, divisor: emberDivisor = 110, range: [sizeMin, sizeMax] = [0.6, 1.6] } = {},
       emberDrift: [radialDrift, randomDrift] = [0.5, 0.3],
       emberRise: [riseMin, riseMax] = [0.2, 0.65],
@@ -2024,8 +2071,9 @@ var FX = (() => {
     const cut = delay + heatMs * cutAt;
     const cw = w / cols, rows = Math.max(1, Math.round(shown / cw)), ch = shown / rows;
     const opacity = el.style.opacity || "1";
-    const at = seg(cut, 0, call.step.dur);
-    animate([{ opacity }, { offset: at, opacity, easing: "steps(1, jump-start)" }, { offset: at, opacity: 0 }, { opacity: 0 }], hidden, { easing: "linear" });
+    const at2 = seg(cut, 0, call.step.dur);
+    const shows = standInAt === void 0 ? 0 : Math.min(at2, seg(standInAt, 0, call.step.dur));
+    animate([...shows > 0 ? [{ opacity: 0 }, { offset: shows, opacity: 0 }, { offset: shows, opacity }] : [{ opacity }], { offset: at2, opacity, easing: "steps(1, jump-start)" }, { offset: at2, opacity: 0 }, { opacity: 0 }], hidden, { easing: "linear" });
     const overlay = stage.stand([x, y, w, shown], {
       borderRadius: getComputedStyle(el).borderRadius,
       mixBlendMode: "screen",
@@ -2141,9 +2189,9 @@ var FX = (() => {
     } = call.step;
     const stage = scene(fx);
     const holder = stage.stand(call.from, { perspective: px(perspective * unit) });
-    const at = seg(delay, 0, call.step.dur);
+    const at2 = seg(delay, 0, call.step.dur);
     const opacity = el.style.opacity || "1";
-    animate([{ opacity }, { offset: at, opacity }, { offset: at, opacity: 0 }, { opacity: 0 }], { opacity: "0" }, { easing: "linear" });
+    animate([{ opacity }, { offset: at2, opacity }, { offset: at2, opacity: 0 }, { opacity: 0 }], { opacity: "0" }, { easing: "linear" });
     const random = rng(motionSeed);
     const gx = Math.max(1, Math.floor(grid[0]));
     const gy = Math.max(1, Math.floor(grid[1]), Math.ceil(count / (2 * gx)));
@@ -2280,30 +2328,7 @@ var FX = (() => {
       centre: [x, y],
       radius: [w * 0.58, h * 0.58],
       hex: Math.max(6, Math.min(w, h) / 22),
-      hitAngle: Math.PI,
-      hit: 0,
-      unit: 1,
-      breaks: false,
-      attack: false,
-      outline: 1.4,
-      colour: "220,220,220",
-      rimColour: "255,255,255",
-      cellColour: "240,240,240",
-      breakColour: "240,240,240",
-      glowColour: "220,220,220",
-      core: "255,255,255",
-      sparkColours: ["240,240,240", "255,255,255"],
-      glowRadii: [110, 34],
-      glowAlpha: 0.7,
-      impactPointScale: 0.97,
-      visibleIn: [-20, 40],
-      flashPeak: 0.1,
-      flashRadius: 110,
-      flashStrength: 1.4,
-      fieldAlpha: 0.14,
-      waveWidth: 30,
-      waveReach: 560,
-      waveStrength: [2.2, 1.2],
+      ...SHIELD_BUBBLE_DEFAULTS,
       ...call.step
     };
     const { centre: [cx, cy], radius: [rx, ry], hex: size, hitAngle, hit, unit: u, breaks, attack } = look;
@@ -2393,7 +2418,7 @@ var FX = (() => {
     glow(ctx, ...pt, look.glowRadii[0] * u, look.glowColour, look.glowAlpha * fp);
     glow(ctx, ...pt, look.glowRadii[1] * u, look.core, fp);
     const tangent2 = Math.atan2(pt[1] - B.cy, pt[0] - B.cx) + Math.PI / 2;
-    const { count = 16, life = 380, speed = 0.7, spread: spread2 = 0.7, width: sparkWidth = 2 } = look.sparks ?? {};
+    const { count = SHIELD_BUBBLE_DEFAULTS.sparks.count, life = SHIELD_BUBBLE_DEFAULTS.sparks.life, speed = SHIELD_BUBBLE_DEFAULTS.sparks.speed, spread: spread2 = SHIELD_BUBBLE_DEFAULTS.sparks.spread, width: sparkWidth = SHIELD_BUBBLE_DEFAULTS.sparks.width } = look.sparks ?? {};
     for (let k2 = 0; k2 < 2; k2++)
       sparks(
         ctx,
@@ -2518,13 +2543,13 @@ var FX = (() => {
     const o = call.step["curve"];
     if (!o) return;
     const {
-      colour = WHITE[0],
-      moteColour = WHITE[0],
-      sparkColour = "white",
-      unit = 1,
+      colour = CURVED_BEAM_DEFAULTS.colour,
+      moteColour = CURVED_BEAM_DEFAULTS.moteColour,
+      sparkColour = CURVED_BEAM_DEFAULTS.sparkColour,
+      unit = CURVED_BEAM_DEFAULTS.unit,
       image,
-      size = [40, 34],
-      tuck = true
+      size = CURVED_BEAM_DEFAULTS.size,
+      tuck = CURVED_BEAM_DEFAULTS.tuck
     } = o;
     const src = centre2(call.from);
     const dst = centre2(call.to ?? call.from);
@@ -2613,12 +2638,12 @@ var FX = (() => {
         background: `linear-gradient(to ${way === "in" ? "right" : "left"}, ${colour}, transparent)`
       });
       const far = size * reachScale * reach;
-      const at = (d, s) => `rotate(${String(angle)}deg) translateX(${String(d)}px) scaleX(${String(s)})`;
+      const at2 = (d, s) => `rotate(${String(angle)}deg) translateX(${String(d)}px) scaleX(${String(s)})`;
       const frames2 = [
-        { offset: 0, transform: at(far, 0.02), opacity: 0, easing: "ease-in" },
-        { offset: 0.3, transform: at(far * 0.7, 0.55), opacity: 1, easing: "cubic-bezier(0.5, 0, 0.9, 0.5)" },
-        { offset: 0.8, transform: at(size * 0.05, 0.25), opacity: 1, easing: "linear" },
-        { offset: 1, transform: at(0, 0), opacity: 0 }
+        { offset: 0, transform: at2(far, 0.02), opacity: 0, easing: "ease-in" },
+        { offset: 0.3, transform: at2(far * 0.7, 0.55), opacity: 1, easing: "cubic-bezier(0.5, 0, 0.9, 0.5)" },
+        { offset: 0.8, transform: at2(size * 0.05, 0.25), opacity: 1, easing: "linear" },
+        { offset: 1, transform: at2(0, 0), opacity: 0 }
       ];
       if (way === "out")
         frames2.reverse().forEach((f, i, all) => {
@@ -2816,17 +2841,17 @@ var FX = (() => {
     }, content);
   }
   function zip(stage, make, from, to, start, glow3, index, settings) {
-    const { zipGhosts = 3, zipSparks = 8, zipPopMs = 130 } = settings;
+    const { zipGhosts = WARP_TRANSFER_DEFAULTS.zipGhosts, zipSparks = WARP_TRANSFER_DEFAULTS.zipSparks, zipPopMs = WARP_TRANSFER_DEFAULTS.zipPopMs } = settings;
     const [sx, sy] = centre2(from);
     const [x, y] = centre2(to);
     const d = to[2];
     const box = [sx - d / 2, sy - d / 2, d, to[3]];
     const scale = from[2] / d;
-    const at = (k, s) => `translate(${px((x - sx) * k)}, ${px((y - sy) * k)}) scale(${String(s)})`;
+    const at2 = (k, s) => `translate(${px((x - sx) * k)}, ${px((y - sy) * k)}) scale(${String(s)})`;
     const frame = (opacity) => [
-      { transform: at(0, scale), opacity: 0 },
-      { transform: at(0.06, scale * 1.2), opacity, offset: 0.12 },
-      { transform: at(1, 1), opacity }
+      { transform: at2(0, scale), opacity: 0 },
+      { transform: at2(0.06, scale * 1.2), opacity, offset: 0.12 },
+      { transform: at2(1, 1), opacity }
     ];
     for (let k = zipGhosts; k >= 1; k--) {
       const opacity = [0.45, 0.28, 0.14][k - 1] ?? 0.14;
@@ -2838,8 +2863,8 @@ var FX = (() => {
     token.style.transformOrigin = "50% 50%";
     stage.play(token, frame(1), 200, start, "cubic-bezier(.45,.05,.55,1)");
     stage.play(token, [
-      { transform: at(1, 1), opacity: 1, filter: `brightness(1) drop-shadow(0 0 ${px(d * 0.16)} ${glow3})` },
-      { transform: at(1, 1.7), opacity: 0, filter: `brightness(2.2) drop-shadow(0 0 ${px(d * 0.4)} ${glow3})` }
+      { transform: at2(1, 1), opacity: 1, filter: `brightness(1) drop-shadow(0 0 ${px(d * 0.16)} ${glow3})` },
+      { transform: at2(1, 1.7), opacity: 0, filter: `brightness(2.2) drop-shadow(0 0 ${px(d * 0.4)} ${glow3})` }
     ], zipPopMs, start + 200, "ease-out", "forwards");
     for (let k = 0; k < zipSparks; k++) {
       const angle = k * Math.PI * 2 / zipSparks + index;
@@ -2960,8 +2985,8 @@ var FX = (() => {
     }), ms, start);
   }
   function totalTag(stage, o, delay) {
-    const { text, at, font = "700 24px/1.15 sans-serif", colour = "white", travel: travel2 = 24, ms = 1700, image } = o;
-    const tag = stage.stand([...at, 0, 0], {
+    const { text, at: at2, font = "700 24px/1.15 sans-serif", colour = "white", travel: travel2 = 24, ms = 1700, image } = o;
+    const tag = stage.stand([...at2, 0, 0], {
       display: "flex",
       alignItems: "center",
       gap: ".15em",
@@ -2996,22 +3021,22 @@ var FX = (() => {
     const {
       from = call.from,
       destination: to = call.to ?? call.from,
-      mode = "column",
-      count = 1,
-      stagger = mode === "zip" ? 60 : 110,
+      mode = WARP_TRANSFER_DEFAULTS.mode,
+      count = WARP_TRANSFER_DEFAULTS.count,
+      stagger = mode === "zip" ? WARP_TRANSFER_DEFAULTS.zipStagger : WARP_TRANSFER_DEFAULTS.stagger,
       image,
-      colour = "255 255 255",
+      colour = WARP_TRANSFER_DEFAULTS.colour,
       glowColour = `rgb(${colour})`,
       lightColour = "white",
-      crossing = true,
+      crossing = WARP_TRANSFER_DEFAULTS.crossing,
       totalLabel,
-      lift = 60,
+      lift = WARP_TRANSFER_DEFAULTS.lift,
       portal,
       columnUp,
       columnDown,
-      crossingDots,
-      riseMs = 260,
-      riseTravelMs = 300,
+      crossingDots = WARP_TRANSFER_DEFAULTS.crossingDots,
+      riseMs = WARP_TRANSFER_DEFAULTS.riseMs,
+      riseTravelMs = WARP_TRANSFER_DEFAULTS.riseTravelMs,
       columnLight = `linear-gradient(to top, transparent, rgb(${colour} / .75) 22%, rgb(255 255 255 / .95) 50%, rgb(${colour} / .6) 80%, transparent)`
     } = settings;
     const { counterColour, beforeLook, afterLook, popOffsets = [0.45, 0.75] } = settings;
@@ -3197,8 +3222,8 @@ var FX = (() => {
     const len = Math.max(s.dw, s.dh) * 0.42 * st.sc;
     return [st.x + Math.cos(back) * len, st.y + Math.sin(back) * len];
   };
-  function shipLayer(ctx, g, s, at, u) {
-    const st = at(u);
+  function shipLayer(ctx, g, s, at2, u) {
+    const st = at2(u);
     if (st === null) return;
     if (st.phase === "lift" || st.phase === "land") {
       const k2 = (st.sc - 1) / 0.22;
@@ -3214,7 +3239,7 @@ var FX = (() => {
     if (st.phase === "in" || st.phase === "out") {
       const pts = [];
       for (let j = 0; j <= 16; j += 1) {
-        const ps = at(u - j * 14);
+        const ps = at2(u - j * 14);
         if (ps === null || ps.phase !== st.phase) break;
         pts.push(rearOf(s, ps));
       }
@@ -3245,7 +3270,7 @@ var FX = (() => {
         ctx.restore();
       }
       for (let j = 3; j >= 1; j -= 1) {
-        const ps = at(u - j * 30);
+        const ps = at2(u - j * 30);
         if (ps !== null && ps.phase === st.phase) drawShip(ctx, s, ps, 0.28 / j * st.a, true);
       }
     }
@@ -3273,23 +3298,23 @@ var FX = (() => {
       const endpoint = o.outward ? call.from : call.to ?? call.from;
       const g2 = {
         c: o.centre ?? centre2(endpoint),
-        lift: o.lift ?? 34,
-        sq: o.squash ?? 0.62,
-        orbit: o.orbit ?? 0.2,
-        u: o.unit ?? 1,
+        lift: o.lift ?? SPIRAL_DEFAULTS.lift,
+        sq: o.squash ?? SPIRAL_DEFAULTS.squash,
+        orbit: o.orbit ?? SPIRAL_DEFAULTS.orbit,
+        u: o.unit ?? SPIRAL_DEFAULTS.unit,
         tail: o.tail ?? white,
         tip: o.tip ?? white,
-        engine: o.engine ?? "255,255,255",
-        ribbonReach: o.ribbonReach ?? 1
+        engine: o.engine ?? SPIRAL_DEFAULTS.engine,
+        ribbonReach: o.ribbonReach ?? SPIRAL_DEFAULTS.ribbonReach
       };
       const s2 = {
         img,
         p0: centre2(parked),
         dw: parked[2],
         dh: parked[3],
-        h0: o.heading ?? 0,
-        nose: o.nose ?? 0,
-        flip: o.flip ?? false,
+        h0: o.heading ?? SPIRAL_DEFAULTS.heading,
+        nose: o.nose ?? SPIRAL_DEFAULTS.nose,
+        flip: o.flip ?? SPIRAL_DEFAULTS.flip,
         afterimageFilter: o.afterimageFilter
       };
       entry2 = { g: g2, s: s2, p: pathOf(g2, s2) };
@@ -3599,26 +3624,33 @@ var FX = (() => {
       Object.assign(glow3.style, { width: diameter, height: diameter, background: p.glow.gradient ?? `radial-gradient(${colour},transparent 70%)`, mixBlendMode: "plus-lighter" });
     }
     if (p.ring) ring.style.border = `${String(p.ring.width)}px solid ${p.ring.colour}`;
+    if (p.ringCentred) ring.style.boxSizing = "border-box";
     const text = el.ownerDocument.createTextNode("");
-    el.replaceChildren(glow3, ring, text);
-    const at = (x, y) => `${String(x)}px ${String(y)}px`;
-    const stop = clock(fx, (t) => {
+    const over = el.ownerDocument.createElement("span");
+    over.style.cssText = "position:relative;z-index:1";
+    over.append(text);
+    el.replaceChildren(glow3, ring, p.glowUnder ? over : text);
+    const at2 = (x, y) => `${String(x)}px ${String(y)}px`;
+    const draw = (t) => {
       const k = ease.inOut(seg(t, a, b));
       text.data = String(t >= (a + b) / 2 ? to : from);
-      el.style.translate = at(dx * k, dy * k - Math.sin(k * Math.PI) * (p.lift ?? call.from[3] * (p.liftFactor ?? 0.25)));
+      el.style.translate = at2(dx * k, dy * k - Math.sin(k * Math.PI) * (p.lift ?? call.from[3] * (p.liftFactor ?? 0.25)));
       if (p.glow) glow3.style.opacity = String(p.glow.alpha * pulse(t, a, b + p.glow.tail, p.glow.peak));
       if (p.ring) {
         const hr = seg(t, b + p.ring.start, b + p.ring.end);
         ring.style.opacity = String(hr > 0 && hr < 1 ? 1 - hr : 0);
-        ring.style.width = ring.style.height = `${String(2 * lerp(p.ring.from, p.ring.to, ease.out(hr)))}px`;
+        ring.style.width = ring.style.height = `${String(2 * lerp(p.ring.from, p.ring.to, ease.out(hr)) + (p.ringCentred ? p.ring.width : 0))}px`;
       }
-    });
+    };
+    const stop = p.clock ? p.clock(draw) : clock(fx, draw);
     return () => {
       stop();
       glow3.remove();
       ring.remove();
+      if (p.glowUnder) el.replaceChildren(text);
       text.data = String(to);
-      el.style.translate = at(dx, dy);
+      el.style.translate = at2(dx, dy);
+      p.onEnd?.();
     };
   }
   var barFill = (fx) => {
@@ -3857,9 +3889,9 @@ var FX = (() => {
     return startPulse(el, { period: 2400, ...settings, frames: settings.frames ?? frames2 }, state);
   }
   function drawCrackle(ctx, box, t, settings) {
-    const { period, at, duration, arc: arcSettings, sparkColour = "rgba(255,255,255,1)" } = settings;
+    const { period, at: at2, duration, arc: arcSettings, sparkColour = "rgba(255,255,255,1)" } = settings;
     const loop = Math.floor(t / period);
-    const start = loop * period + at;
+    const start = loop * period + at2;
     const alpha = pulse(t, start, start + duration, 0.2);
     if (alpha <= 0) return 0;
     const random = rng(900 + loop);
@@ -3900,7 +3932,8 @@ var FX = (() => {
     crackle,
     jitter = 0,
     copySaturation,
-    popMs = 0
+    popMs = 0,
+    twinkleMs = 0
   } = {}) {
     if (!canDraw()) return () => {
     };
@@ -3987,7 +4020,7 @@ var FX = (() => {
           const angle = ((t + phaseMs) / period + i / count) * Math.PI * 2;
           const y = Math.sin(angle);
           const side = y > 0 ? 1 : 0;
-          const tw = twinkle[0] + twinkle[1] * Math.sin(t / twinkle[2] + i * twinkle[3]);
+          const tw = twinkle[0] + twinkle[1] * Math.sin((t + twinkleMs) / twinkle[2] + i * twinkle[3]);
           if (size[side] * pop > 0.5) star(ctx, w / 2 + Math.cos(angle) * rx, cy + y * ry, size[side] * pop, angle * spin, alpha[side] * tw, rgb, glowRgb);
         }
       }
@@ -4080,7 +4113,7 @@ var FX = (() => {
   }
   function registerDashLine(verbs, resolve, stage) {
     verbs.register("dash-line", (call, run) => {
-      const { from = call.actor, to, dash = 9, gap = 6, speed = 20, width = 2, colour = "currentColor", cap = "round", filter, hideInsideTarget = false } = call.step;
+      const { from = call.actor, to, dash = 9, gap = 6, speed = 20, width = 2, colour = "currentColor", cap = "round", filter, hideInsideTarget = false, loop = false, signal } = call.step;
       if (typeof to !== "string" || call.dur <= 0) return void 0;
       const rect = (id) => run.timeline.actors.find((actor) => actor.id === id)?.rect ?? stage?.(id);
       const ar = from === call.actor ? call.from : rect(from);
@@ -4122,15 +4155,21 @@ var FX = (() => {
         path.setAttribute("stroke-dashoffset", String(-speed * specTime(now - start, call) / 1e3 % (dash + gap || 1)));
       };
       paint(start);
+      const stop = () => {
+        cancelAnimationFrame(frame);
+        svg.remove();
+      };
       const tick = (now) => {
+        if (loop && !svg.isConnected) return;
         paint(now);
         frame = requestAnimationFrame(tick);
       };
       let frame = requestAnimationFrame(tick);
-      return () => {
-        cancelAnimationFrame(frame);
-        svg.remove();
-      };
+      if (loop) {
+        signal?.addEventListener("abort", stop, { once: true });
+        return () => void 0;
+      }
+      return stop;
     });
   }
 
@@ -4294,8 +4333,35 @@ var FX = (() => {
       loop = false,
       period = call.step.dur,
       sweep = SHEEN_DEFAULTS.sweep,
-      easing = SHEEN_DEFAULTS.easing
+      easing = SHEEN_DEFAULTS.easing,
+      pseudo,
+      hover = false,
+      blend
     } = call.step;
+    const from = { transform: `translateX(${travel2[0]}%)` };
+    const to = { transform: `translateX(${travel2[1]}%)` };
+    const frames2 = [{ ...from, offset: 0 }, { ...from, offset: sweep[0], easing }, { ...to, offset: sweep[1] }, { ...to, offset: 1 }];
+    const timing = { duration: loop ? period * call.dur / call.step.dur : call.dur, iterations: loop ? Infinity : 1, fill: "both" };
+    const hovered = (a) => {
+      if (!hover) return () => void 0;
+      a.pause();
+      const on = () => a.play();
+      const off = () => a.pause();
+      el.addEventListener("pointerenter", on);
+      el.addEventListener("pointerleave", off);
+      return () => {
+        el.removeEventListener("pointerenter", on);
+        el.removeEventListener("pointerleave", off);
+      };
+    };
+    if (pseudo) {
+      const a = el.animate(frames2, { ...timing, pseudoElement: pseudo });
+      const off = hovered(a);
+      return () => {
+        off();
+        a.cancel();
+      };
+    }
     const clip = el.ownerDocument.createElement("div");
     clip.setAttribute("aria-hidden", "true");
     clip.style.cssText = "position:absolute;inset:0;overflow:hidden;border-radius:inherit;pointer-events:none;container-type:size";
@@ -4307,19 +4373,15 @@ var FX = (() => {
     band.style.width = `${bandWidth}%`;
     if (background) band.style.background = background;
     else band.style.backgroundImage = `linear-gradient(90deg, transparent ${stops[0]}%, ${colour} 50%, transparent ${stops[1]}%)`;
-    const from = { transform: `translateX(${travel2[0]}%)` };
-    const to = { transform: `translateX(${travel2[1]}%)` };
+    if (blend) clip.style.mixBlendMode = blend;
     axis.append(band);
     clip.append(axis);
     el.append(clip);
     try {
-      const animation = band.animate([
-        { ...from, offset: 0 },
-        { ...from, offset: sweep[0], easing },
-        { ...to, offset: sweep[1] },
-        { ...to, offset: 1 }
-      ], { duration: loop ? period * call.dur / call.step.dur : call.dur, iterations: loop ? Infinity : 1, fill: "both" });
+      const animation = band.animate(frames2, timing);
+      const off = hovered(animation);
       return () => {
+        off();
         animation.cancel();
         clip.remove();
       };
@@ -4328,6 +4390,100 @@ var FX = (() => {
       throw error;
     }
   };
+
+  // components/effect-library/fizzle.ts
+  var noise3 = `url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='1.1' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 0.8  0 0 0 0 0.84  0 0 0 0 0.9  0 0 0 1.4 -0.35'/></filter><rect width='160' height='160' filter='url(%23n)'/></svg>")`;
+  var fizzle = ({ call, el, animate }) => {
+    const {
+      shakeMs = 520,
+      greyMs = 1e3,
+      sputterMs = 520,
+      shake = [-4, 3.5, -2.5, 1.5],
+      saturate = 0.3,
+      brightness = 0.85,
+      colour = "200 210 228",
+      grain = "calc(var(--u, 4px) * 6)"
+    } = call.step;
+    const sc = call.dur / Math.max(1, Number(call.step.dur));
+    const offsets = [0.12, 0.3, 0.48, 0.66];
+    animate([
+      { transform: "translateX(0)" },
+      ...shake.map((s, i) => ({ transform: `translateX(${String(s)}%)`, offset: offsets[i] ?? (i + 1) / (shake.length + 1) })),
+      { transform: "translateX(0)", offset: 0.84 },
+      { transform: "translateX(0)" }
+    ], { transform: el.style.transform }, { duration: Math.max(1, shakeMs * sc), easing: "ease-out" });
+    const grey = `saturate(${String(saturate)}) brightness(${String(brightness)})`;
+    animate(
+      [{ filter: "saturate(1) brightness(1)" }, { filter: grey, offset: 0.25 }, { filter: grey, offset: 0.6 }, { filter: "saturate(1) brightness(1)" }],
+      { filter: el.style.filter },
+      { duration: Math.max(1, greyMs * sc), easing: "ease-in-out" }
+    );
+    const doc = el.ownerDocument;
+    const position = el.style.position;
+    if (doc.defaultView?.getComputedStyle(el).position === "static") el.style.position = "relative";
+    const clip = doc.createElement("span");
+    clip.setAttribute("aria-hidden", "true");
+    clip.style.cssText = "position:absolute;inset:0;z-index:6;overflow:hidden;border-radius:inherit;pointer-events:none";
+    const fx = doc.createElement("span");
+    const mask = "linear-gradient(100deg, transparent 20%, #000 42%, #000 58%, transparent 80%)";
+    fx.style.cssText = "position:absolute;inset:-5% -10%;pointer-events:none;opacity:0;mix-blend-mode:screen";
+    fx.style.background = `linear-gradient(100deg, transparent 0%, rgb(${colour} / 0) 25%, rgb(${colour} / .55) 48%, rgb(${colour} / .55) 52%, rgb(${colour} / 0) 75%, transparent 100%), ${noise3}`;
+    fx.style.backgroundSize = `100% 100%, ${grain} ${grain}`;
+    fx.style.maskImage = mask;
+    fx.style.setProperty("-webkit-mask-image", mask);
+    clip.append(fx);
+    el.append(clip);
+    const a = fx.animate([
+      { transform: "translateX(-90%)", opacity: 0 },
+      { transform: "translateX(-40%)", opacity: 0.65, offset: 0.2 },
+      { transform: "translateX(-20%)", opacity: 0.2, offset: 0.35 },
+      { transform: "translateX(20%)", opacity: 0.8, offset: 0.5 },
+      { transform: "translateX(55%)", opacity: 0.3, offset: 0.7 },
+      { transform: "translateX(95%)", opacity: 0 }
+    ], { duration: Math.max(1, sputterMs * sc), easing: "ease-out", fill: "both" });
+    return () => {
+      a.cancel();
+      clip.remove();
+      el.style.position = position;
+    };
+  };
+  var sparkBurst = (fx) => {
+    const { call } = fx;
+    const { box = call.from, count = 34, colour = "white", ms = Number(call.step.dur), delay = 0, size = 8, fall = 0, z = 5, seed = 0 } = call.step;
+    const reach = call.step.reach ?? Math.max(box[2], box[3]) * 0.8;
+    const x = box[0] + box[2] / 2, y = box[1] + box[3] / 2;
+    const stage = scene(fx);
+    for (let i = 0; i < count; i++) {
+      const a = i / count * Math.PI * 2 + rand(i + seed, 14) * 0.5;
+      const d = reach * (0.55 + rand(i + seed, 15) * 0.6);
+      const s = size * (0.6 + rand(i + seed, 16) * 0.7);
+      const cx = Math.cos(a) * d, cy = Math.sin(a) * d;
+      const spark = stage.stand([x - s / 2, y - s / 2, s, s], { borderRadius: "50%", background: colour, boxShadow: `0 0 ${px(s * 1.6)} ${colour}`, zIndex: String(z), opacity: "0" });
+      stage.play(spark, [
+        { transform: "translate(0,0) scale(1.2)", opacity: 1 },
+        { transform: `translate(${px(cx * 0.8)}, ${px(cy * 0.8)}) scale(1)`, opacity: 1, offset: 0.6 },
+        { transform: `translate(${px(cx)}, ${px(cy + fall)}) scale(.3)`, opacity: 0 }
+      ], ms * (0.75 + rand(i + seed, 17) * 0.25), delay, "cubic-bezier(.2,.7,.3,1)", "forwards");
+    }
+    return stage.end;
+  };
+  var MISSION_SHINE = {
+    angle: 110,
+    bandWidth: 40,
+    easing: "ease-in-out",
+    blend: "screen",
+    background: "linear-gradient(90deg, rgba(255,240,200,0), rgba(255,246,220,.95), rgba(255,240,200,0))"
+  };
+  var MISSION_MS = { shine: 650, sparks: 900 };
+  function missionSparks(chip) {
+    const [l, t, w, h] = chip;
+    const k = Math.max(0.45, Math.min(1.4, h / 56));
+    const size = Math.max(3, 12 * k);
+    return [
+      { box: [l + 10 * k, t, h, h], count: k < 0.6 ? 22 : 34, colour: "#ffd36a", ms: MISSION_MS.sparks, reach: h * 2.4, size, fall: h * 0.4 },
+      { box: [l + w * 0.55, t, h, h], count: k < 0.6 ? 12 : 18, colour: "#fff3cf", ms: MISSION_MS.sparks, reach: h * 2, size: size * 0.58 }
+    ];
+  }
 
   // components/effect-library/slash.ts
   var slash = (ctx, t, { call }) => {
@@ -4355,10 +4511,10 @@ var FX = (() => {
       ctx.globalCompositeOperation = "lighter";
       ctx.lineCap = "round";
       for (let i = 0; i < count; i++) {
-        const at = t - i * stagger;
-        if (at <= 0 || at >= fade[1]) continue;
-        const a = 1 - seg(at, ...fade);
-        const k = ease.out(seg(at, 0, drawMs));
+        const at2 = t - i * stagger;
+        if (at2 <= 0 || at2 >= fade[1]) continue;
+        const a = 1 - seg(at2, ...fade);
+        const k = ease.out(seg(at2, 0, drawMs));
         const startX = x + w * (0.5 + (i - (count - 1) / 2) * spacing) - dx / 2;
         const startY = y + (h - dy) / 2;
         const rgb = typeof colour === "string" ? colour : colour[i % colour.length] ?? "255,255,255";
@@ -4820,10 +4976,42 @@ void main() {
     return void 0;
   };
   var css = (el, s) => void Object.assign(el.style, s);
+  var nums = (v) => Array.isArray(v) && v.length > 0 && v.every((n) => typeof n === "number") ? v : void 0;
+  var at = (c, k) => {
+    const i = k * (c.length - 1);
+    const j = Math.min(c.length - 2, Math.floor(i));
+    return c.length === 1 ? c[0] : c[j] + (c[j + 1] - c[j]) * (i - j);
+  };
+  function callerFrames(call) {
+    const frames2 = call.step["frames"];
+    if (!Array.isArray(frames2) || frames2.length === 0) return void 0;
+    const last = { ...frames2.at(-1) };
+    delete last.offset;
+    delete last.easing;
+    return [frames2, Object.fromEntries(Object.entries(last).map(([k, v]) => [k, String(v)]))];
+  }
+  function scaleCurves(call, base) {
+    const x = nums(call.step["scaleX"]);
+    const y = nums(call.step["scaleY"]);
+    if (!x && !y && !base) return void 0;
+    const n = Math.max(2, x?.length ?? 0, y?.length ?? 0, base ? 25 : 0);
+    return Array.from({ length: n }, (_, i) => {
+      const k = i / (n - 1);
+      const [bx, by] = base?.(k) ?? [1, 1];
+      return { scale: `${String((x ? at(x, k) : 1) * bx)} ${String((y ? at(y, k) : 1) * by)}` };
+    });
+  }
+  var lastScale = (kf) => {
+    const s = String(kf?.at(-1)?.["scale"] ?? "");
+    return s === "1 1" ? "" : s;
+  };
   function registerEffect(verbs, name, effect) {
     verbs.register(name, (call, run) => {
       const layer = run.context;
       const el = layer.actor(run, call.actor, call.from);
+      const zi = call.step["zIndex"];
+      if (typeof zi === "number" || typeof zi === "string") el.style.zIndex = String(zi);
+      if (typeof call.step["blend"] === "string") el.style.mixBlendMode = call.step["blend"];
       const done = [];
       const anims = /* @__PURE__ */ new Set();
       const all = () => typeof el.getAnimations === "function" ? el.getAnimations({ subtree: true }) : [];
@@ -4848,11 +5036,55 @@ void main() {
       };
     });
   }
+  function moveMore({ call, el, animate }, t) {
+    const f = call.from;
+    const tf = call.step["output"] === "transform";
+    const own = callerFrames(call);
+    if (own) {
+      animate(own[0], own[1]);
+      return () => {
+        if (!tf) place(el, t);
+        if (call.step["then"] === "hide") css(el, { visibility: "hidden" });
+      };
+    }
+    const resize = call.step["resize"] === true;
+    const dx = resize ? t[0] + t[2] / 2 - f[0] - f[2] / 2 : t[0] - f[0];
+    const dy = resize ? t[1] + t[3] / 2 - f[1] - f[3] / 2 : t[1] - f[1];
+    const pc = call.step["percent"] === true;
+    const tr = (k) => pc ? `${String(dx * k / Math.max(1, f[2]) * 100)}% ${String(dy * k / Math.max(1, f[3]) * 100)}%` : `${String(dx * k)}px ${String(dy * k)}px`;
+    const rv = call.step["rotate"];
+    const rot = typeof rv === "number" ? [0, rv] : nums(rv)?.length === 2 ? nums(rv) : void 0;
+    const sv = call.step["scale"];
+    const ent = typeof sv === "number" ? [sv, call.step["hold"] === true ? sv : 1] : nums(sv)?.length === 2 ? nums(sv) : void 0;
+    const kx = resize ? t[2] / Math.max(1, f[2]) : 1, ky = resize ? t[3] / Math.max(1, f[3]) : 1;
+    const sizeAt = (k) => {
+      const s = ent ? ent[0] + (ent[1] - ent[0]) * k : 1;
+      return [s * (1 + (kx - 1) * k), s * (1 + (ky - 1) * k)];
+    };
+    const curves = scaleCurves(call, ent || resize ? sizeAt : void 0);
+    const n = Math.max(2, curves?.length ?? 0);
+    const frames2 = Array.from({ length: n }, (_, i) => {
+      const k = i / (n - 1);
+      const sc = String(curves?.[i]?.["scale"] ?? "1 1").replace(" ", ", ");
+      const deg2 = rot ? rot[0] + (rot[1] - rot[0]) * k : 0;
+      if (tf) return { transform: `translate(${tr(k).replace(" ", ", ")}) rotate(${String(deg2)}deg) scale(${sc})` };
+      return { translate: tr(k), ...rot ? { rotate: `${String(deg2)}deg` } : {}, ...curves ? { scale: curves[i]?.["scale"] } : {} };
+    });
+    const last = frames2.at(-1);
+    const end = tf ? { transform: String(last.transform) } : { translate: "", ...rot ? { rotate: rot[1] ? `${String(rot[1])}deg` : "" } : {}, ...curves ? { scale: lastScale(scaleCurves(call, () => [ent?.[1] ?? 1, ent?.[1] ?? 1])) } : {} };
+    animate(frames2, end, { easing: EASE[String(call.step["ease"])] ?? (typeof call.step["ease"] === "string" ? call.step["ease"] : "ease-in-out") });
+    return () => {
+      if (!tf) place(el, t);
+      if (call.step["then"] === "hide") css(el, { visibility: "hidden" });
+    };
+  }
   var EASE = { in: "ease-in", out: "ease-out", "in-out": "ease-in-out", linear: "linear" };
   var BUILT_IN = {
-    move: ({ call, el, animate }) => {
+    move: (fx) => {
+      const { call, el, animate } = fx;
       const t = call.to;
       if (!t) return void 0;
+      if (["frames", "scaleX", "scaleY", "percent", "rotate", "resize"].some((k) => call.step[k] !== void 0) || call.step["output"] === "transform") return moveMore(fx, t);
       const f = call.from;
       const e = entry(call);
       animate(
@@ -4916,38 +5148,80 @@ void main() {
     flip: ({ call, el, animate }) => {
       const target = !el.hasAttribute("data-fx-flipped");
       const label = call.step["label"];
+      const faces = Array.isArray(call.step["faces"]) ? call.step["faces"].map((s) => typeof s === "string" ? el.querySelector(s) : null) : [];
+      const show = (back) => {
+        if (faces[0]) faces[0].style.visibility = back ? "hidden" : "visible";
+        if (faces[1]) faces[1].style.visibility = back ? "visible" : "hidden";
+      };
+      if (faces.length > 0) show(!target);
       const swap = () => {
         el.toggleAttribute("data-fx-flipped", target);
         if (typeof label === "string") el.setAttribute("data-fx-label", label);
+        if (faces.length > 0) show(target);
       };
       if (call.step["squash"] === false) {
         swap();
         return void 0;
       }
+      const sc = call.dur / Math.max(1, Number(call.step.dur));
+      const tm = call.step["turnMs"];
+      const T = typeof tm === "number" ? Math.min(tm * sc, call.dur) : call.dur;
+      const D = typeof call.step["turnDelay"] === "number" ? call.step["turnDelay"] * sc : 0;
+      const turn = T === call.dur && D === 0 ? void 0 : { duration: Math.max(T, 1), delay: D };
+      const pivot = call.step["pivot"];
+      const origin = typeof pivot === "string" ? { transformOrigin: pivot } : {};
       const hm = call.step["holdMs"];
-      const h = typeof hm === "number" && call.dur > 0 ? Math.min(Math.max(hm, 0), call.dur * 0.8) : 0;
-      const mid = h + (call.dur - h) / 2;
+      const h = typeof hm === "number" && T > 0 ? Math.min(Math.max(hm, 0), T * 0.8) : 0;
+      const mid = D + h + (T - h) / 2;
       const timer = setTimeout(swap, mid);
       const vertical = call.step["axis"] === "y";
       const direction = call.step["direction"];
-      if (direction === 1 || direction === -1) {
+      const own = callerFrames(call);
+      if (own) animate(own[0], { transform: "none", ...own[1] }, turn);
+      else if (direction === 1 || direction === -1) {
         const perspective = typeof call.step["perspective"] === "number" ? call.step["perspective"] : 800;
         const transform = (degrees) => `perspective(${perspective}px) rotate${vertical ? "X" : "Y"}(${degrees}deg)`;
         const ease2 = call.step["ease"];
         const easing = typeof ease2 === "string" ? EASE[ease2] ?? ease2 : "ease-in-out";
-        const edge2 = call.dur > 0 ? mid / call.dur : 0.5;
-        animate([
-          { transform: transform(0), easing },
-          ...h > 0 ? [{ transform: transform(0), offset: h / call.dur, easing }] : [],
-          { transform: transform(direction * 90), offset: edge2 },
-          { transform: transform(-direction * 90), offset: edge2, easing },
-          { transform: transform(0) }
-        ], { transform: "none" }, { easing: "linear" });
+        const eases = Array.isArray(call.step["eases"]) ? call.step["eases"].map((e) => typeof e === "string" ? EASE[e] ?? e : easing) : [];
+        const [e1 = easing, e2 = easing] = eases;
+        const over = typeof call.step["overshoot"] === "number" ? call.step["overshoot"] : 0;
+        const edge2 = T > 0 ? (mid - D) / T : 0.5;
+        const o = edge2 + (1 - edge2) * 0.8;
+        animate(call.step["continuous"] === true ? [
+          { transform: transform(0), easing, ...origin },
+          ...h > 0 ? [{ transform: transform(0), offset: h / T, easing, ...origin }] : [],
+          { transform: transform(direction * 180), ...origin }
+        ] : [
+          { transform: transform(0), easing: e1, ...origin },
+          ...h > 0 ? [{ transform: transform(0), offset: h / T, easing: e1, ...origin }] : [],
+          { transform: transform(direction * 90), offset: edge2, ...origin },
+          { transform: transform(-direction * 90), offset: edge2, easing: e2, ...origin },
+          ...over ? [{ transform: transform(direction * over), offset: o, easing: "ease-in-out", ...origin }] : [],
+          { transform: transform(0), ...origin }
+        ], { transform: call.step["continuous"] === true ? transform(direction * 180) : "none" }, { easing: "linear", ...turn });
       } else {
         const scale = vertical ? "scaleY" : "scaleX";
-        const rest = { transform: `${scale}(1)` };
-        const edge2 = { transform: `${scale}(0)` };
-        animate(h > 0 ? [rest, { ...rest, offset: h / call.dur }, { ...edge2, offset: mid / call.dur }, rest] : [rest, edge2, rest], { transform: "none" });
+        const rest = { transform: `${scale}(1)`, ...origin };
+        const edge2 = { transform: `${scale}(0)`, ...origin };
+        animate(h > 0 ? [rest, { ...rest, offset: h / T }, { ...edge2, offset: (mid - D) / T }, rest] : [rest, edge2, rest], { transform: "none" }, turn);
+      }
+      const curves = scaleCurves(call);
+      if (curves) animate(curves, { scale: lastScale(curves) }, { easing: "linear" });
+      const glow3 = call.step["glow"];
+      if (typeof glow3 === "string") {
+        const k = T > 0 ? (mid - D) / T : 0.5;
+        animate([{ boxShadow: "none" }, { boxShadow: glow3, offset: k }, { boxShadow: "none" }], { boxShadow: el.style.boxShadow }, { easing: "linear", ...turn });
+      }
+      const fl = call.step["filter"];
+      const ff = Array.isArray(fl) ? { frames: fl } : fl && typeof fl === "object" ? fl : void 0;
+      if (ff?.frames.length) {
+        animate(ff.frames.map((filter) => ({ filter })), { filter: el.style.filter }, {
+          ...turn ?? {},
+          ...ff.ms !== void 0 ? { duration: Math.max(1, ff.ms * sc) } : {},
+          ...ff.delay !== void 0 ? { delay: ff.delay * sc } : {},
+          ...ff.easing ? { easing: EASE[ff.easing] ?? ff.easing } : {}
+        });
       }
       return () => {
         clearTimeout(timer);
@@ -4975,6 +5249,14 @@ void main() {
       const hold = call.step["hold"];
       const off = typeof colour === "string" ? "0 0 0 0 transparent" : "var(--fx-glow-off,0 0 0 0)";
       const on = typeof colour === "string" ? (Array.isArray(shadows) ? shadows.filter((s) => typeof s === "string") : ["0 0 24px 6px"]).map((s) => `${s} ${colour}`).join(",") : "var(--fx-glow,0 0 24px 6px)";
+      if (call.step["latch"] === true) {
+        animate([{ boxShadow: off }, { boxShadow: on }], { boxShadow: on });
+        return void 0;
+      }
+      if (call.step["release"] === true) {
+        animate([{ boxShadow: el.style.boxShadow || on }, { boxShadow: off }], { boxShadow: "" });
+        return void 0;
+      }
       const span = typeof hold === "number" ? Math.max(0, Math.min(1, hold)) : 0;
       const pulse2 = span > 0 ? [{ boxShadow: on, offset: (1 - span) / 2 }, { boxShadow: on, offset: (1 + span) / 2 }] : [{ boxShadow: on }];
       animate([{ boxShadow: off }, ...pulse2, { boxShadow: off }], { boxShadow: el.style.boxShadow });
@@ -5073,6 +5355,8 @@ void main() {
     const pixels = verbs.get("debris");
     verbs.register("debris", (call, run) => (call.step["dom"] ? pieces : pixels)?.(call, run));
     registerEffect(verbs, "sheen", sheen);
+    registerEffect(verbs, "fizzle", fizzle);
+    registerEffect(verbs, "spark-burst", sparkBurst);
     registerCanvasEffect(verbs, "slash", slash);
     registerCrumple(verbs);
     return createEffectLayer(o);
@@ -5139,8 +5423,18 @@ void main() {
         update();
         return;
       }
+      frame = requestAnimationFrame(tick);
+      if (o.fps && now - last < 1e3 / o.fps - 1) return;
+      if (o.covered?.()) {
+        last = now;
+        return;
+      }
       t += (now - last) / s;
       last = now;
+      paint(t);
+    };
+    const paint = (at2) => {
+      if (!canvas || !ctx) return;
       const w = el.clientWidth;
       const h = el.clientHeight;
       if (canvas.width !== w || canvas.height !== h) {
@@ -5148,8 +5442,7 @@ void main() {
         canvas.height = h;
       }
       ctx.clearRect(0, 0, w, h);
-      o.draw?.(ctx, t, w, h);
-      frame = requestAnimationFrame(tick);
+      o.draw?.(ctx, at2, w, h);
     };
     const observer = typeof ResizeObserver === "function" ? new ResizeObserver(() => update()) : void 0;
     function update() {
@@ -5160,7 +5453,8 @@ void main() {
         seen = target;
       }
       const s = o.speed();
-      if (!target || typeof s !== "number" || !(s > 0)) {
+      const still = typeof s !== "number" || !(s > 0);
+      if (!target || still && !(o.still === true && s === "instant")) {
         el.style.display = "none";
         cancelAnimationFrame(frame);
         frame = 0;
@@ -5168,6 +5462,13 @@ void main() {
       }
       const r = target.getBoundingClientRect();
       Object.assign(el.style, { display: "block", left: `${String(r.left)}px`, top: `${String(r.top)}px`, width: `${String(r.width)}px`, height: `${String(r.height)}px` });
+      if (still) {
+        cancelAnimationFrame(frame);
+        frame = 0;
+        t = 0;
+        paint(0);
+        return;
+      }
       if (ctx && !frame) {
         last = performance.now();
         frame = requestAnimationFrame(tick);
@@ -5383,9 +5684,9 @@ void main() {
     for (const e of events) {
       const b = table[e.kind]?.(e) ?? o.fallback?.(e);
       if (!b) continue;
-      const at = o.rectOf?.(b.anchor);
-      if (o.rectOf && !at) skipped.push(b);
-      else beats.push(at ? { ...b, at } : b);
+      const at2 = o.rectOf?.(b.anchor);
+      if (o.rectOf && !at2) skipped.push(b);
+      else beats.push(at2 ? { ...b, at: at2 } : b);
     }
     return { beats, skipped };
   }
@@ -5526,9 +5827,9 @@ void main() {
   var movements = (prev, next, o) => entryMotions(placements(prev, o), placements(next, o), o);
 
   // components/effect-library/camera-pull.ts
-  function cameraScaleAt(t, at, end, { scale = 1.05, enter = 400, exit = 250, speed = 1 } = {}) {
+  function cameraScaleAt(t, at2, end, { scale = 1.05, enter = 400, exit = 250, speed = 1 } = {}) {
     if (speed === 0 || speed === "instant") return 1;
-    return 1 + (scale - 1) * ease.inOut(seg(t, at, at + enter)) * (1 - ease.inOut(seg(t, end - exit, end)));
+    return 1 + (scale - 1) * ease.inOut(seg(t, at2, at2 + enter)) * (1 - ease.inOut(seg(t, end - exit, end)));
   }
   function cameraPush(root, onChange, { speed = 1 } = {}) {
     const { transform, transformOrigin } = root.style;
@@ -5562,7 +5863,8 @@ void main() {
     dimMs = pullMs / 2,
     dimBackground = "#000",
     releaseMs = 400,
-    speed = 1
+    speed = 1,
+    easeOnCut = false
   } = {}) {
     if (speed === 0 || speed === "instant") {
       const done = Promise.resolve();
@@ -5597,19 +5899,18 @@ void main() {
     };
     void play(root, [{ transform: "scale(1)" }, { transform: scaled }], pullMs, "ease-in-out");
     const dimmed = play(shade, [{ opacity: 0 }, { opacity: dim }], dimMs, "ease-in");
-    return Object.assign(end, {
-      dimmed,
-      release() {
-        if (ended) return Promise.resolve();
-        if (release) return release;
-        const returning = [
-          play(root, [{ transform: scaled }, { transform: "scale(1)" }], releaseMs, "ease-out"),
-          play(shade, [{ opacity: dim }, { opacity: 0 }], releaseMs, "ease-out")
-        ];
-        release = Promise.all(returning).then(end);
-        return release;
-      }
-    });
+    const back = () => {
+      if (ended) return Promise.resolve();
+      if (release) return release;
+      const from = (el, prop, fallback) => (easeOnCut ? getComputedStyle(el)[prop] : "") || fallback;
+      const returning = [
+        play(root, [{ transform: from(root, "transform", scaled) }, { transform: "scale(1)" }], releaseMs, "ease-out"),
+        play(shade, [{ opacity: from(shade, "opacity", String(dim)) }, { opacity: 0 }], releaseMs, "ease-out")
+      ];
+      release = Promise.all(returning).then(end);
+      return release;
+    };
+    return Object.assign(easeOnCut ? () => void back() : end, { dimmed, release: back });
   }
 
   // components/effect-library/letterbox-banner.ts
@@ -5647,14 +5948,14 @@ void main() {
     const stamp2 = box(hud, { top: "0", height, display: "grid", placeItems: "center", color: "#fff", font: "700 1rem system-ui", ...textStyle });
     stamp2.textContent = text.toUpperCase();
     return {
-      frame(t, at, end, camera) {
-        const k = ease.out(seg(t, at, at + enter)) * (1 - ease.inOut(seg(t, end - exit, end)));
+      frame(t, at2, end, camera) {
+        const k = ease.out(seg(t, at2, at2 + enter)) * (1 - ease.inOut(seg(t, end - exit, end)));
         hud.style.opacity = k === 0 ? "0" : "1";
         top.style.transform = `translateY(${String(-(1 - k) * barHeight)}px)`;
         bottom.style.transform = `translateY(${String((1 - k) * barHeight)}px)`;
         vignette.style.opacity = String(k);
-        const look = textFrames && bannerKeyAt(textFrames, t - at);
-        stamp2.style.opacity = String((look ? look.opacity : seg(t, at + textIn[0], at + textIn[1]) * (1 - seg(t, at + textOut[0], at + textOut[1]))) * k);
+        const look = textFrames && bannerKeyAt(textFrames, t - at2);
+        stamp2.style.opacity = String((look ? look.opacity : seg(t, at2 + textIn[0], at2 + textIn[1]) * (1 - seg(t, at2 + textOut[0], at2 + textOut[1]))) * k);
         if (look) stamp2.style.transform = `scale(${String(look.scale)})`;
         const scale = camera?.scale ?? 1;
         const [dx, dy] = camera?.shake ?? [0, 0];
@@ -5961,15 +6262,15 @@ void main() {
       const retiredAge = co.retired === void 0 ? void 0 : (co.retired - co.born) / scale;
       const dim = 1 - cohortDim * (n - 1 - rank);
       for (const p of driftPieces(co.id, settings, survivors)) {
-        const at = driftPoseAt(p, age, retiredAge, settings);
-        if (at === null || at.alpha <= cutoff) continue;
-        const x = cx + at.x * o.u;
-        const y = cy + at.y * o.u;
-        const size = at.size * o.u;
+        const at2 = driftPoseAt(p, age, retiredAge, settings);
+        if (at2 === null || at2.alpha <= cutoff) continue;
+        const x = cx + at2.x * o.u;
+        const y = cy + at2.y * o.u;
+        const size = at2.size * o.u;
         const edge2 = Math.max(Math.abs(x - cx) / (cx - size / 2 || 1), Math.abs(y - cy) / (cy - size / 2 || 1));
-        const alpha = at.alpha * dim * (1 - seg(edge2, edgeFade, 1));
+        const alpha = at2.alpha * dim * (1 - seg(edge2, edgeFade, 1));
         if (alpha <= cutoff) continue;
-        drawDriftPiece(c, pic, shards, p.triangle, x, y, size, at.rot, alpha);
+        drawDriftPiece(c, pic, shards, p.triangle, x, y, size, at2.rot, alpha);
         if (p.ember) {
           c.save();
           c.globalCompositeOperation = "lighter";
@@ -6025,9 +6326,9 @@ void main() {
   var isPoint = (v) => Array.isArray(v) && v.length === 2 && v.every((n) => typeof n === "number");
   var centred = (c, w, h) => [c[0] - w / 2, c[1] - h / 2, w, h];
   var centreOf = (r) => [r[0] + r[2] / 2, r[1] + r[3] / 2];
-  function place2(at, stage, w, h) {
-    if (isPoint(at)) return centred(at, w ?? 0, h ?? 0);
-    const z = stage(at);
+  function place2(at2, stage, w, h) {
+    if (isPoint(at2)) return centred(at2, w ?? 0, h ?? 0);
+    const z = stage(at2);
     return z && centred(centreOf(z), w ?? z[2], h ?? z[3]);
   }
   function buildTimeline(spec, stage, factor = 1, pace = Math.max(1, factor)) {
@@ -6083,7 +6384,7 @@ void main() {
     }
     return seen;
   }
-  function flyBoard(swap, before, factor, at, open2) {
+  function flyBoard(swap, before, factor, at2, open2) {
     const after = measureBoard(swap);
     const duration = (swap.dur ?? 420) * factor;
     if (!(duration > 0)) return 0;
@@ -6104,7 +6405,7 @@ void main() {
       };
       open2.add(finish);
       end = Math.max(end, duration + delay);
-      at(duration + delay, finish);
+      at2(duration + delay, finish);
     };
     const ghostAt = (ghost, rect) => {
       ghost.removeAttribute("data-motion-key");
@@ -6360,7 +6661,7 @@ void main() {
       const me = { item, run, timers, open: open2, leaving: false };
       live.add(me);
       if (!parallel) cur = me;
-      const at = (ms, f) => {
+      const at2 = (ms, f) => {
         const t = setTimeout(() => {
           timers.delete(t);
           f();
@@ -6388,7 +6689,7 @@ void main() {
           const e = Math.max(elapsed, ...going.map((s) => s.end));
           const base = e - elapsed - Math.min(...runs2.map((s) => s.call.t));
           const ends = runs2.map((s) => put(s.call, base, s));
-          at(Math.max(e - elapsed, ...ends), () => {
+          at2(Math.max(e - elapsed, ...ends), () => {
             finish(me, "skipped");
             next();
             emit();
@@ -6398,7 +6699,7 @@ void main() {
         const put = (call, base, step) => {
           let done;
           step.end = call.t + call.dur + base + Date.now() - t0;
-          at(call.t + base, () => {
+          at2(call.t + base, () => {
             step.started = true;
             safe(`${spec.id} ${call.verb}`, () => {
               done = o.verbs.get(call.verb)?.(call, run);
@@ -6406,7 +6707,7 @@ void main() {
             if (done !== void 0) open2.add(done);
           });
           if (!(item.keep && call.t + call.dur >= run.timeline.ms))
-            step.timer = at(call.t + call.dur + base, () => {
+            step.timer = at2(call.t + call.dur + base, () => {
               const d = done;
               if (d === void 0) return;
               open2.delete(d);
@@ -6421,15 +6722,15 @@ void main() {
         }
         const leave = item.gate && run.timeline.calls.find((c) => c.step.leave === true);
         if (leave)
-          at(leave.t, () => {
+          at2(leave.t, () => {
             me.leaving = true;
             emit();
           });
         for (const c of run.timeline.cues)
-          at(c.t, () => {
+          at2(c.t, () => {
             cue(c.cue, spec.id);
           });
-        at(Math.max(run.timeline.ms, ...run.timeline.cues.map((c) => swap ? c.t : 0)), () => {
+        at2(Math.max(run.timeline.ms, ...run.timeline.cues.map((c) => swap ? c.t : 0)), () => {
           if (!live.has(me)) return;
           reached(spec.id);
           const delay = (spec.autoContinueMs ?? 0) * factor;
@@ -6471,7 +6772,7 @@ void main() {
         const cancel = waitForRects(spec, stage, () => {
           if (!live.has(me)) return;
           run.timeline = build();
-          if (swap && before) run.timeline.ms = Math.max(run.timeline.ms, flyBoard(swap, before, factor, at, open2));
+          if (swap && before) run.timeline.ms = Math.max(run.timeline.ms, flyBoard(swap, before, factor, at2, open2));
           schedule();
         }, failRedraw);
         if (live.has(me)) open2.add(cancel);

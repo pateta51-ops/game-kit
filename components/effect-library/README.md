@@ -54,14 +54,37 @@ Tests: `particles.test.ts`, `count.test.ts` (node); `effects.e2e.test.ts` (Chrom
 - `startPulse` / `pulse`: `pseudo` (`::before`, `::after`), `delay`, `once`, `keepReduced`.
 - `bannerAt(lines, t, { frames })` adds the newest line's `opacity` and `scale` (`frames`: `{ at, opacity, scale }`, `at` ms since it appeared); `letterboxBanner({ textFrames })` drives the text the same way from the banner's start. `bannerKeyAt(frames, t)` is the interpolation.
 
+### More options (K436)
+
+All opt-in; without them every verb plays as before.
+- `bar-fill` `pin`: `glowUnder` (the number draws over the glow), `ringCentred` (the ring's radius is the middle of its stroke), `clock(draw)` (the caller's frame clock drives the pin with step ms and returns its stop; default the kit's rAF), `onEnd()` (once, on the end or a skip).
+- `idle` orbit `twinkleMs`: ms added to the twinkle's clock only, apart from the pop and the orbit (Warp's stun stars).
+- Layer: `createEffectLayer({ isolate: false })` is no stacking context (`display: contents`; parts place against `parent`), so parts blend with the board; an `EffectActor`'s `zIndex` and `blend` (via `layer.start(run, actors)`), or step `zIndex` and `blend`, set them on the clone.
+- `projectile` `headEarly` shows the head at the source during `delay`; `shimmer` `rippleEarly` shows the ripple ring's first frame during `delay`; `ring-pulse` `boxSizing`.
+- `fizzle` (new; STCC's fizzled card): the actor shakes (`shake` % offsets, `shakeMs` 520), greys (`saturate` 0.3, `brightness` 0.85, `greyMs` 1000) and a clipped, screen-blended noise sputter crosses it (`colour` RGB, `grain` tile size, `sputterMs` 520). All ms are spec ms.
+- `spark-burst` (new): `count` sparks fly out of the middle of `box` (default the actor) and fade: `colour`, `ms`, `delay`, `reach`, `size`, `fall` (px), `z`, `seed`. Presets from STCC's mission fanfare: `missionSparks(chipBox)` gives the gold and pale bursts; `MISSION_SHINE` is `sheen` settings (play over `MISSION_MS.shine`, 650 ms).
+- `createAmbience`: `fps` caps the drawn frames, `covered()` true draws nothing and holds `t`, `still: true` shows one frame drawn at t = 0 at speed `'instant'` and stops.
+- Defaults, exported: `WARP_TRANSFER_DEFAULTS`, `SPIRAL_DEFAULTS`, `PROJECTILE_DEFAULTS`, `SHIELD_BUBBLE_DEFAULTS`, `CURVED_BEAM_DEFAULTS`; the effects and the energy tuner read them.
+- `move`: `frames` (caller keyframes, the last is the end style), `scaleX` / `scaleY` (curves: numbers spread over the step), `percent: true` (translate in % of the actor's size), `rotate` (deg: a number ends there, `[from, to]`), `resize: true` (centre to centre onto the target's size), `output: 'transform'` (writes only `transform`, never left/top, `translate`, `rotate` or `scale`, so a separate hover `scale` composes; the end state keeps the last transform).
+- `flip`: `frames` (caller keyframes), `scaleX` / `scaleY` curves (on `scale`), `faces: [front, back]` (selectors in the actor; the back shows from the swap), `pivot` (transform-origin, e.g. `0 50%`), `eases: [first half, second half]`, `overshoot` (deg past flat before it settles), `glow` (a CSS box-shadow peaking edge-on), `filter` (CSS filters over the turn, or `{ frames, ms, delay, easing }`), `turnMs` and `turnDelay` (the turn's own time in the step), and with `direction`, `continuous: true` (one ease from 0 to 180 deg; ends turned).
+- `glow`: `latch: true` turns on and stays on; a later `glow` step with `release: true` fades it.
+- `dissolve` `standInAt`: ms from the step start before the stand-in shows (the live piece shows until the break).
+- `cameraPull` `easeOnCut: true`: the returned cut eases back over `releaseMs` from where it is, so the dim eases out.
+- `dash-line` `loop: true`: the line stays past its step until `signal` aborts or the layer is cleared.
+- `sheen`: `pseudo` (`::before` / `::after`: animates the actor's own pseudo-element, the game's CSS draws the band), `hover: true` (plays while the pointer is over the actor, pauses where it is when it leaves), `blend`.
+- Not done here: `arc-move` and the other flights take no `rotate` or transform-only output yet.
+
 ## Use it in 10 lines
 
 ```ts
-import { createEffectLayer } from '../kit/effect-library/index'
+import { createEffectLayer, missionSparks, MISSION_SHINE } from '../kit/effect-library/index'
 
 const layer = createEffectLayer() // the DOM layer the motion frame draws the twelve verbs on
 document.body.append(layer.el)
 layer.clear() // empties it between beats
+const blended = createEffectLayer({ isolate: false }) // K436: parts may screen-blend with the board
+const [gold, pale] = missionSparks([0, 0, 200, 56]) // `spark-burst` steps; MISSION_SHINE is a `sheen` step
+console.log(blended.el, gold.count, pale.colour, MISSION_SHINE.blend)
 ```
 
 Look file (opt-in): `looks/rise-pulse.css`, class `fx-rise-pulse` on a positioned element over a card plays a red-orange pulse once (none under reduced motion); variables `--buff-ms`, `--card-w`, `--motion-scale`.
