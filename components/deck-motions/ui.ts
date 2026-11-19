@@ -101,11 +101,15 @@ const REST = 'translate(0px, 0px) scale(1, 1)';
  * the piles in `shuffled` riffle. Call once the new view is rendered (the places exist). Which moves is the game's call from
  * its view diff; `planDeal` and `cycleMove` give the timing and the deck cycle.
  */
-export function dealFrom(moves: readonly Move[], o: DeckMotionOpts & { shuffled?: readonly string[]; departs?: boolean } = {}): Dealing {
+export function dealFrom(moves: readonly Move[], o: DeckMotionOpts & { shuffled?: readonly string[]; departs?: boolean; onCardStart?: (index: number, id: string) => void; signal?: AbortSignal } = {}): Dealing {
   const speed = reduced() ? 0 : (o.speed ?? 1);
   const plan = planDeal(moves, { speed, shuffled: o.shuffled, departs: o.departs, riffleMs: o.durations ? sum(o.durations) : undefined });
   const face = o.face ?? ((_id: string, el: HTMLElement) => el.cloneNode(true) as HTMLElement);
   const ends: Promise<void>[] = [];
+  const mine: Animation[] = [];
+  const mineTimers = new Set<{ t: number; r: () => void }>();
+  const start = (move: Move) => { o.onCardStart?.(moves.indexOf(move), move.id); };
+  if (!plan.timed.length) for (const m of moves) start(m);
   for (const t of plan.timed) {
     const { move } = t;
     const pileEl = resolveAt(move.pile);
@@ -115,6 +119,14 @@ export function dealFrom(moves: readonly Move[], o: DeckMotionOpts & { shuffled?
     const ar = atEl.getBoundingClientRect();
     const [from, to] = move.dir === 'out' ? [pr, ar] : [ar, pr];
     const start = `translate(${String(from.left - to.left)}px, ${String(from.top - to.top)}px) scale(${String(from.width / (to.width || 1))}, ${String(from.height / (to.height || 1))})`;
+    if (o.onCardStart) {
+      if (t.delay > 0) {
+        const x = { t: 0, r: () => { start(move); } };
+        x.t = window.setTimeout(() => { timers.delete(x); mineTimers.delete(x); start(move); }, t.delay);
+        timers.add(x);
+        mineTimers.add(x);
+      } else start(move);
+    }
     const stand = (el: HTMLElement) => {
       el.removeAttribute('data-card-id');
       el.dataset['motionStandin'] = '';
@@ -122,7 +134,9 @@ export function dealFrom(moves: readonly Move[], o: DeckMotionOpts & { shuffled?
       return el;
     };
     const fly = (el: HTMLElement, frames: Keyframe[]) => {
-      ends.push(track(el.animate(frames, { duration: t.ms, delay: t.delay, fill: 'both', easing: 'ease-in-out' }), el));
+      const a = el.animate(frames, { duration: t.ms, delay: t.delay, fill: 'both', easing: 'ease-in-out' });
+      mine.push(a);
+      ends.push(track(a, el));
     };
     if (move.faceDown && move.dir === 'out') {
       const rot = o.axis === 'y' ? 'rotateX' : 'rotateY';
@@ -137,6 +151,7 @@ export function dealFrom(moves: readonly Move[], o: DeckMotionOpts & { shuffled?
     const mid = t.lift !== 1 ? [{ transform: `${REST} scale(${String(t.lift)})`, offset: 0.5 }] : [];
     fly(el, [{ transform: start, offset: 0 }, ...mid, { transform: REST, offset: 1, ...(t.vanish ? { opacity: 0 } : {}) }]);
   }
+  let stopRif = () => undefined as void;
   const rif = plan.shuffling.length
     ? new Promise<void>((r) => {
         const x = { t: 0, r };
@@ -145,8 +160,17 @@ export function dealFrom(moves: readonly Move[], o: DeckMotionOpts & { shuffled?
           void shuffleDecks(plan.shuffling, speed, o).then(r);
         }, plan.shuffleAt);
         timers.add(x);
+        stopRif = () => { window.clearTimeout(x.t); timers.delete(x); r(); };
       })
     : Promise.resolve();
+  const abort = () => {
+    for (const x of [...mineTimers]) { window.clearTimeout(x.t); timers.delete(x); mineTimers.delete(x); }
+    stopRif();
+    for (const a of mine) a.finish();
+    for (const p of plan.shuffling) { const at = pileElement(p); if (at) riffling.get(at)?.finish(); }
+  };
+  if (o.signal?.aborted) abort();
+  else o.signal?.addEventListener('abort', abort, { once: true });
   return { plan, done: Promise.all([...ends, rif]).then(() => undefined) };
 }
 
