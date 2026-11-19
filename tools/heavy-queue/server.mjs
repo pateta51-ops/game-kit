@@ -23,7 +23,7 @@ export function isHeavy(args) {
   const s = py && args[1] === '-m' ? args[2] : args[1];
   const t = stem(s);
   if (/^(vitest|playwright|pytest|puppeteer)$/.test(t)) return true;
-  if (/(^|\/)(vitest|playwright)\/(bin|cli|dist)/.test(s ?? '')) return true;
+  if (/(^|\/)(vitest|playwright|puppeteer)\/(bin|cli|dist|lib)/.test(s ?? '')) return true;
   if (t === 'vite' || /(^|\/)vite\/bin\//.test(s ?? '')) return args.includes('build');
   if (t === 'tsc' || /(^|\/)typescript\/bin\/tsc/.test(s ?? '')) return args.includes('-b') || args.includes('--build');
   return false;
