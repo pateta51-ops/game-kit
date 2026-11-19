@@ -108,13 +108,15 @@ export interface FlipOpts {
   vanish?: boolean | undefined;
   /** K443: the lift's shape: 0..1 across the turn gives the share of the lift (default a sine: 0, 1 at the middle, 0). */
   liftCurve?: ((u: number) => number) | undefined;
+  /** K445: resize-box mode: the keyframes animate left/top/width/height from `from` to `to` (px) and carry no perspective(): the parent holds one, fixed (`perspective` of the result, default 4x the start height). */
+  box?: { from: { left: number; top: number; width: number; height: number }; to: { left: number; top: number; width: number; height: number } } | undefined;
 }
 
 /**
  * K406: a real turn-over from `from` (offset and scale of the start against the rest place) to rest. Both sides fly the same
  * path; the first turns 0 to 90 degrees about its own axis with perspective, the second -90 to 0; they swap at edge-on, lifting.
  */
-export function flipFrames(from: { x: number; y: number; sx: number; sy: number; rot?: number | undefined; rest?: number | undefined }, o: FlipOpts = {}): { first: Keyframe[]; second: Keyframe[] } {
+export function flipFrames(from: { x: number; y: number; sx: number; sy: number; rot?: number | undefined; rest?: number | undefined }, o: FlipOpts = {}): { first: Keyframe[]; second: Keyframe[]; perspective: number } {
   const s = Math.min(Math.max(o.start ?? FLIP_START, 0), 1);
   const e = Math.max(Math.min(Math.max(o.end ?? FLIP_END, 0), 1), s);
   const m = (s + e) / 2;
@@ -123,16 +125,22 @@ export function flipFrames(from: { x: number; y: number; sx: number; sy: number;
   const rot = o.axis === 'y' ? 'rotateX' : 'rotateY';
   const sg = o.direction ?? 1;
   const n = (v: number) => String(Math.round(v * 1e4) / 1e4);
-  const at = (p: number, deg: number) => {
+  const bx = o.box;
+  const persp = o.perspective ?? (bx ? bx.from.height * 4 : FLIP_PERSPECTIVE);
+  const at = (p: number, deg: number): Keyframe => {
     const q = 1 - p;
     const l = e > s && p > s && p < e ? 1 + (lift - 1) * (o.liftCurve ? o.liftCurve((p - s) / (e - s)) : Math.sin(Math.PI * (p - s) / (e - s))) : 1;
-    return `translate(${n(from.x * q)}px, ${n(from.y * q)}px) scale(${n(from.sx * q + p)}, ${n(from.sy * q + p)}) scale(${n(l)})${from.rot || from.rest ? ` rotate(${n((from.rot ?? 0) * q + (from.rest ?? 0) * p)}deg)` : ''} perspective(${n(o.perspective ?? FLIP_PERSPECTIVE)}px) ${rot}(${n(deg * sg)}deg)`;
+    if (bx) {
+      const b = (k: 'left' | 'top' | 'width' | 'height') => `${n(bx.from[k] * q + bx.to[k] * p)}px`;
+      return { left: b('left'), top: b('top'), width: b('width'), height: b('height'), transform: `scale(${n(l)})${from.rot || from.rest ? ` rotate(${n((from.rot ?? 0) * q + (from.rest ?? 0) * p)}deg)` : ''} ${rot}(${n(deg * sg)}deg)` };
+    }
+    return { transform: `translate(${n(from.x * q)}px, ${n(from.y * q)}px) scale(${n(from.sx * q + p)}, ${n(from.sy * q + p)}) scale(${n(l)})${from.rot || from.rest ? ` rotate(${n((from.rot ?? 0) * q + (from.rest ?? 0) * p)}deg)` : ''} perspective(${n(persp)}px) ${rot}(${n(deg * sg)}deg)` };
   };
   const offs = [...new Set([0, s, (s + m) / 2, m, Math.min(m + eps, 1), (m + e) / 2, e, 1])].sort((a, b) => a - b);
   const turn = (p: number, a: number, b: number) => (b > a ? Math.min(Math.max((p - a) / (b - a), 0), 1) : p >= b ? 1 : 0);
-  const first = offs.map((p) => ({ offset: p, transform: at(p, 90 * turn(p, s, m)), opacity: p <= m ? 1 : 0 }));
-  const second = offs.map((p) => ({ offset: p, transform: at(p, p <= m ? -90 : -90 + 90 * turn(p, m, e)), opacity: p <= m ? 0 : o.vanish && p === 1 ? 0 : 1 }));
-  return { first, second };
+  const first = offs.map((p) => ({ offset: p, ...at(p, 90 * turn(p, s, m)), opacity: p <= m ? 1 : 0 }));
+  const second = offs.map((p) => ({ offset: p, ...at(p, p <= m ? -90 : -90 + 90 * turn(p, m, e)), opacity: p <= m ? 0 : o.vanish && p === 1 ? 0 : 1 }));
+  return { first, second, perspective: persp };
 }
 
 /** Keyframes of card `n` of the riffle (the approved shuffle v2: constants and offsets unchanged). `k` is unit / MOCK_U. */
