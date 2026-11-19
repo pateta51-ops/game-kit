@@ -2,7 +2,7 @@
 // K435: verb options so games drop their own copies (STCC batches 9-23, Warp batches 13 and 31).
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { buildTimeline, createVerbs, type Step } from '../motion-frame/index.ts';
-import { createEffectLayer, pileLift, playOn, shakeAt, registerEffects, type EffectCtx } from './index.ts';
+import { createEffectLayer, startPulse, pileLift, playOn, shakeAt, registerEffects, type EffectCtx } from './index.ts';
 
 const animate = vi.fn<HTMLElement['animate']>();
 const fakeAnim = (running: boolean) => {
@@ -164,5 +164,16 @@ describe('K435 effect verb options', () => {
     expect([src.style.visibility, src.querySelector('b')!.style.visibility, src.querySelector('i')!.style.visibility]).toEqual(['', 'hidden', '']);
     layer.end(run);
     expect(src.querySelector('b')!.style.visibility).toBe('');
+  });
+  it('K435 startPulse takes a pseudo-element, a delay, play-once, and keeps pulsing under reduced motion', () => {
+    Object.defineProperty(Element.prototype, 'animate', { configurable: true, value: animate });
+    animate.mockReturnValue(fakeAnim(false).a as unknown as Animation);
+    vi.stubGlobal('matchMedia', () => ({ matches: true, addEventListener: vi.fn(), removeEventListener: vi.fn() }));
+    const el = document.createElement('div');
+    startPulse(el, { period: 450, once: true, pseudo: '::after', delay: 100 });
+    expect(animate).not.toHaveBeenCalled();
+    startPulse(el, { period: 450, once: true, pseudo: '::after', delay: 100, keepReduced: true });
+    expect(animate.mock.calls[0]![1]).toMatchObject({ duration: 450, iterations: 1, pseudoElement: '::after', delay: 100 });
+    vi.unstubAllGlobals();
   });
 });
