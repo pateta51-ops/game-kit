@@ -101,15 +101,15 @@ const REST = 'translate(0px, 0px) scale(1, 1)';
  * the piles in `shuffled` riffle. Call once the new view is rendered (the places exist). Which moves is the game's call from
  * its view diff; `planDeal` and `cycleMove` give the timing and the deck cycle.
  */
-export function dealFrom(moves: readonly Move[], o: DeckMotionOpts & { shuffled?: readonly string[]; departs?: boolean; onCardStart?: (index: number, id: string) => void; signal?: AbortSignal } = {}): Dealing {
+export function dealFrom(moves: readonly Move[], o: DeckMotionOpts & { shuffled?: readonly string[]; departs?: boolean; onCardStart?: (index: number, id: string) => void; signal?: AbortSignal | undefined } = {}): Dealing {
   const speed = reduced() ? 0 : (o.speed ?? 1);
   const plan = planDeal(moves, { speed, shuffled: o.shuffled, departs: o.departs, riffleMs: o.durations ? sum(o.durations) : undefined });
   const face = o.face ?? ((_id: string, el: HTMLElement) => el.cloneNode(true) as HTMLElement);
   const ends: Promise<void>[] = [];
   const mine: Animation[] = [];
   const mineTimers = new Set<{ t: number; r: () => void }>();
-  const start = (move: Move) => { o.onCardStart?.(moves.indexOf(move), move.id); };
-  if (!plan.timed.length) for (const m of moves) start(m);
+  const began = (move: Move) => { o.onCardStart?.(moves.indexOf(move), move.id); };
+  if (!plan.timed.length) for (const m of moves) began(m);
   for (const t of plan.timed) {
     const { move } = t;
     const pileEl = resolveAt(move.pile);
@@ -121,11 +121,11 @@ export function dealFrom(moves: readonly Move[], o: DeckMotionOpts & { shuffled?
     const start = `translate(${String(from.left - to.left)}px, ${String(from.top - to.top)}px) scale(${String(from.width / (to.width || 1))}, ${String(from.height / (to.height || 1))})`;
     if (o.onCardStart) {
       if (t.delay > 0) {
-        const x = { t: 0, r: () => { start(move); } };
-        x.t = window.setTimeout(() => { timers.delete(x); mineTimers.delete(x); start(move); }, t.delay);
+        const x = { t: 0, r: () => { began(move); } };
+        x.t = window.setTimeout(() => { timers.delete(x); mineTimers.delete(x); began(move); }, t.delay);
         timers.add(x);
         mineTimers.add(x);
-      } else start(move);
+      } else began(move);
     }
     const stand = (el: HTMLElement) => {
       el.removeAttribute('data-card-id');
