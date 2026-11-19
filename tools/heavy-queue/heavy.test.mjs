@@ -13,7 +13,7 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const servers = [];
 afterEach(() => { for (const s of servers.splice(0)) s.close(); });
 async function serve(o) {
-  const s = startServer({ port: 0, tick: 50, ...o });
+  const s = startServer({ port: 0, tick: 50, sweepMs: 0, ...o });
   servers.push(s);
   await once(s, 'listening');
   const url = `http://127.0.0.1:${s.address().port}`;
@@ -181,5 +181,35 @@ describe('heavy-queue review fixes (K399)', () => {
     expect(readFileSync(join(d, '.env'), 'utf8')).toBe(env);
     expect(go()).toBe('actions-runner-a: hooks already set\n');
     expect(readFileSync(join(d, '.env'), 'utf8')).toBe(env);
+  });
+});
+
+describe('heavy-queue sweep (K418)', () => {
+  it('lists and renices unqueued heavy runs once; ignores held and runner ones; drops ended', async () => {
+    const dir = mkdtempSync(join(tmpdir(), 'hq-sweep-'));
+    let procs = [
+      { pid: 11, cmd: 'vitest run', cwd: '/g/a', held: true },
+      { pid: 12, cmd: 'playwright test', cwd: '/g/b', runner: true },
+      { pid: 13, cmd: 'pytest', cwd: '/g/c' },
+    ];
+    const reniced = [];
+    const { status } = await serve({ scan: () => procs, renice: (p) => reniced.push(p), sweepMs: 30, log: join(dir, 'bypass.log') });
+    await sleep(200);
+    const s = await status();
+    expect(s.unqueued.map((u) => u.pid)).toEqual([13]);
+    expect(s.unqueued[0].cwd).toBe('/g/c');
+    expect(reniced).toEqual([13]);
+    expect(readFileSync(join(dir, 'bypass.log'), 'utf8')).toContain('pid 13 cwd /g/c');
+    procs = procs.filter((p) => p.pid !== 13);
+    await sleep(200);
+    expect((await status()).unqueued).toEqual([]);
+    expect(reniced).toEqual([13]);
+  });
+  it('HEAVY_SWEEP_MS 0 turns the sweep off', async () => {
+    let calls = 0;
+    const { status } = await serve({ scan: () => { calls++; return []; }, sweepMs: 0 });
+    await sleep(150);
+    expect(calls).toBe(0);
+    expect((await status()).unqueued).toEqual([]);
   });
 });
