@@ -94,4 +94,14 @@ describe('K435 effect verb options', () => {
     setup({ do: 'motes', count: 1, box: [0, 0, 10, 10] });
     expect(String(kf()[0]!.at(-1)!.transform)).not.toBe(a);
   });
+  it('K435-4 settle takes caller frames, or curve parameters', () => {
+    animate.mockReturnValue(fakeAnim(false).a as unknown as Animation);
+    const kf = (): Keyframe[] => animate.mock.calls.at(-1)![0] as Keyframe[];
+    const { end, context } = setup({ do: 'settle', frames: [{ transform: 'translateY(-9px)' }, { transform: 'none', opacity: 0.5, offset: 1 }] });
+    expect(kf()).toHaveLength(2);
+    end?.();
+    expect((context.el.querySelector('.fx-actor') as HTMLElement).style.opacity).toBe('0.5');
+    setup({ do: 'settle', rise: -12, fromScale: 1.2, dip: 0.9, dipAt: 0.6 });
+    expect([kf()[0]!.transform, kf()[1]!.transform, kf()[1]!.offset]).toEqual(['translateY(-12px) scale(1.2)', 'scale(0.9)', 0.6]);
+  });
 });

@@ -113,12 +113,23 @@ export const BUILT_IN: Readonly<Record<string, Effect>> = {
     animate([{ transform: 'none', boxShadow: 'none' }, end], end);
     return undefined;
   },
-  settle: ({ animate }) => {
+  settle: ({ call, animate }) => {
     const rest = { transform: 'none', boxShadow: 'var(--fx-settle-shadow,0 1px 3px)' };
+    // K435-4: caller `frames` (the last is the end state), or the curve: `fromScale`, `rise` px, `dip` scale at `dipAt`
+    const frames = call.step['frames'];
+    if (Array.isArray(frames) && frames.length > 0) {
+      const last = { ...(frames.at(-1) as Keyframe) };
+      delete last.offset;
+      delete last.easing;
+      animate(frames as Keyframe[], Object.fromEntries(Object.entries(last).map(([k, v]) => [k, String(v)])));
+      return undefined;
+    }
+    const n = (k: string): number | undefined => (typeof call.step[k] === 'number' ? call.step[k] : undefined);
+    const rise = n('rise');
     animate(
       [
-        { transform: 'translateY(var(--fx-lift-rise,-6px)) scale(1.08)', boxShadow: 'var(--fx-lift-shadow,0 12px 24px)' },
-        { transform: 'scale(.98)', boxShadow: rest.boxShadow, offset: 0.7 },
+        { transform: `translateY(${rise === undefined ? 'var(--fx-lift-rise,-6px)' : `${String(rise)}px`}) scale(${String(n('fromScale') ?? 1.08)})`, boxShadow: 'var(--fx-lift-shadow,0 12px 24px)' },
+        { transform: `scale(${String(n('dip') ?? 0.98)})`, boxShadow: rest.boxShadow, offset: n('dipAt') ?? 0.7 },
         rest,
       ],
       rest,
