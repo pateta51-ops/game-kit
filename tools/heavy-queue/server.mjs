@@ -19,7 +19,7 @@ export function isHeavy(args) {
   const exe = stem(args[0]);
   if (/^(chrome|chromium|chromium-browser|headless_shell|chrome-headless-shell)$/.test(exe)) return args.some((a) => a.startsWith('--headless'));
   const py = /^python[\d.]*$/.test(exe);
-  if (!py && !/^nodejs?$/.test(exe)) return false;
+  if (!py && !/^node(js)?$/.test(exe)) return false;
   const s = py && args[1] === '-m' ? args[2] : args[1];
   const t = stem(s);
   if (/^(vitest|playwright|pytest)$/.test(t)) return true;
