@@ -17,7 +17,7 @@ const stem = (p) => (p ?? '').split('/').pop().replace(/\.(c|m)?js$/, '');
 // Only node/python running a test or build tool script, and headless chromium; editors, git, language servers and MCP servers never match.
 export function isHeavy(args) {
   const exe = stem(args[0]);
-  if (/^(chrome|chromium|chromium-browser|headless_shell|chrome-headless-shell)$/.test(exe)) return args.some((a) => a.startsWith('--headless') || a === '--remote-debugging-pipe' || a === '--enable-automation' || /^--user-data-dir=.*(playwright|puppeteer)/.test(a));
+  if (/^(chrome|chromium|chromium-browser|headless_shell|chrome-headless-shell)$/.test(exe)) return args.some((a) => a.startsWith('--headless'));
   const py = /^python[\d.]*$/.test(exe);
   if (!py && !/^node(js)?$/.test(exe)) return false;
   const s = py && args[1] === '-m' ? args[2] : args[1];
