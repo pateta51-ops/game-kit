@@ -2,7 +2,7 @@
 // K435: verb options so games drop their own copies (STCC batches 9-23, Warp batches 13 and 31).
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { buildTimeline, createVerbs, type Step } from '../motion-frame/index.ts';
-import { pileLift, playOn, registerEffects, type EffectCtx } from './index.ts';
+import { pileLift, playOn, shakeAt, registerEffects, type EffectCtx } from './index.ts';
 
 const animate = vi.fn<HTMLElement['animate']>();
 const fakeAnim = (running: boolean) => {
@@ -133,5 +133,11 @@ describe('K435 effect verb options', () => {
     expect((animate.mock.calls.at(-1)![0] as Keyframe[])).toHaveLength(31);
     end?.();
     expect([...context.el.children].map((k) => k.className)).toEqual(['fx-actor']);
+  });
+  it('K435-8 shakeAt takes a sine shake: amplitude, frequency, decay', () => {
+    const o = { decayMs: 1000, sine: { amplitude: 10, frequency: 5, decay: 1 } };
+    expect(shakeAt(50, 1, o).x).toBeCloseTo(9.5);
+    expect(shakeAt(150, 1, o).x).toBeCloseTo(-8.5);
+    expect(Math.abs(shakeAt(1000, 1, o).x)).toBe(0);
   });
 });

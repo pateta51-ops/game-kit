@@ -25,8 +25,10 @@ const wob = (t: number, hz: number, ph: number, speed: number): number =>
 
 /** Shake offset (px, deg) at `t` ms after the hit: max * trauma^2 * two seeded sines (5-8 Hz and 9-13 Hz). Each
  * frequency is capped at 25 Hz after `speed` (the player's factor, 1 = normal) so a quick setting never aliases. */
-export function shakeAt(t: number, t0: number, o: { seed?: number; max?: number; rot?: number; decayMs?: number; speed?: number } = {}): { x: number; y: number; rot: number } {
-  const { seed = 1, max = 12, rot = 2, decayMs = 600, speed = 1 } = o;
+/** K435-8: `sine` instead: x = amplitude * (1 - t/decayMs)^decay * sin(2 pi frequency t), y and rot 0 (t0 unused) */
+export function shakeAt(t: number, t0: number, o: { seed?: number; max?: number; rot?: number; decayMs?: number; speed?: number; sine?: { amplitude: number; frequency: number; decay?: number } } = {}): { x: number; y: number; rot: number } {
+  const { seed = 1, max = 12, rot = 2, decayMs = 600, speed = 1, sine } = o;
+  if (sine) return { x: sine.amplitude * clamp(1 - Math.max(0, t) / decayMs, 0, 1) ** (sine.decay ?? 2) * wob(t, sine.frequency, 0, speed), y: 0, rot: 0 };
   const k = traumaAt(t0, t, decayMs) ** 2;
   const h = (n: number): number => (Math.imul(seed * 31 + n, 2654435761) >>> 0) / 4294967296;
   const f = (n: number, lo: number, hi: number): number => lo + h(n) * (hi - lo);
