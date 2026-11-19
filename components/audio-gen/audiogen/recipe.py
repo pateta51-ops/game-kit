@@ -20,13 +20,13 @@ def _voice(ln: str):
     return t[0] if t else None
 
 
-def novocal(abc: str, vocal: str = "move", ins: str = "Ins") -> tuple[str, int]:
+def novocal(abc: str, vocal: str = "rests", ins: str = "Ins") -> tuple[str, int]:
     """The "Vocal" voice is silenced bar by bar (whole-bar rests, chord symbols kept: the native format keeps harmony in
     Vocal). Returns the score and the number of Vocal bars that had notes.
     vocal="rests": the notes are dropped. This is what the YuE yue2-music skill does (release yue2-v0.1.6,
     skills/yue2-music/references/abc-editing.md): "If the cover should preserve only one part ... `--keep-voice Ins` ...
     The unselected voice is replaced with rests on the same time grid".
-    vocal="move" (default, the kit's reading of the 7th Inning Stretch audit; the skill itself never moves notes):
+    vocal="move" (option; the skill itself never moves notes):
     first each Vocal bar with notes (chords dropped) is put in the same bar index of the voice named `ins` (else the
     first other voice), but only where that bar has no notes of its own: an instrumental bar with notes is kept as it
     is (a voice is monophonic), vocal bars past the end of the instrumental voice are appended, and a tie that would

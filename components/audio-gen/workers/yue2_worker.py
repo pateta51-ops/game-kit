@@ -11,7 +11,7 @@ Job options (config backends.<name>): modelDir (local snapshot, default ~/audio-
 model is used), model ("m-a-p/YuE2-3B"), revision ("8f24312f"), version (yue2 code, "0.1.6"), demucsPython,
 tries (6), keep (1: passing takes kept per item; the first is the item's file, the others
 <out>-keep2.wav, ... listed in extra.alternates; raise tries with it), maxVocalDb (-25), maxLoudWindows (0.03), cot ("full"), lyrics ("[Instrumental]"),
-vocal ("move" | "rests"), offloadAr (true | false | "auto": on when the card has under 24 GB; YuE2 only, the one exception to GPU only).
+vocal ("rests" default, as the YuE skill does | "move"), offloadAr (true | false | "auto": on when the card has under 24 GB; YuE2 only, the one exception to GPU only).
 Per item: prompt (the style text), seed, options.lyrics / options.tries. YuE2 sets its own length: the pipeline cuts.
 Exit 3 = cannot start (wrong yue2 version, no CUDA, or a first generation that did not use the GPU).
 Weights: CC BY-NC 4.0 (non-commercial).
@@ -81,7 +81,7 @@ def main() -> int:
         best, tried, kept, keep = None, [], [], int(o.get("keep", opts.get("keep", 1)))
         for s in recipe.seeds(int(item["seed"]), int(o.get("tries", opts.get("tries", 6)))):
             plan = pipe.plan(style=item["prompt"], lyrics=lyrics, cot=cot, seed=s)
-            abc, nv = recipe.novocal(plan.abc, str(opts.get("vocal", "move")))
+            abc, nv = recipe.novocal(plan.abc, str(opts.get("vocal", "rests")))
             tmp = out.parent / f"_yue_{out.stem}-{s}.wav"
             pipe(style=item["prompt"], lyrics=lyrics, cot=cot, seed=s, abc=abc).save(tmp)
             db, loud = gate(tmp)
