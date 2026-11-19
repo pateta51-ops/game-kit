@@ -24,6 +24,7 @@ const noise = "url(\"data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/
 export const fizzle: Effect = ({ call, el, animate }) => {
   const { shakeMs = 520, greyMs = 1000, sputterMs = 520, shake = [-4, 3.5, -2.5, 1.5], saturate = 0.3, brightness = 0.85,
     colour = '200 210 228', grain = 'calc(var(--u, 4px) * 6)' } = call.step as FizzleSettings;
+  if (call.dur <= 0) return undefined;
   const sc = call.dur / Math.max(1, Number(call.step.dur));
   const offsets = [0.12, 0.3, 0.48, 0.66];
   animate([{ transform: 'translateX(0)' }, ...shake.map((s, i) => ({ transform: `translateX(${String(s)}%)`, offset: offsets[i] ?? (i + 1) / (shake.length + 1) })),
@@ -81,6 +82,7 @@ export interface SparkBurstSettings {
 export const sparkBurst: Effect = (fx) => {
   const { call } = fx;
   const { box = call.from, count = 34, colour = 'white', ms = Number(call.step.dur), delay = 0, size = 8, fall = 0, z = 5, seed = 0 } = call.step as SparkBurstSettings;
+  if (call.dur <= 0) return undefined;
   const reach = (call.step as SparkBurstSettings).reach ?? Math.max(box[2], box[3]) * 0.8;
   const x = box[0] + box[2] / 2, y = box[1] + box[3] / 2;
   const stage = scene(fx);

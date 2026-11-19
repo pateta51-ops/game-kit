@@ -228,3 +228,79 @@ describe('K436 effect options', () => {
     expect(html).not.toContain("'Number of tokens sent.', 1)");
   });
 });
+
+describe('K436 effect options, review additions', () => {
+  it('K436 glow release fades a latched glow and clears it', () => {
+    const { el, end } = setup({ do: 'glow', colour: 'gold', release: true });
+    expect(frames().map((k) => k.boxShadow)).toEqual(['0 0 24px 6px gold', '0 0 0 0 transparent']);
+    el.style.boxShadow = '0 0 1px red';
+    end?.();
+    expect(el.style.boxShadow).toBe('');
+  });
+  it('K436 move takes scaleX and scaleY curves spread over the step', () => {
+    const { el, end } = setup({ do: 'move', scaleX: [1, 2], scaleY: [1, 1, 0.5] });
+    expect(frames().map((k) => k.scale)).toEqual(['1 1', '1.5 1', '2 0.5']);
+    expect(frames().at(-1)!.translate).toBe('100px 30px');
+    end?.();
+    expect(el.style.scale).toBe('2 0.5');
+  });
+  it('K436 flip continuous holds first, then one ease to 180 deg', () => {
+    setup({ do: 'flip', direction: 1, continuous: true, holdMs: 20, ease: 'in' });
+    expect(frames(0).map((k) => [k.transform, k.offset, k.easing])).toEqual([
+      ['perspective(800px) rotateY(0deg)', undefined, 'ease-in'],
+      ['perspective(800px) rotateY(0deg)', 0.2, 'ease-in'],
+      ['perspective(800px) rotateY(180deg)', undefined, undefined],
+    ]);
+  });
+  it('K436 flip filter object form takes its own ms, delay and easing', () => {
+    setup({ do: 'flip', filter: { frames: ['none', 'brightness(0.6)'], ms: 40, delay: 10, easing: 'in' } });
+    expect(frames(1).map((k) => k.filter)).toEqual(['none', 'brightness(0.6)']);
+    expect(opts(1)).toMatchObject({ duration: 40, delay: 10, easing: 'ease-in' });
+  });
+  it('K436 fizzle options: shake, saturate, brightness, colour, grain', () => {
+    const { el } = setup({ do: 'fizzle', shake: [-2, 2], saturate: 0.5, brightness: 0.9, colour: '1 2 3', grain: '8px', shakeMs: 50, greyMs: 60, sputterMs: 70 });
+    expect(frames(0).slice(1, 3)).toEqual([{ transform: 'translateX(-2%)', offset: 0.12 }, { transform: 'translateX(2%)', offset: 0.3 }]);
+    expect(frames(1)[1]!.filter).toBe('saturate(0.5) brightness(0.9)');
+    expect([opts(0).duration, opts(1).duration, opts(2).duration]).toEqual([50, 60, 70]);
+    const sputter = el.lastElementChild!.firstElementChild as HTMLElement;
+    expect(sputter.style.cssText).toContain('rgb(1 2 3 / .55)');
+    expect(sputter.style.cssText).toContain('8px 8px');
+  });
+  it('K436 spark-burst options: box, delay, reach, fall, z, seed', () => {
+    const o = { do: 'spark-burst', box: [0, 0, 10, 10], count: 1, delay: 30, reach: 100, fall: 20, z: 7, size: 4, ms: 200 };
+    const { context } = setup({ ...o, seed: 1 });
+    const spark = context.el.lastElementChild as HTMLElement;
+    expect([spark.style.zIndex, Math.round(parseFloat(spark.style.left) + parseFloat(spark.style.width) / 2), Math.round(parseFloat(spark.style.top) + parseFloat(spark.style.height) / 2)]).toEqual(['7', 5, 5]);
+    expect(opts()).toMatchObject({ delay: 30, fill: 'forwards' });
+    const xy = (k: Keyframe): number[] => [...String(k.transform).matchAll(/(-?[\d.e-]+)px/g)].map((m) => Number(m[1]));
+    const [mx, my] = xy(frames()[1]!), [lx, ly] = xy(frames()[2]!);
+    expect(ly! - my! / 0.8).toBeCloseTo(20);
+    expect(lx).toBeCloseTo(mx! / 0.8);
+    const d = Math.hypot(lx!, ly! - 20);
+    expect(d >= 55 && d <= 115).toBe(true);
+    const seeded = String(frames()[2]!.transform);
+    setup(o);
+    expect(String(frames()[2]!.transform)).not.toBe(seeded);
+  });
+  it('K436 speed 0: ambience still stays hidden, fizzle and spark-burst draw nothing', () => {
+    const dom = fakeDom();
+    const target = dom.el('div') as unknown as Element;
+    const ts: number[] = [];
+    const a = createAmbience({ target: () => target, speed: () => 0, still: true, draw: (_c, t) => void ts.push(t) });
+    expect([dom.body.children[0]?.style['display'], ts, dom.waiting()]).toEqual(['none', [], 0]);
+    a.destroy();
+    vi.unstubAllGlobals();
+    const f = setup({ do: 'fizzle', dur: 0 });
+    expect([animate.mock.calls.length, f.el.children.length]).toEqual([0, 0]);
+    const s = setup({ do: 'spark-burst', dur: 0, count: 5 });
+    expect([animate.mock.calls.length, s.context.el.children.length]).toEqual([0, 1]);
+  });
+  it('K436 a layer with isolate false sits in its parent, and its parts place against the parent box', () => {
+    const parent = document.createElement('section');
+    parent.style.position = 'relative';
+    document.body.append(parent);
+    const { context, el, call } = setup({ do: 'show', zIndex: 3, blend: 'screen' }, { parent, isolate: false });
+    expect([context.el.parentElement, context.el.style.display, context.el.style.zIndex, el.parentElement]).toEqual([parent, 'contents', '', context.el]);
+    expect([el.style.position, el.style.left, el.style.top, el.style.zIndex, el.style.mixBlendMode]).toEqual(['absolute', `${String(call.from[0])}px`, `${String(call.from[1])}px`, '3', 'screen']);
+  });
+});

@@ -72,7 +72,7 @@ All opt-in; without them every verb plays as before.
 - `cameraPull` `easeOnCut: true`: the returned cut eases back over `releaseMs` from where it is, so the dim eases out.
 - `dash-line` `loop: true`: the line stays past its step until `signal` aborts or the layer is cleared.
 - `sheen`: `pseudo` (`::before` / `::after`: animates the actor's own pseudo-element, the game's CSS draws the band), `hover: true` (plays while the pointer is over the actor, pauses where it is when it leaves), `blend`.
-- Not done here: `arc-move` and the other flights take no `rotate` or transform-only output yet.
+- `fizzle` and `spark-burst` draw nothing at speed 0 (a call of no duration). `rotate` and transform-only output for `arc-move` and the other flights: row K438.
 
 ## Use it in 10 lines
 
