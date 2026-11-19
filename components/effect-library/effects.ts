@@ -142,16 +142,19 @@ function moveMore({ call, el, animate }: Fx, t: Rect): () => void {
       if (call.step['then'] === 'hide') css(el, { visibility: 'hidden' });
     };
   }
-  const resize = call.step['resize'] === true;
+  const rs = nums(call.step['resize']);
+  const resize = call.step['resize'] === true || rs?.length === 2;
   const dx = resize ? t[0] + t[2] / 2 - f[0] - f[2] / 2 : t[0] - f[0];
   const dy = resize ? t[1] + t[3] / 2 - f[1] - f[3] / 2 : t[1] - f[1];
+  const [sw, sh] = rs?.length === 2 ? rs : [t[2], t[3]];
+  const land: Rect = resize ? [t[0] + t[2] / 2 - sw! / 2, t[1] + t[3] / 2 - sh! / 2, sw!, sh!] : t;
   const pc = call.step['percent'] === true;
   const tr = (k: number): string => pc ? `${String(dx * k / Math.max(1, f[2]) * 100)}% ${String(dy * k / Math.max(1, f[3]) * 100)}%` : `${String(dx * k)}px ${String(dy * k)}px`;
   const rv = call.step['rotate'];
   const rot: readonly [number, number] | undefined = typeof rv === 'number' ? [0, rv] : nums(rv)?.length === 2 ? nums(rv) as [number, number] : undefined;
   const sv = call.step['scale'];
   const ent: readonly [number, number] | undefined = typeof sv === 'number' ? [sv, call.step['hold'] === true ? sv : 1] : nums(sv)?.length === 2 ? nums(sv) as [number, number] : undefined;
-  const kx = resize ? t[2] / Math.max(1, f[2]) : 1, ky = resize ? t[3] / Math.max(1, f[3]) : 1;
+  const kx = resize ? sw! / Math.max(1, f[2]) : 1, ky = resize ? sh! / Math.max(1, f[3]) : 1;
   const sizeAt = (k: number): [number, number] => {
     const s = ent ? ent[0] + (ent[1] - ent[0]) * k : 1;
     return [s * (1 + (kx - 1) * k), s * (1 + (ky - 1) * k)];
@@ -169,7 +172,7 @@ function moveMore({ call, el, animate }: Fx, t: Rect): () => void {
   const end: Partial<CSSStyleDeclaration> = tf ? { transform: String(last.transform) } : { translate: '', ...(rot ? { rotate: rot[1] ? `${String(rot[1])}deg` : '' } : {}), ...(curves ? { scale: lastScale(scaleCurves(call, () => [ent?.[1] ?? 1, ent?.[1] ?? 1])) } : {}) };
   animate(frames, end, { easing: EASE[String(call.step['ease'])] ?? (typeof call.step['ease'] === 'string' ? call.step['ease'] : 'ease-in-out') });
   return () => {
-    if (!tf) place(el, t);
+    if (!tf) place(el, land);
     if (call.step['then'] === 'hide') css(el, { visibility: 'hidden' });
   };
 }

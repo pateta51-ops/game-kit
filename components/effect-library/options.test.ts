@@ -157,7 +157,7 @@ describe('K436 effect options', () => {
     end?.();
     expect([el.style.left, el.style.transform]).toEqual([`${String(call.from[0])}px`, 'translate(100px, 30px) rotate(90deg) scale(1, 1)']);
     animate.mockClear();
-    const r = setup({ do: 'move', to: 'deck', rotate: [30, 0], resize: true }, {}, (id) => (id === 'deck' ? [200, 0, 40, 80] : undefined));
+    const r = setup({ do: 'move', rotate: [30, 0], resize: [40, 80] });
     const f = frames();
     expect([f[0]!.rotate, f.at(-1)!.rotate, f.at(-1)!.scale]).toEqual(['30deg', '0deg', '2 2']);
     r.end?.();
@@ -195,7 +195,7 @@ describe('K436 effect options', () => {
   });
   it('K436 dash-line loop stays past its step until the signal aborts', () => {
     const c = new AbortController();
-    const { context, end } = setup({ do: 'dash-line', to: 'piece', loop: true, signal: c.signal });
+    const { context, end } = setup({ do: 'dash-line', to: 'deck', loop: true, signal: c.signal }, {}, (id) => (id === 'deck' ? [200, 0, 40, 80] : undefined));
     end?.();
     expect(context.el.querySelector('svg')).not.toBeNull();
     c.abort();
@@ -204,7 +204,7 @@ describe('K436 effect options', () => {
   it('K436 sheen on a pseudo-element, playing only while hovered; MISSION_SHINE blends with screen', () => {
     const a = anim();
     const { el } = setup({ do: 'sheen', pseudo: '::before', hover: true });
-    animate.mockImplementation(() => a as unknown as Animation);
+    animate.mockImplementationOnce(() => a as unknown as Animation);
     const { el: el2 } = setup({ do: 'sheen', pseudo: '::before', hover: true });
     expect(opts()).toMatchObject({ pseudoElement: '::before' });
     expect([a.pause.mock.calls.length, a.play.mock.calls.length]).toEqual([1, 0]);
