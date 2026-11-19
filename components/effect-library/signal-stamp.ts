@@ -24,7 +24,7 @@ export interface StampSettings {
 
 /** A pressed label can ride on the same stand-in during subsequent steps. */
 export const stamp: Effect = ({ el, call }) => {
-  const { text = '', tilt = 0, image, ms, ease = 'ease-in', scales = [2.2, 0.95, 1], pressOffset = 0.8, style, frames, press, ring, onParts, holdRing, ringZ, target } = call.step as StampSettings;
+  const { text = '', tilt = 0, image, look, ms, ease = 'ease-in', scales = [2.2, 0.95, 1], pressOffset = 0.8, style, frames, press, ring, onParts, holdRing, ringZ, target } = call.step as StampSettings;
   const found = typeof target === 'string' ? el.querySelector<HTMLElement>(target) ?? el.ownerDocument.querySelector<HTMLElement>(target) : target;
   const tag = found ?? el.ownerDocument.createElement(image === undefined ? 'div' : 'img');
   if (found) Object.assign(tag.style, style);
@@ -35,7 +35,14 @@ export const stamp: Effect = ({ el, call }) => {
     } else tag.textContent = text;
     Object.assign(tag.style, image !== undefined
       ? { position: 'absolute', left: '0', top: '0', width: '100%', height: '100%', boxSizing: 'border-box', background: 'none', border: '0', objectFit: 'contain', pointerEvents: 'none' }
-      : { position: 'absolute', left: '0', top: '25%', width: '100%', height: '50%', display: 'grid', placeItems: 'center', boxSizing: 'border-box', border: '0', background: 'none', color: 'inherit', font: '700 4em/1 inherit', letterSpacing: '.08em', pointerEvents: 'none' }, style);
+      : look === 'bare'
+        ? { position: 'absolute', left: '0', top: '25%', width: '100%', height: '50%', display: 'grid', placeItems: 'center', boxSizing: 'border-box', border: '0', background: 'none', color: 'inherit', fontWeight: '700', fontSize: '4em', lineHeight: '1', letterSpacing: '.08em', pointerEvents: 'none' }
+        : {
+          position: 'absolute', left: '8%', top: '42%', width: '84%', height: '16%',
+          display: 'grid', placeItems: 'center', boxSizing: 'border-box',
+          border: '2px solid currentColor', background: '#222', color: '#fff',
+          font: '700 1rem system-ui', pointerEvents: 'none',
+        }, style);
     el.append(tag);
   }
   tag.dataset['fxPart'] = 'label';

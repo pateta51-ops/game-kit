@@ -3340,7 +3340,7 @@ var FX = (() => {
 
   // components/effect-library/signal-stamp.ts
   var stamp = ({ el, call }) => {
-    const { text = "", tilt = 0, image, ms, ease: ease2 = "ease-in", scales = [2.2, 0.95, 1], pressOffset = 0.8, style, frames: frames2, press, ring, onParts, holdRing, ringZ, target } = call.step;
+    const { text = "", tilt = 0, image, look, ms, ease: ease2 = "ease-in", scales = [2.2, 0.95, 1], pressOffset = 0.8, style, frames: frames2, press, ring, onParts, holdRing, ringZ, target } = call.step;
     const found = typeof target === "string" ? el.querySelector(target) ?? el.ownerDocument.querySelector(target) : target;
     const tag = found ?? el.ownerDocument.createElement(image === void 0 ? "div" : "img");
     if (found) Object.assign(tag.style, style);
@@ -3349,7 +3349,21 @@ var FX = (() => {
         tag.src = image;
         tag.alt = text;
       } else tag.textContent = text;
-      Object.assign(tag.style, image !== void 0 ? { position: "absolute", left: "0", top: "0", width: "100%", height: "100%", boxSizing: "border-box", background: "none", border: "0", objectFit: "contain", pointerEvents: "none" } : { position: "absolute", left: "0", top: "25%", width: "100%", height: "50%", display: "grid", placeItems: "center", boxSizing: "border-box", border: "0", background: "none", color: "inherit", font: "700 4em/1 inherit", letterSpacing: ".08em", pointerEvents: "none" }, style);
+      Object.assign(tag.style, image !== void 0 ? { position: "absolute", left: "0", top: "0", width: "100%", height: "100%", boxSizing: "border-box", background: "none", border: "0", objectFit: "contain", pointerEvents: "none" } : look === "bare" ? { position: "absolute", left: "0", top: "25%", width: "100%", height: "50%", display: "grid", placeItems: "center", boxSizing: "border-box", border: "0", background: "none", color: "inherit", fontWeight: "700", fontSize: "4em", lineHeight: "1", letterSpacing: ".08em", pointerEvents: "none" } : {
+        position: "absolute",
+        left: "8%",
+        top: "42%",
+        width: "84%",
+        height: "16%",
+        display: "grid",
+        placeItems: "center",
+        boxSizing: "border-box",
+        border: "2px solid currentColor",
+        background: "#222",
+        color: "#fff",
+        font: "700 1rem system-ui",
+        pointerEvents: "none"
+      }, style);
       el.append(tag);
     }
     tag.dataset["fxPart"] = "label";

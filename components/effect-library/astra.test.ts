@@ -62,6 +62,18 @@ describe('K460 effect-library defaults', () => {
     expect(() => trail(ctx, 200, { call } as unknown as CanvasFx)).not.toThrow();
     expect(calls).toContain('stroke');
   });
+  it('K460 trail derives its flight from the paired arc-move (control point 2 x arcHeight above the midpoint)', () => {
+    const ys: number[] = [];
+    const ctx = new Proxy({}, { get: (_t, k) => (k === 'moveTo' ? (_x: number, y: number) => { ys.push(y); } : () => undefined), set: () => true }) as unknown as CanvasRenderingContext2D;
+    const to: Rect = [300, 100, 10, 10];
+    const call = { t: 0, verb: 'trail', dur: 400, from: [0, 0, 10, 10] as Rect, to, step: { dur: 400, ribbon: { width: 6, tipWidth: 1, colour: '255,255,255', fade: 0.8 } } };
+    const run = { timeline: { calls: [call, { t: 0, verb: 'arc-move', to, step: { arcHeight: 50 } }] } };
+    trail(ctx, 200, { call, run } as unknown as CanvasFx);
+    expect(ys[0]).toBeCloseTo(5, 5);
+    ys.length = 0;
+    trail(ctx, 200, { call, run: { timeline: { calls: [call] } } } as unknown as CanvasFx);
+    expect(ys[0]).toBeCloseTo(55, 5);
+  });
   it('K460 shake-group moves the actors its step names though the spec did not declare them', () => {
     const { context } = setup({ do: 'shake-group', actors: ['map', 'invader'] });
     expect(context.el.querySelectorAll('.fx-actor').length).toBe(2);
