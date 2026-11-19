@@ -27,6 +27,8 @@ export interface LayerOptions {
 }
 export interface EffectActor extends Actor {
   hideSource?: 'start' | 'step';
+  /** K435-10: hides only the source's descendants matching this selector (a class: `.name`), not the whole source */
+  hideParts?: string;
 }
 
 export interface EffectLayer {
@@ -92,13 +94,13 @@ export function createEffectLayer(o: LayerOptions = {}): EffectLayer {
   parent.appendChild(el);
   const runs = new Map<number, Map<string, HTMLElement>>();
   const originals = new WeakMap<HTMLElement, HTMLElement>();
-  const sources = new Map<number, Map<string, HTMLElement>>();
+  const sources = new Map<number, Map<string, HTMLElement[]>>();
   const pending = new Map<number, ReturnType<typeof setTimeout>[]>();
   const hidden = new Map<HTMLElement, { count: number; value: string; priority: string }>();
   const restore = (id: number): void => {
     for (const timer of pending.get(id) ?? []) clearTimeout(timer);
     pending.delete(id);
-    for (const src of sources.get(id)?.values() ?? []) {
+    for (const src of [...(sources.get(id)?.values() ?? [])].flat()) {
       const saved = hidden.get(src);
       if (saved && --saved.count === 0) {
         src.style.setProperty('visibility', saved.value, saved.priority);
@@ -112,7 +114,7 @@ export function createEffectLayer(o: LayerOptions = {}): EffectLayer {
     start(run, actors) {
       for (const a of run.timeline.actors) self.actor(run, a.id, a.rect);
       if (sources.has(run.id)) return;
-      const held = new Map<string, HTMLElement>();
+      const held = new Map<string, HTMLElement[]>();
       const timers: ReturnType<typeof setTimeout>[] = [];
       const scheduled = new Set<string>();
       for (const a of actors ?? []) {
@@ -120,13 +122,16 @@ export function createEffectLayer(o: LayerOptions = {}): EffectLayer {
         const src = clone && originals.get(clone);
         if (!a.hideSource || !src || scheduled.has(a.id)) continue;
         const hide = (): void => {
-          const saved = hidden.get(src);
-          if (saved) saved.count++;
-          else {
-            hidden.set(src, { count: 1, value: src.style.visibility, priority: src.style.getPropertyPriority('visibility') });
-            src.style.setProperty('visibility', 'hidden', 'important');
+          const els = a.hideParts ? [...src.querySelectorAll<HTMLElement>(a.hideParts)] : [src];
+          for (const e of els) {
+            const saved = hidden.get(e);
+            if (saved) saved.count++;
+            else {
+              hidden.set(e, { count: 1, value: e.style.visibility, priority: e.style.getPropertyPriority('visibility') });
+              e.style.setProperty('visibility', 'hidden', 'important');
+            }
           }
-          held.set(a.id, src);
+          held.set(a.id, els);
         };
         if (a.hideSource === 'start') hide();
         else {

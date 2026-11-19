@@ -2,7 +2,7 @@
 // K435: verb options so games drop their own copies (STCC batches 9-23, Warp batches 13 and 31).
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { buildTimeline, createVerbs, type Step } from '../motion-frame/index.ts';
-import { pileLift, playOn, shakeAt, registerEffects, type EffectCtx } from './index.ts';
+import { createEffectLayer, pileLift, playOn, shakeAt, registerEffects, type EffectCtx } from './index.ts';
 
 const animate = vi.fn<HTMLElement['animate']>();
 const fakeAnim = (running: boolean) => {
@@ -151,5 +151,18 @@ describe('K435 effect verb options', () => {
     expect([chip.textContent, chip.style.position]).toEqual(['3', '']);
     end?.();
     expect(chip.isConnected).toBe(true);
+  });
+  it('K435-10 hideSource with hideParts hides only the matching parts of the source, and restores them', () => {
+    const src = document.createElement('div');
+    src.id = 'card';
+    src.innerHTML = '<b class="cost">2</b><i>name</i>';
+    document.body.append(src);
+    const layer = createEffectLayer({ resolve: (id) => document.getElementById(id) ?? undefined });
+    const timeline = buildTimeline({ id: 'p', actors: [{ id: 'card', at: [0, 0], w: 10, h: 10 }], steps: [{ t: 0, actor: 'card', dur: 10, do: 'show' }] }, () => undefined);
+    const run = { id: 7, context: layer, timeline };
+    layer.start(run, [{ id: 'card', at: [0, 0], hideSource: 'start', hideParts: '.cost' }]);
+    expect([src.style.visibility, src.querySelector('b')!.style.visibility, src.querySelector('i')!.style.visibility]).toEqual(['', 'hidden', '']);
+    layer.end(run);
+    expect(src.querySelector('b')!.style.visibility).toBe('');
   });
 });
