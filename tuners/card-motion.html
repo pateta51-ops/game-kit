@@ -1044,6 +1044,12 @@ var DECK = (() => {
     const plan = planDeal(moves, { speed, shuffled: o.shuffled, departs: o.departs, riffleMs: o.durations ? sum(o.durations) : void 0 });
     const face = o.face ?? ((_id, el) => el.cloneNode(true));
     const ends = [];
+    const mine = [];
+    const mineTimers = /* @__PURE__ */ new Set();
+    const began = (move) => {
+      o.onCardStart?.(moves.indexOf(move), move.id);
+    };
+    if (!plan.timed.length) for (const m of moves) began(m);
     for (const t of plan.timed) {
       const { move } = t;
       const pileEl = resolveAt(move.pile);
@@ -1053,6 +1059,20 @@ var DECK = (() => {
       const ar = atEl.getBoundingClientRect();
       const [from, to] = move.dir === "out" ? [pr, ar] : [ar, pr];
       const start = `translate(${String(from.left - to.left)}px, ${String(from.top - to.top)}px) scale(${String(from.width / (to.width || 1))}, ${String(from.height / (to.height || 1))})`;
+      if (o.onCardStart) {
+        if (t.delay > 0) {
+          const x = { t: 0, r: () => {
+            began(move);
+          } };
+          x.t = window.setTimeout(() => {
+            timers.delete(x);
+            mineTimers.delete(x);
+            began(move);
+          }, t.delay);
+          timers.add(x);
+          mineTimers.add(x);
+        } else began(move);
+      }
       const stand = (el2) => {
         el2.removeAttribute("data-card-id");
         el2.dataset["motionStandin"] = "";
@@ -1060,7 +1080,9 @@ var DECK = (() => {
         return el2;
       };
       const fly = (el2, frames) => {
-        ends.push(track(el2.animate(frames, { duration: t.ms, delay: t.delay, fill: "both", easing: "ease-in-out" }), el2));
+        const a = el2.animate(frames, { duration: t.ms, delay: t.delay, fill: "both", easing: "ease-in-out" });
+        mine.push(a);
+        ends.push(track(a, el2));
       };
       if (move.faceDown && move.dir === "out") {
         const rot = o.axis === "y" ? "rotateX" : "rotateY";
@@ -1075,6 +1097,7 @@ var DECK = (() => {
       const mid = t.lift !== 1 ? [{ transform: `${REST} scale(${String(t.lift)})`, offset: 0.5 }] : [];
       fly(el, [{ transform: start, offset: 0 }, ...mid, { transform: REST, offset: 1, ...t.vanish ? { opacity: 0 } : {} }]);
     }
+    let stopRif = () => void 0;
     const rif = plan.shuffling.length ? new Promise((r) => {
       const x = { t: 0, r };
       x.t = window.setTimeout(() => {
@@ -1082,7 +1105,27 @@ var DECK = (() => {
         void shuffleDecks(plan.shuffling, speed, o).then(r);
       }, plan.shuffleAt);
       timers.add(x);
+      stopRif = () => {
+        window.clearTimeout(x.t);
+        timers.delete(x);
+        r();
+      };
     }) : Promise.resolve();
+    const abort = () => {
+      for (const x of [...mineTimers]) {
+        window.clearTimeout(x.t);
+        timers.delete(x);
+        mineTimers.delete(x);
+      }
+      stopRif();
+      for (const a of mine) a.finish();
+      for (const p of plan.shuffling) {
+        const at = pileElement(p);
+        if (at) riffling.get(at)?.finish();
+      }
+    };
+    if (o.signal?.aborted) abort();
+    else o.signal?.addEventListener("abort", abort, { once: true });
     return { plan, done: Promise.all([...ends, rif]).then(() => void 0) };
   }
   var riffle = (deck, speed = 1, o = {}) => startRiffle(deck, sum(o.durations ?? RIFFLE_PHASES_MS) * speed, o)?.done ?? Promise.resolve();
@@ -1179,9 +1222,9 @@ var PREVIEW = (() => {
   ));
   var __toCommonJS = (mod) => __copyProps(__defProp({}, "__esModule", { value: true }), mod);
 
-  // node_modules/react/cjs/react.production.js
+  // ../../../node_modules/react/cjs/react.production.js
   var require_react_production = __commonJS({
-    "node_modules/react/cjs/react.production.js"(exports) {
+    "../../../node_modules/react/cjs/react.production.js"(exports) {
       "use strict";
       var REACT_ELEMENT_TYPE = /* @__PURE__ */ Symbol.for("react.transitional.element");
       var REACT_PORTAL_TYPE = /* @__PURE__ */ Symbol.for("react.portal");
@@ -1631,9 +1674,9 @@ var PREVIEW = (() => {
     }
   });
 
-  // node_modules/react/index.js
+  // ../../../node_modules/react/index.js
   var require_react = __commonJS({
-    "node_modules/react/index.js"(exports, module) {
+    "../../../node_modules/react/index.js"(exports, module) {
       "use strict";
       if (true) {
         module.exports = require_react_production();
@@ -1643,9 +1686,9 @@ var PREVIEW = (() => {
     }
   });
 
-  // node_modules/react-dom/cjs/react-dom.production.js
+  // ../../../node_modules/react-dom/cjs/react-dom.production.js
   var require_react_dom_production = __commonJS({
-    "node_modules/react-dom/cjs/react-dom.production.js"(exports) {
+    "../../../node_modules/react-dom/cjs/react-dom.production.js"(exports) {
       "use strict";
       var React = require_react();
       function formatProdErrorMessage(code) {
@@ -1800,9 +1843,9 @@ var PREVIEW = (() => {
     }
   });
 
-  // node_modules/react-dom/index.js
+  // ../../../node_modules/react-dom/index.js
   var require_react_dom = __commonJS({
-    "node_modules/react-dom/index.js"(exports, module) {
+    "../../../node_modules/react-dom/index.js"(exports, module) {
       "use strict";
       function checkDCE() {
         if (typeof __REACT_DEVTOOLS_GLOBAL_HOOK__ === "undefined" || typeof __REACT_DEVTOOLS_GLOBAL_HOOK__.checkDCE !== "function") {
@@ -1826,9 +1869,9 @@ var PREVIEW = (() => {
     }
   });
 
-  // node_modules/scheduler/cjs/scheduler.production.js
+  // ../../../node_modules/scheduler/cjs/scheduler.production.js
   var require_scheduler_production = __commonJS({
-    "node_modules/scheduler/cjs/scheduler.production.js"(exports) {
+    "../../../node_modules/scheduler/cjs/scheduler.production.js"(exports) {
       "use strict";
       function push(heap, node) {
         var index = heap.length;
@@ -2099,9 +2142,9 @@ var PREVIEW = (() => {
     }
   });
 
-  // node_modules/scheduler/index.js
+  // ../../../node_modules/scheduler/index.js
   var require_scheduler = __commonJS({
-    "node_modules/scheduler/index.js"(exports, module) {
+    "../../../node_modules/scheduler/index.js"(exports, module) {
       "use strict";
       if (true) {
         module.exports = require_scheduler_production();
@@ -2111,9 +2154,9 @@ var PREVIEW = (() => {
     }
   });
 
-  // node_modules/react-dom/cjs/react-dom-client.production.js
+  // ../../../node_modules/react-dom/cjs/react-dom-client.production.js
   var require_react_dom_client_production = __commonJS({
-    "node_modules/react-dom/cjs/react-dom-client.production.js"(exports) {
+    "../../../node_modules/react-dom/cjs/react-dom-client.production.js"(exports) {
       "use strict";
       var Scheduler = require_scheduler();
       var React = require_react();
@@ -15655,9 +15698,9 @@ var PREVIEW = (() => {
     }
   });
 
-  // node_modules/react-dom/client.js
+  // ../../../node_modules/react-dom/client.js
   var require_client = __commonJS({
-    "node_modules/react-dom/client.js"(exports, module) {
+    "../../../node_modules/react-dom/client.js"(exports, module) {
       "use strict";
       function checkDCE() {
         if (typeof __REACT_DEVTOOLS_GLOBAL_HOOK__ === "undefined" || typeof __REACT_DEVTOOLS_GLOBAL_HOOK__.checkDCE !== "function") {
@@ -15681,9 +15724,9 @@ var PREVIEW = (() => {
     }
   });
 
-  // node_modules/react/cjs/react-jsx-runtime.production.js
+  // ../../../node_modules/react/cjs/react-jsx-runtime.production.js
   var require_react_jsx_runtime_production = __commonJS({
-    "node_modules/react/cjs/react-jsx-runtime.production.js"(exports) {
+    "../../../node_modules/react/cjs/react-jsx-runtime.production.js"(exports) {
       "use strict";
       var REACT_ELEMENT_TYPE = /* @__PURE__ */ Symbol.for("react.transitional.element");
       var REACT_FRAGMENT_TYPE = /* @__PURE__ */ Symbol.for("react.fragment");
@@ -15711,9 +15754,9 @@ var PREVIEW = (() => {
     }
   });
 
-  // node_modules/react/jsx-runtime.js
+  // ../../../node_modules/react/jsx-runtime.js
   var require_jsx_runtime = __commonJS({
-    "node_modules/react/jsx-runtime.js"(exports, module) {
+    "../../../node_modules/react/jsx-runtime.js"(exports, module) {
       "use strict";
       if (true) {
         module.exports = require_react_jsx_runtime_production();

@@ -830,6 +830,12 @@ var DM = (() => {
     const plan = planDeal(moves, { speed, shuffled: o.shuffled, departs: o.departs, riffleMs: o.durations ? sum(o.durations) : void 0 });
     const face = o.face ?? ((_id, el) => el.cloneNode(true));
     const ends = [];
+    const mine = [];
+    const mineTimers = /* @__PURE__ */ new Set();
+    const began = (move) => {
+      o.onCardStart?.(moves.indexOf(move), move.id);
+    };
+    if (!plan.timed.length) for (const m of moves) began(m);
     for (const t of plan.timed) {
       const { move } = t;
       const pileEl = resolveAt(move.pile);
@@ -839,6 +845,20 @@ var DM = (() => {
       const ar = atEl.getBoundingClientRect();
       const [from, to] = move.dir === "out" ? [pr, ar] : [ar, pr];
       const start = `translate(${String(from.left - to.left)}px, ${String(from.top - to.top)}px) scale(${String(from.width / (to.width || 1))}, ${String(from.height / (to.height || 1))})`;
+      if (o.onCardStart) {
+        if (t.delay > 0) {
+          const x = { t: 0, r: () => {
+            began(move);
+          } };
+          x.t = window.setTimeout(() => {
+            timers.delete(x);
+            mineTimers.delete(x);
+            began(move);
+          }, t.delay);
+          timers.add(x);
+          mineTimers.add(x);
+        } else began(move);
+      }
       const stand = (el2) => {
         el2.removeAttribute("data-card-id");
         el2.dataset["motionStandin"] = "";
@@ -846,7 +866,9 @@ var DM = (() => {
         return el2;
       };
       const fly = (el2, frames) => {
-        ends.push(track(el2.animate(frames, { duration: t.ms, delay: t.delay, fill: "both", easing: "ease-in-out" }), el2));
+        const a = el2.animate(frames, { duration: t.ms, delay: t.delay, fill: "both", easing: "ease-in-out" });
+        mine.push(a);
+        ends.push(track(a, el2));
       };
       if (move.faceDown && move.dir === "out") {
         const rot = o.axis === "y" ? "rotateX" : "rotateY";
@@ -861,6 +883,7 @@ var DM = (() => {
       const mid = t.lift !== 1 ? [{ transform: `${REST} scale(${String(t.lift)})`, offset: 0.5 }] : [];
       fly(el, [{ transform: start, offset: 0 }, ...mid, { transform: REST, offset: 1, ...t.vanish ? { opacity: 0 } : {} }]);
     }
+    let stopRif = () => void 0;
     const rif = plan.shuffling.length ? new Promise((r) => {
       const x = { t: 0, r };
       x.t = window.setTimeout(() => {
@@ -868,7 +891,27 @@ var DM = (() => {
         void shuffleDecks(plan.shuffling, speed, o).then(r);
       }, plan.shuffleAt);
       timers.add(x);
+      stopRif = () => {
+        window.clearTimeout(x.t);
+        timers.delete(x);
+        r();
+      };
     }) : Promise.resolve();
+    const abort = () => {
+      for (const x of [...mineTimers]) {
+        window.clearTimeout(x.t);
+        timers.delete(x);
+        mineTimers.delete(x);
+      }
+      stopRif();
+      for (const a of mine) a.finish();
+      for (const p of plan.shuffling) {
+        const at = pileElement(p);
+        if (at) riffling.get(at)?.finish();
+      }
+    };
+    if (o.signal?.aborted) abort();
+    else o.signal?.addEventListener("abort", abort, { once: true });
     return { plan, done: Promise.all([...ends, rif]).then(() => void 0) };
   }
   var riffle = (deck, speed = 1, o = {}) => startRiffle(deck, sum(o.durations ?? RIFFLE_PHASES_MS) * speed, o)?.done ?? Promise.resolve();
