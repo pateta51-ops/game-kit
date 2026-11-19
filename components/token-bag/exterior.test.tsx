@@ -1,17 +1,17 @@
 import { describe, expect, it, vi } from 'vitest';
-import { exteriorCanvas } from './exterior.ts';
+import { exteriorCanvas, type ExteriorPrint } from './exterior.ts';
 
 const ctx = { fillRect: () => undefined, createPattern: () => null, fillStyle: '' };
 vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockReturnValue(ctx as unknown as CanvasRenderingContext2D);
 
 describe('exteriorCanvas (K441)', () => {
   it('paints a print once per function and reuses the canvas', async () => {
-    const print = vi.fn();
+    const print = vi.fn<ExteriorPrint>();
     const a = await exteriorCanvas(print);
     const b = await exteriorCanvas(print);
     expect(print).toHaveBeenCalledTimes(1);
     expect(b).toBe(a);
-    expect(await exteriorCanvas(vi.fn())).not.toBe(a);
+    expect(await exteriorCanvas(vi.fn<ExteriorPrint>())).not.toBe(a);
   });
 
   it('caches the plain cloth', async () => {
@@ -24,7 +24,7 @@ describe('exteriorCanvas (K441)', () => {
   });
 
   it('does not cache a print that failed', async () => {
-    const print = vi.fn().mockRejectedValueOnce(new Error('x'));
+    const print = vi.fn<ExteriorPrint>().mockRejectedValueOnce(new Error('x'));
     await expect(exteriorCanvas(print)).rejects.toThrow('x');
     await exteriorCanvas(print);
     expect(print).toHaveBeenCalledTimes(2);
