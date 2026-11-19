@@ -4,7 +4,7 @@
 Per take: plan the song (lyrics "[Instrumental]", cot "full", the seed), turn every note of the ABC "Vocal" voice into
 rests, render with that score (abc=), then split it with demucs htdemucs two-stem on cuda (in `demucsPython`) and keep
 it only when vocal/mix <= -25 dB and at most 3 % of 0.5 s windows are loud. A take that fails is tried again with the
-next seed (seed + 7919 k), up to `tries` seeds (default 6); none passing fails the item.
+next seed (seed + 7919 k), up to `tries` seeds (default 6); when none passes, the best take (lowest vocal dB) is kept with extra.failedGate true for a human to judge.
 
 Usage: <venv python> yue2_worker.py job.json     (written by audiogen; see audiogen/backends.py)
 Job options (config backends.<name>): modelDir (local snapshot, default ~/audio-gen/models/yue2; when missing the hub
@@ -73,7 +73,7 @@ def main() -> int:
         o = item.get("options") or {}
         lyrics = str(o.get("lyrics", opts.get("lyrics", "[Instrumental]")))
         cot = str(opts.get("cot", "full"))
-        tried, kept, keep = [], [], int(o.get("keep", opts.get("keep", 1)))
+        best, tried, kept, keep = None, [], [], int(o.get("keep", opts.get("keep", 1)))
         for s in recipe.seeds(int(item["seed"]), int(o.get("tries", opts.get("tries", 6)))):
             plan = pipe.plan(style=item["prompt"], lyrics=lyrics, cot=cot, seed=s)
             abc, nv = recipe.novocal(plan.abc)
@@ -89,14 +89,25 @@ def main() -> int:
                 kept.append({"seed": s, "file": str(dest)})
                 if len(kept) >= keep:
                     break
+            elif best is None or (db, loud) < best[0]:
+                if best:
+                    best[1].unlink(missing_ok=True)
+                best = ((db, loud), tmp, s)
             else:
                 tmp.unlink(missing_ok=True)
-        if not kept:
-            raise RuntimeError(f"no take passed the vocal gate: {tried}")
+        if not kept and best is None:
+            raise RuntimeError(f"no take made: {tried}")
+        failed = not kept
+        if failed:  # keep the best failing take for a human to judge
+            shutil.move(best[1], out)
+            kept.append({"seed": best[2], "file": str(out)})
+            print(f"yue2 worker: {item['label']} no take passed the vocal gate; kept best seed {best[2]} marked failedGate", file=sys.stderr, flush=True)
+        elif best:
+            best[1].unlink(missing_ok=True)
         print(f"yue2 worker: {item['label']} {len(kept)} take(s) in {time.time() - t0:.0f} s", file=sys.stderr, flush=True)
         return {"out": str(out), "seed": kept[0]["seed"], "model": f"{hub}@{rev} (yue2 {want})",
                 "extra": {"recipe": "instrumental: plan cot full, Vocal voice to rests, render abc=, demucs gate",
-                          "tried": tried, "alternates": kept[1:]}}  # fmt: skip
+                          "tried": tried, "alternates": kept[1:], "failedGate": failed}}  # fmt: skip
 
     results = []
     for item in job["items"]:

@@ -101,7 +101,7 @@ class Arr:
 
 
 class Yue2Worker(unittest.TestCase):
-    def run_worker(self, version="0.1.6", cuda=True, keep=None):
+    def run_worker(self, version="0.1.6", cuda=True, keep=None, quiet=0.001):
         seen = {"calls": [], "demucs": []}
 
         class Pipe:
@@ -122,7 +122,7 @@ class Yue2Worker(unittest.TestCase):
             p = str(p)
             if p.endswith("no_vocals.wav"):
                 return Arr([1.0] * 40), 20
-            return Arr([1.0 if "-1000" in p else 0.001] * 40), 20
+            return Arr([1.0 if "-1000" in p else quiet] * 40), 20
 
         def demucs(cmd, **kw):
             seen["demucs"].append(cmd)
@@ -176,6 +176,13 @@ class Yue2Worker(unittest.TestCase):
         self.assertEqual(res[0]["seed"], 8919)
         self.assertEqual([a["seed"] for a in res[0]["extra"]["alternates"]], [16838])
         self.assertEqual(len(res[0]["extra"]["tried"]), 3)
+        self.assertFalse(res[0]["extra"]["failedGate"])
+
+    def test_no_seed_passes_keeps_best_marked(self):
+        code, seen, res, made, alt = self.run_worker(quiet=0.5)
+        self.assertEqual((code, made, alt), (0, True, False))
+        self.assertNotIn("error", res[0])
+        self.assertEqual((res[0]["seed"], res[0]["extra"]["failedGate"], len(res[0]["extra"]["tried"])), (8919, True, 3))
 
 
 class Sa3Retry(unittest.TestCase):
