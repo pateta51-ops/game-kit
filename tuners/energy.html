@@ -6285,9 +6285,10 @@ void main() {
     });
     const emptyTimeline = (id) => ({ id, ms: 0, calls: [], actors: [], cues: [] });
     const snapStart = (item) => {
-      if (item.commit || item.data !== void 0)
-        safe(`${item.spec.id} start`, () => o.onBeatStart?.(makeRun(item, emptyTimeline(item.spec.id))));
+      const run = item.commit || item.data !== void 0 ? makeRun(item, emptyTimeline(item.spec.id)) : void 0;
+      if (run) safe(`${item.spec.id} start`, () => o.onBeatStart?.(run));
       commit(item);
+      if (run) safe(`${item.spec.id} end`, () => o.onBeatEnd?.(run));
       if (item.problem) o.onProblem?.(item.problem);
     };
     const snapEnd = (item) => {
@@ -7780,9 +7781,10 @@ var MOTION = (() => {
     });
     const emptyTimeline = (id) => ({ id, ms: 0, calls: [], actors: [], cues: [] });
     const snapStart = (item) => {
-      if (item.commit || item.data !== void 0)
-        safe(`${item.spec.id} start`, () => o.onBeatStart?.(makeRun(item, emptyTimeline(item.spec.id))));
+      const run = item.commit || item.data !== void 0 ? makeRun(item, emptyTimeline(item.spec.id)) : void 0;
+      if (run) safe(`${item.spec.id} start`, () => o.onBeatStart?.(run));
       commit(item);
+      if (run) safe(`${item.spec.id} end`, () => o.onBeatEnd?.(run));
       if (item.problem) o.onProblem?.(item.problem);
     };
     const snapEnd = (item) => {
