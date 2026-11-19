@@ -27,12 +27,23 @@ V:Piano
 
 class Yue2Recipe(unittest.TestCase):
     def test_vocal_voice_becomes_rests(self):
-        abc, n = novocal(ABC)
+        abc, n = novocal(ABC, "rests")
         lines = abc.split("\n")
         self.assertEqual(n, 2)
         self.assertEqual(lines[2], '"C"z16|z16|"G"z16|')
         self.assertEqual(lines[3], "w: la la la")
         self.assertEqual(lines[5], '"C" C4 E4 G8 | c16 |')
+
+    def test_vocal_notes_move_to_instrumental_voice_by_default(self):
+        lines = novocal(ABC)[0].split("\n")
+        self.assertEqual(novocal(ABC)[1], 2)
+        self.assertEqual(lines[2], '"C"z16|z16|"G"z16|')
+        self.assertEqual(lines[5], "c2 d2 e4|c16|G8 A8|")
+        self.assertEqual(novocal("X:1\nV:Vocal\nc4 |\n")[0], "X:1\nV:Vocal\nz16|\n")
+
+    def test_offload_ar_auto_under_24_gib(self):
+        from audiogen.recipe import offload_ar
+        self.assertEqual([offload_ar("auto", 15.9), offload_ar(None, 24.0), offload_ar(True, 80), offload_ar(False, 8)], [True, False, True, False])
 
     def test_gate_math(self):
         mix = [1.0] * 400

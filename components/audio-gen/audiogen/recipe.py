@@ -17,8 +17,7 @@ def novocal(abc: str, vocal: str = "move") -> tuple[str, int]:
     instrumental part", release yue2-v0.1.6, skills/yue2-music/references/abc-editing.md: the `Ins` part "can carry an
     instrumental theme or solo"); a bar with no vocal notes keeps the instrumental bar. With no other voice, or
     vocal="rests", the notes are dropped. Returns the score and the number of Vocal bars that had notes."""
-    lines = abc.split("
-")
+    lines = abc.split(chr(10))
     q = lambda b: re.sub(r'"[^"]*"', "", b)  # noqa: E731
     music = lambda ln: "|" in ln and not ln.startswith(("%", "w:"))  # noqa: E731
     ins, cur = None, None
@@ -54,8 +53,7 @@ def novocal(abc: str, vocal: str = "move") -> tuple[str, int]:
             out.append("|".join(res) + "|")
         else:
             out.append(ln)
-    return "
-".join(out), n
+    return chr(10).join(out), n
 
 
 YUE2_DOC_GIB = 24  # YuE2 docs (README, docs/generation.md): "a BF16-capable NVIDIA GPU with 24 GB VRAM, one request at a time"
