@@ -12,6 +12,7 @@ Interactive pages that show one kit part live, with sliders for its tunable valu
 | [riffle.html](riffle.html) | deck-motions | top-view and side-view riffle, each with speed, cards, orientation and the four phase timings | to publish |
 | [token-motion.html](token-motion.html) | token-flights, token-bag, track | token flights, 2D and 3D bag draws, marker glide, hop-and-fill, and lit steps | (link removed)> |
 | [pieces-motion.html](pieces-motion.html) | pieces-3d, pieces-3d-verbs, drag-drop | d6 and d10 rolls, ball roll and settle, chip depth and shadows, drag ghost | (link removed)> |
+| [screen.html](screen.html) | effect-library, motion-frame, board-viewport, modal-dialog, phone-mode, card-zoom, achievements, card-attachments | camera pull and push, scroll pan, letterbox banner, typewriter, pile lift, board zoom and pan, dialog fade, phone sheet slide, card-zoom placement, achievement toast hold, card stack slide and fan | to publish |
 
 ## How a tuner is made
 
