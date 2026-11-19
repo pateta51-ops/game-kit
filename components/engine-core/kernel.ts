@@ -81,3 +81,4 @@ export { preview, type Preview, type PreviewOptions, type PreviewStop } from './
 export { query } from './query.ts';
 export { markIdle } from './idle.ts';
 export { kernelPort, portAnswer, portOptions, portResult, portSettle, type EnginePort, type PortAnswer, type PortOption, type PortPrompt, type PortStep, type PortTypes } from './port.ts';
+export { addPortStep, canUndoPortStep, extendPortStep, newPortSteps, portStepReason, redoPortStep, replayPortSteps, undoPortStep, type PortStepEntry, type PortStepHistory, type PortStepOptions, type PortStepResult, type ReplayedPortSteps } from './portSteps.ts';
