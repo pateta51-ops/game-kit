@@ -143,7 +143,7 @@ describe('tableMapper (K447)', () => {
 describe('endRect (K447)', () => {
   it("reads the element's rect at its animations' end and puts their clocks back", () => {
     const anims = [5, 10].map((t, i) => ({
-      currentTime: t as number | null,
+      currentTime: t,
       effect: { getComputedTiming: () => ({ endTime: i ? 400 : Infinity }) },
     }));
     const el = {
