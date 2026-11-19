@@ -63,9 +63,9 @@ describe('glitch', () => {
     expect(tops()).toEqual(a);
   });
   it('bursts after the idle gap, ends, and schedules the next', () => {
-    mk(1);
+    createGlitch(host as unknown as HTMLElement, { speed: () => 1, seed: 1, repeat: 0, idleMs: [1000, 1000] });
     expect(vi.getTimerCount()).toBe(1);
-    vi.advanceTimersByTime(7000);
+    vi.advanceTimersByTime(1000);
     expect(host.classes.has('fx-glitch--burst')).toBe(true);
     vi.advanceTimersByTime(200);
     expect(host.classes.has('fx-glitch--burst')).toBe(false);
