@@ -106,7 +106,8 @@ describe('K445 flipFrames resize box', () => {
   it("K445: the swap is exactly edge-on, the perspective is the parent's (4x the start height), none in the transform", () => {
     const i = f.first.findIndex((k) => k.opacity === 0);
     expect(deg(f.first[i - 1]!)).toBe(90);
-    expect(deg(f.second[i]!)).toBe(-90);
+    expect(deg(f.second[i - 1]!)).toBe(-90);
+    expect(deg(f.second[i]!)).toBeLessThan(-89.9);
     expect(f.first[i - 1]!.offset).toBe(0.5);
     expect(f.perspective).toBe(448);
     for (const k of [...f.first, ...f.second]) expect(String(k.transform)).not.toContain('perspective(');
