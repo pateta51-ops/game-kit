@@ -1,17 +1,18 @@
-"""ACE-Step 1.5 worker: runs in the ACE-Step Python (a venv with CUDA PyTorch), not in the pipeline's.
+"""ACE-Step 1.5 worker: runs in the ACE-Step Python (a venv with CUDA PyTorch), not in the pipeline's. GPU only.
 
 Usage: <venv python> acestep_worker.py job.json     (written by audiogen; see audiogen/backends.py)
 Job options (config backends.<name>, all optional except repo):
   repo            the ACE-Step-1.5 checkout
   checkpointsDir  where weights are downloaded (outside any game repo)
   model           DiT config, default "acestep-v15-turbo"
-  thinking        use the 5 Hz LM to plan the audio codes (better structure), default true
+  thinking        use the 5 Hz LM to plan the audio codes (better structure; the LM is on CUDA too), default false
   lmModel         LM name, default: the first one available (downloaded on first use)
   lmBackend       "pt" (default) or "vllm"
   steps           diffusion steps, default 8 (turbo)
-  offload         offload to CPU between stages (for GPUs under 20 GB), default true
+  offload         ignored: the models stay on the card (it moved them to the CPU between stages)
 Per item: prompt, seconds, seed, tempo, key, beatsPerBar, options.lyrics (default "[Instrumental]").
-Exit 3 = cannot start (missing checkout or GPU); the pipeline turns it into a skip.
+Exit 3 = cannot start (missing checkout, no CUDA, or a first generation that did not use the GPU); the pipeline
+turns it into a skip. There is no CPU fallback: a VAE decode that ACE-Step would move to the CPU fails the item.
 """
 
 from __future__ import annotations
@@ -22,6 +23,9 @@ import shutil
 import sys
 import time
 from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+from audiogen import gpu  # noqa: E402
 
 
 def main() -> int:
@@ -36,11 +40,8 @@ def main() -> int:
     os.chdir(repo)
     sys.path.insert(0, str(repo))
 
-    import torch
-
-    if not torch.cuda.is_available() and not opts.get("allowCpu"):
-        print("acestep worker: CUDA is not available (set allowCpu to run slowly on the CPU)", file=sys.stderr)
-        return 3
+    torch = gpu.cuda("acestep worker")
+    os.environ.pop("ACESTEP_VAE_ON_CPU", None)
 
     from acestep.handler import AceStepHandler
     from acestep.inference import GenerationConfig, GenerationParams, generate_music
@@ -54,10 +55,11 @@ def main() -> int:
         get_checkpoints_dir,
     )
 
-    device = "cuda" if torch.cuda.is_available() else "cpu"
+    device = "cuda"
     model = str(opts.get("model", "acestep-v15-turbo"))
-    thinking = bool(opts.get("thinking", True))
-    offload = bool(opts.get("offload", True))
+    thinking = bool(opts.get("thinking", False))
+    if opts.get("offload"):
+        print("acestep worker: 'offload' is ignored. GPU only: the models stay on the card.", file=sys.stderr)
     ckpt = get_checkpoints_dir()
     if not check_main_model_exists(ckpt):
         ok, msg = ensure_main_model(ckpt)
@@ -72,11 +74,19 @@ def main() -> int:
 
     dit = AceStepHandler()
     status, ok = dit.initialize_service(
-        project_root=str(repo), config_path=model, device=device, offload_to_cpu=offload, use_mlx_dit=False
+        project_root=str(repo), config_path=model, device=device, offload_to_cpu=False, use_mlx_dit=False
     )
     if not ok:
         print(f"acestep worker: DiT init failed: {status}", file=sys.stderr)
         return 3
+    decode = dit.vae.decode
+
+    def gpu_decode(z, *a, **k):  # ACE-Step moves the VAE decode to the CPU when VRAM is short
+        if z.device.type != "cuda":
+            raise RuntimeError("GPU only: not enough free VRAM for the VAE decode, and no CPU fallback")
+        return decode(z, *a, **k)
+
+    dit.vae.decode = gpu_decode
     llm = LLMHandler()
     lm_name = ""
     if thinking:
@@ -92,7 +102,7 @@ def main() -> int:
         if lm_name:
             status, ok = llm.initialize(
                 checkpoint_dir=str(ckpt), lm_model_path=lm_name, backend=str(opts.get("lmBackend", "pt")),
-                device=device, offload_to_cpu=offload,
+                device=device, offload_to_cpu=False,
             )  # fmt: skip
             if not ok:
                 print(f"acestep worker: LM init failed ({status}); continuing without thinking", file=sys.stderr)
@@ -145,7 +155,8 @@ def main() -> int:
     results = []
     for item in job["items"]:
         try:
-            results.append(one(item))
+            results.append(one(item) if any("error" not in r for r in results)
+                           else gpu.first(torch, "acestep worker", lambda: one(item)))  # fmt: skip
         except Exception as e:  # noqa: BLE001 - one bad item must not stop the rest
             print(f"acestep worker: {item['label']} failed: {e}", file=sys.stderr, flush=True)
             results.append({"out": item["out"], "error": f"{type(e).__name__}: {e}"[:500]})

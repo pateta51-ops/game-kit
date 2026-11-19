@@ -213,5 +213,103 @@ class Config(unittest.TestCase):
         cues = load_cues  # noqa: F841
 
 
+class GpuOnly(unittest.TestCase):
+    """Fake torch and ACE-Step: no CUDA means no audio, never the CPU."""
+
+    def torch(self, cuda=True, took=1):
+        import types
+        c = types.SimpleNamespace(is_available=lambda: cuda, reset_peak_memory_stats=lambda: None,
+                                  memory_allocated=lambda: 5, max_memory_allocated=lambda: 5 + took)
+        return types.SimpleNamespace(cuda=c, set_num_threads=lambda n: self.assertEqual(n, 2))
+
+    def test_workers_start_under_nice(self):
+        import tempfile
+        from unittest import mock
+        from audiogen import backends as B
+        c = parse_cue({"name": "a", "prompt": "p", "category": "music", "length": 1}, None)
+        with tempfile.TemporaryDirectory() as t, mock.patch.object(B.subprocess, "run", return_value=mock.Mock(returncode=0)) as run:
+            B.make("acestep", {"licence": "x", "python": sys.executable}, Path(t)).generate([B.Job(cue=c, n=1, seed=1, seconds=1.0, out=Path(t) / "a.wav")])
+        cmd = run.call_args[0][0]
+        self.assertEqual(cmd[:3], ["nice", "-n", "19"])
+        self.assertTrue(cmd[4].endswith("acestep_worker.py"))
+
+    def test_no_cuda_exits_and_threads_are_capped(self):
+        import os
+        from unittest import mock
+        from audiogen import gpu
+        self.assertEqual((os.environ["OMP_NUM_THREADS"], os.environ["MKL_NUM_THREADS"]), ("2", "2"))
+        with mock.patch.dict(sys.modules, {"torch": self.torch()}):
+            self.assertTrue(gpu.cuda("x").cuda.is_available())
+        with mock.patch.dict(sys.modules, {"torch": self.torch(cuda=False)}), self.assertRaises(SystemExit) as e:
+            gpu.cuda("x")
+        self.assertEqual(e.exception.code, 3)
+
+    def test_first_generation_must_take_cuda_memory(self):
+        from audiogen import gpu
+        self.assertEqual(gpu.first(self.torch(), "x", lambda: 7), 7)
+        with self.assertRaises(SystemExit) as e:
+            gpu.first(self.torch(took=0), "x", lambda: 7)
+        self.assertEqual(e.exception.code, 3)
+
+    def test_acestep_worker_defaults_and_no_cpu(self):
+        import importlib.util
+        import json
+        import os
+        import tempfile
+        import types
+        from unittest import mock
+        seen = {}
+        on = lambda kind: types.SimpleNamespace(device=types.SimpleNamespace(type=kind))  # noqa: E731
+
+        class Handler:
+            def initialize_service(self, **kw):
+                seen["dit"] = kw
+                self.vae = types.SimpleNamespace(decode=lambda z: "wav")
+                return "", True
+
+        class LLM:
+            def initialize(self, **kw):
+                seen["lm"] = kw
+                return "", True
+
+        def music(dit, llm, params, cfg, save_dir):
+            seen["thinking"] = params.thinking
+            with self.assertRaises(RuntimeError):  # the VAE decode ACE-Step would do on the CPU
+                dit.vae.decode(on("cpu"))
+            self.assertEqual(dit.vae.decode(on("cuda")), "wav")
+            p = Path(save_dir) / "x.wav"
+            p.write_bytes(b"x")
+            return types.SimpleNamespace(success=True, audios=[{"path": str(p), "params": {"seed": 1}}], error=None)
+
+        mods = {"acestep": types.ModuleType("acestep"), "acestep.handler": types.SimpleNamespace(AceStepHandler=Handler),
+                "acestep.inference": types.SimpleNamespace(GenerationConfig=lambda **k: None, generate_music=music,
+                                                           GenerationParams=lambda **k: types.SimpleNamespace(**k)),
+                "acestep.llm_inference": types.SimpleNamespace(LLMHandler=LLM),
+                "acestep.model_downloader": types.SimpleNamespace(
+                    check_main_model_exists=lambda c: True, check_model_exists=lambda m, c: True, ensure_dit_model=None,
+                    ensure_lm_model=None, ensure_main_model=None, get_checkpoints_dir=lambda: "ckpt")}
+        spec = importlib.util.spec_from_file_location("acestep_worker", Path(__file__).resolve().parent.parent / "workers" / "acestep_worker.py")
+        w = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(w)
+        cwd = os.getcwd()
+        with tempfile.TemporaryDirectory() as t:
+            t = Path(t)
+            (t / "repo" / "acestep").mkdir(parents=True)
+            (t / "job.json").write_text(json.dumps({
+                "options": {"repo": str(t / "repo"), "allowCpu": True, "offload": True}, "result": str(t / "r.json"),
+                "items": [{"out": str(t / "o" / "a.wav"), "prompt": "p", "seconds": 1, "seed": 1, "label": "a#1"}]}))
+            try:
+                with mock.patch.object(sys, "argv", ["w", str(t / "job.json")]):
+                    with mock.patch.dict(sys.modules, {**mods, "torch": self.torch()}):
+                        self.assertEqual(w.main(), 0)
+                    with mock.patch.dict(sys.modules, {**mods, "torch": self.torch(cuda=False)}), self.assertRaises(SystemExit) as e:
+                        w.main()  # allowCpu is gone, and so is offload
+            finally:
+                os.chdir(cwd)
+            self.assertEqual(e.exception.code, 3)
+            self.assertEqual(json.loads((t / "r.json").read_text())["items"][0]["out"], str(t / "o" / "a.wav"))
+        self.assertEqual((seen["dit"]["device"], seen["dit"]["offload_to_cpu"], seen["thinking"], "lm" in seen), ("cuda", False, False, False))
+
+
 if __name__ == "__main__":
     unittest.main()

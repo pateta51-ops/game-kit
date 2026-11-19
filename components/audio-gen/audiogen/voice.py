@@ -1,4 +1,5 @@
-"""Voice lines from a script table with a free local voice (Kokoro-82M). Parts (names, number words) are separate files.
+"""Voice lines from a script table with a free local voice (Kokoro-82M, on CUDA only). Parts (names, number words) are
+separate files.
 
 Table (JSON): {"kinds": {kind: {"voices": [..], "speed": 1.0, "filters": "<ffmpeg af>", "lufs": -20, "peakDbfs": -3,
 "peakBelowS": 0, "shout": false}}, "lines": [{"id", "text", "kind"}], "parts": {group: [{"id", "text", "kind"?}]}}.
@@ -7,6 +8,7 @@ from __future__ import annotations
 
 import json
 import math
+import os
 from pathlib import Path
 
 from . import post as P
@@ -52,20 +54,28 @@ def shout(x: list[float], drive: float = 3.0) -> list[float]:
 
 def generate(table: dict, out: Path, only: set[str] | None = None) -> dict:
     """Make the raw takes with Kokoro (run in the venv that has it). A take that is silent, too short or clipped is
-    remade once with the kind's `retryVoice`, when it has one. Returns {key: voice used}."""
+    remade once with the kind's `retryVoice`, when it has one. Returns {key: voice used}. GPU only, low priority."""
+    from . import gpu
+
+    torch = gpu.cuda("voice")
+    os.nice(19)
     import numpy as np
     import soundfile as sf
     from kokoro import KPipeline
 
     out.mkdir(parents=True, exist_ok=True)
-    pipe, used = KPipeline(lang_code="a"), {}
+    pipe, used = KPipeline(lang_code="a", device="cuda"), {}
+
+    def say(j: dict, voice: str):
+        return np.concatenate([np.asarray(g[2].cpu() if hasattr(g[2], "cpu") else g[2]) for g in pipe(j["text"], voice=voice, speed=j["speed"])])
+
     for j in jobs(table):
         if only and j["id"] not in only:
             continue
         retry = table["kinds"][j["kind"]].get("retryVoice")
         for key, v in zip(keys(j), j["voices"]):
             for voice in [v] + ([retry] if retry else []):
-                a = np.concatenate([np.asarray(g[2].cpu() if hasattr(g[2], "cpu") else g[2]) for g in pipe(j["text"], voice=voice, speed=j["speed"])])
+                a = say(j, voice) if used else gpu.first(torch, "voice", lambda: say(j, voice))
                 if 0.02 < np.abs(a).max() < 0.999 and len(a) / KOKORO_RATE >= 0.25:
                     break
             sf.write(out / f"{key}.raw.wav", a, KOKORO_RATE)
