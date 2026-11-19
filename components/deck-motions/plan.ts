@@ -20,6 +20,11 @@ export const RIFFLE_PHASES_MS: readonly number[] = RIFFLE_STUDY_MS.map((ms) => m
 export const RIFFLE_DECK_CARDS = 20;
 /** The unit (px) at which the riffle's pixel offsets were measured (3840x2160). */
 export const MOCK_U = 21.6;
+/** K406: a turn-over: the lift at edge-on, the perspective distance (px), and the share of the travel the turn spans. */
+export const FLIP_LIFT = 1.08;
+export const FLIP_PERSPECTIVE = 800;
+export const FLIP_START = 0.25;
+export const FLIP_END = 0.75;
 
 /** A place: a pile id (`data-pile`), or a function giving the element where the card is shown. */
 export type At = string | (() => HTMLElement | null);
@@ -29,8 +34,8 @@ export interface Move {
   dir: 'out' | 'in';
   pile: string;
   at: At;
-  /** Turns over on the way (a back leaves a pile, a card goes face down into one). */
-  faceDown: boolean;
+  /** Turns over on the way (a back leaves a pile, a card goes face down into one). K406: unset = the pile's `data-face` (face down unless "up"); a pile marked `data-face="down"` always turns. */
+  faceDown?: boolean;
   /** A refill: waits for the departing card, may fly far, lifts. */
   refill?: boolean;
   far?: boolean;
@@ -72,7 +77,7 @@ export function planDeal(moves: readonly Move[], opts: { speed?: number | undefi
   const shuffleAt = ins.length ? (ins.length - 1) * stagger + deal : 0;
   const dealAt = shuffling.length ? shuffleAt + (opts.riffleMs ?? RIFFLE_MS) * speed : 0;
   const refillAt = opts.departs ? deal * REFILL_AFTER + REFILL_GAP_MS * speed : 0;
-  const timed: Timed[] = ins.map((move, i) => ({ move, delay: i * stagger, ms: deal, lift: 1, vanish: move.faceDown }));
+  const timed: Timed[] = ins.map((move, i) => ({ move, delay: i * stagger, ms: deal, lift: 1, vanish: move.faceDown === true }));
   let dealt = 0;
   for (const move of outs) {
     if (move.refill) timed.push({ move, delay: refillAt, ms: deal * (move.far ? REFILL_FAR_SCALE : 1), lift: REFILL_LIFT, vanish: false });
@@ -83,6 +88,45 @@ export function planDeal(moves: readonly Move[], opts: { speed?: number | undefi
   }
   const total = Math.max(...timed.map((t) => t.delay + t.ms), shuffling.length ? dealAt : 0);
   return { timed, shuffling, shuffleAt, dealAt, total };
+}
+
+export interface FlipOpts {
+  /** Scale at edge-on (default FLIP_LIFT; a refill's lift when it has one). */
+  lift?: number | undefined;
+  /** Perspective distance in px (default FLIP_PERSPECTIVE). */
+  perspective?: number | undefined;
+  /** Where in the travel (0..1) the turn starts and ends (default FLIP_START, FLIP_END). */
+  start?: number | undefined;
+  end?: number | undefined;
+  axis?: 'x' | 'y' | undefined;
+  direction?: 1 | -1 | undefined;
+  /** The second side fades out at the end (a card going into a pile). */
+  vanish?: boolean | undefined;
+}
+
+/**
+ * K406: a real turn-over from `from` (offset and scale of the start against the rest place) to rest. Both sides fly the same
+ * path; the first turns 0 to 90 degrees about its own axis with perspective, the second -90 to 0; they swap at edge-on, lifting.
+ */
+export function flipFrames(from: { x: number; y: number; sx: number; sy: number }, o: FlipOpts = {}): { first: Keyframe[]; second: Keyframe[] } {
+  const s = Math.min(Math.max(o.start ?? FLIP_START, 0), 1);
+  const e = Math.max(Math.min(Math.max(o.end ?? FLIP_END, 0), 1), s);
+  const m = (s + e) / 2;
+  const eps = 0.0001;
+  const lift = o.lift ?? FLIP_LIFT;
+  const rot = o.axis === 'y' ? 'rotateX' : 'rotateY';
+  const sg = o.direction ?? 1;
+  const n = (v: number) => String(Math.round(v * 1e4) / 1e4);
+  const at = (p: number, deg: number) => {
+    const q = 1 - p;
+    const l = e > s && p > s && p < e ? 1 + (lift - 1) * Math.sin(Math.PI * (p - s) / (e - s)) : 1;
+    return `translate(${n(from.x * q)}px, ${n(from.y * q)}px) scale(${n(from.sx * q + p)}, ${n(from.sy * q + p)}) scale(${n(l)}) perspective(${n(o.perspective ?? FLIP_PERSPECTIVE)}px) ${rot}(${n(deg * sg)}deg)`;
+  };
+  const offs = [...new Set([0, s, (s + m) / 2, m, Math.min(m + eps, 1), (m + e) / 2, e, 1])].sort((a, b) => a - b);
+  const turn = (p: number, a: number, b: number) => (b > a ? Math.min(Math.max((p - a) / (b - a), 0), 1) : p >= b ? 1 : 0);
+  const first = offs.map((p) => ({ offset: p, transform: at(p, 90 * turn(p, s, m)), opacity: p <= m ? 1 : 0 }));
+  const second = offs.map((p) => ({ offset: p, transform: at(p, p <= m ? -90 : -90 + 90 * turn(p, m, e)), opacity: p <= m ? 0 : o.vanish && p === 1 ? 0 : 1 }));
+  return { first, second };
 }
 
 /** Keyframes of card `n` of the riffle (the approved shuffle v2: constants and offsets unchanged). `k` is unit / MOCK_U. */

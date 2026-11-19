@@ -10,6 +10,7 @@ Run `python kit/plan-checker/plancheck.py docs/PLAN.md [flags]` (the game's chec
 - Session plan: every phase appears in exactly one batch row, every batch names an existing phase and has a Model and a Confidence percentage; missing Worker, Touches, Gate or Owner columns are a note. `--sessions-optional` accepts a plan with no session plan.
 - Experience features (XP-nn): each names a phase or Roadmap.
 - Opt-in flags: `--cover TEXT` (every id of that section appears in the scenario catalogue; `--cover-rows`, `--cover-skip`), `--tsc` with `--types`, `--tsc-stub` and `--tsc-at DIR` (the plan's `ts` blocks compile under strict flags; `--tsc-at <folder>` compiles them in the game folder the plan's imports are written from so `../../kit/...` imports resolve), `--scenarios-end`; `--scenarios`, `--phases`, `--types`, `--sessions` rename the sections it looks for by heading keyword.
+- Test depth (K414; every problem starts with `depth:`): the card-test section (heading "Card-language test programme", `--cards TEXT`) names `expectNotOffered` and has a table with columns Family, Full resolve, Poor setup in which every row has a full-resolve depth and names `expectNotOffered` or `expectNotFired`; the Definition of Done (`--done TEXT`) names `expectNotOffered`, "default-off" and "LLM playtest"; the test-layers section ("Layers", `--layers TEXT`) names "LLM playtest"; a phase block in the phases section names `llm-playtester`; the shared preamble names e2e and `heavy`. `--depth-optional` reports all of these as NOTE lines instead of problems.
 - Warnings, never failures: the kit pin is 5+ minor versions behind the latest tag, or a `Phase GK` targets a K row the kit marks done (`--kit PATH` names the checkout).
 
 `--batch <id>` and `--section N.N` print and exit without checking. `--batch S4` prints the shared preamble, the batch's block, its phase blocks and the line ranges of the sections they list under "Read first"; a worker Reads only those ranges. `--section 5.3` prints one numbered section. `plancheck.ts` runs it from a test.
@@ -19,3 +20,7 @@ Run `python kit/plan-checker/plancheck.py docs/PLAN.md [flags]` (the game's chec
 ```sh
 python kit/plan-checker/plancheck.py docs/PLAN.md --batch S4   # a worker's order and the line ranges to read
 ```
+
+## Breaking (K414)
+
+A plan written before 18 Nov 2026 fails the `depth:` checks until its planner amends it, or until the game's plancheck script passes `--depth-optional` (the same plan then passes, with NOTE lines). The older checks give the same results as before. `plancheck.ts` only runs `plancheck.py`, so the two cannot differ; the tests run both on the same fixture plans and compare exit codes.
