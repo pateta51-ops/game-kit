@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { CONTENT, COUNTER, RULES, type Counter } from '../engine-core/fake/counter.ts';
 import { kernelPort } from '../engine-core/index.ts';
-import { lockAt, lockPrompt, playScript, refusal, startRun, tutorialCheck, type TutorialGame, type TutorialPort, type TutorialScript } from './index.ts';
+import { answerWords, buildScript, driverLine, lineDump, scriptLine, searchSeeds, lockAt, lockPrompt, playScript, refusal, startRun, tutorialCheck, type TutorialGame, type TutorialPort, type TutorialScript } from './index.ts';
 
 // K390: a game with its own engine: climb to 2; "down" is disabled at 0; string prompt ids, events in its log
 interface Climb {
@@ -109,5 +109,35 @@ describe('K390 tutorial over an engine port', () => {
     expect([lb.answer, lb.asks, lb.option('draw'), lb.button('next')]).toEqual([la.answer, la.asks, la.option('draw'), la.button('next')]);
     const [x, y] = [io(), io()];
     expect([tutorialCheck(port, script, {}, y.io), y.lines]).toEqual([tutorialCheck(rules, script, {}, x.io), x.lines]);
+  });
+  it('K400 seed and build helpers give the same results through GameRules and through kernelPort', () => {
+    const words = { optionWords: (_s: unknown, id: string) => (id === 'add' ? 'Add' : id), promptKind: () => 'main' };
+    const rules: TutorialGame<Counter> = { rules: COUNTER, content: CONTENT, gameRules: RULES, options: (seed) => ({ seed }), ...words };
+    const port: TutorialPort<Counter> = { ...kernelPort(COUNTER, CONTENT, { gameRules: RULES }), ...words };
+    const script: TutorialScript = {
+      seed: 'tut',
+      steps: [
+        { id: 'add', narration: 'Add.', targets: [], do: { kind: 'move', choose: ['add'] } },
+        { id: 'draw', narration: 'Draw.', targets: [], do: { kind: 'move', choose: ['draw'] }, expect: [{ type: 'drawn', card: 6 }] },
+      ],
+    };
+    const choose = (s: { readonly prompt: { readonly id: number; readonly options: readonly { readonly id: string; readonly enabled: boolean }[] } | null }) => {
+      const o = s.prompt?.options.find((x) => x.enabled);
+      return s.prompt === null || o === undefined ? null : ({ kind: 'answer', promptId: s.prompt.id, picks: [o.id] } as const);
+    };
+    const lr = scriptLine(rules, script)('tut');
+    expect(scriptLine(port, script)('tut')).toEqual(lr);
+    expect(lr.stopped).toBeUndefined();
+    const dr = driverLine(rules, (s) => choose(s), 6)('tut');
+    expect(dr.actions.length).toBeGreaterThan(0);
+    expect(driverLine(port, (s) => choose(s as never), 6)('tut')).toEqual(dr);
+    const search = <T,>(play: (seed: string) => T) => searchSeeds({ seeds: ['nope', 'tut'], play: play as never, accept: (_e, l) => l.stopped === undefined });
+    expect(search(scriptLine(port, script))).toEqual(search(scriptLine(rules, script)));
+    const plan = [{ id: 'a', n: 1, narration: 'A.' }, { id: 'b', n: 1, narration: 'B.' }];
+    const built = buildScript(rules, lr.actions, plan, { seed: 'tut', keep: () => true });
+    expect(buildScript(port, lr.actions, plan, { seed: 'tut', keep: () => true })).toEqual(built);
+    expect(answerWords(port, script)).toEqual(answerWords(rules, script));
+    expect(answerWords(port, script)[0]).toEqual(['Add']);
+    expect(lineDump(port, 'tut', lr.actions)).toEqual(lineDump(rules, 'tut', lr.actions));
   });
 });

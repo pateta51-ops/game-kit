@@ -14,7 +14,7 @@ JSON: `seed`, optional `title`, `steps`, optional `end` (matched against `state.
 
 `rules`, `content`, `gameRules`, `options(seed)`. Optional: `human(state)` (is the open prompt the player's), `promptKind(state)`, `findOption(state, ref)`, `ordered(state)` (answer order matters), `optionWords(state, id)`, `eventWords(state, event)`, `same(state, want, actual)` (e.g. a card instance against its definition id).
 
-K390: a game with its own engine passes a `TutorialPort<G>` instead: engine-core's `EnginePort` (`start(seed)`, `apply`, `settle`, `prompt`, `events`, `result`) with the same optional hooks. `startRun`, `playStep`, `playScript`, `scriptedIds`, `missingEvents`, `lockAt`, `lockPrompt`, `refusal`, `tutorialCheck` and `stepHeadings` take either (`TutorialEngine<G>`); `run.actions` are `PortAnswer`s (the port's prompt ids). `buildScript`, `answerWords`, `lineDump`, `scriptLine` and `driverLine` stay `GameRules` only.
+K390: a game with its own engine passes a `TutorialPort<G>` instead: engine-core's `EnginePort` (`start(seed)`, `apply`, `settle`, `prompt`, `events`, `result`) with the same optional hooks. `startRun`, `playStep`, `playScript`, `scriptedIds`, `missingEvents`, `lockAt`, `lockPrompt`, `refusal`, `tutorialCheck` and `stepHeadings` take either (`TutorialEngine<G>`); `run.actions` are `PortAnswer`s (the port's prompt ids). `searchSeeds`, `buildScript`, `answerWords`, `lineDump`, `scriptLine` and `driverLine` take either too (K400; a port's `SeedLine.actions` are `PortAnswer`s).
 
 ## Use
 
