@@ -7,6 +7,7 @@
 //                   "pathsIgnore": [<paths a push to main does not run CI for>], "runDrafts": <true: CI on draft pull requests too>,
 //                   "push": <false: no CI on a push to main>, "prTypes": [<pull_request types instead of the template's>],
 //                   "queueWaitMinutes": <default 60, false for none: self-hosted jobs get timeoutMinutes + this; their run steps get timeoutMinutes>,
+//                   "docsSkip": <false: no docs-only skip (K453: default on in ci.yml)>, "docsPaths": [<globs, default docs/**, **/*.md, *.md>], "docsSteps": [<steps of a hosted docs lane that runs on a docs-only change>],
 //                   "ci": { "name", "timeoutMinutes", "checkout": {<with>}, "node": {<more with>}, "install": <step>, "steps": [<steps instead of npm run check>] },
 //                   "gate": { the same keys, for full-gate.yml }, "jobs": { "<id>": { "name", "timeoutMinutes", "steps": [...] } } (more jobs in ci.yml) }
 // More keys of ci / gate (K190, see README): id, if, runsOn, nodeVersion, before/after/replace (by step), python, rust, failureArtifact, e2ePort, flat; ci: dispatch, inputs, branchesIgnore, draftConcurrency; gate: inputs.
@@ -129,6 +130,27 @@ for (const f of c.workflows ?? ['ci.yml', 'full-gate.yml']) {
       if (!g) die(`ci.yml: no "if" and "runs-on" lines in the template to give job "${id}"`);
       out += `\n  ${id}:\n    name:${val(j.name ?? id)}\n${g[0]}    timeout-minutes: ${j.timeoutMinutes ?? 15}\n    steps:\n      - uses: actions/checkout@v7\n${steps(j.steps)}`;
     }
+  }
+  if (f === 'ci.yml' && c.docsSkip !== false) {
+    // K453: a docs-only change never takes the self-hosted slot: a hosted `changes` job says so, `check` is then skipped (a skipped job
+    // counts as passed for a required check), and the optional hosted `docs` job (docsSteps) runs the docs lanes alone.
+    const id = o?.id ?? 'check';
+    const a = out.search(new RegExp(`^ {2}${id}:\n`, 'm'));
+    const b = a < 0 ? -1 : out.slice(a + 1).search(/^ {2}[\w-]+:\n/m);
+    const blk = a < 0 ? '' : out.slice(a, b < 0 ? undefined : a + 1 + b);
+    if (!blk || /^ {4}if: [|>]/m.test(blk) || !/^ {4}runs-on: /m.test(blk)) die(`ci.yml: "docsSkip" of ci.config.json needs the job "${id}" with a one-line "if" and a "runs-on"; set "docsSkip": false`);
+    const m = blk.match(/^ {4}if: (.*)\n/m);
+    const e = m ? (m[1].startsWith('"') ? JSON.parse(m[1]) : m[1]) : '';
+    const cond = `${e ? `(${e}) && ` : ''}!cancelled() && needs.changes.outputs.docs != 'true'`;
+    const nb = (m ? blk.replace(m[0], '') : blk).replace(/^ {4}runs-on: /m, `    needs: changes\n    if:${val(cond)}\n    runs-on: `);
+    const ifLine = m ? `    if: ${m[1]}\n` : '';
+    const dp = c.docsPaths?.length ? `\n          DOCS_PATHS: ${JSON.stringify(c.docsPaths.join(','))}` : '';
+    const ds = c.docsSteps?.length
+      ? `\n  docs:\n    name: Docs lanes\n    needs: changes\n    if: needs.changes.outputs.docs == 'true'\n    runs-on: ubuntu-latest\n    timeout-minutes: 10\n    steps:\n      - uses: actions/checkout@v7\n      - uses: actions/setup-node@v7\n        with:\n          node-version-file: .nvmrc\n      - run: npm ci --no-audit --no-fund\n${steps(c.docsSteps)}`
+      : '';
+    const ch = `\n  changes:\n    name: Docs-only change?\n${ifLine}    runs-on: ubuntu-latest\n    timeout-minutes: 5\n    outputs:\n      docs: \${{ steps.diff.outputs.docs }}\n    steps:\n      - uses: actions/checkout@v7\n        with:\n          fetch-depth: 0\n      - id: diff\n        run: node ${dir}/docs-only.mjs\n        env:\n          BASE: \${{ github.event.pull_request.base.sha || github.event.before }}${dp}\n`;
+    out = out.slice(0, a) + nb + out.slice(a + blk.length);
+    out = out.replace(/\n*$/, '\n') + ch + ds;
   }
   if (f !== 'nightly-fuzz.yml' && c.queueWaitMinutes !== false) {
     const q = c.queueWaitMinutes ?? 60;

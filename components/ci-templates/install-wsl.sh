@@ -12,6 +12,9 @@
 # that it stops when gh fails (a failed gh leaves no token, and the registration would then fail with 401):
 #   $t = gh api -X POST repos/<owner>/<repo>/actions/runners/registration-token -q .token; if ($LASTEXITCODE -ne 0 -or -not $t) { "no token: run again" } else { wsl -d Ubuntu -e env RUNNER_REPO=<owner>/<repo> RUNNER_LABEL=<label> RUNNER_TOKEN=$t bash <path>/install-wsl.sh }
 # A token that is given (RUNNER_TOKEN set, even empty, or an argument) is checked before anything is downloaded.
+# K453: it also keeps WSL itself up (WSL shuts the machine down when no Windows process holds it, and the runner dies with it):
+# a Windows scheduled task "WSL keepalive <distro>" (at logon, hidden) runs `wsl -d <distro> -- sleep infinity`, created through
+# interop (schtasks.exe) and started at once. KEEPALIVE=0 skips it. Without interop it says so and carries on.
 # It needs sudo -n, curl, tar and systemd in the WSL machine. It never
 # prints the token. Exit codes: 0 the service is active and the runner is online (or --check found it so), 1 it is not,
 # 2 bad usage or a missing tool.
@@ -110,7 +113,27 @@ verify() {
   esac
 }
 
-if [ "$CHECK_ONLY" = 1 ]; then verify && exit 0 || exit 1; fi
+keepalive() {
+  [ "${KEEPALIVE:-1}" = 0 ] && return 0
+  local distro="${WSL_DISTRO_NAME:-Ubuntu}" task
+  task="WSL keepalive $distro"
+  if ! command -v schtasks.exe >/dev/null 2>&1; then
+    say "no Windows interop (schtasks.exe): WSL may shut down when idle; run on Windows: wsl -d $distro -- sleep infinity, hidden, at logon"
+    return 0
+  fi
+  if [ "$CHECK_ONLY" = 1 ]; then
+    schtasks.exe /Query /TN "$task" >/dev/null 2>&1 && say "keepalive task \"$task\" exists" || say "no keepalive task \"$task\": WSL may shut down when idle (run install-wsl.sh again)"
+    return 0
+  fi
+  if schtasks.exe /Create /F /SC ONLOGON /RL LIMITED /TN "$task" /TR "powershell.exe -NoProfile -WindowStyle Hidden -Command wsl.exe -d $distro -- sleep infinity" >/dev/null 2>&1; then
+    schtasks.exe /Run /TN "$task" >/dev/null 2>&1 || true
+    say "keepalive task \"$task\" installed and started (keeps WSL up while idle)"
+  else
+    say "could not create the keepalive task \"$task\": WSL may shut down when idle"
+  fi
+}
+
+if [ "$CHECK_ONLY" = 1 ]; then keepalive; verify && exit 0 || exit 1; fi
 
 # --- sudo, the token ----------------------------------------------------------------------------------------------------
 sudo -n true 2>/dev/null || { say "sudo -n does not work in this WSL machine (the owner allowed it for services); run: sudo true  once, or fix /etc/sudoers.d"; exit 2; }
@@ -154,6 +177,7 @@ if [ -z "$(service_unit)" ]; then
 fi
 sudo -n ./svc.sh start >/dev/null 2>&1 || true
 sleep 3
+keepalive
 verify && { say "done. The runner takes the jobs of ci.yml and full-gate.yml (runs-on: [self-hosted, $LABEL])."; exit 0; }
 say "the runner is not healthy yet: run  sudo ./svc.sh status  in $DIR, and send the last lines to the architect"
 exit 1
