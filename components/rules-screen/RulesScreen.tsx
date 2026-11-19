@@ -145,7 +145,7 @@ export function RulesScreen({
   target,
   collapsible = false,
   enlargeDiagrams = false,
-  bodyAs,
+  bodyAs = "main",
   nav = false,
 }: RulesScreenProps) {
   const [navOpen, setNavOpen] = useState(false);
