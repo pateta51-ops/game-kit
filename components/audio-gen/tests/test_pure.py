@@ -296,14 +296,14 @@ class GpuOnly(unittest.TestCase):
             t = Path(t)
             (t / "repo" / "acestep").mkdir(parents=True)
             (t / "job.json").write_text(json.dumps({
-                "options": {"repo": str(t / "repo"), "allowCpu": True}, "result": str(t / "r.json"),
+                "options": {"repo": str(t / "repo"), "allowCpu": True, "offload": True}, "result": str(t / "r.json"),
                 "items": [{"out": str(t / "o" / "a.wav"), "prompt": "p", "seconds": 1, "seed": 1, "label": "a#1"}]}))
             try:
                 with mock.patch.object(sys, "argv", ["w", str(t / "job.json")]):
                     with mock.patch.dict(sys.modules, {**mods, "torch": self.torch()}):
                         self.assertEqual(w.main(), 0)
                     with mock.patch.dict(sys.modules, {**mods, "torch": self.torch(cuda=False)}), self.assertRaises(SystemExit) as e:
-                        w.main()  # allowCpu is gone
+                        w.main()  # allowCpu is gone, and so is offload
             finally:
                 os.chdir(cwd)
             self.assertEqual(e.exception.code, 3)

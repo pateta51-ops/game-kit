@@ -9,7 +9,7 @@ Job options (config backends.<name>, all optional except repo):
   lmModel         LM name, default: the first one available (downloaded on first use)
   lmBackend       "pt" (default) or "vllm"
   steps           diffusion steps, default 8 (turbo)
-  offload         move models to the CPU between stages: CPU load, against the GPU-only rule, default false
+  offload         ignored: the models stay on the card (it moved them to the CPU between stages)
 Per item: prompt, seconds, seed, tempo, key, beatsPerBar, options.lyrics (default "[Instrumental]").
 Exit 3 = cannot start (missing checkout, no CUDA, or a first generation that did not use the GPU); the pipeline
 turns it into a skip. There is no CPU fallback: a VAE decode that ACE-Step would move to the CPU fails the item.
@@ -58,7 +58,8 @@ def main() -> int:
     device = "cuda"
     model = str(opts.get("model", "acestep-v15-turbo"))
     thinking = bool(opts.get("thinking", False))
-    offload = bool(opts.get("offload", False))
+    if opts.get("offload"):
+        print("acestep worker: 'offload' is ignored. GPU only: the models stay on the card.", file=sys.stderr)
     ckpt = get_checkpoints_dir()
     if not check_main_model_exists(ckpt):
         ok, msg = ensure_main_model(ckpt)
@@ -73,7 +74,7 @@ def main() -> int:
 
     dit = AceStepHandler()
     status, ok = dit.initialize_service(
-        project_root=str(repo), config_path=model, device=device, offload_to_cpu=offload, use_mlx_dit=False
+        project_root=str(repo), config_path=model, device=device, offload_to_cpu=False, use_mlx_dit=False
     )
     if not ok:
         print(f"acestep worker: DiT init failed: {status}", file=sys.stderr)
@@ -101,7 +102,7 @@ def main() -> int:
         if lm_name:
             status, ok = llm.initialize(
                 checkpoint_dir=str(ckpt), lm_model_path=lm_name, backend=str(opts.get("lmBackend", "pt")),
-                device=device, offload_to_cpu=offload,
+                device=device, offload_to_cpu=False,
             )  # fmt: skip
             if not ok:
                 print(f"acestep worker: LM init failed ({status}); continuing without thinking", file=sys.stderr)

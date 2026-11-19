@@ -32,10 +32,10 @@ def first(torch, who: str, run):
         try:
             while True:
                 last = stop.wait(0.5)
-                seen.append(int(subprocess.run(SMI, capture_output=True, text=True).stdout.split()[0]))
+                seen.append(int(subprocess.run(SMI, capture_output=True, text=True, timeout=5).stdout.split()[0]))
                 if last:
                     return
-        except (OSError, ValueError, IndexError):
+        except (OSError, subprocess.SubprocessError, ValueError, IndexError):
             pass
 
     th = threading.Thread(target=sample, daemon=True)
