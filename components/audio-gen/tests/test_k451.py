@@ -315,13 +315,12 @@ class Sa3Sampler(unittest.TestCase):
 
             def generate(self, **kw):
                 seen["kw"] = kw
-                return T(np.sin(np.arange(44100 * 8) * 0.05)[None, :].repeat(2, 0) * 0.3)
+                return T(mock.MagicMock())
 
-        import numpy as np
         torch = types.SimpleNamespace(cuda=types.SimpleNamespace(
             is_available=lambda: True, reset_peak_memory_stats=lambda: None, memory_allocated=lambda: 5,
             max_memory_allocated=lambda: 6), set_num_threads=lambda n: None)
-        mods = {"torch": torch, "soundfile": types.SimpleNamespace(write=lambda *a, **k: None),
+        mods = {"torch": torch, "numpy": mock.MagicMock(), "soundfile": types.SimpleNamespace(write=lambda *a, **k: None),
                 "stable_audio_3": types.SimpleNamespace(StableAudioModel=Model)}
         spec = importlib.util.spec_from_file_location("sa3_worker", HERE / "workers" / "stable_audio_3_worker.py")
         w = importlib.util.module_from_spec(spec)
@@ -330,7 +329,7 @@ class Sa3Sampler(unittest.TestCase):
             t = Path(t)
             (t / "job.json").write_text(json.dumps({"options": opts, "result": str(t / "r.json"), "items": [
                 {"out": str(t / "a.wav"), "prompt": "p", "seconds": 1, "seed": 1, "label": "a#1"}]}))
-            with mock.patch.object(sys, "argv", ["w", str(t / "job.json")]), mock.patch.dict(sys.modules, mods):
+            with mock.patch.object(sys, "argv", ["w", str(t / "job.json")]), mock.patch.dict(sys.modules, mods), mock.patch.object(w.recipe, "first_good", lambda make, bad, seed, tries: (make(seed), seed, 1)):
                 self.assertEqual(w.main(), 0)
             self.assertNotIn("error", json.loads((t / "r.json").read_text())["items"][0])
         return seen["kw"]
