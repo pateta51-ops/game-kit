@@ -26,11 +26,11 @@ Plays motion specs in the director's format (one JSON per beat: `actors`, `steps
   Each ensure and return times out after `panTimeoutMs` (default 2000 ms).
   Instant and reduced beats start no pan.
   Custom adapters should stop any movement when the signal aborts.
-- `scrollPan({ scroller, tabs?, activeTab?, inView? })` makes a session factory.
+- `scrollPan({ scroller, tabs?, activeTab?, inView?, tabWaitMs?, panMs? })` makes a session factory.
   Pass a selector as the target and return the current scroll container from `scroller`.
   For tabbed views, supply the destination button via `tabs(selector)` and the
   current button via `activeTab()`. Buttons should stay mounted during the session.
-  The default checks the scroller bounds. Pans ease over 350 ms times the motion scale.
+  The default checks the scroller bounds. Pans ease over 350 ms times the motion scale. K444: `panMs` changes that 350; `tabWaitMs` (STCC: 70) makes a tab press wait that long instead of three frames.
 - `withViewTransition(apply, speed, { onCardStart, id, signal })` uses the browser transition when enabled. K402: `onCardStart(0, id)` is called once when the flight takes off (at once under instant); an aborted `signal` skips the transition to its end state with no start. K431: `cards: [{ id, delay }]` (ms, ascending) makes `onCardStart(i, id)` fire once per card as its staggered start is reached (rAF; `clock: 'name'` follows that native animation's currentTime instead of time since ready; leftovers fire at the end; all at once under instant). Without `cards` the single start is unchanged.
   Supply a synchronous DOM update (React can wrap it in `flushSync`) or return the redraw promise.
   Import `view-transition.css` to use the durations set by `putMotionSpeed`.
@@ -38,7 +38,7 @@ Plays motion specs in the director's format (one JSON per beat: `actors`, `steps
   The helper is independent of the board swap.
 - `speed()` is read when a beat starts: a factor (1, 0.5) or `'instant'`. Instant builds no timeline: `onEnd` fires at once, and the cues are still called, in order.
 - `busy()`: a `rare` or `once` beat is playing or queued. `constant`, `often` and `each round` never set it. A pan return counts in both `busy()` and `pending()`. `subscribe(f)`.
-- `skipAll()`: everything playing and queued jumps to its end: open verbs finish, every `onEnd` fires, cues not yet due are dropped. `skipOnInput(player, window)` calls it on any press or key.
+- `skipAll()`: everything playing and queued jumps to its end: open verbs finish, every `onEnd` fires, cues not yet due are dropped. `skipOnInput(player, window)` calls it on any press or key. K444: `{ consume: true }` also stops (preventDefault, stopPropagation) the input that skipped, only while something plays; the default never swallows it.
 - `onCue(cue, beatId)` at the cue's time. A verb, hook or cue that throws goes to `onProblem`; the queue goes on.
 - `withReducedMotion(speed)`: `'instant'` when the system asks for reduced motion. `BeatTable<Kind>`: type for the game's event-kind to beat-names table, so a kind without an entry fails the type check.
 - `withAutomationOff(speed, marker = 'KitMotion')`: `'instant'` in an automated browser (`navigator.webdriver`), unless the user agent carries `marker` or the address has `?motion=on`; a real player is untouched. Use `speed: () => withReducedMotion(withAutomationOff(setting))`. The e2e suite then runs fast and steady; a second Playwright project runs the flows again with motion on: `{ name: 'chromium-motion', use: { ...devices['Desktop Chrome'], userAgent: devices['Desktop Chrome'].userAgent + ' KitMotion' }, testMatch: /(flows|motion)\.spec\.ts$/ }`. `putMotionSpeed(speed, name = 'on')`: `<html data-motion>` (`off`, or `name`, e.g. `fast`) and `--motion-scale` (the factor, 0 when off) for the game's CSS; call it at start and when the setting changes; `bindMotionSpeed(() => speed, () => name)` calls it again when the system's reduced-motion setting changes (returns the unbind). Without a `document` it does nothing.
@@ -79,6 +79,15 @@ For the owner's motion review: a clip of the beat on the real screen and a still
 - Real play, not a staged state: the game finds a seed and a line of answers that reaches the beat (its own driver), replays them at instant pace in the page, and `play` gives the last answer at normal pace. That part is the game's.
 
 ## Use it in 10 lines
+
+```ts
+import { scrollPan, skipOnInput, type MotionPlayer } from '../kit/motion-frame/index'
+
+declare const player: MotionPlayer
+const off = skipOnInput(player, window, { consume: true }) // the skipping click is not passed on
+const pan = scrollPan({ scroller: () => document.body, tabs: () => null, tabWaitMs: 70, panMs: 200 }) // STCC-style fast tab press
+off(); void pan
+```
 
 ```ts
 import { placeOf } from '../kit/motion-frame/index'
