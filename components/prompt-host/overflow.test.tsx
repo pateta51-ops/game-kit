@@ -139,8 +139,8 @@ it('checks the host again when answers are added and removed', async () => {
   await waitFor(() => expect(box).not.toHaveAttribute('data-overflow'));
 });
 
-function Row() {
-  useOverflow({ ...layout, answers: '.answers', find: () => document.querySelector<HTMLElement>('#prompt-box') }, []);
+function Row({ rows = true }: { rows?: boolean } = {}) {
+  useOverflow({ ...layout, rows, answers: '.answers', find: () => document.querySelector<HTMLElement>('#prompt-box') }, []);
   return (
     <section id="prompt-box" data-testid="box" style={{ height: 100, position: 'relative' }}>
       <div className="answers" style={{ fontSize: '31.5px', display: 'flex', flexDirection: 'row', flexWrap: 'nowrap' }}>
@@ -171,4 +171,13 @@ it('K442 a wrapped row that still overflows scrolls in the zone: no panel, no sh
   expect(answers?.style.fontSize).toBe('31.5px');
   expect(answers?.style.flexWrap).toBe('wrap');
   expect(box).toHaveAttribute('data-more', '1');
+});
+
+it('K458 rows:false keeps a flex row on the list path: font shrinks, no wrap, no rows mode', () => {
+  fakeLayout((box) => (box.querySelector<HTMLElement>('.answers')?.style.fontSize === '28px' ? 100 : 240));
+  render(<Row rows={false} />);
+  const box = screen.getByTestId('box');
+  expect(box.querySelector<HTMLElement>('.answers')?.style.flexWrap).toBe('nowrap');
+  expect(box.querySelector<HTMLElement>('.answers')?.style.fontSize).toBe('28px');
+  expect(box).not.toHaveAttribute('data-overflow', 'rows');
 });

@@ -72,7 +72,7 @@ export function PromptHost<P extends Kinded, V>({ widgets, prompt, view, answer,
   const [tried, setTried] = useState<number | null>(null);
   const picks = prompt !== null && mine && tried !== prompt.id ? (auto?.(prompt) ?? null) : null;
   const shown = prompt !== null && mine && picks === null;
-  useOverflow(shown && overflow ? { ...overflow, answers: overflow.answers ?? '[data-prompt-answers]', ref: host } : undefined, [shown, id, overflow && JSON.stringify([overflow.answers, overflow.floor, overflow.frac, overflow.stage, overflow.zone, overflow.keepOut, overflow.gap])]);
+  useOverflow(shown && overflow ? { ...overflow, answers: overflow.answers ?? '[data-prompt-answers]', ref: host } : undefined, [shown, id, overflow && JSON.stringify([overflow.answers, overflow.floor, overflow.frac, overflow.stage, overflow.zone, overflow.keepOut, overflow.gap, overflow.rows])]);
   useEffect(() => {
     open.current = id;
     if (id === null || picks === null) return;

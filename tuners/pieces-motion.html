@@ -17162,10 +17162,23 @@ var PIECES = (() => {
   };
 
   // components/effect-library/trail.ts
-  var trail = (ctx, t, { call }) => {
-    const s = call.step["ribbon"];
-    if (!s || !call.to) return;
+  var trail = (ctx, t, { call, run }) => {
+    const r = call.step["ribbon"];
+    if (!r || !call.to) return;
     const from = centre2(call.from), to = centre2(call.to);
+    const arc2 = run?.timeline.calls.find((c) => c.verb === "arc-move" && c.t === call.t && c.to?.join() === call.to?.join());
+    const lift = Number(arc2?.step["arcHeight"] ?? 0);
+    const s = {
+      rear: 0,
+      samples: 24,
+      spacing: 28,
+      width: 4,
+      tipWidth: 1,
+      fade: 0.8,
+      colour: "255,255,255",
+      ...r,
+      quadratic: r.quadratic ?? { control: [(from[0] + to[0]) / 2, (from[1] + to[1]) / 2 - 2 * lift], blend: 0, lookAhead: 0.02, nose: 0, rollAxis: 0, rollSquash: 0, reverseBrightness: 0 }
+    };
     const sample = (time) => quadraticPose(from, to, seg(time, 0, call.step.dur), s.quadratic);
     if (t <= 0 || t >= call.step.dur) return;
     const current = sample(t);
@@ -18982,7 +18995,7 @@ var PIECES = (() => {
 
   // components/effect-library/signal-stamp.ts
   var stamp = ({ el, call }) => {
-    const { text = "", tilt = 0, image, ms, ease: ease2 = "ease-in", scales = [2.2, 0.95, 1], pressOffset = 0.8, style, frames: frames2, press, ring, onParts, holdRing, ringZ, target } = call.step;
+    const { text = "", tilt = 0, image, look, ms, ease: ease2 = "ease-in", scales = [2.2, 0.95, 1], pressOffset = 0.8, style, frames: frames2, press, ring, onParts, holdRing, ringZ, target } = call.step;
     const found = typeof target === "string" ? el.querySelector(target) ?? el.ownerDocument.querySelector(target) : target;
     const tag = found ?? el.ownerDocument.createElement(image === void 0 ? "div" : "img");
     if (found) Object.assign(tag.style, style);
@@ -18991,7 +19004,7 @@ var PIECES = (() => {
         tag.src = image;
         tag.alt = text;
       } else tag.textContent = text;
-      Object.assign(tag.style, {
+      Object.assign(tag.style, image !== void 0 ? { position: "absolute", left: "0", top: "0", width: "100%", height: "100%", boxSizing: "border-box", background: "none", border: "0", objectFit: "contain", pointerEvents: "none" } : look === "bare" ? { position: "absolute", left: "0", top: "25%", width: "100%", height: "50%", display: "grid", placeItems: "center", boxSizing: "border-box", border: "0", background: "none", color: "inherit", fontWeight: "700", fontSize: "4em", lineHeight: "1", letterSpacing: ".08em", pointerEvents: "none" } : {
         position: "absolute",
         left: "8%",
         top: "42%",
@@ -19022,6 +19035,7 @@ var PIECES = (() => {
     const give = press && accent(el, press, "add");
     let halo;
     let glint;
+    const ringFrames = ring?.frames ?? [{ opacity: 0.9, transform: "scale(.6)" }, { opacity: 0, transform: "scale(1.6)" }];
     if (ring) {
       halo = el.ownerDocument.createElement("div");
       Object.assign(halo.style, {
@@ -19033,11 +19047,12 @@ var PIECES = (() => {
         height: tag.style.height,
         boxSizing: "border-box",
         borderRadius: "50%",
-        opacity: "0"
+        opacity: "0",
+        ...ring.style ? {} : { border: "3px solid currentColor" }
       }, ring.style);
       halo.dataset["fxPart"] = "ring";
       tag.before(halo);
-      glint = accent(halo, ring, "replace");
+      glint = accent(halo, { ...ring, frames: ringFrames }, "replace");
     }
     onParts?.(halo ? { label: tag, ring: halo } : { label: tag });
     return () => {
@@ -19047,7 +19062,7 @@ var PIECES = (() => {
       animation.cancel();
       give?.cancel();
       glint?.cancel();
-      if (holdRing && halo && ring) Object.assign(halo.style, Object.fromEntries(Object.entries(ring.frames.at(-1) ?? {}).filter(([k]) => k !== "offset" && k !== "easing" && k !== "composite").map(([k, v]) => [k, String(v)])));
+      if (holdRing && halo && ring) Object.assign(halo.style, Object.fromEntries(Object.entries(ringFrames.at(-1) ?? {}).filter(([k]) => k !== "offset" && k !== "easing" && k !== "composite").map(([k, v]) => [k, String(v)])));
       else halo?.remove();
       if (!found && tag.style.opacity === "0") tag.remove();
     };
@@ -20892,7 +20907,8 @@ void main() {
       const s = call.step["text"] ?? call.step["label"];
       el.textContent = typeof s === "string" ? s : call.value !== void 0 ? String(call.value) : "";
       const rise = "translateY(var(--fx-text-rise,12px))";
-      css(el, { color: "var(--fx-text,inherit)", font: "var(--fx-text-font,inherit)" });
+      const colour = call.step["colour"];
+      css(el, { color: typeof colour === "string" ? colour : "var(--fx-text,inherit)", font: "var(--fx-text-font,inherit)" });
       const reveal = call.step["typewriter"];
       if (reveal === true || reveal && typeof reveal === "object") {
         const settings = reveal === true ? {} : reveal;
@@ -20901,7 +20917,7 @@ void main() {
         return typewriter(fx, settings);
       }
       el.style.textAlign = "center";
-      animate([{ opacity: 0, transform: rise }, { opacity: 1, offset: 0.25 }, { opacity: 1, transform: "none" }], { opacity: "1", transform: "none" });
+      animate(call.step["rise"] === false ? [{ opacity: 0 }, { opacity: 1, offset: 0.25 }, { opacity: 1 }] : [{ opacity: 0, transform: rise }, { opacity: 1, offset: 0.25 }, { opacity: 1, transform: "none" }], { opacity: "1", transform: "none" });
       return void 0;
     },
     spin: rotate,
@@ -20947,7 +20963,10 @@ void main() {
     verbs.register("warp-transfer", (call, run) => (call.step["spiral"] ? spiral : transfer)?.(call, run));
     verbs.register("shake-group", (call, run) => {
       const { selector, actors, amplitude = 6, crossAmplitude = 1, frames: frames2 = 9 } = call.step;
-      const targets = typeof selector === "string" ? Array.from(run.context.el.ownerDocument.querySelectorAll(selector)) : run.timeline.actors.filter((a) => Array.isArray(actors) ? actors.includes(a.id) : a.id === call.actor).map((a) => run.context.actor(run, a.id, a.rect));
+      const targets = typeof selector === "string" ? Array.from(run.context.el.ownerDocument.querySelectorAll(selector)) : [
+        ...run.timeline.actors.filter((a) => Array.isArray(actors) ? actors.includes(a.id) : a.id === call.actor).map((a) => run.context.actor(run, a.id, a.rect)),
+        ...Array.isArray(actors) ? actors.filter((id) => typeof id === "string" && !run.timeline.actors.some((a) => a.id === id)).map((id) => run.context.actor(run, id, call.from)) : []
+      ];
       const animations = targets.map((el, n) => el.animate(Array.from({ length: typeof frames2 === "number" ? frames2 : 9 }, (_, j) => ({
         transform: `translate(${String((j % 2 ? 1 : -1) * Number(amplitude))}px,${String(((j + n) % 3 - 1) * Number(crossAmplitude))}px)`
       })), { duration: Math.max(call.dur, 1) }));

@@ -256,7 +256,7 @@ export function registerRiffle<C>(verbs: Pick<VerbRegistry<C>, 'register'>, opts
   verbs.register('riffle', (call) => {
     const deck = (opts.resolvePile ?? pileElement)(call.actor);
     if (!deck) return undefined;
-    return startRiffle(deck, call.step['natural'] === true ? sum(opts.durations ?? RIFFLE_PHASES_MS) : call.dur, opts, opts.shake)?.finish;
+    return startRiffle(deck, call.step['natural'] === true ? sum(opts.durations ?? RIFFLE_PHASES_MS) : call.dur, opts, (call.step['shake'] as RiffleVerbOpts['shake']) ?? opts.shake)?.finish;
   });
 }
 

@@ -388,7 +388,8 @@ export const BUILT_IN: Readonly<Record<string, Effect>> = {
     const s = call.step['text'] ?? call.step['label'];
     el.textContent = typeof s === 'string' ? s : call.value !== undefined ? String(call.value) : '';
     const rise = 'translateY(var(--fx-text-rise,12px))';
-    css(el, { color: 'var(--fx-text,inherit)', font: 'var(--fx-text-font,inherit)' });
+    const colour = call.step['colour'];
+    css(el, { color: typeof colour === 'string' ? colour : 'var(--fx-text,inherit)', font: 'var(--fx-text-font,inherit)' });
     const reveal = call.step['typewriter'];
     if (reveal === true || (reveal && typeof reveal === 'object')) {
       const settings = reveal === true ? {} : reveal as TypewriterSettings;
@@ -397,7 +398,7 @@ export const BUILT_IN: Readonly<Record<string, Effect>> = {
       return typewriter(fx, settings);
     }
     el.style.textAlign = 'center';
-    animate([{ opacity: 0, transform: rise }, { opacity: 1, offset: 0.25 }, { opacity: 1, transform: 'none' }], { opacity: '1', transform: 'none' });
+    animate(call.step['rise'] === false ? [{ opacity: 0 }, { opacity: 1, offset: 0.25 }, { opacity: 1 }] : [{ opacity: 0, transform: rise }, { opacity: 1, offset: 0.25 }, { opacity: 1, transform: 'none' }], { opacity: '1', transform: 'none' });
     return undefined;
   },
   spin: rotate,
@@ -447,8 +448,10 @@ export function registerEffects(verbs: VerbRegistry<EffectCtx>, o?: LayerOptions
     const { selector, actors, amplitude = 6, crossAmplitude = 1, frames = 9 } = call.step;
     const targets = typeof selector === 'string'
       ? Array.from(run.context.el.ownerDocument.querySelectorAll<HTMLElement>(selector))
-      : run.timeline.actors.filter((a) => Array.isArray(actors) ? actors.includes(a.id) : a.id === call.actor)
-        .map((a) => run.context.actor(run, a.id, a.rect));
+      : [
+        ...run.timeline.actors.filter((a) => Array.isArray(actors) ? actors.includes(a.id) : a.id === call.actor).map((a) => run.context.actor(run, a.id, a.rect)),
+        ...(Array.isArray(actors) ? actors.filter((id): id is string => typeof id === 'string' && !run.timeline.actors.some((a) => a.id === id)).map((id) => run.context.actor(run, id, call.from)) : []),
+      ];
     const animations = targets.map((el, n) => el.animate(Array.from({ length: typeof frames === 'number' ? frames : 9 }, (_, j) => ({
       transform: `translate(${String((j % 2 ? 1 : -1) * Number(amplitude))}px,${String(((j + n) % 3 - 1) * Number(crossAmplitude))}px)`,
     })), { duration: Math.max(call.dur, 1) }));

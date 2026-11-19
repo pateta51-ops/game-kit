@@ -227,12 +227,12 @@ describe('deck-motions DOM', () => {
 });
 
 describe('riffle verb', () => {
-  const play = (opts?: RiffleVerbOpts, natural = false, speed: number | 'instant' = 0.5, actor = 'deck') => {
+  const play = (opts?: RiffleVerbOpts, natural = false, speed: number | 'instant' = 0.5, actor = 'deck', extra: Record<string, unknown> = {}) => {
     const verbs = createVerbs();
     registerRiffle(verbs, opts);
     const player = createMotionPlayer({
       verbs, stages: { default: () => [0, 0, 10, 14] }, speed: () => speed, context: undefined,
-      specs: { shuffle: { id: 'shuffle', steps: [{ t: 0, dur: 1000, actor, do: 'riffle', natural }] } },
+      specs: { shuffle: { id: 'shuffle', steps: [{ t: 0, dur: 1000, actor, do: 'riffle', natural, ...extra }] } },
     });
     player.play('shuffle');
     vi.advanceTimersByTime(0);
@@ -282,6 +282,15 @@ describe('riffle verb', () => {
     play({ resolvePile }, true, 'instant');
     expect(resolvePile).not.toHaveBeenCalled();
     expect(made).toHaveLength(0);
+    atRest();
+  });
+
+  it('K458: a step shake overrides the registration shake', () => {
+    vi.useFakeTimers();
+    setup();
+    const player = play({ shake: { degrees: 4, pixels: 3 } }, false, 0.5, 'deck', { shake: { degrees: 8, pixels: 5 } });
+    expect(made[0]?.frames[1]).toEqual({ transform: 'rotate(-8deg) translateX(-5px)', easing: 'ease-in-out' });
+    player.skipAll();
     atRest();
   });
 
