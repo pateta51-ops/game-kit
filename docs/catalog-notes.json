@@ -150,7 +150,7 @@
     "not": "Playwright tests (e2e-helpers)."
   },
   "effect-library": {
-    "use": "Release 1.1 visual effects: the twelve motion verbs, particles, ambience, canvas layers.",
+    "use": "Release 1.1 visual effects: the twelve motion verbs, particles, ambience, canvas layers, an opt-in logo glitch.",
     "not": "Deciding which effect plays (the game's motion specs and motion-frame)."
   },
   "engine-core": {
