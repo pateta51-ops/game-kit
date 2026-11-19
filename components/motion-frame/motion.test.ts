@@ -383,6 +383,34 @@ describe('player', () => {
     expect(skip).toHaveBeenCalledTimes(1);
   });
 
+  it('consume stops the input that skipped, only while something plays', () => {
+    const { player } = setup();
+    const target = new EventTarget();
+    skipOnInput(player, target, { consume: true });
+    const idle = new Event('pointerdown', { cancelable: true });
+    const stop = vi.spyOn(idle, 'stopPropagation');
+    target.dispatchEvent(idle);
+    expect(idle.defaultPrevented).toBe(false);
+    expect(stop).not.toHaveBeenCalled();
+    player.play('gain');
+    const press = new Event('keydown', { cancelable: true });
+    const stop2 = vi.spyOn(press, 'stopPropagation');
+    target.dispatchEvent(press);
+    expect(player.pending()).toBe(0);
+    expect(press.defaultPrevented).toBe(true);
+    expect(stop2).toHaveBeenCalled();
+  });
+
+  it('default never swallows the input', () => {
+    const { player } = setup();
+    const target = new EventTarget();
+    skipOnInput(player, target);
+    player.play('gain');
+    const press = new Event('pointerdown', { cancelable: true });
+    target.dispatchEvent(press);
+    expect(press.defaultPrevented).toBe(false);
+  });
+
   it('instant builds no timeline: the end fires at once and the cues still sound', () => {
     const { log, player, setSpeed } = setup('instant');
     player.play('call', { onEnd: () => log.push('done') });
@@ -509,35 +537,5 @@ describe('player', () => {
     expect([el.dataset.motion, style['--motion-scale']]).toEqual(['fast', '0.5']);
     unbind();
     expect(heard.size).toBe(0);
-  });
-});
-
-describe('skipOnInput consume K444', () => {
-  it('consume stops the input that skipped, only while something plays', () => {
-    const { player } = setup();
-    const target = new EventTarget();
-    skipOnInput(player, target, { consume: true });
-    const idle = new Event('pointerdown', { cancelable: true });
-    const stop = vi.spyOn(idle, 'stopPropagation');
-    target.dispatchEvent(idle);
-    expect(idle.defaultPrevented).toBe(false);
-    expect(stop).not.toHaveBeenCalled();
-    player.play('gain');
-    const press = new Event('keydown', { cancelable: true });
-    const stop2 = vi.spyOn(press, 'stopPropagation');
-    target.dispatchEvent(press);
-    expect(player.pending()).toBe(0);
-    expect(press.defaultPrevented).toBe(true);
-    expect(stop2).toHaveBeenCalled();
-  });
-
-  it('default never swallows the input', () => {
-    const { player } = setup();
-    const target = new EventTarget();
-    skipOnInput(player, target);
-    player.play('gain');
-    const press = new Event('pointerdown', { cancelable: true });
-    target.dispatchEvent(press);
-    expect(press.defaultPrevented).toBe(false);
   });
 });
