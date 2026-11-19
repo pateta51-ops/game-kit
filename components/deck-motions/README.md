@@ -7,6 +7,7 @@ Cards fly from a pile to their places (deal, refill turn-over, deck cycle) and a
 - `dealFrom(moves, { speed, back, face, unit, shuffled, departs })`: lays stand-ins on `document.body` (call after the new view is rendered), plays them with Web Animations, returns `{ plan, done }`. `back(pile, rect)` is the game's card back (default an empty `div[data-pile-back]`), `face(id, el)` the face (default a clone of the place's element), `unit(pile)` the px unit the riffle's offsets follow (default `--u`, else 21.6, the 4K table); `axis` the turn-over: `'x'` side to side (default), `'y'` top to bottom; `direction` `1` a front flip (default), `-1` a back flip.
 - K406 turn-over: a card leaving a face-down pile (or going face down into one) turns about its own axis with perspective: back and face fly one path, swap at edge-on and lift. `faceDown` unset = turn unless the pile has `data-face="up"`; a pile with `data-face="down"` (card-pile's `browse={false}`) always turns. Options `flipLift` (default the refill's lift, else `FLIP_LIFT` 1.08), `perspective` (`FLIP_PERSPECTIVE` 800 px), `flipStart`/`flipEnd` (share of the travel, `FLIP_START` 0.25, `FLIP_END` 0.75). `flipFrames(from, opts)` gives the pure keyframes.
 - K443 intro spread (from STCC `gameStart.ts`): `dealFrom` options `dealMs`/`staggerMs` (flight and stagger at speed 1; defaults 520/90, STCC's opening uses 680/190; also `planDeal` opts) and `liftCurve(u)` (0..1 across the turn gives the share of `flipLift`; default a sine; STCC lifts 1.07 on a triangle, `u => 1 - Math.abs(2*u - 1)`). A `Move` may carry `from: { x, y, tilt, scale }` (px added to the pile-derived start, start rotation in degrees, a factor on the start scale: a heap-to-place flight from a tilt and 0.9) and `turn` (resting rotation in degrees). `flipFrames` `from` takes `rot` and `rest` the same way. All unset = unchanged; speed 0 still plays nothing.
+- K445 resize box (STCC `lookFan.ts` fan entrance): `flipFrames(from, { box: { from, to } })` animates the copy's `left/top/width/height` (px) from a pile card's box to a different-size fan card's box, with `rotateY` only and no `perspective()` in the transform: the parent holds one fixed perspective, returned as `perspective` (default 4x the start height). Both sides share each box, the swap is exactly edge-on. Without `box` nothing changes.
 - `riffle(deck, speed, opts)`, `shuffleDecks(piles, speed, opts)` (K396): the owner-approved riffle study (18 Nov 2026). `view: 'top'` (default) splits, riffles, bridges and squares a stack drawn on one canvas (WebGL2 strips, 2D canvas strips without WebGL2); `view: 'side'` tilts edge-on, riffles thumb-bent halves, bridges and tilts back (DOM strips). Options: `orientation` `'portrait' | 'landscape'` (default from the deck's shape), `cards` (default `RIFFLE_DECK_CARDS` 20), `durations` the four phases in ms at speed 1 (split or tilt in, riffle, bridge, square or tilt out; default `RIFFLE_PHASES_MS`, the study's `RIFFLE_STUDY_MS` 450/1350/750/450 scaled to `RIFFLE_MS` 2200 so `planDeal` still matches; `dealFrom` passes custom ones to `planDeal` as `riffleMs`), `topBack` the top view's back (a draw function `(ctx, w, h)` or an image; default `drawNeutralBack`), `back(pile, rect)` the side view's back element (default a clone of the top card). Speed is a time factor (2 = twice as long). The deck is hidden meanwhile and restored after; one riffle per deck at a time; a deck with no size, speed 0 or reduced motion: none. `riffleFrames` (the v2 keyframes, STCC D-428) stays exported but nothing plays it.
 - `registerRiffle(verbs, { resolvePile?, back?, topBack?, view?, orientation?, cards?, durations?, shake? })` adds the
   `riffle` verb. The step's actor or zone id names the pile. By default it
@@ -23,7 +24,7 @@ Cards fly from a pile to their places (deal, refill turn-over, deck cycle) and a
 ## Use it in 10 lines
 
 ```ts
-import { cycleMove, planDeal, type Move } from '../kit/deck-motions/index'
+import { cycleMove, flipFrames, planDeal, type Move } from '../kit/deck-motions/index'
 import { dealFrom, finishOnInput } from '../kit/deck-motions/ui'
 
 const moves: Move[] = [
@@ -34,6 +35,8 @@ console.log(planDeal(moves, { shuffled: ['p1.deck'] }).total)
 finishOnInput()
 void dealFrom(moves, { speed: 1, shuffled: ['p1.deck'], back: (pile) => Object.assign(document.createElement('div'), { className: `back ${pile}` }) }).done
 const stop = new AbortController()
+const fan = flipFrames({ x: 0, y: 0, sx: 1, sy: 1 }, { box: { from: { left: 0, top: 0, width: 80, height: 112 }, to: { left: 300, top: 40, width: 200, height: 280 } } })
+console.log(fan.perspective)
 void dealFrom([{ ...moves[1]!, from: { tilt: 9, scale: 0.9 }, turn: -3 }], { speed: 1, dealMs: 680, staggerMs: 190, liftCurve: (u) => 1 - Math.abs(2 * u - 1) }).done
 void dealFrom(moves, { onCardStart: (index, id) => console.log('takes off', index, id), signal: stop.signal }).done
 ```
