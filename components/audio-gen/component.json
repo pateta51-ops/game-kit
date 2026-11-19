@@ -5,7 +5,8 @@
     "commit": "6b79936",
     "paths": [
       "docs/experience/audio/pipeline: config.json and make_specs.py (the category table: tiers, tail rule, formats), round3_sfx.py and round5_kokoro.py (the rings-out tail, peak detection, the voice finishing), round3_midi.py and round3_music_post.py (MIDI to stems, exact loop, one shared gain), review_page.py (the listening data shape). Rewritten with every game name, path and cue list taken out into a config, a score file and a voice table.",
-      "The game-sfx-review skill's audiogen package (spec, post, manifest, backends, cli, workers): copied; the hosted ElevenLabs backend and its tests were left out (paid service). Added: the tail rule in post.clean and the generation margin for it."
+      "The game-sfx-review skill's audiogen package (spec, post, manifest, backends, cli, workers): copied; the hosted ElevenLabs backend and its tests were left out (paid service). Added: the tail rule in post.clean and the generation margin for it.",
+      "K451: 7is docs/experience/audio/pipeline round6i_music.py and round6_music.py (YuE2 instrumental recipe: plan, Vocal voice to rests, render with abc=, demucs vocal gate) and round8_sfx.py (Stable Audio 3 takes and their reject check); Astra Imperium round-2 scripts (sa3.py, yue.py, sep.py)."
     ]
   },
   "licence": "Models are not part of the kit; see docs/SELECTION.md for their licences.",

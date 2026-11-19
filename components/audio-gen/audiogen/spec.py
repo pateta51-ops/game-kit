@@ -289,5 +289,9 @@ def output_stem(cue: Cue, cat: Category, n: int) -> str:
     return layout.format(kind=cat.kind, category=cat.name, name=cue.name, n=n)
 
 
+# the backend (config key) a category gets when neither it nor the cue names one
+DEFAULTS = {"sfx": "sa3", "music": "yue2"}
+
+
 def resolve_backend(cue: Cue, cat: Category, override: str | None) -> str | None:
-    return override or cue.backend or cat.backend
+    return override or cue.backend or cat.backend or DEFAULTS.get(cat.kind)

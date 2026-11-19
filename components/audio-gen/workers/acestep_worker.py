@@ -8,7 +8,8 @@ Job options (config backends.<name>, all optional except repo):
   thinking        use the 5 Hz LM to plan the audio codes (better structure; the LM is on CUDA too), default false
   lmModel         LM name, default: the first one available (downloaded on first use)
   lmBackend       "pt" (default) or "vllm"
-  steps           diffusion steps, default 8 (turbo)
+  steps           diffusion steps, default 8 for a turbo model, else 50 (acestep-v15-xl-sft)
+  guidance        guidance scale (non-turbo models only), default 7.0
   offload         ignored: the models stay on the card (it moved them to the CPU between stages)
 Per item: prompt, seconds, seed, tempo, key, beatsPerBar, options.lyrics (default "[Instrumental]").
 Exit 3 = cannot start (missing checkout, no CUDA, or a first generation that did not use the GPU); the pipeline
@@ -123,7 +124,8 @@ def main() -> int:
             keyscale=str(item.get("key") or ""),
             timesignature=str(item.get("beatsPerBar") or ""),
             duration=float(item["seconds"]),
-            inference_steps=int(o.get("steps", opts.get("steps", 8))),
+            inference_steps=int(o.get("steps", opts.get("steps", 8 if "turbo" in model else 50))),
+            **({} if "turbo" in model else {"guidance_scale": float(o.get("guidance", opts.get("guidance", 7.0)))}),
             seed=int(item["seed"]),
             thinking=thinking,
             use_cot_metas=False,

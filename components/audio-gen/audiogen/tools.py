@@ -116,8 +116,14 @@ def status() -> dict[str, bool]:
         "core (numpy, soundfile)": probe("venv", "numpy") and probe("venv", "soundfile"),
         "sao (Stable Audio Open: diffusers)": probe("venv", "diffusers"),
         "ace (ACE-Step 1.5 checkout)": (home / "ACE-Step-1.5").is_dir(),
+        "sa3 (Stable Audio 3 Small SFX)": probe("venv-sa3", "stable_audio_3"),
+        "yue2 0.1.6 (YuE2-3B)": probe("venv-yue", "yue2; assert yue2.__version__ == '0.1.6'"),
+        "yue2 weights": (home / "models" / "yue2" / "config.json").is_file(),
+        "demucs (yue2 vocal gate)": probe("venv-demucs", "demucs"),
         "kokoro (voice)": probe("venv-kokoro", "kokoro"),
         "CUDA in venv (sao, ace)": probe("venv", "torch; assert torch.cuda.is_available()"),
+        "CUDA in venv-sa3": probe("venv-sa3", "torch; assert torch.cuda.is_available()"),
+        "CUDA in venv-yue": probe("venv-yue", "torch; assert torch.cuda.is_available()"),
         "CUDA in venv-kokoro (voice)": probe("venv-kokoro", "torch; assert torch.cuda.is_available()"),
     }
 
