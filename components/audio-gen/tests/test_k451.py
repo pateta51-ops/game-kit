@@ -27,12 +27,40 @@ V:Piano
 
 class Yue2Recipe(unittest.TestCase):
     def test_vocal_voice_becomes_rests(self):
-        abc, n = novocal(ABC)
+        abc, n = novocal(ABC, "rests")
         lines = abc.split("\n")
         self.assertEqual(n, 2)
         self.assertEqual(lines[2], '"C"z16|z16|"G"z16|')
         self.assertEqual(lines[3], "w: la la la")
         self.assertEqual(lines[5], '"C" C4 E4 G8 | c16 |')
+
+    def test_vocal_notes_move_to_instrumental_voice_when_asked(self):
+        self.assertEqual(novocal(ABC)[0], novocal(ABC, "rests")[0])  # rests is the default, as the YuE skill does
+        lines = novocal(ABC, "move")[0].split("\n")
+        self.assertEqual(novocal(ABC, "move")[1], 2)
+        self.assertEqual(lines[2], '"C"z16|z16|"G"z16|')
+        self.assertEqual(lines[5], "\"C\" C4 E4 G8|c16|G8 A8|")  # own notes kept under the vocal bar; the longer Vocal voice is appended
+        self.assertEqual(novocal("X:1\nV:Vocal\nc4 |\n")[0], "X:1\nV:Vocal\nz16|\n")
+
+    def test_move_targets_ins_by_name_and_pairs_by_bar(self):
+        s = "X:1\nV:Vocal\nV:Ins\nV:Pad\nK:C\nV:Vocal\n\"C\" c2 d2 | z16 |\nV:Pad\nA16 | A16 |\nV:Ins\nz16 | z16 |\nV:Vocal\ne8 | f8 |\nV:Ins\nz16 | z16 |\n"
+        o = novocal(s, "move")[0].split("\n")
+        self.assertEqual((o[8], o[10], o[14]), ("A16 | A16 |", "c2 d2|z16|", "e8|f8|"))
+
+    def test_move_ties_chords_and_unequal_lengths(self):
+        s = "X:1\nV:Vocal\nV:Ins\nK:C\nV:Vocal\nc8- | c8 | [CEG]8- | d8 |\nV:Ins\nz16 | C16 |\n"
+        o = novocal(s, "move")[0].split("\n")
+        self.assertEqual(o[5], "z16|z16|z16|z16|")
+        self.assertEqual(o[7], "c8|C16|[CEG]8-|d8|")  # the tie from a moved bar into an own bar is dropped; the Vocal voice is longer; a [CEG] tie between moved bars stays
+
+    def test_move_leaves_repeats_and_inline_fields_alone(self):
+        for bad in ("|: c8 :|", "c8 |]", "c8 | [K:D] d8 |"):
+            s = f"X:1\nV:Vocal\nV:Ins\nK:C\nV:Vocal\n{bad}\nV:Ins\nz16 |\n"
+            self.assertEqual(novocal(s, "move")[0].split("\n")[7], "z16 |", bad)
+
+    def test_offload_ar_auto_under_24_gib(self):
+        from audiogen.recipe import offload_ar
+        self.assertEqual([offload_ar("auto", 15.9), offload_ar(None, 24.0), offload_ar(True, 80), offload_ar(False, 8)], [True, False, True, False])
 
     def test_gate_math(self):
         mix = [1.0] * 400
@@ -74,16 +102,39 @@ class Defaults(unittest.TestCase):
         c = parse_cue({"name": "a", "prompt": "p", "category": "music", "length": 1}, None)
         for kind, script in (("stable-audio-3", "stable_audio_3_worker.py"), ("yue2", "yue2_worker.py")):
             with tempfile.TemporaryDirectory() as t, mock.patch.object(B.subprocess, "run", return_value=mock.Mock(returncode=0)) as run:
-                B.make("x", {"type": kind, "licence": "x", "python": sys.executable}, Path(t)).generate(
+                B.make("x", {"type": kind, "licence": "x", "python": sys.executable, "queue": False}, Path(t)).generate(
                     [B.Job(cue=c, n=1, seed=1, seconds=1.0, out=Path(t) / "a.wav")])
             cmd = run.call_args[0][0]
             self.assertEqual(cmd[:3], ["nice", "-n", "19"])
             self.assertTrue(cmd[4].endswith(script))
 
+    def test_yue2_runs_through_heavy_queue_only_yue2(self):
+        c = parse_cue({"name": "a", "prompt": "p", "category": "music", "length": 1}, None)
+        for kind, queued in (("yue2", True), ("stable-audio-3", False), ("acestep", False), ("stable-audio-open", False)):
+            with tempfile.TemporaryDirectory() as t, mock.patch.object(B.subprocess, "run", return_value=mock.Mock(returncode=0)) as run,                     mock.patch.object(B.YuE2, "queue_tool", return_value="/x/heavy"):
+                B.make("x", {"type": kind, "licence": "x", "python": sys.executable}, Path(t)).generate(
+                    [B.Job(cue=c, n=1, seed=1, seconds=1.0, out=Path(t) / "a.wav")])
+            cmd = run.call_args[0][0]
+            self.assertEqual(cmd[:5] == ["/x/heavy", "run", "--label", "audio-gen x", "--"], queued)
+            self.assertEqual(cmd[5 if queued else 0:8 if queued else 3], ["nice", "-n", "19"])
+        with tempfile.TemporaryDirectory() as t, mock.patch.object(B.YuE2, "queue_tool", return_value=None):
+            with self.assertRaises(B.Skip):
+                B.make("x", {"type": "yue2", "licence": "x", "python": sys.executable}, Path(t)).generate(
+                    [B.Job(cue=c, n=1, seed=1, seconds=1.0, out=Path(t) / "a.wav")])
+
     def test_yue2_needs_demucs(self):
         with self.assertRaises(B.Skip):
             B.make("y", {"type": "yue2", "licence": "x", "python": sys.executable, "demucsPython": "/nope/python"}, Path(".")).check()
-        B.make("y", {"type": "yue2", "licence": "x", "python": sys.executable, "demucsPython": sys.executable}, Path(".")).check()
+        B.make("y", {"type": "yue2", "licence": "x", "python": sys.executable, "demucsPython": sys.executable, "queue": False}, Path(".")).check()
+
+    def test_yue2_check_needs_heavy_unless_queue_off(self):
+        o = {"type": "yue2", "licence": "x", "python": sys.executable, "demucsPython": sys.executable}
+        with mock.patch.object(B.YuE2, "queue_tool", return_value=None):
+            with self.assertRaises(B.Skip):
+                B.make("y", o, Path(".")).check()
+            B.make("y", {**o, "queue": False}, Path(".")).check()
+        with mock.patch.object(B.YuE2, "queue_tool", return_value="/x/heavy"):
+            B.make("y", o, Path(".")).check()
 
 
 class Arr:
@@ -101,7 +152,7 @@ class Arr:
 
 
 class Yue2Worker(unittest.TestCase):
-    def run_worker(self, version="0.1.6", cuda=True, keep=None, quiet=0.001):
+    def run_worker(self, version="0.1.6", cuda=True, keep=None, quiet=0.001, gib=16, offload=None, vocal=None):
         seen = {"calls": [], "demucs": []}
 
         class Pipe:
@@ -130,7 +181,8 @@ class Yue2Worker(unittest.TestCase):
 
         torch = types.SimpleNamespace(cuda=types.SimpleNamespace(
             is_available=lambda: cuda, reset_peak_memory_stats=lambda: None, memory_allocated=lambda: 5,
-            max_memory_allocated=lambda: 6), set_num_threads=lambda n: None)
+            max_memory_allocated=lambda: 6, get_device_properties=lambda i: types.SimpleNamespace(total_memory=gib * 2**30)),
+            set_num_threads=lambda n: None)
         mods = {"yue2": types.SimpleNamespace(__version__=version, YuE2Pipeline=Pipe), "soundfile": types.SimpleNamespace(read=read), "torch": torch}
         spec = importlib.util.spec_from_file_location("yue2_worker", HERE / "workers" / "yue2_worker.py")
         w = importlib.util.module_from_spec(spec)
@@ -138,7 +190,8 @@ class Yue2Worker(unittest.TestCase):
         with tempfile.TemporaryDirectory() as t:
             t = Path(t)
             (t / "job.json").write_text(json.dumps({
-                "options": {"modelDir": str(t / "none"), "tries": 3, **({"keep": keep} if keep else {})}, "result": str(t / "r.json"),
+                "options": {"modelDir": str(t / "none"), "tries": 3, **({"keep": keep} if keep else {}),
+                            **({"offloadAr": offload} if offload is not None else {}), **({"vocal": vocal} if vocal else {})}, "result": str(t / "r.json"),
                 "items": [{"out": str(t / "o" / "a.wav"), "prompt": "calm ballpark organ", "seconds": 20, "seed": 1000, "label": "a#1"}]}))
             with mock.patch.object(sys, "argv", ["w", str(t / "job.json")]), mock.patch.dict(sys.modules, mods), \
                     mock.patch.object(w.subprocess, "run", demucs):
@@ -154,17 +207,28 @@ class Yue2Worker(unittest.TestCase):
         self.assertFalse(alt)
         self.assertEqual(code, 0)
         self.assertTrue(made)
-        self.assertEqual(seen["load"], ("m-a-p/YuE2-3B", {"revision": "8f24312f", "device": "cuda"}))
+        self.assertEqual(seen["load"], ("m-a-p/YuE2-3B", {"revision": "8f24312f", "device": "cuda", "offload_ar": True}))
         plans = [kw for k, kw in seen["calls"] if k == "plan"]
         renders = [kw for k, kw in seen["calls"] if k == "render"]
         self.assertEqual([p["seed"] for p in plans], [1000, 8919])
         self.assertEqual({(p["lyrics"], p["cot"]) for p in plans + renders}, {("[Instrumental]", "full")})
         self.assertIn('"C"z16|z16|"G"z16|', renders[0]["abc"])
+        self.assertNotIn("G8 A8|", renders[0]["abc"])  # rests by default, as the YuE skill does
         self.assertEqual(res[0]["seed"], 8919)
         self.assertEqual([x["vocalDb"] > -25 for x in res[0]["extra"]["tried"]], [True, False])
         d = seen["demucs"][0]
         self.assertEqual((d[:3], d[d.index("-d") + 1], d[d.index("-n", 3) + 1], "--two-stems=vocals" in d),
                          (["nice", "-n", "19"], "cuda", "htdemucs", True))
+
+    def test_offload_only_under_24_gib_unless_set(self):
+        self.assertTrue(self.run_worker(gib=16)[1]["load"][1]["offload_ar"])
+        self.assertNotIn("offload_ar", self.run_worker(gib=24)[1]["load"][1])
+        self.assertNotIn("offload_ar", self.run_worker(gib=16, offload=False)[1]["load"][1])
+        self.assertTrue(self.run_worker(gib=48, offload=True)[1]["load"][1]["offload_ar"])
+
+    def test_vocal_move_option(self):
+        renders = [kw for k, kw in self.run_worker(vocal="move")[1]["calls"] if k == "render"]
+        self.assertIn("G8 A8|", renders[0]["abc"])
 
     def test_pinned_version_and_no_cuda(self):
         self.assertEqual(self.run_worker(version="0.1.5")[0], 3)
@@ -248,3 +312,54 @@ class AceDefaults(unittest.TestCase):
         self.assertEqual((xl["inference_steps"], xl["guidance_scale"]), (50, 7.0))
         turbo = self.params("acestep-v15-turbo")
         self.assertEqual((turbo["inference_steps"], "guidance_scale" in turbo), (8, False))
+
+
+class Sa3Sampler(unittest.TestCase):
+    def sampler(self, opts):
+        seen = {}
+
+        class T:
+            def __init__(self, a):
+                self.a = a
+                self.dim = lambda: 2
+
+            def float(self):
+                return self
+
+            def cpu(self):
+                return self
+
+            def numpy(self):
+                return self.a
+
+        class Model:
+            model_config = {"sample_rate": 44100}
+
+            @classmethod
+            def from_pretrained(cls, name, **kw):
+                return cls()
+
+            def generate(self, **kw):
+                seen["kw"] = kw
+                return T(mock.MagicMock())
+
+        torch = types.SimpleNamespace(cuda=types.SimpleNamespace(
+            is_available=lambda: True, reset_peak_memory_stats=lambda: None, memory_allocated=lambda: 5,
+            max_memory_allocated=lambda: 6), set_num_threads=lambda n: None)
+        mods = {"torch": torch, "numpy": mock.MagicMock(), "soundfile": types.SimpleNamespace(write=lambda *a, **k: None),
+                "stable_audio_3": types.SimpleNamespace(StableAudioModel=Model)}
+        spec = importlib.util.spec_from_file_location("sa3_worker", HERE / "workers" / "stable_audio_3_worker.py")
+        w = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(w)
+        with tempfile.TemporaryDirectory() as t:
+            t = Path(t)
+            (t / "job.json").write_text(json.dumps({"options": opts, "result": str(t / "r.json"), "items": [
+                {"out": str(t / "a.wav"), "prompt": "p", "seconds": 1, "seed": 1, "label": "a#1"}]}))
+            with mock.patch.object(sys, "argv", ["w", str(t / "job.json")]), mock.patch.dict(sys.modules, mods), mock.patch.object(w.recipe, "first_good", lambda make, bad, seed, tries: (make(seed), seed, 1)):
+                self.assertEqual(w.main(), 0)
+            self.assertNotIn("error", json.loads((t / "r.json").read_text())["items"][0])
+        return seen["kw"]
+
+    def test_pingpong_sampler_by_default(self):
+        self.assertEqual(self.sampler({})["sampler_type"], "pingpong")
+        self.assertEqual(self.sampler({"sampler": "euler"})["sampler_type"], "euler")

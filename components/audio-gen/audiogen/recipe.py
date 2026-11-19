@@ -10,26 +10,86 @@ MAX_LOUD_WINDOWS = 0.03
 LOUD_WINDOW_DB = -14.0
 
 
-def novocal(abc: str) -> tuple[str, int]:
-    """Every bar of the Vocal voice becomes a whole-bar rest (chord symbols kept). Returns the score and the number
-    of bars that had notes."""
-    out, inv, n = [], False, 0
-    for ln in abc.split("\n"):
+_CH = re.compile(r'"[^"]*"')
+_NOTE = re.compile(r"[A-Ga-g]")
+_FANCY = re.compile(r"\|:|:\||\|\]|\[\||\|\||\[[A-Za-z]:")  # repeats, double and final bars, inline fields
+
+
+def _voice(ln: str):
+    t = ln[2:].split()
+    return t[0] if t else None
+
+
+def novocal(abc: str, vocal: str = "rests", ins: str = "Ins") -> tuple[str, int]:
+    """The "Vocal" voice is silenced bar by bar (whole-bar rests, chord symbols kept: the native format keeps harmony in
+    Vocal). Returns the score and the number of Vocal bars that had notes.
+    vocal="rests": the notes are dropped. This is what the YuE yue2-music skill does (release yue2-v0.1.6,
+    skills/yue2-music/references/abc-editing.md): "If the cover should preserve only one part ... `--keep-voice Ins` ...
+    The unselected voice is replaced with rests on the same time grid".
+    vocal="move" (option; the skill itself never moves notes):
+    first each Vocal bar with notes (chords dropped) is put in the same bar index of the voice named `ins` (else the
+    first other voice), but only where that bar has no notes of its own: an instrumental bar with notes is kept as it
+    is (a voice is monophonic), vocal bars past the end of the instrumental voice are appended, and a tie that would
+    dangle is dropped. A score with repeats, double or final bar lines or inline fields (`[K:..]`) is only silenced."""
+    lines = abc.split(chr(10))
+    music = lambda ln: "|" in ln and not ln.startswith(("%", "w:"))  # noqa: E731
+    names, cur = [], None
+    for ln in lines:
         if ln.startswith("V:"):
-            inv = ln.startswith(("V: Vocal", "V:Vocal"))
+            cur = _voice(ln)
+            if cur != "Vocal" and cur not in names:
+                names.append(cur)
+    tgt = ins if ins in names else (names[0] if names else None)
+    vb, ib, il, cur = [], [], [], None  # Vocal bars; target bars; target line -> bar count
+    for ln in lines:
+        if ln.startswith("V:"):
+            cur = _voice(ln)
+        elif music(ln) and cur == "Vocal":
+            vb += [b.strip() for b in ln.split("|") if b.strip()]
+        elif music(ln) and cur == tgt and tgt:
+            bs = [b.strip() for b in ln.split("|") if b.strip()]
+            ib += bs
+            il.append(len(bs))
+    fancy = any(_FANCY.search(ln) for ln in lines if music(ln))
+    new = None
+    if vocal == "move" and il and not fancy:
+        new = list(ib) + ["z16"] * max(0, len(vb) - len(ib))
+        mv = [False] * len(new)
+        for i, v in enumerate(vb):
+            if _NOTE.search(_CH.sub("", v)) and not _NOTE.search(_CH.sub("", ib[i] if i < len(ib) else "")):
+                new[i], mv[i] = _CH.sub("", v).strip(), True
+        for i, x in enumerate(new):  # no tie into or out of a bar that was swapped
+            if x.endswith("-") and (i + 1 >= len(new) or mv[i] != mv[i + 1]):
+                new[i] = x[:-1].rstrip()
+        il[-1] += len(new) - len(ib)
+    out, cur, k, n = [], None, 0, 0
+    for ln in lines:
+        if ln.startswith("V:"):
+            cur = _voice(ln)
             out.append(ln)
-            continue
-        if inv and "|" in ln and not ln.startswith(("%", "w:")):
+        elif music(ln) and cur == "Vocal":
             nb = []
             for b in [b for b in ln.split("|") if b.strip()]:
-                ch = "".join(re.findall(r'"[^"]*"', b))
-                if re.search(r"[A-Ga-g]", re.sub(r'"[^"]*"', "", b)):
+                if _NOTE.search(_CH.sub("", b)):
                     n += 1
-                nb.append(ch + "z16")
+                nb.append("".join(_CH.findall(b)) + "z16")
             out.append("|".join(nb) + "|")
+        elif new is not None and music(ln) and cur == tgt:
+            c = il.pop(0)
+            out.append("|".join(new[k:k + c]) + "|")
+            k += c
         else:
             out.append(ln)
-    return "\n".join(out), n
+    return chr(10).join(out), n
+
+
+YUE2_DOC_GIB = 24  # YuE2 docs (README, docs/generation.md): "a BF16-capable NVIDIA GPU with 24 GB VRAM, one request at a time"
+
+
+def offload_ar(opt, total_gib: float) -> bool:
+    """YuE2 only (owner, 19 Nov 2026: the one exception to GPU only): the package's `offload_ar` option moves the AR
+    weights to host memory between stages. opt true/false, or "auto" (default): on when the card has under 24 GB."""
+    return total_gib < YUE2_DOC_GIB if opt in (None, "auto") else bool(opt)
 
 
 def measure(v2: list[float], m2: list[float], w: int) -> tuple[float, float]:

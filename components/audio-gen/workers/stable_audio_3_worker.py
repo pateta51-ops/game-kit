@@ -4,7 +4,7 @@ Usage: <venv python> stable_audio_3_worker.py job.json     (written by audiogen;
 Job options (config backends.<name>): model ("small-sfx", hf stabilityai/stable-audio-3-small-sfx), steps (8),
 cfg (1.0), half (true), minSeconds (7: shorter cues are generated at 7 s and cut by the pipeline), tries (4: a take
 with spectral flatness > 0.4, over 20 % of its energy above 8 kHz, or a peak at 1.0 is made again with seed + 1),
-cacheDir (Hugging Face cache, outside any game repo).
+sampler ("pingpong", the documented one; the package picks it only for rf_denoiser models, else euler), cacheDir (Hugging Face cache, outside any game repo).
 Per item: prompt, negativePrompt, seconds, seed.
 Exit 3 = cannot start (no CUDA, or a first generation that did not use the GPU).
 """
@@ -52,7 +52,7 @@ def main() -> int:
         def make(seed):
             a = m.generate(prompt=item["prompt"], negative_prompt=item.get("negativePrompt") or None, duration=sec,
                            steps=int(o.get("steps", opts.get("steps", 8))), cfg_scale=float(o.get("cfg", opts.get("cfg", 1.0))),
-                           seed=seed)  # fmt: skip
+                           seed=seed, sampler_type=str(o.get("sampler", opts.get("sampler", "pingpong"))))  # fmt: skip
             return (a[0] if a.dim() == 3 else a).float().cpu().numpy()
 
         a, seed, tr = recipe.first_good(make, bad, int(item["seed"]), int(o.get("tries", opts.get("tries", 4))))
