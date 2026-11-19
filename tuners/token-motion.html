@@ -36580,7 +36580,7 @@ void main() {
   __export(Rest_exports, {
     Rest: () => Rest
   });
-  function Rest({ faceUrl: faceUrl2, exterior, backdrop, onFail }) {
+  function Rest({ faceUrl: faceUrl2, exterior, backdrop, onFail, className, hostSized, e2eHooks }) {
     const canvas = (0, import_react3.useRef)(null);
     const cb = (0, import_react3.useRef)(onFail);
     (0, import_react3.useLayoutEffect)(() => {
@@ -36615,12 +36615,16 @@ void main() {
         },
         () => fail("error")
       );
+      const w = window;
+      const frames = () => s.renders();
+      if (e2eHooks === true) w.__bagDockFrames = frames;
       return () => {
         alive = false;
+        if (w.__bagDockFrames === frames) delete w.__bagDockFrames;
         s.dispose();
       };
     }, []);
-    return /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("canvas", { ref: canvas, "data-part": "token-bag-canvas", "aria-hidden": "true", style: { display: "block", width: "100%", height: "100%" } });
+    return /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("canvas", { ref: canvas, "data-part": "token-bag-canvas", "aria-hidden": "true", ...className === void 0 ? {} : { className }, ...hostSized === true ? {} : { style: { display: "block", width: "100%", height: "100%" } } });
   }
   var import_react3, import_jsx_runtime2;
   var init_Rest = __esm({
@@ -36757,17 +36761,17 @@ void main() {
         },
         children: [
           /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("canvas", { ref: canvas, "data-part": "token-bag-scene", style: { display: "block", width: "100%", height: "100%", touchAction: "none" } }),
-          /* @__PURE__ */ (0, import_jsx_runtime3.jsxs)("div", { "data-part": "token-bag-count", "aria-label": `${String(count)} ${countLabel}`, style: { position: "absolute", top: 16, left: 16, pointerEvents: "none" }, children: [
+          /* @__PURE__ */ (0, import_jsx_runtime3.jsxs)("div", { "data-part": "token-bag-count", "aria-label": `${String(count)} ${countLabel}`, children: [
             /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("span", { "data-part": "token-bag-n", children: count }),
             " ",
             /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("span", { "data-part": "token-bag-label", children: countLabel })
           ] }),
-          /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("p", { "data-part": "token-bag-skip", style: { position: "absolute", left: 16, right: 16, bottom: 16, margin: 0, textAlign: "center" }, children: skipText })
+          /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("p", { "data-part": "token-bag-skip", children: skipText })
         ]
       }
     );
   }
-  var import_react4, import_jsx_runtime3, STYLE;
+  var import_react4, import_jsx_runtime3, I, STYLE;
   var init_Draw = __esm({
     "components/token-bag/Draw.tsx"() {
       "use strict";
@@ -36775,11 +36779,12 @@ void main() {
       init_scene();
       init_mode();
       import_jsx_runtime3 = __toESM(require_jsx_runtime(), 1);
+      I = "var(--token-bag-inset,16px)";
       STYLE = `html.token-bag-drawing canvas[data-part="token-bag-canvas"]{visibility:hidden}
-[data-part="token-bag-draw"] [data-part="token-bag-count"]{top:max(16px,env(safe-area-inset-top))}
+[data-part="token-bag-draw"] [data-part="token-bag-count"]{position:absolute;left:${I};top:max(${I},env(safe-area-inset-top));pointer-events:none}
 [data-part="token-bag-draw"] [data-part="token-bag-n"]{font-size:clamp(34px,3.2vmin,96px)}
 [data-part="token-bag-draw"] [data-part="token-bag-label"]{font-size:clamp(12px,1.2vmin,36px)}
-[data-part="token-bag-draw"] [data-part="token-bag-skip"]{bottom:max(16px,env(safe-area-inset-bottom));font-size:clamp(15px,1.4vmin,40px)}`;
+[data-part="token-bag-draw"] [data-part="token-bag-skip"]{position:absolute;left:${I};right:${I};bottom:max(${I},env(safe-area-inset-bottom));margin:0;text-align:center;font-size:clamp(15px,1.4vmin,40px)}`;
     }
   });
 
