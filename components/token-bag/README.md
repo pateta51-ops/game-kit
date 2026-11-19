@@ -17,6 +17,8 @@ A bag of tokens with its count; the draw shown as a 2D flight from the bag or a 
 
 - K441: the Draw hides every dock bag at any time (class `token-bag-drawing` on `<html>`, one injected style), keeps the count and hint inside the safe area and grows them with `clamp()`, ends when `back()` rejects, and with `e2eHooks` (default off) sets `window.__bag3dStats()` / `window.__bag3dSeek(t)` for e2e while it plays (cleanup removes only its own).
 
+- K446: the Draw's count and hint are placed by its stylesheet (no inline positions; `--token-bag-inset`, default 16px, sets the margin). `Rest` takes `className`, `hostSized` (no inline 100% size; the host's CSS sizes the canvas) and `e2eHooks` (default off: sets `window.__bagDockFrames()`, the frames rendered so far; cleanup removes only its own). `TokenBag` still mounts `Rest` with the defaults.
+
 ## Finite supply (K373)
 `supply.ts`: the engine keeps integers, the table draws the box's real pieces. `placeTokens(places, box)` gives each place (in order) the change of its number out of what the ones before it left, largest values first, at most its `cap`; what the supply or the cap cannot draw is `short` (show it as a badge; the number beside it stays exact). Also `makeChange`, `countOf`, `valueOf`, `tokenSplit` (no supply limit), `heapOf` and `heapSpot` (the supply as a heap that keeps its shape), `discStack`, `heldAndAside`. A game's counts per kind and value are its own.
 
