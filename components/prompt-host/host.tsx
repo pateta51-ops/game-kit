@@ -103,18 +103,18 @@ const key = (i: number): number | undefined => (i < 9 ? i + 1 : undefined);
 const mark = (picks: readonly string[], id: string): 'picked' | 'unpicked' | undefined => (picks.length === 0 ? undefined : picks.includes(id) ? 'picked' : 'unpicked');
 
 /** One option as a button: barred ones stay, say why and never answer; a legal one that does nothing warns (K91 `idle`). */
-export function OptionButton<P extends Kinded>({ option: o, prompt, look, onPick, pressed, mark, picked, shortcut }: { option: KernelOption; prompt: P; look: Look<P>; onPick: () => void; pressed?: boolean; mark?: ReactNode; picked?: 'picked' | 'unpicked' | undefined; shortcut?: number | undefined }) {
+export function OptionButton<P extends Kinded>({ option: o, prompt, look, onPick, pressed, mark, picked, shortcut, full }: { option: KernelOption; prompt: P; look: Look<P>; onPick: () => void; pressed?: boolean; mark?: ReactNode; picked?: 'picked' | 'unpicked' | undefined; shortcut?: number | undefined; full?: boolean }) {
   return (
     <button
       type="button"
       className={look.cls('option')}
       data-option={o.id}
-      aria-disabled={o.enabled ? undefined : 'true'}
+      aria-disabled={o.enabled && !full ? undefined : 'true'}
       aria-pressed={pressed}
       data-picked={picked}
       data-shortcut={shortcut}
       onClick={() => {
-        if (o.enabled) onPick();
+        if (o.enabled && !full) onPick();
       }}
     >
       {mark === undefined ? null : <b className={look.cls('mark')}>{mark}</b>}
@@ -153,7 +153,7 @@ export function PickOptions<P extends Kinded, V>({ prompt, answer, look, confirm
   return (
     <div className={look.cls('pick')} data-prompt-answers="">
       {prompt.options.map((o, i) => (
-        <OptionButton key={o.id} option={o} prompt={prompt} look={look} pressed={picked.includes(o.id)} picked={mark(picked, o.id)} shortcut={key(i)} onPick={() => (o.alone === true ? answer([o.id]) : toggle(o.id))} />
+        <OptionButton key={o.id} option={o} prompt={prompt} look={look} pressed={picked.includes(o.id)} picked={mark(picked, o.id)} shortcut={key(i)} full={!one && prompt.max > 1 && picked.length >= prompt.max && !picked.includes(o.id) && o.alone !== true} onPick={() => (o.alone === true ? answer([o.id]) : toggle(o.id))} />
       ))}
       {one ? null : (
         <>
