@@ -89,6 +89,7 @@ class Cue:
     group: str | None = None  # stems normalised together
     options: dict[str, Any] = field(default_factory=dict)  # passed to the backend as is
     notes: str = ""
+    lyrics: str = ""  # K485: YuE2 sung lyrics (section tags allowed); empty = instrumental
 
     @property
     def is_loop(self) -> bool:
@@ -227,7 +228,7 @@ def parse_cue(obj: dict, cfg: Config | None, index: int = 0) -> Cue:
     known = {
         "name", "prompt", "negativePrompt", "category", "mode", "loop", "length", "variations", "tempo", "bars",
         "beatsPerBar", "key", "seed", "backend", "channels", "crossfade", "skip", "group", "options", "notes",
-        "generate", "maxDropDb",
+        "generate", "maxDropDb", "lyrics",
     }  # fmt: skip
     unknown = set(obj) - known
     if unknown:
@@ -259,6 +260,7 @@ def parse_cue(obj: dict, cfg: Config | None, index: int = 0) -> Cue:
         group=obj.get("group"),
         options=dict(obj.get("options") or {}),
         notes=str(obj.get("notes", "")),
+        lyrics=str(obj.get("lyrics") or "").strip(),
     )
 
 

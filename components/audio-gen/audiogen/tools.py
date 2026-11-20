@@ -118,6 +118,7 @@ def status() -> dict[str, bool]:
         "yue2 0.1.6 (YuE2-3B)": probe("venv-yue", "yue2; assert yue2.__version__ == '0.1.6'"),
         "yue2 weights": (home / "models" / "yue2" / "config.json").is_file(),
         "demucs (yue2 vocal gate)": probe("venv-demucs", "demucs"),
+        "faster-whisper (yue2 lyrics check)": probe("venv-demucs", "faster_whisper") and (home / "models" / "whisper-large-v3-turbo" / "model.bin").is_file(),
         "kokoro (voice)": probe("venv-kokoro", "kokoro"),
         "CUDA in venv-sa3": probe("venv-sa3", "torch; assert torch.cuda.is_available()"),
         "CUDA in venv-yue": probe("venv-yue", "torch; assert torch.cuda.is_available()"),
