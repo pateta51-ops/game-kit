@@ -5213,6 +5213,28 @@ void main() {
     let endTimer;
     let steps = [];
     let dead = false;
+    let blanked = [];
+    const texts = [];
+    const walk = (n) => {
+      if (n.nodeType === 3) texts.push(n);
+      else n.childNodes.forEach(walk);
+    };
+    face.forEach(walk);
+    const restore = () => {
+      for (const [t, d] of blanked) t.data = d;
+      blanked = [];
+    };
+    const blank = (count) => {
+      restore();
+      const pos = [];
+      for (const t of texts) for (let i = 0; i < t.data.length; i++) if (/\S/.test(t.data[i])) pos.push([t, i]);
+      for (let c = Math.min(count, pos.length); c > 0; c--) {
+        const [t, i] = pos.splice(Math.floor(rand2() * pos.length), 1)[0];
+        if (!blanked.some((b) => b[0] === t)) blanked.push([t, t.data]);
+        t.data = t.data.slice(0, i) + "\xA0" + t.data.slice(i + 1);
+      }
+    };
+    const angle = () => (rand2() < 0.5 ? -1 : 1) * between(o.skewDeg);
     const factor = () => {
       const s = o.speed();
       return typeof s === "number" && s > 0 ? s : 0;
@@ -5222,6 +5244,8 @@ void main() {
       clearTimeout(endTimer);
       steps.forEach(clearTimeout);
       steps = [];
+      restore();
+      el.style.removeProperty("--glitch-skew");
       timer = endTimer = void 0;
     };
     const clearClasses = () => el.classList.remove("fx-glitch--burst", "fx-glitch--tear", "fx-glitch--steps", "fx-glitch--drop");
@@ -5248,6 +5272,17 @@ void main() {
         }
       };
       draw();
+      const doSkew = kind === "burst" && !!o.skewDeg;
+      const doBlank = kind === "burst" && !!o.blankLetters && !o.mask && texts.length > 0;
+      const total = stepped ? n : 4;
+      const skewAt = doSkew ? stepped ? Math.floor(rand2() * n) : 1 : -1;
+      if (doSkew && !stepped) set("--glitch-skew", `${String(angle())}deg`);
+      const blankAt = doBlank ? Math.floor(rand2() * total) : -1;
+      const frame = (i) => {
+        if (doSkew && stepped) set("--glitch-skew", i === skewAt ? `${String(angle())}deg` : "0deg");
+        if (i === blankAt) blank(Math.max(1, Math.round(between(o.blankLetters))));
+        else if (i === blankAt + 1) restore();
+      };
       set("--glitch-ms", `${String(len * f)}ms`);
       void el.offsetWidth;
       if (stepped) {
@@ -5256,16 +5291,26 @@ void main() {
           el.classList[rand2() < 0.25 ? "add" : "remove"]("fx-glitch--drop");
         };
         side();
+        frame(0);
         el.classList.add("fx-glitch--steps");
         for (let i = 1; i < n; i++)
           steps.push(setTimeout(() => {
             draw();
             side();
+            frame(i);
           }, len * f * i / n));
-      } else el.classList.add(`fx-glitch--${kind}`);
+      } else {
+        el.classList.add(`fx-glitch--${kind}`);
+        if (doBlank) for (const i of [blankAt, blankAt + 1]) {
+          if (i === 0) frame(0);
+          else if (i < total) steps.push(setTimeout(() => frame(i), len * f * i / total));
+        }
+      }
       endTimer = setTimeout(() => {
         endTimer = void 0;
         clearClasses();
+        restore();
+        el.style.removeProperty("--glitch-skew");
         if (again) timer = setTimeout(() => play("burst", false), between(gap) * f);
         else schedule();
       }, len * f);
