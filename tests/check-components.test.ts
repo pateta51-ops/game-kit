@@ -77,7 +77,7 @@ describe('K256 README and tests', () => {
     expect(r.stderr).toContain('no test file');
   });
   it('a test_*.py counts as a test', () => {
-    expect(make({ a: { bare: true, files: { 'README.md': '# a\n', 'test_x.py': '' } } }).status).toBe(0);
+    expect(make({ a: { bare: true, files: { 'README.md': '# a\n\n## Rules for agents\n', 'test_x.py': '' } } }).status).toBe(0);
   });
 });
 
