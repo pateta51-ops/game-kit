@@ -1,6 +1,8 @@
 """YuE2-3B worker, the 7th Inning Stretch instrumental recipe (round6i): runs in the YuE2 Python (venv-yue, yue2-infer
 0.1.6, CUDA PyTorch). GPU only.
 
+K477: each take is generated in a child process (this script with --take) that loads the pipeline, writes the take and exits;
+this light parent then runs the demucs gate and, on a fail, starts the next seed's child (the reload time is logged per take).
 Per take: plan the song (lyrics "[Instrumental]", cot "full", the seed), silence every note of the ABC "Vocal" voice:
 silent (its notes move into the instrumental voice; `vocal: "rests"` drops them), render with that score (abc=), then split it with demucs htdemucs two-stem on cuda (in `demucsPython`) and keep
 it only when vocal/mix <= -25 dB and at most 3 % of 0.5 s windows are loud. A take that fails is tried again with the
@@ -11,7 +13,8 @@ Job options (config backends.<name>): modelDir (local snapshot, default ~/audio-
 model is used), model ("m-a-p/YuE2-3B"), revision ("8f24312f"), version (yue2 code, "0.1.6"), demucsPython,
 tries (6), keep (1: passing takes kept per item; the first is the item's file, the others
 <out>-keep2.wav, ... listed in extra.alternates; raise tries with it), maxVocalDb (-25), maxLoudWindows (0.03), cot ("full"), lyrics ("[Instrumental]"),
-vocal ("rests" default, as the YuE skill does | "move"), minAvailGiB (6: MemAvailable needed before loading the model and before each demucs pass; under it the take fails, K474), offloadAr (true | false | "auto": on when the card has under 24 GB; YuE2 only, the one exception to GPU only).
+vocal ("rests" default, as the YuE skill does | "move"), minAvailGiB (6: MemAvailable needed before each take's child loads the model; under it the take fails, K474),
+minAvailDemucsGiB (3: MemAvailable needed before each demucs pass, K477; an estimate, not measured: demucs htdemucs on CUDA alone is a torch + CUDA-context process of about 2-3 GiB host RAM; the child that held the model has exited by then), offloadAr (true | false | "auto": on when the card has under 24 GB; YuE2 only, the one exception to GPU only).
 Per item: prompt (the style text), seed, options.lyrics / options.tries. YuE2 sets its own length: the pipeline cuts.
 Exit 3 = cannot start (wrong yue2 version, no CUDA, or a first generation that did not use the GPU).
 Weights: CC BY-NC 4.0 (non-commercial).
@@ -19,7 +22,6 @@ Weights: CC BY-NC 4.0 (non-commercial).
 
 from __future__ import annotations
 
-import gc
 import json
 import os
 import shutil
@@ -32,9 +34,10 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from audiogen import gpu, recipe  # noqa: E402
 
 
-def main() -> int:
-    job = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
-    opts = job["options"]
+def child(take_path: str) -> int:
+    """K477: one take in its own process: load the pipeline, plan, render, save, exit, so its host memory is gone before demucs."""
+    t = json.loads(Path(take_path).read_text(encoding="utf-8"))
+    opts = t["options"]
     import yue2
 
     want = str(opts.get("version", "0.1.6"))
@@ -42,16 +45,9 @@ def main() -> int:
         print(f"yue2 worker: yue2 {yue2.__version__} installed, the kit is pinned to {want} (install.sh yue2)", file=sys.stderr)
         return 3
     torch = gpu.cuda("yue2 worker")
-    import soundfile as sf
     from yue2 import YuE2Pipeline
 
-    need = float(opts.get("minAvailGiB", 6))
-    try:
-        recipe.need_memory(need, "loading YuE2")
-    except recipe.LowMemory as e:
-        print(f"yue2 worker: {e}", file=sys.stderr, flush=True)
-        Path(job["result"]).write_text(json.dumps({"items": [{"out": i["out"], "error": f"LowMemory: {e}"[:500]} for i in job["items"]]}, indent=2), encoding="utf-8")
-        return 0
+    t0 = time.time()
     local = Path(str(opts.get("modelDir", "~/audio-gen/models/yue2"))).expanduser()
     hub = str(opts.get("model", "m-a-p/YuE2-3B"))
     rev = str(opts.get("revision", "8f24312f"))
@@ -63,14 +59,37 @@ def main() -> int:
         pipe = YuE2Pipeline.from_pretrained(str(local), device="cuda", **extra)
     else:
         pipe = YuE2Pipeline.from_pretrained(hub, revision=rev, device="cuda", **extra)
+    load = time.time() - t0
+
+    def make() -> int:
+        plan = pipe.plan(style=t["prompt"], lyrics=t["lyrics"], cot=t["cot"], seed=t["seed"])
+        abc, nv = recipe.novocal(plan.abc, str(opts.get("vocal", "rests")))
+        pipe(style=t["prompt"], lyrics=t["lyrics"], cot=t["cot"], seed=t["seed"], abc=abc).save(t["tmp"])
+        return nv
+
+    nv = gpu.first(torch, "yue2 worker", make) if t.get("first") else make()
+    Path(t["result"]).write_text(json.dumps({"nv": nv, "loadSeconds": load}), encoding="utf-8")
+    return 0
+
+
+def main() -> int:
+    if len(sys.argv) > 3 and sys.argv[2] == "--take":
+        return child(sys.argv[3])
+    job = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
+    opts = job["options"]
+    import soundfile as sf
+
+    need = float(opts.get("minAvailGiB", 6))
+    need_demucs = float(opts.get("minAvailDemucsGiB", 3))
+    hub = str(opts.get("model", "m-a-p/YuE2-3B"))
+    rev = str(opts.get("revision", "8f24312f"))
+    want = str(opts.get("version", "0.1.6"))
     demucs = str(Path(str(opts.get("demucsPython", "~/audio-gen/venv-demucs/bin/python"))).expanduser())
     env = {**os.environ, "OMP_NUM_THREADS": "2", "MKL_NUM_THREADS": "2"}
 
     def gate(wav: Path) -> tuple[float, float]:
-        gc.collect()
-        torch.cuda.empty_cache()  # give back what generation held before demucs loads
         try:
-            recipe.need_memory(need, "the demucs pass")
+            recipe.need_memory(need_demucs, "the demucs pass")
         except recipe.LowMemory:
             wav.unlink(missing_ok=True)
             raise
@@ -93,6 +112,33 @@ def main() -> int:
         finally:
             shutil.rmtree(sep, ignore_errors=True)
 
+    state = {"first": True}
+
+    def generate(tmp: Path, prompt: str, lyrics: str, cot: str, seed: int) -> int:
+        """The take in a child process that has exited when this returns (K477); a child killed by the cap is a failed take naming it."""
+        recipe.need_memory(need, "loading YuE2 in a child process")
+        tj, rj = tmp.with_suffix(".take.json"), tmp.with_suffix(".take.res.json")
+        tj.write_text(json.dumps({"options": opts, "prompt": prompt, "lyrics": lyrics, "cot": cot, "seed": seed, "tmp": str(tmp),
+                                  "result": str(rj), "first": state["first"]}), encoding="utf-8")
+        t0, kills = time.time(), recipe.oom_kills()
+        try:
+            try:
+                subprocess.run([sys.executable, str(Path(__file__).resolve()), sys.argv[1], "--take", str(tj)], env=env, check=True)
+            except subprocess.CalledProcessError as e:
+                if e.returncode == 3:
+                    raise SystemExit(3) from e
+                tmp.unlink(missing_ok=True)
+                if e.returncode in (-9, 137) or recipe.oom_kills() > kills:
+                    raise recipe.LowMemory(f"killed by the memory cap: the generating child died (exit {e.returncode}) in the cgroup limit") from e
+                raise RuntimeError(f"the generating child failed (exit {e.returncode})") from e
+            r = json.loads(rj.read_text(encoding="utf-8"))
+        finally:
+            tj.unlink(missing_ok=True)
+            rj.unlink(missing_ok=True)
+        state["first"] = False
+        print(f"yue2 worker: seed {seed}: child reloaded the pipeline in {r['loadSeconds']:.0f} s ({time.time() - t0:.0f} s in all)", file=sys.stderr, flush=True)
+        return r["nv"]
+
     def one(item: dict) -> dict:
         t0 = time.time()
         out = Path(item["out"])
@@ -102,10 +148,8 @@ def main() -> int:
         cot = str(opts.get("cot", "full"))
         best, tried, kept, keep = None, [], [], int(o.get("keep", opts.get("keep", 1)))
         for s in recipe.seeds(int(item["seed"]), int(o.get("tries", opts.get("tries", 6)))):
-            plan = pipe.plan(style=item["prompt"], lyrics=lyrics, cot=cot, seed=s)
-            abc, nv = recipe.novocal(plan.abc, str(opts.get("vocal", "rests")))
             tmp = out.parent / f"_yue_{out.stem}-{s}.wav"
-            pipe(style=item["prompt"], lyrics=lyrics, cot=cot, seed=s, abc=abc).save(tmp)
+            nv = generate(tmp, item["prompt"], lyrics, cot, s)
             db, loud = gate(tmp)
             tried.append({"seed": s, "vocalDb": db, "loudWindows": loud, "vocalBarsSilenced": nv})
             print(f"yue2 worker: {item['label']} seed {s}: vocal {db} dB, {loud:.1%} loud windows", file=sys.stderr, flush=True)
@@ -139,8 +183,9 @@ def main() -> int:
     results = []
     for item in job["items"]:
         try:
-            results.append(one(item) if any("error" not in r for r in results)
-                           else gpu.first(torch, "yue2 worker", lambda: one(item)))  # fmt: skip
+            results.append(one(item))
+        except SystemExit as e:
+            return int(e.code or 0)
         except Exception as e:  # noqa: BLE001 - one bad item must not stop the rest
             print(f"yue2 worker: {item['label']} failed: {e}", file=sys.stderr, flush=True)
             results.append({"out": item["out"], "error": f"{type(e).__name__}: {e}"[:500]})
