@@ -1,4 +1,23 @@
 # check-runner (two scripts a game runs with `node` from its root)
+
+## Rules for agents
+
+**What it does:** Scripts a game runs with `node` from its root: the check chain in lanes, a per-item gate with a known-failing list, and a cap on whole-game tests.
+
+**You must:**
+1. Run from the game root with `node kit/check-runner/<script>.ts`; each takes `--config <path>` (defaults `check-runner.config.json`, `gate-all.config.json`, `test-cost.config.json`).
+2. Keep the lanes and the `checkScript` chain in agreement in `check-runner.config.json`: the run fails while they differ. A CI-only step goes in `extra`, a `--pr`-only one in `pr.own`.
+3. Set `timeoutMinutes` (and `graceSeconds`): a timeout or cancel kills the check's whole process tree.
+4. In `gate-all.config.json` put a failing item in `known` with the reason; remove its line when it passes (the run flags it with `::notice::`). Any unlisted failure fails the run.
+5. In `test-cost.config.json` list the player functions in `players`/`playerFiles`; keep `allow` counts exact: a file over its count, unlisted, or now under it (stale) fails.
+6. Run through the game's npm scripts or `heavy run`, not bare on a busy machine; never edit `kit/check-runner`.
+
+**Common mistakes:**
+- Adding a script to the `package.json` chain but not to a lane (or the reverse): the run fails on the disagreement.
+- Expecting a failure to stop the rest: by default every check runs; use `--fail-fast`, or `--keep-going` to override a config that sets `failFast`.
+- Leaving a stale `allow` count in test-cost: it fails; lower or remove the line.
+
+
 ## check-runner.ts: the checks of `npm run check`, in lanes
 `node kit/check-runner/check-runner.ts [--config path] [--pr] [--fail-fast] [--keep-going]`
 The game passes `check-runner.config.json` (see `check-runner.config.example.json`):

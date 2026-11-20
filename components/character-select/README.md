@@ -1,5 +1,23 @@
 A character select screen before a game: roster by set, hero, deck browser, track slot, opponent strip, modes, folded options and Begin; the game supplies the data, slots and look.
 
+## Rules for agents
+
+**What it does:** A pre-game character select screen: roster, hero, deck browser, opponent strip, modes, folded options and Begin. The game supplies data, slots and look.
+
+**You must:**
+1. Import `CharacterSelect` from `ui` and `looks/layout.css`; set the `--cs-*` variables for colours and fonts (neutral defaults otherwise).
+2. Pass `roster` (each `Character` with a `set` listed in `sets`), and `opponents` unless every mode has `opponents: false`.
+3. Pass `icons` for every `[name]` icon used in summaries; only names in `icons` are drawn as icons.
+4. Build the new game from `onBegin(choice)` (`mode`, `pick`, `opponent`, `options`); options of fields hidden in the chosen mode are already dropped.
+5. Return reasons from `problems(choice)` to disable Begin; use `canPick` / `canOppose` for roster and opponent rules (the default only stops a character opposing itself).
+6. To use your own controls, return your part from `slots.control(kind, props)` (null keeps the built-in) and wire `onClick`/`onChange` from `props`. `slots.begin` wins over `control("begin")`.
+7. With `slots.renderText` the game draws its own text links; set `phone` for the phone layout.
+
+**Common mistakes:**
+- Expecting `renderText` to keep the kit links: it replaces `RichText` wholesale.
+- Drawing the sub-picker, track, field or options bodies expecting the kit to wire their buttons: the game draws those itself.
+
+
 ## Use it in 10 lines
 
 ```tsx

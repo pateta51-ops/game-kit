@@ -2,6 +2,24 @@
 
 The game's log, derived from engine events by one table. Cards and rules write nothing: a new game has a complete log by listing its event types once. Pure data and functions, no look. Reuses engine-core's `KernelEvent` (a game's events add `type`).
 
+## Rules for agents
+
+**What it does:** The game's log derived from engine events by one table; cards and rules write nothing. Pure data and functions, no look.
+
+**You must:**
+1. Write one `Narrator` table: an event type to a narration (one, several or null); silence is the default, so list every event type that should show.
+2. Call `appendLog(log, events, table, step)` once per action and keep the log in the game state; it returns a new array and never edits old rows.
+3. Use the same `step` for all rows of one action so undo can rewind (`rewindLog`, `previewAt`, `stepOf`).
+4. Keep narrations pure: never push, throw or assume an entity still exists (a throw becomes a `problem` row).
+5. Give `cause` as a `ref`, not prose; group rows with `group: { id, role }`.
+6. Run `wordingProblems(row)` over what the table writes in a test; export a golden with `exportText`.
+7. Draw the log yourself: refs (card, space, piece) are resolved by the client.
+
+**Common mistakes:**
+- Expecting a catch-all: unlisted events are silent.
+- A delta of 0, an empty part or a ref without type or id: `wordingProblems` flags them.
+
+
 - `Narrator<E>`: event type to `Narrated` (one, several, or null). Silence is the default: no catch-all, and wrapper copies (when/after/would) of one occurrence are left out. A narration is pure, never pushes, throws or assumes an entity still exists; one that throws becomes a `problem` row.
 - `appendLog(log, events, table, step)`: returns a new array with rows added; old rows are never edited. Row: `id`, `seq` (the event), `step` (the undo point; one action's rows share it), `kind`, `parts`, `cause`, `group`, `tone`, `tag`.
 - Parts: `text`, `num`, `delta`, `ref(type, id, label?)` (card, space, piece: the client resolves it), `icon`, `list`. Build with `text`, `num`, `delta`, `ref`, `icon`.

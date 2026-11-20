@@ -2,6 +2,25 @@
 
 Cards fly from a pile to their places (deal, refill turn-over, deck cycle) and a pile riffles, anchored on piles found by `[data-pile="<id>"]` (the attribute card-pile draws). Uses motion-frame types for verb registration. `index.ts` is the pure timing (node); `ui.ts` the DOM.
 
+## Rules for agents
+
+**What it does:** Cards fly from a pile to their places (deal, refill, cycle) and a pile riffles; piles are found by `[data-pile="<id>"]`. `index.ts` is pure timing, `ui.ts` the DOM.
+
+**You must:**
+1. Render every pile (card-pile does) with `data-pile="<id>"`; the game lists `Move`s (`id`, `dir`, `pile`, `at`, `faceDown`) from its view diff.
+2. Call `dealFrom` after the new view is rendered; it lays stand-ins on `document.body` and returns `{ plan, done }`.
+3. Pass `speed` from settings: speed 0 or less, reduced motion, or no Web Animations means nothing plays (empty plan).
+4. Provide `back(pile, rect)` for the card back (default an empty `div[data-pile-back]`) and `face(id, el)` if cloning the place is wrong.
+5. Call `finishOnInput()` once, and `finishDeckMotions()` on undo and when leaving the screen.
+6. To riffle from a motion spec, call `registerRiffle(verbs, ...)` on motion-frame `createVerbs()`; with `natural: true` give the step at least 2200 ms of scaled time.
+7. A riffle needs a sized deck element; one riffle per deck at a time.
+
+**Common mistakes:**
+- Calling `dealFrom` before the new view is rendered: the places are not found.
+- Not calling `finishDeckMotions` on undo or leaving: stand-ins stay on the page.
+- Using it for a market row slide: market-row has its own `rowMotions`.
+
+
 - The game diffs its views and lists `Move`s: `{ id, dir: 'out' | 'in', pile, at, faceDown, refill?, far? }`. `at` is a pile id or `() => element` (where the card is drawn). `out`: pile to place; `in`: place to pile (a face-down card vanishes into it). `cycleMove(id, discard, deck)`: the top of the discard carried into the deck.
 - `planDeal(moves, { speed, shuffled, departs })`: cards going in (90 ms apart, 520 ms each), then a riffle (2200 ms) for the `shuffled` piles that received one, then cards out in turn. Refills (`refill`) start together once the departing card landed (`departs`) plus 160 ms, lift 1.06, `far` flies 1.5x longer. Speed 0 or less: an empty plan.
 - `dealFrom(moves, { speed, back, face, unit, shuffled, departs })`: lays stand-ins on `document.body` (call after the new view is rendered), plays them with Web Animations, returns `{ plan, done }`. `back(pile, rect)` is the game's card back (default an empty `div[data-pile-back]`), `face(id, el)` the face (default a clone of the place's element), `unit(pile)` the px unit the riffle's offsets follow (default `--u`, else 21.6, the 4K table); `axis` the turn-over: `'x'` side to side (default), `'y'` top to bottom; `direction` `1` a front flip (default), `-1` a back flip.

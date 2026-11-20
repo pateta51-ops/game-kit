@@ -1,6 +1,24 @@
 # prompt-gallery
 One game state per prompt kind and per ending, a check that fails when a kind has none, and a dev route that shows each on the game's own components. `index.ts` loads in node (scripts, tests); `ui.ts` is the React route.
 
+## Rules for agents
+
+**What it does:** gives each engine prompt kind and each ending one stored game state, fails a test when a kind has none, and shows each on the game's own components in a dev-only route.
+
+**You must:**
+1. Build a `GallerySpec` from the engine's own list of prompt kinds (`prompts`) and result kinds (`endings`), with one `fixtures` entry per kind (`group`, `kind`, `state`), and `kindOf` to read the kind back from a state.
+2. Store ids and actions in a fixture (replay them), not card text, and return the state (it may be a promise).
+3. Put `expect(checkGallery(spec)).toEqual([])` in a test: a new kind then fails until it has a fixture. Run `checkStates` too: it reports fixtures that throw, are slow, or no longer show their kind.
+4. Mount `Gallery` on a dev route and show it only when `isDevMode(undefined, import.meta.env.DEV)` is true.
+5. Render each fixture with the game's own prompt and ending components in `render`; give `check` so answers are validated and not played.
+6. Where the game has screen controls, run `checkActionCoverage` over seeded states to find legal actions no control sends.
+
+**Common mistakes:**
+- An empty `prompts` list: it is a finding.
+- A fixture of a kind not in the list, or two for one kind: findings.
+- Fixtures left stale after an engine change: `checkStates` with `kindOf` reports a state that no longer shows its kind; harvest again.
+- Opening the route in a production build: `isDevMode` is false unless the game passes the dev flag.
+
 ## The game passes
 ```ts
 const spec: GallerySpec<State> = {
