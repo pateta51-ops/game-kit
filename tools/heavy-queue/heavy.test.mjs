@@ -427,3 +427,49 @@ describe('heavy --mem and --slots (K474)', () => {
     expect((await q.post('/acquire', { label: 'late' })).granted).toBe(false);
   });
 });
+
+describe('heavy-queue cache drop (K495)', () => {
+  const cache = (gb, runs, o = {}) => { const st = { gb, runs: 0, logs: [] }; return { st, o: { readCache: () => st.gb, runDrop: () => { st.runs++; st.gb = 1; return runs ?? true; }, say: (m) => st.logs.push(m), ...o } }; };
+  const job = async (q) => { const a = await q.post('/acquire', { label: 'j' }); await q.post('/release', { id: a.id, exit: 0 }); };
+  it('above the limit it drops once and logs before and after', async () => {
+    const { st, o } = cache(10);
+    const q = await serve({ dropGb: 6, dropEveryMs: 0, ...o });
+    await job(q);
+    await until(async () => (await q.status()).lastDrop);
+    expect(st.runs).toBe(1);
+    expect(st.logs).toEqual(['heavy-queue: dropped file cache 10 GB -> 1 GB']);
+    expect((await q.status()).cacheGB).toBe(1);
+  });
+  it('below the limit it does nothing', async () => {
+    const { st, o } = cache(3);
+    const q = await serve({ dropGb: 6, dropEveryMs: 0, ...o });
+    await job(q); await sleep(100);
+    expect(st.runs).toBe(0);
+    expect((await q.status()).lastDrop).toBe(null);
+  });
+  it('0 turns it off', async () => {
+    const { st, o } = cache(50);
+    const q = await serve({ dropGb: 0, dropEveryMs: 0, ...o });
+    await job(q); await sleep(100);
+    expect(st.runs).toBe(0);
+  });
+  it('at most one check per HEAVY_DROP_EVERY_MS', async () => {
+    const { st, o } = cache(10);
+    const q = await serve({ dropGb: 6, dropEveryMs: 3600000, ...o });
+    await job(q);
+    await until(async () => (await q.status()).lastDrop);
+    st.gb = 10;
+    await job(q); await job(q); await sleep(100);
+    expect(st.runs).toBe(1);
+  });
+  it('a sudo failure warns once, never throws, never retries', async () => {
+    const { st, o } = cache(10, false);
+    const q = await serve({ dropGb: 6, dropEveryMs: 0, ...o });
+    await job(q); await until(() => st.logs.length);
+    await job(q); await job(q); await sleep(100);
+    expect(st.runs).toBe(1);
+    expect(st.logs).toHaveLength(1);
+    expect(st.logs[0]).toMatch(/sudo/);
+    expect((await q.status()).lastDrop).toBe(null);
+  });
+});
