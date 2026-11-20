@@ -1,6 +1,6 @@
 # game-server
 
-A small web panel that updates any game to its latest `origin/main` in its own clone (`REDACTED/<id>`), builds it, serves it and maps it onto the tailnet with `tailscale serve`. No dependencies (Node 24). Not a kit component: it runs on the owner's PC and is never pulled into a game.
+A small web panel that updates any game to its latest `origin/main` in its own clone (`<serveRoot>/<id>`, set in kit.local.json), builds it, serves it and maps it onto the tailnet with `tailscale serve`. No dependencies (Node 24). Not a kit component: it runs on the owner's PC and is never pulled into a game.
 
 ## Install (once, on the PC)
 
