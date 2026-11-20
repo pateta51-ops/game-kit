@@ -1,4 +1,4 @@
-/* Opt-in look for createGlitch(el, opts). Without `mask` the copies and slices are copies of the element's content (text or markup), coloured by --glitch-a and --glitch-b; with `mask` (or --glitch-mask) set to url(shape.svg) they are flat colour cut to that shape. Variables: --glitch-a, --glitch-b, --glitch-split, --glitch-jump (number, % of width), --glitch-dropout (opacity), --glitch-ms (set by the scheduler). */
+/* Opt-in look for createGlitch(el, opts). Without `mask` the copies and slices are copies of the element's content (text or markup), coloured by --glitch-a and --glitch-b; with `mask` (or --glitch-mask) set to url(shape.svg) they are flat colour cut to that shape. Variables: --glitch-a, --glitch-b, --glitch-split, --glitch-jump (number, % of width), --glitch-dropout (opacity), --glitch-ms and --glitch-side (set by the scheduler). With `burstSteps` the scheduler holds the class fx-glitch--steps and redraws the slice variables per step: no keyframes. */
 .fx-glitch {
   --glitch-a: #fff;
   --glitch-b: #888;
@@ -34,6 +34,11 @@
     > .fx-glitch-copy { animation: fx-glitch-split var(--glitch-ms) steps(1, end); }
     > .fx-glitch-slice { animation: fx-glitch-slices var(--glitch-ms) steps(1, end); }
   }
+  .fx-glitch--steps {
+    > .fx-glitch-copy { opacity: .7; transform: translateX(calc(var(--glitch-side, 1) * var(--offset))); }
+    > .fx-glitch-slice { opacity: .9; transform: translateX(calc(var(--jump) * var(--glitch-jump) * 1%)); }
+  }
+  .fx-glitch--steps.fx-glitch--drop { opacity: var(--glitch-dropout); }
   .fx-glitch--tear {
     --glitch-split: 2%;
     animation: fx-glitch-tear-dropout var(--glitch-ms) steps(1, end);

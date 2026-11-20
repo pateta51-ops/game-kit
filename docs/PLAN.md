@@ -176,6 +176,12 @@ Port from Unstoppable PR #152. Tests per control; demo page + contact sheet. | M
 - One general `slots.control(kind, props)` used by EVERY interactive element the screen draws (mode tabs, deck tabs, deck search, paging arrows, full-text toggle, Day/Night style sub-picker buttons, options fold toggle, roster and opponent entries if they are buttons): the game returns its own part or null for the built-in. List every kind in the README so no plain control is left unslotted.
 Tests: each kind reaches the slot with its props; null keeps the built-in. | S | Unstoppable experience director, 20 Nov 2026 (first real user, Unstoppable PR #154 on v0.186.0); owner bar XD-14: no native or plain controls a player sees | done |
 | K471 | controls `Toggle`: optional `sub` marks a nested sub-setting (`data-sub`); looks/plain.css indents it by `--controls-sub-indent` (default 1.6em). Test: sub marked, plain not. | S | Unstoppable architect, 20 Nov 2026 (game PR #156, branch controls-onto-kit); not blocking | done |
+| K472 | effect-library `createGlitch`, by addition (today's options and look unchanged when the new ones are absent):
+- `burstMs` also takes [min, max]: each burst draws its length from the seeded rng.
+- `burstSteps?: number | [min, max]`: a burst is that many hard steps (distinct frames, no easing); each step re-draws slice positions, jumps and the split side. Without it, the burst plays as today.
+- `jumpRange?: [min, max]` in % of width: each slice's sideways jump is drawn exactly in that range (sign random), instead of the approximate `jump` x 0.6-1.4.
+- README: say that `looks/glitch.css` must be imported or the layers sit in the page flow.
+Tests with a seed and fake timers: lengths inside the range; step count inside the range; every jump inside the range; old options unchanged. | S | Unstoppable architect, 20 Nov 2026 (XD-11 title glitch, game PR #161, branch title-glitch-fix); not blocking | done |
 | K283 | `card-pile` `hitTitle={false}` drops the native title on the stack button (STCC draws its own pile tooltip) | S |  | done |
 | K284 | `layout-editor` Reset button (in-page confirmation): restores the starting doc, backdrops (`LAYOUT_EDITOR_BG_INIT`), zoom and screen; `layoutEditor.reset()` | S |  | done |
 | K285 | `plan-checker` `--tsc-at DIR` compiles the plan's type blocks inside a game folder, so relative `kit/` imports resolve | S |  | done |
