@@ -13,8 +13,8 @@ Job options (config backends.<name>): modelDir (local snapshot, default ~/audio-
 model is used), model ("m-a-p/YuE2-3B"), revision ("8f24312f"), version (yue2 code, "0.1.6"), demucsPython,
 tries (6), keep (1: passing takes kept per item; the first is the item's file, the others
 <out>-keep2.wav, ... listed in extra.alternates; raise tries with it), maxVocalDb (-25), maxLoudWindows (0.03), cot ("full"), lyrics ("[Instrumental]"),
-vocal ("rests" default, as the YuE skill does | "move"), minAvailGiB (6: MemAvailable needed before each take's child loads the model; under it the take fails, K474),
-minAvailDemucsGiB (3: MemAvailable needed before each demucs pass, K477; an estimate, not measured: demucs htdemucs on CUDA alone is a torch + CUDA-context process of about 2-3 GiB host RAM; the child that held the model has exited by then), offloadAr (true | false | "auto": on when the card has under 24 GB; YuE2 only, the one exception to GPU only).
+vocal ("rests" default, as the YuE skill does | "move"), minAvailGiB (14: MemAvailable needed before each take's child loads the model; under it the take fails, K474),
+minAvailDemucsGiB (4: MemAvailable needed before each demucs pass, K477; an estimate, not measured: demucs htdemucs on CUDA alone is a torch + CUDA-context process of about 2-3 GiB host RAM; the child that held the model has exited by then), offloadAr (true | false | "auto": on when the card has under 24 GB; YuE2 only, the one exception to GPU only).
 Per item: prompt (the style text), seed, options.lyrics / options.tries. YuE2 sets its own length: the pipeline cuts.
 Exit 3 = cannot start (wrong yue2 version, no CUDA, or a first generation that did not use the GPU).
 Weights: CC BY-NC 4.0 (non-commercial).
@@ -79,8 +79,8 @@ def main() -> int:
     opts = job["options"]
     import soundfile as sf
 
-    need = float(opts.get("minAvailGiB", 6))
-    need_demucs = float(opts.get("minAvailDemucsGiB", 3))
+    need = float(opts.get("minAvailGiB", 14))
+    need_demucs = float(opts.get("minAvailDemucsGiB", 4))
     hub = str(opts.get("model", "m-a-p/YuE2-3B"))
     rev = str(opts.get("revision", "8f24312f"))
     want = str(opts.get("version", "0.1.6"))
@@ -192,7 +192,7 @@ def main() -> int:
         Path(job["result"]).write_text(json.dumps({"items": results}, indent=2), encoding="utf-8")
     try:
         import resource
-        print(f"yue2 worker: peak host RSS {resource.getrusage(resource.RUSAGE_SELF).ru_maxrss / 2**20:.1f} GiB (demucs not included)", file=sys.stderr, flush=True)
+        print(f"yue2 worker: peak host RSS {resource.getrusage(resource.RUSAGE_CHILDREN).ru_maxrss / 2**20:.1f} GiB (largest child process, demucs included)", file=sys.stderr, flush=True)
     except ImportError:
         pass
     return 0
