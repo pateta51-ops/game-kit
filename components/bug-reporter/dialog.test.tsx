@@ -7,7 +7,7 @@ import { BugReportHost } from './BugReportDialog.tsx';
 import { createElement } from 'react';
 import { BugSettings, QueueBar } from './BugSettings.tsx';
 import { collectReport } from './collect.ts';
-import { useBugDialog } from './dialogStore.ts';
+import { openBugReport, useBugDialog } from './dialogStore.ts';
 import {
   MEMORY_ONLY_NOTE,
   queueReport,
@@ -56,6 +56,17 @@ describe('K387: BugSettings button slots', () => {
     fireEvent.click(screen.getByTestId('bug-queue-delete'));
     await waitFor(() => { expect(screen.queryByTestId('bug-queue-item')).toBeNull(); });
     expect(screen.getByTestId('bug-queue-download-all').getAttribute('aria-disabled')).toBe('true');
+  });
+});
+
+describe('K469: BugReportHost button slot', () => {
+  it('renderButton draws the dialog buttons and keeps them wired', async () => {
+    render(<BugReportHost renderButton={(b) => createElement('a', { className: b.className, 'data-testid': b.testId, 'data-kind': b.kind, onClick: b.onClick }, b.label)} />);
+    act(() => { openBugReport(); });
+    expect((await screen.findByTestId('bug-cancel')).tagName).toBe('A');
+    expect(screen.getByTestId('bug-send').getAttribute('data-kind')).toBe('send');
+    fireEvent.click(screen.getByTestId('bug-cancel'));
+    await waitFor(() => { expect(screen.queryByTestId('bug-send')).toBeNull(); });
   });
 });
 

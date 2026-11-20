@@ -14,6 +14,7 @@ import { queueReport, safeInQueueMessage, savedMessage, useQueue } from './queue
 import { reportFileName, type BugReport } from './report.ts';
 import { useToken } from './token.ts';
 import { installDevBugHooks, sendDeps } from './transport.ts';
+import { Btn, Slots, type BugBtnSlots } from './BugSettings.tsx';
 import './bugs.css';
 
 type Outcome =
@@ -122,17 +123,15 @@ function Dialog({ screenshot, close }: { screenshot: string | null; close: () =>
                 alt="Screenshot of the screen"
                 src={`data:image/png;base64,${marked ?? ''}`}
               />
-              <button
-                type="button"
-                className="bug-btn"
-                data-testid="bug-markup"
+              <Btn
+                kind="markup"
+                testId="bug-markup"
                 disabled={busy || done}
                 onClick={() => {
                   setEditing(true);
                 }}
-              >
-                Mark up screenshot{markup.length ? ` (${String(markup.length)})` : ''}
-              </button>
+                label={<>Mark up screenshot{markup.length ? ` (${String(markup.length)})` : ''}</>}
+              />
             </div>
           )}
           <div className="bugdlg__textcol">
@@ -197,21 +196,19 @@ function Dialog({ screenshot, close }: { screenshot: string | null; close: () =>
           </p>
         ) : null}
         <div className="bugdlg__buttons">
-          <button
-            type="button"
-            className="bug-btn primary"
-            data-testid="bug-send"
+          <Btn
+            kind="send"
+            primary
+            testId="bug-send"
             disabled={busy || done}
             onClick={() => {
               void send();
             }}
-          >
-            {outcome.kind === 'busy' ? 'Sending…' : 'Send now'}
-          </button>
-          <button
-            type="button"
-            className="bug-btn"
-            data-testid="bug-queue"
+            label={outcome.kind === 'busy' ? 'Sending…' : 'Send now'}
+          />
+          <Btn
+            kind="queue"
+            testId="bug-queue"
             disabled={busy || done}
             onClick={() => {
               setOutcome({ kind: 'busy', message: 'Saving in the queue…' });
@@ -223,13 +220,12 @@ function Dialog({ screenshot, close }: { screenshot: string | null; close: () =>
                   });
               });
             }}
-          >
-            Keep in queue
-          </button>
-          <button
-            type="button"
-            className={`bug-btn${memoryOnly && outcome.kind === 'queued' ? ' primary' : ''}`}
-            data-testid="bug-export"
+            label="Keep in queue"
+          />
+          <Btn
+            kind="export"
+            primary={memoryOnly && outcome.kind === 'queued'}
+            testId="bug-export"
             disabled={busy}
             onClick={() => {
               const report = make();
@@ -239,12 +235,9 @@ function Dialog({ screenshot, close }: { screenshot: string | null; close: () =>
                   : { kind: 'failed', message: 'The browser would not save the file.' },
               );
             }}
-          >
-            Download
-          </button>
-          <button type="button" className="bug-btn" data-testid="bug-cancel" disabled={busy} onClick={close}>
-            {done ? 'Close' : 'Cancel'}
-          </button>
+            label="Download"
+          />
+          <Btn kind="cancel" testId="bug-cancel" disabled={busy} onClick={close} label={done ? 'Close' : 'Cancel'} />
         </div>
       </div>
     </div>
@@ -252,7 +245,7 @@ function Dialog({ screenshot, close }: { screenshot: string | null; close: () =>
 }
 
 /** Mounted once, by the App: draws the dialog while a report is being made, and opens it on F8. */
-export function BugReportHost() {
+export function BugReportHost(slots: BugBtnSlots = {}) {
   const dialog = useBugDialog((s) => s.dialog);
   const close = useBugDialog((s) => s.close);
   useEffect(() => {
@@ -269,5 +262,9 @@ export function BugReportHost() {
     };
   }, []);
   if (dialog.phase === 'capturing') return <div hidden data-testid="bug-capturing" data-no-capture="" />;
-  return dialog.phase === 'open' ? <Dialog screenshot={dialog.screenshot} close={close} /> : null;
+  return dialog.phase === 'open' ? (
+    <Slots.Provider value={slots}>
+      <Dialog screenshot={dialog.screenshot} close={close} />
+    </Slots.Provider>
+  ) : null;
 }

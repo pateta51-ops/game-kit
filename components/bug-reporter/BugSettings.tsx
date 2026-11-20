@@ -31,9 +31,9 @@ export interface BugBtnSlots {
   /** Draws a button instead of the default `<button>`; wire `onClick`, `disabled`, `type` and `testId` through. */
   readonly renderButton?: (b: BugBtnProps) => ReactNode;
 }
-const Slots = createContext<BugBtnSlots>({});
+export const Slots = createContext<BugBtnSlots>({});
 
-function Btn(o: { kind: string; testId: string; label: ReactNode; primary?: boolean; submit?: boolean; disabled?: boolean; onClick?: () => void }) {
+export function Btn(o: { kind: string; testId: string; label: ReactNode; primary?: boolean; submit?: boolean; disabled?: boolean; onClick?: () => void }) {
   const { buttonClass, renderButton } = useContext(Slots);
   const b: BugBtnProps = {
     kind: o.kind, testId: o.testId, label: o.label, onClick: o.onClick, disabled: o.disabled === true, type: o.submit === true ? 'submit' : 'button',

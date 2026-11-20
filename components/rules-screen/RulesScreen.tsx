@@ -38,6 +38,8 @@ const defaults = {
 export interface RulesScreenProps {
   book: Rulebook;
   words?: Partial<typeof defaults>;
+  /** Draws the search field instead of the default `<input>`; wire value and onChange. */
+  search?: (s: { value: string; onChange: (v: string) => void; label: string }) => React.ReactNode;
   back?: ReactNode;
   actions?: ReactNode;
   glossary?: boolean;
@@ -135,6 +137,7 @@ function Results({
 export function RulesScreen({
   book,
   words: labels,
+  search,
   back,
   actions,
   glossary,
@@ -450,14 +453,18 @@ export function RulesScreen({
             {words.contents}
           </button>
         )}
-        <input
-          type="search"
-          data-part="search"
-          aria-label={words.search}
-          placeholder={words.search}
-          value={query}
-          onChange={(event) => setQuery(event.target.value)}
-        />
+        {search ? (
+          search({ value: query, onChange: setQuery, label: words.search })
+        ) : (
+          <input
+            type="search"
+            data-part="search"
+            aria-label={words.search}
+            placeholder={words.search}
+            value={query}
+            onChange={(event) => setQuery(event.target.value)}
+          />
+        )}
         {searching ? (
           <Results hits={hits} query={query} words={words} anchor={anchor} />
         ) : (

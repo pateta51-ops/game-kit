@@ -167,6 +167,9 @@ Acceptance: a fake game (no STCC names, texts or art) on a demo page; tests on t
 - A `field(f, value, set)` render slot (one field) and an `options(choice, set)` slot (replaces the whole fold body), so a game renders its own controls. Built-in native controls stay the default.
 - At 4K the opponent detail text is clipped at the bottom of the strip ("FULL TEXT" cut): the detail scrolls inside its box (or the strip grows) so nothing is cut.
 Tests for both slots; re-shoot the contact sheets (same states) with the detail fully visible. | S | Unstoppable experience director, 20 Nov 2026 (owner bar XD-14: no native browser controls a player sees); follow-up to K467 | done |
+| K469 | New component `controls`: Segmented, Toggle, Slider, TextField as plain behaviour parts (class names and data attributes a game skins; minimal neutral CSS only); no game look. Slider rounds to the step without float noise (0.1 steps give 0.3, not 0.30000000000000004).
+Slots by addition: bug-report dialog takes a `button` render slot (or `Button` component prop); rules-screen takes a `search` render slot for its search field. Defaults unchanged.
+Port from Unstoppable PR #152. Tests per control; demo page + contact sheet. | M | Unstoppable architect, 20 Nov 2026 (game PR #152, branch xd14-sweep, commit 841421ba, src/screen/kit/K.tsx); owner bar XD-14: no native browser controls a player sees. Owner approved the small version 20 Nov. | done |
 | K283 | `card-pile` `hitTitle={false}` drops the native title on the stack button (STCC draws its own pile tooltip) | S |  | done |
 | K284 | `layout-editor` Reset button (in-page confirmation): restores the starting doc, backdrops (`LAYOUT_EDITOR_BG_INIT`), zoom and screen; `layoutEditor.reset()` | S |  | done |
 | K285 | `plan-checker` `--tsc-at DIR` compiles the plan's type blocks inside a game folder, so relative `kit/` imports resolve | S |  | done |

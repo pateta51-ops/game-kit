@@ -51,6 +51,7 @@ graph LR
   content_pack["content-pack"] --> card_harness["card-harness"]
   content_pack["content-pack"] --> card_language["card-language"]
   content_pack["content-pack"] --> engine_core["engine-core"]
+  controls["controls"]
   counter["counter"] --> effect_library["effect-library"]
   counter["counter"] --> motion_frame["motion-frame"]
   counter["counter"] --> ui_helpers["ui-helpers"]
@@ -176,6 +177,7 @@ graph LR
 - `check-runner`
 - `ci-templates`
 - `content-pack`
+- `controls`
 - `coverage-report`
 - `debug-console`
 - `dev-autoplay`
