@@ -474,12 +474,12 @@ describe('heavy-queue cache drop (K495)', () => {
   });
   it('cachedGB parses a real meminfo sample and a missing file is null', () => {
     const d = mkdtempSync(join(tmpdir(), 'mi-'));
-    writeFileSync(join(d, 'meminfo'), 'MemTotal:       16384000 kB
+    writeFileSync(join(d, 'meminfo'), `MemTotal:       16384000 kB
 MemFree:         1000000 kB
 Buffers:          100000 kB
 Cached:         6291456 kB
 SwapCached:            0 kB
-');
+`);
     expect(cachedGB(join(d, 'meminfo'))).toBe(6);
     expect(cachedGB(join(d, 'nope'))).toBe(null);
     rmSync(d, { recursive: true });
