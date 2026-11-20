@@ -6,7 +6,7 @@ import { createServer } from 'node:net';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { isHeavy, procScan, startServer } from './server.mjs';
+import { cachedGB, isHeavy, procScan, startServer } from './server.mjs';
 
 const HEAVY = fileURLToPath(new URL('./heavy.mjs', import.meta.url));
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -471,5 +471,28 @@ describe('heavy-queue cache drop (K495)', () => {
     expect(st.logs).toHaveLength(1);
     expect(st.logs[0]).toMatch(/sudo/);
     expect((await q.status()).lastDrop).toBe(null);
+  });
+  it('cachedGB parses a real meminfo sample and a missing file is null', () => {
+    const d = mkdtempSync(join(tmpdir(), 'mi-'));
+    writeFileSync(join(d, 'meminfo'), 'MemTotal:       16384000 kB
+MemFree:         1000000 kB
+Buffers:          100000 kB
+Cached:         6291456 kB
+SwapCached:            0 kB
+');
+    expect(cachedGB(join(d, 'meminfo'))).toBe(6);
+    expect(cachedGB(join(d, 'nope'))).toBe(null);
+    rmSync(d, { recursive: true });
+  });
+  it('two drops never overlap', async () => {
+    const { st, o } = cache(10);
+    let release;
+    o.runDrop = () => { st.runs++; return new Promise((r) => (release = () => r(true))); };
+    const q = await serve({ dropGb: 6, dropEveryMs: 0, ...o });
+    await job(q); await until(() => st.runs === 1);
+    await job(q); await job(q); await sleep(100);
+    expect(st.runs).toBe(1);
+    release();
+    await until(async () => (await q.status()).lastDrop);
   });
 });

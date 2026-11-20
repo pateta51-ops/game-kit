@@ -1,7 +1,7 @@
 // Machine-wide queue for heavy runs (K399): N slots, high before normal, FIFO within; leases end on release, missed heartbeats or a dead pid.
 import http from 'node:http';
 import { appendFileSync, existsSync, readFileSync, readdirSync, readlinkSync } from 'node:fs';
-import { spawnSync } from 'node:child_process';
+import { spawn, spawnSync } from 'node:child_process';
 import { availableParallelism, homedir, loadavg } from 'node:os';
 import { join } from 'node:path';
 import { pathToFileURL } from 'node:url';
@@ -53,8 +53,8 @@ export function procScan(root = '/proc') {
   }
   return out;
 }
-const cachedGB = () => { const m = /^Cached:s+(d+) kB/m.exec(rd('/proc/meminfo') ?? ''); return m ? Number(m[1]) / 1048576 : null; };
-const sudoDrop = () => spawnSync('sudo', ['-n', 'sh', '-c', 'sync; echo 1 > /proc/sys/vm/drop_caches'], { stdio: 'ignore' }).status === 0;
+export const cachedGB = (file = '/proc/meminfo') => { const m = /^Cached:\s+(\d+) kB/m.exec(rd(file) ?? ''); return m ? Number(m[1]) / 1048576 : null; };
+const sudoDrop = () => new Promise((res) => { const c = spawn('sudo', ['-n', 'sh', '-c', 'sync; echo 1 > /proc/sys/vm/drop_caches'], { stdio: 'ignore' }); c.on('error', () => res(false)); c.on('exit', (code) => res(code === 0)); });
 const reniceProc = (pid) => { spawnSync('renice', ['-n', '19', '-p', String(pid)], { stdio: 'ignore' }); };
 
 export function startServer({ scan = procScan, renice = reniceProc, sweepMs = process.env.HEAVY_SWEEP_MS === undefined ? 20000 : Number(process.env.HEAVY_SWEEP_MS), log = join(process.env.HEAVY_HOME || join(homedir(), '.local/share/heavy-queue'), 'bypass.log'), port = defaultPort(), slots = Number(process.env.HEAVY_SLOTS) || 1, cores = Number(process.env.HEAVY_CORES) || availableParallelism(), ttl = Number(process.env.HEAVY_TTL) || 30000, readCache = cachedGB, runDrop = sudoDrop, dropGb = process.env.HEAVY_DROP_CACHE_GB === undefined ? 6 : Number(process.env.HEAVY_DROP_CACHE_GB), dropEveryMs = process.env.HEAVY_DROP_EVERY_MS === undefined ? 600000 : Number(process.env.HEAVY_DROP_EVERY_MS), say = (m) => console.log(m), tick = 1000, age = Number(process.env.HEAVY_AGE_MS) || 600000 } = {}) {
@@ -63,14 +63,16 @@ export function startServer({ scan = procScan, renice = reniceProc, sweepMs = pr
   const leases = new Map();
   const history = [];
   let seq = 0;
-  let lastCheck = 0, lastDrop = null, dropBroken = false;
+  let lastCheck = 0, lastDrop = null, dropBroken = false, dropping = false;
   const maybeDrop = async () => {
-    if (!(dropGb > 0) || dropBroken || Date.now() - lastCheck < dropEveryMs) return;
+    if (!(dropGb > 0) || dropBroken || dropping || Date.now() - lastCheck < dropEveryMs) return;
     lastCheck = Date.now();
     const before = readCache();
     if (before == null || before <= dropGb) return;
     let ok = false;
+    dropping = true;
     try { ok = await runDrop(); } catch { /* ignore */ }
+    dropping = false;
     if (!ok) { dropBroken = true; say('heavy-queue: cache drop failed (needs passwordless sudo); not retrying'); return; }
     const after = readCache();
     lastDrop = { at: Date.now(), beforeGB: +before.toFixed(1), afterGB: after == null ? null : +after.toFixed(1) };
