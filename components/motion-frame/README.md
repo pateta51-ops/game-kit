@@ -8,7 +8,7 @@ Plays motion specs in the director's format (one JSON per beat: `actors`, `steps
 **You must:**
 1. Pass `speed: () => ...` from the settings. It is read when each beat starts: a factor, or `'instant'`; `0` (or any non-positive value) means still, the same as instant: no timeline, `onEnd` at once, cues still sound. Use `speed: () => withReducedMotion(withAutomationOff(setting))`.
 2. Register a verb for every verb name the specs use (`createVerbs().register`) and run `validateSpecs(specs, stages, verbs)` in the game's check, expecting no lines.
-3. Set per-beat state in `onBeatStart` and clear it in `onBeatEnd`: they always pair, even for a beat that is skipped, snapped, instant or failed (it gets `onBeatEnd` right after its commit).
+3. Set per-beat state in `onBeatStart` and clear it in `onBeatEnd`: when called, they always come as a pair; on a skipped, snapped, instant or failed beat they are called only if the beat has `commit` or `data`.
 4. Apply the next game state with `play(beat, { commit, data })`, never from a verb: the player never touches game state.
 5. If sound is wired to `onCue`, also pass `onDroppedCue(cue, beat, why)` (`skipped`, `failed`, `cut`): every cue goes to exactly one of the two, so a sound is lost when a beat is skipped and only `onCue` is wired.
 6. Pass `onProblem`: a throwing verb, hook or cue, or zones still missing after 60 frames, goes there and the queue goes on.
