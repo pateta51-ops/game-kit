@@ -4,8 +4,8 @@
 // The module exports createAdapter() or a default (an adapter or a function returning one). Exit 0 every run ended,
 // 1 a run stopped on a finding or a cap, 2 bad usage.
 import { createHash } from 'node:crypto';
-import { appendFileSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
-import { join, resolve } from 'node:path';
+import { appendFileSync, existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { dirname, join, resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { cost, MAX_TOKENS, PRICES, sdkChooser, worstCost, type Chooser, type Usage } from './client.ts';
 import { loadKey } from './key.ts';
@@ -41,6 +41,8 @@ export interface PlaytestOptions {
   history?: number;
   /** Where the pre-call cost estimate is printed (default console.log). */
   log?: (s: string) => void;
+  /** Called after every paid call with its cost and the run id, so a caller can record spend even when the run throws. */
+  onSpend?: (costUsd: number, runId: string) => void;
 }
 export interface PlaytestResult {
   runId: string;
@@ -143,6 +145,7 @@ export async function runPlaytest(adapter: GameAdapter, opts: PlaytestOptions): 
           const a = await choose(ask);
           const c = cost(a.usage, model);
           spent += c;
+          opts.onSpend?.(c, runId);
           paid += c;
           usage = a.usage;
           choice = a.option;
@@ -193,30 +196,67 @@ export async function runPlaytest(adapter: GameAdapter, opts: PlaytestOptions): 
   return { runId, dir, result, stop, decisions, costUsd: spent, findings };
 }
 
-export async function main(argv: string[], log: (s: string) => void = console.log): Promise<number> {
+export interface MainResult {
+  code: number;
+  runs: PlaytestResult[];
+  /** Everything paid in this invocation, including a run that threw. */
+  totalUsd: number;
+  error?: unknown;
+}
+/** Sum of costUsd in a spend ledger (jsonl); 0 when the file is missing. */
+export function ledgerSpent(file: string): number {
+  if (!existsSync(file)) return 0;
+  return readFileSync(file, 'utf8').split('\n').filter((l) => l.trim() !== '').reduce((n, l) => n + (JSON.parse(l) as { costUsd: number }).costUsd, 0);
+}
+
+export async function main(argv: string[], log: (s: string) => void = console.log, env: Record<string, string | undefined> = process.env, client?: Chooser): Promise<number> {
+  const r = await runMain(argv, log, env, client);
+  if (r.error !== undefined) throw r.error;
+  return r.code;
+}
+
+export async function runMain(argv: string[], log: (s: string) => void = console.log, env: Record<string, string | undefined> = process.env, injected?: Chooser): Promise<MainResult> {
+  const bad: MainResult = { code: usage(log), runs: [], totalUsd: 0 };
   const flags = new Map<string, string>();
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i]!;
-    if (!a.startsWith('--')) return usage(log);
-    if (a === '--dummy') flags.set('dummy', '1');
-    else if (argv[i + 1] === undefined) return usage(log);
+    if (!a.startsWith('--')) return bad;
+    if (a === '--dummy' || a === '--require-cap') flags.set(a.slice(2), '1');
+    else if (argv[i + 1] === undefined) return bad;
     else flags.set(a.slice(2), argv[++i]!);
   }
   const path = flags.get('adapter');
-  if (path === undefined) return usage(log);
+  if (path === undefined) return bad;
+  const g = (k: string) => flags.get(k);
+  const ledger = g('ledger') ?? env['PLAYTEST_LEDGER'];
+  const capRaw = g('total-cap') ?? env['PLAYTEST_TOTAL_CAP_USD'];
+  const capSet = capRaw !== undefined && capRaw !== '';
+  const cap = capSet ? Number(capRaw) : Number.NaN;
+  if (capSet && !(cap > 0)) return bad;
+  if ((flags.has('require-cap') || env['PLAYTEST_REQUIRE_CAP'] === '1') && !capSet) {
+    log('no total cap set (--total-cap or PLAYTEST_TOTAL_CAP_USD): refusing to start');
+    return { code: 2, runs: [], totalUsd: 0 };
+  }
   for (const k of ['max-usd', 'max-decisions', 'runs', 'max-tokens']) {
     const v = flags.get(k);
-    if (v !== undefined && !(Number.isFinite(Number(v)) && Number(v) > 0 && (k !== 'max-tokens' || Number.isInteger(Number(v))))) return usage(log);
+    if (v !== undefined && !(Number.isFinite(Number(v)) && Number(v) > 0 && (k !== 'max-tokens' || Number.isInteger(Number(v))))) return bad;
   }
   const mod = (await import(pathToFileURL(resolve(path)).href)) as { createAdapter?: () => GameAdapter; default?: GameAdapter | (() => GameAdapter) };
   const adapter = mod.createAdapter?.() ?? (typeof mod.default === 'function' ? mod.default() : mod.default);
-  if (adapter === undefined) return usage(log);
+  if (adapter === undefined) return bad;
   const seed = flags.get('seed') ?? '1';
   const runs = Number(flags.get('runs') ?? 1);
   let left = Number(flags.get('max-usd') ?? 5);
   let code = 0;
-  const g = (k: string) => flags.get(k);
-  const client = flags.has('dummy') ? undefined : await sdkChooser(loadKey(adapter.name, g('env') ?? '.env.local'), g('max-tokens') === undefined ? undefined : Number(g('max-tokens')));
+  const done: PlaytestResult[] = [];
+  let totalUsd = 0;
+  if (capSet) {
+    const spent = ledger === undefined ? 0 : ledgerSpent(ledger);
+    left = Math.min(left, cap - spent);
+    log(`Spent so far $${spent.toFixed(4)} of the $${cap} total cap; this call may spend $${Math.max(0, left).toFixed(4)}`);
+    if (left <= 0) return { code: 1, runs: done, totalUsd };
+  }
+  const client = flags.has('dummy') ? undefined : injected ?? await sdkChooser(loadKey(adapter.name, g('env') ?? '.env.local'), g('max-tokens') === undefined ? undefined : Number(g('max-tokens')));
   for (let r = 0; r < runs; r++) {
     const o: PlaytestOptions = { seed: runs > 1 ? `${seed}-${r + 1}` : seed, maxUsd: left, dummy: flags.has('dummy') };
     for (const [k, f] of [['difficulty', 'difficulty'], ['scenario', 'scenario'], ['model', 'model'], ['env', 'env'], ['out', 'out']] as const) {
@@ -228,17 +268,30 @@ export async function main(argv: string[], log: (s: string) => void = console.lo
     if (g('docs') !== undefined) o.docs = g('docs')!.split(',');
     if (client !== undefined) o.client = client;
     o.log = log;
-    const res = await runPlaytest(adapter, o);
+    o.onSpend = (c, runId) => {
+      totalUsd += c;
+      if (ledger !== undefined) {
+        mkdirSync(dirname(resolve(ledger)), { recursive: true });
+        appendFileSync(ledger, JSON.stringify({ runId, seed: o.seed, costUsd: c, at: new Date().toISOString() }) + '\n');
+      }
+    };
+    let res: PlaytestResult;
+    try {
+      res = await runPlaytest(adapter, o);
+    } catch (error) {
+      return { code: 1, runs: done, totalUsd, error };
+    }
     left -= res.costUsd;
+    done.push(res);
     log(`${res.runId}: ${res.result === null ? `stopped (${res.stop})` : res.result.won ? 'won' : 'lost'}, ${res.decisions} decisions, $${res.costUsd.toFixed(4)}, ${res.findings.length} findings -> ${res.dir}`);
     if (res.stop !== 'done') code = 1;
-    if (res.stop === 'max-usd') break;
+    if (res.stop === 'max-usd' || (capSet && left <= 0)) break;
   }
-  return code;
+  return { code, runs: done, totalUsd };
 }
 
 function usage(log: (s: string) => void): number {
-  log('usage: node playtest.ts --adapter <module> [--seed s] [--difficulty d] [--scenario s] [--model claude-opus-5-5|claude-sonnet-5-5] [--max-usd 5] [--max-decisions n] [--runs n] [--docs a.md,b.md] [--env .env.local] [--out dir] [--dummy]');
+  log('usage: node playtest.ts --adapter <module> [--seed s] [--difficulty d] [--scenario s] [--model claude-opus-5-5|claude-sonnet-5-5] [--max-usd 5] [--max-decisions n] [--runs n] [--docs a.md,b.md] [--env .env.local] [--out dir] [--dummy] [--ledger spend.jsonl] [--total-cap usd] [--require-cap]');
   return 2;
 }
 

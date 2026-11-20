@@ -10,6 +10,12 @@ Key: `<GAME>_CLAUDE_API_KEY` (adapter name in upper snake case: `fakeGame` is `F
 
 Per run, `logs/llm-player/<run-id>/`: `decisions.jsonl` (step, view hash and start, options, choice, reason, usage, cost), `summary.md` (result, decisions, cost, findings: `BUG:` reasons, invalid options, adapter throws), `replay.json` (`adapter.replay()`). An invalid option is retried once with the error, then the run stops with a finding; an adapter throw stops it with a finding. Exit 1 when a run did not finish.
 
+Optional total spend cap across invocations (all opt-in; without them nothing changes). `--ledger <file>` (env `PLAYTEST_LEDGER`): after every paid call one jsonl line `{runId, seed, costUsd, at}` is appended, so a run that throws still leaves its spend. `--total-cap <usd>` (env `PLAYTEST_TOTAL_CAP_USD`): what the ledger already holds is counted, and the runs get only what is left under it (per-run `--max-usd` still applies; nothing left: exit 1, no run). `--require-cap` (env `PLAYTEST_REQUIRE_CAP=1`): exit 2 when no total cap is set. `runMain(argv, log, env, client?)` returns `{code, runs, totalUsd, error?}` (`totalUsd` includes a run that threw); `main` returns its code and rethrows the error. `ledgerSpent(file)` sums a ledger.
+
+```
+PLAYTEST_REQUIRE_CAP=1 node kit/llm-playtester/playtest.ts --adapter src/llm.ts --ledger logs/spend.jsonl --total-cap 20 --runs 3
+```
+
 ## Use it in 10 lines
 
 ```ts

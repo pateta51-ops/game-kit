@@ -6,7 +6,7 @@ import type { Chooser } from './client.ts';
 import { makeChooser, type Body } from './client.ts';
 import { createAdapter } from './fake-adapter.ts';
 import { keyName, loadKey } from './key.ts';
-import { main, runPlaytest } from './playtest.ts';
+import { ledgerSpent, main, runMain, runPlaytest } from './playtest.ts';
 
 const tmp = () => mkdtempSync(join(tmpdir(), 'llm-playtester-'));
 const usage = { input_tokens: 100, output_tokens: 50, cache_creation_input_tokens: 0, cache_read_input_tokens: 2000 };
@@ -140,5 +140,70 @@ describe('llm-playtester', () => {
     expect(await main(['--adapter', adapter, '--dummy', '--max-tokens', '2000', '--out', tmp()], () => undefined)).toBe(0);
     for (const bad of ['1.5', '0', 'abc', '-3'])
       expect(await main(['--adapter', adapter, '--dummy', '--max-tokens', bad], () => undefined)).toBe(2);
+  });
+
+  describe('K466 spend ledger and total cap', () => {
+    const adapter = join(import.meta.dirname, 'fake-adapter.ts');
+    const dummyRun = (extra: string[], env: Record<string, string> = {}) => runMain(['--adapter', adapter, '--dummy', '--out', tmp(), ...extra], () => undefined, env);
+    const paying: Chooser = () => Promise.resolve({ option: 0, reason: 'r', usage });
+    const M = ['--model', 'claude-sonnet-5-5'];
+    it('runMain returns the runs and the total cost', async () => {
+      const r = await runMain(['--adapter', adapter, '--out', tmp(), '--runs', '2', ...M], () => undefined, {}, paying);
+      expect(r.runs).toHaveLength(2);
+      expect(r.totalUsd).toBeGreaterThan(0);
+      expect(r.totalUsd).toBeCloseTo(r.runs[0]!.costUsd + r.runs[1]!.costUsd, 10);
+    });
+    it('appends to the ledger per paid call, from the flag or the env var', async () => {
+      const f = join(tmp(), 'sub', 'spend.jsonl');
+      const r = await runMain(['--adapter', adapter, '--out', tmp(), '--ledger', f, ...M], () => undefined, {}, paying);
+      const rows = readFileSync(f, 'utf8').trim().split('\n').map((l) => JSON.parse(l) as { runId: string; seed: string; costUsd: number; at: string });
+      expect(rows.length).toBe(r.runs[0]!.decisions);
+      expect(rows[0]).toMatchObject({ runId: r.runs[0]!.runId, seed: '1' });
+      expect(typeof rows[0]!.at).toBe('string');
+      expect(ledgerSpent(f)).toBeCloseTo(r.totalUsd, 10);
+      const g = join(tmp(), 'env.jsonl');
+      await runMain(['--adapter', adapter, '--out', tmp(), ...M], () => undefined, { PLAYTEST_LEDGER: g }, paying);
+      expect(ledgerSpent(g)).toBeGreaterThan(0);
+    });
+    it('a second invocation sees the first spend and stops at the cap', async () => {
+      const f = join(tmp(), 'spend.jsonl');
+      const first = await runMain(['--adapter', adapter, '--out', tmp(), '--ledger', f, ...M], () => undefined, {}, paying);
+      const cap = String(first.totalUsd * 1.5);
+      const lines: string[] = [];
+      const second = await runMain(['--adapter', adapter, '--out', tmp(), '--ledger', f, '--total-cap', cap, ...M], (s) => lines.push(s), {}, paying);
+      expect(lines[0]).toContain('Spent so far');
+      expect(second.totalUsd).toBeLessThanOrEqual(first.totalUsd * 0.5 + 1e-9);
+      expect(ledgerSpent(f)).toBeLessThanOrEqual(first.totalUsd * 1.5 + 1e-9);
+      const third = await runMain(['--adapter', adapter, '--out', tmp(), '--ledger', f, '--total-cap', String(ledgerSpent(f)), ...M], () => undefined, {}, paying);
+      expect(third.code).toBe(1);
+      expect(third.runs).toEqual([]);
+    });
+    it('required-cap mode refuses to start with no cap, and starts with one', async () => {
+      expect((await dummyRun(['--require-cap'])).code).toBe(2);
+      expect((await dummyRun([], { PLAYTEST_REQUIRE_CAP: '1' })).code).toBe(2);
+      expect((await dummyRun(['--require-cap', '--total-cap', '1'])).code).toBe(0);
+      expect((await dummyRun([], { PLAYTEST_REQUIRE_CAP: '1', PLAYTEST_TOTAL_CAP_USD: '1' })).code).toBe(0);
+    });
+    it('a bad total cap exits 2; no flags changes nothing', async () => {
+      expect((await dummyRun(['--total-cap', '0'])).code).toBe(2);
+      expect((await dummyRun([])).code).toBe(0);
+    });
+    it('a run that throws after two paid calls leaves both costs in the ledger, and the next invocation sees them', async () => {
+      const f = join(tmp(), 'spend.jsonl');
+      let n = 0;
+      const flaky: Chooser = () => (++n > 2 ? Promise.reject(new Error('API down')) : Promise.resolve({ option: 0, reason: 'r', usage }));
+      const args = ['--adapter', adapter, '--out', tmp(), '--ledger', f, ...M];
+      const r = await runMain(args, () => undefined, {}, flaky);
+      expect(String(r.error)).toContain('API down');
+      expect(r.runs).toEqual([]);
+      expect(readFileSync(f, 'utf8').trim().split('\n')).toHaveLength(2);
+      expect(r.totalUsd).toBeGreaterThan(0);
+      expect(ledgerSpent(f)).toBeCloseTo(r.totalUsd, 10);
+      const lines: string[] = [];
+      await runMain([...args, '--total-cap', String(r.totalUsd * 3)], (s) => lines.push(s), {}, paying);
+      expect(Number(/so far \$([\d.]+)/.exec(lines[0]!)![1])).toBeCloseTo(r.totalUsd, 3);
+      n = 0;
+      await expect(main(args, () => undefined, {}, flaky)).rejects.toThrow('API down');
+    });
   });
 });
