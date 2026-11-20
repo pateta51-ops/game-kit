@@ -89,8 +89,12 @@ function beat(f, pid, lease) {
 // --mem <GiB>: the command runs in a memory-capped systemd scope with no swap, so the kernel kills the job and not the VM (K474). Never uncapped: null when no cap can be set.
 export function capCmd(gib, cmd, bin = process.env.HEAVY_SYSTEMD_RUN || 'systemd-run') {
   const cap = ['--user', '--scope', '-q', '-p', `MemoryMax=${gib}G`, '-p', 'MemorySwapMax=0'];
-  const ok = spawnSync(bin, [...cap, '--', 'true'], { stdio: 'ignore' });
-  return ok.status === 0 ? [bin, ...cap, '--', ...cmd] : null;
+  // The probe reads the scope's own memory.max and memory.swap.max: the cap must be in force, not just accepted.
+  const sh = 'cg=$(sed -n "s/^0:://p" /proc/self/cgroup); r=${HEAVY_CGROUP_ROOT:-/sys/fs/cgroup}; cat "$r$cg/memory.max" "$r$cg/memory.swap.max" 2>/dev/null';
+  const ok = spawnSync(bin, [...cap, '--', 'sh', '-c', sh], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] });
+  const [max, swap] = (ok.stdout ?? '').trim().split('\n');
+  const good = ok.status === 0 && Math.abs(Number(max) - gib * 2 ** 30) <= 2 ** 20 && (swap === undefined || swap === '0');
+  return good ? [bin, ...cap, '--', ...cmd] : null;
 }
 
 async function run(f) {
@@ -98,7 +102,7 @@ async function run(f) {
   if (f.mem !== undefined) {
     if (!(Number(f.mem) > 0)) { say(`--mem needs a number of GiB, got ${f.mem}`); return 2; }
     const capped = capCmd(Number(f.mem), f.cmd);
-    if (!capped) { say(`cannot set a ${f.mem} GiB memory cap (systemd-run --user --scope failed): not running uncapped`); return 4; }
+    if (!capped) { say(`cannot set a ${f.mem} GiB memory cap (systemd-run --user --scope failed, or its cgroup does not show the cap): not running uncapped`); return 4; }
     f.cmd = capped;
   }
   if (f.slots !== undefined && f.slots !== 'all' && !(Number(f.slots) >= 1)) { say(`--slots needs a number or all, got ${f.slots}`); return 2; }

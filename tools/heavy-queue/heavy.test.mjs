@@ -315,7 +315,7 @@ describe('heavy --mem and --slots (K474)', () => {
     return { f, d };
   };
   it.skipIf(!posix)('--mem runs the command inside the capped scope', async () => {
-    const { f, d } = fake('echo "$@" >> "$0.log"; while [ "$1" != "--" ]; do shift; done; shift; exec "$@"');
+    const { f, d } = fake('case "$*" in *memory.max*) echo 7516192768; echo 0; exit 0;; esac; echo "$@" >> "$0.log"; while [ "$1" != "--" ]; do shift; done; shift; exec "$@"');
     const q = await serve({});
     const r = await heavy(['run', '--mem', '7', '--', process.execPath, '-e', 'process.exit(9)'], { HEAVY_URL: q.url, HEAVY_SYSTEMD_RUN: f });
     expect(r.code).toBe(9);
@@ -332,6 +332,54 @@ describe('heavy --mem and --slots (K474)', () => {
     expect(r.err).toContain('not running uncapped');
     expect(existsSync(mark)).toBe(false);
     rmSync(d, { recursive: true }); rmSync(d2, { recursive: true });
+  });
+  it.skipIf(!posix)('--mem refuses when the scope starts but the cgroup shows no cap (max) or a swap allowance', async () => {
+    for (const out of ['echo max', 'echo 7516192768; echo max', 'echo 1073741824; echo 0']) {
+      const { f, d } = fake(`case "$*" in *memory.max*) ${out}; exit 0;; esac; exit 0`);
+      const r = await heavy(['run', '--mem', '7', '--', process.execPath, '-e', 'process.exit(0)'], { HEAVY_URL: await deadUrl(), HEAVY_SYSTEMD_RUN: f });
+      expect(r.code, out).toBe(4);
+      expect(r.err).toContain('not running uncapped');
+      rmSync(d, { recursive: true });
+    }
+  });
+  it.skipIf(!posix)('--mem passes a job killed by SIGKILL through as 137', async () => {
+    const { f, d } = fake('case "$*" in *memory.max*) echo 7516192768; echo 0; exit 0;; esac; while [ "$1" != "--" ]; do shift; done; shift; exec "$@"');
+    const r = await heavy(['run', '--mem', '7', '--', 'sh', '-c', 'kill -9 $$'], { HEAVY_URL: await deadUrl(), HEAVY_SYSTEMD_RUN: f });
+    expect(r.code).toBe(137);
+    rmSync(d, { recursive: true });
+  });
+  const realScope = process.platform === 'linux' && spawnSync('systemd-run', ['--user', '--scope', '-q', '-p', 'MemoryMax=100M', '--', 'true'], { stdio: 'ignore' }).status === 0;
+  it.skipIf(!realScope)('--mem with the real systemd-run shows the cap in the job and the kernel kills an over-limit job (137)', async () => {
+    const q = await serve({});
+    const r1 = await heavy(['run', '--mem', '1', '--', 'sh', '-c', 'cg=$(sed -n "s/^0:://p" /proc/self/cgroup); cat /sys/fs/cgroup$cg/memory.max; exit 5'], { HEAVY_URL: q.url });
+    expect(r1.code).toBe(5);
+    expect(r1.out()).toContain('1073741824');
+    const r2 = await heavy(['run', '--mem', '1', '--', process.execPath, '-e', 'const a = []; for (let i = 0; i < 40; i++) a.push(Buffer.alloc(64 * 2 ** 20, 1)); process.exit(0)'], { HEAVY_URL: q.url });
+    expect(r2.code).toBe(137);
+  });
+  it('--slots all: a high waiter queued behind jumps an earlier normal all-slots waiter, and never preempts a running one', async () => {
+    const q = await serve({ slots: 2 });
+    const a = await q.post('/acquire', { label: 'a' });
+    const big = await q.post('/acquire', { label: 'big', slots: 'all' });
+    expect(big.granted).toBe(false);
+    const h = await q.post('/acquire', { label: 'h', priority: 'high' });
+    expect(h.granted).toBe(true);
+    await q.post('/release', { id: h.id });
+    await q.post('/release', { id: a.id });
+    await until(async () => (await q.status()).running.some((l) => l.label === 'big'));
+    const h2 = await q.post('/acquire', { label: 'h2', priority: 'high' });
+    expect(h2.granted).toBe(false);
+    await q.post('/release', { id: big.id });
+    expect((await q.post('/beat', { id: h2.id })).granted).toBe(true);
+  });
+  it.skipIf(process.platform !== 'linux')('--slots all: every lease is released when the holder process is killed', async () => {
+    const q = await serve({ slots: 2 });
+    const run = heavy(['run', '--slots', 'all', '--label', 'big', '--', process.execPath, '-e', 'setTimeout(() => {}, 30000)'], { HEAVY_URL: q.url });
+    await until(async () => (await q.status()).running.length === 1);
+    run.c.kill('SIGKILL');
+    await until(async () => (await q.status()).running.length === 0);
+    expect((await q.post('/acquire', { label: 'x' })).granted).toBe(true);
+    expect((await q.post('/acquire', { label: 'y' })).granted).toBe(true);
   });
   it('--slots all waits for every slot and holds them all', async () => {
     const q = await serve({ slots: 2 });

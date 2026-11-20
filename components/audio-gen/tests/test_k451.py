@@ -219,7 +219,7 @@ class Arr:
 
 
 class Yue2Worker(unittest.TestCase):
-    def run_worker(self, version="0.1.6", cuda=True, keep=None, quiet=0.001, gib=16, offload=None, vocal=None, avail=100.0, need=None):
+    def run_worker(self, version="0.1.6", cuda=True, keep=None, quiet=0.001, gib=16, offload=None, vocal=None, avail=100.0, need=None, kill=None):
         seen = {"calls": [], "demucs": [], "freed": []}
 
         class Pipe:
@@ -244,6 +244,8 @@ class Yue2Worker(unittest.TestCase):
 
         def demucs(cmd, **kw):
             seen["demucs"].append(cmd)
+            if kill is not None and "htdemucs" in cmd:
+                raise __import__("subprocess").CalledProcessError(kill, cmd)
             return mock.Mock(returncode=0)
 
         torch = types.SimpleNamespace(cuda=types.SimpleNamespace(
@@ -349,6 +351,29 @@ class K474MemoryCap(unittest.TestCase):
                 [B.Job(cue=c, n=1, seed=1, seconds=1.0, out=Path(t) / "a.wav")])
         self.assertNotIn("memory cap", res[0].error)
 
+    def test_demucs_killed_in_the_cgroup_names_the_cap(self):
+        c = parse_cue({"name": "a", "prompt": "p", "category": "music", "length": 1}, None)
+        for err in ("LowMemory: killed by the memory cap: demucs died (exit -9) in the cgroup limit",
+                    "CalledProcessError: Command '[x]' died with <Signals.SIGKILL: 9>."):
+            def fake(cmd, env=None):
+                job = json.loads(Path(cmd[-1]).read_text())
+                Path(job["result"]).write_text(json.dumps({"items": [{"out": job["items"][0]["out"], "error": err}]}))
+                return mock.Mock(returncode=0)
+            with tempfile.TemporaryDirectory() as t, mock.patch.object(B.subprocess, "run", side_effect=fake), \
+                    mock.patch.object(B.YuE2, "queue_tool", return_value="/x/heavy"):
+                res = B.make("x", {"type": "yue2", "licence": "x", "python": sys.executable, "memGiB": 9}, Path(t)).generate(
+                    [B.Job(cue=c, n=1, seed=1, seconds=1.0, out=Path(t) / "a.wav")])
+            self.assertIn("9 GiB memory cap", res[0].error, err)
+
+    def test_oom_kill_counter_reader(self):
+        from audiogen import recipe
+        with tempfile.TemporaryDirectory() as t:
+            (Path(t) / "u" / "s").mkdir(parents=True)
+            (Path(t) / "u" / "s" / "memory.events").write_text("low 0\nmax 3\noom 1\noom_kill 2\n")
+            (Path(t) / "cg").write_text("0::/u/s\n")
+            self.assertEqual(recipe.oom_kills(t, str(Path(t) / "cg")), 2)
+        self.assertEqual(recipe.oom_kills("/nonexistent", "/nonexistent"), 0)
+
     def test_meminfo_reader_and_check(self):
         from audiogen import recipe
         with tempfile.TemporaryDirectory() as t:
@@ -372,6 +397,18 @@ class K474Worker(unittest.TestCase):
         self.assertEqual(len(res), 1)
         self.assertIn("LowMemory", res[0]["error"])
         self.assertFalse(made)
+
+    def test_demucs_sigkill_fails_the_take_naming_the_cap(self):
+        for rc in (-9, 137):
+            code, seen, res, made, _ = self.run_worker(kill=rc)
+            self.assertEqual(code, 0)
+            self.assertIn("killed by the memory cap", res[0]["error"])
+            self.assertFalse(made)
+
+    def test_demucs_other_failure_is_not_the_cap(self):
+        code, seen, res, made, _ = self.run_worker(kill=1)
+        self.assertNotIn("memory cap", res[0]["error"])
+        self.assertIn("CalledProcessError", res[0]["error"])
 
     def test_low_memory_option_lowers_the_need(self):
         code, seen, res, made, _ = self.run_worker(avail=2.0, need=1)

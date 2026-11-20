@@ -76,8 +76,15 @@ def main() -> int:
             raise
         sep = wav.parent / f"_sep_{wav.stem}"
         try:
-            subprocess.run(["nice", "-n", "19", demucs, "-m", "demucs", "-n", "htdemucs", "--two-stems=vocals", "-d", "cuda",
-                            "-o", str(sep), str(wav)], env=env, check=True)  # fmt: skip
+            kills = recipe.oom_kills()
+            try:
+                subprocess.run(["nice", "-n", "19", demucs, "-m", "demucs", "-n", "htdemucs", "--two-stems=vocals", "-d", "cuda",
+                                "-o", str(sep), str(wav)], env=env, check=True)  # fmt: skip
+            except subprocess.CalledProcessError as e:  # demucs runs in this cgroup, so the cap can kill it too
+                if e.returncode in (-9, 137) or recipe.oom_kills() > kills:
+                    wav.unlink(missing_ok=True)
+                    raise recipe.LowMemory(f"killed by the memory cap: demucs died (exit {e.returncode}) in the cgroup limit") from e
+                raise
             d = sep / "htdemucs" / wav.stem
             v, sr = sf.read(str(d / "vocals.wav"))
             f, _ = sf.read(str(d / "no_vocals.wav"))

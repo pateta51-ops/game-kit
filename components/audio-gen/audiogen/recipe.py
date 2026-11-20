@@ -107,6 +107,18 @@ def mem_available_gib(path: str = "/proc/meminfo") -> float | None:
     return None
 
 
+def oom_kills(root: str = "/sys/fs/cgroup", cgroup_file: str = "/proc/self/cgroup") -> int:
+    """oom_kill count of this process's cgroup (memory.events), 0 when unreadable."""
+    try:
+        cg = next(ln.strip()[3:] for ln in open(cgroup_file, encoding="ascii") if ln.startswith("0::"))
+        for ln in open(f"{root}{cg}/memory.events", encoding="ascii"):
+            if ln.startswith("oom_kill "):
+                return int(ln.split()[1])
+    except (OSError, ValueError, StopIteration):
+        pass
+    return 0
+
+
 def need_memory(need_gib: float, what: str, avail: float | None = None) -> None:
     """Raise LowMemory when MemAvailable is under need_gib before `what`."""
     a = mem_available_gib() if avail is None else avail
