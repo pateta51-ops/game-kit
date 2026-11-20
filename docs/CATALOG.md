@@ -613,7 +613,7 @@ The game writes one adapter; Claude (or `--dummy`, the first option, no client b
 
 - **Use it when:** Headless whole-game playtests by Claude through a small game adapter (view, numbered options, choose): finds rules and screen bugs the model flags, adapter throws and illegal option lists, and saves each run's replay for a replay test; capped in dollars per run; --dummy plays the first option for free.
 - **Not for:** The in-game Claude opponent (a game's own server code) or balance sims at volume; use sim-pool for many cheap games.
-- **Key exports:** `runPlaytest`, `main`, `GameAdapter`, `PlaytestOptions`, `PlaytestResult`
+- **Key exports:** `runPlaytest`, `ledgerSpent`, `main`, `runMain`, `GameAdapter`, `PlaytestOptions`, `PlaytestResult`, `MainResult`
 - **Needs:** nothing
 - **Came from:** stcc
 - **Docs:** [README](../components/llm-playtester/README.md)
