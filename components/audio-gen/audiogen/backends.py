@@ -257,7 +257,7 @@ class YuE2(WorkerBackend):
     def capped(self, rs: list[Result]) -> list[Result]:
         """A take killed by the cap (exit 137, SIGKILL) is a failed take that names the cap, not a crash of the batch."""
         for r in rs:
-            if r.error and re.search(r"exited with code (137|-9)", r.error):
+            if r.error and re.search(r"exited with code (137|-9)", r.error):
                 r.error = f"killed by the {self.mem_gib():g} GiB memory cap (heavy --mem, option memGiB: raise it or lower the model's memory use); the WSL VM was not taken down"
         return rs
 
