@@ -106,7 +106,7 @@ class SpecAndCheck(unittest.TestCase):
             self.assertIn("s", str(e.exception))
             (Path(t) / "m").mkdir()
             (Path(t) / "m" / "model.bin").write_bytes(b"x")
-            B.make("y", {**o, "whisperModelDir": str(Path(t) / "m")}, Path(t)).check([sung])
+            B.make("y", {**o, "whisperModelDir": str(Path(t) / "m"), "whisperPython": sys.executable}, Path(t)).check([sung])
 
 
 ABC = 'X:1\nV:Vocal\n"C" c2 d2 e4 |\nw: la\nV:Piano\n"C" C4 E4 G8 |\n'
