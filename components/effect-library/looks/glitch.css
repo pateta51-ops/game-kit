@@ -38,7 +38,8 @@
     > .fx-glitch-copy { opacity: .7; transform: translateX(calc(var(--glitch-side, 1) * var(--offset))); }
     > .fx-glitch-slice { opacity: .9; transform: translateX(calc(var(--jump) * var(--glitch-jump) * 1%)); }
   }
-  .fx-glitch--steps { transform: skewX(var(--glitch-skew, 0deg)); }
+  .fx-glitch--steps.fx-glitch--skew { transform: skewX(var(--glitch-skew, 0deg)); }
+  .fx-glitch--burst.fx-glitch--skew { animation: fx-glitch-dropout var(--glitch-ms) steps(1, end), fx-glitch-skew var(--glitch-ms) steps(1, end); }
   .fx-glitch--steps.fx-glitch--drop { opacity: var(--glitch-dropout); }
   .fx-glitch--tear {
     --glitch-split: 2%;
@@ -48,11 +49,8 @@
   }
 }
 
-@keyframes fx-glitch-dropout {
-  0%, 75% { opacity: 1; transform: none; }
-  25% { opacity: 1; transform: skewX(var(--glitch-skew, 0deg)); }
-  50% { opacity: var(--glitch-dropout); transform: none; }
-}
+@keyframes fx-glitch-dropout { 0%, 75% { opacity: 1; } 50% { opacity: var(--glitch-dropout); } }
+@keyframes fx-glitch-skew { 0%, 50% { transform: none; } 25% { transform: skewX(var(--glitch-skew, 0deg)); } }
 @keyframes fx-glitch-split {
   0% { opacity: .82; transform: translateX(var(--offset)); }
   25% { opacity: .5; transform: translateX(calc(1.6 * var(--offset))); }

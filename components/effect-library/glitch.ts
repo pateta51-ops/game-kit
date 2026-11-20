@@ -82,25 +82,34 @@ export function createGlitch(el: HTMLElement, o: GlitchOptions): Glitch {
   let endTimer: ReturnType<typeof setTimeout> | undefined;
   let steps: ReturnType<typeof setTimeout>[] = [];
   let dead = false;
-  let blanked: [Text, string][] = [];
-  const texts: Text[] = [];
-  const walk = (n: Node): void => {
-    if (n.nodeType === 3) texts.push(n as Text);
-    else n.childNodes.forEach(walk);
+  let blanked: [Text, string, string][] = [];
+  const walk = (n: Node, out: Text[]): void => {
+    if (n.nodeType === 3) out.push(n as Text);
+    else n.childNodes.forEach((c) => walk(c, out));
   };
-  face.forEach(walk);
   const restore = (): void => {
-    for (const [t, d] of blanked) t.data = d;
+    for (const [t, d, b] of blanked) if (t.data === b) t.data = d;
     blanked = [];
   };
   const blank = (count: number): void => {
     restore();
-    const pos: [Text, number][] = [];
-    for (const t of texts) for (let i = 0; i < t.data.length; i++) if (/\S/.test(t.data[i] as string)) pos.push([t, i]);
+    const own = new Set<Node>([...layers, ...slices]);
+    const texts: Text[] = [];
+    Array.from(el.childNodes).filter((n) => !own.has(n as Node)).forEach((n) => walk(n as Node, texts));
+    const chars = texts.map((t) => Array.from(t.data));
+    const pos: [number, number][] = [];
+    chars.forEach((cs, ti) => cs.forEach((c, i) => { if (/\S/.test(c)) pos.push([ti, i]); }));
+    const hit = new Set<number>();
     for (let c = Math.min(count, pos.length); c > 0; c--) {
-      const [t, i] = pos.splice(Math.floor(rand() * pos.length), 1)[0] as [Text, number];
-      if (!blanked.some((b) => b[0] === t)) blanked.push([t, t.data]);
-      t.data = t.data.slice(0, i) + '\u00a0' + t.data.slice(i + 1);
+      const [ti, i] = pos.splice(Math.floor(rand() * pos.length), 1)[0] as [number, number];
+      (chars[ti] as string[])[i] = '\u00a0';
+      hit.add(ti);
+    }
+    for (const ti of hit) {
+      const t = texts[ti] as Text;
+      const nd = (chars[ti] as string[]).join('');
+      blanked.push([t, t.data, nd]);
+      t.data = nd;
     }
   };
   const angle = (): number => (rand() < 0.5 ? -1 : 1) * between(o.skewDeg as [number, number]);
@@ -117,7 +126,7 @@ export function createGlitch(el: HTMLElement, o: GlitchOptions): Glitch {
     el.style.removeProperty('--glitch-skew');
     timer = endTimer = undefined;
   };
-  const clearClasses = (): void => el.classList.remove('fx-glitch--burst', 'fx-glitch--tear', 'fx-glitch--steps', 'fx-glitch--drop');
+  const clearClasses = (): void => el.classList.remove('fx-glitch--burst', 'fx-glitch--tear', 'fx-glitch--steps', 'fx-glitch--drop', 'fx-glitch--skew');
   function schedule(): void {
     const f = factor();
     if (dead || !f) return;
@@ -142,9 +151,10 @@ export function createGlitch(el: HTMLElement, o: GlitchOptions): Glitch {
     };
     draw();
     const doSkew = kind === 'burst' && !!o.skewDeg;
-    const doBlank = kind === 'burst' && !!o.blankLetters && !o.mask && texts.length > 0;
+    const doBlank = kind === 'burst' && !!o.blankLetters && !o.mask;
     const total = stepped ? n : 4;
     const skewAt = doSkew ? (stepped ? Math.floor(rand() * n) : 1) : -1;
+    if (doSkew) el.classList.add('fx-glitch--skew');
     if (doSkew && !stepped) set('--glitch-skew', `${String(angle())}deg`);
     const blankAt = doBlank ? Math.floor(rand() * total) : -1;
     const frame = (i: number): void => {
