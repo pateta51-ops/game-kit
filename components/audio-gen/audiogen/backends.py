@@ -253,15 +253,37 @@ class YuE2(WorkerBackend):
         return {k: v for k, v in super().worker_options().items() if k != "queue"}
 
     def generate(self, jobs: list[Job]) -> list[Result]:
-        """One fresh worker process (and heavy job) per item, so host RAM is given back; one retry after a CUDA error (K465)."""
-        out: list[Result] = []
+        """One fresh worker process (and heavy job) per cue, with all its takes, so host RAM is given back; a cue's
+        takes that fail with a CUDA error are retried once in a fresh process; a Skip keeps the earlier cues' results (K465)."""
+        groups: dict[str, list[Job]] = {}
         for j in jobs:
-            r = super().generate([j])[0]
-            if r.error and ("CUDA error" in r.error or "AcceleratorError" in r.error):
-                print(f"  [{self.name}] {j.cue.name}#{j.n}: CUDA error, retrying once in a fresh process", flush=True)
-                r = super().generate([j])[0]
-            out.append(r)
-        return out
+            groups.setdefault(j.cue.name, []).append(j)
+        done: dict[int, Result] = {}
+        skip: str | None = None
+        ran = False
+        for js in groups.values():
+            if skip is None:
+                try:
+                    rs = super().generate(js)
+                    ran = True
+                    bad = [r.job for r in rs if r.error and ("CUDA error" in r.error or "AcceleratorError" in r.error)]
+                    if bad:
+                        print(f"  [{self.name}] {js[0].cue.name}: CUDA error, retrying {len(bad)} take(s) once in a fresh process", flush=True)
+                        try:
+                            again = {id(r.job): r for r in super().generate(bad)}
+                            rs = [again.get(id(r.job), r) for r in rs]
+                        except Skip:
+                            pass
+                    for r in rs:
+                        done[id(r.job)] = r
+                    continue
+                except Skip as e:
+                    skip = str(e)
+                    if not ran:
+                        raise
+            for j in js:
+                done[id(j)] = failed(j, skip or "", self.model)
+        return [done[id(j)] for j in jobs]
 
     def check(self) -> None:
         super().check()
