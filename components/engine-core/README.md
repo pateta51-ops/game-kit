@@ -9,7 +9,7 @@ The kernel of a game engine: seeded random numbers, canonical JSON and hashes, t
 **You must:**
 1. Import only from the entry files `kernel.ts`, `timed.ts`, `tools.ts` or `index.ts`, never an implementation module.
 2. Use `ctx.rng` for all randomness; never `Math.random` or the clock (a game's lint preset fails it).
-3. Open a prompt with `ctx.ask(prompt, resume)`: one prompt at a time, only from a handler that pushed a task, and with at least `min` enabled options. Violations throw `EngineBugError` naming the prompt.
+3. Open a prompt with `ctx.ask(prompt, resume)`: one prompt at a time, passing the `resume` task (or, with no `resume`, only after the handler pushed one itself), and with at least `min` enabled options. Violations throw `EngineBugError` naming the prompt.
 4. Keep state plain data with finite numbers (`canonicalJson` throws otherwise) and change it only through copy on write (`own`).
 5. Supply `contentHash`, `blank` and `setup`; a save whose content hash differs is refused on load.
 6. Opt in to timing, debug, legal and queries by using their parts; add `GameRules.debug` for the debug console.
