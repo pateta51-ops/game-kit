@@ -295,7 +295,7 @@ describe('heavy-queue worker cap and load (K454)', () => {
     await until(async () => (await q.status()).unqueued.length === 1);
     const r = heavy(['load'], { HEAVY_URL: q.url });
     expect((await r).code).toBe(0);
-    expect(r.out()).toMatch(/^load \d+\.\d\d \d+\.\d\d \d+\.\d\d \| cores 16 \| slots 2\/2 \| queued 1 \| unqueued 1\n$/);
+    expect(r.out()).toMatch(/^load \d+\.\d\d \d+\.\d\d \d+\.\d\d \| cores 16 \| slots 2\/2 \| queued 1 \| unqueued 1( \| cache \d+\.\d GB)?\n$/);
   });
   it('flags headless chromium and puppeteer scripts, never a normal browser', () => {
     for (const c of ['/c/chrome --headless --user-data-dir=/tmp/playwright_chromiumdev_profile-x', 'node /g/node_modules/puppeteer/lib/cli.js']) expect(isHeavy(c.split(' ')), c).toBe(true);
