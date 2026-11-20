@@ -34,6 +34,8 @@ YuE2 makes instrumental music by the 7th Inning Stretch recipe (its shipped musi
 
 YuE2 hardware and queue (owner, 19 Nov 2026: YuE2 is the one exception to GPU only, and it must follow the queue). The YuE2 docs ask for a BF16 NVIDIA GPU with 24 GB VRAM, one request at a time (peak 14.08 GiB documented); the Astra Imperium director measured about 10 GB peak on a 16 GB card in a real run. The package's own low-memory option is `offload_ar` (moves the AR weights to host memory between stages, an "optional memory tradeoff"): the kit's `offloadAr` option (true, false, or "auto", the default) turns it on when the card has under 24 GB. It stays on the card otherwise, and every other backend stays GPU only with no offload. Every YuE2 run goes through the heavy queue: the backend starts its worker as `heavy run --label "audio-gen <name>" -- nice ... yue2_worker.py` and skips with a message when `heavy` is missing, at `check` and at generate (`queue: false` turns the wrapping off). Not yet measured by the kit on this PC.
 
+Each YuE2 item, with all its takes, runs in its own worker process and its own `heavy run` job (host RAM drifts down while one process makes many items; a fresh process gives it back). An item that fails with a CUDA error (`CUDA error` or `AcceleratorError` in the worker's error text) is retried once in a fresh process; a second failure, or any other error, fails the item as before.
+
 ### sa3 and yue2
 Their own paragraphs above (K459): doc links, doc-backed settings and the kit's findings are marked there.
 

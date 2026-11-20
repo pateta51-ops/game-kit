@@ -151,6 +151,10 @@ Failing test first for each. | M | Astra Imperium V1 (PR #71) and V2 (PR #72), 1
 - on phone widths that nav collapses into a "Contents" button that opens it.
 Port from Unstoppable PR #144 (RulesPage.tsx, screens.css, e2e/screens.spec.ts). Tests on a fake game; README example. | M | Unstoppable architect, 19 Nov 2026 (game PR #144, branch rules-lookup-layout, commit ec3eaadc); built in game CSS, nothing waits | done |
 | K464 | motion-frame player: a snapped beat (skipped while still queued) got onBeatStart but never onBeatEnd, so state a game set in onBeatStart stayed set. A snapped beat now gets onBeatEnd with the same run, after its commit. Test: start and end pair up on skip. | S | Astra Imperium FIX-R11-F3 (game PR #78), 19 Nov 2026; worked around, not blocking | done |
+| K465 | audio-gen YuE2, from a real run:
+- RAM drifts per process: available RAM fell to 1.7 GB on the 2nd take when all items ran in one worker process, and came back after each process exited. Run each YuE2 item (all its takes) in its own worker process, still through `heavy run`, one heavy-queue job per item.
+- A one-off `AcceleratorError: CUDA error: unknown error` (rc 5) passed in a fresh process. On a CUDA error in a YuE2 item, retry that item once in a fresh process; a second failure fails the item as today.
+README: say both. Tests with a fake worker: one process per item; a CUDA error retries once in a new process; a non-CUDA error does not retry. | S | Astra Imperium director 3, 19 Nov 2026 (YuE2 run of 8 music states on v0.178.0); not blocking | open |
 | K283 | `card-pile` `hitTitle={false}` drops the native title on the stack button (STCC draws its own pile tooltip) | S |  | done |
 | K284 | `layout-editor` Reset button (in-page confirmation): restores the starting doc, backdrops (`LAYOUT_EDITOR_BG_INIT`), zoom and screen; `layoutEditor.reset()` | S |  | done |
 | K285 | `plan-checker` `--tsc-at DIR` compiles the plan's type blocks inside a game folder, so relative `kit/` imports resolve | S |  | done |

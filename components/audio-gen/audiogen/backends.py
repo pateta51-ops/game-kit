@@ -252,6 +252,17 @@ class YuE2(WorkerBackend):
     def worker_options(self) -> dict[str, Any]:
         return {k: v for k, v in super().worker_options().items() if k != "queue"}
 
+    def generate(self, jobs: list[Job]) -> list[Result]:
+        """One fresh worker process (and heavy job) per item, so host RAM is given back; one retry after a CUDA error (K465)."""
+        out: list[Result] = []
+        for j in jobs:
+            r = super().generate([j])[0]
+            if r.error and ("CUDA error" in r.error or "AcceleratorError" in r.error):
+                print(f"  [{self.name}] {j.cue.name}#{j.n}: CUDA error, retrying once in a fresh process", flush=True)
+                r = super().generate([j])[0]
+            out.append(r)
+        return out
+
     def check(self) -> None:
         super().check()
         self.need_queue()

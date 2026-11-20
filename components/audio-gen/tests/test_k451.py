@@ -122,6 +122,46 @@ class Defaults(unittest.TestCase):
                 B.make("x", {"type": "yue2", "licence": "x", "python": sys.executable}, Path(t)).generate(
                     [B.Job(cue=c, n=1, seed=1, seconds=1.0, out=Path(t) / "a.wav")])
 
+    def run_yue2_fake(self, errors, n=3):
+        c = parse_cue({"name": "a", "prompt": "p", "category": "music", "length": 1}, None)
+        calls = []
+        with tempfile.TemporaryDirectory() as t:
+            t = Path(t)
+
+            def fake(cmd, env=None):
+                job = json.loads(Path(cmd[-1]).read_text())
+                calls.append((cmd[-1], [i["label"] for i in job["items"]]))
+                it = job["items"][0]
+                e = errors.get(it["label"], [])
+                err = e.pop(0) if e else None
+                Path(job["result"]).write_text(json.dumps({"items": [{"out": it["out"], "error": err} if err else {"out": it["out"]}]}))
+                if not err:
+                    Path(it["out"]).write_bytes(b"x")
+                return mock.Mock(returncode=0)
+
+            jobs = [B.Job(cue=c, n=i, seed=1, seconds=1.0, out=t / f"a{i}.wav") for i in range(1, n + 1)]
+            with mock.patch.object(B.subprocess, "run", side_effect=fake):
+                res = B.make("x", {"type": "yue2", "licence": "x", "python": sys.executable, "queue": False}, t).generate(jobs)
+        return calls, res
+
+    def test_k465_one_process_per_item(self):
+        calls, res = self.run_yue2_fake({})
+        self.assertEqual([c[1] for c in calls], [["a#1"], ["a#2"], ["a#3"]])
+        self.assertTrue(all(r.ok for r in res))
+
+    def test_k465_cuda_error_retries_once_in_new_process(self):
+        calls, res = self.run_yue2_fake({"a#2": ["AcceleratorError: CUDA error: unknown error"]})
+        self.assertEqual([c[1] for c in calls], [["a#1"], ["a#2"], ["a#2"], ["a#3"]])
+        self.assertTrue(all(r.ok for r in res))
+        calls, res = self.run_yue2_fake({"a#1": ["CUDA error: x", "CUDA error: y"]}, n=1)
+        self.assertEqual(len(calls), 2)
+        self.assertFalse(res[0].ok)
+
+    def test_k465_other_error_no_retry(self):
+        calls, res = self.run_yue2_fake({"a#1": ["RuntimeError: no take made"]}, n=1)
+        self.assertEqual(len(calls), 1)
+        self.assertFalse(res[0].ok)
+
     def test_yue2_needs_demucs(self):
         with self.assertRaises(B.Skip):
             B.make("y", {"type": "yue2", "licence": "x", "python": sys.executable, "demucsPython": "/nope/python"}, Path(".")).check()
