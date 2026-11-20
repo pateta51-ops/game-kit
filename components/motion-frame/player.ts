@@ -66,6 +66,8 @@ export interface PlayerOptions<C = undefined> {
   speed: () => Speed;
   context: C;
   onCue?: (cue: string, beat: string) => void;
+  /** K476: a cue not fired because its beat ended early, once each, in timeline order; every cue goes to onCue or here */
+  onDroppedCue?: (cue: string, beat: string, why: 'skipped' | 'failed') => void;
   onBeatStart?: (run: Run<C>) => void;
   onBeatEnd?: (run: Run<C>) => void;
   /** a beat that could not play (no spec, a zone not on the stage, a verb that threw); the game goes on */
@@ -137,6 +139,7 @@ interface Item {
 }
 type Timer = ReturnType<typeof setTimeout>;
 interface Current<C> {
+  drop?: (why: 'skipped' | 'failed') => void;
   item: Item;
   run: Run<C>;
   timers: Set<Timer>;
@@ -241,6 +244,12 @@ export function createMotionPlayer<C = undefined>(o: PlayerOptions<C>): MotionPl
   const cue = (c: string, beat: string): void => {
     safe(`cue ${c}`, () => o.onCue?.(c, beat));
   };
+  const drop = (spec: MotionSpec, why: 'skipped' | 'failed', fired?: ReadonlySet<number>): void => {
+    if (!o.onDroppedCue) return;
+    [...(spec.sound ?? [])].sort((a, b) => a.t - b.t).forEach((c, k) => {
+      if (!fired?.has(k)) safe(`dropped cue ${c.cue}`, () => o.onDroppedCue?.(c.cue, spec.id, why));
+    });
+  };
 
   const commit = (item: Item): void => {
     const apply = item.commit;
@@ -266,6 +275,7 @@ export function createMotionPlayer<C = undefined>(o: PlayerOptions<C>): MotionPl
     if (item.problem) o.onProblem?.(item.problem);
   };
   const snapEnd = (item: Item): void => {
+    drop(item.spec, 'skipped');
     snapStart(item);
     safe(`${item.spec.id} onEnd`, () => item.onEnd?.('skipped'));
   };
@@ -300,8 +310,9 @@ export function createMotionPlayer<C = undefined>(o: PlayerOptions<C>): MotionPl
     return cancel;
   };
 
-  const finish = (c: Current<C>, how: Ended): void => {
+  const finish = (c: Current<C>, how: Ended, why?: 'failed'): void => {
     if (!live.delete(c)) return;
+    if (why ?? how === 'skipped') c.drop?.(why ?? 'skipped');
     if (cur === c) cur = null;
     c.waiting.clear();
     delete c.after;
@@ -323,7 +334,8 @@ export function createMotionPlayer<C = undefined>(o: PlayerOptions<C>): MotionPl
     const run = makeRun(item, redraw ? emptyTimeline(spec.id) : build());
     const timers = new Set<Timer>();
     const open = new Set<() => void>();
-    const me: Current<C> = { item, run, timers, open, leaving: false, waiting: new Set() };
+    const fired = new Set<number>();
+    const me: Current<C> = { item, run, timers, open, leaving: false, waiting: new Set(), drop: (w) => drop(spec, w, fired) };
     live.add(me);
     if (!parallel) cur = me;
     const at = (ms: number, f: () => void): Timer => {
@@ -424,10 +436,11 @@ export function createMotionPlayer<C = undefined>(o: PlayerOptions<C>): MotionPl
           me.leaving = true;
           emit();
         });
-      for (const c of run.timeline.cues)
+      run.timeline.cues.forEach((c, k) =>
         atT(c.t, () => {
+          fired.add(k);
           cue(c.cue, spec.id);
-        });
+        }));
       atT(Math.max(run.timeline.ms, ...run.timeline.cues.map((c) => swap ? c.t : 0)), () => {
         if (!live.has(me)) return;
         if (me.waiting.size > 0) {
@@ -467,7 +480,7 @@ export function createMotionPlayer<C = undefined>(o: PlayerOptions<C>): MotionPl
     const failRedraw = (e: unknown): void => {
       if (!live.has(me)) return;
       o.onProblem?.(e instanceof Error ? e.message : String(e));
-      finish(me, 'done');
+      finish(me, 'done', 'failed');
       next();
       emit();
     };
@@ -564,6 +577,7 @@ export function createMotionPlayer<C = undefined>(o: PlayerOptions<C>): MotionPl
     const fail = (e: unknown): void => {
       reached(spec.id);
       snapStart(item);
+      drop(spec, 'failed');
       o.onProblem?.(e instanceof Error ? e.message : String(e));
       safe(`${spec.id} onEnd`, () => item.onEnd?.('done'));
     };
@@ -702,6 +716,7 @@ export function createMotionPlayer<C = undefined>(o: PlayerOptions<C>): MotionPl
       if (opts?.parallel === true && !item.commit && (!o.pan || item.spec.pan === undefined)) {
         // during a skip it jumps to its end at once, like everything else
         if (skipping) {
+          drop(item.spec, 'skipped');
           snapStart(item);
           safe(`${item.spec.id} onEnd`, () => end?.('skipped'));
         }
