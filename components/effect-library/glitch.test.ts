@@ -412,5 +412,68 @@ describe('glitch', () => {
       createGlitch(host as unknown as HTMLElement, { speed: () => 1, repeat: 0, seed: 1, burstSteps: 1, blankLetters: [2, 2] }).burst();
       expect(host.classes.has('fx-glitch--steps')).toBe(true);
     });
+    it('stepped blank is restored exactly on the next step', () => {
+      for (let k = 0; k < 10; k++) {
+        const t = withText('GLITCH WORD');
+        const h = createGlitch(host as unknown as HTMLElement, { speed: () => 1, repeat: 0, seed: k, burstMs: 200, burstSteps: 4, blankLetters: [2, 3] });
+        h.burst();
+        const at: string[] = [t.data];
+        for (let i = 1; i < 4; i++) {
+          vi.advanceTimersByTime(50);
+          at.push(t.data);
+        }
+        const j = at.findIndex((d) => d !== 'GLITCH WORD');
+        expect(at.filter((d) => d !== 'GLITCH WORD')).toHaveLength(1);
+        expect(at[j]).toHaveLength(11);
+        if (j < 3) expect(at[j + 1]).toBe('GLITCH WORD');
+        vi.advanceTimersByTime(50);
+        expect(t.data).toBe('GLITCH WORD');
+        h.destroy();
+      }
+    });
+    it('a game text change mid-blank survives', () => {
+      const t = withText('GLITCH');
+      const h = createGlitch(host as unknown as HTMLElement, { speed: () => 1, repeat: 0, seed: 1, burstMs: 200, burstSteps: 1, blankLetters: [2, 2] });
+      h.burst();
+      expect(t.data).not.toBe('GLITCH');
+      t.data = 'NEW';
+      vi.advanceTimersByTime(250);
+      expect(t.data).toBe('NEW');
+      h.destroy();
+      expect(t.data).toBe('NEW');
+    });
+    it('a second burst and tear() during a blanked frame leave the text intact', () => {
+      const t = withText('GLITCH');
+      const h = createGlitch(host as unknown as HTMLElement, { speed: () => 1, repeat: 0, seed: 1, burstMs: 200, burstSteps: 1, blankLetters: [2, 2] });
+      h.burst();
+      expect(t.data).not.toBe('GLITCH');
+      h.burst();
+      expect([...t.data].filter((c) => c === '\u00a0')).toHaveLength(2);
+      h.tear();
+      expect(t.data).toBe('GLITCH');
+      vi.advanceTimersByTime(700);
+      expect(t.data).toBe('GLITCH');
+      h.destroy();
+    });
+    it('no text: nothing blanked; astral letters are never split', () => {
+      mount();
+      const before = host.children.map((c) => c.data);
+      createGlitch(host as unknown as HTMLElement, { speed: () => 1, repeat: 0, seed: 1, burstSteps: 1, blankLetters: [2, 2] }).burst();
+      expect(host.children.slice(0, before.length).map((c) => c.data)).toEqual(before);
+      const t = withText('\u{1D4D0}\u{1D4D1} \u{1D4D2}');
+      createGlitch(host as unknown as HTMLElement, { speed: () => 1, repeat: 0, seed: 1, burstSteps: 1, blankLetters: [2, 2] }).burst();
+      expect(Array.from(t.data)).toHaveLength(4);
+      expect(Array.from(t.data).filter((c) => c === '\u00a0')).toHaveLength(2);
+      expect(t.data).not.toMatch(/[\ud800-\udbff](?![\udc00-\udfff])/);
+    });
+    it('plain burst without skewDeg sets no transform; with it, the skew class', () => {
+      mount();
+      make({ seed: 1 }).burst();
+      expect(host.style.props['transform']).toBeUndefined();
+      expect(on('skew')).toBe(false);
+      mount();
+      make({ seed: 1, skewDeg: [3, 4] }).burst();
+      expect(on('skew')).toBe(true);
+    });
   });
 });
