@@ -1,6 +1,6 @@
 // Ported from STCC src/ui/select/parts.tsx, SelectText.tsx and src/ui/screens/NewGame.tsx (27fb8882): a character select
 // screen (roster, hero, deck browser, track slot, opponent strip, modes, folded options, Begin). The game supplies data and look.
-import { useCallback, useLayoutEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react';
+import { Fragment, useCallback, useLayoutEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react';
 import {
   choiceOf,
   deckPage,
@@ -54,7 +54,30 @@ const WORDS: SelectWords = {
   less: 'Close',
 };
 
+export interface ControlProps {
+  children: ReactNode;
+  onClick?: (() => void) | undefined;
+  disabled?: boolean | undefined;
+  on?: boolean | undefined;
+  expanded?: boolean | undefined;
+  title?: string | undefined;
+  label?: string | undefined;
+  id?: string | undefined;
+  value?: string | boolean | undefined;
+  onChange?: ((v: string | boolean) => void) | undefined;
+  placeholder?: string | undefined;
+  choices?: readonly { value: string; label: string; disabled?: string | null | undefined }[] | undefined;
+}
+export type ControlSlot = ((kind: string, props: ControlProps) => ReactNode) | undefined;
+const ctl = (control: ControlSlot, kind: string, props: ControlProps, builtin: ReactNode): ReactNode => control?.(kind, props) ?? builtin;
+
 export interface SelectSlots {
+  /** Every interactive element goes through here by kind (see the README table); null or undefined keeps the built-in. */
+  control?: ControlSlot | undefined;
+  /** Renders summary and detail text (a text, its links); null or undefined keeps the built-in. */
+  renderText?: ((text: string, links?: readonly TextLink[]) => ReactNode) | undefined;
+  /** The primary Begin; null or undefined keeps the built-in. */
+  begin?: ((state: { choice: Choice; disabled: boolean; problems: string[]; label: ReactNode }, onBegin: () => void) => ReactNode) | undefined;
   /** Wraps the whole screen (the game's frame). */
   frame?: ((screen: ReactNode) => ReactNode) | undefined;
   /** The header (title, art) above the mode tabs. */
@@ -145,7 +168,9 @@ export function RichText({
   links,
   renderGlyph,
   onCard,
+  control,
 }: {
+  control?: ControlSlot | undefined;
   text: string;
   icons?: Iterable<string> | undefined;
   links?: readonly TextLink[] | undefined;
@@ -158,9 +183,16 @@ export function RichText({
         p.kind === 'text' ? (
           <span key={i}>{p.text}</span>
         ) : p.kind === 'link' ? (
-          <button key={i} type="button" data-part="link" data-card={p.id} onClick={() => onCard?.(p.id)}>
-            {p.text}
-          </button>
+          <Fragment key={i}>
+            {ctl(
+              control,
+              'link',
+              { id: p.id, children: p.text, onClick: () => onCard?.(p.id) },
+              <button type="button" data-part="link" data-card={p.id} onClick={() => onCard?.(p.id)}>
+                {p.text}
+              </button>,
+            )}
+          </Fragment>
         ) : (
           <span key={i} data-part={p.kind} data-name={p.name}>
             {renderGlyph?.(p) ?? p.name}
@@ -177,7 +209,9 @@ function Summary({
   full,
   rich,
   words,
+  control,
 }: {
+  control?: ControlSlot | undefined;
   summary: string;
   full?: string | undefined;
   rich: (t: string) => ReactNode;
@@ -200,16 +234,21 @@ function Summary({
       <p>{rich(summary)}</p>
       {full === undefined ? null : (
         <>
-          <button
-            type="button"
-            data-part="more"
-            aria-expanded={shown}
-            onClick={() => {
-              setOpen((o) => !o);
-            }}
-          >
-            {shown ? words.less : words.more}
-          </button>
+          {ctl(
+            control,
+            'more',
+            { children: shown ? words.less : words.more, expanded: shown, on: shown, onClick: () => { setOpen((o) => !o); } },
+            <button
+              type="button"
+              data-part="more"
+              aria-expanded={shown}
+              onClick={() => {
+                setOpen((o) => !o);
+              }}
+            >
+              {shown ? words.less : words.more}
+            </button>,
+          )}
           {shown ? <div data-part="full">{rich(full)}</div> : null}
         </>
       )}
@@ -242,7 +281,9 @@ export function Roster({
   onPick,
   plate,
   title,
+  control,
 }: {
+  control?: ControlSlot | undefined;
   list: readonly Character[];
   sets: readonly CharacterSet[];
   picked: string;
@@ -259,20 +300,8 @@ export function Roster({
           <div data-part="set-label">{g.set.label}</div>
           {g.items.map((c) => {
             const r = can(c.id);
-            return (
-              <button
-                key={c.id}
-                type="button"
-                data-part="entry"
-                data-id={c.id}
-                data-on={c.id === picked ? 'yes' : 'no'}
-                aria-pressed={c.id === picked}
-                disabled={!r.ok}
-                title={r.why ?? undefined}
-                onClick={() => {
-                  onPick(c.id);
-                }}
-              >
+            const kids = (
+              <>
                 <Portrait p={c.portrait} />
                 {plate?.(c, 'roster') ?? (
                   <span data-part="plate">
@@ -280,7 +309,30 @@ export function Roster({
                     {c.statLine === undefined ? null : <small>{c.statLine}</small>}
                   </span>
                 )}
-              </button>
+              </>
+            );
+            return (
+              <Fragment key={c.id}>
+                {ctl(
+                  control,
+                  'entry',
+                  { id: c.id, children: kids, on: c.id === picked, disabled: !r.ok, title: r.why ?? undefined, onClick: () => { onPick(c.id); } },
+                  <button
+                    type="button"
+                    data-part="entry"
+                    data-id={c.id}
+                    data-on={c.id === picked ? 'yes' : 'no'}
+                    aria-pressed={c.id === picked}
+                    disabled={!r.ok}
+                    title={r.why ?? undefined}
+                    onClick={() => {
+                      onPick(c.id);
+                    }}
+                  >
+                    {kids}
+                  </button>,
+                )}
+              </Fragment>
             );
           })}
         </div>
@@ -298,7 +350,9 @@ export function DeckBrowser({
   renderCard,
   onCard,
   words,
+  control,
 }: {
+  control?: ControlSlot | undefined;
   c: Character;
   perPage: number;
   order?: readonly string[] | undefined;
@@ -316,80 +370,110 @@ export function DeckBrowser({
     <section data-part="deck">
       <h2>
         <span>{words.deck(c)}</span>
-        <input
-          type="search"
-          data-part="search"
-          value={query}
-          placeholder={words.search}
-          aria-label={words.search}
-          autoComplete="off"
-          onChange={(e) => {
-            setQuery(e.target.value);
-            setPage(0);
-          }}
-        />
-      </h2>
-      <div data-part="tabs" role="group">
-        {deckTabs(deck, order).map((t) => (
-          <button
-            key={t.kind}
-            type="button"
-            data-part="tab"
-            data-kind={t.kind}
-            data-on={kind === t.kind ? 'yes' : 'no'}
-            aria-pressed={kind === t.kind}
-            onClick={() => {
-              setKind(t.kind);
+        {ctl(
+          control,
+          'search',
+          {
+            children: words.search,
+            value: query,
+            placeholder: words.search,
+            label: words.search,
+            onChange: (v) => {
+              setQuery(String(v));
+              setPage(0);
+            },
+          },
+          <input
+            type="search"
+            data-part="search"
+            value={query}
+            placeholder={words.search}
+            aria-label={words.search}
+            autoComplete="off"
+            onChange={(e) => {
+              setQuery(e.target.value);
               setPage(0);
             }}
-          >
-            {t.kind === 'ALL' ? words.all : (kindLabel?.(t.kind) ?? t.kind)}
-            <small>{t.count}</small>
-          </button>
-        ))}
+          />,
+        )}
+      </h2>
+      <div data-part="tabs" role="group">
+        {deckTabs(deck, order).map((t) => {
+          const pickTab = (): void => {
+            setKind(t.kind);
+            setPage(0);
+          };
+          const kids = (
+            <>
+              {t.kind === 'ALL' ? words.all : (kindLabel?.(t.kind) ?? t.kind)}
+              <small>{t.count}</small>
+            </>
+          );
+          return (
+            <Fragment key={t.kind}>
+              {ctl(
+                control,
+                'deck-tab',
+                { id: t.kind, children: kids, on: kind === t.kind, onClick: pickTab },
+                <button type="button" data-part="tab" data-kind={t.kind} data-on={kind === t.kind ? 'yes' : 'no'} aria-pressed={kind === t.kind} onClick={pickTab}>
+                  {kids}
+                </button>,
+              )}
+            </Fragment>
+          );
+        })}
       </div>
       <div data-part="row">
-        <button
-          type="button"
-          data-part="prev"
-          aria-label={words.prev}
-          disabled={shown.page === 0}
-          onClick={() => {
-            setPage(shown.page - 1);
-          }}
-        >
-          ‹
-        </button>
+        {ctl(
+          control,
+          'prev',
+          { children: '‹', label: words.prev, disabled: shown.page === 0, onClick: () => { setPage(shown.page - 1); } },
+          <button
+            type="button"
+            data-part="prev"
+            aria-label={words.prev}
+            disabled={shown.page === 0}
+            onClick={() => {
+              setPage(shown.page - 1);
+            }}
+          >
+            ‹
+          </button>,
+        )}
         <div data-part="cards" style={{ '--cs-per-page': String(perPage) } as CSSProperties}>
           {shown.cards.length === 0 ? (
             <div data-part="empty">{words.empty(c)}</div>
           ) : (
             shown.cards.map((card) => (
-              <button
-                key={card.id}
-                type="button"
-                data-part="card"
-                data-kind={card.kind}
-                data-card={card.id}
-                title={card.name}
-                onClick={() => onCard?.(card.id)}
-              >
-                {renderCard?.(card) ?? card.name}
-              </button>
+              <Fragment key={card.id}>
+                {ctl(
+                  control,
+                  'card',
+                  { id: card.id, children: renderCard?.(card) ?? card.name, title: card.name, onClick: () => onCard?.(card.id) },
+                  <button type="button" data-part="card" data-kind={card.kind} data-card={card.id} title={card.name} onClick={() => onCard?.(card.id)}>
+                    {renderCard?.(card) ?? card.name}
+                  </button>,
+                )}
+              </Fragment>
             ))
           )}
         </div>
-        <button
-          type="button"
-          data-part="next"
-          aria-label={words.next}
-          disabled={shown.page >= shown.pages - 1}
-          onClick={() => {
-            setPage(shown.page + 1);
-          }}
-        >
-          ›
-        </button>
+        {ctl(
+          control,
+          'next',
+          { children: '›', label: words.next, disabled: shown.page >= shown.pages - 1, onClick: () => { setPage(shown.page + 1); } },
+          <button
+            type="button"
+            data-part="next"
+            aria-label={words.next}
+            disabled={shown.page >= shown.pages - 1}
+            onClick={() => {
+              setPage(shown.page + 1);
+            }}
+          >
+            ›
+          </button>,
+        )}
       </div>
       <div data-part="pager">
         {Array.from({ length: shown.pages }, (_, i) => (
@@ -438,8 +522,11 @@ export function CharacterSelect(props: CharacterSelectProps) {
   const o = opponents.find((x) => x.id === oppId);
   const problems = props.problems?.(choice) ?? [];
   const rich = (t: string, links?: readonly TextLink[]): ReactNode => (
-    <RichText text={t} icons={props.icons} links={links} renderGlyph={props.renderGlyph} onCard={props.onCard} />
+    slots.renderText?.(t, links) ?? (
+      <RichText text={t} icons={props.icons} links={links} renderGlyph={props.renderGlyph} onCard={props.onCard} control={slots.control} />
+    )
   );
+  const control = slots.control;
   const name = c === undefined ? null : splitName(c.name, c.short);
   const screen = (
     <div data-part="character-select" data-layout={phone ? 'phone' : 'wide'} data-mode={m.id}>
@@ -447,36 +534,44 @@ export function CharacterSelect(props: CharacterSelectProps) {
         {slots.header}
         {modes.length > 1 ? (
           <div data-part="modes" role="group">
-            {modes.map((x) => (
-              <button
-                key={x.id}
-                type="button"
-                data-part="mode"
-                data-on={x.id === m.id ? 'yes' : 'no'}
-                aria-pressed={x.id === m.id}
-                onClick={() => {
-                  setMode(x.id);
-                  changed({ mode: x.id });
-                }}
-              >
-                {x.label}
-              </button>
-            ))}
+            {modes.map((x) => {
+              const pickMode = (): void => {
+                setMode(x.id);
+                changed({ mode: x.id });
+              };
+              return (
+                <Fragment key={x.id}>
+                  {ctl(
+                    control,
+                    'mode',
+                    { id: x.id, children: x.label, on: x.id === m.id, onClick: pickMode },
+                    <button type="button" data-part="mode" data-on={x.id === m.id ? 'yes' : 'no'} aria-pressed={x.id === m.id} onClick={pickMode}>
+                      {x.label}
+                    </button>,
+                  )}
+                </Fragment>
+              );
+            })}
           </div>
         ) : null}
         <p data-part="mode-line">
           {m.line}{' '}
           {fieldsFor(fields, m.id).length === 0 ? null : (
-            <button
-              type="button"
-              data-part="options-toggle"
-              aria-expanded={open}
-              onClick={() => {
-                setOpen((x) => !x);
-              }}
-            >
-              {words.options} {open ? '▴' : '▾'}
-            </button>
+            ctl(
+              control,
+              'options-toggle',
+              { children: `${words.options} ${open ? '▴' : '▾'}`, expanded: open, on: open, onClick: () => { setOpen((x) => !x); } },
+              <button
+                type="button"
+                data-part="options-toggle"
+                aria-expanded={open}
+                onClick={() => {
+                  setOpen((x) => !x);
+                }}
+              >
+                {words.options} {open ? '▴' : '▾'}
+              </button>,
+            )
           )}
         </p>
         {open ? (
@@ -503,35 +598,50 @@ export function CharacterSelect(props: CharacterSelectProps) {
               return (
                 <label key={f.id} data-part="field" data-kind={f.kind} data-id={f.id}>
                   {f.kind === 'check' ? (
-                    <input
-                      type="checkbox"
-                      checked={v === true}
-                      onChange={(e) => {
-                        set(e.target.checked);
-                      }}
-                    />
+                    ctl(
+                      control,
+                      'field-check',
+                      { id: f.id, children: f.label, label: f.label, value: v === true, onChange: set },
+                      <input
+                        type="checkbox"
+                        checked={v === true}
+                        onChange={(e) => {
+                          set(e.target.checked);
+                        }}
+                      />,
+                    )
                   ) : null}
                   <span>{f.label}</span>
                   {f.kind === 'select' ? (
-                    <select
-                      value={String(v ?? '')}
-                      onChange={(e) => {
-                        set(e.target.value);
-                      }}
-                    >
-                      {(f.choices ?? []).map((x) => (
-                        <option key={x.value} value={x.value} disabled={x.disabled != null}>
-                          {x.disabled == null ? x.label : `${x.label} (${x.disabled})`}
-                        </option>
-                      ))}
-                    </select>
+                    ctl(
+                      control,
+                      'field-select',
+                      { id: f.id, children: f.label, label: f.label, value: String(v ?? ''), onChange: set, choices: f.choices ?? [] },
+                      <select
+                        value={String(v ?? '')}
+                        onChange={(e) => {
+                          set(e.target.value);
+                        }}
+                      >
+                        {(f.choices ?? []).map((x) => (
+                          <option key={x.value} value={x.value} disabled={x.disabled != null}>
+                            {x.disabled == null ? x.label : `${x.label} (${x.disabled})`}
+                          </option>
+                        ))}
+                      </select>,
+                    )
                   ) : f.kind === 'text' ? (
-                    <input
-                      value={String(v ?? '')}
-                      onChange={(e) => {
-                        set(e.target.value);
-                      }}
-                    />
+                    ctl(
+                      control,
+                      'field-text',
+                      { id: f.id, children: f.label, label: f.label, value: String(v ?? ''), onChange: set },
+                      <input
+                        value={String(v ?? '')}
+                        onChange={(e) => {
+                          set(e.target.value);
+                        }}
+                      />,
+                    )
                   ) : null}
                 </label>
               );
@@ -546,6 +656,7 @@ export function CharacterSelect(props: CharacterSelectProps) {
         can={canPick}
         plate={slots.plate}
         title={words.roster}
+        control={control}
         onPick={(id) => {
           setPick(id);
           changed({ pick: id });
@@ -565,11 +676,11 @@ export function CharacterSelect(props: CharacterSelectProps) {
             {c.meta === undefined ? null : <div data-part="meta">{c.meta}</div>}
             {slots.sub?.(c, choice)}
             {phone || c.summary === undefined ? null : (
-              <Summary summary={c.summary} full={c.full} rich={(t) => rich(t, c.links)} words={words} />
+              <Summary summary={c.summary} full={c.full} rich={(t) => rich(t, c.links)} words={words} control={control} />
             )}
           </div>
           {phone && c.summary !== undefined ? (
-            <Summary summary={c.summary} full={c.full} rich={(t) => rich(t, c.links)} words={words} />
+            <Summary summary={c.summary} full={c.full} rich={(t) => rich(t, c.links)} words={words} control={control} />
           ) : null}
         </section>
       )}
@@ -584,6 +695,7 @@ export function CharacterSelect(props: CharacterSelectProps) {
             renderCard={props.renderCard}
             onCard={props.onCard}
             words={words}
+            control={control}
           />
         )}
         {c === undefined || slots.track === undefined ? null : <section data-part="track">{slots.track(c, choice)}</section>}
@@ -599,32 +711,44 @@ export function CharacterSelect(props: CharacterSelectProps) {
                 {slots.plate?.(o, 'opponent') ?? <div data-part="opponent-name">{o.name}</div>}
                 {o.meta === undefined ? null : <div data-part="meta">{o.meta}</div>}
                 {o.summary === undefined ? null : (
-                  <Summary summary={o.summary} full={o.full} rich={(t) => rich(t)} words={words} />
+                  <Summary summary={o.summary} full={o.full} rich={(t) => rich(t)} words={words} control={control} />
                 )}
               </div>
             )}
             <div data-part="opponent-strip" role="group">
               {opponents.map((x) => {
                 const s = canOppose(x.id);
-                return (
-                  <button
-                    key={x.id}
-                    type="button"
-                    data-part="opponent-pick"
-                    data-id={x.id}
-                    data-on={x.id === oppId ? 'yes' : 'no'}
-                    aria-pressed={x.id === oppId}
-                    disabled={!s.ok}
-                    title={s.why ?? undefined}
-                    onClick={() => {
-                      setOpp(x.id);
-                      changed({ opponent: x.id });
-                    }}
-                  >
+                const pickOpp = (): void => {
+                  setOpp(x.id);
+                  changed({ opponent: x.id });
+                };
+                const kids = (
+                  <>
                     <Portrait p={x.portrait} />
                     <b>{x.name}</b>
                     {x.statLine === undefined ? null : <small>{x.statLine}</small>}
-                  </button>
+                  </>
+                );
+                return (
+                  <Fragment key={x.id}>
+                    {ctl(
+                      control,
+                      'opponent-pick',
+                      { id: x.id, children: kids, on: x.id === oppId, disabled: !s.ok, title: s.why ?? undefined, onClick: pickOpp },
+                      <button
+                        type="button"
+                        data-part="opponent-pick"
+                        data-id={x.id}
+                        data-on={x.id === oppId ? 'yes' : 'no'}
+                        aria-pressed={x.id === oppId}
+                        disabled={!s.ok}
+                        title={s.why ?? undefined}
+                        onClick={pickOpp}
+                      >
+                        {kids}
+                      </button>,
+                    )}
+                  </Fragment>
                 );
               })}
             </div>
@@ -632,16 +756,23 @@ export function CharacterSelect(props: CharacterSelectProps) {
         )}
         <div data-part="go">
           {problems.length > 0 ? <p data-part="problems">{problems.join(' ')}</p> : null}
-          <button
-            type="button"
-            data-part="begin"
-            disabled={problems.length > 0}
-            onClick={() => {
+          {(() => {
+            const go = (): void => {
               props.onBegin(choice);
-            }}
-          >
-            {words.begin}
-          </button>
+            };
+            const dis = problems.length > 0;
+            return (
+              slots.begin?.({ choice, disabled: dis, problems, label: words.begin }, go) ??
+              ctl(
+                control,
+                'begin',
+                { children: words.begin, disabled: dis, onClick: go },
+                <button type="button" data-part="begin" disabled={dis} onClick={go}>
+                  {words.begin}
+                </button>,
+              )
+            );
+          })()}
         </div>
       </section>
     </div>
