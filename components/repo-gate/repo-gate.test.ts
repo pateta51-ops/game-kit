@@ -78,7 +78,7 @@ describe('repo-gate', () => {
   });
 
   it('finds a session URL, a tailnet host and a runner name in tracked text, but not in dossier/ or docs/', () => {
-    const session = '(link removed)' + 'session_' + '01ABCDEFGHIJKLMNOPQRSTUV';
+    const session = 'https://claude.ai/code/' + 'session_' + '01ABCDEFGHIJKLMNOPQRSTUV';
     const host = 'my-pc.tail1a2b3.' + 'ts.net';
     const runner = RUNNER.toUpperCase();
     const body = `a ${session}\nb ${host}\nc runs on ${runner} now\n`;
@@ -351,7 +351,7 @@ describe('K137 options', () => {
   });
 
   it('finds a chat URL and a session URL without code/', () => {
-    const chat = '(link removed)' + 'chat/' + '0a1b2c3d-4e5f-6789-abcd-ef0123456789';
+    const chat = 'https://claude.ai/' + 'chat/' + '0a1b2c3d-4e5f-6789-abcd-ef0123456789';
     const short = 'claude.ai/' + 'session_' + 'abc123';
     expect(flat([text('a.md', `${chat}\n${short}\nclaude.ai/chat\nclaude.ai/session_ab\n`)], CFG)).toEqual(['a.md:1 SESSION_URL', 'a.md:2 SESSION_URL']);
   });
@@ -363,7 +363,7 @@ describe('K137 options', () => {
 
 describe('K137 text switches', () => {
   it('SESSION_URL, TAILNET_HOST and RUNNER_NAME are each switchable; secrets are still found', () => {
-    const session = '(link removed)' + 'session_' + '01ABCDEFGHIJKLMNOPQRSTUV';
+    const session = 'https://claude.ai/code/' + 'session_' + '01ABCDEFGHIJKLMNOPQRSTUV';
     const host = 'my-pc.tail1a2b3.' + 'ts.net';
     const token = 'ghp_' + 'A1'.repeat(18);
     const files = [text('src/x.ts', `${session}\n${host}\n${RUNNER}\n${token}\n`)];

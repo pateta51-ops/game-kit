@@ -4,15 +4,15 @@ Interactive pages that show one kit part live, with sliders for its tunable valu
 
 | Tuner | Component | What it tunes | Artifact |
 | --- | --- | --- | --- |
-| [card-hand.html](card-hand.html) | card-hand | the fan's arc, spacing, lift, grow, stand-up, motion time | (link removed)> |
+| [card-hand.html](card-hand.html) | card-hand | the fan's arc, spacing, lift, grow, stand-up, motion time | private Artifact |
 | [effect-library.html](effect-library.html) | effect-library, motion-frame | motion verbs, flights and trails, rotations, beams, combat, transfers, signals, refresh and live loops | to publish |
-| [target-arrow.html](target-arrow.html) | target-arrow | arrow colours, stroke, dash flow, head, curve, snap and strike timing | (link removed)> |
-| [glows.html](glows.html) | picked-state, prompt-host, card-parts, counter | picked marks, legal glows, inline icon glow, counter motion and thresholds | (link removed)> |
-| [card-motion.html](card-motion.html) | deck-motions, card-pile, market-row | deal, refill turn-over, deck cycle, riffle, pile edges and fan, market refill by slide | (link removed)> |
+| [target-arrow.html](target-arrow.html) | target-arrow | arrow colours, stroke, dash flow, head, curve, snap and strike timing | private Artifact |
+| [glows.html](glows.html) | picked-state, prompt-host, card-parts, counter | picked marks, legal glows, inline icon glow, counter motion and thresholds | private Artifact |
+| [card-motion.html](card-motion.html) | deck-motions, card-pile, market-row | deal, refill turn-over, deck cycle, riffle, pile edges and fan, market refill by slide | private Artifact |
 | [riffle.html](riffle.html) | deck-motions | top-view and side-view riffle, each with speed, cards, orientation and the four phase timings | to publish |
 | [energy.html](energy.html) | effect-library | column, curved and rotating beams, warp and spiral transfers, projectile, shield bubble, plasma orb, reticle, drift cloud | to publish |
-| [token-motion.html](token-motion.html) | token-flights, token-bag, track | token flights, 2D and 3D bag draws, marker glide, hop-and-fill, and lit steps | (link removed)> |
-| [pieces-motion.html](pieces-motion.html) | pieces-3d, pieces-3d-verbs, drag-drop | d6 and d10 rolls, ball roll and settle, chip depth and shadows, drag ghost | (link removed)> |
+| [token-motion.html](token-motion.html) | token-flights, token-bag, track | token flights, 2D and 3D bag draws, marker glide, hop-and-fill, and lit steps | private Artifact |
+| [pieces-motion.html](pieces-motion.html) | pieces-3d, pieces-3d-verbs, drag-drop | d6 and d10 rolls, ball roll and settle, chip depth and shadows, drag ghost | private Artifact |
 | [screen.html](screen.html) | effect-library, motion-frame, board-viewport, modal-dialog, phone-mode, card-zoom, achievements, card-attachments | camera pull and push, scroll pan, letterbox banner, typewriter, pile lift, board zoom and pan, dialog fade, phone sheet slide, card-zoom placement, achievement toast hold, card stack slide and fan | to publish |
 
 ## How a tuner is made

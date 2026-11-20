@@ -1,4 +1,4 @@
 {
   "host": "my-pc.tailnet.ts.net",
-  "serveRoot": "REDACTED"
+  "serveRoot": "C:/path/to/serve"
 }
