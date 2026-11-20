@@ -172,11 +172,36 @@ describe('llm-playtester', () => {
       const lines: string[] = [];
       const second = await runMain(['--adapter', adapter, '--out', tmp(), '--ledger', f, '--total-cap', cap, ...M], (s) => lines.push(s), {}, paying);
       expect(lines[0]).toContain('Spent so far');
+      expect(second.totalUsd).toBeGreaterThan(0);
       expect(second.totalUsd).toBeLessThanOrEqual(first.totalUsd * 0.5 + 1e-9);
       expect(ledgerSpent(f)).toBeLessThanOrEqual(first.totalUsd * 1.5 + 1e-9);
       const third = await runMain(['--adapter', adapter, '--out', tmp(), '--ledger', f, '--total-cap', String(ledgerSpent(f)), ...M], () => undefined, {}, paying);
       expect(third.code).toBe(1);
       expect(third.runs).toEqual([]);
+    });
+    it('a corrupt ledger line or a non-numeric costUsd refuses to start with exit 2', async () => {
+      for (const bad of ['not json', '{"costUsd":"x"}', '{"runId":"a"}']) {
+        const f = join(tmp(), 'spend.jsonl');
+        writeFileSync(f, `{"costUsd":0.01}
+${bad}
+`);
+        const lines: string[] = [];
+        const r = await runMain(['--adapter', adapter, '--out', tmp(), '--ledger', f, '--total-cap', '1', ...M], (s) => lines.push(s), {}, paying);
+        expect(r.code).toBe(2);
+        expect(r.runs).toEqual([]);
+        expect(lines.join('\n')).toMatch(/line 2/);
+        expect(lines.join('\n')).toContain(f);
+      }
+    });
+    it('--max-usd above what the total cap has left: the run gets only what is left', async () => {
+      const f = join(tmp(), 'spend.jsonl');
+      writeFileSync(f, '{"costUsd":0.99}
+');
+      const lines: string[] = [];
+      const r = await runMain(['--adapter', adapter, '--out', tmp(), '--ledger', f, '--total-cap', '1', '--max-usd', '5', ...M], (s) => lines.push(s), {}, paying);
+      expect(lines.join('\n')).toContain('may spend $0.0100');
+      expect(r.totalUsd).toBeLessThanOrEqual(0.01);
+      expect(ledgerSpent(f)).toBeLessThanOrEqual(1);
     });
     it('required-cap mode refuses to start with no cap, and starts with one', async () => {
       expect((await dummyRun(['--require-cap'])).code).toBe(2);

@@ -206,7 +206,20 @@ export interface MainResult {
 /** Sum of costUsd in a spend ledger (jsonl); 0 when the file is missing. */
 export function ledgerSpent(file: string): number {
   if (!existsSync(file)) return 0;
-  return readFileSync(file, 'utf8').split('\n').filter((l) => l.trim() !== '').reduce((n, l) => n + (JSON.parse(l) as { costUsd: number }).costUsd, 0);
+  let n = 0;
+  readFileSync(file, 'utf8').split('
+').forEach((l, i) => {
+    if (l.trim() === '') return;
+    let c: unknown;
+    try {
+      c = (JSON.parse(l) as { costUsd?: unknown }).costUsd;
+    } catch {
+      throw new Error(`spend ledger ${file} line ${i + 1} is not valid JSON`);
+    }
+    if (typeof c !== 'number' || !Number.isFinite(c) || c < 0) throw new Error(`spend ledger ${file} line ${i + 1} has no valid costUsd`);
+    n += c;
+  });
+  return n;
 }
 
 export async function main(argv: string[], log: (s: string) => void = console.log, env: Record<string, string | undefined> = process.env, client?: Chooser): Promise<number> {
@@ -251,7 +264,13 @@ export async function runMain(argv: string[], log: (s: string) => void = console
   const done: PlaytestResult[] = [];
   let totalUsd = 0;
   if (capSet) {
-    const spent = ledger === undefined ? 0 : ledgerSpent(ledger);
+    let spent = 0;
+    try {
+      spent = ledger === undefined ? 0 : ledgerSpent(ledger);
+    } catch (e) {
+      log(`${(e as Error).message}: refusing to start`);
+      return { code: 2, runs: done, totalUsd };
+    }
     left = Math.min(left, cap - spent);
     log(`Spent so far $${spent.toFixed(4)} of the $${cap} total cap; this call may spend $${Math.max(0, left).toFixed(4)}`);
     if (left <= 0) return { code: 1, runs: done, totalUsd };
