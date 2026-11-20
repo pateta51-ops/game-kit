@@ -10,6 +10,7 @@ import os
 import re
 import shutil
 import sys
+import zlib
 from collections import defaultdict
 from pathlib import Path
 from typing import Any
@@ -94,7 +95,7 @@ def cmd_check(cfg: Config, cues: list[Cue], args: argparse.Namespace) -> int:
     for name, cs in by.items():
         be = B.make(name, cfg.backends[name], cfg.root)
         try:
-            be.check()
+            be.check(cs)
             state = "ready"
         except B.Skip as e:
             state = f"SKIP: {e}"
@@ -119,7 +120,7 @@ def _gen_jobs(cfg: Config, name: str, be: B.Backend, cs: list[Cue], args: argpar
             tl = cfg.categories[c.category].tail
             if tl and not c.is_loop:
                 secs = round(secs + float(tl.get("extraGenerateS", 2.0)), 3)  # room for the clip's own decay
-            stem = f"{name}--{c.name}-{n}-s{seed}-{secs:g}s"  # a longer request is a new raw file
+            stem = f"{name}--{c.name}-{n}-s{seed}-{secs:g}s" + (f"-L{zlib.crc32(c.lyrics.encode()):08x}" if c.lyrics else "")  # a longer request is a new raw file
             job = B.Job(cue=c, n=n, seed=seed, seconds=secs, out=raw_dir / f"{stem}.wav")
             old = [p for p in sorted(raw_dir.glob(f"{stem}.*")) if p.suffix != ".json"] if args.reuse_raw else []
             if old:
@@ -169,7 +170,7 @@ def cmd_generate(cfg: Config, cues: list[Cue], args: argparse.Namespace, all_cue
         if not jobs:
             continue
         try:
-            be.check()
+            be.check(cs)
             print(f"[{name}] generating {len(jobs)} file(s) with {be.tool}")
             results = be.generate(jobs)
         except B.Skip as e:

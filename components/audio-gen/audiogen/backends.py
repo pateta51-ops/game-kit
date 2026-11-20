@@ -81,8 +81,8 @@ class Backend:
     def licence(self) -> str:
         return str(self.opts["licence"])
 
-    def check(self) -> None:
-        """Raise Skip when the backend cannot run."""
+    def check(self, cues: list[Cue] | None = None) -> None:
+        """Raise Skip when the backend cannot run (cues: the cues it will make, for checks that depend on them)."""
 
     def generate(self, jobs: list[Job]) -> list[Result]:
         """One Result per job, in any order; a failed job has `error` set. Raise Skip only before any work."""
@@ -107,7 +107,7 @@ class WorkerBackend(Backend):
     def python(self) -> Path:
         return expand(str(self.opts.get("python", sys.executable)), self.base)
 
-    def check(self) -> None:
+    def check(self, cues: list[Cue] | None = None) -> None:
         py = self.python()
         if not py.exists():
             raise Skip(f"{self.name}: its Python {py} does not exist (see scripts/audio/README.md, Setup).")
@@ -140,6 +140,7 @@ class WorkerBackend(Backend):
                     "beatsPerBar": j.cue.beats_per_bar,
                     "loop": j.cue.is_loop,
                     "options": j.cue.options,
+                    "lyrics": j.cue.lyrics,
                     "label": f"{j.cue.name}#{j.n}",
                 }
                 for j in jobs
@@ -257,12 +258,21 @@ class YuE2(WorkerBackend):
                 done[id(j)] = failed(j, skip or "", self.model)
         return [done[id(j)] for j in jobs]
 
-    def check(self) -> None:
-        super().check()
+    def whisper_model(self) -> Path:
+        return expand(str(self.opts.get("whisperModelDir", "~/audio-gen/models/whisper-large-v3-turbo")), self.base)
+
+    def whisper_python(self) -> Path:
+        return expand(str(self.opts.get("whisperPython", "~/audio-gen/venv-demucs/bin/python")), self.base)
+
+    def check(self, cues: list[Cue] | None = None) -> None:
+        super().check(cues)
         self.need_queue()
         dm = expand(str(self.opts.get("demucsPython", "~/audio-gen/venv-demucs/bin/python")), self.base)
         if not dm.exists():
             raise Skip(f"{self.name}: no demucs Python at {dm} for the vocal gate (install.sh yue2, or set demucsPython).")
+        sung = [c.name for c in cues or [] if c.lyrics]
+        if sung and not ((self.whisper_model() / "model.bin").is_file() and self.whisper_python().exists()):
+            raise Skip(f"{self.name}: cue(s) {', '.join(sung)} have lyrics, which are checked with faster-whisper, and its model {self.whisper_model()} (or Python {self.whisper_python()}) is missing: run `bash install/install.sh whisper`.")
 
 
 KINDS: dict[str, type[Backend]] = {b.id: b for b in (StableAudio3, YuE2)}

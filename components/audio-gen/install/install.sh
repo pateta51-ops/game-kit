@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Install the local models under ~/audio-gen (WSL or Linux). Each group is optional:
-#   install.sh core sa3 yue2 kokoro midi        (no argument: core only)
+#   install.sh core sa3 yue2 whisper kokoro midi        (no argument: core only)
 # Nothing paid is installed or called. Weights are downloaded by the tools on first use into ~/audio-gen or the
 # Hugging Face cache and are never committed. `python3 audiogen/tools.py status` says what is installed.
 set -euo pipefail
@@ -29,6 +29,13 @@ if has yue2; then
   # demucs htdemucs for the vocal gate, in its own venv
   venv venv-demucs
   "$H/venv-demucs/bin/pip" install -q torch torchaudio demucs==4.1.0 soundfile
+fi
+if has whisper; then
+  # K485: faster-whisper (CUDA) checks sung lyrics; it goes into the demucs venv (torch is already there), the model is
+  # large-v3-turbo in CTranslate2 form (MIT) in $H/models/whisper-large-v3-turbo.
+  venv venv-demucs
+  "$H/venv-demucs/bin/pip" install -q torch torchaudio faster-whisper==1.2.1 huggingface-hub
+  "$H/venv-demucs/bin/python" -c "from huggingface_hub import snapshot_download as d; d('mobiuslabsgmbh/faster-whisper-large-v3-turbo', local_dir='$H/models/whisper-large-v3-turbo')"
 fi
 if has kokoro; then
   # Kokoro-82M, free local voice lines (needs espeak-ng for English: sudo apt install espeak-ng).
