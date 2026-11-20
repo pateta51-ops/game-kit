@@ -18,6 +18,8 @@ Small repo scripts a game runs with `node kit/tooling-scripts/<script>.ts`. Each
 - Treating `text-leak.ts` output as a failure to fix blindly: short functional overlaps are expected and a person judges the list.
 - Running `launch.ts` without listing every source, content and config input: a change outside the list does not trigger a rebuild.
 
+## Scripts
+
 - `shrink-png.ts` (from Jarl): `--dir <dir> [--max-bytes 1900000] [--colours 256,192,128] [--sharp <module>]`. Re-encodes each PNG over the limit as a dithered palette PNG at the same size; exit 1 when one still does not fit.
 - `fonts-fetch.ts`, `woff.ts` (from Rome): `--roles <json> --out <dir> [--force]`. The JSON is `{ roles: [{ role, family, printed, ownerPrefix?, substitute: { family, licence, licenceFile, licenceUrl, files: [{ file, url }] } }], copy?: [{ from, note }] }`. Downloads from the URLs you list (a manual step, never in a check); a `.woff` name packs the TTF with `toWoff(bytes)`; writes `fonts.json` and `LICENSES.md`.
 - `mock-capture.ts` (from Jarl and Rome): `--list <json> --src <dir> --out <dir> [--only a,b] [--width 3840] [--height 2160] [--settle-ms 800] [--playwright <module>]`. The list is `[{ name, file, query?, width?, height?, deviceScaleFactor?, browser?, fullPage? }]`; writes `<out>/<name>.png` and `capture-report.json` (errors, failed requests, broken images, fonts, bytes). No callout boards.

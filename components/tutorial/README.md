@@ -13,7 +13,7 @@ The tutorial engine for any `GameRules<G>` game: a script format, headless play 
 4. Add a `tutorial:check` script that calls `tutorialCheck(game, script, options, io)`; exit 1 means the script no longer plays (`NO_PROMPT`, `WRONG_SEAT`, `NO_SUCH_OPTION`, `DISABLED_OPTION`, `ILLEGAL`, `MISSING_EVENT`, `UNCOVERED`, `UNTESTED`, `NO_END` ...).
 5. Lock the UI with `lockAt` and `lockPrompt`: only the scripted answer is allowed, Undo and Redo are off during the lesson and everything is free after the last step.
 6. Use `actionsBefore` and `stepAt` to resume the right step after an undo or reload.
-7. Mount `<TutorialPanel>` and `<TutorialHighlight>`; mark target elements `data-tutorial-target="<id>"` (or pass `find`), and pass `side`/`docked` to both when the panel is docked, shrinking the game screen with `--tut-reserve`.
+7. Mount `<TutorialPanel>` and `<TutorialHighlight>`; mark target elements `data-tutorial-target="<id>"` (or pass `find`), pass `side` to the panel and `docked` to both when it is docked, shrinking the game screen with `--tut-reserve`.
 8. Set `--tut-*` variables on `:root`; give e2e `playTutorialE2E` and waits on `data-step`.
 9. Write narration with the game's words; the owner approves the generated `scriptDoc`, so regenerate it and run its `--check`.
 

@@ -10,7 +10,7 @@ Rule-citation gate. The game passes a `trace.config.json` (any subset of the opt
 1. Install the game's `typescript` package (test titles are read with a TypeScript parse) and keep a `trace.config.json` in the repository root (copy `trace.config.example.json`).
 2. Run `node kit/traceability/check-traceability.ts [--config path] [--strict] [--release] [--quiet] [--warn]` from the repository root in the game's check.
 3. Set `families`/`idTail` (or the whole `idPattern`) to the plan's id shape; defaults are `\d{2,3}` tails.
-4. Put the id in the title string of the first argument of `it`, `test` or `describe`; ids in comments, strings or `helper.it(` calls are not read.
+4. Put the id in the title string of the first argument of an `it` or `test` call (`describe` titles count only with `countDescribe: true`); ids in comments, strings or `helper.it(` calls are not read.
 5. Keep a title to at most `maxIdsPerTitle` ids (default 6; more counts for none), and do not write titles as template literals when `rejectTemplateTitles` is on.
 6. List ids that are not due in the pending file named by `pending` (id to batch); `--release` fails while it is not empty.
 7. Use `citeFiles` to require rule citations in comments for engine folders.
