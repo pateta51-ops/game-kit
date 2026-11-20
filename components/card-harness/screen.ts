@@ -11,7 +11,9 @@ export interface ScreenInput {
   /** Printed text per clause id. */
   clauses: readonly { id: string; text: string }[];
   /** Prompts a card test scanned: their clause and the words shown (`Delivery.screens`). */
-  prompts: readonly { clause: string; shown: string }[];
+  prompts: readonly { clause: string; shown: string; /** Option labels on screen (optional, K496). */ screenOptions?: readonly string[]; /** The engine prompt's options (optional, K496); compared with `screenOptions` one for one. */ engineOptions?: readonly unknown[] }[];
+  /** Turns an engine option into its label; default `String`. */
+  label?: (engineOption: unknown) => string;
   /** Clauses whose resolution opened a prompt in a card test (`Delivery.opened`). */
   opened: Iterable<string>;
   /** `[open, close]` of an icon token in printed text; default `['{', '}']`. */
@@ -41,6 +43,14 @@ export function screenProblems(i: ScreenInput): string[] {
     const want = numbers(text.get(p.clause) ?? '');
     const got = new Set(numbers(p.shown));
     if (want.length > 0 && !want.some((w) => got.has(w))) out.push(`prompt for ${p.clause}: no amount`);
+  }
+  for (const p of i.prompts) {
+    if (!p.screenOptions || !p.engineOptions) continue;
+    const n = (t: string): string => plainWords(t, i.strip).join(' ');
+    const eng = p.engineOptions.map((e) => n((i.label ?? String)(e))), scr = p.screenOptions.map(n);
+    const left = [...eng];
+    for (const [k, x] of scr.entries()) { const j = left.indexOf(x); if (j < 0) out.push(`prompt for ${p.clause}: option "${p.screenOptions[k]!}" on screen, not in the engine`); else left.splice(j, 1); }
+    for (const x of left) out.push(`prompt for ${p.clause}: engine option "${p.engineOptions.map((e) => (i.label ?? String)(e)).find((e) => n(e) === x)!}" not on screen`);
   }
   const scanned = new Set(i.prompts.map((p) => p.clause));
   for (const k of [...new Set(i.opened)].sort()) if (!scanned.has(k)) out.push(`${k} opens a prompt no test scanned`);
