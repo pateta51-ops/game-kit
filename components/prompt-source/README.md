@@ -2,6 +2,21 @@
 
 Each prompt names its source frame (card and clause), a decision-authority tag when the player decides for the automated side, and a read-only stack view. No packages; draws nothing; no prose. Tests: `source.test.ts`. Idea from marvel-champions-digital-game (K90).
 
+## Rules for agents
+
+**What it does:** Each prompt names its source (card and clause); a tag says when the player decides for the automated side.
+
+**You must:**
+1. Add `source: PromptSource` (`frame`, printed `clause`, optional `card`, `window`, `event`) to every `ctx.ask`; for a rule's own prompt `clause` is the rule id and `card` is absent.
+2. Set `authority` on prompts the player answers for the automated side, with an `AuthorityTable` of constant words.
+3. Keep a game test `expect(checkPromptSources({ states, prompt, frames?, authorities? })).toEqual([])` over seeded states.
+4. Show the printed words on screen, never the rule id (filter with plain-text).
+5. For a "what is resolving" panel use `stackView` and return null from `describe` for internal tasks.
+
+**Common mistakes:**
+- An empty `clause`, a `frame` not among the state's frames or an unknown authority tag is reported by the check.
+
+
 ## The game passes
 
 The game adds `source: PromptSource` and `authority?: string` to its own prompt type (engine-core's `G['prompt']` extends `KernelPrompt`, so engine-core is unchanged) and fills them in `ctx.ask`:

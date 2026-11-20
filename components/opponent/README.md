@@ -2,6 +2,24 @@
 
 A rule-based opponent (K103, K115). Pure data and functions; the engine never imports it. The game supplies the view, the candidates, the advice and the handlers.
 
+## Rules for agents
+
+**What it does:** A rule-based opponent: pure functions that choose from the player's own view.
+
+**You must:**
+1. Make the view with `redact(state, seat, view)` and pass opponent functions only that `Redacted` type; never the real state, the rng or hidden cards.
+2. Keep a game test `viewLeaks(view, secrets, { keys: ['rng'] })` expecting `[]`, over several states.
+3. Give each `Candidate` a `key` stable across prompts, lined up with the legal answers; pass sim-pool's `DriverRng` (or `int` / `chance`) as `rand`, never `Math.random`.
+4. Keep tests `handlerProblems(verbs, handlers)` and `adviceProblems(table)` expecting `[]`; load profiles with `loadProfile` (an unknown key or type throws).
+5. Never import the opponent from the engine.
+6. Use `opponentBot` with game-store's `botOpponent` or `opponentDriver` with sim-pool; save `memory` with the opponent.
+7. In tests assert the `reason` code of a decision, not the move.
+
+**Common mistakes:**
+- A greedy that reads hidden state is a test pilot, not an opponent.
+- A view type with an `rng` key does not compile through `redact`.
+
+
 - **Redacted view**: `redact(state, seat, view)` returns `Redacted<V>`; every opponent function takes only that type. `viewLeaks(view, secrets, { numbers?, keys? })` lists hidden ids found in a view: an exact value or a whole word inside a string (`card:42` holds `42`, `c10` does not hold `c1`); `numbers` are exact secret numbers the game marks; `keys` are key names the view must not hold (`['rng']`), listed as `key:rng` (a test expects none). K238: `redact` refuses, at type level, a view type with an `rng` key.
 - **Pick an index**: `pick(opponent, view, candidates, { rand, timing?, step?, prompt? })` returns a `DecisionRecord` whose `index` is the legal option taken. A `Candidate` is `{ key, card?, verbs?, pass? }`; `key` is stable across prompts. Order: one option (`only-option`), the plan, the best `play`, a `pass`, else the best of the rest (`forced`). `rand` is sim-pool's `DriverRng` or anything with `int` and `chance`.
 - **Fixed pipeline** (`judge`): advice `cannotUse`, `when` against the timing, `needs` (via `count`), `nonStacking` (via `inPlay`), runaway guard (after `runawayFree` uses of a card, goes on with chance `runawayDecay^n`), then each verb's handler (`judge`, then `cost`; a refused sub-effect is `drawback`), then `advice.priority` and the opponent's `score`. `prune` passes drop keys before the choice.

@@ -2,6 +2,21 @@
 
 The mark for an option the player has picked, as tokens plus one small helper.
 
+## Rules for agents
+
+**What it does:** The mark for an option the player has picked.
+
+**You must:**
+1. Spread `pickedAttrs(picked, anyPicked)` on each option of one choice (or use `pickedStates`).
+2. Import one `looks/*.css` once (or write your own on `[data-picked]`): `picked.css` alone shows nothing.
+3. Use it for "picked" only, never for "can act" or "just counted".
+4. Give a clipped parent `overflow: visible` so the tick shows.
+5. Keep unpicked options pressable and readable: raise `--unpicked-dim`, never remove the dimming.
+
+**Common mistakes:**
+- The looks set tokens on `:root` at normal specificity: override later or with a more specific selector.
+
+
 Game passes in: for each option of one choice, whether it is picked. Spread `pickedAttrs(picked, anyPicked)` on the element (`data-picked="picked"` or `"unpicked"`; nothing before the first pick), or use `pickedStates(options, isPicked)`. `picked.css` ships no look; import one `looks/*.css` once (or write your own on `[data-picked]`).
 
 Rules

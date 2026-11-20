@@ -1,6 +1,24 @@
 # prompt-host
 Shows the engine's open question (an engine-core prompt) through a typed widget registry, with the common widgets built and unstyled. `index.ts` loads in node (`autoAnswer`); `ui.ts` is React.
 
+## Rules for agents
+
+**What it does:** Shows the engine's open question through a typed widget registry.
+
+**You must:**
+1. Give `Widgets` one component for every prompt `kind`; a missing kind fails to compile.
+2. Pass `prompt` and `view` from the player's own view, `answer(picks, promptId)` to the store, and `seat` (this screen's seat) so another seat's prompt shows `waiting`.
+3. Supply `look` with `cls`, `label`, the game's words (`done`, `count`, `confirm`, `cancel`, ...) and `text: ids.strip`; keep a game test `checkLook(look)` equal to `[]` (placeholders warn in dev).
+4. For forced answers use the store helper `answerWithForced(game, history, action, content, forced, { seat })` (`seat` required; `'all'` for hot seat), then feed its `events` to paced-view `pushSteps` once. `auto` is only for a game without undo.
+5. Board taps: `useBoardPick` and `<BoardBar>`; map `marks` onto the board elements and call `tap(id)`.
+6. Import opt-in look CSS (`looks/overflow.css`, `legal-glow.css`) yourself; pass `overflow` with `stage` and `zone` in the same coordinates.
+7. Show printed words: the heading is the card's printed clause (prompt-source), never a rule id.
+
+**Common mistakes:**
+- A chain of forced answers beyond `cap` stops with `capped: true` and an `error`.
+- Half-made picks reset when the prompt id changes; do not keep them elsewhere.
+
+
 ## The game passes
 - K289, `alone` options (engine-core K287): in `PickOptions` and `Order` an enabled alone option (Back, Pass) answers `[id]` on its click and never joins the selection or the order; prompts without `alone` are unchanged.
 

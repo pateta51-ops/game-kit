@@ -2,6 +2,22 @@
 
 The plan checker: `plancheck.py` checks a game's build plan (Markdown) for balanced fences, anchors, section references, defined and cited ids, tables, session-plan and phase coverage. It also prints a worker's order (`--batch <id>`: the shared preamble, the batch block and the line ranges to read) or one numbered section (`--section 5.3`). `plancheck.ts` wraps it for tests. It warns (never fails) when the kit pin is 5+ minor versions behind the latest tag or a `Phase GK` targets a K row the kit's PLAN marks done (a major jump counts; `--kit PATH`; skipped when no checkout is found). The docstring at the top of `plancheck.py` lists every check and flag.
 
+## Rules for agents
+
+**What it does:** Checks a game's build plan and prints a worker's order.
+
+**You must:**
+1. Run `python kit/plan-checker/plancheck.py docs/PLAN.md` in the game's check chain (Python 3 needed); exit 1 lists problems, nothing is written.
+2. A worker prints its batch with `--batch <id>` and Reads only the line ranges it lists; `--section N.N` prints one section. Never open the plan whole.
+3. Keep each id defined once, every cited scenario defined and every scenario cited by a phase.
+4. Keep the session plan complete: every phase in one batch row, every batch with a Model and a Confidence percentage.
+5. Keep the test-depth text in the plan (`expectNotOffered`, "default-off", "LLM playtest", `llm-playtester` in a phase, e2e and `heavy` in the preamble), or pass `--depth-optional` for an older plan.
+6. Use `--sessions-optional` only for a plan with no session plan.
+
+**Common mistakes:**
+- A plan older than 18 Nov 2026 fails the `depth:` checks until amended or run with `--depth-optional`.
+
+
 ## What it checks, how to run it
 
 Run `python kit/plan-checker/plancheck.py docs/PLAN.md [flags]` (the game's check chain does); exit 0 when there is no problem, 1 with the problems listed. It reads only the Markdown; nothing is written.
