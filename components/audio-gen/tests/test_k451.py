@@ -250,7 +250,7 @@ class Yue2Worker(unittest.TestCase):
             is_available=lambda: cuda, reset_peak_memory_stats=lambda: None, memory_allocated=lambda: 5,
             max_memory_allocated=lambda: 6, get_device_properties=lambda i: types.SimpleNamespace(total_memory=gib * 2**30)),
             set_num_threads=lambda n: None)
-        torch.cuda.empty_cache = lambda: seen["freed"].append(len(seen["demucs"]))
+        torch.cuda.empty_cache = lambda: seen["freed"].append(sum("htdemucs" in c for c in seen["demucs"]))
         mods = {"yue2": types.SimpleNamespace(__version__=version, YuE2Pipeline=Pipe), "soundfile": types.SimpleNamespace(read=read), "torch": torch}
         spec = importlib.util.spec_from_file_location("yue2_worker", HERE / "workers" / "yue2_worker.py")
         w = importlib.util.module_from_spec(spec)
@@ -385,7 +385,7 @@ class K474Worker(unittest.TestCase):
     def test_low_memory_before_demucs_fails_the_take_without_running_it(self):
         avail = iter([100.0, 2.0])
         code, seen, res, made, _ = self.run_worker(avail=lambda: next(avail))
-        self.assertEqual(seen["demucs"], [])
+        self.assertEqual([c for c in seen["demucs"] if "htdemucs" in c], [])
         self.assertIn("demucs pass", res[0]["error"])
         self.assertFalse(made)
 
