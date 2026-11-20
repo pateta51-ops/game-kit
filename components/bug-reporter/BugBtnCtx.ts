@@ -17,4 +17,4 @@ export interface BugBtnSlots {
   /** Draws a button instead of the default `<button>`; wire `onClick`, `disabled`, `type` and `testId` through. */
   readonly renderButton?: (b: BugBtnProps) => ReactNode;
 }
-export export const Slots = createContext<BugBtnSlots>({});
+export const Slots = createContext<BugBtnSlots>({});
