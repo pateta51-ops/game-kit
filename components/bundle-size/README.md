@@ -2,6 +2,22 @@
 
 The size gate for a vite build: gzips `index.html` and what it loads at once, and fails over the game's limits.
 
+## Rules for agents
+
+**What it does:** The size gate for a vite build: gzips `index.html` and what it loads at once, and fails when the game's limits are exceeded.
+
+**You must:**
+1. Run `vite build` first (or omit `--dir` so it builds into `.cache/size-build`); a missing build exits 2 with `no build`.
+2. Pass at least one limit, in bytes: `--initial-budget` (gzipped first download), `--chunk-limit` (one script chunk before gzip) or `--asset-limit`; a limit left out is not checked, and none at all is a usage error (exit 2).
+3. Keep the game's limits in its own script as `Limits` and pass them as the defaults of `run`, so a test can import the same `BUDGET` and call `measureBuild(dir, BUDGET)`.
+4. Set `base` to the app's base path, or `auto`, when the app is not served from `/`; otherwise assets are not found.
+5. Add `follow: true` to count static imports, stylesheet `url(...)` and icon or manifest links.
+6. Read exit codes: 0 within limits, 1 over, 2 no build or bad usage.
+
+**Common mistakes:**
+- A `gzipLevel` outside the whole numbers 0 to 9: it throws.
+- Stale or partial `dist`: it throws when `index.html` names a file the build lacks.
+
 ```
 node kit/bundle-size/check-bundle-size.ts --initial-budget 2097152 --chunk-limit 512000 [--dir dist] [--json report.json]
 ```
