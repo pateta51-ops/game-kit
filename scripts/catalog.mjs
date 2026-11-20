@@ -78,7 +78,7 @@ for (const n of names) {
     `- **Key exports:** ${ex}\n` +
     `- **Needs:** ${needs}\n` +
     `- **Came from:** ${origin.length > 160 ? origin.slice(0, 157) + '...' : origin}\n` +
-    `- **Docs:** ${readme ? `[README](../${readme})` : `[component.json](../components/${n}/component.json)`}\n`,
+    `- **Docs:** ${readme ? `[README](../${readme}) ([rules for agents](../${readme}#rules-for-agents))` : `[component.json](../components/${n}/component.json)`}\n`,
   )
   table.push(`| [\`${n}\`](#${n}) | ${note.use.split(/[.;]/)[0]} |`)
 }

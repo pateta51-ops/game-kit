@@ -82,6 +82,13 @@
   #pile-sample { transform: rotate(-5deg); box-shadow: .35rem .6rem #afa7c2, .7rem 1.2rem #8276aa }
 </style>
 <script>if (new URLSearchParams(location.search).has('signals')) document.documentElement.classList.add('signals-only')</script>
+<script>if (new URLSearchParams(location.search).has('herald')) document.documentElement.classList.add('herald-only')</script>
+<style>
+  .herald-panel { display: none; background: #292733; color: #ebe9f2 }
+  .herald-only main > :not(.herald-panel) { display: none }
+  .herald-only .herald-panel { display: block }
+  .herald-panel .sample { background: #55486d; color: #ebe9f2; font: bold 1.4rem Georgia; left: 15%; top: 30%; width: 70%; height: 40% }
+</style>
 <style>
   .lines-panel { display: none; background: #292733; color: #ebe9f2 }
   .lines-only main { grid-template-columns: repeat(2, minmax(0, 1fr)) }
@@ -161,6 +168,11 @@
     <div id="via-rest" class="flight-target" style="left:45%;top:25%;width:15%"></div>
     <div id="via-target" class="flight-target" style="left:77%;top:58%;width:9%"></div>
   </section>
+  <section class="field herald-panel"><h2>Unroll collapse</h2><div id="herald-collapse" class="sample">Panel</div></section>
+  <section class="field herald-panel"><h2>Count</h2><div id="herald-count" class="sample"></div></section>
+  <section class="field herald-panel"><h2>Banner</h2><div id="herald-banner" class="sample"></div></section>
+  <section class="field herald-panel"><h2>Glow to dark</h2><div id="herald-glow" class="sample">Plate</div></section>
+  <section class="field herald-panel"><h2>Cracked stamp</h2><div id="herald-stamp" class="sample"></div></section>
   <section class="field signal-panel"><h2>Stamp</h2><div id="signal-stamp" class="card sample"></div></section>
   <section class="field signal-panel"><h2>Motes</h2><div id="signal-motes" class="lamp signal-mark sample">✦</div></section>
   <section class="field signal-panel"><h2>Flicker</h2><div id="signal-flicker" class="card signal-mark sample"></div></section>
@@ -184,6 +196,7 @@
 <script type="module" src="./flights.ts"></script>
 <script type="module" src="./beams.ts"></script>
 <script type="module" src="./signals.ts"></script>
+<script type="module" src="./herald.ts"></script>
 <script type="module" src="./rotations.ts"></script>
 <script type="module" src="./combat.ts"></script>
 <script type="module" src="./loops.ts"></script>
