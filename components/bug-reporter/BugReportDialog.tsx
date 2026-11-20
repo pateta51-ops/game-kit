@@ -14,7 +14,8 @@ import { queueReport, safeInQueueMessage, savedMessage, useQueue } from './queue
 import { reportFileName, type BugReport } from './report.ts';
 import { useToken } from './token.ts';
 import { installDevBugHooks, sendDeps } from './transport.ts';
-import { Btn, Slots, type BugBtnSlots } from './BugSettings.tsx';
+import { Btn } from './BugBtn.tsx';
+import { Slots, type BugBtnSlots } from './BugBtnCtx.ts';
 import './bugs.css';
 
 type Outcome =
