@@ -11,6 +11,8 @@ import { ledgerSpent, main, runMain, runPlaytest } from './playtest.ts';
 const tmp = () => mkdtempSync(join(tmpdir(), 'llm-playtester-'));
 const usage = { input_tokens: 100, output_tokens: 50, cache_creation_input_tokens: 0, cache_read_input_tokens: 2000 };
 
+const endless = () => ({ ...createAdapter(), done: () => null });
+
 describe('llm-playtester', () => {
   it('plays a dummy game to the end and writes the logs', async () => {
     const out = tmp();
@@ -246,5 +248,41 @@ describe('heavy queue (K416)', () => {
     expect(lines.join(' ')).toContain('REFUSED');
     const ok = await runMain(['--adapter', adapter, '--out', tmp()], () => undefined, {}, () => Promise.resolve({ option: 0, reason: 'r', usage }));
     expect(ok.runs).toHaveLength(1);
+  });
+
+  it('K491: one PLAYTEST ENDED line when the game ended with a result, none otherwise', async () => {
+    const lines: string[] = [];
+    await runPlaytest(createAdapter(), { seed: 's', dummy: true, out: tmp(), log: (s) => lines.push(s) });
+    expect(lines.filter((l) => l.startsWith('PLAYTEST ENDED'))).toEqual(['PLAYTEST ENDED won after 4 turns']);
+    const none: string[] = [];
+    await runPlaytest(createAdapter(), { seed: 's', dummy: true, out: tmp(), maxDecisions: 2, log: (s) => none.push(s) });
+    await runPlaytest(createAdapter(2), { seed: 's', dummy: true, out: tmp(), log: (s) => none.push(s) });
+    expect(none.filter((l) => l.includes('PLAYTEST ENDED'))).toEqual([]);
+  });
+
+  it('K491: the same finding repeated is reported once with a count and the run stops asking', async () => {
+    let calls = 0;
+    const client: Chooser = () => {
+      calls++;
+      return Promise.resolve({ option: 0, reason: `BUG: wrong count ${calls}`, usage });
+    };
+    const base = { seed: 's', client, model: 'claude-sonnet-5-5', log: () => undefined };
+    const r = await runPlaytest(endless(), { ...base, out: tmp(), maxRepeats: 5 });
+    expect(calls).toBe(5);
+    expect(r.findings).toHaveLength(1);
+    expect(r.findingCounts).toEqual([{ finding: r.findings[0], count: 5 }]);
+    expect(r.stop).toBe('finding');
+    expect(readFileSync(join(r.dir, 'summary.md'), 'utf8')).toContain('(x5)');
+    calls = 0;
+    const d = await runPlaytest(endless(), { ...base, out: tmp() });
+    expect(calls).toBe(3);
+    expect(d.findingCounts[0]!.count).toBe(3);
+  });
+
+  it('K491: different findings are all kept', async () => {
+    let calls = 0;
+    const client: Chooser = () => Promise.resolve({ option: 0, reason: `BUG: problem ${'ab'[calls++ % 2]}`, usage });
+    const r = await runPlaytest(endless(), { seed: 's', client, out: tmp(), model: 'claude-sonnet-5-5', log: () => undefined });
+    expect(r.findings).toHaveLength(2);
   });
 });

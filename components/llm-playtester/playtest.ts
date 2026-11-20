@@ -42,6 +42,8 @@ export interface PlaytestOptions {
   /** Where the pre-call cost estimate is printed (default console.log). */
   log?: (s: string) => void;
   /** Called after every paid call with its cost and the run id, so a caller can record spend even when the run throws. */
+  /** A finding seen this many times (same normalised key) stops the run; default 3. */
+  maxRepeats?: number;
   onSpend?: (costUsd: number, runId: string) => void;
 }
 export interface PlaytestResult {
@@ -52,11 +54,14 @@ export interface PlaytestResult {
   decisions: number;
   costUsd: number;
   findings: string[];
+  /** Each distinct finding (first text) with how often it was seen. */
+  findingCounts: { finding: string; count: number }[];
 }
 
 const HOW =
   'You are playtesting a board game adaptation. Each turn you get the current view and numbered options; you must answer by calling the choose tool (always call it, never reply in plain text): the option number and a short reason. Play to win. When the view, the options or the rules look wrong (an illegal option offered, a legal one missing, a wrong count, unclear text), start the reason with BUG: and say what.';
 
+const findingKey = (f: string) => f.toLowerCase().replace(/^step \d+:\s*/, '').replace(/\(step \d+, option \d+\)/g, '').replace(/\d+/g, '#').replace(/\s+/g, ' ').trim();
 const short = (s: string, n = 200) => (s.length > n ? `${s.slice(0, n)}…` : s);
 
 export async function runPlaytest(adapter: GameAdapter, opts: PlaytestOptions): Promise<PlaytestResult> {
@@ -72,7 +77,16 @@ export async function runPlaytest(adapter: GameAdapter, opts: PlaytestOptions): 
   mkdirSync(dir, { recursive: true });
   const log = join(dir, 'decisions.jsonl');
   writeFileSync(log, '');
-  const findings: string[] = [];
+  const seen = new Map<string, { finding: string; count: number }>();
+  let last = '';
+  const maxRepeats = opts.maxRepeats ?? 3;
+  const note = (f: string) => {
+    last = findingKey(f);
+    const e = seen.get(last);
+    if (e === undefined) seen.set(last, { finding: f, count: 1 });
+    else e.count++;
+    return seen.get(last)!.count >= maxRepeats && maxRepeats > 1;
+  };
   const recent: string[] = [];
   let spent = 0;
   let decisions = 0;
@@ -86,7 +100,7 @@ export async function runPlaytest(adapter: GameAdapter, opts: PlaytestOptions): 
     try {
       return f();
     } catch (e) {
-      findings.push(`adapter threw in ${what}: ${e instanceof Error ? e.message : String(e)}`);
+      note(`adapter threw in ${what}: ${e instanceof Error ? e.message : String(e)}`);
       return undefined;
     }
   };
@@ -116,7 +130,7 @@ export async function runPlaytest(adapter: GameAdapter, opts: PlaytestOptions): 
       const options = attempt('options', () => adapter.options());
       if (view === undefined || options === undefined) break;
       if (options.length === 0) {
-        findings.push(`step ${decisions}: no options and the game is not over`);
+        note(`step ${decisions}: no options and the game is not over`);
         break;
       }
       let choice = 0;
@@ -135,7 +149,7 @@ export async function runPlaytest(adapter: GameAdapter, opts: PlaytestOptions): 
             if (worst > maxUsd) {
               const m = `the first call alone could cost $${worst.toFixed(4)}, over the cap of $${maxUsd}: raise --max-usd`;
               say(m);
-              findings.push(m);
+              note(m);
             }
           }
           if (spent + worst > maxUsd) {
@@ -152,7 +166,7 @@ export async function runPlaytest(adapter: GameAdapter, opts: PlaytestOptions): 
           reason = a.reason;
           if (Number.isInteger(choice) && choice >= 0 && choice < options.length) break;
           const none = Number.isNaN(choice);
-          findings.push(none ? `step ${decisions}: ${a.stop_reason === 'max_tokens' ? `reply cut off at max_tokens (${maxTokens}) before a choose tool call` : 'reply had no choose tool call'}` : `step ${decisions}: invalid option ${String(choice)} of ${options.length}`);
+          note(none ? `step ${decisions}: ${a.stop_reason === 'max_tokens' ? `reply cut off at max_tokens (${maxTokens}) before a choose tool call` : 'reply had no choose tool call'}` : `step ${decisions}: invalid option ${String(choice)} of ${options.length}`);
           if (tries >= 1) {
             appendFileSync(log, JSON.stringify({ step: decisions, view: short(view), options, choice, reason, usage, cost: paid }) + '\n');
             break play;
@@ -164,16 +178,19 @@ export async function runPlaytest(adapter: GameAdapter, opts: PlaytestOptions): 
       }
       const viewHash = createHash('sha1').update(view).digest('hex').slice(0, 12);
       appendFileSync(log, JSON.stringify({ step: decisions, viewHash, view: short(view), options, choice, reason, usage, cost: paid }) + '\n');
-      if (/^\s*BUG:/i.test(reason)) findings.push(`step ${decisions}: ${reason}`);
+      const repeated = /^\s*BUG:/i.test(reason) && note(`step ${decisions}: ${reason}`);
       recent.push(`${decisions}: ${short(options[choice]!, 80)} (${short(reason, 120)})`);
       if (recent.length > (opts.history ?? 6)) recent.shift();
       decisions++;
+      if (repeated) break;
       if (attempt('choose', () => (adapter.choose(choice), true)) === undefined) {
-        findings[findings.length - 1] += ` (step ${decisions - 1}, option ${choice})`;
+        seen.get(last)!.finding += ` (step ${decisions - 1}, option ${choice})`;
         break;
       }
     }
   }
+  const counts = [...seen.values()];
+  const findings = counts.map((c) => c.finding);
   const replay = attempt('replay', () => adapter.replay());
   writeFileSync(join(dir, 'replay.json'), JSON.stringify(replay ?? null, null, 1) + '\n');
   writeFileSync(
@@ -189,11 +206,12 @@ export async function runPlaytest(adapter: GameAdapter, opts: PlaytestOptions): 
       '',
       '## Findings',
       '',
-      ...(findings.length ? findings.map((f) => `- ${f}`) : ['none']),
+      ...(findings.length ? counts.map((c) => `- ${c.finding}${c.count > 1 ? ` (x${c.count})` : ''}`) : ['none']),
       '',
     ].join('\n'),
   );
-  return { runId, dir, result, stop, decisions, costUsd: spent, findings };
+  if (result !== null) (opts.log ?? console.log)(`PLAYTEST ENDED ${result.won ? 'won' : 'lost'} after ${decisions} turns`);
+  return { runId, dir, result, stop, decisions, costUsd: spent, findings, findingCounts: counts };
 }
 
 export interface MainResult {

@@ -13,6 +13,8 @@ The game writes one adapter; Claude (or `--dummy`, the first option, no client b
 5. Always cap spend: `--max-usd` per run, and across invocations `--ledger <file> --total-cap <usd>` (`--require-cap` exits 2 without a cap).
 6. Never run a paid run under `heavy run` or in a queued job: it waits on an API, not the CPU, and exits 2 when `HEAVY_HELD=1` is set (what the heavy queue sets for its jobs). `--dummy` is allowed.
 7. Read `summary.md` in `logs/llm-player/<run-id>/`: `BUG:` reasons, invalid options and adapter throws are findings; keep legal wins as replay tests from `replay.json`.
+8. A gate reads one line per run that ended with a result: `PLAYTEST ENDED <won|lost> after <n> turns` (printed through `log`; nothing like it when the run stopped on a cap or a finding). Grep for it; never parse `summary.md` for that.
+9. A repeated finding is reported once: findings are keyed by their text lowercased, without the `step n:` prefix, digits as `#`. `summary.md` shows `(xN)`, `PlaytestResult.findingCounts` is `{finding, count}[]` (`findings` stays the distinct texts). When one finding reaches `maxRepeats` (default 3) the run stops with `stop: 'finding'`, so it does not keep spending on it; raise `maxRepeats` only to count more repeats.
 
 **Common mistakes:**
 - An adapter that throws, or an invalid option after one retry, stops the run with a finding and exit 1.
