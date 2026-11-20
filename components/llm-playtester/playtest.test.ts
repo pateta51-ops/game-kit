@@ -34,7 +34,7 @@ describe('llm-playtester', () => {
     const lines: string[] = [];
     const code = await main(['--adapter', join(import.meta.dirname, 'fake-adapter.ts'), '--dummy', '--runs', '2', '--out', out], (s) => lines.push(s), {});
     expect(code).toBe(0);
-    expect(lines).toHaveLength(2);
+    expect(lines.filter((l) => !l.startsWith('PLAYTEST ENDED'))).toHaveLength(2);
   });
 
   it('the CLI exits 2 on a bad --max-usd or --max-decisions', async () => {
@@ -63,8 +63,9 @@ describe('llm-playtester', () => {
   it('records BUG: reasons as findings', async () => {
     const client: Chooser = () => Promise.resolve({ option: 1, reason: 'BUG: only two options', usage });
     const r = await runPlaytest(createAdapter(), { seed: 's', client, out: tmp() });
-    expect(r.stop).toBe('done');
-    expect(r.findings).toHaveLength(2);
+    expect(r.stop).toBe('finding');
+    expect(r.findings).toHaveLength(1);
+    expect(r.findingCounts[0]!.count).toBe(3);
   });
 
   it('stops before a call would pass --max-usd (fake client, no network)', async () => {
