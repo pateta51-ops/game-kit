@@ -20,7 +20,6 @@ let last = 0;
 for (const at of [50, 450, 850, 1250, 1750]) {
   await page.waitForTimeout(at - last);
   last = at;
-  console.log('dbg', await page.evaluate(() => `${String(document.getAnimations().length)} anims; ${document.body.innerHTML.length} chars; clones ${String(document.querySelectorAll('[data-fx-actor],.fx-actor').length)}; ${getComputedStyle(document.getElementById('herald-count')).display}`));
   shots.push((await page.screenshot()).toString('base64'));
 }
 const sheet = await browser.newPage({ viewport: { width: 1000, height: 800 } });
