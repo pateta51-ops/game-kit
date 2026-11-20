@@ -14,6 +14,7 @@ One machine-wide queue for heavy runs (`kit.mjs finish`, e2e suites, full gates,
 5. Do not put a command that waits on an API (an LLM playtest, a generation call) in the queue: it holds a slot while it waits.
 6. Read `heavy status` or the status page (port `tools.heavy-queue` in `ports.json`) to see what is running or waiting; `heavy load` prints one line.
 7. Take `HEAVY_WORKERS` for test worker counts (vitest `maxWorkers`, Playwright `workers`); never hard-code them.
+8. The server gives WSL's file cache back (K495): after a job ends, at most every `HEAVY_DROP_EVERY_MS` (default 600000), when `Cached` exceeds `HEAVY_DROP_CACHE_GB` (default 6, 0 = off) it runs `sudo -n sh -c 'sync; echo 1 > /proc/sys/vm/drop_caches'` and logs the GB before and after. It needs passwordless sudo; if that fails it warns once and never retries (restart the service to try again). `/status`, `heavy load` and the page show the cache size, the page the last drop. Never run the real drop in a test: inject `readCache` and `runDrop`.
 
 **Common mistakes:**
 - A `heavy run` inside a job that already holds a slot runs at once (`HEAVY_HELD=1`): not a second queue.

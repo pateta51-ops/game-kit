@@ -53,15 +53,31 @@ export function procScan(root = '/proc') {
   }
   return out;
 }
+const cachedGB = () => { const m = /^Cached:s+(d+) kB/m.exec(rd('/proc/meminfo') ?? ''); return m ? Number(m[1]) / 1048576 : null; };
+const sudoDrop = () => spawnSync('sudo', ['-n', 'sh', '-c', 'sync; echo 1 > /proc/sys/vm/drop_caches'], { stdio: 'ignore' }).status === 0;
 const reniceProc = (pid) => { spawnSync('renice', ['-n', '19', '-p', String(pid)], { stdio: 'ignore' }); };
 
-export function startServer({ scan = procScan, renice = reniceProc, sweepMs = process.env.HEAVY_SWEEP_MS === undefined ? 20000 : Number(process.env.HEAVY_SWEEP_MS), log = join(process.env.HEAVY_HOME || join(homedir(), '.local/share/heavy-queue'), 'bypass.log'), port = defaultPort(), slots = Number(process.env.HEAVY_SLOTS) || 1, cores = Number(process.env.HEAVY_CORES) || availableParallelism(), ttl = Number(process.env.HEAVY_TTL) || 30000, tick = 1000, age = Number(process.env.HEAVY_AGE_MS) || 600000 } = {}) {
+export function startServer({ scan = procScan, renice = reniceProc, sweepMs = process.env.HEAVY_SWEEP_MS === undefined ? 20000 : Number(process.env.HEAVY_SWEEP_MS), log = join(process.env.HEAVY_HOME || join(homedir(), '.local/share/heavy-queue'), 'bypass.log'), port = defaultPort(), slots = Number(process.env.HEAVY_SLOTS) || 1, cores = Number(process.env.HEAVY_CORES) || availableParallelism(), ttl = Number(process.env.HEAVY_TTL) || 30000, readCache = cachedGB, runDrop = sudoDrop, dropGb = process.env.HEAVY_DROP_CACHE_GB === undefined ? 6 : Number(process.env.HEAVY_DROP_CACHE_GB), dropEveryMs = process.env.HEAVY_DROP_EVERY_MS === undefined ? 600000 : Number(process.env.HEAVY_DROP_EVERY_MS), say = (m) => console.log(m), tick = 1000, age = Number(process.env.HEAVY_AGE_MS) || 600000 } = {}) {
   const workers = Math.max(1, Math.floor(cores / slots));
   const hi = (x) => x.priority === 'high' || Date.now() - x.queuedAt >= age;
   const leases = new Map();
   const history = [];
   let seq = 0;
+  let lastCheck = 0, lastDrop = null, dropBroken = false;
+  const maybeDrop = async () => {
+    if (!(dropGb > 0) || dropBroken || Date.now() - lastCheck < dropEveryMs) return;
+    lastCheck = Date.now();
+    const before = readCache();
+    if (before == null || before <= dropGb) return;
+    let ok = false;
+    try { ok = await runDrop(); } catch { /* ignore */ }
+    if (!ok) { dropBroken = true; say('heavy-queue: cache drop failed (needs passwordless sudo); not retrying'); return; }
+    const after = readCache();
+    lastDrop = { at: Date.now(), beforeGB: +before.toFixed(1), afterGB: after == null ? null : +after.toFixed(1) };
+    say(`heavy-queue: dropped file cache ${lastDrop.beforeGB} GB -> ${lastDrop.afterGB} GB`);
+  };
   const end = (l, exit, reason) => {
+    if (l.startedAt) void maybeDrop();
     leases.delete(l.id);
     history.unshift({ id: l.id, label: l.label, priority: l.priority, queuedAt: l.queuedAt, startedAt: l.startedAt, endedAt: Date.now(), exit, reason });
     history.length = Math.min(history.length, 100);
@@ -103,7 +119,7 @@ export function startServer({ scan = procScan, renice = reniceProc, sweepMs = pr
   const status = () => {
     const now = Date.now();
     const ls = [...leases.values()].map((l) => ({ id: l.id, label: l.label, priority: l.priority, pid: l.pid, need: l.need, queuedAt: l.queuedAt, startedAt: l.startedAt, waitedMs: (l.startedAt ?? now) - l.queuedAt, runningMs: l.startedAt ? now - l.startedAt : null }));
-    return { slots, cores, workers, load1: loadavg()[0], running: ls.filter((l) => l.startedAt), waiting: ls.filter((l) => !l.startedAt), history, unqueued: [...unqueued.values()] };
+    return { slots, cores, workers, load1: loadavg()[0], cacheGB: readCache(), lastDrop, running: ls.filter((l) => l.startedAt), waiting: ls.filter((l) => !l.startedAt), history, unqueued: [...unqueued.values()] };
   };
   const page = () => {
     const s = status();
@@ -112,6 +128,7 @@ export function startServer({ scan = procScan, renice = reniceProc, sweepMs = pr
     const when = (ms) => ms ? new Date(ms).toLocaleTimeString() : '';
     return `<!doctype html><meta charset=utf-8><meta http-equiv=refresh content=5><meta name=viewport content="width=device-width,initial-scale=1"><title>heavy-queue</title><link rel=icon href=/logo.svg><link rel=apple-touch-icon href=/icon.png><link rel=manifest href=/manifest.json><meta name=apple-mobile-web-app-title content="Heavy queue"><meta name=theme-color content="#111718"><body style="font-family:sans-serif">
 <h2>Running (${s.running.reduce((n, l) => n + l.need, 0)}/${s.slots}) - ${s.workers} workers per job on ${s.cores} cores</h2>${t(['Label', 'Priority', 'Started', 'Running', 'Waited'], s.running.map((l) => row([l.label, l.priority, when(l.startedAt), dur(l.runningMs), dur(l.waitedMs)])))}
+${s.cacheGB == null ? '' : `<p>File cache ${s.cacheGB.toFixed(1)} GB${s.lastDrop ? `; last drop ${when(s.lastDrop.at)}: ${s.lastDrop.beforeGB} -> ${s.lastDrop.afterGB} GB` : ''}</p>`}
 <h2>Waiting (${s.waiting.length})</h2>${t(['Label', 'Priority', 'Queued', 'Waiting'], s.waiting.map((l) => row([l.label, l.priority, when(l.queuedAt), dur(l.waitedMs)])))}
 ${s.unqueued.length ? `<h2 style="color:#c00">Unqueued (${s.unqueued.length})</h2>${t(['PID', 'Command', 'Folder', 'First seen'], s.unqueued.map((u) => row([u.pid, u.cmd, u.cwd, when(u.firstSeen)]))).replace('<table', '<table style="border-color:#c00;color:#c00"')}` : ''}
 <h2>Recent</h2>${t(['Label', 'Priority', 'Ended', 'Waited', 'Ran', 'Exit'], s.history.map((h) => row([h.label, h.priority, when(h.endedAt), dur((h.startedAt ?? h.endedAt) - h.queuedAt), h.startedAt ? dur(h.endedAt - h.startedAt) : 'never ran', h.exit ?? h.reason])))}`;

@@ -17,7 +17,7 @@ const alive = (pid) => { try { process.kill(pid, 0); return true; } catch (e) { 
 const sigCode = (code, sig) => code ?? 128 + (constants.signals[sig] ?? 1);
 const listen = (on) => { for (const [s, h] of Object.entries(on)) process.on(s, h); return () => { for (const [s, h] of Object.entries(on)) process.off(s, h); }; };
 
-const loadLine = (s, la = loadavg(), cores = s.cores ?? availableParallelism()) => `load ${la.map((x) => x.toFixed(2)).join(' ')} | cores ${cores} | slots ${s.running.length}/${s.slots} | queued ${s.waiting.length} | unqueued ${s.unqueued.length}`;
+const loadLine = (s, la = loadavg(), cores = s.cores ?? availableParallelism()) => `load ${la.map((x) => x.toFixed(2)).join(' ')} | cores ${cores} | slots ${s.running.length}/${s.slots} | queued ${s.waiting.length} | unqueued ${s.unqueued.length}${s.cacheGB == null ? '' : ` | cache ${s.cacheGB.toFixed(1)} GB`}`;
 function flags(a) {
   const f = { priority: 'normal' };
   let i = 0;
