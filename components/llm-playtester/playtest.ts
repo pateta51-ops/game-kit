@@ -263,7 +263,7 @@ export async function runMain(argv: string[], log: (s: string) => void = console
   const done: PlaytestResult[] = [];
   let totalUsd = 0;
   if (capSet) {
-    let spent = 0;
+    let spent: number;
     try {
       spent = ledger === undefined ? 0 : ledgerSpent(ledger);
     } catch (e) {
