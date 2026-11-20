@@ -15276,7 +15276,7 @@ var PIECES = (() => {
       };
       if (!redraw) {
         commit(item);
-        item.afterCommit?.();
+        item.afterCommit?.(me);
         if (live.has(me)) schedule();
         return;
       }
@@ -15290,7 +15290,7 @@ var PIECES = (() => {
       try {
         const before = swap && measureBoard(swap, swap.leave !== "none");
         commit(item);
-        item.afterCommit?.();
+        item.afterCommit?.(me);
         if (!live.has(me)) return;
         const cancel = waitForRects(spec, stage, () => {
           if (!live.has(me)) return;
@@ -15426,9 +15426,18 @@ var PIECES = (() => {
         }
       };
       const late = spec.panAt === "commit" && o.pan && !reduced && spec.pan !== void 0;
-      if (late) item.afterCommit = () => {
+      if (late) item.afterCommit = (me) => {
         const s = safe(`${spec.id} pan`, () => startPan(speed));
-        if (s && pan) void panWork(() => s.ensure(spec.pan), pan.controller);
+        if (!s || !pan) return;
+        const token = () => {
+        };
+        me.waiting.add(token);
+        void panWork(() => s.ensure(spec.pan), pan.controller).then(() => {
+          if (!me.waiting.delete(token) || me.waiting.size > 0 || !me.after) return;
+          const a = me.after;
+          delete me.after;
+          a();
+        });
       };
       const session = o.pan && !reduced && !late && spec.pan !== void 0 ? safe(`${spec.id} pan`, () => startPan(speed)) : null;
       const active = pan;
