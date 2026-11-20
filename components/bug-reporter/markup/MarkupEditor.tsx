@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, type PointerEvent } from 'react';
 import { COLORS, drawMarkup, displayPoint, type Markup, type Point } from './model.ts';
+import { Btn } from '../BugBtn.tsx';
 import './markup.css';
 
 interface Props {
@@ -29,12 +30,11 @@ export function MarkupEditor({
   const [width, setWidth] = useState(0.003);
   const [note, setNote] = useState('');
   const dialog = useRef<HTMLDivElement>(null);
-  const done = useRef<HTMLButtonElement>(null);
   const loaded = useRef(false);
   const [display, setDisplay] = useState({ w: 1, h: 1 });
   useEffect(() => {
     const opener = document.activeElement as HTMLElement | null;
-    done.current?.focus();
+    document.querySelector<HTMLElement>('[data-testid="markup-done"]')?.focus();
     return () => opener?.focus();
   }, []);
   useEffect(() => {
@@ -109,16 +109,15 @@ export function MarkupEditor({
       <div className="markup__tools">
         <strong>Mark up screenshot</strong>
         {(['pen', 'box', 'arrow', 'pin'] as const).map((value) => (
-          <button
-            type="button"
-            className="btn"
-            data-testid={`markup-${value}`}
-            aria-pressed={tool === value}
+          <Btn
+            kind={`markup-${value}`}
+            base="btn"
+            testId={`markup-${value}`}
+            pressed={tool === value}
             key={value}
             onClick={() => setTool(value)}
-          >
-            {value === 'pin' ? 'Numbered pin' : value.charAt(0).toUpperCase() + value.slice(1)}
-          </button>
+            label={value === 'pin' ? 'Numbered pin' : value.charAt(0).toUpperCase() + value.slice(1)}
+          />
         ))}
         <label>
           Colour{' '}
@@ -146,9 +145,11 @@ export function MarkupEditor({
             <option value={0.006}>Thick</option>
           </select>
         </label>
-        <button
-          type="button"
-          className="btn"
+        <Btn
+          kind="undo"
+          base="btn"
+          testId="markup-undo"
+          label="Undo"
           disabled={!past.length}
           onClick={() => {
             const previous = past.at(-1)!;
@@ -156,12 +157,12 @@ export function MarkupEditor({
             setFuture([...future, items]);
             onChange(previous);
           }}
-        >
-          Undo
-        </button>
-        <button
-          type="button"
-          className="btn"
+        />
+        <Btn
+          kind="redo"
+          base="btn"
+          testId="markup-redo"
+          label="Redo"
           disabled={!future.length}
           onClick={() => {
             const next = future.at(-1)!;
@@ -169,15 +170,9 @@ export function MarkupEditor({
             setPast([...past, items]);
             onChange(next);
           }}
-        >
-          Redo
-        </button>
-        <button type="button" className="btn" disabled={!items.length} onClick={() => commit([])}>
-          Clear
-        </button>
-        <button ref={done} type="button" className="btn" data-testid="markup-done" onClick={onClose}>
-          Done
-        </button>
+        />
+        <Btn kind="clear" base="btn" testId="markup-clear" label="Clear" disabled={!items.length} onClick={() => commit([])} />
+        <Btn kind="done" base="btn" testId="markup-done" label="Done" onClick={onClose} />
         {tool === 'pin' && (
           <label className="markup__note">
             Pin note{' '}

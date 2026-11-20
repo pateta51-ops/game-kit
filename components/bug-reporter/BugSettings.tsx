@@ -2,7 +2,7 @@
 // of reports not filed yet with "Send all bug reports" (one at a time, never the same report twice, failures stay queued
 // with their reason, then a summary), and per report Send, Download and Delete. QueueBar is the same count and Send all
 // for Home; BugButton is the table's button.
-import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
+import { useEffect, useState } from 'react';
 import { bugConfig, bugRepo } from './config.ts';
 import { openBugReport } from './dialogStore.ts';
 import { downloadText } from '../small-helpers/download.ts';
@@ -14,38 +14,10 @@ import { useToken } from './token.ts';
 import { sendDeps } from './transport.ts';
 import './bugs.css';
 
-export interface BugBtnProps {
-  readonly label: ReactNode;
-  readonly onClick: (() => void) | undefined;
-  readonly disabled: boolean;
-  /** Which button: send-all, report, download-all, send, download, delete, forget, save. */
-  readonly kind: string;
-  /** `bug-btn` (and `primary`) plus the settings' `buttonClass`. */
-  readonly className: string;
-  readonly type: 'button' | 'submit';
-  readonly testId: string;
-}
-export interface BugBtnSlots {
-  /** Added to the class of every `.bug-btn` in Settings > Bug reports. */
-  readonly buttonClass?: string;
-  /** Draws a button instead of the default `<button>`; wire `onClick`, `disabled`, `type` and `testId` through. */
-  readonly renderButton?: (b: BugBtnProps) => ReactNode;
-}
-const Slots = createContext<BugBtnSlots>({});
-
-function Btn(o: { kind: string; testId: string; label: ReactNode; primary?: boolean; submit?: boolean; disabled?: boolean; onClick?: () => void }) {
-  const { buttonClass, renderButton } = useContext(Slots);
-  const b: BugBtnProps = {
-    kind: o.kind, testId: o.testId, label: o.label, onClick: o.onClick, disabled: o.disabled === true, type: o.submit === true ? 'submit' : 'button',
-    className: `bug-btn${o.primary === true ? ' primary' : ''}${buttonClass === undefined ? '' : ` ${buttonClass}`}`,
-  };
-  if (renderButton) return <>{renderButton(b)}</>;
-  return (
-    <button type={b.type} className={b.className} data-testid={b.testId} disabled={b.disabled} onClick={b.onClick}>
-      {b.label}
-    </button>
-  );
-}
+import { Btn } from './BugBtn.tsx';
+import type { BugBtnSlots } from './BugBtnCtx.ts';
+import { Slots } from './BugBtnCtx.ts';
+export type { BugBtnProps, BugBtnSlots } from './BugBtnCtx.ts';
 
 const plural = (n: number, word: string): string => `${String(n)} ${word}${n === 1 ? '' : 's'}`;
 

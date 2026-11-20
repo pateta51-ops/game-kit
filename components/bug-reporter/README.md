@@ -55,4 +55,4 @@ export const Mine = () => (
 )
 ```
 
-`buttonClass` is added to every `.bug-btn` in Settings > Bug reports (Send all, Report, Send, Download, Delete, Save and Forget the token); `renderButton({ label, onClick, disabled, kind, className, type, testId })` draws a button instead. Without them nothing changes.
+`buttonClass` is added to every `.bug-btn` in Settings > Bug reports (Send all, Report, Send, Download, Delete, Save and Forget the token); `renderButton({ label, onClick, disabled, kind, className, type, testId })` draws a button instead. Without them nothing changes. `<BugReportHost />` takes the same two props (`buttonClass`, `renderButton`) for the dialog's own buttons (`kind`: markup, send, queue, export, cancel).

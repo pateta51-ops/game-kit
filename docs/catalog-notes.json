@@ -298,6 +298,11 @@
     "use": "A pick-your-character screen before a game: roster by set, hero with portrait and summary, deck browser, opponent strip, modes, folded options and Begin; the game supplies data, slots and look.",
     "not": "The game's own board or track (pass it in the track slot) or building its new-game options."
   },
+  "controls": {
+    "use": "Segmented, Toggle, Slider and TextField as plain behaviour parts that a game skins by data-part, replacing native selects, checkboxes and range inputs.",
+    "not": "A game look, or form layout and validation.",
+    "entry": ["ui.ts"]
+  },
   "rules-screen": {
     "use": "Show a game-owned rulebook with contents, ranked search, glossary links, annotated diagrams and reference sheets.",
     "not": "Engine rules or deciding printed wording; the game owns the book and its assets."

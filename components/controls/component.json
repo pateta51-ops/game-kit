@@ -1,0 +1,10 @@
+{
+  "name": "controls",
+  "source": {
+    "game": "unstoppable-fan-prototype",
+    "commit": "841421ba",
+    "paths": ["src/screen/kit/K.tsx (Segmented, Toggle, Slider, TextField; PR #152)"]
+  },
+  "needs": [],
+  "packages": ["react", "react-dom"]
+}

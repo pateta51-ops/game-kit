@@ -112,3 +112,17 @@ it("nav lists every heading, jumps, holds the search first, and the phone toggle
   fireEvent.click(toggle);
   expect(root.getAttribute("data-nav")).toBe("closed");
 });
+
+it("K469 search slot draws the search field and filters the book", () => {
+  render(
+    <RulesScreen
+      book={book}
+      search={({ value, onChange, label }) => (
+        <textarea data-testid="mine" aria-label={label} value={value} onChange={(e) => onChange(e.target.value)} />
+      )}
+    />,
+  );
+  expect(document.querySelector('[data-part="search"]')).toBeNull();
+  fireEvent.change(screen.getByTestId("mine"), { target: { value: "scoring" } });
+  expect(screen.getByRole("list", { name: "Search results" })).toBeTruthy();
+});

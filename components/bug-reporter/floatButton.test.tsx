@@ -67,6 +67,16 @@ describe('floating bug button', () => {
     act(() => useTestSettings.setState({ bugButton: 'off' }));
     expect(screen.queryByTestId('bug-float')).toBeNull();
   });
+  it('K469: renderButton and buttonClass reach the floating button', () => {
+    phone(true);
+    render(<FloatingBugButton buttonClass="mine" renderButton={(b) => <a data-testid={b.testId} className={b.className} aria-label={b.ariaLabel} onClick={b.onClick}>{b.label}</a>} />);
+    const f = screen.getByTestId('bug-float');
+    expect(f.tagName).toBe('A');
+    expect(f.className).toBe('bug-float mine');
+    expect(f.getAttribute('aria-label')).toBe('Report a bug');
+    fireEvent.click(f);
+    expect(useBugDialog.getState().dialog.phase).not.toBe('closed');
+  });
   it('is not shown on the table, which has its own header button', () => {
     phone(true);
     window.location.hash = '#/game';

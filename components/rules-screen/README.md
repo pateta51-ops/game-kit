@@ -26,7 +26,7 @@ export const Rules = () => <RulesScreen book={book} />;
 - Each figure has one or more scenes and optional callouts. Coordinates use the scene's own units. Use `area` on scenes and callouts for theme-defined grid arrangement, with reading order in the data for a stacked layout.
 - Scenes place face and icon assets by bounds. A face can be rotated, cropped in fractional coordinates or stacked with offset copies. Polygons and zones sit under the assets. Dashed boxes, leader lines, labels, plates and markers sit above them.
 - `renderAsset(asset, context)` receives `kind`, `id` and an optional `side`. Supply the game's card-parts face, icon, or sheet scan. Fill the given box inside scenes. `enlargeDiagrams` enables a native modal for each scene. Use the `enlarged` context to provide full-size assets. Sheet sides always enlarge and use the sheet transcript as their accessible description.
-- `collapsible` uses native disclosures. A heading's `open` sets its initial state, and a contents jump opens its enclosing disclosures. `words` overrides control labels. Pass game-owned `back` and `actions` to the screens frame.
+- `collapsible` uses native disclosures. A heading's `open` sets its initial state, and a contents jump opens its enclosing disclosures. `words` overrides control labels. `search({ value, onChange, label })` draws the search field instead of the default input (default unchanged). Pass game-owned `back` and `actions` to the screens frame.
 
 ## Theme
 
