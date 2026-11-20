@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Install the local models under ~/audio-gen (WSL or Linux). Each group is optional:
-#   install.sh core sa3 yue2 ace sao kokoro midi        (no argument: core only)
+#   install.sh core sa3 yue2 kokoro midi        (no argument: core only)
 # Nothing paid is installed or called. Weights are downloaded by the tools on first use into ~/audio-gen or the
 # Hugging Face cache and are never committed. `python3 audiogen/tools.py status` says what is installed.
 set -euo pipefail
@@ -11,20 +11,10 @@ has() { for g in "${groups[@]}"; do [ "$g" = "$1" ] && return 0; done; return 1;
 
 venv() { [ -x "$H/$1/bin/python" ] || python3 -m venv "$H/$1"; }
 
-if has core || has sao || has ace; then
+if has core; then
   command -v ffmpeg >/dev/null || { echo "install ffmpeg first: sudo apt install ffmpeg"; exit 1; }
   venv venv
   "$H/venv/bin/pip" install -q numpy soundfile
-fi
-if has sao; then
-  # Stable Audio Open 1.0 (Stability AI Community License). The weights are gated: accept the licence on its
-  # Hugging Face page, then run `hf auth login` once.
-  "$H/venv/bin/pip" install -q torch torchaudio diffusers torchsde transformers accelerate huggingface_hub
-fi
-if has ace; then
-  # ACE-Step 1.5 (MIT), music from a prompt.
-  [ -d "$H/ACE-Step-1.5" ] || git clone https://github.com/ace-step/ACE-Step-1.5.git "$H/ACE-Step-1.5"
-  "$H/venv/bin/pip" install -q -e "$H/ACE-Step-1.5"
 fi
 if has sa3; then
   # Stable Audio 3 Small SFX (Stability AI Community License), the default for sounds; weights go to the HF cache.
