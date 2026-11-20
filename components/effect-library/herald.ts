@@ -31,8 +31,8 @@ export const unrollCollapse: Effect = ({ call, animate }) => {
 /** `count`: the actor shows a number counting from `from` (default 0) to the step's `to` over the call; `prefix`, `suffix`, `colour`. A skip shows the final number. */
 export const count: Effect = ({ call, el }) => {
   const value = call.value ?? 0;
-  const prefix = String(call.step['prefix'] ?? '');
-  const suffix = String(call.step['suffix'] ?? '');
+  const prefix = typeof call.step['prefix'] === 'string' ? call.step['prefix'] : '';
+  const suffix = typeof call.step['suffix'] === 'string' ? call.step['suffix'] : '';
   const show = (n: number): void => { el.textContent = `${prefix}${String(n)}${suffix}`; };
   const colour = call.step['colour'];
   Object.assign(el.style, { opacity: '1', color: typeof colour === 'string' ? colour : 'var(--fx-text,inherit)' });
