@@ -49,4 +49,16 @@ describe('cards:screen (K489)', () => {
     expect(d.screens).toEqual([{ clause: 'a#1', shown: 'Pay 2?' }]);
     expect(screenProblems({ ...good, clauses: [{ id: 'a#1', text: 'Pay 2.' }], faces: [], icons: {}, prompts: d.screens, opened: d.opened })).toEqual([]);
   });
+  it('screenMain exits 1 for a zoom, an icon and an amount failure', () => {
+    const run = (i: ScreenInput) => { const out: string[] = []; return [screenMain(i, (l) => out.push(l)), out] as const; };
+    expect(run({ ...good, zoom: (t) => t.replace('Draw 2', 'Draw 3') })).toEqual([1, ['zoom scout: differs at word 2']]);
+    expect(run({ ...good, icons: { coin: '' } })).toEqual([1, ['icon coin has no label']]);
+    expect(run({ ...good, prompts: [{ clause: 'scout#1', shown: 'Draw?' }, good.prompts[1]!] })).toEqual([1, ['prompt for scout#1: no amount']]);
+  });
+  it('a Delivery without clauseOf or screen records nothing', () => {
+    const d = new Delivery<null, string>({ load: () => undefined, dispatch: () => ({ ok: true, autos: [] }), prompt: () => 'a#1' });
+    d.load(null); d.answer('x');
+    expect([...d.opened]).toEqual([]);
+    expect(d.screens).toEqual([]);
+  });
 });
