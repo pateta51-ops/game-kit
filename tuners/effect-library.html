@@ -167,7 +167,8 @@ legend { font: 700 12px var(--display); text-transform: uppercase; letter-spacin
     > .fx-glitch-copy { opacity: .7; transform: translateX(calc(var(--glitch-side, 1) * var(--offset))); }
     > .fx-glitch-slice { opacity: .9; transform: translateX(calc(var(--jump) * var(--glitch-jump) * 1%)); }
   }
-  .fx-glitch--steps { transform: skewX(var(--glitch-skew, 0deg)); }
+  .fx-glitch--steps.fx-glitch--skew { transform: skewX(var(--glitch-skew, 0deg)); }
+  .fx-glitch--burst.fx-glitch--skew { animation: fx-glitch-dropout var(--glitch-ms) steps(1, end), fx-glitch-skew var(--glitch-ms) steps(1, end); }
   .fx-glitch--steps.fx-glitch--drop { opacity: var(--glitch-dropout); }
   .fx-glitch--tear {
     --glitch-split: 2%;
@@ -177,11 +178,8 @@ legend { font: 700 12px var(--display); text-transform: uppercase; letter-spacin
   }
 }
 
-@keyframes fx-glitch-dropout {
-  0%, 75% { opacity: 1; transform: none; }
-  25% { opacity: 1; transform: skewX(var(--glitch-skew, 0deg)); }
-  50% { opacity: var(--glitch-dropout); transform: none; }
-}
+@keyframes fx-glitch-dropout { 0%, 75% { opacity: 1; } 50% { opacity: var(--glitch-dropout); } }
+@keyframes fx-glitch-skew { 0%, 50% { transform: none; } 25% { transform: skewX(var(--glitch-skew, 0deg)); } }
 @keyframes fx-glitch-split {
   0% { opacity: .82; transform: translateX(var(--offset)); }
   25% { opacity: .5; transform: translateX(calc(1.6 * var(--offset))); }
@@ -5564,24 +5562,35 @@ void main() {
     let steps = [];
     let dead = false;
     let blanked = [];
-    const texts = [];
-    const walk = (n) => {
-      if (n.nodeType === 3) texts.push(n);
-      else n.childNodes.forEach(walk);
+    const walk = (n, out) => {
+      if (n.nodeType === 3) out.push(n);
+      else n.childNodes.forEach((c) => walk(c, out));
     };
-    face.forEach(walk);
     const restore = () => {
-      for (const [t, d] of blanked) t.data = d;
+      for (const [t, d, b] of blanked) if (t.data === b) t.data = d;
       blanked = [];
     };
     const blank = (count) => {
       restore();
+      const own = /* @__PURE__ */ new Set([...layers, ...slices]);
+      const texts = [];
+      Array.from(el.childNodes).filter((n) => !own.has(n)).forEach((n) => walk(n, texts));
+      const chars = texts.map((t) => Array.from(t.data));
       const pos = [];
-      for (const t of texts) for (let i = 0; i < t.data.length; i++) if (/\S/.test(t.data[i])) pos.push([t, i]);
+      chars.forEach((cs, ti) => cs.forEach((c, i) => {
+        if (/\S/.test(c)) pos.push([ti, i]);
+      }));
+      const hit = /* @__PURE__ */ new Set();
       for (let c = Math.min(count, pos.length); c > 0; c--) {
-        const [t, i] = pos.splice(Math.floor(rand2() * pos.length), 1)[0];
-        if (!blanked.some((b) => b[0] === t)) blanked.push([t, t.data]);
-        t.data = t.data.slice(0, i) + "\xA0" + t.data.slice(i + 1);
+        const [ti, i] = pos.splice(Math.floor(rand2() * pos.length), 1)[0];
+        chars[ti][i] = "\xA0";
+        hit.add(ti);
+      }
+      for (const ti of hit) {
+        const t = texts[ti];
+        const nd = chars[ti].join("");
+        blanked.push([t, t.data, nd]);
+        t.data = nd;
       }
     };
     const angle = () => (rand2() < 0.5 ? -1 : 1) * between(o.skewDeg);
@@ -5598,7 +5607,7 @@ void main() {
       el.style.removeProperty("--glitch-skew");
       timer = endTimer = void 0;
     };
-    const clearClasses = () => el.classList.remove("fx-glitch--burst", "fx-glitch--tear", "fx-glitch--steps", "fx-glitch--drop");
+    const clearClasses = () => el.classList.remove("fx-glitch--burst", "fx-glitch--tear", "fx-glitch--steps", "fx-glitch--drop", "fx-glitch--skew");
     function schedule() {
       const f = factor();
       if (dead || !f) return;
@@ -5623,9 +5632,10 @@ void main() {
       };
       draw();
       const doSkew = kind === "burst" && !!o.skewDeg;
-      const doBlank = kind === "burst" && !!o.blankLetters && !o.mask && texts.length > 0;
+      const doBlank = kind === "burst" && !!o.blankLetters && !o.mask;
       const total = stepped ? n : 4;
       const skewAt = doSkew ? stepped ? Math.floor(rand2() * n) : 1 : -1;
+      if (doSkew) el.classList.add("fx-glitch--skew");
       if (doSkew && !stepped) set("--glitch-skew", `${String(angle())}deg`);
       const blankAt = doBlank ? Math.floor(rand2() * total) : -1;
       const frame = (i) => {
