@@ -105,16 +105,16 @@ it('K449 banner: a skip ends invisible with its text removed', () => {
 });
 
 it('K449 glow to off starts lit and ends dark', () => {
-  play({ actor: 'a', t: 0, dur: 500, do: 'glow', to: 'off', colour: '#9ff' });
+  play({ actor: 'a', t: 0, dur: 500, do: 'glow', end: 'dark', colour: '#9ff' });
   expect(frames()).toHaveLength(2);
   expect(frames()[0]?.boxShadow).toBe('0 0 24px 6px #9ff');
   expect(frames()[1]?.boxShadow).toBe('0 0 0 0 transparent');
 });
 
 it('K449 glow to off: a skip leaves it dark', () => {
-  const { end, el } = direct({ do: 'glow', to: 'off', colour: '#9ff' });
+  const { end, el } = direct({ do: 'glow', end: 'dark', colour: '#9ff' });
   end?.();
-  expect(el.style.boxShadow).toContain('0px 0px 0px 0px');
+  expect(el.style.boxShadow).toContain('transparent');
 });
 
 it('K449 glow without `to` is unchanged: dark, lit, dark', () => {

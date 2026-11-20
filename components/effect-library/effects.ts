@@ -365,8 +365,8 @@ export const BUILT_IN: Readonly<Record<string, Effect>> = {
       animate([{ boxShadow: el.style.boxShadow || on }, { boxShadow: off }], { boxShadow: '' });
       return undefined;
     }
-    // K449: `to: 'off'` starts lit and goes dark; the actor is left dark
-    if (call.step['to'] === 'off') {
+    // K449: `end: 'dark'` starts lit and goes dark; the actor is left dark
+    if (call.step['end'] === 'dark') {
       animate([{ boxShadow: on }, { boxShadow: off }], { boxShadow: off });
       return undefined;
     }
