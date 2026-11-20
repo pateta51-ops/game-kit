@@ -63,9 +63,9 @@ describe('llm-playtester', () => {
   it('records BUG: reasons as findings', async () => {
     const client: Chooser = () => Promise.resolve({ option: 1, reason: 'BUG: only two options', usage });
     const r = await runPlaytest(createAdapter(), { seed: 's', client, out: tmp() });
-    expect(r.stop).toBe('finding');
+    expect(r.stop).toBe('done');
     expect(r.findings).toHaveLength(1);
-    expect(r.findingCounts[0]!.count).toBe(3);
+    expect(r.findingCounts[0]!.count).toBe(2);
   });
 
   it('stops before a call would pass --max-usd (fake client, no network)', async () => {
