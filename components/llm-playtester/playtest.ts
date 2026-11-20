@@ -42,7 +42,7 @@ export interface PlaytestOptions {
   /** Where the pre-call cost estimate is printed (default console.log). */
   log?: (s: string) => void;
   /** Called after every paid call with its cost and the run id, so a caller can record spend even when the run throws. */
-  /** A finding seen this many times (same normalised key) stops the run; default 3. */
+  /** A finding seen this many times (same normalised key) stops the run; default 3, 0 = never. */
   maxRepeats?: number;
   onSpend?: (costUsd: number, runId: string) => void;
 }
@@ -61,7 +61,7 @@ export interface PlaytestResult {
 const HOW =
   'You are playtesting a board game adaptation. Each turn you get the current view and numbered options; you must answer by calling the choose tool (always call it, never reply in plain text): the option number and a short reason. Play to win. When the view, the options or the rules look wrong (an illegal option offered, a legal one missing, a wrong count, unclear text), start the reason with BUG: and say what.';
 
-const findingKey = (f: string) => f.toLowerCase().replace(/^step \d+:\s*/, '').replace(/\(step \d+, option \d+\)/g, '').replace(/\d+/g, '#').replace(/\s+/g, ' ').trim();
+const findingKey = (f: string) => f.toLowerCase().replace(/^step \d+:\s*/, '').replace(/\s+/g, ' ').replace(/[\s.!;:,]+$/, '').trim();
 const short = (s: string, n = 200) => (s.length > n ? `${s.slice(0, n)}…` : s);
 
 export async function runPlaytest(adapter: GameAdapter, opts: PlaytestOptions): Promise<PlaytestResult> {
@@ -85,7 +85,7 @@ export async function runPlaytest(adapter: GameAdapter, opts: PlaytestOptions): 
     const e = seen.get(last);
     if (e === undefined) seen.set(last, { finding: f, count: 1 });
     else e.count++;
-    return seen.get(last)!.count >= maxRepeats && maxRepeats > 1;
+    return seen.get(last)!.count >= maxRepeats && maxRepeats > 0;
   };
   const recent: string[] = [];
   let spent = 0;

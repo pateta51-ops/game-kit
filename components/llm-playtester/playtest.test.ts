@@ -265,7 +265,7 @@ describe('heavy queue (K416)', () => {
     let calls = 0;
     const client: Chooser = () => {
       calls++;
-      return Promise.resolve({ option: 0, reason: `BUG: wrong count ${calls}`, usage });
+      return Promise.resolve({ option: 0, reason: 'BUG: wrong count.', usage });
     };
     const base = { seed: 's', client, model: 'claude-sonnet-5-5', log: () => undefined };
     const r = await runPlaytest(endless(), { ...base, out: tmp(), maxRepeats: 5 });
@@ -285,5 +285,31 @@ describe('heavy queue (K416)', () => {
     const client: Chooser = () => Promise.resolve({ option: 0, reason: `BUG: problem ${'ab'[calls++ % 2]}`, usage });
     const r = await runPlaytest(endless(), { seed: 's', client, out: tmp(), model: 'claude-sonnet-5-5', log: () => undefined });
     expect(r.findings).toHaveLength(2);
+  });
+
+  it('K491: findings that differ only in a number stay two; maxRepeats 0 never stops', async () => {
+    let calls = 0;
+    const client: Chooser = () => Promise.resolve({ option: 0, reason: `BUG: option ${calls++ % 2 ? 5 : 2} offered illegally`, usage });
+    const base = { seed: 's', client, model: 'claude-sonnet-5-5', log: () => undefined };
+    const r = await runPlaytest(endless(), { ...base, out: tmp(), maxDecisions: 6 });
+    expect(r.findings).toHaveLength(2);
+    calls = 0;
+    const same: Chooser = () => { calls++; return Promise.resolve({ option: 0, reason: 'BUG: same', usage }); };
+    const z = await runPlaytest(endless(), { ...base, client: same, out: tmp(), maxDecisions: 7, maxRepeats: 0 });
+    expect(calls).toBe(7);
+    expect(z).toMatchObject({ stop: 'max-decisions' });
+    expect(z.findingCounts[0]!.count).toBe(7);
+  });
+
+  it('K491: exit code 0 and the ENDED line for a result; exit 1 and no line for a finding stop', async () => {
+    const adapter = join(import.meta.dirname, 'fake-adapter.ts');
+    const run = async (reason: string) => {
+      const lines: string[] = [];
+      const client: Chooser = () => Promise.resolve({ option: 0, reason, usage });
+      const r = await runMain(['--adapter', adapter, '--model', 'claude-sonnet-5-5', '--out', tmp()], (s) => lines.push(s), {}, client);
+      return { code: r.code, ended: lines.filter((l) => l.startsWith('PLAYTEST ENDED')) };
+    };
+    expect(await run('fine')).toEqual({ code: 0, ended: ['PLAYTEST ENDED won after 4 turns'] });
+    expect(await run('BUG: same')).toEqual({ code: 1, ended: [] });
   });
 });
