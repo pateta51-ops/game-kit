@@ -216,34 +216,34 @@ export async function main(argv: string[], log: (s: string) => void = console.lo
 }
 
 export async function runMain(argv: string[], log: (s: string) => void = console.log, env: Record<string, string | undefined> = process.env, injected?: Chooser): Promise<MainResult> {
-  const bad: MainResult = { code: usage(log), runs: [], totalUsd: 0 };
+  const bad = (): MainResult => ({ code: usage(log), runs: [], totalUsd: 0 });
   const flags = new Map<string, string>();
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i]!;
-    if (!a.startsWith('--')) return bad;
+    if (!a.startsWith('--')) return bad();
     if (a === '--dummy' || a === '--require-cap') flags.set(a.slice(2), '1');
-    else if (argv[i + 1] === undefined) return bad;
+    else if (argv[i + 1] === undefined) return bad();
     else flags.set(a.slice(2), argv[++i]!);
   }
   const path = flags.get('adapter');
-  if (path === undefined) return bad;
+  if (path === undefined) return bad();
   const g = (k: string) => flags.get(k);
   const ledger = g('ledger') ?? env['PLAYTEST_LEDGER'];
   const capRaw = g('total-cap') ?? env['PLAYTEST_TOTAL_CAP_USD'];
   const capSet = capRaw !== undefined && capRaw !== '';
   const cap = capSet ? Number(capRaw) : Number.NaN;
-  if (capSet && !(cap > 0)) return bad;
+  if (capSet && !(cap > 0)) return bad();
   if ((flags.has('require-cap') || env['PLAYTEST_REQUIRE_CAP'] === '1') && !capSet) {
     log('no total cap set (--total-cap or PLAYTEST_TOTAL_CAP_USD): refusing to start');
     return { code: 2, runs: [], totalUsd: 0 };
   }
   for (const k of ['max-usd', 'max-decisions', 'runs', 'max-tokens']) {
     const v = flags.get(k);
-    if (v !== undefined && !(Number.isFinite(Number(v)) && Number(v) > 0 && (k !== 'max-tokens' || Number.isInteger(Number(v))))) return bad;
+    if (v !== undefined && !(Number.isFinite(Number(v)) && Number(v) > 0 && (k !== 'max-tokens' || Number.isInteger(Number(v))))) return bad();
   }
   const mod = (await import(pathToFileURL(resolve(path)).href)) as { createAdapter?: () => GameAdapter; default?: GameAdapter | (() => GameAdapter) };
   const adapter = mod.createAdapter?.() ?? (typeof mod.default === 'function' ? mod.default() : mod.default);
-  if (adapter === undefined) return bad;
+  if (adapter === undefined) return bad();
   const seed = flags.get('seed') ?? '1';
   const runs = Number(flags.get('runs') ?? 1);
   let left = Number(flags.get('max-usd') ?? 5);
