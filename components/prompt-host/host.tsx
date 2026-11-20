@@ -140,8 +140,13 @@ export const May = <P extends Kinded, V>(p: WidgetProps<P, V>) => <OptionList {.
 export const PayCost = <P extends Kinded, V>(p: WidgetProps<P, V>) => <OptionList {...p} part="pay" />;
 
 /** Pick cards (or any options), min..max: options toggle, the count shows, Done answers. min = max = 1 answers on the click unless `confirm`. */
-export function PickOptions<P extends Kinded, V>({ prompt, answer, look, confirm = false }: WidgetProps<P, V> & { confirm?: boolean }) {
-  const [picked, setPicked] = useState<string[]>([]);
+export function PickOptions<P extends Kinded, V>({ prompt, answer, look, confirm = false, onChange, picked: controlled }: WidgetProps<P, V> & { confirm?: boolean; onChange?: (picked: string[]) => void; picked?: readonly string[] }) {
+  const [own, setOwn] = useState<string[]>([]);
+  const picked = controlled === undefined ? own : [...controlled];
+  const setPicked = (next: string[]): void => {
+    if (controlled === undefined) setOwn(next);
+    onChange?.(next);
+  };
   const one = prompt.min === 1 && prompt.max === 1 && !confirm;
   const toggle = (id: string): void => {
     if (one) answer([id]);
