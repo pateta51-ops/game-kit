@@ -1,5 +1,6 @@
 // K497: card gates gaps: screen log recorder, interaction-row pending map, restriction words path.
-import { mkdtempSync, rmSync } from 'node:fs';
+import { spawn } from 'node:child_process';
+import { appendFileSync, mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
@@ -76,5 +77,69 @@ describe('restriction words path', () => {
     expect(cardsCheckMain(['--words', 'my/w.json'], game, (l) => log.push(l))).toBe(1);
     expect(log).toContain('FAIL --words needs a RecordIo with read');
     expect(cardsCheckMain(['--words', 'bad.json'], game, (l) => log.push(l), io({ 'bad.json': 'nope' }))).toBe(1);
+  });
+});
+
+describe('K497 fix round', () => {
+  it('recorder makes the folder; several writer processes interleave and every record reads back', () => {
+    const dir = mkdtempSync(join(tmpdir(), 'k497m-'));
+    const f = join(dir, 'deep', 'er', 'log.jsonl');
+    const mod = join(import.meta.dirname, 'screenLog.ts').replace(/\\/g, '/');
+    const code = `import { recordPrompt } from 'file:///${mod}'; for (let i = 0; i < 60; i++) recordPrompt(process.argv[1], { clause: 'w' + process.argv[2] + '#' + i, shown: 'Draw 2 ' + 'x'.repeat(2000) })`;
+    const kids = [0, 1, 2, 3].map((w) => spawn(process.execPath, ['--experimental-strip-types', '--input-type=module', '-e', code, f, String(w)], { stdio: 'pipe' }));
+    return Promise.all(kids.map((k) => new Promise<number | null>((r) => k.on('close', r)))).then((codes) => {
+      expect(codes).toEqual([0, 0, 0, 0]);
+      const r = readScreenLogs([f]);
+      expect(r.warnings).toEqual([]);
+      expect(r.prompts.length).toBe(240);
+      expect(new Set(r.prompts.map((p) => p.clause)).size).toBe(240);
+      rmSync(dir, { recursive: true, force: true });
+    });
+  });
+  it('a torn line is skipped and named; the rest reads back', () => {
+    const f = join(mkdtempSync(join(tmpdir(), 'k497t-')), 'log.jsonl');
+    recordOpened(f, 'a#1');
+    appendFileSync(f, '{"t":"prompt","clause":"b#1","sh\n');
+    recordOpened(f, 'c#1');
+    const r = readScreenLogs([f]);
+    expect(r.opened.sort()).toEqual(['a#1', 'c#1']);
+    expect(r.warnings).toEqual([`${f} line 2: skipped, not a record`]);
+  });
+  const C = (id: string, text: string) => ({ id, card: id.split('#')[0] ?? '', text });
+  const records: CardRecord[] = [{ id: 's#1 r0', clause: 's#1', op: 'gain', n: 1, optional: true }];
+  const base = {
+    faces: [{ card: 's', text: 'You may gain 1 coin.' }],
+    catalogue: { summary: { clauses: 1 }, patterns: [], oneOffs: [C('s#1', 'You may gain 1 coin.')], interactions: [] },
+    records, keys: ['optional'], rulings: [], arMap: [],
+    readings: [{ clause: 's#1', verdict: 'ok' as const, note: '', hash: recordsHash(records) }],
+  };
+  const io = (files: Record<string, string>) => ({ comments: () => [], write: () => undefined, git: () => '', read: (p: string) => { if (!(p in files)) throw new Error('ENOENT'); return files[p]!; } });
+  it('no words and no flag: the default path loads when it exists, else none', () => {
+    expect(cardsCheckMain([], base, () => undefined, io({ [RESTRICTION_WORDS_PATH]: '{"optional:true":["you may"]}' }))).toBe(0);
+    const log: string[] = [];
+    expect(cardsCheckMain([], base, (l) => log.push(l), io({}))).toBe(1);
+    expect(log.join('\n')).toContain('optional=true');
+  });
+  it('--list-restrictions takes --words', () => {
+    const log: string[] = [];
+    expect(cardsCheckMain(['--list-restrictions', 'B', '--words', 'w.json'], { ...base, batch: () => ['s#1'] }, (l) => log.push(l), io({ 'w.json': '{"optional:true":["You may"]}' }))).toBe(0);
+    expect(log).toEqual(['s#1 1 [You may] You may gain 1 coin.']);
+  });
+  it('--record takes --words (a bad words file stops it before anything is written)', () => {
+    const log: string[] = [];
+    expect(cardsCheckMain(['--record', 'B', '--pr', '1', '--words', 'bad.json'], { ...base, batch: () => ['s#1'] }, (l) => log.push(l), io({ 'bad.json': 'x' }))).toBe(1);
+    expect(log[0]).toMatch(/^FAIL --words bad.json/);
+  });
+  it('an old-style call (explicit words, no recorder, no pending map, no --words) is unchanged', () => {
+    const words = { 'optional:true': ['you may'] };
+    const log: string[] = [];
+    expect(cardsCheckMain([], { ...base, words }, (l) => log.push(l))).toBe(0);
+    expect(log).toEqual(['ok   clauses (0)', 'ok   restrictions (0)', 'ok   patterns (0)', 'ok   readings (0)']);
+    expect(cardsCheckMain([], { ...base, words: {} }, (l) => log.push(l))).toBe(1);
+    const l: string[] = [];
+    const c = runInventory({ pieces: [], tests: [], interacting: ['r1'] }, 'x.md', false, { read: () => null, write: () => undefined, log: (x) => void l.push(x) });
+    expect(c).toBe(1);
+    expect(l).toContain('inventory: r1 is in no interaction row');
+    expect(screenMain({ faces: [], clauses: [{ id: 'k#1', text: 'Draw 2.' }], zoom: (t) => t, icons: {}, prompts: [{ clause: 'k#1', shown: 'Draw?' }], opened: [] }, () => undefined)).toBe(1);
   });
 });

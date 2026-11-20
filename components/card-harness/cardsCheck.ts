@@ -285,23 +285,29 @@ export function recordReadings(i: RecordInput, io: RecordIo): { failed: boolean;
 
 // ---- the whole cards:check ----
 
-export interface CardsCheckInput extends ClauseInput, Omit<RestrictionInput, 'catalogue' | 'records'>, Omit<PatternInput, 'catalogue' | 'records'> {
+export interface CardsCheckInput extends ClauseInput, Omit<RestrictionInput, 'catalogue' | 'records' | 'words'>, Omit<PatternInput, 'catalogue' | 'records'> {
+  /** Optional (K497): when missing, `cardsCheckMain` loads `RESTRICTION_WORDS_PATH` (or `--words <path>`) through `io.read` if the file exists. */
+  readonly words?: RestrictionInput['words'];
   readonly readings: readonly ReadingLine[];
   /** The clause ids of a batch (for `--list-restrictions` and `--record`). */
   readonly batch?: (id: string) => readonly string[];
 }
 export function cardsCheck(i: CardsCheckInput): { clauses: string[]; restrictions: string[]; patterns: string[]; readings: string[] } {
-  return { clauses: clauseProblems(i), restrictions: restrictionProblems(i), patterns: patternProblems(i), readings: readingProblems(i) };
+  return { clauses: clauseProblems(i), restrictions: restrictionProblems({ ...i, words: i.words ?? {} }), patterns: patternProblems(i), readings: readingProblems(i) };
 }
 /** K497: the restriction words file: `--words <path>` in `argv`, else `dflt`. */
 export const RESTRICTION_WORDS_PATH = 'content/restriction-words.json';
 export const wordsPathOf = (argv: readonly string[], dflt = RESTRICTION_WORDS_PATH): string => { const k = argv.indexOf('--words'); return k < 0 ? dflt : argv[k + 1] ?? dflt; };
 /** The game script's entry: `[]`, `--list-restrictions <batch> [n]` or `--record <batch> --pr <n>`. Returns the exit code. */
 export function cardsCheckMain(argv: readonly string[], input: CardsCheckInput, log: (l: string) => void = console.log, io?: RecordIo): number {
-  let i = input;
+  let i: CardsCheckInput & { words: RestrictionInput['words'] } = { ...input, words: input.words ?? {} };
   if (argv.includes('--words')) {
     if (!io?.read) { log('FAIL --words needs a RecordIo with read'); return 1; }
-    try { i = { ...input, words: JSON.parse(io.read(wordsPathOf(argv))) as Record<string, readonly string[]> }; } catch (e) { log(`FAIL --words ${wordsPathOf(argv)}: ${(e as Error).message}`); return 1; }
+    try { i = { ...i, words: JSON.parse(io.read(wordsPathOf(argv))) as Record<string, readonly string[]> }; } catch (e) { log(`FAIL --words ${wordsPathOf(argv)}: ${(e as Error).message}`); return 1; }
+  } else if (input.words === undefined && io?.read) {
+    let t: string | undefined;
+    try { t = io.read(RESTRICTION_WORDS_PATH); } catch { t = undefined; }
+    if (t !== undefined) { try { i = { ...i, words: JSON.parse(t) as Record<string, readonly string[]> }; } catch (e) { log(`FAIL ${RESTRICTION_WORDS_PATH}: ${(e as Error).message}`); return 1; } }
   }
   const arg = (f: string): string | undefined => { const k = argv.indexOf(f); return k < 0 ? undefined : argv[k + 1]; };
   const batchOf = (b: string): readonly string[] => { if (!i.batch) throw new Error('cardsCheck: no batch() given'); return i.batch(b); };
