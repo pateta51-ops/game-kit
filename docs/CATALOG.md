@@ -285,8 +285,8 @@ Card tests on real cards. Test code only; the engine imports nothing here but `c
 
 - **Use it when:** Testing card effects on real cards with the scenario builder, prompt delivery, choice probe and inventory with stale check.
 - **Not for:** Card rules themselves; those stay in the game.
-- **Key exports:** `createProbe`, `rulingGroups`, `Scenario`, `scenarioLiteral`, `Delivery`, `cardCasesIn`, `clauseIds`, `interactionNeeds`, `inventory`, `runInventory`, `testFiles`, `conforms`, `describeCheck`, `report`, and 78 more
-- **Needs:** [`engine-core`](#engine-core)
+- **Key exports:** `createProbe`, `rulingGroups`, `Scenario`, `scenarioLiteral`, `Delivery`, `cardCasesIn`, `clauseIds`, `interactionNeeds`, `inventory`, `runInventory`, `testFiles`, `conforms`, `describeCheck`, `report`, and 81 more
+- **Needs:** [`engine-core`](#engine-core), [`plain-text`](#plain-text)
 - **Came from:** stcc
 - **Docs:** [README](../components/card-harness/README.md) ([rules for agents](../components/card-harness/README.md#rules-for-agents))
 
@@ -780,7 +780,7 @@ The owner's rule "no rule ids on screen" as code: rule, ruling and decision ids 
 
 - **Use it when:** Every line a person reads must be free of rule ids (`TURN-07`, `AR-12`).
 - **Not for:** Engine output, which keeps ids.
-- **Key exports:** `ruleIdSource`, `ruleIdFilter`, `plainPrompt`, `plainView`, `CODE_TEXT`, `forbiddenText`, `visibleText`, `longSentences`, `IdFamilies`, `Strip`, `RuleIdFilter`
+- **Key exports:** `ruleIdSource`, `ruleIdFilter`, `plainPrompt`, `plainView`, `CODE_TEXT`, `forbiddenText`, `visibleText`, `longSentences`, `plainWords`, `IdFamilies`, `Strip`, `RuleIdFilter`
 - **Needs:** nothing
 - **Came from:** rome
 - **Docs:** [README](../components/plain-text/README.md) ([rules for agents](../components/plain-text/README.md#rules-for-agents))
