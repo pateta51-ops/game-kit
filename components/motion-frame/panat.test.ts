@@ -7,7 +7,7 @@ const spec = (panAt?: 'commit'): MotionSpec => ({ id: 'b', maxMs: 100, steps: []
 const run = async (panAt?: 'commit') => {
   const log: string[] = [];
   const player = createMotionPlayer({
-    specs: { b: spec(panAt) }, stages: { default: () => undefined }, verbs: createVerbs(), speed: () => 1,
+    specs: { b: spec(panAt) }, stages: { default: () => undefined }, verbs: createVerbs(), speed: () => 1, context: undefined,
     pan: () => ({ ensure: () => { log.push('pan'); return Promise.resolve(); }, back: () => Promise.resolve() }),
   });
   player.play('b', { commit: () => log.push('commit') });
