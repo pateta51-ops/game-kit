@@ -2,6 +2,25 @@
 
 The catalogue as data, achievements as pure functions over finished-game summaries, and the small summary written when a game ends. Nothing earned is stored, so a new definition applies to old games. Needs `play-stats`: the summary is a play-stats record and its store is `createPlayStats` (play-stats holds no summary of its own, only the game's fields). No packages; draws nothing (release 1.0: no motion, no sound). Tests: `achievements.test.ts`. K161 (feats inside a game) extends it.
 
+## Rules for agents
+
+**What it does:** Defines achievements as pure functions over small end-of-game summaries, plus a list screen, a toast and in-game feats. Nothing earned is stored; it is recomputed from the summaries.
+
+**You must:**
+1. Import from `kit/achievements/index` (no React) or `kit/achievements/ui` (screens); the screens load their own `achievements.css`.
+2. Call `record()` on the summary store once, when a game ends, using `makeSummary(...)` so `v` is set; call `remove()` when an Undo goes back past the end.
+3. Give `createSummaryStore` your own `key`; it is a play-stats store, so `play-stats` must be listed in the game's needs.
+4. Mark tutorial and practice games with `practice: true`; `evaluate` drops them.
+5. For a checklist achievement, put the same keys in `checklist` on the def and in the `checklist(keys, itemsOf)` measure, so the list screen can tick them.
+6. Keep `FeatState` in the game state (Undo rewinds it) and keep `createEarnStore` outside it; call `award(ids)` after the save.
+7. Pass `silent: firstRun(storage, key)` to `toastFor`, so an old history is not announced; remove the toast yourself after `holdMs`.
+8. Word every name, text and callout in the game; the kit gives ids and numbers only.
+
+**Common mistakes:**
+- Storing earned ids in the game state or a save: a changed definition then disagrees with old games.
+- Adding a summary field without bumping `SUMMARY_VERSION`.
+- Putting a summary that fails `validSummary` (counts not numbers, sets not string lists) in the store: the store drops it as invalid.
+
 ## Summary
 
 `GameSummary` = `{ id, at, v, result, lossReason?, rounds, counts, sets, practice? }`. `makeSummary(s)` sets `v` (`SUMMARY_VERSION`, 1; a field added later bumps it, older rows read as they are). `counts` are named numbers, `sets` named lists of keys (heroes, scenarios won). `createSummaryStore({ key, ... })` is `createPlayStats` with `validSummary` and latest-first order; the other play-stats options pass through. `record()` once when the game ends, `remove()` on an Undo past the end.

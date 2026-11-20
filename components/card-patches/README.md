@@ -2,8 +2,25 @@
 
 Card data patch layer. The source card data (the dossier transcription) is never edited: corrections live in small files, one per reason (`hidden-fixes`, `reprints`, `abbreviations`, `missing-tags`, `additional-cards`), applied when the data is imported. Pure functions, no packages.
 
+## Rules for agents
+
+**What it does:** Applies small correction files to card data when it is imported, so the source transcription is never edited.
+
+**You must:**
+1. Keep one patch file per reason (`hidden-fixes`, `reprints`, `abbreviations`, `missing-tags`, `additional-cards`) and pass them to `applyPatches(source, files, log?)` in the order they should apply; a later file wins on the same field.
+2. Use `patch: true` with a `code` to change fields of an existing card; without it the row adds a card.
+3. Never edit the source card data; `applyPatches` returns new cards (source order, then added ones) and leaves the input unchanged.
+4. Pass a `log` function when a review page needs `{ reason, code, fields }` per row.
+5. For a zoomed card, use `errata(source, played)` for printed against played and `rulingsFor(rulings, code)` for rulings keyed by card code.
+6. For a check against a community database use `diffCards(ours, theirs, fields, known)` and `cardLookup(cards, standIn)`, so one lost card costs that card, not the game.
+
+**Common mistakes:**
+- A `patch: true` row with a code the source lacks: it throws `no card <code>`.
+- An added row whose code already exists: it throws `already exists`.
+- Fixing a card by hand in the source file: the next import loses it.
+
 ```ts
-import { applyPatches } from './kit/components/card-patches';
+import { applyPatches } from '../kit/card-patches/index';
 const cards = applyPatches(source, [
   { reason: 'hidden-fixes', rows: [{ code: '01', patch: true, text: 'Gain 1 gold.' }] },
   { reason: 'additional-cards', rows: [{ code: '90', name: 'Digital card' }] },

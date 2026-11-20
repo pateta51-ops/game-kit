@@ -1,5 +1,23 @@
 Fit, zoom and pan a large SVG or DOM board, and move the camera to a game-supplied rectangle.
 
+## Rules for agents
+
+**What it does:** Fits, zooms and pans a large SVG or DOM board, and moves the camera to a rectangle the game supplies.
+
+**You must:**
+1. Import the math from `kit/board-viewport/index` (node-safe) and the wrapper from `kit/board-viewport/ui`.
+2. Pass `bounds` as `[x, y, width, height]` in board units with positive width and height; draw the children at those intrinsic board dimensions.
+3. Give the viewport its width and height through its class or style; it clips overflow.
+4. Pass `speed` from the game's motion setting; speed 0 makes `focus` immediate, and reduced motion does the same.
+5. Control the camera through the ref: `fit()` for an immediate whole-board fit, `focus(rect)` for an eased move; put the camera buttons beside the viewport, in the game.
+6. Set `minScale` / `maxScale` (CSS pixels per board unit) only to override the defaults (whole-board fit up to eight times that).
+7. Keep the view math inputs finite, with positive ordered scale limits.
+8. To check taps in a real browser run `node components/board-viewport/e2e/tap.mjs` in WSL (`NODE_PATH=$HOME/codex/base/node_modules`).
+
+**Common mistakes:**
+- A wrapper with no height: the board has no viewport to fit into.
+- Using it for scroll containers on a phone: motion-frame's phone pan handles those.
+
 Use `index.ts` for package-free view math in Node and `ui.ts` for the React wrapper. This component keeps the existing `board-layout` drawing and hit-area utilities package-free. It operates on a board transform and follows motion-frame's 350 ms ease-in-out and manual-input cancellation. Motion-frame's phone pan keeps handling scroll containers.
 
 ## View math

@@ -2,6 +2,26 @@
 
 The card-language shell (K206): card effects as data, one typed verb table where each verb has a field check, a handler that runs on engine-core and a text generator that prints the card's words from the same step. The game writes its own verbs; the standard pack (K232, `pack.ts`) gives the common ones.
 
+## Rules for agents
+
+**What it does:** Card effects as data: one typed verb table where each verb has a field check, a handler on engine-core and a text generator, so the screen prints what the engine does.
+
+**You must:**
+1. Write the game's `VerbTable<G, Step, Env?>`: each `op` of the step union needs `fields`, `run` and `text`; a missing or misspelt row fails to compile, and `null` marks a verb not built (running it throws `EngineBugError`).
+2. Start from `template/verbs.ts` and `template/verbs.test.ts`.
+3. Wire the run: put `VerbTask<Step, Env>` in the task union, spread `{ verb: verbHandler<G>(VERBS) }` into `GameRules.handlers`, and push `ctx.then(...effectTasks(card.effect, env))`.
+4. A verb that asks uses `askVerb(ctx, prompt, step, env)` and a `resume(ctx, step, env, answer)` for the answer; a verb answered without `resume` throws.
+5. Use the standard `cardPack(cfg)`: spread its `verbs`, call its `happen` in timing's `cfg.happen`, and pass `{ seat }` as env (a verb run with no env throws); `choosePlayer` and `eachPlayer` need `cfg.seats`.
+6. Print card words with `describeEffect`; keep rule ids in code comments, never in text.
+7. Test with `expectVerbs(VERBS, examples)`: it fails on a verb without handler, text or example, an invalid example, or empty text or text holding a rule id; validate card data with `validateEffect`.
+8. Keep value expressions out of bare lists of steps: only objects in a step position are read as steps.
+9. For triggers, use `when` on card data and `cardTriggers(cfg)`; every `if` name must be in `tests`, and an `optional` entry needs a `table` holding `may`, or it throws at build.
+
+**Common mistakes:**
+- Writing text for the screen apart from the verb's `text`: the words and the engine then differ.
+- A trigger `if` rechecked at resolve: only "source still active" is rechecked there.
+- A `custom` verb or `count` / filter name not in the config: throws `no custom verb` / `no count` / `no filter`.
+
 - `VerbTable<G, Step, Env?>`: one row per `op` of the game's step union: `{ fields, run, text }`. A missing verb, a missing field check or a misspelt one fails to compile (`FieldsOf<S>`). `run(ctx, step, env)` may push tasks, `ask`, `emit`, or start a timing batch with engine-core's `would` (`timing.md`); `null` marks a verb not built yet (running it throws `EngineBugError`).
 - Ask and resume (K232): a verb asks with `askVerb(ctx, prompt, step, env)` (give the prompt `kind` and `seat`); the answer comes back to the verb's `resume(ctx, step, env, answer)`, so a save in the middle of an effect resumes.
 - Standard verb pack (K232): `cardPack<G, E>(cfg)` gives `verbs` (spread into the table) and `happen` (call it in timing's `cfg.happen`). Every card move is a `would` batch (one occurrence per card, kind = the verb). Words: default templates, the game overrides each (`words`, `word`). Opponents pick from their own view (hidden cards are `#index`). Verbs:
