@@ -20,6 +20,16 @@ if (root)
       initial={{ pick: q.get('pick') ?? 'cora', opponent: q.get('opp') ?? 'fen' }}
       words={{ roster: 'Travellers', opponent: 'Choose your rival', deck: (c) => `Look through ${c.short ?? ''}’s deck` }}
       slots={{
+        control: (kind, p) =>
+          kind === 'begin' ? (
+            <button type="button" data-part="begin" data-own="yes" disabled={p.disabled} onClick={p.onClick}>
+              ▶ {p.children}
+            </button>
+          ) : kind === 'deck-tab' ? (
+            <button type="button" data-part="tab" data-own="yes" data-kind={p.id} data-on={p.on === true ? 'yes' : 'no'} aria-pressed={p.on} onClick={p.onClick}>
+              {p.children}
+            </button>
+          ) : null,
         header: (
           <div className="demo-title">
             <h1>Pick a Traveller</h1>
