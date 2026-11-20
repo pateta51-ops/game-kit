@@ -80,8 +80,8 @@ export async function runPlaytest(adapter: GameAdapter, opts: PlaytestOptions): 
   const seen = new Map<string, { finding: string; count: number }>();
   let last = '';
   const maxRepeats = opts.maxRepeats ?? 3;
-  const note = (f: string) => {
-    last = findingKey(f);
+  const note = (f: string, norm = false) => {
+    last = norm ? findingKey(f) : f;
     const e = seen.get(last);
     if (e === undefined) seen.set(last, { finding: f, count: 1 });
     else e.count++;
@@ -178,7 +178,7 @@ export async function runPlaytest(adapter: GameAdapter, opts: PlaytestOptions): 
       }
       const viewHash = createHash('sha1').update(view).digest('hex').slice(0, 12);
       appendFileSync(log, JSON.stringify({ step: decisions, viewHash, view: short(view), options, choice, reason, usage, cost: paid }) + '\n');
-      const repeated = /^\s*BUG:/i.test(reason) && note(`step ${decisions}: ${reason}`);
+      const repeated = /^\s*BUG:/i.test(reason) && note(`step ${decisions}: ${reason}`, true);
       recent.push(`${decisions}: ${short(options[choice]!, 80)} (${short(reason, 120)})`);
       if (recent.length > (opts.history ?? 6)) recent.shift();
       decisions++;
