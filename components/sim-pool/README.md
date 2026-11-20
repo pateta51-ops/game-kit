@@ -16,7 +16,7 @@ Plays N whole games of any `GameRules<G>` with a driver, in this thread or on wo
 7. Set `maxActions` for a game whose length is unusual (default 100,000; no result by then fails the game), and `gameTimeoutMs` (worker threads only) to stop a hung game.
 8. For the hidden-shuffle check give `reshuffleHidden` on `SimGame` and pass `hidden: true`; without it the run throws.
 9. Use `heavy run` or the game's npm script for long runs, not bare Node on the shared machine.
-10. For the whole-game report (K490) pass `whole: { clauses, group? }` (or `true`) in `fuzzMain`'s options and give `trace(content)` on `SimGame` (card-harness `traceAbilities` over the registry the engine plays from, built in `content()`); without `trace` no record has `resolved` and every listed clause fails as never resolved.
+10. For the whole-game report (K490) pass `whole: { clauses, group? }` (or `true`) in `fuzzMain`'s options and give `trace(content)` on `SimGame` (card-harness `traceAbilities` over the registry the engine plays from, built in `content()`); without `trace` no record has `resolved` and every listed clause fails as never resolved. Set `gameTimeoutMs` in the options too: without it a game that hangs inside one action stalls the run; with it the game is a `timeout` record, counted unfinished with its seed (a crashed worker's game too).
 11. Answer with the engine's own options: `randomDriver` over the default `legalAnswers` (the prompt's enabled options) is the legal-move driver; a game `answers` override replaces those options.
 
 **Common mistakes:**

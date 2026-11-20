@@ -43,4 +43,17 @@ describe('K490 whole-game report', () => {
     expect(lines).toContain('    seed long-0 step 40: replay --seed long-0 --driver random --until 40');
     expect(lines.at(-1)).toBe('-/-: 1 of 1 games did not finish (seeds long-0)');
   });
+
+  it('counts a timed-out game (gameTimeoutMs) and a crashed game as not finished, with their seeds', async () => {
+    const good = new URL('./fake/game.ts', import.meta.url).href;
+    const hung = await fuzz(good, { seed: 'loop', gameTimeoutMs: 500 });
+    expect(hung.records[0]?.errorName).toBe('timeout');
+    expect(wholeGame(hung).failures).toEqual(['-/-: 1 of 1 games did not finish (seeds loop)']);
+    const died = await fuzz(good, { seed: 'die', gameTimeoutMs: 30_000 });
+    expect(died.records[0]?.error).toMatch(/^crash in game 0/);
+    expect(wholeGame(died).failures).toEqual(['-/-: 1 of 1 games did not finish (seeds die)']);
+    const lines: string[] = [];
+    expect(await fuzzMain(['--seed', 'loop'], good, { whole: true, gameTimeoutMs: 500 }, (l) => void lines.push(l))).toBe(1);
+    expect(lines.at(-1)).toBe('-/-: 1 of 1 games did not finish (seeds loop)');
+  });
 });

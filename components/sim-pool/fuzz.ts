@@ -31,6 +31,8 @@ export interface FuzzOptions {
   readonly hasten?: number | undefined;
   /** K274: the hidden-shuffle check (see `PlayOptions.hidden`). */
   readonly hidden?: boolean | number | undefined;
+  /** K490: stop a game that runs longer than this many ms (wall clock) as a failed `timeout` record (see `RunRequest.gameTimeoutMs`); default off. */
+  readonly gameTimeoutMs?: number | undefined;
   /** The game's settings for a seed, from the seed alone (so a seed replays). */
   readonly settings?: ((seed: string, driver: string) => NonNullable<GameSpec['settings']>) | undefined;
   /** K490: print the whole-game report after the findings and fail on its failures (`fuzzMain`; not with `--until`). */
@@ -118,7 +120,7 @@ export async function fuzz(module: string, o: FuzzOptions = {}): Promise<FuzzRun
   const driver = o.driver ?? 'random';
   const seeds = o.seed !== undefined ? [o.seed] : Array.from({ length: o.games ?? 500 }, (_, i) => `${o.prefix ?? 'fuzz'}-${String(i)}`);
   const specs = seeds.map((seed, index): GameSpec => ({ index, seed, driver, ...(o.settings ? { settings: o.settings(seed, driver) } : {}) }));
-  const records = await runGames({ module, specs, invariants: true, until: o.until, view: o.view, hasten: o.hasten, hidden: o.hidden, ...(o.worker !== undefined ? { worker: o.worker } : {}) }, o.workers ?? 1);
+  const records = await runGames({ module, specs, invariants: true, until: o.until, view: o.view, hasten: o.hasten, hidden: o.hidden, gameTimeoutMs: o.gameTimeoutMs, ...(o.worker !== undefined ? { worker: o.worker } : {}) }, o.workers ?? 1);
   return { records, findings: records.flatMap((r) => findingOf(r) ?? []) };
 }
 
