@@ -15,7 +15,7 @@ const make = (comps: Record<string, { needs?: string[]; packages?: string[]; fil
     fs.mkdirSync(d, { recursive: true });
     fs.writeFileSync(path.join(d, 'component.json'), JSON.stringify({ name, source: { game: 'g', commit: 'c', paths: [] }, needs: c.needs ?? [], packages: c.packages ?? [] }));
     if (!c.bare) {
-      fs.writeFileSync(path.join(d, 'README.md'), '# ' + name + '\n');
+      fs.writeFileSync(path.join(d, 'README.md'), c.readme ?? '# ' + name + '\n\n## Rules for agents\n');
       fs.writeFileSync(path.join(d, 'a.test.ts'), '');
     }
     for (const [f, s] of Object.entries(c.files ?? {})) fs.writeFileSync(path.join(d, f), s);
@@ -28,10 +28,7 @@ describe('check-components', () => {
     expect(make({ a: { files: { 'x.ts': "import { y } from './y'\n" } } }).status).toBe(0);
   });
   it('a README without the Rules for agents heading fails', () => {
-    const r = make({ a: { readme: '# a
-
-Use it.
-' } });
+    const r = make({ a: { readme: '# a\n\nUse it.\n' } });
     expect(r.status).toBe(1);
     expect(r.stderr).toContain('Rules for agents');
   });
