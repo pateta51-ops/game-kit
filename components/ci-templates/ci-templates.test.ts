@@ -440,6 +440,21 @@ describe('K190: what the four games need (examples/<game>.json renders their wor
     expect(c.check!['timeout-minutes']).toBe(15);
     expect(st(c.check!).some((s) => 'timeout-minutes' in s)).toBe(false);
   });
+  it('K478: docsRunsOn self puts changes and docs on the runner label, no queue wait on changes; default unchanged', () => {
+    const base = { repo: 'acme/widget', runnerLabel: 'widget', docsSteps: ['npm run plancheck'] };
+    const d = mk('k478-def', base)('ci.yml').jobs;
+    expect(d.changes!['runs-on']).toBe('ubuntu-latest');
+    expect(d.docs!['runs-on']).toBe('ubuntu-latest');
+    expect(d.changes!['timeout-minutes']).toBe(5);
+    const s = mk('k478-self', { ...base, docsRunsOn: 'self' })('ci.yml').jobs;
+    expect(s.changes!['runs-on']).toEqual(['self-hosted', 'widget']);
+    expect(s.docs!['runs-on']).toEqual(['self-hosted', 'widget']);
+    expect(s.changes!['timeout-minutes']).toBe(5);
+    expect(JSON.stringify(s.changes!.steps)).not.toContain('timeout-minutes');
+    expect(s.docs!['timeout-minutes']).toBe(10);
+    expect(JSON.stringify(s.docs!.steps)).not.toContain('timeout-minutes');
+    expect(mk('k478-own', { ...base, docsRunsOn: 'ubuntu-24.04' })('ci.yml').jobs.changes!['runs-on']).toBe('ubuntu-24.04');
+  });
   it('K453: a docs-only diff renders the skip (hosted changes job, check needs it); docsSkip false renders none; docs-only.mjs tells docs from code', () => {
     const base = { repo: 'acme/widget', runnerLabel: 'widget' };
     const on = mk('docs-on', { ...base, docsSteps: ['npm run plancheck'], docsPaths: ['docs/**', '*.md'] })('ci.yml').jobs;

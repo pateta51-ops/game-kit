@@ -134,6 +134,7 @@ for (const f of c.workflows ?? ['ci.yml', 'full-gate.yml']) {
   if (f === 'ci.yml' && c.docsSkip !== false) {
     // K453: a docs-only change never takes the self-hosted slot: a hosted `changes` job says so, `check` is then skipped (a skipped job
     // counts as passed for a required check), and the optional hosted `docs` job (docsSteps) runs the docs lanes alone.
+    const dro = c.docsRunsOn ?? 'hosted', dr = dro === 'hosted' ? ' ubuntu-latest' : dro === 'self' ? ` [self-hosted, ${c.runnerLabel}]` : val(dro, '      ');
     const id = o?.id ?? 'check';
     const a = out.search(new RegExp(`^ {2}${id}:\n`, 'm'));
     const b = a < 0 ? -1 : out.slice(a + 1).search(/^ {2}[\w-]+:\n/m);
@@ -146,9 +147,9 @@ for (const f of c.workflows ?? ['ci.yml', 'full-gate.yml']) {
     const ifLine = m ? `    if: ${m[1]}\n` : '';
     const dp = c.docsPaths?.length ? `\n          DOCS_PATHS: ${JSON.stringify(c.docsPaths.join(','))}` : '';
     const ds = c.docsSteps?.length
-      ? `\n  docs:\n    name: Docs lanes\n    needs: changes\n    if: needs.changes.outputs.docs == 'true'\n    runs-on: ubuntu-latest\n    timeout-minutes: 10\n    steps:\n      - uses: actions/checkout@v7\n      - uses: actions/setup-node@v7\n        with:\n          node-version-file: .nvmrc\n      - run: npm ci --no-audit --no-fund\n${steps(c.docsSteps)}`
+      ? `\n  docs:\n    name: Docs lanes\n    needs: changes\n    if: needs.changes.outputs.docs == 'true'\n    runs-on:${dr}\n    timeout-minutes: 10\n    steps:\n      - uses: actions/checkout@v7\n      - uses: actions/setup-node@v7\n        with:\n          node-version-file: .nvmrc\n      - run: npm ci --no-audit --no-fund\n${steps(c.docsSteps)}`
       : '';
-    const ch = `\n  changes:\n    name: Docs-only change?\n${ifLine}    runs-on: ubuntu-latest\n    timeout-minutes: 5\n    outputs:\n      docs: \${{ steps.diff.outputs.docs }}\n    steps:\n      - uses: actions/checkout@v7\n        with:\n          fetch-depth: 0\n      - id: diff\n        run: node ${dir}/docs-only.mjs\n        env:\n          BASE: \${{ github.event.pull_request.base.sha || github.event.before }}${dp}\n`;
+    const ch = `\n  changes:\n    name: Docs-only change?\n${ifLine}    runs-on:${dr}\n    timeout-minutes: 5\n    outputs:\n      docs: \${{ steps.diff.outputs.docs }}\n    steps:\n      - uses: actions/checkout@v7\n        with:\n          fetch-depth: 0\n      - id: diff\n        run: node ${dir}/docs-only.mjs\n        env:\n          BASE: \${{ github.event.pull_request.base.sha || github.event.before }}${dp}\n`;
     out = out.slice(0, a) + nb + out.slice(a + blk.length);
     out = out.replace(/\n*$/, '\n') + ch + ds;
   }
@@ -157,7 +158,7 @@ for (const f of c.workflows ?? ['ci.yml', 'full-gate.yml']) {
     const j0 = out.indexOf('\njobs:\n');
     out = out.slice(0, j0) + out.slice(j0).split(/(?=^ {2}[\w-]+:\n)/m).map((b) => {
       const n = b.match(/^ {4}timeout-minutes: (\d+)$/m);
-      if (!n || !/^ {4}runs-on: .*self-hosted/m.test(b)) return b;
+      if (/^ {2}(?:changes|docs):\n/.test(b) || !n || !/^ {4}runs-on: .*self-hosted/m.test(b)) return b;
       const i = b.indexOf('\n    steps:\n');
       return b.slice(0, i).replace(n[0], `    timeout-minutes: ${+n[1] + q}`) + b.slice(i).split(/(?=^ {6}- )/m).map((t) => (/^(?: {6}- | {8})run:/m.test(t) && !/^(?: {6}- | {8})timeout-minutes:/m.test(t) ? `${t.replace(/\n+$/, '')}\n        timeout-minutes: ${n[1]}\n${t.match(/\n*$/)[0].slice(1)}` : t)).join('');
     }).join('');
