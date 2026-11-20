@@ -95,7 +95,7 @@ export function createGlitch(el: HTMLElement, o: GlitchOptions): Glitch {
     restore();
     const own = new Set<Node>([...layers, ...slices]);
     const texts: Text[] = [];
-    Array.from(el.childNodes).filter((n) => !own.has(n as Node)).forEach((n) => walk(n as Node, texts));
+    Array.from(el.childNodes).filter((n) => !own.has(n)).forEach((n) => walk(n, texts));
     const chars = texts.map((t) => Array.from(t.data));
     const pos: [number, number][] = [];
     chars.forEach((cs, ti) => cs.forEach((c, i) => { if (/\S/.test(c)) pos.push([ti, i]); }));
