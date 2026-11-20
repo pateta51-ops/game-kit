@@ -8,7 +8,7 @@ const SCRIPT = path.resolve(import.meta.dirname, '..', 'scripts', 'check-compone
 const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'cc-test-'));
 afterAll(() => fs.rmSync(tmp, { recursive: true, force: true }));
 let n = 0;
-const make = (comps: Record<string, { needs?: string[]; packages?: string[]; files?: Record<string, string>; bare?: boolean }>) => {
+const make = (comps: Record<string, { needs?: string[]; packages?: string[]; files?: Record<string, string>; bare?: boolean; readme?: string }>) => {
   const root = path.join(tmp, 'r' + String(++n));
   for (const [name, c] of Object.entries(comps)) {
     const d = path.join(root, 'components', name);
@@ -26,6 +26,14 @@ const make = (comps: Record<string, { needs?: string[]; packages?: string[]; fil
 describe('check-components', () => {
   it('a clean component passes', () => {
     expect(make({ a: { files: { 'x.ts': "import { y } from './y'\n" } } }).status).toBe(0);
+  });
+  it('a README without the Rules for agents heading fails', () => {
+    const r = make({ a: { readme: '# a
+
+Use it.
+' } });
+    expect(r.status).toBe(1);
+    expect(r.stderr).toContain('Rules for agents');
   });
   it('an escaping static import fails', () => {
     const r = make({ a: { files: { 'x.ts': "import { y } from '../b/y'\n" } }, b: {} });
