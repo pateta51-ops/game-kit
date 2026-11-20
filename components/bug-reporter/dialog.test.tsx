@@ -38,6 +38,7 @@ beforeEach(async () => {
 });
 afterEach(() => {
   cleanup();
+  vi.unstubAllGlobals();
   (window as unknown as { bugReports?: { real: () => void } }).bugReports?.real();
 });
 
@@ -63,6 +64,7 @@ describe('K387: BugSettings button slots', () => {
 describe('K469: BugReportHost button slot', () => {
   const draw = (b: BugBtnProps) => createElement('a', { className: b.className, 'data-testid': b.testId, 'data-kind': b.kind, 'aria-disabled': b.disabled, 'aria-pressed': b.pressed, onClick: b.onClick }, b.label);
   it('renderButton draws the dialog buttons, with disabled, primary and buttonClass', async () => {
+    vi.stubGlobal('ResizeObserver', class { observe = () => undefined; disconnect = () => undefined; unobserve = () => undefined; });
     render(<BugReportHost buttonClass="mine" renderButton={draw} />);
     act(() => { openBugReport(); });
     expect((await screen.findByTestId('bug-cancel')).tagName).toBe('A');
