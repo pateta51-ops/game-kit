@@ -547,15 +547,6 @@
   font-size: 8vw;
   padding: 2.5vw;
 }
-[data-part='character-select'] > [data-part='header'] {
-  position: relative;
-}
-[data-part='character-select'] [data-part='options'] {
-  position: absolute;
-  top: 100%;
-  right: 0;
-  z-index: 3;
-}
 [data-part='character-select'] [data-part='field'] select,
 [data-part='character-select'] [data-part='field'] input:not([type='checkbox']) {
   font: inherit;
@@ -566,7 +557,6 @@
   padding: 0.1em 0.4em;
 }
 [data-layout='phone'] [data-part='options'] {
-  left: 0;
   flex-direction: column;
   align-items: flex-start;
 }
