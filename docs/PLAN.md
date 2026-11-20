@@ -182,6 +182,10 @@ Tests: each kind reaches the slot with its props; null keeps the built-in. | S |
 - `jumpRange?: [min, max]` in % of width: each slice's sideways jump is drawn exactly in that range (sign random), instead of the approximate `jump` x 0.6-1.4.
 - README: say that `looks/glitch.css` must be imported or the layers sit in the page flow.
 Tests with a seed and fake timers: lengths inside the range; step count inside the range; every jump inside the range; old options unchanged. | S | Unstoppable architect, 20 Nov 2026 (XD-11 title glitch, game PR #161, branch title-glitch-fix); not blocking | done |
+| K473 | effect-library `createGlitch`, by addition (off unless set):
+- `skewDeg?: [min, max]`: one frame per burst is skewed by an angle drawn in that range (sign random), on stepped bursts (K472 `burstSteps`) and on plain bursts.
+- `blankLetters?: [min, max]`: one frame per burst blanks that many letters of the target's text (text targets only; ignored with `mask` or when the face has no text); the text comes back on the next frame and at the burst's end, and never after destroy().
+Seeded rng; motion off = no timers. Tests: angle in range on exactly one frame; blank count in range on one frame, text restored; ignored on a masked target; old behaviour unchanged. | S | Unstoppable architect, 20 Nov 2026 (XD-11 text-line glitch, game PR #162, branch dcc-line-glitch); add-on to K472, not blocking | done |
 | K283 | `card-pile` `hitTitle={false}` drops the native title on the stack button (STCC draws its own pile tooltip) | S |  | done |
 | K284 | `layout-editor` Reset button (in-page confirmation): restores the starting doc, backdrops (`LAYOUT_EDITOR_BG_INIT`), zoom and screen; `layoutEditor.reset()` | S |  | done |
 | K285 | `plan-checker` `--tsc-at DIR` compiles the plan's type blocks inside a game folder, so relative `kit/` imports resolve | S |  | done |
