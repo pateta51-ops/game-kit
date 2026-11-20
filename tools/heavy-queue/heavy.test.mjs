@@ -6,7 +6,7 @@ import { createServer } from 'node:net';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { isHeavy, procScan, startServer } from './server.mjs';
+import { cachedGB, isHeavy, procScan, startServer } from './server.mjs';
 
 const HEAVY = fileURLToPath(new URL('./heavy.mjs', import.meta.url));
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -295,7 +295,7 @@ describe('heavy-queue worker cap and load (K454)', () => {
     await until(async () => (await q.status()).unqueued.length === 1);
     const r = heavy(['load'], { HEAVY_URL: q.url });
     expect((await r).code).toBe(0);
-    expect(r.out()).toMatch(/^load \d+\.\d\d \d+\.\d\d \d+\.\d\d \| cores 16 \| slots 2\/2 \| queued 1 \| unqueued 1\n$/);
+    expect(r.out()).toMatch(/^load \d+\.\d\d \d+\.\d\d \d+\.\d\d \| cores 16 \| slots 2\/2 \| queued 1 \| unqueued 1( \| cache \d+\.\d GB)?\n$/);
   });
   it('flags headless chromium and puppeteer scripts, never a normal browser', () => {
     for (const c of ['/c/chrome --headless --user-data-dir=/tmp/playwright_chromiumdev_profile-x', 'node /g/node_modules/puppeteer/lib/cli.js']) expect(isHeavy(c.split(' ')), c).toBe(true);
@@ -425,5 +425,74 @@ describe('heavy --mem and --slots (K474)', () => {
     expect((await q.post('/acquire', { label: 'two', slots: 2 })).granted).toBe(true);
     expect((await q.post('/acquire', { label: 'one' })).granted).toBe(true);
     expect((await q.post('/acquire', { label: 'late' })).granted).toBe(false);
+  });
+});
+
+describe('heavy-queue cache drop (K495)', () => {
+  const cache = (gb, runs, o = {}) => { const st = { gb, runs: 0, logs: [] }; return { st, o: { readCache: () => st.gb, runDrop: () => { st.runs++; st.gb = 1; return runs ?? true; }, say: (m) => st.logs.push(m), ...o } }; };
+  const job = async (q) => { const a = await q.post('/acquire', { label: 'j' }); await q.post('/release', { id: a.id, exit: 0 }); };
+  it('above the limit it drops once and logs before and after', async () => {
+    const { st, o } = cache(10);
+    const q = await serve({ dropGb: 6, dropEveryMs: 0, ...o });
+    await job(q);
+    await until(async () => (await q.status()).lastDrop);
+    expect(st.runs).toBe(1);
+    expect(st.logs).toEqual(['heavy-queue: dropped file cache 10 GB -> 1 GB']);
+    expect((await q.status()).cacheGB).toBe(1);
+  });
+  it('below the limit it does nothing', async () => {
+    const { st, o } = cache(3);
+    const q = await serve({ dropGb: 6, dropEveryMs: 0, ...o });
+    await job(q); await sleep(100);
+    expect(st.runs).toBe(0);
+    expect((await q.status()).lastDrop).toBe(null);
+  });
+  it('0 turns it off', async () => {
+    const { st, o } = cache(50);
+    const q = await serve({ dropGb: 0, dropEveryMs: 0, ...o });
+    await job(q); await sleep(100);
+    expect(st.runs).toBe(0);
+  });
+  it('at most one check per HEAVY_DROP_EVERY_MS', async () => {
+    const { st, o } = cache(10);
+    const q = await serve({ dropGb: 6, dropEveryMs: 3600000, ...o });
+    await job(q);
+    await until(async () => (await q.status()).lastDrop);
+    st.gb = 10;
+    await job(q); await job(q); await sleep(100);
+    expect(st.runs).toBe(1);
+  });
+  it('a sudo failure warns once, never throws, never retries', async () => {
+    const { st, o } = cache(10, false);
+    const q = await serve({ dropGb: 6, dropEveryMs: 0, ...o });
+    await job(q); await until(() => st.logs.length);
+    await job(q); await job(q); await sleep(100);
+    expect(st.runs).toBe(1);
+    expect(st.logs).toHaveLength(1);
+    expect(st.logs[0]).toMatch(/sudo/);
+    expect((await q.status()).lastDrop).toBe(null);
+  });
+  it('cachedGB parses a real meminfo sample and a missing file is null', () => {
+    const d = mkdtempSync(join(tmpdir(), 'mi-'));
+    writeFileSync(join(d, 'meminfo'), `MemTotal:       16384000 kB
+MemFree:         1000000 kB
+Buffers:          100000 kB
+Cached:         6291456 kB
+SwapCached:            0 kB
+`);
+    expect(cachedGB(join(d, 'meminfo'))).toBe(6);
+    expect(cachedGB(join(d, 'nope'))).toBe(null);
+    rmSync(d, { recursive: true });
+  });
+  it('two drops never overlap', async () => {
+    const { st, o } = cache(10);
+    let release;
+    o.runDrop = () => { st.runs++; return new Promise((r) => (release = () => r(true))); };
+    const q = await serve({ dropGb: 6, dropEveryMs: 0, ...o });
+    await job(q); await until(() => st.runs === 1);
+    await job(q); await job(q); await sleep(100);
+    expect(st.runs).toBe(1);
+    release();
+    await until(async () => (await q.status()).lastDrop);
   });
 });
