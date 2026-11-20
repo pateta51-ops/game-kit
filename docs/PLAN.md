@@ -170,7 +170,11 @@ Tests for both slots; re-shoot the contact sheets (same states) with the detail 
 | K469 | New component `controls`: Segmented, Toggle, Slider, TextField as plain behaviour parts (class names and data attributes a game skins; minimal neutral CSS only); no game look. Slider rounds to the step without float noise (0.1 steps give 0.3, not 0.30000000000000004).
 Slots by addition: bug-report dialog takes a `button` render slot (or `Button` component prop); rules-screen takes a `search` render slot for its search field. Defaults unchanged.
 Port from Unstoppable PR #152. Tests per control; demo page + contact sheet. | M | Unstoppable architect, 20 Nov 2026 (game PR #152, branch xd14-sweep, commit 841421ba, src/screen/kit/K.tsx); owner bar XD-14: no native browser controls a player sees. Owner approved the small version 20 Nov. | done |
-| K471 | controls `Toggle`: optional `sub` marks a nested sub-setting (`data-sub`); looks/plain.css indents it by `--controls-sub-indent` (default 1.6em). Test: sub marked, plain not. | S | Unstoppable architect, 20 Nov 2026 (game PR #156, branch controls-onto-kit); not blocking | done |
+| K470 | character-select, by addition, built-ins stay the defaults:
+- `slots.renderText(text)`: the game renders summary/detail text itself (its glyph tokens, e.g. "[boss damage 12]"); the kit's `pieces()` stays the default.
+- `slots.begin(state, onBegin)` for the primary Begin.
+- One general `slots.control(kind, props)` used by EVERY interactive element the screen draws (mode tabs, deck tabs, deck search, paging arrows, full-text toggle, Day/Night style sub-picker buttons, options fold toggle, roster and opponent entries if they are buttons): the game returns its own part or null for the built-in. List every kind in the README so no plain control is left unslotted.
+Tests: each kind reaches the slot with its props; null keeps the built-in. | S | Unstoppable experience director, 20 Nov 2026 (first real user, Unstoppable PR #154 on v0.186.0); owner bar XD-14: no native or plain controls a player sees | done |
 | K283 | `card-pile` `hitTitle={false}` drops the native title on the stack button (STCC draws its own pile tooltip) | S |  | done |
 | K284 | `layout-editor` Reset button (in-page confirmation): restores the starting doc, backdrops (`LAYOUT_EDITOR_BG_INIT`), zoom and screen; `layoutEditor.reset()` | S |  | done |
 | K285 | `plan-checker` `--tsc-at DIR` compiles the plan's type blocks inside a game folder, so relative `kit/` imports resolve | S |  | done |
