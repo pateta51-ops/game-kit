@@ -15,8 +15,8 @@ export interface GlitchOptions {
   slices?: number;
   /** still time between bursts in ms, [min, max], default [3500, 7000] */
   idleMs?: [number, number];
-  /** default 200 */
-  burstMs?: number;
+  /** default 200; [min, max] draws each burst's length from the seed */
+  burstMs?: number | [number, number];
   /** default 600 */
   tearMs?: number;
   /** opacity at the dropout frame, default .3 (`--glitch-dropout`) */
@@ -29,6 +29,10 @@ export interface GlitchOptions {
   split?: number;
   /** slice jump in % of width (`--glitch-jump`), default 2.4 */
   jump?: number;
+  /** a burst is this many hard steps (or [min, max]); each re-draws slices, jumps and the split side; absent: the burst plays as the CSS keyframes */
+  burstSteps?: number | [number, number];
+  /** [min, max] slice jump in % of width, sign random; replaces `jump` x 0.6-1.4 */
+  jumpRange?: [number, number];
 }
 export interface Glitch {
   burst(): void;
@@ -43,7 +47,8 @@ export function createGlitch(el: HTMLElement, o: GlitchOptions): Glitch {
   const between = (r: [number, number]): number => r[0] + rand() * (r[1] - r[0]);
   const idle = o.idleMs ?? GLITCH_DEFAULTS.idleMs;
   const gap = o.repeatGapMs ?? GLITCH_DEFAULTS.repeatGapMs;
-  const ms = { burst: o.burstMs ?? GLITCH_DEFAULTS.burstMs, tear: o.tearMs ?? GLITCH_DEFAULTS.tearMs };
+  const bm = o.burstMs ?? GLITCH_DEFAULTS.burstMs;
+  const ms = { burst: typeof bm === 'number' ? bm : 0, tear: o.tearMs ?? GLITCH_DEFAULTS.tearMs };
   const set = (k: string, v: string | number): void => el.style.setProperty(k, String(v));
   el.classList.add('fx-glitch');
   if (o.mask) set('--glitch-mask', o.mask);
@@ -53,7 +58,8 @@ export function createGlitch(el: HTMLElement, o: GlitchOptions): Glitch {
   }
   if (o.dropout !== undefined) set('--glitch-dropout', o.dropout);
   if (o.split !== undefined) set('--glitch-split', `${String(o.split)}%`);
-  if (o.jump !== undefined) set('--glitch-jump', o.jump);
+  if (o.jumpRange) set('--glitch-jump', 1);
+  else if (o.jump !== undefined) set('--glitch-jump', o.jump);
   if (o.mask) el.classList.add('fx-glitch--masked');
   const face = Array.from(el.childNodes);
   const layer = (cls: string): HTMLElement => {
@@ -70,6 +76,7 @@ export function createGlitch(el: HTMLElement, o: GlitchOptions): Glitch {
   for (let i = 0; i < (o.slices ?? GLITCH_DEFAULTS.slices); i++) slices.push(layer(`fx-glitch-slice${i % 2 ? ' fx-glitch-slice--b' : ''}`));
   let timer: ReturnType<typeof setTimeout> | undefined;
   let endTimer: ReturnType<typeof setTimeout> | undefined;
+  let steps: ReturnType<typeof setTimeout>[] = [];
   let dead = false;
   const factor = (): number => {
     const s = o.speed();
@@ -78,9 +85,11 @@ export function createGlitch(el: HTMLElement, o: GlitchOptions): Glitch {
   const stop = (): void => {
     clearTimeout(timer);
     clearTimeout(endTimer);
+    steps.forEach(clearTimeout);
+    steps = [];
     timer = endTimer = undefined;
   };
-  const clearClasses = (): void => el.classList.remove('fx-glitch--burst', 'fx-glitch--tear');
+  const clearClasses = (): void => el.classList.remove('fx-glitch--burst', 'fx-glitch--tear', 'fx-glitch--steps', 'fx-glitch--drop');
   function schedule(): void {
     const f = factor();
     if (dead || !f) return;
@@ -91,22 +100,40 @@ export function createGlitch(el: HTMLElement, o: GlitchOptions): Glitch {
     if (dead || !f) return;
     stop();
     clearClasses();
-    for (const s of slices) {
-      const top = rand() * 72;
-      const h = 8 + rand() * 18;
-      s.style.setProperty('--top', `${String(top)}%`);
-      s.style.setProperty('--bottom', `${String(100 - top - h)}%`);
-      s.style.setProperty('--jump', String((rand() < 0.5 ? -1 : 1) * (0.6 + rand() * 0.8)));
-    }
-    set('--glitch-ms', `${String(ms[kind] * f)}ms`);
+    const len = kind === 'burst' && typeof bm !== 'number' ? between(bm) : ms[kind];
+    const stepped = kind === 'burst' && o.burstSteps !== undefined;
+    const n = stepped ? Math.max(1, Math.round(typeof o.burstSteps === 'number' ? o.burstSteps : between(o.burstSteps as [number, number]))) : 0;
+    const draw = (): void => {
+      for (const s of slices) {
+        const top = rand() * 72;
+        const h = 8 + rand() * 18;
+        s.style.setProperty('--top', `${String(top)}%`);
+        s.style.setProperty('--bottom', `${String(100 - top - h)}%`);
+        s.style.setProperty('--jump', String((rand() < 0.5 ? -1 : 1) * (o.jumpRange ? between(o.jumpRange) : 0.6 + rand() * 0.8)));
+      }
+    };
+    draw();
+    set('--glitch-ms', `${String(len * f)}ms`);
     void el.offsetWidth;
-    el.classList.add(`fx-glitch--${kind}`);
+    if (stepped) {
+      const side = (): void => {
+        set('--glitch-side', rand() < 0.5 ? -1 : 1);
+        el.classList[rand() < 0.25 ? 'add' : 'remove']('fx-glitch--drop');
+      };
+      side();
+      el.classList.add('fx-glitch--steps');
+      for (let i = 1; i < n; i++)
+        steps.push(setTimeout(() => {
+          draw();
+          side();
+        }, (len * f * i) / n));
+    } else el.classList.add(`fx-glitch--${kind}`);
     endTimer = setTimeout(() => {
       endTimer = undefined;
       clearClasses();
       if (again) timer = setTimeout(() => play('burst', false), between(gap) * f);
       else schedule();
-    }, ms[kind] * f);
+    }, len * f);
   }
   function update(): void {
     if (dead) return;

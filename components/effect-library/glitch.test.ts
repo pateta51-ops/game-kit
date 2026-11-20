@@ -166,4 +166,47 @@ describe('glitch', () => {
     g.burst();
     expect(vi.getTimerCount()).toBe(0);
   });
+  it('burstMs range, burstSteps and jumpRange stay in range; no timer at instant', () => {
+    const g = make({ seed: 3, burstMs: [160, 280], burstSteps: [3, 5], jumpRange: [2, 4] });
+    for (let k = 0; k < 20; k++) {
+      mount();
+      const h = createGlitch(host as unknown as HTMLElement, { speed: () => 1, repeat: 0, seed: k, burstMs: [160, 280], burstSteps: [3, 5], jumpRange: [2, 4] });
+      h.burst();
+      const len = parseFloat(host.style.props['--glitch-ms']!);
+      expect(len).toBeGreaterThanOrEqual(160);
+      expect(len).toBeLessThanOrEqual(280);
+      expect(on('steps')).toBe(true);
+      const seen = new Set<string>();
+      const grab = () => {
+        for (const s of sliceEls()) {
+          const j = Math.abs(parseFloat(s.style.props['--jump']!));
+          expect(j).toBeGreaterThanOrEqual(2);
+          expect(j).toBeLessThanOrEqual(4);
+        }
+        seen.add(tops().join());
+      };
+      grab();
+      for (let t = 0; t < len; t += 1) {
+        vi.advanceTimersByTime(1);
+        grab();
+      }
+      expect(seen.size).toBeGreaterThanOrEqual(3);
+      expect(seen.size).toBeLessThanOrEqual(5);
+      expect(on('steps')).toBe(false);
+      h.destroy();
+    }
+    g.destroy();
+    mount();
+    const z = make({ seed: 1, burstSteps: 3, speed: () => 'instant' });
+    z.burst();
+    expect(vi.getTimerCount()).toBe(0);
+  });
+  it('without the new options the burst is the CSS animation and 200 ms', () => {
+    const g = mk(2);
+    g.burst();
+    expect(on('burst')).toBe(true);
+    expect(on('steps')).toBe(false);
+    expect(host.style.props['--glitch-ms']).toBe('200ms');
+    expect(vi.getTimerCount()).toBe(1);
+  });
 });
