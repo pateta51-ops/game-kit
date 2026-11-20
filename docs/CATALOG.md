@@ -534,7 +534,7 @@ Playwright helpers a game's browser tests share. Lifted from Imperium's `e2e/hel
 
 ## effect-library
 
-Sixteen verbs for the director's spec format as DOM effects for the motion frame: `move`, `arc-move`, `lift`, `settle`, `fade-in`, `fade-out`, `show`, `hide`, `flip`, `scale`, `shake`, `shake-group`, `glow`, `unroll`, `multi-stop-path`, `text`. Web Animations API; browser only. Beside them: canvas effects with a particle kit and `trail`, a count-up and a boxed ambience layer.
+Sixteen verbs for the director's spec format as DOM effects for the motion frame: `move`, `arc-move`, `lift`, `settle`, `fade-in`, `fade-out`, `show`, `hide`, `flip`, `scale`, `shake`, `shake-group`, `glow`, `unroll`, `multi-stop-path`, `text`, and since K449 `count` and `banner`. Web Animations API; browser only. Beside them: canvas effects with a particle kit and `trail`, a count-up and a boxed ambience layer.
 
 - **Use it when:** Release 1.1 visual effects: the twelve motion verbs, particles, ambience, canvas layers, an opt-in logo glitch.
 - **Not for:** Deciding which effect plays (the game's motion specs and motion-frame).
