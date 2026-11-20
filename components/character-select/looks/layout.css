@@ -1,0 +1,587 @@
+/* character-select layout (K467, from STCC take-the-chair.css). Neutral defaults; a game sets the variables. */
+[data-part='character-select'] {
+  --cs-u: min(1vh, 0.5625vw);
+  --cs-bg: Canvas;
+  --cs-panel: color-mix(in srgb, CanvasText 6%, Canvas);
+  --cs-edge: color-mix(in srgb, CanvasText 25%, Canvas);
+  --cs-text: CanvasText;
+  --cs-muted: color-mix(in srgb, CanvasText 60%, Canvas);
+  --cs-accent: color-mix(in srgb, CanvasText 80%, Canvas);
+  --cs-on: color-mix(in srgb, CanvasText 15%, Canvas);
+  --cs-begin-bg: CanvasText;
+  --cs-begin-text: Canvas;
+  --cs-font: system-ui, sans-serif;
+  --cs-label-font: var(--cs-font);
+  --cs-radius: calc(var(--cs-u) * 0.8);
+  --cs-gap: calc(var(--cs-u) * 1.2);
+  --cs-roster-w: calc(var(--cs-u) * 25);
+  --cs-hero-w: calc(var(--cs-u) * 64);
+  --cs-bottom-h: calc(var(--cs-u) * 19);
+  --cs-card-ratio: 0.7156;
+  display: grid;
+  box-sizing: border-box;
+  height: 100dvh;
+  padding: calc(var(--cs-u) * 1.6);
+  gap: var(--cs-gap);
+  grid-template-columns: var(--cs-roster-w) var(--cs-hero-w) minmax(0, 1fr);
+  grid-template-rows: auto minmax(0, 1fr) var(--cs-bottom-h);
+  grid-template-areas: 'header header header' 'roster hero side' 'roster opponents opponents';
+  background: var(--cs-bg);
+  color: var(--cs-text);
+  font-family: var(--cs-font);
+  font-size: calc(var(--cs-u) * 1.7);
+}
+[data-part='character-select'] *,
+[data-part='character-select'] *::before,
+[data-part='character-select'] *::after {
+  box-sizing: border-box;
+}
+[data-part='character-select'] button {
+  font: inherit;
+  color: inherit;
+  background: none;
+  border: 0;
+  padding: 0;
+  cursor: pointer;
+}
+[data-part='character-select'] button:disabled {
+  cursor: default;
+  opacity: 0.4;
+}
+[data-part='character-select'] h2 {
+  margin: 0;
+  font-family: var(--cs-label-font);
+  font-size: calc(var(--cs-u) * 2.6);
+  color: var(--cs-accent);
+}
+[data-part='character-select'] [data-part='portrait'] {
+  background: var(--cs-on) no-repeat center / cover;
+  border-radius: var(--cs-radius);
+}
+
+/* header: the game's header slot, the mode tabs, the mode line and the folded options */
+[data-part='character-select'] > [data-part='header'] {
+  grid-area: header;
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: end;
+  gap: 0 var(--cs-gap);
+}
+[data-part='character-select'] > [data-part='header'] > :first-child:not([data-part]) {
+  grid-row: span 3;
+}
+[data-part='character-select'] [data-part='modes'] {
+  display: flex;
+  justify-self: end;
+}
+[data-part='character-select'] [data-part='mode'] {
+  font-family: var(--cs-label-font);
+  padding: calc(var(--cs-u) * 0.55) calc(var(--cs-u) * 1.6);
+  border: 1px solid var(--cs-edge);
+}
+[data-part='character-select'] [data-part='mode'][data-on='yes'] {
+  background: var(--cs-accent);
+  color: var(--cs-bg);
+}
+[data-part='character-select'] [data-part='mode-line'] {
+  margin: calc(var(--cs-u) * 0.4) 0 0;
+  justify-self: end;
+  color: var(--cs-muted);
+}
+[data-part='character-select'] [data-part='options-toggle'] {
+  color: var(--cs-accent);
+  text-decoration: underline dotted;
+}
+[data-part='character-select'] [data-part='options'] {
+  justify-self: end;
+  display: flex;
+  flex-wrap: wrap;
+  gap: calc(var(--cs-u) * 0.6) calc(var(--cs-u) * 1.6);
+  padding: calc(var(--cs-u) * 0.8);
+  background: var(--cs-panel);
+  border: 1px solid var(--cs-edge);
+  border-radius: var(--cs-radius);
+}
+[data-part='character-select'] [data-part='field'] {
+  display: flex;
+  gap: calc(var(--cs-u) * 0.6);
+  align-items: center;
+}
+
+/* panels */
+[data-part='character-select'] > [data-part='roster'],
+[data-part='character-select'] > [data-part='hero'],
+[data-part='character-select'] [data-part='deck'],
+[data-part='character-select'] [data-part='track'],
+[data-part='character-select'] > [data-part='opponents'] {
+  background: var(--cs-panel);
+  border: 1px solid var(--cs-edge);
+  border-radius: var(--cs-radius);
+  padding: calc(var(--cs-u) * 1.2);
+  min-height: 0;
+}
+
+/* roster */
+[data-part='character-select'] > [data-part='roster'] {
+  grid-area: roster;
+  overflow: auto;
+  padding: 0;
+}
+[data-part='character-select'] [data-part='roster-title'] {
+  font-family: var(--cs-label-font);
+  font-size: calc(var(--cs-u) * 2.2);
+  padding: calc(var(--cs-u) * 0.8) calc(var(--cs-u) * 1.2);
+  color: var(--cs-accent);
+}
+[data-part='character-select'] [data-part='set-label'] {
+  font-family: var(--cs-label-font);
+  font-size: calc(var(--cs-u) * 1.2);
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--cs-muted);
+  padding: calc(var(--cs-u) * 0.4) calc(var(--cs-u) * 1.2);
+}
+[data-part='character-select'] [data-part='entry'] {
+  display: grid;
+  grid-template-columns: calc(var(--cs-u) * 5.6) 1fr;
+  gap: calc(var(--cs-u) * 1);
+  align-items: center;
+  width: 100%;
+  height: calc(var(--cs-u) * 4.25);
+  padding-right: calc(var(--cs-u) * 1);
+  text-align: left;
+  border-top: 1px solid var(--cs-edge);
+}
+[data-part='character-select'] [data-part='entry'] [data-part='portrait'] {
+  height: 100%;
+  border-radius: 0;
+}
+[data-part='character-select'] [data-part='entry'][data-on='yes'] {
+  background: var(--cs-on);
+  outline: 2px solid var(--cs-accent);
+  outline-offset: -2px;
+}
+[data-part='character-select'] [data-part='plate'] {
+  display: grid;
+  line-height: 1.1;
+}
+[data-part='character-select'] [data-part='plate'] b {
+  font-family: var(--cs-label-font);
+  font-size: calc(var(--cs-u) * 2.1);
+}
+[data-part='character-select'] [data-part='plate'] small {
+  color: var(--cs-muted);
+}
+
+/* hero */
+[data-part='character-select'] > [data-part='hero'] {
+  grid-area: hero;
+  display: grid;
+  grid-template-columns: calc(var(--cs-u) * 33) minmax(0, 1fr);
+  gap: calc(var(--cs-u) * 1.6);
+}
+[data-part='character-select'] > [data-part='hero'] > [data-part='portrait'] {
+  min-height: 0;
+}
+[data-part='character-select'] [data-part='info'] {
+  display: flex;
+  flex-direction: column;
+  gap: calc(var(--cs-u) * 0.8);
+  min-height: 0;
+  overflow: auto;
+}
+[data-part='character-select'] [data-part='first'] {
+  font-family: var(--cs-label-font);
+  font-size: calc(var(--cs-u) * 2.6);
+}
+[data-part='character-select'] [data-part='last'] {
+  font-family: var(--cs-label-font);
+  font-size: calc(var(--cs-u) * 6.5);
+  font-weight: 700;
+  line-height: 1;
+}
+[data-part='character-select'] [data-part='stat'] {
+  display: grid;
+  gap: calc(var(--cs-u) * 0.4);
+  color: var(--cs-accent);
+  font-family: var(--cs-label-font);
+  font-size: calc(var(--cs-u) * 2.3);
+}
+[data-part='character-select'] [data-part='meter'] {
+  display: flex;
+  gap: calc(var(--cs-u) * 0.4);
+}
+[data-part='character-select'] [data-part='meter'] i {
+  width: calc(var(--cs-u) * 1.3);
+  height: calc(var(--cs-u) * 1.3);
+  border: 1px solid var(--cs-accent);
+  border-radius: 50%;
+}
+[data-part='character-select'] [data-part='meter'] i[data-on='yes'] {
+  background: var(--cs-accent);
+}
+[data-part='character-select'] [data-part='meta'] {
+  color: var(--cs-muted);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  font-size: 0.85em;
+}
+[data-part='character-select'] [data-part='summary'] p {
+  margin: 0;
+  line-height: 1.45;
+}
+[data-part='character-select'] [data-part='more'] {
+  color: var(--cs-accent);
+  font-size: 0.85em;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+[data-part='character-select'] [data-part='full'] {
+  margin-top: calc(var(--cs-u) * 0.6);
+  padding: calc(var(--cs-u) * 0.8);
+  border: 1px solid var(--cs-edge);
+  border-radius: var(--cs-radius);
+  background: var(--cs-bg);
+  white-space: pre-line;
+}
+[data-part='character-select'] [data-part='chip'],
+[data-part='character-select'] [data-part='icon'] {
+  display: inline-flex;
+  vertical-align: middle;
+}
+[data-part='character-select'] [data-part='chip'] {
+  padding: 0 0.35em;
+  border-radius: 0.6em;
+  background: var(--cs-on);
+}
+[data-part='character-select'] [data-part='link'] {
+  text-decoration: underline dotted;
+}
+
+/* the right column: the deck browser and the track slot */
+[data-part='character-select'] > [data-part='side'] {
+  grid-area: side;
+  display: grid;
+  grid-template-rows: minmax(0, 1.22fr) minmax(0, 1fr);
+  gap: var(--cs-gap);
+  min-height: 0;
+}
+[data-part='character-select'] > [data-part='side'] > :only-child {
+  grid-row: span 2;
+}
+[data-part='character-select'] [data-part='deck'] {
+  display: grid;
+  grid-template-rows: auto auto minmax(0, 1fr) auto;
+  gap: calc(var(--cs-u) * 0.8);
+}
+[data-part='character-select'] [data-part='deck'] h2 {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--cs-gap);
+}
+[data-part='character-select'] [data-part='search'] {
+  font: inherit;
+  font-size: calc(var(--cs-u) * 1.6);
+  width: calc(var(--cs-u) * 22);
+  background: var(--cs-bg);
+  color: var(--cs-text);
+  border: 1px solid var(--cs-edge);
+  border-radius: var(--cs-radius);
+  padding: calc(var(--cs-u) * 0.3) calc(var(--cs-u) * 0.8);
+}
+[data-part='character-select'] [data-part='tabs'] {
+  display: flex;
+  flex-wrap: wrap;
+  gap: calc(var(--cs-u) * 0.5);
+}
+[data-part='character-select'] [data-part='tab'] {
+  display: inline-flex;
+  gap: 0.4em;
+  align-items: center;
+  padding: calc(var(--cs-u) * 0.3) calc(var(--cs-u) * 0.8);
+  border: 1px solid var(--cs-edge);
+  border-radius: var(--cs-radius);
+  font-family: var(--cs-label-font);
+}
+[data-part='character-select'] [data-part='tab'][data-on='yes'] {
+  background: var(--cs-accent);
+  color: var(--cs-bg);
+}
+[data-part='character-select'] [data-part='tab'] small {
+  opacity: 0.7;
+}
+[data-part='character-select'] [data-part='row'] {
+  display: grid;
+  grid-template-columns: calc(var(--cs-u) * 3) minmax(0, 1fr) calc(var(--cs-u) * 3);
+  align-items: center;
+  min-height: 0;
+}
+[data-part='character-select'] [data-part='prev'],
+[data-part='character-select'] [data-part='next'] {
+  font-size: calc(var(--cs-u) * 3.6);
+  color: var(--cs-accent);
+}
+[data-part='character-select'] [data-part='cards'] {
+  display: grid;
+  grid-template-columns: repeat(var(--cs-per-page), minmax(0, 1fr));
+  gap: calc(var(--cs-u) * 0.8);
+  height: 100%;
+  min-height: 0;
+  align-items: center;
+}
+[data-part='character-select'] [data-part='card'] {
+  aspect-ratio: var(--cs-card-ratio);
+  max-height: 100%;
+  overflow: hidden;
+  border: 1px solid var(--cs-edge);
+  border-radius: var(--cs-radius);
+  background: var(--cs-bg);
+}
+[data-part='character-select'] [data-part='empty'] {
+  grid-column: 1 / -1;
+  text-align: center;
+  color: var(--cs-muted);
+}
+[data-part='character-select'] [data-part='pager'] {
+  display: flex;
+  gap: calc(var(--cs-u) * 0.5);
+  align-items: center;
+  justify-content: center;
+  color: var(--cs-muted);
+}
+[data-part='character-select'] [data-part='pager'] i {
+  width: calc(var(--cs-u) * 0.9);
+  height: calc(var(--cs-u) * 0.9);
+  border-radius: 50%;
+  background: var(--cs-edge);
+}
+[data-part='character-select'] [data-part='pager'] i[data-on='yes'] {
+  background: var(--cs-accent);
+}
+[data-part='character-select'] [data-part='track'] {
+  overflow: auto;
+}
+
+/* the opponent detail, strip and Begin */
+[data-part='character-select'] > [data-part='opponents'] {
+  grid-area: opponents;
+  display: grid;
+  grid-template-columns: calc(var(--cs-u) * 36) minmax(0, 1fr) calc(var(--cs-u) * 17);
+  gap: var(--cs-gap);
+}
+[data-part='character-select'] [data-part='opponent'] {
+  overflow: auto;
+  display: grid;
+  align-content: start;
+  gap: calc(var(--cs-u) * 0.4);
+}
+[data-part='character-select'] [data-part='opponent-name'] {
+  font-family: var(--cs-label-font);
+  font-size: calc(var(--cs-u) * 2.2);
+  font-weight: 700;
+}
+[data-part='character-select'] [data-part='opponent-strip'] {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(calc(var(--cs-u) * 6), 1fr);
+  gap: calc(var(--cs-u) * 0.4);
+  overflow-x: auto;
+  min-width: 0;
+}
+[data-part='character-select'] [data-part='opponent-pick'] {
+  display: grid;
+  grid-template-rows: minmax(0, 1fr) auto auto;
+  text-align: center;
+  font-size: calc(var(--cs-u) * 1.3);
+  border: 1px solid var(--cs-edge);
+  border-radius: var(--cs-radius);
+  overflow: hidden;
+}
+[data-part='character-select'] [data-part='opponent-pick'][data-on='yes'] {
+  outline: 2px solid var(--cs-accent);
+  outline-offset: -2px;
+  background: var(--cs-on);
+}
+[data-part='character-select'] [data-part='opponent-pick'] [data-part='portrait'] {
+  border-radius: 0;
+}
+[data-part='character-select'] [data-part='opponent-pick'] small {
+  color: var(--cs-muted);
+}
+[data-part='character-select'] [data-part='opponent-note'] {
+  grid-column: 1 / 3;
+  align-self: center;
+}
+[data-part='character-select'] [data-part='go'] {
+  grid-column: 3;
+  display: grid;
+  gap: calc(var(--cs-u) * 0.4);
+}
+[data-part='character-select'] [data-part='begin'] {
+  background: var(--cs-begin-bg);
+  color: var(--cs-begin-text);
+  font-family: var(--cs-label-font);
+  font-size: calc(var(--cs-u) * 4.4);
+  font-weight: 700;
+  border-radius: calc(var(--cs-radius) * 2);
+}
+[data-part='character-select'] [data-part='problems'] {
+  margin: 0;
+  font-size: 0.85em;
+}
+
+/* phone: one column, a horizontal roster strip, Begin pinned to the bottom */
+[data-part='character-select'][data-layout='phone'] {
+  --cs-u: 0.85vw;
+  display: flex;
+  flex-direction: column;
+  height: auto;
+  min-height: 100dvh;
+  padding: 3vw 3vw 22vw;
+  gap: 3vw;
+  font-size: 4vw;
+}
+[data-layout='phone'] > [data-part='header'] {
+  grid-template-columns: 1fr;
+}
+[data-layout='phone'] [data-part='modes'] {
+  justify-self: stretch;
+}
+[data-layout='phone'] [data-part='mode'] {
+  flex: 1;
+  font-size: 4.4vw;
+  padding: 2vw;
+}
+[data-layout='phone'] [data-part='mode-line'],
+[data-layout='phone'] [data-part='options'] {
+  justify-self: start;
+}
+[data-layout='phone'] > [data-part='roster'] {
+  display: flex;
+  overflow-x: auto;
+  overflow-y: hidden;
+  background: none;
+  border: 0;
+  gap: 2vw;
+  flex: none;
+}
+[data-layout='phone'] [data-part='roster-title'],
+[data-layout='phone'] [data-part='set-label'] {
+  display: none;
+}
+[data-layout='phone'] [data-part='set'] {
+  display: flex;
+  gap: 2vw;
+}
+[data-layout='phone'] [data-part='entry'] {
+  flex: none;
+  width: 34vw;
+  height: 13vw;
+  grid-template-columns: 11vw 1fr;
+  border: 1px solid var(--cs-edge);
+  background: var(--cs-panel);
+}
+[data-layout='phone'] [data-part='plate'] b {
+  font-size: 4.4vw;
+}
+[data-layout='phone'] [data-part='plate'] small {
+  font-size: 3vw;
+}
+[data-layout='phone'] > [data-part='hero'] {
+  grid-template-columns: 40vw minmax(0, 1fr);
+}
+[data-layout='phone'] > [data-part='hero'] > [data-part='portrait'] {
+  height: 54vw;
+}
+[data-layout='phone'] > [data-part='hero'] > [data-part='summary'] {
+  grid-column: 1 / -1;
+}
+[data-layout='phone'] [data-part='first'] {
+  font-size: 5vw;
+}
+[data-layout='phone'] [data-part='last'] {
+  font-size: 11vw;
+}
+[data-layout='phone'] [data-part='stat'] {
+  font-size: 4.6vw;
+}
+[data-layout='phone'] [data-part='meter'] i {
+  width: 3.2vw;
+  height: 3.2vw;
+}
+[data-layout='phone'] > [data-part='side'] {
+  display: flex;
+  flex-direction: column;
+}
+[data-layout='phone'] [data-part='deck'] h2 {
+  flex-direction: column;
+}
+[data-layout='phone'] [data-part='search'] {
+  width: 100%;
+  font-size: 4vw;
+}
+[data-layout='phone'] [data-part='tabs'] {
+  flex-wrap: nowrap;
+  overflow-x: auto;
+}
+[data-layout='phone'] [data-part='card'] {
+  max-height: none;
+}
+[data-layout='phone'] > [data-part='opponents'] {
+  display: flex;
+  flex-direction: column;
+}
+[data-layout='phone'] [data-part='opponent-strip'] {
+  grid-auto-columns: 18vw;
+  height: 30vw;
+  font-size: 3vw;
+}
+[data-layout='phone'] [data-part='go'] {
+  position: fixed;
+  left: 3vw;
+  right: 3vw;
+  bottom: 3vw;
+  z-index: 2;
+}
+[data-layout='phone'] [data-part='begin'] {
+  font-size: 8vw;
+  padding: 2.5vw;
+}
+[data-part='character-select'] > [data-part='header'] {
+  position: relative;
+}
+[data-part='character-select'] [data-part='options'] {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  z-index: 3;
+}
+[data-part='character-select'] [data-part='field'] select,
+[data-part='character-select'] [data-part='field'] input:not([type='checkbox']) {
+  font: inherit;
+  color: var(--cs-text);
+  background: var(--cs-bg);
+  border: 1px solid var(--cs-edge);
+  border-radius: var(--cs-radius);
+  padding: 0.1em 0.4em;
+}
+[data-layout='phone'] [data-part='options'] {
+  left: 0;
+  flex-direction: column;
+  align-items: flex-start;
+}
+[data-layout='phone'] h2 {
+  font-size: 5.4vw;
+}
+[data-layout='phone'] [data-part='entry'] {
+  width: 44vw;
+}
+[data-layout='phone'] [data-part='opponent-name'] {
+  font-size: 5vw;
+}
+[data-layout='phone'] [data-part='opponent-strip'] {
+  height: 34vw;
+}
+[data-layout='phone'] [data-part='opponent-pick'] {
+  font-size: 3vw;
+}

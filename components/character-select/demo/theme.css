@@ -1,0 +1,71 @@
+body {
+  margin: 0;
+}
+[data-part='character-select'] {
+  --cs-bg: #15181d;
+  --cs-panel: #1f242c;
+  --cs-edge: #3a434f;
+  --cs-text: #e4e7ec;
+  --cs-muted: #9aa3ae;
+  --cs-accent: #8fc1a9;
+  --cs-on: #2b3a35;
+  --cs-begin-bg: #d9c27a;
+  --cs-begin-text: #15181d;
+}
+.demo-title h1 {
+  margin: 0;
+  font-size: calc(var(--cs-u) * 5.5);
+  color: #d9c27a;
+}
+.demo-title span {
+  color: var(--cs-accent);
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+}
+.demo-sub {
+  display: flex;
+  gap: 0.3em;
+}
+.demo-sub button {
+  border: 1px solid var(--cs-edge) !important;
+  padding: 0.1em 0.8em !important;
+}
+.demo-sub .is-on {
+  background: var(--cs-accent) !important;
+  color: var(--cs-bg) !important;
+}
+.demo-track > div {
+  display: grid;
+  grid-template-columns: repeat(12, 1fr);
+  gap: 4px;
+  margin-top: 1em;
+}
+.demo-track i {
+  height: 3em;
+  background: var(--cs-accent);
+  border-radius: 4px;
+}
+.demo-card {
+  display: grid;
+  align-content: space-between;
+  height: 100%;
+  padding: 0.4em;
+  font-size: 0.8em;
+  border-top: 0.5em solid #6b8;
+}
+.demo-card[data-kind='FRIEND'] {
+  border-color: #c96;
+}
+.demo-card[data-kind='PLACE'] {
+  border-color: #69c;
+}
+.demo-card[data-kind='EVENT'] {
+  border-color: #b6c;
+}
+.demo-coin {
+  display: inline-block;
+  width: 0.9em;
+  height: 0.9em;
+  border-radius: 50%;
+  background: #d9c27a;
+}

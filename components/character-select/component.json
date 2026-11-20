@@ -1,0 +1,20 @@
+{
+  "name": "character-select",
+  "source": {
+    "game": "star-trek-captains-chair",
+    "commit": "27fb8882",
+    "paths": [
+      "src/ui/select/takeTheChair.ts (roster sort, text pieces, deck tabs and pages, portrait crop; the game's crew board, ladder and New Game options left out)",
+      "src/ui/select/parts.tsx (Portrait, CaptainList, DeckBrowser, BotPicker, CaptainHero; the pack art, missions and header left out)",
+      "src/ui/select/SelectText.tsx (icons, chips and card links)",
+      "src/ui/screens/NewGame.tsx (mode tabs, folded Game options, rival strip, Begin)",
+      "src/ui/screens/take-the-chair.css (grid areas and the phone column; colours and fonts became variables)"
+    ],
+    "note": "K467. CrewLadder.tsx stays game code: the kit offers the empty track slot. photo.ts and portraitArt.ts became the Portrait data (src, focus, crop)."
+  },
+  "needs": [],
+  "packages": [
+    "react",
+    "react-dom"
+  ]
+}
