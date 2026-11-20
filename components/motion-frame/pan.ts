@@ -119,7 +119,7 @@ export function scrollPan({ scroller, tabs, activeTab, inView: shown, tabWaitMs,
       if (r.width <= 0 || r.height <= 0) return;
       const m = el.getBoundingClientRect();
       await scrollTo(el, Math.max(0, horizontal
-        ? el.scrollLeft + (r.left + r.right - m.left - m.right) / 2
+        ? Math.min(el.scrollLeft + (r.left + r.right - m.left - m.right) / 2, Math.max(0, el.scrollWidth - el.clientWidth))
         : el.scrollTop + (r.top + r.bottom - m.top - m.bottom) / 2));
     };
 

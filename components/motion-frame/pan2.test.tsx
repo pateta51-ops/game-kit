@@ -59,6 +59,8 @@ describe('scrollPan K452', () => {
     box(main, { w: 100, h: 200 });
     target(main, 'x', { left: 500, w: 10, h: 50 });
     main.scrollLeft = 7;
+    Object.defineProperty(main, 'scrollWidth', { value: 5000 });
+    Object.defineProperty(main, 'clientWidth', { value: 100 });
     const s = scrollPan({ scroller: () => main, horizontal: true, panMs: 50 })(1, new AbortController().signal)!;
     void s.ensure('.x');
     await vi.advanceTimersByTimeAsync(400);
@@ -67,6 +69,19 @@ describe('scrollPan K452', () => {
     void s.back();
     await vi.advanceTimersByTimeAsync(400);
     expect(main.scrollLeft).toBe(7);
+  });
+
+  it('horizontal clamps to the scrollable width near the right edge', async () => {
+    vi.useFakeTimers();
+    const { main } = rig();
+    box(main, { w: 100, h: 200 });
+    target(main, 'x', { left: 500, w: 10, h: 50 });
+    Object.defineProperty(main, 'scrollWidth', { value: 300 });
+    Object.defineProperty(main, 'clientWidth', { value: 100 });
+    const s = scrollPan({ scroller: () => main, horizontal: true, panMs: 50 })(1, new AbortController().signal)!;
+    void s.ensure('.x');
+    await vi.advanceTimersByTimeAsync(400);
+    expect(main.scrollLeft).toBe(200);
   });
 
   it('back(tab) presses the given tab, not the starting one', async () => {

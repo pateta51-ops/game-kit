@@ -136,7 +136,7 @@ interface Item {
   gate?: GateData | undefined;
   place?: RunPlace;
   keep?: boolean;
-  afterCommit?: () => void;
+  afterCommit?: (me: Current<unknown>) => void;
 }
 type Timer = ReturnType<typeof setTimeout>;
 interface Current<C> {
@@ -477,7 +477,7 @@ export function createMotionPlayer<C = undefined>(o: PlayerOptions<C>): MotionPl
     };
     if (!redraw) {
       commit(item);
-      item.afterCommit?.();
+      item.afterCommit?.(me as Current<unknown>);
       if (live.has(me)) schedule();
       return;
     }
@@ -491,7 +491,7 @@ export function createMotionPlayer<C = undefined>(o: PlayerOptions<C>): MotionPl
     try {
       const before = swap && measureBoard(swap, swap.leave !== 'none');
       commit(item);
-      item.afterCommit?.();
+      item.afterCommit?.(me as Current<unknown>);
       if (!live.has(me)) return;
       const cancel = waitForRects(spec, stage, () => {
         if (!live.has(me)) return;
@@ -630,9 +630,17 @@ export function createMotionPlayer<C = undefined>(o: PlayerOptions<C>): MotionPl
       }
     };
     const late = spec.panAt === 'commit' && o.pan && !reduced && spec.pan !== undefined;
-    if (late) item.afterCommit = () => {
+    if (late) item.afterCommit = (me) => {
       const s = safe(`${spec.id} pan`, () => startPan(speed));
-      if (s && pan) void panWork(() => s.ensure(spec.pan), pan.controller);
+      if (!s || !pan) return;
+      const token = (): void => {};
+      me.waiting.add(token);
+      void panWork(() => s.ensure(spec.pan), pan.controller).then(() => {
+        if (!me.waiting.delete(token) || me.waiting.size > 0 || !me.after) return;
+        const a = me.after;
+        delete me.after;
+        a();
+      });
     };
     const session = o.pan && !reduced && !late && spec.pan !== undefined
       ? safe(`${spec.id} pan`, () => startPan(speed)) : null;
