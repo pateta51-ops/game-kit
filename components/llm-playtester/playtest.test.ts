@@ -237,11 +237,9 @@ describe('heavy queue (K416)', () => {
     const lines: string[] = [];
     const r = await runMain(['--adapter', 'x', '--dummy'], (l) => lines.push(l), { HEAVY_HELD: '1' });
     expect(r.code).toBe(2);
-    expect(lines.join('
-')).toMatch(/heavy queue/);
+    expect(lines.join(' ')).toMatch(/heavy queue/);
     const lines2: string[] = [];
     await runMain([], (l) => lines2.push(l), {});
-    expect(lines2.join('
-')).not.toMatch(/heavy queue/);
+    expect(lines2.join(' ')).not.toMatch(/heavy queue/);
   });
 });
