@@ -1,4 +1,4 @@
-/* Opt-in look for createGlitch(el, opts). Without `mask` the copies and slices are copies of the element's content (text or markup), coloured by --glitch-a and --glitch-b; with `mask` (or --glitch-mask) set to url(shape.svg) they are flat colour cut to that shape. Variables: --glitch-a, --glitch-b, --glitch-split, --glitch-jump (number, % of width), --glitch-dropout (opacity), --glitch-ms and --glitch-side (set by the scheduler). With `burstSteps` the scheduler holds the class fx-glitch--steps and redraws the slice variables per step: no keyframes. */
+/* Opt-in look for createGlitch(el, opts). Without `mask` the copies and slices are copies of the element's content (text or markup), coloured by --glitch-a and --glitch-b; with `mask` (or --glitch-mask) set to url(shape.svg) they are flat colour cut to that shape. Variables: --glitch-a, --glitch-b, --glitch-split, --glitch-jump (number, % of width), --glitch-dropout (opacity), --glitch-ms and --glitch-side and --glitch-skew (set by the scheduler). With `burstSteps` the scheduler holds the class fx-glitch--steps and redraws the slice variables per step: no keyframes. */
 .fx-glitch {
   --glitch-a: #fff;
   --glitch-b: #888;
@@ -38,6 +38,8 @@
     > .fx-glitch-copy { opacity: .7; transform: translateX(calc(var(--glitch-side, 1) * var(--offset))); }
     > .fx-glitch-slice { opacity: .9; transform: translateX(calc(var(--jump) * var(--glitch-jump) * 1%)); }
   }
+  .fx-glitch--steps.fx-glitch--skew { transform: skewX(var(--glitch-skew, 0deg)); }
+  .fx-glitch--burst.fx-glitch--skew { animation: fx-glitch-dropout var(--glitch-ms) steps(1, end), fx-glitch-skew var(--glitch-ms) steps(1, end); }
   .fx-glitch--steps.fx-glitch--drop { opacity: var(--glitch-dropout); }
   .fx-glitch--tear {
     --glitch-split: 2%;
@@ -48,6 +50,7 @@
 }
 
 @keyframes fx-glitch-dropout { 0%, 75% { opacity: 1; } 50% { opacity: var(--glitch-dropout); } }
+@keyframes fx-glitch-skew { 0%, 50% { transform: none; } 25% { transform: skewX(var(--glitch-skew, 0deg)); } }
 @keyframes fx-glitch-split {
   0% { opacity: .82; transform: translateX(var(--offset)); }
   25% { opacity: .5; transform: translateX(calc(1.6 * var(--offset))); }
