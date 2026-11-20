@@ -87,7 +87,7 @@ it('K470 begin and renderText slots; null keeps the built-ins', () => {
     },
   });
   expect(part('begin')).toHaveLength(0);
-  expect(one('mine-text', one('hero')).textContent).toContain('Gains');
+  expect(one('mine-text', one('hero')).textContent).toContain('gains');
   fireEvent.click(one('mine-go'));
   expect(onBegin).toHaveBeenCalledTimes(1);
   cleanup();
