@@ -63,7 +63,7 @@ def child(take_path: str) -> int:
 
     def make() -> int:
         plan = pipe.plan(style=t["prompt"], lyrics=t["lyrics"], cot=t["cot"], seed=t["seed"])
-        abc, nv = recipe.novocal(plan.abc, str(opts.get("vocal", "rests")))
+        abc, nv = (plan.abc, 0) if t.get("sung") else recipe.novocal(plan.abc, str(opts.get("vocal", "rests")))  # K485: sung keeps Vocal
         pipe(style=t["prompt"], lyrics=t["lyrics"], cot=t["cot"], seed=t["seed"], abc=abc).save(t["tmp"])
         return nv
 
@@ -87,7 +87,7 @@ def main() -> int:
     demucs = str(Path(str(opts.get("demucsPython", "~/audio-gen/venv-demucs/bin/python"))).expanduser())
     env = {**os.environ, "OMP_NUM_THREADS": "2", "MKL_NUM_THREADS": "2"}
 
-    def gate(wav: Path) -> tuple[float, float]:
+    def gate(wav: Path, after=None):
         try:
             recipe.need_memory(need_demucs, "the demucs pass")
         except recipe.LowMemory:
@@ -108,17 +108,18 @@ def main() -> int:
             v, sr = sf.read(str(d / "vocals.wav"))
             f, _ = sf.read(str(d / "no_vocals.wav"))
             e = lambda x: (x**2).sum(1) if x.ndim == 2 else x**2  # noqa: E731
-            return recipe.measure(e(v).tolist(), e(v + f).tolist(), sr // 2)
+            m = recipe.measure(e(v).tolist(), e(v + f).tolist(), sr // 2)
+            return (m, after(d / "vocals.wav")) if after else m
         finally:
             shutil.rmtree(sep, ignore_errors=True)
 
     state = {"first": True}
 
-    def generate(tmp: Path, prompt: str, lyrics: str, cot: str, seed: int) -> int:
+    def generate(tmp: Path, prompt: str, lyrics: str, cot: str, seed: int, sung: bool = False) -> int:
         """The take in a child process that has exited when this returns (K477); a child killed by the cap is a failed take naming it."""
         recipe.need_memory(need, "loading YuE2 in a child process")
         tj, rj = tmp.with_suffix(".take.json"), tmp.with_suffix(".take.res.json")
-        tj.write_text(json.dumps({"options": opts, "prompt": prompt, "lyrics": lyrics, "cot": cot, "seed": seed, "tmp": str(tmp),
+        tj.write_text(json.dumps({"options": opts, "prompt": prompt, "lyrics": lyrics, "cot": cot, "sung": sung, "seed": seed, "tmp": str(tmp),
                                   "result": str(rj), "first": state["first"]}), encoding="utf-8")
         t0, kills = time.time(), recipe.oom_kills()
         try:
@@ -139,31 +140,71 @@ def main() -> int:
         print(f"yue2 worker: seed {seed}: child reloaded the pipeline in {r['loadSeconds']:.0f} s ({time.time() - t0:.0f} s in all)", file=sys.stderr, flush=True)
         return r["nv"]
 
+    whisper_py = str(Path(str(opts.get("whisperPython", "~/audio-gen/venv-demucs/bin/python"))).expanduser())
+    whisper_dir = str(Path(str(opts.get("whisperModelDir", "~/audio-gen/models/whisper-large-v3-turbo"))).expanduser())
+
+    class WhisperFailed(RuntimeError):
+        pass
+
+    def transcribe(vocals: Path) -> str:
+        """K485: faster-whisper on CUDA in its own process, after the YuE2 child and demucs have exited, inside the cue's capped job."""
+        recipe.need_memory(float(opts.get("minAvailWhisperGiB", 4)), "the whisper pass")
+        rj, kills = vocals.parent / "whisper.json", recipe.oom_kills()
+        try:
+            subprocess.run(["nice", "-n", "19", whisper_py, str(Path(__file__).resolve().parent / "whisper_transcribe.py"), whisper_dir, str(vocals), str(rj)],
+                           env=env, check=True)  # fmt: skip
+        except subprocess.CalledProcessError as e:
+            if e.returncode == 3:
+                print("yue2 worker: faster-whisper cannot start (no CUDA); the lyrics check never runs on the CPU, so the cue stops", file=sys.stderr, flush=True)
+                raise SystemExit(3) from e
+            if e.returncode not in (-9, 137) and recipe.oom_kills() <= kills:
+                raise WhisperFailed(f"whisper crashed (exit {e.returncode})") from e
+            if e.returncode in (-9, 137) or recipe.oom_kills() > kills:
+                raise recipe.LowMemory(f"killed by the memory cap: whisper died (exit {e.returncode}) in the cgroup limit") from e
+            raise
+        return str(json.loads(rj.read_text(encoding="utf-8"))["text"])
+
     def one(item: dict) -> dict:
         t0 = time.time()
         out = Path(item["out"])
         out.parent.mkdir(parents=True, exist_ok=True)
         o = item.get("options") or {}
-        lyrics = str(o.get("lyrics", opts.get("lyrics", "[Instrumental]")))
+        sung = str(item.get("lyrics") or "").strip()
+        lyrics = sung or str(o.get("lyrics", opts.get("lyrics", "[Instrumental]")))
         cot = str(opts.get("cot", "full"))
         best, tried, kept, keep = None, [], [], int(o.get("keep", opts.get("keep", 1)))
         for s in recipe.seeds(int(item["seed"]), int(o.get("tries", opts.get("tries", 6)))):
             tmp = out.parent / f"_yue_{out.stem}-{s}.wav"
-            nv = generate(tmp, item["prompt"], lyrics, cot, s)
-            db, loud = gate(tmp)
-            tried.append({"seed": s, "vocalDb": db, "loudWindows": loud, "vocalBarsSilenced": nv})
-            print(f"yue2 worker: {item['label']} seed {s}: vocal {db} dB, {loud:.1%} loud windows", file=sys.stderr, flush=True)
-            if recipe.passes(db, loud, float(opts.get("maxVocalDb", recipe.MAX_VOCAL_DB)),
-                             float(opts.get("maxLoudWindows", recipe.MAX_LOUD_WINDOWS))):  # fmt: skip
+            nv = generate(tmp, item["prompt"], lyrics, cot, s, bool(sung))
+            if sung:  # K485: the lyrics check replaces the instrumental vocal gate
+                mw = float(o.get("lyricsMaxWer", opts.get("lyricsMaxWer", recipe.LYRICS_MAX_WER)))
+                try:
+                    (db, loud), heard = gate(tmp, transcribe)
+                except WhisperFailed as e:  # a failed take, the next seed goes on
+                    tmp.unlink(missing_ok=True)
+                    tried.append({"seed": s, "reason": f"{e}"})
+                    print(f"yue2 worker: {item['label']} seed {s}: {e} -> FAILED", file=sys.stderr, flush=True)
+                    continue
+                why, w = recipe.lyrics_fail(db, heard, sung, mw, float(opts.get("lyricsMinVocalDb", recipe.LYRICS_MIN_VOCAL_DB)))
+                tried.append({"seed": s, "vocalDb": db, "wer": round(w, 3), "heard": heard, "reason": why})
+                print(f"yue2 worker: {item['label']} seed {s}: vocal {db} dB, WER {w:.2f}, heard {heard!r}" + (f" -> FAILED: {why}" if why else ""), file=sys.stderr, flush=True)
+                ok, rank = not why, (w, 0.0)
+            else:
+                db, loud = gate(tmp)
+                tried.append({"seed": s, "vocalDb": db, "loudWindows": loud, "vocalBarsSilenced": nv})
+                print(f"yue2 worker: {item['label']} seed {s}: vocal {db} dB, {loud:.1%} loud windows", file=sys.stderr, flush=True)
+                ok = recipe.passes(db, loud, float(opts.get("maxVocalDb", recipe.MAX_VOCAL_DB)), float(opts.get("maxLoudWindows", recipe.MAX_LOUD_WINDOWS)))  # fmt: skip
+                rank = (db, loud)
+            if ok:
                 dest = out if not kept else out.with_name(f"{out.stem}-keep{len(kept) + 1}{out.suffix}")
                 shutil.move(tmp, dest)
                 kept.append({"seed": s, "file": str(dest)})
                 if len(kept) >= keep:
                     break
-            elif best is None or (db, loud) < best[0]:
+            elif best is None or rank < best[0]:
                 if best:
                     best[1].unlink(missing_ok=True)
-                best = ((db, loud), tmp, s)
+                best = (rank, tmp, s)
             else:
                 tmp.unlink(missing_ok=True)
         if not kept and best is None:
@@ -172,12 +213,12 @@ def main() -> int:
         if failed:  # keep the best failing take for a human to judge
             shutil.move(best[1], out)
             kept.append({"seed": best[2], "file": str(out)})
-            print(f"yue2 worker: {item['label']} no take passed the vocal gate; kept best seed {best[2]} marked failedGate", file=sys.stderr, flush=True)
+            print(f"yue2 worker: {item['label']} no take passed the {'lyrics check' if sung else 'vocal gate'}; kept best seed {best[2]} marked failedGate", file=sys.stderr, flush=True)
         elif best:
             best[1].unlink(missing_ok=True)
         print(f"yue2 worker: {item['label']} {len(kept)} take(s) in {time.time() - t0:.0f} s", file=sys.stderr, flush=True)
         return {"out": str(out), "seed": kept[0]["seed"], "model": f"{hub}@{rev} (yue2 {want})",
-                "extra": {"recipe": "instrumental: plan cot full, Vocal voice to rests, render abc=, demucs gate",
+                "extra": {"recipe": "sung: plan with the cue's lyrics, Vocal kept, demucs, faster-whisper WER check" if sung else "instrumental: plan cot full, Vocal voice to rests, render abc=, demucs gate",
                           "tried": tried, "alternates": kept[1:], "failedGate": failed}}  # fmt: skip
 
     results = []
