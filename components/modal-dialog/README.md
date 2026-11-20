@@ -1,5 +1,18 @@
 A React modal over the board and a confirm dialog built on it.
 
+## Rules for agents
+
+**What it does:** A React modal over the board and a confirm dialog built on it.
+
+**You must:**
+1. Own the `open` state: both dialogs only call `onClose` / `onCancel` / `onConfirm`, so set `open` false yourself after acting.
+2. Give `title` always; give the dialog a `data-autofocus` control, else the first focusable one gets focus.
+3. Pass `speed` from settings (default 1, 0 = instant fade).
+4. Set the `--kc-modal-*` variables on `body` or an ancestor of the portal to match the game's look.
+5. Use `closeOnBackdrop={false}` where an accidental click must not dismiss.
+
+
+
 `Modal` takes `open`, `onClose`, `title`, `children` and optional `actions`.
 Escape and backdrop clicks call `onClose`. Set `closeOnBackdrop={false}` to disable backdrop dismissal.
 The portal mounts in `document.body` and locks body scrolling while open. Focus goes to `data-autofocus`, the first focusable control, or the panel, and returns to the opener on close.

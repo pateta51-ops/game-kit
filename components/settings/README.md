@@ -2,6 +2,24 @@
 
 Settings declared as data, a persisted store of their values and a screen drawn from them. The game keeps its keys, words, sections and the frame around the screen. Needs the packages `react` and `zustand`. `index.ts` draws nothing and loads in node; `ui/index.ts` (import `./ui`) holds the screen.
 
+## Rules for agents
+
+**What it does:** Settings declared as data (sliders, toggles, choices), a persisted zustand store of their values, and a screen drawn from the schema.
+
+**You must:**
+1. Install `react` and `zustand`; import the schema and store from `index` (loads in Node) and the screen from `./ui`.
+2. Write the schema `as const satisfies SettingsSchema` so `Values<typeof schema>` types every key; give it a game-specific `storageKey`.
+3. Create one store with `createSettingsStore(schema)` and read values only from it; a stored value is kept only if it is a boolean (toggle), one of the options (choice) or a number in range (slider), otherwise the default is used.
+4. Pass `speed`, reduced motion and similar values to other kit parts from the store's values; the settings component does not apply them.
+5. Mark developer-only settings with `dev: true` and pass `dev` to `<SettingsScreen>` to show them; `reset()` with no keys also resets the hidden `dev` ones.
+6. Put the game's own rows in `extra` (keyed by section id) or `children`; do not portal into the screen by heading text.
+7. For a layout setting use `layoutSetting(...)` and wire phone-mode's viewport with `setting: () => store.getState().values.layout` and `onSetting: (f) => store.subscribe(f)`; for a Resolution use `resolutionSetting(...)`.
+8. Use `onRelease(key, value)` on the screen to play a sample when a slider is let go.
+
+**Common mistakes:**
+- Changing a choice's option values: a stored value that is no longer one of the options falls back to the default.
+- Using one storage key for two games' stores.
+
 ## Schema (`schema.ts`)
 
 `{ storageKey, version?, sections: [{ id, title, settings }] }`. A setting is a slider `{ kind: 'range', key, label, min, max, step?, default, hint?, dev? }` (a number; the screen's `onRelease(key, value)` fires when it is let go, so the game plays a sample at the new level) or a toggle `{ kind: 'toggle', key, label, default, hint?, dev? }` or a choice `{ kind: 'choice', key, label, options: [{ value, label, line? }], default, hint?, dev?, select? }` (values are strings or numbers; `select` draws a drop-down). Write the schema `as const satisfies SettingsSchema` and `Values<typeof schema>` types every key.

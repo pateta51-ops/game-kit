@@ -2,6 +2,23 @@
 
 The engine speed budget: plays whole driver games, times every `applyAction`, and fails when a percentile reaches its limit. Needs `engine-core` and `sim-pool` (the game and driver contract is sim-pool's `SimGame<G>`).
 
+## Rules for agents
+
+**What it does:** The engine speed budget (and a browser capture) for a game.
+
+**You must:**
+1. Write one module exporting `perfGame` (or `simGame`), optionally `budgets`, `bucket`, `promptKind`, `specs`; run `node kit/perf/cli.ts --module <file>` (exit 1 over budget, 2 bad usage).
+2. In a test use `expectBudgets(() => measure(...), budgets)` and run it alone, never beside other test files, and never on local Windows: use WSL through `heavy run -- <command>`.
+3. Set state freezing and invariant checking as the shipped game runs them; they are part of what is timed.
+4. A budgeted bucket with no timed call fails, and a limit counts as exceeded when reached, not only passed.
+5. Run `capture-cli.ts` from the game folder (it resolves `playwright` from the game's `node_modules`), with a url on the game's port from `ports.json`.
+6. Compare captures with `compare-cli.ts`: counters are exact, any increase fails; bundle sizes are `bundle-size`'s job.
+
+**Common mistakes:**
+- `NODE_PATH` does not make `playwright` resolve for the capture (ESM).
+- A busy machine skews percentiles: use `--attempts` or the attempts of `expectBudgets`, not a looser budget.
+
+
 A game writes one module (its sim-pool module will do) that exports:
 
 - `perfGame: PerfGame<G>` (or `simGame`): a `SimGame<G>`, plus two optional functions:

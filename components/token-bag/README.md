@@ -1,6 +1,24 @@
 # token-bag
 A bag of tokens with its count; the draw shown as a 2D flight from the bag or a 3D shake-and-draw that never decides the draw, and falls back to 2D. Port of Warp's Edge `bag3d` (decision 017). `index.ts` is pure (loads in node); `ui.ts` adds React; `scene.ts` is the only file that imports three.js and is reached only through dynamic imports, so a game's main bundle does not carry it (the game depends on `three` and `@types/three` 0.170.0).
 
+## Rules for agents
+
+**What it does:** A bag of tokens with its count; a draw shows as a 2D flight from the bag dock or a 3D shake-and-draw that never decides the draw, with a session fallback to 2D.
+
+**You must:**
+1. Install `react`, `react-dom` and `three` (with `@types/three`, 0.170.0) in the game; import from `ui` for React and `index` for the pure parts (loads in Node). Only `scene.ts` imports three.js, through dynamic imports, so never import it statically.
+2. Pass `faceUrl(kind)` for every token kind, `count`, `chosen` (`'2d'` or `'3d'` from settings), `speed` (1 normal, 2 slow, 0 none) and `reduced()`.
+3. Resolve the draw in the engine first: set `draw={{ key, left, drawn }}` when an answer drew (`left` the bag's unordered contents after the draw, `drawn` the tokens in draw order), and clear it in `onDrawDone(key)`.
+4. Mark the dock `[data-bag][data-place="bag"]` (or the `place` prop); token-flights fly from it in 2D, and speed 0, reduced motion, 2D mode or a failed scene all end in `onDrawDone`.
+5. Pass a stable `exterior` function or a ready canvas: the print is cached by the function, so an inline arrow repaints every time.
+6. Never use the scene for randomness: which coin rises comes from the drawn kinds only (`assignDraws`); the pile layout is decoration, never `ctx.rng`.
+7. For a finite box use `placeTokens(places, box)`; show `short` as a badge, since the number beside it stays exact.
+8. For e2e, set `e2eHooks` on `Draw` / `Rest` (default off); they set `window.__bag3dStats()`, `__bag3dSeek(t)` and `__bagDockFrames()` and remove only their own.
+
+**Common mistakes:**
+- Waiting for the scene before applying the draw: the engine has already drawn.
+- Expecting 3D without WebGL, or below 30 fps for 2 s: it falls back to 2D for the session.
+
 ## The game passes
 - `faceUrl(kind)`: the image (SVG or raster) of a token kind; it is rasterised once per session and size onto the coin's face (512 px, stepping down to keep GPU textures inside 32 MB).
 - `exterior` (optional): a pre-painted `HTMLCanvasElement` (`EXTERIOR_WIDTH` x `EXTERIOR_HEIGHT`, used as is) or `(canvas, ctx) => void | Promise<void>`, painted once per function and cached (never repainted per scene mount); the cache is keyed by the print function, so pass a stable one: an inline arrow repaints every time; it paints the game's print on the cloth over the plain weave (`EXTERIOR_ACROSS`, `EXTERIOR_UP` give the texel scale; front of the bag at canvas x = W / 2). `backdrop`: clear colour (default `#0a121a`).

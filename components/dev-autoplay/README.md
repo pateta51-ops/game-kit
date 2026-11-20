@@ -2,6 +2,23 @@
 
 Dev-only: `?dev=1&autoplay=<prompt kind>[*n]` plays a game-store with a sim-pool `Bot` until the open prompt is of that kind (the n-th one), then stops on that screen. Needs engine-core, game-store, sim-pool.
 
+## Rules for agents
+
+**What it does:** Dev-only: `?dev=1&autoplay=<prompt kind>[*n]` plays a game-store with a sim-pool bot until the open prompt is that kind, then stops on that screen.
+
+**You must:**
+1. Pass `dev: import.meta.env.DEV`; `false` makes it do nothing in a production build.
+2. Pass a sim-pool `Bot`; it decides from the store's view and `legalAnswers` only, never the real state.
+3. Pass `search` (`location.search`); the flag needs `dev=1`, then `autoplay=<kind>[*n]`, optionally `steps=N` and `seat=S`.
+4. In React use `useDevAutoplay(store, opts)` (once per store, StrictMode safe, stops on unmount).
+5. Set `over(state)` for the game's own end, and `leave(prompt)` when the board answers a prompt itself (the bot waits; `paceMs: 0` stops with `left`).
+6. Read `status().stop` to see why it stopped: `off`, `kind`, `steps`, `seat`, `over`, `refused`, `left`.
+
+**Common mistakes:**
+- Forgetting `dev=1` in the URL: the flag is ignored.
+- No `steps` and a game that never reaches the kind: it runs up to `cap` (10,000) answers.
+
+
 - `devAutoplay(store, { bot, search?, dev?, cap?, onStep?, paceMs?, over?, leave? })` → `{ stop(), status() }`; `status()` is `{ stop, steps }`, `stop` null while running, else `off` (no flag or stopped by you), `kind`, `steps`, `seat`, `over`, `refused` (the store dropped an answer) or `left`. One answer per `paceMs` (default 120; 0 = all at once in the call). `over(state)`: the game's own end (default: no open prompt). `leave(prompt)`: the board answers it itself (IR-25); the bot waits for it (`paceMs: 0` stops with `left`).
 - `ui.ts`: `useDevAutoplay(store, opts)` starts it once per store (StrictMode safe) and stops on unmount.
 - Flag (`readAutoplayFlag(search)`): needs `dev=1`; `autoplay=<kind>[*n]`, `steps=N` (answers made), `seat=S` (a prompt for that seat); the first reached stops it. `cap` (default 10,000) bounds a run with no `steps`.

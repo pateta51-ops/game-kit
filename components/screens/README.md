@@ -1,5 +1,22 @@
 Unstyled, data-driven main menu and new-game set-up form, with a pure default and validate model, plus reusable frames for non-table screens.
 
+## Rules for agents
+
+**What it does:** An unstyled main menu and new-game set-up form with a pure default and validate model, plus a frame, footer and theme toggle for non-table screens.
+
+**You must:**
+1. Import the model from `../kit/screens/index` (loads in Node) and the React parts from `../kit/screens/ui`; install `react`.
+2. Pass every word in (`words`, entry and field labels); English defaults exist, nothing else is drawn, and the menu and form load no CSS (style `data-part`, `data-field`, `data-entry`, `className`).
+3. Start from `defaultSetup(spec)` and check with `validateSetup(spec, setup)`, which returns the failing field names (`seats`, `seat-kind`, `scenario`, `difficulty` or an extra key). `SetupForm` calls `onStart` only when the setup is valid.
+4. Leave `SetupSpec.seats` out for a solo game; `setup.seats` is then `[]`.
+5. For a Start button outside the form, pass `submit={false}` and `id`, and use `<button type="submit" form={id}>`.
+6. Use `ScreenFrame` for settings, saves, rules and similar screens; pass `bodyAs="div"` when the screen sits inside the game's own `<main>`; import `looks/frame.css` only for its layout variables.
+7. Create one theme store at app start with a game-specific storage key (`createThemeStore('mygame.theme')`); `store.destroy()` removes its OS listener.
+8. Pass footer text, toggle labels and the back action from the game (`disclaimer(...)` gives neutral English); the back action has no default.
+
+**Common mistakes:**
+- Waiting for `onStart` on an invalid form: it never fires; show what `validateSetup` returns.
+
 Words are passed in (`words`, English defaults); the menu and setup form load no CSS: plain elements with `data-part`, `data-field`, `data-entry` and `className`.
 
 ## Use it in 10 lines

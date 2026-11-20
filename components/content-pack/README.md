@@ -2,6 +2,25 @@
 
 Card and scenario data as a checked pack: the game names its record kinds, each with a zod schema, an id field and the fields that refer to other kinds; `load` refuses with every problem at once (duplicate ids, dangling references, schema failures, unknown verbs, your own extra checks). Also the expansion choice (`expansion.ts`, `ui.ts`): a registry of products with `dependsOn`, tick/untick with dependencies, a serialisable `Choice`, and `mergePacks` of a base plus its expansions into one index. Not here: importing or storing packs, the game's record shapes, verbs or words; checking one effect at run time (card-language `validateEffect`, used here for `effects` fields).
 
+## Rules for agents
+
+**What it does:** Card and scenario data as a checked pack (`load`), plus the expansion choice and `mergePacks`. The game names its kinds, schemas and verbs.
+
+**You must:**
+1. Define `def.kinds`: each kind has a zod `schema`, an `id` field (default `id`), `refs` (`field: targetKind`, string or string[]) and `effects` fields. Install `zod`.
+2. Call `load(def, { kind: records[] })` and handle `{ ok: false, problems }` (all problems come at once), or use `loadOrThrow` at startup.
+3. For CSV use `loadText`: every CSV value is a string, so the schema must use `z.coerce` for numbers.
+4. Give `def.verbs` (the game's verb table) so `effects` fields are checked with card-language `validateEffect`; extra checks go in `def.check(kind, record, all)` returning problem strings.
+5. Describe expansions in a `Registry` with `dependsOn`; `tick`/`untick` keep dependencies, and `choiceFromJson` returns null when a saved choice no longer fits the registry.
+6. Use `mergePacks` for base plus expansions: one owner per record id (`E_PACK_CONFLICT` across packs, `E_DUP_ID` in one); replace a record only with `replaces: { kind, id, by }`.
+7. Draw the choice with `ExpansionPicker` (unstyled; the game styles it).
+
+**Common mistakes:**
+- Passing data for a kind the definition does not list: it is a problem (`unknown kind`).
+- A reference to an id missing from the target kind is a problem, not ignored.
+- A dependency cycle in the registry throws (`dependencyClosure`).
+
+
 - `load(def, { kind: records[] })` gives `{ ok: true, pack: { records, byId } }` (`byId` keyed `kind:id`) or `{ ok: false, problems }`; `loadOrThrow` throws one message listing them.
 - Kind: `{ schema, id? = 'id', refs? = { field: targetKind } (string or string[] fields), effects? = [fields holding card-language steps] }`. `def.verbs` is the game's verb table; `def.check(kind, record, all)` returns extra problems.
 - `loadText(def, { kind: { csv } | { json } })`: CSV through card-harness `parseCsv` (every value is a string: use `z.coerce` in the schema), JSON as a list; a bad file is a problem, not a throw.

@@ -1,5 +1,22 @@
 Arrange the zones of a game screen by hand (card zones, piles, hand, market, tracks, log, buttons) in a one-file wireframe editor; its JSON is a `board-layout` zones layout per screen.
 
+## Rules for agents
+
+**What it does:** A one-file wireframe editor that arranges a game screen's zones; its JSON is a `board-layout` zones layout per screen.
+
+**You must:**
+1. Open `editor.html` as is (no packages, no network); load a game's start with `window.LAYOUT_EDITOR_INIT = doc` before the script runs.
+2. After editing `index.ts` run `node components/layout-editor/build.mjs`; the test fails while the generated copy in `editor.html` is stale.
+3. Read the exported JSON with `normalizeDoc` and `screenLayout(doc, name)`; draw with `board-layout` `zone()` / `slots()`.
+4. Honour `scale` per zone (draw cards at that fraction) and `kind` (`cards`, `component`, `pile`, `group`).
+5. Make a starting wireframe from a running page with `node capture.mjs <url> <out.json>` (it reads `data-zone`).
+6. Use the helpers (`mirrorZones`, `consolidate`, `split`, `cardFit`, `layoutWarnings`); they return new objects.
+
+**Common mistakes:**
+- Editing the generated copy in `editor.html` by hand.
+- Expecting rotation, non-rectangular zones or overlapping fans: not supported.
+
+
 ## Parts
 - `editor.html`: the editor. One file, no packages, no network: open it from disk, a dev server or a claude.ai artifact.
 - `index.ts`: the logic it runs (pure, tested). `editor.html` carries a generated copy: after editing `index.ts` run `node components/layout-editor/build.mjs`; the test fails while the copy is stale.

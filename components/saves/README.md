@@ -2,6 +2,25 @@
 
 Saved games in IndexedDB over engine-core's `SaveFile`, and a screen for them. `index.ts` draws nothing and loads in node; `ui/index.ts` (import `./ui`) holds the screen. Needs engine-core, small-helpers (`downloadText`) and the packages `idb-keyval`, `react`.
 
+## Rules for agents
+
+**What it does:** Saved games in IndexedDB (autosave slots, named saves, JSON export and import) over engine-core's `SaveFile`, and a screen to list, load, save and import them.
+
+**You must:**
+1. Install `idb-keyval` and `react` (needs `engine-core` and `small-helpers`); import the store from `index` (loads in Node) and the screen from `./ui`.
+2. Create one store with `makeSaves({ game, content, database, filePrefix })`: `database` is the game's own IndexedDB name and `filePrefix` starts every export file name.
+3. Call `saves.writeAutosave(history, name)` after every action; the store prunes to the newest `autosaves` (default 1).
+4. Never mutate an action object after it is saved: the autosave cache matches actions by identity and applies only new ones.
+5. Load only through `saves.restore(stored)` or the screen's `onLoad`; a save from another build or an edited file gives a reason, never a throw. Return a string from `onLoad` to show an error.
+6. Give `<SavesScreen>` a `summary(state, save)` and the `history` it saves; a save that cannot load shows its reason and only Delete.
+7. For export and import of all data, list every localStorage key (a prefix like `mygame.*` is allowed) and pass stores as `stores: { saves: saves.data }`; before `resetAllData`, put in-memory stores (settings `reset()`) back to defaults.
+8. For an engine-port game pass the `EnginePort` as `game`; the save then holds the seed, content hash and answers. Saving an invalid port history throws "Cannot save an invalid game."
+
+**Common mistakes:**
+- Two games sharing one `database` name: they overwrite each other's slots.
+- Expecting a save to load after the rules or content changed: it shows the reason and can only be deleted.
+- Listing a key in `allData` that the game never writes as a string: only stored strings are exported.
+
 ## Store (`saves.ts`)
 
 `makeSaves({ game, content, format?, database, table?, autosaves?, filePrefix, now?, backend? })`. `database` is the game's own IndexedDB name; `filePrefix` starts an export's file name.

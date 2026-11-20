@@ -1,5 +1,25 @@
 # tooling-scripts
 Small repo scripts a game runs with `node kit/tooling-scripts/<script>.ts`. Each takes its paths and patterns as flags, or the same names in `--config <json>` (flags win; a repeatable flag is an array). Exit 0 clean, 1 findings, 2 usage or a failed read or write. Each also exports `run(args, io)` and its pure parts. No dependency beyond Node, except the three below that load a package of the game (`sharp`, `playwright`, `esbuild`).
+
+## Rules for agents
+
+**What it does:** Small repository scripts a game runs as `node kit/tooling-scripts/<script>.ts`; each takes its paths and patterns as flags or the same names in `--config <json>`.
+
+**You must:**
+1. Run scripts from the game's repository root with plain `node`; flags win over `--config`, and a repeatable flag is an array.
+2. Read exit codes: 0 clean, 1 findings, 2 usage or a failed read or write.
+3. Install the game's own package for the scripts that load one: `sharp` (`shrink-png.ts`, optionally `--sharp`), `playwright` (`mock-capture.ts`, `home-screen.ts`) and `esbuild` (`bundle-node.ts`).
+4. Run `fonts-fetch.ts` by hand only; it downloads and never belongs in a check.
+5. Pass the game's own port to `launch.ts` (`--port` or config); it is never defaulted.
+6. Keep `lookup.ts` out of the test glob, and keep private source texts for `text-leak.ts` out of the diff with `--exclude`.
+7. Do not use these for worker commands (worktree, finish, teardown): they are `node kit/kit.mjs ...`.
+
+**Common mistakes:**
+- Treating `text-leak.ts` output as a failure to fix blindly: short functional overlaps are expected and a person judges the list.
+- Running `launch.ts` without listing every source, content and config input: a change outside the list does not trigger a rebuild.
+
+## Scripts
+
 - `shrink-png.ts` (from Jarl): `--dir <dir> [--max-bytes 1900000] [--colours 256,192,128] [--sharp <module>]`. Re-encodes each PNG over the limit as a dithered palette PNG at the same size; exit 1 when one still does not fit.
 - `fonts-fetch.ts`, `woff.ts` (from Rome): `--roles <json> --out <dir> [--force]`. The JSON is `{ roles: [{ role, family, printed, ownerPrefix?, substitute: { family, licence, licenceFile, licenceUrl, files: [{ file, url }] } }], copy?: [{ from, note }] }`. Downloads from the URLs you list (a manual step, never in a check); a `.woff` name packs the TTF with `toWoff(bytes)`; writes `fonts.json` and `LICENSES.md`.
 - `mock-capture.ts` (from Jarl and Rome): `--list <json> --src <dir> --out <dir> [--only a,b] [--width 3840] [--height 2160] [--settle-ms 800] [--playwright <module>]`. The list is `[{ name, file, query?, width?, height?, deviceScaleFactor?, browser?, fullPage? }]`; writes `<out>/<name>.png` and `capture-report.json` (errors, failed requests, broken images, fonts, bytes). No callout boards.

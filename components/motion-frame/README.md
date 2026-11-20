@@ -1,5 +1,27 @@
 # motion-frame
 Plays motion specs in the director's format (one JSON per beat: `actors`, `steps` of `{t, dur, actor, do, to?}`, `sound` of `{t, cue}`, `maxMs`, `frequency`, `stage`). It knows no game and draws nothing: verbs draw. Loads in node; no packages.
+
+## Rules for agents
+
+**What it does:** Plays the director's motion specs as timed beats; verbs draw, the game keeps its state.
+
+**You must:**
+1. Pass `speed: () => ...` from the settings. It is read when each beat starts: a factor, or `'instant'`; `0` (or any non-positive value) means still, the same as instant: no timeline, `onEnd` at once, cues still sound. Use `speed: () => withReducedMotion(withAutomationOff(setting))`.
+2. Register a verb for every verb name the specs use (`createVerbs().register`) and run `validateSpecs(specs, stages, verbs)` in the game's check, expecting no lines.
+3. Set per-beat state in `onBeatStart` and clear it in `onBeatEnd`: when called, they always come as a pair; on a skipped, snapped, instant or failed beat they are called only if the beat has `commit` or `data`.
+4. Apply the next game state with `play(beat, { commit, data })`, never from a verb: the player never touches game state.
+5. If sound is wired to `onCue`, also pass `onDroppedCue(cue, beat, why)` (`skipped`, `failed`, `cut`): every cue goes to exactly one of the two, so a sound is lost when a beat is skipped and only `onCue` is wired.
+6. Pass `onProblem`: a throwing verb, hook or cue, or zones still missing after 60 frames, goes there and the queue goes on.
+7. Call `skipAll()` on undo, load and leaving the screen; bind `skipOnInput` / `hurryOnInput` / `releaseOnInput` to the window and keep the unbind.
+8. Call `putMotionSpeed(speed, name)` at start and when the setting changes (or `bindMotionSpeed`), and import `view-transition.css` when using `withViewTransition`.
+9. Give swapped board elements unique `data-motion-key` values.
+10. Give `mountMotionLab` a player of its own: on the game's player a press would end the game's beats.
+
+**Common mistakes:**
+- A `holdUntil` beat holds the queue until `release()`, `skipAll()` or `autoContinueMs`: wire a release or the board freezes.
+- `recordClip` takes the start time in epoch seconds (`Date.now() / 1000`), not `performance.now`; import it from `record`, not `index`.
+- `onBeatEnd` does not mean the beat played in full: check `onEnded(how)` for `skipped`.
+
 ## Timeline (`timeline.ts`, pure)
 - `stageFromLayout(layout, live?)`: a `Stage` (zone id to `[x, y, w, h]`) from a layout JSON; `live` is the game's resolver, asked first (live and dynamic targets). A game may pass any function as a stage.
 - `buildTimeline(spec, stage, factor = 1)`: `{ id, ms, actors, calls, cues }`. A call is `{ t, dur, actor, zone, verb, from, to?, value?, step }` with times multiplied by `factor`, sorted by time. An actor's `at` and a move's `to` are centres: the rectangle has the actor's `w`, `h` (the zone's size without them). `from` is where the actor is after its earlier moves; a step whose actor is a zone id has `zone: true`. A number as `to` is `value`. `step` is the spec's step (`ease`, `label`, `pulse`, `then`).

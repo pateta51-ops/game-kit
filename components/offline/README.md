@@ -2,6 +2,24 @@
 
 Offline install: a Vite plugin that writes a precaching service worker into the build, the rule for registering it, and the update line. `precache.ts` runs in node (the game's `vite.config.ts`); `index.ts` draws nothing; `ui.ts` holds `UpdateLine`. Needs state-machines and the packages `react`, `zustand`. Saves and `keepStorage()` are in saves.
 
+## Rules for agents
+
+**What it does:** A Vite plugin that writes a precaching service worker, the rule for registering it, and the update line.
+
+**You must:**
+1. Add `swPrecache({ prefix, assets?, ... })` to `vite.config.ts` plugins; `prefix` is unique per game. Keep no `public/sw.js`.
+2. Register once at start-up with `registerServiceWorker({ prod, e2e, local }, url)`, url `${BASE_URL}sw.js`: it registers only in production on HTTPS (or local when allowed), never in an e2e build, never inside a frame.
+3. List the faces and fonts folders in `assets` and do not also call card-parts `fillImageCache` (art would be stored twice).
+4. Import `buildInfoPlugin` from `../kit/offline/buildInfo.ts` in `vite.config.ts` only (node, not `index.ts`) to write `build.json`; it is never precached.
+5. For `autoApply` and `watchBuild` give a `safe()` that is false while input is half-entered, a `flush` that awaits the pending save, and call the returned `check` when what `safe` reads changes.
+6. Mount `<UpdateLine words>` with the game's own words; it shows only when a newer version is ready.
+7. The manifest, icons and iOS meta are the game's own files.
+
+**Common mistakes:**
+- Importing `buildInfo.ts` from page code pulls node code into the bundle.
+- A `safe` that always returns true applies an update while input is half-entered and loses it.
+
+
 ## Build (`precache.ts`)
 
 `plugins: [swPrecache({ prefix, assets?, appDir?, exclude?, navTimeoutMs? })]`. After `vite build` it writes `sw.js` at the build's root: the kit's `sw.js` with the files to keep and a version hashed from their contents. `prefix` starts the cache names (one per game; activate deletes the older caches with it). With `assets` (folders of the build, e.g. the faces and the fonts), only root files, the bundler's `assetsDir` and those folders are kept; without it, every file. `exclude` takes more files out (e.g. originals). Card faces in `assets` are precached here: do not also call card-parts `fillImageCache` (art stored twice). The game keeps no `public/sw.js`. `writeServiceWorker(outDir, options)` does the same on any folder.

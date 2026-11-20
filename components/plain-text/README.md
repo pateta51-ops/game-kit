@@ -2,6 +2,23 @@
 
 The owner's rule "no rule ids on screen" as code: rule, ruling and decision ids (`TURN-07`, `AR-12`, `D-044`) stay in data, engine output and tests, and every line a person reads goes through this filter first. Pure functions, no packages, loads in node.
 
+## Rules for agents
+
+**What it does:** The "no rule ids on screen" rule as code.
+
+**You must:**
+1. Build one `ruleIdFilter({ long, short })` from the game's id families (regex sources; a longer name before its prefix).
+2. Pass every line a person reads through `ids.strip` where text enters the screen: the store's view and error, the log, rich text; use `plainPrompt` / `plainView` for prompts.
+3. Do not draw a line that `strip` turned into `''`.
+4. Keep a game test that runs `strip` over the content files and expects no change (printed card text never matches), and one using `forbiddenText(ids.pattern, ...)` with `visibleText(container)`.
+5. Run `longSentences` over prompt wording and expect `[]`.
+6. For glossary entries use `hideRules` for the `rules` list and `strip` for `summary` and `body`.
+
+**Common mistakes:**
+- A `short` family needs 2 to 4 digits, so "A-5" and "R-1" stay; put ids with 1 to 3 digits in `long`.
+- A family matches only in its own case (`d-44` stays).
+
+
 ## Filter
 
 ```ts

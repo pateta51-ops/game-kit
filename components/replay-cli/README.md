@@ -2,6 +2,22 @@
 
 Headless replays, golden games and a determinism check across two checkouts. Needs `engine-core` and `sim-pool`.
 
+## Rules for agents
+
+**What it does:** Headless replays, golden games and a determinism check across two checkouts.
+
+**You must:**
+1. Write the engine module exporting `engine: { game, content(), format?, describe? }` for `replay.ts`, and a golden module exporting `simGame` and `goldens` (`format`, `view`, `causes` optional) for `golden.ts`.
+2. Run `node kit/replay-cli/golden.ts check <dir> --game <module>` in CI; exit 1 is a golden that differs, 2 bad usage or an unloadable module.
+3. Use `--update-golden` only after a deliberate rules change, never to silence a failure: read the verdict (CRASHED, DIVERGED, CHANGED, MOVED) first.
+4. For a refactor or performance change record on the base (`golden.ts record`) and `replay` on the head; they must replay the same.
+5. Name each golden with a seed and driver that the game's sim-pool also plays: a golden equals the simulated game of that seed.
+
+**Common mistakes:**
+- A driver change shows as CHANGED (the stored moves still replay), an engine or content change as DIVERGED.
+- The driver is not asked again at replay.
+
+
 ## replay.ts: one log
 
 `node replay.ts <log.json> (--engine <module> | --config <replay.json>) [--record <out.json>]`. The module exports `engine: { game, content(), format?, describe? }`. A log is a sealed save or a record with per-action hashes. Exit 0 same, 1 differs, 2 unusable. Checkpoint goldens: an engine with `checkpoint(state, content, action)` names checkpoints (one per round, say; `action` is null after setup); `--checkpoints <golden.json>` compares the hash at each (of `project(state, content)` when the engine has it, else of the state) with the file and names the first that differs; `--update-golden` writes the file.

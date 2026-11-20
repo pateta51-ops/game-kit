@@ -2,6 +2,23 @@
 
 Story as data only (flavour: no rule lives in it; a missing line never blocks play). Needs the package `react` for the views. `index.ts` draws nothing and loads in node; `ui.ts` holds the React part. Ideas from `docs/evaluation/outside/story-campaign-*.md`; code written fresh.
 
+## Rules for agents
+
+**What it does:** Story as data (speakers, scenarios, beats, pages, panel sheets, splashes) with React views; flavour only, no rule lives in it and a missing line never blocks play.
+
+**You must:**
+1. Import data and helpers from `index` (loads in Node; needs `engine-core`) and the views from `ui` (needs `react`).
+2. Keep rules out of story data; resolve lines with `resolveLine` / `resolveBeat(story, x, inPlay)`: a character not in play reads as narrator with `fallback`, and a line with none is dropped.
+3. Run `storyProblems`, `pageProblems`, `panelProblems` and `beatProblems` over the game's story in a test.
+4. For a picture give `fileExists` or `renderFile`; without a file the `note` text shows.
+5. To ask story beats as engine questions, spread `storyHandlers({ story, inPlay?, answered? })` into the handlers and push `ctx.then(storyTask(scenario, beatId))`; a beat id the story lacks throws "story: no beat ...".
+6. Pass `reduced` (default: the media query) to `PanelReader` and `SplashView`; add a splash's `key` to the game's `shown` set so it shows once.
+7. Style at zero specificity with the `--story-*` variables and `kit-story*`, `kit-page-*`, `kit-panel*`, `kit-splash*` classes.
+
+**Common mistakes:**
+- Gating play on a story line: a missing line must never block.
+- Forgetting to record a shown splash: `splashFor` returns it again.
+
 ## Data (`story.ts`)
 
 - `Story` = `{ speakers: {id, name, kind?}[], scenarios }`. `Scenario` = `{ id, title, slots?, stages?, sheet }`; `slots`: `intro`, `win`, `loss`, `teaser`, `recap`; `stages`: beats by number; `sheet`: parts `{ id, title?, beats }` in reading order.

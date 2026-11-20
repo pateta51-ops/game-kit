@@ -2,6 +2,23 @@
 
 One command makes a working, empty game repo from the kit (K204). Run it from the game-kit checkout; the game's repo does not carry this component.
 
+## Rules for agents
+
+**What it does:** Creates a working, empty game repository from the kit with one command, run from the game-kit checkout.
+
+**You must:**
+1. Run it from the game-kit checkout as `node kit.mjs new <dir> <id> "<Name>"`; a game repository does not carry this component.
+2. Register the game's port block first: `node tools/game-server/server.mjs add <id> "<Name>" <dir>`, then commit `ports.json` and `docs/PORTS.md` in game-kit. The scaffold reads `games.<id>` (with `serve.local`), stops with that command if it is missing, and never picks a port.
+3. Use an empty or new folder: any other is refused ("is not empty") unless `--existing`, which writes only missing files and, if any template file already exists, writes nothing and lists the clashes.
+4. Re-running is safe: each step (git init, first commit, `gh repo create`, `gh repo edit --delete-branch-on-merge`) prints what it did and a failure names the step. Use `--no-remote` offline; `--no-install` or `--link` skips `npm install`.
+5. After it: set `ci.config.json` (`repo`, `runnerLabel`), run `node kit/ci-templates/render.mjs`, then `npm run check`.
+6. Write template files with the `.tpl` ending and only the placeholders `{{id}} {{name}} {{dev}} {{preview}} {{phone}} {{repo}} {{runner}}`; any other `{{x}}` throws "unknown {{x}}".
+7. Do the TODOs listed in the generated `CLAUDE.md` (traceability, theme-check, plan-checker, plain-text, e2e, repo-gate's `cardIdLiteral` and `artFolder`); they are not wired.
+
+**Common mistakes:**
+- Editing `ports.json` by hand instead of using `server.mjs add`.
+- Skipping `npm install`: the generated CI's `npm ci` needs `package-lock.json`.
+
 1. Ports: `kit.mjs new` runs `node tools/game-server/server.mjs add <id> "<Name>" <dir>` itself when `ports.json` has no entry (then commit `ports.json` and `docs/PORTS.md` in game-kit; never edit them by hand). After the files it also does `git init`, the first commit, `gh repo create <owner>/<id> --private --source . --push` and `gh repo edit --delete-branch-on-merge` (owner from `gh api user`, or `--repo`); each step prints what it did, skips when done, and a failure stops naming the step, so re-running is safe. `--no-remote` skips git and GitHub (tests, offline); `--ports <file>` never registers. The scaffold reads `games.<id>` in `ports.json` (dev = block, preview = block + 1, phone = `serve.local`) and stops with that command if the entry is missing. It never picks a port.
 2. `node kit.mjs new <dir> <id> "<Name>" [--ref <tag|commit>] [--repo <owner/name>] [--runner <label>] [--link <node_modules folder>] [--no-install] [--existing] [--trailer <text>] [--ports <file>]`; `--runner` defaults to the id, `--trailer` replaces the first commit's trailer (empty: none)
 3. The command ends with `npm install` in `<dir>` (it writes `package-lock.json`, which the generated CI's `npm ci` needs); `--no-install` skips it (tests, offline), and `--link` (a junction to an existing `node_modules`) skips it too. Then set `ci.config.json` (`repo`, `runnerLabel`), run `node kit/ci-templates/render.mjs`, then `npm run check`.
