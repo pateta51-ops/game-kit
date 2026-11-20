@@ -32,7 +32,7 @@ export const Select = () => (
 
 ## Slots and words
 
-`slots`: `frame(screen)` wraps the screen, `header` sits above the mode tabs, `plate(c, where)` replaces the name plate in `roster`, `hero` or `opponent`, `track(c, choice)` is the game's own panel under the deck (a board, a ladder), `sub(c, choice)` a sub-picker in the hero (a board side). `words` replaces the labels (roster title, deck heading, search, tabs, pager, opponent heading, options, Begin, full-text toggle). `phone` sets `data-layout="phone"`.
+`slots`: `frame(screen)` wraps the screen, `header` sits above the mode tabs, `plate(c, where)` replaces the name plate in `roster`, `hero` or `opponent`, `track(c, choice)` is the game's own panel under the deck (a board, a ladder), `sub(c, choice)` a sub-picker in the hero (a board side). `field(f, value, set)` renders one option field instead of the native control (return null to keep the native one); `options(choice, set(id, value))` replaces the whole folded body. `words` replaces the labels (roster title, deck heading, search, tabs, pager, opponent heading, options, Begin, full-text toggle). `phone` sets `data-layout="phone"`.
 
 ## Look
 

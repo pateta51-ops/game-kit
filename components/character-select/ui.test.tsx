@@ -184,3 +184,33 @@ it('portrait: cover at the focus point, or a crop of a region', () => {
   fireEvent.click(z);
   expect(one('portrait', one('hero')).style.backgroundSize).toMatch(/^200(.00)?%/);
 });
+
+it('field slot: renders one field with its value, set reaches Begin; null keeps the native control', () => {
+  const onBegin = draw({
+    slots: {
+      field: (f, v, set) =>
+        f.id === 'difficulty' ? (
+          <button type="button" data-part="mine" onClick={() => { set('normal'); }}>{String(v)}</button>
+        ) : null,
+    },
+  });
+  fireEvent.click(one('options-toggle'));
+  expect(one('mine').textContent).toBe('easy');
+  expect(one('options').querySelectorAll('select').length).toBe(1);
+  fireEvent.click(one('mine'));
+  expect(one('mine').textContent).toBe('normal');
+  fireEvent.click(one('begin'));
+  expect((onBegin.mock.calls[0]?.[0] as { options: Record<string, unknown> }).options.difficulty).toBe('normal');
+});
+
+it('options slot: replaces the whole fold body; set reaches Begin', () => {
+  const onBegin = draw({
+    slots: { options: (c, set) => <button type="button" data-part="mine" onClick={() => { set('seed', 'x'); }}>{String(c.options.seed)}</button> },
+  });
+  fireEvent.click(one('options-toggle'));
+  expect(part('field')).toHaveLength(0);
+  fireEvent.click(one('mine'));
+  expect(one('mine').textContent).toBe('x');
+  fireEvent.click(one('begin'));
+  expect((onBegin.mock.calls[0]?.[0] as { options: Record<string, unknown> }).options.seed).toBe('x');
+});
