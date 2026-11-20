@@ -16,7 +16,7 @@ W = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(W)
 
 HANG = "import time\nprint('Running Planning score: 667 tokens', flush=True)\ntime.sleep(60)\n"
-BUSY = "import time\nfor i in range(8):\n    print('step', i, flush=True)\n    time.sleep(0.4)\n"
+BUSY = "import time\nfor i in range(18):\n    print('step', i, flush=True)\n    time.sleep(0.4)\n"
 
 
 def script(t, src):
@@ -37,8 +37,8 @@ class Stall(unittest.TestCase):
     def test_child_that_keeps_printing_passes(self):
         with tempfile.TemporaryDirectory() as t:
             t0 = time.time()
-            W.run_take(script(t, BUSY), None, 1)
-            self.assertGreater(time.time() - t0, 2.5)  # longer than stallSecs, never silent for it
+            W.run_take(script(t, BUSY), None, 5)
+            self.assertGreater(time.time() - t0, 5)  # longer than stallSecs, never silent for it
 
     def test_zero_turns_the_watch_off(self):
         with tempfile.TemporaryDirectory() as t:
@@ -79,10 +79,10 @@ class StallInWorker(unittest.TestCase):
         self.assertFalse(made)
         self.assertIn("no take made", res[0]["error"])
 
-    def test_default_is_600(self):
+    def test_default_is_900(self):
         got = []
         self.run_worker(LY, wrap=lambda w, run: lambda cmd, env, stall: (got.append(stall), run(cmd, env=env, check=True))[1])
-        self.assertEqual(got[0], 600)
+        self.assertEqual(got[0], 900)
 
 
 if __name__ == "__main__":

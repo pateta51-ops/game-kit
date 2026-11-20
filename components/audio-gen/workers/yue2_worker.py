@@ -55,7 +55,10 @@ def run_take(cmd, env, stall: float) -> None:
             if not b:
                 return
             last[0] = time.monotonic()
-            os.write(2, b)
+            try:
+                os.write(2, b)
+            except OSError:
+                pass
 
     th = threading.Thread(target=pump, daemon=True)
     th.start()
@@ -215,7 +218,7 @@ def main() -> int:
         for s in recipe.seeds(int(item["seed"]), int(o.get("tries", opts.get("tries", 6)))):
             tmp = out.parent / f"_yue_{out.stem}-{s}.wav"
             try:
-                nv = generate(tmp, item["prompt"], lyrics, cot, s, bool(sung), float(o.get("stallSecs", opts.get("stallSecs", 600))))
+                nv = generate(tmp, item["prompt"], lyrics, cot, s, bool(sung), float(o.get("stallSecs", opts.get("stallSecs", 900))))
             except TakeStalled as e:  # K494: a failed take, the next seed goes on
                 tmp.unlink(missing_ok=True)
                 tried.append({"seed": s, "reason": f"{e}"})
