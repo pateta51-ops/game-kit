@@ -430,9 +430,9 @@ var COUNTER = (() => {
   ));
   var __toCommonJS = (mod) => __copyProps(__defProp({}, "__esModule", { value: true }), mod);
 
-  // ../../../node_modules/react/cjs/react.production.js
+  // node_modules/react/cjs/react.production.js
   var require_react_production = __commonJS({
-    "../../../node_modules/react/cjs/react.production.js"(exports) {
+    "node_modules/react/cjs/react.production.js"(exports) {
       "use strict";
       var REACT_ELEMENT_TYPE = /* @__PURE__ */ Symbol.for("react.transitional.element");
       var REACT_PORTAL_TYPE = /* @__PURE__ */ Symbol.for("react.portal");
@@ -626,9 +626,9 @@ var COUNTER = (() => {
       }
       function mapChildren(children, func, context) {
         if (null == children) return children;
-        var result = [], count2 = 0;
+        var result = [], count = 0;
         mapIntoArray(children, result, "", "", function(child) {
-          return func.call(context, child, count2++);
+          return func.call(context, child, count++);
         });
         return result;
       }
@@ -882,9 +882,9 @@ var COUNTER = (() => {
     }
   });
 
-  // ../../../node_modules/react/index.js
+  // node_modules/react/index.js
   var require_react = __commonJS({
-    "../../../node_modules/react/index.js"(exports, module) {
+    "node_modules/react/index.js"(exports, module) {
       "use strict";
       if (true) {
         module.exports = require_react_production();
@@ -894,9 +894,9 @@ var COUNTER = (() => {
     }
   });
 
-  // ../../../node_modules/scheduler/cjs/scheduler.production.js
+  // node_modules/scheduler/cjs/scheduler.production.js
   var require_scheduler_production = __commonJS({
-    "../../../node_modules/scheduler/cjs/scheduler.production.js"(exports) {
+    "node_modules/scheduler/cjs/scheduler.production.js"(exports) {
       "use strict";
       function push(heap, node) {
         var index = heap.length;
@@ -1167,9 +1167,9 @@ var COUNTER = (() => {
     }
   });
 
-  // ../../../node_modules/scheduler/index.js
+  // node_modules/scheduler/index.js
   var require_scheduler = __commonJS({
-    "../../../node_modules/scheduler/index.js"(exports, module) {
+    "node_modules/scheduler/index.js"(exports, module) {
       "use strict";
       if (true) {
         module.exports = require_scheduler_production();
@@ -1179,9 +1179,9 @@ var COUNTER = (() => {
     }
   });
 
-  // ../../../node_modules/react-dom/cjs/react-dom.production.js
+  // node_modules/react-dom/cjs/react-dom.production.js
   var require_react_dom_production = __commonJS({
-    "../../../node_modules/react-dom/cjs/react-dom.production.js"(exports) {
+    "node_modules/react-dom/cjs/react-dom.production.js"(exports) {
       "use strict";
       var React = require_react();
       function formatProdErrorMessage(code) {
@@ -1336,9 +1336,9 @@ var COUNTER = (() => {
     }
   });
 
-  // ../../../node_modules/react-dom/index.js
+  // node_modules/react-dom/index.js
   var require_react_dom = __commonJS({
-    "../../../node_modules/react-dom/index.js"(exports, module) {
+    "node_modules/react-dom/index.js"(exports, module) {
       "use strict";
       function checkDCE() {
         if (typeof __REACT_DEVTOOLS_GLOBAL_HOOK__ === "undefined" || typeof __REACT_DEVTOOLS_GLOBAL_HOOK__.checkDCE !== "function") {
@@ -1362,9 +1362,9 @@ var COUNTER = (() => {
     }
   });
 
-  // ../../../node_modules/react-dom/cjs/react-dom-client.production.js
+  // node_modules/react-dom/cjs/react-dom-client.production.js
   var require_react_dom_client_production = __commonJS({
-    "../../../node_modules/react-dom/cjs/react-dom-client.production.js"(exports) {
+    "node_modules/react-dom/cjs/react-dom-client.production.js"(exports) {
       "use strict";
       var Scheduler = require_scheduler();
       var React = require_react();
@@ -12631,7 +12631,7 @@ var COUNTER = (() => {
       }
       function estimateBandwidth() {
         if ("function" === typeof performance.getEntriesByType) {
-          for (var count2 = 0, bits = 0, resourceEntries = performance.getEntriesByType("resource"), i = 0; i < resourceEntries.length; i++) {
+          for (var count = 0, bits = 0, resourceEntries = performance.getEntriesByType("resource"), i = 0; i < resourceEntries.length; i++) {
             var entry = resourceEntries[i], transferSize = entry.transferSize, initiatorType = entry.initiatorType, duration = entry.duration;
             if (transferSize && duration && isLikelyStaticResource(initiatorType)) {
               initiatorType = 0;
@@ -12644,13 +12644,13 @@ var COUNTER = (() => {
               }
               --i;
               bits += 8 * (transferSize + initiatorType) / (entry.duration / 1e3);
-              count2++;
-              if (10 < count2) break;
+              count++;
+              if (10 < count) break;
             }
           }
-          if (0 < count2) return bits / count2 / 1e6;
+          if (0 < count) return bits / count / 1e6;
         }
-        return navigator.connection && (count2 = navigator.connection.downlink, "number" === typeof count2) ? count2 : 5;
+        return navigator.connection && (count = navigator.connection.downlink, "number" === typeof count) ? count : 5;
       }
       var eventsEnabled = null;
       var selectionInformation = null;
@@ -14906,9 +14906,9 @@ var COUNTER = (() => {
     }
   });
 
-  // ../../../node_modules/react-dom/client.js
+  // node_modules/react-dom/client.js
   var require_client = __commonJS({
-    "../../../node_modules/react-dom/client.js"(exports, module) {
+    "node_modules/react-dom/client.js"(exports, module) {
       "use strict";
       function checkDCE() {
         if (typeof __REACT_DEVTOOLS_GLOBAL_HOOK__ === "undefined" || typeof __REACT_DEVTOOLS_GLOBAL_HOOK__.checkDCE !== "function") {
@@ -14932,9 +14932,9 @@ var COUNTER = (() => {
     }
   });
 
-  // ../../../node_modules/react/cjs/react-jsx-runtime.production.js
+  // node_modules/react/cjs/react-jsx-runtime.production.js
   var require_react_jsx_runtime_production = __commonJS({
-    "../../../node_modules/react/cjs/react-jsx-runtime.production.js"(exports) {
+    "node_modules/react/cjs/react-jsx-runtime.production.js"(exports) {
       "use strict";
       var REACT_ELEMENT_TYPE = /* @__PURE__ */ Symbol.for("react.transitional.element");
       var REACT_FRAGMENT_TYPE = /* @__PURE__ */ Symbol.for("react.fragment");
@@ -14962,9 +14962,9 @@ var COUNTER = (() => {
     }
   });
 
-  // ../../../node_modules/react/jsx-runtime.js
+  // node_modules/react/jsx-runtime.js
   var require_jsx_runtime = __commonJS({
-    "../../../node_modules/react/jsx-runtime.js"(exports, module) {
+    "node_modules/react/jsx-runtime.js"(exports, module) {
       "use strict";
       if (true) {
         module.exports = require_react_jsx_runtime_production();
@@ -15028,6 +15028,9 @@ var COUNTER = (() => {
   // components/effect-library/spiral.ts
   var TAU2 = Math.PI * 2;
 
+  // components/effect-library/crumple.ts
+  var deg = Math.PI / 180;
+
   // components/effect-library/count.ts
   var countAt = (value, k, from = 0) => Math.round(from + (value - from) * (1 - (1 - Math.min(1, Math.max(0, k))) ** 3));
   function countUp(o) {
@@ -15064,9 +15067,6 @@ var COUNTER = (() => {
     id = frame(tick);
     return finish;
   }
-
-  // components/effect-library/crumple.ts
-  var deg = Math.PI / 180;
 
   // components/effect-library/plasma-orb.ts
   var TAU3 = Math.PI * 2;
@@ -15148,7 +15148,7 @@ var COUNTER = (() => {
 
   // components/counter/ui.tsx
   var import_jsx_runtime = __toESM(require_jsx_runtime(), 1);
-  function Counter({ value, anchor, icon: icon2, thresholds, speed, onCross, count: count2 = true, bumpOnChange = true }) {
+  function Counter({ value, anchor, icon: icon2, thresholds, speed, onCross, count = true, bumpOnChange = true }) {
     const [shown, setShown] = (0, import_react.useState)(value);
     const prev = (0, import_react.useRef)(value);
     const mid = (0, import_react.useRef)(value);
@@ -15165,7 +15165,7 @@ var COUNTER = (() => {
       }
       const c = crossed(was, value, thresholds);
       if (c) onCross?.(c, value);
-      if (!count2) {
+      if (!count) {
         mid.current = value;
         setShown(value);
         return;

@@ -156,9 +156,9 @@ var PIECES = (() => {
   ));
   var __toCommonJS = (mod) => __copyProps(__defProp({}, "__esModule", { value: true }), mod);
 
-  // ../../../node_modules/react/cjs/react.production.js
+  // node_modules/react/cjs/react.production.js
   var require_react_production = __commonJS({
-    "../../../node_modules/react/cjs/react.production.js"(exports) {
+    "node_modules/react/cjs/react.production.js"(exports) {
       "use strict";
       var REACT_ELEMENT_TYPE = /* @__PURE__ */ Symbol.for("react.transitional.element");
       var REACT_PORTAL_TYPE = /* @__PURE__ */ Symbol.for("react.portal");
@@ -352,9 +352,9 @@ var PIECES = (() => {
       }
       function mapChildren(children, func, context) {
         if (null == children) return children;
-        var result = [], count2 = 0;
+        var result = [], count = 0;
         mapIntoArray(children, result, "", "", function(child) {
-          return func.call(context, child, count2++);
+          return func.call(context, child, count++);
         });
         return result;
       }
@@ -608,9 +608,9 @@ var PIECES = (() => {
     }
   });
 
-  // ../../../node_modules/react/index.js
+  // node_modules/react/index.js
   var require_react = __commonJS({
-    "../../../node_modules/react/index.js"(exports, module) {
+    "node_modules/react/index.js"(exports, module) {
       "use strict";
       if (true) {
         module.exports = require_react_production();
@@ -620,9 +620,9 @@ var PIECES = (() => {
     }
   });
 
-  // ../../../node_modules/scheduler/cjs/scheduler.production.js
+  // node_modules/scheduler/cjs/scheduler.production.js
   var require_scheduler_production = __commonJS({
-    "../../../node_modules/scheduler/cjs/scheduler.production.js"(exports) {
+    "node_modules/scheduler/cjs/scheduler.production.js"(exports) {
       "use strict";
       function push(heap, node) {
         var index = heap.length;
@@ -893,9 +893,9 @@ var PIECES = (() => {
     }
   });
 
-  // ../../../node_modules/scheduler/index.js
+  // node_modules/scheduler/index.js
   var require_scheduler = __commonJS({
-    "../../../node_modules/scheduler/index.js"(exports, module) {
+    "node_modules/scheduler/index.js"(exports, module) {
       "use strict";
       if (true) {
         module.exports = require_scheduler_production();
@@ -905,9 +905,9 @@ var PIECES = (() => {
     }
   });
 
-  // ../../../node_modules/react-dom/cjs/react-dom.production.js
+  // node_modules/react-dom/cjs/react-dom.production.js
   var require_react_dom_production = __commonJS({
-    "../../../node_modules/react-dom/cjs/react-dom.production.js"(exports) {
+    "node_modules/react-dom/cjs/react-dom.production.js"(exports) {
       "use strict";
       var React = require_react();
       function formatProdErrorMessage(code) {
@@ -1062,9 +1062,9 @@ var PIECES = (() => {
     }
   });
 
-  // ../../../node_modules/react-dom/index.js
+  // node_modules/react-dom/index.js
   var require_react_dom = __commonJS({
-    "../../../node_modules/react-dom/index.js"(exports, module) {
+    "node_modules/react-dom/index.js"(exports, module) {
       "use strict";
       function checkDCE() {
         if (typeof __REACT_DEVTOOLS_GLOBAL_HOOK__ === "undefined" || typeof __REACT_DEVTOOLS_GLOBAL_HOOK__.checkDCE !== "function") {
@@ -1088,9 +1088,9 @@ var PIECES = (() => {
     }
   });
 
-  // ../../../node_modules/react-dom/cjs/react-dom-client.production.js
+  // node_modules/react-dom/cjs/react-dom-client.production.js
   var require_react_dom_client_production = __commonJS({
-    "../../../node_modules/react-dom/cjs/react-dom-client.production.js"(exports) {
+    "node_modules/react-dom/cjs/react-dom-client.production.js"(exports) {
       "use strict";
       var Scheduler = require_scheduler();
       var React = require_react();
@@ -12357,7 +12357,7 @@ var PIECES = (() => {
       }
       function estimateBandwidth() {
         if ("function" === typeof performance.getEntriesByType) {
-          for (var count2 = 0, bits = 0, resourceEntries = performance.getEntriesByType("resource"), i = 0; i < resourceEntries.length; i++) {
+          for (var count = 0, bits = 0, resourceEntries = performance.getEntriesByType("resource"), i = 0; i < resourceEntries.length; i++) {
             var entry2 = resourceEntries[i], transferSize = entry2.transferSize, initiatorType = entry2.initiatorType, duration = entry2.duration;
             if (transferSize && duration && isLikelyStaticResource(initiatorType)) {
               initiatorType = 0;
@@ -12370,13 +12370,13 @@ var PIECES = (() => {
               }
               --i;
               bits += 8 * (transferSize + initiatorType) / (entry2.duration / 1e3);
-              count2++;
-              if (10 < count2) break;
+              count++;
+              if (10 < count) break;
             }
           }
-          if (0 < count2) return bits / count2 / 1e6;
+          if (0 < count) return bits / count / 1e6;
         }
-        return navigator.connection && (count2 = navigator.connection.downlink, "number" === typeof count2) ? count2 : 5;
+        return navigator.connection && (count = navigator.connection.downlink, "number" === typeof count) ? count : 5;
       }
       var eventsEnabled = null;
       var selectionInformation = null;
@@ -14632,9 +14632,9 @@ var PIECES = (() => {
     }
   });
 
-  // ../../../node_modules/react-dom/client.js
+  // node_modules/react-dom/client.js
   var require_client = __commonJS({
-    "../../../node_modules/react-dom/client.js"(exports, module) {
+    "node_modules/react-dom/client.js"(exports, module) {
       "use strict";
       function checkDCE() {
         if (typeof __REACT_DEVTOOLS_GLOBAL_HOOK__ === "undefined" || typeof __REACT_DEVTOOLS_GLOBAL_HOOK__.checkDCE !== "function") {
@@ -14658,9 +14658,9 @@ var PIECES = (() => {
     }
   });
 
-  // ../../../node_modules/react/cjs/react-jsx-runtime.production.js
+  // node_modules/react/cjs/react-jsx-runtime.production.js
   var require_react_jsx_runtime_production = __commonJS({
-    "../../../node_modules/react/cjs/react-jsx-runtime.production.js"(exports) {
+    "node_modules/react/cjs/react-jsx-runtime.production.js"(exports) {
       "use strict";
       var REACT_ELEMENT_TYPE = /* @__PURE__ */ Symbol.for("react.transitional.element");
       var REACT_FRAGMENT_TYPE = /* @__PURE__ */ Symbol.for("react.fragment");
@@ -14688,9 +14688,9 @@ var PIECES = (() => {
     }
   });
 
-  // ../../../node_modules/react/jsx-runtime.js
+  // node_modules/react/jsx-runtime.js
   var require_jsx_runtime = __commonJS({
-    "../../../node_modules/react/jsx-runtime.js"(exports, module) {
+    "node_modules/react/jsx-runtime.js"(exports, module) {
       "use strict";
       if (true) {
         module.exports = require_react_jsx_runtime_production();
@@ -14857,10 +14857,10 @@ var PIECES = (() => {
     const after = measureBoard(swap);
     const duration = (swap.dur ?? 420) * factor;
     if (!(duration > 0)) return 0;
-    let count2 = 0;
+    let count = 0;
     let end = 0;
     const fly = (node, frames2, cleanup, live = false) => {
-      const delay = Math.min(count2++, live ? Infinity : swap.maxStagger ?? 8) * (swap.stagger ?? 70) * factor;
+      const delay = Math.min(count++, live ? Infinity : swap.maxStagger ?? 8) * (swap.stagger ?? 70) * factor;
       if (cleanup) open2.add(cleanup);
       const anim = node.animate(frames2, { duration, delay, fill: "backwards", easing: swap.ease ?? "cubic-bezier(.2,.8,.2,1)" });
       if (cleanup) open2.delete(cleanup);
@@ -15902,13 +15902,13 @@ var PIECES = (() => {
     return [v[0] / h2, v[1] / h2, v[2] / h2];
   };
   var CH = /* @__PURE__ */ new WeakMap();
-  var chevrons = (S, count2, flip) => {
+  var chevrons = (S, count, flip) => {
     let m = CH.get(S);
     if (!m) {
       m = /* @__PURE__ */ new Map();
       CH.set(S, m);
     }
-    const key = `${count2}|${flip?.join() ?? ""}`;
+    const key = `${count}|${flip?.join() ?? ""}`;
     let c = m.get(key);
     if (c) return c;
     const n = S.length, s = [0];
@@ -15916,9 +15916,9 @@ var PIECES = (() => {
       const a = S[i2 % n], b = S[i2 - 1];
       s.push((s[i2 - 1] ?? 0) + Math.hypot(a[0] - b[0], a[1] - b[1], a[2] - b[2]));
     }
-    const L = s[n] ?? 1, P = L / count2, k = [];
+    const L = s[n] ?? 1, P = L / count, k = [];
     let i = 0;
-    for (let j = 0; j < count2; j += 1) {
+    for (let j = 0; j < count; j += 1) {
       const at2 = j * P;
       while ((s[i + 1] ?? L) < at2) i += 1;
       const a = S[i], b = S[(i + 1) % n], f = (at2 - (s[i] ?? 0)) / ((s[i + 1] ?? L) - (s[i] ?? 0) || 1);
@@ -15930,11 +15930,11 @@ var PIECES = (() => {
     m.set(key, c);
     return c;
   };
-  var chevronAt = (S, at2, o, count2 = 56, hw = CHEV_HW, flip) => {
-    const c = chevrons(S, count2, flip), j0 = Math.floor((c.s[at2] ?? 0) / c.P), dep = hw * CHEV_DEP / CHEV_HW, w = Math.ceil(dep / c.P) + 1;
+  var chevronAt = (S, at2, o, count = 56, hw = CHEV_HW, flip) => {
+    const c = chevrons(S, count, flip), j0 = Math.floor((c.s[at2] ?? 0) / c.P), dep = hw * CHEV_DEP / CHEV_HW, w = Math.ceil(dep / c.P) + 1;
     let best = 0;
     for (let dj = flip ? -w : -1; dj <= w; dj += 1) {
-      const st = c.k[((j0 + dj) % count2 + count2) % count2], { A, T, N } = st;
+      const st = c.k[((j0 + dj) % count + count) % count], { A, T, N } = st;
       if (o[0] * A[0] + o[1] * A[1] + o[2] * A[2] < 0.9) continue;
       const px2 = Math.abs(o[0] * N[0] + o[1] * N[1] + o[2] * N[2]), py = o[0] * T[0] + o[1] * T[1] + o[2] * T[2];
       const bx = hw, by = -dep, f = Math.min(1, Math.max(0, (px2 * bx + py * by) / (bx * bx + by * by)));
@@ -15942,10 +15942,10 @@ var PIECES = (() => {
     }
     return best;
   };
-  var seamLineAt = (S, at2, o, w, dash = 0, count2 = 56) => {
+  var seamLineAt = (S, at2, o, w, dash = 0, count = 56) => {
     const n = S.length, a = S[at2];
     let dm = 2, pos = 0;
-    const c = dash > 0 ? chevrons(S, count2) : void 0;
+    const c = dash > 0 ? chevrons(S, count) : void 0;
     for (const sg of [1, -1]) {
       const b = S[(at2 + n + sg) % n], d = [b[0] - a[0], b[1] - a[1], b[2] - a[2]], dd = d[0] * d[0] + d[1] * d[1] + d[2] * d[2] || 1, f = Math.min(1, Math.max(0, ((o[0] - a[0]) * d[0] + (o[1] - a[1]) * d[1] + (o[2] - a[2]) * d[2]) / dd)), h2 = Math.hypot(o[0] - a[0] - f * d[0], o[1] - a[1] - f * d[1], o[2] - a[2] - f * d[2]);
       if (h2 < dm) {
@@ -17163,8 +17163,8 @@ var PIECES = (() => {
       const active = time >= s.launch && time < path.finish;
       draw(el, time, active ? 1 : 0);
       if (s.ghosts) {
-        const { opacity: alpha, spacing, count: count2 } = s.ghosts;
-        ghosts.forEach((node, i) => draw(node, time - spacing * (i + 1), active ? alpha * (1 - i / count2) : 0));
+        const { opacity: alpha, spacing, count } = s.ghosts;
+        ghosts.forEach((node, i) => draw(node, time - spacing * (i + 1), active ? alpha * (1 - i / count) : 0));
       }
     });
     return () => {
@@ -17199,14 +17199,14 @@ var PIECES = (() => {
       x: p.x + Math.cos(p.heading + Math.PI) * s.rear * p.scale,
       y: p.y + Math.sin(p.heading + Math.PI) * s.rear * p.scale
     });
-    const count2 = Math.min(s.samples, Math.ceil(t / s.spacing));
+    const count = Math.min(s.samples, Math.ceil(t / s.spacing));
     let prev = rear(current);
     ctx.save();
     ctx.globalCompositeOperation = "lighter";
     ctx.lineCap = "round";
-    for (let j = 1; j < count2; j += 1) {
+    for (let j = 1; j < count; j += 1) {
       const next = rear(sample(t - j * s.spacing));
-      const a = 1 - j / count2;
+      const a = 1 - j / count;
       ctx.strokeStyle = `rgba(${s.colour},${s.fade * a * current.alpha})`;
       ctx.lineWidth = s.width * a + s.tipWidth;
       ctx.beginPath();
@@ -17412,8 +17412,8 @@ var PIECES = (() => {
       frames: frames2 = pulseFrames,
       easing = "ease-out",
       delay = 0,
-      count: count2 = 1,
-      ms = (call.step.dur - delay) / Math.max(1, count2),
+      count = 1,
+      ms = (call.step.dur - delay) / Math.max(1, count),
       period = ms,
       shockwaves,
       outline = "255 255 255",
@@ -17446,7 +17446,7 @@ var PIECES = (() => {
         }), wave.ms, delay + wave.delay, "linear", "none");
       }
     } else {
-      for (let i = 0; i < count2; i++) {
+      for (let i = 0; i < count; i++) {
         const ring = stage.stand(box, {
           borderRadius: radius,
           opacity: "0",
@@ -17844,7 +17844,7 @@ var PIECES = (() => {
     const [x, y, w, h2] = call.from;
     const {
       grid = [3, 4],
-      count: count2 = grid[0] * grid[1] * 2,
+      count = grid[0] * grid[1] * 2,
       jitter = [22, 16],
       seed = 42,
       motionSeed = 7,
@@ -17877,8 +17877,8 @@ var PIECES = (() => {
     animate([{ opacity }, { offset: at2, opacity }, { offset: at2, opacity: 0 }, { opacity: 0 }], { opacity: "0" }, { easing: "linear" });
     const random = rng(motionSeed);
     const gx = Math.max(1, Math.floor(grid[0]));
-    const gy = Math.max(1, Math.floor(grid[1]), Math.ceil(count2 / (2 * gx)));
-    for (const tri of triangles(gx, gy, seed, jitter).slice(0, Math.max(0, count2))) {
+    const gy = Math.max(1, Math.floor(grid[1]), Math.ceil(count / (2 * gx)));
+    for (const tri of triangles(gx, gy, seed, jitter).slice(0, Math.max(0, count))) {
       const cx = tri.reduce((a, p) => a + p[0], 0) / 3, cy = tri.reduce((a, p) => a + p[1], 0) / 3;
       const wrap = document.createElement("div");
       Object.assign(wrap.style, { position: "absolute", inset: "0", opacity: "0", transformOrigin: `${cx}% ${cy}%` });
@@ -18101,14 +18101,14 @@ var PIECES = (() => {
     glow(ctx, ...pt, look.glowRadii[0] * u, look.glowColour, look.glowAlpha * fp);
     glow(ctx, ...pt, look.glowRadii[1] * u, look.core, fp);
     const tangent2 = Math.atan2(pt[1] - B.cy, pt[0] - B.cx) + Math.PI / 2;
-    const { count: count2 = SHIELD_BUBBLE_DEFAULTS.sparks.count, life = SHIELD_BUBBLE_DEFAULTS.sparks.life, speed = SHIELD_BUBBLE_DEFAULTS.sparks.speed, spread: spread2 = SHIELD_BUBBLE_DEFAULTS.sparks.spread, width: sparkWidth = SHIELD_BUBBLE_DEFAULTS.sparks.width } = look.sparks ?? {};
+    const { count = SHIELD_BUBBLE_DEFAULTS.sparks.count, life = SHIELD_BUBBLE_DEFAULTS.sparks.life, speed = SHIELD_BUBBLE_DEFAULTS.sparks.speed, spread: spread2 = SHIELD_BUBBLE_DEFAULTS.sparks.spread, width: sparkWidth = SHIELD_BUBBLE_DEFAULTS.sparks.width } = look.sparks ?? {};
     for (let k2 = 0; k2 < 2; k2++)
       sparks(
         ctx,
         t,
         {
           seed: 4 + k2,
-          n: count2,
+          n: count,
           x: pt[0],
           y: pt[1],
           t0: hit,
@@ -18147,13 +18147,13 @@ var PIECES = (() => {
   // components/effect-library/beam-canvas.ts
   var TAU = Math.PI * 2;
   var WHITE = ["255,255,255", "255,255,255", "255,255,255"];
-  function streaks(ctx, c, k, { inward = false, seed = 71, count: count2 = 110, alpha = 0.9, unit: u = 1, palette = WHITE }) {
+  function streaks(ctx, c, k, { inward = false, seed = 71, count = 110, alpha = 0.9, unit: u = 1, palette = WHITE }) {
     if (k <= 0 || k >= 1) return;
     const R = rng(seed);
     ctx.save();
     ctx.globalCompositeOperation = "lighter";
     ctx.lineCap = "round";
-    for (let i = 0; i < count2; i += 1) {
+    for (let i = 0; i < count; i += 1) {
       const a = R() * TAU;
       const r0 = (20 + R() * 160) * u;
       const sp = 0.6 + R() * 0.8;
@@ -18705,7 +18705,7 @@ var PIECES = (() => {
       from = call.from,
       destination: to = call.to ?? call.from,
       mode = WARP_TRANSFER_DEFAULTS.mode,
-      count: count2 = WARP_TRANSFER_DEFAULTS.count,
+      count = WARP_TRANSFER_DEFAULTS.count,
       stagger = mode === "zip" ? WARP_TRANSFER_DEFAULTS.zipStagger : WARP_TRANSFER_DEFAULTS.stagger,
       image,
       colour = WARP_TRANSFER_DEFAULTS.colour,
@@ -18748,7 +18748,7 @@ var PIECES = (() => {
     const visibility = el.style.visibility;
     const make = (box, blur, extra) => tokenOf(stage, el, box, image, glowColour, blur, extra);
     const arrive2 = from === null ? 0 : 510 + (crossing ? 336 : 0);
-    for (let i = 0; i < count2; i++) {
+    for (let i = 0; i < count; i++) {
       const start = i * stagger;
       if (from && mode === "portal" && portal) {
         portalIcon(stage, make, from, to, portal, call.step.dur - start, lift, start, image, glowColour);
@@ -18767,7 +18767,7 @@ var PIECES = (() => {
       } else {
         if (from) {
           const [x, y, w, h2] = from;
-          const box = [x + (i - (count2 - 1) / 2) * w * 0.95, y - i % 2 * w * 0.2, w, h2];
+          const box = [x + (i - (count - 1) / 2) * w * 0.95, y - i % 2 * w * 0.2, w, h2];
           const token = make(box, 0.12, "drop-shadow(0 2px 3px rgba(0,0,0,.55)) ");
           stage.play(token, [{ opacity: 0, translate: "0 -60%", scale: 1.6 }, { opacity: 1, translate: "0 0", scale: 1 }], 240, start, "cubic-bezier(0.3, 1.4, 0.5, 1)");
           column(stage, token, box, start + 300, true, columnLight, glowColour, columnUp);
@@ -19010,7 +19010,7 @@ var PIECES = (() => {
 
   // components/effect-library/signal-stamp.ts
   var stamp = ({ el, call }) => {
-    const { text = "", tilt = 0, image, look, ms, ease: ease2 = "ease-in", scales = [2.2, 0.95, 1], pressOffset = 0.8, style, frames: frames2, press, ring, onParts, holdRing, ringZ, target, cracked } = call.step;
+    const { text = "", tilt = 0, image, look, ms, ease: ease2 = "ease-in", scales = [2.2, 0.95, 1], pressOffset = 0.8, style, frames: frames2, press, ring, onParts, holdRing, ringZ, target } = call.step;
     const found = typeof target === "string" ? el.querySelector(target) ?? el.ownerDocument.querySelector(target) : target;
     const tag = found ?? el.ownerDocument.createElement(image === void 0 ? "div" : "img");
     if (found) Object.assign(tag.style, style);
@@ -19069,32 +19069,17 @@ var PIECES = (() => {
       tag.before(halo);
       glint = accent(halo, { ...ring, frames: ringFrames }, "replace");
     }
-    let crack;
-    let crackAnim;
-    if (cracked) {
-      crack = el.ownerDocument.createElement("div");
-      Object.assign(crack.style, { position: "absolute", left: tag.style.left || "0", top: tag.style.top || "0", width: tag.style.width || "100%", height: tag.style.height || "100%", pointerEvents: "none", opacity: "0", color: typeof cracked === "object" && cracked.colour ? cracked.colour : "inherit", zIndex: tag.style.zIndex });
-      crack.innerHTML = '<svg viewBox="0 0 100 100" preserveAspectRatio="none" width="100%" height="100%" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="bevel"><path d="M46 0 L52 22 L40 38 L55 55 L45 72 L58 100 M52 22 L72 30 M55 55 L80 62 M40 38 L18 44 M45 72 L24 84"/></svg>';
-      crack.dataset["fxPart"] = "crack";
-      tag.after(crack);
-      crackAnim = crack.animate([{ opacity: 0 }, { opacity: 0, offset: pressOffset }, { opacity: 1 }], { duration: ms === void 0 ? call.dur : ms * scale, easing: "linear", fill: "both" });
-    }
     onParts?.(halo ? { label: tag, ring: halo } : { label: tag });
     return () => {
       if (end?.transform !== void 0) tag.style.transform = String(end.transform);
       if (end?.opacity !== void 0) tag.style.opacity = String(end.opacity);
       if (end?.filter !== void 0) tag.style.filter = String(end.filter);
       animation.cancel();
-      crackAnim?.cancel();
-      if (crack) crack.style.opacity = "1";
       give?.cancel();
       glint?.cancel();
       if (holdRing && halo && ring) Object.assign(halo.style, Object.fromEntries(Object.entries(ringFrames.at(-1) ?? {}).filter(([k]) => k !== "offset" && k !== "easing" && k !== "composite").map(([k, v]) => [k, String(v)])));
       else halo?.remove();
-      if (!found && tag.style.opacity === "0") {
-        tag.remove();
-        crack?.remove();
-      }
+      if (!found && tag.style.opacity === "0") tag.remove();
     };
   };
 
@@ -19107,7 +19092,7 @@ var PIECES = (() => {
     const { box, z } = call.step;
     const [left2, top, w, h2] = box ?? call.from;
     const {
-      count: count2 = 16,
+      count = 16,
       colour = "#fff",
       size = 6,
       rise = h2,
@@ -19136,7 +19121,7 @@ var PIECES = (() => {
     const rand2 = (i, k) => noise2(i + seed * 1e3, k);
     const turn = (direction + 90) * Math.PI / 180;
     const duration = ms === void 0 ? call.dur / (1 + lag) : call.dur * ms / Number(call.step["dur"]);
-    const parts = Array.from({ length: count2 }, (_, i) => {
+    const parts = Array.from({ length: count }, (_, i) => {
       const s = Math.max(minSize, size * (sizeJitter[0] + rand2(i, 7) * sizeJitter[1]));
       const tint = typeof colour === "string" ? colour : colour[Math.floor(rand2(i, 14) * colour.length)] ?? "#fff";
       const d = el.ownerDocument.createElement("div");
@@ -19421,114 +19406,10 @@ var PIECES = (() => {
     return void 0;
   };
 
-  // components/effect-library/count.ts
-  var countAt = (value, k, from = 0) => Math.round(from + (value - from) * (1 - (1 - Math.min(1, Math.max(0, k))) ** 3));
-  function countUp(o) {
-    const from = o.from ?? 0;
-    const s = o.speed();
-    const frame = o.frame ?? (typeof requestAnimationFrame === "function" ? (f) => requestAnimationFrame(f) : void 0);
-    const ms = (o.ms ?? 700) * (typeof s === "number" ? s : 0);
-    if (!frame || !(ms > 0) || from === o.value) {
-      o.show(o.value);
-      return () => void 0;
-    }
-    const cancel = o.cancel ?? (typeof cancelAnimationFrame === "function" ? (id2) => cancelAnimationFrame(id2) : void 0);
-    const now = o.now ?? (() => performance.now());
-    const start = now();
-    let id = 0;
-    let stopped = false;
-    const finish2 = () => {
-      if (stopped) return;
-      stopped = true;
-      cancel?.(id);
-      o.show(o.value);
-    };
-    const tick = (t) => {
-      if (stopped) return;
-      const k = (t - start) / ms;
-      if (k >= 1 || o.speed() === "instant") {
-        finish2();
-        return;
-      }
-      o.show(countAt(o.value, k, from));
-      id = frame(tick);
-    };
-    o.show(from);
-    id = frame(tick);
-    return finish2;
-  }
-
-  // components/effect-library/herald.ts
-  var unrollCollapse = ({ call, animate }) => {
-    const axis = call.step["axis"] === "x" ? "X" : "Y";
-    const origin = call.step["origin"];
-    const transformOrigin = typeof origin === "string" ? origin : "center";
-    const k = Number(call.step.dur) > 0 ? call.dur / Number(call.step.dur) : 1;
-    const line = Math.min(call.dur * 0.4, Number(call.step["lineMs"] ?? 0) * k);
-    const n = Math.max(0, Number(call.step["gutter"] ?? 0));
-    const gut = n > 0 ? call.dur * 0.3 : 0;
-    const c = (call.dur - line - gut) / Math.max(1, call.dur);
-    const l = (call.dur - gut) / Math.max(1, call.dur);
-    const colour = call.step["colour"];
-    const lit = typeof colour === "string" ? `brightness(2.4) drop-shadow(0 0 14px ${colour}) drop-shadow(0 0 4px ${colour})` : "none";
-    const thin = `scale${axis}(.012)`;
-    const frames2 = [{ offset: 0, transform: `scale${axis}(1)`, transformOrigin, opacity: 1, filter: "none" }, { offset: c, transform: thin, transformOrigin, opacity: 1, filter: lit, easing: "ease-in" }];
-    if (n === 0) frames2.push({ offset: 1, transform: thin, transformOrigin, opacity: 0, filter: lit });
-    else {
-      frames2.push({ offset: l, transform: thin, transformOrigin, opacity: 1, filter: lit });
-      const w = (1 - l) / n;
-      for (let i = 0; i < n; i += 1) frames2.push({ offset: l + w * (i + 0.5), transform: thin, transformOrigin, opacity: 0.12, filter: lit }, { offset: i === n - 1 ? 1 : l + w * (i + 1), transform: thin, transformOrigin, opacity: i === n - 1 ? 0 : 1, filter: lit });
-    }
-    animate(frames2, { opacity: "0", transform: "none", filter: "none" }, { easing: "linear" });
-    return void 0;
-  };
-  var count = ({ call, el }) => {
-    const value = call.value ?? 0;
-    const prefix = typeof call.step["prefix"] === "string" ? call.step["prefix"] : "";
-    const suffix = typeof call.step["suffix"] === "string" ? call.step["suffix"] : "";
-    const show = (n) => {
-      el.textContent = `${prefix}${String(n)}${suffix}`;
-    };
-    const colour = call.step["colour"];
-    Object.assign(el.style, { opacity: "1", color: typeof colour === "string" ? colour : "var(--fx-text,inherit)" });
-    const stop = countUp({ value, from: Number(call.step["from"] ?? 0), ms: call.dur, speed: () => 1, show });
-    return () => {
-      stop();
-      show(value);
-    };
-  };
-  var banner = ({ call, el, animate }) => {
-    const { text = "", axis = "x", origin, unrollMs, fadeMs, textFrames, textAt } = call.step;
-    const total = Math.max(1, Number(call.step.dur));
-    const u = Math.min(1, (unrollMs ?? total * 0.3) / total);
-    const f = Math.min(1 - u, (fadeMs ?? total * 0.3) / total);
-    const a = axis === "x" ? "X" : "Y";
-    const transformOrigin = origin ?? (axis === "x" ? "left" : "top");
-    el.style.opacity = "1";
-    animate([
-      { offset: 0, transform: `scale${a}(0)`, transformOrigin, opacity: 1, easing: "ease-out" },
-      { offset: u, transform: "none", transformOrigin, opacity: 1 },
-      { offset: 1 - f, transform: "none", transformOrigin, opacity: 1 },
-      { offset: 1, transform: "none", transformOrigin, opacity: 0 }
-    ], { opacity: "0", transform: "none" }, { easing: "linear" });
-    const label = el.ownerDocument.createElement("div");
-    label.textContent = text;
-    label.dataset["fxPart"] = "banner-text";
-    Object.assign(label.style, { position: "absolute", inset: "0", display: "grid", placeItems: "center", pointerEvents: "none", color: "var(--fx-text,inherit)", font: "var(--fx-text-font,inherit)" });
-    el.append(label);
-    const at2 = (textAt ?? u * total) / total;
-    const keys = textFrames ? textFrames.map((k) => ({ offset: Math.min(1, k.at / total), opacity: k.opacity, transform: `scale(${String(k.scale)})` })) : [{ offset: 0, opacity: 0 }, { offset: Math.min(at2, 1 - f), opacity: 0 }, { offset: Math.min(1, at2 + 0.15), opacity: 1 }, { offset: 1, opacity: 1 }];
-    const anim = label.animate(keys, { duration: Math.max(call.dur, 1), fill: "both", easing: "linear" });
-    return () => {
-      anim.cancel();
-      label.remove();
-    };
-  };
-
   // components/effect-library/refresh.ts
   var refresh = ({ call, el }) => {
     const {
-      banner: banner2,
+      banner,
       face: face2,
       filter = "grayscale(1)",
       liftMs = 500,
@@ -19547,7 +19428,7 @@ var PIECES = (() => {
       lineMinHeight = 1,
       lineFade = [0.12, 0.85]
     } = call.step;
-    const tag = banner2 === void 0 ? null : el.querySelector(banner2);
+    const tag = banner === void 0 ? null : el.querySelector(banner);
     if (typeof el.animate !== "function" || el.ownerDocument.defaultView?.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches) {
       tag?.remove();
       return void 0;
@@ -19579,7 +19460,7 @@ var PIECES = (() => {
       for (const target of el.querySelectorAll(face2)) {
         if (tag?.contains(target)) continue;
         const copy = decorativeCopy(target);
-        if (banner2 !== void 0) copy.querySelector(banner2)?.remove();
+        if (banner !== void 0) copy.querySelector(banner)?.remove();
         copy.style.filter = filter;
         grey.append(copy);
       }
@@ -19700,8 +19581,8 @@ var PIECES = (() => {
     if (alpha <= 0) return 0;
     const random = rng(900 + loop);
     const point2 = random();
-    const count2 = 1 + Math.floor(random() * 2);
-    for (let i = 0; i < count2; i++) {
+    const count = 1 + Math.floor(random() * 2);
+    for (let i = 0; i < count; i++) {
       const [ax, ay] = edge(box, point2 + i * 0.03);
       const [bx, by] = edge(box, point2 + 0.05 + i * 0.03 + random() * 0.03);
       arc(ctx, t, ax, ay, bx, by, {
@@ -19724,7 +19605,7 @@ var PIECES = (() => {
     radii = [40, 12],
     centerY = 0,
     phaseMs = 0,
-    count: count2 = 3,
+    count = 3,
     size = [6, 9],
     alpha = [0.6, 1],
     twinkle = [0.8, 0.2, 100, 2],
@@ -19820,8 +19701,8 @@ var PIECES = (() => {
           ctx.stroke();
         }
         ctx.restore();
-        for (let i = 0; i < count2; i++) {
-          const angle = ((t + phaseMs) / period + i / count2) * Math.PI * 2;
+        for (let i = 0; i < count; i++) {
+          const angle = ((t + phaseMs) / period + i / count) * Math.PI * 2;
           const y = Math.sin(angle);
           const side = y > 0 ? 1 : 0;
           const tw = twinkle[0] + twinkle[1] * Math.sin((t + twinkleMs) / twinkle[2] + i * twinkle[3]);
@@ -20027,7 +19908,7 @@ var PIECES = (() => {
   var debris = (board2, t, { call, x, y }) => {
     const {
       pieces,
-      count: count2 = pieces?.length ?? 12,
+      count = pieces?.length ?? 12,
       seed = 1,
       unit: unit2 = 1,
       spread: spread2 = [60, 24],
@@ -20049,7 +19930,7 @@ var PIECES = (() => {
     const alpha = fade ? 1 - seg(local, ...fade) : 1;
     const ctx = (groupFade && alpha < 1 ? fadeBuffer(board2) : void 0) ?? board2;
     const random = rng(seed);
-    for (let i = 0; i < capN(count2); i++) {
+    for (let i = 0; i < capN(count); i++) {
       const piece = pieces?.[i];
       const [px2, py] = piece?.at ?? [0, 0];
       const [ox, oy] = piece?.offset ?? [0, 0];
@@ -20078,7 +19959,7 @@ var PIECES = (() => {
     const { call } = fx;
     const {
       pieces,
-      count: count2 = pieces?.length ?? 12,
+      count = pieces?.length ?? 12,
       seed = 1,
       unit: unit2 = 1,
       spread: spread2 = [60, 24],
@@ -20096,7 +19977,7 @@ var PIECES = (() => {
     const stage = scene(fx);
     const random = rng(seed);
     const end = fade ? fade[1] : ms;
-    for (let i = 0; i < capN(count2); i++) {
+    for (let i = 0; i < capN(count); i++) {
       const piece = pieces?.[i];
       const [px2, py] = piece?.at ?? [0, 0];
       const [ox, oy] = piece?.offset ?? [0, 0];
@@ -20254,13 +20135,13 @@ var PIECES = (() => {
   };
   var sparkBurst = (fx) => {
     const { call } = fx;
-    const { box = call.from, count: count2 = 34, colour = "white", ms = Number(call.step.dur), delay = 0, size = 8, fall = 0, z = 5, seed = 0 } = call.step;
+    const { box = call.from, count = 34, colour = "white", ms = Number(call.step.dur), delay = 0, size = 8, fall = 0, z = 5, seed = 0 } = call.step;
     if (call.dur <= 0) return void 0;
     const reach = call.step.reach ?? Math.max(box[2], box[3]) * 0.8;
     const x = box[0] + box[2] / 2, y = box[1] + box[3] / 2;
     const stage = scene(fx);
-    for (let i = 0; i < count2; i++) {
-      const a = i / count2 * Math.PI * 2 + rand(i + seed, 14) * 0.5;
+    for (let i = 0; i < count; i++) {
+      const a = i / count * Math.PI * 2 + rand(i + seed, 14) * 0.5;
       const d = reach * (0.55 + rand(i + seed, 15) * 0.6);
       const s = size * (0.6 + rand(i + seed, 16) * 0.7);
       const cx = Math.cos(a) * d, cy = Math.sin(a) * d;
@@ -20277,7 +20158,7 @@ var PIECES = (() => {
   // components/effect-library/slash.ts
   var slash = (ctx, t, { call }) => {
     const {
-      count: count2 = 3,
+      count = 3,
       angle = 60,
       spacing = 0.2,
       length = 0.9,
@@ -20299,12 +20180,12 @@ var PIECES = (() => {
     try {
       ctx.globalCompositeOperation = "lighter";
       ctx.lineCap = "round";
-      for (let i = 0; i < count2; i++) {
+      for (let i = 0; i < count; i++) {
         const at2 = t - i * stagger;
         if (at2 <= 0 || at2 >= fade[1]) continue;
         const a = 1 - seg(at2, ...fade);
         const k = ease.out(seg(at2, 0, drawMs));
-        const startX = x + w * (0.5 + (i - (count2 - 1) / 2) * spacing) - dx / 2;
+        const startX = x + w * (0.5 + (i - (count - 1) / 2) * spacing) - dx / 2;
         const startY = y + (h2 - dy) / 2;
         const rgb2 = typeof colour === "string" ? colour : colour[i % colour.length] ?? "255,255,255";
         ctx.beginPath();
@@ -20342,7 +20223,7 @@ var PIECES = (() => {
   function makeMesh(w, h2, o) {
     const grid = o.grid ?? [16, 22];
     const [cols, rows] = grid;
-    const count2 = o.creases ?? 9;
+    const count = o.creases ?? 9;
     const [slope, slopeRange] = o.creaseSlope ?? [0.55, 0.75];
     const [width, widthRange] = o.creaseWidth ?? [0.07, 0.13];
     const [start, stagger, startJitter] = o.creaseStart ?? [0.02, 0.5, 0.06];
@@ -20368,7 +20249,7 @@ var PIECES = (() => {
         else tris.push(a, b, d, b, c, d);
       }
     const creases = [];
-    for (let k = 0; k < count2; k += 1) {
+    for (let k = 0; k < count; k += 1) {
       const ang = R() * Math.PI;
       const nx = Math.cos(ang);
       const ny = Math.sin(ang);
@@ -20380,7 +20261,7 @@ var PIECES = (() => {
         m: slope + R() * slopeRange,
         s: R() < 0.5 ? -1 : 1,
         L: (width + R() * widthRange) * h2,
-        a: start + k / count2 * stagger + R() * startJitter
+        a: start + k / count * stagger + R() * startJitter
       });
     }
     return { w, h: h2, grid, verts, tris: new Uint16Array(tris), creases };
@@ -21019,18 +20900,12 @@ void main() {
         animate([{ boxShadow: el.style.boxShadow || on }, { boxShadow: off }], { boxShadow: "" });
         return void 0;
       }
-      if (call.step["end"] === "dark") {
-        animate([{ boxShadow: on }, { boxShadow: off }], { boxShadow: off });
-        return void 0;
-      }
       const span = typeof hold === "number" ? Math.max(0, Math.min(1, hold)) : 0;
       const pulse2 = span > 0 ? [{ boxShadow: on, offset: (1 - span) / 2 }, { boxShadow: on, offset: (1 + span) / 2 }] : [{ boxShadow: on }];
       animate([{ boxShadow: off }, ...pulse2, { boxShadow: off }], { boxShadow: el.style.boxShadow });
       return void 0;
     },
-    unroll: (fx) => {
-      const { call, el, animate } = fx;
-      if (call.step["reverse"] === true) return unrollCollapse(fx);
+    unroll: ({ call, el, animate }) => {
       const axis = call.step["axis"] === "x" ? "X" : "Y";
       const origin = call.step["origin"];
       const transformOrigin = typeof origin === "string" ? origin : axis === "X" ? "left" : "top";
@@ -21074,8 +20949,6 @@ void main() {
     const column2 = verbs.get("column-beam");
     verbs.register("column-beam", (call, run) => (call.step["curve"] ? curve : column2)?.(call, run));
     registerEffect(verbs, "collapse-jump", collapseJump);
-    registerEffect(verbs, "count", count);
-    registerEffect(verbs, "banner", banner);
     registerEffect(verbs, "rotating-beam", rotatingBeam);
     registerEffect(verbs, "projectile", projectile);
     const beam = verbs.get("projectile");
