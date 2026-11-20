@@ -30,7 +30,7 @@ describe('llm-playtester', () => {
   it('the CLI loads the adapter module and plays dummy runs', async () => {
     const out = tmp();
     const lines: string[] = [];
-    const code = await main(['--adapter', join(import.meta.dirname, 'fake-adapter.ts'), '--dummy', '--runs', '2', '--out', out], (s) => lines.push(s));
+    const code = await main(['--adapter', join(import.meta.dirname, 'fake-adapter.ts'), '--dummy', '--runs', '2', '--out', out], (s) => lines.push(s), {});
     expect(code).toBe(0);
     expect(lines).toHaveLength(2);
   });
@@ -38,7 +38,7 @@ describe('llm-playtester', () => {
   it('the CLI exits 2 on a bad --max-usd or --max-decisions', async () => {
     const adapter = join(import.meta.dirname, 'fake-adapter.ts');
     for (const bad of [['--max-usd', 'abc'], ['--max-usd', '0'], ['--max-decisions', 'abc'], ['--max-decisions', '-1']])
-      expect(await main(['--adapter', adapter, '--dummy', ...bad], () => undefined)).toBe(2);
+      expect(await main(['--adapter', adapter, '--dummy', ...bad], () => undefined, {})).toBe(2);
   });
 
   it('runPlaytest throws on a bad maxUsd or maxDecisions', async () => {
@@ -137,9 +137,9 @@ describe('llm-playtester', () => {
 
   it('K398: the CLI accepts --max-tokens and rejects non-integers', async () => {
     const adapter = join(import.meta.dirname, 'fake-adapter.ts');
-    expect(await main(['--adapter', adapter, '--dummy', '--max-tokens', '2000', '--out', tmp()], () => undefined)).toBe(0);
+    expect(await main(['--adapter', adapter, '--dummy', '--max-tokens', '2000', '--out', tmp()], () => undefined, {})).toBe(0);
     for (const bad of ['1.5', '0', 'abc', '-3'])
-      expect(await main(['--adapter', adapter, '--dummy', '--max-tokens', bad], () => undefined)).toBe(2);
+      expect(await main(['--adapter', adapter, '--dummy', '--max-tokens', bad], () => undefined, {})).toBe(2);
   });
 
   describe('K466 spend ledger and total cap', () => {
@@ -229,5 +229,22 @@ ${bad}
       n = 0;
       await expect(main(args, () => undefined, {}, flaky)).rejects.toThrow('API down');
     });
+  });
+});
+
+describe('heavy queue (K416)', () => {
+  const adapter = join(import.meta.dirname, 'fake-adapter.ts');
+  const held = { HEAVY_HELD: '1' };
+  it('a dummy run under HEAVY_HELD=1 runs; a real-client run exits 2 before any call', async () => {
+    const d = await runMain(['--adapter', adapter, '--dummy', '--out', tmp()], () => undefined, held);
+    expect(d.code).toBe(0);
+    expect(d.runs).toHaveLength(1);
+    const lines: string[] = [];
+    const r = await runMain(['--adapter', adapter, '--out', tmp()], (l) => lines.push(l), held);
+    expect(r.code).toBe(2);
+    expect(r.runs).toHaveLength(0);
+    expect(lines.join(' ')).toContain('REFUSED');
+    const ok = await runMain(['--adapter', adapter, '--out', tmp()], () => undefined, {}, () => Promise.resolve({ option: 0, reason: 'r', usage }));
+    expect(ok.runs).toHaveLength(1);
   });
 });
