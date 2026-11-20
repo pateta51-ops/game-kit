@@ -45,6 +45,7 @@ graph LR
   card_zoom["card-zoom"] --> glossary["glossary"]
   card_zoom["card-zoom"] --> plain_text["plain-text"]
   challenges["challenges"]
+  character_select["character-select"]
   check_runner["check-runner"]
   ci_templates["ci-templates"]
   content_pack["content-pack"] --> card_harness["card-harness"]
@@ -171,6 +172,7 @@ graph LR
 - `card-pile`
 - `card-query`
 - `challenges`
+- `character-select`
 - `check-runner`
 - `ci-templates`
 - `content-pack`

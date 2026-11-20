@@ -158,6 +158,7 @@ Components with no row above. Each starts from the game and commit in its `compo
 | `looked-at` | Earthborne Rangers `b9b06107` (reopening the large view); Imperium Horizon `22736b2` (zone context); serialisable peek memory new (K369) | S |
 | `modal-dialog` | Unstoppable modal and confirmation; Imperium modal focus and Escape handling (K365) | M |
 | `rules-screen` | Rise of a Jarl `82bb1d5` (rulebook, search, diagrams); Under Falling Skies `f1042f8` (disclosures and illustrated items); Unstoppable `e314b5f` (reference sheets) (K370) | M |
+| `character-select` | STCC `27fb8882` Take the Chair (`takeTheChair.ts`, `parts.tsx`, `SelectText.tsx`, `NewGame.tsx`, `take-the-chair.css`); crew ladder left in the game (K467) | L |
 | `board-viewport` | Earthborne Rangers `b9b06107` (pointer zoom and sheet bounds); Under Falling Skies `07238a4` (camera targets and tween scheduling) (K367) | M |
 | `card-pile` | Imperium fan prototype `Stack.tsx`, `PeekPile.tsx`, `fanLayout.ts`, `PileGrid.tsx`; STCC `usePileFan.tsx` (K219) | S |
 | `player-board` | Earthborne fan prototype `table/geometry.ts` (layRow, fitZone, MIN_CARD_WIDTH, handSink) and `Board.tsx` (rem units, mat, zone anchors); no mats, layouts or tags (K244) | M |
