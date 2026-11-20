@@ -2,6 +2,24 @@
 
 Every printed item (card, tile, board) is transcribed twice, independently, then the owner checks it against the physical item. Nothing enters the real pack before that. Node only (reads files); no packages.
 
+## Rules for agents
+
+**What it does:** makes a printed item (card, tile, board) enter the real pack only after two independent transcriptions agree and the owner has verified it against the physical item; it also checks that printed text fits its box on a card face.
+
+**You must:**
+1. Write A and B as `{ id, source: { transcriber, from, picture?, session? }, flags, data }` under `a/` and `b/` of the content root. B is written by another session or agent that has not seen A.
+2. Pass the game's schema as `parse` (it throws on a bad file); without it only the file's shape is checked.
+3. Run `check()` and read `DIFF.md`; resolve a difference by an A flag `NOTE: <path>` naming the path as a whole token, after looking at the picture (the picture wins).
+4. Call `verify(ids, date)` only after the owner says the item is verified; it refuses while B is missing or a difference is open.
+5. Run `gate()` in the content check and before the real-pack build: it reports any required item not verified, or whose A, B or picture changed since.
+6. Run `faceFitCheck` over the faces a game lays out, with the game's `floor`, boxes and measure function; it fails on `below-floor` and `overflow`. The Python `face-tools/` need Python 3.11+, numpy and Pillow, run from that folder.
+
+**Common mistakes:**
+- Writing B while looking at A (or copying A): the check is only worth its independence.
+- Editing A, B or the picture after `verify`: the hash changes and `gate()` reports the item again.
+- A `NOTE:` flag naming `n` for a difference at `n.first`: it does not resolve it.
+- Building the pack from unverified items: `gate()` is the stop.
+
 ## Use it in 10 lines
 
 ```ts

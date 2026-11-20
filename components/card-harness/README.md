@@ -2,6 +2,28 @@
 
 Card tests on real cards. Test code only; the engine imports nothing here but `createProbe`, and card-language imports the pure `strictProblems` from `strict.ts`. Not here: `validateEffect` in card-language checks one effect at run time, `strictProblems` checks a whole grammar in a test.
 
+## Rules for agents
+
+**What it does:** Test code for card games: a `Scenario` that builds real positions and plays them, a delivery check, an inventory of printed clauses, spec rows, and a strict validator.
+
+**You must:**
+1. Use it in tests only; the engine imports nothing from it but `createProbe`.
+2. Give `Scenario` a `ScenarioGame` over the game's `GameRules` (`rules`, `content`, `start()`, `put`, `probe`), or a `ScenarioPort` for a game with its own engine; `run()` with tasks needs `push` and `put` needs `put`, or it throws.
+3. Build the position with `put`, `set` and `run`, then `answer(...picks)`; an `answer` refused by the engine throws with the open prompt and options printed.
+4. Use `{ strict: true }` for scripted runs: `script(...)` queues answers, `check(label, fn)` fails mid-run, and `done()` fails on a leftover answer, an open prompt or equal entries in `effects(state)`.
+5. Use `sc.cast('kind')` to narrow the open prompt; it throws naming the kind found.
+6. Run `runInventory` from a game script: every piece of the game's language must be cited by a test file or sit in `baseline`; exit 1 when the report is stale, a piece is uncited, or the baseline lists one cited or gone.
+7. Import `literalsOf` / `keysOf` / `nodesOf` from `kit/card-harness/literals`; they need `typescript`.
+8. Pin a known bug as `it.fails('EXPECTED FAILURE: ...')`, never delete the test.
+9. Trace only the content the engine reads to play: walking `.registry` with `Object.values` marks every id looked up.
+
+**Common mistakes:**
+- Calling `answer` in strict mode with no open prompt: it throws.
+- A `{ from: { state, events } }` start: the state is trusted, not validated, unless `validate` is on.
+- An inventory piece listed twice: `runInventory` throws `is listed twice`.
+- A cited clause only in a comment with `titleOnly: true`: it is not counted as cited.
+- A spec row that still passes with its line's records removed: `cardSpecs` fails it.
+
 - **Probe** (`createProbe<D>()`): the engine calls `probe.note(d)` (or `note(() => d)`) where it settles a choice without asking. Off in the game.
 - **Scenario** (`new Scenario(game)`): the game passes a `ScenarioGame<G, W, D>` over engine-core's `GameRules<G>`: `rules`, `content`, `start()` (the state to build on), `put(s, card, where)` (a new instance, its id) and its `probe`. Then `put`, `set`, `run(...tasks)`, `answer(...picks)`, `options`, `offered`, `events`, `notes`, `observe(read, fn)`. The rules' invariants run on the built position (`{ validate: false }` to skip).
 - **Engine port** (K390): a game with its own engine passes a `ScenarioPort<G, W, D>` instead: engine-core's `EnginePort` (`content`, `start()`, `apply(s, answer)` returning the state or an `Error`, `settle(s)`, `prompt(s)` with options as `{ id, enabled, why? }`, `events(s)` the whole log, optional `invariants(s, content)`, `options(s)`, `put(s, card, where)`, `push(s, tasks)` for `run`) plus `probe` and `effects`. `G` is any `PortTypes` (`state`, `prompt`, `event`, `task`, `content`); prompt ids may be strings. Every Scenario method works the same; `run()` with tasks needs `push`.
@@ -13,7 +35,7 @@ Card tests on real cards. Test code only; the engine imports nothing here but `c
 - **Scenario `{ from: { state, events } }`**: starts from a built state and its events; the state is trusted, not validated unless `validate` is on.
 - **Checks**: `describeCheck(cards, describe, validate?, tokens?)` (generated reading equals the printed text word for word, `[TOKENS]` both ways); `conforms<Same<A, B>>()` (schema type equals engine type, at compile time); `report(name, errors, log)` gives the exit code. `Is<z.infer<typeof S>, T>` is `Same<DR<..>, T>` (`DR` = deep readonly), for readonly game types.
 - **parseCsv(text)**: RFC 4180 reader (quotes, doubled quotes, CRLF or LF); rows as header-keyed string records, blank lines dropped.
-- **Strict checks** (`new Scenario(game, { strict: true })`): `script([picks], �)` answers the prompts that open next; `check(label, fn)` fails mid-run naming label and step; `done()` fails on a leftover scripted answer, an open prompt (strict), or equal entries in the game's optional `effects(state)`. Strict `answer` with no open prompt throws.
+- **Strict checks** (`new Scenario(game, { strict: true })`): `script([picks], [picks], ...)` answers the prompts that open next; `check(label, fn)` fails mid-run naming label and step; `done()` fails on a leftover scripted answer, an open prompt (strict), or equal entries in the game's optional `effects(state)`. Strict `answer` with no open prompt throws.
 - **Ability trace** (`traceAbilities(registry, field = 'effects')`): pass `.registry` (the game's ability or card record, wrapped) as the content; `considered` holds ids looked up, `resolved` ids whose `field` was read to run. `expectResolved(trace, ...ids)` fails a test whose card never ran, saying looked up or never reached; `clear()` between parts.
 - Walking the whole registry (`Object.values`, hashing, validation) through `.registry` marks every id looked up, and run if it reads `field`: trace only the content the engine reads to play.
 

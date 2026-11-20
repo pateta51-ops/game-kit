@@ -1,6 +1,27 @@
 # card-hand
 A hand of cards as a fan that fits any number of cards in a width, lifts the card under the pointer or focus, shows the prompt's marks, reports taps and is a drag source. Ships the fan geometry CSS (`card-hand.css`, imported by `ui.tsx`); shadows, glow, badges and colours are the game's, on `data-part` hooks.
 
+
+## Rules for agents
+
+**What it does:** A fan of cards that fits any count in a width, lifts the card under the pointer or focus, shows the prompt's marks, reports taps and is a drag source; a grid layout serves phones.
+
+**You must:**
+1. Import `CardHand` from `kit/card-hand/ui`; it loads `card-hand.css` itself. Import `kit/card-hand/looks/tilt.css` too only when you pass `hoverTilt`.
+2. Pass `view` (a card-zones `ZoneView`) and `face(id)`; a `null` card is drawn as a back (`back()`), with no id in the DOM, so an opponent's hand uses the same part.
+3. Wire the prompt with `pick` from prompt-host `useBoardPick`; the strip button's click calls `pick.tap(id)`, and a barred card answers nothing.
+4. Pass `speed` from settings; 0, `'instant'` and reduced motion turn every animation off.
+5. Size the hand with the CSS variables (`--hand-card-w`, `--hand-card-ratio`, `--hand-step-max`, `--hand-margin`, `--hand-lift`, `--hand-stand`, `--hand-grow`) on the hand or above it.
+6. Give a drag via `drag` (drag-drop `useDragDrop`) and draw `DragGhost` yourself.
+7. For the glide of a played card, put `data-glide="<id>"` on the element in play and call `useGlideIn(rootRef, ids, speed)`.
+8. With `onTap`, call `pick.tap` yourself; a barred card still reaches `onTap`, so decide there.
+9. On a phone use `layout="grid"` (and `phone`, `phoneTap="all"`, `onSheet` for a card sheet); the grid has no fan, lift or hint.
+10. Word `label`, `cardLabel` and `hint` in the game; style on `data-part` hooks (hand, fan, card, strip, face, hint, back).
+
+**Common mistakes:**
+- Expecting a theme's blanket `button` rule to leave the strips alone: every button carries `data-kit`, so write `:where(button:not([data-kit]))`.
+- `markOf` with a mark other than `barred`: it stays selectable (dim but selectable).
+
 - Cards: `view` is a card-zones `ZoneView`; a `null` card (or a zone with only a `count`) is a back through `back()`, with no id, button or mark in the DOM, so an opponent's hand uses the same part. `face(id)` is the game's card face.
 - Geometry (`fan.ts`, node): `fanOf(i, n, tilt)` true arc (angle step capped at 1.5 degrees, 14 across, radius 20 card widths: the gentle arc, K311; drop = radius x (1 - cos)); strips `--step` fit the width by container query (`stepOf`); strips never move, the last card's is the whole card; hover or focus lifts a card (straightened, rises, grows) and the neighbours slide away (`spreadOf`: 1, .65, .4, .2 steps, clamped to the fan's band, `shiftOf`); a picked card stands up; `[data-part="hint"]` shows above the lifted card.
 - Size tokens (CSS custom properties on the hand or above): `--hand-card-w`, `--hand-card-ratio`, `--hand-step-max`, `--hand-margin`, `--hand-lift`, `--hand-stand`, `--hand-grow`.
