@@ -353,9 +353,7 @@ class K474MemoryCap(unittest.TestCase):
         from audiogen import recipe
         with tempfile.TemporaryDirectory() as t:
             f = Path(t) / "meminfo"
-            f.write_text("MemTotal: 20971520 kB
-MemAvailable: 5242880 kB
-")
+            f.write_text("MemTotal: 20971520 kB\nMemAvailable: 5242880 kB\n")
             self.assertEqual(recipe.mem_available_gib(str(f)), 5.0)
         self.assertIsNone(recipe.mem_available_gib("/nonexistent/meminfo"))
         recipe.need_memory(4, "x", avail=5.0)
