@@ -21,9 +21,6 @@
  },
  "backends": {
   "sa3": {"type": "stable-audio-3", "licence": "Stability AI Community License", "model": "small-sfx", "python": "~/audio-gen/venv-sa3/bin/python"},
-  "yue2": {"type": "yue2", "licence": "CC BY-NC 4.0 (YuE2-3B weights, non-commercial)", "model": "m-a-p/YuE2-3B", "revision": "8f24312f", "version": "0.1.6", "modelDir": "~/audio-gen/models/yue2", "python": "~/audio-gen/venv-yue/bin/python", "demucsPython": "~/audio-gen/venv-demucs/bin/python", "tries": 6},
-  "ace-xl": {"type": "acestep", "licence": "MIT", "model": "acestep-v15-xl-sft", "python": "~/audio-gen/venv/bin/python", "repo": "~/audio-gen/ACE-Step-1.5", "checkpointsDir": "~/audio-gen/checkpoints", "thinking": false},
-  "sao": {"type": "stable-audio-open", "licence": "Stability AI Community License", "model": "stabilityai/stable-audio-open-1.0", "python": "~/audio-gen/venv/bin/python"},
-  "ace": {"type": "acestep", "licence": "MIT", "python": "~/audio-gen/venv/bin/python", "repo": "~/audio-gen/ACE-Step-1.5", "checkpointsDir": "~/audio-gen/checkpoints", "model": "acestep-v15-turbo", "thinking": false}
+  "yue2": {"type": "yue2", "licence": "CC BY-NC 4.0 (YuE2-3B weights, non-commercial)", "model": "m-a-p/YuE2-3B", "revision": "8f24312f", "version": "0.1.6", "modelDir": "~/audio-gen/models/yue2", "python": "~/audio-gen/venv-yue/bin/python", "demucsPython": "~/audio-gen/venv-demucs/bin/python", "tries": 6}
  }
 }

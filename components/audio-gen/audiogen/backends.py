@@ -25,7 +25,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
-from .spec import DEFAULTS, Cue, expand  # noqa: F401 - DEFAULTS is read from here too
+from .spec import DEFAULTS, Cue, SpecError, expand  # noqa: F401 - DEFAULTS is read from here too
 
 WORKERS = Path(__file__).resolve().parent.parent / "workers"
 
@@ -174,47 +174,7 @@ class WorkerBackend(Backend):
         return out
 
 
-class AceStep(WorkerBackend):
-    """ACE-Step 1.5 (MIT), local music. https://github.com/ace-step/ACE-Step-1.5"""
-
-    id = "acestep"
-    tool = "ACE-Step 1.5"
-    script = "acestep_worker.py"
-
-    def check(self) -> None:
-        super().check()
-        repo = expand(str(self.opts.get("repo", "")), self.base)
-        if not (repo / "acestep").is_dir():
-            raise Skip(f"{self.name}: ACE-Step checkout not found at {repo} (set backends.{self.name}.repo).")
-
-
-def hf_token_file() -> Path:
-    """Where `hf auth login` stores the token (huggingface_hub reads it by itself)."""
-    if os.environ.get("HF_TOKEN_PATH"):
-        return Path(os.environ["HF_TOKEN_PATH"]).expanduser()
-    home = os.environ.get("HF_HOME") or os.path.join(os.environ.get("XDG_CACHE_HOME", "~/.cache"), "huggingface")
-    return Path(home).expanduser() / "token"
-
-
-class StableAudioOpen(WorkerBackend):
-    """Stable Audio Open 1.0 (Stability AI Community License), local SFX via diffusers. The weights are gated.
-
-    The token comes from HF_TOKEN, or from the standard Hugging Face login (`hf auth login`), which huggingface_hub
-    reads from its token file; the pipeline only checks that one of them exists."""
-
-    id = "stable-audio-open"
-    tool = "Stable Audio Open"
-    script = "stable_audio_open_worker.py"
-    pass_env = ("HF_TOKEN",)
-
-    def check(self) -> None:
-        if not os.environ.get("HF_TOKEN") and not hf_token_file().is_file():
-            raise Skip(
-                f"{self.name}: no Hugging Face token (neither HF_TOKEN nor a login at {hf_token_file()}). Its weights "
-                "are gated: accept the licence at https://huggingface.co/stabilityai/stable-audio-open-1.0, then log "
-                "in with `hf auth login` . Nothing was generated."
-            )
-        super().check()
+REMOVED = ("acestep", "stable-audio-open")
 
 
 class StableAudio3(WorkerBackend):
@@ -305,12 +265,14 @@ class YuE2(WorkerBackend):
             raise Skip(f"{self.name}: no demucs Python at {dm} for the vocal gate (install.sh yue2, or set demucsPython).")
 
 
-KINDS: dict[str, type[Backend]] = {b.id: b for b in (AceStep, StableAudioOpen, StableAudio3, YuE2)}
+KINDS: dict[str, type[Backend]] = {b.id: b for b in (StableAudio3, YuE2)}
 
 
 def make(name: str, opts: dict[str, Any], base: Path) -> Backend:
     """`name` is the config key; `opts.type` picks the adapter (default: the key itself)."""
     kind = str(opts.get("type", name))
+    if kind in REMOVED:
+        raise SpecError(f"backend '{name}': type '{kind}' was removed on the owner's order 20 Nov 2026; use yue2 for music, sa3 for sounds.")
     if kind not in KINDS:
         raise ValueError(f"backend '{name}': unknown type '{kind}' (known: {', '.join(KINDS)})")
     return KINDS[kind](name, opts, base)

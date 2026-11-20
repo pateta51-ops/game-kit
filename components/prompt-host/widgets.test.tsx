@@ -38,6 +38,34 @@ describe('widgets (K123 review)', () => {
     expect(c).toHaveBeenCalledWith(['a']);
   });
 
+  it('K457: PickOptions onChange fires with the picked list on each pick and unpick', () => {
+    const c = vi.fn<(p: string[]) => void>();
+    render(<PickOptions prompt={pr(opts('a', 'b', 'c'), 1, 2)} view={null} answer={vi.fn<Answer>()} look={look} onChange={c} />);
+    fireEvent.click(opt('a'));
+    expect(c).toHaveBeenLastCalledWith(['a']);
+    fireEvent.click(opt('c'));
+    expect(c).toHaveBeenLastCalledWith(['a', 'c']);
+    fireEvent.click(opt('a'));
+    expect(c).toHaveBeenLastCalledWith(['c']);
+    expect(c).toHaveBeenCalledTimes(3);
+    expect(opt('c')).toHaveAttribute('aria-pressed', 'true');
+  });
+
+  it('K457: PickOptions controlled picked drives the selection and Done answers it', () => {
+    const a = vi.fn<Answer>();
+    const c = vi.fn<(p: string[]) => void>();
+    const { rerender } = render(<PickOptions prompt={pr(opts('a', 'b', 'c'), 1, 2)} view={null} answer={a} look={look} picked={['b']} onChange={c} />);
+    expect(opt('b')).toHaveAttribute('aria-pressed', 'true');
+    expect(opt('a')).toHaveAttribute('aria-pressed', 'false');
+    fireEvent.click(opt('a'));
+    expect(c).toHaveBeenLastCalledWith(['b', 'a']);
+    expect(opt('a')).toHaveAttribute('aria-pressed', 'false');
+    rerender(<PickOptions prompt={pr(opts('a', 'b', 'c'), 1, 2)} view={null} answer={a} look={look} picked={['b', 'a']} onChange={c} />);
+    expect(opt('a')).toHaveAttribute('aria-pressed', 'true');
+    fireEvent.click(done());
+    expect(a).toHaveBeenCalledWith(['b', 'a']);
+  });
+
   it('PickOptions: picks stop at max', () => {
     const a = vi.fn<Answer>();
     render(<PickOptions prompt={pr(opts('a', 'b', 'c'), 1, 2)} view={null} answer={a} look={look} />);
