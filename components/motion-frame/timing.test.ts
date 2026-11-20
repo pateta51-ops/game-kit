@@ -176,6 +176,19 @@ describe('K142 K143 player', () => {
     expect(player.held()).toBe(true);
   });
 
+  it('K464 a snapped beat that got onBeatStart also gets onBeatEnd', () => {
+    const seen: string[] = [];
+    const player = createMotionPlayer({
+      specs: { banner }, stages: { default: stage }, verbs: createVerbs(), speed: () => 1, context: undefined,
+      onBeatStart: (r) => seen.push(`start ${String(r.data)}`), onBeatEnd: (r) => seen.push(`end ${String(r.data)}`),
+    });
+    player.play('banner', { data: 'a' });
+    player.play('banner', { data: 'b' });
+    player.skipAll();
+    expect(seen.filter((l) => l.endsWith('b'))).toEqual(['start b', 'end b']);
+    expect(seen.filter((l) => l.startsWith('start')).length).toBe(seen.filter((l) => l.startsWith('end')).length);
+  });
+
   it('K437 finishStep: the step in progress plays to its end, later steps and cues never start, queued beats snap', () => {
     const { log, player } = setup({ finishes: true });
     const ends: string[] = [];
