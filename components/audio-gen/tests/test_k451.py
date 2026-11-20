@@ -87,8 +87,8 @@ class Defaults(unittest.TestCase):
         c = parse_cue({"name": "a", "prompt": "p", "category": "x", "length": 1}, None)
         self.assertEqual(resolve_backend(c, cat("sfx"), None), "sa3")
         self.assertEqual(resolve_backend(c, cat("music"), None), "yue2")
-        self.assertEqual(resolve_backend(c, cat("music", "ace"), None), "ace")
-        self.assertEqual(resolve_backend(c, cat("sfx"), "sao"), "sao")
+        self.assertEqual(resolve_backend(c, cat("music", "yue2"), None), "yue2")
+        self.assertEqual(resolve_backend(c, cat("music"), "sa3"), "sa3")
 
     def test_example_config(self):
         cfg = json.loads((HERE / "example" / "config.json").read_text())
@@ -97,8 +97,14 @@ class Defaults(unittest.TestCase):
         y = cfg["backends"]["yue2"]
         self.assertEqual((y["revision"], y["version"], y["licence"][:12]), ("8f24312f", "0.1.6", "CC BY-NC 4.0"))
         made = {n: type(B.make(n, o, Path("."))).__name__ for n, o in cfg["backends"].items()}
-        self.assertEqual(made, {"sa3": "StableAudio3", "yue2": "YuE2", "ace-xl": "AceStep", "sao": "StableAudioOpen", "ace": "AceStep"})
-        self.assertEqual((cfg["backends"]["ace-xl"]["model"], cfg["backends"]["ace"]["model"]), ("acestep-v15-xl-sft", "acestep-v15-turbo"))
+        self.assertEqual(made, {"sa3": "StableAudio3", "yue2": "YuE2"})
+
+    def test_k484_removed_types_fail_check(self):  # K484: ace, ace-xl and sao were removed on the owner's order, 20 Nov 2026
+        for kind in ("acestep", "stable-audio-open"):
+            b = B.make("old", {"type": kind, "licence": "x"}, Path("."))
+            with self.assertRaises(B.Skip) as e:
+                b.check()
+            self.assertIn("removed on the owner's order 20 Nov 2026; use yue2 for music, sa3 for sounds", str(e.exception))
 
     def test_new_workers_start_under_nice(self):
         c = parse_cue({"name": "a", "prompt": "p", "category": "music", "length": 1}, None)
@@ -112,7 +118,7 @@ class Defaults(unittest.TestCase):
 
     def test_yue2_runs_through_heavy_queue_only_yue2(self):
         c = parse_cue({"name": "a", "prompt": "p", "category": "music", "length": 1}, None)
-        for kind, queued in (("yue2", True), ("stable-audio-3", False), ("acestep", False), ("stable-audio-open", False)):
+        for kind, queued in (("yue2", True), ("stable-audio-3", False)):
             with tempfile.TemporaryDirectory() as t, mock.patch.object(B.subprocess, "run", return_value=mock.Mock(returncode=0)) as run,                     mock.patch.object(B.YuE2, "queue_tool", return_value="/x/heavy"):
                 B.make("x", {"type": kind, "licence": "x", "python": sys.executable}, Path(t)).generate(
                     [B.Job(cue=c, n=1, seed=1, seconds=1.0, out=Path(t) / "a.wav")])
@@ -533,53 +539,6 @@ class Sa3Retry(unittest.TestCase):
             first_good(lambda s: s, lambda s: f"high 0.{s} > 0.2", 30, 2)
         self.assertIn("take rejected, seed 30: high 0.30 > 0.2", err.getvalue())
         self.assertIn("seed 30: high 0.30 > 0.2; seed 31: high 0.31 > 0.2", str(e.exception))
-
-
-class AceDefaults(unittest.TestCase):
-    def params(self, model):
-        seen = {}
-
-        class Handler:
-            def initialize_service(self, **kw):
-                self.vae = types.SimpleNamespace(decode=lambda z: "wav")
-                return "", True
-
-        def music(dit, llm, params, cfg, save_dir):
-            seen["p"] = params
-            p = Path(save_dir) / "x.wav"
-            p.write_bytes(b"x")
-            return types.SimpleNamespace(success=True, audios=[{"path": str(p), "params": {"seed": 1}}], error=None)
-
-        torch = types.SimpleNamespace(cuda=types.SimpleNamespace(
-            is_available=lambda: True, reset_peak_memory_stats=lambda: None, memory_allocated=lambda: 5,
-            max_memory_allocated=lambda: 6), set_num_threads=lambda n: None)
-        mods = {"torch": torch, "acestep": types.ModuleType("acestep"), "acestep.handler": types.SimpleNamespace(AceStepHandler=Handler),
-                "acestep.inference": types.SimpleNamespace(GenerationConfig=lambda **k: None, generate_music=music, GenerationParams=lambda **k: k),
-                "acestep.llm_inference": types.SimpleNamespace(LLMHandler=lambda: None),
-                "acestep.model_downloader": types.SimpleNamespace(
-                    check_main_model_exists=lambda c: True, check_model_exists=lambda m, c: True, ensure_dit_model=None,
-                    ensure_lm_model=None, ensure_main_model=None, get_checkpoints_dir=lambda: "ckpt")}
-        spec = importlib.util.spec_from_file_location("acestep_worker", HERE / "workers" / "acestep_worker.py")
-        w = importlib.util.module_from_spec(spec)
-        spec.loader.exec_module(w)
-        cwd = os.getcwd()
-        with tempfile.TemporaryDirectory() as t:
-            t = Path(t)
-            (t / "repo" / "acestep").mkdir(parents=True)
-            (t / "job.json").write_text(json.dumps({"options": {"repo": str(t / "repo"), "model": model}, "result": str(t / "r.json"),
-                                                    "items": [{"out": str(t / "a.wav"), "prompt": "p", "seconds": 1, "seed": 1, "label": "a#1"}]}))
-            try:
-                with mock.patch.object(sys, "argv", ["w", str(t / "job.json")]), mock.patch.dict(sys.modules, mods):
-                    self.assertEqual(w.main(), 0)
-            finally:
-                os.chdir(cwd)
-        return seen["p"]
-
-    def test_xl_sft_and_turbo(self):
-        xl = self.params("acestep-v15-xl-sft")
-        self.assertEqual((xl["inference_steps"], xl["guidance_scale"]), (50, 7.0))
-        turbo = self.params("acestep-v15-turbo")
-        self.assertEqual((turbo["inference_steps"], "guidance_scale" in turbo), (8, False))
 
 
 class Sa3Sampler(unittest.TestCase):
