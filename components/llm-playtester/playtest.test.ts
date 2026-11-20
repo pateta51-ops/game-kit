@@ -168,13 +168,13 @@ describe('llm-playtester', () => {
     it('a second invocation sees the first spend and stops at the cap', async () => {
       const f = join(tmp(), 'spend.jsonl');
       const first = await runMain(['--adapter', adapter, '--out', tmp(), '--ledger', f, ...M], () => undefined, {}, paying);
-      const cap = String(first.totalUsd * 1.5);
+      const cap = String(first.totalUsd + 0.3);
       const lines: string[] = [];
       const second = await runMain(['--adapter', adapter, '--out', tmp(), '--ledger', f, '--total-cap', cap, ...M], (s) => lines.push(s), {}, paying);
       expect(lines[0]).toContain('Spent so far');
       expect(second.totalUsd).toBeGreaterThan(0);
-      expect(second.totalUsd).toBeLessThanOrEqual(first.totalUsd * 0.5 + 1e-9);
-      expect(ledgerSpent(f)).toBeLessThanOrEqual(first.totalUsd * 1.5 + 1e-9);
+      expect(second.totalUsd).toBeLessThanOrEqual(0.3 + 1e-9);
+      expect(ledgerSpent(f)).toBeLessThanOrEqual(first.totalUsd + 0.3 + 1e-9);
       const third = await runMain(['--adapter', adapter, '--out', tmp(), '--ledger', f, '--total-cap', String(ledgerSpent(f)), ...M], () => undefined, {}, paying);
       expect(third.code).toBe(1);
       expect(third.runs).toEqual([]);
@@ -195,8 +195,7 @@ ${bad}
     });
     it('--max-usd above what the total cap has left: the run gets only what is left', async () => {
       const f = join(tmp(), 'spend.jsonl');
-      writeFileSync(f, '{"costUsd":0.99}
-');
+      writeFileSync(f, '{"costUsd":0.99}\n');
       const lines: string[] = [];
       const r = await runMain(['--adapter', adapter, '--out', tmp(), '--ledger', f, '--total-cap', '1', '--max-usd', '5', ...M], (s) => lines.push(s), {}, paying);
       expect(lines.join('\n')).toContain('may spend $0.0100');

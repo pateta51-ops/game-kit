@@ -207,8 +207,7 @@ export interface MainResult {
 export function ledgerSpent(file: string): number {
   if (!existsSync(file)) return 0;
   let n = 0;
-  readFileSync(file, 'utf8').split('
-').forEach((l, i) => {
+  readFileSync(file, 'utf8').split('\n').forEach((l, i) => {
     if (l.trim() === '') return;
     let c: unknown;
     try {
