@@ -155,6 +155,11 @@ Port from Unstoppable PR #144 (RulesPage.tsx, screens.css, e2e/screens.spec.ts).
 - RAM drifts per process: available RAM fell to 1.7 GB on the 2nd take when all items ran in one worker process, and came back after each process exited. Run each YuE2 item (all its takes) in its own worker process, still through `heavy run`, one heavy-queue job per item.
 - A one-off `AcceleratorError: CUDA error: unknown error` (rc 5) passed in a fresh process. On a CUDA error in a YuE2 item, retry that item once in a fresh process; a second failure fails the item as today.
 README: say both. Tests with a fake worker: one process per item; a CUDA error retries once in a new process; a non-CUDA error does not retry. | S | Astra Imperium director 3, 19 Nov 2026 (YuE2 run of 8 music states on v0.178.0); not blocking | done |
+| K466 | llm-playtester: a game can enforce a total spend cap across invocations without its own run loop.
+- `main` (or an exported runner it uses) returns the runs' results with the total cost, not only an exit code.
+- Optional spend ledger: a jsonl file (flag and env var) where each run appends {runId, seed, costUsd, at}; an optional total cap (flag and env var) counts what the ledger already holds and gives the next runs only what is left; a required-cap mode refuses to start with no cap set.
+- All opt-in; today's CLI and per-run --max-usd unchanged.
+Port from Unstoppable PR #148. Tests with the dummy chooser: cost returned; ledger appended per run; a second invocation sees the first's spend and stops at the cap; no cap in required mode refuses. | S | Unstoppable architect, 19 Nov 2026 (game PR #148, branch lp-llm-adapter, commit 1bc32ac3, src/drivers/llm-adapter.ts + scripts/llm-play.ts); built in the game, nothing waits | done |
 | K283 | `card-pile` `hitTitle={false}` drops the native title on the stack button (STCC draws its own pile tooltip) | S |  | done |
 | K284 | `layout-editor` Reset button (in-page confirmation): restores the starting doc, backdrops (`LAYOUT_EDITOR_BG_INIT`), zoom and screen; `layoutEditor.reset()` | S |  | done |
 | K285 | `plan-checker` `--tsc-at DIR` compiles the plan's type blocks inside a game folder, so relative `kit/` imports resolve | S |  | done |
