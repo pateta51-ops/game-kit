@@ -67,7 +67,7 @@ export interface PlayerOptions<C = undefined> {
   context: C;
   onCue?: (cue: string, beat: string) => void;
   /** K476: a cue not fired because its beat ended early, once each, in timeline order; every cue goes to onCue or here */
-  onDroppedCue?: (cue: string, beat: string, why: 'skipped' | 'failed') => void;
+  onDroppedCue?: (cue: string, beat: string, why: 'skipped' | 'failed' | 'cut') => void;
   onBeatStart?: (run: Run<C>) => void;
   onBeatEnd?: (run: Run<C>) => void;
   /** a beat that could not play (no spec, a zone not on the stage, a verb that threw); the game goes on */
@@ -139,7 +139,7 @@ interface Item {
 }
 type Timer = ReturnType<typeof setTimeout>;
 interface Current<C> {
-  drop?: (why: 'skipped' | 'failed') => void;
+  drop?: (why: 'skipped' | 'failed' | 'cut') => void;
   item: Item;
   run: Run<C>;
   timers: Set<Timer>;
@@ -244,7 +244,7 @@ export function createMotionPlayer<C = undefined>(o: PlayerOptions<C>): MotionPl
   const cue = (c: string, beat: string): void => {
     safe(`cue ${c}`, () => o.onCue?.(c, beat));
   };
-  const drop = (spec: MotionSpec, why: 'skipped' | 'failed', fired?: ReadonlySet<number>): void => {
+  const drop = (spec: MotionSpec, why: 'skipped' | 'failed' | 'cut', fired?: ReadonlySet<number>): void => {
     if (!o.onDroppedCue) return;
     [...(spec.sound ?? [])].sort((a, b) => a.t - b.t).forEach((c, k) => {
       if (!fired?.has(k)) safe(`dropped cue ${c.cue}`, () => o.onDroppedCue?.(c.cue, spec.id, why));
@@ -267,6 +267,8 @@ export function createMotionPlayer<C = undefined>(o: PlayerOptions<C>): MotionPl
     ...(item.data !== undefined && { data: item.data }),
   });
   const emptyTimeline = (id: string): Timeline => ({ id, ms: 0, calls: [], actors: [], cues: [] });
+  const variant = (item: Item): MotionSpec =>
+    o.reduced?.() === true ? withVariant(item.spec, item.spec.reduced) : withVariant(item.spec, item.place && item.spec.places?.[item.place.at]);
   const snapStart = (item: Item): void => {
     const run = item.commit || item.data !== undefined ? makeRun(item, emptyTimeline(item.spec.id)) : undefined;
     if (run) safe(`${item.spec.id} start`, () => o.onBeatStart?.(run));
@@ -275,7 +277,7 @@ export function createMotionPlayer<C = undefined>(o: PlayerOptions<C>): MotionPl
     if (item.problem) o.onProblem?.(item.problem);
   };
   const snapEnd = (item: Item): void => {
-    drop(item.spec, 'skipped');
+    drop(variant(item), 'skipped');
     snapStart(item);
     safe(`${item.spec.id} onEnd`, () => item.onEnd?.('skipped'));
   };
@@ -312,7 +314,7 @@ export function createMotionPlayer<C = undefined>(o: PlayerOptions<C>): MotionPl
 
   const finish = (c: Current<C>, how: Ended, why?: 'failed'): void => {
     if (!live.delete(c)) return;
-    if (why ?? how === 'skipped') c.drop?.(why ?? 'skipped');
+    c.drop?.(why ?? (how === 'skipped' ? 'skipped' : 'cut'));
     if (cur === c) cur = null;
     c.waiting.clear();
     delete c.after;
@@ -716,7 +718,7 @@ export function createMotionPlayer<C = undefined>(o: PlayerOptions<C>): MotionPl
       if (opts?.parallel === true && !item.commit && (!o.pan || item.spec.pan === undefined)) {
         // during a skip it jumps to its end at once, like everything else
         if (skipping) {
-          drop(item.spec, 'skipped');
+          drop(variant(item), 'skipped');
           snapStart(item);
           safe(`${item.spec.id} onEnd`, () => end?.('skipped'));
         }
