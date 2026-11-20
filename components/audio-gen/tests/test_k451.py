@@ -115,8 +115,8 @@ class Defaults(unittest.TestCase):
                 B.make("x", {"type": kind, "licence": "x", "python": sys.executable}, Path(t)).generate(
                     [B.Job(cue=c, n=1, seed=1, seconds=1.0, out=Path(t) / "a.wav")])
             cmd = run.call_args[0][0]
-            self.assertEqual(cmd[:5] == ["/x/heavy", "run", "--label", "audio-gen x", "--"], queued)
-            self.assertEqual(cmd[5 if queued else 0:8 if queued else 3], ["nice", "-n", "19"])
+            self.assertEqual(cmd[:9] == ["/x/heavy", "run", "--label", "audio-gen x", "--slots", "all", "--mem", "14", "--"], queued)  # K474
+            self.assertEqual(cmd[9 if queued else 0:12 if queued else 3], ["nice", "-n", "19"])
         with tempfile.TemporaryDirectory() as t, mock.patch.object(B.YuE2, "queue_tool", return_value=None):
             with self.assertRaises(B.Skip):
                 B.make("x", {"type": "yue2", "licence": "x", "python": sys.executable}, Path(t)).generate(
@@ -219,8 +219,8 @@ class Arr:
 
 
 class Yue2Worker(unittest.TestCase):
-    def run_worker(self, version="0.1.6", cuda=True, keep=None, quiet=0.001, gib=16, offload=None, vocal=None):
-        seen = {"calls": [], "demucs": []}
+    def run_worker(self, version="0.1.6", cuda=True, keep=None, quiet=0.001, gib=16, offload=None, vocal=None, avail=100.0, need=None, kill=None):
+        seen = {"calls": [], "demucs": [], "freed": []}
 
         class Pipe:
             @classmethod
@@ -244,12 +244,15 @@ class Yue2Worker(unittest.TestCase):
 
         def demucs(cmd, **kw):
             seen["demucs"].append(cmd)
+            if kill is not None and "htdemucs" in cmd:
+                raise __import__("subprocess").CalledProcessError(kill, cmd)
             return mock.Mock(returncode=0)
 
         torch = types.SimpleNamespace(cuda=types.SimpleNamespace(
             is_available=lambda: cuda, reset_peak_memory_stats=lambda: None, memory_allocated=lambda: 5,
             max_memory_allocated=lambda: 6, get_device_properties=lambda i: types.SimpleNamespace(total_memory=gib * 2**30)),
             set_num_threads=lambda n: None)
+        torch.cuda.empty_cache = lambda: seen["freed"].append(sum("htdemucs" in c for c in seen["demucs"]))
         mods = {"yue2": types.SimpleNamespace(__version__=version, YuE2Pipeline=Pipe), "soundfile": types.SimpleNamespace(read=read), "torch": torch}
         spec = importlib.util.spec_from_file_location("yue2_worker", HERE / "workers" / "yue2_worker.py")
         w = importlib.util.module_from_spec(spec)
@@ -258,10 +261,11 @@ class Yue2Worker(unittest.TestCase):
             t = Path(t)
             (t / "job.json").write_text(json.dumps({
                 "options": {"modelDir": str(t / "none"), "tries": 3, **({"keep": keep} if keep else {}),
-                            **({"offloadAr": offload} if offload is not None else {}), **({"vocal": vocal} if vocal else {})}, "result": str(t / "r.json"),
+                            **({"offloadAr": offload} if offload is not None else {}), **({"vocal": vocal} if vocal else {}), **({"minAvailGiB": need} if need is not None else {})}, "result": str(t / "r.json"),
                 "items": [{"out": str(t / "o" / "a.wav"), "prompt": "calm ballpark organ", "seconds": 20, "seed": 1000, "label": "a#1"}]}))
             with mock.patch.object(sys, "argv", ["w", str(t / "job.json")]), mock.patch.dict(sys.modules, mods), \
-                    mock.patch.object(w.subprocess, "run", demucs):
+                    mock.patch.object(w.subprocess, "run", demucs), \
+                    mock.patch.object(w.recipe, "mem_available_gib", avail if callable(avail) else lambda: avail):
                 try:
                     code = w.main()
                 except SystemExit as e:
@@ -314,6 +318,113 @@ class Yue2Worker(unittest.TestCase):
         self.assertEqual((code, made, alt), (0, True, False))
         self.assertNotIn("error", res[0])
         self.assertEqual((res[0]["seed"], res[0]["extra"]["failedGate"], len(res[0]["extra"]["tried"])), (8919, True, 3))
+
+
+class K474MemoryCap(unittest.TestCase):
+    """K474: a YuE2 run must never take WSL down: cap and all slots from the backend, MemAvailable gates in the worker."""
+
+    def test_backend_passes_mem_and_slots_all(self):
+        c = parse_cue({"name": "a", "prompt": "p", "category": "music", "length": 1}, None)
+        for opts, mem in (({}, "14"), ({"memGiB": 9}, "9")):
+            with tempfile.TemporaryDirectory() as t, mock.patch.object(B.subprocess, "run", return_value=mock.Mock(returncode=0)) as run,                     mock.patch.object(B.YuE2, "queue_tool", return_value="/x/heavy"):
+                B.make("x", {"type": "yue2", "licence": "x", "python": sys.executable, **opts}, Path(t)).generate(
+                    [B.Job(cue=c, n=1, seed=1, seconds=1.0, out=Path(t) / "a.wav")])
+                cmd = run.call_args[0][0]
+            self.assertEqual((cmd[cmd.index("--slots") + 1], cmd[cmd.index("--mem") + 1]), ("all", mem))
+            self.assertLess(cmd.index("--mem"), cmd.index("--"))
+
+    def test_memgib_is_not_sent_to_the_worker(self):
+        self.assertNotIn("memGiB", B.make("x", {"type": "yue2", "memGiB": 9}, Path(".")).worker_options())
+
+    def test_take_killed_by_the_cap_names_the_cap(self):
+        c = parse_cue({"name": "a", "prompt": "p", "category": "music", "length": 1}, None)
+        with tempfile.TemporaryDirectory() as t, mock.patch.object(B.subprocess, "run", return_value=mock.Mock(returncode=137)),                 mock.patch.object(B.YuE2, "queue_tool", return_value="/x/heavy"):
+            res = B.make("x", {"type": "yue2", "licence": "x", "python": sys.executable, "memGiB": 9}, Path(t)).generate(
+                [B.Job(cue=c, n=1, seed=1, seconds=1.0, out=Path(t) / "a.wav")])
+        self.assertFalse(res[0].ok)
+        self.assertIn("9 GiB memory cap", res[0].error)
+
+    def test_other_failure_keeps_its_message(self):
+        c = parse_cue({"name": "a", "prompt": "p", "category": "music", "length": 1}, None)
+        with tempfile.TemporaryDirectory() as t, mock.patch.object(B.subprocess, "run", return_value=mock.Mock(returncode=1)),                 mock.patch.object(B.YuE2, "queue_tool", return_value="/x/heavy"):
+            res = B.make("x", {"type": "yue2", "licence": "x", "python": sys.executable}, Path(t)).generate(
+                [B.Job(cue=c, n=1, seed=1, seconds=1.0, out=Path(t) / "a.wav")])
+        self.assertNotIn("memory cap", res[0].error)
+
+    def test_demucs_killed_in_the_cgroup_names_the_cap(self):
+        c = parse_cue({"name": "a", "prompt": "p", "category": "music", "length": 1}, None)
+        for err in ("LowMemory: killed by the memory cap: demucs died (exit -9) in the cgroup limit",
+                    "CalledProcessError: Command '[x]' died with <Signals.SIGKILL: 9>."):
+            def fake(cmd, env=None):
+                job = json.loads(Path(cmd[-1]).read_text())
+                Path(job["result"]).write_text(json.dumps({"items": [{"out": job["items"][0]["out"], "error": err}]}))
+                return mock.Mock(returncode=0)
+            with tempfile.TemporaryDirectory() as t, mock.patch.object(B.subprocess, "run", side_effect=fake), \
+                    mock.patch.object(B.YuE2, "queue_tool", return_value="/x/heavy"):
+                res = B.make("x", {"type": "yue2", "licence": "x", "python": sys.executable, "memGiB": 9}, Path(t)).generate(
+                    [B.Job(cue=c, n=1, seed=1, seconds=1.0, out=Path(t) / "a.wav")])
+            self.assertIn("9 GiB memory cap", res[0].error, err)
+
+    def test_oom_kill_counter_reader(self):
+        from audiogen import recipe
+        with tempfile.TemporaryDirectory() as t:
+            (Path(t) / "u" / "s").mkdir(parents=True)
+            (Path(t) / "u" / "s" / "memory.events").write_text("low 0\nmax 3\noom 1\noom_kill 2\n")
+            (Path(t) / "cg").write_text("0::/u/s\n")
+            self.assertEqual(recipe.oom_kills(t, str(Path(t) / "cg")), 2)
+        self.assertEqual(recipe.oom_kills("/nonexistent", "/nonexistent"), 0)
+
+    def test_meminfo_reader_and_check(self):
+        from audiogen import recipe
+        with tempfile.TemporaryDirectory() as t:
+            f = Path(t) / "meminfo"
+            f.write_text("MemTotal: 20971520 kB\nMemAvailable: 5242880 kB\n")
+            self.assertEqual(recipe.mem_available_gib(str(f)), 5.0)
+        self.assertIsNone(recipe.mem_available_gib("/nonexistent/meminfo"))
+        recipe.need_memory(4, "x", avail=5.0)
+        with self.assertRaisesRegex(recipe.LowMemory, "5.0 GiB.*demucs.*6 GiB"):
+            recipe.need_memory(6, "the demucs pass", avail=5.0)
+
+
+class K474Worker(unittest.TestCase):
+    run_worker = Yue2Worker.run_worker
+
+    def test_low_memory_before_load_fails_every_take_and_loads_nothing(self):
+        code, seen, res, made, _ = self.run_worker(avail=2.0)
+        self.assertEqual(code, 0)
+        self.assertNotIn("load", seen)
+        self.assertEqual(seen["calls"], [])
+        self.assertEqual(len(res), 1)
+        self.assertIn("LowMemory", res[0]["error"])
+        self.assertFalse(made)
+
+    def test_demucs_sigkill_fails_the_take_naming_the_cap(self):
+        for rc in (-9, 137):
+            code, seen, res, made, _ = self.run_worker(kill=rc)
+            self.assertEqual(code, 0)
+            self.assertIn("killed by the memory cap", res[0]["error"])
+            self.assertFalse(made)
+
+    def test_demucs_other_failure_is_not_the_cap(self):
+        code, seen, res, made, _ = self.run_worker(kill=1)
+        self.assertNotIn("memory cap", res[0]["error"])
+        self.assertIn("CalledProcessError", res[0]["error"])
+
+    def test_low_memory_option_lowers_the_need(self):
+        code, seen, res, made, _ = self.run_worker(avail=2.0, need=1)
+        self.assertTrue(made)
+        self.assertNotIn("error", res[0])
+
+    def test_memory_freed_then_checked_before_each_demucs_pass(self):
+        code, seen, res, made, _ = self.run_worker()
+        self.assertEqual(seen["freed"], [0, 1])  # before the first and the second pass
+
+    def test_low_memory_before_demucs_fails_the_take_without_running_it(self):
+        avail = iter([100.0, 2.0])
+        code, seen, res, made, _ = self.run_worker(avail=lambda: next(avail))
+        self.assertEqual([c for c in seen["demucs"] if "htdemucs" in c], [])
+        self.assertIn("demucs pass", res[0]["error"])
+        self.assertFalse(made)
 
 
 class Sa3Retry(unittest.TestCase):

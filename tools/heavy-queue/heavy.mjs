@@ -1,5 +1,5 @@
 // heavy run [--priority high|normal] [--label t] -- cmd...  |  hold --pid p [--priority] [--label]  |  release <id> [exit]  |  status   (K399)
-import { spawn } from 'node:child_process';
+import { spawn, spawnSync } from 'node:child_process';
 import { availableParallelism, constants, loadavg } from 'node:os';
 import { basename } from 'node:path';
 import { defaultPort } from './server.mjs';
@@ -42,7 +42,7 @@ function exec(cmd, extra = {}) {
 // Waits until granted; null when the server never answered or stopped answering for GIVEUP ms.
 async function acquire(f, pid, resume = false) {
   let r;
-  try { r = await post('/acquire', { label: f.label, priority: f.priority, pid, resume }); } catch { return null; }
+  try { r = await post('/acquire', { label: f.label, priority: f.priority, pid, resume, slots: f.slots }); } catch { return null; }
   let told = false, failSince = 0;
   const off = listen(Object.fromEntries(SIGS.map((s) => [s, () => { post('/release', { id: r.id }).catch(() => {}).finally(() => process.exit(sigCode(null, s))); }])));
   while (!r.granted) {
@@ -80,14 +80,32 @@ function beat(f, pid, lease) {
     busy = true;
     const r = await post('/beat', { id: lease.id }).catch(() => ({}));
     if (r.code === 410) lease.gone = true;
-    if (r.code === 404) lease.id = (await post('/acquire', { label: f.label, priority: f.priority, pid, resume: true }).catch(() => ({}))).id ?? lease.id;
+    if (r.code === 404) lease.id = (await post('/acquire', { label: f.label, priority: f.priority, pid, resume: true, slots: f.slots }).catch(() => ({}))).id ?? lease.id;
     busy = false;
   }, BEAT);
   return () => clearInterval(t);
 }
 
+// --mem <GiB>: the command runs in a memory-capped systemd scope with no swap, so the kernel kills the job and not the VM (K474). Never uncapped: null when no cap can be set.
+export function capCmd(gib, cmd, bin = process.env.HEAVY_SYSTEMD_RUN || 'systemd-run') {
+  const cap = ['--user', '--scope', '-q', '-p', `MemoryMax=${gib}G`, '-p', 'MemorySwapMax=0'];
+  // The probe reads the scope's own memory.max and memory.swap.max: the cap must be in force, not just accepted.
+  const sh = 'cg=$(sed -n "s/^0:://p" /proc/self/cgroup); r=${HEAVY_CGROUP_ROOT:-/sys/fs/cgroup}; cat "$r$cg/memory.max" "$r$cg/memory.swap.max" 2>/dev/null';
+  const ok = spawnSync(bin, [...cap, '--', 'sh', '-c', sh], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] });
+  const [max, swap] = (ok.stdout ?? '').trim().split('\n');
+  const good = ok.status === 0 && Math.abs(Number(max) - gib * 2 ** 30) <= 2 ** 20 && (swap === undefined || swap === '0');
+  return good ? [bin, ...cap, '--', ...cmd] : null;
+}
+
 async function run(f) {
-  if (!f.cmd.length) { say('usage: heavy run [--priority high|normal] [--label <text>] -- <cmd...>'); return 2; }
+  if (!f.cmd.length) { say('usage: heavy run [--priority high|normal] [--label <text>] [--slots <n|all>] [--mem <GiB>] -- <cmd...>'); return 2; }
+  if (f.mem !== undefined) {
+    if (!(Number(f.mem) > 0)) { say(`--mem needs a number of GiB, got ${f.mem}`); return 2; }
+    const capped = capCmd(Number(f.mem), f.cmd);
+    if (!capped) { say(`cannot set a ${f.mem} GiB memory cap (systemd-run --user --scope failed, or its cgroup does not show the cap): not running uncapped`); return 4; }
+    f.cmd = capped;
+  }
+  if (f.slots !== undefined && f.slots !== 'all' && !(Number(f.slots) >= 1)) { say(`--slots needs a number or all, got ${f.slots}`); return 2; }
   if (process.env.HEAVY_HELD === '1') return exec(f.cmd);
   f.label ??= `${basename(process.cwd())}: ${f.cmd.join(' ')}`.slice(0, 120);
   const pid = process.platform === 'linux' ? process.pid : 0;
@@ -129,7 +147,7 @@ async function main([cmd, ...a]) {
   if (cmd === 'load') { try { console.log(loadLine(await (await fetch(URL_ + '/status')).json())); return 0; } catch { say(`no queue at ${URL_}`); return 3; } }
   if (cmd === 'release') { await post('/release', { id: a[0], exit: a[1] === undefined ? null : Number(a[1]) }).catch(() => {}); return 0; }
   if (cmd === 'status') { try { console.log(JSON.stringify(await (await fetch(URL_ + '/status')).json(), null, 2)); return 0; } catch { say(`no queue at ${URL_}`); return 3; } }
-  say('usage: heavy run [--priority high|normal] [--label <text>] -- <cmd...> | heavy status | heavy load | heavy hold --pid <pid> [--priority] [--label] | heavy release <id> [exit]');
+  say('usage: heavy run [--priority high|normal] [--label <text>] [--slots <n|all>] [--mem <GiB>] -- <cmd...> | heavy status | heavy load | heavy hold --pid <pid> [--priority] [--label] | heavy release <id> [exit]');
   return cmd === '--help' || cmd === '-h' ? 0 : 2;
 }
 

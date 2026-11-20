@@ -9,8 +9,10 @@ Status page: `http://127.0.0.1:<port>/` (port: `tools.heavy-queue` in `ports.jso
 
 ## heavy run
 ```
-heavy run [--priority high|normal] [--label <text>] -- <cmd...>
+heavy run [--priority high|normal] [--label <text>] [--slots <n|all>] [--mem <GiB>] -- <cmd...>
 ```
+`--slots <n|all>` (K474) holds that many slots (all = every slot), so nothing else runs beside it; the first in line waits until enough are free, so it is not starved. `--mem <GiB>` runs the command in `systemd-run --user --scope -p MemoryMax=<n>G -p MemorySwapMax=0`: when it goes over, the kernel kills the job (exit 137) and not the WSL VM. It is checked with a probe first (before waiting for a slot): a scope is started and its own cgroup `memory.max` must equal the requested bytes (and `memory.swap.max` be 0 when it exists); otherwise `heavy` exits 4 and does not run the command, never uncapped. A job killed by the cap exits 137, passed through unchanged. Order with `--slots`: high before normal, then arrival; the first in that order waits until enough slots are free, so a high waiter jumps an earlier normal all-slots waiter, a running all-slots job is never preempted, and a high waiter behind it starts when it ends. All of a job's slots are freed when its `heavy` process dies. Needs a systemd user session (WSL with systemd, as `install-wsl.sh` assumes).
+
 Waits for a slot (`high` - CI jobs, full gates, landings - goes before `normal` - worker runs; first come first served within one), runs the command with the terminal's stdio, heartbeats while it runs, releases, and exits with the command's exit code (Ctrl-C, SIGTERM and SIGHUP reach the command, which runs in its own process group and is killed if `heavy` itself is killed; a wait is cancelled). The command gets `HEAVY_HELD=1`, so a `heavy run` inside it runs at once. A lease whose heartbeats stop for 30 s (`HEAVY_TTL` ms on the server) or whose process dies is freed, so a crashed holder never jams the queue.
 
 No server answering (at the start, or for 60 s while waiting, `HEAVY_GIVEUP` ms): it holds `/tmp/heavy-queue.lock` with `flock` (through `wsl -e flock` on Windows) while the command runs; with neither it runs at once with a warning. `HEAVY_URL` points the client at another server.

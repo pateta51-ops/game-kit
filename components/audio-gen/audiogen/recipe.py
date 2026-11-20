@@ -92,6 +92,40 @@ def offload_ar(opt, total_gib: float) -> bool:
     return total_gib < YUE2_DOC_GIB if opt in (None, "auto") else bool(opt)
 
 
+class LowMemory(RuntimeError):
+    """MemAvailable is under what the next YuE2 step needs (K474): the take fails instead of risking the WSL VM."""
+
+
+def mem_available_gib(path: str = "/proc/meminfo") -> float | None:
+    """MemAvailable in GiB, or None when it cannot be read (not Linux)."""
+    try:
+        for ln in open(path, encoding="ascii"):
+            if ln.startswith("MemAvailable:"):
+                return int(ln.split()[1]) / 2**20
+    except (OSError, ValueError, IndexError):
+        pass
+    return None
+
+
+def oom_kills(root: str = "/sys/fs/cgroup", cgroup_file: str = "/proc/self/cgroup") -> int:
+    """oom_kill count of this process's cgroup (memory.events), 0 when unreadable."""
+    try:
+        cg = next(ln.strip()[3:] for ln in open(cgroup_file, encoding="ascii") if ln.startswith("0::"))
+        for ln in open(f"{root}{cg}/memory.events", encoding="ascii"):
+            if ln.startswith("oom_kill "):
+                return int(ln.split()[1])
+    except (OSError, ValueError, StopIteration):
+        pass
+    return 0
+
+
+def need_memory(need_gib: float, what: str, avail: float | None = None) -> None:
+    """Raise LowMemory when MemAvailable is under need_gib before `what`."""
+    a = mem_available_gib() if avail is None else avail
+    if a is not None and a < need_gib:
+        raise LowMemory(f"only {a:.1f} GiB of host memory available, {what} needs {need_gib:g} GiB (option minAvailGiB): not started, so the WSL VM is not put at risk")
+
+
 def measure(v2: list[float], m2: list[float], w: int) -> tuple[float, float]:
     """v2, m2: energy per frame (sum of squared channels) of the vocal stem and of the mix (vocals + no_vocals);
     w: frames per window (half a second). Returns (vocal/mix dB, share of loud windows)."""
