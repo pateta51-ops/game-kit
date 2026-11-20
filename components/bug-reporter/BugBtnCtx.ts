@@ -10,10 +10,10 @@ export interface BugBtnProps {
   readonly className: string;
   readonly type: 'button' | 'submit';
   readonly testId: string;
-  readonly pressed?: boolean;
-  readonly ariaLabel?: string;
-  readonly title?: string;
-  readonly noCapture?: boolean;
+  readonly pressed?: boolean | undefined;
+  readonly ariaLabel?: string | undefined;
+  readonly title?: string | undefined;
+  readonly noCapture?: boolean | undefined;
 }
 export interface BugBtnSlots {
   /** Added to the class of every `.bug-btn` in Settings > Bug reports. */
