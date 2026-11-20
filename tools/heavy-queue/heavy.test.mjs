@@ -173,13 +173,11 @@ describe('heavy-queue review fixes (K399)', () => {
     const go = (sh, job, light) => spawnSync('bash', [join(hq, sh)], { encoding: 'utf8', env: { ...process.env, GITHUB_JOB: job, GITHUB_ENV: join(d, 'env'), RUNNER_NAME: 'k478-none', HEAVY_URL: 'http://127.0.0.1:1', ...(light ? { HEAVY_LIGHT_JOBS: light } : {}) } });
     writeFileSync(join(d, 'env'), '');
     expect(go('runner-job-started.sh', 'changes').status).toBe(0);
-    expect(readFileSync(join(d, 'env'), 'utf8')).toBe('HEAVY_HELD=1
-');
+    expect(readFileSync(join(d, 'env'), 'utf8')).toBe('HEAVY_HELD=1'+String.fromCharCode(10));
     expect(existsSync('/tmp/heavy-queue-runners/k478-none')).toBe(false);
     writeFileSync(join(d, 'env'), '');
     expect(go('runner-job-started.sh', 'lint', 'lint docs').status).toBe(0);
-    expect(readFileSync(join(d, 'env'), 'utf8')).toBe('HEAVY_HELD=1
-');
+    expect(readFileSync(join(d, 'env'), 'utf8')).toBe('HEAVY_HELD=1'+String.fromCharCode(10));
     expect(go('runner-job-completed.sh', 'changes').status).toBe(0);
   });
   it.skipIf(win)('install-runner-hooks.sh adds the hooks once, after a .env without a final newline', () => {
