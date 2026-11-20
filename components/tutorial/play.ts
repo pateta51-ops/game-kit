@@ -112,6 +112,7 @@ export function playStep<G extends PortTypes>(game: TutorialEngine<G>, run: Scri
     events.push(...cur.lastEvents);
   }
   const done: ScriptRun<G> = { ...cur, lastEvents: events };
+  if (step.do.kind === 'next') events.push(...run.lastEvents);
   const missing = missingEvents(game, done.state, step.expect ?? [], events);
   if (missing.length === 0) return { ok: true, run: done };
   const words = (e: G['event']): string => drive(game).hooks.eventWords?.(done.state, e) ?? JSON.stringify(e);

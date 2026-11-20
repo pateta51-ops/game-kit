@@ -95,6 +95,13 @@ describe('play', () => {
     expect(p({ ...SCRIPT, steps: SCRIPT.steps.slice(0, 3) })).toMatch(/^NOT_OVER/);
   });
 
+  it('K413 a Next step expect is checked against the events since the previous step', () => {
+    expect(playScript(GAME, withStep(5, { expect: [{ type: 'drawn' }] })).problems).toEqual([]);
+    const r = playScript(GAME, withStep(5, { expect: [{ type: 'added' }] }));
+    expect(r.failures.map((f) => `${f.step} ${f.code}`)).toEqual(['6 MISSING_EVENT']);
+    expect(playScript(GAME, withStep(0, { expect: [{ type: 'drawn' }] })).failures.map((f) => f.code)).toEqual(['MISSING_EVENT']);
+  });
+
   it('keeps going when asked, and checks coverage, evidence and bare numbers', () => {
     const r = playScript(GAME, withStep(1, { expect: [{ type: 'drawn' }], narration: 'Add 1.' }), { stopOnFailure: false, items: ['adding', 'scoring'], evidence: { adding: ['added'] }, noBareNumbers: true });
     expect(r.failures.map((f) => f.code)).toEqual(['MISSING_EVENT']);
