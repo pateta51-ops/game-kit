@@ -5,6 +5,7 @@ from __future__ import annotations
 import math
 import re
 import sys
+import unicodedata
 
 MAX_VOCAL_DB = -25.0
 MAX_LOUD_WINDOWS = 0.03
@@ -186,3 +187,64 @@ def first_good(make, bad, seed: int, tries: int):
         why.append(f"seed {seed + tr}: {r if isinstance(r, str) else 'bad'}")
         print(f"take rejected, {why[-1]}", file=sys.stderr, flush=True)
     raise RuntimeError("every try was noise, hiss or clipped (" + "; ".join(why) + ")")
+
+
+# K485: a cue with `lyrics` is sung; the instrumental vocal gate is replaced by a Whisper lyrics check.
+LYRICS_MAX_WER = 0.5  # unmeasured conservative default, see the README
+LYRICS_MIN_VOCAL_DB = -35.0  # vocal stem vs mix below this = near silent (an estimate, not measured)
+
+
+def words(text: str) -> list[str]:
+    """Lower case, section tags ([verse], [chorus]) and punctuation stripped; apostrophes join the word."""
+    t = re.sub(r"\[[^\]]*\]", " ", text.lower())
+    t = "".join(c for c in t if c not in "'’‘ʼ`")  # apostrophes join the word
+    return "".join(" " if unicodedata.category(c)[0] in "PSZC" else c for c in t).split()
+
+
+_TAG = re.compile(r"^\[[^\]\[]+\]$")
+
+
+def format_lyrics(text: str) -> str:
+    """K485: YuE's lyric format: each section is a tag line ([verse], [chorus]) then its lines, sections separated by one
+    blank line. Normalises blank lines and spaces; raises ValueError for text before the first tag, no tag, or an empty section."""
+    out, cur = [], None
+    for ln in (x.strip() for x in text.strip().splitlines()):
+        if not ln:
+            continue
+        if _TAG.match(ln):
+            if cur is not None and len(cur) < 2:
+                raise ValueError(f"section {cur[0]} has no lyric lines")
+            cur = [ln]
+            out.append(cur)
+        elif cur is None:
+            raise ValueError(f"lyrics must start with a section tag such as [verse], found {ln!r}")
+        else:
+            cur.append(ln)
+    if not out:
+        raise ValueError("lyrics need at least one section tag such as [verse] followed by its lines")
+    if len(out[-1]) < 2:
+        raise ValueError(f"section {out[-1][0]} has no lyric lines")
+    return "\n\n".join("\n".join(s) for s in out)
+
+
+def wer(ref: str, hyp: str) -> float:
+    """Word error rate of hyp against ref after `words`: word edit distance / reference words (1.0 when ref is empty and hyp is not)."""
+    r, h = words(ref), words(hyp)
+    if not r:
+        return 0.0 if not h else 1.0
+    d = list(range(len(h) + 1))
+    for i, a in enumerate(r, 1):
+        p, d[0] = d[0], i
+        for j, b in enumerate(h, 1):
+            p, d[j] = d[j], min(d[j] + 1, d[j - 1] + 1, p + (a != b))
+    return d[-1] / len(r)
+
+
+def lyrics_fail(vocal_db: float, heard: str, lyrics: str, max_wer: float = LYRICS_MAX_WER, min_db: float = LYRICS_MIN_VOCAL_DB) -> tuple[str, float]:
+    """(reason, wer): reason is "" when the take passes. A near-silent vocal stem fails before any transcript is read."""
+    w = wer(lyrics, heard)
+    if vocal_db < min_db:
+        return f"vocal stem near silent ({vocal_db} dB vs the mix, under {min_db} dB); heard {heard!r}", w
+    if w > max_wer:
+        return f"WER {w:.2f} > {max_wer:g}; heard {heard!r}", w
+    return "", w
