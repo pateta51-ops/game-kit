@@ -444,6 +444,19 @@ class Sa3Retry(unittest.TestCase):
         with self.assertRaises(RuntimeError):
             first_good(take, lambda s: True, 10, 2)
 
+    def test_k475_gate_per_cue_and_reason(self):
+        from audiogen.recipe import first_good, sa3_bad, sa3_fail
+        self.assertEqual(sa3_fail(0.1, 0.31, 0.5), "high 0.310 > 0.2")
+        self.assertEqual(sa3_fail(0.41, 0.0, 0.5), "flatness 0.410 > 0.4")
+        self.assertEqual(sa3_fail(0.1, 0.0, 1.0), "peak 1.000 >= 0.999")
+        self.assertEqual(sa3_fail(0.1, 0.31, 0.5, {"high": 0.5}), "")
+        self.assertEqual(sa3_fail(0.9, 0.9, 1.0, False), "")
+        self.assertTrue(sa3_bad(0.1, 0.31, 0.5, {"flatness": 0.9}))
+        self.assertFalse(sa3_bad(0.4, 0.2, 0.99, None))
+        with self.assertRaises(RuntimeError) as e:
+            first_good(lambda s: s, lambda s: f"high 0.{s} > 0.2", 30, 2)
+        self.assertIn("seed 30: high 0.30 > 0.2; seed 31: high 0.31 > 0.2", str(e.exception))
+
 
 class AceDefaults(unittest.TestCase):
     def params(self, model):

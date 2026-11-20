@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import math
 import re
+import sys
 
 MAX_VOCAL_DB = -25.0
 MAX_LOUD_WINDOWS = 0.03
@@ -146,17 +147,39 @@ def seeds(seed: int, tries: int, step: int = 7919) -> list[int]:
     return [seed + step * k for k in range(tries)]
 
 
-def sa3_bad(flatness: float, high: float, peak: float) -> bool:
+SA3_GATE = {"flatness": 0.4, "high": 0.2, "peak": 0.999}
+
+
+def sa3_fail(flatness: float, high: float, peak: float, gate: dict | bool | None = None) -> str:
+    """K475: the first test a take fails ("high 0.310 > 0.2"), or "" when it passes. gate False skips the gate; a dict
+    overrides the limits of SA3_GATE (a cue's options.gate, e.g. {"high": 0.5} for metallic clinks)."""
+    if gate is False:
+        return ""
+    g = {**SA3_GATE, **(gate if isinstance(gate, dict) else {})}
+    if flatness > g["flatness"]:
+        return f"flatness {flatness:.3f} > {g['flatness']}"
+    if high > g["high"]:
+        return f"high {high:.3f} > {g['high']}"
+    if peak >= g["peak"]:
+        return f"peak {peak:.3f} >= {g['peak']}"
+    return ""
+
+
+def sa3_bad(flatness: float, high: float, peak: float, gate: dict | bool | None = None) -> bool:
     """7th Inning Stretch round 8: a Stable Audio 3 take is noise (spectral flatness > 0.4), hiss (over 20 % of its
     energy above 8 kHz) or clipped (peak 1.0)."""
-    return flatness > 0.4 or high > 0.2 or peak >= 0.999
+    return bool(sa3_fail(flatness, high, peak, gate))
 
 
 def first_good(make, bad, seed: int, tries: int):
     """make(seed) -> take; the first take `bad` passes, trying seed, seed + 1, ... Returns (take, seed, tries used);
     raises RuntimeError when every try was bad."""
+    why = []
     for tr in range(tries):
         a = make(seed + tr)
-        if not bad(a):
+        r = bad(a)
+        if not r:
             return a, seed + tr, tr + 1
-    raise RuntimeError("every try was noise, hiss or clipped")
+        why.append(f"seed {seed + tr}: {r if isinstance(r, str) else 'bad'}")
+        print(f"take rejected, {why[-1]}", file=sys.stderr, flush=True)
+    raise RuntimeError("every try was noise, hiss or clipped (" + "; ".join(why) + ")")

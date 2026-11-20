@@ -3,7 +3,8 @@
 Usage: <venv python> stable_audio_3_worker.py job.json     (written by audiogen; see audiogen/backends.py)
 Job options (config backends.<name>): model ("small-sfx", hf stabilityai/stable-audio-3-small-sfx), steps (8),
 cfg (1.0), half (true), minSeconds (7: shorter cues are generated at 7 s and cut by the pipeline), tries (4: a take
-with spectral flatness > 0.4, over 20 % of its energy above 8 kHz, or a peak at 1.0 is made again with seed + 1),
+with spectral flatness > 0.4, over 20 % of its energy above 8 kHz, or a peak at 1.0 is made again with seed + 1; each rejected take logs the test it failed), gate (K475: false skips the gate, or
+{flatness, high, peak} overrides those limits; a cue sets it in its options),
 sampler ("pingpong", the documented one; the package picks it only for rf_denoiser models, else euler), cacheDir (Hugging Face cache, outside any game repo).
 Per item: prompt, negativePrompt, seconds, seed.
 Exit 3 = cannot start (no CUDA, or a first generation that did not use the GPU).
@@ -35,13 +36,13 @@ def main() -> int:
     m = StableAudioModel.from_pretrained(name, device="cuda", model_half=bool(opts.get("half", True)))
     rate = int(m.model_config["sample_rate"])
 
-    def bad(a):
+    def bad(a, gate=None):
         x = a[0].astype("float64")
         sp = np.abs(np.fft.rfft(x)) ** 2
         fq = np.fft.rfftfreq(len(x), 1 / rate)
         fl = float(np.exp(np.mean(np.log(sp + 1e-20))) / (sp.mean() + 1e-20))
         hi = float(sp[fq > 8000].sum() / (sp.sum() + 1e-20))
-        return recipe.sa3_bad(fl, hi, float(np.abs(a).max()))
+        return recipe.sa3_fail(fl, hi, float(np.abs(a).max()), gate)
 
     def one(item: dict) -> dict:
         t0 = time.time()
@@ -55,7 +56,7 @@ def main() -> int:
                            seed=seed, sampler_type=str(o.get("sampler", opts.get("sampler", "pingpong"))))  # fmt: skip
             return (a[0] if a.dim() == 3 else a).float().cpu().numpy()
 
-        a, seed, tr = recipe.first_good(make, bad, int(item["seed"]), int(o.get("tries", opts.get("tries", 4))))
+        a, seed, tr = recipe.first_good(make, lambda a: bad(a, o.get("gate", opts.get("gate"))), int(item["seed"]), int(o.get("tries", opts.get("tries", 4))))
         sf.write(str(out), a.T, rate, subtype="FLOAT")
         print(f"stable-audio-3 worker: {item['label']} {sec:.1f} s in {time.time() - t0:.1f} s (seed {seed})",
               file=sys.stderr, flush=True)  # fmt: skip
