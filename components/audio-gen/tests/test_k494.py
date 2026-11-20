@@ -52,11 +52,12 @@ class StallInWorker(unittest.TestCase):
         n = [0]
 
         def wrap(w, run):
+            real = w.run_take
             def take(cmd, env, stall):
                 n[0] += 1
                 if n[0] <= bad_first:
                     with tempfile.TemporaryDirectory() as t:
-                        return w.run_take(script(t, HANG), env, stall)
+                        return real(script(t, HANG), env, stall)
                 return run(cmd, env=env, check=True)
             return take
         return wrap
