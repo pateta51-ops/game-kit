@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { createMotionPlayer, createVerbs } from './player.ts';
 import type { MotionSpec } from './timeline.ts';
 
-const spec = (panAt?: 'commit'): MotionSpec => ({ id: 'b', maxMs: 100, steps: [], pan: '.x', ...(panAt && { panAt }) }) as unknown as MotionSpec;
+const spec = (panAt?: 'commit'): MotionSpec => ({ id: 'b', maxMs: 100, steps: [], pan: '.x', ...(panAt && { panAt }) });
 
 const run = async (panAt?: 'commit') => {
   const log: string[] = [];
