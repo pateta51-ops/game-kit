@@ -36,7 +36,7 @@ it('K470 control: each kind reaches the slot with its props; null keeps the buil
     perPage: 1,
     slots: {
       control: (kind, p) => {
-        seen.set(kind, p);
+        if (!seen.has(kind)) seen.set(kind, p);
         return null;
       },
     },
