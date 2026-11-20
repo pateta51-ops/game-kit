@@ -122,6 +122,73 @@ class Defaults(unittest.TestCase):
                 B.make("x", {"type": "yue2", "licence": "x", "python": sys.executable}, Path(t)).generate(
                     [B.Job(cue=c, n=1, seed=1, seconds=1.0, out=Path(t) / "a.wav")])
 
+    def run_yue2_fake(self, errors, cues=(("a", 3),), skip=(), queue=False):
+        calls = []
+        with tempfile.TemporaryDirectory() as t:
+            t = Path(t)
+
+            def fake(cmd, env=None):
+                job = json.loads(Path(cmd[-1]).read_text())
+                calls.append((cmd[0], [i["label"] for i in job["items"]]))
+                if job["items"][0]["label"].split("#")[0] in skip:
+                    return mock.Mock(returncode=3)
+                res = []
+                for it in job["items"]:
+                    e = errors.get(it["label"], [])
+                    err = e.pop(0) if e else None
+                    res.append({"out": it["out"], "error": err} if err else {"out": it["out"]})
+                    if not err:
+                        Path(it["out"]).write_bytes(b"x")
+                Path(job["result"]).write_text(json.dumps({"items": res}))
+                return mock.Mock(returncode=0)
+
+            jobs = []
+            for name, n in cues:
+                c = parse_cue({"name": name, "prompt": "p", "category": "music", "length": 1}, None)
+                jobs += [B.Job(cue=c, n=i, seed=1, seconds=1.0, out=t / f"{name}{i}.wav") for i in range(1, n + 1)]
+            with mock.patch.object(B.subprocess, "run", side_effect=fake), mock.patch.object(B.YuE2, "queue_tool", return_value="/x/heavy"):
+                res = B.make("x", {"type": "yue2", "licence": "x", "python": sys.executable, "queue": queue}, t).generate(jobs)
+        return calls, res
+
+    def test_k465_takes_of_one_cue_share_one_process(self):
+        calls, res = self.run_yue2_fake({})
+        self.assertEqual([c[1] for c in calls], [["a#1", "a#2", "a#3"]])
+        self.assertTrue(all(r.ok for r in res))
+
+    def test_k465_two_cues_two_processes(self):
+        calls, res = self.run_yue2_fake({}, cues=(("a", 2), ("b", 1)))
+        self.assertEqual([c[1] for c in calls], [["a#1", "a#2"], ["b#1"]])
+        self.assertEqual([r.job.cue.name for r in res], ["a", "a", "b"])
+
+    def test_k465_one_heavy_run_per_cue(self):
+        calls, _ = self.run_yue2_fake({}, cues=(("a", 2), ("b", 2)), queue=True)
+        self.assertEqual([c[0] for c in calls], ["/x/heavy", "/x/heavy"])
+
+    def test_k465_cuda_error_retries_failed_takes_once_in_new_process(self):
+        calls, res = self.run_yue2_fake({"a#2": ["AcceleratorError: CUDA error: unknown error"]}, cues=(("a", 3), ("b", 1)))
+        self.assertEqual([c[1] for c in calls], [["a#1", "a#2", "a#3"], ["a#2"], ["b#1"]])
+        self.assertTrue(all(r.ok for r in res))
+        calls, res = self.run_yue2_fake({"a#1": ["CUDA error: x", "CUDA error: y"]}, cues=(("a", 1),))
+        self.assertEqual(len(calls), 2)
+        self.assertFalse(res[0].ok)
+
+    def test_k465_other_error_no_retry(self):
+        calls, res = self.run_yue2_fake({"a#1": ["RuntimeError: no take made"]}, cues=(("a", 1),))
+        self.assertEqual(len(calls), 1)
+        self.assertFalse(res[0].ok)
+
+    def test_k465_skip_midrun_keeps_earlier_cues(self):
+        calls, res = self.run_yue2_fake({}, cues=(("a", 1), ("b", 2), ("c", 1)), skip=("b",))
+        self.assertEqual([r.ok for r in res], [True, False, False, False])
+        self.assertEqual(len(calls), 2)
+        self.assertIn("could not start", res[1].error)
+        with self.assertRaises(B.Skip):
+            self.run_yue2_fake({}, cues=(("a", 1), ("b", 1)), skip=("a", "b"))
+
+    def test_k465_mixed_failed_and_passed_cues_merge_in_order(self):
+        calls, res = self.run_yue2_fake({"b#1": ["RuntimeError: x"]}, cues=(("a", 1), ("b", 1), ("c", 2)))
+        self.assertEqual([(r.job.cue.name, r.job.n, r.ok) for r in res], [("a", 1, True), ("b", 1, False), ("c", 1, True), ("c", 2, True)])
+
     def test_yue2_needs_demucs(self):
         with self.assertRaises(B.Skip):
             B.make("y", {"type": "yue2", "licence": "x", "python": sys.executable, "demucsPython": "/nope/python"}, Path(".")).check()
