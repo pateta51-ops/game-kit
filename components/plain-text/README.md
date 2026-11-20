@@ -13,6 +13,7 @@ The owner's rule "no rule ids on screen" as code: rule, ruling and decision ids 
 4. Keep a game test that runs `strip` over the content files and expects no change (printed card text never matches), and one using `forbiddenText(ids.pattern, ...)` with `visibleText(container)`.
 5. Run `longSentences` over prompt wording and expect `[]`.
 6. For glossary entries use `hideRules` for the `rules` list and `strip` for `summary` and `body`.
+7. Compare screen text with printed text through `plainWords(text, strip?)` (NFKC, plain quotes and dashes, `¶` dropped, white-space split); card-harness's `cards:screen` does, so word numbers agree.
 
 **Common mistakes:**
 - A `short` family needs 2 to 4 digits, so "A-5" and "R-1" stay; put ids with 1 to 3 digits in `long`.
