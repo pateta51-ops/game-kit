@@ -155,7 +155,10 @@ def sa3_fail(flatness: float, high: float, peak: float, gate: dict | bool | None
     overrides the limits of SA3_GATE (a cue's options.gate, e.g. {"high": 0.5} for metallic clinks)."""
     if gate is False:
         return ""
-    g = {**SA3_GATE, **(gate if isinstance(gate, dict) else {})}
+    over = gate if isinstance(gate, dict) else {}
+    if set(over) - set(SA3_GATE) or not all(isinstance(v, (int, float)) for v in over.values()):
+        raise ValueError(f"gate takes false or numbers for {sorted(SA3_GATE)}, got {gate!r}")
+    g = {**SA3_GATE, **over}
     if flatness > g["flatness"]:
         return f"flatness {flatness:.3f} > {g['flatness']}"
     if high > g["high"]:

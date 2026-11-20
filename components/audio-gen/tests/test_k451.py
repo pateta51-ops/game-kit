@@ -1,5 +1,7 @@
 """K451: Stable Audio 3 and YuE2 defaults, the YuE2 instrumental recipe (7th Inning Stretch round6i), with fakes."""
+import contextlib
 import importlib.util
+import io
 import json
 import os
 import sys
@@ -451,10 +453,17 @@ class Sa3Retry(unittest.TestCase):
         self.assertEqual(sa3_fail(0.1, 0.0, 1.0), "peak 1.000 >= 0.999")
         self.assertEqual(sa3_fail(0.1, 0.31, 0.5, {"high": 0.5}), "")
         self.assertEqual(sa3_fail(0.9, 0.9, 1.0, False), "")
+        self.assertFalse(sa3_bad(0.5, 0.0, 0.5, {"flatness": 0.9}))
         self.assertTrue(sa3_bad(0.1, 0.31, 0.5, {"flatness": 0.9}))
+        with self.assertRaises(ValueError):
+            sa3_fail(0.1, 0.0, 0.5, {"hihg": 0.5})
+        with self.assertRaises(ValueError):
+            sa3_fail(0.1, 0.0, 0.5, {"high": None})
         self.assertFalse(sa3_bad(0.4, 0.2, 0.99, None))
-        with self.assertRaises(RuntimeError) as e:
+        err = io.StringIO()
+        with self.assertRaises(RuntimeError) as e, contextlib.redirect_stderr(err):
             first_good(lambda s: s, lambda s: f"high 0.{s} > 0.2", 30, 2)
+        self.assertIn("take rejected, seed 30: high 0.30 > 0.2", err.getvalue())
         self.assertIn("seed 30: high 0.30 > 0.2; seed 31: high 0.31 > 0.2", str(e.exception))
 
 
