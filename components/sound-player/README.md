@@ -2,6 +2,26 @@
 
 A Web Audio player driven by one table of data. It knows no game. No packages.
 
+## Rules for agents
+
+**What it does:** plays a game's sounds, voice and music from one data table through Web Audio, with volume buses, ducking and caps; it never cuts a cue, it fades it.
+
+**You must:**
+1. Build the player once: `createSoundPlayer({ table, base, volumes, onVolumes })`. Put every sound, voice file (`voiceCues(table)` spread into `cues`) and music layer in the table; a game plays names from it and never makes its own `AudioContext` or `Audio`.
+2. Pass the saved `volumes` and store what `onVolumes` gives: music, sounds, voice and muted come from settings. Call `setVolumes` from the settings screen.
+3. Nothing sounds before a first tap or key on `target`: call `unlock()` from the game's own first gesture if it has one, and do not rely on a sound at load (a cue asked for before the tap is dropped).
+4. Every cue has a `tier` (`quiet`, `normal`, `loud`); loud cues duck the music, voice-bus cues duck it too. Give music tracks `bus: 'music'` and play them with `playTrack`.
+5. Stop a cue only with `stopCues(ms, cue)` (150 ms fade at least); never expect a hard stop, and never use `lengthMs` as a stop time.
+6. In tests pass `silent: true` (no audio context, every call is safe) or `context` with `fakeContext.ts`.
+7. Run `checkSoundFiles(table, dir, options)` from `check.ts` in the game's checks (node only, import it by path): it fails on a missing file, a bad format, a cue file over 400 kB or a loop over 4 MB. Files come from audio-gen (`tools.py limits` prints the same limits).
+8. Use `onEnd(how)` (`ended`, `faded`, `dropped`) to chain: a cue that is not played (before the tap, hidden page, no file, over the cap) still calls it once.
+
+**Common mistakes:**
+- Playing a cue at start-up before the first tap and wondering why nothing sounds.
+- A cue name not in the table, or a file that fails to load: the cue is silent and the console says so once; use `canPlay(cue)` to ask.
+- Layers of different lengths in `music`: they must be loops of equal length.
+- Calling `play` for the same cue twice within 40 ms: it plays once.
+
 **A cue is never cut.** It plays to the end of its file. When it must stop early (a skip, the cap, `stopCues`) its gain fades to zero over 150 ms or more, and only then does its source stop. A mute, a hidden page and a volume change fade the same way and stop nothing. `lengthMs` in the table is information, never a stop time.
 
 ## The table (`SoundTable`)

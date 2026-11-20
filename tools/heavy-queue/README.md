@@ -2,6 +2,24 @@
 
 One machine-wide queue for heavy runs (`kit.mjs finish`, e2e suites, full gates, self-hosted CI jobs) on the WSL PC, so they run one (or `HEAVY_SLOTS`) at a time instead of timing out together. Plain Node, no dependencies. Not a kit component: it runs on the owner's PC and is never pulled into a game.
 
+## Rules for agents
+
+**What it does:** one queue per machine (WSL) so heavy runs (checks, e2e, full gates, simulations, CI jobs, YuE2 music) go one at a time, or `HEAVY_SLOTS` at a time, instead of timing out together.
+
+**You must:**
+1. Run anything heavy through it: `heavy run [--priority high|normal] [--label <text>] -- <cmd...>` in WSL (the game's npm scripts and `kit.mjs finish --check` already wrap it). Never start vitest, Playwright, `tsc -b`, `vite build` or a simulation bare: they are listed as unqueued and reniced.
+2. Use `--slots <n|all>` when the job must run alone (YuE2 uses `all`), and `--mem <GiB>` to cap its memory: the job is killed by the kernel at the cap (exit 137) and not the WSL VM. With no way to set a cap, `heavy` exits 4 and does not run the command.
+3. Install it once on the machine: `bash tools/heavy-queue/install-wsl.sh` from a WSL path of a game-kit checkout (`HEAVY_SLOTS=2` for two slots); it needs systemd in WSL. Run it again to update; the kit's tools find `heavy` on PATH or in `~/.local/bin`.
+4. Let the exit code through: `heavy` returns the command's exit code.
+5. Do not put a command that waits on an API (an LLM playtest, a generation call) in the queue: it holds a slot while it waits.
+6. Read `heavy status` or the status page (port `tools.heavy-queue` in `ports.json`) to see what is running or waiting; `heavy load` prints one line.
+7. Take `HEAVY_WORKERS` for test worker counts (vitest `maxWorkers`, Playwright `workers`); never hard-code them.
+
+**Common mistakes:**
+- A `heavy run` inside a job that already holds a slot runs at once (`HEAVY_HELD=1`): not a second queue.
+- No server answering: it falls back to a `flock` lock, or runs at once with a warning; heavy runs may then collide.
+- Killing the job by hand and expecting the slot to stay: a lease is freed when its `heavy` process dies.
+
 ## Install (WSL)
 `bash tools/heavy-queue/install-wsl.sh` (from a WSL path of a game-kit checkout; `HEAVY_SLOTS=2 bash ...` for two slots). A normal run that has waited `HEAVY_AGE_MS` (default 10 min) ranks with high ones, so a stream of CI jobs cannot starve `finish` runs. It copies the tool to `~/.local/share/heavy-queue` (`HEAVY_HOME`), writes the always-on systemd unit `heavy-queue.service` (runs that copy as you, restarts on failure) and links `heavy` into `~/.local/bin`; nothing points at a checkout. Run it again to update the copy or change the slots; it is idempotent. A restarted queue forgets its leases: running clients and runner watchers take theirs again at their next heartbeat, waiting ones queue again.
 

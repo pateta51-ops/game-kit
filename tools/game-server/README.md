@@ -2,6 +2,23 @@
 
 A small web panel that updates any game to its latest `origin/main` in its own clone (`<serveRoot>/<id>`, set in kit.local.json), builds it, serves it and maps it onto the tailnet with `tailscale serve`. No dependencies (Node 24). Not a kit component: it runs on the owner's PC and is never pulled into a game.
 
+## Rules for agents
+
+**What it does:** the owner's panel that updates a game to its latest `origin/main`, builds it, serves it and maps it onto the tailnet; it also hands out port blocks to new games.
+
+**You must:**
+1. Take every port from `ports.json` (readable view `docs/PORTS.md`); never invent one or hard-code one that is not there. A game's block of 10 starts at its dev port: preview +1, e2e +2, second e2e +3.
+2. Add a new game with `node tools/game-server/server.mjs add <id> "<Name>" <repo path> [app subfolder]`: it appends one line to `ports.json`, validates it and regenerates `docs/PORTS.md`; then set what it prints in the game's vite and Playwright config, and commit `ports.json` and `docs/PORTS.md` in game-kit.
+3. Change a port in `ports.json` first (`validatePorts` checks every port is unique, phone ports are 4170-4199 and blocks avoid the reserved ranges), then in the game.
+4. Keep owner-specific values (tailnet host, serve root) in the untracked `kit.local.json`; never commit it or put them in the repo.
+5. Use the CLI (`server.mjs update <id> | stop <id> | status`) or the panel; it serves each game from its own clone, never from your worktree.
+
+**Common mistakes:**
+- A game, e2e or Codex server on a port that is not in `ports.json`: it collides with another game's block.
+- Editing `docs/PORTS.md` by hand: it is generated.
+- Forgetting `copyIgnored` or `build` on the game's line when it needs private files.
+- Treating it as a kit component: it runs on the owner's PC and is never pulled into a game.
+
 ## Install (once, on the PC)
 
 `sudo powershell -ExecutionPolicy Bypass -File tools\game-server\install.ps1` (elevated: a task that runs before logon needs it). It registers the Scheduled Task `game-server` for this user with two triggers, at boot (30 s delay, runs without anyone logged in, no window) and at logon, restarts it on failure, maps the panel onto the tailnet, and puts a **Game Server** icon (`game-server.ico`) on the desktop. The icon opens the panel in the browser and starts the task first if the panel is not answering. `uninstall.ps1` removes the task, the mapping and the icon. Re-run `install.ps1` after moving the kit or changing the panel port.

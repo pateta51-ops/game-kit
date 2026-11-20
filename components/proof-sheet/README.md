@@ -1,5 +1,22 @@
 Review a pack's faces beside their fields, printed words, generated words, and flags.
 
+## Rules for agents
+
+**What it does:** a review page (React, or one static HTML file) that shows each card face beside its fields, printed words, generated words and flags, so a person can check a pack.
+
+**You must:**
+1. Pass `cards`, `id`, `name`, `renderFace` (the game's own face renderer, backs and scan overlays included) and `printed` / `fields` from the pack's loader; the sheet draws no face itself.
+2. Give a unique `id` per card and a unique id per check; the facet id `flags` is reserved.
+3. Style `.proof-card`, `.proof-faces`, `.proof-data` and `.proof-flags > li` in the game: the React view is unstyled.
+4. Mount it on a dev route, beside prompt-gallery.
+5. For the static export run `node kit/proof-sheet/cli.ts <game-module> <pack> [output.html]` (Node 22.18+); the module's `loadProof(packPath, outputPath)` takes absolute paths and returns the same props, with a server-renderable `renderFace`.
+6. Turn on `lazyFaces` for a large pack.
+
+**Common mistakes:**
+- A `renderFace` that needs the browser (canvas, window) in the static export: the export renders on the server.
+- Reusing a check id, or the id `flags`.
+- Reading the sheet's hash view without `viewFromHash` / `viewToHash` when the game has its own router: pass the view in explicitly.
+
 ## Use it in 10 lines
 
 ```tsx
