@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { cleanup, fireEvent, render } from '@testing-library/react';
+import { act, cleanup, fireEvent, render } from '@testing-library/react';
 import { afterEach, expect, it, vi } from 'vitest';
 import { CharacterSelect, type CharacterSelectProps, type ControlProps } from './ui.ts';
 import { fields, icons, kindOrder, modes, opponents, roster, sets } from './demo/game.ts';
@@ -43,7 +43,7 @@ it('K470 control: each kind reaches the slot with its props; null keeps the buil
   });
   fireEvent.click(one('options-toggle'));
   fireEvent.click(one('more', one('hero')));
-  for (const k of ['begin', 'card', 'deck-tab', 'entry', 'mode', 'more', 'next', 'opponent-pick', 'options-toggle', 'prev', 'search', 'field-select', 'link'])
+  for (const k of ['begin', 'card', 'deck-tab', 'entry', 'mode', 'more', 'next', 'opponent-pick', 'options-toggle', 'prev', 'search', 'field-select', 'link', 'field-check', 'field-text'])
     expect(seen.has(k), k).toBe(true);
   expect(seen.get('next')?.label).toBe('Next page');
   expect(seen.get('entry')?.id).toBe('ada');
@@ -53,6 +53,72 @@ it('K470 control: each kind reaches the slot with its props; null keeps the buil
   expect(part('mode')).toHaveLength(modes.length);
   expect(part('entry')).toHaveLength(roster.length);
   expect(one('options').querySelectorAll('select')).toHaveLength(2);
+});
+
+it('K470 control: the props work (on, disabled, expanded, onChange change the screen)', () => {
+  const now = new Map<string, ControlProps>();
+  const get = (k: string): ControlProps => {
+    const p = now.get(k);
+    if (p === undefined) throw new Error(`no ${k}`);
+    return p;
+  };
+  const onBegin = draw({
+    slots: {
+      control: (kind, p) => {
+        now.set(`${kind}:${p.id ?? ''}`, p);
+        return null;
+      },
+    },
+  });
+  const fire = (k: string, f: (p: ControlProps) => void): void => {
+    act(() => {
+      f(get(k));
+    });
+  };
+  expect(get('entry:ada').on).toBe(true);
+  expect(get('entry:cora').on).toBe(false);
+  fire('entry:cora', (p) => p.onClick?.());
+  expect(one('hero').dataset.id).toBe('cora');
+  expect(get('entry:cora').on).toBe(true);
+  expect(get('entry:ada').on).toBe(false);
+  const tab = part('tab')[1]?.dataset.kind ?? '';
+  expect(get(`deck-tab:${tab}`).on).toBe(false);
+  fire(`deck-tab:${tab}`, (p) => p.onClick?.());
+  expect(get(`deck-tab:${tab}`).on).toBe(true);
+  expect(get('deck-tab:ALL').on).toBe(false);
+  expect(part('card').length).toBeGreaterThan(0);
+  expect(part('card').every((c) => c.dataset.kind === tab)).toBe(true);
+  const m1 = modes[1]?.id ?? '';
+  expect(get(`mode:${m1}`).on).toBe(false);
+  fire(`mode:${m1}`, (p) => p.onClick?.());
+  expect(get(`mode:${m1}`).on).toBe(true);
+  expect(get(`mode:${modes[0]?.id ?? ''}`).on).toBe(false);
+  expect(one('character-select').dataset.mode).toBe(m1);
+  fire('deck-tab:ALL', (p) => p.onClick?.());
+  expect(get('prev:').disabled).toBe(true);
+  expect(get('next:').disabled).toBe(false);
+  fire('next:', (p) => p.onClick?.());
+  expect(get('prev:').disabled).toBe(false);
+  expect(one('prev').hasAttribute('disabled')).toBe(false);
+  fire('search:', (p) => p.onChange?.('Rope'));
+  expect(part('card').length).toBeGreaterThan(0);
+  expect(part('card').every((c) => c.title.includes('Rope'))).toBe(true);
+  expect(get('search:').value).toBe('Rope');
+  expect(get('options-toggle:').expanded).toBe(false);
+  fire('options-toggle:', (p) => p.onClick?.());
+  expect(get('options-toggle:').expanded).toBe(true);
+  expect(part('options')).toHaveLength(1);
+  fire('field-check:extra', (p) => p.onChange?.(true));
+  expect(get('field-check:extra').value).toBe(true);
+  fire('field-select:pack', (p) => p.onChange?.('all'));
+  expect(get('field-select:pack').value).toBe('all');
+  fire('field-text:seed', (p) => p.onChange?.('abc'));
+  expect(get('field-text:seed').value).toBe('abc');
+  fireEvent.click(one('begin'));
+  const o = (onBegin.mock.calls[0]?.[0] as { options: Record<string, unknown> }).options;
+  expect(o.extra).toBe(true);
+  expect(o.pack).toBe('all');
+  expect(o.seed).toBe('abc');
 });
 
 it('K470 control: a returned part replaces the built-in and its handler works', () => {
