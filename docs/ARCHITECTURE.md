@@ -28,6 +28,7 @@ graph LR
   card_hand["card-hand"] --> picked_state["picked-state"]
   card_hand["card-hand"] --> prompt_host["prompt-host"]
   card_harness["card-harness"] --> engine_core["engine-core"]
+  card_harness["card-harness"] --> plain_text["plain-text"]
   card_language["card-language"] --> engine_core["engine-core"]
   card_language["card-language"] --> card_harness["card-harness"]
   card_language["card-language"] --> plain_text["plain-text"]
