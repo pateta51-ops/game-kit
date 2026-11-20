@@ -48,6 +48,8 @@ export interface InventoryInput {
   readonly rulings?: readonly string[];
   /** K487: record or card ids that must sit in an `interaction` piece's `records` or `cards` (see `interactionNeeds`). */
   readonly interacting?: readonly string[];
+  /** K497: known `interacting` ids pending a row: id to the fix that clears it (a game's JSON map). Listed ids are reported as pending, not failed; one no longer a finding is `stale pending entry`. */
+  readonly interactingPending?: Readonly<Record<string, string>>;
 }
 export interface Row {
   readonly key: string;
@@ -67,6 +69,8 @@ export interface Inventory {
   readonly unrouted: readonly string[];
   readonly quoteDiffers: readonly string[];
   readonly outOfRows: readonly string[];
+  readonly pendingRows: readonly string[];
+  readonly staleInteracting: readonly string[];
   readonly report: string;
 }
 
@@ -200,7 +204,11 @@ export function inventory(input: InventoryInput): Inventory {
   const routes = new Set(input.routes ?? []);
   const unrouted = (input.records ?? []).filter((r) => !routes.has(r.verb)).map((r) => `${r.id}:${r.verb}`);
   const inRows = new Set(input.pieces.filter((p) => p.kind === 'interaction').flatMap((p) => [...(p.cards ?? []), ...(p.records ?? [])]));
-  const outOfRows = (input.interacting ?? []).filter((id) => !inRows.has(id));
+  const missing = (input.interacting ?? []).filter((id) => !inRows.has(id));
+  const pend = input.interactingPending ?? {};
+  const outOfRows = missing.filter((id) => !(id in pend));
+  const pendingRows = missing.filter((id) => id in pend);
+  const staleInteracting = Object.keys(pend).filter((id) => !missing.includes(id)).sort();
 
   const kinds = [...new Set(rows.map((r) => r.kind))];
   const lines = [
@@ -232,7 +240,7 @@ export function inventory(input: InventoryInput): Inventory {
       lines.push(`| \`${r.id}\` | ${String(r.cards)} | ${r.examples.join(', ')}${r.cards > 6 ? ', …' : ''} | ${r.direct.join('<br>')} | ${r.via.join('<br>')} |`);
     lines.push('');
   }
-  return { rows, uncited, staleBaseline, unowned, staleOpen, unrouted, quoteDiffers, outOfRows, report: lines.join('\n') };
+  return { rows, uncited, staleBaseline, unowned, staleOpen, unrouted, quoteDiffers, outOfRows, pendingRows, staleInteracting, report: lines.join('\n') };
 }
 
 /** The test files under `dirs` of `root` whose names match `re`, with paths relative to `root`. */
@@ -253,6 +261,7 @@ export interface InventoryIo {
 /** Write the report to `out`, or with `check` compare it; the exit code. */
 export function runInventory(input: InventoryInput, out: string, check: boolean, io: InventoryIo): number {
   const inv = inventory(input);
+  const pend = input.interactingPending ?? {};
   let code = 0;
   if (check) {
     if (io.read(out) !== inv.report) {
@@ -263,11 +272,13 @@ export function runInventory(input: InventoryInput, out: string, check: boolean,
   for (const k of inv.uncited) io.log(k.startsWith('interaction:') ? `inventory: interaction ${k.slice(12)} has no test` : `inventory: ${k} is cited by no test`);
   for (const k of inv.quoteDiffers) io.log(`inventory: ${k}`);
   for (const k of inv.outOfRows) io.log(`inventory: ${k} is in no interaction row`);
+  for (const k of inv.pendingRows) io.log(`inventory: ${k} is in no interaction row (pending: ${pend[k]!})`);
+  for (const k of inv.staleInteracting) io.log(`inventory: stale pending entry: ${k}`);
   for (const k of inv.staleBaseline) io.log(`inventory: baseline lists ${k}, which is cited or gone`);
   for (const k of inv.unowned) io.log(`inventory: printed line ${k} is owned by no record and not listed open`);
   for (const k of inv.staleOpen) io.log(`inventory: open list has ${k}, which is owned or gone`);
   for (const k of inv.unrouted) io.log(`inventory: record ${k} has a verb the engine does not route`);
-  if (inv.uncited.length + inv.staleBaseline.length + inv.unowned.length + inv.staleOpen.length + inv.unrouted.length + inv.quoteDiffers.length + inv.outOfRows.length > 0) code = 1;
+  if (inv.uncited.length + inv.staleBaseline.length + inv.unowned.length + inv.staleOpen.length + inv.unrouted.length + inv.quoteDiffers.length + inv.outOfRows.length + inv.staleInteracting.length > 0) code = 1;
   io.log(`inventory: ${String(inv.rows.length)} pieces and clauses, ${String(inv.uncited.length)} uncited${code === 0 ? '; ok' : ''}`);
   return code;
 }
