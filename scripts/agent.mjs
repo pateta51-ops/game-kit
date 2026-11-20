@@ -1,7 +1,7 @@
 // Plain-node worker commands, no install and no tsx: node kit.mjs worktree|finish|teardown (also: node scripts/agent.mjs <cmd> ...).
 //   worktree --branch <b> [--repo .] [--dir d] [--base origin/main] [--shared <dir with node_modules>] [--no-fetch]   new worktree + node_modules link
 //   worktree --here [--branch <b>] [--shared d]   for a worker already inside a worktree: link node_modules from the main checkout (or --shared); --branch also switches to a new branch
-//   finish [--repo .] [--check "npm run check"] [--install "npm ci"] [--tail 15] [--comment]   clone + install + check in WSL (bash on Linux); prints PASS <sha> or FAIL <sha>; with --check the line names it: PASS <sha> (check: <command>), so it never passes for the gate's PASS (K416)
+//   finish [--repo .] [--check "npm run check"] [--install "npm ci"] [--tail 15] [--comment]   clone + install + check in WSL (bash on Linux); prints PASS <sha> or FAIL <sha>; with --check the line is check passed|failed <sha> (check: <command>), never PASS, so it cannot pass for the gate (K416)
 //   teardown --worktree <dir> [--repo .] [--force]
 import { execFileSync, spawnSync } from 'node:child_process'
 import fs from 'node:fs'
@@ -91,7 +91,7 @@ export function finish(args, io, exec = real, win = process.platform === 'win32'
   const r = win ? exec('wsl', ['-e', 'bash', '-s'], sh) : exec('bash', ['-s'], sh)
   if (r.status === null || r.error) { io.out(`FAIL ${sha} (${branch}; could not run the check: ${win ? 'WSL is unavailable' : 'bash is unavailable'}${r.error ? ' - ' + r.error.message : ''}; the check never runs on local Windows)`); return 1 }
   const ok = r.status === 0
-  const line = `${ok ? 'PASS' : 'FAIL'} ${sha}${f.check ? ` (check: ${f.check.replace(/\s+/g, ' ')})` : ''}`
+  const line = f.check ? `check ${ok ? 'passed' : 'failed'} ${sha} (check: ${f.check.replace(/\s+/g, ' ')})` : `${ok ? 'PASS' : 'FAIL'} ${sha}`
   io.out(`${line} (${branch}; check ${ok ? 'passed' : 'exit ' + r.status}, clone removed)\n${r.output.split('\n').filter((l) => l.trim()).slice(-Number(f.tail ?? 15)).join('\n')}`)
   if (f.comment) try { execFileSync('gh', ['pr', 'comment', branch, '--body', line], { cwd: repo, stdio: 'pipe' }) } catch { io.err('warning: could not comment on the PR (gh missing or no PR yet)') }
   return ok ? 0 : 1

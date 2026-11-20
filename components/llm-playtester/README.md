@@ -11,7 +11,7 @@ The game writes one adapter; Claude (or `--dummy`, the first option, no client b
 3. Put the key in `.env.local` (or `--env <file>`) as `<GAME>_CLAUDE_API_KEY`, the adapter name in upper snake case. Never rely on the process environment, and never use `ANTHROPIC_API_KEY`: it is refused.
 4. Install `@anthropic-ai/sdk` in the game before a paid run.
 5. Always cap spend: `--max-usd` per run, and across invocations `--ledger <file> --total-cap <usd>` (`--require-cap` exits 2 without a cap).
-6. Never run it under `heavy run` or in a queued job: it waits on an API, not the CPU, and exits 2 when `HEAVY_HELD=1` is set (what the heavy queue sets for its jobs).
+6. Never run a paid run under `heavy run` or in a queued job: it waits on an API, not the CPU, and exits 2 when `HEAVY_HELD=1` is set (what the heavy queue sets for its jobs). `--dummy` is allowed.
 7. Read `summary.md` in `logs/llm-player/<run-id>/`: `BUG:` reasons, invalid options and adapter throws are findings; keep legal wins as replay tests from `replay.json`.
 
 **Common mistakes:**

@@ -233,13 +233,18 @@ ${bad}
 });
 
 describe('heavy queue (K416)', () => {
-  it('refuses under HEAVY_HELD=1 with exit 2 and runs without it', async () => {
+  const adapter = join(import.meta.dirname, 'fake-adapter.ts');
+  const held = { HEAVY_HELD: '1' };
+  it('a dummy run under HEAVY_HELD=1 runs; a real-client run exits 2 before any call', async () => {
+    const d = await runMain(['--adapter', adapter, '--dummy', '--out', tmp()], () => undefined, held);
+    expect(d.code).toBe(0);
+    expect(d.runs).toHaveLength(1);
     const lines: string[] = [];
-    const r = await runMain(['--adapter', 'x', '--dummy'], (l) => lines.push(l), { HEAVY_HELD: '1' });
+    const r = await runMain(['--adapter', adapter, '--out', tmp()], (l) => lines.push(l), held);
     expect(r.code).toBe(2);
-    expect(lines.join(' ')).toMatch(/heavy queue/);
-    const lines2: string[] = [];
-    await runMain([], (l) => lines2.push(l), {});
-    expect(lines2.join(' ')).not.toMatch(/heavy queue/);
+    expect(r.runs).toHaveLength(0);
+    expect(lines.join(' ')).toContain('REFUSED');
+    const ok = await runMain(['--adapter', adapter, '--out', tmp()], () => undefined, {}, () => Promise.resolve({ option: 0, reason: 'r', usage }));
+    expect(ok.runs).toHaveLength(1);
   });
 });

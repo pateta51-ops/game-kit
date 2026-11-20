@@ -228,7 +228,6 @@ export async function main(argv: string[], log: (s: string) => void = console.lo
 }
 
 export async function runMain(argv: string[], log: (s: string) => void = console.log, env: Record<string, string | undefined> = process.env, injected?: Chooser): Promise<MainResult> {
-  if (env['HEAVY_HELD'] === '1') { log('REFUSED: running under the heavy queue (HEAVY_HELD=1); this waits on an API, not the CPU, so run it directly, never under `heavy run`'); return { code: 2, runs: [], totalUsd: 0 }; }
   const bad = (): MainResult => ({ code: usage(log), runs: [], totalUsd: 0 });
   const flags = new Map<string, string>();
   for (let i = 0; i < argv.length; i++) {
@@ -240,6 +239,7 @@ export async function runMain(argv: string[], log: (s: string) => void = console
   }
   const path = flags.get('adapter');
   if (path === undefined) return bad();
+  if (env['HEAVY_HELD'] === '1' && !flags.has('dummy') && injected === undefined) { log('REFUSED: a paid run under the heavy queue (HEAVY_HELD=1); it waits on an API, not the CPU, so run it directly, never under `heavy run` (--dummy is fine)'); return { code: 2, runs: [], totalUsd: 0 }; }
   const g = (k: string) => flags.get(k);
   const ledger = g('ledger') ?? env['PLAYTEST_LEDGER'];
   const capRaw = g('total-cap') ?? env['PLAYTEST_TOTAL_CAP_USD'];
