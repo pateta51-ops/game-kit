@@ -111,3 +111,9 @@ export function longSentences(text: string, max = 20, strip?: Strip): { sentence
     .map((s) => ({ sentence: s, words: s.split(/\s+/).filter((w) => /[\p{L}\p{N}]/u.test(w)).length }))
     .filter((s) => s.words > max);
 }
+
+/** The words of `text` as a scan compares them: NFKC, curly quotes and dashes made plain, paragraph marks dropped, split on white space (`strip` runs first when given). */
+export function plainWords(text: string, strip?: Strip): string[] {
+  const t = strip === undefined ? text : strip(text);
+  return t.normalize('NFKC').replace(/[‘’]/g, "'").replace(/[“”]/g, '"').replace(/[–—]/g, '-').replace(/¶/g, ' ').split(/\s+/).filter((w) => w !== '');
+}

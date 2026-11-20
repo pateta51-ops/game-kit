@@ -17,6 +17,10 @@ export interface DeliveryGame<S, P, D = never, A = never> {
   silentNote?(d: D): string | null;
   /** A description when the settings' answer is a viewer decision (null for one the viewer does not own). */
   silentAuto?(a: A): string | null;
+  /** The clause id whose resolution opened `p` (null when none). Feeds `Delivery.opened`. */
+  clauseOf?(p: P): string | null;
+  /** The words the table shows for `p`, or null when this prompt is not scanned. Feeds `Delivery.screens`. */
+  screen?(p: P): string | null;
 }
 
 export interface Delivered<P, D, A> {
@@ -30,6 +34,19 @@ export interface Delivered<P, D, A> {
 
 export class Delivery<S, P, D = never, A = never> {
   readonly log: Delivered<P, D, A>[] = [];
+  /** Clause ids that opened a prompt (K489), for `screenProblems`. */
+  readonly opened = new Set<string>();
+  /** `{ clause, shown }` of each scanned prompt that opened, for `screenProblems`. */
+  readonly screens: { clause: string; shown: string }[] = [];
+  private seen(): void {
+    const p = this.game.prompt();
+    if (p === null) return;
+    const clause = this.game.clauseOf?.(p) ?? null;
+    if (clause === null) return;
+    this.opened.add(clause);
+    const shown = this.game.screen?.(p) ?? null;
+    if (shown !== null) this.screens.push({ clause, shown });
+  }
 
   readonly game: DeliveryGame<S, P, D, A>;
   constructor(game: DeliveryGame<S, P, D, A>) {
@@ -38,6 +55,7 @@ export class Delivery<S, P, D = never, A = never> {
 
   load(state: S): this {
     this.game.load(state);
+    this.seen();
     return this;
   }
   get prompt(): P | null {
@@ -55,6 +73,7 @@ export class Delivery<S, P, D = never, A = never> {
       prompt: this.game.prompt(),
     };
     this.log.push(out);
+    this.seen();
     return out;
   }
   silentChoices(): { kind: 'engine' | 'settings'; what: string }[] {
