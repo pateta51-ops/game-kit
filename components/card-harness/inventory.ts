@@ -82,7 +82,10 @@ export interface CardCaseInfo {
   readonly title?: string;
 }
 const KEY = /(?<![\w$])(clause|printed|ar|title)\s*:\s*(['"`])((?:\\[\s\S]|(?!\2)[^\\])*)\2/g;
-const unescape = (s: string): string => s.replace(/\\([\s\S])/g, (_, c: string) => ({ n: '\n', t: '\t', r: '\r' })[c] ?? c);
+const ESC: Record<string, string> = { n: '\n', t: '\t', r: '\r', b: '\b', f: '\f', v: '\v', '0': '\0', '\n': '', '\r': '', '\r\n': '', ' ': '', ' ': '' };
+const unescape = (s: string): string =>
+  s.replace(/\\(?:u\{([0-9a-fA-F]+)\}|u([0-9a-fA-F]{4})|x([0-9a-fA-F]{2})|(\r\n|[\s\S]))/g, (_, cp?: string, u?: string, x?: string, c?: string) =>
+    cp !== undefined ? String.fromCodePoint(parseInt(cp, 16)) : (u ?? x) !== undefined ? String.fromCharCode(parseInt((u ?? x) as string, 16)) : (ESC[c as string] ?? (c as string)));
 
 /** K487: the string-literal fields of each `cardCase({ ... })` call in a test file's text; a field that is not a literal is absent. */
 export function cardCasesIn(text: string): Partial<CardCaseInfo>[] {

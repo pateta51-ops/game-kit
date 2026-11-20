@@ -37,6 +37,8 @@ describe('K487 cardCase and quote counting', () => {
       { clause: 'CL-a', printed: `It's "here"`, ar: 'AR-2', title: 'poor' },
     ]);
     expect(cardCasesIn('cardCase({ clause: P.id, printed, ar: "AR-1" }, f)')).toEqual([{ ar: 'AR-1' }]);
+    expect(cardCasesIn("cardCase({ printed: 'It\\u2019s a \\\nlong \\u{1F600}\\x41\\n' }, f)")).toEqual([{ printed: 'It’s a long \u{1F600}A\n' }]);
+    expect(cardCasesIn("cardCase({ printed: 'a \\\r\nb' }, f)")).toEqual([{ printed: 'a b' }]);
   });
   it('passes: printed equals the clause text and ar is a known ruling', () => {
     const inv = inventory(base([ok]));

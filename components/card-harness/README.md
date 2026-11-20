@@ -26,7 +26,7 @@ Card tests on real cards. Test code only; the engine imports nothing here but `c
 - An inventory piece listed twice: `runInventory` throws `is listed twice`.
 - A cited clause only in a comment with `titleOnly: true`: it is not counted as cited.
 - A spec row that still passes with its line's records removed: `cardSpecs` fails it.
-- A `cardCase` with `printed: P.text` or shorthand `{ clause, printed, ar }`: not a literal, so it counts as `quote differs`.
+- A `cardCase` with a literal `clause` but `printed: P.text` (or `ar` not a literal): counts as `quote differs`. One with no literal `clause` (shorthand `{ clause, printed, ar }`) is skipped, so its clause reads `clause:<id> is cited by no test`.
 - A game without clause `text`, `rulings`, `interacting` or `interaction` pieces counts as before; the one change it sees is that a `cardCase(` call's title now counts as a test title.
 
 - **Probe** (`createProbe<D>()`): the engine calls `probe.note(d)` (or `note(() => d)`) where it settles a choice without asking. Off in the game.
