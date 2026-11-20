@@ -13,7 +13,7 @@ A bug report dialog: screenshot (scrolled areas, game fonts embedded), markup ed
 4. Have `snapshot()` return the replay save, round, prompt, action count and log lines of the open game, or nulls when none is open.
 5. Pass `fonts()` for fonts registered with the FontFace API, or the screenshot falls back to default fonts.
 6. Let the player type the token in `BugSettings`; never put a token in the config, the repo or the build.
-7. List `state-machines` in the game's needs.
+7. List `state-machines` and `small-helpers` in the game's needs.
 8. Theme it with the `--bug-*` variables on `:root`, not by editing the kit; use `buttonClass` / `renderButton` to restyle buttons.
 
 **Common mistakes:**
