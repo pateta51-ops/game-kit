@@ -2,6 +2,25 @@
 
 Links every glossary term and icon code in the game's texts to a lookup, and checks the glossary covers what the game shows. The game passes its entries as data and keeps its words, routes and look. Needs `phone-mode` (and so `state-machines`) and the packages `react` and `zustand`. `index.ts` draws nothing and loads in node; `ui.ts` holds the React parts.
 
+## Rules for agents
+
+**What it does:** Links every glossary term and icon code in a game's texts to a lookup, and checks that the glossary covers what the game shows.
+
+**You must:**
+1. Install `react` and `zustand`; the component needs `phone-mode`. `glossary.css` is loaded by `GlossaryText`.
+2. Pass your entries as data to `<GlossaryProvider entries icon? renderIcon?>` and mount `<LookupHost>` once inside it.
+3. Draw text with `<GlossaryText text>`; a link inside a button is `hold` (right-click or long press), elsewhere `click`.
+4. Pass `closeOn` (your route) to `LookupHost` so the lookup closes on navigation; `hideRules` keeps rule ids out of the DOM.
+5. Add a script that calls `runGlossaryCheck({ entries, texts, ... })` to the check chain; it exits 1 on findings.
+6. Run `node kit/glossary/printed.ts --entries ... --source ...` in the check chain so summaries match the printed text.
+7. Set `--glo-*` variables for the look.
+
+**Common mistakes:**
+- Showing rule ids on screen: use `hideRules`.
+- `coverage: true` in `buildIndex` links every name, including `searchAliases` and `plain` entries' names; leave it for the coverage check.
+- Expecting a `plain` entry to link in lower case: it links only its names in capitals.
+
+
 ## Matcher (`match.ts`)
 
 - `GlossaryEntry`: `id`, `term`, `aliases?`, `kind?`, `icon?`, `tokens?`, `searchAliases?`, `plain?`, `summary`, `body?` (blank-line paragraphs), `rules?`, `see?`.

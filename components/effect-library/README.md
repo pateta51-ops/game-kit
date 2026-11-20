@@ -2,6 +2,25 @@
 
 Sixteen verbs for the director's spec format as DOM effects for the motion frame: `move`, `arc-move`, `lift`, `settle`, `fade-in`, `fade-out`, `show`, `hide`, `flip`, `scale`, `shake`, `shake-group`, `glow`, `unroll`, `multi-stop-path`, `text`. Web Animations API; browser only. Beside them: canvas effects with a particle kit and `trail`, a count-up and a boxed ambience layer.
 
+## Rules for agents
+
+**What it does:** Director-spec effects for the motion frame: sixteen DOM verbs (move, lift, flip, glow, text and more), canvas effects with a particle kit, `countUp`, ambience and many opt-in extras. Browser only.
+
+**You must:**
+1. Create verbs with `createVerbs<EffectCtx>()`, call `registerEffects(verbs, { resolve })` and pass the returned layer as the motion player's `context`, with `onBeatEnd: (run) => layer.end(run)`.
+2. `resolve(id, run)` returns the real element; the kit animates a clone, never the original (a cloned canvas is blank: copy pixels in `onActor`).
+3. Pass the player's `speed` from settings through `withReducedMotion(speed)`: reduced motion gives `'instant'`, no verb runs and no clone is made.
+4. Call `layer.start(run)` from `onBeatStart` when actors must be cloned at the beat's start, and `layer.clear()` between beats.
+5. Set `--fx-*` variables for the look; no colour comes from the kit. Opt-in looks: `looks/rise-pulse.css`, `looks/glitch.css`.
+6. Add your own verbs with `registerEffect` (use `animate(keyframes, endStyle)` so a skip jumps to the end) or `registerCanvasEffect`.
+7. Use `countUp({ value, speed, show })` for counting numbers; it never writes game state.
+
+**Common mistakes:**
+- Reading `style.transform` for `move` or `scale`: they animate `translate` and `scale`.
+- Setting your own CSS `scale` or `translate` on an actor.
+- Using it in node: it is browser only (Web Animations).
+
+
 ```ts
 const verbs = createVerbs<EffectCtx>();
 const layer = registerEffects(verbs, { resolve: (id) => document.getElementById(id) ?? undefined });

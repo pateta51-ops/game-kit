@@ -2,6 +2,24 @@
 
 A learned opponent (K125): a value net, a one-horizon look-ahead on the game's own pure reducer, and TD(lambda) self-play on the sim-pool. Written new from the design in `docs/evaluation/outside/rftg-opponent.md`. Needs `engine-core`, `sim-pool`.
 
+## Rules for agents
+
+**What it does:** A learned opponent: a value net, a one-step look-ahead on the game's pure reducer and TD(lambda) self-play on sim-pool.
+
+**You must:**
+1. The driver decides only from the seat's redacted view; give `decide` the view, never the real state, and make `model.sample` deal the hidden cards.
+2. Build the game's encoder with `Inputs` and keep the input names stable; a weight file whose names differ from the encoder throws.
+3. Supply the model: `view`, `sample`, `legal`, `apply` (pure), `over`, `horizon`, `encode`; the open prompt needs a numeric `seat` (or an `actor`).
+4. Pass `epsilon` for noise and `samples` / `pick` for the decision; create the net with `newNet(names, hidden, seats)`.
+5. Train by exporting `simGame = withTrace(game, model)` and calling `trainSelfPlay({...})`; judge new weights with sim-pool's paired validation.
+6. Make every `encode` output the length the net expects.
+
+**Common mistakes:**
+- A view that leaks hidden cards: the "HARD RULE" test catches it.
+- A model with no legal action: throws "no legal action".
+- Forward play that never reaches the horizon throws after `maxSteps` (default 10,000).
+
+
 **Hard rule: the driver decides only from the seat's redacted view.** `decide(model, net, view, seat, actions)` never gets the real state; every state it plays forward is sampled from the view by `model.sample`. The test "HARD RULE" gives two states with one view and other hidden cards and expects the same choice. A game's view must hold nothing the seat cannot see (`opponent`'s `viewLeaks` checks that).
 
 - **Encoder** (each game builds its own): `new Inputs()` then `thermo(name, n)`, `presence(name, keys)` (card ids, or card properties such as tags and costs, so new cards need no retrain), `value(name)`, `perSeat(seats, prefix => ...)` (seat-relative, self first). Fill `blank(inputs)` (all -1) with `thermo`, `present`, `setValue`; `seatOrder`, `behind` (gap to the leader), `relative(v, seat)`.

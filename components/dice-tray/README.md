@@ -2,6 +2,23 @@
 
 Pure logic of a dice tray and its roll window (K211), opt-in, unstyled; the game draws it (CSS, `pieces-3d`) and writes its own meanings. Import from `index`. Needs `state-machines`.
 
+## Rules for agents
+
+**What it does:** Pure logic of a dice tray and its roll window: dice, holds, rolls, meanings and the tap order. The game draws it.
+
+**You must:**
+1. Pass `ctx.rng` (anything with `int(sides)`) to `roll`; never `Math.random`, so the roll is seeded and replayable.
+2. Create with `newTray(specs)` (a sides number or `{ sides, kind }`); a value of 0 means not rolled.
+3. Treat the tray as immutable: every function returns a new tray (`roll` returns `{ tray, rolled }`).
+4. Use `readRoll(tray, meanings)` with your own `Meaning { id, test, label }` list; the kit has no game meanings.
+5. Drive the roll window with `rollWindow`/`step` and the pick helpers in order: token, die, then + or -; die taps before a token are ignored.
+6. Animate through `rollWith(tray, rng, { onRoll })`; it is off unless given.
+
+**Common mistakes:**
+- Expecting `roll` to roll held dice: it skips them unless named in `only`.
+- Drawing faces or 3D here: use `pieces-3d`.
+
+
 - `newTray(specs)`: dice in play, each a sides number or `{sides, kind}`; value 0 until rolled.
 - `roll(tray, rng, only?)`: rolls every die not held (or only those ids) with `rng.int(sides) + 1`, in die order; pass `ctx.rng` so the roll is seeded and replayable (never `Math.random`). Returns `{tray, rolled}`.
 - `toggleHold`, `hold`, `heldDice`, `adjust(tray, id, +-1)` (stays in 1..sides), `remove`, `values`.
