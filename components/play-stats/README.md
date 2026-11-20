@@ -2,6 +2,22 @@
 
 The records of finished games, the totals and best scores read from them, and a clock of playing time. No packages; draws nothing; loads in node (tests: `stats.test.ts`, `clock.test.ts`). The game keeps its record fields, the score comparison, its words and its screen.
 
+## Rules for agents
+
+**What it does:** Records of finished games, totals and best scores, and a clock of playing time.
+
+**You must:**
+1. Create the store with `createPlayStats<R>({ key, valid, compare, ... })`: `valid` checks every field of a stored record (a failing entry is skipped), `compare` is negative when `a` is the better score.
+2. Give each record an `id` and `at`; add `same(a, b)` so one ending is never added twice; a record with the same `id` is replaced.
+3. Call `record` once when a game ends and `remove(id)` when an undo goes past the end; treat a null result (write refused) as not saved.
+4. Filter the list before `ranked`, `bestBy`, `personalBest`, `totals` for a per-difficulty view.
+5. Clock: `start(id)` on a new game, `resume(id)` on continue and when the page shows, `tick()` on each move, `pause()` when the page hides, `stop()` for a game not recorded.
+6. Use a distinct `key` per game; `clear()` leaves the `<key>.unreadable` copy.
+
+**Common mistakes:**
+- A loose `valid` lets a malformed stored record into the figures.
+
+
 ## Store (`stats.ts`)
 
 A record is `{ id, at }` (the game's identity, when it ended in ms) plus the game's own fields. `createPlayStats<R>({ key, valid, compare, same?, max?, dropWorst?, storage?, onError? })`:

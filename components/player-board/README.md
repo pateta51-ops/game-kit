@@ -2,6 +2,18 @@
 
 A mat with named zones from a layout: each zone fits its cards (largest size, two rows when that allows larger cards, a fan below the readable minimum), and is a motion anchor. Needs `card-zones`, `board-layout`; package `react`.
 
+## Rules for agents
+
+**What it does:** A mat with named zones from a layout, each fitting its cards.
+
+**You must:**
+1. Give `<PlayerBoard>` a board-layout `layout`, card-zones `views` (`null` = a back), the `mat` image and the `card` size in design pixels; fill each card with `slot(info)`.
+2. Use the same zone ids in `layout.zones` and `views`.
+3. Use `planBoard` for the pure plan; give `footprint(id, zone, index)` for cards with tucked cards.
+4. Style it yourself: the CSS is structural; hooks are `data-part` (`player-board mat zone slot`) and `data-zone`, `data-count`, `data-rows`, `data-fan`.
+5. Sizes are design pixels times `rem` (default 1/32 rem): a table scale grows everything.
+
+
 - The game owns the layout (where zones sit) and the look; the kit owns how a zone lays out its cards. Zones come from a board-layout `ZoneLayout` (`zones[id].r = [x, y, w, h]`), cards from a card-zones `ZoneView` (`null` = a back).
 - `planBoard(zones, cards, { card, footprint?, gap, pad, minWidth, align })` (pure, `index.ts`) returns per zone `placed` (a rect per card, board design pixels, `overlap` under the left neighbour), `scale`, `rows`, `fan`. `fitZone`, `layRow`, `handSink` are exported too.
 - `footprint(id, zone, index)` is an assembly's size at scale 1 (default the card): wrap `footprint(host, attachments, cw, ch)` from `card-attachments` for a host with tucked cards, e.g. `footprint: (id) => footprint({}, tuckedUnder(id).map(() => ({})), 276, 386)`.

@@ -2,6 +2,23 @@
 
 What the table shows while an answer's events play one step at a time. Pure, no packages, no game types: the game supplies its view type `V`, its event type `E` and its fold. Loads in node.
 
+## Rules for agents
+
+**What it does:** What the table shows while an answer's events play one step at a time.
+
+**You must:**
+1. Keep `Steps` in the game's store; reset it with `noSteps()` on undo, redo, load and a new game.
+2. After an answer call `pushSteps(steps, before, events, isStep, instant)` where `before` is the view the answer was given on; `instant` queues nothing.
+3. Show `foldView(steps, live, fold)` when it is not null, else `live`; the game clears the open question on the folded view itself.
+4. Call `stepper.drive()` on every store change, and make `play` call `next` at the step's end (or `read(ms)` for a step that only waits).
+5. Fold "view or base missing" into `instant()`.
+6. Give `left()` the motion player's `skipAll()`; bind `press()` to pointerdown and keydown before motion-frame's `skipOnInput`.
+
+**Common mistakes:**
+- A store that notifies later than `advance` makes every step end call `left()`.
+- A late `next` from a step no longer at the head does nothing: do not rely on it.
+
+
 ## Step queue
 
 `Steps<V, E>` is `{ base, events, queue }`: the view before the answer, the answer's events, the steps still to play (the head is on screen). Keep it in the game's store.

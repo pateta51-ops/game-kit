@@ -2,6 +2,25 @@
 
 The mechanism of a phone layout: which layout a window gets, the fit zoom of the large screens, safe-area tokens, the one bottom sheet, folds, second-tap commit, the sideways panel. The game keeps its screens, zones, sheet contents, words and look. Needs `state-machines` and the packages `react` and `zustand`. `index.ts` draws nothing and loads in node; `ui.ts` holds the React parts.
 
+## Rules for agents
+
+**What it does:** The mechanism of a phone layout: layout mode, fit zoom, safe areas, the bottom sheet, dock and second tap.
+
+**You must:**
+1. Call `useViewport.getState().start(root, { ... })` once at start-up and keep the stop function; pass `fit: false` when app-frame `<Stage>` scales.
+2. Select phone styles with `:root[data-layout='phone']`; a phone follows the window and a coarse pointer, not the user agent.
+3. Use the viewport meta `width=device-width, initial-scale=1` without `viewport-fit=cover`, no `apple-mobile-web-app-capable`; size full-height layers with `--pm-h` (`100dvh`).
+4. Keep a game test `phoneLayerCheck(files, ...).faults` equal to `[]`, reading the game's CSS.
+5. All words come from the game: `Sheet` needs `title` and `onClose`; give `slideMs` / `leaveMs` / `arriveMs` from the motion setting (0 = none).
+6. To close a `Sheet` from outside set `leaving` and handle `onLeft` (`onClose` is not called then).
+7. Feed `createHaptics({ enabled })` from the game's Haptics setting; use `setSafeArea` in e2e tests (a browser cannot emulate a notch).
+8. Use `dockWantsOpen`, `useDock(wants, dockKey(...))` and `shortPrompt` together for the prompt dock.
+
+**Common mistakes:**
+- Using CSS zoom on a phone screen: only the fitted mode zooms.
+- Fixed bottom layers without `top: 0; height: var(--pm-h)` leave a band under the dock on iPhone; the layer check reports them.
+
+
 ## Layout (`layout.ts`, `viewport.ts`)
 
 - `layoutModeFor({ w, h, coarse, setting, autoPhone?, shortSide?, deskW?, deskH? })`: `desk` (window at least 3840x2160 or the given design size), `fitted`, `phonePortrait`, `phoneLandscape`. A phone is the setting `phone`, or `auto` with a coarse pointer and a short side of at most 500 CSS px; it follows the window, never the user agent, so a narrow desktop window is not a phone. Sideways needs a touch pointer. `layoutAttr`, `isPhone`.

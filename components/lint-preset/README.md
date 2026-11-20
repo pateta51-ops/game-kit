@@ -8,6 +8,24 @@ import { PACK_PREFIXES } from './eslint.prefixes.js';
 export default defineConfig(/* the game's blocks, */ ...engineLint({ callers: ['src/ui', 'scripts'], cardPrefixes: PACK_PREFIXES }));
 ```
 
+## Rules for agents
+
+**What it does:** ESLint blocks that keep the engine folder pure, copy-on-write and free of card ids, and make callers reach the engine through its api file only.
+
+**You must:**
+1. Spread `...engineLint({ ... })` into the flat config after the game's own blocks.
+2. Pass `callers` with every folder that imports the engine (default only `src/ui`; `scripts` and the like are not checked unless listed), and `engine` / `api` when they are not `src/engine` / `api`.
+3. Keep engine imports relative; name any package in `allowImports` by exact name. No dynamic `import()`, no `ui` folder.
+4. Take randomness from `ctx.rng` only: `Math.random`, `Date`, `performance`, timers, `window`, `fetch` and the other globals are errors in the engine folder.
+5. Pass `cardPrefixes` from the pack registry and keep a game test `expect(prefixDrift(PACK_PREFIXES, registryPrefixes)).toEqual([])`.
+6. Run the engine tests with engine-core `setCowChecks(true)`: the lint does not see writes through an alias.
+7. To add your own `no-restricted-*` block for engine files, build it from `cowSelectors(cow)` and `cardIdSelectors(prefixes)`.
+
+**Common mistakes:**
+- A later block that sets `no-restricted-globals`, `-properties`, `-syntax` or `-imports` for the same files replaces the preset's rule: the checks silently stop.
+- `const t = s.turn; t.n = 1` passes the lint and writes shared state.
+
+
 `engineLint(options)`, all optional:
 
 - `engine` (`'src/engine'`), `api` (`'api'`): the engine folder, and the one file of it that `callers` may import.

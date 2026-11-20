@@ -1,5 +1,23 @@
 # llm-playtester: headless Claude playtests of whole games through a game adapter, to find bugs and keep legal wins as replay tests.
 
+## Rules for agents
+
+**What it does:** Headless Claude playtests of a whole game through a game adapter.
+
+**You must:**
+1. Write one adapter (`GameAdapter`: `name`, `rulesText`, `start({seed, difficulty, scenario})`, `view`, `options`, `choose(i)` with `i` the 0-based index into `options()`, `done`, `replay`); `start` must reset all game state.
+2. Try `--dummy` first: it builds no client and costs nothing.
+3. Put the key in `.env.local` (or `--env <file>`) as `<GAME>_CLAUDE_API_KEY`, the adapter name in upper snake case. Never rely on the process environment, and never use `ANTHROPIC_API_KEY`: it is refused.
+4. Install `@anthropic-ai/sdk` in the game before a paid run.
+5. Always cap spend: `--max-usd` per run, and across invocations `--ledger <file> --total-cap <usd>` (`--require-cap` exits 2 without a cap).
+6. Run it directly, never through the `heavy` queue: it waits on an API.
+7. Read `summary.md` in `logs/llm-player/<run-id>/`: `BUG:` reasons, invalid options and adapter throws are findings; keep legal wins as replay tests from `replay.json`.
+
+**Common mistakes:**
+- An adapter that throws, or an invalid option after one retry, stops the run with a finding and exit 1.
+- A reply cut off at `max_tokens` before its tool call is a finding: raise `--max-tokens` for thinking models.
+
+
 The game writes one adapter; Claude (or `--dummy`, the first option, no client built) picks one numbered option per step by a `choose` tool call (tool_choice auto, never forced: models that think refuse it; a reply without a tool call is re-asked once, then logged as a finding) `{option, reason}`. The system prompt is `rulesText()` plus `--docs` files, cached (`cache_control` ephemeral on the last block); each call sends only the current view, the options and the last 6 decisions, so cost per call stays flat.
 
 `node kit/llm-playtester/playtest.ts --adapter <module> [--seed s] [--difficulty d] [--scenario s] [--model claude-opus-5-5|claude-sonnet-5-5] [--max-usd 5] [--max-decisions 500] [--max-tokens 16000] [--runs n] [--docs a.md,b.md] [--env .env.local] [--dummy]`. The module exports `createAdapter()` or a default. The game needs `@anthropic-ai/sdk` for paid runs.

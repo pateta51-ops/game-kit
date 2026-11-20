@@ -2,6 +2,23 @@
 
 Pieces built in code, no model file: a rounded d6 and a ten-sided die (WebGL), a seamed ball that rolls by distance, a chip with thickness, card edge and cast shadow. Owner's rule: simple shapes made in code may be true 3D; nothing modelled or generated.
 
+## Rules for agents
+
+**What it does:** Pieces built in code (dice, ball, chip, tilted card), no model files.
+
+**You must:**
+1. Import `ui.ts` for `Ball` and `Chip` (it loads `pieces3d.css`); import the pure parts from `index.ts`.
+2. Start dice once with `startDiceLayer(look)`, keep `stop()`; it returns `null` without WebGL, so keep each die's own flat children as the fallback (shown unless `p3-gl` is on `<html>`).
+3. Mark dice `data-p3-die="d6|d10"` with `data-v`; animate them with `data-roll` / `data-turn`.
+4. Pass colours, fonts and tilts from the game's tokens (`look`); set `--piece-tilt` per game.
+5. Import the animation verbs (`shake`, `flip`, `move`, `settle`) from `pieces-3d-verbs`, not from here.
+6. Only simple code-built shapes; never add a modelled or generated mesh.
+
+**Common mistakes:**
+- Importing the verbs from `pieces-3d` no longer works (moved).
+- Assuming WebGL is present: the flat fallback must still read.
+
+
 - Dice: `startDiceLayer(look, sel = '[data-p3-die]', on?)` draws every element matching `sel` with `data-p3-die="d6|d10"` and `data-v` as the solid (a canvas per die, one offscreen WebGL context). `data-roll="t0,dur,seed"` tumbles it to its value, `data-turn="t0,dur,out|in"` turns it a quarter (times of `performance.now()`). `look`: `{ body, ink, font, tilt }` (colours, the d10 numeral font, the resting tilt in radians). Returns `null` without WebGL. `on(ok)` (default: `p3-gl` on `<html>`) runs when it starts, stops, or loses and gets back its context. `stop()` removes its canvases and listeners and frees the context; nothing redraws after it.
 - Fallback: without `p3-gl` the die's own children show (its flat form, `--die-depth`); with it they are hidden and the solid is drawn over them.
 - Ball: `<Ball look />` (`ui.ts`) or a `canvas[data-ball]` painted with `paintBall(canvas, turn, look)`. `look`: `{ leather, seam?, curve?, stitch?, stitchCount?, stitchWidth?, stitchFlip?, seamLine?, seamLineWidth?, seamLineDash? }` (#rrggbb; `stitch: 'chevron'` draws rows of V stitches, `stitchCount` around the measured seam (default 56: 14 per visible arc at rest), each V symmetric about the seam with a 75 degree opening (`chevrons(curve, count)` gives each stitch's frame, `chevronPoints` its apex and arm ends), default seam colour #e63a30; `stitchWidth` = V half width as a fraction (default 0.14); `stitchFlip: true` turns the stitches on curve positions [0.25, 0.75) of the curve's point list (or a given `[from, to]`) the other way, so both visible arcs point the same screen way, switching at `twoArcSeam()`'s far points (still hidden when the game rotates the curve about the view axis); `seamLine` (#rrggbb) + `seamLineWidth` (fraction of the diameter, default 0.01) draw a line under the stitches through every apex (`seamLineDash`: dashes instead, one per stitch centred on its apex, this fraction of the stitch spacing long, round ends; 0/unset = solid), instead of the default bars and groove (XD-63); `curve` = points on the unit sphere, default `twoArcSeam()`). `rolled(from, dx, dy, size, perTurn)`, `turnOf(px, size, perTurn)`: one turn per `perTurn * size` px (default 345/110).

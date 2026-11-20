@@ -2,6 +2,24 @@
 
 A market of offer slots refilled from decks: prices, buy and cycle options, refill at once or by slide, clear, a view of face-up slots and deck counts, and an unstyled row that deals new cards from the deck with a stagger. Needs `engine-core`, `card-zones`, `prompt-host`, `picked-state`, `motion-frame`; package `react`.
 
+## Rules for agents
+
+**What it does:** A market of offer slots refilled from decks, with its row view.
+
+**You must:**
+1. Spread `marketZones(rows)` into `newZones` so every slot is a card-zones zone (key `slotZone(row, i)`, face up); call `takeSlot`, `cycleSlot`, `refill`, `fillEmpty`, `clearMarket` only inside a handler, on the draft.
+2. Build options with `marketOptions(s, cfg, afford)`; `afford` returns the reason a price cannot be paid. Payment, who may buy and where the bought card goes are the game's.
+3. With `when: 'later'` call `refill` or `fillEmpty` yourself after the player's picks; a taken slot stays empty until then.
+4. When a result has `pending` (a slot whose deck the player picks), ask the prompt, then `fillSlot(s, cfg, row, i, deck)` and `fillEmpty`.
+5. Send the UI `marketView(viewOf(s, seat), rows)`, never the state; give `MarketRow` `speed` from settings (0 = no motion) and `pick` from `useBoardPick`.
+6. Pass the market events of the last step as `events` so new cards fly from the deck they came from.
+7. For a top offer make the deck `seen: 'top'` and offer `'top'` through `offersOf`.
+
+**Common mistakes:**
+- `fillSlot` with a deck that is not one of the slot's sources throws `EngineBugError`.
+- `takeOffer` / `cycleOffer` on an empty slot or empty top throws `EngineBugError`.
+
+
 - Slots are card-zones zones (`marketZones(rows)` spread into `newZones`, key `slotZone(row, i)`, face up), so every move goes through the copy-on-write barrier, replay, undo and saves. Call the moves inside a handler on the draft.
 - `MarketCfg`: `rows` (`slots`, `decks`, `prices`, `cycle` per slot), `when` (`now`: a taken or cycled slot refills at once from its source, no slide; `later`: it stays empty until `refill`). Hooks: `source(s, row, i)` decks tried in order (fallback), `ask(s, row, i)` the player picks the deck, `price(s, row, i, card, base)` the game's modifiers, `home(s, row, card)` where a card goes back (default the row's first deck).
 - `marketOptions(s, cfg, afford)`: `buy:row:i` and `cycle:row:i` (when the row has `cycle`) with `card`, `cost`; `afford(verb, cost, at)` returns the reason it cannot be paid (a disabled option with `why`). Payment is the game's. `parseOption(id)`.
