@@ -31,8 +31,10 @@ export function Slider({ label, min, max, step, value, onChange, disabled, unit 
   label: string; min: number; max: number; step: number; value: number; onChange: (v: number) => void; disabled?: boolean; unit?: string;
 }) {
   const ref = useRef<HTMLDivElement>(null);
-  const decimals = (String(step).split(".")[1] ?? "").length;
-  const set = (v: number) => { onChange(Number(Math.min(max, Math.max(min, min + Math.round((v - min) / step) * step)).toFixed(decimals))); };
+  const places = (n: number) => { const [m = "", e = "0"] = String(n).split("e"); return Math.max(0, (m.split(".")[1] ?? "").length - Number(e)); };
+  const decimals = Math.min(100, Math.max(places(step), places(min)));
+  const last = Math.floor((max - min) / step + 1e-9);
+  const set = (v: number) => { onChange(Number((min + Math.min(last, Math.max(0, Math.round((v - min) / step))) * step).toFixed(decimals))); };
   const at = (x: number) => { const r = ref.current!.getBoundingClientRect(); set(min + ((x - r.left) / r.width) * (max - min)); };
   return (
     <div ref={ref} data-part="slider" role="slider" tabIndex={disabled ? -1 : 0} aria-label={label} aria-valuemin={min} aria-valuemax={max} aria-valuenow={value}

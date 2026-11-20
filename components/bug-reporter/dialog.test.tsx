@@ -6,6 +6,7 @@ import { startTestGame } from './test-utils.ts';
 import { BugReportHost } from './BugReportDialog.tsx';
 import { createElement } from 'react';
 import { BugSettings, QueueBar } from './BugSettings.tsx';
+import type { BugBtnProps } from './BugBtnCtx.ts';
 import { collectReport } from './collect.ts';
 import { openBugReport, useBugDialog } from './dialogStore.ts';
 import {
@@ -60,12 +61,26 @@ describe('K387: BugSettings button slots', () => {
 });
 
 describe('K469: BugReportHost button slot', () => {
-  it('renderButton draws the dialog buttons and keeps them wired', async () => {
-    render(<BugReportHost renderButton={(b) => createElement('a', { className: b.className, 'data-testid': b.testId, 'data-kind': b.kind, onClick: b.onClick }, b.label)} />);
+  const draw = (b: BugBtnProps) => createElement('a', { className: b.className, 'data-testid': b.testId, 'data-kind': b.kind, 'aria-disabled': b.disabled, 'aria-pressed': b.pressed, onClick: b.onClick }, b.label);
+  it('renderButton draws the dialog buttons, with disabled, primary and buttonClass', async () => {
+    render(<BugReportHost buttonClass="mine" renderButton={draw} />);
     act(() => { openBugReport(); });
     expect((await screen.findByTestId('bug-cancel')).tagName).toBe('A');
     expect(screen.getByTestId('bug-send').getAttribute('data-kind')).toBe('send');
-    fireEvent.click(screen.getByTestId('bug-cancel'));
+    expect(screen.getByTestId('bug-send').className).toBe('bug-btn primary mine');
+    expect(screen.getByTestId('bug-cancel').className).toBe('bug-btn mine');
+    expect(screen.getByTestId('bug-export').getAttribute('aria-disabled')).toBe('false');
+    fireEvent.click(screen.getByTestId('bug-markup'));
+    expect((await screen.findByTestId('markup-done')).tagName).toBe('A');
+    expect(screen.getByTestId('markup-done').className).toBe('btn mine');
+    expect(screen.getByTestId('markup-undo').getAttribute('aria-disabled')).toBe('true');
+    expect(screen.getByTestId('markup-clear').getAttribute('aria-disabled')).toBe('true');
+    expect(screen.getByTestId('markup-pen').getAttribute('aria-pressed')).toBe('true');
+    expect(screen.getByTestId('markup-box').getAttribute('aria-pressed')).toBe('false');
+    fireEvent.click(screen.getByTestId('markup-box'));
+    expect(screen.getByTestId('markup-box').getAttribute('aria-pressed')).toBe('true');
+    fireEvent.click(screen.getByTestId('markup-done'));
+    fireEvent.click(await screen.findByTestId('bug-cancel'));
     await waitFor(() => { expect(screen.queryByTestId('bug-send')).toBeNull(); });
   });
 });

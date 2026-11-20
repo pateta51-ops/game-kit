@@ -70,3 +70,56 @@ it("TextField types and passes native props", () => {
   expect(f).toHaveBeenCalledWith("x1");
   expect(screen.getByLabelText("Seed").getAttribute("data-part")).toBe("text-field");
 });
+
+it("Slider stays put at the ends and a pointer past either edge clamps", () => {
+  const f = vi.fn();
+  const { rerender } = render(<Slider label="Vol" min={0} max={10} step={1} value={10} onChange={f} />);
+  const s = screen.getByRole("slider");
+  rect(s);
+  fireEvent.keyDown(s, { key: "ArrowRight" });
+  expect(f).toHaveBeenLastCalledWith(10);
+  rerender(<Slider label="Vol" min={0} max={10} step={1} value={0} onChange={f} />);
+  fireEvent.keyDown(s, { key: "ArrowLeft" });
+  expect(f).toHaveBeenLastCalledWith(0);
+  fireEvent.pointerDown(s, { clientX: 500, pointerId: 1 });
+  expect(f).toHaveBeenLastCalledWith(10);
+  fireEvent.pointerDown(s, { clientX: -500, pointerId: 1 });
+  expect(f).toHaveBeenLastCalledWith(0);
+});
+
+it("Slider steps 0.25 and 5 land on the grid", () => {
+  const f = vi.fn();
+  const { rerender } = render(<Slider label="A" min={0} max={1} step={0.25} value={0.25} onChange={f} />);
+  fireEvent.keyDown(screen.getByRole("slider"), { key: "ArrowRight" });
+  expect(f).toHaveBeenLastCalledWith(0.5);
+  rerender(<Slider label="A" min={0} max={100} step={5} value={95} onChange={f} />);
+  rect(screen.getByRole("slider"));
+  fireEvent.pointerDown(screen.getByRole("slider"), { clientX: 52, pointerId: 1 });
+  expect(f).toHaveBeenLastCalledWith(50);
+  fireEvent.keyDown(screen.getByRole("slider"), { key: "ArrowRight" });
+  expect(f).toHaveBeenLastCalledWith(100);
+});
+
+it("Slider min 0.05 step 0.1 max 0.95 stays on the grid and never exceeds max", () => {
+  const f = vi.fn();
+  render(<Slider label="A" min={0.05} max={0.95} step={0.1} value={0.85} onChange={f} />);
+  const s = screen.getByRole("slider");
+  rect(s);
+  fireEvent.keyDown(s, { key: "ArrowRight" });
+  expect(f).toHaveBeenLastCalledWith(0.95);
+  fireEvent.keyDown(s, { key: "End" });
+  expect(f).toHaveBeenLastCalledWith(0.95);
+  fireEvent.pointerDown(s, { clientX: 100, pointerId: 1 });
+  expect(f).toHaveBeenLastCalledWith(0.95);
+  fireEvent.pointerDown(s, { clientX: 48, pointerId: 1 });
+  expect(f).toHaveBeenLastCalledWith(0.45);
+  fireEvent.keyDown(s, { key: "Home" });
+  expect(f).toHaveBeenLastCalledWith(0.05);
+});
+
+it("Slider copes with a tiny step", () => {
+  const f = vi.fn();
+  render(<Slider label="A" min={0} max={1e-6} step={1e-7} value={2e-7} onChange={f} />);
+  fireEvent.keyDown(screen.getByRole("slider"), { key: "ArrowRight" });
+  expect(f).toHaveBeenLastCalledWith(3e-7);
+});
