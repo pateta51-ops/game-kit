@@ -391,7 +391,7 @@ A character select screen before a game: roster by set, hero, deck browser, trac
 
 ## check-runner
 
-`node kit/check-runner/check-runner.ts [--config path] [--pr] [--fail-fast] [--keep-going]`
+**What it does:** Scripts a game runs with `node` from its root: the check chain in lanes, a per-item gate with a known-failing list, and a cap on whole-game tests.
 
 - **Use it when:** Running `npm run check` lanes in parallel with process-tree timeouts and a drift check.
 - **Not for:** Writing the checks themselves.

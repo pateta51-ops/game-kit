@@ -2,6 +2,28 @@
 
 Pull this component and use it where it is: a game never edits or copies its `kit/` files. Nothing here names a repository, runner or login.
 
+## Rules for agents
+
+**What it does:** Workflow templates and scripts for a game's CI, rendered from one `ci.config.json`. Workflows are generated, never hand-edited.
+
+**You must:**
+1. Write `ci.config.json` at the repo root with `repo` (`<owner>/<repo>`) and `runnerLabel`; every other change to CI goes into this file, never into `.github/workflows/`.
+2. Run `node kit/ci-templates/render.mjs` after every edit of the config and after every pull of this component, and commit the result. Put `node kit/ci-templates/render.mjs --check` in the game's check chain: it fails on a hand-edited or stale workflow.
+3. A key with no place in the template stops the render; fix the key, do not work around it.
+4. While GitHub-hosted minutes are blocked for private repos, every private game must set `"docsRunsOn": "self"`: the `changes` and `docs` jobs then run on `[self-hosted, <runnerLabel>]` instead of `ubuntu-latest` and pass the heavy queue without a slot (jobs named in `HEAVY_LIGHT_JOBS`, default `changes docs`). Without it the hosted job fails in seconds and every non-draft PR goes red. `"docsSkip": false` removes the jobs altogether.
+5. Run the scripts from `kit/ci-templates/` (`full-gate.mjs`, `local-ci.sh`, `watch-run.sh` or `.mjs`); the full gate reads the slug and `e2eScripts` from `ci.config.json`.
+6. In `playwright.config.ts` spread `gateCaps()` from `kit/ci-templates/playwright-caps` and add its reporter; set `E2E_TEST_TIMEOUT_MS` near the suite's worst case, and `gate.timeoutMinutes` if 30 min is too short.
+7. Install the runner from WSL with `RUNNER_REPO`, `RUNNER_LABEL` (the config's `runnerLabel`) and a fresh `RUNNER_TOKEN` (valid one hour) through `install-wsl.sh`; it exits 2 on a missing or malformed token.
+8. Never add `pull_request_target` or repository secrets; the full gate refuses a PR whose head is outside the repository.
+9. Watch a long run with one background `watch-run` command, not a foreground wait.
+
+**Common mistakes:**
+- Editing a workflow by hand: the next render overwrites it and `--check` fails.
+- A wrong `ownerLogin`: another login's jobs are skipped silently.
+- Copying `kit/ci-templates` files into the game instead of using them in place.
+- A multi-line `if` on the `check` job: it must be one line.
+
+
 1. Write `ci.config.json` in the repository root: `{ "repo": "<owner>/<repo>", "runnerLabel": "<label>" }`. Optional: `"ownerLogin"` (default the repository's owner), `"workflows"` (default `["ci.yml", "full-gate.yml"]`; add `"nightly-fuzz.yml"` when the game has `npm run fuzz:nightly`), `"e2eScripts"` (the npm scripts the full gate and `local-ci.sh` run, default `["test:e2e"]`), `"pathsIgnore"` (paths whose pushes to main run no CI, for example `["bugs/**"]`), `"runDrafts": true` (CI on draft pull requests too), `"push": false` (no CI on a push to main), `"prTypes"` (the pull_request types, instead of the template's). A gate of several steps: `"ci": { "steps": [...] }` puts those steps where `ci.yml` has `npm run check`, and `"gate": { "steps": [...] }` does the same in `full-gate.yml`; both also take `"name"` (the job's), `"timeoutMinutes"`, `"node"` (more `with` keys for setup-node, for example `{ "cache": "npm" }`), `"install"` (the step instead of `npm ci --no-audit --no-fund`) and, `ci` only, `"checkout"` (the checkout's `with`). More jobs in `ci.yml` (same runner and guard, a checkout first): `"jobs": { "python": { "name": "...", "timeoutMinutes": 15, "steps": [...] } }`. A step is a command (`"npm run lint"`) or the step's keys in the order to write them (`{ "name": "...", "uses": "actions/setup-python@v7", "with": { "python-version": "3.13" } }`, `run`, `env`, `if`, `working-directory`); a `run` of several lines is written as a block. In the full gate, commands run in `full-gate/`, and a path in `with` or `working-directory` starts with `full-gate/`.
 
 Queue wait (K434): on a self-hosted job the heavy-queue `runner-job-started` hook waits for a slot before the first step, and that wait counts against `timeout-minutes`. So the rendered job gets `timeoutMinutes + queueWaitMinutes` (`queueWaitMinutes` in `ci.config.json`, default 60, `false` for none) and each of its `run` steps without a `timeout-minutes` of its own gets `timeoutMinutes` (the job's value before the addition). Jobs whose `runs-on` has no `self-hosted` (hosted runners) are written as before.

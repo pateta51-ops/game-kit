@@ -4,6 +4,21 @@ A prompt choice whose source card has left play (an "after this is discarded" tr
 hang its button on. `ghostChoices` splits the choices: those the table shows, and one group per absent source with
 the card as it last was, which the screen draws as a ghost card (a modal or a side slot) carrying those buttons.
 
+## Rules for agents
+
+**What it does:** Splits a prompt's choices into those the table shows and one group per absent source (a card that left play), to draw as a ghost card carrying the buttons.
+
+**You must:**
+1. Call `ghostChoices(choices, sourceOf, onBoard, snapshotOf, key?)` with the open prompt's choices.
+2. `sourceOf(c)` returns an id or an engine-core `ObjectRef`, or undefined for pass and rule actions.
+3. `onBoard(r)` says whether the source is on the table now (with refs: `isCurrent` and in a table zone).
+4. `snapshotOf(r)` returns the card as last seen (engine-core `lastKnown(state, r)?.obj`).
+5. Draw each ghost yourself, dimmed, with its `choices` as buttons (a stand-in when `snapshot` is undefined).
+
+**Common mistakes:**
+- Drawing only the `onTable` choices: the ghost choices then have no button anywhere.
+
+
 | Argument | What the game passes in |
 |---|---|
 | `choices` | The open prompt's choices. |

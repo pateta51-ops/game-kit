@@ -2,6 +2,24 @@
 
 Playwright helpers a game's browser tests share. Lifted from Imperium's `e2e/helpers.ts`, with STCC's `shoot`, `VIEWPORTS` and `motionsDone`, Jarl's autosave wait and Unstoppable's axe helper. `page` and `testInfo` are Playwright's, typed by shape: the kit installs no Playwright and no axe. A failed check throws, which fails the test.
 
+## Rules for agents
+
+**What it does:** Playwright helpers a game's browser tests share: error watching, settling, viewports, screenshots and autosave waits.
+
+**You must:**
+1. Call `watchErrors(page, ignore?)` at the start of a test and `w.check()` at the end; it throws on uncaught exceptions, console errors, 400+ responses and failed requests.
+2. Ignore known noise with `ignore` (substrings or regexes), for example `ERR_ABORTED` when the game cancels requests.
+3. Call `settle(page)` or `finishAnimations(page)` before screenshots and measurements; set the game's moving marker (default `html[data-moving]`) and use `motionsDone`.
+4. Call `expectNoHorizontalScroll(page, where)` for each viewport in `VIEWPORTS` (`uhd`, `laptop`, `phone`).
+5. Before `page.reload()` call `autosaveSettled(memoryCount, storedCount)`; it throws when the counts are not equal by the timeout.
+6. Pass Playwright's own `page` and `testInfo`; the kit installs neither Playwright nor axe.
+7. Run the suites through the game's e2e npm scripts (the machine queue), desktop and phone.
+
+**Common mistakes:**
+- Skipping `check()`: errors are collected but nothing fails.
+- Reading the stored count with your own code that opens the database: use `idbCount`, which never creates it.
+
+
 `index.ts`:
 
 - `watchErrors(page, ignore?)` at the start of a test; returns `{ errors, check() }`. It collects uncaught exceptions, console errors, requests answered 400 or more and requests that failed (an aborted one counts: ignore `ERR_ABORTED` if the game cancels requests); `ignore` (substrings or regexes) drops lines such as an optional pack address. Call `check()` at the end.

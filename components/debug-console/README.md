@@ -2,6 +2,23 @@
 
 A console line for the engine-core debug edits (K100). Needs `engine-core`. Tests: `console.test.tsx`.
 
+## Rules for agents
+
+**What it does:** A one-line console for engine-core debug edits (`set`, `force`, `close` and the game's own verbs).
+
+**You must:**
+1. Mount it only in dev builds (or behind a key); the game decides where.
+2. The game opts in: `GameRules.debug` must exist (`{}` gives the kernel verbs) and the action type is `AnswerAction | DebugAction`.
+3. Pass `verbs={debugVerbs(rules)}`; with a game-store use `send={store.debug}` (its own undo step, saved and replayed, then settled and autosaved).
+4. `send` must return the refusal words or nothing; the console marks refusals.
+5. Name positional tokens per verb with `params` (`{ summon: ['card'] }`); quote text with spaces (`to="hand zone"`).
+6. Set the `--dbg-*` variables for the look; `debug.css` is imported by the component.
+
+**Common mistakes:**
+- Sending the action around the store: the edit is not recorded, so undo and load lose it; use `store.debug`.
+- Leaving the console in a production build.
+
+
 - `parseDebug(line, verbs, params?)` -> `DebugAction` or `{ error }`. `verbs` is `debugVerbs(game)`. Syntax (slash optional): `/set path.to.number value [min] [max]` (numeric path parts are indexes), `/force n [n ...] [name=roll]`, `/close`, `/<game verb> key=value ...`; `params` names positional tokens per verb (`{ summon: ['card'] }` makes `/summon 9` mean `card=9`). Values read as JSON when they parse, else as text; quote text with spaces (`to="hand zone"`).
 - `<DebugConsole verbs params? send className? />` (`ui.ts`): one input; Enter parses and calls `send(action)`, which applies it through the game's store (so it is recorded like an answer) and returns the refusal words or nothing; the last 50 lines show above the input, refusals marked; Up recalls the last command.
 - K302 on a store-driven game: `send={store.debug}` (game-store `debug`: its own undo step, saved and replayed like an answer, then settled, paced and autosaved); the mount block below.
