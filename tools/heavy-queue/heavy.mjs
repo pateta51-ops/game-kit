@@ -89,7 +89,7 @@ function beat(f, pid, lease) {
 // --mem <GiB>: the command runs in a memory-capped systemd scope with no swap, so the kernel kills the job and not the VM (K474). Never uncapped: null when no cap can be set.
 export function capCmd(gib, cmd, bin = process.env.HEAVY_SYSTEMD_RUN || 'systemd-run') {
   const cap = ['--user', '--scope', '-q', '-p', `MemoryMax=${gib}G`, '-p', 'MemorySwapMax=0'];
-  const ok = spawnSync(bin, [...cap, 'true'], { stdio: 'ignore' });
+  const ok = spawnSync(bin, [...cap, '--', 'true'], { stdio: 'ignore' });
   return ok.status === 0 ? [bin, ...cap, '--', ...cmd] : null;
 }
 
