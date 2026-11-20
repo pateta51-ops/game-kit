@@ -25,6 +25,15 @@ Checks:
   expectNotFired in its Poor setup cell; the Definition of Done names expectNotOffered, "default-off" and
   "LLM playtest"; the test-layers section ("Layers") names "LLM playtest"; a phase block in the phases section names
   llm-playtester; the shared preamble names e2e and heavy (the machine queue);
+- card encoding (problems prefixed "cards:"; with --cards-optional they are NOTEs, for a plan written before 20 Nov 2026
+  only): the catalogue file exists (--catalogue PATH, else cards/catalogue.json beside the plan; contract
+  {"summary": {"clauses": <int>}, "patterns": [{"id": "P-01", ...}, ...]}); the plan names ar-map.md; a "Modifier order"
+  heading whose table rows each hold an AR-n or IR-n id (header and separator rows, and rows starting "<", skipped); the
+  card-test section names cardCase and "interaction"; a "Screen-text scan" heading; the Definition of Done names
+  cards:check, cards:screen and cards:whole-game; a phase block names cards:whole-game; the session table has Clauses
+  and Patterns columns, no row over --max-clauses (default 40) clauses or --max-patterns (default 10) patterns (ids
+  comma-separated), the Clauses cells sum to the catalogue's summary.clauses, and every catalogue pattern id is in a
+  Patterns cell;
 
 Extraction (prints and exits, no checks):
   --section 5.3   one numbered section
@@ -57,6 +66,7 @@ docs/PLAN.md marks done.
 Usage: python plancheck.py docs/BUILD_PLAN.md [--tsc] [--scenarios TEXT] [--phases TEXT] [--types TEXT] [--tsc-stub TEXT]
        [--sessions TEXT] [--sessions-optional] [--scenarios-end TEXT] [--cover TEXT] [--cover-rows A,B]
        [--cover-skip A,B] [--tsc-at DIR] [--cards TEXT] [--done TEXT] [--layers TEXT] [--depth-optional]
+       [--cards-optional] [--catalogue PATH] [--max-clauses N] [--max-patterns N]
 Exit code 0 when no problems were found.
 """
 from __future__ import annotations
@@ -334,7 +344,8 @@ def main() -> int:
     safe_console()
     args = [a for a in sys.argv[1:] if not a.startswith("--")]
     for flag in ("--scenarios", "--phases", "--types", "--sessions", "--section", "--batch", "--scenarios-end", "--cover",
-                 "--cover-rows", "--cover-skip", "--tsc-stub", "--kit", "--tsc-at", "--cards", "--done", "--layers"):
+                 "--cover-rows", "--cover-skip", "--tsc-stub", "--kit", "--tsc-at", "--cards", "--done", "--layers",
+                 "--catalogue", "--max-clauses", "--max-patterns"):
         if flag in sys.argv:
             v = opt(flag, "")
             if v in args:
@@ -471,6 +482,9 @@ def main() -> int:
     # --- session plan: every phase in exactly one batch; every batch has a model and a confidence ---
     sess_kw = opt("--sessions", "Session plan")
     sess = section(lines, heads, sess_kw)
+    cd: list[str] = []
+    ch, csum, pids = [0, 0], 0, []
+    maxc, maxp = int(opt("--max-clauses", "40")), int(opt("--max-patterns", "10"))
     phase_ids: list[str] = []
     for _, _, h in section_headings(heads, opt("--phases", "Implementation phases")):
         m = re.match(r"Phase\s+([A-Za-z0-9]+)\b", h)
@@ -500,11 +514,24 @@ def main() -> int:
                         j += 1
                     i = j
                     continue
+                cc, pc = (next((k for k, c in enumerate(header) if w in c), None) for w in ("clauses", "patterns"))
+                ch[0] |= cc is not None
+                ch[1] |= pc is not None
                 while j < len(slines) and slines[j].strip().startswith("|"):
                     cells = [c.strip() for c in table_cells(slines[j])]
                     if len(cells) == len(header):
                         batch = cells[0].strip("`*") or f"row {j + 1}"
                         batches += 1
+                        if cc is not None and cells[cc].strip("`*").isdigit():
+                            csum += int(cells[cc].strip("`*"))
+                            if int(cells[cc].strip("`*")) > maxc:
+                                cd.append(f"{batch} has {cells[cc].strip('`*')} clauses (cap {maxc})")
+                        if pc is not None:
+                            ids = [x.strip("`* ") for x in cells[pc].split(",")]
+                            ids = [x for x in ids if x.strip("-—– ")]
+                            pids += ids
+                            if len(ids) > maxp:
+                                cd.append(f"{batch} has {len(ids)} patterns (cap {maxp})")
                         toks = phase_tokens(cells[cols["phase"]])
                         if not toks:
                             problems.append(f"{batch}: no phases listed")
@@ -595,6 +622,48 @@ def main() -> int:
         notes |= {f"depth: {d}" for d in depth}
     else:
         problems += [f"depth: {d}" for d in depth]
+
+    # --- card encoding: catalogue, AR map, modifier order, screen-text scan, whole-game check, batch size ---
+    cat = Path(opt("--catalogue", str(path.parent / "cards" / "catalogue.json")))
+    if not cat.exists():
+        cd.append(f"no catalogue ({cat}): stage 5b")
+    if "ar-map.md" not in src:
+        cd.append("the plan does not name ar-map.md")
+    mo = section(lines, heads, "modifier order")
+    if not mo:
+        cd.append("no heading contains 'Modifier order'")
+    ml = mo.split("\n")
+    for n, l in enumerate(ml[:-1]):
+        c0 = [c.strip() for c in table_cells(l)] if l.strip().startswith("|") else []
+        if (c0 and re.match(r"^\|[\s\-:|]+\|$", ml[n + 1].strip()) is None and not re.fullmatch(r"[\s:-]*", c0[0])
+                and not c0[0].startswith("<") and not re.search(r"\b(?:AR|IR)-\d+", l)):
+            cd.append(f"Modifier order: row {c0[0]!r} has no AR or IR id")
+    if "cardCase" not in cards or "interaction" not in cards.lower():
+        cd.append("the card-test section does not name cardCase and 'interaction'")
+    if find_heading(heads, "screen-text scan") is None:
+        cd.append("no heading contains 'Screen-text scan'")
+    for need in ("cards:check", "cards:screen", "cards:whole-game"):
+        if need not in done:
+            cd.append(f"the Definition of Done lacks {need}")
+    if kph is not None and not any("cards:whole-game" in "\n".join(lines[slice(*span_of(lines, heads, k))])
+                                   for k, (i, _, t) in enumerate(heads) if a < i < b and re.match(r"Phase\s+\w", t)):
+        cd.append("no phase names cards:whole-game")
+    for w, on in (("Clauses", ch[0]), ("Patterns", ch[1])):
+        if not on:
+            cd.append(f"the session table has no {w} column")
+    if cat.exists():
+        try:
+            cj = json.loads(cat.read_text(encoding="utf-8"))
+            tot, cp = cj["summary"]["clauses"], [p["id"] for p in cj["patterns"]]
+            if ch[0] and tot != csum:
+                cd.append(f"{tot} clauses in the catalogue, {csum} in batches")
+            cd += [f"pattern {p} is in no batch" for p in cp if ch[1] and p not in pids]
+        except Exception:  # noqa: BLE001
+            cd.append(f"catalogue ({cat}) does not parse or lacks summary.clauses / patterns")
+    if "--cards-optional" in sys.argv:
+        notes |= {f"cards: {d}" for d in cd}
+    else:
+        problems += [f"cards: {d}" for d in cd]
 
     # --- the type contract ---
     if "--tsc" in sys.argv:

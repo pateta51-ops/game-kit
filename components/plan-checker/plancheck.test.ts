@@ -78,7 +78,7 @@ describe('plancheck.py flags (K68)', () => {
     writeFileSync(f, text, 'utf-8');
     return f;
   };
-  const run = (text: string, ...flags: string[]): number => main(['--plan', plan(text), '--depth-optional', ...flags]);
+  const run = (text: string, ...flags: string[]): number => main(['--plan', plan(text), '--depth-optional', '--cards-optional', ...flags]);
   const full = PLAN.replace('\nSC-01\n', '\nSC-01, SC-02\n');
   const end = ['--sessions-optional', '--scenarios-end', 'Property tests'];
   afterEach(() => vi.unstubAllEnvs());
@@ -170,7 +170,7 @@ describe('plancheck.py kit warnings (K207)', () => {
   };
   const py = candidates(process.env, process.platform)[0] ?? ['python'];
   const out = (f: string, ...a: string[]): string =>
-    spawnSync(py[0] ?? 'python', [...py.slice(1), fileURLToPath(new URL('./plancheck.py', import.meta.url)), f, '--sessions-optional', '--depth-optional', ...a], { encoding: 'utf-8' }).stdout;
+    spawnSync(py[0] ?? 'python', [...py.slice(1), fileURLToPath(new URL('./plancheck.py', import.meta.url)), f, '--sessions-optional', '--depth-optional', '--cards-optional', ...a], { encoding: 'utf-8' }).stdout;
   it('warns on a pin 5+ minor versions behind and on a done K row, without failing', () => {
     const o = out(plan('v0.3.0', 'Targets K25 and K26.'), '--kit', kit);
     expect(o).toContain('WARN kit pin v0.3.0 is far behind the latest kit tag v0.9.0');
@@ -229,7 +229,7 @@ Unit, e2e, LLM playtest.
   const direct = (text: string, ...flags: string[]): { code: number | null; out: string } => {
     const f = join(dir, `p${n++}.md`);
     writeFileSync(f, text, 'utf-8');
-    const base = ['--sessions-optional', '--scenarios-end', 'Property tests', ...flags];
+    const base = ['--sessions-optional', '--scenarios-end', 'Property tests', '--cards-optional', ...flags];
     const r = spawnSync(py[0] ?? 'python', [...py.slice(1), fileURLToPath(new URL('./plancheck.py', import.meta.url)), f, ...base], { encoding: 'utf-8' });
     expect(main(['--plan', f, ...base])).toBe(r.status);
     return { code: r.status, out: r.stdout };
@@ -284,5 +284,127 @@ Unit, e2e, LLM playtest.
   });
   it('the old checks give the same result with the depth flag', () => {
     expect(bad(PLAN, '--depth-optional')).toContain('SC-02');
+  });
+});
+
+describe('plancheck card encoding checks (K492)', () => {
+  const dir = tmp('plancheck-cards-');
+  let n = 0;
+  const cat = join(dir, 'cat.json');
+  writeFileSync(cat, JSON.stringify({ summary: { clauses: 30 }, patterns: [{ id: 'P-01' }, { id: 'P-02' }] }));
+  const BASE = `${PLAN.replace('\nSC-01\n', '\nSC-01, SC-02\n')}
+#### Phase 1 - playtest
+
+Build llm-playtester. Run cards:whole-game.
+
+## 11.4 Session plan
+
+| Batch | Phase | Model | Confidence | Clauses | Patterns |
+|---|---|---|---|---|---|
+| B1 | 0 | opus | 80% | 10 | P-01 |
+| B2 | 1 | opus | 80% | 20 | P-02 |
+
+## 12. Shared preamble
+
+Run e2e through heavy run. Rulings: ar-map.md.
+
+## 13. Card-language test programme
+
+Each test is cardCase; add an interaction test.
+
+| Family | Full resolve | Poor setup |
+|---|---|---|
+| Events | one per clause | expectNotOffered |
+| Triggers | one per clause | expectNotFired |
+
+### 13.1 Modifier order
+
+| Step | Rule |
+|---|---|
+| a | AR-12 |
+| b | IR-03 |
+| <skipped> | none |
+
+### 13.2 Screen-text scan
+
+Scan.
+
+## 14. Definition of Done
+
+A poor test calls expectNotOffered; default-off paths covered; LLM playtest run; cards:check, cards:screen, cards:whole-game pass.
+
+## 15. Layers
+
+Unit, e2e, LLM playtest.
+`;
+  const py = candidates(process.env, process.platform)[0] ?? ['python'];
+  const direct = (text: string, ...flags: string[]): { code: number | null; out: string } => {
+    const f = join(dir, `p${n++}.md`);
+    writeFileSync(f, text, 'utf-8');
+    const base = ['--scenarios-end', 'Property tests', ...(flags.includes('--catalogue') ? [] : ['--catalogue', cat]), ...flags];
+    const r = spawnSync(py[0] ?? 'python', [...py.slice(1), fileURLToPath(new URL('./plancheck.py', import.meta.url)), f, ...base], { encoding: 'utf-8' });
+    expect(main(['--plan', f, ...base])).toBe(r.status);
+    return { code: r.status, out: r.stdout };
+  };
+  const bad = (text: string, want: string, ...flags: string[]): void => {
+    const r = direct(text, ...flags);
+    expect(r.code).toBe(1);
+    expect(r.out).toContain(`PROBLEM cards: ${want}`);
+  };
+  const without = (from: string, to = ''): string => {
+    expect(BASE).toContain(from);
+    return BASE.replace(from, to);
+  };
+  it('a plan with every cards element passes', () => {
+    const r = direct(BASE);
+    expect(r.out).not.toContain('cards:');
+    expect(r.code).toBe(0);
+  });
+  it('no catalogue, unparsable catalogue, and --catalogue names it', () => {
+    bad(BASE, 'no catalogue', '--catalogue', join(dir, 'missing.json'));
+    const badc = join(dir, 'bad.json');
+    writeFileSync(badc, '{}');
+    bad(BASE, 'catalogue', '--catalogue', badc);
+  });
+  it('the plan names ar-map.md; a Modifier order heading; rows hold AR or IR ids', () => {
+    bad(without(' Rulings: ar-map.md.'), 'the plan does not name ar-map.md');
+    bad(without('Modifier order', 'Order'), "no heading contains 'Modifier order'");
+    bad(without('| b | IR-03 |', '| b | none |'), "Modifier order: row 'b' has no AR or IR id");
+  });
+  it('cardCase and interaction; Screen-text scan; Definition of Done names', () => {
+    bad(without('Each test is cardCase; add an interaction test.', 'Tests.'), "the card-test section does not name cardCase and 'interaction'");
+    bad(without('Screen-text scan', 'Scan'), "no heading contains 'Screen-text scan'");
+    for (const w of ['cards:check', 'cards:screen']) bad(without(`${w}, `), `the Definition of Done lacks ${w}`);
+    bad(without('cards:whole-game pass', 'pass'), 'the Definition of Done lacks cards:whole-game');
+  });
+  it('a phase names cards:whole-game', () => {
+    bad(without(' Run cards:whole-game.'), 'no phase names cards:whole-game');
+  });
+  it('session table: Clauses and Patterns columns, sum, every pattern in a batch', () => {
+    const nocols = BASE.replace(' Clauses | Patterns |', '').replace('|---|---|---|---|---|---|', '|---|---|---|---|').replace(/ \| \d+ \| P-0\d \|/g, ' |');
+    const r = direct(nocols);
+    expect(r.out).toContain('PROBLEM cards: the session table has no Clauses column');
+    expect(r.out).toContain('PROBLEM cards: the session table has no Patterns column');
+    bad(without('| 10 | P-01 |', '| 9 | P-01 |'), '30 clauses in the catalogue, 29 in batches');
+    bad(without('| 20 | P-02 |', '| 20 | P-01 |'), 'pattern P-02 is in no batch');
+  });
+  it('--max-clauses and --max-patterns cap a batch (defaults 40 and 10)', () => {
+    bad(BASE, 'B2 has 20 clauses (cap 15)', '--max-clauses', '15');
+    bad(without('| 20 | P-02 |', '| 20 | P-02, P-03, P-04 |'), 'B2 has 3 patterns (cap 2)', '--max-patterns', '2');
+    expect(direct(BASE, '--max-clauses', '20').code).toBe(0);
+    bad(without('| 10 | P-01 |', '| 41 | P-01 |'), 'B1 has 41 clauses (cap 40)');
+    const many = Array.from({ length: 11 }, (_, i) => `P-${i + 10}`).join(', ');
+    bad(without('| 20 | P-02 |', `| 20 | P-02, ${many} |`), 'B2 has 12 patterns (cap 10)');
+  });
+  it('--cards-optional turns every cards problem into a NOTE; an old plan stays green, and without it fails', () => {
+    const old = `${BASE.split('## 11.4 Session plan')[0] ?? ''}## 12. Shared preamble\n\ne2e heavy\n\n## 13. Card-language test programme\n\n| Family | Full resolve | Poor setup |\n|---|---|---|\n| E | one per clause | expectNotOffered |\n\n## 14. Definition of Done\n\nA poor test calls expectNotOffered; default-off; LLM playtest.\n\n## 15. Layers\n\nLLM playtest\n`;
+    const miss = join(dir, 'missing.json');
+    const o = direct(old, '--sessions-optional', '--cards-optional', '--catalogue', miss);
+    expect(o.code).toBe(0);
+    expect(o.out).toContain('NOTE cards: ');
+    expect(o.out).not.toContain('PROBLEM');
+    const r = direct(old, '--sessions-optional', '--catalogue', miss);
+    expect(r.code).toBe(1);
+    expect(r.out).toContain('PROBLEM cards: ');
   });
 });
