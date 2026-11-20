@@ -2,6 +2,7 @@
 # K399: copy the heavy queue to ~/.local/share/heavy-queue (HEAVY_HOME), install it as the always-on systemd service
 # heavy-queue.service (as the invoking user) and link `heavy` into ~/.local/bin; the unit, the link and the runner hooks use
 # the copy, never a checkout. Idempotent: run it again to update the copy. HEAVY_SLOTS=<n> sets the slots (default 2).
+# K495: the queue drops WSL's file cache after jobs (HEAVY_DROP_CACHE_GB, HEAVY_DROP_EVERY_MS); that needs passwordless sudo (sudo -n).
 set -e
 S=$(cd "$(dirname "$(readlink -f "$0")")" && pwd)
 D=${HEAVY_HOME:-$HOME/.local/share/heavy-queue}
