@@ -16,7 +16,7 @@
   --cs-gap: calc(var(--cs-u) * 1.2);
   --cs-roster-w: calc(var(--cs-u) * 25);
   --cs-hero-w: calc(var(--cs-u) * 64);
-  --cs-bottom-h: calc(var(--cs-u) * 19);
+  --cs-bottom-h: calc(var(--cs-u) * 23);
   --cs-card-ratio: 0.7156;
   display: grid;
   box-sizing: border-box;
