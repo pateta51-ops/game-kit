@@ -477,7 +477,7 @@ export function createMotionPlayer<C = undefined>(o: PlayerOptions<C>): MotionPl
     };
     if (!redraw) {
       commit(item);
-      item.afterCommit?.(me as Current<unknown>);
+      item.afterCommit?.(me);
       if (live.has(me)) schedule();
       return;
     }
@@ -491,7 +491,7 @@ export function createMotionPlayer<C = undefined>(o: PlayerOptions<C>): MotionPl
     try {
       const before = swap && measureBoard(swap, swap.leave !== 'none');
       commit(item);
-      item.afterCommit?.(me as Current<unknown>);
+      item.afterCommit?.(me);
       if (!live.has(me)) return;
       const cancel = waitForRects(spec, stage, () => {
         if (!live.has(me)) return;
