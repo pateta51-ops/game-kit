@@ -1,6 +1,24 @@
 # art-pipeline
 Game-free scripts that get a card game's art from its sources to `public/` with a manifest `tooling-scripts/art-check.ts` verifies. Everything game-specific (ids, URLs, paths, the order of preference) is in JSON config files; each script takes `--config <json>` (paths relative to that file), exits 0 clean, 1 findings, 2 usage or a failed read, and exports `run(args, io)`. Run with plain `node kit/art-pipeline/<script>.ts`.
 
+## Rules for agents
+
+**What it does:** takes a card game's art from its sources to `public/` in steps (fetch, extract, render a PDF, index, publish, cache), each driven by a JSON config, with a manifest the art check verifies.
+
+**You must:**
+1. Run each script with plain node: `node kit/art-pipeline/<script>.ts --config <json>` (paths in the config are relative to the config file). Exit 0 is clean, 1 findings, 2 usage or a failed read: read the findings before going on.
+2. Keep every game-specific value (ids, URLs, paths, the order of sources) in the config files; never edit the scripts or `kit/`.
+3. Run the steps in order: `art-fetch` / `art-extract` / `art-render-pdf` leave pictures and a records file, `art-index` picks one picture per card from the records in the order given, `art-publish` copies them and writes the manifest, then run `node kit/tooling-scripts/art-check.ts` on it.
+4. Install the optional packages yourself when you use them: `pdfjs-dist` and `@napi-rs/canvas` for `art-render-pdf`, `sharp` for any format but 8-bit PNG (name it in the config's `sharp`). The kit installs none of them.
+5. `art-fetch` goes to the network: run it by hand as a manual step, never in a check or in CI; give it `gapMs` and a `userAgent`, and use `--refresh` only to ask again for remembered misses.
+6. Use `art-index --strict` when every card must have art; read `missing` otherwise.
+7. Use `art-ci-cache` to key and restore the costly folders on CI; its key comes from the inputs' content.
+
+**Common mistakes:**
+- A failed fetch item is reported and the run goes on: exit 1 still means something is missing.
+- Cropping or converting a non-PNG without `sharp`: the built-in codec reads and writes 8-bit PNG only.
+- Running the fetch in a check: it asks the network every time.
+
 Pipeline: `art-fetch` / `art-extract` / `art-render-pdf` each leave pictures plus a records file `{ id: { file, ... } | { miss } }` (files relative to the art root); `art-index` picks one per card from the records in the game's order; `art-publish` copies the chosen pictures to public and writes the manifest; `art-ci-cache` saves and restores the costly folders on CI.
 
 - `art-fetch.ts`: `{ cache, from?, userAgent?, gapMs?, timeoutMs? (600000), retries? (3, doubling `backoffMs` 1000), items: [{ id, source, url, name? }] }`. A URL is `http(s)://`, `file:` or a path under `from` (a local folder). Writes `<cache>/<source>/<name>.<ext>` and `<cache>/<source>.json` (url, sha256, bytes); a failed item is reported (exit 1) and the run goes on; the records file is rewritten atomically after each item; a cached file is hashed again and fetched anew when it differs from its sha256; skips files already there and remembered misses (`--refresh` asks again); at most one request per `gapMs`. Manual step, never in a check.

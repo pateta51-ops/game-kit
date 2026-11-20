@@ -2,6 +2,25 @@
 
 Hash routes, the screen of the address bar with an error boundary and lazy loading, and start-up. The game keeps its screens, its route machine, its crash screen and its words. Needs `state-machines` and the packages `react` and `react-dom`. `index.ts` draws nothing and loads in node; `ui.ts` holds the React parts.
 
+## Rules for agents
+
+**What it does:** Hash routing, a frame that draws each route in an error boundary with lazy loading, a fixed-size scaled stage, a crash screen and the start-up call.
+
+**You must:**
+1. Import `kit/app-frame/index` for the route functions (loads in node) and `kit/app-frame/ui` for the React parts; the frame loads its own `frame.css`.
+2. Pass `AppFrame` a `routes` map and `home`; a hash whose name is not in `routes` is read as `home`.
+3. Define each `load: () => import(...)` once, outside render, and return `{ default: Screen }`; do not pass a `React.lazy` as `screen` (a failed import cannot be retried).
+4. Start the app with `startApp(app, { root, before, hook })`: the root element must exist (default `#root`) or it throws; pass `hook` only in dev or end-to-end builds.
+5. For the game's own moves (redirects, the step after a flow) call `follow(machine, from, event, home)` with a route machine from `state-machines`; an edge the table lacks throws.
+6. When you use `<Stage>`, start phone-mode's viewport with `fit: false`, or the two scalers multiply.
+7. Put a `CrashScreen` in `fallback` and give it `getSave` so the player can download the save; word it through `words`.
+8. Place children of `Stage` with `zone(...)` from `board-layout`, not fixed pixel offsets.
+
+**Common mistakes:**
+- Calling `window.location.hash = ...` for your own moves instead of `follow` / `navigate`: the route machine is bypassed.
+- A `getSave` that never settles: the crash screen only waits `timeoutMs` (10 s), then shows the failed words.
+- Expecting a phone layout to come from `Stage`: it only scales; a flowing phone layout stays in the game.
+
 ## Routes (`routes.ts`)
 
 - `parseHash(hash, names, home)`: `#/name/part/part?query` gives `{ name, parts, query }` (parts decoded; a bad escape stays as written). No hash, `#/` and a name not in `names` are `home`.

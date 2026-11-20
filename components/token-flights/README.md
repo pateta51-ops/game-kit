@@ -1,6 +1,23 @@
 # token-flights
 Tokens that moved between two views fly from where they were to where they are, and a ledger keeps each token in one place at a time. Port of Unstoppable's `flights.ts`, `flightLedger.ts` and `TokenFlights.tsx`. `index.ts` is pure (loads in node); `ui.ts` adds React.
 
+## Rules for agents
+
+**What it does:** Tokens that moved between two views fly from where they were to where they are, and a ledger keeps each token drawn in one place at a time; 3D object flights are in `three.ts`.
+
+**You must:**
+1. Pass `placement` (place key to token values), `supplyOf(key)` (the supply a place draws from; undefined for a place that never flies) and `render(move)` (`{ src, size, clip? }` in px, or null to skip).
+2. Give every place, supplies included, a `data-place="<key>"` (or `data-res`), or pass `find(key)`.
+3. Create one `createFlightLedger()` per table, not a global, and draw rows with `shownTokens`, `shownCounts` or `shownCount`; numbers beside tokens stay final.
+4. Pass `speed` (0 none), `undoNo` (change it on undo, redo or load), `enabled` and `reduced()`; each settles to the final state at once with nothing in the ledger.
+5. If you pass `hold(move, launch)`, it runs for every move: filter which ones wait and always call `launch`.
+6. Import `index` for pure parts and `ui` for React; for 3D import `three` (a game dependency) and use `flyObject3d` with a preset of your own or `WARP_FLIGHTS_3D`; there is no default preset.
+7. Use `isSoftwareGl()` to keep 2D tokens on CPU WebGL.
+
+**Common mistakes:**
+- A place that left the view: its tokens are taken back unseen, with no flight.
+- A `hold` that does not call `launch`: tokens never take off.
+
 ## The game passes
 - `placement`: `Record<placeKey, number[]>`, the token values each place draws now (`{ credits: [3, 1], 'threat:a': [5] }`). Keys are the game's strings.
 - `supplyOf(key)`: the supply a place draws from and gives back to (`credits` -> `bank`), or undefined for a place that never flies. A supply is a place too: give it a `data-place`. `Move.kind` is that supply key.

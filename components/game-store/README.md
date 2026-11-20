@@ -2,6 +2,24 @@
 
 One game store and one game object (K234): `defineGame` is what the game writes once; `createGameStore` joins engine-core step undo, prompt-host forced answers, paced-view steps, autosave and the opponent seat. Needs engine-core, prompt-host, paced-view (and sim-pool, replay-cli for `sim.ts`). Recipe: [game-store](../../docs/recipes/game-store.md).
 
+## Rules for agents
+
+**What it does:** One game store and one game object: engine-core step undo, forced answers, paced views, autosave and the opponent seat joined.
+
+**You must:**
+1. Write the game once with `defineGame({ rules, content, seats, start, view, ... })`; `view(state, seat)` must be the seat's own redacted view.
+2. Create the store with `createGameStore(def, { seat, seed?, undo?, saves?, ... })`; React reads it with `useSyncExternalStore(store.subscribe, store.get)`.
+3. Answer only through `store.answer(picks, promptId)`; a stale prompt id is dropped. A click, the forced answers and the opponent's answers are one undo step.
+4. The opponent decides from the view only: `opponent(view, prompt, rng)`; use `botOpponent(bot)` so the store and the sim share one bot.
+5. Mount debug edits with `store.debug`, load with `store.load(save)`, undo with `undo()` / `redo()` (mode `safe` unless `undo` says otherwise).
+6. Set `openingSteps: true` to pace the setup events as steps; the default is off.
+7. Use `sim.ts` (`simGameOf`, `botDriverOf`) in node only.
+
+**Common mistakes:**
+- Reading `get().state` in the opponent or the screen: only the view is allowed.
+- Sending the same answer from two places: it is two undo steps.
+
+
 - `defineGame({ rules, content, seats, start(seed), view(state, seat), forced?, opponent?(view, prompt), isStep?, words?, format? })`: `view` is the seat's own view (build it from card-zones `viewOf`); the opponent and the screen read only it.
 - `createGameStore(def, { seat, seed?, undo?, afterGameOver?, instant?, openingSteps?, saves?, saveName? })`: `get()` gives `{ history, state, view, steps, options, rules, error }`; `subscribe(fn)` (React: `useSyncExternalStore(store.subscribe, store.get)`).
 - K271 one bot for both: `opponent(view, prompt, rng)` gets a `DriverRng` keyed `<options.seed>|opponent|<prompt id>` (sim-pool's key for driver `opponent`); `botOpponent(bot)` turns a sim-pool `Bot` (opponent's `opponentBot`) into it, `botDriverOf(def, bot)` into the sim's driver: same seed, same answers.

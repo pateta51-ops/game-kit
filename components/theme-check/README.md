@@ -2,6 +2,24 @@
 
 Static check that a game's look lives in its token file. Lifted from Jarl's `scripts/theme-check.ts` (its file mode, made configurable).
 
+## Rules for agents
+
+**What it does:** a static check that a game's look lives in its token file (colours, fonts, radii, shadows, logo, assets), plus browser steps for layout, coverage and the phone font floor, and a dev sheet of the game's parts.
+
+**You must:**
+1. Write `theme-check.config.json` (copy `theme-check.config.example.json`) and run `node kit/theme-check/theme-check.ts --config theme-check.config.json` in the game's check chain: exit 0 is clean, 1 findings, 2 usage.
+2. Put every colour, font family, radius and shadow in the token file; a radius or shadow elsewhere must be a `var(...)` token (or 0 / none). Fix a finding in the source; turn a rule off in `rules` only when the owner or director says so.
+3. Pass files after the flags to check only those (pre-commit style); a path that matches nothing is a `FILE` finding.
+4. In e2e run `layoutFindings`, `coverageFindings` and `phoneFontFindings` per screen with the Playwright `page`; assert `problems` is empty and that `pieces` or `rows` holds what the screen should show (an empty screen is clean).
+5. Mount `Sheet` only with `dev` true: `isDevMode(undefined, import.meta.env.DEV)` from prompt-gallery.
+6. Never edit `kit/` to quiet a finding.
+
+**Common mistakes:**
+- Matching is textual (`prop: value`, one declaration a line): a value built in code or split over lines is not seen.
+- Checking the token file itself: it is exempt unless `checkTokenFile` is set.
+- `layoutFindings` on a screen that has not rendered its pieces yet: nothing measured, nothing found.
+- `onTop` on an element with `pointer-events: none`: it is not hit.
+
 `node components/theme-check/theme-check.ts --config theme-check.config.json [--root .]` (exit 0 clean, 1 findings, 2 usage). From code: `themeCheck(root, config)` or `themeFindings(files, config)` return the finding lines.
 
 Config (see `theme-check.config.example.json`): `tokenFile` (exempt), `dirs`, `exts`, `exclude` (regexes), `fontFamilies` (allowed named families), `logoComponent` and `menuFiles` (each must render it).

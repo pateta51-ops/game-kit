@@ -2,6 +2,23 @@
 
 A Resolution setting that works: on a PC the game is laid out as on a screen of the chosen size, then the whole picture is scaled to fill the browser window (letterboxed). The game runs in a same-origin `<iframe>` of that size, so every media query sees the chosen width and height. Needs settings (its `resolutionSetting` and `resolutionSize`) and the package `react`. `index.ts` draws nothing; `ui.ts` holds the framed page. A game that does not mount the frame is unchanged.
 
+## Rules for agents
+
+**What it does:** Lays the game out as on a screen of the player's chosen Resolution and scales that picture to the browser window, by running the same build in a same-origin iframe.
+
+**You must:**
+1. Have the `settings` schema contain a `resolutionSetting` and install the package `react`.
+2. At start-up, before saves, sound or any store starts, call `shouldFrame(storedResolution(schema, key))`; render `<ResolutionFrame schema settingKey title />` on the top page, else the app. The same build loads twice and the top page must start nothing.
+3. Pass the same `schema` and the same setting key to `storedResolution` and `ResolutionFrame`.
+4. With offline, call `registerServiceWorker` on both paths (the framed page registers nothing by itself) and pass `<UpdateLine />` as the frame's children so the top page shows a newer build.
+5. Do not set `html` or `body` margin and scrolling yourself while the frame is mounted (the frame removes them); colour the letterbox with `--res-surround`.
+6. Do not expect the frame in test browsers: `shouldFrame` is false under webdriver, on phone-sized screens and for `window`; a unit test passes `{ top, webdriver, phone }` to it.
+
+**Common mistakes:**
+- Starting stores or audio before the `shouldFrame` check: they start twice, once in each document.
+- Reading the stored resolution yourself: use `storedResolution`, which parses the stored JSON for any `version` and survives blocked storage.
+- Scaling by device pixel ratio: `fitBox` leaves it alone on purpose (a fractional scale softens text).
+
 ## Start-up
 
 ```tsx
