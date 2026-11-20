@@ -66,6 +66,14 @@ export interface SimGame<G extends GameTypes, S = unknown, O = unknown> {
   hasten?(state: G['state'], content: G['content']): G['action'] | undefined;
   /** K274 (G06/T9): with `hidden` set, a copy of `state` in which everything hidden from `seat` is randomised but consistent (opponent hand and deck order shuffled together); draw only from `rng`. The driver must answer the same on it, else the game fails as `hidden-info: ...`. */
   reshuffleHidden?(state: G['state'], seat: KernelPrompt['seat'], rng: DriverRng, content: G['content']): G['state'];
+  /** K490: the game's ability trace (card-harness `traceAbilities` fits): cleared before each game; its `resolved` ids are stored on the record as `resolved`, so a run merges them across workers. */
+  trace?(content: G['content']): ResolvedTrace | undefined;
+}
+
+/** K490: what `SimGame.trace` returns. */
+export interface ResolvedTrace {
+  readonly resolved: Iterable<string>;
+  clear(): void;
 }
 
 function leaks(view: unknown, secrets: readonly string[], keys: readonly string[]): string[] {
@@ -117,6 +125,8 @@ export interface SimRecord<S = unknown> {
   readonly summary?: S;
   /** K101: the largest view in JSON characters, when views were rendered. */
   readonly viewBytes?: number;
+  /** K490: the ids `SimGame.trace` saw resolved in this game, sorted. */
+  readonly resolved?: readonly string[];
 }
 
 export const ANSWER_CAP = 512;
@@ -205,6 +215,8 @@ export function playOne<G extends GameTypes, S, O = unknown>(game: SimGame<G, S,
   let errorName: string | undefined;
   let viewBytes: number | undefined;
   const ms = { answers: 0, choose: 0, apply: 0, view: 0 };
+  const trace = game.trace?.(content);
+  trace?.clear();
   const render = (st: G['state']): void => {
     if (!opts.view || !game.view) return;
     const t = performance.now();
@@ -299,6 +311,7 @@ export function playOne<G extends GameTypes, S, O = unknown>(game: SimGame<G, S,
     ...(failed ? { log: actions } : {}),
     ...(summary !== undefined ? { summary } : {}),
     ...(viewBytes !== undefined ? { viewBytes } : {}),
+    ...(trace ? { resolved: [...new Set(trace.resolved)].sort() } : {}),
   };
 }
 

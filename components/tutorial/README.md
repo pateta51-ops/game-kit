@@ -23,7 +23,9 @@ The tutorial engine for any `GameRules<G>` game: a script format, headless play 
 
 ## Script (`parseScript`)
 
-JSON: `seed`, optional `title`, `steps`, optional `end` (matched against `state.result`). A step: `id` (unique), `narration`, `targets` (highlight target ids, the game's own spelling), `do`, optional `asks` (the words of "The tutorial asks for …"), `expect` (events that must happen, in order; an object matches when its fields match), `items` (what the step teaches).
+JSON: `seed`, optional `title`, `steps`, optional `end` (matched against `state.result`). A step: `id` (unique), `narration`, `targets` (highlight target ids, the game's own spelling), `do`, optional `asks` (the words of "The tutorial asks for …"), `expect` (events that must happen, in order; on a Next step, those of the step before; an object matches when its fields match), `items` (what the step teaches).
+
+An `expect` on a Next step (K413) is checked against the events of the step before it (what the engine settled or advanced by itself after that answer; nothing for a first step or after another Next), with the same `MISSING_EVENT`, `UNTESTED` and script-document treatment; the step still plays no answer. A Next step without `expect` is unchanged.
 
 `do` is one of `{ kind: 'move', choose: [refs], prompt? }` (one locked answer), `{ kind: 'next' }` (explains only), `{ kind: 'auto', moves: [[refs], …] }` (Next plays these answers by itself). A ref is an option id unless the game's `findOption` reads it.
 

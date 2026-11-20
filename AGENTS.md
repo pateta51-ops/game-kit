@@ -27,7 +27,8 @@ Needs Node 22.18+: tools run with plain `node` (no tsx, no build); relative impo
 1. `search` / [CATALOG.md](docs/CATALOG.md): each entry says when to use it and when not.
 2. Read the component's README (its "Use it in 10 lines" is real, type-checked code) and, for `engine-core`, its guides (`timing.md`, `undo.md`, `random.md`, `legal.md`, `debug.md`).
 3. `kit.mjs new` pulls the base set (`BASE` in `components/scaffold/scaffold.js`: engine-core, game-store, sim-pool, state-machines, app-frame, settings, saves, screens, lint-preset, ci-templates, check-runner, repo-gate, bundle-size); other tooling is pulled by hand (`--existing` for a repo that has files). Recipe: [new-game](docs/recipes/new-game.md).
-4. A need the kit lacks: change the kit (below) or write "Kit gap" in the PR; do not fork.
+4. Before using a part, read its "## Rules for agents" section (`kit/components/<name>/README.md` in a game) and follow every "You must".
+5. A need the kit lacks: change the kit (below) or write "Kit gap" in the PR; do not fork.
 
 ## Change the kit
 1. Look at open PRs: **one open PR per component**. Wait for or continue the one touching yours.
@@ -36,7 +37,8 @@ Needs Node 22.18+: tools run with plain `node` (no tsx, no build); relative impo
 4. Interfaces grow by addition; nothing breaking. A breaking change says `breaking` in its title and lists what a game must change.
 5. New component: `components/<name>/` with `component.json` (`name`, `source.game`, `source.commit`, `source.paths`, `needs`), a README (non-empty first line), tests (a `*.test.*` or `test_*.py` file in the folder), and an entry in `docs/catalog-notes.json` (`use`, `not`). `npm run check` fails without them.
 6. README: purpose in the first line, a **Use it in 10 lines** section (from the component's own tests or types; never an invented API; `scripts/readme-examples.mjs` type-checks every TypeScript one in `npm run components:check`).
-7. Done = independent review, CI green on the runner, squash-merge. Then an annotated tag on main (`git tag -a <v> -m <v>`): **middle number up for a feature or new component, last number up for a fix**. Draft PR, no hooks, never merge your own batch.
+7. Every change that adds, renames or changes how a component or tool is used updates that README's "## Rules for agents" section in the same PR, true to the code; a reviewer fails a PR that does not. `npm run components:check` fails a README without that heading.
+8. Done = independent review, CI green on the runner, squash-merge. Then an annotated tag on main (`git tag -a <v> -m <v>`): **middle number up for a feature or new component, last number up for a fix**. Draft PR, no hooks, never merge your own batch.
 
 ## Rules agents break most
 - Editing `kit/` in a game, or copying kit code into `src/`.

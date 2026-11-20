@@ -32,6 +32,7 @@ for (const n of dirs) {
   if (!Array.isArray(pk) || pk.some((x) => typeof x !== 'string' || !/^(@[a-z0-9~._-]+\/)?[a-z0-9~._-]+$/.test(x))) bad.push(`${n}: packages must be bare package names`)
   const rm = path.join(dir, 'README.md')
   if (!fs.existsSync(rm) || !fs.readFileSync(rm, 'utf8').split(/\r?\n/)[0].trim()) bad.push(`${n}: README.md missing or its first line is empty`)
+  if (fs.existsSync(rm) && !/^## Rules for agents\s*$/m.test(fs.readFileSync(rm, 'utf8'))) bad.push(`${n}: README.md has no "## Rules for agents" heading`)
   if (!walk(dir).some((f) => /(\.test\.[^\\/]+|[\\/]test_[^\\/]+\.py)$/.test(f))) bad.push(`${n}: no test file (*.test.* or test_*.py)`)
   const used = new Set()
   for (const f of walk(dir).filter((f) => CODE.test(f))) {
@@ -46,6 +47,11 @@ for (const n of dirs) {
     }
   }
   if (Array.isArray(pk)) for (const u of used) if (!pk.includes(u)) bad.push(`${n}: imports package ${u} that component.json packages does not list`)
+}
+const tools = path.join(path.dirname(root), 'tools')
+if (fs.existsSync(tools)) for (const e of fs.readdirSync(tools, { withFileTypes: true })) {
+  const rm = path.join(tools, e.name, 'README.md')
+  if (e.isDirectory() && fs.existsSync(rm) && !/^## Rules for agents\s*$/m.test(fs.readFileSync(rm, 'utf8'))) bad.push(`tools/${e.name}: README.md has no "## Rules for agents" heading`)
 }
 if (bad.length) {
   console.error(bad.join('\n'))

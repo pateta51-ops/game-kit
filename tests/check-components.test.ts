@@ -8,14 +8,14 @@ const SCRIPT = path.resolve(import.meta.dirname, '..', 'scripts', 'check-compone
 const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'cc-test-'));
 afterAll(() => fs.rmSync(tmp, { recursive: true, force: true }));
 let n = 0;
-const make = (comps: Record<string, { needs?: string[]; packages?: string[]; files?: Record<string, string>; bare?: boolean }>) => {
+const make = (comps: Record<string, { needs?: string[]; packages?: string[]; files?: Record<string, string>; bare?: boolean; readme?: string }>) => {
   const root = path.join(tmp, 'r' + String(++n));
   for (const [name, c] of Object.entries(comps)) {
     const d = path.join(root, 'components', name);
     fs.mkdirSync(d, { recursive: true });
     fs.writeFileSync(path.join(d, 'component.json'), JSON.stringify({ name, source: { game: 'g', commit: 'c', paths: [] }, needs: c.needs ?? [], packages: c.packages ?? [] }));
     if (!c.bare) {
-      fs.writeFileSync(path.join(d, 'README.md'), '# ' + name + '\n');
+      fs.writeFileSync(path.join(d, 'README.md'), c.readme ?? '# ' + name + '\n\n## Rules for agents\n');
       fs.writeFileSync(path.join(d, 'a.test.ts'), '');
     }
     for (const [f, s] of Object.entries(c.files ?? {})) fs.writeFileSync(path.join(d, f), s);
@@ -26,6 +26,23 @@ const make = (comps: Record<string, { needs?: string[]; packages?: string[]; fil
 describe('check-components', () => {
   it('a clean component passes', () => {
     expect(make({ a: { files: { 'x.ts': "import { y } from './y'\n" } } }).status).toBe(0);
+  });
+  it('a README without the Rules for agents heading fails', () => {
+    const r = make({ a: { readme: '# a\n\nUse it.\n' } });
+    expect(r.status).toBe(1);
+    expect(r.stderr).toContain('Rules for agents');
+  });
+  it('a tool README without the Rules for agents heading fails', () => {
+    make({ a: {} });
+    const root = path.join(tmp, 'r' + String(n));
+    const t = path.join(root, 'tools', 'x');
+    fs.mkdirSync(t, { recursive: true });
+    fs.writeFileSync(path.join(t, 'README.md'), '# x\n\nUse it.\n');
+    const r = spawnSync('node', [SCRIPT, root], { encoding: 'utf8' });
+    expect(r.status).toBe(1);
+    expect(r.stderr).toContain('tools/x');
+    fs.writeFileSync(path.join(t, 'README.md'), '# x\n\n## Rules for agents\n');
+    expect(spawnSync('node', [SCRIPT, root], { encoding: 'utf8' }).status).toBe(0);
   });
   it('an escaping static import fails', () => {
     const r = make({ a: { files: { 'x.ts': "import { y } from '../b/y'\n" } }, b: {} });
@@ -60,7 +77,7 @@ describe('K256 README and tests', () => {
     expect(r.stderr).toContain('no test file');
   });
   it('a test_*.py counts as a test', () => {
-    expect(make({ a: { bare: true, files: { 'README.md': '# a\n', 'test_x.py': '' } } }).status).toBe(0);
+    expect(make({ a: { bare: true, files: { 'README.md': '# a\n\n## Rules for agents\n', 'test_x.py': '' } } }).status).toBe(0);
   });
 });
 

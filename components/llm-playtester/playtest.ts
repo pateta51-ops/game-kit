@@ -239,6 +239,7 @@ export async function runMain(argv: string[], log: (s: string) => void = console
   }
   const path = flags.get('adapter');
   if (path === undefined) return bad();
+  if (env['HEAVY_HELD'] === '1' && !flags.has('dummy') && injected === undefined) { log('REFUSED: a paid run under the heavy queue (HEAVY_HELD=1); it waits on an API, not the CPU, so run it directly, never under `heavy run` (--dummy is fine)'); return { code: 2, runs: [], totalUsd: 0 }; }
   const g = (k: string) => flags.get(k);
   const ledger = g('ledger') ?? env['PLAYTEST_LEDGER'];
   const capRaw = g('total-cap') ?? env['PLAYTEST_TOTAL_CAP_USD'];
