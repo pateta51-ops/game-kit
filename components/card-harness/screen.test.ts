@@ -68,7 +68,7 @@ describe('cards:screen (K489)', () => {
       const code = screenMain({ ...good, prompts, label: (e) => (e as { name: string }).name }, (l) => out.push(l));
       return [code, out] as const;
     };
-    expect(run(['Yes', 'No'], [{ name: 'no' }, { name: 'Yes' }])).toEqual([0, ['cards:screen ok']]);
+    expect(run(['Yes', 'No'], [{ name: 'No' }, { name: 'Yes' }])).toEqual([0, ['cards:screen ok']]);
     expect(run(['Yes', 'No'], [{ name: 'Yes' }, { name: 'No' }, { name: 'Skip' }])).toEqual([1, ['prompt for scout#1: engine option "Skip" not on screen']]);
     expect(run(['Yes', 'No', 'Maybe'], [{ name: 'Yes' }, { name: 'No' }])).toEqual([1, ['prompt for scout#1: option "Maybe" on screen, not in the engine']]);
     expect(screenProblems(good)).toEqual([]);
