@@ -112,7 +112,7 @@ The catalogue as data, achievements as pure functions over finished-game summari
 - **Key exports:** `SUMMARY_VERSION`, `makeSummary`, `validSummary`, `createSummaryStore`, `countGames`, `checklist`, `bestCount`, `evaluate`, `newlyEarned`, `byFamily`, `DEFAULT_HOLD_MS`, `toastFor`, `firstRun`, `toastSettingsWith`, and 19 more
 - **Needs:** [`play-stats`](#play-stats)
 - **Came from:** marvel-lcg and ArkhamHorror (ideas only, no code copied)
-- **Docs:** [README](../components/achievements/README.md)
+- **Docs:** [README](../components/achievements/README.md) ([rules for agents](../components/achievements/README.md#rules-for-agents))
 
 ## app-frame
 
@@ -123,7 +123,7 @@ Hash routes, the screen of the address bar with an error boundary and lazy loadi
 - **Key exports:** `parseHash`, `routeHref`, `navigate`, `replaceRoute`, `follow`, `Route`
 - **Needs:** [`state-machines`](#state-machines)
 - **Came from:** imp
-- **Docs:** [README](../components/app-frame/README.md)
+- **Docs:** [README](../components/app-frame/README.md) ([rules for agents](../components/app-frame/README.md#rules-for-agents))
 
 ## app-icons
 
@@ -134,7 +134,7 @@ Opaque home-screen icons and a web manifest from a game's own SVG/PNG mark. Requ
 - **Key exports:** buildIcons, headTags, insertHead (app-icons.mjs)
 - **Needs:** nothing
 - **Came from:** 7th-inning-stretch
-- **Docs:** [README](../components/app-icons/README.md)
+- **Docs:** [README](../components/app-icons/README.md) ([rules for agents](../components/app-icons/README.md#rules-for-agents))
 
 ## art-pipeline
 
@@ -145,7 +145,7 @@ Game-free scripts that get a card game's art from its sources to `public/` with 
 - **Key exports:** Scripts: `art-index`, `art-fetch`, `art-extract`, `art-render-pdf`, `art-ci-cache`, `art-publish`; `lib`: `cellBox`, `decodePng`, `encodePng`, `imageSize`, `codec`
 - **Needs:** [`tooling-scripts`](#tooling-scripts)
 - **Came from:** earthborne-rangers
-- **Docs:** [README](../components/art-pipeline/README.md)
+- **Docs:** [README](../components/art-pipeline/README.md) ([rules for agents](../components/art-pipeline/README.md#rules-for-agents))
 
 ## audio-gen
 
@@ -156,7 +156,7 @@ Sounds, music and voice lines for a game, made with free local models in WSL and
 - **Key exports:** Python package `audiogen` (CLI `audiogen.py`), see its README
 - **Needs:** nothing
 - **Came from:** 7is
-- **Docs:** [README](../components/audio-gen/README.md)
+- **Docs:** [README](../components/audio-gen/README.md) ([rules for agents](../components/audio-gen/README.md#rules-for-agents))
 
 ## automa
 
@@ -167,7 +167,7 @@ An official solo automa that does not play by player rules: a seeded card deck k
 - **Key exports:** `newAutomaDeck`, `drawAutoma`, `decideAutoma`, `automaLines`, `atTier`, `automaBot`, `AutomaDeck`, `ShuffleRng`, `TieBreak`, `AutomaRule`, `AutomaTable`, `AutomaDecision`, `Automa`, `AutomaTier`, and 1 more
 - **Needs:** [`engine-core`](#engine-core), [`sim-pool`](#sim-pool)
 - **Came from:** stcc
-- **Docs:** [README](../components/automa/README.md)
+- **Docs:** [README](../components/automa/README.md) ([rules for agents](../components/automa/README.md#rules-for-agents))
 
 ## board-layout
 
@@ -178,7 +178,7 @@ Draw the map once over the board picture in Inkscape; get the click areas (space
 - **Key exports:** `parseLayout`, `newLayoutSvg`, `spaceAt`, `zoneRect`, `zone`, `zonePct`, `slots`, `withZones`, `zonesOf`, `Rect`, `LayoutNode`, `Edge`, `Layout`, `ZoneLayout`, and 1 more
 - **Needs:** nothing
 - **Came from:** rally-the-troops
-- **Docs:** [README](../components/board-layout/README.md)
+- **Docs:** [README](../components/board-layout/README.md) ([rules for agents](../components/board-layout/README.md#rules-for-agents))
 
 ## board-model
 
@@ -189,7 +189,7 @@ Spaces as data, adjacency computed once, named placement kinds resolved by the b
 - **Key exports:** `createBoard`, `fromLayout`, `hexRows`, `neighbours`, `setSpace`, `availableSpaces`, `emptyBoard`, `baseKinds`, `Space`, `Board`, `Kind`, `Kinds`
 - **Needs:** nothing
 - **Came from:** terraforming-mars
-- **Docs:** [README](../components/board-model/README.md)
+- **Docs:** [README](../components/board-model/README.md) ([rules for agents](../components/board-model/README.md#rules-for-agents))
 
 ## board-registry
 
@@ -200,7 +200,7 @@ The board UI's registry of things (space, piece, marker, stack), highlighted str
 - **Key exports:** `emptyRegistry`, `define`, `remove`, `moveTo`, `get`, `inSpace`, `mark`, `highlighted`, `unknownOffered`, `stackLayout`, `Thing`, `Registry`, `Actions`, `Mark`, and 2 more
 - **Needs:** nothing
 - **Came from:** rally-the-troops
-- **Docs:** [README](../components/board-registry/README.md)
+- **Docs:** [README](../components/board-registry/README.md) ([rules for agents](../components/board-registry/README.md#rules-for-agents))
 
 ## board-viewport
 
@@ -211,7 +211,7 @@ Fit, zoom and pan a large SVG or DOM board, and move the camera to a game-suppli
 - **Key exports:** `clampView`, `zoomAbout`, `fitRect`, `tweenView`, `Point`, `Size`, `Rect`, `View`, `ViewLimits`
 - **Needs:** nothing
 - **Came from:** earthborne-rangers
-- **Docs:** [README](../components/board-viewport/README.md)
+- **Docs:** [README](../components/board-viewport/README.md) ([rules for agents](../components/board-viewport/README.md#rules-for-agents))
 
 ## boundary-check
 
@@ -222,7 +222,7 @@ Four small pure helpers from outside ideas (written new). No game types.
 - **Key exports:** `boundaryFile`, `violationList`, `catalogueCheck`, `releaseForbidden`, `releaseCheck`, `Violation`, `CatalogueRule`
 - **Needs:** nothing
 - **Came from:** outside-ideas
-- **Docs:** [README](../components/boundary-check/README.md)
+- **Docs:** [README](../components/boundary-check/README.md) ([rules for agents](../components/boundary-check/README.md#rules-for-agents))
 
 ## bug-reporter
 
@@ -233,7 +233,7 @@ A bug report dialog: screenshot (scrolled areas, game fonts embedded), markup ed
 - **Key exports:** `configureBugReporter`, `bugConfig`, `bugRepo`, `GITHUB_API`, `MAX_ISSUE_BODY`, `MAX_ATTACHMENT_BASE64`, `DeviceSchema`, `ReportSchema`, `LOG_LINES`, `newReportId`, `parseReport`, `reportFileName`, `reportHeadline`, `deviceFacts`, and 57 more
 - **Needs:** [`state-machines`](#state-machines), [`small-helpers`](#small-helpers)
 - **Came from:** rome
-- **Docs:** [README](../components/bug-reporter/README.md)
+- **Docs:** [README](../components/bug-reporter/README.md) ([rules for agents](../components/bug-reporter/README.md#rules-for-agents))
 
 ## bundle-size
 
@@ -244,7 +244,7 @@ The size gate for a vite build: gzips `index.html` and what it loads at once, an
 - **Key exports:** `initialFiles`, `staticImports`, `cssUrls`, `measureBuild`, `formatSize`, `run`, `Limits`, `FileSize`, `SizeReport`, `SizeIo`
 - **Needs:** nothing
 - **Came from:** ebr
-- **Docs:** [README](../components/bundle-size/README.md)
+- **Docs:** [README](../components/bundle-size/README.md) ([rules for agents](../components/bundle-size/README.md#rules-for-agents))
 
 ## campaign
 
@@ -255,7 +255,7 @@ The campaign log as plain data and pure functions (release 1.0). No packages; dr
 - **Key exports:** `emptyLog`, `fieldKey`, `has`, `isCrossed`, `record`, `crossOut`, `forget`, `count`, `setCount`, `addCount`, `countHistory`, `setOf`, `setInsert`, `setCrossOut`, and 65 more
 - **Needs:** nothing
 - **Came from:** outside: halogenandtoast/ArkhamHorror, halogenandtoast/LordOfTheRings, Marvel Champions repos (docs/evaluation/outside/story-campaign-*.md)
-- **Docs:** [README](../components/campaign/README.md)
+- **Docs:** [README](../components/campaign/README.md) ([rules for agents](../components/campaign/README.md#rules-for-agents))
 
 ## card-attachments
 
@@ -266,7 +266,7 @@ Cards tucked under a host card (a visible L, slide out on hover) or fanned past 
 - **Key exports:** `TUCK`, `faceBox`, `tuckedTurned`, `tuckOffset`, `tuckSpots`, `footprint`, `outSpan`, `outSpots`, `outSide`, `fanSpots`, `fanFootprint`, `ROW_MAX`, `tokenRow`, `changedDir`, and 7 more
 - **Needs:** nothing
 - **Came from:** earthborne-rangers-fan-prototype
-- **Docs:** [README](../components/card-attachments/README.md)
+- **Docs:** [README](../components/card-attachments/README.md) ([rules for agents](../components/card-attachments/README.md#rules-for-agents))
 
 ## card-hand
 
@@ -277,7 +277,7 @@ A hand of cards as a fan that fits any number of cards in a width, lifts the car
 - **Key exports:** `TILT`, `fanOf`, `stepOf`, `SPREAD`, `spreadOf`, `shiftOf`, `HAND_MS`, `RISE_MS`, `PLAY_MS`, `msAt`, `noteLaunch`, `takeLaunch`, `playKeyframes`, `riseKeyframes`, and 2 more
 - **Needs:** [`engine-core`](#engine-core), [`card-zones`](#card-zones), [`drag-drop`](#drag-drop), [`motion-frame`](#motion-frame), [`picked-state`](#picked-state), [`prompt-host`](#prompt-host)
 - **Came from:** imperium
-- **Docs:** [README](../components/card-hand/README.md)
+- **Docs:** [README](../components/card-hand/README.md) ([rules for agents](../components/card-hand/README.md#rules-for-agents))
 
 ## card-harness
 
@@ -288,7 +288,7 @@ Card tests on real cards. Test code only; the engine imports nothing here but `c
 - **Key exports:** `createProbe`, `rulingGroups`, `Scenario`, `scenarioLiteral`, `Delivery`, `clauseIds`, `inventory`, `runInventory`, `testFiles`, `conforms`, `describeCheck`, `report`, `diffPaths`, `roundTripCards`, and 43 more
 - **Needs:** [`engine-core`](#engine-core)
 - **Came from:** stcc
-- **Docs:** [README](../components/card-harness/README.md)
+- **Docs:** [README](../components/card-harness/README.md) ([rules for agents](../components/card-harness/README.md#rules-for-agents))
 
 ## card-language
 
@@ -299,7 +299,7 @@ The card-language shell (K206): card effects as data, one typed verb table where
 - **Key exports:** `posInt`, `int`, `str`, `bool`, `oneOf`, `listOf`, `optional`, `effectOf`, `grammarOf`, `validateStep`, `validateEffect`, `describeEffect`, `effectTasks`, `askVerb`, and 12 more
 - **Needs:** [`engine-core`](#engine-core), [`card-harness`](#card-harness), [`plain-text`](#plain-text), [`card-zones`](#card-zones)
 - **Came from:** jarl
-- **Docs:** [README](../components/card-language/README.md)
+- **Docs:** [README](../components/card-language/README.md) ([rules for agents](../components/card-language/README.md#rules-for-agents))
 
 ## card-parts
 
@@ -310,7 +310,7 @@ The parts a game builds its own card face from: the layout as the game's data, a
 - **Key exports:** `checkLayout`, `checkLayouts`, `mergeLayout`, `zoneBox`, `zonesInOrder`, `anchorOf`, `placeTokens`, `BRACKETS`, `parseIconText`, `plainOf`, `unknownIcons`, `cacheStorageStore`, `isQuotaError`, `cacheNameFor`, and 31 more
 - **Needs:** nothing
 - **Came from:** stcc
-- **Docs:** [README](../components/card-parts/README.md)
+- **Docs:** [README](../components/card-parts/README.md) ([rules for agents](../components/card-parts/README.md#rules-for-agents))
 
 ## card-patches
 
@@ -321,7 +321,7 @@ Card data patch layer. The source card data (the dossier transcription) is never
 - **Key exports:** `applyPatches`, `wordDiff`, `errata`, `rulingsFor`, `diffCards`, `cardLookup`, `Card`, `PatchRow`, `PatchFile`, `PatchLog`, `DiffPart`, `Erratum`, `Ruling`, `DiffField`, and 4 more
 - **Needs:** nothing
 - **Came from:** arkham.build (idea only, re-implemented; AGPL-3.0, no code copied)
-- **Docs:** [README](../components/card-patches/README.md)
+- **Docs:** [README](../components/card-patches/README.md) ([rules for agents](../components/card-patches/README.md#rules-for-agents))
 
 ## card-pile
 
@@ -332,7 +332,7 @@ A pile on the table: a stack at rest (top card, edges of the cards beneath, empt
 - **Key exports:** `fanPlaces`, `arcsFor`, `edgesFor`, `flight`, `gatherFlight`, `holesPath`, `totalMs`, `stepFor`, `step`, `pileModel`, `named`, `pickEnded`, `backdropCloses`, `nextInRing`, and 5 more
 - **Needs:** [`card-zones`](#card-zones), [`prompt-host`](#prompt-host), [`picked-state`](#picked-state), [`phone-mode`](#phone-mode), [`motion-frame`](#motion-frame)
 - **Came from:** imperium-horizon-fan-prototype
-- **Docs:** [README](../components/card-pile/README.md)
+- **Docs:** [README](../components/card-pile/README.md) ([rules for agents](../components/card-pile/README.md#rules-for-agents))
 
 ## card-query
 
@@ -343,7 +343,7 @@ A small card query language (K107): lexer, parser, evaluator. The game supplies 
 - **Key exports:** `QueryError`, `parseQuery`, `compileQuery`, `filterCards`, `FieldType`, `Value`, `Side`, `Field`, `Node`
 - **Needs:** nothing
 - **Came from:** outside
-- **Docs:** [README](../components/card-query/README.md)
+- **Docs:** [README](../components/card-query/README.md) ([rules for agents](../components/card-query/README.md#rules-for-agents))
 
 ## card-zones
 
@@ -354,7 +354,7 @@ Card zones as data on engine-core state (K223): decks, hands, discards and play 
 - **Key exports:** `newZones`, `seatZone`, `cardsIn`, `locate`, `place`, `moveCard`, `draw`, `shuffleZone`, `reveal`, `canSee`, `viewOf`, `hiddenFrom`, `zoneProblems`, `Seen`, and 5 more
 - **Needs:** [`engine-core`](#engine-core)
 - **Came from:** imperium
-- **Docs:** [README](../components/card-zones/README.md)
+- **Docs:** [README](../components/card-zones/README.md) ([rules for agents](../components/card-zones/README.md#rules-for-agents))
 
 ## card-zoom
 
@@ -365,7 +365,7 @@ A zoomed card as a full transcription: the printed text decoded with its icons, 
 - **Key exports:** `placeZoom`, `zoomRoom`, `SECTIONS`, `ZOOM_WORDS`, `zoomLine`, `plainSegs`, `transcribe`, `untranscribed`, `PlaceRect`, `PlaceSide`, `PlaceOpts`, `Placed`, `IconSeg`, `Seg`, and 5 more
 - **Needs:** [`card-parts`](#card-parts), [`glossary`](#glossary), [`plain-text`](#plain-text)
 - **Came from:** stcc
-- **Docs:** [README](../components/card-zoom/README.md)
+- **Docs:** [README](../components/card-zoom/README.md) ([rules for agents](../components/card-zoom/README.md#rules-for-agents))
 
 ## challenges
 
@@ -376,7 +376,7 @@ A challenge is a content item picked before a game: a setup restriction plus tri
 - **Key exports:** `challengeOk`, `pickable`, `pickChallenge`, `penaltiesFor`, `Challenge`, `ChallengeGame`
 - **Needs:** nothing
 - **Came from:** outside: sdolle1775/marvel-lcg (docs/evaluation/outside/story-campaign-marvel.md)
-- **Docs:** [README](../components/challenges/README.md)
+- **Docs:** [README](../components/challenges/README.md) ([rules for agents](../components/challenges/README.md#rules-for-agents))
 
 ## character-select
 
@@ -387,7 +387,7 @@ A character select screen before a game: roster by set, hero, deck browser, trac
 - **Key exports:** `sortRoster`, `groupBySet`, `splitName`, `pieces`, `deckTabs`, `deckPage`, `portraitCrop`, `fieldsFor`, `choiceOf`, `firstAllowed`, `PortraitSpec`, `CharacterSet`, `DeckCard`, `Character`, and 6 more
 - **Needs:** nothing
 - **Came from:** star-trek-captains-chair
-- **Docs:** [README](../components/character-select/README.md)
+- **Docs:** [README](../components/character-select/README.md) ([rules for agents](../components/character-select/README.md#rules-for-agents))
 
 ## check-runner
 
@@ -398,7 +398,7 @@ A character select screen before a game: roster by set, hero, deck browser, trac
 - **Key exports:** `DEFAULT_CONFIG`, `checkScripts`, `coverageProblems`, `envOf`, `main`, `rowOf`, `gate`, `gateAll`, `report`, `wholeGames`, `testCost`, `Plan`, `Config`, `Row`, and 4 more
 - **Needs:** nothing
 - **Came from:** ebr
-- **Docs:** [README](../components/check-runner/README.md)
+- **Docs:** [README](../components/check-runner/README.md) ([rules for agents](../components/check-runner/README.md#rules-for-agents))
 
 ## ci-templates
 
@@ -409,7 +409,7 @@ Pull this component and use it where it is: a game never edits or copies its `ki
 - **Key exports:** `render.mjs`, `ci.yml`, `full-gate.yml`, `nightly-fuzz.yml`, `local-ci.sh`, `install-wsl.sh`, `watch-run.sh`, `watch-run.mjs`, `skip-reporter.ts`
 - **Needs:** nothing
 - **Came from:** jarl
-- **Docs:** [README](../components/ci-templates/README.md)
+- **Docs:** [README](../components/ci-templates/README.md) ([rules for agents](../components/ci-templates/README.md#rules-for-agents))
 
 ## content-pack
 
@@ -420,7 +420,7 @@ Card and scenario data as a checked pack: the game names its record kinds, each 
 - **Key exports:** `load`, `rowsOf`, `loadText`, `loadOrThrow`, `Kind`, `PackDef`, `Loaded`, `LoadResult`, `Source`
 - **Needs:** [`card-harness`](#card-harness), [`card-language`](#card-language), [`engine-core`](#engine-core)
 - **Came from:** 7is
-- **Docs:** [README](../components/content-pack/README.md)
+- **Docs:** [README](../components/content-pack/README.md) ([rules for agents](../components/content-pack/README.md#rules-for-agents))
 
 ## controls
 
@@ -431,7 +431,7 @@ Plain behaviour parts for four controls (Segmented, Toggle, Slider, TextField) t
 - **Key exports:** `Segmented`, `Toggle`, `Slider`, `TextField`
 - **Needs:** nothing
 - **Came from:** unstoppable-fan-prototype
-- **Docs:** [README](../components/controls/README.md)
+- **Docs:** [README](../components/controls/README.md) ([rules for agents](../components/controls/README.md#rules-for-agents))
 
 ## counter
 
@@ -442,7 +442,7 @@ A resource number that counts up, bumps, shows a "+N" tag and warns when low; un
 - **Key exports:** `Counter`, `levelOf`, `crossed`, `tagText`, `BUMP_FRAMES`, `BUMP_MS`, `TAG_MS`, `scaledMs`, `tagAt`, `rowRightOf`, `counterOf`, `bumpCounter`, `showTag`, `crossToast`, and 4 more
 - **Needs:** [`effect-library`](#effect-library), [`motion-frame`](#motion-frame), [`ui-helpers`](#ui-helpers)
 - **Came from:** ebr
-- **Docs:** [README](../components/counter/README.md)
+- **Docs:** [README](../components/counter/README.md) ([rules for agents](../components/counter/README.md#rules-for-agents))
 
 ## coverage-report
 
@@ -453,7 +453,7 @@ Which card-language constructs (verbs, triggers, conditions: any string a card n
 - **Key exports:** `walkConstructs`, `coverageReport`, `formatReport`, `runCli`, `Construct`, `CoverageInput`, `UsedRow`, `CoverageReport`
 - **Needs:** nothing
 - **Came from:** earthborne-rangers-fan-prototype
-- **Docs:** [README](../components/coverage-report/README.md)
+- **Docs:** [README](../components/coverage-report/README.md) ([rules for agents](../components/coverage-report/README.md#rules-for-agents))
 
 ## debug-console
 
@@ -464,7 +464,7 @@ A console line for the engine-core debug edits (K100). Needs `engine-core`. Test
 - **Key exports:** `parseDebug`, `DebugParams`
 - **Needs:** [`engine-core`](#engine-core)
 - **Came from:** netrunner
-- **Docs:** [README](../components/debug-console/README.md)
+- **Docs:** [README](../components/debug-console/README.md) ([rules for agents](../components/debug-console/README.md#rules-for-agents))
 
 ## deck-motions
 
@@ -475,7 +475,7 @@ Cards fly from a pile to their places (deal, refill turn-over, deck cycle) and a
 - **Key exports:** `DEAL_MS`, `STAGGER_MS`, `REFILL_AFTER`, `REFILL_GAP_MS`, `REFILL_FAR_SCALE`, `REFILL_LIFT`, `RIFFLE_MS`, `RIFFLE_CARDS`, `RIFFLE_STUDY_MS`, `RIFFLE_PHASES_MS`, `RIFFLE_DECK_CARDS`, `MOCK_U`, `FLIP_LIFT`, `FLIP_PERSPECTIVE`, and 11 more
 - **Needs:** [`motion-frame`](#motion-frame)
 - **Came from:** stcc
-- **Docs:** [README](../components/deck-motions/README.md)
+- **Docs:** [README](../components/deck-motions/README.md) ([rules for agents](../components/deck-motions/README.md#rules-for-agents))
 
 ## dev-autoplay
 
@@ -486,7 +486,7 @@ Dev-only: `?dev=1&autoplay=<prompt kind>[*n]` plays a game-store with a sim-pool
 - **Key exports:** `readAutoplayFlag`, `devAutoplay`, `AutoplayFlag`, `AutoplayStop`, `AutoplayOptions`, `AutoplayHandle`
 - **Needs:** [`engine-core`](#engine-core), [`game-store`](#game-store), [`sim-pool`](#sim-pool)
 - **Came from:** 7is
-- **Docs:** [README](../components/dev-autoplay/README.md)
+- **Docs:** [README](../components/dev-autoplay/README.md) ([rules for agents](../components/dev-autoplay/README.md#rules-for-agents))
 
 ## dice-odds
 
@@ -497,7 +497,7 @@ Exact dice probabilities (K24), opt-in. No packages; import from `index`.
 - **Key exports:** `outcomes`, `chance`, `Outcome`, `DiceSpec`
 - **Needs:** nothing
 - **Came from:** outside
-- **Docs:** [README](../components/dice-odds/README.md)
+- **Docs:** [README](../components/dice-odds/README.md) ([rules for agents](../components/dice-odds/README.md#rules-for-agents))
 
 ## dice-tray
 
@@ -508,7 +508,7 @@ Pure logic of a dice tray and its roll window (K211), opt-in, unstyled; the game
 - **Key exports:** `newTray`, `roll`, `hold`, `toggleHold`, `adjust`, `remove`, `values`, `heldDice`, `readRoll`, `rollWith`, `rollWindow`, `step`, `winStart`, `winPickToken`, and 18 more
 - **Needs:** [`state-machines`](#state-machines)
 - **Came from:** 7th-inning-stretch
-- **Docs:** [README](../components/dice-tray/README.md)
+- **Docs:** [README](../components/dice-tray/README.md) ([rules for agents](../components/dice-tray/README.md#rules-for-agents))
 
 ## drag-drop
 
@@ -519,7 +519,7 @@ Drag a source onto a target, both option ids of the open prompt: a drop answers 
 - **Key exports:** `DRAG_THRESHOLD_PX`, `pressSource`, `dragStep`, `DragGesture`, `DragInput`, `DragStep`
 - **Needs:** [`prompt-host`](#prompt-host), [`motion-frame`](#motion-frame), [`engine-core`](#engine-core), [`prompt-source`](#prompt-source)
 - **Came from:** imperium
-- **Docs:** [README](../components/drag-drop/README.md)
+- **Docs:** [README](../components/drag-drop/README.md) ([rules for agents](../components/drag-drop/README.md#rules-for-agents))
 
 ## e2e-helpers
 
@@ -530,7 +530,7 @@ Playwright helpers a game's browser tests share. Lifted from Imperium's `e2e/hel
 - **Key exports:** `VIEWPORTS`, `watchErrors`, `expectNoHorizontalScroll`, `settle`, `finishAnimations`, `motionsDone`, `shoot`, `autosaveSettled`, `idbCount`, `EvalPage`, `WatchPage`, `WaitPage`, `ShotPage`, `Info`, and 1 more
 - **Needs:** nothing
 - **Came from:** imp
-- **Docs:** [README](../components/e2e-helpers/README.md)
+- **Docs:** [README](../components/e2e-helpers/README.md) ([rules for agents](../components/e2e-helpers/README.md#rules-for-agents))
 
 ## effect-library
 
@@ -541,7 +541,7 @@ Sixteen verbs for the director's spec format as DOM effects for the motion frame
 - **Key exports:** `startPulse`, `startIdle`, `registerGlEffect`, `crumpleStill`, `MISSION_SHINE`, `MISSION_MS`, `missionSparks`, `decorativeCopy`, `endOnFinished`, `flushEnds`, `place`, `createEffectLayer`, `registerEffect`, `BUILT_IN`, and 154 more
 - **Needs:** [`motion-frame`](#motion-frame), [`board-registry`](#board-registry)
 - **Came from:** stcc
-- **Docs:** [README](../components/effect-library/README.md)
+- **Docs:** [README](../components/effect-library/README.md) ([rules for agents](../components/effect-library/README.md#rules-for-agents))
 
 ## engine-core
 
@@ -552,7 +552,7 @@ The kernel of a game engine: seeded random numbers, canonical JSON and hashes, t
 - **Key exports:** `claimEngineCore`, `canonicalJson`, `fnv1a64`, `copyJson`, `copyState`, `deepFreeze`, `freezeState`, `isFreezing`, `setStateFreezing`, `advance`, `applyAction`, `applyActionWith`, `createGame`, `isChecking`, and 251 more
 - **Needs:** nothing
 - **Came from:** jarl
-- **Docs:** [README](../components/engine-core/README.md)
+- **Docs:** [README](../components/engine-core/README.md) ([rules for agents](../components/engine-core/README.md#rules-for-agents))
 
 ## game-log
 
@@ -563,7 +563,7 @@ The game's log, derived from engine events by one table. Cards and rules write n
 - **Key exports:** `text`, `num`, `delta`, `ref`, `icon`, `appendLog`, `blocks`, `plainParts`, `plainLine`, `wordingProblems`, `stepOf`, `rewindLog`, `previewAt`, `refsOf`, and 13 more
 - **Needs:** [`engine-core`](#engine-core)
 - **Came from:** ArkhamHorror
-- **Docs:** [README](../components/game-log/README.md)
+- **Docs:** [README](../components/game-log/README.md) ([rules for agents](../components/game-log/README.md#rules-for-agents))
 
 ## game-store
 
@@ -574,7 +574,7 @@ One game store and one game object (K234): `defineGame` is what the game writes 
 - **Key exports:** `defineGame`, `botOpponent`, `answerOf`, `createGameStore`, `SeatId`, `GameDef`, `GameSnap`, `StoreOptions`, `GameStore`
 - **Needs:** [`engine-core`](#engine-core), [`prompt-host`](#prompt-host), [`paced-view`](#paced-view), [`sim-pool`](#sim-pool), [`replay-cli`](#replay-cli)
 - **Came from:** imperium
-- **Docs:** [README](../components/game-store/README.md)
+- **Docs:** [README](../components/game-store/README.md) ([rules for agents](../components/game-store/README.md#rules-for-agents))
 
 ## ghost-card
 
@@ -585,7 +585,7 @@ A prompt choice whose source card has left play (an "after this is discarded" tr
 - **Key exports:** `ghostChoices`, `GhostGroup`, `GhostSplit`
 - **Needs:** nothing
 - **Came from:** ArkhamHorror (idea only, no licence: no code copied)
-- **Docs:** [README](../components/ghost-card/README.md)
+- **Docs:** [README](../components/ghost-card/README.md) ([rules for agents](../components/ghost-card/README.md#rules-for-agents))
 
 ## glossary
 
@@ -596,7 +596,7 @@ Links every glossary term and icon code in the game's texts to a lookup, and che
 - **Key exports:** `ICON`, `isPrinted`, `nameKey`, `GLOSSARY_ID`, `buildIndex`, `iconEntry`, `matchText`, `linkedIds`, `coveredChars`, `paragraphs`, `searchEntries`, `glossaryProblems`, `checkGlossary`, `runGlossaryCheck`, and 12 more
 - **Needs:** [`phone-mode`](#phone-mode), [`state-machines`](#state-machines)
 - **Came from:** warps
-- **Docs:** [README](../components/glossary/README.md)
+- **Docs:** [README](../components/glossary/README.md) ([rules for agents](../components/glossary/README.md#rules-for-agents))
 
 ## layout-editor
 
@@ -607,7 +607,7 @@ Arrange the zones of a game screen by hand (card zones, piles, hand, market, tra
 - **Key exports:** `KINDS`, `normalizeDoc`, `screenLayout`, `descendants`, `childrenOf`, `parentOf`, `moveZone`, `resizeZone`, `idTaken`, `mirrorZones`, `renameZone`, `snap`, `cardFit`, `layoutWarnings`, and 22 more
 - **Needs:** [`board-layout`](#board-layout)
 - **Came from:** none (owner request)
-- **Docs:** [README](../components/layout-editor/README.md)
+- **Docs:** [README](../components/layout-editor/README.md) ([rules for agents](../components/layout-editor/README.md#rules-for-agents))
 
 ## learned-opponent
 
@@ -618,7 +618,7 @@ A learned opponent (K125): a value net, a one-horizon look-ahead on the game's o
 - **Key exports:** `Inputs`, `behind`, `blank`, `present`, `seatOrder`, `setValue`, `thermo`, `Evaluator`, `forward`, `fromWeights`, `newNet`, `readWeights`, `toWeights`, `trainStep`, and 25 more
 - **Needs:** [`engine-core`](#engine-core), [`sim-pool`](#sim-pool)
 - **Came from:** outside: rftg (Keldon Jones's Race for the Galaxy AI), design only
-- **Docs:** [README](../components/learned-opponent/README.md)
+- **Docs:** [README](../components/learned-opponent/README.md) ([rules for agents](../components/learned-opponent/README.md#rules-for-agents))
 
 ## lint-preset
 
@@ -629,7 +629,7 @@ ESLint flat-config blocks for a game's engine folder. Spread them after the game
 - **Key exports:** `cowSelectors`, `cardIdSelectors`, `prefixDrift`, `engineLint`, `CowOptions`, `EngineLintOptions`, `Selector`
 - **Needs:** nothing
 - **Came from:** jarl
-- **Docs:** [README](../components/lint-preset/README.md)
+- **Docs:** [README](../components/lint-preset/README.md) ([rules for agents](../components/lint-preset/README.md#rules-for-agents))
 
 ## llm-playtester
 
@@ -640,7 +640,7 @@ The game writes one adapter; Claude (or `--dummy`, the first option, no client b
 - **Key exports:** `runPlaytest`, `ledgerSpent`, `main`, `runMain`, `GameAdapter`, `PlaytestOptions`, `PlaytestResult`, `MainResult`
 - **Needs:** nothing
 - **Came from:** stcc
-- **Docs:** [README](../components/llm-playtester/README.md)
+- **Docs:** [README](../components/llm-playtester/README.md) ([rules for agents](../components/llm-playtester/README.md#rules-for-agents))
 
 ## looked-at
 
@@ -651,7 +651,7 @@ Remember explicitly peeked cards by zone and show their faces again on demand.
 - **Key exports:** `recordPeek`, `forgetCard`, `knownInZone`, `Peek`, `LookedAtMemory`
 - **Needs:** [`card-zoom`](#card-zoom)
 - **Came from:** earthborne-rangers-fan-prototype
-- **Docs:** [README](../components/looked-at/README.md)
+- **Docs:** [README](../components/looked-at/README.md) ([rules for agents](../components/looked-at/README.md#rules-for-agents))
 
 ## market-row
 
@@ -662,7 +662,7 @@ A market of offer slots refilled from decks: prices, buy and cycle options, refi
 - **Key exports:** `DEAL_MS`, `STAGGER_MS`, `SLIDE_MS`, `rowMotions`, `flyFrames`, `slotZone`, `marketZones`, `slotsOf`, `priceOf`, `marketOptions`, `parseOption`, `fillSlot`, `takeSlot`, `cycleSlot`, and 19 more
 - **Needs:** [`engine-core`](#engine-core), [`card-zones`](#card-zones), [`prompt-host`](#prompt-host), [`picked-state`](#picked-state), [`motion-frame`](#motion-frame), [`deck-motions`](#deck-motions)
 - **Came from:** rome-fate-of-an-empire-fan-prototype
-- **Docs:** [README](../components/market-row/README.md)
+- **Docs:** [README](../components/market-row/README.md) ([rules for agents](../components/market-row/README.md#rules-for-agents))
 
 ## modal-dialog
 
@@ -673,7 +673,7 @@ A React modal over the board and a confirm dialog built on it.
 - **Key exports:** `Modal`, `ConfirmDialog`, `ModalProps`, `ConfirmDialogProps`
 - **Needs:** nothing
 - **Came from:** unstoppable
-- **Docs:** [README](../components/modal-dialog/README.md)
+- **Docs:** [README](../components/modal-dialog/README.md) ([rules for agents](../components/modal-dialog/README.md#rules-for-agents))
 
 ## motion-frame
 
@@ -684,7 +684,7 @@ Plays motion specs in the director's format (one JSON per beat: `actors`, `steps
 - **Key exports:** `withViewTransition`, `withVariant`, `stageFromLayout`, `buildTimeline`, `validateSpec`, `validateSpecs`, `placeOf`, `createVerbs`, `createMotionPlayer`, `withReducedMotion`, `prefersReducedMotion`, `automatedWithoutMotion`, `withAutomationOff`, `putMotionSpeed`, and 47 more
 - **Needs:** nothing
 - **Came from:** warps
-- **Docs:** [README](../components/motion-frame/README.md)
+- **Docs:** [README](../components/motion-frame/README.md) ([rules for agents](../components/motion-frame/README.md#rules-for-agents))
 
 ## offline
 
@@ -695,7 +695,7 @@ Offline install: a Vite plugin that writes a precaching service worker into the 
 - **Key exports:** `applyUpdate`, `autoApply`, `pageHost`, `registerServiceWorker`, `RELOAD_FALLBACK_MS`, `shouldRegister`, `UPDATE_MACHINE`, `useUpdate`, `buildStamp`, `BUILD_FILE`, `FRESH_KEY`, `watchBuild`, `AutoApply`, `PageHost`, and 6 more
 - **Needs:** [`state-machines`](#state-machines)
 - **Came from:** jarl
-- **Docs:** [README](../components/offline/README.md)
+- **Docs:** [README](../components/offline/README.md) ([rules for agents](../components/offline/README.md#rules-for-agents))
 
 ## opponent
 
@@ -706,7 +706,7 @@ A rule-based opponent (K103, K115). Pure data and functions; the engine never im
 - **Key exports:** `redact`, `viewLeaks`, `REASONS`, `adviceProblems`, `discardOrder`, `PIPELINE`, `loadProfile`, `newMemory`, `remember`, `recalls`, `forget`, `forgetTurn`, `setPlan`, `evaluate`, and 33 more
 - **Needs:** [`sim-pool`](#sim-pool)
 - **Came from:** chiriboga, Forge (GPL-3.0, ideas only); boardgame.io, XMage (MIT, ideas only, no code ported)
-- **Docs:** [README](../components/opponent/README.md)
+- **Docs:** [README](../components/opponent/README.md) ([rules for agents](../components/opponent/README.md#rules-for-agents))
 
 ## paced-view
 
@@ -717,7 +717,7 @@ What the table shows while an answer's events play one step at a time. Pure, no 
 - **Key exports:** `noSteps`, `pushSteps`, `advance`, `skip`, `foldView`, `foldBefore`, `createStepper`, `questionZone`, `Steps`, `Fold`, `FoldOptions`, `StepperOptions`, `Rect`, `QuestionZoneOptions`
 - **Needs:** nothing
 - **Came from:** 7th-inning-stretch
-- **Docs:** [README](../components/paced-view/README.md)
+- **Docs:** [README](../components/paced-view/README.md) ([rules for agents](../components/paced-view/README.md#rules-for-agents))
 
 ## perf
 
@@ -728,7 +728,7 @@ The engine speed budget: plays whole driver games, times every `applyAction`, an
 - **Key exports:** `REPEATS`, `SLOWEST`, `distribution`, `expectBudgets`, `formatReport`, `measure`, `overBudget`, `percentile`, `reportOf`, `timeGame`, `run`, `OBSERVE`, `capture`, `compare`, and 22 more
 - **Needs:** [`engine-core`](#engine-core), [`sim-pool`](#sim-pool)
 - **Came from:** stcc
-- **Docs:** [README](../components/perf/README.md)
+- **Docs:** [README](../components/perf/README.md) ([rules for agents](../components/perf/README.md#rules-for-agents))
 
 ## phone-mode
 
@@ -739,7 +739,7 @@ The mechanism of a phone layout: which layout a window gets, the fit zoom of the
 - **Key exports:** `secondTap`, `VIEWPORT_MACHINE`, `foldMachine`, `SECOND_TAP_MACHINE`, `PHONE_SHORT_SIDE`, `DESK_W`, `DESK_H`, `layoutModeFor`, `layoutAttr`, `isPhone`, `fitZoom`, `applyFit`, `setSafeArea`, `needsFit`, and 36 more
 - **Needs:** [`state-machines`](#state-machines)
 - **Came from:** jarl
-- **Docs:** [README](../components/phone-mode/README.md)
+- **Docs:** [README](../components/phone-mode/README.md) ([rules for agents](../components/phone-mode/README.md#rules-for-agents))
 
 ## picked-state
 
@@ -750,7 +750,7 @@ The mark for an option the player has picked, as tokens plus one small helper.
 - **Key exports:** `pickedState`, `pickedAttrs`, `pickedStates`, `PickedState`
 - **Needs:** nothing
 - **Came from:** 7is
-- **Docs:** [README](../components/picked-state/README.md)
+- **Docs:** [README](../components/picked-state/README.md) ([rules for agents](../components/picked-state/README.md#rules-for-agents))
 
 ## pieces-3d
 
@@ -761,7 +761,7 @@ Pieces built in code, no model file: a rounded d6 and a ten-sided die (WebGL), a
 - **Key exports:** `sub`, `add`, `mul`, `dot`, `cross`, `norm`, `apply`, `mmul`, `transpose`, `ID`, `rotX`, `rotY`, `rotAxis`, `cube`, and 32 more
 - **Needs:** nothing
 - **Came from:** 7is
-- **Docs:** [README](../components/pieces-3d/README.md)
+- **Docs:** [README](../components/pieces-3d/README.md) ([rules for agents](../components/pieces-3d/README.md#rules-for-agents))
 
 ## pieces-3d-verbs
 
@@ -772,7 +772,7 @@ The animation verbs of `pieces-3d` (release 1.1: VFX). A 1.0 game draws dice and
 - **Key exports:** `dice3d`, `registerPieceVerbs`, `copyPieces`, `PieceVerbOptions`
 - **Needs:** [`pieces-3d`](#pieces-3d), [`effect-library`](#effect-library), [`motion-frame`](#motion-frame)
 - **Came from:** 7is
-- **Docs:** [README](../components/pieces-3d-verbs/README.md)
+- **Docs:** [README](../components/pieces-3d-verbs/README.md) ([rules for agents](../components/pieces-3d-verbs/README.md#rules-for-agents))
 
 ## plain-text
 
@@ -783,7 +783,7 @@ The owner's rule "no rule ids on screen" as code: rule, ruling and decision ids 
 - **Key exports:** `ruleIdSource`, `ruleIdFilter`, `plainPrompt`, `plainView`, `CODE_TEXT`, `forbiddenText`, `visibleText`, `longSentences`, `IdFamilies`, `Strip`, `RuleIdFilter`
 - **Needs:** nothing
 - **Came from:** rome
-- **Docs:** [README](../components/plain-text/README.md)
+- **Docs:** [README](../components/plain-text/README.md) ([rules for agents](../components/plain-text/README.md#rules-for-agents))
 
 ## plan-checker
 
@@ -794,7 +794,7 @@ The plan checker: `plancheck.py` checks a game's build plan (Markdown) for balan
 - **Key exports:** `plancheck.py` (CLI), `plancheck.ts` (wrapper)
 - **Needs:** nothing
 - **Came from:** jarl
-- **Docs:** [README](../components/plan-checker/README.md)
+- **Docs:** [README](../components/plan-checker/README.md) ([rules for agents](../components/plan-checker/README.md#rules-for-agents))
 
 ## play-stats
 
@@ -805,7 +805,7 @@ The records of finished games, the totals and best scores read from them, and a 
 - **Key exports:** `localStats`, `createPlayStats`, `ranked`, `bestBy`, `personalBest`, `totals`, `createPlayClock`, `StatsStorage`, `PlayRecord`, `PlayStatsOptions`, `PlayStats`, `PlaySession`, `PlayClockOptions`, `PlayClock`
 - **Needs:** nothing
 - **Came from:** imp
-- **Docs:** [README](../components/play-stats/README.md)
+- **Docs:** [README](../components/play-stats/README.md) ([rules for agents](../components/play-stats/README.md#rules-for-agents))
 
 ## player-board
 
@@ -816,7 +816,7 @@ A mat with named zones from a layout: each zone fits its cards (largest size, tw
 - **Key exports:** `layRow`, `fitZone`, `planBoard`, `handSink`, `DEFAULT_GAP`, `DEFAULT_MIN_CARD_WIDTH`, `Size`, `Rect`, `RowFit`, `Placed`, `ZonePlan`, `BoardPlanOpts`
 - **Needs:** [`card-zones`](#card-zones), [`board-layout`](#board-layout), [`card-attachments`](#card-attachments)
 - **Came from:** earthborne-rangers-fan-prototype
-- **Docs:** [README](../components/player-board/README.md)
+- **Docs:** [README](../components/player-board/README.md) ([rules for agents](../components/player-board/README.md#rules-for-agents))
 
 ## prompt-gallery
 
@@ -827,7 +827,7 @@ One game state per prompt kind and per ending, a check that fails when a kind ha
 - **Key exports:** `fixtureId`, `galleryEntries`, `checkGallery`, `loadFixture`, `checkStates`, `keepBest`, `isDevMode`, `checkActionCoverage`, `FixtureGroup`, `Fixture`, `GallerySpec`, `GalleryEntry`, `Loaded`, `Seen`, and 2 more
 - **Needs:** nothing
 - **Came from:** ebr
-- **Docs:** [README](../components/prompt-gallery/README.md)
+- **Docs:** [README](../components/prompt-gallery/README.md) ([rules for agents](../components/prompt-gallery/README.md#rules-for-agents))
 
 ## prompt-host
 
@@ -838,7 +838,7 @@ Shows the engine's open question (an engine-core prompt) through a typed widget 
 - **Key exports:** `autoAnswer`, `checkLook`, `answerWithForced`, `sendForced`, `Forced`, `ForcedOptions`
 - **Needs:** [`engine-core`](#engine-core), [`prompt-source`](#prompt-source)
 - **Came from:** rome
-- **Docs:** [README](../components/prompt-host/README.md)
+- **Docs:** [README](../components/prompt-host/README.md) ([rules for agents](../components/prompt-host/README.md#rules-for-agents))
 
 ## prompt-source
 
@@ -849,7 +849,7 @@ Each prompt names its source frame (card and clause), a decision-authority tag w
 - **Key exports:** `authorityNotice`, `stackView`, `checkPromptSources`, `PromptSource`, `Authority`, `AuthorityTable`, `StackRow`, `OpenPrompt`, `SourceSpec`
 - **Needs:** nothing
 - **Came from:** marvel-champions-digital-game (idea only, AGPL-3.0, no code copied)
-- **Docs:** [README](../components/prompt-source/README.md)
+- **Docs:** [README](../components/prompt-source/README.md) ([rules for agents](../components/prompt-source/README.md#rules-for-agents))
 
 ## proof-sheet
 
@@ -860,7 +860,7 @@ Review a pack's faces beside their fields, printed words, generated words, and f
 - **Key exports:** `viewFromHash`, `viewToHash`, `flagsFor`, `toggleFilter`, `filterCards`, `proofGroups`, `ProofView`, `ProofFlag`, `ProofCheck`, `ProofFilter`, `ProofSort`, `ProofSpec`, `ProofGroup`
 - **Needs:** nothing
 - **Came from:** Star-trek-captains-chair-game
-- **Docs:** [README](../components/proof-sheet/README.md)
+- **Docs:** [README](../components/proof-sheet/README.md) ([rules for agents](../components/proof-sheet/README.md#rules-for-agents))
 
 ## reference-game
 
@@ -871,7 +871,7 @@ A small made-up card game kept in the kit as a contract test (K205, K276): when 
 - **Key exports:** `reference.test.ts`; template/ overlay for scaffold
 - **Needs:** [`scaffold`](#scaffold)
 - **Came from:** kit
-- **Docs:** [README](../components/reference-game/README.md)
+- **Docs:** [README](../components/reference-game/README.md) ([rules for agents](../components/reference-game/README.md#rules-for-agents))
 
 ## replay-cli
 
@@ -882,7 +882,7 @@ Headless replays, golden games and a determinism check across two checkouts. Nee
 - **Key exports:** `checkpointText`, `checkpointDiff`, `pathDiff`, `viewDigest`, `nodeIo`, `parseLog`, `logText`, `loadEngine`, `replayFile`, `run`, `GOLDEN_SAVED_AT`, `goldenGameSpec`, `blankContentHashes`, `playGolden`, and 13 more
 - **Needs:** [`engine-core`](#engine-core), [`sim-pool`](#sim-pool)
 - **Came from:** imp
-- **Docs:** [README](../components/replay-cli/README.md)
+- **Docs:** [README](../components/replay-cli/README.md) ([rules for agents](../components/replay-cli/README.md#rules-for-agents))
 
 ## repo-gate
 
@@ -893,7 +893,7 @@ The repository gate: file sizes, raw scans, secrets, session URLs, tailnet hosts
 - **Key exports:** `RAW_SCAN`, `DEFAULT_CONFIG`, `MAX_FILE_BYTES`, `SESSION_URL`, `TAILNET_HOST`, `GITHUB_TOKEN`, `PRIVATE_KEY`, `namePattern`, `collectIds`, `collectNames`, `namesPattern`, `idsPattern`, `checkFiles`, `decodeText`, and 11 more
 - **Needs:** nothing
 - **Came from:** jarl
-- **Docs:** [README](../components/repo-gate/README.md)
+- **Docs:** [README](../components/repo-gate/README.md) ([rules for agents](../components/repo-gate/README.md#rules-for-agents))
 
 ## resolution-frame
 
@@ -904,7 +904,7 @@ A Resolution setting that works: on a PC the game is laid out as on a screen of 
 - **Key exports:** `fitBox`, `PHONE_QUERY`, `frameHost`, `shouldFrame`, `storedResolution`, `FrameHost`
 - **Needs:** [`settings`](#settings)
 - **Came from:** rome
-- **Docs:** [README](../components/resolution-frame/README.md)
+- **Docs:** [README](../components/resolution-frame/README.md) ([rules for agents](../components/resolution-frame/README.md#rules-for-agents))
 
 ## rules-screen
 
@@ -915,7 +915,7 @@ An in-app rulebook with heading navigation, ranked word search, glossary links, 
 - **Key exports:** `rulebookSchema`, `headingTree`, `blockText`, `searchText`, `searchRules`, `rulesMatching`, `highlight`, `Block`, `Rulebook`, `Scene`, `SceneElement`, `DiagramAsset`, `Heading`, `RuleHit`
 - **Needs:** [`glossary`](#glossary), [`card-parts`](#card-parts), [`screens`](#screens)
 - **Came from:** rise-of-a-jarl-fan-prototype
-- **Docs:** [README](../components/rules-screen/README.md)
+- **Docs:** [README](../components/rules-screen/README.md) ([rules for agents](../components/rules-screen/README.md#rules-for-agents))
 
 ## saves
 
@@ -926,7 +926,7 @@ Saved games in IndexedDB over engine-core's `SaveFile`, and a screen for them. `
 - **Key exports:** `AUTO`, `keepStorage`, `makeSaves`, `NAMED`, `SAVE_CLOCK`, `SAVE_CLOCK_MAX_AHEAD_MS`, `makeKv`, `allData`, `exportAllData`, `importAllData`, `resetAllData`, `Saves`, `SavesConfig`, `StoredSave`, and 9 more
 - **Needs:** [`engine-core`](#engine-core), [`small-helpers`](#small-helpers)
 - **Came from:** jarl
-- **Docs:** [README](../components/saves/README.md)
+- **Docs:** [README](../components/saves/README.md) ([rules for agents](../components/saves/README.md#rules-for-agents))
 
 ## scaffold
 
@@ -937,7 +937,7 @@ One command makes a working, empty game repo from the kit (K204). Run it from th
 - **Key exports:** `node kit.mjs new <dir> <id> "<Name>"`; `scaffold(options)` in scaffold.js
 - **Needs:** nothing
 - **Came from:** 7is
-- **Docs:** [README](../components/scaffold/README.md)
+- **Docs:** [README](../components/scaffold/README.md) ([rules for agents](../components/scaffold/README.md#rules-for-agents))
 
 ## scan-ingest
 
@@ -948,7 +948,7 @@ Flatbed scans of a game's components to one upright, tightly cropped image per i
 - **Key exports:** Python package `scanpipe`; TS `index.ts` (measureBoxes, planOverlay, clipPathOf, mmStyle, uniformOutlines...), `ui.ts` (ScanBoard, Piece)
 - **Needs:** nothing
 - **Came from:** scanning-pipeline
-- **Docs:** [README](../components/scan-ingest/README.md)
+- **Docs:** [README](../components/scan-ingest/README.md) ([rules for agents](../components/scan-ingest/README.md#rules-for-agents))
 
 ## screens
 
@@ -959,7 +959,7 @@ Unstyled, data-driven main menu and new-game set-up form, with a pure default an
 - **Key exports:** `createThemeStore`, `disclaimer`, `defaultSetup`, `validateSetup`, `defaultWords`, `Theme`, `Option`, `SetupSpec`, `Setup`, `Field`, `Words`
 - **Needs:** nothing
 - **Came from:** kit
-- **Docs:** [README](../components/screens/README.md)
+- **Docs:** [README](../components/screens/README.md) ([rules for agents](../components/screens/README.md#rules-for-agents))
 
 ## settings
 
@@ -970,7 +970,7 @@ Settings declared as data, a persisted store of their values and a screen drawn 
 - **Key exports:** `settingDefs`, `defaults`, `isValid`, `readSettings`, `layoutSetting`, `RESOLUTIONS`, `resolutionSetting`, `resolutionSize`, `safeStorage`, `createSettingsStore`, `Toggle`, `Option`, `Choice`, `Range`, and 7 more
 - **Needs:** nothing
 - **Came from:** imp
-- **Docs:** [README](../components/settings/README.md)
+- **Docs:** [README](../components/settings/README.md) ([rules for agents](../components/settings/README.md#rules-for-agents))
 
 ## sim-pool
 
@@ -981,7 +981,7 @@ Plays N whole games of any `GameRules<G>` with a driver, in this thread or on wo
 - **Key exports:** `DriverRng`, `ANSWER_CAP`, `CRASH_HASH`, `breakAt`, `bySeat`, `crashRecord`, `legalAnswers`, `playOne`, `randomDriver`, `botDriver`, `replayStep`, `formatReport`, `report`, `runGames`, and 61 more
 - **Needs:** [`engine-core`](#engine-core)
 - **Came from:** warps
-- **Docs:** [README](../components/sim-pool/README.md)
+- **Docs:** [README](../components/sim-pool/README.md) ([rules for agents](../components/sim-pool/README.md#rules-for-agents))
 
 ## small-helpers
 
@@ -992,7 +992,7 @@ Small pure helpers from the outside harvest (K109). No packages; import from `in
 - **Key exports:** `HIDDEN_WORD_STYLE`, `iconHtml`, `iconText`, `validateAll`, `runLegalCases`, `relationIndex`, `keysIn`, `missingKeys`, `joinBase`, `cssUrl`, `assetPaths`, `plural`, `pluralWord`, `signed`, and 9 more
 - **Needs:** nothing
 - **Came from:** outside
-- **Docs:** [README](../components/small-helpers/README.md)
+- **Docs:** [README](../components/small-helpers/README.md) ([rules for agents](../components/small-helpers/README.md#rules-for-agents))
 
 ## sound-player
 
@@ -1003,7 +1003,7 @@ A Web Audio player driven by one table of data. It knows no game. No packages.
 - **Key exports:** `MIN_FADE_MS`, `seamLoop`, `createSoundPlayer`, `synthLength`, `startSynthVoice`, `cuesFor`, `createEventSounds`, `resolveCue`, `createTrailSounds`, `mp3Frames`, `trimMp3`, `musicTracks`, `pickTrack`, `pickPlaylistTrack`, and 17 more
 - **Needs:** nothing
 - **Came from:** warps
-- **Docs:** [README](../components/sound-player/README.md)
+- **Docs:** [README](../components/sound-player/README.md) ([rules for agents](../components/sound-player/README.md#rules-for-agents))
 
 ## state-machines
 
@@ -1014,7 +1014,7 @@ Explicit state machines as plain tables. `index.ts` loads in node and needs no p
 - **Key exports:** `MACHINES_DOC`, `setMachinesDoc`, `defineMachine`, `defineTable`, `listTables`, `tableWhere`, `listMachines`, `getMachine`, `targetOf`, `can`, `allowedFrom`, `edgesOf`, `isState`, `hasEdge`, and 25 more
 - **Needs:** nothing
 - **Came from:** jarl
-- **Docs:** [README](../components/state-machines/README.md)
+- **Docs:** [README](../components/state-machines/README.md) ([rules for agents](../components/state-machines/README.md#rules-for-agents))
 
 ## story
 
@@ -1025,7 +1025,7 @@ Story as data only (flavour: no rule lives in it; a missing line never blocks pl
 - **Key exports:** `NARRATOR`, `speakerName`, `resolveLine`, `resolveBeat`, `findScenario`, `slotBeats`, `visibleParts`, `sheetView`, `pictureView`, `storyProblems`, `holds`, `textOf`, `fill`, `pageView`, and 56 more
 - **Needs:** [`engine-core`](#engine-core)
 - **Came from:** quincarter/marvel-champions-digital-game, halogenandtoast/MarvelChampions, ArkhamHorror (AGPL or no licence: ideas only, code written fresh)
-- **Docs:** [README](../components/story/README.md)
+- **Docs:** [README](../components/story/README.md) ([rules for agents](../components/story/README.md#rules-for-agents))
 
 ## table-panels
 
@@ -1036,7 +1036,7 @@ The panels every game writes around its table, as logic plus unstyled slots: log
 - **Key exports:** `fill`, `logLines`, `rowLines`, `filterSeat`, `groupByTurn`, `opponentTurn`, `gameResult`, `banner`, `phaseChanged`, `Words`, `LogLine`, `LogOptions`, `StepLine`, `OpponentTurn`, and 4 more
 - **Needs:** [`game-log`](#game-log), [`paced-view`](#paced-view)
 - **Came from:** imperium
-- **Docs:** [README](../components/table-panels/README.md)
+- **Docs:** [README](../components/table-panels/README.md) ([rules for agents](../components/table-panels/README.md#rules-for-agents))
 
 ## target-arrow
 
@@ -1047,7 +1047,7 @@ A curved arrow from the card that asks for a target to the pointer; it snaps to 
 - **Key exports:** `MAX_HOLD_MS`, `createStrikes`, `BEND`, `MAX_BEND`, `curveOf`, `pointOn`, `partOf`, `HEAD_LENGTH`, `HEAD_WIDTH`, `lengthOf`, `arrowShape`, `aimedZone`, `centreOf`, `STRIKE_MS`, and 11 more
 - **Needs:** nothing
 - **Came from:** unstoppable-fan-prototype
-- **Docs:** [README](../components/target-arrow/README.md)
+- **Docs:** [README](../components/target-arrow/README.md) ([rules for agents](../components/target-arrow/README.md#rules-for-agents))
 
 ## test-setup
 
@@ -1058,7 +1058,7 @@ Game-free helpers for a game's vitest runs: jsdom stubs, UI fixtures (fake pack 
 - **Key exports:** `installDomStubs`, `fakeArt`, `fakePack`, `DomStubOptions`, `FakeCard`, `FakePack`
 - **Needs:** nothing
 - **Came from:** unst
-- **Docs:** [README](../components/test-setup/README.md)
+- **Docs:** [README](../components/test-setup/README.md) ([rules for agents](../components/test-setup/README.md#rules-for-agents))
 
 ## theme-check
 
@@ -1069,7 +1069,7 @@ Static check that a game's look lives in its token file. Lifted from Jarl's `scr
 - **Key exports:** `themeFindings`, `assetFindings`, `themeCheck`, `coverageProblems`, `contentBoxes`, `coverageFindings`, `smallText`, `fontSizeFindings`, `phoneFontFindings`, `outside`, `overlap`, `layoutProblems`, `measure`, `layoutFindings`, and 23 more
 - **Needs:** nothing
 - **Came from:** jarl
-- **Docs:** [README](../components/theme-check/README.md)
+- **Docs:** [README](../components/theme-check/README.md) ([rules for agents](../components/theme-check/README.md#rules-for-agents))
 
 ## token-bag
 
@@ -1080,7 +1080,7 @@ A bag of tokens with its count; the draw shown as a 2D flight from the bag or a 
 - **Key exports:** `EXTERIOR_ACROSS`, `EXTERIOR_UP`, `CLOTH`, `COIN_RADIUS`, `COIN_HEIGHT`, `SHAKE_START`, `SHAKE_END`, `DRAW_START`, `STAGGER`, `DRAW_DURATION`, `pileLayout`, `shakeAmount`, `bagPose`, `slotPose`, and 43 more
 - **Needs:** nothing
 - **Came from:** warps-edge-fan-prototype
-- **Docs:** [README](../components/token-bag/README.md)
+- **Docs:** [README](../components/token-bag/README.md) ([rules for agents](../components/token-bag/README.md#rules-for-agents))
 
 ## token-flights
 
@@ -1091,7 +1091,7 @@ Tokens that moved between two views fly from where they were to where they are, 
 - **Key exports:** `MAX_PER_CHANGE`, `movesBetween`, `EMPTY_LEDGER`, `book`, `createFlightLedger`, `isEmpty`, `land`, `shownCount`, `shownCounts`, `shownTokens`, `takeOff`, `WARP_FLIGHTS_3D`, `applyPose`, `flight3dMs`, and 17 more
 - **Needs:** nothing
 - **Came from:** unstoppable-fan-prototype
-- **Docs:** [README](../components/token-flights/README.md)
+- **Docs:** [README](../components/token-flights/README.md) ([rules for agents](../components/token-flights/README.md#rules-for-agents))
 
 ## tooling-scripts
 
@@ -1102,7 +1102,7 @@ Small repo scripts a game runs with `node kit/tooling-scripts/<script>.ts`. Each
 - **Key exports:** Scripts: `text-leak`, `art-check`, `shrink-png`, `mock-capture`, `contact-sheet`, `gen-from-table`, `docs-index`, `dossier-sync`, `fonts-fetch`, `woff`, `bundle-node`, `home-screen`, `move`, `lookup`, `launch`
 - **Needs:** nothing
 - **Came from:** imp
-- **Docs:** [README](../components/tooling-scripts/README.md)
+- **Docs:** [README](../components/tooling-scripts/README.md) ([rules for agents](../components/tooling-scripts/README.md#rules-for-agents))
 
 ## traceability
 
@@ -1113,7 +1113,7 @@ Rule-citation gate. The game passes a `trace.config.json` (any subset of the opt
 - **Key exports:** `DEFAULT_CONFIG`, `readPending`, `ruleIdPattern`, `extractRuleIds`, `extractTitles`, `extractComments`, `computeCoverage`, `groupByPrefix`, `extractScenarioIds`, `scenarioCoverage`, `familyOf`, `phaseFamilies`, `mergedPhases`, `inlinePending`, and 7 more
 - **Needs:** nothing
 - **Came from:** jarl
-- **Docs:** [README](../components/traceability/README.md)
+- **Docs:** [README](../components/traceability/README.md) ([rules for agents](../components/traceability/README.md#rules-for-agents))
 
 ## track
 
@@ -1124,7 +1124,7 @@ A row of spaces with a marker that glides, on a drawn row or on spots of a mat i
 - **Key exports:** `Track`, `HopTrack`, `StepTrack`, `useMarkerGlide`, `registerFill`, `landingEffects`, `stateOf`, `spaceLabel`, `GLIDE_MS`, `GLIDE_RISE`, `GLIDE_CURVE`, `glideMs`, `glideFrames`, `HOP_MS`, and 31 more
 - **Needs:** [`counter`](#counter), [`motion-frame`](#motion-frame)
 - **Came from:** unstoppable
-- **Docs:** [README](../components/track/README.md)
+- **Docs:** [README](../components/track/README.md) ([rules for agents](../components/track/README.md#rules-for-agents))
 
 ## transcription-check
 
@@ -1135,7 +1135,7 @@ Every printed item (card, tile, board) is transcribed twice, independently, then
 - **Key exports:** `sha256`, `jsonDiff`, `transcriptionCheck`, `wrapMeasure`, `faceFitCheck`, `TOLERANCE`, `RADIUS`, `patternValue`, `median`, `wordFailures`, `lineBreakFailures`, `faceFindings`, `judgeFace`, `Transcript`, and 16 more
 - **Needs:** nothing
 - **Came from:** under-falling-skies
-- **Docs:** [README](../components/transcription-check/README.md)
+- **Docs:** [README](../components/transcription-check/README.md) ([rules for agents](../components/transcription-check/README.md#rules-for-agents))
 
 ## turn-flow
 
@@ -1146,7 +1146,7 @@ Rounds, turns per seat and phases and steps inside a turn as one data table; the
 - **Key exports:** `FLOW_NEXT`, `flowOf`, `whoseTurn`, `startFlow`, `endTurn`, `flowHandlers`, `FlowPhase`, `FlowLevel`, `FlowPos`, `FlowState`, `FlowConfig`
 - **Needs:** [`engine-core`](#engine-core)
 - **Came from:** 7th-inning-stretch
-- **Docs:** [README](../components/turn-flow/README.md)
+- **Docs:** [README](../components/turn-flow/README.md) ([rules for agents](../components/turn-flow/README.md#rules-for-agents))
 
 ## tutorial
 
@@ -1157,7 +1157,7 @@ The tutorial engine for any `GameRules<G>` game: a script format, headless play 
 - **Key exports:** `parseScript`, `actionsOf`, `actionsBefore`, `stepAt`, `bareNumbers`, `drive`, `formatFailure`, `startRun`, `scriptedIds`, `missingEvents`, `playStep`, `playScript`, `lockAt`, `lockPrompt`, and 69 more
 - **Needs:** [`engine-core`](#engine-core), [`state-machines`](#state-machines)
 - **Came from:** stcc
-- **Docs:** [README](../components/tutorial/README.md)
+- **Docs:** [README](../components/tutorial/README.md) ([rules for agents](../components/tutorial/README.md#rules-for-agents))
 
 ## ui-helpers
 
@@ -1168,7 +1168,7 @@ Small screen helpers with no look and no game types. The stores are zustand vani
 - **Key exports:** `realTimers`, `bindHoverHold`, `createHoverHold`, `createInspect`, `createToasts`, `createSelection`, `picksFor`, `onlyForcedAnswer`, `probedAnswer`, `sheetMatching`, `sheetWords`, `compileIconWords`, `iconizeSegments`, `withoutIconWords`, and 41 more
 - **Needs:** nothing
 - **Came from:** jarl
-- **Docs:** [README](../components/ui-helpers/README.md)
+- **Docs:** [README](../components/ui-helpers/README.md) ([rules for agents](../components/ui-helpers/README.md#rules-for-agents))
 
 ## voice
 
@@ -1179,4 +1179,4 @@ A line player on the sound player's `voice` bus. It knows no game: the lines are
 - **Key exports:** `voiceCue`, `voiceCues`, `createVoice`, `LineDef`, `VoiceTable`, `VoicePlayer`, `VoiceOptions`, `Voice`, `VoiceCue`
 - **Needs:** [`sound-player`](#sound-player)
 - **Came from:** ebr
-- **Docs:** [README](../components/voice/README.md)
+- **Docs:** [README](../components/voice/README.md) ([rules for agents](../components/voice/README.md#rules-for-agents))
