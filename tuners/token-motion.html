@@ -349,9 +349,9 @@ var MOTION = (() => {
       }
       function mapChildren(children, func, context) {
         if (null == children) return children;
-        var result = [], count = 0;
+        var result = [], count2 = 0;
         mapIntoArray(children, result, "", "", function(child) {
-          return func.call(context, child, count++);
+          return func.call(context, child, count2++);
         });
         return result;
       }
@@ -12354,7 +12354,7 @@ var MOTION = (() => {
       }
       function estimateBandwidth() {
         if ("function" === typeof performance.getEntriesByType) {
-          for (var count = 0, bits = 0, resourceEntries = performance.getEntriesByType("resource"), i = 0; i < resourceEntries.length; i++) {
+          for (var count2 = 0, bits = 0, resourceEntries = performance.getEntriesByType("resource"), i = 0; i < resourceEntries.length; i++) {
             var entry = resourceEntries[i], transferSize = entry.transferSize, initiatorType = entry.initiatorType, duration = entry.duration;
             if (transferSize && duration && isLikelyStaticResource(initiatorType)) {
               initiatorType = 0;
@@ -12367,13 +12367,13 @@ var MOTION = (() => {
               }
               --i;
               bits += 8 * (transferSize + initiatorType) / (entry.duration / 1e3);
-              count++;
-              if (10 < count) break;
+              count2++;
+              if (10 < count2) break;
             }
           }
-          if (0 < count) return bits / count / 1e6;
+          if (0 < count2) return bits / count2 / 1e6;
         }
-        return navigator.connection && (count = navigator.connection.downlink, "number" === typeof count) ? count : 5;
+        return navigator.connection && (count2 = navigator.connection.downlink, "number" === typeof count2) ? count2 : 5;
       }
       var eventsEnabled = null;
       var selectionInformation = null;
@@ -15986,14 +15986,14 @@ var MOTION = (() => {
     function setMode(value) {
       mode = value;
     }
-    function render(start, count) {
-      gl.drawArrays(mode, start, count);
-      info.update(count, mode, 1);
+    function render(start, count2) {
+      gl.drawArrays(mode, start, count2);
+      info.update(count2, mode, 1);
     }
-    function renderInstances(start, count, primcount) {
+    function renderInstances(start, count2, primcount) {
       if (primcount === 0) return;
-      gl.drawArraysInstanced(mode, start, count, primcount);
-      info.update(count, mode, primcount);
+      gl.drawArraysInstanced(mode, start, count2, primcount);
+      info.update(count2, mode, primcount);
     }
     function renderMultiDraw(starts, counts, drawCount) {
       if (drawCount === 0) return;
@@ -16574,12 +16574,12 @@ var MOTION = (() => {
       return texture;
     }
     function isCubeTextureComplete(image) {
-      let count = 0;
+      let count2 = 0;
       const length = 6;
       for (let i = 0; i < length; i++) {
-        if (image[i] !== void 0) count++;
+        if (image[i] !== void 0) count2++;
       }
-      return count === length;
+      return count2 === length;
     }
     function onTextureDispose(event) {
       const texture = event.target;
@@ -16761,14 +16761,14 @@ var MOTION = (() => {
       type = value.type;
       bytesPerElement = value.bytesPerElement;
     }
-    function render(start, count) {
-      gl.drawElements(mode, count, type, start * bytesPerElement);
-      info.update(count, mode, 1);
+    function render(start, count2) {
+      gl.drawElements(mode, count2, type, start * bytesPerElement);
+      info.update(count2, mode, 1);
     }
-    function renderInstances(start, count, primcount) {
+    function renderInstances(start, count2, primcount) {
       if (primcount === 0) return;
-      gl.drawElementsInstanced(mode, count, type, start * bytesPerElement, primcount);
-      info.update(count, mode, primcount);
+      gl.drawElementsInstanced(mode, count2, type, start * bytesPerElement, primcount);
+      info.update(count2, mode, primcount);
     }
     function renderMultiDraw(starts, counts, drawCount) {
       if (drawCount === 0) return;
@@ -16815,23 +16815,23 @@ var MOTION = (() => {
       points: 0,
       lines: 0
     };
-    function update(count, mode, instanceCount) {
+    function update(count2, mode, instanceCount) {
       render.calls++;
       switch (mode) {
         case gl.TRIANGLES:
-          render.triangles += instanceCount * (count / 3);
+          render.triangles += instanceCount * (count2 / 3);
           break;
         case gl.LINES:
-          render.lines += instanceCount * (count / 2);
+          render.lines += instanceCount * (count2 / 2);
           break;
         case gl.LINE_STRIP:
-          render.lines += instanceCount * (count - 1);
+          render.lines += instanceCount * (count2 - 1);
           break;
         case gl.LINE_LOOP:
-          render.lines += instanceCount * count;
+          render.lines += instanceCount * count2;
           break;
         case gl.POINTS:
-          render.points += instanceCount * count;
+          render.points += instanceCount * count2;
           break;
         default:
           console.error("THREE.WebGLInfo: Unknown draw mode:", mode);
@@ -19705,13 +19705,13 @@ var MOTION = (() => {
     const viewportParam = gl.getParameter(gl.VIEWPORT);
     const currentScissor = new Vector4().fromArray(scissorParam);
     const currentViewport = new Vector4().fromArray(viewportParam);
-    function createTexture(type, target, count, dimensions) {
+    function createTexture(type, target, count2, dimensions) {
       const data = new Uint8Array(4);
       const texture = gl.createTexture();
       gl.bindTexture(type, texture);
       gl.texParameteri(type, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
       gl.texParameteri(type, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
-      for (let i = 0; i < count; i++) {
+      for (let i = 0; i < count2; i++) {
         if (type === gl.TEXTURE_3D || type === gl.TEXTURE_2D_ARRAY) {
           gl.texImage3D(target, 0, gl.RGBA, 1, 1, dimensions, 0, gl.RGBA, gl.UNSIGNED_BYTE, data);
         } else {
@@ -23778,8 +23778,8 @@ var MOTION = (() => {
           texture.generateMipmaps = options.generateMipmaps;
           texture.internalFormat = options.internalFormat;
           this.textures = [];
-          const count = options.count;
-          for (let i = 0; i < count; i++) {
+          const count2 = options.count;
+          for (let i = 0; i < count2; i++) {
             this.textures[i] = texture.clone();
             this.textures[i].isRenderTargetTexture = true;
           }
@@ -27954,8 +27954,8 @@ var MOTION = (() => {
           this.usage = value;
           return this;
         }
-        addUpdateRange(start, count) {
-          this.updateRanges.push({ start, count });
+        addUpdateRange(start, count2) {
+          this.updateRanges.push({ start, count: count2 });
         }
         clearUpdateRanges() {
           this.updateRanges.length = 0;
@@ -28204,19 +28204,19 @@ var MOTION = (() => {
         hasAttribute(name) {
           return this.attributes[name] !== void 0;
         }
-        addGroup(start, count, materialIndex = 0) {
+        addGroup(start, count2, materialIndex = 0) {
           this.groups.push({
             start,
-            count,
+            count: count2,
             materialIndex
           });
         }
         clearGroups() {
           this.groups = [];
         }
-        setDrawRange(start, count) {
+        setDrawRange(start, count2) {
           this.drawRange.start = start;
-          this.drawRange.count = count;
+          this.drawRange.count = count2;
         }
         applyMatrix4(matrix) {
           const position = this.attributes.position;
@@ -28451,8 +28451,8 @@ var MOTION = (() => {
           for (let i = 0, il = groups.length; i < il; ++i) {
             const group = groups[i];
             const start = group.start;
-            const count = group.count;
-            for (let j = start, jl = start + count; j < jl; j += 3) {
+            const count2 = group.count;
+            for (let j = start, jl = start + count2; j < jl; j += 3) {
               handleTriangle(
                 index.getX(j + 0),
                 index.getX(j + 1),
@@ -28476,8 +28476,8 @@ var MOTION = (() => {
           for (let i = 0, il = groups.length; i < il; ++i) {
             const group = groups[i];
             const start = group.start;
-            const count = group.count;
-            for (let j = start, jl = start + count; j < jl; j += 3) {
+            const count2 = group.count;
+            for (let j = start, jl = start + count2; j < jl; j += 3) {
               handleVertex(index.getX(j + 0));
               handleVertex(index.getX(j + 1));
               handleVertex(index.getX(j + 2));
@@ -36643,7 +36643,7 @@ void main() {
   });
   function Draw({ contents, drawn, faceUrl: faceUrl2, exterior, backdrop, e2eHooks, rate, countLabel, skipText, onDone, onFail }) {
     const canvas = (0, import_react4.useRef)(null);
-    const [count, setCount] = (0, import_react4.useState)(contents.length);
+    const [count2, setCount] = (0, import_react4.useState)(contents.length);
     const [phase, setPhase] = (0, import_react4.useState)("loading");
     const cb = (0, import_react4.useRef)({ onDone, onFail });
     (0, import_react4.useLayoutEffect)(() => {
@@ -36761,8 +36761,8 @@ void main() {
         },
         children: [
           /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("canvas", { ref: canvas, "data-part": "token-bag-scene", style: { display: "block", width: "100%", height: "100%", touchAction: "none" } }),
-          /* @__PURE__ */ (0, import_jsx_runtime3.jsxs)("div", { "data-part": "token-bag-count", "aria-label": `${String(count)} ${countLabel}`, children: [
-            /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("span", { "data-part": "token-bag-n", children: count }),
+          /* @__PURE__ */ (0, import_jsx_runtime3.jsxs)("div", { "data-part": "token-bag-count", "aria-label": `${String(count2)} ${countLabel}`, children: [
+            /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("span", { "data-part": "token-bag-n", children: count2 }),
             " ",
             /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("span", { "data-part": "token-bag-label", children: countLabel })
           ] }),
@@ -37087,12 +37087,12 @@ void main() {
       if (key !== void 0 && !play) done.current(key);
     }, [key, play]);
     const label = p.label ?? `Bag: ${String(p.count)} tokens`;
-    const count = /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("span", { "data-part": "token-bag-count", children: /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("b", { "data-part": "token-bag-n", children: p.count }) });
+    const count2 = /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("span", { "data-part": "token-bag-count", children: /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("b", { "data-part": "token-bag-n", children: p.count }) });
     return /* @__PURE__ */ (0, import_jsx_runtime4.jsxs)(import_jsx_runtime4.Fragment, { children: [
       /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("div", { "data-part": "token-bag", "data-bag": "", "data-place": p.place ?? "bag", "data-mode": mode, "data-fallback": fb ?? "", "aria-label": label, children: mode === "3d" && hasWebgl() ? /* @__PURE__ */ (0, import_jsx_runtime4.jsxs)(import_jsx_runtime4.Fragment, { children: [
         /* @__PURE__ */ (0, import_jsx_runtime4.jsx)(import_react5.Suspense, { fallback: /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("span", { "data-part": "token-bag-canvas" }), children: /* @__PURE__ */ (0, import_jsx_runtime4.jsx)(Rest2, { faceUrl: p.faceUrl, exterior: p.exterior, backdrop: p.backdrop, onFail: setFallback }) }),
-        count
-      ] }) : p.children ?? count }),
+        count2
+      ] }) : p.children ?? count2 }),
       play && p.draw !== null ? /* @__PURE__ */ (0, import_jsx_runtime4.jsx)(import_react5.Suspense, { fallback: null, children: /* @__PURE__ */ (0, import_jsx_runtime4.jsx)(
         Draw2,
         {
