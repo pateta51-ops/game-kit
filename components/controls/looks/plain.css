@@ -1,6 +1,7 @@
 [data-part="segmented"] { display: inline-flex; gap: 0.25em; }
 [data-part="segment"][data-selected] { font-weight: 700; text-decoration: underline; }
 [data-part="toggle"] { display: inline-flex; align-items: center; gap: 0.5em; background: none; border: 0; font: inherit; color: inherit; cursor: pointer; }
+[data-part="toggle"][data-sub] { margin-left: var(--controls-sub-indent, 1.6em); }
 [data-part="toggle-track"] { display: inline-block; width: 2.4em; height: 1.2em; border: 1px solid currentColor; border-radius: 1em; position: relative; }
 [data-part="toggle-knob"] { position: absolute; top: 0.1em; left: 0.1em; width: 0.9em; height: 0.9em; border-radius: 50%; background: currentColor; }
 [data-part="toggle"][data-checked] [data-part="toggle-knob"] { left: 1.3em; }

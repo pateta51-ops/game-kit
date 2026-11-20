@@ -25,6 +25,13 @@ it("Toggle click flips the value; disabled does not", () => {
   expect(f).toHaveBeenCalledTimes(1);
 });
 
+it("K471 Toggle sub marks a nested setting; plain has no mark", () => {
+  const { container } = render(<><Toggle checked onChange={() => undefined} sub>A</Toggle><Toggle checked onChange={() => undefined}>B</Toggle></>);
+  const [a, b] = [...container.querySelectorAll('[data-part="toggle"]')];
+  expect(a?.getAttribute("data-sub")).toBe("true");
+  expect(b?.hasAttribute("data-sub")).toBe(false);
+});
+
 it("Slider arrow, Home and End keys step and clamp; step 0.1 gives 0.3", () => {
   const f = vi.fn();
   render(<Slider label="Vol" min={0} max={1} step={0.1} value={0.2} onChange={f} />);

@@ -15,12 +15,12 @@ export function Segmented<T extends string>({ label, options, value, onChange }:
   );
 }
 
-export function Toggle({ checked, onChange, disabled, children, label }: {
-  checked: boolean; onChange: (v: boolean) => void; disabled?: boolean; children?: ReactNode; label?: string;
+export function Toggle({ checked, onChange, disabled, children, label, sub }: {
+  checked: boolean; onChange: (v: boolean) => void; disabled?: boolean; children?: ReactNode; label?: string; sub?: boolean;
 }) {
   return (
     <button type="button" role="checkbox" data-part="toggle" aria-checked={checked} aria-label={label} disabled={disabled}
-      data-checked={checked ? "true" : undefined} onClick={() => { onChange(!checked); }}>
+      data-checked={checked ? "true" : undefined} data-sub={sub ? "true" : undefined} onClick={() => { onChange(!checked); }}>
       <i data-part="toggle-track"><b data-part="toggle-knob" /></i>
       {children && <span data-part="toggle-text">{children}</span>}
     </button>

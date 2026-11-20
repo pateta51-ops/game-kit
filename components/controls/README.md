@@ -23,3 +23,5 @@ export const Audio = () => {
 - `Segmented` is generic over the option value. `TextField` is an `<input>` taking any native props.
 - Optional `looks/plain.css` is minimal neutral styling so the parts work unskinned; a game styles the `data-part` names instead.
 - Demo: `demo/index.html`.
+
+K471: `<Toggle sub>` marks a nested sub-setting: it gets `data-sub`, and `looks/plain.css` indents it by `--controls-sub-indent` (default 1.6em).
