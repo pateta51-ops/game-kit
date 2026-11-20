@@ -11,7 +11,9 @@ const html = readFileSync(join(dir, 'index.html'), 'utf8').replace(/<script type
 const file = join(mkdtempSync(join(tmpdir(), 'herald-')), 'index.html');
 writeFileSync(file, html);
 const browser = await chromium.launch();
-const page = await browser.newPage({ viewport: { width: 1000, height: 620 } });
+const page = await browser.newPage({ viewport: { width: 1000, height: 900 } });
+page.on('console', (c) => { console.log('page:', c.text()); });
+page.on('pageerror', (e) => { console.log('pageerror:', e.message); });
 const shots = [];
 await page.goto(`file://${file}?herald`);
 let last = 0;
@@ -20,7 +22,7 @@ for (const at of [50, 450, 850, 1250, 1750]) {
   last = at;
   shots.push((await page.screenshot()).toString('base64'));
 }
-const sheet = await browser.newPage({ viewport: { width: 1000, height: 620 * 5 / 5 } });
-await sheet.setContent(`<body style="margin:0;display:grid;grid-template-columns:repeat(3,1fr);gap:4px;background:#000">${shots.map((s, i) => `<figure style="margin:0;color:#fff;font:12px sans-serif"><img style="width:100%" src="data:image/png;base64,${s}">t=~${String(i * 0.4)}s</figure>`).join('')}</body>`);
+const sheet = await browser.newPage({ viewport: { width: 1000, height: 800 } });
+await sheet.setContent(`<body style="margin:0;display:grid;grid-template-columns:repeat(3,1fr);gap:4px;background:#000">${shots.map((s, i) => `<figure style="margin:0;color:#fff;font:12px sans-serif"><img style="width:100%" src="data:image/png;base64,${s}">t=~${['0.05', '0.45', '0.85', '1.25', '1.75'][i] ?? ''}s</figure>`).join('')}</body>`);
 await sheet.screenshot({ path: process.argv[2] ?? 'herald-sheet.png', fullPage: true });
 await browser.close();
