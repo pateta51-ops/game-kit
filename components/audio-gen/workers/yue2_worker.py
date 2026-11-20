@@ -34,6 +34,45 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from audiogen import gpu, recipe  # noqa: E402
 
 
+class TakeStalled(RuntimeError):
+    pass
+
+
+def run_take(cmd, env, stall: float) -> None:
+    """K494: run a take's child; no new output byte for `stall` s (0 = no watch) kills it and its process group (TakeStalled)."""
+    if stall <= 0:
+        subprocess.run(cmd, env=env, check=True)
+        return
+    import signal
+    import threading
+
+    p = subprocess.Popen(cmd, env=env, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, start_new_session=True)
+    last = [time.monotonic()]
+
+    def pump():
+        while True:
+            b = os.read(p.stdout.fileno(), 65536)
+            if not b:
+                return
+            last[0] = time.monotonic()
+            os.write(2, b)
+
+    th = threading.Thread(target=pump, daemon=True)
+    th.start()
+    while p.poll() is None:
+        if time.monotonic() - last[0] > stall:
+            try:
+                os.killpg(p.pid, signal.SIGKILL)
+            except ProcessLookupError:
+                pass
+            p.wait()
+            raise TakeStalled(f"stalled: no progress for {stall:g} s")
+        time.sleep(min(0.2, stall / 4))
+    th.join(5)
+    if p.returncode:
+        raise subprocess.CalledProcessError(p.returncode, cmd)
+
+
 def child(take_path: str) -> int:
     """K477: one take in its own process: load the pipeline, plan, render, save, exit, so its host memory is gone before demucs."""
     t = json.loads(Path(take_path).read_text(encoding="utf-8"))
@@ -115,7 +154,7 @@ def main() -> int:
 
     state = {"first": True}
 
-    def generate(tmp: Path, prompt: str, lyrics: str, cot: str, seed: int, sung: bool = False) -> int:
+    def generate(tmp: Path, prompt: str, lyrics: str, cot: str, seed: int, sung: bool = False, stall: float = 0) -> int:
         """The take in a child process that has exited when this returns (K477); a child killed by the cap is a failed take naming it."""
         recipe.need_memory(need, "loading YuE2 in a child process")
         tj, rj = tmp.with_suffix(".take.json"), tmp.with_suffix(".take.res.json")
@@ -124,7 +163,7 @@ def main() -> int:
         t0, kills = time.time(), recipe.oom_kills()
         try:
             try:
-                subprocess.run([sys.executable, str(Path(__file__).resolve()), sys.argv[1], "--take", str(tj)], env=env, check=True)
+                run_take([sys.executable, str(Path(__file__).resolve()), sys.argv[1], "--take", str(tj)], env, stall)
             except subprocess.CalledProcessError as e:
                 if e.returncode == 3:
                     raise SystemExit(3) from e
@@ -175,7 +214,13 @@ def main() -> int:
         best, tried, kept, keep = None, [], [], int(o.get("keep", opts.get("keep", 1)))
         for s in recipe.seeds(int(item["seed"]), int(o.get("tries", opts.get("tries", 6)))):
             tmp = out.parent / f"_yue_{out.stem}-{s}.wav"
-            nv = generate(tmp, item["prompt"], lyrics, cot, s, bool(sung))
+            try:
+                nv = generate(tmp, item["prompt"], lyrics, cot, s, bool(sung), float(o.get("stallSecs", opts.get("stallSecs", 600))))
+            except TakeStalled as e:  # K494: a failed take, the next seed goes on
+                tmp.unlink(missing_ok=True)
+                tried.append({"seed": s, "reason": f"{e}"})
+                print(f"yue2 worker: {item['label']} take seed {s} {e}", file=sys.stderr, flush=True)
+                continue
             if sung:  # K485: the lyrics check replaces the instrumental vocal gate
                 mw = float(o.get("lyricsMaxWer", opts.get("lyricsMaxWer", recipe.LYRICS_MAX_WER)))
                 try:

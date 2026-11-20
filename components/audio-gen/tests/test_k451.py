@@ -294,7 +294,7 @@ class Yue2Worker(unittest.TestCase):
                             **({"offloadAr": offload} if offload is not None else {}), **({"vocal": vocal} if vocal else {}), **({"minAvailGiB": need} if need is not None else {}), **({"minAvailDemucsGiB": need_d} if need_d is not None else {})}, "result": str(t / "r.json"),
                 "items": [{"out": str(t / "o" / "a.wav"), "prompt": "calm ballpark organ", "seconds": 20, "seed": 1000, "label": "a#1"}]}))
             with mock.patch.object(sys, "argv", ["w", str(t / "job.json")]), mock.patch.dict(sys.modules, mods), \
-                    mock.patch.object(w.subprocess, "run", demucs), \
+                    mock.patch.object(w.subprocess, "run", demucs), mock.patch.object(w, "run_take", lambda cmd, env, stall: demucs(cmd, env=env, check=True)), \
                     mock.patch.object(w.recipe, "oom_kills", oom or (lambda: 0)), \
                     mock.patch.object(w.recipe, "mem_available_gib", avail if callable(avail) else lambda: avail):
                 try:
