@@ -52,7 +52,7 @@ it('K470 control: each kind reaches the slot with its props; null keeps the buil
   expect(part('begin')).toHaveLength(1);
   expect(part('mode')).toHaveLength(modes.length);
   expect(part('entry')).toHaveLength(roster.length);
-  expect(one('options').querySelectorAll('select')).toHaveLength(1);
+  expect(one('options').querySelectorAll('select')).toHaveLength(2);
 });
 
 it('K470 control: a returned part replaces the built-in and its handler works', () => {
