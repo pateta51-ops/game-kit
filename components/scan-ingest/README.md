@@ -6,6 +6,26 @@ deskew and crop, cut-out by colour on a magenta backing (rim, edge unmixing, the
 casts), scanner tone curve, flags and exit status. It stops at crops and a manifest: the game turns them into its
 content pack. Real scans never enter the kit; the tests draw their own sheets.
 
+## Rules for agents
+
+**What it does:** turns flatbed scans of a game's components into one upright, cropped image per item with a review overlay and a manifest (Python `scanpipe`), and, in TypeScript, draws live state on a printed board scan.
+
+**You must:**
+1. Install in a venv with Python 3.11+: `pip install -r kit/scan-ingest/requirements.txt`; run from the game's checkout with `PYTHONPATH=kit/scan-ingest python -m scanpipe scan --plugin module:Class --project . <scans>`.
+2. Keep the game's knowledge in a `scanpipe.plugins.base.Plugin` subclass in the game's own repository (item sizes, kinds, hooks); the kit has no game names. Test it with `assert problems(MyGame()) == []` (`scanpipe.plugins.contract`).
+3. Read the exit status: 1 means an item needs a look (a flag that is not informational, a rejected region, a plug-in problem). Open the review overlay and the manifest before using a crop.
+4. Scan the way the plug-in expects (white lid with a black or coloured backing, or magenta for cut-outs); two items that touch go through `scripts/split_touching.py`, run with `python -I`, not a re-scan.
+5. Run `python -m scanpipe rescan REVIEW_DIR` to list items worth scanning again; scan again under the same `--name` only with `rescans = True` in the plug-in.
+6. Real scans never enter the kit (its tests draw their own sheets); keep the game's plug-in and tools in the game, outside `kit/`.
+7. For printed boards (`index.ts`, `ui.ts`) pass the game's scan, box list and state: `ScanBoard` draws the scan and calls `render(id, sizePx)` in each box; frames and colours stay in the game.
+8. Tesseract is optional and only for reading print; without it callers get None and one warning.
+
+**Common mistakes:**
+- A `--plugin` class that is not a `Plugin` subclass: refused.
+- Passing an odd number of scans with `pair_backs = True`: refused (front, back, front, back).
+- Treating a `held-` crop as the new crop: a re-scan with a flag that asks for a look replaces nothing.
+- Running `split_touching.py` without `python -I` from a folder holding scans.
+
 ## Setup
 
 Python 3.11 or later. `pip install -r kit/scan-ingest/requirements.txt` (in a venv). Tesseract is optional, only for

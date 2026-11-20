@@ -2,6 +2,23 @@
 
 Opaque home-screen icons and a web manifest from a game's own SVG/PNG mark. Requires `playwright-core` and its installed Chromium; `PW_CHROMIUM_PATH` overrides the executable.
 
+## Rules for agents
+
+**What it does:** makes a game's opaque home-screen icons and its web manifest from the game's own SVG or PNG mark, and prints (or patches in) the head tags.
+
+**You must:**
+1. Have `playwright-core` and its installed Chromium (`PW_CHROMIUM_PATH` names another executable); the mark is drawn in that browser.
+2. Run it with the game's mark and a real background colour: `node kit/app-icons/app-icons.mjs --mark logo.svg --out public/app-icons --name "..." --background '#rrggbb' --width 0.8 --html index.html`.
+3. Give an SVG mark an intrinsic size (`width` and `height`, not only a `viewBox`), and a valid colour: either failure stops before anything is written.
+4. Pass `--html index.html` so the head tags are replaced in place (idempotent), or paste the printed tags; keep the output in the public folder named by `--path` (default `app-icons`).
+5. Use `--manifest-root` when an offline cache or a test expects `/manifest.webmanifest` at the public root; give a negative nudge as `--x=-0.1`.
+6. Re-run it when the mark or colour changes.
+
+**Common mistakes:**
+- An SVG with only a `viewBox`: no intrinsic size, so it fails.
+- Expecting transparency: the output is always opaque (the maskable one fits the central 80 % circle).
+- Moving the icons out of the `--path` folder, so the manifest's icon paths break.
+
 ## Use it in 10 lines
 
 ```js

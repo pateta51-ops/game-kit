@@ -2,6 +2,25 @@
 
 A line player on the sound player's `voice` bus. It knows no game: the lines are data and the game supplies the gate. Needs `sound-player` (its `play` `onEnd`). No packages.
 
+## Rules for agents
+
+**What it does:** plays a game's spoken lines (recorded files) on the sound player's voice bus, one line at a time, never cutting one.
+
+**You must:**
+1. Build the sound table with `voiceCues(table)` (and the extra files that only `pieces` use) spread into the player's `cues`: the voice plays each file as a cue named by `voiceCue(file)`, and `createVoice` finds nothing to play without them.
+2. Pass the sound player as `player` to `createVoice({ table, player })`; hand `enabled` and `volume` from settings (`setEnabled`, `setVolume`).
+3. Declare every line in `lines` (`files`, `busy: 'drop' | 'wait'`, `limit`); every part used in `play(id, { parts })` must be in `parts`, or the whole line is silent.
+4. Use `limit.once` or `limit.every` for a line that must not repeat, and keep `counts()` in the saved game and give it back with `reset(counts)` on load.
+5. Give `mayPlay(id)` for what the game decides (a phase, a screen); it is asked before each line starts, a waiting one too.
+6. Run `checkVoiceFiles(table, dir)` (node only) in the game's checks: it fails on a missing file, a bad format or size, or a line with no file.
+7. Paid speech (`speech.ts`) is for build scripts only, never in the browser bundle: set the `cap`, put the key in the environment variable named by `keyEnv`, and keep one spender per ledger folder.
+
+**Common mistakes:**
+- Calling `player.stopCues` to cut a line: the voice never cuts; it only waits or does not start.
+- Expecting a line to repeat: the same spoken text twice in a row is not played, and a `once` line plays once per game.
+- A busy voice: a line with the default `busy: 'drop'` is dropped, not queued.
+- Forgetting `reset(counts)` on load, so `once` lines play again after a reload.
+
 **A line is never cut.** It plays out; it only waits or is not started. The voice never calls `stopCues`.
 
 ## `VoiceTable`
