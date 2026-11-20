@@ -2,6 +2,23 @@
 
 Card zones as data on engine-core state (K223): decks, hands, discards and play areas, per seat or shared, each an ordered list of card ids (index 0 is the top) with who sees it, and `viewOf(state, seat)` that hides what a seat may not see. Needs `engine-core`.
 
+## Rules for agents
+
+**What it does:** Card zones as data on engine-core state, each an ordered list of ids (index 0 is the top) with who sees it, and `viewOf` that hides what a seat may not see.
+
+**You must:**
+1. Keep `zones: newZones({ name: { seen, owner?, cards? } })` in the game state, with per-seat keys from `seatZone('hand', seat)`; a card carries no zone field.
+2. Move cards only with `moveCard`, `draw`, `place`, `shuffleZone`, `reveal` inside a handler on the draft, so replay, undo and saves work.
+3. Shuffle only through `shuffleZone(ctx, zone)` (it uses `ctx.rng`).
+4. Build every player view from `viewOf(s, seat)`; a hidden card is `null`, and the game adds no hidden state of its own.
+5. Give opponents' `viewLeaks` the list from `hiddenFrom(s, seat)`.
+6. Add `zoneProblems(s, expected?)` to `GameRules.invariants`.
+7. Keep end-of-deck rules (reshuffle the discard, game end) and card meaning in the game.
+
+**Common mistakes:**
+- Moving a card to or from an unknown zone, or a card already in a zone (`place`) or in none (`moveCard`): each throws `EngineBugError`.
+- Reading `s.zones` directly in a view: hidden ids and order leak.
+
 - State: the game keeps `zones: newZones({ name: { seen, owner?, cards? } })` (`Zoned`); per-seat keys by `seatZone('hand', seat)`. A card carries no zone field; `locate`, `cardsIn` find it.
 - Seen: `all`, `owner` (others see the count), `top` (top card and count), `count`, `none` (not even the count: absent from the view, or only its revealed cards).
 - Moves (inside a handler on the draft, through the copy-on-write barrier, so replay, undo and saves work): `moveCard(s, id, to, at)` (`'top'` default, `'bottom'`, an index), `draw(s, from, to, n, at)` (bottom by default, so a hand keeps draw order), `place` (a card in no zone), `shuffleZone(ctx, zone)` (only `ctx.rng`), `reveal(s, zone, ids, seats | 'all')` (lasts until the card leaves or the zone is shuffled). A state with engine-core's `objRefs` gets `leaveZone` on every move (snapshot: `moveCard`'s fifth argument, default the id). An unknown zone or card is an `EngineBugError`.

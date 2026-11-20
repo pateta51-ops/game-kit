@@ -1,6 +1,24 @@
 # card-attachments
 Cards tucked under a host card (a visible L, slide out on hover) or fanned past it, and the tokens on a card: one per token, one and "×N" past a cap, number boxes that count down. Port of Earthborne's table geometry and `Tokens.tsx` and Imperium's Garrison stack. `index.ts` is pure (loads in node); `ui.ts` adds React.
 
+
+## Rules for agents
+
+**What it does:** Lays out cards tucked under or fanned past a host card, and token rows and number boxes on a card, with pure geometry and thin React parts.
+
+**You must:**
+1. Import the geometry from `kit/card-attachments/index` (node) and the components from `kit/card-attachments/ui`.
+2. Describe cards to the geometry as `{ turned?: boolean }` boxes, with one upright size `cw`, `ch` (`w`, `h` on `HostStack`) in px; the geometry never sees ids or faces.
+3. Pass `HostStack` the game's own nodes: `attachments={[{ key, node, turned? }]}` bottom first; a face-down attachment is passed as its back, and `key` is only a React key.
+4. Pass `ms` from the settings' speed (0 for no slide); pass `open` only for a controlled slide-out.
+5. Give `TokenRow` and `NumberBox` a `render`: the token shapes, colours and fonts are the game's.
+6. Put anchored tokens at fixed spots of a face in `card-parts` (`TokenLayer`), not here; draw a token row from `shownCount(...)` of `counter` when a number must bump or fly.
+7. Style it yourself: the CSS is structural only; hook on `data-part` (`host-stack`, `host`, `attachment`, `token-row`, `token`, `number-box`).
+
+**Common mistakes:**
+- Putting a card id or face text in the DOM for a face-down attachment: pass the back as `node`.
+- Forgetting a turned host turns what is under it (`tuckedTurned`): use `footprint` for the box, do not size it by hand.
+
 ## The game passes
 - Cards as `{ turned?: boolean }` boxes (an exhausted card is turned) and one upright size `cw`, `ch` in px. The geometry never sees a card's id or face.
 - `<HostStack host attachments={[{ key, node, turned? }]} w h mode? side? open? onRead? ms? />`: the game's own nodes. A face-down attachment is passed as its back; only `key` is a React key, never in the DOM. `onRead(index, key)`: a tap (the phone sheet). `ms` 0 for no slide (the settings' speed).

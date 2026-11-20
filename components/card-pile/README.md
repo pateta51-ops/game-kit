@@ -2,6 +2,27 @@
 
 A pile on the table: a stack at rest (top card, edges of the cards beneath, empty slot), an animated fan to look through it, picks from it, and a grid in phone-mode's sheet. Needs `card-zones`, `prompt-host`, `picked-state`, `phone-mode`, `motion-frame`; packages `react`, `react-dom`.
 
+## Rules for agents
+
+**What it does:** A pile on the table: a stack at rest, an animated fan to look through it, picks from it, and a grid in the phone sheet.
+
+**You must:**
+1. Import `Pile` from `kit/card-pile/ui`; the CSS loads with it. The game must have `card-zones`, `prompt-host`, `picked-state`, `phone-mode`, `motion-frame` available.
+2. Pass `view` (a card-zones `ZoneView`), `face(id, { where, top })` and `back({ where, top })`; a hidden card is `null` and its id never reaches the DOM.
+3. Pass `browse={false}` for a deck nobody may look through.
+4. Pass `speed` from settings (0 means none; reduced motion is none too).
+5. Wire prompts with `pick={{ marks, tap }}` from `useBoardPick`; the fan closes once the prompt no longer names its cards.
+6. Use `show="<selector>"` to keep a decision element lit through the backdrop.
+7. Size it with `--kp-card-w`, `--kp-card-h`, `--kp-step`, `--kp-u`, `--kp-z`, `--kp-grid-cols`, and style the `data-part` hooks yourself.
+8. On a phone pass `phone`, and `onDetail(id)` for cards the prompt does not name.
+9. Replace the English `words` defaults; they are placeholders. Do not use `data-pile` / `data-pile-fan` for your own anchors (deck-motions reads them).
+10. With `onTap`, call `pick.tap` yourself; `markOf` marks other than `barred` stay selectable.
+
+**Common mistakes:**
+- A theme rule on every `button`: the pile's buttons carry `data-kit`, so write `:where(button:not([data-kit]))`.
+- Expecting Escape or a backdrop click to close the fan while cards still fly: it does not.
+- Keeping the native tooltip when the game draws its own: pass `hitTitle={false}`.
+
 - Cards come from a card-zones `ZoneView` (`{ count, cards }`, a `null` is a back; a hidden id never reaches the DOM). `browse={false}` for a deck nobody may look through. The faces are yours: `face(id, { where, top })` and `back({ where, top })`, `where` is `top | edge | fan | grid`.
 - Anchor: the pile root carries `data-pile="<testId>"` (what deck-motions finds); the open fan carries `data-pile-fan` instead.
 - Click: the cards leave the pile one after another along a curve into a fan and gather back in reverse. `speed` scales the times (`1` normal, `0` none; prefers-reduced-motion is none too). The board greys behind a modal backdrop; focus moves into the fan and returns to the pile's button, Tab cycles, Escape and a backdrop click gather (not while the cards still fly). `show="[data-testid=decision]"` keeps that element lit through a hole in the backdrop.

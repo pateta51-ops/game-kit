@@ -1,6 +1,27 @@
 # card-parts
 The parts a game builds its own card face from: the layout as the game's data, art with a cache, printed text with SVG icons inline, tokens. No layout or look is fixed here. `index.ts` loads in node; `ui.ts` adds React.
 
+
+## Rules for agents
+
+**What it does:** The parts a game builds its own card face from: layout as the game's data, art with a cache, printed text with inline SVG icons, tokens at anchors, a fit-the-text size, and a state banner. No layout or look is fixed here.
+
+**You must:**
+1. Import node-safe functions from `kit/card-parts/index` and React parts from `kit/card-parts/ui`.
+2. Give each card type a `CardLayout` in the card's own units (`w`, `h`, `zones`, `anchors`), and expect `checkLayouts(all)` to return `[]` in a test.
+3. Draw a face with `<CardFace layout zones={{ zone: node | (zone, name) => node }} />`; only zones given content are drawn; put `TokenLayer` as a child to go over it.
+4. Describe icons as an `IconSet` (`{ name: { label, body?, viewBox?, src? } }`) and write markers as `[[name]]`; run `unknownIcons(texts, icons)` in a content test and expect `[]`.
+5. Wrap faces that use art in `<ArtProvider art urls>` (`useArt` outside one throws `no ArtProvider above this card`), and give `ArtImage` a `fallback`.
+6. Use `fillImageCache` only when the game has no service worker; a game that installs one precaches faces through offline's `assets`, or the art is stored twice.
+7. Fit text with `fitSize` / `useFitText` with a `min`; it never cuts text, and a content test expects `fitReport(...).bad` to be `[]`.
+8. Pass the game's own word to `<StateBanner word />` and put it last inside a positioned card; no word means nothing is drawn.
+9. Style the `data-part` / `kc-*` hooks and the `--kc-banner-*` variables yourself; the parts are unstyled. Import `looks/icon-glow.css` only if you want the glow.
+
+**Common mistakes:**
+- Board-layout zones (`{ r: [x, y, w, h] }`) in a card layout: card zones are `{ x, y, w, h }`.
+- A token at an anchor the layout lacks: `placeTokens` lists it in `missing`.
+- An unknown icon name in text: it draws as its name in `.kc-unknown` instead of an icon.
+
 ## The game passes
 - `CardLayout` per card type: `{ w, h, zones: { name: { x, y, w, h, kind?, rotate?, z? } }, anchors?: { name: { x, y, dx?, dy? } } }` in the card's own units (photo pixels, any aspect). `checkLayouts(all)` gives every problem as a line (a test expects `[]`); `mergeLayout(typeLayout, cardOver)` applies one card's tuning.
 - `<CardFace layout zones={{ art: <ArtImage url fallback />, text: (zone, name) => <MyText /> }}>`: draws each zone it is given content for (a node, or a function: the slot for the game's own component), sized by percent, in `z` order; `containerType: inline-size`, so text can size in `cqw`. Children (a `TokenLayer`) go over it.

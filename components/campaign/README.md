@@ -2,6 +2,25 @@
 
 The campaign log as plain data and pure functions (release 1.0). No packages; draws nothing; loads in node (tests: `log.test.ts`). Every function returns a new log and never changes its argument, so the log goes into a save as JSON (a game keeps it beside its `saves` history) and undo is keeping the old value. Later parts (steps, saves, screens, graph runner, achievements tab) add to this shape: `readLog` keeps unknown parts and fills missing ones.
 
+## Rules for agents
+
+**What it does:** The campaign log, steps, saves, graph runner and between-scenario screens as plain data and pure functions; nothing is stored by the kit.
+
+**You must:**
+1. Treat every log and save as immutable: each function returns a new value; assign it, and undo is keeping the old one.
+2. Store the log and save as JSON beside the game's own saves; load with `readLog(parsed)` / `readSave(parsed, version)` (`readLog` returns undefined for a value that is not a v1 log; another version reads as `incompatible`).
+3. Declare the game's fields as `FieldDef` data and get storage keys with `fieldKey(fields, id, who?)`; an unknown field or a wrong scope gives undefined.
+4. Pass `step` (a string you choose, e.g. `stepKey(step)`) on every count or reward write, so `countHistory` can explain a number.
+5. Run a scenario through `begin(save, seed?)` and `end(save, { log, outcome?, resolution? }, next)`: the game sets up from the frozen copy of the log and never reads the campaign itself.
+6. Give the campaign a `NextStep` (or `linear(steps)`, or `graphNext(graph)`); returning null ends it (`status: 'over'`).
+7. Run `checkGraph` on a graph in a test; it lists data problems.
+8. Import `kit/campaign/index` (node-safe) for logic and `kit/campaign/ui` for screens; word every label and citation in the game.
+
+**Common mistakes:**
+- Calling `begin` with no active step, or `end` with no attempt in progress: both throw `campaign: no step ...`.
+- Resolving a graph node that is not available, or answering an option that does not exist: `campaign: node ... not available` / `no option ...` throws.
+- Mutating a log in place: saves and undo then disagree.
+
 ## Log
 
 `emptyLog()` gives `{ v: 1, recorded, crossed, counts, sets, order, changes, ledger }`.
