@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it } from 'vitest';
 import { spawn, spawnSync } from 'node:child_process';
 import { once } from 'node:events';
-import { chmodSync, mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
+import { chmodSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
 import { createServer } from 'node:net';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -303,5 +303,54 @@ describe('heavy-queue worker cap and load (K454)', () => {
         expect('maxWorkers' in (await import(`${f}?off${Math.random()}`)).default.test, f).toBe(false);
       }
     } finally { if (old === undefined) delete process.env.HEAVY_WORKERS; else process.env.HEAVY_WORKERS = old; rmSync(tpl); }
+  });
+});
+
+describe('heavy --mem and --slots (K474)', () => {
+  const posix = process.platform !== 'win32';
+  const fake = (body) => {
+    const d = mkdtempSync(join(tmpdir(), 'k474-'));
+    const f = join(d, 'systemd-run');
+    writeFileSync(f, `#!/bin/sh\n${body}\n`, { mode: 0o755 });
+    return { f, d };
+  };
+  it.skipIf(!posix)('--mem runs the command inside the capped scope', async () => {
+    const { f, d } = fake('echo "$@" >> "$0.log"; while [ "$1" != "--" ]; do shift; done; shift; exec "$@"');
+    const q = await serve({});
+    const r = await heavy(['run', '--mem', '7', '--', process.execPath, '-e', 'process.exit(9)'], { HEAVY_URL: q.url, HEAVY_SYSTEMD_RUN: f });
+    expect(r.code).toBe(9);
+    const log = readFileSync(f + '.log', 'utf8').split('\n').filter(Boolean);
+    expect(log.at(-1)).toContain('--user --scope -q -p MemoryMax=7G -p MemorySwapMax=0 -- ' + process.execPath);
+    rmSync(d, { recursive: true });
+  });
+  it.skipIf(!posix)('--mem refuses to run uncapped when no cap can be set', async () => {
+    const { f, d } = fake('exit 1');
+    const d2 = mkdtempSync(join(tmpdir(), 'k474-'));
+    const mark = join(d2, 'ran');
+    const r = await heavy(['run', '--mem', '7', '--', process.execPath, '-e', `require('fs').writeFileSync(${JSON.stringify(mark)}, 'x')`], { HEAVY_URL: await deadUrl(), HEAVY_SYSTEMD_RUN: f });
+    expect(r.code).toBe(4);
+    expect(r.err).toContain('not running uncapped');
+    expect(existsSync(mark)).toBe(false);
+    rmSync(d, { recursive: true }); rmSync(d2, { recursive: true });
+  });
+  it('--slots all waits for every slot and holds them all', async () => {
+    const q = await serve({ slots: 2 });
+    const a = await q.post('/acquire', { label: 'a' });
+    const run = heavy(['run', '--slots', 'all', '--label', 'big', '--', process.execPath, '-e', 'setTimeout(() => {}, 1500)'], { HEAVY_URL: q.url });
+    await until(async () => (await q.status()).waiting.length === 1);
+    expect((await q.status()).waiting[0]).toMatchObject({ label: 'big', need: 2 });
+    await q.post('/release', { id: a.id });
+    await until(async () => (await q.status()).running.some((l) => l.label === 'big'));
+    const b = await q.post('/acquire', { label: 'b' });
+    expect(b.granted).toBe(false);
+    expect((await q.status()).running).toHaveLength(1);
+    await run;
+    await until(async () => (await q.post('/beat', { id: b.id })).granted);
+  });
+  it('--slots 2 of 3 leaves one slot free', async () => {
+    const q = await serve({ slots: 3 });
+    expect((await q.post('/acquire', { label: 'two', slots: 2 })).granted).toBe(true);
+    expect((await q.post('/acquire', { label: 'one' })).granted).toBe(true);
+    expect((await q.post('/acquire', { label: 'late' })).granted).toBe(false);
   });
 });

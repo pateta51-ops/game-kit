@@ -15,6 +15,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import socket
 import shutil
 import subprocess
@@ -247,10 +248,21 @@ class YuE2(WorkerBackend):
     def wrap(self, cmd: list[str]) -> list[str]:
         """Every YuE2 run goes through the machine's heavy queue (owner, 19 Nov 2026), unless `queue` is false."""
         h = self.need_queue()
-        return cmd if h is None else [h, "run", "--label", f"audio-gen {self.name}", "--"] + cmd
+        return cmd if h is None else [h, "run", "--label", f"audio-gen {self.name}", "--slots", "all", "--mem", f"{self.mem_gib():g}", "--"] + cmd
+
+    def mem_gib(self) -> float:
+        """The host memory cap of one cue's job (K474); `memGiB`, default 14 of the 20 GiB WSL total (README)."""
+        return float(self.opts.get("memGiB", 14))
+
+    def capped(self, rs: list[Result]) -> list[Result]:
+        """A take killed by the cap (exit 137, SIGKILL) is a failed take that names the cap, not a crash of the batch."""
+        for r in rs:
+            if r.error and re.search(r"exited with code (137|-9)", r.error):
+                r.error = f"killed by the {self.mem_gib():g} GiB memory cap (heavy --mem, option memGiB: raise it or lower the model's memory use); the WSL VM was not taken down"
+        return rs
 
     def worker_options(self) -> dict[str, Any]:
-        return {k: v for k, v in super().worker_options().items() if k != "queue"}
+        return {k: v for k, v in super().worker_options().items() if k not in ("queue", "memGiB")}
 
     def generate(self, jobs: list[Job]) -> list[Result]:
         """One fresh worker process (and heavy job) per cue, with all its takes, so host RAM is given back; a cue's
@@ -264,13 +276,13 @@ class YuE2(WorkerBackend):
         for js in groups.values():
             if skip is None:
                 try:
-                    rs = super().generate(js)
+                    rs = self.capped(super().generate(js))
                     ran = True
                     bad = [r.job for r in rs if r.error and ("CUDA error" in r.error or "AcceleratorError" in r.error)]
                     if bad:
                         print(f"  [{self.name}] {js[0].cue.name}: CUDA error, retrying {len(bad)} take(s) once in a fresh process", flush=True)
                         try:
-                            again = {id(r.job): r for r in super().generate(bad)}
+                            again = {id(r.job): r for r in self.capped(super().generate(bad))}
                             rs = [again.get(id(r.job), r) for r in rs]
                         except Skip:
                             pass

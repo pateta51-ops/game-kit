@@ -11,7 +11,7 @@ Job options (config backends.<name>): modelDir (local snapshot, default ~/audio-
 model is used), model ("m-a-p/YuE2-3B"), revision ("8f24312f"), version (yue2 code, "0.1.6"), demucsPython,
 tries (6), keep (1: passing takes kept per item; the first is the item's file, the others
 <out>-keep2.wav, ... listed in extra.alternates; raise tries with it), maxVocalDb (-25), maxLoudWindows (0.03), cot ("full"), lyrics ("[Instrumental]"),
-vocal ("rests" default, as the YuE skill does | "move"), offloadAr (true | false | "auto": on when the card has under 24 GB; YuE2 only, the one exception to GPU only).
+vocal ("rests" default, as the YuE skill does | "move"), minAvailGiB (6: MemAvailable needed before loading the model and before each demucs pass; under it the take fails, K474), offloadAr (true | false | "auto": on when the card has under 24 GB; YuE2 only, the one exception to GPU only).
 Per item: prompt (the style text), seed, options.lyrics / options.tries. YuE2 sets its own length: the pipeline cuts.
 Exit 3 = cannot start (wrong yue2 version, no CUDA, or a first generation that did not use the GPU).
 Weights: CC BY-NC 4.0 (non-commercial).
@@ -19,6 +19,7 @@ Weights: CC BY-NC 4.0 (non-commercial).
 
 from __future__ import annotations
 
+import gc
 import json
 import os
 import shutil
@@ -44,6 +45,13 @@ def main() -> int:
     import soundfile as sf
     from yue2 import YuE2Pipeline
 
+    need = float(opts.get("minAvailGiB", 6))
+    try:
+        recipe.need_memory(need, "loading YuE2")
+    except recipe.LowMemory as e:
+        print(f"yue2 worker: {e}", file=sys.stderr, flush=True)
+        Path(job["result"]).write_text(json.dumps({"items": [{"out": i["out"], "error": f"LowMemory: {e}"[:500]} for i in job["items"]]}, indent=2), encoding="utf-8")
+        return 0
     local = Path(str(opts.get("modelDir", "~/audio-gen/models/yue2"))).expanduser()
     hub = str(opts.get("model", "m-a-p/YuE2-3B"))
     rev = str(opts.get("revision", "8f24312f"))
@@ -59,6 +67,13 @@ def main() -> int:
     env = {**os.environ, "OMP_NUM_THREADS": "2", "MKL_NUM_THREADS": "2"}
 
     def gate(wav: Path) -> tuple[float, float]:
+        gc.collect()
+        torch.cuda.empty_cache()  # give back what generation held before demucs loads
+        try:
+            recipe.need_memory(need, "the demucs pass")
+        except recipe.LowMemory:
+            wav.unlink(missing_ok=True)
+            raise
         sep = wav.parent / f"_sep_{wav.stem}"
         try:
             subprocess.run(["nice", "-n", "19", demucs, "-m", "demucs", "-n", "htdemucs", "--two-stems=vocals", "-d", "cuda",
@@ -123,6 +138,11 @@ def main() -> int:
             print(f"yue2 worker: {item['label']} failed: {e}", file=sys.stderr, flush=True)
             results.append({"out": item["out"], "error": f"{type(e).__name__}: {e}"[:500]})
         Path(job["result"]).write_text(json.dumps({"items": results}, indent=2), encoding="utf-8")
+    try:
+        import resource
+        print(f"yue2 worker: peak host RSS {resource.getrusage(resource.RUSAGE_SELF).ru_maxrss / 2**20:.1f} GiB (demucs not included)", file=sys.stderr, flush=True)
+    except ImportError:
+        pass
     return 0
 
 
