@@ -26,6 +26,16 @@ if (root)
             <span>Who walks the river road?</span>
           </div>
         ),
+        field: (f, v, set) =>
+          f.id !== 'difficulty' ? null : (
+            <span className="demo-sub">
+              {(f.choices ?? []).map((x) => (
+                <button key={x.value} type="button" className={v === x.value ? 'is-on' : ''} disabled={x.disabled != null} onClick={() => { set(x.value); }}>
+                  {x.label}
+                </button>
+              ))}
+            </span>
+          ),
         sub: () => (
           <div className="demo-sub">
             <button type="button" className="is-on">Day</button>

@@ -65,6 +65,10 @@ export interface SelectSlots {
   track?: ((c: Character, choice: Choice) => ReactNode) | undefined;
   /** A sub-picker in the hero (a board side, a loadout). */
   sub?: ((c: Character, choice: Choice) => ReactNode) | undefined;
+  /** Renders one option field in place of the native control (null or undefined keeps the native one; the label stays). */
+  field?: ((f: OptionField, value: string | boolean | undefined, set: (v: string | boolean) => void) => ReactNode) | undefined;
+  /** Replaces the whole body of the folded options. */
+  options?: ((choice: Choice, set: (id: string, v: string | boolean) => void) => ReactNode) | undefined;
 }
 
 export type Allowed = { ok: boolean; why?: string | null | undefined };
@@ -477,12 +481,25 @@ export function CharacterSelect(props: CharacterSelectProps) {
         </p>
         {open ? (
           <div data-part="options">
-            {fieldsFor(fields, m.id).map((f) => {
+            {slots.options !== undefined
+              ? slots.options(choice, (id, v) => {
+                  setOptions((x) => ({ ...x, [id]: v }));
+                  changed({ options: { ...choice.options, [id]: v } });
+                })
+              : fieldsFor(fields, m.id).map((f) => {
               const set = (v: string | boolean): void => {
                 setOptions((x) => ({ ...x, [f.id]: v }));
                 changed({ options: { ...choice.options, [f.id]: v } });
               };
               const v = options[f.id];
+              const own = slots.field?.(f, v, set);
+              if (own !== undefined && own !== null)
+                return (
+                  <div key={f.id} data-part="field" data-kind={f.kind} data-id={f.id} data-slot="yes">
+                    <span>{f.label}</span>
+                    {own}
+                  </div>
+                );
               return (
                 <label key={f.id} data-part="field" data-kind={f.kind} data-id={f.id}>
                   {f.kind === 'check' ? (

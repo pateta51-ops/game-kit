@@ -367,10 +367,12 @@
   grid-area: opponents;
   display: grid;
   grid-template-columns: calc(var(--cs-u) * 36) minmax(0, 1fr) calc(var(--cs-u) * 17);
+  grid-template-rows: minmax(0, 1fr);
   gap: var(--cs-gap);
 }
 [data-part='character-select'] [data-part='opponent'] {
-  overflow: auto;
+  min-height: 0;
+  overflow-y: auto;
   display: grid;
   align-content: start;
   gap: calc(var(--cs-u) * 0.4);
