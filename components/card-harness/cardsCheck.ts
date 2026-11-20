@@ -131,7 +131,7 @@ export function restrictionProblems(i: RestrictionInput): string[] {
   const found: { id: string; key: string; message: string }[] = [];
   for (const r of i.records) {
     const t = text.get(r.clause) ?? '';
-    for (const k of i.keys) {
+    for (const k of new Set([...i.keys, ...(i.lasting?.(r) ? [dk] : [])])) {
       if (r[k] === undefined) continue;
       const v = val(r[k]);
       if ((i.words[`${k}:${v}`] ?? []).some((p) => has(t, p)) || cites(r[whyKey], rulings)) continue;
@@ -202,8 +202,8 @@ export type Verdict = 'ok' | 'wrong' | 'ambiguous' | 'render-gap';
 export interface ReadingLine { readonly clause: string; readonly verdict: Verdict; readonly note: string; readonly hash?: string }
 const VERDICT = /^(ok|wrong|ambiguous|render-gap)$/;
 const stable = (v: unknown): string => Array.isArray(v) ? `[${v.map(stable).join(',')}]`
-  : v !== null && typeof v === 'object' ? `{${Object.keys(v).sort().map((k) => `${JSON.stringify(k)}:${stable((v as Record<string, unknown>)[k])}`).join(',')}}` : JSON.stringify(v) ?? 'null';
-/** The hash of a clause's records now (key order does not count): 12 hex digits. */
+  : v !== null && typeof v === 'object' ? `{${Object.keys(v).filter((k) => (v as Record<string, unknown>)[k] !== undefined).sort().map((k) => `${JSON.stringify(k)}:${stable((v as Record<string, unknown>)[k])}`).join(',')}}` : JSON.stringify(v) ?? 'null';
+/** The hash of a clause's records now (key order and keys holding `undefined` do not count): 12 hex digits. */
 export function recordsHash(records: readonly CardRecord[]): string {
   return createHash('sha256').update(stable([...records].map(stable).sort())).digest('hex').slice(0, 12);
 }
@@ -241,17 +241,18 @@ export interface RecordIo {
   /** The PR's comment bodies, oldest first (default: `gh pr view <n> --json comments`). */
   comments(pr: number): string[];
   write(path: string, text: string): void;
-  /** Runs git with these arguments (default: `git` in the current folder). */
-  git(args: readonly string[]): void;
+  /** Runs git with these arguments and returns its output (default: `git` in the current folder); throws on failure. */
+  git(args: readonly string[]): string;
 }
 export const realRecordIo = (fs: { writeFileSync: (p: string, t: string) => void; mkdirSync: (p: string, o: { recursive: true }) => unknown }): RecordIo => ({
   comments: (pr) => (JSON.parse(execFileSync('gh', ['pr', 'view', String(pr), '--json', 'comments'], { encoding: 'utf8' })) as { comments: { body: string }[] }).comments.map((c) => c.body),
   write: (p, t) => { fs.mkdirSync(p.slice(0, p.lastIndexOf('/')), { recursive: true }); fs.writeFileSync(p, t); },
-  git: (args) => void execFileSync('git', args as string[], { stdio: 'inherit' }),
+  git: (args) => execFileSync('git', args as string[], { encoding: 'utf8' }),
 });
 export interface RecordInput { readonly batch: string; readonly pr: number; readonly clauses: readonly string[]; readonly records: readonly CardRecord[]; readonly dir?: string }
 /** Writes the latest judge comment of the PR (the last with verdict lines) to `<dir>/<batch>.md` with a hash per clause, commits, pushes. */
-export function recordReadings(i: RecordInput, io: RecordIo): { failed: boolean; problems: string[]; path: string } {
+/** Refuses on the default branch, with anything staged, or with other changes to the readings file; commits only that file. */
+export function recordReadings(i: RecordInput, io: RecordIo): { failed: boolean; problems: string[]; path: string; unchanged?: boolean } {
   const path = `${i.dir ?? 'docs/cards/readings'}/${i.batch}.md`;
   const body = [...io.comments(i.pr)].reverse().find((b) => parseReadings(b).length > 0);
   const lines = body === undefined ? [] : parseReadings(body);
@@ -260,13 +261,21 @@ export function recordReadings(i: RecordInput, io: RecordIo): { failed: boolean;
   const batch = new Set(i.clauses);
   for (const l of lines) if (!batch.has(l.clause)) problems.push(`judge line names no clause of ${i.batch}: ${l.clause}`);
   for (const c of i.clauses) if (!lines.some((l) => l.clause === c)) problems.push(`${c} has no judge line`);
+  const branch = io.git(['rev-parse', '--abbrev-ref', 'HEAD']).trim();
+  let def = 'main';
+  try { def = io.git(['symbolic-ref', '--short', 'refs/remotes/origin/HEAD']).trim().replace(/^origin\//, '') || def; } catch { /* no origin HEAD: main */ }
+  if ([def, 'main', 'master'].includes(branch)) problems.push(`refusing to record on ${branch}: switch to the batch's branch`);
+  const staged = io.git(['diff', '--cached', '--name-only']).trim();
+  if (staged !== '') problems.push(`refusing to record with staged files: ${staged.split(/\s+/).join(', ')}`);
+  if (io.git(['status', '--porcelain', '--', path]).trim() !== '') problems.push(`refusing to record: ${path} has uncommitted changes`);
   if (problems.length) return { failed: true, problems, path };
   const text = [`# Readings: ${i.batch}`, '', `The reading judge's lines from PR #${String(i.pr)}, recorded by \`--record\`; the last cell is the hash of the clause's records when judged. Never edit by hand.`, '',
     '| Clause | Verdict | Note | Hash |', '|---|---|---|---|',
     ...lines.map((l) => `| ${l.clause} | ${l.verdict} | ${l.note.replace(/\|/g, '/')} | ${recordsHash(i.records.filter((r) => r.clause === l.clause))} |`), ''].join('\n');
   io.write(path, text);
-  io.git(['add', path]);
-  io.git(['commit', '-m', `readings: ${i.batch} from PR #${String(i.pr)}`]);
+  if (io.git(['status', '--porcelain', '--', path]).trim() === '') return { failed: false, problems, path, unchanged: true };
+  io.git(['add', '--', path]);
+  io.git(['commit', '-m', `readings: ${i.batch} from PR #${String(i.pr)}`, '--', path]);
   io.git(['push']);
   return { failed: false, problems, path };
 }
@@ -299,7 +308,7 @@ export function cardsCheckMain(argv: readonly string[], i: CardsCheckInput, log:
     if (!io) throw new Error('cardsCheck: --record needs a RecordIo (realRecordIo(fs) in a script)');
     const r = recordReadings({ batch: rec, pr, clauses: batchOf(rec), records: i.records }, io);
     for (const p of r.problems) log(`FAIL ${p}`);
-    if (!r.failed) log(`recorded ${r.path}`);
+    if (!r.failed) log(r.unchanged ? `readings unchanged: ${r.path}` : `recorded ${r.path}`);
     return r.failed ? 1 : 0;
   }
   const r = cardsCheck(i);

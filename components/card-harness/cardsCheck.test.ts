@@ -88,6 +88,13 @@ describe('restrictions', () => {
     expect(p({ lasting, records: records.map((r) => (r.op === 'gain' ? { ...r, duration: 'round', why: 'AR-1' } : r)) })).toEqual([]);
     expect(p({ lasting, records: records.map((r) => (r.id === 'mage#1 r0' ? r : r.op === 'gain' ? { ...r, duration: 'round', why: 'AR-1' } : r)) })).toEqual(['mage#1 r0: lasting effect with no duration']);
   });
+  it("a lasting record's duration needs a printed source or a ruling even when the duration key is not in keys", () => {
+    const lasting = (r: CardRecord) => r.id === 'mage#1 r0';
+    const k = keys.filter((x) => x !== 'duration');
+    expect(p({ keys: k, lasting, records: set('mage#1 r0', { duration: 'game' }) })).toEqual(['mage#1 r0: duration=game has no printed source and no AR']);
+    expect(p({ keys: k, lasting, records: set('mage#1 r0', { duration: 'game', why: 'AR-1' }) })).toEqual([]);
+    expect(p({ keys: k, lasting, durationKey: 'until', records: set('mage#1 r0', { until: 'game' }) })).toEqual(['mage#1 r0: until=game has no printed source and no AR']);
+  });
   it('exceptions cite a ruling and match something', () => {
     const recs = set('guard#1 r0', { phase: 'night' });
     expect(p({ records: recs, exceptions: [{ id: 'guard#1 r0', key: 'phase', ar: 'AR-1' }] })).toEqual([]);
@@ -127,6 +134,10 @@ describe('readings', () => {
     expect(p({ readings: [...others, { clause: 'mage#1', verdict: 'ambiguous', note: 'see AR-2' }] })).toEqual([]);
     expect(p({ readings: [...others, { clause: 'mage#1', verdict: 'wrong', note: 'adds a phase' }] })).toEqual(['mage#1: judged wrong: adds a phase']);
   });
+  it('the hash treats a key holding undefined as missing', () => {
+    expect(recordsHash([{ id: 'a', clause: 'c', n: 1, why: undefined }])).toBe(recordsHash([{ id: 'a', clause: 'c', n: 1 }]));
+    expect(recordsHash([{ id: 'a', clause: 'c', n: 1, why: null }])).not.toBe(recordsHash([{ id: 'a', clause: 'c', n: 1 }]));
+  });
   it('the hash ignores key order and record order', () => {
     const a: CardRecord = { id: 'a', clause: 'c', n: 1, op: 'x' }, b: CardRecord = { op: 'y', clause: 'c', id: 'b' };
     expect(recordsHash([a, b])).toBe(recordsHash([b, { op: 'x', n: 1, clause: 'c', id: 'a' }]));
@@ -141,17 +152,29 @@ describe('readings', () => {
 });
 
 describe('--record', () => {
-  const fake = (comments: string[]) => {
+  // A fake git: the branch, the staged list, and the readings file's status: `dirty` before the write, `changed` after it.
+  const fake = (comments: string[], o: { branch?: string; staged?: string; dirty?: boolean; changed?: boolean } = {}) => {
     const calls: string[][] = [], files: Record<string, string> = {};
-    const io: RecordIo = { comments: () => comments, write: (p, t) => void (files[p] = t), git: (a) => void calls.push([...a]) };
-    return { io, calls, files };
+    const io: RecordIo = {
+      comments: () => comments, write: (p, t) => void (files[p] = t),
+      git: (a) => {
+        calls.push([...a]);
+        const c = a.join(' ');
+        if (c === 'rev-parse --abbrev-ref HEAD') return `${o.branch ?? 'b1-cards'}\n`;
+        if (c.startsWith('symbolic-ref')) return 'origin/trunk\n';
+        if (c === 'diff --cached --name-only') return o.staged ?? '';
+        if (c.startsWith('status')) return (Object.keys(files).length ? o.changed ?? true : o.dirty) ? ' M x\n' : '';
+        return '';
+      },
+    };
+    return { io, calls, files, writes: () => calls.filter((x) => ['add', 'commit', 'push'].includes(x[0] ?? '')) };
   };
   const judge = 'scout#1 | ok | reads right\nscout#2 | ambiguous | AR-1 decides';
   it('writes the latest judge comment with a hash per clause, commits and pushes; the file then passes readings', () => {
     const f = fake(['scout#1 | wrong | old', judge, 'thanks']);
     const r = recordReadings({ batch: 'B1', pr: 7, clauses: ['scout#1', 'scout#2'], records }, f.io);
     expect(r).toEqual({ failed: false, problems: [], path: 'docs/cards/readings/B1.md' });
-    expect(f.calls).toEqual([['add', 'docs/cards/readings/B1.md'], ['commit', '-m', 'readings: B1 from PR #7'], ['push']]);
+    expect(f.writes()).toEqual([['add', '--', 'docs/cards/readings/B1.md'], ['commit', '-m', 'readings: B1 from PR #7', '--', 'docs/cards/readings/B1.md'], ['push']]);
     const lines = parseReadings(f.files['docs/cards/readings/B1.md'] ?? '');
     expect(lines.map((l) => [l.clause, l.verdict, l.hash])).toEqual([['scout#1', 'ok', recordsHash(records.slice(0, 1))], ['scout#2', 'ambiguous', recordsHash(records.slice(1, 2))]]);
     expect(readingProblems({ records: records.slice(0, 2), readings: lines, rulings })).toEqual([]);
@@ -161,8 +184,27 @@ describe('--record', () => {
     expect(recordReadings({ batch: 'B1', pr: 7, clauses: ['scout#1', 'scout#2'], records }, f.io).problems).toEqual(['judge line names no clause of B1: guard#1']);
     expect(recordReadings({ batch: 'B1', pr: 7, clauses: ['scout#1', 'scout#2', 'scout#3'], records }, fake([judge]).io).problems).toEqual(['scout#3 has no judge line']);
     expect(recordReadings({ batch: 'B1', pr: 7, clauses: ['scout#1'], records }, fake(['lgtm']).io).problems).toEqual(['PR #7 has no judge comment', 'scout#1 has no judge line']);
-    expect(f.calls).toEqual([]);
+    expect(f.writes()).toEqual([]);
     expect(f.files).toEqual({});
+  });
+  it('refuses on the default branch, with staged files, or with other changes to the readings file', () => {
+    const go = (o: Parameters<typeof fake>[1]) => { const f = fake([judge], o); return { r: recordReadings({ batch: 'B1', pr: 7, clauses: ['scout#1', 'scout#2'], records }, f.io), f }; };
+    for (const branch of ['trunk', 'main']) {
+      const { r, f } = go({ branch });
+      expect(r.problems).toEqual([`refusing to record on ${branch}: switch to the batch's branch`]);
+      expect(f.writes()).toEqual([]);
+      expect(f.files).toEqual({});
+    }
+    expect(go({ staged: 'src/a.ts\nsrc/b.ts\n' }).r.problems).toEqual(['refusing to record with staged files: src/a.ts, src/b.ts']);
+    const d = go({ dirty: true });
+    expect(d.r.problems).toEqual(['refusing to record: docs/cards/readings/B1.md has uncommitted changes']);
+    expect(d.f.writes()).toEqual([]);
+  });
+  it('a re-run with the same verdicts says readings unchanged, exits 0 and commits nothing', () => {
+    const f = fake([judge], { changed: false }), log: string[] = [];
+    expect(cardsCheckMain(['--record', 'B1', '--pr', '7'], game, (l) => log.push(l), f.io)).toBe(0);
+    expect(log).toEqual(['readings unchanged: docs/cards/readings/B1.md']);
+    expect(f.writes()).toEqual([]);
   });
   it('through cardsCheckMain: exit codes, and --pr is required', () => {
     const log: string[] = [];
