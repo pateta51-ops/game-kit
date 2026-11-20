@@ -25,7 +25,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
-from .spec import DEFAULTS, Cue, expand  # noqa: F401 - DEFAULTS is read from here too
+from .spec import DEFAULTS, Cue, SpecError, expand  # noqa: F401 - DEFAULTS is read from here too
 
 WORKERS = Path(__file__).resolve().parent.parent / "workers"
 
@@ -174,20 +174,6 @@ class WorkerBackend(Backend):
         return out
 
 
-class Removed(Backend):
-    """A backend type removed from the kit: `check` says so and names the replacements."""
-
-    id = "removed"
-    tool = "removed backend"
-
-    def check(self) -> None:
-        raise Skip(f"{self.name}: type '{self.opts.get('type', self.name)}' was removed on the owner's order 20 Nov 2026; use yue2 for music, sa3 for sounds.")
-
-    def generate(self, jobs: list[Job]) -> list[Result]:
-        self.check()
-        return []
-
-
 REMOVED = ("acestep", "stable-audio-open")
 
 
@@ -286,7 +272,7 @@ def make(name: str, opts: dict[str, Any], base: Path) -> Backend:
     """`name` is the config key; `opts.type` picks the adapter (default: the key itself)."""
     kind = str(opts.get("type", name))
     if kind in REMOVED:
-        return Removed(name, opts, base)
+        raise SpecError(f"backend '{name}': type '{kind}' was removed on the owner's order 20 Nov 2026; use yue2 for music, sa3 for sounds.")
     if kind not in KINDS:
         raise ValueError(f"backend '{name}': unknown type '{kind}' (known: {', '.join(KINDS)})")
     return KINDS[kind](name, opts, base)

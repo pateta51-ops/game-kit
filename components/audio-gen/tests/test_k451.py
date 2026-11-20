@@ -100,11 +100,19 @@ class Defaults(unittest.TestCase):
         self.assertEqual(made, {"sa3": "StableAudio3", "yue2": "YuE2"})
 
     def test_k484_removed_types_fail_check(self):  # K484: ace, ace-xl and sao were removed on the owner's order, 20 Nov 2026
+        from audiogen import cli
+        cfg = json.loads((HERE / "example" / "config.json").read_text())
         for kind in ("acestep", "stable-audio-open"):
-            b = B.make("old", {"type": kind, "licence": "x"}, Path("."))
-            with self.assertRaises(B.Skip) as e:
-                b.check()
-            self.assertIn("removed on the owner's order 20 Nov 2026; use yue2 for music, sa3 for sounds", str(e.exception))
+            cfg["backends"]["old"] = {"type": kind, "licence": "x"}
+            for cmd in ("check", "generate"):
+                with tempfile.TemporaryDirectory() as d:
+                    (Path(d) / "c.json").write_text(json.dumps(cfg))
+                    (Path(d) / "s.json").write_text(json.dumps({"cues": [{"name": "a", "prompt": "p", "category": "music", "length": 1}]}))
+                    err = io.StringIO()
+                    with contextlib.redirect_stderr(err), contextlib.redirect_stdout(io.StringIO()):
+                        code = cli.main([cmd, "--config", str(Path(d) / "c.json"), "--spec", str(Path(d) / "s.json"), "--backend", "old"])
+                self.assertNotEqual(code, 0)
+                self.assertIn("removed on the owner's order 20 Nov 2026; use yue2 for music, sa3 for sounds", err.getvalue())
 
     def test_new_workers_start_under_nice(self):
         c = parse_cue({"name": "a", "prompt": "p", "category": "music", "length": 1}, None)
