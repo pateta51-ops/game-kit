@@ -158,7 +158,7 @@ for (const f of c.workflows ?? ['ci.yml', 'full-gate.yml']) {
     const j0 = out.indexOf('\njobs:\n');
     out = out.slice(0, j0) + out.slice(j0).split(/(?=^ {2}[\w-]+:\n)/m).map((b) => {
       const n = b.match(/^ {4}timeout-minutes: (\d+)$/m);
-      if (/^ {2}changes:\n/.test(b) || !n || !/^ {4}runs-on: .*self-hosted/m.test(b)) return b;
+      if (/^ {2}(?:changes|docs):\n/.test(b) || !n || !/^ {4}runs-on: .*self-hosted/m.test(b)) return b;
       const i = b.indexOf('\n    steps:\n');
       return b.slice(0, i).replace(n[0], `    timeout-minutes: ${+n[1] + q}`) + b.slice(i).split(/(?=^ {6}- )/m).map((t) => (/^(?: {6}- | {8})run:/m.test(t) && !/^(?: {6}- | {8})timeout-minutes:/m.test(t) ? `${t.replace(/\n+$/, '')}\n        timeout-minutes: ${n[1]}\n${t.match(/\n*$/)[0].slice(1)}` : t)).join('');
     }).join('');

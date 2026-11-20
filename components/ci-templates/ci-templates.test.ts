@@ -451,7 +451,8 @@ describe('K190: what the four games need (examples/<game>.json renders their wor
     expect(s.docs!['runs-on']).toEqual(['self-hosted', 'widget']);
     expect(s.changes!['timeout-minutes']).toBe(5);
     expect(JSON.stringify(s.changes!.steps)).not.toContain('timeout-minutes');
-    expect(s.docs!['timeout-minutes']).toBe(70);
+    expect(s.docs!['timeout-minutes']).toBe(10);
+    expect(JSON.stringify(s.docs!.steps)).not.toContain('timeout-minutes');
     expect(mk('k478-own', { ...base, docsRunsOn: 'ubuntu-24.04' })('ci.yml').jobs.changes!['runs-on']).toBe('ubuntu-24.04');
   });
   it('K453: a docs-only diff renders the skip (hosted changes job, check needs it); docsSkip false renders none; docs-only.mjs tells docs from code', () => {
