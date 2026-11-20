@@ -136,6 +136,7 @@ interface Item {
   gate?: GateData | undefined;
   place?: RunPlace;
   keep?: boolean;
+  afterCommit?: () => void;
 }
 type Timer = ReturnType<typeof setTimeout>;
 interface Current<C> {
@@ -476,6 +477,7 @@ export function createMotionPlayer<C = undefined>(o: PlayerOptions<C>): MotionPl
     };
     if (!redraw) {
       commit(item);
+      item.afterCommit?.();
       if (live.has(me)) schedule();
       return;
     }
@@ -489,6 +491,7 @@ export function createMotionPlayer<C = undefined>(o: PlayerOptions<C>): MotionPl
     try {
       const before = swap && measureBoard(swap, swap.leave !== 'none');
       commit(item);
+      item.afterCommit?.();
       if (!live.has(me)) return;
       const cancel = waitForRects(spec, stage, () => {
         if (!live.has(me)) return;
@@ -626,7 +629,12 @@ export function createMotionPlayer<C = undefined>(o: PlayerOptions<C>): MotionPl
         fail(e);
       }
     };
-    const session = o.pan && !reduced && spec.pan !== undefined
+    const late = spec.panAt === 'commit' && o.pan && !reduced && spec.pan !== undefined;
+    if (late) item.afterCommit = () => {
+      const s = safe(`${spec.id} pan`, () => startPan(speed));
+      if (s && pan) void panWork(() => s.ensure(spec.pan), pan.controller);
+    };
+    const session = o.pan && !reduced && !late && spec.pan !== undefined
       ? safe(`${spec.id} pan`, () => startPan(speed)) : null;
     const active = pan;
     if (!session || !active) {

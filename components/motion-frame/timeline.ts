@@ -51,6 +51,8 @@ export interface MotionSpec {
   whenVisible?: boolean;
   swap?: BoardSwap;
   pan?: unknown;
+  /** K452: `commit` starts the pan right after the beat's commit (beside the timeline, not before it) */
+  panAt?: 'commit';
   whenReady?: boolean;
   awaitRects?: readonly string[];
   holdUntil?: string;
