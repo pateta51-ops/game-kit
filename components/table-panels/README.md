@@ -2,6 +2,24 @@
 
 The panels every game writes around its table, as logic plus unstyled slots: log, opponent's turn, game over, turn banner. The game owns words, layout and look (parts carry `data-part` / `data-action` hooks only). Logic in `index.ts` (node-testable); React in `ui.tsx`.
 
+## Rules for agents
+
+**What it does:** The panels around a table (log, opponent's turn, game over, turn banner) as node-testable logic plus unstyled React slots.
+
+**You must:**
+1. Import logic from `index` and the React panels from `ui`; the component needs `game-log` and `paced-view`.
+2. Pass the game's words to `logLines(events, words, { turnOf, seatOf, slots })`; an event type without words gives no line.
+3. Keep hidden fields out of the word table or strip them in `slots`: words are filled from the raw event.
+4. For `opponentTurn`, make `describe(e, viewer)` return null for anything the viewer may not read; null shows the `hidden` slot, never the event. Wire the skip button to paced-view `skip`.
+5. Give `gameResult(scores, { lowWins })` the game's own scoring; ties share a rank.
+6. For a solo or reasoned end use `title`, `reason`, `standings={false}` and `<GameOverActions>` instead of the winner line.
+7. Supply `turnName`, `phaseName`, `seatName` for any wording; `TurnBanner` fires `onPhase` on a change, not on first show.
+8. Style by `data-part` / `data-action`; every `<button>` carries `data-kit`, so theme resets use `:where(button:not([data-kit]))`.
+
+**Common mistakes:**
+- Expecting default English words in the log: no words, no line.
+- Describing an opponent's hidden event in `describe`: it leaks to the viewer.
+
 - `logLines(events, words, { turnOf, seatOf, slots })`: `words` maps event `type` to text with `{slots}` (read from the event, or from `slots(e)`). No words, no line. `rowLines` does the same from game-log rows. `filterSeat(lines, seat|null)` (lines with no seat pass), `groupByTurn(lines)`.
 - `logLines` fills words from the raw event, so keep hidden fields out of the word table, or strip them in `slots`.
 - `<LogPanel lines seats? seatName? turnName? renderLine? />`: grouped by turn, scrolled to the newest, seat filter buttons when `seats` is given.
