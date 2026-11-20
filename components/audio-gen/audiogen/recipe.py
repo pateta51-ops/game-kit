@@ -5,6 +5,7 @@ from __future__ import annotations
 import math
 import re
 import sys
+import unicodedata
 
 MAX_VOCAL_DB = -25.0
 MAX_LOUD_WINDOWS = 0.03
@@ -195,8 +196,35 @@ LYRICS_MIN_VOCAL_DB = -35.0  # vocal stem vs mix below this = near silent (an es
 
 def words(text: str) -> list[str]:
     """Lower case, section tags ([verse], [chorus]) and punctuation stripped; apostrophes join the word."""
-    t = re.sub(r"\[[^\]]*\]", " ", text.lower()).replace("'", "").replace("’", "")
-    return re.sub(r"[^a-z0-9À-￿]+", " ", t).split()
+    t = re.sub(r"\[[^\]]*\]", " ", text.lower())
+    t = "".join(c for c in t if c not in "'’‘ʼ`")  # apostrophes join the word
+    return "".join(" " if unicodedata.category(c)[0] in "PSZC" else c for c in t).split()
+
+
+_TAG = re.compile(r"^\[[^\]\[]+\]$")
+
+
+def format_lyrics(text: str) -> str:
+    """K485: YuE's lyric format: each section is a tag line ([verse], [chorus]) then its lines, sections separated by one
+    blank line. Normalises blank lines and spaces; raises ValueError for text before the first tag, no tag, or an empty section."""
+    out, cur = [], None
+    for ln in (x.strip() for x in text.strip().splitlines()):
+        if not ln:
+            continue
+        if _TAG.match(ln):
+            if cur is not None and len(cur) < 2:
+                raise ValueError(f"section {cur[0]} has no lyric lines")
+            cur = [ln]
+            out.append(cur)
+        elif cur is None:
+            raise ValueError(f"lyrics must start with a section tag such as [verse], found {ln!r}")
+        else:
+            cur.append(ln)
+    if not out:
+        raise ValueError("lyrics need at least one section tag such as [verse] followed by its lines")
+    if len(out[-1]) < 2:
+        raise ValueError(f"section {out[-1][0]} has no lyric lines")
+    return "\n\n".join("\n".join(s) for s in out)
 
 
 def wer(ref: str, hyp: str) -> float:

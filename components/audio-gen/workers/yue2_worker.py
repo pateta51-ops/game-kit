@@ -143,6 +143,9 @@ def main() -> int:
     whisper_py = str(Path(str(opts.get("whisperPython", "~/audio-gen/venv-demucs/bin/python"))).expanduser())
     whisper_dir = str(Path(str(opts.get("whisperModelDir", "~/audio-gen/models/whisper-large-v3-turbo"))).expanduser())
 
+    class WhisperFailed(RuntimeError):
+        pass
+
     def transcribe(vocals: Path) -> str:
         """K485: faster-whisper on CUDA in its own process, after the YuE2 child and demucs have exited, inside the cue's capped job."""
         recipe.need_memory(float(opts.get("minAvailWhisperGiB", 4)), "the whisper pass")
@@ -152,7 +155,10 @@ def main() -> int:
                            env=env, check=True)  # fmt: skip
         except subprocess.CalledProcessError as e:
             if e.returncode == 3:
+                print("yue2 worker: faster-whisper cannot start (no CUDA); the lyrics check never runs on the CPU, so the cue stops", file=sys.stderr, flush=True)
                 raise SystemExit(3) from e
+            if e.returncode not in (-9, 137) and recipe.oom_kills() <= kills:
+                raise WhisperFailed(f"whisper crashed (exit {e.returncode})") from e
             if e.returncode in (-9, 137) or recipe.oom_kills() > kills:
                 raise recipe.LowMemory(f"killed by the memory cap: whisper died (exit {e.returncode}) in the cgroup limit") from e
             raise
@@ -172,7 +178,13 @@ def main() -> int:
             nv = generate(tmp, item["prompt"], lyrics, cot, s, bool(sung))
             if sung:  # K485: the lyrics check replaces the instrumental vocal gate
                 mw = float(o.get("lyricsMaxWer", opts.get("lyricsMaxWer", recipe.LYRICS_MAX_WER)))
-                (db, loud), heard = gate(tmp, transcribe)
+                try:
+                    (db, loud), heard = gate(tmp, transcribe)
+                except WhisperFailed as e:  # a failed take, the next seed goes on
+                    tmp.unlink(missing_ok=True)
+                    tried.append({"seed": s, "reason": f"{e}"})
+                    print(f"yue2 worker: {item['label']} seed {s}: {e} -> FAILED", file=sys.stderr, flush=True)
+                    continue
                 why, w = recipe.lyrics_fail(db, heard, sung, mw, float(opts.get("lyricsMinVocalDb", recipe.LYRICS_MIN_VOCAL_DB)))
                 tried.append({"seed": s, "vocalDb": db, "wer": round(w, 3), "heard": heard, "reason": why})
                 print(f"yue2 worker: {item['label']} seed {s}: vocal {db} dB, WER {w:.2f}, heard {heard!r}" + (f" -> FAILED: {why}" if why else ""), file=sys.stderr, flush=True)

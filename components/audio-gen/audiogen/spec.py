@@ -177,6 +177,17 @@ def load_config(path: str | Path) -> Config:
     )
 
 
+def _lyrics(v: Any, where: str) -> str:
+    if not v:
+        return ""
+    from .recipe import format_lyrics
+
+    try:
+        return format_lyrics(str(v))
+    except ValueError as e:
+        raise SpecError(f"{where}: 'lyrics': {e}") from e
+
+
 def parse_cue(obj: dict, cfg: Config | None, index: int = 0) -> Cue:
     where = f"cue #{index + 1}"
     if not isinstance(obj, dict):
@@ -260,7 +271,7 @@ def parse_cue(obj: dict, cfg: Config | None, index: int = 0) -> Cue:
         group=obj.get("group"),
         options=dict(obj.get("options") or {}),
         notes=str(obj.get("notes", "")),
-        lyrics=str(obj.get("lyrics") or "").strip(),
+        lyrics=_lyrics(obj.get("lyrics"), where),
     )
 
 

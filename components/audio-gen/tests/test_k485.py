@@ -10,11 +10,12 @@ from unittest import mock
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from audiogen import backends as B  # noqa: E402
-from audiogen.recipe import lyrics_fail, wer, words  # noqa: E402
+from audiogen.recipe import format_lyrics, lyrics_fail, wer, words
+from audiogen.spec import SpecError  # noqa: E402
 from audiogen.spec import parse_cue  # noqa: E402
 
 HERE = Path(__file__).resolve().parent.parent
-LY = "[verse]\nTake me out, to the ball game!\n[chorus]\nDon't stop, now"
+LY = "[verse]\nTake me out, to the ball game!\n\n[chorus]\nDon't stop, now"
 
 
 class Arr:
@@ -35,6 +36,16 @@ class Normaliser(unittest.TestCase):
     def test_words(self):
         self.assertEqual(words(LY), ["take", "me", "out", "to", "the", "ball", "game", "dont", "stop", "now"])
         self.assertEqual(words("[Instrumental]"), [])
+
+    def test_unicode_punctuation_is_stripped(self):
+        self.assertEqual(words("Don’t stop — “now”… go – on!"), ["dont", "stop", "now", "go", "on"])
+        self.assertEqual(wer("dont stop now", "Don’t stop—now…"), 0.0)
+
+    def test_format_lyrics(self):
+        self.assertEqual(format_lyrics("  [verse]\n a b \n\n\n c\n[chorus]\nd\n"), "[verse]\na b\nc\n\n[chorus]\nd")
+        for bad in ("a b", "[verse]", "x\n[verse]\na", "[verse]\n[chorus]\na", ""):
+            with self.assertRaises(ValueError):
+                format_lyrics(bad)
 
     def test_wer(self):
         self.assertEqual(wer(LY, "Take me out to the ball game. Dont stop now"), 0.0)
@@ -61,6 +72,11 @@ class SpecAndCheck(unittest.TestCase):
         c = parse_cue({"name": "a", "prompt": "p", "category": "music", "length": 1, "lyrics": "  " + LY + "\n"}, None)
         self.assertEqual(c.lyrics, LY)
         self.assertEqual(parse_cue({"name": "a", "prompt": "p", "category": "music", "length": 1}, None).lyrics, "")
+
+    def test_malformed_lyrics_rejected_at_parse(self):
+        with self.assertRaises(SpecError) as e:
+            parse_cue({"name": "a", "prompt": "p", "category": "music", "length": 1, "lyrics": "no tags here"}, None)
+        self.assertIn("section tag", str(e.exception))
 
     def test_payload_carries_lyrics(self):
         c = parse_cue({"name": "a", "prompt": "p", "category": "music", "length": 1, "lyrics": LY}, None)
@@ -97,7 +113,7 @@ ABC = 'X:1\nV:Vocal\n"C" c2 d2 e4 |\nw: la\nV:Piano\n"C" C4 E4 G8 |\n'
 
 
 class SungWorker(unittest.TestCase):
-    def run_worker(self, heard, vocal=0.5, lyrics=LY, tries=3, **o):
+    def run_worker(self, heard, vocal=0.5, lyrics=LY, tries=3, whisper_exit=None, **o):
         seen = {"plans": [], "renders": [], "cmds": [], "seed": None}
 
         class Pipe:
@@ -126,6 +142,9 @@ class SungWorker(unittest.TestCase):
                 assert code == 0
             elif any(str(c).endswith("whisper_transcribe.py") for c in cmd):
                 seen["cmds"].append(cmd)
+                n = sum(1 for c in seen["cmds"] if not isinstance(c, tuple))
+                if whisper_exit and whisper_exit.get(n):
+                    raise __import__("subprocess").CalledProcessError(whisper_exit[n], cmd)
                 text = heard[sum(1 for c in seen["cmds"] if not isinstance(c, tuple)) - 1] if isinstance(heard, list) else heard
                 Path(cmd[-1]).write_text(json.dumps({"text": text}))
             elif "htdemucs" in cmd:
@@ -150,7 +169,7 @@ class SungWorker(unittest.TestCase):
                     mock.patch.object(w.subprocess, "run", run), mock.patch.object(w.recipe, "oom_kills", lambda: 0), \
                     mock.patch.object(w.recipe, "mem_available_gib", lambda: 100.0):
                 code = w.main()
-            res = json.loads((t / "r.json").read_text())["items"]
+            res = json.loads((t / "r.json").read_text())["items"] if (t / "r.json").exists() else []
             return code, seen, res, (t / "o" / "a.wav").exists()
 
     def test_keeps_vocal_sends_lyrics_skips_instrumental_gate(self):
@@ -178,6 +197,19 @@ class SungWorker(unittest.TestCase):
         self.assertIn("WER 0.70 > 0.5", tr[0]["reason"])
         self.assertIn("take me out", tr[0]["reason"])
         self.assertEqual((res[0]["seed"], tr[1]["reason"], res[0]["extra"]["failedGate"]), (8919, "", False))
+
+    def test_whisper_crash_is_a_failed_take_then_next_seed(self):
+        code, seen, res, made = self.run_worker("take me out to the ball game dont stop now", whisper_exit={1: 1})
+        self.assertEqual((code, made), (0, True))
+        tr = res[0]["extra"]["tried"]
+        self.assertEqual(len(seen["plans"]), 2)
+        self.assertIn("whisper crashed (exit 1)", tr[0]["reason"])
+        self.assertEqual((res[0]["seed"], tr[1]["reason"]), (8919, ""))
+
+    def test_whisper_no_cuda_exit_3_stops_the_cue(self):
+        code, seen, res, made = self.run_worker("x", whisper_exit={1: 3})
+        self.assertEqual(code, 3)
+        self.assertEqual(len(seen["plans"]), 1)
 
     def test_lyrics_max_wer_option(self):
         _, _, res, _ = self.run_worker("take me out", lyricsMaxWer=0.9)
