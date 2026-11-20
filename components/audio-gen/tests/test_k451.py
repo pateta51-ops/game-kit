@@ -8,6 +8,7 @@ import sys
 import tempfile
 import types
 import unittest
+import unittest.mock
 from pathlib import Path
 from unittest import mock
 
@@ -109,7 +110,7 @@ class Defaults(unittest.TestCase):
                     (Path(d) / "c.json").write_text(json.dumps(cfg))
                     (Path(d) / "s.json").write_text(json.dumps({"cues": [{"name": "a", "prompt": "p", "category": "music", "length": 1}]}))
                     err = io.StringIO()
-                    with contextlib.redirect_stderr(err), contextlib.redirect_stdout(io.StringIO()):
+                    with contextlib.redirect_stderr(err), contextlib.redirect_stdout(io.StringIO()), unittest.mock.patch.object(cli.P, "have_ffmpeg", lambda: True):
                         code = cli.main([cmd, "--config", str(Path(d) / "c.json"), "--spec", str(Path(d) / "s.json"), "--backend", "old"])
                 self.assertNotEqual(code, 0)
                 self.assertIn("removed on the owner's order 20 Nov 2026; use yue2 for music, sa3 for sounds", err.getvalue())
