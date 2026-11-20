@@ -37,17 +37,11 @@ describe('check-components', () => {
     const root = path.join(tmp, 'r' + String(n));
     const t = path.join(root, 'tools', 'x');
     fs.mkdirSync(t, { recursive: true });
-    fs.writeFileSync(path.join(t, 'README.md'), '# x
-
-Use it.
-');
+    fs.writeFileSync(path.join(t, 'README.md'), '# x\n\nUse it.\n');
     const r = spawnSync('node', [SCRIPT, root], { encoding: 'utf8' });
     expect(r.status).toBe(1);
     expect(r.stderr).toContain('tools/x');
-    fs.writeFileSync(path.join(t, 'README.md'), '# x
-
-## Rules for agents
-');
+    fs.writeFileSync(path.join(t, 'README.md'), '# x\n\n## Rules for agents\n');
     expect(spawnSync('node', [SCRIPT, root], { encoding: 'utf8' }).status).toBe(0);
   });
   it('an escaping static import fails', () => {
