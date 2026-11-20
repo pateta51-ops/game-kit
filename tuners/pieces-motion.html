@@ -15048,6 +15048,12 @@ var PIECES = (() => {
     const cue = (c, beat) => {
       safe(`cue ${c}`, () => o.onCue?.(c, beat));
     };
+    const drop = (spec, why, fired) => {
+      if (!o.onDroppedCue) return;
+      [...spec.sound ?? []].sort((a, b) => a.t - b.t).forEach((c, k) => {
+        if (!fired?.has(k)) safe(`dropped cue ${c.cue}`, () => o.onDroppedCue?.(c.cue, spec.id, why));
+      });
+    };
     const commit = (item) => {
       const apply = item.commit;
       delete item.commit;
@@ -15075,6 +15081,7 @@ var PIECES = (() => {
       if (item.problem) o.onProblem?.(item.problem);
     };
     const snapEnd = (item) => {
+      drop(item.spec, "skipped");
       snapStart(item);
       safe(`${item.spec.id} onEnd`, () => item.onEnd?.("skipped"));
     };
@@ -15108,8 +15115,9 @@ var PIECES = (() => {
       request = frame(poll);
       return cancel;
     };
-    const finish2 = (c, how) => {
+    const finish2 = (c, how, why) => {
       if (!live.delete(c)) return;
+      if (why ?? how === "skipped") c.drop?.(why ?? "skipped");
       if (cur === c) cur = null;
       c.waiting.clear();
       delete c.after;
@@ -15130,7 +15138,8 @@ var PIECES = (() => {
       const run = makeRun(item, redraw ? emptyTimeline(spec.id) : build());
       const timers = /* @__PURE__ */ new Set();
       const open2 = /* @__PURE__ */ new Set();
-      const me = { item, run, timers, open: open2, leaving: false, waiting: /* @__PURE__ */ new Set() };
+      const fired = /* @__PURE__ */ new Set();
+      const me = { item, run, timers, open: open2, leaving: false, waiting: /* @__PURE__ */ new Set(), drop: (w) => drop(spec, w, fired) };
       live.add(me);
       if (!parallel) cur = me;
       const at2 = (ms, f) => {
@@ -15229,10 +15238,10 @@ var PIECES = (() => {
             me.leaving = true;
             emit();
           });
-        for (const c of run.timeline.cues)
-          atT(c.t, () => {
-            cue(c.cue, spec.id);
-          });
+        run.timeline.cues.forEach((c, k) => atT(c.t, () => {
+          fired.add(k);
+          cue(c.cue, spec.id);
+        }));
         atT(Math.max(run.timeline.ms, ...run.timeline.cues.map((c) => swap ? c.t : 0)), () => {
           if (!live.has(me)) return;
           if (me.waiting.size > 0) {
@@ -15272,7 +15281,7 @@ var PIECES = (() => {
       const failRedraw = (e) => {
         if (!live.has(me)) return;
         o.onProblem?.(e instanceof Error ? e.message : String(e));
-        finish2(me, "done");
+        finish2(me, "done", "failed");
         next();
         emit();
       };
@@ -15366,6 +15375,7 @@ var PIECES = (() => {
       const fail = (e) => {
         reached(spec.id);
         snapStart(item);
+        drop(spec, "failed");
         o.onProblem?.(e instanceof Error ? e.message : String(e));
         safe(`${spec.id} onEnd`, () => item.onEnd?.("done"));
       };
@@ -15499,6 +15509,7 @@ var PIECES = (() => {
         };
         if (opts?.parallel === true && !item.commit && (!o.pan || item.spec.pan === void 0)) {
           if (skipping) {
+            drop(item.spec, "skipped");
             snapStart(item);
             safe(`${item.spec.id} onEnd`, () => end?.("skipped"));
           } else {
