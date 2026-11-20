@@ -6718,6 +6718,7 @@ void main() {
       ...item.data !== void 0 && { data: item.data }
     });
     const emptyTimeline = (id) => ({ id, ms: 0, calls: [], actors: [], cues: [] });
+    const variant = (item) => o.reduced?.() === true ? withVariant(item.spec, item.spec.reduced) : withVariant(item.spec, item.place && item.spec.places?.[item.place.at]);
     const snapStart = (item) => {
       const run = item.commit || item.data !== void 0 ? makeRun(item, emptyTimeline(item.spec.id)) : void 0;
       if (run) safe(`${item.spec.id} start`, () => o.onBeatStart?.(run));
@@ -6726,7 +6727,7 @@ void main() {
       if (item.problem) o.onProblem?.(item.problem);
     };
     const snapEnd = (item) => {
-      drop(item.spec, "skipped");
+      drop(variant(item), "skipped");
       snapStart(item);
       safe(`${item.spec.id} onEnd`, () => item.onEnd?.("skipped"));
     };
@@ -6762,7 +6763,7 @@ void main() {
     };
     const finish = (c, how, why) => {
       if (!live.delete(c)) return;
-      if (why ?? how === "skipped") c.drop?.(why ?? "skipped");
+      c.drop?.(why ?? (how === "skipped" ? "skipped" : "cut"));
       if (cur === c) cur = null;
       c.waiting.clear();
       delete c.after;
@@ -7154,7 +7155,7 @@ void main() {
         };
         if (opts?.parallel === true && !item.commit && (!o.pan || item.spec.pan === void 0)) {
           if (skipping) {
-            drop(item.spec, "skipped");
+            drop(variant(item), "skipped");
             snapStart(item);
             safe(`${item.spec.id} onEnd`, () => end?.("skipped"));
           } else {
@@ -8225,6 +8226,7 @@ var MOTION = (() => {
       ...item.data !== void 0 && { data: item.data }
     });
     const emptyTimeline = (id) => ({ id, ms: 0, calls: [], actors: [], cues: [] });
+    const variant = (item) => o.reduced?.() === true ? withVariant(item.spec, item.spec.reduced) : withVariant(item.spec, item.place && item.spec.places?.[item.place.at]);
     const snapStart = (item) => {
       const run = item.commit || item.data !== void 0 ? makeRun(item, emptyTimeline(item.spec.id)) : void 0;
       if (run) safe(`${item.spec.id} start`, () => o.onBeatStart?.(run));
@@ -8233,7 +8235,7 @@ var MOTION = (() => {
       if (item.problem) o.onProblem?.(item.problem);
     };
     const snapEnd = (item) => {
-      drop(item.spec, "skipped");
+      drop(variant(item), "skipped");
       snapStart(item);
       safe(`${item.spec.id} onEnd`, () => item.onEnd?.("skipped"));
     };
@@ -8269,7 +8271,7 @@ var MOTION = (() => {
     };
     const finish = (c, how, why) => {
       if (!live.delete(c)) return;
-      if (why ?? how === "skipped") c.drop?.(why ?? "skipped");
+      c.drop?.(why ?? (how === "skipped" ? "skipped" : "cut"));
       if (cur === c) cur = null;
       c.waiting.clear();
       delete c.after;
@@ -8661,7 +8663,7 @@ var MOTION = (() => {
         };
         if (opts?.parallel === true && !item.commit && (!o.pan || item.spec.pan === void 0)) {
           if (skipping) {
-            drop(item.spec, "skipped");
+            drop(variant(item), "skipped");
             snapStart(item);
             safe(`${item.spec.id} onEnd`, () => end?.("skipped"));
           } else {
