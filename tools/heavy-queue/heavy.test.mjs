@@ -351,9 +351,10 @@ describe('heavy --mem and --slots (K474)', () => {
   const realScope = process.platform === 'linux' && spawnSync('systemd-run', ['--user', '--scope', '-q', '-p', 'MemoryMax=100M', '--', 'true'], { stdio: 'ignore' }).status === 0;
   it.skipIf(!realScope)('--mem with the real systemd-run shows the cap in the job and the kernel kills an over-limit job (137)', async () => {
     const q = await serve({});
-    const r1 = await heavy(['run', '--mem', '1', '--', 'sh', '-c', 'cg=$(sed -n "s/^0:://p" /proc/self/cgroup); cat /sys/fs/cgroup$cg/memory.max; exit 5'], { HEAVY_URL: q.url });
+    const p1 = heavy(['run', '--mem', '1', '--', 'sh', '-c', 'cg=$(sed -n "s/^0:://p" /proc/self/cgroup); cat /sys/fs/cgroup$cg/memory.max; exit 5'], { HEAVY_URL: q.url });
+    const r1 = await p1;
     expect(r1.code).toBe(5);
-    expect(r1.out()).toContain('1073741824');
+    expect(p1.out()).toContain('1073741824');
     const r2 = await heavy(['run', '--mem', '1', '--', process.execPath, '-e', 'const a = []; for (let i = 0; i < 40; i++) a.push(Buffer.alloc(64 * 2 ** 20, 1)); process.exit(0)'], { HEAVY_URL: q.url });
     expect(r2.code).toBe(137);
   });
