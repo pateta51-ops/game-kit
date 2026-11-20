@@ -22,11 +22,13 @@ export interface StampSettings {
   ringZ?: number | string;
   /** K435-9: stamps this existing element (or the first match of a selector in the actor, else the page) instead of a new label: no default look, never removed */
   target?: HTMLElement | string;
+  /** K449: a crack overlay (`data-fx-part` `crack`, an SVG of jagged lines in `currentColor`, or `colour`) appears at the press and stays; `true` or `{ colour }` */
+  cracked?: boolean | { colour?: string };
 }
 
 /** A pressed label can ride on the same stand-in during subsequent steps. */
 export const stamp: Effect = ({ el, call }) => {
-  const { text = '', tilt = 0, image, look, ms, ease = 'ease-in', scales = [2.2, 0.95, 1], pressOffset = 0.8, style, frames, press, ring, onParts, holdRing, ringZ, target } = call.step as StampSettings;
+  const { text = '', tilt = 0, image, look, ms, ease = 'ease-in', scales = [2.2, 0.95, 1], pressOffset = 0.8, style, frames, press, ring, onParts, holdRing, ringZ, target, cracked } = call.step as StampSettings;
   const found = typeof target === 'string' ? el.querySelector<HTMLElement>(target) ?? el.ownerDocument.querySelector<HTMLElement>(target) : target;
   const tag = found ?? el.ownerDocument.createElement(image === undefined ? 'div' : 'img');
   if (found) Object.assign(tag.style, style);
@@ -73,16 +75,31 @@ export const stamp: Effect = ({ el, call }) => {
     tag.before(halo);
     glint = accent(halo, { ...ring, frames: ringFrames }, 'replace');
   }
+  let crack: HTMLElement | undefined;
+  let crackAnim: Animation | undefined;
+  if (cracked) {
+    crack = el.ownerDocument.createElement('div');
+    Object.assign(crack.style, { position: 'absolute', left: tag.style.left || '0', top: tag.style.top || '0', width: tag.style.width || '100%', height: tag.style.height || '100%', pointerEvents: 'none', opacity: '0', color: typeof cracked === 'object' && cracked.colour ? cracked.colour : 'inherit', zIndex: tag.style.zIndex });
+    crack.innerHTML = '<svg viewBox="0 0 100 100" preserveAspectRatio="none" width="100%" height="100%" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="bevel"><path d="M46 0 L52 22 L40 38 L55 55 L45 72 L58 100 M52 22 L72 30 M55 55 L80 62 M40 38 L18 44 M45 72 L24 84"/></svg>';
+    crack.dataset['fxPart'] = 'crack';
+    tag.after(crack);
+    crackAnim = crack.animate([{ opacity: 0 }, { opacity: 0, offset: pressOffset }, { opacity: 1 }], { duration: ms === undefined ? call.dur : ms * scale, easing: 'linear', fill: 'both' });
+  }
   onParts?.(halo ? { label: tag, ring: halo } : { label: tag });
   return () => {
     if (end?.transform !== undefined) tag.style.transform = String(end.transform);
     if (end?.opacity !== undefined) tag.style.opacity = String(end.opacity);
     if (end?.filter !== undefined) tag.style.filter = String(end.filter);
     animation.cancel();
+    crackAnim?.cancel();
+    if (crack) crack.style.opacity = '1';
     give?.cancel();
     glint?.cancel();
     if (holdRing && halo && ring) Object.assign(halo.style, Object.fromEntries(Object.entries(ringFrames.at(-1) ?? {}).filter(([k]) => k !== 'offset' && k !== 'easing' && k !== 'composite').map(([k, v]) => [k, String(v)])));
     else halo?.remove();
-    if (!found && tag.style.opacity === '0') tag.remove();
+    if (!found && tag.style.opacity === '0') {
+      tag.remove();
+      crack?.remove();
+    }
   };
 };

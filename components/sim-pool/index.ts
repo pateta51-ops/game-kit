@@ -1,10 +1,10 @@
 export { DriverRng } from './rng.ts';
-export { ANSWER_CAP, CRASH_HASH, breakAt, bySeat, crashRecord, legalAnswers, playOne, randomDriver, type Driver, type GameSpec, type SimGame, type PlayOptions, type SimRecord, type StepMs } from './play.ts';
+export { ANSWER_CAP, CRASH_HASH, breakAt, bySeat, crashRecord, legalAnswers, playOne, randomDriver, type Driver, type GameSpec, type SimGame, type PlayOptions, type ResolvedTrace, type SimRecord, type StepMs } from './play.ts';
 export { botDriver, type Bot } from './bot.ts';
 export { replayStep, type StepReport } from './replay.ts';
 export { formatReport, report, type FailKind, type Lengths, type Report, type ReportOptions, type Seat } from './report.ts';
 export { runGames, runInThread, type RunRequest } from './pool.ts';
-export { findingOf, formatFuzz, fuzz, fuzzMain, FUZZ_USAGE, type Finding, type FindingKind, type FuzzOptions, type FuzzRun } from './fuzz.ts';
+export { findingOf, formatFuzz, formatWholeGame, fuzz, fuzzMain, wholeGame, FUZZ_USAGE, type Finding, type FindingKind, type FuzzOptions, type FuzzRun, type WholeGame, type WholeGameOptions, type WholeGroup } from './fuzz.ts';
 export { formatBands, type Band, type SanityBands } from './bands.ts';
 export { codeVersion, gitShort, sourceHash } from './version.ts';
 export { openCheckpoint, runResumable, specKey, type Checkpoint } from './resume.ts';

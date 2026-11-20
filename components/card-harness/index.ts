@@ -1,7 +1,7 @@
 export { createProbe, type Probe } from './probe.ts';
 export { rulingGroups, Scenario, scenarioLiteral, type ScenarioGame, type ScenarioPort, type ScenarioStep } from './scenario.ts';
 export { Delivery, type Delivered, type DeliveryGame } from './delivery.ts';
-export { clauseIds, inventory, runInventory, testFiles, type Clause, type Inventory, type InventoryInput, type InventoryIo, type Piece, type Row, type TestFile } from './inventory.ts';
+export { cardCasesIn, clauseIds, interactionNeeds, inventory, runInventory, testFiles, type CardCaseInfo, type Clause, type Inventory, type InventoryInput, type InventoryIo, type Piece, type Row, type TestFile } from './inventory.ts';
 export { conforms, describeCheck, report, type DescribedCard, type DR, type Is, type Same } from './checks.ts';
 export { diffPaths, roundTripCards } from './roundtrip.ts';
 export { parseCsv } from './csv.ts';

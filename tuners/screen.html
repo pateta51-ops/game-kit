@@ -16248,6 +16248,13 @@ var K = (() => {
 
   // components/motion-frame/pan.ts
   var PAN_MS = 350;
+  function inViewX(element, scroller) {
+    const r = element.getBoundingClientRect();
+    const m = scroller.getBoundingClientRect();
+    const middle = r.left + r.width / 2;
+    const inside = r.width <= m.width ? r.left >= m.left - 2 && r.right <= m.right + 2 : middle >= m.left && middle <= m.right;
+    return r.width > 0 && r.height > 0 && inside && r.bottom > m.top && r.top < m.bottom;
+  }
   function inView(element, scroller) {
     const r = element.getBoundingClientRect();
     const m = scroller.getBoundingClientRect();
@@ -16255,13 +16262,14 @@ var K = (() => {
     const inside = r.height <= m.height ? r.top >= m.top - 2 && r.bottom <= m.bottom + 2 : middle >= m.top && middle <= m.bottom;
     return r.width > 0 && r.height > 0 && inside && r.right > m.left && r.left < m.right;
   }
-  function scrollPan({ scroller, tabs, activeTab, inView: shown = inView, tabWaitMs, panMs = PAN_MS }) {
+  function scrollPan({ scroller, tabs, activeTab, inView: shown, tabWaitMs, panMs = PAN_MS, clickTabs = true, horizontal = false, backTab }) {
     return (scale, signal) => {
       const main = scroller();
       if (!main || !(scale > 0) || main.ownerDocument.visibilityState === "hidden") return null;
       const win = main.ownerDocument.defaultView;
       if (!win) return null;
-      const home = { tab: activeTab?.(), top: main.scrollTop };
+      const see = shown ?? (horizontal ? inViewX : inView);
+      const home = { tab: activeTab?.(), top: main.scrollTop, left: main.scrollLeft };
       const wait = (tick, ms, timeout) => new Promise((resolve) => {
         if (signal.aborted) {
           resolve();
@@ -16286,7 +16294,7 @@ var K = (() => {
         frame = win.requestAnimationFrame(step);
       });
       const goTab = async (tab) => {
-        if (!tab || signal.aborted || tab === activeTab?.()) return;
+        if (!clickTabs || !tab || signal.aborted || tab === activeTab?.()) return;
         tab.click();
         if (tabWaitMs !== void 0) {
           await wait(() => false, tabWaitMs, () => {
@@ -16299,9 +16307,13 @@ var K = (() => {
       };
       const scrollTo = (el, top) => {
         if (signal.aborted) return Promise.resolve();
-        const from = el.scrollTop;
+        const from = horizontal ? el.scrollLeft : el.scrollTop;
+        const set = (v) => {
+          if (horizontal) el.scrollLeft = v;
+          else el.scrollTop = v;
+        };
         if (Math.abs(top - from) < 2) {
-          el.scrollTop = top;
+          set(top);
           return Promise.resolve();
         }
         const start = win.performance.now();
@@ -16309,29 +16321,35 @@ var K = (() => {
         return wait((now) => {
           const k = Math.max(0, Math.min(1, (now - start) / ms));
           const eased = k < 0.5 ? 2 * k * k : 1 - (-2 * k + 2) ** 2 / 2;
-          el.scrollTop = from + (top - from) * eased;
+          set(from + (top - from) * eased);
           return k === 1;
         }, ms + 200, () => {
-          el.scrollTop = top;
+          set(top);
         });
+      };
+      const one = async (target) => {
+        await goTab(tabs?.(target));
+        if (signal.aborted) return;
+        const el = scroller();
+        const actor = el?.querySelector(target);
+        if (!el || !actor || see(actor, el)) return;
+        const r = actor.getBoundingClientRect();
+        if (r.width <= 0 || r.height <= 0) return;
+        const m = el.getBoundingClientRect();
+        await scrollTo(el, Math.max(0, horizontal ? Math.min(el.scrollLeft + (r.left + r.right - m.left - m.right) / 2, Math.max(0, el.scrollWidth - el.clientWidth)) : el.scrollTop + (r.top + r.bottom - m.top - m.bottom) / 2));
       };
       return {
         ensure: async (target) => {
-          if (signal.aborted || typeof target !== "string") return;
-          await goTab(tabs?.(target));
-          if (signal.aborted) return;
-          const el = scroller();
-          const actor = el?.querySelector(target);
-          if (!el || !actor || shown(actor, el)) return;
-          const r = actor.getBoundingClientRect();
-          if (r.width <= 0 || r.height <= 0) return;
-          const m = el.getBoundingClientRect();
-          await scrollTo(el, Math.max(0, el.scrollTop + (r.top + r.bottom - m.top - m.bottom) / 2));
+          const list = Array.isArray(target) ? target : [target];
+          for (const t of list) {
+            if (signal.aborted) return;
+            if (typeof t === "string") await one(t);
+          }
         },
-        back: async () => {
-          await goTab(home.tab);
+        back: async (tab) => {
+          await goTab(tab ?? backTab?.() ?? home.tab);
           const el = scroller();
-          if (el) await scrollTo(el, home.top);
+          if (el) await scrollTo(el, horizontal ? home.left : home.top);
         }
       };
     };
