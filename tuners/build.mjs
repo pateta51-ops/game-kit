@@ -13,7 +13,7 @@ for (const f of fs.readdirSync(path.join(dir, 'src')).filter((f) => f.endsWith('
   let html = norm(fs.readFileSync(path.join(dir, 'src', f), 'utf8'));
   html = html.replace(/\/\*@kit-css (\S+)\*\//g, (_, p) => `/* ===== game-kit ${p}, inlined by tuners/build.mjs ===== */\n${norm(fs.readFileSync(path.join(root, p), 'utf8'))}`);
   html = html.replace(/\/\/@kit-js (\S+) as (\w+)/g, (_, p, name) =>
-    norm(buildSync({ entryPoints: [path.join(root, p)], bundle: true, loader: { '.css': 'empty' }, define: { 'process.env.NODE_ENV': '"production"' }, format: 'iife', globalName: name, write: false, absWorkingDir: root, preserveSymlinks: true, target: 'es2022', legalComments: 'none', logLevel: 'error' }).outputFiles[0].text));
+    norm(buildSync({ entryPoints: [path.join(root, p)], bundle: true, loader: { '.css': 'empty' }, define: { 'process.env.NODE_ENV': '"production"' }, format: 'iife', globalName: name, write: false, absWorkingDir: root, preserveSymlinks: true, target: 'es2022', legalComments: 'none', logLevel: 'error' }).outputFiles[0].text).replace(/(\.\.\/)+node_modules\//g, 'node_modules/'));
   const out = path.join(dir, f);
   if (!check) fs.writeFileSync(out, html);
   else if (!fs.existsSync(out) || norm(fs.readFileSync(out, 'utf8')) !== html) stale.push(f);
