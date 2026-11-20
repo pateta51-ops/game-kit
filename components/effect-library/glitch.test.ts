@@ -167,7 +167,6 @@ describe('glitch', () => {
     expect(vi.getTimerCount()).toBe(0);
   });
   it('burstMs range, burstSteps and jumpRange stay in range; no timer at instant', () => {
-    const g = make({ seed: 3, burstMs: [160, 280], burstSteps: [3, 5], jumpRange: [2, 4] });
     for (let k = 0; k < 20; k++) {
       mount();
       const h = createGlitch(host as unknown as HTMLElement, { speed: () => 1, repeat: 0, seed: k, burstMs: [160, 280], burstSteps: [3, 5], jumpRange: [2, 4] });
@@ -193,7 +192,6 @@ describe('glitch', () => {
       expect(on('steps')).toBe(false);
       h.destroy();
     }
-    g.destroy();
     mount();
     const z = make({ seed: 1, burstSteps: 3, speed: () => 'instant' });
     z.burst();
