@@ -201,7 +201,7 @@ export interface MainResult {
   runs: PlaytestResult[];
   /** Everything paid in this invocation, including a run that threw. */
   totalUsd: number;
-  error?: unknown;
+  error?: Error;
 }
 /** Sum of costUsd in a spend ledger (jsonl); 0 when the file is missing. */
 export function ledgerSpent(file: string): number {
@@ -279,7 +279,7 @@ export async function runMain(argv: string[], log: (s: string) => void = console
     try {
       res = await runPlaytest(adapter, o);
     } catch (error) {
-      return { code: 1, runs: done, totalUsd, error };
+      return { code: 1, runs: done, totalUsd, error: error instanceof Error ? error : new Error(String(error)) };
     }
     left -= res.costUsd;
     done.push(res);
