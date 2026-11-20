@@ -74,4 +74,13 @@ describe('cards:screen (K489)', () => {
     expect(screenProblems(good)).toEqual([]);
     expect(screenProblems({ ...good, prompts: [{ ...good.prompts[0]!, screenOptions: ['Yes'] }, good.prompts[1]!] })).toEqual([]);
   });
+  it('K496 a repeated option counts once per copy', () => {
+    const run = (screenOptions: string[], engineOptions: string[]) => {
+      const out: string[] = [];
+      const prompts = [{ ...good.prompts[0]!, screenOptions, engineOptions }, good.prompts[1]!];
+      return [screenMain({ ...good, prompts }, (l) => out.push(l)), out] as const;
+    };
+    expect(run(['Yes', 'Yes'], ['Yes'])).toEqual([1, ['prompt for scout#1: option "Yes" on screen, not in the engine']]);
+    expect(run(['Yes'], ['Yes', 'Yes'])).toEqual([1, ['prompt for scout#1: engine option "Yes" not on screen']]);
+  });
 });
