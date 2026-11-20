@@ -19,6 +19,7 @@ import { motes } from './signal-motes.ts';
 import { flicker } from './signal-flicker.ts';
 import { barFill } from './signal-bar.ts';
 import { rotate } from './rotation.ts';
+import { banner, count, unrollCollapse } from './herald.ts';
 
 import { refresh } from './refresh.ts';
 import { pulseEffect } from './loops.ts';
@@ -364,6 +365,11 @@ export const BUILT_IN: Readonly<Record<string, Effect>> = {
       animate([{ boxShadow: el.style.boxShadow || on }, { boxShadow: off }], { boxShadow: '' });
       return undefined;
     }
+    // K449: `to: 'off'` starts lit and goes dark; the actor is left dark
+    if (call.step['to'] === 'off') {
+      animate([{ boxShadow: on }, { boxShadow: off }], { boxShadow: off });
+      return undefined;
+    }
     const span = typeof hold === 'number' ? Math.max(0, Math.min(1, hold)) : 0;
     const pulse = span > 0
       ? [{ boxShadow: on, offset: (1 - span) / 2 }, { boxShadow: on, offset: (1 + span) / 2 }]
@@ -371,7 +377,9 @@ export const BUILT_IN: Readonly<Record<string, Effect>> = {
     animate([{ boxShadow: off }, ...pulse, { boxShadow: off }], { boxShadow: el.style.boxShadow });
     return undefined;
   },
-  unroll: ({ call, el, animate }) => {
+  unroll: (fx) => {
+    const { call, el, animate } = fx;
+    if (call.step['reverse'] === true) return unrollCollapse(fx);
     const axis = call.step['axis'] === 'x' ? 'X' : 'Y';
     const origin = call.step['origin'];
     const transformOrigin = typeof origin === 'string' ? origin : axis === 'X' ? 'left' : 'top';
@@ -417,6 +425,8 @@ export function registerEffects(verbs: VerbRegistry<EffectCtx>, o?: LayerOptions
   const column = verbs.get('column-beam');
   verbs.register('column-beam', (call, run) => (call.step['curve'] ? curve : column)?.(call, run));
   registerEffect(verbs, 'collapse-jump', collapseJump);
+  registerEffect(verbs, 'count', count);
+  registerEffect(verbs, 'banner', banner);
   registerEffect(verbs, 'rotating-beam', rotatingBeam);
   registerEffect(verbs, 'projectile', projectile);
   const beam = verbs.get('projectile');

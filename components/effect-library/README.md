@@ -1,6 +1,6 @@
 # effect-library
 
-Sixteen verbs for the director's spec format as DOM effects for the motion frame: `move`, `arc-move`, `lift`, `settle`, `fade-in`, `fade-out`, `show`, `hide`, `flip`, `scale`, `shake`, `shake-group`, `glow`, `unroll`, `multi-stop-path`, `text`. Web Animations API; browser only. Beside them: canvas effects with a particle kit and `trail`, a count-up and a boxed ambience layer.
+Sixteen verbs for the director's spec format as DOM effects for the motion frame: `move`, `arc-move`, `lift`, `settle`, `fade-in`, `fade-out`, `show`, `hide`, `flip`, `scale`, `shake`, `shake-group`, `glow`, `unroll`, `multi-stop-path`, `text`, and since K449 `count` and `banner`. Web Animations API; browser only. Beside them: canvas effects with a particle kit and `trail`, a count-up and a boxed ambience layer.
 
 ## Rules for agents
 
@@ -13,7 +13,8 @@ Sixteen verbs for the director's spec format as DOM effects for the motion frame
 4. Call `layer.start(run)` from `onBeatStart` when actors must be cloned at the beat's start, and `layer.clear()` between beats.
 5. Set `--fx-*` variables for the look; no colour comes from the kit. Opt-in looks: `looks/rise-pulse.css`, `looks/glitch.css`.
 6. Add your own verbs with `registerEffect` (use `animate(keyframes, endStyle)` so a skip jumps to the end) or `registerCanvasEffect`.
-7. Use `countUp({ value, speed, show })` for counting numbers; it never writes game state.
+7. Use `countUp({ value, speed, show })` for counting numbers in your own code, or the `count` verb in a spec; neither writes game state.
+8. A step with `unroll` + `reverse: true` collapses the actor and ends it at opacity 0 (hidden): give a panel that leaves this, not `fade-out`. `glow` with `to: 'off'` leaves the actor dark, and `stamp` with `cracked` leaves its crack on screen until the beat ends.
 
 **Common mistakes:**
 - Reading `style.transform` for `move` or `scale`: they animate `translate` and `scale`.
@@ -279,3 +280,12 @@ glitch.tear() // victory or defeat; glitch.burst() plays one on demand
 glitch.update() // after the speed setting changed
 glitch.destroy()
 ```
+
+## K449: collapse, count, banner, glow end, cracked stamp
+
+- `unroll` with `reverse: true` collapses the actor on `axis` (`origin` default centre) to a line and ends at opacity 0. `colour` lights the line (brightness and a glow), `lineMs` holds it, `gutter` flickers it that many times before it goes out; `lineMs` scales with the speed. Without `reverse` it is unchanged.
+- `count` shows a number on the actor counting from `from` (default 0) to the step's `to` over the call, easing out (the same `countUp`); `prefix`, `suffix`, `colour` (default `var(--fx-text)`). A skip shows `to`.
+- `banner` unrolls the actor on `axis` (default `x`), shows `text` in a centred child (`data-fx-part` `banner-text`), holds, then fades the actor out; it ends at opacity 0 with the child removed. `unrollMs` and `fadeMs` default to 30% of the step each; `textAt` is when the text shows; `textFrames` (`{ at, opacity, scale }`, `at` ms from the step's start, as in `letterboxBanner`) drive the text instead.
+- `glow` with `to: 'off'` starts lit and dims to off, and ends dark (inline shadow `0 0 0 0`), where a plain `glow` ends at rest.
+- `stamp` with `cracked: true` (or `{ colour }`) adds a crack overlay (`data-fx-part` `crack`, an SVG of jagged lines in `currentColor`) over the label that appears at the press and stays with the label.
+- Lab: `fake/retrofit/index.html?herald`; `node fake/retrofit/herald-sheet.mjs out.png` makes a contact sheet.
