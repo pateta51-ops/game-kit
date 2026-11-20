@@ -102,6 +102,11 @@ describe('play', () => {
     expect(playScript(GAME, withStep(0, { expect: [{ type: 'drawn' }] })).failures.map((f) => f.code)).toEqual(['MISSING_EVENT']);
   });
 
+  it('K413 a Next step after a Next step sees no events', () => {
+    const steps = [SCRIPT.steps[0]!, SCRIPT.steps[1]!, { id: 'n1', narration: 'x', targets: [], do: { kind: 'next' as const } }, { id: 'n2', narration: 'y', targets: [], do: { kind: 'next' as const }, expect: [{ type: 'added' }] }];
+    expect(playScript(GAME, { ...SCRIPT, steps, end: undefined }, { stopOnFailure: false }).failures.map((f) => `${f.step} ${f.code}`)).toEqual(['4 MISSING_EVENT']);
+  });
+
   it('keeps going when asked, and checks coverage, evidence and bare numbers', () => {
     const r = playScript(GAME, withStep(1, { expect: [{ type: 'drawn' }], narration: 'Add 1.' }), { stopOnFailure: false, items: ['adding', 'scoring'], evidence: { adding: ['added'] }, noBareNumbers: true });
     expect(r.failures.map((f) => f.code)).toEqual(['MISSING_EVENT']);
