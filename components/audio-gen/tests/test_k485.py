@@ -113,7 +113,7 @@ ABC = 'X:1\nV:Vocal\n"C" c2 d2 e4 |\nw: la\nV:Piano\n"C" C4 E4 G8 |\n'
 
 
 class SungWorker(unittest.TestCase):
-    def run_worker(self, heard, vocal=0.5, lyrics=LY, tries=3, whisper_exit=None, **o):
+    def run_worker(self, heard, vocal=0.5, lyrics=LY, tries=3, whisper_exit=None, wrap=None, **o):
         seen = {"plans": [], "renders": [], "cmds": [], "seed": None}
 
         class Pipe:
@@ -166,7 +166,7 @@ class SungWorker(unittest.TestCase):
                 "options": {"modelDir": str(t / "none"), "tries": tries, **o}, "result": str(t / "r.json"),
                 "items": [{"out": str(t / "o" / "a.wav"), "prompt": "style", "seconds": 20, "seed": 1000, "label": "a#1", "lyrics": lyrics}]}))
             with mock.patch.object(sys, "argv", ["w", str(t / "job.json")]), mock.patch.dict(sys.modules, mods), \
-                    mock.patch.object(w.subprocess, "run", run), mock.patch.object(w.recipe, "oom_kills", lambda: 0), \
+                    mock.patch.object(w.subprocess, "run", run), mock.patch.object(w, "run_take", wrap(w, run) if wrap else (lambda cmd, env, stall: run(cmd, env=env, check=True))), mock.patch.object(w.recipe, "oom_kills", lambda: 0), \
                     mock.patch.object(w.recipe, "mem_available_gib", lambda: 100.0):
                 code = w.main()
             res = json.loads((t / "r.json").read_text())["items"] if (t / "r.json").exists() else []
