@@ -1,6 +1,24 @@
 # target-arrow
 A curved arrow from the card that asks for a target to the pointer; it snaps to a legal target (card or the prompt panel's button), collapses into the chosen one, then the hit (flash and shake on damage targets, a glow otherwise); token flights wait for the hit. Port of Unstoppable's `arrow.ts`, `strike.ts` and `TargetArrow.tsx`. `index.ts` is pure (loads in node); `ui.ts` adds React.
 
+## Rules for agents
+
+**What it does:** Draws a curved arrow from the card asking for a target to the pointer, snaps it to legal targets, collapses it into the chosen one, then plays the hit and holds token flights until it lands.
+
+**You must:**
+1. Pass `prompt` (the open target prompt, else null; which prompts are target prompts is the game's predicate), one `createStrikes()` per table, and `source(prompt)` (the asking element).
+2. Call `strikes.announce({ prompt, ids, auto })` for every answer to a target prompt, the player's and the board's own (`auto: true`), just before dispatching and while the targets are still on the page.
+3. Mark targets so the arrow finds them: `[data-target-id]` on the board and `[data-option]` or `[data-option-id]` in the prompt panel, or pass `board` and `panel`; style the aimed one by `data-arrow-aim="true"`.
+4. Pass `speed` from settings (1, 2, 0 none), `enabled`, and `undoNo` (a change cancels the strike); `damage(prompt)` picks flash and shake over a glow.
+5. Mount `<TokenFlights hold={strikes.hold} />` so tokens set off at the hit; a strike that never ends lets go after 3 s.
+6. Import from `ui` for React; `index` is pure.
+7. Restyle through the `data-part` hooks (zero-specificity `target-arrow.css`); the layer is fixed, click-through and `aria-hidden`.
+
+**Common mistakes:**
+- Announcing after the dispatch: the targets are gone and the arrow cannot collapse onto them.
+- Expecting an arrow on touch, at speed 0 or under reduced motion: only the hit plays.
+- Expecting a re-render on pointer move: it re-renders nothing by design.
+
 ## The game passes
 - `prompt`: the open prompt (`{ id, options: [{ id, disabled? }] }`) when it asks for a target, else null. Which prompts are target prompts is the game's predicate.
 - `strikes`: `createStrikes()`, one per table. The game calls `strikes.announce({ prompt, ids, auto })` for every answer to a target prompt (the player's and the board's own) just before it dispatches, while the targets are still on the page; it drops Back/forfeit itself. `auto` is true for the board's own answers.

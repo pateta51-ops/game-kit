@@ -1,5 +1,24 @@
 An in-app rulebook with heading navigation, ranked word search, glossary links, layered diagrams and reference sheets.
 
+## Rules for agents
+
+**What it does:** An in-app rulebook screen: contents, ranked word search, glossary links, layered diagrams and reference sheets, drawn from a `Rulebook` array.
+
+**You must:**
+1. Import the screen from `../kit/rules-screen/ui` and the data helpers (`rulebookSchema`, `headingTree`, `searchRules`, `rulesMatching`, `highlight`) from `index`, which loads in Node; the component needs `glossary`, `card-parts` and `screens`.
+2. Validate rulebook JSON with `rulebookSchema.safeParse(raw)` before passing it as `book`.
+3. Give every heading or block a link or contents jump must reach a stable `id`; repeated `src` values share the first anchor.
+4. Supply `renderAsset(asset, context)` for faces, icons and sheets and fill the box you are given; the default only prints `asset.id`. Set `enlargeDiagrams` to allow a full-size view and give full-size assets for the `enlarged` context.
+5. For glossary links render inside a `GlossaryProvider` and pass `glossary`; use `renderText` for the game's own markup and `plainText` so search still reads words.
+6. When the game's frame already has a `<main>`, pass `bodyAs="div"`; with `nav`, import `looks/nav.css` for the layout.
+7. Style by `data-part` selectors; the view only positions and sizes diagram geometry (`--rules-line` and `--rules-area` colour strokes and zones).
+8. Pass the game's own `back` and `actions` to the screens frame.
+
+**Common mistakes:**
+- Not passing `renderAsset`: figures show the asset ids as text.
+- Custom markup without `plainText`: search matches the markup, not the words.
+- Passing `search` and expecting the default input too: `search({ value, onChange, label })` replaces it.
+
 ## Use it in 10 lines
 
 ```tsx

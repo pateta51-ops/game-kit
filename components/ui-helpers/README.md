@@ -3,6 +3,24 @@
 Small screen helpers with no look and no game types. The stores are zustand vanilla stores: read them in React with
 `useStore(store, selector)`. Every timer goes through an optional `timers: { set, clear }`, so tests need no real clock.
 
+## Rules for agents
+
+**What it does:** Small screen helpers with no look and no game types: hover hold, inspect, toasts, selection, forced-answer and probe helpers, sheet search, icon words, prompt and play keys, and link tooltips.
+
+**You must:**
+1. Import from `../kit/ui-helpers/index`; read the zustand stores in React with `useStore(store, selector)`.
+2. Pass the optional `timers: { set, clear }` where tests need no real clock.
+3. Call `bindHoverHold(hold, window)` once; call `hold.start()` when an overlay closes; pieces ignore pointer-enter while `hold.held()`.
+4. Call `selection.reset()` when the game store's version changes; picks of another version or prompt are ignored anyway.
+5. For an engine-core prompt use prompt-host (`useBoardPick`, `autoAnswer`) instead of `createSelection` and `onlyForcedAnswer`.
+6. Keep every bind's returned unbind and call it on teardown (`bindPromptKeys`, `bindPlayKeys`, `bindLinkTooltip`).
+7. In `bindPlayKeys`, do not map the reserved keys 1-9, Enter, Escape, `?` or arrows in `board`: it throws. Pass `paused: () => help.getState().open` to `bindPromptKeys` so Escape closes help first.
+8. Keep the game's own words, keys, never-list, cost function and icon table out of the helpers: the game passes them in.
+
+**Common mistakes:**
+- Searching rule ids with `sheetMatching`: it only sees printed words by design.
+- Wiring tooltips per link: one `bindLinkTooltip` call on a container is enough.
+
 | Helper | What the game passes in |
 |---|---|
 | `createHoverHold(movePx = 3)` | Nothing. `bindHoverHold(hold, window)` once; call `hold.start()` when an overlay closes; a piece ignores pointer-enter while `hold.held()`. |

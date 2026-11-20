@@ -2,6 +2,24 @@
 
 Rule-citation gate. The game passes a `trace.config.json` (any subset of the options; `trace.config.example.json` shows the base ones) and runs `node kit/traceability/check-traceability.ts [--config path] [--strict] [--release] [--quiet] [--warn]`. Defaults are Jarl's check. Test titles are read with a TypeScript parse (the game's `typescript` package): the first argument of an `it`, `test` or `describe` call, so a call inside a string or a comment, or on another object (`helper.it(`), holds no title.
 
+## Rules for agents
+
+**What it does:** A rule-citation gate: every rule id in the plan must be cited by a test title (and, by default, a comment), and test titles may cite only defined ids.
+
+**You must:**
+1. Install the game's `typescript` package (test titles are read with a TypeScript parse) and keep a `trace.config.json` in the repository root (copy `trace.config.example.json`).
+2. Run `node kit/traceability/check-traceability.ts [--config path] [--strict] [--release] [--quiet] [--warn]` from the repository root in the game's check.
+3. Set `families`/`idTail` (or the whole `idPattern`) to the plan's id shape; defaults are `\d{2,3}` tails.
+4. Put the id in the title string of the first argument of `it`, `test` or `describe`; ids in comments, strings or `helper.it(` calls are not read.
+5. Keep a title to at most `maxIdsPerTitle` ids (default 6; more counts for none), and do not write titles as template literals when `rejectTemplateTitles` is on.
+6. List ids that are not due in the pending file named by `pending` (id to batch); `--release` fails while it is not empty.
+7. Use `citeFiles` to require rule citations in comments for engine folders.
+
+**Common mistakes:**
+- Citing an id in a `.skip`, `.todo` or `.fails` test: it counts for none unless `countSkipped` is set.
+- A sub-letter id (`LVL-01a`) is read as its base id; with `strictIdEnd` it is not.
+- Assuming the report wording matches a game's old script: it differs.
+
 | Option (default) | What it does | Games that set it |
 |---|---|---|
 | `families`, `idTail` (`\d{2,3}`) | An id is a family (a regexp piece), a dash and the tail. `\d{2}` for two digits; `[A-Z0-9]+(?:-[A-Z0-9]+)*` with family `[A-Z][A-Z0-9]*` for word suffixes and one digit (`KW-FAST`, `SET-7`). A sub-letter in a title (`LVL-01a`) always names its id. | Unstoppable, EBR (generic); Imperium, STCC, Warp's (`\d{2}`) |

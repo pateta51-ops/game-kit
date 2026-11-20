@@ -2,6 +2,25 @@
 
 The tutorial engine for any `GameRules<G>` game: a script format, headless play of a script on a seed, the lock that allows only the scripted answer, the phase table and session, the check, the readable script document, a seed search; and, in `ui.ts` (React), the narration panel and the highlight. Needs `engine-core`, `state-machines` and the packages `zod` and `react`. `index.ts` draws nothing and loads in node.
 
+## Rules for agents
+
+**What it does:** The tutorial engine for any `GameRules` or engine-port game: a JSON script format, headless play of a script on a seed, the answer lock, the session machine, the check, a readable script document, a seed search, plus the narration panel and highlight.
+
+**You must:**
+1. Needs `engine-core`, `state-machines` and the packages `zod` and `react`; import `index` in Node and `ui` for the panel and highlight.
+2. Write the script as JSON and load it with `parseScript` (it returns every problem as `path: message`); give each step a unique `id`, a `narration` (with `noBareNumbers` set, a digit outside `{{tokens}}` is `BARE_NUMBER`) and a `do` of `move`, `next` or `auto`.
+3. Give `TutorialGame` (or `TutorialPort` for an engine port) `rules`, `content`, `gameRules`, `options(seed)`, and `human`, `findOption`, `optionWords`, `eventWords` when options are not plain ids.
+4. Add a `tutorial:check` script that calls `tutorialCheck(game, script, options, io)`; exit 1 means the script no longer plays (`NO_PROMPT`, `WRONG_SEAT`, `NO_SUCH_OPTION`, `DISABLED_OPTION`, `ILLEGAL`, `MISSING_EVENT`, `UNCOVERED`, `UNTESTED`, `NO_END` ...).
+5. Lock the UI with `lockAt` and `lockPrompt`: only the scripted answer is allowed, Undo and Redo are off during the lesson and everything is free after the last step.
+6. Use `actionsBefore` and `stepAt` to resume the right step after an undo or reload.
+7. Mount `<TutorialPanel>` and `<TutorialHighlight>`; mark target elements `data-tutorial-target="<id>"` (or pass `find`), and pass `side`/`docked` to both when the panel is docked, shrinking the game screen with `--tut-reserve`.
+8. Set `--tut-*` variables on `:root`; give e2e `playTutorialE2E` and waits on `data-step`.
+9. Write narration with the game's words; the owner approves the generated `scriptDoc`, so regenerate it and run its `--check`.
+
+**Common mistakes:**
+- Editing the script without re-running `tutorial:check`: a move that is no longer legal fails the check, not the screen.
+- Targeting ids the game never marks: the highlight shows nothing.
+
 ## Script (`parseScript`)
 
 JSON: `seed`, optional `title`, `steps`, optional `end` (matched against `state.result`). A step: `id` (unique), `narration`, `targets` (highlight target ids, the game's own spelling), `do`, optional `asks` (the words of "The tutorial asks for …"), `expect` (events that must happen, in order; an object matches when its fields match), `items` (what the step teaches).

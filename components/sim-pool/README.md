@@ -2,6 +2,27 @@
 
 Plays N whole games of any `GameRules<G>` with a driver, in this thread or on worker threads, with crash-safe records and a resume file. Needs `engine-core`.
 
+## Rules for agents
+
+**What it does:** Plays many whole games of any `GameRules` with a driver, in-thread or on worker threads, with crash-safe records, a resume file, fuzzing with invariants, grid sweeps and a weight tuner.
+
+**You must:**
+1. Write one module that exports `simGame: SimGame<G, S>` (`rules`, `content()`, `start(spec, content)`, `driver(name, spec, content)`); the worker loads it by URL on plain Node, so its `.ts` imports name their extension (a bundled game passes `worker: <bundle URL>`).
+2. Make a game a function of its spec (seed, driver, settings) only: keep no counters or caches between games in module variables (use `observation` and `onPrompt` for per-game notes). `fresh: true` shows any leak.
+3. Take driver randomness only from the `DriverRng` passed to `choose`, never `state.rng`; a driver sees the player's view only (`botDriver(bot, view)`), never hidden state.
+4. Run fuzz and invariants with `process.exitCode = await fuzzMain(process.argv.slice(2), module)`; exit 1 means findings (`exception`, `violation`, `runaway`, `endless`, `dead end`, `hidden-info`), each with seed, step and a replay line.
+5. Put `codeVersion([...engine folders], root)` in the `runResumable` settings label; a resume file played with another label or version is refused.
+6. Do not pass `until` to `runResumable` (it throws); use `--seed S --until N` in fuzz to replay one game.
+7. Set `maxActions` for a game whose length is unusual (default 100,000; no result by then fails the game), and `gameTimeoutMs` (worker threads only) to stop a hung game.
+8. For the hidden-shuffle check give `reshuffleHidden` on `SimGame` and pass `hidden: true`; without it the run throws.
+9. Use `heavy run` or the game's npm script for long runs, not bare Node on the shared machine.
+
+**Common mistakes:**
+- A game whose result differs between a pool run and a single run: module state is carried between games.
+- A driver with `stateful: true` in a hidden-info run: it is skipped, not checked.
+- Tuning on 1,000 games at low win rates: that is noise; use 3,000 or more and `validate` on fresh seeds (training seeds are refused).
+- A worker module that fails to load: the crash is charged to the next game and every game becomes a crash record.
+
 A game writes one module that exports `simGame: SimGame<G, S>`:
 
 - `rules`, `content()` (loaded once per thread), `start(spec, content)` → `{ options, rules }` for `createGame`.
