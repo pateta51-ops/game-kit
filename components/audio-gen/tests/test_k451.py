@@ -280,7 +280,8 @@ class Yue2Worker(unittest.TestCase):
                 "items": [{"out": str(t / "o" / "a.wav"), "prompt": "calm ballpark organ", "seconds": 20, "seed": 1000, "label": "a#1"}]}))
             with mock.patch.object(sys, "argv", ["w", str(t / "job.json")]), mock.patch.dict(sys.modules, mods), \
                     mock.patch.object(w.subprocess, "run", demucs), \
-                    mock.patch.object(w.recipe, "oom_kills", oom or (lambda: 0)), \n                    mock.patch.object(w.recipe, "mem_available_gib", avail if callable(avail) else lambda: avail):
+                    mock.patch.object(w.recipe, "oom_kills", oom or (lambda: 0)), \
+                    mock.patch.object(w.recipe, "mem_available_gib", avail if callable(avail) else lambda: avail):
                 try:
                     code = w.main()
                 except SystemExit as e:
