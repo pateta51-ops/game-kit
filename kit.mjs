@@ -5,7 +5,7 @@
 //   node kit.mjs state                                                                  (game-kit checkout) prints what is open (PLAN rows not done, waiting, watch)
 //   node kit.mjs next-id [n] [--from <docs/plan dir or file>...]                                (game-kit checkout) the next free K number(s): origin/main and every open PR's docs/plan/ file names
 //   node kit.mjs next-id [n] --reserve                                                 also reserves the ids on origin (refs/kit-reserved/K<n>) so no other session gets them
-//   node kit.mjs worktree --branch <b> | worktree --here | finish [--comment] | teardown --worktree <dir>   worker commands, plain node (scripts/agent.mjs, pulled as kit/agent.mjs); finish prints PASS|FAIL <sha>
+//   node kit.mjs worktree --branch <b> | worktree --here | finish [--comment] | teardown --worktree <dir>   worker commands, plain node (scripts/agent.mjs, pulled as kit/agent.mjs); finish prints PASS|FAIL <sha> (with --check: PASS|FAIL <sha> (check: <command>))
 //   node kit/kit.mjs outdated [<game-kit checkout>]                                    the game's tag vs the latest, the PLAN rows and breaking notes between them
 //   node kit/kit.mjs check [--source <game-kit checkout>]                               fails if ./kit differs from kit/kit.lock.json; --source also fails if the tag moved off the locked commit or that commit holds other content
 import { execFileSync as x, spawnSync } from 'node:child_process'

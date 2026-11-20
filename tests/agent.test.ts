@@ -78,6 +78,10 @@ describe('agent commands (K216): plain node, no tsx', () => {
     expect(sent[0]).toContain(`"$H" run --label 'finish `); // K399: through the heavy queue when installed
     expect(finish(['--repo', main, '--check', 'echo hi'], io, () => ({ status: 3, output: 'boom' }), false)).toBe(1);
     expect(out[1]).toMatch(new RegExp(`^FAIL ${sha} .*exit 3[^]*boom`));
+    expect(out[1]).toMatch(new RegExp(`^FAIL ${sha} \(check: echo hi\) `)); // K416
+    expect(finish(['--repo', main, '--check', 'echo hi'], io, () => ({ status: 0, output: '' }), false)).toBe(0);
+    expect(out[2]).toMatch(new RegExp(`^PASS ${sha} \(check: echo hi\) `));
+    expect(out[0]).not.toContain('check:');
   });
   it('finish: TMPDIR inside the clone; a Windows worktree seen from non-Windows is refused; no WSL is FAIL, never a local run (K228)', () => {
     const main = repo('w7');

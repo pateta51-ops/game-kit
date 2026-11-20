@@ -228,6 +228,7 @@ export async function main(argv: string[], log: (s: string) => void = console.lo
 }
 
 export async function runMain(argv: string[], log: (s: string) => void = console.log, env: Record<string, string | undefined> = process.env, injected?: Chooser): Promise<MainResult> {
+  if (env['HEAVY_HELD'] === '1') { log('REFUSED: running under the heavy queue (HEAVY_HELD=1); this waits on an API, not the CPU, so run it directly, never under `heavy run`'); return { code: 2, runs: [], totalUsd: 0 }; }
   const bad = (): MainResult => ({ code: usage(log), runs: [], totalUsd: 0 });
   const flags = new Map<string, string>();
   for (let i = 0; i < argv.length; i++) {
