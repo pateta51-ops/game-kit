@@ -251,8 +251,8 @@ class YuE2(WorkerBackend):
         return cmd if h is None else [h, "run", "--label", f"audio-gen {self.name}", "--slots", "all", "--mem", f"{self.mem_gib():g}", "--"] + cmd
 
     def mem_gib(self) -> float:
-        """The host memory cap of one cue's job (K474); `memGiB`, default 14 of the 20 GiB WSL total (README)."""
-        return float(self.opts.get("memGiB", 14))
+        """The host memory cap of one cue's job (K474); `memGiB`, default 16 of the 20 GiB WSL total (README)."""
+        return float(self.opts.get("memGiB", 16))
 
     def capped(self, rs: list[Result]) -> list[Result]:
         """A take killed by the cap (exit 137, SIGKILL) is a failed take that names the cap, not a crash of the batch."""
