@@ -32,6 +32,24 @@ describe('check-components', () => {
     expect(r.status).toBe(1);
     expect(r.stderr).toContain('Rules for agents');
   });
+  it('a tool README without the Rules for agents heading fails', () => {
+    make({ a: {} });
+    const root = path.join(tmp, 'r' + String(n));
+    const t = path.join(root, 'tools', 'x');
+    fs.mkdirSync(t, { recursive: true });
+    fs.writeFileSync(path.join(t, 'README.md'), '# x
+
+Use it.
+');
+    const r = spawnSync('node', [SCRIPT, root], { encoding: 'utf8' });
+    expect(r.status).toBe(1);
+    expect(r.stderr).toContain('tools/x');
+    fs.writeFileSync(path.join(t, 'README.md'), '# x
+
+## Rules for agents
+');
+    expect(spawnSync('node', [SCRIPT, root], { encoding: 'utf8' }).status).toBe(0);
+  });
   it('an escaping static import fails', () => {
     const r = make({ a: { files: { 'x.ts': "import { y } from '../b/y'\n" } }, b: {} });
     expect(r.status).toBe(1);
