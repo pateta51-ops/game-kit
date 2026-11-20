@@ -20,6 +20,12 @@ Card tests on real cards. Test code only; the engine imports nothing here but `c
 11. To count only quoted tests, give each clause its `text` and the inventory the `rulings` ids: such a clause is cited only by a `cardCase` whose `printed` equals `text` and whose `ar` is in `rulings`; any other `cardCase` of it fails `<clause>: quote differs`.
 12. Give each interaction row as a piece of kind `interaction` (`IX-nn`, its `cards` and `records`); only a test title (an `it` title or a `cardCase` title) cites it, else `interaction IX-nn has no test`. Pass `interacting: interactionNeeds(records, { modifier, lasting, limited })` (every modifier and lasting record, each card with several limited records): an id in no row's `cards` or `records` fails `<id> is in no interaction row`.
 
+13. Build a game's `cards:check` with `cardsCheckMain(process.argv.slice(2), input, console.log, realRecordIo(fs))` (`./cardsCheck` or the index; Node only) and exit with its code. `input`: `faces` (`{ card, text, clauses? }`, the printed text with its ' ¶ ' marks), `catalogue` (docs/cards/catalogue.json), `records` (`{ id, clause, ...restriction keys, why? }`), `open` (content/open-clauses.json, `{ clause, reason }`), `keys` (the grammar's restriction keys), `words` (content/restriction-words.json: `"<key>:<value>"` to printed phrases), `rulings` (AR ids), `arMap` (`{ id, ar, split? }` per pattern), `readings` (`parseReadings` over every docs/cards/readings/*.md), `batch(id)` (its clause ids); optional `lasting`, `durationKey` (`duration`), `whyKey` (`why`), `exceptions` (`{ id, key, ar }`), `shape`.
+14. The four parts are also pure functions, each returning its problem lines: `clauseProblems` (rejoin, sentence or paragraph end, count, orphans both ways, open clauses need a reason), `restrictionProblems` (each restriction has its words in its clause or a `why` naming a ruling; each printed word has its restriction; a `lasting` record has a duration; an exception cites a known ruling and matches something), `patternProblems` (one record shape per pattern unless its AR-map row has `split`; an encoded pattern needs a row that is not `not read`), `readingProblems` (the last line per encoded clause is `ok` with the hash of its records now (`recordsHash`), or `ambiguous` citing a ruling).
+15. Never write docs/cards/readings/<batch>.md by hand: `--record <batch> --pr <n>` takes the PR's last comment holding verdict lines (`<clause> | ok|wrong|ambiguous|render-gap | <note>`), and fails (writing nothing) on a line naming no clause of the batch, a batch clause with no line, or no such comment; else it writes the file with a hash per clause, then `git add`, `commit`, `push`. In tests pass a fake `RecordIo`, never `realRecordIo`.
+16. `--list-restrictions <batch> [n]` prints the batch's `n` (10) clauses with the most restriction words: `<clause> <count> [words] <text>`.
+17. For `cards:catalogue`, split and group with `splitClauses(text, lead?)` (first at ' ¶ ', then before each match of `lead`, a lookahead), `numberClauses(card, faces, lead?, from = 1)` (`<card>#<n>` across the faces in order), `maskClause(text, names)` and `groupClauses(clauses, names)` (numbers to `N`, names to `NAME`); never retype a clause. Write `docs/cards/catalogue.json` as the `Catalogue` type (`summary.clauses`, `patterns[{ id, clauses[{ id, card, text }] }]`, `oneOffs` of clauses, `interactions[{ id }]`; more keys allowed) and check it with `catalogueProblems`.
+
 **Common mistakes:**
 - Calling `answer` in strict mode with no open prompt: it throws.
 - A `{ from: { state, events } }` start: the state is trusted, not validated, unless `validate` is on.
@@ -27,6 +33,8 @@ Card tests on real cards. Test code only; the engine imports nothing here but `c
 - A cited clause only in a comment with `titleOnly: true`: it is not counted as cited.
 - A spec row that still passes with its line's records removed: `cardSpecs` fails it.
 - A `cardCase` with a literal `clause` but `printed: P.text` (or `ar` not a literal): counts as `quote differs`. One with no literal `clause` (shorthand `{ clause, printed, ar }`) is skipped, so its clause reads `clause:<id> is cited by no test`.
+- An `ok` reading goes stale when any key of the clause's records changes (key order does not count): run `--record` again after the judge re-reads.
+- `words` keys compare `String(value)`: a boolean restriction is `"optional:true"`; an object value compares as its JSON.
 - A game without clause `text`, `rulings`, `interacting` or `interaction` pieces counts as before; the one change it sees is that a `cardCase(` call's title now counts as a test title.
 
 - **Probe** (`createProbe<D>()`): the engine calls `probe.note(d)` (or `note(() => d)`) where it settles a choice without asking. Off in the game.
@@ -54,6 +62,8 @@ Card tests on real cards. Test code only; the engine imports nothing here but `c
 
 Known bugs are pinned as `it.fails('EXPECTED FAILURE: …')`.
 - **Content gate** (K169, `contentGate(input, log)`): the game script passes `packs` (`validate()` issues; warnings fail unless `allowWarnings`), `broken` packs each with the `code` and `severity` it must report, `generated` files compared with `readGenerated` ("stale: run `regenerate`"), and `features` `{ required, used }` (`requireAll` fails on an unused one). Returns `{ failed }`.
+
+- **cards:check** (K488, `cardsCheck.ts`): the four parts, `--list-restrictions`, `--record` and the clause tools above (rules 13-17); `cardsCheck(input)` returns the four problem lists without logging.
 
 ## Use it in 10 lines
 
