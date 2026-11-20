@@ -61,4 +61,17 @@ describe('cards:screen (K489)', () => {
     expect([...d.opened]).toEqual([]);
     expect(d.screens).toEqual([]);
   });
+  it('K496 options on screen equal the engine options one for one', () => {
+    const run = (screenOptions: string[], engineOptions: { name: string }[]) => {
+      const out: string[] = [];
+      const prompts = [{ ...good.prompts[0]!, screenOptions, engineOptions }, good.prompts[1]!];
+      const code = screenMain({ ...good, prompts, label: (e) => (e as { name: string }).name }, (l) => out.push(l));
+      return [code, out] as const;
+    };
+    expect(run(['Yes', 'No'], [{ name: 'no' }, { name: 'Yes' }])).toEqual([0, ['cards:screen ok']]);
+    expect(run(['Yes', 'No'], [{ name: 'Yes' }, { name: 'No' }, { name: 'Skip' }])).toEqual([1, ['prompt for scout#1: engine option "Skip" not on screen']]);
+    expect(run(['Yes', 'No', 'Maybe'], [{ name: 'Yes' }, { name: 'No' }])).toEqual([1, ['prompt for scout#1: option "Maybe" on screen, not in the engine']]);
+    expect(screenProblems(good)).toEqual([]);
+    expect(screenProblems({ ...good, prompts: [{ ...good.prompts[0]!, screenOptions: ['Yes'] }, good.prompts[1]!] })).toEqual([]);
+  });
 });
