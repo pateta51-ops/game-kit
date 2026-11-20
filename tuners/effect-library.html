@@ -127,7 +127,7 @@ legend { font: 700 12px var(--display); text-transform: uppercase; letter-spacin
 .gl-sec > h2 { font: 700 18px var(--display); margin: 0; }
 .ctl input[type=color] { height: 34px; padding: 2px; }
 /* ===== game-kit components/effect-library/looks/glitch.css, inlined by tuners/build.mjs ===== */
-/* Opt-in look for createGlitch(el, opts). Without `mask` the copies and slices are copies of the element's content (text or markup), coloured by --glitch-a and --glitch-b; with `mask` (or --glitch-mask) set to url(shape.svg) they are flat colour cut to that shape. Variables: --glitch-a, --glitch-b, --glitch-split, --glitch-jump (number, % of width), --glitch-dropout (opacity), --glitch-ms (set by the scheduler). */
+/* Opt-in look for createGlitch(el, opts). Without `mask` the copies and slices are copies of the element's content (text or markup), coloured by --glitch-a and --glitch-b; with `mask` (or --glitch-mask) set to url(shape.svg) they are flat colour cut to that shape. Variables: --glitch-a, --glitch-b, --glitch-split, --glitch-jump (number, % of width), --glitch-dropout (opacity), --glitch-ms and --glitch-side (set by the scheduler). With `burstSteps` the scheduler holds the class fx-glitch--steps and redraws the slice variables per step: no keyframes. */
 .fx-glitch {
   --glitch-a: #fff;
   --glitch-b: #888;
@@ -163,6 +163,11 @@ legend { font: 700 12px var(--display); text-transform: uppercase; letter-spacin
     > .fx-glitch-copy { animation: fx-glitch-split var(--glitch-ms) steps(1, end); }
     > .fx-glitch-slice { animation: fx-glitch-slices var(--glitch-ms) steps(1, end); }
   }
+  .fx-glitch--steps {
+    > .fx-glitch-copy { opacity: .7; transform: translateX(calc(var(--glitch-side, 1) * var(--offset))); }
+    > .fx-glitch-slice { opacity: .9; transform: translateX(calc(var(--jump) * var(--glitch-jump) * 1%)); }
+  }
+  .fx-glitch--steps.fx-glitch--drop { opacity: var(--glitch-dropout); }
   .fx-glitch--tear {
     --glitch-split: 2%;
     animation: fx-glitch-tear-dropout var(--glitch-ms) steps(1, end);
@@ -5522,7 +5527,8 @@ void main() {
     const between = (r) => r[0] + rand2() * (r[1] - r[0]);
     const idle2 = o.idleMs ?? GLITCH_DEFAULTS.idleMs;
     const gap = o.repeatGapMs ?? GLITCH_DEFAULTS.repeatGapMs;
-    const ms = { burst: o.burstMs ?? GLITCH_DEFAULTS.burstMs, tear: o.tearMs ?? GLITCH_DEFAULTS.tearMs };
+    const bm = o.burstMs ?? GLITCH_DEFAULTS.burstMs;
+    const ms = { burst: typeof bm === "number" ? bm : 0, tear: o.tearMs ?? GLITCH_DEFAULTS.tearMs };
     const set = (k, v) => el.style.setProperty(k, String(v));
     el.classList.add("fx-glitch");
     if (o.mask) set("--glitch-mask", o.mask);
@@ -5532,7 +5538,8 @@ void main() {
     }
     if (o.dropout !== void 0) set("--glitch-dropout", o.dropout);
     if (o.split !== void 0) set("--glitch-split", `${String(o.split)}%`);
-    if (o.jump !== void 0) set("--glitch-jump", o.jump);
+    if (o.jumpRange) set("--glitch-jump", 1);
+    else if (o.jump !== void 0) set("--glitch-jump", o.jump);
     if (o.mask) el.classList.add("fx-glitch--masked");
     const face = Array.from(el.childNodes);
     const layer = (cls) => {
@@ -5549,6 +5556,7 @@ void main() {
     for (let i = 0; i < (o.slices ?? GLITCH_DEFAULTS.slices); i++) slices.push(layer(`fx-glitch-slice${i % 2 ? " fx-glitch-slice--b" : ""}`));
     let timer;
     let endTimer;
+    let steps = [];
     let dead = false;
     const factor = () => {
       const s = o.speed();
@@ -5557,9 +5565,11 @@ void main() {
     const stop = () => {
       clearTimeout(timer);
       clearTimeout(endTimer);
+      steps.forEach(clearTimeout);
+      steps = [];
       timer = endTimer = void 0;
     };
-    const clearClasses = () => el.classList.remove("fx-glitch--burst", "fx-glitch--tear");
+    const clearClasses = () => el.classList.remove("fx-glitch--burst", "fx-glitch--tear", "fx-glitch--steps", "fx-glitch--drop");
     function schedule() {
       const f = factor();
       if (dead || !f) return;
@@ -5570,22 +5580,40 @@ void main() {
       if (dead || !f) return;
       stop();
       clearClasses();
-      for (const s of slices) {
-        const top = rand2() * 72;
-        const h = 8 + rand2() * 18;
-        s.style.setProperty("--top", `${String(top)}%`);
-        s.style.setProperty("--bottom", `${String(100 - top - h)}%`);
-        s.style.setProperty("--jump", String((rand2() < 0.5 ? -1 : 1) * (0.6 + rand2() * 0.8)));
-      }
-      set("--glitch-ms", `${String(ms[kind] * f)}ms`);
+      const len = kind === "burst" && typeof bm !== "number" ? between(bm) : ms[kind];
+      const stepped = kind === "burst" && o.burstSteps !== void 0;
+      const n = stepped ? Math.max(1, Math.round(typeof o.burstSteps === "number" ? o.burstSteps : between(o.burstSteps))) : 0;
+      const draw = () => {
+        for (const s of slices) {
+          const top = rand2() * 72;
+          const h = 8 + rand2() * 18;
+          s.style.setProperty("--top", `${String(top)}%`);
+          s.style.setProperty("--bottom", `${String(100 - top - h)}%`);
+          s.style.setProperty("--jump", String((rand2() < 0.5 ? -1 : 1) * (o.jumpRange ? between(o.jumpRange) : 0.6 + rand2() * 0.8)));
+        }
+      };
+      draw();
+      set("--glitch-ms", `${String(len * f)}ms`);
       void el.offsetWidth;
-      el.classList.add(`fx-glitch--${kind}`);
+      if (stepped) {
+        const side = () => {
+          set("--glitch-side", rand2() < 0.5 ? -1 : 1);
+          el.classList[rand2() < 0.25 ? "add" : "remove"]("fx-glitch--drop");
+        };
+        side();
+        el.classList.add("fx-glitch--steps");
+        for (let i = 1; i < n; i++)
+          steps.push(setTimeout(() => {
+            draw();
+            side();
+          }, len * f * i / n));
+      } else el.classList.add(`fx-glitch--${kind}`);
       endTimer = setTimeout(() => {
         endTimer = void 0;
         clearClasses();
         if (again) timer = setTimeout(() => play("burst", false), between(gap) * f);
         else schedule();
-      }, ms[kind] * f);
+      }, len * f);
     }
     function update() {
       if (dead) return;
