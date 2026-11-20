@@ -190,17 +190,17 @@ it('field slot: renders one field with its value, set reaches Begin; null keeps 
     slots: {
       field: (f, v, set) =>
         f.id === 'difficulty' ? (
-          <button type="button" data-part="mine" onClick={() => { set('easy'); }}>{String(v)}</button>
+          <button type="button" data-part="mine" onClick={() => { set('normal'); }}>{String(v)}</button>
         ) : null,
     },
   });
   fireEvent.click(one('options-toggle'));
-  expect(one('mine').textContent).toBe('normal');
+  expect(one('mine').textContent).toBe('easy');
   expect(one('options').querySelectorAll('select').length).toBe(1);
   fireEvent.click(one('mine'));
-  expect(one('mine').textContent).toBe('easy');
+  expect(one('mine').textContent).toBe('normal');
   fireEvent.click(one('begin'));
-  expect((onBegin.mock.calls[0]?.[0] as { options: Record<string, unknown> }).options.difficulty).toBe('easy');
+  expect((onBegin.mock.calls[0]?.[0] as { options: Record<string, unknown> }).options.difficulty).toBe('normal');
 });
 
 it('options slot: replaces the whole fold body; set reaches Begin', () => {
