@@ -81,7 +81,7 @@ export async function runPlaytest(adapter: GameAdapter, opts: PlaytestOptions): 
   let last = '';
   const maxRepeats = opts.maxRepeats ?? 3;
   const note = (f: string, norm = false) => {
-    last = norm ? findingKey(f) : f;
+    last = norm ? findingKey(f) : `${seen.size}|${f}`;
     const e = seen.get(last);
     if (e === undefined) seen.set(last, { finding: f, count: 1 });
     else e.count++;
