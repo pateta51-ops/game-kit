@@ -11,6 +11,8 @@ import { ledgerSpent, main, runMain, runPlaytest } from './playtest.ts';
 const tmp = () => mkdtempSync(join(tmpdir(), 'llm-playtester-'));
 const usage = { input_tokens: 100, output_tokens: 50, cache_creation_input_tokens: 0, cache_read_input_tokens: 2000 };
 
+const endless = () => ({ ...createAdapter(), done: () => null });
+
 describe('llm-playtester', () => {
   it('plays a dummy game to the end and writes the logs', async () => {
     const out = tmp();
@@ -32,7 +34,7 @@ describe('llm-playtester', () => {
     const lines: string[] = [];
     const code = await main(['--adapter', join(import.meta.dirname, 'fake-adapter.ts'), '--dummy', '--runs', '2', '--out', out], (s) => lines.push(s), {});
     expect(code).toBe(0);
-    expect(lines).toHaveLength(2);
+    expect(lines.filter((l) => !l.startsWith('PLAYTEST ENDED'))).toHaveLength(2);
   });
 
   it('the CLI exits 2 on a bad --max-usd or --max-decisions', async () => {
@@ -62,7 +64,8 @@ describe('llm-playtester', () => {
     const client: Chooser = () => Promise.resolve({ option: 1, reason: 'BUG: only two options', usage });
     const r = await runPlaytest(createAdapter(), { seed: 's', client, out: tmp() });
     expect(r.stop).toBe('done');
-    expect(r.findings).toHaveLength(2);
+    expect(r.findings).toHaveLength(1);
+    expect(r.findingCounts[0]!.count).toBe(2);
   });
 
   it('stops before a call would pass --max-usd (fake client, no network)', async () => {
@@ -246,5 +249,67 @@ describe('heavy queue (K416)', () => {
     expect(lines.join(' ')).toContain('REFUSED');
     const ok = await runMain(['--adapter', adapter, '--out', tmp()], () => undefined, {}, () => Promise.resolve({ option: 0, reason: 'r', usage }));
     expect(ok.runs).toHaveLength(1);
+  });
+
+  it('K491: one PLAYTEST ENDED line when the game ended with a result, none otherwise', async () => {
+    const lines: string[] = [];
+    await runPlaytest(createAdapter(), { seed: 's', dummy: true, out: tmp(), log: (s) => lines.push(s) });
+    expect(lines.filter((l) => l.startsWith('PLAYTEST ENDED'))).toEqual(['PLAYTEST ENDED won after 4 turns']);
+    const none: string[] = [];
+    await runPlaytest(createAdapter(), { seed: 's', dummy: true, out: tmp(), maxDecisions: 2, log: (s) => none.push(s) });
+    await runPlaytest(createAdapter(2), { seed: 's', dummy: true, out: tmp(), log: (s) => none.push(s) });
+    expect(none.filter((l) => l.includes('PLAYTEST ENDED'))).toEqual([]);
+  });
+
+  it('K491: the same finding repeated is reported once with a count and the run stops asking', async () => {
+    let calls = 0;
+    const client: Chooser = () => {
+      calls++;
+      return Promise.resolve({ option: 0, reason: 'BUG: wrong count.', usage });
+    };
+    const base = { seed: 's', client, model: 'claude-sonnet-5-5', log: () => undefined };
+    const r = await runPlaytest(endless(), { ...base, out: tmp(), maxRepeats: 5 });
+    expect(calls).toBe(5);
+    expect(r.findings).toHaveLength(1);
+    expect(r.findingCounts).toEqual([{ finding: r.findings[0], count: 5 }]);
+    expect(r.stop).toBe('finding');
+    expect(readFileSync(join(r.dir, 'summary.md'), 'utf8')).toContain('(x5)');
+    calls = 0;
+    const d = await runPlaytest(endless(), { ...base, out: tmp() });
+    expect(calls).toBe(3);
+    expect(d.findingCounts[0]!.count).toBe(3);
+  });
+
+  it('K491: different findings are all kept', async () => {
+    let calls = 0;
+    const client: Chooser = () => Promise.resolve({ option: 0, reason: `BUG: problem ${'ab'[calls++ % 2]}`, usage });
+    const r = await runPlaytest(endless(), { seed: 's', client, out: tmp(), model: 'claude-sonnet-5-5', log: () => undefined });
+    expect(r.findings).toHaveLength(2);
+  });
+
+  it('K491: findings that differ only in a number stay two; maxRepeats 0 never stops', async () => {
+    let calls = 0;
+    const client: Chooser = () => Promise.resolve({ option: 0, reason: `BUG: option ${calls++ % 2 ? 5 : 2} offered illegally`, usage });
+    const base = { seed: 's', client, model: 'claude-sonnet-5-5', log: () => undefined };
+    const r = await runPlaytest(endless(), { ...base, out: tmp(), maxDecisions: 6 });
+    expect(r.findings).toHaveLength(2);
+    calls = 0;
+    const same: Chooser = () => { calls++; return Promise.resolve({ option: 0, reason: 'BUG: same', usage }); };
+    const z = await runPlaytest(endless(), { ...base, client: same, out: tmp(), maxDecisions: 7, maxRepeats: 0 });
+    expect(calls).toBe(7);
+    expect(z).toMatchObject({ stop: 'max-decisions' });
+    expect(z.findingCounts[0]!.count).toBe(7);
+  });
+
+  it('K491: exit code 0 and the ENDED line for a result; exit 1 and no line for a finding stop', async () => {
+    const adapter = join(import.meta.dirname, 'fake-adapter.ts');
+    const run = async (reason: string) => {
+      const lines: string[] = [];
+      const client: Chooser = () => Promise.resolve({ option: 0, reason, usage });
+      const r = await runMain(['--adapter', adapter, '--model', 'claude-sonnet-5-5', '--out', tmp()], (s) => lines.push(s), {}, client);
+      return { code: r.code, ended: lines.filter((l) => l.startsWith('PLAYTEST ENDED')) };
+    };
+    expect(await run('fine')).toEqual({ code: 0, ended: ['PLAYTEST ENDED won after 4 turns'] });
+    expect(await run('BUG: same')).toEqual({ code: 1, ended: [] });
   });
 });
