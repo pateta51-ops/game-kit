@@ -11,12 +11,16 @@ export interface Piece {
   readonly id: string;
   /** Regular expressions (sources) a test file matches to cite the piece directly. */
   readonly cite?: readonly string[];
-  /** The cards whose encoding uses it. */
+  /** The cards whose encoding uses it (an `interaction` piece: the cards in the row). */
   readonly cards?: readonly string[];
+  /** An `interaction` piece: the record ids in the row. */
+  readonly records?: readonly string[];
 }
 export interface Clause {
   readonly id: string;
   readonly cards: readonly string[];
+  /** K487: the printed text. Given, the clause is cited only by a `cardCase` quoting it word for word with a known `ar`. */
+  readonly text?: string;
 }
 export interface TestFile {
   readonly path: string;
@@ -40,6 +44,10 @@ export interface InventoryInput {
   /** Record verbs, checked against `routes` (the verbs the engine routes by). */
   readonly records?: readonly { readonly id: string; readonly verb: string }[];
   readonly routes?: readonly string[];
+  /** K487: the ruling ids a `cardCase` may cite. */
+  readonly rulings?: readonly string[];
+  /** K487: record or card ids that must sit in an `interaction` piece's `records` or `cards` (see `interactionNeeds`). */
+  readonly interacting?: readonly string[];
 }
 export interface Row {
   readonly key: string;
@@ -57,6 +65,8 @@ export interface Inventory {
   readonly unowned: readonly string[];
   readonly staleOpen: readonly string[];
   readonly unrouted: readonly string[];
+  readonly quoteDiffers: readonly string[];
+  readonly outOfRows: readonly string[];
   readonly report: string;
 }
 
@@ -64,12 +74,59 @@ const esc = (s: string): string => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 const word = (s: string): RegExp => new RegExp(`(?<![\\w-])${esc(s)}(?![\\w-])`);
 const TITLE = /\b(?:it|test|describe)(?:\.\w+)*\(\s*(['"`])((?:(?!\1).)*)\1/g;
 
+export interface CardCaseInfo {
+  readonly clause: string;
+  readonly printed: string;
+  readonly ar: string;
+  /** Added to the test title after the clause id (`poor`, `IX-03 with …`). */
+  readonly title?: string;
+}
+const KEY = /(?<![\w$])(clause|printed|ar|title)\s*:\s*(['"`])((?:\\[\s\S]|(?!\2)[^\\])*)\2/g;
+const unescape = (s: string): string => s.replace(/\\([\s\S])/g, (_, c: string) => ({ n: '\n', t: '\t', r: '\r' })[c] ?? c);
+
+/** K487: the string-literal fields of each `cardCase({ ... })` call in a test file's text; a field that is not a literal is absent. */
+export function cardCasesIn(text: string): Partial<CardCaseInfo>[] {
+  const out: Partial<CardCaseInfo>[] = [];
+  for (const m of text.matchAll(/\bcardCase\(\s*\{/g)) {
+    const from = (m.index ?? 0) + m[0].length;
+    let i = from;
+    let depth = 1;
+    let q = '';
+    for (; i < text.length && depth > 0; i++) {
+      const ch = text[i];
+      if (q !== '') {
+        if (ch === '\\') i++;
+        else if (ch === q) q = '';
+      } else if (ch === "'" || ch === '"' || ch === '`') q = ch;
+      else if (ch === '{') depth++;
+      else if (ch === '}') depth--;
+    }
+    const o: Record<string, string> = {};
+    for (const k of text.slice(from, i - 1).matchAll(KEY)) o[k[1] as string] ??= unescape(k[3] ?? '');
+    out.push(o);
+  }
+  return out;
+}
+const caseTitle = (c: Partial<CardCaseInfo>): string => (c.title === undefined ? (c.clause ?? '') : `${c.clause ?? ''} ${c.title}`);
+const titlesOf = (text: string): string[] => [...[...text.matchAll(TITLE)].map((m) => m[2] ?? ''), ...cardCasesIn(text).map(caseTitle)];
+
+/** K487: the ids `interaction` rows must hold: every modifier and lasting record, and each card with several limited records. */
+export function interactionNeeds<R extends { readonly id: string; readonly card: string }>(
+  records: readonly R[],
+  is: { modifier(r: R): boolean; lasting(r: R): boolean; limited(r: R): boolean },
+): string[] {
+  const out = records.filter((r) => is.modifier(r) || is.lasting(r)).map((r) => r.id);
+  const n = new Map<string, number>();
+  for (const r of records) if (is.limited(r)) n.set(r.card, (n.get(r.card) ?? 0) + 1);
+  return [...out, ...[...n].filter(([, k]) => k > 1).map(([c]) => c)];
+}
+
 /** The files cited: `path` or `path › title` for the test titles that match. */
 function cites(tests: readonly TestFile[], res: readonly RegExp[], titleOnly = false): string[] {
   const out: string[] = [];
   for (const t of tests) {
     if (!titleOnly && !res.some((r) => r.test(t.text))) continue;
-    const titles = [...t.text.matchAll(TITLE)].map((m) => m[2] ?? '').filter((x) => res.some((r) => r.test(x)));
+    const titles = titlesOf(t.text).filter((x) => res.some((r) => r.test(x)));
     out.push(...(titles.length > 0 ? titles.map((x) => `${t.path} › ${x}`) : titleOnly ? [] : [t.path]));
   }
   return out;
@@ -91,8 +148,22 @@ export function inventory(input: InventoryInput): Inventory {
   const tests = [...input.tests].sort((a, b) => (a.path < b.path ? -1 : 1));
   const named = (cards: readonly string[]): string[] =>
     cards.length === 0 ? [] : tests.filter((t) => cards.some((c) => word(c).test(t.text))).map((t) => t.path);
-  const row = (kind: string, id: string, res: RegExp[], cards: readonly string[], titleOnly = false): Row => {
-    const direct = cites(tests, res, titleOnly);
+  const rulings = new Set(input.rulings ?? []);
+  const quoteDiffers: string[] = [];
+  const quoted = (c: Clause): string[] =>
+    tests.flatMap((t) =>
+      cardCasesIn(t.text)
+        .filter((k) => k.clause === c.id)
+        .filter((k) => {
+          if (k.printed !== c.text) quoteDiffers.push(`${c.id}: quote differs (${t.path})`);
+          else if (k.ar === undefined || !rulings.has(k.ar)) quoteDiffers.push(`${c.id}: quote differs (${t.path}: ${k.ar ?? 'ar'} is not a known ruling)`);
+          else return true;
+          return false;
+        })
+        .map((k) => `${t.path} › ${caseTitle(k)}`),
+    );
+  const row = (kind: string, id: string, res: RegExp[], cards: readonly string[], titleOnly = false, given?: string[]): Row => {
+    const direct = given ?? cites(tests, res, titleOnly);
     const directFiles = new Set(direct.map((d) => d.split(' › ')[0]));
     return {
       key: `${kind}:${id}`,
@@ -101,12 +172,12 @@ export function inventory(input: InventoryInput): Inventory {
       cards: cards.length,
       examples: [...cards].sort().slice(0, 6),
       direct,
-      via: input.directOnly === true ? [] : named(cards).filter((p) => !directFiles.has(p)),
+      via: input.directOnly === true || given !== undefined || kind === 'interaction' ? [] : named(cards).filter((p) => !directFiles.has(p)),
     };
   };
   const rows = [
-    ...input.pieces.map((p) => row(p.kind, p.id, (p.cite ?? []).map((c) => new RegExp(c)).concat(p.cite === undefined ? [word(p.id)] : []), p.cards ?? [], input.titleOnly === true && p.cite === undefined)),
-    ...(input.clauses ?? []).map((c) => row('clause', c.id, [word(c.id)], c.cards, input.titleOnly === true)),
+    ...input.pieces.map((p) => row(p.kind, p.id, (p.cite ?? []).map((c) => new RegExp(c)).concat(p.cite === undefined ? [word(p.id)] : []), p.cards ?? [], p.kind === 'interaction' || (input.titleOnly === true && p.cite === undefined))),
+    ...(input.clauses ?? []).map((c) => row('clause', c.id, [word(c.id)], c.cards, input.titleOnly === true, c.text === undefined ? undefined : quoted(c))),
   ];
   const seen = new Set<string>();
   for (const r of rows) {
@@ -125,6 +196,8 @@ export function inventory(input: InventoryInput): Inventory {
   const staleOpen = [...open].filter((id) => !lineIds.has(id) || owned.has(id)).sort();
   const routes = new Set(input.routes ?? []);
   const unrouted = (input.records ?? []).filter((r) => !routes.has(r.verb)).map((r) => `${r.id}:${r.verb}`);
+  const inRows = new Set(input.pieces.filter((p) => p.kind === 'interaction').flatMap((p) => [...(p.cards ?? []), ...(p.records ?? [])]));
+  const outOfRows = (input.interacting ?? []).filter((id) => !inRows.has(id));
 
   const kinds = [...new Set(rows.map((r) => r.kind))];
   const lines = [
@@ -156,7 +229,7 @@ export function inventory(input: InventoryInput): Inventory {
       lines.push(`| \`${r.id}\` | ${String(r.cards)} | ${r.examples.join(', ')}${r.cards > 6 ? ', …' : ''} | ${r.direct.join('<br>')} | ${r.via.join('<br>')} |`);
     lines.push('');
   }
-  return { rows, uncited, staleBaseline, unowned, staleOpen, unrouted, report: lines.join('\n') };
+  return { rows, uncited, staleBaseline, unowned, staleOpen, unrouted, quoteDiffers, outOfRows, report: lines.join('\n') };
 }
 
 /** The test files under `dirs` of `root` whose names match `re`, with paths relative to `root`. */
@@ -184,12 +257,14 @@ export function runInventory(input: InventoryInput, out: string, check: boolean,
       code = 1;
     }
   } else io.write(out, inv.report);
-  for (const k of inv.uncited) io.log(`inventory: ${k} is cited by no test`);
+  for (const k of inv.uncited) io.log(k.startsWith('interaction:') ? `inventory: interaction ${k.slice(12)} has no test` : `inventory: ${k} is cited by no test`);
+  for (const k of inv.quoteDiffers) io.log(`inventory: ${k}`);
+  for (const k of inv.outOfRows) io.log(`inventory: ${k} is in no interaction row`);
   for (const k of inv.staleBaseline) io.log(`inventory: baseline lists ${k}, which is cited or gone`);
   for (const k of inv.unowned) io.log(`inventory: printed line ${k} is owned by no record and not listed open`);
   for (const k of inv.staleOpen) io.log(`inventory: open list has ${k}, which is owned or gone`);
   for (const k of inv.unrouted) io.log(`inventory: record ${k} has a verb the engine does not route`);
-  if (inv.uncited.length + inv.staleBaseline.length + inv.unowned.length + inv.staleOpen.length + inv.unrouted.length > 0) code = 1;
+  if (inv.uncited.length + inv.staleBaseline.length + inv.unowned.length + inv.staleOpen.length + inv.unrouted.length + inv.quoteDiffers.length + inv.outOfRows.length > 0) code = 1;
   io.log(`inventory: ${String(inv.rows.length)} pieces and clauses, ${String(inv.uncited.length)} uncited${code === 0 ? '; ok' : ''}`);
   return code;
 }

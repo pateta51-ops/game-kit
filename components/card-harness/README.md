@@ -16,6 +16,9 @@ Card tests on real cards. Test code only; the engine imports nothing here but `c
 7. Import `literalsOf` / `keysOf` / `nodesOf` from `kit/card-harness/literals`; they need `typescript`.
 8. Pin a known bug as `it.fails('EXPECTED FAILURE: ...')`, never delete the test.
 9. Trace only the content the engine reads to play: walking `.registry` with `Object.values` marks every id looked up.
+10. Write each full-resolve card test as `cardCase({ clause, printed, ar }, fn)` from `kit/card-harness/cardCase` (it imports vitest; the index does not): `printed` the clause's text word for word, and `clause`, `printed`, `ar` as string literals, since `runInventory` reads them from the file's text. `title` adds words after the clause id (`poor`, `IX-03 …`).
+11. To count only quoted tests, give each clause its `text` and the inventory the `rulings` ids: such a clause is cited only by a `cardCase` whose `printed` equals `text` and whose `ar` is in `rulings`; any other `cardCase` of it fails `<clause>: quote differs`.
+12. Give each interaction row as a piece of kind `interaction` (`IX-nn`, its `cards` and `records`); only a test title (an `it` title or a `cardCase` title) cites it, else `interaction IX-nn has no test`. Pass `interacting: interactionNeeds(records, { modifier, lasting, limited })` (every modifier and lasting record, each card with several limited records): an id in no row's `cards` or `records` fails `<id> is in no interaction row`.
 
 **Common mistakes:**
 - Calling `answer` in strict mode with no open prompt: it throws.
@@ -23,6 +26,8 @@ Card tests on real cards. Test code only; the engine imports nothing here but `c
 - An inventory piece listed twice: `runInventory` throws `is listed twice`.
 - A cited clause only in a comment with `titleOnly: true`: it is not counted as cited.
 - A spec row that still passes with its line's records removed: `cardSpecs` fails it.
+- A `cardCase` with `printed: P.text` or shorthand `{ clause, printed, ar }`: not a literal, so it counts as `quote differs`.
+- A game without clause `text`, `rulings`, `interacting` or `interaction` pieces counts as before; the one change it sees is that a `cardCase(` call's title now counts as a test title.
 
 - **Probe** (`createProbe<D>()`): the engine calls `probe.note(d)` (or `note(() => d)`) where it settles a choice without asking. Off in the game.
 - **Scenario** (`new Scenario(game)`): the game passes a `ScenarioGame<G, W, D>` over engine-core's `GameRules<G>`: `rules`, `content`, `start()` (the state to build on), `put(s, card, where)` (a new instance, its id) and its `probe`. Then `put`, `set`, `run(...tasks)`, `answer(...picks)`, `options`, `offered`, `events`, `notes`, `observe(read, fn)`. The rules' invariants run on the built position (`{ validate: false }` to skip).
