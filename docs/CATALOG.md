@@ -378,6 +378,27 @@ The card-language shell (K206): card effects as data, one typed verb table where
 - **Came from:** jarl
 - **Docs:** [README](../components/card-language/README.md) ([rules for agents](../components/card-language/README.md#rules-for-agents))
 
+### card-language/verb-pack
+
+- **Also called:** Standard verb pack
+- **Words:** verbs, draw, discard, gain, pay, choose, standard pack
+- **Use it when:** Card effects use the common verbs (draw, discard, move, gain, pay, choose and the rest) instead of game-written ones.
+- **Guide:** [pack.md](../components/card-language/pack.md)
+
+### card-language/triggers
+
+- **Also called:** Triggers printed on cards
+- **Words:** when, trigger, after, card trigger, reaction
+- **Use it when:** A card prints "when X, do Y": `when` on card data, compiled by `cardTriggers` into the engine's triggers.
+- **Guide:** [README.md](../components/card-language/README.md)
+
+### card-language/op-table
+
+- **Also called:** Op table for a game on its own engine
+- **Words:** op table, own engine, ops, card words
+- **Use it when:** A game that keeps its own engine still wants one row per op with checked fields, a run function and its text (`OpTable`, `runOp`, `validateOps`).
+- **Guide:** [README.md](../components/card-language/README.md)
+
 ## card-parts
 
 The parts a game builds its own card face from: the layout as the game's data, art with a cache, printed text with SVG icons inline, tokens. No layout or look is fixed here. `index.ts` loads in node; `ui.ts` adds React.
@@ -731,6 +752,48 @@ The kernel of a game engine: seeded random numbers, canonical JSON and hashes, t
 - **Needs:** nothing
 - **Came from:** jarl
 - **Docs:** [README](../components/engine-core/README.md) ([rules for agents](../components/engine-core/README.md#rules-for-agents))
+
+### engine-core/timing
+
+- **Also called:** Prevention, replacement and triggers
+- **Words:** prevent, replace, instead of, trigger, reaction, window, at once
+- **Use it when:** An effect can be prevented, replaced or answered by others: batches of occurrences, the prevention window, the replacement loop, triggers.
+- **Guide:** [timing.md](../components/engine-core/timing.md)
+
+### engine-core/lasting-effects
+
+- **Also called:** Lasting effects and durations
+- **Words:** duration, until end of turn, lasting, expires, continuous, modifier
+- **Use it when:** An effect stays for a while and changes numbers or rules until a boundary ends it (`addEffect`, `boundary`, `effectsOf`, `sumEffects`).
+- **Guide:** [timing.md](../components/engine-core/timing.md)
+
+### engine-core/layers
+
+- **Also called:** Layers for continuous effects
+- **Words:** layers, order of changes, recompute, continuous, static
+- **Use it when:** Several lasting effects change the same thing and the order matters (`layered`, `stampActive`).
+- **Guide:** [timing.md](../components/engine-core/timing.md)
+
+### engine-core/legal
+
+- **Also called:** Legal moves and reasons
+- **Words:** legal moves, barred, why disabled, reason, only option
+- **Use it when:** The game says which options are legal, bars the others with a reason code, and notices the only option (`bar`, `blocked`, `onlyOne`, `legalTable`).
+- **Guide:** [legal.md](../components/engine-core/legal.md)
+
+### engine-core/preview
+
+- **Also called:** Outcome preview
+- **Words:** preview, outcome, what would happen, look ahead
+- **Use it when:** Show or test what an answer would do before it is given, stopping at hidden information (`preview`).
+- **Guide:** [legal.md](../components/engine-core/legal.md)
+
+### engine-core/do-nothing
+
+- **Also called:** Options that do nothing
+- **Words:** does nothing, do nothing, idle, no result, empty effect
+- **Use it when:** Find or mark an option whose effect would change nothing (`doesNothing`, `idleProblems`, `markIdle`).
+- **Guide:** [idle.md](../components/engine-core/idle.md)
 
 ## game-log
 
