@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { cardsCheckMain, patternProblems, recordsHash, type CardRecord, type CardsCheckInput, type Catalogue } from './index.ts';
+import { cardsCheckMain, patternNotes, patternProblems, recordsHash, type CardRecord, type CardsCheckInput, type Catalogue } from './index.ts';
 
 // K509: an invented game; one pattern holds several printed wordings.
 const C = (id: string, text: string) => ({ id, card: id.split('#')[0] ?? '', text });
@@ -58,5 +58,33 @@ describe('K509 patternProblems wording', () => {
     const log3: string[] = [];
     expect(cardsCheckMain([], { ...game, records: with_('elk#1', { kind: 'x' }), readings: [], allowShape: () => 'excused' }, (l) => log3.push(l))).toBe(1);
     expect(log3).toContain('ok   patterns (0)');
+  });
+  it('an excused clause is printed as a NOTE with its reason; the exit code stays 0', () => {
+    const recs = with_('elk#1', { instead: true });
+    const faces = clauses.map((c) => ({ card: c.card, text: c.text }));
+    const readings = recs.map((r) => ({ clause: r.clause, verdict: 'ok' as const, note: '', hash: recordsHash([r]) }));
+    const allowShape = (id: string) => (id === 'elk#1' ? 'owl#2 changes it with "instead"' : null);
+    const game: CardsCheckInput = { faces, catalogue: cat, records: recs, keys: [], words: {}, rulings: ['AR-9'], arMap, readings, wording: true, allowShape };
+    const log: string[] = [];
+    expect(cardsCheckMain([], game, (l) => log.push(l))).toBe(0);
+    expect(log).toEqual(['ok   clauses (0)', 'ok   restrictions (0)', 'ok   patterns (0)', 'ok   readings (0)', 'NOTE elk#1 excused: owl#2 changes it with "instead"']);
+    expect(patternNotes({ catalogue: cat, records: recs, arMap, allowShape })).toEqual(['elk#1 excused: owl#2 changes it with "instead"']);
+    expect(patternNotes({ catalogue: cat, records: [], arMap, allowShape })).toEqual([]);
+  });
+  it('no records: a pattern gives no lines; a clause with no records is no shape', () => {
+    expect(p([], { wording: true, allowShape: () => null, arMap: [] })).toEqual([]);
+    const two = base.filter((r) => r.clause !== 'owl#1').map((r) => (r.clause === 'elk#1' ? { ...r, phase: 'night' } : r));
+    expect(p(two, { wording: true })).toEqual(['P-07 wording "Gain N {gem}." has 2 shapes: fox#1 {n,op}; elk#1 {n,op,phase}']);
+    expect(p(two.filter((r) => r.clause !== 'fox#1'), { wording: true })).toEqual([]);
+  });
+  it('wording true keeps numbers inside icon codes: {d6} and {d8} are different keys', () => {
+    const dice = [C('ant#1', 'Roll {d6}.'), C('cow#1', 'Roll {d8}.'), C('pig#1', 'Roll {d6} twice.'), C('rat#1', 'Roll {d6} 3 times.')];
+    const dc: Catalogue = { summary: { clauses: 4 }, patterns: [{ id: 'P-08', clauses: dice }], oneOffs: [], interactions: [] };
+    const q = (records: CardRecord[]) => patternProblems({ catalogue: dc, records, arMap: [{ id: 'P-08', ar: 'AR-9' }], wording: true });
+    expect(q([R('ant#1'), R('cow#1', { die: 8 })])).toEqual([]);
+    expect(q([R('ant#1'), R('cow#1'), R('pig#1', { twice: true }), R('rat#1', { times: 3 })])).toEqual([]);
+    const ext: Catalogue = { ...dc, patterns: [{ id: 'P-08', clauses: [...dice, C('emu#1', 'Roll {d6} 2 times.')] }] };
+    expect(patternProblems({ catalogue: ext, records: [R('rat#1', { times: 3 }), R('emu#1')], arMap: [{ id: 'P-08', ar: 'AR-9' }], wording: true }))
+      .toEqual(['P-08 wording "Roll {d6} N times." has 2 shapes: rat#1 {n,op,times}; emu#1 {n,op}']);
   });
 });

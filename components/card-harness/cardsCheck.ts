@@ -182,10 +182,18 @@ export interface PatternInput {
   readonly allowShape?: (clauseId: string, records: CardRecord[]) => string | null;
 }
 const SKIP = new Set(['id', 'clause', 'why']);
+/** K509: `<clause> excused: <reason>` for each encoded pattern clause `allowShape` excuses (notes, not problems). */
+export function patternNotes(i: PatternInput): string[] {
+  return i.catalogue.patterns.flatMap((p) => p.clauses.flatMap((c) => {
+    const recs = i.records.filter((r) => r.clause === c.id);
+    const why = recs.length ? i.allowShape?.(c.id, recs) : null;
+    return why == null ? [] : [`${c.id} excused: ${why}`];
+  }));
+}
 export function patternProblems(i: PatternInput): string[] {
   const out: string[] = [];
   const shape = i.shape ?? ((r: CardRecord) => Object.keys(r).filter((k) => !SKIP.has(k)).sort().join(','));
-  const key = i.wording === undefined ? undefined : i.wording === true ? (c: CatalogueClause) => maskClause(c.text) : i.wording;
+  const key = i.wording === undefined ? undefined : i.wording === true ? (c: CatalogueClause) => c.text.replace(/\{[^}]*\}|\d+/g, (m) => (m.startsWith('{') ? m : 'N')) : i.wording;
   for (const p of i.catalogue.patterns) {
     const shapes = new Map<string, string>();
     const groups = new Map<string, Map<string, string>>();
@@ -345,5 +353,6 @@ export function cardsCheckMain(argv: readonly string[], input: CardsCheckInput, 
   const r = cardsCheck(i);
   let bad = 0;
   for (const [part, ps] of Object.entries(r)) { log(`${ps.length ? 'FAIL' : 'ok  '} ${part} (${String(ps.length)})`); for (const p of ps) log(`  ${p}`); bad += ps.length; }
+  for (const n of patternNotes(i)) log(`NOTE ${n}`);
   return bad ? 1 : 0;
 }
