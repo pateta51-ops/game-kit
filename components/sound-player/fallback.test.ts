@@ -40,7 +40,7 @@ describe('sound-player: format fallback (K508)', () => {
     noWebm();
     const { net, player } = await start();
     player.setAmbience('bed');
-    player.setMusic('calm');
+    player.setState('calm');
     await tick();
     expect(net.urls.filter((u) => u.endsWith('.webm'))).toEqual([]);
     expect(net.urls).toContain('a/long-lead.m4a');
