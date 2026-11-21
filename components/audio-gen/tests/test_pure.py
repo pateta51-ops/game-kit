@@ -102,6 +102,42 @@ class Tail(unittest.TestCase):
         y = tail.apply_tail(x, self.rate, 0.2)
         self.assertLessEqual(len(y) / self.rate, 0.2 + 1.5 + 0.02)
 
+    def test_k512_cap_ends_short_with_fade(self):
+        x = clip(self.rate, 0.1, 2.0, total_s=4.0)  # spec 0.2 s, rings the whole file
+        y, info = tail.apply_tail_info(x, self.rate, 0.2, tail.TailRule(max_length_x=1.5))
+        d = len(y) / self.rate
+        self.assertAlmostEqual(d, 0.31, delta=0.03)
+        self.assertTrue(info["capped"])
+        self.assertGreater(info["lengthBeforeMs"], 1000)
+        self.assertAlmostEqual(info["lengthAfterMs"], 1000 * d, delta=1)
+        self.assertLess(abs(y[-1]), 1e-3)
+        self.assertGreater(max(abs(v) for v in y[-int(0.07 * self.rate):-int(0.05 * self.rate)]), 5 * max(abs(v) for v in y[-20:]))
+
+    def test_k512_smaller_cap_wins_and_min_does_not_override(self):
+        x = clip(self.rate, 0.1, 2.0, total_s=4.0)
+        y = tail.apply_tail(x, self.rate, 0.2, tail.TailRule(max_length_x=5, max_s=0.2))
+        self.assertLess(len(y) / self.rate, 0.25)  # the 0.35 s minimum would give more
+
+    def test_k512_no_key_unchanged(self):
+        x = clip(self.rate, 0.1, 2.0, total_s=4.0)
+        y, info = tail.apply_tail_info(x, self.rate, 0.2)
+        self.assertEqual(y, tail.apply_tail(x, self.rate, 0.2, tail.TailRule()))
+        self.assertFalse(info["capped"])
+        self.assertGreater(len(y) / self.rate, 1.5)
+        r = tail.TailRule.from_category({"tail": {"maxLengthX": 1.5, "maxS": 2, "capFadeMs": 30}})
+        self.assertEqual((r.max_length_x, r.max_s, r.cap_fade_ms), (1.5, 2, 30))
+
+    def test_k512_gate_flags_uncapped_take(self):
+        x = clip(self.rate, 0.1, 2.0, total_s=4.0)
+        r = tail.TailRule(max_length_x=1.5)
+        self.assertEqual(tail.check_cap(tail.apply_tail(x, self.rate, 0.2, r), self.rate, 0.2, r), "")
+        self.assertIn("past the", tail.check_cap(tail.apply_tail(x, self.rate, 0.2), self.rate, 0.2, r))
+        self.assertEqual(tail.check_cap(tail.apply_tail(x, self.rate, 0.2), self.rate, 0.2, tail.TailRule()), "")
+
+    def test_k512_manifest_fields(self):
+        cli = (Path(__file__).parent.parent / "audiogen" / "cli.py").read_text(encoding="utf-8")
+        self.assertIn('e["tail"] = tail_info', cli)
+
     def test_silent_raises(self):
         with self.assertRaises(ValueError):
             tail.apply_tail([0.0] * 800, self.rate, 0.1)
