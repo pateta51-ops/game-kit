@@ -114,7 +114,7 @@ describe('widgets (K123 review)', () => {
     expect(container.querySelector('[class*="readout"]')?.textContent).toBe('XP 20');
   });
 
-  it('K522: PickAmount hideDone has no Done; onChange gives the stepped value for the game's own Confirm', () => {
+  it('K522: PickAmount hideDone has no Done; onChange gives the stepped value for the game own Confirm', () => {
     const a = vi.fn<Answer>();
     let cur: string[] = [];
     const Band = () => (
