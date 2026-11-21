@@ -356,12 +356,12 @@ A hand of cards as a fan that fits any number of cards in a width, lifts the car
 Card tests on real cards. Test code only; the engine imports nothing here but `createProbe`, and card-language imports the pure `strictProblems` from `strict.ts`. Not here: `validateEffect` in card-language checks one effect at run time, `strictProblems` checks a whole grammar in a test.
 
 - **Also called:** Test card effects on real cards
-- **Words:** card, test, scenario, prompt, probe, inventory, effects
+- **Words:** card, test, scenario, prompt, probe, inventory, effects, test depth, depth, poor test, poor, not offered, not fired, expectNotOffered, expectNotFired, full resolve
 - **Release:** 1.0; not seen
 - **The game supplies:** The game rules, real cards and scenarios.
-- **Use it when:** Testing card effects on real cards with the scenario builder, prompt delivery, choice probe and inventory with stale check.
+- **Use it when:** Testing card effects on real cards with the scenario builder, prompt delivery, choice probe and inventory with stale check; test depth: a full-resolve test per clause and a poor test (expectNotOffered, expectNotFired) per conditional clause.
 - **Not for:** Card rules themselves; those stay in the game.
-- **Key exports:** `createProbe`, `rulingGroups`, `Scenario`, `scenarioLiteral`, `Delivery`, `cardCasesIn`, `clauseIds`, `interactionNeeds`, `inventory`, `runInventory`, `testFiles`, `conforms`, `describeCheck`, `report`, and 88 more
+- **Key exports:** `createProbe`, `rulingGroups`, `Scenario`, `scenarioLiteral`, `Delivery`, `cardCasesIn`, `clauseIds`, `interactionNeeds`, `inventory`, `runInventory`, `testFiles`, `conforms`, `describeCheck`, `report`, and 96 more
 - **Needs:** [`engine-core`](#engine-core), [`plain-text`](#plain-text)
 - **Came from:** stcc
 - **Docs:** [README](../components/card-harness/README.md) ([rules for agents](../components/card-harness/README.md#rules-for-agents))

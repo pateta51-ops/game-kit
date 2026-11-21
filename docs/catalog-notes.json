@@ -258,7 +258,7 @@
     "gameSupplies": "The cards, their face view and the look."
   },
   "card-harness": {
-    "use": "Testing card effects on real cards with the scenario builder, prompt delivery, choice probe and inventory with stale check.",
+    "use": "Testing card effects on real cards with the scenario builder, prompt delivery, choice probe and inventory with stale check; test depth: a full-resolve test per clause and a poor test (expectNotOffered, expectNotFired) per conditional clause.",
     "not": "Card rules themselves; those stay in the game.",
     "title": "Test card effects on real cards",
     "tags": [
@@ -268,7 +268,16 @@
       "prompt",
       "probe",
       "inventory",
-      "effects"
+      "effects",
+      "test depth",
+      "depth",
+      "poor test",
+      "poor",
+      "not offered",
+      "not fired",
+      "expectNotOffered",
+      "expectNotFired",
+      "full resolve"
     ],
     "visible": false,
     "release": 1,

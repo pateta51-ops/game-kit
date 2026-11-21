@@ -5,6 +5,7 @@
 // piece or clause is uncited and not in the baseline, or when the baseline lists one that is cited or gone.
 import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
 import { join, relative } from 'node:path';
+import { asserts, callsHelper, testCalls } from './depth.ts';
 
 export interface Piece {
   readonly kind: string;
@@ -21,6 +22,10 @@ export interface Clause {
   readonly cards: readonly string[];
   /** K487: the printed text. Given, the clause is cited only by a `cardCase` quoting it word for word with a known `ar`. */
   readonly text?: string;
+  /** K415: it has a condition or a cost (the game decides): it also needs a `<id> poor` test calling expectNotOffered or expectNotFired. Marking any clause (true or false) turns the depth gate on. */
+  readonly conditional?: boolean;
+  /** K415: the family the depth report groups it under (default `clauses`). */
+  readonly family?: string;
 }
 export interface TestFile {
   readonly path: string;
@@ -50,6 +55,8 @@ export interface InventoryInput {
   readonly interacting?: readonly string[];
   /** K497: known `interacting` ids pending a row: id to the fix that clears it (a game's JSON map). Listed ids are reported as pending, not failed; one no longer a finding is `stale pending entry`. */
   readonly interactingPending?: Readonly<Record<string, string>>;
+  /** K415: the depth gate (on too when any clause has `conditional`): a clause is cited only by a test titled with its id (not its poor test) whose body asserts; a conditional one also needs `poor:<id>`. */
+  readonly depth?: boolean;
 }
 export interface Row {
   readonly key: string;
@@ -71,6 +78,9 @@ export interface Inventory {
   readonly outOfRows: readonly string[];
   readonly pendingRows: readonly string[];
   readonly staleInteracting: readonly string[];
+  /** K415: tests titled with a clause id that do not count (`<path> › <title>: <why>`), clause not in the baseline. */
+  readonly notCounted: readonly string[];
+  readonly depth: boolean;
   readonly report: string;
 }
 
@@ -169,6 +179,23 @@ export function inventory(input: InventoryInput): Inventory {
         })
         .map((k) => `${t.path} › ${caseTitle(k)}`),
     );
+  const depth = input.depth === true || (input.clauses ?? []).some((c) => c.conditional !== undefined);
+  const calls = depth ? tests.flatMap((t) => testCalls(t.text).filter((c) => !c.skipped).map((c) => ({ ...c, path: t.path }))) : [];
+  const fullRe = (id: string): RegExp => new RegExp(`(?<![\\w-])${esc(id)}(?![\\w-])(?! poor\\b)`);
+  const poorRe = (id: string): RegExp => new RegExp(`(?<![\\w-])${esc(id)} poor\\b`);
+  const notCounted: string[] = [];
+  const full = (c: Clause): string[] => {
+    const q = c.text === undefined ? undefined : new Set(quoted(c));
+    return calls
+      .filter((k) => fullRe(c.id).test(k.title) && (q === undefined || (k.card !== undefined && q.has(`${k.path} › ${k.title}`))))
+      .filter((k) => asserts(k) || void notCounted.push(`clause:${c.id}|${k.path} › ${k.title}: its body asserts nothing`))
+      .map((k) => `${k.path} › ${k.title}`);
+  };
+  const poor = (c: Clause): string[] =>
+    calls
+      .filter((k) => poorRe(c.id).test(k.title))
+      .filter((k) => callsHelper(k) || void notCounted.push(`poor:${c.id}|${k.path} › ${k.title}: a poor test that calls neither expectNotOffered nor expectNotFired`))
+      .map((k) => `${k.path} › ${k.title}`);
   const row = (kind: string, id: string, res: RegExp[], cards: readonly string[], titleOnly = false, given?: string[]): Row => {
     const direct = given ?? cites(tests, res, titleOnly);
     const directFiles = new Set(direct.map((d) => d.split(' › ')[0]));
@@ -184,7 +211,8 @@ export function inventory(input: InventoryInput): Inventory {
   };
   const rows = [
     ...input.pieces.map((p) => row(p.kind, p.id, (p.cite ?? []).map((c) => new RegExp(c)).concat(p.cite === undefined ? [word(p.id)] : []), p.cards ?? [], p.kind === 'interaction' || (input.titleOnly === true && p.cite === undefined))),
-    ...(input.clauses ?? []).map((c) => row('clause', c.id, [word(c.id)], c.cards, input.titleOnly === true, c.text === undefined ? undefined : quoted(c))),
+    ...(input.clauses ?? []).map((c) => row('clause', c.id, [word(c.id)], c.cards, input.titleOnly === true, depth ? full(c) : c.text === undefined ? undefined : quoted(c))),
+    ...(input.clauses ?? []).filter((c) => depth && c.conditional === true).map((c) => row('poor', c.id, [], c.cards, true, poor(c))),
   ];
   const seen = new Set<string>();
   for (const r of rows) {
@@ -194,6 +222,7 @@ export function inventory(input: InventoryInput): Inventory {
   const base = new Set(input.baseline ?? []);
   const cited = (r: Row): boolean => r.direct.length + r.via.length > 0;
   const uncited = rows.filter((r) => !cited(r) && !base.has(r.key)).map((r) => r.key);
+  const failing = [...new Set(notCounted.filter((n) => !base.has(n.split('|')[0] as string)).map((n) => n.slice(n.indexOf('|') + 1)))];
   const staleBaseline = [...base].filter((k) => !seen.has(k) || cited(rows.find((r) => r.key === k) as Row)).sort();
 
   const owned = new Set((input.lines ?? []).filter((l) => l.records.length > 0).map((l) => l.id));
@@ -234,13 +263,24 @@ export function inventory(input: InventoryInput): Inventory {
     lines.push(`| ${k} | ${n.join(' | ')} |`);
   }
   lines.push(`| **all** | ${sum.join(' | ')} |`, '');
+  if (depth) {
+    lines.push('## Depth by family', '', '| Family | Clauses | Conditional | Full resolve | Poor test | Baseline |', '|---|---|---|---|---|---|');
+    const cl = input.clauses ?? [];
+    const has = (k: string): boolean => (rows.find((x) => x.key === k)?.direct.length ?? 0) > 0;
+    for (const f of [...new Set(cl.map((c) => c.family ?? 'clauses'))]) {
+      const cs = cl.filter((c) => (c.family ?? 'clauses') === f);
+      const n = (p: (c: Clause) => boolean): string => String(cs.filter(p).length);
+      lines.push(`| ${f} | ${String(cs.length)} | ${n((c) => c.conditional === true)} | ${n((c) => has(`clause:${c.id}`))} | ${n((c) => has(`poor:${c.id}`))} | ${n((c) => base.has(`clause:${c.id}`) || base.has(`poor:${c.id}`))} |`);
+    }
+    lines.push('');
+  }
   for (const k of kinds) {
     lines.push(`## ${k}`, '', '| Piece | Cards | Examples | Direct | Via cards |', '|---|---|---|---|---|');
     for (const r of rows.filter((x) => x.kind === k))
       lines.push(`| \`${r.id}\` | ${String(r.cards)} | ${r.examples.join(', ')}${r.cards > 6 ? ', …' : ''} | ${r.direct.join('<br>')} | ${r.via.join('<br>')} |`);
     lines.push('');
   }
-  return { rows, uncited, staleBaseline, unowned, staleOpen, unrouted, quoteDiffers, outOfRows, pendingRows, staleInteracting, report: lines.join('\n') };
+  return { rows, uncited, staleBaseline, unowned, staleOpen, unrouted, quoteDiffers, outOfRows, pendingRows, staleInteracting, notCounted: failing, depth, report: lines.join('\n') };
 }
 
 /** The test files under `dirs` of `root` whose names match `re`, with paths relative to `root`. */
@@ -269,7 +309,17 @@ export function runInventory(input: InventoryInput, out: string, check: boolean,
       code = 1;
     }
   } else io.write(out, inv.report);
-  for (const k of inv.uncited) io.log(k.startsWith('interaction:') ? `inventory: interaction ${k.slice(12)} has no test` : `inventory: ${k} is cited by no test`);
+  for (const k of inv.uncited)
+    io.log(
+      k.startsWith('interaction:')
+        ? `inventory: interaction ${k.slice(12)} has no test`
+        : inv.depth && k.startsWith('clause:')
+          ? `inventory: ${k} has no full-resolve test (titled with its id, its body asserts)`
+          : inv.depth && k.startsWith('poor:')
+            ? `inventory: ${k} has no poor test (titled '${k.slice(5)} poor', calling expectNotOffered or expectNotFired)`
+            : `inventory: ${k} is cited by no test`,
+    );
+  for (const k of inv.notCounted) io.log(`inventory: ${k} (not counted)`);
   for (const k of inv.quoteDiffers) io.log(`inventory: ${k}`);
   for (const k of inv.outOfRows) io.log(`inventory: ${k} is in no interaction row`);
   for (const k of inv.pendingRows) io.log(`inventory: ${k} is in no interaction row (pending: ${pend[k]!})`);
@@ -278,7 +328,7 @@ export function runInventory(input: InventoryInput, out: string, check: boolean,
   for (const k of inv.unowned) io.log(`inventory: printed line ${k} is owned by no record and not listed open`);
   for (const k of inv.staleOpen) io.log(`inventory: open list has ${k}, which is owned or gone`);
   for (const k of inv.unrouted) io.log(`inventory: record ${k} has a verb the engine does not route`);
-  if (inv.uncited.length + inv.staleBaseline.length + inv.unowned.length + inv.staleOpen.length + inv.unrouted.length + inv.quoteDiffers.length + inv.outOfRows.length + inv.staleInteracting.length > 0) code = 1;
+  if (inv.uncited.length + inv.staleBaseline.length + inv.unowned.length + inv.staleOpen.length + inv.unrouted.length + inv.quoteDiffers.length + inv.outOfRows.length + inv.staleInteracting.length + inv.notCounted.length > 0) code = 1;
   io.log(`inventory: ${String(inv.rows.length)} pieces and clauses, ${String(inv.uncited.length)} uncited${code === 0 ? '; ok' : ''}`);
   return code;
 }
