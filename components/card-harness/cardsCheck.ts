@@ -2,6 +2,7 @@
 // `--record` (a reading judge's PR comment written to docs/cards/readings/<batch>.md with a hash per clause), the
 // clause tools for `cards:catalogue` and the catalogue.json contract. Pure functions; the game script passes data.
 import { createHash } from 'node:crypto';
+import { dirname } from 'node:path';
 import { execFileSync } from 'node:child_process';
 
 export interface CatalogueClause { readonly id: string; readonly card: string; readonly text: string }
@@ -270,7 +271,7 @@ export interface RecordIo {
 }
 export const realRecordIo = (fs: { readFileSync?: (p: string, e: 'utf8') => string; writeFileSync: (p: string, t: string) => void; mkdirSync: (p: string, o: { recursive: true }) => unknown }): RecordIo => ({
   comments: (pr) => (JSON.parse(execFileSync('gh', ['pr', 'view', String(pr), '--json', 'comments'], { encoding: 'utf8' })) as { comments: { body: string }[] }).comments.map((c) => c.body),
-  write: (p, t) => { fs.mkdirSync(p.slice(0, p.lastIndexOf('/')), { recursive: true }); fs.writeFileSync(p, t); },
+  write: (p, t) => { const d = dirname(p); if (d !== '.') fs.mkdirSync(d, { recursive: true }); fs.writeFileSync(p, t); },
   git: (args) => execFileSync('git', args as string[], { encoding: 'utf8' }),
   ...(fs.readFileSync ? { read: (p: string) => fs.readFileSync!(p, 'utf8') } : {}),
 });
@@ -313,6 +314,8 @@ export interface CardsCheckInput extends ClauseInput, Omit<RestrictionInput, 'ca
   readonly readings: readonly ReadingLine[];
   /** The clause ids of a batch (for `--list-restrictions` and `--record`). */
   readonly batch?: (id: string) => readonly string[];
+  /** K513: a file of allowed problem lines (`--baseline <path>` wins); needs a RecordIo with `read` and `write`. */
+  readonly baseline?: string;
 }
 export function cardsCheck(i: CardsCheckInput): { clauses: string[]; restrictions: string[]; patterns: string[]; readings: string[] } {
   return { clauses: clauseProblems(i), restrictions: restrictionProblems({ ...i, words: i.words ?? {} }), patterns: patternProblems(i), readings: readingProblems(i) };
@@ -351,6 +354,29 @@ export function cardsCheckMain(argv: readonly string[], input: CardsCheckInput, 
     return r.failed ? 1 : 0;
   }
   const r = cardsCheck(i);
+  const bf = arg('--baseline') ?? i.baseline, wb = argv.includes('--write-baseline');
+  if (bf !== undefined || wb) {
+    if (bf === undefined) { log('FAIL --write-baseline needs a baseline path'); return 1; }
+    const found = Object.entries(r).flatMap(([part, ps]) => ps.map((p) => `${part}: ${p}`));
+    if (wb) {
+      if (!io) { log('FAIL --write-baseline needs a RecordIo'); return 1; }
+      io.write(bf, `# cards:check problems allowed for now; this file only shrinks\n${found.join('\n')}${found.length ? '\n' : ''}`);
+      log(`cards:check: baseline written, ${String(found.length)} lines`);
+      return 0;
+    }
+    if (!io?.read) { log('FAIL --baseline needs a RecordIo with read'); return 1; }
+    let t: string;
+    try { t = io.read(bf); } catch (e) { if ((e as { code?: string }).code !== 'ENOENT') { log(`FAIL baseline ${bf}: ${(e as Error).message}`); return 1; } t = ''; }
+    const base = t.replace(/\r\n/g, '\n').split('\n').map((l) => l.trimEnd()).filter((l) => l !== '' && !l.startsWith('#'));
+    const now = new Set(found), had = new Set(base);
+    base.splice(0, base.length, ...had);
+    const fresh = found.filter((p) => !had.has(p)), stale = base.filter((p) => !now.has(p));
+    for (const p of fresh) log(`FAIL ${p}`);
+    for (const p of stale) log(`FAIL baseline lists "${p}", which is gone: remove it from ${bf}`);
+    log(`cards:check: ${Object.entries(r).map(([k, ps]) => `${k} ${String(ps.length)}`).join(', ')} (${String(base.length)} in the baseline); ${String(fresh.length)} new, ${String(stale.length)} stale`);
+    for (const n of patternNotes(i)) log(`NOTE ${n}`);
+    return fresh.length + stale.length ? 1 : 0;
+  }
   let bad = 0;
   for (const [part, ps] of Object.entries(r)) { log(`${ps.length ? 'FAIL' : 'ok  '} ${part} (${String(ps.length)})`); for (const p of ps) log(`  ${p}`); bad += ps.length; }
   for (const n of patternNotes(i)) log(`NOTE ${n}`);
