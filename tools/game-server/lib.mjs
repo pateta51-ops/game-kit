@@ -18,6 +18,7 @@ export function validatePorts(cfg) {
   phone(cfg.panel.local, 'panel.local');
   const https = new Map([[cfg.panel.https, 'panel.https']]);
   if (!Number.isInteger(cfg.panel.https)) errs.push('panel.https: bad port');
+  for (const [k, n] of Object.entries(cfg.toolsHttps ?? {})) { if (https.has(n)) errs.push(`toolsHttps.${k}: https ${n} already used by ${https.get(n)}`); else https.set(n, `toolsHttps.${k}`); }
   for (const [k, n] of Object.entries(cfg.tools ?? {})) { take(n, `tools.${k}`); if ((n >= 4170 && n <= 4199) || (n >= 5190 && n <= 5299)) errs.push(`tools.${k}: ${n} must be outside 4170-4199 and 5190-5299`); }
   const blocks = [];
   for (const [id, g] of Object.entries(cfg.games)) {
@@ -94,7 +95,7 @@ export function nextSlot(cfg) {
   let block = Math.max(6000, ...gs.map((g) => g.block)) + 10;
   while ((block + 9 >= 4170 && block <= 4199) || (block + 9 >= 5190 && block <= 5299)) block += 10;
   const locals = new Set([cfg.panel.local, ...gs.map((g) => g.serve.local)]);
-  const https = new Set([cfg.panel.https, ...gs.map((g) => g.serve.https)]);
+  const https = new Set([cfg.panel.https, ...Object.values(cfg.toolsHttps ?? {}), ...gs.map((g) => g.serve.https)]);
   let local = 4171; while (locals.has(local)) local++;
   let h = 8441; while (https.has(h)) h++;
   if (local > 4199) throw new Error('no free serve port left in 4170-4199');
