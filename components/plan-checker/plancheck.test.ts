@@ -78,7 +78,7 @@ describe('plancheck.py flags (K68)', () => {
     writeFileSync(f, text, 'utf-8');
     return f;
   };
-  const run = (text: string, ...flags: string[]): number => main(['--plan', plan(text), '--depth-optional', '--cards-optional', ...flags]);
+  const run = (text: string, ...flags: string[]): number => main(['--plan', plan(text), '--depth-optional', '--cards-optional', '--kit-optional', ...flags]);
   const full = PLAN.replace('\nSC-01\n', '\nSC-01, SC-02\n');
   const end = ['--sessions-optional', '--scenarios-end', 'Property tests'];
   afterEach(() => vi.unstubAllEnvs());
@@ -158,6 +158,8 @@ describe('plancheck.py kit warnings (K207)', () => {
   const git = (cwd: string, ...a: string[]): void => void spawnSync('git', ['-C', cwd, ...a]);
   const kit = tmp('kit-');
   mkdirSync(join(kit, 'docs'));
+  mkdirSync(join(kit, 'components'));
+  writeFileSync(join(kit, 'kit.mjs'), '');
   writeFileSync(join(kit, 'docs', 'PLAN.md'), '| # | Batch | Size | State |\n|---|---|---|---|\n| K25 | x | S | done |\n| K26 | y | S | proposed |\n| K27 | z | S | covered: already there |\n');
   git(kit, 'init');
   git(kit, '-c', 'user.name=t', '-c', 'user.email=t@t', 'commit', '--allow-empty', '-m', 'x');
@@ -170,7 +172,7 @@ describe('plancheck.py kit warnings (K207)', () => {
   };
   const py = candidates(process.env, process.platform)[0] ?? ['python'];
   const out = (f: string, ...a: string[]): string =>
-    spawnSync(py[0] ?? 'python', [...py.slice(1), fileURLToPath(new URL('./plancheck.py', import.meta.url)), f, '--sessions-optional', '--depth-optional', '--cards-optional', ...a], { encoding: 'utf-8' }).stdout;
+    spawnSync(py[0] ?? 'python', [...py.slice(1), fileURLToPath(new URL('./plancheck.py', import.meta.url)), f, '--sessions-optional', '--depth-optional', '--cards-optional', '--kit-optional', ...a], { encoding: 'utf-8' }).stdout;
   it('warns on a pin 5+ minor versions behind and on a done K row, without failing', () => {
     const o = out(plan('v0.3.0', 'Targets K25 and K26.'), '--kit', kit);
     expect(o).toContain('WARN kit pin v0.3.0 is far behind the latest kit tag v0.9.0');
@@ -229,7 +231,7 @@ Unit, e2e, LLM playtest.
   const direct = (text: string, ...flags: string[]): { code: number | null; out: string } => {
     const f = join(dir, `p${n++}.md`);
     writeFileSync(f, text, 'utf-8');
-    const base = ['--sessions-optional', '--scenarios-end', 'Property tests', '--cards-optional', ...flags];
+    const base = ['--sessions-optional', '--scenarios-end', 'Property tests', '--cards-optional', '--kit-optional', ...flags];
     const r = spawnSync(py[0] ?? 'python', [...py.slice(1), fileURLToPath(new URL('./plancheck.py', import.meta.url)), f, ...base], { encoding: 'utf-8' });
     expect(main(['--plan', f, ...base])).toBe(r.status);
     return { code: r.status, out: r.stdout };
@@ -341,7 +343,7 @@ Unit, e2e, LLM playtest.
   const direct = (text: string, ...flags: string[]): { code: number | null; out: string } => {
     const f = join(dir, `p${n++}.md`);
     writeFileSync(f, text, 'utf-8');
-    const base = ['--scenarios-end', 'Property tests', ...(flags.includes('--catalogue') ? [] : ['--catalogue', cat]), ...flags];
+    const base = ['--scenarios-end', 'Property tests', '--kit-optional', ...(flags.includes('--catalogue') ? [] : ['--catalogue', cat]), ...flags];
     const r = spawnSync(py[0] ?? 'python', [...py.slice(1), fileURLToPath(new URL('./plancheck.py', import.meta.url)), f, ...base], { encoding: 'utf-8' });
     expect(main(['--plan', f, ...base])).toBe(r.status);
     return { code: r.status, out: r.stdout };
@@ -417,5 +419,156 @@ describe('plancheck --batch read-first ranges (K515)', () => {
     const py = candidates(process.env, process.platform)[0] ?? ['python'];
     const o = spawnSync(py[0] ?? 'python', [...py.slice(1), '-X', 'utf8', fileURLToPath(new URL('./plancheck.py', import.meta.url)), f, '--batch', 'S1'], { encoding: 'utf-8' }).stdout;
     for (const s of ['§3.4', '§3.5', '§3.6', '§3.7', '§5.1', 'BRIEF §2.2']) expect(o).toContain(s);
+  });
+});
+
+describe('plancheck kit checks (K525)', () => {
+  const git = (cwd: string, ...a: string[]): void => void spawnSync('git', ['-C', cwd, ...a]);
+  const kit = tmp('kit525-');
+  mkdirSync(join(kit, 'docs'));
+  writeFileSync(join(kit, 'docs', 'PLAN.md'), '| # | Batch | Size | State |\n|---|---|---|---|\n');
+  writeFileSync(join(kit, 'kit.mjs'), '');
+  for (const c of ['engine-core', 'card-language', 'board-model', 'player-board', 'automa', 'opponent']) {
+    mkdirSync(join(kit, 'components', c), { recursive: true });
+    writeFileSync(join(kit, 'components', c, 'README.md'), c);
+  }
+  git(kit, 'init');
+  git(kit, 'add', '-A');
+  git(kit, '-c', 'user.name=t', '-c', 'user.email=t@t', 'commit', '-m', 'x');
+  git(kit, 'tag', 'v0.227.1');
+  const L = ['Who the player controls', 'What can run out', 'Clocks and tracks', 'The phase list', 'Where the opposition comes from', 'Dice', 'Positions', 'Numbers several cards change', 'Costs and payment', 'May an effect be offered', 'Lasting effects and status', 'Triggers and windows', 'Cards as data', 'Hidden information', 'Objectives and scoring', 'Set-up picks', 'Between games', 'Loading the content', 'Attacks and damage', 'Tokens and markers', 'Levels and upgrades', 'Markets and rows'];
+  const SHEET = '| Game sheet line | Answer | Kit part or build-own row |\n|---|---|---|\n' + L.map((t, i) => `| ${t} | ${i % 4 === 3 ? 'not in this game' : 'one hero'} | ${i % 4 === 3 ? '' : '`player-board`'} |\n`).join('');
+  const REPLY = "**Kit steward's reply (21 Nov 2026):**";
+  const GOOD = `${PLAN.replace('\nSC-01\n', '\nSC-01, SC-02\n')}
+### 4.11 Reuse map
+
+**Kit pin:** \`kit/\`, tag v0.227.1.
+
+| Layer | Kind | Source | What the game supplies or changes | Phase |
+|---|---|---|---|---|
+| Kernel | Pull | \`engine-core\` (\`timing.md\`, \`layered\`) | state | 1 |
+| Effect language | Pull | \`card-language\` (\`cardPack\`) | verbs | 3 |
+| Walled grid | **Kit phase, new** | \`grid-map\` (new) | cells | GK530 |
+| Map | Pull | \`board-model\`, \`grid-map\` | spaces | 2 |
+| Spy movement | New | game code | the arrow deck | 5 |
+| Greedy player | Pattern | the kit's note | scores | 7 |
+
+${SHEET}
+| What the game builds | Words searched in the kit | Nearest kit part | Verdict | Register id or refusal |
+|---|---|---|---|---|
+| Spy movement | "arrow deck"; "movement deck" | \`automa\` | game code | \`automa\` picks among legal answers; this deck moves a piece by printed arrows |
+| Greedy player | "greedy"; "look ahead" | \`opponent\` | candidate | K424 |
+| Walled grid | "grid"; "line of sight" | \`board-model\` | kit phase | K530 |
+| Game verbs: none | 12 clauses, 12 covered by the pack | - | - | - |
+
+${REPLY}
+> Spy movement: game code. Greedy player: candidate K424. Walled grid: kit phase K530.
+
+### 5.14 Modifier order
+
+| Quantity | Applied in this order | Floors and caps | Read or paid at | Kit function or build-own row | AR |
+|---|---|---|---|---|---|
+| Roll | set, add | floor 1 | the roll | \`layered\` | \`AR-001\` |
+
+#### Phase GK530 — game-kit: grid-map
+
+x
+`;
+  const FIT = "| row | verdict |\n|---|---|\n| Spy movement | truly this game's |\n| Greedy player | candidate |\n| Walled grid | kit phase |\n";
+  const py = candidates(process.env, process.platform)[0] ?? ['python'];
+  const exec = (text: string, fit: string | null = FIT, ...extra: string[]): { code: number | null; out: string; f: string; args: string[] } => {
+    const d = join(tmp('pc-kit-'), 'docs');
+    mkdirSync(join(d, 'plan-review'), { recursive: true });
+    const f = join(d, 'P.md');
+    writeFileSync(f, text, 'utf-8');
+    if (fit !== null) writeFileSync(join(d, 'plan-review', 'kit-fit.md'), fit, 'utf-8');
+    const args = ['--sessions-optional', '--scenarios-end', 'Property tests', '--depth-optional', '--cards-optional', ...(extra.includes('--kit') ? [] : ['--kit', kit]), ...extra];
+    const r = spawnSync(py[0] ?? 'python', [...py.slice(1), '-X', 'utf8', fileURLToPath(new URL('./plancheck.py', import.meta.url)), f, ...args], { encoding: 'utf-8' });
+    return { code: r.status, out: r.stdout, f, args };
+  };
+  const problems = (text: string, fit: string | null = FIT): string[] => exec(text, fit).out.split('\n').filter((l) => l.startsWith('PROBLEM kit:'));
+  const cases: [string, (t: string) => string, string | null][] = [
+    ['kind game-owned', (t) => t.replace('| Spy movement | New |', '| Spy movement | Game-owned |'), 'has Kind'],
+    ['port without build-own row', (t) => t.replace('| Greedy player | Pattern |', '| Other thing | Port |'), "Port row 'Other thing' is not in the build-own"],
+    ['pull, wrong name outside parentheses', (t) => t.replace('`engine-core` (', '`engine-core`, `dice-oddz` ('), '`dice-oddz`'],
+    ['pull, only a wrong name', (t) => t.replace('| `engine-core` (`timing.md`, `layered`) |', '| Kernel (`enginecore`) |'), 'names no kit part'],
+    ['pull written as title (folder)', (t) => t.replace('| `engine-core` (`timing.md`, `layered`) |', '| Game rules engine core (`engine-core`) |'), null],
+    ['pull of the part its own kit phase builds', (t) => t.replace('| `board-model`, `grid-map` |', '| `grid-map` |'), null],
+    ['another version before the pin', (t) => t.replace('**Kit pin:**', 'Since v0.2.1 the kernel exists. At this stage the plan is v9.9.9.\n\n**Kit pin:**'), null],
+    ['no pin at all', (t) => t.replace(', tag v0.227.1', ''), 'names no kit pin'],
+    ['kit phase row without a GK heading', (t) => t.replace('| cells | GK530 |', '| cells | GK7 |'), 'names no GK phase'],
+    ['new kit phase without build-own row', (t) => t.replace('| Walled grid | "grid"; "line of sight" | `board-model` | kit phase | K530 |\n', ''), "Kit phase row 'Walled grid' is not in the build-own"],
+    ['sheet line missing', (t) => t.replace('| Dice | one hero | `player-board` |\n', ''), "no row for the line 'dice'"],
+    ['sheet third cell empty', (t) => t.replace('| Positions | one hero | `player-board` |', '| Positions | one hero | |'), 'names no kit part'],
+    ['sheet third cell n/a', (t) => t.replace('| Positions | one hero | `player-board` |', '| Positions | n/a | n/a |'), 'names no kit part'],
+    ['verdict word buried', (t) => t.replace('| `opponent` | candidate | K424 |', '| `opponent` | undecided, not a candidate yet | K424 |'), 'has no verdict'],
+    ['one phrasing', (t) => t.replace('"greedy"; "look ahead"', 'greedy'), 'fewer than two phrasings'],
+    ['words searched is a semicolon', (t) => t.replace('"greedy"; "look ahead"', ';'), 'fewer than two phrasings'],
+    ['candidate without id', (t) => t.replace('| candidate | K424 |', '| candidate | soon |'), 'no kit row id'],
+    ['game code with a short reason', (t) => t.replace('`automa` picks among legal answers; this deck moves a piece by printed arrows', 'n/a'), 'six words'],
+    ['kit phase verdict without GK heading', (t) => t.replace('| kit phase | K530 |', '| kit phase | K531 |'), "no 'Phase GK531'"],
+    ['another none row', (t) => t.replace('| Game verbs: none |', '| Engine modules: none | - | - | - | - |\n| Game verbs: none |'), 'may say none'],
+    ['game verbs none without counts', (t) => t.replace('12 clauses, 12 covered by the pack', '-'), 'no counts'],
+    ['no reply label', (t) => t.replace(REPLY, 'Reply:'), "Kit steward's reply"],
+    ['reply label with nothing under it', (t) => t.replace('> Spy movement: game code.', 'Spy movement: game code.'), "Kit steward's reply"],
+    ['reply label with a typographic apostrophe', (t) => t.replace("Kit steward's reply", 'Kit steward’s reply'), null],
+    ['every row says steward not asked', (t) => t.replace('by printed arrows |', 'by printed arrows; steward not asked |').replace('| K424 |', '| steward not asked |').replace('| kit phase | K530 |', '| kit phase | steward not asked |').replace(REPLY, 'x'), null],
+    ['modifier row names no function', (t) => t.replace('| `layered` | `AR-001` |', '| the engine | `AR-001` |'), "Modifier order: row 'Roll'"],
+    ['hyphenated verdict', (t) => t.replace('| game code |', '| Game-code |'), null],
+    ['table inside a code fence', (t) => t.replace(REPLY, '```\n| Layer | Kind | Source |\n|---|---|---|\n| Example | New | x |\n```\n\n' + REPLY), null],
+    ['second table with a Kind column', (t) => t.replace(REPLY, '| Kit phase | Kind |\n|---|---|\n| GK530 | new |\n\n' + REPLY), null],
+    ['no reuse-map table', (t) => t.replace('| Layer | Kind | Source |', '| Part | Kind | Source |'), 'no table with Layer, Kind and Source'],
+    ['sheet line with no answer', (t) => t.replace('| Positions | one hero | `player-board` |', '| Positions |  | `player-board` |'), "line 'Positions' has no answer"],
+    ['no Game verbs row', (t) => t.replace('| Game verbs: none | 12 clauses, 12 covered by the pack | - | - | - |\n', ''), "no 'Game verbs' row"],
+  ];
+  it('a plan with a reuse map, game sheet, build-own table and kit-fit review passes; Pull rows checked at the tag', () => {
+    const r = exec(GOOD);
+    expect(r.out).not.toContain('PROBLEM');
+    expect(r.out).toContain('NOTE kit: Pull rows checked against v0.227.1');
+    expect(r.code).toBe(0);
+    expect(main(['--plan', r.f, ...r.args])).toBe(0);
+  });
+  for (const [name, change, want] of cases)
+    it(`${name}: ${want ?? 'no kit problem'}`, () => {
+      const t = change(GOOD);
+      expect(t).not.toBe(GOOD);
+      const r = exec(t);
+      const p = r.out.split('\n').filter((l) => l.startsWith('PROBLEM kit:'));
+      expect(want === null ? p : p.filter((l) => l.includes(want)).length > 0).toEqual(want === null ? [] : true);
+      expect(r.code).toBe(want === null ? 0 : 1);
+    });
+  it('kit-fit review: an empty file, a missing row, no file', () => {
+    expect(problems(GOOD, '').some((l) => l.includes('missing or empty'))).toBe(true);
+    expect(problems(GOOD, '| Spy movement | x |\n').some((l) => l.includes('no line for the build-own row'))).toBe(true);
+    expect(problems(GOOD, null).some((l) => l.includes('missing or empty'))).toBe(true);
+  });
+  it('without --kit-optional a kit problem exits 1; with it the problem is a NOTE and exit 0', () => {
+    const t = GOOD.replace('| candidate | K424 |', '| candidate | soon |');
+    const r = exec(t);
+    expect(r.code).toBe(1);
+    expect(r.out).toContain('PROBLEM kit: build-own table');
+    expect(main(['--plan', r.f, ...r.args])).toBe(1);
+    const o = exec(t, FIT, '--kit-optional');
+    expect(o.code).toBe(0);
+    expect(o.out).toContain('NOTE kit: build-own table');
+    expect(o.out).not.toContain('PROBLEM');
+    expect(main(['--plan', o.f, ...o.args])).toBe(0);
+  });
+  it('an old plan with no reuse map fails every kit part until --kit-optional', () => {
+    const old = PLAN.replace('\nSC-01\n', '\nSC-01, SC-02\n');
+    const r = exec(old);
+    expect(r.code).toBe(1);
+    for (const w of ["no heading contains 'Reuse map'", 'the reuse map has no game sheet table', 'the reuse map has no build-own table']) expect(r.out).toContain(`PROBLEM kit: ${w}`);
+    expect(exec(old, FIT, '--kit-optional').code).toBe(0);
+  });
+  it('a folder lacking components/ and kit.mjs is no kit: the NOTE says the Pull rows were not checked', () => {
+    const r = exec(GOOD, FIT, '--kit', join(kit, 'docs'));
+    expect(r.out).toContain('NOTE kit: Pull rows NOT checked (no kit checkout)');
+    expect(r.code).toBe(0);
+  });
+  it('a tag the kit lacks: the NOTE says to fetch tags', () => {
+    const r = exec(GOOD.replace('tag v0.227.1', 'tag v0.999.0'));
+    expect(r.out).toContain('tag v0.999.0 not in');
+    expect(r.code).toBe(0);
   });
 });

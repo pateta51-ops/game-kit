@@ -89,6 +89,29 @@
     "release": 1,
     "gameSupplies": "The spaces, their neighbours and the placement kinds."
   },
+  "grid-map": {
+    "use": "A square grid board with walls: adjacent spaces, grid distance and range, shortest paths, line of sight, tiles that turn, and targeting shapes (within range, adjacent, row, column, line, area).",
+    "not": "Drawing the map; hex or graph boards (board-model); movement rules or costs per step.",
+    "title": "Square grid with walls and sight",
+    "tags": [
+      "grid",
+      "distance",
+      "range",
+      "wall",
+      "walls",
+      "adjacent",
+      "line of sight",
+      "sight",
+      "path",
+      "squares",
+      "tiles",
+      "targeting",
+      "area"
+    ],
+    "visible": false,
+    "release": 1,
+    "gameSupplies": "Rows, columns, the walls, merged spaces and tiles of its map."
+  },
   "board-registry": {
     "use": "The board UI needs to highlight things (spaces, pieces, markers, stacks) straight from the legal-action list.",
     "not": "Rules for what is legal; the engine decides that.",
@@ -235,7 +258,7 @@
     "gameSupplies": "The cards, their face view and the look."
   },
   "card-harness": {
-    "use": "Testing card effects on real cards with the scenario builder, prompt delivery, choice probe and inventory with stale check.",
+    "use": "Testing card effects on real cards with the scenario builder, prompt delivery, choice probe and inventory with stale check; test depth: a full-resolve test per clause and a poor test (expectNotOffered, expectNotFired) per conditional clause.",
     "not": "Card rules themselves; those stay in the game.",
     "title": "Test card effects on real cards",
     "tags": [
@@ -245,7 +268,16 @@
       "prompt",
       "probe",
       "inventory",
-      "effects"
+      "effects",
+      "test depth",
+      "depth",
+      "poor test",
+      "poor",
+      "not offered",
+      "not fired",
+      "expectNotOffered",
+      "expectNotFired",
+      "full resolve"
     ],
     "visible": false,
     "release": 1,
@@ -543,6 +575,25 @@
     "visible": false,
     "release": 1,
     "gameSupplies": "The dice to compute odds for."
+  },
+  "dice-patterns": {
+    "use": "Dice patterns as data (a pair, N the same, a run, odd or even, a sum against a number, a count, two pair, all or any) compiled to the test that dice-odds chance and dice-tray readRoll take, plus the smallest set of dice that meets one.",
+    "not": "Rolling dice, odds after rerolls, card sets or poker hands, dice formulas.",
+    "title": "Dice patterns: pair, run, sum",
+    "tags": [
+      "dice",
+      "pattern",
+      "check",
+      "pair",
+      "run",
+      "sum",
+      "same",
+      "different",
+      "condition"
+    ],
+    "visible": false,
+    "release": 1,
+    "gameSupplies": "Its patterns as plain data and what each one means."
   },
   "dice-tray": {
     "use": "Dice in play, held dice, rolling through ctx.rng and the roll window content. Recipe: docs/recipes/dice.md.",
@@ -1039,7 +1090,11 @@
       "markdown",
       "references",
       "batch",
-      "ranges"
+      "ranges",
+      "kit fit",
+      "build own table",
+      "game sheet",
+      "reuse map"
     ],
     "visible": false,
     "release": 1,
@@ -1804,5 +1859,25 @@
     "entry": [
       "playtest.ts"
     ]
+  },
+  "clock": {
+    "use": "A marker on a row of spaces as rules data (countdown, round tracker, danger or doom track): steps forward or back by the game's number, thresholds that fire on landing or passing (lose, trigger, reward, limit) in order, once-only thresholds, per-space values such as a limit read from the marker's row; crossings become engine-core occurrences.",
+    "not": "Drawing the track (track); turn or round flow (turn-flow); deciding what a threshold does (the game).",
+    "title": "Clock or countdown with thresholds",
+    "tags": [
+      "clock",
+      "countdown",
+      "round tracker",
+      "round",
+      "tracker",
+      "threshold",
+      "timer",
+      "doom track",
+      "marker",
+      "limit"
+    ],
+    "visible": false,
+    "release": 1,
+    "gameSupplies": "The spaces, start, direction, thresholds with their kinds and data, and per-space values."
   }
 }
