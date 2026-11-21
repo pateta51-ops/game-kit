@@ -72,7 +72,7 @@ describe('K499 effect catalog', () => {
     expect(withSection(readme, catalog)).toBe(readme);
   });
   it('K505 every entry has a film strip and every group a sheet in gallery/strips', () => {
-    const name = (e: Entry): string => e.id + (e.option ? '--' + Object.entries(e.option).map(([k, v]) => (typeof v === 'object' || v === true ? k : `${k}-${String(v)}`)).join('-') : '');
+    const name = (e: Entry): string => e.id + (e.option ? '--' + Object.entries(e.option).map(([k, v]) => (typeof v === 'object' || v === true ? k : `${k}-${v as string}`)).join('-') : '');
     const has = (f: string): boolean => existsSync(join(process.cwd(), 'gallery', 'strips', `${f}.png`));
     expect(catalog.filter((e) => !has(name(e))).map(name)).toEqual([]);
     expect([...new Set(catalog.map((e) => e.group))].filter((g) => !has(`group-${g}`))).toEqual([]);

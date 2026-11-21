@@ -1,4 +1,4 @@
-/* global window, document, Element, Image, tiles, specs, player, __adv */
+/* global window, document, Element, Image, tiles, specs, player, __adv, __paint */
 // K505: `node gallery/build.mjs --strips` shoots five frames of every catalogue demo from the built gallery page, with a fake clock
 // (performance.now, timers, rAF, Web Animations paused and set) so the same demo gives the same picture. One PNG per entry, one sheet per group.
 import fs from 'node:fs';
@@ -12,6 +12,8 @@ const clock = () => {
   const timers = new Map();
   let raf = [];
   Math.random = () => { seed = (seed * 1664525 + 1013904223) >>> 0; return seed / 4294967296; };
+  const realRaf = window.requestAnimationFrame.bind(window);
+  window.__paint = () => new Promise((r) => realRaf(() => realRaf(() => r())));
   performance.now = () => now;
   Date.now = () => 1.7e12 + now;
   window.setTimeout = (f, d = 0, ...a) => { const id = ++seq; timers.set(id, { at: now + Math.max(0, +d || 0), f, a, id }); return id; };
@@ -43,6 +45,8 @@ const clock = () => {
   };
 };
 
+const paintShot = async (loc, o) => { await loc.page().evaluate(() => __paint()); return loc.screenshot(o); };
+
 export async function strips({ entries, url, outDir, only }) {
   const { chromium } = await import('playwright-core');
   fs.mkdirSync(outDir, { recursive: true });
@@ -73,7 +77,7 @@ export async function strips({ entries, url, outDir, only }) {
       while (at < target) { const d = Math.min(step, target - at); await adv(d); at += d; }
       // the last frame is the end of the demo, or the last moment before it when the demo has cleared by then
       if (f === 1 && !(await live())) { const back = await shootBack(page, idx, L, step); frames.push(back); continue; }
-      frames.push({ ms: at, png: (await stage.screenshot({ animations: 'allow', caret: 'hide' })).toString('base64') });
+      frames.push({ ms: at, png: (await paintShot(stage, { animations: 'allow', caret: 'hide' })).toString('base64') });
     }
     await page.close();
     return frames;
@@ -86,7 +90,7 @@ export async function strips({ entries, url, outDir, only }) {
     await page.evaluate(() => __adv(0));
     let at = 0;
     while (at < L - step) { const d = Math.min(step, L - step - at); await page.evaluate((m) => __adv(m), d); at += d; }
-    return { ms: at, png: (await page.locator('.tile.shoot .stage').screenshot({ animations: 'allow', caret: 'hide' })).toString('base64') };
+    return { ms: at, png: (await paintShot(page.locator('.tile.shoot .stage'), { animations: 'allow', caret: 'hide' })).toString('base64') };
   };
   const composer = await ctx.newPage();
   await composer.setContent('<canvas id="c"></canvas>');
