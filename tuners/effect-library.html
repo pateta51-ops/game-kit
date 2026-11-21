@@ -5253,6 +5253,7 @@ void main() {
       };
     },
     "arc-move": arcMove,
+    "multi-stop-path": multiStopMove,
     "round-trip": multiStopMove,
     lift: ({ call, animate }) => {
       const sc = call.step["scale"] === false ? "" : ` scale(${String(call.value ?? 1.08)})`;
@@ -5460,6 +5461,10 @@ void main() {
   };
   var OLD_IDS = { "multi-stop-path": "round-trip", "collapse-jump": "flash-jump", "warp-transfer": "light-teleport", "radial-streaks": "streak-burst", "column-beam": "light-pillar", "rotating-beam": "radar-sweep", "dissolve": "burn-away", "motes": "particles-rise", "reticle": "target-brackets", "sheen": "light-sweep" };
   function registerEffects(verbs, o) {
+    const own = Object.values(OLD_IDS).flatMap((id) => {
+      const v = verbs.get(id);
+      return v ? [[id, v]] : [];
+    });
     for (const [name, fx] of Object.entries(BUILT_IN)) registerEffect(verbs, name, fx);
     registerCanvasEffect(verbs, "trail", trail);
     registerCanvasEffect(verbs, "streak-burst", radialStreaks);
@@ -5528,8 +5533,8 @@ void main() {
     registerEffect(verbs, "spark-burst", sparkBurst);
     registerCanvasEffect(verbs, "slash", slash);
     registerCrumple(verbs);
-    for (const [old, id] of Object.entries(OLD_IDS)) if (verbs.alias) verbs.alias(old, id);
-    else verbs.register(old, (call, run) => verbs.get(id)?.(call, run));
+    for (const [old, id] of Object.entries(OLD_IDS)) verbs.register(old, verbs.get(id));
+    for (const [id, v] of own) verbs.register(id, v);
     return createEffectLayer(o);
   }
 
@@ -6690,17 +6695,11 @@ void main() {
   var placeOf = (k, of) => of <= 1 ? "lone" : k <= 1 ? "first" : k >= of ? "last" : "middle";
   function createVerbs() {
     const m = /* @__PURE__ */ new Map();
-    const a = /* @__PURE__ */ new Map();
-    const to = (n) => m.has(n) ? n : a.get(n) ?? n;
     return {
       register: (name, verb) => void m.set(name, verb),
-      has: (name) => m.has(to(name)),
-      get: (name) => m.get(to(name)),
-      names: () => [...m.keys()],
-      alias: (old, name) => {
-        m.delete(old);
-        a.set(old, name);
-      }
+      has: (name) => m.has(name),
+      get: (name) => m.get(name),
+      names: () => [...m.keys()]
     };
   }
   function requiredRects(spec) {
@@ -8220,17 +8219,11 @@ var MOTION = (() => {
   var placeOf = (k, of) => of <= 1 ? "lone" : k <= 1 ? "first" : k >= of ? "last" : "middle";
   function createVerbs() {
     const m = /* @__PURE__ */ new Map();
-    const a = /* @__PURE__ */ new Map();
-    const to = (n) => m.has(n) ? n : a.get(n) ?? n;
     return {
       register: (name, verb) => void m.set(name, verb),
-      has: (name) => m.has(to(name)),
-      get: (name) => m.get(to(name)),
-      names: () => [...m.keys()],
-      alias: (old, name) => {
-        m.delete(old);
-        a.set(old, name);
-      }
+      has: (name) => m.has(name),
+      get: (name) => m.get(name),
+      names: () => [...m.keys()]
     };
   }
   function requiredRects(spec) {

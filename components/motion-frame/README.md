@@ -16,7 +16,6 @@ Plays motion specs in the director's format (one JSON per beat: `actors`, `steps
 8. Call `putMotionSpeed(speed, name)` at start and when the setting changes (or `bindMotionSpeed`), and import `view-transition.css` when using `withViewTransition`.
 9. Give swapped board elements unique `data-motion-key` values.
 10. Give `mountMotionLab` a player of its own: on the game's player a press would end the game's beats.
-11. K506: `createVerbs().alias(old, name)` makes `old` play `name` (in `has`, `get`, `validateSpec`; not in `names()`) until a verb is registered under `old` itself; it drops what `old` held, as registering over it did. `registerEffects` aliases the effect library's old ids; never remove an alias.
 
 **Common mistakes:**
 - A `holdUntil` beat holds the queue until `release()`, `skipAll()` or `autoContinueMs`: wire a release or the board freezes.

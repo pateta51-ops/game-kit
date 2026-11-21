@@ -60,10 +60,19 @@ describe('K506 old effect ids', () => {
         expect(b).toBe(a);
       }
     });
-  it('K506 old ids are not listed among the registered names', () => {
+  it('K506 old ids are still listed among the registered names, the new ids added', () => {
     const verbs = createVerbs<EffectCtx>();
     registerEffects(verbs).el.remove();
-    expect(PAIRS.filter(([old, id]) => verbs.names().includes(old) || !verbs.names().includes(id))).toEqual([]);
+    expect(PAIRS.filter(([old, id]) => !verbs.names().includes(old) || !verbs.names().includes(id))).toEqual([]);
+  });
+  it("K506 a game's own verb under a new id, registered before registerEffects, is kept; the old id still plays the kit's verb", () => {
+    const verbs = createVerbs<EffectCtx>();
+    const own = vi.fn(() => undefined);
+    verbs.register('radar-sweep', own);
+    registerEffects(verbs).el.remove();
+    expect(verbs.get('radar-sweep')).toBe(own);
+    expect(verbs.get('rotating-beam')).not.toBe(own);
+    expect(verbs.has('rotating-beam')).toBe(true);
   });
   it("K506 a game's own rotating-beam, registered after the kit's, still wins for specs that say rotating-beam", () => {
     const seen: string[] = [];

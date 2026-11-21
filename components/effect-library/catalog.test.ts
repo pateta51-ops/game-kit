@@ -24,7 +24,7 @@ const sameLook = (s: unknown, v: unknown): boolean => JSON.stringify(s) === JSON
 function problems(entries: readonly Entry[]): string[] {
   const out: string[] = [];
   const fns = entries.filter((e) => !names.includes(e.id)).map((e) => e.id);
-  for (const n of names) if (!entries.some((e) => e.id === n)) out.push(`${n}: registered, no catalog entry`);
+  for (const n of names) if (!entries.some((e) => e.id === n || (e.was ?? []).includes(n))) out.push(`${n}: registered, no catalog entry`);
   const seen = new Set<string>();
   // K506: notThis and pairs name an entry's id or old id, with an option after `--` (as strips are named)
   const known = (r: string): boolean => {

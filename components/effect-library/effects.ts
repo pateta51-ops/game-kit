@@ -198,6 +198,7 @@ export const BUILT_IN: Readonly<Record<string, Effect>> = {
     };
   },
   'arc-move': arcMove,
+  'multi-stop-path': multiStopMove,
   'round-trip': multiStopMove,
   lift: ({ call, animate }) => {
     // K435-5: step `scale: false` lifts with no scale, `shadow: false` with no shadow
@@ -414,11 +415,12 @@ export const BUILT_IN: Readonly<Record<string, Effect>> = {
   untap: rotate,
 };
 
-/** K506: old effect ids, each still registered as an alias of its new id; never removed. */
+/** K506: old effect ids, each still registered beside its new id and playing the same verb; never removed. */
 export const OLD_IDS: Readonly<Record<string, string>> = { 'multi-stop-path': 'round-trip', 'collapse-jump': 'flash-jump', 'warp-transfer': 'light-teleport', 'radial-streaks': 'streak-burst', 'column-beam': 'light-pillar', 'rotating-beam': 'radar-sweep', 'dissolve': 'burn-away', 'motes': 'particles-rise', 'reticle': 'target-brackets', 'sheen': 'light-sweep' };
 
 /** The built-in verbs registered, and a layer made. Pass the registry to the motion player and the layer as its `context`. */
 export function registerEffects(verbs: VerbRegistry<EffectCtx>, o?: LayerOptions): EffectLayer {
+  const own = Object.values(OLD_IDS).flatMap((id) => { const v = verbs.get(id); return v ? [[id, v] as const] : []; });
   for (const [name, fx] of Object.entries(BUILT_IN)) registerEffect(verbs, name, fx);
   registerCanvasEffect(verbs, 'trail', trail);
   registerCanvasEffect(verbs, 'streak-burst', radialStreaks);
@@ -489,6 +491,8 @@ export function registerEffects(verbs: VerbRegistry<EffectCtx>, o?: LayerOptions
   registerEffect(verbs, 'spark-burst', sparkBurst);
   registerCanvasEffect(verbs, 'slash', slash);
   registerCrumple(verbs);
-  for (const [old, id] of Object.entries(OLD_IDS)) if (verbs.alias) verbs.alias(old, id); else verbs.register(old, (call, run) => verbs.get(id)?.(call, run));
+  // K506: an old id plays the kit's verb as before (last registration wins); a game's own verb under a new id, registered before, is kept
+  for (const [old, id] of Object.entries(OLD_IDS)) verbs.register(old, verbs.get(id)!);
+  for (const [id, v] of own) verbs.register(id, v);
   return createEffectLayer(o);
 }

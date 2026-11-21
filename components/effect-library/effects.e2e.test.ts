@@ -148,12 +148,13 @@ describe.skipIf(!HAVE && !process.env['CI'])('effect library in a browser', () =
 
   it('a game registers its own effect beside the built-in verbs', async () => {
     const r = await page.evaluate(() => (window as unknown as { fxTest: Api }).fxTest.own());
-    expect(r.names).toEqual(expect.arrayContaining(['stamp', 'particles-rise', 'flicker', 'bar-fill']));
-    expect(r.names).toHaveLength(49);
+    expect(r.names).toEqual(expect.arrayContaining(['stamp', 'motes', 'flicker', 'bar-fill']));
+    expect(r.names).toHaveLength(59);
+    expect(r.names).toEqual(expect.arrayContaining(['round-trip', 'flash-jump', 'light-teleport', 'streak-burst', 'light-pillar', 'radar-sweep', 'burn-away', 'particles-rise', 'target-brackets', 'light-sweep']));
     expect(r.names).toContain('crumple');
     expect(r.names).toEqual(expect.arrayContaining(['spin', 'tap', 'untap']));
-    expect(r.names).toEqual(expect.arrayContaining(['dash-line', 'target-brackets', 'debris']));
-    expect(r.names).toEqual(expect.arrayContaining(['arc-move', 'shake-group', 'unroll', 'round-trip', 'trail', 'light-teleport', 'streak-burst', 'flash-jump', 'light-pillar', 'radar-sweep', 'projectile', 'burn-away', 'shatter', 'shimmer', 'shield-bubble', 'ring-pulse']));
+    expect(r.names).toEqual(expect.arrayContaining(['dash-line', 'reticle', 'debris']));
+    expect(r.names).toEqual(expect.arrayContaining(['arc-move', 'shake-group', 'unroll', 'multi-stop-path', 'trail', 'warp-transfer', 'radial-streaks', 'collapse-jump', 'column-beam', 'rotating-beam', 'projectile', 'dissolve', 'shatter', 'shimmer', 'shield-bubble', 'ring-pulse']));
     expect(r.names).toContain('pop');
     expect(r.names).toEqual(expect.arrayContaining(['refresh', 'pulse', 'idle']));
     expect(r.log).toEqual(['done fx-actor']);

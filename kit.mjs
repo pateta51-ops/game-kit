@@ -268,13 +268,14 @@ if (cmd === 'pull') {
     // K506: counts each effect id and old id in the specs (json) and code (ts, tsx, js) of the given folders
     const dirs = a.slice(1)
     if (!ef || !dirs.length || dirs.some((g) => !fs.existsSync(g))) { console.error(ef ? 'usage: kit.mjs effects --used <folder>...' : 'no effect catalog beside kit.mjs'); process.exit(2) }
-    const files = (g) => fs.statSync(g).isDirectory() ? fs.readdirSync(g).filter((n) => !n.startsWith('.') && !['node_modules', 'kit', 'dist', 'build', 'test-results'].includes(n)).flatMap((n) => files(g + '/' + n)) : /\.(json|tsx?|js)$/.test(g) ? [g] : []
+    const files = (g) => fs.statSync(g).isDirectory() ? fs.readdirSync(g).filter((n) => !n.startsWith('.') && !['node_modules', 'kit', 'dist', 'build', 'test-results'].includes(n)).flatMap((n) => files(g + '/' + n)) : /\.(json|[mc]?js|jsx|tsx?)$/.test(g) ? [g] : []
     const text = dirs.flatMap(files).map((g) => fs.readFileSync(g, 'utf8')).join('\n')
-    const count = (id) => (text.match(new RegExp(`(['"\`])${id}\\1` + (/[A-Z]/.test(id) ? `|\\b${id}\\(` : ''), 'g')) ?? []).length
+    const n = (re) => (text.match(new RegExp(re, 'g')) ?? []).length
+    const count = (id) => { const r = n(`\\bregister\\w*\\(\\s*(?:[\\w.]+\\s*,\\s*)?(['"\`])${id}\\1`); return (n(`(['"\`])${id}\\1` + (/[A-Z]/.test(id) ? `|\\b${id}\\(` : '')) - r) + ' uses, ' + r + ' registrations' }
     const seen = new Set()
     for (const e of JSON.parse(fs.readFileSync(ef, 'utf8'))) {
-      if (!seen.has(e.id)) { seen.add(e.id); console.log(e.id + ' ' + count(e.id)) }
-      for (const o of e.was ?? []) if (!seen.has(o)) { seen.add(o); console.log(o + ' ' + count(o) + ' (old id of ' + e.id + ')') }
+      if (!seen.has(e.id)) { seen.add(e.id); console.log(e.id + ': ' + count(e.id)) }
+      for (const o of e.was ?? []) if (!seen.has(o)) { seen.add(o); console.log(o + ': ' + count(o) + ' (old id of ' + e.id + ')') }
     }
     process.exit(0)
   }
