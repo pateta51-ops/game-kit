@@ -79,7 +79,7 @@ export function numberParts(base: number, modifiers: readonly NumberModifier[], 
       if (n === undefined) throw new EngineBugError(`numberParts: no count "${m.per}" for ${m.source}`);
       x = { ...m, amount: m.amount * n(m) };
     }
-    if (!steps.includes(x.op) && !(x.op === 'add' && steps.includes(x.amount < 0 ? 'decrease' : 'increase'))) throw new EngineBugError(`numberParts: ${x.source} has "${x.op}" but the order has no step for it`);
+    if (!steps.includes(x.op) && !(x.op === 'add' && ((x.amount <= 0 && steps.includes('decrease')) || (x.amount >= 0 && steps.includes('increase'))))) throw new EngineBugError(`numberParts: ${x.source} has "${x.op}" but the order has no step for it`);
     if (m.when !== undefined) {
       const c = opts.conditions?.[m.when];
       if (c === undefined) throw new EngineBugError(`numberParts: no condition "${m.when}" for ${m.source}`);
@@ -93,9 +93,13 @@ export function numberParts(base: number, modifiers: readonly NumberModifier[], 
   let v = base;
   let bound: NumberPart | undefined;
   const done = new Set<NumberModifier>();
+  const idleOf = new Map<NumberModifier, UnchangedPart>();
   const skip = (m: NumberModifier, why: UnchangedPart['why']): void => {
+    if (done.has(m)) return;
     done.add(m);
-    idle.push({ source: m.source, op: m.op, amount: m.amount, applied: 0, why });
+    const u = { source: m.source, op: m.op, amount: m.amount, applied: 0, why };
+    idleOf.set(m, u);
+    idle.push(u);
   };
   const put = (m: NumberModifier, to: number): NumberPart | undefined => {
     if (to === v) {
@@ -103,6 +107,9 @@ export function numberParts(base: number, modifiers: readonly NumberModifier[], 
       return undefined;
     }
     done.add(m);
+    const u = idleOf.get(m);
+    if (u !== undefined) idle.splice(idle.indexOf(u), 1);
+    idleOf.delete(m);
     const p = { source: m.source, op: m.op, amount: m.amount, applied: to - v };
     parts.push(p);
     v = to;
@@ -125,7 +132,7 @@ export function numberParts(base: number, modifiers: readonly NumberModifier[], 
       }
     } else if (step === 'floor' || step === 'cap') {
       const lo = step === 'floor';
-      const ms = take((m) => m.op === step);
+      const ms = live.filter((m) => m.op === step);
       const def = order[step];
       const all: NumberModifier[] = def === undefined ? ms : [...ms, { source: step, op: step, amount: def }];
       const win = all.reduce<NumberModifier | undefined>((a, m) => (a === undefined || (lo ? m.amount > a.amount : m.amount < a.amount) ? m : a), undefined);
@@ -135,7 +142,7 @@ export function numberParts(base: number, modifiers: readonly NumberModifier[], 
         else if (ms.includes(win)) skip(win, 'same');
       }
     } else {
-      let ms = take((m) => m.op === 'add' && (step === 'add' || (step === 'decrease') === m.amount < 0));
+      let ms = take((m) => m.op === 'add' && (step === 'add' || (step === 'decrease' ? m.amount <= 0 : m.amount >= 0)));
       if (step === 'decrease' && order.decreases === 'highestMin') ms = ms.sort((a, b) => (b.min ?? -Infinity) - (a.min ?? -Infinity) || a.amount - b.amount);
       for (const m of ms) put(m, m.amount < 0 && m.min !== undefined ? (v <= m.min ? v : Math.max(m.min, v + m.amount)) : v + m.amount);
     }

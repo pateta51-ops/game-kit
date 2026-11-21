@@ -113,6 +113,31 @@ describe('numberParts: floors and caps (K526)', () => {
     expect(r.bound).toEqual({ source: 'floor', op: 'floor', amount: 0, applied: 2 });
     expect(r.base + total(r.parts)).toBe(0);
   });
+  it('a floor named by a modifier holds at every floor step, like the default floor', () => {
+    const steps: NumberOrder['steps'] = ['add', 'floor', 'multiply', 'floor'];
+    const ms = [add('A', -2), mul('H', 0.5)];
+    const named = numberParts(3, [...ms, { source: 'F', op: 'floor', amount: 2 }], { steps, round: 'down' }, { unchanged: true });
+    expect(named.value).toBe(2);
+    expect(show(named.parts)).toEqual(['A:add:-2:-2', 'F:floor:2:1', 'H:multiply:0.5:-1', 'F:floor:2:1']);
+    expect(named.unchanged).toEqual([]);
+    expect(numberParts(3, ms, { steps, round: 'down', floor: 2 }).value).toBe(2);
+    const idle = numberParts(9, [add('A', -2), { source: 'F', op: 'floor', amount: 2 }], { steps }, { unchanged: true });
+    expect(idle.unchanged).toEqual([{ source: 'F', op: 'floor', amount: 2, applied: 0, why: 'same' }]);
+    const late = numberParts(5, [add('A', -2), mul('H', 0.5), { source: 'F', op: 'floor', amount: 2 }], { steps, round: 'down' }, { unchanged: true });
+    expect(show(late.parts)).toEqual(['A:add:-2:-2', 'H:multiply:0.5:-2', 'F:floor:2:1']);
+    expect(late.unchanged).toEqual([]);
+  });
+  it('a floor always holds: a base under the default floor is raised with no modifier, and the floor is a part', () => {
+    const r = numberParts(-1, [], COST);
+    expect(r.value).toBe(0);
+    expect(r.parts).toEqual([{ source: 'floor', op: 'floor', amount: 0, applied: 1 }]);
+    expect(r.bound).toEqual(r.parts[0]);
+  });
+  it('an add of zero is accepted by either split step', () => {
+    expect(numberParts(3, [add('A', 0)], { steps: ['decrease'] }, { unchanged: true })).toEqual({ value: 3, base: 3, parts: [], unchanged: [{ source: 'A', op: 'add', amount: 0, applied: 0, why: 'same' }] });
+    expect(numberParts(3, [add('A', 0)], { steps: ['increase'] }).value).toBe(3);
+    expect(numberParts(3, [add('A', 0)], { steps: ['increase', 'decrease'] }, { unchanged: true }).unchanged).toHaveLength(1);
+  });
   it('floor knob: no default floor lets the value go below zero', () => {
     expect(numberParts(2, [add('A', -4)], SUM).value).toBe(-2);
   });

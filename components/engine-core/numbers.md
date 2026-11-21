@@ -26,7 +26,7 @@ The order is data, one `NumberOrder` per kind of number. Take every field from t
 | halves round up, or down | `round`; a modifier's own `round` wins; none named: no rounding |
 | a number of this kind never goes below N, or above N | `floor`, `cap` (each needs its step) |
 
-Within a step modifiers apply in the order given, except as the fields above say. The `floor` step clamps once, and also with no modifier at all: the highest of the floors named by modifiers and the default holds; the `cap` step the lowest cap. A floor between two steps is a second `floor` step. A modifier whose operation has no step in the order, or a default floor or cap without its step, is an `EngineBugError`: nothing is dropped silently.
+Within a step modifiers apply in the order given, except as the fields above say. A floor always holds: the `floor` step raises any value under the floor, also the base when no modifier applied. At that step the highest of the floors named by modifiers and the default holds; at the `cap` step the lowest cap. A floor between two steps is a second `floor` step: every floor, named or default, holds at each one (and may be a part twice). An add of 0 is taken by whichever of `increase` and `decrease` the order has. A modifier whose operation has no step in the order, or a default floor or cap without its step, is an `EngineBugError`: nothing is dropped silently.
 
 ## The parts
 
