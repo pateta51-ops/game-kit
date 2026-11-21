@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { checkClock, ended, left, newClock, occurrences, setTo, spaceOf, step, valueAt, type ClockSpec } from './index.ts'
 
-const ids = (cs: { threshold: { id: string }; how: string }[]) => cs.map((c) => `${c.threshold.id}:${c.how}`)
+const ids = (cs: readonly { threshold: { id: string }; how: string }[]) => cs.map((c) => `${c.threshold.id}:${c.how}`)
 
 describe('clock', () => {
   it('a 15-space countdown is lost when it runs out', () => {
@@ -106,7 +106,7 @@ describe('clock', () => {
     ] }
     const r = step(spec, newClock(spec), 3)
     expect(ids(r.crossings)).toEqual(['second:land', 'first:land'])
-    expect(r.crossings[0].threshold.data).toEqual({ n: 2 })
+    expect(r.crossings[0]?.threshold.data).toEqual({ n: 2 })
   })
   it('turns crossings into occurrence inputs', () => {
     const spec: ClockSpec = { spaces: 5, start: 0, thresholds: [{ id: 't', at: 1, on: 'pass', kind: 'reward' }] }
