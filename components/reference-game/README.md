@@ -13,6 +13,11 @@ A small made-up card game kept in the kit as a contract test (K205, K276): when 
 4. To add a component to the contract list it in `components`, use it in the template, cover it in `tests/`.
 5. Keep it unstyled: no look decisions in the template.
 
+**Common mistakes:**
+- Changing a component's interface and leaving `template/` as it was: the generated game no longer compiles and the kit's check fails.
+- Using it as the start of a game: a game starts with `node kit.mjs new`.
+- Running it on local Windows.
+
 
 `reference.test.ts` makes it with `scaffold({ overlay: [template/], components: [...] })` (prompt-host, replay-cli, card-language, card-zones, game-store, table-panels, opponent, paced-view, turn-flow, automa, campaign) at the checkout's HEAD (into a temp folder, `node_modules` linked, fake ports in a temp ports file) and runs the game's own `npm run check` (tests, lint, typecheck, kit check, CI check, build).
 

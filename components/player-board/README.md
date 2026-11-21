@@ -13,6 +13,11 @@ A mat with named zones from a layout: each zone fits its cards (largest size, tw
 4. Style it yourself: the CSS is structural; hooks are `data-part` (`player-board mat zone slot`) and `data-zone`, `data-count`, `data-rows`, `data-fan`.
 5. Sizes are design pixels times `rem` (default 1/32 rem): a table scale grows everything.
 
+**Common mistakes:**
+- A view under an id that `layout.zones` does not hold is never drawn, and a zone with no view draws empty: no error says so.
+- Styling by class name: the only hooks are `data-part` and the `data-zone`, `data-count`, `data-rows`, `data-fan` attributes.
+- Giving `card` in screen pixels: sizes are design pixels, multiplied by `rem`.
+
 
 - The game owns the layout (where zones sit) and the look; the kit owns how a zone lays out its cards. Zones come from a board-layout `ZoneLayout` (`zones[id].r = [x, y, w, h]`), cards from a card-zones `ZoneView` (`null` = a back).
 - `planBoard(zones, cards, { card, footprint?, gap, pad, minWidth, align })` (pure, `index.ts`) returns per zone `placed` (a rect per card, board design pixels, `overlap` under the left neighbour), `scale`, `rows`, `fan`. `fitZone`, `layRow`, `handSink` are exported too.

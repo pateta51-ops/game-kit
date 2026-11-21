@@ -11,6 +11,10 @@ A React modal over the board and a confirm dialog built on it.
 4. Set the `--kc-modal-*` variables on `body` or an ancestor of the portal to match the game's look.
 5. Use `closeOnBackdrop={false}` where an accidental click must not dismiss.
 
+**Common mistakes:**
+- Leaving `open` true after `onConfirm`, `onCancel` or `onClose`: neither dialog closes itself, so it stays up.
+- Setting the `--kc-modal-*` variables on the game's root element: the portal mounts in `document.body`, outside it, so they do not reach the dialog.
+
 
 
 `Modal` takes `open`, `onClose`, `title`, `children` and optional `actions`.

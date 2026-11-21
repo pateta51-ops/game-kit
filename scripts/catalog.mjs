@@ -1,4 +1,4 @@
-// Writes docs/CATALOG.md and docs/ARCHITECTURE.md from components/*/component.json, README.md and docs/catalog-notes.json.
+// Writes docs/CATALOG.md, docs/ARCHITECTURE.md and docs/recipes/mechanics.md (from docs/mechanics.json) from components/*/component.json, README.md and docs/catalog-notes.json.
 //   node scripts/catalog.mjs          write the file
 //   node scripts/catalog.mjs --check  fail when the file is stale or a component has no note
 import fs from 'node:fs'

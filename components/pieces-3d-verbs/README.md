@@ -13,6 +13,11 @@ The animation verbs of `pieces-3d` (release 1.1: VFX). A 1.0 game draws dice and
 4. A 1.0 game does not pull this component, effect-library or motion-frame.
 5. Import from `../kit/pieces-3d-verbs/index`, not from `pieces-3d`.
 
+**Common mistakes:**
+- Calling `registerPieceVerbs` before `registerEffects`: the library then registers its plain `shake`, `flip`, `move` and `settle` over these.
+- Expecting a die to tumble while the dice layer is off: without `p3-gl` (`dice3d()` false) the library's plain verb runs.
+- Importing the verbs from `pieces-3d`: they moved out of it (K235).
+
 
 - `registerPieceVerbs(verbs, { ballLook?, perTurn? })` after `registerEffects`: on a die (with `p3-gl`) `shake` tumbles and `flip` turns the first die out and the next in (actor class `fx-two` holds both faces; `data-fx-flipped` at half way); on a ball `move` rolls and `settle` rocks back. Any other actor gets the library's verb. `dice3d()`: true while the WebGL dice layer is on.
 - `copyPieces(ballLook)`: layer option `onActor` that repaints a clone's ball and copies its other canvases.
