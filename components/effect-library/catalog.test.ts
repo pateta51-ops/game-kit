@@ -55,8 +55,6 @@ describe('K499 effect catalog', () => {
     expect(problems(catalog)).toEqual([]);
   });
   it('fails when an entry is removed, a tag list is short or a title names a game', () => {
-    const i = catalog.findIndex((e) => e.id === 'dissolve');
-    expect(problems(catalog.filter((_, j) => j !== i))).toEqual([]);
     expect(problems(catalog.filter((e) => e.id !== 'dissolve'))).toContain('dissolve: registered, no catalog entry');
     expect(problems(catalog.map((e, j) => (j === 0 ? { ...e, tags: ['a', 'b'] } : e)))).toContain('move: needs 3 to 8 tags');
     expect(problems(catalog.map((e, j) => (j === 0 ? { ...e, title: 'Slides a piece like in Unstoppable' } : e)))).toContain("move: a game's name in the title or tags");

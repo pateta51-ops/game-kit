@@ -24,11 +24,11 @@
    "phoneSafe": true
   },
   "options": {
-   "to": null,
-   "ease": null,
-   "scale": null,
-   "then": null,
-   "rotate": null
+   "to": "required",
+   "ease": "required",
+   "scale": "required",
+   "then": "required",
+   "rotate": "required"
   },
   "since": "v0.17.0",
   "usedBy": [
@@ -151,11 +151,11 @@
    "phoneSafe": true
   },
   "options": {
-   "path": null,
-   "launch": null,
-   "hop": null,
-   "back": null,
-   "ghosts": null
+   "path": "required",
+   "launch": "required",
+   "hop": "required",
+   "back": "required",
+   "ghosts": "required"
   },
   "since": "v0.118.0",
   "usedBy": [],
@@ -220,9 +220,9 @@
    "phoneSafe": true
   },
   "options": {
-   "to": null,
-   "scale": null,
-   "shadow": null
+   "to": "required",
+   "scale": "required",
+   "shadow": true
   },
   "since": "v0.17.0",
   "usedBy": [
@@ -280,11 +280,11 @@
    "phoneSafe": true
   },
   "options": {
-   "frames": null,
-   "fromScale": null,
-   "rise": null,
-   "dip": null,
-   "dipAt": null
+   "frames": "required",
+   "fromScale": "required",
+   "rise": "required",
+   "dip": "required",
+   "dipAt": "required"
   },
   "since": "v0.17.0",
   "usedBy": [
@@ -342,11 +342,11 @@
    "phoneSafe": true
   },
   "options": {
-   "axis": null,
-   "holdMs": null,
-   "faces": null,
-   "label": null,
-   "squash": null
+   "axis": "required",
+   "holdMs": "required",
+   "faces": "required",
+   "label": "required",
+   "squash": "required"
   },
   "since": "v0.17.0",
   "usedBy": [
@@ -407,11 +407,11 @@
    "phoneSafe": true
   },
   "options": {
-   "direction": null,
-   "perspective": null,
-   "overshoot": null,
-   "glow": null,
-   "pivot": null
+   "direction": "required",
+   "perspective": 800,
+   "overshoot": 0,
+   "glow": "required",
+   "pivot": "required"
   },
   "since": "v0.122.0",
   "usedBy": [
@@ -470,9 +470,9 @@
    "phoneSafe": true
   },
   "options": {
-   "to": null,
-   "pulse": null,
-   "ease": null
+   "to": "required",
+   "pulse": false,
+   "ease": "required"
   },
   "since": "v0.17.0",
   "usedBy": [
@@ -532,8 +532,8 @@
    "phoneSafe": true
   },
   "options": {
-   "to": null,
-   "ease": null
+   "to": "required",
+   "ease": "required"
   },
   "since": "v0.17.0",
   "usedBy": [
@@ -592,10 +592,10 @@
   },
   "options": {
    "turns": 1,
-   "direction": null,
-   "ease": null,
-   "pivot": null,
-   "scaleFrom": null
+   "direction": "required",
+   "ease": "required",
+   "pivot": "required",
+   "scaleFrom": "required"
   },
   "since": "v0.123.0",
   "usedBy": [],
@@ -652,10 +652,10 @@
    "phoneSafe": true
   },
   "options": {
-   "period": null,
+   "period": "required",
    "turns": 1,
-   "direction": null,
-   "pivot": null
+   "direction": "required",
+   "pivot": "required"
   },
   "since": "v0.123.0",
   "usedBy": [],
@@ -711,10 +711,10 @@
   },
   "options": {
    "angle": 90,
-   "direction": null,
-   "overshoot": null,
-   "ease": null,
-   "pivot": null
+   "direction": "required",
+   "overshoot": "required",
+   "ease": "required",
+   "pivot": "required"
   },
   "since": "v0.123.0",
   "usedBy": [
@@ -770,9 +770,9 @@
   },
   "options": {
    "angle": 90,
-   "direction": null,
-   "overshoot": null,
-   "ease": null
+   "direction": "required",
+   "overshoot": "required",
+   "ease": "required"
   },
   "since": "v0.123.0",
   "usedBy": [
@@ -1141,10 +1141,10 @@
    "phoneSafe": true
   },
   "options": {
-   "outward": null,
-   "vortex": null,
-   "startSize": null,
-   "endSize": null,
+   "outward": "required",
+   "vortex": "required",
+   "startSize": "required",
+   "endSize": "required",
    "lift": 60
   },
   "since": "v0.119.0",
@@ -1268,8 +1268,8 @@
    "phoneSafe": true
   },
   "options": {
-   "beforeLook": null,
-   "afterLook": null
+   "beforeLook": "required",
+   "afterLook": "required"
   },
   "since": "v0.119.0",
   "usedBy": [
@@ -1328,7 +1328,7 @@
    "phoneSafe": true
   },
   "options": {
-   "counterColour": null,
+   "counterColour": "required",
    "popOffsets": [
     0.45,
     0.75
@@ -1396,7 +1396,7 @@
    "lift": 34,
    "orbit": 0.2,
    "engine": "255,255,255",
-   "image": null
+   "image": "required"
   },
   "since": "v0.119.0",
   "usedBy": [
@@ -1453,9 +1453,9 @@
    "phoneSafe": true
   },
   "options": {
-   "scale": null,
-   "hold": null,
-   "ease": null
+   "scale": "required",
+   "hold": "required",
+   "ease": "required"
   },
   "since": "v0.17.0",
   "usedBy": [
@@ -1517,9 +1517,9 @@
    "phoneSafe": true
   },
   "options": {
-   "scale": null,
-   "hold": null,
-   "ease": null
+   "scale": "required",
+   "hold": "required",
+   "ease": "required"
   },
   "since": "v0.17.0",
   "usedBy": [
@@ -1579,8 +1579,8 @@
    "phoneSafe": true
   },
   "options": {
-   "to": null,
-   "ease": null
+   "to": "required",
+   "ease": "required"
   },
   "since": "v0.17.0",
   "usedBy": [
@@ -1746,9 +1746,9 @@
    "phoneSafe": true
   },
   "options": {
-   "axis": null,
-   "origin": null,
-   "reverse": null
+   "axis": "required",
+   "origin": "required",
+   "reverse": false
   },
   "since": "v0.117.0",
   "usedBy": [
@@ -1807,9 +1807,9 @@
    "phoneSafe": true
   },
   "options": {
-   "axis": null,
-   "origin": null,
-   "colour": null,
+   "axis": "required",
+   "origin": "required",
+   "colour": "required",
    "lineMs": 0,
    "gutter": 0
   },
@@ -1872,9 +1872,9 @@
   "options": {
    "text": "",
    "axis": "x",
-   "unrollMs": null,
-   "fadeMs": null,
-   "textAt": null
+   "unrollMs": "required",
+   "fadeMs": "required",
+   "textAt": "required"
   },
   "since": "v0.204.0",
   "usedBy": [],
@@ -1928,10 +1928,10 @@
    "phoneSafe": true
   },
   "options": {
-   "text": null,
-   "colour": null,
-   "rise": null,
-   "typewriter": null
+   "text": "computed",
+   "colour": "required",
+   "rise": true,
+   "typewriter": "required"
   },
   "since": "v0.17.0",
   "usedBy": [
@@ -1992,9 +1992,9 @@
    "phoneSafe": true
   },
   "options": {
-   "typewriter": null,
+   "typewriter": "required",
    "textAlign": "center",
-   "rise": null
+   "rise": true
   },
   "since": "v0.127.0",
   "usedBy": [
@@ -2055,10 +2055,10 @@
   },
   "options": {
    "from": 0,
-   "to": null,
-   "prefix": null,
-   "suffix": null,
-   "colour": null
+   "to": "required",
+   "prefix": "",
+   "suffix": "",
+   "colour": "required"
   },
   "since": "v0.204.0",
   "usedBy": [],
@@ -2112,9 +2112,9 @@
    "phoneSafe": true
   },
   "options": {
-   "colour": null,
-   "hold": null,
-   "shadows": null
+   "colour": "required",
+   "hold": "required",
+   "shadows": "required"
   },
   "since": "v0.17.0",
   "usedBy": [
@@ -2175,9 +2175,9 @@
    "phoneSafe": true
   },
   "options": {
-   "colour": null,
-   "shadows": null,
-   "release": null
+   "colour": "required",
+   "shadows": "required",
+   "release": false
   },
   "since": "v0.173.0",
   "usedBy": [
@@ -2239,8 +2239,8 @@
    "phoneSafe": true
   },
   "options": {
-   "colour": null,
-   "shadows": null
+   "colour": "required",
+   "shadows": "required"
   },
   "since": "v0.204.0",
   "usedBy": [
@@ -2300,7 +2300,7 @@
    "phoneSafe": true
   },
   "options": {
-   "times": null
+   "times": 4
   },
   "since": "v0.17.0",
   "usedBy": [
@@ -2358,8 +2358,8 @@
    "phoneSafe": true
   },
   "options": {
-   "actors": null,
-   "selector": null,
+   "actors": "required",
+   "selector": "required",
    "amplitude": 6,
    "crossAmplitude": 1,
    "frames": 9
@@ -2422,11 +2422,11 @@
    "phoneSafe": true
   },
   "options": {
-   "width": null,
-   "tipWidth": null,
-   "colour": null,
-   "fade": null,
-   "ribbon": null
+   "width": "required",
+   "tipWidth": "required",
+   "colour": "required",
+   "fade": "required",
+   "ribbon": "required"
   },
   "since": "v0.118.0",
   "usedBy": [
@@ -2486,11 +2486,11 @@
    "phoneSafe": true
   },
   "options": {
-   "count": null,
-   "inward": null,
-   "palette": null,
-   "alpha": null,
-   "pulse": null
+   "count": "required",
+   "inward": "required",
+   "palette": "required",
+   "alpha": "required",
+   "pulse": "required"
   },
   "since": "v0.119.0",
   "usedBy": [
@@ -2611,14 +2611,14 @@
    "phoneSafe": true
   },
   "options": {
-   "control": null,
+   "control": "required",
    "colour": "255,255,255",
    "moteColour": "255,255,255",
    "size": [
     40,
     34
    ],
-   "image": null
+   "image": "required"
   },
   "since": "v0.119.0",
   "usedBy": [
@@ -2741,8 +2741,8 @@
   "options": {
    "travelMs": 200,
    "colour": "255 255 255",
-   "width": null,
-   "miss": null,
+   "width": "computed",
+   "miss": "required",
    "delay": 0
   },
   "since": "v0.122.0",
@@ -2802,7 +2802,7 @@
    "phoneSafe": true
   },
   "options": {
-   "bolt": null,
+   "bolt": "required",
    "tail": 0.25,
    "colour": "255 255 255",
    "unit": 1,
@@ -2866,7 +2866,7 @@
    "phoneSafe": true
   },
   "options": {
-   "bolt": null,
+   "bolt": "required",
    "lift": 70,
    "launchMs": 220,
    "fadeMs": 200,
@@ -2994,10 +2994,10 @@
    "phoneSafe": true
   },
   "options": {
-   "distance": null,
-   "spin": null,
-   "fade": null,
-   "smoke": null
+   "distance": "required",
+   "spin": "required",
+   "fade": "required",
+   "smoke": "required"
   },
   "since": "v0.122.0",
   "usedBy": [
@@ -3054,11 +3054,11 @@
    "phoneSafe": true
   },
   "options": {
-   "count": null,
-   "impact": null,
-   "direction": null,
+   "count": "computed",
+   "impact": "computed",
+   "direction": "required",
    "hotColour": "255 255 255",
-   "ms": null
+   "ms": "computed"
   },
   "since": "v0.122.0",
   "usedBy": [],
@@ -3118,7 +3118,7 @@
    "colour": "255 255 255",
    "rippleSize": 0.3,
    "ms": 300,
-   "jolt": null
+   "jolt": "required"
   },
   "since": "v0.122.0",
   "usedBy": [],
@@ -3174,7 +3174,7 @@
    "colour": "255 255 255",
    "width": 2,
    "count": 1,
-   "period": null,
+   "period": "computed",
    "radius": "50%"
   },
   "since": "v0.122.0",
@@ -3236,11 +3236,11 @@
    "phoneSafe": true
   },
   "options": {
-   "shockwaves": null,
+   "shockwaves": "required",
    "colour": "255 255 255",
    "outline": "255 255 255",
    "unit": 1,
-   "clip": null
+   "clip": "required"
   },
   "since": "v0.122.0",
   "usedBy": [
@@ -3300,8 +3300,8 @@
    "phoneSafe": true
   },
   "options": {
-   "radius": null,
-   "hitAngle": null,
+   "radius": "required",
+   "hitAngle": "required",
    "hit": 0,
    "colour": "220,220,220",
    "attack": false
@@ -3360,9 +3360,9 @@
    "phoneSafe": true
   },
   "options": {
-   "radius": null,
-   "hitAngle": null,
-   "scatter": null,
+   "radius": "required",
+   "hitAngle": "required",
+   "scatter": "computed",
    "breakColour": "240,240,240"
   },
   "since": "v0.122.0",
@@ -3420,10 +3420,10 @@
    "phoneSafe": true
   },
   "options": {
-   "recharge": null,
-   "radius": null,
+   "recharge": "required",
+   "radius": "required",
    "colour": "220,220,220",
-   "hex": null
+   "hex": "required"
   },
   "since": "v0.122.0",
   "usedBy": [],
@@ -3479,10 +3479,10 @@
   },
   "options": {
    "text": "",
-   "image": null,
+   "image": "required",
    "tilt": 0,
-   "ring": null,
-   "press": null
+   "ring": "required",
+   "press": "required"
   },
   "since": "v0.124.0",
   "usedBy": [
@@ -3544,7 +3544,7 @@
   },
   "options": {
    "text": "",
-   "cracked": null,
+   "cracked": "required",
    "tilt": 0
   },
   "since": "v0.204.0",
@@ -3607,8 +3607,8 @@
   "options": {
    "count": 16,
    "colour": "#fff",
-   "rise": null,
-   "spread": null,
+   "rise": "computed",
+   "spread": "computed",
    "size": 6
   },
   "since": "v0.124.0",
@@ -3667,9 +3667,9 @@
   "options": {
    "colour": "rgb(255 255 255 / .25)",
    "times": 2,
-   "period": null,
-   "loop": null,
-   "grey": null
+   "period": "required",
+   "loop": "required",
+   "grey": "required"
   },
   "since": "v0.124.0",
   "usedBy": [
@@ -3729,11 +3729,11 @@
    "phoneSafe": true
   },
   "options": {
-   "buzz": null,
-   "window": null,
-   "jitter": null,
+   "buzz": "required",
+   "window": "required",
+   "jitter": "required",
    "brightness": 1,
-   "threshold": null
+   "threshold": "required"
   },
   "since": "v0.124.0",
   "usedBy": [
@@ -3794,8 +3794,8 @@
    "from": 0,
    "to": 1,
    "colour": "currentColor",
-   "marker": null,
-   "pips": null
+   "marker": "required",
+   "pips": "required"
   },
   "since": "v0.124.0",
   "usedBy": [
@@ -3855,7 +3855,7 @@
    "phoneSafe": true
   },
   "options": {
-   "pin": null,
+   "pin": "required",
    "from": 0,
    "to": 1
   },
@@ -3915,8 +3915,8 @@
    "phoneSafe": true
   },
   "options": {
-   "banner": null,
-   "face": null,
+   "banner": "required",
+   "face": "required",
    "filter": "grayscale(1)",
    "liftMs": 500,
    "drainMs": 400
@@ -3974,11 +3974,11 @@
    "phoneSafe": true
   },
   "options": {
-   "frames": null,
-   "period": null,
-   "easing": null,
-   "pseudo": null,
-   "once": null
+   "frames": "required",
+   "period": "required",
+   "easing": "required",
+   "pseudo": "required",
+   "once": "required"
   },
   "since": "v0.17.0",
   "usedBy": [
@@ -4037,9 +4037,9 @@
    "phoneSafe": true
   },
   "options": {
-   "kind": null,
-   "rise": null,
-   "period": null
+   "kind": "required",
+   "rise": "required",
+   "period": "required"
   },
   "since": "v0.125.0",
   "usedBy": [],
@@ -4096,9 +4096,9 @@
    "phoneSafe": true
   },
   "options": {
-   "kind": null,
-   "period": null,
-   "frames": null
+   "kind": "required",
+   "period": "required",
+   "frames": "required"
   },
   "since": "v0.125.0",
   "usedBy": [],
@@ -4155,9 +4155,9 @@
    "phoneSafe": true
   },
   "options": {
-   "kind": null,
-   "orbit": null,
-   "period": null
+   "kind": "required",
+   "orbit": "required",
+   "period": "required"
   },
   "since": "v0.125.0",
   "usedBy": [],
@@ -4214,9 +4214,9 @@
    "phoneSafe": true
   },
   "options": {
-   "kind": null,
-   "drift": null,
-   "period": null
+   "kind": "required",
+   "drift": "required",
+   "period": "required"
   },
   "since": "v0.135.0",
   "usedBy": [],
@@ -4400,7 +4400,7 @@
    "phoneSafe": true
   },
   "options": {
-   "count": null,
+   "count": "computed",
    "spread": [
     60,
     24
@@ -4467,7 +4467,7 @@
    "bandWidth": 50,
    "colour": "rgba(255,255,255,.25)",
    "loop": false,
-   "period": null
+   "period": "computed"
   },
   "since": "v0.135.0",
   "usedBy": [
@@ -4585,7 +4585,7 @@
   "options": {
    "count": 34,
    "colour": "white",
-   "reach": null,
+   "reach": "computed",
    "size": 8,
    "fall": 0
   },
@@ -4701,11 +4701,11 @@
    "phoneSafe": false
   },
   "options": {
-   "image": null,
+   "image": "required",
    "foldMs": 600,
    "throwMs": 420,
-   "creases": null,
-   "fadeOut": null
+   "creases": "required",
+   "fadeOut": false
   },
   "since": "v0.129.0",
   "usedBy": [
@@ -4762,14 +4762,14 @@
    "phoneSafe": true
   },
   "options": {
-   "colours": null,
+   "colours": "required",
    "idleMs": [
     3500,
     7000
    ],
    "burstMs": 200,
    "slices": 3,
-   "seed": null
+   "seed": "computed"
   },
   "since": "v0.148.0",
   "usedBy": [],
@@ -4881,9 +4881,9 @@
    "phoneSafe": true
   },
   "options": {
-   "scale": null,
-   "enter": null,
-   "exit": null
+   "scale": "required",
+   "enter": "required",
+   "exit": "required"
   },
   "since": "v0.129.0",
   "usedBy": [],
@@ -4940,7 +4940,7 @@
    "barHeight": 40,
    "enter": 250,
    "exit": 250,
-   "textIn": null
+   "textIn": "computed"
   },
   "since": "v0.129.0",
   "usedBy": [],
@@ -5051,10 +5051,10 @@
    "phoneSafe": true
   },
   "options": {
-   "pieceCount": null,
-   "cohortCount": null,
-   "shards": null,
-   "survivors": null
+   "pieceCount": "required",
+   "cohortCount": "required",
+   "shards": "computed",
+   "survivors": "computed"
   },
   "since": "v0.129.0",
   "usedBy": [],
@@ -5164,8 +5164,8 @@
    "phoneSafe": true
   },
   "options": {
-   "name": null,
-   "className": null
+   "name": "required",
+   "className": "required"
   },
   "since": "v0.43.0",
   "usedBy": [],
@@ -5219,11 +5219,11 @@
    "phoneSafe": true
   },
   "options": {
-   "frames": null,
+   "frames": "computed",
    "period": 1500,
-   "pseudo": null,
-   "delay": null,
-   "once": null
+   "pseudo": "required",
+   "delay": "required",
+   "once": "required"
   },
   "since": "v0.125.0",
   "usedBy": [],
@@ -5276,10 +5276,10 @@
    "phoneSafe": true
   },
   "options": {
-   "kind": null,
+   "kind": "required",
    "rise": 8,
-   "period": null,
-   "orbit": null
+   "period": "required",
+   "orbit": "required"
   },
   "since": "v0.125.0",
   "usedBy": [],
@@ -5332,7 +5332,7 @@
    "phoneSafe": true
   },
   "options": {
-   "value": null,
+   "value": "required",
    "from": 0,
    "ms": 700
   },
@@ -5389,7 +5389,7 @@
    "phoneSafe": true
   },
   "options": {
-   "frames": null
+   "frames": "required"
   },
   "since": "v0.43.0",
   "usedBy": [],
@@ -5445,7 +5445,7 @@
    "max": 12,
    "decayMs": 600,
    "seed": 1,
-   "sine": null
+   "sine": "required"
   },
   "since": "v0.39.0",
   "usedBy": [],

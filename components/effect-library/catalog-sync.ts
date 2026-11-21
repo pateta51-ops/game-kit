@@ -141,7 +141,7 @@ function defaultsObject(name: string): string {
   }
   return '';
 }
-/** The default of an option as the code writes it, or null when the code has none (off, required or computed). */
+/** The default of an option as the code writes it; `computed` when the code works it out, `required` when it has none. */
 export function optionDefault(name: string, files: readonly string[]): Val {
   const texts = files.map(textOf);
   const objs = [...new Set(files.map((f) => read(fileOf(f))).flatMap((t) => [...t.matchAll(/\b([A-Z_]+_DEFAULTS)\b/g)].map((m) => m[1]!)))].map(defaultsObject);
@@ -149,11 +149,15 @@ export function optionDefault(name: string, files: readonly string[]): Val {
     const m = new RegExp(String.raw`[{,\s]${name}:\s*${LIT}\s*(?:as [^,}]+)?[,}]`).exec(o);
     if (m) return lit(m[1]!);
   }
+  const ref = String.raw`(?:\['${name}'\]|\.${name}\b)`;
+  const tern = String.raw`typeof\s+[\w.]*${ref}\s*===\s*'\w+'\s*\?\s*[^:;]+?:\s*`;
   for (const t of texts) {
-    const m = new RegExp(String.raw`[{,]\s*${name}\s*=\s*${LIT}\s*[,}\n]`).exec(t) ?? new RegExp(String.raw`(?:\['${name}'\]|\.${name})\s*\?\?\s*${LIT}`).exec(t);
+    const m = new RegExp(String.raw`[{,]\s*${name}\s*=\s*${LIT}\s*[,}\n]`).exec(t) ?? new RegExp(String.raw`${ref}\s*\?\?\s*${LIT}`).exec(t) ?? new RegExp(tern + LIT).exec(t);
     if (m) return lit(m[1]!);
+    if (new RegExp(String.raw`${ref}\s*===\s*true`).test(t)) return false;
+    if (new RegExp(String.raw`${ref}\s*!==\s*false`).test(t)) return true;
   }
-  return null;
+  return texts.some((t) => new RegExp(String.raw`[{,]\s*${name}\s*=\s*[^=>]|${ref}\s*\?\?|${tern}`).test(t)) ? 'computed' : 'required';
 }
 
 function partOf(e: Entry, regs: Map<string, Reg>): Part | undefined {
