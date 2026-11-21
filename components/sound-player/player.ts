@@ -88,6 +88,8 @@ type Listens = { addEventListener: (type: string, f: () => void) => void; remove
 export type CueFilter = ((cue: string, def: CueDef) => boolean) | { buses?: readonly Bus[]; cues?: readonly string[] };
 
 export interface SoundPlayerOptions {
+  /** Format fallback (default `{ '.webm': '.m4a' }`; `{}`: off): a file with a key as extension loads its sibling with the value instead when the browser says it cannot play the key's format (`canPlayType`, so the file is not fetched) or when fetching or decoding it fails. One take, not two; a sibling that is missing only warns. */
+  fallback?: Readonly<Record<string, string>>;
   table: SoundTable;
   /** Which cues are decoded in the background after the first tap (default: every cue not on the music bus). Others still load when first played. */
   autoPreload?: CueFilter;
@@ -267,13 +269,38 @@ export function createSoundPlayer(o: SoundPlayerOptions): SoundPlayer {
     };
     const bed = table.duck?.ambience ? duckedMusic : unduckedAmbience?.node ?? buses.music.node;
 
-    const decode = async (file: string, what: string): Promise<AudioBuffer | null> => {
+    const fb = o.fallback ?? { '.webm': '.m4a' };
+    const MIME: Record<string, string> = { '.webm': 'audio/webm; codecs="opus"', '.m4a': 'audio/mp4', '.ogg': 'audio/ogg', '.opus': 'audio/ogg; codecs="opus"', '.mp3': 'audio/mpeg' };
+    const playable = (ext: string): boolean => {
+      const m = MIME[ext];
+      if (m === undefined || typeof Audio === 'undefined') return true;
       try {
-        const r = await get(base + file);
-        if (!r.ok) throw new Error(`${String(r.status)} ${file}`);
-        return await ctx.decodeAudioData(await r.arrayBuffer());
+        return new Audio().canPlayType(m) !== '';
+      } catch {
+        return true;
+      }
+    };
+    const one = async (file: string): Promise<AudioBuffer> => {
+      const r = await get(base + file);
+      if (!r.ok) throw new Error(`${String(r.status)} ${file}`);
+      return await ctx.decodeAudioData(await r.arrayBuffer());
+    };
+    const decode = async (file: string, what: string): Promise<AudioBuffer | null> => {
+      const dot = file.lastIndexOf('.');
+      const ext = dot < 0 ? '' : file.slice(dot).toLowerCase();
+      const alt = fb[ext] === undefined ? undefined : file.slice(0, dot) + fb[ext];
+      let use = file;
+      try {
+        if (alt !== undefined && !playable(ext)) use = alt;
+        try {
+          return await one(use);
+        } catch (err) {
+          if (alt === undefined || use === alt) throw err;
+          use = alt;
+          return await one(alt);
+        }
       } catch (err) {
-        warn(`${what} (${file})`, err);
+        warn(`${what} (${use})`, err);
         return null;
       }
     };

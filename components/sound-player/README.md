@@ -9,11 +9,12 @@ A Web Audio player driven by one table of data. It knows no game. No packages.
 **You must:**
 1. Build the player once: `createSoundPlayer({ table, base, volumes, onVolumes })`. Put every sound, voice file (`voiceCues(table)` spread into `cues`) and music layer in the table; a game plays names from it and never makes its own `AudioContext` or `Audio`.
 2. Pass the saved `volumes` and store what `onVolumes` gives: music, sounds, voice and muted come from settings. Call `setVolumes` from the settings screen.
+2b. Format fallback: `fallback` (default `{ '.webm': '.m4a' }`, `{}` off) loads the `.m4a` sibling of a `.webm` the browser cannot play (`canPlayType`) or fails to fetch or decode; ship both files (`checkSoundFiles` with `fallback` reports a missing sibling); a missing sibling only warns.
 3. Nothing sounds before a first tap or key on `target`: call `unlock()` from the game's own first gesture if it has one, and do not rely on a sound at load (a cue asked for before the tap is dropped).
 4. Every cue has a `tier` (`quiet`, `normal`, `loud`); loud cues duck the music, voice-bus cues duck it too. Give music tracks `bus: 'music'` and play them with `playTrack`.
 5. Stop a cue only with `stopCues(ms, cue)` (150 ms fade at least); never expect a hard stop, and never use `lengthMs` as a stop time.
 6. In tests pass `silent: true` (no audio context, every call is safe) or `context` with `fakeContext.ts`.
-7. Run `checkSoundFiles(table, dir, options)` from `check.ts` in the game's checks (node only, import it by path): it fails on a missing file, a bad format, a cue file over 400 kB or a loop over 4 MB. Files come from audio-gen (`tools.py limits` prints the same limits).
+7. Run `checkSoundFiles(table, dir, options)` from `check.ts` in the game's checks (node only, import it by path): it fails on a missing file, a bad format, a cue file over 400 kB or a loop or music-bus track over 4 MB. Files come from audio-gen (`tools.py limits` prints the same limits).
 8. Use `onEnd(how)` (`ended`, `faded`, `dropped`) to chain: a cue that is not played (before the tap, hidden page, no file, over the cap) still calls it once.
 
 **Common mistakes:**
@@ -60,7 +61,7 @@ For a store with `lastEvents`, call `playEvents(next.lastEvents)` when the array
 changes and is nonempty.
 
 ## Check (`check.ts`, node only: import it by path, not from `index`)
-`checkSoundFiles(table, dir, { missing?, formats?, maxCueBytes?, maxLoopBytes? })` returns lines of problems: a cue, `layer:<name>`, `once:<name>` or `ambience:<name>` whose files are not all in `dir` and that is not in `missing`; a `missing` entry that has its files or is not in the table; a file not in `formats` (.ogg .opus .webm .mp3 .m4a), empty, or over the size (400 kB a cue file, 4 MB a loop); a state naming an unknown layer. `checkFrontSilence(table, dir, { maxMs = 60, threshold = 0.02, decode? })`: cue files that start silent too long (wav read here; other formats need `decode`). `trimMp3(bytes, front, back)` (index): cuts whole frames, no re-encode, drops ID3 and Xing. Tests: `cues2.test.ts`, `sound.test.ts`, `synth.test.ts`, `events.test.ts` (node) on `fakeContext.ts`, which a game's tests may use too.
+`checkSoundFiles(table, dir, { missing?, formats?, maxCueBytes?, maxLoopBytes?, maxTrackBytes?, fallback? })` returns lines of problems: a cue, `layer:<name>`, `once:<name>` or `ambience:<name>` whose files are not all in `dir` and that is not in `missing`; a `missing` entry that has its files or is not in the table; a file not in `formats` (.ogg .opus .webm .mp3 .m4a), empty, or over the size (400 kB a cue file, 4 MB a loop); a cue on the music bus (a whole track) is held to `maxTrackBytes` (default `maxLoopBytes`, else 4 MB), not the cue limit; with `fallback` (e.g. `{ '.webm': '.m4a' }`) every file with that extension must have its sibling; a state naming an unknown layer. `checkFrontSilence(table, dir, { maxMs = 60, threshold = 0.02, decode? })`: cue files that start silent too long (wav read here; other formats need `decode`). `trimMp3(bytes, front, back)` (index): cuts whole frames, no re-encode, drops ID3 and Xing. Tests: `cues2.test.ts`, `sound.test.ts`, `synth.test.ts`, `events.test.ts` (node) on `fakeContext.ts`, which a game's tests may use too.
 
 ## Look
 None.
