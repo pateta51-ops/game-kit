@@ -408,3 +408,14 @@ Unit, e2e, LLM playtest.
     expect(r.out).toContain('PROBLEM cards: ');
   });
 });
+
+describe('plancheck --batch read-first ranges (K515)', () => {
+  it('a range of one major lists every section in it', () => {
+    const d = tmp('pc-range-');
+    const f = join(d, 'PLAN.md');
+    writeFileSync(f, '# Plan\n\n## Batch S1\n\n**Read first:** §3.4-§3.7, §5.1, BRIEF §2.1–2.3\n\nBody.\n');
+    const py = candidates(process.env, process.platform)[0] ?? ['python'];
+    const o = spawnSync(py[0] ?? 'python', [...py.slice(1), '-X', 'utf8', fileURLToPath(new URL('./plancheck.py', import.meta.url)), f, '--batch', 'S1'], { encoding: 'utf-8' }).stdout;
+    for (const s of ['§3.4', '§3.5', '§3.6', '§3.7', '§5.1', 'BRIEF §2.2']) expect(o).toContain(s);
+  });
+});
