@@ -496,3 +496,6 @@ export function registerEffects(verbs: VerbRegistry<EffectCtx>, o?: LayerOptions
   for (const [id, v] of own) verbs.register(id, v);
   return createEffectLayer(o);
 }
+
+/** K511: every verb name `registerEffects` registers (new ids and old ids), sorted; for `validateSpecs(specs, stages, [...EFFECT_NAMES, ...gameVerbs])`. A test keeps it equal to the registry. */
+export const EFFECT_NAMES: readonly string[] = ['arc-move', 'banner', 'bar-fill', 'burn-away', 'collapse-jump', 'column-beam', 'count', 'crumple', 'dash-line', 'debris', 'dissolve', 'fade-in', 'fade-out', 'fizzle', 'flash-jump', 'flicker', 'flip', 'glow', 'hide', 'idle', 'lift', 'light-pillar', 'light-sweep', 'light-teleport', 'motes', 'move', 'multi-stop-path', 'particles-rise', 'projectile', 'pulse', 'radar-sweep', 'radial-streaks', 'refresh', 'reticle', 'ring-pulse', 'rotating-beam', 'round-trip', 'scale', 'settle', 'shake', 'shake-group', 'shatter', 'sheen', 'shield-bubble', 'shimmer', 'show', 'slash', 'spark-burst', 'spin', 'stamp', 'streak-burst', 'tap', 'target-brackets', 'text', 'trail', 'unroll', 'untap', 'warp-transfer'];

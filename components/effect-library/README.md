@@ -137,6 +137,7 @@ Sixteen verbs for the director's spec format as DOM effects for the motion frame
 2. `resolve(id, run)` returns the real element; the kit animates a clone, never the original (a cloned canvas is blank: copy pixels in `onActor`).
 3. Pass the player's `speed` from settings through `withReducedMotion(speed)`: reduced motion gives `'instant'`, no verb runs and no clone is made.
 4. Call `layer.start(run)` from `onBeatStart` when actors must be cloned at the beat's start, and `layer.clear()` between beats.
+5. Check specs with `validateSpecs(specs, stages, [...EFFECT_NAMES, ...gameVerbs])`, never `Object.keys(BUILT_IN)` (it lacks verbs registered by name: particles-rise, flicker, stamp, bar-fill).
 5. Set `--fx-*` variables for the look; no colour comes from the kit. Opt-in looks: `looks/rise-pulse.css`, `looks/glitch.css`.
 6. Add your own verbs with `registerEffect` (use `animate(keyframes, endStyle)` so a skip jumps to the end) or `registerCanvasEffect`.
 7. Use `countUp({ value, speed, show })` for counting numbers in your own code, or the `count` verb in a spec; neither writes game state.
