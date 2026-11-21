@@ -13,27 +13,69 @@ export interface TestCall {
 const HEAD = /\b(it|test|cardCase|describe)((?:\.\w+)*)\(/g;
 const SKIP = /\.(?:skip|todo|skipIf)\b/;
 
-/** The text with string literals and comments blanked (same length). */
+/** The end (exclusive) of the string, template, comment or regex literal starting at `i`, or -1; `prev` is the code character before it. */
+function literalEnd(text: string, i: number, prev: string): number {
+  const c = text[i];
+  if (c === '"' || c === "'") {
+    let j = i + 1;
+    for (; j < text.length && text[j] !== c && text[j] !== '\n'; j++) if (text[j] === '\\') j++;
+    return Math.min(j + 1, text.length);
+  }
+  if (c === '`') {
+    let j = i + 1;
+    for (; j < text.length && text[j] !== '`'; j++) {
+      if (text[j] === '\\') j++;
+      else if (text[j] === '$' && text[j + 1] === '{') j = codeEnd(text, j + 2);
+    }
+    return Math.min(j + 1, text.length);
+  }
+  if (c !== '/') return -1;
+  if (text[i + 1] === '/') {
+    const j = text.indexOf('\n', i);
+    return j < 0 ? text.length : j;
+  }
+  if (text[i + 1] === '*') {
+    const j = text.indexOf('*/', i + 2);
+    return j < 0 ? text.length : j + 2;
+  }
+  if (!/^$|[(,=:[!&|?{};\n]/.test(prev)) return -1;
+  let j = i + 1;
+  for (let cls = false; j < text.length && text[j] !== '\n' && (cls || text[j] !== '/'); j++) {
+    if (text[j] === '\\') j++;
+    else if (text[j] === '[') cls = true;
+    else if (text[j] === ']') cls = false;
+  }
+  return text[j] === '/' ? j + 1 : -1;
+}
+const prevOf = (text: string, i: number): string => {
+  let k = i - 1;
+  while (k >= 0 && (text[k] === ' ' || text[k] === '\t')) k--;
+  return k < 0 ? '' : (text[k] as string);
+};
+/** The index of the `}` that closes a template's `${` opened before `i`. */
+function codeEnd(text: string, i: number): number {
+  let depth = 1;
+  for (; i < text.length; i++) {
+    const e = literalEnd(text, i, prevOf(text, i));
+    if (e >= 0) i = e - 1;
+    else if (text[i] === '{') depth++;
+    else if (text[i] === '}' && --depth === 0) return i;
+  }
+  return i;
+}
+
+/** The text with string, template and regex literals and comments blanked (same length; quotes kept). */
 export function codeOnly(text: string): string {
   let out = '';
   for (let i = 0; i < text.length; i++) {
-    const c = text[i] as string;
-    if (c === '"' || c === "'" || c === '`') {
-      let j = i + 1;
-      for (; j < text.length && text[j] !== c; j++) if (text[j] === '\\') j++;
-      out += c + ' '.repeat(Math.max(0, Math.min(j, text.length) - i - 1)) + (j < text.length ? c : '');
-      i = j;
-    } else if (c === '/' && text[i + 1] === '/') {
-      const j = text.indexOf('\n', i);
-      const e = j < 0 ? text.length : j;
-      out += ' '.repeat(e - i);
-      i = e - 1;
-    } else if (c === '/' && text[i + 1] === '*') {
-      const j = text.indexOf('*/', i + 2);
-      const e = j < 0 ? text.length : j + 2;
-      out += ' '.repeat(e - i);
-      i = e - 1;
-    } else out += c;
+    const e = literalEnd(text, i, prevOf(out, out.length));
+    if (e < 0) {
+      out += text[i] as string;
+      continue;
+    }
+    const q = text[i] as string;
+    out += q === '/' ? ' '.repeat(e - i) : q + ' '.repeat(Math.max(0, e - i - 2)) + (e - i > 1 ? q : '');
+    i = e - 1;
   }
   return out;
 }

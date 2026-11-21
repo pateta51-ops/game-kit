@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { expectNotFired, expectNotOffered, inventory, runInventory, Scenario, testCalls, type InventoryInput } from './index.ts';
+import { asserts, expectNotFired, expectNotOffered, inventory, runInventory, Scenario, testCalls, type InventoryInput } from './index.ts';
 import { DICE_GAME } from './fake/dice.ts';
 
 // K415: test depth on the fake dice game. CL-twin scores on a pair (conditional), CL-plain always scores (not conditional).
@@ -102,6 +102,14 @@ describe('K415 depth inventory', () => {
       '# Card language: inventory and coverage\n\nGenerated; do not edit by hand. **cards**: cards that use the piece; **direct**: tests that cite it; **via cards**: test files that name a card using it.\n\n| Kind | Pieces | Used by cards | Direct | Via cards only | Uncited | Baseline |\n|---|---|---|---|---|---|---|\n| pattern | 1 | 0 | 1 | 0 | 0 | 0 |\n| clause | 3 | 1 | 3 | 0 | 0 | 0 |\n| **all** | 4 | 1 | 4 | 0 | 0 | 0 |\n\n## pattern\n\n| Piece | Cards | Examples | Direct | Via cards |\n|---|---|---|---|---|\n| `pair` | 0 |  | t.test.ts › CL-a pair |  |\n\n## clause\n\n| Piece | Cards | Examples | Direct | Via cards |\n|---|---|---|---|---|\n| `CL-a` | 1 | twin | t.test.ts › CL-a pair |  |\n| `CL-b` | 0 |  | t.test.ts › CL-b |  |\n| `CL-c` | 0 |  | t.test.ts › CL-c poor |  |\n',
     );
     expect(inventory(old).depth).toBe(false);
+  });
+  it('testCalls: a quote inside a regex literal opens no string; a division is no regex; a template ${} may hold quotes', () => {
+    const t = "it('x#1 full', () => { expect(() => f()).toThrow(/can't/) })\nit('x#2 full', () => { expect(a / b / c).toBe(1) })\nit('x#3 full', () => { g() })";
+    expect(testCalls(t).map((c) => [c.title, asserts(c)])).toEqual([['x#1 full', true], ['x#2 full', true], ['x#3 full', false]]);
+    const u = "it('y#1', () => { const s = `${a ? \"it's\" : '`'}`; expect(s).toBe(1) })\nit('y#2', () => { g() })";
+    expect(testCalls(u).map((c) => [c.title, asserts(c)])).toEqual([['y#1', true], ['y#2', false]]);
+    const clauses = [{ id: 'x#3', cards: [], conditional: false }];
+    expect(inventory({ pieces: [], clauses, tests: files(t) }).notCounted).toEqual(['tests/t0.test.ts › x#3 full: its body asserts nothing']);
   });
   it('testCalls reads titles, bodies and skips, ignoring parentheses in strings and comments', () => {
     const c = testCalls("it('a (b', () => { f(')') /* ) */ })\nit.todo('t')\ncardCase({ clause: 'CL-x', printed: 'p', ar: 'A', title: 'poor' }, () => {})");
