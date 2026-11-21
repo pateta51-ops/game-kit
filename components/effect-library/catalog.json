@@ -24,11 +24,11 @@
    "phoneSafe": true
   },
   "options": {
-   "to": "required",
-   "ease": "required",
-   "scale": "required",
-   "then": "required",
-   "rotate": "required"
+   "to": "none",
+   "ease": "none",
+   "scale": "none",
+   "then": "none",
+   "rotate": "none"
   },
   "since": "v0.17.0",
   "usedBy": [
@@ -151,11 +151,11 @@
    "phoneSafe": true
   },
   "options": {
-   "path": "required",
-   "launch": "required",
-   "hop": "required",
-   "back": "required",
-   "ghosts": "required"
+   "path": "none",
+   "launch": "none",
+   "hop": "none",
+   "back": "none",
+   "ghosts": "none"
   },
   "since": "v0.118.0",
   "usedBy": [],
@@ -220,8 +220,8 @@
    "phoneSafe": true
   },
   "options": {
-   "to": "required",
-   "scale": "required",
+   "to": "none",
+   "scale": "none",
    "shadow": true
   },
   "since": "v0.17.0",
@@ -280,11 +280,11 @@
    "phoneSafe": true
   },
   "options": {
-   "frames": "required",
-   "fromScale": "required",
-   "rise": "required",
-   "dip": "required",
-   "dipAt": "required"
+   "frames": "none",
+   "fromScale": "none",
+   "rise": "none",
+   "dip": "none",
+   "dipAt": "none"
   },
   "since": "v0.17.0",
   "usedBy": [
@@ -342,11 +342,11 @@
    "phoneSafe": true
   },
   "options": {
-   "axis": "required",
-   "holdMs": "required",
-   "faces": "required",
-   "label": "required",
-   "squash": "required"
+   "axis": "none",
+   "holdMs": "none",
+   "faces": "none",
+   "label": "none",
+   "squash": "none"
   },
   "since": "v0.17.0",
   "usedBy": [
@@ -407,11 +407,11 @@
    "phoneSafe": true
   },
   "options": {
-   "direction": "required",
+   "direction": "none",
    "perspective": 800,
    "overshoot": 0,
-   "glow": "required",
-   "pivot": "required"
+   "glow": "none",
+   "pivot": "none"
   },
   "since": "v0.122.0",
   "usedBy": [
@@ -470,9 +470,9 @@
    "phoneSafe": true
   },
   "options": {
-   "to": "required",
+   "to": "none",
    "pulse": false,
-   "ease": "required"
+   "ease": "none"
   },
   "since": "v0.17.0",
   "usedBy": [
@@ -532,8 +532,8 @@
    "phoneSafe": true
   },
   "options": {
-   "to": "required",
-   "ease": "required"
+   "to": "none",
+   "ease": "none"
   },
   "since": "v0.17.0",
   "usedBy": [
@@ -592,10 +592,10 @@
   },
   "options": {
    "turns": 1,
-   "direction": "required",
-   "ease": "required",
-   "pivot": "required",
-   "scaleFrom": "required"
+   "direction": "none",
+   "ease": "none",
+   "pivot": "none",
+   "scaleFrom": "none"
   },
   "since": "v0.123.0",
   "usedBy": [],
@@ -652,10 +652,10 @@
    "phoneSafe": true
   },
   "options": {
-   "period": "required",
+   "period": "none",
    "turns": 1,
-   "direction": "required",
-   "pivot": "required"
+   "direction": "none",
+   "pivot": "none"
   },
   "since": "v0.123.0",
   "usedBy": [],
@@ -711,10 +711,10 @@
   },
   "options": {
    "angle": 90,
-   "direction": "required",
-   "overshoot": "required",
-   "ease": "required",
-   "pivot": "required"
+   "direction": "none",
+   "overshoot": "none",
+   "ease": "none",
+   "pivot": "none"
   },
   "since": "v0.123.0",
   "usedBy": [
@@ -770,9 +770,9 @@
   },
   "options": {
    "angle": 90,
-   "direction": "required",
-   "overshoot": "required",
-   "ease": "required"
+   "direction": "none",
+   "overshoot": "none",
+   "ease": "none"
   },
   "since": "v0.123.0",
   "usedBy": [
@@ -1141,10 +1141,10 @@
    "phoneSafe": true
   },
   "options": {
-   "outward": "required",
-   "vortex": "required",
-   "startSize": "required",
-   "endSize": "required",
+   "outward": "none",
+   "vortex": "none",
+   "startSize": "none",
+   "endSize": "none",
    "lift": 60
   },
   "since": "v0.119.0",
@@ -1268,8 +1268,8 @@
    "phoneSafe": true
   },
   "options": {
-   "beforeLook": "required",
-   "afterLook": "required"
+   "beforeLook": "none",
+   "afterLook": "none"
   },
   "since": "v0.119.0",
   "usedBy": [
@@ -1328,7 +1328,7 @@
    "phoneSafe": true
   },
   "options": {
-   "counterColour": "required",
+   "counterColour": "none",
    "popOffsets": [
     0.45,
     0.75
@@ -1396,7 +1396,7 @@
    "lift": 34,
    "orbit": 0.2,
    "engine": "255,255,255",
-   "image": "required"
+   "image": "none"
   },
   "since": "v0.119.0",
   "usedBy": [
@@ -1453,9 +1453,9 @@
    "phoneSafe": true
   },
   "options": {
-   "scale": "required",
-   "hold": "required",
-   "ease": "required"
+   "scale": "none",
+   "hold": "none",
+   "ease": "none"
   },
   "since": "v0.17.0",
   "usedBy": [
@@ -1517,9 +1517,9 @@
    "phoneSafe": true
   },
   "options": {
-   "scale": "required",
-   "hold": "required",
-   "ease": "required"
+   "scale": "none",
+   "hold": "none",
+   "ease": "none"
   },
   "since": "v0.17.0",
   "usedBy": [
@@ -1579,8 +1579,8 @@
    "phoneSafe": true
   },
   "options": {
-   "to": "required",
-   "ease": "required"
+   "to": "none",
+   "ease": "none"
   },
   "since": "v0.17.0",
   "usedBy": [
@@ -1746,8 +1746,8 @@
    "phoneSafe": true
   },
   "options": {
-   "axis": "required",
-   "origin": "required",
+   "axis": "none",
+   "origin": "none",
    "reverse": false
   },
   "since": "v0.117.0",
@@ -1807,9 +1807,9 @@
    "phoneSafe": true
   },
   "options": {
-   "axis": "required",
-   "origin": "required",
-   "colour": "required",
+   "axis": "none",
+   "origin": "none",
+   "colour": "none",
    "lineMs": 0,
    "gutter": 0
   },
@@ -1872,9 +1872,9 @@
   "options": {
    "text": "",
    "axis": "x",
-   "unrollMs": "required",
-   "fadeMs": "required",
-   "textAt": "required"
+   "unrollMs": "none",
+   "fadeMs": "none",
+   "textAt": "none"
   },
   "since": "v0.204.0",
   "usedBy": [],
@@ -1929,9 +1929,9 @@
   },
   "options": {
    "text": "computed",
-   "colour": "required",
+   "colour": "none",
    "rise": true,
-   "typewriter": "required"
+   "typewriter": "none"
   },
   "since": "v0.17.0",
   "usedBy": [
@@ -1992,7 +1992,7 @@
    "phoneSafe": true
   },
   "options": {
-   "typewriter": "required",
+   "typewriter": "none",
    "textAlign": "center",
    "rise": true
   },
@@ -2055,10 +2055,10 @@
   },
   "options": {
    "from": 0,
-   "to": "required",
+   "to": "none",
    "prefix": "",
    "suffix": "",
-   "colour": "required"
+   "colour": "none"
   },
   "since": "v0.204.0",
   "usedBy": [],
@@ -2112,9 +2112,9 @@
    "phoneSafe": true
   },
   "options": {
-   "colour": "required",
-   "hold": "required",
-   "shadows": "required"
+   "colour": "none",
+   "hold": "none",
+   "shadows": "none"
   },
   "since": "v0.17.0",
   "usedBy": [
@@ -2175,8 +2175,8 @@
    "phoneSafe": true
   },
   "options": {
-   "colour": "required",
-   "shadows": "required",
+   "colour": "none",
+   "shadows": "none",
    "release": false
   },
   "since": "v0.173.0",
@@ -2239,8 +2239,8 @@
    "phoneSafe": true
   },
   "options": {
-   "colour": "required",
-   "shadows": "required"
+   "colour": "none",
+   "shadows": "none"
   },
   "since": "v0.204.0",
   "usedBy": [
@@ -2358,8 +2358,8 @@
    "phoneSafe": true
   },
   "options": {
-   "actors": "required",
-   "selector": "required",
+   "actors": "none",
+   "selector": "none",
    "amplitude": 6,
    "crossAmplitude": 1,
    "frames": 9
@@ -2422,11 +2422,11 @@
    "phoneSafe": true
   },
   "options": {
-   "width": "required",
-   "tipWidth": "required",
-   "colour": "required",
-   "fade": "required",
-   "ribbon": "required"
+   "width": "none",
+   "tipWidth": "none",
+   "colour": "none",
+   "fade": "none",
+   "ribbon": "none"
   },
   "since": "v0.118.0",
   "usedBy": [
@@ -2486,11 +2486,11 @@
    "phoneSafe": true
   },
   "options": {
-   "count": "required",
-   "inward": "required",
-   "palette": "required",
-   "alpha": "required",
-   "pulse": "required"
+   "count": "none",
+   "inward": "none",
+   "palette": "none",
+   "alpha": "none",
+   "pulse": "none"
   },
   "since": "v0.119.0",
   "usedBy": [
@@ -2611,14 +2611,14 @@
    "phoneSafe": true
   },
   "options": {
-   "control": "required",
+   "control": "none",
    "colour": "255,255,255",
    "moteColour": "255,255,255",
    "size": [
     40,
     34
    ],
-   "image": "required"
+   "image": "none"
   },
   "since": "v0.119.0",
   "usedBy": [
@@ -2742,7 +2742,7 @@
    "travelMs": 200,
    "colour": "255 255 255",
    "width": "computed",
-   "miss": "required",
+   "miss": "none",
    "delay": 0
   },
   "since": "v0.122.0",
@@ -2802,7 +2802,7 @@
    "phoneSafe": true
   },
   "options": {
-   "bolt": "required",
+   "bolt": "none",
    "tail": 0.25,
    "colour": "255 255 255",
    "unit": 1,
@@ -2866,7 +2866,7 @@
    "phoneSafe": true
   },
   "options": {
-   "bolt": "required",
+   "bolt": "none",
    "lift": 70,
    "launchMs": 220,
    "fadeMs": 200,
@@ -2994,10 +2994,10 @@
    "phoneSafe": true
   },
   "options": {
-   "distance": "required",
-   "spin": "required",
-   "fade": "required",
-   "smoke": "required"
+   "distance": "none",
+   "spin": "none",
+   "fade": "none",
+   "smoke": "none"
   },
   "since": "v0.122.0",
   "usedBy": [
@@ -3056,7 +3056,7 @@
   "options": {
    "count": "computed",
    "impact": "computed",
-   "direction": "required",
+   "direction": "none",
    "hotColour": "255 255 255",
    "ms": "computed"
   },
@@ -3118,7 +3118,7 @@
    "colour": "255 255 255",
    "rippleSize": 0.3,
    "ms": 300,
-   "jolt": "required"
+   "jolt": "none"
   },
   "since": "v0.122.0",
   "usedBy": [],
@@ -3236,11 +3236,11 @@
    "phoneSafe": true
   },
   "options": {
-   "shockwaves": "required",
+   "shockwaves": "none",
    "colour": "255 255 255",
    "outline": "255 255 255",
    "unit": 1,
-   "clip": "required"
+   "clip": "none"
   },
   "since": "v0.122.0",
   "usedBy": [
@@ -3300,8 +3300,8 @@
    "phoneSafe": true
   },
   "options": {
-   "radius": "required",
-   "hitAngle": "required",
+   "radius": "none",
+   "hitAngle": "none",
    "hit": 0,
    "colour": "220,220,220",
    "attack": false
@@ -3360,8 +3360,8 @@
    "phoneSafe": true
   },
   "options": {
-   "radius": "required",
-   "hitAngle": "required",
+   "radius": "none",
+   "hitAngle": "none",
    "scatter": "computed",
    "breakColour": "240,240,240"
   },
@@ -3420,10 +3420,10 @@
    "phoneSafe": true
   },
   "options": {
-   "recharge": "required",
-   "radius": "required",
+   "recharge": "none",
+   "radius": "none",
    "colour": "220,220,220",
-   "hex": "required"
+   "hex": "none"
   },
   "since": "v0.122.0",
   "usedBy": [],
@@ -3479,10 +3479,10 @@
   },
   "options": {
    "text": "",
-   "image": "required",
+   "image": "none",
    "tilt": 0,
-   "ring": "required",
-   "press": "required"
+   "ring": "none",
+   "press": "none"
   },
   "since": "v0.124.0",
   "usedBy": [
@@ -3544,7 +3544,7 @@
   },
   "options": {
    "text": "",
-   "cracked": "required",
+   "cracked": "none",
    "tilt": 0
   },
   "since": "v0.204.0",
@@ -3667,9 +3667,9 @@
   "options": {
    "colour": "rgb(255 255 255 / .25)",
    "times": 2,
-   "period": "required",
-   "loop": "required",
-   "grey": "required"
+   "period": "none",
+   "loop": "none",
+   "grey": "none"
   },
   "since": "v0.124.0",
   "usedBy": [
@@ -3729,11 +3729,11 @@
    "phoneSafe": true
   },
   "options": {
-   "buzz": "required",
-   "window": "required",
-   "jitter": "required",
+   "buzz": "none",
+   "window": "none",
+   "jitter": "none",
    "brightness": 1,
-   "threshold": "required"
+   "threshold": "none"
   },
   "since": "v0.124.0",
   "usedBy": [
@@ -3794,8 +3794,8 @@
    "from": 0,
    "to": 1,
    "colour": "currentColor",
-   "marker": "required",
-   "pips": "required"
+   "marker": "none",
+   "pips": "none"
   },
   "since": "v0.124.0",
   "usedBy": [
@@ -3855,7 +3855,7 @@
    "phoneSafe": true
   },
   "options": {
-   "pin": "required",
+   "pin": "none",
    "from": 0,
    "to": 1
   },
@@ -3915,8 +3915,8 @@
    "phoneSafe": true
   },
   "options": {
-   "banner": "required",
-   "face": "required",
+   "banner": "none",
+   "face": "none",
    "filter": "grayscale(1)",
    "liftMs": 500,
    "drainMs": 400
@@ -3974,11 +3974,11 @@
    "phoneSafe": true
   },
   "options": {
-   "frames": "required",
-   "period": "required",
-   "easing": "required",
-   "pseudo": "required",
-   "once": "required"
+   "frames": "none",
+   "period": "none",
+   "easing": "none",
+   "pseudo": "none",
+   "once": "none"
   },
   "since": "v0.17.0",
   "usedBy": [
@@ -4037,9 +4037,9 @@
    "phoneSafe": true
   },
   "options": {
-   "kind": "required",
-   "rise": "required",
-   "period": "required"
+   "kind": "none",
+   "rise": "none",
+   "period": "none"
   },
   "since": "v0.125.0",
   "usedBy": [],
@@ -4096,9 +4096,9 @@
    "phoneSafe": true
   },
   "options": {
-   "kind": "required",
-   "period": "required",
-   "frames": "required"
+   "kind": "none",
+   "period": "none",
+   "frames": "none"
   },
   "since": "v0.125.0",
   "usedBy": [],
@@ -4155,9 +4155,9 @@
    "phoneSafe": true
   },
   "options": {
-   "kind": "required",
-   "orbit": "required",
-   "period": "required"
+   "kind": "none",
+   "orbit": "none",
+   "period": "none"
   },
   "since": "v0.125.0",
   "usedBy": [],
@@ -4214,9 +4214,9 @@
    "phoneSafe": true
   },
   "options": {
-   "kind": "required",
-   "drift": "required",
-   "period": "required"
+   "kind": "none",
+   "drift": "none",
+   "period": "none"
   },
   "since": "v0.135.0",
   "usedBy": [],
@@ -4701,10 +4701,10 @@
    "phoneSafe": false
   },
   "options": {
-   "image": "required",
+   "image": "none",
    "foldMs": 600,
    "throwMs": 420,
-   "creases": "required",
+   "creases": "none",
    "fadeOut": false
   },
   "since": "v0.129.0",
@@ -4762,7 +4762,7 @@
    "phoneSafe": true
   },
   "options": {
-   "colours": "required",
+   "colours": "none",
    "idleMs": [
     3500,
     7000
@@ -4881,9 +4881,9 @@
    "phoneSafe": true
   },
   "options": {
-   "scale": "required",
-   "enter": "required",
-   "exit": "required"
+   "scale": "none",
+   "enter": "none",
+   "exit": "none"
   },
   "since": "v0.129.0",
   "usedBy": [],
@@ -5051,8 +5051,8 @@
    "phoneSafe": true
   },
   "options": {
-   "pieceCount": "required",
-   "cohortCount": "required",
+   "pieceCount": "none",
+   "cohortCount": "none",
    "shards": "computed",
    "survivors": "computed"
   },
@@ -5164,8 +5164,8 @@
    "phoneSafe": true
   },
   "options": {
-   "name": "required",
-   "className": "required"
+   "name": "none",
+   "className": "none"
   },
   "since": "v0.43.0",
   "usedBy": [],
@@ -5221,9 +5221,9 @@
   "options": {
    "frames": "computed",
    "period": 1500,
-   "pseudo": "required",
-   "delay": "required",
-   "once": "required"
+   "pseudo": "none",
+   "delay": "none",
+   "once": "none"
   },
   "since": "v0.125.0",
   "usedBy": [],
@@ -5276,10 +5276,10 @@
    "phoneSafe": true
   },
   "options": {
-   "kind": "required",
+   "kind": "none",
    "rise": 8,
-   "period": "required",
-   "orbit": "required"
+   "period": "none",
+   "orbit": "none"
   },
   "since": "v0.125.0",
   "usedBy": [],
@@ -5332,7 +5332,7 @@
    "phoneSafe": true
   },
   "options": {
-   "value": "required",
+   "value": "none",
    "from": 0,
    "ms": 700
   },
@@ -5389,7 +5389,7 @@
    "phoneSafe": true
   },
   "options": {
-   "frames": "required"
+   "frames": "none"
   },
   "since": "v0.43.0",
   "usedBy": [],
@@ -5445,7 +5445,7 @@
    "max": 12,
    "decayMs": 600,
    "seed": 1,
-   "sine": "required"
+   "sine": "none"
   },
   "since": "v0.39.0",
   "usedBy": [],
