@@ -99,7 +99,7 @@ for (const { group, tiles: list } of DATA) {
     fit.append(world);
     stage.append(fit, el('span', 'hint', 'click to play'));
     const body = el('div', 'body'), meta = el('div', 'meta');
-    meta.append(el('code', '', t.id));
+    meta.append(el('code', '', t.was?.length ? `${t.id} (was ${t.was.join(', ')})` : t.id));
     if (t.option) meta.append(el('span', 'opt', JSON.stringify(t.option).replace(/^\{|\}$/g, '')));
     meta.append(el('span', 'ms', t.ms + ' ms'));
     body.append(el('h3', '', t.title), meta, el('p', 'looks', t.looks));

@@ -264,8 +264,22 @@ if (cmd === 'pull') {
       listLine: n + ': ' + (use ?? '').replace('- **Use it when:** ', '(use when: ') + (use ? ')' : '') })
   }
   const ef = [d + '/components/effect-library/catalog.json', d + '/effect-library/catalog.json'].find((p) => fs.existsSync(p))
+  if (cmd === 'effects' && a[0] === '--used') {
+    // K506: counts each effect id and old id in the specs (json) and code (ts, tsx, js) of the given folders
+    const dirs = a.slice(1)
+    if (!ef || !dirs.length || dirs.some((g) => !fs.existsSync(g))) { console.error(ef ? 'usage: kit.mjs effects --used <folder>...' : 'no effect catalog beside kit.mjs'); process.exit(2) }
+    const files = (g) => fs.statSync(g).isDirectory() ? fs.readdirSync(g).filter((n) => !n.startsWith('.') && !['node_modules', 'kit', 'dist', 'build', 'test-results'].includes(n)).flatMap((n) => files(g + '/' + n)) : /\.(json|tsx?|js)$/.test(g) ? [g] : []
+    const text = dirs.flatMap(files).map((g) => fs.readFileSync(g, 'utf8')).join('\n')
+    const count = (id) => (text.match(new RegExp(`(['"\`])${id}\\1` + (/[A-Z]/.test(id) ? `|\\b${id}\\(` : ''), 'g')) ?? []).length
+    const seen = new Set()
+    for (const e of JSON.parse(fs.readFileSync(ef, 'utf8'))) {
+      if (!seen.has(e.id)) { seen.add(e.id); console.log(e.id + ' ' + count(e.id)) }
+      for (const o of e.was ?? []) if (!seen.has(o)) { seen.add(o); console.log(o + ' ' + count(o) + ' (old id of ' + e.id + ')') }
+    }
+    process.exit(0)
+  }
   if (ef && cmd !== 'list') for (const e of JSON.parse(fs.readFileSync(ef, 'utf8'))) {
-    ents.push({ id: toks(e.id), title: toks(e.id + ' ' + (e.was ?? []).join(' ') + ' ' + e.title + ' ' + (e.tags ?? []).join(' ')), use: toks((e.use ?? '') + ' ' + (e.looks ?? '') + ' ' + (e.group ?? '')), ex: [], exl: [], eff: true,
+    ents.push({ id: toks(e.id + ' ' + (e.was ?? []).join(' ')), title: toks(e.id + ' ' + (e.was ?? []).join(' ') + ' ' + e.title + ' ' + (e.tags ?? []).join(' ')), use: toks((e.use ?? '') + ' ' + (e.looks ?? '') + ' ' + (e.group ?? '')), ex: [], exl: [], eff: true,
       line: () => e.id + (e.was?.length ? ' (was ' + e.was.join(', ') + ')' : '') + ': ' + e.title + '. Use: ' + e.use + ' Words: ' + (e.tags ?? []).join(', ') })
   }
   if (cmd === 'list') { for (const e of ents) console.log(e.listLine); process.exit(0) }

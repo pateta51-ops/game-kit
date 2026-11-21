@@ -13,16 +13,16 @@ const run = (...a: string[]) => spawnSync('node', [KIT, ...a], { cwd: ROOT, enco
 const first = (q: string) => run('search', ...q.split(' ')).stdout.split('\n')[0] ?? '';
 
 const top: [string, string][] = [
-  ['burn', 'dissolve:'],
-  ['burning', 'dissolve:'],
+  ['burn', 'burn-away (was dissolve):'],
+  ['burning', 'burn-away (was dissolve):'],
   ['question box', 'Question box (`prompt-host`)'],
   ['count up', 'countUp:'],
-  ['light sweeps across the card', 'sheen:'],
-  ['teleport', 'collapse-jump:'],
-  ['sparkle', 'motes:'],
+  ['light sweeps across the card', 'light-sweep (was sheen):'],
+  ['teleport', 'light-teleport (was warp-transfer):'],
+  ['sparkle', 'particles-rise (was motes):'],
   ['explosion', 'ring-pulse:'],
-  ['motes', 'motes:'],
-  ['warp-transfer', 'warp-transfer:'],
+  ['motes', 'particles-rise (was motes):'],
+  ['warp-transfer', 'light-teleport (was warp-transfer):'],
   ['flip card', 'flip:'],
   ['screen shake', 'shakeAt:'],
   ['glow', 'glow:'],
@@ -39,14 +39,14 @@ const top: [string, string][] = [
   ['spin', 'spin:'],
   ['glitch', 'createGlitch:'],
   ['camera', 'cameraPull:'],
-  ['smoke', 'dissolve:'],
+  ['smoke', 'burn-away (was dissolve):'],
   ['trail', 'trail:'],
   ['laser beam', 'projectile:'],
-  ['rays', 'radial-streaks:'],
+  ['rays', 'streak-burst (was radial-streaks):'],
   ['speed', 'Game speed limits (`perf`)'],
   ['speeds', 'Game speed limits (`perf`)'],
   ['shakes', 'shake:'],
-  ['sparkles', 'motes:'],
+  ['sparkles', 'particles-rise (was motes):'],
   ['hand of cards', 'Fan of cards in hand (`card-hand`)'],
   ['card pile', 'Draw pile, discard pile and fan view (`card-pile`)'],
   ['settings', 'Settings store and screen (`settings`)'],
@@ -67,7 +67,7 @@ describe('K500 search', () => {
   });
 
   it('an effect hit prints the effect line with its words, not the component sentence', () => {
-    expect(first('burn')).toMatch(/^dissolve: Heats up.*\. Use: .* Words: burn, /);
+    expect(first('burn')).toMatch(/^burn-away (was dissolve): Heats up.*\. Use: .* Words: burn, /);
     expect(run('search', 'burn').stdout).not.toContain('effect-library');
   });
 
@@ -83,7 +83,7 @@ describe('K500 search', () => {
     const o = run('effects', 'burn');
     expect(o.status).toBe(0);
     expect(o.stdout.split('\n').filter(Boolean).every((l) => l.includes(' Use: ') && l.includes(' Words: '))).toBe(true);
-    expect(o.stdout).toContain('dissolve:');
+    expect(o.stdout).toContain('burn-away (was dissolve):');
     expect(o.stdout).not.toContain('`');
     expect(run('effects').stdout.split('\n').filter(Boolean).length).toBeGreaterThan(80);
   });
@@ -97,7 +97,7 @@ describe('K500 search', () => {
       fs.copyFileSync(path.join(ROOT, 'components/effect-library/catalog.json'), path.join(g, 'kit/effect-library/catalog.json'));
       fs.writeFileSync(path.join(g, 'kit/kit.lock.json'), '{}');
       const kit = (...a: string[]) => spawnSync('node', [path.join(g, 'kit/kit.mjs'), ...a], { cwd: g, encoding: 'utf8', env });
-      expect(kit('search', 'burn').stdout).toMatch(/^dissolve:/);
+      expect(kit('search', 'burn').stdout).toMatch(/^burn-away (was dissolve):/);
       const m = kit('search', 'burn', 'zebra');
       expect(m.status).toBe(0);
       expect(m.stdout).toContain('not in the kit by that name');

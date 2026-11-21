@@ -10,13 +10,13 @@ const catalog = JSON.parse(fs.readFileSync(path.join(lib, 'catalog.json'), 'utf8
 const readme = norm(fs.readFileSync(path.join(lib, 'README.md'), 'utf8'));
 const from = readme.indexOf('## Effects by group');
 const groups = [...readme.slice(from, readme.indexOf('\n## ', from + 3)).matchAll(/^\*\*([a-z-]+)\*\*$/gm)].map((m) => m[1]);
-const ENERGY = ['column-beam', 'rotating-beam', 'warp-transfer', 'projectile', 'shield-bubble', 'reticle', 'drawPlasmaOrb', 'drawDriftCloud'];
+const ENERGY = ['light-pillar', 'radar-sweep', 'light-teleport', 'projectile', 'shield-bubble', 'target-brackets', 'drawPlasmaOrb', 'drawDriftCloud'];
 const SCREEN = ['cameraPull', 'cameraPush', 'letterboxBanner', 'pileLift'];
 const tuner = (e) => ENERGY.includes(e.id) ? 'energy.html' : SCREEN.includes(e.id) || (e.id === 'text' && e.option?.typewriter) ? 'screen.html' : e.id === 'flight' ? 'token-motion.html' : 'effect-library.html';
 const lost = catalog.filter((e) => !groups.includes(e.group));
 if (lost.length) throw new Error(`gallery: groups not in the README list: ${lost.map((e) => e.group).join(', ')}`);
 const data = groups.map((g) => ({ group: g, tiles: catalog.filter((e) => e.group === g).map((e) => ({
-  key: e.id + (e.option ? ' ' + JSON.stringify(e.option) : ''), id: e.id, option: e.option ?? null, title: e.title, looks: e.looks, ms: e.ms, demo: e.demo, tuner: tuner(e),
+  key: e.id + (e.option ? ' ' + JSON.stringify(e.option) : ''), id: e.id, option: e.option ?? null, was: e.was, title: e.title, looks: e.looks, ms: e.ms, demo: e.demo, tuner: tuner(e),
 })) }));
 const out = path.join(import.meta.dirname, 'effects.html');
 if (process.argv.includes('--play')) {

@@ -7,86 +7,86 @@ Sixteen verbs for the director's spec format as DOM effects for the motion frame
 
 **move-and-fly**
 
-- `move`: Slides a piece straight to a new place
-- `arc-move`: Flies a piece in an arc
-- `multi-stop-path`: Flies a piece through several stops and back
-- `lift`: Raises a piece up off the table
+- `move`: Slides a piece straight to a place
+- `arc-move`: Flies a piece over in an arc
+- `round-trip`: Flies to each stop, then back home
+- `lift`: Raises one piece and holds it up
 - `settle`: Sets a raised piece back down
 - `flip`: Turns a card over by squashing it flat
 - `flip` (direction: 1): Turns a card over in 3D
-- `scale`: Grows or shrinks a piece to a size
-- `spin`: Spins a piece round a number of turns
+- `scale`: Grows or shrinks a piece and holds
+- `spin`: Spins a piece round a few turns
 - `tap`: Turns a card sideways to show it used
 - `untap`: Turns a sideways card upright again
-- `collapse-jump`: Shrinks to a point and reappears elsewhere
-- `warp-transfer` (mode: "zip"): Zips a token across leaving afterimages
-- `warp-transfer` (mode: "rise"): Raises a token then flies it straight
-- `warp-transfer` (mode: "portal"): Sucks a token through a spinning vortex
-- `warp-transfer` (spiral: true): Spirals a ship out with an engine trail
-- `pileLift`: Lifts a pile while a card flies off
-- `flight`: Flies a card between screens smoothly
+- `flash-jump`: Vanishes in a flash, bursts out at target
+- `light-teleport` (mode: "zip"): Zips a token across with afterimages
+- `light-teleport` (mode: "rise"): Lifts a token, then flies it straight
+- `light-teleport` (mode: "portal"): Sucks a token through a spinning vortex
+- `light-teleport` (spiral: true): Spirals a ship off the board, trail behind
+- `pileLift`: Raises the deck while a card leaves it
+- `flight`: Moves a dialog card to its board spot
 
 **appear-and-vanish**
 
-- `warp-transfer` (mode: "pop"): Pops an icon into view in place
+- `light-teleport` (mode: "pop"): Pops an icon into view in place
 - `fade-in`: Fades a piece into view
-- `fade-in` (scale: 2): Fades in large and shrinks into place
+- `fade-in` (scale: 2): Drops in large and shrinks into place
 - `fade-out`: Fades a piece out of view
 - `show`: Shows a piece at once
 - `hide`: Hides a piece at once
 - `unroll`: Unrolls a panel open from one edge
-- `unroll` (reverse: true): Collapses a panel to a glowing line
+- `unroll` (reverse: true): Shuts a panel down to a glowing line
 
 **light**
 
-- `glow`: Makes a piece glow once
+- `glow`: Glows once, then fades back
 - `glow` (latch: true): Lights a piece and keeps it lit
 - `glow` (end: "dark"): Dims a lit piece to dark
-- `rotating-beam`: Sweeps a turning wedge of light round
+- `radar-sweep`: Sweeps a turning wedge of light round
 - `shield-bubble` (recharge: {}): Builds a hex shield up cell by cell
-- `flicker`: Flickers a coloured light over a piece
+- `flicker`: Flickers a colour over a piece
 - `flicker` (buzz: {}): Buzzes a piece like a bad signal
-- `sheen`: Sweeps a band of light across a piece
+- `light-sweep`: Sweeps a band of light across a piece
 
 **particles**
 
-- `radial-streaks`: Bursts streaks of light from a point
-- `motes`: Floats small lights up from a piece
-- `debris`: Throws small pieces out that fall
+- `streak-burst`: Bursts streaks of light from a point
+- `particles-rise`: Floats small lights up from a piece
+- `debris`: Throws small bits out that fall
 - `spark-burst`: Bursts sparks out from a piece
 - `drawDriftCloud`: Drifts broken card shards across the screen
 
 **beams**
 
-- `warp-transfer`: Carries a token between two columns of light
-- `warp-transfer` (mode: "crossing"): Sends a line of light dots between places
-- `trail`: Draws a fading ribbon behind a flight
-- `column-beam`: Raises a column of light over a piece
-- `column-beam` (curve: true): Curves a beam of light to a target
+- `light-teleport`: Beams a token up here, down there
+- `light-teleport` (mode: "crossing"): Sends big glowing dots across to a piece
+- `trail`: Leaves a thin line behind a flying piece
+- `light-pillar`: Raises a pillar of light over a piece
+- `light-pillar` (curve: true): Holds a glowing arc between two pieces
 - `projectile`: Fires a steady beam at another piece
 - `projectile` (bolt: "streak"): Shoots a fast bolt with a tail
-- `projectile` (bolt: "ribbon"): Shoots a curved shot with a trail
+- `projectile` (bolt: "ribbon"): Lobs a shot along a fading arc
 - `dash-line`: Draws a marching dashed line between pieces
 
 **hits-and-destruction**
 
 - `shake`: Shakes a piece side to side
 - `shake-group`: Shakes several pieces together
-- `dissolve`: Heats up, breaks apart, embers rise
-- `dissolve` (lift: true): Burns away into rising smoke
-- `shatter`: Shatters a piece into flying shards
-- `shimmer`: Ripples a shimmer where a hit lands
-- `ring-pulse` (shockwaves: [{}]): Blasts shockwave rings out from an impact
+- `burn-away`: Heats up, breaks apart, embers rise
+- `burn-away` (lift: true): Card tilts, lifts and burns to smoke
+- `shatter`: Breaks the piece itself into flying shards
+- `shimmer`: Flashes an oval glint over a hit piece
+- `ring-pulse` (shockwaves: [{}]): Blasts wide rings far beyond the piece
 - `shield-bubble`: Flashes a hex shield as a hit lands
-- `shield-bubble` (breaks: true): Breaks a hex shield into pieces
+- `shield-bubble` (breaks: true): Shield cracks away, the piece stays whole
 - `fizzle`: Fizzles a piece out with grey static
 - `slash`: Slashes strokes across a piece
 - `crumple`: Crumples a card into a ball, throws it
 
 **text-and-numbers**
 
-- `warp-transfer` (mode: "bump"): Bumps a counter as it changes
-- `banner`: Unrolls a banner, shows text, fades away
+- `light-teleport` (mode: "bump"): Bumps a counter as it changes
+- `banner`: Unrolls a banner with text, then fades
 - `text`: Fades in text rising into place
 - `text` (typewriter: true): Types out text word by word
 - `count`: Counts a number up to its new value
@@ -96,14 +96,14 @@ Sixteen verbs for the director's spec format as DOM effects for the motion frame
 **signals**
 
 - `scale` (pulse: true): Swells a piece once and back
-- `warp-transfer` (mode: "grey"): Greys out a piece in place
+- `light-teleport` (mode: "grey"): Flashes a piece, then dims it in place
 - `ring-pulse`: Sends a ring outward from a piece
 - `stamp`: Stamps a label onto a piece
 - `stamp` (cracked: true): Stamps a cracked label onto a piece
 - `bar-fill`: Fills a bar from one level to another
 - `bar-fill` (pin: {}): Moves a numbered pin along a track
 - `refresh`: Clears a used card back to ready
-- `reticle`: Closes target brackets in on a piece
+- `target-brackets`: Closes target brackets in on a piece
 
 **loops**
 
@@ -115,7 +115,7 @@ Sixteen verbs for the director's spec format as DOM effects for the motion frame
 - `idle` (kind: "drift"): Drifts a piece slowly away and back
 - `createGlitch`: Glitches a logo with split colour bursts
 - `drawPlasmaOrb`: Draws a crackling orb of energy
-- `startPulse`: Pulses a live page element until stopped
+- `startPulse`: Pulses a live element until stopped
 - `startIdle`: Keeps a live element bobbing or orbiting
 
 **camera**

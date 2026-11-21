@@ -43,14 +43,22 @@ export interface VerbRegistry<C = undefined> {
   has(name: string): boolean;
   get(name: string): Verb<C> | undefined;
   names(): string[];
+  /** K506: `old` plays `name` until a verb is registered under `old` itself; drops what `old` held (as registering over it did); not in `names()` */
+  alias?(old: string, name: string): void;
 }
 export function createVerbs<C = undefined>(): VerbRegistry<C> {
   const m = new Map<string, Verb<C>>();
+  const a = new Map<string, string>();
+  const to = (n: string): string => (m.has(n) ? n : a.get(n) ?? n);
   return {
     register: (name, verb) => void m.set(name, verb),
-    has: (name) => m.has(name),
-    get: (name) => m.get(name),
+    has: (name) => m.has(to(name)),
+    get: (name) => m.get(to(name)),
     names: () => [...m.keys()],
+    alias: (old, name) => {
+      m.delete(old);
+      a.set(old, name);
+    },
   };
 }
 

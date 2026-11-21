@@ -12,7 +12,7 @@ const ZONES: Record<string, readonly [number, number, number, number]> = { a: [8
 export const demoStage = (z: string): readonly [number, number, number, number] | undefined => ZONES[z];
 type Val = number | string | boolean | number[] | null;
 export interface Entry {
-  id: string; option?: Record<string, unknown>; was: string[]; title: string; looks: string; use: string; tags: string[]; group: string; ends: string;
+  id: string; option?: Record<string, unknown>; was: string[]; title: string; looks: string; notThis: { id: string; diff: string }[]; pairs: string[]; impactMs: number | null; use: string; tags: string[]; group: string; ends: string;
   options: Record<string, Val>; demo: { steps: { do: string; dur: number; to?: unknown }[] } & Record<string, unknown>;
   needs?: string; ms?: number; fits?: string; draws?: { by: string[]; phoneSafe: boolean }; since?: string; usedBy?: string[];
 }
@@ -225,7 +225,7 @@ function texts(dir: string, out: string[] = []): string[] {
 export function usedBy(entries: readonly Entry[], root: string): Map<Entry, string[]> {
   const games = readdirSync(root).filter((g) => existsSync(join(root, g, 'kit', 'effect-library')) && statSync(join(root, g, '.git'), { throwIfNoEntry: false })?.isDirectory());
   const code = new Map(games.map((g) => [g, texts(join(root, g)).join('\n')]));
-  return new Map(entries.map((e) => [e, games.filter((g) => new RegExp(e.id.includes('-') || !/[A-Z]/.test(e.id) ? String.raw`\bdo['"]?\s*:\s*['"]${e.id}['"]` : String.raw`\b${e.id}\(`).test(code.get(g)!)).sort()]));
+  return new Map(entries.map((e) => [e, games.filter((g) => [e.id, ...e.was].some((id) => new RegExp(id.includes('-') || !/[A-Z]/.test(id) ? String.raw`\bdo['"]?\s*:\s*['"]${id}['"]` : String.raw`\b${id}\(`).test(code.get(g)!))).sort()]));
 }
 
 /** The README's effect list: one line per entry, by group. */
@@ -247,7 +247,7 @@ export function withSection(readme: string, entries: readonly Entry[]): string {
   return `${readme.slice(0, at + 1)}${readmeSection(entries)}\n${readme.slice(at)}`;
 }
 
-const ORDER = ['id', 'option', 'was', 'title', 'looks', 'use', 'tags', 'group', 'ends', 'needs', 'ms', 'fits', 'draws', 'options', 'since', 'usedBy', 'demo'];
+const ORDER = ['id', 'option', 'was', 'title', 'looks', 'notThis', 'pairs', 'use', 'tags', 'group', 'ends', 'needs', 'ms', 'impactMs', 'fits', 'draws', 'options', 'since', 'usedBy', 'demo'];
 if (process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1]) {
   const a = process.argv.slice(2);
   const path = join(DIR, 'catalog.json');
