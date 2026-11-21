@@ -25,3 +25,4 @@ Tool heavy-queue: local 6005
 | LotR LCG | 6110 | 6111 | 6112 | 6113 | 4183 | https://<host>:8452 |
 | Astra Imperium | 6120 | 6121 | 6122 | 6123 | 4171 | https://<host>:8441 |
 | Dieson Crusoe | 6130 | 6131 | 6132 | 6133 | 4172 | https://<host>:8442 |
+| Dice Commandos | 6140 | 6141 | 6142 | 6143 | 4184 | https://<host>:8454 |
