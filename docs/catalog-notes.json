@@ -656,7 +656,12 @@
       "replay",
       "save",
       "prompts",
-      "state"
+      "state",
+      "modifier",
+      "stat",
+      "cost",
+      "reduction",
+      "breakdown"
     ],
     "visible": false,
     "release": 1,

@@ -219,6 +219,38 @@
           "public/common/framework.js (action, button: legal actions as one verb-to-ids table; K119 design only, written new)",
           "docs/overview/module.md, public/common/framework.js (exports.query: derived data on demand; K124 design only, written new)"
         ]
+      },
+      {
+        "game": "radiance",
+        "commit": "f400e41",
+        "paths": [
+          "radiance src/engine/stats.ts (K526: set, multiply, add and floor order; parts)",
+          "radiance src/engine/stat.ts (K526: parts as changes that sum to the value)"
+        ]
+      },
+      {
+        "game": "imp",
+        "commit": "d696640",
+        "paths": [
+          "imp src/engine/select/costs.ts (K526: increases first, reductions with their own minimum)",
+          "imp src/engine/select/effectiveCost.ts (K526: direction, sources that changed the value)"
+        ]
+      },
+      {
+        "game": "warps",
+        "commit": "6790200",
+        "paths": [
+          "warps src/engine/modifiers/collect.ts (K526: gathering)",
+          "warps src/engine/combat/counting.ts (K526: override, summed deltas, one clamp to the highest floor)",
+          "warps src/engine/economy/buy.ts (K526: cost floor, lowest setter)"
+        ]
+      },
+      {
+        "game": "astra-imperium",
+        "commit": "6d037a3",
+        "paths": [
+          "astra-imperium src/engine/modules.ts (K526: per-unit reduction, cost floor)"
+        ]
       }
     ]
   },
