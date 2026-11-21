@@ -295,7 +295,7 @@ if (cmd === 'pull') {
   const pool = cmd === 'effects' ? ents.filter((e) => e.eff) : ents.filter((e) => !e.cand || cf)
   if (cmd === 'effects' && !words.length) { for (const e of pool) console.log(e.line([])); process.exit(0) }
   const scored = pool.map((e, i) => ({ e, i, all: words.every((w) => w3(e, w)), s: words.reduce((t, w) => t + w3(e, w) + (e.id.includes(w) ? 1 : 0), 0) }))
-  const hits = scored.filter((x) => x.all).sort((x, y) => y.s - x.s || !!y.e.cand - !!x.e.cand || y.e.eff - x.e.eff || x.i - y.i)
+  const hits = scored.filter((x) => x.all).sort((x, y) => y.s - x.s || !!x.e.cand - !!y.e.cand || y.e.eff - x.e.eff || x.i - y.i)
   for (const { e } of hits) console.log(e.line(e.exl.filter((x) => words.some((w) => !hasTok(e.title, w) && !hasTok(e.use, w) && hasTok(toks(x).concat(toks(x.toLowerCase())), w)))))
   if (hits.length && hits.every((x) => x.e.cand)) console.log('not built yet')
   if (!hits.length) {
