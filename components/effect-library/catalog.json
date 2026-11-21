@@ -4806,7 +4806,9 @@
    "meter",
    "progress",
    "track",
-   "gauge"
+   "gauge",
+   "health",
+   "hp"
   ],
   "group": "signals",
   "ends": "changed",
