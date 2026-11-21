@@ -63,6 +63,7 @@ graph LR
   dev_autoplay["dev-autoplay"] --> game_store["game-store"]
   dev_autoplay["dev-autoplay"] --> sim_pool["sim-pool"]
   dice_odds["dice-odds"]
+  dice_patterns["dice-patterns"]
   dice_tray["dice-tray"] --> state_machines["state-machines"]
   drag_drop["drag-drop"] --> prompt_host["prompt-host"]
   drag_drop["drag-drop"] --> motion_frame["motion-frame"]
@@ -183,6 +184,7 @@ graph LR
 - `debug-console`
 - `dev-autoplay`
 - `dice-odds`
+- `dice-patterns`
 - `dice-tray`
 - `e2e-helpers`
 - `ghost-card`
