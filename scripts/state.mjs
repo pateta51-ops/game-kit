@@ -4,7 +4,7 @@ import fs from 'node:fs'
 import path from 'node:path'
 import { spawnSync } from 'node:child_process'
 import { fileURLToPath } from 'node:url'
-import { loadRows } from './plan.mjs'
+import { loadRows, isCandidate, wantedBy } from './plan.mjs'
 
 const args = process.argv.slice(2)
 const top = args.find((a) => !a.startsWith('--')) ?? path.dirname(path.dirname(fileURLToPath(import.meta.url)))
@@ -17,7 +17,7 @@ const short = (s) => {
   return s.length > 70 ? s.slice(0, 67).trimEnd() + '...' : s
 }
 
-const sections = [], waiting = []
+const sections = [], waiting = [], cands = []
 let done = 0, total = 0
 for (const r of loadRows(top)) {
   const name = r.section.replace(/\s*\(.*$/, '').trim()
@@ -28,6 +28,7 @@ for (const r of loadRows(top)) {
   if (/^reopened as/i.test(state)) continue
   total++
   if (isDone(state)) done++
+  else if (isCandidate(r)) cands.push(`- ${r.id}: ${short(r.content)} (wanted by: ${wantedBy(r) || 'nobody yet'})`)
   else (/waits? for|when a game/i.test(state) ? waiting : cur.rows).push(`- ${r.id}: ${short(r.content)} (${state.split(/[.;(]/)[0].trim() || "open"})`)
 }
 
@@ -70,6 +71,7 @@ const text = [
   '',
   ...open.flatMap((s) => [`### ${s.name}`, '', ...s.rows, '']),
   ...(nOpen ? [] : ['None.', '']),
+  ...(cands.length ? ['## Candidates', '', ...cands, ''] : []),
   ...(waiting.length ? ['## Waiting on a game', '', ...waiting, ''] : []),
   ...(prs.length ? ['## Open pull requests (one per component)', '', ...prs, ''] : []),
   ...(pins.length ? ['## Games: kit pin', '', ...pins, ''] : []),
