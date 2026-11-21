@@ -43,4 +43,13 @@ describe('K521 dossierRow', () => {
     const bad = run(['y,main,Y,unit,1,{rock:1},,,']);
     expect(!bad.ok && bad.problems.join()).toContain('unknown icon "rock"');
   });
+  it('checkIconsOnCard: false switches the count check off', () => {
+    const off = dossierRow({ icons, syntax: curly, textColumns: ['rules'], checkIconsOnCard: false });
+    const r = loadText({ kinds: { card: off.kind } }, { card: { csv: 'component_id,rules,icons_on_card\nx,{gem:1},5\n' } });
+    expect(r.ok).toBe(true);
+  });
+  it('a quantity that is not a number is a problem with the id', () => {
+    const bad = run(['q,main,Q,unit,two,,,,']);
+    expect(!bad.ok && bad.problems.join()).toContain('component "q": quantity "two" is not a whole number');
+  });
 });
