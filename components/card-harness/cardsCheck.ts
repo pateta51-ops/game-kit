@@ -2,6 +2,7 @@
 // `--record` (a reading judge's PR comment written to docs/cards/readings/<batch>.md with a hash per clause), the
 // clause tools for `cards:catalogue` and the catalogue.json contract. Pure functions; the game script passes data.
 import { createHash } from 'node:crypto';
+import { dirname } from 'node:path';
 import { execFileSync } from 'node:child_process';
 
 export interface CatalogueClause { readonly id: string; readonly card: string; readonly text: string }
@@ -270,7 +271,7 @@ export interface RecordIo {
 }
 export const realRecordIo = (fs: { readFileSync?: (p: string, e: 'utf8') => string; writeFileSync: (p: string, t: string) => void; mkdirSync: (p: string, o: { recursive: true }) => unknown }): RecordIo => ({
   comments: (pr) => (JSON.parse(execFileSync('gh', ['pr', 'view', String(pr), '--json', 'comments'], { encoding: 'utf8' })) as { comments: { body: string }[] }).comments.map((c) => c.body),
-  write: (p, t) => { fs.mkdirSync(p.slice(0, p.lastIndexOf('/')), { recursive: true }); fs.writeFileSync(p, t); },
+  write: (p, t) => { const d = dirname(p); if (d !== '.') fs.mkdirSync(d, { recursive: true }); fs.writeFileSync(p, t); },
   git: (args) => execFileSync('git', args as string[], { encoding: 'utf8' }),
   ...(fs.readFileSync ? { read: (p: string) => fs.readFileSync!(p, 'utf8') } : {}),
 });
@@ -365,9 +366,10 @@ export function cardsCheckMain(argv: readonly string[], input: CardsCheckInput, 
     }
     if (!io?.read) { log('FAIL --baseline needs a RecordIo with read'); return 1; }
     let t: string;
-    try { t = io.read(bf); } catch { t = ''; }
-    const base = t.replace(/\r\n/g, '\n').split('\n').filter((l) => l.trim() !== '' && !l.startsWith('#'));
+    try { t = io.read(bf); } catch (e) { if ((e as { code?: string }).code !== 'ENOENT') { log(`FAIL baseline ${bf}: ${(e as Error).message}`); return 1; } t = ''; }
+    const base = t.replace(/\r\n/g, '\n').split('\n').map((l) => l.trimEnd()).filter((l) => l !== '' && !l.startsWith('#'));
     const now = new Set(found), had = new Set(base);
+    base.splice(0, base.length, ...had);
     const fresh = found.filter((p) => !had.has(p)), stale = base.filter((p) => !now.has(p));
     for (const p of fresh) log(`FAIL ${p}`);
     for (const p of stale) log(`FAIL baseline lists "${p}", which is gone: remove it from ${bf}`);
