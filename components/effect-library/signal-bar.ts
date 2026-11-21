@@ -16,7 +16,7 @@ interface Pips {
 }
 
 interface Pin {
-  delta: readonly [number, number];
+  delta?: readonly [number, number];
   lift?: number;
   liftFactor?: number;
   window?: readonly [number, number];
@@ -44,7 +44,7 @@ export interface BarFillSettings {
     offsets?: readonly [number, number];
   };
   pips?: Pips;
-  pin?: Pin;
+  pin?: Pin | true;
 }
 
 /** Use a WAAPI clock so the frame follows the document timeline and can be scrubbed in the lab. */
@@ -138,7 +138,7 @@ function pipFill(fx: Fx, p: Pips, from: number, to: number, colour: string): () 
 
 function pinFill(fx: Fx, p: Pin, from: number, to: number, colour: string): () => void {
   const { el, call } = fx;
-  const [dx, dy] = p.delta;
+  const [dx, dy] = p.delta ?? [40, 10];
   const [a, b] = p.window ?? [0, Number(call.step['dur'])];
   const glow = el.ownerDocument.createElement('div');
   const ring = el.ownerDocument.createElement('div');
@@ -181,7 +181,7 @@ function pinFill(fx: Fx, p: Pin, from: number, to: number, colour: string): () =
 export const barFill: Effect = (fx) => {
   const { call, el } = fx;
   const { from = 0, to = 1, colour = 'currentColor', ease = 'ease-out', property, marker, pips, pin } = call.step as BarFillSettings;
-  if (pin) return pinFill(fx, pin, from, to, colour);
+  if (pin) return pinFill(fx, pin === true ? {} : pin, from, to, colour);
   if (pips) return pipFill(fx, pips, from, to, colour);
   const fill = property ? el : el.ownerDocument.createElement('div');
   const key = property ?? 'width';

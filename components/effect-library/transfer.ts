@@ -67,13 +67,13 @@ export interface TransferSettings {
   counterColour?: string;
   beforeLook?: { opacity: number; filter: string };
   afterLook?: { opacity: number; filter: string };
-  portal?: {
-    outward?: boolean; startSize: number; endSize: number; alpha?: number;
+  portal?: true | {
+    outward?: boolean; startSize?: number; endSize?: number; alpha?: number;
     collapse?: readonly [number, number]; elapsed?: number; travelMs?: number; travelAt?: number;
     growth?: readonly [number, number];
     spin?: Point;
     vortex?: {
-      size: number; open: Point; background?: string; stroke?: string; strokeWidth?: number; alpha?: number;
+      size?: number; open?: Point; background?: string; stroke?: string; strokeWidth?: number; alpha?: number;
       armCount?: number; armSegments?: number; armTurns?: number; armRadius?: number; armExponent?: number; armSpin?: number;
       ringMs?: number; ringTurns?: number; ringSpacing?: number; ringScale?: Point; ringAlpha?: number;
     };
@@ -189,8 +189,9 @@ function zip(stage: Scene, make: (box: Rect, blur: number) => HTMLElement, from:
   }
 }
 
-function portalIcon(stage: Scene, make: (box: Rect, blur: number) => HTMLElement, from: Rect, to: Rect, o: NonNullable<TransferSettings['portal']>, ms: number, lift: number, start: number, image: string | undefined, glow: string): void {
-  const { outward = false, startSize, endSize, alpha = .5, collapse, elapsed = 0, travelMs = ms, travelAt = 0, growth, vortex } = o;
+function portalIcon(stage: Scene, make: (box: Rect, blur: number) => HTMLElement, from: Rect, to: Rect, o0: NonNullable<TransferSettings['portal']>, ms: number, lift: number, start: number, image: string | undefined, glow: string): void {
+  const o = o0 === true ? {} : o0;
+  const { outward = false, startSize = 60, endSize = 20, alpha = .5, collapse, elapsed = 0, travelMs = ms, travelAt = 0, growth, vortex } = o;
   const [sx, sy] = centre(from);
   const [dx, dy] = centre(to);
   const token = make([sx - startSize / 2, sy - startSize / 2, startSize, startSize], 0);
@@ -220,7 +221,7 @@ function portalIcon(stage: Scene, make: (box: Rect, blur: number) => HTMLElement
   }), ms, start, 'linear', 'forwards');
   if (!vortex) return;
   const [x, y] = outward ? [sx, sy] : [dx, dy];
-  const { size, open, background = 'radial-gradient(circle,rgb(255 255 255 / .34),rgb(255 255 255 / .1) 42%,transparent 66%)',
+  const { size = 120, open = [0, 300], background = 'radial-gradient(circle,rgb(255 255 255 / .34),rgb(255 255 255 / .1) 42%,transparent 66%)',
     stroke = 'white', strokeWidth = 2.2, alpha: vortexAlpha = .42, armCount = 4, armSegments = 50,
     armTurns = 1.6, armRadius = 48, armExponent = 1.6, armSpin = .7, ringMs = 1100, ringTurns = 2 / 3,
     ringSpacing = 60, ringScale = [1.15, .05], ringAlpha = .5 } = vortex;

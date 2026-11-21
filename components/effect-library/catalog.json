@@ -2627,7 +2627,7 @@
    "phoneSafe": true
   },
   "options": {
-   "control": "none",
+   "control": "computed",
    "colour": "255,255,255",
    "moteColour": "255,255,255",
    "size": [
@@ -3015,9 +3015,12 @@
    "phoneSafe": true
   },
   "options": {
-   "distance": "none",
-   "spin": "none",
-   "fade": "none",
+   "distance": 40,
+   "spin": 1.5,
+   "fade": [
+    200,
+    380
+   ],
    "smoke": "none"
   },
   "since": "v0.122.0",
@@ -3455,7 +3458,7 @@
    "phoneSafe": true
   },
   "options": {
-   "recharge": "none",
+   "recharge": false,
    "radius": "none",
    "colour": "220,220,220",
    "hex": "none"
