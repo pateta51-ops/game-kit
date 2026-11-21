@@ -35,6 +35,11 @@ if (process.argv.includes('--play')) {
   for (const e of errors) console.error(e);
   process.exit(errors.length || n !== data.reduce((s, g) => s + g.tiles.length, 0) ? 1 : 0);
 }
+if (process.argv.includes('--strips')) {
+  const { strips } = await import('./strips.mjs');
+  const only = process.argv.find((a) => a.startsWith('--only='))?.slice(7).split(',');
+  process.exit(await strips({ entries: data.flatMap((g) => g.tiles.map((t) => ({ ...t, group: g.group }))), url: new URL('file:///' + out.replace(/\\/g, '/').replace(/^\/+/, '')).href, outDir: path.join(import.meta.dirname, 'strips'), only }));
+}
 const { inlineKit } = await import('../tuners/build.mjs');
 const html = inlineKit(norm(fs.readFileSync(path.join(import.meta.dirname, 'src/effects.html'), 'utf8')))
   .replace('<!--@gallery-data-->', () => `<script type="application/json" id="data">${JSON.stringify(data).replace(/</g, '\\u003c')}</script>`);
