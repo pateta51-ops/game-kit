@@ -17441,7 +17441,8 @@ var PIECES = (() => {
     if (shockwaves) {
       const [x, y] = centre3(box);
       const holder = clip && stage.stand(clip, { overflow: "hidden" });
-      for (const wave of shockwaves) {
+      for (const w0 of shockwaves) {
+        const wave = { delay: 0, ms: 700, radius: 160, width: 24, alpha: 1, ...w0 };
         const max = wave.radiusAt ? Math.max(...Array.from({ length: 61 }, (_, i) => wave.radiusAt?.(i / 60) ?? 0)) * unit2 : wave.radius * unit2;
         const ring = stage.stand([x - max - (clip?.[0] ?? 0), y - max - (clip?.[1] ?? 0), 2 * max, 2 * max], { borderRadius: radius, ...boxSizing ? { boxSizing } : {} });
         holder?.append(ring);
@@ -17589,17 +17590,17 @@ var PIECES = (() => {
       beam.style.maskImage = miss.mask;
       beam.style.setProperty("-webkit-mask-image", miss.mask);
     }
-    const clipPath = miss ? "inset(0)" : void 0;
+    const clip0 = miss ? { clipPath: "inset(0)" } : {};
     stage.play(beam, [
-      { offset: 0, transform: rot(0), opacity: 1, clipPath },
-      { offset: at2(travel2), transform: rot(1), opacity: 1, clipPath, easing: miss ? "ease-in" : "linear" },
+      { offset: 0, transform: rot(0), opacity: 1, ...clip0 },
+      { offset: at2(travel2), transform: rot(1), opacity: 1, ...clip0, easing: miss ? "ease-in" : "linear" },
       ...!miss ? flicker2.filter(({ at: t }) => t > 0 && travel2 + t < ms).map((f) => ({
         offset: at2(travel2 + f.at),
         transform: rot(1, f.width),
         opacity: f.opacity,
         easing: f.easing ?? "linear"
       })) : [],
-      { offset: 1, transform: rot(1, miss ? 0.3 : 0.1), opacity: miss ? 0.2 : 0, clipPath: miss ? "inset(0 0 0 100%)" : void 0 }
+      { offset: 1, transform: rot(1, miss ? 0.3 : 0.1), opacity: miss ? 0.2 : 0, ...miss ? { clipPath: "inset(0 0 0 100%)" } : {} }
     ], ms, delay);
     const hd = width * headScale;
     const head = stage.stand([x - hd / 2, y - hd / 2, hd, hd], {
@@ -17750,7 +17751,7 @@ var PIECES = (() => {
     const stage = scene(fx);
     const hidden = { opacity: "0" };
     if (lift) {
-      const { distance, spin, fade, ms } = lift;
+      const { distance = 40, spin = 1.5, fade = [200, 380], ms = 380 } = lift === true ? {} : lift;
       const sample = (t) => ({
         transform: `translateY(${px(-distance * seg(t, 0, ms))}) rotate(${spin * seg(t, 0, ms)}rad)`,
         opacity: 1 - seg(t, fade[0], fade[1]) ** 3
@@ -17938,7 +17939,8 @@ var PIECES = (() => {
   var dissolveSmoke = (ctx, t, { call, x, y }) => {
     const { delay = 0, lift } = call.step;
     if (!lift || t < delay) return;
-    const { distance, ms, unit: unit2 = 1, colour = "220,220,220", glowRadius = 46 } = lift;
+    const L = lift === true ? {} : lift;
+    const { distance = 40, ms = 380, unit: unit2 = 1, colour = "220,220,220", glowRadius = 46 } = L;
     const k = seg(t, delay, delay + ms);
     glow(ctx, x, y - distance * k, glowRadius * unit2, colour, Math.sin(k * Math.PI));
     smoke(ctx, t, {
@@ -17955,7 +17957,7 @@ var PIECES = (() => {
       size: 10,
       alpha: 0.25,
       rgb: "70,70,70",
-      ...lift.smoke
+      ...L.smoke
     }, unit2);
   };
 
@@ -18035,9 +18037,9 @@ var PIECES = (() => {
     const B = { cx, cy, rx, ry, hex: size };
     if (look.recharge) {
       const {
-        assemble,
-        hum: humTime,
-        settle: settleTime,
+        assemble = [0, 520],
+        hum: humTime = [420, 960],
+        settle: settleTime = [850, 1200],
         scanColour = "220,220,220",
         scanCore = "255,255,255",
         humPeak = 0.3,
@@ -18047,7 +18049,7 @@ var PIECES = (() => {
         snapSpeed = 3,
         snapOvershoot = 1.6,
         strength: [snapAlpha, humAlpha] = [0.32, 0.35]
-      } = look.recharge;
+      } = look.recharge === true ? {} : look.recharge;
       const as = seg(t, ...assemble);
       const hum = pulse(t, ...humTime, humPeak);
       const settle = ease.inQuad(seg(t, ...settleTime));
@@ -18239,8 +18241,9 @@ var PIECES = (() => {
     return image;
   }
   var curvedBeam = (ctx, t, { call }) => {
-    const o = call.step["curve"];
-    if (!o) return;
+    const raw = call.step["curve"];
+    if (!raw) return;
+    const o = raw === true ? {} : raw;
     const {
       colour = CURVED_BEAM_DEFAULTS.colour,
       moteColour = CURVED_BEAM_DEFAULTS.moteColour,
@@ -18252,12 +18255,12 @@ var PIECES = (() => {
     } = o;
     const src = centre3(call.from);
     const dst = centre3(call.to ?? call.from);
-    const c = o.control;
     ctx.save();
     ctx.translate(src[0], src[1]);
     ctx.scale(unit2, unit2);
     ctx.translate(-src[0], -src[1]);
     const a = src;
+    const c = o.control ?? [(src[0] + dst[0]) / 2, (src[1] + dst[1]) / 2 - Math.hypot(dst[0] - src[0], dst[1] - src[1]) / 2];
     const local = ([x, y]) => [a[0] + (x - a[0]) / unit2, a[1] + (y - a[1]) / unit2];
     const b = local(dst);
     const control = local(c);
@@ -18581,8 +18584,9 @@ var PIECES = (() => {
       ], 250, start + 200, "ease-out", "forwards");
     }
   }
-  function portalIcon(stage, make, from, to, o, ms, lift, start, image, glow2) {
-    const { outward = false, startSize, endSize, alpha = 0.5, collapse: collapse2, elapsed = 0, travelMs = ms, travelAt = 0, growth, vortex } = o;
+  function portalIcon(stage, make, from, to, o0, ms, lift, start, image, glow2) {
+    const o = o0 === true ? {} : o0;
+    const { outward = false, startSize = 60, endSize = 20, alpha = 0.5, collapse: collapse2, elapsed = 0, travelMs = ms, travelAt = 0, growth, vortex } = o;
     const [sx, sy] = centre3(from);
     const [dx, dy] = centre3(to);
     const token = make([sx - startSize / 2, sy - startSize / 2, startSize, startSize], 0);
@@ -18613,8 +18617,8 @@ var PIECES = (() => {
     if (!vortex) return;
     const [x, y] = outward ? [sx, sy] : [dx, dy];
     const {
-      size,
-      open: open2,
+      size = 120,
+      open: open2 = [0, 300],
       background = "radial-gradient(circle,rgb(255 255 255 / .34),rgb(255 255 255 / .1) 42%,transparent 66%)",
       stroke = "white",
       strokeWidth = 2.2,
@@ -18913,7 +18917,7 @@ var PIECES = (() => {
     if (s.flip) ctx.scale(-1, 1);
     const w = s.dw * st.sc;
     const h2 = s.dh * st.sc;
-    ctx.drawImage(s.img, -w / 2, -h2 / 2, w, h2);
+    if (s.img) ctx.drawImage(s.img, -w / 2, -h2 / 2, w, h2);
     ctx.restore();
   }
   var rearOf = (s, st) => {
@@ -18983,16 +18987,17 @@ var PIECES = (() => {
   var images2 = /* @__PURE__ */ new WeakMap();
   var geometry = /* @__PURE__ */ new WeakMap();
   var spiralTransfer = (ctx, t, { call }) => {
-    const o = call.step["spiral"];
+    const raw = call.step["spiral"];
+    const o = raw === true ? {} : raw;
     let entry2 = geometry.get(call);
     if (!entry2) {
       let img = images2.get(call);
-      if (!img) {
+      if (!img && o.image) {
         img = new Image();
         img.src = o.image;
         images2.set(call, img);
       }
-      if (!img.naturalWidth) return;
+      if (img && !img.naturalWidth) return;
       const parked = o.parked ?? (o.outward ? call.to ?? call.from : call.from);
       const endpoint = o.outward ? call.from : call.to ?? call.from;
       const g2 = {
@@ -19196,7 +19201,7 @@ var PIECES = (() => {
   // components/effect-library/signal-flicker.ts
   function buzzFrames(b, duration) {
     const n = Math.max(1, Math.ceil(duration / (b.sampleMs ?? 4)));
-    const [start, end] = b.window;
+    const [start, end] = b.window ?? [0, duration];
     const [jx, jy] = b.jitter ?? [0, 0];
     const [xm, ym] = b.jitterMs ?? [9, 11];
     return Array.from({ length: n + 1 }, (_, i) => {
@@ -19205,7 +19210,7 @@ var PIECES = (() => {
       const k = seg(local, start, end);
       const amount = b.power === void 0 ? pulse(local, start, end, b.peak) : Math.sin(Math.PI * k) ** b.power;
       const since = t + (b.timeOffset ?? 0);
-      const bright = b.brightness[noise(since / b.noiseMs, b.power === void 0 ? 2 : 5) > (b.threshold ?? 0) ? 1 : 0];
+      const bright = (b.brightness ?? [0.5, 2])[noise(since / (b.noiseMs ?? 50), b.power === void 0 ? 2 : 5) > (b.threshold ?? 0) ? 1 : 0];
       return {
         filter: `brightness(${String(lerp(1, bright, b.power === void 0 ? amount : Number(k > 0 && k < 1)))}) saturate(${String(b.saturation ?? 1)}) hue-rotate(${String(amount * (b.hue ?? 0))}deg)`,
         transform: `translate(${String(noise(since / xm, 1) * amount * jx)}px,${String(noise(since / ym, 3) * amount * jy)}px)`
@@ -19222,7 +19227,7 @@ var PIECES = (() => {
       fill: "both"
     };
     if (buzz) {
-      animate(buzzFrames(buzz, duration), void 0, options);
+      animate(buzzFrames(buzz === true ? {} : buzz, duration), void 0, options);
       return void 0;
     }
     const veil = el.ownerDocument.createElement("div");
@@ -19330,7 +19335,7 @@ var PIECES = (() => {
   }
   function pinFill(fx, p, from, to, colour) {
     const { el, call } = fx;
-    const [dx, dy] = p.delta;
+    const [dx, dy] = p.delta ?? [40, 10];
     const [a, b] = p.window ?? [0, Number(call.step["dur"])];
     const glow2 = el.ownerDocument.createElement("div");
     const ring = el.ownerDocument.createElement("div");
@@ -19372,7 +19377,7 @@ var PIECES = (() => {
   var barFill = (fx) => {
     const { call, el } = fx;
     const { from = 0, to = 1, colour = "currentColor", ease: ease2 = "ease-out", property, marker, pips, pin } = call.step;
-    if (pin) return pinFill(fx, pin, from, to, colour);
+    if (pin) return pinFill(fx, pin === true ? {} : pin, from, to, colour);
     if (pips) return pipFill(fx, pips, from, to, colour);
     const fill = property ? el : el.ownerDocument.createElement("div");
     const key = property ?? "width";

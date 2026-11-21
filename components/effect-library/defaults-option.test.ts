@@ -7,6 +7,7 @@ import { curvedBeam } from './beam-canvas.ts';
 import { dissolveSmoke } from './break-effects.ts';
 import { shieldBubble } from './shield-bubble.ts';
 import { spiralTransfer } from './spiral.ts';
+import type { CanvasEffect } from './canvas.ts';
 
 const animate = vi.fn<HTMLElement['animate']>();
 const anim = () => ({ cancel: vi.fn(), pause: vi.fn(), play: vi.fn(), playState: 'finished', finished: Promise.resolve(), effect: { getComputedTiming: () => ({ endTime: 100, localTime: 100 }) } });
@@ -79,18 +80,19 @@ describe('K504 option defaults', () => {
       end?.();
     }
   });
-  for (const [name, step, fn] of [
+  const drawn: [string, Step, CanvasEffect][] = [
     ['shield-bubble recharge {}', { do: 'shield-bubble', recharge: {} }, shieldBubble],
     ['column-beam curve {}', { do: 'column-beam', curve: {} }, curvedBeam],
     ['column-beam curve true', { do: 'column-beam', curve: true }, curvedBeam],
     ['dissolve lift {} smoke', { do: 'dissolve', lift: {} }, dissolveSmoke],
     ['warp-transfer spiral true', { do: 'warp-transfer', spiral: true }, spiralTransfer],
     ['warp-transfer spiral {}', { do: 'warp-transfer', spiral: {} }, spiralTransfer],
-  ] as const) {
+  ];
+  for (const [name, step, fn] of drawn) {
     it(`${name} draws finite numbers`, () => {
-      const { call, run, context } = setup({ ...step, do: 'unused' } as Step);
+      const { call, run, context } = setup({ ...step, do: 'unused' });
       const fx = { call, run, layer: context, x: 100, y: 100 };
-      for (const t of [100, 300, 600, 1000, 1400]) canvas((ctx) => { (fn as typeof shieldBubble)(ctx, t, fx as never); });
+      for (const t of [100, 300, 600, 1000, 1400]) canvas((ctx) => { fn(ctx, t, fx as never); });
     });
   }
 });
