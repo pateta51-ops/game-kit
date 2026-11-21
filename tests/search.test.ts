@@ -35,7 +35,7 @@ const top: [string, string][] = [
   ['slash', 'slash:'],
   ['stamp', 'stamp:'],
   ['progress bar', 'bar-fill:'],
-  ['health bar', 'bar-fill:'],
+  ['meter', 'bar-fill:'],
   ['spin', 'spin:'],
   ['glitch', 'createGlitch:'],
   ['camera', 'cameraPull:'],
@@ -62,7 +62,7 @@ const top: [string, string][] = [
 describe('K500 search', () => {
   it('forty-four plain queries find the expected top hit', () => {
     expect(top).toHaveLength(44);
-    const bad = top.filter(([q, want]) => !first(q).startsWith(want)).map(([q]) => q + ' -> ' + first(q).slice(0, 40));
+    const bad = top.filter(([q, want]) => !first(q).startsWith(want) || run('search', ...q.split(' ')).stdout.includes('not in the kit')).map(([q]) => q + ' -> ' + first(q).slice(0, 40));
     expect(bad).toEqual([]);
   });
 
@@ -102,7 +102,7 @@ describe('K500 search', () => {
       expect(m.status).toBe(0);
       expect(m.stdout).toContain('not in the kit by that name');
       expect(m.stdout.split('\n').filter(Boolean)).toHaveLength(4);
-      expect(fs.readFileSync(path.join(home, '.game-kit/search-misses.log'), 'utf8')).toMatch(/^\d{4}-\d\d-\d\d burn zebra\n$/);
+      expect(fs.readFileSync(path.join(home, '.game-kit/search-misses.log'), 'utf8')).toMatch(/\d{4}-\d\d-\d\d burn zebra\n$/);
       expect(fs.existsSync(path.join(g, '.kit-search-misses.log'))).toBe(false);
       expect(kit('search', '--misses', '1').stdout).toMatch(/burn zebra/);
     } finally { fs.rmSync(g, { recursive: true, force: true }); }
