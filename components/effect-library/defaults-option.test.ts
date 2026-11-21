@@ -80,7 +80,7 @@ describe('K504 option defaults', () => {
       end?.();
     }
   });
-  const drawn: [string, Step, CanvasEffect][] = [
+  const drawn: [string, Partial<Step> & Pick<Step, 'do'>, CanvasEffect][] = [
     ['shield-bubble recharge {}', { do: 'shield-bubble', recharge: {} }, shieldBubble],
     ['column-beam curve {}', { do: 'column-beam', curve: {} }, curvedBeam],
     ['column-beam curve true', { do: 'column-beam', curve: true }, curvedBeam],
@@ -92,7 +92,7 @@ describe('K504 option defaults', () => {
     it(`${name} draws finite numbers`, () => {
       const { call, run, context } = setup({ ...step, do: 'unused' });
       const fx = { call, run, layer: context, x: 100, y: 100 };
-      for (const t of [100, 300, 600, 1000, 1400]) canvas((ctx) => { fn(ctx, t, fx as never); });
+      for (const t of [100, 300, 600, 1000, 1400]) canvas((ctx) => { fn(ctx, t, fx); });
     });
   }
 });
