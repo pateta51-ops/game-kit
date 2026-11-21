@@ -99,6 +99,45 @@ describe('catalog.mjs --check', () => {
   });
 });
 
+describe('catalog.mjs --check words (K498)', () => {
+  const top = path.resolve(import.meta.dirname, '..');
+  const setup = (edit: (n: Record<string, Record<string, unknown>>) => void) => {
+    const root = fs.mkdtempSync(path.join(tmp, 'words-'));
+    fs.cpSync(path.join(top, 'components'), path.join(root, 'components'), { recursive: true });
+    fs.mkdirSync(path.join(root, 'scripts'));
+    fs.mkdirSync(path.join(root, 'docs'));
+    for (const f of ['catalog.mjs', 'plan.mjs']) fs.copyFileSync(path.join(top, 'scripts', f), path.join(root, 'scripts', f));
+    fs.cpSync(path.join(top, 'docs', 'plan'), path.join(root, 'docs', 'plan'), { recursive: true });
+    for (const f of ['CATALOG.md', 'ARCHITECTURE.md', 'PLAN.md']) fs.copyFileSync(path.join(top, 'docs', f), path.join(root, 'docs', f));
+    const n = JSON.parse(fs.readFileSync(path.join(top, 'docs', 'catalog-notes.json'), 'utf8'));
+    edit(n);
+    fs.writeFileSync(path.join(root, 'docs', 'catalog-notes.json'), JSON.stringify(n));
+    return spawnSync('node', [path.join(root, 'scripts', 'catalog.mjs'), '--check'], { encoding: 'utf8' });
+  };
+  it('fails a missing title', () => {
+    const r = setup((n) => { delete n['counter'].title });
+    expect(r.status).toBe(1);
+    expect(r.stderr).toContain('counter: add title');
+  });
+  it('fails fewer than 3 tags', () => {
+    const r = setup((n) => { n['counter'].tags = ['a', 'b'] });
+    expect(r.status).toBe(1);
+    expect(r.stderr).toContain('counter: add title');
+  });
+  it('fails a title over 8 words', () => {
+    const r = setup((n) => { n['counter'].title = 'one two three four five six seven eight nine' });
+    expect(r.status).toBe(1);
+    expect(r.stderr).toContain('over 8 words');
+  });
+  it('fails a missing visible or release', () => {
+    expect(setup((n) => { delete n['counter'].visible }).status).toBe(1);
+    expect(setup((n) => { delete n['counter'].release }).status).toBe(1);
+  });
+  it('passes a full entry', () => {
+    expect(setup(() => {}).status).toBe(0);
+  });
+});
+
 describe('ARCHITECTURE.md', () => {
   it('check fails when a component needs changes', () => {
     const top = path.resolve(import.meta.dirname, '..');

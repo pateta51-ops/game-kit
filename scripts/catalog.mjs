@@ -52,6 +52,9 @@ for (const n of names) {
   try { meta = JSON.parse(rd(path.join(dir, 'component.json'))) } catch { bad.push(`${n}: component.json unreadable`); continue }
   const note = notes[n]
   if (!note || !note.use || !note.not) { bad.push(`${n}: add use and not to docs/catalog-notes.json`); continue }
+  if (!note.title || !Array.isArray(note.tags) || note.tags.length < 3) { bad.push(`${n}: add title and at least 3 tags to docs/catalog-notes.json`); continue }
+  if (note.title.trim().split(/s+/).length > 8) { bad.push(`${n}: title is over 8 words`); continue }
+  if (typeof note.visible !== 'boolean' || ![1, 1.1, 1.2, 1.3].includes(note.release)) { bad.push(`${n}: add visible (true or false) and release (1.0, 1.1, 1.2 or 1.3) to docs/catalog-notes.json`); continue }
   const readme = fs.existsSync(path.join(dir, 'README.md')) ? 'components/' + n + '/README.md' : null
   const text = readme ? purpose(rd(J(readme))) : (note.what ?? '')
   let ex
@@ -73,6 +76,11 @@ for (const n of names) {
   parts.push(
     `## ${n}\n\n` +
     `${one(text)}\n\n` +
+    `- **Also called:** ${note.title}\n` +
+    (note.looks ? `- **Looks like:** ${note.looks}\n` : '') +
+    `- **Words:** ${note.tags.join(', ')}\n` +
+    `- **Release:** ${note.release.toFixed(1)}; ${note.visible ? 'seen on screen' : 'not seen'}\n` +
+    (note.gameSupplies ? `- **The game supplies:** ${note.gameSupplies}\n` : '') +
     `- **Use it when:** ${note.use}\n` +
     `- **Not for:** ${note.not}\n` +
     `- **Key exports:** ${ex}\n` +
