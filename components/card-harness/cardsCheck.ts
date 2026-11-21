@@ -364,7 +364,7 @@ export function cardsCheckMain(argv: readonly string[], input: CardsCheckInput, 
       return 0;
     }
     if (!io?.read) { log('FAIL --baseline needs a RecordIo with read'); return 1; }
-    let t = '';
+    let t: string;
     try { t = io.read(bf); } catch { t = ''; }
     const base = t.replace(/\r\n/g, '\n').split('\n').filter((l) => l.trim() !== '' && !l.startsWith('#'));
     const now = new Set(found), had = new Set(base);
