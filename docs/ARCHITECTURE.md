@@ -51,6 +51,7 @@ graph LR
   ci_templates["ci-templates"]
   content_pack["content-pack"] --> card_harness["card-harness"]
   content_pack["content-pack"] --> card_language["card-language"]
+  content_pack["content-pack"] --> card_parts["card-parts"]
   content_pack["content-pack"] --> engine_core["engine-core"]
   controls["controls"]
   counter["counter"] --> effect_library["effect-library"]

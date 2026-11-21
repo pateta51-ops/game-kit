@@ -274,6 +274,9 @@
     "not": "A fixed face, the game's look, or the zoomed transcription (K203).",
     "title": "Pieces to build a card face",
     "tags": [
+      "value",
+      "icon value",
+      "marker",
       "card",
       "face",
       "layout",
@@ -436,6 +439,11 @@
     "not": "The game's record shapes, verbs or words; one effect checked at run time (card-language validateEffect); importing or storing packs.",
     "title": "Load card and scenario data safely",
     "tags": [
+      "dossier",
+      "card csv loader",
+      "csv",
+      "row",
+      "copies",
       "data",
       "cards",
       "scenarios",

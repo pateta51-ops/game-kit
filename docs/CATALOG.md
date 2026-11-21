@@ -384,7 +384,7 @@ The parts a game builds its own card face from: the layout as the game's data, a
 
 - **Also called:** Pieces to build a card face
 - **Looks like:** Card faces assembled from art, printed text with icons, and tokens in zones the game defines.
-- **Words:** card, face, layout, art, text, icons, tokens, parts
+- **Words:** value, icon value, marker, card, face, layout, art, text, icons, tokens, parts
 - **Release:** 1.0; seen on screen
 - **The game supplies:** The face layout, art, texts and icons.
 - **Use it when:** Drawing card faces: the layout as the game's own data (zones, anchors per card type), art with a device cache and decode-ahead, printed text with SVG icons inline, tokens at anchors. Recipe: docs/recipes/card-face-zoom.md.
@@ -537,13 +537,13 @@ Pull this component and use it where it is: a game never edits or copies its `ki
 Card and scenario data as a checked pack: the game names its record kinds, each with a zod schema, an id field and the fields that refer to other kinds; `load` refuses with every problem at once (duplicate ids, dangling references, schema failures, unknown verbs, your own extra checks). Also the expansion choice (`expansion.ts`, `ui.ts`): a registry of products with `dependsOn`, tick/untick with dependencies, a serialisable `Choice`, and `mergePacks` of a base plus its expansions into one index. Not here: importing or storing packs, the game's record shapes, verbs or words; checking one effect at run time (card-language `validateEffect`, used here for `effects` fields).
 
 - **Also called:** Load card and scenario data safely
-- **Words:** data, cards, scenarios, csv, json, load, validate, pack
+- **Words:** dossier, card csv loader, csv, row, copies, data, cards, scenarios, csv, json, load, validate, pack
 - **Release:** 1.0; not seen
 - **The game supplies:** The record kinds and a schema for each.
 - **Use it when:** Card, deck or scenario data (CSV or JSON) loads through a zod schema per record kind with id-uniqueness, dangling-reference and card-language verb checks, every problem listed at once; also a base + expansions pick list with dependency ticking and a merge into one index.
 - **Not for:** The game's record shapes, verbs or words; one effect checked at run time (card-language validateEffect); importing or storing packs.
-- **Key exports:** `load`, `rowsOf`, `loadText`, `loadOrThrow`, `Kind`, `PackDef`, `Loaded`, `LoadResult`, `Source`
-- **Needs:** [`card-harness`](#card-harness), [`card-language`](#card-language), [`engine-core`](#engine-core)
+- **Key exports:** `load`, `rowsOf`, `loadText`, `loadOrThrow`, `dossierRow`, `Kind`, `PackDef`, `Loaded`, `LoadResult`, `Source`, `DossierOptions`, `DossierRecord`
+- **Needs:** [`card-harness`](#card-harness), [`card-language`](#card-language), [`card-parts`](#card-parts), [`engine-core`](#engine-core)
 - **Came from:** 7is
 - **Docs:** [README](../components/content-pack/README.md) ([rules for agents](../components/content-pack/README.md#rules-for-agents))
 
