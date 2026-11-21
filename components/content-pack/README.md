@@ -35,8 +35,7 @@ Card and scenario data as a checked pack: the game names its record kinds, each 
 import { dossierRow, loadText } from '../kit/content-pack/index';
 
 const d = dossierRow({ icons: { gem: { label: 'gem' } }, syntax: { open: '{', close: '}', separator: ':' }, textColumns: ['rules'], notDeck: ['sheet'] });
-const r = loadText({ kinds: { card: d.kind } }, { card: { csv: 'component_id,name,type,quantity,rules
-x,X,unit,2,Gain {gem:1}.' } });
+const r = loadText({ kinds: { card: d.kind } }, { card: { csv: 'component_id,name,type,quantity,rules\nx,X,unit,2,Gain {gem:1}.' } });
 console.log(r.ok ? d.expand(r.pack.records.card as never[]).map((c) => c.id) : r.problems); // ['x#1', 'x#2']
 ```
 
