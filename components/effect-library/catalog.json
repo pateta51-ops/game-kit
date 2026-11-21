@@ -189,7 +189,19 @@
          168
         ]
        }
-      ]
+      ],
+      "launch": 200,
+      "travel": 800,
+      "lap": 600,
+      "hop": 300,
+      "back": 800,
+      "padding": [
+       0,
+       0
+      ],
+      "nose": 0,
+      "headingSample": 30,
+      "roll": 0.2
      }
     }
    ]
@@ -2468,11 +2480,13 @@
      "dur": 600,
      "actor": "A",
      "do": "trail",
-     "width": 8,
-     "tipWidth": 2,
-     "colour": "255,255,255",
-     "fade": 0.8,
-     "to": "b"
+     "to": "b",
+     "ribbon": {
+      "width": 8,
+      "tipWidth": 2,
+      "colour": "255,255,255",
+      "fade": 0.8
+     }
     }
    ]
   }

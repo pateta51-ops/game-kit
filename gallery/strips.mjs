@@ -7,7 +7,7 @@ import path from 'node:path';
 const FW = 180, FH = 105, GAP = 4, LAB = 16, TITLE = 20;
 export const stripName = (e) => e.id + (e.option ? '--' + Object.entries(e.option).map(([k, v]) => (typeof v === 'object' || v === true ? k : `${k}-${String(v)}`)).join('-') : '');
 
-const clock = () => {
+export const clock = () => {
   let now = 0, seq = 0, seed = 12345;
   const timers = new Map();
   let raf = [];
@@ -47,8 +47,12 @@ const clock = () => {
   };
 };
 
-// entries whose look is no motion: show and hide switch at once
-const STILL = [];
+const PAGE_CSS = `header,.head,.hint{display:none!important}.tile{display:none!important}.tile.shoot{display:grid!important;border:0!important;border-radius:0!important;width:${FW}px!important}.stage{width:${FW}px!important}main,section{padding:0!important;margin:0!important;max-width:none!important}.grid{display:block!important}`;
+// entries whose look is no motion (frames 2 to 4 may equal frame 1)
+const STILL = [
+  'show', // switches a hidden piece on at once: nothing moves, the strip is the look
+  'flight', // the browser's view transition between two pages of the app: the gallery has no stand-in for it
+];
 const paintShot = async (loc, o) => { await loc.page().evaluate(() => __paint()); return loc.screenshot(o); };
 
 export async function strips({ entries, url, outDir, only }) {
@@ -58,11 +62,11 @@ export async function strips({ entries, url, outDir, only }) {
   const ctx = await browser.newContext({ viewport: { width: 700, height: 500 }, deviceScaleFactor: 1 });
   await ctx.addInitScript(clock);
   const errors = [];
-  const shoot = async (idx) => {
+  const open = async (idx) => {
     const page = await ctx.newPage();
     page.on('pageerror', (e) => errors.push(e.message));
     await page.goto(url);
-    await page.addStyleTag({ content: `header,.head,.hint{display:none!important}.tile{display:none!important}.tile.shoot{display:grid!important;border:0!important;border-radius:0!important;width:${FW}px!important}.stage{width:${FW}px!important}main,section{padding:0!important;margin:0!important;max-width:none!important}.grid{display:block!important}` });
+    await page.addStyleTag({ content: PAGE_CSS });
     const L = await page.evaluate(([i, ms, old]) => {
       const id = 't' + i;
       tiles[id].tile.classList.add('shoot');
@@ -70,33 +74,41 @@ export async function strips({ entries, url, outDir, only }) {
       // the demo's real play time (spec length, steps' ends, the entry's ms), at least 400 ms
       return old ? sp.maxMs ?? end : Math.max(400, sp.maxMs ?? 0, end, ms ?? 0);
     }, [idx, entries[idx].ms, !!process.env.K505_OLD]);
-    const step = Math.max(16, Math.round(L / 200));
-    const adv = (ms) => page.evaluate((m) => __adv(m), ms);
-    const live = () => page.evaluate((i) => tiles['t' + i].tile.classList.contains('playing'), idx);
     await page.evaluate((i) => { player.play('t' + i); }, idx);
-    await adv(0);
-    const stage = page.locator('.tile.shoot .stage');
+    await page.evaluate(() => __adv(0));
+    return { page, L, stage: page.locator('.tile.shoot .stage'), adv: (ms) => page.evaluate((m) => __adv(m), ms) };
+  };
+  const snap = async (stage) => (await paintShot(stage, { animations: 'allow', caret: 'hide' })).toString('base64');
+  // the play time up to the last change on the stage: demos padded with a quiet tail would show four empty frames
+  const active = async (idx) => {
+    const { page, L, stage, adv } = await open(idx);
+    if (process.env.K505_OLD) { await page.close(); return L; }
+    const n = 60, d = Math.ceil(L / n);
+    let prev = await snap(stage), last = 0;
+    for (let k = 1; k * d <= L + d; k++) {
+      await adv(d);
+      // the restore at the end of the run is not motion
+      if (!(await page.evaluate((i) => tiles['t' + i].tile.classList.contains('playing'), idx))) break;
+      const s = await snap(stage);
+      if (s !== prev) last = k;
+      prev = s;
+    }
+    await page.close();
+    return Math.min(L, Math.max(400, (last + 1) * d));
+  };
+  const shoot = async (idx) => {
+    const span = await active(idx);
+    const { page, stage, adv } = await open(idx);
+    const step = Math.max(16, Math.round(span / 100));
     const frames = [];
     let at = 0;
     for (const f of [0, 0.25, 0.5, 0.75, 1]) {
-      const target = Math.round(L * f);
+      const target = Math.round(span * f);
       while (at < target) { const d = Math.min(step, target - at); await adv(d); at += d; }
-      // the last frame is the end of the demo, or the last moment before it when the demo has cleared by then
-      if (f === 1 && !(await live())) { const back = await shootBack(page, idx, L, step); frames.push(back); continue; }
-      frames.push({ ms: at, png: (await paintShot(stage, { animations: 'allow', caret: 'hide' })).toString('base64') });
+      frames.push({ ms: at, png: await snap(stage) });
     }
     await page.close();
     return frames;
-  };
-  // replay up to just before the end (the page is deterministic, so this is the same run)
-  const shootBack = async (page, idx, L, step) => {
-    await page.reload();
-    await page.addStyleTag({ content: `header,.head,.hint{display:none!important}.tile{display:none!important}.tile.shoot{display:grid!important;border:0!important;border-radius:0!important;width:${FW}px!important}.stage{width:${FW}px!important}main,section{padding:0!important;margin:0!important;max-width:none!important}.grid{display:block!important}` });
-    await page.evaluate((i) => { tiles['t' + i].tile.classList.add('shoot'); player.play('t' + i); }, idx);
-    await page.evaluate(() => __adv(0));
-    let at = 0;
-    while (at < L - step) { const d = Math.min(step, L - step - at); await page.evaluate((m) => __adv(m), d); at += d; }
-    return { ms: at, png: (await paintShot(page.locator('.tile.shoot .stage'), { animations: 'allow', caret: 'hide' })).toString('base64') };
   };
   const composer = await ctx.newPage();
   await composer.setContent('<canvas id="c"></canvas>');
