@@ -2,13 +2,13 @@ import type { Effect } from './effects.ts';
 import { lerp, noise, pulse, seg } from './particles.ts';
 
 interface Buzz {
-  window: readonly [number, number];
+  window?: readonly [number, number];
   sampleMs?: number;
   timeOffset?: number;
   period?: number;
   peak?: number;
-  brightness: readonly [number, number];
-  noiseMs: number;
+  brightness?: readonly [number, number];
+  noiseMs?: number;
   threshold?: number;
   saturation?: number;
   hue?: number;
@@ -26,12 +26,12 @@ export interface FlickerSettings {
   period?: number;
   style?: Partial<CSSStyleDeclaration>;
   frames?: readonly Keyframe[];
-  buzz?: Buzz;
+  buzz?: Buzz | true;
 }
 
 function buzzFrames(b: Buzz, duration: number): Keyframe[] {
   const n = Math.max(1, Math.ceil(duration / (b.sampleMs ?? 4)));
-  const [start, end] = b.window;
+  const [start, end] = b.window ?? [0, duration];
   const [jx, jy] = b.jitter ?? [0, 0];
   const [xm, ym] = b.jitterMs ?? [9, 11];
   return Array.from({ length: n + 1 }, (_, i) => {
@@ -40,7 +40,7 @@ function buzzFrames(b: Buzz, duration: number): Keyframe[] {
     const k = seg(local, start, end);
     const amount = b.power === undefined ? pulse(local, start, end, b.peak) : Math.sin(Math.PI * k) ** b.power;
     const since = t + (b.timeOffset ?? 0);
-    const bright = b.brightness[noise(since / b.noiseMs, b.power === undefined ? 2 : 5) > (b.threshold ?? 0) ? 1 : 0];
+    const bright = (b.brightness ?? [.5, 2])[noise(since / (b.noiseMs ?? 50), b.power === undefined ? 2 : 5) > (b.threshold ?? 0) ? 1 : 0];
     return {
       filter: `brightness(${String(lerp(1, bright, b.power === undefined ? amount : Number(k > 0 && k < 1)))}) saturate(${String(b.saturation ?? 1)}) hue-rotate(${String(amount * (b.hue ?? 0))}deg)`,
       transform: `translate(${String(noise(since / xm, 1) * amount * jx)}px,${String(noise(since / ym, 3) * amount * jy)}px)`,
@@ -56,7 +56,7 @@ export const flicker: Effect = ({ el, call, animate }) => {
     easing: ease, iterations: loop ? Infinity : 1, fill: 'both' as const,
   };
   if (buzz) {
-    animate(buzzFrames(buzz, duration), undefined, options);
+    animate(buzzFrames(buzz === true ? {} : buzz, duration), undefined, options);
     return undefined;
   }
   const veil = el.ownerDocument.createElement('div');

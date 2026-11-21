@@ -91,7 +91,7 @@ export const radialStreaks: CanvasEffect = (ctx, t, { call }) => {
 };
 
 export interface CurvedBeamSettings {
-  control: Point;
+  control?: Point;
   colour?: string;
   moteColour?: string;
   sparkColour?: string;
@@ -112,18 +112,19 @@ function imageFor(call: VerbCall, src: string): HTMLImageElement {
 }
 
 export const curvedBeam: CanvasEffect = (ctx, t, { call }) => {
-  const o = call.step['curve'] as CurvedBeamSettings | undefined;
-  if (!o) return;
+  const raw = call.step['curve'] as CurvedBeamSettings | true | undefined;
+  if (!raw) return;
+  const o = raw === true ? {} : raw;
   const { colour = CB.colour, moteColour = CB.moteColour, sparkColour = CB.sparkColour, unit = CB.unit,
     image, size = CB.size, tuck = CB.tuck } = o;
   const src = centre(call.from);
   const dst = centre(call.to ?? call.from);
-  const c = o.control;
   ctx.save();
   ctx.translate(src[0], src[1]);
   ctx.scale(unit, unit);
   ctx.translate(-src[0], -src[1]);
   const a: Point = src;
+  const c = o.control ?? [(src[0] + dst[0]) / 2, (src[1] + dst[1]) / 2 - Math.hypot(dst[0] - src[0], dst[1] - src[1]) / 2];
   const local = ([x, y]: Point): Point => [a[0] + (x - a[0]) / unit, a[1] + (y - a[1]) / unit];
   const b = local(dst);
   const control = local(c);

@@ -30,7 +30,7 @@ export interface DissolveSettings {
   emberRise?: Point;
   emberSpan?: Point;
   emberShadow?: Point;
-  lift?: { distance: number; spin: number; fade: Point; ms: number; unit?: number; colour?: string; glowRadius?: number; smoke?: Partial<SmokeOpts> };
+  lift?: true | { distance?: number; spin?: number; fade?: Point; ms?: number; unit?: number; colour?: string; glowRadius?: number; smoke?: Partial<SmokeOpts> };
 }
 
 export const dissolve: Effect = (fx) => {
@@ -46,7 +46,7 @@ export const dissolve: Effect = (fx) => {
   const stage = scene(fx);
   const hidden = { opacity: '0' };
   if (lift) {
-    const { distance, spin, fade, ms } = lift;
+    const { distance = 40, spin = 1.5, fade = [200, 380], ms = 380 } = lift === true ? {} : lift;
     const sample = (t: number): Keyframe => ({
       transform: `translateY(${px(-distance * seg(t, 0, ms))}) rotate(${spin * seg(t, 0, ms)}rad)`,
       opacity: 1 - seg(t, fade[0], fade[1]) ** 3,
@@ -229,11 +229,12 @@ export const shatter: Effect = (fx) => {
 export const dissolveSmoke: CanvasEffect = (ctx, t, { call, x, y }) => {
   const { delay = 0, lift } = call.step as DissolveSettings;
   if (!lift || t < delay) return;
-  const { distance, ms, unit = 1, colour = '220,220,220', glowRadius = 46 } = lift;
+  const L = lift === true ? {} : lift;
+  const { distance = 40, ms = 380, unit = 1, colour = '220,220,220', glowRadius = 46 } = L;
   const k = seg(t, delay, delay + ms);
   drawGlow(ctx, x, y - distance * k, glowRadius * unit, colour, Math.sin(k * Math.PI));
   smoke(ctx, t, {
     seed: 91, n: 6, x, y: y - 30 * unit, t0: delay + 220, life: 500,
-    stagger: 40, radius: 6, spread: 16, rise: 30, size: 10, alpha: .25, rgb: '70,70,70', ...lift.smoke,
+    stagger: 40, radius: 6, spread: 16, rise: 30, size: 10, alpha: .25, rgb: '70,70,70', ...L.smoke,
   }, unit);
 };

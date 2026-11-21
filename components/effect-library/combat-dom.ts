@@ -21,7 +21,7 @@ interface PulseLook {
 export interface RingPulseSettings extends PulseLook {
   count?: number;
   period?: number;
-  shockwaves?: readonly { delay: number; ms: number; radius: number; width: number; alpha: number; squash?: number; borderWidth?: number; outlineWidth?: number; outlineOffset?: number;
+  shockwaves?: readonly { delay?: number; ms?: number; radius?: number; width?: number; alpha?: number; squash?: number; borderWidth?: number; outlineWidth?: number; outlineOffset?: number;
     /** K435-6: alpha share at time k in 0..1 (default (1-k)^3), radius in px before `unit` (default radius * outExpo(k)), width in px before `unit` (default width * (1 - k/2)) */
     alphaAt?: (k: number) => number; radiusAt?: (k: number) => number; widthAt?: (k: number) => number }[];
   outline?: string;
@@ -46,7 +46,8 @@ export const ringPulse: Effect = (fx) => {
   if (shockwaves) {
     const [x, y] = centre(box);
     const holder = clip && stage.stand(clip, { overflow: 'hidden' });
-    for (const wave of shockwaves) {
+    for (const w0 of shockwaves) {
+      const wave = { delay: 0, ms: 700, radius: 160, width: 24, alpha: 1, ...w0 };
       const max = wave.radiusAt ? Math.max(...Array.from({ length: 61 }, (_, i) => wave.radiusAt?.(i / 60) ?? 0)) * unit : wave.radius * unit;
       const ring = stage.stand([x - max - (clip?.[0] ?? 0), y - max - (clip?.[1] ?? 0), 2 * max, 2 * max], { borderRadius: radius, ...(boxSizing ? { boxSizing } : {}) });
       holder?.append(ring);
@@ -195,14 +196,14 @@ export const projectile: Effect = (fx) => {
     beam.style.maskImage = miss.mask;
     beam.style.setProperty('-webkit-mask-image', miss.mask);
   }
-  const clipPath = miss ? 'inset(0)' : undefined;
+  const clip0 = miss ? { clipPath: 'inset(0)' } : {};
   stage.play(beam, [
-    { offset: 0, transform: rot(0), opacity: 1, clipPath },
-    { offset: at(travel), transform: rot(1), opacity: 1, clipPath, easing: miss ? 'ease-in' : 'linear' },
+    { offset: 0, transform: rot(0), opacity: 1, ...clip0 },
+    { offset: at(travel), transform: rot(1), opacity: 1, ...clip0, easing: miss ? 'ease-in' : 'linear' },
     ...(!miss ? flicker.filter(({ at: t }) => t > 0 && travel + t < ms).map((f) => ({
       offset: at(travel + f.at), transform: rot(1, f.width), opacity: f.opacity, easing: f.easing ?? 'linear',
     })) : []),
-    { offset: 1, transform: rot(1, miss ? .3 : .1), opacity: miss ? .2 : 0, clipPath: miss ? 'inset(0 0 0 100%)' : undefined },
+    { offset: 1, transform: rot(1, miss ? .3 : .1), opacity: miss ? .2 : 0, ...(miss ? { clipPath: 'inset(0 0 0 100%)' } : {}) },
   ], ms, delay);
   const hd = width * headScale;
   const head = stage.stand([x - hd / 2, y - hd / 2, hd, hd], {

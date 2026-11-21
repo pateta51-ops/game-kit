@@ -12,7 +12,7 @@ const depart = { lift: [300, 520], approach: [520, 1120], revolve: [1120, 1720] 
 const arrive = { revolve: [380, 880], emerge: [880, 1380], land: [1380, 1520] } as const;
 
 export interface SpiralSettings {
-  image: string;
+  image?: string;
   outward?: boolean;
   centre?: readonly [number, number];
   lift?: number;
@@ -41,7 +41,7 @@ interface Geo {
   ribbonReach: number;
 }
 interface Ship {
-  img: HTMLImageElement;
+  img: HTMLImageElement | undefined;
   p0: [number, number];
   dw: number;
   dh: number;
@@ -180,7 +180,7 @@ function drawShip(ctx: Ctx, s: Ship, st: ShipAt, alpha: number, tint: boolean): 
   if (s.flip) ctx.scale(-1, 1);
   const w = s.dw * st.sc;
   const h = s.dh * st.sc;
-  ctx.drawImage(s.img, -w / 2, -h / 2, w, h);
+  if (s.img) ctx.drawImage(s.img, -w / 2, -h / 2, w, h);
   ctx.restore();
 }
 
@@ -255,16 +255,17 @@ function shipLayer(ctx: Ctx, g: Geo, s: Ship, at: (u: number) => ShipAt | null, 
 const images = new WeakMap<object, HTMLImageElement>();
 const geometry = new WeakMap<object, { g: Geo; s: Ship; p: Path }>();
 export const spiralTransfer: CanvasEffect = (ctx, t, { call }) => {
-  const o = call.step['spiral'] as SpiralSettings;
+  const raw = call.step['spiral'] as SpiralSettings | true;
+  const o = raw === true ? {} : raw;
   let entry = geometry.get(call);
   if (!entry) {
     let img = images.get(call);
-    if (!img) {
+    if (!img && o.image) {
       img = new Image();
       img.src = o.image;
       images.set(call, img);
     }
-    if (!img.naturalWidth) return;
+    if (img && !img.naturalWidth) return;
     const parked = o.parked ?? (o.outward ? call.to ?? call.from : call.from);
     const endpoint: Rect = o.outward ? call.from : call.to ?? call.from;
     const g: Geo = { c: o.centre ?? centre(endpoint), lift: o.lift ?? SP.lift, sq: o.squash ?? SP.squash,

@@ -69,8 +69,8 @@ export interface ShieldBubbleSettings {
     cellScale?: number;
     alpha?: Point;
   };
-  recharge?: {
-    assemble: Point; hum: Point; settle: Point; scanColour?: string; scanCore?: string;
+  recharge?: true | {
+    assemble?: Point; hum?: Point; settle?: Point; scanColour?: string; scanCore?: string;
     humPeak?: number; scanWidth?: number; scanAlpha?: number; snapDepth?: number;
     snapSpeed?: number; snapOvershoot?: number; strength?: Point;
   };
@@ -162,10 +162,10 @@ export const shieldBubble: CanvasEffect = (ctx, t, { call, x, y }) => {
   if (rx <= 0 || ry <= 0 || size <= 0 || u <= 0) return;
   const B: Bubble = { cx, cy, rx, ry, hex: size };
   if (look.recharge) {
-    const { assemble, hum: humTime, settle: settleTime, scanColour = '220,220,220', scanCore = '255,255,255',
+    const { assemble = [0, 520], hum: humTime = [420, 960], settle: settleTime = [850, 1200], scanColour = '220,220,220', scanCore = '255,255,255',
       humPeak = .3, scanWidth = 4, scanAlpha = .95, snapDepth = 60, snapSpeed = 3, snapOvershoot = 1.6,
       strength: [snapAlpha, humAlpha] = [.32, .35],
-    } = look.recharge;
+    } = look.recharge === true ? {} : look.recharge;
     const as = seg(t, ...assemble);
     const hum = pulse(t, ...humTime, humPeak);
     const settle = ease.inQuad(seg(t, ...settleTime));
