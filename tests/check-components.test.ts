@@ -115,23 +115,23 @@ describe('catalog.mjs --check words (K498)', () => {
     return spawnSync('node', [path.join(root, 'scripts', 'catalog.mjs'), '--check'], { encoding: 'utf8' });
   };
   it('fails a missing title', () => {
-    const r = setup((n) => { delete n['counter'].title });
+    const r = setup((n) => { delete n['counter']!.title });
     expect(r.status).toBe(1);
     expect(r.stderr).toContain('counter: add title');
   });
   it('fails fewer than 3 tags', () => {
-    const r = setup((n) => { n['counter'].tags = ['a', 'b'] });
+    const r = setup((n) => { n['counter']!.tags = ['a', 'b'] });
     expect(r.status).toBe(1);
     expect(r.stderr).toContain('counter: add title');
   });
   it('fails a title over 8 words', () => {
-    const r = setup((n) => { n['counter'].title = 'one two three four five six seven eight nine' });
+    const r = setup((n) => { n['counter']!.title = 'one two three four five six seven eight nine' });
     expect(r.status).toBe(1);
     expect(r.stderr).toContain('over 8 words');
   });
   it('fails a missing visible or release', () => {
-    expect(setup((n) => { delete n['counter'].visible }).status).toBe(1);
-    expect(setup((n) => { delete n['counter'].release }).status).toBe(1);
+    expect(setup((n) => { delete n['counter']!.visible }).status).toBe(1);
+    expect(setup((n) => { delete n['counter']!.release }).status).toBe(1);
   });
   it('passes a full entry', () => {
     expect(setup(() => {}).status).toBe(0);
