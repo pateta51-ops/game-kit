@@ -9,6 +9,10 @@ export interface SoundCheckOptions {
   formats?: readonly string[];
   maxCueBytes?: number;
   maxLoopBytes?: number;
+  /** Limit for a cue on the music bus (a whole track): default `maxLoopBytes`, else 4 MB. */
+  maxTrackBytes?: number;
+  /** Extension to sibling extension (as the player's `fallback`): every file with a key must have its sibling in `dir`. Default: not checked. */
+  fallback?: Readonly<Record<string, string>>;
 }
 
 /** Lines of problems (none: all good). `dir` is the folder the table's file paths start from. */
@@ -17,7 +21,7 @@ export function checkSoundFiles(table: SoundTable, dir: string, o: SoundCheckOpt
   const missing = new Set(o.missing ?? []);
   const bad: string[] = [];
   const rows: { name: string; files: readonly string[]; max: number }[] = [
-    ...Object.entries(table.cues).filter(([, c]) => c.files.length > 0 || !c.synth?.length).map(([k, c]) => ({ name: k, files: c.files, max: o.maxCueBytes ?? 400_000 })),
+    ...Object.entries(table.cues).filter(([, c]) => c.files.length > 0 || !c.synth?.length).map(([k, c]) => ({ name: k, files: c.files, max: c.bus === 'music' ? (o.maxTrackBytes ?? o.maxLoopBytes ?? 4_000_000) : (o.maxCueBytes ?? 400_000) })),
     ...Object.entries(table.music?.layers ?? {}).map(([k, f]) => ({ name: `layer:${k}`, files: [f], max: o.maxLoopBytes ?? 4_000_000 })),
     ...Object.entries(table.music?.once ?? {}).map(([k, f]) => ({ name: `once:${k}`, files: [f], max: o.maxLoopBytes ?? 4_000_000 })),
     ...Object.entries(table.ambience ?? {}).map(([k, f]) => ({ name: `ambience:${k}`, files: [f], max: o.maxLoopBytes ?? 4_000_000 })),
@@ -30,6 +34,8 @@ export function checkSoundFiles(table: SoundTable, dir: string, o: SoundCheckOpt
     if (whole && missing.has(r.name)) bad.push(`${r.name}: listed as missing, but its files are there`);
     for (const f of there) {
       if (!formats.includes(path.extname(f).toLowerCase())) bad.push(`${r.name}: ${f} is not one of ${formats.join(' ')}`);
+      const alt = o.fallback?.[path.extname(f).toLowerCase()];
+      if (alt !== undefined && !fs.existsSync(path.join(dir, f.slice(0, f.length - path.extname(f).length) + alt))) bad.push(`${r.name}: ${f} has no ${alt} sibling`);
       const size = fs.statSync(path.join(dir, f)).size;
       if (size > r.max) bad.push(`${r.name}: ${f} is ${String(size)} bytes, over ${String(r.max)}`);
       if (size === 0) bad.push(`${r.name}: ${f} is empty`);
