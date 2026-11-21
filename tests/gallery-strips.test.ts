@@ -13,5 +13,5 @@ const shoot = (): string => {
 };
 it('K505 the same demo shot twice is byte-identical', () => {
   const a = shoot(), b = shoot();
-  for (const n of only.split(',')) expect(readFileSync(join(a, `${n}.png`)).equals(readFileSync(join(b, `${n}.png`)))).toBe(true);
+  expect(only.split(',').filter((n) => !readFileSync(join(a, `${n}.png`)).equals(readFileSync(join(b, `${n}.png`))))).toEqual([]);
 }, 240000);

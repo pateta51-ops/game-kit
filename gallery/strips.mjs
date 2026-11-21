@@ -1,10 +1,11 @@
+/* global window, document, Element, Image, tiles, specs, player, __adv */
 // K505: `node gallery/build.mjs --strips` shoots five frames of every catalogue demo from the built gallery page, with a fake clock
 // (performance.now, timers, rAF, Web Animations paused and set) so the same demo gives the same picture. One PNG per entry, one sheet per group.
 import fs from 'node:fs';
 import path from 'node:path';
 
 const FW = 180, FH = 105, GAP = 4, LAB = 16, TITLE = 20;
-export const stripName = (e) => e.id + (e.option ? '--' + Object.entries(e.option).map(([k, v]) => (typeof v === 'object' || v === true ? k : `${k}-${v}`)).join('-') : '');
+export const stripName = (e) => e.id + (e.option ? '--' + Object.entries(e.option).map(([k, v]) => (typeof v === 'object' || v === true ? k : `${k}-${String(v)}`)).join('-') : '');
 
 const clock = () => {
   let now = 0, seq = 0, seed = 12345;

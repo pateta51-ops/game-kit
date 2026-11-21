@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 // K499: catalog.json holds one entry per look of every registered effect and every function effect, each valid and current.
 import { existsSync, readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { createVerbs, validateSpec } from '../motion-frame/index.ts';
 import * as lib from './index.ts';
@@ -72,7 +73,7 @@ describe('K499 effect catalog', () => {
   });
   it('K505 every entry has a film strip and every group a sheet in gallery/strips', () => {
     const name = (e: Entry): string => e.id + (e.option ? '--' + Object.entries(e.option).map(([k, v]) => (typeof v === 'object' || v === true ? k : `${k}-${String(v)}`)).join('-') : '');
-    const has = (f: string): boolean => existsSync(new URL(`../../gallery/strips/${f}.png`, import.meta.url));
+    const has = (f: string): boolean => existsSync(join(process.cwd(), 'gallery', 'strips', `${f}.png`));
     expect(catalog.filter((e) => !has(name(e))).map(name)).toEqual([]);
     expect([...new Set(catalog.map((e) => e.group))].filter((g) => !has(`group-${g}`))).toEqual([]);
   });
