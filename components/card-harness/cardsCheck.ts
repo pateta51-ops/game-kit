@@ -176,21 +176,35 @@ export interface PatternInput {
   readonly arMap: readonly { readonly id: string; readonly ar: string; readonly split?: boolean }[];
   /** A record's shape (default: its sorted keys but `id`, `clause` and `why`). */
   readonly shape?: (r: CardRecord) => string;
+  /** K509: compare shapes only among clauses of one wording key (`true`: the text with numbers as N, `maskClause`). */
+  readonly wording?: true | ((c: CatalogueClause) => string);
+  /** K509: a non-null reason leaves that clause out of the shape comparison. */
+  readonly allowShape?: (clauseId: string, records: CardRecord[]) => string | null;
 }
 const SKIP = new Set(['id', 'clause', 'why']);
 export function patternProblems(i: PatternInput): string[] {
   const out: string[] = [];
   const shape = i.shape ?? ((r: CardRecord) => Object.keys(r).filter((k) => !SKIP.has(k)).sort().join(','));
+  const key = i.wording === undefined ? undefined : i.wording === true ? (c: CatalogueClause) => maskClause(c.text) : i.wording;
   for (const p of i.catalogue.patterns) {
     const shapes = new Map<string, string>();
+    const groups = new Map<string, Map<string, string>>();
+    let encoded = false;
     for (const c of p.clauses) {
       const recs = i.records.filter((r) => r.clause === c.id);
-      if (recs.length) { const s = recs.map(shape).sort().join(' + '); if (!shapes.has(s)) shapes.set(s, c.id); }
+      if (!recs.length) continue;
+      encoded = true;
+      if (i.allowShape?.(c.id, recs) != null) continue;
+      const s = recs.map(shape).sort().join(' + ');
+      let g = shapes;
+      if (key) { const k = key(c); g = groups.get(k) ?? new Map<string, string>(); groups.set(k, g); }
+      if (!g.has(s)) g.set(s, c.id);
     }
-    if (shapes.size === 0) continue;
+    if (!encoded) continue;
     const row = i.arMap.find((r) => r.id === p.id);
     if (row === undefined) out.push(`${p.id} has no AR-map row`);
     else if (row.ar.trim() === '' || /not read/i.test(row.ar)) out.push(`${p.id}: AR-map row is not read`);
+    if (row?.split !== true) for (const [k, g] of groups) if (g.size > 1) out.push(`${p.id} wording "${k}" has ${String(g.size)} shapes: ${[...g].map(([s, c]) => `${c} {${s}}`).join('; ')}`);
     if (shapes.size > 1 && row?.split !== true) out.push(`${p.id} has ${String(shapes.size)} shapes: ${[...shapes].map(([s, c]) => `${c} {${s}}`).join('; ')}`);
   }
   return out;
