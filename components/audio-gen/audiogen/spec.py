@@ -89,6 +89,7 @@ class Cue:
     group: str | None = None  # stems normalised together
     options: dict[str, Any] = field(default_factory=dict)  # passed to the backend as is
     notes: str = ""
+    cap_length: float | None = None  # K514: tail.maxLengthX multiplies this instead of length; never in raw_seconds or the raw stem
     lyrics: str = ""  # K485: YuE2 sung lyrics (section tags allowed); empty = instrumental
 
     @property
@@ -239,7 +240,7 @@ def parse_cue(obj: dict, cfg: Config | None, index: int = 0) -> Cue:
     known = {
         "name", "prompt", "negativePrompt", "category", "mode", "loop", "length", "variations", "tempo", "bars",
         "beatsPerBar", "key", "seed", "backend", "channels", "crossfade", "skip", "group", "options", "notes",
-        "generate", "maxDropDb", "lyrics",
+        "generate", "maxDropDb", "lyrics", "capLength",
     }  # fmt: skip
     unknown = set(obj) - known
     if unknown:
@@ -249,6 +250,9 @@ def parse_cue(obj: dict, cfg: Config | None, index: int = 0) -> Cue:
     if generate is not None and mode == "loop" and generate < skip + length + crossfade:
         raise SpecError(f"{where}: 'generate' {generate} s is less than skip + length + crossfade "
                         f"({skip + length + crossfade:.2f} s)")  # fmt: skip
+    cl = _num(obj, "capLength", where)
+    if cl is not None and cl <= 0:
+        raise SpecError(f"{where}: 'capLength' must be > 0, got {cl}")
     return Cue(
         name=name,
         prompt=prompt.strip(),
@@ -272,6 +276,7 @@ def parse_cue(obj: dict, cfg: Config | None, index: int = 0) -> Cue:
         options=dict(obj.get("options") or {}),
         notes=str(obj.get("notes", "")),
         lyrics=_lyrics(obj.get("lyrics"), where),
+        cap_length=float(cl) if cl is not None else None,
     )
 
 

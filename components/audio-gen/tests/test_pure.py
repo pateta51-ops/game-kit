@@ -121,6 +121,30 @@ class Tail(unittest.TestCase):
         y = tail.apply_tail(x, self.rate, 0.2, tail.TailRule(max_length_x=5, max_s=0.2))
         self.assertLess(len(y) / self.rate, 0.25)  # the 0.35 s minimum would give more
 
+    def test_k514_cap_length_replaces_length_in_cap_only(self):
+        from audiogen import cli
+        x = clip(self.rate, 0.1, 2.0, total_s=4.0)
+        r = tail.TailRule(max_length_x=1.5)
+        y, info = tail.apply_tail_info(x, self.rate, 1.0, r, 0.2)
+        self.assertTrue(info["capped"])
+        self.assertAlmostEqual(len(y) / self.rate, 0.3 + 0.01, delta=0.03)  # 1.5 x 0.2 s after onset
+        self.assertEqual(tail.check_cap(y, self.rate, 1.0, r, 0.2), "")
+        self.assertEqual(tail.apply_tail_info(x, self.rate, 1.0, r), tail.apply_tail_info(x, self.rate, 1.0, r, None))  # v0.225.0
+        a = parse_cue({"name": "a", "prompt": "p", "category": "q", "length": 1.0}, None)
+        b = parse_cue({"name": "a", "prompt": "p", "category": "q", "length": 1.0, "capLength": 0.2}, None)
+        self.assertEqual((a.cap_length, b.cap_length), (None, 0.2))
+        self.assertEqual((a.raw_seconds(), b.raw_seconds()), (1.0, 1.0))
+        from types import SimpleNamespace as NS
+        from audiogen.spec import SpecError
+        cfg = NS(categories={"q": NS(tail={"maxLengthX": 1.5})})
+        args = NS(variations=None, reuse_raw=False)
+        ja, _ = cli._gen_jobs(cfg, "be", None, [a], args, Path("raw"))
+        jb, _ = cli._gen_jobs(cfg, "be", None, [b], args, Path("raw"))
+        self.assertEqual([j.out for j in ja], [j.out for j in jb])
+        for bad in (0, -0.2):
+            with self.assertRaises(SpecError):
+                parse_cue({"name": "a", "prompt": "p", "category": "q", "length": 1.0, "capLength": bad}, None)
+
     def test_k512_no_key_unchanged(self):
         # golden values taken from main's tail.py (before K512) on this fixed clip
         x = clip(self.rate, 0.1, 2.0, total_s=4.0)
