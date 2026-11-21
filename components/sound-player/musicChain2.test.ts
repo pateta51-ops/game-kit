@@ -12,7 +12,7 @@ const table: SoundTable = {
     fadeMs: 2000,
     stateFadeMs: { victory: 500, menu: 4000 },
     layers: { pad: 'long-pad.ogg' },
-    states: { menu: { pad: 1 }, play: { pad: 1 } },
+    states: { menu: { pad: 1 }, play: { pad: 1 }, defeat: { pad: 0.5 } },
     once: { victory: 'long-victory.ogg', defeat: 'long-defeat.ogg', sting: 'long-sting.ogg' },
     then: { victory: 'menu', defeat: null, sting: 'play' },
     interludes: ['sting'],
@@ -71,6 +71,8 @@ describe('K510 music: per-state fades and chains', () => {
     ctx.currentTime += 20;
     player.setState('defeat');
     const d = of('long-defeat.ogg')[0]!;
+    ctx.currentTime = d.startedAt! + 5;
+    expect(ctx.heard(pad, ctx.currentTime + 10)).toBeCloseTo(0.5);
     ctx.currentTime = d.startedAt! + 40;
     ctx.end(d);
     expect(ctx.heard(pad, ctx.currentTime + 10)).toBeCloseTo(0);
