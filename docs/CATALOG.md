@@ -1126,7 +1126,7 @@ The owner's rule "no rule ids on screen" as code: rule, ruling and decision ids 
 The plan checker: `plancheck.py` checks a game's build plan (Markdown) for balanced fences, anchors, section references, defined and cited ids, tables, session-plan and phase coverage. It also prints a worker's order (`--batch <id>`: the shared preamble, the batch block and the line ranges to read) or one numbered section (`--section 5.3`). `plancheck.ts` wraps it for tests. It warns (never fails) when the kit pin is 5+ minor versions behind the latest tag or a `Phase GK` targets a K row the kit's PLAN marks done (a major jump counts; `--kit PATH`; skipped when no checkout is found). The docstring at the top of `plancheck.py` lists every check and flag.
 
 - **Also called:** Check a build plan document
-- **Words:** plan, check, markdown, references, batch, ranges
+- **Words:** plan, check, markdown, references, batch, ranges, kit fit, build own table, game sheet, reuse map
 - **Release:** 1.0; not seen
 - **The game supplies:** The build plan file.
 - **Use it when:** Checking a game plan and listing a batch's line ranges (`plancheck.py --batch`).
