@@ -61,6 +61,8 @@ export interface PackEnv {
   readonly n?: number;
   /** Set by the pack while a `payThen` cost runs: the first occurrence id of the cost (a cancelled one means unpaid). */
   readonly paidFrom?: number;
+  /** K529, set by the pack while a cost judged as a whole is paid: the cost steps still to pay after this one. */
+  readonly owed?: readonly Step[];
 }
 /** A move waiting for its occurrence (`cardMoves`, keyed by occurrence id). */
 export interface PendingMove {
@@ -161,7 +163,8 @@ const matched = (need: readonly (readonly string[])[]): boolean => {
   });
   return need.every((_, i) => place(i, new Set()));
 };
-interface Ledger { readonly res: Record<string, number>; readonly top: Record<string, number>; readonly need: string[][] }
+// What a cost judged as a whole has taken so far: resources, top cards per zone, and per pool (`move`, `exhaust`, `ready`) the cards each step could use.
+interface Ledger { readonly res: Record<string, number>; readonly top: Record<string, number>; readonly need: Record<string, string[][]> }
 
 const SELS: readonly Sel[] = ['chosen', 'source', 'top', 'pick', 'all'];
 const DEF: Record<string, { from?: string; to?: string; sel?: Sel; at?: At }> = {
@@ -256,30 +259,32 @@ export function cardPack<G extends GameTypes, E extends PackEnv = PackEnv>(cfg: 
     const sel = c.cards ?? d.sel ?? 'chosen';
     const k = n(c.count, env);
     const ok = (id: string): boolean => locate(s, id) !== undefined && (c.op !== 'exhaust' || !hasMark(s, id, 'exhausted')) && (c.op !== 'ready' || hasMark(s, id, 'exhausted'));
-    const m = 'to' in fieldsOf(p.op) || p.op === 'attach' ? l : undefined;
+    // A moving step takes its card for good; two exhausts (or two readies) need two cards; an exhausted card may still leave.
+    const moves = 'to' in fieldsOf(p.op) || p.op === 'attach';
+    const pool = moves ? 'move' : p.op === 'exhaust' || p.op === 'ready' ? p.op : undefined;
+    const put = (ids: string[]): void => {
+      if (l && pool !== undefined) (l.need[pool] ??= []).push(ids);
+    };
     if (sel === 'source') {
-      if (env.source !== undefined) m?.need.push([env.source]);
+      if (env.source !== undefined) put([env.source]);
       return env.source !== undefined && ok(env.source);
     }
     if (sel === 'chosen') {
-      for (const id of env.cards ?? []) m?.need.push([id]);
+      for (const id of env.cards ?? []) put([id]);
       return (env.cards ?? []).length > 0 && (env.cards ?? []).every(ok);
     }
     if (sel === 'top') {
-      const t = m?.top[from] ?? 0;
-      if (m) m.top[from] = t + k;
+      const t = (moves ? l?.top[from] : undefined) ?? 0;
+      if (l && moves) l.top[from] = t + k;
       return cardsIn(s, from).length >= k + t;
     }
     if (sel === 'all') return true;
     const can = eligible(s, c, env, from, false).filter((id) => id.startsWith('#') || ok(id));
-    for (let i = 0; i < k; i += 1) m?.need.push(can.map((id) => (id.startsWith('#') ? from + id : id)));
+    for (let i = 0; i < k; i += 1) put(can.map((id) => (id.startsWith('#') ? from + id : id)));
     return can.length >= k;
   };
-  const canPay = (s: PackState, cost: Eff, env: E): boolean => {
-    if (P.cost !== 'whole') return cost.every((x) => payable(s, x, env));
-    const l: Ledger = { res: {}, top: {}, need: [] };
-    return cost.every((x) => payable(s, x, env, l)) && matched(l.need);
-  };
+  const whole = (s: PackState, cost: Eff, env: E, l: Ledger = { res: {}, top: {}, need: {} }): boolean => cost.every((x) => payable(s, x, env, l)) && Object.values(l.need).every(matched);
+  const canPay = (s: PackState, cost: Eff, env: E): boolean => (P.cost === 'whole' ? whole(s, cost, env) : cost.every((x) => payable(s, x, env)));
   const VIEW_SKIP = ['stack', 'prompt', 'seq', 'promptSeq', 'log', 'timing', 'cardMoves', 'rng', 'forced'];
   const view = (s: unknown): string => canonicalJson(P.view ? P.view(s as G['state']) : Object.fromEntries(Object.entries(s as object).filter(([k]) => !VIEW_SKIP.includes(k))));
   // K529: would these steps change the game? They run on a copy with the game's handlers; every prompt forks one run per answer tried.
@@ -364,8 +369,8 @@ export function cardPack<G extends GameTypes, E extends PackEnv = PackEnv>(cfg: 
     });
   };
   const unhide = (s: PackState, z: string, picks: readonly string[]): string[] => picks.map((p) => (p.startsWith('#') ? (cardsIn(s, z)[Number(p.slice(1))] ?? '') : p));
-  const pickAsk = (ctx: Ctx<G>, st: PackStep, env: E, z: string, min: number, max: number, peek = false, kind = 'chooseCards'): boolean => {
-    const ids = eligible(S(ctx), st as { filter?: string }, env, z, peek);
+  const pickAsk = (ctx: Ctx<G>, st: PackStep, env: E, z: string, min: number, max: number, peek = false, kind = 'chooseCards', keep?: (id: string) => boolean): boolean => {
+    const ids = eligible(S(ctx), st as { filter?: string }, env, z, peek).filter((id) => keep?.(id) ?? true);
     const hi = Math.min(max, ids.length);
     if (hi === 0) return false;
     ask(ctx, st, env, kind, ids.map((id) => ({ id, enabled: true })), Math.min(min, hi), hi);
@@ -403,7 +408,15 @@ export function cardPack<G extends GameTypes, E extends PackEnv = PackEnv>(cfg: 
     if (sel === 'all') return [...cardsIn(s, from)];
     if (sel === 'top') return n(st.count, env);
     const c = n(st.count, env);
-    return pickAsk(ctx, st as PackStep, env, from, c, c) ? undefined : [];
+    // K529, a cost judged as a whole: only picks that leave this step's other picks and the steps still owed payable (a card the seat cannot see is never judged).
+    const owed = P.cost === 'whole' ? env.owed : undefined;
+    const keep = owed && ((id: string): boolean => {
+      if (id.startsWith('#')) return true;
+      const l: Ledger = { res: {}, top: {}, need: {} };
+      payable(s, { ...st, cards: 'chosen' } as Step, { ...env, cards: [id] }, l);
+      return (c < 2 || payable(s, { ...st, count: c - 1 } as Step, env, l)) && whole(s, owed, env, l);
+    });
+    return pickAsk(ctx, st as PackStep, env, from, c, c, false, 'chooseCards', keep) ? undefined : [];
   };
   const picked = (ctx: Ctx<G>, st: Cards & { op: string }, env: E, a: readonly string[]): void => {
     const s = S(ctx);
@@ -621,14 +634,23 @@ export function cardPack<G extends GameTypes, E extends PackEnv = PackEnv>(cfg: 
     payThen: flow({ cost: eff, then: eff }, (ctx, st: Extract<PackStep, { op: 'payThen' }>, e) => {
       // Pays the cost, then (the same step again, env.paidFrom set) runs `then` only when no cost occurrence was cancelled.
       const s = S(ctx);
-      const { paidFrom, ...rest } = e;
+      const { paidFrom, owed, ...rest } = e;
       const occs = (s as unknown as KernelState).timing?.occurrences ?? [];
+      // K529, a cost judged as a whole is paid one step at a time: a step that cannot pay when it is reached stops the cost, and `then` does not run.
+      const next = (from: number, left: readonly Step[]): void => {
+        const step = left[0];
+        if (step === undefined || !payable(s, step, rest as E)) return;
+        ctx.then(...(effectTasks([step], { ...rest, owed: left.slice(1) }) as unknown as G['task'][]), ...(effectTasks([st], { ...rest, paidFrom: from, owed: left.slice(1) }) as unknown as G['task'][]));
+      };
       if (paidFrom !== undefined) {
+        if (occs.some((o) => o.id >= paidFrom && o.state === 'cancelled')) return;
+        if (P.cost === 'whole' && owed !== undefined && owed.length > 0) return next(paidFrom, owed);
         // K529: in the check the "if you do" part does not run, so it never counts on its own.
-        if (dry === null && !occs.some((o) => o.id >= paidFrom && o.state === 'cancelled')) go(ctx, st.then, rest as E);
+        if (dry === null) go(ctx, st.then, rest as E);
         return;
       }
       if (!canPay(s, st.cost, e)) return;
+      if (P.cost === 'whole') return next((s as unknown as KernelState).timing?.next ?? 0, st.cost);
       ctx.then(...(effectTasks(st.cost, e) as unknown as G['task'][]), ...(effectTasks([st], { ...e, paidFrom: (s as unknown as KernelState).timing?.next ?? 0 }) as unknown as G['task'][]));
     }),
     custom: flow({ name: str, n: optional(amount) }, (ctx, st: Extract<PackStep, { op: 'custom' }>, e) => {

@@ -31,6 +31,7 @@ const DRAW: PackStep = { op: 'draw', count: 1 };
 const pay = (amount: number): PackStep => ({ op: 'pay', res: 'gold', amount });
 
 const game = (offer?: OfferPolicy<S>, wire = true) => {
+  const nested: string[] = [];
   const pack = cardPack<G>({
     filters: { even: (_s, c) => c.endsWith('2') },
     tests: { rich: (s, e) => gold(s, e.seat) >= 9 },
@@ -39,6 +40,8 @@ const game = (offer?: OfferPolicy<S>, wire = true) => {
       nothing: { run: () => undefined, text: () => 'Nothing.' },
       roll: { run: (ctx, _st, env) => void (draftOf(ctx).res = { [env.seat]: { gold: ctx.rng.int(6) } }), text: () => 'Roll.' },
       loop: { run: (ctx, st, env) => ctx.then(...(effectTasks([st], env) as Task[])), text: () => 'Loop.' },
+      spend: { run: (ctx, _st, env) => void (draftOf(ctx).res = { [env.seat]: { gold: 0 } }), text: () => 'Lose all gold.' },
+      nest: { run: (ctx, _st, env) => void nested.push(pack.wouldChange(ctx.s, ctx.content, [GAIN], env)), text: () => 'Nest.' },
       dry: { run: (ctx) => void (inDryRun() && ctx.emit({ type: 'dry' })), text: () => 'Dry.' },
     },
     moved: (ctx, m) => ctx.emit({ type: `${m.op} ${m.card}` }),
@@ -81,7 +84,7 @@ const game = (offer?: OfferPolicy<S>, wire = true) => {
     expect(hashState(s)).toBe(h);
     return r;
   };
-  return { pack, play, check };
+  return { pack, play, check, nested };
 };
 const z = (s: S, name: string): readonly string[] => cardsIn(s, name);
 const kinds = (p: readonly KernelPrompt[]): (string | undefined)[] => p.map((x) => x.kind);
@@ -148,11 +151,22 @@ describe('card-language offer policy (K529): the would-change-nothing check', ()
     expect(check([{ op: 'chooseCards', zone: 'hand:b', max: 1, then: [{ op: 'move', cards: 'chosen', to: 'discard' }] }])).toBe('yes');
   });
   it('K529 case 36: the check leaks no state change and no event, in or out of a run, and does not nest', () => {
-    const { play, pack } = game({ noChange: 'skip' });
+    const { play } = game({ noChange: 'skip' });
     const { s, prompts } = play([{ op: 'may', then: [{ op: 'custom', name: 'dry' }, DRAW] }], [['no']]);
     expect([kinds(prompts), s.log, z(s, 'hand:a'), s.timing?.occurrences ?? []]).toEqual([['may'], [], ['h1', 'h2'], []]);
     expect(inDryRun()).toBe(false);
-    expect(typeof pack.wouldChange).toBe('function');
+  });
+  it('K529 the check does not nest: called inside itself it answers unknown, and yes in the real run', () => {
+    const g = game();
+    expect([g.check([{ op: 'custom', name: 'nest' }]), g.nested]).toEqual(['no', ['unknown']]);
+    g.play([{ op: 'custom', name: 'nest' }]);
+    expect([g.nested, inDryRun()]).toEqual([['unknown', 'yes'], false]);
+  });
+  it('K529 offer.view says what counts as the game: a change outside it is no change', () => {
+    const cards = game({ view: (s) => s.zones });
+    expect([check([GAIN]), cards.check([GAIN]), cards.check([DRAW])]).toEqual(['yes', 'no', 'yes']);
+    const later: Eff = [{ op: 'later', at: 'end', then: [GAIN] }];
+    expect([check(later), game({ view: ({ zones, res, marks }) => ({ zones, res, marks }) }).check(later)]).toEqual(['yes', 'no']);
   });
   it('K529 a policy that needs the check without cfg.handlers fails at build', () => {
     expect(() => game({ noChange: 'skip' }, false)).toThrow(/handlers/);
@@ -203,6 +217,26 @@ describe('card-language offer policy (K529): one test per knob setting', () => {
     const { s } = g.play([{ op: 'payThen', cost: [{ op: 'discard', count: 1 }, even], then: [GAIN] }], [['h1'], ['h2']]);
     expect([z(s, 'hand:a'), gold(s)]).toEqual([[], 4]);
     expect(gold(g.play([{ op: 'payThen', cost: [{ op: 'mill', count: 2 }, { op: 'mill', count: 1 }], then: [GAIN] }]).s)).toBe(3);
+  });
+  it('K529 knob cost = whole: a pick that would leave a later part unpayable is not offered', () => {
+    const cost: Eff = [{ op: 'payThen', cost: [{ op: 'discard', count: 1 }, { op: 'discard', count: 1, filter: 'even' }], then: [GAIN] }];
+    const { s, prompts } = game({ cost: 'whole' }).play(cost, [['h1'], ['h2']]);
+    expect([prompts.map((p) => p.options.map((o) => o.id)), gold(s)]).toEqual([[['h1'], ['h2']], 4]);
+    expect(game().play(cost, [['h2']]).prompts[0]?.options.map((o) => o.id)).toEqual(['h1', 'h2']);
+  });
+  it('K529 knob cost = whole: a cost step that can pay nothing when it is reached stops the cost, and then does not run', () => {
+    const cost: Eff = [{ op: 'payThen', cost: [{ op: 'custom', name: 'spend' }, pay(1)], then: [DRAW] }];
+    expect(z(game({ cost: 'whole' }).play(cost).s, 'hand:a')).toEqual(['h1', 'h2']);
+    expect(z(game().play(cost).s, 'hand:a')).toEqual(['h1', 'h2', 'd1']);
+  });
+  it('K529 knob cost = whole: two exhaust parts need two ready cards; exhaust a card, then destroy the same card, is payable', () => {
+    const tap: PackStep = { op: 'exhaust', cards: 'pick', count: 1 };
+    const g = game({ cost: 'whole' });
+    const twice = g.play([{ op: 'payThen', cost: [tap, tap], then: [GAIN] }]);
+    expect([twice.prompts, gold(twice.s), twice.s.marks]).toEqual([[], 3, undefined]);
+    const both = g.play([{ op: 'payThen', cost: [tap, { op: 'destroy' }], then: [GAIN] }], [['p1'], ['p1']]);
+    expect([gold(both.s), z(both.s, 'play:a')]).toEqual([4, []]);
+    expect(gold(g.play([{ op: 'payThen', cost: [{ op: 'exhaust' }, { op: 'exhaust' }], then: [GAIN] }]).s)).toBe(3);
   });
   it('K529 knob cost = whole, case 5: exhaust this card and discard this card is payable with the one card; two discards of it are not', () => {
     const g = game({ cost: 'whole' });
