@@ -94,7 +94,7 @@ export async function strips({ entries, url, outDir, only }) {
       prev = s;
     }
     await page.close();
-    return Math.min(L, Math.max(400, (last + 1) * d));
+    return Math.min(L, Math.max(400, Math.round((last + 1) * d * 1.5)));
   };
   const shoot = async (idx) => {
     const span = await active(idx);
