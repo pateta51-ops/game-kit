@@ -14,7 +14,7 @@ Dice patterns as plain data (a pair, N the same, a run, odd or even, a sum again
 5. Write the game's rule for what a met pattern does in the game, not here.
 
 **Common mistakes:**
-- Expecting `smallest` to drop dice from a sum: a sum reads every die, so `{ kind: 'sum' }` returns all indexes.
+- Expecting `smallest` to agree with `compile` on the whole roll for an upper bound (`max`, `spread` or `sum` with `<`, `<=`): it judges each set alone.
 - Expecting an empty roll to meet anything: every pattern needs at least one die (`spread` two).
 
 ## Kinds
@@ -23,7 +23,7 @@ Dice patterns as plain data (a pair, N the same, a run, odd or even, a sum again
 - `atLeast` and `face` with `face` and `n`: n dice showing `face` or more; n dice showing exactly `face` (a slot that takes one named face).
 - `sum` with `op` (`<`, `<=`, `=`, `>=`, `>`) and `value`; `max` and `spread` (highest minus lowest) with `value` and an optional `op` (default `=`).
 - `twoPair`; `all` and `any` with `of`, a list of patterns.
-- `smallest(p, values)`: indexes of the fewest dice that meet `p`, or null when the whole roll does not. Tie-break: the set whose indexes come first in order (`[0, 3]` before `[1, 2]`). `all` first tries the union of each part's set; `any` takes the smallest set of its met parts (the first on a tie).
+- `smallest(p, values)`: indexes of the smallest non-empty set of the dice that meets `p` when judged on that set alone, or null when no set does. Tie-break: the set whose indexes come first in order (`[0, 3]` before `[1, 2]`). One rule for every kind, `all`, `any` and `sum` included: "highest die at most 3" on `[2, 3]` gives `[0]`, and on `[6, 2]` gives `[1]` although `compile` (which judges the whole roll it is given) says false.
 
 Not here: rolling, odds after rerolls, card sets or poker hands, dice formulas.
 

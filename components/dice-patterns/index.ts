@@ -87,20 +87,8 @@ const search = (ok: (s: readonly number[]) => boolean, n: number): number[] | nu
   return null;
 };
 
-/** Indexes of the fewest dice that meet `p` (ties: lowest indexes), or null. A sum reads every die. */
+/** Indexes of the smallest non-empty set of dice that meets `p` judged on that set alone (ties: lowest indexes), or null. */
 export function smallest(p: Pattern, values: readonly number[]): number[] | null {
   const test = compile(p);
-  if (!test(values)) return null;
-  const ok = (s: readonly number[]) => test(s.map((i) => values[i] as number));
-  if (p.kind === 'sum') return values.map((_, i) => i);
-  if (p.kind === 'all') {
-    const u = [...new Set(p.of.flatMap((q) => smallest(q, values) ?? []))].sort((a, b) => a - b);
-    if (ok(u)) return u;
-  }
-  if (p.kind === 'any') {
-    let best: number[] | null = null;
-    for (const q of p.of) { const r = smallest(q, values); if (r && (!best || r.length < best.length)) best = r; }
-    return best;
-  }
-  return search(ok, values.length);
+  return search((s) => test(s.map((i) => values[i] as number)), values.length);
 }
