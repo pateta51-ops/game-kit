@@ -82,6 +82,7 @@ Open check before the lift: the canonical JSON of the Jarl line and of STCC buil
 | Ghost card (K92) | No game: a new design from ArkhamHorror `ghostAbility.ts` (no licence, so no code copied): a choice whose source left play grouped under its last-known snapshot (engine-core K113) | | S |
 | Challenges (K163) | New; idea only from marvel-lcg (a challenge as a content item: setup restriction plus triggered penalties) | | S |
 | Dice odds (`dice-odds`, K24) | New code from the K24 row (a finished build, 15 Nov 2026): multiset enumeration with multinomial weights, `chance(k, test)`, cached per thread | - | S |
+| Dice patterns (`dice-patterns`, K527) | 7IS, commit b3ef81b (`src/engine/conditions.ts`): pattern logic and the smallest satisfying set kept; patterns become plain data compiled to `chance`/`readRoll` tests | - | S |
 | Dice tray and roll window (`dice-tray`, K211) | 7th Inning Stretch (roll-window machine, `src/ui/prompts/logic.ts`): new code for the tray, holds, adjusts, meanings and the optional roll hook; rolls only through `ctx.rng` | - | S |
 
 ## Menus shell and phone

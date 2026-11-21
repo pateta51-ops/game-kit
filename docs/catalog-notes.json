@@ -559,6 +559,25 @@
     "release": 1,
     "gameSupplies": "The dice to compute odds for."
   },
+  "dice-patterns": {
+    "use": "Dice patterns as data (a pair, N the same, a run, odd or even, a sum against a number, a count, two pair, all or any) compiled to the test that dice-odds chance and dice-tray readRoll take, plus the smallest set of dice that meets one.",
+    "not": "Rolling dice, odds after rerolls, card sets or poker hands, dice formulas.",
+    "title": "Dice patterns: pair, run, sum",
+    "tags": [
+      "dice",
+      "pattern",
+      "check",
+      "pair",
+      "run",
+      "sum",
+      "same",
+      "different",
+      "condition"
+    ],
+    "visible": false,
+    "release": 1,
+    "gameSupplies": "Its patterns as plain data and what each one means."
+  },
   "dice-tray": {
     "use": "Dice in play, held dice, rolling through ctx.rng and the roll window content. Recipe: docs/recipes/dice.md.",
     "not": "Dice drawing or 3D (pieces-3d) and odds (dice-odds).",
@@ -1054,7 +1073,11 @@
       "markdown",
       "references",
       "batch",
-      "ranges"
+      "ranges",
+      "kit fit",
+      "build own table",
+      "game sheet",
+      "reuse map"
     ],
     "visible": false,
     "release": 1,

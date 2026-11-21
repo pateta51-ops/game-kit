@@ -34,6 +34,31 @@ Checks:
   and Patterns columns, no row over --max-clauses (default 40) clauses or --max-patterns (default 10) patterns (ids
   comma-separated), the Clauses cells sum to the catalogue's summary.clauses, and every catalogue pattern id is in a
   Patterns cell;
+- game-kit reuse (problems prefixed "kit:"; with --kit-optional they are NOTEs, for a plan written before 21 Nov 2026
+  only), read from the section whose heading contains "Reuse map" (--reuse TEXT), tables inside code fences skipped
+  (cases: test_kit_checks.py beside this file):
+  * the reuse map is each table whose header has Layer, Kind and Source cells; every Kind starts with Pull, Kit phase,
+    Pattern, Port or New. A Pull row names in backticks at least one component of the kit at the pin (or the part a
+    Kit phase row of this map builds), and a backticked lower-case name outside parentheses that is neither is a
+    problem. The pin is the first vX.Y.Z on a line of the section that says pin, pinned or tag as a word, else
+    kit/kit.lock.json's ref, else the first vX.Y.Z of the section; Pull rows with no pin at all are a problem. A NOTE
+    always says whether the Pull rows were checked and against which tag. A Kit phase row names a GK<n> that is a
+    "Phase GK<n>" heading, and a new kit phase also has a build-own row;
+  * a game sheet table (a header cell names "Game sheet") with a row for each line of references/game-sheet.md
+    (SHEET_LINES), each with an answer, and with a backticked kit part or the words "build-own" in its third cell
+    unless the answer starts "not in this game"; more than half the lines absent is a NOTE;
+  * a build-own table (a header cell names "What the game builds"; columns: what, words searched, nearest kit part,
+    verdict, register id or refusal) with a row for every New, Port and Pattern row of the reuse map by its Layer text,
+    and a row starting "Game verbs" when a Source cell of the map names card-language or a heading contains "Effect
+    language" (one "Game verbs: none" row is allowed, with the coverage diff's counts in its second cell). Every other
+    row: two phrasings searched (two parts around a ";", or two quoted or backticked strings); a verdict cell that
+    starts with kit phase, candidate or game code; for kit phase and candidate a K<n> id or "steward not asked" in the
+    last cell; for game code a reason of six words or more; a kit phase with K<n> needs a "Phase GK<n>" heading;
+  * the kit-fit review (plan-review/kit-fit.md beside the plan) exists, is not empty and names every build-own row;
+  * a line starting "Kit steward's reply (" with a ">" line within the next three, unless every build-own row says
+    "steward not asked";
+  * every Modifier order row holds a backticked name or the words "build-own", in its "Kit function" cell when the
+    table has one;
 
 Extraction (prints and exits, no checks):
   --section 5.3   one numbered section
@@ -66,7 +91,7 @@ docs/PLAN.md marks done.
 Usage: python plancheck.py docs/BUILD_PLAN.md [--tsc] [--scenarios TEXT] [--phases TEXT] [--types TEXT] [--tsc-stub TEXT]
        [--sessions TEXT] [--sessions-optional] [--scenarios-end TEXT] [--cover TEXT] [--cover-rows A,B]
        [--cover-skip A,B] [--tsc-at DIR] [--cards TEXT] [--done TEXT] [--layers TEXT] [--depth-optional]
-       [--cards-optional] [--catalogue PATH] [--max-clauses N] [--max-patterns N]
+       [--cards-optional] [--catalogue PATH] [--max-clauses N] [--max-patterns N] [--kit-optional] [--reuse TEXT] [--kit PATH]
 Exit code 0 when no problems were found.
 """
 from __future__ import annotations
@@ -292,13 +317,23 @@ def extract(path: Path, lines: list[str], heads: list[tuple[int, int, str]]) -> 
     return 0
 
 
+SHEET_LINES = ("who the player controls", "what can run out", "clocks and tracks", "the phase list", "where the opposition comes from",
+               "dice", "positions", "numbers several cards change", "costs and payment", "may an effect be offered",
+               "lasting effects and status", "triggers and windows", "cards as data", "hidden information", "objectives and scoring",
+               "set-up picks", "between games", "loading the content", "attacks and damage", "tokens and markers",
+               "levels and upgrades", "markets and rows")
+
+
+def kit_dir() -> Path | None:
+    for c in ([Path(opt("--kit", ""))] if "--kit" in sys.argv else ([Path(os.environ["KIT_DIR"])] if os.environ.get("KIT_DIR") else []) + [Path(__file__).resolve().parents[2], Path("C:/projects/game-kit"), Path.home() / "game-kit"]):
+        if (c / "docs" / "PLAN.md").is_file() and (c / "components").is_dir() and (c / "kit.mjs").is_file():
+            return c
+    return None
+
+
 def kit_warnings(path: Path, lines: list[str]) -> set[str]:
     out: set[str] = set()
-    kit = None
-    for c in ([Path(opt("--kit", ""))] if "--kit" in sys.argv else ([Path(os.environ["KIT_DIR"])] if os.environ.get("KIT_DIR") else []) + [Path(__file__).resolve().parents[2], Path("C:/projects/game-kit"), Path.home() / "game-kit"]):
-        if (c / "docs" / "PLAN.md").is_file():
-            kit = c
-            break
+    kit = kit_dir()
     if kit is None:
         return out
     try:
@@ -347,7 +382,7 @@ def main() -> int:
     args = [a for a in sys.argv[1:] if not a.startswith("--")]
     for flag in ("--scenarios", "--phases", "--types", "--sessions", "--section", "--batch", "--scenarios-end", "--cover",
                  "--cover-rows", "--cover-skip", "--tsc-stub", "--kit", "--tsc-at", "--cards", "--done", "--layers",
-                 "--catalogue", "--max-clauses", "--max-patterns"):
+                 "--catalogue", "--max-clauses", "--max-patterns", "--reuse"):
         if flag in sys.argv:
             v = opt(flag, "")
             if v in args:
@@ -666,6 +701,139 @@ def main() -> int:
         notes |= {f"cards: {d}" for d in cd}
     else:
         problems += [f"cards: {d}" for d in cd]
+
+    # --- game-kit reuse: pulls at the pin, the game sheet, the build-own table, the kit-fit review ---
+    kd: list[str] = []
+    norm = lambda c: re.sub(r"\s+", " ", re.sub(r"[*`]", "", c)).strip().lower()
+    slug = r"`([a-z0-9]+(?:-[a-z0-9]+)*)`"
+    named = lambda c: "`" in c or "build-own" in c.lower()
+    ru = section(lines, heads, opt("--reuse", "Reuse map"))
+    if not ru:
+        kd.append(f"no heading contains {opt('--reuse', 'Reuse map')!r} (use --reuse)")
+    tabs: dict[str, list[list[str]]] = {}
+    seen: set[str] = set()
+    th, fence, pos = None, False, (0, 1, 2)
+    for l in ru.split("\n"):
+        if l.strip().startswith(("```", "~~~")):
+            fence = not fence
+        cells = [c.strip() for c in table_cells(l)] if l.strip().startswith("|") and not fence else []
+        if not cells:
+            th = None
+        elif th is None:
+            low = [norm(c) for c in cells]
+            th = ("sheet" if any("game sheet" in c for c in low) else "own" if any("what the game builds" in c for c in low)
+                  else "map" if all(any(w in c for c in low) for w in ("layer", "kind", "source")) else "x")
+            seen.add(th)
+            if th == "map":
+                pos = tuple(next(k for k, c in enumerate(low) if w in c) for w in ("layer", "kind", "source"))
+        elif not all(re.fullmatch(r"[\s:-]*", c) for c in cells):
+            trows = tabs.setdefault(th, [])
+            if th == "map":
+                if len(cells) <= max(pos):
+                    continue
+                cells = [cells[pos[0]], cells[pos[1]], cells[pos[2]], " ".join(cells)]
+            if not norm(cells[0]) and trows:
+                cells[0] = trows[-1][0]
+            trows.append(cells)
+    own, sheet, maprows = tabs.get("own", []), tabs.get("sheet", []), tabs.get("map", [])
+    if ru and "map" not in seen:
+        kd.append("the reuse map has no table with Layer, Kind and Source columns")
+    kit, comps = kit_dir(), set()
+    vs = [(m.group(0), l) for l in ru.split("\n") for m in [re.search(r"v\d+\.\d+\.\d+", l)] if m]
+    tag = next((v for v, l in vs if re.search(r"\b(pin|pinned|tag)\b", l, re.I)), None)
+    if not tag:
+        with contextlib.suppress(Exception):
+            tag = json.loads((path.resolve().parent.parent / "kit" / "kit.lock.json").read_text(encoding="utf-8")).get("ref")
+    tag = tag or (vs[0][0] if vs else None)
+    if not tag and any(norm(r[1]).startswith("pull") for r in maprows):
+        kd.append("the reuse map names no kit pin (a line that says pin or tag, with vX.Y.Z)")
+    if kit and tag:
+        with contextlib.suppress(OSError):
+            comps = set(subprocess.run(["git", "-C", str(kit), "ls-tree", "-d", "--name-only", tag + ":components"],
+                                       capture_output=True, text=True, encoding="utf-8").stdout.split())
+    notes.add(f"kit: Pull rows checked against {tag} in {kit}" if comps else "kit: Pull rows NOT checked ("
+              + ("no kit checkout" if not kit else "no kit pin in the reuse map" if not tag else f"tag {tag} not in {kit}: git fetch --tags") + ")")
+    ownset = {norm(o[0]) for o in own}
+    phased = {n for r in maprows if norm(r[1]).startswith("kit phase") for n in re.findall(slug, r[2])}
+    for layer, kindc, srcc, whole in maprows:
+        kind, bare = norm(kindc), srcc
+        if not kind.startswith(("pull", "kit phase", "pattern", "port", "new")):
+            kd.append(f"reuse map: row {layer!r} has Kind {kindc!r} (use Pull, Kit phase, Pattern, Port or New)")
+        if kind.startswith("pull") and comps:
+            while (b2 := re.sub(r"\([^()]*\)", "", bare)) != bare:
+                bare = b2
+            if not set(re.findall(slug, srcc)) & (comps | phased):
+                kd.append(f"reuse map: Pull row {layer!r} names no kit part of {tag}")
+            kd += [f"reuse map: `{n}` (row {layer!r}) is no kit part at {tag}" for n in re.findall(slug, bare) if n not in comps and n not in phased]
+        if kind.startswith("kit phase") and not any(re.match(rf"Phase {re.escape(g)}\b", t) for g in re.findall(r"\bGK\w+", whole) for _, _, t in heads):
+            kd.append(f"reuse map: Kit phase row {layer!r} names no GK phase of this plan (GK<n> in the row, 'Phase GK<n>' as a heading)")
+        if (kind.startswith(("new", "port", "pattern")) or (kind.startswith("kit phase") and "new" in kind)) and norm(layer) not in ownset:
+            kd.append(f"reuse map: {'Kit phase' if kind.startswith('kit') else kind.split()[0].capitalize()} row {layer!r} is not in the build-own table")
+    if "sheet" not in seen:
+        kd.append("the reuse map has no game sheet table (a header cell names 'Game sheet'): stage 5")
+    else:
+        kd += [f"game sheet: no row for the line {t!r}" for t in SHEET_LINES if not any(norm(r[0]).startswith(t) for r in sheet)]
+        for r in sheet:
+            ans = norm(r[1]) if len(r) > 1 else ""
+            if not ans.strip("-—– "):
+                kd.append(f"game sheet: line {r[0]!r} has no answer")
+            elif not ans.startswith("not in this game") and (len(r) < 3 or not named(r[2])):
+                kd.append(f"game sheet: line {r[0]!r} names no kit part (in backticks) and no build-own row")
+        absent = [r[0] for r in sheet if len(r) > 1 and norm(r[1]).startswith("not in this game")]
+        if len(absent) * 2 > len(SHEET_LINES):
+            notes.add(f"kit: the game sheet says 'not in this game' on {len(absent)} lines: {', '.join(absent)}")
+    gv = [o for o in own if norm(o[0]).startswith("game verbs")]
+    if "own" not in seen:
+        kd.append("the reuse map has no build-own table (a header cell names 'What the game builds'): stage 5")
+    elif not gv and (any("card-language" in r[2] for r in maprows) or find_heading(heads, "effect language") is not None):
+        kd.append("build-own table: no 'Game verbs' row (one per family of the game's own verbs, or 'Game verbs: none' with the coverage diff's counts)")
+    fit = path.parent / "plan-review" / "kit-fit.md"
+    fitt = norm(fit.read_text(encoding="utf-8", errors="replace")) if fit.is_file() else ""
+    if not fitt:
+        kd.append(f"no kit-fit review ({fit} is missing or empty): stage 9")
+    answered = False
+    for o in own:
+        o = o + [""] * (5 - len(o))
+        name, v, last = norm(o[0]), norm(o[3]).replace("-", " "), o[4]
+        if name.endswith(": none"):
+            if name != "game verbs: none" or len(gv) > 1:
+                kd.append(f"build-own table: {o[0]!r}: only one row, 'Game verbs: none', may say none")
+            elif not re.search(r"\d", o[1]):
+                kd.append("build-own table: 'Game verbs: none' gives no counts from the coverage diff in its second cell")
+            continue
+        asked, kid = "steward not asked" in last.lower(), re.search(r"\bK(\d+)\b", last)
+        answered = answered or not asked
+        if len([x for x in o[1].split(";") if re.search(r"[A-Za-z]", x)]) < 2 and len(re.findall(r"\"[^\"]+\"|`[^`]+`", o[1])) < 2:
+            kd.append(f"build-own table: {o[0]!r} names fewer than two phrasings searched in the kit (separate them with ';')")
+        if not v.startswith(("kit phase", "candidate", "game code")):
+            kd.append(f"build-own table: {o[0]!r} has no verdict (the cell starts with kit phase, candidate or game code)")
+        if v.startswith(("kit phase", "candidate")) and not kid and not asked:
+            kd.append(f"build-own table: {o[0]!r} has no kit row id (K<n>) and does not say 'steward not asked'")
+        if v.startswith("game code") and len(re.sub(r"steward not asked", "", last, flags=re.I).split()) < 6:
+            kd.append(f"build-own table: {o[0]!r} is game code with no reason of six words or more")
+        if v.startswith("kit phase") and kid and not any(re.match(rf"Phase GK{kid.group(1)}\b", t) for _, _, t in heads):
+            kd.append(f"build-own table: {o[0]!r} is a kit phase on row K{kid.group(1)} but the plan has no 'Phase GK{kid.group(1)}' heading")
+        if fitt and name not in fitt:
+            kd.append(f"kit-fit review: no line for the build-own row {o[0]!r}")
+    rl = ru.split("\n")
+    if answered and not any(re.match(r"[\s>*-]*Kit steward['’]s reply \(", l) and any(x.lstrip().startswith(">") for x in rl[i + 1:i + 4])
+                            for i, l in enumerate(rl)):
+        kd.append("the reuse map has no line starting \"Kit steward's reply (<date>)\" with the reply under it as a > block, though build-own rows carry answers")
+    mh, mfence = None, False
+    for l in ml:
+        if l.strip().startswith(("```", "~~~")):
+            mfence = not mfence
+        c0 = [c.strip() for c in table_cells(l)] if l.strip().startswith("|") and not mfence else []
+        if not c0:
+            mh = None
+        elif mh is None:
+            mh = next((k for k, c in enumerate(c0) if "kit function" in c.lower()), -1)
+        elif not re.fullmatch(r"[\s:-]*", c0[0]) and not c0[0].startswith("<") and not named(c0[mh] if 0 <= mh < len(c0) else l):
+            kd.append(f"Modifier order: row {c0[0]!r} names no kit function (in backticks) and no build-own row")
+    if "--kit-optional" in sys.argv:
+        notes |= {f"kit: {d}" for d in kd}
+    else:
+        problems += [f"kit: {d}" for d in kd]
 
     # --- the type contract ---
     if "--tsc" in sys.argv:
