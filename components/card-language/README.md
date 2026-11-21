@@ -16,7 +16,7 @@ The card-language shell (K206): card effects as data, one typed verb table where
 7. Test with `expectVerbs(VERBS, examples)`: it fails on a verb without handler, text or example, an invalid example, or empty text or text holding a rule id; validate card data with `validateEffect`.
 8. Keep value expressions out of bare lists of steps: only objects in a step position are read as steps.
 9. For triggers, use `when` on card data and `cardTriggers(cfg)`; every `if` name must be in `tests`, and an `optional` entry needs a `table` holding `may`, or it throws at build.
-10. A game on its own engine (not engine-core) uses `opTable.ts`: an `OpTable<Port, Op>` row `{ fields, run, text }` per op, `run` on the game's `EnginePort`; run ops only with `runOp`, print them only with `describeOps`, and check card data with `validateOps` in a test.
+10. A game on its own engine (not engine-core) uses `opTable.ts`: an `OpTable<Port, Op>` row `{ fields, run, text }` per op, `run` on the game's `EnginePort`; run ops only with `runOp`, print them only with `describeOps` (both wordings live in the row: `text`, optional `rules`), and check card data with `validateOps` in a test.
 
 **Common mistakes:**
 - Writing text for the screen apart from the verb's `text`: the words and the engine then differ.
@@ -39,9 +39,9 @@ The card-language shell (K206): card effects as data, one typed verb table where
 
 K507, `opTable.ts`. A game that keeps its own engine (no engine-core `Ctx`) still gets one row per op, so the card's words cannot drift from what the op does:
 - `EnginePort<State>`: `{ state }`; the game extends it with the few calls its ops need (draw a card, ask a prompt, log).
-- `OpTable<Port, Op>`: one row per `op` of the game's op union, `{ fields, run, text }`. `fields` uses the same checks as `VerbTable` (`posInt`, `optional(f)`, `effectOf(...)`); a missing op or field check fails to compile. `run(port, op)` changes the game's state; `text(op)` is the sentence.
-- `runOp(table, port, op)` runs one op through its row (unknown op: `EngineBugError`). `describeOps(table, ops, join?)` prints them with `describeEffect`. A nested op's row calls `runOp` and `describeOps` on its child ops.
-- `validateOps(table, { [card]: ops })` returns `{ card, index, op, kind, detail }[]`, `kind` one of `not-an-op`, `unknown-op`, `missing-field`, `extra-field`, `bad-field`, `text` (the row's text throws or is empty). `[]` when every card holds.
+- `OpTable<Port, Op>`: one row per `op` of the game's op union, `{ fields, run, text }`. `fields` uses the same checks as `VerbTable` (`posInt`, `optional(f)`, `effectOf(...)`); a missing op or field check fails to compile. `run(port, op)` changes the game's state; `text(op, view)` is the short sentence, and an optional `rules(op, view)` the rule wording of the same row. `view`: `{ mode, spent, say }`; `say(op, spent?)` writes a nested op in the same mode.
+- `runOp(table, port, op)` runs one op through its row (unknown op: `EngineBugError`). `describeOps(table, ops, join?, { mode?, spent? })` prints them with `describeEffect`: `mode: 'rules'` reads `rules` (else `text`), `spent` (default `amount`) names what a cost spent. A nested op's row calls `runOp` on its child ops and `view.say` for their words.
+- `validateOps(table, { [card]: ops }, { metaKeys? })` (`metaKeys`: record keys it ignores, default none) returns `{ card, index, op, kind, detail }[]`, `kind` one of `not-an-op`, `unknown-op`, `missing-field`, `extra-field`, `bad-field`, `text` (the row's short or rules text throws or is empty). `[]` when every card holds.
 
 ```ts
 import { posInt } from '../kit/card-language/index'

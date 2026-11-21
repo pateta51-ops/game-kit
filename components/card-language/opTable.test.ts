@@ -78,7 +78,40 @@ describe('op table (K507)', () => {
       ['c', 0, 'shout', 'text'],
       ['c', 1, 'shout', 'text'],
     ]);
-    expect(p.map((x) => x.detail)).toEqual(['unknown op "fly"', 'an op must be an object', 'amount', 'colour', 'amount must be a positive integer', 'too loud', 'empty text']);
+    expect(p.map((x) => x.detail)).toEqual(['unknown op "fly"', 'an op must be an object', 'amount', 'colour', 'amount must be a positive integer', 'too loud', 'empty short text']);
+  });
+
+  it('a row keeps both wordings: short text and rules text, nested ops and spent in the same mode', () => {
+    type W = { readonly op: 'coins'; readonly n: number | 'spent' } | { readonly op: 'pay'; readonly cost: number; readonly then: readonly W[] };
+    const W_OPS: OpTable<Port, W> = {
+      coins: {
+        fields: { n: () => null },
+        run: () => undefined,
+        text: (o, v) => (o.n === 'spent' ? `Gain coins equal to the ${v.spent} spent` : `Gain ${String(o.n)} coins`),
+        rules: (o, v) => (o.n === 'spent' ? `Gain that much [coin] (the ${v.spent} spent)` : `Gain [coin ${String(o.n)}]`),
+      },
+      pay: {
+        fields: { cost: posInt, then: () => null },
+        run: () => undefined,
+        text: (o, v) => `Pay ${String(o.cost)} → ${o.then.map((x) => v.say(x, 'cards')).join('; ')}`,
+      },
+    };
+    const card: W[] = [{ op: 'coins', n: 2 }, { op: 'pay', cost: 1, then: [{ op: 'coins', n: 'spent' }] }];
+    expect(describeOps(W_OPS, card, '. ')).toBe('Gain 2 coins. Pay 1 → Gain coins equal to the cards spent');
+    expect(describeOps(W_OPS, card, '. ', { mode: 'rules' })).toBe('Gain [coin 2]. Pay 1 → Gain that much [coin] (the cards spent)');
+    expect(describeOps(W_OPS, [{ op: 'coins', n: 'spent' }], ' ', { mode: 'rules', spent: 'gold' })).toBe('Gain that much [coin] (the gold spent)');
+    expect(describeOps(W_OPS, [{ op: 'coins', n: 'spent' }])).toBe('Gain coins equal to the amount spent');
+  });
+
+  it('validateOps ignores metaKeys and still reports other extra keys', () => {
+    const cards = { purse: [{ op: 'gainCoins', amount: 1, note: 'x', colour: 'red' }] };
+    expect(validateOps(OPS, cards).map((x) => x.detail)).toEqual(['note', 'colour']);
+    expect(validateOps(OPS, cards, { metaKeys: ['note'] }).map((x) => [x.kind, x.detail])).toEqual([['extra-field', 'colour']]);
+  });
+
+  it('validateOps reports an empty rules text', () => {
+    const R: OpTable<Port, { readonly op: 'hum' }> = { hum: { fields: {}, run: () => undefined, text: () => 'Hum.', rules: () => '' } };
+    expect(validateOps(R, { a: [{ op: 'hum' }] }).map((x) => x.detail)).toEqual(['empty rules text']);
   });
 
   it('the README example is this file\'s example', () => {

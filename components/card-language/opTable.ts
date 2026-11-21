@@ -12,16 +12,30 @@ export interface EnginePort<State> {
 export interface OpRow<P, S> {
   readonly fields: FieldsOf<S>;
   readonly run: (port: P, op: S) => void;
-  readonly text: (op: S) => string;
+  /** The short wording (prompts, placeholders). `view.say` writes a nested op in the same mode. */
+  readonly text: (op: S, view: TextView) => string;
+  /** Optional rule wording (`describeOps(..., { mode: 'rules' })`); falls back to `text`. */
+  readonly rules?: (op: S, view: TextView) => string;
+}
+
+/** How a text is asked for: `short` (`text`) or `rules` (`rules`, else `text`); `spent` names what a cost spent; `say` writes a nested op. */
+export interface TextView {
+  readonly mode: 'short' | 'rules';
+  readonly spent: string;
+  readonly say: (op: Step, spent?: string) => string;
+}
+export interface DescribeOptions {
+  readonly mode?: 'short' | 'rules';
+  readonly spent?: string;
 }
 
 /** One row per op of the game's op union: a missing op or field check fails to compile. */
 export type OpTable<P, S extends Step> = { readonly [K in S['op']]: OpRow<P, Extract<S, { op: K }>> };
 
-type AnyRow = { readonly fields: object; readonly run: unknown; readonly text: unknown };
+type AnyRow = { readonly fields: object; readonly run: unknown; readonly text: unknown; readonly rules?: unknown };
 type AnyOpTable = Readonly<Record<string, AnyRow>>;
 type PortOf<T> = T[keyof T] extends { readonly run: (port: infer P, op: never) => void } ? P : never;
-type OpOf<T> = { [K in keyof T]: T[K] extends { readonly text: (op: infer S) => string } ? S : never }[keyof T];
+type OpOf<T> = { [K in keyof T]: T[K] extends { readonly text: (op: infer S, ...rest: never[]) => string } ? S : never }[keyof T];
 
 const rowOf = (table: AnyOpTable, op: unknown): AnyRow => {
   const r = typeof op === 'string' && Object.hasOwn(table, op) ? table[op] : undefined;
@@ -34,9 +48,25 @@ export function runOp<T extends AnyOpTable>(table: T, port: PortOf<T>, op: OpOf<
   (rowOf(table, (op as Step).op).run as (p: unknown, o: unknown) => void)(port, op);
 }
 
-/** The card's words for a list of ops: card-language's `describeEffect` over the table's `text`. */
-export const describeOps = <T extends AnyOpTable>(table: T, ops: readonly OpOf<T>[], join = ' '): string =>
-  describeEffect(table as never, ops as never, join);
+type Say = (op: unknown, view: TextView) => string;
+const viewOf = (table: AnyOpTable, mode: 'short' | 'rules', spent: string): TextView => {
+  const view: TextView = { mode, spent, say: (op, sp = spent) => sayOps(table, [op], ' ', mode, sp) };
+  return view;
+};
+function sayOps(table: AnyOpTable, ops: readonly unknown[], join: string, mode: 'short' | 'rules', spent: string): string {
+  const view = viewOf(table, mode, spent);
+  const words = Object.fromEntries(
+    Object.entries(table).map(([k, row]) => {
+      const t = (mode === 'rules' && typeof row.rules === 'function' ? row.rules : row.text) as Say | null;
+      return [k, { ...row, text: typeof t === 'function' ? (o: unknown) => t(o, view) : t }];
+    }),
+  );
+  return describeEffect(words as never, ops as never, join);
+}
+
+/** The card's words for a list of ops: card-language's `describeEffect` over each row's `text` (or `rules` with `{ mode: 'rules' }`). `spent` defaults to `amount`. */
+export const describeOps = <T extends AnyOpTable>(table: T, ops: readonly OpOf<T>[], join = ' ', opts: DescribeOptions = {}): string =>
+  sayOps(table, ops, join, opts.mode ?? 'short', opts.spent ?? 'amount');
 
 export type OpProblemKind = 'not-an-op' | 'unknown-op' | 'missing-field' | 'extra-field' | 'bad-field' | 'text';
 export interface OpProblem {
@@ -48,8 +78,9 @@ export interface OpProblem {
 }
 
 /** Each card's ops against the table: unknown op, missing, extra or bad field, text that throws or is empty. [] when all hold. */
-export function validateOps(table: AnyOpTable, cards: Readonly<Record<string, readonly unknown[]>>): OpProblem[] {
+export function validateOps(table: AnyOpTable, cards: Readonly<Record<string, readonly unknown[]>>, opts: { readonly metaKeys?: readonly string[] } = {}): OpProblem[] {
   const out: OpProblem[] = [];
+  const meta = opts.metaKeys ?? [];
   for (const [card, ops] of Object.entries(cards))
     ops.forEach((raw, index) => {
       const add = (op: string, kind: OpProblemKind, detail: string): void => void out.push({ card, index, op, kind, detail });
@@ -59,7 +90,7 @@ export function validateOps(table: AnyOpTable, cards: Readonly<Record<string, re
       if (typeof o.op !== 'string' || !Object.hasOwn(table, o.op)) return add(op, 'unknown-op', `unknown op ${JSON.stringify(o.op)}`);
       const fields = rowOf(table, op).fields as Readonly<Record<string, Field>>;
       const before = out.length;
-      for (const k of Object.keys(o)) if (k !== 'op' && !Object.hasOwn(fields, k)) add(op, 'extra-field', k);
+      for (const k of Object.keys(o)) if (k !== 'op' && !meta.includes(k) && !Object.hasOwn(fields, k)) add(op, 'extra-field', k);
       for (const [k, check] of Object.entries(fields)) {
         if (o[k] === undefined) {
           if (check.optional !== true) add(op, 'missing-field', k);
@@ -70,8 +101,10 @@ export function validateOps(table: AnyOpTable, cards: Readonly<Record<string, re
       }
       if (out.length > before) return;
       try {
-        const words = (rowOf(table, op).text as (s: unknown) => string)(o);
-        if (typeof words !== 'string' || words.trim() === '') add(op, 'text', 'empty text');
+        for (const mode of ['short', 'rules'] as const) {
+          const words = sayOps(table, [o], ' ', mode, 'amount');
+          if (typeof words !== 'string' || words.trim() === '') { add(op, 'text', `empty ${mode} text`); break; }
+        }
       } catch (e) {
         add(op, 'text', e instanceof Error ? e.message : String(e));
       }
