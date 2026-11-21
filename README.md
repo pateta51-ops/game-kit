@@ -8,7 +8,7 @@ Needs Node 22.18 or newer: every kit tool runs with plain `node` (type stripping
 
 1. [AGENTS.md](AGENTS.md): the rules, in a game's `kit/` copy and here.
 2. [docs/recipes/](docs/recipes/README.md): the paths (new game, game batch, kit change) and one guide per task, with the components it uses.
-3. `node kit.mjs search <words>` (in a game: `node kit/kit.mjs search <words>`; every word must match one entry, titles and tags rank first, an effect hit prints the effect's line, a miss is logged to `search-misses.log`, newest: `search --misses`; `kit.mjs effects [words]` lists effects only), then the component's README. Never read `docs/PLAN.md`, `docs/CATALOG.md` or `docs/SELECTION.md` whole; what is open: `node kit.mjs state`.
+3. `node kit.mjs search <words>` (in a game: `node kit/kit.mjs search <words>`; every word must match one entry, titles and tags rank first, an effect hit prints the effect's line, a miss is logged to `~/.game-kit/search-misses.log`, newest: `search --misses`; `kit.mjs effects [words]` lists effects only), then the component's README. Never read `docs/PLAN.md`, `docs/CATALOG.md` or `docs/SELECTION.md` whole; what is open: `node kit.mjs state`.
 
 Generated, never edited by hand: [docs/CATALOG.md](docs/CATALOG.md) and [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) (`node scripts/catalog.mjs`), `docs/PLAN.md` (`node scripts/plan.mjs`), [docs/PORTS.md](docs/PORTS.md) (from [ports.json](ports.json), the one port registry; [tools/game-server/](tools/game-server/README.md)).
 

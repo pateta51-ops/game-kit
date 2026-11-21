@@ -7,7 +7,9 @@ import { describe, expect, it } from 'vitest';
 // K500: kit.mjs search reads titles, tags, looks, use and effect words; the top hit is what a director expects.
 const ROOT = path.resolve(import.meta.dirname, '..');
 const KIT = path.join(ROOT, 'kit.mjs');
-const run = (...a: string[]) => spawnSync('node', [KIT, ...a], { cwd: ROOT, encoding: 'utf8' });
+const home = fs.mkdtempSync(path.join(os.tmpdir(), 'k500h-'));
+const env = { ...process.env, HOME: home, USERPROFILE: home };
+const run = (...a: string[]) => spawnSync('node', [KIT, ...a], { cwd: ROOT, encoding: 'utf8', env });
 const first = (q: string) => run('search', ...q.split(' ')).stdout.split('\n')[0] ?? '';
 
 const top: [string, string][] = [
@@ -40,7 +42,11 @@ const top: [string, string][] = [
   ['smoke', 'dissolve:'],
   ['trail', 'trail:'],
   ['laser beam', 'projectile:'],
-  ['lightning', 'radial-streaks:'],
+  ['rays', 'radial-streaks:'],
+  ['speed', 'Game speed limits (`perf`)'],
+  ['speeds', 'Game speed limits (`perf`)'],
+  ['shakes', 'shake:'],
+  ['sparkles', 'motes:'],
   ['hand of cards', 'Fan of cards in hand (`card-hand`)'],
   ['card pile', 'Draw pile, discard pile and fan view (`card-pile`)'],
   ['settings', 'Settings store and screen (`settings`)'],
@@ -54,8 +60,8 @@ const top: [string, string][] = [
 ];
 
 describe('K500 search', () => {
-  it('forty plain queries find the expected top hit', () => {
-    expect(top).toHaveLength(40);
+  it('forty-four plain queries find the expected top hit', () => {
+    expect(top).toHaveLength(44);
     const bad = top.filter(([q, want]) => !first(q).startsWith(want)).map(([q]) => q + ' -> ' + first(q).slice(0, 40));
     expect(bad).toEqual([]);
   });
@@ -63,6 +69,10 @@ describe('K500 search', () => {
   it('an effect hit prints the effect line with its words, not the component sentence', () => {
     expect(first('burn')).toMatch(/^dissolve: Heats up.*\. Use: .* Words: burn, /);
     expect(run('search', 'burn').stdout).not.toContain('effect-library');
+  });
+
+  it('arise does not match rise', () => {
+    expect(run('search', 'arise').stdout).toContain('not in the kit by that name');
   });
 
   it('every query word must match inside one entry', () => {
@@ -78,7 +88,7 @@ describe('K500 search', () => {
     expect(run('effects').stdout.split('\n').filter(Boolean).length).toBeGreaterThan(80);
   });
 
-  it('a miss prints three nearest and logs outside kit/ in a game', () => {
+  it('a miss prints three nearest and logs in the home folder', () => {
     const g = fs.mkdtempSync(path.join(os.tmpdir(), 'k500-'));
     try {
       fs.mkdirSync(path.join(g, 'kit/effect-library'), { recursive: true });
@@ -86,14 +96,14 @@ describe('K500 search', () => {
       fs.copyFileSync(path.join(ROOT, 'docs/CATALOG.md'), path.join(g, 'kit/CATALOG.md'));
       fs.copyFileSync(path.join(ROOT, 'components/effect-library/catalog.json'), path.join(g, 'kit/effect-library/catalog.json'));
       fs.writeFileSync(path.join(g, 'kit/kit.lock.json'), '{}');
-      const kit = (...a: string[]) => spawnSync('node', [path.join(g, 'kit/kit.mjs'), ...a], { cwd: g, encoding: 'utf8' });
+      const kit = (...a: string[]) => spawnSync('node', [path.join(g, 'kit/kit.mjs'), ...a], { cwd: g, encoding: 'utf8', env });
       expect(kit('search', 'burn').stdout).toMatch(/^dissolve:/);
       const m = kit('search', 'burn', 'zebra');
       expect(m.status).toBe(0);
       expect(m.stdout).toContain('not in the kit by that name');
       expect(m.stdout.split('\n').filter(Boolean)).toHaveLength(4);
-      expect(fs.readFileSync(path.join(g, '.kit-search-misses.log'), 'utf8')).toMatch(/^\d{4}-\d\d-\d\d burn zebra\n$/);
-      expect(fs.existsSync(path.join(g, 'kit/search-misses.log'))).toBe(false);
+      expect(fs.readFileSync(path.join(home, '.game-kit/search-misses.log'), 'utf8')).toMatch(/^\d{4}-\d\d-\d\d burn zebra\n$/);
+      expect(fs.existsSync(path.join(g, '.kit-search-misses.log'))).toBe(false);
       expect(kit('search', '--misses', '1').stdout).toMatch(/burn zebra/);
     } finally { fs.rmSync(g, { recursive: true, force: true }); }
   });

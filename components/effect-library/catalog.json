@@ -2472,8 +2472,7 @@
    "streaks",
    "rays",
    "power",
-   "charge",
-   "lightning"
+   "charge"
   ],
   "group": "particles",
   "ends": "as-started",

@@ -11,6 +11,7 @@
 import { execFileSync as x, spawnSync } from 'node:child_process'
 import { createHash } from 'node:crypto'
 import fs from 'node:fs'
+import os from 'node:os'
 import { dirname, resolve } from 'node:path'
 import { fileURLToPath, pathToFileURL } from 'node:url'
 const [cmd, ...a] = process.argv.slice(2)
@@ -210,7 +211,7 @@ if (cmd === 'pull') {
 } else if (cmd === 'list' || cmd === 'search' || cmd === 'effects') {
   const d = dirname(fileURLToPath(import.meta.url))
   const f = [d + '/CATALOG.md', d + '/docs/CATALOG.md'].find((p) => fs.existsSync(p))
-  const logFile = fs.existsSync(d + '/kit.lock.json') ? resolve(d, '..', '.kit-search-misses.log') : d + '/search-misses.log'
+  const logFile = resolve(os.homedir(), '.game-kit/search-misses.log')
   if (cmd === 'search' && a[0] === '--misses') {
     const n = Number(a[1]) || 10
     console.log(fs.existsSync(logFile) ? fs.readFileSync(logFile, 'utf8').split(/\r?\n/).filter(Boolean).slice(-n).reverse().join('\n') : 'no misses logged')
@@ -244,7 +245,7 @@ if (cmd === 'pull') {
     }
     return [...out]
   }
-  const stem = (w) => w.length > 4 && /(ing|ed|es)$/.test(w) ? w.replace(/(ing|ed|es)$/, '') : w.length > 3 ? w.replace(/s$/, '') : w
+  const stem = (w) => { if (w.length > 3) w = w.replace(/s$/, ''); if (w.length > 4) w = w.replace(/(ed|ing)$/, ''); if (w.length > 3) w = w.replace(/e$/, ''); return w }
   const camel = (t) => String(t ?? '').replace(/([a-z])([A-Z])/g, '$1 $2')
   const toks = (t) => camel(t).toLowerCase().split(/[^a-z0-9]+/).filter(Boolean).map(stem)
   const stop = new Set(['the', 'a', 'an', 'of', 'to', 'in', 'on', 'it', 'is', 'and', 'or', 'for', 'at', 'my', 'with'])
@@ -277,7 +278,7 @@ if (cmd === 'pull') {
   if (!hits.length) {
     for (const { e } of scored.sort((x, y) => y.s - x.s || y.e.eff - x.e.eff || x.i - y.i).slice(0, 3)) console.log(e.line([]))
     console.log('not in the kit by that name')
-    if (cmd === 'search') try { fs.appendFileSync(logFile, new Date().toISOString().slice(0, 10) + ' ' + a.join(' ') + '\n') } catch { /* read-only */ }
+    if (cmd === 'search') try { fs.mkdirSync(dirname(logFile), { recursive: true }); fs.appendFileSync(logFile, new Date().toISOString().slice(0, 10) + ' ' + a.join(' ') + '\n') } catch { /* read-only */ }
   }
 } else if (cmd === 'new') {
   // node <kit>/kit.mjs new <dir> <id> "<Name>" [--ref r] [--repo owner/name] [--runner label] [--link <node_modules>] [--no-install] [--no-remote] [--ports file] [--existing]
