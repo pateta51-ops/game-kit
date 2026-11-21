@@ -1172,7 +1172,20 @@
      "actor": "A",
      "do": "warp-transfer",
      "mode": "portal",
-     "portal": {},
+     "portal": {
+      "outward": true,
+      "travelAt": 1200,
+      "travelMs": 400,
+      "startSize": 60,
+      "endSize": 20,
+      "vortex": {
+       "size": 120,
+       "open": [
+        0,
+        300
+       ]
+      }
+     },
      "to": "b"
     }
    ]
@@ -1358,7 +1371,8 @@
      "dur": 400,
      "actor": "A",
      "do": "warp-transfer",
-     "mode": "bump"
+     "mode": "bump",
+     "counterColour": "#ffd166"
     }
    ]
   }
@@ -1422,7 +1436,9 @@
      "dur": 1600,
      "actor": "A",
      "do": "warp-transfer",
-     "spiral": true,
+     "spiral": {
+      "image": "data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22120%22%20height%3D%22168%22%20viewBox%3D%220%200%20120%20168%22%3E%3Crect%20x%3D%222%22%20y%3D%222%22%20width%3D%22116%22%20height%3D%22164%22%20rx%3D%2210%22%20fill%3D%22%233f8f7d%22%20stroke%3D%22%23ffffff%22%20stroke-width%3D%223%22%2F%3E%3Cpath%20d%3D%22M45%2060l34%2024-34%2024z%22%20fill%3D%22%23ffffff%22%2F%3E%3C%2Fsvg%3E"
+     },
      "to": "b"
     }
    ]
@@ -2646,7 +2662,12 @@
      "dur": 1200,
      "actor": "A",
      "do": "column-beam",
-     "curve": true,
+     "curve": {
+      "control": [
+       360,
+       40
+      ]
+     },
      "to": "b"
     }
    ]
@@ -3023,7 +3044,15 @@
      "dur": 1800,
      "actor": "A",
      "do": "dissolve",
-     "lift": true
+     "lift": {
+      "distance": 40,
+      "spin": 1.5,
+      "fade": [
+       200,
+       380
+      ],
+      "ms": 380
+     }
     }
    ]
   }
@@ -3268,7 +3297,13 @@
      "actor": "A",
      "do": "ring-pulse",
      "shockwaves": [
-      {}
+      {
+       "delay": 0,
+       "ms": 700,
+       "radius": 160,
+       "width": 24,
+       "alpha": 1
+      }
      ]
     }
    ]
@@ -3447,7 +3482,20 @@
      "dur": 1400,
      "actor": "A",
      "do": "shield-bubble",
-     "recharge": {}
+     "recharge": {
+      "assemble": [
+       0,
+       520
+      ],
+      "hum": [
+       420,
+       960
+      ],
+      "settle": [
+       850,
+       1200
+      ]
+     }
     }
    ]
   }
@@ -3760,7 +3808,25 @@
      "dur": 900,
      "actor": "A",
      "do": "flicker",
-     "buzz": {}
+     "buzz": {
+      "window": [
+       0,
+       900
+      ],
+      "sampleMs": 20,
+      "peak": 0.6,
+      "brightness": [
+       0.5,
+       2
+      ],
+      "noiseMs": 50,
+      "saturation": 0.8,
+      "hue": 30,
+      "jitter": [
+       5,
+       3
+      ]
+     }
     }
    ]
   }
@@ -3883,7 +3949,12 @@
      "dur": 900,
      "actor": "A",
      "do": "bar-fill",
-     "pin": {},
+     "pin": {
+      "delta": [
+       40,
+       10
+      ]
+     },
      "from": 0.2,
      "to": 0.7
     }
@@ -4731,7 +4802,7 @@
      "dur": 1600,
      "actor": "A",
      "do": "crumple",
-     "image": "card.png",
+     "image": "data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22120%22%20height%3D%22168%22%20viewBox%3D%220%200%20120%20168%22%3E%3Crect%20x%3D%222%22%20y%3D%222%22%20width%3D%22116%22%20height%3D%22164%22%20rx%3D%2210%22%20fill%3D%22%233f8f7d%22%20stroke%3D%22%23ffffff%22%20stroke-width%3D%223%22%2F%3E%3Cpath%20d%3D%22M45%2060l34%2024-34%2024z%22%20fill%3D%22%23ffffff%22%2F%3E%3C%2Fsvg%3E",
      "to": "b"
     }
    ]

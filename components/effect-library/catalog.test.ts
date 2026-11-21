@@ -15,6 +15,11 @@ const names = verbs.names();
 const regs = registrations();
 const isFn = (id: string): boolean => typeof (lib as Record<string, unknown>)[id] === 'function';
 
+// K502: an option `true`, `{}` or `[{}]` names a look whose settings the demo step gives in full (an object, a list of objects)
+const sameLook = (s: unknown, v: unknown): boolean => JSON.stringify(s) === JSON.stringify(v)
+  || (v === true && typeof s === 'object' && s !== null)
+  || (JSON.stringify(v) === '{}' && typeof s === 'object' && s !== null && !Array.isArray(s))
+  || (JSON.stringify(v) === '[{}]' && Array.isArray(s) && s.length > 0);
 function problems(entries: readonly Entry[]): string[] {
   const out: string[] = [];
   const fns = entries.filter((e) => !names.includes(e.id)).map((e) => e.id);
@@ -40,7 +45,7 @@ function problems(entries: readonly Entry[]): string[] {
     out.push(...validateSpec(e.demo, demoStage, [...names, ...fns]).map((p) => `${at}: demo ${p}`));
     const step = e.demo.steps.find((s) => s.do === e.id);
     if (!step) out.push(`${at}: demo does not play ${e.id}`);
-    else for (const [k, v] of Object.entries(e.option ?? {})) if (JSON.stringify((step as Record<string, unknown>)[k]) !== JSON.stringify(v)) out.push(`${at}: demo step lacks ${k}`);
+    else for (const [k, v] of Object.entries(e.option ?? {})) if (!sameLook((step as Record<string, unknown>)[k], v)) out.push(`${at}: demo step lacks ${k}`);
     if (!step) continue;
     const d = derive(e, regs);
     for (const [k, v] of Object.entries(d)) if (JSON.stringify(e[k as keyof Entry]) !== JSON.stringify(v)) out.push(`${at}: ${k} is stale (run node components/effect-library/catalog-sync.ts)`);

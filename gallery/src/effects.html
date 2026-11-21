@@ -1,0 +1,198 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Effects gallery</title>
+<style>
+:root { --bg: #111317; --tile: #1a1d22; --stage: #0c0e11; --line: #2a2e35; --fg: #e9ebee; --muted: #9298a2; --accent: #7cc4ff; --a: #3f8f7d; --b: #b07a3a;
+  --mono: ui-monospace, 'Cascadia Mono', Consolas, monospace; color-scheme: dark; }
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--fg); font: 14px/1.45 system-ui, 'Segoe UI', sans-serif; }
+header { position: sticky; top: 0; z-index: 5; background: rgb(17 19 23 / .94); backdrop-filter: blur(6px); border-bottom: 1px solid var(--line); }
+.bar { max-width: 1400px; margin: 0 auto; padding: 12px 20px; display: flex; flex-wrap: wrap; gap: 8px 18px; align-items: center; }
+h1 { font-size: 18px; margin: 0; font-weight: 700; }
+.count { color: var(--muted); font-size: 13px; }
+.slow { margin-left: auto; display: flex; gap: 8px; align-items: center; cursor: pointer; user-select: none; }
+.slow input { accent-color: var(--accent); width: 16px; height: 16px; }
+nav { max-width: 1400px; margin: 0 auto; padding: 0 20px 10px; display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none; }
+nav a { flex: none; color: var(--fg); text-decoration: none; border: 1px solid var(--line); border-radius: 999px; padding: 4px 12px; font-size: 13px; white-space: nowrap; }
+nav a:hover { border-color: var(--accent); }
+nav a span { color: var(--muted); margin-left: 4px; }
+main { max-width: 1400px; margin: 0 auto; padding: 8px 20px 60px; }
+section { scroll-margin-top: 110px; }
+.head { display: flex; align-items: baseline; gap: 14px; margin: 28px 0 12px; }
+h2 { font-size: 16px; margin: 0; letter-spacing: .01em; }
+h2::first-letter { text-transform: uppercase; }
+button { font: 600 12px system-ui, sans-serif; color: var(--fg); background: #23272e; border: 1px solid var(--line); border-radius: 6px; padding: 5px 10px; cursor: pointer; }
+button:hover { border-color: var(--accent); }
+.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(300px, 100%), 1fr)); gap: 16px; }
+.tile { background: var(--tile); border: 1px solid var(--line); border-radius: 10px; overflow: hidden; display: grid; grid-template-rows: auto 1fr auto; }
+.tile.playing { border-color: var(--accent); }
+.stage { position: relative; aspect-ratio: 720 / 420; background: var(--stage); overflow: hidden; cursor: pointer; container-type: inline-size; }
+.fit { position: absolute; left: 0; top: 0; width: 720px; height: 420px; transform-origin: 0 0; transform: scale(calc(100cqw / 720px)); }
+.world { position: absolute; inset: 0; }
+.card { position: absolute; width: 120px; height: 168px; border-radius: 10px; display: grid; place-items: center; font: 700 64px/1 system-ui, sans-serif; color: #fff; box-shadow: 0 4px 14px #0008; border: 2px solid rgb(255 255 255 / .25); }
+.card.A { background: var(--a); }
+.card.B { background: var(--b); }
+.world > .card.A { left: 80px; top: 120px; }
+.world > .card.B { left: 520px; top: 120px; }
+.playing .world > .card { visibility: hidden; }
+.hint { position: absolute; right: 8px; bottom: 8px; font-size: 11px; color: var(--muted); background: rgb(0 0 0 / .5); padding: 2px 7px; border-radius: 4px; pointer-events: none; }
+.playing .hint { opacity: 0; }
+.body { padding: 10px 14px 4px; display: grid; gap: 6px; align-content: start; }
+h3 { font-size: 14.5px; margin: 0; line-height: 1.3; }
+.meta { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; font: 12px var(--mono); color: var(--muted); }
+.meta code { color: var(--accent); }
+.meta .opt { color: #d6b4ff; }
+.meta .ms { margin-left: auto; }
+.looks { margin: 0; color: #bfc4cc; font-size: 13px; }
+.foot { padding: 8px 14px 12px; display: grid; gap: 8px; }
+.links { display: flex; gap: 10px; align-items: center; font-size: 12.5px; }
+.links a { color: var(--accent); text-decoration: none; margin-left: auto; }
+details summary { cursor: pointer; color: var(--muted); font-size: 12.5px; }
+pre { margin: 6px 0 0; background: #0f1114; border: 1px solid var(--line); border-radius: 6px; padding: 8px 10px; font: 11.5px/1.5 var(--mono); color: #cdd6df; overflow: auto; max-height: 220px; white-space: pre; }
+.banner-lines { position: absolute; left: 50%; top: 50%; translate: -50% -50%; display: grid; gap: 6px; text-align: center; font: 700 30px system-ui, sans-serif; color: #fff; text-shadow: 0 2px 8px #000; white-space: nowrap; }
+@media (max-width: 560px) { .bar, nav, main { padding-left: 12px; padding-right: 12px; } .slow { margin-left: 0; } }
+/*@kit-css components/effect-library/looks/glitch.css*/
+</style>
+<header>
+  <div class="bar">
+    <h1>Effects gallery</h1><span class="count" id="count"></span>
+    <label class="slow"><input type="checkbox" id="slow"> Slow motion (x4)</label>
+  </div>
+  <nav id="jump"></nav>
+</header>
+<main id="main"></main>
+<!--@gallery-data-->
+<script>
+//@kit-js components/effect-library/index.ts as FX
+//@kit-js components/motion-frame/player.ts as MOTION
+const DATA = JSON.parse(document.getElementById('data').textContent);
+const slow = document.getElementById('slow');
+const base = Number(new URLSearchParams(location.search).get('speed')) || 1;
+const factor = () => (slow.checked ? 4 : 1) * base;
+const el = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text !== undefined) e.textContent = text; return e; };
+const tiles = {}, specs = {}, stages = { demo: (z) => ({ a: [80, 120, 120, 168], b: [520, 120, 120, 168], board: [0, 0, 720, 420] })[z] };
+let n = 0;
+for (const { group, tiles: list } of DATA) {
+  const a = el('a', '', group.replace(/-/g, ' '));
+  a.href = '#' + group;
+  a.append(el('span', '', String(list.length)));
+  document.getElementById('jump').append(a);
+  const sec = el('section');
+  sec.id = group;
+  const head = el('div', 'head');
+  const all = el('button', '', 'Play all in this group');
+  head.append(el('h2', '', group.replace(/-/g, ' ')), all);
+  const grid = el('div', 'grid');
+  sec.append(head, grid);
+  document.getElementById('main').append(sec);
+  const ids = [];
+  for (const t of list) {
+    const id = 't' + n++;
+    ids.push(id);
+    specs[id] = { ...t.demo, id };
+    const tile = el('article', 'tile');
+    tile.dataset.key = t.key;
+    const stage = el('div', 'stage'), fit = el('div', 'fit'), world = el('div', 'world');
+    for (const k of ['A', 'B']) { const c = el('div', 'card ' + k, k); c.dataset.actor = k; world.append(c); }
+    fit.append(world);
+    stage.append(fit, el('span', 'hint', 'click to play'));
+    const body = el('div', 'body'), meta = el('div', 'meta');
+    meta.append(el('code', '', t.id));
+    if (t.option) meta.append(el('span', 'opt', JSON.stringify(t.option).replace(/^\{|\}$/g, '')));
+    meta.append(el('span', 'ms', t.ms + ' ms'));
+    body.append(el('h3', '', t.title), meta, el('p', 'looks', t.looks));
+    const foot = el('div', 'foot'), det = el('details'), pre = el('pre', '', JSON.stringify(t.demo.steps.find((s) => s.do === t.id) ?? t.demo.steps[0], null, 2));
+    const links = el('div', 'links'), copy = el('button', '', 'Copy step'), tuner = el('a', '', 'Sliders: ' + t.tuner.replace('.html', '') + ' tuner');
+    tuner.href = '../tuners/' + t.tuner;
+    tuner.target = '_blank';
+    copy.onclick = () => { navigator.clipboard?.writeText(pre.textContent); copy.textContent = 'Copied'; setTimeout(() => { copy.textContent = 'Copy step'; }, 1200); };
+    det.append(el('summary', '', 'Demo step (JSON)'), pre);
+    links.append(copy, tuner);
+    foot.append(det, links);
+    tile.append(stage, body, foot);
+    grid.append(tile);
+    tiles[id] = { tile, world };
+    stage.onclick = () => { player.skipAll(); player.play(id); };
+  }
+  all.onclick = () => { player.skipAll(); for (const id of ids) player.play(id); };
+}
+document.getElementById('count').textContent = n + ' effects';
+
+const verbs = MOTION.createVerbs();
+const layer = FX.registerEffects(verbs, {
+  parent: tiles.t0.world, position: 'absolute',
+  resolve: (id, run) => tiles[run.timeline.id]?.world.querySelector(`:scope > [data-actor="${id}"]`) ?? undefined,
+});
+const tileOf = (run) => tiles[run.timeline.id];
+// The function effects a game calls itself, played here as verbs over the step's time.
+const loop = (call, f) => {
+  const t0 = performance.now();
+  let raf = requestAnimationFrame(function tick(now) { f(FX.specTime(now - t0, call)); raf = requestAnimationFrame(tick); });
+  return () => cancelAnimationFrame(raf);
+};
+const dur = (call) => Number(call.step.dur);
+FX.registerEffect(verbs, 'createGlitch', ({ el: e }) => { const g = FX.createGlitch(e, { speed: factor, seed: 7, colours: ['#ff3d7f', '#3de0ff'], idleMs: [400, 700] }); g.tear(); return () => g.destroy(); });
+FX.registerEffect(verbs, 'cameraPull', ({ call, run }) => {
+  const { world } = tileOf(run);
+  const p = FX.cameraPull(world, world.parentElement, { pullMs: dur(call) * .6, speed: factor() });
+  const t = setTimeout(() => void p.release(), dur(call) * .7 * factor());
+  return () => { clearTimeout(t); p(); };
+});
+FX.registerEffect(verbs, 'cameraPush', ({ call, run }) => {
+  const { world } = tileOf(run);
+  const c = FX.cameraPush(world, undefined, { speed: factor() });
+  const stop = loop(call, (t) => c.frame(FX.cameraScaleAt(t, 0, dur(call), { scale: 1.2 }), [140, 204]));
+  return () => { stop(); c.end(); };
+});
+FX.registerEffect(verbs, 'letterboxBanner', ({ call, run }) => {
+  const b = FX.letterboxBanner(tileOf(run).world, { speed: factor(), text: 'Round 3', lineWidth: 2, lineColour: '#7cc4ff' });
+  const stop = loop(call, (t) => b.frame(t, 0, dur(call)));
+  return () => { stop(); b.end(); };
+});
+FX.registerEffect(verbs, 'pileLift', ({ el: e, call }) => {
+  const p = FX.pileLift(e, { speed: factor() });
+  const t = setTimeout(() => p.settle(), dur(call) * .5 * factor());
+  return () => { clearTimeout(t); p.end(); };
+});
+FX.registerEffect(verbs, 'startPulse', ({ el: e }) => FX.startPulse(e, {}, { speed: factor() }));
+FX.registerEffect(verbs, 'startIdle', ({ el: e }) => FX.startIdle(e, { kind: 'bob' }, { speed: factor() }));
+FX.registerEffect(verbs, 'countUp', ({ el: e }) => FX.countUp({ value: 12, speed: factor, show: (v) => { e.textContent = String(Math.round(v)); } }));
+FX.registerEffect(verbs, 'shakeAt', ({ call, run }) => {
+  const { world } = tileOf(run);
+  const stop = loop(call, (t) => { const s = FX.shakeAt(t, 0, { seed: 3, max: 18 }); world.style.transform = `translate(${s.x}px, ${s.y}px) rotate(${s.rot}deg)`; });
+  return () => { stop(); world.style.transform = ''; };
+});
+FX.registerEffect(verbs, 'bannerAt', ({ call, run }) => {
+  const box = el('div', 'banner-lines');
+  tileOf(run).world.append(box);
+  const lines = [{ text: 'Round 2' }, { text: 'Draw 2 cards' }];
+  const stop = loop(call, (t) => { const b = FX.bannerAt(lines, t, { stepMs: 500 }); box.replaceChildren(...b.shown.map((l) => el('div', '', l.text))); box.style.opacity = b.opacity; box.style.scale = b.scale; });
+  return () => { stop(); box.remove(); };
+});
+FX.registerCanvasEffect(verbs, 'drawPlasmaOrb', (ctx, t, { x, y }) => FX.drawPlasmaOrb(ctx, x, y, 40, t, false, FX.plasmaSwellAt(t, 80, 180)));
+const art = (() => {
+  const c = document.createElement('canvas');
+  c.width = c.height = 64;
+  const g = c.getContext('2d');
+  g.fillStyle = '#5a8fb8';
+  g.beginPath(); g.arc(32, 32, 26, 0, Math.PI * 2); g.fill();
+  return { img: c, w: 64, h: 64 };
+})();
+const clouds = new WeakMap();
+FX.registerCanvasEffect(verbs, 'drawDriftCloud', (ctx, _t, { call }) => {
+  const now = performance.now();
+  if (!clouds.has(call)) clouds.set(call, FX.syncDriftCloud([], ['a', 'b', 'c'], new Set(), now, 1, false));
+  FX.drawDriftCloud(ctx, { w: ctx.canvas.width, h: ctx.canvas.height, u: 6, now, scale: 1, cohorts: clouds.get(call), art: () => art, empty: false });
+});
+
+const player = MOTION.createMotionPlayer({
+  specs, stages, verbs, speed: factor, context: layer,
+  onBeatStart: (run) => { const t = tileOf(run); t.world.append(layer.el); t.tile.classList.add('playing'); layer.start(run); },
+  onBeatEnd: (run) => { layer.end(run); layer.clear(); tileOf(run).tile.classList.remove('playing'); },
+  onProblem: (p) => console.error(p),
+});
+// node gallery/build.mjs --play: every tile once, in order
+window.playEvery = async () => { for (const id of Object.keys(tiles)) await new Promise((r) => player.play(id, { onEnd: r })); return Object.keys(tiles).length; };
+</script>
