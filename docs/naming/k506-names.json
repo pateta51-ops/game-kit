@@ -1,0 +1,1992 @@
+[
+ {
+  "id": "move",
+  "option": null,
+  "newId": "move",
+  "title": "Slides a piece straight to a place",
+  "looks": "The piece glides in a straight line to the target and stays there.",
+  "notThis": [
+   {
+    "id": "arc-move",
+    "diff": "rises in an arc instead of a straight line"
+   },
+   {
+    "id": "warp-transfer--mode-rise",
+    "diff": "lifts first, then flies"
+   }
+  ],
+  "pairs": [
+   "lift",
+   "settle",
+   "trail"
+  ],
+  "impactMs": 400
+ },
+ {
+  "id": "arc-move",
+  "option": null,
+  "newId": "arc-move",
+  "title": "Flies a piece over in an arc",
+  "looks": "The piece rises above the straight line and drops onto the target.",
+  "notThis": [
+   {
+    "id": "move",
+    "diff": "straight line, no rise"
+   }
+  ],
+  "pairs": [
+   "trail",
+   "settle",
+   "flip"
+  ],
+  "impactMs": 600
+ },
+ {
+  "id": "multi-stop-path",
+  "option": null,
+  "newId": "round-trip",
+  "title": "Flies to each stop, then back home",
+  "looks": "The piece leaves, visits each stop in turn with fading ghosts behind it, and comes back to where it started.",
+  "notThis": [
+   {
+    "id": "flight",
+    "diff": "one move from a dialog to the board, no return"
+   },
+   {
+    "id": "warp-transfer--spiral",
+    "diff": "one spiral away with an engine trail, no stops"
+   },
+   {
+    "id": "arc-move",
+    "diff": "one flight, no return"
+   }
+  ],
+  "pairs": [
+   "trail",
+   "idle--kind-orbit"
+  ],
+  "impactMs": 2400,
+  "why": "\"path\" is how it is built; \"flight-tour\" was read as flight. The piece flies out and comes back where it started."
+ },
+ {
+  "id": "lift",
+  "option": null,
+  "newId": "lift",
+  "title": "Raises one piece and holds it up",
+  "looks": "The piece grows a little, its shadow deepens, and it stays raised.",
+  "notThis": [
+   {
+    "id": "pileLift",
+    "diff": "the whole pile rises while a card leaves it, then sinks back"
+   },
+   {
+    "id": "scale--pulse",
+    "diff": "swells and comes back at once"
+   }
+  ],
+  "pairs": [
+   "settle",
+   "move",
+   "glow--latch-true"
+  ],
+  "impactMs": null
+ },
+ {
+  "id": "settle",
+  "option": null,
+  "newId": "settle",
+  "title": "Sets a raised piece back down",
+  "looks": "The raised piece with its shadow drops, dips a touch under its size and rests flat.",
+  "notThis": [
+   {
+    "id": "fade-in--scale-2",
+    "diff": "arrives from nothing, big and transparent"
+   }
+  ],
+  "pairs": [
+   "lift",
+   "move",
+   "arc-move"
+  ],
+  "impactMs": 260
+ },
+ {
+  "id": "flip",
+  "option": null,
+  "newId": "flip",
+  "title": "Turns a card over by squashing it flat",
+  "looks": "The card narrows to a sliver, vanishes edge-on and widens again showing the other face.",
+  "notThis": [
+   {
+    "id": "flip--direction-1",
+    "diff": "turns in perspective, not flat squash"
+   },
+   {
+    "id": "tap",
+    "diff": "turns a quarter, face stays"
+   }
+  ],
+  "pairs": [
+   "lift",
+   "glow"
+  ],
+  "impactMs": null
+ },
+ {
+  "id": "flip",
+  "option": {
+   "direction": 1
+  },
+  "newId": "flip",
+  "title": "Turns a card over in 3D",
+  "looks": "The card tilts in perspective to edge-on, swaps faces and turns flat again.",
+  "notThis": [
+   {
+    "id": "flip",
+    "diff": "flat squash, no perspective"
+   },
+   {
+    "id": "spin",
+    "diff": "keeps turning on the table plane"
+   }
+  ],
+  "pairs": [
+   "sheen",
+   "glow"
+  ],
+  "impactMs": null
+ },
+ {
+  "id": "scale",
+  "option": null,
+  "newId": "scale",
+  "title": "Grows or shrinks a piece and holds",
+  "looks": "The piece scales smoothly to the new size and stays at it.",
+  "notThis": [
+   {
+    "id": "scale--pulse-true",
+    "diff": "comes back to its size"
+   },
+   {
+    "id": "cameraPush",
+    "diff": "the whole board grows"
+   }
+  ],
+  "pairs": [
+   "move"
+  ],
+  "impactMs": null
+ },
+ {
+  "id": "scale",
+  "option": {
+   "pulse": true
+  },
+  "newId": "scale",
+  "title": "Swells a piece once and back",
+  "looks": "The piece grows a little and returns to its size in one beat.",
+  "notThis": [
+   {
+    "id": "warp-transfer--mode-bump",
+    "diff": "starts big and tints the digits"
+   },
+   {
+    "id": "pulse",
+    "diff": "repeats until the step ends"
+   }
+  ],
+  "pairs": [
+   "glow",
+   "ring-pulse"
+  ],
+  "impactMs": null
+ },
+ {
+  "id": "spin",
+  "option": null,
+  "newId": "spin",
+  "title": "Spins a piece round a few turns",
+  "looks": "The piece rotates about its centre and ends where it started on whole turns.",
+  "notThis": [
+   {
+    "id": "spin--endless-true",
+    "diff": "keeps turning until the step ends"
+   },
+   {
+    "id": "tap",
+    "diff": "stops at a quarter turn"
+   }
+  ],
+  "pairs": [
+   "spark-burst"
+  ],
+  "impactMs": null
+ },
+ {
+  "id": "spin",
+  "option": {
+   "endless": true
+  },
+  "newId": "spin",
+  "title": "Keeps a piece spinning until the step ends",
+  "looks": "The piece turns round and round at a steady speed, then snaps upright.",
+  "notThis": [
+   {
+    "id": "spin",
+    "diff": "a set number of turns"
+   }
+  ],
+  "pairs": [
+   "pulse",
+   "glow--latch-true"
+  ],
+  "impactMs": null
+ },
+ {
+  "id": "tap",
+  "option": null,
+  "newId": "tap",
+  "title": "Turns a card sideways to show it used",
+  "looks": "The card rotates a quarter turn and stays sideways.",
+  "notThis": [
+   {
+    "id": "spin",
+    "diff": "full turns, ends upright"
+   },
+   {
+    "id": "warp-transfer--mode-grey",
+    "diff": "dims instead of turning"
+   }
+  ],
+  "pairs": [
+   "untap",
+   "refresh"
+  ],
+  "impactMs": null
+ },
+ {
+  "id": "untap",
+  "option": null,
+  "newId": "untap",
+  "title": "Turns a sideways card upright again",
+  "looks": "The sideways card rotates back to upright and stays.",
+  "notThis": [
+   {
+    "id": "refresh",
+    "diff": "grey copy drains off, no rotation"
+   }
+  ],
+  "pairs": [
+   "tap",
+   "refresh"
+  ],
+  "impactMs": null
+ },
+ {
+  "id": "collapse-jump",
+  "option": null,
+  "newId": "flash-jump",
+  "title": "Vanishes in a flash, bursts out at target",
+  "looks": "The piece flashes bright with streaks, vanishes, and bursts back open at the target.",
+  "notThis": [
+   {
+    "id": "warp-transfer--spiral",
+    "diff": "the piece flies a visible orbit with a trail; here nothing is seen travelling"
+   },
+   {
+    "id": "warp-transfer",
+    "diff": "columns of light carry it"
+   },
+   {
+    "id": "warp-transfer--mode-portal",
+    "diff": "it spirals into a vortex"
+   }
+  ],
+  "pairs": [
+   "radial-streaks",
+   "spark-burst"
+  ],
+  "impactMs": 1125,
+  "why": "\"collapse\" is the source game's word; \"shrink-jump\" was read as the ship spiral. The strip shows a flash here and a burst there."
+ },
+ {
+  "id": "warp-transfer",
+  "option": null,
+  "newId": "light-teleport",
+  "title": "Beams a token up here, down there",
+  "looks": "A column of light lifts the token away at the source and a second column sets it down at the target with sparks.",
+  "notThis": [
+   {
+    "id": "column-beam",
+    "diff": "one column over a piece that stays"
+   },
+   {
+    "id": "collapse-jump",
+    "diff": "shrinks to a flash, no column"
+   }
+  ],
+  "pairs": [
+   "motes",
+   "spark-burst"
+  ],
+  "impactMs": 1050,
+  "why": "\"warp\" is one game's word; the player sees a light teleport."
+ },
+ {
+  "id": "warp-transfer",
+  "option": {
+   "mode": "crossing"
+  },
+  "newId": "warp-transfer",
+  "title": "Sends big glowing dots across to a piece",
+  "looks": "A glowing band of bright dots travels from the source and blooms on the target; the token stays.",
+  "notThis": [
+   {
+    "id": "trail",
+    "diff": "a thin faint line behind a flying piece; no glowing dots, no bloom on the target"
+   },
+   {
+    "id": "dash-line",
+    "diff": "thin dashed line, no glow"
+   }
+  ],
+  "pairs": [
+   "glow"
+  ],
+  "impactMs": 400
+ },
+ {
+  "id": "warp-transfer",
+  "option": {
+   "mode": "zip"
+  },
+  "newId": "warp-transfer",
+  "title": "Zips a token across with afterimages",
+  "looks": "The token streaks to the target with ghost copies behind it and lands with a small spark.",
+  "notThis": [
+   {
+    "id": "move",
+    "diff": "one clean slide, no ghosts"
+   },
+   {
+    "id": "trail",
+    "diff": "a ribbon, not copies"
+   }
+  ],
+  "pairs": [
+   "spark-burst",
+   "warp-transfer--mode-bump"
+  ],
+  "impactMs": 333
+ },
+ {
+  "id": "warp-transfer",
+  "option": {
+   "mode": "rise"
+  },
+  "newId": "warp-transfer",
+  "title": "Lifts a token, then flies it straight",
+  "looks": "The token rises glowing off its place, then travels straight to the target.",
+  "notThis": [
+   {
+    "id": "move",
+    "diff": "no lift first"
+   },
+   {
+    "id": "lift",
+    "diff": "stays in place"
+   }
+  ],
+  "pairs": [
+   "count",
+   "warp-transfer--mode-bump"
+  ],
+  "impactMs": 600
+ },
+ {
+  "id": "warp-transfer",
+  "option": {
+   "mode": "portal"
+  },
+  "newId": "warp-transfer",
+  "title": "Sucks a token through a spinning vortex",
+  "looks": "A swirl opens, the token spirals in and shrinks, and comes out at the target.",
+  "notThis": [
+   {
+    "id": "collapse-jump",
+    "diff": "a bright flash and streaks, no swirl"
+   },
+   {
+    "id": "spin",
+    "diff": "the piece only turns"
+   }
+  ],
+  "pairs": [
+   "fade-in",
+   "spark-burst"
+  ],
+  "impactMs": 1350
+ },
+ {
+  "id": "warp-transfer",
+  "option": {
+   "mode": "pop"
+  },
+  "newId": "warp-transfer",
+  "title": "Pops an icon into view in place",
+  "looks": "The icon appears small, overshoots its size and settles.",
+  "notThis": [
+   {
+    "id": "fade-in",
+    "diff": "fades without overshoot"
+   },
+   {
+    "id": "fade-in--scale-2",
+    "diff": "starts large and shrinks"
+   }
+  ],
+  "pairs": [
+   "spark-burst",
+   "glow"
+  ],
+  "impactMs": 125
+ },
+ {
+  "id": "warp-transfer",
+  "option": {
+   "mode": "grey"
+  },
+  "newId": "warp-transfer",
+  "title": "Flashes a piece, then dims it in place",
+  "looks": "The piece starts large and bright, shrinks back to size and ends in the dim look the game passes.",
+  "notThis": [
+   {
+    "id": "fizzle",
+    "diff": "shakes and static crosses it"
+   },
+   {
+    "id": "glow--end-dark",
+    "diff": "a halo fades, no size change"
+   }
+  ],
+  "pairs": [
+   "tap"
+  ],
+  "impactMs": null
+ },
+ {
+  "id": "warp-transfer",
+  "option": {
+   "mode": "bump"
+  },
+  "newId": "warp-transfer",
+  "title": "Bumps a counter as it changes",
+  "looks": "The counter jumps large with tinted digits and shrinks back.",
+  "notThis": [
+   {
+    "id": "scale--pulse-true",
+    "diff": "grows from rest, no tint"
+   },
+   {
+    "id": "count",
+    "diff": "the digits roll"
+   }
+  ],
+  "pairs": [
+   "count",
+   "warp-transfer--mode-rise"
+  ],
+  "impactMs": 0
+ },
+ {
+  "id": "warp-transfer",
+  "option": {
+   "spiral": true
+  },
+  "newId": "warp-transfer",
+  "title": "Spirals a ship off the board, trail behind",
+  "looks": "The ship banks round a squashed orbit and spirals away or in, a glowing ribbon behind it.",
+  "notThis": [
+   {
+    "id": "multi-stop-path",
+    "diff": "stops at places and comes home; no engine ribbon"
+   },
+   {
+    "id": "collapse-jump",
+    "diff": "no travel seen, a flash and a burst"
+   }
+  ],
+  "pairs": [
+   "trail",
+   "idle--kind-bob"
+  ],
+  "impactMs": null
+ },
+ {
+  "id": "fade-in",
+  "option": null,
+  "newId": "fade-in",
+  "title": "Fades a piece into view",
+  "looks": "The piece goes from invisible to fully visible in place.",
+  "notThis": [
+   {
+    "id": "show",
+    "diff": "instant, no fade"
+   },
+   {
+    "id": "warp-transfer--mode-pop",
+    "diff": "overshoots its size"
+   }
+  ],
+  "pairs": [
+   "fade-out",
+   "text"
+  ],
+  "impactMs": null
+ },
+ {
+  "id": "fade-in",
+  "option": {
+   "scale": 2
+  },
+  "newId": "fade-in",
+  "title": "Drops in large and shrinks into place",
+  "looks": "The piece appears at twice its size, faint, and shrinks to normal as it turns solid.",
+  "notThis": [
+   {
+    "id": "fade-in",
+    "diff": "no size change"
+   },
+   {
+    "id": "settle",
+    "diff": "a visible piece lands"
+   }
+  ],
+  "pairs": [
+   "shake",
+   "ring-pulse--shockwaves"
+  ],
+  "impactMs": 400
+ },
+ {
+  "id": "fade-out",
+  "option": null,
+  "newId": "fade-out",
+  "title": "Fades a piece out of view",
+  "looks": "The piece goes from fully visible to transparent.",
+  "notThis": [
+   {
+    "id": "hide",
+    "diff": "instant"
+   },
+   {
+    "id": "glow--end-dark",
+    "diff": "dims, does not vanish"
+   }
+  ],
+  "pairs": [
+   "fade-in",
+   "move"
+  ],
+  "impactMs": null
+ },
+ {
+  "id": "show",
+  "option": null,
+  "newId": "show",
+  "title": "Shows a piece at once",
+  "looks": "The piece is just there, with no motion.",
+  "notThis": [
+   {
+    "id": "fade-in",
+    "diff": "fades over time"
+   }
+  ],
+  "pairs": [
+   "hide"
+  ],
+  "impactMs": null
+ },
+ {
+  "id": "hide",
+  "option": null,
+  "newId": "hide",
+  "title": "Hides a piece at once",
+  "looks": "The piece is just gone, with no motion.",
+  "notThis": [
+   {
+    "id": "fade-out",
+    "diff": "fades over time"
+   }
+  ],
+  "pairs": [
+   "show"
+  ],
+  "impactMs": null
+ },
+ {
+  "id": "unroll",
+  "option": null,
+  "newId": "unroll",
+  "title": "Unrolls a panel open from one edge",
+  "looks": "The panel grows down from a thin strip at its top edge to full size.",
+  "notThis": [
+   {
+    "id": "banner",
+    "diff": "a strip with text that fades away"
+   },
+   {
+    "id": "fade-in",
+    "diff": "appears whole"
+   }
+  ],
+  "pairs": [
+   "unroll--reverse-true",
+   "text"
+  ],
+  "impactMs": null
+ },
+ {
+  "id": "unroll",
+  "option": {
+   "reverse": true
+  },
+  "newId": "unroll",
+  "title": "Shuts a panel down to a glowing line",
+  "looks": "The panel brightens, squeezes to a thin glowing line and goes out.",
+  "notThis": [
+   {
+    "id": "fade-out",
+    "diff": "fades whole, no squeeze"
+   },
+   {
+    "id": "glow--end-dark",
+    "diff": "dims but stays"
+   }
+  ],
+  "pairs": [
+   "unroll",
+   "flicker--buzz"
+  ],
+  "impactMs": null
+ },
+ {
+  "id": "banner",
+  "option": null,
+  "newId": "banner",
+  "title": "Unrolls a banner with text, then fades",
+  "looks": "A strip opens over the board, large text appears on it, holds, and the whole banner fades.",
+  "notThis": [
+   {
+    "id": "bannerAt",
+    "diff": "lines stack one after another"
+   },
+   {
+    "id": "letterboxBanner",
+    "diff": "black bars top and bottom"
+   }
+  ],
+  "pairs": [
+   "text",
+   "cameraPull"
+  ],
+  "impactMs": null
+ },
+ {
+  "id": "text",
+  "option": null,
+  "newId": "text",
+  "title": "Fades in text rising into place",
+  "looks": "A line of text fades in while rising a little and stays.",
+  "notThis": [
+   {
+    "id": "text--typewriter-true",
+    "diff": "appears a word at a time"
+   },
+   {
+    "id": "banner",
+    "diff": "on a strip that fades away"
+   }
+  ],
+  "pairs": [
+   "fade-in",
+   "count"
+  ],
+  "impactMs": null
+ },
+ {
+  "id": "text",
+  "option": {
+   "typewriter": true
+  },
+  "newId": "text",
+  "title": "Types out text word by word",
+  "looks": "The text appears a word or a letter at a time over the step.",
+  "notThis": [
+   {
+    "id": "text",
+    "diff": "the whole line fades in at once"
+   }
+  ],
+  "pairs": [
+   "unroll",
+   "letterboxBanner"
+  ],
+  "impactMs": null
+ },
+ {
+  "id": "count",
+  "option": null,
+  "newId": "count",
+  "title": "Counts a number up to its new value",
+  "looks": "The number on the piece rolls from the old value to the new one, slowing at the end.",
+  "notThis": [
+   {
+    "id": "countUp",
+    "diff": "same look in the game's own text, from code"
+   },
+   {
+    "id": "warp-transfer--mode-bump",
+    "diff": "the counter jumps, digits do not roll"
+   }
+  ],
+  "pairs": [
+   "warp-transfer--mode-bump",
+   "bar-fill",
+   "spark-burst"
+  ],
+  "impactMs": null
+ },
+ {
+  "id": "glow",
+  "option": null,
+  "newId": "glow",
+  "title": "Glows once, then fades back",
+  "looks": "A soft halo grows round the piece and fades back.",
+  "notThis": [
+   {
+    "id": "glow--latch",
+    "diff": "stays lit until a later step"
+   },
+   {
+    "id": "ring-pulse",
+    "diff": "a ring travels outward"
+   },
+   {
+    "id": "sheen",
+    "diff": "a band slides across"
+   }
+  ],
+  "pairs": [
+   "reticle",
+   "ring-pulse"
+  ],
+  "impactMs": 300
+ },
+ {
+  "id": "glow",
+  "option": {
+   "latch": true
+  },
+  "newId": "glow",
+  "title": "Lights a piece and keeps it lit",
+  "looks": "A halo grows round the piece and stays until a later glow step turns it off.",
+  "notThis": [
+   {
+    "id": "glow",
+    "diff": "fades back by itself in the same step"
+   },
+   {
+    "id": "pulse",
+    "diff": "throbs instead of holding"
+   }
+  ],
+  "pairs": [
+   "glow--end-dark",
+   "lift"
+  ],
+  "impactMs": null
+ },
+ {
+  "id": "glow",
+  "option": {
+   "end": "dark"
+  },
+  "newId": "glow",
+  "title": "Dims a lit piece to dark",
+  "looks": "The piece starts with a halo that fades until it is gone.",
+  "notThis": [
+   {
+    "id": "fade-out",
+    "diff": "the piece itself vanishes"
+   },
+   {
+    "id": "warp-transfer--mode-grey",
+    "diff": "size flash, then a grey look"
+   }
+  ],
+  "pairs": [
+   "glow--latch-true"
+  ],
+  "impactMs": null
+ },
+ {
+  "id": "shake",
+  "option": null,
+  "newId": "shake",
+  "title": "Shakes a piece side to side",
+  "looks": "The piece jitters left and right a few times and comes to rest.",
+  "notThis": [
+   {
+    "id": "shake-group",
+    "diff": "several pieces at once"
+   },
+   {
+    "id": "shakeAt",
+    "diff": "the whole screen"
+   },
+   {
+    "id": "flicker--buzz",
+    "diff": "colour noise, little movement"
+   }
+  ],
+  "pairs": [
+   "slash",
+   "ring-pulse--shockwaves"
+  ],
+  "impactMs": 0
+ },
+ {
+  "id": "shake-group",
+  "option": null,
+  "newId": "shake-group",
+  "title": "Shakes several pieces together",
+  "looks": "The listed pieces jitter at once, each a little differently in both directions.",
+  "notThis": [
+   {
+    "id": "shake",
+    "diff": "one piece only"
+   },
+   {
+    "id": "shakeAt",
+    "diff": "the whole view jolts"
+   }
+  ],
+  "pairs": [
+   "debris",
+   "ring-pulse--shockwaves"
+  ],
+  "impactMs": 0
+ },
+ {
+  "id": "trail",
+  "option": null,
+  "newId": "trail",
+  "title": "Leaves a thin line behind a flying piece",
+  "looks": "A thin ribbon of light follows the flying piece's route and fades out.",
+  "notThis": [
+   {
+    "id": "warp-transfer--mode-crossing",
+    "diff": "big glowing dots cross and bloom on the target"
+   },
+   {
+    "id": "dash-line",
+    "diff": "a fixed dashed line between two pieces"
+   }
+  ],
+  "pairs": [
+   "arc-move",
+   "move"
+  ],
+  "impactMs": null
+ },
+ {
+  "id": "radial-streaks",
+  "option": null,
+  "newId": "streak-burst",
+  "title": "Bursts streaks of light from a point",
+  "looks": "Thin streaks shoot out from a point (or rush into it) across the board and fade.",
+  "notThis": [
+   {
+    "id": "spark-burst",
+    "diff": "short sparks round one piece"
+   },
+   {
+    "id": "collapse-jump",
+    "diff": "the piece itself vanishes"
+   }
+  ],
+  "pairs": [
+   "shake",
+   "cameraPush"
+  ],
+  "impactMs": 450,
+  "why": "\"radial\" is geometry; the player sees a burst of streaks."
+ },
+ {
+  "id": "column-beam",
+  "option": null,
+  "newId": "light-pillar",
+  "title": "Raises a pillar of light over a piece",
+  "looks": "A vertical pillar of light with drifting glitter rises over the piece, lights it, and fades.",
+  "notThis": [
+   {
+    "id": "warp-transfer",
+    "diff": "the token is carried away in it"
+   },
+   {
+    "id": "rotating-beam",
+    "diff": "a wedge that turns"
+   }
+  ],
+  "pairs": [
+   "fade-in",
+   "motes"
+  ],
+  "impactMs": 300,
+  "why": "\"column\" is a building word and \"beam\" reads as a shot; the strip shows a pillar of light."
+ },
+ {
+  "id": "column-beam",
+  "option": {
+   "curve": true
+  },
+  "newId": "column-beam",
+  "title": "Holds a glowing arc between two pieces",
+  "looks": "A glowing arc bends from the piece to the target and sparks there.",
+  "notThis": [
+   {
+    "id": "projectile--bolt-ribbon",
+    "diff": "a shot travels along the arc and fades; the arc never stays"
+   },
+   {
+    "id": "dash-line",
+    "diff": "straight dashed line"
+   }
+  ],
+  "pairs": [
+   "glow",
+   "spark-burst"
+  ],
+  "impactMs": 300
+ },
+ {
+  "id": "rotating-beam",
+  "option": null,
+  "newId": "radar-sweep",
+  "title": "Sweeps a turning wedge of light round",
+  "looks": "A wedge of light turns round the piece like a lighthouse, then fades.",
+  "notThis": [
+   {
+    "id": "sheen",
+    "diff": "a band slides once across the face"
+   },
+   {
+    "id": "column-beam",
+    "diff": "a pillar, no turning"
+   }
+  ],
+  "pairs": [
+   "reticle",
+   "ring-pulse"
+  ],
+  "impactMs": null,
+  "why": "\"rotating-beam\" says how it is built; everyone knows a radar sweep."
+ },
+ {
+  "id": "projectile",
+  "option": null,
+  "newId": "projectile",
+  "title": "Fires a steady beam at another piece",
+  "looks": "A straight beam shoots from the source, holds on the target, then fades.",
+  "notThis": [
+   {
+    "id": "projectile--bolt-streak",
+    "diff": "a short bolt, not a held beam"
+   },
+   {
+    "id": "dash-line",
+    "diff": "a dashed line, no hit"
+   }
+  ],
+  "pairs": [
+   "shimmer",
+   "shield-bubble",
+   "shake"
+  ],
+  "impactMs": 225
+ },
+ {
+  "id": "projectile",
+  "option": {
+   "bolt": "streak"
+  },
+  "newId": "projectile",
+  "title": "Shoots a fast bolt with a tail",
+  "looks": "A short bright bolt with a tail streaks from the source and flashes on the target.",
+  "notThis": [
+   {
+    "id": "projectile",
+    "diff": "a beam held for a while"
+   }
+  ],
+  "pairs": [
+   "shake",
+   "spark-burst"
+  ],
+  "impactMs": 150
+ },
+ {
+  "id": "projectile",
+  "option": {
+   "bolt": "ribbon"
+  },
+  "newId": "projectile",
+  "title": "Lobs a shot along a fading arc",
+  "looks": "A shot arcs from the source to the target trailing a curved ribbon that fades.",
+  "notThis": [
+   {
+    "id": "column-beam--curve",
+    "diff": "the whole arc stays lit and sparks on the target; here a short trail travels and fades"
+   },
+   {
+    "id": "arc-move",
+    "diff": "the piece itself flies"
+   }
+  ],
+  "pairs": [
+   "debris",
+   "shake"
+  ],
+  "impactMs": 600
+ },
+ {
+  "id": "dissolve",
+  "option": null,
+  "newId": "burn-away",
+  "title": "Heats up, breaks apart, embers rise",
+  "looks": "The card glows from one point, breaks into small squares, and embers drift up until it is gone.",
+  "notThis": [
+   {
+    "id": "dissolve--lift-true",
+    "diff": "pieces lift and turn to smoke"
+   },
+   {
+    "id": "shatter",
+    "diff": "big shards fly apart"
+   }
+  ],
+  "pairs": [
+   "debris",
+   "fade-out"
+  ],
+  "impactMs": null,
+  "why": "\"dissolve\" hides that it burns; \"burn\" is what a director types."
+ },
+ {
+  "id": "dissolve",
+  "option": {
+   "lift": true
+  },
+  "newId": "dissolve",
+  "title": "Card tilts, lifts and burns to smoke",
+  "looks": "The card tilts and lifts as it burns apart, its pieces spinning off into smoke.",
+  "notThis": [
+   {
+    "id": "shatter",
+    "diff": "big shards fly apart; nothing lifts or smokes"
+   },
+   {
+    "id": "shield-bubble--breaks",
+    "diff": "only the shield breaks; the card stays"
+   },
+   {
+    "id": "dissolve",
+    "diff": "breaks into squares in place"
+   }
+  ],
+  "pairs": [
+   "fade-out"
+  ],
+  "impactMs": null
+ },
+ {
+  "id": "shatter",
+  "option": null,
+  "newId": "shatter",
+  "title": "Breaks the piece itself into flying shards",
+  "looks": "The piece cracks, breaks into triangular shards that fly apart and fall.",
+  "notThis": [
+   {
+    "id": "shield-bubble--breaks",
+    "diff": "a hex shield breaks and the piece stays whole"
+   },
+   {
+    "id": "dissolve--lift",
+    "diff": "the card tilts, lifts and turns to smoke; no shards"
+   },
+   {
+    "id": "debris",
+    "diff": "small bits, the piece stays"
+   }
+  ],
+  "pairs": [
+   "shake",
+   "ring-pulse--shockwaves"
+  ],
+  "impactMs": 0
+ },
+ {
+  "id": "shimmer",
+  "option": null,
+  "newId": "shimmer",
+  "title": "Flashes an oval glint over a hit piece",
+  "looks": "An oval shimmer flashes over the piece and a ring ripples out from the hit point.",
+  "notThis": [
+   {
+    "id": "ring-pulse--shockwaves",
+    "diff": "wide rings blast far beyond the piece; no glint on it"
+   },
+   {
+    "id": "shield-bubble",
+    "diff": "a hex-cell bubble"
+   }
+  ],
+  "pairs": [
+   "projectile",
+   "shake"
+  ],
+  "impactMs": 175
+ },
+ {
+  "id": "ring-pulse",
+  "option": null,
+  "newId": "ring-pulse",
+  "title": "Sends a ring outward from a piece",
+  "looks": "A ring outlines the piece and spreads out as it fades.",
+  "notThis": [
+   {
+    "id": "ring-pulse--shockwaves",
+    "diff": "wide fast blast rings"
+   },
+   {
+    "id": "glow",
+    "diff": "a halo, not a ring"
+   }
+  ],
+  "pairs": [
+   "glow",
+   "reticle"
+  ],
+  "impactMs": null
+ },
+ {
+  "id": "ring-pulse",
+  "option": {
+   "shockwaves": [
+    {}
+   ]
+  },
+  "newId": "ring-pulse",
+  "title": "Blasts wide rings far beyond the piece",
+  "looks": "Wide rings burst out from the piece, thinning as they grow.",
+  "notThis": [
+   {
+    "id": "shimmer",
+    "diff": "an oval glint stays tight over the piece"
+   },
+   {
+    "id": "ring-pulse",
+    "diff": "one soft ring hugging the piece"
+   }
+  ],
+  "pairs": [
+   "shake-group",
+   "debris",
+   "shakeAt"
+  ],
+  "impactMs": 0
+ },
+ {
+  "id": "shield-bubble",
+  "option": null,
+  "newId": "shield-bubble",
+  "title": "Flashes a hex shield as a hit lands",
+  "looks": "A bubble of hexagon cells lights round the piece with waves from the hit side.",
+  "notThis": [
+   {
+    "id": "shimmer",
+    "diff": "plain oval shimmer"
+   },
+   {
+    "id": "shield-bubble--recharge",
+    "diff": "builds up cell by cell"
+   }
+  ],
+  "pairs": [
+   "projectile",
+   "shake"
+  ],
+  "impactMs": 300
+ },
+ {
+  "id": "shield-bubble",
+  "option": {
+   "breaks": true
+  },
+  "newId": "shield-bubble",
+  "title": "Shield cracks away, the piece stays whole",
+  "looks": "The hex bubble flares at the hit, cracks and scatters into specks.",
+  "notThis": [
+   {
+    "id": "shatter",
+    "diff": "the piece itself breaks into big shards"
+   },
+   {
+    "id": "dissolve--lift",
+    "diff": "the card itself burns away"
+   }
+  ],
+  "pairs": [
+   "projectile",
+   "shake"
+  ],
+  "impactMs": 207
+ },
+ {
+  "id": "shield-bubble",
+  "option": {
+   "recharge": {}
+  },
+  "newId": "shield-bubble",
+  "title": "Builds a hex shield up cell by cell",
+  "looks": "Hex cells assemble round the piece, hum and settle.",
+  "notThis": [
+   {
+    "id": "shield-bubble",
+    "diff": "flashes on a hit"
+   }
+  ],
+  "pairs": [
+   "glow"
+  ],
+  "impactMs": null
+ },
+ {
+  "id": "stamp",
+  "option": null,
+  "newId": "stamp",
+  "title": "Stamps a label onto a piece",
+  "looks": "A tilted label slams down from large onto the piece and stays.",
+  "notThis": [
+   {
+    "id": "stamp--cracked-true",
+    "diff": "a crack runs across it"
+   },
+   {
+    "id": "banner",
+    "diff": "board-wide strip, fades"
+   }
+  ],
+  "pairs": [
+   "shake",
+   "spark-burst"
+  ],
+  "impactMs": 250
+ },
+ {
+  "id": "stamp",
+  "option": {
+   "cracked": true
+  },
+  "newId": "stamp",
+  "title": "Stamps a cracked label onto a piece",
+  "looks": "A label slams down and a jagged crack runs across it.",
+  "notThis": [
+   {
+    "id": "stamp",
+    "diff": "no crack"
+   }
+  ],
+  "pairs": [
+   "shake",
+   "fizzle"
+  ],
+  "impactMs": 250
+ },
+ {
+  "id": "motes",
+  "option": null,
+  "newId": "particles-rise",
+  "title": "Floats small lights up from a piece",
+  "looks": "Small glowing dots drift up from the piece and fade at different heights.",
+  "notThis": [
+   {
+    "id": "spark-burst",
+    "diff": "sparks fly out fast"
+   },
+   {
+    "id": "debris",
+    "diff": "bits fall down"
+   }
+  ],
+  "pairs": [
+   "count",
+   "glow"
+  ],
+  "impactMs": null,
+  "why": "\"motes\" is a rare word; the player sees small lights rising."
+ },
+ {
+  "id": "flicker",
+  "option": null,
+  "newId": "flicker",
+  "title": "Flickers a colour over a piece",
+  "looks": "A solid colour flashes on and off over the piece a few times.",
+  "notThis": [
+   {
+    "id": "flicker--buzz",
+    "diff": "noisy brightness, piece jitters"
+   },
+   {
+    "id": "pulse",
+    "diff": "soft fade, repeats until the step ends"
+   }
+  ],
+  "pairs": [
+   "shake",
+   "fizzle"
+  ],
+  "impactMs": null
+ },
+ {
+  "id": "flicker",
+  "option": {
+   "buzz": {}
+  },
+  "newId": "flicker",
+  "title": "Buzzes a piece like a bad signal",
+  "looks": "The piece jitters and its brightness and colour flicker in noisy bursts.",
+  "notThis": [
+   {
+    "id": "flicker",
+    "diff": "clean colour flashes"
+   },
+   {
+    "id": "fizzle",
+    "diff": "ends grey with static"
+   }
+  ],
+  "pairs": [
+   "unroll--reverse-true",
+   "shake"
+  ],
+  "impactMs": null
+ },
+ {
+  "id": "bar-fill",
+  "option": null,
+  "newId": "bar-fill",
+  "title": "Fills a bar from one level to another",
+  "looks": "A bar inside the piece grows or shrinks between two levels.",
+  "notThis": [
+   {
+    "id": "bar-fill--pin",
+    "diff": "a numbered pin moves"
+   },
+   {
+    "id": "count",
+    "diff": "the digits roll"
+   }
+  ],
+  "pairs": [
+   "count"
+  ],
+  "impactMs": null
+ },
+ {
+  "id": "bar-fill",
+  "option": {
+   "pin": {}
+  },
+  "newId": "bar-fill",
+  "title": "Moves a numbered pin along a track",
+  "looks": "A numbered marker lifts, slides along the track and lands with a glow.",
+  "notThis": [
+   {
+    "id": "move",
+    "diff": "any piece, no number"
+   },
+   {
+    "id": "bar-fill",
+    "diff": "a bar grows"
+   }
+  ],
+  "pairs": [
+   "count",
+   "ring-pulse"
+  ],
+  "impactMs": 675
+ },
+ {
+  "id": "refresh",
+  "option": null,
+  "newId": "refresh",
+  "title": "Clears a used card back to ready",
+  "looks": "A grey cover drains off the card from the bottom up, leaving the ready face.",
+  "notThis": [
+   {
+    "id": "untap",
+    "diff": "turns upright, no colour change"
+   }
+  ],
+  "pairs": [
+   "untap",
+   "sheen"
+  ],
+  "impactMs": null
+ },
+ {
+  "id": "pulse",
+  "option": null,
+  "newId": "pulse",
+  "title": "Pulses a piece in a steady rhythm",
+  "looks": "The piece dims and brightens again and again until the step ends.",
+  "notThis": [
+   {
+    "id": "idle--kind-breathe",
+    "diff": "slower, softer"
+   },
+   {
+    "id": "flicker",
+    "diff": "solid colour flashes, few times"
+   },
+   {
+    "id": "startPulse",
+    "diff": "same from code, outside a beat"
+   }
+  ],
+  "pairs": [
+   "glow--latch-true"
+  ],
+  "impactMs": null
+ },
+ {
+  "id": "idle",
+  "option": {
+   "kind": "bob"
+  },
+  "newId": "idle",
+  "title": "Bobs a piece gently up and down",
+  "looks": "The piece floats up a few pixels and back, over and over.",
+  "notThis": [
+   {
+    "id": "idle--kind-drift",
+    "diff": "slow, wide drift"
+   },
+   {
+    "id": "lift",
+    "diff": "rises once and stays"
+   }
+  ],
+  "pairs": [
+   "glow--latch-true"
+  ],
+  "impactMs": null
+ },
+ {
+  "id": "idle",
+  "option": {
+   "kind": "breathe"
+  },
+  "newId": "idle",
+  "title": "Breathes a piece softly in and out",
+  "looks": "The piece slowly fades a little and back, over and over.",
+  "notThis": [
+   {
+    "id": "pulse",
+    "diff": "faster, stronger"
+   }
+  ],
+  "pairs": [
+   "idle--kind-bob"
+  ],
+  "impactMs": null
+ },
+ {
+  "id": "idle",
+  "option": {
+   "kind": "orbit"
+  },
+  "newId": "idle",
+  "title": "Circles little stars round a piece",
+  "looks": "Small stars circle in an ellipse above the piece, twinkling.",
+  "notThis": [
+   {
+    "id": "motes",
+    "diff": "lights rise and fade"
+   },
+   {
+    "id": "multi-stop-path",
+    "diff": "the piece itself flies round"
+   }
+  ],
+  "pairs": [
+   "flicker--buzz"
+  ],
+  "impactMs": null
+ },
+ {
+  "id": "idle",
+  "option": {
+   "kind": "drift"
+  },
+  "newId": "idle",
+  "title": "Drifts a piece slowly away and back",
+  "looks": "Over a long period the piece moves and grows a little, then returns.",
+  "notThis": [
+   {
+    "id": "idle--kind-bob",
+    "diff": "small, quick up and down"
+   },
+   {
+    "id": "cameraPull",
+    "diff": "the board zooms"
+   }
+  ],
+  "pairs": [
+   "drawDriftCloud"
+  ],
+  "impactMs": null
+ },
+ {
+  "id": "dash-line",
+  "option": null,
+  "newId": "dash-line",
+  "title": "Draws a marching dashed line between pieces",
+  "looks": "A dashed line joins two pieces, its dashes running from one to the other.",
+  "notThis": [
+   {
+    "id": "trail",
+    "diff": "follows a flying piece"
+   },
+   {
+    "id": "warp-transfer--mode-crossing",
+    "diff": "glowing band of dots"
+   }
+  ],
+  "pairs": [
+   "reticle",
+   "projectile"
+  ],
+  "impactMs": null
+ },
+ {
+  "id": "reticle",
+  "option": null,
+  "newId": "target-brackets",
+  "title": "Closes target brackets in on a piece",
+  "looks": "Four corner brackets close in round the piece and fade.",
+  "notThis": [
+   {
+    "id": "glow",
+    "diff": "a soft halo"
+   },
+   {
+    "id": "ring-pulse",
+    "diff": "a ring spreads out"
+   }
+  ],
+  "pairs": [
+   "dash-line",
+   "projectile"
+  ],
+  "impactMs": 175,
+  "why": "\"reticle\" is a specialist word; the player sees target brackets."
+ },
+ {
+  "id": "debris",
+  "option": null,
+  "newId": "debris",
+  "title": "Throws small bits out that fall",
+  "looks": "Small fragments burst from the piece, spin and fall, then fade.",
+  "notThis": [
+   {
+    "id": "shatter",
+    "diff": "the piece itself breaks"
+   },
+   {
+    "id": "spark-burst",
+    "diff": "sparks fade without falling"
+   }
+  ],
+  "pairs": [
+   "shake",
+   "shatter"
+  ],
+  "impactMs": 0
+ },
+ {
+  "id": "sheen",
+  "option": null,
+  "newId": "light-sweep",
+  "title": "Sweeps a band of light across a piece",
+  "looks": "A slanted band of shine slides across the piece from one side to the other.",
+  "notThis": [
+   {
+    "id": "rotating-beam",
+    "diff": "a wedge turns round the piece"
+   },
+   {
+    "id": "glow",
+    "diff": "a halo round it"
+   }
+  ],
+  "pairs": [
+   "flip",
+   "spark-burst"
+  ],
+  "impactMs": null,
+  "why": "\"sheen\" is a rare word; the strip shows a light sweeping across."
+ },
+ {
+  "id": "fizzle",
+  "option": null,
+  "newId": "fizzle",
+  "title": "Fizzles a piece out with grey static",
+  "looks": "The piece shakes, drains to grey and a noisy sputter crosses it, then recovers.",
+  "notThis": [
+   {
+    "id": "warp-transfer--mode-grey",
+    "diff": "size flash, dim, no static"
+   },
+   {
+    "id": "flicker--buzz",
+    "diff": "colour noise, no grey"
+   }
+  ],
+  "pairs": [
+   "shake",
+   "stamp--cracked-true"
+  ],
+  "impactMs": null
+ },
+ {
+  "id": "spark-burst",
+  "option": null,
+  "newId": "spark-burst",
+  "title": "Bursts sparks out from a piece",
+  "looks": "A spray of sparks flies out round the piece and fades.",
+  "notThis": [
+   {
+    "id": "radial-streaks",
+    "diff": "long streaks across the board"
+   },
+   {
+    "id": "motes",
+    "diff": "slow lights rising"
+   }
+  ],
+  "pairs": [
+   "stamp",
+   "count"
+  ],
+  "impactMs": 0
+ },
+ {
+  "id": "slash",
+  "option": null,
+  "newId": "slash",
+  "title": "Slashes strokes across a piece",
+  "looks": "Bright diagonal strokes cut across the piece and fade.",
+  "notThis": [
+   {
+    "id": "shatter",
+    "diff": "the piece breaks"
+   }
+  ],
+  "pairs": [
+   "shake",
+   "debris"
+  ],
+  "impactMs": 125
+ },
+ {
+  "id": "crumple",
+  "option": null,
+  "newId": "crumple",
+  "title": "Crumples a card into a ball, throws it",
+  "looks": "The card folds into a creased ball, is tossed and lands at the target.",
+  "notThis": [
+   {
+    "id": "dissolve--lift-true",
+    "diff": "burns, no ball"
+   },
+   {
+    "id": "arc-move",
+    "diff": "the card flies flat"
+   }
+  ],
+  "pairs": [
+   "shake"
+  ],
+  "impactMs": 1200
+ },
+ {
+  "id": "createGlitch",
+  "option": null,
+  "newId": "createGlitch",
+  "title": "Glitches a logo with split colour bursts",
+  "looks": "Every few seconds the wordmark splits into two colours, slices jump sideways and a frame drops.",
+  "notThis": [
+   {
+    "id": "flicker--buzz",
+    "diff": "on a piece, in a step"
+   }
+  ],
+  "pairs": [
+   "letterboxBanner"
+  ],
+  "impactMs": null
+ },
+ {
+  "id": "cameraPull",
+  "option": null,
+  "newId": "cameraPull",
+  "title": "Zooms the board in and dims around it",
+  "looks": "The whole board darkens round a point and eases back.",
+  "notThis": [
+   {
+    "id": "cameraPush",
+    "diff": "grows, no dimming"
+   },
+   {
+    "id": "letterboxBanner",
+    "diff": "bars and a caption"
+   }
+  ],
+  "pairs": [
+   "banner",
+   "shakeAt"
+  ],
+  "impactMs": null
+ },
+ {
+  "id": "cameraPush",
+  "option": null,
+  "newId": "cameraPush",
+  "title": "Pushes the camera in and back",
+  "looks": "The whole board grows a little about a point and returns.",
+  "notThis": [
+   {
+    "id": "cameraPull",
+    "diff": "dims round the edges"
+   },
+   {
+    "id": "scale",
+    "diff": "one piece only"
+   }
+  ],
+  "pairs": [
+   "shakeAt",
+   "ring-pulse--shockwaves"
+  ],
+  "impactMs": 500
+ },
+ {
+  "id": "letterboxBanner",
+  "option": null,
+  "newId": "letterboxBanner",
+  "title": "Slides in cinema bars with a caption",
+  "looks": "Bars slide in top and bottom with a small caption, hold, and slide out.",
+  "notThis": [
+   {
+    "id": "banner",
+    "diff": "a strip in the middle"
+   },
+   {
+    "id": "cameraPull",
+    "diff": "dims, no bars"
+   }
+  ],
+  "pairs": [
+   "text--typewriter-true"
+  ],
+  "impactMs": null
+ },
+ {
+  "id": "drawPlasmaOrb",
+  "option": null,
+  "newId": "drawPlasmaOrb",
+  "title": "Draws a crackling orb of energy",
+  "looks": "A glowing ball of crackling filaments pulses on the piece.",
+  "notThis": [
+   {
+    "id": "glow",
+    "diff": "a soft halo, no orb"
+   },
+   {
+    "id": "idle--kind-orbit",
+    "diff": "stars circle"
+   }
+  ],
+  "pairs": [
+   "column-beam"
+  ],
+  "impactMs": null
+ },
+ {
+  "id": "drawDriftCloud",
+  "option": null,
+  "newId": "drawDriftCloud",
+  "title": "Drifts broken card shards across the screen",
+  "looks": "Triangle shards of art float, spin and fade, in waves.",
+  "notThis": [
+   {
+    "id": "shatter",
+    "diff": "one piece breaks and falls"
+   },
+   {
+    "id": "debris",
+    "diff": "small bits fall"
+   }
+  ],
+  "pairs": [
+   "letterboxBanner"
+  ],
+  "impactMs": null
+ },
+ {
+  "id": "pileLift",
+  "option": null,
+  "newId": "pileLift",
+  "title": "Raises the deck while a card leaves it",
+  "looks": "The pile rises with a shadow, holds, and settles when the card arrives.",
+  "notThis": [
+   {
+    "id": "lift",
+    "diff": "one piece rises and stays up; no card leaves"
+   }
+  ],
+  "pairs": [
+   "arc-move",
+   "flip"
+  ],
+  "impactMs": null
+ },
+ {
+  "id": "flight",
+  "option": null,
+  "newId": "flight",
+  "title": "Moves a dialog card to its board spot",
+  "looks": "The card moves from an overlay to its place using a browser view transition.",
+  "notThis": [
+   {
+    "id": "multi-stop-path",
+    "diff": "visits stops and returns home"
+   },
+   {
+    "id": "collapse-jump",
+    "diff": "vanishes in a flash and bursts out"
+   },
+   {
+    "id": "move",
+    "diff": "both places are on the board"
+   }
+  ],
+  "pairs": [
+   "settle"
+  ],
+  "impactMs": null
+ },
+ {
+  "id": "startPulse",
+  "option": null,
+  "newId": "startPulse",
+  "title": "Pulses a live element until stopped",
+  "looks": "A page element dims and brightens over and over until the game stops it.",
+  "notThis": [
+   {
+    "id": "pulse",
+    "diff": "inside a beat"
+   }
+  ],
+  "pairs": [
+   "startIdle"
+  ],
+  "impactMs": null
+ },
+ {
+  "id": "startIdle",
+  "option": null,
+  "newId": "startIdle",
+  "title": "Keeps a live element bobbing or orbiting",
+  "looks": "A page element bobs, breathes, drifts or carries stars until the game stops it.",
+  "notThis": [
+   {
+    "id": "idle--kind-bob",
+    "diff": "inside a beat"
+   }
+  ],
+  "pairs": [
+   "startPulse"
+  ],
+  "impactMs": null
+ },
+ {
+  "id": "countUp",
+  "option": null,
+  "newId": "countUp",
+  "title": "Counts a number up in the game's text",
+  "looks": "A number in the game's own element rolls up to its value, slowing at the end.",
+  "notThis": [
+   {
+    "id": "count",
+    "diff": "same look on a beat actor"
+   }
+  ],
+  "pairs": [
+   "spark-burst"
+  ],
+  "impactMs": null
+ },
+ {
+  "id": "bannerAt",
+  "option": null,
+  "newId": "bannerAt",
+  "title": "Shows banner lines one after another",
+  "looks": "Lines appear one every 650 ms, the newest fading and growing in.",
+  "notThis": [
+   {
+    "id": "banner",
+    "diff": "one strip that fades away"
+   }
+  ],
+  "pairs": [
+   "text"
+  ],
+  "impactMs": null
+ },
+ {
+  "id": "shakeAt",
+  "option": null,
+  "newId": "shakeAt",
+  "title": "Shakes the screen harder for bigger hits",
+  "looks": "The whole view jolts and wobbles, harder for more damage, and settles fast.",
+  "notThis": [
+   {
+    "id": "shake",
+    "diff": "one piece"
+   },
+   {
+    "id": "shake-group",
+    "diff": "listed pieces"
+   }
+  ],
+  "pairs": [
+   "cameraPush",
+   "projectile"
+  ],
+  "impactMs": 0
+ }
+]
