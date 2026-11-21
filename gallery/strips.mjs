@@ -22,7 +22,8 @@ const clock = () => {
   window.requestAnimationFrame = (f) => { raf.push({ id: ++seq, f }); return seq; };
   window.cancelAnimationFrame = (id) => { raf = raf.filter((r) => r.id !== id); };
   const started = new WeakMap();
-  const sync = () => { for (const a of document.getAnimations()) { if (!started.has(a)) started.set(a, now); a.pause(); a.currentTime = now - started.get(a); } };
+  const done = new WeakSet();
+  const sync = () => { let fresh = false; for (const a of document.getAnimations()) { if (!started.has(a)) started.set(a, now); a.pause(); a.currentTime = now - started.get(a); if (a.playState === 'finished' && !done.has(a)) { done.add(a); fresh = true; } } return fresh; };
   const orig = Element.prototype.animate;
   Element.prototype.animate = function (...args) { const a = orig.apply(this, args); started.set(a, now); a.pause(); a.currentTime = 0; return a; };
   const yieldTurn = () => new Promise((r) => { const c = new MessageChannel(); c.port1.onmessage = () => r(); c.port2.postMessage(0); });
@@ -40,9 +41,9 @@ const clock = () => {
     now = end;
     const q = raf; raf = [];
     for (const r of q) r.f(now);
-    sync();
-    // a real frame per step, so finish events of the paused animations fire before the next virtual step
-    await new Promise((r) => realRaf(() => r()));
+    const fresh = sync();
+    // real frames per step, so finish events of the paused animations fire before the next virtual step
+    for (let i = fresh ? 4 : 1; i > 0; i--) await new Promise((r) => realRaf(() => r()));
   };
 };
 
@@ -59,7 +60,7 @@ export async function strips({ entries, url, outDir, only }) {
     const page = await ctx.newPage();
     page.on('pageerror', (e) => errors.push(e.message));
     await page.goto(url);
-    await page.addStyleTag({ content: `header,.head,.hint{display:none!important}.tile{display:none!important}.tile.shoot{display:grid!important;width:${FW}px!important}.stage{width:${FW}px!important}main,section{padding:0!important;margin:0!important;max-width:none!important}.grid{display:block!important}` });
+    await page.addStyleTag({ content: `header,.head,.hint{display:none!important}.tile{display:none!important}.tile.shoot{display:grid!important;border:0!important;border-radius:0!important;width:${FW}px!important}.stage{width:${FW}px!important}main,section{padding:0!important;margin:0!important;max-width:none!important}.grid{display:block!important}` });
     const L = await page.evaluate((i) => {
       const id = 't' + i;
       tiles[id].tile.classList.add('shoot');
@@ -86,7 +87,7 @@ export async function strips({ entries, url, outDir, only }) {
   // replay up to just before the end (the page is deterministic, so this is the same run)
   const shootBack = async (page, idx, L, step) => {
     await page.reload();
-    await page.addStyleTag({ content: `header,.head,.hint{display:none!important}.tile{display:none!important}.tile.shoot{display:grid!important;width:${FW}px!important}.stage{width:${FW}px!important}main,section{padding:0!important;margin:0!important;max-width:none!important}.grid{display:block!important}` });
+    await page.addStyleTag({ content: `header,.head,.hint{display:none!important}.tile{display:none!important}.tile.shoot{display:grid!important;border:0!important;border-radius:0!important;width:${FW}px!important}.stage{width:${FW}px!important}main,section{padding:0!important;margin:0!important;max-width:none!important}.grid{display:block!important}` });
     await page.evaluate((i) => { tiles['t' + i].tile.classList.add('shoot'); player.play('t' + i); }, idx);
     await page.evaluate(() => __adv(0));
     let at = 0;
