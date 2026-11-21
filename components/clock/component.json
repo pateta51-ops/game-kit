@@ -1,0 +1,10 @@
+{
+  "name": "clock",
+  "source": {
+    "game": "none",
+    "commit": "written new for the kit (K530); each game's clock was bespoke",
+    "paths": []
+  },
+  "needs": [],
+  "packages": []
+}

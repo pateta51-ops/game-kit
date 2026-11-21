@@ -49,6 +49,7 @@ graph LR
   character_select["character-select"]
   check_runner["check-runner"]
   ci_templates["ci-templates"]
+  clock["clock"]
   content_pack["content-pack"] --> card_harness["card-harness"]
   content_pack["content-pack"] --> card_language["card-language"]
   content_pack["content-pack"] --> engine_core["engine-core"]
@@ -179,6 +180,7 @@ graph LR
 - `character-select`
 - `check-runner`
 - `ci-templates`
+- `clock`
 - `content-pack`
 - `controls`
 - `coverage-report`
