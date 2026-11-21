@@ -54,18 +54,40 @@ describe('sound-player: format fallback (K508)', () => {
     expect(net.urls.filter((u) => u.startsWith('a/tap'))).toEqual(['a/tap.webm', 'a/tap.m4a']);
     expect(ctx.sources.some((s) => s.buffer?.id === 'a/tap.m4a')).toBe(true);
   });
-  it('a webm that fails to decode is replaced by its m4a', async () => {
-    const { net, player, ctx } = await start([], { table: { cues: { tap: { files: ['broken.webm'], tier: 'quiet' } } } });
+  it('a webm that fails to decode is replaced by its m4a, which plays', async () => {
+    const real = FakeAudioContext.prototype.decodeAudioData;
+    vi.spyOn(FakeAudioContext.prototype, 'decodeAudioData').mockImplementation(function (this: FakeAudioContext, d: ArrayBuffer) {
+      return new TextDecoder().decode(d).endsWith('.webm') ? Promise.reject(new Error('cannot decode')) : real.call(this, d);
+    });
+    const { net, player, ctx } = await start([], { table: { cues: { tap: { files: ['x.webm'], tier: 'quiet' } } } });
     player.play('tap');
-    expect(net.urls).toEqual(['a/broken.webm', 'a/broken.m4a']);
-    expect(ctx.sources).toHaveLength(0);
+    expect(net.urls).toEqual(['a/x.webm', 'a/x.m4a']);
+    expect(ctx.sources.map((s) => s.buffer?.id)).toEqual(['a/x.m4a']);
   });
-  it('a missing m4a only warns, and fallback {} turns it off', async () => {
+  it('a missing m4a only warns: nothing plays, nothing throws; fallback {} turns it off', async () => {
     noWebm();
     const a = await start(['.m4a']);
     expect(a.warn).toHaveBeenCalled();
+    expect(() => a.player.play('tap')).not.toThrow();
+    expect(a.ctx.sources).toHaveLength(0);
     const b = await start([], { fallback: {} });
     expect(b.net.urls).toContain('a/tap.webm');
+  });
+  it('canPlayType says yes: the webm is fetched and the m4a is not', async () => {
+    vi.stubGlobal('Audio', class { canPlayType() { return 'probably'; } });
+    const { net, player, ctx } = await start();
+    player.play('tap');
+    expect(net.urls).toContain('a/tap.webm');
+    expect(net.urls.filter((u) => u.endsWith('.m4a'))).toEqual([]);
+    expect(ctx.sources.map((s) => s.buffer?.id)).toEqual(['a/tap.webm']);
+  });
+  it('canPlayType throws: the webm is tried as before and plays', async () => {
+    vi.stubGlobal('Audio', class { canPlayType(): string { throw new Error('no'); } });
+    const { net, player, ctx } = await start();
+    player.play('tap');
+    expect(net.urls).toContain('a/tap.webm');
+    expect(net.urls.filter((u) => u.endsWith('.m4a'))).toEqual([]);
+    expect(ctx.sources.map((s) => s.buffer?.id)).toEqual(['a/tap.webm']);
   });
   it('a custom map is used', async () => {
     const { net } = await start(['tap.webm'], { fallback: { '.webm': '.mp3' } });
@@ -87,12 +109,16 @@ describe('sound-player: files check (K508)', () => {
     expect(checkSoundFiles(t, dir, { maxLoopBytes: 100 })).toContain('theme: theme.webm is 500000 bytes, over 100');
     expect(checkSoundFiles(t, dir, { maxLoopBytes: 100, maxTrackBytes: 600_000 }).some((l) => l.startsWith('theme:'))).toBe(false);
   });
-  it('fallback reports a file with no sibling', () => {
-    put('tap.webm');
-    put('theme.webm');
-    put('theme.m4a');
-    const t: SoundTable = { cues: table.cues };
-    expect(checkSoundFiles(t, dir)).toEqual([]);
-    expect(checkSoundFiles(t, dir, { fallback: { '.webm': '.m4a' } })).toEqual(['tap: tap.webm has no .m4a sibling']);
+  it('fallback reports a file with no sibling: cue, layer, once, ambience', () => {
+    for (const f of ['tap.webm', 'theme.webm', 'theme.m4a', 'long-lead.webm', 'long-won.webm', 'long-bed.webm']) put(f);
+    expect(checkSoundFiles(table, dir)).toEqual([]);
+    expect(checkSoundFiles(table, dir, { fallback: { '.webm': '.m4a' } })).toEqual([
+      'tap: tap.webm has no .m4a sibling',
+      'layer:lead: long-lead.webm has no .m4a sibling',
+      'once:won: long-won.webm has no .m4a sibling',
+      'ambience:bed: long-bed.webm has no .m4a sibling',
+    ]);
+    for (const f of ['tap.m4a', 'long-lead.m4a', 'long-won.m4a', 'long-bed.m4a']) put(f);
+    expect(checkSoundFiles(table, dir, { fallback: { '.webm': '.m4a' } })).toEqual([]);
   });
 });
