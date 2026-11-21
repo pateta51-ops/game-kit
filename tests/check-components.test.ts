@@ -109,7 +109,7 @@ describe('catalog.mjs --check words (K498)', () => {
     for (const f of ['catalog.mjs', 'plan.mjs']) fs.copyFileSync(path.join(top, 'scripts', f), path.join(root, 'scripts', f));
     fs.cpSync(path.join(top, 'docs', 'plan'), path.join(root, 'docs', 'plan'), { recursive: true });
     for (const f of ['CATALOG.md', 'ARCHITECTURE.md', 'PLAN.md']) fs.copyFileSync(path.join(top, 'docs', f), path.join(root, 'docs', f));
-    const n = JSON.parse(fs.readFileSync(path.join(top, 'docs', 'catalog-notes.json'), 'utf8'));
+    const n = JSON.parse(fs.readFileSync(path.join(top, 'docs', 'catalog-notes.json'), 'utf8')) as Record<string, Record<string, unknown>>;
     edit(n);
     fs.writeFileSync(path.join(root, 'docs', 'catalog-notes.json'), JSON.stringify(n));
     return spawnSync('node', [path.join(root, 'scripts', 'catalog.mjs'), '--check'], { encoding: 'utf8' });
