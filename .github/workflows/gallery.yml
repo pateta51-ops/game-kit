@@ -26,14 +26,3 @@ jobs:
         with:
           name: gallery-strips
           path: gallery/strips
-      - run: |
-          node gallery/build.mjs --strips --only=move,glow--latch --out=/tmp/a
-          node gallery/build.mjs --strips --only=move,glow--latch --out=/tmp/b
-          cmp /tmp/a/move.png /tmp/b/move.png || true
-          cmp /tmp/a/glow--latch.png /tmp/b/glow--latch.png || true
-      - uses: actions/upload-artifact@v4
-        with:
-          name: dbg
-          path: |
-            /tmp/a
-            /tmp/b

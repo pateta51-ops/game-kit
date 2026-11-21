@@ -41,7 +41,8 @@ const clock = () => {
     const q = raf; raf = [];
     for (const r of q) r.f(now);
     sync();
-    await yieldTurn();
+    // a real frame per step, so finish events of the paused animations fire before the next virtual step
+    await new Promise((r) => realRaf(() => r()));
   };
 };
 
