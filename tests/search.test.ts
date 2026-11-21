@@ -67,7 +67,7 @@ describe('K500 search', () => {
   });
 
   it('an effect hit prints the effect line with its words, not the component sentence', () => {
-    expect(first('burn')).toMatch(/^burn-away (was dissolve): Heats up.*\. Use: .* Words: burn, /);
+    expect(first('burn')).toMatch(/^burn-away \(was dissolve\): Heats up.*\. Use: .* Words: burn, /);
     expect(run('search', 'burn').stdout).not.toContain('effect-library');
   });
 
@@ -97,7 +97,7 @@ describe('K500 search', () => {
       fs.copyFileSync(path.join(ROOT, 'components/effect-library/catalog.json'), path.join(g, 'kit/effect-library/catalog.json'));
       fs.writeFileSync(path.join(g, 'kit/kit.lock.json'), '{}');
       const kit = (...a: string[]) => spawnSync('node', [path.join(g, 'kit/kit.mjs'), ...a], { cwd: g, encoding: 'utf8', env });
-      expect(kit('search', 'burn').stdout).toMatch(/^burn-away (was dissolve):/);
+      expect(kit('search', 'burn').stdout).toMatch(/^burn-away \(was dissolve\):/);
       const m = kit('search', 'burn', 'zebra');
       expect(m.status).toBe(0);
       expect(m.stdout).toContain('not in the kit by that name');

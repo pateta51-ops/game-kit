@@ -144,6 +144,7 @@ Sixteen verbs for the director's spec format as DOM effects for the motion frame
 9. To choose an effect, read "Effects by group" above or `catalog.json` (K499), not the option lists below. A new effect (a registered verb, a look one verb hides behind an option, or a function effect a game calls) arrives with its `catalog.json` entry and demo in the same PR: write `id`, `option` (for a look behind an option), `was`, `title` (up to 8 words, with a verb, what the player sees, no game's name), `looks`, `use`, `tags` (3 to 8), `group`, `ends` (`as-started`, `changed`, `hidden`), the option names (up to five) and `demo` (a spec on the stage `demo`: zones `a`, `b`, `board`, actors `A` and `B`), then run `node components/effect-library/catalog-sync.ts`. It derives `needs`, `ms`, `fits` (up to 400 ms constant, 900 each round, else rare), `draws` (from how it is registered; WebGL is not phone-safe), the option defaults (`computed` when the code works one out, `none` when it has none: the option is off or must be passed), `since` (the first tag holding it; `--since` redoes them all) and, with `--games <dir>`, `usedBy`, and rewrites the list above. `catalog.test.ts` fails on a missing entry, a missing field, a bad demo, a game's name or a stale derived field.
 10. To watch every effect play before choosing it, open `gallery/effects.html` in the game-kit checkout (K502). After changing `catalog.json` or this component's code, run `node gallery/build.mjs` and commit the page: `tests/gallery.test.ts` fails when it is stale or misses an entry.
     To see an effect as one picture before choosing it: `gallery/strips/<id>.png` (five frames with the time under each) and `gallery/strips/group-<group>.png` (one sheet per group); a new effect arrives with its strip (`node gallery/build.mjs --strips`).
+11. K506: specs use the new ids; an old id (table "Old ids" below, `OLD_IDS`) stays registered as an alias forever and plays the same verb with every option. Change a name in a spec only when you edit that spec for another reason. A game's own verb registered under an old id after `registerEffects` still wins for specs that say the old id. `catalog.json` entries also carry `notThis` (look-alikes, each `{ id, diff }`), `pairs` (effects that go with it) and `impactMs` (when the hit lands, `null` for none; 0 to `ms`); ids there may add an option after `--` as strip names do. `node kit.mjs effects --used <folder>...` counts each id and old id in a game's specs and code.
 
 **Common mistakes:**
 - Reading `style.transform` for `move` or `scale`: they animate `translate` and `scale`.
@@ -172,6 +173,21 @@ const player = createMotionPlayer({ specs, stages, verbs, speed, context: layer,
 - Particles as data: `sparkPoints(t, opts)` is what `sparks` draws; `BUDGET` (70), `capN`, `max` in the opts cap what is alive; `hash(seed, i)` is the integer hash.
 - K235: `placements(reg, ...)` / `movements(prev, next, ...)` (`movement.ts`, from board-registry (was `../kit/board-registry/index`), so a 1.0 board does not pull this component): the rect of each piece and a Motion for each that moved.
 - Bands, banners, flight (`bands.ts`, opt-in): `flip` step `holdMs` holds the old face first, then turns at the edge-on midpoint; `phaseSweeps(order, prev, next, {quick, cardsMove})` is false on undo, with moving cards, under Quick; `createBandSlots()` keeps a level-up band apart from the phase band; `bannerAt(lines, t, opts)` shows a line per 650 ms, `ring` is the cards the newest names, `createRingStore()` hands them to the table; `flight(document, { name, from, to, swap, className })` moves the card by `startViewTransition` (the name leaves `from` and lands on `to` inside the callback; no API, it just swaps).
+
+## Old ids
+
+| Old id | New id |
+| --- | --- |
+| `multi-stop-path` | `round-trip` |
+| `collapse-jump` | `flash-jump` |
+| `warp-transfer` | `light-teleport` |
+| `radial-streaks` | `streak-burst` |
+| `column-beam` | `light-pillar` |
+| `rotating-beam` | `radar-sweep` |
+| `dissolve` | `burn-away` |
+| `motes` | `particles-rise` |
+| `reticle` | `target-brackets` |
+| `sheen` | `light-sweep` |
 
 ## Look
 

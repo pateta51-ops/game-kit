@@ -23,7 +23,7 @@ function play(name: string, opts: Record<string, unknown>, own?: (name: string) 
   const verbs = createVerbs<EffectCtx>();
   const context = registerEffects(verbs);
   if (own) verbs.register('rotating-beam', () => (own(name), undefined));
-  const spec = { id: 'k506', maxMs: 400, actors: [{ id: 'piece', at: [50, 50], w: 20, h: 40 }], steps: [{ ...opts, t: 0, actor: 'piece', dur: 400, to: [150, 80], do: name } as Step] };
+  const spec = { id: 'k506', maxMs: 400, actors: [{ id: 'piece', at: [50, 50] as [number, number], w: 20, h: 40 }], steps: [{ ...opts, t: 0, actor: 'piece', dur: 400, to: [150, 80], do: name } as Step] };
   const problems = validateSpec(spec, () => undefined, verbs);
   const timeline = buildTimeline(spec, () => undefined);
   const call = timeline.calls[0]!;
@@ -56,7 +56,7 @@ describe('K506 old effect ids', () => {
       for (const o of looks) {
         const a = play(old, o), b = play(id, o);
         expect(JSON.parse(b)).toMatchObject({ problems: [] });
-        expect(JSON.parse(b).out).not.toBe('unknown');
+        expect((JSON.parse(b) as { out: string }).out).not.toBe('unknown');
         expect(b).toBe(a);
       }
     });
@@ -70,7 +70,7 @@ describe('K506 old effect ids', () => {
     play('rotating-beam', {}, (n) => seen.push(n));
     const kit = play('radar-sweep', {}, (n) => seen.push(n));
     expect(seen).toEqual(['rotating-beam']);
-    expect(JSON.parse(kit).out).not.toBe('unknown');
+    expect((JSON.parse(kit) as { out: string }).out).not.toBe('unknown');
   });
   it("K506 a game's own rotating-beam registered before registerEffects is replaced by the kit's, as before", () => {
     const verbs = createVerbs<EffectCtx>();
