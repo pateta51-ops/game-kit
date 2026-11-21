@@ -294,6 +294,7 @@ Seeded rng; motion off = no timers. Tests: angle in range on exactly one frame; 
 | K496 | card-harness screen scan: a prompt's options on screen equal the engine prompt's options one for one (optional input; fails naming the option on either side). | S | card-encoding safeguards plan, change 7 (20 Nov 2026) | done |
 | K497 | card-harness card gates: a recorder that hands a played game's prompts and opened texts to the screen scan; an optional baseline file for 'is in no interaction row'; a configurable restriction-words path. | M | a game's architect wiring the card gates (20 Nov 2026) | done |
 | K498 | Every component gets a title, tags and (if visible) a looks line in docs/catalog-notes.json; CATALOG.md prints them; catalog.mjs --check enforces them; AGENTS.md carries the naming rules. | M | owner, 20 Nov 2026: plain names so directors and agents find kit parts | done |
+| K499 | effect-library catalog.json: one entry per look with title, looks, use, tags, group, options and a demo spec; a test keeps it complete and valid; the README lists effects by group from it. | M | owner, 20 Nov 2026: plain names so directors and agents find kit effects | done |
 
 ## Harvest from the existing games (owner, 15 Nov 2026)
 

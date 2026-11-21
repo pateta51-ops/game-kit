@@ -1,0 +1,5476 @@
+[
+ {
+  "id": "move",
+  "was": [],
+  "title": "Slides a piece straight to a new place",
+  "looks": "The piece glides in a straight line from where it is to the target and stays there.",
+  "use": "A card or token changes zone: drawn, played, moved on the board.",
+  "tags": [
+   "slide",
+   "move",
+   "travel",
+   "glide",
+   "go"
+  ],
+  "group": "move-and-fly",
+  "ends": "changed",
+  "needs": "source and target",
+  "ms": 400,
+  "fits": "constant",
+  "draws": {
+   "by": [
+    "elements"
+   ],
+   "phoneSafe": true
+  },
+  "options": {
+   "to": "none",
+   "ease": "none",
+   "scale": "none",
+   "then": "none",
+   "rotate": "none"
+  },
+  "since": "v0.17.0",
+  "usedBy": [
+   "7th-inning-stretch-fan-prototype",
+   "astra-imperium",
+   "radiance-fan-prototype",
+   "unstoppable-fan-prototype"
+  ],
+  "demo": {
+   "id": "demo-move",
+   "stage": "demo",
+   "maxMs": 400,
+   "actors": [
+    {
+     "id": "A",
+     "at": "a"
+    },
+    {
+     "id": "B",
+     "at": "b"
+    }
+   ],
+   "steps": [
+    {
+     "t": 0,
+     "dur": 400,
+     "actor": "A",
+     "do": "move",
+     "to": "b"
+    }
+   ]
+  }
+ },
+ {
+  "id": "arc-move",
+  "was": [],
+  "title": "Flies a piece in an arc",
+  "looks": "The piece rises in an arc and lands on the target, optionally banking and leaning as it flies.",
+  "use": "A card is tossed, dealt or thrown to a zone.",
+  "tags": [
+   "arc",
+   "fly",
+   "toss",
+   "throw",
+   "deal",
+   "curve"
+  ],
+  "group": "move-and-fly",
+  "ends": "changed",
+  "needs": "source and target",
+  "ms": 600,
+  "fits": "each round",
+  "draws": {
+   "by": [
+    "elements"
+   ],
+   "phoneSafe": true
+  },
+  "options": {
+   "arcHeight": 0,
+   "bank": 0,
+   "lean": 0,
+   "apex": 0.5,
+   "stagger": 0
+  },
+  "since": "v0.117.0",
+  "usedBy": [
+   "astra-imperium",
+   "unstoppable-fan-prototype"
+  ],
+  "demo": {
+   "id": "demo-arc-move",
+   "stage": "demo",
+   "maxMs": 600,
+   "actors": [
+    {
+     "id": "A",
+     "at": "a"
+    },
+    {
+     "id": "B",
+     "at": "b"
+    }
+   ],
+   "steps": [
+    {
+     "t": 0,
+     "dur": 600,
+     "actor": "A",
+     "do": "arc-move",
+     "arcHeight": 80,
+     "to": "b"
+    }
+   ]
+  }
+ },
+ {
+  "id": "multi-stop-path",
+  "was": [],
+  "title": "Flies a piece through several stops and back",
+  "looks": "The piece launches, circles each stop in turn with fading ghosts behind it, and returns home.",
+  "use": "A ship or unit visits several places in one action, then comes back.",
+  "tags": [
+   "tour",
+   "orbit",
+   "visit",
+   "patrol",
+   "loop",
+   "fly"
+  ],
+  "group": "move-and-fly",
+  "ends": "as-started",
+  "needs": "one thing",
+  "ms": 2400,
+  "fits": "rare",
+  "draws": {
+   "by": [
+    "elements"
+   ],
+   "phoneSafe": true
+  },
+  "options": {
+   "path": "none",
+   "launch": "none",
+   "hop": "none",
+   "back": "none",
+   "ghosts": "none"
+  },
+  "since": "v0.118.0",
+  "usedBy": [],
+  "demo": {
+   "id": "demo-multi-stop-path",
+   "stage": "demo",
+   "maxMs": 2400,
+   "actors": [
+    {
+     "id": "A",
+     "at": "a"
+    },
+    {
+     "id": "B",
+     "at": "b"
+    }
+   ],
+   "steps": [
+    {
+     "t": 0,
+     "dur": 2400,
+     "actor": "A",
+     "do": "multi-stop-path",
+     "path": {
+      "stops": [
+       {
+        "box": [
+         520,
+         120,
+         120,
+         168
+        ]
+       }
+      ]
+     }
+    }
+   ]
+  }
+ },
+ {
+  "id": "lift",
+  "was": [],
+  "title": "Raises a piece up off the table",
+  "looks": "The piece rises a few pixels, grows slightly and casts a deeper shadow, and stays raised.",
+  "use": "A card is picked up, chosen or about to be played.",
+  "tags": [
+   "raise",
+   "pick",
+   "hover",
+   "select",
+   "up"
+  ],
+  "group": "move-and-fly",
+  "ends": "changed",
+  "needs": "one thing",
+  "ms": 200,
+  "fits": "constant",
+  "draws": {
+   "by": [
+    "elements"
+   ],
+   "phoneSafe": true
+  },
+  "options": {
+   "to": "none",
+   "scale": "none",
+   "shadow": true
+  },
+  "since": "v0.17.0",
+  "usedBy": [
+   "7th-inning-stretch-fan-prototype",
+   "astra-imperium",
+   "radiance-fan-prototype",
+   "unstoppable-fan-prototype"
+  ],
+  "demo": {
+   "id": "demo-lift",
+   "stage": "demo",
+   "maxMs": 200,
+   "actors": [
+    {
+     "id": "A",
+     "at": "a"
+    },
+    {
+     "id": "B",
+     "at": "b"
+    }
+   ],
+   "steps": [
+    {
+     "t": 0,
+     "dur": 200,
+     "actor": "A",
+     "do": "lift"
+    }
+   ]
+  }
+ },
+ {
+  "id": "settle",
+  "was": [],
+  "title": "Sets a raised piece back down",
+  "looks": "The piece drops from a raised pose, dips just under its size and comes to rest with a flat shadow.",
+  "use": "A lifted card is put down or lands after a move.",
+  "tags": [
+   "drop",
+   "land",
+   "put down",
+   "rest",
+   "set down"
+  ],
+  "group": "move-and-fly",
+  "ends": "changed",
+  "needs": "one thing",
+  "ms": 260,
+  "fits": "constant",
+  "draws": {
+   "by": [
+    "elements"
+   ],
+   "phoneSafe": true
+  },
+  "options": {
+   "frames": "none",
+   "fromScale": "none",
+   "rise": "none",
+   "dip": "none",
+   "dipAt": "none"
+  },
+  "since": "v0.17.0",
+  "usedBy": [
+   "7th-inning-stretch-fan-prototype",
+   "astra-imperium",
+   "radiance-fan-prototype",
+   "unstoppable-fan-prototype"
+  ],
+  "demo": {
+   "id": "demo-settle",
+   "stage": "demo",
+   "maxMs": 260,
+   "actors": [
+    {
+     "id": "A",
+     "at": "a"
+    },
+    {
+     "id": "B",
+     "at": "b"
+    }
+   ],
+   "steps": [
+    {
+     "t": 0,
+     "dur": 260,
+     "actor": "A",
+     "do": "settle"
+    }
+   ]
+  }
+ },
+ {
+  "id": "flip",
+  "was": [],
+  "title": "Turns a card over by squashing it flat",
+  "looks": "The card narrows to an edge, swaps to its other face and widens again.",
+  "use": "A card is revealed, turned face down or switches side.",
+  "tags": [
+   "flip",
+   "turn over",
+   "reveal",
+   "face",
+   "card"
+  ],
+  "group": "move-and-fly",
+  "ends": "changed",
+  "needs": "one thing",
+  "ms": 400,
+  "fits": "constant",
+  "draws": {
+   "by": [
+    "elements"
+   ],
+   "phoneSafe": true
+  },
+  "options": {
+   "axis": "none",
+   "holdMs": "none",
+   "faces": "none",
+   "label": "none",
+   "squash": "none"
+  },
+  "since": "v0.17.0",
+  "usedBy": [
+   "7th-inning-stretch-fan-prototype",
+   "astra-imperium",
+   "radiance-fan-prototype",
+   "unstoppable-fan-prototype"
+  ],
+  "demo": {
+   "id": "demo-flip",
+   "stage": "demo",
+   "maxMs": 400,
+   "actors": [
+    {
+     "id": "A",
+     "at": "a"
+    },
+    {
+     "id": "B",
+     "at": "b"
+    }
+   ],
+   "steps": [
+    {
+     "t": 0,
+     "dur": 400,
+     "actor": "A",
+     "do": "flip"
+    }
+   ]
+  }
+ },
+ {
+  "id": "flip",
+  "option": {
+   "direction": 1
+  },
+  "was": [],
+  "title": "Turns a card over in 3D",
+  "looks": "The card rotates in perspective to edge-on, swaps faces at the edge and turns flat again, with optional overshoot and glow.",
+  "use": "A dramatic reveal of a card face.",
+  "tags": [
+   "flip",
+   "3d",
+   "turn over",
+   "reveal",
+   "rotate"
+  ],
+  "group": "move-and-fly",
+  "ends": "changed",
+  "needs": "one thing",
+  "ms": 600,
+  "fits": "each round",
+  "draws": {
+   "by": [
+    "elements"
+   ],
+   "phoneSafe": true
+  },
+  "options": {
+   "direction": "none",
+   "perspective": 800,
+   "overshoot": 0,
+   "glow": "none",
+   "pivot": "none"
+  },
+  "since": "v0.122.0",
+  "usedBy": [
+   "7th-inning-stretch-fan-prototype",
+   "astra-imperium",
+   "radiance-fan-prototype",
+   "unstoppable-fan-prototype"
+  ],
+  "demo": {
+   "id": "demo-flip-direction",
+   "stage": "demo",
+   "maxMs": 600,
+   "actors": [
+    {
+     "id": "A",
+     "at": "a"
+    },
+    {
+     "id": "B",
+     "at": "b"
+    }
+   ],
+   "steps": [
+    {
+     "t": 0,
+     "dur": 600,
+     "actor": "A",
+     "do": "flip",
+     "direction": 1
+    }
+   ]
+  }
+ },
+ {
+  "id": "scale",
+  "was": [],
+  "title": "Grows or shrinks a piece to a size",
+  "looks": "The piece scales smoothly to the given size and stays at it.",
+  "use": "A card is enlarged to read or shrunk away.",
+  "tags": [
+   "grow",
+   "shrink",
+   "zoom",
+   "enlarge",
+   "size"
+  ],
+  "group": "move-and-fly",
+  "ends": "changed",
+  "needs": "one thing",
+  "ms": 300,
+  "fits": "constant",
+  "draws": {
+   "by": [
+    "elements"
+   ],
+   "phoneSafe": true
+  },
+  "options": {
+   "to": "none",
+   "pulse": false,
+   "ease": "none"
+  },
+  "since": "v0.17.0",
+  "usedBy": [
+   "7th-inning-stretch-fan-prototype",
+   "radiance-fan-prototype"
+  ],
+  "demo": {
+   "id": "demo-scale",
+   "stage": "demo",
+   "maxMs": 300,
+   "actors": [
+    {
+     "id": "A",
+     "at": "a"
+    },
+    {
+     "id": "B",
+     "at": "b"
+    }
+   ],
+   "steps": [
+    {
+     "t": 0,
+     "dur": 300,
+     "actor": "A",
+     "do": "scale",
+     "to": 1.3
+    }
+   ]
+  }
+ },
+ {
+  "id": "scale",
+  "option": {
+   "pulse": true
+  },
+  "was": [],
+  "title": "Swells a piece once and back",
+  "looks": "The piece grows to the size and returns to rest in one beat.",
+  "use": "Draw the eye to a piece that just changed.",
+  "tags": [
+   "pulse",
+   "pop",
+   "swell",
+   "bump",
+   "attention"
+  ],
+  "group": "signals",
+  "ends": "as-started",
+  "needs": "one thing",
+  "ms": 300,
+  "fits": "constant",
+  "draws": {
+   "by": [
+    "elements"
+   ],
+   "phoneSafe": true
+  },
+  "options": {
+   "to": "none",
+   "ease": "none"
+  },
+  "since": "v0.17.0",
+  "usedBy": [
+   "7th-inning-stretch-fan-prototype",
+   "radiance-fan-prototype"
+  ],
+  "demo": {
+   "id": "demo-scale-pulse",
+   "stage": "demo",
+   "maxMs": 300,
+   "actors": [
+    {
+     "id": "A",
+     "at": "a"
+    },
+    {
+     "id": "B",
+     "at": "b"
+    }
+   ],
+   "steps": [
+    {
+     "t": 0,
+     "dur": 300,
+     "actor": "A",
+     "do": "scale",
+     "pulse": true,
+     "to": 1.2
+    }
+   ]
+  }
+ },
+ {
+  "id": "spin",
+  "was": [],
+  "title": "Spins a piece round a number of turns",
+  "looks": "The piece rotates the given turns about its centre; whole turns end where it started.",
+  "use": "A coin, die or token spins.",
+  "tags": [
+   "spin",
+   "rotate",
+   "turn",
+   "twirl",
+   "coin"
+  ],
+  "group": "move-and-fly",
+  "ends": "as-started",
+  "needs": "one thing",
+  "ms": 600,
+  "fits": "each round",
+  "draws": {
+   "by": [
+    "elements"
+   ],
+   "phoneSafe": true
+  },
+  "options": {
+   "turns": 1,
+   "direction": "none",
+   "ease": "none",
+   "pivot": "none",
+   "scaleFrom": "none"
+  },
+  "since": "v0.123.0",
+  "usedBy": [],
+  "demo": {
+   "id": "demo-spin",
+   "stage": "demo",
+   "maxMs": 600,
+   "actors": [
+    {
+     "id": "A",
+     "at": "a"
+    },
+    {
+     "id": "B",
+     "at": "b"
+    }
+   ],
+   "steps": [
+    {
+     "t": 0,
+     "dur": 600,
+     "actor": "A",
+     "do": "spin",
+     "turns": 1
+    }
+   ]
+  }
+ },
+ {
+  "id": "spin",
+  "option": {
+   "endless": true
+  },
+  "was": [],
+  "title": "Keeps a piece spinning until the step ends",
+  "looks": "The piece turns round and round at a steady period, then snaps back to its resting angle.",
+  "use": "A token is busy or charging for a while.",
+  "tags": [
+   "spin",
+   "rotate",
+   "loading",
+   "busy",
+   "wheel"
+  ],
+  "group": "loops",
+  "ends": "as-started",
+  "needs": "one thing",
+  "ms": 2000,
+  "fits": "rare",
+  "draws": {
+   "by": [
+    "elements"
+   ],
+   "phoneSafe": true
+  },
+  "options": {
+   "period": "none",
+   "turns": 1,
+   "direction": "none",
+   "pivot": "none"
+  },
+  "since": "v0.123.0",
+  "usedBy": [],
+  "demo": {
+   "id": "demo-spin-endless",
+   "stage": "demo",
+   "maxMs": 2000,
+   "actors": [
+    {
+     "id": "A",
+     "at": "a"
+    },
+    {
+     "id": "B",
+     "at": "b"
+    }
+   ],
+   "steps": [
+    {
+     "t": 0,
+     "dur": 2000,
+     "actor": "A",
+     "do": "spin",
+     "endless": true,
+     "turns": 1
+    }
+   ]
+  }
+ },
+ {
+  "id": "tap",
+  "was": [],
+  "title": "Turns a card sideways to show it used",
+  "looks": "The card rotates a quarter turn, optionally overshooting, and stays turned.",
+  "use": "A card is exhausted, tapped or used this round.",
+  "tags": [
+   "tap",
+   "exhaust",
+   "turn sideways",
+   "used",
+   "rotate"
+  ],
+  "group": "move-and-fly",
+  "ends": "changed",
+  "needs": "one thing",
+  "ms": 300,
+  "fits": "constant",
+  "draws": {
+   "by": [
+    "elements"
+   ],
+   "phoneSafe": true
+  },
+  "options": {
+   "angle": 90,
+   "direction": "none",
+   "overshoot": "none",
+   "ease": "none",
+   "pivot": "none"
+  },
+  "since": "v0.123.0",
+  "usedBy": [
+   "unstoppable-fan-prototype"
+  ],
+  "demo": {
+   "id": "demo-tap",
+   "stage": "demo",
+   "maxMs": 300,
+   "actors": [
+    {
+     "id": "A",
+     "at": "a"
+    },
+    {
+     "id": "B",
+     "at": "b"
+    }
+   ],
+   "steps": [
+    {
+     "t": 0,
+     "dur": 300,
+     "actor": "A",
+     "do": "tap"
+    }
+   ]
+  }
+ },
+ {
+  "id": "untap",
+  "was": [],
+  "title": "Turns a sideways card upright again",
+  "looks": "A rotated card turns back to upright and stays upright.",
+  "use": "A card is readied or refreshed.",
+  "tags": [
+   "untap",
+   "ready",
+   "upright",
+   "refresh",
+   "rotate"
+  ],
+  "group": "move-and-fly",
+  "ends": "changed",
+  "needs": "one thing",
+  "ms": 300,
+  "fits": "constant",
+  "draws": {
+   "by": [
+    "elements"
+   ],
+   "phoneSafe": true
+  },
+  "options": {
+   "angle": 90,
+   "direction": "none",
+   "overshoot": "none",
+   "ease": "none"
+  },
+  "since": "v0.123.0",
+  "usedBy": [
+   "unstoppable-fan-prototype"
+  ],
+  "demo": {
+   "id": "demo-untap",
+   "stage": "demo",
+   "maxMs": 300,
+   "actors": [
+    {
+     "id": "A",
+     "at": "a"
+    },
+    {
+     "id": "B",
+     "at": "b"
+    }
+   ],
+   "steps": [
+    {
+     "t": 0,
+     "dur": 300,
+     "actor": "A",
+     "do": "untap"
+    }
+   ]
+  }
+ },
+ {
+  "id": "collapse-jump",
+  "was": [],
+  "title": "Shrinks to a point and reappears elsewhere",
+  "looks": "The piece collapses into a flash with streaks, holds, and bursts back open at the target.",
+  "use": "A piece teleports or jumps across the board.",
+  "tags": [
+   "teleport",
+   "jump",
+   "blink",
+   "vanish",
+   "reappear"
+  ],
+  "group": "move-and-fly",
+  "ends": "changed",
+  "needs": "source and target",
+  "ms": 1500,
+  "fits": "rare",
+  "draws": {
+   "by": [
+    "elements"
+   ],
+   "phoneSafe": true
+  },
+  "options": {
+   "colour": "rgb(255 255 255 / .95)",
+   "n": 16,
+   "outMs": 640,
+   "gapMs": 140,
+   "inMs": 640
+  },
+  "since": "v0.119.0",
+  "usedBy": [
+   "Star-trek-captains-chair-game",
+   "unstoppable-fan-prototype"
+  ],
+  "demo": {
+   "id": "demo-collapse-jump",
+   "stage": "demo",
+   "maxMs": 1500,
+   "actors": [
+    {
+     "id": "A",
+     "at": "a"
+    },
+    {
+     "id": "B",
+     "at": "b"
+    }
+   ],
+   "steps": [
+    {
+     "t": 0,
+     "dur": 1500,
+     "actor": "A",
+     "do": "collapse-jump",
+     "to": "b"
+    }
+   ]
+  }
+ },
+ {
+  "id": "warp-transfer",
+  "was": [],
+  "title": "Carries a token between two columns of light",
+  "looks": "A column of light rises at the source carrying the token up, and a second column sets it down at the target with sparks.",
+  "use": "A resource or token is sent from one place to another.",
+  "tags": [
+   "transfer",
+   "send",
+   "beam up",
+   "column",
+   "teleport"
+  ],
+  "group": "beams",
+  "ends": "changed",
+  "needs": "source and target",
+  "ms": 1400,
+  "fits": "rare",
+  "draws": {
+   "by": [
+    "elements"
+   ],
+   "phoneSafe": true
+  },
+  "options": {
+   "mode": "column",
+   "count": 1,
+   "stagger": 110,
+   "colour": "255 255 255",
+   "crossing": true
+  },
+  "since": "v0.119.0",
+  "usedBy": [
+   "Star-trek-captains-chair-game"
+  ],
+  "demo": {
+   "id": "demo-warp-transfer",
+   "stage": "demo",
+   "maxMs": 1400,
+   "actors": [
+    {
+     "id": "A",
+     "at": "a"
+    },
+    {
+     "id": "B",
+     "at": "b"
+    }
+   ],
+   "steps": [
+    {
+     "t": 0,
+     "dur": 1400,
+     "actor": "A",
+     "do": "warp-transfer",
+     "to": "b"
+    }
+   ]
+  }
+ },
+ {
+  "id": "warp-transfer",
+  "option": {
+   "mode": "crossing"
+  },
+  "was": [],
+  "title": "Sends a line of light dots between places",
+  "looks": "A band of light with travelling dots crosses from the source to the target; the token itself stays.",
+  "use": "Show a link or a flow between two zones.",
+  "tags": [
+   "link",
+   "flow",
+   "dots",
+   "line",
+   "connect"
+  ],
+  "group": "beams",
+  "ends": "as-started",
+  "needs": "source and target",
+  "ms": 800,
+  "fits": "each round",
+  "draws": {
+   "by": [
+    "elements"
+   ],
+   "phoneSafe": true
+  },
+  "options": {
+   "crossingDots": 5,
+   "colour": "255 255 255",
+   "lightColour": "white"
+  },
+  "since": "v0.119.0",
+  "usedBy": [
+   "Star-trek-captains-chair-game"
+  ],
+  "demo": {
+   "id": "demo-warp-transfer-mode",
+   "stage": "demo",
+   "maxMs": 800,
+   "actors": [
+    {
+     "id": "A",
+     "at": "a"
+    },
+    {
+     "id": "B",
+     "at": "b"
+    }
+   ],
+   "steps": [
+    {
+     "t": 0,
+     "dur": 800,
+     "actor": "A",
+     "do": "warp-transfer",
+     "mode": "crossing",
+     "to": "b"
+    }
+   ]
+  }
+ },
+ {
+  "id": "warp-transfer",
+  "option": {
+   "mode": "zip"
+  },
+  "was": [],
+  "title": "Zips a token across leaving afterimages",
+  "looks": "The token streaks to the target with ghost copies behind it and pops with a small burst of sparks on landing.",
+  "use": "A fast gain or transfer of a token.",
+  "tags": [
+   "zip",
+   "dash",
+   "streak",
+   "afterimage",
+   "quick"
+  ],
+  "group": "move-and-fly",
+  "ends": "changed",
+  "needs": "source and target",
+  "ms": 700,
+  "fits": "each round",
+  "draws": {
+   "by": [
+    "elements"
+   ],
+   "phoneSafe": true
+  },
+  "options": {
+   "zipGhosts": 3,
+   "zipSparks": 8,
+   "zipPopMs": 130,
+   "count": 1,
+   "stagger": 110
+  },
+  "since": "v0.119.0",
+  "usedBy": [
+   "Star-trek-captains-chair-game"
+  ],
+  "demo": {
+   "id": "demo-warp-transfer-mode",
+   "stage": "demo",
+   "maxMs": 700,
+   "actors": [
+    {
+     "id": "A",
+     "at": "a"
+    },
+    {
+     "id": "B",
+     "at": "b"
+    }
+   ],
+   "steps": [
+    {
+     "t": 0,
+     "dur": 700,
+     "actor": "A",
+     "do": "warp-transfer",
+     "mode": "zip",
+     "to": "b"
+    }
+   ]
+  }
+ },
+ {
+  "id": "warp-transfer",
+  "option": {
+   "mode": "rise"
+  },
+  "was": [],
+  "title": "Raises a token then flies it straight",
+  "looks": "The token rises off its place, then travels straight to the target.",
+  "use": "A token is collected and carried to a pool.",
+  "tags": [
+   "rise",
+   "collect",
+   "carry",
+   "fly",
+   "gain"
+  ],
+  "group": "move-and-fly",
+  "ends": "changed",
+  "needs": "source and target",
+  "ms": 800,
+  "fits": "each round",
+  "draws": {
+   "by": [
+    "elements"
+   ],
+   "phoneSafe": true
+  },
+  "options": {
+   "lift": 60,
+   "riseMs": 260,
+   "riseTravelMs": 300,
+   "count": 1
+  },
+  "since": "v0.119.0",
+  "usedBy": [
+   "Star-trek-captains-chair-game"
+  ],
+  "demo": {
+   "id": "demo-warp-transfer-mode",
+   "stage": "demo",
+   "maxMs": 800,
+   "actors": [
+    {
+     "id": "A",
+     "at": "a"
+    },
+    {
+     "id": "B",
+     "at": "b"
+    }
+   ],
+   "steps": [
+    {
+     "t": 0,
+     "dur": 800,
+     "actor": "A",
+     "do": "warp-transfer",
+     "mode": "rise",
+     "to": "b"
+    }
+   ]
+  }
+ },
+ {
+  "id": "warp-transfer",
+  "option": {
+   "mode": "portal"
+  },
+  "was": [],
+  "title": "Sucks a token through a spinning vortex",
+  "looks": "A spinning vortex opens, the token spirals in and shrinks, and comes out at the target.",
+  "use": "A piece is banished, summoned or sent through a gate.",
+  "tags": [
+   "portal",
+   "vortex",
+   "swirl",
+   "banish",
+   "summon",
+   "gate"
+  ],
+  "group": "move-and-fly",
+  "ends": "changed",
+  "needs": "source and target",
+  "ms": 1800,
+  "fits": "rare",
+  "draws": {
+   "by": [
+    "elements"
+   ],
+   "phoneSafe": true
+  },
+  "options": {
+   "outward": "none",
+   "vortex": "none",
+   "startSize": "none",
+   "endSize": "none",
+   "lift": 60
+  },
+  "since": "v0.119.0",
+  "usedBy": [
+   "Star-trek-captains-chair-game"
+  ],
+  "demo": {
+   "id": "demo-warp-transfer-mode",
+   "stage": "demo",
+   "maxMs": 1800,
+   "actors": [
+    {
+     "id": "A",
+     "at": "a"
+    },
+    {
+     "id": "B",
+     "at": "b"
+    }
+   ],
+   "steps": [
+    {
+     "t": 0,
+     "dur": 1800,
+     "actor": "A",
+     "do": "warp-transfer",
+     "mode": "portal",
+     "portal": {},
+     "to": "b"
+    }
+   ]
+  }
+ },
+ {
+  "id": "warp-transfer",
+  "option": {
+   "mode": "pop"
+  },
+  "was": [],
+  "title": "Pops an icon into view in place",
+  "looks": "The icon appears small, overshoots its size and settles.",
+  "use": "A new icon or token is revealed where it stands.",
+  "tags": [
+   "pop",
+   "appear",
+   "reveal",
+   "icon",
+   "bounce"
+  ],
+  "group": "appear-and-vanish",
+  "ends": "changed",
+  "needs": "one thing",
+  "ms": 500,
+  "fits": "each round",
+  "draws": {
+   "by": [
+    "elements"
+   ],
+   "phoneSafe": true
+  },
+  "options": {
+   "popOffsets": [
+    0.45,
+    0.75
+   ]
+  },
+  "since": "v0.119.0",
+  "usedBy": [
+   "Star-trek-captains-chair-game"
+  ],
+  "demo": {
+   "id": "demo-warp-transfer-mode",
+   "stage": "demo",
+   "maxMs": 500,
+   "actors": [
+    {
+     "id": "A",
+     "at": "a"
+    },
+    {
+     "id": "B",
+     "at": "b"
+    }
+   ],
+   "steps": [
+    {
+     "t": 0,
+     "dur": 500,
+     "actor": "A",
+     "do": "warp-transfer",
+     "mode": "pop"
+    }
+   ]
+  }
+ },
+ {
+  "id": "warp-transfer",
+  "option": {
+   "mode": "grey"
+  },
+  "was": [],
+  "title": "Greys out a piece in place",
+  "looks": "The piece fades to a dim, desaturated look and stays that way.",
+  "use": "A piece is spent, disabled or unavailable.",
+  "tags": [
+   "grey",
+   "dim",
+   "disable",
+   "spent",
+   "inactive"
+  ],
+  "group": "signals",
+  "ends": "changed",
+  "needs": "one thing",
+  "ms": 500,
+  "fits": "each round",
+  "draws": {
+   "by": [
+    "elements"
+   ],
+   "phoneSafe": true
+  },
+  "options": {
+   "beforeLook": "none",
+   "afterLook": "none"
+  },
+  "since": "v0.119.0",
+  "usedBy": [
+   "Star-trek-captains-chair-game"
+  ],
+  "demo": {
+   "id": "demo-warp-transfer-mode",
+   "stage": "demo",
+   "maxMs": 500,
+   "actors": [
+    {
+     "id": "A",
+     "at": "a"
+    },
+    {
+     "id": "B",
+     "at": "b"
+    }
+   ],
+   "steps": [
+    {
+     "t": 0,
+     "dur": 500,
+     "actor": "A",
+     "do": "warp-transfer",
+     "mode": "grey"
+    }
+   ]
+  }
+ },
+ {
+  "id": "warp-transfer",
+  "option": {
+   "mode": "bump"
+  },
+  "was": [],
+  "title": "Bumps a counter as it changes",
+  "looks": "The counter jumps up and back with a coloured flash of its digits.",
+  "use": "A number on the board goes up or down.",
+  "tags": [
+   "bump",
+   "counter",
+   "number",
+   "change",
+   "tick"
+  ],
+  "group": "text-and-numbers",
+  "ends": "as-started",
+  "needs": "one thing",
+  "ms": 400,
+  "fits": "constant",
+  "draws": {
+   "by": [
+    "elements"
+   ],
+   "phoneSafe": true
+  },
+  "options": {
+   "counterColour": "none",
+   "popOffsets": [
+    0.45,
+    0.75
+   ]
+  },
+  "since": "v0.119.0",
+  "usedBy": [
+   "Star-trek-captains-chair-game"
+  ],
+  "demo": {
+   "id": "demo-warp-transfer-mode",
+   "stage": "demo",
+   "maxMs": 400,
+   "actors": [
+    {
+     "id": "A",
+     "at": "a"
+    },
+    {
+     "id": "B",
+     "at": "b"
+    }
+   ],
+   "steps": [
+    {
+     "t": 0,
+     "dur": 400,
+     "actor": "A",
+     "do": "warp-transfer",
+     "mode": "bump"
+    }
+   ]
+  }
+ },
+ {
+  "id": "warp-transfer",
+  "option": {
+   "spiral": true
+  },
+  "was": [],
+  "title": "Spirals a ship out with an engine trail",
+  "looks": "The ship banks round in a squashed orbit and spirals away or in, a glowing engine ribbon behind it.",
+  "use": "A ship departs to or returns from a place off the board.",
+  "tags": [
+   "ship",
+   "depart",
+   "return",
+   "spiral",
+   "trail",
+   "launch"
+  ],
+  "group": "move-and-fly",
+  "ends": "changed",
+  "needs": "source and target",
+  "ms": 1600,
+  "fits": "rare",
+  "draws": {
+   "by": [
+    "canvas"
+   ],
+   "phoneSafe": true
+  },
+  "options": {
+   "outward": false,
+   "lift": 34,
+   "orbit": 0.2,
+   "engine": "255,255,255",
+   "image": "none"
+  },
+  "since": "v0.119.0",
+  "usedBy": [
+   "Star-trek-captains-chair-game"
+  ],
+  "demo": {
+   "id": "demo-warp-transfer-spiral",
+   "stage": "demo",
+   "maxMs": 1600,
+   "actors": [
+    {
+     "id": "A",
+     "at": "a"
+    },
+    {
+     "id": "B",
+     "at": "b"
+    }
+   ],
+   "steps": [
+    {
+     "t": 0,
+     "dur": 1600,
+     "actor": "A",
+     "do": "warp-transfer",
+     "spiral": true,
+     "to": "b"
+    }
+   ]
+  }
+ },
+ {
+  "id": "fade-in",
+  "was": [],
+  "title": "Fades a piece into view",
+  "looks": "The piece goes from transparent to fully visible.",
+  "use": "Something appears: a new card, a panel, a token.",
+  "tags": [
+   "fade in",
+   "appear",
+   "show",
+   "reveal",
+   "materialise"
+  ],
+  "group": "appear-and-vanish",
+  "ends": "changed",
+  "needs": "one thing",
+  "ms": 300,
+  "fits": "constant",
+  "draws": {
+   "by": [
+    "elements"
+   ],
+   "phoneSafe": true
+  },
+  "options": {
+   "scale": "none",
+   "hold": "none",
+   "ease": "none"
+  },
+  "since": "v0.17.0",
+  "usedBy": [
+   "7th-inning-stretch-fan-prototype",
+   "Star-trek-captains-chair-game",
+   "astra-imperium",
+   "radiance-fan-prototype",
+   "unstoppable-fan-prototype"
+  ],
+  "demo": {
+   "id": "demo-fade-in",
+   "stage": "demo",
+   "maxMs": 300,
+   "actors": [
+    {
+     "id": "A",
+     "at": "a"
+    },
+    {
+     "id": "B",
+     "at": "b"
+    }
+   ],
+   "steps": [
+    {
+     "t": 0,
+     "dur": 300,
+     "actor": "A",
+     "do": "fade-in"
+    }
+   ]
+  }
+ },
+ {
+  "id": "fade-in",
+  "option": {
+   "scale": 2
+  },
+  "was": [],
+  "title": "Fades in large and shrinks into place",
+  "looks": "The piece appears at twice its size and shrinks down to normal as it becomes solid.",
+  "use": "A piece arrives with weight: a placed marker, a summoned unit.",
+  "tags": [
+   "slam",
+   "drop in",
+   "appear",
+   "arrive",
+   "shrink"
+  ],
+  "group": "appear-and-vanish",
+  "ends": "changed",
+  "needs": "one thing",
+  "ms": 400,
+  "fits": "constant",
+  "draws": {
+   "by": [
+    "elements"
+   ],
+   "phoneSafe": true
+  },
+  "options": {
+   "scale": "none",
+   "hold": "none",
+   "ease": "none"
+  },
+  "since": "v0.17.0",
+  "usedBy": [
+   "7th-inning-stretch-fan-prototype",
+   "Star-trek-captains-chair-game",
+   "astra-imperium",
+   "radiance-fan-prototype",
+   "unstoppable-fan-prototype"
+  ],
+  "demo": {
+   "id": "demo-fade-in-scale",
+   "stage": "demo",
+   "maxMs": 400,
+   "actors": [
+    {
+     "id": "A",
+     "at": "a"
+    },
+    {
+     "id": "B",
+     "at": "b"
+    }
+   ],
+   "steps": [
+    {
+     "t": 0,
+     "dur": 400,
+     "actor": "A",
+     "do": "fade-in",
+     "scale": 2
+    }
+   ]
+  }
+ },
+ {
+  "id": "fade-out",
+  "was": [],
+  "title": "Fades a piece out of view",
+  "looks": "The piece goes from fully visible to transparent (or to the given opacity).",
+  "use": "Something leaves: a discarded card, a closed panel.",
+  "tags": [
+   "fade out",
+   "vanish",
+   "disappear",
+   "leave",
+   "dim"
+  ],
+  "group": "appear-and-vanish",
+  "ends": "hidden",
+  "needs": "one thing",
+  "ms": 300,
+  "fits": "constant",
+  "draws": {
+   "by": [
+    "elements"
+   ],
+   "phoneSafe": true
+  },
+  "options": {
+   "to": "none",
+   "ease": "none"
+  },
+  "since": "v0.17.0",
+  "usedBy": [
+   "7th-inning-stretch-fan-prototype",
+   "Star-trek-captains-chair-game",
+   "astra-imperium",
+   "radiance-fan-prototype",
+   "unstoppable-fan-prototype"
+  ],
+  "demo": {
+   "id": "demo-fade-out",
+   "stage": "demo",
+   "maxMs": 300,
+   "actors": [
+    {
+     "id": "A",
+     "at": "a"
+    },
+    {
+     "id": "B",
+     "at": "b"
+    }
+   ],
+   "steps": [
+    {
+     "t": 0,
+     "dur": 300,
+     "actor": "A",
+     "do": "fade-out"
+    }
+   ]
+  }
+ },
+ {
+  "id": "show",
+  "was": [],
+  "title": "Shows a piece at once",
+  "looks": "The piece becomes visible instantly, with no motion.",
+  "use": "Reveal a stand-in or a final state between steps.",
+  "tags": [
+   "show",
+   "appear",
+   "instant",
+   "cut",
+   "visible"
+  ],
+  "group": "appear-and-vanish",
+  "ends": "changed",
+  "needs": "one thing",
+  "ms": 1,
+  "fits": "constant",
+  "draws": {
+   "by": [
+    "elements"
+   ],
+   "phoneSafe": true
+  },
+  "options": {},
+  "since": "v0.17.0",
+  "usedBy": [
+   "7th-inning-stretch-fan-prototype"
+  ],
+  "demo": {
+   "id": "demo-show",
+   "stage": "demo",
+   "maxMs": 1,
+   "actors": [
+    {
+     "id": "A",
+     "at": "a"
+    },
+    {
+     "id": "B",
+     "at": "b"
+    }
+   ],
+   "steps": [
+    {
+     "t": 0,
+     "dur": 1,
+     "actor": "A",
+     "do": "show"
+    }
+   ]
+  }
+ },
+ {
+  "id": "hide",
+  "was": [],
+  "title": "Hides a piece at once",
+  "looks": "The piece disappears instantly, with no motion.",
+  "use": "Remove a stand-in or a piece between steps.",
+  "tags": [
+   "hide",
+   "vanish",
+   "instant",
+   "cut",
+   "remove"
+  ],
+  "group": "appear-and-vanish",
+  "ends": "hidden",
+  "needs": "one thing",
+  "ms": 1,
+  "fits": "constant",
+  "draws": {
+   "by": [
+    "elements"
+   ],
+   "phoneSafe": true
+  },
+  "options": {},
+  "since": "v0.17.0",
+  "usedBy": [
+   "Star-trek-captains-chair-game"
+  ],
+  "demo": {
+   "id": "demo-hide",
+   "stage": "demo",
+   "maxMs": 1,
+   "actors": [
+    {
+     "id": "A",
+     "at": "a"
+    },
+    {
+     "id": "B",
+     "at": "b"
+    }
+   ],
+   "steps": [
+    {
+     "t": 0,
+     "dur": 1,
+     "actor": "A",
+     "do": "hide"
+    }
+   ]
+  }
+ },
+ {
+  "id": "unroll",
+  "was": [],
+  "title": "Unrolls a panel open from one edge",
+  "looks": "The panel grows from a line at its edge to full size along one axis.",
+  "use": "A banner, scroll, table or briefing panel opens.",
+  "tags": [
+   "unroll",
+   "open",
+   "scroll",
+   "banner",
+   "panel",
+   "expand"
+  ],
+  "group": "appear-and-vanish",
+  "ends": "changed",
+  "needs": "one thing",
+  "ms": 400,
+  "fits": "constant",
+  "draws": {
+   "by": [
+    "elements"
+   ],
+   "phoneSafe": true
+  },
+  "options": {
+   "axis": "none",
+   "origin": "none",
+   "reverse": false
+  },
+  "since": "v0.117.0",
+  "usedBy": [
+   "astra-imperium",
+   "unstoppable-fan-prototype"
+  ],
+  "demo": {
+   "id": "demo-unroll",
+   "stage": "demo",
+   "maxMs": 400,
+   "actors": [
+    {
+     "id": "A",
+     "at": "a"
+    },
+    {
+     "id": "B",
+     "at": "b"
+    }
+   ],
+   "steps": [
+    {
+     "t": 0,
+     "dur": 400,
+     "actor": "A",
+     "do": "unroll"
+    }
+   ]
+  }
+ },
+ {
+  "id": "unroll",
+  "option": {
+   "reverse": true
+  },
+  "was": [],
+  "title": "Collapses a panel to a glowing line",
+  "looks": "The panel squeezes to a thin line that can glow and flicker, then goes out.",
+  "use": "A panel or screen closes like an old monitor.",
+  "tags": [
+   "collapse",
+   "close",
+   "shut",
+   "line",
+   "switch off"
+  ],
+  "group": "appear-and-vanish",
+  "ends": "hidden",
+  "needs": "one thing",
+  "ms": 500,
+  "fits": "each round",
+  "draws": {
+   "by": [
+    "elements"
+   ],
+   "phoneSafe": true
+  },
+  "options": {
+   "axis": "none",
+   "origin": "none",
+   "colour": "none",
+   "lineMs": 0,
+   "gutter": 0
+  },
+  "since": "v0.204.0",
+  "usedBy": [
+   "astra-imperium",
+   "unstoppable-fan-prototype"
+  ],
+  "demo": {
+   "id": "demo-unroll-reverse",
+   "stage": "demo",
+   "maxMs": 500,
+   "actors": [
+    {
+     "id": "A",
+     "at": "a"
+    },
+    {
+     "id": "B",
+     "at": "b"
+    }
+   ],
+   "steps": [
+    {
+     "t": 0,
+     "dur": 500,
+     "actor": "A",
+     "do": "unroll",
+     "reverse": true,
+     "colour": "white"
+    }
+   ]
+  }
+ },
+ {
+  "id": "banner",
+  "was": [],
+  "title": "Unrolls a banner, shows text, fades away",
+  "looks": "A strip unrolls, its text appears in the middle, holds, and the whole banner fades out.",
+  "use": "Announce a round, a phase or an event.",
+  "tags": [
+   "banner",
+   "announce",
+   "title",
+   "heading",
+   "round",
+   "phase"
+  ],
+  "group": "text-and-numbers",
+  "ends": "hidden",
+  "needs": "one thing",
+  "ms": 1600,
+  "fits": "rare",
+  "draws": {
+   "by": [
+    "elements"
+   ],
+   "phoneSafe": true
+  },
+  "options": {
+   "text": "",
+   "axis": "x",
+   "unrollMs": "none",
+   "fadeMs": "none",
+   "textAt": "none"
+  },
+  "since": "v0.204.0",
+  "usedBy": [],
+  "demo": {
+   "id": "demo-banner",
+   "stage": "demo",
+   "maxMs": 1600,
+   "actors": [
+    {
+     "id": "A",
+     "at": "a"
+    },
+    {
+     "id": "B",
+     "at": "b"
+    }
+   ],
+   "steps": [
+    {
+     "t": 0,
+     "dur": 1600,
+     "actor": "A",
+     "do": "banner",
+     "text": "Round 2"
+    }
+   ]
+  }
+ },
+ {
+  "id": "text",
+  "was": [],
+  "title": "Fades in text rising into place",
+  "looks": "A line of text fades in while rising a little and stays.",
+  "use": "A label, a word of result or a caption appears.",
+  "tags": [
+   "text",
+   "label",
+   "caption",
+   "words",
+   "message"
+  ],
+  "group": "text-and-numbers",
+  "ends": "changed",
+  "needs": "one thing",
+  "ms": 600,
+  "fits": "each round",
+  "draws": {
+   "by": [
+    "elements"
+   ],
+   "phoneSafe": true
+  },
+  "options": {
+   "text": "computed",
+   "colour": "none",
+   "rise": true,
+   "typewriter": "none"
+  },
+  "since": "v0.17.0",
+  "usedBy": [
+   "7th-inning-stretch-fan-prototype",
+   "astra-imperium",
+   "unstoppable-fan-prototype"
+  ],
+  "demo": {
+   "id": "demo-text",
+   "stage": "demo",
+   "maxMs": 600,
+   "actors": [
+    {
+     "id": "A",
+     "at": "a"
+    },
+    {
+     "id": "B",
+     "at": "b"
+    }
+   ],
+   "steps": [
+    {
+     "t": 0,
+     "dur": 600,
+     "actor": "A",
+     "do": "text",
+     "text": "Hit"
+    }
+   ]
+  }
+ },
+ {
+  "id": "text",
+  "option": {
+   "typewriter": true
+  },
+  "was": [],
+  "title": "Types out text word by word",
+  "looks": "The text reveals itself a word or a letter at a time over the step.",
+  "use": "Narration, a briefing or a story line.",
+  "tags": [
+   "typewriter",
+   "type",
+   "narrate",
+   "story",
+   "reveal text"
+  ],
+  "group": "text-and-numbers",
+  "ends": "changed",
+  "needs": "one thing",
+  "ms": 1500,
+  "fits": "rare",
+  "draws": {
+   "by": [
+    "elements"
+   ],
+   "phoneSafe": true
+  },
+  "options": {
+   "typewriter": "none",
+   "textAlign": "center",
+   "rise": true
+  },
+  "since": "v0.127.0",
+  "usedBy": [
+   "7th-inning-stretch-fan-prototype",
+   "astra-imperium",
+   "unstoppable-fan-prototype"
+  ],
+  "demo": {
+   "id": "demo-text-typewriter",
+   "stage": "demo",
+   "maxMs": 1500,
+   "actors": [
+    {
+     "id": "A",
+     "at": "a"
+    },
+    {
+     "id": "B",
+     "at": "b"
+    }
+   ],
+   "steps": [
+    {
+     "t": 0,
+     "dur": 1500,
+     "actor": "A",
+     "do": "text",
+     "typewriter": true,
+     "text": "The fleet arrives at dawn"
+    }
+   ]
+  }
+ },
+ {
+  "id": "count",
+  "was": [],
+  "title": "Counts a number up to its new value",
+  "looks": "A number on the piece rolls from the start value to the target, easing out.",
+  "use": "A score, total or resource changes.",
+  "tags": [
+   "count",
+   "number",
+   "score",
+   "tally",
+   "total",
+   "count up"
+  ],
+  "group": "text-and-numbers",
+  "ends": "changed",
+  "needs": "one thing",
+  "ms": 700,
+  "fits": "each round",
+  "draws": {
+   "by": [
+    "elements"
+   ],
+   "phoneSafe": true
+  },
+  "options": {
+   "from": 0,
+   "to": "none",
+   "prefix": "",
+   "suffix": "",
+   "colour": "none"
+  },
+  "since": "v0.204.0",
+  "usedBy": [],
+  "demo": {
+   "id": "demo-count",
+   "stage": "demo",
+   "maxMs": 700,
+   "actors": [
+    {
+     "id": "A",
+     "at": "a"
+    },
+    {
+     "id": "B",
+     "at": "b"
+    }
+   ],
+   "steps": [
+    {
+     "t": 0,
+     "dur": 700,
+     "actor": "A",
+     "do": "count",
+     "to": 12
+    }
+   ]
+  }
+ },
+ {
+  "id": "glow",
+  "was": [],
+  "title": "Makes a piece glow once",
+  "looks": "A soft halo grows around the piece and fades back.",
+  "use": "Draw attention to a piece: a target, a trigger, a choice.",
+  "tags": [
+   "glow",
+   "halo",
+   "highlight",
+   "light",
+   "shine"
+  ],
+  "group": "light",
+  "ends": "as-started",
+  "needs": "one thing",
+  "ms": 600,
+  "fits": "each round",
+  "draws": {
+   "by": [
+    "elements"
+   ],
+   "phoneSafe": true
+  },
+  "options": {
+   "colour": "none",
+   "hold": "none",
+   "shadows": "none"
+  },
+  "since": "v0.17.0",
+  "usedBy": [
+   "7th-inning-stretch-fan-prototype",
+   "astra-imperium",
+   "radiance-fan-prototype",
+   "unstoppable-fan-prototype"
+  ],
+  "demo": {
+   "id": "demo-glow",
+   "stage": "demo",
+   "maxMs": 600,
+   "actors": [
+    {
+     "id": "A",
+     "at": "a"
+    },
+    {
+     "id": "B",
+     "at": "b"
+    }
+   ],
+   "steps": [
+    {
+     "t": 0,
+     "dur": 600,
+     "actor": "A",
+     "do": "glow"
+    }
+   ]
+  }
+ },
+ {
+  "id": "glow",
+  "option": {
+   "latch": true
+  },
+  "was": [],
+  "title": "Lights a piece and keeps it lit",
+  "looks": "A halo grows round the piece and stays until a later glow step releases it.",
+  "use": "A piece stays selected or active across several steps.",
+  "tags": [
+   "glow",
+   "stay lit",
+   "selected",
+   "active",
+   "highlight"
+  ],
+  "group": "light",
+  "ends": "changed",
+  "needs": "one thing",
+  "ms": 300,
+  "fits": "constant",
+  "draws": {
+   "by": [
+    "elements"
+   ],
+   "phoneSafe": true
+  },
+  "options": {
+   "colour": "none",
+   "shadows": "none",
+   "release": false
+  },
+  "since": "v0.173.0",
+  "usedBy": [
+   "7th-inning-stretch-fan-prototype",
+   "astra-imperium",
+   "radiance-fan-prototype",
+   "unstoppable-fan-prototype"
+  ],
+  "demo": {
+   "id": "demo-glow-latch",
+   "stage": "demo",
+   "maxMs": 300,
+   "actors": [
+    {
+     "id": "A",
+     "at": "a"
+    },
+    {
+     "id": "B",
+     "at": "b"
+    }
+   ],
+   "steps": [
+    {
+     "t": 0,
+     "dur": 300,
+     "actor": "A",
+     "do": "glow",
+     "latch": true
+    }
+   ]
+  }
+ },
+ {
+  "id": "glow",
+  "option": {
+   "end": "dark"
+  },
+  "was": [],
+  "title": "Dims a lit piece to dark",
+  "looks": "The piece starts lit with a halo and dims until the glow is gone.",
+  "use": "A piece loses power or is switched off.",
+  "tags": [
+   "dim",
+   "power down",
+   "darken",
+   "switch off",
+   "glow"
+  ],
+  "group": "light",
+  "ends": "changed",
+  "needs": "one thing",
+  "ms": 500,
+  "fits": "each round",
+  "draws": {
+   "by": [
+    "elements"
+   ],
+   "phoneSafe": true
+  },
+  "options": {
+   "colour": "none",
+   "shadows": "none"
+  },
+  "since": "v0.204.0",
+  "usedBy": [
+   "7th-inning-stretch-fan-prototype",
+   "astra-imperium",
+   "radiance-fan-prototype",
+   "unstoppable-fan-prototype"
+  ],
+  "demo": {
+   "id": "demo-glow-end",
+   "stage": "demo",
+   "maxMs": 500,
+   "actors": [
+    {
+     "id": "A",
+     "at": "a"
+    },
+    {
+     "id": "B",
+     "at": "b"
+    }
+   ],
+   "steps": [
+    {
+     "t": 0,
+     "dur": 500,
+     "actor": "A",
+     "do": "glow",
+     "end": "dark"
+    }
+   ]
+  }
+ },
+ {
+  "id": "shake",
+  "was": [],
+  "title": "Shakes a piece side to side",
+  "looks": "The piece jitters left and right a few times and returns to rest.",
+  "use": "A hit, a refusal or an invalid move.",
+  "tags": [
+   "shake",
+   "jitter",
+   "wobble",
+   "hit",
+   "no",
+   "error"
+  ],
+  "group": "hits-and-destruction",
+  "ends": "as-started",
+  "needs": "one thing",
+  "ms": 300,
+  "fits": "constant",
+  "draws": {
+   "by": [
+    "elements"
+   ],
+   "phoneSafe": true
+  },
+  "options": {
+   "times": 4
+  },
+  "since": "v0.17.0",
+  "usedBy": [
+   "7th-inning-stretch-fan-prototype",
+   "astra-imperium",
+   "radiance-fan-prototype",
+   "unstoppable-fan-prototype"
+  ],
+  "demo": {
+   "id": "demo-shake",
+   "stage": "demo",
+   "maxMs": 300,
+   "actors": [
+    {
+     "id": "A",
+     "at": "a"
+    },
+    {
+     "id": "B",
+     "at": "b"
+    }
+   ],
+   "steps": [
+    {
+     "t": 0,
+     "dur": 300,
+     "actor": "A",
+     "do": "shake"
+    }
+   ]
+  }
+ },
+ {
+  "id": "shake-group",
+  "was": [],
+  "title": "Shakes several pieces together",
+  "looks": "The listed pieces (or page elements) jitter at once with small offsets in both directions.",
+  "use": "An explosion or quake rattles a whole area.",
+  "tags": [
+   "shake",
+   "quake",
+   "rattle",
+   "tremor",
+   "group"
+  ],
+  "group": "hits-and-destruction",
+  "ends": "as-started",
+  "needs": "one thing",
+  "ms": 400,
+  "fits": "constant",
+  "draws": {
+   "by": [
+    "elements"
+   ],
+   "phoneSafe": true
+  },
+  "options": {
+   "actors": "none",
+   "selector": "none",
+   "amplitude": 6,
+   "crossAmplitude": 1,
+   "frames": 9
+  },
+  "since": "v0.117.0",
+  "usedBy": [
+   "astra-imperium",
+   "unstoppable-fan-prototype"
+  ],
+  "demo": {
+   "id": "demo-shake-group",
+   "stage": "demo",
+   "maxMs": 400,
+   "actors": [
+    {
+     "id": "A",
+     "at": "a"
+    },
+    {
+     "id": "B",
+     "at": "b"
+    }
+   ],
+   "steps": [
+    {
+     "t": 0,
+     "dur": 400,
+     "actor": "A",
+     "do": "shake-group",
+     "actors": [
+      "A",
+      "B"
+     ]
+    }
+   ]
+  }
+ },
+ {
+  "id": "trail",
+  "was": [],
+  "title": "Draws a fading ribbon behind a flight",
+  "looks": "A tapering ribbon of light follows the curved path of a flying piece and fades out.",
+  "use": "Give a flying card or ship a visible wake.",
+  "tags": [
+   "trail",
+   "ribbon",
+   "wake",
+   "streak",
+   "path"
+  ],
+  "group": "beams",
+  "ends": "as-started",
+  "needs": "source and target",
+  "ms": 600,
+  "fits": "each round",
+  "draws": {
+   "by": [
+    "canvas"
+   ],
+   "phoneSafe": true
+  },
+  "options": {
+   "width": "none",
+   "tipWidth": "none",
+   "colour": "none",
+   "fade": "none",
+   "ribbon": "none"
+  },
+  "since": "v0.118.0",
+  "usedBy": [
+   "astra-imperium"
+  ],
+  "demo": {
+   "id": "demo-trail",
+   "stage": "demo",
+   "maxMs": 600,
+   "actors": [
+    {
+     "id": "A",
+     "at": "a"
+    },
+    {
+     "id": "B",
+     "at": "b"
+    }
+   ],
+   "steps": [
+    {
+     "t": 0,
+     "dur": 600,
+     "actor": "A",
+     "do": "trail",
+     "width": 8,
+     "tipWidth": 2,
+     "colour": "255,255,255",
+     "fade": 0.8,
+     "to": "b"
+    }
+   ]
+  }
+ },
+ {
+  "id": "radial-streaks",
+  "was": [],
+  "title": "Bursts streaks of light from a point",
+  "looks": "Thin coloured streaks shoot out from (or rush into) a centre point and fade.",
+  "use": "Power gathering or released at a spot.",
+  "tags": [
+   "burst",
+   "streaks",
+   "rays",
+   "power",
+   "charge"
+  ],
+  "group": "particles",
+  "ends": "as-started",
+  "needs": "one thing",
+  "ms": 900,
+  "fits": "each round",
+  "draws": {
+   "by": [
+    "canvas"
+   ],
+   "phoneSafe": true
+  },
+  "options": {
+   "count": "none",
+   "inward": "none",
+   "palette": "none",
+   "alpha": "none",
+   "pulse": "none"
+  },
+  "since": "v0.119.0",
+  "usedBy": [
+   "astra-imperium",
+   "unstoppable-fan-prototype"
+  ],
+  "demo": {
+   "id": "demo-radial-streaks",
+   "stage": "demo",
+   "maxMs": 900,
+   "actors": [
+    {
+     "id": "A",
+     "at": "a"
+    },
+    {
+     "id": "B",
+     "at": "b"
+    }
+   ],
+   "steps": [
+    {
+     "t": 0,
+     "dur": 900,
+     "actor": "A",
+     "do": "radial-streaks"
+    }
+   ]
+  }
+ },
+ {
+  "id": "column-beam",
+  "was": [],
+  "title": "Raises a column of light over a piece",
+  "looks": "A vertical column of light with a core and drifting glitter rises over the piece and fades.",
+  "use": "A piece arrives, is beamed down or powered up.",
+  "tags": [
+   "column",
+   "beam",
+   "pillar",
+   "light",
+   "arrive",
+   "beam down"
+  ],
+  "group": "beams",
+  "ends": "as-started",
+  "needs": "one thing",
+  "ms": 1200,
+  "fits": "rare",
+  "draws": {
+   "by": [
+    "elements"
+   ],
+   "phoneSafe": true
+  },
+  "options": {
+   "way": "out",
+   "colour": "255 255 255",
+   "glitter": 56,
+   "core": false,
+   "tuck": 0
+  },
+  "since": "v0.119.0",
+  "usedBy": [
+   "Star-trek-captains-chair-game",
+   "astra-imperium",
+   "unstoppable-fan-prototype"
+  ],
+  "demo": {
+   "id": "demo-column-beam",
+   "stage": "demo",
+   "maxMs": 1200,
+   "actors": [
+    {
+     "id": "A",
+     "at": "a"
+    },
+    {
+     "id": "B",
+     "at": "b"
+    }
+   ],
+   "steps": [
+    {
+     "t": 0,
+     "dur": 1200,
+     "actor": "A",
+     "do": "column-beam"
+    }
+   ]
+  }
+ },
+ {
+  "id": "column-beam",
+  "option": {
+   "curve": true
+  },
+  "was": [],
+  "title": "Curves a beam of light to a target",
+  "looks": "A glowing beam bends from the piece to the target along a curve, with motes and sparks.",
+  "use": "A piece sends power or a unit to another place.",
+  "tags": [
+   "beam",
+   "curve",
+   "send",
+   "link",
+   "motes"
+  ],
+  "group": "beams",
+  "ends": "as-started",
+  "needs": "source and target",
+  "ms": 1200,
+  "fits": "rare",
+  "draws": {
+   "by": [
+    "canvas"
+   ],
+   "phoneSafe": true
+  },
+  "options": {
+   "control": "none",
+   "colour": "255,255,255",
+   "moteColour": "255,255,255",
+   "size": [
+    40,
+    34
+   ],
+   "image": "none"
+  },
+  "since": "v0.119.0",
+  "usedBy": [
+   "Star-trek-captains-chair-game",
+   "astra-imperium",
+   "unstoppable-fan-prototype"
+  ],
+  "demo": {
+   "id": "demo-column-beam-curve",
+   "stage": "demo",
+   "maxMs": 1200,
+   "actors": [
+    {
+     "id": "A",
+     "at": "a"
+    },
+    {
+     "id": "B",
+     "at": "b"
+    }
+   ],
+   "steps": [
+    {
+     "t": 0,
+     "dur": 1200,
+     "actor": "A",
+     "do": "column-beam",
+     "curve": true,
+     "to": "b"
+    }
+   ]
+  }
+ },
+ {
+  "id": "rotating-beam",
+  "was": [],
+  "title": "Sweeps a turning wedge of light round",
+  "looks": "A wedge of light turns round the piece like a lighthouse, then fades.",
+  "use": "A scan, a search or a radar sweep.",
+  "tags": [
+   "radar",
+   "scan",
+   "sweep",
+   "search",
+   "lighthouse"
+  ],
+  "group": "light",
+  "ends": "as-started",
+  "needs": "one thing",
+  "ms": 1500,
+  "fits": "rare",
+  "draws": {
+   "by": [
+    "elements"
+   ],
+   "phoneSafe": true
+  },
+  "options": {
+   "turns": 2,
+   "beamDeg": 46,
+   "colour": "255 255 255",
+   "fadeMs": 160,
+   "clip": false
+  },
+  "since": "v0.119.0",
+  "usedBy": [
+   "Star-trek-captains-chair-game",
+   "astra-imperium",
+   "unstoppable-fan-prototype"
+  ],
+  "demo": {
+   "id": "demo-rotating-beam",
+   "stage": "demo",
+   "maxMs": 1500,
+   "actors": [
+    {
+     "id": "A",
+     "at": "a"
+    },
+    {
+     "id": "B",
+     "at": "b"
+    }
+   ],
+   "steps": [
+    {
+     "t": 0,
+     "dur": 1500,
+     "actor": "A",
+     "do": "rotating-beam"
+    }
+   ]
+  }
+ },
+ {
+  "id": "projectile",
+  "was": [],
+  "title": "Fires a steady beam at another piece",
+  "looks": "A beam with a bright head shoots from the source, holds on the target with a flickering spot, then fades.",
+  "use": "An attack or a ray from one piece to another.",
+  "tags": [
+   "beam",
+   "laser",
+   "ray",
+   "attack",
+   "shoot",
+   "fire"
+  ],
+  "group": "beams",
+  "ends": "as-started",
+  "needs": "source and target",
+  "ms": 900,
+  "fits": "each round",
+  "draws": {
+   "by": [
+    "elements"
+   ],
+   "phoneSafe": true
+  },
+  "options": {
+   "travelMs": 200,
+   "colour": "255 255 255",
+   "width": "computed",
+   "miss": "none",
+   "delay": 0
+  },
+  "since": "v0.122.0",
+  "usedBy": [
+   "unstoppable-fan-prototype"
+  ],
+  "demo": {
+   "id": "demo-projectile",
+   "stage": "demo",
+   "maxMs": 900,
+   "actors": [
+    {
+     "id": "A",
+     "at": "a"
+    },
+    {
+     "id": "B",
+     "at": "b"
+    }
+   ],
+   "steps": [
+    {
+     "t": 0,
+     "dur": 900,
+     "actor": "A",
+     "do": "projectile",
+     "to": "b"
+    }
+   ]
+  }
+ },
+ {
+  "id": "projectile",
+  "option": {
+   "bolt": "streak"
+  },
+  "was": [],
+  "title": "Shoots a fast bolt with a tail",
+  "looks": "A short bright bolt with a tapering tail streaks from the source and flashes on the target.",
+  "use": "A shot or missile is fired.",
+  "tags": [
+   "bolt",
+   "shot",
+   "missile",
+   "shoot",
+   "attack"
+  ],
+  "group": "beams",
+  "ends": "as-started",
+  "needs": "source and target",
+  "ms": 600,
+  "fits": "each round",
+  "draws": {
+   "by": [
+    "canvas"
+   ],
+   "phoneSafe": true
+  },
+  "options": {
+   "bolt": "none",
+   "tail": 0.25,
+   "colour": "255 255 255",
+   "unit": 1,
+   "travelMs": 200
+  },
+  "since": "v0.122.0",
+  "usedBy": [
+   "unstoppable-fan-prototype"
+  ],
+  "demo": {
+   "id": "demo-projectile-bolt",
+   "stage": "demo",
+   "maxMs": 600,
+   "actors": [
+    {
+     "id": "A",
+     "at": "a"
+    },
+    {
+     "id": "B",
+     "at": "b"
+    }
+   ],
+   "steps": [
+    {
+     "t": 0,
+     "dur": 600,
+     "actor": "A",
+     "do": "projectile",
+     "bolt": "streak",
+     "to": "b"
+    }
+   ]
+  }
+ },
+ {
+  "id": "projectile",
+  "option": {
+   "bolt": "ribbon"
+  },
+  "was": [],
+  "title": "Shoots a curved shot with a trail",
+  "looks": "A shot arcs from the source to the target trailing a curved ribbon and fades.",
+  "use": "A lobbed or homing shot.",
+  "tags": [
+   "shot",
+   "arc",
+   "homing",
+   "lob",
+   "attack"
+  ],
+  "group": "beams",
+  "ends": "as-started",
+  "needs": "source and target",
+  "ms": 800,
+  "fits": "each round",
+  "draws": {
+   "by": [
+    "canvas"
+   ],
+   "phoneSafe": true
+  },
+  "options": {
+   "bolt": "none",
+   "lift": 70,
+   "launchMs": 220,
+   "fadeMs": 200,
+   "colour": "255 255 255"
+  },
+  "since": "v0.122.0",
+  "usedBy": [
+   "unstoppable-fan-prototype"
+  ],
+  "demo": {
+   "id": "demo-projectile-bolt",
+   "stage": "demo",
+   "maxMs": 800,
+   "actors": [
+    {
+     "id": "A",
+     "at": "a"
+    },
+    {
+     "id": "B",
+     "at": "b"
+    }
+   ],
+   "steps": [
+    {
+     "t": 0,
+     "dur": 800,
+     "actor": "A",
+     "do": "projectile",
+     "bolt": "ribbon",
+     "to": "b"
+    }
+   ]
+  }
+ },
+ {
+  "id": "dissolve",
+  "was": [],
+  "title": "Heats up, breaks apart, embers rise",
+  "looks": "The card glows hot from one point, breaks into small squares, and embers drift up.",
+  "use": "A card or piece is destroyed.",
+  "tags": [
+   "burn",
+   "fire",
+   "embers",
+   "destroy",
+   "disintegrate",
+   "dissolve"
+  ],
+  "group": "hits-and-destruction",
+  "ends": "hidden",
+  "needs": "one thing",
+  "ms": 1600,
+  "fits": "rare",
+  "draws": {
+   "by": [
+    "elements"
+   ],
+   "phoneSafe": true
+  },
+  "options": {
+   "hit": [
+    0.5,
+    0.45
+   ],
+   "heatMs": 520,
+   "breakMs": 900,
+   "embers": 16,
+   "heat": "255 255 255"
+  },
+  "since": "v0.122.0",
+  "usedBy": [
+   "unstoppable-fan-prototype"
+  ],
+  "demo": {
+   "id": "demo-dissolve",
+   "stage": "demo",
+   "maxMs": 1600,
+   "actors": [
+    {
+     "id": "A",
+     "at": "a"
+    },
+    {
+     "id": "B",
+     "at": "b"
+    }
+   ],
+   "steps": [
+    {
+     "t": 0,
+     "dur": 1600,
+     "actor": "A",
+     "do": "dissolve"
+    }
+   ]
+  }
+ },
+ {
+  "id": "dissolve",
+  "option": {
+   "lift": true
+  },
+  "was": [],
+  "title": "Burns away into rising smoke",
+  "looks": "The card burns apart while its pieces lift, spin and fade into smoke.",
+  "use": "A piece is destroyed and leaves no trace.",
+  "tags": [
+   "burn",
+   "smoke",
+   "destroy",
+   "vanish",
+   "ash"
+  ],
+  "group": "hits-and-destruction",
+  "ends": "hidden",
+  "needs": "one thing",
+  "ms": 1800,
+  "fits": "rare",
+  "draws": {
+   "by": [
+    "canvas",
+    "elements"
+   ],
+   "phoneSafe": true
+  },
+  "options": {
+   "distance": "none",
+   "spin": "none",
+   "fade": "none",
+   "smoke": "none"
+  },
+  "since": "v0.122.0",
+  "usedBy": [
+   "unstoppable-fan-prototype"
+  ],
+  "demo": {
+   "id": "demo-dissolve-lift",
+   "stage": "demo",
+   "maxMs": 1800,
+   "actors": [
+    {
+     "id": "A",
+     "at": "a"
+    },
+    {
+     "id": "B",
+     "at": "b"
+    }
+   ],
+   "steps": [
+    {
+     "t": 0,
+     "dur": 1800,
+     "actor": "A",
+     "do": "dissolve",
+     "lift": true
+    }
+   ]
+  }
+ },
+ {
+  "id": "shatter",
+  "was": [],
+  "title": "Shatters a piece into flying shards",
+  "looks": "The piece breaks into triangular shards that glow hot, fly apart and cool as they fall.",
+  "use": "A piece is smashed or destroyed by a blow.",
+  "tags": [
+   "shatter",
+   "break",
+   "shards",
+   "smash",
+   "glass",
+   "destroy"
+  ],
+  "group": "hits-and-destruction",
+  "ends": "hidden",
+  "needs": "one thing",
+  "ms": 1200,
+  "fits": "rare",
+  "draws": {
+   "by": [
+    "elements"
+   ],
+   "phoneSafe": true
+  },
+  "options": {
+   "count": "computed",
+   "impact": "computed",
+   "direction": "none",
+   "hotColour": "255 255 255",
+   "ms": "computed"
+  },
+  "since": "v0.122.0",
+  "usedBy": [],
+  "demo": {
+   "id": "demo-shatter",
+   "stage": "demo",
+   "maxMs": 1200,
+   "actors": [
+    {
+     "id": "A",
+     "at": "a"
+    },
+    {
+     "id": "B",
+     "at": "b"
+    }
+   ],
+   "steps": [
+    {
+     "t": 0,
+     "dur": 1200,
+     "actor": "A",
+     "do": "shatter"
+    }
+   ]
+  }
+ },
+ {
+  "id": "shimmer",
+  "was": [],
+  "title": "Ripples a shimmer where a hit lands",
+  "looks": "An oval shimmer flashes over the piece and a ring ripples out from the hit point.",
+  "use": "A hit is absorbed or deflected.",
+  "tags": [
+   "ripple",
+   "shimmer",
+   "absorb",
+   "deflect",
+   "hit"
+  ],
+  "group": "hits-and-destruction",
+  "ends": "as-started",
+  "needs": "one thing",
+  "ms": 700,
+  "fits": "each round",
+  "draws": {
+   "by": [
+    "elements"
+   ],
+   "phoneSafe": true
+  },
+  "options": {
+   "hit": [
+    0.5,
+    0.45
+   ],
+   "colour": "255 255 255",
+   "rippleSize": 0.3,
+   "ms": 300,
+   "jolt": "none"
+  },
+  "since": "v0.122.0",
+  "usedBy": [],
+  "demo": {
+   "id": "demo-shimmer",
+   "stage": "demo",
+   "maxMs": 700,
+   "actors": [
+    {
+     "id": "A",
+     "at": "a"
+    },
+    {
+     "id": "B",
+     "at": "b"
+    }
+   ],
+   "steps": [
+    {
+     "t": 0,
+     "dur": 700,
+     "actor": "A",
+     "do": "shimmer"
+    }
+   ]
+  }
+ },
+ {
+  "id": "ring-pulse",
+  "was": [],
+  "title": "Sends a ring outward from a piece",
+  "looks": "A ring outlines the piece and expands and fades, once or a few times.",
+  "use": "Mark a piece that triggered or a spot that matters.",
+  "tags": [
+   "ring",
+   "pulse",
+   "ping",
+   "ripple",
+   "wave"
+  ],
+  "group": "signals",
+  "ends": "as-started",
+  "needs": "one thing",
+  "ms": 800,
+  "fits": "each round",
+  "draws": {
+   "by": [
+    "elements"
+   ],
+   "phoneSafe": true
+  },
+  "options": {
+   "colour": "255 255 255",
+   "width": 2,
+   "count": 1,
+   "period": "computed",
+   "radius": "50%"
+  },
+  "since": "v0.122.0",
+  "usedBy": [
+   "astra-imperium",
+   "unstoppable-fan-prototype"
+  ],
+  "demo": {
+   "id": "demo-ring-pulse",
+   "stage": "demo",
+   "maxMs": 800,
+   "actors": [
+    {
+     "id": "A",
+     "at": "a"
+    },
+    {
+     "id": "B",
+     "at": "b"
+    }
+   ],
+   "steps": [
+    {
+     "t": 0,
+     "dur": 800,
+     "actor": "A",
+     "do": "ring-pulse"
+    }
+   ]
+  }
+ },
+ {
+  "id": "ring-pulse",
+  "option": {
+   "shockwaves": [
+    {}
+   ]
+  },
+  "was": [],
+  "title": "Blasts shockwave rings out from an impact",
+  "looks": "Wide rings burst outward from the piece, thinning and fading as they grow.",
+  "use": "An explosion or a heavy impact.",
+  "tags": [
+   "shockwave",
+   "blast",
+   "explosion",
+   "boom",
+   "impact"
+  ],
+  "group": "hits-and-destruction",
+  "ends": "as-started",
+  "needs": "one thing",
+  "ms": 900,
+  "fits": "each round",
+  "draws": {
+   "by": [
+    "elements"
+   ],
+   "phoneSafe": true
+  },
+  "options": {
+   "shockwaves": "none",
+   "colour": "255 255 255",
+   "outline": "255 255 255",
+   "unit": 1,
+   "clip": "none"
+  },
+  "since": "v0.122.0",
+  "usedBy": [
+   "astra-imperium",
+   "unstoppable-fan-prototype"
+  ],
+  "demo": {
+   "id": "demo-ring-pulse-shockwaves",
+   "stage": "demo",
+   "maxMs": 900,
+   "actors": [
+    {
+     "id": "A",
+     "at": "a"
+    },
+    {
+     "id": "B",
+     "at": "b"
+    }
+   ],
+   "steps": [
+    {
+     "t": 0,
+     "dur": 900,
+     "actor": "A",
+     "do": "ring-pulse",
+     "shockwaves": [
+      {}
+     ]
+    }
+   ]
+  }
+ },
+ {
+  "id": "shield-bubble",
+  "was": [],
+  "title": "Flashes a hex shield as a hit lands",
+  "looks": "A bubble of hexagon cells lights round the piece and waves spread from the hit angle.",
+  "use": "An attack is blocked by a shield.",
+  "tags": [
+   "shield",
+   "block",
+   "bubble",
+   "hex",
+   "protect",
+   "barrier"
+  ],
+  "group": "hits-and-destruction",
+  "ends": "as-started",
+  "needs": "one thing",
+  "ms": 1200,
+  "fits": "rare",
+  "draws": {
+   "by": [
+    "canvas"
+   ],
+   "phoneSafe": true
+  },
+  "options": {
+   "radius": "none",
+   "hitAngle": "none",
+   "hit": 0,
+   "colour": "220,220,220",
+   "attack": false
+  },
+  "since": "v0.122.0",
+  "usedBy": [],
+  "demo": {
+   "id": "demo-shield-bubble",
+   "stage": "demo",
+   "maxMs": 1200,
+   "actors": [
+    {
+     "id": "A",
+     "at": "a"
+    },
+    {
+     "id": "B",
+     "at": "b"
+    }
+   ],
+   "steps": [
+    {
+     "t": 0,
+     "dur": 1200,
+     "actor": "A",
+     "do": "shield-bubble"
+    }
+   ]
+  }
+ },
+ {
+  "id": "shield-bubble",
+  "option": {
+   "breaks": true
+  },
+  "was": [],
+  "title": "Breaks a hex shield into pieces",
+  "looks": "The hexagon bubble lights on the hit, cracks and scatters away.",
+  "use": "A shield is broken.",
+  "tags": [
+   "shield",
+   "break",
+   "shatter",
+   "barrier",
+   "down"
+  ],
+  "group": "hits-and-destruction",
+  "ends": "as-started",
+  "needs": "one thing",
+  "ms": 1400,
+  "fits": "rare",
+  "draws": {
+   "by": [
+    "canvas"
+   ],
+   "phoneSafe": true
+  },
+  "options": {
+   "radius": "none",
+   "hitAngle": "none",
+   "scatter": "computed",
+   "breakColour": "240,240,240"
+  },
+  "since": "v0.122.0",
+  "usedBy": [],
+  "demo": {
+   "id": "demo-shield-bubble-breaks",
+   "stage": "demo",
+   "maxMs": 1400,
+   "actors": [
+    {
+     "id": "A",
+     "at": "a"
+    },
+    {
+     "id": "B",
+     "at": "b"
+    }
+   ],
+   "steps": [
+    {
+     "t": 0,
+     "dur": 1400,
+     "actor": "A",
+     "do": "shield-bubble",
+     "breaks": true
+    }
+   ]
+  }
+ },
+ {
+  "id": "shield-bubble",
+  "option": {
+   "recharge": {}
+  },
+  "was": [],
+  "title": "Builds a hex shield up cell by cell",
+  "looks": "Hexagon cells assemble round the piece, hum and settle as a scan sweeps across.",
+  "use": "A shield is raised or recharged.",
+  "tags": [
+   "shield",
+   "recharge",
+   "raise",
+   "build",
+   "protect"
+  ],
+  "group": "light",
+  "ends": "as-started",
+  "needs": "one thing",
+  "ms": 1400,
+  "fits": "rare",
+  "draws": {
+   "by": [
+    "canvas"
+   ],
+   "phoneSafe": true
+  },
+  "options": {
+   "recharge": "none",
+   "radius": "none",
+   "colour": "220,220,220",
+   "hex": "none"
+  },
+  "since": "v0.122.0",
+  "usedBy": [],
+  "demo": {
+   "id": "demo-shield-bubble-recharge",
+   "stage": "demo",
+   "maxMs": 1400,
+   "actors": [
+    {
+     "id": "A",
+     "at": "a"
+    },
+    {
+     "id": "B",
+     "at": "b"
+    }
+   ],
+   "steps": [
+    {
+     "t": 0,
+     "dur": 1400,
+     "actor": "A",
+     "do": "shield-bubble",
+     "recharge": {}
+    }
+   ]
+  }
+ },
+ {
+  "id": "stamp",
+  "was": [],
+  "title": "Stamps a label onto a piece",
+  "looks": "A tilted label slams down onto the piece from larger to its size and stays on it.",
+  "use": "Mark a result: done, won, lost, claimed.",
+  "tags": [
+   "stamp",
+   "seal",
+   "mark",
+   "label",
+   "done",
+   "approved"
+  ],
+  "group": "signals",
+  "ends": "changed",
+  "needs": "one thing",
+  "ms": 500,
+  "fits": "each round",
+  "draws": {
+   "by": [
+    "elements"
+   ],
+   "phoneSafe": true
+  },
+  "options": {
+   "text": "",
+   "image": "none",
+   "tilt": 0,
+   "ring": "none",
+   "press": "none"
+  },
+  "since": "v0.124.0",
+  "usedBy": [
+   "Star-trek-captains-chair-game",
+   "astra-imperium",
+   "unstoppable-fan-prototype"
+  ],
+  "demo": {
+   "id": "demo-stamp",
+   "stage": "demo",
+   "maxMs": 500,
+   "actors": [
+    {
+     "id": "A",
+     "at": "a"
+    },
+    {
+     "id": "B",
+     "at": "b"
+    }
+   ],
+   "steps": [
+    {
+     "t": 0,
+     "dur": 500,
+     "actor": "A",
+     "do": "stamp",
+     "text": "DONE"
+    }
+   ]
+  }
+ },
+ {
+  "id": "stamp",
+  "option": {
+   "cracked": true
+  },
+  "was": [],
+  "title": "Stamps a cracked label onto a piece",
+  "looks": "A label slams down and a jagged crack appears across it at the press.",
+  "use": "Mark a failure or a broken result.",
+  "tags": [
+   "stamp",
+   "crack",
+   "failed",
+   "broken",
+   "mark"
+  ],
+  "group": "signals",
+  "ends": "changed",
+  "needs": "one thing",
+  "ms": 500,
+  "fits": "each round",
+  "draws": {
+   "by": [
+    "elements"
+   ],
+   "phoneSafe": true
+  },
+  "options": {
+   "text": "",
+   "cracked": "none",
+   "tilt": 0
+  },
+  "since": "v0.204.0",
+  "usedBy": [
+   "Star-trek-captains-chair-game",
+   "astra-imperium",
+   "unstoppable-fan-prototype"
+  ],
+  "demo": {
+   "id": "demo-stamp-cracked",
+   "stage": "demo",
+   "maxMs": 500,
+   "actors": [
+    {
+     "id": "A",
+     "at": "a"
+    },
+    {
+     "id": "B",
+     "at": "b"
+    }
+   ],
+   "steps": [
+    {
+     "t": 0,
+     "dur": 500,
+     "actor": "A",
+     "do": "stamp",
+     "cracked": true,
+     "text": "FAILED"
+    }
+   ]
+  }
+ },
+ {
+  "id": "motes",
+  "was": [],
+  "title": "Floats small lights up from a piece",
+  "looks": "Small glowing dots drift up from the piece and fade at different heights.",
+  "use": "Gentle gain: healing, a resource, a blessing.",
+  "tags": [
+   "lights",
+   "float",
+   "rise",
+   "sparkle",
+   "heal",
+   "dots"
+  ],
+  "group": "particles",
+  "ends": "as-started",
+  "needs": "one thing",
+  "ms": 1200,
+  "fits": "rare",
+  "draws": {
+   "by": [
+    "elements"
+   ],
+   "phoneSafe": true
+  },
+  "options": {
+   "count": 16,
+   "colour": "#fff",
+   "rise": "computed",
+   "spread": "computed",
+   "size": 6
+  },
+  "since": "v0.124.0",
+  "usedBy": [
+   "astra-imperium",
+   "unstoppable-fan-prototype"
+  ],
+  "demo": {
+   "id": "demo-motes",
+   "stage": "demo",
+   "maxMs": 1200,
+   "actors": [
+    {
+     "id": "A",
+     "at": "a"
+    },
+    {
+     "id": "B",
+     "at": "b"
+    }
+   ],
+   "steps": [
+    {
+     "t": 0,
+     "dur": 1200,
+     "actor": "A",
+     "do": "motes"
+    }
+   ]
+  }
+ },
+ {
+  "id": "flicker",
+  "was": [],
+  "title": "Flickers a coloured light over a piece",
+  "looks": "A coloured overlay breathes on and off over the piece a few times.",
+  "use": "A piece is unstable, warned or under an effect.",
+  "tags": [
+   "flicker",
+   "blink",
+   "warning",
+   "flash",
+   "unstable"
+  ],
+  "group": "light",
+  "ends": "as-started",
+  "needs": "one thing",
+  "ms": 900,
+  "fits": "each round",
+  "draws": {
+   "by": [
+    "elements"
+   ],
+   "phoneSafe": true
+  },
+  "options": {
+   "colour": "rgb(255 255 255 / .25)",
+   "times": 2,
+   "period": "none",
+   "loop": "none",
+   "grey": "none"
+  },
+  "since": "v0.124.0",
+  "usedBy": [
+   "astra-imperium",
+   "unstoppable-fan-prototype"
+  ],
+  "demo": {
+   "id": "demo-flicker",
+   "stage": "demo",
+   "maxMs": 900,
+   "actors": [
+    {
+     "id": "A",
+     "at": "a"
+    },
+    {
+     "id": "B",
+     "at": "b"
+    }
+   ],
+   "steps": [
+    {
+     "t": 0,
+     "dur": 900,
+     "actor": "A",
+     "do": "flicker",
+     "colour": "red"
+    }
+   ]
+  }
+ },
+ {
+  "id": "flicker",
+  "option": {
+   "buzz": {}
+  },
+  "was": [],
+  "title": "Buzzes a piece like a bad signal",
+  "looks": "The piece jitters and its brightness and colour flicker in noisy bursts.",
+  "use": "A piece is damaged, glitching or losing power.",
+  "tags": [
+   "buzz",
+   "glitch",
+   "static",
+   "noise",
+   "damaged"
+  ],
+  "group": "light",
+  "ends": "as-started",
+  "needs": "one thing",
+  "ms": 900,
+  "fits": "each round",
+  "draws": {
+   "by": [
+    "elements"
+   ],
+   "phoneSafe": true
+  },
+  "options": {
+   "buzz": "none",
+   "window": "none",
+   "jitter": "none",
+   "brightness": 1,
+   "threshold": "none"
+  },
+  "since": "v0.124.0",
+  "usedBy": [
+   "astra-imperium",
+   "unstoppable-fan-prototype"
+  ],
+  "demo": {
+   "id": "demo-flicker-buzz",
+   "stage": "demo",
+   "maxMs": 900,
+   "actors": [
+    {
+     "id": "A",
+     "at": "a"
+    },
+    {
+     "id": "B",
+     "at": "b"
+    }
+   ],
+   "steps": [
+    {
+     "t": 0,
+     "dur": 900,
+     "actor": "A",
+     "do": "flicker",
+     "buzz": {}
+    }
+   ]
+  }
+ },
+ {
+  "id": "bar-fill",
+  "was": [],
+  "title": "Fills a bar from one level to another",
+  "looks": "A bar inside the piece grows or shrinks between two fractions, with an optional hopping marker.",
+  "use": "A track, meter or progress value changes.",
+  "tags": [
+   "bar",
+   "fill",
+   "meter",
+   "progress",
+   "track",
+   "gauge"
+  ],
+  "group": "signals",
+  "ends": "changed",
+  "needs": "one thing",
+  "ms": 700,
+  "fits": "each round",
+  "draws": {
+   "by": [
+    "elements"
+   ],
+   "phoneSafe": true
+  },
+  "options": {
+   "from": 0,
+   "to": 1,
+   "colour": "currentColor",
+   "marker": "none",
+   "pips": "none"
+  },
+  "since": "v0.124.0",
+  "usedBy": [
+   "Star-trek-captains-chair-game"
+  ],
+  "demo": {
+   "id": "demo-bar-fill",
+   "stage": "demo",
+   "maxMs": 700,
+   "actors": [
+    {
+     "id": "A",
+     "at": "a"
+    },
+    {
+     "id": "B",
+     "at": "b"
+    }
+   ],
+   "steps": [
+    {
+     "t": 0,
+     "dur": 700,
+     "actor": "A",
+     "do": "bar-fill",
+     "from": 0.2,
+     "to": 0.7
+    }
+   ]
+  }
+ },
+ {
+  "id": "bar-fill",
+  "option": {
+   "pin": {}
+  },
+  "was": [],
+  "title": "Moves a numbered pin along a track",
+  "looks": "A numbered marker lifts, slides along the track by the change and lands with a glow and a ring.",
+  "use": "A score marker moves on a track.",
+  "tags": [
+   "pin",
+   "marker",
+   "track",
+   "score",
+   "advance"
+  ],
+  "group": "signals",
+  "ends": "changed",
+  "needs": "one thing",
+  "ms": 900,
+  "fits": "each round",
+  "draws": {
+   "by": [
+    "elements"
+   ],
+   "phoneSafe": true
+  },
+  "options": {
+   "pin": "none",
+   "from": 0,
+   "to": 1
+  },
+  "since": "v0.124.0",
+  "usedBy": [
+   "Star-trek-captains-chair-game"
+  ],
+  "demo": {
+   "id": "demo-bar-fill-pin",
+   "stage": "demo",
+   "maxMs": 900,
+   "actors": [
+    {
+     "id": "A",
+     "at": "a"
+    },
+    {
+     "id": "B",
+     "at": "b"
+    }
+   ],
+   "steps": [
+    {
+     "t": 0,
+     "dur": 900,
+     "actor": "A",
+     "do": "bar-fill",
+     "pin": {},
+     "from": 0.2,
+     "to": 0.7
+    }
+   ]
+  }
+ },
+ {
+  "id": "refresh",
+  "was": [],
+  "title": "Clears a used card back to ready",
+  "looks": "The card's banner lifts off and a grey copy drains away bottom to top, leaving the ready face.",
+  "use": "A used or exhausted card becomes ready again.",
+  "tags": [
+   "refresh",
+   "ready",
+   "restore",
+   "reset",
+   "clear"
+  ],
+  "group": "signals",
+  "ends": "changed",
+  "needs": "one thing",
+  "ms": 900,
+  "fits": "each round",
+  "draws": {
+   "by": [
+    "elements"
+   ],
+   "phoneSafe": true
+  },
+  "options": {
+   "banner": "none",
+   "face": "none",
+   "filter": "grayscale(1)",
+   "liftMs": 500,
+   "drainMs": 400
+  },
+  "since": "v0.125.0",
+  "usedBy": [
+   "Star-trek-captains-chair-game"
+  ],
+  "demo": {
+   "id": "demo-refresh",
+   "stage": "demo",
+   "maxMs": 900,
+   "actors": [
+    {
+     "id": "A",
+     "at": "a"
+    },
+    {
+     "id": "B",
+     "at": "b"
+    }
+   ],
+   "steps": [
+    {
+     "t": 0,
+     "dur": 900,
+     "actor": "A",
+     "do": "refresh"
+    }
+   ]
+  }
+ },
+ {
+  "id": "pulse",
+  "was": [],
+  "title": "Pulses a piece in a steady rhythm",
+  "looks": "The piece repeats a short change (by default its opacity) every period until the step ends.",
+  "use": "A piece waits for the player: playable, pending, active.",
+  "tags": [
+   "pulse",
+   "breathe",
+   "throb",
+   "waiting",
+   "playable"
+  ],
+  "group": "loops",
+  "ends": "as-started",
+  "needs": "one thing",
+  "ms": 3000,
+  "fits": "rare",
+  "draws": {
+   "by": [
+    "elements"
+   ],
+   "phoneSafe": true
+  },
+  "options": {
+   "frames": "none",
+   "period": "none",
+   "easing": "none",
+   "pseudo": "none",
+   "once": "none"
+  },
+  "since": "v0.17.0",
+  "usedBy": [
+   "astra-imperium",
+   "unstoppable-fan-prototype"
+  ],
+  "demo": {
+   "id": "demo-pulse",
+   "stage": "demo",
+   "maxMs": 3000,
+   "actors": [
+    {
+     "id": "A",
+     "at": "a"
+    },
+    {
+     "id": "B",
+     "at": "b"
+    }
+   ],
+   "steps": [
+    {
+     "t": 0,
+     "dur": 3000,
+     "actor": "A",
+     "do": "pulse"
+    }
+   ]
+  }
+ },
+ {
+  "id": "idle",
+  "option": {
+   "kind": "bob"
+  },
+  "was": [],
+  "title": "Bobs a piece gently up and down",
+  "looks": "The piece floats up a few pixels and back, over and over.",
+  "use": "A piece is alive and waiting: a hovering ship, a lit token.",
+  "tags": [
+   "bob",
+   "float",
+   "hover",
+   "idle",
+   "alive"
+  ],
+  "group": "loops",
+  "ends": "as-started",
+  "needs": "one thing",
+  "ms": 2400,
+  "fits": "rare",
+  "draws": {
+   "by": [
+    "elements"
+   ],
+   "phoneSafe": true
+  },
+  "options": {
+   "kind": "none",
+   "rise": "none",
+   "period": "none"
+  },
+  "since": "v0.125.0",
+  "usedBy": [],
+  "demo": {
+   "id": "demo-idle-kind",
+   "stage": "demo",
+   "maxMs": 2400,
+   "actors": [
+    {
+     "id": "A",
+     "at": "a"
+    },
+    {
+     "id": "B",
+     "at": "b"
+    }
+   ],
+   "steps": [
+    {
+     "t": 0,
+     "dur": 2400,
+     "actor": "A",
+     "do": "idle",
+     "kind": "bob"
+    }
+   ]
+  }
+ },
+ {
+  "id": "idle",
+  "option": {
+   "kind": "breathe"
+  },
+  "was": [],
+  "title": "Breathes a piece softly in and out",
+  "looks": "The piece slowly fades a little and back, over and over.",
+  "use": "A quiet sign that a piece is active.",
+  "tags": [
+   "breathe",
+   "idle",
+   "soft",
+   "alive",
+   "fade"
+  ],
+  "group": "loops",
+  "ends": "as-started",
+  "needs": "one thing",
+  "ms": 2400,
+  "fits": "rare",
+  "draws": {
+   "by": [
+    "elements"
+   ],
+   "phoneSafe": true
+  },
+  "options": {
+   "kind": "none",
+   "period": "none",
+   "frames": "none"
+  },
+  "since": "v0.125.0",
+  "usedBy": [],
+  "demo": {
+   "id": "demo-idle-kind",
+   "stage": "demo",
+   "maxMs": 2400,
+   "actors": [
+    {
+     "id": "A",
+     "at": "a"
+    },
+    {
+     "id": "B",
+     "at": "b"
+    }
+   ],
+   "steps": [
+    {
+     "t": 0,
+     "dur": 2400,
+     "actor": "A",
+     "do": "idle",
+     "kind": "breathe"
+    }
+   ]
+  }
+ },
+ {
+  "id": "idle",
+  "option": {
+   "kind": "orbit"
+  },
+  "was": [],
+  "title": "Circles little stars round a piece",
+  "looks": "Small stars orbit in an ellipse above the piece, twinkling, optionally crackling.",
+  "use": "A piece is stunned, dazed or enchanted.",
+  "tags": [
+   "stars",
+   "orbit",
+   "stunned",
+   "dazed",
+   "circle"
+  ],
+  "group": "loops",
+  "ends": "as-started",
+  "needs": "one thing",
+  "ms": 2200,
+  "fits": "rare",
+  "draws": {
+   "by": [
+    "elements"
+   ],
+   "phoneSafe": true
+  },
+  "options": {
+   "kind": "none",
+   "orbit": "none",
+   "period": "none"
+  },
+  "since": "v0.125.0",
+  "usedBy": [],
+  "demo": {
+   "id": "demo-idle-kind",
+   "stage": "demo",
+   "maxMs": 2200,
+   "actors": [
+    {
+     "id": "A",
+     "at": "a"
+    },
+    {
+     "id": "B",
+     "at": "b"
+    }
+   ],
+   "steps": [
+    {
+     "t": 0,
+     "dur": 2200,
+     "actor": "A",
+     "do": "idle",
+     "kind": "orbit"
+    }
+   ]
+  }
+ },
+ {
+  "id": "idle",
+  "option": {
+   "kind": "drift"
+  },
+  "was": [],
+  "title": "Drifts a piece slowly away and back",
+  "looks": "The piece moves slowly to an offset and size and returns, over a long period.",
+  "use": "A background picture or panel lives quietly.",
+  "tags": [
+   "drift",
+   "slow",
+   "background",
+   "idle",
+   "pan"
+  ],
+  "group": "loops",
+  "ends": "as-started",
+  "needs": "one thing",
+  "ms": 40000,
+  "fits": "rare",
+  "draws": {
+   "by": [
+    "elements"
+   ],
+   "phoneSafe": true
+  },
+  "options": {
+   "kind": "none",
+   "drift": "none",
+   "period": "none"
+  },
+  "since": "v0.135.0",
+  "usedBy": [],
+  "demo": {
+   "id": "demo-idle-kind",
+   "stage": "demo",
+   "maxMs": 40000,
+   "actors": [
+    {
+     "id": "A",
+     "at": "a"
+    },
+    {
+     "id": "B",
+     "at": "b"
+    }
+   ],
+   "steps": [
+    {
+     "t": 0,
+     "dur": 40000,
+     "actor": "A",
+     "do": "idle",
+     "kind": "drift",
+     "drift": {
+      "x": 20,
+      "y": 0,
+      "scale": 1.05
+     }
+    }
+   ]
+  }
+ },
+ {
+  "id": "dash-line",
+  "was": [],
+  "title": "Draws a marching dashed line between pieces",
+  "looks": "A dashed line joins two pieces, its dashes running from one to the other.",
+  "use": "Show a link, a target or a path between two pieces.",
+  "tags": [
+   "line",
+   "dashed",
+   "link",
+   "target",
+   "arrow",
+   "connect"
+  ],
+  "group": "beams",
+  "ends": "as-started",
+  "needs": "source and target",
+  "ms": 1200,
+  "fits": "rare",
+  "draws": {
+   "by": [
+    "elements"
+   ],
+   "phoneSafe": true
+  },
+  "options": {
+   "dash": 9,
+   "gap": 6,
+   "width": 2,
+   "speed": 20,
+   "colour": "currentColor"
+  },
+  "since": "v0.127.0",
+  "usedBy": [],
+  "demo": {
+   "id": "demo-dash-line",
+   "stage": "demo",
+   "maxMs": 1200,
+   "actors": [
+    {
+     "id": "A",
+     "at": "a"
+    },
+    {
+     "id": "B",
+     "at": "b"
+    }
+   ],
+   "steps": [
+    {
+     "t": 0,
+     "dur": 1200,
+     "actor": "A",
+     "do": "dash-line",
+     "to": "b"
+    }
+   ]
+  }
+ },
+ {
+  "id": "reticle",
+  "was": [],
+  "title": "Closes target brackets in on a piece",
+  "looks": "Four corner brackets close in around the piece and fade.",
+  "use": "A piece is targeted or chosen.",
+  "tags": [
+   "target",
+   "brackets",
+   "aim",
+   "lock on",
+   "select"
+  ],
+  "group": "signals",
+  "ends": "as-started",
+  "needs": "one thing",
+  "ms": 700,
+  "fits": "each round",
+  "draws": {
+   "by": [
+    "canvas"
+   ],
+   "phoneSafe": true
+  },
+  "options": {
+   "colour": "255,255,255",
+   "padding": [
+    18,
+    6
+   ],
+   "length": 16,
+   "closeMs": 220,
+   "fade": [
+    520,
+    660
+   ]
+  },
+  "since": "v0.127.0",
+  "usedBy": [
+   "astra-imperium"
+  ],
+  "demo": {
+   "id": "demo-reticle",
+   "stage": "demo",
+   "maxMs": 700,
+   "actors": [
+    {
+     "id": "A",
+     "at": "a"
+    },
+    {
+     "id": "B",
+     "at": "b"
+    }
+   ],
+   "steps": [
+    {
+     "t": 0,
+     "dur": 700,
+     "actor": "A",
+     "do": "reticle"
+    }
+   ]
+  }
+ },
+ {
+  "id": "debris",
+  "was": [],
+  "title": "Throws small pieces out that fall",
+  "looks": "Small fragments burst out from the piece, spin and fall with gravity, then fade.",
+  "use": "Something breaks, explodes or is hit hard.",
+  "tags": [
+   "debris",
+   "fragments",
+   "bits",
+   "explode",
+   "fall",
+   "pieces"
+  ],
+  "group": "particles",
+  "ends": "as-started",
+  "needs": "one thing",
+  "ms": 1000,
+  "fits": "rare",
+  "draws": {
+   "by": [
+    "canvas"
+   ],
+   "phoneSafe": true
+  },
+  "options": {
+   "count": "computed",
+   "spread": [
+    60,
+    24
+   ],
+   "gravity": 100,
+   "spin": 140,
+   "colour": "#b0b0b0"
+  },
+  "since": "v0.127.0",
+  "usedBy": [
+   "unstoppable-fan-prototype"
+  ],
+  "demo": {
+   "id": "demo-debris",
+   "stage": "demo",
+   "maxMs": 1000,
+   "actors": [
+    {
+     "id": "A",
+     "at": "a"
+    },
+    {
+     "id": "B",
+     "at": "b"
+    }
+   ],
+   "steps": [
+    {
+     "t": 0,
+     "dur": 1000,
+     "actor": "A",
+     "do": "debris"
+    }
+   ]
+  }
+ },
+ {
+  "id": "sheen",
+  "was": [],
+  "title": "Sweeps a band of light across a piece",
+  "looks": "A slanted shine slides across the piece from one side to the other.",
+  "use": "A card is new, rare, chosen or upgraded.",
+  "tags": [
+   "shine",
+   "gleam",
+   "glint",
+   "sweep",
+   "shiny",
+   "foil"
+  ],
+  "group": "light",
+  "ends": "as-started",
+  "needs": "one thing",
+  "ms": 650,
+  "fits": "each round",
+  "draws": {
+   "by": [
+    "elements"
+   ],
+   "phoneSafe": true
+  },
+  "options": {
+   "angle": 100,
+   "bandWidth": 50,
+   "colour": "rgba(255,255,255,.25)",
+   "loop": false,
+   "period": "computed"
+  },
+  "since": "v0.135.0",
+  "usedBy": [
+   "astra-imperium",
+   "unstoppable-fan-prototype"
+  ],
+  "demo": {
+   "id": "demo-sheen",
+   "stage": "demo",
+   "maxMs": 650,
+   "actors": [
+    {
+     "id": "A",
+     "at": "a"
+    },
+    {
+     "id": "B",
+     "at": "b"
+    }
+   ],
+   "steps": [
+    {
+     "t": 0,
+     "dur": 650,
+     "actor": "A",
+     "do": "sheen"
+    }
+   ]
+  }
+ },
+ {
+  "id": "fizzle",
+  "was": [],
+  "title": "Fizzles a piece out with grey static",
+  "looks": "The piece shakes, turns grey and a noisy sputter crosses it.",
+  "use": "An action fails or a card is cancelled.",
+  "tags": [
+   "fizzle",
+   "fail",
+   "cancel",
+   "static",
+   "grey",
+   "sputter"
+  ],
+  "group": "hits-and-destruction",
+  "ends": "changed",
+  "needs": "one thing",
+  "ms": 1000,
+  "fits": "rare",
+  "draws": {
+   "by": [
+    "elements"
+   ],
+   "phoneSafe": true
+  },
+  "options": {
+   "shakeMs": 520,
+   "greyMs": 1000,
+   "sputterMs": 520,
+   "colour": "200 210 228",
+   "saturate": 0.3
+  },
+  "since": "v0.173.0",
+  "usedBy": [
+   "unstoppable-fan-prototype"
+  ],
+  "demo": {
+   "id": "demo-fizzle",
+   "stage": "demo",
+   "maxMs": 1000,
+   "actors": [
+    {
+     "id": "A",
+     "at": "a"
+    },
+    {
+     "id": "B",
+     "at": "b"
+    }
+   ],
+   "steps": [
+    {
+     "t": 0,
+     "dur": 1000,
+     "actor": "A",
+     "do": "fizzle"
+    }
+   ]
+  }
+ },
+ {
+  "id": "spark-burst",
+  "was": [],
+  "title": "Bursts sparks out from a piece",
+  "looks": "A spray of sparks flies out of the middle of the piece and fades.",
+  "use": "A success, a completion or a reward.",
+  "tags": [
+   "sparks",
+   "burst",
+   "celebrate",
+   "success",
+   "fireworks"
+  ],
+  "group": "particles",
+  "ends": "as-started",
+  "needs": "one thing",
+  "ms": 800,
+  "fits": "each round",
+  "draws": {
+   "by": [
+    "elements"
+   ],
+   "phoneSafe": true
+  },
+  "options": {
+   "count": 34,
+   "colour": "white",
+   "reach": "computed",
+   "size": 8,
+   "fall": 0
+  },
+  "since": "v0.173.0",
+  "usedBy": [
+   "unstoppable-fan-prototype"
+  ],
+  "demo": {
+   "id": "demo-spark-burst",
+   "stage": "demo",
+   "maxMs": 800,
+   "actors": [
+    {
+     "id": "A",
+     "at": "a"
+    },
+    {
+     "id": "B",
+     "at": "b"
+    }
+   ],
+   "steps": [
+    {
+     "t": 0,
+     "dur": 800,
+     "actor": "A",
+     "do": "spark-burst"
+    }
+   ]
+  }
+ },
+ {
+  "id": "slash",
+  "was": [],
+  "title": "Slashes strokes across a piece",
+  "looks": "One or more bright strokes cut across the piece and fade.",
+  "use": "A melee hit or a claw attack.",
+  "tags": [
+   "slash",
+   "cut",
+   "claw",
+   "strike",
+   "melee",
+   "scratch"
+  ],
+  "group": "hits-and-destruction",
+  "ends": "as-started",
+  "needs": "one thing",
+  "ms": 500,
+  "fits": "each round",
+  "draws": {
+   "by": [
+    "canvas"
+   ],
+   "phoneSafe": true
+  },
+  "options": {
+   "count": 3,
+   "angle": 60,
+   "length": 0.9,
+   "colour": "255,255,255",
+   "width": 8
+  },
+  "since": "v0.135.0",
+  "usedBy": [],
+  "demo": {
+   "id": "demo-slash",
+   "stage": "demo",
+   "maxMs": 500,
+   "actors": [
+    {
+     "id": "A",
+     "at": "a"
+    },
+    {
+     "id": "B",
+     "at": "b"
+    }
+   ],
+   "steps": [
+    {
+     "t": 0,
+     "dur": 500,
+     "actor": "A",
+     "do": "slash"
+    }
+   ]
+  }
+ },
+ {
+  "id": "crumple",
+  "was": [],
+  "title": "Crumples a card into a ball, throws it",
+  "looks": "The card folds into a creased ball in 3D, then is tossed and lands at the target.",
+  "use": "A card is discarded or thrown away.",
+  "tags": [
+   "crumple",
+   "discard",
+   "trash",
+   "paper",
+   "throw away",
+   "ball"
+  ],
+  "group": "hits-and-destruction",
+  "ends": "hidden",
+  "needs": "source and target",
+  "ms": 1600,
+  "fits": "rare",
+  "draws": {
+   "by": [
+    "webgl"
+   ],
+   "phoneSafe": false
+  },
+  "options": {
+   "image": "none",
+   "foldMs": 600,
+   "throwMs": 420,
+   "creases": "none",
+   "fadeOut": false
+  },
+  "since": "v0.129.0",
+  "usedBy": [
+   "Star-trek-captains-chair-game"
+  ],
+  "demo": {
+   "id": "demo-crumple",
+   "stage": "demo",
+   "maxMs": 1600,
+   "actors": [
+    {
+     "id": "A",
+     "at": "a"
+    },
+    {
+     "id": "B",
+     "at": "b"
+    }
+   ],
+   "steps": [
+    {
+     "t": 0,
+     "dur": 1600,
+     "actor": "A",
+     "do": "crumple",
+     "image": "card.png",
+     "to": "b"
+    }
+   ]
+  }
+ },
+ {
+  "id": "createGlitch",
+  "was": [],
+  "title": "Glitches a logo with split colour bursts",
+  "looks": "Every few seconds the wordmark splits into two colours, slices jump sideways and a frame drops out.",
+  "use": "A title or logo that feels alive, or a victory or defeat tear.",
+  "tags": [
+   "glitch",
+   "logo",
+   "title",
+   "split",
+   "static"
+  ],
+  "group": "loops",
+  "ends": "as-started",
+  "needs": "one thing",
+  "ms": 3000,
+  "fits": "rare",
+  "draws": {
+   "by": [
+    "elements"
+   ],
+   "phoneSafe": true
+  },
+  "options": {
+   "colours": "none",
+   "idleMs": [
+    3500,
+    7000
+   ],
+   "burstMs": 200,
+   "slices": 3,
+   "seed": "computed"
+  },
+  "since": "v0.148.0",
+  "usedBy": [],
+  "demo": {
+   "id": "demo-createGlitch",
+   "stage": "demo",
+   "maxMs": 3000,
+   "actors": [
+    {
+     "id": "A",
+     "at": "a"
+    },
+    {
+     "id": "B",
+     "at": "b"
+    }
+   ],
+   "steps": [
+    {
+     "t": 0,
+     "dur": 3000,
+     "actor": "A",
+     "do": "createGlitch"
+    }
+   ]
+  }
+ },
+ {
+  "id": "cameraPull",
+  "was": [],
+  "title": "Zooms the board in and dims around it",
+  "looks": "The whole board scales up about a point while a shade darkens the edges, then eases back.",
+  "use": "A dramatic moment: a big attack, a game-changing card.",
+  "tags": [
+   "zoom",
+   "camera",
+   "focus",
+   "dim",
+   "dramatic"
+  ],
+  "group": "camera",
+  "ends": "as-started",
+  "needs": "one thing",
+  "ms": 1500,
+  "fits": "rare",
+  "draws": {
+   "by": [
+    "elements"
+   ],
+   "phoneSafe": true
+  },
+  "options": {
+   "scale": 0.95,
+   "origin": "center",
+   "dim": 0.5,
+   "pullMs": 2000,
+   "releaseMs": 400
+  },
+  "since": "v0.129.0",
+  "usedBy": [
+   "Star-trek-captains-chair-game"
+  ],
+  "demo": {
+   "id": "demo-cameraPull",
+   "stage": "demo",
+   "maxMs": 1500,
+   "actors": [
+    {
+     "id": "A",
+     "at": "a"
+    },
+    {
+     "id": "B",
+     "at": "b"
+    }
+   ],
+   "steps": [
+    {
+     "t": 0,
+     "dur": 1500,
+     "actor": "A",
+     "do": "cameraPull"
+    }
+   ]
+  }
+ },
+ {
+  "id": "cameraPush",
+  "was": [],
+  "title": "Pushes the camera in and back",
+  "looks": "The board scales in slightly about a focus point and returns to normal, optionally with shake.",
+  "use": "An impact or emphasis on one area.",
+  "tags": [
+   "push in",
+   "zoom",
+   "camera",
+   "emphasis",
+   "punch"
+  ],
+  "group": "camera",
+  "ends": "as-started",
+  "needs": "one thing",
+  "ms": 1000,
+  "fits": "rare",
+  "draws": {
+   "by": [
+    "elements"
+   ],
+   "phoneSafe": true
+  },
+  "options": {
+   "scale": "none",
+   "enter": "none",
+   "exit": "none"
+  },
+  "since": "v0.129.0",
+  "usedBy": [],
+  "demo": {
+   "id": "demo-cameraPush",
+   "stage": "demo",
+   "maxMs": 1000,
+   "actors": [
+    {
+     "id": "A",
+     "at": "a"
+    },
+    {
+     "id": "B",
+     "at": "b"
+    }
+   ],
+   "steps": [
+    {
+     "t": 0,
+     "dur": 1000,
+     "actor": "A",
+     "do": "cameraPush"
+    }
+   ]
+  }
+ },
+ {
+  "id": "letterboxBanner",
+  "was": [],
+  "title": "Slides in cinema bars with a caption",
+  "looks": "Black bars slide in top and bottom with a vignette and a caption, then slide out.",
+  "use": "A cut-scene feel: a closing scene, an ending.",
+  "tags": [
+   "letterbox",
+   "cinema",
+   "bars",
+   "cutscene",
+   "caption"
+  ],
+  "group": "camera",
+  "ends": "as-started",
+  "needs": "one thing",
+  "ms": 2500,
+  "fits": "rare",
+  "draws": {
+   "by": [
+    "elements"
+   ],
+   "phoneSafe": true
+  },
+  "options": {
+   "text": "",
+   "barHeight": 40,
+   "enter": 250,
+   "exit": 250,
+   "textIn": "computed"
+  },
+  "since": "v0.129.0",
+  "usedBy": [],
+  "demo": {
+   "id": "demo-letterboxBanner",
+   "stage": "demo",
+   "maxMs": 2500,
+   "actors": [
+    {
+     "id": "A",
+     "at": "a"
+    },
+    {
+     "id": "B",
+     "at": "b"
+    }
+   ],
+   "steps": [
+    {
+     "t": 0,
+     "dur": 2500,
+     "actor": "A",
+     "do": "letterboxBanner"
+    }
+   ]
+  }
+ },
+ {
+  "id": "drawPlasmaOrb",
+  "was": [],
+  "title": "Draws a crackling orb of energy",
+  "looks": "A glowing ball with arcs, filaments and motes pulses and swells.",
+  "use": "A power source, a charge or a magic core.",
+  "tags": [
+   "orb",
+   "energy",
+   "plasma",
+   "power",
+   "crackle"
+  ],
+  "group": "loops",
+  "ends": "as-started",
+  "needs": "one thing",
+  "ms": 2400,
+  "fits": "rare",
+  "draws": {
+   "by": [
+    "canvas"
+   ],
+   "phoneSafe": true
+  },
+  "options": {
+   "arcCount": 5,
+   "filaments": 4,
+   "motes": 10,
+   "pulsePeriod": 2400,
+   "swell": 0.1
+  },
+  "since": "v0.129.0",
+  "usedBy": [],
+  "demo": {
+   "id": "demo-drawPlasmaOrb",
+   "stage": "demo",
+   "maxMs": 2400,
+   "actors": [
+    {
+     "id": "A",
+     "at": "a"
+    },
+    {
+     "id": "B",
+     "at": "b"
+    }
+   ],
+   "steps": [
+    {
+     "t": 0,
+     "dur": 2400,
+     "actor": "A",
+     "do": "drawPlasmaOrb"
+    }
+   ]
+  }
+ },
+ {
+  "id": "drawDriftCloud",
+  "was": [],
+  "title": "Drifts broken card shards across the screen",
+  "looks": "Triangle shards of artwork float, spin and fade with embers, in waves.",
+  "use": "A closing or ruined scene: what is left of the board.",
+  "tags": [
+   "shards",
+   "drift",
+   "ruin",
+   "float",
+   "pieces",
+   "embers"
+  ],
+  "group": "particles",
+  "ends": "as-started",
+  "needs": "one thing",
+  "ms": 5000,
+  "fits": "rare",
+  "draws": {
+   "by": [
+    "canvas"
+   ],
+   "phoneSafe": true
+  },
+  "options": {
+   "pieceCount": "none",
+   "cohortCount": "none",
+   "shards": "computed",
+   "survivors": "computed"
+  },
+  "since": "v0.129.0",
+  "usedBy": [],
+  "demo": {
+   "id": "demo-drawDriftCloud",
+   "stage": "demo",
+   "maxMs": 5000,
+   "actors": [
+    {
+     "id": "A",
+     "at": "a"
+    },
+    {
+     "id": "B",
+     "at": "b"
+    }
+   ],
+   "steps": [
+    {
+     "t": 0,
+     "dur": 5000,
+     "actor": "A",
+     "do": "drawDriftCloud"
+    }
+   ]
+  }
+ },
+ {
+  "id": "pileLift",
+  "was": [],
+  "title": "Lifts a pile while a card flies off",
+  "looks": "The live pile rises with a shadow, holds, and settles when the game says the card arrived.",
+  "use": "A card is drawn from a deck or pile.",
+  "tags": [
+   "pile",
+   "deck",
+   "draw",
+   "lift",
+   "stack"
+  ],
+  "group": "move-and-fly",
+  "ends": "as-started",
+  "needs": "one thing",
+  "ms": 400,
+  "fits": "constant",
+  "draws": {
+   "by": [
+    "elements"
+   ],
+   "phoneSafe": true
+  },
+  "options": {
+   "lift": "0 -2%",
+   "scale": 1.04,
+   "shadow": "drop-shadow(0 12px 12px #0006)",
+   "liftMs": 250,
+   "settleMs": 300
+  },
+  "since": "v0.129.0",
+  "usedBy": [],
+  "demo": {
+   "id": "demo-pileLift",
+   "stage": "demo",
+   "maxMs": 400,
+   "actors": [
+    {
+     "id": "A",
+     "at": "a"
+    },
+    {
+     "id": "B",
+     "at": "b"
+    }
+   ],
+   "steps": [
+    {
+     "t": 0,
+     "dur": 400,
+     "actor": "A",
+     "do": "pileLift"
+    }
+   ]
+  }
+ },
+ {
+  "id": "flight",
+  "was": [],
+  "title": "Flies a card between screens smoothly",
+  "looks": "The card moves from an overlay to its board place with the browser's view transition.",
+  "use": "A card leaves a dialog and lands on the board.",
+  "tags": [
+   "fly",
+   "transition",
+   "card",
+   "land",
+   "move"
+  ],
+  "group": "move-and-fly",
+  "ends": "changed",
+  "needs": "source and target",
+  "ms": 400,
+  "fits": "constant",
+  "draws": {
+   "by": [
+    "elements"
+   ],
+   "phoneSafe": true
+  },
+  "options": {
+   "name": "none",
+   "className": "none"
+  },
+  "since": "v0.43.0",
+  "usedBy": [],
+  "demo": {
+   "id": "demo-flight",
+   "stage": "demo",
+   "maxMs": 400,
+   "actors": [
+    {
+     "id": "A",
+     "at": "a"
+    },
+    {
+     "id": "B",
+     "at": "b"
+    }
+   ],
+   "steps": [
+    {
+     "t": 0,
+     "dur": 400,
+     "actor": "A",
+     "do": "flight",
+     "to": "b"
+    }
+   ]
+  }
+ },
+ {
+  "id": "startPulse",
+  "was": [],
+  "title": "Pulses a live page element until stopped",
+  "looks": "A page element repeats a short change every period until the game stops it.",
+  "use": "A playable card or button waits, outside any beat.",
+  "tags": [
+   "pulse",
+   "throb",
+   "waiting",
+   "playable",
+   "loop"
+  ],
+  "group": "loops",
+  "ends": "as-started",
+  "needs": "one thing",
+  "ms": 1500,
+  "fits": "rare",
+  "draws": {
+   "by": [
+    "elements"
+   ],
+   "phoneSafe": true
+  },
+  "options": {
+   "frames": "computed",
+   "period": 1500,
+   "pseudo": "none",
+   "delay": "none",
+   "once": "none"
+  },
+  "since": "v0.125.0",
+  "usedBy": [],
+  "demo": {
+   "id": "demo-startPulse",
+   "stage": "demo",
+   "maxMs": 1500,
+   "actors": [
+    {
+     "id": "A",
+     "at": "a"
+    },
+    {
+     "id": "B",
+     "at": "b"
+    }
+   ],
+   "steps": [
+    {
+     "t": 0,
+     "dur": 1500,
+     "actor": "A",
+     "do": "startPulse"
+    }
+   ]
+  }
+ },
+ {
+  "id": "startIdle",
+  "was": [],
+  "title": "Keeps a live element bobbing or orbiting",
+  "looks": "A page element bobs, breathes, drifts or carries orbiting stars until the game stops it.",
+  "use": "An idle piece on the board, outside any beat.",
+  "tags": [
+   "idle",
+   "bob",
+   "breathe",
+   "orbit",
+   "alive"
+  ],
+  "group": "loops",
+  "ends": "as-started",
+  "needs": "one thing",
+  "ms": 2400,
+  "fits": "rare",
+  "draws": {
+   "by": [
+    "elements"
+   ],
+   "phoneSafe": true
+  },
+  "options": {
+   "kind": "none",
+   "rise": 8,
+   "period": "none",
+   "orbit": "none"
+  },
+  "since": "v0.125.0",
+  "usedBy": [],
+  "demo": {
+   "id": "demo-startIdle",
+   "stage": "demo",
+   "maxMs": 2400,
+   "actors": [
+    {
+     "id": "A",
+     "at": "a"
+    },
+    {
+     "id": "B",
+     "at": "b"
+    }
+   ],
+   "steps": [
+    {
+     "t": 0,
+     "dur": 2400,
+     "actor": "A",
+     "do": "startIdle"
+    }
+   ]
+  }
+ },
+ {
+  "id": "countUp",
+  "was": [],
+  "title": "Counts a number up in the game's text",
+  "looks": "A number in the game's own element rolls up to its value, easing out.",
+  "use": "A score or total in the game's UI changes.",
+  "tags": [
+   "count",
+   "number",
+   "score",
+   "tally",
+   "count up"
+  ],
+  "group": "text-and-numbers",
+  "ends": "changed",
+  "needs": "one thing",
+  "ms": 700,
+  "fits": "each round",
+  "draws": {
+   "by": [
+    "elements"
+   ],
+   "phoneSafe": true
+  },
+  "options": {
+   "value": "none",
+   "from": 0,
+   "ms": 700
+  },
+  "since": "v0.23.0",
+  "usedBy": [
+   "astra-imperium"
+  ],
+  "demo": {
+   "id": "demo-countUp",
+   "stage": "demo",
+   "maxMs": 700,
+   "actors": [
+    {
+     "id": "A",
+     "at": "a"
+    },
+    {
+     "id": "B",
+     "at": "b"
+    }
+   ],
+   "steps": [
+    {
+     "t": 0,
+     "dur": 700,
+     "actor": "A",
+     "do": "countUp"
+    }
+   ]
+  }
+ },
+ {
+  "id": "bannerAt",
+  "was": [],
+  "title": "Shows banner lines one after another",
+  "looks": "Lines of a banner appear one every 650 ms, the newest fading and scaling in.",
+  "use": "Several events announced in turn.",
+  "tags": [
+   "banner",
+   "lines",
+   "announce",
+   "list",
+   "sequence"
+  ],
+  "group": "text-and-numbers",
+  "ends": "as-started",
+  "needs": "one thing",
+  "ms": 2000,
+  "fits": "rare",
+  "draws": {
+   "by": [
+    "elements"
+   ],
+   "phoneSafe": true
+  },
+  "options": {
+   "frames": "none"
+  },
+  "since": "v0.43.0",
+  "usedBy": [],
+  "demo": {
+   "id": "demo-bannerAt",
+   "stage": "demo",
+   "maxMs": 2000,
+   "actors": [
+    {
+     "id": "A",
+     "at": "a"
+    },
+    {
+     "id": "B",
+     "at": "b"
+    }
+   ],
+   "steps": [
+    {
+     "t": 0,
+     "dur": 2000,
+     "actor": "A",
+     "do": "bannerAt"
+    }
+   ]
+  }
+ },
+ {
+  "id": "shakeAt",
+  "was": [],
+  "title": "Shakes the screen harder for bigger hits",
+  "looks": "The view jolts and wobbles with a strength that grows with the damage and fades quickly.",
+  "use": "A hit lands; a kill shakes harder.",
+  "tags": [
+   "screen shake",
+   "shake",
+   "impact",
+   "hit",
+   "trauma"
+  ],
+  "group": "camera",
+  "ends": "as-started",
+  "needs": "one thing",
+  "ms": 500,
+  "fits": "each round",
+  "draws": {
+   "by": [
+    "elements"
+   ],
+   "phoneSafe": true
+  },
+  "options": {
+   "max": 12,
+   "decayMs": 600,
+   "seed": 1,
+   "sine": "none"
+  },
+  "since": "v0.39.0",
+  "usedBy": [],
+  "demo": {
+   "id": "demo-shakeAt",
+   "stage": "demo",
+   "maxMs": 500,
+   "actors": [
+    {
+     "id": "A",
+     "at": "a"
+    },
+    {
+     "id": "B",
+     "at": "b"
+    }
+   ],
+   "steps": [
+    {
+     "t": 0,
+     "dur": 500,
+     "actor": "A",
+     "do": "shakeAt"
+    }
+   ]
+  }
+ }
+]
