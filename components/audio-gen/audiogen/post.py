@@ -109,7 +109,10 @@ def clean(src: Path, dst: Path, cue: Cue, cat: Category, rate: int, channels: in
                 src2 = dst.with_suffix(".flt.wav")
                 ff("-i", str(src), "-af", f"aresample={rate},{cat.filters}", "-c:a", "pcm_f32le", str(src2))
             rule = TailRule.from_category({"tail": cat.tail, "fadeOutMs": cat.fade_out_ms, "fadeInMs": cat.fade_in_ms})
-            y, info = apply_tail_info(list(decode_mono(src2, rate)), rate, cue.length, rule)
+            try:
+                y, info = apply_tail_info(list(decode_mono(src2, rate)), rate, cue.length, rule)
+            except ValueError as e:
+                raise PostError(f"{cue.name}: {e}") from e
             bad = check_cap(y, rate, cue.length, rule)
             if bad:
                 raise PostError(f"{cue.name}: {bad}")

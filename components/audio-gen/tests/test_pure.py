@@ -1,5 +1,8 @@
 """Pure parts: python3 -m unittest discover -s components/audio-gen/tests"""
+import contextlib
+import io
 import math
+import tempfile
 import sys
 import unittest
 from pathlib import Path
@@ -119,11 +122,14 @@ class Tail(unittest.TestCase):
         self.assertLess(len(y) / self.rate, 0.25)  # the 0.35 s minimum would give more
 
     def test_k512_no_key_unchanged(self):
+        # golden values taken from main's tail.py (before K512) on this fixed clip
         x = clip(self.rate, 0.1, 2.0, total_s=4.0)
         y, info = tail.apply_tail_info(x, self.rate, 0.2)
-        self.assertEqual(y, tail.apply_tail(x, self.rate, 0.2, tail.TailRule()))
+        self.assertEqual(len(y), 13600)
+        for i, v in ((100, 0.470228), (500, 0.470228), (1000, -0.466715), (3000, -0.411874), (len(y) - 200, -0.008113)):
+            self.assertAlmostEqual(y[i], v, places=5)
+        self.assertEqual(y, tail.apply_tail(x, self.rate, 0.2))
         self.assertFalse(info["capped"])
-        self.assertGreater(len(y) / self.rate, 1.5)
         r = tail.TailRule.from_category({"tail": {"maxLengthX": 1.5, "maxS": 2, "capFadeMs": 30}})
         self.assertEqual((r.max_length_x, r.max_s, r.cap_fade_ms), (1.5, 2, 30))
 
@@ -134,9 +140,52 @@ class Tail(unittest.TestCase):
         self.assertIn("past the", tail.check_cap(tail.apply_tail(x, self.rate, 0.2), self.rate, 0.2, r))
         self.assertEqual(tail.check_cap(tail.apply_tail(x, self.rate, 0.2), self.rate, 0.2, tail.TailRule()), "")
 
-    def test_k512_manifest_fields(self):
-        cli = (Path(__file__).parent.parent / "audiogen" / "cli.py").read_text(encoding="utf-8")
-        self.assertIn('e["tail"] = tail_info', cli)
+    def test_k512_silent_take_is_a_post_error(self):
+        from unittest import mock
+        from audiogen import post as P
+        from audiogen.spec import Category
+        cue = parse_cue({"name": "a", "prompt": "p", "category": "q", "length": 0.2}, None)
+        cat = Category(name="q", kind="sfx", lufs=-20, tail={"maxLengthX": 1.5})
+        with tempfile.TemporaryDirectory() as t, mock.patch.object(P, "decode_mono", lambda *a: [0.0] * 800):
+            with self.assertRaises(P.PostError):
+                P.clean(Path(t) / "s.wav", Path(t) / "d.wav", cue, cat, 8000, 1)
+
+    def test_k512_manifest_entry_has_tail(self):
+        import json
+        from unittest import mock
+        from audiogen import backends as B, cli, post as P
+        info = {"lengthBeforeMs": 1500.0, "lengthAfterMs": 310.0, "capped": True}
+        cfgd = {"root": ".", "outputDir": "out", "manifest": "out/manifest.json", "workDir": "work", "categories": {
+            "q": {"kind": "sfx", "lufs": -20, "backend": "sa3", "tail": {"maxLengthX": 1.5}},
+            "n": {"kind": "sfx", "lufs": -20, "backend": "sa3", "tail": {}}}, "backends": {"sa3": {"type": "stable-audio-3", "licence": "x"}}}
+        class Fake:
+            name, tool, model, licence, opts = "sa3", "t", "m", "x", {}
+            def check(self, cs): pass
+            def generate(self, jobs):
+                for j in jobs:
+                    j.out.write_bytes(b"x")
+                return [B.Result(job=j, path=j.out, seed=j.seed, model="m") for j in jobs]
+        def clean(src, dst, cue, cat, rate, ch):
+            return info if cue.name == "a" else None
+        with tempfile.TemporaryDirectory() as d:
+            d = Path(d)
+            (d / "c.json").write_text(json.dumps(cfgd))
+            (d / "s.json").write_text(json.dumps({"cues": [{"name": n, "prompt": "p", "category": n if n == "q" else "n", "length": 0.2} for n in ("a", "b")]}))
+            (d / "s.json").write_text(json.dumps({"cues": [{"name": "a", "prompt": "p", "category": "q", "length": 0.2}, {"name": "b", "prompt": "p", "category": "n", "length": 0.2}]}))
+            def deliver(fin, stem, cat, ch, rate, loop, tmp):
+                out = []
+                for ext in (".webm", ".m4a"):
+                    f = stem.with_suffix(ext); f.parent.mkdir(parents=True, exist_ok=True); f.write_bytes(b"x")
+                    out.append(P.Shipped(path=f, rate=rate, samples=100, true_peak=-3.0, integrated=-20.0, priming=0, lag=0))
+                return out[0], out[1], 0.0
+            with mock.patch.object(cli.B, "make", lambda *a: Fake()), mock.patch.object(P, "have_ffmpeg", lambda: True), \
+                    mock.patch.object(P, "to_wav", lambda *a: None), mock.patch.object(P, "clean", clean), \
+                    mock.patch.object(P, "normalise", lambda *a, **k: (P.Loudness(-20.0, -3.0, -3.0), "lufs")), \
+                    mock.patch.object(P, "deliver", deliver), contextlib.redirect_stdout(io.StringIO()):
+                self.assertEqual(cli.main(["generate", "--config", str(d / "c.json"), "--spec", str(d / "s.json")]), 0)
+            rows = {r["id"]: r for r in json.loads((d / "out" / "manifest.json").read_text())["files"]}
+            self.assertEqual(rows["a"]["tail"], info)
+            self.assertNotIn("tail", rows["b"])
 
     def test_silent_raises(self):
         with self.assertRaises(ValueError):
