@@ -82,6 +82,7 @@ graph LR
   ghost_card["ghost-card"]
   glossary["glossary"] --> phone_mode["phone-mode"]
   glossary["glossary"] --> state_machines["state-machines"]
+  grid_map["grid-map"]
   layout_editor["layout-editor"] --> board_layout["board-layout"]
   learned_opponent["learned-opponent"] --> engine_core["engine-core"]
   learned_opponent["learned-opponent"] --> sim_pool["sim-pool"]
@@ -188,6 +189,7 @@ graph LR
 - `dice-tray`
 - `e2e-helpers`
 - `ghost-card`
+- `grid-map`
 - `layout-editor`
 - `learned-opponent`
 - `lint-preset`
