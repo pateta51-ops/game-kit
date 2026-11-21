@@ -121,6 +121,8 @@ Generic effects: deal, move, flip, shake, highlight, beam, sparks, count-up, ban
 
 `board-model` (K118): spaces as data, adjacency computed once, named placement kinds resolved by the board, empty-board fixture. Idea from Terraforming Mars (GPL, written new); takes `board-layout` output through `fromLayout`.
 
+`grid-map` (K528): a square grid with walls, merged spaces and tiles that turn; steps, distance, shortest paths, line of sight and targeting shapes. Written for the kit: no older game had usable prior art.
+
 ## Risks to carry into the lifts
 
 - The STCC, EBR and Rome motion code descends from an open-source LOTR LCG project (BSD-3). Its notice file travels with every file taken from it.

@@ -89,6 +89,29 @@
     "release": 1,
     "gameSupplies": "The spaces, their neighbours and the placement kinds."
   },
+  "grid-map": {
+    "use": "A square grid board with walls: adjacent spaces, grid distance and range, shortest paths, line of sight, tiles that turn, and targeting shapes (within range, adjacent, row, column, line, area).",
+    "not": "Drawing the map; hex or graph boards (board-model); movement rules or costs per step.",
+    "title": "Square grid with walls and sight",
+    "tags": [
+      "grid",
+      "distance",
+      "range",
+      "wall",
+      "walls",
+      "adjacent",
+      "line of sight",
+      "sight",
+      "path",
+      "squares",
+      "tiles",
+      "targeting",
+      "area"
+    ],
+    "visible": false,
+    "release": 1,
+    "gameSupplies": "Rows, columns, the walls, merged spaces and tiles of its map."
+  },
   "board-registry": {
     "use": "The board UI needs to highlight things (spaces, pieces, markers, stacks) straight from the legal-action list.",
     "not": "Rules for what is legal; the engine decides that.",
