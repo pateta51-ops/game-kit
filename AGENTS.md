@@ -24,7 +24,7 @@ Needs Node 22.18+: tools run with plain `node` (no tsx, no build); relative impo
 - Pulling a newer tag happens only when the game needs something in it. Commit `kit/`.
 
 ## Choose components for a new game
-1. `search` / [CATALOG.md](docs/CATALOG.md): each entry says when to use it and when not.
+1. `search` / [CATALOG.md](docs/CATALOG.md): each entry says when to use it and when not. Effects: watch each one play in [gallery/effects.html](gallery/effects.html) (`node gallery/build.mjs` rebuilds it).
 2. Read the component's README (its "Use it in 10 lines" is real, type-checked code) and, for `engine-core`, its guides (`timing.md`, `undo.md`, `random.md`, `legal.md`, `debug.md`).
 3. `kit.mjs new` pulls the base set (`BASE` in `components/scaffold/scaffold.js`: engine-core, game-store, sim-pool, state-machines, app-frame, settings, saves, screens, lint-preset, ci-templates, check-runner, repo-gate, bundle-size); other tooling is pulled by hand (`--existing` for a repo that has files). Recipe: [new-game](docs/recipes/new-game.md).
 4. Before using a part, read its "## Rules for agents" section (`kit/components/<name>/README.md` in a game) and follow every "You must".
