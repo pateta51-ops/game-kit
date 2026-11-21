@@ -101,7 +101,9 @@ async function run(f) {
   if (!f.cmd.length) { say('usage: heavy run [--priority high|normal] [--label <text>] [--slots <n|all>] [--mem <GiB>] -- <cmd...>'); return 2; }
   if (f.mem !== undefined) {
     if (!(Number(f.mem) > 0)) { say(`--mem needs a number of GiB, got ${f.mem}`); return 2; }
-    const capped = capCmd(Number(f.mem), f.cmd);
+    const tries = Number(process.env.HEAVY_CAP_RETRIES ?? 6) || 1, wait = Number(process.env.HEAVY_CAP_WAIT_MS ?? 10000);
+    let capped = capCmd(Number(f.mem), f.cmd);
+    for (let i = 1; !capped && i < tries; i++) { say(`memory cap not ready, retrying in ${wait / 1000} s (${i}/${tries})`); await new Promise((r) => setTimeout(r, wait)); capped = capCmd(Number(f.mem), f.cmd); }
     if (!capped) { say(`cannot set a ${f.mem} GiB memory cap (systemd-run --user --scope failed, or its cgroup does not show the cap): not running uncapped`); return 4; }
     f.cmd = capped;
   }
