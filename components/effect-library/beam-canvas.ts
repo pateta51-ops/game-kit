@@ -124,7 +124,8 @@ export const curvedBeam: CanvasEffect = (ctx, t, { call }) => {
   ctx.scale(unit, unit);
   ctx.translate(-src[0], -src[1]);
   const a: Point = src;
-  const c = o.control ?? [(src[0] + dst[0]) / 2, (src[1] + dst[1]) / 2 - Math.hypot(dst[0] - src[0], dst[1] - src[1]) / 2];
+  const mid: Point = [(src[0] + dst[0]) / 2, (src[1] + dst[1]) / 2];
+  const c = o.control ?? [mid[0] + (dst[1] - src[1]) / 2, mid[1] - (dst[0] - src[0]) / 2];
   const local = ([x, y]: Point): Point => [a[0] + (x - a[0]) / unit, a[1] + (y - a[1]) / unit];
   const b = local(dst);
   const control = local(c);

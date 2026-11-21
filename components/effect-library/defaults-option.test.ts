@@ -74,12 +74,26 @@ describe('K504 option defaults', () => {
     setup({ do: 'projectile', miss: {} });
     expect(animate.mock.calls.some(([kf]) => (kf as Keyframe[]).some((f) => f['clipPath'] === 'inset(0)'))).toBe(true);
   });
-  it('bar-fill pin {} and true', () => {
+  it('bar-fill pin {} and true draw the pin: the number lands and the pin moves by the default delta', () => {
     for (const pin of [{}, true]) {
-      const { end } = setup({ do: 'bar-fill', pin });
+      const { end, context } = setup({ do: 'bar-fill', pin, to: 0.7 });
+      const el = context.el.querySelector<HTMLElement>('.fx-actor')!;
       end?.();
+      expect([el.textContent, el.style.translate]).toEqual(['0.7', '40px 10px']);
     }
   });
+  it('column-beam default curve is not collinear for a vertical beam', () => {
+    const { call, run, context } = setup({ do: 'unused', curve: true, to: [50, 250] });
+    const pts: number[][] = [];
+    const ctx = new Proxy({}, {
+      get: (_t, k) => k === 'lineTo' ? (...a: number[]) => pts.push(a) : () => ({ addColorStop: () => undefined }),
+      set: () => true,
+    }) as unknown as CanvasRenderingContext2D;
+    curvedBeam(ctx, 650, { call, run, layer: context, x: 0, y: 0 });
+    expect(pts.length).toBeGreaterThan(10);
+    expect(Math.max(...pts.map(([x]) => Math.abs(x! - pts[0]![0]!)))).toBeGreaterThan(5);
+  });
+  // spiral cases cover the no-image path only: jsdom never loads an image, so they cannot fail on the drawing
   const drawn: [string, Partial<Step> & Pick<Step, 'do'>, CanvasEffect][] = [
     ['shield-bubble recharge {}', { do: 'shield-bubble', recharge: {} }, shieldBubble],
     ['column-beam curve {}', { do: 'column-beam', curve: {} }, curvedBeam],
