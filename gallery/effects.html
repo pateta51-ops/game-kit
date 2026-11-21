@@ -176,6 +176,7 @@ var FX = (() => {
     COLUMN_BEAM_DEFAULTS: () => COLUMN_BEAM_DEFAULTS,
     CURVED_BEAM_DEFAULTS: () => CURVED_BEAM_DEFAULTS,
     DRIFT_CLOUD_DEFAULTS: () => DRIFT_CLOUD_DEFAULTS,
+    EFFECT_NAMES: () => EFFECT_NAMES,
     GLITCH_DEFAULTS: () => GLITCH_DEFAULTS,
     HOLD: () => HOLD,
     MISSION_MS: () => MISSION_MS,
@@ -5251,6 +5252,7 @@ void main() {
     for (const [id, v] of own) verbs.register(id, v);
     return createEffectLayer(o);
   }
+  var EFFECT_NAMES = ["arc-move", "banner", "bar-fill", "burn-away", "collapse-jump", "column-beam", "count", "crumple", "dash-line", "debris", "dissolve", "fade-in", "fade-out", "fizzle", "flash-jump", "flicker", "flip", "glow", "hide", "idle", "lift", "light-pillar", "light-sweep", "light-teleport", "motes", "move", "multi-stop-path", "particles-rise", "projectile", "pulse", "radar-sweep", "radial-streaks", "refresh", "reticle", "ring-pulse", "rotating-beam", "round-trip", "scale", "settle", "shake", "shake-group", "shatter", "sheen", "shield-bubble", "shimmer", "show", "slash", "spark-burst", "spin", "stamp", "streak-burst", "tap", "target-brackets", "text", "trail", "unroll", "untap", "warp-transfer"];
 
   // components/effect-library/ambience.ts
   function createAmbience(o) {
