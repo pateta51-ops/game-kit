@@ -199,6 +199,7 @@ export const BUILT_IN: Readonly<Record<string, Effect>> = {
   },
   'arc-move': arcMove,
   'multi-stop-path': multiStopMove,
+  'round-trip': multiStopMove,
   lift: ({ call, animate }) => {
     // K435-5: step `scale: false` lifts with no scale, `shadow: false` with no shadow
     const sc = call.step['scale'] === false ? '' : ` scale(${String(call.value ?? 1.08)})`;
@@ -414,30 +415,34 @@ export const BUILT_IN: Readonly<Record<string, Effect>> = {
   untap: rotate,
 };
 
+/** K506: old effect ids, each still registered beside its new id and playing the same verb; never removed. */
+export const OLD_IDS: Readonly<Record<string, string>> = { 'multi-stop-path': 'round-trip', 'collapse-jump': 'flash-jump', 'warp-transfer': 'light-teleport', 'radial-streaks': 'streak-burst', 'column-beam': 'light-pillar', 'rotating-beam': 'radar-sweep', 'dissolve': 'burn-away', 'motes': 'particles-rise', 'reticle': 'target-brackets', 'sheen': 'light-sweep' };
+
 /** The built-in verbs registered, and a layer made. Pass the registry to the motion player and the layer as its `context`. */
 export function registerEffects(verbs: VerbRegistry<EffectCtx>, o?: LayerOptions): EffectLayer {
+  const own = Object.values(OLD_IDS).flatMap((id) => { const v = verbs.get(id); return v ? [[id, v] as const] : []; });
   for (const [name, fx] of Object.entries(BUILT_IN)) registerEffect(verbs, name, fx);
   registerCanvasEffect(verbs, 'trail', trail);
-  registerCanvasEffect(verbs, 'radial-streaks', radialStreaks);
-  registerCanvasEffect(verbs, 'column-beam', curvedBeam);
-  const curve = verbs.get('column-beam');
-  registerEffect(verbs, 'column-beam', columnBeam);
-  const column = verbs.get('column-beam');
-  verbs.register('column-beam', (call, run) => (call.step['curve'] ? curve : column)?.(call, run));
-  registerEffect(verbs, 'collapse-jump', collapseJump);
+  registerCanvasEffect(verbs, 'streak-burst', radialStreaks);
+  registerCanvasEffect(verbs, 'light-pillar', curvedBeam);
+  const curve = verbs.get('light-pillar');
+  registerEffect(verbs, 'light-pillar', columnBeam);
+  const column = verbs.get('light-pillar');
+  verbs.register('light-pillar', (call, run) => (call.step['curve'] ? curve : column)?.(call, run));
+  registerEffect(verbs, 'flash-jump', collapseJump);
   registerEffect(verbs, 'count', count);
   registerEffect(verbs, 'banner', banner);
-  registerEffect(verbs, 'rotating-beam', rotatingBeam);
+  registerEffect(verbs, 'radar-sweep', rotatingBeam);
   registerEffect(verbs, 'projectile', projectile);
   const beam = verbs.get('projectile');
   registerCanvasEffect(verbs, 'projectile', bolt);
   const shot = verbs.get('projectile');
   verbs.register('projectile', (call, run) => (call.step['bolt'] ? shot : beam)?.(call, run));
-  registerCanvasEffect(verbs, 'dissolve', dissolveSmoke);
-  const smoke = verbs.get('dissolve');
-  registerEffect(verbs, 'dissolve', dissolve);
-  const burn = verbs.get('dissolve');
-  verbs.register('dissolve', (call, run) => {
+  registerCanvasEffect(verbs, 'burn-away', dissolveSmoke);
+  const smoke = verbs.get('burn-away');
+  registerEffect(verbs, 'burn-away', dissolve);
+  const burn = verbs.get('burn-away');
+  verbs.register('burn-away', (call, run) => {
     const endBurn = burn?.(call, run);
     const endSmoke = call.step['lift'] ? smoke?.(call, run) : undefined;
     return () => {
@@ -449,11 +454,11 @@ export function registerEffects(verbs: VerbRegistry<EffectCtx>, o?: LayerOptions
   registerEffect(verbs, 'shimmer', shimmer);
   registerEffect(verbs, 'ring-pulse', ringPulse);
   registerCanvasEffect(verbs, 'shield-bubble', shieldBubble);
-  registerCanvasEffect(verbs, 'warp-transfer', spiralTransfer);
-  const spiral = verbs.get('warp-transfer');
-  registerEffect(verbs, 'warp-transfer', warpTransfer);
-  const transfer = verbs.get('warp-transfer');
-  verbs.register('warp-transfer', (call, run) => (call.step['spiral'] ? spiral : transfer)?.(call, run));
+  registerCanvasEffect(verbs, 'light-teleport', spiralTransfer);
+  const spiral = verbs.get('light-teleport');
+  registerEffect(verbs, 'light-teleport', warpTransfer);
+  const transfer = verbs.get('light-teleport');
+  verbs.register('light-teleport', (call, run) => (call.step['spiral'] ? spiral : transfer)?.(call, run));
   verbs.register('shake-group', (call, run) => {
     const { selector, actors, amplitude = 6, crossAmplitude = 1, frames = 9 } = call.step;
     const targets = typeof selector === 'string'
@@ -468,23 +473,26 @@ export function registerEffects(verbs: VerbRegistry<EffectCtx>, o?: LayerOptions
     return () => animations.forEach((a) => a.cancel());
   });
   registerEffect(verbs, 'stamp', stamp);
-  registerEffect(verbs, 'motes', motes);
+  registerEffect(verbs, 'particles-rise', motes);
   registerEffect(verbs, 'flicker', flicker);
   registerEffect(verbs, 'bar-fill', barFill);
   registerEffect(verbs, 'refresh', refresh);
   registerEffect(verbs, 'pulse', pulseEffect);
   registerEffect(verbs, 'idle', idle);
   registerDashLine(verbs, o?.resolve, o?.stage);
-  registerCanvasEffect(verbs, 'reticle', reticle);
+  registerCanvasEffect(verbs, 'target-brackets', reticle);
   registerEffect(verbs, 'debris', debrisDom);
   const pieces = verbs.get('debris');
   registerCanvasEffect(verbs, 'debris', debris);
   const pixels = verbs.get('debris');
   verbs.register('debris', (call, run) => (call.step['dom'] ? pieces : pixels)?.(call, run));
-  registerEffect(verbs, 'sheen', sheen);
+  registerEffect(verbs, 'light-sweep', sheen);
   registerEffect(verbs, 'fizzle', fizzle);
   registerEffect(verbs, 'spark-burst', sparkBurst);
   registerCanvasEffect(verbs, 'slash', slash);
   registerCrumple(verbs);
+  // K506: an old id plays the kit's verb as before (last registration wins); a game's own verb under a new id, registered before, is kept
+  for (const [old, id] of Object.entries(OLD_IDS)) verbs.register(old, verbs.get(id)!);
+  for (const [id, v] of own) verbs.register(id, v);
   return createEffectLayer(o);
 }

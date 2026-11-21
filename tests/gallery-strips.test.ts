@@ -5,7 +5,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { expect, it } from 'vitest';
 
-const only = 'move,glow--latch,warp-transfer--mode-zip,dissolve,shatter,crumple';
+const only = 'move,glow--latch,light-teleport--mode-zip,burn-away,shatter,crumple';
 const shoot = (): string => {
   const out = mkdtempSync(join(tmpdir(), 'strips-'));
   execFileSync('node', ['gallery/build.mjs', '--strips', `--only=${only}`, `--out=${out}`], { stdio: 'pipe' });

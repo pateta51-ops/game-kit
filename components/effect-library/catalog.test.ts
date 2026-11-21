@@ -24,8 +24,13 @@ const sameLook = (s: unknown, v: unknown): boolean => JSON.stringify(s) === JSON
 function problems(entries: readonly Entry[]): string[] {
   const out: string[] = [];
   const fns = entries.filter((e) => !names.includes(e.id)).map((e) => e.id);
-  for (const n of names) if (!entries.some((e) => e.id === n)) out.push(`${n}: registered, no catalog entry`);
+  for (const n of names) if (!entries.some((e) => e.id === n || (e.was ?? []).includes(n))) out.push(`${n}: registered, no catalog entry`);
   const seen = new Set<string>();
+  // K506: notThis and pairs name an entry's id or old id, with an option after `--` (as strips are named)
+  const known = (r: string): boolean => {
+    const [b, rest] = r.split('--');
+    return entries.some((e) => (e.id === b || (e.was ?? []).includes(b!)) && (rest === undefined || Object.keys({ ...e.option, ...e.options }).some((k) => rest === k || rest.startsWith(k + '-'))));
+  };
   for (const e of entries) {
     const at = `${e.id}${e.option ? ` ${JSON.stringify(e.option)}` : ''}`;
     if (seen.has(at)) out.push(`${at}: listed twice`);
@@ -33,6 +38,11 @@ function problems(entries: readonly Entry[]): string[] {
     if (!names.includes(e.id) && !isFn(e.id)) out.push(`${at}: neither a registered effect nor an exported function`);
     for (const k of ['title', 'looks', 'use'] as const) if (typeof e[k] !== 'string' || !e[k].trim()) out.push(`${at}: ${k} missing`);
     if (!Array.isArray(e.was)) out.push(`${at}: was missing`);
+    if (!Array.isArray(e.notThis)) out.push(`${at}: notThis missing`);
+    else for (const n of e.notThis) if (!known(n.id) || typeof n.diff !== 'string' || !n.diff.trim()) out.push(`${at}: notThis ${n.id} is not an effect or has no diff`);
+    if (!Array.isArray(e.pairs)) out.push(`${at}: pairs missing`);
+    else for (const n of e.pairs) if (!known(n)) out.push(`${at}: pairs ${n} is not an effect`);
+    if (e.impactMs !== null && !(typeof e.impactMs === 'number' && e.impactMs >= 0 && typeof e.ms === 'number' && e.impactMs <= e.ms)) out.push(`${at}: impactMs is neither null nor within 0 to ms`);
     if (!Array.isArray(e.tags) || e.tags.length < 3 || e.tags.length > 8) out.push(`${at}: needs 3 to 8 tags`);
     if (typeof e.title === 'string' && e.title.split(/\s+/).length > 8) out.push(`${at}: title over 8 words`);
     if (!GROUPS.includes(e.group)) out.push(`${at}: group ${String(e.group)} is not one of ${GROUPS.join(', ')}`);
@@ -61,11 +71,20 @@ describe('K499 effect catalog', () => {
     expect(problems(catalog)).toEqual([]);
   });
   it('fails when an entry is removed, a tag list is short or a title names a game', () => {
-    expect(problems(catalog.filter((e) => e.id !== 'dissolve'))).toContain('dissolve: registered, no catalog entry');
+    expect(problems(catalog.filter((e) => e.id !== 'burn-away'))).toContain('burn-away: registered, no catalog entry');
     expect(problems(catalog.map((e, j) => (j === 0 ? { ...e, tags: ['a', 'b'] } : e)))).toContain('move: needs 3 to 8 tags');
     expect(problems(catalog.map((e, j) => (j === 0 ? { ...e, title: 'Slides a piece like in Unstoppable' } : e)))).toContain("move: a game's name in the title or tags");
     expect(problems(catalog.map((e, j) => (j === 0 ? { ...e, ms: 1 } : e))).some((p) => p.startsWith('move: ms is stale'))).toBe(true);
     expect(problems([...catalog, { ...catalog[0]!, id: 'nowhere' }])).toContain('nowhere: neither a registered effect nor an exported function');
+  });
+  it('K506 fails when notThis or pairs name no effect, or impactMs is outside 0 to ms', () => {
+    const one = (o: Partial<Entry>): string[] => problems(catalog.map((e, j) => (j === 0 ? { ...e, ...o } : e)));
+    expect(one({ notThis: [{ id: 'nowhere', diff: 'x' }] })).toContain('move: notThis nowhere is not an effect or has no diff');
+    expect(one({ notThis: [{ id: 'light-teleport--nomode-rise', diff: 'x' }] })).toContain('move: notThis light-teleport--nomode-rise is not an effect or has no diff');
+    expect(one({ pairs: ['nowhere'] })).toContain('move: pairs nowhere is not an effect');
+    expect(one({ impactMs: 401 })).toContain('move: impactMs is neither null nor within 0 to ms');
+    expect(one({ impactMs: -1 })).toContain('move: impactMs is neither null nor within 0 to ms');
+    expect(one({ pairs: ['dissolve', 'light-teleport--mode-rise'], impactMs: 400 })).toEqual([]);
   });
   it('the README lists the effects by group from catalog.json', () => {
     const readme = read('./README.md');
