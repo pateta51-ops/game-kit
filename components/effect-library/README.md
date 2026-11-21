@@ -2,6 +2,131 @@
 
 Sixteen verbs for the director's spec format as DOM effects for the motion frame: `move`, `arc-move`, `lift`, `settle`, `fade-in`, `fade-out`, `show`, `hide`, `flip`, `scale`, `shake`, `shake-group`, `glow`, `unroll`, `multi-stop-path`, `text`, and since K449 `count` and `banner`. Web Animations API; browser only. Beside them: canvas effects with a particle kit and `trail`, a count-up and a boxed ambience layer.
 
+<!-- effects:start (written by catalog-sync.ts from catalog.json) -->
+## Effects by group
+
+**move-and-fly**
+
+- `move`: Slides a piece straight to a new place
+- `arc-move`: Flies a piece in an arc
+- `multi-stop-path`: Flies a piece through several stops and back
+- `lift`: Raises a piece up off the table
+- `settle`: Sets a raised piece back down
+- `flip`: Turns a card over by squashing it flat
+- `flip` (direction: 1): Turns a card over in 3D
+- `scale`: Grows or shrinks a piece to a size
+- `spin`: Spins a piece round a number of turns
+- `tap`: Turns a card sideways to show it used
+- `untap`: Turns a sideways card upright again
+- `collapse-jump`: Shrinks to a point and reappears elsewhere
+- `warp-transfer` (mode: "zip"): Zips a token across leaving afterimages
+- `warp-transfer` (mode: "rise"): Raises a token then flies it straight
+- `warp-transfer` (mode: "portal"): Sucks a token through a spinning vortex
+- `warp-transfer` (spiral: true): Spirals a ship out with an engine trail
+- `pileLift`: Lifts a pile while a card flies off
+- `flight`: Flies a card between screens smoothly
+
+**appear-and-vanish**
+
+- `warp-transfer` (mode: "pop"): Pops an icon into view in place
+- `fade-in`: Fades a piece into view
+- `fade-in` (scale: 2): Fades in large and shrinks into place
+- `fade-out`: Fades a piece out of view
+- `show`: Shows a piece at once
+- `hide`: Hides a piece at once
+- `unroll`: Unrolls a panel open from one edge
+- `unroll` (reverse: true): Collapses a panel to a glowing line
+
+**light**
+
+- `glow`: Makes a piece glow once
+- `glow` (latch: true): Lights a piece and keeps it lit
+- `glow` (end: "dark"): Dims a lit piece to dark
+- `rotating-beam`: Sweeps a turning wedge of light round
+- `shield-bubble` (recharge: {}): Builds a hex shield up cell by cell
+- `flicker`: Flickers a coloured light over a piece
+- `flicker` (buzz: {}): Buzzes a piece like a bad signal
+- `sheen`: Sweeps a band of light across a piece
+
+**particles**
+
+- `radial-streaks`: Bursts streaks of light from a point
+- `motes`: Floats small lights up from a piece
+- `debris`: Throws small pieces out that fall
+- `spark-burst`: Bursts sparks out from a piece
+- `drawDriftCloud`: Drifts broken card shards across the screen
+
+**beams**
+
+- `warp-transfer`: Carries a token between two columns of light
+- `warp-transfer` (mode: "crossing"): Sends a line of light dots between places
+- `trail`: Draws a fading ribbon behind a flight
+- `column-beam`: Raises a column of light over a piece
+- `column-beam` (curve: true): Curves a beam of light to a target
+- `projectile`: Fires a steady beam at another piece
+- `projectile` (bolt: "streak"): Shoots a fast bolt with a tail
+- `projectile` (bolt: "ribbon"): Shoots a curved shot with a trail
+- `dash-line`: Draws a marching dashed line between pieces
+
+**hits-and-destruction**
+
+- `shake`: Shakes a piece side to side
+- `shake-group`: Shakes several pieces together
+- `dissolve`: Heats up, breaks apart, embers rise
+- `dissolve` (lift: true): Burns away into rising smoke
+- `shatter`: Shatters a piece into flying shards
+- `shimmer`: Ripples a shimmer where a hit lands
+- `ring-pulse` (shockwaves: [{}]): Blasts shockwave rings out from an impact
+- `shield-bubble`: Flashes a hex shield as a hit lands
+- `shield-bubble` (breaks: true): Breaks a hex shield into pieces
+- `fizzle`: Fizzles a piece out with grey static
+- `slash`: Slashes strokes across a piece
+- `crumple`: Crumples a card into a ball, throws it
+
+**text-and-numbers**
+
+- `warp-transfer` (mode: "bump"): Bumps a counter as it changes
+- `banner`: Unrolls a banner, shows text, fades away
+- `text`: Fades in text rising into place
+- `text` (typewriter: true): Types out text word by word
+- `count`: Counts a number up to its new value
+- `countUp`: Counts a number up in the game's text
+- `bannerAt`: Shows banner lines one after another
+
+**signals**
+
+- `scale` (pulse: true): Swells a piece once and back
+- `warp-transfer` (mode: "grey"): Greys out a piece in place
+- `ring-pulse`: Sends a ring outward from a piece
+- `stamp`: Stamps a label onto a piece
+- `stamp` (cracked: true): Stamps a cracked label onto a piece
+- `bar-fill`: Fills a bar from one level to another
+- `bar-fill` (pin: {}): Moves a numbered pin along a track
+- `refresh`: Clears a used card back to ready
+- `reticle`: Closes target brackets in on a piece
+
+**loops**
+
+- `spin` (endless: true): Keeps a piece spinning until the step ends
+- `pulse`: Pulses a piece in a steady rhythm
+- `idle` (kind: "bob"): Bobs a piece gently up and down
+- `idle` (kind: "breathe"): Breathes a piece softly in and out
+- `idle` (kind: "orbit"): Circles little stars round a piece
+- `idle` (kind: "drift"): Drifts a piece slowly away and back
+- `createGlitch`: Glitches a logo with split colour bursts
+- `drawPlasmaOrb`: Draws a crackling orb of energy
+- `startPulse`: Pulses a live page element until stopped
+- `startIdle`: Keeps a live element bobbing or orbiting
+
+**camera**
+
+- `cameraPull`: Zooms the board in and dims around it
+- `cameraPush`: Pushes the camera in and back
+- `letterboxBanner`: Slides in cinema bars with a caption
+- `shakeAt`: Shakes the screen harder for bigger hits
+
+<!-- effects:end -->
+
 ## Rules for agents
 
 **What it does:** Director-spec effects for the motion frame: sixteen DOM verbs (move, lift, flip, glow, text and more), canvas effects with a particle kit, `countUp`, ambience and many opt-in extras. Browser only.
@@ -15,6 +140,7 @@ Sixteen verbs for the director's spec format as DOM effects for the motion frame
 6. Add your own verbs with `registerEffect` (use `animate(keyframes, endStyle)` so a skip jumps to the end) or `registerCanvasEffect`.
 7. Use `countUp({ value, speed, show })` for counting numbers in your own code, or the `count` verb in a spec; neither writes game state.
 8. A step with `unroll` + `reverse: true` collapses the actor and ends it at opacity 0 (hidden): give a panel that leaves this, not `fade-out`. `glow` with `end: 'dark'` leaves the actor dark, and `stamp` with `cracked` leaves its crack on screen until the beat ends.
+9. To choose an effect, read "Effects by group" above or `catalog.json` (K499), not the option lists below. A new effect (a registered verb, a look one verb hides behind an option, or a function effect a game calls) arrives with its `catalog.json` entry and demo in the same PR: write `id`, `option` (for a look behind an option), `was`, `title` (up to 8 words, with a verb, what the player sees, no game's name), `looks`, `use`, `tags` (3 to 8), `group`, `ends` (`as-started`, `changed`, `hidden`), the option names (up to five) and `demo` (a spec on the stage `demo`: zones `a`, `b`, `board`, actors `A` and `B`), then run `node components/effect-library/catalog-sync.ts`. It derives `needs`, `ms`, `fits` (up to 400 ms constant, 900 each round, else rare), `draws` (from how it is registered; WebGL is not phone-safe), the option defaults (null: none found in the code), `since` (the first tag holding it; `--since` redoes them all) and, with `--games <dir>`, `usedBy`, and rewrites the list above. `catalog.test.ts` fails on a missing entry, a missing field, a bad demo, a game's name or a stale derived field.
 
 **Common mistakes:**
 - Reading `style.transform` for `move` or `scale`: they animate `translate` and `scale`.
