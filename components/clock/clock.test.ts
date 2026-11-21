@@ -108,6 +108,15 @@ describe('clock', () => {
     expect(ids(r.crossings)).toEqual(['second:land', 'first:land'])
     expect(r.crossings[0]?.threshold.data).toEqual({ n: 2 })
   })
+  it('step and setTo leave the input state unchanged', () => {
+    const spec: ClockSpec = { spaces: 5, start: 0, thresholds: [{ id: 'o', at: 1, on: 'landOrPass', once: true, kind: 'reward' }] }
+    const s = Object.freeze({ value: 0, fired: Object.freeze([] as string[]) })
+    const r = step(spec, s, 3)
+    expect(r.state).toEqual({ value: 3, fired: ['o'] })
+    expect(s).toEqual({ value: 0, fired: [] })
+    expect(setTo(spec, s, 4).value).toBe(4)
+    expect(s).toEqual({ value: 0, fired: [] })
+  })
   it('turns crossings into occurrence inputs', () => {
     const spec: ClockSpec = { spaces: 5, start: 0, thresholds: [{ id: 't', at: 1, on: 'pass', kind: 'reward' }] }
     expect(occurrences(step(spec, newClock(spec), 2).crossings)).toEqual([{ kind: 'clock.reward', keys: { target: 't' }, amount: 1 }])
@@ -126,5 +135,6 @@ describe('clock', () => {
     ])
     expect(checkClock({ spaces: 0, start: 0, thresholds: [] })).toEqual(['spaces must be a whole number above 0 or a list of ids'])
     expect(checkClock(null as unknown as ClockSpec)).toEqual(['spec is not an object'])
+    expect(checkClock({ spaces: 3, start: 0, thresholds: [null, 5, { id: 'k', at: 1, on: 'land', kind: 'x' }] } as unknown as ClockSpec)).toEqual(['threshold 0 is not an object', 'threshold 1 is not an object'])
   })
 })

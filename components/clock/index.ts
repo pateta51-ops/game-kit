@@ -88,7 +88,8 @@ export function checkClock(spec: ClockSpec): string[] {
   if (!Array.isArray(ts)) p.push('thresholds is not a list')
   else {
     const seen = new Set<string>()
-    for (const t of spec.thresholds) {
+    for (const [i, t] of spec.thresholds.entries()) {
+      if (!t || typeof t !== 'object') { p.push(`threshold ${i} is not an object`); continue }
       if (indexOf(spec, t.at) < 0) p.push(`threshold ${t.id}: at ${t.at} is not a space`)
       if (!['land', 'pass', 'landOrPass'].includes(t.on)) p.push(`threshold ${t.id}: on ${t.on} is not land, pass or landOrPass`)
       if (t.direction !== undefined && !['forward', 'back', 'either'].includes(t.direction)) p.push(`threshold ${t.id}: direction ${t.direction} is not forward, back or either`)

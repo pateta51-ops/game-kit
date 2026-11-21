@@ -23,7 +23,7 @@ A clock as rules data: a marker on a row of spaces (countdown, round tracker, da
 
 - `newClock(spec)`: `{ value, fired: [] }`. `spaceOf(spec, state)`: the space id (or index for a count). `indexOf(spec, space)`: index or -1.
 - `step(spec, state, by)`: `{ state, crossings }`; each crossing `{ threshold, from, to, space, how: 'land' | 'pass' }` (`from`, `to` are the step's ends, `space` the threshold's). The last space reached is the land, every space before it a pass. `stop`: the walk ends at the row's edge (either end). `wrap`: it goes round; a long step meets a space once per lap.
-- `setTo(spec, state, space)`: moves, fires nothing, keeps `fired`; an unknown space throws.
+- `setTo(spec, state, space)`: moves, fires nothing, keeps `fired`; an unknown space throws. `step(spec, s, target - s.value)` is pure and can be called as a dry run to ask what would fire.
 - `left(spec, state)`, `ended(spec, state)` (`stop` only: on the end space in the `direction`).
 - `valueAt(spec, state, key)`: `spec.values[key][state.value]` (a limit that depends on the marker's row).
 - `occurrences(crossings, prefix = 'clock.')`: engine-core `OccurrenceInput`s (`kind` `clock.<kind>`, `keys.target` the threshold id, `amount` 1), ready for `would(ctx, occurrences(r.crossings))` so triggers and windows see them.
