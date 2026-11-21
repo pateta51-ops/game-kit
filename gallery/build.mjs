@@ -38,7 +38,7 @@ if (process.argv.includes('--play')) {
 if (process.argv.includes('--strips')) {
   const { strips } = await import('./strips.mjs');
   const only = process.argv.find((a) => a.startsWith('--only='))?.slice(7).split(',');
-  process.exit(await strips({ entries: data.flatMap((g) => g.tiles.map((t) => ({ ...t, group: g.group }))), url: new URL('file:///' + out.replace(/\\/g, '/').replace(/^\/+/, '')).href, outDir: path.join(import.meta.dirname, 'strips'), only }));
+  process.exit(await strips({ entries: data.flatMap((g) => g.tiles.map((t) => ({ ...t, group: g.group }))), url: new URL('file:///' + out.replace(/\\/g, '/').replace(/^\/+/, '')).href, outDir: path.resolve(process.argv.find((a) => a.startsWith('--out='))?.slice(6) ?? path.join(import.meta.dirname, 'strips')), only }));
 }
 const { inlineKit } = await import('../tuners/build.mjs');
 const html = inlineKit(norm(fs.readFileSync(path.join(import.meta.dirname, 'src/effects.html'), 'utf8')))
