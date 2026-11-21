@@ -12,7 +12,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from .spec import Category, Cue
-from .tail import TailRule, apply_tail
+from .tail import TailRule, apply_tail_info, check_cap
 
 FFMPEG = "ffmpeg"
 FFPROBE = "ffprobe"
@@ -84,7 +84,7 @@ def to_wav(src: Path, dst: Path, rate: int, channels: int) -> None:
     ff("-i", str(src), "-ac", str(channels), "-ar", str(rate), "-c:a", "pcm_f32le", str(dst))
 
 
-def clean(src: Path, dst: Path, cue: Cue, cat: Category, rate: int, channels: int) -> None:
+def clean(src: Path, dst: Path, cue: Cue, cat: Category, rate: int, channels: int) -> dict | None:
     """Trim silence, apply the category filters, cut to length and fade (one-shots); cut, seam and fade (loops)."""
     chain: list[str] = [f"aresample={rate}"]
     if cue.is_loop:
@@ -108,14 +108,20 @@ def clean(src: Path, dst: Path, cue: Cue, cat: Category, rate: int, channels: in
             if cat.filters:
                 src2 = dst.with_suffix(".flt.wav")
                 ff("-i", str(src), "-af", f"aresample={rate},{cat.filters}", "-c:a", "pcm_f32le", str(src2))
-            y = apply_tail(list(decode_mono(src2, rate)), rate, cue.length,
-                           TailRule.from_category({"tail": cat.tail, "fadeOutMs": cat.fade_out_ms, "fadeInMs": cat.fade_in_ms}))
+            rule = TailRule.from_category({"tail": cat.tail, "fadeOutMs": cat.fade_out_ms, "fadeInMs": cat.fade_in_ms})
+            try:
+                y, info = apply_tail_info(list(decode_mono(src2, rate)), rate, cue.length, rule)
+            except ValueError as e:
+                raise PostError(f"{cue.name}: {e}") from e
+            bad = check_cap(y, rate, cue.length, rule)
+            if bad:
+                raise PostError(f"{cue.name}: {bad}")
             write_f32(pre, y, rate)
             ff("-i", str(pre), "-ac", str(channels), "-c:a", "pcm_f32le", str(dst))
         finally:
             pre.unlink(missing_ok=True)
             dst.with_suffix(".flt.wav").unlink(missing_ok=True)
-        return
+        return info if rule.cap_s(cue.length) is not None else None
     if cat.trim_silence:
         th = f"{cat.silence_db}dB"
         # leading silence, then trailing silence (reverse, trim leading, reverse back)

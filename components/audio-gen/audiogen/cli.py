@@ -196,6 +196,7 @@ def cmd_generate(cfg: Config, cues: list[Cue], args: argparse.Namespace, all_cue
 
     # post-process: decode, clean, (group) normalise, encode, check the shipped files
     cleaned: list[tuple[B.Result, Path, int]] = []
+    tail_info: dict[Any, dict] = {}
     for r in made:
         c = r.job.cue
         cat = cfg.categories[c.category]
@@ -205,7 +206,9 @@ def cmd_generate(cfg: Config, cues: list[Cue], args: argparse.Namespace, all_cue
         try:
             assert r.path is not None
             P.to_wav(r.path, dec, cfg.sample_rate, ch)
-            P.clean(dec, cl, c, cat, cfg.sample_rate, ch)
+            ti = P.clean(dec, cl, c, cat, cfg.sample_rate, ch)
+            if ti:
+                tail_info[(c.name, r.job.n)] = ti
             cleaned.append((r, cl, ch))
         except P.PostError as e:
             fail(c, r.job.n, r.job.out.name.split("--")[0], "post", f"{e} (raw kept: {r.path})")
@@ -235,6 +238,8 @@ def cmd_generate(cfg: Config, cues: list[Cue], args: argparse.Namespace, all_cue
             if not args.keep_tmp:
                 cl.unlink(missing_ok=True)
         e = _entry(cfg, c, cat, r, be, today, ch, webm, m4a, loud, rule, gg, extra_gain)
+        if (c.name, r.job.n) in tail_info:
+            e["tail"] = tail_info[(c.name, r.job.n)]
         entries.append(e)
         if not args.keep_tmp:
             (tmp_dir / f"{c.name}-{r.job.n}.final.wav").unlink(missing_ok=True)
