@@ -3,7 +3,7 @@
 Usage: <venv python> stable_audio_3_worker.py job.json     (written by audiogen; see audiogen/backends.py)
 Job options (config backends.<name>): model ("small-sfx", hf stabilityai/stable-audio-3-small-sfx), steps (8),
 cfg (1.0), half (true), minSeconds (7: shorter cues are generated at 7 s and cut by the pipeline), tries (4: a take
-with spectral flatness > 0.4, over 20 % of its energy above 8 kHz, or a peak at 1.0 is made again with seed + 1; each rejected take logs the test it failed), gate (K475: false skips the gate, or
+with spectral flatness > 0.4, over 20 % of its energy above 8 kHz, or a peak at 1.0 is made again with seed + 7919 k (never another variation's seed); each rejected take logs the test it failed), gate (K475: false skips the gate, or
 {flatness, high, peak} overrides those limits; a cue sets it in its options),
 sampler ("pingpong", the documented one; the package picks it only for rf_denoiser models, else euler), cacheDir (Hugging Face cache, outside any game repo).
 Per item: prompt, negativePrompt, seconds, seed.

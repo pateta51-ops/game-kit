@@ -524,10 +524,21 @@ class Sa3Retry(unittest.TestCase):
         from audiogen.recipe import first_good
         made = []
         take = lambda s: made.append(s) or s  # noqa: E731
-        self.assertEqual(first_good(take, lambda s: s < 12, 10, 4), (12, 12, 3))
-        self.assertEqual(made, [10, 11, 12])
+        self.assertEqual(first_good(take, lambda s: s < 7939, 10, 4), (15848, 15848, 3))
+        self.assertEqual(made, [10, 7929, 15848])
         with self.assertRaises(RuntimeError):
             first_good(take, lambda s: True, 10, 2)
+
+    def test_k503_retry_never_lands_on_another_variation_seed(self):
+        from audiogen.recipe import first_good
+        from audiogen.spec import Cue
+        c = Cue(name="x", prompt="p", category="sfx", length=1.0, seed=100)
+        v2, v3 = c.seed_for(2), c.seed_for(3)
+        made = []
+        take = lambda s: made.append(s) or s  # noqa: E731
+        _, seed, tr = first_good(take, lambda s: s == v2, v2, 4)
+        self.assertEqual((tr, seed), (2, v2 + 7919))
+        self.assertNotIn(v3, made)
 
     def test_k475_gate_per_cue_and_reason(self):
         from audiogen.recipe import first_good, sa3_bad, sa3_fail
@@ -547,7 +558,7 @@ class Sa3Retry(unittest.TestCase):
         with self.assertRaises(RuntimeError) as e, contextlib.redirect_stderr(err):
             first_good(lambda s: s, lambda s: f"high 0.{s} > 0.2", 30, 2)
         self.assertIn("take rejected, seed 30: high 0.30 > 0.2", err.getvalue())
-        self.assertIn("seed 30: high 0.30 > 0.2; seed 31: high 0.31 > 0.2", str(e.exception))
+        self.assertIn("seed 30: high 0.30 > 0.2; seed 7949: high 0.7949 > 0.2", str(e.exception))
 
 
 class Sa3Sampler(unittest.TestCase):

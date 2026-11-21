@@ -187,6 +187,12 @@ def cmd_generate(cfg: Config, cues: list[Cue], args: argparse.Namespace, all_cue
             side = r.job.out.with_suffix(".json")
             side.write_text(json.dumps({"seed": r.seed, "model": r.model, "extra": r.extra}), encoding="utf-8")
             made.append(r)
+    seen_seeds: dict[tuple[str, int], int] = {}
+    for r in made:
+        k = (r.job.cue.name, r.seed)
+        if k in seen_seeds:
+            print(f"WARNING: cue {r.job.cue.name}: variations {seen_seeds[k]} and {r.job.n} share seed {r.seed}: the same take")
+        seen_seeds.setdefault(k, r.job.n)
 
     # post-process: decode, clean, (group) normalise, encode, check the shipped files
     cleaned: list[tuple[B.Result, Path, int]] = []
