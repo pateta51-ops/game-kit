@@ -1537,8 +1537,7 @@
       "style",
       "sheet"
     ],
-    "looks": "A developer sheet showing every themed element.",
-    "visible": true,
+    "visible": false,
     "release": 1,
     "gameSupplies": "The token file, fonts and layout.",
     "entry": [
