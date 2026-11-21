@@ -55,9 +55,9 @@ describe('sound-player: format fallback (K508)', () => {
     expect(ctx.sources.some((s) => s.buffer?.id === 'a/tap.m4a')).toBe(true);
   });
   it('a webm that fails to decode is replaced by its m4a, which plays', async () => {
-    const real = FakeAudioContext.prototype.decodeAudioData;
+    const real = FakeAudioContext.prototype.decodeAudioData.bind(new FakeAudioContext());
     vi.spyOn(FakeAudioContext.prototype, 'decodeAudioData').mockImplementation(function (this: FakeAudioContext, d: ArrayBuffer) {
-      return new TextDecoder().decode(d).endsWith('.webm') ? Promise.reject(new Error('cannot decode')) : real.call(this, d);
+      return new TextDecoder().decode(d).endsWith('.webm') ? Promise.reject(new Error('cannot decode')) : real(d);
     });
     const { net, player, ctx } = await start([], { table: { cues: { tap: { files: ['x.webm'], tier: 'quiet' } } } });
     player.play('tap');
