@@ -23,6 +23,7 @@ Sounds, music and voice lines for a game, made with free local models in WSL and
 **Common mistakes:**
 - A cue sheet's generated prompt used for a music cue: it ends "no music, no voice" and gives seconds, so YuE2 gets a sound-effect prompt.
 - Naming a choir, a voice or singing (or, likely, a lone sustained solo line) in a YuE2 style: seeds then tend to fail the vocal gate and the batch ends with `failedGate` takes.
+- An SA3 take that fails the gate is made again with seed + 7919 k (K503), never seed + 1, which is the next variation's seed; `generate` prints a WARNING when two variations of one cue share a seed.
 - Believing the cue's `tempo`, `key` or `bars` steer the model: they do not reach it (they only set the cut length of a loop).
 - Running YuE2 with `queue: false` or beside other heavy jobs: the WSL VM can go down (two runs did).
 - Taking a `failedGate` take into the game without listening to it.

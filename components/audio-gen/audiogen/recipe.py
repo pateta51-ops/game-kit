@@ -176,15 +176,15 @@ def sa3_bad(flatness: float, high: float, peak: float, gate: dict | bool | None 
 
 
 def first_good(make, bad, seed: int, tries: int):
-    """make(seed) -> take; the first take `bad` passes, trying seed, seed + 1, ... Returns (take, seed, tries used);
+    """make(seed) -> take; the first take `bad` passes, trying the seeds of `seeds(seed, tries)` (a step of 7919, so a retry never lands on another variation's seed). Returns (take, seed, tries used);
     raises RuntimeError when every try was bad."""
     why = []
-    for tr in range(tries):
-        a = make(seed + tr)
+    for tr, sd in enumerate(seeds(seed, tries)):
+        a = make(sd)
         r = bad(a)
         if not r:
-            return a, seed + tr, tr + 1
-        why.append(f"seed {seed + tr}: {r if isinstance(r, str) else 'bad'}")
+            return a, sd, tr + 1
+        why.append(f"seed {sd}: {r if isinstance(r, str) else 'bad'}")
         print(f"take rejected, {why[-1]}", file=sys.stderr, flush=True)
     raise RuntimeError("every try was noise, hiss or clipped (" + "; ".join(why) + ")")
 
