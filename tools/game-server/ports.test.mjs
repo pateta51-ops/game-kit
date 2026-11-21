@@ -95,6 +95,8 @@ describe('add a game', () => {
     expect(s.block).toBe(Math.max(...Object.values(cfg.games).map((x) => x.block)) + 10);
     expect(Object.values(cfg.games).some((x) => x.serve.local === s.local || x.serve.https === s.https)).toBe(false);
     expect(nextSlot({ panel: P, games: { a: g(5180, 4171, 8441) } })).toEqual({ block: 6010, local: 4172, https: 8442 });
+    expect(nextSlot({ panel: P, toolsHttps: { q: 8442 }, games: { a: g(5180, 4171, 8441) } }).https).toBe(8443);
+    expect(validatePorts({ panel: P, toolsHttps: { q: 8441 }, games: { a: g(6010, 4171, 8441) } }).join()).toContain('https 8441 already used by toolsHttps.q');
   });
   it('adds one valid line and keeps the rest', () => {
     const s = nextSlot(cfg);
