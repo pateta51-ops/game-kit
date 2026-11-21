@@ -130,6 +130,7 @@ Sixteen verbs for the director's spec format as DOM effects for the motion frame
 ## Rules for agents
 
 **What it does:** Director-spec effects for the motion frame: sixteen DOM verbs (move, lift, flip, glow, text and more), canvas effects with a particle kit, `countUp`, ambience and many opt-in extras. Browser only.
+- An object option given as `{}` or `true` takes its defaults.
 
 **You must:**
 1. Create verbs with `createVerbs<EffectCtx>()`, call `registerEffects(verbs, { resolve })` and pass the returned layer as the motion player's `context`, with `onBeatEnd: (run) => layer.end(run)`.
