@@ -18,6 +18,8 @@ const O = gridMap({ rows: 5, cols: 5 })
 // 1 x 3 corridor with a wall between c0 and c1; `sealed` also walls the top and bottom of c1, so both wall ends are junctions
 const oneWall = gridMap({ rows: 1, cols: 3, walls: [[0, 1, 'w']] })
 const sealed = gridMap({ rows: 1, cols: 3, walls: [[0, 1, 'w'], [0, 1, 'n'], [0, 1, 's']] })
+// 3 x 3 with one wall segment between r1c0 and r1c1: both its ends are inside the board
+const gap = gridMap({ rows: 3, cols: 3, walls: [[1, 1, 'w']] })
 
 describe('grid-map: steps', () => {
   it('a wall blocks both ways, whichever side marks it', () => {
@@ -47,6 +49,26 @@ describe('grid-map: steps', () => {
     expect(neighbours(M, 'r1c0', { diagonal: true })).not.toContain('r0c1')
     expect(neighbours(M, 'r1c1', { diagonal: true })).not.toContain('r0c0')
     expect(neighbours(gridMap({ rows: 4, cols: 6 }), 'r0c0', { diagonal: true })).toEqual(['r0c1', 'r1c0', 'r1c1'])
+  })
+  it("wallEnd 'open' allows the diagonal through the free end of one wall segment, never through a junction", () => {
+    expect(neighbours(M, 'r0c0', { diagonal: true, wallEnd: 'open' })).toEqual(['r1c0', 'r1c1'])
+    expect(neighbours(M, 'r0c0', { diagonal: true, wallEnd: 'closed' })).toEqual(['r1c0'])
+    expect(neighbours(M, 'r1c0', { diagonal: true, wallEnd: 'open' })).toContain('r0c1')
+    expect(neighbours(M, 'r2c0', { diagonal: true, wallEnd: 'open' })).not.toContain('r3c1')
+    expect(neighbours(M, 'r3c0', { diagonal: true, wallEnd: 'open' })).not.toContain('r2c1')
+    expect(neighbours(M, 'r0c0', { wallEnd: 'open' })).toEqual(['r1c0'])
+    expect(distance(M, 'r0c0', 'r0c1', { diagonal: true, wallEnd: 'open' })).toBe(2)
+    expect(shortestPaths(M, 'r0c0', 'r0c1', { diagonal: true, wallEnd: 'open' }).paths).toEqual([['r0c0', 'r1c0', 'r0c1'], ['r0c0', 'r1c1', 'r0c1']])
+    expect(shortestPaths(M, 'r0c0', 'r0c1', { diagonal: true }).distance).toBe(3)
+    expect(within(M, 'r0c0', 1, { diagonal: true, wallEnd: 'open' })).toEqual(['r1c0', 'r1c1'])
+    expect(adjacent(M, 'r0c0', { diagonal: true, wallEnd: 'open' })).toEqual(['r1c0', 'r1c1'])
+    expect(line(M, 'r0c0', 'se', { stopAtWall: true, wallEnd: 'open' })).toEqual(['r1c1', 'r2c2', 'r3c3'])
+    expect(line(M, 'r2c0', 'se', { stopAtWall: true, wallEnd: 'open' })).toEqual([])
+  })
+  it('a diagonal between two plain cells past the corner of a merged space is a step', () => {
+    expect(neighbours(M, 'r0c5', { diagonal: true })).toContain('r1c5')
+    expect(neighbours(M, 'r0c4', { diagonal: true })).toEqual(['r0c3', 'r0c5', 'hall', 'r1c5'])
+    expect(neighbours(M, 'r1c5', { diagonal: true })).toContain('r0c4')
   })
   it('no diagonal step enters or leaves a merged space', () => {
     expect(neighbours(M, 'r0c2', { diagonal: true })).toEqual(['r0c1', 'r1c1', 'r1c2'])
@@ -109,10 +131,29 @@ describe('grid-map: lineOfSight', () => {
     expect(lineOfSight(M, 'hall', 'hall')).toBe(true)
   })
   it('touching the free end of a single wall segment is clear', () => {
-    expect(lineOfSight(oneWall, 'r0c0', 'r0c2')).toBe(true)
-    expect(lineOfSight(gridMap({ rows: 1, cols: 3, walls: [[0, 1, 'w'], [0, 1, 'n']] }), 'r0c0', 'r0c2')).toBe(true)
+    expect(lineOfSight(gap, 'r1c0', 'r1c2')).toBe(true)
+    expect(lineOfSight(gridMap({ rows: 3, cols: 3, walls: [[1, 1, 'w'], [0, 1, 'w']] }), 'r1c0', 'r1c2')).toBe(true)
+  })
+  it('a wall end on the border of the board is not a free end: a wall across the full width blocks', () => {
+    expect(lineOfSight(oneWall, 'r0c0', 'r0c2')).toBe(false)
+    expect(lineOfSight(oneWall, 'r0c0', 'r0c1')).toBe(false)
+    expect(lineOfSight(oneWall, 'r0c1', 'r0c2')).toBe(true)
+    expect(lineOfSight(gridMap({ rows: 2, cols: 3, walls: [[0, 1, 'w']] }), 'r0c0', 'r0c2')).toBe(true)
+    expect(lineOfSight(gridMap({ rows: 2, cols: 3, walls: [[0, 1, 'w'], [1, 1, 'w']] }), 'r0c0', 'r0c2')).toBe(false)
+  })
+  it('a wall lying on the border of the board blocks no sight', () => {
+    expect(lineOfSight(gridMap({ rows: 1, cols: 3, walls: [[0, 1, 'n'], [0, 1, 's'], [0, 0, 'w']] }), 'r0c0', 'r0c2')).toBe(true)
+  })
+  it('running along a wall blocks, where that alone decides', () => {
+    // the upper corners of r1c0 and r1c2 are wall junctions or border ends, so only segments on the line under them are left
+    const others: [number, number, 'n' | 'w'][] = [[1, 0, 'n'], [0, 1, 'w'], [1, 2, 'n'], [0, 2, 'w']]
+    expect(lineOfSight(gridMap({ rows: 3, cols: 3, walls: others }), 'r1c0', 'r1c2')).toBe(true)
+    expect(lineOfSight(gridMap({ rows: 3, cols: 3, walls: [...others, [2, 1, 'n']] }), 'r1c0', 'r1c2')).toBe(false)
   })
   it('touching a point where two wall segments meet blocks', () => {
+    expect(lineOfSight(gridMap({ rows: 3, cols: 3, walls: [[1, 1, 'w'], [0, 1, 'w'], [2, 1, 'w']] }), 'r1c0', 'r1c2')).toBe(false)
+    expect(lineOfSight(gridMap({ rows: 4, cols: 3, walls: [[1, 1, 'w'], [2, 1, 'w']] }), 'r1c0', 'r1c2')).toBe(true)
+    expect(lineOfSight(gridMap({ rows: 4, cols: 3, walls: [[1, 1, 'w'], [2, 1, 'w'], [0, 1, 'w']] }), 'r1c0', 'r1c2')).toBe(false)
     expect(lineOfSight(sealed, 'r0c0', 'r0c2')).toBe(false)
     expect(lineOfSight(sealed, 'r0c2', 'r0c0')).toBe(false)
     expect(lineOfSight(sealed, 'r0c0', 'r0c1')).toBe(false)
@@ -212,7 +253,9 @@ describe('grid-map: targeting shapes on a walled grid', () => {
     expect(within(sealed, 'r0c0', 2)).toEqual([])
     expect(within(sealed, 'r0c0', 2, { throughWalls: true })).toEqual(['r0c1', 'r0c2'])
     expect(within(sealed, 'r0c0', 2, { throughWalls: true, sight: true })).toEqual([])
-    expect(within(oneWall, 'r0c0', 2, { throughWalls: true, sight: true })).toEqual(['r0c1', 'r0c2'])
+    expect(within(oneWall, 'r0c0', 2, { throughWalls: true, sight: true })).toEqual([])
+    expect(within(gap, 'r1c0', 1, { throughWalls: true, sight: true })).toEqual(['r0c0', 'r1c1', 'r2c0'])
+    expect(within(gap, 'r1c0', 1)).toEqual(['r0c0', 'r2c0'])
   })
   it('adjacent: walls block unless throughWalls', () => {
     expect(adjacent(M, 'r0c0')).toEqual(['r1c0'])
