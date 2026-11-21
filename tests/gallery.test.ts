@@ -1,6 +1,7 @@
 // K502: gallery/effects.html is current and has a tile for every catalog.json entry.
 import { spawnSync } from 'node:child_process';
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
+import { chromium } from 'playwright-core';
 import { describe, expect, it } from 'vitest';
 
 const root = new URL('../', import.meta.url);
@@ -23,4 +24,11 @@ describe('effects gallery (K502)', () => {
     expect(r.stderr).toBe('');
     expect(r.status).toBe(0);
   });
+
+  it.skipIf(!existsSync(chromium.executablePath()) && !process.env['CI'])('node gallery/build.mjs --play exits 0: every demo plays with no console error', () => {
+    const r = spawnSync(process.execPath, ['gallery/build.mjs', '--play'], { cwd: root, encoding: 'utf8' });
+    expect(r.stderr).toBe('');
+    expect(r.stdout).toContain(`gallery play: ${catalog.length} tiles, 0 console errors`);
+    expect(r.status).toBe(0);
+  }, 120_000);
 });
