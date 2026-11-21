@@ -368,7 +368,7 @@ Card tests on real cards. Test code only; the engine imports nothing here but `c
 The card-language shell (K206): card effects as data, one typed verb table where each verb has a field check, a handler that runs on engine-core and a text generator that prints the card's words from the same step. The game writes its own verbs; the standard pack (K232, `pack.ts`) gives the common ones.
 
 - **Also called:** Card effects written as data
-- **Words:** card, effects, data, verbs, text, validator, rules, language
+- **Words:** card, effects, data, verbs, text, validator, rules, language, offered, can resolve, unpayable cost, dry run
 - **Release:** 1.0; not seen
 - **The game supplies:** The verbs, with their field checks, handlers and text.
 - **Use it when:** A new game encodes card effects as data: verb table with handler, resume and text slots, validator, every-verb test; the standard verb pack (cardPack) on card-zones: draw, discard, mill, move, putIntoPlay, setAside, recall, gain, refill, shuffle, search, destroy, attach, detach, reveal, lookAt, scout, flip, exhaust, ready, chooseCards, chooseOption, may, chooseNumber, chooseDestination, choosePlayer, choosePayment, orderEffects, gainResource, pay, convert, adjust, seq, if, forEach, eachPlayer, repeat, count, later, payThen, custom; every card move through timing would; words overridable. Recipe: docs/recipes/card-effect.md.

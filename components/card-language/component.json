@@ -31,7 +31,7 @@
         "paths": [
           "src/engine/effects/opTable.ts (K507: OpRow { fields, run, text } on the game's own ctx, validateEffect over the rows; shape only, no game op)"
         ]
-      }
+      },
       {
         "game": "stcc",
         "commit": "27fb8882",
