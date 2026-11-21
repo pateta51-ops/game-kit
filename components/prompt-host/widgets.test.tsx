@@ -114,6 +114,33 @@ describe('widgets (K123 review)', () => {
     expect(container.querySelector('[class*="readout"]')?.textContent).toBe('XP 20');
   });
 
+  it('K522: PickAmount hideDone has no Done; onChange gives the stepped value for the game's own Confirm', () => {
+    const a = vi.fn<Answer>();
+    let cur: string[] = [];
+    const Band = () => (
+      <>
+        <PickAmount prompt={pr(opts('1', '2', '-3'))} view={null} answer={a} look={look} hideDone onChange={(p) => (cur = p)} />
+        <button type="button" onClick={() => a(cur)}>Confirm</button>
+      </>
+    );
+    render(<Band />);
+    expect(screen.queryByRole('button', { name: 'Done' })).toBeNull();
+    expect(cur).toEqual(['1']);
+    fireEvent.click(screen.getByRole('button', { name: '+' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Confirm' }));
+    expect(a).toHaveBeenCalledWith(['2']);
+    fireEvent.click(screen.getByRole('button', { name: '+' }));
+    expect(cur).toEqual([]);
+  });
+
+  it('K522: PickAmount without the option keeps Done and answers as before', () => {
+    const a = vi.fn<Answer>();
+    render(<PickAmount prompt={pr(opts('1', '2'))} view={null} answer={a} look={look} />);
+    fireEvent.click(screen.getByRole('button', { name: '+' }));
+    fireEvent.click(done());
+    expect(a).toHaveBeenCalledWith(['2']);
+  });
+
   it('idle words, title and look overrides', () => {
     const p = pr([{ id: 'a', enabled: true, idle: 'Changes nothing now' }, ...opts('b')], 1, 2);
     render(
