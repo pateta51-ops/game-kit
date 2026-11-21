@@ -41,6 +41,10 @@ export interface MusicDef {
   once?: Readonly<Record<string, string>>;
   /** `once` states that are temporary: entering one from a `once` track still playing shelves that track and its position; going back to it resumes there, going anywhere else drops the shelf. Looping layers keep their own clock and need no shelf. */
   interludes?: readonly string[];
+  /** State name to the ms of the fades (layers and `once` track) when entering that state; others use `fadeMs`. */
+  stateFadeMs?: Readonly<Record<string, number>>;
+  /** `once` state to the state entered when its track plays out (not when stopped early or shelved), or null for silence. */
+  then?: Readonly<Record<string, string | null>>;
 }
 
 export interface SoundTable {
@@ -106,6 +110,8 @@ export interface SoundPlayerOptions {
   /** Where the first tap is heard (default `window`). */
   target?: Listens;
   document?: Listens & { hidden: boolean };
+  /** A `once` music track played out (not stopped early): its state name, before any `then` chain. */
+  onMusicEnd?: (state: string) => void;
 }
 
 export interface SoundPlayer {
@@ -538,14 +544,15 @@ export function createSoundPlayer(o: SoundPlayerOptions): SoundPlayer {
       if (held) at = epoch + Math.ceil((Math.max(now, held.at + (m.holdMs ?? 0) / 1000) - epoch) / bar - 1e-6) * bar;
       if (wantState !== null && m.states[wantState] === undefined && m.once?.[wantState] === undefined) warn(`music state ${wantState}`, 'not in the table');
       const gains = wantState === null ? {} : (m.states[wantState] ?? {});
-      for (const [k, f] of layers) f.ramp(clamp01(gains[k] ?? 0), at, fadeMs);
+      const fade = (wantState === null ? undefined : m.stateFadeMs?.[wantState]) ?? fadeMs;
+      for (const [k, f] of layers) f.ramp(clamp01(gains[k] ?? 0), at, fade);
       if (held) pending = { at };
       else held = { at };
       if (once) {
         const len = tunes.get(once.name)?.duration ?? 0;
         if (wantState !== null && wantState !== once.name && m.interludes?.includes(wantState) && !m.interludes.includes(once.name) && once.at < at && at - once.at + once.off < len) shelf = { name: once.name, pos: at - once.at + once.off };
-        if (once.at <= now) once.f.ramp(0, at, fadeMs);
-        once.src.stop(once.at <= now ? at + fadeMs / 1000 + 0.01 : now);
+        if (once.at <= now) once.f.ramp(0, at, fade);
+        once.src.stop(once.at <= now ? at + fade / 1000 + 0.01 : now);
         once = null;
       }
       if (shelf && shelf.name !== wantState && !(wantState !== null && m.interludes?.includes(wantState))) shelf = null;
@@ -557,9 +564,20 @@ export function createSoundPlayer(o: SoundPlayerOptions): SoundPlayer {
         const src = ctx.createBufferSource();
         src.buffer = tune;
         src.connect(f.node);
-        src.onended = () => f.node.disconnect();
+        const mine = { f, src, at, off: pos, name: wantState ?? '' };
+        src.onended = () => {
+          f.node.disconnect();
+          if (once !== mine) return;
+          once = null;
+          o.onMusicEnd?.(mine.name);
+          const next = m.then?.[mine.name];
+          if (next === undefined) return;
+          wantState = next;
+          asked = undefined;
+          setState();
+        };
         src.start(at, pos);
-        once = { f, src, at, off: pos, name: wantState ?? '' };
+        once = mine;
       }
     };
     const setState = (): void => {
