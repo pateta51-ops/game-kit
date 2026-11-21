@@ -177,9 +177,11 @@ export function PickAmount<P extends Kinded, V>({ prompt, answer, look, start = 
   const n = prompt.options.length;
   const [at, setAt] = useState(start === 'last' ? n - 1 : start);
   const o = prompt.options[at];
+  const cb = useRef(onChange);
+  cb.current = onChange;
   useEffect(() => {
-    onChange?.(o?.enabled === true ? [o.id] : []);
-  });
+    cb.current?.(o?.enabled === true ? [o.id] : []);
+  }, [o?.id, o?.enabled]);
   return (
     <div className={look.cls('amount')}>
       <button type="button" className={look.cls('less')} disabled={at <= 0} onClick={() => setAt(at - 1)}>

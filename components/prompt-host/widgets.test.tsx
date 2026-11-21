@@ -1,4 +1,5 @@
 import { fireEvent, render, screen } from '@testing-library/react';
+import { useState } from 'react';
 import { describe, expect, it, vi } from 'vitest';
 import type { KernelOption } from '../engine-core/index.ts';
 import { BoardBar, defaultLook, Order, PickAmount, PickOptions, PromptHost, useBoardPick, type Answer, type Kinded, type Look, type WidgetProps, type Widgets } from './ui.ts';
@@ -131,6 +132,21 @@ describe('widgets (K123 review)', () => {
     expect(a).toHaveBeenCalledWith(['2']);
     fireEvent.click(screen.getByRole('button', { name: '+' }));
     expect(cur).toEqual([]);
+  });
+
+  it('K522: onChange that sets parent state does not loop: once on mount, once per step', () => {
+    const calls = vi.fn();
+    const Band = () => {
+      const [, setPicked] = useState<string[]>([]);
+      return <PickAmount prompt={pr(opts('1', '2', '3'))} view={null} answer={vi.fn<Answer>()} look={look} hideDone onChange={(p) => { calls(p); setPicked(p); }} />;
+    };
+    render(<Band />);
+    expect(calls).toHaveBeenCalledTimes(1);
+    fireEvent.click(screen.getByRole('button', { name: '+' }));
+    expect(calls).toHaveBeenCalledTimes(2);
+    fireEvent.click(screen.getByRole('button', { name: '+' }));
+    expect(calls).toHaveBeenCalledTimes(3);
+    expect(calls).toHaveBeenLastCalledWith(['3']);
   });
 
   it('K522: PickAmount without the option keeps Done and answers as before', () => {
