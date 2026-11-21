@@ -250,6 +250,9 @@ def parse_cue(obj: dict, cfg: Config | None, index: int = 0) -> Cue:
     if generate is not None and mode == "loop" and generate < skip + length + crossfade:
         raise SpecError(f"{where}: 'generate' {generate} s is less than skip + length + crossfade "
                         f"({skip + length + crossfade:.2f} s)")  # fmt: skip
+    cl = _num(obj, "capLength", where)
+    if cl is not None and cl <= 0:
+        raise SpecError(f"{where}: 'capLength' must be > 0, got {cl}")
     return Cue(
         name=name,
         prompt=prompt.strip(),
@@ -273,7 +276,7 @@ def parse_cue(obj: dict, cfg: Config | None, index: int = 0) -> Cue:
         options=dict(obj.get("options") or {}),
         notes=str(obj.get("notes", "")),
         lyrics=_lyrics(obj.get("lyrics"), where),
-        cap_length=float(_num(obj, "capLength", where)) if obj.get("capLength") is not None else None,
+        cap_length=float(cl) if cl is not None else None,
     )
 
 
