@@ -517,6 +517,9 @@ x
     ['hyphenated verdict', (t) => t.replace('| game code |', '| Game-code |'), null],
     ['table inside a code fence', (t) => t.replace(REPLY, '```\n| Layer | Kind | Source |\n|---|---|---|\n| Example | New | x |\n```\n\n' + REPLY), null],
     ['second table with a Kind column', (t) => t.replace(REPLY, '| Kit phase | Kind |\n|---|---|\n| GK530 | new |\n\n' + REPLY), null],
+    ['no reuse-map table', (t) => t.replace('| Layer | Kind | Source |', '| Part | Kind | Source |'), 'no table with Layer, Kind and Source'],
+    ['sheet line with no answer', (t) => t.replace('| Positions | one hero | `player-board` |', '| Positions |  | `player-board` |'), "line 'Positions' has no answer"],
+    ['no Game verbs row', (t) => t.replace('| Game verbs: none | 12 clauses, 12 covered by the pack | - | - | - |\n', ''), "no 'Game verbs' row"],
   ];
   it('a plan with a reuse map, game sheet, build-own table and kit-fit review passes; Pull rows checked at the tag', () => {
     const r = exec(GOOD);
@@ -529,8 +532,10 @@ x
     it(`${name}: ${want ?? 'no kit problem'}`, () => {
       const t = change(GOOD);
       expect(t).not.toBe(GOOD);
-      const p = problems(t);
+      const r = exec(t);
+      const p = r.out.split('\n').filter((l) => l.startsWith('PROBLEM kit:'));
       expect(want === null ? p : p.filter((l) => l.includes(want)).length > 0).toEqual(want === null ? [] : true);
+      expect(r.code).toBe(want === null ? 0 : 1);
     });
   it('kit-fit review: an empty file, a missing row, no file', () => {
     expect(problems(GOOD, '').some((l) => l.includes('missing or empty'))).toBe(true);
@@ -562,6 +567,8 @@ x
     expect(r.code).toBe(0);
   });
   it('a tag the kit lacks: the NOTE says to fetch tags', () => {
-    expect(exec(GOOD.replace('tag v0.227.1', 'tag v0.999.0')).out).toContain('tag v0.999.0 not in');
+    const r = exec(GOOD.replace('tag v0.227.1', 'tag v0.999.0'));
+    expect(r.out).toContain('tag v0.999.0 not in');
+    expect(r.code).toBe(0);
   });
 });
