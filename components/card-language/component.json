@@ -32,6 +32,41 @@
           "src/engine/effects/opTable.ts (K507: OpRow { fields, run, text } on the game's own ctx, validateEffect over the rows; shape only, no game op)"
         ]
       }
+      {
+        "game": "stcc",
+        "commit": "27fb8882",
+        "paths": [
+          "src/engine/text/resolve.ts (K529: cost judged as a whole, card-taking parts matched to distinct cards; cases only, written new)"
+        ]
+      },
+      {
+        "game": "imperium",
+        "commit": "d696640",
+        "paths": [
+          "src/engine/text/resolve.ts, src/engine/ops/structure.ts (K529: each cost part judged alone, dead options shown disabled; cases only)"
+        ]
+      },
+      {
+        "game": "unstoppable",
+        "commit": "d53c479",
+        "paths": [
+          "src/engine/effects/canResolve.ts (K529: a reason code with the answer; cases only)"
+        ]
+      },
+      {
+        "game": "ebr",
+        "commit": "b9b06107",
+        "paths": [
+          "src/engine/dryRun.ts (K529: run on a copy, one branch per answer, branch and task caps, yes / no / unknown; idea and cases, written new)"
+        ]
+      },
+      {
+        "game": "radiance",
+        "commit": "f400e41",
+        "paths": [
+          "src/engine/lang/verbs.ts (K529: dry run that stops at a random draw or a reveal; cases only)"
+        ]
+      }
     ],
     "compared": "Imperium src/engine/ops + text, Rome src/engine/ops, Unstoppable src/engine/effects, EBR src/engine/effects + describe: interpreters welded to their games; only the shell is shared (SELECTION.md)."
   },

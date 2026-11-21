@@ -17,8 +17,36 @@ The card-language shell (K206): card effects as data, one typed verb table where
 8. Keep value expressions out of bare lists of steps: only objects in a step position are read as steps.
 9. For triggers, use `when` on card data and `cardTriggers(cfg)`; every `if` name must be in `tests`, and an `optional` entry needs a `table` holding `may`, or it throws at build.
 10. A game on its own engine (not engine-core) uses `opTable.ts`: an `OpTable<Port, Op>` row `{ fields, run, text }` per op, `run` on the game's `EnginePort`; run ops only with `runOp`, print them only with `describeOps` (both wordings live in the row: `text`, optional `rules`), and check card data with `validateOps` in a test.
+11. Decide when an effect is offered in one place (K529): `cardPack({ offer, handlers: () => RULES.handlers })`, each knob set from a ruling of the game (cite it beside the knob). Never write your own "can this resolve" test in a verb or on screen; a game's own verb calls `pack.wouldChange(s, content, steps, env)`.
+
+**Offer policy (K529): the defaults and the knobs.** With no `offer` the pack does what it always did:
+- `may` always asks. `chooseOption` offers every option. `chooseCards` caps `min` and `max` at what is there (nothing there: asks nothing, `then` runs with no cards).
+- `choosePayment` bars a way that cannot be paid (`why: 'cannotPay'`, no code) and asks nothing when no way can be paid.
+- `payThen` starts only when every cost step is payable, each step judged alone on the state as it is: two steps of 2 gold with 3 gold start, the second `pay` refuses, and `then` still runs. `pay` and `convert` refuse (do nothing) when not payable.
+
+| The ruling says | Set |
+| --- | --- |
+| An optional effect that would change nothing is still asked | `noChange: 'ask'` (default) |
+| ... is not offered | `noChange: 'skip'` |
+| ... is shown but cannot be taken | `noChange: 'bar'` (yes is barred, code `noChange`, `cannotPay` or `unknown`) |
+| Each part of a cost is judged alone | `cost: 'parts'` (default) |
+| A cost is paid in full or not at all: resources are summed, two card-taking parts need two cards | `cost: 'whole'` (`payThen` and each `choosePayment` way; cards assigned by matching, a card may exhaust and then leave) |
+| "Choose N" with fewer than N there: choose what is there | `fewer: 'cap'` (default) |
+| ... the choice is not made at all | `fewer: 'exact'` (`chooseCards` below its `min` asks nothing and `then` does not run; "up to N" is `min: 0` and is never affected) |
+| A choice is offered even when no option does anything | `deadChoice: 'today'` (default) |
+| A choice with no option that changes anything is not offered | `deadChoice: 'skip'` (with one live option, all are offered as before) |
+| ... and each option that does nothing is shown barred | `deadChoice: 'bar'` (`chooseOption`: code `noChange`, `cannotPay` or `unknown`; `choosePayment`: code `cannotPay`) |
+| What nobody can know yet (hidden cards, a random draw) is offered | `unknown: 'offer'` (default) |
+| ... is not offered | `unknown: 'skip'` |
+
+The codes are engine-core's `reason` on a barred option (`bar`, read with `blocked(prompt)`, legal.md); the game turns them into words. `noChange` and `deadChoice` need `cfg.handlers` (the pack throws at build without it).
+
+**The check.** `pack.wouldChange(s, content, steps, env)` answers `'yes' | 'no' | 'unknown'` for `env.seat`: it runs the steps on a copy of the state with the game's handlers and stops at the first change of the game (`offer.view(s)`: what counts; default the state without stack, prompt, counters, log, timing, pending moves and rng). Each prompt forks one run per answer tried (the empty answer when `min` is 0, each single option when `min` is 0 or 1, else the first `min` options). Caps: `offer.branches` answers in all (default 32), `offer.tasks` tasks per answer (default 2000); a cap hit is `unknown`, never `no`. The real state, its rng and its log are never touched. `unknown` when nothing changed before: any `ctx.rng` call (it throws before drawing), a filter over cards `env.seat` cannot see, a prompt for another seat, a cap, an `EngineBugError`. A `may` inside counts when its body changes something; the `then` of a `payThen` does not run in the check, so an "if you do" part never counts on its own (paying the cost does). Inside the check the policy verbs ask as by default and `wouldChange` answers `unknown` (no nesting). `inDryRun()` is true while it runs: a custom verb that would read hidden cards checks it.
 
 **Common mistakes:**
+- A custom verb, test, count or filter that reads cards the acting seat cannot see: the check cannot notice, so guard it with `inDryRun()`.
+- Expecting `cost: 'whole'` by default: the default judges each cost step alone.
+- Using `offer.view` with bookkeeping in it: leave out turn counters and logs, or every effect "changes something".
 - Writing text for the screen apart from the verb's `text`: the words and the engine then differ.
 - A trigger `if` rechecked at resolve: only "source still active" is rechecked there.
 - A `custom` verb or `count` / filter name not in the config: throws `no custom verb` / `no count` / `no filter`.
