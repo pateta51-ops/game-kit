@@ -89,6 +89,7 @@ class Cue:
     group: str | None = None  # stems normalised together
     options: dict[str, Any] = field(default_factory=dict)  # passed to the backend as is
     notes: str = ""
+    cap_length: float | None = None  # K514: tail.maxLengthX multiplies this instead of length; never in raw_seconds or the raw stem
     lyrics: str = ""  # K485: YuE2 sung lyrics (section tags allowed); empty = instrumental
 
     @property
@@ -239,7 +240,7 @@ def parse_cue(obj: dict, cfg: Config | None, index: int = 0) -> Cue:
     known = {
         "name", "prompt", "negativePrompt", "category", "mode", "loop", "length", "variations", "tempo", "bars",
         "beatsPerBar", "key", "seed", "backend", "channels", "crossfade", "skip", "group", "options", "notes",
-        "generate", "maxDropDb", "lyrics",
+        "generate", "maxDropDb", "lyrics", "capLength",
     }  # fmt: skip
     unknown = set(obj) - known
     if unknown:
@@ -272,6 +273,7 @@ def parse_cue(obj: dict, cfg: Config | None, index: int = 0) -> Cue:
         options=dict(obj.get("options") or {}),
         notes=str(obj.get("notes", "")),
         lyrics=_lyrics(obj.get("lyrics"), where),
+        cap_length=float(_num(obj, "capLength", where)) if obj.get("capLength") is not None else None,
     )
 
 

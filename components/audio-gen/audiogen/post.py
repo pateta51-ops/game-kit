@@ -110,10 +110,10 @@ def clean(src: Path, dst: Path, cue: Cue, cat: Category, rate: int, channels: in
                 ff("-i", str(src), "-af", f"aresample={rate},{cat.filters}", "-c:a", "pcm_f32le", str(src2))
             rule = TailRule.from_category({"tail": cat.tail, "fadeOutMs": cat.fade_out_ms, "fadeInMs": cat.fade_in_ms})
             try:
-                y, info = apply_tail_info(list(decode_mono(src2, rate)), rate, cue.length, rule)
+                y, info = apply_tail_info(list(decode_mono(src2, rate)), rate, cue.length, rule, cue.cap_length)
             except ValueError as e:
                 raise PostError(f"{cue.name}: {e}") from e
-            bad = check_cap(y, rate, cue.length, rule)
+            bad = check_cap(y, rate, cue.length, rule, cue.cap_length)
             if bad:
                 raise PostError(f"{cue.name}: {bad}")
             write_f32(pre, y, rate)
@@ -121,7 +121,7 @@ def clean(src: Path, dst: Path, cue: Cue, cat: Category, rate: int, channels: in
         finally:
             pre.unlink(missing_ok=True)
             dst.with_suffix(".flt.wav").unlink(missing_ok=True)
-        return info if rule.cap_s(cue.length) is not None else None
+        return info if rule.cap_s(cue.cap_length or cue.length) is not None else None
     if cat.trim_silence:
         th = f"{cat.silence_db}dB"
         # leading silence, then trailing silence (reverse, trim leading, reverse back)

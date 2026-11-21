@@ -46,9 +46,9 @@ def apply_tail(x: list[float], rate: int, length: float, rule: TailRule | None =
     return apply_tail_info(x, rate, length, rule)[0]
 
 
-def check_cap(y: list[float], rate: int, length: float, rule: TailRule) -> str:
+def check_cap(y: list[float], rate: int, length: float, rule: TailRule, cap_length: float | None = None) -> str:
     """K512 gate: "" or a message when a finished clip is still audible (above endBelowDbfs) past its cap."""
-    cap = rule.cap_s(length)
+    cap = rule.cap_s(cap_length if cap_length is not None else length)
     pk = max((abs(v) for v in y), default=0.0)
     if cap is None or pk <= 0:
         return ""
@@ -60,7 +60,7 @@ def check_cap(y: list[float], rate: int, length: float, rule: TailRule) -> str:
     return ""
 
 
-def apply_tail_info(x: list[float], rate: int, length: float, rule: TailRule | None = None) -> tuple[list[float], dict]:
+def apply_tail_info(x: list[float], rate: int, length: float, rule: TailRule | None = None, cap_length: float | None = None) -> tuple[list[float], dict]:
     r = rule or TailRule()
     pk = max((abs(v) for v in x), default=0.0)
     if pk <= 0:
@@ -76,7 +76,7 @@ def apply_tail_info(x: list[float], rate: int, length: float, rule: TailRule | N
     e = min(e, s + int((length + r.max_extra_s) * rate))
     e = min(len(x), max(e, s + int(r.min_len_s * rate)))
     before = e - s
-    cap = r.cap_s(length)
+    cap = r.cap_s(cap_length if cap_length is not None else length)
     capped = False
     if cap is not None:
         ec = min(len(x), above[0] * fr + int(cap * rate))  # counted from the first sound; the minimum never overrides it
