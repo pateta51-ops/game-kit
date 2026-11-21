@@ -9,7 +9,7 @@ export interface ScreenInput {
   /** Icon code to its label (blank or missing = no label). */
   icons: Readonly<Record<string, string | undefined>>;
   /** Printed text per clause id. */
-  clauses: readonly { id: string; text: string }[];
+  clauses: readonly { id: string; text: string; /** Which numbers of the text are amounts (K532): a list (empty = none), or 'counted' = worked out at run time (the prompt must show some number). Unset: every number counts. */ amounts?: readonly string[] | 'counted' }[];
   /** Prompts a card test scanned: their clause and the words shown (`Delivery.screens`). */
   prompts: readonly { clause: string; shown: string; /** Option labels on screen (optional, K496). */ screenOptions?: readonly string[]; /** The engine prompt's options (optional, K496); compared with `screenOptions` one for one. */ engineOptions?: readonly unknown[] }[];
   /** Turns an engine option into its label; default `String`. */
@@ -39,9 +39,13 @@ export function screenProblems(i: ScreenInput): string[] {
   for (const code of [...new Set([...Object.keys(i.icons), ...used])].sort())
     if ((i.icons[code] ?? '').trim() === '') out.push(`icon ${code} has no label`);
   const text = new Map(i.clauses.map((x) => [x.id, x.text]));
+  const am = new Map(i.clauses.map((x) => [x.id, x.amounts]));
+  for (const x of i.clauses) if (Array.isArray(x.amounts)) for (const a of x.amounts) if (!numbers(x.text).includes(a)) out.push(`${x.id}: amount ${a} is not in its text`);
   for (const p of i.prompts) {
-    const want = numbers(text.get(p.clause) ?? '');
+    const a = am.get(p.clause);
     const got = new Set(numbers(p.shown));
+    if (a === 'counted') { if (got.size === 0) out.push(`prompt for ${p.clause}: no amount`); continue; }
+    const want = a ?? numbers(text.get(p.clause) ?? '');
     if (want.length > 0 && !want.some((w) => got.has(w))) out.push(`prompt for ${p.clause}: no amount`);
   }
   for (const p of i.prompts) {
