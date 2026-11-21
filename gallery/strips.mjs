@@ -47,6 +47,8 @@ const clock = () => {
   };
 };
 
+// entries whose look is no motion: show and hide switch at once
+const STILL = [];
 const paintShot = async (loc, o) => { await loc.page().evaluate(() => __paint()); return loc.screenshot(o); };
 
 export async function strips({ entries, url, outDir, only }) {
@@ -61,11 +63,13 @@ export async function strips({ entries, url, outDir, only }) {
     page.on('pageerror', (e) => errors.push(e.message));
     await page.goto(url);
     await page.addStyleTag({ content: `header,.head,.hint{display:none!important}.tile{display:none!important}.tile.shoot{display:grid!important;border:0!important;border-radius:0!important;width:${FW}px!important}.stage{width:${FW}px!important}main,section{padding:0!important;margin:0!important;max-width:none!important}.grid{display:block!important}` });
-    const L = await page.evaluate((i) => {
+    const L = await page.evaluate(([i, ms, old]) => {
       const id = 't' + i;
       tiles[id].tile.classList.add('shoot');
-      return specs[id].maxMs ?? Math.max(...specs[id].steps.map((s) => s.t + (s.dur ?? 0)));
-    }, idx);
+      const sp = specs[id], end = Math.max(...sp.steps.map((s) => s.t + (s.dur ?? 0)));
+      // the demo's real play time (spec length, steps' ends, the entry's ms), at least 400 ms
+      return old ? sp.maxMs ?? end : Math.max(400, sp.maxMs ?? 0, end, ms ?? 0);
+    }, [idx, entries[idx].ms, !!process.env.K505_OLD]);
     const step = Math.max(16, Math.round(L / 200));
     const adv = (ms) => page.evaluate((m) => __adv(m), ms);
     const live = () => page.evaluate((i) => tiles['t' + i].tile.classList.contains('playing'), idx);
@@ -121,11 +125,13 @@ export async function strips({ entries, url, outDir, only }) {
     }
     return c.toDataURL('image/png').split(',')[1];
   }, { spec, FW, FH, GAP, LAB, TITLE });
-  const byGroup = {};
+  const byGroup = {}, still = [];
   for (let i = 0; i < entries.length; i++) {
     const e = entries[i], name = stripName(e);
     if (only && !only.includes(name)) continue;
-    const png = await compose({ kind: 'strip', frames: await shoot(i) });
+    const frames = await shoot(i);
+    if (frames.slice(1, 4).every((f) => f.png === frames[0].png) && !STILL.includes(name)) still.push(name);
+    const png = await compose({ kind: 'strip', frames });
     fs.writeFileSync(path.join(outDir, name + '.png'), Buffer.from(png, 'base64'));
     (byGroup[e.group] ??= []).push({ title: e.title, id: name, png });
   }
@@ -133,7 +139,8 @@ export async function strips({ entries, url, outDir, only }) {
   await browser.close();
   let total = 0;
   for (const f of fs.readdirSync(outDir)) total += fs.statSync(path.join(outDir, f)).size;
+  console.log(`still strips (frames 2 to 4 equal frame 1, no visible motion): ${still.length}${still.length ? ': ' + still.join(', ') : ''}`);
   console.log(`gallery strips: ${entries.length} entries, ${(total / 1048576).toFixed(1)} MB, ${errors.length} page errors`);
   for (const e of errors) console.error(e);
-  return errors.length ? 1 : 0;
+  return errors.length || still.length ? 1 : 0;
 }
