@@ -265,6 +265,8 @@ def extract(path: Path, lines: list[str], heads: list[tuple[int, int, str]]) -> 
             if on:
                 briefs.extend(re.findall(r"BRIEF\s*§(\d+(?:\.\d+)*)", l))
                 reads.extend(re.findall(r"(?<!BRIEF )(?<!BRIEF)§(\d+(?:\.\d+)*)", l))
+                for m in re.finditer(r"(BRIEF\s*)?§((?:\d+\.)*)(\d+)\s*[-–]\s*§?\2(\d+)\b", l):  # a range of one major: every section in it
+                    (briefs if m.group(1) else reads).extend(f"{m.group(2)}{i}" for i in range(int(m.group(3)) + 1, int(m.group(4))))
 
     read_refs(out[-1])
     for t in toks:
