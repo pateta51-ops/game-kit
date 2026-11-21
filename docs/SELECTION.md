@@ -178,3 +178,4 @@ Components with no row above. Each starts from the game and commit in its `compo
 | `turn-flow` | 7th Inning Stretch `src/engine/rules.ts` `season.phase` chain (each phase task queues its work, then the next phase); Radiance has no engine yet; written new on engine-core with the phase table, seat order, skips and boundary calls (K264) | S |
 | `app-icons` (K291) | New; starting points: 7th Inning Stretch `scripts/app-icons.ts` (Chromium rendering) and Warp’s Edge `scripts/build-app-icons.ts` (opaque tile and safe sizing); game art remains game-owned | S |
 | `art-pipeline` (K374) | Earthborne Rangers `b9b06107` (art index, fetch, extract, CI cache, PDF render; URLs, pack registry and dossier parsing became config) and 7th Inning Stretch `5e0ad51` (art-build: copy to public with manifest) | L |
+| `clock` (K530) | none: written new for the kit (each game's clock was bespoke) | S |
