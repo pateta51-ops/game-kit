@@ -351,16 +351,31 @@ describe('heavy --mem and --slots (K474)', () => {
     const { f, d } = fake('exit 1');
     const d2 = mkdtempSync(join(tmpdir(), 'k474-'));
     const mark = join(d2, 'ran');
-    const r = await heavy(['run', '--mem', '7', '--', process.execPath, '-e', `require('fs').writeFileSync(${JSON.stringify(mark)}, 'x')`], { HEAVY_URL: await deadUrl(), HEAVY_SYSTEMD_RUN: f });
+    const r = await heavy(['run', '--mem', '7', '--', process.execPath, '-e', `require('fs').writeFileSync(${JSON.stringify(mark)}, 'x')`], { HEAVY_URL: await deadUrl(), HEAVY_SYSTEMD_RUN: f, HEAVY_CAP_RETRIES: '1' });
     expect(r.code).toBe(4);
     expect(r.err).toContain('not running uncapped');
     expect(existsSync(mark)).toBe(false);
     rmSync(d, { recursive: true }); rmSync(d2, { recursive: true });
   });
+  it.skipIf(!posix)('--mem retries the cap probe until the user systemd is up (K501)', async () => {
+    const { f, d } = fake('c="$0.count"; case "$*" in *memory.max*) n=$(cat "$c" 2>/dev/null || echo 0); echo $((n+1)) > "$c"; [ "$n" -lt 1 ] && exit 1; echo 7516192768; echo 0; exit 0;; esac; while [ "$1" != "--" ]; do shift; done; shift; exec "$@"');
+    const r = await heavy(['run', '--mem', '7', '--', process.execPath, '-e', 'process.exit(9)'], { HEAVY_URL: await deadUrl(), HEAVY_SYSTEMD_RUN: f, HEAVY_CAP_WAIT_MS: '10' });
+    expect(r.code).toBe(9);
+    expect(r.err).toContain('memory cap not ready, retrying in 0.01 s (1/6)');
+    rmSync(d, { recursive: true });
+  });
+  it.skipIf(!posix)('--mem still exits 4 after all the cap retries (K501)', async () => {
+    const { f, d } = fake('echo x >> "$0.log"; exit 1');
+    const r = await heavy(['run', '--mem', '7', '--', process.execPath, '-e', 'process.exit(0)'], { HEAVY_URL: await deadUrl(), HEAVY_SYSTEMD_RUN: f, HEAVY_CAP_WAIT_MS: '10', HEAVY_CAP_RETRIES: '3' });
+    expect(r.code).toBe(4);
+    expect(readFileSync(f + '.log', 'utf8').split('
+').filter(Boolean)).toHaveLength(3);
+    rmSync(d, { recursive: true });
+  });
   it.skipIf(!posix)('--mem refuses when the scope starts but the cgroup shows no cap (max) or a swap allowance', async () => {
     for (const out of ['echo max', 'echo 7516192768; echo max', 'echo 1073741824; echo 0']) {
       const { f, d } = fake(`case "$*" in *memory.max*) ${out}; exit 0;; esac; exit 0`);
-      const r = await heavy(['run', '--mem', '7', '--', process.execPath, '-e', 'process.exit(0)'], { HEAVY_URL: await deadUrl(), HEAVY_SYSTEMD_RUN: f });
+      const r = await heavy(['run', '--mem', '7', '--', process.execPath, '-e', 'process.exit(0)'], { HEAVY_URL: await deadUrl(), HEAVY_SYSTEMD_RUN: f, HEAVY_CAP_RETRIES: '1' });
       expect(r.code, out).toBe(4);
       expect(r.err).toContain('not running uncapped');
       rmSync(d, { recursive: true });
