@@ -178,7 +178,9 @@ export function PickAmount<P extends Kinded, V>({ prompt, answer, look, start = 
   const [at, setAt] = useState(start === 'last' ? n - 1 : start);
   const o = prompt.options[at];
   const cb = useRef(onChange);
-  cb.current = onChange;
+  useEffect(() => {
+    cb.current = onChange;
+  });
   useEffect(() => {
     cb.current?.(o?.enabled === true ? [o.id] : []);
   }, [o?.id, o?.enabled]);
