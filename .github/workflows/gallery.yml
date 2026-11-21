@@ -1,0 +1,28 @@
+name: gallery
+
+on:
+  workflow_dispatch:
+  push:
+    branches-ignore: [main]
+    paths: ['gallery/**', 'components/effect-library/**']
+
+permissions:
+  contents: read
+
+jobs:
+  strips:
+    name: gallery strips
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+      - run: npm ci --no-audit --no-fund
+      - run: npx playwright install --with-deps chromium
+      - run: node gallery/build.mjs --strips
+      - uses: actions/upload-artifact@v4
+        with:
+          name: gallery-strips
+          path: gallery/strips

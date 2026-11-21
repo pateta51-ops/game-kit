@@ -123,7 +123,7 @@ document.getElementById('count').textContent = n + ' effects';
 const verbs = MOTION.createVerbs();
 const layer = FX.registerEffects(verbs, {
   parent: tiles.t0.world, position: 'absolute',
-  resolve: (id, run) => tiles[run.timeline.id]?.world.querySelector(`:scope > [data-actor="${id}"]`) ?? undefined,
+  resolve: (id, run) => tiles[run.timeline.id]?.world.querySelector(`:scope > [data-actor="${id}" i]`) ?? undefined,
 });
 const tileOf = (run) => tiles[run.timeline.id];
 // The function effects a game calls itself, played here as verbs over the step's time.
@@ -161,7 +161,7 @@ FX.registerEffect(verbs, 'startIdle', ({ el: e }) => FX.startIdle(e, { kind: 'bo
 FX.registerEffect(verbs, 'countUp', ({ el: e }) => FX.countUp({ value: 12, speed: factor, show: (v) => { e.textContent = String(Math.round(v)); } }));
 FX.registerEffect(verbs, 'shakeAt', ({ call, run }) => {
   const { world } = tileOf(run);
-  const stop = loop(call, (t) => { const s = FX.shakeAt(t, 0, { seed: 3, max: 18 }); world.style.transform = `translate(${s.x}px, ${s.y}px) rotate(${s.rot}deg)`; });
+  const stop = loop(call, (t) => { const s = FX.shakeAt(t, 1, { seed: 3, max: 18 }); world.style.transform = `translate(${s.x}px, ${s.y}px) rotate(${s.rot}deg)`; });
   return () => { stop(); world.style.transform = ''; };
 });
 FX.registerEffect(verbs, 'bannerAt', ({ call, run }) => {
