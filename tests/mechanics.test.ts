@@ -99,6 +99,21 @@ describe('K524 mechanics page and search', () => {
     const out = r.kit('search', 'quuz').stdout.split('\n').filter(Boolean);
     expect(out.slice(-2)).toEqual(['nearest mechanic: quux -> not in the kit (candidate K901)', 'not in the kit by that name']);
   });
+  it('a nonsense miss prints no nearest line: only a shared word or a small edit distance counts', () => {
+    const r = fake();
+    const out = r.kit('search', 'zzgravity').stdout;
+    expect(out).not.toContain('nearest mechanic');
+    expect(out.endsWith('not in the kit by that name\n')).toBe(true);
+    expect(r.kit('search', 'zork', 'wibble').stdout).toContain('nearest mechanic: zorking, zork a blip -> ');
+  });
+  it('a search that hits only a "not in the kit" mechanics line is logged as a miss; a hit on a part is not', () => {
+    const r = fake();
+    expect(r.kit('search', 'zorking').stdout).toMatch(/^mechanic: zorking/);
+    expect(r.kit('search', 'quux').stdout).toBe('mechanic: quux -> not in the kit (candidate K901)\n');
+    const log = fs.readFileSync(path.join(tmp, '.game-kit', 'search-misses.log'), 'utf8');
+    expect(log).toMatch(/\d{4}-\d\d-\d\d quux\n$/);
+    expect(log).not.toContain('zorking');
+  });
   it('list prints one clean line per component: id, title, use', () => {
     expect(fake().kit('list').stdout).toBe('alpha: Alpha things. Use: You need Alpha things.\ntool: Tool things. Use: You need Tool things.\n');
   });
@@ -139,6 +154,19 @@ describe('K524 gate (scripts/mechanics-check.mjs)', () => {
     const h = fake((f) => { delete f.lines[1]!.pending; }).gate();
     expect(h.status).toBe(1);
     expect(h.stderr).toContain('"flarn": ghost is not a component');
+  });
+  it('a pending line fails once its row is done, also when the part exists', () => {
+    const open = fake((f) => { f.lines[0]!.pending = 'K900'; }).gate();
+    expect(open.status).toBe(0);
+    const g = fake((f) => { f.lines[0]!.pending = 'K902'; f.rows['K902'] = 'done'; }).gate();
+    expect(g.status).toBe(1);
+    expect(g.stderr).toContain('"zorking, zork a blip": row K902 is done: drop pending and name what it built');
+  });
+  it('a backticked name in read must be in the part\'s guide, README or code', () => {
+    expect(fake((f) => { f.lines[0]!.read = 'guide.md, `alpha`, `The alpha part`'; }).gate().status).toBe(0);
+    const g = fake((f) => { f.lines[0]!.read = 'guide.md, `alpha`, `nopeName(x)`'; }).gate();
+    expect(g.status).toBe(1);
+    expect(g.stderr).toContain('"zorking, zork a blip": `nopeName` is not in components/alpha/');
   });
   it('a guide that is not in the part folder fails', () => {
     const g = fake((f) => { f.lines[0]!.read = 'absent.md'; }).gate();

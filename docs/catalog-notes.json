@@ -16,7 +16,7 @@
     "gameSupplies": "The list of feats and the summary of each finished game."
   },
   "app-frame": {
-    "mechanics": "none: a screen part, no game mechanic",
+    "mechanics": "none: app shell and device support",
     "use": "Every browser game: hash routes, error boundary, lazy screens, start-up, the stage that scales to the window.",
     "not": "A game's own screens or look; it only hosts them.",
     "title": "Game page shell and start-up",
@@ -37,7 +37,7 @@
     "gameSupplies": "Its screens, route machine and crash screen."
   },
   "audio-gen": {
-    "mechanics": "none: effects, sound or voice, no game mechanic",
+    "mechanics": "none: sound or voice only",
     "use": "Making the game's sounds, music and voice lines offline with free local models (release 1.2 and 1.3 assets).",
     "not": "Playing sound in the browser (use sound-player and voice).",
     "title": "Make sounds, music and voices offline",
@@ -91,6 +91,29 @@
     "release": 1,
     "gameSupplies": "The spaces, their neighbours and the placement kinds."
   },
+  "grid-map": {
+    "use": "A square grid board with walls: adjacent spaces, grid distance and range, shortest paths, line of sight, tiles that turn, and targeting shapes (within range, adjacent, row, column, line, area).",
+    "not": "Drawing the map; hex or graph boards (board-model); movement rules or costs per step.",
+    "title": "Square grid with walls and sight",
+    "tags": [
+      "grid",
+      "distance",
+      "range",
+      "wall",
+      "walls",
+      "adjacent",
+      "line of sight",
+      "sight",
+      "path",
+      "squares",
+      "tiles",
+      "targeting",
+      "area"
+    ],
+    "visible": false,
+    "release": 1,
+    "gameSupplies": "Rows, columns, the walls, merged spaces and tiles of its map."
+  },
   "board-registry": {
     "use": "The board UI needs to highlight things (spaces, pieces, markers, stacks) straight from the legal-action list.",
     "not": "Rules for what is legal; the engine decides that.",
@@ -110,7 +133,7 @@
     "gameSupplies": "The board things and the legal-action list."
   },
   "board-viewport": {
-    "mechanics": "none: a screen part, no game mechanic",
+    "mechanics": "none: a way to point or pick on screen",
     "use": "Fit a large SVG or DOM board, zoom about a pointer, drag to pan, or move the camera to an action rect.",
     "not": "Phone app layout (phone-mode) or scrolling a target into view during a beat (motion-frame).",
     "title": "Zoom and drag a big board",
@@ -129,7 +152,7 @@
     "gameSupplies": "The board element and the rectangle to move to."
   },
   "boundary-check": {
-    "mechanics": "none: tooling, no game mechanic",
+    "mechanics": "none: build, CI or repository tooling",
     "use": "Checking a game's layering rules (engine does not import UI) and that a catalogue's faces exist.",
     "not": "General lint; use lint-preset.",
     "title": "Layering and missing-picture checks",
@@ -147,7 +170,7 @@
     "gameSupplies": "The folders to check and the list of catalogue faces."
   },
   "bug-reporter": {
-    "mechanics": "none: a screen part, no game mechanic",
+    "mechanics": "none: developer tooling",
     "use": "An in-game bug report with screenshot, markup, offline queue and a filed GitHub issue.",
     "not": "Crash screens (app-frame) or analytics.",
     "title": "In-game bug report with screenshot",
@@ -166,7 +189,7 @@
     "gameSupplies": "The filing target, game fonts and its own words."
   },
   "bundle-size": {
-    "mechanics": "none: tooling, no game mechanic",
+    "mechanics": "none: build, CI or repository tooling",
     "use": "A vite build must stay under a first-load size limit.",
     "not": "Runtime performance (perf).",
     "title": "Page download size limit",
@@ -222,7 +245,7 @@
     "gameSupplies": "Card views and the offsets and look."
   },
   "card-hand": {
-    "mechanics": "none: a screen part, no game mechanic",
+    "mechanics": "none: draws what the engine or the game decided",
     "use": "Showing a hand of cards (or an opponent's face-down hand) as a fan that fits any width, lifts on pointer or focus, marks legal, picked and barred cards from the prompt, reports taps, is a drag source, and animates draw-in and play glide; or, with layout=grid, the phone hand: whole cards in rows with a header slot.",
     "not": "The card face, shadows, glow, badges, colours (the game's, on data-part hooks); reordering a hand.",
     "title": "Fan of cards in hand",
@@ -296,7 +319,7 @@
     "gameSupplies": "The face layout, art, texts and icons."
   },
   "card-patches": {
-    "mechanics": "none: tooling, no game mechanic",
+    "mechanics": "none: content tooling (art, scans, card data)",
     "use": "The card data needs corrections without editing the source data.",
     "not": "Card behaviour; patches change data only.",
     "title": "Card data corrections",
@@ -314,7 +337,7 @@
     "gameSupplies": "The source card data and the fix files."
   },
   "card-pile": {
-    "mechanics": "none: a screen part, no game mechanic",
+    "mechanics": "none: draws what the engine or the game decided",
     "use": "A pile on the table: stack at rest, an animated fan to look through it, picks from it, a grid in the phone sheet.",
     "not": "A hand, dragging, card faces.",
     "title": "Draw pile, discard pile and fan view",
@@ -333,7 +356,7 @@
     "gameSupplies": "The pile contents, card views and the look."
   },
   "card-query": {
-    "mechanics": "none: tooling, no game mechanic",
+    "mechanics": "none: content tooling (art, scans, card data)",
     "use": "Cards must be searched or filtered by a small text query.",
     "not": "Game-rule target selection inside the engine.",
     "title": "Search cards with a text query",
@@ -368,7 +391,7 @@
     "gameSupplies": "The zones, their owners and who sees what."
   },
   "card-zoom": {
-    "mechanics": "none: a screen part, no game mechanic",
+    "mechanics": "none: draws what the engine or the game decided",
     "use": "The zoomed card as a full transcription: decoded printed text with icons, engine notes (errata, rulings), tokens, an icon legend and glossary links, rule ids stripped; unstyled sections with slots. Recipe: docs/recipes/card-face-zoom.md.",
     "not": "The card face (card-parts), the zoom's layout or look, or the glossary lookup itself (glossary).",
     "title": "Big card view with full text",
@@ -403,7 +426,7 @@
     "gameSupplies": "The challenge list in the game card language."
   },
   "check-runner": {
-    "mechanics": "none: tooling, no game mechanic",
+    "mechanics": "none: build, CI or repository tooling",
     "use": "Running `npm run check` lanes in parallel with process-tree timeouts and a drift check.",
     "not": "Writing the checks themselves.",
     "title": "Run all checks in parallel",
@@ -426,7 +449,7 @@
     ]
   },
   "ci-templates": {
-    "mechanics": "none: tooling, no game mechanic",
+    "mechanics": "none: build, CI or repository tooling",
     "use": "Rendering a game's CI workflows, full gate and local CI script from one `ci.config.json`.",
     "not": "Rules for what the gate contains (repo-gate, check-runner).",
     "title": "Build server workflows for a game",
@@ -499,7 +522,7 @@
     "gameSupplies": "The number, its label and the look."
   },
   "debug-console": {
-    "mechanics": "none: tooling, no game mechanic",
+    "mechanics": "none: developer tooling",
     "use": "A developer slash console over the engine-core debug edits.",
     "not": "Player-facing UI; it is a dev tool.",
     "title": "Developer command line",
@@ -516,7 +539,7 @@
     "gameSupplies": "The engine-core debug edits and the look."
   },
   "deck-motions": {
-    "mechanics": "none: effects, sound or voice, no game mechanic",
+    "mechanics": "none: motion only (release 1.1)",
     "use": "Cards fly from a pile to their places (deal, refill turn-over, deck cycle) and a pile riffles; piles found by data-pile; timing pure.",
     "not": "Which cards move (the game diffs its views), the card look, a market row slide or a fan (card-pile).",
     "title": "Dealing, refilling and shuffling motions",
@@ -551,6 +574,25 @@
     "release": 1,
     "gameSupplies": "The dice to compute odds for."
   },
+  "dice-patterns": {
+    "use": "Dice patterns as data (a pair, N the same, a run, odd or even, a sum against a number, a count, two pair, all or any) compiled to the test that dice-odds chance and dice-tray readRoll take, plus the smallest set of dice that meets one.",
+    "not": "Rolling dice, odds after rerolls, card sets or poker hands, dice formulas.",
+    "title": "Dice patterns: pair, run, sum",
+    "tags": [
+      "dice",
+      "pattern",
+      "check",
+      "pair",
+      "run",
+      "sum",
+      "same",
+      "different",
+      "condition"
+    ],
+    "visible": false,
+    "release": 1,
+    "gameSupplies": "Its patterns as plain data and what each one means."
+  },
   "dice-tray": {
     "use": "Dice in play, held dice, rolling through ctx.rng and the roll window content. Recipe: docs/recipes/dice.md.",
     "not": "Dice drawing or 3D (pieces-3d) and odds (dice-odds).",
@@ -569,7 +611,7 @@
     "gameSupplies": "The dice, their meanings and how they are drawn."
   },
   "drag-drop": {
-    "mechanics": "none: a screen part, no game mechanic",
+    "mechanics": "none: a way to point or pick on screen",
     "use": "Dragging a source (hand card, pile) onto a target on the board, both option ids of the open prompt: a drop answers as tap source then tap target through prompt-host useBoardPick, with the ghost, legal-target marks and animation.",
     "not": "Free dragging that answers nothing (reordering a hand, moving a panel); the look of the ghost and the targets.",
     "title": "Drag a card onto a target",
@@ -588,7 +630,7 @@
     "gameSupplies": "The sources, the targets and the open prompt options."
   },
   "e2e-helpers": {
-    "mechanics": "none: tooling, no game mechanic",
+    "mechanics": "none: test tooling",
     "use": "Playwright tests of a game that need shared helpers.",
     "not": "Unit tests (vitest).",
     "title": "Shared browser test helpers",
@@ -624,7 +666,7 @@
     "gameSupplies": "The peek events and the card face view."
   },
   "test-setup": {
-    "mechanics": "none: tooling, no game mechanic",
+    "mechanics": "none: test tooling",
     "use": "vitest setup in a game: jsdom stubs (scroll, matchMedia, observers), a fake pack and fake art for card components, a once-per-run real-pack cache that skips without the private pack.",
     "not": "Playwright tests (e2e-helpers).",
     "title": "Fake browser and fake data for tests",
@@ -643,7 +685,7 @@
     "gameSupplies": "The fake pack and art for its tests."
   },
   "effect-library": {
-    "mechanics": "none: effects, sound or voice, no game mechanic",
+    "mechanics": "none: motion only (release 1.1)",
     "use": "Release 1.1 visual effects: the twelve motion verbs, particles, ambience, canvas layers, an opt-in logo glitch.",
     "not": "Deciding which effect plays (the game's motion specs and motion-frame).",
     "title": "Visual effects for cards and pieces",
@@ -682,7 +724,7 @@
     "gameSupplies": "The rules: state, actions, prompts and set-up."
   },
   "game-log": {
-    "mechanics": "none: a screen part, no game mechanic",
+    "mechanics": "none: draws what the engine or the game decided",
     "use": "A readable game log derived from engine events through one table.",
     "not": "Engine event design (engine-core).",
     "title": "Readable game log from events",
@@ -716,7 +758,7 @@
     "gameSupplies": "One defineGame object: rules, content, seats, start."
   },
   "ghost-card": {
-    "mechanics": "none: a screen part, no game mechanic",
+    "mechanics": "none: draws what the engine or the game decided",
     "use": "A prompt's source card left play and the screen must show its last-known snapshot.",
     "not": "Cards still in play.",
     "title": "Last-known card snapshot",
@@ -735,7 +777,7 @@
     "gameSupplies": "The snapshot data and the card view."
   },
   "glossary": {
-    "mechanics": "none: a screen part, no game mechanic",
+    "mechanics": "none: shows or checks text on screen",
     "use": "Linking glossary terms and icon codes in any shown text to a lookup, with a coverage check.",
     "not": "Writing glossary text; the game owns it.",
     "title": "Glossary links in game text",
@@ -770,7 +812,7 @@
     "gameSupplies": "The game rules, a view and the training settings."
   },
   "layout-editor": {
-    "mechanics": "none: tooling, no game mechanic",
+    "mechanics": "none: developer tooling",
     "use": "Arranging a screen's zones by hand (owner, or the director's wireframe gate): a one-file editor whose JSON is a board-layout zones layout per screen; capture.mjs takes a running page's [data-zone] rects as the start.",
     "not": "Map click areas and adjacency (board-layout's Inkscape flow), or placing anything at run time (board-layout zone()).",
     "title": "Drag-to-place screen layout editor",
@@ -789,7 +831,7 @@
     "gameSupplies": "The zone names and the board picture."
   },
   "lint-preset": {
-    "mechanics": "none: tooling, no game mechanic",
+    "mechanics": "none: build, CI or repository tooling",
     "use": "ESLint flat-config blocks for a game's engine folder.",
     "not": "UI lint settings.",
     "title": "Code style rules for the engine",
@@ -828,7 +870,7 @@
     "gameSupplies": "The offers, prices, decks and card view."
   },
   "modal-dialog": {
-    "mechanics": "none: a screen part, no game mechanic",
+    "mechanics": "none: draws what the engine or the game decided",
     "use": "Show a dialog or confirm a choice over the board, with focus return and a scroll lock.",
     "not": "Rules for deciding when a game prompts the player.",
     "title": "Pop-up dialog and confirm box",
@@ -849,7 +891,7 @@
     ]
   },
   "motion-frame": {
-    "mechanics": "none: effects, sound or voice, no game mechanic",
+    "mechanics": "none: motion only (release 1.1)",
     "use": "Playing the director's motion specs (JSON beats) on the screen.",
     "not": "The effects themselves (effect-library) or game logic.",
     "title": "Motion player",
@@ -868,7 +910,7 @@
     "gameSupplies": "The motion spec files and the elements they name."
   },
   "offline": {
-    "mechanics": "none: tooling, no game mechanic",
+    "mechanics": "none: app shell and device support",
     "use": "The game must install and run offline: service worker plugin, register rule, update line.",
     "not": "Saving game data (saves).",
     "title": "Play without internet",
@@ -920,7 +962,7 @@
     "gameSupplies": "The view, candidate moves, advice and handlers."
   },
   "paced-view": {
-    "mechanics": "none: a screen part, no game mechanic",
+    "mechanics": "none: draws what the engine or the game decided",
     "use": "The table must show an answer's events one step at a time.",
     "not": "Animation itself (motion-frame, effect-library).",
     "title": "Step-by-step playback of an answer",
@@ -941,7 +983,7 @@
     "gameSupplies": "Its view and event types and the step function."
   },
   "perf": {
-    "mechanics": "none: tooling, no game mechanic",
+    "mechanics": "none: test tooling",
     "use": "A speed budget for `applyAction` over whole driver games; browser load, render and dispatch capture; exact compare of two results.",
     "not": "Bundle size (bundle-size).",
     "title": "Game speed limits",
@@ -960,7 +1002,7 @@
     "gameSupplies": "The game rules, a driver and the limits."
   },
   "phone-mode": {
-    "mechanics": "none: a screen part, no game mechanic",
+    "mechanics": "none: app shell and device support",
     "use": "The game has a phone layout: layout choice, fit zoom, safe areas, the one bottom sheet, second-tap commit.",
     "not": "Desktop-only games; some owners skip phone.",
     "title": "Phone screen layout",
@@ -979,7 +1021,7 @@
     "gameSupplies": "The layouts, breakpoints and the sheet content."
   },
   "picked-state": {
-    "mechanics": "none: a screen part, no game mechanic",
+    "mechanics": "none: draws what the engine or the game decided",
     "use": "Marking an option the player has picked, as tokens plus a helper.",
     "not": "Legality of options.",
     "title": "Marks on picked options",
@@ -1016,7 +1058,7 @@
     "gameSupplies": "The look: colours, faces and sizes."
   },
   "pieces-3d-verbs": {
-    "mechanics": "none: effects, sound or voice, no game mechanic",
+    "mechanics": "none: motion only (release 1.1)",
     "use": "Release 1.1: the shake, flip, move and settle verbs for pieces-3d dice and balls, over the effect library.",
     "not": "Drawing the pieces (pieces-3d); a 1.0 game never pulls it.",
     "title": "Roll, shake and flip for 3D pieces",
@@ -1036,7 +1078,7 @@
     "gameSupplies": "The dice or balls and the effect library."
   },
   "plain-text": {
-    "mechanics": "none: tooling, no game mechanic",
+    "mechanics": "none: shows or checks text on screen",
     "use": "Every line a person reads must be free of rule ids (`TURN-07`, `AR-12`).",
     "not": "Engine output, which keeps ids.",
     "title": "Keep rule ids off the screen",
@@ -1112,7 +1154,7 @@
     "gameSupplies": "The layout of zones and the cards in each."
   },
   "prompt-gallery": {
-    "mechanics": "none: tooling, no game mechanic",
+    "mechanics": "none: developer tooling",
     "use": "Showing one state per prompt kind and ending, with a check that no kind lacks one.",
     "not": "Runtime screens.",
     "title": "Gallery of every question and ending",
@@ -1132,7 +1174,7 @@
     "gameSupplies": "One state per prompt kind and per ending."
   },
   "proof-sheet": {
-    "mechanics": "none: tooling, no game mechanic",
+    "mechanics": "none: content tooling (art, scans, card data)",
     "use": "Review a pack’s faces beside fields, printed words, generated words and flags, with filters in the hash and a static export.",
     "not": "Designing faces, loading packs or deciding which findings a game should flag.",
     "title": "Review sheet of card faces and fields",
@@ -1189,7 +1231,7 @@
     "gameSupplies": "The source card and clause on each prompt."
   },
   "reference-game": {
-    "mechanics": "none: tooling, no game mechanic",
+    "mechanics": "none: test tooling",
     "use": "Kit CI only: a made-up game generated through the scaffold whose own check fails when a component interface drifts.",
     "not": "Pulling into a game or copying as a starter; use scaffold for a new game.",
     "title": "Tiny sample game that tests the kit",
@@ -1207,7 +1249,7 @@
     "exports": "`reference.test.ts`; template/ overlay for scaffold"
   },
   "replay-cli": {
-    "mechanics": "none: tooling, no game mechanic",
+    "mechanics": "none: test tooling",
     "use": "Headless replays, golden games and a determinism check across two checkouts.",
     "not": "Big simulation runs (sim-pool).",
     "title": "Replay saved games from the command line",
@@ -1229,7 +1271,7 @@
     ]
   },
   "repo-gate": {
-    "mechanics": "none: tooling, no game mechanic",
+    "mechanics": "none: build, CI or repository tooling",
     "use": "A repository gate: file sizes, secrets, session URLs, runner names, card ids in rules code, art budgets.",
     "not": "Code lint or tests.",
     "title": "Repository safety check",
@@ -1251,7 +1293,7 @@
     ]
   },
   "resolution-frame": {
-    "mechanics": "none: a screen part, no game mechanic",
+    "mechanics": "none: app shell and device support",
     "use": "A Resolution setting that lays out for a chosen screen size and scales to the window.",
     "not": "Phone layouts (phone-mode).",
     "title": "Screen-size setting",
@@ -1288,7 +1330,7 @@
     "gameSupplies": "The roster, decks, modes and slots."
   },
   "controls": {
-    "mechanics": "none: a screen part, no game mechanic",
+    "mechanics": "none: a way to point or pick on screen",
     "use": "Segmented, Toggle, Slider and TextField as plain behaviour parts that a game skins by data-part, replacing native selects, checkboxes and range inputs.",
     "not": "A game look, or form layout and validation.",
     "title": "Basic form controls",
@@ -1311,7 +1353,7 @@
     ]
   },
   "rules-screen": {
-    "mechanics": "none: a screen part, no game mechanic",
+    "mechanics": "none: shows or checks text on screen",
     "use": "Show a game-owned rulebook with contents, ranked search, glossary links, annotated diagrams and reference sheets.",
     "not": "Engine rules or deciding printed wording; the game owns the book and its assets.",
     "title": "In-game rulebook",
@@ -1349,7 +1391,7 @@
     "gameSupplies": "The game state type and the screen look."
   },
   "scaffold": {
-    "mechanics": "none: tooling, no game mechanic",
+    "mechanics": "none: build, CI or repository tooling",
     "use": "Starting a new game: one command makes the empty working repo (Vite, ESLint, Vitest, tsconfig, CI, kit pull, stub GameRules).",
     "not": "Anything inside a running game; it is a generator run from the kit checkout.",
     "title": "Start a new game project",
@@ -1368,7 +1410,7 @@
     "exports": "`node kit.mjs new <dir> <id> \"<Name>\"`; `scaffold(options)` in scaffold.js"
   },
   "scan-ingest": {
-    "mechanics": "none: tooling, no game mechanic",
+    "mechanics": "none: content tooling (art, scans, card data)",
     "use": "Turning flatbed scans into one cropped upright image per item; a printed board scan with live state drawn into its boxes, die-cut pieces at true size, playmat box detection, tone profile.",
     "not": "Scanning crew boards or anything shipped in-game.",
     "title": "Turn scans into cropped pictures",
@@ -1407,7 +1449,7 @@
     "gameSupplies": "The menu entries and the set-up fields."
   },
   "settings": {
-    "mechanics": "none: a screen part, no game mechanic",
+    "mechanics": "none: app shell and device support",
     "use": "Settings declared as data, a persisted store and a screen drawn from them.",
     "not": "Game rules options that change the engine (declare them as settings, read them in setup).",
     "title": "Settings store and screen",
@@ -1425,7 +1467,7 @@
     "gameSupplies": "The setting definitions, words and sections."
   },
   "dev-autoplay": {
-    "mechanics": "none: tooling, no game mechanic",
+    "mechanics": "none: developer tooling",
     "use": "A dev-only URL flag (?dev=1&autoplay=<prompt kind>[*n], steps=N, seat=S) that plays the game store with a sim-pool bot until the open prompt is of that kind, then stops so the developer lands on that screen; off in production builds.",
     "not": "Playing for the player in a release, or animating the bot (it answers at once).",
     "title": "Jump to a screen by auto-playing",
@@ -1462,7 +1504,7 @@
     "gameSupplies": "The game rules and a driver for each seat."
   },
   "small-helpers": {
-    "mechanics": "none: tooling, no game mechanic",
+    "mechanics": "none: small helpers with no rule in them",
     "use": "Icon with hidden word, text-key check, paired legality fixtures, relation index, base-aware asset paths, plural and number formats.",
     "not": "Anything with its own component.",
     "title": "Small pure helper functions",
@@ -1486,7 +1528,7 @@
     "gameSupplies": "Depends on the helper; see its entry."
   },
   "sound-player": {
-    "mechanics": "none: effects, sound or voice, no game mechanic",
+    "mechanics": "none: sound or voice only",
     "use": "Release 1.2 sound and music from one data table on Web Audio.",
     "not": "Voice lines (voice) or making audio (audio-gen).",
     "title": "Sound and music player",
@@ -1504,7 +1546,7 @@
     "gameSupplies": "The table of sounds and the audio files."
   },
   "state-machines": {
-    "mechanics": "none: a screen part, no game mechanic",
+    "mechanics": "none: small helpers with no rule in them",
     "use": "Naming a screen or flow state explicitly as a table instead of scattered flags.",
     "not": "Game engine state (engine-core).",
     "title": "Named screen states",
@@ -1521,7 +1563,6 @@
     "gameSupplies": "The table of states and moves."
   },
   "story": {
-    "mechanics": "none: a screen part, no game mechanic",
     "use": "Story, flavour text, panels and splash as data that never blocks play.",
     "not": "Rules text.",
     "title": "Story and flavour text panels",
@@ -1540,7 +1581,7 @@
     "gameSupplies": "The story lines and panels."
   },
   "table-panels": {
-    "mechanics": "none: a screen part, no game mechanic",
+    "mechanics": "none: draws what the engine or the game decided",
     "use": "The panels around the table, unstyled: log (event words with slots, by turn, seat filter), banner (turn, seat, phase, fires on change), game over (result, breakdown slot, rematch, review log, home), opponent turn (paced-view steps, what the viewer may see, skip to end).",
     "not": "Any look, layout or game text; the log data itself (game-log); the opponent's decisions (opponent).",
     "title": "Log, turn banner and game-over panels",
@@ -1560,7 +1601,7 @@
     "gameSupplies": "The words, layout and look."
   },
   "target-arrow": {
-    "mechanics": "none: a screen part, no game mechanic",
+    "mechanics": "none: a way to point or pick on screen",
     "use": "A curved targeting arrow from the card that asks to the pointer: snaps to legal targets, collapses into the chosen one, then a hit; holds token flights until the hit.",
     "not": "Prompt kinds, which prompts are targets, the prompt panel (prompt-host) or the arrow's colours.",
     "title": "Arrow from a card to its target",
@@ -1579,7 +1620,7 @@
     "gameSupplies": "The card, the legal targets and the look."
   },
   "theme-check": {
-    "mechanics": "none: tooling, no game mechanic",
+    "mechanics": "none: build, CI or repository tooling",
     "use": "Checking that the game's look lives in its token file, fonts and layout, and one dev page (Sheet) showing every registered component or view with its states and a hash filter.",
     "not": "Choosing the look; the director's wireframes and themes do that.",
     "title": "Check that the look lives in tokens",
@@ -1624,7 +1665,7 @@
     "gameSupplies": "The tokens, their count and the draw result."
   },
   "token-flights": {
-    "mechanics": "none: effects, sound or voice, no game mechanic",
+    "mechanics": "none: motion only (release 1.1)",
     "use": "Tokens that moved between two views fly from where they were to where they are, with a ledger that draws each token in one place at a time.",
     "not": "Cards flying, motion specs (motion-frame) or the token look.",
     "title": "Tokens fly between places",
@@ -1644,7 +1685,7 @@
     "gameSupplies": "The views before and after, and the token elements."
   },
   "art-pipeline": {
-    "mechanics": "none: tooling, no game mechanic",
+    "mechanics": "none: content tooling (art, scans, card data)",
     "use": "Game-free scripts for a card game's art, driven by the game's config: an index of one chosen image per card (order, overrides, degraded rule), fetch with sha256, sheet cells and crops, PDF pages as faces, a CI cache keyed on input hashes, publish to public with a manifest art-check reads.",
     "not": "Mapping card ids to files, the sources' URLs and parsing a dossier: those stay in the game and go in as config.",
     "title": "Get card art ready for the game",
@@ -1663,7 +1704,7 @@
     "exports": "Scripts: `art-index`, `art-fetch`, `art-extract`, `art-render-pdf`, `art-ci-cache`, `art-publish`; `lib`: `cellBox`, `decodePng`, `encodePng`, `imageSize`, `codec`"
   },
   "tooling-scripts": {
-    "mechanics": "none: tooling, no game mechanic",
+    "mechanics": "none: build, CI or repository tooling",
     "use": "Small repo scripts run with `node kit/tooling-scripts/<script>.ts` (art check, shots, text-leak, home screen, docs index). Recipe: docs/recipes/agent-workflow.md.",
     "not": "Game-specific scripts.",
     "title": "Small command-line tool scripts",
@@ -1691,7 +1732,7 @@
     "exports": "Scripts: `text-leak`, `art-check`, `shrink-png`, `mock-capture`, `contact-sheet`, `gen-from-table`, `docs-index`, `dossier-sync`, `fonts-fetch`, `woff`, `bundle-node`, `home-screen`, `move`, `lookup`, `launch`"
   },
   "traceability": {
-    "mechanics": "none: tooling, no game mechanic",
+    "mechanics": "none: test tooling",
     "use": "Test titles must cite the game's rule ids; gate configured in `trace.config.json`.",
     "not": "Showing ids on screen (plain-text forbids it).",
     "title": "Tests must cite rule ids",
@@ -1730,7 +1771,7 @@
     "gameSupplies": "The spaces, marker position and look."
   },
   "transcription-check": {
-    "mechanics": "none: tooling, no game mechanic",
+    "mechanics": "none: content tooling (art, scans, card data)",
     "use": "Printed items (cards, tiles, boards) are transcribed twice independently and the owner verifies them before they enter the real pack; also the face fit check (printed text fits its box at a pixel floor) and Python tools to measure, fit, autotune and crop-sheet faces.",
     "not": "Card rules or card-language checks (card-harness); anything that reads no files.",
     "title": "Double-checked card transcription",
@@ -1748,7 +1789,6 @@
     "gameSupplies": "The two transcriptions and the item list."
   },
   "tutorial": {
-    "mechanics": "none: a screen part, no game mechanic",
     "use": "A scripted tutorial on a seed with the lock that allows only the scripted answer.",
     "not": "Rules text or free-play hints.",
     "title": "Scripted tutorial on a fixed game",
@@ -1766,7 +1806,7 @@
     "gameSupplies": "The script, the seed and the phase table."
   },
   "ui-helpers": {
-    "mechanics": "none: a screen part, no game mechanic",
+    "mechanics": "none: small helpers with no rule in them",
     "use": "Small screen helpers: hover hold, inspect, rule sheet, toasts, prompt keys. For an engine-core prompt use prompt-host instead of createSelection and onlyForcedAnswer.",
     "not": "Any look or game type.",
     "title": "Small screen helper functions",
@@ -1789,7 +1829,7 @@
     "gameSupplies": "Depends on the helper; see its entry."
   },
   "voice": {
-    "mechanics": "none: effects, sound or voice, no game mechanic",
+    "mechanics": "none: sound or voice only",
     "use": "Release 1.3 voice lines on the sound player's voice bus, never twice the same.",
     "not": "Sound effects (sound-player).",
     "title": "Spoken lines player",
@@ -1823,7 +1863,7 @@
     "gameSupplies": "The table of rounds, turns, phases and steps."
   },
   "app-icons": {
-    "mechanics": "none: tooling, no game mechanic",
+    "mechanics": "none: build, CI or repository tooling",
     "use": "Generate opaque home-screen icons and a relative web manifest from game-owned art.",
     "not": "Creating artwork or choosing a game’s visual identity.",
     "title": "Home-screen icons and manifest",
@@ -1842,7 +1882,7 @@
     "exports": "buildIcons, headTags, insertHead (app-icons.mjs)"
   },
   "llm-playtester": {
-    "mechanics": "none: tooling, no game mechanic",
+    "mechanics": "none: test tooling",
     "use": "Headless whole-game playtests by Claude through a small game adapter (view, numbered options, choose): finds rules and screen bugs the model flags, adapter throws and illegal option lists, and saves each run's replay for a replay test; capped in dollars per run; --dummy plays the first option for free.",
     "not": "The in-game Claude opponent (a game's own server code) or balance sims at volume; use sim-pool for many cheap games.",
     "title": "Whole-game playtests by Claude",
@@ -1973,5 +2013,25 @@
     ],
     "use": "A game that keeps its own engine still wants one row per op with checked fields, a run function and its text (`OpTable`, `runOp`, `validateOps`).",
     "guide": "README.md"
+  },
+  "clock": {
+    "use": "A marker on a row of spaces as rules data (countdown, round tracker, danger or doom track): steps forward or back by the game's number, thresholds that fire on landing or passing (lose, trigger, reward, limit) in order, once-only thresholds, per-space values such as a limit read from the marker's row; crossings become engine-core occurrences.",
+    "not": "Drawing the track (track); turn or round flow (turn-flow); deciding what a threshold does (the game).",
+    "title": "Clock or countdown with thresholds",
+    "tags": [
+      "clock",
+      "countdown",
+      "round tracker",
+      "round",
+      "tracker",
+      "threshold",
+      "timer",
+      "doom track",
+      "marker",
+      "limit"
+    ],
+    "visible": false,
+    "release": 1,
+    "gameSupplies": "The spaces, start, direction, thresholds with their kinds and data, and per-space values."
   }
 }

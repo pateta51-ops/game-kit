@@ -49,6 +49,7 @@ graph LR
   character_select["character-select"]
   check_runner["check-runner"]
   ci_templates["ci-templates"]
+  clock["clock"]
   content_pack["content-pack"] --> card_harness["card-harness"]
   content_pack["content-pack"] --> card_language["card-language"]
   content_pack["content-pack"] --> engine_core["engine-core"]
@@ -63,6 +64,7 @@ graph LR
   dev_autoplay["dev-autoplay"] --> game_store["game-store"]
   dev_autoplay["dev-autoplay"] --> sim_pool["sim-pool"]
   dice_odds["dice-odds"]
+  dice_patterns["dice-patterns"]
   dice_tray["dice-tray"] --> state_machines["state-machines"]
   drag_drop["drag-drop"] --> prompt_host["prompt-host"]
   drag_drop["drag-drop"] --> motion_frame["motion-frame"]
@@ -81,6 +83,7 @@ graph LR
   ghost_card["ghost-card"]
   glossary["glossary"] --> phone_mode["phone-mode"]
   glossary["glossary"] --> state_machines["state-machines"]
+  grid_map["grid-map"]
   layout_editor["layout-editor"] --> board_layout["board-layout"]
   learned_opponent["learned-opponent"] --> engine_core["engine-core"]
   learned_opponent["learned-opponent"] --> sim_pool["sim-pool"]
@@ -177,15 +180,18 @@ graph LR
 - `character-select`
 - `check-runner`
 - `ci-templates`
+- `clock`
 - `content-pack`
 - `controls`
 - `coverage-report`
 - `debug-console`
 - `dev-autoplay`
 - `dice-odds`
+- `dice-patterns`
 - `dice-tray`
 - `e2e-helpers`
 - `ghost-card`
+- `grid-map`
 - `layout-editor`
 - `learned-opponent`
 - `lint-preset`
