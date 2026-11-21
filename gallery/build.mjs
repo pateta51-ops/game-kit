@@ -21,6 +21,22 @@ const data = groups.map((g) => ({ group: g, tiles: catalog.filter((e) => e.group
 const html = inlineKit(norm(fs.readFileSync(path.join(import.meta.dirname, 'src/effects.html'), 'utf8')))
   .replace('<!--@gallery-data-->', () => `<script type="application/json" id="data">${JSON.stringify(data).replace(/</g, '\\u003c')}</script>`);
 const out = path.join(import.meta.dirname, 'effects.html');
+if (process.argv.includes('--play')) {
+  // plays every tile of the built page once in Chromium (4x fast) and fails on any console error
+  const { chromium } = await import('playwright-core');
+  const browser = await chromium.launch();
+  const page = await browser.newPage({ viewport: { width: 1280, height: 800 } });
+  const errors = [];
+  page.on('console', (m) => { if (m.type() === 'error') errors.push(m.text()); });
+  page.on('pageerror', (e) => errors.push(e.message));
+  await page.goto(new URL('file:///' + out.replace(/\\/g, '/').replace(/^\/+/, '')).href + '?speed=0.25');
+  const n = await page.evaluate(() => globalThis.playEvery());
+  await page.waitForTimeout(500);
+  await browser.close();
+  console.log(`gallery play: ${n} tiles, ${errors.length} console errors`);
+  for (const e of errors) console.error(e);
+  process.exit(errors.length || n !== data.reduce((s, g) => s + g.tiles.length, 0) ? 1 : 0);
+}
 if (!process.argv.includes('--check')) fs.writeFileSync(out, html);
 else if (!fs.existsSync(out) || norm(fs.readFileSync(out, 'utf8')) !== html) {
   console.error('gallery out of date, run node gallery/build.mjs');

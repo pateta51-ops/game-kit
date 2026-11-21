@@ -69,7 +69,8 @@ pre { margin: 6px 0 0; background: #0f1114; border: 1px solid var(--line); borde
 //@kit-js components/motion-frame/player.ts as MOTION
 const DATA = JSON.parse(document.getElementById('data').textContent);
 const slow = document.getElementById('slow');
-const factor = () => slow.checked ? 4 : 1;
+const base = Number(new URLSearchParams(location.search).get('speed')) || 1;
+const factor = () => (slow.checked ? 4 : 1) * base;
 const el = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text !== undefined) e.textContent = text; return e; };
 const tiles = {}, specs = {}, stages = { demo: (z) => ({ a: [80, 120, 120, 168], b: [520, 120, 120, 168], board: [0, 0, 720, 420] })[z] };
 let n = 0;
@@ -103,7 +104,7 @@ for (const { group, tiles: list } of DATA) {
     meta.append(el('span', 'ms', t.ms + ' ms'));
     body.append(el('h3', '', t.title), meta, el('p', 'looks', t.looks));
     const foot = el('div', 'foot'), det = el('details'), pre = el('pre', '', JSON.stringify(t.demo.steps.find((s) => s.do === t.id) ?? t.demo.steps[0], null, 2));
-    const links = el('div', 'links'), copy = el('button', '', 'Copy step'), tuner = el('a', '', 'Tuner: ' + t.tuner.replace('.html', '') + ' ↗');
+    const links = el('div', 'links'), copy = el('button', '', 'Copy step'), tuner = el('a', '', 'Sliders: ' + t.tuner.replace('.html', '') + ' tuner');
     tuner.href = '../tuners/' + t.tuner;
     tuner.target = '_blank';
     copy.onclick = () => { navigator.clipboard?.writeText(pre.textContent); copy.textContent = 'Copied'; setTimeout(() => { copy.textContent = 'Copy step'; }, 1200); };
@@ -192,4 +193,6 @@ const player = MOTION.createMotionPlayer({
   onBeatEnd: (run) => { layer.end(run); layer.clear(); tileOf(run).tile.classList.remove('playing'); },
   onProblem: (p) => console.error(p),
 });
+// node gallery/build.mjs --play: every tile once, in order
+window.playEvery = async () => { for (const id of Object.keys(tiles)) await new Promise((r) => player.play(id, { onEnd: r })); return Object.keys(tiles).length; };
 </script>
