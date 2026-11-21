@@ -4558,9 +4558,7 @@
    "rise",
    "sparkle",
    "heal",
-   "dots",
-   "arise",
-   "ascend"
+   "dots"
   ],
   "group": "particles",
   "ends": "as-started",
@@ -4810,8 +4808,7 @@
    "track",
    "gauge",
    "health",
-   "hp",
-   "life"
+   "hp"
   ],
   "group": "signals",
   "ends": "changed",
