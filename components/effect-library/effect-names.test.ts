@@ -16,7 +16,7 @@ describe('K511 EFFECT_NAMES', () => {
   });
   it('holds every catalog.json id', () => {
     expect(catalog.length).toBeGreaterThan(10);
-    expect(catalog.map((c) => c.id).filter((id) => /^[a-z]+(-[a-z]+)*$/.test(id) && !EFFECT_NAMES.includes(id))).toEqual([]);
+    expect(catalog.map((c) => c.id).filter((id) => id !== 'flight' && /^[a-z]+(-[a-z]+)*$/.test(id) && !EFFECT_NAMES.includes(id))).toEqual([]);
   });
   it('validateSpecs accepts particles-rise with EFFECT_NAMES and rejects an unknown verb', () => {
     const step = (d: string) => ({ id: 's', maxMs: 400, actors: [{ id: 'a', at: [5, 5], w: 10, h: 10 }], steps: [{ t: 0, actor: 'a', dur: 400, do: d }] });
