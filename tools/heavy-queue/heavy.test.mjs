@@ -368,8 +368,7 @@ describe('heavy --mem and --slots (K474)', () => {
     const { f, d } = fake('echo x >> "$0.log"; exit 1');
     const r = await heavy(['run', '--mem', '7', '--', process.execPath, '-e', 'process.exit(0)'], { HEAVY_URL: await deadUrl(), HEAVY_SYSTEMD_RUN: f, HEAVY_CAP_WAIT_MS: '10', HEAVY_CAP_RETRIES: '3' });
     expect(r.code).toBe(4);
-    expect(readFileSync(f + '.log', 'utf8').split('
-').filter(Boolean)).toHaveLength(3);
+    expect(readFileSync(f + '.log', 'utf8').split(String.fromCharCode(10)).filter(Boolean)).toHaveLength(3);
     rmSync(d, { recursive: true });
   });
   it.skipIf(!posix)('--mem refuses when the scope starts but the cgroup shows no cap (max) or a swap allowance', async () => {
