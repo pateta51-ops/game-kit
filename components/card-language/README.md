@@ -16,6 +16,7 @@ The card-language shell (K206): card effects as data, one typed verb table where
 7. Test with `expectVerbs(VERBS, examples)`: it fails on a verb without handler, text or example, an invalid example, or empty text or text holding a rule id; validate card data with `validateEffect`.
 8. Keep value expressions out of bare lists of steps: only objects in a step position are read as steps.
 9. For triggers, use `when` on card data and `cardTriggers(cfg)`; every `if` name must be in `tests`, and an `optional` entry needs a `table` holding `may`, or it throws at build.
+10. A game on its own engine (not engine-core) uses `opTable.ts`: an `OpTable<Port, Op>` row `{ fields, run, text }` per op, `run` on the game's `EnginePort`; run ops only with `runOp`, print them only with `describeOps` (both wordings live in the row: `text`, optional `rules`), and check card data with `validateOps` in a test.
 
 **Common mistakes:**
 - Writing text for the screen apart from the verb's `text`: the words and the engine then differ.
@@ -33,6 +34,28 @@ The card-language shell (K206): card effects as data, one typed verb table where
 - Start a game: copy `template/verbs.ts` and `template/verbs.test.ts`. Printed text check: card-harness `describeCheck`. Pattern notes: `docs/patterns/card-language.md`.
 - Triggers on cards (K267, `when.ts`): `when: [{ on, if?, then, optional?, once?, order?, timing? }]` on card data; `cardTriggers(cfg)` compiles a pool into engine-core's `triggersFor`, `invalid` (source no longer active: default zone `play` / `play:<seat>`) and `resolveTrigger` (pushes `then` as verb tasks; `optional` runs as the pack's `may`). After-window only (occurrences that happened), ordered as engine-core's triggers. `validateWhen(VERBS, when, { kinds, tests })` checks keys, the event kind and the steps. `if` is checked when triggers are collected; only "source still active" is rechecked at resolve. `cardTriggers` throws at build for an `if` not in `tests` or an `optional` entry without `table` holding `may`. `env(s, card, player, occurrences)` (K295) gets what triggered it (the trigger's occurrences at resolve, the one occurrence when testing `if`), so a response can name the triggering card. K296: `triggersFor` / `invalid` take the game's content and pass it as the added last parameter of `player`, `defOf`, `active`, `sources`, `env` and the `tests`.
 - Held responses (K292): `timing: 'when' | 'after'` on a `when` entry is carried onto the trigger; engine-core's `cfg.held(s, t)` reads `t.timing` to keep an "after" response waiting until the game pushes `timing.triggers` at its effect end (timing.md).
+
+## Op table (for games on their own engine)
+
+K507, `opTable.ts`. A game that keeps its own engine (no engine-core `Ctx`) still gets one row per op, so the card's words cannot drift from what the op does:
+- `EnginePort<State>`: `{ state }`; the game extends it with the few calls its ops need (draw a card, ask a prompt, log).
+- `OpTable<Port, Op>`: one row per `op` of the game's op union, `{ fields, run, text }`. `fields` uses the same checks as `VerbTable` (`posInt`, `optional(f)`, `effectOf(...)`); a missing op or field check fails to compile. `run(port, op)` changes the game's state; `text(op, view)` is the short sentence, and an optional `rules(op, view)` the rule wording of the same row. `view`: `{ mode, spent, say }`; `say(op, spent?)` writes a nested op in the same mode.
+- `runOp(table, port, op)` runs one op through its row (unknown op: `EngineBugError`). `describeOps(table, ops, join?, { mode?, spent? })` prints them with `describeEffect`: `mode: 'rules'` reads `rules` (else `text`), `spent` (default `amount`) names what a cost spent. A nested op's row calls `runOp` on its child ops and `view.say` for their words.
+- `validateOps(table, { [card]: ops }, { metaKeys? })` (`metaKeys`: record keys it ignores, default none) returns `{ card, index, op, kind, detail }[]`, `kind` one of `not-an-op`, `unknown-op`, `missing-field`, `extra-field`, `bad-field`, `text` (the row's short or rules text throws or is empty). `[]` when every card holds.
+
+```ts
+import { posInt } from '../kit/card-language/index'
+import { describeOps, runOp, validateOps, type EnginePort, type OpTable } from '../kit/card-language/opTable'
+type Ex = { readonly op: 'gain'; readonly coins: number };
+interface ExPort extends EnginePort<{ coins: number }> { readonly log: (s: string) => void }
+const EX: OpTable<ExPort, Ex> = {
+  gain: { fields: { coins: posInt }, run: (p, o) => void (p.state.coins += o.coins), text: (o) => `Gain ${String(o.coins)} coins.` },
+};
+const exState = { coins: 0 };
+runOp(EX, { state: exState, log: () => undefined }, { op: 'gain', coins: 2 }) // exState.coins === 2
+console.log(describeOps(EX, [{ op: 'gain', coins: 2 }])) // "Gain 2 coins."
+console.log(validateOps(EX, { purse: [{ op: 'gain' }, { op: 'fly' }] })) // missing-field coins, unknown-op fly
+```
 
 ## Use it in 10 lines
 
