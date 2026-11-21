@@ -283,15 +283,23 @@ if (cmd === 'pull') {
     ents.push({ id: toks(e.id + ' ' + (e.was ?? []).join(' ')), title: toks(e.id + ' ' + (e.was ?? []).join(' ') + ' ' + e.title + ' ' + (e.tags ?? []).join(' ')), use: toks((e.use ?? '') + ' ' + (e.looks ?? '') + ' ' + (e.group ?? '')), ex: [], exl: [], eff: true,
       line: () => e.id + (e.was?.length ? ' (was ' + e.was.join(', ') + ')' : '') + ': ' + e.title + '. Use: ' + e.use + ' Words: ' + (e.tags ?? []).join(', ') })
   }
+  const cf = cmd === 'search' ? [d + '/docs/recipes/candidates.md', d + '/recipes/candidates.md'].find((p) => fs.existsSync(p)) : undefined
+  if (cf) for (const l of fs.readFileSync(cf, 'utf8').split(/\r?\n/)) {
+    const c = l.split(/(?<!\\)\|/).slice(1, -1).map((x) => x.trim().replace(/\\\|/g, '|'))
+    if (c.length < 4 || !/^K\d+$/.test(c[0])) continue
+    const sh = c[1].length > 110 ? c[1].slice(0, 107).replace(/\s+\S*$/, '') + '...' : c[1]
+    ents.push({ id: [], title: toks(c[1] + ' ' + c[3]), use: [], ex: [], exl: [], eff: false, cand: true, line: () => 'candidate ' + c[0] + ', wanted by ' + c[2] + ': ' + sh })
+  }
   if (cmd === 'list') { for (const e of ents) console.log(e.listLine); process.exit(0) }
   const w3 = (e, w) => hasTok(e.title, w) ? 3 : hasTok(e.use, w) ? 2 : e.ex.some((x) => hasTok(x, w)) ? 1 : 0
-  const pool = cmd === 'effects' ? ents.filter((e) => e.eff) : ents
+  const pool = cmd === 'effects' ? ents.filter((e) => e.eff) : ents.filter((e) => !e.cand || cf)
   if (cmd === 'effects' && !words.length) { for (const e of pool) console.log(e.line([])); process.exit(0) }
   const scored = pool.map((e, i) => ({ e, i, all: words.every((w) => w3(e, w)), s: words.reduce((t, w) => t + w3(e, w) + (e.id.includes(w) ? 1 : 0), 0) }))
-  const hits = scored.filter((x) => x.all).sort((x, y) => y.s - x.s || y.e.eff - x.e.eff || x.i - y.i)
+  const hits = scored.filter((x) => x.all).sort((x, y) => y.s - x.s || !!x.e.cand - !!y.e.cand || y.e.eff - x.e.eff || x.i - y.i)
   for (const { e } of hits) console.log(e.line(e.exl.filter((x) => words.some((w) => !hasTok(e.title, w) && !hasTok(e.use, w) && hasTok(toks(x).concat(toks(x.toLowerCase())), w)))))
+  if (hits.length && hits.every((x) => x.e.cand)) console.log('not built yet')
   if (!hits.length) {
-    for (const { e } of scored.sort((x, y) => y.s - x.s || y.e.eff - x.e.eff || x.i - y.i).slice(0, 3)) console.log(e.line([]))
+    for (const { e } of scored.filter((x) => !x.e.cand).sort((x, y) => y.s - x.s || y.e.eff - x.e.eff || x.i - y.i).slice(0, 3)) console.log(e.line([]))
     console.log('not in the kit by that name')
     if (cmd === 'search') try { fs.mkdirSync(dirname(logFile), { recursive: true }); fs.appendFileSync(logFile, new Date().toISOString().slice(0, 10) + ' ' + a.join(' ') + '\n') } catch { /* read-only */ }
   }

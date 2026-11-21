@@ -22,6 +22,8 @@ Exact dice probabilities (K24), opt-in. No packages; import from `index`.
 
 Not here: rerolls, keep-best rules and the game's own success tests; the game writes `test`.
 
+A success test written as data (a pair, a run, a sum over a number): `dice-patterns` `compile(pattern)` gives the `test` `chance` takes.
+
 ## Use it in 10 lines
 
 ```ts

@@ -29,6 +29,8 @@ Pure logic of a dice tray and its roll window (K211), opt-in, unstyled; the game
 
 Not here: dice faces, 3D (`pieces-3d`), odds (`dice-odds`), tokens and costs, the game's rules for what a roll means.
 
+Meanings written as data (a pair, a run, a sum over a number): `dice-patterns` `meaning(id, pattern, label)` gives the `Meaning` `readRoll` takes.
+
 ## Use it in 10 lines
 
 ```ts

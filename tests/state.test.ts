@@ -9,15 +9,15 @@ const root = fs.mkdtempSync(path.join(os.tmpdir(), 'state-test-'));
 afterAll(() => fs.rmSync(root, { recursive: true, force: true }));
 fs.mkdirSync(path.join(root, 'docs'));
 fs.mkdirSync(path.join(root, 'docs', 'plan'));
-const row = (id: string, section: string, order: number, content: string, state: string) => fs.writeFileSync(path.join(root, 'docs', 'plan', id + '.md'), `---
+const row = (id: string, section: string, order: number, content: string, state: string, extra = '') => fs.writeFileSync(path.join(root, 'docs', 'plan', id + '.md'), `---
 section: ${section}
 order: ${order}
 state: ${state}
----
+${extra}---
 ${content}
 `);
 row('K1', 'Stage A', 10, '(GAPS A1) First thing. More words', 'done');
-row('K2', 'Stage A', 20, 'Second thing: details', 'proposed');
+row('K2', 'Stage A', 20, 'Second thing: details', 'open');
 row('K3', 'Wave B', 30, 'Third', 'done (x)');
 row('K4', 'Wave B', 40, 'Fourth', 'waits for a game');
 fs.mkdirSync(path.join(root, 'docs', 'evaluation'));
@@ -27,7 +27,7 @@ const run = () => spawnSync('node', [SCRIPT, root, '--games'], { encoding: 'utf8
 it('lists open rows by section, counts done, lists watch rows', () => {
   const s = run().stdout;
   expect(s).toContain('Rows done: 2 of 4. Open: 1.');
-  expect(s).toContain('### Stage A\n\n- K2: Second thing (proposed)');
+  expect(s).toContain('### Stage A\n\n- K2: Second thing (open)');
   expect(s).toContain('## Waiting on a game\n\n- K4: Fourth (waits for a game)');
   expect(s).not.toContain('K1');
   expect(s).toContain('- C1: watch. Revisit later.');
@@ -55,4 +55,13 @@ it('lists open PRs with the component each touches and each games oldest kit pin
   expect(s).toContain('- #7 (draft): K9 [alpha]');
   expect(s).toContain('- g1: oldest pin v0.9.2 (latest none)');
   expect(s).not.toContain('- none:');
+});
+
+it('lists candidates under their own heading with the games that want them (K523)', () => {
+  row('K6', 'Candidates', 60, 'discard-row: a row of cards', 'candidate', 'wanted-by: A, B\n');
+  row('K7', 'Stage A', 70, 'Seventh: old proposal', 'proposed', 'asked-by: C\n');
+  const s = run().stdout;
+  expect(s).toContain('## Candidates\n\n- K7: Seventh (wanted by: C)\n- K6: discard-row (wanted by: A, B)');
+  expect(s).not.toContain('(proposed)');
+  expect(s).toContain('Open: 1.');
 });

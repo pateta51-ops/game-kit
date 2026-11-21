@@ -1,0 +1,104 @@
+export type Space = number | string
+export interface Threshold<D = unknown> {
+  readonly id: string
+  readonly at: Space
+  readonly on: 'land' | 'pass' | 'landOrPass'
+  readonly direction?: 'forward' | 'back' | 'either'
+  readonly once?: boolean
+  readonly kind: string
+  readonly data?: D
+}
+export interface ClockSpec<D = unknown> {
+  readonly spaces: number | readonly string[]
+  readonly start: Space
+  readonly direction?: 'up' | 'down'
+  readonly ends?: 'stop' | 'wrap'
+  readonly thresholds: readonly Threshold<D>[]
+  readonly values?: Readonly<Record<string, readonly unknown[]>>
+}
+export interface ClockState { readonly value: number; readonly fired: readonly string[] }
+export interface Crossing<D = unknown> { readonly threshold: Threshold<D>; readonly from: number; readonly to: number; readonly space: number; readonly how: 'land' | 'pass' }
+export interface StepResult<D = unknown> { readonly state: ClockState; readonly crossings: readonly Crossing<D>[] }
+
+const size = (spec: ClockSpec) => typeof spec.spaces === 'number' ? spec.spaces : spec.spaces.length
+export function indexOf(spec: ClockSpec, x: Space): number {
+  if (typeof x === 'number') return Number.isInteger(x) && x >= 0 && x < size(spec) ? x : -1
+  return typeof spec.spaces === 'number' ? -1 : spec.spaces.indexOf(x)
+}
+const endOf = (spec: ClockSpec) => spec.direction === 'down' ? 0 : size(spec) - 1
+const sign = (spec: ClockSpec) => spec.direction === 'down' ? -1 : 1
+
+export function newClock(spec: ClockSpec): ClockState {
+  return { value: indexOf(spec, spec.start), fired: [] }
+}
+export function spaceOf(spec: ClockSpec, state: ClockState): Space {
+  return typeof spec.spaces === 'number' ? state.value : spec.spaces[state.value] as string
+}
+export function valueAt<T = number>(spec: ClockSpec, state: ClockState, key: string): T | undefined {
+  return spec.values?.[key]?.[state.value] as T | undefined
+}
+export function step<D>(spec: ClockSpec<D>, state: ClockState, by: number): StepResult<D> {
+  const n = size(spec), d = Math.sign(by) * sign(spec), wrap = spec.ends === 'wrap', path: number[] = []
+  let v = state.value
+  for (let i = 0; i < Math.abs(by); i++) {
+    let next = v + d
+    if (wrap) next = (next + n) % n
+    else if (next < 0 || next >= n) break
+    path.push(v = next)
+  }
+  const fired = [...state.fired], crossings: Crossing<D>[] = []
+  const way = by > 0 ? 'forward' : 'back'
+  path.forEach((space, i) => {
+    const how = i === path.length - 1 ? 'land' : 'pass'
+    for (const t of spec.thresholds) {
+      if (indexOf(spec, t.at) !== space) continue
+      if (t.on !== 'landOrPass' && t.on !== how) continue
+      const dir = t.direction ?? 'forward'
+      if (dir !== 'either' && dir !== way) continue
+      if (t.once && fired.includes(t.id)) continue
+      if (t.once) fired.push(t.id)
+      crossings.push({ threshold: t, from: state.value, to: v, space, how })
+    }
+  })
+  return { state: { value: v, fired }, crossings }
+}
+export function setTo(spec: ClockSpec, state: ClockState, space: Space): ClockState {
+  const value = indexOf(spec, space)
+  if (value < 0) throw new Error(`clock: ${space} is not a space`)
+  return { value, fired: state.fired }
+}
+export function left(spec: ClockSpec, state: ClockState): number {
+  return Math.abs(endOf(spec) - state.value)
+}
+export function ended(spec: ClockSpec, state: ClockState): boolean {
+  return spec.ends !== 'wrap' && state.value === endOf(spec)
+}
+export function occurrences(crossings: readonly Crossing[], prefix = 'clock.'): { kind: string; keys: { target: string }; amount: number }[] {
+  return crossings.map((c) => ({ kind: prefix + c.threshold.kind, keys: { target: c.threshold.id }, amount: 1 }))
+}
+export function checkClock(spec: ClockSpec): string[] {
+  if (!spec || typeof spec !== 'object') return ['spec is not an object']
+  const p: string[] = []
+  const s: number | readonly string[] = spec.spaces, ts: readonly Threshold[] = spec.thresholds
+  if (typeof s !== 'number' && Array.isArray(s)) s.forEach((id, i) => { if (typeof id !== 'string' || !id) p.push(`space ${i} has no id`); else if (s.indexOf(id) !== i) p.push(`space id ${id} repeats`) })
+  else if (!(typeof s === 'number' && Number.isInteger(s) && s > 0)) return ['spaces must be a whole number above 0 or a list of ids']
+  if (indexOf(spec, spec.start) < 0) p.push(`start ${spec.start} is not a space`)
+  if (spec.direction !== undefined && spec.direction !== 'up' && spec.direction !== 'down') p.push(`direction ${String(spec.direction)} is not up or down`)
+  if (spec.ends !== undefined && spec.ends !== 'stop' && spec.ends !== 'wrap') p.push(`ends ${String(spec.ends)} is not stop or wrap`)
+  if (!Array.isArray(ts)) p.push('thresholds is not a list')
+  else {
+    const seen = new Set<string>()
+    for (const [i, t] of spec.thresholds.entries()) {
+      if (!t || typeof t !== 'object') { p.push(`threshold ${i} is not an object`); continue }
+      if (indexOf(spec, t.at) < 0) p.push(`threshold ${t.id}: at ${t.at} is not a space`)
+      if (!['land', 'pass', 'landOrPass'].includes(t.on)) p.push(`threshold ${t.id}: on ${t.on} is not land, pass or landOrPass`)
+      if (t.direction !== undefined && !['forward', 'back', 'either'].includes(t.direction)) p.push(`threshold ${t.id}: direction ${t.direction} is not forward, back or either`)
+      if (!t.kind) p.push(`threshold ${t.id}: kind is empty`)
+      if (!t.id) p.push('a threshold has no id')
+      else if (seen.has(t.id)) p.push(`threshold id ${t.id} repeats`)
+      seen.add(t.id)
+    }
+  }
+  for (const [k, row] of Object.entries(spec.values ?? {}) as [string, unknown][]) if (!Array.isArray(row) || row.length !== size(spec)) p.push(`values ${k} has ${Array.isArray(row) ? row.length : 0} entries, not ${size(spec)}`)
+  return p
+}
