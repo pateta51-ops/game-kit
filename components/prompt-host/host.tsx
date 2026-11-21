@@ -173,10 +173,17 @@ export function PickOptions<P extends Kinded, V>({ prompt, answer, look, confirm
 }
 
 /** Pick an amount: the options are the amounts in order; a stepper over them (from `start`, default the first), then Done. */
-export function PickAmount<P extends Kinded, V>({ prompt, answer, look, start = 0, readout }: WidgetProps<P, V> & { start?: number | 'last'; readout?: (o: KernelOption, p: P) => ReactNode }) {
+export function PickAmount<P extends Kinded, V>({ prompt, answer, look, start = 0, readout, hideDone = false, onChange }: WidgetProps<P, V> & { start?: number | 'last'; readout?: (o: KernelOption, p: P) => ReactNode; hideDone?: boolean; onChange?: (picked: string[]) => void }) {
   const n = prompt.options.length;
   const [at, setAt] = useState(start === 'last' ? n - 1 : start);
   const o = prompt.options[at];
+  const cb = useRef(onChange);
+  useEffect(() => {
+    cb.current = onChange;
+  });
+  useEffect(() => {
+    cb.current?.(o?.enabled === true ? [o.id] : []);
+  }, [o?.id, o?.enabled]);
   return (
     <div className={look.cls('amount')}>
       <button type="button" className={look.cls('less')} disabled={at <= 0} onClick={() => setAt(at - 1)}>
@@ -189,9 +196,11 @@ export function PickAmount<P extends Kinded, V>({ prompt, answer, look, start = 
       <button type="button" className={look.cls('more')} disabled={at >= n - 1} onClick={() => setAt(at + 1)}>
         {look.more}
       </button>
-      <button type="button" className={look.cls('done')} disabled={o?.enabled !== true} onClick={() => o !== undefined && answer([o.id])}>
-        {look.done}
-      </button>
+      {hideDone ? null : (
+        <button type="button" className={look.cls('done')} disabled={o?.enabled !== true} onClick={() => o !== undefined && answer([o.id])}>
+          {look.done}
+        </button>
+      )}
       {o !== undefined && !o.enabled && o.why !== undefined ? <small className={look.cls('why')}>{look.text(o.why)}</small> : null}
     </div>
   );

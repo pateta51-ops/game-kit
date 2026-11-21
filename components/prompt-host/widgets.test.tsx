@@ -1,4 +1,5 @@
 import { fireEvent, render, screen } from '@testing-library/react';
+import { useState } from 'react';
 import { describe, expect, it, vi } from 'vitest';
 import type { KernelOption } from '../engine-core/index.ts';
 import { BoardBar, defaultLook, Order, PickAmount, PickOptions, PromptHost, useBoardPick, type Answer, type Kinded, type Look, type WidgetProps, type Widgets } from './ui.ts';
@@ -112,6 +113,48 @@ describe('widgets (K123 review)', () => {
     expect(container.querySelector('[class*="readout"]')?.textContent).toBe('XP 10');
     fireEvent.click(screen.getByRole('button', { name: '+' }));
     expect(container.querySelector('[class*="readout"]')?.textContent).toBe('XP 20');
+  });
+
+  it('K522: PickAmount hideDone has no Done; onChange gives the stepped value for the game own Confirm', () => {
+    const a = vi.fn<Answer>();
+    let cur: string[] = [];
+    const Band = () => (
+      <>
+        <PickAmount prompt={pr(opts('1', '2', '-3'))} view={null} answer={a} look={look} hideDone onChange={(p) => (cur = p)} />
+        <button type="button" onClick={() => a(cur)}>Confirm</button>
+      </>
+    );
+    render(<Band />);
+    expect(screen.queryByRole('button', { name: 'Done' })).toBeNull();
+    expect(cur).toEqual(['1']);
+    fireEvent.click(screen.getByRole('button', { name: '+' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Confirm' }));
+    expect(a).toHaveBeenCalledWith(['2']);
+    fireEvent.click(screen.getByRole('button', { name: '+' }));
+    expect(cur).toEqual([]);
+  });
+
+  it('K522: onChange that sets parent state does not loop: once on mount, once per step', () => {
+    const calls = vi.fn();
+    const Band = () => {
+      const [, setPicked] = useState<string[]>([]);
+      return <PickAmount prompt={pr(opts('1', '2', '3'))} view={null} answer={vi.fn<Answer>()} look={look} hideDone onChange={(p) => { calls(p); setPicked(p); }} />;
+    };
+    render(<Band />);
+    expect(calls).toHaveBeenCalledTimes(1);
+    fireEvent.click(screen.getByRole('button', { name: '+' }));
+    expect(calls).toHaveBeenCalledTimes(2);
+    fireEvent.click(screen.getByRole('button', { name: '+' }));
+    expect(calls).toHaveBeenCalledTimes(3);
+    expect(calls).toHaveBeenLastCalledWith(['3']);
+  });
+
+  it('K522: PickAmount without the option keeps Done and answers as before', () => {
+    const a = vi.fn<Answer>();
+    render(<PickAmount prompt={pr(opts('1', '2'))} view={null} answer={a} look={look} />);
+    fireEvent.click(screen.getByRole('button', { name: '+' }));
+    fireEvent.click(done());
+    expect(a).toHaveBeenCalledWith(['2']);
   });
 
   it('idle words, title and look overrides', () => {
