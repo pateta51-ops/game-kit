@@ -207,12 +207,17 @@ if (cmd === 'pull') {
       for (const l of d.split(/\r?\n/)) if (l.startsWith('+') && !l.startsWith('+++') && /breaking/i.test(l)) console.log('  README ' + n + ': ' + l.slice(1).trim())
     }
   } catch (e) { console.error('outdated failed: ' + String(e.stderr ?? e.message).trim()); process.exit(1) }
-} else if (cmd === 'list' || cmd === 'search') {
+} else if (cmd === 'list' || cmd === 'search' || cmd === 'effects') {
   const d = dirname(fileURLToPath(import.meta.url))
   const f = [d + '/CATALOG.md', d + '/docs/CATALOG.md'].find((p) => fs.existsSync(p))
+  const logFile = fs.existsSync(d + '/kit.lock.json') ? resolve(d, '..', '.kit-search-misses.log') : d + '/search-misses.log'
+  if (cmd === 'search' && a[0] === '--misses') {
+    const n = Number(a[1]) || 10
+    console.log(fs.existsSync(logFile) ? fs.readFileSync(logFile, 'utf8').split(/\r?\n/).filter(Boolean).slice(-n).reverse().join('\n') : 'no misses logged')
+    process.exit(0)
+  }
   if (!f || (cmd === 'search' && !a.length)) { console.error(f ? 'usage: kit.mjs search <word>' : 'no CATALOG.md beside kit.mjs: pull again'); process.exit(2) }
   const secs = fs.readFileSync(f, 'utf8').split(/^## /m).slice(1).map((t) => t.split(/\r?\n/))
-  const words = a.map((w) => w.toLowerCase())
   const exportsOf = (n) => {
     const out = new Set()
     const seen = new Set()
@@ -239,15 +244,40 @@ if (cmd === 'pull') {
     }
     return [...out]
   }
-  for (const [n, , purpose, , use] of secs) {
-    let hit = []
-    if (cmd === 'search') {
-      const text = (n + purpose + use).toLowerCase()
-      const ex = exportsOf(n)
-      if (!words.every((w) => text.includes(w) || ex.some((e) => e.toLowerCase().includes(w)))) continue
-      hit = ex.filter((e) => words.some((w) => !text.includes(w) && e.toLowerCase().includes(w)))
-    }
-    console.log(n + ': ' + (cmd === 'list' ? '' : (purpose ?? '').split(/(?<=\.)\s/)[0].slice(0, 200) + ' ') + (use ?? '').replace('- **Use it when:** ', '(use when: ') + (use ? ')' : '') + (hit.length ? ' [export: ' + hit.slice(0, 8).join(', ') + ']' : ''))
+  const stem = (w) => w.length > 4 && /(ing|ed|es)$/.test(w) ? w.replace(/(ing|ed|es)$/, '') : w.length > 3 ? w.replace(/s$/, '') : w
+  const camel = (t) => String(t ?? '').replace(/([a-z])([A-Z])/g, '$1 $2')
+  const toks = (t) => camel(t).toLowerCase().split(/[^a-z0-9]+/).filter(Boolean).map(stem)
+  const stop = new Set(['the', 'a', 'an', 'of', 'to', 'in', 'on', 'it', 'is', 'and', 'or', 'for', 'at', 'my', 'with'])
+  const words = a.flatMap(toks).filter((w) => !stop.has(w))
+  const hasTok = (t, w) => t.some((x) => x === w || (w.length > 3 && x.startsWith(w)))
+  const bullet = (t, k) => (t.find((l) => l.startsWith('- **' + k + ':**')) ?? '').replace(/^- \*\*[^*]*\*\*\s*/, '')
+  const ents = []
+  for (const t of secs) {
+    const [n, , purpose, , use] = t
+    const title = bullet(t, 'Also called'), u = bullet(t, 'Use it when') || (use ?? '').replace('- **Use it when:** ', '')
+    const pur = (purpose ?? '').split(/(?<=\.)\s/)[0].slice(0, 200)
+    const exl = cmd === 'search' ? exportsOf(n) : []
+    const sfx = (hit) => hit.length ? ' [export: ' + hit.slice(0, 8).join(', ') + ']' : ''
+    ents.push({ id: toks(n), title: toks(n + ' ' + title + ' ' + bullet(t, 'Words')), use: toks(pur + ' ' + u + ' ' + bullet(t, 'Looks like')), ex: exl.map((e) => toks(e).concat(toks(e.toLowerCase()))), exl, eff: false,
+      line: (hit) => title ? title + ' (`' + n + '`): Use: ' + u + sfx(hit) : n + ': ' + pur + ' ' + (u ? '(use when: ' + u.replace(/\.$/, '') + '.)' : '') + sfx(hit),
+      listLine: n + ': ' + (use ?? '').replace('- **Use it when:** ', '(use when: ') + (use ? ')' : '') })
+  }
+  const ef = [d + '/components/effect-library/catalog.json', d + '/effect-library/catalog.json'].find((p) => fs.existsSync(p))
+  if (ef && cmd !== 'list') for (const e of JSON.parse(fs.readFileSync(ef, 'utf8'))) {
+    ents.push({ id: toks(e.id), title: toks(e.id + ' ' + (e.was ?? []).join(' ') + ' ' + e.title + ' ' + (e.tags ?? []).join(' ')), use: toks((e.use ?? '') + ' ' + (e.looks ?? '') + ' ' + (e.group ?? '')), ex: [], exl: [], eff: true,
+      line: () => e.id + (e.was?.length ? ' (was ' + e.was.join(', ') + ')' : '') + ': ' + e.title + '. Use: ' + e.use + ' Words: ' + (e.tags ?? []).join(', ') })
+  }
+  if (cmd === 'list') { for (const e of ents) console.log(e.listLine); process.exit(0) }
+  const w3 = (e, w) => hasTok(e.title, w) ? 3 : hasTok(e.use, w) ? 2 : e.ex.some((x) => hasTok(x, w)) ? 1 : 0
+  const pool = cmd === 'effects' ? ents.filter((e) => e.eff) : ents
+  if (cmd === 'effects' && !words.length) { for (const e of pool) console.log(e.line([])); process.exit(0) }
+  const scored = pool.map((e, i) => ({ e, i, all: words.every((w) => w3(e, w)), s: words.reduce((t, w) => t + w3(e, w) + (e.id.includes(w) ? 1 : 0), 0) }))
+  const hits = scored.filter((x) => x.all).sort((x, y) => y.s - x.s || y.e.eff - x.e.eff || x.i - y.i)
+  for (const { e } of hits) console.log(e.line(e.exl.filter((x) => words.some((w) => !hasTok(e.title, w) && !hasTok(e.use, w) && hasTok(toks(x).concat(toks(x.toLowerCase())), w)))))
+  if (!hits.length) {
+    for (const { e } of scored.sort((x, y) => y.s - x.s || y.e.eff - x.e.eff || x.i - y.i).slice(0, 3)) console.log(e.line([]))
+    console.log('not in the kit by that name')
+    if (cmd === 'search') try { fs.appendFileSync(logFile, new Date().toISOString().slice(0, 10) + ' ' + a.join(' ') + '\n') } catch { /* read-only */ }
   }
 } else if (cmd === 'new') {
   // node <kit>/kit.mjs new <dir> <id> "<Name>" [--ref r] [--repo owner/name] [--runner label] [--link <node_modules>] [--no-install] [--no-remote] [--ports file] [--existing]
@@ -260,6 +290,6 @@ if (cmd === 'pull') {
   const { newGame } = await import(pathToFileURL(d + '/components/scaffold/newgame.js').href)
   try { newGame({ dir, id, name, kit: d, ...flags, remote: flags.remote !== false }) } catch (e) { console.error(e.message); process.exit(1) }
 } else {
-  console.error('usage: kit.mjs pull <game-kit checkout> <ref> [component...] | kit.mjs check | kit.mjs outdated [game-kit checkout] | kit.mjs next-id [n] [--reserve] | kit.mjs state | kit.mjs worktree|finish|teardown | kit.mjs list | kit.mjs search <word> | kit.mjs new <dir> <id> "<Name>"')
+  console.error('usage: kit.mjs pull <game-kit checkout> <ref> [component...] | kit.mjs check | kit.mjs outdated [game-kit checkout] | kit.mjs next-id [n] [--reserve] | kit.mjs state | kit.mjs worktree|finish|teardown | kit.mjs list | kit.mjs search <word> | kit.mjs effects [word] | kit.mjs new <dir> <id> "<Name>"')
   process.exit(2)
 }
