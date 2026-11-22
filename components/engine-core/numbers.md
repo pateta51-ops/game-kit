@@ -45,7 +45,7 @@ Show `base`, then one line per part: the source's name (the game maps `source` t
 
 ## Payment, `bar`, `preview`
 
-Compute the cost once with `numberParts` and pass `value` on to the game's own payment plan, option label, can-pay check and `bar` reason, so none of them reads the printed cost. Nothing in the kit does this for the game: `numberParts` only returns the number. The standard verb pack of `card-language` reads the printed amount of a cost step and takes no modified cost yet; a game on it changes the amount in its cost steps itself before they reach the pack. `preview` needs nothing extra: it runs the same handlers.
+Compute the cost once with `numberParts` and pass `value` on to the game's own payment plan, option label, can-pay check and `bar` reason, so none of them reads the printed cost. Nothing in the kit does this for the game: `numberParts` only returns the number. A game on the standard verb pack of `card-language` returns the value from `cardPack({ due })` (K583): the pack's can-pay check, payment, would-change check and `bar` reason then read it instead of the printed amount of a `pay` or `convert` step, and `pack.costed(s, steps, env)` gives the steps with that amount for the label. Without `due` the pack reads the printed amount. `preview` needs nothing extra: it runs the same handlers.
 
 ```ts
 const cost = numberParts(printed, [...printedMods, ...effectModifiers(s, toMod, 'cost')], COST_ORDER, { of: 'play' });

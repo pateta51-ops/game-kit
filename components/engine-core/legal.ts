@@ -2,6 +2,7 @@
 // a reason code and, for a missing target, what was missing, read when the prompt opened. `askOrTake` takes the only
 // legal option without asking and returns the notice the UI shows (every option, the taken one, each barred one).
 import { draftOf } from './ctx.ts';
+import { takePromptSeq } from './ids.ts';
 import type { Ctx, GameTypes, KernelOption, KernelPrompt } from './types.ts';
 
 export interface Blocked {
@@ -46,6 +47,8 @@ export function askOrTake<G extends GameTypes>(ctx: Ctx<G>, prompt: Omit<G['prom
     ctx.ask(prompt);
     return null;
   }
+  // K652: the prompt counts as opened and answered, so later prompt ids and the hash match the game where it was asked
+  takePromptSeq(s);
   (s.stack as G['task'][])[s.stack.length - 1] = { ...top, answer: [n.taken] };
   return n;
 }
