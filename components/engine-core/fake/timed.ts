@@ -28,7 +28,7 @@ export interface Timed {
   readonly prompt: KernelPrompt & { readonly player?: string };
   readonly event: TimedEvent;
   readonly stamped: never;
-  readonly content: { readonly triggers: Readonly<Record<string, readonly TriggerCandidate[]>> } | null;
+  readonly content: { readonly triggers: Readonly<Record<string, readonly TriggerCandidate[]>>; readonly cards?: Readonly<Record<string, { readonly doubles?: boolean }>> } | null;
   readonly options: { readonly seed: string };
   readonly rules: TimedRules;
 }
