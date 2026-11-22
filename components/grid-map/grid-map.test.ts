@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { adjacent, adjacentTiles, area, cellsOf, columnOf, distance, gridMap, line, lineOfSight, neighbours, rotateTile, rowOf, shortestPaths, spaceAt, spacesOf, tileOf, within } from './index.ts'
+import { adjacent, adjacentTiles, area, cellsOf, columnOf, distance, firstSteps, gridMap, line, lineOfSight, neighbours, rotateTile, rowOf, shortestPaths, spaceAt, spacesOf, tileOf, within } from './index.ts'
 
 // 4 x 6, two 4 x 3 tiles A (left) and B (right). | and _ are walls, HH is the merged space 'hall'.
 //      c0  c1  c2  c3  c4  c5
@@ -314,5 +314,77 @@ describe('grid-map: making one', () => {
     expect(() => gridMap({ rows: 2, cols: 2, merges: [{ id: 'x', cells: [[0, 0]] }, { id: 'y', cells: [[0, 0]] }] })).toThrow('two merges')
     expect(() => gridMap({ rows: 2, cols: 2, tiles: [{ id: 't', row: 0, col: 0, rows: 2, cols: 2 }, { id: 'u', row: 1, col: 1, rows: 1, cols: 1 }] })).toThrow('overlap')
     expect(() => gridMap({ rows: 1, cols: 2, merges: [{ id: 'x', cells: [[0, 0], [0, 1]] }], tiles: [{ id: 't', row: 0, col: 0, rows: 1, cols: 1 }] })).toThrow('crosses a tile border')
+  })
+})
+
+describe('grid-map: firstSteps', () => {
+  it('an open 5 + 5 stretch: 252 paths overflow, the two first steps do not', () => {
+    const open = gridMap({ rows: 6, cols: 6 })
+    expect(shortestPaths(open, 'r0c0', 'r5c5').overflow).toBe(true)
+    expect(firstSteps(open, 'r0c0', 'r5c5')).toEqual({ distance: 10, starts: [['r0c1'], ['r1c0']] })
+    expect(firstSteps(open, 'r0c0', ['r5c5', 'r0c3'])).toEqual({ distance: 3, starts: [['r0c1']] })
+  })
+  it('walls leave one first step; no way gives none', () => {
+    expect(firstSteps(M, 'r0c0', 'r0c1')).toEqual({ distance: 3, starts: [['r1c0']] })
+    expect(firstSteps(M, 'r0c0', 'r0c1', { diagonal: true, wallEnd: 'open' }).starts).toEqual([['r1c0'], ['r1c1']])
+    expect(firstSteps(gridMap({ rows: 1, cols: 2, walls: [[0, 0, 'e']] }), 'r0c0', 'r0c1')).toEqual({ distance: null, starts: [] })
+    expect(firstSteps(O, 'r0c0', 'r0c0')).toEqual({ distance: 0, starts: [] })
+    expect(() => firstSteps(M, 'nowhere', 'r0c0')).toThrow('unknown space')
+  })
+  it('steps: 2 gives the distinct first two steps, cut at the target', () => {
+    expect(firstSteps(O, 'r0c0', 'r4c4', { steps: 2 }).starts).toEqual([['r0c1', 'r0c2'], ['r0c1', 'r1c1'], ['r1c0', 'r1c1'], ['r1c0', 'r2c0']])
+    expect(firstSteps(O, 'r0c0', 'r0c1', { steps: 2 }).starts).toEqual([['r0c1']])
+    expect(firstSteps(O, 'r0c0', 'r1c1', { steps: 9 }).starts).toEqual(shortestPaths(O, 'r0c0', 'r1c1').paths.map(p => p.slice(1)))
+  })
+})
+
+describe('grid-map: extra steps', () => {
+  const extra = [['r0c0', 'r0c1']] as const
+  it('every call that takes steps sees an extra step, both ways', () => {
+    expect(neighbours(M, 'r0c0', { extra })).toEqual(['r0c1', 'r1c0'])
+    expect(neighbours(M, 'r0c1', { extra })).toEqual(['r0c0', 'r0c2', 'r1c1'])
+    expect(neighbours(M, 'r0c0')).toEqual(['r1c0'])
+    expect(adjacent(M, 'r0c0', { extra })).toEqual(['r0c1', 'r1c0'])
+    expect(distance(M, 'r0c0', 'r0c2', { extra })).toBe(2)
+    expect(distance(M, 'r0c2', 'r0c0', { extra })).toBe(2)
+    expect(within(M, 'r0c0', 1, { extra })).toEqual(['r0c1', 'r1c0'])
+    expect(shortestPaths(M, 'r0c0', 'r0c2', { extra })).toEqual({ distance: 2, paths: [['r0c0', 'r0c1', 'r0c2']], overflow: false })
+    expect(firstSteps(M, 'r0c0', 'r0c2', { extra })).toEqual({ distance: 2, starts: [['r0c1']] })
+    expect(M.adjacency.orth.r0c0).toEqual(['r1c0'])
+  })
+  it('an extra step may be a diagonal into a merged space or between any two spaces', () => {
+    expect(neighbours(M, 'r0c5', { diagonal: true, extra: [['r0c5', 'hall']] })).toEqual(['r0c4', 'hall', 'r1c5'])
+    expect(neighbours(M, 'hall', { extra: [['r0c5', 'hall']] })).toContain('r0c5')
+    expect(distance(O, 'r0c0', 'r4c4', { extra: [['r0c0', 'r4c4']] })).toBe(1)
+    expect(() => neighbours(M, 'r0c0', { extra: [['r0c0', 'nowhere']] })).toThrow('unknown space')
+  })
+  it("a 'oneWay' extra step goes from the first space to the second only, in every call", () => {
+    const oneWay = [['r0c0', 'r0c1', 'oneWay']] as const
+    expect(neighbours(oneWall, 'r0c0', { extra: oneWay })).toEqual(['r0c1'])
+    expect(neighbours(oneWall, 'r0c1', { extra: oneWay })).toEqual(['r0c2'])
+    expect(distance(oneWall, 'r0c0', 'r0c2', { extra: oneWay })).toBe(2)
+    expect(distance(oneWall, 'r0c2', 'r0c0', { extra: oneWay })).toBeNull()
+    expect(within(oneWall, 'r0c2', 2, { extra: oneWay })).toEqual(['r0c1'])
+    expect(shortestPaths(oneWall, 'r0c0', 'r0c2', { extra: oneWay })).toEqual({ distance: 2, paths: [['r0c0', 'r0c1', 'r0c2']], overflow: false })
+    expect(shortestPaths(oneWall, 'r0c2', 'r0c0', { extra: oneWay })).toEqual({ distance: null, paths: [], overflow: false })
+    expect(firstSteps(oneWall, 'r0c0', 'r0c2', { extra: oneWay })).toEqual({ distance: 2, starts: [['r0c1']] })
+    expect(firstSteps(oneWall, 'r0c2', 'r0c0', { extra: oneWay })).toEqual({ distance: null, starts: [] })
+  })
+})
+
+describe('grid-map: line with stopAtWall agrees with neighbours', () => {
+  it('a diagonal line stops before it enters or leaves a merged space, as the step is barred', () => {
+    expect(neighbours(M, 'r0c5', { diagonal: true })).not.toContain('hall')
+    expect(line(M, 'r0c5', 'sw', { stopAtWall: true })).toEqual([])
+    expect(line(M, 'hall', 'sw', { stopAtWall: true })).toEqual([])
+    expect(line(M, 'r0c5', 'sw')).toEqual(['hall', 'r2c3', 'r3c2'])
+    expect(line(M, 'r1c2', 'e', { stopAtWall: true })).toEqual(['hall', 'r1c5'])
+  })
+  it('an extra step lets the line through, as it lets the step through', () => {
+    const extra = [['r0c5', 'hall']] as const
+    expect(neighbours(M, 'r0c5', { diagonal: true, extra })).toContain('hall')
+    expect(line(M, 'r0c5', 'sw', { stopAtWall: true, extra })).toEqual(['hall'])
+    expect(line(M, 'r0c0', 'e', { stopAtWall: true, extra: [['r0c0', 'r0c1']] })).toEqual(['r0c1', 'r0c2'])
+    expect(line(M, 'r0c1', 'w', { stopAtWall: true, extra: [['r0c0', 'r0c1', 'oneWay']] })).toEqual([])
   })
 })

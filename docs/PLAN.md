@@ -315,6 +315,7 @@ Seeded rng; motion off = no timers. Tests: angle in range on exactly one frame; 
 | K532 | `card-harness` `screenProblems`: a clause may state which of its numbers are amounts (`amounts`: a list, or `counted` for an amount worked out at run time), so a condition's number, a stat line or a counted value is not held against the prompt as a missing amount. With nothing set the check is unchanged; a prompt that lacks a stated amount still fails. | S | Unstoppable build (kit gap), 22 Nov 2026 | done |
 | K567 | plan-checker: when the game sheet is checked against the mechanics map, the map's lines are the sheet; the older fixed list of sheet lines is asked for only when the map is missing or `--sheet-optional` is passed. | S | kit steward (K531 follow-up) | done |
 | K568 | plan-checker: with no kit checkout (a game's CI), the reuse map's Pull rows are checked against the game's locked copy `kit/` (recognised by `kit.lock.json`; parts from the lock, its folders and `kit/CATALOG.md`); the hard-coded local drive candidate is gone (`--kit PATH`, `$KIT_DIR`). | S | kit steward (plan check in a game's CI) | done |
+| K580 | `grid-map`: `firstSteps` gives the distinct first step (or first k steps) of all shortest paths without listing them, so a move toward a target with ties never overflows; `extra` adds a game's own steps to every call; `line` with `stopAtWall` stops where `neighbours` has no step; the README says first that tiles turn 180 degrees only. | S | kit steward (check of the tier 1 rows) | done |
 
 ## Asked for by the owner
 
@@ -365,7 +366,7 @@ A candidate is a part some game wants and nobody builds yet. A second game that 
 | K561 | `card-harness` mutation check per clause: change a clause on purpose and fail the card test that does not notice; a game passes its clauses and tests. | S | Radiance | candidate |
 | K563 | dice formulas as data (count, sides, modifiers) rolled through the engine random and read by the odds; a game passes the formula. | S | 7th Inning Stretch | candidate |
 | K565 | turn-flow: take another turn, with the rule for what ends it; a game passes the turn order and the limit. | S | survey | candidate |
-| K566 | grid-map option: extra steps a game adds to the neighbours (for example a diagonal past a wall end under the game's own condition); a game passes the condition. | S | Dice Commandos | candidate |
+| K566 | grid-map option: extra steps a game adds to the neighbours (for example a diagonal past a wall end under the game's own condition); a game passes the condition. | S | Dice Commandos | done |
 
 ## Harvest from the existing games (owner, 15 Nov 2026)
 

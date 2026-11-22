@@ -108,6 +108,12 @@
       "squares",
       "tiles",
       "targeting",
+      "first step",
+      "shortest path",
+      "extra steps",
+      "diagonal",
+      "move toward",
+      "ties",
       "area"
     ],
     "visible": false,

@@ -891,15 +891,15 @@ Links every glossary term and icon code in the game's texts to a lookup, and che
 
 ## grid-map
 
-A square grid with walls as data: adjacent spaces, distance, every shortest path, line of sight, tiles that turn, and targeting shapes (within range, adjacent, row, column, line, area). Pure functions, no state, no packages, draws nothing. Written for the kit.
+A square grid with walls as data: adjacent spaces, distance, every shortest path or only its distinct first steps, extra steps a game adds, line of sight, tiles that turn half a circle (180 degrees only: a game whose tiles turn a quarter cannot use `rotateTile`), and targeting shapes (within range, adjacent, row, column, line, area). Pure functions, no state, no packages, draws nothing. Written for the kit.
 
 - **Also called:** Square grid with walls and sight
-- **Words:** grid, distance, range, wall, walls, adjacent, line of sight, sight, path, squares, tiles, targeting, area
+- **Words:** grid, distance, range, wall, walls, adjacent, line of sight, sight, path, squares, tiles, targeting, first step, shortest path, extra steps, diagonal, move toward, ties, area
 - **Release:** 1.0; not seen
 - **The game supplies:** Rows, columns, the walls, merged spaces and tiles of its map.
 - **Use it when:** A square grid board with walls: adjacent spaces, grid distance and range, shortest paths, line of sight, tiles that turn, and targeting shapes (within range, adjacent, row, column, line, area).
 - **Not for:** Drawing the map; hex or graph boards (board-model); movement rules or costs per step.
-- **Key exports:** `gridMap`, `cellsOf`, `spaceAt`, `neighbours`, `distance`, `shortestPaths`, `lineOfSight`, `tileOf`, `spacesOf`, `adjacentTiles`, `rotateTile`, `adjacent`, `within`, `line`, and 13 more
+- **Key exports:** `gridMap`, `cellsOf`, `spaceAt`, `neighbours`, `distance`, `shortestPaths`, `firstSteps`, `lineOfSight`, `tileOf`, `spacesOf`, `adjacentTiles`, `rotateTile`, `adjacent`, `within`, and 15 more
 - **Needs:** nothing
 - **Came from:** none (written for the kit)
 - **Docs:** [README](../components/grid-map/README.md) ([rules for agents](../components/grid-map/README.md#rules-for-agents))
