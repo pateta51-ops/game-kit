@@ -747,7 +747,9 @@
       "stat",
       "cost",
       "reduction",
-      "breakdown"
+      "breakdown",
+      "floor",
+      "minimum"
     ],
     "visible": false,
     "release": 1,

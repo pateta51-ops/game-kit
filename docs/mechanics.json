@@ -35,7 +35,7 @@
     { "words": "duration, until end of turn, lasting effect, expires", "part": "engine-core", "read": "timing.md, `addEffect`, `boundary`; recipe turn-flow.md step 5", "also": ["turn-flow"] },
     { "words": "continuous effect, static ability, aura, layers, order of changes", "part": "engine-core", "read": "timing.md, `addEffect`, `effectsOf`, `layered`, `stampActive`" },
     { "words": "modifier, bonus, plus one, stat change, cost change", "part": "engine-core", "read": "timing.md, `addEffect`, `sumEffects`, `layered`" },
-    { "words": "number with its parts, floor and cap, breakdown of a number", "part": "engine-core", "read": "numbers.md, `numberParts`, `NumberModifier` (`set`, `add`, `multiply`, `floor`, `cap`), `effectModifiers`" },
+    { "words": "number with its parts, floor and cap, breakdown of a number, stat breakdown, modifier floor, cost reduction minimum", "part": "engine-core", "read": "numbers.md, `numberParts`, `NumberModifier` (`set`, `add`, `multiply`, `floor`, `cap`), `effectModifiers`, `bounds`" },
     { "words": "hooks at fixed engine timings, rules that always apply run in source order", "row": "K425", "note": "today: engine-core timing.md continuous effects" },
     { "words": "state check, lose at zero, hand limit", "part": "engine-core", "read": "recipe timing.md step 6, `cfg.checkpoint`, `StateCheck` (`checkpoint.ts`)" },
     { "words": "objective, goal, win condition, lose condition, progress toward a goal", "part": "engine-core", "read": "recipe timing.md step 6, `StateCheck` (`checkpoint.ts`) for win and lose", "also": ["turn-flow"], "missing": "objective state with progress, and objectives per scenario" },
