@@ -157,7 +157,7 @@ Opaque home-screen icons and a web manifest from a game's own SVG/PNG mark. Requ
 Game-free scripts that get a card game's art from its sources to `public/` with a manifest `tooling-scripts/art-check.ts` verifies. Everything game-specific (ids, URLs, paths, the order of preference) is in JSON config files; each script takes `--config <json>` (paths relative to that file), exits 0 clean, 1 findings, 2 usage or a failed read, and exports `run(args, io)`. Run with plain `node kit/art-pipeline/<script>.ts`.
 
 - **Also called:** Get card art ready for the game
-- **Words:** art, images, cards, download, pipeline, manifest, crop, jpeg quality, re-encode, face enlarged, larger than source, size cap, minimum quality
+- **Words:** art, images, cards, download, pipeline, manifest, crop, jpeg quality, re-encode, face enlarged, larger than source, size cap, minimum quality, resize image long edge cap
 - **Release:** 1.0; not seen
 - **The game supplies:** The art config: sources, ids and output.
 - **Use it when:** Game-free scripts for a card game's art, driven by the game's config: an index of one chosen image per card (order, overrides, degraded rule), fetch with sha256, sheet cells and crops, PDF pages as faces, a CI cache keyed on input hashes, publish to public with a manifest art-check reads, with a minimum JPEG quality within a size cap and an enlarged-face check.
@@ -309,7 +309,7 @@ The size gate for a vite build: gzips `index.html` and what it loads at once, an
 The campaign log as plain data and pure functions (release 1.0). No packages; draws nothing; loads in node (tests: `log.test.ts`). Every function returns a new log and never changes its argument, so the log goes into a save as JSON (a game keeps it beside its `saves` history) and undo is keeping the old value. Later parts (steps, saves, screens, graph runner, achievements tab) add to this shape: `readLog` keeps unknown parts and fills missing ones.
 
 - **Also called:** Linked scenarios kept as a log
-- **Words:** campaign, scenarios, log, progress, story, chain, carried between games, carry state, deck carried, record
+- **Words:** campaign, scenarios, log, progress, story, chain, carried between games, carry state, deck carried, record, campaign setup, phone campaign
 - **Release:** 1.0; not seen
 - **The game supplies:** The scenarios and what a result changes.
 - **Use it when:** A campaign of linked scenarios kept as a plain log.
@@ -380,7 +380,7 @@ Card tests on real cards. Test code only; the engine imports nothing here but `c
 The card-language shell (K206): card effects as data, one typed verb table where each verb has a field check, a handler that runs on engine-core and a text generator that prints the card's words from the same step. The game writes its own verbs; the standard pack (K232, `pack.ts`) gives the common ones.
 
 - **Also called:** Card effects written as data
-- **Words:** card, effects, data, verbs, text, validator, rules, language, offered, can resolve, unpayable cost, dry run, would change nothing, offer, offer policy, no change, effect offered, paid effect, modified cost, tax, discount, cannot know, hidden cards, resolve in full, resolve in part, partial resolution, full or partial, why not offered, why is an effect not offered, reason, no target, condition false, full option bars partial, prefer options that resolve fully, skip forced choice nothing resolves, partial option barred, choose number bar dead, gain zero no change, pick among the cards just moved, cards just moved, draw then discard one of them, effect interpreter, interpreter, ops, bespoke ability, custom handler, one-off, ability, draw three keep one, draft pick, pay or else, otherwise, target filter, select cards, randomly rearrange, reshuffle, search a deck, stop at first, draw until you find, delay effect until, gain tokens, would do nothing, cannot be paid, amount expression count per, then only if previous resolved, condition expression all any not compare, barred option, reason code, not offered
+- **Words:** card, effects, data, verbs, text, validator, rules, language, offered, can resolve, unpayable cost, dry run, would change nothing, offer, offer policy, no change, effect offered, paid effect, modified cost, tax, discount, cannot know, hidden cards, resolve in full, resolve in part, partial resolution, full or partial, why not offered, why is an effect not offered, reason, no target, condition false, full option bars partial, prefer options that resolve fully, skip forced choice nothing resolves, partial option barred, choose number bar dead, gain zero no change, pick among the cards just moved, cards just moved, draw then discard one of them, effect interpreter, interpreter, ops, bespoke ability, custom handler, one-off, ability, draw three keep one, draft pick, pay or else, otherwise, target filter, select cards, randomly rearrange, reshuffle, search a deck, stop at first, draw until you find, delay effect until, gain tokens, would do nothing, cannot be paid, amount expression count per, then only if previous resolved, condition expression all any not compare, barred option, reason code, not offered, resource cap
 - **Release:** 1.0; not seen
 - **The game supplies:** The verbs, with their field checks, handlers and text.
 - **Use it when:** A new game encodes card effects as data: verb table with handler, resume and text slots, validator, every-verb test; the standard verb pack (cardPack) on card-zones: draw, discard, mill, move, putIntoPlay, setAside, recall, gain, refill, shuffle, search, destroy, attach, detach, reveal, lookAt, scout, flip, exhaust, ready, chooseCards, chooseOption, may, chooseNumber, chooseDestination, choosePlayer, choosePayment, orderEffects, gainResource, pay, convert, adjust, seq, if, forEach, eachPlayer, repeat, count, later, payThen, custom; every card move through timing would; words overridable. Recipe: docs/recipes/card-effect.md.
@@ -514,7 +514,7 @@ A zoomed card as a full transcription: the printed text decoded with its icons, 
 
 - **Also called:** Big card view with full text
 - **Looks like:** A card shown large with its printed text decoded, icons, tokens and a legend.
-- **Words:** zoom, big, card, text, icons, glossary, transcription
+- **Words:** zoom, big, card, text, icons, glossary, transcription, card zoom preview
 - **Release:** 1.0; seen on screen
 - **The game supplies:** The card data, its icons and glossary terms.
 - **Use it when:** The zoomed card as a full transcription: decoded printed text with icons, engine notes (errata, rulings), tokens, an icon legend and glossary links, rule ids stripped; unstyled sections with slots. Recipe: docs/recipes/card-face-zoom.md.
@@ -630,7 +630,7 @@ Plain behaviour parts for four controls (Segmented, Toggle, Slider, TextField) t
 
 - **Also called:** Basic form controls
 - **Looks like:** A segmented choice, an on-off switch, a slider and a text box with no style of their own.
-- **Words:** buttons, toggle, slider, segmented, text, field, input, controls
+- **Words:** buttons, toggle, slider, segmented, text, field, input, controls, skin components
 - **Release:** 1.0; seen on screen
 - **The game supplies:** The look, by data-part.
 - **Use it when:** Segmented, Toggle, Slider and TextField as plain behaviour parts that a game skins by data-part, replacing native selects, checkboxes and range inputs.
@@ -722,7 +722,7 @@ Dev-only: `?dev=1&autoplay=<prompt kind>[*n]` plays a game-store with a sim-pool
 Exact dice probabilities (K24), opt-in. No packages; import from `index`.
 
 - **Also called:** Exact dice probabilities
-- **Words:** dice, odds, probability, chance, roll, maths
+- **Words:** dice, odds, probability, chance, roll, maths, win probability exact odds two dice compare
 - **Release:** 1.0; not seen
 - **The game supplies:** The dice to compute odds for.
 - **Use it when:** Exact dice probabilities for tests, sanity bands or AI.
@@ -756,7 +756,7 @@ Dice patterns as plain data (a pair, N the same, a run, odd or even, a sum again
 Pure logic of a dice tray and its roll window (K211), opt-in, unstyled; the game draws it (CSS, `pieces-3d`) and writes its own meanings. Import from `index`. Needs `state-machines`.
 
 - **Also called:** Dice rolling and holding
-- **Words:** dice, roll, hold, tray, reroll, window, random, reroll cost, pay to reroll, target number, modify roll, add to roll, combat reroll window, until different value, named dice roll, dice roll name, force a dice roll
+- **Words:** dice, roll, hold, tray, reroll, window, random, reroll cost, pay to reroll, target number, modify roll, add to roll, combat reroll window, until different value, named dice roll, dice roll name, force a dice roll, reroll window choose dice to reroll
 - **Release:** 1.0; not seen
 - **The game supplies:** The dice, their meanings and how they are drawn.
 - **Use it when:** Dice in play, held dice, rolling through ctx.rng (a roll name selects a test override) and the roll window content. Recipe: docs/recipes/dice.md.
@@ -862,7 +862,7 @@ The kernel of a game engine: seeded random numbers, canonical JSON and hashes, t
 ### engine-core/layers
 
 - **Also called:** Layers for continuous effects
-- **Words:** layers, order of changes, recompute, continuous, static
+- **Words:** layers, order of changes, recompute, continuous, static, static ability changes cost
 - **Use it when:** Several lasting effects change the same thing and the order matters (`layered`, `stampActive`).
 - **Guide:** [timing.md](../components/engine-core/timing.md)
 
@@ -883,7 +883,7 @@ The kernel of a game engine: seeded random numbers, canonical JSON and hashes, t
 ### engine-core/do-nothing
 
 - **Also called:** Options that do nothing
-- **Words:** does nothing, do nothing, idle, no result, empty effect
+- **Words:** does nothing, do nothing, idle, no result, empty effect, did nothing
 - **Use it when:** Find or mark an option whose effect would change nothing (`doesNothing`, `idleProblems`, `markIdle`).
 - **Guide:** [idle.md](../components/engine-core/idle.md)
 
@@ -1078,7 +1078,7 @@ A React modal over the board and a confirm dialog built on it.
 
 - **Also called:** Pop-up dialog and confirm box
 - **Looks like:** A box over the board with a dimmed background and OK and Cancel buttons.
-- **Words:** dialog, popup, modal, confirm, box, overlay
+- **Words:** dialog, popup, modal, confirm, box, overlay, popup notice
 - **Release:** 1.0; seen on screen
 - **The game supplies:** The content and its look.
 - **Use it when:** Show a dialog or confirm a choice over the board, with focus return and a scroll lock.
@@ -1094,7 +1094,7 @@ Plays motion specs in the director's format (one JSON per beat: `actors`, `steps
 
 - **Also called:** Motion player
 - **Looks like:** Plays a director motion file on the screen, step by step.
-- **Words:** motion, play, animation, spec, beats, director, timeline, sound cue timing, check game uses kit hooks, no bypass, game bypasses the kit, beat from engine events, events, sound cue, cue sound from events, event order, after the animation step, timer hold, hold until, auto continue
+- **Words:** motion, play, animation, spec, beats, director, timeline, sound cue timing, check game uses kit hooks, no bypass, game bypasses the kit, beat from engine events, events, sound cue, cue sound from events, event order, after the animation step, timer hold, hold until, auto continue, animation queue, event queue for animations
 - **Release:** 1.1; seen on screen
 - **The game supplies:** The motion spec files and the elements they name.
 - **Use it when:** Playing the director's motion specs (JSON beats) on the screen.
@@ -1150,7 +1150,7 @@ What the table shows while an answer's events play one step at a time. Pure, no 
 
 - **Also called:** Step-by-step playback of an answer
 - **Looks like:** The table updates one event at a time after a move.
-- **Words:** playback, steps, events, one, at, a, time, table, pace, opponent turn, step display
+- **Words:** playback, steps, events, one, at, a, time, table, pace, opponent turn, step display, timer for bot thinking delay
 - **Release:** 1.0; seen on screen
 - **The game supplies:** Its view and event types and the step function.
 - **Use it when:** The table must show an answer's events one step at a time.
@@ -1322,7 +1322,7 @@ Shows the engine's open question (an engine-core prompt) through a typed widget 
 
 - **Also called:** Question box
 - **Looks like:** The box that asks the player a question, with a widget for each kind of question.
-- **Words:** question, box, prompt, choice, ask, answer, widget, pick
+- **Words:** question, box, prompt, choice, ask, answer, widget, pick, confirm button prompt
 - **Release:** 1.0; seen on screen
 - **The game supplies:** A widget for each prompt kind, and the look.
 - **Use it when:** Showing the open engine-core prompt on screen: a widget per prompt kind (a missing one fails to compile), the common widgets (pick, amount, order, may, pay) unstyled, forced answers sent from the store in one undo step (answerWithForced), board picks with tap to confirm (one or several). Recipe: docs/recipes/prompts.md.
@@ -1447,7 +1447,7 @@ Saved games in IndexedDB over engine-core's `SaveFile`, and a screen for them. `
 
 - **Also called:** Saved games and their screen
 - **Looks like:** A list of saved games to load, rename or delete.
-- **Words:** save, load, saved, games, list, screen, browser, storage
+- **Words:** save, load, saved, games, list, screen, browser, storage, save game slots
 - **Release:** 1.0; seen on screen
 - **The game supplies:** The game state type and the screen look.
 - **Use it when:** Saved games in IndexedDB over engine-core's save file and a saves screen.
@@ -1669,7 +1669,7 @@ Game-free helpers for a game's vitest runs: jsdom stubs, UI fixtures (fake pack 
 Static check that a game's look lives in its token file. Lifted from Jarl's `scripts/theme-check.ts` (its file mode, made configurable).
 
 - **Also called:** Check that the look lives in tokens
-- **Words:** theme, tokens, look, colours, fonts, check, style, sheet
+- **Words:** theme, tokens, look, colours, fonts, check, style, sheet, theme kit
 - **Release:** 1.0; not seen
 - **The game supplies:** The token file, fonts and layout.
 - **Use it when:** Checking that the game's look lives in its token file, fonts and layout, and one dev page (Sheet) showing every registered component or view with its states and a hash filter.
@@ -1782,7 +1782,7 @@ Every printed item (card, tile, board) is transcribed twice, independently, then
 Rounds, turns per seat and phases and steps inside a turn as one data table; the runner walks it and calls engine-core `boundary()` at each turn begin, turn end, phase end and round end, so `endOfTurn` / `endOfRound` / `endOfPhase` / `turnBegins` durations end with no manual call (K264). Needs `engine-core`.
 
 - **Also called:** Rounds, turns and phases table
-- **Words:** turns, rounds, phases, steps, order, seat, flow, once per turn, once per round, once per phase, once per game, once per turn per card, use limit per game, usage limit, used this turn, repeat limit, same effect, once per turn response, ability, once per combat, skip a phase, skip phase condition, loop, actions per turn, round phases
+- **Words:** turns, rounds, phases, steps, order, seat, flow, once per turn, once per round, once per phase, once per game, once per turn per card, use limit per game, usage limit, used this turn, repeat limit, same effect, once per turn response, ability, once per combat, skip a phase, skip phase condition, loop, actions per turn, round phases, end of round scoring
 - **Release:** 1.0; not seen
 - **The game supplies:** The table of rounds, turns, phases and steps.
 - **Use it when:** Rounds, turns per seat in seat order, and phases and steps inside a turn as one data table; the runner calls engine-core boundary() at each turn, phase and round edge, so endOfTurn / endOfRound / endOfPhase durations end with no manual call; whoseTurn and flowOf read the position from state; once-per limits (K589: once per turn, round, phase or game, per card, per seat) bar a used option with its reason and clear at the matching edge. Recipe: docs/recipes/turn-flow.md.
@@ -1819,7 +1819,7 @@ The tutorial engine for any `GameRules<G>` game: a script format, headless play 
 Small screen helpers with no look and no game types. The stores are zustand vanilla stores: read them in React with
 
 - **Also called:** Small screen helper functions
-- **Words:** hover, hold, inspect, rule, sheet, toast, prompt, keys, selection, timers, icon, words
+- **Words:** hover, hold, inspect, rule, sheet, toast, prompt, keys, selection, timers, icon, words, toast message, tooltip hover card
 - **Release:** 1.0; not seen
 - **The game supplies:** Depends on the helper; see its entry.
 - **Use it when:** Small screen helpers: hover hold, inspect, rule sheet, toasts, prompt keys. For an engine-core prompt use prompt-host instead of createSelection and onlyForcedAnswer.
