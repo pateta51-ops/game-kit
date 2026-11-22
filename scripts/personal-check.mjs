@@ -19,7 +19,7 @@ const rules = [
 const DRIVE_EXEMPT = new Set(['ports.json', 'tools/game-server/boxes.json', 'docs/PORTS.md']); // the registries hold each game's repo folder on purpose
 const hits = [];
 for (const f of git('ls-files', '-z').split('\0').filter(Boolean)) {
-  if (f === 'scripts/personal-check.mjs' || !existsSync(f)) continue;
+  if (f === 'scripts/personal-check.mjs' || f === 'tests/personal-check.test.ts' || !existsSync(f)) continue;
   const buf = readFileSync(f);
   if (buf.length > 5e6 || buf.subarray(0, 8000).includes(0)) continue;
   const lines = buf.toString('utf8').split('\n');
