@@ -231,3 +231,25 @@ describe('K698 claims cache', () => {
     expect(calls.sort()).toEqual(['effects dice log', 'effects roll record', 'search dice log', 'search roll record']);
   });
 });
+describe('K698 the checker\'s own searches write no miss log', () => {
+  it('K698 kit.mjs search in a game logs a miss, but not with KIT_NO_MISS_LOG=1', () => {
+    const d = fs.mkdtempSync(path.join(root, 'log-')), home = path.join(d, 'home'), kit = path.join(d, 'kit');
+    fs.mkdirSync(kit);
+    fs.copyFileSync(path.resolve(import.meta.dirname, '..', 'kit.mjs'), path.join(kit, 'kit.mjs'));
+    fs.copyFileSync(path.resolve(import.meta.dirname, '..', 'docs', 'CATALOG.md'), path.join(kit, 'CATALOG.md'));
+    const log = path.join(home, '.game-kit', 'search-misses.log');
+    const go = (extra: Record<string, string>) => spawnSync(process.execPath, [path.join(kit, 'kit.mjs'), 'search', 'zqxv', 'wombat'], { encoding: 'utf8', env: { ...process.env, HOME: home, USERPROFILE: home, KIT_NO_MISS_LOG: '', ...extra } });
+    expect(go({ KIT_NO_MISS_LOG: '1' }).status).toBe(0);
+    expect(fs.existsSync(log)).toBe(false);
+    expect(go({}).status).toBe(0);
+    expect(fs.readFileSync(log, 'utf8')).toContain('zqxv wombat');
+  });
+  it('K698 claims passes KIT_NO_MISS_LOG=1 to every search it spawns', () => {
+    const d = fs.mkdtempSync(path.join(root, 'env-'));
+    put(d, 'kit/kit.mjs', "console.log(process.env.KIT_NO_MISS_LOG === '1' ? 'count: x\\nnot in the kit by that name' : 'glow: x highlight')\n");
+    put(d, 'a.md', 'A kit gap | search: playable highlight; lit highlight\n');
+    const out: string[] = [];
+    expect(claimsCmd([path.join(d, 'a.md'), '--repo', d], { out: (l) => void out.push(l), err: (l) => void out.push(l) }, '')).toBe(0);
+    expect(out.join('\n')).toBe('claims ok: a.md');
+  });
+});

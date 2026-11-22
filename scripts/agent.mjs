@@ -185,7 +185,7 @@ const next = () => { if (i >= keys.length) { if (!live) process.stdout.write(JSO
 for (let j = 0; j < 12; j++) next(); if (!keys.length) process.stdout.write('{}')`
 const kitSearch = (repo, k = path.join(repo, 'kit', 'kit.mjs')) => {
   if (!fs.existsSync(k)) return undefined
-  const home = fs.mkdtempSync(path.join(os.tmpdir(), 'kit-search-')), env = { ...process.env, HOME: home, USERPROFILE: home }
+  const home = fs.mkdtempSync(path.join(os.tmpdir(), 'kit-search-')), env = { ...process.env, HOME: home, USERPROFILE: home, KIT_NO_MISS_LOG: '1' }
   const one = (q, cmd = 'search') => spawnSync(process.execPath, [k, cmd, ...q.split(/\s+/)], { cwd: repo, encoding: 'utf8', env }).stdout ?? ''
   one.many = (keys) => { try { return new Map(Object.entries(JSON.parse(spawnSync(process.execPath, ['-e', MANY], { cwd: repo, encoding: 'utf8', env, input: JSON.stringify([k, ...keys]), maxBuffer: 1 << 28 }).stdout))) } catch { return new Map() } }
   return one
