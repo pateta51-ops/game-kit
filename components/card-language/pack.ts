@@ -275,8 +275,7 @@ export function cardPack<G extends GameTypes, E extends PackEnv = PackEnv>(cfg: 
   const due = (s: PackState, p: { readonly amount: Amount }, env: E): number => {
     const printed = n(p.amount, env);
     if (!cfg.due || p.amount === 'X' || (p as Record<string, unknown>)[FIXED] === true) return printed;
-    if (hid(s)) stop();
-    const d = cfg.due(s as unknown as G['state'], p as PackStep, env, printed);
+    const d = cfg.due(ro(s) as unknown as G['state'], p as PackStep, env, printed);
     if (!Number.isInteger(d) || d < 0) throw new EngineBugError(`card-language pack: due gave ${String(d)} for a cost of ${String(printed)} (a whole number, 0 or more, is needed)`);
     return d;
   };
@@ -311,7 +310,7 @@ export function cardPack<G extends GameTypes, E extends PackEnv = PackEnv>(cfg: 
     const base = { kind, seat: env.seat, min, max, options };
     askVerb(ctx, (cfg.prompt?.(base, st, env) ?? base) as Omit<G['prompt'], 'id'>, st, env);
   };
-  const resGet = (s: PackState, seat: string, key: string): number => (cfg.res ? (hid(s) && stop(), cfg.res.get(s as unknown as G['state'], seat, key)) : (s.res?.[seat]?.[key] ?? 0));
+  const resGet = (s: PackState, seat: string, key: string): number => (cfg.res ? cfg.res.get(ro(s) as unknown as G['state'], seat, key) : (s.res?.[seat]?.[key] ?? 0));
   const resSet = (ctx: Ctx<G>, seat: string, key: string, v: number): void => {
     if (cfg.res) return cfg.res.set(ctx, seat, key, v);
     const s = S(ctx);
@@ -334,8 +333,7 @@ export function cardPack<G extends GameTypes, E extends PackEnv = PackEnv>(cfg: 
     if (p.op === 'payThen') return p.cost.every((x) => payable(s, x, env, l));
     if (p.op === 'custom') {
       const f = cfg.custom?.[p.name]?.payable;
-      if (f && hid(s)) stop();
-      return f?.(s as unknown as G['state'], p, env) ?? true;
+      return f ? f(ro(s) as unknown as G['state'], p, env) : true;
     }
     if (!('cards' in fieldsOf(p.op))) return true;
     const c = p as Cards & { op: string; to?: string };
@@ -400,8 +398,44 @@ export function cardPack<G extends GameTypes, E extends PackEnv = PackEnv>(cfg: 
   // K583: in the check, has a cost shown the judged seat a card since it began? Noted the moment it is shown (read before each task and each game hook).
   const hid = (s: PackState): boolean => {
     if (dry === null) return false;
-    if (!J.hidden && J.sees !== null && seenBy(s, dry).some((c) => !(J.sees ?? []).includes(c))) J.hidden = true;
+    if (!J.hidden && fresh(s).length > 0) J.hidden = true;
     return J.hidden;
+  };
+  // K597: the cards that came into the judged seat's view during the line and that it did not see before.
+  const fresh = (s: PackState): string[] => (dry === null || J.sees === null ? [] : seenBy(s, dry).filter((c) => !(J.sees ?? []).includes(c)));
+  // K597: the state game code reads (tests, counts, filters, `payable`, `due`, `res.get`, `seats`, `noPlayer`, `reshuffle`). In resolves a read-only view that stops (hidden)
+  // only when a read yields a card that came into view: an array element, an object key or a string holding its id (a log line); `length` passes. Elsewhere the hard stop of K583.
+  const ro = <T>(s: T): T => {
+    if (R === null) return hid(s as unknown as PackState) ? stop() : s;
+    const f = fresh(s as unknown as PackState);
+    if (f.length === 0) return s;
+    const bad = (v: unknown): boolean => typeof v === 'string' && f.some((c) => v.includes(c));
+    const px = (o: unknown): unknown => {
+      if (typeof o !== 'object' || o === null) return o;
+      const t = o as object;
+      return new Proxy(Array.isArray(o) ? [] : {}, {
+        get: (_, k) => {
+          const v: unknown = Reflect.get(t, k);
+          return bad(v) ? stop() : px(v);
+        },
+        has: (_, k) => Reflect.has(t, k),
+        ownKeys: () => {
+          const ks = Reflect.ownKeys(t);
+          return ks.some(bad) ? stop() : ks;
+        },
+        getOwnPropertyDescriptor: (_, k) => {
+          const d = Reflect.getOwnPropertyDescriptor(t, k);
+          if (d === undefined) return undefined;
+          if (bad(d.value)) stop();
+          return Array.isArray(t) && k === 'length' ? { value: t.length, writable: true, enumerable: false, configurable: false } : 'value' in d ? { ...d, value: px(d.value), configurable: true } : { ...d, configurable: true };
+        },
+        getPrototypeOf: () => Reflect.getPrototypeOf(t),
+        set: () => false,
+        deleteProperty: () => false,
+        defineProperty: () => false,
+      });
+    };
+    return px(s) as T;
   };
   // A task that runs game code: a verb that is not the pack's own row, or any task kind but `verb` and engine-core's `timing.*`.
   const gameTask = (t: G['task']): boolean => {
@@ -485,7 +519,7 @@ export function cardPack<G extends GameTypes, E extends PackEnv = PackEnv>(cfg: 
         const t = cfg.tests?.[p.test];
         if (!t) return 'error';
         blind(s, env);
-        const b = t(s as unknown as G['state'], env) ? p.then : p.else;
+        const b = t(ro(s) as unknown as G['state'], env) ? p.then : p.else;
         return b === undefined ? 'condition' : first(s, b, env);
       }
       if (p.op === 'payThen') return canPay(s, p.cost, env) ? first(s, p.then, env) : 'cannotPay';
@@ -685,16 +719,20 @@ export function cardPack<G extends GameTypes, E extends PackEnv = PackEnv>(cfg: 
     const judge = dry;
     if (judge !== null && f !== undefined && cardsIn(s, z).some((c) => (peek || canSee(s, env.seat, c)) && !canSee(s, judge, c))) stop();
     if (f !== undefined) blind(s, env);
+    const v = f === undefined ? s : ro(s);
+    const nu = f === undefined ? [] : fresh(s);
     return cardsIn(s, z).flatMap((c, i) => {
       const seen = peek || canSee(s, env.seat, c);
       if (!seen) return f === undefined ? [`#${String(i)}`] : [];
-      return f === undefined || f(s as unknown as G['state'], c, env) ? [c] : [];
+      if (nu.includes(c)) stop();
+      return f === undefined || f(v as unknown as G['state'], c, env) ? [c] : [];
     });
   };
   // K583: in the check a card picked blind stays unknown to the game: its tests, counts, filters and custom verbs are not run with it.
   const blind = (s: PackState, env: E): void => {
     const judge = dry;
-    if (judge !== null && (hid(s) || (env.cards ?? []).some((c) => locate(s, c) !== undefined && !canSee(s, judge, c)))) stop();
+    const nu = R === null ? [] : fresh(s);
+    if (judge !== null && ((R === null && hid(s)) || [...(env.cards ?? []), ...(env.source === undefined ? [] : [env.source])].some((c) => nu.includes(c)) || (env.cards ?? []).some((c) => locate(s, c) !== undefined && !canSee(s, judge, c)))) stop();
   };
   const unhide = (s: PackState, z: string, picks: readonly string[]): string[] => picks.map((p) => (p.startsWith('#') ? (cardsIn(s, z)[Number(p.slice(1))] ?? '') : p));
   const pickAsk = (ctx: Ctx<G>, st: PackStep, env: E, z: string, min: number, max: number, peek = false, kind = 'chooseCards', keep?: (id: string) => boolean): boolean => {
@@ -924,10 +962,9 @@ export function cardPack<G extends GameTypes, E extends PackEnv = PackEnv>(cfg: 
     },
     choosePlayer: flow({ others: optional(bool), then: eff }, (ctx, st: Extract<PackStep, { op: 'choosePlayer' }>, e) => {
       if (!cfg.seats) throw new EngineBugError('card-language pack: choosePlayer needs cfg.seats');
-      if (hid(S(ctx))) stop();
-      const seats = cfg.seats(ctx.s).filter((p) => !st.others || p !== e.seat);
+      const seats = cfg.seats(ro(ctx.s)).filter((p) => !st.others || p !== e.seat);
       if (seats.length > 0) return ask(ctx, st, e, 'choosePlayer', seats.map((id) => ({ id, enabled: true })), 1, 1);
-      const seat = cfg.noPlayer?.(ctx.s, e);
+      const seat = cfg.noPlayer?.(ro(ctx.s), e);
       if (seat !== undefined) go(ctx, st.then, { ...e, seat });
     }, (ctx, st: Extract<PackStep, { op: 'choosePlayer' }>, e, a) => go(ctx, st.then, { ...e, seat: a[0] ?? e.seat })),
     choosePayment: flow({ ways: effs, then: eff }, (ctx, st: Extract<PackStep, { op: 'choosePayment' }>, e) => {
@@ -965,14 +1002,13 @@ export function cardPack<G extends GameTypes, E extends PackEnv = PackEnv>(cfg: 
       const t = cfg.tests?.[st.test];
       if (!t) throw new EngineBugError(`card-language pack: no test ${st.test}`);
       blind(S(ctx), e);
-      const branch = t(ctx.s, e) ? st.then : st.else;
+      const branch = t(ro(ctx.s), e) ? st.then : st.else;
       if (branch) go(ctx, branch, e);
     }),
     forEach: flow({ then: eff }, (ctx, st: Extract<PackStep, { op: 'forEach' }>, e) => ctx.then(...((e.cards ?? []).flatMap((c) => effectTasks(st.then, { ...e, cards: [c] })) as unknown as G['task'][]))),
     eachPlayer: flow({ then: eff }, (ctx, st: Extract<PackStep, { op: 'eachPlayer' }>, e) => {
       if (!cfg.seats) throw new EngineBugError('card-language pack: eachPlayer needs cfg.seats');
-      if (hid(S(ctx))) stop();
-      const all = cfg.seats(ctx.s);
+      const all = cfg.seats(ro(ctx.s));
       const i = Math.max(0, all.indexOf(e.seat));
       ctx.then(...([...all.slice(i), ...all.slice(0, i)].flatMap((seat) => effectTasks(st.then, { ...e, seat })) as unknown as G['task'][]));
     }),
@@ -981,7 +1017,7 @@ export function cardPack<G extends GameTypes, E extends PackEnv = PackEnv>(cfg: 
       const c = cfg.counts?.[st.what];
       if (!c) throw new EngineBugError(`card-language pack: no count ${st.what}`);
       blind(S(ctx), e);
-      go(ctx, st.then, { ...e, n: c(ctx.s, e) });
+      go(ctx, st.then, { ...e, n: c(ro(ctx.s), e) });
     }),
     later: flow({ at: str, then: eff }, (ctx, st: Extract<PackStep, { op: 'later' }>, e) => {
       const s = S(ctx);
@@ -1052,6 +1088,7 @@ export function cardPack<G extends GameTypes, E extends PackEnv = PackEnv>(cfg: 
       const c = cfg.custom?.[st.name];
       if (!c) throw new EngineBugError(`card-language pack: no custom verb ${st.name}`);
       blind(S(ctx), e);
+      if (hid(S(ctx))) stop();
       c.run(ctx, st, e);
     }, (ctx, st: Extract<PackStep, { op: 'custom' }>, e, a) => {
       const r = cfg.custom?.[st.name]?.resume;
@@ -1104,8 +1141,7 @@ export function cardPack<G extends GameTypes, E extends PackEnv = PackEnv>(cfg: 
     if (m.top) {
       if (cardsIn(s, m.from).length === 0 && m.op === 'draw' && !m.again) {
         // The reshuffle is its own `would` occurrence (kind `reshuffle`); the draw is tried once more after it.
-        if (cfg.reshuffle && hid(s)) stop();
-        const r = cfg.reshuffle?.(s as unknown as G['state'], m.from, m.seat);
+        const r = cfg.reshuffle?.(ro(s) as unknown as G['state'], m.from, m.seat);
         if (r !== undefined && cardsIn(s, r).length > 0) {
           const env = { seat: m.seat } as E;
           send(ctx, 'draw', 1, m.from, m.to, m.at, env, { again: true });
