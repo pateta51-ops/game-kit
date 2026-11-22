@@ -282,6 +282,9 @@
     "not": "Card rules themselves; those stay in the game.",
     "title": "Test card effects on real cards",
     "tags": [
+      "raw key in card reading",
+      "describe check accepted list",
+      "reading order verdict",
       "card",
       "prompt quotes printed clause",
       "who pays shared cost prompt",
