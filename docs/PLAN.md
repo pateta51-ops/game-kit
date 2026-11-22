@@ -371,6 +371,7 @@ The blind matching test's result was not recorded: the PR, its comments and docs
 | K411 | A new tuner page `tuners/screen.html` for screen and camera motion that no tuner shows: effect-library camera pull and push, scroll pan, letterbox banner, typewriter, pile lift; board-viewport zoom and pan; modal-dialog open and close; phone-mode sheet motion; card-zoom; achievements pop-up; card-attachments. Each gets a stage with a Play button, a "Kit default" preset read from the component's constants, sliders for its tunable values (unit, one-line help) and the "These settings in code" block with Copy, per tuners/README.md. Listed in the README's table. | M | owner (18 Nov 2026): tuners missing for many kit parts | done |
 | K673 | kit tooling: search cases run as a check, ranking that ignores a single common word on candidates, and every row file carries a state line. | M | owner (22 Nov 2026): search and status kept right every time the kit changes | done |
 | K676 | search: answer the planners' unanswered searches of 22 Nov with tags and cases. | M | owner (22 Nov 2026): every planner search that found nothing is answered before a tag | done |
+| K687 | search: answer 12 more planner searches of 22 Nov. | S | owner (22 Nov 2026): every planner search that found nothing is answered before a tag | done |
 
 ## Candidates
 

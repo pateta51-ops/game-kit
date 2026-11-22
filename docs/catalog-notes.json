@@ -144,7 +144,15 @@
       "tile records",
       "build grid",
       "assembled from map tiles",
-      "shoot"
+      "shoot",
+      "movement",
+      "reach",
+      "reachable spaces",
+      "steps",
+      "end spaces",
+      "one space at a time",
+      "move preview",
+      "distinct paths"
     ],
     "visible": false,
     "release": 1,
@@ -472,7 +480,10 @@
       "cannot be paid",
       "amount expression count per",
       "then only if previous resolved",
-      "condition expression all any not compare"
+      "condition expression all any not compare",
+      "barred option",
+      "reason code",
+      "not offered"
     ],
     "visible": false,
     "release": 1,
@@ -1162,7 +1173,11 @@
       "events",
       "sound cue",
       "cue sound from events",
-      "event order"
+      "event order",
+      "after the animation step",
+      "timer hold",
+      "hold until",
+      "auto continue"
     ],
     "looks": "Plays a director motion file on the screen, step by step.",
     "visible": true,
@@ -1765,7 +1780,10 @@
       "screen",
       "bot",
       "url",
-      "flag"
+      "flag",
+      "playtest",
+      "random answers",
+      "through the screen"
     ],
     "visible": false,
     "release": 1,
@@ -1802,7 +1820,10 @@
       "legal move driver",
       "drivers",
       "simulation module",
-      "rounds until no new clause"
+      "rounds until no new clause",
+      "play whole games",
+      "by script",
+      "e2e"
     ],
     "visible": false,
     "release": 1,
@@ -2201,7 +2222,10 @@
       "ability",
       "once per combat",
       "skip a phase",
-      "skip phase condition"
+      "skip phase condition",
+      "loop",
+      "actions per turn",
+      "round phases"
     ],
     "visible": false,
     "release": 1,

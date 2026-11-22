@@ -394,5 +394,18 @@
   { "q": "scenario put tokens on map", "first": "card-harness" },
   { "q": "simulation module drivers", "first": "sim-pool" },
   { "q": "wounded instead of removed", "first": "engine-core" },
-  { "q": "motion beats event order cue sound from motion player", "first": "motion-frame" }
+  { "q": "motion beats event order cue sound from motion player", "first": "motion-frame" },
+  { "q":"art pipeline image jpeg manifest","first":"art-pipeline" },
+  { "q":"movement path step one space at a time end space reach","first":"grid-map" },
+  { "q":"barred option reason code not offered","first":"card-language" },
+  { "q":"round phases loop actions per turn","first":"turn-flow" },
+  { "q":"play a sound after the animation step","first":"motion-frame" },
+  { "q":"timer hold auto continue","first":"motion-frame" },
+  { "q":"reachable spaces within N steps","first":"grid-map" },
+  { "q":"move preview end spaces paths","first":"grid-map" },
+  { "q":"playtest random answers through the screen","first":"e2e-helpers" },
+  { "q":"play whole games by script e2e","first":"e2e-helpers" },
+  { "q":"music state machine layers by game state","first":"sound-player" },
+  { "q":"all end spaces of a move with distinct paths","first":"grid-map" },
+  { "q":"ready exhausted cards at round start","first":"tap" }
 ]
