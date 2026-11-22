@@ -1,5 +1,6 @@
 // cards:screen (K489): what the player reads against what the pack prints. Pure; the game gathers the input.
 import { plainWords } from '../plain-text/index.ts';
+import { knownGate, type KnownFindings } from './known.ts';
 
 export interface ScreenInput {
   /** Printed text per face (its id, the pack's text). */
@@ -24,6 +25,8 @@ export interface ScreenInput {
   allowNumbers?: readonly (string | RegExp)[];
   /** Strip run before words are compared (plain-text's `ids.strip`). */
   strip?: (t: string) => string;
+  /** K650: a known-findings list for `screenMain`; unset: unchanged. */
+  known?: KnownFindings;
 }
 
 const esc = (s: string): string => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
@@ -97,6 +100,7 @@ export function screenProblems(i: ScreenInput): string[] {
 /** The `cards:screen` script body: prints each problem, returns the exit code. */
 export function screenMain(input: ScreenInput, log: (l: string) => void): number {
   const p = screenProblems(input);
+  if (input.known) return knownGate('cards:screen', p, input.known, log);
   for (const l of p) log(l);
   if (p.length === 0) log('cards:screen ok');
   return p.length === 0 ? 0 : 1;

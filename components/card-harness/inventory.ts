@@ -6,6 +6,7 @@
 import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
 import { join, relative } from 'node:path';
 import { asserts, callsHelper, testCalls } from './depth.ts';
+import { knownCheck, writeKnown, type KnownFindings } from './known.ts';
 
 export interface Piece {
   readonly kind: string;
@@ -57,6 +58,8 @@ export interface InventoryInput {
   readonly interactingPending?: Readonly<Record<string, string>>;
   /** K415: the depth gate (on too when any clause has `conditional`): a clause is cited only by a test titled with its id (not its poor test) whose body asserts; a conditional one also needs `poor:<id>`. */
   readonly depth?: boolean;
+  /** K650: a known-findings list of the `interacting` ids in no row (an id per line, or the K497 JSON map); replaces `interactingPending`. Its io defaults to `runInventory`'s. */
+  readonly known?: KnownFindings;
 }
 export interface Row {
   readonly key: string;
@@ -300,9 +303,17 @@ export interface InventoryIo {
 
 /** Write the report to `out`, or with `check` compare it; the exit code. */
 export function runInventory(input: InventoryInput, out: string, check: boolean, io: InventoryIo): number {
+  if (input.known && input.interactingPending) throw new Error('inventory: pass known or interactingPending, not both');
   const inv = inventory(input);
   const pend = input.interactingPending ?? {};
-  let code = 0;
+  const k = input.known && { io, ...input.known };
+  if (k?.write) {
+    const w = writeKnown(inv.outOfRows, k);
+    io.log(`inventory: ${k.file}: ${String(w.added)} added, ${String(w.removed)} removed, ${String(w.lines)} lines`);
+    return 0;
+  }
+  const kr = k && knownCheck(inv.outOfRows, k);
+  let code = kr?.problems.length ? 1 : 0;
   if (check) {
     if (io.read(out) !== inv.report) {
       io.log(`inventory: ${out} is stale; run the inventory again`);
@@ -321,14 +332,15 @@ export function runInventory(input: InventoryInput, out: string, check: boolean,
     );
   for (const k of inv.notCounted) io.log(`inventory: ${k} (not counted)`);
   for (const k of inv.quoteDiffers) io.log(`inventory: ${k}`);
-  for (const k of inv.outOfRows) io.log(`inventory: ${k} is in no interaction row`);
+  for (const k of kr ? kr.fresh : inv.outOfRows) io.log(`inventory: ${k} is in no interaction row`);
+  for (const p of kr?.problems.slice(kr.fresh.length) ?? []) io.log(`inventory: ${p}`);
   for (const k of inv.pendingRows) io.log(`inventory: ${k} is in no interaction row (pending: ${pend[k]!})`);
   for (const k of inv.staleInteracting) io.log(`inventory: stale pending entry: ${k}`);
   for (const k of inv.staleBaseline) io.log(`inventory: baseline lists ${k}, which is cited or gone`);
   for (const k of inv.unowned) io.log(`inventory: printed line ${k} is owned by no record and not listed open`);
   for (const k of inv.staleOpen) io.log(`inventory: open list has ${k}, which is owned or gone`);
   for (const k of inv.unrouted) io.log(`inventory: record ${k} has a verb the engine does not route`);
-  if (inv.uncited.length + inv.staleBaseline.length + inv.unowned.length + inv.staleOpen.length + inv.unrouted.length + inv.quoteDiffers.length + inv.outOfRows.length + inv.staleInteracting.length + inv.notCounted.length > 0) code = 1;
+  if (inv.uncited.length + inv.staleBaseline.length + inv.unowned.length + inv.staleOpen.length + inv.unrouted.length + inv.quoteDiffers.length + (kr ? 0 : inv.outOfRows.length) + inv.staleInteracting.length + inv.notCounted.length > 0) code = 1;
   io.log(`inventory: ${String(inv.rows.length)} pieces and clauses, ${String(inv.uncited.length)} uncited${code === 0 ? '; ok' : ''}`);
   return code;
 }

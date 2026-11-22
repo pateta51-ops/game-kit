@@ -1,6 +1,7 @@
 // Card-language checks. `describeCheck`: per card, the encoding passes the game's validator and its generated reading
 // equals the printed text word for word, with the bracketed tokens compared both ways. `Same` with `conforms`: a
 // compile-time check that a schema's inferred type and the engine's type are the same. `report`: findings to an exit code.
+import { knownCheck, type KnownFindings } from './known.ts';
 
 export interface DescribedCard<E> {
   readonly id: string;
@@ -15,7 +16,9 @@ export function describeCheck<E>(
   describe: (e: E) => string,
   validate: (e: E) => readonly string[] = () => [],
   tokens: (text: string) => Set<string> = TOKENS,
+  known?: KnownFindings,
 ): string[] {
+  if (known?.write) throw new Error('describeCheck: write the known lines with writeKnown, never inside the check');
   const errors: string[] = [];
   for (const c of cards) {
     const bad = validate(c.encoding);
@@ -30,7 +33,7 @@ export function describeCheck<E>(
     for (const t of p) if (!g.has(t)) errors.push(`${c.id}: printed [${t}] is not in the generated reading`);
     for (const t of g) if (!p.has(t)) errors.push(`${c.id}: generated [${t}] is not on the printed card`);
   }
-  return errors;
+  return known ? knownCheck(errors, known).problems : errors;
 }
 
 export type Same<A, B> = [A] extends [B] ? ([B] extends [A] ? true : false) : false;
