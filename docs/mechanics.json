@@ -128,7 +128,6 @@
   ],
   "searches": {
     "undo button": "engine-core",
-    "until end of combat": "engine-core",
     "line of sight": "grid-map",
     "wall": "grid-map",
     "heavy queue": "heavy-queue",
