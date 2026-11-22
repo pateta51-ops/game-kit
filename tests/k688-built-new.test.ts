@@ -12,7 +12,7 @@ const put = (dir: string, f: string, t = 'x') => { fs.mkdirSync(path.dirname(pat
 // a stand-in for the game's kit/kit.mjs search: "dice" finds dice-tray, "deck" a mechanics line naming card-zones, anything else misses
 const fakeKit = `const w = process.argv.slice(3).join(' ')
 if (process.argv[2] !== 'search') process.exit(2)
-if (w.includes('pile')) console.log('Dice tray (\`dice-tray\`): Use: rolls dice\nCard pile (\`card-zones\`): Use: piles\ncount: Counts.\nhand-fan: Fans a hand.')
+if (w.includes('pile')) console.log('Dice tray (\`dice-tray\`): Use: rolls dice\\nCard pile (\`card-zones\`): Use: piles\\ncount: Counts.\\nhand-fan: Fans a hand.')
 else if (w.includes('dice')) console.log('Dice tray (\`dice-tray\`): Use: rolls dice')
 else if (w.includes('deck')) console.log('mechanic: deck of cards -> \`card-zones\`: read its README')
 else console.log('count: Counts a number up.\\nnot in the kit by that name')
@@ -160,8 +160,8 @@ describe('K688 new top-level exports and timers in changed files need a line', (
     }
   });
   it('K688 a timer in an arrow or function body on a top-level line is not top-level; a top-level assigned one is', () => {
-    for (const t of ['const start = () => setTimeout(tick, 100)', 'export const stop = () => clearTimeout(setTimeout(tick, 1))', 'function go() { setInterval(tick, 1) }']) {
-      const x = run(game({ 'src/old.ts': 'export const a = 1\nfunction tick() {}\n' + t + '\n' }), '## Built new\n- src/old.ts#stop | search: a b; c d | nearest: none | why: x\n');
+    for (const t of ['const start = () => setTimeout(tick, 100)', 'const stop = () => clearTimeout(setTimeout(tick, 1))', 'function go() { setInterval(tick, 1) }']) {
+      const x = run(game({ 'src/old.ts': 'export const a = 1\nfunction tick() {}\n' + t + '\n' }), '## Built new\n');
       expect(x.rc, t).toBe(0);
     }
     const y = run(game({ 'src/old.ts': 'export const a = 1\nfunction tick() {}\nconst id = setTimeout(tick, 100)\n' }), '## Built new\n');
