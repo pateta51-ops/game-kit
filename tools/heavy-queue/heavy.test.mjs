@@ -510,3 +510,84 @@ SwapCached:            0 kB
     await until(async () => (await q.status()).lastDrop);
   });
 });
+
+describe('heavy cancel (K571)', () => {
+  const gone = (pid) => { try { process.kill(pid, 0); return false; } catch { return true; } };
+  const HC = (q, args) => heavy(args, { HEAVY_URL: q.url });
+  const hang = (file) => ['-e', `const {spawn}=require('child_process');const g=spawn(process.execPath,['-e','setInterval(()=>{},1000)']);require('fs').writeFileSync(${JSON.stringify(file)},process.pid+' '+g.pid);setInterval(()=>{},1000)`];
+  it('a waiting job leaves the queue, never starts, and the next waiting job starts', async () => {
+    const q = await serve({});
+    const hold = await q.post('/acquire', { label: 'other' });
+    const a = heavy(['run', '--label', 'a', '--', process.execPath, '-e', 'process.exit(0)'], { HEAVY_URL: q.url });
+    await until(async () => (await q.status()).waiting.length === 1);
+    const b = heavy(['run', '--label', 'b', '--', process.execPath, '-e', 'process.exit(7)'], { HEAVY_URL: q.url });
+    await until(async () => (await q.status()).waiting.length === 2);
+    const id = (await q.status()).waiting[0].id;
+    const c = await HC(q, ['cancel', id]);
+    expect(c.code).toBe(0);
+    const ra = await a;
+    expect(ra.code).toBe(143);
+    expect(ra.err).toContain('cancelled: a');
+    await q.post('/release', { id: hold.id });
+    expect((await b).code).toBe(7);
+    const h = (await q.status()).history;
+    expect(h.find((x) => x.label === 'a').startedAt).toBeUndefined();
+    expect(h.find((x) => x.label === 'a')).toMatchObject({ reason: 'cancelled' });
+  });
+  it('a running job: its process group is gone, slots freed, the run exits non-zero', async () => {
+    const q = await serve({});
+    const f = join(mkdtempSync(join(tmpdir(), 'hc-')), 'pids');
+    const run = heavy(['run', '--label', 'long', '--', process.execPath, ...hang(f)], { HEAVY_URL: q.url, HEAVY_GRACE: '500' });
+    await until(async () => existsSync(f) && readFileSync(f, 'utf8').includes(' '));
+    const [p, g] = readFileSync(f, 'utf8').split(' ').map(Number);
+    const id = (await q.status()).running[0].id;
+    const c = await HC(q, ['cancel', id]);
+    expect(c.code).toBe(0);
+    const r = await run;
+    expect(r.code).toBe(143);
+    expect(r.err).toContain('cancelled: long');
+    await until(() => gone(p) && gone(g));
+    const s = await q.status();
+    expect(s.running).toEqual([]);
+    expect(s.history[0]).toMatchObject({ label: 'long', reason: 'cancelled' });
+  });
+  it('a grandchild that ignores TERM is killed after the grace, and the slots are freed only then', async () => {
+    const q = await serve({});
+    const f = join(mkdtempSync(join(tmpdir(), 'hc-')), 'pids');
+    const code = `const {spawn}=require('child_process');const g=spawn(process.execPath,['-e','process.on("SIGTERM",()=>{});setInterval(()=>{},1000)']);require('fs').writeFileSync(${JSON.stringify(f)},g.pid+'');setInterval(()=>{},1000)`;
+    const run = heavy(['run', '--label', 'stubborn', '--', process.execPath, '-e', code], { HEAVY_URL: q.url, HEAVY_GRACE: '600' });
+    await until(async () => existsSync(f) && readFileSync(f, 'utf8').length > 0);
+    await sleep(200);
+    const g = Number(readFileSync(f, 'utf8'));
+    expect((await HC(q, ['cancel', (await q.status()).running[0].id])).code).toBe(0);
+    await until(async () => (await q.status()).running.length === 0);
+    expect(gone(g)).toBe(true);
+    expect((await run).code).toBe(143);
+  });
+  it('--label cancels every match (equal, or followed by a space) and prints each; no match exits 1', async () => {
+    const q = await serve({});
+    const hold = await q.post('/acquire', { label: 'other' });
+    const runs = ['job one', 'job', 'jobless'].map((l) => heavy(['run', '--label', l, '--', process.execPath, '-e', 'process.exit(0)'], { HEAVY_URL: q.url }));
+    await until(async () => (await q.status()).waiting.length === 3);
+    const c = HC(q, ['cancel', '--label', 'job']);
+    const cr = await c;
+    expect(cr.code).toBe(0);
+    expect(c.out().split('\n').filter(Boolean)).toHaveLength(2);
+    expect((await runs[0]).code).toBe(143);
+    expect((await runs[1]).code).toBe(143);
+    expect((await q.status()).waiting.map((l) => l.label)).toEqual(['jobless']);
+    const none = await HC(q, ['cancel', '--label', 'nothing']);
+    expect(none.code).toBe(1);
+    expect(none.err).toContain('no waiting or running job matches');
+    await q.post('/release', { id: hold.id });
+    expect((await runs[2]).code).toBe(0);
+  });
+  it('a running lease not started by heavy run (runner hook) is refused, exit 1, and keeps its slot', async () => {
+    const q = await serve({});
+    const hold = await q.post('/acquire', { label: 'runner job' });
+    const r = await HC(q, ['cancel', hold.id]);
+    expect(r.code).toBe(1);
+    expect(r.err).toContain('not started by heavy run');
+    expect((await q.status()).running.map((l) => l.label)).toEqual(['runner job']);
+  });
+});
