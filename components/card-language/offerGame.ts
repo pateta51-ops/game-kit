@@ -11,7 +11,11 @@ export interface S extends KernelState, PackState {
   readonly stack: readonly Task[];
   readonly log: readonly { readonly seq: number; readonly type: string }[];
   /** The brute-force run's own notes (never part of the view): what a cost changed is not counted. */
+  /** K597 fourth look, with `marks`: every card moved, kept as a key (a mark). */
+  readonly got?: Readonly<Record<string, number>>;
   readonly truth?: { readonly hit: boolean; readonly open: readonly number[]; readonly base: string | null };
+  /** K597, the brute-force run's notes: the view after the last step marker, the parts whose run changed it (a top-level payThen: i its cost, i + 0.5 its effect), the step running, the view when a cost ended. */
+  readonly steps?: { readonly base: string; readonly done: readonly number[]; readonly next: number; readonly paid?: string; readonly part?: readonly number[]; readonly half?: readonly number[]; readonly costs?: readonly { readonly pre?: string; readonly mid?: string }[] };
 }
 export interface Content { readonly effect: readonly PackStep[]; readonly env?: PackEnv }
 export interface G {
@@ -41,7 +45,11 @@ export interface GameOpts {
   readonly pool?: Readonly<Record<string, WhenCard<PackStep>>>;
   /** An occurrence kind every occurrence of which is cancelled in its would-window (a replacement that skips it). */
   readonly cancel?: string;
+  /** K597 fourth look: `moved` also marks the card in `got`; `viewSafe` flags the custom verbs that read no card and the row `lucky`. */
+  readonly marks?: boolean;
+  readonly viewSafe?: boolean;
 }
+const SAFE = ['nothing', 'lone', 'order', 'spend', 'win', 'boom', 'back', 'pairs', 'roll', 'have'];
 
 export const gold = (s: PackState, seat = 'a', k = 'gold'): number => s.res?.[seat]?.[k] ?? 0;
 export const GAIN: PackStep = { op: 'gainResource', res: 'gold', amount: 1 };
@@ -49,7 +57,7 @@ export const NOTHING: PackStep = { op: 'move', cards: 'top', from: 'aside', to: 
 export const DRAW: PackStep = { op: 'draw', count: 1 };
 export const pay = (amount: number): PackStep => ({ op: 'pay', res: 'gold', amount });
 export const LUCKY = { op: 'lucky' } as unknown as PackStep;
-const SKIP = ['stack', 'prompt', 'seq', 'promptSeq', 'log', 'timing', 'cardMoves', 'rng', 'forced', 'truth'];
+const SKIP = ['stack', 'prompt', 'seq', 'promptSeq', 'log', 'timing', 'cardMoves', 'rng', 'forced', 'truth', 'steps'];
 /** What the check compares by default, without the brute-force notes. */
 export const viewOf = (s: S): string => canonicalJson(Object.fromEntries(Object.entries(s).filter(([k, v]) => !SKIP.includes(k) && !(k === 'marks' && Object.keys(v as object).length === 0))));
 /** Did this line of play change the game, not counting what a cost marked by `marked` changed? */
@@ -74,6 +82,8 @@ export const offerGame = <P extends BasePack>(make: (cfg: never) => P, opts: Gam
       ends: (_s, e) => ['h2', 'd1'].every((c) => e.cards?.includes(c)), b3: (_s, e) => e.cards?.includes('b3') ?? false,
       evenUp: (s) => cardsIn(s, 'discard:a').some((c) => c.endsWith('2')), drew2: (s) => cardsIn(s, 'hand:a').includes('d2'),
       top: (s) => (cannotKnow(), cardsIn(s, 'deck:a')[0] === 'd1'), owes: (_s, e) => e.owed !== undefined,
+      gotD2: (s) => s.got?.d2 === 1, inD2: (s) => 'd2' in (s.got ?? {}), ownD2: (s) => Object.prototype.hasOwnProperty.call(s.got ?? {}, 'd2'), hasD2: (s) => Object.hasOwn(s.got ?? {}, 'd2'),
+      descD2: (s) => Object.getOwnPropertyDescriptor(s.got ?? {}, 'd2') !== undefined, p1: (s) => cardsIn(s, 'play:a').includes('p1'),
     },
     counts: { held: (s, e) => cardsIn(s, `hand:${e.seat}`).length },
     seats: () => ['a', 'b'],
@@ -132,20 +142,44 @@ export const offerGame = <P extends BasePack>(make: (cfg: never) => P, opts: Gam
       peek: { run: (ctx, _st, env) => (cannotKnow(), void (cardsIn(ctx.s, 'hand:b')[0] === 'b1' && res(ctx, env.seat, 9))), text: () => 'Peek.' },
       // Case 25: attempt to draw, otherwise gain 1 gold (the game's own verb, on the pack's check).
       attempt: { run: (ctx, _st, env) => ctx.then(...(effectTasks([pack.wouldChange(ctx.s, ctx.content, [DRAW], env) === 'no' ? GAIN : DRAW], env) as Task[])), text: () => 'Attempt.' },
+      // K597: between two top-level steps of a real run (`n` = the step just run, 1-based; none before the first).
+      step: { run: (ctx, st) => {
+        const v = viewOf(ctx.s);
+        const n = (st as { n?: number }).n;
+        const t = ctx.s.steps ?? { base: v, done: [], next: 0 };
+        const got = n === undefined ? [] : t.paid !== undefined ? [...(t.paid !== t.base ? [n - 1] : []), ...(v !== t.paid ? [n - 0.5] : [])] : v !== t.base ? [n - 1] : [];
+        const part = t.part ?? [];
+        draftOf(ctx).steps = { base: v, done: [...t.done, ...got.filter((u) => !part.includes(u))], half: [...(t.half ?? []), ...got.filter((u) => part.includes(u))], part, next: n ?? 0 } as never;
+      }, text: () => 'Step.' },
+      // K597: around a cost that is not a top-level payThen (pre2 before it, mid2 when it is paid, end2 after its effect, post2 after it): a part whose cost or effect changed nothing did not resolve in full.
+      pre2: { run: (ctx) => void (ctx.s.steps && (draftOf(ctx).steps = { ...ctx.s.steps, costs: [...(ctx.s.steps.costs ?? []), { pre: viewOf(ctx.s) }] } as never)), text: () => 'Pre2.' },
+      mid2: { run: (ctx) => void (ctx.s.steps && (draftOf(ctx).steps = { ...ctx.s.steps, costs: [...(ctx.s.steps.costs ?? []).slice(0, -1), { ...ctx.s.steps.costs?.[ctx.s.steps.costs.length - 1], mid: viewOf(ctx.s) }] } as never)), text: () => 'Mid2.' },
+      end2: { run: (ctx) => {
+        const t = ctx.s.steps;
+        const c = t?.costs?.[t.costs.length - 1];
+        if (t && c && (c.mid === c.pre || viewOf(ctx.s) === c.mid)) draftOf(ctx).steps = { ...t, part: [...(t.part ?? []), t.paid !== undefined ? t.next + 0.5 : t.next] } as never;
+      }, text: () => 'End2.' },
+      post2: { run: (ctx) => {
+        const t = ctx.s.steps;
+        const c = t?.costs?.[t.costs.length - 1];
+        if (t && c) draftOf(ctx).steps = { ...t, costs: t.costs?.slice(0, -1), ...(c.mid === undefined && viewOf(ctx.s) !== c.pre ? { part: [...(t.part ?? []), t.paid !== undefined ? t.next + 0.5 : t.next] } : {}) } as never;
+      }, text: () => 'Post2.' },
+      // K597: first in the effect of a top-level payThen of a real run: the view when its cost ended.
+      paid: { run: (ctx) => void (ctx.s.steps && ctx.s.steps.paid === undefined && (draftOf(ctx).steps = { ...ctx.s.steps, paid: viewOf(ctx.s) } as never)), text: () => 'Paid.' },
       start: { run: (ctx) => note(ctx, (t) => ({ ...t, base: viewOf(ctx.s) })), text: () => 'Start.' },
       pre: { run: (ctx, st) => note(ctx, (t) => ({ ...t, hit: t.hit || (t.open.length === 0 && viewOf(ctx.s) !== (t.base ?? base())), open: [...t.open, (st as { n?: number }).n ?? 0] })), text: () => 'Pre.' },
       mark: { run: (ctx) => note(ctx, (t) => ({ ...t, open: t.open.slice(0, -1), base: t.open.length === 1 ? viewOf(ctx.s) : t.base })), text: () => 'Mark.' },
       post: { run: (ctx, st) => note(ctx, (t) => (t.open[t.open.length - 1] !== (st as { n?: number }).n ? t : { ...t, open: t.open.slice(0, -1), base: t.open.length === 1 ? viewOf(ctx.s) : t.base })), text: () => 'Post.' },
     },
-    moved: (ctx, m) => ctx.emit({ type: `${m.op} ${m.card}` }),
+    moved: (ctx, m) => (ctx.emit({ type: `${m.op} ${m.card}` }), opts.marks === true && void (draftOf(ctx).got = { ...ctx.s.got, [m.card]: 1 })),
     ...(opts.offer === undefined ? {} : { offer: opts.offer }),
     handlers: (): HandlerTable<G> => RULES.handlers,
     table: () => VERBS,
     ...opts.cfg,
   };
-  const pack = make(cfg as never);
+  const pack = make((opts.viewSafe === true ? { ...cfg, custom: Object.fromEntries(Object.entries(cfg.custom ?? {}).map(([k, v]) => [k, SAFE.includes(k) ? { ...v, viewSafe: true } : v])) } : cfg) as never);
   // The game's own verb (a row of its table, not a pack verb): 9 gold if an even card lies in the open discard.
-  const VERBS = { ...pack.verbs, lucky: { fields: {}, run: (ctx: Ctx<G>, _st: PackStep, env: PackEnv | undefined) => void (cardsIn(ctx.s, 'discard:a').some((c) => c.endsWith('2')) && res(ctx, env?.seat ?? 'a', 9)), text: () => 'Lucky.' } } as unknown as VerbTable<G, PackStep, PackEnv>;
+  const VERBS = { ...pack.verbs, lucky: { fields: {}, run: (ctx: Ctx<G>, _st: PackStep, env: PackEnv | undefined) => void (cardsIn(ctx.s, 'discard:a').some((c) => c.endsWith('2')) && res(ctx, env?.seat ?? 'a', 9)), text: () => 'Lucky.', ...(opts.viewSafe === true ? { viewSafe: true } : {}) } } as unknown as VerbTable<G, PackStep, PackEnv>;
   const RULES: GameRules<G> = {
     handlers: {
       ...timingHandlers<G>({
@@ -193,4 +227,49 @@ export const offerGame = <P extends BasePack>(make: (cfg: never) => P, opts: Gam
     return r;
   };
   return { pack, play, check, at, nested, RULES };
+};
+
+// K583: random small effects on the made-up game (fixed seeds, no clock). `rnd` is a plain generator kept in the test.
+export const rng = (seed: number) => {
+  let x = seed;
+  const rnd = (n: number): number => {
+    x = (Math.imul(x, 1103515245) + 12345) >>> 0;
+    return (x >>> 8) % n;
+  };
+  return { rnd, of: <T,>(xs: readonly T[]): T => xs[rnd(xs.length)] as T };
+};
+const custom = (name: string): PackStep => ({ op: 'custom', name });
+// K583: the random effect generator of the check's tests (also K597's comparison). K597: `more` adds tests that read a card drawn or milled (the same sequence without it).
+export const gen = (seed: number, more = false) => {
+  const { rnd, of } = rng(seed);
+  const reads = more ? ['drew2', 'evenUp', 'gotD2', 'inD2', 'ownD2', 'hasD2', 'descD2', 'p1'] : [];
+  const leaf = (): PackStep => of<() => PackStep>([
+    () => GAIN, () => NOTHING, () => NOTHING, () => DRAW, () => pay(1), () => pay(9), () => custom('nothing'), () => custom('lone'), () => custom('order'), () => custom('roll'),
+    () => custom('win'), () => custom('boom'), () => custom('back'), () => custom('pairs'), () => custom('nest'), () => custom('attempt'), () => custom('spend'),
+    () => ({ op: 'adjust', key: 'gold', by: -1 }), () => ({ op: 'adjust', key: 'gold', by: 1, max: 3 }), () => ({ op: 'gainResource', res: 'gold', amount: 'X' }),
+    () => ({ op: 'discard', cards: 'chosen' }), () => ({ op: 'move', cards: 'chosen', to: 'discard' }), () => ({ op: 'exhaust' }), () => ({ op: 'ready' }), () => ({ op: 'shuffle', zone: of(['deck', 'aside', 'play']) }),
+    () => ({ op: 'lookAt', cards: 'all', from: of(['hand', 'play', 'deck']) }), () => ({ op: 'reveal', cards: 'all', from: of(['hand', 'play']) }), () => ({ op: 'lookAt', count: 1 }),
+    () => ({ op: 'if', test: of(['two', 'h2', 'poor', 'rich', 'b3', 'ends', ...reads]), then: [of([GAIN, DRAW, NOTHING])] }),
+    () => ({ op: 'later', at: 'end', then: [GAIN] }), () => ({ op: 'search', zone: 'deck', filter: 'even' }), () => ({ op: 'search', zone: 'aside' }),
+    ...(more ? [(): PackStep => ({ op: 'mill', count: 1 }), (): PackStep => ({ op: 'if', test: of(reads), then: [GAIN] })] : []),
+  ])();
+  const eff = (depth: number): PackStep[] => Array.from({ length: 1 + rnd(2) }, () => step(depth));
+  const cost = (): PackStep[] => Array.from({ length: 1 + rnd(2) }, () => of<() => PackStep>([() => pay(1), () => pay(2), () => pay(9), () => custom('have'), () => custom('nothing'), () => ({ op: 'discard', count: 1 }), () => ({ op: 'exhaust' }), () => ({ op: 'mill', count: 1 })])());
+  const step = (depth: number): PackStep => (depth === 0 || rnd(4) === 0 ? leaf() : of<() => PackStep>([
+    () => ({ op: 'may', then: eff(depth - 1) }),
+    () => ({ op: 'chooseOption', options: [eff(depth - 1), eff(depth - 1)] }),
+    () => ({ op: 'chooseCards', zone: of(['hand', 'hand', 'hand:b', 'aside', 'deck']), min: rnd(3), max: 2 + rnd(2), then: eff(depth - 1) }),
+    () => ({ op: 'chooseCards', zone: of(['hand', 'hand:b']), min: rnd(2), max: 1, then: eff(depth - 1) }),
+    () => ({ op: 'orderEffects', effects: Array.from({ length: 2 + rnd(2) }, () => eff(depth - 1)) }),
+    () => ({ op: 'chooseNumber', max: 2, then: eff(depth - 1) }),
+    () => ({ op: 'seq', steps: [{ op: 'scout', count: 2 }, ...eff(depth - 1)] }),
+    () => ({ op: 'if', test: of(['two', 'h2', 'poor', 'b3', ...reads]), then: eff(depth - 1) }),
+    () => ({ op: 'payThen', cost: cost(), then: eff(depth - 1) }),
+    () => ({ op: 'choosePayment', ways: [cost(), cost()], then: eff(depth - 1) }),
+    () => ({ op: 'eachPlayer', then: eff(depth - 1) }),
+    () => ({ op: 'choosePlayer', then: eff(depth - 1) }),
+    () => ({ op: 'forEach', then: eff(depth - 1) }),
+    () => ({ op: 'count', what: 'held', then: eff(depth - 1) }),
+  ])());
+  return eff;
 };
