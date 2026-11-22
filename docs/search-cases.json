@@ -397,5 +397,8 @@
   { "q": "scenario put tokens on map", "first": "card-harness" },
   { "q": "simulation module drivers", "first": "sim-pool" },
   { "q": "wounded instead of removed", "first": "engine-core" },
-  { "q": "motion beats event order cue sound from motion player", "first": "motion-frame" }
+  { "q": "motion beats event order cue sound from motion player", "first": "motion-frame" },
+  { "q": "pr body lists new modules", "first": "none" },
+  { "q": "worker pr body new files listed", "first": "none" },
+  { "q": "reason for each new file", "first": "none" }
 ]

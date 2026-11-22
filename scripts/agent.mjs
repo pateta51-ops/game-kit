@@ -2,7 +2,7 @@
 //   worktree --branch <b> [--repo .] [--dir d] [--base origin/main] [--shared <dir with node_modules>] [--no-fetch]   new worktree + node_modules link
 //   worktree --here [--branch <b>] [--shared d]   for a worker already inside a worktree: link node_modules from the main checkout (or --shared); --branch also switches to a new branch
 //   finish [--repo .] [--check "npm run check"] [--install "npm ci"] [--tail 15] [--comment] [--detach] | finish --result   clone + install + check in WSL (bash on Linux); prints PASS <sha> or FAIL <sha>; refuses (exit 3) while the queue holds `finish <branch>`; a line a minute while it waits and runs; --detach returns at once, --result reads the stored outcome (exit 4 while running) (K572); the WSL run writes a start marker first: if it is not there after 45 s finish exits 6 with `the run did not start` and the command to run by hand (K644); with --check the line is check passed|failed <sha> (check: <command>), never PASS, so it cannot pass for the gate (K416)
-//   finish also reads the PR body (gh pr view, or --body <file>) and fails before any run unless every file added under src/ since the merge base with main (not tests, *.d.ts, or package.json kit.builtNew.ignore globs) is named in a "Built new" section, one line each: - <file or folder> | search: <words>; <other words> | nearest: <kit part or none> | why: <reason> (K684; not with --check; renames are not new; a folder line covers files only two levels below src/; no merge base fails)
+//   finish also reads the PR body (gh pr view, or --body <file>) and fails before any run unless every file added under src/ since the merge base with main (not tests, *.d.ts, or package.json kit.builtNew.ignore globs) is named in a "Built new" section, one line each: - <file or folder> | search: <words>; <other words> | nearest: <kit part or none> | why: <reason> (K684; not with --check; renames are not new; a folder line covers files only two levels below src/; no merge base fails). K688: each line's two searches run again with the game's kit/kit.mjs search, and a part on a search's first line that is not the line's nearest fails (check: search finds <part>); kit.builtNew.ignore entries are { glob, why } (no bare string, no empty why, no glob covering all of src/, at most 10); a new top-level export or top-level setTimeout/setInterval/createMachine added to a changed src/ file needs a line naming <file>#<export> or the file (renames, edits and newly exported old names do not count)
 //   teardown --worktree <dir> [--repo .] [--force]
 import { execFileSync, spawn, spawnSync } from 'node:child_process'
 import { createHash } from 'node:crypto'
@@ -127,16 +127,62 @@ const stored = (dir, m, io, repo, f) => {
 // K684: files added under src/ since the merge base with main must each be named in the PR body's "Built new" section
 export const BUILT_NEW_LINE = '- <file or folder> | search: <words>; <other words> | nearest: <kit part or none> | why: <reason it could not do it>'
 const globRe = (g) => new RegExp('^' + g.split(/(\*\*\/?|\*|\?)/).map((t) => t === '**/' ? '(.*/)?' : t === '**' ? '.*' : t === '*' ? '[^/]*' : t === '?' ? '[^/]' : t.replace(/[.+^${}()|[\]\\]/g, '\\$&')).join('') + '$')
-export function newSrcFiles(repo) {
-  let base = ''
-  for (const r of ['origin/main', 'main']) { try { base = git(repo, ['merge-base', 'HEAD', r]); break } catch { /* try the next */ } }
-  if (!base) return null
+// K688: kit.builtNew.ignore entries are { glob, why }; at most 10; none may cover all of src/
+export function builtNewIgnore(repo) {
   let ign = []
   try { ign = JSON.parse(fs.readFileSync(path.join(repo, 'package.json'), 'utf8')).kit?.builtNew?.ignore ?? [] } catch { /* no package.json */ }
-  return git(repo, ['diff', '--name-only', '--diff-filter=A', '-M', base, 'HEAD', '--', 'src']).split('\n').filter(Boolean)
-    .filter((f) => !/\.(test|spec)\.[^/]+$/.test(f) && !/(^|\/)(tests?|__tests__)\//.test(f.slice(4)) && !f.endsWith('.d.ts') && !ign.some((g) => globRe(g).test(f)))
+  if (!Array.isArray(ign)) return { globs: [], probs: ['kit.builtNew.ignore: must be a list of { "glob": ..., "why": ... }'] }
+  const probs = ign.length > 10 ? [`kit.builtNew.ignore: ${ign.length} entries, at most 10`] : [], globs = []
+  for (const e of ign) {
+    if (typeof e?.glob !== 'string' || !e.glob.trim()) { probs.push(`kit.builtNew.ignore: ${JSON.stringify(e)} needs { "glob": ..., "why": ... }`); continue }
+    if (typeof e.why !== 'string' || !e.why.trim()) { probs.push(`kit.builtNew.ignore: ${e.glob} needs a non-empty why`); continue }
+    if (['src/q9.zz', 'src/q9/q9.zz'].some((x) => globRe(e.glob).test(x))) { probs.push(`kit.builtNew.ignore: ${e.glob} covers all of src/; name a narrower glob`); continue }
+    globs.push(e.glob)
+  }
+  return { globs, probs }
 }
-export function builtNew(files, body) {
+const skip = (f, ign) => /\.(test|spec)\.[^/]+$/.test(f) || /(^|\/)(tests?|__tests__)\//.test(f.slice(4)) || f.endsWith('.d.ts') || ign.some((g) => globRe(g).test(f))
+const mergeBase = (repo) => { for (const r of ['origin/main', 'main']) { try { return git(repo, ['merge-base', 'HEAD', r]) } catch { /* try the next */ } } return '' }
+export function newSrcFiles(repo, ign = builtNewIgnore(repo).globs) {
+  const base = mergeBase(repo)
+  if (!base) return null
+  return git(repo, ['diff', '--name-only', '--diff-filter=A', '-M', base, 'HEAD', '--', 'src']).split('\n').filter(Boolean).filter((f) => !skip(f, ign))
+}
+// K688: in a changed file under src/, a new top-level export (function, class, const, let, var) or a new top-level setTimeout/setInterval/createMachine; edits, renames and newly exported old names do not count
+export const TIMERS = ['setTimeout', 'setInterval', 'createMachine']
+const DECL = /^(?:export\s+)?(?:default\s+)?(?:declare\s+)?(?:async\s+)?(?:function\*?|class|const|let|var)\s+(\w+)/
+export function newExports(repo, ign = builtNewIgnore(repo).globs) {
+  const base = mergeBase(repo)
+  if (!base) return null
+  const out = []
+  for (const f of git(repo, ['diff', '--name-only', '--diff-filter=M', base, 'HEAD', '--', 'src']).split('\n').filter(Boolean)) {
+    if (skip(f, ign) || !/\.[mc]?[jt]sx?$/.test(f)) continue
+    const d = git(repo, ['diff', '-U0', base, 'HEAD', '--', f]).split('\n').filter((l) => !/^(\+\+\+|---) /.test(l))
+    const add = d.filter((l) => l[0] === '+').map((l) => l.slice(1)), del = d.filter((l) => l[0] === '-').map((l) => l.slice(1))
+    const names = (ls, ex) => ls.map((l) => (ex && !/^export\s/.test(l)) ? null : l.match(DECL)?.[1]).filter(Boolean)
+    const gone = names(del, false), was = new Set(gone), now = new Set(names(add, false))
+    let fresh = names(add, true).filter((n) => !was.has(n))
+    fresh = fresh.slice(gone.filter((n) => !now.has(n)).length)
+    for (const n of new Set(fresh)) out.push(f + '#' + n)
+    const top = (ls, t) => ls.filter((l) => /^\S/.test(l) && new RegExp('\\b' + t + '\\(').test(l)).length
+    for (const t of TIMERS) if (top(add, t) > top(del, t)) out.push(f + '#' + t)
+  }
+  return out
+}
+// K688: the part a search's first line names, or null for a miss, a candidate or a "not in the kit" mechanic
+export function searchPart(o) {
+  const L = o.split(/\r?\n/).filter(Boolean), l0 = L[0] ?? ''
+  if (!l0 || o.includes('not in the kit by that name') || /^candidate K\d+/.test(l0)) return null
+  if (l0.startsWith('mechanic: ')) { const a = l0.split(' -> ').slice(1).join(' -> '); return a.startsWith('not in the kit') ? null : (a.match(/`([^`]+)`/) ?? [])[1] ?? null }
+  return (l0.match(/\(`([^`]+)`\)/) ?? l0.match(/^([a-z0-9][\w./-]*)(?=: | \(was )/) ?? [])[1] ?? null
+}
+const kitSearch = (repo) => {
+  const k = path.join(repo, 'kit', 'kit.mjs')
+  if (!fs.existsSync(k)) return undefined
+  const home = fs.mkdtempSync(path.join(os.tmpdir(), 'kit-search-'))
+  return (q) => spawnSync(process.execPath, [k, 'search', ...q.split(/\s+/)], { cwd: repo, encoding: 'utf8', env: { ...process.env, HOME: home, USERPROFILE: home } }).stdout ?? ''
+}
+export function builtNew(files, body, search) {
   const lines = body.split(/\r?\n/), at = lines.findIndex((l) => /^\s*(#{1,6}\s*)?\**\s*built new\s*:?\s*\**\s*:?\s*$/i.test(l))
   const sec = []
   if (at >= 0) for (const l of lines.slice(at + 1)) { if (/^\s*#{1,6}\s/.test(l)) break; if (/^\s*[-*]\s/.test(l)) sec.push(l.trim()) }
@@ -145,13 +191,16 @@ export function builtNew(files, body) {
     const c = l.replace(/^[-*]\s*/, '').split('|').map((x) => x.trim()), get = (k) => (c.find((x) => x.toLowerCase().startsWith(k + ':')) ?? '').slice(k.length + 1).trim()
     const f = c[0].replace(/`/g, '').replace(/^\.\//, '').replace(/\/$/, ''), ph = get('search').split(';').map((x) => x.trim()).filter(Boolean)
     const why = [ph.length < 2 && 'two search phrasings separated by ;', !get('nearest') && 'nearest: <kit part or none>', !get('why') && 'why: <reason>', !f && 'the file or folder first'].filter(Boolean)
-    if (why.length) bad.push(`malformed: ${l} (needs ${why.join(', ')})`)
-    else named.push(f)
+    if (why.length) { bad.push(`malformed: ${l} (needs ${why.join(', ')})`); continue }
+    named.push(f)
+    // K688: each phrasing is searched again; a part on its first line must be the line's nearest
+    const near = (get('nearest').replace(/`/g, '').match(/[\w./-]+/g) ?? []).filter((t) => t !== 'none')
+    if (search) for (const p of ph) { const part = searchPart(search(p)); if (part && !near.some((t) => t === part || part.startsWith(t + '/') || t.startsWith(part + '/'))) bad.push(`check: search finds ${part} for "${p}" (line ${f}, nearest: ${get('nearest')}); use ${part}, or name it as nearest with a why`) }
   }
   const full = named.map((n) => n === 'src' || n.startsWith('src/') ? n : 'src/' + n)
-  for (const n of full) if (n.split('/').length < 3 && !files.includes(n)) bad.push(`too broad: ${n}/ (name a file, or a folder at least two levels below src/, such as src/ui/motion/)`)
-  const missing = files.filter((x) => !full.some((n) => x === n || (n.split('/').length >= 3 && x.startsWith(n + '/'))))
-  return [...(at < 0 ? ['no "Built new" section in the PR body'] : []), ...bad, ...missing.map((x) => 'missing: ' + x)]
+  for (const n of full) if (n.split('/').length < 3 && !n.includes('#') && !files.some((x) => x === n || x.startsWith(n + '#'))) bad.push(`too broad: ${n}/ (name a file, or a folder at least two levels below src/, such as src/ui/motion/)`)
+  const missing = files.filter((x) => { const [file, name] = x.split('#'); return !full.some((n) => x === n || (name && n === file) || (name && TIMERS.includes(name) && n.startsWith(file + '#')) || (n.split('/').length >= 3 && x.startsWith(n + '/'))) })
+  return [...(at < 0 ? ['no "Built new" section in the PR body'] : []), ...bad, ...missing.map((x) => 'missing: ' + x + (x.includes('#') ? ' (new in a changed file; name <file>#<export> or the file)' : ''))]
 }
 export function finish(args, io, exec = real, win = process.platform === 'win32', bg = exec === real ? realBg : null) {
   const f = parse(args, ['comment', 'detach', 'result'])
@@ -175,14 +224,17 @@ export function finish(args, io, exec = real, win = process.platform === 'win32'
   if (branch === 'HEAD') { io.err('REFUSED: detached HEAD; switch to the batch branch first'); return 1 }
   const sha = git(repo, ['rev-parse', 'HEAD'])
   if (!f.check) {
-    const files = newSrcFiles(repo)
-    if (files === null) { io.out(`FAIL ${sha} (${branch}; Built new: no merge base with origin/main or main, so the new files under src/ cannot be listed; fetch origin main or base the branch on main; nothing was run)`); return 1 }
-    else if (files.length) {
+    const ig = builtNewIgnore(repo)
+    if (ig.probs.length) { io.out(`FAIL ${sha} (${branch}; Built new: package.json kit.builtNew.ignore is not valid; nothing was run)\n${ig.probs.join('\n')}\neach entry: { "glob": "src/data/*.json", "why": "<reason>" }`); return 1 }
+    const nf = newSrcFiles(repo, ig.globs), ne = nf && newExports(repo, ig.globs)
+    if (nf === null) { io.out(`FAIL ${sha} (${branch}; Built new: no merge base with origin/main or main, so the new files under src/ cannot be listed; fetch origin main or base the branch on main; nothing was run)`); return 1 }
+    const files = [...nf, ...ne]
+    if (files.length) {
       let body = null
       if (f.body) { try { body = fs.readFileSync(path.resolve(f.body), 'utf8') } catch { /* named file missing */ } }
       else { const r = exec('gh', ['pr', 'view', branch, '--json', 'body', '-q', '.body'], ''); if (r.status === 0) body = r.output }
-      const probs = body === null ? [f.body ? `cannot read --body ${f.body}` : 'no PR body (no PR yet?): pass --body <file> with the PR body'] : builtNew(files, body)
-      if (probs.length) { io.out(`FAIL ${sha} (${branch}; Built new: ${files.length} new file(s) under src/ not all listed; nothing was run)\n${probs.join('\n')}\nexpected under a "## Built new" heading, one line per new file or folder:\n${BUILT_NEW_LINE}`); return 1 }
+      const probs = body === null ? [f.body ? `cannot read --body ${f.body}` : 'no PR body (no PR yet?): pass --body <file> with the PR body'] : builtNew(files, body, kitSearch(repo))
+      if (probs.length) { io.out(`FAIL ${sha} (${branch}; Built new: ${nf.length} new file(s) and ${ne.length} new export(s) or timer(s) in changed files under src/ not all listed, or a search finds a kit part; nothing was run)\n${probs.join('\n')}\nexpected under a "## Built new" heading, one line per new file, folder or <file>#<export>:\n${BUILT_NEW_LINE}`); return 1 }
     }
   }
   const label = 'finish ' + branch

@@ -74,9 +74,9 @@ describe('K684 finish: every new src file is listed under Built new', () => {
     expect(r.text).toMatch(/^PASS /);
   });
   it('K684 files matching package.json kit.builtNew.ignore globs pass', () => {
-    const main = game('e', { 'src/data/cards.json': '{}', 'src/assets/a/b.png': 'p' }, { kit: { builtNew: { ignore: ['src/data/*.json', 'src/assets/**'] } } });
+    const main = game('e', { 'src/data/cards.json': '{}', 'src/assets/a/b.png': 'p' }, { kit: { builtNew: { ignore: [{ glob: 'src/data/*.json', why: 'card data' }, { glob: 'src/assets/**', why: 'images' }] } } });
     expect(run(main, null).rc).toBe(0);
-    const other = game('f', { 'src/data/cards.ts': '' }, { kit: { builtNew: { ignore: ['src/data/*.json'] } } });
+    const other = game('f', { 'src/data/cards.ts': '' }, { kit: { builtNew: { ignore: [{ glob: 'src/data/*.json', why: 'card data' }] } } });
     expect(run(other, null).rc).toBe(1);
   });
   it('K684 with no --body it reads the PR body through gh pr view; no PR and no --body fails', () => {
