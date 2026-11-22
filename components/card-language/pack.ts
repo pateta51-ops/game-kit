@@ -103,8 +103,8 @@ export interface OfferCheck {
   readonly reason?: OfferReason | SkipReason | (string & {});
   readonly error?: unknown;
 }
-/** K605: why a step changed nothing: a false condition, a cost that cannot be paid, no card it may take, an empty zone, or none of these. K597: `short`, a step that did less than its number (resolves only). */
-export type SkipReason = 'condition' | 'cannotPay' | 'noTarget' | 'emptyZone' | 'noChange' | 'short';
+/** K605: why a step changed nothing: a false condition, a cost that cannot be paid, no card it may take, an empty zone, or none of these. K597: `short`, a step that did less than its number; `gameOver`, the game ended before the step (resolves only). */
+export type SkipReason = 'condition' | 'cannotPay' | 'noTarget' | 'emptyZone' | 'noChange' | 'short' | 'gameOver';
 /** K597: how much of an effect would resolve: every top-level step on some line of play (`full`), some step but never all (`part`), none (`none`), or `unknown`. */
 export type Resolved = 'full' | 'part' | 'none' | 'unknown';
 /** K597: `pack.resolves`'s answer; `skipped`: the steps the best line does not resolve, each with its reason (`error` holds what a handler threw). */
@@ -412,7 +412,7 @@ export function cardPack<G extends GameTypes, E extends PackEnv = PackEnv>(cfg: 
     const bad = (v: unknown): boolean => typeof v === 'string' && f.some((c) => v.includes(c));
     const px = (o: unknown): unknown => {
       if (typeof o !== 'object' || o === null) return o;
-      const t = o as object;
+      const t = o;
       return new Proxy(Array.isArray(o) ? [] : {}, {
         get: (_, k) => {
           const v: unknown = Reflect.get(t, k);
@@ -495,7 +495,8 @@ export function cardPack<G extends GameTypes, E extends PackEnv = PackEnv>(cfg: 
     const most = Math.max(0, ...lines.map(g));
     const could = capped || whys.has('nested') ? 2 : Math.max(most, ...lines.filter((l) => l.reason !== undefined).map((l) => (l.half.some((u) => u in l.part) ? 1 : g({ ...l, done: [...l.done, ...units.filter((u) => u >= l.next && !l.done.includes(u))] }))));
     const answer: Resolved = c.answer === 'yes' ? 'full' : most === could ? (G3[most] ?? 'none') : 'unknown';
-    const best = lines.reduce<L | undefined>((b, l) => (b === undefined || g(l) > g(b) || (g(l) === g(b) && (l.done.length > b.done.length || (l.done.length === b.done.length && b.reason !== undefined && l.reason === undefined))) ? l : b), undefined);
+    // An unknown answer is reported from the lines left open (they make it unknown), never from a closed line such as a declined `may`.
+    const best = (answer === 'unknown' && lines.some((l) => l.reason !== undefined) ? lines.filter((l) => l.reason !== undefined) : lines).reduce<L | undefined>((b, l) => (b === undefined || g(l) > g(b) || (g(l) === g(b) && (l.done.length > b.done.length || (l.done.length === b.done.length && b.reason !== undefined && l.reason === undefined))) ? l : b), undefined);
     const skipped = answer === 'full' ? [] : steps.flatMap((_, i) => {
       const u = unitsOf(steps, i).find((x) => !(best?.done ?? []).includes(x));
       if (u === undefined) return [];
@@ -527,6 +528,7 @@ export function cardPack<G extends GameTypes, E extends PackEnv = PackEnv>(cfg: 
       if (p.op === 'pay' || p.op === 'convert') return payable(s, p, env) ? 'noChange' : 'cannotPay';
       if (p.op === 'seq') return first(s, p.steps, env);
       if (p.op === 'may') return first(s, p.then, env);
+      if (p.op === 'chooseOption') return p.options.map((o) => first(s, o, env)).find((r) => r !== 'noChange') ?? 'noChange';
       if (p.op === 'chooseCards' || p.op === 'search') {
         const z = zone(s, p.zone, env.seat);
         if (cardsIn(s, z).length === 0) return 'emptyZone';
@@ -616,6 +618,7 @@ export function cardPack<G extends GameTypes, E extends PackEnv = PackEnv>(cfg: 
           const us = unitsOf(steps, J.next);
           J.done = [...J.done, ...us.filter((u) => !J.done.includes(u))];
           J.half = J.half.filter((u) => !us.includes(u));
+          J.whys = { ...J.whys, ...Object.fromEntries(steps.flatMap((_, i) => (i > J.next ? unitsOf(steps, i) : [])).map((u) => [u, 'gameOver'])) };
         }
         if (s.result !== null || s.prompt === null) return F.line(J) ? 'yes' : 'no';
         at.set(s, J);
@@ -1054,7 +1057,8 @@ export function cardPack<G extends GameTypes, E extends PackEnv = PackEnv>(cfg: 
         if (R === null || J.paid !== null) return m;
         J.paid = J.base;
         const top = R.steps[J.next] as PackStep | undefined;
-        if (top?.op === 'payThen') J.whys = { ...J.whys, [J.next + 0.5]: whyNot(s, { op: 'seq', steps: top.then } as Step, R.env) };
+        // A top-level payThen whose cost stopped part paid (judged as a whole) or was cancelled: its effect part is cannotPay.
+        if (top?.op === 'payThen') J.whys = { ...J.whys, [J.next + 0.5]: ok ?whyNot(s, { op: 'seq', steps: top.then } as Step, R.env) : 'cannotPay' };
         return m;
       };
       // K583: every amount of the cost is read from `cfg.due` here, before anything is paid, so the cost is paid as it was judged.

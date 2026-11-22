@@ -1,8 +1,9 @@
 import { describe, expect, it } from 'vitest';
-import { applyAction, blocked, createGame, enumerateAnswers, hashState } from '../engine-core/index.ts';
+import { applyAction, blocked, createGame, draftOf, enumerateAnswers, hashState, type Ctx } from '../engine-core/index.ts';
 import { cannotKnow, cardPack, inDryRun, type OfferPolicy, type PackEnv, type PackStep } from './pack.ts';
 import { DRAW, GAIN, gen, NOTHING, offerGame, pay, type Eff, type G, type S } from './offerGame.ts';
 import { pinned } from './k597.pin.ts';
+import { cardsIn } from '../card-zones/index.ts';
 
 // K597: how much of an effect would resolve (in full, in part, not at all, unknown), each skipped step with its reason.
 // K605: the reasons of a `no` from `judge` (opt-in), and a game hook that decides the answer.
@@ -185,6 +186,57 @@ describe('card-language resolves (K597): second review', () => {
   });
 });
 
+describe('card-language resolves (K597, K605): third look', () => {
+  const POOR: PackStep = { op: 'if', test: 'poor', then: [GAIN] };
+  const DREW2: PackStep = { op: 'if', test: 'drew2', then: [GAIN] };
+  const DECKS = [['d1', 'd2'], ['d2', 'd1']];
+  const paid = (then: Eff): PackStep => ({ op: 'payThen', cost: [pay(1)], then });
+  const RES = { res: { get: (s: S, seat: string, key: string) => s.res?.[seat]?.[key] ?? 0, set: (ctx: { s: S }, seat: string, key: string, n: number) => void ((ctx as unknown as { s: { res: unknown } }).s.res = { ...ctx.s.res, [seat]: { ...ctx.s.res?.[seat], [key]: n } }) } };
+  const resGame = (deck: readonly string[]) => offerGame(cardPack<G>, { deck, cfg: RES });
+  it('K597 a top-level payThen whose cost judged as a whole stops part paid: its effect part is cannotPay', () => {
+    expect(resolves([{ op: 'payThen', cost: [pay(2), { op: 'custom', name: 'have' }], then: [DRAW] }], game({ cost: 'whole' }))).toEqual({ answer: 'part', skipped: [{ step: 0, reason: 'cannotPay' }] });
+  });
+  it('K597 a step after the game ended is skipped with gameOver', () => {
+    expect(resolves([{ op: 'custom', name: 'win' }, GAIN])).toEqual({ answer: 'part', skipped: [{ step: 1, reason: 'gameOver' }] });
+  });
+  it('K605 judge why on a choice of options gives the reason of its options', () => {
+    const g = game();
+    const { s, content } = g.at();
+    expect(g.pack.judge(s, content, [{ op: 'chooseOption', options: [[RICH], [pay(9)]] }], A, { why: true })).toEqual({ answer: 'no', reason: 'condition' });
+  });
+  it('K597 an unknown answer is reported from the line left open, not from a declined may (no condition)', () => {
+    for (const d of DECKS) expect(resolves([{ op: 'may', then: [paid([DRAW, DREW2])] }], game({}, d))).toEqual({ answer: 'unknown', reason: 'hidden', skipped: [{ step: 0, reason: 'hidden' }] });
+  });
+  it('K597 game code that reads no card that came into view runs after a draw: a gold test, a gain through cfg.res; a test that reads the drawn card stays unknown', () => {
+    for (const d of DECKS) {
+      expect(resolves([DRAW, POOR], game({}, d))).toEqual({ answer: 'part', skipped: [{ step: 1, reason: 'condition' }] });
+      expect(resolves([DRAW, GAIN], resGame(d))).toEqual({ answer: 'full', skipped: [] });
+      expect(resolves([DRAW, pay(9)], resGame(d))).toEqual({ answer: 'part', skipped: [{ step: 1, reason: 'cannotPay' }] });
+      expect(resolves([DRAW, DREW2], game({}, d))).toEqual({ answer: 'unknown', reason: 'hidden', skipped: [{ step: 1, reason: 'hidden' }] });
+      expect(resolves([DRAW, DREW2], resGame(d))).toMatchObject({ answer: 'unknown', reason: 'hidden' });
+      expect(resolves([DRAW, { op: 'choosePlayer', then: [GAIN] }, { op: 'eachPlayer', then: [GAIN] }], game({}, d))).toEqual({ answer: 'full', skipped: [] });
+      expect(resolves([DRAW, pay(1)], offerGame(cardPack<G>, { deck: d, cfg: { due: (_s: S, _st: PackStep, _e: PackEnv, n: number) => n } }))).toEqual({ answer: 'full', skipped: [] });
+    }
+  });
+  it('K597 the guarded view stops on a key or a log line holding the card, and on the card in env; length passes', () => {
+    type K = S & { got?: Record<string, number> };
+    const t = (f: (s: K) => boolean) => offerGame(cardPack<G>, { cfg: { tests: { f }, moved: (ctx: Ctx<G>, m: { card: string }) => void ((draftOf(ctx) as unknown as K).got = { [m.card]: 1 }) } });
+    const IF: PackStep = { op: 'if', test: 'f', then: [GAIN] };
+    expect(resolves([DRAW, IF], t((s) => s.zones['hand:a']?.cards.length === 3))).toEqual({ answer: 'full', skipped: [] });
+    expect(resolves([DRAW, IF], t((s) => s.got?.zz === undefined))).toEqual({ answer: 'full', skipped: [] });
+    expect(resolves([DRAW, IF], t((s) => Object.keys(s.got ?? {}).length === 1))).toMatchObject({ answer: 'unknown', reason: 'hidden' });
+    expect(resolves([DRAW, IF], offerGame(cardPack<G>, { cfg: { tests: { f: (s: S) => s.log.some((l) => l.type.includes('d2')) } } }))).toMatchObject({ answer: 'unknown', reason: 'hidden' });
+    expect(resolves([{ op: 'lookAt', count: 1, then: [{ op: 'if', test: 'two', then: [GAIN] }] }])).toMatchObject({ answer: 'unknown', reason: 'hidden' });
+  });
+  it('K597 a filter is not run on a card that came into view; a custom verb after it keeps the hard stop', () => {
+    const custom = { drewTwo: { run: (ctx: Ctx<G>) => void (cardsIn(ctx.s, 'hand:a').includes('d2') && (draftOf(ctx).res = { a: { gold: 9 } })), text: () => 'Drew two.' } };
+    for (const d of DECKS) {
+      expect(resolves([DRAW, { op: 'chooseCards', zone: 'hand', filter: 'even', min: 2, max: 2, then: [GAIN] }], game({}, d))).toMatchObject({ answer: 'unknown', reason: 'hidden' });
+      expect(resolves([DRAW, { op: 'custom', name: 'drewTwo' }], offerGame(cardPack<G>, { deck: d, cfg: { custom } }))).toMatchObject({ answer: 'unknown', reason: 'hidden' });
+    }
+  });
+});
+
 describe('card-language reasons (K605): second review', () => {
   const reasons = (p: Parameters<typeof blocked>[0]) => blocked(p).map((b) => [b.id, b.reason]);
   it('K605 decide may return the game\'s own reason: judge carries it and a barred option shows it', () => {
@@ -305,7 +357,9 @@ describe('card-language resolves (K597): agrees with playing every answer', () =
         if (r === undefined) throw new Error('no answer');
         add(r.answer);
         // The answer is the seat's own: the same in every hidden world.
-        if (rs.some((x) => x.answer !== r.answer)) throw new Error(`answers differ between hidden worlds: ${rs.map((y) => y.answer).join()}: ${JSON.stringify(e)}`);
+        // K597 third look: the whole answer, its skipped steps and reasons included.
+        const whole = (x: typeof r): string => JSON.stringify([x.answer, x.reason, x.skipped.map((k) => [k.step, k.reason])]);
+        if (rs.some((x) => whole(x) !== whole(r))) throw new Error(`answers differ between hidden worlds: ${rs.map(whole).join()}: ${JSON.stringify(e)}`);
         if (r.answer === 'full' ? r.skipped.length !== 0 : r.skipped.length === 0) throw new Error(`skipped ${JSON.stringify(r.skipped)} with ${r.answer}`);
         if (!secret(e)) {
           if (r.answer === 'unknown') throw new Error(`unknown (${String(r.reason)}) with nothing hidden: ${JSON.stringify(e)}`);
