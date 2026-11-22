@@ -1049,7 +1049,7 @@ Offline install: a Vite plugin that writes a precaching service worker into the 
 A rule-based opponent (K103, K115). Pure data and functions; the engine never imports it. The game supplies the view, the candidates, the advice and the handlers.
 
 - **Also called:** Rule-based computer player
-- **Words:** ai, opponent, computer, bot, rules, advice, profiles, test player, greedy, test pilot, random bot
+- **Words:** ai, opponent, computer, bot, rules, advice, profiles, test player
 - **Release:** 1.0; not seen
 - **The game supplies:** The view, candidate moves, advice and handlers.
 - **Use it when:** A rule-based AI opponent: advice, profiles and memory as data through a fixed pick pipeline, plus decision records.

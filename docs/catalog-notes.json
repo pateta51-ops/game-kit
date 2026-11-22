@@ -1209,10 +1209,7 @@
       "rules",
       "advice",
       "profiles",
-      "test player",
-      "greedy",
-      "test pilot",
-      "random bot"
+      "test player"
     ],
     "visible": false,
     "release": 1,
