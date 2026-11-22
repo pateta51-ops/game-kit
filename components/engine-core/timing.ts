@@ -106,16 +106,16 @@ export interface TimingConfig<G extends GameTypes> {
   preventions?(s: G['state'], occ: Occurrence, w: PreventionWindow): readonly PreventionOffer[];
   /** After the kit prevented `n` with `offer` (pay, count the use). */
   onPrevent?(ctx: Ctx<G>, offer: PreventionOffer, n: number): void;
-  /** K111 window 2 candidates. */
-  replacementsFor?(s: G['state'], occ: Occurrence): readonly Replacement[];
+  /** K111 window 2 candidates. K697: `content` is the game's content (`ctx.content`). */
+  replacementsFor?(s: G['state'], occ: Occurrence, content: G['content']): readonly Replacement[];
   /** K111: applies one (`changeOccurrence`, or pushes what happens instead) and says what it did. */
   applyReplacement?(ctx: Ctx<G>, r: Replacement, occ: Occurrence): ReplaceResult;
   /** Who answers the kit's prompts: the affected player (default `keys.player`). */
   chooser?(s: G['state'], occ: Occurrence): string;
   /** The game's prompt from the kit's options (default: those as they are). */
   prompt?(base: Pick<KernelPrompt, 'options' | 'min' | 'max'>, info: TimingPromptInfo): Omit<G['prompt'], 'id'>;
-  /** K94: the abilities that answer a happened occurrence. K296: `content` is the game's content (`ctx.content`). */
-  triggersFor?(s: G['state'], occ: Occurrence, content: G['content']): readonly TriggerCandidate[];
+  /** K94: the abilities that answer a happened occurrence. K296: `content` is the game's content (`ctx.content`). K696: `batch` is the happened occurrences of its batch settling together, in order (read-only). */
+  triggersFor?(s: G['state'], occ: Occurrence, content: G['content'], batch: readonly Occurrence[]): readonly TriggerCandidate[];
   /** K94: resolves one trigger (may ask, push tasks). */
   resolveTrigger?(ctx: Ctx<G>, t: PendingTrigger): void;
   /** K94: why a trigger no longer resolves (source gone, blanked), or undefined. */

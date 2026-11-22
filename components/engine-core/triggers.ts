@@ -71,7 +71,8 @@ export function collectTriggers<G extends GameTypes>(ctx: Ctx<G>, cfg: TimingCon
   t.batches = t.batches.filter((b) => open.has(b.id));
   if (cfg.triggersFor === undefined) return out;
   for (const o of happened) {
-    for (const c of cfg.triggersFor(ctx.s, o, ctx.content)) {
+    const batch = happened.filter((x) => x.batch === o.batch);
+    for (const c of cfg.triggersFor(ctx.s, o, ctx.content, batch)) {
       if ((o.enteredAfter ?? []).includes(c.source)) continue;
       const once: PendingTrigger['once'] = c.once ?? 'perItem';
       const same = once === 'perInstance' ? out.findIndex((p) => p.once === once && p.batch === o.batch && p.ability === c.ability && p.source === c.source && p.player === c.player) : -1;

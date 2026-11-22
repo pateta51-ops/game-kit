@@ -446,5 +446,8 @@
   { "q": "single flash glow", "first": "glow" },
   { "q": "force a dice roll in a test", "first": "dice-tray" },
   { "q": "dice tray roll name override", "first": "dice-tray" },
-  { "q": "named dice roll", "first": "dice-tray" }
+  { "q": "named dice roll", "first": "dice-tray" },
+  { "q": "trigger order matters in batch", "first": "engine-core" },
+  { "q": "replacement depends on card data", "first": "engine-core" },
+  { "q": "simultaneous triggers choose order only when it matters", "first": "engine-core" }
 ]

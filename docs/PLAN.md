@@ -368,6 +368,8 @@ The blind matching test's result was not recorded: the PR, its comments and docs
 | K689 | bypass patterns: game-side holds and timers, and input wrappers around skipAll/hurry | S |  | done |
 | K690 | plancheck: build-own rows for screen, motion and sound code are accepted and required | S |  | done |
 | K694 | effect-library glow: rise from dark before fading, for a single flash | S |  | done |
+| K696 | engine-core triggersFor gets the batch its occurrence settled with (4th argument), so a trigger asks its order only when the order changes the result | S |  | done |
+| K697 | engine-core replacementsFor gets the game content (3rd argument), so card data can switch a replacement on | S |  | done |
 
 ## Asked for by the owner
 
