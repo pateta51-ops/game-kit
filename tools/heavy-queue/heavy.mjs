@@ -14,6 +14,7 @@ const say = (m) => process.stderr.write(`[heavy] ${m}\n`);
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const post = async (path, body) => { const r = await fetch(URL_ + path, { method: 'POST', body: JSON.stringify(body), signal: AbortSignal.timeout(5000) }); return { code: r.status, ...(await r.json()) }; };
 const alive = (pid) => { try { process.kill(pid, 0); return true; } catch (e) { return e.code === 'EPERM'; } };
+const CANCELLED = 143, GRACE = Number(process.env.HEAVY_GRACE) || 3000;
 const sigCode = (code, sig) => code ?? 128 + (constants.signals[sig] ?? 1);
 const listen = (on) => { for (const [s, h] of Object.entries(on)) process.on(s, h); return () => { for (const [s, h] of Object.entries(on)) process.off(s, h); }; };
 
@@ -27,11 +28,12 @@ function flags(a) {
 }
 
 // The command runs in its own process group (not on Windows); a guard kills the group if heavy itself is killed.
-function exec(cmd, extra = {}) {
+function exec(cmd, extra = {}, lease = {}) {
   const group = process.platform !== 'win32';
   return new Promise((resolve) => {
     const c = spawn(cmd[0], cmd.slice(1), { stdio: 'inherit', detached: group, env: { ...process.env, HEAVY_HELD: '1', ...extra } });
     const kill = (s) => { try { if (group) process.kill(-c.pid, s); else c.kill(s); } catch { /* gone */ } };
+    lease.kill = kill;
     const off = listen(Object.fromEntries(SIGS.map((s) => [s, () => kill(s)])));
     if (group && c.pid) spawn(process.execPath, [process.argv[1], '_guard', String(process.pid), String(c.pid)], { detached: true, stdio: 'ignore' }).unref();
     c.on('error', (e) => { off(); say(`could not start ${cmd[0]}: ${e.message}`); resolve(127); });
@@ -42,7 +44,7 @@ function exec(cmd, extra = {}) {
 // Waits until granted; null when the server never answered or stopped answering for GIVEUP ms.
 async function acquire(f, pid, resume = false) {
   let r;
-  try { r = await post('/acquire', { label: f.label, priority: f.priority, pid, resume, slots: f.slots }); } catch { return null; }
+  try { r = await post('/acquire', { label: f.label, priority: f.priority, pid, resume, slots: f.slots, run: f.run }); } catch { return null; }
   let told = false, failSince = 0;
   const off = listen(Object.fromEntries(SIGS.map((s) => [s, () => { post('/release', { id: r.id }).catch(() => {}).finally(() => process.exit(sigCode(null, s))); }])));
   while (!r.granted) {
@@ -53,6 +55,7 @@ async function acquire(f, pid, resume = false) {
       if (Date.now() - failSince > GIVEUP) { off(); say('queue stopped answering'); return null; }
       continue;
     }
+    if (r.code === 410) { off(); say(`cancelled: ${f.label}`); process.exit(CANCELLED); }
     if (r.code === 404) { off(); say('lease lost (queue restarted): queueing again'); return acquire(f, pid); }
   }
   off();
@@ -80,7 +83,8 @@ function beat(f, pid, lease) {
     busy = true;
     const r = await post('/beat', { id: lease.id }).catch(() => ({}));
     if (r.code === 410) lease.gone = true;
-    if (r.code === 404) lease.id = (await post('/acquire', { label: f.label, priority: f.priority, pid, resume: true, slots: f.slots }).catch(() => ({}))).id ?? lease.id;
+    if (r.cancelled && !lease.cancelled && lease.kill) { lease.cancelled = true; lease.kill('SIGTERM'); setTimeout(() => lease.kill('SIGKILL'), GRACE).unref(); }
+    if (r.code === 404) lease.id = (await post('/acquire', { label: f.label, priority: f.priority, pid, resume: true, slots: f.slots, run: f.run }).catch(() => ({}))).id ?? lease.id;
     busy = false;
   }, BEAT);
   return () => clearInterval(t);
@@ -111,13 +115,15 @@ async function run(f) {
   if (process.env.HEAVY_HELD === '1') return exec(f.cmd);
   f.label ??= `${basename(process.cwd())}: ${f.cmd.join(' ')}`.slice(0, 120);
   const pid = process.platform === 'linux' ? process.pid : 0;
+  f.run = true;
   const id = await acquire(f, pid);
   if (!id) return fallback(f.cmd);
   const lease = { id };
   const stop = beat(f, pid, lease);
-  const code = await exec(f.cmd, { HEAVY_LEASE: id, ...(f.workers ? { HEAVY_WORKERS: String(f.workers) } : {}) });
+  const code = await exec(f.cmd, { HEAVY_LEASE: id, ...(f.workers ? { HEAVY_WORKERS: String(f.workers) } : {}) }, lease);
   stop();
   await post('/release', { id: lease.id, exit: code }).catch(() => {});
+  if (lease.cancelled) { say(`cancelled: ${f.label}`); return CANCELLED; }
   return code;
 }
 
@@ -147,9 +153,26 @@ async function main([cmd, ...a]) {
   }
   if (cmd === 'workers') { try { console.log((await (await fetch(URL_ + '/status')).json()).workers ?? ''); return 0; } catch { return 3; } }
   if (cmd === 'load') { try { console.log(loadLine(await (await fetch(URL_ + '/status')).json())); return 0; } catch { say(`no queue at ${URL_}`); return 3; } }
+  if (cmd === 'cancel') {
+    const f = flags(a), q = f.label ?? a[0];
+    if (!q) { say('usage: heavy cancel <id> | heavy cancel --label <text>'); return 2; }
+    let ids;
+    try {
+      const s = await (await fetch(URL_ + '/status')).json();
+      ids = [...s.running, ...s.waiting].filter((l) => f.label === undefined ? l.id === q : l.label === q || l.label.startsWith(q + ' ')).map((l) => [l.id, l.label]);
+    } catch { say(`no queue at ${URL_}`); return 3; }
+    if (!ids.length) { say(`no waiting or running job matches ${q}`); return 1; }
+    let bad = 0;
+    for (const [id, label] of ids) {
+      const r = await post('/cancel', { id }).catch(() => ({ code: 0 }));
+      if (r.code === 200) console.log(`cancelled ${r.was} job ${id}: ${label}`);
+      else { bad = 1; say(r.code === 409 ? `${id}: ${label} was not started by heavy run (a runner job): cannot cancel it from here` : `${id}: could not cancel`); }
+    }
+    return bad;
+  }
   if (cmd === 'release') { await post('/release', { id: a[0], exit: a[1] === undefined ? null : Number(a[1]) }).catch(() => {}); return 0; }
   if (cmd === 'status') { try { console.log(JSON.stringify(await (await fetch(URL_ + '/status')).json(), null, 2)); return 0; } catch { say(`no queue at ${URL_}`); return 3; } }
-  say('usage: heavy run [--priority high|normal] [--label <text>] [--slots <n|all>] [--mem <GiB>] -- <cmd...> | heavy status | heavy load | heavy hold --pid <pid> [--priority] [--label] | heavy release <id> [exit]');
+  say('usage: heavy run [--priority high|normal] [--label <text>] [--slots <n|all>] [--mem <GiB>] -- <cmd...> | heavy status | heavy cancel <id>|--label <text> | heavy load | heavy hold --pid <pid> [--priority] [--label] | heavy release <id> [exit]');
   return cmd === '--help' || cmd === '-h' ? 0 : 2;
 }
 
