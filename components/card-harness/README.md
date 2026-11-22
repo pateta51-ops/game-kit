@@ -18,6 +18,7 @@ Card tests on real cards. Test code only; the engine imports nothing here but `c
 9. Trace only the content the engine reads to play: walking `.registry` with `Object.values` marks every id looked up.
 10. Write each full-resolve card test as `cardCase({ clause, printed, ar }, fn)` from `kit/card-harness/cardCase` (it imports vitest; the index does not): `printed` the clause's text word for word, and `clause`, `printed`, `ar` as string literals, since `runInventory` reads them from the file's text. `title` adds words after the clause id (`poor`, `IX-03 …`).
 11. To count only quoted tests, give each clause its `text` and the inventory the `rulings` ids: such a clause is cited only by a `cardCase` whose `printed` equals `text` and whose `ar` is in `rulings`; any other `cardCase` of it fails `<clause>: quote differs`.
+11b. (K663) `printed` may be a `const` of the same file (one level: a string literal, or a template without `${}`; comments are ignored, and a name declared more than once in the file does not resolve); an import, a computed value or any other expression fails as `<clause>: printed is not a literal or a same-file const: <name>`, not as "quote differs". `mixed: true` on the inventory input (opt-in): a clause with `text` that has a `cardCase` is quote-checked as in rule 11, and every other clause is cited by an `it()` title naming its id; without it nothing changes.
 12. Give each interaction row as a piece of kind `interaction` (`IX-nn`, its `cards` and `records`); only a test title (an `it` title or a `cardCase` title) cites it, else `interaction IX-nn has no test`. Pass `interacting: interactionNeeds(records, { modifier, lasting, limited })` (every modifier and lasting record, each card with several limited records): an id in no row's `cards` or `records` fails `<id> is in no interaction row`.
 
 13. Build a game's `cards:check` with `cardsCheckMain(process.argv.slice(2), input, console.log, realRecordIo(fs))` (`./cardsCheck` or the index; Node only) and exit with its code. `input`: `faces` (`{ card, text, clauses? }`, the printed text with its ' ¶ ' marks), `catalogue` (docs/cards/catalogue.json), `records` (`{ id, clause, ...restriction keys, why? }`), `open` (content/open-clauses.json, `{ clause, reason }`), `keys` (the grammar's restriction keys), `words` (content/restriction-words.json: `"<key>:<value>"` to printed phrases), `rulings` (AR ids), `arMap` (`{ id, ar, split? }` per pattern), `readings` (`parseReadings` over every docs/cards/readings/*.md), `batch(id)` (its clause ids); optional `lasting`, `durationKey` (`duration`), `whyKey` (`why`), `exceptions` (`{ id, key, ar }`), `shape`, `wording` and `allowShape` (K509, see `patternProblems`), `baseline` (K513: a path, or `--baseline <path>`; a file of allowed problem lines `<part>: <problem>`, `#` comments and blanks ignored; a problem not in it fails, so does a line no longer found ("remove it from <file>"); `--write-baseline` writes today's lines and exits 0; needs a `RecordIo` with `read` and `write`; `NOTE` lines never count; without a baseline the output is unchanged).
@@ -119,4 +120,14 @@ import { expectNotFired, type Observed } from '../kit/card-harness/index'
 const sc: Observed = { prompt: null, s: {}, events: [] } // yours: a Scenario
 const clauseOf = (x: unknown) => { const e = x as { t?: string; source?: string; clause?: number }; return e.t === 'resolved' ? `${String(e.source)}#${String(e.clause)}` : undefined }
 expectNotFired(sc, 'c1#0', undefined, undefined, { clauseOf }) // nothing of clause c1#0 fired, however the event is shaped
+```
+
+Recipe (K663, run by `k663.test.ts`): quote through a same-file const, and cite the clauses without a `cardCase` by test title.
+
+```ts
+import { inventory } from '../kit/card-harness/index'
+
+const tests = [{ path: 'a.test.ts', text: "const P = 'Draw 1.'\ncardCase({ clause: 'c-1', printed: P, ar: 'AR-1' }, f)\nit('c-2 scores', () => {})" }] // yours: testFiles(...)
+const inv = inventory({ pieces: [], tests, rulings: ['AR-1'], mixed: true, clauses: [{ id: 'c-1', cards: [], text: 'Draw 1.' }, { id: 'c-2', cards: [], text: 'Score 2.' }] })
+console.log(inv.quoteDiffers, inv.uncited) // [] []
 ```

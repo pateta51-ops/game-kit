@@ -60,6 +60,8 @@ export interface InventoryInput {
   readonly depth?: boolean;
   /** K650: one known-findings list for every inventory finding (`inventoryFindings`): `kind:id` uncited or not counted (the old `baseline` lines read as they are), an `interacting` id in no row (the K497 JSON map reads as it is), `line:<id>` unowned. Replaces `baseline`, `openLines` and `interactingPending`. Its io defaults to `runInventory`'s. */
   readonly known?: KnownFindings;
+  /** K663: rule 11 mixed mode: a clause with `text` that has a `cardCase` is quote-checked; one without is cited by a test title like a clause without `text`. */
+  readonly mixed?: boolean;
 }
 export interface Row {
   readonly key: string;
@@ -99,7 +101,10 @@ export interface CardCaseInfo {
   readonly ar: string;
   /** Added to the test title after the clause id (`poor`, `IX-03 with …`). */
   readonly title?: string;
+  /** K663: `printed` is not a literal or a same-file const: its source text. */
+  readonly printedRef?: string;
 }
+const CONST = /(?<![\w$.])const\s+([A-Za-z_$][\w$]*)\s*(?::\s*string\s*)?=\s*(?:(['"])((?:\\[\s\S]|(?!\2)[^\\\n])*)\2|`((?:\\[\s\S]|[^`\\$]|\$(?!\{))*)`)\s*(?:as const\s*)?(?=[;\n\r,]|$)/g;
 const KEY = /(?<![\w$])(clause|printed|ar|title)\s*:\s*(['"`])((?:\\[\s\S]|(?!\2)[^\\])*)\2/g;
 const ESC: Record<string, string> = { n: '\n', t: '\t', r: '\r', b: '\b', f: '\f', v: '\v', '0': '\0', '\n': '', '\r': '', '\r\n': '', ' ': '', ' ': '' };
 const unescape = (s: string): string =>
@@ -109,6 +114,11 @@ const unescape = (s: string): string =>
 /** K487: the string-literal fields of each `cardCase({ ... })` call in a test file's text; a field that is not a literal is absent. */
 export function cardCasesIn(text: string): Partial<CardCaseInfo>[] {
   const out: Partial<CardCaseInfo>[] = [];
+  const consts = new Map<string, string>();
+  const code = text.replace(/\/\*[\s\S]*?\*\/|\/\/.*$/gm, '');
+  const decls = new Map<string, number>();
+  for (const d of code.matchAll(/(?<![\w$.])(?:const|let|var)\s+([A-Za-z_$][\w$]*)/g)) decls.set(d[1] as string, (decls.get(d[1] as string) ?? 0) + 1);
+  for (const c of code.matchAll(CONST)) if (decls.get(c[1] as string) === 1) consts.set(c[1] as string, unescape(c[3] ?? c[4] ?? ''));
   for (const m of text.matchAll(/\bcardCase\(\s*\{/g)) {
     const from = (m.index ?? 0) + m[0].length;
     let i = from;
@@ -124,7 +134,13 @@ export function cardCasesIn(text: string): Partial<CardCaseInfo>[] {
       else if (ch === '}') depth--;
     }
     const o: Record<string, string> = {};
-    for (const k of text.slice(from, i - 1).matchAll(KEY)) o[k[1] as string] ??= unescape(k[3] ?? '');
+    const body = text.slice(from, i - 1);
+    for (const k of body.matchAll(KEY)) o[k[1] as string] ??= unescape(k[3] ?? '');
+    const ref = /(?<![\w$])printed\s*:\s*(?!['"`])([^,}\n]+)/.exec(body)?.[1]?.trim();
+    if (ref !== undefined && o.printed === undefined) {
+      if (consts.has(ref)) o.printed = consts.get(ref) as string;
+      else o.printedRef = ref;
+    }
     out.push(o);
   }
   return out;
@@ -177,20 +193,22 @@ export function inventory(input: InventoryInput): Inventory {
       cardCasesIn(t.text)
         .filter((k) => k.clause === c.id)
         .filter((k) => {
-          if (k.printed !== c.text) quoteDiffers.push(`${c.id}: quote differs (${t.path})`);
+          if (k.printedRef !== undefined) quoteDiffers.push(`${c.id}: printed is not a literal or a same-file const: ${k.printedRef}`);
+          else if (k.printed !== c.text) quoteDiffers.push(`${c.id}: quote differs (${t.path})`);
           else if (k.ar === undefined || !rulings.has(k.ar)) quoteDiffers.push(`${c.id}: quote differs (${t.path}: ${k.ar ?? 'ar'} is not a known ruling)`);
           else return true;
           return false;
         })
         .map((k) => `${t.path} › ${caseTitle(k)}`),
     );
+  const quotes = (c: Clause): boolean => c.text !== undefined && (input.mixed !== true || tests.some((t) => cardCasesIn(t.text).some((k) => k.clause === c.id)));
   const depth = input.depth === true || (input.clauses ?? []).some((c) => c.conditional !== undefined);
   const calls = depth ? tests.flatMap((t) => testCalls(t.text).filter((c) => !c.skipped).map((c) => ({ ...c, path: t.path }))) : [];
   const fullRe = (id: string): RegExp => new RegExp(`(?<![\\w-])${esc(id)}(?![\\w-])(?! poor\\b)`);
   const poorRe = (id: string): RegExp => new RegExp(`(?<![\\w-])${esc(id)} poor\\b`);
   const notCounted: string[] = [];
   const full = (c: Clause): string[] => {
-    const q = c.text === undefined ? undefined : new Set(quoted(c));
+    const q = !quotes(c) ? undefined : new Set(quoted(c));
     return calls
       .filter((k) => fullRe(c.id).test(k.title) && (q === undefined || (k.card !== undefined && q.has(`${k.path} › ${k.title}`))))
       .filter((k) => asserts(k) || void notCounted.push(`clause:${c.id}|${k.path} › ${k.title}: its body asserts nothing`))
@@ -216,7 +234,7 @@ export function inventory(input: InventoryInput): Inventory {
   };
   const rows = [
     ...input.pieces.map((p) => row(p.kind, p.id, (p.cite ?? []).map((c) => new RegExp(c)).concat(p.cite === undefined ? [word(p.id)] : []), p.cards ?? [], p.kind === 'interaction' || (input.titleOnly === true && p.cite === undefined))),
-    ...(input.clauses ?? []).map((c) => row('clause', c.id, [word(c.id)], c.cards, input.titleOnly === true, depth ? full(c) : c.text === undefined ? undefined : quoted(c))),
+    ...(input.clauses ?? []).map((c) => row('clause', c.id, [word(c.id)], c.cards, input.titleOnly === true || (input.mixed === true && !quotes(c)), depth ? full(c) : !quotes(c) ? undefined : quoted(c))),
     ...(input.clauses ?? []).filter((c) => depth && c.conditional === true).map((c) => row('poor', c.id, [], c.cards, true, poor(c))),
   ];
   const seen = new Set<string>();
