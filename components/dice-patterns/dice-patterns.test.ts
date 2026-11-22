@@ -126,6 +126,20 @@ describe('dice-patterns smallest', () => {
   });
 });
 
+describe('dice-patterns smallest over the whole roll (K578)', () => {
+  it('an exact sum or spread that only some of the dice meet is not met by the whole roll', () => {
+    const seven: Pattern = { kind: 'sum', op: '=', value: 7 };
+    expect(t(seven, [3, 4, 2])).toBe(false);
+    expect(smallest(seven, [3, 4, 2])).toEqual([0, 1]);
+    expect(smallest(seven, [3, 4, 2], { whole: true })).toBeNull();
+    const gap: Pattern = { kind: 'spread', value: 2 };
+    expect(t(gap, [1, 3, 6])).toBe(false);
+    expect(smallest(gap, [1, 3, 6])).toEqual([0, 1]);
+    expect(smallest(gap, [1, 3, 6], { whole: true })).toBeNull();
+    expect(smallest({ kind: 'max', op: '<=', value: 3 }, [6, 2], { whole: true })).toBeNull();
+  });
+});
+
 describe('dice-patterns checkPattern', () => {
   it('good data has no problems', () => {
     expect(checkPattern({ kind: 'all', of: [{ kind: 'same', n: 2 }, { kind: 'sum', op: '>', value: 7 }] })).toEqual([]);
