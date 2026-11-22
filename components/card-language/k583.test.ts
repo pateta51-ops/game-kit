@@ -221,6 +221,10 @@ describe('card-language cost hook (K583) point 6: cfg.due, the amount a cost ste
     const conv = cheap.play([{ op: 'convert', res: 'gold', amount: 4, into: 'vp', get: 1 }]).s;
     expect([gold(conv), gold(conv, 'a', 'vp')]).toEqual([0, 1]);
   });
+  it('K583 README "Use it in 10 lines": the taxed pack prints the amount it asks for; a test that calls cannotKnow builds', () => {
+    const taxed = cardPack<G>({ due: (_s, step, _env, printed) => (step.op === 'pay' && step.res === 'gold' ? printed + 1 : printed), tests: { topIsRed: () => (cannotKnow(), false) } });
+    expect(describeEffect(taxed.verbs, taxed.costed({} as S, [{ op: 'pay', res: 'gold', amount: 3 }], { seat: 'a' }))).toBe('Pay 4 gold.');
+  });
   it('K583 with no due nothing changes: costed returns the same steps, and so does a due that returns the printed amount', () => {
     const g = game();
     const same = game(undefined, { cfg: { due: (_s, _st, _e, printed) => printed } });
