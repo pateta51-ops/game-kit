@@ -30,6 +30,7 @@
     { "words": "which printed clauses the verbs cover, verb coverage", "part": "coverage-report", "read": "its README", "sheet": "cards" },
     { "words": "test an effect on real cards, scenario builder for tests, test state helper, set up a test state, dry run an effect", "part": "card-harness", "read": "its README; recipe card-effect.md", "sheet": "cards" },
     { "words": "test depth per clause, effect never offered, effect never fired", "part": "card-harness", "read": "its README rules 23 to 27, `expectNotOffered`, `expectNotFired`, a test titled \"<clause id> poor\", `runInventory`", "sheet": "offered" },
+    { "words": "screen amount icon, counted amount shown, prompt shows wrong number, amount only in an icon", "part": "card-harness", "read": "its README rules 18 and 28 to 30, `screenProblems`, `iconAmounts`, `value`", "sheet": "cards" },
     { "words": "trigger, when, after, reaction, things that happen at once, free action window, free actions window, window where players may act", "part": "engine-core", "read": "timing.md, `TriggerCandidate`, `PendingTrigger`, `simultaneously`; recipe timing.md", "also": ["card-language"], "sheet": "triggers" },
     { "words": "when X do Y printed on a card", "part": "card-language", "read": "its README, `when` and `cardTriggers`; recipe card-effect.md step 0c", "sheet": "triggers" },
     { "words": "prevent damage, prevention, block, absorb", "part": "engine-core", "read": "timing.md, `would`, `Prevention`, `prevent`", "sheet": "attacks" },
