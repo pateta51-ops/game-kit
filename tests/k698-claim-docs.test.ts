@@ -3,7 +3,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { afterAll, describe, expect, it } from 'vitest';
-import { claimParts, finish, type Exec } from '../scripts/agent.mjs';
+import { claimParts, finish, isClaim, type Exec } from '../scripts/agent.mjs';
 
 const root = fs.mkdtempSync(path.join(os.tmpdir(), 'k698-'));
 afterAll(() => fs.rmSync(root, { recursive: true, force: true }));
@@ -131,6 +131,15 @@ describe('K698 finish checks claim lines in the role documents', () => {
     const g2 = spawnSync(process.execPath, [kit, 'claims', path.join(main, 'notes/glow.md'), '--repo', main], { encoding: 'utf8' });
     expect(g2.status).toBe(1);
     expect(g2.stdout).toContain('check: search finds glow');
+  });
+  it('K698 claim forms: a Gap: label (bold or not), kit ships no, no kit part, kit does not have, missing from the kit, not covered by the kit', () => {
+    const exact = '**Gap:** the kit ships no look for data-mark legal';
+    const r = run(game(doc(exact)));
+    expect(r.rc).toBe(1);
+    expect(r.text).toContain('docs/experience/plan.md:4: ' + exact);
+    for (const l of ['GAP: dice log', 'A row the KIT SHIPS NO look for', 'No kit part draws it', 'The kit does not have a log', 'Missing from the kit: a log', 'Not covered by the kit: a log'])
+      expect(isClaim(l), l).toBe(true);
+    expect(isClaim('The gap between cards is 4 px')).toBe(false);
   });
   it('K698 claimParts: after a miss line, only guesses sharing a word with the phrasing count', () => {
     expect(claimParts('count: Counts a number up.\nnot in the kit by that name', 'lit card')).toEqual([]);
