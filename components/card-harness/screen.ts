@@ -20,6 +20,8 @@ export interface ScreenInput {
   syntax?: readonly [string, string];
   /** Icon codes whose digits are the amount (K649): a list of codes or a pattern a code matches. Other icon codes' digits are no number shown. */
   iconAmounts?: readonly string[] | RegExp;
+  /** For a counted prompt (K649): numbers (`'2'`) never taken as stray, or patterns (`/Unit \d+/`) whose matches in the shown words are left out of the counted check. */
+  allowNumbers?: readonly (string | RegExp)[];
   /** Strip run before words are compared (plain-text's `ids.strip`). */
   strip?: (t: string) => string;
 }
@@ -53,19 +55,26 @@ export function screenProblems(i: ScreenInput): string[] {
     for (const [k, e] of (x.promptAmounts ?? []).entries()) if (e !== 'counted') for (const a of e) if (!numbers(x.text).includes(a)) out.push(`${x.id}: prompt ${String(k + 1)} amount ${a} is not in its text`);
   }
   const steps = new Map<string, Set<number>>();
+  const ia = i.iconAmounts, iaRe = ia instanceof RegExp ? new RegExp(ia.source, ia.flags.replace(/[gy]/g, '')) : undefined;
+  const allowRe = (i.allowNumbers ?? []).flatMap((x) => (x instanceof RegExp ? [new RegExp(x.source, x.flags.includes('g') ? x.flags : `${x.flags}g`)] : []));
+  const allowNum = (i.allowNumbers ?? []).filter((x): x is string => typeof x === 'string');
   for (const p of i.prompts) {
     const k = p.step ?? 0;
     const e = per.get(p.clause);
     if (e) { (steps.get(p.clause) ?? steps.set(p.clause, new Set()).get(p.clause)!).add(k); if (k >= e.length) { out.push(`prompt for ${p.clause}: prompt ${String(k + 1)} has no promptAmounts entry`); continue; } }
     const a = e ? e[k] : am.get(p.clause);
-    const words = p.shown.replace(token, (m) => { const k = m.slice(o.length, m.length - c.length), ia = i.iconAmounts; return ia && (Array.isArray(ia) ? ia.includes(k) : (ia as RegExp).test(k)) ? ` ${m} ` : ' '; });
+    const words = p.shown.replace(token, (m) => { const k = m.slice(o.length, m.length - c.length); return (iaRe ? iaRe.test(k) : (ia as readonly string[] | undefined)?.includes(k)) ? ` ${m} ` : ' '; });
     const got = new Set(numbers(words));
     if (a === 'counted') {
-      if (got.size === 0) { out.push(`prompt for ${p.clause}: no amount`); continue; }
+      const cw = allowRe.reduce((t, r) => t.replace(r, ' '), words), cnt = new Set(cw.match(/\d+(?!\d|(?:st|nd|rd|th)\b)/gi) ?? []);
+      if (cnt.size === 0) { out.push(`prompt for ${p.clause}: no amount`); continue; }
       const v = p.value === undefined ? undefined : String(p.value), printed = numbers(text.get(p.clause) ?? '');
-      if (v !== undefined && !got.has(v)) out.push(`prompt for ${p.clause}: amount ${v} not shown`);
-      const stray = [...got].filter((n) => n !== v && !printed.includes(n));
-      for (const n of stray.slice(v === undefined ? 1 : 0)) out.push(`prompt for ${p.clause}: stray number ${n}`);
+      if (v !== undefined && !/^-?\d+$/.test(v)) { out.push(`prompt for ${p.clause}: value ${v} is not a whole number`); continue; }
+      const abs = v?.replace('-', '');
+      if (v !== undefined && !(v.startsWith('-') ? new RegExp(`(?<!\\d)[-\\u2212]${abs!}(?!\\d)`).test(cw) : cnt.has(abs!))) out.push(`prompt for ${p.clause}: amount ${v} not shown`);
+      const stray = [...cnt].filter((n) => n !== abs && !printed.includes(n) && !allowNum.includes(n));
+      if (v !== undefined) for (const n of stray) out.push(`prompt for ${p.clause}: stray number ${n}`);
+      else if (stray.length > 1) out.push(`prompt for ${p.clause}: numbers ${stray.join(', ')} shown, pass value to tell the amount`);
       continue;
     }
     const want = a ?? numbers(text.get(p.clause) ?? '');
