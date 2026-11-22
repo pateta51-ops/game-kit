@@ -15,6 +15,7 @@ Rounds, turns per seat and phases and steps inside a turn as one data table; the
 6. Expect boundaries in this order: `turnBegin`, `phaseEnd`, `turnEnd`, `roundEnd`; steps get none, and a skipped turn or phase gets none.
 7. Run `expireEffects` at the game's checkpoint; ended effects stay in state until then (they count nothing).
 8. With `roundEnds`, expect a round with no turn played to end anyway; `over(s)` stops before the next position.
+9. Once-per limits (K589): declare every key in one `LimitTable`; build the option with `limitOption` (never a hand-made disabled option) and call `markLimit` when the action resolves; pass `card` for a `perCard` key (it throws without one). Never clear turn, phase or round limits yourself while the runner runs: it clears them at `turnEnd`, `phaseEnd` and `roundEnd`; `game` limits are never cleared.
 
 **Common mistakes:**
 - Expecting out-of-turn interrupts or reactions here: they are not in this component.
@@ -25,6 +26,22 @@ Rounds, turns per seat and phases and steps inside a turn as one data table; the
 - Read: `flowOf(s)` is `state.flow` (`round`, `turn` index, `seat`, `phase`, `step`, `done` when it stopped); `whoseTurn(s)` the seat (undefined once done).
 - Boundaries: `turnBegin` (player = seat), `phaseEnd` (phase = id), `turnEnd` (player = seat), `roundEnd`, in that order. Steps get none: engine-core has no step duration. Ended effects stay in state until the game's checkpoint runs `expireEffects` (they count nothing).
 - Not here: what a step does, interrupts or reactions out of turn order.
+
+## Once-per limits
+
+A game declares keys, each `{ scope: 'turn' | 'round' | 'phase' | 'game', perCard?, perSeat?, why? }`. A key without `perCard` is shared: any card that names it uses the one limit. `perSeat` reads the seat from `ref.seat` or `whoseTurn`. The used marks live in `state.limits` (plain arrays per scope, so saves, undo and replay keep them); a game that never calls `markLimit` gets no `limits` field.
+
+- `limitOption(s, table, ref, id)`: `{ id, enabled: true }`, or `bar(id, 'used', why)` (`why` from the key, else `used this turn` / `used this round` / `used this phase` / `already used this game`).
+- `markLimit(ctx, table, ref)`: marks it, `false` when it already was. `limitUsed(s, table, ref)` reads it; `limitsOf(s)` the raw state.
+- `clearLimits(ctx, scope)`: for a game that runs its own boundaries; the runner calls it at each `turnEnd`, `phaseEnd` and `roundEnd`.
+
+```ts
+const table: LimitTable = { draw: { scope: 'turn', why: 'drawn this turn' }, power: { scope: 'round', perCard: true } }
+markLimit(ctx, table, { key: 'draw' })
+ctx.ask({ min: 1, max: 1, options: [limitOption(ctx.s, table, { key: 'draw' }, 'draw'), limitOption(ctx.s, table, { key: 'power', card: 'c7' }, 'power:c7')] }, { kind: 'pick' })
+// draw: { enabled: false, reason: 'used', why: 'drawn this turn' }; power:c7 enabled until a card c7 use this round
+```
+Run by `limits.test.ts` ("README recipe").
 
 ## Use it in 10 lines
 

@@ -1986,7 +1986,7 @@
     "gameSupplies": "The voice lines and the gate for when to play."
   },
   "turn-flow": {
-    "use": "Rounds, turns per seat in seat order, and phases and steps inside a turn as one data table; the runner calls engine-core boundary() at each turn, phase and round edge, so endOfTurn / endOfRound / endOfPhase durations end with no manual call; whoseTurn and flowOf read the position from state. Recipe: docs/recipes/turn-flow.md.",
+    "use": "Rounds, turns per seat in seat order, and phases and steps inside a turn as one data table; the runner calls engine-core boundary() at each turn, phase and round edge, so endOfTurn / endOfRound / endOfPhase durations end with no manual call; whoseTurn and flowOf read the position from state; once-per limits (K589: once per turn, round, phase or game, per card, per seat) bar a used option with its reason and clear at the matching edge. Recipe: docs/recipes/turn-flow.md.",
     "not": "What a step does, simultaneous or out-of-order turns (interrupts, reactions), step-long durations (engine-core has none), or the screen that shows the phase.",
     "title": "Rounds, turns and phases table",
     "tags": [
@@ -1996,7 +1996,15 @@
       "steps",
       "order",
       "seat",
-      "flow"
+      "flow",
+      "once per turn",
+      "once per round",
+      "once per phase",
+      "once per game",
+      "once per turn per card",
+      "use limit per game",
+      "usage limit",
+      "used this turn"
     ],
     "visible": false,
     "release": 1,
