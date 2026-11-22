@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { blocked, EngineBugError, type KernelPrompt } from '../engine-core/index.ts';
+import { blocked, EngineBugError, onlyOne, type KernelPrompt } from '../engine-core/index.ts';
 import { cardsIn } from '../card-zones/index.ts';
 import { describeEffect } from './index.ts';
 import { cannotKnow, cardPack, inDryRun, type PackEnv, type PackStep } from './pack.ts';
@@ -231,8 +231,6 @@ describe('card-language cost hook (K583) point 6: cfg.due, the amount a cost ste
     expect(g.pack.costed(g.at().s, ways, A)).toBe(ways);
     expect(same.pack.costed(same.at().s, ways, A)).toBe(ways);
     expect(gold(same.play([GAIN, ...ways], [['0']]).s)).toBe(1);
-    const x: Eff = [{ op: 'pay', res: 'gold', amount: 'X' }];
-    expect(tax().pack.costed(g.at().s, x, { ...A, n: 2 })).toEqual([pay(3)]);
   });
 });
 
@@ -261,5 +259,157 @@ describe('card-language offer policy (K583) point 7: prior-art cases without a t
     const eff: Eff = [{ op: 'may', then: [paid([pay(1)], [NOTHING])] }];
     expect(kinds(game({ noChange: 'skip' }).play(eff, [['no']]).prompts)).toEqual(['may']);
     expect(game({ noChange: 'skip', paid: 'effect' }).play(eff).prompts).toEqual([]);
+  });
+});
+
+// K583 review round: each case failed before its fix.
+describe('card-language offer policy (K583) review: under paid = effect a cost that shows a hidden card does not tell the card', () => {
+  const judge = (offer: GameOpts['offer'], deck: readonly string[], steps: Eff) => {
+    const g = game(offer, { deck });
+    const { s, content } = g.at();
+    return g.pack.judge(s, content, steps, A);
+  };
+  const DECKS = [['d1', 'd2'], ['d2', 'd1']];
+  const MILL: PackStep = { op: 'mill', count: 1 };
+  it('K583 a cost that moves the top card of a hidden deck into view, then a test that reads it: unknown (hidden) whatever the card', () => {
+    const eff: Eff = [paid([MILL], [{ op: 'if', test: 'evenUp', then: [GAIN] }])];
+    expect(DECKS.map((d) => judge({ paid: 'effect' }, d, eff))).toEqual([{ answer: 'unknown', reason: 'hidden' }, { answer: 'unknown', reason: 'hidden' }]);
+    expect(DECKS.map((d) => judge({ paid: 'effect' }, d, [paid([DRAW], [{ op: 'if', test: 'drew2', then: [GAIN] }])]).answer)).toEqual(['unknown', 'unknown']);
+    expect(DECKS.map((d) => judge({ paid: 'effect' }, d, [paid([MILL], [{ op: 'count', what: 'held', then: [NOTHING] }])]).answer)).toEqual(['unknown', 'unknown']);
+    expect(DECKS.map((d) => judge({}, d, eff).answer)).toEqual(['yes', 'yes']);
+  });
+  it('K583 the offer is the same for both cards: an optional paid effect, and a way of paying that moves the top card', () => {
+    const eff: Eff = [{ op: 'may', then: [paid([MILL], [{ op: 'if', test: 'evenUp', then: [GAIN] }])] }];
+    expect(DECKS.map((d) => kinds(game({ noChange: 'skip', paid: 'effect' }, { deck: d }).play(eff, [['no']]).prompts))).toEqual([['may'], ['may']]);
+    const ways: Eff = [{ op: 'choosePayment', ways: [[MILL], [pay(9)]], then: [{ op: 'if', test: 'evenUp', then: [GAIN] }] }];
+    expect(DECKS.map((d) => bars(game({ deadChoice: 'bar', paid: 'effect' }, { deck: d }).play(ways, [], undefined, true).s.prompt ?? undefined))).toEqual([[['1', 'cannotPay']], [['1', 'cannotPay']]]);
+    const blindCost: Eff = [paid([{ op: 'discard', from: 'hand:b', count: 1 }], [{ op: 'if', test: 'evenUp', then: [GAIN] }])];
+    expect([['b1', 'b3'], ['b2', 'b3']].map((b) => game({ paid: 'effect' }, { b }).check(blindCost))).toEqual(['unknown', 'unknown']);
+  });
+  it('K583 a cost that shows a card, then only the pack\'s own verbs: still decided; a cost that shows nothing new: decided as before', () => {
+    expect(DECKS.map((d) => judge({ paid: 'effect' }, d, [paid([MILL], [GAIN])]).answer)).toEqual(['yes', 'yes']);
+    expect(DECKS.map((d) => judge({ paid: 'effect' }, d, [paid([MILL], [NOTHING])]).answer)).toEqual(['no', 'no']);
+    expect(judge({ paid: 'effect' }, ['d1', 'd2'], [paid([{ op: 'discard', count: 1 }, pay(1)], [{ op: 'if', test: 'poor', then: [GAIN] }])]).answer).toBe('yes');
+  });
+});
+
+describe('card-language cost hook (K583) review: label, check and payment give one number', () => {
+  const taxed = (due: NonNullable<GameOpts['cfg']>['due'], offer?: GameOpts['offer']) => game(offer, { cfg: { ...(due ? { due } : {}) } });
+  const plus1: NonNullable<GameOpts['cfg']>['due'] = (_s, _st, _e, printed) => printed + 1;
+  it('K583 an amount written X is the number the effect computed: due is not called for it, so the label keeps X and X leaves', () => {
+    const g = taxed(plus1);
+    const eff: Eff = [{ op: 'chooseNumber', min: 1, max: 2, then: [{ op: 'pay', res: 'gold', amount: 'X' }] }];
+    expect(g.pack.costed(g.at().s, eff, A)).toBe(eff);
+    expect(describeEffect(g.pack.verbs, g.pack.costed(g.at().s, eff, A))).toBe('Choose a number from 1 to 2. Pay X gold.');
+    expect(gold(g.play(eff, [['2']]).s)).toBe(1);
+    const x: Eff = [{ op: 'pay', res: 'gold', amount: 'X' }];
+    expect(g.pack.costed(g.at().s, x, { ...A, n: 2 })).toBe(x);
+    expect(gold(g.play(x, [], { ...A, n: 2 }).s)).toBe(1);
+  });
+  it('K583 a due that reads what the cost itself changes is read once, before anything is paid: the cost is paid as labelled, whole', () => {
+    const parity: NonNullable<GameOpts['cfg']>['due'] = (s, _st, e, printed) => printed + (gold(s, e.seat) % 2);
+    const g = taxed(parity, { cost: 'whole' });
+    const cost: Eff = [pay(1), pay(1)];
+    const { s } = g.at([GAIN]);
+    expect(describeEffect(g.pack.verbs, g.pack.costed(s, cost, A))).toBe('Pay 1 gold. Pay 1 gold.');
+    const rich = g.play([GAIN, paid(cost, [DRAW])]).s;
+    expect([gold(rich), z(rich, 'hand:a').length]).toEqual([2, 3]);
+    const poorer = g.play([paid(cost, [DRAW])]).s;
+    expect([gold(poorer), z(poorer, 'hand:a').length]).toEqual([3, 2]);
+    const tired: NonNullable<GameOpts['cfg']>['due'] = (s, _st, _e, printed) => printed + (s.marks?.p1?.includes('exhausted') ? 2 : 0);
+    const one = taxed(tired, { cost: 'whole' }).play([{ op: 'adjust', key: 'gold', by: -2 }, paid([{ op: 'exhaust' }, pay(1)], [DRAW])]).s;
+    expect([gold(one), z(one, 'hand:a').length, one.marks]).toEqual([0, 3, { p1: ['exhausted'] }]);
+  });
+  it('K583 a due that is negative, a fraction or not a number is an engine-bug error, in the real run and (as unknown, error) in the check; 0 pays nothing', () => {
+    for (const bad of [-1, 0.5, Number.NaN]) {
+      const g = taxed(() => bad);
+      expect(() => g.play([pay(2)])).toThrow(/due gave/);
+      const { s, content } = g.at();
+      const r = g.pack.judge(s, content, [paid([pay(2)], [GAIN])], A);
+      expect([r.answer, r.reason, r.error instanceof EngineBugError]).toEqual(['unknown', 'error', true]);
+      expect(() => g.pack.costed(s, [pay(2)], A)).toThrow(/due gave/);
+    }
+    expect(gold(taxed(() => 0).play([paid([pay(9)], [GAIN])]).s)).toBe(4);
+  });
+  it('K583 400 random costs, 4 seeds, flat and state-reading dues, parts and whole: what the label says, what the check allows and what leaves are one number', () => {
+    const DUES: readonly NonNullable<GameOpts['cfg']>['due'][] = [
+      plus1, (_s, _st, _e, printed) => Math.max(0, printed - 1), (s, _st, e, printed) => printed + (gold(s, e.seat) % 2),
+      (s, _st, _e, printed) => printed + (s.marks?.p1?.includes('exhausted') ? 2 : 0), (s, st, e, printed) => (st.op === 'convert' ? printed + gold(s, e.seat, 'vp') : printed),
+    ];
+    let offered = 0;
+    let refused = 0;
+    for (const seed of [1, 2, 3, 4]) {
+      let x = seed;
+      const rnd = (k: number): number => {
+        x = (Math.imul(x, 1103515245) + 12345) >>> 0;
+        return (x >>> 8) % k;
+      };
+      for (let i = 0; i < 100; i += 1) {
+        const whole = rnd(2) === 0;
+        const g = taxed(DUES[rnd(DUES.length)], whole ? { cost: 'whole' } : {});
+        const cost: PackStep[] = Array.from({ length: 1 + rnd(3) }, (): PackStep => [pay(1 + rnd(3)), pay(1 + rnd(3)), { op: 'pay', res: 'gold', amount: 'X' } as PackStep, { op: 'exhaust' } as PackStep, { op: 'convert', res: 'gold', amount: 1 + rnd(2), into: 'vp', get: 1 } as PackStep][rnd(5)] as PackStep);
+        const env: PackEnv = { ...A, n: rnd(3) };
+        const before: Eff = [{ op: 'adjust', key: 'gold', by: rnd(7) - 3 }];
+        const start = g.play(before, [], env).s;
+        const label = (g.pack.costed(start, cost, env) as Eff).flatMap((st) => (st.op === 'pay' || st.op === 'convert' ? [st.amount === 'X' ? (env.n ?? 0) : st.amount] : []));
+        // What the label promises: under whole all of it or nothing; under parts each step that can be paid in turn (the stated rules question).
+        let left = gold(start);
+        const twice = cost.filter((st) => st.op === 'exhaust').length > 1;
+        const able = whole ? label.reduce((a, b) => a + b, 0) <= left && !twice : label.every((a) => a <= left);
+        if (able) for (const a of label) if (a <= left) left -= a;
+        const end = g.play([...before, { op: 'choosePayment', ways: [cost], then: [DRAW] }], [], env, true).s;
+        const asked = end.prompt?.options[0]?.enabled === true;
+        if (asked !== able) throw new Error(`label ${JSON.stringify(label)} with ${String(gold(start))} gold says ${String(able)}, the check ${String(asked)}: ${JSON.stringify(cost)}`);
+        if (!asked) {
+          refused += 1;
+          continue;
+        }
+        offered += 1;
+        const paidUp = g.play([...before, { op: 'choosePayment', ways: [cost], then: [DRAW] }], [['0']], env).s;
+        if (gold(paidUp) !== left) throw new Error(`label ${JSON.stringify(label)} from ${String(gold(start))} gold leaves ${String(left)}, the payment left ${String(gold(paidUp))}: ${JSON.stringify(cost)}`);
+        if (whole && z(paidUp, 'hand:a').length !== 3) throw new Error(`a whole cost was paid and the effect not given: ${JSON.stringify(cost)}`);
+      }
+    }
+    expect(offered).toBeGreaterThan(100);
+    expect(refused).toBeGreaterThan(50);
+  });
+});
+
+describe('card-language offer policy (K583) review: lines no test held, and two older answers', () => {
+  it('K583 under paid = effect a cost cancelled in its would-window gives no effect, and what follows is still compared', () => {
+    const g = game({ paid: 'effect' }, { cancel: 'mill' });
+    const stopped: PackStep = paid([{ op: 'mill', count: 1 }], [GAIN]);
+    expect([g.check([stopped]), g.check([stopped, GAIN]), g.check([stopped, NOTHING])]).toEqual(['no', 'yes', 'no']);
+    expect(z(g.play([stopped]).s, 'deck:a')).toEqual(['d1', 'd2']);
+  });
+  it('K583 a filter is not run with a blind pick in the chosen cards: unknown', () => {
+    expect(game().check([{ op: 'chooseCards', zone: 'hand:b', max: 1, then: [{ op: 'chooseCards', zone: 'hand', filter: 'even', max: 1, then: [NOTHING] }] }])).toBe('unknown');
+    expect(game().check([{ op: 'chooseCards', zone: 'hand', max: 1, then: [{ op: 'chooseCards', zone: 'hand', filter: 'even', max: 1, then: [NOTHING] }] }])).toBe('no');
+  });
+  it('K583 the reason nested, and dryRunSeat read by game code', () => {
+    const g = game();
+    expect([g.check([{ op: 'custom', name: 'why' }, { op: 'custom', name: 'who' }]), g.nested]).toEqual(['no', ['nested', 'a']]);
+    g.play([{ op: 'custom', name: 'who' }]);
+    expect(g.nested[2]).toBe('null');
+  });
+  it('K583 ready when no card was ever marked changes nothing; neither does exhaust then ready; exhaust does', () => {
+    const g = game();
+    expect([g.check([{ op: 'ready' }]), g.check([{ op: 'exhaust' }, { op: 'ready' }]), g.check([{ op: 'exhaust' }]), g.check([{ op: 'ready' }], A, [{ op: 'exhaust' }])]).toEqual(['no', 'no', 'yes', 'yes']);
+    expect(game({ noChange: 'skip' }).play([{ op: 'may', then: [{ op: 'ready' }] }]).prompts).toEqual([]);
+    expect(game({ view: ({ zones, res, marks }) => ({ zones, res, marks }) }).check([{ op: 'ready' }])).toBe('no');
+  });
+  it('K583 a shuffle of a zone with fewer than two cards, or a search of an empty zone, changes nothing; a shuffle of two is random', () => {
+    const g = game();
+    expect([g.check([{ op: 'shuffle', zone: 'aside' }]), g.check([{ op: 'shuffle', zone: 'play' }]), g.check([{ op: 'search', zone: 'aside' }]), g.check([{ op: 'shuffle', zone: 'deck' }])]).toEqual(['no', 'no', 'no', 'unknown']);
+    expect(game({ noChange: 'skip' }).play([{ op: 'may', then: [{ op: 'search', zone: 'aside' }] }]).prompts).toEqual([]);
+  });
+  it('K583 an option over a card the seat cannot see is marked unseen, so a lone hidden card is never taken for the player; a seen card is as before', () => {
+    const pick = (zone: string): Eff => [{ op: 'chooseCards', zone, max: 1, then: [{ op: 'discard', cards: 'chosen' }] }];
+    const hidden = game(undefined, { b: ['b1'] }).play(pick('hand:b'), [], undefined, true).s.prompt;
+    expect([hidden?.options, hidden && onlyOne(hidden)]).toEqual([[{ id: '#0', enabled: true, unseen: true }], null]);
+    const seen = game().play(pick('play'), [], undefined, true).s.prompt;
+    expect([seen?.options, seen && onlyOne(seen)?.taken]).toEqual([[{ id: 'p1', enabled: true }], 'p1']);
+    const cost = game(undefined, { b: ['b1'] }).play([{ op: 'discard', from: 'hand:b', count: 1 }], [], undefined, true).s.prompt;
+    expect(cost?.options).toEqual([{ id: '#0', enabled: true, unseen: true }]);
   });
 });

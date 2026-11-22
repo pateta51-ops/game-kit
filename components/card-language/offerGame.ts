@@ -3,7 +3,7 @@
 import { applyAction, canonicalJson, createGame, draftOf, GameOver, hashState, hashValue, seedRng, timingHandlers, type AnswerAction, type Ctx, type Draft, type GameRules, type HandlerTable, type KernelPrompt, type KernelState, type KernelTask, type Occurrence } from '../engine-core/index.ts';
 import { cardsIn, locate, newZones } from '../card-zones/index.ts';
 import { askVerb, effectTasks, verbHandler, type VerbTable, type VerbTask } from './index.ts';
-import { cannotKnow, type Offered, type OfferPolicy, type PackConfig, type PackEnv, type PackState, type PackStep } from './pack.ts';
+import { cannotKnow, dryRunSeat, type Offered, type OfferPolicy, type PackConfig, type PackEnv, type PackState, type PackStep } from './pack.ts';
 import { cardTriggers, type WhenCard } from './when.ts';
 
 export type Task = KernelTask | VerbTask<PackStep, PackEnv>;
@@ -39,6 +39,8 @@ export interface GameOpts {
   readonly cfg?: Partial<PackConfig<G>>;
   /** Card data with `when` entries; a card is live wherever it is. */
   readonly pool?: Readonly<Record<string, WhenCard<PackStep>>>;
+  /** An occurrence kind every occurrence of which is cancelled in its would-window (a replacement that skips it). */
+  readonly cancel?: string;
 }
 
 export const gold = (s: PackState, seat = 'a', k = 'gold'): number => s.res?.[seat]?.[k] ?? 0;
@@ -48,7 +50,7 @@ export const DRAW: PackStep = { op: 'draw', count: 1 };
 export const pay = (amount: number): PackStep => ({ op: 'pay', res: 'gold', amount });
 const SKIP = ['stack', 'prompt', 'seq', 'promptSeq', 'log', 'timing', 'cardMoves', 'rng', 'forced', 'truth'];
 /** What the check compares by default, without the brute-force notes. */
-export const viewOf = (s: S): string => canonicalJson(Object.fromEntries(Object.entries(s).filter(([k]) => !SKIP.includes(k))));
+export const viewOf = (s: S): string => canonicalJson(Object.fromEntries(Object.entries(s).filter(([k, v]) => !SKIP.includes(k) && !(k === 'marks' && Object.keys(v as object).length === 0))));
 /** Did this line of play change the game, not counting what a cost marked by `marked` changed? */
 export const changed = (s: S, base: string): boolean => (s.truth?.hit ?? false) || ((s.truth?.open.length ?? 0) === 0 && viewOf(s) !== (s.truth?.base ?? base));
 /** The same effect with each `payThen` wrapped in the brute-force notes: `pre`, the cost, `mark` before `then`, `post`. */
@@ -69,6 +71,7 @@ export const offerGame = <P extends BasePack>(make: (cfg: never) => P, opts: Gam
     tests: {
       rich: (s, e) => gold(s, e.seat) >= 9, two: (_s, e) => e.cards?.length === 2, h2: (_s, e) => e.cards?.join() === 'h2', poor: (s, e) => gold(s, e.seat) === 2,
       ends: (_s, e) => ['h2', 'd1'].every((c) => e.cards?.includes(c)), b3: (_s, e) => e.cards?.includes('b3') ?? false,
+      evenUp: (s) => cardsIn(s, 'discard:a').some((c) => c.endsWith('2')), drew2: (s) => cardsIn(s, 'hand:a').includes('d2'),
       top: (s) => (cannotKnow(), cardsIn(s, 'deck:a')[0] === 'd1'), owes: (_s, e) => e.owed !== undefined,
     },
     counts: { held: (s, e) => cardsIn(s, `hand:${e.seat}`).length },
@@ -78,6 +81,8 @@ export const offerGame = <P extends BasePack>(make: (cfg: never) => P, opts: Gam
       roll: { run: (ctx, _st, env) => res(ctx, env.seat, ctx.rng.int(6)), text: () => 'Roll.' },
       loop: { run: (ctx, st, env) => ctx.then(...(effectTasks([st], env) as Task[])), text: () => 'Loop.' },
       spend: { run: (ctx, _st, env) => res(ctx, env.seat, 0), text: () => 'Lose all gold.' },
+      who: { run: () => void nested.push(String(dryRunSeat())), text: () => 'Who.' },
+      why: { run: (ctx, _st, env) => void nested.push(String((pack as unknown as { judge: (...a: unknown[]) => { reason?: string } }).judge(ctx.s, ctx.content, [GAIN], env).reason)), text: () => 'Why.' },
       nest: { run: (ctx, _st, env) => void nested.push(pack.wouldChange(ctx.s, ctx.content, [GAIN], env)), text: () => 'Nest.' },
       order: {
         run: (ctx, st, env) => askVerb(ctx, { kind: 'order', seat: env.seat, min: 3, max: 3, ordered: true, options: ['x', 'y', 'z'].map((id) => ({ id, enabled: true })) }, st, env),
@@ -132,6 +137,7 @@ export const offerGame = <P extends BasePack>(make: (cfg: never) => P, opts: Gam
     handlers: {
       ...timingHandlers<G>({
         happen: (ctx, o) => void pack.happen(ctx, o),
+        ...(opts.cancel === undefined ? {} : { replacementsFor: (_s: S, o: Occurrence) => (o.kind === opts.cancel ? [{ id: 9000, controller: 'b', cls: 1, label: 'Skip' }] : []), applyReplacement: () => 'skipped' as const }),
         ...(opts.pool ? cardTriggers<G>({ pool: opts.pool, player: () => 'b', active: (s, c) => locate(s, c) !== undefined, table: pack.verbs }) : {}),
       }),
       verb: verbHandler<G>(pack.verbs),
