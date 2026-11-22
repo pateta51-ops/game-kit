@@ -310,7 +310,8 @@
       "offered",
       "can resolve",
       "unpayable cost",
-      "dry run"
+      "dry run",
+      "would change nothing"
     ],
     "visible": false,
     "release": 1,

@@ -47,6 +47,7 @@ const game = (offer?: OfferPolicy<S>, wire = true) => {
         resume: (ctx, _st, env, a) => void (a[0] === 'other' && (draftOf(ctx).res = { [env.seat]: { gold: 0 } })),
         text: () => 'Lone.',
       },
+      have: { run: () => undefined, payable: (s, _st, e) => gold(s, e.seat) >= 2, text: () => 'Have 2 gold.' },
       dry: { run: (ctx) => void (inDryRun() && ctx.emit({ type: 'dry' })), text: () => 'Dry.' },
     },
     moved: (ctx, m) => ctx.emit({ type: `${m.op} ${m.card}` }),
@@ -359,5 +360,66 @@ describe('card-language offer policy (K579): the check tries every legal pick se
     expect(check([{ op: 'orderEffects', effects: [[down], [up]] }])).toBe('yes');
     expect(check([{ op: 'orderEffects', effects: [[down], [{ op: 'adjust', key: 'gold', by: 1 }]] }])).toBe('no');
     expect(check([{ op: 'custom', name: 'lone' }])).toBe('yes');
+  });
+});
+
+// K579: prior-art cases that had no test, and the two rules questions the defaults hide. Each pins what the pack does today.
+describe('card-language offer policy (K579): pinned behaviour', () => {
+  const { check, play } = game();
+  const hand = (s: S): number => z(s, 'hand:a').length;
+  it('K579 rules question a (pins today): under cost = parts a refused pay step still gives the effect; cost = whole is the knob', () => {
+    const two: Eff = [{ op: 'payThen', cost: [pay(2), pay(2)], then: [DRAW] }];
+    const parts = play(two).s;
+    const whole = game({ cost: 'whole' }).play(two).s;
+    expect([gold(parts), hand(parts), gold(whole), hand(whole)]).toEqual([1, 3, 3, 2]);
+  });
+  it('K579 rules question b, case 20 (pins today): a paid option whose effect does nothing is always offered, under every knob', () => {
+    const paid: Eff = [{ op: 'payThen', cost: [pay(1)], then: [NOTHING] }];
+    const g = game({ noChange: 'skip', deadChoice: 'bar', unknown: 'skip', cost: 'whole', fewer: 'exact' });
+    expect(g.check(paid)).toBe('yes');
+    const asked = g.play([{ op: 'may', then: paid }], [['yes']]);
+    expect([kinds(asked.prompts), gold(asked.s)]).toEqual([['may'], 2]);
+    expect(blocked(g.play([{ op: 'chooseOption', options: [paid, [NOTHING]] }], [['0']]).prompts[0] ?? null).map((b) => b.id)).toEqual(['1']);
+  });
+  it('K579 case 6 (pins today): a "have N" cost part is judged on the state as it is; under cost = whole it is judged again when reached, after the spend', () => {
+    const cost: Eff = [{ op: 'payThen', cost: [pay(2), { op: 'custom', name: 'have' }], then: [DRAW] }];
+    const parts = play(cost).s;
+    const whole = game({ cost: 'whole' }).play(cost).s;
+    expect([gold(parts), hand(parts), gold(whole), hand(whole)]).toEqual([1, 3, 1, 2]);
+  });
+  it('K579 case 16: a declined may leaves its cost unpaid and its "if you do" part unrun', () => {
+    const eff: Eff = [{ op: 'may', then: [{ op: 'payThen', cost: [pay(1)], then: [DRAW] }] }];
+    const no = play(eff, [['no']]).s;
+    const yes = play(eff, [['yes']]).s;
+    expect([gold(no), hand(no), gold(yes), hand(yes)]).toEqual([3, 2, 2, 3]);
+  });
+  it('K579 case 21 (pins today): an option that resolves only in part is offered beside one that resolves in full', () => {
+    const { s, prompts } = game({ deadChoice: 'bar' }).play([{ op: 'chooseOption', options: [[{ op: 'draw', count: 3 }], [{ op: 'draw', count: 2 }]] }], [['0']]);
+    expect([blocked(prompts[0] ?? null), hand(s)]).toEqual([[], 4]);
+  });
+  it('K579 case 24: choosing one card at a time, a later pick no longer offers the card an earlier pick took', () => {
+    const { prompts } = play([{ op: 'repeat', times: 2, then: [{ op: 'chooseCards', zone: 'hand', max: 1, then: [{ op: 'discard', cards: 'chosen' }] }] }], [['h1'], ['h2']]);
+    expect(prompts.map((p) => p.options.map((o) => o.id))).toEqual([['h1', 'h2'], ['h2']]);
+  });
+  it('K579 case 27 (pins today): a cost that cannot be paid stops only its own "if you do" part; a step beside it still makes the effect able', () => {
+    expect(check([{ op: 'payThen', cost: [pay(9)], then: [GAIN] }, GAIN])).toBe('yes');
+    expect(check([{ op: 'payThen', cost: [pay(9)], then: [GAIN, GAIN] }])).toBe('no');
+  });
+  it('K579 case 28: a step that names the card an earlier step chose is judged with that card, in the check and as a cost', () => {
+    const bound: Eff = [{ op: 'chooseCards', zone: 'hand', max: 1, then: [{ op: 'if', test: 'ends', then: [GAIN], else: [{ op: 'discard', cards: 'chosen' }] }] }];
+    expect(check(bound)).toBe('yes');
+    expect(check([{ op: 'chooseCards', zone: 'aside', max: 1, then: [{ op: 'discard', cards: 'chosen' }] }])).toBe('no');
+    const { s } = play([{ op: 'payThen', cost: bound, then: [GAIN] }], [['h1']]);
+    expect([z(s, 'hand:a'), gold(s)]).toEqual([['h2'], 4]);
+    expect(gold(play([{ op: 'payThen', cost: [{ op: 'discard', cards: 'chosen' }], then: [GAIN] }]).s)).toBe(3);
+  });
+  it('K579 case 32: an effect each player does is able when any seat can do it without a choice', () => {
+    expect(check([{ op: 'eachPlayer', then: [DRAW] }], { seat: 'b' })).toBe('yes');
+    expect(check([{ op: 'eachPlayer', then: [NOTHING] }])).toBe('no');
+    expect(check([{ op: 'eachPlayer', then: [{ op: 'may', then: [NOTHING] }] }])).toBe('unknown');
+  });
+  it('K579 case 37 (pins today): X read before any step sets it counts as 0, so the effect is not able', () => {
+    expect(check([{ op: 'gainResource', res: 'gold', amount: 'X' }])).toBe('no');
+    expect(gold(play([{ op: 'gainResource', res: 'gold', amount: 'X' }]).s)).toBe(3);
   });
 });
