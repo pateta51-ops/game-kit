@@ -910,12 +910,12 @@ Arrange the zones of a game screen by hand (card zones, piles, hand, market, tra
 
 - **Also called:** Drag-to-place screen layout editor
 - **Looks like:** A page where you drag boxes for each part of the table and export the arrangement.
-- **Words:** layout, editor, wireframe, zones, place, drag, screen
+- **Words:** layout, editor, wireframe, zones, place, drag, screen, zone card size, landscape card zone, card orientation per zone
 - **Release:** 1.0; seen on screen
 - **The game supplies:** The zone names and the board picture.
 - **Use it when:** Arranging a screen's zones by hand (owner, or the director's wireframe gate): a one-file editor whose JSON is a board-layout zones layout per screen; capture.mjs takes a running page's [data-zone] rects as the start.
 - **Not for:** Map click areas and adjacency (board-layout's Inkscape flow), or placing anything at run time (board-layout zone()).
-- **Key exports:** `KINDS`, `normalizeDoc`, `screenLayout`, `descendants`, `childrenOf`, `parentOf`, `moveZone`, `resizeZone`, `idTaken`, `mirrorZones`, `renameZone`, `snap`, `cardFit`, `layoutWarnings`, and 22 more
+- **Key exports:** `KINDS`, `zoneCard`, `normalizeDoc`, `screenLayout`, `descendants`, `childrenOf`, `parentOf`, `moveZone`, `resizeZone`, `idTaken`, `mirrorZones`, `renameZone`, `snap`, `cardFit`, and 23 more
 - **Needs:** [`board-layout`](#board-layout)
 - **Came from:** none (owner request)
 - **Docs:** [README](../components/layout-editor/README.md) ([rules for agents](../components/layout-editor/README.md#rules-for-agents))

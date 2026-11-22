@@ -98,6 +98,7 @@ input[type=number]{width:66px;box-sizing:border-box;padding:3px 4px}input[type=t
     <span>Kind</span><span class="xywh"><select id="zKind" title="What the box is: cards, a digital part, a pile, or a band that holds other boxes."><option value="" title="Decided from the box: card outlines if it has a card count, else a plain box.">auto</option><option title="Shows card outlines, side by side.">cards</option><option title="A part that is not a card, such as a crew board, log or button: dashed box.">component</option><option title="One small stack of cards (draw or discard pile). To make it look like a card pile again, pick this and tick full size.">pile</option><option title="A container for other boxes, such as a player band.">group</option></select><label title="Draw the pile at the full card size instead of the small pile size."><input id="zFull" type="checkbox" title="Draw this pile at full card size instead of the small pile size."> full size</label></span>
     <span>Cards</span><span class="xywh"><input id="zCards" type="number" min="0" title="How many cards this box holds. The red edge shows if they do not fit."><select id="zFan" title="How the cards lie: side by side in a row, in a column, as one pile, or in a grid."><option>row</option><option>column</option><option>stack</option><option>grid</option></select></span>
     <span>Card size here</span><span class="xywh"><input id="zS" type="range" min="20" max="100" value="100" title="Shrink the cards in this box only, to fit them in less space. The game must draw them smaller here. 100% is the normal card size."><input id="zSn" type="number" min="20" max="100" title="Card size in this box, 20 to 100 percent of the normal card size."><span>%</span></span>
+    <span>Card px here</span><span class="xywh"><input id="zCw" type="number" min="1" placeholder="w" title="Card width in this box only, in stage pixels. Empty: the screen card size."><input id="zCh" type="number" min="1" placeholder="h" title="Card height in this box only, in stage pixels. Empty: the screen card size."><button id="zCc" title="Clear: this box uses the screen card size again.">Clear</button></span>
     <span>Mirror</span><span class="xywh"><button id="flipV" title="Turn the selected boxes upside down inside the screen (a mirror image, top to bottom).">Flip ↕</button><button id="flipH" title="Turn the selected boxes left to right inside the screen (a mirror image).">Flip ↔</button><input id="mirTo" type="text" placeholder="copy as id" style="width:110px" title="Type a new name first, then Flip, to make a mirrored copy under that name instead of flipping the original."></span>
   </div>
   <h3>Warnings</h3><div id="warns"></div>
@@ -117,6 +118,9 @@ const FANS = ['row', 'column', 'stack', 'grid'];
 const KINDS = ['cards', 'component', 'pile', 'group'];
 const num = (v , d ) => (typeof v === 'number' && isFinite(v) ? v : typeof v === 'string' && v.trim() !== '' && isFinite(Number(v)) ? Number(v) : d);
 const isObj = (v ) => !!v && typeof v === 'object' && !Array.isArray(v);
+const validCard = (c ) => Array.isArray(c) && c.length === 2 && c.every((n) => typeof n === 'number' && isFinite(n) && n > 0);
+// K670: the card size a zone draws at: its own `card` when valid, else the screen's.
+const zoneCard = (z , s ) => (validCard(z.card) ? z.card : s.card);
 function normalizeZone(v ) {
 const o = Array.isArray(v) ? { r: v } : isObj(v) ? v : null;
 if (!o || !Array.isArray(o.r)) return null;
@@ -129,6 +133,7 @@ if (typeof o.fan === 'string' && FANS.includes(o.fan)) z.fan = o.fan ;
 if (typeof o.kind === 'string' && KINDS.includes(o.kind)) z.kind = o.kind ;
 if (o.full === true) z.full = true;
 if (o.scale !== undefined && num(o.scale, 1) < 1 && num(o.scale, 1) > 0) z.scale = Math.max(0.2, num(o.scale, 1));
+if (o.card !== undefined && validCard(o.card)) z.card = [o.card[0], o.card[1]];
 if (o.locked === true) z.locked = true;
 if (o.hidden === true) z.hidden = true;
 return z;
@@ -240,7 +245,8 @@ const out = [];
 const ids = Object.keys(s.zones).filter((k) => !s.zones[k] .hidden);
 for (const id of ids) {
 const z = s.zones[id] , p = parentOf(s, id);
-const k = kindOf(z), f = k === 'pile' ? cardFit(z, z.scale || z.full ? s.card : pileSize(s), 1, 'stack', z.scale ?? 1) : k === 'component' || k === 'group' ? null : cardFit(z, s.card);
+const zc = zoneCard(z, s), k = kindOf(z), f = k === 'pile' ? cardFit(z, z.scale || z.full ? zc : pileSize(s), 1, 'stack', z.scale ?? 1) : k === 'component' || k === 'group' ? null : cardFit(z, zc);
+if (z.card !== undefined && !validCard(z.card)) out.push({ id, kind: 'card', text: `${id}: card must be two positive numbers [w, h]; the screen card size is used` });
 if (f && !f.fits) out.push({ id, kind: 'cards', text: k === 'pile' ? `${id}: the pile fits only at ${Math.floor(f.scale * 100)}% of its size` : `${id}: ${z.cards} cards fit only at ${Math.floor(f.scale * 100)}% of the card size` });
 if (!inside(z.r, [0, 0, s.w, s.h])) out.push({ id, kind: 'outside', text: `${id}: outside the screen` });
 else if (p && !inside(z.r, s.zones[p] .r)) out.push({ id, kind: 'outside', text: `${id}: outside ${p}` });
@@ -426,15 +432,15 @@ function render() {
     const kd = kindOf(z), [x, y, w, h] = z.r, cls = ['z', kd && 'k-' + kd, sel.has(k) && 'sel', z.locked && 'locked', bad.has(k) ? 'bad' : warn.has(k) && 'warn'].filter(Boolean).join(' ')
     let cards = ''
     const chip = `<b>${esc(kd === 'pile' ? k.slice(k.lastIndexOf('.') + 1) : k)}</b>${z.label ? ' <br>' + esc(z.label) : ''}`
-    if (kd === 'pile') { const [tw, th] = z.scale ? [s.card[0] * z.scale, s.card[1] * z.scale] : z.full ? s.card : pileSize(s); cards = `<div class="pl" style="left:${px((w - tw) / 2)};top:${px((h - th) / 2)};width:${px(tw)};height:${px(th)}"><span class="cnt">#</span></div>` }
+    if (kd === 'pile') { const zc = zoneCard(z, s), [tw, th] = z.scale ? [zc[0] * z.scale, zc[1] * z.scale] : z.full ? zc : pileSize(s); cards = `<div class="pl" style="left:${px((w - tw) / 2)};top:${px((h - th) / 2)};width:${px(tw)};height:${px(th)}"><span class="cnt">#</span></div>` }
     else if (kd === 'cards' && z.cards) {
-      const cw = s.card[0] * (z.scale ?? 1), ch = s.card[1] * (z.scale ?? 1), fan = z.fan || 'row', cols = Math.max(1, Math.floor(w / cw))
+      const zc = zoneCard(z, s), cw = zc[0] * (z.scale ?? 1), ch = zc[1] * (z.scale ?? 1), fan = z.fan || 'row', cols = Math.max(1, Math.floor(w / cw))
       for (let j = 0; j < (fan === 'stack' ? 1 : Math.min(z.cards, 60)); j++) {
         const cx = fan === 'row' ? j * cw : fan === 'grid' ? (j % cols) * cw : 0, cy = fan === 'column' ? j * ch : fan === 'grid' ? Math.floor(j / cols) * ch : 0
         cards += `<div class="c${cx + cw > w + 0.5 || cy + ch > h + 0.5 ? ' out' : ''}" style="left:${px(cx)};top:${px(cy)};width:${px(cw)};height:${px(ch)}"></div>`
       }
     }
-    const info = (kd === 'cards' && z.cards ? ` <br><i>${z.cards} card${z.cards > 1 ? 's' : ''}, ${z.fan || 'row'}</i>` : '') + (z.scale ? ` <br><i>cards at ${Math.round(z.scale * 100)}%</i>` : '')
+    const info = (kd === 'cards' && z.cards ? ` <br><i>${z.cards} card${z.cards > 1 ? 's' : ''}, ${z.fan || 'row'}</i>` : '') + (z.scale ? ` <br><i>cards at ${Math.round(z.scale * 100)}%</i>` : '') + (validCard(z.card) ? ` <br><i>card ${z.card[0]}x${z.card[1]}</i>` : '')
     html.push(`<div class="${cls}" data-id="${esc(k)}" style="--h:${hue(k)};left:${px(x)};top:${px(y)};width:${px(w)};height:${px(h)};z-index:${depth(s, k) * 1000 + i}" title="${esc(k + (z.label ? ': ' + z.label : ''))}">${cards}${kids(k) ? '' : `<div class="t">${chip}${info}</div>`}</div>`)
     if (kids(k)) tags.push(kd === 'group' ? `<div class="t one tab" style="left:${px(x)};top:${px(y)};max-width:${px(w)}">${chip}</div>` : `<div class="t one" style="left:${px(x + w)};top:${px(y)}">${chip}${info}</div>`)
   })
@@ -471,7 +477,7 @@ function panel() {
   const k = sel.size === 1 ? [...sel][0] : null, z = k && s.zones[k]
   for (const e of $('zf').querySelectorAll('input,select,button')) e.disabled = !z && !(sel.size > 1 && e.tagName === 'BUTTON')
   if (!z) { for (const id of ['zId', 'zLabel', 'zX', 'zY', 'zW', 'zH', 'zCards', 'zKind', 'zSn']) setVal(id, ''); $('zFull').checked = false; return }
-  setVal('zId', k); setVal('zLabel', z.label || ''); ['zX', 'zY', 'zW', 'zH'].forEach((id, i) => setVal(id, Math.round(z.r[i]))); setVal('zCards', z.cards || ''); setVal('zFan', z.fan || 'row'); setVal('zKind', z.kind || ''); setVal('zS', Math.round((z.scale ?? 1) * 100)); setVal('zSn', Math.round((z.scale ?? 1) * 100)); $('zFull').checked = !!z.full; $('zFull').disabled = kindOf(z) !== 'pile'
+  setVal('zId', k); setVal('zLabel', z.label || ''); ['zX', 'zY', 'zW', 'zH'].forEach((id, i) => setVal(id, Math.round(z.r[i]))); setVal('zCards', z.cards || ''); setVal('zFan', z.fan || 'row'); setVal('zKind', z.kind || ''); setVal('zCw', validCard(z.card) ? z.card[0] : ''); setVal('zCh', validCard(z.card) ? z.card[1] : ''); setVal('zS', Math.round((z.scale ?? 1) * 100)); setVal('zSn', Math.round((z.scale ?? 1) * 100)); $('zFull').checked = !!z.full; $('zFull').disabled = kindOf(z) !== 'pile'
 }
 function status() {
   const k = sel.size === 1 ? [...sel][0] : null, z = k && S().zones[k]
@@ -629,6 +635,9 @@ const zScale = (v) => editZone((z) => { v = Math.max(20, Math.min(100, Math.roun
 $('zS').oninput = () => setVal('zSn', $('zS').value)
 $('zS').onchange = () => zScale(Number($('zS').value))
 $('zSn').onchange = () => isFinite(Number($('zSn').value)) && $('zSn').value !== '' ? zScale(Number($('zSn').value)) : render()
+const zCard = (c) => editZone((z) => { if (c) z.card = c; else delete z.card })
+for (const [id, i] of [['zCw', 0], ['zCh', 1]]) $(id).onchange = () => { const k = [...sel][0], z = S().zones[k], v = Number($(id).value), c = [...zoneCard(z, S())]; if (v > 0) { c[i] = v; zCard(c) } else render() }
+$('zCc').onclick = () => zCard(null)
 $('takeOut').onclick = () => { const r = takeOut(S(), tops()); if (!r.ids.length) return flash('Select a pile inside a consolidated box'); sel = new Set(r.ids); commit(r.screen) }
 $('zFan').onchange = () => editZone((z) => (z.fan = $('zFan').value))
 for (const [id, i] of [['zX', 0], ['zY', 1], ['zW', 2], ['zH', 3]]) $(id).onchange = () => { const k = [...sel][0], s = S(), z = s.zones[k], v = Number($(id).value); if (!z || !isFinite(v)) return; const r = [...z.r]; r[i] = i > 1 ? Math.max(1, v) : v; commit(resizeZone(s, k, r, ui.keep)) }
