@@ -112,6 +112,31 @@ describe('K500 search', () => {
   });
 });
 
+describe('K673 search --check', () => {
+  it('passes the cases that hold, fails with exit 1 naming each miss', () => {
+    const g = fs.mkdtempSync(path.join(os.tmpdir(), 'k673-'));
+    try {
+      fs.mkdirSync(path.join(g, 'effect-library'));
+      fs.copyFileSync(KIT, path.join(g, 'kit.mjs'));
+      fs.copyFileSync(path.join(ROOT, 'docs/CATALOG.md'), path.join(g, 'CATALOG.md'));
+      fs.copyFileSync(path.join(ROOT, 'components/effect-library/catalog.json'), path.join(g, 'effect-library/catalog.json'));
+      const check = () => spawnSync('node', [path.join(g, 'kit.mjs'), 'search', '--check'], { encoding: 'utf8', env });
+      expect(check().status).toBe(2);
+      const cases = (c: object[]) => fs.writeFileSync(path.join(g, 'search-cases.json'), JSON.stringify(c));
+      cases([{ q: 'burn', first: 'burn-away' }, { q: 'hand of cards', first: 'card-hand' }, { q: 'burn quarterback', first: 'none' }]);
+      let r = check();
+      expect(r.status).toBe(0);
+      expect(r.stdout).toBe('search cases ok: 3\n');
+      cases([{ q: 'burn', first: 'card-hand' }, { q: 'hand of cards', first: 'none' }, { q: 'burn quarterback', first: 'burn-away' }, { q: 'burn', first: 'burn-away' }]);
+      r = check();
+      expect(r.status).toBe(1);
+      expect(r.stderr).toContain('search "burn": want card-hand on the first line');
+      expect(r.stderr).toContain('search "hand of cards": want nothing');
+      expect(r.stderr).toContain('search "burn quarterback": want burn-away');
+      expect(r.stderr).toContain('3 of 4 search cases failed');    } finally { fs.rmSync(g, { recursive: true, force: true }); }
+  });
+});
+
 describe('K523 candidates', () => {
   const lines = (q: string) => run('search', ...q.split(' ')).stdout.split('\n');
   it('finds a candidate row by its content line and tags, first for discard row', () => {

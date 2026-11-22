@@ -236,6 +236,27 @@ if (cmd === 'pull') {
     console.log(fs.existsSync(logFile) ? fs.readFileSync(logFile, 'utf8').split(/\r?\n/).filter(Boolean).slice(-n).reverse().join('\n') : 'no misses logged')
     process.exit(0)
   }
+  if (cmd === 'search' && a[0] === '--check') {
+    // K673: every case of docs/search-cases.json: `first` (a part, `<part>/<sub>`, an effect id or K<n>) names the first line, or "none": no hit and no candidate
+    const cf = [d + '/docs/search-cases.json', d + '/search-cases.json'].find((p) => fs.existsSync(p))
+    if (!cf) { console.error('no docs/search-cases.json beside kit.mjs'); process.exit(2) }
+    const home = fs.mkdtempSync(resolve(os.tmpdir(), 'kit-search-'))
+    const bad = []
+    const cases = JSON.parse(fs.readFileSync(cf, 'utf8'))
+    for (const { q, first } of cases) {
+      const o = spawnSync('node', [fileURLToPath(import.meta.url), 'search', ...q.split(' ')], { encoding: 'utf8', env: { ...process.env, HOME: home, USERPROFILE: home } }).stdout ?? ''
+      const L = o.split(/\r?\n/).filter(Boolean), l0 = L[0] ?? ''
+      const miss = o.includes('not in the kit by that name') || L.every((l) => / -> not in the kit/.test(l))
+      const part = (n) => n === first || n?.startsWith(first + '/')
+      const names = /^K\d+$/.test(first) ? (l0.match(/candidate (K\d+)/) ?? [])[1] === first : l0.startsWith('mechanic: ') ? part((l0.split(' -> ')[1]?.match(/`([^`]+)`/) ?? [])[1]) : part((l0.match(/\(`([^`]+)`\)/) ?? [])[1]) || l0.startsWith(first + ':') || l0.startsWith(first + ' (')
+      const ok = first === 'none' ? miss && !/candidate K\d+/.test(o) : !o.includes('not in the kit by that name') && names
+      if (!ok) bad.push('search "' + q + '": want ' + (first === 'none' ? 'nothing (not in the kit, no candidate)' : first + ' on the first line, and a hit') + '; got: ' + (first === 'none' && miss ? L.find((l) => /candidate K\d+/.test(l)) ?? l0 : l0).slice(0, 160) + (o.includes('not in the kit by that name') ? ' ... not in the kit by that name' : ''))
+    }
+    fs.rmSync(home, { recursive: true, force: true })
+    if (bad.length) { console.error(bad.join('\n')); console.error(bad.length + ' of ' + cases.length + ' search cases failed'); process.exit(1) }
+    console.log('search cases ok: ' + cases.length)
+    process.exit(0)
+  }
   if (!f || (cmd === 'search' && !a.length)) { console.error(f ? 'usage: kit.mjs search <word>' : 'no CATALOG.md beside kit.mjs: pull again'); process.exit(2) }
   const secs = fs.readFileSync(f, 'utf8').split(/^## /m).slice(1).map((t) => t.split(/^### /m).map((p) => p.split(/\r?\n/)))
   const exportsOf = (n) => {
@@ -336,8 +357,9 @@ if (cmd === 'pull') {
     for (const { e } of scored.filter((x) => !x.e.cand).sort((x, y) => y.s - x.s || y.e.eff - x.e.eff || x.i - y.i).slice(0, 3)) console.log(e.line([]))
     if (mech.length) {
       const lev = (p, q) => { let r = [...Array(q.length + 1).keys()]; for (let i = 1; i <= p.length; i++) { const n = [i]; for (let j = 1; j <= q.length; j++) n[j] = Math.min(r[j] + 1, n[j - 1] + 1, r[j - 1] + (p[i - 1] === q[j - 1] ? 0 : 1)); r = n } return r[q.length] }
-      const near = mech.map((m, i) => { const t = m.alts.flat(); return { m, i, s: words.filter((w) => hasTok(t, w)).length, d: Math.min(99, ...words.flatMap((w) => t.map((x) => lev(w, x)).filter((n) => n <= 2 && n * 2 < w.length))) } }).sort((x, y) => y.s - x.s || x.d - y.d || x.i - y.i)[0]
-      if (near.s || near.d < 99) console.log('nearest mechanic: ' + near.m.words + ' -> ' + near.m.ans)
+      const near = mech.map((m, i) => { const t = m.alts.flat(); return { m, i, s: words.filter((w) => hasTok(t, w)).length, d: Math.min(99, ...words.flatMap((w) => t.map((x) => lev(w, x)).filter((n) => n <= 2 && n * 2 < w.length))) } }).filter((x) => words.length < 2 || x.s > 1 || !(x.m.ans.startsWith('not in the kit') || /candidate K\d+/.test(x.m.ans))).sort((x, y) => y.s - x.s || x.d - y.d || x.i - y.i)[0]
+      // K673: for a query of two or more words, a "not in the kit" line or one naming a candidate is offered as nearest only when two query words match it, never on one common word
+      if (near && (near.s || near.d < 99)) console.log('nearest mechanic: ' + near.m.words + ' -> ' + near.m.ans)
     }
     console.log('not in the kit by that name')
   }
