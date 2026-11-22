@@ -16,6 +16,14 @@ export function newExports(repo: string, ign?: string[]): string[] | null
 export function searchPart(line: string): string | null
 export function searchParts(output: string): string[]
 export function builtNew(files: string[], body: string, search?: (words: string) => string): string[]
+export const CLAIM_DOCS: string[]
+export const CLAIM_WORDS: string[]
+export function claimDocs(repo: string): { globs: string[]; probs: string[] }
+export function claimLines(repo: string, globs?: string[]): { file: string; n: number; text: string }[] | null
+export function isClaim(line: string): boolean
+export function claimParts(output: string, words: string): string[]
+export function planDirs(repo: string): string[]
+export function claims(lines: { file: string; n: number; text: string }[], search?: (words: string, cmd?: string) => string, dirs?: string[]): string[]
 export function launch(win: boolean, dir: string): { cmd: string; args: string[]; env: Record<string, string> }
 export function byHand(win: boolean, dir: string): string
 export const realBg: Bg & { start: (cmd: string, args: string[], dir: string, env?: Record<string, string>, sp?: unknown) => void }
