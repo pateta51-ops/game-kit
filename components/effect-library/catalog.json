@@ -2872,7 +2872,7 @@
   },
   "was": [],
   "title": "Flashes once and goes dark",
-  "looks": "The piece starts dark, a halo rises to full and fades until it is gone.",
+  "looks": "The piece starts dark, a halo ramps up from dark to full, flashes once and goes dark.",
   "notThis": [
    {
     "id": "glow--end-dark",
@@ -2887,10 +2887,11 @@
    "glow--end-dark",
    "glow--latch-true"
   ],
-  "use": "A cell or piece flashes once and goes dark.",
+  "use": "A cell or piece flashes once and goes dark; glow ramp up from dark.",
   "tags": [
    "flash",
    "single flash",
+   "flash once and go dark",
    "ramp up",
    "light up",
    "dark"
