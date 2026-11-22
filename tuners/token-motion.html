@@ -36581,12 +36581,12 @@ void main() {
     Rest: () => Rest
   });
   function Rest({ faceUrl: faceUrl2, exterior, backdrop, onFail, className, hostSized, e2eHooks }) {
-    const canvas = (0, import_react3.useRef)(null);
-    const cb = (0, import_react3.useRef)(onFail);
-    (0, import_react3.useLayoutEffect)(() => {
+    const canvas = (0, import_react4.useRef)(null);
+    const cb = (0, import_react4.useRef)(onFail);
+    (0, import_react4.useLayoutEffect)(() => {
       cb.current = onFail;
     });
-    (0, import_react3.useEffect)(() => {
+    (0, import_react4.useEffect)(() => {
       const el = canvas.current;
       if (el === null) return;
       let alive = true;
@@ -36624,15 +36624,15 @@ void main() {
         s.dispose();
       };
     }, []);
-    return /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("canvas", { ref: canvas, "data-part": "token-bag-canvas", "aria-hidden": "true", ...className === void 0 ? {} : { className }, ...hostSized === true ? {} : { style: { display: "block", width: "100%", height: "100%" } } });
+    return /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("canvas", { ref: canvas, "data-part": "token-bag-canvas", "aria-hidden": "true", ...className === void 0 ? {} : { className }, ...hostSized === true ? {} : { style: { display: "block", width: "100%", height: "100%" } } });
   }
-  var import_react3, import_jsx_runtime2;
+  var import_react4, import_jsx_runtime3;
   var init_Rest = __esm({
     "components/token-bag/Rest.tsx"() {
       "use strict";
-      import_react3 = __toESM(require_react(), 1);
+      import_react4 = __toESM(require_react(), 1);
       init_scene();
-      import_jsx_runtime2 = __toESM(require_jsx_runtime(), 1);
+      import_jsx_runtime3 = __toESM(require_jsx_runtime(), 1);
     }
   });
 
@@ -36642,14 +36642,14 @@ void main() {
     Draw: () => Draw
   });
   function Draw({ contents, drawn, faceUrl: faceUrl2, exterior, backdrop, e2eHooks, rate, countLabel, skipText, onDone, onFail }) {
-    const canvas = (0, import_react4.useRef)(null);
-    const [count2, setCount] = (0, import_react4.useState)(contents.length);
-    const [phase, setPhase] = (0, import_react4.useState)("loading");
-    const cb = (0, import_react4.useRef)({ onDone, onFail });
-    (0, import_react4.useLayoutEffect)(() => {
+    const canvas = (0, import_react5.useRef)(null);
+    const [count2, setCount] = (0, import_react5.useState)(contents.length);
+    const [phase, setPhase] = (0, import_react5.useState)("loading");
+    const cb = (0, import_react5.useRef)({ onDone, onFail });
+    (0, import_react5.useLayoutEffect)(() => {
       cb.current = { onDone, onFail };
     });
-    (0, import_react4.useEffect)(() => {
+    (0, import_react5.useEffect)(() => {
       const el = canvas.current;
       if (el === null) return;
       let s;
@@ -36731,7 +36731,7 @@ void main() {
         s.dispose();
       };
     }, []);
-    (0, import_react4.useEffect)(() => {
+    (0, import_react5.useEffect)(() => {
       const skip = (e) => {
         e.preventDefault();
         e.stopPropagation();
@@ -36740,7 +36740,7 @@ void main() {
       window.addEventListener("keydown", skip, true);
       return () => window.removeEventListener("keydown", skip, true);
     }, []);
-    return /* @__PURE__ */ (0, import_jsx_runtime3.jsxs)(
+    return /* @__PURE__ */ (0, import_jsx_runtime4.jsxs)(
       "div",
       {
         "data-part": "token-bag-draw",
@@ -36760,25 +36760,25 @@ void main() {
           cb.current.onDone();
         },
         children: [
-          /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("canvas", { ref: canvas, "data-part": "token-bag-scene", style: { display: "block", width: "100%", height: "100%", touchAction: "none" } }),
-          /* @__PURE__ */ (0, import_jsx_runtime3.jsxs)("div", { "data-part": "token-bag-count", "aria-label": `${String(count2)} ${countLabel}`, children: [
-            /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("span", { "data-part": "token-bag-n", children: count2 }),
+          /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("canvas", { ref: canvas, "data-part": "token-bag-scene", style: { display: "block", width: "100%", height: "100%", touchAction: "none" } }),
+          /* @__PURE__ */ (0, import_jsx_runtime4.jsxs)("div", { "data-part": "token-bag-count", "aria-label": `${String(count2)} ${countLabel}`, children: [
+            /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("span", { "data-part": "token-bag-n", children: count2 }),
             " ",
-            /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("span", { "data-part": "token-bag-label", children: countLabel })
+            /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("span", { "data-part": "token-bag-label", children: countLabel })
           ] }),
-          /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("p", { "data-part": "token-bag-skip", children: skipText })
+          /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("p", { "data-part": "token-bag-skip", children: skipText })
         ]
       }
     );
   }
-  var import_react4, import_jsx_runtime3, I, STYLE;
+  var import_react5, import_jsx_runtime4, I, STYLE;
   var init_Draw = __esm({
     "components/token-bag/Draw.tsx"() {
       "use strict";
-      import_react4 = __toESM(require_react(), 1);
+      import_react5 = __toESM(require_react(), 1);
       init_scene();
       init_mode();
-      import_jsx_runtime3 = __toESM(require_jsx_runtime(), 1);
+      import_jsx_runtime4 = __toESM(require_jsx_runtime(), 1);
       I = "var(--token-bag-inset,16px)";
       STYLE = `html.token-bag-drawing canvas[data-part="token-bag-canvas"]{visibility:hidden}
 [data-part="token-bag-draw"] [data-part="token-bag-count"]{position:absolute;left:${I};top:max(${I},env(safe-area-inset-top));pointer-events:none}
@@ -36803,7 +36803,7 @@ void main() {
     subscribeFallback: () => subscribeFallback,
     totalDuration: () => totalDuration
   });
-  var import_react9 = __toESM(require_react(), 1);
+  var import_react10 = __toESM(require_react(), 1);
   var import_react_dom2 = __toESM(require_react_dom(), 1);
   var import_client = __toESM(require_client(), 1);
 
@@ -37056,45 +37056,38 @@ void main() {
   init_exterior();
 
   // components/token-bag/TokenBag.tsx
-  var import_react5 = __toESM(require_react(), 1);
+  var import_react6 = __toESM(require_react(), 1);
+
+  // components/token-bag/TokenBagView.tsx
+  var import_react3 = __toESM(require_react(), 1);
   init_mode();
-  var import_jsx_runtime4 = __toESM(require_jsx_runtime(), 1);
-  function Failed({ onFail }) {
-    (0, import_react5.useEffect)(() => onFail("error"), [onFail]);
-    return null;
-  }
-  var Rest2 = (0, import_react5.lazy)(
-    () => Promise.resolve().then(() => (init_Rest(), Rest_exports)).then((m) => ({ default: m.Rest }), () => ({ default: Failed }))
-  );
-  var Draw2 = (0, import_react5.lazy)(
-    () => Promise.resolve().then(() => (init_Draw(), Draw_exports)).then((m) => ({ default: m.Draw }), () => ({ default: Failed }))
-  );
+  var import_jsx_runtime2 = __toESM(require_jsx_runtime(), 1);
   var prefersReduced = () => typeof matchMedia === "function" && matchMedia("(prefers-reduced-motion: reduce)").matches;
-  function TokenBag(p) {
-    const fb = (0, import_react5.useSyncExternalStore)(subscribeFallback, getFallback, getFallback);
-    const mode = bagMode(p.chosen, fb);
-    (0, import_react5.useEffect)(() => {
-      if (p.chosen === "3d" && getFallback() === null && !hasWebgl()) setFallback("no-webgl");
-    }, [p.chosen]);
+  function TokenBagView({ Rest: Rest3, Draw: Draw3, ...p }) {
+    const fb = (0, import_react3.useSyncExternalStore)(subscribeFallback, getFallback, getFallback);
+    const mode = Rest3 && Draw3 ? bagMode(p.chosen, fb) : "2d";
+    (0, import_react3.useEffect)(() => {
+      if (p.chosen === "3d" && Rest3 && Draw3 && getFallback() === null && !hasWebgl()) setFallback("no-webgl");
+    }, [p.chosen, Rest3, Draw3]);
     const rate = rateFor(p.speed, (p.reduced ?? prefersReduced)());
     const play = p.draw !== null && mode === "3d" && rate > 0;
-    const done = (0, import_react5.useRef)(p.onDrawDone);
-    (0, import_react5.useEffect)(() => {
+    const done = (0, import_react3.useRef)(p.onDrawDone);
+    (0, import_react3.useEffect)(() => {
       done.current = p.onDrawDone;
     });
     const key = p.draw?.key;
-    (0, import_react5.useEffect)(() => {
+    (0, import_react3.useEffect)(() => {
       if (key !== void 0 && !play) done.current(key);
     }, [key, play]);
     const label = p.label ?? `Bag: ${String(p.count)} tokens`;
-    const count2 = /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("span", { "data-part": "token-bag-count", children: /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("b", { "data-part": "token-bag-n", children: p.count }) });
-    return /* @__PURE__ */ (0, import_jsx_runtime4.jsxs)(import_jsx_runtime4.Fragment, { children: [
-      /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("div", { "data-part": "token-bag", "data-bag": "", "data-place": p.place ?? "bag", "data-mode": mode, "data-fallback": fb ?? "", "aria-label": label, children: mode === "3d" && hasWebgl() ? /* @__PURE__ */ (0, import_jsx_runtime4.jsxs)(import_jsx_runtime4.Fragment, { children: [
-        /* @__PURE__ */ (0, import_jsx_runtime4.jsx)(import_react5.Suspense, { fallback: /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("span", { "data-part": "token-bag-canvas" }), children: /* @__PURE__ */ (0, import_jsx_runtime4.jsx)(Rest2, { faceUrl: p.faceUrl, exterior: p.exterior, backdrop: p.backdrop, onFail: setFallback }) }),
+    const count2 = /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("span", { "data-part": "token-bag-count", children: /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("b", { "data-part": "token-bag-n", children: p.count }) });
+    return /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)(import_jsx_runtime2.Fragment, { children: [
+      /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("div", { "data-part": "token-bag", "data-bag": "", "data-place": p.place ?? "bag", "data-mode": mode, "data-fallback": fb ?? "", "aria-label": label, children: Rest3 && mode === "3d" && hasWebgl() ? /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)(import_jsx_runtime2.Fragment, { children: [
+        /* @__PURE__ */ (0, import_jsx_runtime2.jsx)(import_react3.Suspense, { fallback: /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("span", { "data-part": "token-bag-canvas" }), children: /* @__PURE__ */ (0, import_jsx_runtime2.jsx)(Rest3, { faceUrl: p.faceUrl, exterior: p.exterior, backdrop: p.backdrop, onFail: setFallback }) }),
         count2
       ] }) : p.children ?? count2 }),
-      play && p.draw !== null ? /* @__PURE__ */ (0, import_jsx_runtime4.jsx)(import_react5.Suspense, { fallback: null, children: /* @__PURE__ */ (0, import_jsx_runtime4.jsx)(
-        Draw2,
+      Draw3 && play && p.draw !== null ? /* @__PURE__ */ (0, import_jsx_runtime2.jsx)(import_react3.Suspense, { fallback: null, children: /* @__PURE__ */ (0, import_jsx_runtime2.jsx)(
+        Draw3,
         {
           contents: drawContents(p.draw.left, p.draw.drawn),
           drawn: p.draw.drawn,
@@ -37114,6 +37107,22 @@ void main() {
         p.draw.key
       ) }) : null
     ] });
+  }
+
+  // components/token-bag/TokenBag.tsx
+  var import_jsx_runtime5 = __toESM(require_jsx_runtime(), 1);
+  function Failed({ onFail }) {
+    (0, import_react6.useEffect)(() => onFail("error"), [onFail]);
+    return null;
+  }
+  var Rest2 = (0, import_react6.lazy)(
+    () => Promise.resolve().then(() => (init_Rest(), Rest_exports)).then((m) => ({ default: m.Rest }), () => ({ default: Failed }))
+  );
+  var Draw2 = (0, import_react6.lazy)(
+    () => Promise.resolve().then(() => (init_Draw(), Draw_exports)).then((m) => ({ default: m.Draw }), () => ({ default: Failed }))
+  );
+  function TokenBag(p) {
+    return /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(TokenBagView, { ...p, Rest: Rest2, Draw: Draw2 });
   }
 
   // components/track/track.ts
@@ -37184,10 +37193,10 @@ void main() {
   var stepsOf = (steps2, current) => steps2.map((s) => ({ ...s, lit: s.id === current }));
 
   // components/track/ui.tsx
-  var import_react8 = __toESM(require_react(), 1);
+  var import_react9 = __toESM(require_react(), 1);
 
   // components/track/glide.ts
-  var import_react6 = __toESM(require_react(), 1);
+  var import_react7 = __toESM(require_react(), 1);
 
   // components/motion-frame/player.ts
   function withReducedMotion(speed, reduced = prefersReducedMotion()) {
@@ -37200,9 +37209,9 @@ void main() {
   // components/track/glide.ts
   var paceOf = (speed) => withReducedMotion(speed ? speed() : 1);
   function useMarkerGlide(list, index, o = {}) {
-    const was = (0, import_react6.useRef)(index);
-    const lastUndo = (0, import_react6.useRef)(o.undone);
-    (0, import_react6.useLayoutEffect)(() => {
+    const was = (0, import_react7.useRef)(index);
+    const lastUndo = (0, import_react7.useRef)(o.undone);
+    (0, import_react7.useLayoutEffect)(() => {
       const from = was.current;
       was.current = index;
       const undone = lastUndo.current !== o.undone;
@@ -37245,7 +37254,7 @@ void main() {
   }
 
   // components/counter/ui.tsx
-  var import_react7 = __toESM(require_react(), 1);
+  var import_react8 = __toESM(require_react(), 1);
 
   // components/effect-library/particles.ts
   function rng(seed) {
@@ -37296,7 +37305,7 @@ void main() {
   var defaultShards = triangles(2, 2, 1, [0, 0]);
 
   // components/counter/ui.tsx
-  var import_jsx_runtime5 = __toESM(require_jsx_runtime(), 1);
+  var import_jsx_runtime6 = __toESM(require_jsx_runtime(), 1);
 
   // components/track/ups.ts
   var LIGHT_MS = 520;
@@ -37349,47 +37358,47 @@ void main() {
   }
 
   // components/track/ui.tsx
-  var import_jsx_runtime6 = __toESM(require_jsx_runtime(), 1);
+  var import_jsx_runtime7 = __toESM(require_jsx_runtime(), 1);
   function Track({ spaces: spaces2, index, words: words2, label, markerLabel, marker, mat, renderValue, renderMark, renderEffect, children, ...glide }) {
-    const list = (0, import_react8.useRef)(null);
+    const list = (0, import_react9.useRef)(null);
     useMarkerGlide(list, index, glide);
     const onMat = mat !== void 0 && mat.spots.length >= spaces2.length;
-    const ol = /* @__PURE__ */ (0, import_jsx_runtime6.jsx)("ol", { ref: list, "data-part": "track", "data-layout": onMat ? "mat" : "row", "aria-label": label, children: spaces2.map((space, i) => {
+    const ol = /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("ol", { ref: list, "data-part": "track", "data-layout": onMat ? "mat" : "row", "aria-label": label, children: spaces2.map((space, i) => {
       const state = stateOf(spaces2, index, i);
       const text = spaceLabel(space, i, state, words2);
       const p = onMat ? mat.spots[i] : void 0;
       const style = p ? { position: "absolute", left: `${String(p[0] * 100)}%`, top: `${String(p[1] * 100)}%` } : void 0;
-      return /* @__PURE__ */ (0, import_jsx_runtime6.jsxs)("li", { "data-part": "space", "data-state": state, "data-max": space.max ? "" : void 0, style, "aria-current": state === "current" ? "step" : void 0, "aria-label": text, title: text, children: [
-        onMat ? null : /* @__PURE__ */ (0, import_jsx_runtime6.jsx)("span", { "data-part": "value", children: renderValue ? renderValue(space, i) : space.max ? null : space.value }),
-        space.marks?.length || space.effect ? /* @__PURE__ */ (0, import_jsx_runtime6.jsxs)("span", { "data-part": "marks", children: [
-          space.marks?.map((m) => /* @__PURE__ */ (0, import_jsx_runtime6.jsx)("span", { "data-part": "mark", "data-mark": m.id, "aria-hidden": "true", children: renderMark ? renderMark(m) : m.letter }, m.id)),
-          space.effect ? /* @__PURE__ */ (0, import_jsx_runtime6.jsx)("span", { "data-part": "effect", "data-effect": space.effect.id, "aria-hidden": "true", children: renderEffect ? renderEffect(space.effect) : null }) : null
+      return /* @__PURE__ */ (0, import_jsx_runtime7.jsxs)("li", { "data-part": "space", "data-state": state, "data-max": space.max ? "" : void 0, style, "aria-current": state === "current" ? "step" : void 0, "aria-label": text, title: text, children: [
+        onMat ? null : /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("span", { "data-part": "value", children: renderValue ? renderValue(space, i) : space.max ? null : space.value }),
+        space.marks?.length || space.effect ? /* @__PURE__ */ (0, import_jsx_runtime7.jsxs)("span", { "data-part": "marks", children: [
+          space.marks?.map((m) => /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("span", { "data-part": "mark", "data-mark": m.id, "aria-hidden": "true", children: renderMark ? renderMark(m) : m.letter }, m.id)),
+          space.effect ? /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("span", { "data-part": "effect", "data-effect": space.effect.id, "aria-hidden": "true", children: renderEffect ? renderEffect(space.effect) : null }) : null
         ] }) : null,
-        state === "current" ? /* @__PURE__ */ (0, import_jsx_runtime6.jsxs)(import_jsx_runtime6.Fragment, { children: [
-          onMat && marker ? /* @__PURE__ */ (0, import_jsx_runtime6.jsx)("span", { "data-part": "glide", "data-marker": true, children: marker }) : null,
-          /* @__PURE__ */ (0, import_jsx_runtime6.jsx)("span", { "data-part": "marker", "data-marker": onMat && marker ? void 0 : "", children: markerLabel })
+        state === "current" ? /* @__PURE__ */ (0, import_jsx_runtime7.jsxs)(import_jsx_runtime7.Fragment, { children: [
+          onMat && marker ? /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("span", { "data-part": "glide", "data-marker": true, children: marker }) : null,
+          /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("span", { "data-part": "marker", "data-marker": onMat && marker ? void 0 : "", children: markerLabel })
         ] }) : null
       ] }, i);
     }) });
     if (!onMat) return ol;
-    return /* @__PURE__ */ (0, import_jsx_runtime6.jsxs)("div", { "data-part": "mat", style: { position: "relative" }, children: [
-      /* @__PURE__ */ (0, import_jsx_runtime6.jsx)("img", { "data-part": "mat-image", src: mat.src, alt: "", draggable: false, style: { display: "block", width: "100%" } }),
+    return /* @__PURE__ */ (0, import_jsx_runtime7.jsxs)("div", { "data-part": "mat", style: { position: "relative" }, children: [
+      /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("img", { "data-part": "mat-image", src: mat.src, alt: "", draggable: false, style: { display: "block", width: "100%" } }),
       ol,
       children
     ] });
   }
   function HopTrack({ value, max, mult = 1, label, multText = (n) => `\xD7${String(n)}`, speed, backward, undone }) {
-    const [shown, setShown] = (0, import_react8.useState)(value);
-    const [hold, setHold] = (0, import_react8.useState)(false);
-    const was = (0, import_react8.useRef)({ value, mult, undone });
-    const root = (0, import_react8.useRef)(null);
-    const dot = (0, import_react8.useRef)(null);
-    const num = (0, import_react8.useRef)(null);
-    const badge = (0, import_react8.useRef)(null);
-    const bar = (0, import_react8.useRef)(null);
-    const [rising, setRising] = (0, import_react8.useState)(null);
-    const anims = (0, import_react8.useRef)([]);
-    (0, import_react8.useLayoutEffect)(() => {
+    const [shown, setShown] = (0, import_react9.useState)(value);
+    const [hold, setHold] = (0, import_react9.useState)(false);
+    const was = (0, import_react9.useRef)({ value, mult, undone });
+    const root = (0, import_react9.useRef)(null);
+    const dot = (0, import_react9.useRef)(null);
+    const num = (0, import_react9.useRef)(null);
+    const badge = (0, import_react9.useRef)(null);
+    const bar = (0, import_react9.useRef)(null);
+    const [rising, setRising] = (0, import_react9.useState)(null);
+    const anims = (0, import_react9.useRef)([]);
+    (0, import_react9.useLayoutEffect)(() => {
       const p = was.current;
       was.current = { value, mult, undone };
       const s = paceOf(speed);
@@ -37438,7 +37447,7 @@ void main() {
         setHold(false);
       };
     }, [value, undone]);
-    (0, import_react8.useLayoutEffect)(() => {
+    (0, import_react9.useLayoutEffect)(() => {
       if (rising === null) return;
       const s = paceOf(speed);
       const mine = [];
@@ -37451,20 +37460,20 @@ void main() {
         for (const a of mine) a.cancel();
       };
     }, [rising, speed]);
-    return /* @__PURE__ */ (0, import_jsx_runtime6.jsxs)("div", { ref: root, "data-part": "hop-track", role: "group", "aria-label": label, "data-value": value, "data-max": max, children: [
-      /* @__PURE__ */ (0, import_jsx_runtime6.jsx)("div", { ref: bar, "data-part": "bar", style: { "--v": shown }, children: /* @__PURE__ */ (0, import_jsx_runtime6.jsx)("i", { ref: dot, "data-part": "dot", "data-marker": true }) }),
-      /* @__PURE__ */ (0, import_jsx_runtime6.jsx)("span", { ref: num, "data-part": "number", children: shown }),
-      mult > 1 ? /* @__PURE__ */ (0, import_jsx_runtime6.jsxs)("span", { ref: badge, "data-part": "badge", "data-mult": mult, style: hold ? { visibility: "hidden" } : void 0, children: [
+    return /* @__PURE__ */ (0, import_jsx_runtime7.jsxs)("div", { ref: root, "data-part": "hop-track", role: "group", "aria-label": label, "data-value": value, "data-max": max, children: [
+      /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("div", { ref: bar, "data-part": "bar", style: { "--v": shown }, children: /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("i", { ref: dot, "data-part": "dot", "data-marker": true }) }),
+      /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("span", { ref: num, "data-part": "number", children: shown }),
+      mult > 1 ? /* @__PURE__ */ (0, import_jsx_runtime7.jsxs)("span", { ref: badge, "data-part": "badge", "data-mult": mult, style: hold ? { visibility: "hidden" } : void 0, children: [
         multText(mult),
-        rising === null ? null : /* @__PURE__ */ (0, import_jsx_runtime6.jsxs)(import_jsx_runtime6.Fragment, { children: [
-          Array.from({ length: 2 }, (_, k) => /* @__PURE__ */ (0, import_jsx_runtime6.jsx)("span", { "data-part": "pulse", "data-k": k, "aria-hidden": "true", style: { position: "absolute", inset: 0, pointerEvents: "none" } }, k)),
-          /* @__PURE__ */ (0, import_jsx_runtime6.jsx)("span", { "data-part": "rise", "aria-hidden": "true", style: { position: "absolute", left: 0, right: 0, bottom: "100%", textAlign: "center", pointerEvents: "none" }, children: multText(rising) })
+        rising === null ? null : /* @__PURE__ */ (0, import_jsx_runtime7.jsxs)(import_jsx_runtime7.Fragment, { children: [
+          Array.from({ length: 2 }, (_, k) => /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("span", { "data-part": "pulse", "data-k": k, "aria-hidden": "true", style: { position: "absolute", inset: 0, pointerEvents: "none" } }, k)),
+          /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("span", { "data-part": "rise", "aria-hidden": "true", style: { position: "absolute", left: 0, right: 0, bottom: "100%", textAlign: "center", pointerEvents: "none" }, children: multText(rising) })
         ] })
       ] }) : null
     ] });
   }
   function StepTrack({ steps: steps2, current, label }) {
-    return /* @__PURE__ */ (0, import_jsx_runtime6.jsx)("ol", { "data-part": "steps", "aria-label": label, "data-step": current ?? "none", children: stepsOf(steps2, current).map((s) => /* @__PURE__ */ (0, import_jsx_runtime6.jsx)("li", { "data-part": "step", "data-step-id": s.id, "data-lit": s.lit ? "" : void 0, "aria-current": s.lit ? "step" : void 0, children: /* @__PURE__ */ (0, import_jsx_runtime6.jsx)("span", { "data-part": "name", children: s.name }) }, s.id)) });
+    return /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("ol", { "data-part": "steps", "aria-label": label, "data-step": current ?? "none", children: stepsOf(steps2, current).map((s) => /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("li", { "data-part": "step", "data-step-id": s.id, "data-lit": s.lit ? "" : void 0, "aria-current": s.lit ? "step" : void 0, children: /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("span", { "data-part": "name", children: s.name }) }, s.id)) });
   }
 
   // tuners/src/token-motion-stage.mjs
@@ -37483,12 +37492,12 @@ void main() {
   var supplyOf = (place2) => place2 === "tray" ? "bank" : void 0;
   function Counter2({ label, place: place2, tokens, ledger, size }) {
     const shown = shownTokens(tokens, place2, useFlightLedger(ledger));
-    return (0, import_react9.createElement)(
+    return (0, import_react10.createElement)(
       "div",
       { className: "counter", "data-place": place2 },
-      (0, import_react9.createElement)("span", null, label),
-      (0, import_react9.createElement)("div", { className: "coins", "aria-hidden": "true" }, shown.slice(0, 4).map((v) => (0, import_react9.createElement)("img", { key: v, src: face, width: size, height: size, alt: "" }))),
-      (0, import_react9.createElement)("strong", null, shown.length)
+      (0, import_react10.createElement)("span", null, label),
+      (0, import_react10.createElement)("div", { className: "coins", "aria-hidden": "true" }, shown.slice(0, 4).map((v) => (0, import_react10.createElement)("img", { key: v, src: face, width: size, height: size, alt: "" }))),
+      (0, import_react10.createElement)("strong", null, shown.length)
     );
   }
   function Transfer({ stage, effect, s, moved, draw, finishDraw, ledger, hold }) {
@@ -37496,10 +37505,10 @@ void main() {
     const tokens = Array.from({ length: s.count }, (_, i) => i + 1);
     const size = s.size ?? 30;
     const placement = { tray: moved ? tokens : [] };
-    return (0, import_react9.createElement)(
+    return (0, import_react10.createElement)(
       "div",
       { className: "transfer" },
-      bag ? (0, import_react9.createElement)(TokenBag, {
+      bag ? (0, import_react10.createElement)(TokenBag, {
         count: 12 - (draw || moved ? s.count : 0),
         place: "bank",
         chosen: effect === "bag3d" ? "3d" : "2d",
@@ -37507,10 +37516,10 @@ void main() {
         faceUrl,
         draw,
         onDrawDone: finishDraw,
-        children: (0, import_react9.createElement)("div", { className: "bag-face" }, "Bag", (0, import_react9.createElement)("strong", null, 12 - (moved ? s.count : 0)))
-      }) : (0, import_react9.createElement)(Counter2, { label: "Supply", place: "bank", tokens: moved ? [] : tokens, ledger, size }),
-      (0, import_react9.createElement)(Counter2, { label: "Tray", place: "tray", tokens: placement.tray, ledger, size }),
-      (0, import_react9.createElement)(TokenFlights, {
+        children: (0, import_react10.createElement)("div", { className: "bag-face" }, "Bag", (0, import_react10.createElement)("strong", null, 12 - (moved ? s.count : 0)))
+      }) : (0, import_react10.createElement)(Counter2, { label: "Supply", place: "bank", tokens: moved ? [] : tokens, ledger, size }),
+      (0, import_react10.createElement)(Counter2, { label: "Tray", place: "tray", tokens: placement.tray, ledger, size }),
+      (0, import_react10.createElement)(TokenFlights, {
         placement,
         supplyOf,
         ledger,
@@ -37539,7 +37548,7 @@ void main() {
         const finishDraw = (done) => {
           if (done === run2) root.render(frame3(true, null));
         };
-        const frame3 = (moved, draw = null) => (0, import_react9.createElement)(Transfer, { key, stage, effect, s, moved, draw, finishDraw, ledger, hold });
+        const frame3 = (moved, draw = null) => (0, import_react10.createElement)(Transfer, { key, stage, effect, s, moved, draw, finishDraw, ledger, hold });
         (0, import_react_dom2.flushSync)(() => root.render(frame3(false)));
         if (play && effect === "flight") root.render(frame3(true));
         if (play && effect !== "flight") {
@@ -37553,13 +37562,13 @@ void main() {
       const frame2 = (moved) => {
         switch (effect) {
           case "glide":
-            return (0, import_react9.createElement)(Track, { key, spaces, words, label: "Marker track", markerLabel: "Marker", index: moved ? end : start, speed, backward: Boolean(s.backward) });
+            return (0, import_react10.createElement)(Track, { key, spaces, words, label: "Marker track", markerLabel: "Marker", index: moved ? end : start, speed, backward: Boolean(s.backward) });
           case "hop": {
             const at = moved ? end : start;
-            return (0, import_react9.createElement)(HopTrack, { key, label: "Progress", max: 8, value: at, mult: at === s.distance ? s.mult : 1, speed, backward: Boolean(s.backward) });
+            return (0, import_react10.createElement)(HopTrack, { key, label: "Progress", max: 8, value: at, mult: at === s.distance ? s.mult : 1, speed, backward: Boolean(s.backward) });
           }
           default:
-            return (0, import_react9.createElement)(StepTrack, { key, steps, label: "Step list", current: steps[s.current - 1]?.id ?? null });
+            return (0, import_react10.createElement)(StepTrack, { key, steps, label: "Step list", current: steps[s.current - 1]?.id ?? null });
         }
       };
       (0, import_react_dom2.flushSync)(() => root.render(frame2(false)));

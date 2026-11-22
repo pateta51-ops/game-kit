@@ -2,20 +2,10 @@
 // never in a loop. Reached only by a dynamic import (TokenBag.tsx), so a game's main bundle carries no three.js.
 import { useEffect, useLayoutEffect, useRef } from 'react';
 import { createBagScene } from './scene.ts';
-import type { Exterior } from './exterior.ts';
+import type { RestProps } from './props3d.ts';
 import type { FallbackReason } from './mode.ts';
 
-export interface RestProps {
-  faceUrl: (kind: string) => string;
-  exterior?: Exterior | undefined;
-  backdrop?: string | undefined;
-  onFail: (reason: FallbackReason) => void;
-  className?: string | undefined;
-  /** leave the canvas size to the host's CSS (default: inline 100% x 100%) */
-  hostSized?: boolean | undefined;
-  /** set window.__bagDockFrames (frames rendered so far) for e2e (default off) */
-  e2eHooks?: boolean | undefined;
-}
+export type { RestProps };
 
 export function Rest({ faceUrl, exterior, backdrop, onFail, className, hostSized, e2eHooks }: RestProps) {
   const canvas = useRef<HTMLCanvasElement>(null);
