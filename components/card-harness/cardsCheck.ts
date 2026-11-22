@@ -126,7 +126,21 @@ export interface RestrictionInput {
 const val = (v: unknown): string => (typeof v === 'object' && v !== null ? JSON.stringify(v) : String(v));
 const has = (text: string, phrase: string): boolean => text.toLowerCase().includes(phrase.toLowerCase());
 const cites = (why: unknown, rulings: ReadonlySet<string>): boolean => [why].flat().some((w) => typeof w === 'string' && [...rulings].some((r) => new RegExp(`(^|[^\\w-])${r.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}(?![\\w-])`).test(w)));
-const nodes = (r: unknown, skip: ReadonlySet<string>): Record<string, unknown>[] => Array.isArray(r) ? r.flatMap((x) => nodes(x, skip)) : typeof r === 'object' && r !== null ? [r as Record<string, unknown>, ...Object.entries(r).filter(([k]) => !skip.has(k)).flatMap(([, x]) => nodes(x, skip))] : [];
+const STEP_KEYS = new Set(['effects', 'then', 'else', 'steps', 'options', 'upgraded', 'each', 'branch', 'effect']);
+/** The record and its step nodes (K665): objects with an `op`, and what sits in the step lists and branches (`STEP_KEYS`); never filters, targets or other metadata. Iterative, each object once. */
+const nodes = (r: Record<string, unknown>, skip: ReadonlySet<string>): Record<string, unknown>[] => {
+  const out: Record<string, unknown>[] = [], seen = new Set<object>([r]), todo = [r];
+  const add = (v: unknown, named: boolean) => { if (typeof v === 'object' && v !== null && !Array.isArray(v) && !seen.has(v) && (named || typeof (v as Record<string, unknown>).op === 'string')) { seen.add(v); todo.push(v as Record<string, unknown>); } };
+  for (let n = todo.pop(); n; n = todo.pop()) {
+    out.push(n);
+    for (const [k, v] of Object.entries(n)) {
+      if (skip.has(k)) continue;
+      const named = STEP_KEYS.has(k);
+      if (Array.isArray(v)) { const l = [...(v as unknown[])]; for (let x = l.pop(); x !== undefined; x = l.pop()) { if (Array.isArray(x)) l.push(...(x as unknown[])); else add(x, named); } } else add(v, named);
+    }
+  }
+  return out;
+};
 export function restrictionProblems(i: RestrictionInput): string[] {
   const rulings = new Set(i.rulings);
   const text = new Map(catalogueClauses(i.catalogue).map((c) => [c.id, c.text]));
@@ -150,7 +164,7 @@ export function restrictionProblems(i: RestrictionInput): string[] {
     for (const [kv, phrases] of Object.entries(i.words)) {
       const p = phrases.find((x) => has(t, x));
       const k = kv.slice(0, kv.indexOf(':')), v = kv.slice(kv.indexOf(':') + 1);
-      if (p !== undefined && !recs.some((r) => all(r).some((n) => n[k] !== undefined && val(n[k]) === v))) found.push({ id: c, key: k, message: `${c}: printed "${p}" has no restriction ${k}=${v}` });
+      if (p !== undefined && !recs.some((r) => r[k] !== undefined && val(r[k]) === v)) found.push({ id: c, key: k, message: `${c}: printed "${p}" has no restriction ${k}=${v}` });
     }
   }
   const used = new Set<object>();

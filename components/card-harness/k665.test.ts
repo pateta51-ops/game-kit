@@ -32,6 +32,20 @@ describe('K665 nested restrictions', () => {
     expect(run({ op: 'if', why: 'AR-1', then: [pay({ duration: 'round' })] }, o)).toEqual([]);
     expect(run({ op: 'if', why: 'AR-1', then: [pay()] }, o)).toEqual(['owl#1 r0: lasting effect with no duration']);
   });
+  it('a restriction inside a target or filter is not a step restriction', () => {
+    expect(run({ op: 'pay', target: { filter: { optional: true } } })).toEqual(['owl#1: printed "you may" has no restriction optional=true']);
+    expect(run({ op: 'pay', then: [pay({ target: { filter: { phase: 'night' } } })] }, { words: {} })).toEqual([]);
+  });
+  it('a self-reference does not loop', () => {
+    const a: Record<string, unknown> = { op: 'if' };
+    a.then = [a, { op: 'pay', optional: true }];
+    expect(run(a)).toEqual([]);
+  });
+  it('a 20000-deep tree is walked', () => {
+    let deep: Record<string, unknown> = pay({ optional: true });
+    for (let i = 0; i < 20000; i++) deep = { op: 'if', then: [deep] };
+    expect(run(deep)).toEqual([]);
+  });
   it('top level is found as before', () => {
     expect(run({ op: 'pay', optional: true })).toEqual([]);
   });
