@@ -181,6 +181,25 @@ if (cmd === 'pull') {
       if (miss.length) console.warn('warning: ' + n + ' needs package(s) this game lacks: ' + miss.join(', '))
     }
   }
+  // K675: each pulled component's component.json `bypass` patterns, run over the game's src/ (not kit/, not tests)
+  const pats = Object.keys(lock.components).flatMap((n) => { const cj = 'kit/' + n + '/component.json'; return fs.existsSync(cj) ? (JSON.parse(fs.readFileSync(cj, 'utf8')).bypass ?? []).map((p) => ({ ...p, from: n })) : [] })
+  if (pats.length && fs.existsSync('src')) {
+    const hits = []
+    const files = walk('src').filter((f) => /\.(m?[jt]sx?|cjs|vue|svelte)$/.test(f) && !/(^|\/)(node_modules|kit|tests?|__tests__)\//.test(f.slice(4)) && !/\.(test|spec)\.[^/]+$/.test(f))
+    for (const f of files) {
+      const t = fs.readFileSync(f, 'utf8'), lines = t.split(/\r?\n/)
+      for (const p of pats) {
+        if (!(p.imports ?? [p.from]).some((m) => new RegExp('(from|import|require)\\s*\\(?\\s*[\'"]([^\'"\\n]*/)?' + m + '(/[^\'"\\n]*)?[\'"]').test(t))) continue
+        for (const m of t.matchAll(new RegExp(p.match, 'g' + (p.flags ?? '')))) {
+          const ln = t.slice(0, m.index).split('\n').length
+          const al = [lines[ln - 1], lines[ln - 2] ?? ''].map((l) => l.match(new RegExp('kit-allow\\s+' + p.id + '(?![\\w-])(:\\s*(\\S.*))?'))).find(Boolean)
+          if (al && al[2]) continue
+          hits.push(f + ':' + ln + ' ' + p.id + ' (' + p.from + '): ' + (al ? 'kit-allow ' + p.id + ' needs a reason (// kit-allow ' + p.id + ': <reason>); ' : '') + p.hook)
+        }
+      }
+    }
+    if (hits.length) { console.error('src/ goes around a kit part. Use the hook named, or put // kit-allow <id>: <reason> on the line.\n' + hits.join('\n')); process.exit(1) }
+  }
   const names = Object.keys(lock.components).join(', ') || 'no components'
   console.log(lock.ref ? 'kit ok at ' + lock.ref + ': ' + names : 'kit ok: ' + (Object.entries(lock.components).map(([n, c]) => n + '@' + c.ref).join(', ') || names) + (Object.keys(lock.components).length ? ' (per-component locks: the next pull converts them to one tag)' : ''))
 } else if (cmd === 'outdated') {
