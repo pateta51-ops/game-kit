@@ -297,7 +297,11 @@
       "prompt amount",
       "screen check",
       "no amount",
-      "amounts"
+      "amounts",
+      "prompt amount check",
+      "clause two prompts",
+      "screen text amounts",
+      "amounts per prompt"
     ],
     "visible": false,
     "release": 1,

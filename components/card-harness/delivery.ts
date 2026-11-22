@@ -37,7 +37,8 @@ export class Delivery<S, P, D = never, A = never> {
   /** Clause ids that opened a prompt (K489), for `screenProblems`. */
   readonly opened = new Set<string>();
   /** `{ clause, shown }` of each scanned prompt that opened, for `screenProblems`. */
-  readonly screens: { clause: string; shown: string }[] = [];
+  readonly screens: { clause: string; shown: string; step?: number }[] = [];
+  private last: { clause: string; step: number; p: P } | null = null;
   private seen(): void {
     const p = this.game.prompt();
     if (p === null) return;
@@ -45,7 +46,9 @@ export class Delivery<S, P, D = never, A = never> {
     if (clause === null) return;
     this.opened.add(clause);
     const shown = this.game.screen?.(p) ?? null;
-    if (shown !== null) this.screens.push({ clause, shown });
+    const step = this.last?.clause === clause ? this.last.step + (this.last.p === p ? 0 : 1) : 0;
+    this.last = { clause, step, p };
+    if (shown !== null) this.screens.push(step > 0 ? { clause, shown, step } : { clause, shown });
   }
 
   readonly game: DeliveryGame<S, P, D, A>;
@@ -54,6 +57,7 @@ export class Delivery<S, P, D = never, A = never> {
   }
 
   load(state: S): this {
+    this.last = null;
     this.game.load(state);
     this.seen();
     return this;
