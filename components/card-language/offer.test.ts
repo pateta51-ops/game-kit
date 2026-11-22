@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { applyAction, blocked, createGame, draftOf, hashState, hashValue, seedRng, timingHandlers, type AnswerAction, type Draft, type GameRules, type KernelPrompt, type KernelState, type KernelTask } from '../engine-core/index.ts';
 import { cardsIn, newZones } from '../card-zones/index.ts';
-import { effectTasks, verbHandler, type VerbTask } from './index.ts';
+import { askVerb, effectTasks, verbHandler, type VerbTask } from './index.ts';
 import { cardPack, inDryRun, type OfferPolicy, type PackEnv, type PackState, type PackStep } from './pack.ts';
 
 // K529: a made-up two-seat game on the pack (tests only). Seat a acts with 3 gold; p1 (in play) is the source card.
@@ -34,7 +34,7 @@ const game = (offer?: OfferPolicy<S>, wire = true) => {
   const nested: string[] = [];
   const pack = cardPack<G>({
     filters: { even: (_s, c) => c.endsWith('2') },
-    tests: { rich: (s, e) => gold(s, e.seat) >= 9 },
+    tests: { rich: (s, e) => gold(s, e.seat) >= 9, two: (_s, e) => e.cards?.length === 2, ends: (_s, e) => ['h2', 'd1'].every((c) => e.cards?.includes(c)) },
     seats: () => ['a', 'b'],
     custom: {
       nothing: { run: () => undefined, text: () => 'Nothing.' },
@@ -42,6 +42,11 @@ const game = (offer?: OfferPolicy<S>, wire = true) => {
       loop: { run: (ctx, st, env) => ctx.then(...(effectTasks([st], env) as Task[])), text: () => 'Loop.' },
       spend: { run: (ctx, _st, env) => void (draftOf(ctx).res = { [env.seat]: { gold: 0 } }), text: () => 'Lose all gold.' },
       nest: { run: (ctx, _st, env) => void nested.push(pack.wouldChange(ctx.s, ctx.content, [GAIN], env)), text: () => 'Nest.' },
+      lone: {
+        run: (ctx, st, env) => askVerb(ctx, { kind: 'lone', seat: env.seat, min: 1, max: 1, options: [{ id: 'stay', enabled: true }, { id: 'other', enabled: true, alone: true }] }, st, env),
+        resume: (ctx, _st, env, a) => void (a[0] === 'other' && (draftOf(ctx).res = { [env.seat]: { gold: 0 } })),
+        text: () => 'Lone.',
+      },
       dry: { run: (ctx) => void (inDryRun() && ctx.emit({ type: 'dry' })), text: () => 'Dry.' },
     },
     moved: (ctx, m) => ctx.emit({ type: `${m.op} ${m.card}` }),
@@ -319,5 +324,40 @@ describe('card-language offer policy (K529): one test per knob setting', () => {
       expect([hashState(b.s), JSON.stringify(b.prompts)]).toEqual([hashState(a.s), JSON.stringify(a.prompts)]);
       expect(hashState(c.s)).toBe(hashState(a.s));
     }
+  });
+});
+
+describe('card-language offer policy (K579): the check tries every legal pick set, or answers unknown', () => {
+  const { check } = game();
+  const pair: Eff = [{ op: 'chooseCards', zone: 'hand', min: 2, max: 2, then: [{ op: 'if', test: 'ends', then: [GAIN] }] }];
+  const upTo: Eff = [{ op: 'chooseCards', zone: 'hand', min: 0, max: 2, then: [{ op: 'if', test: 'two', then: [GAIN] }] }];
+  it('K579 choose 2 of 3 where only the last pair changes something is a yes', () => {
+    expect(check(pair, undefined, [DRAW])).toBe('yes');
+    const { s, prompts } = game({ noChange: 'skip' }).play([DRAW, { op: 'may', then: pair }], [['yes'], ['h2', 'd1']]);
+    expect([kinds(prompts), gold(s)]).toEqual([['may', 'chooseCards'], 4]);
+  });
+  it('K579 choose up to 2 where only a pair changes something is a yes', () => {
+    expect(check(upTo)).toBe('yes');
+    expect(blocked(game({ deadChoice: 'bar' }).play([{ op: 'chooseOption', options: [upTo, [GAIN]] }], [['1']]).prompts[0] ?? null)).toEqual([]);
+  });
+  it('K579 it stays a no when every pick set was tried and none changes anything', () => {
+    expect(check([{ op: 'chooseCards', zone: 'hand', min: 2, max: 2, then: [NOTHING] }], undefined, [DRAW])).toBe('no');
+    expect(check([{ op: 'chooseCards', zone: 'hand', min: 0, max: 2, then: [{ op: 'if', test: 'ends', then: [GAIN] }] }])).toBe('no');
+    expect(game({ noChange: 'skip' }).play([{ op: 'may', then: [{ op: 'chooseCards', zone: 'hand', min: 0, max: 2, then: [NOTHING] }] }]).prompts).toEqual([]);
+  });
+  it('K579 pick sets left untried when the branch cap is reached give unknown, never a no', () => {
+    const idle: Eff = [{ op: 'chooseCards', zone: 'hand', min: 2, max: 2, then: [NOTHING] }];
+    expect(game({ branches: 2 }).check(pair, undefined, [DRAW])).toBe('unknown');
+    expect(game({ branches: 2 }).check(idle, undefined, [DRAW])).toBe('unknown');
+    expect(game({ branches: 3 }).check(idle, undefined, [DRAW])).toBe('no');
+    expect(kinds(game({ branches: 2, noChange: 'skip' }).play([DRAW, { op: 'may', then: idle }], [['no']]).prompts)).toEqual(['may']);
+    expect(game({ branches: 2, noChange: 'skip', unknown: 'skip' }).play([DRAW, { op: 'may', then: idle }]).prompts).toEqual([]);
+  });
+  it('K579 a prompt whose order matters is tried in every order; an option answered alone is tried', () => {
+    const down: PackStep = { op: 'adjust', key: 'gold', by: -1 };
+    const up: PackStep = { op: 'adjust', key: 'gold', by: 1, max: 3 };
+    expect(check([{ op: 'orderEffects', effects: [[down], [up]] }])).toBe('yes');
+    expect(check([{ op: 'orderEffects', effects: [[down], [{ op: 'adjust', key: 'gold', by: 1 }]] }])).toBe('no');
+    expect(check([{ op: 'custom', name: 'lone' }])).toBe('yes');
   });
 });
