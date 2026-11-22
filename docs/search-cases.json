@@ -416,5 +416,8 @@
   { "q": "ready exhausted cards at round start", "first": "tap" },
   { "q": "build own table check", "first": "plan-checker" },
   { "q": "plan build own table rows", "first": "plan-checker" },
-  { "q": "plan check build own rows", "first": "plan-checker" }
+  { "q": "plan check build own rows", "first": "plan-checker" },
+  { "q": "pr body lists new modules", "first": "none" },
+  { "q": "worker pr body new files listed", "first": "none" },
+  { "q": "reason for each new file", "first": "none" }
 ]
