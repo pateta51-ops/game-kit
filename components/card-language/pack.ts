@@ -139,6 +139,8 @@ export interface OfferPolicy<S = unknown> {
   readonly decide?: (s: S, steps: readonly (PackStep | Step)[], env: PackEnv, check: OfferCheck) => OfferCheck;
   /** K605: the reason on a barred option: `code` (default: `cannotPay` or `noChange`, as before) or `why` (the reason of `judge(..., { why: true })`). With `decide` set, a reason it returns is used under both. */
   readonly barReason?: 'code' | 'why';
+  /** K598, `chooseOption`: `any` (default) or `full` (an option `resolves` answers `full` bars each `part` one, reason `partial`; every option `none`: not offered; `unknown` never barred). */
+  readonly prefer?: 'any' | 'full';
 }
 export interface PackConfig<G extends GameTypes, E extends PackEnv = PackEnv> {
   /** Default zones per verb (names; `hand` means `hand:<seat>` when that zone exists). */

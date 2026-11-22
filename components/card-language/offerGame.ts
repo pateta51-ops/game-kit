@@ -1,6 +1,6 @@
 // K583: the made-up two-seat game of the offer-policy tests (tests only), built on a pack given by the caller, so the same
 // game runs on the pack as it is and on a frozen copy of an earlier one. Seat a acts with 3 gold; p1 (in play) is the source card.
-import { applyAction, canonicalJson, createGame, draftOf, GameOver, hashState, hashValue, seedRng, timingHandlers, type AnswerAction, type Ctx, type Draft, type GameRules, type HandlerTable, type KernelPrompt, type KernelState, type KernelTask, type Occurrence } from '../engine-core/index.ts';
+import { applyAction, canonicalJson, createGame, draftOf, enumerateAnswers, GameOver, hashState, hashValue, seedRng, timingHandlers, type AnswerAction, type Ctx, type Draft, type GameRules, type HandlerTable, type KernelPrompt, type KernelState, type KernelTask, type Occurrence } from '../engine-core/index.ts';
 import { cardsIn, locate, newZones, reveal } from '../card-zones/index.ts';
 import { askVerb, effectTasks, verbHandler, type VerbTable, type VerbTask } from './index.ts';
 import { cannotKnow, dryRunSeat, type Offered, type OfferPolicy, type PackConfig, type PackEnv, type PackState, type PackStep } from './pack.ts';
@@ -272,4 +272,44 @@ export const gen = (seed: number, more = false) => {
     () => ({ op: 'count', what: 'held', then: eff(depth - 1) }),
   ])());
   return eff;
+};
+// K597 interface row (moved from its test; also K598): exhaustive real play of every answer, graded full, part or none.
+export const has = (e: Eff, f: (st: PackStep) => boolean): boolean => e.some((st) => f(st) || Object.values(st).some((v) => Array.isArray(v) && typeof v[0] === 'object' && (Array.isArray(v[0]) ? (v as Eff[]).some((o) => has(o, f)) : has(v as Eff, f))));
+export const shortOf = (e: Eff, r: { answer: string }, t: string | undefined): boolean => r.answer === 'part' && t === 'full' && has(e, (st) => st.op === 'chooseCards' && (st.min ?? 0) >= 2);
+export const truth = (g: { readonly RULES: GameRules<G> }, effect: Eff, seed: string): string | undefined => {
+  const c = (name: string): PackStep => ({ op: 'custom', name });
+  // A cost that is not a top-level payThen: two parts, its cost and its effect, at any depth.
+  const wrap = (e: Eff): PackStep[] => e.map((st): PackStep => {
+    const out = Object.fromEntries(Object.entries(st).map(([k, v]) => [k, Array.isArray(v) && typeof v[0] === 'object' ? (Array.isArray(v[0]) ? (v as Eff[]).map(wrap) : wrap(v as Eff)) : v as unknown])) as unknown as PackStep;
+    if (out.op !== 'payThen' && out.op !== 'choosePayment') return out;
+    return { op: 'seq', steps: [c('pre2'), { ...out, then: [c('mid2'), ...out.then, c('end2')] }, c('post2')] };
+  });
+  const top = (st: PackStep): PackStep => (st.op === 'payThen' ? { ...st, cost: wrap(st.cost as Eff), then: [c('paid'), ...wrap(st.then as Eff)] } : wrap([st])[0] ?? st);
+  const content = { effect: [{ op: 'custom', name: 'step' } as PackStep, ...effect.flatMap((st, i): PackStep[] => [top(st), { op: 'custom', name: 'step', n: i + 1 }])] };
+  const units = effect.reduce((n, st) => n + (st.op === 'payThen' ? 2 : 1), 0);
+  let left = 3000;
+  let best = 0;
+  const grade = (done: number, half: number): number => (done === units ? 2 : done + half > 0 ? 1 : 0);
+  const walk = (s: S): boolean => {
+    if ((left -= 1) < 0) return false;
+    const t = s.steps;
+    if (s.result !== null) {
+      // K597 fourth look: the step that ended the game resolves, and the steps after it do not count against full.
+      const i = t?.next ?? 0;
+      const now = effect.flatMap((st, j) => (j < i ? [] : st.op === 'payThen' ? [j, j + 0.5] : [j])).filter((u) => !(t?.done ?? []).includes(u));
+      best = Math.max(best, grade((t?.done.length ?? 0) + now.length, (t?.half ?? []).filter((u) => u < i).length));
+      return true;
+    }
+    const p = s.prompt;
+    if (p === null) return (best = Math.max(best, grade(t?.done.length ?? 0, t?.half?.length ?? 0))), true;
+    const ordered = p.ordered === true || p.kind === 'orderCards' || p.kind === 'orderEffects';
+    for (const a of enumerateAnswers({ ...s, prompt: { ...p, ordered } })) if (!walk(applyAction(g.RULES, s, a, content).state)) return false;
+    return true;
+  };
+  try {
+    if (!walk(createGame(g.RULES, { seed }, {}, content).state)) return undefined;
+  } catch {
+    return undefined;
+  }
+  return (['none', 'part', 'full'] as const)[best];
 };
