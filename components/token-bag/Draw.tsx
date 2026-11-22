@@ -5,24 +5,10 @@
 // Reached only by a dynamic import (TokenBag.tsx).
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { createBagScene, ZOOM_BACK, type BagScene, type FrameStats } from './scene.ts';
-import type { Exterior } from './exterior.ts';
-import { dockCanvas, type FallbackReason } from './mode.ts';
+import { dockCanvas } from './mode.ts';
+import type { DrawProps } from './props3d.ts';
 
-export interface DrawProps {
-  contents: readonly string[];
-  drawn: readonly string[];
-  faceUrl: (kind: string) => string;
-  exterior?: Exterior | undefined;
-  backdrop?: string | undefined;
-  /** set window.__bag3dStats / __bag3dSeek for e2e (default off) */
-  e2eHooks?: boolean | undefined;
-  /** the scene's rate (1 = as approved; 2 = twice as fast) */
-  rate: number;
-  countLabel: string;
-  skipText: string;
-  onDone: () => void;
-  onFail: (reason: FallbackReason) => void;
-}
+export type { DrawProps };
 
 // Hides every dock bag while a draw plays, found whenever it is shown (the game may mount a new dock mid-draw); the
 // count and hint are placed by this stylesheet (override --token-bag-inset, default 16px), keep clear of the notch and grow with the screen. e2e hooks: window.__bag3dStats / __bag3dSeek.
