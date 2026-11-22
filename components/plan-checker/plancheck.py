@@ -45,7 +45,7 @@ Checks:
     always says whether the Pull rows were checked and against which tag. A Kit phase row names a GK<n> that is a
     "Phase GK<n>" heading, and a new kit phase also has a build-own row;
   * a game sheet table (a header cell names "Game sheet") with a row for each line of references/game-sheet.md
-    (SHEET_LINES), each with an answer, and with a backticked kit part or the words "build-own" in its third cell
+    (SHEET_LINES; asked for only when the mechanics map is not checked), each with an answer, and with a backticked kit part or the words "build-own" in its third cell
     unless the answer starts "not in this game"; more than half the lines absent is a NOTE;
   * a build-own table (a header cell names "What the game builds"; columns: what, words searched, nearest kit part,
     verdict, register id or refusal) with a row for every New, Port and Pattern row of the reuse map by its Layer text,
@@ -778,10 +778,12 @@ def main() -> int:
             kd.append(f"reuse map: Kit phase row {layer!r} names no GK phase of this plan (GK<n> in the row, 'Phase GK<n>' as a heading)")
         if (kind.startswith(("new", "port", "pattern")) or (kind.startswith("kit phase") and "new" in kind)) and norm(layer) not in ownset:
             kd.append(f"reuse map: {'Kit phase' if kind.startswith('kit') else kind.split()[0].capitalize()} row {layer!r} is not in the build-own table")
+    mp = Path(opt("--map", "")) if "--map" in sys.argv else path.resolve().parent.parent / "kit" / "recipes" / "mechanics.md"
     if "sheet" not in seen:
         kd.append("the reuse map has no game sheet table (a header cell names 'Game sheet'): stage 5")
     else:
-        kd += [f"game sheet: no row for the line {t!r}" for t in SHEET_LINES if not any(norm(r[0]).startswith(t) for r in sheet)]
+        if "--sheet-optional" in sys.argv or not mp.is_file():
+            kd += [f"game sheet: no row for the line {t!r}" for t in SHEET_LINES if not any(norm(r[0]).startswith(t) for r in sheet)]
         for r in sheet:
             ans = norm(r[1]) if len(r) > 1 else ""
             if not ans.strip("-—– "):
@@ -792,7 +794,6 @@ def main() -> int:
         if len(absent) * 2 > len(SHEET_LINES):
             notes.add(f"kit: the game sheet says 'not in this game' on {len(absent)} lines: {', '.join(absent)}")
     # K531: the game sheet answers every line of the kit's mechanics map (kit/recipes/mechanics.md beside the docs folder, or --map)
-    mp = Path(opt("--map", "")) if "--map" in sys.argv else path.resolve().parent.parent / "kit" / "recipes" / "mechanics.md"
     if "--sheet-optional" not in sys.argv and not mp.is_file() and "sheet" in seen:
         notes.add(f"kit: game sheet NOT checked against the mechanics map (no {mp}; --map PATH)")
     if "--sheet-optional" not in sys.argv and mp.is_file():

@@ -593,6 +593,14 @@ x
       expect(warns(r.out)).toEqual([]);
       expect(r.code).toBe(0);
     });
+    it('K567 with the map checked, the map's lines are the sheet: the older fixed lines are not asked for', () => {
+      const cut = FULL.split('
+').filter((l) => !l.startsWith('| Markets and rows |')).join('
+');
+      expect(run(MAP, cut).out).not.toContain('no row for the line');
+      expect(run(null, cut).out).toContain("PROBLEM kit: game sheet: no row for the line 'markets and rows'");
+      expect(run(MAP, cut, '--sheet-optional').out).toContain("PROBLEM kit: game sheet: no row for the line 'markets and rows'");
+    });
     it('K531 sheet missing one map line: a failure naming its first words', () => {
       const r = run(MAP, FULL.replace('| Market | not in this game | |\n', ''));
       expect(r.out.split(/\r?\n/).filter((l) => l.startsWith('PROBLEM'))).toEqual(["PROBLEM kit: game sheet: 1 mechanics map line(s) unanswered: market. Each mechanics map line needs its own row in the game sheet table, first cell = the line's first phrase; answer a kit part, a build-own row, or 'not in this game'"]);
