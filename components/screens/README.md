@@ -2,6 +2,15 @@ Unstyled, data-driven main menu and new-game set-up form, with a pure default an
 
 ## Rules for agents
 
+<!-- hooks: written by scripts/catalog.mjs from docs/catalog-notes.json; do not edit -->
+**Hooks a game calls:**
+- `MainMenu`: the main menu
+- `SetupForm` + `defaultSetup` + `validateSetup`: the new game set-up form and its check
+- `ScreenFrame`: frame for settings, saves and rules screens
+- `createThemeStore` + `ThemeToggle`: light and dark theme switch
+- `Footer` + `disclaimer`: the footer line
+<!-- /hooks -->
+
 **What it does:** An unstyled main menu and new-game set-up form with a pure default and validate model, plus a frame, footer and theme toggle for non-table screens.
 
 **You must:**

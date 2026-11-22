@@ -4,6 +4,21 @@ The card-language shell (K206): card effects as data, one typed verb table where
 
 ## Rules for agents
 
+<!-- hooks: written by scripts/catalog.mjs from docs/catalog-notes.json; do not edit -->
+**Hooks a game calls:**
+- `cardPack` + `offer`: offer an effect only if it does something, each knob set from a ruling
+- `wouldChange`: ask whether an effect would change the game: yes, no or unknown
+- `resolves`: how much of an effect would happen: in full, in part or nothing
+- `judge`: the reason an effect is not offered
+- `due`: a cost a card changes, a tax or a discount
+- `describeEffect`: print card text from the same data the engine runs
+- `askVerb` + `resume`: a verb that asks the player and goes on with the answer
+- `cardTriggers` + `when`: card triggers, when this happens do that, from card data
+- `cannotKnow`: say a read looks at cards the seat cannot see
+- `then` + `moved`: act on the cards a step just moved, draw 2 then discard 1 of them
+- `expectVerbs`: test that every verb has a handler, text and an example
+<!-- /hooks -->
+
 **What it does:** Card effects as data: one typed verb table where each verb has a field check, a handler on engine-core and a text generator, so the screen prints what the engine does.
 
 **You must:**

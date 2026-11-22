@@ -4,6 +4,19 @@ Card zones as data on engine-core state (K223): decks, hands, discards and play 
 
 ## Rules for agents
 
+<!-- hooks: written by scripts/catalog.mjs from docs/catalog-notes.json; do not edit -->
+**Hooks a game calls:**
+- `newZones` + `seatZone`: card zones in the game state, one per seat
+- `moveCard` + `draw` + `place`: move cards between zones
+- `shuffleZone`: shuffle a deck with the seeded rng
+- `reveal`: show a card to every seat
+- `viewOf`: what one seat sees, hidden cards as backs
+- `hiddenFrom`: the secrets list for an opponent
+- `zoneProblems`: a card in two places or a wrong total
+- `limit` + `raiseLimit` + `capacityCheck` + `capacityHandlers`: a hand limit, discard down to it when over
+- `locate` + `cardsIn`: find where a card is, list a zone
+<!-- /hooks -->
+
 **What it does:** Card zones as data on engine-core state, each an ordered list of ids (index 0 is the top) with who sees it, and `viewOf` that hides what a seat may not see.
 
 **You must:**

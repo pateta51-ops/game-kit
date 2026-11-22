@@ -4,6 +4,18 @@ Pure logic of a dice tray and its roll window (K211), opt-in, unstyled; the game
 
 ## Rules for agents
 
+<!-- hooks: written by scripts/catalog.mjs from docs/catalog-notes.json; do not edit -->
+**Hooks a game calls:**
+- `newTray`: dice in play
+- `roll`: roll every die not held, with the seeded rng
+- `toggleHold` + `hold`: keep a die out of the next roll
+- `readRoll`: what the roll means: values, sum and every meaning that holds
+- `adjust` + `setValue`: change a die value by one or set it
+- `rerollSelected` + `canReroll`: reroll the picked dice
+- `rollWindow` + `step`: the roll window tap order: token, die, then plus or minus
+- `rollWith` + `onRoll`: animate a roll
+<!-- /hooks -->
+
 **What it does:** Pure logic of a dice tray and its roll window: dice, holds, rolls, meanings and the tap order. The game draws it.
 
 **You must:**

@@ -363,6 +363,7 @@ The blind matching test's result was not recorded: the PR, its comments and docs
 | K675 | kit check: components declare bypass patterns; `kit.mjs check` fails a game that goes around a kit part, naming the hook to use; first patterns for motion-frame and sound-player. | M |  | done |
 | K679 | art-pipeline: minimum JPEG quality for re-encoded faces within the size cap; art check fails an enlarged face. | S |  | done |
 | K684 | finish: every new src file is listed under 'Built new' with two kit searches, the nearest part and why it did not fit. | M |  | done |
+| K685 | search names the hook a game calls; hook lists per component; kit-internal searches are not logged as misses. | M |  | done |
 | K688 | Built new check: re-run each line's searches, ignore entries need a reason, new exports in old files need a line | M |  | done |
 | K689 | bypass patterns: game-side holds and timers, and input wrappers around skipAll/hurry | S |  | done |
 | K690 | plancheck: build-own rows for screen, motion and sound code are accepted and required | S |  | done |
