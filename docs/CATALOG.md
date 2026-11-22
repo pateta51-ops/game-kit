@@ -371,7 +371,7 @@ Card tests on real cards. Test code only; the engine imports nothing here but `c
 The card-language shell (K206): card effects as data, one typed verb table where each verb has a field check, a handler that runs on engine-core and a text generator that prints the card's words from the same step. The game writes its own verbs; the standard pack (K232, `pack.ts`) gives the common ones.
 
 - **Also called:** Card effects written as data
-- **Words:** card, effects, data, verbs, text, validator, rules, language, offered, can resolve, unpayable cost, dry run, would change nothing, offer, offer policy, no change, effect offered, paid effect, modified cost, tax, discount, cannot know, hidden cards, resolve in full, resolve in part, partial resolution, full or partial, why not offered, why is an effect not offered, reason, no target, condition false, full option bars partial, prefer options that resolve fully, skip forced choice nothing resolves, partial option barred, choose number bar dead, gain zero no change, pick among the cards just moved, cards just moved, draw then discard one of them, effect interpreter, interpreter, ops, bespoke ability, custom handler, one-off, ability, draw three keep one, draft pick, pay or else, otherwise, target filter, select cards, randomly rearrange, reshuffle, search a deck, stop at first, draw until you find, delay effect until, gain tokens, would do nothing, cannot be paid, amount expression count per, then only if previous resolved, condition expression all any not compare
+- **Words:** card, effects, data, verbs, text, validator, rules, language, offered, can resolve, unpayable cost, dry run, would change nothing, offer, offer policy, no change, effect offered, paid effect, modified cost, tax, discount, cannot know, hidden cards, resolve in full, resolve in part, partial resolution, full or partial, why not offered, why is an effect not offered, reason, no target, condition false, full option bars partial, prefer options that resolve fully, skip forced choice nothing resolves, partial option barred, choose number bar dead, gain zero no change, pick among the cards just moved, cards just moved, draw then discard one of them, effect interpreter, interpreter, ops, bespoke ability, custom handler, one-off, ability, draw three keep one, draft pick, pay or else, otherwise, target filter, select cards, randomly rearrange, reshuffle, search a deck, stop at first, draw until you find, delay effect until, gain tokens, would do nothing, cannot be paid, amount expression count per, then only if previous resolved, condition expression all any not compare, barred option, reason code, not offered
 - **Release:** 1.0; not seen
 - **The game supplies:** The verbs, with their field checks, handlers and text.
 - **Use it when:** A new game encodes card effects as data: verb table with handler, resume and text slots, validator, every-verb test; the standard verb pack (cardPack) on card-zones: draw, discard, mill, move, putIntoPlay, setAside, recall, gain, refill, shuffle, search, destroy, attach, detach, reveal, lookAt, scout, flip, exhaust, ready, chooseCards, chooseOption, may, chooseNumber, chooseDestination, choosePlayer, choosePayment, orderEffects, gainResource, pay, convert, adjust, seq, if, forEach, eachPlayer, repeat, count, later, payThen, custom; every card move through timing would; words overridable. Recipe: docs/recipes/card-effect.md.
@@ -669,7 +669,7 @@ Cards fly from a pile to their places (deal, refill turn-over, deck cycle) and a
 Dev-only: `?dev=1&autoplay=<prompt kind>[*n]` plays a game-store with a sim-pool `Bot` until the open prompt is of that kind (the n-th one), then stops on that screen. Needs engine-core, game-store, sim-pool.
 
 - **Also called:** Jump to a screen by auto-playing
-- **Words:** autoplay, dev, jump, skip, screen, bot, url, flag
+- **Words:** autoplay, dev, jump, skip, screen, bot, url, flag, playtest, random answers, through the screen
 - **Release:** 1.0; not seen
 - **The game supplies:** The game store and a bot.
 - **Use it when:** A dev-only URL flag (?dev=1&autoplay=<prompt kind>[*n], steps=N, seat=S) that plays the game store with a sim-pool bot until the open prompt is of that kind, then stops so the developer lands on that screen; off in production builds.
@@ -894,7 +894,7 @@ Links every glossary term and icon code in the game's texts to a lookup, and che
 A square grid with walls as data: adjacent spaces, distance, every shortest path or only its distinct first steps, extra steps a game adds, line of sight, tiles that turn half a circle (180 degrees only: a game whose tiles turn a quarter cannot use `rotateTile`), and targeting shapes (within range, adjacent, row, column, line, area). Pure functions, no state, no packages, draws nothing. Written for the kit.
 
 - **Also called:** Square grid with walls and sight
-- **Words:** grid, distance, range, wall, walls, adjacent, line of sight, sight, path, squares, tiles, targeting, first step, shortest path, extra steps, extra adjacency, adjacency, extra neighbours, diagonal, move toward, ties, area, inset corners, corridor, end corner, sight end corner wall, touching edge, endpoints never block, ranged attack, tile records, build grid, assembled from map tiles, shoot
+- **Words:** grid, distance, range, wall, walls, adjacent, line of sight, sight, path, squares, tiles, targeting, first step, shortest path, extra steps, extra adjacency, adjacency, extra neighbours, diagonal, move toward, ties, area, inset corners, corridor, end corner, sight end corner wall, touching edge, endpoints never block, ranged attack, tile records, build grid, assembled from map tiles, shoot, movement, reach, reachable spaces, steps, end spaces, one space at a time, move preview, distinct paths
 - **Release:** 1.0; not seen
 - **The game supplies:** Rows, columns, the walls, merged spaces and tiles of its map.
 - **Use it when:** A square grid board with walls: adjacent spaces, grid distance and range, shortest paths, line of sight, tiles that turn, and targeting shapes (within range, adjacent, row, column, line, area).
@@ -1019,7 +1019,7 @@ Plays motion specs in the director's format (one JSON per beat: `actors`, `steps
 
 - **Also called:** Motion player
 - **Looks like:** Plays a director motion file on the screen, step by step.
-- **Words:** motion, play, animation, spec, beats, director, timeline, sound cue timing, check game uses kit hooks, no bypass, game bypasses the kit, beat from engine events, events, sound cue, cue sound from events, event order
+- **Words:** motion, play, animation, spec, beats, director, timeline, sound cue timing, check game uses kit hooks, no bypass, game bypasses the kit, beat from engine events, events, sound cue, cue sound from events, event order, after the animation step, timer hold, hold until, auto continue
 - **Release:** 1.1; seen on screen
 - **The game supplies:** The motion spec files and the elements they name.
 - **Use it when:** Playing the director's motion specs (JSON beats) on the screen.
@@ -1439,7 +1439,7 @@ Settings declared as data, a persisted store of their values and a screen drawn 
 Plays N whole games of any `GameRules<G>` with a driver, in this thread or on worker threads, with crash-safe records and a resume file. Needs `engine-core`.
 
 - **Also called:** Bulk game simulator
-- **Words:** simulate, many, games, bots, balance, fuzz, tune, threads, unreached, clauses, whole game, coverage, replay seed, failing seed, findings, prove clause, game log, static clause applied, trace input, invariants, simulation runner, coverage rounds, no new clause, legal move driver, drivers, simulation module, rounds until no new clause
+- **Words:** simulate, many, games, bots, balance, fuzz, tune, threads, unreached, clauses, whole game, coverage, replay seed, failing seed, findings, prove clause, game log, static clause applied, trace input, invariants, simulation runner, coverage rounds, no new clause, legal move driver, drivers, simulation module, rounds until no new clause, play whole games, by script, e2e
 - **Release:** 1.0; not seen
 - **The game supplies:** The game rules and a driver for each seat.
 - **Use it when:** Playing many whole games with drivers on worker threads, fuzzing, sanity bands, sweeps, the K200 weight tuner and paired validation; the whole-game check of unreached clauses (proof from counted full-resolve tests, with a trace input built from the game's own log so a static clause applied with an effect counts as proven), coverage rounds and a findings file to replay a failing seed.
@@ -1670,7 +1670,7 @@ Every printed item (card, tile, board) is transcribed twice, independently, then
 Rounds, turns per seat and phases and steps inside a turn as one data table; the runner walks it and calls engine-core `boundary()` at each turn begin, turn end, phase end and round end, so `endOfTurn` / `endOfRound` / `endOfPhase` / `turnBegins` durations end with no manual call (K264). Needs `engine-core`.
 
 - **Also called:** Rounds, turns and phases table
-- **Words:** turns, rounds, phases, steps, order, seat, flow, once per turn, once per round, once per phase, once per game, once per turn per card, use limit per game, usage limit, used this turn, repeat limit, same effect, once per turn response, ability, once per combat, skip a phase, skip phase condition
+- **Words:** turns, rounds, phases, steps, order, seat, flow, once per turn, once per round, once per phase, once per game, once per turn per card, use limit per game, usage limit, used this turn, repeat limit, same effect, once per turn response, ability, once per combat, skip a phase, skip phase condition, loop, actions per turn, round phases
 - **Release:** 1.0; not seen
 - **The game supplies:** The table of rounds, turns, phases and steps.
 - **Use it when:** Rounds, turns per seat in seat order, and phases and steps inside a turn as one data table; the runner calls engine-core boundary() at each turn, phase and round edge, so endOfTurn / endOfRound / endOfPhase durations end with no manual call; whoseTurn and flowOf read the position from state; once-per limits (K589: once per turn, round, phase or game, per card, per seat) bar a used option with its reason and clear at the matching edge. Recipe: docs/recipes/turn-flow.md.
