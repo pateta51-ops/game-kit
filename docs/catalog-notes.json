@@ -369,7 +369,11 @@
       "why is an effect not offered",
       "reason",
       "no target",
-      "condition false"
+      "condition false",
+      "full option bars partial",
+      "prefer options that resolve fully",
+      "skip forced choice nothing resolves",
+      "partial option barred"
     ],
     "visible": false,
     "release": 1,

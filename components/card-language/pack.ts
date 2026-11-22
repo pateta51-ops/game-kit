@@ -258,7 +258,7 @@ export function runLater<G extends GameTypes>(ctx: Ctx<G>, at: string): void {
 /** The pack: `verbs` (spread into the game's table), `happen` (call it first in timing's `cfg.happen`; true when the occurrence was a pack move). */
 export function cardPack<G extends GameTypes, E extends PackEnv = PackEnv>(cfg: PackConfig<G, E> = {}): { verbs: VerbTable<G, PackStep, E>; happen: (ctx: Ctx<G>, occ: Occurrence) => boolean; wouldChange: (s: G['state'], content: G['content'], steps: readonly (PackStep | Step)[], env: E) => Offered; judge: (s: G['state'], content: G['content'], steps: readonly (PackStep | Step)[], env: E, opts?: { readonly why?: boolean }) => OfferCheck; resolves: (s: G['state'], content: G['content'], steps: readonly (PackStep | Step)[], env: E) => ResolveCheck; costed: <T extends readonly (PackStep | Step)[]>(s: G['state'], steps: T, env: E) => T } {
   const P: OfferPolicy<G['state']> = cfg.offer ?? {};
-  const checks = (P.noChange ?? 'ask') !== 'ask' || (P.deadChoice ?? 'today') !== 'today';
+  const checks = (P.noChange ?? 'ask') !== 'ask' || (P.deadChoice ?? 'today') !== 'today' || P.prefer === 'full';
   if (checks && !cfg.handlers) throw new EngineBugError('card-language pack: offer.noChange and offer.deadChoice need cfg.handlers (() => RULES.handlers)');
   type V = Verb<G, never, E>;
   const S = (ctx: Ctx<G>): Draft<PackState> => draftOf(ctx) as unknown as Draft<PackState>;
@@ -964,10 +964,15 @@ export function cardPack<G extends GameTypes, E extends PackEnv = PackEnv>(cfg: 
       go(ctx, st.then, { ...e, cards: unhide(s, zone(s, st.zone, e.seat), a) });
     }),
     chooseOption: flow({ options: effs }, (ctx, st: Extract<PackStep, { op: 'chooseOption' }>, e) => {
-      if (dry !== null || (P.deadChoice ?? 'today') === 'today') return ask(ctx, st, e, 'chooseOption', list(st.options.length), 1, 1);
-      const cs = st.options.map((o) => barCheck(ctx.s, ctx.content, o, e));
+      const pre = P.prefer === 'full';
+      if (dry !== null || ((P.deadChoice ?? 'today') === 'today' && !pre)) return ask(ctx, st, e, 'chooseOption', list(st.options.length), 1, 1);
+      const cs = st.options.map((o): OfferCheck => ((P.deadChoice ?? 'today') === 'today' ? { answer: 'yes' } : barCheck(ctx.s, ctx.content, o, e)));
       if (!cs.some((c) => live(c.answer))) return;
-      ask(ctx, st, e, 'chooseOption', cs.map((c, i) => (live(c.answer) || P.deadChoice !== 'bar' ? { id: String(i), enabled: true } : bar(String(i), why(S(ctx), st.options[i] ?? [], e, c)))), 1, 1);
+      // K598, prefer full: read on the seat's view (resolves); a full option bars each part one, nothing resolvable at all is not offered, unknown stays open.
+      const rs = pre ? st.options.map((o) => resolves(ctx.s, ctx.content, o, e)) : [];
+      if (pre && rs.every((r) => r.answer === 'none')) return;
+      const full = rs.some((r) => r.answer === 'full');
+      ask(ctx, st, e, 'chooseOption', cs.map((c, i) => (!live(c.answer) && P.deadChoice === 'bar' ? bar(String(i), why(S(ctx), st.options[i] ?? [], e, c)) : full && rs[i]?.answer === 'part' ? bar(String(i), 'partial', undefined, P.barReason === 'why' ? [...new Set(rs[i].skipped.map((k) => k.reason))].join() : undefined) : { id: String(i), enabled: true })), 1, 1);
     },
       (ctx, st: Extract<PackStep, { op: 'chooseOption' }>, e, a) => go(ctx, st.options[Number(a[0])] ?? [], e)),
     may: flow({ then: eff }, (ctx, st: Extract<PackStep, { op: 'may' }>, e) => {

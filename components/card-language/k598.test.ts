@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { blocked, type KernelPrompt } from '../engine-core/index.ts';
 import { cardsIn } from '../card-zones/index.ts';
 import { cardPack, inDryRun, type OfferPolicy, type PackStep } from './pack.ts';
-import { DRAW, GAIN, gen, gold, offerGame, shortOf, truth, type Eff, type G, type S } from './offerGame.ts';
+import { DRAW, GAIN, gen, gold, has, offerGame, shortOf, truth, type Eff, type G, type S } from './offerGame.ts';
 
 // K598: in a choice, an option that resolves in full bars the options that resolve only in part (`offer.prefer: 'full'`).
 const game = (offer: OfferPolicy<S> = {}, deck?: readonly string[]) => offerGame(cardPack<G>, { offer, ...(deck ? { deck } : {}) });
@@ -69,12 +69,14 @@ describe('card-language prefer full (K598): prior-art cases restated on the made
 // part or none; an option the check answers unknown is open), and is the same in every hidden world.
 describe('card-language prefer full (K598): agrees with playing every answer', () => {
   const WORLDS = [['d1', 'd2'], ['d2', 'd1'], ['d3', 'd4']].flatMap((deck) => [['b1', 'b2', 'b3'], ['b4', 'b5', 'b6']].map((b) => offerGame(cardPack<G>, { offer: { prefer: 'full', branches: 3000 }, deck, b, marks: true })));
-  it('K598 400 random choices: barred set from real play of every answer, unknown open, the same in every hidden world', () => {
+  it('K598 600 random choices: barred set from real play of every answer, unknown open, the same in every hidden world', () => {
     const n = { choices: 0, barred: 0, skipped: 0, open: 0, unknown: 0 };
-    for (const seed of [598, 5981]) {
+    for (const seed of [598, 5981, 5982]) {
       const eff = gen(seed, true);
       for (let i = 0; i < 200; i += 1) {
         const options = Array.from({ length: 2 + (i % 2) }, () => eff(1));
+        // Declared (K583, as in K597's comparison): looking at a card the seat already sees is no change in the check; a real run records it.
+        if (options.some((o) => has(o, (st) => (st.op === 'lookAt' || st.op === 'reveal') && st.cards === 'all' && st.from !== 'deck'))) continue;
         const shown = WORLDS.map((g) => {
           const p = g.play(choice(...options), [], undefined, true).s.prompt;
           return p === null ? 'skip' : JSON.stringify(blocked(p).map((b) => [b.id, b.reason]));
@@ -100,7 +102,7 @@ describe('card-language prefer full (K598): agrees with playing every answer', (
       }
     }
     console.log(`K598 comparison: ${JSON.stringify(n)}`);
-    expect(n.choices).toBeGreaterThan(200);
+    expect(n.choices).toBeGreaterThan(300);
     expect(n.barred).toBeGreaterThan(20);
     expect(n.skipped).toBeGreaterThan(5);
     expect(n.open).toBeGreaterThan(20);
