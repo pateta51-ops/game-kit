@@ -484,8 +484,8 @@ x
     writeFileSync(f, text, 'utf-8');
     if (fit !== null) writeFileSync(join(d, 'plan-review', 'kit-fit.md'), fit, 'utf-8');
     if (mapText !== null) {
-      mkdirSync(join(d, '..', 'kit', 'recipes'), { recursive: true });
-      writeFileSync(join(d, '..', 'kit', 'recipes', 'mechanics.md'), mapText, 'utf-8');
+      mkdirSync(join(dirname(d), 'kit', 'recipes'), { recursive: true });
+      writeFileSync(join(dirname(d), 'kit', 'recipes', 'mechanics.md'), mapText, 'utf-8');
     }
     const args = ['--sessions-optional', '--scenarios-end', 'Property tests', '--depth-optional', '--cards-optional', ...(extra.includes('--kit') ? [] : ['--kit', kit]), ...extra];
     const r = spawnSync(py[0] ?? 'python', [...py.slice(1), '-X', 'utf8', fileURLToPath(new URL('./plancheck.py', import.meta.url)), f, ...args], { encoding: 'utf-8' });
