@@ -531,7 +531,8 @@ describe('heavy cancel (K571)', () => {
     await q.post('/release', { id: hold.id });
     expect((await b).code).toBe(7);
     const h = (await q.status()).history;
-    expect(h.find((x) => x.label === 'a')).toMatchObject({ startedAt: null, reason: 'cancelled' });
+    expect(h.find((x) => x.label === 'a').startedAt).toBeUndefined();
+    expect(h.find((x) => x.label === 'a')).toMatchObject({ reason: 'cancelled' });
   });
   it('a running job: its process group is gone, slots freed, the run exits non-zero', async () => {
     const q = await serve({});
