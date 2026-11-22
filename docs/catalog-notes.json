@@ -1140,7 +1140,10 @@
       "kit fit",
       "build own table",
       "game sheet",
-      "reuse map"
+      "reuse map",
+      "game sheet check",
+      "mechanics map",
+      "closed candidate"
     ],
     "visible": false,
     "release": 1,

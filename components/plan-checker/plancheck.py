@@ -59,6 +59,14 @@ Checks:
     "steward not asked";
   * every Modifier order row holds a backticked name or the words "build-own", in its "Kit function" cell when the
     table has one;
+  * K531, the mechanics map (kit/recipes/mechanics.md beside the plan's docs folder, or --map PATH; skipped when the
+    file is missing or with --sheet-optional): every map line has a game sheet row whose first cell is the line's
+    Mechanic cell or starts with its first phrase (before the first comma); a line with none is a problem naming that
+    phrase. A sheet row whose answer starts "kit part" and whose backticked names are all absent from the map line's
+    Answer cell is a WARN; a plan with no game sheet table gets one WARN, not a problem;
+  * a build-own row whose verdict is candidate and whose K<n> is a row the kit's docs/plan/K<n>.md marks "state: done"
+    gets a WARN naming the part that closed it (its docs/mechanics.json line, else the row's first backticked name or
+    leading "name:");
 
 Extraction (prints and exits, no checks):
   --section 5.3   one numbered section
@@ -92,6 +100,7 @@ Usage: python plancheck.py docs/BUILD_PLAN.md [--tsc] [--scenarios TEXT] [--phas
        [--sessions TEXT] [--sessions-optional] [--scenarios-end TEXT] [--cover TEXT] [--cover-rows A,B]
        [--cover-skip A,B] [--tsc-at DIR] [--cards TEXT] [--done TEXT] [--layers TEXT] [--depth-optional]
        [--cards-optional] [--catalogue PATH] [--max-clauses N] [--max-patterns N] [--kit-optional] [--reuse TEXT] [--kit PATH]
+       [--map PATH] [--sheet-optional]
 Exit code 0 when no problems were found.
 """
 from __future__ import annotations
@@ -382,7 +391,7 @@ def main() -> int:
     args = [a for a in sys.argv[1:] if not a.startswith("--")]
     for flag in ("--scenarios", "--phases", "--types", "--sessions", "--section", "--batch", "--scenarios-end", "--cover",
                  "--cover-rows", "--cover-skip", "--tsc-stub", "--kit", "--tsc-at", "--cards", "--done", "--layers",
-                 "--catalogue", "--max-clauses", "--max-patterns", "--reuse"):
+                 "--catalogue", "--max-clauses", "--max-patterns", "--reuse", "--map"):
         if flag in sys.argv:
             v = opt(flag, "")
             if v in args:
@@ -782,6 +791,33 @@ def main() -> int:
         absent = [r[0] for r in sheet if len(r) > 1 and norm(r[1]).startswith("not in this game")]
         if len(absent) * 2 > len(SHEET_LINES):
             notes.add(f"kit: the game sheet says 'not in this game' on {len(absent)} lines: {', '.join(absent)}")
+    # K531: the game sheet answers every line of the kit's mechanics map (kit/recipes/mechanics.md beside the docs folder, or --map)
+    mp = Path(opt("--map", "")) if "--map" in sys.argv else path.resolve().parent.parent / "kit" / "recipes" / "mechanics.md"
+    if "--sheet-optional" not in sys.argv and not mp.is_file() and "sheet" in seen:
+        notes.add(f"kit: game sheet NOT checked against the mechanics map (no {mp}; --map PATH)")
+    if "--sheet-optional" not in sys.argv and mp.is_file():
+        if "sheet" not in seen:
+            notes.add(f"WARN kit: the plan has no game sheet table, so it was not checked against the mechanics map {mp}")
+        else:
+            mrows, mh2 = [], False
+            for l in mp.read_text(encoding="utf-8").splitlines():
+                c = [x.strip() for x in table_cells(l)] if l.strip().startswith("|") else []
+                if len(c) < 2 or re.fullmatch(r"[\s:-]*", c[0]):
+                    continue
+                if not mh2:
+                    mh2 = True
+                    continue
+                mrows.append((norm(c[0]), set(re.findall(r"`([^`]+)`", c[1]))))
+            first = lambda t: t.split(",")[0].strip()
+            for mech, mnames in mrows:
+                hit = [r for r in sheet if norm(r[0]) == mech or first(norm(r[0])) == first(mech)]
+                if not hit:
+                    kd.append(f"game sheet: no row answers the mechanics map line {first(mech)!r}")
+                for r in hit:
+                    rn = set(re.findall(slug, " ".join(r[2:])))
+                    if len(r) > 1 and norm(r[1]).startswith("kit part") and rn and not rn & mnames:
+                        notes.add(f"WARN kit: game sheet line {r[0]!r} answers kit part {', '.join(sorted(rn))}, which the mechanics map's line does not name")
+            notes.add(f"kit: game sheet checked against the mechanics map {mp} ({len(mrows)} lines)")
     gv = [o for o in own if norm(o[0]).startswith("game verbs")]
     if "own" not in seen:
         kd.append("the reuse map has no build-own table (a header cell names 'What the game builds'): stage 5")
@@ -815,6 +851,18 @@ def main() -> int:
             kd.append(f"build-own table: {o[0]!r} is a kit phase on row K{kid.group(1)} but the plan has no 'Phase GK{kid.group(1)}' heading")
         if fitt and name not in fitt:
             kd.append(f"kit-fit review: no line for the build-own row {o[0]!r}")
+        if v.startswith("candidate") and kit:
+            for k in re.findall(r"\bK\d+\b", last):
+                rf = kit / "docs" / "plan" / f"{k}.md"
+                rt = rf.read_text(encoding="utf-8") if rf.is_file() else ""
+                if not re.search(r"^state:\s*done\b", rt, re.M):
+                    continue
+                part = None
+                with contextlib.suppress(Exception):
+                    part = next((m["part"] for m in json.loads((kit / "docs" / "mechanics.json").read_text(encoding="utf-8"))["lines"] if m.get("row") == k and m.get("part")), None)
+                body = rt.split("---", 2)[-1].strip()
+                part = part or next(iter(re.findall(slug, body)), None) or (m.group(1) if (m := re.match(r"([a-z0-9]+(?:-[a-z0-9]+)+):", body)) else None)
+                notes.add(f"WARN kit: build-own row {o[0]!r} names candidate {k}, which the kit closed (state: done): use " + (f"`{part}`" if part else f"the part {k}.md names"))
     rl = ru.split("\n")
     if answered and not any(re.match(r"[\s>*-]*Kit steward['’]s reply \(", l) and any(x.lstrip().startswith(">") for x in rl[i + 1:i + 4])
                             for i, l in enumerate(rl)):

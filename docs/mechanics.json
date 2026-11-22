@@ -82,7 +82,7 @@
     { "words": "load card data, scenario data, checked ids and references", "part": "content-pack", "read": "recipe content-pipeline.md" },
     { "words": "dossier card files, column map, icon count check", "part": "content-pack", "read": "its README rule 6b, `dossierRow` (`textColumns`, `columns`, `checkIconsOnCard`), `expand`" },
     { "words": "icons in printed text, unknown icon codes", "part": "card-parts", "read": "its README, `parseIconText`, `unknownIcons`" },
-    { "words": "check a build plan, line ranges of a batch", "part": "plan-checker", "read": "its README" },
+    { "words": "check a build plan, line ranges of a batch, plan check mechanics, game sheet check, closed candidate", "part": "plan-checker", "read": "its README" },
     { "words": "simulate many games, balance, fuzz", "part": "sim-pool", "read": "recipe simulations.md" },
     { "words": "question to the player, decision on screen", "part": "prompt-host", "read": "recipe prompts.md", "also": ["prompt-source"] }
   ],
