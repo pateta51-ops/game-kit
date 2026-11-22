@@ -9,7 +9,7 @@ Guarded lines, each checked by deleting it (a test fails):
 
 Real amount next to a reference ("pay 3 (card #9)", declared 2) still fails: tested.
 
-Departures: the brief's "false no amount" did not reproduce; the bug found is the opposite, a reference whose digits equal the declared amount passed as the amount (false pass). A counted prompt's printed numbers are not stripped (the shown words already were, so no test could guard it).
+Departures: the brief's "false no amount" did not reproduce; the bug found is the opposite, a reference whose digits equal the declared amount passed as the amount (false pass). A counted prompt's printed numbers are not stripped (the shown words already were, so no test could guard it). The counted-prompt test was dropped: it passed without the fix (the shown words were already stripped there). The text-side guard is tested by printed "card #09" with shown words lacking it.
 
 Kit gap / Kit override: none. Check: GitHub's check on the head commit.
 
