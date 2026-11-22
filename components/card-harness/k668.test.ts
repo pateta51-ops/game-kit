@@ -2,7 +2,7 @@ import { existsSync, mkdtempSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterAll, describe, expect, it } from 'vitest';
-import { ENGINE_WORDS, readScreenLogs, Scenario, screenProblems, type ScreenInput, type ScreenPrompt } from './index.ts';
+import { ENGINE_WORDS, readScreenLogs, Scenario, screenMain, screenProblems, type ScreenInput, type ScreenPrompt } from './index.ts';
 import { cardCase } from './cardCase.ts';
 import { recordCardPrompts } from './promptRecorder.ts';
 import { clearPromptLog } from './clearLog.ts';
@@ -87,6 +87,10 @@ describe('K668 prompt rules in the screen scan', () => {
     expect(scan([], { strictLog: true })).toEqual(['no prompts recorded: run the card tests first', 'no opened clauses recorded: run the card tests first']);
     expect(scan([{ clause: 'q#1', shown: 'Hi' }], { strictLog: true, opened: ['a#1', 'r#1'] })).toEqual(['logged clause q#1 is in no clause', 'logged clause r#1 is in no clause', 'a#1 opens a prompt no test scanned', 'r#1 opens a prompt no test scanned']);
     expect(scan([ok], { strictLog: true, opened: ['a#1'] })).toEqual([]);
+    const log: string[] = [], base: ScreenInput = { faces: [], zoom: (x) => x, icons: {}, clauses, prompts: [], opened: [] };
+    expect(screenMain({ ...base, strictLog: true }, (l) => log.push(l))).toBe(1);
+    expect(screenMain(base, (l) => log.push(l))).toBe(0);
+    expect(log).toEqual(['no prompts recorded: run the card tests first', 'no opened clauses recorded: run the card tests first', 'cards:screen ok']);
   });
   it('K668 rule 7 poor: without strictLog an empty log passes', () => {
     expect(scan([])).toEqual([]);
@@ -117,5 +121,20 @@ describe('K668 prompt recorder', () => {
     const input: ScreenInput = { faces: [], zoom: (x) => x, icons: {}, clauses: [{ id: 'ladder#1', text: 'Score 3, then discard a card.' }], ...log, strictLog: true };
     expect(screenProblems(input)).toEqual([]);
     expect(screenProblems({ ...input, clauses: [{ id: 'ladder#1', text: 'Score 4, then discard a card.' }] })).toEqual(['prompt for ladder#1: no amount', 'prompt for ladder#1: does not quote its printed clause']);
+  });
+});
+
+describe('K668 README recipes', () => {
+  it('K668 recipe: the prompt rules on a recorded prompt', () => {
+    const prompts: ScreenPrompt[] = [{ clause: 'b#1', line: 'Pay 3 coins per player.', shown: 'Pay 3 coins per player.', raw: 'Pay 3 coins per player. (PAY-02)' }];
+    const whoPays = { shared: [/\bper player\b/i], says: [/\bYou pay\b/, /\bP\d pays\b/] };
+    const found = screenProblems({ faces: [], zoom: (t) => t, icons: {}, clauses: [{ id: 'b#1', text: 'Pay 3 coins per player.' }], prompts, opened: ['b#1'], strictLog: true, whoPays, ruleIds: [/\b[A-Z]{2,}-\d+\b/] });
+    expect(found).toEqual(['prompt for b#1: does not say who pays', 'prompt for b#1: rule id in the prompt text']);
+  });
+  it('K668 recipe: record every card test', () => {
+    const undo = recordCardPrompts({ entry: (p) => ({ shown: String((p as { text?: string }).text) }) });
+    expect(Scenario.onPrompt).toBeTypeOf('function');
+    undo();
+    expect(Scenario.onPrompt).toBeUndefined();
   });
 });

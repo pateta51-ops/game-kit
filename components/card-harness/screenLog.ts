@@ -1,8 +1,12 @@
 // K497: a played game hands its prompts and opened texts to the screen scan: JSON lines appended to a file, read back as `prompts` / `opened`.
 import { appendFileSync, mkdirSync, readFileSync } from 'node:fs';
 import { dirname } from 'node:path';
+import type { ScreenPrompt } from './screen.ts';
 
-interface LoggedPrompt { clause: string; shown: string; screenOptions?: readonly string[]; engineOptions?: readonly unknown[]; step?: number; value?: number | string }
+/** K668: the default prompt log of card tests (`recordCardPrompts`, `clearLog.ts`). */
+export const PROMPT_LOG = 'test-results/card-prompts.jsonl';
+
+type LoggedPrompt = ScreenPrompt;
 export type ScreenLogEntry = ({ t: 'prompt' } & LoggedPrompt) | { t: 'opened'; clause: string };
 
 const add = (file: string, e: ScreenLogEntry): void => { mkdirSync(dirname(file), { recursive: true }); appendFileSync(file, `${JSON.stringify(e)}\n`); };

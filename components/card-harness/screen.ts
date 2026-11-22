@@ -2,6 +2,15 @@
 import { plainWords } from '../plain-text/index.ts';
 import { knownGate, type KnownFindings } from './known.ts';
 
+export interface ScreenPrompt {
+  clause: string; shown: string; /** Option labels on screen (optional, K496). */ screenOptions?: readonly string[]; /** The engine prompt's options (optional, K496); compared with `screenOptions` one for one. */ engineOptions?: readonly unknown[]; /** 0-based order of this prompt within its clause's resolution (K587; `Delivery.screens` sets it from the second prompt on). Unset: 0, the first. */ step?: number; /** The value the run computed for a counted amount of this prompt (K649); it must be shown. */ value?: number | string;
+  /** K668: the clause line the prompt quotes; it must be the clause's whole printed words. */ line?: string;
+  /** K668: the text as written, before any stripping (default: shown and screenOptions); read for rule ids. */ raw?: string;
+  /** K668: the record path that opened it and its card; with `records` the prompt is credited to that record's clause. */ path?: string; card?: string;
+  /** K668: the players who pay; the shown words must name each. */ payers?: readonly string[];
+  /** K668: a choice of lines: each option is checked as a prompt of its own clause (by `path` with `records`, else `clause`). */ choices?: readonly { label: string; raw?: string; path?: string; card?: string; clause?: string }[];
+}
+
 export interface ScreenInput {
   /** Printed text per face (its id, the pack's text). */
   faces: readonly { id: string; text: string }[];
@@ -12,7 +21,7 @@ export interface ScreenInput {
   /** Printed text per clause id. */
   clauses: readonly { id: string; text: string; /** Which numbers of the text are amounts (K532): a list (empty = none), or 'counted' = worked out at run time (the prompt must show some number). Unset: every number counts. */ amounts?: readonly string[] | 'counted'; /** Amounts per prompt the clause opens (K587), by its order within the clause (`step`): entry k checks the k-th prompt, each as `amounts`. Replaces `amounts` for this clause. */ promptAmounts?: readonly (readonly string[] | 'counted')[] }[];
   /** Prompts a card test scanned: their clause and the words shown (`Delivery.screens`). */
-  prompts: readonly { clause: string; shown: string; /** Option labels on screen (optional, K496). */ screenOptions?: readonly string[]; /** The engine prompt's options (optional, K496); compared with `screenOptions` one for one. */ engineOptions?: readonly unknown[]; /** 0-based order of this prompt within its clause's resolution (K587; `Delivery.screens` sets it from the second prompt on). Unset: 0, the first. */ step?: number; /** The value the run computed for a counted amount of this prompt (K649); it must be shown. */ value?: number | string }[];
+  prompts: readonly ScreenPrompt[];
   /** Turns an engine option into its label; default `String`. */
   label?: (engineOption: unknown) => string;
   /** Clauses whose resolution opened a prompt in a card test (`Delivery.opened`). */
@@ -27,6 +36,57 @@ export interface ScreenInput {
   strip?: (t: string) => string;
   /** K650: a known-findings list for `screenMain`; unset: unchanged. */
   known?: KnownFindings;
+  /** K668: `shared` patterns mark a shared cost in a clause text (`ignore` spans removed first); its prompt must match one of `says`. */
+  whoPays?: { shared: readonly RegExp[]; says: readonly RegExp[]; ignore?: readonly RegExp[] };
+  /** K668: rule id patterns, read in each prompt's raw text; `ENGINE_WORDS` are always added. `names`: exact texts (card names) removed first. */
+  ruleIds?: readonly RegExp[];
+  names?: readonly string[];
+  /** K668: hand-written handler sentences; each must equal its clause's printed words. */
+  handlers?: readonly { id: string; clause: string; text: string }[];
+  /** K668: records by path: a prompt with `path` is credited to the clause of the longest record path at or above it. */
+  records?: readonly { clause: string; path: string; card?: string }[];
+  /** K668: fail an empty log and a logged clause id that is in no clause. */
+  strictLog?: boolean;
+}
+
+/** K668: engine words that never reach the screen, checked with every `ruleIds`. */
+export const ENGINE_WORDS: readonly RegExp[] = [/\[custom\b[^\]]*\]/i, /\bEngine:/];
+const one = (r: RegExp): RegExp => new RegExp(r.source, r.flags.replace(/[gy]/g, ''));
+const join = (t: string, strip?: (t: string) => string): string => plainWords(t, strip).join(' ');
+
+function credit(i: ScreenInput, out: string[]): (ScreenPrompt & { choice?: boolean })[] {
+  const owner = (card: string | undefined, path: string | undefined): string | undefined =>
+    i.records && path !== undefined ? i.records.filter((r) => (r.card === undefined || r.card === card) && (path === r.path || path.startsWith(`${r.path}.`))).sort((x, y) => y.path.length - x.path.length)[0]?.clause : undefined;
+  return i.prompts.flatMap((p) => {
+    const q = { ...p, clause: owner(p.card, p.path) ?? p.clause };
+    if (!p.choices) return [q];
+    return p.choices.flatMap((c) => {
+      const id = owner(c.card ?? p.card, c.path) ?? c.clause;
+      if (id === undefined) { out.push(`prompt for ${q.clause}: option "${c.label}" is no clause's`); return []; }
+      return [{ clause: id, shown: c.label, raw: c.raw ?? c.label, ...(p.payers ? { payers: p.payers } : {}), ...(p.line === undefined ? {} : { line: p.line, choice: true }) }];
+    });
+  });
+}
+
+function ruleProblems(i: ScreenInput, ps: readonly (ScreenPrompt & { choice?: boolean })[], text: ReadonlyMap<string, string>): string[] {
+  const out: string[] = [];
+  const w = i.whoPays, ids = i.ruleIds ? [...i.ruleIds, ...ENGINE_WORDS].map(one) : undefined;
+  for (const r of w?.says ?? []) if (one(r).test('you') || one(r).test('You')) out.push(`whoPays: pattern ${String(r)} accepts a bare "you"`);
+  for (const p of ps) {
+    const t = text.get(p.clause);
+    if (t === undefined) continue;
+    const on = [p.shown, ...(p.screenOptions ?? [])].join(' ');
+    if (p.line !== undefined && (p.choice ? !` ${join(p.line, i.strip)} `.includes(` ${join(t, i.strip)} `) : join(p.line, i.strip) !== join(t, i.strip))) out.push(`prompt for ${p.clause}: does not quote its printed clause`);
+    if (w && (p.payers?.length || w.shared.some((r) => one(r).test((w.ignore ?? []).reduce((u, x) => u.replace(new RegExp(x.source, `${x.flags.replace('g', '')}g`), ' '), t))))
+      && !(p.payers?.length ? p.payers.every((n) => new RegExp(`(?<!\\w)${esc(n)}(?!\\w)`).test(on)) : w.says.some((r) => one(r).test(on)))) out.push(`prompt for ${p.clause}: does not say who pays`);
+    if (ids && ids.some((r) => r.test((i.names ?? []).reduce((u, n) => u.split(n).join(' '), p.raw ?? on)))) out.push(`prompt for ${p.clause}: rule id in the prompt text`);
+  }
+  for (const h of i.handlers ?? []) {
+    const t = text.get(h.clause);
+    if (t === undefined) out.push(`handler ${h.id}: unknown clause ${h.clause}`);
+    else if (join(h.text, i.strip) !== join(t, i.strip)) out.push(`prompt for ${h.clause}: handler ${h.id} text is not its printed clause`);
+  }
+  return [...new Set(out)];
 }
 
 const esc = (s: string): string => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
@@ -57,12 +117,13 @@ export function screenProblems(i: ScreenInput): string[] {
     if (x.promptAmounts && x.amounts) out.push(`${x.id}: amounts and promptAmounts both set`);
     for (const [k, e] of (x.promptAmounts ?? []).entries()) if (e !== 'counted') for (const a of e) if (!numbers(x.text).includes(a)) out.push(`${x.id}: prompt ${String(k + 1)} amount ${a} is not in its text`);
   }
+  const ps = credit(i, out);
   const steps = new Map<string, Set<number>>();
   const ia = i.iconAmounts, iaRe = ia instanceof RegExp ? new RegExp(ia.source, ia.flags.replace(/[gy]/g, '')) : undefined;
   const allowRe = (i.allowNumbers ?? []).flatMap((x) => (x instanceof RegExp ? [new RegExp(x.source, x.flags.includes('g') ? x.flags : `${x.flags}g`)] : []));
   const noRef = (t: string): string => allowRe.reduce((u, r) => u.replace(r, ' '), t);
   const allowNum = (i.allowNumbers ?? []).filter((x): x is string => typeof x === 'string');
-  for (const p of i.prompts) {
+  for (const p of ps) {
     const k = p.step ?? 0;
     const e = per.get(p.clause);
     if (e) { (steps.get(p.clause) ?? steps.set(p.clause, new Set()).get(p.clause)!).add(k); if (k >= e.length) { out.push(`prompt for ${p.clause}: prompt ${String(k + 1)} has no promptAmounts entry`); continue; } }
@@ -93,7 +154,13 @@ export function screenProblems(i: ScreenInput): string[] {
     for (const [k, x] of scr.entries()) { const j = left.indexOf(x); if (j < 0) out.push(`prompt for ${p.clause}: option "${p.screenOptions[k]!}" on screen, not in the engine`); else left.splice(j, 1); }
     for (const x of left) out.push(`prompt for ${p.clause}: engine option "${p.engineOptions.map((e) => (i.label ?? String)(e)).find((e) => n(e) === x)!}" not on screen`);
   }
-  const scanned = new Set(i.prompts.map((p) => p.clause));
+  out.push(...ruleProblems(i, ps, text));
+  if (i.strictLog) {
+    if (i.prompts.length === 0) out.push('no prompts recorded: run the card tests first');
+    if ([...i.opened].length === 0) out.push('no opened clauses recorded: run the card tests first');
+    for (const k of new Set([...i.prompts.map((p) => p.clause), ...ps.map((p) => p.clause), ...i.opened])) if (!text.has(k)) out.push(`logged clause ${k} is in no clause`);
+  }
+  const scanned = new Set([...i.prompts, ...ps].map((p) => p.clause));
   for (const k of [...new Set(i.opened)].sort()) if (!scanned.has(k)) out.push(`${k} opens a prompt no test scanned`);
   return out;
 }
