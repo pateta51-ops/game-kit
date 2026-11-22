@@ -270,6 +270,22 @@ describe('dice-patterns second review (K578)', () => {
     expect(t({ kind: 'odd', n: 2 }, [-1, -3, 2])).toBe(true);
     expect(t({ kind: 'even', n: 2 }, [-2, 0, 1])).toBe(true);
     expect(t({ kind: 'odd', n: 1 }, [-2, 0])).toBe(false);
+    expect(t({ kind: 'odd', n: 1 }, [2.5, NaN, undefined as unknown as number])).toBe(false);
+    expect(t({ kind: 'odd', n: 1 }, [2.5, NaN, -3])).toBe(true);
+  });
+  it('meaning leaves out every die of value 0 or less, so it misjudges dice whose real faces go that low', () => {
+    const dice = (v: number[]) => v.map((value) => ({ value }));
+    const three: Pattern = { kind: 'sum', op: '=', value: 3 };
+    expect(meaning('m', three, '').test(dice([-1, 3]))).toBe(true);
+    expect(t(three, [-1, 3])).toBe(false);
+    const low: Pattern = { kind: 'sum', op: '>=', value: -3 };
+    expect(meaning('m', low, '').test(dice([-2, -2]))).toBe(false);
+    expect(t(low, [-2, -2])).toBe(false);
+    expect(t(low, [-2, -1])).toBe(true);
+    expect(meaning('m', low, '').test(dice([-2, -1]))).toBe(false);
+    const gap: Pattern = { kind: 'spread', value: 2 };
+    expect(meaning('m', gap, '').test(dice([0, 3, 5]))).toBe(true);
+    expect(t(gap, [0, 3, 5])).toBe(false);
   });
   it('calls without the new options give what the part gave before K578 (frozen copy, fixed seed, faces 0 to 6)', () => {
     let s = 5150;
