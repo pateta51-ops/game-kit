@@ -42,6 +42,11 @@ const game = (offer?: OfferPolicy<S>, wire = true) => {
       loop: { run: (ctx, st, env) => ctx.then(...(effectTasks([st], env) as Task[])), text: () => 'Loop.' },
       spend: { run: (ctx, _st, env) => void (draftOf(ctx).res = { [env.seat]: { gold: 0 } }), text: () => 'Lose all gold.' },
       nest: { run: (ctx, _st, env) => void nested.push(pack.wouldChange(ctx.s, ctx.content, [GAIN], env)), text: () => 'Nest.' },
+      order: {
+        run: (ctx, st, env) => askVerb(ctx, { kind: 'order', seat: env.seat, min: 3, max: 3, ordered: true, options: ['x', 'y', 'z'].map((id) => ({ id, enabled: true })) }, st, env),
+        resume: (ctx, _st, env, a) => void (a.join('') === 'zyx' && (draftOf(ctx).res = { [env.seat]: { gold: 0 } })),
+        text: () => 'Order.',
+      },
       lone: {
         run: (ctx, st, env) => askVerb(ctx, { kind: 'lone', seat: env.seat, min: 1, max: 1, options: [{ id: 'stay', enabled: true }, { id: 'other', enabled: true, alone: true }] }, st, env),
         resume: (ctx, _st, env, a) => void (a[0] === 'other' && (draftOf(ctx).res = { [env.seat]: { gold: 0 } })),
@@ -366,6 +371,25 @@ describe('card-language offer policy (K579): the check tries every legal pick se
     expect(check([{ op: 'orderEffects', effects: [[down], [up]] }])).toBe('yes');
     expect(check([{ op: 'orderEffects', effects: [[down], [{ op: 'adjust', key: 'gold', by: 1 }]] }])).toBe('no');
     expect(check([{ op: 'custom', name: 'lone' }])).toBe('yes');
+  });
+  it('K579 a prompt opened under a pick set of the second pass is answered too', () => {
+    const under = (then: Eff): Eff => [{ op: 'chooseCards', zone: 'hand', min: 2, max: 2, then: [{ op: 'if', test: 'ends', then: [{ op: 'may', then }] }] }];
+    expect(check(under([GAIN]), undefined, [DRAW])).toBe('yes');
+    expect(check(under([NOTHING]), undefined, [DRAW])).toBe('no');
+  });
+  it('K579 a prompt marked ordered is tried in every order', () => {
+    expect(check([{ op: 'custom', name: 'order' }])).toBe('yes');
+    expect(game({ branches: 5 }).check([{ op: 'custom', name: 'order' }])).toBe('unknown');
+  });
+  it('K579 scout over cards the seat has already seen is tried in every order', () => {
+    const seen: Eff = [{ op: 'lookAt', count: 2 }];
+    expect(check([{ op: 'scout', count: 2 }], undefined, seen)).toBe('yes');
+    expect(check([{ op: 'scout', count: 1 }], undefined, seen)).toBe('no');
+  });
+  it('K579 (pins today) the order of the picks inside one pick set is not tried unless the prompt is ordered: an effect that reads it can answer no wrongly', () => {
+    const inOrder: Eff = [{ op: 'chooseCards', zone: 'hand', min: 2, max: 2, then: [{ op: 'move', cards: 'chosen', from: 'hand', to: 'hand', at: 'bottom' }] }];
+    expect(check(inOrder)).toBe('no');
+    expect(z(game().play(inOrder, [['h2', 'h1']]).s, 'hand:a')).toEqual(['h2', 'h1']);
   });
 });
 
