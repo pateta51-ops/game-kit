@@ -12,7 +12,11 @@ describe('K669 describeCheck raw words', () => {
   it('an empty bracket is reported', () => { expect(gen('Draw 2 {} cards').join('\n')).toContain('empty bracket'); });
   it('an empty square bracket is reported', () => { expect(gen('Draw 2 [] cards').join('\n')).toContain('empty bracket'); });
   it('a stand-in 99 is reported', () => { expect(gen('Draw 99 cards').join('\n')).toContain('stand-in number 99'); });
-  it('allowed words pass', () => { expect(gen('Mark freeLight')).toEqual([]); });
+  it('an allowed stand-in number passes, an unlisted one fails', () => {
+    expect(gen('Draw 99 cards', { raw: { allow: ['99'] } })).toEqual([]);
+    expect(gen('Draw 999 cards', { raw: { allow: ['99'] } }).join('\n')).toContain('stand-in number 999');
+  });
+  it('allowed words pass',() => { expect(gen('Mark freeLight')).toEqual([]); });
   it('without the option nothing changes', () => { expect(describeCheck(card('Draw 99 doomThreshold {}'), (e) => e)).toEqual([]); });
   it('a code in braces is not a raw word', () => { expect(gen('Draw 2 {attackValue}')).toEqual([]); });
 });
