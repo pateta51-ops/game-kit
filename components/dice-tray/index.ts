@@ -10,13 +10,13 @@ export const newTray = (specs: readonly (number | { sides: number; kind?: string
   rolls: 0,
 })
 
-/** Rolls every die not held (or only `only` ids) with `rng.int(sides) + 1`, in die order; returns the new tray and the ids rolled. */
-export function roll(t: Tray, rng: Rng, only?: readonly number[]): { tray: Tray; rolled: number[] } {
+/** Rolls every die not held (or only `only` ids) with `rng.int(sides) + 1`, in die order (`name` goes to `rng.int` as a test override name, K692); returns the new tray and the ids rolled. */
+export function roll(t: Tray, rng: Rng, only?: readonly number[], name?: string): { tray: Tray; rolled: number[] } {
   const rolled: number[] = []
   const dice = t.dice.map((d) => {
     if (d.held || (only && !only.includes(d.id))) return d
     rolled.push(d.id)
-    return { ...d, value: rng.int(d.sides) + 1 }
+    return { ...d, value: rng.int(d.sides, name) + 1 }
   })
   return { tray: { dice, rolls: t.rolls + 1 }, rolled }
 }
@@ -41,8 +41,8 @@ export function readRoll<T = string>(t: Tray, meanings: readonly Meaning<T>[]): 
 
 /** Optional hook for a roll animation: off unless given (release 1.0 has none). */
 export interface RollHook { onRoll?(rolled: readonly number[], tray: Tray): void }
-export function rollWith(t: Tray, rng: Rng, hook?: RollHook, only?: readonly number[]): Tray {
-  const r = roll(t, rng, only)
+export function rollWith(t: Tray, rng: Rng, hook?: RollHook, only?: readonly number[], name?: string): Tray {
+  const r = roll(t, rng, only, name)
   hook?.onRoll?.(r.rolled, r.tray)
   return r.tray
 }
@@ -75,6 +75,6 @@ export const canReroll = (sel: readonly number[], min = 1): boolean => sel.lengt
 /** One die picked at a time (a die's own answers); tapping it again clears. */
 export const selectOne = (cur: number | null, id: number): number | null => (cur === id ? null : id)
 /** Rerolls the selected dice together, in die order; the roll count rises once. */
-export const rerollSelected = (t: Tray, rng: Rng, sel: readonly number[]): { tray: Tray; rolled: number[] } => roll(t, rng, sel)
+export const rerollSelected = (t: Tray, rng: Rng, sel: readonly number[], name?: string): { tray: Tray; rolled: number[] } => roll(t, rng, sel, name)
 /** A die's value set by the game (a "set to" ability), clamped to 1..sides. */
 export const setValue = (t: Tray, id: number, value: number): Tray => ({ ...t, dice: t.dice.map((d) => (d.id === id ? { ...d, value: Math.min(d.sides, Math.max(1, value)) } : d)) })

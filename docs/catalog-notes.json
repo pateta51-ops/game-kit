@@ -156,7 +156,19 @@
     ],
     "visible": false,
     "release": 1,
-    "gameSupplies": "Rows, columns, the walls, merged spaces and tiles of its map."
+    "gameSupplies": "Rows, columns, the walls, merged spaces and tiles of its map.",
+    "hooks": [
+      "gridMap: a square grid with walls, merged spaces and turnable tiles",
+      "neighbours: the spaces next to a space",
+      "distance: how far, or no way there",
+      "shortestPaths + firstSteps: move one step at a time along a shortest path",
+      "lineOfSight: can one space see another past the walls",
+      "area: the spaces a square or diamond shape covers",
+      "within: the spaces within N steps",
+      "rotateTile: turn a tile half a circle, 180 degrees only",
+      "extra: a step the game allows past a wall, a door",
+      "spaceAt + cellsOf: space ids from row and column"
+    ]
   },
   "board-registry": {
     "use": "The board UI needs to highlight things (spaces, pieces, markers, stacks) straight from the legal-action list.",
@@ -408,7 +420,18 @@
     ],
     "visible": false,
     "release": 1,
-    "gameSupplies": "The game rules, real cards and scenarios."
+    "gameSupplies": "The game rules, real cards and scenarios.",
+    "hooks": [
+      "Scenario: build a real position and play it in a test",
+      "put + set + run + answer: set a position up and answer its prompts",
+      "cardCase: a full-resolve card test that quotes the printed clause",
+      "expectNotOffered: test that an ability is not offered",
+      "expectNotFired: test that a forced effect did not fire",
+      "runInventory: every printed clause is cited by a test",
+      "cardsCheckMain: the game cards check of clauses and records",
+      "screenMain: the screen text matches the engine",
+      "recordPrompt + recordOpened: record each prompt shown in e2e or a simulation"
+    ]
   },
   "card-language": {
     "use": "A new game encodes card effects as data: verb table with handler, resume and text slots, validator, every-verb test; the standard verb pack (cardPack) on card-zones: draw, discard, mill, move, putIntoPlay, setAside, recall, gain, refill, shuffle, search, destroy, attach, detach, reveal, lookAt, scout, flip, exhaust, ready, chooseCards, chooseOption, may, chooseNumber, chooseDestination, choosePlayer, choosePayment, orderEffects, gainResource, pay, convert, adjust, seq, if, forEach, eachPlayer, repeat, count, later, payThen, custom; every card move through timing would; words overridable. Recipe: docs/recipes/card-effect.md.",
@@ -487,7 +510,20 @@
     ],
     "visible": false,
     "release": 1,
-    "gameSupplies": "The verbs, with their field checks, handlers and text."
+    "gameSupplies": "The verbs, with their field checks, handlers and text.",
+    "hooks": [
+      "cardPack + offer: offer an effect only if it does something, each knob set from a ruling",
+      "wouldChange: ask whether an effect would change the game: yes, no or unknown",
+      "resolves: how much of an effect would happen: in full, in part or nothing",
+      "judge: the reason an effect is not offered",
+      "due: a cost a card changes, a tax or a discount",
+      "describeEffect: print card text from the same data the engine runs",
+      "askVerb + resume: a verb that asks the player and goes on with the answer",
+      "cardTriggers + when: card triggers, when this happens do that, from card data",
+      "cannotKnow: say a read looks at cards the seat cannot see",
+      "then + moved: act on the cards a step just moved, draw 2 then discard 1 of them",
+      "expectVerbs: test that every verb has a handler, text and an example"
+    ]
   },
   "card-parts": {
     "use": "Drawing card faces: the layout as the game's own data (zones, anchors per card type), art with a device cache and decode-ahead, printed text with SVG icons inline, tokens at anchors. Recipe: docs/recipes/card-face-zoom.md.",
@@ -600,7 +636,18 @@
     ],
     "visible": false,
     "release": 1,
-    "gameSupplies": "The zones, their owners and who sees what."
+    "gameSupplies": "The zones, their owners and who sees what.",
+    "hooks": [
+      "newZones + seatZone: card zones in the game state, one per seat",
+      "moveCard + draw + place: move cards between zones",
+      "shuffleZone: shuffle a deck with the seeded rng",
+      "reveal: show a card to every seat",
+      "viewOf: what one seat sees, hidden cards as backs",
+      "hiddenFrom: the secrets list for an opponent",
+      "zoneProblems: a card in two places or a wrong total",
+      "limit + raiseLimit + capacityCheck + capacityHandlers: a hand limit, discard down to it when over",
+      "locate + cardsIn: find where a card is, list a zone"
+    ]
   },
   "card-zoom": {
     "mechanics": "none: draws what the engine or the game decided",
@@ -819,10 +866,16 @@
     ],
     "visible": false,
     "release": 1,
-    "gameSupplies": "Its patterns as plain data and what each one means."
+    "gameSupplies": "Its patterns as plain data and what each one means.",
+    "hooks": [
+      "compile: test a dice pattern, a pair, a run or a sum, on the dice",
+      "meaning: a pattern as a dice tray meaning",
+      "smallest: the fewest dice that meet a pattern",
+      "checkPattern: check pattern data from content"
+    ]
   },
   "dice-tray": {
-    "use": "Dice in play, held dice, rolling through ctx.rng and the roll window content. Recipe: docs/recipes/dice.md.",
+    "use": "Dice in play, held dice, rolling through ctx.rng (a roll name selects a test override) and the roll window content. Recipe: docs/recipes/dice.md.",
     "not": "Dice drawing or 3D (pieces-3d) and odds (dice-odds).",
     "title": "Dice rolling and holding",
     "tags": [
@@ -839,11 +892,24 @@
       "modify roll",
       "add to roll",
       "combat reroll window",
-      "until different value"
+      "until different value",
+      "named dice roll",
+      "dice roll name",
+      "force a dice roll"
     ],
     "visible": false,
     "release": 1,
-    "gameSupplies": "The dice, their meanings and how they are drawn."
+    "gameSupplies": "The dice, their meanings and how they are drawn.",
+    "hooks": [
+      "newTray: dice in play",
+      "roll: roll every die not held, with the seeded rng",
+      "toggleHold + hold: keep a die out of the next roll",
+      "readRoll: what the roll means: values, sum and every meaning that holds",
+      "adjust + setValue: change a die value by one or set it",
+      "rerollSelected + canReroll: reroll the picked dice",
+      "rollWindow + step: the roll window tap order: token, die, then plus or minus",
+      "rollWith + onRoll: animate a roll"
+    ]
   },
   "drag-drop": {
     "mechanics": "none: a way to point or pick on screen",
@@ -983,7 +1049,18 @@
     ],
     "visible": false,
     "release": 1,
-    "gameSupplies": "The rules: state, actions, prompts and set-up."
+    "gameSupplies": "The rules: state, actions, prompts and set-up.",
+    "hooks": [
+      "ctx.ask: open a prompt for a player and resume with the answer",
+      "ctx.rng: seeded random numbers, never Math.random",
+      "own: change state by copy on write",
+      "askOrTake + onlyOne: take the only legal answer, else ask",
+      "unseen: mark an option over a hidden card so it is never taken for the player",
+      "numberParts: a modified cost or stat with set, add, multiply, floor or cap",
+      "until + eventOver: end an effect at the end of combat or at the next event",
+      "waitingOn: show which live effects wait on an event",
+      "kernelPort: wrap this kernel as an EnginePort for a game with its own engine"
+    ]
   },
   "game-log": {
     "mechanics": "none: draws what the engine or the game decided",
@@ -1095,7 +1172,15 @@
     "looks": "A page where you drag boxes for each part of the table and export the arrangement.",
     "visible": true,
     "release": 1,
-    "gameSupplies": "The zone names and the board picture."
+    "gameSupplies": "The zone names and the board picture.",
+    "hooks": [
+      "normalizeDoc + screenLayout: read the exported layout of one screen",
+      "zoneCard: the card size a zone asks for",
+      "mirrorZones: mirror zones for the other seat",
+      "consolidate + split: merge or split zones",
+      "cardFit: how many cards fit a zone",
+      "layoutWarnings: zones too small for their cards or pile"
+    ]
   },
   "lint-preset": {
     "mechanics": "none: build, CI or repository tooling",
@@ -1188,7 +1273,19 @@
     "looks": "Plays a director motion file on the screen, step by step.",
     "visible": true,
     "release": 1.1,
-    "gameSupplies": "The motion spec files and the elements they name."
+    "gameSupplies": "The motion spec files and the elements they name.",
+    "hooks": [
+      "holdUntil + autoContinueMs: hold a beat until a condition, with a timed fallback",
+      "release: let a held beat go when the game is ready",
+      "onCue + onDroppedCue: play a sound on a beat, also when the beat is skipped",
+      "parallel: run a beat at the same time as the one before it",
+      "play: queue a beat and apply the next game state with commit",
+      "onBeatStart + onBeatEnd: set and clear screen state for one beat",
+      "skipAll: drop every queued beat on undo, load or leaving the screen",
+      "skipOnInput + hurryOnInput: skip or hurry the animation on a click or key",
+      "withReducedMotion + withAutomationOff: the motion speed setting, still in tests and under reduced motion",
+      "validateSpecs: check that every motion spec names a known verb and zone"
+    ]
   },
   "offline": {
     "mechanics": "none: app shell and device support",
@@ -1753,7 +1850,14 @@
     "looks": "A main menu and a set-up form with seats, scenario and difficulty.",
     "visible": true,
     "release": 1,
-    "gameSupplies": "The menu entries and the set-up fields."
+    "gameSupplies": "The menu entries and the set-up fields.",
+    "hooks": [
+      "MainMenu: the main menu",
+      "SetupForm + defaultSetup + validateSetup: the new game set-up form and its check",
+      "ScreenFrame: frame for settings, saves and rules screens",
+      "createThemeStore + ThemeToggle: light and dark theme switch",
+      "Footer + disclaimer: the footer line"
+    ]
   },
   "settings": {
     "mechanics": "none: app shell and device support",
@@ -1833,7 +1937,17 @@
     ],
     "visible": false,
     "release": 1,
-    "gameSupplies": "The game rules and a driver for each seat."
+    "gameSupplies": "The game rules and a driver for each seat.",
+    "hooks": [
+      "simGame: the module that plays one game for the pool",
+      "runGames: play many whole games on worker threads",
+      "fuzzMain: fuzz games with invariants and report each finding with a seed",
+      "randomDriver + legalAnswers: random answers from the legal options",
+      "botDriver: a driver that sees the player view only",
+      "runResumable + codeVersion: a long run that resumes after a crash",
+      "tune + validate: tune weights, then check on fresh seeds",
+      "proveResolved + provenClauses: prove each clause resolved in a played game"
+    ]
   },
   "small-helpers": {
     "mechanics": "none: small helpers with no rule in them",
@@ -1880,7 +1994,18 @@
     ],
     "visible": false,
     "release": 1.2,
-    "gameSupplies": "The table of sounds and the audio files."
+    "gameSupplies": "The table of sounds and the audio files.",
+    "hooks": [
+      "createSoundPlayer: one player for every sound, voice and music cue, from a table",
+      "play: play a sound cue by name",
+      "playTrack: play background music",
+      "stopCues: fade a sound out early, never a hard stop",
+      "unlock: let sound start after the first tap",
+      "setVolumes: change music, sound and voice volume from the settings",
+      "onEnd: run something when a sound ends, fades or is dropped",
+      "canPlay: ask whether a cue can sound",
+      "checkSoundFiles: check every sound file exists, its format and size"
+    ]
   },
   "state-machines": {
     "mechanics": "none: small helpers with no rule in them",
@@ -2010,7 +2135,14 @@
     "looks": "A bag with a count; a token flies out or the bag shakes in 3D.",
     "visible": true,
     "release": 1,
-    "gameSupplies": "The tokens, their count and the draw result."
+    "gameSupplies": "The tokens, their count and the draw result.",
+    "hooks": [
+      "TokenBag + draw: show a token drawn from a bag, in 2D or 3D, after the engine drew it",
+      "onDrawDone: clear the draw when the flight ended",
+      "assignDraws: which token rises comes from the drawn kinds only",
+      "placeTokens: tokens in a finite box, short as a badge",
+      "makeStocks: finite stocks and a bag in the engine state"
+    ]
   },
   "token-flights": {
     "mechanics": "none: motion only (release 1.1)",
@@ -2235,7 +2367,16 @@
     ],
     "visible": false,
     "release": 1,
-    "gameSupplies": "The table of rounds, turns, phases and steps."
+    "gameSupplies": "The table of rounds, turns, phases and steps.",
+    "hooks": [
+      "FlowConfig + flowHandlers + startFlow: rounds, turns and phases from one table",
+      "endTurn: end a turn early, pass",
+      "flowOf + whoseTurn: whose turn it is and which phase",
+      "skip: skip a turn or a phase",
+      "roundEnds + over: end the round and end the game",
+      "LimitTable + limitOption + markLimit: once per turn, once per round or once per game",
+      "expireEffects: drop effects that ended at the end of a turn, phase or round"
+    ]
   },
   "app-icons": {
     "mechanics": "none: build, CI or repository tooling",
@@ -2446,6 +2587,17 @@
     ],
     "visible": false,
     "release": 1,
-    "gameSupplies": "The spaces, start, direction, thresholds with their kinds and data, and per-space values."
+    "gameSupplies": "The spaces, start, direction, thresholds with their kinds and data, and per-space values.",
+    "hooks": [
+      "newClock: a marker on a track of spaces",
+      "step: move the marker and get the thresholds it met",
+      "setTo: place the marker without firing anything",
+      "stepsTo: the steps to reach a space on the track",
+      "ended + reached: the marker reached the end or a space",
+      "overrun: the marker cannot advance, no space left",
+      "occurrences: thresholds as engine events for triggers",
+      "valueAt: a limit that depends on the marker space",
+      "checkClock: check a track spec in a content test"
+    ]
   }
 }

@@ -3,6 +3,15 @@ A bag of tokens with its count; the draw shown as a 2D flight from the bag or a 
 
 ## Rules for agents
 
+<!-- hooks: written by scripts/catalog.mjs from docs/catalog-notes.json; do not edit -->
+**Hooks a game calls:**
+- `TokenBag` + `draw`: show a token drawn from a bag, in 2D or 3D, after the engine drew it
+- `onDrawDone`: clear the draw when the flight ended
+- `assignDraws`: which token rises comes from the drawn kinds only
+- `placeTokens`: tokens in a finite box, short as a badge
+- `makeStocks`: finite stocks and a bag in the engine state
+<!-- /hooks -->
+
 **What it does:** A bag of tokens with its count; a draw shows as a 2D flight from the bag dock or a 3D shake-and-draw that never decides the draw, with a session fallback to 2D.
 
 **You must:**

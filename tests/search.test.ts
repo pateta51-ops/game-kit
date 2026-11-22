@@ -112,6 +112,36 @@ describe('K500 search', () => {
   });
 });
 
+describe('K685 hooks and the kit-internal miss log', () => {
+  it('a hook match ranks its component first and prints the hook line under it', () => {
+    const r = run('search', 'hold', 'with', 'fallback');
+    expect(r.status).toBe(0);
+    const L = r.stdout.split('\n');
+    expect(L[0]).toMatch(/^Motion player \(`motion-frame`\)/);
+    expect(L[1]).toBe('  hook: holdUntil + autoContinueMs: hold a beat until a condition, with a timed fallback');
+    expect(run('search', 'motion', 'player').stdout).not.toContain('  hook: ');
+  });
+  it('a miss in the kit repository itself (components/ beside kit.mjs) is not logged; in a game it is', () => {
+    const g = fs.mkdtempSync(path.join(os.tmpdir(), 'k685-'));
+    const h = fs.mkdtempSync(path.join(os.tmpdir(), 'k685h-'));
+    try {
+      fs.copyFileSync(KIT, path.join(g, 'kit.mjs'));
+      fs.copyFileSync(path.join(ROOT, 'docs/CATALOG.md'), path.join(g, 'CATALOG.md'));
+      const log = path.join(h, '.game-kit/search-misses.log');
+      const miss = () => spawnSync('node', [path.join(g, 'kit.mjs'), 'search', 'burn', 'zebra'], { cwd: g, encoding: 'utf8', env: { ...process.env, HOME: h, USERPROFILE: h } });
+      fs.mkdirSync(path.join(g, 'components'));
+      let r = miss();
+      expect(r.status).toBe(0);
+      expect(r.stdout).toContain('not in the kit by that name');
+      expect(fs.existsSync(log)).toBe(false);
+      fs.rmdirSync(path.join(g, 'components'));
+      r = miss();
+      expect(r.status).toBe(0);
+      expect(fs.readFileSync(log, 'utf8')).toMatch(/\d{4}-\d\d-\d\d burn zebra\n$/);
+    } finally { fs.rmSync(g, { recursive: true, force: true }); fs.rmSync(h, { recursive: true, force: true }); }
+  });
+});
+
 describe('K673 search --check', () => {
   it('passes the cases that hold, fails with exit 1 naming each miss', () => {
     const g = fs.mkdtempSync(path.join(os.tmpdir(), 'k673-'));
