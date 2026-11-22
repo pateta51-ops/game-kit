@@ -30,6 +30,10 @@ export function render(top) {
   const known = new Set(tpl.map((l) => l.match(/^<!-- rows: (.*) -->$/)?.[1]).filter(Boolean))
   const bad = rows.filter((r) => !known.has(r.section))
   if (bad.length) throw new Error(bad.map((r) => 'docs/plan/' + r.file + ': section "' + r.section + '" has no <!-- rows: ... --> line in docs/plan/_template.md').join('\n'))
+  // K673: every row carries a state; a row whose content or a column says "(done" or "(covered" is in a done state
+  const said = (r) => Object.entries(r).some(([k, v]) => !['state', 'file', 'id', 'n'].includes(k) && /\((?:[^)]*[;,:]\s*)?(done|covered)\b/i.test(String(v)))
+  const st = rows.filter((r) => !r.state || (said(r) && !/^(done|covered|closed)\b/i.test(r.state)))
+  if (st.length) throw new Error(st.map((r) => 'docs/plan/' + r.file + (r.state ? ': says done but its state is "' + r.state + '": set state: done' : ': no state: line in its front matter (state: done, open, candidate, ...)')).join('\n'))
   return tpl.flatMap((l, i) => {
     const m = l.match(/^<!-- rows: (.*) -->$/)
     if (!m) return [l]
