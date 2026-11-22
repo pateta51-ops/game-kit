@@ -19,6 +19,7 @@ The kernel of a game engine: seeded random numbers, canonical JSON and hashes, t
 10. Take every field of a `NumberOrder` (step order, setter rule, rounding, floor, cap) from the game's rulings; where they are silent, ask. Use `numberParts` for a stat or cost with set, add, multiply, floor or cap instead of a hand-written fold.
 11. Pass `opts.of` whenever a modifier names an `of`, and read which bound holds from `bounds` (`holds`), not from `bound`. Tell two modifiers of one source apart by `ref`.
 12. Mark an option the answering player has not seen (a face-down card, an unrevealed option) with `unseen: true`: when it is the only legal answer, `onlyOne` returns null and `askOrTake` asks instead of taking it (K641). The game, or the part that builds the prompt, sets `unseen` on every option over a hidden thing; nothing in the kernel sets it (card-language will set it for hidden picks in its own row).
+13. Expect `askOrTake` to advance `promptSeq` when it takes the only answer, as an opened and answered prompt does (K652): a taken game and an asked one have the same hash and later prompt ids. Re-record any hash or prompt id a game pinned over a taken answer before K652.
 
 **Common mistakes:**
 - Using the old `ctx.then` then `ctx.ask` form in new code: it is deprecated.

@@ -78,6 +78,13 @@ The codes are engine-core's `reason` on a barred option (`bar`, read with `block
 
 Case 29 (a cost a card in play changes) is `cfg.due`.
 
+**Older engines' cases (K654, `k654.test.ts`): stated choices and their recipes.**
+- Case 21 again: a game can rule that an option that resolves in full bars those that resolve only in part; the check has no "in part" answer yet, so the pack cannot do it.
+- A draw from an empty deck whose reshuffle zone is empty makes no `reshuffle` occurrence ("draw 3" with both empty: no event). A ruling that each draw attempt is an event: draw one at a time (`repeat` of `draw`) and, when both zones are empty (a test), run a custom verb that starts its own `would` occurrence; triggers on that kind fire once per attempt.
+- `chooseNumber` offers every number from `min` to `max`, also ones whose cost cannot then be paid. Until K660, set `max: 'X'` after a `count` of what can be paid.
+- "Draw N if able" (never reshuffles): `repeat` N times an `if` on a game test "the deck is not empty" around a one-card `draw`.
+- Defects pinned with `it.fails`, each with its fix row: gaining 0 of a resource the seat never held counts as a change in the check (K657); a step cannot pick among the cards a step just moved, "draw 2, discard one of them" (K658); `deadChoice: 'bar'` does not bar a `chooseNumber` number that changes nothing (K660).
+
 **Common mistakes:**
 - Reading `no` from `wouldChange` as "not searched": `no` is only given when every pick set was tried (not every order of the picks inside a set, unless the prompt is ordered); a small `branches` gives `unknown` more often, and `unknown: 'offer'` (default) then offers the effect.
 - A custom verb, test, count or filter that reads cards the acting seat cannot see: the check cannot notice, so call `cannotKnow()` before the read (skipping the read under `inDryRun()` instead gives a wrong `no`).
