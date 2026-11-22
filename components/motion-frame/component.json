@@ -25,6 +25,8 @@
   "needs": [],
   "bypass": [
     {"id":"cue-time-from-maxms","imports":["motion-frame","sound-player"],"match":"\\+=?\\s*\\(?[\\w.?]*\\bmaxMs\\b|\\bmaxMs\\b\\s*\\+","hook":"a sum of maxMs is not when a beat plays: play sounds from createMotionPlayer onCue / onDroppedCue"},
-    {"id":"beats-reordered","imports":["motion-frame","sound-player"],"match":"\\b\\w*(?:beat|queue|spec|step)\\w*(?:\\s*\\?\\?\\s*\\[\\])?[\\])]*\\s*\\.(?:sort|splice|reverse|unshift|toSorted|toReversed|toSpliced)\\s*\\(","flags":"i","hook":"beat order comes only from the motion player queue: play beats in event order, with parallel: true to overlap and holdUntil to wait"}
+    {"id":"beats-reordered","imports":["motion-frame","sound-player"],"match":"\\b\\w*(?:beat|queue|spec|step)\\w*(?:\\s*\\?\\?\\s*\\[\\])?[\\])]*\\s*\\.(?:sort|splice|reverse|unshift|toSorted|toReversed|toSpliced)\\s*\\(","flags":"i","hook":"beat order comes only from the motion player queue: play beats in event order, with parallel: true to overlap and holdUntil to wait"},
+    {"id":"hold-on-timer","match":"\\bset(?:Timeout|Interval)\\(\\s*(?:\\(\\s*\\)\\s*=>\\s*)?(?:[\\w.]*\\.)?(?:release|next|advance|continue\\w*|resume|proceed|finish)\\b","hook":"a beat waits and a hold auto-continues in the motion player: holdUntil to wait, autoContinueMs to continue on its own, never a setTimeout / setInterval beside it"},
+    {"id":"skip-from-own-listener","match":"\\.addEventListener\\(\\s*(?:[\"'](?:keydown|pointerdown|click)[\"']|\\w+)\\s*,[\\s\\S]{0,160}?\\b(?:skipAll|hurry)\\s*\\(|\\bon(?:KeyDown|PointerDown)\\s*=\\s*\\{[^}]{0,160}?\\b(?:skipAll|hurry)\\s*\\(","hook":"an input that skips or hurries beats is bound with skipOnInput / hurryOnInput (keep the unbind), not skipAll / hurry from your own keydown, pointerdown or click listener"}
   ]
 }
