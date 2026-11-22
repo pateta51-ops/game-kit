@@ -15,7 +15,7 @@ A bag of tokens with its count; the draw shown as a 2D flight from the bag or a 
 **What it does:** A bag of tokens with its count; a draw shows as a 2D flight from the bag dock or a 3D shake-and-draw that never decides the draw, with a session fallback to 2D.
 
 **You must:**
-1. Install `react`, `react-dom` and `three` (with `@types/three`, 0.170.0) in the game; import from `ui` for React and `index` for the pure parts (loads in Node). Only `scene.ts` imports three.js, through dynamic imports, so never import it statically.
+1. Install `react` and `react-dom` in the game; `three` (with `@types/three`, 0.170.0) only for the 3D entry `ui` (React, 3D or 2D). A game with no `three` imports `ui2d` (the same `TokenBag`, always 2D), `index` (pure parts, loads in Node) or `stock`: no import in them reaches three.js (K702, a test walks them with `three` unresolvable). Only `scene.ts` imports three.js, through dynamic imports from `ui`'s `TokenBag`, so never import it statically.
 2. Pass `faceUrl(kind)` for every token kind, `count`, `chosen` (`'2d'` or `'3d'` from settings), `speed` (1 normal, 2 slow, 0 none) and `reduced()`.
 3. Resolve the draw in the engine first: set `draw={{ key, left, drawn }}` when an answer drew (`left` the bag's unordered contents after the draw, `drawn` the tokens in draw order), and clear it in `onDrawDone(key)`.
 4. Mark the dock `[data-bag][data-place="bag"]` (or the `place` prop); token-flights fly from it in 2D, and speed 0, reduced motion, 2D mode or a failed scene all end in `onDrawDone`.
