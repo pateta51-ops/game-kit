@@ -3,9 +3,10 @@
 // drops one whose source left). Shape from STCC `TriggeredOperation` (`trigger: { event, who, filter }` + steps,
 // src/engine/types/cardlang.ts) and Radiance's planned ability (`on: { event, timing, filter }`, `cond`, `steps`).
 import type { Ctx, GameTypes, Occurrence, PendingTrigger, TriggerCandidate, TriggerOrder } from '../engine-core/index.ts';
-import { locate, type Zoned } from '../card-zones/index.ts';
+import { canSee, locate, type Zoned } from '../card-zones/index.ts';
 import { EngineBugError } from '../engine-core/index.ts';
 import { effectTasks, validateEffect, type AnyVerbTable, type Step } from './index.ts';
+import { dryRunSeat } from './pack.ts';
 
 /** One trigger of a card: on an occurrence of kind `on` that happened, if the game's test `if` holds, run `then`. */
 export interface When<S extends Step = Step> {
@@ -64,7 +65,8 @@ export function cardTriggers<G extends GameTypes, E = { seat: string; source: st
   const entry = (s: G['state'], t: PendingTrigger, k: G['content']): When | undefined => cfg.pool[def(s, t.source, k)]?.when?.[Number(t.ability.slice(t.ability.lastIndexOf('#') + 1))];
   return {
     triggersFor: (s, o, k) =>
-      sources(s, k).flatMap((card) => {
+      // K583: in the pack's check a trigger on a card the judged seat cannot see does not fire, so the answer does not tell what another seat holds.
+      sources(s, k).filter((card) => dryRunSeat() === null || locate(s as unknown as Zoned, card) === undefined || canSee(s as unknown as Zoned, dryRunSeat() ?? '', card)).flatMap((card) => {
         const d = def(s, card, k);
         const player = cfg.player(s, card, k);
         return (cfg.pool[d]?.when ?? []).flatMap((w, i): TriggerCandidate[] => {
