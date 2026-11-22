@@ -5,7 +5,7 @@ import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 import { applyAction, draftOf, enumerateAnswers, type Ctx, type GameRules } from '../engine-core/index.ts';
 import { answer, playGame, startPlay, type Play, type PlayState } from '../engine-core/fake/casesK647.ts';
-import { capacityCheck, capacityHandlers, cardsIn, dropRaise, limitOf, newZones, overBy, raiseLimit, type OverLimit, type Zone, type Zoned } from './index.ts';
+import { capacityCheck, capacityHandlers, cardsIn, dropRaise, hiddenFrom, limitOf, newZones, overBy, raiseLimit, reveal, viewOf, type OverLimit, type Zone, type Zoned } from './index.ts';
 
 type S = PlayState & Zoned;
 const CP = { kind: 'timing.checkpoint' };
@@ -17,7 +17,7 @@ const game = (step: (s: Zoned) => void = () => undefined, o: OverLimit = { to: '
       ctx.then(CP);
     },
   });
-const go = (g: GameRules<Play>, hand: Partial<Zone>): S => {
+const go = (g: GameRules<Play>, hand: Omit<Partial<Zone>, 'owner'> & { owner?: string | undefined }): S => {
   const s = startPlay(g);
   const s1 = { ...s, zones: { 'hand:a': { seen: 'owner', owner: 'a', cards: [], ...hand }, discard: { seen: 'all', cards: [] } } } as S;
   return applyAction(g, s1, answer(s1, 'go'), null).state as S;
@@ -85,9 +85,62 @@ describe('K599 zone capacity (cases of the source engine)', () => {
       raiseLimit(z, 'hand:a', 'x', 2);
       raiseLimit(z, 'hand:a', 'x', 1);
       expect(dropRaise(z, 'hand:a', 'y')).toBe(false);
-    }, { to: () => 'discard', chooser: 'b', kind: 'drop' }), { cards: FIVE, limit: 2 });
-    expect(s.prompt).toMatchObject({ kind: 'drop', seat: 'b', min: 2, max: 2 });
+    }, { to: () => 'discard', chooser: 'b', kind: 'drop' }), { cards: FIVE, limit: 2, seen: 'all' });
+    expect(s.prompt).toMatchObject({ kind: 'drop', seat: 'b', zone: 'hand:a', to: 'discard', min: 2, max: 2 });
     expect(newZones({ h: { seen: 'all', limit: 2 } })['h']?.limit).toBe(2);
+  });
+
+  it('K599 two raises sum; dropping one of two keeps the other', () => {
+    const s = go(game((z) => {
+      raiseLimit(z, 'hand:a', 'x', 1);
+      raiseLimit(z, 'hand:a', 'y', 2);
+      expect(limitOf(z, 'hand:a')).toBe(4);
+      expect(dropRaise(z, 'hand:a', 'x')).toBe(true);
+    }), { cards: FIVE, limit: 1 });
+    expect(s.zones['hand:a']?.raises).toEqual({ y: 2 });
+    expect(limitOf(s, 'hand:a')).toBe(3);
+    expect(viewOf(s, 'a')['hand:a']?.limit).toBe(3);
+    expect(viewOf(s, 'b')['discard']).not.toHaveProperty('limit');
+    expect(s.prompt).toMatchObject({ min: 2, max: 2 });
+  });
+
+  it('K599 a negative raise lowers the limit, never below 0: all go, no crash', () => {
+    const s = go(game((z) => raiseLimit(z, 'hand:a', 'curse', -2)), { cards: ['c1', 'c2'], limit: 1 });
+    expect(limitOf(s, 'hand:a')).toBe(0);
+    expect(s.prompt).toBeNull();
+    expect(cardsIn(s, 'hand:a')).toEqual([]);
+    expect(s.result).toEqual({ done: true });
+  });
+
+  it('K599 misuse throws EngineBugError: a repeated id, the discard being the zone, no owner and no chooser, a hidden option', () => {
+    expect(() => go(game(), { cards: ['g', 'g', 'g'], limit: 1 })).toThrow(/holds g twice/);
+    expect(() => go(game(() => undefined, { to: 'hand:a' }), { cards: FIVE, limit: 3 })).toThrow(/to itself/);
+    expect(() => go(game(), { cards: FIVE, limit: 3, owner: undefined })).toThrow(/no owner or chooser/);
+    expect(() => go(game(() => undefined, { to: 'discard', chooser: 'b' }), { cards: FIVE, limit: 3 })).toThrow(/b chooses .* cannot see c1, c2, c3, c4, c5/);
+    expect(() => go(game(), { cards: FIVE, limit: 3, seen: 'count' })).toThrow(/cannot see/);
+  });
+
+  it('K599 a chooser shown the cards by the game may choose: no hidden id reaches the prompt', () => {
+    const g = game((z) => reveal(z, 'hand:a', FIVE, ['b']), { to: 'discard', chooser: 'b' });
+    const s = go(g, { cards: FIVE, limit: 3 });
+    const hidden = hiddenFrom(s, 'b');
+    expect(s.prompt?.options.map((o) => o.id)).toEqual(FIVE);
+    expect(s.prompt?.options.filter((o) => hidden.includes(o.id))).toEqual([]);
+  });
+
+  it('K599 two zones over at once: the first is asked, then the second', () => {
+    const g = playGame({ checkpoint: { checks: [capacityCheck<Play>(['hand:a', 'hand:b'], { to: 'discard' })] } }, { ...capacityHandlers<Play>(), play: (ctx: Ctx<Play>) => ctx.then(CP) });
+    const s0 = startPlay(g);
+    const zones = newZones({ 'hand:a': { seen: 'owner', owner: 'a', cards: ['a1', 'a2'], limit: 1 }, 'hand:b': { seen: 'owner', owner: 'b', cards: ['b1', 'b2', 'b3'], limit: 1 }, discard: { seen: 'all' } });
+    const s1 = { ...s0, zones } as S;
+    const s2 = applyAction(g, s1, answer(s1, 'go'), null).state as S;
+    expect(s2.prompt).toMatchObject({ seat: 'a', zone: 'hand:a', min: 1 });
+    const s3 = pick(g, s2, 'a1');
+    expect(s3.prompt).toMatchObject({ seat: 'b', zone: 'hand:b', min: 2 });
+    const s4 = pick(g, s3, 'b1', 'b3');
+    expect(cardsIn(s4, 'hand:b')).toEqual(['b2']);
+    expect(cardsIn(s4, 'discard')).toEqual(['b3', 'b1', 'a1']);
+    expect(s4.result).toEqual({ done: true });
   });
 });
 

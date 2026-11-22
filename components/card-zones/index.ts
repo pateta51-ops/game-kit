@@ -26,6 +26,8 @@ export interface ZoneView {
   readonly count?: number;
   readonly owner?: string;
   readonly cards?: readonly (string | null)[];
+  /** K599: the zone's limit with its raises (`limitOf`), when it has one. */
+  readonly limit?: number;
 }
 export type At = 'top' | 'bottom' | number;
 export interface ZoneDef {
@@ -137,7 +139,7 @@ export function viewOf(s: Zoned, seat: string): Record<string, ZoneView> {
       if (any) out[name] = { cards: cards.filter((c) => c !== null) };
       continue;
     }
-    out[name] = { count: z.cards.length, ...(z.owner === undefined ? {} : { owner: z.owner }), ...(any ? { cards } : {}) };
+    out[name] = { count: z.cards.length, ...(z.owner === undefined ? {} : { owner: z.owner }), ...(any ? { cards } : {}), ...(z.limit === undefined ? {} : { limit: limitOf(s, name) ?? 0 }) };
   }
   return out;
 }
@@ -163,10 +165,10 @@ export function zoneProblems(s: Zoned, expected?: number): string[] {
 // K599: a zone with a capacity (ported from a duty-officer limit: the limit is a base plus raises, a raise can be given up, over the limit the
 // chooser picks exactly the excess, which leaves for a discard zone; the next check asks again).
 
-/** The zone's limit: its base plus every raise; undefined when the zone has none. */
+/** The zone's limit: its base plus every raise (a negative raise lowers it), never below 0; undefined when the zone has none. */
 export function limitOf(s: Zoned, zone: string): number | undefined {
   const z = zoneOf(s, zone);
-  return z.limit === undefined ? undefined : z.limit + Object.values(z.raises ?? {}).reduce((a, b) => a + b, 0);
+  return z.limit === undefined ? undefined : Math.max(0, z.limit + Object.values(z.raises ?? {}).reduce((a, b) => a + b, 0));
 }
 
 /** Raises the limit by `by` from `source` (again from the same source replaces it). */
@@ -219,14 +221,20 @@ export function overLimit<G extends GameTypes>(ctx: Ctx<G>, zones: readonly stri
     const n = overBy(s, zone);
     if (n === 0) continue;
     const to = typeof o.to === 'string' ? o.to : o.to(zone);
+    if (to === zone) throw new EngineBugError(`card-zones: ${zone} over its limit cannot leave to itself`);
+    zoneOf(s, to);
     const cards = cardsIn(s, zone);
-    if (n === cards.length) {
+    const twice = cards.find((c, i) => cards.indexOf(c) !== i);
+    if (twice !== undefined) throw new EngineBugError(`card-zones: ${zone} holds ${twice} twice`);
+    if (n >= cards.length) {
       leave(draftOf(ctx) as unknown as Zoned, zone, cards, to);
       return true;
     }
     const seat = o.chooser === undefined ? zoneOf(s, zone).owner : typeof o.chooser === 'string' ? o.chooser : o.chooser(zone);
     if (seat === undefined) throw new EngineBugError(`card-zones: ${zone} is over its limit and has no owner or chooser`);
-    const prompt = { kind: o.kind ?? OVER_LIMIT, seat, min: n, max: n, options: cards.map((id) => ({ id, enabled: true })) };
+    const hidden = cards.filter((c) => !canSee(s, seat, c));
+    if (hidden.length > 0) throw new EngineBugError(`card-zones: ${seat} chooses what leaves ${zone} but cannot see ${hidden.join(', ')}; reveal them first`);
+    const prompt = { kind: o.kind ?? OVER_LIMIT, seat, zone, to, min: n, max: n, options: cards.map((id) => ({ id, enabled: true })) };
     const task: LeaveTask = { kind: OVER_LIMIT, zone, to };
     ctx.ask(prompt as unknown as Omit<G['prompt'], 'id'>, task);
     return true;
