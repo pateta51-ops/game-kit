@@ -157,7 +157,7 @@ Opaque home-screen icons and a web manifest from a game's own SVG/PNG mark. Requ
 Game-free scripts that get a card game's art from its sources to `public/` with a manifest `tooling-scripts/art-check.ts` verifies. Everything game-specific (ids, URLs, paths, the order of preference) is in JSON config files; each script takes `--config <json>` (paths relative to that file), exits 0 clean, 1 findings, 2 usage or a failed read, and exports `run(args, io)`. Run with plain `node kit/art-pipeline/<script>.ts`.
 
 - **Also called:** Get card art ready for the game
-- **Words:** art, images, cards, download, pipeline, manifest, crop, jpeg quality, re-encode, face enlarged, larger than source, size cap, minimum quality, resize image long edge cap
+- **Words:** art, images, cards, download, pipeline, manifest, crop, jpeg quality, re-encode, face enlarged, larger than source, size cap, minimum quality, resize image long edge cap, upscale image, upscale, image, sharpen upscale scan, sharpen, scan, enlarge sharpen image model, enlarge, model
 - **Release:** 1.0; not seen
 - **The game supplies:** The art config: sources, ids and output.
 - **Use it when:** Game-free scripts for a card game's art, driven by the game's config: an index of one chosen image per card (order, overrides, degraded rule), fetch with sha256, sheet cells and crops, PDF pages as faces, a CI cache keyed on input hashes, publish to public with a manifest art-check reads, with a minimum JPEG quality within a size cap and an enlarged-face check.
@@ -217,7 +217,7 @@ Draw the map once over the board picture in Inkscape; get the click areas (space
 Spaces as data, adjacency computed once, named placement kinds resolved by the board. Cards never filter spaces: card data names a kind (`'land'`, `'isolated'`), the board answers with the legal spaces. Pure functions, no packages. Idea from Terraforming Mars (GPL, written new).
 
 - **Also called:** Board spaces and neighbours as data
-- **Words:** board, spaces, neighbours, adjacency, placement, map, data, graph, nodes, edges, route map, stations, network, train, movement, move along edges, placement enumeration, legal placements, placement legality, tokens placed, move token to space, move a piece along edges, legal placements on a grid
+- **Words:** board, spaces, neighbours, adjacency, placement, map, data, graph, nodes, edges, route map, stations, network, train, movement, move along edges, placement enumeration, legal placements, placement legality, tokens placed, move token to space, move a piece along edges, legal placements on a grid, move along a ring of spaces, move, along, a, ring, of
 - **Release:** 1.0; not seen
 - **The game supplies:** The spaces, their neighbours and the placement kinds.
 - **Use it when:** Spaces and adjacency as data, with named placement kinds the board resolves.
@@ -325,7 +325,7 @@ Cards tucked under a host card (a visible L, slide out on hover) or fanned past 
 
 - **Also called:** Cards tucked under others, tokens on cards
 - **Looks like:** Cards peek out from beneath a host card; tokens sit on a card, shown as one each or a number.
-- **Words:** tucked, under, attached, tokens, counters, card, stack, on-card, upgrade, sleeve, behind
+- **Words:** tucked, under, attached, tokens, counters, card, stack, on-card, upgrade, sleeve, behind, choose upgrade target, choose, target, physical token stack, physical, token
 - **Release:** 1.0; seen on screen
 - **The game supplies:** Card views and the offsets and look.
 - **Use it when:** Cards tucked under or fanned past a host card with a pure footprint, and the tokens on a card: one per token, ×N past a cap, number boxes.
@@ -341,7 +341,7 @@ A hand of cards as a fan that fits any number of cards in a width, lifts the car
 
 - **Also called:** Fan of cards in hand
 - **Looks like:** A row of cards fanned to fit the width; the one under the pointer lifts.
-- **Words:** hand, fan, cards, lift, hover, drag, opponent, face-down
+- **Words:** hand, fan, cards, lift, hover, drag, opponent, face-down, playable highlight, playable, highlight, hand fan float, float, legal card glow, legal, card, glow
 - **Release:** 1.0; seen on screen
 - **The game supplies:** The cards, their face view and the look.
 - **Use it when:** Showing a hand of cards (or an opponent's face-down hand) as a fan that fits any width, lifts on pointer or focus, marks legal, picked and barred cards from the prompt, reports taps, is a drag source, and animates draw-in and play glide; or, with layout=grid, the phone hand: whole cards in rows with a header slot.
@@ -380,7 +380,7 @@ Card tests on real cards. Test code only; the engine imports nothing here but `c
 The card-language shell (K206): card effects as data, one typed verb table where each verb has a field check, a handler that runs on engine-core and a text generator that prints the card's words from the same step. The game writes its own verbs; the standard pack (K232, `pack.ts`) gives the common ones.
 
 - **Also called:** Card effects written as data
-- **Words:** card, effects, data, verbs, text, validator, rules, language, offered, can resolve, unpayable cost, dry run, would change nothing, offer, offer policy, no change, effect offered, paid effect, modified cost, tax, discount, cannot know, hidden cards, resolve in full, resolve in part, partial resolution, full or partial, why not offered, why is an effect not offered, reason, no target, condition false, full option bars partial, prefer options that resolve fully, skip forced choice nothing resolves, partial option barred, choose number bar dead, gain zero no change, pick among the cards just moved, cards just moved, draw then discard one of them, effect interpreter, interpreter, ops, bespoke ability, custom handler, one-off, ability, draw three keep one, draft pick, pay or else, otherwise, target filter, select cards, randomly rearrange, reshuffle, search a deck, stop at first, draw until you find, delay effect until, gain tokens, would do nothing, cannot be paid, amount expression count per, then only if previous resolved, condition expression all any not compare, barred option, reason code, not offered, resource cap, put cards on top or bottom of deck, top of deck, bottom of deck, resource pool with limit, resource limit cap
+- **Words:** card, effects, data, verbs, text, validator, rules, language, offered, can resolve, unpayable cost, dry run, would change nothing, offer, offer policy, no change, effect offered, paid effect, modified cost, tax, discount, cannot know, hidden cards, resolve in full, resolve in part, partial resolution, full or partial, why not offered, why is an effect not offered, reason, no target, condition false, full option bars partial, prefer options that resolve fully, skip forced choice nothing resolves, partial option barred, choose number bar dead, gain zero no change, pick among the cards just moved, cards just moved, draw then discard one of them, effect interpreter, interpreter, ops, bespoke ability, custom handler, one-off, ability, draw three keep one, draft pick, pay or else, otherwise, target filter, select cards, randomly rearrange, reshuffle, search a deck, stop at first, draw until you find, delay effect until, gain tokens, would do nothing, cannot be paid, amount expression count per, then only if previous resolved, condition expression all any not compare, barred option, reason code, not offered, resource cap, put cards on top or bottom of deck, top of deck, bottom of deck, resource pool with limit, resource limit cap, setup resource amounts, setup, resource, amounts
 - **Release:** 1.0; not seen
 - **The game supplies:** The verbs, with their field checks, handlers and text.
 - **Use it when:** A new game encodes card effects as data: verb table with handler, resume and text slots, validator, every-verb test; the standard verb pack (cardPack) on card-zones: draw, discard, mill, move, putIntoPlay, setAside, recall, gain, refill, shuffle, search, destroy, attach, detach, reveal, lookAt, scout, flip, exhaust, ready, chooseCards, chooseOption, may, chooseNumber, chooseDestination, choosePlayer, choosePayment, orderEffects, gainResource, pay, convert, adjust, seq, if, forEach, eachPlayer, repeat, count, later, payThen, custom; every card move through timing would; words overridable. Recipe: docs/recipes/card-effect.md.
@@ -489,7 +489,7 @@ A small card query language (K107): lexer, parser, evaluator. The game supplies 
 Card zones as data on engine-core state (K223): decks, hands, discards and play areas, per seat or shared, each an ordered list of card ids (index 0 is the top) with who sees it, and `viewOf(state, seat)` that hides what a seat may not see. Needs `engine-core`.
 
 - **Also called:** Decks, hands and discards as lists
-- **Words:** deck, hand, discard, zones, lists, visibility, play, area, face-down, hand limit, zone capacity, discard choice, over the limit, choose what to drop, discard event, on leave hook, leave callback, shuffle, rng name, override, forced order, card stack on a location, location, hand size maximum, public back, hidden face
+- **Words:** deck, hand, discard, zones, lists, visibility, play, area, face-down, hand limit, zone capacity, discard choice, over the limit, choose what to drop, discard event, on leave hook, leave callback, shuffle, rng name, override, forced order, card stack on a location, location, hand size maximum, public back, hidden face, hand limit disc, limit, disc
 - **Release:** 1.0; not seen
 - **The game supplies:** The zones, their owners and who sees what.
 - **Use it when:** Decks, hands, discards and play areas as ordered id lists in engine state, with who sees what and a per-seat view for opponents and the UI. A zone can have a capacity (hand limit, slot limit) that rules raise and give up, with a state check that asks the owner which cards over the limit go to the discard. Hand, pile and drag UI parts are planned (K218-K220), not built: ask for them, do not build them in the game. Recipe: docs/recipes/card-table.md. shuffleZone shuffles a zone on ctx.rng; its rng name selects a named override, so a test can force the shuffle order (shuffle zone named rng, shuffle deck rng name override, forced order test).
@@ -826,7 +826,7 @@ Sixteen verbs for the director's spec format as DOM effects for the motion frame
 The kernel of a game engine: seeded random numbers, canonical JSON and hashes, the task runner with prompts, copy on write, replay, undo and the save format. A game passes one `GameTypes` bundle and a `GameRules<G>` (handlers, `blank`, `setup`, `contentHash`, optional `stamp`, `invariants`, `revealWords`); see `fake/counter.ts`. Import from one of the entry files below, never from an implementation module. Options legal but doing nothing (`idle`, K91): `idle.md`.
 
 - **Also called:** Game rules engine core
-- **Words:** engine, rules, random, undo, replay, save, prompts, state, modifier, stat, cost, reduction, breakdown, floor, minimum, deterministic, until end of combat, duration named end point, lasts until event, named end point, task queue, seeded, cap, gain lost, derived value, additive, random override, override rolls, modifier per count, status, condition, stunned, status token, give a status, wound, objective, scenario objective progress, mission goal done or failed, objective with steps, mission progress, goal deadline, lose condition prompt, lose condition
+- **Words:** engine, rules, random, undo, replay, save, prompts, state, modifier, stat, cost, reduction, breakdown, floor, minimum, deterministic, until end of combat, duration named end point, lasts until event, named end point, task queue, seeded, cap, gain lost, derived value, additive, random override, override rolls, modifier per count, status, condition, stunned, status token, give a status, wound, objective, scenario objective progress, mission goal done or failed, objective with steps, mission progress, goal deadline, lose condition prompt, lose condition, status effect duration, effect, duration
 - **Release:** 1.0; not seen
 - **The game supplies:** The rules: state, actions, prompts and set-up.
 - **Use it when:** Every game's engine: seeded random, tasks and prompts, copy on write, replay, undo, saves, timing windows and triggers.
@@ -848,7 +848,7 @@ The kernel of a game engine: seeded random numbers, canonical JSON and hashes, t
 ### engine-core/timing
 
 - **Also called:** Prevention, replacement and triggers
-- **Words:** prevent, replace, instead of, trigger, reaction, window, at once
+- **Words:** prevent, replace, instead of, trigger, reaction, window, at once, trigger when card enters zone, when, card, enters, zone, defeat replacement trigger occurrence, defeat, replacement, occurrence
 - **Use it when:** An effect can be prevented, replaced or answered by others: batches of occurrences, the prevention window, the replacement loop, triggers.
 - **Guide:** [timing.md](../components/engine-core/timing.md)
 
@@ -1094,7 +1094,7 @@ Plays motion specs in the director's format (one JSON per beat: `actors`, `steps
 
 - **Also called:** Motion player
 - **Looks like:** Plays a director motion file on the screen, step by step.
-- **Words:** motion, play, animation, spec, beats, director, timeline, sound cue timing, check game uses kit hooks, no bypass, game bypasses the kit, beat from engine events, events, sound cue, cue sound from events, event order, after the animation step, timer hold, hold until, auto continue, animation queue, event queue for animations
+- **Words:** motion, play, animation, spec, beats, director, timeline, sound cue timing, check game uses kit hooks, no bypass, game bypasses the kit, beat from engine events, events, sound cue, cue sound from events, event order, after the animation step, timer hold, hold until, auto continue, animation queue, event queue for animations, motion layer wiring, layer, wiring, animation demo page, demo, page
 - **Release:** 1.1; seen on screen
 - **The game supplies:** The motion spec files and the elements they name.
 - **Use it when:** Playing the director's motion specs (JSON beats) on the screen.
@@ -1493,7 +1493,7 @@ Unstyled, data-driven main menu and new-game set-up form, with a pure default an
 
 - **Also called:** Main menu and new-game form
 - **Looks like:** A main menu and a set-up form with seats, scenario and difficulty.
-- **Words:** menu, main, start, new, game, setup, form, seats, difficulty
+- **Words:** menu, main, start, new, game, setup, form, seats, difficulty, home menu, home
 - **Release:** 1.0; seen on screen
 - **The game supplies:** The menu entries and the set-up fields.
 - **Use it when:** Main menu and new-game set-up form (seats, scenario, difficulty, extras) from data, unstyled, with a pure default and validate. Non-table screen frame, footer, disclaimer and persistent theme toggle.
@@ -1567,7 +1567,7 @@ Small pure helpers from the outside harvest (K109). No packages; import from `in
 A Web Audio player driven by one table of data. It knows no game. No packages.
 
 - **Also called:** Sound and music player
-- **Words:** sound, music, audio, play, volume, buses, effects, music state, intensity layers, adaptive music, game state, music state machine
+- **Words:** sound, music, audio, play, volume, buses, effects, music state, intensity layers, adaptive music, game state, music state machine, music state routes, state, routes, music mood from game state, mood, from, game
 - **Release:** 1.2; not seen
 - **The game supplies:** The table of sounds and the audio files.
 - **Use it when:** Release 1.2 sound and music from one data table on Web Audio.
@@ -1752,7 +1752,7 @@ A row of spaces with a marker that glides, on a drawn row or on spots of a mat i
 
 - **Also called:** Track with a moving marker
 - **Looks like:** A row of spaces with a marker that glides along it.
-- **Words:** track, marker, row, steps, score, bar, progress
+- **Words:** track, marker, row, steps, score, bar, progress, level marker track, level
 - **Release:** 1.0; seen on screen
 - **The game supplies:** The spaces, marker position and look.
 - **Use it when:** A row of spaces with a marker that glides (drawn row or spots on a mat image), per-space marks, labels from the game's words; a hop-and-fill bar with a badge pop; a step list with one lit step; unstyled.

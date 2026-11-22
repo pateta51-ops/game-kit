@@ -106,7 +106,13 @@
       "tokens placed",
       "move token to space",
       "move a piece along edges",
-      "legal placements on a grid"
+      "legal placements on a grid",
+      "move along a ring of spaces",
+      "move",
+      "along",
+      "a",
+      "ring",
+      "of"
     ],
     "visible": false,
     "release": 1,
@@ -307,7 +313,13 @@
       "on-card",
       "upgrade",
       "sleeve",
-      "behind"
+      "behind",
+      "choose upgrade target",
+      "choose",
+      "target",
+      "physical token stack",
+      "physical",
+      "token"
     ],
     "looks": "Cards peek out from beneath a host card; tokens sit on a card, shown as one each or a number.",
     "visible": true,
@@ -327,7 +339,16 @@
       "hover",
       "drag",
       "opponent",
-      "face-down"
+      "face-down",
+      "playable highlight",
+      "playable",
+      "highlight",
+      "hand fan float",
+      "float",
+      "legal card glow",
+      "legal",
+      "card",
+      "glow"
     ],
     "looks": "A row of cards fanned to fit the width; the one under the pointer lifts.",
     "visible": true,
@@ -522,7 +543,11 @@
       "top of deck",
       "bottom of deck",
       "resource pool with limit",
-      "resource limit cap"
+      "resource limit cap",
+      "setup resource amounts",
+      "setup",
+      "resource",
+      "amounts"
     ],
     "visible": false,
     "release": 1,
@@ -648,7 +673,10 @@
       "location",
       "hand size maximum",
       "public back",
-      "hidden face"
+      "hidden face",
+      "hand limit disc",
+      "limit",
+      "disc"
     ],
     "visible": false,
     "release": 1,
@@ -1072,7 +1100,10 @@
       "mission progress",
       "goal deadline",
       "lose condition prompt",
-      "lose condition"
+      "lose condition",
+      "status effect duration",
+      "effect",
+      "duration"
     ],
     "visible": false,
     "release": 1,
@@ -1300,7 +1331,13 @@
       "hold until",
       "auto continue",
       "animation queue",
-      "event queue for animations"
+      "event queue for animations",
+      "motion layer wiring",
+      "layer",
+      "wiring",
+      "animation demo page",
+      "demo",
+      "page"
     ],
     "looks": "Plays a director motion file on the screen, step by step.",
     "visible": true,
@@ -1883,7 +1920,9 @@
       "setup",
       "form",
       "seats",
-      "difficulty"
+      "difficulty",
+      "home menu",
+      "home"
     ],
     "looks": "A main menu and a set-up form with seats, scenario and difficulty.",
     "visible": true,
@@ -2028,7 +2067,14 @@
       "intensity layers",
       "adaptive music",
       "game state",
-      "music state machine"
+      "music state machine",
+      "music state routes",
+      "state",
+      "routes",
+      "music mood from game state",
+      "mood",
+      "from",
+      "game"
     ],
     "visible": false,
     "release": 1.2,
@@ -2229,7 +2275,16 @@
       "larger than source",
       "size cap",
       "minimum quality",
-      "resize image long edge cap"
+      "resize image long edge cap",
+      "upscale image",
+      "upscale",
+      "image",
+      "sharpen upscale scan",
+      "sharpen",
+      "scan",
+      "enlarge sharpen image model",
+      "enlarge",
+      "model"
     ],
     "visible": false,
     "release": 1,
@@ -2296,7 +2351,9 @@
       "steps",
       "score",
       "bar",
-      "progress"
+      "progress",
+      "level marker track",
+      "level"
     ],
     "looks": "A row of spaces with a marker that glides along it.",
     "visible": true,
@@ -2480,7 +2537,16 @@
       "trigger",
       "reaction",
       "window",
-      "at once"
+      "at once",
+      "trigger when card enters zone",
+      "when",
+      "card",
+      "enters",
+      "zone",
+      "defeat replacement trigger occurrence",
+      "defeat",
+      "replacement",
+      "occurrence"
     ],
     "use": "An effect can be prevented, replaced or answered by others: batches of occurrences, the prevention window, the replacement loop, triggers.",
     "guide": "timing.md"
