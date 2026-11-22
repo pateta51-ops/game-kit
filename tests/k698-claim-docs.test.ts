@@ -3,7 +3,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { afterAll, describe, expect, it } from 'vitest';
-import { claimParts, finish, isClaim, type Exec } from '../scripts/agent.mjs';
+import { claimParts, claims, claimsCmd, finish, isClaim, type Exec } from '../scripts/agent.mjs';
 
 const root = fs.mkdtempSync(path.join(os.tmpdir(), 'k698-'));
 afterAll(() => fs.rmSync(root, { recursive: true, force: true }));
@@ -145,5 +145,89 @@ describe('K698 finish checks claim lines in the role documents', () => {
     expect(claimParts('count: Counts a number up.\nnot in the kit by that name', 'lit card')).toEqual([]);
     expect(claimParts('glow: x highlight\npulse: x playable\nnot in the kit by that name', 'playable highlight')).toEqual(['glow', 'pulse']);
     expect(claimParts('count: Counts.\nglow: x', 'lit card')).toEqual(['count', 'glow']);
+  });
+});
+
+describe('K698 claims <file>: ordinary text passes, only changed lines, exit codes', () => {
+  const cmd = (args: string[], fallback = '') => { const out: string[] = []; const rc = claimsCmd(args, { out: (l) => void out.push(l), err: (l) => void out.push(l) }, fallback); return { rc, text: out.join('\n') }; };
+  const dir = () => fs.mkdtempSync(path.join(root, 'plain-'));
+  const ordinary = ['```css', 'gap: 8px;', 'The kit has no grid here', '```', 'gap: 8px;', '- [x] The kit has no dice log', '| gap | gap: 12 px |', 'Mind the gap: two rows apart.', '> A kit gap, says the review', 'The button adds a new effect on the button.', 'See the Built new section.', 'The kit cannot be pulled offline.', 'It keeps a game-own copy.', '- [x] kit gap K12 closed', 'Uses `kit gap` as a word.', 'A kit gap was closed in K12.'];
+  it('K698 good: code blocks, CSS gap, "Mind the gap:", quotes, prose mentions and checked items are no claims (exit 0)', () => {
+    const d = dir();
+    put(d, 'doc.md', ordinary.join('\n') + '\n');
+    const r = cmd([path.join(d, 'doc.md')]);
+    expect(r.text).toBe('claims ok: doc.md');
+    expect(r.rc).toBe(0);
+  });
+  it('K698 real claims still fail: the data-mark Gap: line, a Built new: label, a list under a Built new heading, game-own instead of the kit, a new effect the kit lacks', () => {
+    const d = dir();
+    const real = ['**Gap:** the kit ships no look for data-mark legal', '- Gap: a dice log', 'Built new: the dice log', 'A game-own log instead of the kit part', 'A new effect: no kit effect does it'];
+    put(d, 'doc.md', [...real, '## Built new', '- src/log.ts | nearest: none', '## Next', '- a plain item'].join('\n') + '\n');
+    const r = cmd([path.join(d, 'doc.md')]);
+    expect(r.rc).toBe(1);
+    real.forEach((l, i) => expect(r.text).toContain(`doc.md:${i + 1}: ${l}`));
+    expect(r.text).toContain('doc.md:7: - src/log.ts');
+    expect(r.text).not.toContain('doc.md:9:');
+    expect(r.text.split('\n').pop()).toMatch(/^each claim line carries/);
+  });
+  it('K698 --before: a claim line already in the old file passes; a new one fails; a missing old file means all lines', () => {
+    const d = dir();
+    put(d, 'old.md', 'Intro.\nThe kit has no dice log.\n');
+    put(d, 'new.md', 'Intro, longer.\nThe kit has no dice log.\n');
+    expect(cmd([path.join(d, 'new.md'), '--before', path.join(d, 'old.md')]).rc).toBe(0);
+    expect(cmd([path.join(d, 'new.md')]).rc).toBe(1);
+    put(d, 'new2.md', 'The kit has no dice log.\nThe kit has no turn timer.\n');
+    const r = cmd([path.join(d, 'new2.md'), '--before', path.join(d, 'old.md')]);
+    expect(r.rc).toBe(1);
+    expect(r.text).toContain('new2.md:2: The kit has no turn timer.');
+    expect(r.text).not.toContain('new2.md:1:');
+    expect(cmd([path.join(d, 'new2.md'), '--before', path.join(d, 'gone.md')]).text).toContain('new2.md:1:');
+  });
+  it('K698 exit codes: 2 for usage or a missing file, 0 for an empty file; outside a git repo with no kit the search-line rule still holds', () => {
+    const d = dir();
+    expect(cmd([]).rc).toBe(2);
+    expect(cmd(['--repo', d]).rc).toBe(2);
+    expect(cmd([path.join(d, 'x.md'), '--bogus', '1']).rc).toBe(2);
+    const m = cmd([path.join(d, 'missing.md')]);
+    expect(m.rc).toBe(2);
+    expect(m.text).toContain('cannot read');
+    put(d, 'empty.md', '');
+    expect(cmd([path.join(d, 'empty.md'), '--repo', path.join(d, 'nowhere')]).rc).toBe(0);
+    put(d, 'c.md', 'A kit gap | search: playable highlight; lit card\nThe kit has no log.\n');
+    const r = cmd([path.join(d, 'c.md')]);
+    expect(r.rc).toBe(1);
+    expect(r.text).toContain('c.md:2: The kit has no log.');
+    expect(r.text).not.toContain('c.md:1:');
+  });
+  it('K698 kit.mjs claims with no --repo finds the repo from the file and its kit/kit.mjs; no stack trace on a bad path', () => {
+    const main = game({ 'README.md': 'x' });
+    put(main, 'docs/notes/a.md', 'A kit gap | search: playable highlight; lit card\n');
+    const kit = path.resolve(import.meta.dirname, '..', 'kit.mjs');
+    const r = spawnSync(process.execPath, [kit, 'claims', path.join(main, 'docs/notes/a.md')], { encoding: 'utf8' });
+    expect(r.status).toBe(1);
+    expect(r.stdout).toContain('docs/notes/a.md:1:');
+    expect(r.stdout).toContain('check: search finds glow');
+    const b = spawnSync(process.execPath, [kit, 'claims', path.join(main, 'nope.md')], { encoding: 'utf8' });
+    expect(b.status).toBe(2);
+    expect(b.stderr).not.toMatch(/\n\s+at /);
+  });
+  it('K698 20 claims against the real kit search (40 distinct phrasings, 80 searches) run in one parallel batch', () => {
+    const d = dir();
+    put(d, 'many.md', Array.from({ length: 20 }, (_, i) => `The kit has no thing ${i} | search: playable highlight ${i}; lit card ${i} | nearest: none | why: x`).join('\n') + '\n');
+    const t0 = Date.now();
+    const r = cmd([path.join(d, 'many.md')], path.resolve(import.meta.dirname, '..', 'kit.mjs'));
+    const ms = Date.now() - t0;
+    expect(r.rc).toBe(1);
+    expect(r.text).toContain('check: search finds glow');
+    console.log(`K698 20 claims: ${ms} ms`);
+    expect(ms).toBeLessThan(15000);
+  });
+});
+describe('K698 claims cache', () => {
+  it('K698 each distinct phrasing runs once per command', () => {
+    const calls: string[] = [];
+    const lines = [1, 2, 3].map((n) => ({ file: 'a.md', n, text: 'The kit has no log | search: dice log; roll record | nearest: none | why: x' }));
+    claims(lines, (q: string, c?: string) => (calls.push(c + ' ' + q), 'count: x\nnot in the kit by that name'));
+    expect(calls.sort()).toEqual(['effects dice log', 'effects roll record', 'search dice log', 'search roll record']);
   });
 });

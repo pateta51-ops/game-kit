@@ -6,7 +6,7 @@
 //   node kit.mjs next-id [n] [--from <docs/plan dir or file>...]                                (game-kit checkout) the next free K number(s): origin/main and every open PR's docs/plan/ file names
 //   node kit.mjs next-id [n] --reserve                                                 also reserves the ids on origin (refs/kit-reserved/K<n>) so no other session gets them
 //   node kit.mjs worktree --branch <b> | worktree --here | finish [--comment] [--body <PR body file>] | teardown --worktree <dir>   worker commands, plain node (scripts/agent.mjs, pulled as kit/agent.mjs); finish prints PASS|FAIL <sha> (with --check: check passed|failed <sha> (check: <command>), never PASS); without --check it first fails unless each file added under src/ is a line of the PR body's "Built new" section: - <file or folder> | search: <words>; <other words> | nearest: <kit part or none> | why: <reason> (K684; ignore globs: package.json kit.builtNew.ignore; renames are not new; a folder covers files only two levels below src/, e.g. src/ui/motion/)
-//   node kit.mjs claims <file> [--repo <game repo>]   K698: every claim line of that one file (as on disk, any path) checked with finish's claim rules; prints each problem; exit 1 on any, 0 when clean
+//   node kit.mjs claims <file> [--repo <game repo>] [--before <old file>]   K698: the claim lines of one file (as on disk, any path; --before: only new or changed lines) checked with finish's claim rules; exit 1 on claim problems, 2 on usage or a missing file, 0 clean
 //   node kit/kit.mjs outdated [<game-kit checkout>]                                    the game's tag vs the latest, the PLAN rows and breaking notes between them
 //   node kit/kit.mjs check [--source <game-kit checkout>]                               fails if ./kit differs from kit/kit.lock.json; --source also fails if the tag moved off the locked commit or that commit holds other content; also fails src/ (tests excluded) on the `bypass` patterns of the pulled components' component.json (K675)
 import { execFileSync as x, spawnSync } from 'node:child_process'
@@ -382,6 +382,6 @@ if (cmd === 'pull') {
   const { newGame } = await import(pathToFileURL(d + '/components/scaffold/newgame.js').href)
   try { newGame({ dir, id, name, kit: d, ...flags, remote: flags.remote !== false }) } catch (e) { console.error(e.message); process.exit(1) }
 } else {
-  console.error('usage: kit.mjs pull <game-kit checkout> <ref> [component...] | kit.mjs check | kit.mjs outdated [game-kit checkout] | kit.mjs next-id [n] [--reserve] | kit.mjs state | kit.mjs worktree|finish [--body <PR body file>]|teardown | kit.mjs claims <file> [--repo <game repo>] | kit.mjs list | kit.mjs search <word> | kit.mjs effects [word] | kit.mjs new <dir> <id> "<Name>"')
+  console.error('usage: kit.mjs pull <game-kit checkout> <ref> [component...] | kit.mjs check | kit.mjs outdated [game-kit checkout] | kit.mjs next-id [n] [--reserve] | kit.mjs state | kit.mjs worktree|finish [--body <PR body file>]|teardown | kit.mjs claims <file> [--repo <game repo>] [--before <old file>] | kit.mjs list | kit.mjs search <word> | kit.mjs effects [word] | kit.mjs new <dir> <id> "<Name>"')
   process.exit(2)
 }
