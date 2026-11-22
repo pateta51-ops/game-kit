@@ -32,7 +32,7 @@ console.log(firstSteps(g, 'r0c0', 'r3c5', { extra }).starts, firstSteps(g, 'r0c0
 - `lineOfSight`: can one space see another past the walls
 - `area`: the spaces a square or diamond shape covers
 - `within`: the spaces within N steps
-- `rotateTile`: turn a tile 180 degrees and move its pieces
+- `rotateTile`: turn a tile half a circle, 180 degrees only
 - `extra`: a step the game allows past a wall, a door
 - `spaceAt` + `cellsOf`: space ids from row and column
 <!-- /hooks -->

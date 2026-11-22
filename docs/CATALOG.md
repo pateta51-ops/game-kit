@@ -966,7 +966,7 @@ A square grid with walls as data: adjacent spaces, distance, every shortest path
 - **Hook:** lineOfSight: can one space see another past the walls
 - **Hook:** area: the spaces a square or diamond shape covers
 - **Hook:** within: the spaces within N steps
-- **Hook:** rotateTile: turn a tile 180 degrees and move its pieces
+- **Hook:** rotateTile: turn a tile half a circle, 180 degrees only
 - **Hook:** extra: a step the game allows past a wall, a door
 - **Hook:** spaceAt + cellsOf: space ids from row and column
 - **Needs:** nothing

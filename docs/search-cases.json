@@ -410,5 +410,21 @@
   { "q":"play whole games by script e2e","first":"sim-pool" },
   { "q":"music state machine layers by game state","first":"sound-player" },
   { "q":"all end spaces of a move with distinct paths","first":"grid-map" },
-  { "q":"ready exhausted cards at round start","first":"tap" }
+  { "q":"ready exhausted cards at round start","first":"tap" },
+  { "q": "hold with fallback", "first": "motion-frame" },
+  { "q": "play sound on beat", "first": "motion-frame" },
+  { "q": "skip animation on click", "first": "motion-frame" },
+  { "q": "offer only if it does something", "first": "card-language" },
+  { "q": "end effect at end of combat", "first": "engine-core" },
+  { "q": "hand limit discard", "first": "card-zones" },
+  { "q": "shuffle deck seeded", "first": "card-zones" },
+  { "q": "once per round", "first": "turn-flow" },
+  { "q": "end turn early", "first": "turn-flow" },
+  { "q": "fade sound out", "first": "sound-player" },
+  { "q": "see past walls", "first": "grid-map" },
+  { "q": "keep die out of next roll", "first": "dice-tray" },
+  { "q": "test ability not offered", "first": "card-harness" },
+  { "q": "resume after crash", "first": "sim-pool" },
+  { "q": "marker cannot advance", "first": "clock" },
+  { "q": "fewest dice meet pattern", "first": "dice-patterns" }
 ]
