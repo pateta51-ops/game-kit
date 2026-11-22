@@ -1049,7 +1049,10 @@
       "spec",
       "beats",
       "director",
-      "timeline"
+      "timeline",
+      "sound cue timing",
+      "check game uses kit hooks, no bypass",
+      "game bypasses the kit"
     ],
     "looks": "Plays a director motion file on the screen, step by step.",
     "visible": true,

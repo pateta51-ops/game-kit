@@ -123,5 +123,8 @@
   { "q": "cards leave over limit callback", "first": "card-zones" },
   { "q": "jpeg quality re-encode face", "first": "art-pipeline" },
   { "q": "face enlarged larger than source", "first": "art-pipeline" },
-  { "q": "minimum image quality size cap", "first": "art-pipeline" }
+  { "q": "minimum image quality size cap", "first": "art-pipeline" },
+  { "q": "game bypasses the kit", "first": "motion-frame" },
+  { "q": "sound cue timing with animation", "first": "motion-frame" },
+  { "q": "check game uses kit hooks", "first": "motion-frame" }
 ]
