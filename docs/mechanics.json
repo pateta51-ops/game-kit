@@ -121,9 +121,6 @@
     { "words": "response window, timing window prompt, play a response now, reaction window, pass", "part": "engine-core", "read": "recipe timing.md (windows)", "missing": "one prompt that offers every response legal at a window, with a pass", "row": "K646", "sheet": "triggers" }
   ],
   "searches": {
-    "unreached clauses": "sim-pool",
-    "whole game coverage": "sim-pool",
-    "replay a failing seed": "sim-pool",
     "undo button": "engine-core",
     "line of sight": "grid-map",
     "wall": "grid-map",
