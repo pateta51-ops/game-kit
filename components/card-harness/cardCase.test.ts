@@ -56,7 +56,7 @@ describe('K487 cardCase and quote counting', () => {
   it('fails `<clause>: quote differs` when ar is not a known ruling, or not a literal', () => {
     expect(run(base([ok.replace('AR-1', 'AR-9')])).log).toContain('inventory: CL-twin: quote differs (tests/t0.test.ts: AR-9 is not a known ruling)');
     expect(run(base([ok], { rulings: [] })).code).toBe(1);
-    expect(run(base(["cardCase({ clause: 'CL-twin', printed: P, ar: 'AR-1' }, f)"])).log).toContain('inventory: CL-twin: quote differs (tests/t0.test.ts)');
+    expect(run(base(["cardCase({ clause: 'CL-twin', printed: P, ar: 'AR-1' }, f)"])).log).toContain('inventory: CL-twin: printed is not a literal or a same-file const: P');
   });
   it('a clause with text is not cited by its id or a card name outside cardCase', () => {
     expect(inventory(base(["it('CL-twin twin scores', () => {})"])).uncited).toEqual(['clause:CL-twin']);
