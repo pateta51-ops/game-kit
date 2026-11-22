@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // Run from a game's repo root.
 //   node <kit>/kit.mjs pull <path to game-kit checkout> <tag or commit> [component...]   moves the whole kit to one tag (named components are added); atomic
-//   node kit/kit.mjs list | search <word>                                              the catalogue of every component (pulled or not), from kit/CATALOG.md; search prints the mechanics map line first (kit/recipes/mechanics.md); the log ~/.game-kit/search-misses.log gets a line when no part has every word (the 3 parts printed above "not in the kit by that name" are only the nearest guesses) or the only hit is a "not in the kit" mechanics line (a candidate counts as demand), never from the kit's own repository (components/ beside kit.mjs; K685); a component whose catalogue Hook line holds every word comes first, with that line printed under it as "  hook: ..."; `search --misses [n]` prints the newest
+//   node kit/kit.mjs list | search <word>                                              the catalogue of every component (pulled or not), from kit/CATALOG.md; search prints the mechanics map line first (kit/recipes/mechanics.md); the log ~/.game-kit/search-misses.log gets a line when no part has every word (the 3 parts printed above "not in the kit by that name" are only the nearest guesses) or the only hit is a "not in the kit" mechanics line (a candidate counts as demand), never from the kit's own repository (components/ beside kit.mjs; K685); a component whose catalogue Hook line holds every word is a hit scored as if each word were in its title (first unless a part matches as well by its own words), with that line printed under it as "  hook: ..."; `search --misses [n]` prints the newest
 //   node kit.mjs state                                                                  (game-kit checkout) prints what is open (PLAN rows not done, waiting, watch)
 //   node kit.mjs next-id [n] [--from <docs/plan dir or file>...]                                (game-kit checkout) the next free K number(s): origin/main and every open PR's docs/plan/ file names
 //   node kit.mjs next-id [n] --reserve                                                 also reserves the ids on origin (refs/kit-reserved/K<n>) so no other session gets them
@@ -351,8 +351,9 @@ if (cmd === 'pull') {
   const w3 = (e, w) => hasTok(e.title, w) ? 3 : hasTok(e.use, w) ? 2 : e.ex.some((x) => hasTok(x, w)) ? 1 : 0
   const pool = cmd === 'effects' ? ents.filter((e) => e.eff) : ents.filter((e) => !e.cand || cf)
   if (cmd === 'effects' && !words.length) { for (const e of pool) console.log(e.line([])); process.exit(0) }
-  const scored = pool.map((e, i) => { const hh = (e.hk ?? []).filter((h) => words.length && words.every((w) => hasTok(h.t, w))); return { e, i, hh, all: hh.length > 0 || words.every((w) => w3(e, w)), s: words.reduce((t, w) => t + w3(e, w) + (e.id.includes(w) ? 1 : 0), 0) } })
-  const hits = scored.filter((x) => x.all).sort((x, y) => (y.hh.length > 0) - (x.hh.length > 0) || y.s - x.s || !!x.e.cand - !!y.e.cand || y.e.eff - x.e.eff || x.i - y.i)
+  const scored = pool.map((e, i) => { const hh = (e.hk ?? []).filter((h) => words.length && words.every((w) => hasTok(h.t, w))); return { e, i, hh, all: hh.length > 0 || words.every((w) => w3(e, w)), s: words.reduce((t, w) => t + w3(e, w) + (e.id.includes(w) ? 1 : 0), 0), hs: words.reduce((t, w) => t + (hh.length ? Math.max(3, w3(e, w)) : w3(e, w)) + (e.id.includes(w) ? 1 : 0), 0) } })
+  // K685: a matching hook counts each query word as a title word; at equal score the part whose own words match comes first
+  const hits = scored.filter((x) => x.all).sort((x, y) => y.hs - x.hs || y.s - x.s || !!x.e.cand - !!y.e.cand || y.e.eff - x.e.eff || x.i - y.i)
   for (const { e, hh } of hits) { console.log(e.line(e.exl.filter((x) => words.some((w) => !hasTok(e.title, w) && !hasTok(e.use, w) && hasTok(toks(x).concat(toks(x.toLowerCase())), w))))); for (const { h } of hh) console.log('  hook: ' + h) }
   if (hits.length && hits.every((x) => x.e.cand)) console.log('not built yet')
   if (!hits.length && !mhit.length) {
