@@ -133,7 +133,7 @@ export function newSrcFiles(repo) {
   if (!base) return null
   let ign = []
   try { ign = JSON.parse(fs.readFileSync(path.join(repo, 'package.json'), 'utf8')).kit?.builtNew?.ignore ?? [] } catch { /* no package.json */ }
-  return git(repo, ['diff', '--name-only', '--diff-filter=A', '--no-renames', base, 'HEAD', '--', 'src']).split('\n').filter(Boolean)
+  return git(repo, ['diff', '--name-only', '--diff-filter=A', '-M', base, 'HEAD', '--', 'src']).split('\n').filter(Boolean)
     .filter((f) => !/\.(test|spec)\.[^/]+$/.test(f) && !/(^|\/)(tests?|__tests__)\//.test(f.slice(4)) && !f.endsWith('.d.ts') && !ign.some((g) => globRe(g).test(f)))
 }
 export function builtNew(files, body) {
@@ -148,7 +148,9 @@ export function builtNew(files, body) {
     if (why.length) bad.push(`malformed: ${l} (needs ${why.join(', ')})`)
     else named.push(f)
   }
-  const missing = files.filter((x) => !named.some((n) => x === n || x.startsWith(n + '/') || x === 'src/' + n || x.startsWith('src/' + n + '/')))
+  const full = named.map((n) => n === 'src' || n.startsWith('src/') ? n : 'src/' + n)
+  for (const n of full) if (n.split('/').length < 3 && !files.includes(n)) bad.push(`too broad: ${n}/ (name a file, or a folder at least two levels below src/, such as src/ui/motion/)`)
+  const missing = files.filter((x) => !full.some((n) => x === n || (n.split('/').length >= 3 && x.startsWith(n + '/'))))
   return [...(at < 0 ? ['no "Built new" section in the PR body'] : []), ...bad, ...missing.map((x) => 'missing: ' + x)]
 }
 export function finish(args, io, exec = real, win = process.platform === 'win32', bg = exec === real ? realBg : null) {
@@ -174,7 +176,7 @@ export function finish(args, io, exec = real, win = process.platform === 'win32'
   const sha = git(repo, ['rev-parse', 'HEAD'])
   if (!f.check) {
     const files = newSrcFiles(repo)
-    if (files === null) io.err('warning: no merge base with main; the Built new check was skipped')
+    if (files === null) { io.out(`FAIL ${sha} (${branch}; Built new: no merge base with origin/main or main, so the new files under src/ cannot be listed; fetch origin main or base the branch on main; nothing was run)`); return 1 }
     else if (files.length) {
       let body = null
       if (f.body) { try { body = fs.readFileSync(path.resolve(f.body), 'utf8') } catch { /* named file missing */ } }

@@ -49,8 +49,8 @@ describe('K684 finish: every new src file is listed under Built new', () => {
     expect(r.text).toContain('| search: <words>; <other words> | nearest: <kit part or none> | why:');
   });
   it('K684 a well-formed section passes and the check runs; a folder line covers the files in it', () => {
-    const main = game('b', { 'src/deck/shuffle.ts': 'export {}', 'src/deck/cut.ts': 'export {}' });
-    const r = run(main, ok.replace('src/deck/shuffle.ts', '`src/deck/`'));
+    const main = game('b', { 'src/cards/deck/shuffle.ts': 'export {}', 'src/cards/deck/cut.ts': 'export {}' });
+    const r = run(main, ok.replace('src/deck/shuffle.ts', '`src/cards/deck/`'));
     expect(r.rc).toBe(0);
     expect(r.ran).toBe(true);
     expect(r.text).toMatch(/^PASS [0-9a-f]{40} /);
@@ -87,6 +87,38 @@ describe('K684 finish: every new src file is listed under Built new', () => {
     const none = run(main, null);
     expect(none.rc).toBe(1);
     expect(none.text).toContain('pass --body <file>');
+  });
+  it('K684 a file moved with git mv is not new: passes with no section', () => {
+    const main = game('i', { 'notes.md': 'x' });
+    g(main, 'mv', 'src/old.ts', 'src/ui/old.ts');
+    g(main, 'commit', '-qm', 'move');
+    const r = run(main, null);
+    expect(r.rc).toBe(0);
+    expect(r.gh).toHaveLength(0);
+  });
+  it('K684 a bare src/ line or a one-level folder covers nothing; a folder two levels below src/ does', () => {
+    const main = game('j', { 'src/ui/motion/a.ts': '', 'src/ui/motion/b.ts': '' });
+    const line = (p: string) => `## Built new\n- ${p} | search: a b; c d | nearest: none | why: x\n`;
+    for (const p of ['src/', 'src', 'ui/', 'src/ui']) {
+      const r = run(main, line(p));
+      expect(r.rc).toBe(1);
+      expect(r.text).toContain('too broad');
+      expect(r.text).toContain('missing: src/ui/motion/a.ts');
+    }
+    expect(run(main, line('src/ui/motion/')).rc).toBe(0);
+    expect(run(main, line('ui/motion')).rc).toBe(0);
+  });
+  it('K684 no merge base with main fails with a clear message and runs nothing', () => {
+    const main = path.join(root, 'k');
+    fs.mkdirSync(main);
+    g(main, 'init', '-q', '-b', 'work');
+    put(main, 'src/a.ts');
+    g(main, 'add', '.');
+    g(main, 'commit', '-qm', 'one');
+    const r = run(main, null);
+    expect(r.rc).toBe(1);
+    expect(r.ran).toBe(false);
+    expect(r.text).toMatch(/^FAIL [0-9a-f]{40} .*no merge base with origin\/main or main/);
   });
   it('K684 kit.mjs finish exits 1 on the CLI for a new file without a section', () => {
     const main = game('h', { 'src/a.ts': '' });
