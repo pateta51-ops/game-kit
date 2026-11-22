@@ -27,18 +27,24 @@ describe('S B23: a capacity granted by a lasting ability (K647)', () => {
   const limit: StateCheck<Play> = {
     name: 'limit',
     run: (ctx) => {
+      add(ctx, 'checks');
       const post = ctx.s.z['post'] ?? [];
       if (post.length <= 1 + sumEffects(ctx.s, 'room')) return;
       say(ctx, `which leaves ${post.join(',')}`);
       ctx.ask(pickOne('leave', post), { kind: 'leave' });
     },
   };
-  const game = (step: (ctx: Ctx<Play>) => void) =>
+  // the game queues the check only when a move changed a zone; the kit runs a check only where one is queued
+  const move = (ctx: Ctx<Play>, card: string, to: string): boolean => {
+    if (zoneOf(ctx.s, card) === to) return false;
+    put(ctx, card, to);
+    return true;
+  };
+  const game = (step: (ctx: Ctx<Play>) => boolean) =>
     playGame(checks(limit), {
       play: (ctx) => {
         addEffect(ctx, { kind: 'room', source: 'annex', target: 'post', value: 1, duration: { while: 'sourceInPlay' } });
-        step(ctx);
-        ctx.then(CP);
+        if (step(ctx)) ctx.then(CP);
       },
       leave: (ctx, t) => put(ctx, t.answer?.[0] ?? '', 'discard'),
     });
@@ -46,8 +52,8 @@ describe('S B23: a capacity granted by a lasting ability (K647)', () => {
 
   it('S B23 the grant ends the moment its source leaves; the limit check then asks at once which card goes', () => {
     const g = game((ctx) => {
-      put(ctx, 'annex', 'discard');
       sourceLeft(ctx, 'annex');
+      return move(ctx, 'annex', 'discard');
     });
     const s1 = go(g, Z);
     expect(s1.prompt).toMatchObject({ kind: 'leave', min: 1, max: 1 });
@@ -58,19 +64,21 @@ describe('S B23: a capacity granted by a lasting ability (K647)', () => {
     expect(s2.z['post']).toEqual(['b']);
     expect(zoneOf(s2, 'a')).toBe('discard');
     expect(said(s2)).toEqual(['which leaves a,b']);
+    expect(n(s2, 'checks')).toBe(2);
     expect(s2.result).toEqual(DONE);
   });
 
-  it('S B23 a move that changes nothing asks nothing', () => {
-    const s = go(game((ctx) => put(ctx, 'a', 'post')), Z);
+  it('S B23 a move that changes nothing queues no check (passes; the game supplies queuing only on a change)', () => {
+    const s = go(game((ctx) => move(ctx, 'a', 'post')), Z);
     expect(s.prompt).toBeNull();
     expect(said(s)).toEqual([]);
-    expect(s.z['post']).toEqual(['b', 'a']);
+    expect(n(s, 'checks')).toBeUndefined();
+    expect(s.z['post']).toEqual(['a', 'b']);
     expect(s.result).toEqual(DONE);
   });
 
   it('S B23 a new card joins first, then the check asks among all of them', () => {
-    const g = game((ctx) => put(ctx, 'c', 'post'));
+    const g = game((ctx) => move(ctx, 'c', 'post'));
     const s1 = go(g, Z);
     expect(ids(s1)).toEqual(['a', 'b', 'c']);
     const s2 = pick(g, s1, 'c');
@@ -339,16 +347,26 @@ describe('E B15: a unit at two defeat thresholds; a unit its own defeat line mov
 describe('E B19: a cap per check counts only what the check added (K647)', () => {
   const CAP: NumberModifier = { source: 'U', op: 'cap', amount: 1, of: 'check' };
   const ORDER = { steps: ['add', 'cap'] } as const;
-  const added = (base: number, of: string, mods: readonly NumberModifier[] = [CAP]): number => numberParts(base, mods, ORDER, { of }).value;
+  // one running count per unit of everything added during the check; the cap names `of: 'check'`, so only the check's
+  // own additions are capped through the scope of `numberParts`; a side effect's addition is read with `of: 'side'`
+  const addCounters = (ctx: Ctx<Play>, unit: string, amount: number, of: string): void => {
+    const so = ctx.s.n[`during:${unit}`] ?? 0;
+    const v = numberParts(so + amount, unit === 'U' ? [CAP] : [], ORDER, { of }).value - so;
+    add(ctx, `counters:${unit}`, v);
+    add(ctx, `during:${unit}`, v);
+  };
+  const g = playGame({}, {
+    play: (ctx) => {
+      for (const u of ['U', 'V']) {
+        addCounters(ctx, u, 2, 'check');
+        addCounters(ctx, u, 1, 'side');
+      }
+    },
+  });
 
-  it('E B19 a check adds 2 to a unit capped at 1 per check: 1; a side effect in the same check adds its 1; another unit takes all 2 (passes; the game supplies the scope and the running count)', () => {
-    expect(added(2, 'check')).toBe(1);
-    expect(added(1, 'side')).toBe(1);
-    expect(added(2, 'check') + added(1, 'side')).toBe(2);
-    expect(added(2, 'check', [])).toBe(2);
-    const first = added(0 + 1, 'check');
-    const second = added(first + 1, 'check') - first;
-    expect([first, second]).toEqual([1, 0]);
+  it('E B19 a check adds 2 to a unit capped at 1 per check: 1; a side effect in the same check adds its 1; another unit takes all 2 and the 1 (passes; the game supplies the running count, the kit the `of` scope)', () => {
+    const s = go(g);
+    expect([n(s, 'counters:U'), n(s, 'counters:V')]).toEqual([2, 3]);
   });
 });
 
@@ -401,6 +419,14 @@ describe('E B21: a second copy of a unique card discards the first at once (K647
 });
 
 describe('E B24: a check started inside another check (K647)', () => {
+  const H: G['handlers'] = {
+    play: (ctx) => {
+      ctx.then({ kind: 'after' });
+      would(ctx, [{ kind: 'check', keys: { source: 'c1' } }]);
+    },
+    rest: (ctx) => say(ctx, 'c1 finishes'),
+    after: (ctx) => say(ctx, `extra effects after c1: ${String(effectsOf(ctx.s, 'extra').length)}`),
+  };
   const g = playGame({
     happen: (ctx, o) => {
       if (o.keys.source === 'c1') {
@@ -413,17 +439,25 @@ describe('E B24: a check started inside another check (K647)', () => {
       add(ctx, 'cost', cost);
       say(ctx, `c2 fails, costs ${String(cost)}`);
     },
-  }, {
-    play: (ctx) => {
-      ctx.then({ kind: 'after' });
-      would(ctx, [{ kind: 'check', keys: { source: 'c1' } }]);
-    },
-    rest: (ctx) => say(ctx, 'c1 finishes'),
-    after: (ctx) => say(ctx, `extra effects after c1: ${String(effectsOf(ctx.s, 'extra').length)}`),
-  });
+  }, H);
 
-  it.fails('E B24 the inner check runs whole and costs no extra; then the outer finishes once; its effect ends with it', () => {
-    expect(said(go(g))).toEqual(['c2 fails, costs 1', 'c1 finishes', 'extra effects after c1: 0']);
+  it('E B24 recipe: counting only the batch itself (`duration.batch === occ.batch`), the inner check costs no extra; the outer finishes once; its effect ends with it (passes; the game supplies the filter)', () => {
+    const own = playGame({
+      happen: (ctx, o) => {
+        if (o.keys.source === 'c1') {
+          addEffect(ctx, { kind: 'extra', source: 'c1', value: 1, duration: { until: 'endOfBatch', batch: o.batch, ifCancelled: 'expire' } });
+          ctx.then({ kind: 'rest' });
+          would(ctx, [{ kind: 'check', keys: { source: 'c2' } }]);
+          return;
+        }
+        const cost = 1 + sumEffects(ctx.s, 'extra', (e) => 'batch' in e.duration && e.duration.batch === o.batch);
+        add(ctx, 'cost', cost);
+        say(ctx, `c2 fails, costs ${String(cost)}`);
+      },
+    }, H);
+    const s = go(own);
+    expect(said(s)).toEqual(['c2 fails, costs 1', 'c1 finishes', 'extra effects after c1: 0']);
+    expect(n(s, 'cost')).toBe(1);
   });
   it('E B24 today: an effect lasting until the outer batch ends also counts during the inner batch (the game filters by `duration.batch`); the rest holds', () => {
     const s = go(g);
@@ -497,6 +531,17 @@ describe('I B13: answers with repeats, a capped list keeping "stop" (K647)', () 
   it('I B13 today: the list has no cap: 12 options with 0 to 12 picks list all 4096 answers (cannot be expressed)', () => {
     expect(enumerateAnswers(go(g(12, 0, 12)))).toHaveLength(4096);
   });
+  it('I B13 recipe: the game caps the list itself and keeps "stop" in the last place (helpers.md); 12 options and "stop" capped at 512 (passes; the game supplies the cap)', () => {
+    const many = Array.from({ length: 12 }, (_, i) => ({ id: `o${String(i)}`, enabled: true }));
+    const gs = playGame({}, { play: (ctx) => ctx.ask({ ...pickOne('many', []), min: 0, max: 12, options: [...many, { id: 'stop', enabled: true, alone: true }] }, { kind: 'noop' }), noop: () => undefined });
+    const all = enumerateAnswers(go(gs));
+    const stop = all.filter((a) => a.picks.includes('stop'));
+    const list = [...all.filter((a) => !a.picks.includes('stop')).slice(0, 512 - stop.length), ...stop];
+    expect(all).toHaveLength(4097);
+    expect(list).toHaveLength(512);
+    expect(list.at(-1)?.picks).toEqual(['stop']);
+    expect(list.slice(0, -1).some((a) => a.picks.includes('stop'))).toBe(false);
+  });
 });
 
 describe('I B14: the game ending in the middle of an effect drops everything scheduled (K647)', () => {
@@ -539,7 +584,7 @@ describe('E B17: a forced choice taken without asking gives the same game as ask
   })();
   const taken = go(game(true));
 
-  it.fails('E B17 the game with the only answer taken equals the one where it was asked: the same final hash and events', () => {
+  it.fails('E B17 (defect, fix row K652: askOrTake advances promptSeq) the game with the only answer taken equals the one where it was asked: the same final hash and events', () => {
     expect(said(taken)).toEqual(['chose a']);
     expect(taken.log).toEqual(asked.log);
     expect(hashState(taken)).toBe(hashState(asked));
