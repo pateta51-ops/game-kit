@@ -9,7 +9,7 @@ export interface KnownFindings {
   readonly open?: readonly string[];
   /** Fail while any line is left. */
   readonly release?: boolean;
-  /** Write today's findings to the file instead of checking (new lines get `ownerOf(f)`, default `none`; stale lines go). */
+  /** Set on a check: it refuses (exit 1). Lines are written only by `writeKnownMain` / `writeKnown` (or `--write-known`). */
   readonly write?: boolean;
   readonly ownerOf?: (finding: string) => string;
   readonly io?: KnownIo;
@@ -18,18 +18,21 @@ export interface KnownLine { readonly finding: string; readonly owner?: string }
 export interface KnownResult { readonly lines: readonly KnownLine[]; readonly fresh: string[]; readonly stale: string[]; readonly closed: KnownLine[]; readonly left: KnownLine[]; readonly problems: string[] }
 
 const MARK = ' @ ';
+/** The first line of a known-findings text file; without it every line is a whole finding with no owner (the K513 flat format). */
+export const KNOWN_HEADER = '# known findings v1: <finding> @ <owner>';
 const isJson = (t: string): boolean => t.trimStart().startsWith('{');
 export function parseKnown(text: string): KnownLine[] {
   const t = text.charCodeAt(0) === 0xfeff ? text.slice(1) : text;
   const all: KnownLine[] = isJson(t)
     ? Object.entries(JSON.parse(t) as Record<string, string>).map(([finding, owner]) => ({ finding, owner }))
     : t.replace(/\r\n/g, '\n').split('\n').map((l) => l.trimEnd()).filter((l) => l !== '' && !l.startsWith('#')).map((l) => {
-      const k = l.lastIndexOf(MARK);
+      const k = hasHeader(t) ? l.lastIndexOf(MARK) : -1;
       return k < 0 ? { finding: l } : { finding: l.slice(0, k).trimEnd(), owner: l.slice(k + MARK.length).trim() };
     });
   const seen = new Set<string>();
   return all.filter((l) => !seen.has(l.finding) && (seen.add(l.finding), true));
 }
+const hasHeader = (t: string): boolean => t.replace(/\r\n/g, '\n').split('\n').some((l) => l.trimEnd() === KNOWN_HEADER);
 const readText = (k: KnownFindings): string => {
   if (!k.io) throw new Error(`known findings ${k.file}: no io`);
   try { return k.io.read(k.file) ?? ''; } catch (e) { if ((e as { code?: string }).code === 'ENOENT') return ''; throw e; }
@@ -56,20 +59,23 @@ export function writeKnown(found: readonly string[], k: KnownFindings): { added:
   const keep = lines.filter((l) => now.has(l.finding));
   const add = [...now].filter((f) => !had.has(f)).map((finding) => ({ finding, owner: k.ownerOf?.(finding) ?? 'none' }));
   const all = [...keep, ...add];
-  const head = old.replace(/\r\n/g, '\n').split('\n').filter((l) => l.startsWith('#'));
+  const head = old.replace(/\r\n/g, '\n').split('\n').map((l) => l.trimEnd()).filter((l) => l.startsWith('#') && l !== KNOWN_HEADER);
   const text = isJson(old) ? `${JSON.stringify(Object.fromEntries(all.map((l) => [l.finding, l.owner ?? 'none'])), null, 1)}\n`
-    : [...head, ...all.map((l) => (l.owner === undefined ? l.finding : `${l.finding}${MARK}${l.owner}`))].map((l) => `${l}\n`).join('');
+    : [KNOWN_HEADER, ...head, ...all.map((l) => `${l.finding}${MARK}${l.owner ?? 'none'}`)].map((l) => `${l}\n`).join('');
   k.io!.write(k.file, text);
   return { added: add.length, removed: lines.length - keep.length, lines: all.length, text };
 }
 
-/** A check's tail: with `write`, writes and prints the count (exit 0); else prints each problem as `FAIL` and a summary, returns the exit code. */
+/** The separate write command: writes today's findings (new lines get `ownerOf`, stale ones go), prints the count, exit 0. */
+export function writeKnownMain(name: string, found: readonly string[], k: KnownFindings, log: (l: string) => void): number {
+  const w = writeKnown(found, k);
+  log(`${name}: ${k.file}: ${String(w.added)} added, ${String(w.removed)} removed, ${String(w.lines)} lines`);
+  return 0;
+}
+export const refuseWrite = (name: string, file: string): string => `FAIL ${name}: a check never writes ${file}: run the write command (writeKnownMain) on its own`;
+/** A check's tail: prints each problem as `FAIL` and a summary, returns the exit code; `write` set refuses (exit 1), it never writes. */
 export function knownGate(name: string, found: readonly string[], k: KnownFindings, log: (l: string) => void): number {
-  if (k.write) {
-    const w = writeKnown(found, k);
-    log(`${name}: ${k.file}: ${String(w.added)} added, ${String(w.removed)} removed, ${String(w.lines)} lines`);
-    return 0;
-  }
+  if (k.write) { log(refuseWrite(name, k.file)); return 1; }
   const r = knownCheck(found, k);
   for (const p of r.problems) log(`FAIL ${p}`);
   log(`${name}: ${String(now(found))} findings, ${String(now(found) - r.fresh.length)} known; ${String(r.fresh.length)} new, ${String(r.stale.length)} stale${k.open ? `, ${String(r.closed.length)} without an open owner` : ''}${k.release ? `, ${String(r.left.length)} left for release` : ''}`);

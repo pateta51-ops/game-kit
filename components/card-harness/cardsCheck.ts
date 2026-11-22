@@ -4,7 +4,7 @@
 import { createHash } from 'node:crypto';
 import { dirname } from 'node:path';
 import { execFileSync } from 'node:child_process';
-import { knownCheck, writeKnown, type KnownFindings, type KnownResult } from './known.ts';
+import { knownCheck, writeKnownMain, type KnownFindings, type KnownResult } from './known.ts';
 
 export interface CatalogueClause { readonly id: string; readonly card: string; readonly text: string }
 export interface CataloguePattern { readonly id: string; readonly name?: string; readonly clauses: readonly CatalogueClause[]; readonly [k: string]: unknown }
@@ -378,7 +378,7 @@ export function cardsCheckMain(argv: readonly string[], input: CardsCheckInput, 
     const k: KnownFindings = { file: bf, io: { read: (p) => rio.read!(p), write: (p, t) => rio.write(p, t) }, ...(i.openOwners ? { open: i.openOwners } : {}), release: i.release === true || argv.includes('--release'), ...(i.ownerOf ? { ownerOf: i.ownerOf } : {}) };
     let kr: KnownResult;
     try {
-      if (wk) { const w = writeKnown(found, k); log(`cards:check: ${bf}: ${String(w.added)} added, ${String(w.removed)} removed, ${String(w.lines)} lines`); return 0; }
+      if (wk) return writeKnownMain('cards:check', found, k, log);
       kr = knownCheck(found, k);
     } catch (e) { log(`FAIL baseline ${bf}: ${(e as Error).message}`); return 1; }
     for (const p of kr.problems) log(`FAIL ${p}`);
