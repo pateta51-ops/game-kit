@@ -265,6 +265,9 @@ export function parseReadings(text: string): ReadingLine[] {
     return [{ clause, verdict: verdict as Verdict, note, ...(hash === undefined ? {} : { hash }) }];
   });
 }
+const prOf = (t: string): number => Number(/PR #(\d+)/.exec(t)?.[1] ?? 0);
+/** K669: the lines of several readings files in the order they were recorded (by the `PR #n` in each file, stable; files with none keep their order), so a later line of a clause overrides an earlier one. */
+export const parseReadingFiles = (texts: readonly string[]): ReadingLine[] => texts.map((t, i) => ({ t, i })).sort((a, b) => prOf(a.t) - prOf(b.t) || a.i - b.i).flatMap((x) => parseReadings(x.t));
 export interface ReadingInput { readonly records: readonly CardRecord[]; readonly readings: readonly ReadingLine[]; readonly rulings: readonly string[] }
 /** Every encoded clause: a current `ok` line (its hash equals the records now) or an `ambiguous` line citing a ruling. */
 export function readingProblems(i: ReadingInput): string[] {
