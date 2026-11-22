@@ -124,7 +124,8 @@ export function createTrailSounds<A>(o: TrailSoundsOptions<A>): { feed: (trail: 
       mark = trail.length;
       last = trail[mark - 1];
       if (was < 0 || mark <= was) return;
-      if (was > 0 && prev !== undefined && !(o.same ?? Object.is)(trail[was - 1] as A, prev)) return;
+      const same: (a: A, b: A) => boolean = o.same ?? Object.is;
+      if (was > 0 && prev !== undefined && !same(trail[was - 1] as A, prev)) return;
       o.onNew(trail.slice(was));
     },
     reset() {

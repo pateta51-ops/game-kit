@@ -2086,7 +2086,13 @@
       "limit",
       "lose space",
       "track",
-      "lose"
+      "lose",
+      "overrun",
+      "track overrun",
+      "distance to space",
+      "distance",
+      "space",
+      "dry run"
     ],
     "visible": false,
     "release": 1,
