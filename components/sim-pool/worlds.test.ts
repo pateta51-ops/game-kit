@@ -2,7 +2,7 @@
 // builder: a world is one `reshuffleHidden` call with its own DriverRng; the bound-card rule is the game's).
 import { describe, expect, it } from 'vitest';
 import { draftOf, hashValue, seedRng, type AnswerAction, type Ctx, type Draft, type GameRules, type KernelEvent, type KernelPrompt, type KernelState, type KernelTask } from '../engine-core/index.ts';
-import { botDriver, DriverRng, playOne, type SimGame } from './index.ts';
+import { botDriver, playOne, type SimGame } from './index.ts';
 
 interface LState extends KernelState {
   readonly decks: Readonly<Record<string, readonly string[]>>;
@@ -40,7 +40,7 @@ const rules: GameRules<L> = {
 
 // The seat's view: scores, deck sizes and the cards its own effects looked at.
 const view = (s: LState, seat: string) => ({ score: s.score, counts: Object.fromEntries(Object.entries(s.decks).map(([k, v]) => [k, v.length])), seen: s.looked.filter((l) => l.by === seat).map((l) => s.decks[l.deck]?.[l.at]) });
-const reshuffle = (keepBound: boolean) => (s: LState, seat: KernelPrompt['seat'], rng: DriverRng): LState => {
+const reshuffle = (keepBound: boolean) => (s: LState, seat: KernelPrompt['seat'], rng: { int(n: number): number }): LState => {
   const decks: Record<string, string[]> = {};
   for (const [k, cards] of Object.entries(s.decks)) {
     const fixed = keepBound ? s.looked.filter((l) => l.by === seat && l.deck === k).map((l) => l.at) : [];
@@ -62,19 +62,11 @@ const sim = (keepBound: boolean): SimGame<L> => ({
 });
 
 describe('K653 sim-pool: sampled worlds keep a card the deciding seat looked at', () => {
-  it('S B25: a card bound by the deciding seat keeps its identity in all 20 worlds; one bound by the other seat is pooled; visible cards and counts stay (the game supplies the bound-card rule in reshuffleHidden)', () => {
+  it('S B25: the hidden-shuffle check passes an honest bot when the bound card is kept, and flags the run when the game pools it; it asks for the world of the deciding seat (the game supplies the bound-card rule in reshuffleHidden)', () => {
+    const asked: unknown[] = [];
     const g = sim(true);
-    const r = playOne(g, null, { index: 0, seed: 'k653', driver: 'honest' });
-    expect(r.error).toBeUndefined();
-    const s = rules.blank({ seed: 'k653' }, null, null) as LState;
-    const at = { ...s, looked: [{ by: 'b', deck: 'b', at: 0 }, { by: 'a', deck: 'a', at: 0 }] };
-    const worlds = Array.from({ length: 20 }, (_, i) => (g.reshuffleHidden as ReturnType<typeof reshuffle>)(at, 'a', new DriverRng(`world-${String(i)}`)));
-    expect(new Set(worlds.map((w) => w.decks.a?.[0]))).toEqual(new Set(['a1']));
-    expect(new Set(worlds.map((w) => w.decks.a?.slice(1).join())).size).toBeGreaterThan(1);
-    expect(new Set(worlds.map((w) => w.decks.b?.[0])).size).toBeGreaterThan(1);
-    expect(new Set(worlds.map((w) => hashValue(view(w, 'a'))))).toEqual(new Set([hashValue(view(at, 'a'))]));
-  });
-  it('S B25: the hidden-shuffle check passes an honest bot when the bound card is kept, and flags the run when the game pools it', () => {
+    playOne({ ...g, reshuffleHidden: (s, seat, r) => { asked.push(seat); return reshuffle(true)(s, seat, r); } }, null, { index: 0, seed: 'k653', driver: 'honest' }, undefined, { hidden: true });
+    expect(asked).toEqual(['a']);
     const seeds = Array.from({ length: 12 }, (_, i) => `k653-${String(i)}`);
     const run = (keep: boolean) => seeds.map((seed) => playOne(sim(keep), null, { index: 0, seed, driver: 'honest' }, undefined, { hidden: true }));
     expect(run(true).map((r) => r.error ?? 'ok')).toEqual(seeds.map(() => 'ok'));

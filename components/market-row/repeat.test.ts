@@ -21,33 +21,27 @@ describe('K653 market-row: arrivals with extra slots', () => {
   type G = Zoned & { open: number };
   const rows = { u: { slots: 6, decks: ['D'] } };
   const cfg: MarketCfg<G> = { rows, when: 'later', source: (s, _row, i) => (i < s.open ? ['D'] : []) };
-  const extra = (s: G, n: number) => {
-    for (let k = 0; k < n && cardsIn(s, 'D').length > 0; k += 1) {
-      s.open += 1;
-      fillEmpty(s, cfg);
-    }
-  };
-  const live = (s: G) => slotsOf(s, cfg, 'u').slice(0, s.open);
-  it('W B20: a row of 4 refills from the left, an extra arrives in a new slot at the right end, a second extra on an empty deck adds no slot, and next round the row has 4 slots again (the game supplies the open slot count through `source`)', () => {
+  const filled = (r: { events: readonly { kind: string }[] }) => r.events.map((e) => (e.kind === 'filled' && 'slot' in e && 'card' in e ? `${String(e.slot)}=${String(e.card)}` : e.kind));
+  it('W B20: the kit fills only the open slots, from the left: 4 open fill 4; a fifth opened slot (an extra, at the right end) gets the next card; an opened slot on an empty deck stays empty; after a clear, 4 open slots fill 4 again (the game supplies the open count through `source`)', () => {
     const s: G = { open: 4, zones: newZones({ ...marketZones(rows), D: { seen: 'count', cards: ['d1', 'd2', 'd3', 'd4', 'd5'] } }) };
     refill(s, cfg);
-    expect(live(s)).toEqual(['d1', 'd2', 'd3', 'd4']);
-    extra(s, 1);
-    expect(live(s)).toEqual(['d1', 'd2', 'd3', 'd4', 'd5']);
-    extra(s, 2);
-    expect(s.open).toBe(5);
+    expect(slotsOf(s, cfg, 'u')).toEqual(['d1', 'd2', 'd3', 'd4', null, null]);
+    s.open = 5;
+    expect(filled(fillEmpty(s, cfg))).toEqual(['4=d5']);
+    s.open = 6;
+    expect(filled(fillEmpty(s, cfg))).toEqual([]);
     expect(slotsOf(s, cfg, 'u')).toEqual(['d1', 'd2', 'd3', 'd4', 'd5', null]);
     clearMarket(s, cfg);
+    expect(cardsIn(s, 'D')).toEqual(['d1', 'd2', 'd3', 'd4', 'd5']);
     s.open = 4;
     refill(s, cfg);
-    expect(live(s)).toEqual(['d1', 'd2', 'd3', 'd4']);
-    expect(slotsOf(s, cfg, 'u').slice(4)).toEqual([null, null]);
+    expect(slotsOf(s, cfg, 'u')).toEqual(['d1', 'd2', 'd3', 'd4', null, null]);
   });
-  it('W B20: an empty slot left of the extras is refilled before an extra slot opens', () => {
+  it('W B20: an empty slot left of the extras is refilled before the extra slot', () => {
     const s: G = { open: 4, zones: newZones({ ...marketZones(rows), D: { seen: 'count', cards: ['d1', 'd2', 'd3', 'd4', 'd5', 'd6'] }, out: { seen: 'all' } }) };
     refill(s, cfg);
     takeSlot(s, cfg, 'u', 1, 'out');
-    extra(s, 1);
-    expect(live(s)).toEqual(['d1', 'd5', 'd3', 'd4', 'd6']);
+    s.open = 5;
+    expect(filled(fillEmpty(s, cfg))).toEqual(['1=d5', '4=d6']);
   });
 });

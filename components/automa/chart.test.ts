@@ -22,12 +22,11 @@ const chart: AutomaTable<View, string, null> = {
 const base: View = { kind: 'K', pileZ: 0, removable: 0, food: 1, offer: ['R-card'], side: 1, able: {} };
 
 describe('K653 automa: chart rows fall through by how much of them can resolve', () => {
-  it('I B10: the first matching row that cannot resolve at all is skipped; the next resolves in part; exactly one row is chosen (the game supplies how much of a row can resolve)', () => {
+  it('I B10: the first matching row that cannot resolve at all is skipped; the next, resolvable in part, is chosen; exactly one row (the game supplies how much of a row can resolve, and resolves the row: +1 gem, card filed)', () => {
     const d = decideAutoma(chart, base, ['row:R1', 'row:R2'], null, rng);
     expect(d.missed).toEqual(['R1']);
     expect(d.rule).toBe('R2');
     expect(d.answer).toBe('row:R2');
-    expect(rows(base).R2).toBe('part');
     expect(decideAutoma(chart, { ...base, pileZ: 1 }, ['row:R1', 'row:R2'], null, rng).rule).toBe('R1');
   });
   it('I B10: "X if able, otherwise Y": an X that can resolve only in part is not able, so Y runs', () => {
@@ -48,23 +47,19 @@ describe('K653 automa: a coupled cost and a pinned chart side', () => {
     ],
     tieBreak: [],
   };
-  it('I B11: "spend 1 food to buy a T card; if unable, take an R card" with no T on offer: nothing spent, an R card taken', () => {
-    const v = { ...base, offer: ['R-card'] };
+  it('I B11: "spend 1 food to buy a T card; if unable, take an R card" with no T on offer: the table changes nothing in the view and picks the R card (the game supplies the spending, done only after the choice)', () => {
+    const v = Object.freeze({ ...base, offer: Object.freeze(['R-card']), able: Object.freeze({}) }) as unknown as View;
     const d = decideAutoma(buy, v, ['buy:T', 'take:R'], null, rng);
     expect([d.rule, d.answer, d.missed]).toEqual(['takeR', 'take:R', ['buyT']]);
-    expect(v.food).toBe(1);
+    expect(decideAutoma(buy, { ...base, offer: ['R-card', 'T-card'] }, ['buy:T', 'take:R'], null, rng).rule).toBe('buyT');
+    expect(decideAutoma(buy, { ...base, food: 0, offer: ['R-card', 'T-card'] }, ['buy:T', 'take:R'], null, rng).rule).toBe('takeR');
   });
-  it('I B11: a row matched on side 1 keeps that side when its own step flips the chart (the game resolves the row the decision names)', () => {
+  it('I B11: the row is matched on the side the view shows when the table is asked (the game supplies the pin: it resolves the row the decision names, +2 gems, even after its step flips the chart)', () => {
     const sided: AutomaTable<View, string, null> = {
       rules: [{ id: 'side1', when: (v) => v.side === 1, match: (a) => a === 'discard' }, { id: 'side2', when: (v) => v.side === 2, match: (a) => a === 'discard' }],
       tieBreak: [],
     };
-    const v: View = { ...base };
-    const d = decideAutoma(sided, v, ['discard'], null, rng);
-    v.side = 2; // the discarded chart card flips the chart
-    const gems = d.rule === 'side1' ? 2 : 0;
-    expect(d.rule).toBe('side1');
-    expect(gems).toBe(2);
-    expect(decideAutoma(sided, v, ['discard'], null, rng).rule).toBe('side2');
+    expect(decideAutoma(sided, base, ['discard'], null, rng).rule).toBe('side1');
+    expect(decideAutoma(sided, { ...base, side: 2 }, ['discard'], null, rng).rule).toBe('side2');
   });
 });

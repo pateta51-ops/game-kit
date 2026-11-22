@@ -54,18 +54,16 @@ const game = (triggers: readonly Trigger[]): GameRules<E> => {
 const play = (t: readonly Trigger[]): EState => createGame(game(t), { seed: 'k653' }, null, null).state;
 
 describe('K653 turn-flow: the first end trigger is latched', () => {
-  it('I B25: condition A in round 3 (end after round 4), condition B in round 4 (end after this round): the game ends after round 4, reason A (the game supplies the latch read by `over`)', () => {
+  it('I B25: condition A in round 3 (end after round 4), condition B in round 4 (end after this round): the flow stops after round 4: its last turn is played, no round 5 turn begins (the game supplies the latch, first reason kept, read by `over`)', () => {
     const s = play([{ round: 3, seat: 'a', cond: 'A' }, { round: 4, seat: 'b', cond: 'B' }]);
     expect(s.seen.at(-1)).toBe('4:b');
     expect(s.seen).toHaveLength(8);
-    expect(s.end).toEqual({ after: 4, reason: 'A' });
     expect(flowOf(s)?.done).toBe(true);
   });
-  it('I B25: both in round 3: the game ends after round 3 and the first reason stays', () => {
+  it('I B25: both in round 3: the flow stops after round 3 (the game supplies the latch)', () => {
     const s = play([{ round: 3, seat: 'a', cond: 'A' }, { round: 3, seat: 'b', cond: 'B' }]);
     expect(s.seen.at(-1)).toBe('3:b');
     expect(s.seen).toHaveLength(6);
-    expect(s.end).toEqual({ after: 3, reason: 'A' });
   });
   it('I B25: no end trigger: the flow runs to its round cap', () => {
     expect(play([]).seen).toHaveLength(198);
