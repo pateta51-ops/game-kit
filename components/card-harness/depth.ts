@@ -1,5 +1,6 @@
 // K415: test depth. The test calls of a file with their bodies (a full-resolve test asserts; a `<clause id> poor` test calls
 // expectNotOffered or expectNotFired), and those two helpers. Ported from two games' depth gates (component.json).
+import { IllegalActionError } from '../engine-core/index.ts';
 import { cardCasesIn, type CardCaseInfo } from './inventory.ts';
 
 export interface TestCall {
@@ -145,9 +146,14 @@ const sig = (t: Observed): string => `${JSON.stringify(t.s ?? null)}|${String(t.
 /**
  * K415: a player choice that is not offered. No enabled option of `id` and no prompt naming it, now or at any step of the
  * scenario's history (offered, taken and doing nothing fails); taking it (`attempt`, default the scenario's `answer(id)` in a
- * rewind when a prompt is open) is refused (it throws or returns false); state and events are as they were.
+ * rewind when a prompt is open) is refused (it returns false or throws the engine's refusal, K648: any other throw fails); state and events are as they were.
  */
-export function expectNotOffered(t: Observed, id: string | readonly string[], attempt?: () => unknown): void {
+const causes = (e: unknown): unknown[] => (e instanceof Error && e.cause !== undefined && e.cause !== e ? [e, ...causes(e.cause)] : [e]);
+/** K648: the engine's refusal (engine-core's `IllegalActionError`, or the game's own through `refused`), the innermost `cause` (what was first thrown, not Scenario's `refused:` wrapper). */
+export interface NotOfferedOptions {
+  readonly refused?: (e: unknown) => boolean;
+}
+export function expectNotOffered(t: Observed, id: string | readonly string[], attempt?: () => unknown, o: NotOfferedOptions = {}): void {
   const want = ids(id);
   const before = sig(t);
   const steps = [t.prompt, ...(t.history ?? []).map((h) => h.prompt)];
@@ -162,7 +168,8 @@ export function expectNotOffered(t: Observed, id: string | readonly string[], at
     let refused: boolean;
     try {
       refused = tryIt() === false;
-    } catch {
+    } catch (e) {
+      if (!(o.refused ?? ((x) => x instanceof IllegalActionError))(causes(e).at(-1))) throw new Error(`expectNotOffered: taking ${want.join(', ')} crashed instead of being refused: ${String(e)}`, { cause: e });
       refused = true;
     }
     if (!refused) throw new Error(`expectNotOffered: taking ${want.join(', ')} was not refused`);
