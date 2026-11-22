@@ -810,8 +810,8 @@ The kernel of a game engine: seeded random numbers, canonical JSON and hashes, t
 ### engine-core/legal
 
 - **Also called:** Legal moves and reasons
-- **Words:** legal moves, barred, why disabled, reason, only option
-- **Use it when:** The game says which options are legal, bars the others with a reason code, and notices the only option (`bar`, `blocked`, `onlyOne`, `legalTable`).
+- **Words:** legal moves, barred, why disabled, reason, only option, one legal answer, auto pick single option, skip prompt with one choice, hidden option
+- **Use it when:** The game says which options are legal, bars the others with a reason code, and notices the only option (`bar`, `blocked`, `onlyOne`, `legalTable`); the only legal answer is taken automatically (`askOrTake`) unless the player has not seen it (`unseen`: a hidden or face-down option is asked).
 - **Guide:** [legal.md](../components/engine-core/legal.md)
 
 ### engine-core/preview

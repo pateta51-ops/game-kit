@@ -35,6 +35,8 @@ export interface KernelOption {
   readonly outcome?: 'good' | 'bad';
   /** K287: answered only on its own (Back, Pass), whatever min/max say; it does not count toward min..max. */
   readonly alone?: true;
+  /** K641: the answering player has not seen what this option is (a face-down card); when it is the only legal answer it is never taken for the player (`onlyOne`, `askOrTake`). */
+  readonly unseen?: true;
 }
 
 export interface KernelPrompt {

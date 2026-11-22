@@ -29,12 +29,12 @@ export const bar = (id: string, reason: string, why?: string, missing?: string):
 export const blocked = (p: Pick<KernelPrompt, 'options'> | null): Blocked[] =>
   (p?.options ?? []).filter((o) => !o.enabled).map((o) => ({ id: o.id, reason: o.reason ?? 'barred', why: o.why, missing: o.missing }));
 
-/** The notice when the prompt leaves one legal answer (one enabled option, one pick required), else null. */
+/** The notice when the prompt leaves one legal answer (one enabled option, one pick required), else null. K641: null when that answer is `unseen`. */
 export function onlyOne(p: Pick<KernelPrompt, 'options' | 'min' | 'max'>): OnlyOneNotice | null {
   const on = p.options.filter((o) => o.enabled && o.alone !== true);
   const lone = p.options.filter((o) => o.enabled && o.alone === true);
   const o = lone.length === 0 ? on[0] : lone[0];
-  return o !== undefined && (lone.length === 0 ? on.length === 1 && p.min === 1 && p.max >= 1 : lone.length === 1 && on.length < p.min) ? { taken: o.id, options: p.options } : null;
+  return o !== undefined && o.unseen !== true && (lone.length === 0 ? on.length === 1 && p.min === 1 && p.max >= 1 : lone.length === 1 && on.length < p.min) ? { taken: o.id, options: p.options } : null;
 }
 
 /** `ctx.ask`, except that a prompt with one legal answer is answered at once (the resume task on top gets it) and its notice returned. */
