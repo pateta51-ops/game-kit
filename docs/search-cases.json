@@ -410,5 +410,8 @@
   { "q":"play whole games by script e2e","first":"sim-pool" },
   { "q":"music state machine layers by game state","first":"sound-player" },
   { "q":"all end spaces of a move with distinct paths","first":"grid-map" },
-  { "q":"ready exhausted cards at round start","first":"tap" }
+  { "q":"ready exhausted cards at round start","first":"tap" },
+  { "q":"flash once and go dark","first":"glow" },
+  { "q":"glow ramp up from dark","first":"glow" },
+  { "q":"single flash glow","first":"glow" }
 ]

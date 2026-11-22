@@ -122,6 +122,27 @@ it('K449 glow without `to` is unchanged: dark, lit, dark', () => {
   expect(frames()).toHaveLength(3);
 });
 
+it('K694 glow end dark without start keeps its two frames (as on main)', () => {
+  play({ actor: 'a', t: 0, dur: 500, do: 'glow', end: 'dark', colour: '#9ff', hold: 0 });
+  expect(frames().map((f) => [f.boxShadow, f.offset])).toEqual([['0 0 24px 6px #9ff', undefined], ['0 0 0 0 transparent', undefined]]);
+});
+
+it('K694 glow start dark: dark at 0, peak at the rise point, dark at the end', () => {
+  play({ actor: 'a', t: 0, dur: 500, do: 'glow', end: 'dark', start: 'dark', hold: 0, rise: 0.3, colour: '#9ff' });
+  expect(frames().map((f) => [f.boxShadow, f.offset])).toEqual([['0 0 0 0 transparent', 0], ['0 0 24px 6px #9ff', 0.3], ['0 0 0 0 transparent', 1]]);
+});
+
+it('K694 glow start dark: default peak in the middle, hold is a plateau around it', () => {
+  play({ actor: 'a', t: 0, dur: 500, do: 'glow', end: 'dark', start: 'dark', hold: 0.2, colour: '#9ff' });
+  expect(frames().map((f) => f.offset)).toEqual([0, 0.4, 0.6, 1]);
+});
+
+it('K694 glow start dark: a skip leaves it dark', () => {
+  const { end, el } = direct({ do: 'glow', end: 'dark', start: 'dark', colour: '#9ff' });
+  end?.();
+  expect(el.style.boxShadow).toContain('transparent');
+});
+
 it('K449 stamp cracked adds a crack overlay that appears at the press and stays', () => {
   const { end, el } = direct({ do: 'stamp', text: 'LOST', cracked: true });
   const crack = el.querySelector<HTMLElement>('[data-fx-part="crack"]');

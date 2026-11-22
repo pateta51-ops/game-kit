@@ -42,6 +42,7 @@ Sixteen verbs for the director's spec format as DOM effects for the motion frame
 - `glow`: Glows once, then fades back
 - `glow` (latch: true): Lights a piece and keeps it lit
 - `glow` (end: "dark"): Dims a lit piece to dark
+- `glow` (end: "dark", start: "dark"): Flashes once and goes dark
 - `radar-sweep`: Sweeps a turning wedge of light round
 - `shield-bubble` (recharge: {}): Builds a hex shield up cell by cell
 - `flicker`: Flickers a colour over a piece
@@ -258,6 +259,7 @@ Look file (opt-in): `looks/rise-pulse.css`, class `fx-rise-pulse` on a positione
 ## Additional DOM effects and settings
 
 - `glow` accepts a CSS `colour` and a centred `hold` fraction from 0 to 1. With a colour, optional `shadows` lists CSS shadow geometry without colour.
+- `glow` with `end: 'dark'` and `start: 'dark'` (K694) is a single flash: dark at 0, full at `rise` (0 to 1 of the call, default 0.5), dark at the end, and the actor is left dark. `hold` is a plateau centred on `rise`; 0 peaks once. Speed 0 shows the final (dark) state at once. Without `start`, `end: 'dark'` is unchanged (starts lit, fades).
 - `flip` squashes horizontally with `axis: 'x'` (default) or vertically with `axis: 'y'`.
 - Set `direction: 1` or `-1` for a 3D turn with `perspective` in pixels (default 800).
   `holdMs` delays the turn and the face swaps at the edge. `squash: false` swaps immediately.
