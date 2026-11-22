@@ -489,6 +489,7 @@
       "visibility",
       "play",
       "area",
+      "face-down",
       "hand limit",
       "zone capacity",
       "discard choice",
@@ -593,7 +594,9 @@
       "json",
       "load",
       "validate",
-      "pack"
+      "pack",
+      "validation",
+      "columns"
     ],
     "visible": false,
     "release": 1,
@@ -610,7 +613,8 @@
       "conditions",
       "missing",
       "handler",
-      "report"
+      "report",
+      "transcription"
     ],
     "visible": false,
     "release": 1,
@@ -845,6 +849,7 @@
       "breakdown",
       "floor",
       "minimum",
+      "deterministic",
       "until end of combat",
       "duration named end point",
       "lasts until event",
@@ -871,7 +876,9 @@
       "events",
       "text",
       "readable",
-      "table"
+      "table",
+      "rows",
+      "adapter"
     ],
     "visible": false,
     "release": 1,
@@ -1061,7 +1068,8 @@
       "worker",
       "cache",
       "update",
-      "app"
+      "app",
+      "pwa"
     ],
     "visible": false,
     "release": 1,
@@ -1095,7 +1103,8 @@
       "bot",
       "rules",
       "advice",
-      "profiles"
+      "profiles",
+      "test player"
     ],
     "visible": false,
     "release": 1,
@@ -1190,7 +1199,9 @@
       "roll",
       "piece",
       "token",
-      "round"
+      "round",
+      "d20",
+      "die"
     ],
     "looks": "Rounded dice, a rolling ball and a thick chip with a cast shadow.",
     "visible": true,
@@ -1407,7 +1418,8 @@
       "determinism",
       "command",
       "line",
-      "check"
+      "check",
+      "replay file"
     ],
     "visible": false,
     "release": 1,
@@ -1568,7 +1580,9 @@
       "straighten",
       "image",
       "flatbed",
-      "ingest"
+      "ingest",
+      "ingestion",
+      "cards"
     ],
     "visible": false,
     "release": 1,
@@ -1655,7 +1669,9 @@
       "prove clause",
       "game log",
       "static clause applied",
-      "trace input"
+      "trace input",
+      "invariants",
+      "simulation runner"
     ],
     "visible": false,
     "release": 1,
@@ -1697,7 +1713,8 @@
       "play",
       "volume",
       "buses",
-      "effects"
+      "effects",
+      "music state"
     ],
     "visible": false,
     "release": 1.2,
@@ -1805,7 +1822,7 @@
     ]
   },
   "token-bag": {
-    "use": "A bag of tokens with its count; the engine's draw shown as a 2D flight from the bag or a 3D shake-and-draw (three.js by dynamic import) that never decides the draw and falls back to 2D; a finite supply of pieces counted from the engine's integers (supply.ts).",
+    "use": "A bag of tokens with its count; the engine's draw shown as a 2D flight from the bag or a 3D shake-and-draw (three.js by dynamic import) that never decides the draw and falls back to 2D; a finite supply of pieces counted from the engine's integers (supply.ts); finite stocks and a bag for the engine (stock.ts, pure): each piece in one named place, a gain from a stock that runs out says so, a seeded draw of N with the game's short-bag rule per kind of draw (draw what is left, refill when the bag runs out, or fail).",
     "not": "Which tokens are drawn (the engine), the token faces and the bag print (the game), a game's token tables.",
     "title": "Bag of tokens with a draw",
     "tags": [
@@ -1815,7 +1832,16 @@
       "pull",
       "shake",
       "random",
-      "cubes"
+      "cubes",
+      "token pool",
+      "finite",
+      "token",
+      "supply",
+      "stock",
+      "runs out",
+      "short bag",
+      "draw from a bag",
+      "pieces run out"
     ],
     "looks": "A bag with a count; a token flies out or the bag shakes in 3D.",
     "visible": true,
@@ -1940,7 +1966,10 @@
       "cards",
       "owner",
       "check",
-      "printed"
+      "printed",
+      "transcriptions",
+      "two",
+      "agree"
     ],
     "visible": false,
     "release": 1,
@@ -2060,7 +2089,8 @@
       "testing",
       "bugs",
       "game",
-      "adapter"
+      "adapter",
+      "language model"
     ],
     "visible": false,
     "release": 1,
@@ -2179,7 +2209,8 @@
       "op table",
       "own engine",
       "ops",
-      "card words"
+      "card words",
+      "text generation"
     ],
     "use": "A game that keeps its own engine still wants one row per op with checked fields, a run function and its text (`OpTable`, `runOp`, `validateOps`).",
     "guide": "README.md"

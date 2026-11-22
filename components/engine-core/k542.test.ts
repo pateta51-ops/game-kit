@@ -3,7 +3,7 @@
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
-import { applyAction, boundary, createSave, EngineBugError, eventOver, expireEffects, exportSave, hashState, importSave, newHistory, recordAction, replay, undo, type Ctx } from './index.ts';
+import { applyAction, boundary, createSave, effectsOf, EngineBugError, eventOver, expireEffects, exportSave, hashState, importSave, newHistory, recordAction, replay, undo, type Ctx, type EffectsConfig } from './index.ts';
 import { giveStatus, hasStatus, removeStatus, statusCount, statusesOf, statusLeft, type StatusTable } from './timed.ts';
 import { answer, startTimed, timedGame, type Timed, type TimedState } from './fake/timed.ts';
 
@@ -78,6 +78,49 @@ describe('K542 statuses', () => {
       out.push(hasStatus(ctx.s, 'u1', 'notInCombat'), removeStatus(ctx, 'u1', 'notInCombat'), hasStatus(ctx.s, 'u1', 'notInCombat'), removeStatus(ctx, 'u1', 'notInCombat'));
     });
     expect(out).toEqual([true, 1, false, 0]);
+  });
+
+  it('K542 removeStatus takes the oldest stack first; each stack ends on its own end', () => {
+    const out: unknown[] = [];
+    const heal = (instance: string): { ends: { until: 'event'; event: string; instance: string } } => ({ ends: { until: 'event', event: 'heal', instance } });
+    play((ctx) => {
+      giveStatus(ctx, T, 'u1', 'wound', heal('a'));
+      giveStatus(ctx, T, 'u1', 'wound', heal('b'));
+      giveStatus(ctx, T, 'u1', 'wound', heal('c'));
+      eventOver(ctx, 'heal', 'c');
+      out.push(statusCount(ctx.s, 'u1', 'wound'), removeStatus(ctx, 'u1', 'wound', 1));
+      eventOver(ctx, 'heal', 'a');
+      out.push(statusCount(ctx.s, 'u1', 'wound'));
+      eventOver(ctx, 'heal', 'b');
+      out.push(statusCount(ctx.s, 'u1', 'wound'));
+    });
+    expect(out).toEqual([2, 1, 1, 0]);
+  });
+
+  it('K542 removeStatus with n below 1, NaN or not whole is an engine bug and removes nothing', () => {
+    const out: number[] = [];
+    play((ctx) => {
+      for (let i = 0; i < 3; i++) giveStatus(ctx, T, 'u1', 'wound');
+      for (const n of [-1, 0, NaN, 1.5]) expect(() => removeStatus(ctx, 'u1', 'wound', n), String(n)).toThrow(EngineBugError);
+      out.push(statusCount(ctx.s, 'u1', 'wound'), removeStatus(ctx, 'u1', 'wound', 2), statusCount(ctx.s, 'u1', 'wound'));
+    });
+    expect(out).toEqual([3, 2, 1]);
+  });
+
+  it('K542 reads take the game EffectsConfig: a blanked source or a false `when` hides the status, as in effectsOf', () => {
+    const out: unknown[] = [];
+    const s = play((ctx) => {
+      giveStatus(ctx, T, 'u6', 'stunned');
+      giveStatus(ctx, T, 'u7', 'stunned', { when: 'inCombat' });
+      out.push(giveStatus(ctx, T, 'u6', 'stunned').given);
+    });
+    const blanked = { blanked: () => ['u6'] };
+    const cond = (v: boolean) => ({ conditions: { inCombat: () => v } });
+    const agree = (obj: string, cfg: EffectsConfig<TimedState>): [boolean, boolean] => [hasStatus(s, obj, 'stunned', cfg), effectsOf(s, 'status', (e) => e.target === obj, cfg).length > 0];
+    expect(out).toEqual([false]);
+    expect([agree('u6', blanked), agree('u6', {}), agree('u7', cond(false)), agree('u7', cond(true))]).toEqual([[false, false], [true, true], [false, false], [true, true]]);
+    expect([statusesOf(s, T, 'u6', blanked), statusCount(s, 'u7', 'stunned', cond(false))]).toEqual([[], 0]);
+    expect(() => hasStatus(s, 'u7', 'stunned')).toThrow(EngineBugError);
   });
 
   it('K542 a status not in the table is an engine bug', () => {
@@ -158,7 +201,7 @@ describe('K542 comparison: random give, remove, expire and leave-play sequences 
   it('K542 300 random sequences: every object\'s statuses, counts and give results match the model after every step', () => {
     for (let seed = 1; seed <= 300; seed++) {
       const ops = script(seed, 40);
-      let model: { obj: string; name: string }[] = [];
+      let model: { obj: string; name: string; id: number }[] = [];
       const view = (obj: string): { name: string; token: string; count: number }[] => {
         const out: { name: string; token: string; count: number }[] = [];
         for (const m of model.filter((e) => e.obj === obj)) {
@@ -175,7 +218,7 @@ describe('K542 comparison: random give, remove, expire and leave-play sequences 
             const res = giveStatus(ctx, T, o.obj, o.name, { instance: o.obj });
             const stacks = o.name === 'wound';
             expect(res.given, at).toBe(stacks || !had);
-            if (res.given) model.push({ obj: o.obj, name: o.name });
+            if (res.given) model.push({ obj: o.obj, name: o.name, id: res.id });
           }
           if (o.op === 'remove') {
             const mine = model.filter((m) => m.obj === o.obj && m.name === o.name).slice(0, o.n ?? Infinity);
@@ -188,6 +231,7 @@ describe('K542 comparison: random give, remove, expire and leave-play sequences 
           if (o.op === 'expire') expireEffects(ctx);
           for (const obj of OBJS) {
             expect(statusesOf(ctx.s, T, obj), `${at} ${obj}`).toEqual(view(obj));
+            expect(effectsOf(ctx.s, 'status', (e) => e.target === obj).map((e) => e.id), `${at} ${obj} ids`).toEqual(model.filter((m) => m.obj === obj).map((m) => m.id));
             for (const name of NAMES) expect(statusCount(ctx.s, obj, name), `${at} ${obj} ${name}`).toBe(model.filter((m) => m.obj === obj && m.name === name).length);
           }
         });
