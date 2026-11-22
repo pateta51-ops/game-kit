@@ -207,6 +207,47 @@ describe('dice-patterns named shapes (K578)', () => {
   });
 });
 
+describe('dice-patterns second review (K578)', () => {
+  it('whole with any: the set comes from a part the whole roll meets', () => {
+    const p: Pattern = { kind: 'any', of: [{ kind: 'sum', op: '=', value: 7 }, { kind: 'same', n: 2 }] };
+    expect(smallest(p, [3, 4, 2, 2])).toEqual([0, 1]);
+    expect(smallest(p, [3, 4, 2, 2], { whole: true })).toEqual([2, 3]);
+    expect(smallest({ kind: 'any', of: [{ kind: 'max', op: '<=', value: 2 }, { kind: 'count', n: 3 }] }, [1, 6, 5], { whole: true })).toEqual([0, 1, 2]);
+    const nested: Pattern = { kind: 'all', of: [{ kind: 'even', n: 1 }, { kind: 'any', of: [{ kind: 'sum', op: '=', value: 1 }, { kind: 'odd', n: 2 }] }] };
+    expect(smallest(nested, [1, 3, 4], { whole: true })).toEqual([0, 1, 2]);
+  });
+  it('random rolls with any: under whole the set meets a part that the whole roll meets', () => {
+    let s = 97531;
+    const rnd = (n: number): number => { s = (s * 1103515245 + 12345) & 0x7fffffff; return (s >> 8) % n; };
+    const ps: Extract<Pattern, { kind: 'any' }>[] = [
+      { kind: 'any', of: [{ kind: 'sum', op: '=', value: 7 }, { kind: 'same', n: 2 }] },
+      { kind: 'any', of: [{ kind: 'max', op: '<=', value: 2 }, { kind: 'count', n: 3 }] },
+      { kind: 'any', of: [{ kind: 'spread', value: 1 }, { kind: 'sum', op: '<', value: 4 }, { kind: 'run', n: 3 }] }];
+    let met = 0;
+    for (const p of ps) for (let i = 0; i < 300; i += 1) {
+      const v = Array.from({ length: rnd(6) }, () => 1 + rnd(6));
+      const w = smallest(p, v, { whole: true });
+      expect(w !== null).toBe(compile(p)(v));
+      if (!w) continue;
+      met += 1;
+      const set = w.map((x) => v[x] as number);
+      expect(p.of.some((q) => compile(q)(v) && compile(q)(set))).toBe(true);
+    }
+    expect(met).toBeGreaterThan(100);
+  });
+  it('a die of value 0 is not rolled: compile, smallest and meaning leave it out', () => {
+    const pair: Pattern = { kind: 'same', n: 2 };
+    expect(smallest(pair, [0, 0, 4, 4])).toEqual([2, 3]);
+    expect(smallest(pair, [0, 0, 4])).toBeNull();
+    expect(t(pair, [0, 0, 4])).toBe(false);
+    expect(t({ kind: 'even', n: 2 }, [0, 0, 3])).toBe(false);
+    expect(t({ kind: 'count', n: 3 }, [0, 5, 5])).toBe(false);
+    expect(smallest({ kind: 'sum', op: '=', value: 7 }, [7, 0], { whole: true })).toEqual([0]);
+    expect(smallest({ kind: 'sum', op: '=', value: 7 }, [0, 3, 0, 4], { whole: true })).toEqual([1, 3]);
+    expect(meaning('pair', pair, 'a pair').test([{ value: 0 }, { value: 0 }, { value: 4 }, { value: 4 }])).toBe(true);
+  });
+});
+
 describe('dice-patterns checkPattern', () => {
   it('good data has no problems', () => {
     expect(checkPattern({ kind: 'all', of: [{ kind: 'same', n: 2 }, { kind: 'sum', op: '>', value: 7 }] })).toEqual([]);
