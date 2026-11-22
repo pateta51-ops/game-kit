@@ -2,7 +2,7 @@
 // game runs on the pack as it is and on a frozen copy of an earlier one. Seat a acts with 3 gold; p1 (in play) is the source card.
 import { applyAction, canonicalJson, createGame, draftOf, GameOver, hashState, hashValue, seedRng, timingHandlers, type AnswerAction, type Ctx, type Draft, type GameRules, type HandlerTable, type KernelPrompt, type KernelState, type KernelTask, type Occurrence } from '../engine-core/index.ts';
 import { cardsIn, locate, newZones } from '../card-zones/index.ts';
-import { askVerb, effectTasks, verbHandler, type VerbTable, type VerbTask } from './index.ts';
+import { askVerb, effectTasks, verbHandler, type AnyVerbTable, type VerbTable, type VerbTask } from './index.ts';
 import { cannotKnow, dryRunSeat, type Offered, type OfferPolicy, type PackConfig, type PackEnv, type PackState, type PackStep } from './pack.ts';
 import { cardTriggers, type WhenCard } from './when.ts';
 
@@ -48,6 +48,7 @@ export const GAIN: PackStep = { op: 'gainResource', res: 'gold', amount: 1 };
 export const NOTHING: PackStep = { op: 'move', cards: 'top', from: 'aside', to: 'discard' };
 export const DRAW: PackStep = { op: 'draw', count: 1 };
 export const pay = (amount: number): PackStep => ({ op: 'pay', res: 'gold', amount });
+export const LUCKY = { op: 'lucky' } as unknown as PackStep;
 const SKIP = ['stack', 'prompt', 'seq', 'promptSeq', 'log', 'timing', 'cardMoves', 'rng', 'forced', 'truth'];
 /** What the check compares by default, without the brute-force notes. */
 export const viewOf = (s: S): string => canonicalJson(Object.fromEntries(Object.entries(s).filter(([k, v]) => !SKIP.includes(k) && !(k === 'marks' && Object.keys(v as object).length === 0))));
@@ -81,6 +82,9 @@ export const offerGame = <P extends BasePack>(make: (cfg: never) => P, opts: Gam
       roll: { run: (ctx, _st, env) => res(ctx, env.seat, ctx.rng.int(6)), text: () => 'Roll.' },
       loop: { run: (ctx, st, env) => ctx.then(...(effectTasks([st], env) as Task[])), text: () => 'Loop.' },
       spend: { run: (ctx, _st, env) => res(ctx, env.seat, 0), text: () => 'Lose all gold.' },
+      // A pay step a game verb makes itself; a cost step payable only while an even card lies open.
+      dyn: { run: (ctx, _st, env) => ctx.then(...(effectTasks([pay(2)], env) as Task[])), text: () => 'Dyn.' },
+      evenPay: { run: () => undefined, payable: (s) => cardsIn(s, 'discard:a').some((c) => c.endsWith('2')), text: () => 'Even.' },
       who: { run: () => void nested.push(String(dryRunSeat())), text: () => 'Who.' },
       why: { run: (ctx, _st, env) => void nested.push(String((pack as unknown as { judge: (...a: unknown[]) => { reason?: string } }).judge(ctx.s, ctx.content, [GAIN], env).reason)), text: () => 'Why.' },
       nest: { run: (ctx, _st, env) => void nested.push(pack.wouldChange(ctx.s, ctx.content, [GAIN], env)), text: () => 'Nest.' },
@@ -130,9 +134,12 @@ export const offerGame = <P extends BasePack>(make: (cfg: never) => P, opts: Gam
     moved: (ctx, m) => ctx.emit({ type: `${m.op} ${m.card}` }),
     ...(opts.offer === undefined ? {} : { offer: opts.offer }),
     handlers: (): HandlerTable<G> => RULES.handlers,
+    table: () => VERBS as unknown as AnyVerbTable,
     ...opts.cfg,
   };
   const pack = make(cfg as never);
+  // The game's own verb (a row of its table, not a pack verb): 9 gold if an even card lies in the open discard.
+  const VERBS = { ...pack.verbs, lucky: { fields: {}, run: (ctx: Ctx<G>, _st: PackStep, env: PackEnv | undefined) => void (cardsIn(ctx.s, 'discard:a').some((c) => c.endsWith('2')) && res(ctx, env?.seat ?? 'a', 9)), text: () => 'Lucky.' } } as unknown as VerbTable<G, PackStep, PackEnv>;
   const RULES: GameRules<G> = {
     handlers: {
       ...timingHandlers<G>({
@@ -140,7 +147,7 @@ export const offerGame = <P extends BasePack>(make: (cfg: never) => P, opts: Gam
         ...(opts.cancel === undefined ? {} : { replacementsFor: (_s: S, o: Occurrence) => (o.kind === opts.cancel ? [{ id: 9000, controller: 'b', cls: 1, label: 'Skip' }] : []), applyReplacement: () => 'skipped' as const }),
         ...(opts.pool ? cardTriggers<G>({ pool: opts.pool, player: () => 'b', active: (s, c) => locate(s, c) !== undefined, table: pack.verbs }) : {}),
       }),
-      verb: verbHandler<G>(pack.verbs),
+      verb: verbHandler<G>(VERBS),
     },
     blank: ({ seed }): Draft<S> => {
       const [a, b, c, d] = seedRng(seed);

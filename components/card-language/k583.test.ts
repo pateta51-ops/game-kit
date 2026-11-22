@@ -3,7 +3,7 @@ import { blocked, EngineBugError, onlyOne, type KernelPrompt } from '../engine-c
 import { cardsIn } from '../card-zones/index.ts';
 import { describeEffect } from './index.ts';
 import { cannotKnow, cardPack, inDryRun, type PackEnv, type PackStep } from './pack.ts';
-import { DRAW, GAIN, gold, NOTHING, offerGame, pay, type Eff, type G, type GameOpts, type S } from './offerGame.ts';
+import { DRAW, GAIN, gold, LUCKY, NOTHING, offerGame, pay, type Eff, type G, type GameOpts, type S } from './offerGame.ts';
 
 // K583: every case on the made-up game of offerGame.ts. Seat a: 3 gold, hand h1 h2, deck d1 d2, p1 in play; seat b: hidden hand b1 b2 b3.
 const game = (offer?: GameOpts['offer'], opts: GameOpts = {}) => offerGame(cardPack<G>, { ...opts, ...(offer ? { offer } : {}) });
@@ -411,5 +411,98 @@ describe('card-language offer policy (K583) review: lines no test held, and two 
     expect([seen?.options, seen && onlyOne(seen)?.taken]).toEqual([[{ id: 'p1', enabled: true }], 'p1']);
     const cost = game(undefined, { b: ['b1'] }).play([{ op: 'discard', from: 'hand:b', count: 1 }], [], undefined, true).s.prompt;
     expect(cost?.options).toEqual([{ id: '#0', enabled: true, unseen: true }]);
+  });
+});
+
+// K583 third look: each case failed before its fix.
+describe('card-language offer policy (K583) third look: after a cost showed a card, no game code runs in the check', () => {
+  const MILL: PackStep = { op: 'mill', count: 1 };
+  const EVEN_UP: PackStep = { op: 'if', test: 'evenUp', then: [{ op: 'gainResource', res: 'gold', amount: 5 }] };
+  const openTax: NonNullable<GameOpts['cfg']>['due'] = (s, _st, _e, printed) => printed + (cardsIn(s, 'discard:a').some((c) => c.endsWith('2')) ? 1 : 0);
+  const over = (steps: Eff, cfg: GameOpts['cfg'] = {}, offer: GameOpts['offer'] = { paid: 'effect' }) => [['d1', 'd2'], ['d2', 'd1']].map((deck) => {
+    const g = game(offer, { deck, cfg });
+    const { s, content } = g.at();
+    return g.pack.judge(s, content, steps, A);
+  });
+  const HID = [{ answer: 'unknown', reason: 'hidden' }, { answer: 'unknown', reason: 'hidden' }];
+  it('K583 a game\'s own verb after a cost that showed a card: unknown (hidden) for both cards', () => {
+    expect(over([paid([MILL], [LUCKY])])).toEqual(HID);
+    expect(over([paid([pay(1)], [LUCKY])]).map((r) => r.answer)).toEqual(['no', 'no']);
+    expect(game().play([MILL, LUCKY]).s.res?.a?.gold).toBe(3);
+  });
+  it('K583 due, and a custom verb\'s payable, after a cost that showed a card: unknown (hidden) for both cards', () => {
+    expect(over([paid([pay(1), MILL], [paid([pay(2)], [GAIN])])], { due: openTax })).toEqual(HID);
+    expect(over([paid([MILL], [paid([{ op: 'custom', name: 'evenPay' }], [GAIN])])])).toEqual(HID);
+    expect(over([paid([MILL], [{ op: 'choosePayment', ways: [[{ op: 'custom', name: 'evenPay' }]], then: [GAIN] }])])).toEqual(HID);
+    expect(over([paid([pay(1)], [paid([pay(2)], [GAIN])])], { due: openTax }).map((r) => r.answer)).toEqual(['yes', 'yes']);
+  });
+  it('K583 game code inside the cost, after the cost\'s own step showed the card: unknown (hidden) for both cards', () => {
+    expect(over([paid([MILL, EVEN_UP], [pay(4)])])).toEqual(HID);
+    expect(over([paid([MILL, LUCKY], [pay(4)])])).toEqual(HID);
+    expect(over([paid([DRAW, { op: 'if', test: 'drew2', then: [{ op: 'gainResource', res: 'gold', amount: 5 }] }], [paid([pay(4)], [GAIN])])])).toEqual(HID);
+    expect(over([paid([EVEN_UP, MILL], [pay(1)])]).map((r) => r.answer)).toEqual(['yes', 'yes']);
+  });
+  it('K583 300 random paid effects over 4 states the seat cannot tell apart, with and without a due that reads open cards, parts and whole: one answer', () => {
+    let x = 583;
+    const rnd = (k: number): number => {
+      x = (Math.imul(x, 1103515245) + 12345) >>> 0;
+      return (x >>> 8) % k;
+    };
+    const of = <T,>(xs: readonly T[]): T => xs[rnd(xs.length)] as T;
+    const test = (): PackStep => ({ op: 'if', test: of(['evenUp', 'drew2', 'b3', 'poor']), then: [of([GAIN, { op: 'gainResource', res: 'gold', amount: 5 } as PackStep])] });
+    const cost = (): PackStep[] => Array.from({ length: 1 + rnd(3) }, () => of<() => PackStep>([
+      () => MILL, () => MILL, () => DRAW, () => pay(1), () => ({ op: 'discard', from: 'hand:b', count: 1 }), () => ({ op: 'move', cards: 'top', from: 'deck', to: 'aside' }),
+      () => ({ op: 'exhaust' }), () => ({ op: 'discard', count: 1 }), test, () => LUCKY, () => IDLE, () => ({ op: 'custom', name: 'dyn' }), () => ({ op: 'lookAt', count: 1 }), () => ({ op: 'reveal', count: 1 }),
+    ])());
+    const then = (depth: number): PackStep[] => Array.from({ length: 1 + rnd(2) }, () => of<() => PackStep>([
+      () => GAIN, () => NOTHING, () => NOTHING, () => LUCKY, test, () => pay(4), () => pay(2), () => IDLE,
+      () => ({ op: 'count', what: 'held', then: [{ op: 'gainResource', res: 'gold', amount: 'X' }] }),
+      () => ({ op: 'chooseCards', zone: 'hand', filter: 'even', max: 1, then: [{ op: 'discard', cards: 'chosen' }] }),
+      () => (depth === 0 ? NOTHING : paid(of([[pay(2)], [pay(4)], [{ op: 'custom', name: 'evenPay' } as PackStep], cost()]), then(depth - 1))),
+      () => ({ op: 'choosePayment', ways: [[{ op: 'custom', name: 'evenPay' }], [pay(4)]], then: [of([GAIN, NOTHING])] }),
+      () => ({ op: 'may', then: [of([GAIN, NOTHING, LUCKY])] }),
+    ])());
+    const STATES = [{ deck: ['d1', 'd2'], b: ['b1', 'b3'] }, { deck: ['d2', 'd1'], b: ['b1', 'b3'] }, { deck: ['d1', 'd2'], b: ['b2', 'b4'] }, { deck: ['d2', 'd1'], b: ['b4', 'b2'] }];
+    const WORLDS = [{}, { due: openTax }].flatMap((cfg) => [{ paid: 'effect' as const }, { paid: 'effect' as const, cost: 'whole' as const, noChange: 'skip' as const }].map((offer) => STATES.map((st) => game(offer, { ...st, cfg }))));
+    const seen = { hidden: 0, yes: 0, no: 0 };
+    for (let i = 0; i < 300; i += 1) {
+      const eff: Eff = [paid(cost(), then(1)), ...(rnd(3) === 0 ? then(0) : [])];
+      for (const world of WORLDS) {
+        const got = world.map((g) => {
+          const { s, content } = g.at();
+          const r = g.pack.judge(s, content, eff, A);
+          return `${r.answer} ${String(r.reason)} ${JSON.stringify(g.play([{ op: 'may', then: eff }], [], undefined, true).s.prompt?.options ?? null)}`;
+        });
+        if (new Set(got).size !== 1) throw new Error(`the answer tells the hidden cards: ${got.join(' | ')}: ${JSON.stringify(eff)}`);
+        const [first = ''] = got;
+        if (first.startsWith('unknown hidden')) seen.hidden += 1;
+        else if (first.startsWith('yes')) seen.yes += 1;
+        else if (first.startsWith('no')) seen.no += 1;
+      }
+    }
+    expect(seen.hidden).toBeGreaterThan(200);
+    expect(seen.yes).toBeGreaterThan(100);
+    expect(seen.no).toBeGreaterThan(50);
+  }, 240000);
+});
+
+describe('card-language cost hook (K583) third look', () => {
+  const plus1: NonNullable<GameOpts['cfg']>['due'] = (_s, _st, _e, printed) => printed + 1;
+  it('K583 a pay step a game verb makes inside a cost is charged like any other', () => {
+    const g = game(undefined, { cfg: { due: plus1 } });
+    const DYN: PackStep = { op: 'custom', name: 'dyn' };
+    expect([gold(g.play([DYN]).s), gold(g.play([paid([DYN], [NOTHING])]).s), gold(game({ cost: 'whole' }, { cfg: { due: plus1 } }).play([paid([DYN], [NOTHING])]).s)]).toEqual([0, 0, 0]);
+    expect(gold(g.play([GAIN, paid([pay(1)], [pay(1)])]).s)).toBe(0);
+  });
+  it('K583 a game env with its own field named fixed does not turn due off', () => {
+    const g = game(undefined, { cfg: { due: plus1 } });
+    const env = { ...A, fixed: true } as PackEnv;
+    expect(gold(g.play([pay(2)], [], env).s)).toBe(0);
+    expect(describeEffect(g.pack.verbs, g.pack.costed(g.at().s, [pay(2)], env))).toBe('Pay 3 gold.');
+    expect(g.pack.costed(g.at().s, [paid([pay(2)], [GAIN])], A)).toEqual([paid([pay(3)], [GAIN])]);
+  });
+  it('K583 in the check a shuffle of one card that was shown to a seat is still a shuffle (it forgets what was shown)', () => {
+    const g = game(undefined, { deck: ['d1'] });
+    expect([g.check([{ op: 'shuffle', zone: 'deck' }], A, [{ op: 'lookAt', count: 1 }]), g.check([{ op: 'shuffle', zone: 'deck' }])]).toEqual(['unknown', 'no']);
   });
 });
