@@ -1,6 +1,6 @@
 # Harvest review: Rome: Fate of an Empire (`rome`) against game-kit v0.21.0
 
-Read-only review of `C:\projects\_harvest\rome` (snapshot of origin/main) against `C:\projects\game-kit\components`.
+Read-only review of the harvest snapshot of rome (snapshot of origin/main) against `C:\projects\game-kit\components`.
 Paths in the Evidence column: game paths are relative to the snapshot, kit paths to `components/`.
 "Kit: no match" means a grep over `components/`, `kit.mjs`, `scripts/` and `docs/PLAN.md` found nothing.
 Most game files were read by their first 30 to 50 lines only (see the lists at the end), so effort and risk are estimates.

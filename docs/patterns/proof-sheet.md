@@ -3,7 +3,7 @@
 No component: screens draw each game's own faces and describe functions (SELECTION.md, "Menus shell and phone"). Take the pure parts; a generic list-with-filter shell taking a renderer is an M lift if ever wanted.
 
 ## Example (read, never edit)
-stcc `Star-trek-captains-chair-game` @ `9fc59643` (C:\projects\Star-trek-captains-chair-game):
+stcc `Star-trek-captains-chair-game` @ `9fc59643`:
 - `src/ui/screens/proofFilters.ts` + `proofFilters.test.ts` (269 lines of tests): filters, sorts, sections.
 - `src/ui/screens/proofGroups.ts`: grouping.
 - `src/ui/screens/ProofSheet.tsx`: the screen (game-bound).

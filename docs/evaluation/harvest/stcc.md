@@ -1,6 +1,6 @@
 # Harvest review: Star Trek Captain's Chair (stcc) against game-kit v0.21.0
 
-Read-only review, 15 Nov 2026. Snapshot: `C:\projects\_harvest\stcc`. Kit: `C:\projects\game-kit\components`.
+Read-only review, 15 Nov 2026. Snapshot: the harvest snapshot of stcc. Kit: `C:\projects\game-kit\components`.
 Most game files were judged from their header comment, exports and imports (first 16 lines), not their full body: see "Not read".
 Effort and risk are estimates. No test was run.
 

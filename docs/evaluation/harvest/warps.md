@@ -1,6 +1,6 @@
 # Harvest review: Warp's Edge (`warps`) against game-kit v0.21.0
 
-Read-only review, 15 Nov 2026. Snapshot: `C:\projects\_harvest\warps`. Kit: `C:\projects\game-kit`.
+Read-only review, 15 Nov 2026. Snapshot: the harvest snapshot of warps. Kit: `C:\projects\game-kit`.
 Paths in "evidence" are snapshot path first, kit path checked second. 16 candidates, best first; 5 recommended.
 
 | # | Candidate | Kit component | What the game has that the kit lacks | Evidence | Effort | Other games | Risk |

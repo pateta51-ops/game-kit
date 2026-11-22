@@ -3,7 +3,7 @@
 Kit part: GK9 (pool, driver contract, driver random numbers; base warps). Greedy players and band contents are game rules: pattern only (SELECTION.md, "Engine").
 
 ## Example (read, never edit)
-- warps `warps-edge-fan-prototype` @ `2af6937` (C:\projects\warps-edge-fan-prototype):
+- warps `warps-edge-fan-prototype` @ `2af6937`:
   - `src/engine/drivers/{types,rng,random,greedy,heuristics,planner}.ts`.
   - `scripts/sim/core.ts` (`bands`), `scripts/sim/pool.ts`.
   - `tests/unit/drivers/{drivers,bands}.test.ts`.

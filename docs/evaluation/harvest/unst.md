@@ -1,6 +1,6 @@
 # Harvest review: Unstoppable (`unst`) against game-kit v0.21.0
 
-Read-only review of `C:\projects\_harvest\unst` (code-only snapshot) against `C:\projects\game-kit\components`. No tests were run. Paths in the Evidence column are relative to the snapshot (first) and to the kit (second). "Kit grep" means a search of all of `components/` returned no match for the named term.
+Read-only review of the harvest snapshot of unst (code-only snapshot) against `C:\projects\game-kit\components`. No tests were run. Paths in the Evidence column are relative to the snapshot (first) and to the kit (second). "Kit grep" means a search of all of `components/` returned no match for the named term.
 
 14 candidates, best first. Four are marked **recommended**.
 
