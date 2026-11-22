@@ -136,6 +136,7 @@ graph LR
   screens["screens"]
   settings["settings"]
   sim_pool["sim-pool"] --> engine_core["engine-core"]
+  sim_pool["sim-pool"] --> card_harness["card-harness"]
   small_helpers["small-helpers"]
   sound_player["sound-player"]
   state_machines["state-machines"]

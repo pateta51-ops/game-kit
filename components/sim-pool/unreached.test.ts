@@ -1,6 +1,7 @@
-import { mkdtempSync, readFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { pathToFileURL } from 'node:url';
 import { describe, expect, it } from 'vitest';
 import { CONTENT } from '../engine-core/fake/counter.ts';
 import { checked, simGame } from './fake/coverage.ts';
@@ -103,5 +104,34 @@ describe('K651 findings file', () => {
     expect(lines.at(-1)).toBe('finding x-1: the same failure again');
     expect(await fuzzMain(['--finding', 'nope'], module, { whole: { findings } }, (l) => void lines.push(l))).toBe(2);
     expect(lines.at(-1)).toBe(`no finding with seed nope in ${findings}`);
+  });
+});
+
+describe('K651 README recipe', () => {
+  it('runs: proof from a passing counted test, rounds, findings file', async () => {
+    const dir = mkdtempSync(join(tmpdir(), 'k651-recipe-'));
+    mkdirSync(join(dir, 'tests'));
+    mkdirSync(join(dir, '.cache'));
+    writeFileSync(join(dir, 'tests', 'never.test.ts'), full.text);
+    writeFileSync(join(dir, '.cache', 'tests.json'), JSON.stringify({ testResults: [{ name: join(dir, 'tests', 'never.test.ts'), assertionResults: [{ title: 'never full resolve', status: 'passed' }] }] }));
+    const md = readFileSync(new URL('./README.md', import.meta.url), 'utf8');
+    const code = (/## Unreached list[^\n]*\n[\s\S]*?```ts\r?\n([\s\S]*?)```/.exec(md)?.[1] ?? '')
+      .replaceAll(/(['"])\.\.\/kit\//g, '$1../')
+      .replace("'.cache/tests.json'", JSON.stringify(join(dir, '.cache', 'tests.json')))
+      .replace("testFiles('.'", `testFiles(${JSON.stringify(dir)}`)
+      .replace("'tests/whole-game/findings.json'", JSON.stringify(join(dir, 'findings.json')))
+      .replace('process.argv.slice(2)', "['--games', '2', '--prefix', 'c']");
+    expect(code).toContain('provenClauses(');
+    const file = new URL('./.k651-recipe.ts', import.meta.url);
+    writeFileSync(file, code);
+    const was = process.exitCode;
+    try {
+      await import(pathToFileURL(file.pathname.replace(/^\/([A-Za-z]:)/, '$1')).href);
+      expect(process.exitCode).toBe(0);
+      expect(JSON.parse(readFileSync(join(dir, 'findings.json'), 'utf8'))).toEqual([]);
+    } finally {
+      process.exitCode = was;
+      rmSync(file, { force: true });
+    }
   });
 });

@@ -1565,7 +1565,7 @@
     "gameSupplies": "The game store and a bot."
   },
   "sim-pool": {
-    "use": "Playing many whole games with drivers on worker threads, fuzzing, sanity bands, sweeps, the K200 weight tuner and paired validation.",
+    "use": "Playing many whole games with drivers on worker threads, fuzzing, sanity bands, sweeps, the K200 weight tuner and paired validation; the whole-game check of unreached clauses (proof from counted full-resolve tests), coverage rounds and a findings file to replay a failing seed.",
     "not": "A driver's strategy (the game or opponent supplies it).",
     "title": "Bulk game simulator",
     "tags": [
@@ -1576,7 +1576,14 @@
       "balance",
       "fuzz",
       "tune",
-      "threads"
+      "threads",
+      "unreached",
+      "clauses",
+      "whole game",
+      "coverage",
+      "replay seed",
+      "failing seed",
+      "findings"
     ],
     "visible": false,
     "release": 1,

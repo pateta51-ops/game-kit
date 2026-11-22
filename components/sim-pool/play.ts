@@ -68,6 +68,8 @@ export interface SimGame<G extends GameTypes, S = unknown, O = unknown> {
   reshuffleHidden?(state: G['state'], seat: KernelPrompt['seat'], rng: DriverRng, content: G['content']): G['state'];
   /** K490: the game's ability trace (card-harness `traceAbilities` fits): cleared before each game; its `resolved` ids are stored on the record as `resolved`, so a run merges them across workers. */
   trace?(content: G['content']): ResolvedTrace | undefined;
+  /** K651: did the effect do something? With `trace`, each id resolved inside an action counts (`resolved`) only when this returns true for the state before and after that action; else it goes to the record's `noOp`. Ids resolved in setup or between actions count unchecked. */
+  changed?(clause: string, before: G['state'], after: G['state'], content: G['content']): boolean;
 }
 
 /** K490: what `SimGame.trace` returns. */
@@ -127,6 +129,8 @@ export interface SimRecord<S = unknown> {
   readonly viewBytes?: number;
   /** K490: the ids `SimGame.trace` saw resolved in this game, sorted. */
   readonly resolved?: readonly string[];
+  /** K651: ids resolved in this game only by actions after which `SimGame.changed` said nothing changed, sorted. */
+  readonly noOp?: readonly string[];
 }
 
 export const ANSWER_CAP = 512;
@@ -217,6 +221,13 @@ export function playOne<G extends GameTypes, S, O = unknown>(game: SimGame<G, S,
   const ms = { answers: 0, choose: 0, apply: 0, view: 0 };
   const trace = game.trace?.(content);
   trace?.clear();
+  const counted = trace && game.changed ? new Set<string>() : undefined;
+  const noOp = new Set<string>();
+  const take = (): void => {
+    if (!counted || !trace) return;
+    for (const id of trace.resolved) counted.add(id);
+    trace.clear();
+  };
   const render = (st: G['state']): void => {
     if (!opts.view || !game.view) return;
     const t = performance.now();
@@ -240,6 +251,7 @@ export function playOne<G extends GameTypes, S, O = unknown>(game: SimGame<G, S,
     const start = game.start(spec, content);
     seen = game.observation?.(spec, content);
     const first = createGame(game.rules, start.options, start.rules, content);
+    take();
     let s: G['state'] = first.state;
     state = s;
     violations.push(...first.violations);
@@ -273,8 +285,13 @@ export function playOne<G extends GameTypes, S, O = unknown>(game: SimGame<G, S,
       if (until !== undefined && actions.length >= until) break;
       actions.push(a);
       t = performance.now();
+      take();
       const r = applyAction(game.rules, s, a, content);
       ms.apply = performance.now() - t;
+      if (counted && trace && game.changed) {
+        for (const id of trace.resolved) (game.changed(id, s, r.state, content) ? counted : noOp).add(id);
+        trace.clear();
+      }
       const w = s.rng;
       const n = r.state.rng;
       if (game.undoCheck && ((a.kind === 'answer' && a.reseed !== undefined) || n.a !== w.a || n.b !== w.b || n.c !== w.c || n.d !== w.d) && !isRevealing(r.events))
@@ -311,7 +328,8 @@ export function playOne<G extends GameTypes, S, O = unknown>(game: SimGame<G, S,
     ...(failed ? { log: actions } : {}),
     ...(summary !== undefined ? { summary } : {}),
     ...(viewBytes !== undefined ? { viewBytes } : {}),
-    ...(trace ? { resolved: [...new Set(trace.resolved)].sort() } : {}),
+    ...(counted ? { resolved: [...counted].sort() } : trace ? { resolved: [...new Set(trace.resolved)].sort() } : {}),
+    ...(counted && [...noOp].some((id) => !counted.has(id)) ? { noOp: [...noOp].filter((id) => !counted.has(id)).sort() } : {}),
   };
 }
 

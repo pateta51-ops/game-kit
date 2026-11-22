@@ -18,6 +18,7 @@ Plays N whole games of any `GameRules<G>` with a driver, in this thread or on wo
 9. Use `heavy run` or the game's npm script for long runs, not bare Node on the shared machine.
 10. For the whole-game report (K490) pass `whole: { clauses, group? }` (or `true`) in `fuzzMain`'s options and give `trace(content)` on `SimGame` (card-harness `traceAbilities` over the registry the engine plays from, built in `content()`); without `trace` no record has `resolved` and every listed clause fails as never resolved. Set `gameTimeoutMs` in the options too: without it a game that hangs inside one action stalls the run; with it the game is a `timeout` record, counted unfinished with its seed (a crashed worker's game too).
 11. Answer with the engine's own options: `randomDriver` over the default `legalAnswers` (the prompt's enabled options) is the legal-move driver; a game `answers` override replaces those options.
+12. (K651) For the unreached list pass `whole: { clauses, unreached, proof }`: `unreached` is `[{ clause, why }]`, and `proof` must come from `provenClauses(clauses, testFiles(root, dirs), report)` (card-harness's counted full-resolve tests, K415, that passed in the vitest JSON `report` of the same run), never a hand-written map. A listed clause that resolved fails as stale; one with no proof fails. Give `changed(clause, before, after, content)` on `SimGame` so a resolve counts only when the effect moved something; pass `rounds: { games, max?, settings(seed, driver, unreached) }` to steer coverage rounds (they stop when a round adds no clause, or at `max`, default 10); pass `findings: <path>` and replay one failure with `--finding <seed>` (its recorded settings, not the seed's).
 
 **Common mistakes:**
 - A game whose result differs between a pool run and a single run: module state is carried between games.
@@ -61,6 +62,25 @@ import { formatReport, report, runGames } from '../kit/sim-pool/index'
 const specs = [{ index: 0, seed: 'a', driver: 'random' }]
 const records = await runGames({ module: new URL('./sim-game.ts', import.meta.url).href, specs, gameTimeoutMs: 60_000 }, 4)
 console.log(formatReport(report(records, { first: () => 0 })))
+```
+
+## Unreached list, coverage rounds, findings file (K651)
+
+`wholeGame` with `unreached` and `proof`: a clause no game resolved passes only when listed and proven; failures `stale unreached entry (resolved in a game): <ids>`, `unreached with no counted full-resolve test: <ids>`; `WholeGame` gains `proven`, `stale`, `unproven`, `noOp` (resolved only with no change) and `rounds`. `provenClauses` runs card-harness `inventory` with the depth gate and keeps the `<path> › <title>` refs whose test passed in the report: a file that only names the clause, a test that asserts nothing, a skipped or failed test is no proof. `SimGame.changed` checks every id resolved inside an action (setup and between-action resolves count unchecked); the record's `resolved` keeps the ones that changed something, `noOp` the rest. `coverRounds(module, options, clauses, rounds, firstRun)` plays rounds of seeds `<prefix>-r<k>-<n>`; `fuzzMain` prints `coverage round K: N games, +A clause(s), U unreached` and how it stopped. `findings` writes `FindingEntry[]` (the finding with its game's settings); `--finding S` prints the replayed finding and `finding S: the same failure again` (exit 1), `fails differently (...)` (exit 1) or `no longer fails` (exit 0); an unknown seed exits 2.
+
+```ts
+import { readFileSync } from 'node:fs'
+import { testFiles } from '../kit/card-harness/index'
+import { fuzzMain, provenClauses, type TestReport } from '../kit/sim-pool/index'
+
+const clauses = ['add', 'draw', 'noop', 'rare', 'never'] // every printed clause id
+const report = JSON.parse(readFileSync('.cache/tests.json', 'utf8')) as TestReport // vitest run --reporter=json --outputFile=.cache/tests.json
+const proof = provenClauses(clauses, testFiles('.', ['tests']), report)
+const unreached = [{ clause: 'never', why: 'no game deals it' }]
+const rounds = { games: 30, settings: (_seed: string, _driver: string, left: readonly string[]) => (left.includes('rare') ? { steer: 'rare' } : {}) }
+const module = new URL('../kit/sim-pool/fake/coverage.ts', import.meta.url).href // yours: the module exporting simGame
+process.exitCode = await fuzzMain(process.argv.slice(2), module, { whole: { clauses, unreached, proof, rounds, findings: 'tests/whole-game/findings.json' } })
+// replay one failure with its recorded settings: the same script with --finding <seed>
 ```
 
 ## Use it in 10 lines

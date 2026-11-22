@@ -22,6 +22,6 @@
       { "game": "halogenandtoast/MarvelChampions", "paths": ["test/Marvel/SmokeSpec.hs (view on every answer, hasten), tools/replay-smoke-answer.hs (one-answer replay with timings): idea only, written anew; no licence on that source"] }
     ]
   },
-  "needs": ["engine-core"],
+  "needs": ["engine-core", "card-harness"],
   "imports": ["engine-core/fake/counter.ts (tests only, by fake/game.ts)"]
 }

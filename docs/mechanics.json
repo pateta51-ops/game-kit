@@ -86,7 +86,7 @@
     { "words": "dossier card files, column map, icon count check", "part": "content-pack", "read": "its README rule 6b, `dossierRow` (`textColumns`, `columns`, `checkIconsOnCard`) and the expand it returns", "missing": "icons read from several separate columns and kept per column: icons outside `textColumns` stay raw in `extra`", "row": "K604", "sheet": "content" },
     { "words": "icons in printed text, unknown icon codes, inline icon codes in text, inline icon codes", "part": "card-parts", "read": "its README, `parseIconText`, `unknownIcons`", "sheet": "content" },
     { "words": "check a build plan, line ranges of a batch, plan check mechanics, game sheet check, closed candidate, plan check in CI, locked copy pull rows, reuse map check, game sheet questions, plan must answer what the kit holds, mechanics map line belongs to which question", "part": "plan-checker", "read": "its README", "sheet": "content" },
-    { "words": "simulate many games, balance, fuzz", "part": "sim-pool", "read": "recipe simulations.md", "sheet": "opposition" },
+    { "words": "simulate many games, balance, fuzz, unreached clauses, whole game coverage, replay a failing seed", "part": "sim-pool", "read": "recipe simulations.md", "sheet": "opposition" },
     { "words": "question to the player, decision on screen", "part": "prompt-host", "read": "recipe prompts.md", "also": ["prompt-source"], "sheet": "offered" },
     { "words": "repeat that asks each time, do it again if you want", "row": "K535", "sheet": "cards" },
     { "words": "split an amount over targets, divide among", "row": "K536", "sheet": "cards" },
@@ -121,6 +121,9 @@
     { "words": "response window, timing window prompt, play a response now, reaction window, pass", "part": "engine-core", "read": "recipe timing.md (windows)", "missing": "one prompt that offers every response legal at a window, with a pass", "row": "K646", "sheet": "triggers" }
   ],
   "searches": {
+    "unreached clauses": "sim-pool",
+    "whole game coverage": "sim-pool",
+    "replay a failing seed": "sim-pool",
     "undo button": "engine-core",
     "line of sight": "grid-map",
     "wall": "grid-map",
