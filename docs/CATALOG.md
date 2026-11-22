@@ -187,7 +187,7 @@ Sounds, music and voice lines for a game, made with free local models in WSL and
 An official solo automa that does not play by player rules: a seeded card deck kept as plain state data, a priority table of rules over the legal answers with fallbacks and declared tie-breaks, difficulty tiers as data, and an adapter to sim-pool's `Bot` (K272).
 
 - **Also called:** Solo opponent run by cards
-- **Words:** solo, automa, opponent, cards, priority, table, bot
+- **Words:** solo, automa, opponent, cards, priority, table, bot, enemy deck, script, enemy driven by deck, card driven, enemy ai movement
 - **Release:** 1.0; not seen
 - **The game supplies:** The card deck, priority table and handlers.
 - **Use it when:** An official solo automa that does not play by player rules: seeded card deck as plain state data, an ordered priority table over the legal answers with fallbacks and declared tie-breaks, difficulty tiers as data, a sim-pool Bot.
@@ -217,7 +217,7 @@ Draw the map once over the board picture in Inkscape; get the click areas (space
 Spaces as data, adjacency computed once, named placement kinds resolved by the board. Cards never filter spaces: card data names a kind (`'land'`, `'isolated'`), the board answers with the legal spaces. Pure functions, no packages. Idea from Terraforming Mars (GPL, written new).
 
 - **Also called:** Board spaces and neighbours as data
-- **Words:** board, spaces, neighbours, adjacency, placement, map, data
+- **Words:** board, spaces, neighbours, adjacency, placement, map, data, graph, nodes, edges, route map, stations, network, train, movement, move along edges, placement enumeration, legal placements, placement legality, tokens placed, move token to space, move a piece along edges, legal placements on a grid
 - **Release:** 1.0; not seen
 - **The game supplies:** The spaces, their neighbours and the placement kinds.
 - **Use it when:** Spaces and adjacency as data, with named placement kinds the board resolves.
@@ -309,7 +309,7 @@ The size gate for a vite build: gzips `index.html` and what it loads at once, an
 The campaign log as plain data and pure functions (release 1.0). No packages; draws nothing; loads in node (tests: `log.test.ts`). Every function returns a new log and never changes its argument, so the log goes into a save as JSON (a game keeps it beside its `saves` history) and undo is keeping the old value. Later parts (steps, saves, screens, graph runner, achievements tab) add to this shape: `readLog` keeps unknown parts and fills missing ones.
 
 - **Also called:** Linked scenarios kept as a log
-- **Words:** campaign, scenarios, log, progress, story, chain
+- **Words:** campaign, scenarios, log, progress, story, chain, carried between games, carry state, deck carried, record
 - **Release:** 1.0; not seen
 - **The game supplies:** The scenarios and what a result changes.
 - **Use it when:** A campaign of linked scenarios kept as a plain log.
@@ -325,7 +325,7 @@ Cards tucked under a host card (a visible L, slide out on hover) or fanned past 
 
 - **Also called:** Cards tucked under others, tokens on cards
 - **Looks like:** Cards peek out from beneath a host card; tokens sit on a card, shown as one each or a number.
-- **Words:** tucked, under, attached, tokens, counters, card, stack, on-card
+- **Words:** tucked, under, attached, tokens, counters, card, stack, on-card, upgrade, sleeve, behind
 - **Release:** 1.0; seen on screen
 - **The game supplies:** Card views and the offsets and look.
 - **Use it when:** Cards tucked under or fanned past a host card with a pure footprint, and the tokens on a card: one per token, ×N past a cap, number boxes.
@@ -356,7 +356,7 @@ A hand of cards as a fan that fits any number of cards in a width, lifts the car
 Card tests on real cards. Test code only; the engine imports nothing here but `createProbe`, and card-language imports the pure `strictProblems` from `strict.ts`. Not here: `validateEffect` in card-language checks one effect at run time, `strictProblems` checks a whole grammar in a test.
 
 - **Also called:** Test card effects on real cards
-- **Words:** restriction phrase case sensitive, restriction word at start of text, restriction key not phrases, raw key in card reading, describe check accepted list, reading order verdict, card, prompt quotes printed clause, who pays shared cost prompt, record prompts in card tests, rule id in prompt text, card number reference amount, allow numbers pattern, screen amount card number, card case quote constant, cite clause by test title, quote check mixed mode, card case const, mixed mode, cite by title, pattern shapes wording, nested restriction, optional inside effect tree, restriction problems, same wording different shape, split pattern check, screen amount icon, counted amount shown, prompt shows wrong number, test, scenario, prompt, probe, inventory, effects, test depth, depth, poor test, poor, not offered, not fired, crash, refusal, crash counted as refusal, expectNotOffered, expectNotFired, clauseOf, map event to clause, not fired clause id, full resolve, prompt amount, screen check, no amount, amounts, prompt amount check, clause two prompts, screen text amounts, amounts per prompt, known findings, known findings list, pending findings owner, baseline of card check findings, pending list, baseline, owner
+- **Words:** restriction phrase case sensitive, restriction word at start of text, restriction key not phrases, raw key in card reading, describe check accepted list, reading order verdict, card, prompt quotes printed clause, who pays shared cost prompt, record prompts in card tests, rule id in prompt text, card number reference amount, allow numbers pattern, screen amount card number, card case quote constant, cite clause by test title, quote check mixed mode, card case const, mixed mode, cite by title, pattern shapes wording, nested restriction, optional inside effect tree, restriction problems, same wording different shape, split pattern check, screen amount icon, counted amount shown, prompt shows wrong number, test, scenario, prompt, probe, inventory, effects, test depth, depth, poor test, poor, not offered, not fired, crash, refusal, crash counted as refusal, expectNotOffered, expectNotFired, clauseOf, map event to clause, not fired clause id, full resolve, prompt amount, screen check, no amount, amounts, prompt amount check, clause two prompts, screen text amounts, amounts per prompt, known findings, known findings list, pending findings owner, baseline of card check findings, pending list, baseline, owner, scan words on screen, screen text scan, poor setup, helper, reading judge, render records, renderer, snapshot, attribution, prompt recorder, vitest, test title, generated text, unprinted, scope, every card, clause splitter, stacked deck, put pieces on spaces, put tokens on map
 - **Release:** 1.0; not seen
 - **The game supplies:** The game rules, real cards and scenarios.
 - **Use it when:** Testing card effects on real cards with the scenario builder, prompt delivery, choice probe and inventory with stale check; test depth: a full-resolve test per clause and a poor test (expectNotOffered, expectNotFired) per conditional clause.
@@ -371,7 +371,7 @@ Card tests on real cards. Test code only; the engine imports nothing here but `c
 The card-language shell (K206): card effects as data, one typed verb table where each verb has a field check, a handler that runs on engine-core and a text generator that prints the card's words from the same step. The game writes its own verbs; the standard pack (K232, `pack.ts`) gives the common ones.
 
 - **Also called:** Card effects written as data
-- **Words:** card, effects, data, verbs, text, validator, rules, language, offered, can resolve, unpayable cost, dry run, would change nothing, offer, offer policy, no change, effect offered, paid effect, modified cost, tax, discount, cannot know, hidden cards, resolve in full, resolve in part, partial resolution, full or partial, why not offered, why is an effect not offered, reason, no target, condition false, full option bars partial, prefer options that resolve fully, skip forced choice nothing resolves, partial option barred, choose number bar dead, gain zero no change, pick among the cards just moved, cards just moved, draw then discard one of them
+- **Words:** card, effects, data, verbs, text, validator, rules, language, offered, can resolve, unpayable cost, dry run, would change nothing, offer, offer policy, no change, effect offered, paid effect, modified cost, tax, discount, cannot know, hidden cards, resolve in full, resolve in part, partial resolution, full or partial, why not offered, why is an effect not offered, reason, no target, condition false, full option bars partial, prefer options that resolve fully, skip forced choice nothing resolves, partial option barred, choose number bar dead, gain zero no change, pick among the cards just moved, cards just moved, draw then discard one of them, effect interpreter, interpreter, ops, bespoke ability, custom handler, one-off, ability, draw three keep one, draft pick, pay or else, otherwise, target filter, select cards, randomly rearrange, reshuffle, search a deck, stop at first, draw until you find, delay effect until, gain tokens, would do nothing, cannot be paid, amount expression count per, then only if previous resolved, condition expression all any not compare
 - **Release:** 1.0; not seen
 - **The game supplies:** The verbs, with their field checks, handlers and text.
 - **Use it when:** A new game encodes card effects as data: verb table with handler, resume and text slots, validator, every-verb test; the standard verb pack (cardPack) on card-zones: draw, discard, mill, move, putIntoPlay, setAside, recall, gain, refill, shuffle, search, destroy, attach, detach, reveal, lookAt, scout, flip, exhaust, ready, chooseCards, chooseOption, may, chooseNumber, chooseDestination, choosePlayer, choosePayment, orderEffects, gainResource, pay, convert, adjust, seq, if, forEach, eachPlayer, repeat, count, later, payThen, custom; every card move through timing would; words overridable. Recipe: docs/recipes/card-effect.md.
@@ -391,14 +391,14 @@ The card-language shell (K206): card effects as data, one typed verb table where
 ### card-language/triggers
 
 - **Also called:** Triggers printed on cards
-- **Words:** when, trigger, after, card trigger, reaction
+- **Words:** when, trigger, after, card trigger, reaction, reshuffle trigger, when drawn, resolves when drawn, draw trigger, instant
 - **Use it when:** A card prints "when X, do Y": `when` on card data, compiled by `cardTriggers` into the engine's triggers.
 - **Guide:** [README.md](../components/card-language/README.md)
 
 ### card-language/op-table
 
 - **Also called:** Op table for a game on its own engine
-- **Words:** op table, own engine, ops, card words, text generation
+- **Words:** op table, own engine, ops, card words, text generation, engine port, bridge
 - **Use it when:** A game that keeps its own engine still wants one row per op with checked fields, a run function and its text (`OpTable`, `runOp`, `validateOps`).
 - **Guide:** [README.md](../components/card-language/README.md)
 
@@ -439,7 +439,7 @@ A pile on the table: a stack at rest (top card, edges of the cards beneath, empt
 
 - **Also called:** Draw pile, discard pile and fan view
 - **Looks like:** A stack showing its top card and edges, which fans out to look through.
-- **Words:** pile, deck, discard, stack, fan, look-through, grid
+- **Words:** pile, deck, discard, stack, fan, look-through, grid, stack of cards per pile
 - **Release:** 1.0; seen on screen
 - **The game supplies:** The pile contents, card views and the look.
 - **Use it when:** A pile on the table: stack at rest, an animated fan to look through it, picks from it, a grid in the phone sheet.
@@ -469,7 +469,7 @@ A small card query language (K107): lexer, parser, evaluator. The game supplies 
 Card zones as data on engine-core state (K223): decks, hands, discards and play areas, per seat or shared, each an ordered list of card ids (index 0 is the top) with who sees it, and `viewOf(state, seat)` that hides what a seat may not see. Needs `engine-core`.
 
 - **Also called:** Decks, hands and discards as lists
-- **Words:** deck, hand, discard, zones, lists, visibility, play, area, face-down, hand limit, zone capacity, discard choice, over the limit, choose what to drop, discard event, on leave hook, leave callback, shuffle, rng name, override, forced order
+- **Words:** deck, hand, discard, zones, lists, visibility, play, area, face-down, hand limit, zone capacity, discard choice, over the limit, choose what to drop, discard event, on leave hook, leave callback, shuffle, rng name, override, forced order, card stack on a location, location, hand size maximum, public back, hidden face
 - **Release:** 1.0; not seen
 - **The game supplies:** The zones, their owners and who sees what.
 - **Use it when:** Decks, hands, discards and play areas as ordered id lists in engine state, with who sees what and a per-seat view for opponents and the UI. A zone can have a capacity (hand limit, slot limit) that rules raise and give up, with a state check that asks the owner which cards over the limit go to the discard. Hand, pile and drag UI parts are planned (K218-K220), not built: ask for them, do not build them in the game. Recipe: docs/recipes/card-table.md. shuffleZone shuffles a zone on ctx.rng; its rng name selects a named override, so a test can force the shuffle order (shuffle zone named rng, shuffle deck rng name override, forced order test).
@@ -500,7 +500,7 @@ A zoomed card as a full transcription: the printed text decoded with its icons, 
 A challenge is a content item picked before a game: a setup restriction plus triggered penalties, written in the game's own card language (release 1.0). Pure, draws nothing, no packages; the kit holds only the shape and the picking, the game keeps the meaning.
 
 - **Also called:** Optional handicaps picked before a game
-- **Words:** challenge, handicap, restriction, penalty, setup, optional
+- **Words:** challenge, handicap, restriction, penalty, setup, optional, difficulty tier
 - **Release:** 1.0; not seen
 - **The game supplies:** The challenge list in the game card language.
 - **Use it when:** Pre-game challenges: a setup restriction plus triggered penalties in the game's card language.
@@ -561,7 +561,7 @@ Pull this component and use it where it is: a game never edits or copies its `ki
 A clock as rules data: a marker on a row of spaces (countdown, round tracker, danger track) that steps forward or back, with thresholds that fire as it lands on or passes a space, and per-space values read from where it stands. Pure functions, no packages, nothing drawn (K530).
 
 - **Also called:** Clock or countdown with thresholds
-- **Words:** clock, countdown, round tracker, round, tracker, threshold, timer, doom track, marker, limit, lose space, track, lose, overrun, track overrun, distance to space, distance, space, dry run, steps back, looping track, cannot advance, check a track definition
+- **Words:** clock, countdown, round tracker, round, tracker, threshold, timer, doom track, marker, limit, lose space, track, lose, overrun, track overrun, distance to space, distance, space, dry run, steps back, looping track, cannot advance, check a track definition, calendar, day track, game end, reset at max, resets, meter, gives reward, one space at a time, resource track
 - **Release:** 1.0; not seen
 - **The game supplies:** The spaces, start, direction, thresholds with their kinds and data, and per-space values.
 - **Use it when:** A marker on a row of spaces as rules data (countdown, round tracker, danger or doom track): steps forward or back by the game's number, thresholds that fire on landing or passing (lose, trigger, reward, limit) in order, once-only thresholds, per-space values such as a limit read from the marker's row; a lose space anywhere on the row, on landing or on passing; crossings become engine-core occurrences that can carry the threshold's data and space.
@@ -699,7 +699,7 @@ Exact dice probabilities (K24), opt-in. No packages; import from `index`.
 Dice patterns as plain data (a pair, N the same, a run, odd or even, a sum against a number, a count) compiled to the test that `dice-odds` `chance` and `dice-tray` `readRoll` take, plus the smallest set of dice that meets one (K527), on its own or only when the whole roll meets it too (K578). No packages; import from `index`.
 
 - **Also called:** Dice patterns: pair, run, sum
-- **Words:** dice, pattern, check, pair, run, sum, same, different, condition, exact, smallest, set, group, size, whole
+- **Words:** dice, pattern, check, pair, run, sum, same, different, condition, exact, smallest, set, group, size, whole, met
 - **Release:** 1.0; not seen
 - **The game supplies:** Its patterns as plain data and what each one means.
 - **Use it when:** Dice patterns as data (a pair, N the same, a run, odd or even, a sum against a number, a count, two pair, all or any) compiled to the test that dice-odds chance and dice-tray readRoll take, plus the smallest set of dice that meets one, or the whole roll (an exact sum, a group of an exact size).
@@ -714,7 +714,7 @@ Dice patterns as plain data (a pair, N the same, a run, odd or even, a sum again
 Pure logic of a dice tray and its roll window (K211), opt-in, unstyled; the game draws it (CSS, `pieces-3d`) and writes its own meanings. Import from `index`. Needs `state-machines`.
 
 - **Also called:** Dice rolling and holding
-- **Words:** dice, roll, hold, tray, reroll, window, random
+- **Words:** dice, roll, hold, tray, reroll, window, random, reroll cost, pay to reroll, target number, modify roll, add to roll, combat reroll window, until different value
 - **Release:** 1.0; not seen
 - **The game supplies:** The dice, their meanings and how they are drawn.
 - **Use it when:** Dice in play, held dice, rolling through ctx.rng and the roll window content. Recipe: docs/recipes/dice.md.
@@ -776,7 +776,7 @@ Sixteen verbs for the director's spec format as DOM effects for the motion frame
 The kernel of a game engine: seeded random numbers, canonical JSON and hashes, the task runner with prompts, copy on write, replay, undo and the save format. A game passes one `GameTypes` bundle and a `GameRules<G>` (handlers, `blank`, `setup`, `contentHash`, optional `stamp`, `invariants`, `revealWords`); see `fake/counter.ts`. Import from one of the entry files below, never from an implementation module. Options legal but doing nothing (`idle`, K91): `idle.md`.
 
 - **Also called:** Game rules engine core
-- **Words:** engine, rules, random, undo, replay, save, prompts, state, modifier, stat, cost, reduction, breakdown, floor, minimum, deterministic, until end of combat, duration named end point, lasts until event, named end point
+- **Words:** engine, rules, random, undo, replay, save, prompts, state, modifier, stat, cost, reduction, breakdown, floor, minimum, deterministic, until end of combat, duration named end point, lasts until event, named end point, task queue, seeded, cap, gain lost, derived value, additive, random override, override rolls, modifier per count
 - **Release:** 1.0; not seen
 - **The game supplies:** The rules: state, actions, prompts and set-up.
 - **Use it when:** Every game's engine: seeded random, tasks and prompts, copy on write, replay, undo, saves, timing windows and triggers.
@@ -796,7 +796,7 @@ The kernel of a game engine: seeded random numbers, canonical JSON and hashes, t
 ### engine-core/lasting-effects
 
 - **Also called:** Lasting effects and durations
-- **Words:** duration, until end of turn, lasting, expires, continuous, modifier
+- **Words:** duration, until end of turn, lasting, expires, continuous, modifier, restriction on next turn, next turn, duration this combat
 - **Use it when:** An effect stays for a while and changes numbers or rules until a boundary or a named event the game fires ends it (`addEffect`, `boundary`, `eventOver`, `waitingOn`, `effectsOf`, `sumEffects`).
 - **Guide:** [timing.md](../components/engine-core/timing.md)
 
@@ -894,7 +894,7 @@ Links every glossary term and icon code in the game's texts to a lookup, and che
 A square grid with walls as data: adjacent spaces, distance, every shortest path or only its distinct first steps, extra steps a game adds, line of sight, tiles that turn half a circle (180 degrees only: a game whose tiles turn a quarter cannot use `rotateTile`), and targeting shapes (within range, adjacent, row, column, line, area). Pure functions, no state, no packages, draws nothing. Written for the kit.
 
 - **Also called:** Square grid with walls and sight
-- **Words:** grid, distance, range, wall, walls, adjacent, line of sight, sight, path, squares, tiles, targeting, first step, shortest path, extra steps, extra adjacency, adjacency, extra neighbours, diagonal, move toward, ties, area, inset corners, corridor, end corner, sight end corner wall
+- **Words:** grid, distance, range, wall, walls, adjacent, line of sight, sight, path, squares, tiles, targeting, first step, shortest path, extra steps, extra adjacency, adjacency, extra neighbours, diagonal, move toward, ties, area, inset corners, corridor, end corner, sight end corner wall, touching edge, endpoints never block, ranged attack, tile records, build grid, assembled from map tiles, shoot
 - **Release:** 1.0; not seen
 - **The game supplies:** Rows, columns, the walls, merged spaces and tiles of its map.
 - **Use it when:** A square grid board with walls: adjacent spaces, grid distance and range, shortest paths, line of sight, tiles that turn, and targeting shapes (within range, adjacent, row, column, line, area).
@@ -955,7 +955,7 @@ ESLint flat-config blocks for a game's engine folder. Spread them after the game
 The game writes one adapter; Claude (or `--dummy`, the first option, no client built) picks one numbered option per step by a `choose` tool call (tool_choice auto, never forced: models that think refuse it; a reply without a tool call is re-asked once, then logged as a finding) `{option, reason}`. The system prompt is `rulesText()` plus `--docs` files, cached (`cache_control` ephemeral on the last block); each call sends only the current view, the options and the last 6 decisions, so cost per call stays flat.
 
 - **Also called:** Whole-game playtests by Claude
-- **Words:** playtest, llm, claude, ai, testing, bugs, game, adapter, language model
+- **Words:** playtest, llm, claude, ai, testing, bugs, game, adapter, language model, player
 - **Release:** 1.0; not seen
 - **The game supplies:** An adapter: view, numbered options and choose.
 - **Use it when:** Headless whole-game playtests by Claude through a small game adapter (view, numbered options, choose): finds rules and screen bugs the model flags, adapter throws and illegal option lists, and saves each run's replay for a replay test; capped in dollars per run; --dummy plays the first option for free.
@@ -987,7 +987,7 @@ A market of offer slots refilled from decks: prices, buy and cycle options, refi
 
 - **Also called:** Card market with buy and refill
 - **Looks like:** A row of face-up cards for sale with deck counts, refilled when one is taken.
-- **Words:** market, shop, row, offer, buy, refill, slots, deck
+- **Words:** market, shop, row, offer, buy, refill, slots, deck, threat row, spawn
 - **Release:** 1.0; seen on screen
 - **The game supplies:** The offers, prices, decks and card view.
 - **Use it when:** A market of offer slots refilled from decks: buy/cycle options, refill at once or by slide, clear, deal animation.
@@ -1019,7 +1019,7 @@ Plays motion specs in the director's format (one JSON per beat: `actors`, `steps
 
 - **Also called:** Motion player
 - **Looks like:** Plays a director motion file on the screen, step by step.
-- **Words:** motion, play, animation, spec, beats, director, timeline, sound cue timing, check game uses kit hooks, no bypass, game bypasses the kit
+- **Words:** motion, play, animation, spec, beats, director, timeline, sound cue timing, check game uses kit hooks, no bypass, game bypasses the kit, beat from engine events, events, sound cue, cue sound from events, event order
 - **Release:** 1.1; seen on screen
 - **The game supplies:** The motion spec files and the elements they name.
 - **Use it when:** Playing the director's motion specs (JSON beats) on the screen.
@@ -1065,7 +1065,7 @@ What the table shows while an answer's events play one step at a time. Pure, no 
 
 - **Also called:** Step-by-step playback of an answer
 - **Looks like:** The table updates one event at a time after a move.
-- **Words:** playback, steps, events, one, at, a, time, table, pace
+- **Words:** playback, steps, events, one, at, a, time, table, pace, opponent turn, step display
 - **Release:** 1.0; seen on screen
 - **The game supplies:** Its view and event types and the step function.
 - **Use it when:** The table must show an answer's events one step at a time.
@@ -1189,7 +1189,7 @@ The plan checker: `plancheck.py` checks a game's build plan (Markdown) for balan
 The records of finished games, the totals and best scores read from them, and a clock of playing time. No packages; draws nothing; loads in node (tests: `stats.test.ts`, `clock.test.ts`). The game keeps its record fields, the score comparison, its words and its screen.
 
 - **Also called:** Records and totals of finished games
-- **Words:** statistics, records, totals, best, score, play, time, history
+- **Words:** statistics, records, totals, best, score, play, time, history, arcade, high score, xp
 - **Release:** 1.0; not seen
 - **The game supplies:** The finished-game records.
 - **Use it when:** Records of finished games, totals, best scores and a play-time clock.
@@ -1269,7 +1269,7 @@ Review a pack's faces beside their fields, printed words, generated words, and f
 
 - **Also called:** Review sheet of card faces and fields
 - **Looks like:** Cards shown beside their data, printed words and warning flags.
-- **Words:** review, cards, faces, fields, words, flags, filter, proof
+- **Words:** review, cards, faces, fields, words, flags, filter, proof, screen every face, every face
 - **Release:** 1.0; seen on screen
 - **The game supplies:** The pack with card faces and the field list.
 - **Use it when:** Review a pack’s faces beside fields, printed words, generated words and flags, with filters in the hash and a static export.
@@ -1439,7 +1439,7 @@ Settings declared as data, a persisted store of their values and a screen drawn 
 Plays N whole games of any `GameRules<G>` with a driver, in this thread or on worker threads, with crash-safe records and a resume file. Needs `engine-core`.
 
 - **Also called:** Bulk game simulator
-- **Words:** simulate, many, games, bots, balance, fuzz, tune, threads, unreached, clauses, whole game, coverage, replay seed, failing seed, findings, prove clause, game log, static clause applied, trace input, invariants, simulation runner
+- **Words:** simulate, many, games, bots, balance, fuzz, tune, threads, unreached, clauses, whole game, coverage, replay seed, failing seed, findings, prove clause, game log, static clause applied, trace input, invariants, simulation runner, coverage rounds, no new clause, legal move driver, drivers, simulation module, rounds until no new clause
 - **Release:** 1.0; not seen
 - **The game supplies:** The game rules and a driver for each seat.
 - **Use it when:** Playing many whole games with drivers on worker threads, fuzzing, sanity bands, sweeps, the K200 weight tuner and paired validation; the whole-game check of unreached clauses (proof from counted full-resolve tests, with a trace input built from the game's own log so a static clause applied with an effect counts as proven), coverage rounds and a findings file to replay a failing seed.
@@ -1469,7 +1469,7 @@ Small pure helpers from the outside harvest (K109). No packages; import from `in
 A Web Audio player driven by one table of data. It knows no game. No packages.
 
 - **Also called:** Sound and music player
-- **Words:** sound, music, audio, play, volume, buses, effects, music state
+- **Words:** sound, music, audio, play, volume, buses, effects, music state, intensity layers, adaptive music, game state, music state machine
 - **Release:** 1.2; not seen
 - **The game supplies:** The table of sounds and the audio files.
 - **Use it when:** Release 1.2 sound and music from one data table on Web Audio.
@@ -1578,7 +1578,7 @@ A bag of tokens with its count; the draw shown as a 2D flight from the bag or a 
 
 - **Also called:** Bag of tokens with a draw
 - **Looks like:** A bag with a count; a token flies out or the bag shakes in 3D.
-- **Words:** bag, draw, tokens, pull, shake, random, cubes, token pool, finite, token, supply, stock, runs out, short bag, draw from a bag, pieces run out
+- **Words:** bag, draw, tokens, pull, shake, random, cubes, token pool, finite, token, supply, stock, runs out, short bag, draw from a bag, pieces run out, dice pool, pool of dice
 - **Release:** 1.0; seen on screen
 - **The game supplies:** The tokens, their count and the draw result.
 - **Use it when:** A bag of tokens with its count; the engine's draw shown as a 2D flight from the bag or a 3D shake-and-draw (three.js by dynamic import) that never decides the draw and falls back to 2D; a finite supply of pieces counted from the engine's integers (supply.ts); finite stocks and a bag for the engine (stock.ts, pure): each piece in one named place, a gain from a stock that runs out says so, a seeded draw of N with the game's short-bag rule per kind of draw (draw what is left, refill when the bag runs out, or fail).
@@ -1670,7 +1670,7 @@ Every printed item (card, tile, board) is transcribed twice, independently, then
 Rounds, turns per seat and phases and steps inside a turn as one data table; the runner walks it and calls engine-core `boundary()` at each turn begin, turn end, phase end and round end, so `endOfTurn` / `endOfRound` / `endOfPhase` / `turnBegins` durations end with no manual call (K264). Needs `engine-core`.
 
 - **Also called:** Rounds, turns and phases table
-- **Words:** turns, rounds, phases, steps, order, seat, flow, once per turn, once per round, once per phase, once per game, once per turn per card, use limit per game, usage limit, used this turn
+- **Words:** turns, rounds, phases, steps, order, seat, flow, once per turn, once per round, once per phase, once per game, once per turn per card, use limit per game, usage limit, used this turn, repeat limit, same effect, once per turn response, ability, once per combat, skip a phase, skip phase condition
 - **Release:** 1.0; not seen
 - **The game supplies:** The table of rounds, turns, phases and steps.
 - **Use it when:** Rounds, turns per seat in seat order, and phases and steps inside a turn as one data table; the runner calls engine-core boundary() at each turn, phase and round edge, so endOfTurn / endOfRound / endOfPhase durations end with no manual call; whoseTurn and flowOf read the position from state; once-per limits (K589: once per turn, round, phase or game, per card, per seat) bar a used option with its reason and clear at the matching edge. Recipe: docs/recipes/turn-flow.md.

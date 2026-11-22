@@ -85,7 +85,23 @@
       "adjacency",
       "placement",
       "map",
-      "data"
+      "data",
+      "graph",
+      "nodes",
+      "edges",
+      "route map",
+      "stations",
+      "network",
+      "train",
+      "movement",
+      "move along edges",
+      "placement enumeration",
+      "legal placements",
+      "placement legality",
+      "tokens placed",
+      "move token to space",
+      "move a piece along edges",
+      "legal placements on a grid"
     ],
     "visible": false,
     "release": 1,
@@ -121,7 +137,14 @@
       "inset corners",
       "corridor",
       "end corner",
-      "sight end corner wall"
+      "sight end corner wall",
+      "touching edge",
+      "endpoints never block",
+      "ranged attack",
+      "tile records",
+      "build grid",
+      "assembled from map tiles",
+      "shoot"
     ],
     "visible": false,
     "release": 1,
@@ -232,7 +255,11 @@
       "log",
       "progress",
       "story",
-      "chain"
+      "chain",
+      "carried between games",
+      "carry state",
+      "deck carried",
+      "record"
     ],
     "visible": false,
     "release": 1,
@@ -250,7 +277,10 @@
       "counters",
       "card",
       "stack",
-      "on-card"
+      "on-card",
+      "upgrade",
+      "sleeve",
+      "behind"
     ],
     "looks": "Cards peek out from beneath a host card; tokens sit on a card, shown as one each or a number.",
     "visible": true,
@@ -346,7 +376,27 @@
       "baseline of card check findings",
       "pending list",
       "baseline",
-      "owner"
+      "owner",
+      "scan words on screen",
+      "screen text scan",
+      "poor setup",
+      "helper",
+      "reading judge",
+      "render records",
+      "renderer",
+      "snapshot",
+      "attribution",
+      "prompt recorder",
+      "vitest",
+      "test title",
+      "generated text",
+      "unprinted",
+      "scope",
+      "every card",
+      "clause splitter",
+      "stacked deck",
+      "put pieces on spaces",
+      "put tokens on map"
     ],
     "visible": false,
     "release": 1,
@@ -397,7 +447,32 @@
       "gain zero no change",
       "pick among the cards just moved",
       "cards just moved",
-      "draw then discard one of them"
+      "draw then discard one of them",
+      "effect interpreter",
+      "interpreter",
+      "ops",
+      "bespoke ability",
+      "custom handler",
+      "one-off",
+      "ability",
+      "draw three keep one",
+      "draft pick",
+      "pay or else",
+      "otherwise",
+      "target filter",
+      "select cards",
+      "randomly rearrange",
+      "reshuffle",
+      "search a deck",
+      "stop at first",
+      "draw until you find",
+      "delay effect until",
+      "gain tokens",
+      "would do nothing",
+      "cannot be paid",
+      "amount expression count per",
+      "then only if previous resolved",
+      "condition expression all any not compare"
     ],
     "visible": false,
     "release": 1,
@@ -455,7 +530,8 @@
       "stack",
       "fan",
       "look-through",
-      "grid"
+      "grid",
+      "stack of cards per pile"
     ],
     "looks": "A stack showing its top card and edges, which fans out to look through.",
     "visible": true,
@@ -504,7 +580,12 @@
       "shuffle",
       "rng name",
       "override",
-      "forced order"
+      "forced order",
+      "card stack on a location",
+      "location",
+      "hand size maximum",
+      "public back",
+      "hidden face"
     ],
     "visible": false,
     "release": 1,
@@ -539,7 +620,8 @@
       "restriction",
       "penalty",
       "setup",
-      "optional"
+      "optional",
+      "difficulty tier"
     ],
     "visible": false,
     "release": 1,
@@ -721,7 +803,8 @@
       "set",
       "group",
       "size",
-      "whole"
+      "whole",
+      "met"
     ],
     "visible": false,
     "release": 1,
@@ -738,7 +821,14 @@
       "tray",
       "reroll",
       "window",
-      "random"
+      "random",
+      "reroll cost",
+      "pay to reroll",
+      "target number",
+      "modify roll",
+      "add to roll",
+      "combat reroll window",
+      "until different value"
     ],
     "visible": false,
     "release": 1,
@@ -863,7 +953,16 @@
       "until end of combat",
       "duration named end point",
       "lasts until event",
-      "named end point"
+      "named end point",
+      "task queue",
+      "seeded",
+      "cap",
+      "gain lost",
+      "derived value",
+      "additive",
+      "random override",
+      "override rolls",
+      "modifier per count"
     ],
     "visible": false,
     "release": 1,
@@ -1013,7 +1112,9 @@
       "buy",
       "refill",
       "slots",
-      "deck"
+      "deck",
+      "threat row",
+      "spawn"
     ],
     "looks": "A row of face-up cards for sale with deck counts, refilled when one is taken.",
     "visible": true,
@@ -1056,7 +1157,12 @@
       "timeline",
       "sound cue timing",
       "check game uses kit hooks, no bypass",
-      "game bypasses the kit"
+      "game bypasses the kit",
+      "beat from engine events",
+      "events",
+      "sound cue",
+      "cue sound from events",
+      "event order"
     ],
     "looks": "Plays a director motion file on the screen, step by step.",
     "visible": true,
@@ -1093,7 +1199,12 @@
       "cards",
       "priority",
       "table",
-      "bot"
+      "bot",
+      "enemy deck",
+      "script",
+      "enemy driven by deck",
+      "card driven",
+      "enemy ai movement"
     ],
     "visible": false,
     "release": 1,
@@ -1131,7 +1242,9 @@
       "a",
       "time",
       "table",
-      "pace"
+      "pace",
+      "opponent turn",
+      "step display"
     ],
     "looks": "The table updates one event at a time after a move.",
     "visible": true,
@@ -1294,7 +1407,10 @@
       "score",
       "play",
       "time",
-      "history"
+      "history",
+      "arcade",
+      "high score",
+      "xp"
     ],
     "visible": false,
     "release": 1,
@@ -1351,7 +1467,9 @@
       "words",
       "flags",
       "filter",
-      "proof"
+      "proof",
+      "screen every face",
+      "every face"
     ],
     "looks": "Cards shown beside their data, printed words and warning flags.",
     "visible": true,
@@ -1678,7 +1796,13 @@
       "static clause applied",
       "trace input",
       "invariants",
-      "simulation runner"
+      "simulation runner",
+      "coverage rounds",
+      "no new clause",
+      "legal move driver",
+      "drivers",
+      "simulation module",
+      "rounds until no new clause"
     ],
     "visible": false,
     "release": 1,
@@ -1721,7 +1845,11 @@
       "volume",
       "buses",
       "effects",
-      "music state"
+      "music state",
+      "intensity layers",
+      "adaptive music",
+      "game state",
+      "music state machine"
     ],
     "visible": false,
     "release": 1.2,
@@ -1848,7 +1976,9 @@
       "runs out",
       "short bag",
       "draw from a bag",
-      "pieces run out"
+      "pieces run out",
+      "dice pool",
+      "pool of dice"
     ],
     "looks": "A bag with a count; a token flies out or the bag shakes in 3D.",
     "visible": true,
@@ -2064,7 +2194,14 @@
       "once per turn per card",
       "use limit per game",
       "usage limit",
-      "used this turn"
+      "used this turn",
+      "repeat limit",
+      "same effect",
+      "once per turn response",
+      "ability",
+      "once per combat",
+      "skip a phase",
+      "skip phase condition"
     ],
     "visible": false,
     "release": 1,
@@ -2103,7 +2240,8 @@
       "bugs",
       "game",
       "adapter",
-      "language model"
+      "language model",
+      "player"
     ],
     "visible": false,
     "release": 1,
@@ -2134,7 +2272,10 @@
       "lasting",
       "expires",
       "continuous",
-      "modifier"
+      "modifier",
+      "restriction on next turn",
+      "next turn",
+      "duration this combat"
     ],
     "use": "An effect stays for a while and changes numbers or rules until a boundary or a named event the game fires ends it (`addEffect`, `boundary`, `eventOver`, `waitingOn`, `effectsOf`, `sumEffects`).",
     "guide": "timing.md"
@@ -2211,7 +2352,12 @@
       "trigger",
       "after",
       "card trigger",
-      "reaction"
+      "reaction",
+      "reshuffle trigger",
+      "when drawn",
+      "resolves when drawn",
+      "draw trigger",
+      "instant"
     ],
     "use": "A card prints \"when X, do Y\": `when` on card data, compiled by `cardTriggers` into the engine's triggers.",
     "guide": "README.md"
@@ -2223,7 +2369,9 @@
       "own engine",
       "ops",
       "card words",
-      "text generation"
+      "text generation",
+      "engine port",
+      "bridge"
     ],
     "use": "A game that keeps its own engine still wants one row per op with checked fields, a run function and its text (`OpTable`, `runOp`, `validateOps`).",
     "guide": "README.md"
@@ -2255,7 +2403,16 @@
       "steps back",
       "looping track",
       "cannot advance",
-      "check a track definition"
+      "check a track definition",
+      "calendar",
+      "day track",
+      "game end",
+      "reset at max",
+      "resets",
+      "meter",
+      "gives reward",
+      "one space at a time",
+      "resource track"
     ],
     "visible": false,
     "release": 1,
