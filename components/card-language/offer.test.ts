@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { applyAction, blocked, createGame, draftOf, hashState, hashValue, seedRng, timingHandlers, type AnswerAction, type Draft, type GameRules, type KernelPrompt, type KernelState, type KernelTask } from '../engine-core/index.ts';
+import { applyAction, blocked, canonicalJson, createGame, enumerateAnswers, draftOf, hashState, hashValue, seedRng, timingHandlers, type AnswerAction, type Draft, type GameRules, type KernelPrompt, type KernelState, type KernelTask } from '../engine-core/index.ts';
 import { cardsIn, newZones } from '../card-zones/index.ts';
 import { askVerb, effectTasks, verbHandler, type VerbTask } from './index.ts';
 import { cardPack, inDryRun, type OfferPolicy, type PackEnv, type PackState, type PackStep } from './pack.ts';
@@ -34,7 +34,7 @@ const game = (offer?: OfferPolicy<S>, wire = true) => {
   const nested: string[] = [];
   const pack = cardPack<G>({
     filters: { even: (_s, c) => c.endsWith('2') },
-    tests: { rich: (s, e) => gold(s, e.seat) >= 9, two: (_s, e) => e.cards?.length === 2, ends: (_s, e) => ['h2', 'd1'].every((c) => e.cards?.includes(c)) },
+    tests: { rich: (s, e) => gold(s, e.seat) >= 9, two: (_s, e) => e.cards?.length === 2, h2: (_s, e) => e.cards?.join() === 'h2', poor: (s, e) => gold(s, e.seat) === 2, ends: (_s, e) => ['h2', 'd1'].every((c) => e.cards?.includes(c)) },
     seats: () => ['a', 'b'],
     custom: {
       nothing: { run: () => undefined, text: () => 'Nothing.' },
@@ -95,7 +95,7 @@ const game = (offer?: OfferPolicy<S>, wire = true) => {
     expect(hashState(s)).toBe(h);
     return r;
   };
-  return { pack, play, check, nested };
+  return { pack, play, check, nested, RULES };
 };
 const z = (s: S, name: string): readonly string[] => cardsIn(s, name);
 const kinds = (p: readonly KernelPrompt[]): (string | undefined)[] => p.map((x) => x.kind);
@@ -451,5 +451,81 @@ describe('card-language offer policy (K579): pinned behaviour', () => {
   it('K579 case 37 (pins today): X read before any step sets it counts as 0, so the effect is not able', () => {
     expect(check([{ op: 'gainResource', res: 'gold', amount: 'X' }])).toBe('no');
     expect(gold(play([{ op: 'gainResource', res: 'gold', amount: 'X' }]).s)).toBe(3);
+  });
+});
+
+// K579: the check against brute force. Random small effects on the fake game (fixed seed); the truth plays every legal answer
+// of every prompt through the real engine. The same answers as the check: a pick set once, in option order; every order for an
+// ordered prompt, scout and orderEffects. No payThen (its "if you do" part is left out of the check on purpose), nothing random,
+// no other seat, no hidden cards: those answer unknown and have their own tests.
+describe('card-language offer policy (K579): the check agrees with playing every answer', () => {
+  let seed = 579;
+  const rnd = (n: number): number => {
+    seed = (Math.imul(seed, 1103515245) + 12345) >>> 0;
+    return (seed >>> 8) % n;
+  };
+  const of = <T,>(xs: readonly T[]): T => xs[rnd(xs.length)] as T;
+  const leaf = (): PackStep => of<() => PackStep>([
+    () => GAIN, () => NOTHING, () => NOTHING, () => DRAW, () => pay(1), () => pay(9),
+    () => ({ op: 'custom', name: 'nothing' }), () => ({ op: 'custom', name: 'lone' }), () => ({ op: 'custom', name: 'order' }),
+    () => ({ op: 'adjust', key: 'gold', by: -1 }), () => ({ op: 'adjust', key: 'gold', by: 1, max: 3 }),
+    () => ({ op: 'gainResource', res: 'gold', amount: 'X' }), () => ({ op: 'discard', cards: 'chosen' }),
+    () => ({ op: 'if', test: of(['two', 'h2', 'poor', 'rich']), then: [of([GAIN, DRAW, NOTHING])] }),
+  ])();
+  const eff = (depth: number): PackStep[] => Array.from({ length: 1 + rnd(2) }, () => step(depth));
+  const step = (depth: number): PackStep => (depth === 0 || rnd(4) === 0 ? leaf() : of<() => PackStep>([
+    () => ({ op: 'may', then: eff(depth - 1) }),
+    () => ({ op: 'chooseOption', options: [eff(depth - 1), eff(depth - 1)] }),
+    () => ({ op: 'chooseCards', zone: 'hand', min: rnd(3), max: 2 + rnd(2), then: eff(depth - 1) }),
+    () => ({ op: 'chooseCards', zone: 'hand', min: rnd(2), max: 1, then: eff(depth - 1) }),
+    () => ({ op: 'orderEffects', effects: Array.from({ length: 2 + rnd(2) }, () => eff(depth - 1)) }),
+    () => ({ op: 'chooseNumber', max: 2, then: eff(depth - 1) }),
+    () => ({ op: 'seq', steps: [{ op: 'scout', count: 2 }, ...eff(depth - 1)] }),
+    () => ({ op: 'if', test: of(['two', 'h2', 'poor']), then: eff(depth - 1) }),
+    () => ({ op: 'if', test: 'two', then: eff(depth - 1) }),
+  ])());
+  const SKIP = ['stack', 'prompt', 'seq', 'promptSeq', 'log', 'timing', 'cardMoves', 'rng', 'forced'];
+  const view = (s: S): string => canonicalJson(Object.fromEntries(Object.entries(s).filter(([k]) => !SKIP.includes(k))));
+  const wide = game({ branches: 100000 });
+  const narrow = game({ branches: 3 });
+  // Every effect starts after the seat has looked at its top two cards, so a scout of them changes the game only by their order.
+  const SEEN: Eff = [{ op: 'lookAt', count: 2 }];
+  const base = view(createGame(wide.RULES, { seed: 's' }, {}, { effect: SEEN }).state);
+  // Does any line of play change the game? undefined: too many states for a test.
+  const truth = (effect: Eff): boolean | undefined => {
+    const content = { effect: [...SEEN, ...effect] };
+    let left = 1500;
+    const any = (s: S): boolean | undefined => {
+      if ((left -= 1) < 0) return undefined;
+      if (view(s) !== base) return true;
+      const p = s.prompt;
+      if (p === null) return false;
+      const ordered = p.ordered === true || p.kind === 'orderCards' || p.kind === 'orderEffects';
+      for (const a of enumerateAnswers({ ...s, prompt: { ...p, ordered } })) {
+        const r = any(applyAction(wide.RULES, s, a, content).state);
+        if (r !== false) return r;
+      }
+      return false;
+    };
+    return any(createGame(wide.RULES, { seed: 's' }, {}, content).state);
+  };
+  it('K579 300 random effects: yes and no match brute force; a small budget answers the same or unknown; the state is untouched', () => {
+    const seen = { yes: 0, no: 0, unknown: 0 };
+    for (let i = 0; i < 300; i += 1) {
+      const effect = eff(3);
+      const t = truth(effect);
+      if (t === undefined) continue;
+      const want = t ? 'yes' : 'no';
+      const got = wide.check(effect, { seat: 'a', source: 'p1' }, SEEN);
+      if (got !== want) throw new Error(`check ${got}, brute force ${want}: ${JSON.stringify(effect)}`);
+      const small = narrow.check(effect, { seat: 'a', source: 'p1' }, SEEN);
+      if (small !== want && small !== 'unknown') throw new Error(`budget 3: check ${small}, brute force ${want}: ${JSON.stringify(effect)}`);
+      seen[want] += 1;
+      if (small === 'unknown') seen.unknown += 1;
+    }
+    expect(seen.yes).toBeGreaterThan(60);
+    expect(seen.no).toBeGreaterThan(40);
+    expect(seen.unknown).toBeGreaterThan(10);
+    expect(inDryRun()).toBe(false);
   });
 });
