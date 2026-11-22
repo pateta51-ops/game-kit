@@ -27,6 +27,11 @@ describe('K665 nested restrictions', () => {
     expect(run(rec)).toEqual(['owl#1 r0: phase=night has no printed source and no AR']);
     expect(run({ ...rec, why: 'AR-1' })).toEqual([]);
   });
+  it('a lasting record may carry its duration in a nested step', () => {
+    const o = { lasting: () => true, words: {}, keys: ['optional', 'duration'], rulings: ['AR-1'] };
+    expect(run({ op: 'if', why: 'AR-1', then: [pay({ duration: 'round' })] }, o)).toEqual([]);
+    expect(run({ op: 'if', why: 'AR-1', then: [pay()] }, o)).toEqual(['owl#1 r0: lasting effect with no duration']);
+  });
   it('top level is found as before', () => {
     expect(run({ op: 'pay', optional: true })).toEqual([]);
   });

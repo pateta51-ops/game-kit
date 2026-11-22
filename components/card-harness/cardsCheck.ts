@@ -126,20 +126,23 @@ export interface RestrictionInput {
 const val = (v: unknown): string => (typeof v === 'object' && v !== null ? JSON.stringify(v) : String(v));
 const has = (text: string, phrase: string): boolean => text.toLowerCase().includes(phrase.toLowerCase());
 const cites = (why: unknown, rulings: ReadonlySet<string>): boolean => [why].flat().some((w) => typeof w === 'string' && [...rulings].some((r) => new RegExp(`(^|[^\\w-])${r.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}(?![\\w-])`).test(w)));
+const nodes = (r: unknown, skip: ReadonlySet<string>): Record<string, unknown>[] => Array.isArray(r) ? r.flatMap((x) => nodes(x, skip)) : typeof r === 'object' && r !== null ? [r as Record<string, unknown>, ...Object.entries(r).filter(([k]) => !skip.has(k)).flatMap(([, x]) => nodes(x, skip))] : [];
 export function restrictionProblems(i: RestrictionInput): string[] {
   const rulings = new Set(i.rulings);
   const text = new Map(catalogueClauses(i.catalogue).map((c) => [c.id, c.text]));
   const whyKey = i.whyKey ?? 'why', dk = i.durationKey ?? 'duration';
   const found: { id: string; key: string; message: string }[] = [];
+  const skip = new Set([...i.keys, dk, whyKey]);
+  const all = (r: CardRecord) => nodes(r, skip);
   for (const r of i.records) {
     const t = text.get(r.clause) ?? '';
-    for (const k of new Set([...i.keys, ...(i.lasting?.(r) ? [dk] : [])])) {
-      if (r[k] === undefined) continue;
-      const v = val(r[k]);
-      if ((i.words[`${k}:${v}`] ?? []).some((p) => has(t, p)) || cites(r[whyKey], rulings)) continue;
+    for (const k of new Set([...i.keys, ...(i.lasting?.(r) ? [dk] : [])])) for (const n of all(r)) {
+      if (n[k] === undefined) continue;
+      const v = val(n[k]);
+      if ((i.words[`${k}:${v}`] ?? []).some((p) => has(t, p)) || cites(n[whyKey], rulings) || cites(r[whyKey], rulings)) continue;
       found.push({ id: r.id, key: k, message: `${r.id}: ${k}=${v} has no printed source and no AR` });
     }
-    if (i.lasting?.(r) && r[dk] === undefined) found.push({ id: r.id, key: dk, message: `${r.id}: lasting effect with no duration` });
+    if (i.lasting?.(r) && !all(r).some((n) => n[dk] !== undefined)) found.push({ id: r.id, key: dk, message: `${r.id}: lasting effect with no duration` });
   }
   for (const [c, t] of text) {
     const recs = i.records.filter((r) => r.clause === c);
@@ -147,7 +150,7 @@ export function restrictionProblems(i: RestrictionInput): string[] {
     for (const [kv, phrases] of Object.entries(i.words)) {
       const p = phrases.find((x) => has(t, x));
       const k = kv.slice(0, kv.indexOf(':')), v = kv.slice(kv.indexOf(':') + 1);
-      if (p !== undefined && !recs.some((r) => r[k] !== undefined && val(r[k]) === v)) found.push({ id: c, key: k, message: `${c}: printed "${p}" has no restriction ${k}=${v}` });
+      if (p !== undefined && !recs.some((r) => all(r).some((n) => n[k] !== undefined && val(n[k]) === v))) found.push({ id: c, key: k, message: `${c}: printed "${p}" has no restriction ${k}=${v}` });
     }
   }
   const used = new Set<object>();
