@@ -12,7 +12,8 @@ Game-free scripts that get a card game's art from its sources to `public/` with 
 4. Install the optional packages yourself when you use them: `pdfjs-dist` and `@napi-rs/canvas` for `art-render-pdf`, `sharp` for any format but 8-bit PNG (name it in the config's `sharp`). The kit installs none of them.
 5. `art-fetch` goes to the network: run it by hand as a manual step, never in a check or in CI; give it `gapMs` and a `userAgent`, and use `--refresh` only to ask again for remembered misses.
 6. Use `art-index --strict` when every card must have art; read `missing` otherwise.
-7. Use `art-ci-cache` to key and restore the costly folders on CI; its key comes from the inputs' content.
+7. When faces are re-encoded to a lossy format, set `quality: { min }` and `maxFileBytes` in the publish config rather than relying on the codec's default; do not lower `min` to make a face fit, shrink the source or raise the cap.
+8. Use `art-ci-cache` to key and restore the costly folders on CI; its key comes from the inputs' content.
 
 **Common mistakes:**
 - A failed fetch item is reported and the run goes on: exit 1 still means something is missing.
@@ -26,7 +27,15 @@ Pipeline: `art-fetch` / `art-extract` / `art-render-pdf` each leave pictures plu
 - `art-render-pdf.ts`: `{ root, from?, source, pdfjs?, dpi?: 300, format?: "png"|"jpeg", faces: [{ id, pdf, page, region? }] }`. The game installs `pdfjs-dist` and `@napi-rs/canvas`; `region` is in PDF points. 300 dpi of a 2.5 x 3.5 in page is 750 x 1050 px.
 - `art-index.ts`: `{ root, ids, order: [{ name, records }], overrides?: { id: source }, never?: { source: [ids] }, degradedMaxSide?, degradedRatio?, out? }`. The first source in `order` with an existing file wins; `overrides` forces a source for a card, `never` forbids one, and a face whose shorter side is under `degradedMaxSide` loses to a later face `degradedRatio` (1.5) times as large. Writes `{ defs, sources, missing, counts }`; `--strict` exits 1 when a card has none.
 - `art-publish.ts`: `{ index, root, stage, out, manifest, ext, sharp? }`. Stages each chosen source as `<stage>/<name>.<ext>`, writes `<out>/<name>.<ext>` and the manifest (`source`, `sha256`, `bytes`, `outSha256`, `id`, size); `name` is the id with unsafe characters turned into `_`. Then `node kit/tooling-scripts/art-check.ts --manifest <manifest> --sources <stage> --out <out> --ext <ext>`.
+- Quality (publish): `quality: { min, max? }` (or per face `faces: { <id>: { quality, maxFileBytes } }`) with `maxFileBytes` makes a converted face (its source is not already `ext`) encode at the highest JPEG/WebP quality from `max` (100) down to `min` whose output fits the cap; a face that does not fit at `min` fails the run (exit 2) with `<id>: <bytes> bytes at quality <min> is over the cap of <cap> bytes`. Without `quality` a face is encoded as before. The manifest also records `sourceWidth`/`sourceHeight` for `art-check`'s enlarged rule (on by default; entries without sizes are skipped; `--allow-enlarged` turns it off).
 - `art-ci-cache.ts key|restore|save`: `{ cache, inputs: [files or folders], paths: [folders to keep], extra?, version? }`. The key is the SHA-256 of every input's path and content; `restore` on a hit copies `<cache>/<key>/` back (`--require`: a miss exits 1); `save` writes a new key folder atomically.
+
+## Recipe: re-encode at quality 90 or more within a cap
+The publish config (a test reads and runs this block):
+```json recipe-quality
+{ "index": "index.json", "root": "art", "stage": "chosen", "out": "public/art", "manifest": "public/art-manifest.json", "ext": "jpg", "sharp": "sharp", "quality": { "min": 90 }, "maxFileBytes": 200000 }
+```
+Then `node kit/tooling-scripts/art-check.ts --manifest public/art-manifest.json --sources chosen --out public/art --ext jpg --max-file-bytes 200000` (also fails a face larger in pixels than its source).
 
 ## Use it in 10 lines
 ```ts

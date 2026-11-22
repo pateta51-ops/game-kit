@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto';
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
@@ -177,5 +178,77 @@ describe('art-pipeline on a fake game', () => {
     expect(readFileSync(join(dir, 'gen/file.txt'), 'utf8')).toBe('made');
     w('in/data.txt', 'two');
     expect(key()).not.toBe(k1);
+  });
+
+  describe('K679 quality and enlarged', () => {
+    // made-up codec: the size grows with the quality (a real one is the game's sharp)
+    const fake = { out: (_s: Uint8Array, _e: string, _b?: unknown, q?: number) => Promise.resolve(Buffer.alloc(1000 + (q ?? 80) * 100)) };
+    const setup = (cfg: object) => {
+      w('q/art/a.png', solid(4, 4, [1, 2, 3, 255]));
+      w('q/index.json', { order: [], defs: { a: 'a.png' }, sources: {}, missing: [], counts: {} });
+      const base = { index: 'index.json', root: 'art', stage: 'chosen', out: 'public', manifest: 'm.json', ext: 'jpg' };
+      return w('q/pub.json', { ...base, ...cfg });
+    };
+    const size = () => readFileSync(join(dir, 'q/public/a.jpg')).length;
+    it('encodes at the highest quality that fits the cap, never below min', async () => {
+      expect(await publish(['--config', setup({ quality: { min: 90 }, maxFileBytes: 10500 })], io(), fake)).toBe(0);
+      expect(size()).toBe(10500);
+      expect(await publish(['--config', setup({ quality: { min: 90 } })], io(), fake)).toBe(0);
+      expect(size()).toBe(11000);
+    });
+    it('fails a face that cannot fit at min, naming the face, its size and the cap', async () => {
+      const o = io();
+      expect(await publish(['--config', setup({ quality: { min: 90 }, maxFileBytes: 9500 })], o, fake)).toBe(2);
+      expect(o.lines.join(' ')).toContain('a: 10000 bytes at quality 90 is over the cap of 9500 bytes');
+    });
+    it('reads a per-face quality and cap', async () => {
+      expect(await publish(['--config', setup({ faces: { a: { quality: { min: 95 }, maxFileBytes: 20000 } } })], io(), fake)).toBe(0);
+      expect(size()).toBe(11000);
+    });
+    it('rejects max under min', async () => {
+      const o = io();
+      expect(await publish(['--config', setup({ quality: { min: 90, max: 80 } })], o, fake)).toBe(2);
+      expect(o.lines.join(' ')).toContain('a: quality max 80 is under min 90');
+    });
+    it('a per-face quality wins over the global one, and max is the ceiling', async () => {
+      expect(await publish(['--config', setup({ quality: { min: 50, max: 60 }, faces: { a: { quality: { min: 90, max: 92 } } } })], io(), fake)).toBe(0);
+      expect(size()).toBe(1000 + 92 * 100);
+      expect(await publish(['--config', setup({ quality: { min: 50, max: 70 } })], io(), fake)).toBe(0);
+      expect(size()).toBe(1000 + 70 * 100);
+    });
+    it('without quality the output is the codec default', async () => {
+      expect(await publish(['--config', setup({})], io(), fake)).toBe(0);
+      expect(readFileSync(join(dir, 'q/public/a.jpg'))).toEqual(Buffer.alloc(1000 + 80 * 100));
+    });
+    it('README recipe runs', async () => {
+      const md = readFileSync(join(__dirname, 'README.md'), 'utf8');
+      const cfg = JSON.parse(/```json recipe-quality\r?\n([\s\S]*?)\r?\n```/.exec(md)![1]!) as Record<string, unknown>;
+      expect(await publish(['--config', setup({ ...cfg, sharp: undefined })], io(), fake)).toBe(0);
+      const n = readFileSync(join(dir, 'q/public/art/a.jpg')).length;
+      expect(n).toBeGreaterThanOrEqual(1000 + 90 * 100);
+      expect(n).toBeLessThanOrEqual(200000);
+    });
+    it('art-check fails an enlarged face and passes an unchanged one', () => {
+      const sha = (b: Buffer) => createHash('sha256').update(b).digest('hex');
+      const src = solid(2, 2, [1, 2, 3, 255]);
+      w('e/src/a.png', src);
+      w('e/out/a.png', 'xx');
+      const m = (o: object) => w('e/m.json', { a: { source: 'a.png', sha256: sha(src), bytes: 2, ...o } });
+      const args = (): string[] => ['--manifest', join(dir, 'e/m.json'), '--sources', join(dir, 'e/src'), '--out', join(dir, 'e/out'), '--ext', 'png'];
+      m({ width: 2, height: 2, sourceWidth: 2, sourceHeight: 2 });
+      expect(check(args(), io())).toBe(0);
+      m({ width: 4, height: 3, sourceWidth: 2, sourceHeight: 2 });
+      const o = io();
+      expect(check(args(), o)).toBe(1);
+      expect(o.lines.join(' ')).toContain('a: enlarged: the output is 4x3, the source 2x2');
+      expect(check([...args(), '--allow-enlarged'], io())).toBe(0);
+      m({});
+      const s = io();
+      expect(check(args(), s)).toBe(0);
+      expect(s.lines.join(' ')).toContain('enlarged check: 1 faces skipped, no source size; republish to check them');
+      const s2 = io();
+      expect(check([...args(), '--allow-enlarged'], s2)).toBe(0);
+      expect(s2.lines.join(' ')).not.toContain('skipped');
+    });
   });
 });
