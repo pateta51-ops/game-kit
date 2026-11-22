@@ -9,7 +9,7 @@
 - Zone names: `hand` means `hand:<seat>` when that zone exists, else the zone `hand`.
 
 ## Cards
-- `cards`: `chosen` (env.cards), `source`, `top` (top `count` of `from`, read when the move happens), `pick` (the seat picks `count` in `from`, prompt kind `chooseCards`; a hidden card is offered as `#index`, a `filter` applies to seen cards only), `all` (of `from`).
+- `cards`: `chosen` (env.cards), `source`, `top` (top `count` of `from`, read when the move happens), `pick` (the seat picks `count` in `from`, prompt kind `chooseCards`; a hidden card is offered as `#index` with `unseen: true` (K641), a `filter` applies to seen cards only), `all` (of `from`).
 - Amounts: a number or `'X'` (env.n, set by `count` and `chooseNumber`).
 - A card that left `from` before its occurrence happens does not move.
 
@@ -39,7 +39,7 @@
 `cardPack({ offer: { noChange, cost, fewer, deadChoice, unknown, branches, tasks, view }, handlers: () => RULES.handlers })`: when `may`, `chooseCards`, `chooseOption`, `choosePayment` and `payThen` offer their effect, and `pack.wouldChange(s, content, steps, env)`, the would-change-nothing check. Defaults, the table from ruling to knob and the check's limits: README, "Rules for agents". K579: the check answers `no` only when every legal pick set of every prompt was tried within `branches` (a set once, in option order; every order only for an ordered prompt, `scout` and `orderEffects`); with some left it answers `unknown`. K583: `paid: 'cost' | 'effect'` (a paid effect judged on its cost alone, or by what its `then` changes), `strict` (errors inside the check throw), `pack.judge(...)` = `{ answer, reason?, error? }` (`reason`: `error`, `hidden`, `otherSeat`, `random`, `budget`, `nested`), `cannotKnow()` for game code that would read hidden cards, `dryRunSeat()`.
 
 ## A modified cost (K583)
-`cfg.due(s, step, env, printed)`: the amount a `pay` or `convert` step asks for now (default `printed`); read by `payable`, the whole-cost sum, the payment and the check. `pack.costed(s, steps, env)`: the steps with those amounts, for `describeEffect` (the same object when nothing differs). Tests: `k583.test.ts`.
+`cfg.due(s, step, env, printed)`: the amount a `pay` or `convert` step asks for now (default `printed`); read by `payable`, the whole-cost sum, the payment and the check; a whole number of 0 or more (else `EngineBugError`); not called for an `X` amount; a `payThen` reads its whole cost once, before anything is paid. `pack.costed(s, steps, env)`: the steps with those amounts, for `describeEffect` (the same object when nothing differs). Tests: `k583.test.ts`.
 
 ## Timing
 Each moved card is one occurrence of a `would` batch: `kind` the verb (`chooseDestination`, `search`, `refill` and `attach` use their own name), `keys.player` the seat, `keys.target` the card (absent for a `top` move: the card is read when it happens), `keys.source` env.source. Prevention, replacement and before windows apply as for any batch; `cfg.moved(ctx, move)` is called after each card moved (log). `draw` from an empty deck: `cfg.reshuffle(s, deck, seat)` names the zone shuffled in, or undefined to stop (default stop); the reshuffle is its own occurrence (kind `reshuffle`), then the draw is tried once more (cancelled: the draw stops).

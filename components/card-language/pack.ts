@@ -63,6 +63,8 @@ export interface PackEnv {
   readonly paidFrom?: number;
   /** K529, set by the pack while a cost judged as a whole is paid: the cost steps still to pay after this one. */
   readonly owed?: readonly Step[];
+  /** K583, set by the pack while a `payThen` cost is paid: its amounts were read from `cfg.due` before anything was paid and are not read again. */
+  readonly fixed?: true;
 }
 /** A move waiting for its occurrence (`cardMoves`, keyed by occurrence id). */
 export interface PendingMove {
@@ -250,7 +252,14 @@ export function cardPack<G extends GameTypes, E extends PackEnv = PackEnv>(cfg: 
   const n = (a: Amount | undefined, env: E, d = 1): number => (a === undefined ? d : a === 'X' ? (env.n ?? 0) : a);
   // K529 seam: the one place a cost amount is read (judged in `payable`, taken in `pay` and `convert`).
   // K583: `cfg.due` gives the amount asked for now.
-  const due = (s: PackState, p: { readonly amount: Amount }, env: E): number => (cfg.due ? cfg.due(s as unknown as G['state'], p as PackStep, env, n(p.amount, env)) : n(p.amount, env));
+  // An amount written `X` is the number the effect computed: `due` is not called for it. A result that is not a whole number of 0 or more is the game's bug.
+  const due = (s: PackState, p: { readonly amount: Amount }, env: E): number => {
+    const printed = n(p.amount, env);
+    if (!cfg.due || env.fixed === true || p.amount === 'X') return printed;
+    const d = cfg.due(s as unknown as G['state'], p as PackStep, env, printed);
+    if (!Number.isInteger(d) || d < 0) throw new EngineBugError(`card-language pack: due gave ${String(d)} for a cost of ${String(printed)} (a whole number, 0 or more, is needed)`);
+    return d;
+  };
   // K583: the steps with each cost amount as `cfg.due` gives it (for labels); the same object when nothing differs.
   const costed = <T extends Eff>(s: G['state'], steps: T, env: E): T => {
     const all = (xs: Eff): Eff => {
@@ -267,7 +276,7 @@ export function cardPack<G extends GameTypes, E extends PackEnv = PackEnv>(cfg: 
       }
       return out as PackStep | Step;
     };
-    return (cfg.due ? all(steps) : steps) as T;
+    return (cfg.due && env.fixed !== true ? all(steps) : steps) as T;
   };
   const def = (op: string): { from?: string; to?: string; sel?: Sel; at?: At } => ({ ...DEF[op], ...cfg.zones?.[op as PackOp] });
   const zone = (s: PackState, name: string, seat: string): string => (s.zones[`${name}:${seat}`] !== undefined ? `${name}:${seat}` : name);
@@ -332,9 +341,13 @@ export function cardPack<G extends GameTypes, E extends PackEnv = PackEnv>(cfg: 
   const whole = (s: PackState, cost: Eff, env: E, l: Ledger = { res: {}, top: {}, need: {} }): boolean => cost.every((x) => payable(s, x, env, l)) && Object.values(l.need).every(matched);
   const canPay = (s: PackState, cost: Eff, env: E): boolean => (P.cost === 'whole' ? whole(s, cost, env) : cost.every((x) => payable(s, x, env)));
   const VIEW_SKIP = ['stack', 'prompt', 'seq', 'promptSeq', 'log', 'timing', 'cardMoves', 'rng', 'forced'];
-  const view = (s: unknown): string => canonicalJson(P.view ? P.view(s as G['state']) : Object.fromEntries(Object.entries(s as object).filter(([k]) => !VIEW_SKIP.includes(k))));
+  // K583: an empty `marks` record (left by a marking verb that marked nothing, or unmarked the last card) is the same game as none.
+  const unmarked = (s: unknown): unknown => ((s as PackState).marks !== undefined && Object.keys((s as PackState).marks ?? {}).length === 0 ? { ...(s as object), marks: undefined } : s);
+  const view = (s: unknown): string => canonicalJson(P.view ? P.view(unmarked(s) as G['state']) : Object.fromEntries(Object.entries(unmarked(s) as object).filter(([k]) => !VIEW_SKIP.includes(k))));
   // K583, paid = effect: the branch the check is running. `base` is the game it compares with (moved past each cost paid); `cost` counts the costs being paid, while nothing is compared.
-  let J = { base: '', cost: 0 };
+  // `sees`: the cards the judged seat saw when the outermost cost began; `hidden`: a cost has since shown it a card, so no game test, count, filter or custom verb runs any more (the answer must not tell the card).
+  let J: { base: string; cost: number; sees: readonly string[] | null; hidden: boolean } = { base: '', cost: 0, sees: null, hidden: false };
+  const seenBy = (s: PackState, seat: string): string[] => Object.values(s.zones).flatMap((zn) => zn.cards).filter((c) => canSee(s, seat, c));
   const REASONS: readonly OfferReason[] = ['error', 'hidden', 'otherSeat', 'random', 'budget', 'nested'];
   // K529: would these steps change the game? They run on a copy with the game's handlers; every prompt forks one run per answer tried.
   const judge = (state: G['state'], content: G['content'], steps: Eff, env: E): OfferCheck => {
@@ -356,12 +369,12 @@ export function cardPack<G extends GameTypes, E extends PackEnv = PackEnv>(cfg: 
     let left = 0;
     const table = Object.fromEntries(Object.entries(cfg.handlers()).map(([k, h]) => [k, (c: Ctx<G>, t: G['task']) => ((left -= 1) < 0 ? stop('budget') : h(c, t))])) as HandlerTable<G>;
     const before = view(state);
-    const at = new WeakMap<object, { base: string; cost: number }>();
+    const at = new WeakMap<object, typeof J>();
     const random = (): never => stop('random');
     // One run to the next prompt: yes, no, unknown, or the copy with its prompt open.
     const seg = (s: Draft<KernelState>, first?: readonly G['task'][]): Offered | Draft<KernelState> => {
       left = P.tasks ?? 2000;
-      J = { ...(at.get(s) ?? { base: before, cost: 0 }) };
+      J = { ...(at.get(s) ?? { base: before, cost: 0, sees: null, hidden: false }) };
       const ctx = makeCtx<G>({}, s as Draft<G['state']>, content, []);
       (ctx as { rng: unknown }).rng = { nextUint32: random, int: random, shuffle: random };
       const moved = (): boolean => s.result !== null || (J.cost === 0 && view(s) !== J.base);
@@ -477,14 +490,15 @@ export function cardPack<G extends GameTypes, E extends PackEnv = PackEnv>(cfg: 
   // K583: in the check a card picked blind stays unknown to the game: its tests, counts, filters and custom verbs are not run with it.
   const blind = (s: PackState, env: E): void => {
     const judge = dry;
-    if (judge !== null && (env.cards ?? []).some((c) => locate(s, c) !== undefined && !canSee(s, judge, c))) stop();
+    if (judge !== null && (J.hidden || (env.cards ?? []).some((c) => locate(s, c) !== undefined && !canSee(s, judge, c)))) stop();
   };
   const unhide = (s: PackState, z: string, picks: readonly string[]): string[] => picks.map((p) => (p.startsWith('#') ? (cardsIn(s, z)[Number(p.slice(1))] ?? '') : p));
   const pickAsk = (ctx: Ctx<G>, st: PackStep, env: E, z: string, min: number, max: number, peek = false, kind = 'chooseCards', keep?: (id: string) => boolean): boolean => {
     const ids = eligible(S(ctx), st as { filter?: string }, env, z, peek).filter((id) => keep?.(id) ?? true);
     const hi = Math.min(max, ids.length);
     if (hi === 0) return false;
-    ask(ctx, st, env, kind, ids.map((id) => ({ id, enabled: true })), Math.min(min, hi), hi);
+    // K641: an option over a card the seat cannot see is `unseen`, so a lone one is asked, never taken for the player.
+    ask(ctx, st, env, kind, ids.map((id) => ({ id, enabled: true, ...(id.startsWith('#') ? { unseen: true as const } : {}) })), Math.min(min, hi), hi);
     return true;
   };
   const prune = (s: Draft<PackState>): void => {
@@ -592,6 +606,11 @@ export function cardPack<G extends GameTypes, E extends PackEnv = PackEnv>(cfg: 
   });
   const flow = <F extends object>(fields: F, run: (ctx: Ctx<G>, st: never, env: E) => void, resume?: (ctx: Ctx<G>, st: never, env: E, a: readonly string[]) => void): V =>
     ({ fields, run: (ctx: Ctx<G>, st: never, env: E | undefined) => run(ctx, st, need(env)), ...(resume ? { resume: (ctx: Ctx<G>, st: never, env: E | undefined, a: readonly string[]) => resume(ctx, st, need(env), a) } : {}), text: null }) as unknown as V;
+  // K583: in the check a shuffle of fewer than two cards (none of them shown to a seat) changes nothing and draws nothing.
+  const mix = (ctx: Ctx<G>, z: string): void => {
+    if (dry !== null && cardsIn(S(ctx), z).length < 2 && S(ctx).zones[z]?.shown === undefined) return;
+    shuffleZone(ctx, z);
+  };
   const list = (k: number): KernelOption[] => Array.from({ length: k }, (_, i) => ({ id: String(i), enabled: true }));
 
   const verbs = {
@@ -619,10 +638,10 @@ export function cardPack<G extends GameTypes, E extends PackEnv = PackEnv>(cfg: 
       const src = zone(s, st.from, e.seat);
       send(ctx, 'refill', Math.min(Math.max(0, st.size - cardsIn(s, z).length), cardsIn(s, src).length), src, z, 'bottom', e);
     }),
-    shuffle: flow({ zone: str }, (ctx, st: Extract<PackStep, { op: 'shuffle' }>, e) => shuffleZone(ctx, zone(S(ctx), st.zone, e.seat))),
+    shuffle: flow({ zone: str }, (ctx, st: Extract<PackStep, { op: 'shuffle' }>, e) => mix(ctx, zone(S(ctx), st.zone, e.seat))),
     search: flow({ zone: str, filter: optional(str), count: optional(amount), to: optional(str), shuffle: optional(bool) }, (ctx, st: Extract<PackStep, { op: 'search' }>, e) => {
       const z = zone(S(ctx), st.zone, e.seat);
-      if (!pickAsk(ctx, st, e, z, 0, n(st.count, e), true, 'search') && st.shuffle !== false) shuffleZone(ctx, z);
+      if (!pickAsk(ctx, st, e, z, 0, n(st.count, e), true, 'search') && st.shuffle !== false) mix(ctx, z);
     }, (ctx, st: Extract<PackStep, { op: 'search' }>, e, a) => {
       const s = S(ctx);
       const z = zone(s, st.zone, e.seat);
@@ -763,13 +782,17 @@ export function cardPack<G extends GameTypes, E extends PackEnv = PackEnv>(cfg: 
       // K583, paid = effect in the check: what a cost changed is not counted; the game is compared from where the cost ended.
       const fx = dry !== null && P.paid === 'effect';
       const costEnds = (): void => {
-        if (fx && (J.cost -= 1) === 0) J.base = view(s);
+        if (!fx || (J.cost -= 1) !== 0) return;
+        J.base = view(s);
+        if (seenBy(s, dry ?? '').some((c) => !(J.sees ?? []).includes(c))) J.hidden = true;
       };
+      // K583: every amount of the cost is read from `cfg.due` here, before anything is paid, so the cost is paid as it was judged.
+      const paying = { ...rest, fixed: true as const };
       // K529, a cost judged as a whole is paid one step at a time: a step that cannot pay when it is reached stops the cost, and `then` does not run.
       const next = (from: number, left: readonly Step[]): void => {
         const step = left[0];
-        if (step === undefined || !payable(s, step, rest as E)) return costEnds();
-        ctx.then(...(effectTasks([step], { ...rest, owed: left.slice(1) }) as unknown as G['task'][]), ...(effectTasks([st], { ...rest, paidFrom: from, owed: left.slice(1) }) as unknown as G['task'][]));
+        if (step === undefined || !payable(s, step, paying as E)) return costEnds();
+        ctx.then(...(effectTasks([step], { ...paying, owed: left.slice(1) }) as unknown as G['task'][]), ...(effectTasks([st], { ...rest, paidFrom: from, owed: left.slice(1) }) as unknown as G['task'][]));
       };
       if (paidFrom !== undefined) {
         if (occs.some((o) => o.id >= paidFrom && o.state === 'cancelled')) return costEnds();
@@ -779,13 +802,15 @@ export function cardPack<G extends GameTypes, E extends PackEnv = PackEnv>(cfg: 
         if (dry === null || fx) go(ctx, st.then, rest as E);
         return;
       }
-      if (!canPay(s, st.cost, e)) return;
+      const cost = costed(ctx.s, st.cost, e);
+      if (!canPay(s, cost, { ...e, fixed: true })) return;
       if (fx) {
         if (J.cost === 0 && view(s) !== J.base) throw CHANGED;
+        if (J.cost === 0) J.sees = seenBy(s, dry ?? '');
         J.cost += 1;
       }
-      if (P.cost === 'whole') return next((s as unknown as KernelState).timing?.next ?? 0, st.cost);
-      ctx.then(...(effectTasks(st.cost, e) as unknown as G['task'][]), ...(effectTasks([st], { ...e, paidFrom: (s as unknown as KernelState).timing?.next ?? 0 }) as unknown as G['task'][]));
+      if (P.cost === 'whole') return next((s as unknown as KernelState).timing?.next ?? 0, cost);
+      ctx.then(...(effectTasks(cost, { ...e, fixed: true }) as unknown as G['task'][]), ...(effectTasks([st], { ...e, paidFrom: (s as unknown as KernelState).timing?.next ?? 0 }) as unknown as G['task'][]));
     }),
     custom: flow({ name: str, n: optional(amount) }, (ctx, st: Extract<PackStep, { op: 'custom' }>, e) => {
       const c = cfg.custom?.[st.name];
@@ -795,7 +820,6 @@ export function cardPack<G extends GameTypes, E extends PackEnv = PackEnv>(cfg: 
     }, (ctx, st: Extract<PackStep, { op: 'custom' }>, e, a) => {
       const r = cfg.custom?.[st.name]?.resume;
       if (!r) throw new EngineBugError(`card-language pack: custom verb ${st.name} was answered but has no resume`);
-      blind(S(ctx), e);
       r(ctx, st, e, a);
     }),
   } as Record<PackOp, V>;

@@ -19,17 +19,29 @@ const has = (e: Eff, f: (st: PackStep) => boolean): boolean => e.some((st) => f(
 
 // (a) Nothing changed by default: the pack as it is against the frozen copy of the pack as K579 left it, with no K583 setting.
 describe('card-language offer policy (K583): with no new setting the pack answers as the pack K579 left', () => {
-  // The declared defect fixes, each a named predicate over the effect (never a seed or an index).
-  const FIXES: Readonly<Record<string, (e: Eff, p: OfferPolicy<S>) => boolean>> = {
-    // Point 2: an effect that ends the game is a yes under a view without `result` (was no).
-    endsGameUnderAViewWithoutResult: (e, p) => p.view !== undefined && has(e, (st) => st.op === 'custom' && st.name === 'win'),
-    // Point 3: a handler that throws outside the kernel's errors is unknown (the check used to throw into the real action).
-    handlerThrows: (e) => has(e, (st) => st.op === 'custom' && ['boom', 'back', 'pairs'].includes(st.name)),
-    // Point 4: a card picked blind from a hidden hand is not shown to a game test, count or custom verb (unknown; was yes or no by the hidden hand).
-    readsABlindPick: (e) => has(e, (st) => st.op === 'chooseCards' && st.zone === 'hand:b' && has(st.then as Eff, (x) => ['if', 'count', 'custom'].includes(x.op))),
-    // Point 5: looking at a card the seat already sees, or revealing one all see, is no change in the check (was yes).
-    looksAtASeenCard: (e) => has(e, (st) => (st.op === 'lookAt' || st.op === 'reveal') && st.cards === 'all'),
+  // The declared changes of an old answer, each a named predicate over the effect (never a seed or an index) with the one way the check's answer may move
+  // (`moves(K579 answer, answer now)`; a K579 answer starting `throws` is a throw into the caller). `reasonOnly`: the answer stays, a bar reason changes.
+  const HIDDEN = ['hand:b', 'deck', 'deck:b'];
+  const to = (from: readonly string[], now: readonly string[]) => (a: string, b: string): boolean => from.includes(a) && now.includes(b);
+  const FIXES: Readonly<Record<string, { readonly on: (e: Eff, p: OfferPolicy<S>) => boolean; readonly moves?: (then: string, now: string) => boolean; readonly reasonOnly?: true }>> = {
+    // Point 2: an effect that ends the game is a yes under a view without `result`.
+    endsGameUnderAViewWithoutResult: { on: (e, p) => p.view !== undefined && has(e, (st) => st.op === 'custom' && st.name === 'win'), moves: to(['no', 'unknown'], ['yes']) },
+    // Point 3: a handler that throws outside the kernel's errors no longer throws into the real action.
+    handlerThrows: { on: (e) => has(e, (st) => st.op === 'custom' && ['boom', 'back', 'pairs'].includes(st.name)), moves: (a, b) => a.startsWith('throws') && !b.startsWith('throws') },
+    // Point 4: a card picked blind from any hidden zone is not shown to a game test, count, filter or custom verb.
+    readsABlindPick: { on: (e) => has(e, (st) => st.op === 'chooseCards' && HIDDEN.includes(st.zone) && has(st.then as Eff, (x) => ['if', 'count', 'custom', 'chooseCards', 'search'].includes(x.op))), moves: to(['yes', 'no'], ['unknown']) },
+    // Point 5: looking at a card the seat already sees, or revealing one all see, is no change in the check.
+    looksAtASeenCard: { on: (e) => has(e, (st) => (st.op === 'lookAt' || st.op === 'reveal') && st.cards === 'all'), moves: to(['yes'], ['no', 'unknown']) },
+    // Point 5: the bar reason of an unpayable cost inside a seq or a may is cannotPay (was noChange).
+    barReasonOfANestedCost: { on: (e) => has(e, (st) => (st.op === 'seq' || st.op === 'may') && has((st.op === 'seq' ? st.steps : st.then) as Eff, (x) => ['payThen', 'pay', 'convert'].includes(x.op))), reasonOnly: true },
+    // Review: readying when no card was ever marked (an empty marks record) is no change.
+    readiesWithNoMark: { on: (e) => has(e, (st) => st.op === 'ready'), moves: to(['yes'], ['no', 'unknown']) },
+    // Review: a shuffle of fewer than two cards draws nothing and changes nothing.
+    shufflesFewerThanTwo: { on: (e) => has(e, (st) => st.op === 'shuffle' || st.op === 'search'), moves: to(['unknown'], ['no', 'yes']) },
   };
+  // K641, declared for every input: an option over a card the seat cannot see now carries `unseen: true`; nothing else of a prompt may differ.
+  const seen = (x: string): string => x.replaceAll(',"unseen":true', '');
+  const reasonless = (x: string): string => x.replaceAll('"cannotPay"', '"noChange"');
   const POLICIES: readonly OfferPolicy<S>[] = [
     {},
     { noChange: 'skip', deadChoice: 'bar' },
@@ -42,17 +54,17 @@ describe('card-language offer policy (K583): with no new setting the pack answer
       () => GAIN, () => NOTHING, () => NOTHING, () => DRAW, () => pay(1), () => pay(9), () => custom('nothing'), () => custom('lone'), () => custom('order'), () => custom('roll'),
       () => custom('win'), () => custom('boom'), () => custom('back'), () => custom('pairs'), () => custom('nest'), () => custom('attempt'), () => custom('spend'),
       () => ({ op: 'adjust', key: 'gold', by: -1 }), () => ({ op: 'adjust', key: 'gold', by: 1, max: 3 }), () => ({ op: 'gainResource', res: 'gold', amount: 'X' }),
-      () => ({ op: 'discard', cards: 'chosen' }), () => ({ op: 'move', cards: 'chosen', to: 'discard' }), () => ({ op: 'exhaust' }), () => ({ op: 'shuffle', zone: 'deck' }),
+      () => ({ op: 'discard', cards: 'chosen' }), () => ({ op: 'move', cards: 'chosen', to: 'discard' }), () => ({ op: 'exhaust' }), () => ({ op: 'ready' }), () => ({ op: 'shuffle', zone: of(['deck', 'aside', 'play']) }),
       () => ({ op: 'lookAt', cards: 'all', from: of(['hand', 'play', 'deck']) }), () => ({ op: 'reveal', cards: 'all', from: of(['hand', 'play']) }), () => ({ op: 'lookAt', count: 1 }),
       () => ({ op: 'if', test: of(['two', 'h2', 'poor', 'rich', 'b3', 'ends']), then: [of([GAIN, DRAW, NOTHING])] }),
-      () => ({ op: 'later', at: 'end', then: [GAIN] }), () => ({ op: 'search', zone: 'deck', filter: 'even' }),
+      () => ({ op: 'later', at: 'end', then: [GAIN] }), () => ({ op: 'search', zone: 'deck', filter: 'even' }), () => ({ op: 'search', zone: 'aside' }),
     ])();
     const eff = (depth: number): PackStep[] => Array.from({ length: 1 + rnd(2) }, () => step(depth));
     const cost = (): PackStep[] => Array.from({ length: 1 + rnd(2) }, () => of<() => PackStep>([() => pay(1), () => pay(2), () => pay(9), () => custom('have'), () => custom('nothing'), () => ({ op: 'discard', count: 1 }), () => ({ op: 'exhaust' }), () => ({ op: 'mill', count: 1 })])());
     const step = (depth: number): PackStep => (depth === 0 || rnd(4) === 0 ? leaf() : of<() => PackStep>([
       () => ({ op: 'may', then: eff(depth - 1) }),
       () => ({ op: 'chooseOption', options: [eff(depth - 1), eff(depth - 1)] }),
-      () => ({ op: 'chooseCards', zone: of(['hand', 'hand', 'hand:b', 'aside']), min: rnd(3), max: 2 + rnd(2), then: eff(depth - 1) }),
+      () => ({ op: 'chooseCards', zone: of(['hand', 'hand', 'hand:b', 'aside', 'deck']), min: rnd(3), max: 2 + rnd(2), then: eff(depth - 1) }),
       () => ({ op: 'chooseCards', zone: of(['hand', 'hand:b']), min: rnd(2), max: 1, then: eff(depth - 1) }),
       () => ({ op: 'orderEffects', effects: Array.from({ length: 2 + rnd(2) }, () => eff(depth - 1)) }),
       () => ({ op: 'chooseNumber', max: 2, then: eff(depth - 1) }),
@@ -81,7 +93,7 @@ describe('card-language offer policy (K583): with no new setting the pack answer
     safe(() => g.check(e)),
     ...[[{ op: 'may', then: e }], [{ op: 'chooseOption', options: [e, [NOTHING]] }]].map((w) => safe(() => {
       const { s } = g.play(w as Eff, [], undefined, true);
-      return `${hashState(s)} ${show(s.prompt)}`;
+      return `${hashState({ ...s, prompt: null })} ${show(s.prompt)}`;
     })),
   ];
   // A whole real run: every prompt answered with its first legal answer.
@@ -93,9 +105,9 @@ describe('card-language offer policy (K583): with no new setting the pack answer
       if (first === undefined) break;
       state = applyAction(g.RULES, state, first, content).state;
     }
-    return hashState(state);
+    return `${hashState({ ...state, prompt: null })} ${seen(show(state.prompt))}`;
   });
-  it('K583 2,400 random effects over 4 seeds, 3 policies: the check and the offers are equal, but for the named defect fixes; a real run with no policy is equal on every input', () => {
+  it('K583 2,400 random effects over 4 seeds, 3 policies: the check and the offers are equal, or differ only the way a named fix declares; a real run with no policy is equal on every input', () => {
     const fixed: Record<string, number> = Object.fromEntries(Object.keys(FIXES).map((k) => [k, 0]));
     let same = 0;
     let strict = 0;
@@ -107,22 +119,25 @@ describe('card-language offer policy (K583): with no new setting the pack answer
         if (plain === undefined) throw new Error('no game');
         if (run(plain.now, e) !== run(plain.then, e)) throw new Error(`a real run with no policy differs: ${JSON.stringify(e)}`);
         for (const g of games) {
-          const now = offers(g.now, e);
+          const now = offers(g.now, e).map(seen);
           const then = offers(g.then, e);
-          const why = Object.keys(FIXES).filter((k) => FIXES[k]?.(e, g.offer));
-          if (why.length === 0) strict += 1;
+          const why = Object.keys(FIXES).filter((k) => FIXES[k]?.on(e, g.offer));
+          if (why.every((k) => FIXES[k]?.reasonOnly)) strict += 1;
           if (now.join('\n') === then.join('\n')) {
             same += 1;
             continue;
           }
-          if (why.length === 0) throw new Error(`policy ${JSON.stringify(g.offer)}: now ${now.join(' | ')}, K579 ${then.join(' | ')}: ${JSON.stringify(e)}`);
-          for (const k of why) fixed[k] = (fixed[k] ?? 0) + 1;
+          const [a = '', b = ''] = [then[0], now[0]];
+          // The answer moved: only the way a fix that names this effect declares. The answer stayed: only a bar reason may differ, and only for the fix that says so.
+          const by = a !== b ? why.filter((k) => FIXES[k]?.moves?.(a, b)) : now.map(reasonless).join('\n') === then.map(reasonless).join('\n') ? why.filter((k) => FIXES[k]?.reasonOnly) : [];
+          if (by.length === 0) throw new Error(`policy ${JSON.stringify(g.offer)}: now ${now.join(' | ')}, K579 ${then.join(' | ')}: ${JSON.stringify(e)}`);
+          for (const k of by) fixed[k] = (fixed[k] ?? 0) + 1;
         }
       }
     }
-    // Pairs of effect and policy no fix names: compared with no exclusion.
-    expect(strict).toBeGreaterThan(3000);
-    expect(same).toBeGreaterThan(6000);
+    // Pairs of effect and policy whose answer no fix may move: compared with no exclusion.
+    expect(strict).toBeGreaterThan(2000);
+    expect(same).toBeGreaterThan(5500);
     for (const k of Object.keys(FIXES)) expect([k, (fixed[k] ?? 0) > 0]).toEqual([k, true]);
     expect(inDryRun()).toBe(false);
   }, 240000);
@@ -134,7 +149,7 @@ describe('card-language offer policy (K583): under paid = effect the check agree
   const { rnd, of } = rng(583);
   const leaf = (): PackStep => of<() => PackStep>([
     () => GAIN, () => NOTHING, () => NOTHING, () => DRAW, () => pay(1), () => pay(9),
-    () => custom('nothing'), () => custom('lone'), () => custom('order'),
+    () => custom('nothing'), () => custom('lone'), () => custom('order'), () => ({ op: 'ready' }),
     () => ({ op: 'adjust', key: 'gold', by: -1 }), () => ({ op: 'adjust', key: 'gold', by: 1, max: 3 }),
     () => ({ op: 'gainResource', res: 'gold', amount: 'X' }), () => ({ op: 'discard', cards: 'chosen' }),
     () => ({ op: 'if', test: of(['two', 'h2', 'poor', 'rich']), then: [of([GAIN, DRAW, NOTHING])] }),
