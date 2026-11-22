@@ -1,0 +1,12 @@
+{
+  "name": "picture-upscale",
+  "source": {
+    "game": "unstoppable",
+    "commit": "none",
+    "paths": [
+      "K705: new offline tool, nothing ported; install and status pattern copied from audio-gen"
+    ]
+  },
+  "licence": "Model weights are not part of the kit; models.json names each model's licence, and every run writes it into manifest.json.",
+  "needs": []
+}

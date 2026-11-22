@@ -2653,5 +2653,26 @@
       "valueAt: a limit that depends on the marker space",
       "checkClock: check a track spec in a content test"
     ]
+  },
+  "picture-upscale": {
+    "mechanics": "none: offline art tooling",
+    "use": "Making a picture bigger without blur (2-4x) offline on the GPU with a super-resolution model, for art shown larger than its source.",
+    "not": "Resizing in the browser, generating new art, or diffusion upscalers (SeedVR2, SUPIR).",
+    "title": "Enlarge a picture with a model",
+    "tags": [
+      "upscale",
+      "image",
+      "sharpen",
+      "super resolution",
+      "enlarge",
+      "picture",
+      "bigger",
+      "blur",
+      "offline"
+    ],
+    "visible": false,
+    "release": 1.0,
+    "gameSupplies": "The source pictures, the output folder and the target scale or width.",
+    "exports": "CLI `upscale.py` (run, check, status, fetch), see its README"
   }
 }

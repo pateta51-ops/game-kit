@@ -1,0 +1,12 @@
+{
+  "default": "nomos2-hq-dat2",
+  "models": {
+    "nomos2-hq-dat2": {
+      "file": "nomos2-hq-dat2.pth",
+      "url": "https://github.com/Phhofm/models/releases/download/4xNomos2_hq_dat2/4xNomos2_hq_dat2.pth",
+      "sha256": "1f2be2b4786b5031776aed90e1818564f5576ab1e44da9355c7f3788ea25bdea",
+      "licence": "CC-BY-4.0",
+      "source": "4xNomos2_hq_dat2, OpenModelDB 4x-Nomos2-hq-dat2 (its page prints the licence as CC-BY-0.4; the author's release is CC-BY-4.0)"
+    }
+  }
+}
