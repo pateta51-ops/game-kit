@@ -195,7 +195,7 @@
   { "q": "prompt attribution path", "first": "card-harness" },
   { "q": "deal damage split among targets", "first": "K536" },
   { "q": "pay or else otherwise", "first": "card-language" },
-  { "q": "amount expression count times", "first": "none" },
+  { "q": "amount expression count times", "first": "card-language" },
   { "q": "prompt recorder vitest test title", "first": "card-harness" },
   { "q": "render snapshot records", "first": "card-harness" },
   { "q": "response window prompt", "first": "K646" },
