@@ -115,7 +115,10 @@ const unescape = (s: string): string =>
 export function cardCasesIn(text: string): Partial<CardCaseInfo>[] {
   const out: Partial<CardCaseInfo>[] = [];
   const consts = new Map<string, string>();
-  for (const c of text.matchAll(CONST)) consts.set(c[1] as string, unescape(c[3] ?? c[4] ?? ''));
+  const code = text.replace(/\/\*[\s\S]*?\*\/|\/\/.*$/gm, '');
+  const decls = new Map<string, number>();
+  for (const d of code.matchAll(/(?<![\w$.])(?:const|let|var)\s+([A-Za-z_$][\w$]*)/g)) decls.set(d[1] as string, (decls.get(d[1] as string) ?? 0) + 1);
+  for (const c of code.matchAll(CONST)) if (decls.get(c[1] as string) === 1) consts.set(c[1] as string, unescape(c[3] ?? c[4] ?? ''));
   for (const m of text.matchAll(/\bcardCase\(\s*\{/g)) {
     const from = (m.index ?? 0) + m[0].length;
     let i = from;

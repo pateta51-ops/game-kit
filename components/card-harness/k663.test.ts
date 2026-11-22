@@ -31,6 +31,18 @@ describe('K663 cardCasesIn resolves a same-file const', () => {
   });
 });
 
+describe('K663 const scope', () => {
+  const line = 'CL-twin: printed is not a literal or a same-file const: P';
+  it('K663 a shadowing const (computed or template with an expression) is not resolved to the outer literal', () => {
+    expect(inventory(base([`const P = '${TEXT}'\nit('x', () => { const P = g()\n${call('P')} })`], one)).quoteDiffers).toEqual([line]);
+    expect(inventory(base([`const P = '${TEXT}'\nit('x', () => { const P = \`a \${x}\`\n${call('P')} })`], one)).quoteDiffers).toEqual([line]);
+  });
+  it('K663 a const in a comment does not resolve', () => {
+    expect(inventory(base([`// const P = '${TEXT}'\n${call('P')}`], one)).quoteDiffers).toEqual([line]);
+    expect(inventory(base([`/* const P = '${TEXT}' */\n${call('P')}`], one)).quoteDiffers).toEqual([line]);
+  });
+});
+
 describe('K663 README recipe', () => {
   it('K663 the recipe prints no problem and no uncited clause', () => {
     const tests = [{ path: 'a.test.ts', text: "const P = 'Draw 1.'\ncardCase({ clause: 'c-1', printed: P, ar: 'AR-1' }, f)\nit('c-2 scores', () => {})" }];

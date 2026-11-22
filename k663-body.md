@@ -7,7 +7,7 @@ Guarded lines (deleting each fails a test, checked locally):
 2. `if (k.printedRef !== undefined) quoteDiffers.push(...)` in `inventory` (k663 and cardCase tests fail)
 3. `|| (input.mixed === true && !quotes(c))` titleOnly term on the clause row (a k663 test fails)
 
-Departures: none.
+Departures: one. `cardCase.test.ts` K487 assertion "printed: P" (an unresolvable name) now expects the new line `printed is not a literal or a same-file const: P` instead of "quote differs": intended new behaviour.
 
 Post-build notes: performance none; implicit state none; kit candidates none.
 
