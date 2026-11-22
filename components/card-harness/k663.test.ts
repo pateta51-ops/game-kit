@@ -31,6 +31,14 @@ describe('K663 cardCasesIn resolves a same-file const', () => {
   });
 });
 
+describe('K663 README recipe', () => {
+  it('K663 the recipe prints no problem and no uncited clause', () => {
+    const tests = [{ path: 'a.test.ts', text: "const P = 'Draw 1.'\ncardCase({ clause: 'c-1', printed: P, ar: 'AR-1' }, f)\nit('c-2 scores', () => {})" }];
+    const inv = inventory({ pieces: [], tests, rulings: ['AR-1'], mixed: true, clauses: [{ id: 'c-1', cards: [], text: 'Draw 1.' }, { id: 'c-2', cards: [], text: 'Score 2.' }] });
+    expect([inv.quoteDiffers, inv.uncited]).toEqual([[], []]);
+  });
+});
+
 describe('K663 rule 11 mixed mode', () => {
   const good = call(`'${TEXT}'`);
   const t = (texts: string[], mixed?: boolean) => inventory(base(texts, { mixed }));
