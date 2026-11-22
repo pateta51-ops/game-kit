@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { checkClock, ended, left, newClock, occurrences, setTo, spaceOf, step, valueAt, type ClockSpec } from './index.ts'
+import { checkClock, ended, left, newClock, occurrences, onSpace, reached, setTo, spaceOf, step, valueAt, type ClockSpec } from './index.ts'
 
 const ids = (cs: readonly { threshold: { id: string }; how: string }[]) => cs.map((c) => `${c.threshold.id}:${c.how}`)
 
@@ -120,6 +120,59 @@ describe('clock', () => {
   it('turns crossings into occurrence inputs', () => {
     const spec: ClockSpec = { spaces: 5, start: 0, thresholds: [{ id: 't', at: 1, on: 'pass', kind: 'reward' }] }
     expect(occurrences(step(spec, newClock(spec), 2).crossings)).toEqual([{ kind: 'clock.reward', keys: { target: 't' }, amount: 1 }])
+  })
+  it('K581 a lose space in the middle of the row: landing loses, passing over it does not', () => {
+    const spec: ClockSpec = { spaces: 8, start: 0, thresholds: [{ id: 'gone', at: 5, on: 'land', kind: 'lose' }] }
+    const lost = (r: ReturnType<typeof step>) => r.crossings.some((c) => c.threshold.kind === 'lose')
+    const at3 = step(spec, newClock(spec), 3)
+    expect(lost(at3)).toBe(false)
+    expect(onSpace(spec, at3.state, 5)).toBe(false)
+    const over = step(spec, at3.state, 4)
+    expect(over.state.value).toBe(7)
+    expect(lost(over)).toBe(false)
+    expect(onSpace(spec, over.state, 5)).toBe(false)
+    expect(ended(spec, over.state)).toBe(true)
+    const on = step(spec, at3.state, 2)
+    expect(ids(on.crossings)).toEqual(['gone:land'])
+    expect(lost(on)).toBe(true)
+    expect(ended(spec, on.state)).toBe(false)
+    expect(onSpace(spec, on.state, 5)).toBe(true)
+    expect(onSpace(spec, setTo(spec, newClock(spec), 5), 5)).toBe(true)
+    expect(onSpace(spec, on.state, 9)).toBe(false)
+  })
+  it('K581 a lose space in the middle of the row, pass variant: passing over it loses too', () => {
+    const spec: ClockSpec = { spaces: ['a', 'b', 'c', 'd', 'e'], start: 'e', direction: 'down', thresholds: [{ id: 'gone', at: 'c', on: 'landOrPass', kind: 'lose' }] }
+    expect(ids(step(spec, newClock(spec), 3).crossings)).toEqual(['gone:pass'])
+    expect(ids(step(spec, newClock(spec), 2).crossings)).toEqual(['gone:land'])
+    expect(step(spec, newClock(spec), 1).crossings).toEqual([])
+    expect(['e', 'd', 'c', 'b', 'a'].map((x) => reached(spec, setTo(spec, newClock(spec), x), 'c'))).toEqual([false, false, true, true, true])
+    const up: ClockSpec = { spaces: 8, start: 0, thresholds: [] }
+    expect([4, 5, 6].map((x) => reached(up, setTo(up, newClock(up), x), 5))).toEqual([false, true, true])
+    expect(reached(up, setTo(up, newClock(up), 7), 9)).toBe(false)
+    expect(reached({ ...up, ends: 'wrap' }, setTo(up, newClock(up), 6), 5)).toBe(false)
+  })
+  it('K581 a crossing says which way the marker travelled', () => {
+    const spec: ClockSpec = { spaces: 6, start: 0, direction: 'down', thresholds: [{ id: 'any', at: 2, on: 'landOrPass', direction: 'either', kind: 'trigger' }] }
+    const back = step(spec, newClock(spec), -3)
+    expect(back.crossings.map((c) => c.way)).toEqual(['back'])
+    expect(step(spec, back.state, 1).crossings.map((c) => c.way)).toEqual(['forward'])
+  })
+  it('K581 detailed occurrences carry the threshold data, its space, how and the way; the default is as before', () => {
+    const spec: ClockSpec<{ gain: number }> = { spaces: ['a', 'b', 'c', 'd'], start: 'a', thresholds: [
+      { id: 'r', at: 'b', on: 'pass', kind: 'reward', data: { gain: 2 } },
+      { id: 'bare', at: 'c', on: 'land', direction: 'either', kind: 'trigger' },
+    ] }
+    const r = step(spec, newClock(spec), 2)
+    expect(occurrences(r.crossings, 'clock.', true)).toEqual([
+      { kind: 'clock.reward', keys: { target: 'r' }, amount: 1, space: 1, how: 'pass', way: 'forward', data: { gain: 2 } },
+      { kind: 'clock.trigger', keys: { target: 'bare' }, amount: 1, space: 2, how: 'land', way: 'forward' },
+    ])
+    expect(Object.keys(occurrences(r.crossings, 'clock.', true)[1] ?? {})).toEqual(['kind', 'keys', 'amount', 'space', 'how', 'way'])
+    expect(occurrences(r.crossings, 'clock.', true)[0]?.data?.gain).toBe(2)
+    expect(occurrences(step(spec, setTo(spec, r.state, 'd'), -1).crossings, 't.', true)).toEqual([{ kind: 't.trigger', keys: { target: 'bare' }, amount: 1, space: 2, how: 'land', way: 'back' }])
+    expect(occurrences(r.crossings).map((o) => Object.keys(o))).toEqual([['kind', 'keys', 'amount'], ['kind', 'keys', 'amount']])
+    const bare = spec.thresholds[1]
+    expect(bare && occurrences([{ threshold: bare, from: 0, to: 2, space: 2, how: 'land' }], 'clock.', true)).toEqual([{ kind: 'clock.trigger', keys: { target: 'bare' }, amount: 1, space: 2, how: 'land' }])
   })
   it('checkClock reports bad data as problems', () => {
     expect(checkClock({ spaces: 5, start: 0, thresholds: [] })).toEqual([])
