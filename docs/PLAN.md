@@ -361,6 +361,7 @@ The blind matching test's result was not recorded: the PR, its comments and docs
 | K669 | card-harness: `describeCheck` reports raw keys, empty brackets and stand-in numbers in a reading, keeps an accepted list with stale failure and a tokens-only mode; `parseReadings` applies readings in recorded order. | S |  | done |
 | K670 | layout-editor: optional per-zone `card: [w, h]` overriding the screen card size in drawing, cardFit and layoutWarnings; editable in the Zone panel. For screens that mix portrait, landscape and large cards. | S |  | done |
 | K675 | kit check: components declare bypass patterns; `kit.mjs check` fails a game that goes around a kit part, naming the hook to use; first patterns for motion-frame and sound-player. | M |  | done |
+| K679 | art-pipeline: minimum JPEG quality for re-encoded faces within the size cap; art check fails an enlarged face. | S |  | done |
 
 ## Asked for by the owner
 
@@ -518,6 +519,7 @@ What a game's own tool did that the kit's does not; each kept that game on its o
 | K67 | `traceability` options: `describe` titles count; a test title alone is enough (no code-comment rule); scenario check off or 2-digit ids; ids-per-title cap; id shapes with word suffixes, one digit or a sub-letter; phase and pending modes | Jarl, Rome, EBR, Imperium, STCC, Unstoppable | M | done (left: a text scan, not a TypeScript parse as in EBR) |
 | K68 | `plan-checker`: session-plan heading optional; every rule id covered by a scenario; scenario catalogue read in full; skip with a notice when Python is missing | Unstoppable, EBR | S | done (left: `--tsc` over several sections, as in Unstoppable) |
 | K69 | `bundle-size`: base path in addresses; follow static imports and stylesheet `url(...)`; an exported budget a test can import; limits that can be left out | STCC, Unstoppable | S | done (left: Unstoppable flag names) |
+| K681 | card-zones: shuffleZone passes an rng name (named override) like ctx.rng.shuffle. |  | S | done |
 | K70 | `ci-templates` and `repo-gate`: workflow templates filled from a config, not placeholders; `full-gate.mjs`, `local-ci.sh`, `watch-run.sh` usable as pulled; skip reporter on vitest 2; runners file exempt from its own rule; no blob fetch in a partial clone; install command in READMEs with `RUNNER_REPO` and `RUNNER_LABEL` | Jarl, Rome, EBR, Imperium, STCC, Unstoppable | M | done |
 | K71 | `check-runner`: environment per lane; a phase after the lanes; pull-request mode holding a game's own scripts; gate-all error-code column; timeout and tree kill in `gate()`; `replay-cli` checkpoint goldens | EBR, STCC | M | done |
 | K72 | `tooling-scripts`, the rest of K64: picture re-encoder, font fetch and WOFF packer, mock capture, owner PC setup, dossier sync, simulation bundler | Jarl, Rome, Warp's, Imperium | M | done (`mock-capture` without the phone callout boards; `setup.ps1` never executed in CI) |

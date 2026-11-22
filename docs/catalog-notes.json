@@ -556,7 +556,7 @@
     "gameSupplies": "The table of card fields."
   },
   "card-zones": {
-    "use": "Decks, hands, discards and play areas as ordered id lists in engine state, with who sees what and a per-seat view for opponents and the UI. A zone can have a capacity (hand limit, slot limit) that rules raise and give up, with a state check that asks the owner which cards over the limit go to the discard. Hand, pile and drag UI parts are planned (K218-K220), not built: ask for them, do not build them in the game. Recipe: docs/recipes/card-table.md.",
+    "use": "Decks, hands, discards and play areas as ordered id lists in engine state, with who sees what and a per-seat view for opponents and the UI. A zone can have a capacity (hand limit, slot limit) that rules raise and give up, with a state check that asks the owner which cards over the limit go to the discard. Hand, pile and drag UI parts are planned (K218-K220), not built: ask for them, do not build them in the game. Recipe: docs/recipes/card-table.md. shuffleZone shuffles a zone on ctx.rng; its rng name selects a named override, so a test can force the shuffle order (shuffle zone named rng, shuffle deck rng name override, forced order test).",
     "not": "Boards and spaces (board-model), card faces, or rules about running out.",
     "title": "Decks, hands and discards as lists",
     "tags": [
@@ -577,6 +577,10 @@
       "discard event",
       "on leave hook",
       "leave callback",
+      "shuffle",
+      "rng name",
+      "override",
+      "forced order",
       "card stack on a location",
       "location",
       "hand size maximum",
@@ -2003,7 +2007,7 @@
   },
   "art-pipeline": {
     "mechanics": "none: content tooling (art, scans, card data)",
-    "use": "Game-free scripts for a card game's art, driven by the game's config: an index of one chosen image per card (order, overrides, degraded rule), fetch with sha256, sheet cells and crops, PDF pages as faces, a CI cache keyed on input hashes, publish to public with a manifest art-check reads.",
+    "use": "Game-free scripts for a card game's art, driven by the game's config: an index of one chosen image per card (order, overrides, degraded rule), fetch with sha256, sheet cells and crops, PDF pages as faces, a CI cache keyed on input hashes, publish to public with a manifest art-check reads, with a minimum JPEG quality within a size cap and an enlarged-face check.",
     "not": "Mapping card ids to files, the sources' URLs and parsing a dossier: those stay in the game and go in as config.",
     "title": "Get card art ready for the game",
     "tags": [
@@ -2013,7 +2017,13 @@
       "download",
       "pipeline",
       "manifest",
-      "crop"
+      "crop",
+      "jpeg quality",
+      "re-encode",
+      "face enlarged",
+      "larger than source",
+      "size cap",
+      "minimum quality"
     ],
     "visible": false,
     "release": 1,

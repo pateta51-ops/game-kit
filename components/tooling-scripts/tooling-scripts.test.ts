@@ -65,7 +65,7 @@ describe('art-check', () => {
   };
 
   it('passes when the manifest matches sources and outputs', () => {
-    expect(errors(good)).toEqual({ code: 0, text: 'art-check: ok (2 faces, 10 bytes)' });
+    expect(errors(good)).toEqual({ code: 0, text: 'enlarged check: 2 faces skipped, no source size; republish to check them\nart-check: ok (2 faces, 10 bytes)' });
     expect(errors(good, '--need', put('need.json', '["F001"]'), '--max-bytes', '10', '--max-file-bytes', '6').code).toBe(0);
   });
 
