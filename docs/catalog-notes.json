@@ -875,7 +875,7 @@
     ]
   },
   "dice-tray": {
-    "use": "Dice in play, held dice, rolling through ctx.rng and the roll window content. Recipe: docs/recipes/dice.md.",
+    "use": "Dice in play, held dice, rolling through ctx.rng (a roll name selects a test override) and the roll window content. Recipe: docs/recipes/dice.md.",
     "not": "Dice drawing or 3D (pieces-3d) and odds (dice-odds).",
     "title": "Dice rolling and holding",
     "tags": [
@@ -892,7 +892,10 @@
       "modify roll",
       "add to roll",
       "combat reroll window",
-      "until different value"
+      "until different value",
+      "named dice roll",
+      "dice roll name",
+      "force a dice roll"
     ],
     "visible": false,
     "release": 1,
