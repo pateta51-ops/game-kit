@@ -16,7 +16,7 @@
 ## Verbs (fields; defaults)
 | Verb | Fields | Defaults |
 |---|---|---|
-| draw, discard, mill, move, putIntoPlay, setAside, recall, gain, destroy, detach | `cards? count? from? filter? to? at?` | draw top deck>hand at bottom; discard pick hand>discard; mill top deck>discard; move top deck>discard; putIntoPlay pick hand>play; setAside source hand>aside; recall all aside>hand; gain pick market>discard; destroy pick play>discard; detach chosen>discard |
+| draw, discard, mill, move, putIntoPlay, setAside, recall, gain, destroy, detach | `cards? count? from? filter? to? at? then?` | draw top deck>hand at bottom; discard pick hand>discard; mill top deck>discard; move top deck>discard; putIntoPlay pick hand>play; setAside source hand>aside; recall all aside>hand; gain pick market>discard; destroy pick play>discard; detach chosen>discard. K658: `then` runs after every card of the step moved (reshuffle included), with env.moved the cards that moved, in order; a later step picks among them with `from: 'moved'` (`cards: 'pick'` or `'all'`; cards that left their zone since are dropped) |
 | attach | `cards? count? from? filter? host?` | source into zone `attached:<host>` (host: env.source, or `chosen` = env.cards[0]); the zone is made when needed |
 | refill | `zone from size` | top of `from` to the bottom of `zone` until it holds `size` |
 | shuffle | `zone` | `ctx.rng` only |

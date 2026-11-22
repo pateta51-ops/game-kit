@@ -59,7 +59,9 @@ export const pay = (amount: number): PackStep => ({ op: 'pay', res: 'gold', amou
 export const LUCKY = { op: 'lucky' } as unknown as PackStep;
 const SKIP = ['stack', 'prompt', 'seq', 'promptSeq', 'log', 'timing', 'cardMoves', 'rng', 'forced', 'truth', 'steps'];
 /** What the check compares by default, without the brute-force notes. */
-export const viewOf = (s: S): string => canonicalJson(Object.fromEntries(Object.entries(s).filter(([k, v]) => !SKIP.includes(k) && !(k === 'marks' && Object.keys(v as object).length === 0))));
+// K657: a resource at 0 is the same game as none (as the pack's check compares).
+const unzero = (r: S['res']): object => Object.fromEntries(Object.entries(r ?? {}).map(([k, v]) => [k, Object.fromEntries(Object.entries(v).filter(([, x]) => x !== 0))] as const).filter(([, v]) => Object.keys(v).length > 0));
+export const viewOf = (s: S): string => canonicalJson(Object.fromEntries(Object.entries({ ...s, res: unzero(s.res) }).filter(([k, v]) => !SKIP.includes(k) && !(k === 'marks' && Object.keys(v as object).length === 0))));
 /** Did this line of play change the game, not counting what a cost marked by `marked` changed? */
 export const changed = (s: S, base: string): boolean => (s.truth?.hit ?? false) || ((s.truth?.open.length ?? 0) === 0 && viewOf(s) !== (s.truth?.base ?? base));
 /** The same effect with each `payThen` wrapped in the brute-force notes: `pre`, the cost, `mark` before `then`, `post`. */
