@@ -338,7 +338,7 @@ if (cmd === 'pull') {
     for (const { e } of scored.filter((x) => !x.e.cand).sort((x, y) => y.s - x.s || y.e.eff - x.e.eff || x.i - y.i).slice(0, 3)) console.log(e.line([]))
     if (mech.length) {
       const lev = (p, q) => { let r = [...Array(q.length + 1).keys()]; for (let i = 1; i <= p.length; i++) { const n = [i]; for (let j = 1; j <= q.length; j++) n[j] = Math.min(r[j] + 1, n[j - 1] + 1, r[j - 1] + (p[i - 1] === q[j - 1] ? 0 : 1)); r = n } return r[q.length] }
-      const near = mech.map((m, i) => { const t = m.alts.flat(); return { m, i, s: words.filter((w) => hasTok(t, w)).length, d: Math.min(99, ...words.flatMap((w) => t.map((x) => lev(w, x)).filter((n) => n <= 2 && n * 2 < w.length))) } }).sort((x, y) => y.s - x.s || x.d - y.d || x.i - y.i)[0]
+      const near = mech.map((m, i) => { const t = m.alts.flat(); return { m, i, s: words.filter((w) => hasTok(t, w)).length, d: Math.min(99, ...words.flatMap((w) => t.map((x) => lev(w, x)).filter((n) => n <= 2 && n * 2 < w.length))) } }).filter((x) => words.length < 2 || x.s > 1 || !(x.m.ans.startsWith('not in the kit') || /candidate K\d+/.test(x.m.ans))).sort((x, y) => y.s - x.s || x.d - y.d || x.i - y.i)[0]
       // K673: for a query of two or more words, a "not in the kit" line or one naming a candidate is offered as nearest only when two query words match it, never on one common word
       if (near && (near.s || near.d < 99)) console.log('nearest mechanic: ' + near.m.words + ' -> ' + near.m.ans)
     }
