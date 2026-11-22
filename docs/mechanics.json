@@ -114,7 +114,8 @@
     { "words": "full, partial or no resolution of an effect, three-grade forecast, can this effect resolve in full", "row": "K597", "note": "today: the card-language offer policy answers yes, no or unknown", "sheet": "offered" },
     { "words": "zone with a capacity, slot limit on a zone, over the limit choose what leaves", "row": "K599", "sheet": "player" },
     { "words": "stop set on a grid, spaces that end a move, enter but not leave, reach that stops at a space, stop set", "row": "K629", "note": "today: a second grid with added walls (grid-map)", "sheet": "positions" },
-    { "words": "heavy queue, queue a heavy job, queue heavy runs, one at a time on the machine, machine queue", "tool": "heavy-queue", "read": "its README: `heavy run -- <cmd>` in WSL runs a heavy job in the one machine queue", "sheet": "content" }
+    { "words": "heavy queue, queue a heavy job, queue heavy runs, one at a time on the machine, machine queue", "tool": "heavy-queue", "read": "its README: `heavy run -- <cmd>` in WSL runs a heavy job in the one machine queue", "sheet": "content" },
+    { "words": "response window, timing window prompt, play a response now, reaction window, pass", "part": "engine-core", "read": "recipe timing.md (windows)", "missing": "one prompt that offers every response legal at a window, with a pass", "row": "K646", "sheet": "triggers" }
   ],
   "searches": {
     "undo button": "engine-core",

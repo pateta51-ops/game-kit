@@ -437,6 +437,7 @@ A candidate is a part some game wants and nobody builds yet. A second game that 
 | K637 | `clock` `checkClock`: problems for a pass threshold on the forward end of a stopping clock (it can never fire) and for `values` that is not an object; a game passes nothing new. | S |  | candidate |
 | K638 | `clock` occurrences: the threshold's `data` copied, so a reader that edits it does not change the spec (each crossing carries `from` and `to` since K588); a game passes nothing new. | S |  | candidate |
 | K639 | `clock`: the value at a space other than the marker's, and a step amount that is not whole refused instead of rounded up; a game passes the space. | S |  | candidate |
+| K646 | window prompt: at a timing window, one prompt that offers every response legal at that moment (from hand, in play, by seat) and a pass, built on engine-core windows; a game passes what counts as a response and who may answer. | M | Radiance | candidate |
 
 ## Harvest from the existing games (owner, 15 Nov 2026)
 
