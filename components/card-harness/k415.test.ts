@@ -166,3 +166,26 @@ describe('K415 expectNotOffered and expectNotFired', () => {
     expect(() => expectNotFired(s2, 'nothing', () => s2.set((s) => void (s.score = 3)))).toThrow('expectNotFired: the state changed');
   });
 });
+
+describe('K648 expectNotOffered counts only the engine refusal', () => {
+  it('a handler that crashes inside the attempt fails, naming the error', () => {
+    const sc = new Scenario(DICE_GAME);
+    const [twin] = sc.put('hand', 'twin');
+    sc.set((s) => void (s.dice = null as unknown as number[]));
+    expect(() => expectNotOffered(sc, 'twin', () => sc.withRewind(() => sc.run({ kind: 'play', card: twin as string })))).toThrow(/expectNotOffered: taking twin crashed instead of being refused: TypeError/);
+    expect(() => expectNotOffered(sc, 'twin', () => { throw new Error('engine bug'); })).toThrow('expectNotOffered: taking twin crashed instead of being refused: Error: engine bug');
+  });
+  it('the engine refusal still passes, and a taken option still fails', () => {
+    const { sc, ladder } = discardPromptK648();
+    expect(() => expectNotOffered(sc, ladder)).not.toThrow();
+    expect(() => expectNotOffered(sc, ladder, () => sc.withRewind(() => sc.answer(ladder)))).not.toThrow();
+    expect(() => expectNotOffered(sc, ladder, () => false)).not.toThrow();
+    expect(() => expectNotOffered(sc, ladder, () => sc)).toThrow(`expectNotOffered: taking ${ladder} was not refused`);
+  });
+});
+const discardPromptK648 = () => {
+  const sc = new Scenario(DICE_GAME).set((s) => void (s.dice = [1, 2, 3]));
+  const [ladder] = sc.put('hand', 'ladder', 'plain', 'twin');
+  sc.run({ kind: 'play', card: ladder as string });
+  return { sc, ladder: ladder as string };
+};

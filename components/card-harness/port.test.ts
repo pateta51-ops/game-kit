@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { kernelPort, type Draft } from '../engine-core/index.ts';
-import { Scenario, type ScenarioPort } from './index.ts';
+import { expectNotOffered, Scenario, type ScenarioPort } from './index.ts';
 import { DICE, DICE_GAME, PROBE, type Dice, type Note, type Where } from './fake/dice.ts';
 
 // K390: a game with its own engine (no engine-core): a pile of cards worth points, a queue of tasks, string prompt ids
@@ -103,5 +103,16 @@ describe('K390 Scenario over an engine port', () => {
     };
     const viaRules = play(new Scenario(DICE_GAME));
     expect(play(new Scenario(port))).toEqual(viaRules);
+  });
+});
+
+describe('K648 expectNotOffered on a game with its own engine', () => {
+  it('its own refusal error counts only through refused', () => {
+    const sc = new Scenario(OWN);
+    const [, b] = sc.put('hand', 'one', 'two');
+    sc.set((s) => void (s.total = 3)).run('pick');
+    expect(() => expectNotOffered(sc, b as string)).toThrow(/expectNotOffered: taking two#\d crashed instead of being refused: .*disabled: two/);
+    expect(() => expectNotOffered(sc, b as string, undefined, { refused: (e) => e instanceof Error && e.message.startsWith('disabled:') })).not.toThrow();
+    expect(() => expectNotOffered(sc, b as string, () => { throw new TypeError('boom'); }, { refused: (e) => e instanceof Error && e.message.startsWith('disabled:') })).toThrow(/crashed instead of being refused: TypeError: boom/);
   });
 });
