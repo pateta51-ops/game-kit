@@ -1,0 +1,11 @@
+{
+  "name": "dice-patterns",
+  "source": {
+    "game": "7is",
+    "commit": "b3ef81b",
+    "paths": ["src/engine/conditions.ts", "tests/unit/satisfying-dice.test.ts"],
+    "note": "Logic kept; the interface is new: patterns as plain data compiled to the test dice-odds and dice-tray take."
+  },
+  "needs": [],
+  "packages": []
+}

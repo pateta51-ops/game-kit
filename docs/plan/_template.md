@@ -48,6 +48,20 @@ A game's build plan lists the kit work it needs as phases named `GK<n>` for the 
 |---|---|---|---|---|
 <!-- rows: Asked for by a game -->
 
+## Asked for by the owner
+
+| Batch | Content | Effort | Asked by | State |
+|---|---|---|---|---|
+<!-- rows: Asked for by the owner -->
+
+## Candidates
+
+A candidate is a part some game wants and nobody builds yet. A second game that wants it adds its name to "Wanted by" after a comma; never a second row. Row keys: `wanted-by` (game names, comma-separated), `tags` (plain words, comma-separated) and `sources`, which no table prints; `node kit.mjs search` finds a candidate by its content line and tags.
+
+| Batch | Content | Effort | Wanted by | State |
+|---|---|---|---|---|
+<!-- rows: Candidates -->
+
 ## Harvest from the existing games (owner, 15 Nov 2026)
 
 "Enrich the kit first, then retrofit the games" (`docs/RETROFIT_PLAN.md`). Seven read-only reviews, one per game, are in `docs/evaluation/harvest/` (109 candidates; their evidence is headers, exports and searches, so a worker reads the bodies before lifting). Merged here by theme. Wave 1 is built first and tagged; the retrofits pull that tag. Wave 2 follows. A worker does not edit this file: the rows are marked by whoever merges.

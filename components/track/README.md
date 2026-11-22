@@ -1,6 +1,6 @@
 # track
 
-A row of spaces with a marker that glides, on a drawn row or on spots of a mat image; a hop-and-fill bar with a multiplier badge; a step list with one lit step. Unstyled: `data-part` hooks only. The game owns layout, colours and every word.
+A row of spaces with a marker that glides, on a drawn row or on spots of a mat image; a hop-and-fill bar with a multiplier badge; a step list with one lit step. Unstyled: `data-part` hooks only. The game owns layout, colours and every word. The rule side of a track (steps, thresholds, per-space values) is `clock`; draw its state here unchanged.
 
 ## Rules for agents
 

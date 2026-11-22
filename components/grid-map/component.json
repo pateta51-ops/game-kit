@@ -1,0 +1,10 @@
+{
+  "name": "grid-map",
+  "source": {
+    "game": "none (written for the kit)",
+    "commit": "none",
+    "paths": []
+  },
+  "needs": [],
+  "packages": []
+}

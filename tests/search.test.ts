@@ -108,3 +108,29 @@ describe('K500 search', () => {
     } finally { fs.rmSync(g, { recursive: true, force: true }); }
   });
 });
+
+describe('K523 candidates', () => {
+  const lines = (q: string) => run('search', ...q.split(' ')).stdout.split('\n');
+  it('finds a candidate row by its content line and tags, first for discard row', () => {
+    expect(lines('discard row')[0]).toMatch(/^candidate K520, wanted by Hunted North Pole, Hunted Mining Colony, Dungeon Ball Legend: discard-row/);
+    expect(lines('greedy driver')[0]).toMatch(/^candidate K424, wanted by Astra Imperium: /);
+    expect(lines('chamfered keys')[0]).toMatch(/^candidate K423, /);
+    expect(lines('greedy driver')).toContain('not built yet');
+    expect(lines('greedy driver').join('\n')).not.toContain('not in the kit by that name');
+  });
+  it('a second game in wanted-by changes the line; no second row', () => {
+    const g = fs.mkdtempSync(path.join(os.tmpdir(), 'k523-'));
+    try {
+      fs.mkdirSync(path.join(g, 'recipes'));
+      fs.copyFileSync(KIT, path.join(g, 'kit.mjs'));
+      fs.copyFileSync(path.join(ROOT, 'docs/CATALOG.md'), path.join(g, 'CATALOG.md'));
+      const page = (w: string) => '| Id | Content | Wanted by | Tags |\n|---|---|---|---|\n| K900 | zork-row: a row of zorks | ' + w + ' | zork, row |\n';
+      const out = () => spawnSync('node', [path.join(g, 'kit.mjs'), 'search', 'zork'], { encoding: 'utf8', env }).stdout;
+      fs.writeFileSync(path.join(g, 'recipes/candidates.md'), page('A'));
+      expect(out().split('\n')[0]).toBe('candidate K900, wanted by A: zork-row: a row of zorks');
+      fs.writeFileSync(path.join(g, 'recipes/candidates.md'), page('A, B'));
+      expect(out().split('\n')[0]).toBe('candidate K900, wanted by A, B: zork-row: a row of zorks');
+      expect(out().split('\n').filter((l) => l.startsWith('candidate'))).toHaveLength(1);
+    } finally { fs.rmSync(g, { recursive: true, force: true }); }
+  });
+});
