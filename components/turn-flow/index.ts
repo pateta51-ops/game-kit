@@ -1,7 +1,7 @@
 // K264 (audit G03/T5): rounds, turns per seat, phases and steps as a data table; the runner calls engine-core's
 // `boundary()` at each turn, phase and round edge. Idea from 7th Inning Stretch's `season.phase` chain (each phase task
 // pushes its work, then the next phase task), written new and game-free.
-import { boundary, draftOf, type Ctx, type GameTypes, type HandlerTable } from '../engine-core/index.ts';
+import { bar, boundary as endDurations, draftOf, type Boundary, type Ctx, type GameTypes, type HandlerTable, type KernelOption } from '../engine-core/index.ts';
 
 export interface FlowPhase {
   readonly id: string;
@@ -35,6 +35,65 @@ type Flowing = { readonly flow?: FlowState };
 export const FLOW_NEXT = 'flow.next';
 export const flowOf = (s: object): FlowState | undefined => (s as Flowing).flow;
 export const whoseTurn = (s: object): string | undefined => (flowOf(s)?.done === true ? undefined : flowOf(s)?.seat);
+
+// K589: a shared once-per limit. A game declares keys with a scope (and per card, per seat); a used one bars its option
+// with reason `used`; turn, phase and round limits clear at the runner's turnEnd, phaseEnd and roundEnd; game ones never.
+/** A game-named scope (e.g. `combat`) is never cleared by the runner: the game calls `clearLimits` at its own end. */
+export type LimitScope = 'turn' | 'round' | 'phase' | 'game' | (string & {});
+export interface LimitDef {
+  readonly scope: LimitScope;
+  readonly perCard?: true;
+  readonly perSeat?: true;
+  /** The words a prompt shows when the limit is used; default `used this turn` and the like. */
+  readonly why?: string;
+}
+export type LimitTable = Readonly<Record<string, LimitDef>>;
+/** `seat` defaults to whose turn it is (read only when the key is per seat); `card` is read only when it is per card. */
+export interface LimitRef {
+  readonly key: string;
+  readonly card?: string;
+  readonly seat?: string;
+}
+export type LimitsState = Readonly<Record<string, readonly string[]>>;
+type Limited = { readonly limits?: LimitsState };
+const WHY: Readonly<Record<string, string>> = { turn: 'used this turn', round: 'used this round', phase: 'used this phase', game: 'already used this game' };
+
+function slot(s: object, t: LimitTable, r: LimitRef): [LimitDef, string] {
+  const d = t[r.key];
+  if (d === undefined) throw new Error(`No once-per limit "${r.key}" in the table.`);
+  const seat = d.perSeat === true ? (r.seat ?? whoseTurn(s)) : null;
+  if (seat === undefined) throw new Error(`Limit "${r.key}" is per seat: pass a seat (no turn is running).`);
+  if (d.perCard === true && r.card === undefined) throw new Error(`Limit "${r.key}" is per card: pass a card id.`);
+  return [d, JSON.stringify([r.key, seat, d.perCard === true ? r.card : null])];
+}
+export const limitsOf = (s: object): LimitsState | undefined => (s as Limited).limits;
+export const limitUsed = (s: object, t: LimitTable, r: LimitRef): boolean => {
+  const [d, id] = slot(s, t, r);
+  return limitsOf(s)?.[d.scope]?.includes(id) ?? false;
+};
+/** Marks the limit used; false when it already was. */
+export function markLimit<G extends GameTypes>(ctx: Ctx<G>, t: LimitTable, r: LimitRef): boolean {
+  const [d, id] = slot(ctx.s, t, r);
+  const l = limitsOf(ctx.s);
+  if (l?.[d.scope]?.includes(id) === true) return false;
+  (draftOf(ctx) as { limits?: LimitsState }).limits = { ...l, [d.scope]: [...(l?.[d.scope] ?? []), id] };
+  return true;
+}
+/** The prompt option for an action behind the limit: enabled, or barred with reason `used` and the limit's words. */
+export const limitOption = (s: object, t: LimitTable, r: LimitRef, id: string): KernelOption =>
+  limitUsed(s, t, r) ? bar(id, 'used', t[r.key]?.why ?? WHY[t[r.key]?.scope ?? ''] ?? `used this ${t[r.key]?.scope ?? ''}`) : { id, enabled: true };
+/** Clears every limit of a scope (the runner does it at its edges; for a game's own boundaries). */
+export function clearLimits<G extends GameTypes>(ctx: Ctx<G>, scope: LimitScope): void {
+  const l = limitsOf(ctx.s);
+  if (l?.[scope] === undefined) return;
+  const rest = { ...l };
+  delete rest[scope];
+  (draftOf(ctx) as { limits?: LimitsState }).limits = rest;
+}
+function boundary<G extends GameTypes>(ctx: Ctx<G>, b: Boundary): void {
+  endDurations(ctx, b);
+  if (b.kind !== 'turnBegin') clearLimits(ctx, b.kind === 'turnEnd' ? 'turn' : b.kind === 'roundEnd' ? 'round' : 'phase');
+}
 
 export function startFlow<G extends GameTypes>(ctx: Ctx<G>): void {
   ctx.then({ kind: FLOW_NEXT });
