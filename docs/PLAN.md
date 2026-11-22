@@ -337,6 +337,31 @@ A candidate is a part some game wants and nobody builds yet. A second game that 
 | K429 | Phone playtest tooling: `playtest.mjs` (4K, phone 390x664, landscape sweeps with JSONL results), `tap44.mjs` (44 px tap-target audit counting hit areas), `offline.mjs`, `summary.mjs`, `sheet.mjs`, `runall.sh` (Astra `tools/playtest/`) | M | Astra Imperium | candidate |
 | K430 | Scaffold additions every game adds by hand: Playwright config (e2e port = block + 2), the plancheck lane, the architect wrappers (Astra S1) | S | Astra Imperium | candidate |
 | K520 | discard-row: a row of face-up cards that refills by drawing until a trigger card appears, where a cost is paid by discarding row cards that show the needed icons. | M | Hunted North Pole, Hunted Mining Colony, Dungeon Ball Legend | candidate |
+| K535 | card-language verb: a repeat that asks the player before each pass instead of a fixed count; a game passes the effect and the stop rule. | S | Radiance | candidate |
+| K536 | card-language verb: split an amount over chosen targets, the player assigning each share; a game passes the amount, the target list and any limit per target. | S | Radiance | candidate |
+| K537 | card-language: effects offered at the end of a phase (and at its start) as events the player may use; a game passes the phase names and the offers. | S | Radiance | candidate |
+| K538 | card-language: when a host leaves play its attachments leave with it, each to the zone the game names; a game passes the destination per attachment kind. | S | Radiance | candidate |
+| K539 | card-language: a face-down view of a card for a seat that may not see it, with the owner and revealing rules; a game passes who may look. | S | Radiance | candidate |
+| K541 | engine-core: a lasting effect whose end point is a named event the game defines, instead of the nine fixed duration kinds; a game passes the event name and when it fires. | M | Radiance | candidate |
+| K542 | a status: a named lasting effect shown as a token on a card or unit, with a verb to give, remove and test it; a game passes the names, tokens and end rules. | M | survey | candidate |
+| K543 | dice placed on slots: slots with a rule on which die value fits, and a table from die value to the yield the slot gives; a game passes the slots, the rules and the table. | M | Dieson Crusoe | candidate |
+| K544 | layered cell grid: cells that hold a stack of layers, with placement over lower layers, what shows on top and what is covered; a game passes the layer rules and the shapes. | M | Crystallo, Dicemancy | candidate |
+| K546 | objectives with progress: a goal with a count or steps, its progress, when it is done or failed, and objectives per scenario; a game passes the goals and what moves them. | M | Dice Commandos, Paranormal, survey | candidate |
+| K547 | card set matcher: sets, runs and hands of cards tested as data (pairs, straights, flushes, named combos), as the dice patterns are for dice, also a window (for example 2x2) scanned over a grid of cards; a game passes the combos and the window. | M | Drawing Dead, Crystallo | candidate |
+| K548 | all-or-nothing effect block: a list of effects that all resolve or none does, with the state restored when one cannot; a game passes the effects. | M | Unstoppable | candidate |
+| K549 | state-change audit: a check that every changed value in the state is explained by an event, listing the unexplained ones; a game passes its event-to-field map. | S | Unstoppable | candidate |
+| K550 | combat verbs: attack, damage, armor and defeat as data on top of `would` and `adjust`, with the hooks where a game inserts its own rules; a game passes the stats and the defeat rule. | L | Radiance, Hunted North Pole, Dice Commandos, survey | candidate |
+| K551 | flexible starter: a game sheet describing a new game, then a generator that wires the kit parts from it; the sheet names parts and set-up. | L | survey | candidate |
+| K552 | dice-odds: the chance of a pattern or of a success count given a reroll budget and a keep rule, exact (`dice-patterns` `count` and `dice-tray` rerolls exist; the odds with rerolls and the success check as data do not); a game passes the pool, the success rule, the dice and the rerolls. | M | survey | candidate |
+| K553 | one description that gives `board-model` its spaces and `grid-map` its adjacency (both exist); a game passes the cells and links once. | L | survey | candidate |
+| K556 | spawn tables stepped by a clock: what appears at each step of a clock, drawn from tables with the engine random; a game passes the tables and the clock. | M | survey | candidate |
+| K557 | card-language helper to copy another card effect (prevention and `cancelBatch` already cover "cannot"); a game passes the effect to copy. | S | survey | candidate |
+| K559 | walk a piece along a shortest path (`shortestPaths` exists) with a stop rule and a named destination; a game passes the destination and the stop rule. | S | Dice Commandos | candidate |
+| K560 | a row of event cards resolved in order, each with a window before and after it where players may act; a game passes the cards and the windows. | M | Action-Packed Double Feature | candidate |
+| K561 | `card-harness` mutation check per clause: change a clause on purpose and fail the card test that does not notice; a game passes its clauses and tests. | S | Radiance | candidate |
+| K563 | dice formulas as data (count, sides, modifiers) rolled through the engine random and read by the odds; a game passes the formula. | S | 7th Inning Stretch | candidate |
+| K565 | turn-flow: take another turn, with the rule for what ends it; a game passes the turn order and the limit. | S | survey | candidate |
+| K566 | grid-map option: extra steps a game adds to the neighbours (for example a diagonal past a wall end under the game's own condition); a game passes the condition. | S | Dice Commandos | candidate |
 
 ## Harvest from the existing games (owner, 15 Nov 2026)
 
