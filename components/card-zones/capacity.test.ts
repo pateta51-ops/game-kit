@@ -4,12 +4,12 @@ import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 import { applyAction, draftOf, enumerateAnswers, type Ctx, type GameRules } from '../engine-core/index.ts';
-import { answer, playGame, startPlay, type Play, type PlayState } from '../engine-core/fake/casesK647.ts';
+import { answer, playGame, said, say, startPlay, type Play, type PlayState } from '../engine-core/fake/casesK647.ts';
 import { capacityCheck, capacityHandlers, cardsIn, dropRaise, hiddenFrom, limitOf, newZones, overBy, raiseLimit, reveal, viewOf, type OverLimit, type Zone, type Zoned } from './index.ts';
 
 type S = PlayState & Zoned;
 const CP = { kind: 'timing.checkpoint' };
-const game = (step: (s: Zoned) => void = () => undefined, o: OverLimit = { to: 'discard' }): GameRules<Play> =>
+const game = (step: (s: Zoned) => void = () => undefined, o: OverLimit<Play> = { to: 'discard' }): GameRules<Play> =>
   playGame({ checkpoint: { checks: [capacityCheck<Play>(['hand:a'], o)] } }, {
     ...capacityHandlers<Play>(),
     play: (ctx: Ctx<Play>) => {
@@ -148,8 +148,9 @@ describe('K599 README recipe "Capacity" runs', () => {
   it('the README block is this test, and it asks for the excess', () => {
     const s = { zones: newZones({ 'hand:a': { seen: 'owner', owner: 'a', limit: 3, cards: FIVE }, discard: { seen: 'all' } }) };
     // recipe:start
-    const checks = [capacityCheck<Play>(['hand:a'], { to: 'discard' })]; // engine-core checkpoint.checks; asks the zone's owner
-    const handlers = { ...capacityHandlers<Play>() }; // the prompt's resume task, added to the game's handlers
+    const onLeave = (ctx: Ctx<Play>, zone: string, ids: readonly string[], to: string) => say(ctx, `${zone} lost ${ids.join()} to ${to}`); // K674: the game's own event or effect end
+    const checks = [capacityCheck<Play>(['hand:a'], { to: 'discard', onLeave })]; // engine-core checkpoint.checks; asks the zone's owner
+    const handlers = { ...capacityHandlers<Play>({ onLeave }) }; // the prompt's resume task, added to the game's handlers
     raiseLimit(s, 'hand:a', 'annex'); // a rule raises the limit: 3 to 4
     dropRaise(s, 'hand:a', 'annex'); // the raise is given up: back to 3
     // recipe:end
@@ -160,7 +161,7 @@ describe('K599 README recipe "Capacity" runs', () => {
     const block = /\/\/ recipe:start\n([\s\S]*?)\s*\/\/ recipe:end/.exec(src)?.[1] ?? 'none';
     const readme = readFileSync(new URL('README.md', import.meta.url), 'utf8').replaceAll('\r', '');
     const lines = block.split('\n').map((l) => l.trim());
-    expect(lines.length).toBe(4);
+    expect(lines.length).toBe(5);
     expect(/## Capacity[\s\S]*?```ts\n([\s\S]*?)```/.exec(readme)?.[1]?.trim().split('\n').map((l) => l.trim())).toEqual(lines);
   });
 });
@@ -194,5 +195,37 @@ describe('K599 comparison with the brute-force model (stays)', () => {
         }
       }
     expect(asked).toBe(10);
+  });
+});
+
+describe('K674 onLeave', () => {
+  const mk = () => {
+    const calls: [string, string[], string][] = [];
+    const onLeave = (ctx: Ctx<Play>, zone: string, ids: readonly string[], to: string) => {
+      calls.push([zone, [...ids], to]);
+      say(ctx, `left ${ids.join()}`);
+    };
+    return { calls, g: game(() => undefined, { to: 'discard', onLeave }), h: capacityHandlers<Play>({ onLeave }) };
+  };
+  const withH = (g: GameRules<Play>, h: ReturnType<typeof capacityHandlers<Play>>): GameRules<Play> => ({ ...g, handlers: { ...g.handlers, ...h } });
+  it('K674 asked path: once, after the move, ids in chosen order, and the emit is in the state', () => {
+    const { calls, g, h } = mk();
+    const g2 = withH(g, h);
+    const r = pick(g2, go(g2, { cards: FIVE, limit: 3 }), 'c4', 'c2');
+    expect(calls).toEqual([['hand:a', ['c4', 'c2'], 'discard']]);
+    expect(said(r)).toEqual(['left c4,c2']);
+  });
+  it('K674 all-go path: once with every card, nothing asked', () => {
+    const { calls, g } = mk();
+    const s = go(g, { cards: ['c1', 'c2'], limit: 0 });
+    expect(s.prompt).toBeNull();
+    expect(calls).toEqual([['hand:a', ['c1', 'c2'], 'discard']]);
+    expect(said(s)).toEqual(['left c1,c2']);
+  });
+  it('K674 poor: under the limit onLeave is not called', () => {
+    const { calls, g } = mk();
+    const s = go(g, { cards: ['c1', 'c2'], limit: 3 });
+    expect(calls).toEqual([]);
+    expect(said(s)).toEqual([]);
   });
 });

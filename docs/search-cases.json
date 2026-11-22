@@ -1,0 +1,5 @@
+[
+  { "query": "hand limit discard event", "expect": "card-zones" },
+  { "query": "zone capacity on leave hook", "expect": "card-zones" },
+  { "query": "cards leave over limit callback", "expect": "card-zones" }
+]

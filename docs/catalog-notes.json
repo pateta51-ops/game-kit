@@ -493,7 +493,10 @@
       "zone capacity",
       "discard choice",
       "over the limit",
-      "choose what to drop"
+      "choose what to drop",
+      "discard event",
+      "on leave hook",
+      "leave callback"
     ],
     "visible": false,
     "release": 1,

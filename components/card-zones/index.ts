@@ -195,13 +195,15 @@ export const overBy = (s: Zoned, zone: string): number => {
   return l === undefined ? 0 : Math.max(0, cardsIn(s, zone).length - l);
 };
 
-export interface OverLimit {
+export interface OverLimit<G extends GameTypes = GameTypes> {
   /** The zone the excess goes to. */
   readonly to: string | ((zone: string) => string);
   /** Who picks (default the zone's owner). */
   readonly chooser?: string | ((zone: string) => string);
   /** The prompt's kind (default `zones.overLimit`). */
   readonly kind?: string;
+  /** K674: called once after the cards have moved, with the ids in moved order; for the game's own events and effect ends. */
+  readonly onLeave?: (ctx: Ctx<G>, zone: string, ids: readonly string[], to: string) => void;
 }
 interface LeaveTask extends KernelTask {
   readonly zone: string;
@@ -215,7 +217,7 @@ const leave = (s: Zoned, zone: string, ids: readonly string[], to: string): void
 };
 
 /** For a state check: the first zone over its limit asks its chooser for exactly the excess (by card id), or moves every card when all must go. True when it asked or moved. Needs `capacityHandlers()` in the game's handlers. */
-export function overLimit<G extends GameTypes>(ctx: Ctx<G>, zones: readonly string[], o: OverLimit): boolean {
+export function overLimit<G extends GameTypes>(ctx: Ctx<G>, zones: readonly string[], o: OverLimit<G>): boolean {
   const s = ctx.s as unknown as Zoned;
   for (const zone of zones) {
     const n = overBy(s, zone);
@@ -228,6 +230,7 @@ export function overLimit<G extends GameTypes>(ctx: Ctx<G>, zones: readonly stri
     if (twice !== undefined) throw new EngineBugError(`card-zones: ${zone} holds ${twice} twice`);
     if (n >= cards.length) {
       leave(draftOf(ctx) as unknown as Zoned, zone, cards, to);
+      o.onLeave?.(ctx, zone, cards, to);
       return true;
     }
     const seat = o.chooser === undefined ? zoneOf(s, zone).owner : typeof o.chooser === 'string' ? o.chooser : o.chooser(zone);
@@ -243,12 +246,14 @@ export function overLimit<G extends GameTypes>(ctx: Ctx<G>, zones: readonly stri
 }
 
 /** `overLimit` as an engine-core state check, for `checkpoint.checks`. */
-export const capacityCheck = <G extends GameTypes>(zones: readonly string[], o: OverLimit, name = OVER_LIMIT): StateCheck<G> => ({ name, run: (ctx) => overLimit(ctx, zones, o) });
+export const capacityCheck = <G extends GameTypes>(zones: readonly string[], o: OverLimit<G>, name = OVER_LIMIT): StateCheck<G> => ({ name, run: (ctx) => overLimit(ctx, zones, o) });
 
 /** The resume handler of the over-limit prompt: moves the picked cards to the discard zone. */
-export const capacityHandlers = <G extends GameTypes>(): HandlerTable<G> => ({
+export const capacityHandlers = <G extends GameTypes>(o: Pick<OverLimit<G>, 'onLeave'> = {}): HandlerTable<G> => ({
   [OVER_LIMIT]: (ctx, t) => {
     const task = t as LeaveTask;
-    leave(draftOf(ctx) as unknown as Zoned, task.zone, task.answer ?? [], task.to);
+    const ids = task.answer ?? [];
+    leave(draftOf(ctx) as unknown as Zoned, task.zone, ids, task.to);
+    o.onLeave?.(ctx, task.zone, ids, task.to);
   },
 });
