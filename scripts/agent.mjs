@@ -2,6 +2,7 @@
 //   worktree --branch <b> [--repo .] [--dir d] [--base origin/main] [--shared <dir with node_modules>] [--no-fetch]   new worktree + node_modules link
 //   worktree --here [--branch <b>] [--shared d]   for a worker already inside a worktree: link node_modules from the main checkout (or --shared); --branch also switches to a new branch
 //   finish [--repo .] [--check "npm run check"] [--install "npm ci"] [--tail 15] [--comment] [--detach] | finish --result   clone + install + check in WSL (bash on Linux); prints PASS <sha> or FAIL <sha>; refuses (exit 3) while the queue holds `finish <branch>`; a line a minute while it waits and runs; --detach returns at once, --result reads the stored outcome (exit 4 while running) (K572); the WSL run writes a start marker first: if it is not there after 45 s finish exits 6 with `the run did not start` and the command to run by hand (K644); with --check the line is check passed|failed <sha> (check: <command>), never PASS, so it cannot pass for the gate (K416)
+//   finish also reads the PR body (gh pr view, or --body <file>) and fails before any run unless every file added under src/ since the merge base with main (not tests, *.d.ts, or package.json kit.builtNew.ignore globs) is named in a "Built new" section, one line each: - <file or folder> | search: <words>; <other words> | nearest: <kit part or none> | why: <reason> (K684; not with --check; renames are not new; a folder line covers files only two levels below src/; no merge base fails)
 //   teardown --worktree <dir> [--repo .] [--force]
 import { execFileSync, spawn, spawnSync } from 'node:child_process'
 import { createHash } from 'node:crypto'
@@ -123,9 +124,38 @@ const stored = (dir, m, io, repo, f) => {
   if (f.comment) comment(repo, m.branch, line, io)
   return rc === 0 ? 0 : 1
 }
+// K684: files added under src/ since the merge base with main must each be named in the PR body's "Built new" section
+export const BUILT_NEW_LINE = '- <file or folder> | search: <words>; <other words> | nearest: <kit part or none> | why: <reason it could not do it>'
+const globRe = (g) => new RegExp('^' + g.split(/(\*\*\/?|\*|\?)/).map((t) => t === '**/' ? '(.*/)?' : t === '**' ? '.*' : t === '*' ? '[^/]*' : t === '?' ? '[^/]' : t.replace(/[.+^${}()|[\]\\]/g, '\\$&')).join('') + '$')
+export function newSrcFiles(repo) {
+  let base = ''
+  for (const r of ['origin/main', 'main']) { try { base = git(repo, ['merge-base', 'HEAD', r]); break } catch { /* try the next */ } }
+  if (!base) return null
+  let ign = []
+  try { ign = JSON.parse(fs.readFileSync(path.join(repo, 'package.json'), 'utf8')).kit?.builtNew?.ignore ?? [] } catch { /* no package.json */ }
+  return git(repo, ['diff', '--name-only', '--diff-filter=A', '-M', base, 'HEAD', '--', 'src']).split('\n').filter(Boolean)
+    .filter((f) => !/\.(test|spec)\.[^/]+$/.test(f) && !/(^|\/)(tests?|__tests__)\//.test(f.slice(4)) && !f.endsWith('.d.ts') && !ign.some((g) => globRe(g).test(f)))
+}
+export function builtNew(files, body) {
+  const lines = body.split(/\r?\n/), at = lines.findIndex((l) => /^\s*(#{1,6}\s*)?\**\s*built new\s*:?\s*\**\s*:?\s*$/i.test(l))
+  const sec = []
+  if (at >= 0) for (const l of lines.slice(at + 1)) { if (/^\s*#{1,6}\s/.test(l)) break; if (/^\s*[-*]\s/.test(l)) sec.push(l.trim()) }
+  const bad = [], named = []
+  for (const l of sec) {
+    const c = l.replace(/^[-*]\s*/, '').split('|').map((x) => x.trim()), get = (k) => (c.find((x) => x.toLowerCase().startsWith(k + ':')) ?? '').slice(k.length + 1).trim()
+    const f = c[0].replace(/`/g, '').replace(/^\.\//, '').replace(/\/$/, ''), ph = get('search').split(';').map((x) => x.trim()).filter(Boolean)
+    const why = [ph.length < 2 && 'two search phrasings separated by ;', !get('nearest') && 'nearest: <kit part or none>', !get('why') && 'why: <reason>', !f && 'the file or folder first'].filter(Boolean)
+    if (why.length) bad.push(`malformed: ${l} (needs ${why.join(', ')})`)
+    else named.push(f)
+  }
+  const full = named.map((n) => n === 'src' || n.startsWith('src/') ? n : 'src/' + n)
+  for (const n of full) if (n.split('/').length < 3 && !files.includes(n)) bad.push(`too broad: ${n}/ (name a file, or a folder at least two levels below src/, such as src/ui/motion/)`)
+  const missing = files.filter((x) => !full.some((n) => x === n || (n.split('/').length >= 3 && x.startsWith(n + '/'))))
+  return [...(at < 0 ? ['no "Built new" section in the PR body'] : []), ...bad, ...missing.map((x) => 'missing: ' + x)]
+}
 export function finish(args, io, exec = real, win = process.platform === 'win32', bg = exec === real ? realBg : null) {
   const f = parse(args, ['comment', 'detach', 'result'])
-  if (!f) { io.err('usage: finish [--repo <worktree>] [--check "npm run check"] [--install "npm ci"] [--tail 15] [--comment] [--detach] | finish --result [--repo <worktree>] [--comment]'); return 2 }
+  if (!f) { io.err('usage: finish [--repo <worktree>] [--check "npm run check"] [--install "npm ci"] [--tail 15] [--comment] [--detach] [--body <PR body file>] | finish --result [--repo <worktree>] [--comment]'); return 2 }
   const repo = path.resolve(f.repo ?? '.')
   if (!win) {
     let gf = ''
@@ -144,6 +174,17 @@ export function finish(args, io, exec = real, win = process.platform === 'win32'
   const branch = git(repo, ['rev-parse', '--abbrev-ref', 'HEAD'])
   if (branch === 'HEAD') { io.err('REFUSED: detached HEAD; switch to the batch branch first'); return 1 }
   const sha = git(repo, ['rev-parse', 'HEAD'])
+  if (!f.check) {
+    const files = newSrcFiles(repo)
+    if (files === null) { io.out(`FAIL ${sha} (${branch}; Built new: no merge base with origin/main or main, so the new files under src/ cannot be listed; fetch origin main or base the branch on main; nothing was run)`); return 1 }
+    else if (files.length) {
+      let body = null
+      if (f.body) { try { body = fs.readFileSync(path.resolve(f.body), 'utf8') } catch { /* named file missing */ } }
+      else { const r = exec('gh', ['pr', 'view', branch, '--json', 'body', '-q', '.body'], ''); if (r.status === 0) body = r.output }
+      const probs = body === null ? [f.body ? `cannot read --body ${f.body}` : 'no PR body (no PR yet?): pass --body <file> with the PR body'] : builtNew(files, body)
+      if (probs.length) { io.out(`FAIL ${sha} (${branch}; Built new: ${files.length} new file(s) under src/ not all listed; nothing was run)\n${probs.join('\n')}\nexpected under a "## Built new" heading, one line per new file or folder:\n${BUILT_NEW_LINE}`); return 1 }
+    }
+  }
   const label = 'finish ' + branch
   const unavailable = (e) => { io.out(`FAIL ${sha} (${branch}; could not run the check: ${win ? 'WSL is unavailable' : 'bash is unavailable'}${e ? ' - ' + e.message : ''}; the check never runs on local Windows)`); return 1 }
   const q0 = queueJob(exec, win, label)
