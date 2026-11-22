@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { applyAction, createGame, enumerateAnswers, hashState } from '../engine-core/index.ts';
-import { cardPack, inDryRun, type OfferPolicy, type PackEnv, type PackStep } from './pack.ts';
+import { cannotKnow, cardPack, inDryRun, type OfferPolicy, type PackEnv, type PackStep } from './pack.ts';
 import { DRAW, GAIN, gen, NOTHING, offerGame, pay, type Eff, type G, type S } from './offerGame.ts';
 import { pinned } from './k597.pin.ts';
 
@@ -64,6 +64,24 @@ describe('card-language resolves (K597): prior-art cases restated on the made-up
     expect(resolves([{ op: 'custom', name: 'roll' }])).toMatchObject({ answer: 'unknown', reason: 'random' });
     expect(resolves([{ op: 'choosePlayer', others: true, then: [{ op: 'may', then: [GAIN] }] }])).toMatchObject({ answer: 'unknown', reason: 'otherSeat' });
   });
+  it('K597 unknown only when the known part does not fix the answer: a hidden last step after a false condition is part', () => {
+    expect(resolves([GAIN, RICH, { op: 'search', zone: 'deck', filter: 'even' }])).toEqual({ answer: 'part', skipped: [{ step: 1, reason: 'condition' }, { step: 2, reason: 'hidden' }] });
+    expect(resolves([NOTHING, { op: 'search', zone: 'deck', filter: 'even' }])).toMatchObject({ answer: 'unknown', reason: 'hidden' });
+  });
+  it('K597 a paid effect is two parts: the cost paid and the effect under a false condition is part (condition), as judge under paid = effect says no', () => {
+    const step: PackStep = { op: 'payThen', cost: [pay(1)], then: [RICH] };
+    expect(resolves([step])).toEqual({ answer: 'part', skipped: [{ step: 0, reason: 'condition' }] });
+    const g = game({ paid: 'effect' });
+    const { s, content } = g.at();
+    expect(g.pack.judge(s, content, [step], A, { why: true })).toEqual({ answer: 'no', reason: 'condition' });
+    expect(resolves([{ op: 'payThen', cost: [pay(1)], then: [{ op: 'if', test: 'poor', then: [DRAW] }] }])).toEqual({ answer: 'full', skipped: [] });
+  });
+  it('K597 the branch cap: an answer found before it is returned; a cap hit is unknown, a step no tried line resolved carrying budget', () => {
+    const many = (k: number): PackStep => ({ op: 'chooseOption', options: Array.from({ length: 4 }, (_, i) => (i === k ? [GAIN] : [NOTHING])) });
+    expect(resolves([many(0)], game({ branches: 2 }))).toEqual({ answer: 'full', skipped: [] });
+    expect(resolves([many(3), DRAW], game({ branches: 2 }))).toEqual({ answer: 'unknown', reason: 'budget', skipped: [{ step: 0, reason: 'budget' }] });
+    expect(resolves([many(3), DRAW]).answer).toBe('full');
+  });
   it('K597 the check of nested calls and the dry-run flag are left as they were', () => {
     resolves([GAIN, { op: 'custom', name: 'nest' }]);
     expect(inDryRun()).toBe(false);
@@ -105,6 +123,31 @@ describe('card-language judge reasons (K605)', () => {
   });
 });
 
+describe('card-language decide hook (K605): game code in the check', () => {
+  it('K605 a decide that throws is unknown with the reason error, never a crash of the real play (a may under noChange skip is still asked)', () => {
+    const boom = new TypeError('decide');
+    const g = game({ noChange: 'skip', decide: () => {
+      throw boom;
+    } });
+    const { s, content } = g.at();
+    expect(g.pack.judge(s, content, [RICH], A)).toEqual({ answer: 'unknown', reason: 'error', error: boom });
+    expect(g.play([{ op: 'may', then: [RICH] }], [], undefined, true).s.prompt?.kind).toBe('may');
+    expect(() => game({ strict: true, decide: () => {
+      throw boom;
+    } }).check([RICH])).toThrow('decide');
+  });
+  it('K605 decide runs as the check of the seat: one that reads hidden cards is unknown (hidden); after the check met a hidden card it is not asked', () => {
+    let asked = 0;
+    const g = game({ decide: (_s, _st, _e, c) => (asked += 1, c.answer === 'no' ? (cannotKnow(), c) : c) });
+    const { s, content } = g.at();
+    expect(g.pack.judge(s, content, [RICH], A)).toEqual({ answer: 'unknown', reason: 'hidden' });
+    expect(asked).toBe(1);
+    expect(g.pack.judge(s, content, [{ op: 'search', zone: 'deck', filter: 'even' }], A)).toEqual({ answer: 'unknown', reason: 'hidden' });
+    expect(asked).toBe(1);
+    expect(inDryRun()).toBe(false);
+  });
+});
+
 describe('card-language wouldChange (K597): unchanged', () => {
   it('K597 judge and wouldChange answer 1,800 random effects under 3 policies exactly as main did before K597', () => {
     expect(pinned()).toEqual({ hash: 'c210199b3bde6953', count: 1800 });
@@ -132,16 +175,17 @@ describe('card-language resolves (K597): the README recipe runs', () => {
 // effect. Full: some line resolves every part; part: some line resolves one, none all; none: no line resolves any.
 // Without hidden information the answer is never unknown. With it, the effect is played in every hidden world (the acting
 // seat's deck, the other seat's hand, the seed): a known answer must hold in every world, and an unknown one means worlds
-// disagree, or a declared case (another seat's choice, a handler error, game code reading a card the seat cannot see, K583).
+// disagree, or a declared case (another seat's choice, a handler error, a random draw or game code reading a card the seat
+// cannot see, K583: the check stops there and never looks past it).
 describe('card-language resolves (K597): agrees with playing every answer', () => {
   const has = (e: Eff, f: (st: PackStep) => boolean): boolean => e.some((st) => f(st) || Object.values(st).some((v) => Array.isArray(v) && typeof v[0] === 'object' && (Array.isArray(v[0]) ? (v as Eff[]).some((o) => has(o, f)) : has(v as Eff, f))));
   // Declared: in the check, looking at a card the seat already sees (or revealing one all see) is no change (K583); a real run records it.
   const looksAtASeenCard = (e: Eff): boolean => has(e, (st) => (st.op === 'lookAt' || st.op === 'reveal') && st.cards === 'all' && st.from !== 'deck');
   const HIDDEN = ['hand:b', 'deck', 'deck:b'];
-  // Declared (K583's guard, kept by resolves): once a cost begins, a card it or its effect shows the seat stops the game code after it.
+  // Declared (K583's guard, kept by resolves): once a cost begins, a card shown to the seat after it stops the game code that follows.
   const SHOWS = ['scout', 'draw', 'mill', 'lookAt', 'reveal', 'search', 'discard'];
   const CODE = ['custom', 'if', 'count', 'chooseCards', 'search'];
-  const showsAfterACost = (e: Eff): boolean => has(e, (st) => (st.op === 'payThen' || st.op === 'choosePayment') && has([st], (x) => SHOWS.includes(x.op))) && has(e, (x) => CODE.includes(x.op));
+  const showsAfterACost = (e: Eff): boolean => has(e, (st) => st.op === 'payThen' || st.op === 'choosePayment') && has(e, (x) => SHOWS.includes(x.op) || (x.op === 'custom' && x.name === 'attempt')) && has(e, (x) => CODE.includes(x.op));
   const secret = (e: Eff): boolean => has(e, (st) => (st.op === 'custom' && ['roll', 'boom', 'back', 'pairs', 'nest'].includes(st.name)) || ['shuffle', 'search', 'mill', 'choosePlayer', 'eachPlayer'].includes(st.op) || (st.op === 'chooseCards' && HIDDEN.includes(st.zone)) || (st.op === 'lookAt' && st.cards !== 'all')) || showsAfterACost(e);
   // Declared (K583): game code that reads a card the seat cannot see is unknown whatever the card is, so worlds may agree.
   const readsUnseen = (e: Eff): boolean => showsAfterACost(e) || has(e, (st) => (st.op === 'chooseCards' && HIDDEN.includes(st.zone) && has(st.then as Eff, (x) => CODE.includes(x.op))) || (st.op === 'search' && st.filter !== undefined));
@@ -207,15 +251,15 @@ describe('card-language resolves (K597): agrees with playing every answer', () =
           if (ts.some((t) => t !== r.answer)) throw new Error(`resolves ${r.answer}, worlds ${ts.join()}: ${JSON.stringify(e)}`);
           add('everyWorld');
         } else if (new Set(ts).size > 1) add('disagree');
-        else if (['otherSeat', 'error', 'nested'].includes(r.reason ?? '') || (r.reason === 'hidden' && readsUnseen(e))) add('declared');
+        // Declared: the check stops where hidden or random information is read (it never looks past it), so worlds may still agree.
+        else if (['otherSeat', 'error', 'nested', 'random'].includes(r.reason ?? '') || (r.reason === 'hidden' && readsUnseen(e))) add('declared');
         else throw new Error(`unknown (${String(r.reason)}) but every world gives ${String(ts[0])}: ${JSON.stringify(e)}`);
       }
     }
-    console.log(JSON.stringify(seen));
-    expect(seen.plain).toBeGreaterThan(300);
-    expect(seen.everyWorld).toBeGreaterThan(50);
-    expect(seen.disagree).toBeGreaterThan(20);
-    expect(seen.part).toBeGreaterThan(60);
+    expect(seen.plain).toBeGreaterThan(200);
+    expect(seen.everyWorld).toBeGreaterThan(300);
+    expect(seen.disagree).toBeGreaterThan(30);
+    expect(seen.part).toBeGreaterThan(100);
     expect(seen.none).toBeGreaterThan(150);
     expect(inDryRun()).toBe(false);
   }, 240000);
