@@ -371,6 +371,7 @@ The blind matching test's result was not recorded: the PR, its comments and docs
 | K696 | engine-core triggersFor gets the batch its occurrence settled with (4th argument), so a trigger asks its order only when the order changes the result | S |  | done |
 | K697 | engine-core replacementsFor gets the game content (3rd argument), so card data can switch a replacement on | S |  | done |
 | K698 | Claim check in finish: a line in docs/experience, BUILD_PLAN.md or docs/handoff that says the kit lacks something carries two searches, and the kit's search and effects are run again on them | M |  | done |
+| K703 | engine-core state checks marked afterBatch wait until the whole batch has happened, so a "none left" check sees every removal of one effect | S |  | done |
 
 ## Asked for by the owner
 
