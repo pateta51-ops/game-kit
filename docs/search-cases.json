@@ -316,7 +316,7 @@
   { "q": "duration this round", "first": "engine-core" },
   { "q": "enemy driven by deck", "first": "automa" },
   { "q": "automated enemy movement", "first": "K559" },
-  { "q": "mission goals as data", "first": "K546" },
+  { "q": "mission goals as data", "first": "engine-core" },
   { "q": "setup options forced", "first": "none" },
   { "q": "combat compare lower wins", "first": "K550" },
   { "q": "attack and defense roll", "first": "K550" },
@@ -422,5 +422,8 @@
   { "q": "reason for each new file", "first": "none" },
   { "q": "status condition token", "first": "engine-core" },
   { "q": "give a status to a unit", "first": "engine-core" },
-  { "q": "stunned until end of turn", "first": "engine-core" }
+  { "q": "stunned until end of turn", "first": "engine-core" },
+  { "q": "scenario objective progress", "first": "engine-core" },
+  { "q": "mission goal done or failed", "first": "engine-core" },
+  { "q": "objective with steps", "first": "engine-core" }
 ]
