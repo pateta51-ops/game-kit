@@ -5415,6 +5415,17 @@ void main() {
         animate([{ boxShadow: el.style.boxShadow || on }, { boxShadow: off }], { boxShadow: "" });
         return void 0;
       }
+      if (call.step["end"] === "dark" && call.step["start"] === "dark") {
+        const rise = typeof call.step["rise"] === "number" ? Math.max(0, Math.min(1, call.step["rise"])) : 0.5;
+        const span2 = typeof hold === "number" ? Math.max(0, Math.min(1, hold)) : 0;
+        const a = Math.max(0, rise - span2 / 2);
+        const b = Math.min(1, rise + span2 / 2);
+        const kf = [{ boxShadow: off, offset: 0 }, { boxShadow: on, offset: a }];
+        if (b > a) kf.push({ boxShadow: on, offset: b });
+        kf.push({ boxShadow: off, offset: 1 });
+        animate(kf, { boxShadow: off });
+        return void 0;
+      }
       if (call.step["end"] === "dark") {
         animate([{ boxShadow: on }, { boxShadow: off }], { boxShadow: off });
         return void 0;
