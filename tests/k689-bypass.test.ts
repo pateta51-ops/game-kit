@@ -14,16 +14,29 @@ const put = (f: string, s: string) => {
   fs.mkdirSync(path.dirname(f), { recursive: true });
   fs.writeFileSync(f, s);
 };
+const mfJson = (drop: string[]) => {
+  const j = JSON.parse(fs.readFileSync(path.join(ROOT, 'components/motion-frame/component.json'), 'utf8')) as { bypass: { id: string }[] };
+  j.bypass = j.bypass.filter((p) => !drop.includes(p.id));
+  return JSON.stringify(j);
+};
 const check = (files: Record<string, string>, drop: string[] = []) => {
   const g = path.join(tmp, 'game' + String(++n));
   fs.mkdirSync(g);
-  expect(spawnSync('node', [path.join(src, 'kit.mjs'), 'pull', src, 'b1', 'motion-frame'], { cwd: g, encoding: 'utf8' }).status).toBe(0);
+  let from = src;
+  let tag = 'b1';
   if (drop.length) {
-    const cj = path.join(g, 'kit/motion-frame/component.json');
-    const j = JSON.parse(fs.readFileSync(cj, 'utf8'));
-    j.bypass = j.bypass.filter((p: { id: string }) => !drop.includes(p.id));
-    fs.writeFileSync(cj, JSON.stringify(j));
+    from = path.join(tmp, 'src' + String(n));
+    tag = 'b2';
+    fs.mkdirSync(from);
+    git(from, 'init', '-q');
+    git(from, 'config', 'core.autocrlf', 'false');
+    fs.copyFileSync(path.join(ROOT, 'kit.mjs'), path.join(from, 'kit.mjs'));
+    put(path.join(from, 'components/motion-frame/component.json'), mfJson(drop));
+    git(from, 'add', '-A');
+    git(from, 'commit', '-qm', 'b2');
+    git(from, 'tag', '-a', 'b2', '-m', 'b2');
   }
+  expect(spawnSync('node', [path.join(from, 'kit.mjs'), 'pull', from, tag, 'motion-frame'], { cwd: g, encoding: 'utf8' }).status).toBe(0);
   for (const [f, s] of Object.entries(files)) put(path.join(g, f), s);
   return spawnSync('node', [path.join(g, 'kit/kit.mjs'), 'check'], { cwd: g, encoding: 'utf8' });
 };
@@ -62,8 +75,8 @@ describe('K689: kit check fails game-side holds, timers and input wrappers aroun
   it('K689: skipAll / hurry from a keydown, pointerdown or onPointerDown handler fails with skipOnInput / hurryOnInput', () => {
     const c = check({ 'src/in.tsx': LISTEN });
     expect(c.status).toBe(1);
-    expect(c.stderr).toContain('src/in.tsx:4 skip-from-own-listener (motion-frame): an input that skips or hurries beats is bound with skipOnInput / hurryOnInput');
-    expect(hits(c.stderr).map((l) => l.split(' ')[0])).toEqual(['src/in.tsx:4', 'src/in.tsx:5', 'src/in.tsx:6']);
+    expect(c.stderr).toContain('src/in.tsx:3 skip-from-own-listener (motion-frame): an input that skips or hurries beats is bound with skipOnInput / hurryOnInput');
+    expect(hits(c.stderr).map((l) => l.split(' ')[0])).toEqual(['src/in.tsx:3', 'src/in.tsx:4', 'src/in.tsx:5']);
   });
 
   it('K689: removing either pattern lets its fixture pass', () => {
