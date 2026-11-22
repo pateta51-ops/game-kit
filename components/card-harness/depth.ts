@@ -137,12 +137,28 @@ export interface Observed {
 
 const ids = (id: string | readonly string[]): readonly string[] => (typeof id === 'string' ? [id] : id);
 const on = (o: Opt): boolean => o.enabled !== false && o.disabled !== true;
-/** A prompt or event "of" an id: a top-level string field equal to it. */
-const names = (x: unknown, want: readonly string[], of?: ClauseOf): boolean =>
-  (x !== null && typeof x === 'object' && of !== undefined && want.includes(of(x) ?? '')) ||
-  (x !== null && typeof x === 'object' && Object.entries(x).some(([k, v]) => k !== 'options' && typeof v === 'string' && want.includes(v)));
+/** K661: the clause id `clauseOf` gives an item (a throw names the helper and the item); undefined: the field match applies. */
+const mapped = (x: unknown, of: ClauseOf | undefined, who: string): string | undefined => {
+  if (of === undefined) return undefined;
+  try {
+    return of(x);
+  } catch (e) {
+    throw new Error(`${who}: clauseOf threw on ${JSON.stringify(x)}: ${String(e)}`, { cause: e });
+  }
+};
+/** A prompt or event "of" an id: what `clauseOf` maps it to, else a top-level string field equal to it (only the item itself, not nested objects). */
+const names = (x: unknown, want: readonly string[], of?: ClauseOf, who = 'expectNotOffered'): boolean => {
+  if (x === null || typeof x !== 'object') return false;
+  const m = mapped(x, of, who);
+  if (m !== undefined) return want.includes(m);
+  return Object.entries(x).some(([k, v]) => k !== 'options' && typeof v === 'string' && want.includes(v));
+};
 const offeredIn = (p: unknown, want: readonly string[], of?: ClauseOf): string[] =>
-  p === null || typeof p !== 'object' ? [] : ((p as { options?: readonly Opt[] }).options ?? []).filter((o) => on(o) && (want.includes(String(o.id)) || want.includes(of?.(o) ?? ''))).map((o) => String(o.id));
+  p === null || typeof p !== 'object'
+    ? []
+    : ((p as { options?: readonly Opt[] }).options ?? [])
+        .filter((o) => on(o) && want.includes(mapped(o, of, 'expectNotOffered') ?? String(o.id)))
+        .map((o) => String(o.id));
 const sig = (t: Observed): string => `${JSON.stringify(t.s ?? null)}|${String(t.events?.length ?? 0)}`;
 
 /**
@@ -190,7 +206,7 @@ export function expectNotFired(t: Observed, id: string | readonly string[], act?
   const key = (): string => JSON.stringify(same === undefined ? (t.s ?? null) : same(t.s as never));
   const before = key();
   act?.();
-  const fired = (t.events ?? []).find((e) => names(e, want, o.clauseOf));
+  const fired = (t.events ?? []).find((e) => names(e, want, o.clauseOf, 'expectNotFired'));
   if (fired !== undefined) throw new Error(`expectNotFired: ${JSON.stringify(fired)} fired`);
   if (t.prompt !== null) throw new Error(`expectNotFired: a prompt is open: ${JSON.stringify(t.prompt)}`);
   if (act !== undefined && key() !== before) throw new Error('expectNotFired: the state changed');

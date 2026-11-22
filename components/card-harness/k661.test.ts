@@ -30,6 +30,28 @@ describe('K661 clauseOf', () => {
   it('K661 expectNotOffered with clauseOf finds a prompt of the clause', () => {
     expect(() => expectNotOffered(prompted, 'c1#0', () => false, { clauseOf })).toThrow(/a prompt names c1#0/);
   });
+  it('K661 an item clauseOf maps to another clause is not found through the field match', () => {
+    const other = (x: unknown): string | undefined => ((x as { card?: string }).card === 'twin#1' ? 'other#0' : undefined);
+    const ev: Observed = { prompt: null, s: {}, events: [{ card: 'twin#1' }] };
+    expect(() => expectNotFired(ev, 'twin#1', undefined, undefined, { clauseOf: other })).not.toThrow();
+    expect(() => expectNotFired(ev, 'other#0', undefined, undefined, { clauseOf: other })).toThrow(/fired/);
+    const op = { prompt: { options: [{ id: 'twin#1', card: 'twin#1' }] } as unknown as Observed['prompt'], s: {}, events: [] } as Observed;
+    expect(() => expectNotOffered(op, 'twin#1', () => false, { clauseOf: other })).not.toThrow();
+  });
+  it('K661 a throw inside clauseOf names the helper and the item', () => {
+    const boom = (): string => {
+      throw new Error('bad shape');
+    };
+    expect(() => expectNotFired(fired, 'c1#0', undefined, undefined, { clauseOf: boom })).toThrow(/expectNotFired: clauseOf threw on .*"source":"c1".*bad shape/);
+    expect(() => expectNotOffered(offered, 'c1#0', () => false, { clauseOf: boom })).toThrow(/expectNotOffered: clauseOf threw on .*"id":"pick".*bad shape/);
+  });
+  it('K661 clauseOf sees each prompt, option and event itself, not objects nested in them', () => {
+    const nested: Observed = { prompt: null, s: {}, events: [{ batch: [{ source: 'c1', clause: 0 }] }] };
+    expect(() => expectNotFired(nested, 'c1#0', undefined, undefined, { clauseOf })).not.toThrow();
+    const seen: unknown[] = [];
+    expectNotFired(nested, 'c1#0', undefined, undefined, { clauseOf: (x) => (seen.push(x), undefined) });
+    expect(seen).toEqual([{ batch: [{ source: 'c1', clause: 0 }] }]);
+  });
   it('K661 recipe: clauseOf maps a resolved event to its clause id', () => {
     const sc: Observed = { prompt: null, s: {}, events: [{ t: 'resolved', source: 'c1', clause: 0 }] };
     const of = (x: unknown): string | undefined => {
