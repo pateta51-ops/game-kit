@@ -161,12 +161,22 @@ describe('dice-patterns named shapes (K578)', () => {
     expect(smallest(one, [1, 1], { whole: true })).toBeNull();
     expect(smallest(one, [1, 1])).toEqual([0]);
   });
-  it('two even dice that are not equal', () => {
+  it('all joins conditions that are each judged on the roll: two even dice, not equal, only on a group of exactly two', () => {
     const p: Pattern = { kind: 'all', of: [{ kind: 'even', n: 2 }, { kind: 'different', n: 2 }] };
     expect(t(p, [2, 6])).toBe(true);
     expect(t(p, [4, 4])).toBe(false);
     expect(t(p, [2, 3])).toBe(false);
-    expect(smallest(p, [4, 4, 5, 2])).toEqual([0, 3]);
+    expect(t(p, [2, 2, 3])).toBe(true);
+    expect(smallest(p, [2, 2, 3])).toEqual([0, 1, 2]);
+    const two: Pattern = { kind: 'all', of: [p, { kind: 'count', op: '=', n: 2 }] };
+    expect(t(two, [2, 2, 3])).toBe(false);
+    expect(smallest(two, [2, 2, 3])).toBeNull();
+    expect(smallest(two, [4, 4, 5, 2])).toEqual([0, 3]);
+  });
+  it('count below 1 is never met; count above n takes n + 1 dice', () => {
+    expect(smallest({ kind: 'count', op: '<', n: 1 }, [3])).toBeNull();
+    expect(smallest({ kind: 'count', op: '<', n: 2 }, [3, 5])).toEqual([0]);
+    expect(smallest({ kind: 'count', op: '>', n: 2 }, [1, 2, 3, 4])).toEqual([0, 1, 2]);
   });
   it('count with an op: a group of an exact size', () => {
     const three: Pattern = { kind: 'all', of: [{ kind: 'same', n: 3 }, { kind: 'count', op: '=', n: 3 }] };
@@ -219,7 +229,7 @@ describe('dice-patterns second review (K578)', () => {
   it('random rolls with any: under whole the set meets a part that the whole roll meets', () => {
     let s = 97531;
     const rnd = (n: number): number => { s = (s * 1103515245 + 12345) & 0x7fffffff; return (s >> 8) % n; };
-    const ps: Extract<Pattern, { kind: 'any' }>[] = [
+    const ps: { kind: 'any'; of: readonly Pattern[] }[] = [
       { kind: 'any', of: [{ kind: 'sum', op: '=', value: 7 }, { kind: 'same', n: 2 }] },
       { kind: 'any', of: [{ kind: 'max', op: '<=', value: 2 }, { kind: 'count', n: 3 }] },
       { kind: 'any', of: [{ kind: 'spread', value: 1 }, { kind: 'sum', op: '<', value: 4 }, { kind: 'run', n: 3 }] }];

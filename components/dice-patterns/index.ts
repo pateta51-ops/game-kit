@@ -67,13 +67,13 @@ function met(p: Pattern, v: readonly number[]): boolean {
 export function compile(p: Pattern): Test {
   const bad = checkPattern(p);
   if (bad.length) throw new Error(bad.join('; '));
-  return (v) => met(p, v);
+  return (v) => met(p, v.filter((x) => x > 0));
 }
 
-/** A dice-tray `Meaning`: dice with value 0 (not rolled) are left out. */
+/** A dice-tray `Meaning`: dice with value 0 (not rolled) are left out, as in `compile`. */
 export function meaning<T = string>(id: string, p: Pattern, label: T): { id: string; label: T; test(dice: readonly { value: number }[]): boolean } {
   const test = compile(p);
-  return { id, label, test: (dice) => test(dice.map((d) => d.value).filter((x) => x > 0)) };
+  return { id, label, test: (dice) => test(dice.map((d) => d.value)) };
 }
 
 const search = (ok: (s: readonly number[]) => boolean, n: number): number[] | null => {
@@ -89,9 +89,17 @@ const search = (ok: (s: readonly number[]) => boolean, n: number): number[] | nu
   return null;
 };
 
-/** Indexes of the smallest non-empty set of dice that meets `p` judged on that set alone (ties: lowest indexes), or null. `whole`: null unless every die together meets `p` too. */
+const metParts = (p: Pattern, v: readonly number[]): Pattern =>
+  p.kind === 'any' ? { kind: 'any', of: p.of.filter((q) => met(q, v)).map((q) => metParts(q, v)) }
+    : p.kind === 'all' ? { kind: 'all', of: p.of.map((q) => metParts(q, v)) } : p;
+
+/** Indexes of the smallest non-empty set of dice that meets `p` judged on that set alone (ties: lowest indexes), or null. `whole`: null unless every die together meets `p` too, and an `any` then reads only the parts the whole roll meets. Dice of value 0 are left out. */
 export function smallest(p: Pattern, values: readonly number[], opts: { whole?: boolean } = {}): number[] | null {
   const test = compile(p);
-  if (opts.whole && !test(values)) return null;
-  return search((s) => test(s.map((i) => values[i] as number)), values.length);
+  const idx = values.map((_, i) => i).filter((i) => (values[i] as number) > 0);
+  const v = idx.map((i) => values[i] as number);
+  if (opts.whole && !test(v)) return null;
+  const q = opts.whole ? metParts(p, v) : p;
+  const r = search((s) => met(q, s.map((i) => v[i] as number)), v.length);
+  return r && r.map((i) => idx[i] as number);
 }
