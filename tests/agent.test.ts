@@ -3,7 +3,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { afterAll, describe, expect, it } from 'vitest';
-import { finish, teardown, type Bg } from '../scripts/agent.mjs';
+import { byHand, finish, launch, realBg, teardown, type Bg } from '../scripts/agent.mjs';
 
 const KIT = path.resolve(import.meta.dirname, '..', 'kit.mjs');
 const root = fs.mkdtempSync(path.join(os.tmpdir(), 'agent-test-'));
@@ -154,7 +154,7 @@ describe('finish: one run per branch, sign of life, --detach and --result (K572)
   const st = (running: unknown[], waiting: unknown[]) => ({ status: 0, output: JSON.stringify({ slots: 1, running, waiting, history: [] }) });
   function fresh(name: string) { const main = repo(name); fs.rmSync(path.join(main, 'node_modules'), { recursive: true }); return { main, sha: g(main, 'rev-parse', 'HEAD').trim() }; }
   function fakeBg(home: string, onSleep: (t: number) => void = () => {}) {
-    const b = { t: 1000, starts: [] as string[], home, cmds: [] as [string, string[]][], start: (c: string, a: string[], dir: string) => void (b.starts.push(dir), b.cmds.push([c, a])), sleep: (ms: number) => { b.t += ms; if (b.t > 1e8) throw new Error('finish kept polling for a result that never came'); onSleep(b.t); }, now: () => b.t };
+    const b = { t: 1000, starts: [] as string[], home, cmds: [] as [string, string[]][], start: (c: string, a: string[], dir: string) => void (b.starts.push(dir), b.cmds.push([c, a]), fs.writeFileSync(path.join(dir, 'started'), '1')), sleep: (ms: number) => { b.t += ms; if (b.t > 1e8) throw new Error('finish kept polling for a result that never came'); onSleep(b.t); }, now: () => b.t };
     return b;
   }
 
@@ -185,7 +185,7 @@ describe('finish: one run per branch, sign of life, --detach and --result (K572)
     const home = path.join(root, 'k3-home');
     let rcDir = '';
     const b = fakeBg(home, (t) => { if (t >= 201000 && rcDir) { fs.writeFileSync(path.join(rcDir, 'out.log'), 'all good\n'); fs.writeFileSync(path.join(rcDir, 'rc'), '0\n'); } });
-    b.start = (_c: string, _a: string[], dir: string) => { rcDir = dir; b.starts.push(dir); };
+    b.start = (_c: string, _a: string[], dir: string) => { rcDir = dir; b.starts.push(dir); fs.writeFileSync(path.join(dir, 'started'), '1'); };
     const exec = (_c: string, _a: string[], input: string) => b.t < 101000 ? st([job({ id: 'o', label: 'other' })], [job({ id: 'a', label: 'x', queuedAt: 1 }), job({ id: 'b', label: 'y', priority: 'high', queuedAt: 9 }), job({ waitedMs: 1 }), job({ id: 'c', label: 'z', queuedAt: 7 })]) : isStatus(input) ? st([job({ runningMs: b.t - 101000 })], []) : { status: 0, output: '' };
     // the first status query (before the run) must not see our own job: a queue with only others
     let first = true;
@@ -260,7 +260,8 @@ describe('finish: one run per branch, sign of life, --detach and --result (K572)
     const o = io();
     expect(finish(['--repo', main, '--detach'], o.io, exec, false, b as Bg)).toBe(0);
     const dir = b.starts[0]!;
-    expect(b.cmds[0]).toEqual(['bash', ['-c', `setsid nohup bash '${path.join(dir, 'run.sh')}' > /dev/null 2>&1 < /dev/null &`]]);
+    expect(b.cmds[0]![0]).toBe('bash');
+    expect(b.cmds[0]![1][1]).toContain(`setsid nohup bash '${path.join(dir, 'run.sh')}' > /dev/null 2>&1 < /dev/null &`);
     expect(fs.readFileSync(path.join(dir, 'in.sh'), 'utf8')).toContain(`cd "$d" && git rev-parse HEAD > '${path.join(dir, 'sha')}' && `);
     fs.writeFileSync(path.join(dir, 'sha'), 'f'.repeat(40) + '\n');
     fs.writeFileSync(path.join(dir, 'out.log'), 'ok\n');
@@ -275,6 +276,54 @@ describe('finish: one run per branch, sign of life, --detach and --result (K572)
     expect(finish(['--repo', main, '--detach'], o.io, exec, true, w as Bg)).toBe(0);
     expect(w.cmds[0]![0]).toBe('wsl');
     expect(w.cmds[0]![1].slice(0, 3)).toEqual(['-e', 'bash', '-c']);
-    expect(w.cmds[0]![1][3]).toMatch(/^setsid nohup bash '\/(mnt\/[a-z]\/)?[^']*run\.sh' > \/dev\/null 2>&1 < \/dev\/null &$/);
+    expect(w.cmds[0]![1][3]).toMatch(/^setsid nohup bash '\/(mnt\/[a-z]\/)?[^']*run\.sh' > \/dev\/null 2>&1 < \/dev\/null & i=0; /);
+  });
+  it('K644 the launch holds WSL open until the run writes its start marker, and Git Bash cannot rewrite its paths', () => {
+    const l = launch(true, 'C:/h/r/run');
+    expect(l.cmd).toBe('wsl');
+    expect(l.args.slice(0, 3)).toEqual(['-e', 'bash', '-c']);
+    expect(l.args[3]).toContain("setsid nohup bash '/mnt/c/h/r/run/run.sh'");
+    expect(l.args[3]).toContain("[ ! -e '/mnt/c/h/r/run/started' ]");
+    expect(l.env.MSYS_NO_PATHCONV).toBe('1');
+    expect(l.env.MSYS2_ARG_CONV_EXCL).toBe('*');
+    expect(launch(false, '/h/r').cmd).toBe('bash');
+  });
+
+  it('K644 a launch that never writes its start marker: finish exits non-zero in about a minute with the by-hand command, never waits silently', () => {
+    const { main } = fresh('k644');
+    const b = fakeBg(path.join(root, 'k644-home'));
+    b.start = (_c: string, _a: string[], dir: string) => void b.starts.push(dir);
+    const exec = (_c: string, _a: string[], input: string) => isStatus(input) ? st([], []) : { status: 0, output: '' };
+    for (const win of [false, true]) {
+      const o = io();
+      const t0 = b.t;
+      expect(finish(['--repo', main], o.io, exec, win, b as Bg)).not.toBe(0);
+      expect(b.t - t0).toBeLessThanOrEqual(60000);
+      expect(o.err.join(' ')).toMatch(/did not start/);
+      expect(o.err.join(' ')).toContain(byHand(win, b.starts.at(-1)!));
+      expect(o.err.join(' ')).toContain('run.sh');
+      expect(o.out.join(' ')).not.toMatch(/PASS/);
+    }
+  });
+  it('K644 the printed by-hand command has no bare /mnt path argument for Git Bash to rewrite', () => {
+    expect(byHand(true, 'C:/h/r')).toBe(`wsl -e bash -c "bash '/mnt/c/h/r/run.sh'"`);
+    expect(byHand(false, '/h/r')).toBe(`bash '${path.join('/h/r', 'run.sh')}'`);
+  });
+
+  it('K644 the real launcher passes the environment (MSYS path conversion off) to the spawned process', () => {
+    let seen: { cmd: string; opts: { env: Record<string, string>; detached: boolean } } | undefined;
+    const fake = (cmd: string, _a: string[], opts: { env: Record<string, string>; detached: boolean }) => (seen = { cmd, opts }, { on: () => {}, unref: () => {} });
+    realBg.start('wsl', ['x'], '', { MSYS_NO_PATHCONV: '1', MSYS2_ARG_CONV_EXCL: '*' }, fake);
+    expect(seen!.opts.env.MSYS_NO_PATHCONV).toBe('1');
+    expect(seen!.opts.env.MSYS2_ARG_CONV_EXCL).toBe('*');
+    expect(seen!.opts.detached).toBe(true);
+  });
+
+  it('K644 run.sh writes the start marker as its first act', () => {
+    const { main } = fresh('k644r');
+    const b = fakeBg(path.join(root, 'k644r-home'));
+    finish(['--repo', main, '--detach'], io().io, (_c, _a, input) => isStatus(input) ? st([], []) : { status: 0, output: '' }, false, b);
+    const dir = b.starts[0]!;
+    expect(fs.readFileSync(path.join(dir, 'run.sh'), 'utf8').startsWith(`date +%s > '${path.join(dir, 'started')}'; `)).toBe(true);
   });
 });
