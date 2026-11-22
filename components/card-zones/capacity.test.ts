@@ -208,12 +208,12 @@ describe('K674 onLeave', () => {
     return { calls, g: game(() => undefined, { to: 'discard', onLeave }), h: capacityHandlers<Play>({ onLeave }) };
   };
   const withH = (g: GameRules<Play>, h: ReturnType<typeof capacityHandlers<Play>>): GameRules<Play> => ({ ...g, handlers: { ...g.handlers, ...h } });
-  it('K674 asked path: once, after the move, ids in chosen order, and the emit is in the state', () => {
+  it('K674 asked path: once, after the move, ids in the order the cards actually moved (zone order), and the emit is in the state', () => {
     const { calls, g, h } = mk();
     const g2 = withH(g, h);
     const r = pick(g2, go(g2, { cards: FIVE, limit: 3 }), 'c4', 'c2');
-    expect(calls).toEqual([['hand:a', ['c4', 'c2'], 'discard']]);
-    expect(said(r)).toEqual(['left c4,c2']);
+    expect(calls).toEqual([['hand:a', ['c2', 'c4'], 'discard']]);
+    expect(said(r)).toEqual(['left c2,c4']);
   });
   it('K674 all-go path: once with every card, nothing asked', () => {
     const { calls, g } = mk();
@@ -227,5 +227,26 @@ describe('K674 onLeave', () => {
     const s = go(g, { cards: ['c1', 'c2'], limit: 3 });
     expect(calls).toEqual([]);
     expect(said(s)).toEqual([]);
+  });
+  it('K674 onLeave given only to the check throws when the prompt resumes', () => {
+    const { g } = mk();
+    const s = go(g, { cards: FIVE, limit: 3 });
+    expect(() => pick(g, s, 'c1', 'c2')).toThrow(/onLeave must be given/);
+  });
+  it('K674 onLeave given only to the handlers throws when the prompt resumes', () => {
+    const { h } = mk();
+    const g = game();
+    const s = go(g, { cards: FIVE, limit: 3 });
+    expect(() => pick(withH(g, h), s, 'c1', 'c2')).toThrow(/onLeave must be given/);
+  });
+  it('K674 two zones over the limit: one check run takes the first zone, the next run the second; onLeave once per zone', () => {
+    const calls: string[] = [];
+    const onLeave = (_c: Ctx<Play>, zone: string, ids: readonly string[]) => void calls.push(`${zone}:${ids.join()}`);
+    const g = playGame({ checkpoint: { checks: [capacityCheck<Play>(['hand:a', 'hand:b'], { to: 'discard', onLeave })] } }, { ...capacityHandlers<Play>({ onLeave }), play: (ctx: Ctx<Play>) => ctx.then(CP) });
+    const s = startPlay(g);
+    const s1 = { ...s, zones: { 'hand:a': { seen: 'owner', owner: 'a', limit: 0, cards: ['c1', 'c2'] }, 'hand:b': { seen: 'owner', owner: 'b', limit: 0, cards: ['d1'] }, discard: { seen: 'all', cards: [] } } } as S;
+    const r = applyAction(g, s1, answer(s1, 'go'), null).state as S;
+    expect(calls).toEqual(['hand:a:c1,c2', 'hand:b:d1']);
+    expect(cardsIn(r, 'hand:b')).toEqual([]);
   });
 });
