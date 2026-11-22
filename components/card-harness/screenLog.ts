@@ -1,10 +1,14 @@
 // K497: a played game hands its prompts and opened texts to the screen scan: JSON lines appended to a file, read back as `prompts` / `opened`.
-import { appendFileSync, mkdirSync, readFileSync } from 'node:fs';
-import { dirname } from 'node:path';
+import { appendFileSync, existsSync, mkdirSync, readdirSync, readFileSync } from 'node:fs';
+import { dirname, join, relative } from 'node:path';
 import type { ScreenPrompt } from './screen.ts';
 
-/** K668: the default prompt log of card tests (`recordCardPrompts`, `clearLog.ts`). */
-export const PROMPT_LOG = 'test-results/card-prompts.jsonl';
+/** K668: the folder of the card tests' prompt logs, one file per test file (`recordCardPrompts`, `clearLog.ts`). */
+export const PROMPT_LOG_DIR = 'test-results/card-prompts';
+/** K668: the log file of one test file. */
+export const promptLogOf = (testPath: string, dir: string = PROMPT_LOG_DIR): string => join(dir, `${relative(process.cwd(), testPath).replace(/[\\/:]/g, '_')}.jsonl`);
+/** K668: every log file in `dir`, for `readScreenLogs`. */
+export const promptLogs = (dir: string = PROMPT_LOG_DIR): string[] => (existsSync(dir) ? readdirSync(dir).filter((f) => f.endsWith('.jsonl')).sort().map((f) => join(dir, f)) : []);
 
 type LoggedPrompt = ScreenPrompt;
 export type ScreenLogEntry = ({ t: 'prompt' } & LoggedPrompt) | { t: 'opened'; clause: string };

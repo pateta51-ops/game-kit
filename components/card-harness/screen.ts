@@ -38,48 +38,63 @@ export interface ScreenInput {
   known?: KnownFindings;
   /** K668: `shared` patterns mark a shared cost in a clause text (`ignore` spans removed first); its prompt must match one of `says`. */
   whoPays?: { shared: readonly RegExp[]; says: readonly RegExp[]; ignore?: readonly RegExp[] };
-  /** K668: rule id patterns, read in each prompt's raw text; `ENGINE_WORDS` are always added. `names`: exact texts (card names) removed first. */
+  /** K668: rule id patterns, read in each prompt's raw text (or shown), its `screenOptions` and its `engineOptions` labels; `ENGINE_WORDS` are always added. `names`: exact texts (card names) removed first. */
   ruleIds?: readonly RegExp[];
   names?: readonly string[];
   /** K668: hand-written handler sentences; each must equal its clause's printed words. */
   handlers?: readonly { id: string; clause: string; text: string }[];
   /** K668: records by path: a prompt with `path` is credited to the clause of the longest record path at or above it. */
   records?: readonly { clause: string; path: string; card?: string }[];
+  /** K668: rule 1 on for every prompt: each needs `line`, and `line` and the shown words must hold its clause whole. Unset: only prompts with `line` are checked. */
+  quote?: boolean;
   /** K668: fail an empty log and a logged clause id that is in no clause. */
   strictLog?: boolean;
 }
 
 /** K668: engine words that never reach the screen, checked with every `ruleIds`. */
-export const ENGINE_WORDS: readonly RegExp[] = [/\[custom\b[^\]]*\]/i, /\bEngine:/];
+export const ENGINE_WORDS: readonly RegExp[] = [/\[custom\b[^\]]*\]/i, /\bEngine:/i];
+/** K668: texts that hold a bare "you" and name no payer; a `whoPays.says` pattern matching one fails. */
+export const BARE_YOU: readonly string[] = ['you', 'You', 'YOU', 'you choose.', 'You choose.', 'Pay 3 coins per player, you choose.', 'If you do, draw a card.', 'Are you sure?', 'your turn', 'yourself'];
 const one = (r: RegExp): RegExp => new RegExp(r.source, r.flags.replace(/[gy]/g, ''));
 const join = (t: string, strip?: (t: string) => string): string => plainWords(t, strip).join(' ');
+type Scanned = ScreenPrompt & { within?: string; parent?: boolean };
 
-function credit(i: ScreenInput, out: string[]): (ScreenPrompt & { choice?: boolean })[] {
+function credit(i: ScreenInput, out: string[]): { ps: Scanned[]; rs: Scanned[] } {
   const owner = (card: string | undefined, path: string | undefined): string | undefined =>
     i.records && path !== undefined ? i.records.filter((r) => (r.card === undefined || r.card === card) && (path === r.path || path.startsWith(`${r.path}.`))).sort((x, y) => y.path.length - x.path.length)[0]?.clause : undefined;
-  return i.prompts.flatMap((p) => {
+  const ps: Scanned[] = [], rs: Scanned[] = [];
+  for (const p of i.prompts) {
     const q = { ...p, clause: owner(p.card, p.path) ?? p.clause };
-    if (!p.choices) return [q];
-    return p.choices.flatMap((c) => {
+    if (!p.choices) { ps.push(q); rs.push(q); continue; }
+    rs.push({ ...q, parent: true });
+    const within = [p.shown, ...(p.screenOptions ?? [])].join(' ');
+    for (const c of p.choices) {
       const id = owner(c.card ?? p.card, c.path) ?? c.clause;
-      if (id === undefined) { out.push(`prompt for ${q.clause}: option "${c.label}" is no clause's`); return []; }
-      return [{ clause: id, shown: c.label, raw: c.raw ?? c.label, ...(p.payers ? { payers: p.payers } : {}), ...(p.line === undefined ? {} : { line: p.line, choice: true }) }];
-    });
-  });
+      if (id === undefined) { out.push(`prompt for ${q.clause}: option "${c.label}" is no clause's`); continue; }
+      const o: Scanned = { clause: id, shown: c.label, raw: c.raw ?? c.label, within, ...(p.payers ? { payers: p.payers } : {}), ...(p.line === undefined ? {} : { line: p.line }) };
+      ps.push(o); rs.push(o);
+    }
+  }
+  return { ps, rs };
 }
 
-function ruleProblems(i: ScreenInput, ps: readonly (ScreenPrompt & { choice?: boolean })[], text: ReadonlyMap<string, string>): string[] {
+function ruleProblems(i: ScreenInput, ps: readonly Scanned[], text: ReadonlyMap<string, string>): string[] {
   const out: string[] = [];
   const w = i.whoPays, ids = i.ruleIds ? [...i.ruleIds, ...ENGINE_WORDS].map(one) : undefined;
-  for (const r of w?.says ?? []) if (one(r).test('you') || one(r).test('You')) out.push(`whoPays: pattern ${String(r)} accepts a bare "you"`);
+  for (const r of w?.says ?? []) if (BARE_YOU.some((t) => one(r).test(t))) out.push(`whoPays: pattern ${String(r)} accepts a bare "you"`);
+  const holds = (a: string, b: string): boolean => ` ${join(a, i.strip)} `.includes(` ${join(b, i.strip)} `);
   for (const p of ps) {
     const t = text.get(p.clause);
     if (t === undefined) continue;
     const on = [p.shown, ...(p.screenOptions ?? [])].join(' ');
-    if (p.line !== undefined && (p.choice ? !` ${join(p.line, i.strip)} `.includes(` ${join(t, i.strip)} `) : join(p.line, i.strip) !== join(t, i.strip))) out.push(`prompt for ${p.clause}: does not quote its printed clause`);
+    if (!p.parent && (i.quote || p.line !== undefined)) {
+      const bad = p.within !== undefined ? (p.line !== undefined && !holds(p.line, t)) || !holds(p.within, t) : p.line === undefined || join(p.line, i.strip) !== join(t, i.strip) || !holds(on, t);
+      if (bad) out.push(`prompt for ${p.clause}: does not quote its printed clause`);
+    }
     if (w && (p.payers?.length || w.shared.some((r) => one(r).test((w.ignore ?? []).reduce((u, x) => u.replace(new RegExp(x.source, `${x.flags.replace('g', '')}g`), ' '), t))))
       && !(p.payers?.length ? p.payers.every((n) => new RegExp(`(?<!\\w)${esc(n)}(?!\\w)`).test(on)) : w.says.some((r) => one(r).test(on)))) out.push(`prompt for ${p.clause}: does not say who pays`);
-    if (ids && ids.some((r) => r.test((i.names ?? []).reduce((u, n) => u.split(n).join(' '), p.raw ?? on)))) out.push(`prompt for ${p.clause}: rule id in the prompt text`);
+    const all = [p.raw ?? p.shown, ...(p.screenOptions ?? []), ...(p.engineOptions ?? []).map((e) => (i.label ?? String)(e))].join(' ');
+    if (ids && ids.some((r) => r.test((i.names ?? []).reduce((u, n) => u.split(n).join(' '), all)))) out.push(`prompt for ${p.clause}: rule id in the prompt text`);
   }
   for (const h of i.handlers ?? []) {
     const t = text.get(h.clause);
@@ -117,7 +132,7 @@ export function screenProblems(i: ScreenInput): string[] {
     if (x.promptAmounts && x.amounts) out.push(`${x.id}: amounts and promptAmounts both set`);
     for (const [k, e] of (x.promptAmounts ?? []).entries()) if (e !== 'counted') for (const a of e) if (!numbers(x.text).includes(a)) out.push(`${x.id}: prompt ${String(k + 1)} amount ${a} is not in its text`);
   }
-  const ps = credit(i, out);
+  const { ps, rs } = credit(i, out);
   const steps = new Map<string, Set<number>>();
   const ia = i.iconAmounts, iaRe = ia instanceof RegExp ? new RegExp(ia.source, ia.flags.replace(/[gy]/g, '')) : undefined;
   const allowRe = (i.allowNumbers ?? []).flatMap((x) => (x instanceof RegExp ? [new RegExp(x.source, x.flags.includes('g') ? x.flags : `${x.flags}g`)] : []));
@@ -154,7 +169,7 @@ export function screenProblems(i: ScreenInput): string[] {
     for (const [k, x] of scr.entries()) { const j = left.indexOf(x); if (j < 0) out.push(`prompt for ${p.clause}: option "${p.screenOptions[k]!}" on screen, not in the engine`); else left.splice(j, 1); }
     for (const x of left) out.push(`prompt for ${p.clause}: engine option "${p.engineOptions.map((e) => (i.label ?? String)(e)).find((e) => n(e) === x)!}" not on screen`);
   }
-  out.push(...ruleProblems(i, ps, text));
+  out.push(...ruleProblems(i, rs, text));
   if (i.strictLog) {
     if (i.prompts.length === 0) out.push('no prompts recorded: run the card tests first');
     if ([...i.opened].length === 0) out.push('no opened clauses recorded: run the card tests first');

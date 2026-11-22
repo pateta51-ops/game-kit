@@ -3,10 +3,10 @@ import { expect } from 'vitest';
 import { cardCaseLog } from './cardCase.ts';
 import { Scenario } from './scenario.ts';
 import type { ScreenPrompt } from './screen.ts';
-import { PROMPT_LOG, recordOpened, recordPrompt } from './screenLog.ts';
+import { promptLogOf, recordOpened, recordPrompt } from './screenLog.ts';
 
 export interface PromptRecorder {
-  /** The log file; default `PROMPT_LOG`. */
+  /** The log file; default `promptLogOf(<the test file>)`, one file per test file. */
   file?: string;
   /** Which first title words are clause ids; default: the clause of a `cardCase`. */
   clause?: RegExp;
@@ -14,21 +14,22 @@ export interface PromptRecorder {
   entry(prompt: unknown, sc: object): (Omit<ScreenPrompt, 'clause'> & { clause?: string }) | null;
 }
 
-/** Sets `Scenario.onPrompt` so each prompt a card test leaves open is recorded once; returns the undo. */
+/** Sets `Scenario.onPrompt` so each prompt a card test leaves open is recorded once per scenario; returns the undo (the hook before). */
 export function recordCardPrompts(r: PromptRecorder): () => void {
-  let last = '';
+  const prev = Scenario.onPrompt;
+  const last = new WeakMap<object, string>();
   Scenario.onPrompt = (prompt, sc) => {
     const st = expect.getState();
     const name = st.currentTestName?.split(' > ').at(-1)?.split(' ')[0] ?? '';
     if (name === '' || !(r.clause ? r.clause.test(name) : cardCaseLog.some((c) => c.clause === name))) return;
     const key = `${st.testPath ?? ''}|${st.currentTestName ?? ''}|${JSON.stringify((prompt as { id?: unknown }).id)}`;
-    if (key === last) return;
-    last = key;
+    if (last.get(sc) === key) return;
+    last.set(sc, key);
     const e = r.entry(prompt, sc);
     if (e === null) return;
-    const file = r.file ?? PROMPT_LOG, clause = e.clause ?? name;
+    const file = r.file ?? promptLogOf(st.testPath ?? 'unknown'), clause = e.clause ?? name;
     recordOpened(file, clause);
     recordPrompt(file, { ...e, clause });
   };
-  return () => { Scenario.onPrompt = undefined; };
+  return () => { Scenario.onPrompt = prev; };
 }
