@@ -375,7 +375,16 @@
       "why is an effect not offered",
       "reason",
       "no target",
-      "condition false"
+      "condition false",
+      "full option bars partial",
+      "prefer options that resolve fully",
+      "skip forced choice nothing resolves",
+      "partial option barred",
+      "choose number bar dead",
+      "gain zero no change",
+      "pick among the cards just moved",
+      "cards just moved",
+      "draw then discard one of them"
     ],
     "visible": false,
     "release": 1,

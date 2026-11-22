@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { applyAction, blocked, createGame, draftOf, enumerateAnswers, hashState, type Ctx } from '../engine-core/index.ts';
+import { blocked, draftOf, hashState, type Ctx } from '../engine-core/index.ts';
 import { cannotKnow, cardPack, inDryRun, type Moved, type OfferPolicy, type PackEnv, type PackStep } from './pack.ts';
-import { DRAW, GAIN, gen, LUCKY, NOTHING, offerGame, pay, type Eff, type G, type S } from './offerGame.ts';
+import { DRAW, GAIN, gen, has, LUCKY, NOTHING, offerGame, pay, shortOf, truth, type Eff, type G, type S } from './offerGame.ts';
 import { askVerb } from './index.ts';
 import { pinned } from './k597.pin.ts';
 import { cardsIn } from '../card-zones/index.ts';
@@ -372,7 +372,6 @@ describe('card-language resolves (K597): the README recipe runs', () => {
 // disagree, or a declared case (another seat's choice, a handler error, a random draw or game code reading a card the seat
 // cannot see, K583: the check stops there and never looks past it).
 describe('card-language resolves (K597): agrees with playing every answer', () => {
-  const has = (e: Eff, f: (st: PackStep) => boolean): boolean => e.some((st) => f(st) || Object.values(st).some((v) => Array.isArray(v) && typeof v[0] === 'object' && (Array.isArray(v[0]) ? (v as Eff[]).some((o) => has(o, f)) : has(v as Eff, f))));
   // Declared: in the check, looking at a card the seat already sees (or revealing one all see) is no change (K583); a real run records it.
   const looksAtASeenCard = (e: Eff): boolean => has(e, (st) => (st.op === 'lookAt' || st.op === 'reveal') && st.cards === 'all' && st.from !== 'deck');
   const HIDDEN = ['hand:b', 'deck', 'deck:b'];
@@ -387,45 +386,7 @@ describe('card-language resolves (K597): agrees with playing every answer', () =
   const whole = (x: { answer: string; reason?: string; skipped: readonly { step: number; reason: string }[] }): string => JSON.stringify([x.answer, x.reason, x.skipped.map((k) => [k.step, k.reason])]);
   const [base] = WORLDS;
   // Brute force does not see a step that did some but less than its number (K597 `short`; in these effects only a choice of at least 2 cards can): part where it says full.
-  const shortOf = (e: Eff, r: { answer: string }, t: string | undefined): boolean => r.answer === 'part' && t === 'full' && has(e, (st) => st.op === 'chooseCards' && (st.min ?? 0) >= 2);
   if (base === undefined) throw new Error('no world');
-  const truth = (g: typeof base.g, effect: Eff, seed: string): string | undefined => {
-    const c = (name: string): PackStep => ({ op: 'custom', name });
-    // A cost that is not a top-level payThen: two parts, its cost and its effect, at any depth.
-    const wrap = (e: Eff): PackStep[] => e.map((st): PackStep => {
-      const out = Object.fromEntries(Object.entries(st).map(([k, v]) => [k, Array.isArray(v) && typeof v[0] === 'object' ? (Array.isArray(v[0]) ? (v as Eff[]).map(wrap) : wrap(v as Eff)) : v as unknown])) as unknown as PackStep;
-      if (out.op !== 'payThen' && out.op !== 'choosePayment') return out;
-      return { op: 'seq', steps: [c('pre2'), { ...out, then: [c('mid2'), ...out.then, c('end2')] }, c('post2')] };
-    });
-    const top = (st: PackStep): PackStep => (st.op === 'payThen' ? { ...st, cost: wrap(st.cost as Eff), then: [c('paid'), ...wrap(st.then as Eff)] } : wrap([st])[0] ?? st);
-    const content = { effect: [{ op: 'custom', name: 'step' } as PackStep, ...effect.flatMap((st, i): PackStep[] => [top(st), { op: 'custom', name: 'step', n: i + 1 }])] };
-    const units = effect.reduce((n, st) => n + (st.op === 'payThen' ? 2 : 1), 0);
-    let left = 3000;
-    let best = 0;
-    const grade = (done: number, half: number): number => (done === units ? 2 : done + half > 0 ? 1 : 0);
-    const walk = (s: S): boolean => {
-      if ((left -= 1) < 0) return false;
-      const t = s.steps;
-      if (s.result !== null) {
-        // K597 fourth look: the step that ended the game resolves, and the steps after it do not count against full.
-        const i = t?.next ?? 0;
-        const now = effect.flatMap((st, j) => (j < i ? [] : st.op === 'payThen' ? [j, j + 0.5] : [j])).filter((u) => !(t?.done ?? []).includes(u));
-        best = Math.max(best, grade((t?.done.length ?? 0) + now.length, (t?.half ?? []).filter((u) => u < i).length));
-        return true;
-      }
-      const p = s.prompt;
-      if (p === null) return (best = Math.max(best, grade(t?.done.length ?? 0, t?.half?.length ?? 0))), true;
-      const ordered = p.ordered === true || p.kind === 'orderCards' || p.kind === 'orderEffects';
-      for (const a of enumerateAnswers({ ...s, prompt: { ...p, ordered } })) if (!walk(applyAction(g.RULES, s, a, content).state)) return false;
-      return true;
-    };
-    try {
-      if (!walk(createGame(g.RULES, { seed }, {}, content).state)) return undefined;
-    } catch {
-      return undefined;
-    }
-    return (['none', 'part', 'full'] as const)[best];
-  };
   it('K597 1,200 random effects: full, part and none match brute force in every hidden world; unknown only where worlds disagree or a declared case', () => {
     const seen: Record<string, number> = { full: 0, part: 0, none: 0, unknown: 0, plain: 0, everyWorld: 0, disagree: 0, declared: 0 };
     const add = (k: string): void => void (seen[k] = (seen[k] ?? 0) + 1);

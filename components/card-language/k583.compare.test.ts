@@ -29,6 +29,8 @@ describe('card-language offer policy (K583): with no new setting the pack answer
     readiesWithNoMark: { on: (e) => has(e, (st) => st.op === 'ready') && !has(e, (st) => st.op === 'exhaust' || st.op === 'flip'), moves: to(['yes'], ['no', 'unknown']) },
     // Review: a shuffle of fewer than two cards draws nothing and changes nothing.
     shufflesFewerThanTwo: { on: (e) => has(e, (st) => st.op === 'shuffle' || st.op === 'search'), moves: to(['unknown'], ['no', 'yes']) },
+    // K657: gaining 0 (X unbound) of a resource the seat never held is no change.
+    gainsZeroNeverHeld: { on: (e) => has(e, (st) => st.op === 'gainResource' && st.amount === 'X'), moves: to(['yes'], ['no', 'unknown']) },
   };
   // K641, declared for every input: an option over a card the seat cannot see now carries `unseen: true`; nothing else of a prompt may differ.
   const seen = (x: string): string => x.replace(/("id":"#\d+","enabled":true),"unseen":true/g, '$1');
@@ -38,7 +40,7 @@ describe('card-language offer policy (K583): with no new setting the pack answer
     { noChange: 'skip', deadChoice: 'bar' },
     { noChange: 'bar', deadChoice: 'skip', cost: 'whole', fewer: 'exact', unknown: 'skip', view: ({ zones, res, marks }) => ({ zones, res, marks }) },
   ];
-  const games = POLICIES.map((offer) => ({ offer, now: offerGame(cardPack<G>, { offer }), then: offerGame(frozenPack<G>, { offer }) }));
+  const games = POLICIES.map((offer) => ({ offer, now: offerGame(cardPack<G>, { offer }), then: offerGame(frozenPack<G> as never, { offer }) }));
   const safe = (f: () => string): string => {
     try {
       return f();
