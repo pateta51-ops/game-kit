@@ -54,7 +54,10 @@ Checks:
   * a build-own table (a header cell names "What the game builds"; columns: what, words searched, nearest kit part,
     verdict, register id or refusal) with a row for every New, Port and Pattern row of the reuse map by its Layer text,
     and a row starting "Game verbs" when a Source cell of the map names card-language or a heading contains "Effect
-    language" (one "Game verbs: none" row is allowed, with the coverage diff's counts in its second cell). Every other
+    language" (one "Game verbs: none" row is allowed, with the coverage diff's counts in its second cell); K690: a row
+    starting "Screen" when a heading starts "Phase UC" or "Phase U<n>", "Motion" for "Phase V"/"Phase V<n>", "Sound"
+    for "Phase AU"/"Phase AU<n>" ("Screen: none", "Motion: none" or "Sound: none" alone of its kind, with a reason of
+    six words or more, is allowed). Every other
     row: two phrasings searched (two parts around a ";", or two quoted or backticked strings); a verdict cell that
     starts with kit phase, candidate or game code; for kit phase and candidate a K<n> id or "steward not asked" in the
     last cell; for game code a reason of six words or more; a kit phase with K<n> needs a "Phase GK<n>" heading;
@@ -864,7 +867,13 @@ def main() -> int:
         kd.append("the reuse map has no build-own table (a header cell names 'What the game builds'): stage 5")
     elif not gv and (any("card-language" in r[2] for r in maprows) or find_heading(heads, "effect language") is not None):
         kd.append("build-own table: no 'Game verbs' row (one per family of the game's own verbs, or 'Game verbs: none' with the coverage diff's counts)")
-    fit = path.parent / "plan-review" / "kit-fit.md"
+    # K690: screen, motion and sound code the plan's phases build need build-own rows of their kind
+    UIK = (("screen", r"Phase (UC|U\d+)\b"), ("motion", r"Phase V\d*\b"), ("sound", r"Phase AU\d*\b"))
+    for w, rx in UIK if "own" in seen else ():
+        ph = next((m.group(0) for _, _, t in heads for m in [re.match(rx, t)] if m), None)
+        if ph and not any(norm(o[0]).startswith(w) for o in own):
+            kd.append(f"build-own table: the plan builds {w} code ({ph}) but has no '{w.capitalize()}' row (one per {w} part the game writes, '{w.capitalize()}: <part>', or '{w.capitalize()}: none' with a reason of six words or more)")
+    fit =path.parent / "plan-review" / "kit-fit.md"
     fitt = norm(fit.read_text(encoding="utf-8", errors="replace")) if fit.is_file() else ""
     if not fitt:
         kd.append(f"no kit-fit review ({fit} is missing or empty): stage 9")
@@ -873,6 +882,12 @@ def main() -> int:
         o = o + [""] * (5 - len(o))
         name, v, last = norm(o[0]), norm(o[3]).replace("-", " "), o[4]
         if name.endswith(": none"):
+            if name in ("screen: none", "motion: none", "sound: none"):
+                if sum(norm(x[0]).startswith(name[:-6]) for x in own) > 1:
+                    kd.append(f"build-own table: {o[0]!r}: a kind with rows of its own may not also say none")
+                elif len(" ".join(o[1:]).replace("-", " ").split()) < 6:
+                    kd.append(f"build-own table: {o[0]!r} gives no reason of six words or more")
+                continue
             if name != "game verbs: none" or len(gv) > 1:
                 kd.append(f"build-own table: {o[0]!r}: only one row, 'Game verbs: none', may say none")
             elif not re.search(r"\d", o[1]):
