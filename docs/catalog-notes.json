@@ -1605,7 +1605,7 @@
     "gameSupplies": "The game store and a bot."
   },
   "sim-pool": {
-    "use": "Playing many whole games with drivers on worker threads, fuzzing, sanity bands, sweeps, the K200 weight tuner and paired validation; the whole-game check of unreached clauses (proof from counted full-resolve tests), coverage rounds and a findings file to replay a failing seed.",
+    "use": "Playing many whole games with drivers on worker threads, fuzzing, sanity bands, sweeps, the K200 weight tuner and paired validation; the whole-game check of unreached clauses (proof from counted full-resolve tests, with a trace input built from the game's own log so a static clause applied with an effect counts as proven), coverage rounds and a findings file to replay a failing seed.",
     "not": "A driver's strategy (the game or opponent supplies it).",
     "title": "Bulk game simulator",
     "tags": [
@@ -1623,7 +1623,11 @@
       "coverage",
       "replay seed",
       "failing seed",
-      "findings"
+      "findings",
+      "prove clause",
+      "game log",
+      "static clause applied",
+      "trace input"
     ],
     "visible": false,
     "release": 1,
