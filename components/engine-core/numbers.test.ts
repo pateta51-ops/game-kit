@@ -286,7 +286,7 @@ describe('numberParts: scope, conditions, counts (K526)', () => {
     const orders: NumberOrder[] = [
       { steps: ['set', 'multiply', 'add', 'floor', 'cap'], round: 'up' },
       { steps: ['increase', 'set', 'decrease', 'floor', 'cap', 'multiply'], setters: 'lowest', setOnlyLowers: true, floor: 0, round: 'down' },
-      { steps: ['cap', 'add', 'set', 'multiply', 'floor'], setters: 'highest', decreases: 'highestMin', cap: 7, round: 'down' },
+      { steps: ['cap', 'increase', 'decrease', 'set', 'multiply', 'floor'], setters: 'highest', decreases: 'highestMin', cap: 7, round: 'down' },
     ];
     let n = 0;
     for (let mask = 0; mask < 1 << pool.length; mask += 1) {
@@ -402,32 +402,16 @@ describe('numberParts: nothing dropped or ignored silently (K582)', () => {
     expect(r).toEqual({ value: 2, base: 3, parts: [{ source: 'B', op: 'add', amount: -1, applied: -1 }] });
     expect(Object.keys(r)).toEqual(['value', 'base', 'parts']);
   });
-  it('decreases: highestMin also orders the reductions of an unsplit add step, in either input order', () => {
-    const o: NumberOrder = { steps: ['add'], decreases: 'highestMin' };
+  it('decreases: highestMin with an add step, or with no decrease step, is an engine bug; an unsplit add step keeps the order given', () => {
     const a = add('A', -2, { min: 1 });
     const b = add('B', -1, { min: 0 });
-    for (const ms of [[a, b], [b, a]]) {
-      const r = numberParts(3, ms, o);
-      expect(r.value).toBe(0);
-      expect(show(r.parts)).toEqual(['A:add:-2:-2', 'B:add:-1:-1']);
-    }
-    expect(show(numberParts(4, [b, add('R', 1), a], o).parts)).toEqual(['R:add:1:1', 'A:add:-2:-2', 'B:add:-1:-1']);
-    expect(numberParts(3, [add('B', -1, { min: 0 }), add('R', 3), add('C', -3, { min: 2 })], o).value).toBe(2);
+    expect(() => numberParts(3, [b, a], { steps: ['add'], decreases: 'highestMin' })).toThrow(EngineBugError);
+    expect(() => numberParts(3, [], { steps: ['add', 'decrease'], decreases: 'highestMin' })).toThrow(EngineBugError);
+    expect(() => numberParts(3, [], { steps: ['set', 'floor'], decreases: 'highestMin' })).toThrow(EngineBugError);
     expect(numberParts(3, [b, a], { steps: ['add'] }).value).toBe(1);
-  });
-  it('decreases: highestMin in an unsplit add step gives the lowest result any order of the modifiers gives, for every permutation of a pool', () => {
-    const pool = [add('a', -1, { min: 0 }), add('b', 3), add('c', -3, { min: 2 }), add('d', -2), add('e', 1), add('f', -2, { min: 1 })];
-    const perms = (xs: NumberModifier[]): NumberModifier[][] => (xs.length <= 1 ? [xs] : xs.flatMap((x, i) => perms([...xs.slice(0, i), ...xs.slice(i + 1)]).map((p) => [x, ...p])));
-    const all = perms(pool);
-    expect(all).toHaveLength(720);
-    for (const base of [0, 3, 5]) {
-      const plain = all.map((p) => numberParts(base, p, { steps: ['add'] }).value);
-      expect(new Set(plain).size).toBeGreaterThan(1);
-      const sorted = new Set(all.map((p) => numberParts(base, p, { steps: ['add'], decreases: 'highestMin' }).value));
-      expect([...sorted]).toEqual([Math.min(...plain)]);
-      const split = new Set(all.map((p) => numberParts(base, p, MINS).value));
-      expect([...split]).toEqual([Math.min(...plain)]);
-    }
+    expect(numberParts(3, [b, a], { steps: ['add'], decreases: 'gather' }).value).toBe(1);
+    expect(numberParts(3, [b, a], { steps: ['increase', 'decrease'], decreases: 'highestMin' }).value).toBe(0);
+    expect(numberParts(3, [add('B', -1, { min: 0 }), add('R', 3), add('C', -3, { min: 2 })], { steps: ['add'] }).value).toBe(2);
   });
   it('a scoped modifier listed with why "scope" shows its amount times its count when the call gives that count', () => {
     const ms = [add('A', -2, { per: 'units', of: 'play' })];
