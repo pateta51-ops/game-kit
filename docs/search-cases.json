@@ -394,5 +394,8 @@
   { "q": "scenario put tokens on map", "first": "card-harness" },
   { "q": "simulation module drivers", "first": "sim-pool" },
   { "q": "wounded instead of removed", "first": "engine-core" },
-  { "q": "motion beats event order cue sound from motion player", "first": "motion-frame" }
+  { "q": "motion beats event order cue sound from motion player", "first": "motion-frame" },
+  { "q": "build own table check", "first": "plan-checker" },
+  { "q": "plan build own table rows", "first": "plan-checker" },
+  { "q": "plan check build own rows", "first": "plan-checker" }
 ]
