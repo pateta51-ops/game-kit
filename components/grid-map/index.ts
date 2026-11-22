@@ -214,11 +214,11 @@ export function firstSteps(g: GridMap, from: string, to: Targets, o: Steps & { s
 }
 
 const gcd = (a: number, b: number): number => (b ? gcd(b, a % b) : a)
-function clear(g: GridMap, x1: number, y1: number, x2: number, y2: number, open?: boolean): boolean {
+function clear(g: GridMap, x1: number, y1: number, x2: number, y2: number): boolean {
   const dx = x2 - x1
   const dy = y2 - y1
   const n = gcd(Math.abs(dx), Math.abs(dy)) || 1
-  for (let i = open ? 1 : 0; i <= (open ? n - 1 : n); i++) if (g.blocked[(y1 + (dy / n) * i) * (g.cols + 1) + x1 + (dx / n) * i]) return false
+  for (let i = 0; i <= n; i++) if (g.blocked[(y1 + (dy / n) * i) * (g.cols + 1) + x1 + (dx / n) * i]) return false
   for (const [h, x, y] of g.inner) {
     // a, b: along the wall; p: across it
     const [a1, a2, p1, p2, a, p] = h ? [x1, x2, y1, y2, x, y] : [y1, y2, x1, x2, y, x]
@@ -237,15 +237,27 @@ function corners(g: GridMap, space: string): Cell[] {
   return [...out.values()]
 }
 
-export type Sight = { openEnds?: boolean }
+// inset corners: coordinates in thousandths of a side, so every test below is exact integer arithmetic
+const cross = (ax: number, ay: number, bx: number, by: number, cx: number, cy: number) => (bx - ax) * (cy - ay) - (by - ay) * (cx - ax)
+function clearInset(g: GridMap, x1: number, y1: number, x2: number, y2: number): boolean {
+  const on = (x: number, y: number) => !cross(x1, y1, x2, y2, x, y) && Math.min(x1, x2) <= x && x <= Math.max(x1, x2) && Math.min(y1, y2) <= y && y <= Math.max(y1, y2)
+  for (const [h, x, y] of g.inner) {
+    const [bx, by] = h ? [x + 1, y] : [x, y + 1]
+    // an inset point never lies on a grid line, so the segment meets a wall in one point at most
+    if (on(x * 1000, y * 1000)) { if (g.blocked[y * (g.cols + 1) + x]) return false; continue }
+    if (on(bx * 1000, by * 1000)) { if (g.blocked[by * (g.cols + 1) + bx]) return false; continue }
+    if (cross(x1, y1, x2, y2, x * 1000, y * 1000) * cross(x1, y1, x2, y2, bx * 1000, by * 1000) < 0 && cross(x * 1000, y * 1000, bx * 1000, by * 1000, x1, y1) * cross(x * 1000, y * 1000, bx * 1000, by * 1000, x2, y2) < 0) return false
+  }
+  return true
+}
+const inset = (g: GridMap, space: string): Cell[] => cellsOf(g, space).flatMap(([r, c]) => [[r, c], [r, c + 1], [r + 1, c], [r + 1, c + 1]].map(([y, x]): Cell => [y! * 1000 + (y === r ? 1 : -1), x! * 1000 + (x === c ? 1 : -1)]))
+
+export type Sight = { insetCorners?: boolean }
 export function lineOfSight(g: GridMap, a: string, b: string, o: Sight = {}): boolean {
-  const pa = corners(g, a)
-  const pb = corners(g, b)
+  const pa = o.insetCorners ? inset(g, a) : corners(g, a)
+  const pb = o.insetCorners ? inset(g, b) : corners(g, b)
   if (a === b) return true
-  const key = ([y, x]: Cell) => `${y},${x}`
-  const ka = new Set(pa.map(key))
-  const kb = new Set(pb.map(key))
-  for (const [y1, x1] of pa) for (const [y2, x2] of pb) if (!(o.openEnds && (kb.has(key([y1, x1])) || ka.has(key([y2, x2]))))) if (clear(g, x1, y1, x2, y2, o.openEnds)) return true
+  for (const [y1, x1] of pa) for (const [y2, x2] of pb) if (o.insetCorners ? clearInset(g, x1, y1, x2, y2) : clear(g, x1, y1, x2, y2)) return true
   return false
 }
 
