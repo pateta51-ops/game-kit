@@ -398,7 +398,7 @@ The card-language shell (K206): card effects as data, one typed verb table where
 ### card-language/op-table
 
 - **Also called:** Op table for a game on its own engine
-- **Words:** op table, own engine, ops, card words
+- **Words:** op table, own engine, ops, card words, text generation
 - **Use it when:** A game that keeps its own engine still wants one row per op with checked fields, a run function and its text (`OpTable`, `runOp`, `validateOps`).
 - **Guide:** [README.md](../components/card-language/README.md)
 
@@ -469,7 +469,7 @@ A small card query language (K107): lexer, parser, evaluator. The game supplies 
 Card zones as data on engine-core state (K223): decks, hands, discards and play areas, per seat or shared, each an ordered list of card ids (index 0 is the top) with who sees it, and `viewOf(state, seat)` that hides what a seat may not see. Needs `engine-core`.
 
 - **Also called:** Decks, hands and discards as lists
-- **Words:** deck, hand, discard, zones, lists, visibility, play, area, hand limit, zone capacity, discard choice, over the limit, choose what to drop, discard event, on leave hook, leave callback
+- **Words:** deck, hand, discard, zones, lists, visibility, play, area, face-down, hand limit, zone capacity, discard choice, over the limit, choose what to drop, discard event, on leave hook, leave callback
 - **Release:** 1.0; not seen
 - **The game supplies:** The zones, their owners and who sees what.
 - **Use it when:** Decks, hands, discards and play areas as ordered id lists in engine state, with who sees what and a per-seat view for opponents and the UI. A zone can have a capacity (hand limit, slot limit) that rules raise and give up, with a state check that asks the owner which cards over the limit go to the discard. Hand, pile and drag UI parts are planned (K218-K220), not built: ask for them, do not build them in the game. Recipe: docs/recipes/card-table.md.
@@ -576,7 +576,7 @@ A clock as rules data: a marker on a row of spaces (countdown, round tracker, da
 Card and scenario data as a checked pack: the game names its record kinds, each with a zod schema, an id field and the fields that refer to other kinds; `load` refuses with every problem at once (duplicate ids, dangling references, schema failures, unknown verbs, your own extra checks). Also the expansion choice (`expansion.ts`, `ui.ts`): a registry of products with `dependsOn`, tick/untick with dependencies, a serialisable `Choice`, and `mergePacks` of a base plus its expansions into one index. Not here: importing or storing packs, the game's record shapes, verbs or words; checking one effect at run time (card-language `validateEffect`, used here for `effects` fields).
 
 - **Also called:** Load card and scenario data safely
-- **Words:** dossier, card csv loader, csv, row, copies, data, cards, scenarios, csv, json, load, validate, pack
+- **Words:** dossier, card csv loader, csv, row, copies, data, cards, scenarios, csv, json, load, validate, pack, validation, columns
 - **Release:** 1.0; not seen
 - **The game supplies:** The record kinds and a schema for each.
 - **Use it when:** Card, deck or scenario data (CSV or JSON) loads through a zod schema per record kind with id-uniqueness, dangling-reference and card-language verb checks, every problem listed at once; also a base + expansions pick list with dependency ticking and a merge into one index.
@@ -623,7 +623,7 @@ A resource number that counts up, bumps, shows a "+N" tag and warns when low; un
 Which card-language constructs (verbs, triggers, conditions: any string a card names) a game's pack uses and lacks, and which cards use one the game has no handler for: a pure function, a CLI and an unstyled page.
 
 - **Also called:** Which card words the game handles
-- **Words:** coverage, verbs, triggers, conditions, missing, handler, report
+- **Words:** coverage, verbs, triggers, conditions, missing, handler, report, transcription
 - **Release:** 1.0; not seen
 - **The game supplies:** The pack and the verbs, triggers and conditions the game handles.
 - **Use it when:** Which card-language constructs a pack uses, lacks, or has no handler for: function, CLI (--strict exit code) and unstyled page.
@@ -776,7 +776,7 @@ Sixteen verbs for the director's spec format as DOM effects for the motion frame
 The kernel of a game engine: seeded random numbers, canonical JSON and hashes, the task runner with prompts, copy on write, replay, undo and the save format. A game passes one `GameTypes` bundle and a `GameRules<G>` (handlers, `blank`, `setup`, `contentHash`, optional `stamp`, `invariants`, `revealWords`); see `fake/counter.ts`. Import from one of the entry files below, never from an implementation module. Options legal but doing nothing (`idle`, K91): `idle.md`.
 
 - **Also called:** Game rules engine core
-- **Words:** engine, rules, random, undo, replay, save, prompts, state, modifier, stat, cost, reduction, breakdown, floor, minimum, until end of combat, duration named end point, lasts until event, named end point
+- **Words:** engine, rules, random, undo, replay, save, prompts, state, modifier, stat, cost, reduction, breakdown, floor, minimum, deterministic, until end of combat, duration named end point, lasts until event, named end point
 - **Release:** 1.0; not seen
 - **The game supplies:** The rules: state, actions, prompts and set-up.
 - **Use it when:** Every game's engine: seeded random, tasks and prompts, copy on write, replay, undo, saves, timing windows and triggers.
@@ -833,7 +833,7 @@ The kernel of a game engine: seeded random numbers, canonical JSON and hashes, t
 The game's log, derived from engine events by one table. Cards and rules write nothing: a new game has a complete log by listing its event types once. Pure data and functions, no look. Reuses engine-core's `KernelEvent` (a game's events add `type`).
 
 - **Also called:** Readable game log from events
-- **Words:** log, history, events, text, readable, table
+- **Words:** log, history, events, text, readable, table, rows, adapter
 - **Release:** 1.0; not seen
 - **The game supplies:** The table of event types and their words.
 - **Use it when:** A readable game log derived from engine events through one table.
@@ -955,7 +955,7 @@ ESLint flat-config blocks for a game's engine folder. Spread them after the game
 The game writes one adapter; Claude (or `--dummy`, the first option, no client built) picks one numbered option per step by a `choose` tool call (tool_choice auto, never forced: models that think refuse it; a reply without a tool call is re-asked once, then logged as a finding) `{option, reason}`. The system prompt is `rulesText()` plus `--docs` files, cached (`cache_control` ephemeral on the last block); each call sends only the current view, the options and the last 6 decisions, so cost per call stays flat.
 
 - **Also called:** Whole-game playtests by Claude
-- **Words:** playtest, llm, claude, ai, testing, bugs, game, adapter
+- **Words:** playtest, llm, claude, ai, testing, bugs, game, adapter, language model
 - **Release:** 1.0; not seen
 - **The game supplies:** An adapter: view, numbered options and choose.
 - **Use it when:** Headless whole-game playtests by Claude through a small game adapter (view, numbered options, choose): finds rules and screen bugs the model flags, adapter throws and illegal option lists, and saves each run's replay for a replay test; capped in dollars per run; --dummy plays the first option for free.
@@ -1034,7 +1034,7 @@ Plays motion specs in the director's format (one JSON per beat: `actors`, `steps
 Offline install: a Vite plugin that writes a precaching service worker into the build, the rule for registering it, and the update line. `precache.ts` runs in node (the game's `vite.config.ts`); `index.ts` draws nothing; `ui.ts` holds `UpdateLine`. Needs state-machines and the packages `react`, `zustand`. Saves and `keepStorage()` are in saves.
 
 - **Also called:** Play without internet
-- **Words:** offline, install, service, worker, cache, update, app
+- **Words:** offline, install, service, worker, cache, update, app, pwa
 - **Release:** 1.0; not seen
 - **The game supplies:** The list of files to keep and the update words.
 - **Use it when:** The game must install and run offline: service worker plugin, register rule, update line.
@@ -1049,7 +1049,7 @@ Offline install: a Vite plugin that writes a precaching service worker into the 
 A rule-based opponent (K103, K115). Pure data and functions; the engine never imports it. The game supplies the view, the candidates, the advice and the handlers.
 
 - **Also called:** Rule-based computer player
-- **Words:** ai, opponent, computer, bot, rules, advice, profiles
+- **Words:** ai, opponent, computer, bot, rules, advice, profiles, test player
 - **Release:** 1.0; not seen
 - **The game supplies:** The view, candidate moves, advice and handlers.
 - **Use it when:** A rule-based AI opponent: advice, profiles and memory as data through a fixed pick pipeline, plus decision records.
@@ -1128,7 +1128,7 @@ Pieces built in code, no model file: a rounded d6 and a ten-sided die (WebGL), a
 
 - **Also called:** Dice, balls and chips in 3D
 - **Looks like:** Rounded dice, a rolling ball and a thick chip with a cast shadow.
-- **Words:** dice, ball, chip, 3d, roll, piece, token, round
+- **Words:** dice, ball, chip, 3d, roll, piece, token, round, d20, die
 - **Release:** 1.0; seen on screen
 - **The game supplies:** The look: colours, faces and sizes.
 - **Use it when:** Dice, balls and chips built in code with WebGL or CSS (no model files).
@@ -1299,7 +1299,7 @@ A small made-up card game kept in the kit as a contract test (K205, K276): when 
 Headless replays, golden games and a determinism check across two checkouts. Needs `engine-core` and `sim-pool`.
 
 - **Also called:** Replay saved games from the command line
-- **Words:** replay, golden, games, determinism, command, line, check
+- **Words:** replay, golden, games, determinism, command, line, check, replay file
 - **Release:** 1.0; not seen
 - **The game supplies:** The game rules and the golden games.
 - **Use it when:** Headless replays, golden games and a determinism check across two checkouts.
@@ -1392,7 +1392,7 @@ One command makes a working, empty game repo from the kit (K204). Run it from th
 Flatbed scans of a game's components to one upright, tightly cropped image per item, plus a review overlay and a
 
 - **Also called:** Turn scans into cropped pictures
-- **Words:** scan, scanner, crop, straighten, image, flatbed, ingest
+- **Words:** scan, scanner, crop, straighten, image, flatbed, ingest, ingestion, cards
 - **Release:** 1.0; not seen
 - **The game supplies:** The scan files and the crop settings.
 - **Use it when:** Turning flatbed scans into one cropped upright image per item; a printed board scan with live state drawn into its boxes, die-cut pieces at true size, playmat box detection, tone profile.
@@ -1439,7 +1439,7 @@ Settings declared as data, a persisted store of their values and a screen drawn 
 Plays N whole games of any `GameRules<G>` with a driver, in this thread or on worker threads, with crash-safe records and a resume file. Needs `engine-core`.
 
 - **Also called:** Bulk game simulator
-- **Words:** simulate, many, games, bots, balance, fuzz, tune, threads, unreached, clauses, whole game, coverage, replay seed, failing seed, findings, prove clause, game log, static clause applied, trace input
+- **Words:** simulate, many, games, bots, balance, fuzz, tune, threads, unreached, clauses, whole game, coverage, replay seed, failing seed, findings, prove clause, game log, static clause applied, trace input, invariants, simulation runner
 - **Release:** 1.0; not seen
 - **The game supplies:** The game rules and a driver for each seat.
 - **Use it when:** Playing many whole games with drivers on worker threads, fuzzing, sanity bands, sweeps, the K200 weight tuner and paired validation; the whole-game check of unreached clauses (proof from counted full-resolve tests, with a trace input built from the game's own log so a static clause applied with an effect counts as proven), coverage rounds and a findings file to replay a failing seed.
@@ -1469,7 +1469,7 @@ Small pure helpers from the outside harvest (K109). No packages; import from `in
 A Web Audio player driven by one table of data. It knows no game. No packages.
 
 - **Also called:** Sound and music player
-- **Words:** sound, music, audio, play, volume, buses, effects
+- **Words:** sound, music, audio, play, volume, buses, effects, music state
 - **Release:** 1.2; not seen
 - **The game supplies:** The table of sounds and the audio files.
 - **Use it when:** Release 1.2 sound and music from one data table on Web Audio.
@@ -1578,12 +1578,12 @@ A bag of tokens with its count; the draw shown as a 2D flight from the bag or a 
 
 - **Also called:** Bag of tokens with a draw
 - **Looks like:** A bag with a count; a token flies out or the bag shakes in 3D.
-- **Words:** bag, draw, tokens, pull, shake, random, cubes
+- **Words:** bag, draw, tokens, pull, shake, random, cubes, token pool, finite, token, supply, stock, runs out, short bag, draw from a bag, pieces run out
 - **Release:** 1.0; seen on screen
 - **The game supplies:** The tokens, their count and the draw result.
-- **Use it when:** A bag of tokens with its count; the engine's draw shown as a 2D flight from the bag or a 3D shake-and-draw (three.js by dynamic import) that never decides the draw and falls back to 2D; a finite supply of pieces counted from the engine's integers (supply.ts).
+- **Use it when:** A bag of tokens with its count; the engine's draw shown as a 2D flight from the bag or a 3D shake-and-draw (three.js by dynamic import) that never decides the draw and falls back to 2D; a finite supply of pieces counted from the engine's integers (supply.ts); finite stocks and a bag for the engine (stock.ts, pure): each piece in one named place, a gain from a stock that runs out says so, a seeded draw of N with the game's short-bag rule per kind of draw (draw what is left, refill when the bag runs out, or fail).
 - **Not for:** Which tokens are drawn (the engine), the token faces and the bag print (the game), a game's token tables.
-- **Key exports:** `EXTERIOR_ACROSS`, `EXTERIOR_UP`, `CLOTH`, `COIN_RADIUS`, `COIN_HEIGHT`, `SHAKE_START`, `SHAKE_END`, `DRAW_START`, `STAGGER`, `DRAW_DURATION`, `pileLayout`, `shakeAmount`, `bagPose`, `slotPose`, and 43 more
+- **Key exports:** `EXTERIOR_ACROSS`, `EXTERIOR_UP`, `CLOTH`, `COIN_RADIUS`, `COIN_HEIGHT`, `SHAKE_START`, `SHAKE_END`, `DRAW_START`, `STAGGER`, `DRAW_DURATION`, `pileLayout`, `shakeAmount`, `bagPose`, `slotPose`, and 57 more
 - **Needs:** nothing
 - **Came from:** warps-edge-fan-prototype
 - **Docs:** [README](../components/token-bag/README.md) ([rules for agents](../components/token-bag/README.md#rules-for-agents))
@@ -1655,7 +1655,7 @@ A row of spaces with a marker that glides, on a drawn row or on spots of a mat i
 Every printed item (card, tile, board) is transcribed twice, independently, then the owner checks it against the physical item. Nothing enters the real pack before that. Node only (reads files); no packages.
 
 - **Also called:** Double-checked card transcription
-- **Words:** transcribe, twice, verify, cards, owner, check, printed
+- **Words:** transcribe, twice, verify, cards, owner, check, printed, transcriptions, two, agree
 - **Release:** 1.0; not seen
 - **The game supplies:** The two transcriptions and the item list.
 - **Use it when:** Printed items (cards, tiles, boards) are transcribed twice independently and the owner verifies them before they enter the real pack; also the face fit check (printed text fits its box at a pixel floor) and Python tools to measure, fit, autotune and crop-sheet faces.
