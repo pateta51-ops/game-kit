@@ -4,3 +4,4 @@ export { addEffect, allEffects, anyEffect, batchOver, bindEffect, boundary, effe
 export { checkpointHandlers, RECOMPUTE_CAP, recompute, type CheckpointConfig, type StateCheck } from './checkpoint.ts';
 export { effectModifiers, numberParts, partsDirection, type NumberBound, type NumberModifier, type NumberOp, type NumberOptions, type NumberOrder, type NumberPart, type NumberResult, type NumberStep, type UnchangedPart } from './numbers.ts';
 export { collectTriggers, DEFAULT_PRIORITY, enteredPlay, liveTriggers, pendingTriggers, simultaneously, TRIGGER_CAP, triggerHandlers, type PendingTrigger, type TriggerCandidate, type TriggerOrder, type TriggerPromptInfo } from './triggers.ts';
+export { giveStatus, hasStatus, removeStatus, STATUS, statusCount, statusesOf, statusLeft, type GiveOptions, type GiveResult, type StatusDef, type StatusTable, type StatusView } from './statuses.ts';
