@@ -361,3 +361,152 @@ describe('numberParts over the lasting effects (K526)', () => {
     });
   });
 });
+
+// K582: reports made true, silent drops reported, edge values. Each case is on made-up numbers.
+describe('numberParts: every bound that bit, and whether it holds (K582)', () => {
+  const COUNT: NumberOrder = { steps: ['floor', 'add', 'cap'], floor: 0, cap: 6 };
+  it('order floor, add, cap on a base below zero: the floor bit but does not hold on the final value', () => {
+    const r = numberParts(-2, [add('R', 2)], COUNT);
+    expect(r.value).toBe(2);
+    expect(show(r.parts)).toEqual(['floor:floor:0:2', 'R:add:2:2']);
+    expect(r.bound).toEqual({ source: 'floor', op: 'floor', amount: 0, applied: 2 });
+    expect(r.bounds).toEqual([{ source: 'floor', op: 'floor', amount: 0, applied: 2, holds: false }]);
+  });
+  it('both bounds bit: both are listed in the order they bit, and only the cap holds', () => {
+    const r = numberParts(-2, [add('R', 9)], COUNT);
+    expect(r.value).toBe(6);
+    expect(show(r.parts)).toEqual(['floor:floor:0:2', 'R:add:9:9', 'cap:cap:6:-3']);
+    expect(r.bound?.source).toBe('cap');
+    expect(r.bounds).toEqual([
+      { source: 'floor', op: 'floor', amount: 0, applied: 2, holds: false },
+      { source: 'cap', op: 'cap', amount: 6, applied: -3, holds: true },
+    ]);
+  });
+  it('a bound that bit and still holds says so; no bite: no list', () => {
+    expect(numberParts(-2, [], COUNT).bounds).toEqual([{ source: 'floor', op: 'floor', amount: 0, applied: 2, holds: true }]);
+    expect('bounds' in numberParts(2, [add('R', 1)], COUNT)).toBe(false);
+  });
+});
+
+describe('numberParts: nothing dropped or ignored silently (K582)', () => {
+  it('a scoped modifier in a call that names no scope is listed as unchanged with why "scope"', () => {
+    const ms = [add('A', -1, { of: 'play' })];
+    const r = numberParts(3, ms, COST, { unchanged: true });
+    expect(r.value).toBe(3);
+    expect(r.unchanged).toEqual([{ source: 'A', op: 'add', amount: -1, applied: 0, why: 'scope' }]);
+    expect(numberParts(3, ms, COST, { of: 'other', unchanged: true }).unchanged).toEqual([]);
+    expect(numberParts(3, ms, COST, { of: 'play', unchanged: true }).value).toBe(2);
+  });
+  it('decreases: highestMin also orders the reductions of an unsplit add step, in either input order', () => {
+    const o: NumberOrder = { steps: ['add'], decreases: 'highestMin' };
+    const a = add('A', -2, { min: 1 });
+    const b = add('B', -1, { min: 0 });
+    for (const ms of [[a, b], [b, a]]) {
+      const r = numberParts(3, ms, o);
+      expect(r.value).toBe(0);
+      expect(show(r.parts)).toEqual(['A:add:-2:-2', 'B:add:-1:-1']);
+    }
+    expect(show(numberParts(4, [b, add('R', 1), a], o).parts)).toEqual(['A:add:-2:-2', 'R:add:1:1', 'B:add:-1:-1']);
+    expect(numberParts(3, [b, a], { steps: ['add'] }).value).toBe(1);
+  });
+  it('a minimum on a raise, a set, a multiply, a floor or a cap is an engine bug; on a reduction that counts to zero it is not', () => {
+    expect(() => numberParts(3, [add('A', 1, { min: 2 })], SUM)).toThrow(EngineBugError);
+    expect(() => numberParts(3, [set('A', 0, { min: 2 })], SUM)).toThrow(EngineBugError);
+    expect(() => numberParts(3, [mul('A', 2, { min: 2 })], STAT)).toThrow(EngineBugError);
+    expect(() => numberParts(3, [{ source: 'A', op: 'floor', amount: 1, min: 2 }], SUM)).toThrow(EngineBugError);
+    expect(() => numberParts(3, [{ source: 'A', op: 'cap', amount: 9, min: 2 }], SUM)).toThrow(EngineBugError);
+    expect(numberParts(3, [add('A', 0, { min: 2 })], SUM).value).toBe(3);
+    expect(numberParts(3, [add('A', -1, { min: 2, per: 'units' })], SUM, { counts: { units: () => 0 } }).value).toBe(3);
+  });
+});
+
+describe('numberParts: reports on modifiers that changed nothing (K582)', () => {
+  it('the same modifier object given twice is two modifiers: the second is listed as unchanged', () => {
+    const a = add('A', -2, { min: 1 });
+    const r = numberParts(3, [a, a], MINS, { unchanged: true });
+    expect(r.value).toBe(1);
+    expect(show(r.parts)).toEqual(['A:add:-2:-2']);
+    expect(r.unchanged).toEqual([{ source: 'A', op: 'add', amount: -2, applied: 0, why: 'same' }]);
+    const b = add('B', 1);
+    expect(show(numberParts(3, [b, b], SUM).parts)).toEqual(['B:add:1:1', 'B:add:1:1']);
+    const f: NumberModifier = { source: 'F', op: 'floor', amount: 1 };
+    expect(numberParts(3, [f, f], SUM, { unchanged: true }).unchanged?.map((u) => `${u.source}:${u.why}`)).toEqual(['F:outranked', 'F:same']);
+  });
+  it('a setter that setOnlyLowers refused says "refused"; one equal to the value says "same"', () => {
+    const o: NumberOrder = { steps: ['set'], setOnlyLowers: true };
+    const why = (ms: NumberModifier[], order: NumberOrder = o): string[] => numberParts(3, ms, order, { unchanged: true }).unchanged?.map((u) => `${u.source}:${u.why}`) ?? [];
+    expect(why([set('A', 5)])).toEqual(['A:refused']);
+    expect(why([set('A', 3)])).toEqual(['A:same']);
+    expect(why([set('A', 5)], { steps: ['set'] })).toEqual([]);
+  });
+  it('two setters under setOnlyLowers with "lowest": the lowest lowers, the higher one is outranked, a raising one refused', () => {
+    const r = numberParts(4, [set('A', 6), set('B', 2), set('C', 3)], { steps: ['set'], setters: 'lowest', setOnlyLowers: true }, { unchanged: true });
+    expect(r.value).toBe(2);
+    expect(show(r.parts)).toEqual(['B:set:2:-2']);
+    expect(r.unchanged?.map((u) => `${u.source}:${u.why}`)).toEqual(['A:refused', 'C:outranked']);
+  });
+  it('setters that tie: lowest and highest keep the first given, last keeps the last', () => {
+    const ms = [set('A', 2), set('B', 2)];
+    const win = (setters: NonNullable<NumberOrder['setters']>): string | undefined => numberParts(4, ms, { steps: ['set'], setters }).parts[0]?.source;
+    expect([win('lowest'), win('highest'), win('last')]).toEqual(['A', 'A', 'B']);
+  });
+  it('a modifier\'s ref is passed through to its part or its unchanged entry, untouched; none given: no key', () => {
+    const tag = { id: 9 };
+    const r = numberParts(1, [add('S', -1, { min: 0, ref: 7 }), add('S', -1, { min: 0, ref: tag })], MINS, { unchanged: true });
+    expect(r.parts).toEqual([{ source: 'S', op: 'add', amount: -1, applied: -1, ref: 7 }]);
+    expect(r.unchanged).toEqual([{ source: 'S', op: 'add', amount: -1, applied: 0, why: 'same', ref: tag }]);
+    expect(r.unchanged?.[0]?.ref).toBe(tag);
+    const cap = numberParts(9, [{ source: 'W', op: 'cap', amount: 5, ref: 'w1' }], SUM);
+    expect(cap.bound?.ref).toBe('w1');
+    expect(cap.bounds?.[0]?.ref).toBe('w1');
+    const plain = numberParts(3, [add('A', 1)], SUM).parts[0];
+    expect(plain !== undefined && 'ref' in plain).toBe(false);
+  });
+});
+
+describe('numberParts: edge values (K582)', () => {
+  it('no negative zero in the value, the base or an amount', () => {
+    const half = numberParts(-1, [mul('H', 0.5)], { steps: ['multiply'], round: 'up' });
+    expect(half.value).toBe(0);
+    expect(half.parts).toEqual([{ source: 'H', op: 'multiply', amount: 0.5, applied: 1 }]);
+    expect(numberParts(-3, [mul('Z', 0)], { steps: ['multiply'] }).value).toBe(0);
+    const none = numberParts(3, [add('A', -2, { per: 'units' })], SUM, { counts: { units: () => 0 }, unchanged: true });
+    expect(none.unchanged?.[0]?.amount).toBe(0);
+    const zero = numberParts(-0, [], SUM);
+    expect(zero.value).toBe(0);
+    expect(zero.base).toBe(0);
+  });
+  it('a fractional multiplier is rounded from the exact product, not from its float error', () => {
+    const o: NumberOrder = { steps: ['multiply'] };
+    expect(numberParts(100, [mul('A', 1.1)], { ...o, round: 'up' }).value).toBe(110);
+    expect(numberParts(100, [mul('A', 1.15)], { ...o, round: 'down' }).value).toBe(115);
+    expect(numberParts(3, [mul('A', 0.1)], o).value).toBe(0.3);
+    expect(numberParts(5, [mul('A', 0.5)], o).value).toBe(2.5);
+    expect(numberParts(2 ** 52 + 1, [mul('A', 2)], { ...o, round: 'up' }).value).toBe(2 ** 53 + 2);
+  });
+  it('rounding up on a negative value goes toward zero, down goes away from it', () => {
+    const o: NumberOrder = { steps: ['multiply'] };
+    expect(numberParts(-5, [mul('A', 0.5)], { ...o, round: 'up' }).value).toBe(-2);
+    expect(numberParts(-5, [mul('A', 0.5)], { ...o, round: 'down' }).value).toBe(-3);
+  });
+});
+
+describe('numberParts: prior-art cases and orders that had no test (K582)', () => {
+  it('case 15: a cost line reduced to zero comes out as exactly 0, so the game can drop the line', () => {
+    const lines = { X: 1, Y: 2, Z: 1 };
+    const ms = [add('A', -1, { of: 'X' }), add('B', -3, { of: 'Z' })];
+    const out = Object.entries(lines).map(([of, n]) => [of, numberParts(n, ms, COST, { of }).value] as const);
+    expect(out).toEqual([['X', 0], ['Y', 2], ['Z', 0]]);
+    expect(out.filter(([, v]) => v > 0).map(([of]) => of)).toEqual(['Y']);
+  });
+  it('an order of only a set step, the setters kept apart by scope and condition: a set equal to the base is no part, an add is an engine bug', () => {
+    const o: NumberOrder = { steps: ['set'] };
+    const ms = [set('D', 2, { of: 'gain' }), set('D', -2, { of: 'loss', when: 'open' })];
+    const run = (base: number, of: string, open = true) => numberParts(base, ms, o, { of, conditions: { open: () => open }, unchanged: true });
+    expect(show(run(1, 'gain').parts)).toEqual(['D:set:2:1']);
+    expect(run(2, 'gain')).toEqual({ value: 2, base: 2, parts: [], unchanged: [{ source: 'D', op: 'set', amount: 2, applied: 0, why: 'same' }] });
+    expect(run(-1, 'loss').value).toBe(-2);
+    expect(run(-1, 'loss', false)).toEqual({ value: -1, base: -1, parts: [], unchanged: [{ source: 'D', op: 'set', amount: -2, applied: 0, why: 'condition' }] });
+    expect(() => numberParts(1, [add('B', 1)], o)).toThrow(EngineBugError);
+  });
+});
