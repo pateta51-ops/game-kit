@@ -15,17 +15,21 @@ The kernel of a game engine: seeded random numbers, canonical JSON and hashes, t
 6. Opt in to timing, debug, legal and queries by using their parts; add `GameRules.debug` for the debug console.
 7. Keep `ordered` prompts small: test helpers enumerate every order (about 110k answers for 8 options).
 8. A game with its own engine passes an `EnginePort` (`kernelPort` wraps this kernel) to card-harness and tutorial.
+9. Compute a modified cost with `numberParts` before any payment plan, option label or can-pay check, and pass its `value` to all of them; none reads the printed cost.
+10. Take every field of a `NumberOrder` (step order, setter rule, rounding, floor, cap) from the game's rulings; where they are silent, ask. Use `numberParts` for a stat or cost with set, add, multiply, floor or cap instead of a hand-written fold.
 
 **Common mistakes:**
 - Using the old `ctx.then` then `ctx.ask` form in new code: it is deprecated.
 - A prompt nobody can answer (fewer enabled options than `min`): `EngineBugError`; give a legal option or skip the prompt.
 - A derived value that keeps changing in the checkpoint: `EngineBugError` after the recompute cap.
+- A modifier whose operation has no step in the `NumberOrder`, or a default floor or cap without its step: `EngineBugError`.
+- Storing a modified number in state: read it at use, so an ended effect or a source that left stops counting.
 
 
 ## Entry files (K278)
 
 - `kernel.ts`: everything a game with no timing needs: `GameTypes` / `GameRules` and the other types, `createGame`, `applyAction`, `validateAction`, ctx, ids, RNG, copy on write, replay and hashes, undo by action and by step, saves, errors, object references, causes, legal tables and preview, `query`, `markIdle` (a handler marks an idle option).
-- `timed.ts`: timing (`timing.ts`, `replace.ts`, `durations.ts`, `checkpoint.ts`, `triggers.ts`): batches, prevention, replacement, triggers, continuous effects, the checkpoint. Named `timed` because `timing.ts` is the implementation module.
+- `timed.ts`: timing (`timing.ts`, `replace.ts`, `durations.ts`, `checkpoint.ts`, `triggers.ts`): batches, prevention, replacement, triggers, continuous effects, the checkpoint, a number with its parts (`numbers.ts`). Named `timed` because `timing.ts` is the implementation module.
 - `tools.ts`: tests, sims and debugging: `answers.ts` (`enumerateAnswers`, `randomPicks`, `playUntil`, ...), `differentialApply`, `doesNothing` and `idleProblems`, debug actions.
 - `index.ts`: all three; no name is in two entries (`entries.test.ts`).
 
@@ -43,6 +47,7 @@ The kernel of a game engine: seeded random numbers, canonical JSON and hashes, t
 - Derived data on demand (K124, opt-in): `GameRules.queries` by name, read with `query(game, state, content, what, player?, arg?)` (an unknown name is a `GameSetupError`), so a view never carries it.
 - Debug edits as engine actions (`DebugAction`: `set`, `force`, `close` and the game's `GameRules.debug` verbs; `debugVerbs`, K100, opt-in): `debug.md`. The console is `debug-console`.
 - Timing (K93, K111, K94, K96, K112, K95, opt-in): batches of occurrences with `would`, `cancelBatch`, `ignoreBatch`, `insteadOf`, the prevention window (`Prevention` card data, `prevent`) the replacement loop (`Replacement`, `ReplaceResult`, `changeOccurrence`), triggers (`TriggerCandidate`, `PendingTrigger`, `DEFAULT_PRIORITY`, `enteredPlay`), `simultaneously`, continuous effects with durations (`addEffect`, `boundary`, `effectsOf`, `sumEffects`, `anyEffect`, K96) layered recompute (`layered`, `stampActive`, K112) and the checkpoint after every action (`cfg.checkpoint`: `derive`, `checks`, `RECOMPUTE_CAP`, K95); a game spreads `timingHandlers(cfg)` into its handlers: `timing.md`.
+- A number with its parts (K526, `numbers.ts`, opt-in): `numberParts(base, modifiers, order, opts?)` applies `NumberModifier`s (set, add, multiply, floor, cap; own minimum, per-unit count, condition, scope) in the game's `NumberOrder` and returns the value with `parts` (`{ source, op, amount, applied }`), the floor or cap that bit (`bound`) and, on request, what changed nothing; `effectModifiers` maps the lasting effects (`effectsOf`) onto modifiers; `partsDirection`. For stats, costs, payment, `bar` reasons and a breakdown on screen: [numbers.md](numbers.md).
 
 ## Use it in 10 lines
 

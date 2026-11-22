@@ -360,7 +360,7 @@ var ICONS = (() => {
     const out = [];
     let buf = "";
     let i = 0;
-    const { open, close, escape } = syntax;
+    const { open, close, escape, separator } = syntax;
     while (i < text.length) {
       const esc = escape && text.startsWith(escape, i) ? [open, close, escape].find((m) => text.startsWith(m, i + escape.length)) : void 0;
       if (escape && esc !== void 0) {
@@ -371,11 +371,14 @@ var ICONS = (() => {
       if (text.startsWith(open, i)) {
         const end = text.indexOf(close, i + open.length);
         if (end >= 0) {
-          const name = text.slice(i + open.length, end).trim();
+          const inner = text.slice(i + open.length, end);
+          const cut = separator ? inner.indexOf(separator) : -1;
+          const name = (cut >= 0 ? inner.slice(0, cut) : inner).trim();
+          const raw = cut >= 0 ? inner.slice(cut + (separator ?? "").length).trim() : void 0;
           const def = icons[name];
           if (buf) out.push({ t: "text", s: buf });
           buf = "";
-          out.push({ t: "icon", name, label: def?.label ?? name, known: def !== void 0 });
+          out.push({ t: "icon", name, label: def?.label ?? name, known: def !== void 0, ...raw === void 0 ? {} : { value: raw !== "" && Number.isFinite(Number(raw)) ? Number(raw) : raw } });
           i = end + close.length;
           continue;
         }
@@ -386,7 +389,7 @@ var ICONS = (() => {
     if (buf) out.push({ t: "text", s: buf });
     return out;
   }
-  var plainOf = (parts) => parts.map((p) => p.t === "text" ? p.s : p.label).join("");
+  var plainOf = (parts) => parts.map((p) => p.t === "text" ? p.s : p.value === void 0 ? p.label : `${p.label} ${String(p.value)}`).join("");
   var unknownIcons = (texts, icons, syntax = BRACKETS) => [
     ...new Set(texts.flatMap((t) => parseIconText(t, icons, syntax).flatMap((p) => p.t === "icon" && !p.known ? [p.name] : [])))
   ];

@@ -96,3 +96,4 @@ export function loadOrThrow(def: PackDef, data: Readonly<Record<string, readonly
   if (!r.ok) throw new Error(`content pack refused (${String(r.problems.length)} problems):\n${r.problems.join('\n')}`);
   return r.pack;
 }
+export { dossierRow, type DossierOptions, type DossierRecord } from './dossier.ts';

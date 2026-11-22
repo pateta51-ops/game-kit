@@ -371,7 +371,7 @@ Card tests on real cards. Test code only; the engine imports nothing here but `c
 The card-language shell (K206): card effects as data, one typed verb table where each verb has a field check, a handler that runs on engine-core and a text generator that prints the card's words from the same step. The game writes its own verbs; the standard pack (K232, `pack.ts`) gives the common ones.
 
 - **Also called:** Card effects written as data
-- **Words:** card, effects, data, verbs, text, validator, rules, language
+- **Words:** card, effects, data, verbs, text, validator, rules, language, offered, can resolve, unpayable cost, dry run
 - **Release:** 1.0; not seen
 - **The game supplies:** The verbs, with their field checks, handlers and text.
 - **Use it when:** A new game encodes card effects as data: verb table with handler, resume and text slots, validator, every-verb test; the standard verb pack (cardPack) on card-zones: draw, discard, mill, move, putIntoPlay, setAside, recall, gain, refill, shuffle, search, destroy, attach, detach, reveal, lookAt, scout, flip, exhaust, ready, chooseCards, chooseOption, may, chooseNumber, chooseDestination, choosePlayer, choosePayment, orderEffects, gainResource, pay, convert, adjust, seq, if, forEach, eachPlayer, repeat, count, later, payThen, custom; every card move through timing would; words overridable. Recipe: docs/recipes/card-effect.md.
@@ -387,7 +387,7 @@ The parts a game builds its own card face from: the layout as the game's data, a
 
 - **Also called:** Pieces to build a card face
 - **Looks like:** Card faces assembled from art, printed text with icons, and tokens in zones the game defines.
-- **Words:** card, face, layout, art, text, icons, tokens, parts
+- **Words:** value, icon value, marker, card, face, layout, art, text, icons, tokens, parts
 - **Release:** 1.0; seen on screen
 - **The game supplies:** The face layout, art, texts and icons.
 - **Use it when:** Drawing card faces: the layout as the game's own data (zones, anchors per card type), art with a device cache and decode-ahead, printed text with SVG icons inline, tokens at anchors. Recipe: docs/recipes/card-face-zoom.md.
@@ -555,13 +555,13 @@ A clock as rules data: a marker on a row of spaces (countdown, round tracker, da
 Card and scenario data as a checked pack: the game names its record kinds, each with a zod schema, an id field and the fields that refer to other kinds; `load` refuses with every problem at once (duplicate ids, dangling references, schema failures, unknown verbs, your own extra checks). Also the expansion choice (`expansion.ts`, `ui.ts`): a registry of products with `dependsOn`, tick/untick with dependencies, a serialisable `Choice`, and `mergePacks` of a base plus its expansions into one index. Not here: importing or storing packs, the game's record shapes, verbs or words; checking one effect at run time (card-language `validateEffect`, used here for `effects` fields).
 
 - **Also called:** Load card and scenario data safely
-- **Words:** data, cards, scenarios, csv, json, load, validate, pack
+- **Words:** dossier, card csv loader, csv, row, copies, data, cards, scenarios, csv, json, load, validate, pack
 - **Release:** 1.0; not seen
 - **The game supplies:** The record kinds and a schema for each.
 - **Use it when:** Card, deck or scenario data (CSV or JSON) loads through a zod schema per record kind with id-uniqueness, dangling-reference and card-language verb checks, every problem listed at once; also a base + expansions pick list with dependency ticking and a merge into one index.
 - **Not for:** The game's record shapes, verbs or words; one effect checked at run time (card-language validateEffect); importing or storing packs.
-- **Key exports:** `load`, `rowsOf`, `loadText`, `loadOrThrow`, `Kind`, `PackDef`, `Loaded`, `LoadResult`, `Source`
-- **Needs:** [`card-harness`](#card-harness), [`card-language`](#card-language), [`engine-core`](#engine-core)
+- **Key exports:** `load`, `rowsOf`, `loadText`, `loadOrThrow`, `dossierRow`, `Kind`, `PackDef`, `Loaded`, `LoadResult`, `Source`, `DossierOptions`, `DossierRecord`
+- **Needs:** [`card-harness`](#card-harness), [`card-language`](#card-language), [`card-parts`](#card-parts), [`engine-core`](#engine-core)
 - **Came from:** 7is
 - **Docs:** [README](../components/content-pack/README.md) ([rules for agents](../components/content-pack/README.md#rules-for-agents))
 
@@ -755,12 +755,12 @@ Sixteen verbs for the director's spec format as DOM effects for the motion frame
 The kernel of a game engine: seeded random numbers, canonical JSON and hashes, the task runner with prompts, copy on write, replay, undo and the save format. A game passes one `GameTypes` bundle and a `GameRules<G>` (handlers, `blank`, `setup`, `contentHash`, optional `stamp`, `invariants`, `revealWords`); see `fake/counter.ts`. Import from one of the entry files below, never from an implementation module. Options legal but doing nothing (`idle`, K91): `idle.md`.
 
 - **Also called:** Game rules engine core
-- **Words:** engine, rules, random, undo, replay, save, prompts, state
+- **Words:** engine, rules, random, undo, replay, save, prompts, state, modifier, stat, cost, reduction, breakdown
 - **Release:** 1.0; not seen
 - **The game supplies:** The rules: state, actions, prompts and set-up.
 - **Use it when:** Every game's engine: seeded random, tasks and prompts, copy on write, replay, undo, saves, timing windows and triggers.
 - **Not for:** A game's rules or content; the game writes its own `GameRules`.
-- **Key exports:** `claimEngineCore`, `canonicalJson`, `fnv1a64`, `copyJson`, `copyState`, `deepFreeze`, `freezeState`, `isFreezing`, `setStateFreezing`, `advance`, `applyAction`, `applyActionWith`, `createGame`, `isChecking`, and 251 more
+- **Key exports:** `claimEngineCore`, `canonicalJson`, `fnv1a64`, `copyJson`, `copyState`, `deepFreeze`, `freezeState`, `isFreezing`, `setStateFreezing`, `advance`, `applyAction`, `applyActionWith`, `createGame`, `isChecking`, and 262 more
 - **Needs:** nothing
 - **Came from:** jarl
 - **Docs:** [README](../components/engine-core/README.md) ([rules for agents](../components/engine-core/README.md#rules-for-agents))
