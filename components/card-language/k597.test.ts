@@ -249,7 +249,7 @@ describe('card-language resolves (K597, K605): third look', () => {
     const custom = (viewSafe: boolean) => ({
       nine: { run: (ctx: Ctx<G>) => void (draftOf(ctx).res = { ...ctx.s.res, a: { gold: 9 } }), text: () => 'Nine.', viewSafe },
       keep: { run: (ctx: Ctx<G>) => void (draftOf(ctx).res = { ...ctx.s.res, b: { gold: 1 } }), text: () => 'Keep.', viewSafe },
-      zones: { run: (ctx: Ctx<G>) => void (draftOf(ctx).zones = { ...ctx.s.zones }), text: () => 'Zones.', viewSafe },
+      zones: { run: (ctx: Ctx<G>) => void (draftOf(ctx).zones = { ...ctx.s.zones } as never), text: () => 'Zones.', viewSafe },
       drewTwo: { run: (ctx: Ctx<G>) => void (cardsIn(ctx.s, 'hand:a').includes('d2') && (draftOf(ctx).res = { a: { gold: 9 } })), text: () => 'Drew two.', viewSafe },
       ask: {
         run: (ctx: Ctx<G>, st: PackStep, env: PackEnv) => askVerb(ctx, { kind: 'ask', seat: env.seat, min: 1, max: 1, options: [{ id: 'x', enabled: true }, { id: 'y', enabled: true }] }, st, env),
