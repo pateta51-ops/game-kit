@@ -114,5 +114,8 @@
   { "q": "hidden movement", "first": "K576" },
   { "q": "two games one app", "first": "none" },
   { "q": "weapon ammo", "first": "none" },
-  { "q": "suit change", "first": "none" }
+  { "q": "suit change", "first": "none" },
+  { "q": "hand limit discard event", "first": "card-zones" },
+  { "q": "zone capacity on leave hook", "first": "card-zones" },
+  { "q": "cards leave over limit callback", "first": "card-zones" }
 ]
