@@ -45,4 +45,6 @@ const cost = numberParts(printed, [...printedMods, ...effectModifiers(s, toMod, 
 const canPay = have >= cost.value; // the label, the plan and the bar reason read cost.value and cost.parts too
 ```
 
+On the standard verb pack of `card-language` (K583) the game does not rewrite cost steps: it returns `cost.value` from `cardPack({ due })`, and the pack's can-pay check, payment, would-change check and bar reason read it; `pack.costed(s, steps, env)` gives the steps with that amount for the label.
+
 Tests: `numbers.test.ts`.
