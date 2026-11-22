@@ -361,6 +361,7 @@ The blind matching test's result was not recorded: the PR, its comments and docs
 | K669 | card-harness: `describeCheck` reports raw keys, empty brackets and stand-in numbers in a reading, keeps an accepted list with stale failure and a tokens-only mode; `parseReadings` applies readings in recorded order. | S |  | done |
 | K670 | layout-editor: optional per-zone `card: [w, h]` overriding the screen card size in drawing, cardFit and layoutWarnings; editable in the Zone panel. For screens that mix portrait, landscape and large cards. | S |  | done |
 | K675 | kit check: components declare bypass patterns; `kit.mjs check` fails a game that goes around a kit part, naming the hook to use; first patterns for motion-frame and sound-player. | M |  | done |
+| K684 | finish: every new src file is listed under 'Built new' with two kit searches, the nearest part and why it did not fit. | M |  | done |
 
 ## Asked for by the owner
 
