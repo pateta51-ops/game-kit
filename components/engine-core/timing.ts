@@ -114,7 +114,7 @@ export interface TimingConfig<G extends GameTypes> {
   chooser?(s: G['state'], occ: Occurrence): string;
   /** The game's prompt from the kit's options (default: those as they are). */
   prompt?(base: Pick<KernelPrompt, 'options' | 'min' | 'max'>, info: TimingPromptInfo): Omit<G['prompt'], 'id'>;
-  /** K94: the abilities that answer a happened occurrence. K296: `content` is the game's content (`ctx.content`). K696: `batch` is the happened occurrences of its batch settling together, in order (read-only). */
+  /** K94: the abilities that answer a happened occurrence. K296: `content` is the game's content (`ctx.content`). K696: `batch` is every occurrence that happened in this settle (all batches collected together, so all `simultaneously` members), by id, frozen copies. */
   triggersFor?(s: G['state'], occ: Occurrence, content: G['content'], batch: readonly Occurrence[]): readonly TriggerCandidate[];
   /** K94: resolves one trigger (may ask, push tasks). */
   resolveTrigger?(ctx: Ctx<G>, t: PendingTrigger): void;

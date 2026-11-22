@@ -11,18 +11,30 @@ Built to `docs/patterns/timing-vocabulary.md`. Nothing changes for a game that n
 - **Settle.** Happened and cancelled occurrences stay until `takeSettled(ctx)` (K95 will collect triggers there).
 - **Triggers (K94).** Push `timing.triggers` where the after-window opens: it collects occurrences of fully settled batches through `cfg.triggersFor` (`TriggerCandidate`: `once` `perItem` gives one `PendingTrigger` per occurrence, `perInstance` one per batch with all its occurrences; sources named by `enteredPlay(ctx, source)` after an occurrence happened do not answer it), then resolves `state.timing.pending` one at a time, re-collecting after each: players in `cfg.turnOrder` (active first); within one player a prompt (`orderPrompt`, option ids `String(t.id)`) only when one is `interactive` and more than one is not `silent`, else `cfg.priority` (default `DEFAULT_PRIORITY`, `{ auto: key }`), then ability key, then id. Before each: `cfg.invalid` gives a reason to drop it (event `cfg.dropped`), else `cfg.resolveTrigger`. The list stays a flat queue: nested triggers join it; `cfg.triggerCap` (default `TRIGGER_CAP` 200 per chain) drops the rest with `cfg.capped`'s event; `cfg.afterTrigger` runs after each trigger and its follow-ups (K95's checkpoint hook). `cancelBatch` drops the batch's pending triggers.
 - **Content in trigger hooks (K296).** `triggersFor(s, occ, content)`, `invalid(s, t, content)` and `held(s, t, content)` get the game's content (`ctx.content`) as their last argument, so a trigger table kept in content needs no module variable.
-- **The batch in `triggersFor` (K696).** `triggersFor(s, occ, content, batch)`: `batch` is the happened occurrences of `occ`'s batch that settle together, in the order they happened (read-only; the same list for each of them). A game marks a trigger `interactive` only when the order of the batch changes the result, else `silent`, so the order prompt opens only when it matters. A game that ignores it behaves as before.
-- **Recipe: ask the order only when it matters (K696, `k696.test.ts`).** A value that resets to 1 when it reaches 6 gets two gains in one batch (two gains; for more, compare every order):
+- **The batch in `triggersFor` (K696).** `triggersFor(s, occ, content, batch)`: `batch` is every occurrence that happened in this settle, the ones whose triggers share one order prompt: all batches collected together (each `simultaneously` member's own `would` batch, an occurrence a replacement made instead), by id, the same list for each of them. Cancelled occurrences (and the one a replacement replaced) are not in it; a batch a trigger's effect makes settles later and sees only its own. It is a frozen array of frozen shallow copies (`occ` is passed as before, not frozen). A game marks a trigger `interactive` only when the order of the batch changes the result, else `silent`, so the order prompt opens only when it matters. A game that ignores it behaves as before.
+- **Recipe: ask the order only when it matters (K696, `k696.test.ts`).** A value (`hp`) that resets to 1 when it reaches 6 gets two gains settling together (two gains; for more, compare every order). The test runs this block and checks it against this text:
   ```ts
   const end = (v: number, ns: readonly number[]) => ns.reduce((x, n) => (x + n >= 6 ? 1 : x + n), v);
-  triggersFor: (s, _o, _content, batch) => {
-    const ns = batch.map((x) => x.amount ?? 0);
-    const order = end(s.hp, ns) === end(s.hp, [...ns].reverse()) ? 'silent' : 'interactive';
-    return [{ ability: 'gain', source: 'v', player: 'p2', order }];
-  },
+  const recipe: Partial<TimingConfig<Timed>> = {
+    triggersFor: (s, _o, _content, batch) => {
+      const ns = batch.map((x) => x.amount ?? 0);
+      const order = end(s.hp, ns) === end(s.hp, [...ns].reverse()) ? 'silent' : 'interactive';
+      return [{ ability: 'gain', source: 'v', player: 'p2', order }];
+    },
+  };
   ```
   From 4, +2 and +1 asks the order (2 or 1); from 1, +1 and +1 asks nothing (3).
-- **Content in `replacementsFor` (K697).** `replacementsFor(s, occ, content)` gets the game's content (`ctx.content`), as `triggersFor` does, so a replacement that card data switches on is offered only where the data says so, not offered everywhere and declined in `applyReplacement`: `replacementsFor: (_s, o, content) => (content?.cards?.[o.keys.source ?? '']?.doubles === true ? [DOUBLE] : [])` (`k696.test.ts`). A game that ignores it is unchanged.
+- **Content in `replacementsFor` (K697).** `replacementsFor(s, occ, content)` gets the game's content (`ctx.content`), as `triggersFor` does, so a replacement that card data switches on is offered only where the data says so, not offered everywhere and declined in `applyReplacement`. A game that ignores it is unchanged. Recipe (`k696.test.ts` runs it and checks it against this text; the content holds `cards`, the card data by id):
+  ```ts
+  const DOUBLE: Replacement = { id: 1, controller: 'p1', cls: 1, label: 'Double' };
+  const double: Partial<TimingConfig<Timed>> = {
+    replacementsFor: (_s, o, content) => (content?.cards?.[o.keys.source ?? '']?.doubles === true ? [DOUBLE] : []),
+    applyReplacement: (ctx, _r, o) => {
+      changeOccurrence(ctx, o.id, { amount: (o.amount ?? 0) * 2 });
+      return 'updated';
+    },
+  };
+  ```
 - **Held triggers (K292).** `cfg.held(s, t)` true keeps a pending trigger in `state.timing.pending`: `timing.triggers` skips it (and the cap leaves it), and the checkpoint's step 5 opens no after-window when only held ones are pending. `TriggerCandidate.timing` (`when` / `after`, from card-language's `When.timing`) is copied onto the `PendingTrigger` for `held` to read. The game pushes `timing.triggers` where it stops holding (effect end, game action end); the triggers released together then order as above (prompt or priority). With `batchEndAfterTriggers`, a batch's effects last until its held triggers have resolved. A game that never pushes `timing.triggers` again leaves held triggers pending, with no error. Example: an effect is [hit, rest]; a "when" response to the damage interrupts it, an "after" one waits for the effect:
   ```ts
   held: (s, t) => t.timing === 'after' && s.stack.some((x) => x.kind === 'effectEnd'),
