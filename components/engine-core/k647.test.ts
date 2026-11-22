@@ -596,6 +596,25 @@ describe('E B17: a forced choice taken without asking gives the same game as ask
     expect(hashState({ ...taken, promptSeq: 0 })).toBe(hashState({ ...asked, promptSeq: 0 }));
     expect(hashState(taken)).not.toBe(hashState(asked));
   });
+  it('E B17 K652 a later prompt has the same id whether the earlier single-answer prompt was taken or asked', () => {
+    const later = (take: boolean) => {
+      const g = playGame({}, {
+        play: (ctx) => {
+          ctx.then({ kind: 'chosen' });
+          const p = { ...pickOne('rescue', ['a']), options: [{ id: 'a', enabled: true }, bar('b', 'noTarget')] };
+          if (take) askOrTake(ctx, p);
+          else ctx.ask(p);
+        },
+        chosen: (ctx) => ctx.ask(pickOne('next', ['x', 'y']), { kind: 'noop' }),
+        noop: () => undefined,
+      });
+      const s = go(g);
+      return take ? s : pick(g, s, 'a');
+    };
+    const [t, a] = [later(true), later(false)];
+    expect([t.prompt?.kind, a.prompt?.kind]).toEqual(['next', 'next']);
+    expect(t.prompt?.id).toBe(a.prompt?.id);
+  });
 });
 
 describe('E B23: cancel an action until hidden information is revealed (K647)', () => {
