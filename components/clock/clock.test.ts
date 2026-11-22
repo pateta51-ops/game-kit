@@ -356,14 +356,18 @@ describe('clock', () => {
     expect(r.crossings.filter((c) => c.threshold.id === 'one').length).toBe(1)
     expect(r.crossings.filter((c) => c.threshold.id === 'lap').length).toBe(1000)
     expect(r.crossings.every((c) => c.from === 5 && c.to === r.state.value)).toBe(true)
-    expect(r).toEqual(step(spec, newClock(spec), 12000 + 1e9 % 12))
+    expect([r.state, r.crossings, r.cut]).toEqual([step(spec, newClock(spec), 12000 + 1e9 % 12).state, step(spec, newClock(spec), 12000 + 1e9 % 12).crossings, (1e9 - 1e9 % 12) / 12 - 1000])
     expect([back.state.value, back.crossings.length]).toEqual([(((5 - 1e9) % 12) + 12) % 12, 1000])
     expect(step(spec, newClock(spec), 12000).crossings.length).toBe(1001)
     expect(step(spec, newClock(spec), 12007).crossings.length).toBe(1002)
     expect(step(spec, newClock(spec), 12012).crossings.length).toBe(1001)
-    expect(step(spec, newClock(spec), 24000 + 7)).toEqual(step(spec, newClock(spec), 12007))
+    expect(step(spec, newClock(spec), 24000 + 7)).toEqual({ ...step(spec, newClock(spec), 12007), cut: 1000 })
+    const one = step(spec, newClock(spec), 12012)
+    expect([one.state.value, one.crossings.length, one.cut, Object.keys(one)]).toEqual([5, 1001, 1, ['state', 'crossings', 'cut']])
+    expect(['cut' in step(spec, newClock(spec), 12000), 'cut' in step(spec, newClock(spec), 12011), 'cut' in step(spec, newClock(spec), 7), step(spec, newClock(spec), -12013).cut]).toEqual([false, false, false, 1])
+    expect('cut' in step({ ...spec, ends: 'stop' }, newClock(spec), 1e9)).toBe(false)
     expect(step({ ...spec, ends: 'stop' }, newClock(spec), 1e9).overrun).toBe(1e9 - 6)
-    expect(readme).toMatch(/for up to 1000 laps: a longer step lands where the full step lands and fires as a step of 1000 laps plus the rest/)
+    expect(readme).toMatch(/for up to 1000 laps: a longer step lands where the full step lands and fires as a step of 1000 laps plus the rest, and the result says so: `cut` is the number of laps not walked \(the key is absent when nothing was cut\)/)
   })
   it('K640 a step that is not a finite number throws, on a stop row and on a wrap row', () => {
     for (const ends of ['stop', 'wrap'] as const) {
@@ -373,14 +377,20 @@ describe('clock', () => {
     }
     expect(readme.split(/\r?\n/).find((l) => l.startsWith('4. '))).toMatch(/An amount that is not a finite number \(NaN, Infinity, text, nothing\) throws/)
   })
-  it('K640 checkClock reports once that is not a boolean, unknown keys, id and kind that are not text, values that is not an object of lists', () => {
+  it('K640 checkClock reports once that is not a boolean, misspelt keys (not the keys a game adds), id and kind that are not text, values that is not an object of lists', () => {
     const t = { id: 'a', at: 2, on: 'landOrPass', kind: 'k' }
     const of = (x: unknown) => checkClock(x as ClockSpec)
     for (const once of ['false', 'yes', 1, null]) expect(of({ spaces: 6, start: 0, thresholds: [{ ...t, once }] })).toEqual(['threshold a: once is not true or false'])
-    expect(of({ spaces: 4, start: 3, end: 'wrap', thresholds: [] })).toEqual(['unknown key end'])
-    expect(of({ spaces: 4, start: 3, dir: 'down', thresholds: [] })).toEqual(['unknown key dir'])
-    expect(of({ spaces: 6, start: 0, thresholds: [{ ...t, dir: 'either' }] })).toEqual(['threshold a: unknown key dir'])
-    expect(of({ spaces: 6, start: 0, thresholds: [{ ...t, onec: true }] })).toEqual(['threshold a: unknown key onec'])
+    expect(of({ spaces: 4, start: 3, end: 'wrap', thresholds: [] })).toEqual(['key end looks like a misspelt ends'])
+    expect(of({ spaces: 4, start: 3, dir: 'down', thresholds: [] })).toEqual(['key dir looks like a misspelt direction'])
+    expect(of({ spaces: 6, start: 0, thresholds: [{ ...t, dir: 'either' }] })).toEqual(['threshold a: key dir looks like a misspelt direction'])
+    expect(of({ spaces: 6, start: 0, thresholds: [{ ...t, onec: true }] })).toEqual(['threshold a: key onec looks like a misspelt once'])
+    expect(of({ spaces: 4, start: 3, threshold: [], thresholds: [], directions: 'down', Ends: 'wrap', value: {}, strat: 0 })).toEqual(['key threshold looks like a misspelt thresholds', 'key directions looks like a misspelt direction', 'key Ends looks like a misspelt ends', 'key value looks like a misspelt values', 'key strat looks like a misspelt start'])
+    expect(of({ spaces: 6, start: 0, thresholds: [{ ...t, onc: true, kin: 'k', dat: 1, directoin: 'either' }] })).toEqual(['onc', 'kin', 'dat', 'directoin'].map((k, i) => `threshold a: key ${k} looks like a misspelt ${['once', 'kind', 'data', 'direction'][i]}`))
+    for (const extra of [{ name: 'Doom' }, { id: 'doom' }, { label: 'Doom track' }, { name: undefined }]) {
+      expect(of({ spaces: 6, start: 0, thresholds: [], ...extra })).toEqual([])
+      expect(of({ spaces: 6, start: 0, thresholds: [{ ...t, label: 'x', name: undefined, zone: 2, it: 1, ...extra, id: 'a' }] })).toEqual([])
+    }
     expect(of({ spaces: 6, start: 0, thresholds: [{ ...t, id: 7 }] })).toEqual(['threshold 7: id is not text'])
     expect(of({ spaces: 6, start: 0, thresholds: [{ ...t, id: { x: 1 } }] })).toEqual(['threshold 0: id is not text'])
     expect(of({ spaces: 6, start: 0, thresholds: [{ ...t, kind: 5 }] })).toEqual(['threshold a: kind is not text'])
@@ -388,7 +398,7 @@ describe('clock', () => {
     for (const values of [5, null, [[1, 2, 3, 4, 5, 6]], 'x']) expect(of({ spaces: 6, start: 0, thresholds: [], values })).toEqual(['values is not an object of lists'])
     expect(of({ spaces: 6, start: 0, direction: 'down', ends: 'wrap', thresholds: [{ ...t, direction: 'either', once: false, data: { any: 1 } }, { ...t, id: 'b', once: true, data: 0 }], values: { limit: [1, 2, 3, 4, 5, 6] } })).toEqual([])
     expect(of({ spaces: 6, start: 0, direction: undefined, ends: undefined, thresholds: [{ ...t, direction: undefined, once: undefined, data: undefined }], values: undefined })).toEqual([])
-    expect(readme).toMatch(/It also reports a key it does not know/)
+    expect(readme).toMatch(/It also reports a key that looks like a misspelt one[\s\S]*Other keys of the game's own \(`name`, `label`\) pass\./)
   })
   it('K640 README on states off the row: reached takes a value between two spaces as a number, stepsTo on a wrap row may not land', () => {
     const up: ClockSpec = { spaces: 8, start: 0, thresholds: [] }

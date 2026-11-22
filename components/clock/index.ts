@@ -19,7 +19,7 @@ export interface ClockSpec<D = unknown> {
 export interface ClockState { readonly value: number; readonly fired: readonly string[] }
 export interface Crossing<D = unknown> { readonly threshold: Threshold<D>; readonly from: number; readonly to: number; readonly space: number; readonly how: 'land' | 'pass'; readonly way?: 'forward' | 'back' }
 export interface ClockOccurrence<D = unknown> { kind: string; keys: { target: string }; amount: number; space?: number; how?: 'land' | 'pass'; way?: 'forward' | 'back'; data?: D }
-export interface StepResult<D = unknown> { readonly state: ClockState; readonly crossings: readonly Crossing<D>[]; readonly overrun?: number }
+export interface StepResult<D = unknown> { readonly state: ClockState; readonly crossings: readonly Crossing<D>[]; readonly overrun?: number; readonly cut?: number }
 
 const size = (spec: ClockSpec) => typeof spec.spaces === 'number' ? spec.spaces : spec.spaces.length
 export function indexOf(spec: ClockSpec, x: Space): number {
@@ -64,7 +64,7 @@ export function step<D>(spec: ClockSpec<D>, state: ClockState, by: number): Step
     }
   })
   const overrun = wrap ? 0 : asked - path.length
-  return { state: { value: v, fired }, crossings, ...(overrun > 0 ? { overrun } : {}) }
+  return { state: { value: v, fired }, crossings, ...(overrun > 0 ? { overrun } : {}), ...(walk < asked ? { cut: (asked - walk) / n } : {}) }
 }
 export function setTo(spec: ClockSpec, state: ClockState, space: Space): ClockState {
   const value = indexOf(spec, space)
@@ -93,13 +93,20 @@ export function reached(spec: ClockSpec, state: ClockState, space: Space): boole
 export function occurrences<D = unknown>(crossings: readonly Crossing<D>[], prefix = 'clock.', detail = false): ClockOccurrence<D>[] {
   return crossings.map((c) => ({ kind: prefix + c.threshold.kind, keys: { target: c.threshold.id }, amount: 1, ...(detail ? { space: c.space, how: c.how, ...(c.way ? { way: c.way } : {}), ...(c.threshold.data === undefined ? {} : { data: c.threshold.data }) } : {}) }))
 }
+const near = (k: string, known: readonly string[]) => known.find((w) => {
+  if (w.length < 3 || k === w) return false
+  if (k.length > 2 && w.startsWith(k)) return true
+  let i = 0
+  while (k[i] === w[i]) i++
+  return k.slice(i + 1) === w.slice(i + 1) || k.slice(i + 1) === w.slice(i) || k.slice(i) === w.slice(i + 1) || (k[i] === w[i + 1] && k[i + 1] === w[i] && k.slice(i + 2) === w.slice(i + 2))
+})
 export function checkClock(spec: ClockSpec): string[] {
   if (!spec || typeof spec !== 'object') return ['spec is not an object']
   const p: string[] = []
   const s: number | readonly string[] = spec.spaces, ts: readonly Threshold[] = spec.thresholds
   if (typeof s !== 'number' && Array.isArray(s)) s.forEach((id, i) => { if (typeof id !== 'string' || !id) p.push(`space ${i} has no id`); else if (s.indexOf(id) !== i) p.push(`space id ${id} repeats`) })
   else if (!(typeof s === 'number' && Number.isInteger(s) && s > 0)) return ['spaces must be a whole number above 0 or a list of ids']
-  for (const k of Object.keys(spec)) if (!['spaces', 'start', 'direction', 'ends', 'thresholds', 'values'].includes(k)) p.push(`unknown key ${k}`)
+  for (const k of Object.keys(spec)) { const w = near(k, ['spaces', 'start', 'direction', 'ends', 'thresholds', 'values']); if (w) p.push(`key ${k} looks like a misspelt ${w}`) }
   if (indexOf(spec, spec.start) < 0) p.push(`start ${spec.start} is not a space`)
   if (spec.direction !== undefined && spec.direction !== 'up' && spec.direction !== 'down') p.push(`direction ${String(spec.direction)} is not up or down`)
   if (spec.ends !== undefined && spec.ends !== 'stop' && spec.ends !== 'wrap') p.push(`ends ${String(spec.ends)} is not stop or wrap`)
@@ -111,7 +118,7 @@ export function checkClock(spec: ClockSpec): string[] {
       const id: unknown = t.id, once: unknown = t.once, kind: unknown = t.kind, odd = !!id && typeof id !== 'string'
       const name = odd && typeof id !== 'number' ? i : t.id
       if (odd) { p.push(`threshold ${name}: id is not text`); if (name === i) continue }
-      for (const k of Object.keys(t)) if (!['id', 'at', 'on', 'direction', 'once', 'kind', 'data'].includes(k)) p.push(`threshold ${name}: unknown key ${k}`)
+      for (const k of Object.keys(t)) { const w = near(k, ['id', 'at', 'on', 'direction', 'once', 'kind', 'data']); if (w) p.push(`threshold ${name}: key ${k} looks like a misspelt ${w}`) }
       if (once !== undefined && typeof once !== 'boolean') p.push(`threshold ${name}: once is not true or false`)
       if (kind && typeof kind !== 'string') p.push(`threshold ${name}: kind is not text`)
       if (indexOf(spec, t.at) < 0) p.push(`threshold ${t.id}: at ${t.at} is not a space`)
