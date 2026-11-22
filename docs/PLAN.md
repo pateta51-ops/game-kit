@@ -345,6 +345,7 @@ The blind matching test's result was not recorded: the PR, its comments and docs
 | K640 | `clock`: edges from the second review: fractional and huge steps, states off the row, a stricter spec check, every README line run by a test, steps back on a looping row. | S | kit steward (second review of the part) | done |
 | K645 | sim-pool: `fuzzMain`, the whole-game report and the legal-move driver accept, besides a `GameRules<G>`, an engine port for a game with its own engine (engine-core `EnginePort`, as card-harness and saves do since K390 and K419); games on engine-core run unchanged. | M | Unstoppable (plan 3.14, 22 Nov 2026); Imperium, STCC and Rome on the same retrofit path | open |
 | K648 | card-harness: expectNotOffered accepts only the engine's refusal; a crash inside the attempt fails the test. | S |  | done |
+| K655 | grid-map `lineOfSight` option `insetCorners`: sight lines run between the corners moved 1/1000 of a side into each cell, so a corridor walled on both sides sees along itself and a wall a space touches still blocks; default unchanged. | S | Dice Commandos | done |
 
 ## Asked for by the owner
 
