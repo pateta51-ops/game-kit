@@ -49,7 +49,7 @@
     { "words": "hooks at fixed engine timings, rules that always apply run in source order", "row": "K425", "note": "today: engine-core timing.md continuous effects", "sheet": "triggers" },
     { "words": "state check, lose at zero, hand limit, hand size, hand size discard", "part": "engine-core", "read": "recipe timing.md step 6, `checkpoint` of `TimingConfig`, `StateCheck` (`checkpoint.ts`)", "sheet": "run-out" },
     { "words": "objective, goal, win condition, lose condition, progress toward a goal, objective win condition, scenario goal", "part": "engine-core", "read": "recipe timing.md step 6, `StateCheck` (`checkpoint.ts`) for win and lose", "also": ["turn-flow"], "missing": "objective state with progress, and objectives per scenario", "row": "K546", "sheet": "objectives" },
-    { "words": "status, condition, stunned, named state on a unit", "part": "engine-core", "read": "timing.md, lasting effects with durations (`addEffect`, `boundary`)", "also": ["card-attachments"], "missing": "named conditions as data; `card-attachments` `TokenRow` only draws their tokens", "row": "K542", "sheet": "lasting" },
+    { "words": "status, condition, stunned, named state on a unit, give a status to a unit, stunned until end of turn, status condition token, stacking status, wound count", "part": "engine-core", "read": "its README \"Statuses (K542)\": `giveStatus`, `removeStatus`, `hasStatus`, `statusCount`, `statusesOf`, `statusLeft` over a `StatusTable` (token, stacks, ends, endsOnLeave)", "also": ["card-attachments"], "sheet": "lasting" },
     { "words": "legal moves, legal options, what can be done now", "part": "engine-core", "read": "legal.md, `legalTable`, `legalIn`", "also": ["board-registry"], "sheet": "offered" },
     { "words": "why disabled, why an option is barred, reason a move is not allowed", "part": "engine-core", "read": "legal.md, `bar`, `blocked` with reason codes", "sheet": "offered" },
     { "words": "preview, outcome before choosing, what would happen", "part": "engine-core", "read": "legal.md, `preview` (stops at hidden information)", "sheet": "offered" },
@@ -101,7 +101,7 @@
     { "words": "host leaves play with its attachments, attached cards go too", "row": "K538", "sheet": "levels" },
     { "words": "face-down card view, hidden card for the other seat", "part": "card-zones", "read": "its README, `viewOf` (a hidden card is a back), `canSee`, `reveal`", "missing": "one face-down card inside a zone the seat may otherwise see", "row": "K539", "sheet": "hidden" },
     { "words": "lasts until a named end point, open duration, until end of combat, duration named end point, lasts until event, for this combat, until the next", "part": "engine-core", "read": "timing.md, `addEffect` with `{ until: 'event', event, instance }` and `eventOver` (the game fires its named event once; scoped by instance)", "sheet": "lasting" },
-    { "words": "named lasting effect with a token, status token, condition token", "row": "K542", "sheet": "lasting" },
+    { "words": "named lasting effect with a token, status token, condition token", "part": "engine-core", "read": "its README \"Statuses (K542)\": `StatusDef` `token`, read with `statusesOf`; card-attachments `TokenRow` draws them", "also": ["card-attachments"], "sheet": "lasting" },
     { "words": "place dice on slots, die value to yield table, dice group placement, dice placement", "part": "dice-patterns", "read": "its README \"Kinds\", `face` (the rule for a slot that takes one named face)", "missing": "the slots, placing a die on one, and the table from die value to yield", "row": "K543", "sheet": "dice" },
     { "words": "layered grid, stacked tiles on a grid, overlapping tiles, grid stack footprint, stack footprint", "row": "K544", "sheet": "positions" },
     { "words": "objectives with progress, goal per scenario", "row": "K546", "sheet": "objectives" },
@@ -127,6 +127,9 @@
     { "words": "response window, timing window prompt, play a response now, reaction window, pass", "part": "engine-core", "read": "recipe timing.md (windows)", "missing": "one prompt that offers every response legal at a window, with a pass", "row": "K646", "sheet": "triggers" }
   ],
   "searches": {
+    "status condition token": "engine-core",
+    "give a status to a unit": "engine-core",
+    "stunned until end of turn": "engine-core",
     "undo button": "engine-core",
     "line of sight": "grid-map",
     "wall": "grid-map",

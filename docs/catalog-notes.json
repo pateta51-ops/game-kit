@@ -848,7 +848,13 @@
       "until end of combat",
       "duration named end point",
       "lasts until event",
-      "named end point"
+      "named end point",
+      "status",
+      "condition",
+      "stunned",
+      "status token",
+      "give a status",
+      "wound"
     ],
     "visible": false,
     "release": 1,
