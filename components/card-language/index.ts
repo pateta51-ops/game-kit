@@ -24,6 +24,8 @@ export interface Verb<G extends GameTypes, S, E = unknown> {
   readonly text: ((step: S) => string) | null;
   /** K232: runs when the verb's own prompt is answered (`askVerb`): the task comes back with the answer. */
   readonly resume?: (ctx: Ctx<G>, step: S, env: E | undefined, answer: readonly string[]) => void;
+  /** K597: the row reads no card that came into view, so `pack.resolves` runs it after one, with `ctx.s` a view that stops on a read of such a card. */
+  readonly viewSafe?: boolean;
 }
 
 /** One row per verb of the game's step union: a missing verb fails to compile. */

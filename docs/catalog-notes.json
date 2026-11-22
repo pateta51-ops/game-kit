@@ -360,7 +360,16 @@
       "tax",
       "discount",
       "cannot know",
-      "hidden cards"
+      "hidden cards",
+      "resolve in full",
+      "resolve in part",
+      "partial resolution",
+      "full or partial",
+      "why not offered",
+      "why is an effect not offered",
+      "reason",
+      "no target",
+      "condition false"
     ],
     "visible": false,
     "release": 1,

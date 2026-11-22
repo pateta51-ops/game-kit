@@ -2,17 +2,8 @@ import { describe, expect, it } from 'vitest';
 import { applyAction, createGame, enumerateAnswers, hashState, type KernelPrompt } from '../engine-core/index.ts';
 import { cardPack, inDryRun, type OfferPolicy, type PackEnv, type PackStep } from './pack.ts';
 import { cardPack as frozenPack } from './pack.k579.frozen.ts';
-import { changed, DRAW, GAIN, marked, NOTHING, offerGame, pay, viewOf, type Eff, type G, type S } from './offerGame.ts';
+import { changed, DRAW, GAIN, gen, marked, NOTHING, offerGame, pay, rng, viewOf, type Eff, type G, type S } from './offerGame.ts';
 
-// K583: random small effects on the made-up game (fixed seeds, no clock). `rnd` is a plain generator kept in the test.
-const rng = (seed: number) => {
-  let x = seed;
-  const rnd = (n: number): number => {
-    x = (Math.imul(x, 1103515245) + 12345) >>> 0;
-    return (x >>> 8) % n;
-  };
-  return { rnd, of: <T,>(xs: readonly T[]): T => xs[rnd(xs.length)] as T };
-};
 const A: PackEnv = { seat: 'a', source: 'p1' };
 const custom = (name: string): PackStep => ({ op: 'custom', name });
 const has = (e: Eff, f: (st: PackStep) => boolean): boolean => e.some((st) => f(st) || Object.values(st).some((v) => Array.isArray(v) && typeof v[0] === 'object' && (Array.isArray(v[0]) ? (v as Eff[]).some((o) => has(o, f)) : has(v as Eff, f))));
@@ -48,37 +39,6 @@ describe('card-language offer policy (K583): with no new setting the pack answer
     { noChange: 'bar', deadChoice: 'skip', cost: 'whole', fewer: 'exact', unknown: 'skip', view: ({ zones, res, marks }) => ({ zones, res, marks }) },
   ];
   const games = POLICIES.map((offer) => ({ offer, now: offerGame(cardPack<G>, { offer }), then: offerGame(frozenPack<G>, { offer }) }));
-  const gen = (seed: number) => {
-    const { rnd, of } = rng(seed);
-    const leaf = (): PackStep => of<() => PackStep>([
-      () => GAIN, () => NOTHING, () => NOTHING, () => DRAW, () => pay(1), () => pay(9), () => custom('nothing'), () => custom('lone'), () => custom('order'), () => custom('roll'),
-      () => custom('win'), () => custom('boom'), () => custom('back'), () => custom('pairs'), () => custom('nest'), () => custom('attempt'), () => custom('spend'),
-      () => ({ op: 'adjust', key: 'gold', by: -1 }), () => ({ op: 'adjust', key: 'gold', by: 1, max: 3 }), () => ({ op: 'gainResource', res: 'gold', amount: 'X' }),
-      () => ({ op: 'discard', cards: 'chosen' }), () => ({ op: 'move', cards: 'chosen', to: 'discard' }), () => ({ op: 'exhaust' }), () => ({ op: 'ready' }), () => ({ op: 'shuffle', zone: of(['deck', 'aside', 'play']) }),
-      () => ({ op: 'lookAt', cards: 'all', from: of(['hand', 'play', 'deck']) }), () => ({ op: 'reveal', cards: 'all', from: of(['hand', 'play']) }), () => ({ op: 'lookAt', count: 1 }),
-      () => ({ op: 'if', test: of(['two', 'h2', 'poor', 'rich', 'b3', 'ends']), then: [of([GAIN, DRAW, NOTHING])] }),
-      () => ({ op: 'later', at: 'end', then: [GAIN] }), () => ({ op: 'search', zone: 'deck', filter: 'even' }), () => ({ op: 'search', zone: 'aside' }),
-    ])();
-    const eff = (depth: number): PackStep[] => Array.from({ length: 1 + rnd(2) }, () => step(depth));
-    const cost = (): PackStep[] => Array.from({ length: 1 + rnd(2) }, () => of<() => PackStep>([() => pay(1), () => pay(2), () => pay(9), () => custom('have'), () => custom('nothing'), () => ({ op: 'discard', count: 1 }), () => ({ op: 'exhaust' }), () => ({ op: 'mill', count: 1 })])());
-    const step = (depth: number): PackStep => (depth === 0 || rnd(4) === 0 ? leaf() : of<() => PackStep>([
-      () => ({ op: 'may', then: eff(depth - 1) }),
-      () => ({ op: 'chooseOption', options: [eff(depth - 1), eff(depth - 1)] }),
-      () => ({ op: 'chooseCards', zone: of(['hand', 'hand', 'hand:b', 'aside', 'deck']), min: rnd(3), max: 2 + rnd(2), then: eff(depth - 1) }),
-      () => ({ op: 'chooseCards', zone: of(['hand', 'hand:b']), min: rnd(2), max: 1, then: eff(depth - 1) }),
-      () => ({ op: 'orderEffects', effects: Array.from({ length: 2 + rnd(2) }, () => eff(depth - 1)) }),
-      () => ({ op: 'chooseNumber', max: 2, then: eff(depth - 1) }),
-      () => ({ op: 'seq', steps: [{ op: 'scout', count: 2 }, ...eff(depth - 1)] }),
-      () => ({ op: 'if', test: of(['two', 'h2', 'poor', 'b3']), then: eff(depth - 1) }),
-      () => ({ op: 'payThen', cost: cost(), then: eff(depth - 1) }),
-      () => ({ op: 'choosePayment', ways: [cost(), cost()], then: eff(depth - 1) }),
-      () => ({ op: 'eachPlayer', then: eff(depth - 1) }),
-      () => ({ op: 'choosePlayer', then: eff(depth - 1) }),
-      () => ({ op: 'forEach', then: eff(depth - 1) }),
-      () => ({ op: 'count', what: 'held', then: eff(depth - 1) }),
-    ])());
-    return eff;
-  };
   const safe = (f: () => string): string => {
     try {
       return f();
