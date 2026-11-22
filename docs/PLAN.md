@@ -348,6 +348,7 @@ The blind matching test's result was not recorded: the PR, its comments and docs
 | K649 | screenProblems: an amount must appear outside icon codes; a counted amount is tied to the value the run computed, and stray digits do not pass. | S | Unstoppable | done |
 | K650 | card-harness: one known-findings list for every card check: an owner per line, new and stale lines fail, a closed owner fails, writing lines is its own command that prints its count, and a release mode fails while any line is left. | S |  | done |
 | K655 | grid-map `lineOfSight` option `insetCorners`: sight lines run between the corners moved 1/1000 of a side into each cell, so a corridor walled on both sides sees along itself and a wall a space touches still blocks; default unchanged. | S | Dice Commandos | done |
+| K661 | card-harness `expectNotOffered`/`expectNotFired`: an optional `clauseOf(x)` maps a game's own option, prompt and event shapes to clause ids. | S |  | done |
 
 ## Asked for by the owner
 
