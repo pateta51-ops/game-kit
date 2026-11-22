@@ -410,5 +410,8 @@
   { "q":"play whole games by script e2e","first":"sim-pool" },
   { "q":"music state machine layers by game state","first":"sound-player" },
   { "q":"all end spaces of a move with distinct paths","first":"grid-map" },
-  { "q":"ready exhausted cards at round start","first":"tap" }
+  { "q":"ready exhausted cards at round start","first":"tap" },
+  { "q":"force a dice roll in a test","first":"dice-tray" },
+  { "q":"dice tray roll name override","first":"dice-tray" },
+  { "q":"named dice roll","first":"dice-tray" }
 ]

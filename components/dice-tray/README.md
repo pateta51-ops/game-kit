@@ -12,7 +12,8 @@ Pure logic of a dice tray and its roll window (K211), opt-in, unstyled; the game
 3. Treat the tray as immutable: every function returns a new tray (`roll` returns `{ tray, rolled }`).
 4. Use `readRoll(tray, meanings)` with your own `Meaning { id, test, label }` list; the kit has no game meanings.
 5. Drive the roll window with `rollWindow`/`step` and the pick helpers in order: token, die, then + or -; die taps before a token are ignored.
-6. Animate through `rollWith(tray, rng, { onRoll })`; it is off unless given.
+6. To force a roll in a test give it a `name` and override that name; never swap `ctx.rng`.
+7. Animate through `rollWith(tray, rng, { onRoll })`; it is off unless given.
 
 **Common mistakes:**
 - Expecting `roll` to roll held dice: it skips them unless named in `only`.
@@ -20,7 +21,8 @@ Pure logic of a dice tray and its roll window (K211), opt-in, unstyled; the game
 
 
 - `newTray(specs)`: dice in play, each a sides number or `{sides, kind}`; value 0 until rolled.
-- `roll(tray, rng, only?)`: rolls every die not held (or only those ids) with `rng.int(sides) + 1`, in die order; pass `ctx.rng` so the roll is seeded and replayable (never `Math.random`). Returns `{tray, rolled}`.
+- `roll(tray, rng, only?, name?)`: rolls every die not held (or only those ids) with `rng.int(sides) + 1`, in die order; pass `ctx.rng` so the roll is seeded and replayable (never `Math.random`). Returns `{tray, rolled}`.
+- `name` (also on `rollWith(tray, rng, hook?, only?, name?)` and `rerollSelected(tray, rng, sel, name?)`) is passed to every `rng.int(sides, name)`; in a test `setRngOverrides({ attack: ... })` (engine-core `random.md`) forces that one named roll, one call per die in die order (the override returns the 0-based face), e.g. "attack" to [6,2] and "defense" to [3]. No name: unchanged (K692).
 - `toggleHold`, `hold`, `heldDice`, `adjust(tray, id, +-1)` (stays in 1..sides), `remove`, `values`.
 - `readRoll(tray, meanings)`: the roll window's content: values, sum, and every `Meaning {id, test, label}` that holds.
 - `rollWindow`/`step`, `winPickToken`/`winPickDie`/`winBack`/`adjustId`: the tap order token, die, then + or - as a pick state (die taps before a token are ignored).
