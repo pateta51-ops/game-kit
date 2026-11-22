@@ -371,7 +371,7 @@ Card tests on real cards. Test code only; the engine imports nothing here but `c
 The card-language shell (K206): card effects as data, one typed verb table where each verb has a field check, a handler that runs on engine-core and a text generator that prints the card's words from the same step. The game writes its own verbs; the standard pack (K232, `pack.ts`) gives the common ones.
 
 - **Also called:** Card effects written as data
-- **Words:** card, effects, data, verbs, text, validator, rules, language, offered, can resolve, unpayable cost, dry run
+- **Words:** card, effects, data, verbs, text, validator, rules, language, offered, can resolve, unpayable cost, dry run, would change nothing, offer, offer policy, no change, effect offered
 - **Release:** 1.0; not seen
 - **The game supplies:** The verbs, with their field checks, handlers and text.
 - **Use it when:** A new game encodes card effects as data: verb table with handler, resume and text slots, validator, every-verb test; the standard verb pack (cardPack) on card-zones: draw, discard, mill, move, putIntoPlay, setAside, recall, gain, refill, shuffle, search, destroy, attach, detach, reveal, lookAt, scout, flip, exhaust, ready, chooseCards, chooseOption, may, chooseNumber, chooseDestination, choosePlayer, choosePayment, orderEffects, gainResource, pay, convert, adjust, seq, if, forEach, eachPlayer, repeat, count, later, payThen, custom; every card move through timing would; words overridable. Recipe: docs/recipes/card-effect.md.
@@ -561,12 +561,12 @@ Pull this component and use it where it is: a game never edits or copies its `ki
 A clock as rules data: a marker on a row of spaces (countdown, round tracker, danger track) that steps forward or back, with thresholds that fire as it lands on or passes a space, and per-space values read from where it stands. Pure functions, no packages, nothing drawn (K530).
 
 - **Also called:** Clock or countdown with thresholds
-- **Words:** clock, countdown, round tracker, round, tracker, threshold, timer, doom track, marker, limit, lose space, track, lose
+- **Words:** clock, countdown, round tracker, round, tracker, threshold, timer, doom track, marker, limit, lose space, track, lose, overrun, track overrun, distance to space, distance, space, dry run
 - **Release:** 1.0; not seen
 - **The game supplies:** The spaces, start, direction, thresholds with their kinds and data, and per-space values.
 - **Use it when:** A marker on a row of spaces as rules data (countdown, round tracker, danger or doom track): steps forward or back by the game's number, thresholds that fire on landing or passing (lose, trigger, reward, limit) in order, once-only thresholds, per-space values such as a limit read from the marker's row; a lose space anywhere on the row, on landing or on passing; crossings become engine-core occurrences that can carry the threshold's data and space.
 - **Not for:** Drawing the track (track); turn or round flow (turn-flow); deciding what a threshold does (the game); tokens counted without a cap, with no fixed row of spaces (a counter in the game).
-- **Key exports:** `indexOf`, `newClock`, `spaceOf`, `valueAt`, `step`, `setTo`, `left`, `ended`, `onSpace`, `reached`, `occurrences`, `checkClock`, `Space`, `Threshold`, and 5 more
+- **Key exports:** `indexOf`, `newClock`, `spaceOf`, `valueAt`, `step`, `setTo`, `stepsTo`, `left`, `ended`, `onSpace`, `reached`, `occurrences`, `checkClock`, `Space`, and 6 more
 - **Needs:** nothing
 - **Came from:** none
 - **Docs:** [README](../components/clock/README.md) ([rules for agents](../components/clock/README.md#rules-for-agents))
