@@ -4,6 +4,17 @@ Rounds, turns per seat and phases and steps inside a turn as one data table; the
 
 ## Rules for agents
 
+<!-- hooks: written by scripts/catalog.mjs from docs/catalog-notes.json; do not edit -->
+**Hooks a game calls:**
+- `FlowConfig` + `flowHandlers` + `startFlow`: rounds, turns and phases from one table
+- `endTurn`: end a turn early, pass
+- `flowOf` + `whoseTurn`: whose turn it is and which phase
+- `skip`: skip a turn or a phase
+- `roundEnds` + `over`: end the round and end the game
+- `LimitTable` + `limitOption` + `markLimit`: once per turn, once per round or once per game
+- `expireEffects`: drop effects that ended at the end of a turn, phase or round
+<!-- /hooks -->
+
 **What it does:** Rounds, turns per seat and phases or steps inside a turn as one data table; a runner walks it and calls engine-core `boundary()` so turn, phase and round durations end without manual calls.
 
 **You must:**

@@ -299,7 +299,9 @@ if (cmd === 'pull') {
     const pur = (purpose ?? '').split(/(?<=\.)\s/)[0].slice(0, 200)
     const exl = cmd === 'search' ? exportsOf(n) : []
     const sfx = (hit) => hit.length ? ' [export: ' + hit.slice(0, 8).join(', ') + ']' : ''
-    ents.push({ id: toks(n), title: toks(n + ' ' + title + ' ' + bullet(t, 'Words')), use: toks(pur + ' ' + u + ' ' + bullet(t, 'Looks like')), ex: exl.map((e) => toks(e).concat(toks(e.toLowerCase()))), exl, eff: false,
+    // K685: each "- **Hook:** name + name: what it does" line of the catalogue; a hook holding every query word ranks its component first and prints under it
+    const hk = t.filter((l) => l.startsWith('- **Hook:** ')).map((l) => l.slice(12).trim()).map((h) => ({ h, t: toks(h).concat(toks(h.toLowerCase())) }))
+    ents.push({ id: toks(n), title: toks(n + ' ' + title + ' ' + bullet(t, 'Words')), use: toks(pur + ' ' + u + ' ' + bullet(t, 'Looks like')), ex: exl.map((e) => toks(e).concat(toks(e.toLowerCase()))), exl, eff: false, hk,
       line: (hit) => title ? title + ' (`' + n + '`): Use: ' + u + sfx(hit) : n + ': ' + pur + ' ' + (u ? '(use when: ' + u.replace(/\.$/, '') + '.)' : '') + sfx(hit),
       listLine: title ? n + ': ' + title + '. Use: ' + u : n + ': ' + (use ?? '').replace('- **Use it when:** ', '(use when: ') + (use ? ')' : '') })
     // K524: a part inside a big part is its own entry, naming the guide to read
@@ -349,9 +351,9 @@ if (cmd === 'pull') {
   const w3 = (e, w) => hasTok(e.title, w) ? 3 : hasTok(e.use, w) ? 2 : e.ex.some((x) => hasTok(x, w)) ? 1 : 0
   const pool = cmd === 'effects' ? ents.filter((e) => e.eff) : ents.filter((e) => !e.cand || cf)
   if (cmd === 'effects' && !words.length) { for (const e of pool) console.log(e.line([])); process.exit(0) }
-  const scored = pool.map((e, i) => ({ e, i, all: words.every((w) => w3(e, w)), s: words.reduce((t, w) => t + w3(e, w) + (e.id.includes(w) ? 1 : 0), 0) }))
-  const hits = scored.filter((x) => x.all).sort((x, y) => y.s - x.s || !!x.e.cand - !!y.e.cand || y.e.eff - x.e.eff || x.i - y.i)
-  for (const { e } of hits) console.log(e.line(e.exl.filter((x) => words.some((w) => !hasTok(e.title, w) && !hasTok(e.use, w) && hasTok(toks(x).concat(toks(x.toLowerCase())), w)))))
+  const scored = pool.map((e, i) => { const hh = (e.hk ?? []).filter((h) => words.length && words.every((w) => hasTok(h.t, w))); return { e, i, hh, all: hh.length > 0 || words.every((w) => w3(e, w)), s: words.reduce((t, w) => t + w3(e, w) + (e.id.includes(w) ? 1 : 0), 0) } })
+  const hits = scored.filter((x) => x.all).sort((x, y) => (y.hh.length > 0) - (x.hh.length > 0) || y.s - x.s || !!x.e.cand - !!y.e.cand || y.e.eff - x.e.eff || x.i - y.i)
+  for (const { e, hh } of hits) { console.log(e.line(e.exl.filter((x) => words.some((w) => !hasTok(e.title, w) && !hasTok(e.use, w) && hasTok(toks(x).concat(toks(x.toLowerCase())), w))))); for (const { h } of hh) console.log('  hook: ' + h) }
   if (hits.length && hits.every((x) => x.e.cand)) console.log('not built yet')
   if (!hits.length && !mhit.length) {
     for (const { e } of scored.filter((x) => !x.e.cand).sort((x, y) => y.s - x.s || y.e.eff - x.e.eff || x.i - y.i).slice(0, 3)) console.log(e.line([]))

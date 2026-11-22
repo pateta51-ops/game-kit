@@ -4,6 +4,19 @@ Card tests on real cards. Test code only; the engine imports nothing here but `c
 
 ## Rules for agents
 
+<!-- hooks: written by scripts/catalog.mjs from docs/catalog-notes.json; do not edit -->
+**Hooks a game calls:**
+- `Scenario`: build a real position and play it in a test
+- `put` + `set` + `run` + `answer`: set a position up and answer its prompts
+- `cardCase`: a full-resolve card test that quotes the printed clause
+- `expectNotOffered`: test that an ability is not offered
+- `expectNotFired`: test that a forced effect did not fire
+- `runInventory`: every printed clause is cited by a test
+- `cardsCheckMain`: the game cards check of clauses and records
+- `screenMain`: the screen text matches the engine
+- `recordPrompt` + `recordOpened`: record each prompt shown in e2e or a simulation
+<!-- /hooks -->
+
 **What it does:** Test code for card games: a `Scenario` that builds real positions and plays them, a delivery check, an inventory of printed clauses, spec rows, and a strict validator.
 
 **You must:**

@@ -4,6 +4,19 @@ A clock as rules data: a marker on a row of spaces (countdown, round tracker, da
 
 ## Rules for agents
 
+<!-- hooks: written by scripts/catalog.mjs from docs/catalog-notes.json; do not edit -->
+**Hooks a game calls:**
+- `newClock`: a marker on a track of spaces
+- `step`: move the marker and get the thresholds it met
+- `setTo`: place the marker without firing anything
+- `stepsTo`: the steps to reach a space on the track
+- `ended` + `reached`: the marker reached the end or a space
+- `overrun`: the marker cannot advance, no space left
+- `occurrences`: thresholds as engine events for triggers
+- `valueAt`: a limit that depends on the marker space
+- `checkClock`: check a track spec in a content test
+<!-- /hooks -->
+
 **What it does:** Keeps a marker on a row of spaces as JSON-safe state, steps it by the game's number, and returns the thresholds it met in order; `track` draws the same spaces.
 
 **You must:**

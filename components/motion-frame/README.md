@@ -3,6 +3,20 @@ Plays motion specs in the director's format (one JSON per beat: `actors`, `steps
 
 ## Rules for agents
 
+<!-- hooks: written by scripts/catalog.mjs from docs/catalog-notes.json; do not edit -->
+**Hooks a game calls:**
+- `holdUntil` + `autoContinueMs`: hold a beat until a condition, with a timed fallback
+- `release`: let a held beat go when the game is ready
+- `onCue` + `onDroppedCue`: play a sound on a beat, also when the beat is skipped
+- `parallel`: run a beat at the same time as the one before it
+- `play`: queue a beat and apply the next game state with commit
+- `onBeatStart` + `onBeatEnd`: set and clear screen state for one beat
+- `skipAll`: drop every queued beat on undo, load or leaving the screen
+- `skipOnInput` + `hurryOnInput`: skip or hurry the animation on a click or key
+- `withReducedMotion` + `withAutomationOff`: the motion speed setting, still in tests and under reduced motion
+- `validateSpecs`: check that every motion spec names a known verb and zone
+<!-- /hooks -->
+
 **What it does:** Plays the director's motion specs as timed beats; verbs draw, the game keeps its state.
 
 **You must:**

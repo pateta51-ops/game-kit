@@ -23,6 +23,20 @@ console.log(firstSteps(g, 'r0c0', 'r3c5', { extra }).starts, firstSteps(g, 'r0c0
 
 ## Rules for agents
 
+<!-- hooks: written by scripts/catalog.mjs from docs/catalog-notes.json; do not edit -->
+**Hooks a game calls:**
+- `gridMap`: a square grid with walls, merged spaces and turnable tiles
+- `neighbours`: the spaces next to a space
+- `distance`: how far, or no way there
+- `shortestPaths` + `firstSteps`: move one step at a time along a shortest path
+- `lineOfSight`: can one space see another past the walls
+- `area`: the spaces a square or diamond shape covers
+- `within`: the spaces within N steps
+- `rotateTile`: turn a tile 180 degrees and move its pieces
+- `extra`: a step the game allows past a wall, a door
+- `spaceAt` + `cellsOf`: space ids from row and column
+<!-- /hooks -->
+
 **What it does:** Answers "what is next to, how far, which ways, can it see, what does this shape cover" on a square grid with walls, merged spaces and turnable tiles. It holds no pieces and knows no rule of any game.
 
 **You must:**
