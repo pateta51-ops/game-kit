@@ -279,6 +279,9 @@
     "title": "Test card effects on real cards",
     "tags": [
       "card",
+      "screen amount icon",
+      "counted amount shown",
+      "prompt shows wrong number",
       "test",
       "scenario",
       "prompt",

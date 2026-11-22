@@ -11,13 +11,15 @@ export interface ScreenInput {
   /** Printed text per clause id. */
   clauses: readonly { id: string; text: string; /** Which numbers of the text are amounts (K532): a list (empty = none), or 'counted' = worked out at run time (the prompt must show some number). Unset: every number counts. */ amounts?: readonly string[] | 'counted'; /** Amounts per prompt the clause opens (K587), by its order within the clause (`step`): entry k checks the k-th prompt, each as `amounts`. Replaces `amounts` for this clause. */ promptAmounts?: readonly (readonly string[] | 'counted')[] }[];
   /** Prompts a card test scanned: their clause and the words shown (`Delivery.screens`). */
-  prompts: readonly { clause: string; shown: string; /** Option labels on screen (optional, K496). */ screenOptions?: readonly string[]; /** The engine prompt's options (optional, K496); compared with `screenOptions` one for one. */ engineOptions?: readonly unknown[]; /** 0-based order of this prompt within its clause's resolution (K587; `Delivery.screens` sets it from the second prompt on). Unset: 0, the first. */ step?: number }[];
+  prompts: readonly { clause: string; shown: string; /** Option labels on screen (optional, K496). */ screenOptions?: readonly string[]; /** The engine prompt's options (optional, K496); compared with `screenOptions` one for one. */ engineOptions?: readonly unknown[]; /** 0-based order of this prompt within its clause's resolution (K587; `Delivery.screens` sets it from the second prompt on). Unset: 0, the first. */ step?: number; /** The value the run computed for a counted amount of this prompt (K649); it must be shown. */ value?: number | string }[];
   /** Turns an engine option into its label; default `String`. */
   label?: (engineOption: unknown) => string;
   /** Clauses whose resolution opened a prompt in a card test (`Delivery.opened`). */
   opened: Iterable<string>;
   /** `[open, close]` of an icon token in printed text; default `['{', '}']`. */
   syntax?: readonly [string, string];
+  /** Icon codes whose digits are the amount (K649): a list of codes or a pattern a code matches. Other icon codes' digits are no number shown. */
+  iconAmounts?: readonly string[] | RegExp;
   /** Strip run before words are compared (plain-text's `ids.strip`). */
   strip?: (t: string) => string;
 }
@@ -56,8 +58,16 @@ export function screenProblems(i: ScreenInput): string[] {
     const e = per.get(p.clause);
     if (e) { (steps.get(p.clause) ?? steps.set(p.clause, new Set()).get(p.clause)!).add(k); if (k >= e.length) { out.push(`prompt for ${p.clause}: prompt ${String(k + 1)} has no promptAmounts entry`); continue; } }
     const a = e ? e[k] : am.get(p.clause);
-    const got = new Set(numbers(p.shown));
-    if (a === 'counted') { if (numbers(p.shown.replace(token, ' ')).length === 0) out.push(`prompt for ${p.clause}: no amount`); continue; }
+    const words = p.shown.replace(token, (m) => { const k = m.slice(o.length, m.length - c.length), ia = i.iconAmounts; return ia && (Array.isArray(ia) ? ia.includes(k) : (ia as RegExp).test(k)) ? ` ${m} ` : ' '; });
+    const got = new Set(numbers(words));
+    if (a === 'counted') {
+      if (got.size === 0) { out.push(`prompt for ${p.clause}: no amount`); continue; }
+      const v = p.value === undefined ? undefined : String(p.value), printed = numbers(text.get(p.clause) ?? '');
+      if (v !== undefined && !got.has(v)) out.push(`prompt for ${p.clause}: amount ${v} not shown`);
+      const stray = [...got].filter((n) => n !== v && !printed.includes(n));
+      for (const n of stray.slice(v === undefined ? 1 : 0)) out.push(`prompt for ${p.clause}: stray number ${n}`);
+      continue;
+    }
     const want = a ?? numbers(text.get(p.clause) ?? '');
     if (want.length > 0 && !want.some((w) => got.has(w))) out.push(`prompt for ${p.clause}: no amount`);
   }
