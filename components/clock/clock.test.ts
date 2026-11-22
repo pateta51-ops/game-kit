@@ -1,5 +1,28 @@
-import { describe, expect, it } from 'vitest'
-import { checkClock, ended, left, newClock, occurrences, onSpace, reached, setTo, spaceOf, step, valueAt, type ClockSpec } from './index.ts'
+import { spawnSync } from 'node:child_process'
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
+import { createRequire } from 'node:module'
+import { tmpdir } from 'node:os'
+import { dirname, join } from 'node:path'
+import { fileURLToPath } from 'node:url'
+import ts from 'typescript'
+import { describe, expect, it, vi } from 'vitest'
+import * as clock from './index.ts'
+import { checkClock, ended, left, newClock, occurrences, onSpace, reached, setTo, spaceOf, step, stepsTo, valueAt, type ClockSpec } from './index.ts'
+
+const here = dirname(fileURLToPath(import.meta.url))
+const readme = readFileSync(join(here, 'README.md'), 'utf8')
+const HEADINGS = ['Use it in 10 lines', 'Recipe: a dry run', 'Recipe: a lose space that is not the last']
+const block = (heading: string) => /```ts\r?\n([\s\S]*?)```/.exec(readme.split(/^## /m).find((p) => p.startsWith(heading + '\n') || p.startsWith(heading + '\r')) ?? '')?.[1] ?? ''
+const run = (heading: string): unknown => {
+  const code = block(heading)
+  expect(code, heading + ' has a ts block').not.toBe('')
+  const log = vi.spyOn(console, 'log').mockImplementation(() => undefined)
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-implied-eval
+    new Function('require', 'exports', ts.transpileModule(code, { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } }).outputText)(() => clock, {})
+    return log.mock.calls.at(-1)
+  } finally { log.mockRestore() }
+}
 
 const ids = (cs: readonly { threshold: { id: string }; how: string }[]) => cs.map((c) => `${c.threshold.id}:${c.how}`)
 
@@ -190,4 +213,93 @@ describe('clock', () => {
     expect(checkClock(null as unknown as ClockSpec)).toEqual(['spec is not an object'])
     expect(checkClock({ spaces: 3, start: 0, thresholds: [null, 5, { id: 'k', at: 1, on: 'land', kind: 'x' }] } as unknown as ClockSpec)).toEqual(['threshold 0 is not an object', 'threshold 1 is not an object'])
   })
+  it('K588 a dry run to a target space is right on a down clock (the README clock)', () => {
+    const spec: ClockSpec = { spaces: 15, start: 14, direction: 'down', ends: 'stop', thresholds: [{ id: 'out', at: 0, on: 'land', kind: 'lose' }, { id: 'half', at: 7, on: 'landOrPass', once: true, kind: 'trigger' }] }
+    const s = setTo(spec, newClock(spec), 3)
+    expect(stepsTo(spec, s, 0)).toBe(3)
+    const dry = step(spec, s, stepsTo(spec, s, 0))
+    expect([dry.state.value, ids(dry.crossings), s.value]).toEqual([0, ['out:land'], 3])
+    const top = newClock(spec)
+    expect(ids(step(spec, top, stepsTo(spec, top, 6)).crossings)).toEqual(['half:pass'])
+    expect(step(spec, setTo(spec, top, 10), stepsTo(spec, setTo(spec, top, 10), 7)).state.value).toBe(7)
+    expect(run('Recipe: a dry run')).toEqual([3, 0, ['out'], 3])
+  })
+  it('K588 stepsTo is the distance to a space: with the direction positive, against it negative, forward round a wrap', () => {
+    const up: ClockSpec = { spaces: ['a', 'b', 'c', 'd', 'e', 'f'], start: 'b', thresholds: [] }
+    expect([stepsTo(up, newClock(up), 'e'), stepsTo(up, newClock(up), 'a'), stepsTo(up, newClock(up), 'b'), stepsTo(up, newClock(up), 4)]).toEqual([3, -1, 0, 3])
+    expect(left(up, newClock(up))).toBe(4)
+    const down: ClockSpec = { ...up, direction: 'down', start: 'e' }
+    expect([stepsTo(down, newClock(down), 'b'), stepsTo(down, newClock(down), 'f')]).toEqual([3, -1])
+    const loop: ClockSpec = { spaces: 8, start: 7, ends: 'wrap', thresholds: [] }
+    expect([stepsTo(loop, newClock(loop), 2), stepsTo(loop, newClock(loop), 7), stepsTo({ ...loop, direction: 'down' }, newClock(loop), 2)]).toEqual([3, 0, 5])
+    expect(step(loop, newClock(loop), stepsTo(loop, newClock(loop), 2)).state.value).toBe(2)
+    expect(() => stepsTo(up, newClock(up), 'zz')).toThrow('clock: zz is not a space')
+    expect(() => stepsTo(loop, newClock(loop), 8)).toThrow('clock: 8 is not a space')
+  })
+  it('K588 lose-space recipe: a step back onto a land lose space loses on the step and in the state check alike', () => {
+    expect(run('Recipe: a lose space that is not the last')).toEqual(['lost', true])
+    const spec = (direction?: 'either'): ClockSpec => ({ spaces: 8, start: 7, thresholds: [{ id: 'gone', at: 5, on: 'land', ...(direction ? { direction } : {}), kind: 'lose' }] })
+    const quiet = step(spec(), newClock(spec()), -2)
+    expect([ids(quiet.crossings), onSpace(spec(), quiet.state, 5)]).toEqual([[], true])
+    const r = step(spec('either'), newClock(spec('either')), -2)
+    expect([ids(r.crossings), r.crossings[0]?.way, onSpace(spec('either'), r.state, 5)]).toEqual([['gone:land'], 'back', true])
+    expect(ids(step(spec('either'), newClock(spec('either')), -3).crossings)).toEqual([])
+  })
+  it('K588 reach-or-pass lose space: a forward threshold and reached agree on a move against the direction', () => {
+    const spec: ClockSpec = { spaces: 8, start: 3, thresholds: [{ id: 'gone', at: 5, on: 'landOrPass', kind: 'lose' }] }
+    const over = step(spec, newClock(spec), 4)
+    expect([ids(over.crossings), reached(spec, over.state, 5)]).toEqual([['gone:pass'], true])
+    const back = step(spec, over.state, -3)
+    expect([back.state.value, ids(back.crossings), reached(spec, back.state, 5)]).toEqual([4, [], false])
+    const stay = step(spec, over.state, -2)
+    expect([ids(stay.crossings), reached(spec, over.state, 5), reached(spec, stay.state, 5)]).toEqual([[], true, true])
+  })
+  it('K588 reached agrees with onSpace on a state outside the row', () => {
+    const down: ClockSpec = { spaces: 8, start: 9, direction: 'down', thresholds: [] }
+    expect(checkClock(down)).toEqual(['start 9 is not a space'])
+    expect(newClock(down).value).toBe(-1)
+    expect([reached(down, newClock(down), 5), onSpace(down, newClock(down), 5)]).toEqual([false, false])
+    const up: ClockSpec = { spaces: 8, start: 0, thresholds: [] }
+    expect([reached(up, { value: 20, fired: [] }, 5), onSpace(up, { value: 20, fired: [] }, 5)]).toEqual([false, false])
+    expect([reached(up, { value: -1, fired: [] }, 5), reached(down, { value: 20, fired: [] }, 5)]).toEqual([false, false])
+    expect([reached(up, { value: 7, fired: [] }, 5), reached(down, { value: 0, fired: [] }, 5)]).toEqual([true, true])
+  })
+  it('K588 README rule 9: the detail fields are for the caller that holds the crossings, not for a trigger', () => {
+    const rule = readme.split(/\r?\n/).find((l) => l.startsWith('9. ')) ?? ''
+    expect(rule).toMatch(/the caller that holds the crossings/)
+    expect(rule).toMatch(/A trigger or window sees only what the engine passes on/)
+    expect(readme).not.toMatch(/reader \((a )?trigger/)
+    expect(readme).not.toMatch(/a reader inside a trigger or window reads them/)
+  })
+  it('K588 a step that does not fit on a stop row says how many steps were left over', () => {
+    const spec: ClockSpec = { spaces: 15, start: 14, ends: 'stop', thresholds: [{ id: 'last', at: 14, on: 'land', kind: 'x' }] }
+    const full = step(spec, newClock(spec), 1)
+    expect([full.state.value, full.crossings.length, full.overrun, ended(spec, full.state)]).toEqual([14, 0, 1, true])
+    const part = step(spec, setTo(spec, newClock(spec), 13), 3)
+    expect([part.state.value, ids(part.crossings), part.overrun]).toEqual([14, ['last:land'], 2])
+    expect(step(spec, setTo(spec, newClock(spec), 1), -4).overrun).toBe(3)
+    const fits = step(spec, setTo(spec, newClock(spec), 13), 1)
+    expect('overrun' in fits).toBe(false)
+    expect(Object.keys(fits)).toEqual(['state', 'crossings'])
+    expect('overrun' in step(spec, newClock(spec), 0)).toBe(false)
+    const down: ClockSpec = { spaces: 4, start: 1, direction: 'down', thresholds: [] }
+    expect(step(down, newClock(down), 3).overrun).toBe(2)
+    expect(step({ ...down, ends: 'wrap' }, newClock(down), 9).overrun).toBeUndefined()
+  })
+  it('K588 the README examples compile and print what they say', () => {
+    expect(run('Use it in 10 lines')).toEqual([[], ['half'], 2, false])
+    const dir = mkdtempSync(join(tmpdir(), 'clock-readme-'))
+    try {
+      const files = HEADINGS.map((h, i) => {
+        expect(block(h), h + ' has a ts block').not.toBe('')
+        const f = join(dir, 'b' + i + '.ts')
+        writeFileSync(f, block(h).replaceAll("'../kit/clock/index'", JSON.stringify(join(here, 'index.ts').replaceAll('\\', '/'))))
+        return f
+      })
+      writeFileSync(join(dir, 'tsconfig.json'), JSON.stringify({ compilerOptions: { target: 'ES2023', lib: ['ES2023', 'DOM'], module: 'ESNext', moduleResolution: 'bundler', moduleDetection: 'force', types: [], strict: true, noUncheckedIndexedAccess: true, exactOptionalPropertyTypes: true, verbatimModuleSyntax: true, skipLibCheck: true, noEmit: true, allowImportingTsExtensions: true }, files }))
+      const r = spawnSync(process.execPath, [createRequire(import.meta.url).resolve('typescript/bin/tsc'), '-p', dir], { encoding: 'utf8' })
+      expect(r.stdout + r.stderr).toBe('')
+      expect(r.status).toBe(0)
+    } finally { rmSync(dir, { recursive: true, force: true }) }
+  }, 120000)
 })
