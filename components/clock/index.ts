@@ -17,7 +17,8 @@ export interface ClockSpec<D = unknown> {
   readonly values?: Readonly<Record<string, readonly unknown[]>>
 }
 export interface ClockState { readonly value: number; readonly fired: readonly string[] }
-export interface Crossing<D = unknown> { readonly threshold: Threshold<D>; readonly from: number; readonly to: number; readonly space: number; readonly how: 'land' | 'pass' }
+export interface Crossing<D = unknown> { readonly threshold: Threshold<D>; readonly from: number; readonly to: number; readonly space: number; readonly how: 'land' | 'pass'; readonly way?: 'forward' | 'back' }
+export interface ClockOccurrence<D = unknown> { kind: string; keys: { target: string }; amount: number; space?: number; how?: 'land' | 'pass'; way?: 'forward' | 'back'; data?: D }
 export interface StepResult<D = unknown> { readonly state: ClockState; readonly crossings: readonly Crossing<D>[] }
 
 const size = (spec: ClockSpec) => typeof spec.spaces === 'number' ? spec.spaces : spec.spaces.length
@@ -57,7 +58,7 @@ export function step<D>(spec: ClockSpec<D>, state: ClockState, by: number): Step
       if (dir !== 'either' && dir !== way) continue
       if (t.once && fired.includes(t.id)) continue
       if (t.once) fired.push(t.id)
-      crossings.push({ threshold: t, from: state.value, to: v, space, how })
+      crossings.push({ threshold: t, from: state.value, to: v, space, how, way })
     }
   })
   return { state: { value: v, fired }, crossings }
@@ -73,8 +74,15 @@ export function left(spec: ClockSpec, state: ClockState): number {
 export function ended(spec: ClockSpec, state: ClockState): boolean {
   return spec.ends !== 'wrap' && state.value === endOf(spec)
 }
-export function occurrences(crossings: readonly Crossing[], prefix = 'clock.'): { kind: string; keys: { target: string }; amount: number }[] {
-  return crossings.map((c) => ({ kind: prefix + c.threshold.kind, keys: { target: c.threshold.id }, amount: 1 }))
+export function onSpace(spec: ClockSpec, state: ClockState, space: Space): boolean {
+  return state.value >= 0 && state.value === indexOf(spec, space)
+}
+export function reached(spec: ClockSpec, state: ClockState, space: Space): boolean {
+  const i = indexOf(spec, space)
+  return spec.ends !== 'wrap' && i >= 0 && (state.value - i) * sign(spec) >= 0
+}
+export function occurrences<D = unknown>(crossings: readonly Crossing<D>[], prefix = 'clock.', detail = false): ClockOccurrence<D>[] {
+  return crossings.map((c) => ({ kind: prefix + c.threshold.kind, keys: { target: c.threshold.id }, amount: 1, ...(detail ? { space: c.space, how: c.how, ...(c.way ? { way: c.way } : {}), ...(c.threshold.data === undefined ? {} : { data: c.threshold.data }) } : {}) }))
 }
 export function checkClock(spec: ClockSpec): string[] {
   if (!spec || typeof spec !== 'object') return ['spec is not an object']
