@@ -51,16 +51,25 @@ describe('K665 nested restrictions', () => {
   });
 
   const cat2 = (text: string): Catalogue => ({ summary: { clauses: 1 }, patterns: [], oneOffs: [C('owl#1', text)], interactions: [] });
-  it('type words match whole tokens only: a word inside a longer "/" type is not found', () => {
-    const w = { 'kind:alpha': ['TYPE - ALPHA'] };
-    const r = (text: string) => run({ op: 'pay' }, { catalogue: cat2(text), keys: ['kind'], words: w });
-    expect(r('TYPE - ALPHA/BETA: gain 1.')).toEqual([]);
-    expect(r('TYPE - ALPHA: gain 1.')).toEqual(['owl#1: printed "TYPE - ALPHA" has no restriction kind=alpha']);
+  it('type words match whole tokens; "/" splits tokens by default and blocks a match only with slashJoins', () => {
+    const w = { 'kind:alpha': ['TYPE - ALPHA'], 'kind:beta': ['TYPE'] };
+    const r = (text: string, o: Record<string, unknown> = {}) => run({ op: 'pay' }, { catalogue: cat2(text), keys: ['kind'], words: w, ...o });
+    expect(r('TYPE - ALPHA/BETA: gain 1.', { words: { 'kind:alpha': ['TYPE - ALPHA'] }, slashJoins: false })).toEqual(['owl#1: printed "TYPE - ALPHA" has no restriction kind=alpha']);
+    expect(r('ALPHA/TYPE: gain 1.', { words: { 'kind:beta': ['TYPE'] } })).toEqual(['owl#1: printed "TYPE" has no restriction kind=beta']);
+    expect(r('TYPE - ALPHA/BETA: gain 1.', { words: { 'kind:alpha': ['TYPE - ALPHA'] }, slashJoins: true })).toEqual([]);
+    expect(r('ALPHA/TYPE: gain 1.', { words: { 'kind:beta': ['TYPE'] }, slashJoins: true })).toEqual([]);
+    expect(r('TYPES: gain 1.', { words: { 'kind:beta': ['TYPE'] } })).toEqual([]);
   });
   it('ignore: reminder text in parentheses is not a source, only when asked', () => {
     const c = cat2('Gain 1. ¶ (Upgraded: you may lose 2.)');
     expect(run({ op: 'pay' }, { catalogue: c })).toEqual(['owl#1: printed "you may" has no restriction optional=true']);
     expect(run({ op: 'pay' }, { catalogue: c, ignore: [/^\(.*\)$/] })).toEqual([]);
+  });
+  it('ignore removes only the matched span: the rest of the line is still read', () => {
+    const c = cat2('(Reminder) You may lose 2 (once).');
+    expect(run({ op: 'pay' }, { catalogue: c, ignore: [/\([^)]*?\)/] })).toEqual(['owl#1: printed "you may" has no restriction optional=true']);
+    expect(run({ op: 'pay', optional: true }, { catalogue: c, ignore: [/\([^)]*?\)/] })).toEqual([]);
+    expect(run({ op: 'pay' }, { catalogue: cat2('(Reminder: you may lose 2.)'), ignore: [/\([^)]*?\)/] })).toEqual([]);
   });
   it('a printed icon that a pay step in the tree pays counts as its restriction', () => {
     const c = cat2('{gem 2}: gain 1.');
