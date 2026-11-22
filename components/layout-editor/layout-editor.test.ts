@@ -191,7 +191,7 @@ describe('K269 layout-editor logic', () => {
     expect(cardFit(s.zones.land!, s.card).fits).toBe(false);
     expect(cardFit(s.zones.big!, zoneCard(s.zones.big!, s), 1, 'stack').fits).toBe(true);
     const w = layoutWarnings(s).map((x) => x.id + ':' + x.kind);
-    expect(w).toEqual(['bad:cards', 'bad:card']);
+    expect(w).toEqual(['bad:card', 'bad:cards']);
     expect(layoutWarnings(s).some((x) => x.text.includes('fit only'))).toBe(true);
     expect(layoutWarnings(s).filter((x) => x.id === 'land' || x.id === 'big')).toEqual([]);
   });
