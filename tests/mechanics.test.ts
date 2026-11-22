@@ -122,7 +122,15 @@ describe('K524 mechanics page and search', () => {
     const r = fake();
     expect(r.kit('search', 'zorking').stdout).toMatch(/^mechanic: zorking/);
     expect(r.kit('search', 'quux').stdout).toBe('mechanic: quux -> not in the kit (candidate K901)\n');
-    const log = fs.readFileSync(path.join(tmp, '.game-kit', 'search-misses.log'), 'utf8');
+    // K685: the fake is a kit repository (components/ beside kit.mjs), so nothing is logged there; a game layout logs
+    const logFile = path.join(tmp, '.game-kit', 'search-misses.log');
+    expect(fs.existsSync(logFile) ? fs.readFileSync(logFile, 'utf8') : '').not.toContain('quux');
+    const g = path.join(r.root, 'game', 'kit');
+    put(path.join(g, 'kit.mjs'), fs.readFileSync(path.join(r.root, 'kit.mjs'), 'utf8'));
+    fs.copyFileSync(path.join(r.root, 'docs', 'CATALOG.md'), path.join(g, 'CATALOG.md'));
+    fs.cpSync(path.join(r.root, 'docs', 'recipes'), path.join(g, 'recipes'), { recursive: true });
+    for (const q of ['zorking', 'quux']) expect(node(path.join(g, 'kit.mjs'), 'search', q).status).toBe(0);
+    const log = fs.readFileSync(logFile, 'utf8');
     expect(log).toMatch(/\d{4}-\d\d-\d\d quux\n$/);
     expect(log).not.toContain('zorking');
   });

@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // Run from a game's repo root.
 //   node <kit>/kit.mjs pull <path to game-kit checkout> <tag or commit> [component...]   moves the whole kit to one tag (named components are added); atomic
-//   node kit/kit.mjs list | search <word>                                              the catalogue of every component (pulled or not), from kit/CATALOG.md; search prints the mechanics map line first (kit/recipes/mechanics.md); the log ~/.game-kit/search-misses.log gets a line when no part has every word (the 3 parts printed above "not in the kit by that name" are only the nearest guesses) or the only hit is a "not in the kit" mechanics line (a candidate counts as demand); `search --misses [n]` prints the newest
+//   node kit/kit.mjs list | search <word>                                              the catalogue of every component (pulled or not), from kit/CATALOG.md; search prints the mechanics map line first (kit/recipes/mechanics.md); the log ~/.game-kit/search-misses.log gets a line when no part has every word (the 3 parts printed above "not in the kit by that name" are only the nearest guesses) or the only hit is a "not in the kit" mechanics line (a candidate counts as demand), never from the kit's own repository (components/ beside kit.mjs; K685); a component whose catalogue Hook line holds every word is a hit scored as if each word were in its title (first unless a part matches as well by its own words), with that line printed under it as "  hook: ..."; `search --misses [n]` prints the newest
 //   node kit.mjs state                                                                  (game-kit checkout) prints what is open (PLAN rows not done, waiting, watch)
 //   node kit.mjs next-id [n] [--from <docs/plan dir or file>...]                                (game-kit checkout) the next free K number(s): origin/main and every open PR's docs/plan/ file names
 //   node kit.mjs next-id [n] --reserve                                                 also reserves the ids on origin (refs/kit-reserved/K<n>) so no other session gets them
@@ -299,7 +299,9 @@ if (cmd === 'pull') {
     const pur = (purpose ?? '').split(/(?<=\.)\s/)[0].slice(0, 200)
     const exl = cmd === 'search' ? exportsOf(n) : []
     const sfx = (hit) => hit.length ? ' [export: ' + hit.slice(0, 8).join(', ') + ']' : ''
-    ents.push({ id: toks(n), title: toks(n + ' ' + title + ' ' + bullet(t, 'Words')), use: toks(pur + ' ' + u + ' ' + bullet(t, 'Looks like')), ex: exl.map((e) => toks(e).concat(toks(e.toLowerCase()))), exl, eff: false,
+    // K685: each "- **Hook:** name + name: what it does" line of the catalogue; a hook holding every query word ranks its component first and prints under it
+    const hk = t.filter((l) => l.startsWith('- **Hook:** ')).map((l) => l.slice(12).trim()).map((h) => ({ h, t: toks(h).concat(toks(h.toLowerCase())) }))
+    ents.push({ id: toks(n), title: toks(n + ' ' + title + ' ' + bullet(t, 'Words')), use: toks(pur + ' ' + u + ' ' + bullet(t, 'Looks like')), ex: exl.map((e) => toks(e).concat(toks(e.toLowerCase()))), exl, eff: false, hk,
       line: (hit) => title ? title + ' (`' + n + '`): Use: ' + u + sfx(hit) : n + ': ' + pur + ' ' + (u ? '(use when: ' + u.replace(/\.$/, '') + '.)' : '') + sfx(hit),
       listLine: title ? n + ': ' + title + '. Use: ' + u : n + ': ' + (use ?? '').replace('- **Use it when:** ', '(use when: ') + (use ? ')' : '') })
     // K524: a part inside a big part is its own entry, naming the guide to read
@@ -349,9 +351,10 @@ if (cmd === 'pull') {
   const w3 = (e, w) => hasTok(e.title, w) ? 3 : hasTok(e.use, w) ? 2 : e.ex.some((x) => hasTok(x, w)) ? 1 : 0
   const pool = cmd === 'effects' ? ents.filter((e) => e.eff) : ents.filter((e) => !e.cand || cf)
   if (cmd === 'effects' && !words.length) { for (const e of pool) console.log(e.line([])); process.exit(0) }
-  const scored = pool.map((e, i) => ({ e, i, all: words.every((w) => w3(e, w)), s: words.reduce((t, w) => t + w3(e, w) + (e.id.includes(w) ? 1 : 0), 0) }))
-  const hits = scored.filter((x) => x.all).sort((x, y) => y.s - x.s || !!x.e.cand - !!y.e.cand || y.e.eff - x.e.eff || x.i - y.i)
-  for (const { e } of hits) console.log(e.line(e.exl.filter((x) => words.some((w) => !hasTok(e.title, w) && !hasTok(e.use, w) && hasTok(toks(x).concat(toks(x.toLowerCase())), w)))))
+  const scored = pool.map((e, i) => { const hh = (e.hk ?? []).filter((h) => words.length && words.every((w) => hasTok(h.t, w))); return { e, i, hh, all: hh.length > 0 || words.every((w) => w3(e, w)), s: words.reduce((t, w) => t + w3(e, w) + (e.id.includes(w) ? 1 : 0), 0), hs: words.reduce((t, w) => t + (hh.length ? Math.max(3, w3(e, w)) : w3(e, w)) + (e.id.includes(w) ? 1 : 0), 0) } })
+  // K685: a matching hook counts each query word as a title word; at equal score the part whose own words match comes first
+  const hits = scored.filter((x) => x.all).sort((x, y) => y.hs - x.hs || y.s - x.s || !!x.e.cand - !!y.e.cand || y.e.eff - x.e.eff || x.i - y.i)
+  for (const { e, hh } of hits) { console.log(e.line(e.exl.filter((x) => words.some((w) => !hasTok(e.title, w) && !hasTok(e.use, w) && hasTok(toks(x).concat(toks(x.toLowerCase())), w))))); for (const { h } of hh) console.log('  hook: ' + h) }
   if (hits.length && hits.every((x) => x.e.cand)) console.log('not built yet')
   if (!hits.length && !mhit.length) {
     for (const { e } of scored.filter((x) => !x.e.cand).sort((x, y) => y.s - x.s || y.e.eff - x.e.eff || x.i - y.i).slice(0, 3)) console.log(e.line([]))
@@ -364,7 +367,8 @@ if (cmd === 'pull') {
     console.log('not in the kit by that name')
   }
   if (!hits.length && mhit.every((x) => x.m.ans.startsWith('not in the kit'))) {
-    if (cmd === 'search') try { fs.mkdirSync(dirname(logFile), { recursive: true }); fs.appendFileSync(logFile, new Date().toISOString().slice(0, 10) + ' ' + a.join(' ') + '\n') } catch { /* read-only */ }
+    // K685: a search inside the game-kit repository itself (components/ beside kit.mjs) is the kit's own, not a planner's miss
+    if (cmd === 'search' && !fs.existsSync(d + '/components')) try { fs.mkdirSync(dirname(logFile), { recursive: true }); fs.appendFileSync(logFile, new Date().toISOString().slice(0, 10) + ' ' + a.join(' ') + '\n') } catch { /* read-only */ }
   }
 } else if (cmd === 'new') {
   // node <kit>/kit.mjs new <dir> <id> "<Name>" [--ref r] [--repo owner/name] [--runner label] [--link <node_modules>] [--no-install] [--no-remote] [--ports file] [--existing]

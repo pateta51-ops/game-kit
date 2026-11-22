@@ -138,6 +138,44 @@ describe('catalog.mjs --check words (K498)', () => {
   });
 });
 
+describe('K685 hooks block in READMEs', () => {
+  const top = path.resolve(import.meta.dirname, '..');
+  const copy = () => {
+    const root = fs.mkdtempSync(path.join(tmp, 'hooks-'));
+    fs.cpSync(path.join(top, 'components'), path.join(root, 'components'), { recursive: true });
+    fs.mkdirSync(path.join(root, 'scripts'));
+    for (const f of ['catalog.mjs', 'plan.mjs']) fs.copyFileSync(path.join(top, 'scripts', f), path.join(root, 'scripts', f));
+    fs.cpSync(path.join(top, 'docs', 'plan'), path.join(root, 'docs', 'plan'), { recursive: true });
+    for (const f of ['catalog-notes.json', 'CATALOG.md', 'ARCHITECTURE.md', 'PLAN.md']) fs.copyFileSync(path.join(top, 'docs', f), path.join(root, 'docs', f));
+    const run = (...a: string[]) => spawnSync('node', [path.join(root, 'scripts', 'catalog.mjs'), ...a], { encoding: 'utf8' });
+    return { root, run, readme: path.join(root, 'components', 'motion-frame', 'README.md') };
+  };
+  it('the block heads Rules for agents; a hand edit fails --check; a write restores it', () => {
+    const { run, readme } = copy();
+    const good = fs.readFileSync(readme, 'utf8');
+    expect(good.replace(/\r\n/g, '\n')).toMatch(/## Rules for agents\n\n<!-- hooks: [^\n]*-->\n\*\*Hooks a game calls:\*\*\n- `holdUntil` \+ `autoContinueMs`: hold a beat until a condition, with a timed fallback\n/);
+    expect(run('--check').status).toBe(0);
+    fs.writeFileSync(readme, good.replace('with a timed fallback', 'with a fallback'));
+    const r = run('--check');
+    expect(r.status).toBe(1);
+    expect(r.stderr).toContain('components/motion-frame/README.md: its hooks block is stale or edited by hand');
+    expect(run().status).toBe(0);
+    expect(fs.readFileSync(readme, 'utf8')).toBe(good);
+    expect(run('--check').status).toBe(0);
+  });
+  it('a hook name not in the README fails; engine-core gets no block yet', () => {
+    const { root, run } = copy();
+    expect(fs.readFileSync(path.join(root, 'components', 'engine-core', 'README.md'), 'utf8')).not.toContain('<!-- hooks:');
+    const f = path.join(root, 'docs', 'catalog-notes.json');
+    const n = JSON.parse(fs.readFileSync(f, 'utf8')) as Record<string, { hooks: string[] }>;
+    n['clock']!.hooks.push('stepTwice: invented');
+    fs.writeFileSync(f, JSON.stringify(n));
+    const r = run('--check');
+    expect(r.status).toBe(1);
+    expect(r.stderr).toContain('clock: hook name stepTwice is not in its README');
+  });
+});
+
 describe('ARCHITECTURE.md', () => {
   it('check fails when a component needs changes', () => {
     const top = path.resolve(import.meta.dirname, '..');

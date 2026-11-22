@@ -4,6 +4,14 @@ Dice patterns as plain data (a pair, N the same, a run, odd or even, a sum again
 
 ## Rules for agents
 
+<!-- hooks: written by scripts/catalog.mjs from docs/catalog-notes.json; do not edit -->
+**Hooks a game calls:**
+- `compile`: test a dice pattern, a pair, a run or a sum, on the dice
+- `meaning`: a pattern as a dice tray meaning
+- `smallest`: the fewest dice that meet a pattern
+- `checkPattern`: check pattern data from content
+<!-- /hooks -->
+
 **What it does:** Turns JSON-safe pattern data into `test(values)`, a dice-tray meaning, or the fewest dice that meet it.
 
 **You must:**

@@ -4,6 +4,18 @@ Plays N whole games of any `GameRules<G>` with a driver, in this thread or on wo
 
 ## Rules for agents
 
+<!-- hooks: written by scripts/catalog.mjs from docs/catalog-notes.json; do not edit -->
+**Hooks a game calls:**
+- `simGame`: the module that plays one game for the pool
+- `runGames`: play many whole games on worker threads
+- `fuzzMain`: fuzz games with invariants and report each finding with a seed
+- `randomDriver` + `legalAnswers`: random answers from the legal options
+- `botDriver`: a driver that sees the player view only
+- `runResumable` + `codeVersion`: a long run that resumes after a crash
+- `tune` + `validate`: tune weights, then check on fresh seeds
+- `proveResolved` + `provenClauses`: prove each clause resolved in a played game
+<!-- /hooks -->
+
 **What it does:** Plays many whole games of any `GameRules` with a driver, in-thread or on worker threads, with crash-safe records, a resume file, fuzzing with invariants, grid sweeps and a weight tuner.
 
 **You must:**

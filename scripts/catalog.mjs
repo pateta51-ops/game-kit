@@ -43,6 +43,10 @@ const purpose = (readme) => {
 }
 const one = (s) => s.replace(/\s+/g, ' ').trim()
 
+// K685: hooks a game calls, one 'name + name: what it does' line each; every name must be in the README; a block of them heads its "Rules for agents"
+const HOOKS_START = '<!-- hooks: written by scripts/catalog.mjs from docs/catalog-notes.json; do not edit -->', HOOKS_END = '<!-- /hooks -->'
+const NO_BLOCK = ['engine-core', 'plan-checker'] // K685: their READMEs wait for open PRs
+const readmes = []
 const parts = []
 const deps = {}
 const table = []
@@ -57,6 +61,20 @@ for (const n of names) {
   if (typeof note.visible !== 'boolean' || ![1, 1.1, 1.2, 1.3].includes(note.release)) { bad.push(`${n}: add visible (true or false) and release (1.0, 1.1, 1.2 or 1.3) to docs/catalog-notes.json`); continue }
   const readme = fs.existsSync(path.join(dir, 'README.md')) ? 'components/' + n + '/README.md' : null
   const text = readme ? purpose(rd(J(readme))) : (note.what ?? '')
+  const hooks = note.hooks ?? []
+  if (!Array.isArray(hooks) || hooks.some((h) => typeof h !== 'string' || !/^[^:]+: \S/.test(h))) { bad.push(`${n}: hooks must be lines 'name + name: what it does'`); continue }
+  const old = readme ? rd(J(readme)) : '', eol = old.includes('\r\n') ? '\r\n' : '\n'
+  let t = old.replace(/\r\n/g, '\n'), a = t.indexOf(HOOKS_START), b = t.indexOf(HOOKS_END)
+  if (a >= 0 && b > a) t = t.slice(0, a) + t.slice(b + HOOKS_END.length).replace(/^\n+/, '')
+  for (const h of hooks) for (const k of h.split(': ')[0].split(' + ')) if (!new RegExp('`[^`]*(?<![\\w$])' + k.trim().replace(/[.$]/g, '\\$&') + '(?![\\w$])[^`]*`').test(t)) bad.push(`${n}: hook name ${k.trim()} is not in its README`)
+  if (readme && !NO_BLOCK.includes(n)) {
+    if (hooks.length) {
+      const block = HOOKS_START + '\n**Hooks a game calls:**\n' + hooks.map((h) => { const [k, ...w] = h.split(': '); return '- ' + k.split(' + ').map((x) => '`' + x.trim() + '`').join(' + ') + ': ' + w.join(': ') }).join('\n') + '\n' + HOOKS_END + '\n\n'
+      const m = t.match(/^## Rules for agents\n+/m) ?? t.match(/^# .*\n+/m)
+      t = m ? t.slice(0, m.index + m[0].length) + block + t.slice(m.index + m[0].length) : block + t
+    }
+    readmes.push([readme, t.replace(/\n/g, eol), old])
+  }
   let ex
   if (note.exports) ex = note.exports
   else {
@@ -84,6 +102,7 @@ for (const n of names) {
     `- **Use it when:** ${note.use}\n` +
     `- **Not for:** ${note.not}\n` +
     `- **Key exports:** ${ex}\n` +
+    hooks.map((h) => `- **Hook:** ${h}\n`).join('') +
     `- **Needs:** ${needs}\n` +
     `- **Came from:** ${origin.length > 160 ? origin.slice(0, 157) + '...' : origin}\n` +
     `- **Docs:** ${readme ? `[README](../${readme}) ([rules for agents](../${readme}#rules-for-agents))` : `[component.json](../components/${n}/component.json)`}\n` +
@@ -125,6 +144,10 @@ for (const [f, text] of pages) {
   if (arg === '--check') {
     if (!fs.existsSync(file) || rd(file).replace(/\r\n/g, '\n') !== text) { console.error(`docs/${f} is stale: run node scripts/catalog.mjs`); stale = 1 }
   } else if (fs.existsSync(path.dirname(file))) fs.writeFileSync(file, text)
+}
+for (const [f, text, old] of readmes) {
+  if (text === old) continue
+  if (arg === '--check') { console.error(`${f}: its hooks block is stale or edited by hand: run node scripts/catalog.mjs`); stale = 1 } else fs.writeFileSync(J(f), text)
 }
 if (stale) process.exit(1)
 console.log(`catalog ${arg === '--check' ? 'ok' : 'written'}: ${names.length}`)

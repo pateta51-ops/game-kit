@@ -362,6 +362,15 @@ Card tests on real cards. Test code only; the engine imports nothing here but `c
 - **Use it when:** Testing card effects on real cards with the scenario builder, prompt delivery, choice probe and inventory with stale check; test depth: a full-resolve test per clause and a poor test (expectNotOffered, expectNotFired) per conditional clause.
 - **Not for:** Card rules themselves; those stay in the game.
 - **Key exports:** `createProbe`, `rulingGroups`, `Scenario`, `scenarioLiteral`, `Delivery`, `cardCasesIn`, `clauseIds`, `interactionNeeds`, `inventory`, `inventoryFindings`, `runInventory`, `testFiles`, `conforms`, `describeCheck`, and 120 more
+- **Hook:** Scenario: build a real position and play it in a test
+- **Hook:** put + set + run + answer: set a position up and answer its prompts
+- **Hook:** cardCase: a full-resolve card test that quotes the printed clause
+- **Hook:** expectNotOffered: test that an ability is not offered
+- **Hook:** expectNotFired: test that a forced effect did not fire
+- **Hook:** runInventory: every printed clause is cited by a test
+- **Hook:** cardsCheckMain: the game cards check of clauses and records
+- **Hook:** screenMain: the screen text matches the engine
+- **Hook:** recordPrompt + recordOpened: record each prompt shown in e2e or a simulation
 - **Needs:** [`engine-core`](#engine-core), [`plain-text`](#plain-text)
 - **Came from:** stcc
 - **Docs:** [README](../components/card-harness/README.md) ([rules for agents](../components/card-harness/README.md#rules-for-agents))
@@ -377,6 +386,17 @@ The card-language shell (K206): card effects as data, one typed verb table where
 - **Use it when:** A new game encodes card effects as data: verb table with handler, resume and text slots, validator, every-verb test; the standard verb pack (cardPack) on card-zones: draw, discard, mill, move, putIntoPlay, setAside, recall, gain, refill, shuffle, search, destroy, attach, detach, reveal, lookAt, scout, flip, exhaust, ready, chooseCards, chooseOption, may, chooseNumber, chooseDestination, choosePlayer, choosePayment, orderEffects, gainResource, pay, convert, adjust, seq, if, forEach, eachPlayer, repeat, count, later, payThen, custom; every card move through timing would; words overridable. Recipe: docs/recipes/card-effect.md.
 - **Not for:** The game's own rules and words: verbs the pack lacks, card text as printed (override the pack's words), when later effects fire.
 - **Key exports:** `posInt`, `int`, `str`, `bool`, `oneOf`, `listOf`, `optional`, `effectOf`, `grammarOf`, `validateStep`, `validateEffect`, `describeEffect`, `effectTasks`, `askVerb`, and 12 more
+- **Hook:** cardPack + offer: offer an effect only if it does something, each knob set from a ruling
+- **Hook:** wouldChange: ask whether an effect would change the game: yes, no or unknown
+- **Hook:** resolves: how much of an effect would happen: in full, in part or nothing
+- **Hook:** judge: the reason an effect is not offered
+- **Hook:** due: a cost a card changes, a tax or a discount
+- **Hook:** describeEffect: print card text from the same data the engine runs
+- **Hook:** askVerb + resume: a verb that asks the player and goes on with the answer
+- **Hook:** cardTriggers + when: card triggers, when this happens do that, from card data
+- **Hook:** cannotKnow: say a read looks at cards the seat cannot see
+- **Hook:** then + moved: act on the cards a step just moved, draw 2 then discard 1 of them
+- **Hook:** expectVerbs: test that every verb has a handler, text and an example
 - **Needs:** [`engine-core`](#engine-core), [`card-harness`](#card-harness), [`plain-text`](#plain-text), [`card-zones`](#card-zones)
 - **Came from:** jarl
 - **Docs:** [README](../components/card-language/README.md) ([rules for agents](../components/card-language/README.md#rules-for-agents))
@@ -475,6 +495,15 @@ Card zones as data on engine-core state (K223): decks, hands, discards and play 
 - **Use it when:** Decks, hands, discards and play areas as ordered id lists in engine state, with who sees what and a per-seat view for opponents and the UI. A zone can have a capacity (hand limit, slot limit) that rules raise and give up, with a state check that asks the owner which cards over the limit go to the discard. Hand, pile and drag UI parts are planned (K218-K220), not built: ask for them, do not build them in the game. Recipe: docs/recipes/card-table.md. shuffleZone shuffles a zone on ctx.rng; its rng name selects a named override, so a test can force the shuffle order (shuffle zone named rng, shuffle deck rng name override, forced order test).
 - **Not for:** Boards and spaces (board-model), card faces, or rules about running out.
 - **Key exports:** `newZones`, `seatZone`, `cardsIn`, `locate`, `place`, `moveCard`, `draw`, `shuffleZone`, `reveal`, `canSee`, `viewOf`, `hiddenFrom`, `zoneProblems`, `limitOf`, and 14 more
+- **Hook:** newZones + seatZone: card zones in the game state, one per seat
+- **Hook:** moveCard + draw + place: move cards between zones
+- **Hook:** shuffleZone: shuffle a deck with the seeded rng
+- **Hook:** reveal: show a card to every seat
+- **Hook:** viewOf: what one seat sees, hidden cards as backs
+- **Hook:** hiddenFrom: the secrets list for an opponent
+- **Hook:** zoneProblems: a card in two places or a wrong total
+- **Hook:** limit + raiseLimit + capacityCheck + capacityHandlers: a hand limit, discard down to it when over
+- **Hook:** locate + cardsIn: find where a card is, list a zone
 - **Needs:** [`engine-core`](#engine-core)
 - **Came from:** imperium
 - **Docs:** [README](../components/card-zones/README.md) ([rules for agents](../components/card-zones/README.md#rules-for-agents))
@@ -567,6 +596,15 @@ A clock as rules data: a marker on a row of spaces (countdown, round tracker, da
 - **Use it when:** A marker on a row of spaces as rules data (countdown, round tracker, danger or doom track): steps forward or back by the game's number, thresholds that fire on landing or passing (lose, trigger, reward, limit) in order, once-only thresholds, per-space values such as a limit read from the marker's row; a lose space anywhere on the row, on landing or on passing; crossings become engine-core occurrences that can carry the threshold's data and space.
 - **Not for:** Drawing the track (track); turn or round flow (turn-flow); deciding what a threshold does (the game); tokens counted without a cap, with no fixed row of spaces (a counter in the game).
 - **Key exports:** `indexOf`, `newClock`, `spaceOf`, `valueAt`, `step`, `setTo`, `stepsTo`, `left`, `ended`, `onSpace`, `reached`, `occurrences`, `checkClock`, `Space`, and 6 more
+- **Hook:** newClock: a marker on a track of spaces
+- **Hook:** step: move the marker and get the thresholds it met
+- **Hook:** setTo: place the marker without firing anything
+- **Hook:** stepsTo: the steps to reach a space on the track
+- **Hook:** ended + reached: the marker reached the end or a space
+- **Hook:** overrun: the marker cannot advance, no space left
+- **Hook:** occurrences: thresholds as engine events for triggers
+- **Hook:** valueAt: a limit that depends on the marker space
+- **Hook:** checkClock: check a track spec in a content test
 - **Needs:** nothing
 - **Came from:** none
 - **Docs:** [README](../components/clock/README.md) ([rules for agents](../components/clock/README.md#rules-for-agents))
@@ -705,6 +743,10 @@ Dice patterns as plain data (a pair, N the same, a run, odd or even, a sum again
 - **Use it when:** Dice patterns as data (a pair, N the same, a run, odd or even, a sum against a number, a count, two pair, all or any) compiled to the test that dice-odds chance and dice-tray readRoll take, plus the smallest set of dice that meets one, or the whole roll (an exact sum, a group of an exact size).
 - **Not for:** Rolling dice, odds after rerolls, card sets or poker hands, dice formulas.
 - **Key exports:** `checkPattern`, `compile`, `meaning`, `smallest`, `Op`, `Pattern`, `Test`
+- **Hook:** compile: test a dice pattern, a pair, a run or a sum, on the dice
+- **Hook:** meaning: a pattern as a dice tray meaning
+- **Hook:** smallest: the fewest dice that meet a pattern
+- **Hook:** checkPattern: check pattern data from content
 - **Needs:** nothing
 - **Came from:** 7is
 - **Docs:** [README](../components/dice-patterns/README.md) ([rules for agents](../components/dice-patterns/README.md#rules-for-agents))
@@ -720,6 +762,14 @@ Pure logic of a dice tray and its roll window (K211), opt-in, unstyled; the game
 - **Use it when:** Dice in play, held dice, rolling through ctx.rng (a roll name selects a test override) and the roll window content. Recipe: docs/recipes/dice.md.
 - **Not for:** Dice drawing or 3D (pieces-3d) and odds (dice-odds).
 - **Key exports:** `newTray`, `roll`, `hold`, `toggleHold`, `adjust`, `remove`, `values`, `heldDice`, `readRoll`, `rollWith`, `rollWindow`, `step`, `winStart`, `winPickToken`, and 18 more
+- **Hook:** newTray: dice in play
+- **Hook:** roll: roll every die not held, with the seeded rng
+- **Hook:** toggleHold + hold: keep a die out of the next roll
+- **Hook:** readRoll: what the roll means: values, sum and every meaning that holds
+- **Hook:** adjust + setValue: change a die value by one or set it
+- **Hook:** rerollSelected + canReroll: reroll the picked dice
+- **Hook:** rollWindow + step: the roll window tap order: token, die, then plus or minus
+- **Hook:** rollWith + onRoll: animate a roll
 - **Needs:** [`state-machines`](#state-machines)
 - **Came from:** 7th-inning-stretch
 - **Docs:** [README](../components/dice-tray/README.md) ([rules for agents](../components/dice-tray/README.md#rules-for-agents))
@@ -782,6 +832,15 @@ The kernel of a game engine: seeded random numbers, canonical JSON and hashes, t
 - **Use it when:** Every game's engine: seeded random, tasks and prompts, copy on write, replay, undo, saves, timing windows and triggers.
 - **Not for:** A game's rules or content; the game writes its own `GameRules`.
 - **Key exports:** `claimEngineCore`, `canonicalJson`, `fnv1a64`, `copyJson`, `copyState`, `deepFreeze`, `freezeState`, `isFreezing`, `setStateFreezing`, `advance`, `applyAction`, `applyActionWith`, `createGame`, `isChecking`, and 277 more
+- **Hook:** ctx.ask: open a prompt for a player and resume with the answer
+- **Hook:** ctx.rng: seeded random numbers, never Math.random
+- **Hook:** own: change state by copy on write
+- **Hook:** askOrTake + onlyOne: take the only legal answer, else ask
+- **Hook:** unseen: mark an option over a hidden card so it is never taken for the player
+- **Hook:** numberParts: a modified cost or stat with set, add, multiply, floor or cap
+- **Hook:** until + eventOver: end an effect at the end of combat or at the next event
+- **Hook:** waitingOn: show which live effects wait on an event
+- **Hook:** kernelPort: wrap this kernel as an EnginePort for a game with its own engine
 - **Needs:** nothing
 - **Came from:** jarl
 - **Docs:** [README](../components/engine-core/README.md) ([rules for agents](../components/engine-core/README.md#rules-for-agents))
@@ -900,6 +959,16 @@ A square grid with walls as data: adjacent spaces, distance, every shortest path
 - **Use it when:** A square grid board with walls: adjacent spaces, grid distance and range, shortest paths, line of sight, tiles that turn, and targeting shapes (within range, adjacent, row, column, line, area).
 - **Not for:** Drawing the map; hex or graph boards (board-model); movement rules or costs per step.
 - **Key exports:** `gridMap`, `cellsOf`, `spaceAt`, `neighbours`, `distance`, `shortestPaths`, `firstSteps`, `lineOfSight`, `tileOf`, `spacesOf`, `adjacentTiles`, `rotateTile`, `adjacent`, `within`, and 16 more
+- **Hook:** gridMap: a square grid with walls, merged spaces and turnable tiles
+- **Hook:** neighbours: the spaces next to a space
+- **Hook:** distance: how far, or no way there
+- **Hook:** shortestPaths + firstSteps: move one step at a time along a shortest path
+- **Hook:** lineOfSight: can one space see another past the walls
+- **Hook:** area: the spaces a square or diamond shape covers
+- **Hook:** within: the spaces within N steps
+- **Hook:** rotateTile: turn a tile half a circle, 180 degrees only
+- **Hook:** extra: a step the game allows past a wall, a door
+- **Hook:** spaceAt + cellsOf: space ids from row and column
 - **Needs:** nothing
 - **Came from:** none (written for the kit)
 - **Docs:** [README](../components/grid-map/README.md) ([rules for agents](../components/grid-map/README.md#rules-for-agents))
@@ -916,6 +985,12 @@ Arrange the zones of a game screen by hand (card zones, piles, hand, market, tra
 - **Use it when:** Arranging a screen's zones by hand (owner, or the director's wireframe gate): a one-file editor whose JSON is a board-layout zones layout per screen; capture.mjs takes a running page's [data-zone] rects as the start.
 - **Not for:** Map click areas and adjacency (board-layout's Inkscape flow), or placing anything at run time (board-layout zone()).
 - **Key exports:** `KINDS`, `zoneCard`, `normalizeDoc`, `screenLayout`, `descendants`, `childrenOf`, `parentOf`, `moveZone`, `resizeZone`, `idTaken`, `mirrorZones`, `renameZone`, `snap`, `cardFit`, and 23 more
+- **Hook:** normalizeDoc + screenLayout: read the exported layout of one screen
+- **Hook:** zoneCard: the card size a zone asks for
+- **Hook:** mirrorZones: mirror zones for the other seat
+- **Hook:** consolidate + split: merge or split zones
+- **Hook:** cardFit: how many cards fit a zone
+- **Hook:** layoutWarnings: zones too small for their cards or pile
 - **Needs:** [`board-layout`](#board-layout)
 - **Came from:** none (owner request)
 - **Docs:** [README](../components/layout-editor/README.md) ([rules for agents](../components/layout-editor/README.md#rules-for-agents))
@@ -1025,6 +1100,16 @@ Plays motion specs in the director's format (one JSON per beat: `actors`, `steps
 - **Use it when:** Playing the director's motion specs (JSON beats) on the screen.
 - **Not for:** The effects themselves (effect-library) or game logic.
 - **Key exports:** `withViewTransition`, `withVariant`, `stageFromLayout`, `buildTimeline`, `validateSpec`, `validateSpecs`, `placeOf`, `createVerbs`, `createMotionPlayer`, `withReducedMotion`, `prefersReducedMotion`, `automatedWithoutMotion`, `withAutomationOff`, `putMotionSpeed`, and 47 more
+- **Hook:** holdUntil + autoContinueMs: hold a beat until a condition, with a timed fallback
+- **Hook:** release: let a held beat go when the game is ready
+- **Hook:** onCue + onDroppedCue: play a sound on a beat, also when the beat is skipped
+- **Hook:** parallel: run a beat at the same time as the one before it
+- **Hook:** play: queue a beat and apply the next game state with commit
+- **Hook:** onBeatStart + onBeatEnd: set and clear screen state for one beat
+- **Hook:** skipAll: drop every queued beat on undo, load or leaving the screen
+- **Hook:** skipOnInput + hurryOnInput: skip or hurry the animation on a click or key
+- **Hook:** withReducedMotion + withAutomationOff: the motion speed setting, still in tests and under reduced motion
+- **Hook:** validateSpecs: check that every motion spec names a known verb and zone
 - **Needs:** nothing
 - **Came from:** warps
 - **Docs:** [README](../components/motion-frame/README.md) ([rules for agents](../components/motion-frame/README.md#rules-for-agents))
@@ -1414,6 +1499,11 @@ Unstyled, data-driven main menu and new-game set-up form, with a pure default an
 - **Use it when:** Main menu and new-game set-up form (seats, scenario, difficulty, extras) from data, unstyled, with a pure default and validate. Non-table screen frame, footer, disclaimer and persistent theme toggle.
 - **Not for:** Styled or game-specific screens, or settings (use settings).
 - **Key exports:** `createThemeStore`, `disclaimer`, `defaultSetup`, `validateSetup`, `defaultWords`, `Theme`, `Option`, `SetupSpec`, `Setup`, `Field`, `Words`
+- **Hook:** MainMenu: the main menu
+- **Hook:** SetupForm + defaultSetup + validateSetup: the new game set-up form and its check
+- **Hook:** ScreenFrame: frame for settings, saves and rules screens
+- **Hook:** createThemeStore + ThemeToggle: light and dark theme switch
+- **Hook:** Footer + disclaimer: the footer line
 - **Needs:** nothing
 - **Came from:** kit
 - **Docs:** [README](../components/screens/README.md) ([rules for agents](../components/screens/README.md#rules-for-agents))
@@ -1445,6 +1535,14 @@ Plays N whole games of any `GameRules<G>` with a driver, in this thread or on wo
 - **Use it when:** Playing many whole games with drivers on worker threads, fuzzing, sanity bands, sweeps, the K200 weight tuner and paired validation; the whole-game check of unreached clauses (proof from counted full-resolve tests, with a trace input built from the game's own log so a static clause applied with an effect counts as proven), coverage rounds and a findings file to replay a failing seed.
 - **Not for:** A driver's strategy (the game or opponent supplies it).
 - **Key exports:** `DriverRng`, `ANSWER_CAP`, `CRASH_HASH`, `breakAt`, `bySeat`, `crashRecord`, `legalAnswers`, `playOne`, `randomDriver`, `botDriver`, `replayStep`, `formatReport`, `report`, `runGames`, and 76 more
+- **Hook:** simGame: the module that plays one game for the pool
+- **Hook:** runGames: play many whole games on worker threads
+- **Hook:** fuzzMain: fuzz games with invariants and report each finding with a seed
+- **Hook:** randomDriver + legalAnswers: random answers from the legal options
+- **Hook:** botDriver: a driver that sees the player view only
+- **Hook:** runResumable + codeVersion: a long run that resumes after a crash
+- **Hook:** tune + validate: tune weights, then check on fresh seeds
+- **Hook:** proveResolved + provenClauses: prove each clause resolved in a played game
 - **Needs:** [`engine-core`](#engine-core), [`card-harness`](#card-harness)
 - **Came from:** warps
 - **Docs:** [README](../components/sim-pool/README.md) ([rules for agents](../components/sim-pool/README.md#rules-for-agents))
@@ -1475,6 +1573,15 @@ A Web Audio player driven by one table of data. It knows no game. No packages.
 - **Use it when:** Release 1.2 sound and music from one data table on Web Audio.
 - **Not for:** Voice lines (voice) or making audio (audio-gen).
 - **Key exports:** `MIN_FADE_MS`, `seamLoop`, `createSoundPlayer`, `synthLength`, `startSynthVoice`, `cuesFor`, `createEventSounds`, `resolveCue`, `createTrailSounds`, `mp3Frames`, `trimMp3`, `musicTracks`, `pickTrack`, `pickPlaylistTrack`, and 17 more
+- **Hook:** createSoundPlayer: one player for every sound, voice and music cue, from a table
+- **Hook:** play: play a sound cue by name
+- **Hook:** playTrack: play background music
+- **Hook:** stopCues: fade a sound out early, never a hard stop
+- **Hook:** unlock: let sound start after the first tap
+- **Hook:** setVolumes: change music, sound and voice volume from the settings
+- **Hook:** onEnd: run something when a sound ends, fades or is dropped
+- **Hook:** canPlay: ask whether a cue can sound
+- **Hook:** checkSoundFiles: check every sound file exists, its format and size
 - **Needs:** nothing
 - **Came from:** warps
 - **Docs:** [README](../components/sound-player/README.md) ([rules for agents](../components/sound-player/README.md#rules-for-agents))
@@ -1584,6 +1691,11 @@ A bag of tokens with its count; the draw shown as a 2D flight from the bag or a 
 - **Use it when:** A bag of tokens with its count; the engine's draw shown as a 2D flight from the bag or a 3D shake-and-draw (three.js by dynamic import) that never decides the draw and falls back to 2D; a finite supply of pieces counted from the engine's integers (supply.ts); finite stocks and a bag for the engine (stock.ts, pure): each piece in one named place, a gain from a stock that runs out says so, a seeded draw of N with the game's short-bag rule per kind of draw (draw what is left, refill when the bag runs out, or fail).
 - **Not for:** Which tokens are drawn (the engine), the token faces and the bag print (the game), a game's token tables.
 - **Key exports:** `EXTERIOR_ACROSS`, `EXTERIOR_UP`, `CLOTH`, `COIN_RADIUS`, `COIN_HEIGHT`, `SHAKE_START`, `SHAKE_END`, `DRAW_START`, `STAGGER`, `DRAW_DURATION`, `pileLayout`, `shakeAmount`, `bagPose`, `slotPose`, and 57 more
+- **Hook:** TokenBag + draw: show a token drawn from a bag, in 2D or 3D, after the engine drew it
+- **Hook:** onDrawDone: clear the draw when the flight ended
+- **Hook:** assignDraws: which token rises comes from the drawn kinds only
+- **Hook:** placeTokens: tokens in a finite box, short as a badge
+- **Hook:** makeStocks: finite stocks and a bag in the engine state
 - **Needs:** nothing
 - **Came from:** warps-edge-fan-prototype
 - **Docs:** [README](../components/token-bag/README.md) ([rules for agents](../components/token-bag/README.md#rules-for-agents))
@@ -1676,6 +1788,13 @@ Rounds, turns per seat and phases and steps inside a turn as one data table; the
 - **Use it when:** Rounds, turns per seat in seat order, and phases and steps inside a turn as one data table; the runner calls engine-core boundary() at each turn, phase and round edge, so endOfTurn / endOfRound / endOfPhase durations end with no manual call; whoseTurn and flowOf read the position from state; once-per limits (K589: once per turn, round, phase or game, per card, per seat) bar a used option with its reason and clear at the matching edge. Recipe: docs/recipes/turn-flow.md.
 - **Not for:** What a step does, simultaneous or out-of-order turns (interrupts, reactions), step-long durations (engine-core has none), or the screen that shows the phase.
 - **Key exports:** `FLOW_NEXT`, `flowOf`, `whoseTurn`, `limitsOf`, `limitUsed`, `markLimit`, `limitOption`, `clearLimits`, `startFlow`, `endTurn`, `flowHandlers`, `FlowPhase`, `FlowLevel`, `FlowPos`, and 7 more
+- **Hook:** FlowConfig + flowHandlers + startFlow: rounds, turns and phases from one table
+- **Hook:** endTurn: end a turn early, pass
+- **Hook:** flowOf + whoseTurn: whose turn it is and which phase
+- **Hook:** skip: skip a turn or a phase
+- **Hook:** roundEnds + over: end the round and end the game
+- **Hook:** LimitTable + limitOption + markLimit: once per turn, once per round or once per game
+- **Hook:** expireEffects: drop effects that ended at the end of a turn, phase or round
 - **Needs:** [`engine-core`](#engine-core)
 - **Came from:** 7th-inning-stretch
 - **Docs:** [README](../components/turn-flow/README.md) ([rules for agents](../components/turn-flow/README.md#rules-for-agents))
