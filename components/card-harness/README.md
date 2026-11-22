@@ -30,6 +30,11 @@ Card tests on real cards. Test code only; the engine imports nothing here but `c
 20. (K497) Feed `cards:screen` from a played game: in e2e or simulation runs call `recordPrompt(file, { clause, shown, screenOptions?, engineOptions? })` per prompt shown and `recordOpened(file, clause)` per opened text (JSON lines appended to `file`; Node only), then `readScreenLogs([files])` gives `{ prompts, opened }` for `screenProblems` / `screenMain`; a recorded prompt with no amount fails like one from `Delivery`. A game that passes `prompts: []` never runs the prompt checks.
 21. (K497) Known `<id> is in no interaction row` findings go in a JSON map you read and pass as `interactingPending` (id to the fix that clears it): they print `<id> is in no interaction row (pending: <fix>)` and do not fail; an entry that is no longer a finding fails as `stale pending entry: <id>`.
 22. (K497) Read the restriction words from `wordsPathOf(argv)` (`--words <path>`, default `RESTRICTION_WORDS_PATH` = `content/restriction-words.json`); `cardsCheckMain` given `--words <path>` and a `RecordIo` with `read` (`realRecordIo` has it when `fs.readFileSync` is passed) loads that file as `words`, else it exits 1; with no `words` in the input and no flag it loads `RESTRICTION_WORDS_PATH` through `io.read` when the file exists; `--list-restrictions` and `--record` take `--words` too. `recordPrompt` makes the log folder; `readScreenLogs` skips an unparsable line and names it in the returned `warnings`.
+23. (K415) Turn the depth gate on by marking clauses `conditional` (true: it has a condition or a cost; the game decides which) or with `depth: true` on the inventory input; without either, coverage counts as before.
+24. (K415) With the gate on, a clause counts as covered only by a full-resolve test: an `it`/`test`/`cardCase` whose title names the clause id (not followed by ` poor`) and whose body calls `expect…(`, `assert…(` or `.should` itself, outside strings and comments. A test under `.skip`, `.todo`, `.skipIf` or a skipped `describe` covers nothing.
+25. (K415) Give each conditional clause a test titled `<clause id> poor` (a `cardCase` with `title: 'poor'` is one) whose body calls `expectNotOffered` or `expectNotFired` directly; a helper of yours wrapping them does not count. The poor test never covers the full resolve, nor the reverse.
+26. (K415) A player choice: `expectNotOffered(sc, id, attempt?)` fails when an enabled option `id` or a prompt naming `id` (a top-level string field) is open now or was at any step of `sc.history`, when taking it is not refused (`attempt`, default `sc.answer(id)` in `withRewind` while a prompt is open; refused = throws or returns false), or when state or events move. A forced effect: `expectNotFired(sc, id, act?, same?)` fails when any event names `id` (after `act`), when a prompt is open, or when `act` changed the state (`same` projects the part that must not move). Set the condition false or the cost unpayable first; never a test that the effect "resolves to nothing".
+27. (K415) `runInventory` reports kind `clause` and kind `poor` per clause, and `## Depth by family` (`family` on the clause, default `clauses`: clauses, conditional, full resolve, poor test, baseline); it exits 1 on `clause:<id> has no full-resolve test`, `poor:<id> has no poor test`, and on `<path> › <title>: its body asserts nothing` or `… calls neither expectNotOffered nor expectNotFired` (not counted) unless that clause's key is in the baseline. Adopt family by family: list the other families' `clause:<id>` and `poor:<id>` in `baseline`; an entry now covered fails as stale.
 
 **Common mistakes:**
 - Calling `answer` in strict mode with no open prompt: it throws.
@@ -40,6 +45,10 @@ Card tests on real cards. Test code only; the engine imports nothing here but `c
 - A `cardCase` with a literal `clause` but `printed: P.text` (or `ar` not a literal): counts as `quote differs`. One with no literal `clause` (shorthand `{ clause, printed, ar }`) is skipped, so its clause reads `clause:<id> is cited by no test`.
 - An `ok` reading goes stale when any key of the clause's records changes (key order does not count): run `--record` again after the judge re-reads.
 - `words` keys compare `String(value)`: a boolean restriction is `"optional:true"`; an object value compares as its JSON.
+- (K415) A poor test whose body asserts the score is unchanged but calls neither helper: not counted, and the run fails.
+- (K415) A full-resolve test that only plays the card (`sc.run(...)`) with no `expect`: not counted; an `expect` inside a string or comment does not count either.
+- (K415) `it.each([...])('CL-1 %s', ...)` and other titles that are not a literal right after `it(`: not read, so they cover nothing with the gate on.
+- (K415) `expectNotOffered` after the scenario offered the option earlier (then took it) fails: build the poor position from scratch, not after taking the option.
 - A game without clause `text`, `rulings`, `interacting` or `interaction` pieces counts as before; the one change it sees is that a `cardCase(` call's title now counts as a test title.
 
 - **Probe** (`createProbe<D>()`): the engine calls `probe.note(d)` (or `note(() => d)`) where it settles a choice without asking. Off in the game.
@@ -73,11 +82,12 @@ Known bugs are pinned as `it.fails('EXPECTED FAILURE: …')`.
 ## Use it in 10 lines
 
 ```ts
-import { Scenario } from '../kit/card-harness/index'
+import { expectNotFired, Scenario } from '../kit/card-harness/index'
 import { DICE_GAME } from '../kit/card-harness/fake/dice' // yours: a ScenarioGame over your GameRules
 
 const sc = new Scenario(DICE_GAME).set((s) => void (s.dice = [2, 2, 5]))
 const [twin] = sc.put('hand', 'twin') // a real card of your catalogue, in your hand
 sc.run({ kind: 'play', card: twin as string })
 console.log(sc.s.score, sc.events.map((e) => e.type)) // assert on state, events, options(), answer(...)
+expectNotFired(sc, 'plain#9') // K415: in a `<clause id> poor` test, nothing of that id fired and no prompt is open
 ```
