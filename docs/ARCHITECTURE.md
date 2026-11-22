@@ -106,6 +106,7 @@ graph LR
   perf["perf"] --> sim_pool["sim-pool"]
   phone_mode["phone-mode"] --> state_machines["state-machines"]
   picked_state["picked-state"]
+  picture_upscale["picture-upscale"]
   pieces_3d["pieces-3d"]
   pieces_3d_verbs["pieces-3d-verbs"] --> pieces_3d["pieces-3d"]
   pieces_3d_verbs["pieces-3d-verbs"] --> effect_library["effect-library"]
@@ -204,6 +205,7 @@ graph LR
 - `offline`
 - `opponent`
 - `perf`
+- `picture-upscale`
 - `pieces-3d-verbs`
 - `plan-checker`
 - `player-board`
