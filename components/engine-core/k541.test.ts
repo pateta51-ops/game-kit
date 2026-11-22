@@ -1,7 +1,7 @@
 // K541: a lasting effect whose end point is a named event the game defines (`until: 'event'`, `eventOver`).
 import { describe, expect, it } from 'vitest';
 import { addEffect, applyAction, boundary, cancelBatch, draftOf, effectsOf, EngineBugError, hashState, spendEffect, sourceLeft, sumEffects, would, type Ctx, type Duration, type GameRules } from './index.ts';
-import { eventOver } from './timed.ts';
+import { eventOver, waitingOn } from './timed.ts';
 import { answer, HIT, startTimed, timedGame, type Timed, type TimedState } from './fake/timed.ts';
 
 const play = (f: (ctx: Ctx<Timed>) => void, cfg: Parameters<typeof timedGame>[0] = {}, extra: Parameters<typeof timedGame>[1] = {}): TimedState =>
@@ -75,6 +75,23 @@ describe('K541: an effect lasting until a named event', () => {
     expect(ended1).toEqual([first]);
     expect(live).toEqual([later]);
     expect(steps.slice(3)).toEqual([[later], []]);
+  });
+
+  it('K541 waitingOn lists the event names and instances live effects wait on, once each, and reads nothing else', () => {
+    const steps: unknown[] = [];
+    const s = play((ctx) => {
+      steps.push(waitingOn(ctx.s));
+      addEffect(ctx, { kind: 'a', source: 'x', value: 1, duration: combat('c1') });
+      addEffect(ctx, { kind: 'a', source: 'x', value: 1, duration: combat('c1') });
+      addEffect(ctx, { kind: 'a', source: 'x', value: 1, duration: { until: 'event', event: 'combatEnds' } });
+      addEffect(ctx, { kind: 'a', source: 'x', value: 1, duration: combat('c2') });
+      addEffect(ctx, { kind: 'a', source: 'x', value: 1, duration: { until: 'game' } });
+      steps.push(waitingOn(ctx.s));
+      eventOver(ctx, 'combatEnd', 'c2');
+      steps.push(waitingOn(ctx.s));
+    });
+    expect(steps).toEqual([[], [{ event: 'combatEnd', instance: 'c1' }, { event: 'combatEnds' }, { event: 'combatEnd', instance: 'c2' }], [{ event: 'combatEnd', instance: 'c1' }, { event: 'combatEnds' }]]);
+    expect(s.timing?.effects).toHaveLength(5);
   });
 
   it('K541 an event with no name is an engine bug', () => {

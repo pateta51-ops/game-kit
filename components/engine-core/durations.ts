@@ -138,6 +138,17 @@ export function eventOver<G extends GameTypes>(ctx: Ctx<G>, event: string, insta
   return ids;
 }
 
+/** K541, read-only: the event names (and instances) the live `until: 'event'` effects wait on, first-added first, once each. */
+export function waitingOn(s: Timed): { event: string; instance?: string }[] {
+  const out: { event: string; instance?: string }[] = [];
+  for (const e of allEffects(s)) {
+    const d = e.duration;
+    if (e.ended === true || !('until' in d) || d.until !== 'event' || out.some((w) => w.event === d.event && w.instance === d.instance)) continue;
+    out.push(d.instance === undefined ? { event: d.event } : { event: d.event, instance: d.instance });
+  }
+  return out;
+}
+
 /** Batch `b` still runs: an occurrence of it is pending, or its end (`timing.batchEnd`) is still on the stack. */
 export const batchLive = (s: Timed & { readonly stack: readonly object[] }, b: number): boolean =>
   (s.timing?.occurrences.some((o) => o.batch === b && o.state === 'pending') ?? false) || s.stack.some((t) => (t as { kind?: string; end?: number }).kind === 'timing.batchEnd' && (t as { end?: number }).end === b);
