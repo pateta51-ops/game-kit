@@ -73,13 +73,16 @@ describe('a lone unseen answer against the code before K641', () => {
         asked += 1;
         s = applyAction(g, s, all[seeded(seed + asked)(all.length)] as (typeof all)[number], CONTENT).state;
       }
-      return { hash: hashState(s), notices, asked };
+      return { hash: hashState({ ...s, promptSeq: 0 }), notices, asked, seq: s.promptSeq };
     };
     let taken = 0;
     let asked = 0;
     for (let seed = 1; seed <= 40; seed += 1) {
       const now = play(askOrTake, seed);
-      expect(now).toEqual(play(askOrTakeK88, seed));
+      const then = play(askOrTakeK88, seed);
+      // K652: askOrTake now counts a taken prompt in promptSeq; the frozen copy does not, so the hashes match with it set aside
+      expect({ ...now, seq: 0 }).toEqual({ ...then, seq: 0 });
+      expect(now.seq).toBe(then.seq + now.notices.length);
       taken += now.notices.length;
       asked += now.asked;
     }
