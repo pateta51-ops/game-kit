@@ -163,11 +163,26 @@ describe('K524 gate (scripts/mechanics-check.mjs)', () => {
     expect(g.stderr).toContain('"zorking, zork a blip": row K902 is done: drop pending and name what it built');
   });
   it('a backticked name in read must be an exported name of the part, a member of an exported type, or a file of it', () => {
-    const typed = fake((f) => { f.lines[0]!.read = '`Shape` (`wide`, `tall`), `grow`'; });
-    put(path.join(typed.root, 'components', 'alpha', 'shape.ts'), "// narrow\nexport type Shape = { readonly wide?: number; readonly kind: 'tall' | 'flat' };\nexport function grow(shape: Shape) { const inner = shape; return inner; }\n");
-    expect(typed.gate().stderr).toBe('');
-    // K585: each of these passed while the check was a substring match over every file of the folder
-    for (const [name, file, text] of [['part', 'README.md', '# alpha\n\nThe alpha part.\n'], ['helperOnly', 'alpha.test.ts', 'const helperOnly = 1\n'], ['narrow', 'shape.ts', '// narrow\nexport const wide = 1\n'], ['inner', 'shape.ts', 'export function grow() { const inner = 1; return inner }\n'], ['alp', 'index.ts', 'export const alpha = 1\n']] as const) {
+    const typed = fake((f) => { f.lines[0]!.read = '`Shape` (`wide`, `tall`), `grow`, `outer`, `py_name`'; });
+    put(path.join(typed.root, 'components', 'alpha', 'shape.ts'), "// narrow\nexport type Shape = { readonly wide?: number; readonly kind: 'tall' | 'flat' };\nexport function grow(shape: Shape) { const inner = shape; return inner; }\nconst hidden = 1\nexport { hidden as outer }\n");
+    put(path.join(typed.root, 'components', 'alpha', 'helper.py'), 'def py_name():\n    pass\n');
+    const tg = typed.gate();
+    expect(tg.stderr).toBe('');
+    expect(tg.status).toBe(0);
+    // K585: a name in prose, a test file, a comment, a function's inside or a const's keys is not a name of the part
+    const not: [string, string, string][] = [
+      ['part', 'README.md', '# alpha\n\nThe alpha part.\n'],
+      ['helperOnly', 'alpha.test.ts', 'export const helperOnly = 1\n'],
+      ['specOnly', 'alpha.spec.ts', 'export const specOnly = 1\n'],
+      ['py_test', 'test_alpha.py', 'def py_test():\n    pass\n'],
+      ['narrow', 'shape.ts', '/*\nexport const narrow = 1\n*/\nexport const wide = 1\n'],
+      ['gone', 'shape.ts', 'export type Shape = {\n  // gone: number\n  wide: number }\n'],
+      ['inner', 'shape.ts', 'export function grow(inner: number) { return inner }\n'],
+      ['innerKey', 'shape.ts', 'export const table = { innerKey: 1 }\n'],
+      ['hidden', 'shape.ts', 'const hidden = 1\nexport { hidden as outer }\n'],
+      ['alp', 'index.ts', 'export const alpha = 1\n'],
+    ];
+    for (const [name, file, text] of not) {
       const r = fake((f) => { f.lines[0]!.read = 'guide.md, `' + name + '`'; });
       put(path.join(r.root, 'components', 'alpha', file), text);
       const g = r.gate();

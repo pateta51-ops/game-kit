@@ -34,7 +34,7 @@
     { "words": "replacement, instead of, replace an effect", "part": "engine-core", "read": "timing.md, `Replacement`, `insteadOf`, `changeOccurrence`" },
     { "words": "duration, until end of turn, lasting effect, expires", "part": "engine-core", "read": "timing.md, `addEffect`, `boundary`; recipe turn-flow.md step 5", "also": ["turn-flow"] },
     { "words": "continuous effect, static ability, aura, layers, order of changes", "part": "engine-core", "read": "timing.md, `addEffect`, `effectsOf`, `layered`, `stampActive`" },
-    { "words": "modifier, bonus, plus one, stat change, cost change, modifier language, modifier as data, stat breakdown, cost reduction", "part": "engine-core", "read": "numbers.md, `numberParts` (the value of a stat or a cost from every modifier, with its breakdown, floor and cap); timing.md, `addEffect` (keeps a modifier that lasts), `effectModifiers` (hands the kept ones to `numberParts`), `sumEffects` (a plain total of one kind, no breakdown), `layered` (changes applied layer by layer in the game's order)" },
+    { "words": "modifier, bonus, plus one, stat change, cost change, modifier language, modifier as data, stat breakdown, cost reduction, modifier floor", "part": "engine-core", "read": "numbers.md, `numberParts` (the value of a stat or a cost from every modifier, with its breakdown, floor and cap); timing.md, `addEffect` (keeps a modifier that lasts), `effectModifiers` (hands the kept ones to `numberParts`), `sumEffects` (a plain total of one kind, no breakdown), `layered` (changes applied layer by layer in the game's order)" },
     { "words": "number with its parts, floor and cap, breakdown of a number", "part": "engine-core", "read": "numbers.md, `numberParts`, `NumberModifier` (`set`, `add`, `multiply`, `floor`, `cap`), `effectModifiers`" },
     { "words": "hooks at fixed engine timings, rules that always apply run in source order", "row": "K425", "note": "today: engine-core timing.md continuous effects" },
     { "words": "state check, lose at zero, hand limit, hand size, hand size discard", "part": "engine-core", "read": "recipe timing.md step 6, `checkpoint` of `TimingConfig`, `StateCheck` (`checkpoint.ts`)" },
@@ -113,6 +113,7 @@
     { "words": "campaign calendar, roster of players between sessions, shared card box with copy limits", "row": "K595", "note": "today: `campaign` has the log, the steps and the graph runner" },
     { "words": "full, partial or no resolution of an effect, three-grade forecast, can this effect resolve in full", "row": "K597", "note": "today: the card-language offer policy answers yes, no or unknown" },
     { "words": "zone with a capacity, slot limit on a zone, over the limit choose what leaves", "row": "K599" },
+    { "words": "stop set on a grid, spaces that end a move, enter but not leave, reach that stops at a space, stop set", "row": "K629", "note": "today: a second grid with added walls (grid-map)" },
     { "words": "heavy queue, queue a heavy job, queue heavy runs, one at a time on the machine, machine queue", "tool": "heavy-queue", "read": "its README: `heavy run -- <cmd>` in WSL runs a heavy job in the one machine queue" }
   ],
   "searches": {
