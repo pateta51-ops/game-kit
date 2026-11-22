@@ -15,10 +15,10 @@ const put = (f: string, s: string) => {
   fs.writeFileSync(f, s);
 };
 // a game with motion-frame and sound-player pulled (their real component.json), and the given src/ files
-const check = (files: Record<string, string>) => {
+const check = (files: Record<string, string>, pulled = ['motion-frame', 'sound-player']) => {
   const g = path.join(tmp, 'game' + String(++n));
   fs.mkdirSync(g);
-  expect(spawnSync('node', [path.join(src, 'kit.mjs'), 'pull', src, 'b1', 'motion-frame', 'sound-player'], { cwd: g, encoding: 'utf8' }).status).toBe(0);
+  expect(spawnSync('node', [path.join(src, 'kit.mjs'), 'pull', src, 'b1', ...pulled], { cwd: g, encoding: 'utf8' }).status).toBe(0);
   for (const [f, s] of Object.entries(files)) put(path.join(g, f), s);
   return spawnSync('node', [path.join(g, 'kit/kit.mjs'), 'check'], { cwd: g, encoding: 'utf8' });
 };
@@ -63,7 +63,7 @@ describe('K675: kit check fails a game that goes around a kit part', () => {
     expect(c.stderr.split('\n').filter((l) => /^src\/\S+:\d+ /.test(l))).toHaveLength(4);
   });
 
-  it('K675: cue times from a maxMs sum and sorted cue rows fail where only sound-player is imported', () => {
+  it("K675: cue times from a maxMs sum fail where only sound-player is imported; sorting one beat's cue rows by time passes", () => {
     const c = check({
       'src/tally.ts':
         SP +
@@ -76,9 +76,26 @@ describe('K675: kit check fails a game that goes around a kit part', () => {
         '}\n',
     });
     expect(c.status).toBe(1);
-    expect(c.stderr).toContain('src/tally.ts:5 beats-reordered');
+    expect(c.stderr).not.toContain('beats-reordered');
     expect(c.stderr).toContain('src/tally.ts:6 cue-time-from-maxms');
     expect(c.stderr).not.toContain('sound-on-timer');
+  });
+
+  it('K675: sorting the list of beats or steps passed to the player fails', () => {
+    const c = check({ 'src/order.ts': MF + 'export const order = (specs: { at: number }[], steps: { t: number }[]) => [[...specs].sort((a, b) => a.at - b.at), steps.toSorted((a, b) => a.t - b.t)];\n' });
+    expect(c.status).toBe(1);
+    expect(c.stderr.split('\n').filter((l) => l.startsWith('src/order.ts:2 beats-reordered (motion-frame)'))).toHaveLength(2);
+  });
+
+  it("K675: only the pulled component's patterns run", () => {
+    const sp = check({ 'src/turn.ts': BYPASS }, ['sound-player']);
+    expect(sp.status).toBe(1);
+    expect(sp.stderr.split('\n').filter((l) => /^src\/\S+:\d+ /.test(l))).toEqual([expect.stringMatching(/^src\/turn\.ts:8 sound-on-timer \(sound-player\)/)]);
+    const mf = check({ 'src/turn.ts': BYPASS }, ['motion-frame']);
+    expect(mf.status).toBe(1);
+    expect(mf.stderr).toContain('src/turn.ts:5 beats-reordered');
+    expect(mf.stderr).toContain('src/turn.ts:9 cue-time-from-maxms');
+    expect(mf.stderr).not.toContain('sound-on-timer');
   });
 
   it('K675: onCue, parallel and timers that play no sound pass', () => {
