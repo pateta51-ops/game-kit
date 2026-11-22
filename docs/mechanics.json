@@ -56,7 +56,7 @@
     { "words": "preview, outcome before choosing, what would happen", "part": "engine-core", "read": "legal.md, `preview` (stops at hidden information)", "sheet": "offered" },
     { "words": "does nothing, do nothing, effect with no result, idle option, would an effect do anything", "part": "engine-core", "read": "idle.md, `doesNothing`, `idleProblems`, `markIdle`", "sheet": "offered" },
     { "words": "only one option, forced choice, only one legal answer taken automatically, skip prompt with one choice, auto pick single option, lone hidden or face-down option is asked", "part": "engine-core", "read": "legal.md, `onlyOne`, `askOrTake`, `unseen`", "sheet": "offered" },
-    { "words": "undo, take back, undo button, take back button, step back", "part": "engine-core", "read": "undo.md; recipe game-store.md", "also": ["game-store"], "sheet": "phases" },
+    { "words": "undo, undo last move, take back, undo button, take back button, step back", "part": "engine-core", "read": "undo.md; recipe game-store.md", "also": ["game-store"], "sheet": "phases" },
     { "words": "random, seeded, same seed same game", "part": "engine-core", "read": "random.md, `ctx.rng`", "sheet": "dice" },
     { "words": "rounds, turns, phases, passing, turn order, round end", "part": "turn-flow", "read": "recipe turn-flow.md", "sheet": "phases" },
     { "words": "round tracker, round counter, number of rounds left", "part": "clock", "read": "its README, `step`, `setTo`, `occurrences`", "also": ["turn-flow"], "sheet": "phases" },

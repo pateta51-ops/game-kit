@@ -279,7 +279,9 @@
       "carried between games",
       "carry state",
       "deck carried",
-      "record"
+      "record",
+      "campaign setup",
+      "phone campaign"
     ],
     "visible": false,
     "release": 1,
@@ -506,7 +508,8 @@
       "condition expression all any not compare",
       "barred option",
       "reason code",
-      "not offered"
+      "not offered",
+      "resource cap"
     ],
     "visible": false,
     "release": 1,
@@ -661,7 +664,8 @@
       "text",
       "icons",
       "glossary",
-      "transcription"
+      "transcription",
+      "card zoom preview"
     ],
     "looks": "A card shown large with its printed text decoded, icons, tokens and a legend.",
     "visible": true,
@@ -836,7 +840,8 @@
       "probability",
       "chance",
       "roll",
-      "maths"
+      "maths",
+      "win probability exact odds two dice compare"
     ],
     "visible": false,
     "release": 1,
@@ -895,7 +900,8 @@
       "until different value",
       "named dice roll",
       "dice roll name",
-      "force a dice roll"
+      "force a dice roll",
+      "reroll window choose dice to reroll"
     ],
     "visible": false,
     "release": 1,
@@ -1240,7 +1246,8 @@
       "modal",
       "confirm",
       "box",
-      "overlay"
+      "overlay",
+      "popup notice"
     ],
     "looks": "A box over the board with a dimmed background and OK and Cancel buttons.",
     "visible": true,
@@ -1274,7 +1281,9 @@
       "after the animation step",
       "timer hold",
       "hold until",
-      "auto continue"
+      "auto continue",
+      "animation queue",
+      "event queue for animations"
     ],
     "looks": "Plays a director motion file on the screen, step by step.",
     "visible": true,
@@ -1368,7 +1377,8 @@
       "table",
       "pace",
       "opponent turn",
-      "step display"
+      "step display",
+      "timer for bot thinking delay"
     ],
     "looks": "The table updates one event at a time after a move.",
     "visible": true,
@@ -1612,7 +1622,8 @@
       "ask",
       "answer",
       "widget",
-      "pick"
+      "pick",
+      "confirm button prompt"
     ],
     "looks": "The box that asks the player a question, with a widget for each kind of question.",
     "visible": true,
@@ -1750,7 +1761,8 @@
       "text",
       "field",
       "input",
-      "controls"
+      "controls",
+      "skin components"
     ],
     "looks": "A segmented choice, an on-off switch, a slider and a text box with no style of their own.",
     "visible": true,
@@ -1791,7 +1803,8 @@
       "list",
       "screen",
       "browser",
-      "storage"
+      "storage",
+      "save game slots"
     ],
     "looks": "A list of saved games to load, rename or delete.",
     "visible": true,
@@ -2100,7 +2113,8 @@
       "fonts",
       "check",
       "style",
-      "sheet"
+      "sheet",
+      "theme kit"
     ],
     "visible": false,
     "release": 1,
@@ -2188,7 +2202,8 @@
       "face enlarged",
       "larger than source",
       "size cap",
-      "minimum quality"
+      "minimum quality",
+      "resize image long edge cap"
     ],
     "visible": false,
     "release": 1,
@@ -2317,7 +2332,9 @@
       "selection",
       "timers",
       "icon",
-      "words"
+      "words",
+      "toast message",
+      "tooltip hover card"
     ],
     "visible": false,
     "release": 1,
@@ -2369,7 +2386,8 @@
       "skip phase condition",
       "loop",
       "actions per turn",
-      "round phases"
+      "round phases",
+      "end of round scoring"
     ],
     "visible": false,
     "release": 1,
@@ -2464,7 +2482,8 @@
       "order of changes",
       "recompute",
       "continuous",
-      "static"
+      "static",
+      "static ability changes cost"
     ],
     "use": "Several lasting effects change the same thing and the order matters (`layered`, `stampActive`).",
     "guide": "timing.md"
@@ -2503,7 +2522,8 @@
       "do nothing",
       "idle",
       "no result",
-      "empty effect"
+      "empty effect",
+      "did nothing"
     ],
     "use": "Find or mark an option whose effect would change nothing (`doesNothing`, `idleProblems`, `markIdle`).",
     "guide": "idle.md"
