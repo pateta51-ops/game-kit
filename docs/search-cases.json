@@ -316,7 +316,7 @@
   { "q": "duration this round", "first": "engine-core" },
   { "q": "enemy driven by deck", "first": "automa" },
   { "q": "automated enemy movement", "first": "K559" },
-  { "q": "mission goals as data", "first": "K546" },
+  { "q": "mission goals as data", "first": "engine-core" },
   { "q": "setup options forced", "first": "none" },
   { "q": "combat compare lower wins", "first": "K550" },
   { "q": "attack and defense roll", "first": "K550" },
