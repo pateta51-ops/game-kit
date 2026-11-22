@@ -311,7 +311,11 @@
       "can resolve",
       "unpayable cost",
       "dry run",
-      "would change nothing"
+      "would change nothing",
+      "offer",
+      "offer policy",
+      "no change",
+      "effect offered"
     ],
     "visible": false,
     "release": 1,

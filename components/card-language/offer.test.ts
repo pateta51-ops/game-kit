@@ -318,6 +318,12 @@ describe('card-language offer policy (K529): one test per knob setting', () => {
       [[{ op: 'payThen', cost: [{ op: 'discard', count: 1 }, { op: 'exhaust' }], then: [{ op: 'may', then: [DRAW] }] }], [['h2'], ['yes']]],
       [[pay(9), { op: 'convert', res: 'gold', amount: 2, into: 'vp', get: 1 }], []],
     ];
+    const seen = runs.map(([effect, answers]) => {
+      const { s, prompts } = game().play(effect, answers);
+      return `${hashState(s)} ${prompts.map((p) => `${String(p.kind)} ${String(p.min)}-${String(p.max)} ${p.options.map((o) => (o.enabled ? o.id : `!${o.id}`)).join(',')}`).join('; ')}`;
+    });
+    // K579: recorded on the pack as it was before K579 (state hash, then each prompt offered); a change of the default path fails here.
+    expect(seen).toEqual(["a3f8924fed750119 may 1-1 yes,no","a3f8924fed750119 may 1-1 yes,no","2ec17ff668bd8a72 ","a3f8924fed750119 chooseCards 2-2 h1,h2","ba7d048fb02021fa chooseOption 1-1 0,1,2","a3f8924fed750119 chooseOption 1-1 0,1","2cfd92392f7e10d8 may 1-1 yes,no","f4a89317fa54bb5b choosePayment 1-1 !0,1","f309a6a0089916f0 ","d3ab7e793702e5a9 chooseCards 1-1 h1,h2; may 1-1 yes,no","cbd63fb9510fe496 "]);
     for (const [effect, answers] of runs) {
       const a = game().play(effect, answers);
       const b = game(DEFAULTS).play(effect, answers);
