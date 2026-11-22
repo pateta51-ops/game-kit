@@ -6,7 +6,7 @@
     "paths": [
       "src/ui/bag3d/timeline.ts (unchanged: the pure motion, seeded rest layout, assignDraws)",
       "supply.ts (K373): unstoppable-fan-prototype e314b5f src/ui/scanned/supply.ts (makeChange, heapOf, heapSpot; tableTokens generalised as placeTokens, apDiscs and asideStacks as heldAndAside; the game's token counts and places left in it) and geometry.ts tokenSplit, discStack",
-      "stock.ts (K593): src/engine/state/tokens.ts (moveToken, gainFromSupply: one place per piece, an empty stock gives nothing) and src/engine/turn/draw.ts (drawFromBag: a uniform seeded draw one at a time, per-reason short bag); the zones, ids and Warp's draw reasons left in the game",
+      "stock.ts (K593): src/engine/state/tokens.ts (moveToken, gainFromSupply: one place per piece, an empty stock gives nothing) and src/engine/turn/draw.ts (drawFromBag: a uniform seeded draw one at a time, which stops on an empty bag); the short-bag rules `refill` and `fail` are new, not in the source; the zones, ids and the source's draw reasons left in the game",
       "src/ui/bag3d/bagMode.ts (as mode.ts: webgl check, fps watch, texture budget, session fallback; the dock selector, bagMode, drawContents, rateFor are new)",
       "src/ui/bag3d/bagScene.ts (as scene.ts: faces from faceUrl, the print and backdrop are options)",
       "src/ui/bag3d/bagExterior.ts (as exterior.ts: the plain cloth and weave; the Warp logo patch stays in Warp's)",

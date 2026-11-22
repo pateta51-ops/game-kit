@@ -1,4 +1,9 @@
-import { describe, expect, it } from 'vitest';
+import { readFileSync } from 'node:fs';
+import { dirname, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
+import ts from 'typescript';
+import { describe, expect, it, vi } from 'vitest';
+import * as stock from './stock.ts';
 import { drawPieces, gainPieces, makeStocks, moveIds, piecesIn, returnPieces, whereIs, type ShortBagRules, type StockRng } from './stock.ts';
 import { placeTokens } from './index.ts';
 
@@ -62,7 +67,7 @@ describe('finite stocks and a bag (K593)', () => {
     expect(piecesIn(r.state, 'discard')).toBe(4);
   });
 
-  it('a short bag under refill: the named place goes into the bag first, then the draw goes on', () => {
+  it('a short bag under refill: the bag runs out mid-draw, the named place goes into the bag once, the draw goes on', () => {
     const r = drawPieces(fresh(), seeded(2), 'bag', 'hand', 7, RULES.turn);
     expect(r).toMatchObject({ short: 0, refilled: 4, failed: false });
     expect(r.reason).toBeUndefined();
@@ -122,15 +127,35 @@ describe('finite stocks and a bag (K593)', () => {
     expect(places.mat).toEqual({ tokens: [3, 3, 1], short: 0 });
   });
 
-  it('the README recipe runs', () => {
-    // "Finite stocks and a bag" in README.md, line for line
-    const rules = { turn: { do: 'refill', from: 'discard' }, effect: { do: 'fail' } } as const satisfies ShortBagRules;
-    let s = makeStocks({ supply: { die: 6 }, bag: { cube: 2 }, hand: {}, discard: { cube: 3 } });
-    const got = gainPieces(s, 'supply', 'bag', 1, 'die'); // a gain from a named stock
-    s = got.state;
-    const d = drawPieces(s, seeded(7), 'bag', 'hand', 4, rules.turn); // pass ctx.rng in the engine
-    expect(d).toMatchObject({ short: 0, refilled: 3 });
-    expect(piecesIn(d.state, 'hand')).toBe(4);
-    expect(piecesIn(d.state, 'bag') + piecesIn(d.state, 'hand', 'cube') + piecesIn(d.state, 'hand', 'die')).toBe(6);
+  it('the README recipe "Finite stocks and a bag" runs as written', () => {
+    const part = readFileSync(join(dirname(fileURLToPath(import.meta.url)), 'README.md'), 'utf8').split(/^## /m).find((p) => p.startsWith('Finite stocks and a bag')) ?? '';
+    const code = /```ts\r?\n([\s\S]*?)```/.exec(part)?.[1] ?? '';
+    expect(code).toContain("from '../kit/token-bag/stock'");
+    const log = vi.spyOn(console, 'log').mockImplementation(() => undefined);
+    try {
+      const js = ts.transpileModule(code, { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } }).outputText;
+      // eslint-disable-next-line @typescript-eslint/no-implied-eval
+      (new Function('require', 'exports', 'rng', js) as (r: () => unknown, e: object, g: StockRng) => void)(() => stock, {}, seeded(7));
+      const [ids, refilled, inHand, why] = (log.mock.calls.at(-1) ?? []) as unknown[];
+      expect(ids).toHaveLength(4);
+      expect(refilled).toBe(3);
+      expect(inHand).toBe(4);
+      expect(why).toBeUndefined();
+    } finally {
+      log.mockRestore();
+    }
+  });
+
+  it('a piece named twice, a draw into the bag, a refill from where the draw goes: each throws', () => {
+    const s = fresh();
+    expect(() => moveIds(s, ['die#1', 'die#1'], 'hand')).toThrow('named twice');
+    expect(() => returnPieces(s, ['cube#1', 'cube#1'], 'supply')).toThrow('named twice');
+    expect(() => drawPieces(s, seeded(1), 'bag', 'bag', 2, { do: 'drawLeft' })).toThrow('another place');
+    expect(() => drawPieces(s, seeded(1), 'bag', 'discard', 9, { do: 'refill', from: 'discard' })).toThrow('other than where the draw goes');
+  });
+
+  it('a fail draw from an empty bag says nothing is left', () => {
+    const s = moveIds(fresh(), ['cube#1', 'cube#2', 'cube#3', 'crystal#1', 'crystal#2'], 'removed');
+    expect(drawPieces(s, seeded(5), 'bag', 'hand', 2, { do: 'fail' })).toMatchObject({ ids: [], failed: true, reason: 'empty', why: 'Nothing left in bag: nothing drawn.' });
   });
 });

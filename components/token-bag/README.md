@@ -13,7 +13,7 @@ A bag of tokens with its count; the draw shown as a 2D flight from the bag or a 
 5. Pass a stable `exterior` function or a ready canvas: the print is cached by the function, so an inline arrow repaints every time.
 6. Never use the scene for randomness: which coin rises comes from the drawn kinds only (`assignDraws`); the pile layout is decoration, never `ctx.rng`.
 7. For a finite box use `placeTokens(places, box)`; show `short` as a badge, since the number beside it stays exact.
-8. For finite stocks and a bag in the engine (K593), import `stock.ts` from `index`: keep the `Stocks` in the game state, pass `ctx.rng` to `drawPieces`, and pass the short-bag rule of each kind of draw from the game's own `ShortBagRules` table; show `why` (or the game's words for `reason`) when `short` is above 0.
+8. For finite stocks and a bag in the engine (K593), import from `stock` (`../kit/token-bag/stock`: no DOM types, so an engine tsconfig without the DOM lib compiles it; `index` also re-exports the view's DOM parts): keep the `Stocks` in the game state, pass `ctx.rng` to `drawPieces`, and pass the short-bag rule of each kind of draw from the game's own `ShortBagRules` table; show `why` (or the game's words for `reason`) when `short` is above 0.
 9. For e2e, set `e2eHooks` on `Draw` / `Rest` (default off); they set `window.__bag3dStats()`, `__bag3dSeek(t)` and `__bagDockFrames()` and remove only their own.
 
 **Common mistakes:**
@@ -43,17 +43,19 @@ A bag of tokens with its count; the draw shown as a 2D flight from the bag or a 
 `supply.ts`: the engine keeps integers, the table draws the box's real pieces. `placeTokens(places, box)` gives each place (in order) the change of its number out of what the ones before it left, largest values first, at most its `cap`; what the supply or the cap cannot draw is `short` (show it as a badge; the number beside it stays exact). Also `makeChange`, `countOf`, `valueOf`, `tokenSplit` (no supply limit), `heapOf` and `heapSpot` (the supply as a heap that keeps its shape), `discStack`, `heldAndAside`. A game's counts per kind and value are its own.
 
 ## Finite stocks and a bag (K593)
-`stock.ts`, engine-safe (pure, plain data, no DOM): every piece has an id (`kind#n`) and sits in exactly one place the game names. `makeStocks(counts)` builds the state from counts per place and kind; `piecesIn(s, place, kind?)` counts; `whereIs(s, id)`; `moveIds` / `returnPieces(s, ids, to)` move pieces. `gainPieces(s, from, to, n, kind?)` takes from a named stock: an empty or short stock gives what it has, no substitute, with `short`, `reason` (`empty` or `short`) and `why` (words a prompt can show). `drawPieces(s, ctx.rng, bag, to, n, rule)` draws one at a time, uniform over the bag; the rule (`ShortBag`) is the game's for that kind of draw: `drawLeft` (draw what is left), `refill` (when the bag runs out, every piece of `from` goes into the bag once, then the draw goes on; `refilled` counts them) or `fail` (fewer than `n` in the bag: nothing drawn, `failed`, state unchanged). Each call returns the new state; the old one is not changed.
+`stock.ts`, engine-safe (pure, plain data, no DOM): every piece has an id (`kind#n`) and sits in exactly one place the game names. `makeStocks(counts)` builds the state from counts per place and kind; `piecesIn(s, place, kind?)` counts; `whereIs(s, id)`; `moveIds` / `returnPieces(s, ids, to)` move pieces. `gainPieces(s, from, to, n, kind?)` takes from a named stock: an empty or short stock gives what it has, no substitute, with `short`, `reason` (`empty` or `short`) and `why` (words a prompt can show). `drawPieces(s, ctx.rng, bag, to, n, rule)` draws one at a time, uniform over the bag; the rule (`ShortBag`) is the game's for that kind of draw: `drawLeft` (draw what is left), `refill` (when the bag runs out, every piece of `from` goes into the bag once, then the draw goes on; `refilled` counts them) or `fail` (fewer than `n` in the bag: nothing drawn, `failed`, state unchanged). Each call returns the new state; the old one is not changed. A piece named twice in a move, a draw into the bag itself, or a refill from the place the draw goes into throws.
+
+Hidden information: the whole `Stocks` sits in the game state, an id shows its kind (`cube#3`), and a place keeps arrival order (the bag's list shows what went in last). A player's view must hide the ids of hidden places (the bag, an opponent's hand) and show them as counts (`piecesIn`), and a game's `reshuffleHidden` (sim-pool) must cover the hidden places of its `Stocks`.
 
 ```ts
-import { drawPieces, gainPieces, makeStocks, piecesIn, type ShortBagRules, type StockRng } from '../kit/token-bag/index'
+import { drawPieces, gainPieces, makeStocks, piecesIn, type ShortBagRules, type StockRng } from '../kit/token-bag/stock'
 
 declare const rng: StockRng // ctx.rng in a handler
 const rules = { turn: { do: 'refill', from: 'discard' }, effect: { do: 'fail' } } as const satisfies ShortBagRules
 let s = makeStocks({ supply: { die: 6 }, bag: { cube: 2 }, hand: {}, discard: { cube: 3 } })
 const got = gainPieces(s, 'supply', 'bag', 1, 'die') // got.reason 'empty' and got.why when the stock ran out
 s = got.state
-const d = drawPieces(s, rng, 'bag', 'hand', 4, rules.turn) // the bag is short: the discard goes in first
+const d = drawPieces(s, rng, 'bag', 'hand', 4, rules.turn) // the bag runs out after 3: the discard goes in, the 4th is drawn from it
 console.log(d.ids, d.refilled, piecesIn(d.state, 'hand'), d.why)
 ```
 

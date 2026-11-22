@@ -74,6 +74,7 @@ export const whereIs = (s: Stocks, id: string): string | undefined => Object.key
 export function moveIds(s: Stocks, ids: readonly string[], to: string): Stocks {
   at(s, to);
   const set = new Set(ids);
+  if (set.size !== ids.length) throw new Error('token-bag: a piece is named twice');
   for (const id of ids) if (whereIs(s, id) === undefined) throw new Error(`token-bag: no piece "${id}"`);
   const places = Object.fromEntries(Object.entries(s.places).map(([p, xs]) => [p, xs.filter((id) => !set.has(id))]));
   places[to] = [...(places[to] ?? []), ...ids];
@@ -107,9 +108,11 @@ export const returnPieces = moveIds;
  */
 export function drawPieces(s: Stocks, rng: StockRng, from: string, to: string, n: number, short: ShortBag): Drawn {
   const want = Math.max(0, n);
+  if (to === from) throw new Error('token-bag: a draw goes from the bag to another place');
+  if (short.do === 'refill' && short.from === to) throw new Error('token-bag: a refill comes from a place other than where the draw goes');
   if (short.do === 'fail' && at(s, from).length < want) {
     const have = at(s, from).length;
-    return { state: s, ids: [], short: want, refilled: 0, failed: true, reason: have === 0 ? 'empty' : 'short', why: `Only ${String(have)} left in ${from}, ${String(want)} needed: nothing drawn.` };
+    return { state: s, ids: [], short: want, refilled: 0, failed: true, reason: have === 0 ? 'empty' : 'short', why: have === 0 ? `Nothing left in ${from}: nothing drawn.` : `Only ${String(have)} left in ${from}, ${String(want)} needed: nothing drawn.` };
   }
   let state = s;
   const ids: string[] = [];
