@@ -108,6 +108,15 @@
       "squares",
       "tiles",
       "targeting",
+      "first step",
+      "shortest path",
+      "extra steps",
+      "extra adjacency",
+      "adjacency",
+      "extra neighbours",
+      "diagonal",
+      "move toward",
+      "ties",
       "area"
     ],
     "visible": false,
@@ -288,7 +297,11 @@
       "prompt amount",
       "screen check",
       "no amount",
-      "amounts"
+      "amounts",
+      "prompt amount check",
+      "clause two prompts",
+      "screen text amounts",
+      "amounts per prompt"
     ],
     "visible": false,
     "release": 1,

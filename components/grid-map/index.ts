@@ -21,7 +21,8 @@ export type GridMap = {
   readonly blocked: readonly boolean[]
   readonly adjacency: { readonly orth: Adj; readonly diag: Adj; readonly diagEnd: Adj; readonly orthOpen: Adj; readonly diagOpen: Adj }
 }
-export type Steps = { diagonal?: boolean; wallEnd?: 'closed' | 'open' }
+export type ExtraStep = readonly [a: string, b: string, oneWay?: 'oneWay']
+export type Steps = { diagonal?: boolean; wallEnd?: 'closed' | 'open'; extra?: readonly ExtraStep[] }
 type Targets = string | Iterable<string>
 
 const STEP: Record<Direction, Cell> = { n: [-1, 0], ne: [-1, 1], e: [0, 1], se: [1, 1], s: [1, 0], sw: [1, -1], w: [0, -1], nw: [-1, -1] }
@@ -118,8 +119,24 @@ export function cellsOf(g: GridMap, space: string): readonly Cell[] {
   return c
 }
 export const spaceAt = (g: GridMap, row: number, col: number): string | null => (row >= 0 && row < g.rows && col >= 0 && col < g.cols ? g.at[row * g.cols + col] ?? null : null)
-const table = (g: GridMap, o: Steps, open?: boolean): Adj => g.adjacency[o.diagonal ? (open ? 'diagOpen' : o.wallEnd === 'open' ? 'diagEnd' : 'diag') : open ? 'orthOpen' : 'orth']
 const ordered = (g: GridMap, set: ReadonlySet<string>) => g.spaces.filter(s => set.has(s))
+const table = (g: GridMap, o: Steps, open?: boolean): Adj => {
+  const base = g.adjacency[o.diagonal ? (open ? 'diagOpen' : o.wallEnd === 'open' ? 'diagEnd' : 'diag') : open ? 'orthOpen' : 'orth']
+  if (!o.extra?.length) return base
+  const more = new Map<string, Set<string>>()
+  const add = (a: string, b: string) => { if (a !== b) more.set(a, (more.get(a) ?? new Set(base[a])).add(b)) }
+  for (const [a, b, oneWay] of o.extra) { cellsOf(g, a); cellsOf(g, b); add(a, b); if (!oneWay) add(b, a) }
+  const out: Record<string, readonly string[]> = { ...base }
+  for (const [s, set] of more) out[s] = ordered(g, set)
+  return out
+}
+const reversed = (adj: Adj): Adj => {
+  const out: Record<string, string[]> = {}
+  for (const s in adj) out[s] = []
+  for (const s in adj) for (const t of adj[s] as readonly string[]) (out[t] as string[]).push(s)
+  return out
+}
+const toward = (g: GridMap, adj: Adj, to: Targets, o: Steps) => flood(o.extra?.some(e => e[2]) ? reversed(adj) : adj, targets(g, to))
 const targets = (g: GridMap, to: Targets) => new Set((typeof to === 'string' ? [to] : [...to]).filter(s => g.cells[s]))
 
 export function neighbours(g: GridMap, space: string, o: Steps = {}): readonly string[] {
@@ -153,7 +170,7 @@ export function shortestPaths(g: GridMap, from: string, to: Targets, o: Steps & 
   cellsOf(g, from)
   const adj = table(g, o)
   const max = o.maxPaths ?? 64
-  const d = flood(adj, targets(g, to))
+  const d = toward(g, adj, to, o)
   const total = d.get(from)
   const paths: string[][] = []
   let overflow = false
@@ -175,6 +192,25 @@ export function shortestPaths(g: GridMap, from: string, to: Targets, o: Steps & 
   }
   walk(from, total)
   return { distance: total, paths, overflow }
+}
+
+export function firstSteps(g: GridMap, from: string, to: Targets, o: Steps & { steps?: number } = {}): { distance: number | null; starts: string[][] } {
+  cellsOf(g, from)
+  const k = o.steps ?? 1
+  if (!int(k) || k < 1) throw new Error(`grid-map: steps must be a whole number above 0 (got ${k})`)
+  const adj = table(g, o)
+  const d = toward(g, adj, to, o)
+  const total = d.get(from)
+  const starts: string[][] = []
+  if (total === undefined) return { distance: null, starts }
+  const stop = total - Math.min(total, k)
+  const cur: string[] = []
+  const walk = (s: string, left: number) => {
+    if (left === stop) { if (cur.length) starts.push([...cur]); return }
+    for (const t of (adj[s] as readonly string[]).filter(x => d.get(x) === left - 1).sort()) { cur.push(t); walk(t, left - 1); cur.pop() }
+  }
+  walk(from, total)
+  return { distance: total, starts }
 }
 
 const gcd = (a: number, b: number): number => (b ? gcd(b, a % b) : a)
@@ -257,14 +293,16 @@ export function within(g: GridMap, from: string, n: number, o: Steps & { through
   return g.spaces.filter(s => s !== from && d.has(s) && (!o.sight || lineOfSight(g, from, s)))
 }
 
-function run(g: GridMap, r: number, c: number, d: Direction, stop?: boolean, length = Infinity, open?: boolean): string[] {
+function run(g: GridMap, r: number, c: number, d: Direction, stop?: boolean, length = Infinity, open?: boolean, extra?: ReadonlySet<string>): string[] {
   const [dr, dc] = STEP[d]
   const out: string[] = []
   for (let i = 0; i < length; i++) {
     if (r + dr < 0 || r + dr >= g.rows || c + dc < 0 || c + dc >= g.cols) break
-    if (stop && (d.length === 1
+    const s = g.at[r * g.cols + c] as string
+    const t = g.at[(r + dr) * g.cols + c + dc] as string
+    if (stop && !extra?.has(`${s}\n${t}`) && (d.length === 1
       ? g.segments.some(([h, x, y]) => { const e = edge(r, c, d as Side); return h === e[0] && x === e[1] && y === e[2] })
-      : (g.degree[(r + (dr > 0 ? 1 : 0)) * (g.cols + 1) + c + (dc > 0 ? 1 : 0)] as number) > (open ? 1 : 0))) break
+      : (g.degree[(r + (dr > 0 ? 1 : 0)) * (g.cols + 1) + c + (dc > 0 ? 1 : 0)] as number) > (open ? 1 : 0) || (s !== t && g.merges.some(m => m.id === s || m.id === t)))) break
     r += dr
     c += dc
     out.push(g.at[r * g.cols + c] as string)
@@ -272,9 +310,10 @@ function run(g: GridMap, r: number, c: number, d: Direction, stop?: boolean, len
   return out
 }
 
-export function line(g: GridMap, from: string, direction: Direction, o: { length?: number; stopAtWall?: boolean; wallEnd?: 'closed' | 'open' } = {}): string[] {
+export function line(g: GridMap, from: string, direction: Direction, o: { length?: number; stopAtWall?: boolean; wallEnd?: 'closed' | 'open'; extra?: readonly ExtraStep[] } = {}): string[] {
   if (!STEP[direction]) throw new Error(`grid-map: unknown direction ${String(direction)}`)
-  const runs = cellsOf(g, from).map(([r, c]) => run(g, r, c, direction, o.stopAtWall, o.length, o.wallEnd === 'open'))
+  const extra = o.extra?.length ? new Set(o.extra.flatMap(([a, b, oneWay]) => (cellsOf(g, a), cellsOf(g, b), oneWay ? [`${a}\n${b}`] : [`${a}\n${b}`, `${b}\n${a}`]))) : undefined
+  const runs = cellsOf(g, from).map(([r, c]) => run(g, r, c, direction, o.stopAtWall, o.length, o.wallEnd === 'open', extra))
   const out: string[] = []
   for (let i = 0; runs.some(x => i < x.length); i++) for (const x of runs) { const s = x[i]; if (s !== undefined && s !== from && !out.includes(s)) out.push(s) }
   return out
