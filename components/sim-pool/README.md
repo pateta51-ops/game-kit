@@ -19,6 +19,7 @@ Plays N whole games of any `GameRules<G>` with a driver, in this thread or on wo
 10. For the whole-game report (K490) pass `whole: { clauses, group? }` (or `true`) in `fuzzMain`'s options and give `trace(content)` on `SimGame` (card-harness `traceAbilities` over the registry the engine plays from, built in `content()`); without `trace` no record has `resolved` and every listed clause fails as never resolved. Set `gameTimeoutMs` in the options too: without it a game that hangs inside one action stalls the run; with it the game is a `timeout` record, counted unfinished with its seed (a crashed worker's game too).
 11. Answer with the engine's own options: `randomDriver` over the default `legalAnswers` (the prompt's enabled options) is the legal-move driver; a game `answers` override replaces those options.
 12. (K651) For the unreached list pass `whole: { clauses, unreached, proof }`: `unreached` is `[{ clause, why }]`, and `proof` must come from `provenClauses({ log, root, clauses, sources })` over the log that `proveResolved(log, trace, clause)` (`kit/sim-pool/prove`, test code: vitest plus card-harness `trace.ts`) wrote in the card test run just before, never a hand-written object; a stale or foreign log fails the check. A listed clause that resolved fails as stale; one with no proof fails. Give `changed(clause, before, after, content)` on `SimGame` so a resolve counts only when the effect moved something, and give `effects` on the trace (state before and after each effect) so it judges each effect, not the whole action; pass `rounds: { games, max?, settings(seed, driver, unreached) }` to steer coverage rounds (they stop when a round adds no clause, or at `max`, default 10); pass `findings: <path>` and replay one failure with `--finding <seed>` (its recorded settings, not the seed's).
+13. (K666) A game without a kit registry passes `proveResolved(log, clauseTrace(gameLog, clauseOf, changed?), clause)`: `clauseOf` maps each entry of its own log to `{ clause, step, kind: 'resolved' | 'applied', before?, after? }`; an `applied` step proves a static clause only when `changed` (default: before and after differ) says it had an effect. Build the trace from what the engine wrote in the test, never a hand-written list of steps.
 
 **Common mistakes:**
 - A game whose result differs between a pool run and a single run: module state is carried between games.
@@ -81,6 +82,22 @@ const rounds = { games: 30, settings: (_seed: string, _driver: string, left: rea
 const module = new URL('../kit/sim-pool/fake/coverage.ts', import.meta.url).href // yours: the module exporting simGame
 process.exitCode = await fuzzMain(process.argv.slice(2), module, { whole: { clauses, unreached, proof, rounds, findings: 'tests/whole-game/findings.json' } })
 // replay one failure with its recorded settings: the same script with --finding <seed>
+```
+
+## Trace from a game's own log (K666)
+
+A game whose clauses do not run through a kit registry passes `proveResolved` a `ClauseTrace` in place of the registry trace: `{ steps, changed? }`, where `steps` is a list of `ClauseStep` `{ clause, step, kind: 'resolved' | 'applied', before?, after? }`. Build it with `clauseTrace(entries, clauseOf, changed?)`: `clauseOf(entry, index)` maps each entry of the game's own log to a step, a list of steps, or `undefined`. A `resolved` step proves its clause. An `applied` step (a static or passive clause: a modifier that changes a value, a rule check) proves it only when `changed(clause, before, after)` is true (the K651 `changed` rule; default: `before` and `after` are not deep-equal), so applied with no effect proves nothing and the test fails with `Not resolved: <id> (applied with no effect)`; a clause with no step fails with `(not in the trace)`. The record and its rules are K651's: written only when the test passed and is not `it.fails`, under this project root, read back by `provenClauses`. A registry trace works as before.
+
+```ts
+import { clauseTrace, proveResolved, type ClauseStep } from '../kit/sim-pool/prove'
+
+// the game's own log of one card test (in a test: the engine wrote it while the test played)
+const gameLog = [
+  { step: 1, card: 'c12', did: 'gain', value: [2, 5] },
+  { step: 2, card: 'c30', did: 'modify', value: [4, 3] }, // a static cost modifier: 4 became 3
+]
+const trace = clauseTrace(gameLog, (e): ClauseStep => ({ clause: `${e.card}-1`, step: e.step, kind: e.did === 'modify' ? 'applied' : 'resolved', before: e.value[0], after: e.value[1] }))
+proveResolved('.cache/proof.jsonl', trace, 'c12-1', 'c30-1')
 ```
 
 ## Use it in 10 lines
