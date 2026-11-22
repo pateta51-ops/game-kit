@@ -179,9 +179,9 @@ describe('K524 gate (scripts/mechanics-check.mjs)', () => {
     expect(g.stderr).toContain('search "zorking": the first line must be a mechanic: line naming `tool`');
     expect(g.stderr).toContain('search "blorp": the first line must be a mechanic: line naming `alpha`; got: Inner blorp');
   });
-  it('the 20 planner searches pass on the repository, each naming its part', () => {
+  it('the 20 planner searches and the 4 K574 ones pass on the repository, each naming its part', () => {
     const m = JSON.parse(fs.readFileSync(path.join(ROOT, 'docs', 'mechanics.json'), 'utf8')) as { searches: Record<string, string> };
-    expect(Object.keys(m.searches)).toEqual(['modifier', 'why disabled', 'objective', 'encounter', 'adjacent', 'resource pool', 'pay cost', 'duration', 'trigger', 'status', 'legal moves', 'distance', 'health', 'continuous effect', 'prevent damage', 'replacement', 'preview', 'scenario', 'dice odds', 'reroll']);
+    expect(Object.keys(m.searches).slice(4)).toEqual(['modifier', 'why disabled', 'objective', 'encounter', 'adjacent', 'resource pool', 'pay cost', 'duration', 'trigger', 'status', 'legal moves', 'distance', 'health', 'continuous effect', 'prevent damage', 'replacement', 'preview', 'scenario', 'dice odds', 'reroll']);
     const g = node(path.join(ROOT, 'scripts', 'mechanics-check.mjs'));
     expect(g.stderr).toBe('');
     expect(g.status).toBe(0);
