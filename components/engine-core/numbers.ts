@@ -30,7 +30,7 @@ export interface NumberOrder {
   readonly setters?: 'last' | 'lowest' | 'highest';
   /** A set never raises the value. */
   readonly setOnlyLowers?: boolean;
-  /** The order of the reductions in a `decrease` or `add` step: as given (default), or highest `min` first, then the largest reduction. */
+  /** The order of the reductions in a `decrease` step: as given (default), or highest `min` first, then the largest reduction. With `highestMin` an unsplit `add` step applies its raises first, then its reductions in that order. */
   readonly decreases?: 'gather' | 'highestMin';
   /** Rounding after a multiplier (none: the value stays as it is); `up` is toward plus infinity, so toward zero on a negative. */
   readonly round?: 'up' | 'down';
@@ -42,9 +42,9 @@ export interface NumberOrder {
 export interface NumberPart {
   readonly source: string;
   readonly op: NumberOp;
-  /** The modifier's amount (times its count). */
+  /** The modifier's amount (times its count; on a `scope` entry times its count only when the call gave that count). */
   readonly amount: number;
-  /** The change it made: the base plus every `applied` is the value. */
+  /** The change it made: the base plus every `applied` is the value (exactly while every value on the way is a whole number or a half; an unrounded fraction carries float error). */
   readonly applied: number;
   /** The modifier's `ref`, when it has one. */
   readonly ref?: unknown;
@@ -85,7 +85,8 @@ export function numberParts(base: number, modifiers: readonly NumberModifier[], 
   const part = (m: NumberModifier, applied: number): NumberPart => ({ source: m.source, op: m.op, amount: m.amount + 0, applied, ...(m.ref === undefined ? {} : { ref: m.ref }) });
   for (const m of modifiers) {
     if (m.of !== undefined && m.of !== opts.of) {
-      if (opts.of === undefined) idle.push({ ...part(m, 0), why: 'scope' });
+      const n = m.per === undefined ? undefined : opts.counts?.[m.per];
+      if (opts.of === undefined && opts.unchanged === true) idle.push({ ...part(n === undefined ? m : { ...m, amount: m.amount * n(m) }, 0), why: 'scope' });
       continue;
     }
     let x = { ...m };
@@ -144,9 +145,10 @@ export function numberParts(base: number, modifiers: readonly NumberModifier[], 
     } else if (step === 'multiply') {
       for (const m of take((x) => x.op === 'multiply')) {
         const r = m.round ?? order.round;
-        const y = v * m.amount;
-        const x = Number.isInteger(y) ? y : Number(y.toPrecision(15));
-        put(m, r === 'up' ? Math.ceil(x) : r === 'down' ? Math.floor(x) : x);
+        const x = v * m.amount;
+        const w = Math.round(x);
+        const y = Math.abs(x - w) <= Math.abs(x) * Number.EPSILON * 8 ? w : x;
+        put(m, r === 'up' ? Math.ceil(y) : r === 'down' ? Math.floor(y) : x);
       }
     } else if (step === 'floor' || step === 'cap') {
       const lo = step === 'floor';
@@ -164,8 +166,7 @@ export function numberParts(base: number, modifiers: readonly NumberModifier[], 
       const byMin = (a: NumberModifier, b: NumberModifier): number => (b.min ?? -Infinity) - (a.min ?? -Infinity) || a.amount - b.amount;
       if (step === 'decrease' && order.decreases === 'highestMin') ms = ms.sort(byMin);
       if (step === 'add' && order.decreases === 'highestMin') {
-        const down = ms.filter((m) => m.amount < 0).sort(byMin);
-        ms = ms.map((m) => (m.amount < 0 ? (down.shift() as NumberModifier) : m));
+        ms = [...ms.filter((m) => m.amount >= 0), ...ms.filter((m) => m.amount < 0).sort(byMin)];
       }
       for (const m of ms) put(m, m.amount < 0 && m.min !== undefined ? (v <= m.min ? v : Math.max(m.min, v + m.amount)) : v + m.amount);
     }
