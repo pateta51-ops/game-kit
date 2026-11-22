@@ -132,21 +132,23 @@ class Defaults(unittest.TestCase):
                 B.make("x", {"type": kind, "licence": "x", "python": sys.executable}, Path(t)).generate(
                     [B.Job(cue=c, n=1, seed=1, seconds=1.0, out=Path(t) / "a.wav")])
             cmd = run.call_args[0][0]
-            self.assertEqual(cmd[:9] == ["/x/heavy", "run", "--label", "audio-gen x", "--slots", "all", "--mem", "16", "--"], queued)  # K474
+            self.assertEqual(cmd[:9] == ["/x/heavy", "run", "--label", "audio-gen x take 1/1", "--slots", "all", "--mem", "16", "--"], queued)  # K474
             self.assertEqual(cmd[9 if queued else 0:12 if queued else 3], ["nice", "-n", "19"])
         with tempfile.TemporaryDirectory() as t, mock.patch.object(B.YuE2, "queue_tool", return_value=None):
             with self.assertRaises(B.Skip):
                 B.make("x", {"type": "yue2", "licence": "x", "python": sys.executable}, Path(t)).generate(
                     [B.Job(cue=c, n=1, seed=1, seconds=1.0, out=Path(t) / "a.wav")])
 
-    def run_yue2_fake(self, errors, cues=(("a", 3),), skip=(), queue=False):
+    def run_yue2_fake(self, errors, cues=(("a", 3),), skip=(), queue=False, codes={}, **o):
         calls = []
         with tempfile.TemporaryDirectory() as t:
             t = Path(t)
 
             def fake(cmd, env=None):
                 job = json.loads(Path(cmd[-1]).read_text())
-                calls.append((cmd[0], [i["label"] for i in job["items"]]))
+                calls.append((cmd[0], [i["label"] for i in job["items"]], cmd))
+                if job["items"][0]["label"] in codes:
+                    return mock.Mock(returncode=codes[job["items"][0]["label"]])
                 if job["items"][0]["label"].split("#")[0] in skip:
                     return mock.Mock(returncode=3)
                 res = []
@@ -164,7 +166,7 @@ class Defaults(unittest.TestCase):
                 c = parse_cue({"name": name, "prompt": "p", "category": "music", "length": 1}, None)
                 jobs += [B.Job(cue=c, n=i, seed=1, seconds=1.0, out=t / f"{name}{i}.wav") for i in range(1, n + 1)]
             with mock.patch.object(B.subprocess, "run", side_effect=fake), mock.patch.object(B.YuE2, "queue_tool", return_value="/x/heavy"):
-                res = B.make("x", {"type": "yue2", "licence": "x", "python": sys.executable, "queue": queue}, t).generate(jobs)
+                res = B.make("x", {"type": "yue2", "licence": "x", "python": sys.executable, "queue": queue, **o}, t).generate(jobs)
         return calls, res
 
     def test_k465_takes_of_one_cue_share_one_process(self):
@@ -177,9 +179,29 @@ class Defaults(unittest.TestCase):
         self.assertEqual([c[1] for c in calls], [["a#1", "a#2"], ["b#1"]])
         self.assertEqual([r.job.cue.name for r in res], ["a", "a", "b"])
 
-    def test_k465_one_heavy_run_per_cue(self):
-        calls, _ = self.run_yue2_fake({}, cues=(("a", 2), ("b", 2)), queue=True)
+    def test_k465_one_heavy_run_per_cue_with_queue_per_cue(self):
+        calls, _ = self.run_yue2_fake({}, cues=(("a", 2), ("b", 2)), queue=True, queuePerCue=True)
         self.assertEqual([c[0] for c in calls], ["/x/heavy", "/x/heavy"])
+        self.assertEqual([c[2][c[2].index("--label") + 1] for c in calls], ["audio-gen x", "audio-gen x"])
+
+    def test_k573_one_heavy_run_per_take(self):
+        calls, res = self.run_yue2_fake({}, cues=(("a", 3),), queue=True, memGiB=9)
+        self.assertEqual([c[1] for c in calls], [["a#1"], ["a#2"], ["a#3"]])
+        self.assertEqual([c[2][:9] for c in calls], [["/x/heavy", "run", "--label", f"audio-gen x take {i}/3", "--slots", "all", "--mem", "9", "--"] for i in (1, 2, 3)])
+        self.assertTrue(all(r.ok for r in res))
+
+    def test_k573_queue_off_one_process_per_cue_no_heavy(self):
+        calls, _ = self.run_yue2_fake({}, cues=(("a", 3),))
+        self.assertEqual([(c[0], c[1]) for c in calls], [("nice", ["a#1", "a#2", "a#3"])])
+
+    def test_k573_take_killed_by_cap_next_take_runs(self):
+        calls, res = self.run_yue2_fake({}, cues=(("a", 3),), queue=True, codes={"a#2": 137})
+        self.assertEqual([c[1] for c in calls], [["a#1"], ["a#2"], ["a#3"]])
+        self.assertEqual([r.ok for r in res], [True, False, True])
+        self.assertIn("16 GiB memory cap", res[1].error)
+
+    def test_k573_queue_per_cue_not_sent_to_worker(self):
+        self.assertNotIn("queuePerCue", B.make("x", {"type": "yue2", "queuePerCue": True}, Path(".")).worker_options())
 
     def test_k465_cuda_error_retries_failed_takes_once_in_new_process(self):
         calls, res = self.run_yue2_fake({"a#2": ["AcceleratorError: CUDA error: unknown error"]}, cues=(("a", 3), ("b", 1)))
