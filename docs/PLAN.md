@@ -222,6 +222,7 @@ Seeded rng; motion off = no timers. Tests: angle in range on exactly one frame; 
 | K570 | AGENTS.md and agent-workflow recipe: the kit is public, the proof for a row here is GitHub's check on the PR head (no `finish`), landing is a merge commit by the steward, the personal rule is stated. | S | kit steward (docs still describe the kit of before it went public) | done |
 | K572 | `finish`: refuses (exit 3, job named, nothing cloned) while the queue holds `finish <branch>`; also while its result folder shows a live run (heartbeat under 2 min); prints `queued, N ahead` / `running, mm:ss` on stderr about once a minute; the run starts in WSL under `setsid nohup`; `--result` refuses a result for another sha (exit 5); `--detach` starts the run in the background and `--result` reads it (exit 4 while running) from `~/.game-kit/finish/<repo>/<branch>/`; queue not reachable = as before. | M | kit steward (duplicate and silent finish runs) | done |
 | K573 | audio-gen YuE2: each take of a cue is its own heavy-queue job (`audio-gen <name> take <i>/<n>`, every slot, the same memory cap), so a waiting check can run between two takes; `queuePerCue: true` keeps one job per cue. | M | kit steward (one music cue held every queue slot for over an hour while checks waited) | done |
+| K644 | finish: the detached WSL run started from Git Bash on Windows starts, or finish fails within a minute saying so and how to run it by hand. | S | unstoppable architect (finish launch from Git Bash never started) | done |
 | K283 | `card-pile` `hitTitle={false}` drops the native title on the stack button (STCC draws its own pile tooltip) | S |  | done |
 | K284 | `layout-editor` Reset button (in-page confirmation): restores the starting doc, backdrops (`LAYOUT_EDITOR_BG_INIT`), zoom and screen; `layoutEditor.reset()` | S |  | done |
 | K285 | `plan-checker` `--tsc-at DIR` compiles the plan's type blocks inside a game folder, so relative `kit/` imports resolve | S |  | done |
@@ -336,6 +337,7 @@ The blind matching test's result was not recorded: the PR, its comments and docs
 | K588 | `clock`: dry-run and lose-space recipes made right for both directions and put under test, `reached` and `onSpace` agree, a sign when a step does not fit, distance to a given space. | S | kit steward (second review of the part) | done |
 | K640 | `clock`: edges from the second review: fractional and huge steps, states off the row, a stricter spec check, every README line run by a test, steps back on a looping row. | S | kit steward (second review of the part) | done |
 | K645 | sim-pool: `fuzzMain`, the whole-game report and the legal-move driver accept, besides a `GameRules<G>`, an engine port for a game with its own engine (engine-core `EnginePort`, as card-harness and saves do since K390 and K419); games on engine-core run unchanged. | M | Unstoppable (plan 3.14, 22 Nov 2026); Imperium, STCC and Rome on the same retrofit path | open |
+| K648 | card-harness: expectNotOffered accepts only the engine's refusal; a crash inside the attempt fails the test. | S |  | done |
 
 ## Asked for by the owner
 
