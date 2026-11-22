@@ -60,9 +60,9 @@ Checks:
   * every Modifier order row holds a backticked name or the words "build-own", in its "Kit function" cell when the
     table has one;
   * K531, the mechanics map (kit/recipes/mechanics.md beside the plan's docs folder, or --map PATH; skipped when the
-    file is missing or with --sheet-optional): every map line has a game sheet row whose first cell is the line's
-    Mechanic cell or starts with its first phrase (before the first comma); a line with none is a problem naming that
-    phrase. A sheet row whose answer starts "kit part" and whose backticked names are all absent from the map line's
+    file is missing or with --sheet-optional): every map line has a game sheet row whose first cell, up to its first
+    comma, equals the line's first phrase (the Mechanic cell up to its first comma; case and spaces ignored); the
+    unanswered lines are one problem giving their count, their first phrases and how to fix it. A sheet row whose answer starts "kit part" and whose backticked names are all absent from the map line's
     Answer cell is a WARN; a plan with no game sheet table gets one WARN, not a problem;
   * a build-own row whose verdict is candidate and whose K<n> is a row the kit's docs/plan/K<n>.md marks "state: done"
     gets a WARN naming the part that closed it (its docs/mechanics.json line, else the row's first backticked name or
@@ -809,14 +809,17 @@ def main() -> int:
                     continue
                 mrows.append((norm(c[0]), set(re.findall(r"`([^`]+)`", c[1]))))
             first = lambda t: t.split(",")[0].strip()
+            miss = []
             for mech, mnames in mrows:
-                hit = [r for r in sheet if norm(r[0]) == mech or first(norm(r[0])) == first(mech)]
+                hit = [r for r in sheet if first(norm(r[0])) == first(mech)]
                 if not hit:
-                    kd.append(f"game sheet: no row answers the mechanics map line {first(mech)!r}")
+                    miss.append(first(mech))
                 for r in hit:
                     rn = set(re.findall(slug, " ".join(r[2:])))
                     if len(r) > 1 and norm(r[1]).startswith("kit part") and rn and not rn & mnames:
                         notes.add(f"WARN kit: game sheet line {r[0]!r} answers kit part {', '.join(sorted(rn))}, which the mechanics map's line does not name")
+            if miss:
+                kd.append(f"game sheet: {len(miss)} mechanics map line(s) unanswered: {', '.join(miss)}. Each mechanics map line needs its own row in the game sheet table, first cell = the line's first phrase; answer a kit part, a build-own row, or 'not in this game'")
             notes.add(f"kit: game sheet checked against the mechanics map {mp} ({len(mrows)} lines)")
     gv = [o for o in own if norm(o[0]).startswith("game verbs")]
     if "own" not in seen:

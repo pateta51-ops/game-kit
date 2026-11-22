@@ -595,15 +595,33 @@ x
     });
     it('K531 sheet missing one map line: a failure naming its first words', () => {
       const r = run(MAP, FULL.replace('| Market | not in this game | |\n', ''));
-      expect(r.out.split(/\r?\n/).filter((l) => l.startsWith('PROBLEM'))).toEqual(["PROBLEM kit: game sheet: no row answers the mechanics map line 'market'"]);
+      expect(r.out.split(/\r?\n/).filter((l) => l.startsWith('PROBLEM'))).toEqual(["PROBLEM kit: game sheet: 1 mechanics map line(s) unanswered: market. Each mechanics map line needs its own row in the game sheet table, first cell = the line's first phrase; answer a kit part, a build-own row, or 'not in this game'"]);
       expect(r.code).toBe(1);
       expect(main(['--plan', r.f, ...r.args])).toBe(1);
+    });
+    it('K531 two lines missing: one failure listing both', () => {
+      const r = run(MAP, GOOD);
+      const p = r.out.split(/\r?\n/).filter((l) => l.startsWith('PROBLEM'));
+      expect(p).toHaveLength(1);
+      expect(p[0]).toContain('2 mechanics map line(s) unanswered: roll dice, market.');
+      expect(r.code).toBe(1);
+    });
+    it('K531 a row equal to a longer phrase does not answer the line (equality, not prefix)', () => {
+      const r = run(MAP, FULL.replace('| Market | not in this game | |', '| Market stall | not in this game | |'));
+      expect(r.out).toContain('1 mechanics map line(s) unanswered: market.');
+      expect(r.code).toBe(1);
+    });
+    it('K531 the sheet failure is a NOTE under --kit-optional, exit 0', () => {
+      const r = run(MAP, FULL.replace('| Market | not in this game | |\n', ''), '--kit-optional');
+      expect(r.out).toContain('NOTE kit: game sheet: 1 mechanics map line(s) unanswered: market.');
+      expect(r.out).not.toContain('PROBLEM');
+      expect(r.code).toBe(0);
     });
     it('K531 map read from --map PATH', () => {
       const m = join(tmp('pc-map-'), 'm.md');
       writeFileSync(m, MAP, 'utf-8');
       const r = run(null, FULL.replace('| Roll dice | kit part | `dice-tray` |\n', ''), '--map', m);
-      expect(r.out).toContain("PROBLEM kit: game sheet: no row answers the mechanics map line 'roll dice'");
+      expect(r.out).toContain('PROBLEM kit: game sheet: 1 mechanics map line(s) unanswered: roll dice.');
       expect(r.code).toBe(1);
     });
     it('K531 kit part the map line does not name: a warning, exit 0', () => {
@@ -626,7 +644,7 @@ x
     it('K531 no game sheet table: one warning line, no map failure', () => {
       const r = run(MAP, GOOD.replace('| Game sheet line |', '| Sheet line |'));
       expect(warns(r.out).filter((l) => l.includes('mechanics map'))).toHaveLength(1);
-      expect(r.out).not.toContain('no row answers the mechanics map');
+      expect(r.out).not.toContain('mechanics map line(s) unanswered');
     });
     const kit2 = (mech: boolean, state: string): string => {
       const k = tmp('kit531-');
