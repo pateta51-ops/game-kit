@@ -162,8 +162,19 @@ describe('K524 gate (scripts/mechanics-check.mjs)', () => {
     expect(g.status).toBe(1);
     expect(g.stderr).toContain('"zorking, zork a blip": row K902 is done: drop pending and name what it built');
   });
-  it('a backticked name in read must be in the part\'s guide, README or code', () => {
-    expect(fake((f) => { f.lines[0]!.read = 'guide.md, `alpha`, `The alpha part`'; }).gate().status).toBe(0);
+  it('a backticked name in read must be an exported name of the part, a member of an exported type, or a file of it', () => {
+    const typed = fake((f) => { f.lines[0]!.read = '`Shape` (`wide`, `tall`), `grow`'; });
+    put(path.join(typed.root, 'components', 'alpha', 'shape.ts'), "// narrow\nexport type Shape = { readonly wide?: number; readonly kind: 'tall' | 'flat' };\nexport function grow(shape: Shape) { const inner = shape; return inner; }\n");
+    expect(typed.gate().stderr).toBe('');
+    // K585: each of these passed while the check was a substring match over every file of the folder
+    for (const [name, file, text] of [['part', 'README.md', '# alpha\n\nThe alpha part.\n'], ['helperOnly', 'alpha.test.ts', 'const helperOnly = 1\n'], ['narrow', 'shape.ts', '// narrow\nexport const wide = 1\n'], ['inner', 'shape.ts', 'export function grow() { const inner = 1; return inner }\n'], ['alp', 'index.ts', 'export const alpha = 1\n']] as const) {
+      const r = fake((f) => { f.lines[0]!.read = 'guide.md, `' + name + '`'; });
+      put(path.join(r.root, 'components', 'alpha', file), text);
+      const g = r.gate();
+      expect(g.status, name).toBe(1);
+      expect(g.stderr).toContain('"zorking, zork a blip": `' + name + '` is not in components/alpha/');
+    }
+    expect(fake((f) => { f.lines[0]!.read = 'guide.md, `alpha`, `guide`, `index.ts`'; }).gate().status).toBe(0);
     const g = fake((f) => { f.lines[0]!.read = 'guide.md, `alpha`, `nopeName(x)`'; }).gate();
     expect(g.status).toBe(1);
     expect(g.stderr).toContain('"zorking, zork a blip": `nopeName` is not in components/alpha/');
