@@ -7,8 +7,8 @@ const clauseOf = (x: unknown): string | undefined => {
   return e.source !== undefined && e.clause !== undefined ? `${e.source}#${String(e.clause)}` : undefined;
 };
 const fired: Observed = { prompt: null, s: {}, events: [{ t: 'resolved', source: 'c1', clause: 0 }] };
-const offered: Observed = { prompt: { options: [{ id: 'pick', source: 'c1', clause: 0 }] } as Observed['prompt'], s: {}, events: [] };
-const prompted: Observed = { prompt: { source: 'c1', clause: 0, options: [] } as Observed['prompt'], s: {}, events: [] };
+const offered: Observed = { prompt: { options: [{ id: 'pick', source: 'c1', clause: 0 }] } as unknown as Observed['prompt'], s: {}, events: [] };
+const prompted: Observed = { prompt: { source: 'c1', clause: 0, options: [] } as unknown as Observed['prompt'], s: {}, events: [] };
 
 describe('K661 clauseOf', () => {
   it('K661 without clauseOf an event with source and clause index is not found by id (today)', () => {
