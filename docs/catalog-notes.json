@@ -489,6 +489,7 @@
       "visibility",
       "play",
       "area",
+      "face-down",
       "hand limit",
       "zone capacity",
       "discard choice",
@@ -593,7 +594,9 @@
       "json",
       "load",
       "validate",
-      "pack"
+      "pack",
+      "validation",
+      "columns"
     ],
     "visible": false,
     "release": 1,
@@ -610,7 +613,8 @@
       "conditions",
       "missing",
       "handler",
-      "report"
+      "report",
+      "transcription"
     ],
     "visible": false,
     "release": 1,
@@ -845,6 +849,7 @@
       "breakdown",
       "floor",
       "minimum",
+      "deterministic",
       "until end of combat",
       "duration named end point",
       "lasts until event",
@@ -865,7 +870,9 @@
       "events",
       "text",
       "readable",
-      "table"
+      "table",
+      "rows",
+      "adapter"
     ],
     "visible": false,
     "release": 1,
@@ -1055,7 +1062,8 @@
       "worker",
       "cache",
       "update",
-      "app"
+      "app",
+      "pwa"
     ],
     "visible": false,
     "release": 1,
@@ -1089,7 +1097,8 @@
       "bot",
       "rules",
       "advice",
-      "profiles"
+      "profiles",
+      "test player"
     ],
     "visible": false,
     "release": 1,
@@ -1184,7 +1193,9 @@
       "roll",
       "piece",
       "token",
-      "round"
+      "round",
+      "d20",
+      "die"
     ],
     "looks": "Rounded dice, a rolling ball and a thick chip with a cast shadow.",
     "visible": true,
@@ -1401,7 +1412,8 @@
       "determinism",
       "command",
       "line",
-      "check"
+      "check",
+      "replay file"
     ],
     "visible": false,
     "release": 1,
@@ -1562,7 +1574,9 @@
       "straighten",
       "image",
       "flatbed",
-      "ingest"
+      "ingest",
+      "ingestion",
+      "cards"
     ],
     "visible": false,
     "release": 1,
@@ -1649,7 +1663,9 @@
       "prove clause",
       "game log",
       "static clause applied",
-      "trace input"
+      "trace input",
+      "invariants",
+      "simulation runner"
     ],
     "visible": false,
     "release": 1,
@@ -1691,7 +1707,8 @@
       "play",
       "volume",
       "buses",
-      "effects"
+      "effects",
+      "music state"
     ],
     "visible": false,
     "release": 1.2,
@@ -1810,6 +1827,7 @@
       "shake",
       "random",
       "cubes",
+      "token pool",
       "finite",
       "token",
       "supply",
@@ -1942,7 +1960,10 @@
       "cards",
       "owner",
       "check",
-      "printed"
+      "printed",
+      "transcriptions",
+      "two",
+      "agree"
     ],
     "visible": false,
     "release": 1,
@@ -2062,7 +2083,8 @@
       "testing",
       "bugs",
       "game",
-      "adapter"
+      "adapter",
+      "language model"
     ],
     "visible": false,
     "release": 1,
@@ -2181,7 +2203,8 @@
       "op table",
       "own engine",
       "ops",
-      "card words"
+      "card words",
+      "text generation"
     ],
     "use": "A game that keeps its own engine still wants one row per op with checked fields, a run function and its text (`OpTable`, `runOp`, `validateOps`).",
     "guide": "README.md"

@@ -111,6 +111,13 @@ describe('K524 mechanics page and search', () => {
     expect(out.endsWith('not in the kit by that name\n')).toBe(true);
     expect(r.kit('search', 'zork', 'wibble').stdout).toContain('nearest mechanic: zorking, zork a blip -> ');
   });
+  it('K673 a query of two or more words never gets a "not in the kit" or candidate line as nearest on one shared word', () => {
+    const r = fake();
+    const out = r.kit('search', 'quux', 'zebra').stdout;
+    expect(out).not.toContain('nearest mechanic');
+    expect(out).not.toContain('K901');
+    expect(out.endsWith('not in the kit by that name\n')).toBe(true);
+  });
   it('a search that hits only a "not in the kit" mechanics line is logged as a miss; a hit on a part is not', () => {
     const r = fake();
     expect(r.kit('search', 'zorking').stdout).toMatch(/^mechanic: zorking/);
