@@ -311,6 +311,7 @@ Seeded rng; motion off = no timers. Tests: angle in range on exactly one frame; 
 | K530 | Clock as rules data: a value on a row of spaces, steps forward or back, and thresholds that fire as it lands on or passes a space (lose, trigger an effect, give a reward, change a limit), each as an occurrence the timing layer and the screen can read. `track` draws it unchanged. Findable under: clock, countdown, round tracker, threshold. | S | owner, 21 Nov 2026 (kit mechanics list); Dice Commandos plan | done |
 | K531 | plan-checker, after K524 and K525: the kit warning sees a candidate row that was closed (names the part that closed it), and a check that the plan's game sheet answers every line of the mechanics map. | S | owner, 21 Nov 2026 (kit mechanics list) | done |
 | K532 | `card-harness` `screenProblems`: a clause may state which of its numbers are amounts (`amounts`: a list, or `counted` for an amount worked out at run time), so a condition's number, a stat line or a counted value is not held against the prompt as a missing amount. With nothing set the check is unchanged; a prompt that lacks a stated amount still fails. | S | Unstoppable build (kit gap), 22 Nov 2026 | done |
+| K567 | plan-checker: when the game sheet is checked against the mechanics map, the map's lines are the sheet; the older fixed list of sheet lines is asked for only when the map is missing or `--sheet-optional` is passed. | S | kit steward (K531 follow-up) | done |
 
 ## Asked for by the owner
 
