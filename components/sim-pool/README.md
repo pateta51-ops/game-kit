@@ -18,6 +18,7 @@ Plays N whole games of any `GameRules<G>` with a driver, in this thread or on wo
 9. Use `heavy run` or the game's npm script for long runs, not bare Node on the shared machine.
 10. For the whole-game report (K490) pass `whole: { clauses, group? }` (or `true`) in `fuzzMain`'s options and give `trace(content)` on `SimGame` (card-harness `traceAbilities` over the registry the engine plays from, built in `content()`); without `trace` no record has `resolved` and every listed clause fails as never resolved. Set `gameTimeoutMs` in the options too: without it a game that hangs inside one action stalls the run; with it the game is a `timeout` record, counted unfinished with its seed (a crashed worker's game too).
 11. Answer with the engine's own options: `randomDriver` over the default `legalAnswers` (the prompt's enabled options) is the legal-move driver; a game `answers` override replaces those options.
+12. (K651) For the unreached list pass `whole: { clauses, unreached, proof }`: `unreached` is `[{ clause, why }]`, and `proof` must come from `provenClauses({ log, root, clauses, sources })` over the log that `proveResolved(log, trace, clause)` (`kit/sim-pool/prove`, test code: vitest plus card-harness `trace.ts`) wrote in the card test run just before, never a hand-written object; a stale or foreign log fails the check. A listed clause that resolved fails as stale; one with no proof fails. Give `changed(clause, before, after, content)` on `SimGame` so a resolve counts only when the effect moved something, and give `effects` on the trace (state before and after each effect) so it judges each effect, not the whole action; pass `rounds: { games, max?, settings(seed, driver, unreached) }` to steer coverage rounds (they stop when a round adds no clause, or at `max`, default 10); pass `findings: <path>` and replay one failure with `--finding <seed>` (its recorded settings, not the seed's).
 
 **Common mistakes:**
 - A game whose result differs between a pool run and a single run: module state is carried between games.
@@ -61,6 +62,25 @@ import { formatReport, report, runGames } from '../kit/sim-pool/index'
 const specs = [{ index: 0, seed: 'a', driver: 'random' }]
 const records = await runGames({ module: new URL('./sim-game.ts', import.meta.url).href, specs, gameTimeoutMs: 60_000 }, 4)
 console.log(formatReport(report(records, { first: () => 0 })))
+```
+
+## Unreached list, coverage rounds, findings file (K651)
+
+Proof comes from what ran, not from test text. In each full-resolve card test of a clause no game reaches, call `proveResolved(log, trace, clause)` from `kit/sim-pool/prove` (test code: it imports vitest and card-harness's `trace.ts` only; the sim-pool index never loads it). It runs card-harness's `expectResolved` (the test fails unless the clause ran) and, once the test finished passing, appends `{ clause, file, test, root, at }` to `log`; an `it.fails` test, a failed test, or a test that never calls it (an `expect` with no matcher, a bound that always holds, an `expect` inside an `if`) records nothing. `provenClauses({ log, root, clauses, sources })` → `{ proven, problems }`: a record counts only when its `root` equals `root` exactly and it is newer than its test file and every path in `sources`; else `proof log <log>: <clause> was recorded under <root>, not this project <root>` or `... was recorded before its test or a source changed: run the card tests again`; a missing log is a problem too. Delete the log before the card test run.
+
+`wholeGame` with `unreached` and `proof`: a clause no game resolved passes only when listed and proven; failures `stale unreached entry (resolved in a game): <ids>`, `unreached with no counted full-resolve test: <ids>`, and each proof problem; `WholeGame` gains `proven`, `stale`, `unproven`, `noOp` (resolved only with no change) and `rounds`. `SimGame.changed` judges each effect when the trace gives `effects` (`{ clause, before, after }` per effect, written by the game's engine, which alone knows where one effect ends); without them it judges the whole action, so a no-op clause counts when another effect of the same action moves the part it reads (engine-core gives sim-pool no per-effect boundary). Ids without an entry resolved in setup or between actions count unchecked. `coverRounds(module, options, clauses, rounds, firstRun)` plays rounds of seeds `<prefix>-r<k>-<n>`; `fuzzMain` prints `coverage round K: N games, +A clause(s), U unreached` and how it stopped. `findings` writes `FindingEntry[]` (the finding with its game's settings); `--finding S` prints the replayed finding and `finding S: the same failure again` (exit 1), `fails differently (...)` (exit 1) or `no longer fails` (exit 0); an unknown seed exits 2.
+
+```ts
+import { fuzzMain, provenClauses } from '../kit/sim-pool/index'
+
+const clauses = ['add', 'draw', 'noop', 'rare', 'never'] // every printed clause id
+// the card tests ran first; each full-resolve test of a listed clause called proveResolved('.cache/proof.jsonl', trace, clause)
+const proof = provenClauses({ log: '.cache/proof.jsonl', root: process.cwd(), clauses, sources: ['src'] })
+const unreached = [{ clause: 'never', why: 'no game deals it' }]
+const rounds = { games: 30, settings: (_seed: string, _driver: string, left: readonly string[]) => (left.includes('rare') ? { steer: 'rare' } : {}) }
+const module = new URL('../kit/sim-pool/fake/coverage.ts', import.meta.url).href // yours: the module exporting simGame
+process.exitCode = await fuzzMain(process.argv.slice(2), module, { whole: { clauses, unreached, proof, rounds, findings: 'tests/whole-game/findings.json' } })
+// replay one failure with its recorded settings: the same script with --finding <seed>
 ```
 
 ## Use it in 10 lines

@@ -356,12 +356,12 @@ A hand of cards as a fan that fits any number of cards in a width, lifts the car
 Card tests on real cards. Test code only; the engine imports nothing here but `createProbe`, and card-language imports the pure `strictProblems` from `strict.ts`. Not here: `validateEffect` in card-language checks one effect at run time, `strictProblems` checks a whole grammar in a test.
 
 - **Also called:** Test card effects on real cards
-- **Words:** card, test, scenario, prompt, probe, inventory, effects, test depth, depth, poor test, poor, not offered, not fired, crash, refusal, crash counted as refusal, expectNotOffered, expectNotFired, full resolve, prompt amount, screen check, no amount, amounts, prompt amount check, clause two prompts, screen text amounts, amounts per prompt
+- **Words:** card, card case quote constant, cite clause by test title, quote check mixed mode, card case const, mixed mode, cite by title, screen amount icon, counted amount shown, prompt shows wrong number, test, scenario, prompt, probe, inventory, effects, test depth, depth, poor test, poor, not offered, not fired, crash, refusal, crash counted as refusal, expectNotOffered, expectNotFired, clauseOf, map event to clause, not fired clause id, full resolve, prompt amount, screen check, no amount, amounts, prompt amount check, clause two prompts, screen text amounts, amounts per prompt, known findings, known findings list, pending findings owner, baseline of card check findings, pending list, baseline, owner
 - **Release:** 1.0; not seen
 - **The game supplies:** The game rules, real cards and scenarios.
 - **Use it when:** Testing card effects on real cards with the scenario builder, prompt delivery, choice probe and inventory with stale check; test depth: a full-resolve test per clause and a poor test (expectNotOffered, expectNotFired) per conditional clause.
 - **Not for:** Card rules themselves; those stay in the game.
-- **Key exports:** `createProbe`, `rulingGroups`, `Scenario`, `scenarioLiteral`, `Delivery`, `cardCasesIn`, `clauseIds`, `interactionNeeds`, `inventory`, `runInventory`, `testFiles`, `conforms`, `describeCheck`, `report`, and 97 more
+- **Key exports:** `createProbe`, `rulingGroups`, `Scenario`, `scenarioLiteral`, `Delivery`, `cardCasesIn`, `clauseIds`, `interactionNeeds`, `inventory`, `inventoryFindings`, `runInventory`, `testFiles`, `conforms`, `describeCheck`, and 111 more
 - **Needs:** [`engine-core`](#engine-core), [`plain-text`](#plain-text)
 - **Came from:** stcc
 - **Docs:** [README](../components/card-harness/README.md) ([rules for agents](../components/card-harness/README.md#rules-for-agents))
@@ -894,12 +894,12 @@ Links every glossary term and icon code in the game's texts to a lookup, and che
 A square grid with walls as data: adjacent spaces, distance, every shortest path or only its distinct first steps, extra steps a game adds, line of sight, tiles that turn half a circle (180 degrees only: a game whose tiles turn a quarter cannot use `rotateTile`), and targeting shapes (within range, adjacent, row, column, line, area). Pure functions, no state, no packages, draws nothing. Written for the kit.
 
 - **Also called:** Square grid with walls and sight
-- **Words:** grid, distance, range, wall, walls, adjacent, line of sight, sight, path, squares, tiles, targeting, first step, shortest path, extra steps, extra adjacency, adjacency, extra neighbours, diagonal, move toward, ties, area
+- **Words:** grid, distance, range, wall, walls, adjacent, line of sight, sight, path, squares, tiles, targeting, first step, shortest path, extra steps, extra adjacency, adjacency, extra neighbours, diagonal, move toward, ties, area, inset corners, corridor, end corner, sight end corner wall
 - **Release:** 1.0; not seen
 - **The game supplies:** Rows, columns, the walls, merged spaces and tiles of its map.
 - **Use it when:** A square grid board with walls: adjacent spaces, grid distance and range, shortest paths, line of sight, tiles that turn, and targeting shapes (within range, adjacent, row, column, line, area).
 - **Not for:** Drawing the map; hex or graph boards (board-model); movement rules or costs per step.
-- **Key exports:** `gridMap`, `cellsOf`, `spaceAt`, `neighbours`, `distance`, `shortestPaths`, `firstSteps`, `lineOfSight`, `tileOf`, `spacesOf`, `adjacentTiles`, `rotateTile`, `adjacent`, `within`, and 15 more
+- **Key exports:** `gridMap`, `cellsOf`, `spaceAt`, `neighbours`, `distance`, `shortestPaths`, `firstSteps`, `lineOfSight`, `tileOf`, `spacesOf`, `adjacentTiles`, `rotateTile`, `adjacent`, `within`, and 16 more
 - **Needs:** nothing
 - **Came from:** none (written for the kit)
 - **Docs:** [README](../components/grid-map/README.md) ([rules for agents](../components/grid-map/README.md#rules-for-agents))
@@ -1439,13 +1439,13 @@ Settings declared as data, a persisted store of their values and a screen drawn 
 Plays N whole games of any `GameRules<G>` with a driver, in this thread or on worker threads, with crash-safe records and a resume file. Needs `engine-core`.
 
 - **Also called:** Bulk game simulator
-- **Words:** simulate, many, games, bots, balance, fuzz, tune, threads
+- **Words:** simulate, many, games, bots, balance, fuzz, tune, threads, unreached, clauses, whole game, coverage, replay seed, failing seed, findings
 - **Release:** 1.0; not seen
 - **The game supplies:** The game rules and a driver for each seat.
-- **Use it when:** Playing many whole games with drivers on worker threads, fuzzing, sanity bands, sweeps, the K200 weight tuner and paired validation.
+- **Use it when:** Playing many whole games with drivers on worker threads, fuzzing, sanity bands, sweeps, the K200 weight tuner and paired validation; the whole-game check of unreached clauses (proof from counted full-resolve tests), coverage rounds and a findings file to replay a failing seed.
 - **Not for:** A driver's strategy (the game or opponent supplies it).
-- **Key exports:** `DriverRng`, `ANSWER_CAP`, `CRASH_HASH`, `breakAt`, `bySeat`, `crashRecord`, `legalAnswers`, `playOne`, `randomDriver`, `botDriver`, `replayStep`, `formatReport`, `report`, `runGames`, and 67 more
-- **Needs:** [`engine-core`](#engine-core)
+- **Key exports:** `DriverRng`, `ANSWER_CAP`, `CRASH_HASH`, `breakAt`, `bySeat`, `crashRecord`, `legalAnswers`, `playOne`, `randomDriver`, `botDriver`, `replayStep`, `formatReport`, `report`, `runGames`, and 76 more
+- **Needs:** [`engine-core`](#engine-core), [`card-harness`](#card-harness)
 - **Came from:** warps
 - **Docs:** [README](../components/sim-pool/README.md) ([rules for agents](../components/sim-pool/README.md#rules-for-agents))
 

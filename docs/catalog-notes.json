@@ -117,7 +117,11 @@
       "diagonal",
       "move toward",
       "ties",
-      "area"
+      "area",
+      "inset corners",
+      "corridor",
+      "end corner",
+      "sight end corner wall"
     ],
     "visible": false,
     "release": 1,
@@ -279,6 +283,15 @@
     "title": "Test card effects on real cards",
     "tags": [
       "card",
+      "card case quote constant",
+      "cite clause by test title",
+      "quote check mixed mode",
+      "card case const",
+      "mixed mode",
+      "cite by title",
+      "screen amount icon",
+      "counted amount shown",
+      "prompt shows wrong number",
       "test",
       "scenario",
       "prompt",
@@ -296,6 +309,9 @@
       "crash counted as refusal",
       "expectNotOffered",
       "expectNotFired",
+      "clauseOf",
+      "map event to clause",
+      "not fired clause id",
       "full resolve",
       "prompt amount",
       "screen check",
@@ -304,7 +320,14 @@
       "prompt amount check",
       "clause two prompts",
       "screen text amounts",
-      "amounts per prompt"
+      "amounts per prompt",
+      "known findings",
+      "known findings list",
+      "pending findings owner",
+      "baseline of card check findings",
+      "pending list",
+      "baseline",
+      "owner"
     ],
     "visible": false,
     "release": 1,
@@ -1567,7 +1590,7 @@
     "gameSupplies": "The game store and a bot."
   },
   "sim-pool": {
-    "use": "Playing many whole games with drivers on worker threads, fuzzing, sanity bands, sweeps, the K200 weight tuner and paired validation.",
+    "use": "Playing many whole games with drivers on worker threads, fuzzing, sanity bands, sweeps, the K200 weight tuner and paired validation; the whole-game check of unreached clauses (proof from counted full-resolve tests), coverage rounds and a findings file to replay a failing seed.",
     "not": "A driver's strategy (the game or opponent supplies it).",
     "title": "Bulk game simulator",
     "tags": [
@@ -1578,7 +1601,14 @@
       "balance",
       "fuzz",
       "tune",
-      "threads"
+      "threads",
+      "unreached",
+      "clauses",
+      "whole game",
+      "coverage",
+      "replay seed",
+      "failing seed",
+      "findings"
     ],
     "visible": false,
     "release": 1,

@@ -1,7 +1,7 @@
 export { createProbe, type Probe } from './probe.ts';
 export { rulingGroups, Scenario, scenarioLiteral, type ScenarioGame, type ScenarioPort, type ScenarioStep } from './scenario.ts';
 export { Delivery, type Delivered, type DeliveryGame } from './delivery.ts';
-export { cardCasesIn, clauseIds, interactionNeeds, inventory, runInventory, testFiles, type CardCaseInfo, type Clause, type Inventory, type InventoryInput, type InventoryIo, type Piece, type Row, type TestFile } from './inventory.ts';
+export { cardCasesIn, clauseIds, interactionNeeds, inventory, inventoryFindings, runInventory, testFiles, type CardCaseInfo, type Clause, type Inventory, type InventoryInput, type InventoryIo, type Piece, type Row, type TestFile } from './inventory.ts';
 export { conforms, describeCheck, report, type DescribedCard, type DR, type Is, type Same } from './checks.ts';
 export { diffPaths, roundTripCards } from './roundtrip.ts';
 export { parseCsv } from './csv.ts';
@@ -12,5 +12,6 @@ export { grammarReference, strictProblems, type Grammar, type NodeSpec, type Opt
 export { contentGate, type GateInput, type GateIssue } from './contentGate.ts';
 export { cardsCheck, cardsCheckMain, catalogueClauses, catalogueProblems, clauseProblems, groupClauses, maskClause, numberClauses, parseReadings, patternNotes, patternProblems, readingProblems, realRecordIo, RESTRICTION_WORDS_PATH, wordsPathOf, recordReadings, recordsHash, restrictionCounts, restrictionProblems, splitClauses, type CardRecord, type CardsCheckInput, type Catalogue, type CatalogueClause, type CataloguePattern, type ClauseInput, type Face, type OpenClause, type PatternInput, type ReadingInput, type ReadingLine, type RecordInput, type RecordIo, type RestrictionInput, type Verdict } from './cardsCheck.ts';
 export { screenProblems, screenMain, type ScreenInput } from './screen.ts';
-export { asserts, callsHelper, codeOnly, expectNotFired, expectNotOffered, testCalls, type NotOfferedOptions, type Observed, type TestCall } from './depth.ts';
+export { asserts, callsHelper, codeOnly, expectNotFired, expectNotOffered, testCalls, type ClauseOf, type NotOfferedOptions, type Observed, type TestCall } from './depth.ts';
+export { KNOWN_HEADER, knownCheck, knownGate, parseKnown, readKnown, refuseWrite, writeKnown, writeKnownMain, type KnownFindings, type KnownIo, type KnownLine, type KnownResult } from './known.ts';
 export { readScreenLogs, recordOpened, recordPrompt, type ScreenLogEntry } from './screenLog.ts';

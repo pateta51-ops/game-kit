@@ -1,5 +1,6 @@
 // cards:screen (K489): what the player reads against what the pack prints. Pure; the game gathers the input.
 import { plainWords } from '../plain-text/index.ts';
+import { knownGate, type KnownFindings } from './known.ts';
 
 export interface ScreenInput {
   /** Printed text per face (its id, the pack's text). */
@@ -11,15 +12,21 @@ export interface ScreenInput {
   /** Printed text per clause id. */
   clauses: readonly { id: string; text: string; /** Which numbers of the text are amounts (K532): a list (empty = none), or 'counted' = worked out at run time (the prompt must show some number). Unset: every number counts. */ amounts?: readonly string[] | 'counted'; /** Amounts per prompt the clause opens (K587), by its order within the clause (`step`): entry k checks the k-th prompt, each as `amounts`. Replaces `amounts` for this clause. */ promptAmounts?: readonly (readonly string[] | 'counted')[] }[];
   /** Prompts a card test scanned: their clause and the words shown (`Delivery.screens`). */
-  prompts: readonly { clause: string; shown: string; /** Option labels on screen (optional, K496). */ screenOptions?: readonly string[]; /** The engine prompt's options (optional, K496); compared with `screenOptions` one for one. */ engineOptions?: readonly unknown[]; /** 0-based order of this prompt within its clause's resolution (K587; `Delivery.screens` sets it from the second prompt on). Unset: 0, the first. */ step?: number }[];
+  prompts: readonly { clause: string; shown: string; /** Option labels on screen (optional, K496). */ screenOptions?: readonly string[]; /** The engine prompt's options (optional, K496); compared with `screenOptions` one for one. */ engineOptions?: readonly unknown[]; /** 0-based order of this prompt within its clause's resolution (K587; `Delivery.screens` sets it from the second prompt on). Unset: 0, the first. */ step?: number; /** The value the run computed for a counted amount of this prompt (K649); it must be shown. */ value?: number | string }[];
   /** Turns an engine option into its label; default `String`. */
   label?: (engineOption: unknown) => string;
   /** Clauses whose resolution opened a prompt in a card test (`Delivery.opened`). */
   opened: Iterable<string>;
   /** `[open, close]` of an icon token in printed text; default `['{', '}']`. */
   syntax?: readonly [string, string];
+  /** Icon codes whose digits are the amount (K649): a list of codes or a pattern a code matches. Other icon codes' digits are no number shown. */
+  iconAmounts?: readonly string[] | RegExp;
+  /** For a counted prompt (K649): numbers (`'2'`) never taken as stray, or patterns (`/Unit \d+/`) whose matches in the shown words are left out of the counted check. */
+  allowNumbers?: readonly (string | RegExp)[];
   /** Strip run before words are compared (plain-text's `ids.strip`). */
   strip?: (t: string) => string;
+  /** K650: a known-findings list for `screenMain`; unset: unchanged. */
+  known?: KnownFindings;
 }
 
 const esc = (s: string): string => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
@@ -51,13 +58,28 @@ export function screenProblems(i: ScreenInput): string[] {
     for (const [k, e] of (x.promptAmounts ?? []).entries()) if (e !== 'counted') for (const a of e) if (!numbers(x.text).includes(a)) out.push(`${x.id}: prompt ${String(k + 1)} amount ${a} is not in its text`);
   }
   const steps = new Map<string, Set<number>>();
+  const ia = i.iconAmounts, iaRe = ia instanceof RegExp ? new RegExp(ia.source, ia.flags.replace(/[gy]/g, '')) : undefined;
+  const allowRe = (i.allowNumbers ?? []).flatMap((x) => (x instanceof RegExp ? [new RegExp(x.source, x.flags.includes('g') ? x.flags : `${x.flags}g`)] : []));
+  const allowNum = (i.allowNumbers ?? []).filter((x): x is string => typeof x === 'string');
   for (const p of i.prompts) {
     const k = p.step ?? 0;
     const e = per.get(p.clause);
     if (e) { (steps.get(p.clause) ?? steps.set(p.clause, new Set()).get(p.clause)!).add(k); if (k >= e.length) { out.push(`prompt for ${p.clause}: prompt ${String(k + 1)} has no promptAmounts entry`); continue; } }
     const a = e ? e[k] : am.get(p.clause);
-    const got = new Set(numbers(p.shown));
-    if (a === 'counted') { if (numbers(p.shown.replace(token, ' ')).length === 0) out.push(`prompt for ${p.clause}: no amount`); continue; }
+    const words = p.shown.replace(token, (m) => { const k = m.slice(o.length, m.length - c.length); return (iaRe ? iaRe.test(k) : (ia as readonly string[] | undefined)?.includes(k)) ? ` ${m} ` : ' '; });
+    const got = new Set(numbers(words));
+    if (a === 'counted') {
+      const cw = allowRe.reduce((t, r) => t.replace(r, ' '), words), cnt = new Set(cw.match(/\d+(?!\d|(?:st|nd|rd|th)\b)/gi) ?? []);
+      if (cnt.size === 0) { out.push(`prompt for ${p.clause}: no amount`); continue; }
+      const v = p.value === undefined ? undefined : String(p.value), printed = numbers(text.get(p.clause) ?? '');
+      if (v !== undefined && !/^-?\d+$/.test(v)) { out.push(`prompt for ${p.clause}: value ${v} is not a whole number`); continue; }
+      const abs = v?.replace('-', '');
+      if (v !== undefined && !(v.startsWith('-') ? new RegExp(`(?<!\\d)[-\\u2212]${abs!}(?!\\d)`).test(cw) : cnt.has(abs!))) out.push(`prompt for ${p.clause}: amount ${v} not shown`);
+      const stray = [...cnt].filter((n) => n !== abs && !printed.includes(n) && !allowNum.includes(n));
+      if (v !== undefined) for (const n of stray) out.push(`prompt for ${p.clause}: stray number ${n}`);
+      else if (stray.length > 1) out.push(`prompt for ${p.clause}: numbers ${stray.join(', ')} shown, pass value to tell the amount`);
+      continue;
+    }
     const want = a ?? numbers(text.get(p.clause) ?? '');
     if (want.length > 0 && !want.some((w) => got.has(w))) out.push(`prompt for ${p.clause}: no amount`);
   }
@@ -78,6 +100,7 @@ export function screenProblems(i: ScreenInput): string[] {
 /** The `cards:screen` script body: prints each problem, returns the exit code. */
 export function screenMain(input: ScreenInput, log: (l: string) => void): number {
   const p = screenProblems(input);
+  if (input.known) return knownGate('cards:screen', p, input.known, log);
   for (const l of p) log(l);
   if (p.length === 0) log('cards:screen ok');
   return p.length === 0 ? 0 : 1;
