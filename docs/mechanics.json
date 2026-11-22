@@ -103,7 +103,7 @@
     { "words": "offer at the end of a phase, phase start and end events, end of phase trigger", "row": "K537", "sheet": "triggers" },
     { "words": "host leaves play with its attachments, attached cards go too", "row": "K538", "sheet": "levels" },
     { "words": "face-down card view, hidden card for the other seat", "part": "card-zones", "read": "its README, `viewOf` (a hidden card is a back), `canSee`, `reveal`", "missing": "one face-down card inside a zone the seat may otherwise see", "row": "K539", "sheet": "hidden" },
-    { "words": "lasts until a named end point, open duration", "row": "K541", "sheet": "lasting" },
+    { "words": "lasts until a named end point, open duration, until end of combat, duration named end point, lasts until event, for this combat, until the next", "part": "engine-core", "read": "timing.md, `addEffect` with `{ until: 'event', event, instance }` and `eventOver` (the game fires its named event once; scoped by instance)", "sheet": "lasting" },
     { "words": "named lasting effect with a token, status token, condition token", "row": "K542", "sheet": "lasting" },
     { "words": "place dice on slots, die value to yield table, dice group placement, dice placement, assign dice to slots, place dice into groups", "part": "dice-patterns", "read": "its README \"Kinds\", `face` (the rule for a slot that takes one named face)", "missing": "the slots, placing a die on one, and the table from die value to yield", "row": "K543", "sheet": "dice" },
     { "words": "layered grid, stacked tiles on a grid, overlapping tiles, grid stack footprint, stack footprint", "row": "K544", "sheet": "positions" },
