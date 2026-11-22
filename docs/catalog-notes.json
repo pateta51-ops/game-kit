@@ -2338,8 +2338,7 @@
       "when drawn",
       "resolves when drawn",
       "draw trigger",
-      "instant",
-      "card added to row"
+      "instant"
     ],
     "use": "A card prints \"when X, do Y\": `when` on card data, compiled by `cardTriggers` into the engine's triggers.",
     "guide": "README.md"

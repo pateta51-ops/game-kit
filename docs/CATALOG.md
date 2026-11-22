@@ -391,7 +391,7 @@ The card-language shell (K206): card effects as data, one typed verb table where
 ### card-language/triggers
 
 - **Also called:** Triggers printed on cards
-- **Words:** when, trigger, after, card trigger, reaction, reshuffle trigger, when drawn, resolves when drawn, draw trigger, instant, card added to row
+- **Words:** when, trigger, after, card trigger, reaction, reshuffle trigger, when drawn, resolves when drawn, draw trigger, instant
 - **Use it when:** A card prints "when X, do Y": `when` on card data, compiled by `cardTriggers` into the engine's triggers.
 - **Guide:** [README.md](../components/card-language/README.md)
 
