@@ -166,11 +166,11 @@ describe('card-language prefer full (K598): agrees with playing every answer', (
         if (ts.some((t) => t === undefined)) continue;
         n.choices += 1;
         n.unknown += ts.includes('unknown') ? 1 : 0;
-        // K598 second review: the bars read pack.grade (the whole step tree): never above resolves, none and unknown exactly where resolves says so.
+        // K598 second review: the bars read pack.grade (the whole step tree): full only where resolves is; where both are known, never above resolves and none exactly where resolves is (the tree may know more or less than the top-level parts, so unknown may differ).
         const rank = ['none', 'part', 'full'];
         const gs = options.map((o, k) => {
           const x = w.pack.grade(s, content, o, { seat: 'a', source: 'p1' }).answer;
-          if ((x === 'unknown') !== (ts[k] === 'unknown') || (x === 'none') !== (ts[k] === 'none') || rank.indexOf(x) > rank.indexOf(ts[k] ?? '')) throw new Error(`grade ${x}, resolves ${String(ts[k])}: ${JSON.stringify(o)}`);
+          if ((x === 'full' && ts[k] !== 'full') || (x !== 'unknown' && ts[k] !== 'unknown' && ((x === 'none') !== (ts[k] === 'none') || rank.indexOf(x) > rank.indexOf(ts[k] ?? '')))) throw new Error(`grade ${x}, resolves ${String(ts[k])}: ${JSON.stringify(o)}`);
           n.deeper += x !== ts[k] ? 1 : 0;
           return x;
         });
@@ -226,9 +226,10 @@ describe('card-language prefer full (K598): never a choice with nothing enabled'
         const forced = i % 2 === 1;
         const p = forced ? g.play([{ op: 'choosePlayer', others: true, then: choice(...options) }], [['b']], undefined, true).s.prompt : g.play(choice(...options), [], undefined, true).s.prompt;
         const env = forced ? { seat: 'b', source: 'p1', actor: 'a' } : { seat: 'a', source: 'p1' };
-        const on = options.map((o) => offer.deadChoice === 'today' || g.pack.wouldChange(s, content, o, env) !== 'no');
+        const live = options.map((o) => offer.deadChoice === 'today' || g.pack.wouldChange(s, content, o, env) !== 'no');
+        const on = live.map((l) => l || offer.deadChoice !== 'bar');
         const rs = options.map((o, k) => (on[k] === true ? g.pack.grade(s, content, o, env).answer : undefined));
-        const skip = !on.some(Boolean) || (offer.prefer === 'full' && (offer.forcedSkip === 'noFull' && forced ? !rs.some((r) => r === 'full' || r === 'unknown') : rs.every((r) => r === undefined || r === 'none')));
+        const skip = !live.some(Boolean) || (offer.prefer === 'full' && (offer.forcedSkip === 'noFull' && forced ? !rs.some((r) => r === 'full' || r === 'unknown') : rs.every((r) => r === undefined || r === 'none')));
         expect([options, p === null]).toEqual([options, skip]);
         if (p !== null) expect([options, p.options.some((o) => o.enabled)]).toEqual([options, true]);
         // K598 second review: a none option is barred beside a part one, under prefer full only.

@@ -386,8 +386,8 @@ export function cardPack<G extends GameTypes, E extends PackEnv = PackEnv>(cfg: 
   // K597, resolves: `done` the top-level steps this line resolved, `next` the step running, `mark` the view when it began, `whys` each step's reason read when it began.
   // A top-level `payThen` is two parts: its cost (index i) and its `then` (i + 0.5); `paid` is the view when its cost ended.
   // `costs`: the view when each cost now being paid began; `part`: parts that did not resolve in full (a shortfall, or a cost or its effect that changed nothing), with the reason; `half`: the parts that changed but are in `part`.
-  type Line = { base: string; cost: number; sees: readonly string[] | null; hidden: boolean; done: readonly number[]; next: number; mark: string; whys: Readonly<Record<number, SkipReason | OfferReason>>; paid: string | null; costs: readonly string[]; part: Readonly<Record<number, SkipReason | OfferReason>>; half: readonly number[]; over: readonly number[]; ran: number };
-  const J0 = (): Line => ({ base: '', cost: 0, sees: null, hidden: false, done: [], next: 0, mark: '', whys: {}, paid: null, costs: [], part: {}, half: [], over: [], ran: 0 });
+  type Line = { base: string; cost: number; sees: readonly string[] | null; hidden: boolean; done: readonly number[]; next: number; mark: string; whys: Readonly<Record<number, SkipReason | OfferReason>>; paid: string | null; costs: readonly string[]; part: Readonly<Record<number, SkipReason | OfferReason>>; half: readonly number[]; over: readonly number[]; ran: number; ign: readonly number[] };
+  const J0 = (): Line => ({ base: '', cost: 0, sees: null, hidden: false, done: [], next: 0, mark: '', whys: {}, paid: null, costs: [], part: {}, half: [], over: [], ran: 0, ign: [] });
   let J: Line = J0();
   // K597: set while `resolves` runs the search: each line runs to its end, and `line` gets it (true: a line resolved every step, stop).
   // K598: `deep` (the option grading): every step at any depth is graded; it lists the skip reasons that do not count against full.
@@ -397,7 +397,9 @@ export function cardPack<G extends GameTypes, E extends PackEnv = PackEnv>(cfg: 
   const unitNow = (): number => (R !== null && (R.steps[J.next] as PackStep | undefined)?.op === 'payThen' && J.paid !== null ? J.next + 0.5 : J.next);
   const partly = (r: SkipReason | OfferReason): void => {
     const u = unitNow();
-    if (R !== null && dry !== null && !(u in J.part) && R.deep?.includes(r) !== true) J.part = { ...J.part, [u]: r };
+    if (R === null || dry === null) return;
+    if (R.deep?.includes(r) === true) J.ign = [...J.ign, u];
+    else if (!(u in J.part)) J.part = { ...J.part, [u]: r };
   };
   const credit = (got: readonly number[]): void => {
     const fresh = got.filter((u) => !J.done.includes(u) && !J.half.includes(u));
@@ -629,8 +631,8 @@ export function cardPack<G extends GameTypes, E extends PackEnv = PackEnv>(cfg: 
       const v = view(c.s);
       if (t.i >= 0 && (steps[t.i] as PackStep).op === 'payThen') credit([...(J.paid !== null && J.paid !== J.mark ? [t.i] : []), ...(J.paid !== null && v !== J.paid ? [t.i + 0.5] : [])]);
       else if (t.i >= 0 && v !== J.mark) credit([t.i]);
-      // K598, deep: a part no step under it marked as not resolved (every skip of a reason it ignores) resolves.
-      if (F.deep && t.i >= 0) J.done = [...J.done, ...(J.paid === null ? [t.i] : unitsOf(steps, t.i)).filter((u) => !J.done.includes(u) && !J.half.includes(u) && !(u in J.part))];
+      // K598, deep: a part that changed nothing resolves when it skipped only for reasons the grading ignores.
+      if (F.deep && t.i >= 0) J.done = [...J.done, ...unitsOf(steps, t.i).filter((u) => J.ign.includes(u) && !J.done.includes(u) && !J.half.includes(u) && !(u in J.part))];
       J.mark = v;
       J.paid = null;
       J.next = t.i + 1;
