@@ -3,7 +3,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { afterAll, describe, expect, it } from 'vitest';
-import { finish, searchPart, type Exec } from '../scripts/agent.mjs';
+import { finish, searchPart, searchParts, type Exec } from '../scripts/agent.mjs';
 
 const root = fs.mkdtempSync(path.join(os.tmpdir(), 'k688-'));
 afterAll(() => fs.rmSync(root, { recursive: true, force: true }));
@@ -12,7 +12,8 @@ const put = (dir: string, f: string, t = 'x') => { fs.mkdirSync(path.dirname(pat
 // a stand-in for the game's kit/kit.mjs search: "dice" finds dice-tray, "deck" a mechanics line naming card-zones, anything else misses
 const fakeKit = `const w = process.argv.slice(3).join(' ')
 if (process.argv[2] !== 'search') process.exit(2)
-if (w.includes('dice')) console.log('Dice tray (\`dice-tray\`): Use: rolls dice')
+if (w.includes('pile')) console.log('Dice tray (\`dice-tray\`): Use: rolls dice\nCard pile (\`card-zones\`): Use: piles\ncount: Counts.\nhand-fan: Fans a hand.')
+else if (w.includes('dice')) console.log('Dice tray (\`dice-tray\`): Use: rolls dice')
 else if (w.includes('deck')) console.log('mechanic: deck of cards -> \`card-zones\`: read its README')
 else console.log('count: Counts a number up.\\nnot in the kit by that name')
 `;
@@ -66,14 +67,22 @@ describe('K688 finish runs each Built new line\'s two searches again', () => {
     expect(a.ran).toBe(true);
     expect(run(main, sec('src/play/roll.ts | search: flip a coin; toss heads | nearest: none | why: x')).rc).toBe(0);
   });
+  it('K688 nearest is accepted when it is the second of the first 3 parts a search prints; a part after the third does not count', () => {
+    const main = game({ 'src/play/pile.ts': '' }, { kit: true });
+    expect(run(main, sec('src/play/pile.ts | search: pile of cards; stack pile | nearest: card-zones | why: x')).rc).toBe(0);
+    const r = run(main, sec('src/play/pile.ts | search: pile of cards; stack pile | nearest: hand-fan | why: x'));
+    expect(r.rc).toBe(1);
+    expect(r.text).toContain('check: search finds dice-tray for "pile of cards"');
+  });
   it('K688 searchPart reads the first line: a part, a sub-part, an effect, a mechanics line; null for a miss, a candidate or "not in the kit"', () => {
-    expect(searchPart('Dice tray (`dice-tray`): Use: x\nother')).toBe('dice-tray');
+    expect(searchPart('Dice tray (`dice-tray`): Use: x')).toBe('dice-tray');
     expect(searchPart('dash-line: Draws a line. Use: x')).toBe('dash-line');
     expect(searchPart('light-teleport (was warp-transfer): x')).toBe('light-teleport');
     expect(searchPart('mechanic: a, b -> partly: `engine-core` does it')).toBe('engine-core');
     expect(searchPart('mechanic: a -> not in the kit; build it in the game')).toBeNull();
-    expect(searchPart('candidate K123, wanted by x: y\nnot built yet')).toBeNull();
-    expect(searchPart('count: Counts.\nnot in the kit by that name')).toBeNull();
+    expect(searchPart('candidate K123, wanted by x: y')).toBeNull();
+    expect(searchParts('count: Counts.\nnot in the kit by that name')).toEqual([]);
+    expect(searchParts('a (`p1`): x\ncandidate K1, wanted by y: z\nb (`p2`): x\nc (`p3`): x')).toEqual(['p1', 'p2']);
   });
 });
 
@@ -83,9 +92,7 @@ describe('K688 kit.builtNew.ignore entries need a glob and a reason', () => {
     ['a bare string', ['src/data/*.json'], 'needs { "glob"'],
     ['a missing why', [{ glob: 'src/data/*.json' }], 'src/data/*.json needs a non-empty why'],
     ['an empty why', [{ glob: 'src/data/*.json', why: ' ' }], 'needs a non-empty why'],
-    ['src/**', [{ glob: 'src/**', why: 'x' }], 'src/** covers all of src/'],
-    ['**', [{ glob: '**', why: 'x' }], '** covers all of src/'],
-    ['src/*', [{ glob: 'src/*', why: 'x' }], 'src/* covers all of src/'],
+    ...['src/**', '**', 'src/*', 'src/**/*.ts', 'src/**/*.tsx', '**/*.js'].map((x) => [x, [{ glob: x, why: 'x' }], x + ' covers most of src/'] as const),
     ['11 entries', Array.from({ length: 11 }, (_, i) => ({ glob: `src/d${i}/*.json`, why: 'x' })), '11 entries, at most 10'],
   ] as const) it(`K688 ${what} fails before any run, even with nothing new`, () => {
     const main = game({ 'notes.md': 'x' }, { pkg: { kit: { builtNew: { ignore: ignore } } } });
@@ -101,6 +108,7 @@ describe('K688 kit.builtNew.ignore entries need a glob and a reason', () => {
     const r = run(main, null);
     expect(r.rc).toBe(0);
     expect(r.ran).toBe(true);
+    expect(run(game({ 'notes.md': 'x' }, { pkg: { kit: { builtNew: { ignore: [{ glob: 'src/**/*.json', why: 'data' }, { glob: 'src/gen/**/*.ts', why: 'generated' }] } } } }), null).rc).toBe(0);
   });
 });
 
@@ -134,6 +142,31 @@ describe('K688 new top-level exports and timers in changed files need a line', (
     expect(run(top, '## Built new\n- src/old.ts#clock | search: a b; c d | nearest: none | why: x\n').rc).toBe(0);
     const inner = game({ 'src/old.ts': 'export const a = 1\nfunction tick() {\n  setTimeout(tick, 100)\n}\n' });
     expect(run(inner, null).rc).toBe(0);
+  });
+  it('K688 removing a plain declaration does not hide a new export as a rename', () => {
+    const r = run(game({ 'src/old.ts': 'export const a = 1\nexport function shuffle() {}\n' }), '## Built new\n');
+    expect(r.rc).toBe(1);
+    expect(r.text).toContain('missing: src/old.ts#shuffle');
+  });
+  it('K688 export default function, export default arrow, export enum, export abstract class and export const { p } count', () => {
+    for (const [t, name] of [
+      ['export default function () {}', 'default'], ['export default () => 1', 'default'], ['export default function Board() {}', 'Board'],
+      ['export enum Phase { A }', 'Phase'], ['export const enum Side { L }', 'Side'], ['export abstract class Base {}', 'Base'],
+      ['export const { p, q: r } = obj', 'p'], ['export const { p, q: r } = obj', 'r'],
+    ]) {
+      const x = run(game({ 'src/old.ts': 'export const a = 1\nfunction tick() {}\n' + t + '\n' }), '## Built new\n');
+      expect(x.rc, t).toBe(1);
+      expect(x.text, t).toContain('missing: src/old.ts#' + name + ' ');
+    }
+  });
+  it('K688 a timer in an arrow or function body on a top-level line is not top-level; a top-level assigned one is', () => {
+    for (const t of ['const start = () => setTimeout(tick, 100)', 'export const stop = () => clearTimeout(setTimeout(tick, 1))', 'function go() { setInterval(tick, 1) }']) {
+      const x = run(game({ 'src/old.ts': 'export const a = 1\nfunction tick() {}\n' + t + '\n' }), '## Built new\n- src/old.ts#stop | search: a b; c d | nearest: none | why: x\n');
+      expect(x.rc, t).toBe(0);
+    }
+    const y = run(game({ 'src/old.ts': 'export const a = 1\nfunction tick() {}\nconst id = setTimeout(tick, 100)\n' }), '## Built new\n');
+    expect(y.rc).toBe(1);
+    expect(y.text).toContain('missing: src/old.ts#setTimeout');
   });
   it('K688 renaming an export, editing one, exporting an old function or an indented export does not count', () => {
     for (const t of [
