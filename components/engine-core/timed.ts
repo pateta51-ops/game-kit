@@ -2,5 +2,5 @@ export { batchGroups, batchOf, cancelBatch, changeOccurrence, DEFAULT_ORDER, ign
 export { replacementCandidates, type Replacement, type ReplaceResult } from './replace.ts';
 export { addEffect, allEffects, anyEffect, batchOver, bindEffect, boundary, effectsOf, expireEffects, layered, removeEffect, sourceLeft, stampActive, sumEffects, spendEffect, type Boundary, type ContinuousEffect, type Duration, type EffectInput, type EffectsConfig, type LayerConfig } from './durations.ts';
 export { checkpointHandlers, RECOMPUTE_CAP, recompute, type CheckpointConfig, type StateCheck } from './checkpoint.ts';
-export { effectModifiers, numberParts, partsDirection, type NumberModifier, type NumberOp, type NumberOptions, type NumberOrder, type NumberPart, type NumberResult, type NumberStep, type UnchangedPart } from './numbers.ts';
+export { effectModifiers, numberParts, partsDirection, type NumberBound, type NumberModifier, type NumberOp, type NumberOptions, type NumberOrder, type NumberPart, type NumberResult, type NumberStep, type UnchangedPart } from './numbers.ts';
 export { collectTriggers, DEFAULT_PRIORITY, enteredPlay, liveTriggers, pendingTriggers, simultaneously, TRIGGER_CAP, triggerHandlers, type PendingTrigger, type TriggerCandidate, type TriggerOrder, type TriggerPromptInfo } from './triggers.ts';

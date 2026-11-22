@@ -4,7 +4,7 @@
     "game": "7is",
     "commit": "b3ef81b",
     "paths": ["src/engine/conditions.ts", "tests/unit/satisfying-dice.test.ts"],
-    "note": "Logic kept; the interface is new: patterns as plain data compiled to the test dice-odds and dice-tray take."
+    "note": "Kept from the source: what each kind means when it judges a roll (same, different, run, even, odd, at least, face, sum, max, spread, two pair). New here: patterns as plain data compiled to the test dice-odds and dice-tray take, ops on sum, max, spread and count, all and any, and the smallest-set rule (the source joined each condition's smallest set and read every die for a sum; here it is the fewest dice that meet the whole pattern on their own, or with whole only when every die together meets it)."
   },
   "needs": [],
   "packages": []
