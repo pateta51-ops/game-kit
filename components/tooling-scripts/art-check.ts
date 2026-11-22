@@ -34,8 +34,9 @@ export interface ArtConfig {
 
 const sha256 = (path: string): string => createHash('sha256').update(readFileSync(path)).digest('hex');
 
-export function artCheck(c: ArtConfig): { errors: string[]; faces: number; total: number } {
+export function artCheck(c: ArtConfig): { errors: string[]; faces: number; total: number; skipped: number } {
   const errors: string[] = [];
+  let skipped = 0;
   const manifest = JSON.parse(readFileSync(c.manifest, 'utf8')) as Record<string, ArtEntry>;
   const ids = new Set<string>();
   for (const file of readdirSync(c.sources).sort()) {
@@ -51,6 +52,7 @@ export function artCheck(c: ArtConfig): { errors: string[]; faces: number; total
       continue;
     }
     if (entry.source !== file || entry.sha256 !== sha256(join(c.sources, file))) errors.push(`${id}: the source ${file} changed since the last build`);
+    if (c.noEnlarge !== false && (entry.width === undefined || entry.height === undefined || entry.sourceWidth === undefined || entry.sourceHeight === undefined)) skipped += 1;
     if (c.noEnlarge !== false && entry.width !== undefined && entry.height !== undefined && entry.sourceWidth !== undefined && entry.sourceHeight !== undefined && entry.width * entry.height > entry.sourceWidth * entry.sourceHeight)
       errors.push(`${id}: enlarged: the output is ${String(entry.width)}x${String(entry.height)}, the source ${String(entry.sourceWidth)}x${String(entry.sourceHeight)}`);
     if (!existsSync(out)) errors.push(`${id}: the output ${id}.${c.ext} is missing`);
@@ -68,7 +70,7 @@ export function artCheck(c: ArtConfig): { errors: string[]; faces: number; total
     if (c.maxFileBytes !== undefined && size > c.maxFileBytes) errors.push(`${f}: ${String(size)} bytes is over the file cap of ${String(c.maxFileBytes)}`);
   }
   if (c.maxBytes !== undefined && total > c.maxBytes) errors.push(`${String(total)} bytes of outputs is over the cap of ${String(c.maxBytes)}`);
-  return { errors, faces: ids.size, total };
+  return { errors, faces: ids.size, total, skipped };
 }
 
 const NAMES = ['manifest', 'sources', 'out', 'ext', 'source-id', 'need', 'max-bytes', 'max-file-bytes'];
@@ -105,6 +107,7 @@ export function run(args: readonly string[], io: Io = stdio): number {
       io.err(`art-check: ${String(r.errors.length)} error(s)`);
       return 1;
     }
+    if (r.skipped > 0) io.out(`enlarged check: ${String(r.skipped)} faces skipped, no source size; republish to check them`);
     io.out(`art-check: ok (${String(r.faces)} faces, ${String(r.total)} bytes)`);
     return 0;
   } catch (error) {

@@ -163,6 +163,7 @@ export interface Codec {
 
 /** Encodes at the highest quality (from `max`, default 100, down to `min`) whose output fits `cap` bytes; throws naming the face when even `min` does not fit. */
 export async function encodeWithin(c: Codec, src: Uint8Array, ext: string, face: string, q: { min: number; max?: number }, cap: number | undefined): Promise<Uint8Array> {
+  if ((q.max ?? 100) < q.min) throw new Error(`${face}: quality max ${String(q.max ?? 100)} is under min ${String(q.min)}`);
   const at = (n: number): Promise<Uint8Array> => c.out(src, ext, undefined, n);
   let hi = q.max ?? 100;
   let best = await at(hi);
