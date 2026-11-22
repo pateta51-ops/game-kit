@@ -322,7 +322,7 @@ describe('finish: one run per branch, sign of life, --detach and --result (K572)
   it('K644 run.sh writes the start marker as its first act', () => {
     const { main } = fresh('k644r');
     const b = fakeBg(path.join(root, 'k644r-home'));
-    finish(['--repo', main, '--detach'], io().io, (_c, _a, input) => isStatus(input) ? st([], []) : { status: 0, output: '' }, false, b as Bg);
+    finish(['--repo', main, '--detach'], io().io, (_c, _a, input) => isStatus(input) ? st([], []) : { status: 0, output: '' }, false, b);
     const dir = b.starts[0]!;
     expect(fs.readFileSync(path.join(dir, 'run.sh'), 'utf8').startsWith(`date +%s > '${path.join(dir, 'started')}'; `)).toBe(true);
   });
