@@ -9,7 +9,7 @@ Card zones as data on engine-core state (K223): decks, hands, discards and play 
 **You must:**
 1. Keep `zones: newZones({ name: { seen, owner?, cards? } })` in the game state, with per-seat keys from `seatZone('hand', seat)`; a card carries no zone field.
 2. Move cards only with `moveCard`, `draw`, `place`, `shuffleZone`, `reveal` inside a handler on the draft, so replay, undo and saves work.
-3. Shuffle only through `shuffleZone(ctx, zone)` (it uses `ctx.rng`).
+3. Shuffle only through `shuffleZone(ctx, zone)` (it uses `ctx.rng`). `shuffleZone(ctx, zone, { name })` passes `name` to `ctx.rng.shuffle(xs, name)`: the name only selects a test override (`setRngOverrides`); there is one rng stream, so a named shuffle still draws from `state.rng` unless overridden.
 4. Build every player view from `viewOf(s, seat)`; a hidden card is `null`, and the game adds no hidden state of its own.
 5. Give opponents' `viewLeaks` the list from `hiddenFrom(s, seat)`.
 6. Add `zoneProblems(s, expected?)` to `GameRules.invariants`.
@@ -23,7 +23,7 @@ Card zones as data on engine-core state (K223): decks, hands, discards and play 
 
 - State: the game keeps `zones: newZones({ name: { seen, owner?, cards? } })` (`Zoned`); per-seat keys by `seatZone('hand', seat)`. A card carries no zone field; `locate`, `cardsIn` find it.
 - Seen: `all`, `owner` (others see the count), `top` (top card and count), `count`, `none` (not even the count: absent from the view, or only its revealed cards).
-- Moves (inside a handler on the draft, through the copy-on-write barrier, so replay, undo and saves work): `moveCard(s, id, to, at)` (`'top'` default, `'bottom'`, an index), `draw(s, from, to, n, at)` (bottom by default, so a hand keeps draw order), `place` (a card in no zone), `shuffleZone(ctx, zone)` (only `ctx.rng`), `reveal(s, zone, ids, seats | 'all')` (lasts until the card leaves or the zone is shuffled). A state with engine-core's `objRefs` gets `leaveZone` on every move (snapshot: `moveCard`'s fifth argument, default the id). An unknown zone or card is an `EngineBugError`.
+- Moves (inside a handler on the draft, through the copy-on-write barrier, so replay, undo and saves work): `moveCard(s, id, to, at)` (`'top'` default, `'bottom'`, an index), `draw(s, from, to, n, at)` (bottom by default, so a hand keeps draw order), `place` (a card in no zone), `shuffleZone(ctx, zone, { name }?)` (only `ctx.rng`; `name` selects a test override, not a separate stream), `reveal(s, zone, ids, seats | 'all')` (lasts until the card leaves or the zone is shuffled). A state with engine-core's `objRefs` gets `leaveZone` on every move (snapshot: `moveCard`'s fifth argument, default the id). An unknown zone or card is an `EngineBugError`.
 - View-only rule: `viewOf(s, seat)` gives `ZoneView { count, owner?, cards? }` per zone, a hidden card is `null` (a back), so no hidden id, order or rng word is in it; `hiddenFrom(s, seat)` is the secrets list for opponent's `viewLeaks`; `canSee`. The game builds its own view from it and adds no state of its own that is hidden.
 - `zoneProblems(s, expected?)`: a card in two places or a wrong total, for `GameRules.invariants`.
 - Seam for the UI parts (K218 hand, K219 pile, K220 drag): they render a `ZoneView`; a `null` is a card back.
