@@ -2104,7 +2104,11 @@
       "distance to space",
       "distance",
       "space",
-      "dry run"
+      "dry run",
+      "steps back",
+      "looping track",
+      "cannot advance",
+      "check a track definition"
     ],
     "visible": false,
     "release": 1,
