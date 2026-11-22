@@ -4,6 +4,7 @@
 import { createHash } from 'node:crypto';
 import { dirname } from 'node:path';
 import { execFileSync } from 'node:child_process';
+import { knownCheck, writeKnownMain, type KnownFindings, type KnownResult } from './known.ts';
 
 export interface CatalogueClause { readonly id: string; readonly card: string; readonly text: string }
 export interface CataloguePattern { readonly id: string; readonly name?: string; readonly clauses: readonly CatalogueClause[]; readonly [k: string]: unknown }
@@ -316,6 +317,14 @@ export interface CardsCheckInput extends ClauseInput, Omit<RestrictionInput, 'ca
   readonly batch?: (id: string) => readonly string[];
   /** K513: a file of allowed problem lines (`--baseline <path>` wins); needs a RecordIo with `read` and `write`. */
   readonly baseline?: string;
+  /** K650: the known-findings file (`--known <path>` wins; an alias of `baseline`, lines `<part>: <problem> @ <owner>`). */
+  readonly known?: string;
+  /** K650: owners still open; a line whose owner is not among them fails. Unset: owners are not checked. */
+  readonly openOwners?: readonly string[];
+  /** K650: the owner `--write-known` gives a new line (default `none`). */
+  readonly ownerOf?: (finding: string) => string;
+  /** K650: fail while any line is left (also `--release`). */
+  readonly release?: boolean;
 }
 export function cardsCheck(i: CardsCheckInput): { clauses: string[]; restrictions: string[]; patterns: string[]; readings: string[] } {
   return { clauses: clauseProblems(i), restrictions: restrictionProblems({ ...i, words: i.words ?? {} }), patterns: patternProblems(i), readings: readingProblems(i) };
@@ -354,9 +363,9 @@ export function cardsCheckMain(argv: readonly string[], input: CardsCheckInput, 
     return r.failed ? 1 : 0;
   }
   const r = cardsCheck(i);
-  const bf = arg('--baseline') ?? i.baseline, wb = argv.includes('--write-baseline');
-  if (bf !== undefined || wb) {
-    if (bf === undefined) { log('FAIL --write-baseline needs a baseline path'); return 1; }
+  const bf = arg('--known') ?? arg('--baseline') ?? i.known ?? i.baseline, wb = argv.includes('--write-baseline'), wk = argv.includes('--write-known');
+  if (bf !== undefined || wb || wk) {
+    if (bf === undefined) { log(`FAIL ${wk ? '--write-known' : '--write-baseline'} needs a baseline path`); return 1; }
     const found = Object.entries(r).flatMap(([part, ps]) => ps.map((p) => `${part}: ${p}`));
     if (wb) {
       if (!io) { log('FAIL --write-baseline needs a RecordIo'); return 1; }
@@ -364,18 +373,18 @@ export function cardsCheckMain(argv: readonly string[], input: CardsCheckInput, 
       log(`cards:check: baseline written, ${String(found.length)} lines`);
       return 0;
     }
-    if (!io?.read) { log('FAIL --baseline needs a RecordIo with read'); return 1; }
-    let t: string;
-    try { t = io.read(bf); } catch (e) { if ((e as { code?: string }).code !== 'ENOENT') { log(`FAIL baseline ${bf}: ${(e as Error).message}`); return 1; } t = ''; }
-    const base = t.replace(/\r\n/g, '\n').split('\n').map((l) => l.trimEnd()).filter((l) => l !== '' && !l.startsWith('#'));
-    const now = new Set(found), had = new Set(base);
-    base.splice(0, base.length, ...had);
-    const fresh = found.filter((p) => !had.has(p)), stale = base.filter((p) => !now.has(p));
-    for (const p of fresh) log(`FAIL ${p}`);
-    for (const p of stale) log(`FAIL baseline lists "${p}", which is gone: remove it from ${bf}`);
-    log(`cards:check: ${Object.entries(r).map(([k, ps]) => `${k} ${String(ps.length)}`).join(', ')} (${String(base.length)} in the baseline); ${String(fresh.length)} new, ${String(stale.length)} stale`);
+    if (!io?.read) { log(`FAIL ${wk ? '--write-known' : '--baseline'} needs a RecordIo with read`); return 1; }
+    const rio = io;
+    const k: KnownFindings = { file: bf, io: { read: (p) => rio.read!(p), write: (p, t) => rio.write(p, t) }, ...(i.openOwners ? { open: i.openOwners } : {}), release: i.release === true || argv.includes('--release'), ...(i.ownerOf ? { ownerOf: i.ownerOf } : {}) };
+    let kr: KnownResult;
+    try {
+      if (wk) return writeKnownMain('cards:check', found, k, log);
+      kr = knownCheck(found, k);
+    } catch (e) { log(`FAIL baseline ${bf}: ${(e as Error).message}`); return 1; }
+    for (const p of kr.problems) log(`FAIL ${p}`);
+    log(`cards:check: ${Object.entries(r).map(([k, ps]) => `${k} ${String(ps.length)}`).join(', ')} (${String(kr.lines.length)} in the baseline); ${String(kr.fresh.length)} new, ${String(kr.stale.length)} stale${k.open ? `, ${String(kr.closed.length)} without an open owner` : ''}${k.release ? `, ${String(kr.left.length)} left for release` : ''}`);
     for (const n of patternNotes(i)) log(`NOTE ${n}`);
-    return fresh.length + stale.length ? 1 : 0;
+    return kr.problems.length ? 1 : 0;
   }
   let bad = 0;
   for (const [part, ps] of Object.entries(r)) { log(`${ps.length ? 'FAIL' : 'ok  '} ${part} (${String(ps.length)})`); for (const p of ps) log(`  ${p}`); bad += ps.length; }
