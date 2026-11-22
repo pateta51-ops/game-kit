@@ -8,6 +8,9 @@ export function teardown(args: string[], io: Io): number
 export interface Bg { start: (cmd: string, args: string[], dir: string, env?: Record<string, string>) => void; sleep: (ms: number) => void; now: () => number; home: string }
 export function queueJob(exec: Exec, win: boolean, label: string): { down?: true; job?: { id: string; label: string }; state?: 'waiting' | 'running'; ms?: number; ahead?: number } | null
 export function finish(args: string[], io: Io, exec?: Exec, win?: boolean, bg?: Bg | null): number
+export const BUILT_NEW_LINE: string
+export function newSrcFiles(repo: string): string[] | null
+export function builtNew(files: string[], body: string): string[]
 export function launch(win: boolean, dir: string): { cmd: string; args: string[]; env: Record<string, string> }
 export function byHand(win: boolean, dir: string): string
 export const realBg: Bg & { start: (cmd: string, args: string[], dir: string, env?: Record<string, string>, sp?: unknown) => void }
