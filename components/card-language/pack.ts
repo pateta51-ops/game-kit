@@ -4,7 +4,7 @@
 // the middle of an effect resumes. Words: default templates with slots, the game overrides them (`words`).
 import { bar, canonicalJson, closeDraft, copyState, draftOf, EngineBugError, GameOver, makeCtx, openDraft, own, run, would, type Ctx, type Draft, type GameTypes, type HandlerTable, type KernelOption, type KernelPrompt, type KernelState, type Occurrence } from '../engine-core/index.ts';
 import { canSee, cardsIn, locate, moveCard, reveal, shuffleZone, type At, type Zone, type Zoned } from '../card-zones/index.ts';
-import { askVerb, bool, describeEffect, effectOf, effectTasks, int, oneOf, optional, posInt, str, type AnyVerbTable, type Field, type Step, type Verb, type VerbTable } from './index.ts';
+import { askVerb, bool, describeEffect, effectOf, effectTasks, int, oneOf, optional, posInt, str, type AnyVerbTable, type Field, type Step, type Verb, type VerbTable, type VerbTask } from './index.ts';
 
 /** A number, or `'X'`: the env's `n` (set by `count` and `chooseNumber`). */
 export type Amount = number | 'X';
@@ -105,8 +105,8 @@ export interface OfferCheck {
   readonly reason?: OfferReason | SkipReason | (string & {});
   readonly error?: unknown;
 }
-/** K605: why a step changed nothing: a false condition, a cost that cannot be paid, no card it may take, an empty zone, or none of these. K597: `short`, a step that did less than its number; `gameOver`, the game ended before the step (resolves only). */
-export type SkipReason = 'condition' | 'cannotPay' | 'noTarget' | 'emptyZone' | 'noChange' | 'short' | 'gameOver';
+/** K605: why a step changed nothing: a false condition, a cost that cannot be paid, no card it may take, an empty zone, or none of these. K597: `short`, a step that did less than its number; `gameOver`, the game ended before the step (resolves only). K598: `declined`, a `may` answered no (the option grading of `prefer: 'full'` only). */
+export type SkipReason = 'condition' | 'cannotPay' | 'noTarget' | 'emptyZone' | 'noChange' | 'short' | 'gameOver' | 'declined';
 /** K597: how much of an effect would resolve: every top-level step on some line of play (`full`), some step but never all (`part`), none (`none`), or `unknown`. */
 export type Resolved = 'full' | 'part' | 'none' | 'unknown';
 /** K597: `pack.resolves`'s answer; `skipped`: the steps the best line does not resolve, each with its reason (`error` holds what a handler threw). */
@@ -141,8 +141,10 @@ export interface OfferPolicy<S = unknown> {
   readonly decide?: (s: S, steps: readonly (PackStep | Step)[], env: PackEnv, check: OfferCheck) => OfferCheck;
   /** K605: the reason on a barred option: `code` (default: `cannotPay` or `noChange`, as before) or `why` (the reason of `judge(..., { why: true })`). With `decide` set, a reason it returns is used under both. */
   readonly barReason?: 'code' | 'why';
-  /** K598, `chooseOption`: `any` (default) or `full` (among the enabled options, one `resolves` answers `full` bars each `part` one, reason `partial`, and each `none` one, reason `none`; every option `none`: not offered; `unknown` never barred). */
+  /** K598, `chooseOption`: `any` (default) or `full` (each enabled option graded by `pack.grade`, its whole step tree: a `full` one bars each `part` one, reason `partial`, and each `none` one, reason `none`; with no `full` one, a `part` one bars each `none` one; every option `none`: not offered; `unknown` never barred). */
   readonly prefer?: 'any' | 'full';
+  /** K598, with `prefer: 'full'`: the skip reasons that do not count against full when an option is graded (default `[]`), e.g. `['condition', 'declined']`. */
+  readonly fullIgnores?: readonly SkipReason[];
   /** K598, with `prefer: 'full'`: when a `chooseOption` is not offered: `nothing` (default: no option resolves at all) or `noFull` (also when it is another seat's, `env.actor` set and not `env.seat`, and no option may be full). */
   readonly forcedSkip?: 'nothing' | 'noFull';
 }
@@ -182,6 +184,7 @@ export interface PackConfig<G extends GameTypes, E extends PackEnv = PackEnv> {
 const FIXED = 'card-language:due-read';
 const STEP = 'card-language:step';
 const PAID = 'card-language:paid';
+const DEEP = 'card-language:deep';
 const SAME_ENV: readonly string[] = ['seq', 'may', 'if', 'chooseOption', 'choosePayment', 'orderEffects', 'repeat', 'payThen'];
 class Stop extends Error {
   readonly reason: OfferReason;
@@ -260,10 +263,10 @@ export function runLater<G extends GameTypes>(ctx: Ctx<G>, at: string): void {
 }
 
 /** The pack: `verbs` (spread into the game's table), `happen` (call it first in timing's `cfg.happen`; true when the occurrence was a pack move). */
-export function cardPack<G extends GameTypes, E extends PackEnv = PackEnv>(cfg: PackConfig<G, E> = {}): { verbs: VerbTable<G, PackStep, E>; happen: (ctx: Ctx<G>, occ: Occurrence) => boolean; wouldChange: (s: G['state'], content: G['content'], steps: readonly (PackStep | Step)[], env: E) => Offered; judge: (s: G['state'], content: G['content'], steps: readonly (PackStep | Step)[], env: E, opts?: { readonly why?: boolean }) => OfferCheck; resolves: (s: G['state'], content: G['content'], steps: readonly (PackStep | Step)[], env: E) => ResolveCheck; costed: <T extends readonly (PackStep | Step)[]>(s: G['state'], steps: T, env: E) => T } {
+export function cardPack<G extends GameTypes, E extends PackEnv = PackEnv>(cfg: PackConfig<G, E> = {}): { verbs: VerbTable<G, PackStep, E>; happen: (ctx: Ctx<G>, occ: Occurrence) => boolean; wouldChange: (s: G['state'], content: G['content'], steps: readonly (PackStep | Step)[], env: E) => Offered; judge: (s: G['state'], content: G['content'], steps: readonly (PackStep | Step)[], env: E, opts?: { readonly why?: boolean }) => OfferCheck; resolves: (s: G['state'], content: G['content'], steps: readonly (PackStep | Step)[], env: E) => ResolveCheck; grade: (s: G['state'], content: G['content'], steps: readonly (PackStep | Step)[], env: E) => ResolveCheck; costed: <T extends readonly (PackStep | Step)[]>(s: G['state'], steps: T, env: E) => T } {
   const P: OfferPolicy<G['state']> = cfg.offer ?? {};
   const checks = (P.noChange ?? 'ask') !== 'ask' || (P.deadChoice ?? 'today') !== 'today' || P.prefer === 'full';
-  if (checks && !cfg.handlers) throw new EngineBugError('card-language pack: offer.noChange and offer.deadChoice need cfg.handlers (() => RULES.handlers)');
+  if (checks && !cfg.handlers) throw new EngineBugError('card-language pack: offer.noChange, offer.deadChoice and offer.prefer full need cfg.handlers (() => RULES.handlers)');
   type V = Verb<G, never, E>;
   const S = (ctx: Ctx<G>): Draft<PackState> => draftOf(ctx) as unknown as Draft<PackState>;
   const table = (): AnyVerbTable => cfg.table?.() ?? (verbs);
@@ -383,17 +386,18 @@ export function cardPack<G extends GameTypes, E extends PackEnv = PackEnv>(cfg: 
   // K597, resolves: `done` the top-level steps this line resolved, `next` the step running, `mark` the view when it began, `whys` each step's reason read when it began.
   // A top-level `payThen` is two parts: its cost (index i) and its `then` (i + 0.5); `paid` is the view when its cost ended.
   // `costs`: the view when each cost now being paid began; `part`: parts that did not resolve in full (a shortfall, or a cost or its effect that changed nothing), with the reason; `half`: the parts that changed but are in `part`.
-  type Line = { base: string; cost: number; sees: readonly string[] | null; hidden: boolean; done: readonly number[]; next: number; mark: string; whys: Readonly<Record<number, SkipReason | OfferReason>>; paid: string | null; costs: readonly string[]; part: Readonly<Record<number, SkipReason | OfferReason>>; half: readonly number[]; over: readonly number[] };
-  const J0 = (): Line => ({ base: '', cost: 0, sees: null, hidden: false, done: [], next: 0, mark: '', whys: {}, paid: null, costs: [], part: {}, half: [], over: [] });
+  type Line = { base: string; cost: number; sees: readonly string[] | null; hidden: boolean; done: readonly number[]; next: number; mark: string; whys: Readonly<Record<number, SkipReason | OfferReason>>; paid: string | null; costs: readonly string[]; part: Readonly<Record<number, SkipReason | OfferReason>>; half: readonly number[]; over: readonly number[]; ran: number };
+  const J0 = (): Line => ({ base: '', cost: 0, sees: null, hidden: false, done: [], next: 0, mark: '', whys: {}, paid: null, costs: [], part: {}, half: [], over: [], ran: 0 });
   let J: Line = J0();
   // K597: set while `resolves` runs the search: each line runs to its end, and `line` gets it (true: a line resolved every step, stop).
-  let R: { readonly line: (j: Line, reason?: OfferReason, error?: unknown) => boolean; readonly cap: () => void; readonly steps: Eff; readonly env: E } | null = null;
+  // K598: `deep` (the option grading): every step at any depth is graded; it lists the skip reasons that do not count against full.
+  let R: { readonly line: (j: Line, reason?: OfferReason, error?: unknown) => boolean; readonly cap: () => void; readonly steps: Eff; readonly env: E; readonly deep?: readonly string[] } | null = null;
   const unitsOf = (steps: Eff, i: number): number[] => ((steps[i] as PackStep | undefined)?.op === 'payThen' ? [i, i + 0.5] : [i]);
   // K597: the part running now (a top-level payThen: its cost until the cost ended, then its effect); `partly` notes it did not resolve in full (the first reason kept); `credit` adds the parts that changed.
   const unitNow = (): number => (R !== null && (R.steps[J.next] as PackStep | undefined)?.op === 'payThen' && J.paid !== null ? J.next + 0.5 : J.next);
   const partly = (r: SkipReason | OfferReason): void => {
     const u = unitNow();
-    if (R !== null && dry !== null && !(u in J.part)) J.part = { ...J.part, [u]: r };
+    if (R !== null && dry !== null && !(u in J.part) && R.deep?.includes(r) !== true) J.part = { ...J.part, [u]: r };
   };
   const credit = (got: readonly number[]): void => {
     const fresh = got.filter((u) => !J.done.includes(u) && !J.half.includes(u));
@@ -524,12 +528,12 @@ export function cardPack<G extends GameTypes, E extends PackEnv = PackEnv>(cfg: 
     }
   };
   // K597: how much of the effect would resolve, on the same search: each line of play runs to its end, step by step.
-  const resolves = (state: G['state'], content: G['content'], steps: Eff, env: E): ResolveCheck => {
+  const resolves = (state: G['state'], content: G['content'], steps: Eff, env: E, deep?: readonly string[]): ResolveCheck => {
     type L = { done: readonly number[]; half: readonly number[]; over: readonly number[]; part: Line['part']; next: number; whys: Line['whys']; reason?: OfferReason; error?: unknown };
     const units = steps.flatMap((_, i) => unitsOf(steps, i));
     const lines: L[] = [];
     let capped = false;
-    const [c, whys] = checked(state, content, steps, env, { steps, env, cap: () => void (capped = true), line: (j, reason, error) => (lines.push({ done: j.done, half: j.half, over: j.over, part: j.part, next: j.next, whys: j.whys, ...(reason === undefined ? {} : { reason, error }) }), reason === undefined && j.done.length + j.over.length === units.length) });
+    const [c, whys] = checked(state, content, steps, env, { steps, env, ...(deep ? { deep } : {}), cap: () => void (capped = true), line: (j, reason, error) => (lines.push({ done: j.done, half: j.half, over: j.over, part: j.part, next: j.next, whys: j.whys, ...(reason === undefined ? {} : { reason, error }) }), reason === undefined && j.done.length + j.over.length === units.length) });
     // Unknown only when the known part does not fix the answer: a line stopped early may still resolve the parts from where it stopped; a cap hit leaves every line open.
     // K597: a part that changed but did not resolve in full (`half`) makes the line part at most.
     const G3: readonly Resolved[] = ['none', 'part', 'full'];
@@ -543,7 +547,7 @@ export function cardPack<G extends GameTypes, E extends PackEnv = PackEnv>(cfg: 
       const u = unitsOf(steps, i).find((x) => !(best?.done ?? []).includes(x));
       if (u === undefined) return [];
       if (best?.reason !== undefined && i >= best.next) return [{ step: i, reason: best.reason, ...(best.reason === 'error' ? { error: best.error } : {}) }];
-      return [{ step: i, reason: capped && answer === 'unknown' ? 'budget' as const : best === undefined ? (c.answer === 'unknown' ? (c.reason as OfferReason) : 'noChange' as const) : best.half.includes(u) ? (best.part[u] ?? 'short') : (best.whys[u] ?? 'noChange') }];
+      return [{ step: i, reason: capped && answer === 'unknown' ? 'budget' as const : best === undefined ? (c.answer === 'unknown' ? (c.reason as OfferReason) : 'noChange' as const) : best.half.includes(u) ? (best.part[u] ?? 'short') : ((deep ? best.part[u] : undefined) ?? best.whys[u] ?? 'noChange') }];
     });
     return { answer, skipped, ...(answer === 'unknown' && c.reason !== undefined ? { reason: c.reason as OfferReason, ...(c.reason === 'error' ? { error: c.error } : {}) } : {}) };
   };
@@ -607,14 +611,26 @@ export function cardPack<G extends GameTypes, E extends PackEnv = PackEnv>(cfg: 
     if (!cfg.handlers) throw new EngineBugError('card-language pack: wouldChange needs cfg.handlers (() => RULES.handlers)');
     if (state.result !== null) return 'no';
     let left = 0;
-    const table = Object.fromEntries(Object.entries(cfg.handlers()).map(([k, h]) => [k, (c: Ctx<G>, t: G['task']) => ((left -= 1) < 0 ? stop('budget') : hid(c.s as unknown as PackState) && gameTask(t) ? (R !== null && safeRow(t) ? onView(c, () => h(c, t)) : stop()) : h(c, t))])) as HandlerTable<G>;
+    const table = Object.fromEntries(Object.entries(cfg.handlers()).map(([k, h]) => [k, (c: Ctx<G>, t: G['task']) => ((left -= 1) < 0 ? stop('budget') : hid(c.s as unknown as PackState) && gameTask(t) ? (R !== null && safeRow(t) ? (deepIn(c, t), onView(c, () => h(c, t))) : stop()) : (deepIn(c, t), h(c, t)))])) as HandlerTable<G>;
     const before = view(state);
     const F = R;
+    // K598, deep: a marker after each step at any depth; a step after which no step ran and the game did not change did not resolve (a declined may: `declined`).
+    const deepIn = (c: Ctx<G>, t: G['task']): void => {
+      const v = t as unknown as VerbTask<PackStep, E>;
+      if (F?.deep === undefined || v.kind !== 'verb' || v.answer !== undefined) return;
+      J.ran += 1;
+      c.then({ kind: DEEP, from: view(c.s), ran: J.ran, why: v.step.op === 'may' ? 'declined' : whyNot(c.s as unknown as PackState, v.step, v.env ?? env) } as unknown as G['task']);
+    };
+    if (F?.deep) (table as Record<string, unknown>)[DEEP] = (c: Ctx<G>, t: { from: string; ran: number; why: SkipReason | OfferReason }): void => {
+      if (J.ran === t.ran && view(c.s) === t.from) partly(t.why);
+    };
     // K597: a marker after each top-level step (and one before the first): the step resolved when the view changed while it ran.
     if (F) (table as Record<string, unknown>)[STEP] = (c: Ctx<G>, t: { i: number }): void => {
       const v = view(c.s);
       if (t.i >= 0 && (steps[t.i] as PackStep).op === 'payThen') credit([...(J.paid !== null && J.paid !== J.mark ? [t.i] : []), ...(J.paid !== null && v !== J.paid ? [t.i + 0.5] : [])]);
       else if (t.i >= 0 && v !== J.mark) credit([t.i]);
+      // K598, deep: a part no step under it marked as not resolved (every skip of a reason it ignores) resolves.
+      if (F.deep && t.i >= 0) J.done = [...J.done, ...(J.paid === null ? [t.i] : unitsOf(steps, t.i)).filter((u) => !J.done.includes(u) && !J.half.includes(u) && !(u in J.part))];
       J.mark = v;
       J.paid = null;
       J.next = t.i + 1;
@@ -976,14 +992,15 @@ export function cardPack<G extends GameTypes, E extends PackEnv = PackEnv>(cfg: 
       if (!cs.some((c) => live(c.answer))) return;
       const opts = cs.map((c, i) => (live(c.answer) || P.deadChoice !== 'bar' ? { id: String(i), enabled: true } : bar(String(i), why(S(ctx), st.options[i] ?? [], e, c))));
       if (!pre) return ask(ctx, st, e, 'chooseOption', opts, 1, 1);
-      // K598, prefer full, over the options still enabled, on the seat's view (resolves): a full one bars each part or none one; unknown is never barred.
-      const rs = opts.map((o, i) => (o.enabled ? resolves(ctx.s, ctx.content, st.options[i] ?? [], e) : undefined));
+      // K598, prefer full, over the options still enabled, on the seat's view (grade, the whole step tree): a full one bars each part or none one; with no full one a part one bars each none one; unknown is never barred.
+      const rs = opts.map((o, i) => (o.enabled ? resolves(ctx.s, ctx.content, st.options[i] ?? [], e, P.fullIgnores ?? []) : undefined));
       const full = rs.some((x) => x?.answer === 'full');
+      const some = rs.some((x) => x?.answer === 'part');
       // Not offered: nothing resolves at all; under forcedSkip noFull, a choice handed to another seat (env.actor) where none may be full.
       if (P.forcedSkip === 'noFull' && e.actor !== undefined && e.actor !== e.seat ? !rs.some((x) => x?.answer === 'full' || x?.answer === 'unknown') : rs.every((x) => x === undefined || x.answer === 'none')) return;
       ask(ctx, st, e, 'chooseOption', opts.map((o, i) => {
         const x = rs[i];
-        return full && x !== undefined && (x.answer === 'part' || x.answer === 'none') ? bar(String(i), x.answer === 'part' ? 'partial' : 'none', undefined, P.barReason === 'why' ? [...new Set(x.skipped.map((k) => k.reason))].join() : undefined) : o;
+        return x !== undefined && ((full && x.answer === 'part') || ((full || some) && x.answer === 'none')) ? bar(String(i), x.answer === 'part' ? 'partial' : 'none', undefined, P.barReason === 'why' ? [...new Set(x.skipped.map((k) => k.reason))].join() : undefined) : o;
       }), 1, 1);
     },
       (ctx, st: Extract<PackStep, { op: 'chooseOption' }>, e, a) => go(ctx, st.options[Number(a[0])] ?? [], e)),
@@ -1224,5 +1241,5 @@ export function cardPack<G extends GameTypes, E extends PackEnv = PackEnv>(cfg: 
     cfg.moved?.(ctx, { op: m.op, card: id, from, to: m.to, seat: m.seat });
     return true;
   };
-  return { verbs: verbs as unknown as VerbTable<G, PackStep, E>, happen, wouldChange, judge, resolves, costed };
+  return { verbs: verbs as unknown as VerbTable<G, PackStep, E>, happen, wouldChange, judge, resolves: (s, c, st, e) => resolves(s, c, st, e), grade: (s, c, st, e) => resolves(s, c, st, e, P.fullIgnores ?? []), costed };
 }
