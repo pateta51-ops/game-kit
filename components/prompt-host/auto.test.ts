@@ -19,4 +19,9 @@ describe('autoAnswer (Jarl autoAnswer)', () => {
     expect(picks).toEqual(['gold']);
     expect(applyAction(MARKET, s, { kind: 'answer', promptId: p.id, picks }, null).state.result).toEqual({ kind: 'done' });
   });
+  it('K641 does not answer a lone option the player has not seen; the same option seen is answered', () => {
+    const p = { id: 1, kind: 'pick', min: 1, max: 1, options: [{ id: 'top', enabled: true, unseen: true as const }, { id: 'no', enabled: false }] };
+    expect(autoAnswer(p, true)).toBeNull();
+    expect(autoAnswer({ ...p, options: [{ id: 'top', enabled: true }, { id: 'no', enabled: false }] }, true)).toEqual(['top']);
+  });
 });

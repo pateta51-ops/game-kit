@@ -270,6 +270,11 @@ describe('obvious answer', () => {
     expect(onlyForcedAnswer({ min: 1, options: [] }, true)).toBeNull();
   });
 
+  it('K641 never the lone answer the player has not seen; a seen one beside a barred unseen one is still sent', () => {
+    expect(onlyForcedAnswer({ min: 1, options: [{ id: 'top', enabled: true, unseen: true }] }, true)).toBeNull();
+    expect(onlyForcedAnswer({ min: 1, options: [{ id: 'top', enabled: true }, { id: 'under', enabled: false, unseen: true }] }, true)).toEqual(['top']);
+  });
+
   it('never with the setting off or for a prompt on the game never-list', () => {
     const p = { min: 1, options: [opt('a', true)] };
     expect(onlyForcedAnswer(p, false)).toBeNull();

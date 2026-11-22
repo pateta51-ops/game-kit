@@ -4,15 +4,15 @@
 
 export interface ObviousPrompt<Id> {
   min: number;
-  options: readonly { id: Id; enabled: boolean }[];
+  options: readonly { id: Id; enabled: boolean; unseen?: true }[];
 }
 
-/** The picks the screen sends on its own, or null: only when the setting is on, the answer is forced and one option is enabled. */
+/** The picks the screen sends on its own, or null: only when the setting is on, the answer is forced and one option is enabled. K641: never an `unseen` one. */
 export function onlyForcedAnswer<Id>(prompt: ObviousPrompt<Id>, on: boolean, never = false): Id[] | null {
   if (!on || never || prompt.min < 1) return null;
   const open = prompt.options.filter((o) => o.enabled);
   const only = open[0];
-  if (open.length !== 1 || only === undefined) return null;
+  if (open.length !== 1 || only === undefined || only.unseen === true) return null;
   return [only.id];
 }
 
