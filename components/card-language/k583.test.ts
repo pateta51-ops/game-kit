@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { blocked, EngineBugError, onlyOne, type KernelPrompt } from '../engine-core/index.ts';
+import { blocked, draftOf, EngineBugError, onlyOne, type KernelPrompt } from '../engine-core/index.ts';
 import { cardsIn } from '../card-zones/index.ts';
 import { describeEffect } from './index.ts';
 import { cannotKnow, cardPack, inDryRun, type PackEnv, type PackStep } from './pack.ts';
@@ -442,6 +442,12 @@ describe('card-language offer policy (K583) third look: after a cost showed a ca
     expect(over([paid([DRAW, { op: 'if', test: 'drew2', then: [{ op: 'gainResource', res: 'gold', amount: 5 }] }], [paid([pay(4)], [GAIN])])])).toEqual(HID);
     expect(over([paid([EVEN_UP, MILL], [pay(1)])]).map((r) => r.answer)).toEqual(['yes', 'yes']);
   });
+  it('K583 a custom verb answered after its own run showed a card, and a game resource store, after a cost that showed a card: unknown (hidden) for both cards', () => {
+    expect(over([paid([{ op: 'custom', name: 'show' }], [pay(4)])])).toEqual(HID);
+    const store: NonNullable<GameOpts['cfg']>['res'] = { get: (s, seat) => gold(s, seat) + (cardsIn(s, 'discard:a').some((c) => c.endsWith('2')) ? 5 : 0), set: (ctx, seat, _k, v) => void (draftOf(ctx).res = { ...ctx.s.res, [seat]: { gold: v } }) };
+    expect(over([paid([MILL], [pay(4)])], { res: store })).toEqual(HID);
+    expect(over([paid([pay(1)], [pay(1)])], { res: store }).map((r) => r.answer)).toEqual(['yes', 'yes']);
+  });
   it('K583 300 random paid effects over 4 states the seat cannot tell apart, with and without a due that reads open cards, parts and whole: one answer', () => {
     let x = 583;
     const rnd = (k: number): number => {
@@ -449,7 +455,7 @@ describe('card-language offer policy (K583) third look: after a cost showed a ca
       return (x >>> 8) % k;
     };
     const of = <T,>(xs: readonly T[]): T => xs[rnd(xs.length)] as T;
-    const test = (): PackStep => ({ op: 'if', test: of(['evenUp', 'drew2', 'b3', 'poor']), then: [of([GAIN, { op: 'gainResource', res: 'gold', amount: 5 } as PackStep])] });
+    const test = (): PackStep => ({ op: 'if', test: of(['evenUp', 'drew2', 'b3', 'poor']), then: [of([GAIN, { op: 'gainResource', res: 'gold', amount: 5 }])] });
     const cost = (): PackStep[] => Array.from({ length: 1 + rnd(3) }, () => of<() => PackStep>([
       () => MILL, () => MILL, () => DRAW, () => pay(1), () => ({ op: 'discard', from: 'hand:b', count: 1 }), () => ({ op: 'move', cards: 'top', from: 'deck', to: 'aside' }),
       () => ({ op: 'exhaust' }), () => ({ op: 'discard', count: 1 }), test, () => LUCKY, () => IDLE, () => ({ op: 'custom', name: 'dyn' }), () => ({ op: 'lookAt', count: 1 }), () => ({ op: 'reveal', count: 1 }),
@@ -458,7 +464,7 @@ describe('card-language offer policy (K583) third look: after a cost showed a ca
       () => GAIN, () => NOTHING, () => NOTHING, () => LUCKY, test, () => pay(4), () => pay(2), () => IDLE,
       () => ({ op: 'count', what: 'held', then: [{ op: 'gainResource', res: 'gold', amount: 'X' }] }),
       () => ({ op: 'chooseCards', zone: 'hand', filter: 'even', max: 1, then: [{ op: 'discard', cards: 'chosen' }] }),
-      () => (depth === 0 ? NOTHING : paid(of([[pay(2)], [pay(4)], [{ op: 'custom', name: 'evenPay' } as PackStep], cost()]), then(depth - 1))),
+      () => (depth === 0 ? NOTHING : paid(of([[pay(2)], [pay(4)], [{ op: 'custom', name: 'evenPay' }], cost()]), then(depth - 1))),
       () => ({ op: 'choosePayment', ways: [[{ op: 'custom', name: 'evenPay' }], [pay(4)]], then: [of([GAIN, NOTHING])] }),
       () => ({ op: 'may', then: [of([GAIN, NOTHING, LUCKY])] }),
     ])());

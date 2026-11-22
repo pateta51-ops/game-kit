@@ -292,7 +292,7 @@ export function cardPack<G extends GameTypes, E extends PackEnv = PackEnv>(cfg: 
   };
   const resGet = (s: PackState, seat: string, key: string): number => (cfg.res ? (hid(s) && stop(), cfg.res.get(s as unknown as G['state'], seat, key)) : (s.res?.[seat]?.[key] ?? 0));
   const resSet = (ctx: Ctx<G>, seat: string, key: string, v: number): void => {
-    if (cfg.res) return (hid(S(ctx)) && stop(), cfg.res.set(ctx, seat, key, v));
+    if (cfg.res) return cfg.res.set(ctx, seat, key, v);
     const s = S(ctx);
     if (s.res === undefined) s.res = {};
     const all = own(s, 'res') as Record<string, Record<string, number>>;
@@ -807,7 +807,6 @@ export function cardPack<G extends GameTypes, E extends PackEnv = PackEnv>(cfg: 
       const costEnds = (): void => {
         if (!fx || (J.cost -= 1) !== 0) return;
         J.base = view(s);
-        hid(s);
       };
       // K583: every amount of the cost is read from `cfg.due` here, before anything is paid, so the cost is paid as it was judged.
       const paying = rest;
@@ -829,10 +828,7 @@ export function cardPack<G extends GameTypes, E extends PackEnv = PackEnv>(cfg: 
       if (!canPay(s, cost, e)) return;
       if (fx) {
         if (J.cost === 0 && view(s) !== J.base) throw CHANGED;
-        if (J.cost === 0) {
-          hid(s);
-          J.sees = seenBy(s, dry ?? '');
-        }
+        if (J.cost === 0) J.sees = seenBy(s, dry ?? '');
         J.cost += 1;
       }
       if (P.cost === 'whole') return next((s as unknown as KernelState).timing?.next ?? 0, cost);

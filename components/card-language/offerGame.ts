@@ -1,8 +1,8 @@
 // K583: the made-up two-seat game of the offer-policy tests (tests only), built on a pack given by the caller, so the same
 // game runs on the pack as it is and on a frozen copy of an earlier one. Seat a acts with 3 gold; p1 (in play) is the source card.
 import { applyAction, canonicalJson, createGame, draftOf, GameOver, hashState, hashValue, seedRng, timingHandlers, type AnswerAction, type Ctx, type Draft, type GameRules, type HandlerTable, type KernelPrompt, type KernelState, type KernelTask, type Occurrence } from '../engine-core/index.ts';
-import { cardsIn, locate, newZones } from '../card-zones/index.ts';
-import { askVerb, effectTasks, verbHandler, type AnyVerbTable, type VerbTable, type VerbTask } from './index.ts';
+import { cardsIn, locate, newZones, reveal } from '../card-zones/index.ts';
+import { askVerb, effectTasks, verbHandler, type VerbTable, type VerbTask } from './index.ts';
 import { cannotKnow, dryRunSeat, type Offered, type OfferPolicy, type PackConfig, type PackEnv, type PackState, type PackStep } from './pack.ts';
 import { cardTriggers, type WhenCard } from './when.ts';
 
@@ -85,6 +85,12 @@ export const offerGame = <P extends BasePack>(make: (cfg: never) => P, opts: Gam
       // A pay step a game verb makes itself; a cost step payable only while an even card lies open.
       dyn: { run: (ctx, _st, env) => ctx.then(...(effectTasks([pay(2)], env) as Task[])), text: () => 'Dyn.' },
       evenPay: { run: () => undefined, payable: (s) => cardsIn(s, 'discard:a').some((c) => c.endsWith('2')), text: () => 'Even.' },
+      // Shows seat a its deck's top card, asks, and on the answer reads that card (9 gold if it is even).
+      show: {
+        run: (ctx, st, env) => (reveal(draftOf(ctx), 'deck:a', cardsIn(ctx.s, 'deck:a').slice(0, 1), [env.seat]), askVerb(ctx, { kind: 'show', seat: env.seat, min: 1, max: 1, options: [{ id: 'ok', enabled: true }] }, st, env)),
+        resume: (ctx, _st, env) => void (cardsIn(ctx.s, 'deck:a')[0]?.endsWith('2') && res(ctx, env.seat, 9)),
+        text: () => 'Show.',
+      },
       who: { run: () => void nested.push(String(dryRunSeat())), text: () => 'Who.' },
       why: { run: (ctx, _st, env) => void nested.push(String((pack as unknown as { judge: (...a: unknown[]) => { reason?: string } }).judge(ctx.s, ctx.content, [GAIN], env).reason)), text: () => 'Why.' },
       nest: { run: (ctx, _st, env) => void nested.push(pack.wouldChange(ctx.s, ctx.content, [GAIN], env)), text: () => 'Nest.' },
@@ -134,7 +140,7 @@ export const offerGame = <P extends BasePack>(make: (cfg: never) => P, opts: Gam
     moved: (ctx, m) => ctx.emit({ type: `${m.op} ${m.card}` }),
     ...(opts.offer === undefined ? {} : { offer: opts.offer }),
     handlers: (): HandlerTable<G> => RULES.handlers,
-    table: () => VERBS as unknown as AnyVerbTable,
+    table: () => VERBS,
     ...opts.cfg,
   };
   const pack = make(cfg as never);

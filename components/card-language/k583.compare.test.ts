@@ -27,20 +27,20 @@ describe('card-language offer policy (K583): with no new setting the pack answer
     // Point 2: an effect that ends the game is a yes under a view without `result`.
     endsGameUnderAViewWithoutResult: { on: (e, p) => p.view !== undefined && has(e, (st) => st.op === 'custom' && st.name === 'win'), moves: to(['no', 'unknown'], ['yes']) },
     // Point 3: a handler that throws outside the kernel's errors no longer throws into the real action.
-    handlerThrows: { on: (e) => has(e, (st) => st.op === 'custom' && ['boom', 'back', 'pairs'].includes(st.name)), moves: (a, b) => a.startsWith('throws') && !b.startsWith('throws') },
+    handlerThrows: { on: (e) => has(e, (st) => st.op === 'custom' && ['boom', 'back', 'pairs'].includes(st.name)), moves: (a, b) => a.startsWith('throws') && (b === 'unknown' || b === 'yes') },
     // Point 4: a card picked blind from any hidden zone is not shown to a game test, count, filter or custom verb.
     readsABlindPick: { on: (e) => has(e, (st) => st.op === 'chooseCards' && HIDDEN.includes(st.zone) && has(st.then as Eff, (x) => ['if', 'count', 'custom', 'chooseCards', 'search'].includes(x.op))), moves: to(['yes', 'no'], ['unknown']) },
     // Point 5: looking at a card the seat already sees, or revealing one all see, is no change in the check.
-    looksAtASeenCard: { on: (e) => has(e, (st) => (st.op === 'lookAt' || st.op === 'reveal') && st.cards === 'all'), moves: to(['yes'], ['no', 'unknown']) },
+    looksAtASeenCard: { on: (e) => has(e, (st) => (st.op === 'lookAt' || st.op === 'reveal') && st.cards === 'all' && st.from !== 'deck'), moves: to(['yes'], ['no', 'unknown']) },
     // Point 5: the bar reason of an unpayable cost inside a seq or a may is cannotPay (was noChange).
     barReasonOfANestedCost: { on: (e) => has(e, (st) => (st.op === 'seq' || st.op === 'may') && has((st.op === 'seq' ? st.steps : st.then) as Eff, (x) => ['payThen', 'pay', 'convert'].includes(x.op))), reasonOnly: true },
-    // Review: readying when no card was ever marked (an empty marks record) is no change.
-    readiesWithNoMark: { on: (e) => has(e, (st) => st.op === 'ready'), moves: to(['yes'], ['no', 'unknown']) },
+    // Review: readying when no card was ever marked (an empty marks record) is no change (an effect that also marks a card is not named).
+    readiesWithNoMark: { on: (e) => has(e, (st) => st.op === 'ready') && !has(e, (st) => st.op === 'exhaust' || st.op === 'flip'), moves: to(['yes'], ['no', 'unknown']) },
     // Review: a shuffle of fewer than two cards draws nothing and changes nothing.
     shufflesFewerThanTwo: { on: (e) => has(e, (st) => st.op === 'shuffle' || st.op === 'search'), moves: to(['unknown'], ['no', 'yes']) },
   };
   // K641, declared for every input: an option over a card the seat cannot see now carries `unseen: true`; nothing else of a prompt may differ.
-  const seen = (x: string): string => x.replaceAll(',"unseen":true', '');
+  const seen = (x: string): string => x.replace(/("id":"#\d+","enabled":true),"unseen":true/g, '$1');
   const reasonless = (x: string): string => x.replaceAll('"cannotPay"', '"noChange"');
   const POLICIES: readonly OfferPolicy<S>[] = [
     {},
@@ -96,16 +96,19 @@ describe('card-language offer policy (K583): with no new setting the pack answer
       return `${hashState({ ...s, prompt: null })} ${show(s.prompt)}`;
     })),
   ];
-  // A whole real run: every prompt answered with its first legal answer.
+  // A whole real run: every prompt answered with its first legal answer, and every prompt it opened.
   const run = (g: Game, effect: Eff): string => safe(() => {
     const content = { effect };
     let { state } = createGame(g.RULES, { seed: 's' }, {}, content);
+    let asked = '';
     for (let i = 0; i < 12 && state.prompt !== null; i += 1) {
+      asked += `${seen(show(state.prompt))}
+`;
       const [first] = enumerateAnswers(state);
       if (first === undefined) break;
       state = applyAction(g.RULES, state, first, content).state;
     }
-    return `${hashState({ ...state, prompt: null })} ${seen(show(state.prompt))}`;
+    return `${hashState({ ...state, prompt: null })} ${asked}${seen(show(state.prompt))}`;
   });
   it('K583 2,400 random effects over 4 seeds, 3 policies: the check and the offers are equal, or differ only the way a named fix declares; a real run with no policy is equal on every input', () => {
     const fixed: Record<string, number> = Object.fromEntries(Object.keys(FIXES).map((k) => [k, 0]));
