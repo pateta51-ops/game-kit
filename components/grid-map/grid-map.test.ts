@@ -330,6 +330,7 @@ describe('grid-map: firstSteps', () => {
     expect(firstSteps(gridMap({ rows: 1, cols: 2, walls: [[0, 0, 'e']] }), 'r0c0', 'r0c1')).toEqual({ distance: null, starts: [] })
     expect(firstSteps(O, 'r0c0', 'r0c0')).toEqual({ distance: 0, starts: [] })
     expect(() => firstSteps(M, 'nowhere', 'r0c0')).toThrow('unknown space')
+    for (const steps of [NaN, 0, -1, 1.5, Infinity]) expect(() => firstSteps(O, 'r0c0', 'r4c4', { steps })).toThrow('steps must be a whole number above 0')
   })
   it('steps: 2 gives the distinct first two steps, cut at the target', () => {
     expect(firstSteps(O, 'r0c0', 'r4c4', { steps: 2 }).starts).toEqual([['r0c1', 'r0c2'], ['r0c1', 'r1c1'], ['r1c0', 'r1c1'], ['r1c0', 'r2c0']])
@@ -386,5 +387,7 @@ describe('grid-map: line with stopAtWall agrees with neighbours', () => {
     expect(line(M, 'r0c5', 'sw', { stopAtWall: true, extra })).toEqual(['hall'])
     expect(line(M, 'r0c0', 'e', { stopAtWall: true, extra: [['r0c0', 'r0c1']] })).toEqual(['r0c1', 'r0c2'])
     expect(line(M, 'r0c1', 'w', { stopAtWall: true, extra: [['r0c0', 'r0c1', 'oneWay']] })).toEqual([])
+    expect(() => line(M, 'r0c0', 'e', { stopAtWall: true, extra: [['r0c0', 'nowhere']] })).toThrow('unknown space')
+    expect(() => line(M, 'r0c0', 'e', { extra: [['nowhere', 'r0c0', 'oneWay']] })).toThrow('unknown space')
   })
 })

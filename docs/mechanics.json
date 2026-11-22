@@ -104,7 +104,7 @@
     { "words": "walk along the shortest path to a named place", "row": "K559" },
     { "words": "row of event cards resolved in order with windows", "row": "K560" },
     { "words": "dice formula like two dice plus a number", "row": "K563" },
-    { "words": "diagonal past a wall end, extra neighbours on a grid", "row": "K566" }
+    { "words": "diagonal past a wall end, extra neighbours on a grid, extra adjacency, extra steps, first step of a shortest path, move toward with ties", "part": "grid-map", "read": "its README rule 10 and \"Calls\", `extra`, `firstSteps`" }
   ],
   "searches": {
     "modifier": "engine-core",

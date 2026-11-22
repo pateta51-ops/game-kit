@@ -196,12 +196,14 @@ export function shortestPaths(g: GridMap, from: string, to: Targets, o: Steps & 
 
 export function firstSteps(g: GridMap, from: string, to: Targets, o: Steps & { steps?: number } = {}): { distance: number | null; starts: string[][] } {
   cellsOf(g, from)
+  const k = o.steps ?? 1
+  if (!int(k) || k < 1) throw new Error(`grid-map: steps must be a whole number above 0 (got ${k})`)
   const adj = table(g, o)
   const d = toward(g, adj, to, o)
   const total = d.get(from)
   const starts: string[][] = []
   if (total === undefined) return { distance: null, starts }
-  const stop = total - Math.min(total, Math.max(1, Math.floor(o.steps ?? 1)))
+  const stop = total - Math.min(total, k)
   const cur: string[] = []
   const walk = (s: string, left: number) => {
     if (left === stop) { if (cur.length) starts.push([...cur]); return }
@@ -310,7 +312,7 @@ function run(g: GridMap, r: number, c: number, d: Direction, stop?: boolean, len
 
 export function line(g: GridMap, from: string, direction: Direction, o: { length?: number; stopAtWall?: boolean; wallEnd?: 'closed' | 'open'; extra?: readonly ExtraStep[] } = {}): string[] {
   if (!STEP[direction]) throw new Error(`grid-map: unknown direction ${String(direction)}`)
-  const extra = o.extra?.length ? new Set(o.extra.flatMap(([a, b, oneWay]) => (oneWay ? [`${a}\n${b}`] : [`${a}\n${b}`, `${b}\n${a}`]))) : undefined
+  const extra = o.extra?.length ? new Set(o.extra.flatMap(([a, b, oneWay]) => (cellsOf(g, a), cellsOf(g, b), oneWay ? [`${a}\n${b}`] : [`${a}\n${b}`, `${b}\n${a}`]))) : undefined
   const runs = cellsOf(g, from).map(([r, c]) => run(g, r, c, direction, o.stopAtWall, o.length, o.wallEnd === 'open', extra))
   const out: string[] = []
   for (let i = 0; runs.some(x => i < x.length); i++) for (const x of runs) { const s = x[i]; if (s !== undefined && s !== from && !out.includes(s)) out.push(s) }
