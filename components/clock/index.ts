@@ -39,9 +39,11 @@ export function valueAt<T = number>(spec: ClockSpec, state: ClockState, key: str
   return spec.values?.[key]?.[state.value] as T | undefined
 }
 export function step<D>(spec: ClockSpec<D>, state: ClockState, by: number): StepResult<D> {
+  if (!Number.isFinite(by)) throw new Error(`clock: a step must be a finite number, not ${String(by)}`)
   const n = size(spec), d = Math.sign(by) * sign(spec), wrap = spec.ends === 'wrap', path: number[] = []
+  const asked = Math.ceil(Math.abs(by)), walk = wrap && asked > 1000 * n ? 1000 * n + asked % n : asked
   let v = state.value
-  for (let i = 0; i < Math.abs(by); i++) {
+  for (let i = 0; i < walk; i++) {
     let next = v + d
     if (wrap) next = (next + n) % n
     else if (next < 0 || next >= n) break
@@ -61,7 +63,7 @@ export function step<D>(spec: ClockSpec<D>, state: ClockState, by: number): Step
       crossings.push({ threshold: t, from: state.value, to: v, space, how, way })
     }
   })
-  const overrun = Math.ceil(Math.abs(by)) - path.length
+  const overrun = wrap ? 0 : asked - path.length
   return { state: { value: v, fired }, crossings, ...(overrun > 0 ? { overrun } : {}) }
 }
 export function setTo(spec: ClockSpec, state: ClockState, space: Space): ClockState {
@@ -69,11 +71,11 @@ export function setTo(spec: ClockSpec, state: ClockState, space: Space): ClockSt
   if (value < 0) throw new Error(`clock: ${space} is not a space`)
   return { value, fired: state.fired }
 }
-export function stepsTo(spec: ClockSpec, state: ClockState, space: Space): number {
+export function stepsTo(spec: ClockSpec, state: ClockState, space: Space, way: 'forward' | 'back' = 'forward'): number {
   const i = indexOf(spec, space), n = size(spec)
   if (i < 0) throw new Error(`clock: ${space} is not a space`)
   const by = (i - state.value) * sign(spec)
-  return spec.ends === 'wrap' ? ((by % n) + n) % n : by || 0
+  return spec.ends === 'wrap' ? ((by % n) + n) % n - (way === 'back' && by % n ? n : 0) : by || 0
 }
 export function left(spec: ClockSpec, state: ClockState): number {
   return Math.abs(endOf(spec) - state.value)
@@ -97,6 +99,7 @@ export function checkClock(spec: ClockSpec): string[] {
   const s: number | readonly string[] = spec.spaces, ts: readonly Threshold[] = spec.thresholds
   if (typeof s !== 'number' && Array.isArray(s)) s.forEach((id, i) => { if (typeof id !== 'string' || !id) p.push(`space ${i} has no id`); else if (s.indexOf(id) !== i) p.push(`space id ${id} repeats`) })
   else if (!(typeof s === 'number' && Number.isInteger(s) && s > 0)) return ['spaces must be a whole number above 0 or a list of ids']
+  for (const k of Object.keys(spec)) if (!['spaces', 'start', 'direction', 'ends', 'thresholds', 'values'].includes(k)) p.push(`unknown key ${k}`)
   if (indexOf(spec, spec.start) < 0) p.push(`start ${spec.start} is not a space`)
   if (spec.direction !== undefined && spec.direction !== 'up' && spec.direction !== 'down') p.push(`direction ${String(spec.direction)} is not up or down`)
   if (spec.ends !== undefined && spec.ends !== 'stop' && spec.ends !== 'wrap') p.push(`ends ${String(spec.ends)} is not stop or wrap`)
@@ -105,6 +108,12 @@ export function checkClock(spec: ClockSpec): string[] {
     const seen = new Set<string>()
     for (const [i, t] of spec.thresholds.entries()) {
       if (!t || typeof t !== 'object') { p.push(`threshold ${i} is not an object`); continue }
+      const id: unknown = t.id, once: unknown = t.once, kind: unknown = t.kind, odd = !!id && typeof id !== 'string'
+      const name = odd && typeof id !== 'number' ? i : t.id
+      if (odd) { p.push(`threshold ${name}: id is not text`); if (name === i) continue }
+      for (const k of Object.keys(t)) if (!['id', 'at', 'on', 'direction', 'once', 'kind', 'data'].includes(k)) p.push(`threshold ${name}: unknown key ${k}`)
+      if (once !== undefined && typeof once !== 'boolean') p.push(`threshold ${name}: once is not true or false`)
+      if (kind && typeof kind !== 'string') p.push(`threshold ${name}: kind is not text`)
       if (indexOf(spec, t.at) < 0) p.push(`threshold ${t.id}: at ${t.at} is not a space`)
       if (!['land', 'pass', 'landOrPass'].includes(t.on)) p.push(`threshold ${t.id}: on ${t.on} is not land, pass or landOrPass`)
       if (t.direction !== undefined && !['forward', 'back', 'either'].includes(t.direction)) p.push(`threshold ${t.id}: direction ${t.direction} is not forward, back or either`)
@@ -114,6 +123,8 @@ export function checkClock(spec: ClockSpec): string[] {
       seen.add(t.id)
     }
   }
-  for (const [k, row] of Object.entries(spec.values ?? {}) as [string, unknown][]) if (!Array.isArray(row) || row.length !== size(spec)) p.push(`values ${k} has ${Array.isArray(row) ? row.length : 0} entries, not ${size(spec)}`)
+  const vals: unknown = spec.values
+  if (vals !== undefined && (!vals || typeof vals !== 'object' || Array.isArray(vals))) p.push('values is not an object of lists')
+  else for (const [k, row] of Object.entries(spec.values ?? {}) as [string, unknown][]) if (!Array.isArray(row) || row.length !== size(spec)) p.push(`values ${k} has ${Array.isArray(row) ? row.length : 0} entries, not ${size(spec)}`)
   return p
 }
