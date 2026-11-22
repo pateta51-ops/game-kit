@@ -202,7 +202,7 @@ An official solo automa that does not play by player rules: a seeded card deck k
 Draw the map once over the board picture in Inkscape; get the click areas (space rects) and the adjacency list from the drawing. Pure functions, no packages, loads in node. Lifted from the Rally the Troops tools (ISC, notice in component.json).
 
 - **Also called:** Click areas from a drawn map
-- **Words:** map, board, click, areas, neighbours, adjacency, inkscape, drawing
+- **Words:** map, board, click, areas, neighbours, adjacency, inkscape, drawing, board space labels, numbered map labels, optional board zones, space labels, map labels
 - **Release:** 1.0; not seen
 - **The game supplies:** The board picture and the map drawing (SVG).
 - **Use it when:** A map board: draw the map once in Inkscape and get click rects and adjacency from the drawing.
@@ -356,7 +356,7 @@ A hand of cards as a fan that fits any number of cards in a width, lifts the car
 Card tests on real cards. Test code only; the engine imports nothing here but `createProbe`, and card-language imports the pure `strictProblems` from `strict.ts`. Not here: `validateEffect` in card-language checks one effect at run time, `strictProblems` checks a whole grammar in a test.
 
 - **Also called:** Test card effects on real cards
-- **Words:** restriction phrase case sensitive, restriction word at start of text, restriction key not phrases, raw key in card reading, describe check accepted list, reading order verdict, card, prompt quotes printed clause, who pays shared cost prompt, record prompts in card tests, rule id in prompt text, card number reference amount, allow numbers pattern, screen amount card number, card case quote constant, cite clause by test title, quote check mixed mode, card case const, mixed mode, cite by title, pattern shapes wording, nested restriction, optional inside effect tree, restriction problems, same wording different shape, split pattern check, screen amount icon, counted amount shown, prompt shows wrong number, test, scenario, prompt, probe, inventory, effects, test depth, depth, poor test, poor, not offered, not fired, crash, refusal, crash counted as refusal, expectNotOffered, expectNotFired, clauseOf, map event to clause, not fired clause id, full resolve, prompt amount, screen check, no amount, amounts, prompt amount check, clause two prompts, screen text amounts, amounts per prompt, known findings, known findings list, pending findings owner, baseline of card check findings, pending list, baseline, owner, scan words on screen, screen text scan, poor setup, helper, reading judge, render records, renderer, snapshot, attribution, prompt recorder, vitest, test title, generated text, unprinted, scope, every card, clause splitter, stacked deck, put pieces on spaces, put tokens on map
+- **Words:** restriction phrase case sensitive, restriction word at start of text, restriction key not phrases, raw key in card reading, describe check accepted list, reading order verdict, card, prompt quotes printed clause, who pays shared cost prompt, record prompts in card tests, rule id in prompt text, card number reference amount, allow numbers pattern, screen amount card number, card case quote constant, cite clause by test title, quote check mixed mode, card case const, mixed mode, cite by title, pattern shapes wording, nested restriction, optional inside effect tree, restriction problems, same wording different shape, split pattern check, screen amount icon, counted amount shown, prompt shows wrong number, test, scenario, prompt, probe, inventory, effects, test depth, depth, poor test, poor, not offered, not fired, crash, refusal, crash counted as refusal, expectNotOffered, expectNotFired, clauseOf, map event to clause, not fired clause id, full resolve, prompt amount, screen check, no amount, amounts, prompt amount check, clause two prompts, screen text amounts, amounts per prompt, known findings, known findings list, pending findings owner, baseline of card check findings, pending list, baseline, owner, scan words on screen, screen text scan, poor setup, helper, reading judge, render records, renderer, snapshot, attribution, prompt recorder, vitest, test title, generated text, unprinted, scope, every card, clause splitter, stacked deck, put pieces on spaces, put tokens on map, scenario setup place pieces, scenario test fixture, scenario setup
 - **Release:** 1.0; not seen
 - **The game supplies:** The game rules, real cards and scenarios.
 - **Use it when:** Testing card effects on real cards with the scenario builder, prompt delivery, choice probe and inventory with stale check; test depth: a full-resolve test per clause and a poor test (expectNotOffered, expectNotFired) per conditional clause.
@@ -380,7 +380,7 @@ Card tests on real cards. Test code only; the engine imports nothing here but `c
 The card-language shell (K206): card effects as data, one typed verb table where each verb has a field check, a handler that runs on engine-core and a text generator that prints the card's words from the same step. The game writes its own verbs; the standard pack (K232, `pack.ts`) gives the common ones.
 
 - **Also called:** Card effects written as data
-- **Words:** card, effects, data, verbs, text, validator, rules, language, offered, can resolve, unpayable cost, dry run, would change nothing, offer, offer policy, no change, effect offered, paid effect, modified cost, tax, discount, cannot know, hidden cards, resolve in full, resolve in part, partial resolution, full or partial, why not offered, why is an effect not offered, reason, no target, condition false, full option bars partial, prefer options that resolve fully, skip forced choice nothing resolves, partial option barred, choose number bar dead, gain zero no change, pick among the cards just moved, cards just moved, draw then discard one of them, effect interpreter, interpreter, ops, bespoke ability, custom handler, one-off, ability, draw three keep one, draft pick, pay or else, otherwise, target filter, select cards, randomly rearrange, reshuffle, search a deck, stop at first, draw until you find, delay effect until, gain tokens, would do nothing, cannot be paid, amount expression count per, then only if previous resolved, condition expression all any not compare, barred option, reason code, not offered, resource cap
+- **Words:** card, effects, data, verbs, text, validator, rules, language, offered, can resolve, unpayable cost, dry run, would change nothing, offer, offer policy, no change, effect offered, paid effect, modified cost, tax, discount, cannot know, hidden cards, resolve in full, resolve in part, partial resolution, full or partial, why not offered, why is an effect not offered, reason, no target, condition false, full option bars partial, prefer options that resolve fully, skip forced choice nothing resolves, partial option barred, choose number bar dead, gain zero no change, pick among the cards just moved, cards just moved, draw then discard one of them, effect interpreter, interpreter, ops, bespoke ability, custom handler, one-off, ability, draw three keep one, draft pick, pay or else, otherwise, target filter, select cards, randomly rearrange, reshuffle, search a deck, stop at first, draw until you find, delay effect until, gain tokens, would do nothing, cannot be paid, amount expression count per, then only if previous resolved, condition expression all any not compare, barred option, reason code, not offered, resource cap, put cards on top or bottom of deck, top of deck, bottom of deck, resource pool with limit, resource limit cap
 - **Release:** 1.0; not seen
 - **The game supplies:** The verbs, with their field checks, handlers and text.
 - **Use it when:** A new game encodes card effects as data: verb table with handler, resume and text slots, validator, every-verb test; the standard verb pack (cardPack) on card-zones: draw, discard, mill, move, putIntoPlay, setAside, recall, gain, refill, shuffle, search, destroy, attach, detach, reveal, lookAt, scout, flip, exhaust, ready, chooseCards, chooseOption, may, chooseNumber, chooseDestination, choosePlayer, choosePayment, orderEffects, gainResource, pay, convert, adjust, seq, if, forEach, eachPlayer, repeat, count, later, payThen, custom; every card move through timing would; words overridable. Recipe: docs/recipes/card-effect.md.
@@ -826,7 +826,7 @@ Sixteen verbs for the director's spec format as DOM effects for the motion frame
 The kernel of a game engine: seeded random numbers, canonical JSON and hashes, the task runner with prompts, copy on write, replay, undo and the save format. A game passes one `GameTypes` bundle and a `GameRules<G>` (handlers, `blank`, `setup`, `contentHash`, optional `stamp`, `invariants`, `revealWords`); see `fake/counter.ts`. Import from one of the entry files below, never from an implementation module. Options legal but doing nothing (`idle`, K91): `idle.md`.
 
 - **Also called:** Game rules engine core
-- **Words:** engine, rules, random, undo, replay, save, prompts, state, modifier, stat, cost, reduction, breakdown, floor, minimum, deterministic, until end of combat, duration named end point, lasts until event, named end point, task queue, seeded, cap, gain lost, derived value, additive, random override, override rolls, modifier per count, status, condition, stunned, status token, give a status, wound, objective, scenario objective progress, mission goal done or failed, objective with steps, mission progress, goal deadline
+- **Words:** engine, rules, random, undo, replay, save, prompts, state, modifier, stat, cost, reduction, breakdown, floor, minimum, deterministic, until end of combat, duration named end point, lasts until event, named end point, task queue, seeded, cap, gain lost, derived value, additive, random override, override rolls, modifier per count, status, condition, stunned, status token, give a status, wound, objective, scenario objective progress, mission goal done or failed, objective with steps, mission progress, goal deadline, lose condition prompt, lose condition
 - **Release:** 1.0; not seen
 - **The game supplies:** The rules: state, actions, prompts and set-up.
 - **Use it when:** Every game's engine: seeded random, tasks and prompts, copy on write, replay, undo, saves, timing windows and triggers.
@@ -876,7 +876,7 @@ The kernel of a game engine: seeded random numbers, canonical JSON and hashes, t
 ### engine-core/preview
 
 - **Also called:** Outcome preview
-- **Words:** preview, outcome, what would happen, look ahead
+- **Words:** preview, outcome, what would happen, look ahead, score preview panel, score preview
 - **Use it when:** Show or test what an answer would do before it is given, stopping at hidden information (`preview`).
 - **Guide:** [legal.md](../components/engine-core/legal.md)
 
@@ -938,7 +938,7 @@ A prompt choice whose source card has left play (an "after this is discarded" tr
 Links every glossary term and icon code in the game's texts to a lookup, and checks the glossary covers what the game shows. The game passes its entries as data and keeps its words, routes and look. Needs `phone-mode` (and so `state-machines`) and the packages `react` and `zustand`. `index.ts` draws nothing and loads in node; `ui.ts` holds the React parts.
 
 - **Also called:** Glossary links in game text
-- **Words:** glossary, terms, links, tooltip, icons, lookup, text
+- **Words:** glossary, terms, links, tooltip, icons, lookup, text, victory points term, scoring term
 - **Release:** 1.0; not seen
 - **The game supplies:** The glossary entries and icon codes.
 - **Use it when:** Linking glossary terms and icon codes in any shown text to a lookup, with a coverage check.
@@ -1181,7 +1181,7 @@ The mechanism of a phone layout: which layout a window gets, the fit zoom of the
 
 - **Also called:** Phone screen layout
 - **Looks like:** A phone-sized layout with one bottom sheet and a second tap to confirm.
-- **Words:** phone, mobile, layout, sheet, safe-area, zoom, tap
+- **Words:** phone, mobile, layout, sheet, safe-area, zoom, tap, phone campaign panel, campaign panel tabs
 - **Release:** 1.0; seen on screen
 - **The game supplies:** The layouts, breakpoints and the sheet content.
 - **Use it when:** The game has a phone layout: layout choice, fit zoom, safe areas, the one bottom sheet, second-tap commit.
@@ -1623,7 +1623,7 @@ The panels every game writes around its table, as logic plus unstyled slots: log
 
 - **Also called:** Log, turn banner and game-over panels
 - **Looks like:** The log, the turn banner, the opponent-turn notice and the game-over panel.
-- **Words:** log, banner, turn, game, over, opponent, panel, table
+- **Words:** log, banner, turn, game, over, opponent, panel, table, final score breakdown, end game bonus points, game over summary screen, score breakdown
 - **Release:** 1.0; seen on screen
 - **The game supplies:** The words, layout and look.
 - **Use it when:** The panels around the table, unstyled: log (event words with slots, by turn, seat filter), banner (turn, seat, phase, fires on change), game over (result, breakdown slot, rematch, review log, home), opponent turn (paced-view steps, what the viewer may see, skip to end).
@@ -1669,7 +1669,7 @@ Game-free helpers for a game's vitest runs: jsdom stubs, UI fixtures (fake pack 
 Static check that a game's look lives in its token file. Lifted from Jarl's `scripts/theme-check.ts` (its file mode, made configurable).
 
 - **Also called:** Check that the look lives in tokens
-- **Words:** theme, tokens, look, colours, fonts, check, style, sheet, theme kit
+- **Words:** theme, tokens, look, colours, fonts, check, style, sheet, theme kit, theme skin components, styled component gallery, component gallery
 - **Release:** 1.0; not seen
 - **The game supplies:** The token file, fonts and layout.
 - **Use it when:** Checking that the game's look lives in its token file, fonts and layout, and one dev page (Sheet) showing every registered component or view with its states and a hash filter.

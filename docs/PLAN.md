@@ -381,6 +381,7 @@ The blind matching test's result was not recorded: the PR, its comments and docs
 | K676 | search: answer the planners' unanswered searches of 22 Nov with tags and cases. | M | owner (22 Nov 2026): every planner search that found nothing is answered before a tag | done |
 | K687 | search: answer 12 more planner searches of 22 Nov. | S | owner (22 Nov 2026): every planner search that found nothing is answered before a tag | done |
 | K699 | search: answer 40 more planner searches of 22 Nov. | S | owner (22 Nov 2026): every planner search that found nothing is answered before a tag | done |
+| K700 | search: answer 19 more planner searches of 22 Nov. | S | owner (22 Nov 2026): every planner search that found nothing is answered before a tag | done |
 
 ## Candidates
 

@@ -68,7 +68,12 @@
       "neighbours",
       "adjacency",
       "inkscape",
-      "drawing"
+      "drawing",
+      "board space labels",
+      "numbered map labels",
+      "optional board zones",
+      "space labels",
+      "map labels"
     ],
     "visible": false,
     "release": 1,
@@ -418,7 +423,10 @@
       "clause splitter",
       "stacked deck",
       "put pieces on spaces",
-      "put tokens on map"
+      "put tokens on map",
+      "scenario setup place pieces",
+      "scenario test fixture",
+      "scenario setup"
     ],
     "visible": false,
     "release": 1,
@@ -509,7 +517,12 @@
       "barred option",
       "reason code",
       "not offered",
-      "resource cap"
+      "resource cap",
+      "put cards on top or bottom of deck",
+      "top of deck",
+      "bottom of deck",
+      "resource pool with limit",
+      "resource limit cap"
     ],
     "visible": false,
     "release": 1,
@@ -1057,7 +1070,9 @@
       "mission goal done or failed",
       "objective with steps",
       "mission progress",
-      "goal deadline"
+      "goal deadline",
+      "lose condition prompt",
+      "lose condition"
     ],
     "visible": false,
     "release": 1,
@@ -1141,7 +1156,9 @@
       "tooltip",
       "icons",
       "lookup",
-      "text"
+      "text",
+      "victory points term",
+      "scoring term"
     ],
     "visible": false,
     "release": 1,
@@ -1416,7 +1433,9 @@
       "sheet",
       "safe-area",
       "zoom",
-      "tap"
+      "tap",
+      "phone campaign panel",
+      "campaign panel tabs"
     ],
     "looks": "A phone-sized layout with one bottom sheet and a second tap to confirm.",
     "visible": true,
@@ -2074,7 +2093,11 @@
       "over",
       "opponent",
       "panel",
-      "table"
+      "table",
+      "final score breakdown",
+      "end game bonus points",
+      "game over summary screen",
+      "score breakdown"
     ],
     "looks": "The log, the turn banner, the opponent-turn notice and the game-over panel.",
     "visible": true,
@@ -2114,7 +2137,10 @@
       "check",
       "style",
       "sheet",
-      "theme kit"
+      "theme kit",
+      "theme skin components",
+      "styled component gallery",
+      "component gallery"
     ],
     "visible": false,
     "release": 1,
@@ -2510,7 +2536,9 @@
       "preview",
       "outcome",
       "what would happen",
-      "look ahead"
+      "look ahead",
+      "score preview panel",
+      "score preview"
     ],
     "use": "Show or test what an answer would do before it is given, stopping at hidden information (`preview`).",
     "guide": "legal.md"
