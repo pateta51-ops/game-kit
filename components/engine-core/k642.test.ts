@@ -28,7 +28,7 @@ describe('a card and its own entering (K642)', () => {
     expect(s.result).toEqual({ done: true });
   });
 
-  it('K642 "when this enters play, add another" chains in entry order from the pile that owns the slot; a later arrival step with no empty slot adds nothing', () => {
+  it('K642 "when this enters play, add another" chains in entry order from the pile that owns the slot; never for a unit already in play; a later arrival step with no empty slot adds nothing', () => {
     const enter = (s: QState, pile: string): OccurrenceInput[] => {
       const top = list(s, pile)[0];
       return top === undefined ? [] : [{ kind: 'enter', keys: { target: top, other: pile } }];
@@ -40,7 +40,7 @@ describe('a card and its own entering (K642)', () => {
         setList(ctx, 'row', [...list(ctx.s, 'row'), o.keys.target ?? '']);
         enteredPlay(ctx, o.keys.target ?? '');
       },
-      triggersFor: (_s, o) => (o.kind === 'enter' && (o.keys.target ?? '').startsWith('swarm') ? [{ ability: 'another', source: o.keys.target ?? '', player: 'none' }] : []),
+      triggersFor: (_s, o) => (o.kind === 'enter' && (o.keys.target ?? '').startsWith('zib') ? [{ ability: 'another', source: o.keys.target ?? '', player: 'none' }] : []),
       resolveTrigger: (ctx, t) => {
         note(ctx, `another:${t.source}`);
         const more = enter(ctx.s, t.occurrences[0]?.keys.other ?? '');
@@ -49,14 +49,18 @@ describe('a card and its own entering (K642)', () => {
     }, (ctx) => ctx.then({ kind: 'arrive' }, TRIGGERS, { kind: 'arrive' }, TRIGGERS), {
       arrive: (ctx) => {
         note(ctx, 'arrive');
-        if (list(ctx.s, 'row').length < 1) would(ctx, enter(ctx.s, 'near'));
+        if (list(ctx.s, 'row').length < Math.max(1, num(ctx.s, 'slots'))) would(ctx, enter(ctx.s, 'near'));
       },
     });
-    const s = go(g, { lists: { near: ['swarm1', 'swarm2', 'plain', 'spare'], far: ['other'], row: [] } }).state;
-    expect(list(s, 'row')).toEqual(['swarm1', 'swarm2', 'plain']);
+    const old = go(g, { n: { slots: 2 }, lists: { near: ['plain', 'spare'], row: ['zib0'] } }).state;
+    expect(list(old, 'row')).toEqual(['zib0', 'plain']);
+    expect(list(old, 'near')).toEqual(['spare']);
+    expect(old.trace).toEqual(['arrive', 'arrive']);
+    const s = go(g, { lists: { near: ['zib1', 'zib2', 'plain', 'spare'], far: ['other'], row: [] } }).state;
+    expect(list(s, 'row')).toEqual(['zib1', 'zib2', 'plain']);
     expect(list(s, 'near')).toEqual(['spare']);
     expect(list(s, 'far')).toEqual(['other']);
-    expect(s.trace).toEqual(['arrive', 'another:swarm1', 'another:swarm2', 'arrive']);
+    expect(s.trace).toEqual(['arrive', 'another:zib1', 'another:zib2', 'arrive']);
     expect(s.result).toEqual({ done: true });
   });
 });
@@ -221,11 +225,22 @@ describe('results that happen together (K642)', () => {
     expect(addFirst.lists).toEqual({ bag: [], hand: ['x', 'P'] });
   });
 
-  it('K642 two plain gains together: no question, printed order (the game ranks them; their keys sort the other way)', () => {
+  it('K642 two plain gains together, with ranks from the game: no question, printed order (their keys sort the other way)', () => {
     const s = go(results([{ ability: 'stone', source: 'u1', player: 'p1', order: { auto: 'r1' } }, { ability: 'ash', source: 'u1', player: 'p1', order: { auto: 'r2' } }])).state;
     expect(s.result).toEqual({ done: true });
     expect(s.trace).toEqual(['stone', 'ash']);
     expect(s.n).toMatchObject({ stone: 1, ash: 1 });
+  });
+
+  const UNRANKED: TriggerCandidate[] = [{ ability: 'stone', source: 'u1', player: 'p1', order: 'silent' }, { ability: 'ash', source: 'u1', player: 'p1', order: 'silent' }];
+  it.fails('K642 two plain gains together, no ranks from the game: no question, printed order', () => {
+    expect(go(results(UNRANKED)).state.trace).toEqual(['stone', 'ash']);
+  });
+
+  it('K642 today: two plain gains together, no ranks from the game: no question, resolved by ability key, not in printed order', () => {
+    const s = go(results(UNRANKED)).state;
+    expect(s.result).toEqual({ done: true });
+    expect(s.trace).toEqual(['ash', 'stone']);
   });
 
   // Two units defeated at once, each rewarding one piece of the same stock.
@@ -251,8 +266,44 @@ describe('results that happen together (K642)', () => {
     const r = pick(rewards, s1, idFor(s1, 'u2'));
     expect(types(r.events, 'gained', 'unavailable')).toEqual(['gained:u2', 'unavailable:u1']);
     expect(r.state.n).toEqual({ stock: 0, otherStock: 5, held: 1 });
-    expect(r.state.trace).toEqual(['defeat:u1', 'defeat:u2']);
     expect(types(pick(rewards, s1, idFor(s1, 'u1')).events, 'gained', 'unavailable')).toEqual(['gained:u1', 'unavailable:u2']);
+  });
+
+  it.fails('K642 two units defeated at once as one batch, rewards competing: both units are defeated in the order the player chose', () => {
+    const s1 = go(rewards, { n: { stock: 1 } }).state;
+    expect(pick(rewards, s1, idFor(s1, 'u2')).state.trace).toEqual(['defeat:u2', 'defeat:u1']);
+  });
+
+  it('K642 today: two units defeated at once as one batch are defeated in batch order, before the order question; only the rewards follow the answer', () => {
+    const s1 = go(rewards, { n: { stock: 1 } }).state;
+    expect(s1.trace).toEqual(['defeat:u1', 'defeat:u2']);
+    expect(s1.prompt?.kind).toBe('timing.order');
+    const r = pick(rewards, s1, idFor(s1, 'u2'));
+    expect(r.state.trace).toEqual(['defeat:u1', 'defeat:u2']);
+    expect(types(r.events, 'gained', 'unavailable')).toEqual(['gained:u2', 'unavailable:u1']);
+  });
+
+  // The same two units, each defeat queued as an ordered result of the one hit that met both conditions.
+  it('K642 two units defeated at once, each defeat queued as a result of the hit: defeated and rewarded in the order the player chose', () => {
+    const g = queueGame({
+      triggersFor: (s, o) => [{ ability: 'defeat', source: o.keys.target ?? '', player: 'p1', order: num(s, 'stock') < 2 ? 'interactive' : 'silent' }],
+      resolveTrigger: (ctx, t) => {
+        note(ctx, `defeat:${t.source}`);
+        if (num(ctx.s, 'stock') > 0) {
+          add(ctx, 'stock', -1);
+          ctx.emit({ type: 'gained', what: t.source });
+        } else ctx.emit({ type: 'unavailable', what: t.source });
+      },
+    }, (ctx) => {
+      ctx.then(TRIGGERS);
+      would(ctx, [{ kind: 'hit', keys: { player: 'p1', target: 'u1' } }, { kind: 'hit', keys: { player: 'p1', target: 'u2' } }]);
+    });
+    const s1 = go(g, { n: { stock: 1 } }).state;
+    expect(s1.prompt).toMatchObject({ kind: 'timing.order', seat: 'p1' });
+    expect(s1.trace).toEqual([]);
+    const r = pick(g, s1, idFor(s1, 'u2'));
+    expect(r.state.trace).toEqual(['defeat:u2', 'defeat:u1']);
+    expect(types(r.events, 'gained', 'unavailable')).toEqual(['gained:u2', 'unavailable:u1']);
   });
 
   it('K642 two rewards from a stock that holds enough: no question, both gained', () => {
