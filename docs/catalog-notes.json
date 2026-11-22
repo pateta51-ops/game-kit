@@ -295,7 +295,11 @@
       "text",
       "validator",
       "rules",
-      "language"
+      "language",
+      "offered",
+      "can resolve",
+      "unpayable cost",
+      "dry run"
     ],
     "visible": false,
     "release": 1,
