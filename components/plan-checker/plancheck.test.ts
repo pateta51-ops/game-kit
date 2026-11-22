@@ -593,10 +593,8 @@ x
       expect(warns(r.out)).toEqual([]);
       expect(r.code).toBe(0);
     });
-    it('K567 with the map checked, the map's lines are the sheet: the older fixed lines are not asked for', () => {
-      const cut = FULL.split('
-').filter((l) => !l.startsWith('| Markets and rows |')).join('
-');
+    it("K567 with the map checked, the map's lines are the sheet: the older fixed lines are not asked for", () => {
+      const cut = FULL.split('\n').filter((l) => !l.startsWith('| Markets and rows |')).join('\n');
       expect(run(MAP, cut).out).not.toContain('no row for the line');
       expect(run(null, cut).out).toContain("PROBLEM kit: game sheet: no row for the line 'markets and rows'");
       expect(run(MAP, cut, '--sheet-optional').out).toContain("PROBLEM kit: game sheet: no row for the line 'markets and rows'");
