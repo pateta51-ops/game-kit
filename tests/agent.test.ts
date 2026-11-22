@@ -3,7 +3,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { afterAll, describe, expect, it } from 'vitest';
-import { finish, teardown, type Bg } from '../scripts/agent.mjs';
+import { finish, launch, teardown, type Bg } from '../scripts/agent.mjs';
 
 const KIT = path.resolve(import.meta.dirname, '..', 'kit.mjs');
 const root = fs.mkdtempSync(path.join(os.tmpdir(), 'agent-test-'));
@@ -276,5 +276,36 @@ describe('finish: one run per branch, sign of life, --detach and --result (K572)
     expect(w.cmds[0]![0]).toBe('wsl');
     expect(w.cmds[0]![1].slice(0, 3)).toEqual(['-e', 'bash', '-c']);
     expect(w.cmds[0]![1][3]).toMatch(/^setsid nohup bash '\/(mnt\/[a-z]\/)?[^']*run\.sh' > \/dev\/null 2>&1 < \/dev\/null &$/);
+  });
+  it('K644 the launch holds WSL open until the run writes its start marker, and Git Bash cannot rewrite its paths', () => {
+    const l = launch(true, 'C:\h\r\run');
+    expect(l.cmd).toBe('wsl');
+    expect(l.args.slice(0, 3)).toEqual(['-e', 'bash', '-c']);
+    expect(l.args[3]).toContain("setsid nohup bash '/mnt/c/h/r/run/run.sh'");
+    expect(l.args[3]).toContain("[ ! -e '/mnt/c/h/r/run/started' ]");
+    expect(l.env.MSYS_NO_PATHCONV).toBe('1');
+    expect(l.env.MSYS2_ARG_CONV_EXCL).toBe('*');
+    expect(launch(false, '/h/r').cmd).toBe('bash');
+  });
+
+  it('K644 a launch that never writes its start marker: finish exits non-zero in about a minute with the by-hand command, never waits silently', () => {
+    const { main } = fresh('k644');
+    const b = fakeBg(path.join(root, 'k644-home'));
+    b.start = (_c: string, _a: string[], dir: string) => void b.starts.push(dir);
+    const exec = (_c: string, _a: string[], input: string) => isStatus(input) ? st([], []) : { status: 0, output: '' };
+    for (const win of [false, true]) {
+      const o = io();
+      const t0 = b.t;
+      expect(finish(['--repo', main], o.io, exec, win, b as Bg)).not.toBe(0);
+      expect(b.t - t0).toBeLessThanOrEqual(60000);
+      expect(o.err.join('
+')).toMatch(/did not start/);
+      expect(o.err.join('
+')).toContain(win ? 'wsl -e bash ' : 'bash ');
+      expect(o.err.join('
+')).toContain('run.sh');
+      expect(o.out.join('
+')).not.toMatch(/PASS/);
+    }
   });
 });
