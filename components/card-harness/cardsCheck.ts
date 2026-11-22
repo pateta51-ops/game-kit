@@ -122,9 +122,13 @@ export interface RestrictionInput {
   readonly whyKey?: string;
   /** A problem allowed as data: the record or clause, the key, the ruling. Uncited or matching nothing fails. */
   readonly exceptions?: readonly { readonly id: string; readonly key: string; readonly ar: string }[];
+  /** K665: text segments (split at ' ¶ ' and line breaks) matching one of these are not a source of printed words, e.g. `/^\(.*\)$/` for reminder text. Default: none. */
+  readonly ignore?: readonly RegExp[];
+  /** K665: the icon code a step pays (e.g. `{gem 2}` for a `pay` step of gem 2), or undefined. A printed phrase equal to a paid icon counts as its restriction present. */
+  readonly paidIcon?: (step: Record<string, unknown>) => string | undefined;
 }
 const val = (v: unknown): string => (typeof v === 'object' && v !== null ? JSON.stringify(v) : String(v));
-const has = (text: string, phrase: string): boolean => text.toLowerCase().includes(phrase.toLowerCase());
+const has = (text: string, phrase: string): boolean => new RegExp(String.raw`(?<![\p{L}\p{N}_/])${phrase.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}(?![\p{L}\p{N}_/])`, 'iu').test(text);
 const cites = (why: unknown, rulings: ReadonlySet<string>): boolean => [why].flat().some((w) => typeof w === 'string' && [...rulings].some((r) => new RegExp(`(^|[^\\w-])${r.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}(?![\\w-])`).test(w)));
 const STEP_KEYS = new Set(['effects', 'then', 'else', 'steps', 'options', 'upgraded', 'each', 'branch', 'effect']);
 /** The record and its step nodes (K665): objects with an `op`, and what sits in the step lists and branches (`STEP_KEYS`); never filters, targets or other metadata. Iterative, each object once. */
@@ -143,7 +147,7 @@ const nodes = (r: Record<string, unknown>, skip: ReadonlySet<string>): Record<st
 };
 export function restrictionProblems(i: RestrictionInput): string[] {
   const rulings = new Set(i.rulings);
-  const text = new Map(catalogueClauses(i.catalogue).map((c) => [c.id, c.text]));
+  const text = new Map(catalogueClauses(i.catalogue).map((c) => [c.id, i.ignore ? c.text.split(/ ¶ |\r?\n/).filter((x) => !i.ignore?.some((re) => re.test(x.trim()))).join(' ¶ ') : c.text]));
   const whyKey = i.whyKey ?? 'why', dk = i.durationKey ?? 'duration';
   const found: { id: string; key: string; message: string }[] = [];
   const skip = new Set([...i.keys, dk, whyKey]);
@@ -163,6 +167,7 @@ export function restrictionProblems(i: RestrictionInput): string[] {
     if (recs.length === 0) continue;
     for (const [kv, phrases] of Object.entries(i.words)) {
       const p = phrases.find((x) => has(t, x));
+      if (p !== undefined && recs.some((r) => all(r).some((n) => i.paidIcon?.(n)?.toLowerCase() === p.toLowerCase()))) continue;
       const k = kv.slice(0, kv.indexOf(':')), v = kv.slice(kv.indexOf(':') + 1);
       if (p !== undefined && !recs.some((r) => all(r).some((n) => n[k] !== undefined && val(n[k]) === v))) found.push({ id: c, key: k, message: `${c}: printed "${p}" has no restriction ${k}=${v}` });
     }

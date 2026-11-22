@@ -49,4 +49,24 @@ describe('K665 nested restrictions', () => {
   it('top level is found as before', () => {
     expect(run({ op: 'pay', optional: true })).toEqual([]);
   });
+
+  const cat2 = (text: string): Catalogue => ({ summary: { clauses: 1 }, patterns: [], oneOffs: [C('owl#1', text)], interactions: [] });
+  it('type words match whole tokens only: a word inside a longer "/" type is not found', () => {
+    const w = { 'kind:alpha': ['TYPE - ALPHA'] };
+    const r = (text: string) => run({ op: 'pay' }, { catalogue: cat2(text), keys: ['kind'], words: w });
+    expect(r('TYPE - ALPHA/BETA: gain 1.')).toEqual([]);
+    expect(r('TYPE - ALPHA: gain 1.')).toEqual(['owl#1: printed "TYPE - ALPHA" has no restriction kind=alpha']);
+  });
+  it('ignore: reminder text in parentheses is not a source, only when asked', () => {
+    const c = cat2('Gain 1. ¶ (Upgraded: you may lose 2.)');
+    expect(run({ op: 'pay' }, { catalogue: c })).toEqual(['owl#1: printed "you may" has no restriction optional=true']);
+    expect(run({ op: 'pay' }, { catalogue: c, ignore: [/^\(.*\)$/] })).toEqual([]);
+  });
+  it('a printed icon that a pay step in the tree pays counts as its restriction', () => {
+    const c = cat2('{gem 2}: gain 1.');
+    const o = { catalogue: c, keys: ['cost'], words: { 'cost:icon': ['{gem 2}'] }, paidIcon: (n: Record<string, unknown>) => (n.op === 'pay' ? `{${String(n.res)} ${String(n.n)}}` : undefined) };
+    expect(run({ op: 'seq', steps: [{ op: 'pay', res: 'gem', n: 2, then: [{ op: 'gain', n: 1 }] }] }, o)).toEqual([]);
+    expect(run({ op: 'seq', steps: [{ op: 'pay', res: 'gem', n: 3 }] }, o)).toEqual(['owl#1: printed "{gem 2}" has no restriction cost=icon']);
+    expect(run({ op: 'seq', steps: [{ op: 'pay', res: 'gem', n: 2 }] }, { catalogue: o.catalogue, keys: o.keys, words: o.words })).toEqual(['owl#1: printed "{gem 2}" has no restriction cost=icon']);
+  });
 });
