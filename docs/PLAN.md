@@ -329,7 +329,7 @@ A candidate is a part some game wants and nobody builds yet. A second game that 
 | K421 | Phone table layout over `Stage`: a fixed 390x664 stage with one zone per wireframe rect, `stretchTo` for tall phones, a `tall` strip transform, and the `-phone` wireframe at x2 menu scaling (Astra `src/ui/table/phone.ts`, `src/ui/screens/layout.ts`) | M | Astra Imperium | candidate |
 | K422 | Bottom-anchored upward-opening scroll panel for a phone dock, with dock fit by observer (the overflow hook only opens downward) (Astra `src/ui/table/Phone.tsx`, FIX-CQ) | S | Astra Imperium | candidate |
 | K423 | Hit-area pattern for chamfered keys: an unclipped wrapper button or pseudo-element carries the 44 px tap area while a `::before` layer draws the clipped plate (Astra screens.css and phone.css, XD-46, FIX-PT2, fix-rel1) | S | Astra Imperium | candidate |
-| K424 | `sim-pool` greedy driver: one-level nested-choice look-ahead over `preview` scored by a game's `vpOf` (Astra `src/sim/drivers.ts`, S12) | S | Astra Imperium | candidate |
+| K424 | `sim-pool` greedy driver: one-level nested-choice look-ahead over `preview` scored by a game's `vpOf` (Astra `src/sim/drivers.ts`, S12) | S | Astra Imperium, survey | candidate |
 | K425 | `when` modifier runner: module-level hooks at fixed engine timings (`onPlay`, `onBuild`, `beforeInvasion`, `duringInvasion`), run in source order, as data-driven continuous rules (Astra `src/engine/rules.ts` `whens`/`whenTasks`, S6) | M | Astra Imperium | candidate |
 | K426 | App icon generator: glow plus ring icon from an SVG mark, all sizes (the kit `app-icons` lacks the glow and ring) (Astra `scripts/app-icons.mjs`, S20b) | S | Astra Imperium | candidate |
 | K427 | Map-rect tracing: script that traces zone rects from a scan into a layout JSON merged at content build (Astra `scripts/content/trace-maps.py`, F3) | S | Astra Imperium | candidate |
@@ -337,6 +337,38 @@ A candidate is a part some game wants and nobody builds yet. A second game that 
 | K429 | Phone playtest tooling: `playtest.mjs` (4K, phone 390x664, landscape sweeps with JSONL results), `tap44.mjs` (44 px tap-target audit counting hit areas), `offline.mjs`, `summary.mjs`, `sheet.mjs`, `runall.sh` (Astra `tools/playtest/`) | M | Astra Imperium | candidate |
 | K430 | Scaffold additions every game adds by hand: Playwright config (e2e port = block + 2), the plancheck lane, the architect wrappers (Astra S1) | S | Astra Imperium | candidate |
 | K520 | discard-row: a row of face-up cards that refills by drawing until a trigger card appears, where a cost is paid by discarding row cards that show the needed icons. | M | Hunted North Pole, Hunted Mining Colony, Dungeon Ball Legend | candidate |
+| K534 | content build check: every load problem of a card pack gets a coded issue with a severity and a message, and the build fails on the errors (`card-harness` `contentGate` covers part of this today); a game passes its own problem list. | S | Astra Imperium, Radiance, Unstoppable | candidate |
+| K535 | card-language verb: a repeat that asks the player before each pass instead of a fixed count; a game passes the effect and the stop rule. | S | Radiance | candidate |
+| K536 | card-language verb: split an amount over chosen targets, the player assigning each share; a game passes the amount, the target list and any limit per target. | S | Radiance | candidate |
+| K537 | card-language: effects offered at the end of a phase (and at its start) as events the player may use; a game passes the phase names and the offers. | S | Radiance | candidate |
+| K538 | card-language: when a host leaves play its attachments leave with it, each to the zone the game names; a game passes the destination per attachment kind. | S | Radiance | candidate |
+| K539 | card-language: a face-down view of a card for a seat that may not see it, with the owner and revealing rules; a game passes who may look. | S | Radiance | candidate |
+| K540 | card-language: `may` and `chooseOption` that carry a cost the player pays only if they take the option; a game passes the cost and the effect. | S | Radiance, Astra Imperium | candidate |
+| K541 | engine-core: a lasting effect whose end point is a named event the game defines, instead of the nine fixed duration kinds; a game passes the event name and when it fires. | M | Radiance | candidate |
+| K542 | a status: a named lasting effect shown as a token on a card or unit, with a verb to give, remove and test it; a game passes the names, tokens and end rules. | M | survey | candidate |
+| K543 | dice placed on slots: slots with a rule on which die value fits, and a table from die value to the yield the slot gives; a game passes the slots, the rules and the table. | M | Dieson Crusoe, Dicemancy, Dungeon Ball Legend, Cursed Castle | candidate |
+| K544 | layered cell grid: cells that hold a stack of layers, with placement over lower layers, what shows on top and what is covered; a game passes the layer rules and the shapes. | M | Crystallo, Dicemancy | candidate |
+| K545 | free-action window: every free action offered in one prompt, each barred one shown with its reason, with a way forward; a game passes the actions and the bars. | M | Radiance | candidate |
+| K546 | objectives with progress: a goal with a count or steps, its progress, when it is done or failed, and objectives per scenario; a game passes the goals and what moves them. | M | Dice Commandos, Paranormal, survey | candidate |
+| K547 | card set matcher: sets, runs and hands of cards tested as data (pairs, straights, flushes, named combos), as the dice patterns are for dice; a game passes the combos. | M | Drawing Dead, Crystallo | candidate |
+| K548 | all-or-nothing effect block: a list of effects that all resolve or none does, with the state restored when one cannot; a game passes the effects. | M | Unstoppable | candidate |
+| K549 | state-change audit: a check that every changed value in the state is explained by an event, listing the unexplained ones; a game passes its event-to-field map. | S | Unstoppable | candidate |
+| K550 | combat verbs: attack, damage, armor and defeat as data on top of `would` and `adjust`, with the hooks where a game inserts its own rules; a game passes the stats and the defeat rule. | L | Radiance, Hunted North Pole, Dice Commandos, survey | candidate |
+| K551 | flexible starter: a game sheet describing a new game, then a generator that wires the kit parts from it; the sheet names parts and set-up. | L | survey | candidate |
+| K552 | dice-odds: the chance of a pattern given a reroll budget and a keep rule, exact; a game passes the pattern, the dice and the rerolls. | M | Dice Commandos | candidate |
+| K553 | one board model over graph, hex and square boards, so a game switches shape without new code; a game passes its cells and links. | L | survey | candidate |
+| K554 | dice-pool check: roll N dice, count the successes against a rule, with a reroll budget and modifiers, as data; a game passes the pool, the success rule and the budget. | M | survey | candidate |
+| K555 | a stat sheet read from a base card plus the overlays on it (levels, upgrades), with the order they apply; a game passes the base and the overlays. | M | survey | candidate |
+| K556 | spawn tables stepped by a clock: what appears at each step of a clock, drawn from tables with the engine random; a game passes the tables and the clock. | M | survey | candidate |
+| K557 | helpers for card effects that copy another effect and for "cannot" rules; a game passes the effect to copy or the thing barred. | S | survey | candidate |
+| K558 | score table with a breakdown: scoring lines each with its parts, summed and shown at game over; a game passes the lines. | M | Crystallo, survey | candidate |
+| K559 | `grid-map` mover: move a piece by the shortest path to a named place, stopping by the game's rule; a game passes the place and the stop rule. | S | Dice Commandos | candidate |
+| K560 | a row of event cards resolved in order, each with a window before and after it where players may act; a game passes the cards and the windows. | M | Action-Packed Double Feature | candidate |
+| K561 | `card-harness` mutation check per clause: change a clause on purpose and fail the card test that does not notice; a game passes its clauses and tests. | S | Radiance | candidate |
+| K562 | more ready rows for the op table of a game that keeps its own engine; a game passes its ops. | S | Unstoppable | candidate |
+| K563 | dice formulas as data (count, sides, modifiers) rolled through the engine random and read by the odds; a game passes the formula. | S | 7th Inning Stretch | candidate |
+| K564 | an event that carries several amounts (each with its own name) that triggers and modifiers can read and change one by one; a game passes the amounts. | S | survey | candidate |
+| K565 | turn-flow: take another turn, with the rule for what ends it; a game passes the turn order and the limit. | S | survey | candidate |
 
 ## Harvest from the existing games (owner, 15 Nov 2026)
 
