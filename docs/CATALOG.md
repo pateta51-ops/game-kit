@@ -1670,12 +1670,12 @@ Every printed item (card, tile, board) is transcribed twice, independently, then
 Rounds, turns per seat and phases and steps inside a turn as one data table; the runner walks it and calls engine-core `boundary()` at each turn begin, turn end, phase end and round end, so `endOfTurn` / `endOfRound` / `endOfPhase` / `turnBegins` durations end with no manual call (K264). Needs `engine-core`.
 
 - **Also called:** Rounds, turns and phases table
-- **Words:** turns, rounds, phases, steps, order, seat, flow
+- **Words:** turns, rounds, phases, steps, order, seat, flow, once per turn, once per round, once per phase, once per game, once per turn per card, use limit per game, usage limit, used this turn
 - **Release:** 1.0; not seen
 - **The game supplies:** The table of rounds, turns, phases and steps.
-- **Use it when:** Rounds, turns per seat in seat order, and phases and steps inside a turn as one data table; the runner calls engine-core boundary() at each turn, phase and round edge, so endOfTurn / endOfRound / endOfPhase durations end with no manual call; whoseTurn and flowOf read the position from state. Recipe: docs/recipes/turn-flow.md.
+- **Use it when:** Rounds, turns per seat in seat order, and phases and steps inside a turn as one data table; the runner calls engine-core boundary() at each turn, phase and round edge, so endOfTurn / endOfRound / endOfPhase durations end with no manual call; whoseTurn and flowOf read the position from state; once-per limits (K589: once per turn, round, phase or game, per card, per seat) bar a used option with its reason and clear at the matching edge. Recipe: docs/recipes/turn-flow.md.
 - **Not for:** What a step does, simultaneous or out-of-order turns (interrupts, reactions), step-long durations (engine-core has none), or the screen that shows the phase.
-- **Key exports:** `FLOW_NEXT`, `flowOf`, `whoseTurn`, `startFlow`, `endTurn`, `flowHandlers`, `FlowPhase`, `FlowLevel`, `FlowPos`, `FlowState`, `FlowConfig`
+- **Key exports:** `FLOW_NEXT`, `flowOf`, `whoseTurn`, `limitsOf`, `limitUsed`, `markLimit`, `limitOption`, `clearLimits`, `startFlow`, `endTurn`, `flowHandlers`, `FlowPhase`, `FlowLevel`, `FlowPos`, and 7 more
 - **Needs:** [`engine-core`](#engine-core)
 - **Came from:** 7th-inning-stretch
 - **Docs:** [README](../components/turn-flow/README.md) ([rules for agents](../components/turn-flow/README.md#rules-for-agents))

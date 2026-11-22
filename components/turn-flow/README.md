@@ -15,6 +15,7 @@ Rounds, turns per seat and phases and steps inside a turn as one data table; the
 6. Expect boundaries in this order: `turnBegin`, `phaseEnd`, `turnEnd`, `roundEnd`; steps get none, and a skipped turn or phase gets none.
 7. Run `expireEffects` at the game's checkpoint; ended effects stay in state until then (they count nothing).
 8. With `roundEnds`, expect a round with no turn played to end anyway; `over(s)` stops before the next position.
+9. Once-per limits (K589): declare every key in one `LimitTable`; build the option with `limitOption` (never a hand-made disabled option) and call `markLimit` when the action resolves; pass `card` for a `perCard` key (it throws without one). Never clear turn, phase or round limits yourself while the runner runs: it clears them at `turnEnd`, `phaseEnd` and `roundEnd`; `game` limits are never cleared; a scope the game names itself (`combat`) is cleared only by the game's `clearLimits(ctx, 'combat')`. Mark end-of-turn work in the turn's last phase: a mark made after the runner's `turnEnd` counts for the next turn. Pass the id of the copy in play as `card` (a new id when a returning card counts as new).
 
 **Common mistakes:**
 - Expecting out-of-turn interrupts or reactions here: they are not in this component.
@@ -25,6 +26,28 @@ Rounds, turns per seat and phases and steps inside a turn as one data table; the
 - Read: `flowOf(s)` is `state.flow` (`round`, `turn` index, `seat`, `phase`, `step`, `done` when it stopped); `whoseTurn(s)` the seat (undefined once done).
 - Boundaries: `turnBegin` (player = seat), `phaseEnd` (phase = id), `turnEnd` (player = seat), `roundEnd`, in that order. Steps get none: engine-core has no step duration. Ended effects stay in state until the game's checkpoint runs `expireEffects` (they count nothing).
 - Not here: what a step does, interrupts or reactions out of turn order.
+
+## Once-per limits
+
+A game declares keys, each `{ scope, perCard?, perSeat?, why? }`; `scope` is `turn`, `round`, `phase`, `game` or a name of the game's own (`combat`). A key without `perCard` is shared: any card that names it uses the one limit. `perSeat` reads the seat from `ref.seat` (an opponent's reaction out of turn passes its own seat) or else `whoseTurn`; with neither it throws. A key can be both per card and per seat. The used marks live in `state.limits` (plain arrays per scope, so saves, undo and replay keep them); a game that never calls `markLimit` gets no `limits` field.
+
+- `limitOption(s, table, ref, id)`: `{ id, enabled: true }`, or `bar(id, 'used', why)` (`why` from the key, else `used this turn` / `used this round` / `used this phase` / `already used this game` / `used this <scope>`).
+- `markLimit(ctx, table, ref)`: marks it, `false` when it already was. `limitUsed(s, table, ref)` reads it; `limitsOf(s)` the raw state.
+- `clearLimits(ctx, scope)`: clears every mark of one scope. The runner calls it at each `turnEnd` (turn), `phaseEnd` (phase) and `roundEnd` (round). It never clears a game-named scope: the game calls `clearLimits(ctx, 'combat')` where its combat ends, and that leaves every other scope alone.
+- When it clears: turn marks clear inside the runner's `turnEnd`, and the next turn starts in the same task. Put end-of-turn work in the turn's last phase: its marks clear with the turn. A mark made after the runner's `turnEnd` (a trigger resolved at the next checkpoint) counts for the next turn.
+- `card` is the id of this copy in play. A per-card mark stays on that id; there is no call that drops one card's marks. When the game's rules treat a card that left play and came back as a new card, pass a new id for it (for example the id plus a count of entries); with the same id it stays used. Whether it is new is the game's rules question.
+
+```ts
+import { limitOption, markLimit, type LimitTable } from '../kit/turn-flow/index'
+import type { Ctx, GameTypes } from '../kit/engine-core/index'
+declare const ctx: Ctx<GameTypes>
+const table: LimitTable = { draw: { scope: 'turn', why: 'drawn this turn' }, power: { scope: 'round', perCard: true } }
+markLimit(ctx, table, { key: 'draw' })
+const options = [limitOption(ctx.s, table, { key: 'draw' }, 'draw'), limitOption(ctx.s, table, { key: 'power', card: 'c7' }, 'power:c7')]
+ctx.ask({ min: 1, max: 1, options }, { kind: 'pick' })
+console.log(options) // [{ id: 'draw', enabled: false, reason: 'used', why: 'drawn this turn' }, { id: 'power:c7', enabled: true }]
+```
+Run as written by `limits.test.ts` ("README recipe").
 
 ## Use it in 10 lines
 
