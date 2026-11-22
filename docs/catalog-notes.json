@@ -284,7 +284,11 @@
       "not fired",
       "expectNotOffered",
       "expectNotFired",
-      "full resolve"
+      "full resolve",
+      "prompt amount",
+      "screen check",
+      "no amount",
+      "amounts"
     ],
     "visible": false,
     "release": 1,
