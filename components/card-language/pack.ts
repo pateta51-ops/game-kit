@@ -156,7 +156,7 @@ export interface PackConfig<G extends GameTypes, E extends PackEnv = PackEnv> {
   readonly res?: { get(s: G['state'], seat: string, key: string): number; set(ctx: Ctx<G>, seat: string, key: string, n: number): void };
   /** K583: the amount a `pay` or `convert` step asks for now (a tax, a discount); default the printed amount. Read by the can-pay check, the whole-cost sum, the payment and `costed`. */
   readonly due?: (s: G['state'], step: PackStep, env: E, printed: number) => number;
-  readonly custom?: Readonly<Record<string, { run(ctx: Ctx<G>, step: PackStep, env: E): void; readonly resume?: (ctx: Ctx<G>, step: PackStep, env: E, answer: readonly string[]) => void; readonly payable?: (s: G['state'], step: PackStep, env: E) => boolean; text(step: PackStep): string }>>;
+  readonly custom?: Readonly<Record<string, { run(ctx: Ctx<G>, step: PackStep, env: E): void; readonly resume?: (ctx: Ctx<G>, step: PackStep, env: E, answer: readonly string[]) => void; readonly payable?: (s: G['state'], step: PackStep, env: E) => boolean; text(step: PackStep): string; readonly viewSafe?: boolean }>>;
   /** The game's words per verb: a template (`{slot}`, `{slot:noun}` for "2 nouns") or a function of the step. */
   readonly words?: Partial<Record<PackOp, Words>>;
   /** Words for a zone, resource, test, count or `later` moment name in a template (default the name). */
@@ -377,8 +377,8 @@ export function cardPack<G extends GameTypes, E extends PackEnv = PackEnv>(cfg: 
   // K597, resolves: `done` the top-level steps this line resolved, `next` the step running, `mark` the view when it began, `whys` each step's reason read when it began.
   // A top-level `payThen` is two parts: its cost (index i) and its `then` (i + 0.5); `paid` is the view when its cost ended.
   // `costs`: the view when each cost now being paid began; `part`: parts that did not resolve in full (a shortfall, or a cost or its effect that changed nothing), with the reason; `half`: the parts that changed but are in `part`.
-  type Line = { base: string; cost: number; sees: readonly string[] | null; hidden: boolean; done: readonly number[]; next: number; mark: string; whys: Readonly<Record<number, SkipReason | OfferReason>>; paid: string | null; costs: readonly string[]; part: Readonly<Record<number, SkipReason | OfferReason>>; half: readonly number[] };
-  const J0 = (): Line => ({ base: '', cost: 0, sees: null, hidden: false, done: [], next: 0, mark: '', whys: {}, paid: null, costs: [], part: {}, half: [] });
+  type Line = { base: string; cost: number; sees: readonly string[] | null; hidden: boolean; done: readonly number[]; next: number; mark: string; whys: Readonly<Record<number, SkipReason | OfferReason>>; paid: string | null; costs: readonly string[]; part: Readonly<Record<number, SkipReason | OfferReason>>; half: readonly number[]; over: readonly number[] };
+  const J0 = (): Line => ({ base: '', cost: 0, sees: null, hidden: false, done: [], next: 0, mark: '', whys: {}, paid: null, costs: [], part: {}, half: [], over: [] });
   let J: Line = J0();
   // K597: set while `resolves` runs the search: each line runs to its end, and `line` gets it (true: a line resolved every step, stop).
   let R: { readonly line: (j: Line, reason?: OfferReason, error?: unknown) => boolean; readonly cap: () => void; readonly steps: Eff; readonly env: E } | null = null;
@@ -405,38 +405,67 @@ export function cardPack<G extends GameTypes, E extends PackEnv = PackEnv>(cfg: 
   const fresh = (s: PackState): string[] => (dry === null || J.sees === null ? [] : seenBy(s, dry).filter((c) => !(J.sees ?? []).includes(c)));
   // K597: the state game code reads (tests, counts, filters, `payable`, `due`, `res.get`, `seats`, `noPlayer`, `reshuffle`). In resolves a read-only view that stops (hidden)
   // only when a read yields a card that came into view: an array element, an object key or a string holding its id (a log line); `length` passes. Elsewhere the hard stop of K583.
-  const ro = <T>(s: T): T => {
+  // K597 fourth look: on an object whose own keys or values hold such a card, any keyed read (but an array's `length` and inherited methods), `in`, own-key check or key listing stops.
+  // `rw`: a `viewSafe` custom verb or row runs on it, its writes go to the state (a view handed back is stored as what it views).
+  const ro = <T>(s: T, rw = false): T => {
     if (R === null) return hid(s as unknown as PackState) ? stop() : s;
     const f = fresh(s as unknown as PackState);
     if (f.length === 0) return s;
     const bad = (v: unknown): boolean => typeof v === 'string' && f.some((c) => v.includes(c));
+    const PX = new WeakMap<object, object>();
+    const TG = new WeakMap<object, object>();
+    const un = (v: unknown): unknown => {
+      if (typeof v !== 'object' || v === null) return v;
+      const t = TG.get(v);
+      if (t !== undefined) return t;
+      if (!Object.isFrozen(v)) for (const k of Reflect.ownKeys(v)) {
+        const x: unknown = Reflect.get(v, k);
+        const y = un(x);
+        if (y !== x) Reflect.set(v, k, y);
+      }
+      return v;
+    };
     const px = (o: unknown): unknown => {
       if (typeof o !== 'object' || o === null) return o;
       const t = o;
-      return new Proxy(Array.isArray(o) ? [] : {}, {
+      const old = PX.get(t);
+      if (old !== undefined) return old;
+      const dirty = (k?: PropertyKey): boolean => bad(k) || Reflect.ownKeys(t).some((x) => bad(x) || bad(Reflect.get(t, x)));
+      const p = new Proxy(Array.isArray(o) ? [] : {}, {
         get: (_, k) => {
-          const v: unknown = Reflect.get(t, k);
-          return bad(v) ? stop() : px(v);
+          if (bad(k) || ((Object.hasOwn(t, k) || !(k in t)) && !(Array.isArray(t) && k === 'length') && dirty())) stop();
+          return px(Reflect.get(t, k));
         },
-        has: (_, k) => Reflect.has(t, k),
-        ownKeys: () => {
-          const ks = Reflect.ownKeys(t);
-          return ks.some(bad) ? stop() : ks;
-        },
+        has: (_, k) => (dirty(k) ? stop() : Reflect.has(t, k)),
+        ownKeys: () => (dirty() ? stop() : Reflect.ownKeys(t)),
         getOwnPropertyDescriptor: (_, k) => {
+          if (dirty(k)) stop();
           const d = Reflect.getOwnPropertyDescriptor(t, k);
           if (d === undefined) return undefined;
-          if (bad(d.value)) stop();
           return Array.isArray(t) && k === 'length' ? { value: t.length, writable: true, enumerable: false, configurable: false } : 'value' in d ? { ...d, value: px(d.value), configurable: true } : { ...d, configurable: true };
         },
         getPrototypeOf: () => Reflect.getPrototypeOf(t),
-        set: () => false,
-        deleteProperty: () => false,
-        defineProperty: () => false,
+        set: (_, k, v) => rw && Reflect.set(t, k, un(v)),
+        deleteProperty: (_, k) => rw && Reflect.deleteProperty(t, k),
+        defineProperty: (_, k, d) => rw && Reflect.defineProperty(t, k, 'value' in d ? { ...d, value: un(d.value) } : d),
       });
+      PX.set(t, p);
+      TG.set(p, t);
+      return p;
     };
     return px(s) as T;
   };
+  // K597 fourth look: a `viewSafe` custom verb or game row runs, after a card came into view, with `ctx.s` the guarded view (resolves only).
+  const onView = (ctx: Ctx<G>, f: () => void): void => {
+    const was = ctx.s;
+    (ctx as { s: unknown }).s = ro(was, true);
+    try {
+      f();
+    } finally {
+      (ctx as { s: unknown }).s = was;
+    }
+  };
+  const safeRow = (t: G['task']): boolean => String((t as { kind?: unknown }).kind) === 'verb' && (table() as Record<string, { viewSafe?: unknown }>)[String((t as unknown as { step?: { op?: unknown } }).step?.op)]?.viewSafe === true;
   // A task that runs game code: a verb that is not the pack's own row, or any task kind but `verb` and engine-core's `timing.*`.
   const gameTask = (t: G['task']): boolean => {
     const k = String((t as { kind?: unknown }).kind);
@@ -483,21 +512,21 @@ export function cardPack<G extends GameTypes, E extends PackEnv = PackEnv>(cfg: 
   };
   // K597: how much of the effect would resolve, on the same search: each line of play runs to its end, step by step.
   const resolves = (state: G['state'], content: G['content'], steps: Eff, env: E): ResolveCheck => {
-    type L = { done: readonly number[]; half: readonly number[]; part: Line['part']; next: number; whys: Line['whys']; reason?: OfferReason; error?: unknown };
+    type L = { done: readonly number[]; half: readonly number[]; over: readonly number[]; part: Line['part']; next: number; whys: Line['whys']; reason?: OfferReason; error?: unknown };
     const units = steps.flatMap((_, i) => unitsOf(steps, i));
     const lines: L[] = [];
     let capped = false;
-    const [c, whys] = checked(state, content, steps, env, { steps, env, cap: () => void (capped = true), line: (j, reason, error) => (lines.push({ done: j.done, half: j.half, part: j.part, next: j.next, whys: j.whys, ...(reason === undefined ? {} : { reason, error }) }), reason === undefined && j.done.length === units.length) });
+    const [c, whys] = checked(state, content, steps, env, { steps, env, cap: () => void (capped = true), line: (j, reason, error) => (lines.push({ done: j.done, half: j.half, over: j.over, part: j.part, next: j.next, whys: j.whys, ...(reason === undefined ? {} : { reason, error }) }), reason === undefined && j.done.length + j.over.length === units.length) });
     // Unknown only when the known part does not fix the answer: a line stopped early may still resolve the parts from where it stopped; a cap hit leaves every line open.
     // K597: a part that changed but did not resolve in full (`half`) makes the line part at most.
     const G3: readonly Resolved[] = ['none', 'part', 'full'];
-    const g = (l: L): number => (l.done.length === units.length ? 2 : l.done.length + l.half.length > 0 ? 1 : 0);
+    const g = (l: L): number => (l.done.length + l.over.length === units.length ? 2 : l.done.length + l.half.length > 0 ? 1 : 0);
     const most = Math.max(0, ...lines.map(g));
     const could = capped || whys.has('nested') ? 2 : Math.max(most, ...lines.filter((l) => l.reason !== undefined).map((l) => (l.half.some((u) => u in l.part) ? 1 : g({ ...l, done: [...l.done, ...units.filter((u) => u >= l.next && !l.done.includes(u))] }))));
     const answer: Resolved = c.answer === 'yes' ? 'full' : most === could ? (G3[most] ?? 'none') : 'unknown';
     // An unknown answer is reported from the lines left open (they make it unknown), never from a closed line such as a declined `may`.
     const best = (answer === 'unknown' && lines.some((l) => l.reason !== undefined) ? lines.filter((l) => l.reason !== undefined) : lines).reduce<L | undefined>((b, l) => (b === undefined || g(l) > g(b) || (g(l) === g(b) && (l.done.length > b.done.length || (l.done.length === b.done.length && b.reason !== undefined && l.reason === undefined))) ? l : b), undefined);
-    const skipped = answer === 'full' ? [] : steps.flatMap((_, i) => {
+    const skipped = answer === 'full' ? [...new Set((best?.over ?? []).map(Math.floor))].map((step) => ({ step, reason: 'gameOver' as const })) : steps.flatMap((_, i) => {
       const u = unitsOf(steps, i).find((x) => !(best?.done ?? []).includes(x));
       if (u === undefined) return [];
       if (best?.reason !== undefined && i >= best.next) return [{ step: i, reason: best.reason, ...(best.reason === 'error' ? { error: best.error } : {}) }];
@@ -565,7 +594,7 @@ export function cardPack<G extends GameTypes, E extends PackEnv = PackEnv>(cfg: 
     if (!cfg.handlers) throw new EngineBugError('card-language pack: wouldChange needs cfg.handlers (() => RULES.handlers)');
     if (state.result !== null) return 'no';
     let left = 0;
-    const table = Object.fromEntries(Object.entries(cfg.handlers()).map(([k, h]) => [k, (c: Ctx<G>, t: G['task']) => ((left -= 1) < 0 ? stop('budget') : hid(c.s as unknown as PackState) && gameTask(t) ? stop() : h(c, t))])) as HandlerTable<G>;
+    const table = Object.fromEntries(Object.entries(cfg.handlers()).map(([k, h]) => [k, (c: Ctx<G>, t: G['task']) => ((left -= 1) < 0 ? stop('budget') : hid(c.s as unknown as PackState) && gameTask(t) ? (R !== null && safeRow(t) ? onView(c, () => h(c, t)) : stop()) : h(c, t))])) as HandlerTable<G>;
     const before = view(state);
     const F = R;
     // K597: a marker after each top-level step (and one before the first): the step resolved when the view changed while it ran.
@@ -618,7 +647,9 @@ export function cardPack<G extends GameTypes, E extends PackEnv = PackEnv>(cfg: 
           const us = unitsOf(steps, J.next);
           J.done = [...J.done, ...us.filter((u) => !J.done.includes(u))];
           J.half = J.half.filter((u) => !us.includes(u));
-          J.whys = { ...J.whys, ...Object.fromEntries(steps.flatMap((_, i) => (i > J.next ? unitsOf(steps, i) : [])).map((u) => [u, 'gameOver'])) };
+          const later = steps.flatMap((_, i) => (i > J.next ? unitsOf(steps, i) : []));
+          J.whys = { ...J.whys, ...Object.fromEntries(later.map((u) => [u, 'gameOver'])) };
+          J.over = later;
         }
         if (s.result !== null || s.prompt === null) return F.line(J) ? 'yes' : 'no';
         at.set(s, J);
@@ -1092,13 +1123,15 @@ export function cardPack<G extends GameTypes, E extends PackEnv = PackEnv>(cfg: 
       const c = cfg.custom?.[st.name];
       if (!c) throw new EngineBugError(`card-language pack: no custom verb ${st.name}`);
       blind(S(ctx), e);
-      if (hid(S(ctx))) stop();
-      c.run(ctx, st, e);
+      if (!hid(S(ctx))) c.run(ctx, st, e);
+      else if (R !== null && c.viewSafe === true) onView(ctx, () => c.run(ctx, st, e));
+      else stop();
     }, (ctx, st: Extract<PackStep, { op: 'custom' }>, e, a) => {
       const r = cfg.custom?.[st.name]?.resume;
       if (!r) throw new EngineBugError(`card-language pack: custom verb ${st.name} was answered but has no resume`);
-      if (hid(S(ctx))) stop();
-      r(ctx, st, e, a);
+      if (!hid(S(ctx))) r(ctx, st, e, a);
+      else if (R !== null && cfg.custom?.[st.name]?.viewSafe === true) onView(ctx, () => r(ctx, st, e, a));
+      else stop();
     }),
   } as Record<PackOp, V>;
 

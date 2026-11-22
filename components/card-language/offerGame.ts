@@ -11,6 +11,8 @@ export interface S extends KernelState, PackState {
   readonly stack: readonly Task[];
   readonly log: readonly { readonly seq: number; readonly type: string }[];
   /** The brute-force run's own notes (never part of the view): what a cost changed is not counted. */
+  /** K597 fourth look, with `marks`: every card moved, kept as a key (a mark). */
+  readonly got?: Readonly<Record<string, number>>;
   readonly truth?: { readonly hit: boolean; readonly open: readonly number[]; readonly base: string | null };
   /** K597, the brute-force run's notes: the view after the last step marker, the parts whose run changed it (a top-level payThen: i its cost, i + 0.5 its effect), the step running, the view when a cost ended. */
   readonly steps?: { readonly base: string; readonly done: readonly number[]; readonly next: number; readonly paid?: string; readonly part?: readonly number[]; readonly half?: readonly number[]; readonly costs?: readonly { readonly pre?: string; readonly mid?: string }[] };
@@ -43,7 +45,11 @@ export interface GameOpts {
   readonly pool?: Readonly<Record<string, WhenCard<PackStep>>>;
   /** An occurrence kind every occurrence of which is cancelled in its would-window (a replacement that skips it). */
   readonly cancel?: string;
+  /** K597 fourth look: `moved` also marks the card in `got`; `viewSafe` flags the custom verbs that read no card and the row `lucky`. */
+  readonly marks?: boolean;
+  readonly viewSafe?: boolean;
 }
+const SAFE = ['nothing', 'lone', 'order', 'spend', 'win', 'boom', 'back', 'pairs', 'roll', 'have'];
 
 export const gold = (s: PackState, seat = 'a', k = 'gold'): number => s.res?.[seat]?.[k] ?? 0;
 export const GAIN: PackStep = { op: 'gainResource', res: 'gold', amount: 1 };
@@ -76,6 +82,8 @@ export const offerGame = <P extends BasePack>(make: (cfg: never) => P, opts: Gam
       ends: (_s, e) => ['h2', 'd1'].every((c) => e.cards?.includes(c)), b3: (_s, e) => e.cards?.includes('b3') ?? false,
       evenUp: (s) => cardsIn(s, 'discard:a').some((c) => c.endsWith('2')), drew2: (s) => cardsIn(s, 'hand:a').includes('d2'),
       top: (s) => (cannotKnow(), cardsIn(s, 'deck:a')[0] === 'd1'), owes: (_s, e) => e.owed !== undefined,
+      gotD2: (s) => s.got?.d2 === 1, inD2: (s) => 'd2' in (s.got ?? {}), ownD2: (s) => Object.prototype.hasOwnProperty.call(s.got ?? {}, 'd2'), hasD2: (s) => Object.hasOwn(s.got ?? {}, 'd2'),
+      descD2: (s) => Object.getOwnPropertyDescriptor(s.got ?? {}, 'd2') !== undefined,
     },
     counts: { held: (s, e) => cardsIn(s, `hand:${e.seat}`).length },
     seats: () => ['a', 'b'],
@@ -163,15 +171,15 @@ export const offerGame = <P extends BasePack>(make: (cfg: never) => P, opts: Gam
       mark: { run: (ctx) => note(ctx, (t) => ({ ...t, open: t.open.slice(0, -1), base: t.open.length === 1 ? viewOf(ctx.s) : t.base })), text: () => 'Mark.' },
       post: { run: (ctx, st) => note(ctx, (t) => (t.open[t.open.length - 1] !== (st as { n?: number }).n ? t : { ...t, open: t.open.slice(0, -1), base: t.open.length === 1 ? viewOf(ctx.s) : t.base })), text: () => 'Post.' },
     },
-    moved: (ctx, m) => ctx.emit({ type: `${m.op} ${m.card}` }),
+    moved: (ctx, m) => (ctx.emit({ type: `${m.op} ${m.card}` }), opts.marks === true && void (draftOf(ctx).got = { ...ctx.s.got, [m.card]: 1 })),
     ...(opts.offer === undefined ? {} : { offer: opts.offer }),
     handlers: (): HandlerTable<G> => RULES.handlers,
     table: () => VERBS,
     ...opts.cfg,
   };
-  const pack = make(cfg as never);
+  const pack = make((opts.viewSafe === true ? { ...cfg, custom: Object.fromEntries(Object.entries(cfg.custom ?? {}).map(([k, v]) => [k, SAFE.includes(k) ? { ...v, viewSafe: true } : v])) } : cfg) as never);
   // The game's own verb (a row of its table, not a pack verb): 9 gold if an even card lies in the open discard.
-  const VERBS = { ...pack.verbs, lucky: { fields: {}, run: (ctx: Ctx<G>, _st: PackStep, env: PackEnv | undefined) => void (cardsIn(ctx.s, 'discard:a').some((c) => c.endsWith('2')) && res(ctx, env?.seat ?? 'a', 9)), text: () => 'Lucky.' } } as unknown as VerbTable<G, PackStep, PackEnv>;
+  const VERBS = { ...pack.verbs, lucky: { fields: {}, run: (ctx: Ctx<G>, _st: PackStep, env: PackEnv | undefined) => void (cardsIn(ctx.s, 'discard:a').some((c) => c.endsWith('2')) && res(ctx, env?.seat ?? 'a', 9)), text: () => 'Lucky.', ...(opts.viewSafe === true ? { viewSafe: true } : {}) } } as unknown as VerbTable<G, PackStep, PackEnv>;
   const RULES: GameRules<G> = {
     handlers: {
       ...timingHandlers<G>({
@@ -234,7 +242,7 @@ const custom = (name: string): PackStep => ({ op: 'custom', name });
 // K583: the random effect generator of the check's tests (also K597's comparison). K597: `more` adds tests that read a card drawn or milled (the same sequence without it).
 export const gen = (seed: number, more = false) => {
   const { rnd, of } = rng(seed);
-  const reads = more ? ['drew2', 'evenUp'] : [];
+  const reads = more ? ['drew2', 'evenUp', 'gotD2', 'inD2', 'ownD2', 'hasD2', 'descD2'] : [];
   const leaf = (): PackStep => of<() => PackStep>([
     () => GAIN, () => NOTHING, () => NOTHING, () => DRAW, () => pay(1), () => pay(9), () => custom('nothing'), () => custom('lone'), () => custom('order'), () => custom('roll'),
     () => custom('win'), () => custom('boom'), () => custom('back'), () => custom('pairs'), () => custom('nest'), () => custom('attempt'), () => custom('spend'),

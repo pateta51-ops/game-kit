@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { applyAction, blocked, createGame, draftOf, enumerateAnswers, hashState, type Ctx } from '../engine-core/index.ts';
 import { cannotKnow, cardPack, inDryRun, type OfferPolicy, type PackEnv, type PackStep } from './pack.ts';
-import { DRAW, GAIN, gen, NOTHING, offerGame, pay, type Eff, type G, type S } from './offerGame.ts';
+import { DRAW, GAIN, gen, LUCKY, NOTHING, offerGame, pay, type Eff, type G, type S } from './offerGame.ts';
+import { askVerb } from './index.ts';
 import { pinned } from './k597.pin.ts';
 import { cardsIn } from '../card-zones/index.ts';
 
@@ -196,8 +197,12 @@ describe('card-language resolves (K597, K605): third look', () => {
   it('K597 a top-level payThen whose cost judged as a whole stops part paid: its effect part is cannotPay', () => {
     expect(resolves([{ op: 'payThen', cost: [pay(2), { op: 'custom', name: 'have' }], then: [DRAW] }], game({ cost: 'whole' }))).toEqual({ answer: 'part', skipped: [{ step: 0, reason: 'cannotPay' }] });
   });
-  it('K597 a step after the game ended is skipped with gameOver', () => {
-    expect(resolves([{ op: 'custom', name: 'win' }, GAIN])).toEqual({ answer: 'part', skipped: [{ step: 1, reason: 'gameOver' }] });
+  it('K597 fourth look: a step skipped because the game ended does not count against full; it keeps gameOver as its reason', () => {
+    const WIN: PackStep = { op: 'custom', name: 'win' };
+    expect(resolves([WIN])).toEqual({ answer: 'full', skipped: [] });
+    expect(resolves([WIN, GAIN])).toEqual({ answer: 'full', skipped: [{ step: 1, reason: 'gameOver' }] });
+    expect(resolves([GAIN, WIN, GAIN, { op: 'payThen', cost: [pay(1)], then: [DRAW] }])).toEqual({ answer: 'full', skipped: [{ step: 2, reason: 'gameOver' }, { step: 3, reason: 'gameOver' }] });
+    expect(resolves([RICH, WIN, GAIN])).toEqual({ answer: 'part', skipped: [{ step: 0, reason: 'condition' }, { step: 2, reason: 'gameOver' }] });
   });
   it('K605 judge why on a choice of options gives the reason of its options', () => {
     const g = game();
@@ -219,14 +224,59 @@ describe('card-language resolves (K597, K605): third look', () => {
     }
   });
   it('K597 the guarded view stops on a key or a log line holding the card, and on the card in env; length passes', () => {
-    type K = S & { got?: Record<string, number> };
-    const t = (f: (s: K) => boolean) => offerGame(cardPack<G>, { cfg: { tests: { f }, moved: (ctx: Ctx<G>, m: { card: string }) => void ((draftOf(ctx) as unknown as K).got = { [m.card]: 1 }) } });
+    const t = (f: (s: S) => boolean, deck?: readonly string[]) => offerGame(cardPack<G>, { marks: true, ...(deck ? { deck } : {}), cfg: { tests: { f } } });
     const IF: PackStep = { op: 'if', test: 'f', then: [GAIN] };
     expect(resolves([DRAW, IF], t((s) => s.zones['hand:a']?.cards.length === 3))).toEqual({ answer: 'full', skipped: [] });
-    expect(resolves([DRAW, IF], t((s) => s.got?.zz === undefined))).toEqual({ answer: 'full', skipped: [] });
+    expect(resolves([DRAW, IF], t((s) => s.res?.a?.gold === 3))).toEqual({ answer: 'full', skipped: [] });
     expect(resolves([DRAW, IF], t((s) => Object.keys(s.got ?? {}).length === 1))).toMatchObject({ answer: 'unknown', reason: 'hidden' });
     expect(resolves([DRAW, IF], offerGame(cardPack<G>, { cfg: { tests: { f: (s: S) => s.log.some((l) => l.type.includes('d2')) } } }))).toMatchObject({ answer: 'unknown', reason: 'hidden' });
     expect(resolves([{ op: 'lookAt', count: 1, then: [{ op: 'if', test: 'two', then: [GAIN] }] }])).toMatchObject({ answer: 'unknown', reason: 'hidden' });
+  });
+  it('K597 fourth look: a keyed read, an in check, an own-key check or a key listing of an object holding a card that came into view stops, whatever the deck order', () => {
+    const t = (f: (s: S) => boolean, deck: readonly string[]) => offerGame(cardPack<G>, { marks: true, deck, cfg: { tests: { f } } });
+    const IF: PackStep = { op: 'if', test: 'f', then: [GAIN] };
+    const reads: ((s: S) => boolean)[] = [
+      (s) => s.got?.d2 === 1, (s) => 'd2' in (s.got ?? {}), (s) => Object.prototype.hasOwnProperty.call(s.got ?? {}, 'd2'), (s) => Object.hasOwn(s.got ?? {}, 'd2'),
+      (s) => Object.getOwnPropertyDescriptor(s.got ?? {}, 'd2') !== undefined, (s) => Reflect.ownKeys(s.got ?? {}).length === 1, (s) => s.got?.zz === undefined, (s) => Reflect.has(s.got ?? {}, 'd1'),
+    ];
+    for (const [i, f] of reads.entries()) for (const d of DECKS) expect([i, resolves([DRAW, IF], t(f, d))]).toMatchObject([i, { answer: 'unknown', reason: 'hidden' }]);
+  });
+  it('K597 fourth look: a custom verb or game row flagged viewSafe runs after a card came into view, on the guarded view; unflagged keeps the hard stop', () => {
+    const custom = (viewSafe: boolean) => ({
+      nine: { run: (ctx: Ctx<G>) => void (draftOf(ctx).res = { ...ctx.s.res, a: { gold: 9 } }), text: () => 'Nine.', viewSafe },
+      drewTwo: { run: (ctx: Ctx<G>) => void (cardsIn(ctx.s, 'hand:a').includes('d2') && (draftOf(ctx).res = { a: { gold: 9 } })), text: () => 'Drew two.', viewSafe },
+      ask: {
+        run: (ctx: Ctx<G>, st: PackStep, env: PackEnv) => askVerb(ctx, { kind: 'ask', seat: env.seat, min: 1, max: 1, options: [{ id: 'x', enabled: true }, { id: 'y', enabled: true }] }, st, env),
+        resume: (ctx: Ctx<G>, _st: PackStep, _e: PackEnv, a: readonly string[]) => void (a[0] === 'y' && (draftOf(ctx).res = { ...ctx.s.res, a: { gold: 7 } })),
+        text: () => 'Ask.', viewSafe,
+      },
+    });
+    const c = (name: string): PackStep => ({ op: 'custom', name });
+    for (const d of DECKS) {
+      const on = offerGame(cardPack<G>, { deck: d, cfg: { custom: custom(true) } });
+      const off = offerGame(cardPack<G>, { deck: d, cfg: { custom: custom(false) } });
+      expect(resolves([DRAW, c('nine')], on)).toEqual({ answer: 'full', skipped: [] });
+      expect(resolves([DRAW, c('nine')], off)).toEqual({ answer: 'unknown', reason: 'hidden', skipped: [{ step: 1, reason: 'hidden' }] });
+      expect(resolves([DRAW, c('ask')], on)).toEqual({ answer: 'full', skipped: [] });
+      expect(resolves([DRAW, c('ask'), { op: 'if', test: 'rich', then: [GAIN] }], on)).toEqual({ answer: 'part', skipped: [{ step: 2, reason: 'condition' }] });
+      expect(resolves([DRAW, c('ask')], off)).toMatchObject({ answer: 'unknown', reason: 'hidden' });
+      // The guard still holds: a flagged verb that reads the drawn card stops.
+      expect(resolves([DRAW, c('drewTwo')], on)).toMatchObject({ answer: 'unknown', reason: 'hidden' });
+      // A game row: lucky reads the open discard; after a draw it holds no new card and runs, after a mill it does and stops.
+      const row = offerGame(cardPack<G>, { deck: d, viewSafe: true });
+      expect(resolves([DRAW, LUCKY], row)).toEqual({ answer: 'part', skipped: [{ step: 1, reason: 'noChange' }] });
+      expect(resolves([DRAW, LUCKY], offerGame(cardPack<G>, { deck: d }))).toMatchObject({ answer: 'unknown', reason: 'hidden' });
+      expect(resolves([{ op: 'mill', count: 1 }, LUCKY], row)).toMatchObject({ answer: 'unknown', reason: 'hidden' });
+      // Outside resolves the flag changes nothing: wouldChange and judge keep the hard stop.
+      for (const v of [true, false]) {
+        const g = offerGame(cardPack<G>, { deck: d, offer: { paid: 'effect' }, cfg: { custom: custom(v) } });
+        const { s, content } = g.at();
+        expect(g.pack.judge(s, content, [{ op: 'payThen', cost: [{ op: 'mill', count: 1 }], then: [c('nine')] }], A)).toMatchObject({ answer: 'unknown', reason: 'hidden' });
+      }
+      const w = game({ paid: 'effect' }, d);
+      const { s, content } = w.at();
+      expect(w.pack.judge(s, content, [{ op: 'payThen', cost: [{ op: 'mill', count: 1 }], then: [LUCKY] }], A)).toEqual(offerGame(cardPack<G>, { deck: d, viewSafe: true, offer: { paid: 'effect' } }).pack.judge(s, content, [{ op: 'payThen', cost: [{ op: 'mill', count: 1 }], then: [LUCKY] }], A));
+    }
   });
   it('K597 a filter is not run on a card that came into view; a custom verb after it keeps the hard stop', () => {
     const custom = { drewTwo: { run: (ctx: Ctx<G>) => void (cardsIn(ctx.s, 'hand:a').includes('d2') && (draftOf(ctx).res = { a: { gold: 9 } })), text: () => 'Drew two.' } };
@@ -299,7 +349,8 @@ describe('card-language resolves (K597): agrees with playing every answer', () =
   const secret = (e: Eff): boolean => has(e, (st) => (st.op === 'custom' && ['roll', 'boom', 'back', 'pairs', 'nest'].includes(st.name)) || ['shuffle', 'search', 'mill', 'choosePlayer', 'eachPlayer'].includes(st.op) || (st.op === 'chooseCards' && HIDDEN.includes(st.zone)) || (st.op === 'lookAt' && st.cards !== 'all')) || showsAfterACost(e);
   // Declared (K583): game code that reads a card the seat cannot see is unknown whatever the card is, so worlds may agree.
   const readsUnseen = (e: Eff): boolean => showsAfterACost(e) || has(e, (st) => (st.op === 'chooseCards' && HIDDEN.includes(st.zone) && has(st.then as Eff, (x) => CODE.includes(x.op))) || (st.op === 'search' && st.filter !== undefined));
-  const WORLDS = [['d1', 'd2'], ['d2', 'd1'], ['d3', 'd4']].flatMap((deck) => [['b1', 'b2', 'b3'], ['b4', 'b5', 'b6']].map((b) => ({ deck, b, g: offerGame(cardPack<G>, { offer: { branches: 100000 }, deck, b }) })));
+  const WORLDS = [['d1', 'd2'], ['d2', 'd1'], ['d3', 'd4']].flatMap((deck) => [['b1', 'b2', 'b3'], ['b4', 'b5', 'b6']].map((b) => ({ deck, b, g: offerGame(cardPack<G>, { offer: { branches: 100000 }, deck, b, marks: true }), safe: offerGame(cardPack<G>, { offer: { branches: 100000 }, deck, b, marks: true, viewSafe: true }) })));
+  const whole = (x: { answer: string; reason?: string; skipped: readonly { step: number; reason: string }[] }): string => JSON.stringify([x.answer, x.reason, x.skipped.map((k) => [k.step, k.reason])]);
   const [base] = WORLDS;
   // Brute force does not see a step that did some but less than its number (K597 `short`; in these effects only a choice of at least 2 cards can): part where it says full.
   const shortOf = (e: Eff, r: { answer: string }, t: string | undefined): boolean => r.answer === 'part' && t === 'full' && has(e, (st) => st.op === 'chooseCards' && (st.min ?? 0) >= 2);
@@ -322,10 +373,10 @@ describe('card-language resolves (K597): agrees with playing every answer', () =
       if ((left -= 1) < 0) return false;
       const t = s.steps;
       if (s.result !== null) {
+        // K597 fourth look: the step that ended the game resolves, and the steps after it do not count against full.
         const i = t?.next ?? 0;
-        const us = effect[i]?.op === 'payThen' ? [i, i + 0.5] : [i];
-        const now = us.filter((u) => !(t?.done ?? []).includes(u));
-        best = Math.max(best, grade((t?.done.length ?? 0) + now.length, (t?.half ?? []).filter((u) => !us.includes(u)).length));
+        const now = effect.flatMap((st, j) => (j < i ? [] : st.op === 'payThen' ? [j, j + 0.5] : [j])).filter((u) => !(t?.done ?? []).includes(u));
+        best = Math.max(best, grade((t?.done.length ?? 0) + now.length, (t?.half ?? []).filter((u) => u < i).length));
         return true;
       }
       const p = s.prompt;
@@ -358,9 +409,8 @@ describe('card-language resolves (K597): agrees with playing every answer', () =
         add(r.answer);
         // The answer is the seat's own: the same in every hidden world.
         // K597 third look: the whole answer, its skipped steps and reasons included.
-        const whole = (x: typeof r): string => JSON.stringify([x.answer, x.reason, x.skipped.map((k) => [k.step, k.reason])]);
         if (rs.some((x) => whole(x) !== whole(r))) throw new Error(`answers differ between hidden worlds: ${rs.map(whole).join()}: ${JSON.stringify(e)}`);
-        if (r.answer === 'full' ? r.skipped.length !== 0 : r.skipped.length === 0) throw new Error(`skipped ${JSON.stringify(r.skipped)} with ${r.answer}`);
+        if (r.answer === 'full' ? r.skipped.some((k) => k.reason !== 'gameOver') : r.skipped.length === 0) throw new Error(`skipped ${JSON.stringify(r.skipped)} with ${r.answer}`);
         if (!secret(e)) {
           if (r.answer === 'unknown') throw new Error(`unknown (${String(r.reason)}) with nothing hidden: ${JSON.stringify(e)}`);
           const t = truth(base.g, e, 's');
@@ -385,5 +435,38 @@ describe('card-language resolves (K597): agrees with playing every answer', () =
     expect(seen.part).toBeGreaterThan(100);
     expect(seen.none).toBeGreaterThan(150);
     expect(inDryRun()).toBe(false);
+  }, 240000);
+  it('K597 fourth look: with the custom verbs and the row that read no card flagged viewSafe, fewer answers are unknown; every answer is still the same in every hidden world and agrees with brute force', () => {
+    const n = { effects: 0, unknownOff: 0, unknownOn: 0, lostOff: 0, lostOn: 0, hiddenOff: 0, hiddenOn: 0 };
+    const eff = gen(5973, true);
+    for (let i = 0; i < 400; i += 1) {
+      const e = eff(2);
+      if (looksAtASeenCard(e)) continue;
+      const at = (g: typeof base.g) => {
+        const { s, content } = g.at();
+        return g.pack.resolves(s, content, e, A);
+      };
+      const on = WORLDS.map((w) => at(w.safe));
+      const r = on[0];
+      const off = at(base.g);
+      if (r === undefined) throw new Error('no answer');
+      if (on.some((x) => whole(x) !== whole(r))) throw new Error(`answers differ between hidden worlds: ${on.map(whole).join()}: ${JSON.stringify(e)}`);
+      const ts = WORLDS.flatMap((w) => ['s', 't'].map((sd) => truth(w.g, e, sd)));
+      if (ts.some((t) => t === undefined)) continue;
+      n.effects += 1;
+      if (r.answer !== 'unknown' && ts.some((t) => t !== r.answer && !shortOf(e, r, t))) throw new Error(`resolves ${r.answer}, worlds ${ts.join()}: ${JSON.stringify(e)}`);
+      const agree = new Set(ts).size === 1;
+      const k = (x: typeof r): number => (x.answer === 'unknown' ? 1 : 0);
+      n.unknownOff += k(off);
+      n.unknownOn += k(r);
+      n.lostOff += agree ? k(off) : 0;
+      n.lostOn += agree ? k(r) : 0;
+      n.hiddenOff += agree && off.reason === 'hidden' ? 1 : 0;
+      n.hiddenOn += agree && r.reason === 'hidden' ? 1 : 0;
+    }
+    console.log(`K597 viewSafe share: ${JSON.stringify(n)}`);
+    expect(n.effects).toBeGreaterThan(200);
+    expect(n.hiddenOn).toBeLessThan(n.hiddenOff);
+    expect(n.lostOn).toBeLessThan(n.lostOff);
   }, 240000);
 });
