@@ -69,6 +69,19 @@ describe('card-language prefer full (K598): prior-art cases restated on the made
   it('K598 an option that wins the game counts as full and bars a part one', () => {
     expect(barred(ask(FULL, choice(PART, WIN)))).toEqual([['0', 'partial', undefined]]);
   });
+  it('K598 a win inside a nested step forgives only what the end cut off: [seq [if rich: gain, win]] grades part as [if rich: gain, win] does; [seq [win, gain]] is full', () => {
+    const g = game(FULL);
+    const { s, content } = g.at();
+    const env = { seat: 'a', source: 'p1' };
+    const gr = (o: Eff) => g.pack.grade(s, content, o, env).answer;
+    expect([gr([{ op: 'seq', steps: [RICH, ...WIN] }]), gr([RICH, ...WIN]), gr([{ op: 'seq', steps: [...WIN, GAIN] }]), gr([{ op: 'seq', steps: [GAIN, { op: 'seq', steps: [...WIN, RICH] }] }])]).toEqual(['part', 'part', 'full', 'full']);
+    expect(barred(ask(FULL, choice([{ op: 'seq', steps: [RICH, ...WIN] }], [GAIN])))).toEqual([['0', 'partial', undefined]]);
+  });
+  it('K598 deadChoice bar comes first: a lone false if is barred noChange before fullIgnores could grade it full (pinned)', () => {
+    const p = ask({ prefer: 'full', deadChoice: 'bar', fullIgnores: ['condition'] }, choice(NONE, PART));
+    expect(barred(p)).toEqual([['0', 'noChange', undefined]]);
+    expect(barred(ask({ prefer: 'full', fullIgnores: ['condition'] }, choice(NONE, [{ op: 'draw', count: 3 }])))).toEqual([['1', 'partial', undefined]]);
+  });
   it('K598 beside a full option only full ones stay enabled: a none option is barred too (none); under deadChoice bar it keeps noChange', () => {
     expect(barred(ask(FULL, choice(NONE, PART, [DRAW])))).toEqual([['0', 'none', undefined], ['1', 'partial', undefined]]);
     expect(barred(ask({ prefer: 'full', deadChoice: 'bar' }, choice(NONE, PART, [DRAW])))).toEqual([['0', 'noChange', undefined], ['1', 'partial', undefined]]);

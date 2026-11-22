@@ -675,9 +675,10 @@ export function cardPack<G extends GameTypes, E extends PackEnv = PackEnv>(cfg: 
       }
       if (F) {
         if (s.result !== null && J.next < steps.length) {
-          const us = unitsOf(steps, J.next);
+          // K598, deep: a skip noted inside the step before the game ended still counts (only what the end cut off is forgiven).
+          const us = unitsOf(steps, J.next).filter((u) => !(F.deep && u in J.part));
           J.done = [...J.done, ...us.filter((u) => !J.done.includes(u))];
-          J.half = J.half.filter((u) => !us.includes(u));
+          J.half = [...J.half.filter((u) => !us.includes(u)), ...unitsOf(steps, J.next).filter((u) => !us.includes(u) && !J.half.includes(u))];
           const later = steps.flatMap((_, i) => (i > J.next ? unitsOf(steps, i) : []));
           J.whys = { ...J.whys, ...Object.fromEntries(later.map((u) => [u, 'gameOver'])) };
           J.over = later;
