@@ -467,5 +467,8 @@
   { "q": "static ability changes cost", "first": "engine-core/layers" },
   { "q": "scenario objective progress", "first": "engine-core" },
   { "q": "mission goal done or failed", "first": "engine-core" },
-  { "q": "objective with steps", "first": "engine-core" }
+  { "q": "objective with steps", "first": "engine-core" },
+  { "q": "trigger order matters in batch", "first": "engine-core" },
+  { "q": "replacement depends on card data", "first": "engine-core" },
+  { "q": "simultaneous triggers choose order only when it matters", "first": "engine-core" }
 ]

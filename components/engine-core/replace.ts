@@ -45,7 +45,7 @@ function apply<G extends GameTypes>(ctx: Ctx<G>, cfg: TimingConfig<G>, task: Tim
 }
 
 export function replaceHandlers<G extends GameTypes>(cfg: TimingConfig<G>): HandlerTable<G> {
-  const cands = (ctx: Ctx<G>, o: Occurrence) => replacementCandidates(cfg.replacementsFor?.(ctx.s, o) ?? [], o);
+  const cands = (ctx: Ctx<G>, o: Occurrence) => replacementCandidates(cfg.replacementsFor?.(ctx.s, o, ctx.content) ?? [], o);
   return {
     'timing.instead': (ctx, t) => {
       const task = t as TimingTask;
