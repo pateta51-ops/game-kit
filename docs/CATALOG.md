@@ -469,12 +469,12 @@ A small card query language (K107): lexer, parser, evaluator. The game supplies 
 Card zones as data on engine-core state (K223): decks, hands, discards and play areas, per seat or shared, each an ordered list of card ids (index 0 is the top) with who sees it, and `viewOf(state, seat)` that hides what a seat may not see. Needs `engine-core`.
 
 - **Also called:** Decks, hands and discards as lists
-- **Words:** deck, hand, discard, zones, lists, visibility, play, area
+- **Words:** deck, hand, discard, zones, lists, visibility, play, area, hand limit, zone capacity, discard choice, over the limit, choose what to drop
 - **Release:** 1.0; not seen
 - **The game supplies:** The zones, their owners and who sees what.
-- **Use it when:** Decks, hands, discards and play areas as ordered id lists in engine state, with who sees what and a per-seat view for opponents and the UI. Hand, pile and drag UI parts are planned (K218-K220), not built: ask for them, do not build them in the game. Recipe: docs/recipes/card-table.md.
+- **Use it when:** Decks, hands, discards and play areas as ordered id lists in engine state, with who sees what and a per-seat view for opponents and the UI. A zone can have a capacity (hand limit, slot limit) that rules raise and give up, with a state check that asks the owner which cards over the limit go to the discard. Hand, pile and drag UI parts are planned (K218-K220), not built: ask for them, do not build them in the game. Recipe: docs/recipes/card-table.md.
 - **Not for:** Boards and spaces (board-model), card faces, or rules about running out.
-- **Key exports:** `newZones`, `seatZone`, `cardsIn`, `locate`, `place`, `moveCard`, `draw`, `shuffleZone`, `reveal`, `canSee`, `viewOf`, `hiddenFrom`, `zoneProblems`, `Seen`, and 5 more
+- **Key exports:** `newZones`, `seatZone`, `cardsIn`, `locate`, `place`, `moveCard`, `draw`, `shuffleZone`, `reveal`, `canSee`, `viewOf`, `hiddenFrom`, `zoneProblems`, `limitOf`, and 14 more
 - **Needs:** [`engine-core`](#engine-core)
 - **Came from:** imperium
 - **Docs:** [README](../components/card-zones/README.md) ([rules for agents](../components/card-zones/README.md#rules-for-agents))
