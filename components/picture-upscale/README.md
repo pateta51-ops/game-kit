@@ -11,8 +11,7 @@ Enlarges a picture 2-4x offline with a super-resolution model (any spandrel mode
 2. GPU only: no CUDA means exit 3 and no output. Never add a CPU fallback or offload.
 3. Run GPU work through the heavy queue: `heavy run --label "picture-upscale <name>" -- ~/picture-upscale/venv/bin/python -I upscale.py run ...`.
 4. Never commit model weights, source pictures or upscaled output (game art; this repository is public).
-5. Every model in `models.json` has a name, URL, sha256 and licence; a model with no licence line is refused (exit 2). The licence goes into `manifest.json` for each picture: keep that file with the output. A model marked `optIn` (non-commercial licences) runs only with `--allow-noncommercial`.
-6. Give `--scale 2..4` or `--width <px>`, not both (default scale 4). The model's own scale is applied first, then a Lanczos resize to the asked size. Tiles default to 512 with 32 overlap (fits 16 GB; peak is about 4 GB); lower `--tile` on out-of-memory.
+5. Every model in `models.json` has a name, URL, sha256 and licence; a model with no licence line is refused (exit 2). The licence goes into `manifest.json` for each picture: keep that file with the output.6. Give `--scale 2..4` or `--width <px>`, not both (default scale 4). The model's own scale is applied first, then a Lanczos resize to the asked size. Tiles default to 512 with 32 overlap (fits 16 GB; peak is about 4 GB); lower `--tile` on out-of-memory.
 
 **Common mistakes:**
 - Expecting a CPU run when CUDA is missing: it exits 3.

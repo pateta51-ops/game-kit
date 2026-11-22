@@ -131,12 +131,33 @@ class Cli(unittest.TestCase):
         self.assertEqual(cli("check", "--in", a, "--tile", "128", "--overlap", "64")[0], 2)
         self.assertEqual(cli("check", "--in", str(self.p / "missing.png"))[0], 2)
 
-    def test_optin_model_needs_the_flag(self):
-        a = str(self.p / "a.png")
-        r = self.reg(licence="CC-BY-NC-SA-4.0", optIn=True)
-        code, _, err = cli("check", "--in", a, "--registry", r)
-        self.assertEqual(code, 2)
-        self.assertIn("--allow-noncommercial", err)
+    def run_with_torch(self, torch):
+        import types
+        out = self.p / "out"
+        old = sys.modules.get("torch", "unset")
+        sys.modules["torch"] = torch
+        try:
+            code, _, err = cli("run", "--in", str(self.p / "a.png"), "--out", str(out), "--scale", "2")
+        finally:
+            if old == "unset":
+                del sys.modules["torch"]
+            else:
+                sys.modules["torch"] = old
+        self.assertFalse(out.exists())
+        return code, err
+
+    def test_no_torch_exits_3(self):
+        code, err = self.run_with_torch(None)
+        self.assertEqual(code, 3)
+        self.assertIn("torch is not installed", err)
+
+    def test_torch_without_cuda_exits_3(self):
+        import types
+        t = types.ModuleType("torch")
+        t.cuda = types.SimpleNamespace(is_available=lambda: False)
+        code, err = self.run_with_torch(t)
+        self.assertEqual(code, 3)
+        self.assertIn("CUDA is not available", err)
 
 
 class Registry(unittest.TestCase):

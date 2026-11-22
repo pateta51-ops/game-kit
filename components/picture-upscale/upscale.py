@@ -15,7 +15,6 @@ import os
 import sys
 import time
 import urllib.request
-import zipfile
 from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
@@ -32,15 +31,13 @@ def load_registry(path: str | None) -> dict:
     return json.loads(Path(path or HERE / "models.json").read_text(encoding="utf-8"))
 
 
-def model_entry(reg: dict, name: str | None, allow_nc: bool) -> tuple[str, dict]:
+def model_entry(reg: dict, name: str | None) -> tuple[str, dict]:
     name = name or reg["default"]
     e = reg["models"].get(name)
     if e is None:
         die(f"unknown model '{name}'; known: {', '.join(reg['models'])}")
     if not str(e.get("licence", "")).strip():
         die(f"model '{name}' has no licence line in models.json: refused")
-    if e.get("optIn") and not allow_nc:
-        die(f"model '{name}' is {e['licence']} (opt-in): add --allow-noncommercial to use it")
     return name, e
 
 
@@ -134,7 +131,7 @@ def common(a, need_out: bool):
     if a.tile < 64 or a.overlap < 0 or a.overlap * 2 >= a.tile:
         die("--tile must be 64 or more and --overlap under half of it")
     reg = load_registry(a.registry)
-    name, e = model_entry(reg, a.model, a.allow_noncommercial)
+    name, e = model_entry(reg, a.model)
     files = gather(a.inp)
     if not files:
         die(f"no pictures in {a.inp}")
@@ -222,7 +219,7 @@ def cmd_status(a) -> int:
     reg = load_registry(a.registry)
     for n, e in reg["models"].items():
         p = weights_path(e, a.models_dir)
-        print(f"  {n}: {'fetched' if p.is_file() else 'missing'}  {e.get('licence') or 'NO LICENCE'}{'  (opt-in)' if e.get('optIn') else ''}")
+        print(f"  {n}: {'fetched' if p.is_file() else 'missing'}  {e.get('licence') or 'NO LICENCE'}")
     return 0
 
 
@@ -236,9 +233,9 @@ def download(url: str, dest: Path):
 
 def cmd_fetch(a) -> int:
     reg = load_registry(a.registry)
-    names = a.names or [n for n, e in reg["models"].items() if not e.get("optIn")]
+    names = a.names or list(reg["models"])
     for n in names:
-        _, e = model_entry(reg, n, True)
+        _, e = model_entry(reg, n)
         p = weights_path(e, a.models_dir)
         p.parent.mkdir(parents=True, exist_ok=True)
         if p.is_file() and sha256(p) == e["sha256"]:
@@ -246,14 +243,7 @@ def cmd_fetch(a) -> int:
             continue
         print(f"{n}: downloading ({e['licence']})")
         tmp = download(e["url"], p)
-        if e.get("member"):
-            if sha256(tmp) != e["zipSha256"]:
-                die(f"{n}: downloaded zip fails its sha256")
-            with zipfile.ZipFile(tmp) as z, open(p, "wb") as out:
-                out.write(z.read(e["member"]))
-            tmp.unlink()
-        else:
-            tmp.replace(p)
+        tmp.replace(p)
         if sha256(p) != e["sha256"]:
             p.unlink()
             die(f"{n}: downloaded file fails its sha256 and was removed")
@@ -275,7 +265,6 @@ def parser() -> argparse.ArgumentParser:
             sp.add_argument("--width", type=int)
             sp.add_argument("--tile", type=int, default=512)
             sp.add_argument("--overlap", type=int, default=32)
-            sp.add_argument("--allow-noncommercial", action="store_true")
 
     r = sub.add_parser("run")
     base(r, True)
