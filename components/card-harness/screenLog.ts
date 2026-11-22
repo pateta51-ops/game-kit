@@ -2,7 +2,7 @@
 import { appendFileSync, mkdirSync, readFileSync } from 'node:fs';
 import { dirname } from 'node:path';
 
-interface LoggedPrompt { clause: string; shown: string; screenOptions?: readonly string[]; engineOptions?: readonly unknown[] }
+interface LoggedPrompt { clause: string; shown: string; screenOptions?: readonly string[]; engineOptions?: readonly unknown[]; step?: number }
 export type ScreenLogEntry = ({ t: 'prompt' } & LoggedPrompt) | { t: 'opened'; clause: string };
 
 const add = (file: string, e: ScreenLogEntry): void => { mkdirSync(dirname(file), { recursive: true }); appendFileSync(file, `${JSON.stringify(e)}\n`); };
