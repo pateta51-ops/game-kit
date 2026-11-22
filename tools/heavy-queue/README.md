@@ -15,13 +15,12 @@ One machine-wide queue for heavy runs (`kit.mjs finish`, e2e suites, full gates,
 6. Read `heavy status` or the status page (port `tools.heavy-queue` in `ports.json`) to see what is running or waiting; `heavy load` prints one line.
 7. Take `HEAVY_WORKERS` for test worker counts (vitest `maxWorkers`, Playwright `workers`); never hard-code them.
 8. The server gives WSL's file cache back (K495): after a job ends, at most every `HEAVY_DROP_EVERY_MS` (default 600000), when `Cached` exceeds `HEAVY_DROP_CACHE_GB` (default 6, 0 = off) it runs `sudo -n sh -c 'sync; echo 1 > /proc/sys/vm/drop_caches'` and logs the GB before and after. It needs passwordless sudo; if that fails it warns once and never retries (restart the service to try again). `/status`, `heavy load` and the page show the cache size, the page the last drop. Never run the real drop in a test: inject `readCache` and `runDrop`.
+9. Use `heavy cancel` (K571) only on your own stuck or duplicate job (a job you started, or a second copy of the same run); never end another session's running job unless you were told to. A waiting job may be dropped the same way.
 
 **Common mistakes:**
 - A `heavy run` inside a job that already holds a slot runs at once (`HEAVY_HELD=1`): not a second queue.
 - No server answering: it falls back to a `flock` lock, or runs at once with a warning; heavy runs may then collide.
 - Killing the job by hand and expecting the slot to stay: a lease is freed when its `heavy` process dies.
-
-9. Use `heavy cancel` (K571) only on your own stuck or duplicate job (a job you started, or a second copy of the same run); never end another session's running job unless you were told to. A waiting job may be dropped the same way.
 
 ## Install (WSL)
 `bash tools/heavy-queue/install-wsl.sh` (from a WSL path of a game-kit checkout; `HEAVY_SLOTS=2 bash ...` for two slots). A normal run that has waited `HEAVY_AGE_MS` (default 10 min) ranks with high ones, so a stream of CI jobs cannot starve `finish` runs. It copies the tool to `~/.local/share/heavy-queue` (`HEAVY_HOME`), writes the always-on systemd unit `heavy-queue.service` (runs that copy as you, restarts on failure) and links `heavy` into `~/.local/bin`; nothing points at a checkout. Run it again to update the copy or change the slots; it is idempotent. A restarted queue forgets its leases: running clients and runner watchers take theirs again at their next heartbeat, waiting ones queue again.

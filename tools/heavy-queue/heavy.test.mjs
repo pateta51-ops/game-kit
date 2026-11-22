@@ -526,7 +526,7 @@ describe('heavy cancel (K571)', () => {
     const c = await HC(q, ['cancel', id]);
     expect(c.code).toBe(0);
     const ra = await a;
-    expect(ra.code).not.toBe(0);
+    expect(ra.code).toBe(143);
     expect(ra.err).toContain('cancelled: a');
     await q.post('/release', { id: hold.id });
     expect((await b).code).toBe(7);
@@ -544,12 +544,25 @@ describe('heavy cancel (K571)', () => {
     const c = await HC(q, ['cancel', id]);
     expect(c.code).toBe(0);
     const r = await run;
-    expect(r.code).not.toBe(0);
+    expect(r.code).toBe(143);
     expect(r.err).toContain('cancelled: long');
     await until(() => gone(p) && gone(g));
     const s = await q.status();
     expect(s.running).toEqual([]);
     expect(s.history[0]).toMatchObject({ label: 'long', reason: 'cancelled' });
+  });
+  it('a grandchild that ignores TERM is killed after the grace, and the slots are freed only then', async () => {
+    const q = await serve({});
+    const f = join(mkdtempSync(join(tmpdir(), 'hc-')), 'pids');
+    const code = `const {spawn}=require('child_process');const g=spawn(process.execPath,['-e','process.on("SIGTERM",()=>{});setInterval(()=>{},1000)']);require('fs').writeFileSync(${JSON.stringify(f)},g.pid+'');setInterval(()=>{},1000)`;
+    const run = heavy(['run', '--label', 'stubborn', '--', process.execPath, '-e', code], { HEAVY_URL: q.url, HEAVY_GRACE: '600' });
+    await until(async () => existsSync(f) && readFileSync(f, 'utf8').length > 0);
+    await sleep(200);
+    const g = Number(readFileSync(f, 'utf8'));
+    expect((await HC(q, ['cancel', (await q.status()).running[0].id])).code).toBe(0);
+    await until(async () => (await q.status()).running.length === 0);
+    expect(gone(g)).toBe(true);
+    expect((await run).code).toBe(143);
   });
   it('--label cancels every match (equal, or followed by a space) and prints each; no match exits 1', async () => {
     const q = await serve({});
@@ -560,8 +573,8 @@ describe('heavy cancel (K571)', () => {
     const cr = await c;
     expect(cr.code).toBe(0);
     expect(c.out().split('\n').filter(Boolean)).toHaveLength(2);
-    expect((await runs[0]).code).not.toBe(0);
-    expect((await runs[1]).code).not.toBe(0);
+    expect((await runs[0]).code).toBe(143);
+    expect((await runs[1]).code).toBe(143);
     expect((await q.status()).waiting.map((l) => l.label)).toEqual(['jobless']);
     const none = await HC(q, ['cancel', '--label', 'nothing']);
     expect(none.code).toBe(1);

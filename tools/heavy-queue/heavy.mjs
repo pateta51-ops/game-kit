@@ -37,7 +37,10 @@ function exec(cmd, extra = {}, lease = {}) {
     const off = listen(Object.fromEntries(SIGS.map((s) => [s, () => kill(s)])));
     if (group && c.pid) spawn(process.execPath, [process.argv[1], '_guard', String(process.pid), String(c.pid)], { detached: true, stdio: 'ignore' }).unref();
     c.on('error', (e) => { off(); say(`could not start ${cmd[0]}: ${e.message}`); resolve(127); });
-    c.on('exit', (code, sig) => { off(); resolve(sigCode(code, sig)); });
+    c.on('exit', async (code, sig) => {
+      if (lease.cancelled && group) { const t0 = Date.now(); let k = false; while (Date.now() - t0 < GRACE * 3) { try { process.kill(-c.pid, 0); } catch { break; } if (!k && Date.now() - t0 > GRACE) { kill('SIGKILL'); k = true; } await sleep(50); } }
+      off(); resolve(sigCode(code, sig));
+    });
   });
 }
 
