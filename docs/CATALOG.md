@@ -1578,12 +1578,12 @@ A bag of tokens with its count; the draw shown as a 2D flight from the bag or a 
 
 - **Also called:** Bag of tokens with a draw
 - **Looks like:** A bag with a count; a token flies out or the bag shakes in 3D.
-- **Words:** bag, draw, tokens, pull, shake, random, cubes
+- **Words:** bag, draw, tokens, pull, shake, random, cubes, finite, token, supply, stock, runs out, short bag, draw from a bag, pieces run out
 - **Release:** 1.0; seen on screen
 - **The game supplies:** The tokens, their count and the draw result.
-- **Use it when:** A bag of tokens with its count; the engine's draw shown as a 2D flight from the bag or a 3D shake-and-draw (three.js by dynamic import) that never decides the draw and falls back to 2D; a finite supply of pieces counted from the engine's integers (supply.ts).
+- **Use it when:** A bag of tokens with its count; the engine's draw shown as a 2D flight from the bag or a 3D shake-and-draw (three.js by dynamic import) that never decides the draw and falls back to 2D; a finite supply of pieces counted from the engine's integers (supply.ts); finite stocks and a bag for the engine (stock.ts, pure): each piece in one named place, a gain from a stock that runs out says so, a seeded draw of N with the game's short-bag rule per kind of draw (draw what is left, refill when the bag runs out, or fail).
 - **Not for:** Which tokens are drawn (the engine), the token faces and the bag print (the game), a game's token tables.
-- **Key exports:** `EXTERIOR_ACROSS`, `EXTERIOR_UP`, `CLOTH`, `COIN_RADIUS`, `COIN_HEIGHT`, `SHAKE_START`, `SHAKE_END`, `DRAW_START`, `STAGGER`, `DRAW_DURATION`, `pileLayout`, `shakeAmount`, `bagPose`, `slotPose`, and 43 more
+- **Key exports:** `EXTERIOR_ACROSS`, `EXTERIOR_UP`, `CLOTH`, `COIN_RADIUS`, `COIN_HEIGHT`, `SHAKE_START`, `SHAKE_END`, `DRAW_START`, `STAGGER`, `DRAW_DURATION`, `pileLayout`, `shakeAmount`, `bagPose`, `slotPose`, and 57 more
 - **Needs:** nothing
 - **Came from:** warps-edge-fan-prototype
 - **Docs:** [README](../components/token-bag/README.md) ([rules for agents](../components/token-bag/README.md#rules-for-agents))
