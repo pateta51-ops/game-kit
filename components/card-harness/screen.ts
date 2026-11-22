@@ -9,9 +9,9 @@ export interface ScreenInput {
   /** Icon code to its label (blank or missing = no label). */
   icons: Readonly<Record<string, string | undefined>>;
   /** Printed text per clause id. */
-  clauses: readonly { id: string; text: string; /** Which numbers of the text are amounts (K532): a list (empty = none), or 'counted' = worked out at run time (the prompt must show some number). Unset: every number counts. */ amounts?: readonly string[] | 'counted' }[];
+  clauses: readonly { id: string; text: string; /** Which numbers of the text are amounts (K532): a list (empty = none), or 'counted' = worked out at run time (the prompt must show some number). Unset: every number counts. */ amounts?: readonly string[] | 'counted'; /** Amounts per prompt the clause opens (K587), by its order within the clause (`step`): entry k checks the k-th prompt, each as `amounts`. Replaces `amounts` for this clause. */ promptAmounts?: readonly (readonly string[] | 'counted')[] }[];
   /** Prompts a card test scanned: their clause and the words shown (`Delivery.screens`). */
-  prompts: readonly { clause: string; shown: string; /** Option labels on screen (optional, K496). */ screenOptions?: readonly string[]; /** The engine prompt's options (optional, K496); compared with `screenOptions` one for one. */ engineOptions?: readonly unknown[] }[];
+  prompts: readonly { clause: string; shown: string; /** Option labels on screen (optional, K496). */ screenOptions?: readonly string[]; /** The engine prompt's options (optional, K496); compared with `screenOptions` one for one. */ engineOptions?: readonly unknown[]; /** 0-based order of this prompt within its clause's resolution (K587; `Delivery.screens` sets it from the second prompt on). Unset: 0, the first. */ step?: number }[];
   /** Turns an engine option into its label; default `String`. */
   label?: (engineOption: unknown) => string;
   /** Clauses whose resolution opened a prompt in a card test (`Delivery.opened`). */
@@ -41,13 +41,23 @@ export function screenProblems(i: ScreenInput): string[] {
   const text = new Map(i.clauses.map((x) => [x.id, x.text]));
   const am = new Map(i.clauses.map((x) => [x.id, x.amounts]));
   for (const x of i.clauses) if (x.amounts && x.amounts !== 'counted') for (const a of x.amounts) if (!numbers(x.text).includes(a)) out.push(`${x.id}: amount ${a} is not in its text`);
+  const per = new Map(i.clauses.filter((x) => x.promptAmounts).map((x) => [x.id, x.promptAmounts!]));
+  for (const x of i.clauses) {
+    if (x.promptAmounts && x.amounts) out.push(`${x.id}: amounts and promptAmounts both set`);
+    for (const [k, e] of (x.promptAmounts ?? []).entries()) if (e !== 'counted') for (const a of e) if (!numbers(x.text).includes(a)) out.push(`${x.id}: prompt ${String(k + 1)} amount ${a} is not in its text`);
+  }
+  const steps = new Map<string, Set<number>>();
   for (const p of i.prompts) {
-    const a = am.get(p.clause);
+    const k = p.step ?? 0;
+    const e = per.get(p.clause);
+    if (e) { (steps.get(p.clause) ?? steps.set(p.clause, new Set()).get(p.clause)!).add(k); if (k >= e.length) { out.push(`prompt for ${p.clause}: prompt ${String(k + 1)} has no promptAmounts entry`); continue; } }
+    const a = e ? e[k] : am.get(p.clause);
     const got = new Set(numbers(p.shown));
     if (a === 'counted') { if (got.size === 0) out.push(`prompt for ${p.clause}: no amount`); continue; }
     const want = a ?? numbers(text.get(p.clause) ?? '');
     if (want.length > 0 && !want.some((w) => got.has(w))) out.push(`prompt for ${p.clause}: no amount`);
   }
+  if (i.prompts.length > 0) for (const [id, e] of per) for (let k = 0; k < e.length; k++) if (!steps.get(id)?.has(k)) out.push(`${id}: promptAmounts entry ${String(k + 1)} but no prompt ${String(k + 1)} opened`);
   for (const p of i.prompts) {
     if (!p.screenOptions || !p.engineOptions) continue;
     const n = (t: string): string => plainWords(t, i.strip).join(' ');

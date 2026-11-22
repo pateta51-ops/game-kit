@@ -319,6 +319,7 @@ Seeded rng; motion off = no timers. Tests: angle in range on exactly one frame; 
 | K567 | plan-checker: when the game sheet is checked against the mechanics map, the map's lines are the sheet; the older fixed list of sheet lines is asked for only when the map is missing or `--sheet-optional` is passed. | S | kit steward (K531 follow-up) | done |
 | K568 | plan-checker: with no kit checkout (a game's CI), the reuse map's Pull rows are checked against the game's locked copy `kit/` (recognised by `kit.lock.json`; parts from the lock, its folders and `kit/CATALOG.md`); the hard-coded local drive candidate is gone (`--kit PATH`, `$KIT_DIR`). | S | kit steward (plan check in a game's CI) | done |
 | K581 | `clock`: a recipe and state checks (`onSpace`, `reached`) for a lose space that is not the last space of the row, landing only or reaching and passing; `occurrences(crossings, prefix, true)` also carries the threshold's `data`, its `space`, `how` and the `way` of travel, and a crossing says its `way`. Findable under: lose space on a track, countdown threshold, round tracker. | S | kit steward (check of the tier 1 rows) | done |
+| K587 | card-harness screen check: amounts declared per prompt of a clause, so a clause that opens two prompts has each prompt's amount checked on its own. | S |  | done |
 
 ## Asked for by the owner
 
