@@ -1,17 +1,22 @@
-# engine-core: a number with its parts (K526, opt-in)
+# engine-core: a number with its parts (K526, K582, opt-in)
 
-`numberParts(base, modifiers, order, opts?)` computes one number (a stat, a cost, a cost line, a rate) and returns `{ value, base, parts, bound?, unchanged? }`. It is pure: it stores nothing, and a game that never calls it is unchanged. `effectsOf`, `sumEffects` and `layered` are as they were; use `layered` when the value is not a number or the game needs its own `apply`.
+`numberParts(base, modifiers, order, opts?)` computes one number (a stat, a cost, a cost line, a rate) and returns `{ value, base, parts, bound?, bounds?, unchanged? }`. It is pure: it stores nothing, and a game that never calls it is unchanged. `effectsOf`, `sumEffects` and `layered` are as they were; use `layered` when the value is not a number or the game needs its own `apply`.
+
+A stat breakdown, a modifier with a floor, a cost reduction with a minimum: all are this part. What is not: see "Not this part" below.
 
 ## The modifiers
 
-`NumberModifier`: `{ source, op, amount, when?, min?, per?, round?, of? }`, `op` one of `set`, `add`, `multiply`, `floor`, `cap`.
+`NumberModifier`: `{ source, op, amount, when?, min?, per?, round?, of?, ref? }`, `op` one of `set`, `add`, `multiply`, `floor`, `cap`.
 
 - Printed modifiers of the sources in force: the game gathers them (it knows which sources are in force).
 - Lasting effects: `effectModifiers(s, map, kind?, filter?, cfg?)` reads them through `effectsOf` (oldest first; ended, waiting, blanked and false-`when` effects are already left out) and maps each onto none, one or several modifiers. Nothing is stored: a source that left play (`sourceLeft`), a spent "next one" (`spendEffect`) and an ended duration are gone at the next read.
 - `when`: a key in `opts.conditions` (`(m) => boolean`; the game closes over its state). False: not a part. A missing key is an `EngineBugError`.
-- `min`: a reduction's own minimum. It lowers to `min` at most, never lowers a value already at or below it, and never raises one.
+- `min`: a reduction's own minimum. It lowers to `min` at most, never lowers a value already at or below it, and never raises one. Only an add below 0 takes one (an add that counts to 0 may keep it): `min` on a raise, a set, a multiply, a floor or a cap is an `EngineBugError`.
 - `per`: a key in `opts.counts`; the amount is multiplied by that count (the part shows the multiplied amount).
-- `of`: the stat, cost line or cost it changes. Pass `opts.of`; a modifier naming another one is skipped and listed nowhere. A cost with several lines is one call per line; a line that comes out 0 is the game's to drop.
+- `of`: the stat, cost line or cost it changes. Pass `opts.of`; a modifier naming another one is skipped and listed nowhere. Without `opts.of` a scoped modifier never applies, and the call does not throw: on a default call it is invisible (not a part, no other sign). It is reported only when the caller asks for `unchanged`, where each is listed with `why: 'scope'` (its `amount` is times its count when the call gives that count, else the amount as given); an empty list there says the call forgot nothing. A cost with several lines is one call per line; a line that comes out 0 (exactly `0`, never negative zero) is the game's to drop.
+- `ref`: anything the game wants back (an effect id to spend, a clause). It is copied onto the modifier's part, unchanged entry and bound as it is; the kit never reads it. Two modifiers of one source are told apart by it.
+
+The same modifier object given twice is two modifiers (two copies of one card sharing a printed modifier).
 
 ## The order, from a ruling
 
@@ -20,31 +25,39 @@ The order is data, one `NumberOrder` per kind of number. Take every field from t
 | The ruling says | Field |
 | --- | --- |
 | which operation applies before which | `steps`, for example `['set', 'multiply', 'add', 'floor']`; `increase` and `decrease` split the adds (`['increase', 'set', 'decrease', 'floor']`: raises, then "reduce to N", then reductions) |
-| two "becomes N" effects on one number | `setters`: `last` (default, the order the modifiers were given), `lowest`, `highest` |
-| "reduce to N" never raises | `setOnlyLowers: true` |
-| the result must not depend on the order in which reductions with their own minimum arrived | `decreases: 'highestMin'` (highest `min` first, then the largest reduction: the lowest result any order gives) |
-| halves round up, or down | `round`; a modifier's own `round` wins; none named: no rounding |
+| two "becomes N" effects on one number | `setters`: `last` (default: last in the array the game gave, not latest in time; a game whose ruling is "the newest wins" gives the setters oldest first), `lowest`, `highest` (ties: the first given) |
+| "reduce to N" never raises | `setOnlyLowers: true`. It is applied before `setters`: a setter that would raise is refused first, and `setters` picks among the rest. From 4 with "becomes 2" then "becomes 5" under `last`, the 5 is refused and the value is 2 |
+| the result must not depend on the order in which reductions with their own minimum arrived | `decreases: 'highestMin'` (highest `min` first, then the largest reduction: the lowest result any order gives). It orders the `decrease` step only: the order needs a `decrease` step and no `add` step (split the adds into `increase`, `decrease`), else an `EngineBugError` |
+| halves round up, or down | `round`; a modifier's own `round` wins; none named: no rounding. `up` is toward plus infinity and `down` toward minus infinity: -5 halved is -2 rounded up (toward zero), -3 rounded down. There is no "away from zero" |
 | a number of this kind never goes below N, or above N | `floor`, `cap` (each needs its step) |
 
-Within a step modifiers apply in the order given, except as the fields above say. A floor always holds: the `floor` step raises any value under the floor, also the base when no modifier applied. At that step the highest of the floors named by modifiers and the default holds; at the `cap` step the lowest cap. A floor between two steps is a second `floor` step: every floor, named or default, holds at each one (and may be a part twice). An add of 0 is taken by whichever of `increase` and `decrease` the order has. A modifier whose operation has no step in the order, or a default floor or cap without its step, is an `EngineBugError`: nothing is dropped silently.
+Within a step modifiers apply in the order given, except as the fields above say. A floor always holds: the `floor` step raises any value under the floor, also the base when no modifier applied. At that step the highest of the floors named by modifiers and the default holds; at the `cap` step the lowest cap. A floor between two steps is a second `floor` step: every floor, named or default, holds at each one (and may be a part twice). The rule for fractions: before a multiplier is rounded, a product within 8 units in the last place of a whole number is taken as that whole number, so 100 times 1.1 rounded up is 110, not 111, and 10 times a third times 3 rounded down is 10. A rounded result is then the exact one for multipliers p/q with q up to 10 while the product is below 10^13 (tested against exact arithmetic); from about 5 times 10^13 that rule can take a real tenth for float error and round one off. With no rounding the product is left as the plain float (3 times 0.1 is 0.30000000000000004, 100 times 1.1 is 110.00000000000001), and its part is the float difference: no number of that precision makes 3 plus a part equal that value, so there the parts sum to the value only within float precision. A game that needs exact parts rounds at each multiplier. An add of 0 is taken by whichever of `increase` and `decrease` the order has. A modifier whose operation has no step in the order, or a default floor or cap without its step, is an `EngineBugError`: nothing is dropped silently.
 
 ## The parts
 
-`parts` is `{ source, op, amount, applied }` in the order applied. `applied` is the change that part made, so `base` plus every `applied` is `value`: a set counts as the change it made, and a floor or cap that bit is a part too (its `source` is the modifier that named it, or `floor` / `cap` for the order's default) and is also returned as `bound`. A modifier that changed nothing is never a part. With `opts.unchanged: true` they are returned in `unchanged`, each with `why`: `condition` (its condition is false), `outranked` (another setter, floor or cap won) or `same` (it applied and the value stayed).
+`parts` is `{ source, op, amount, applied, ref? }` in the order applied. `applied` is the change that part made, so `base` plus every `applied` is `value` (exactly while every value on the way is a whole number or a half, which rounding at each multiplier gives; after an unrounded fraction only to float precision): a set counts as the change it made, and a floor or cap that bit is a part too (its `source` is the modifier that named it, or `floor` / `cap` for the order's default) and is also listed in `bounds`. A modifier that changed nothing is never a part. With `opts.unchanged: true` they are returned in `unchanged`, each with `why`: `condition` (its condition is false), `outranked` (another setter, floor or cap won), `same` (it applied and the value stayed), `refused` (a setter that `setOnlyLowers` did not let raise the value) or `scope` (it names an `of` and the call named none). `why`, `op` and the steps may get more values later: a game that switches on them keeps a default branch.
+
+`bounds` is every floor or cap that bit, in the order they bit, each with `holds`: whether the final value sits on that bound. A floor that lifted the base before the adds raised it further has `holds: false`; when a floor and a cap both bit, both are listed. No bite: no `bounds`. `bound` is the last entry without `holds` (kept for callers that read it); it does not say the bound still holds.
 
 ## Showing the breakdown
 
-Show `base`, then one line per part: the source's name (the game maps `source` to words; never a rule id on screen) and `applied` with its sign; for `bound` say which floor or cap held. `partsDirection(parts)` gives `lower`, `higher` or `mixed` for a badge. Whether sources that changed nothing are listed is the game's choice (`unchanged`).
+Show `base`, then one line per part: the source's name (the game maps `source` to words; never a rule id on screen) and `applied` with its sign; for each of `bounds` with `holds: true` say which floor or cap held (one with `holds: false` is only a line of the breakdown). `partsDirection(parts)` gives `lower`, `higher` or `mixed` for a badge, part by part: +1 and -2 is `mixed`; for the net direction compare `value` with `base`. Whether sources that changed nothing are listed is the game's choice (`unchanged`).
 
 ## Payment, `bar`, `preview`
 
-Compute the cost once with `numberParts` and pass `value` on: the payment plan, the option label, the can-pay check and the `bar` reason all read that value, never the printed cost. A raised cost then disables the option and the offered plan pays the raised amount. `preview` needs nothing extra: it runs the same handlers.
+Compute the cost once with `numberParts` and pass `value` on to the game's own payment plan, option label, can-pay check and `bar` reason, so none of them reads the printed cost. Nothing in the kit does this for the game: `numberParts` only returns the number. A game on the standard verb pack of `card-language` returns the value from `cardPack({ due })` (K583): the pack's can-pay check, payment, would-change check and `bar` reason then read it instead of the printed amount of a `pay` or `convert` step, and `pack.costed(s, steps, env)` gives the steps with that amount for the label. Without `due` the pack reads the printed amount. `preview` needs nothing extra: it runs the same handlers.
 
 ```ts
 const cost = numberParts(printed, [...printedMods, ...effectModifiers(s, toMod, 'cost')], COST_ORDER, { of: 'play' });
 const canPay = have >= cost.value; // the label, the plan and the bar reason read cost.value and cost.parts too
 ```
 
-On the standard verb pack of `card-language` (K583) the game does not rewrite cost steps: it returns `cost.value` from `cardPack({ due })`, and the pack's can-pay check, payment, would-change check and bar reason read it; `pack.costed(s, steps, env)` gives the steps with that amount for the label.
+## Not this part
+
+- A stored value that is clamped after each change (a die or a track kept between 1 and 6 while it is raised and lowered over time): a floor or cap here holds only at its step, after the changes of the steps before it. From 5, +2 then -1 clamped to 6 after each change is 5; `['add', 'cap']` gives 6. Keep such a value in state and clamp it where it changes.
+- A table lookup or formula in the middle (a result read from a table by the modified number, then modified again): two calls with the game's lookup between them, and two lists of parts.
+- A value that is not one number (several stats set or removed together, a list): `layered`, or one call per stat after the game has picked what applies.
+
+Prior-art cases with no test here, and why: a set that removes the unnamed stats of a multi-stat value, and a change to a stat the target lacks (a value here is one number; which stats exist is the game's gather); a switched-off source that keeps its restrictions (which sources are in force is the game's gather); a list value with granted entries (`layered`).
 
 Tests: `numbers.test.ts`.

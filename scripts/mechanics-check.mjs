@@ -2,7 +2,8 @@
 //   node scripts/mechanics-check.mjs [root]   root defaults to this checkout
 // Fails when: a line's part is not a component (unless the line says `pending: K<n>` and that row is not done);
 // a line says `pending` and that row is done; a `.md` a line tells you to read is not in the part's folder or docs/recipes;
-// a backticked name in `read` is in no file of the part's folder (or of an `also` part); a component or candidate row is named by no line
+// a backticked name in `read` is not a name of the part (or of an `also` part): an exported name, a member of an exported type, or a file,
+// tests, comments and prose not counted (K585); a component or candidate row is named by no line
 // and has no `mechanics: "none: <reason>"` (catalog-notes.json entry, or the row's front matter);
 // a search of `searches` does not print a `mechanic:` line first that names the expected part.
 import { spawnSync } from 'node:child_process'
@@ -21,9 +22,27 @@ const rows = loadRows(top)
 const row = (id) => rows.find((r) => r.id === id)
 const none = (v) => /^none: \S/.test(v ?? '')
 const bad = []
-const walk = (d) => fs.readdirSync(d, { withFileTypes: true }).flatMap((e) => e.name === 'node_modules' ? [] : e.isDirectory() ? walk(path.join(d, e.name)) : /\.(md|[mc]?[jt]sx?|json|py|css|tpl)$/.test(e.name) ? [path.join(d, e.name)] : [])
-const texts = {}
-const textOf = (p) => texts[p] ??= walk(J('components', p)).map((f) => fs.readFileSync(f, 'utf8')).join('\n')
+const walk = (d) => fs.readdirSync(d, { withFileTypes: true }).flatMap((e) => e.name === 'node_modules' ? [] : e.isDirectory() ? walk(path.join(d, e.name)) : [path.join(d, e.name)])
+// K585: the names a line may put in backticks: every file of the part, and from its code files that are not tests (comments removed)
+// each exported name and each member (key, method, string value) of an exported type or interface
+const known = {}
+const namesOf = (p) => known[p] ??= (() => {
+  const s = new Set()
+  for (const f of walk(J('components', p))) {
+    const b = path.basename(f)
+    s.add(b).add(b.replace(/\.[^.]+$/, ''))
+    if (/\.py$/.test(b) && !/^test_/.test(b)) for (const m of fs.readFileSync(f, 'utf8').matchAll(/^(?:def|class)\s+(\w+)/gm)) s.add(m[1])
+    if (!/\.[mc]?[jt]sx?$/.test(b) || /\.(test|spec)\./.test(b)) continue
+    const code = fs.readFileSync(f, 'utf8').replace(/\/\*[\s\S]*?\*\//g, '').replace(/(^|[^:'"`])\/\/.*$/gm, '$1')
+    for (const chunk of code.split(/^(?=[A-Za-z@])/m)) {
+      const d = chunk.match(/^export\s+(?:declare\s+)?(?:default\s+)?(?:async\s+)?(function\*?|const|let|var|class|type|interface)\s+([A-Za-z_$][\w$]*)/)
+      if (d) s.add(d[2])
+      for (const n of chunk.match(/^export\s+(?:type\s+)?\{([^}]*)\}/)?.[1].split(',') ?? []) { const w = n.trim().split(/\s+as\s+/).pop().replace(/^type\s+/, '').trim(); if (w) s.add(w) }
+      if (d && /^(type|interface)$/.test(d[1])) for (const m of chunk.matchAll(/([A-Za-z_$][\w$]*)\??\s*[:(]|'([A-Za-z_$][\w$]*)'|"([A-Za-z_$][\w$]*)"/g)) s.add(m[1] ?? m[2] ?? m[3])
+    }
+  }
+  return s
+})()
 const named = new Set()
 for (const m of lines) {
   const w = '"' + m.words + '"'
@@ -41,8 +60,8 @@ for (const m of lines) {
     else if (!open) bad.push(`${w}: row ${m.pending} is done and ${p} is still not a component`)
   }
   if (m.part && names.includes(m.part) && /`/.test(m.read ?? '')) {
-    const text = [m.part, ...(m.also ?? [])].filter((p) => names.includes(p)).map(textOf).join('\n')
-    for (const [, c] of m.read.matchAll(/`([^`]+)`/g)) if (!text.includes(c)) for (const t of c.match(/[A-Za-z_$][\w$]{2,}/g) ?? []) if (!text.includes(t)) bad.push(`${w}: \`${t}\` is not in components/${m.part}/ (guide, README or code)`)
+    const sets = [m.part, ...(m.also ?? [])].filter((p) => names.includes(p)).map(namesOf)
+    for (const [, c] of m.read.matchAll(/`([^`]+)`/g)) for (const t of c.match(/[A-Za-z_$][\w$]{2,}/g) ?? []) if (!sets.some((k) => k.has(t))) bad.push(`${w}: \`${t}\` is not in components/${m.part}/ (an exported name, a member of an exported type, or a file)`)
   }
   if (m.part && names.includes(m.part)) for (const [f] of (m.read ?? '').matchAll(/[\w-]+\.md\b/g)) {
     if (!fs.existsSync(J('components', m.part, f)) && !fs.existsSync(J('docs', 'recipes', f))) bad.push(`${w}: ${f} is not in components/${m.part}/ or docs/recipes/`)

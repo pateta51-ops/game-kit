@@ -1,6 +1,7 @@
 export type Op = '<' | '<=' | '=' | '>=' | '>';
 export type Pattern =
-  | { kind: 'same' | 'different' | 'run' | 'even' | 'odd' | 'count'; n: number }
+  | { kind: 'same' | 'different' | 'run' | 'even' | 'odd'; n: number }
+  | { kind: 'count'; op?: Op; n: number }
   | { kind: 'atLeast' | 'face'; face: number; n: number }
   | { kind: 'sum'; op: Op; value: number }
   | { kind: 'max' | 'spread'; op?: Op; value: number }
@@ -21,7 +22,8 @@ export function checkPattern(data: unknown, at = 'pattern'): string[] {
   const val = () => { if (typeof d.value !== 'number' || !Number.isFinite(d.value)) p.push(`${at}.value: a number`); };
   const op = (opt: boolean) => { if (!(opt && d.op === undefined) && !OPS.includes(d.op as Op)) p.push(`${at}.op: one of ${OPS.join(', ')}`); };
   switch (d.kind) {
-    case 'same': case 'different': case 'run': case 'even': case 'odd': case 'count': num('n'); break;
+    case 'same': case 'different': case 'run': case 'even': case 'odd': num('n'); break;
+    case 'count': op(true); num('n'); break;
     case 'atLeast': case 'face': num('face'); num('n'); break;
     case 'sum': op(false); val(); break;
     case 'max': case 'spread': op(true); val(); break;
@@ -49,8 +51,8 @@ function met(p: Pattern, v: readonly number[]): boolean {
       return false;
     }
     case 'even': return count((x) => x % 2 === 0) >= p.n;
-    case 'odd': return count((x) => x % 2 === 1) >= p.n;
-    case 'count': return v.length >= p.n;
+    case 'odd': return count((x) => Math.abs(x % 2) === 1) >= p.n;
+    case 'count': return v.length >= 1 && cmp(v.length, p.op ?? '>=', p.n);
     case 'atLeast': return count((x) => x >= p.face) >= p.n;
     case 'face': return count((x) => x === p.face) >= p.n;
     case 'sum': return v.length >= 1 && cmp(v.reduce((a, b) => a + b, 0), p.op, p.value);
@@ -68,7 +70,7 @@ export function compile(p: Pattern): Test {
   return (v) => met(p, v);
 }
 
-/** A dice-tray `Meaning`: dice with value 0 (not rolled) are left out. */
+/** A dice-tray `Meaning`: dice with value 0 or less (0 is not rolled) are left out; `compile` and `smallest` judge every value they are given. */
 export function meaning<T = string>(id: string, p: Pattern, label: T): { id: string; label: T; test(dice: readonly { value: number }[]): boolean } {
   const test = compile(p);
   return { id, label, test: (dice) => test(dice.map((d) => d.value).filter((x) => x > 0)) };
@@ -87,8 +89,14 @@ const search = (ok: (s: readonly number[]) => boolean, n: number): number[] | nu
   return null;
 };
 
-/** Indexes of the smallest non-empty set of dice that meets `p` judged on that set alone (ties: lowest indexes), or null. */
-export function smallest(p: Pattern, values: readonly number[]): number[] | null {
+const metParts = (p: Pattern, v: readonly number[]): Pattern =>
+  p.kind === 'any' ? { kind: 'any', of: p.of.filter((q) => met(q, v)).map((q) => metParts(q, v)) }
+    : p.kind === 'all' ? { kind: 'all', of: p.of.map((q) => metParts(q, v)) } : p;
+
+/** Indexes of the smallest non-empty set of dice that meets `p` judged on that set alone (ties: lowest indexes), or null. `whole`: null unless every die together meets `p` too, and an `any` then reads only the parts the whole roll meets. */
+export function smallest(p: Pattern, values: readonly number[], opts: { whole?: boolean } = {}): number[] | null {
   const test = compile(p);
-  return search((s) => test(s.map((i) => values[i] as number)), values.length);
+  if (opts.whole && !test(values)) return null;
+  const q = opts.whole ? metParts(p, values) : p;
+  return search((s) => met(q, s.map((i) => values[i] as number)), values.length);
 }

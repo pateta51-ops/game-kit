@@ -1,0 +1,95 @@
+// Frozen copy of this part before K578, read only by the test that pins the old results. Never import it; never edit it.
+export type Op = '<' | '<=' | '=' | '>=' | '>';
+export type Pattern =
+  | { kind: 'same' | 'different' | 'run' | 'even' | 'odd' | 'count'; n: number }
+  | { kind: 'atLeast' | 'face'; face: number; n: number }
+  | { kind: 'sum'; op: Op; value: number }
+  | { kind: 'max' | 'spread'; op?: Op; value: number }
+  | { kind: 'twoPair' }
+  | { kind: 'all' | 'any'; of: readonly Pattern[] };
+export type Test = (values: readonly number[]) => boolean;
+
+const OPS: readonly Op[] = ['<', '<=', '=', '>=', '>'];
+const cmp = (a: number, op: Op, b: number): boolean =>
+  op === '<' ? a < b : op === '<=' ? a <= b : op === '=' ? a === b : op === '>=' ? a >= b : a > b;
+const whole = (x: unknown): boolean => typeof x === 'number' && Number.isInteger(x) && x >= 1;
+
+export function checkPattern(data: unknown, at = 'pattern'): string[] {
+  if (typeof data !== 'object' || data === null) return [`${at}: not an object`];
+  const d = data as Record<string, unknown>;
+  const p: string[] = [];
+  const num = (k: string) => { if (!whole(d[k])) p.push(`${at}.${k}: a whole number of 1 or more`); };
+  const val = () => { if (typeof d.value !== 'number' || !Number.isFinite(d.value)) p.push(`${at}.value: a number`); };
+  const op = (opt: boolean) => { if (!(opt && d.op === undefined) && !OPS.includes(d.op as Op)) p.push(`${at}.op: one of ${OPS.join(', ')}`); };
+  switch (d.kind) {
+    case 'same': case 'different': case 'run': case 'even': case 'odd': case 'count': num('n'); break;
+    case 'atLeast': case 'face': num('face'); num('n'); break;
+    case 'sum': op(false); val(); break;
+    case 'max': case 'spread': op(true); val(); break;
+    case 'twoPair': break;
+    case 'all': case 'any':
+      if (!Array.isArray(d.of) || d.of.length === 0) p.push(`${at}.of: a list of 1 or more patterns`);
+      else d.of.forEach((x, i) => p.push(...checkPattern(x, `${at}.of[${i}]`)));
+      break;
+    default: p.push(`${at}: unknown kind ${JSON.stringify(d.kind)}`);
+  }
+  return p;
+}
+
+function met(p: Pattern, v: readonly number[]): boolean {
+  const counts = new Map<number, number>();
+  for (const x of v) counts.set(x, (counts.get(x) ?? 0) + 1);
+  const count = (f: (x: number) => boolean): number => v.filter(f).length;
+  switch (p.kind) {
+    case 'same': return Math.max(0, ...counts.values()) >= p.n;
+    case 'different': return counts.size >= p.n;
+    case 'run': {
+      const u = [...counts.keys()].sort((a, b) => a - b);
+      let run = 0;
+      for (let i = 0; i < u.length; i += 1) { run = i > 0 && u[i] === (u[i - 1] as number) + 1 ? run + 1 : 1; if (run >= p.n) return true; }
+      return false;
+    }
+    case 'even': return count((x) => x % 2 === 0) >= p.n;
+    case 'odd': return count((x) => x % 2 === 1) >= p.n;
+    case 'count': return v.length >= p.n;
+    case 'atLeast': return count((x) => x >= p.face) >= p.n;
+    case 'face': return count((x) => x === p.face) >= p.n;
+    case 'sum': return v.length >= 1 && cmp(v.reduce((a, b) => a + b, 0), p.op, p.value);
+    case 'max': return v.length >= 1 && cmp(Math.max(...v), p.op ?? '=', p.value);
+    case 'spread': return v.length >= 2 && cmp(Math.max(...v) - Math.min(...v), p.op ?? '=', p.value);
+    case 'twoPair': return [...counts.values()].filter((x) => x >= 2).length >= 2;
+    case 'all': return p.of.every((q) => met(q, v));
+    case 'any': return p.of.some((q) => met(q, v));
+  }
+}
+
+export function compile(p: Pattern): Test {
+  const bad = checkPattern(p);
+  if (bad.length) throw new Error(bad.join('; '));
+  return (v) => met(p, v);
+}
+
+/** A dice-tray `Meaning`: dice with value 0 (not rolled) are left out. */
+export function meaning<T = string>(id: string, p: Pattern, label: T): { id: string; label: T; test(dice: readonly { value: number }[]): boolean } {
+  const test = compile(p);
+  return { id, label, test: (dice) => test(dice.map((d) => d.value).filter((x) => x > 0)) };
+}
+
+const search = (ok: (s: readonly number[]) => boolean, n: number): number[] | null => {
+  for (let size = 1; size <= n; size += 1) {
+    const walk = (from: number, acc: number[]): number[] | null => {
+      if (acc.length === size) return ok(acc) ? acc : null;
+      for (let i = from; i < n; i += 1) { const r = walk(i + 1, [...acc, i]); if (r) return r; }
+      return null;
+    };
+    const r = walk(0, []);
+    if (r) return r;
+  }
+  return null;
+};
+
+/** Indexes of the smallest non-empty set of dice that meets `p` judged on that set alone (ties: lowest indexes), or null. */
+export function smallest(p: Pattern, values: readonly number[]): number[] | null {
+  const test = compile(p);
+  return search((s) => test(s.map((i) => values[i] as number)), values.length);
+}
