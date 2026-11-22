@@ -1,6 +1,6 @@
 // K542: a status (stunned, stealth, a wound) is a named lasting effect on an object, kind `status`, `target` the object and
 // `value` the status name, so every duration of `durations.ts` ends it (boundary, eventOver, ...). Ported in idea from
-// Warp's Edge src/engine/combat/stun.ts (6790200): a stun recorded on a target and read when an action asks "is it stunned".
+// a game's stun (component.json sources): a stun recorded on a target and read when an action asks "is it stunned".
 import { addEffect, allEffects, effectsOf, removeEffect, type ContinuousEffect, type Duration, type EffectsConfig } from './durations.ts';
 import { EngineBugError } from './errors.ts';
 import type { TimingState } from './timing.ts';
