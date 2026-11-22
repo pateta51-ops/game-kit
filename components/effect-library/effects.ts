@@ -367,6 +367,18 @@ export const BUILT_IN: Readonly<Record<string, Effect>> = {
       return undefined;
     }
     // K449: `end: 'dark'` starts lit and goes dark; the actor is left dark
+    // K694: `start: 'dark'` with `end: 'dark'` rises from dark to full (at `rise`, a 0-1 fraction of the call, default the middle) before it fades; `hold` is a plateau centred there
+    if (call.step['end'] === 'dark' && call.step['start'] === 'dark') {
+      const rise = typeof call.step['rise'] === 'number' ? Math.max(0, Math.min(1, call.step['rise'])) : .5;
+      const span = typeof hold === 'number' ? Math.max(0, Math.min(1, hold)) : 0;
+      const a = Math.max(0, rise - span / 2);
+      const b = Math.min(1, rise + span / 2);
+      const kf: Keyframe[] = [{ boxShadow: off, offset: 0 }, { boxShadow: on, offset: a }];
+      if (b > a) kf.push({ boxShadow: on, offset: b });
+      kf.push({ boxShadow: off, offset: 1 });
+      animate(kf, { boxShadow: off });
+      return undefined;
+    }
     if (call.step['end'] === 'dark') {
       animate([{ boxShadow: on }, { boxShadow: off }], { boxShadow: off });
       return undefined;

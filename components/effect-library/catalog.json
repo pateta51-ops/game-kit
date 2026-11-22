@@ -2865,6 +2865,86 @@
   }
  },
  {
+  "id": "glow",
+  "option": {
+   "end": "dark",
+   "start": "dark"
+  },
+  "was": [],
+  "title": "Flashes once and goes dark",
+  "looks": "The piece starts dark, a halo ramps up from dark to full, flashes once and goes dark.",
+  "notThis": [
+   {
+    "id": "glow--end-dark",
+    "diff": "that one starts lit and only fades"
+   },
+   {
+    "id": "glow",
+    "diff": "that one returns to the piece's own look"
+   }
+  ],
+  "pairs": [
+   "glow--end-dark",
+   "glow--latch-true"
+  ],
+  "use": "A cell or piece flashes once and goes dark; glow ramp up from dark.",
+  "tags": [
+   "flash",
+   "single flash",
+   "flash once and go dark",
+   "ramp up",
+   "light up",
+   "dark"
+  ],
+  "group": "light",
+  "ends": "changed",
+  "needs": "one thing",
+  "ms": 500,
+  "impactMs": 250,
+  "fits": "each round",
+  "draws": {
+   "by": [
+    "elements"
+   ],
+   "phoneSafe": true
+  },
+  "options": {
+   "colour": "none",
+   "shadows": "none",
+   "hold": "none",
+   "rise": 0.5
+  },
+  "since": "v0.257.0",
+  "usedBy": [
+   "astra-imperium"
+  ],
+  "demo": {
+   "id": "demo-glow-flash",
+   "stage": "demo",
+   "maxMs": 500,
+   "actors": [
+    {
+     "id": "A",
+     "at": "a"
+    },
+    {
+     "id": "B",
+     "at": "b"
+    }
+   ],
+   "steps": [
+    {
+     "t": 0,
+     "dur": 500,
+     "actor": "A",
+     "do": "glow",
+     "end": "dark",
+     "start": "dark"
+    }
+   ]
+  }
+ },
+ {
   "id": "shake",
   "was": [],
   "title": "Shakes a piece side to side",
