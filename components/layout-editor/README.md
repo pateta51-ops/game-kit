@@ -8,7 +8,7 @@ Arrange the zones of a game screen by hand (card zones, piles, hand, market, tra
 1. Open `editor.html` as is (no packages, no network); load a game's start with `window.LAYOUT_EDITOR_INIT = doc` before the script runs.
 2. After editing `index.ts` run `node components/layout-editor/build.mjs`; the test fails while the generated copy in `editor.html` is stale.
 3. Read the exported JSON with `normalizeDoc` and `screenLayout(doc, name)`; draw with `board-layout` `zone()` / `slots()`.
-4. Honour `scale` per zone (draw cards at that fraction) and `kind` (`cards`, `component`, `pile`, `group`).
+4. Honour `card` (`zoneCard(zone, screen)`) and `scale` per zone (draw cards at that fraction) and `kind` (`cards`, `component`, `pile`, `group`).
 5. Make a starting wireframe from a running page with `node capture.mjs <url> <out.json>` (it reads `data-zone`).
 6. Use the helpers (`mirrorZones`, `consolidate`, `split`, `cardFit`, `layoutWarnings`); they return new objects.
 
@@ -27,13 +27,15 @@ Arrange the zones of a game screen by hand (card zones, piles, hand, market, tra
 ```
 { "screens": { "<name>": { "w", "h", "card": [w, h], "pile"?: [w, h],
   "zones": { "<id>": { "r": [x, y, w, h], "label"?, "cards"?, "fan"?: "row"|"column"|"stack"|"grid",
-    "kind"?: "cards"|"component"|"pile"|"group", "full"?, "scale"?, "locked"?, "hidden"? } } } } }
+    "kind"?: "cards"|"component"|"pile"|"group", "full"?, "scale"?, "card"?: [w, h], "locked"?, "hidden"? } } } } }
 ```
 Each screen is a `board-layout` zones layout (`{ w, h, zones: { id: { r } } }`) plus optional fields, so `zone()`, `zonePct()` and `slots()` read it unchanged. Stage pixels. Nesting is by id: `you.hand` sits inside `you`. Import also takes a single layout (no `screens`, becomes screen `main`) and the older `zones: { id: [x, y, w, h] }`.
 
 `cards` with `fan`: the cards sit side by side without overlap (row, column, one pile, or a grid) at the screen's `card` size; a zone too small gets a warning.
 
 `scale` (K298, 0.2-1, absent = 1): the game reads it as "draw the cards in this zone at this fraction of the card size". A pile zone draws its tile at card size x `scale` (this overrides the pile size). Card-fit warnings use the scaled size, and the box label says "cards at 60%".
+
+`card` (K670, optional `[w, h]`, two positive numbers): this zone draws its cards (or a full-size pile tile) at this size instead of the screen's `card`; `scale` still applies on top. `cardFit` and `layoutWarnings` use it (`zoneCard(zone, screen)` gives the size). For screens that mix portrait, landscape and large cards. A bad value (not two positive numbers) is ignored and gives a `card` warning. Absent = the screen's `card`, exactly as before.
 
 `kind` (K280; absent = as before: card outlines when `cards` is set, else a plain box):
 - `cards`: the card outlines above.
@@ -80,6 +82,7 @@ console.log(style, fit.fits, layoutWarnings(L))
 8. **Consolidate**: select two or more piles (Shift+click), pick column or row, click it: they become small tiles in one box `…piles` (rename it in **Id**). **Split** on that box puts them back at card size. Undo takes either back.
    - **Take one pile out of a consolidated box:** click the pile (in the **Zones** list), then **Take out**. It goes back to a full-size card pile beside the box and the box shrinks. Undo takes it back.
    - **Make a pile look like a card pile again:** select it, **Kind** → pile and tick **full size**; or select it inside the box and use **Take out**.
+   - **Another card shape in one area:** select the box, set **Card px here** (width and height, stage pixels); **Clear** puts the screen card size back. For a landscape or large card zone. Fit warnings use it.
    - **Shrink one area's cards:** select the box, set **Card size here** (slider or number, 20-100%). That box draws its cards or pile at that share of the card size, says "cards at 60%" in its label, and the red edge goes if they now fit. The game must draw the cards smaller there.
 9. Screens named `solo/table`, `2p/rulebook`: the tabs show the modes, then the variants. **Copy zones** (Screen panel) copies a box and what is inside it from another screen, e.g. the crew board from solo into 2p.
 10. Top bar: screen tabs and **+ screen**, **Undo** / **Redo** (Ctrl+Z / Ctrl+Y), **+ Zone** (inside the selected box), **Duplicate**, **Delete**, **Forward** / **Back**, align (left, centre, right, top, middle, bottom) and distribute for several boxes.

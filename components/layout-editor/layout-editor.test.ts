@@ -2,7 +2,7 @@ import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import { slots, zone } from '../board-layout/index.ts';
 import { HTML, inline } from './build.mjs';
-import { alignZones, cardFit, childrenOf, clampZoom, commonPrefix, consolidate, copyZones, distributeZones, keepPoint, layoutWarnings, mirrorZones, moveZone, normalizeDoc, parentOf, pileSize, renameZone, resizeZone, screenLayout, screenModes, snap, split, takeOut, stageView, type Screen } from './index.ts';
+import { zoneCard, alignZones, cardFit, childrenOf, clampZoom, commonPrefix, consolidate, copyZones, distributeZones, keepPoint, layoutWarnings, mirrorZones, moveZone, normalizeDoc, parentOf, pileSize, renameZone, resizeZone, screenLayout, screenModes, snap, split, takeOut, stageView, type Screen } from './index.ts';
 
 const scr = (zones: Record<string, [number, number, number, number]>, w = 1000, h = 1000): Screen => ({ w, h, card: [100, 140], zones: Object.fromEntries(Object.entries(zones).map(([k, r]) => [k, { r }])) });
 
@@ -177,5 +177,29 @@ describe('K269 layout-editor logic', () => {
   it('editor.html carries the current index.ts (run node components/layout-editor/build.mjs)', () => {
     const html = readFileSync(HTML, 'utf8');
     expect(inline(html) === html).toBe(true);
+  });
+  it('K670 per-zone card size drives fit and warnings', () => {
+    const d = normalizeDoc({ screens: { s: { w: 3840, h: 2160, card: [270, 378], zones: {
+      hand: { r: [0, 0, 1400, 378], cards: 5, fan: 'row' },
+      land: { r: [0, 500, 1400, 270], cards: 3, fan: 'row', card: [378, 270] },
+      big: { r: [0, 900, 440, 616], cards: 1, fan: 'stack', card: [440, 616] },
+      bad: { r: [0, 1600, 100, 100], cards: 1, fan: 'stack', card: [0, 'x'] },
+    } } } });
+    const s = screenLayout(d, 's');
+    expect(s.zones.land!.card).toEqual([378, 270]);
+    expect(cardFit(s.zones.land!, zoneCard(s.zones.land!, s)).fits).toBe(true);
+    expect(cardFit(s.zones.land!, s.card).fits).toBe(false);
+    expect(cardFit(s.zones.big!, zoneCard(s.zones.big!, s), 1, 'stack').fits).toBe(true);
+    const w = layoutWarnings(s).map((x) => x.id + ':' + x.kind);
+    expect(w).toEqual(['bad:card', 'bad:cards']);
+    expect(layoutWarnings(s).some((x) => x.text.includes('fit only'))).toBe(true);
+    expect(layoutWarnings(s).filter((x) => x.id === 'land' || x.id === 'big')).toEqual([]);
+  });
+  it('K670 a zone without card behaves as before', () => {
+    const s = scr({ a: [0, 0, 300, 140] });
+    s.zones.a!.cards = 4; s.zones.a!.fan = 'row';
+    expect(zoneCard(s.zones.a!, s)).toBe(s.card);
+    expect(layoutWarnings(s)[0]!.text).toBe('a: 4 cards fit only at 75% of the card size');
+    expect(normalizeDoc({ w: 9, h: 9, zones: { a: { r: [0, 0, 1, 1], card: 'x' } } }).screens.main!.zones.a!.card).toBe('x');
   });
 });

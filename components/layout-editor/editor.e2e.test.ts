@@ -146,6 +146,10 @@ describe.skipIf(!HAVE)('K269 layout editor in Chromium', () => {
     expect((await get()).screens.main!.zones.a!.scale).toBe(0.5);
     expect(await page.locator('#warns').innerText()).not.toContain('4 cards');
     expect(await page.locator('.z[data-id="a"] .t').textContent()).toContain('cards at 50%');
+    await page.fill('#zCw', '60'); await page.press('#zCw', 'Enter');
+    expect((await get()).screens.main!.zones.a!.card).toEqual([60, 140]);
+    await page.click('#zCc');
+    expect((await get()).screens.main!.zones.a!.card).toBeUndefined();
     const missing = await page.evaluate(() => [...document.querySelectorAll('button, input, select, #zKind option')].filter((e) => !e.getAttribute('title')?.trim()).map((e) => e.id || e.outerHTML.slice(0, 60)));
     expect(missing).toEqual([]);
   });

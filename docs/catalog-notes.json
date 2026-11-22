@@ -477,7 +477,7 @@
     "gameSupplies": "The table of card fields."
   },
   "card-zones": {
-    "use": "Decks, hands, discards and play areas as ordered id lists in engine state, with who sees what and a per-seat view for opponents and the UI. Hand, pile and drag UI parts are planned (K218-K220), not built: ask for them, do not build them in the game. Recipe: docs/recipes/card-table.md.",
+    "use": "Decks, hands, discards and play areas as ordered id lists in engine state, with who sees what and a per-seat view for opponents and the UI. A zone can have a capacity (hand limit, slot limit) that rules raise and give up, with a state check that asks the owner which cards over the limit go to the discard. Hand, pile and drag UI parts are planned (K218-K220), not built: ask for them, do not build them in the game. Recipe: docs/recipes/card-table.md.",
     "not": "Boards and spaces (board-model), card faces, or rules about running out.",
     "title": "Decks, hands and discards as lists",
     "tags": [
@@ -489,7 +489,12 @@
       "visibility",
       "play",
       "area",
-      "face-down"
+      "face-down",
+      "hand limit",
+      "zone capacity",
+      "discard choice",
+      "over the limit",
+      "choose what to drop"
     ],
     "visible": false,
     "release": 1,
@@ -952,7 +957,10 @@
       "zones",
       "place",
       "drag",
-      "screen"
+      "screen",
+      "zone card size",
+      "landscape card zone",
+      "card orientation per zone"
     ],
     "looks": "A page where you drag boxes for each part of the table and export the arrangement.",
     "visible": true,
@@ -2007,7 +2015,7 @@
     "gameSupplies": "The voice lines and the gate for when to play."
   },
   "turn-flow": {
-    "use": "Rounds, turns per seat in seat order, and phases and steps inside a turn as one data table; the runner calls engine-core boundary() at each turn, phase and round edge, so endOfTurn / endOfRound / endOfPhase durations end with no manual call; whoseTurn and flowOf read the position from state. Recipe: docs/recipes/turn-flow.md.",
+    "use": "Rounds, turns per seat in seat order, and phases and steps inside a turn as one data table; the runner calls engine-core boundary() at each turn, phase and round edge, so endOfTurn / endOfRound / endOfPhase durations end with no manual call; whoseTurn and flowOf read the position from state; once-per limits (K589: once per turn, round, phase or game, per card, per seat) bar a used option with its reason and clear at the matching edge. Recipe: docs/recipes/turn-flow.md.",
     "not": "What a step does, simultaneous or out-of-order turns (interrupts, reactions), step-long durations (engine-core has none), or the screen that shows the phase.",
     "title": "Rounds, turns and phases table",
     "tags": [
@@ -2017,7 +2025,15 @@
       "steps",
       "order",
       "seat",
-      "flow"
+      "flow",
+      "once per turn",
+      "once per round",
+      "once per phase",
+      "once per game",
+      "once per turn per card",
+      "use limit per game",
+      "usage limit",
+      "used this turn"
     ],
     "visible": false,
     "release": 1,
