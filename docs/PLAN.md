@@ -354,6 +354,7 @@ The blind matching test's result was not recorded: the PR, its comments and docs
 | K661 | card-harness `expectNotOffered`/`expectNotFired`: an optional `clauseOf(x)` maps a game's own option, prompt and event shapes to clause ids. | S |  | done |
 | K663 | card-harness: `cardCasesIn` resolves a same-file string const for `printed` (else its own problem line); rule 11 mixed mode quote-checks clauses with a cardCase and lets the rest cite by test title. | S |  | done |
 | K664 | card-harness `patternProblems`: `wording` keeps the whole-pattern shape check, and split patterns compare their wording groups (before, both were skipped). | S |  | done |
+| K665 | card-harness `restrictionProblems`: restrictions nested anywhere in a record's effect tree are found (before, only top-level keys were read). | S |  | done |
 | K666 | sim-pool `proveResolved`: a documented trace input built from a game's own log (clause resolved or applied at a step), so a static clause shown applied with an effect counts as proven. | S | Radiance | done |
 
 ## Asked for by the owner

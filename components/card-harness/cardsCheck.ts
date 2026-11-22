@@ -122,32 +122,56 @@ export interface RestrictionInput {
   readonly whyKey?: string;
   /** A problem allowed as data: the record or clause, the key, the ruling. Uncited or matching nothing fails. */
   readonly exceptions?: readonly { readonly id: string; readonly key: string; readonly ar: string }[];
+  /** K665: the span each of these matches in a text segment (split at ' ¶ ' and line breaks) is removed before the printed words are read, e.g. `/\([^)]*?\)/` for reminder text. Default: none. */
+  readonly ignore?: readonly RegExp[];
+  /** K665: opt-in strict matching: a `/` joining type words blocks a match (`UPGRADE` is not found in `UPGRADE/TACTIC`). Default: `/` splits tokens like `-` and spaces. */
+  readonly slashJoins?: boolean;
+  /** K665: the icon code a step pays (e.g. `{gem 2}` for a `pay` step of gem 2), or undefined. A printed phrase equal to a paid icon counts as its restriction present. */
+  readonly paidIcon?: (step: Record<string, unknown>) => string | undefined;
 }
 const val = (v: unknown): string => (typeof v === 'object' && v !== null ? JSON.stringify(v) : String(v));
-const has = (text: string, phrase: string): boolean => text.toLowerCase().includes(phrase.toLowerCase());
+const has = (text: string, phrase: string, slash = false): boolean => new RegExp(String.raw`(?<![\p{L}\p{N}_${slash ? '/' : ''}])${phrase.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}(?![\p{L}\p{N}_${slash ? '/' : ''}])`, 'iu').test(text);
 const cites = (why: unknown, rulings: ReadonlySet<string>): boolean => [why].flat().some((w) => typeof w === 'string' && [...rulings].some((r) => new RegExp(`(^|[^\\w-])${r.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}(?![\\w-])`).test(w)));
+const STEP_KEYS = new Set(['effects', 'then', 'else', 'steps', 'options', 'upgraded', 'each', 'branch', 'effect']);
+/** The record and its step nodes (K665): objects with an `op`, and what sits in the step lists and branches (`STEP_KEYS`); never filters, targets or other metadata. Iterative, each object once. */
+const nodes = (r: Record<string, unknown>, skip: ReadonlySet<string>): Record<string, unknown>[] => {
+  const out: Record<string, unknown>[] = [], seen = new Set<object>([r]), todo = [r];
+  const add = (v: unknown, named: boolean) => { if (typeof v === 'object' && v !== null && !Array.isArray(v) && !seen.has(v) && (named || typeof (v as Record<string, unknown>).op === 'string')) { seen.add(v); todo.push(v as Record<string, unknown>); } };
+  for (let n = todo.pop(); n; n = todo.pop()) {
+    out.push(n);
+    for (const [k, v] of Object.entries(n)) {
+      if (skip.has(k)) continue;
+      const named = STEP_KEYS.has(k);
+      if (Array.isArray(v)) { const l = [...(v as unknown[])]; for (let x = l.pop(); x !== undefined; x = l.pop()) { if (Array.isArray(x)) l.push(...(x as unknown[])); else add(x, named); } } else add(v, named);
+    }
+  }
+  return out;
+};
 export function restrictionProblems(i: RestrictionInput): string[] {
   const rulings = new Set(i.rulings);
-  const text = new Map(catalogueClauses(i.catalogue).map((c) => [c.id, c.text]));
+  const text = new Map(catalogueClauses(i.catalogue).map((c) => [c.id, i.ignore ? c.text.split(/ ¶ |\r?\n/).map((x) => (i.ignore ?? []).reduce((y, re) => y.replace(new RegExp(re.source, re.flags.replace('g', '') + 'g'), ''), x.trim())).filter((x) => x.trim() !== '').join(' ¶ ') : c.text]));
   const whyKey = i.whyKey ?? 'why', dk = i.durationKey ?? 'duration';
   const found: { id: string; key: string; message: string }[] = [];
+  const skip = new Set([...i.keys, dk, whyKey]);
+  const all = (r: CardRecord) => nodes(r, skip);
   for (const r of i.records) {
     const t = text.get(r.clause) ?? '';
-    for (const k of new Set([...i.keys, ...(i.lasting?.(r) ? [dk] : [])])) {
-      if (r[k] === undefined) continue;
-      const v = val(r[k]);
-      if ((i.words[`${k}:${v}`] ?? []).some((p) => has(t, p)) || cites(r[whyKey], rulings)) continue;
+    for (const k of new Set([...i.keys, ...(i.lasting?.(r) ? [dk] : [])])) for (const n of all(r)) {
+      if (n[k] === undefined) continue;
+      const v = val(n[k]);
+      if ((i.words[`${k}:${v}`] ?? []).some((p) => has(t, p, i.slashJoins)) || cites(n[whyKey], rulings) || cites(r[whyKey], rulings)) continue;
       found.push({ id: r.id, key: k, message: `${r.id}: ${k}=${v} has no printed source and no AR` });
     }
-    if (i.lasting?.(r) && r[dk] === undefined) found.push({ id: r.id, key: dk, message: `${r.id}: lasting effect with no duration` });
+    if (i.lasting?.(r) && !all(r).some((n) => n[dk] !== undefined)) found.push({ id: r.id, key: dk, message: `${r.id}: lasting effect with no duration` });
   }
   for (const [c, t] of text) {
     const recs = i.records.filter((r) => r.clause === c);
     if (recs.length === 0) continue;
     for (const [kv, phrases] of Object.entries(i.words)) {
-      const p = phrases.find((x) => has(t, x));
+      const p = phrases.find((x) => has(t, x, i.slashJoins));
+      if (p !== undefined && recs.some((r) => all(r).some((n) => i.paidIcon?.(n)?.toLowerCase() === p.toLowerCase()))) continue;
       const k = kv.slice(0, kv.indexOf(':')), v = kv.slice(kv.indexOf(':') + 1);
-      if (p !== undefined && !recs.some((r) => r[k] !== undefined && val(r[k]) === v)) found.push({ id: c, key: k, message: `${c}: printed "${p}" has no restriction ${k}=${v}` });
+      if (p !== undefined && !recs.some((r) => all(r).some((n) => n[k] !== undefined && val(n[k]) === v))) found.push({ id: c, key: k, message: `${c}: printed "${p}" has no restriction ${k}=${v}` });
     }
   }
   const used = new Set<object>();
