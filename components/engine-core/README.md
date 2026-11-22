@@ -21,6 +21,7 @@ The kernel of a game engine: seeded random numbers, canonical JSON and hashes, t
 12. Mark an option the answering player has not seen (a face-down card, an unrevealed option) with `unseen: true`: when it is the only legal answer, `onlyOne` returns null and `askOrTake` asks instead of taking it (K641). The game, or the part that builds the prompt, sets `unseen` on every option over a hidden thing; nothing in the kernel sets it (card-language will set it for hidden picks in its own row).
 13. End an effect that lasts "for this combat" or "until the next X" with `{ until: 'event', event, instance }` and one `eventOver(ctx, event, instance)` call from the game's own code when that event happens (K541), not with a hand-kept list; pass the instance (the combat's id) whenever the event can nest or repeat, so an inner or later one does not end it.
 14. Expect `askOrTake` to advance `promptSeq` when it takes the only answer, as an opened and answered prompt does (K652): a taken game and an asked one have the same hash and later prompt ids. Re-record any hash or prompt id a game pinned over a taken answer before K652.
+15. Keep a status (stunned, a wound, stealth) with `giveStatus` / `removeStatus` / `hasStatus` / `statusesOf` and one `StatusTable` (K542, "Statuses" below), not a hand-kept list per unit; end it by its `ends` duration, and call `statusLeft` when an object leaves play. Read `given` of the result: a non-stacking status given again does nothing.
 
 **Common mistakes:**
 - Using the old `ctx.then` then `ctx.ask` form in new code: it is deprecated.
@@ -55,7 +56,23 @@ The kernel of a game engine: seeded random numbers, canonical JSON and hashes, t
 - Derived data on demand (K124, opt-in): `GameRules.queries` by name, read with `query(game, state, content, what, player?, arg?)` (an unknown name is a `GameSetupError`), so a view never carries it.
 - Debug edits as engine actions (`DebugAction`: `set`, `force`, `close` and the game's `GameRules.debug` verbs; `debugVerbs`, K100, opt-in): `debug.md`. The console is `debug-console`.
 - Timing (K93, K111, K94, K96, K112, K95, opt-in): batches of occurrences with `would`, `cancelBatch`, `ignoreBatch`, `insteadOf`, the prevention window (`Prevention` card data, `prevent`) the replacement loop (`Replacement`, `ReplaceResult`, `changeOccurrence`), triggers (`TriggerCandidate`, `PendingTrigger`, `DEFAULT_PRIORITY`, `enteredPlay`), `simultaneously`, continuous effects with durations (`addEffect`, `boundary`, `eventOver` for a named end event and `waitingOn` K541, `effectsOf`, `sumEffects`, `anyEffect`, K96) layered recompute (`layered`, `stampActive`, K112) and the checkpoint after every action (`cfg.checkpoint`: `derive`, `checks`, `RECOMPUTE_CAP`, K95); a game spreads `timingHandlers(cfg)` into its handlers: `timing.md`.
+- Statuses (K542, `statuses.ts`, opt-in): `giveStatus`, `removeStatus`, `hasStatus`, `statusCount`, `statusesOf`, `statusLeft` over a game's `StatusTable`; see "Statuses (K542)" below.
 - A number with its parts (K526, K582, `numbers.ts`, opt-in): `numberParts(base, modifiers, order, opts?)` applies `NumberModifier`s (set, add, multiply, floor, cap; own minimum, per-unit count, condition, scope) in the game's `NumberOrder` and returns the value with `parts` (`{ source, op, amount, applied, ref? }`), every floor or cap that bit and whether it still holds (`bounds`; `bound` is the last) and, on request, what changed nothing and why; `effectModifiers` maps the lasting effects (`effectsOf`) onto modifiers; `partsDirection`. For stats, costs, payment, `bar` reasons and a breakdown on screen: [numbers.md](numbers.md).
+
+## Statuses (K542)
+
+A status (stunned, stealth, a wound, "not in combat") is a named lasting effect on any object id, built on `addEffect` (`statuses.ts`, from `timed.ts`): kind `STATUS`, `target` the object, `value` the name, so every `Duration` ends it (`boundary`, `eventOver`, ...) and it is plain state (saves, undo, replay). The game passes one `StatusTable`: per name a `token` key (the view draws it, card-attachments `TokenRow`), `stacks` (a count) or not, `ends` (a `Duration` or `'removed'`) and `endsOnLeave`. Verbs: `giveStatus(ctx, table, object, name, { source?, ends?, instance?, when? })` (a non-stacking status already there: `{ given: false, why: 'already' }`, nothing changes), `removeStatus(ctx, object, name, n?)` (oldest given first; returns how many; `n` a whole number 1 or more, else an `EngineBugError`), `statusLeft(ctx, table, object)` (the object left play), `hasStatus`, `statusCount`, `statusesOf(s, table, object)` (`{ name, token, count }`, first given first); each read takes the game's `EffectsConfig` last (`blanked`, the `when` conditions), so it agrees with `effectsOf` (a status with a `when` needs it). Give, remove and leave act on every status not ended, hidden or not. Each stack is its own effect with its own end: stacks under the table's shared `ends` end together, stacks given with their own `ends` or `instance` end one by one. A name not in the table is an `EngineBugError`. Tests: `k542.test.ts` (with a comparison against a plain model).
+
+```ts
+const STATUSES: StatusTable = { stunned: { token: 'stun', ends: { until: 'endOfTurn' } }, wound: { token: 'wound', stacks: true, ends: 'removed', endsOnLeave: true } };
+const first = giveStatus(ctx, STATUSES, 'u1', 'stunned'); // { given: true, id, count: 1 }
+const again = giveStatus(ctx, STATUSES, 'u1', 'stunned'); // { given: false, why: 'already', count: 1 }: it does not stack
+const act = { id: 'act', enabled: !hasStatus(ctx.s, 'u1', 'stunned') }; // a stunned unit cannot act
+giveStatus(ctx, STATUSES, 'u1', 'wound'); giveStatus(ctx, STATUSES, 'u1', 'wound'); // stacks: statusCount 2
+const tokens = statusesOf(ctx.s, STATUSES, 'u1'); // [{ name: 'stunned', token: 'stun', count: 1 }, { name: 'wound', token: 'wound', count: 2 }]
+boundary(ctx, { kind: 'turnEnd' }); // the stun ends with the turn
+statusLeft(ctx, STATUSES, 'u1'); // the unit left play: its wounds go (endsOnLeave)
+```
 
 ## Use it in 10 lines
 
