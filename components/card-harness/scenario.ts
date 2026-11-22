@@ -75,6 +75,8 @@ export interface ScenarioStep<G extends PortTypes, D> {
 }
 
 export class Scenario<G extends PortTypes, W, D = never> {
+  /** K668: called with each prompt left open after a step, in every scenario (set by `recordCardPrompts`). */
+  static onPrompt: ((prompt: unknown, sc: object) => void) | undefined;
   readonly history: ScenarioStep<G, D>[] = [];
   s: G['state'];
   private checked: boolean;
@@ -129,6 +131,7 @@ export class Scenario<G extends PortTypes, W, D = never> {
     };
     const { result, notes } = this.game.probe?.trace(run) ?? { result: run(), notes: [] };
     this.history.push({ what, prompt: this.prompt, events: result, notes });
+    if (this.prompt !== null) Scenario.onPrompt?.(this.prompt, this);
     const next = this.prompt === null ? undefined : this.scripted.shift();
     return next === undefined ? this : this.answer(...next);
   }

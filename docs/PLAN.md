@@ -357,6 +357,7 @@ The blind matching test's result was not recorded: the PR, its comments and docs
 | K665 | card-harness `restrictionProblems`: restrictions nested anywhere in a record's effect tree are found (before, only top-level keys were read). | S |  | done |
 | K666 | sim-pool `proveResolved`: a documented trace input built from a game's own log (clause resolved or applied at a step), so a static clause shown applied with an effect counts as proven. | S | Radiance | done |
 | K667 | card-harness `screenProblems`: `allowNumbers` patterns are removed before any amount is read, so a card-number reference is never taken as the printed amount. | S |  | done |
+| K668 | card-harness: prompt rules in the screen scan (whole printed clause, who pays, no rule id, handler sentence equals clause, credited by record path, per option, empty log fails) and a prompt recorder for card tests. | M |  | done |
 
 ## Asked for by the owner
 
