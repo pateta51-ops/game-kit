@@ -371,7 +371,7 @@ A candidate is a part some game wants and nobody builds yet. A second game that 
 | K563 | dice formulas as data (count, sides, modifiers) rolled through the engine random and read by the odds; a game passes the formula. | S | 7th Inning Stretch | candidate |
 | K565 | turn-flow: take another turn, with the rule for what ends it; a game passes the turn order and the limit. | S | survey | candidate |
 | K566 | grid-map option: extra steps a game adds to the neighbours (for example a diagonal past a wall end under the game's own condition); a game passes the condition. | S | Dice Commandos | candidate |
-| K575 | tiles that are placed turned in steps, with the edges of neighbouring tiles tested for a match; a game passes the tile edges and the matching rule. | M | search misses | candidate |
+| K575 | what `grid-map` `rotateTile` (180 degrees only) lacks: tiles placed turned in other steps, with the edges of neighbouring tiles tested for a match; a game passes the tile edges and the matching rule. | M | search misses | candidate |
 | K576 | hidden movement: a piece whose place only its owner knows, with the clues and reveal moments the rules give; a game passes who may see the place and when it is revealed. | M | search misses | candidate |
 
 ## Harvest from the existing games (owner, 15 Nov 2026)

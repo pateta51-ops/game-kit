@@ -181,7 +181,7 @@ describe('K524 gate (scripts/mechanics-check.mjs)', () => {
   });
   it('the 20 planner searches and the 4 K574 ones pass on the repository, each naming its part', () => {
     const m = JSON.parse(fs.readFileSync(path.join(ROOT, 'docs', 'mechanics.json'), 'utf8')) as { searches: Record<string, string> };
-    expect(Object.keys(m.searches).slice(4)).toEqual(['modifier', 'why disabled', 'objective', 'encounter', 'adjacent', 'resource pool', 'pay cost', 'duration', 'trigger', 'status', 'legal moves', 'distance', 'health', 'continuous effect', 'prevent damage', 'replacement', 'preview', 'scenario', 'dice odds', 'reroll']);
+    expect(Object.keys(m.searches)).toEqual(['undo button', 'line of sight', 'wall', 'heavy queue', 'modifier', 'why disabled', 'objective', 'encounter', 'adjacent', 'resource pool', 'pay cost', 'duration', 'trigger', 'status', 'legal moves', 'distance', 'health', 'continuous effect', 'prevent damage', 'replacement', 'preview', 'scenario', 'dice odds', 'reroll']);
     const g = node(path.join(ROOT, 'scripts', 'mechanics-check.mjs'));
     expect(g.stderr).toBe('');
     expect(g.status).toBe(0);
