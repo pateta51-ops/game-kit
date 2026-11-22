@@ -123,5 +123,8 @@
   { "q": "cards leave over limit callback", "first": "card-zones" },
   { "q": "game bypasses the kit", "first": "motion-frame" },
   { "q": "sound cue timing with animation", "first": "motion-frame" },
-  { "q": "check game uses kit hooks", "first": "motion-frame" }
+  { "q": "check game uses kit hooks", "first": "motion-frame" },
+  { "q": "shuffle zone named rng", "first": "card-zones" },
+  { "q": "shuffle deck rng name override", "first": "card-zones" },
+  { "q": "shuffle zone forced order test", "first": "card-zones" }
 ]

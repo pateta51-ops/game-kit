@@ -1,6 +1,6 @@
 // K223 (GAPS D1): zones as data, moves through the copy-on-write barrier, shuffle by ctx.rng, the per-seat view.
 import { afterEach, describe, expect, it } from 'vitest';
-import { applyActionWith, createGame, draftOf, hashState, isCurrent, newObjectTrack, refOf, lastKnown, setCowChecks, setStateFreezing, type Ctx } from '../engine-core/index.ts';
+import { applyActionWith, createGame, draftOf, hashState, isCurrent, newObjectTrack, refOf, lastKnown, setCowChecks, setRngOverrides, setStateFreezing, type Ctx } from '../engine-core/index.ts';
 import { CONTENT, COUNTER, type Counter, type CounterState } from '../engine-core/fake/counter.ts';
 import { canSee, cardsIn, draw, hiddenFrom, locate, moveCard, newZones, place, reveal, seatZone, shuffleZone, viewOf, zoneProblems, type Zoned } from './index.ts';
 
@@ -80,6 +80,33 @@ describe('reveals and hidden sizes', () => {
     expect(s0.zones['deck']?.shown).toEqual({ c4: ['*'] });
     expect(r.zones['deck']?.shown).toBeUndefined();
     expect(canSee(r, 'a', 'c4')).toBe(false);
+  });
+});
+
+const RECORDED = ['c3', 'c5', 'c6', 'c4', 'c1', 'c2'];
+describe('shuffleZone rng name (K681)', () => {
+  afterEach(() => setRngOverrides(null));
+  type T = CounterState & Zoned;
+  const run = (opts?: { name?: string }) => {
+    const base = createGame(COUNTER, { seed: 'k681' }, { target: 1000 }, CONTENT).state;
+    const s0 = { ...base, zones: zones() } as T;
+    const table = { ...COUNTER.handlers, chosen: (ctx: Ctx<Counter>) => { shuffleZone(ctx, 'deck', opts); } };
+    return applyActionWith(COUNTER, s0, { kind: 'answer', promptId: s0.prompt?.id ?? -1, picks: ['add'] }, CONTENT, table).state as T;
+  };
+  it('the named override sets the order and leaves state.rng alone', () => {
+    setRngOverrides({ deck: (xs: readonly string[]) => [...xs].reverse() });
+    const plain = run();
+    const forced = run({ name: 'deck' });
+    expect(forced.zones['deck']?.cards).toEqual([...(zones()['deck']?.cards ?? [])].reverse());
+    expect(forced.rng).not.toEqual(plain.rng);
+  });
+  it('without a name, or with an unlisted name, the result is the seeded one', () => {
+    const plain = run();
+    setRngOverrides({ deck: (xs: readonly string[]) => [...xs].reverse() });
+    expect(hashState(run())).toBe(hashState(plain));
+    expect(hashState(run({}))).toBe(hashState(plain));
+    expect(hashState(run({ name: 'other' }))).toBe(hashState(plain));
+    expect(plain.zones['deck']?.cards).toEqual(RECORDED);
   });
 });
 
