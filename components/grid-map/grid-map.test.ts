@@ -538,6 +538,11 @@ describe('grid-map: insetCorners free wall ends and merged spaces', () => {
       expect(bruteSight(g, a, b, kind), `${kind}: only the free end lets it through`).toBe(false)
     }
   })
+  it('insetCorners: a wall whose line the sight line meets beyond the wall itself does not block', () => {
+    const g = gridMap({ rows: 5, cols: 4, walls: [[1, 1, 's'], [1, 2, 'e'], [2, 1, 's'], [3, 0, 's']] })
+    expect(lineOfSight(g, 'r0c3', 'r3c0', ins)).toBe(true)
+    expect(lineOfSight(g, 'r3c0', 'r0c3', ins)).toBe(true)
+  })
   it('insetCorners: a merged space sees, and is seen by, whatever any of its cells sees (each cell inset toward its own centre)', () => {
     const walls: W[] = [[1, 3, 'w'], [2, 2, 'n'], [2, 3, 'w']]
     const cells = [[0, 0], [1, 0], [1, 1]] as const
@@ -563,8 +568,8 @@ describe('grid-map: lineOfSight against a brute-force model', () => {
     let differ = 0
     let pairs = 0
     for (let k = 0; k < 300; k++) {
-      const rows = 1 + Math.floor(rnd() * 4)
-      const cols = 1 + Math.floor(rnd() * 4)
+      const rows = 1 + Math.floor(rnd() * 7)
+      const cols = 1 + Math.floor(rnd() * 7)
       const walls: [number, number, 'n' | 'e' | 's' | 'w'][] = []
       for (let r = 0; r < rows; r++) for (let c = 0; c < cols; c++) for (const s of sides) if (rnd() < 0.25) walls.push([r, c, s])
       const merges = cols > 1 && rnd() < 0.3 ? [{ id: 'm', cells: [[rows - 1, 0], [rows - 1, 1]] as const }] : []

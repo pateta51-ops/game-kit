@@ -78,11 +78,11 @@ Each returns space ids in reading order (`line`: in order along the line) and wo
 
 | Shape | Covers | Walls by default | Option for the other reading |
 |---|---|---|---|
-| `within(g, from, n, { diagonal?, wallEnd?, throughWalls?, sight? })` | spaces 1 to n steps away, not `from` | respected: steps go round walls | `throughWalls: true` counts cells as if no wall stood; `sight: true` keeps only spaces `from` sees (`insetCorners` as in `lineOfSight`) |
+| `within(g, from, n, { diagonal?, wallEnd?, throughWalls?, sight?, insetCorners? })` | spaces 1 to n steps away, not `from` | respected: steps go round walls | `throughWalls: true` counts cells as if no wall stood; `sight: true` keeps only spaces `from` sees (`insetCorners` as in `lineOfSight`) |
 | `adjacent(g, space, { diagonal?, wallEnd?, throughWalls? })` | the next spaces, orthogonal or also diagonal | respected, as in `neighbours` | `throughWalls: true` |
 | `rowOf(g, space, { stopAtWall? })`, `columnOf(...)` | every space in the row or column, the space itself included | ignored | `stopAtWall: true` stops each way at the first wall crossed |
 | `line(g, from, direction, { length?, stopAtWall?, wallEnd?, extra? })` | the cells in one of `n ne e se s sw w nw`, nearest first, not `from` | ignored | `stopAtWall: true` stops where `neighbours` has no step: at a walled edge, or for a diagonal at a corner a wall touches (`wallEnd: 'open'`: a corner two or more touch) and before entering or leaving a merged space; a step listed in `extra` lets the line through |
-| `area(g, centre, radius, { square \| diamond, sight? })` | cells within `radius` counted as a square (diagonals count 1) or a diamond (they count 2), the centre included | ignored | `sight: true` keeps only spaces the centre sees (`insetCorners` as in `lineOfSight`); for a blast that goes round walls use `within` |
+| `area(g, centre, radius, { square \| diamond, sight?, insetCorners? })` | cells within `radius` counted as a square (diagonals count 1) or a diamond (they count 2), the centre included | ignored | `sight: true` keeps only spaces the centre sees (`insetCorners` as in `lineOfSight`); for a blast that goes round walls use `within` |
 
 `throughWalls` still never steps diagonally into or out of a merged space. A merged space is covered when any of its cells is; a shape from a merged space starts from each of its cells.
 
