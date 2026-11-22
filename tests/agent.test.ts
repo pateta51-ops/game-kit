@@ -154,7 +154,7 @@ describe('finish: one run per branch, sign of life, --detach and --result (K572)
   const st = (running: unknown[], waiting: unknown[]) => ({ status: 0, output: JSON.stringify({ slots: 1, running, waiting, history: [] }) });
   function fresh(name: string) { const main = repo(name); fs.rmSync(path.join(main, 'node_modules'), { recursive: true }); return { main, sha: g(main, 'rev-parse', 'HEAD').trim() }; }
   function fakeBg(home: string, onSleep: (t: number) => void = () => {}) {
-    const b = { t: 1000, starts: [] as string[], home, cmds: [] as [string, string[]][], start: (c: string, a: string[], dir: string) => void (b.starts.push(dir), b.cmds.push([c, a])), sleep: (ms: number) => { b.t += ms; if (b.t > 1e8) throw new Error('finish kept polling for a result that never came'); onSleep(b.t); }, now: () => b.t };
+    const b = { t: 1000, starts: [] as string[], home, cmds: [] as [string, string[]][], start: (c: string, a: string[], dir: string) => void (b.starts.push(dir), b.cmds.push([c, a]), fs.writeFileSync(path.join(dir, 'started'), '1')), sleep: (ms: number) => { b.t += ms; if (b.t > 1e8) throw new Error('finish kept polling for a result that never came'); onSleep(b.t); }, now: () => b.t };
     return b;
   }
 
@@ -185,7 +185,7 @@ describe('finish: one run per branch, sign of life, --detach and --result (K572)
     const home = path.join(root, 'k3-home');
     let rcDir = '';
     const b = fakeBg(home, (t) => { if (t >= 201000 && rcDir) { fs.writeFileSync(path.join(rcDir, 'out.log'), 'all good\n'); fs.writeFileSync(path.join(rcDir, 'rc'), '0\n'); } });
-    b.start = (_c: string, _a: string[], dir: string) => { rcDir = dir; b.starts.push(dir); };
+    b.start = (_c: string, _a: string[], dir: string) => { rcDir = dir; b.starts.push(dir); fs.writeFileSync(path.join(dir, 'started'), '1'); };
     const exec = (_c: string, _a: string[], input: string) => b.t < 101000 ? st([job({ id: 'o', label: 'other' })], [job({ id: 'a', label: 'x', queuedAt: 1 }), job({ id: 'b', label: 'y', priority: 'high', queuedAt: 9 }), job({ waitedMs: 1 }), job({ id: 'c', label: 'z', queuedAt: 7 })]) : isStatus(input) ? st([job({ runningMs: b.t - 101000 })], []) : { status: 0, output: '' };
     // the first status query (before the run) must not see our own job: a queue with only others
     let first = true;
@@ -260,7 +260,8 @@ describe('finish: one run per branch, sign of life, --detach and --result (K572)
     const o = io();
     expect(finish(['--repo', main, '--detach'], o.io, exec, false, b as Bg)).toBe(0);
     const dir = b.starts[0]!;
-    expect(b.cmds[0]).toEqual(['bash', ['-c', `setsid nohup bash '${path.join(dir, 'run.sh')}' > /dev/null 2>&1 < /dev/null &`]]);
+    expect(b.cmds[0]![0]).toBe('bash');
+    expect(b.cmds[0]![1][1]).toContain(`setsid nohup bash '${path.join(dir, 'run.sh')}' > /dev/null 2>&1 < /dev/null &`);
     expect(fs.readFileSync(path.join(dir, 'in.sh'), 'utf8')).toContain(`cd "$d" && git rev-parse HEAD > '${path.join(dir, 'sha')}' && `);
     fs.writeFileSync(path.join(dir, 'sha'), 'f'.repeat(40) + '\n');
     fs.writeFileSync(path.join(dir, 'out.log'), 'ok\n');
@@ -275,10 +276,10 @@ describe('finish: one run per branch, sign of life, --detach and --result (K572)
     expect(finish(['--repo', main, '--detach'], o.io, exec, true, w as Bg)).toBe(0);
     expect(w.cmds[0]![0]).toBe('wsl');
     expect(w.cmds[0]![1].slice(0, 3)).toEqual(['-e', 'bash', '-c']);
-    expect(w.cmds[0]![1][3]).toMatch(/^setsid nohup bash '\/(mnt\/[a-z]\/)?[^']*run\.sh' > \/dev\/null 2>&1 < \/dev\/null &$/);
+    expect(w.cmds[0]![1][3]).toMatch(/^setsid nohup bash '\/(mnt\/[a-z]\/)?[^']*run\.sh' > \/dev\/null 2>&1 < \/dev\/null & i=0; /);
   });
   it('K644 the launch holds WSL open until the run writes its start marker, and Git Bash cannot rewrite its paths', () => {
-    const l = launch(true, 'C:\h\r\run');
+    const l = launch(true, 'C:/h/r/run');
     expect(l.cmd).toBe('wsl');
     expect(l.args.slice(0, 3)).toEqual(['-e', 'bash', '-c']);
     expect(l.args[3]).toContain("setsid nohup bash '/mnt/c/h/r/run/run.sh'");
@@ -298,14 +299,10 @@ describe('finish: one run per branch, sign of life, --detach and --result (K572)
       const t0 = b.t;
       expect(finish(['--repo', main], o.io, exec, win, b as Bg)).not.toBe(0);
       expect(b.t - t0).toBeLessThanOrEqual(60000);
-      expect(o.err.join('
-')).toMatch(/did not start/);
-      expect(o.err.join('
-')).toContain(win ? 'wsl -e bash ' : 'bash ');
-      expect(o.err.join('
-')).toContain('run.sh');
-      expect(o.out.join('
-')).not.toMatch(/PASS/);
+      expect(o.err.join(' ')).toMatch(/did not start/);
+      expect(o.err.join(' ')).toContain(win ? 'wsl -e bash ' : 'bash ');
+      expect(o.err.join(' ')).toContain('run.sh');
+      expect(o.out.join(' ')).not.toMatch(/PASS/);
     }
   });
 });
