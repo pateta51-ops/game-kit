@@ -425,5 +425,20 @@
   { "q": "stunned until end of turn", "first": "engine-core" },
   { "q": "scenario objective progress", "first": "engine-core" },
   { "q": "mission goal done or failed", "first": "engine-core" },
-  { "q": "objective with steps", "first": "engine-core" }
+  { "q": "objective with steps", "first": "engine-core" },
+  { "q": "hold with fallback", "first": "motion-frame" },
+  { "q": "play sound on beat", "first": "motion-frame" },
+  { "q": "skip animation on click", "first": "motion-frame" },
+  { "q": "offer only if it does something", "first": "card-language" },
+  { "q": "end effect at end of combat", "first": "engine-core" },
+  { "q": "hand limit discard", "first": "card-zones" },
+  { "q": "shuffle deck seeded", "first": "card-zones" },
+  { "q": "end turn early", "first": "turn-flow" },
+  { "q": "fade sound out", "first": "sound-player" },
+  { "q": "see past walls", "first": "grid-map" },
+  { "q": "keep die out of next roll", "first": "dice-tray" },
+  { "q": "test ability not offered", "first": "card-harness" },
+  { "q": "resume after crash", "first": "sim-pool" },
+  { "q": "marker cannot advance", "first": "clock" },
+  { "q": "fewest dice meet pattern", "first": "dice-patterns" }
 ]

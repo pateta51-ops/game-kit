@@ -1,8 +1,7 @@
 // K546: objectives with progress kept in engine state (`s.objectives`): a count to reach or a list of steps (ordered or
-// not), an optional fail condition (failures, or a round deadline the game passes), an optional owner seat. Restated in
-// idea from STCC src/engine/turn/missions.ts (27fb8882: progress { have, need } capped at need, each mission done once),
-// Earthborne Rangers src/engine/phases/clear.ts (b9b06107: a progress threshold clears once, IR-61 latch) and Warp's
-// Edge src/engine/combat/counting.ts (6790200: met when have >= need; every part met). Written new.
+// not), an optional fail condition (failures, or a round deadline the game passes), an optional owner seat. Progress
+// is capped at its target, a goal is met when every part is, and done or failed is reported once (sources:
+// component.json). Written new.
 import type { StateCheck } from './checkpoint.ts';
 import { draftOf } from './ctx.ts';
 import { EngineBugError } from './errors.ts';
@@ -54,6 +53,9 @@ const entry = (s: WithObjectives, id: string): ObjectiveEntry => {
   if (e === undefined) throw new EngineBugError(`objective "${id}" was not started`);
   return e;
 };
+const round = (n: number, what: string): void => {
+  if (!(Number.isInteger(n) && n >= 0)) throw new EngineBugError(`${what} must be a whole round number 0 or more, got ${String(n)}`);
+};
 const need = (d: ObjectiveDef): number => (d.kind === 'count' ? d.target : d.steps.length);
 const put = <G extends GameTypes>(ctx: Ctx<G>, id: string, f: (e: ObjectiveEntry) => ObjectiveEntry): void => {
   (draftOf(ctx) as { objectives?: ObjectiveEntry[] }).objectives = list(ctx.s).map((e) => (e.def.id === id ? f(e) : e));
@@ -74,7 +76,9 @@ export function startObjectives<G extends GameTypes>(ctx: Ctx<G>, defs: readonly
     ids.add(d.id);
     if (d.kind === 'count') whole(d.target, `objective "${d.id}" target`);
     else if (d.steps.length === 0 || new Set(d.steps).size !== d.steps.length) throw new EngineBugError(`objective "${d.id}" needs one or more distinct steps`);
+    if (d.fail !== undefined && d.fail.failures === undefined && d.fail.round === undefined) throw new EngineBugError(`objective "${d.id}" has an empty fail: give failures or round`);
     if (d.fail?.failures !== undefined) whole(d.fail.failures, `objective "${d.id}" fail.failures`);
+    if (d.fail?.round !== undefined) round(d.fail.round, `objective "${d.id}" fail.round`);
   }
   (draftOf(ctx) as { objectives?: ObjectiveEntry[] }).objectives = [...old, ...defs.map((def) => ({ def, count: 0, steps: [], failures: 0, outcome: 'open' as const }))];
 }
@@ -110,8 +114,9 @@ export function failObjective<G extends GameTypes>(ctx: Ctx<G>, id: string, n = 
 }
 
 /** The game ended round `round`: every open objective whose `fail.round` is `round` or earlier fails. Returns their ids. */
-export function objectivesRoundEnd<G extends GameTypes>(ctx: Ctx<G>, round: number): string[] {
-  const late = list(ctx.s).filter((e) => e.outcome === 'open' && e.def.fail?.round !== undefined && e.def.fail.round <= round).map((e) => e.def.id);
+export function objectivesRoundEnd<G extends GameTypes>(ctx: Ctx<G>, r: number): string[] {
+  round(r, 'objectivesRoundEnd round');
+  const late = list(ctx.s).filter((e) => e.outcome === 'open' && e.def.fail?.round !== undefined && e.def.fail.round <= r).map((e) => e.def.id);
   for (const id of late) put(ctx, id, (x) => ({ ...x, outcome: 'failed' }));
   return late;
 }

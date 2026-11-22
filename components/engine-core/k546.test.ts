@@ -1,12 +1,10 @@
-// K546: objectives with progress on the timed fake game. Restated cases: STCC src/engine/turn/missions.ts (27fb8882,
-// missionProgress caps have at need, a GOAL of several parts is met when every part is, a mission completes once);
-// Earthborne Rangers src/engine/phases/clear.ts (b9b06107, a progress threshold clears the card once (IR-61 latch), a
-// harm threshold ends it the other way); Warp's Edge src/engine/combat/counting.ts (6790200, defeatWays: met when
-// have >= need; needsAll: every stat met).
+// K546: objectives with progress on the timed fake game. Restated cases of three games (component.json sources):
+// progress capped at its target, a goal of several parts met when every part is, a goal completed once, a threshold
+// reached is reported once, a second threshold ends it the other way, met when what it has reaches what it needs.
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
-import { applyAction, createSave, EngineBugError, exportSave, hashState, importSave, newHistory, recordAction, replay, undo, type Ctx, type GameRules } from './index.ts';
+import { applyAction, createSave, would, EngineBugError, exportSave, hashState, importSave, newHistory, recordAction, replay, undo, type Ctx, type GameRules } from './index.ts';
 import { advanceObjective, failObjective, markStep, objectiveDone, objectiveFailed, objectiveProgress, objectivesCheck, objectivesOf, objectivesRoundEnd, reportObjectives, startObjectives, type ObjectiveDef, type ObjectiveReport } from './timed.ts';
 import { answer, HIT, startTimed, timedGame, type Timed, type TimedState } from './fake/timed.ts';
 
@@ -16,7 +14,7 @@ const CLEAR: ObjectiveDef = { id: 'c', kind: 'count', target: 2, fail: { failure
 const GOAL: ObjectiveDef = { id: 'g', kind: 'steps', steps: ['research', 'military', 'influence'] };
 
 describe('K546 objectives', () => {
-  it('K546 STCC missionProgress: have is capped at need; advancing past the target stays done and changes nothing', () => {
+  it('K546 count: have is capped at need; advancing past the target stays done and changes nothing', () => {
     const out: unknown[] = [];
     const s = play((ctx) => {
       startObjectives(ctx, [MISSION]);
@@ -29,7 +27,7 @@ describe('K546 objectives', () => {
     expect(objectiveProgress(s, 'm').have).toBe(3);
   });
 
-  it('K546 STCC GOAL of several parts / Warp needsAll: unordered steps are done only when every step is marked, in any order', () => {
+  it('K546 a goal of several parts: unordered steps are done only when every step is marked, in any order', () => {
     const out: unknown[] = [];
     play((ctx) => {
       startObjectives(ctx, [GOAL]);
@@ -51,7 +49,7 @@ describe('K546 objectives', () => {
     expect(out).toEqual([{ marked: false, why: 'order' }, [], { marked: true }, { marked: true }, true]);
   });
 
-  it('K546 EBR clear: the harm side, failures reaching fail.failures fail it; a failed objective takes no progress', () => {
+  it('K546 failures: reaching fail.failures fail it; a failed objective takes no progress', () => {
     const out: unknown[] = [];
     play((ctx) => {
       startObjectives(ctx, [CLEAR]);
@@ -81,7 +79,7 @@ describe('K546 objectives', () => {
   it('K546 bad input is an engine bug and changes nothing', () => {
     const errs: unknown[] = [];
     const s = play((ctx) => {
-      startObjectives(ctx, [MISSION, GOAL]);
+      startObjectives(ctx, [MISSION, GOAL, CLEAR]);
       const tries = [
         () => startObjectives(ctx, [MISSION]),
         () => startObjectives(ctx, [{ id: 'z', kind: 'count', target: 0 }]),
@@ -93,11 +91,19 @@ describe('K546 objectives', () => {
         () => markStep(ctx, 'g', 'nope'),
         () => failObjective(ctx, 'm'),
         () => objectiveProgress(ctx.s, 'missing'),
+        ...[NaN, 0, -1, 1.5].flatMap((n) => [() => advanceObjective(ctx, 'm', n), () => failObjective(ctx, 'c', n)]),
+        () => startObjectives(ctx, [{ id: 'z', kind: 'count', target: 1, fail: {} }]),
+        () => startObjectives(ctx, [{ id: 'z', kind: 'count', target: 1, fail: { round: 1.5 } }]),
+        () => startObjectives(ctx, [{ id: 'z', kind: 'count', target: 1, fail: { round: NaN } }]),
+        () => startObjectives(ctx, [{ id: 'z', kind: 'count', target: 1, fail: { round: -1 } }]),
+        () => objectivesRoundEnd(ctx, NaN),
+        () => objectivesRoundEnd(ctx, 2.5),
+        () => objectivesRoundEnd(ctx, -1),
       ];
       for (const t of tries) { try { t(); errs.push('no error'); } catch (e) { errs.push(e instanceof EngineBugError); } }
     });
-    expect(errs).toEqual(Array(10).fill(true));
-    expect(objectivesOf(s).map((p) => [p.id, p.have])).toEqual([['m', 0], ['g', 0]]);
+    expect(errs).toEqual(Array(25).fill(true));
+    expect(objectivesOf(s).map((p) => [p.id, p.have, p.failures])).toEqual([['m', 0, 0], ['g', 0, 0], ['c', 0, 0]]);
   });
 
   it('K546 a game that uses no objectives keeps no objectives key and hashes as before', () => {
@@ -108,7 +114,7 @@ describe('K546 objectives', () => {
     expect(hashState(run(reads))).toBe(hashState(run(plain)));
   });
 
-  it('K546 the state check reports done once (EBR IR-61 latch): later checkpoints and advances past the target do not report it again', () => {
+  it('K546 the state check reports done once: later checkpoints and advances past the target do not report it again', () => {
     const seen: ObjectiveReport[] = [];
     const g = timedGame({
       happen: (ctx) => { advanceObjective(ctx, 'c'); advanceObjective(ctx, 'c'); },
@@ -118,6 +124,23 @@ describe('K546 objectives', () => {
     const s = applyAction(g, s0, answer(s0, 'hit'), null).state;
     expect(seen).toEqual([{ id: 'c', outcome: 'done' }, { id: 'm', outcome: 'failed' }]);
     expect(objectiveProgress(s, 'c')).toMatchObject({ have: 2, outcome: 'done' });
+  });
+
+  it('K546 a report fires once across a save and load: the loaded state does not report it again', () => {
+    const seen: ObjectiveReport[] = [];
+    const g = timedGame({
+      happen: (ctx) => { advanceObjective(ctx, 'm', 3); },
+      checkpoint: { checks: [objectivesCheck((_ctx, r) => { seen.push(r); })] },
+    }, { turn: (ctx) => { startObjectives(ctx, [MISSION]); ctx.then({ kind: 'chosen' }); ctx.ask({ min: 1, max: 1, options: [{ id: 'hit', enabled: true }] }); }, end: (ctx) => ctx.ask({ min: 1, max: 1, options: [{ id: 'again', enabled: true }] }, { kind: 'again' }), again: (ctx) => { ctx.then({ kind: 'fin' }); would(ctx, [HIT]); }, fin: () => {} });
+    const s0 = startTimed(g);
+    const s1 = applyAction(g, s0, answer(s0, 'hit'), null).state;
+    expect(seen).toEqual([{ id: 'm', outcome: 'done' }]);
+    const loaded = JSON.parse(JSON.stringify(s1)) as TimedState;
+    expect(hashState(loaded)).toBe(hashState(s1));
+    const s2 = applyAction(g, loaded, answer(loaded, 'again'), null).state;
+    expect(s2.log.filter((e) => e.type === 'damaged')).toHaveLength(2);
+    expect(seen).toEqual([{ id: 'm', outcome: 'done' }]);
+    expect(objectiveProgress(s2, 'm')).toMatchObject({ have: 3, outcome: 'done' });
   });
 
   it('K546 objectives are plain state: a save restores them, replay gives the same hash, undo takes the advance back', () => {

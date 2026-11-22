@@ -4,6 +4,19 @@ A Web Audio player driven by one table of data. It knows no game. No packages.
 
 ## Rules for agents
 
+<!-- hooks: written by scripts/catalog.mjs from docs/catalog-notes.json; do not edit -->
+**Hooks a game calls:**
+- `createSoundPlayer`: one player for every sound, voice and music cue, from a table
+- `play`: play a sound cue by name
+- `playTrack`: play background music
+- `stopCues`: fade a sound out early, never a hard stop
+- `unlock`: let sound start after the first tap
+- `setVolumes`: change music, sound and voice volume from the settings
+- `onEnd`: run something when a sound ends, fades or is dropped
+- `canPlay`: ask whether a cue can sound
+- `checkSoundFiles`: check every sound file exists, its format and size
+<!-- /hooks -->
+
 **What it does:** plays a game's sounds, voice and music from one data table through Web Audio, with volume buses, ducking and caps; it never cuts a cue, it fades it.
 
 **You must:**

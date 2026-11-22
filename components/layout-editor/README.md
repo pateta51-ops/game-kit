@@ -2,6 +2,16 @@ Arrange the zones of a game screen by hand (card zones, piles, hand, market, tra
 
 ## Rules for agents
 
+<!-- hooks: written by scripts/catalog.mjs from docs/catalog-notes.json; do not edit -->
+**Hooks a game calls:**
+- `normalizeDoc` + `screenLayout`: read the exported layout of one screen
+- `zoneCard`: the card size a zone asks for
+- `mirrorZones`: mirror zones for the other seat
+- `consolidate` + `split`: merge or split zones
+- `cardFit`: how many cards fit a zone
+- `layoutWarnings`: zones too small for their cards or pile
+<!-- /hooks -->
+
 **What it does:** A one-file wireframe editor that arranges a game screen's zones; its JSON is a `board-layout` zones layout per screen.
 
 **You must:**
