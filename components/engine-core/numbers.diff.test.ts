@@ -43,31 +43,91 @@ describe('numberParts: against the K526 code (K582)', () => {
     { steps: ['cap', 'increase', 'decrease', 'set', 'multiply', 'floor'], setters: 'highest', decreases: 'highestMin', cap: 7, round: 'down' },
     { steps: ['floor', 'add', 'cap', 'set', 'multiply'] },
   ];
-  it('seeded random inputs inside the contract give the same value, parts and bound; an unrounded fraction is the same float', () => {
-    const rnd = seeded(526);
-    const fractions = [0.1, 1 / 3, 0.7, 1.1, 2.5, 1 / 7];
-    let n = 0;
-    for (let i = 0; i < 3000; i += 1) {
-      const o = orders[rnd(orders.length)] as NumberOrder;
-      const ms: NumberModifier[] = Array.from({ length: rnd(6) }, (_, k): NumberModifier => {
-        const source = `m${String(k)}`;
-        const kind = rnd(6);
-        if (kind === 0) return { source, op: 'set', amount: rnd(7) };
-        if (kind === 1) return mul(source, o.round === undefined && rnd(2) === 0 ? (fractions[rnd(fractions.length)] as number) : ([2, 3, 0.5][rnd(3)] as number), rnd(4) === 0 ? { round: 'up' } : {});
-        if (kind === 2) return { source, op: 'floor', amount: rnd(4) };
-        if (kind === 3) return { source, op: 'cap', amount: 3 + rnd(7) };
-        const amount = rnd(9) - 4;
-        return add(source, amount, amount < 0 && rnd(2) === 0 ? { min: rnd(4) } : {});
-      });
-      const base = rnd(12) - 2;
-      const now = numberParts(base, ms, o);
-      const was = partsK526(base, ms, o);
-      expect(now.value).toBe(was.value + 0);
-      expect(now.parts).toEqual(was.parts);
-      expect(now.bound).toEqual(was.bound);
-      n += now.parts.length;
+  type Q = { readonly n: bigint; readonly d: bigint };
+  const whole = (n: number): Q => ({ n: BigInt(n), d: 1n });
+  const lt = (x: Q, y: Q): boolean => x.n * y.d < y.n * x.d;
+  // The same rules on exact fractions (numerator and denominator as whole numbers), for inputs with no scope, condition or count.
+  const exact = (base: number, ms: readonly { readonly m: NumberModifier; readonly f: Q }[], o: NumberOrder): Q => {
+    let v = whole(base);
+    for (const step of o.steps) {
+      if (step === 'set') {
+        const all = ms.filter((x) => x.m.op === 'set');
+        const ok = o.setOnlyLowers === true ? all.filter((x) => lt(x.f, v)) : all;
+        const win = (o.setters ?? 'last') === 'last' ? ok.at(-1) : ok.reduce<(typeof ok)[number] | undefined>((w, x) => (w === undefined || (o.setters === 'lowest' ? lt(x.f, w.f) : lt(w.f, x.f)) ? x : w), undefined);
+        if (win !== undefined) v = win.f;
+      } else if (step === 'multiply') {
+        for (const x of ms.filter((y) => y.m.op === 'multiply')) {
+          v = { n: v.n * x.f.n, d: v.d * x.f.d };
+          const r = x.m.round ?? o.round;
+          if (r !== undefined) {
+            const down = (v.n - (((v.n % v.d) + v.d) % v.d)) / v.d;
+            v = { n: r === 'down' || down * v.d === v.n ? down : down + 1n, d: 1n };
+          }
+        }
+      } else if (step === 'floor' || step === 'cap') {
+        const lo = step === 'floor';
+        const def = o[step];
+        const all = [...ms.filter((x) => x.m.op === step).map((x) => x.f), ...(def === undefined ? [] : [whole(def)])];
+        const win = all.reduce<Q | undefined>((w, x) => (w === undefined || (lo ? lt(w, x) : lt(x, w)) ? x : w), undefined);
+        if (win !== undefined && (lo ? lt(v, win) : lt(win, v))) v = win;
+      } else {
+        const adds = ms.map((x) => x.m).filter((m) => m.op === 'add' && (step === 'add' || (step === 'decrease' ? m.amount < 0 : m.amount > 0)));
+        if (step === 'decrease' && o.decreases === 'highestMin') adds.sort((x, y) => (y.min ?? -Infinity) - (x.min ?? -Infinity) || x.amount - y.amount);
+        for (const m of adds) {
+          const to: Q = { n: v.n + BigInt(m.amount) * v.d, d: v.d };
+          if (m.amount < 0 && m.min !== undefined) v = !lt(whole(m.min), v) ? v : lt(to, whole(m.min)) ? whole(m.min) : to;
+          else v = to;
+        }
+      }
     }
-    expect(n).toBeGreaterThan(3000);
+    return v;
+  };
+  it('seeded random inputs inside the contract, several seeds: the exact result always, and the same value, parts and bound as the K526 code; if the two ever differ, the K526 code is the one that is off', () => {
+    const fractions: (readonly [number, number])[] = [[1, 10], [1, 3], [7, 10], [11, 10], [5, 2], [1, 7]];
+    const halves: (readonly [number, number])[] = [[2, 1], [3, 1], [1, 2]];
+    let n = 0;
+    for (const seed of [526, 35, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10]) {
+      const rnd = seeded(seed);
+      for (let i = 0; i < 1500; i += 1) {
+        const o = orders[rnd(orders.length)] as NumberOrder;
+        const made = Array.from({ length: rnd(6) }, (_, k): { m: NumberModifier; f: Q } => {
+          const source = `m${String(k)}`;
+          const kind = rnd(6);
+          const int = (m: NumberModifier): { m: NumberModifier; f: Q } => ({ m, f: whole(m.amount) });
+          if (kind === 0) return int({ source, op: 'set', amount: rnd(7) });
+          if (kind === 1) {
+            const [p, q] = (o.round === undefined && rnd(2) === 0 ? fractions[rnd(fractions.length)] : halves[rnd(3)]) as readonly [number, number];
+            return { m: mul(source, p / q, rnd(2) === 0 ? { round: rnd(2) === 0 ? 'up' : 'down' } : {}), f: { n: BigInt(p), d: BigInt(q) } };
+          }
+          if (kind === 2) return int({ source, op: 'floor', amount: rnd(4) });
+          if (kind === 3) return int({ source, op: 'cap', amount: 3 + rnd(7) });
+          const amount = rnd(9) - 4;
+          return int(add(source, amount, amount < 0 && rnd(2) === 0 ? { min: rnd(4) } : {}));
+        });
+        const ms = made.map((x) => x.m);
+        const base = rnd(12) - 2;
+        const now = numberParts(base, ms, o);
+        const was = partsK526(base, ms, o);
+        const e = exact(base, made, o);
+        const want = Number(e.n) / Number(e.d);
+        if (now.value === was.value) {
+          expect(now.parts).toEqual(was.parts);
+          expect(now.bound).toEqual(was.bound);
+        } else {
+          // The K526 code rounded a product that float error had pushed past a whole number (3.0000000000000004 up: 4).
+          expect(Math.abs(was.value - want)).toBeGreaterThan(0.5);
+        }
+        if (e.d === 1n) expect(now.value).toBe(want);
+        else expect(Math.abs(now.value - want)).toBeLessThan(1e-9);
+        n += now.parts.length;
+      }
+    }
+    expect(n).toBeGreaterThan(18000);
+  });
+  it('an input where the two differ (found by another seed of an earlier form of that test): 4 x 0.1 x 3 x 2.5 rounded up is 3; the K526 code gave 4', () => {
+    const ms = [mul('a', 0.1), mul('b', 3), mul('c', 2.5, { round: 'up' })];
+    expect(numberParts(4, ms, { steps: ['multiply'] }).value).toBe(3);
+    expect(partsK526(4, ms, { steps: ['multiply'] }).value).toBe(4);
   });
 });
 
@@ -116,5 +176,7 @@ describe('numberParts: multipliers p/q with q up to 10 (K582)', () => {
     const r = numberParts(3, [mul('a', 0.1)], o);
     expect(r.value).toBe(3 * 0.1);
     expect(Math.abs(r.base + total(r.parts) - r.value)).toBeLessThan(1e-12);
+    // Float behaviour kept from K526: with no rounding the product is the plain float, also right beside a whole number.
+    expect(numberParts(100, [mul('a', 1.1)], o).value).toBe(110.00000000000001);
   });
 });
