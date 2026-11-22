@@ -325,6 +325,7 @@ The blind matching test's result was not recorded: the PR, its comments and docs
 | K581 | `clock`: a recipe and state checks (`onSpace`, `reached`) for a lose space that is not the last space of the row, landing only or reaching and passing; `occurrences(crossings, prefix, true)` also carries the threshold's `data`, its `space`, `how` and the `way` of travel, and a crossing says its `way`. Findable under: lose space on a track, countdown threshold, round tracker. | S | kit steward (check of the tier 1 rows) | done |
 | K585 | Mechanics map and register: search words for the number breakdown and the offer policy, a stricter name check in the gate, candidate rows for every partly line, and the candidates from the checks of 21 Nov and the older engines' inventories. | M | kit steward (checks of 21 Nov) | done |
 | K587 | card-harness screen check: amounts declared per prompt of a clause, so a clause that opens two prompts has each prompt's amount checked on its own. Fix: a `'counted'` amount no longer passes on digits inside an icon code of the prompt, nor when the clause is listed a second time without it. | S |  | done |
+| K588 | `clock`: dry-run and lose-space recipes made right for both directions and put under test, `reached` and `onSpace` agree, a sign when a step does not fit, distance to a given space. | S | kit steward (second review of the part) | done |
 
 ## Asked for by the owner
 
