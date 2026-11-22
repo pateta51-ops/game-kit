@@ -367,6 +367,7 @@ The blind matching test's result was not recorded: the PR, its comments and docs
 | K688 | Built new check: re-run each line's searches, ignore entries need a reason, new exports in old files need a line | M |  | done |
 | K689 | bypass patterns: game-side holds and timers, and input wrappers around skipAll/hurry | S |  | done |
 | K690 | plancheck: build-own rows for screen, motion and sound code are accepted and required | S |  | done |
+| K694 | effect-library glow: rise from dark before fading, for a single flash | S |  | done |
 | K698 | Claim check in finish: a line in docs/experience, BUILD_PLAN.md or docs/handoff that says the kit lacks something carries two searches, and the kit's search and effects are run again on them | M |  | done |
 
 ## Asked for by the owner
@@ -527,6 +528,7 @@ What a game's own tool did that the kit's does not; each kept that game on its o
 | K68 | `plan-checker`: session-plan heading optional; every rule id covered by a scenario; scenario catalogue read in full; skip with a notice when Python is missing | Unstoppable, EBR | S | done (left: `--tsc` over several sections, as in Unstoppable) |
 | K69 | `bundle-size`: base path in addresses; follow static imports and stylesheet `url(...)`; an exported budget a test can import; limits that can be left out | STCC, Unstoppable | S | done (left: Unstoppable flag names) |
 | K681 | card-zones: shuffleZone passes an rng name (named override) like ctx.rng.shuffle. |  | S | done |
+| K692 | dice-tray: roll calls pass an rng name (named override). |  | S | done |
 | K70 | `ci-templates` and `repo-gate`: workflow templates filled from a config, not placeholders; `full-gate.mjs`, `local-ci.sh`, `watch-run.sh` usable as pulled; skip reporter on vitest 2; runners file exempt from its own rule; no blob fetch in a partial clone; install command in READMEs with `RUNNER_REPO` and `RUNNER_LABEL` | Jarl, Rome, EBR, Imperium, STCC, Unstoppable | M | done |
 | K71 | `check-runner`: environment per lane; a phase after the lanes; pull-request mode holding a game's own scripts; gate-all error-code column; timeout and tree kill in `gate()`; `replay-cli` checkpoint goldens | EBR, STCC | M | done |
 | K72 | `tooling-scripts`, the rest of K64: picture re-encoder, font fetch and WOFF packer, mock capture, owner PC setup, dossier sync, simulation bundler | Jarl, Rome, Warp's, Imperium | M | done (`mock-capture` without the phone callout boards; `setup.ps1` never executed in CI) |
