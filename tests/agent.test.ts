@@ -154,7 +154,7 @@ describe('finish: one run per branch, sign of life, --detach and --result (K572)
   const st = (running: unknown[], waiting: unknown[]) => ({ status: 0, output: JSON.stringify({ slots: 1, running, waiting, history: [] }) });
   function fresh(name: string) { const main = repo(name); fs.rmSync(path.join(main, 'node_modules'), { recursive: true }); return { main, sha: g(main, 'rev-parse', 'HEAD').trim() }; }
   function fakeBg(home: string, onSleep: (t: number) => void = () => {}) {
-    const b = { t: 1000, starts: [] as string[], home, start: (dir: string) => void b.starts.push(dir), sleep: (ms: number) => { b.t += ms; onSleep(b.t); }, now: () => b.t };
+    const b = { t: 1000, starts: [] as string[], home, cmds: [] as [string, string[]][], start: (c: string, a: string[], dir: string) => void (b.starts.push(dir), b.cmds.push([c, a])), sleep: (ms: number) => { b.t += ms; if (b.t > 1e8) throw new Error('finish kept polling for a result that never came'); onSleep(b.t); }, now: () => b.t };
     return b;
   }
 
@@ -180,20 +180,21 @@ describe('finish: one run per branch, sign of life, --detach and --result (K572)
     }
   });
 
-  it('prints queued, N ahead then running, mm:ss about once a minute, then PASS as before', () => {
+  it('prints queued, N ahead then running, mm:ss about once a minute on stderr, then PASS on stdout as before', () => {
     const { main, sha } = fresh('k3');
     const home = path.join(root, 'k3-home');
     let rcDir = '';
     const b = fakeBg(home, (t) => { if (t >= 201000 && rcDir) { fs.writeFileSync(path.join(rcDir, 'out.log'), 'all good\n'); fs.writeFileSync(path.join(rcDir, 'rc'), '0\n'); } });
-    b.start = (dir: string) => { rcDir = dir; b.starts.push(dir); };
+    b.start = (_c: string, _a: string[], dir: string) => { rcDir = dir; b.starts.push(dir); };
     const exec = (_c: string, _a: string[], input: string) => b.t < 101000 ? st([job({ id: 'o', label: 'other' })], [job({ id: 'a', label: 'x', queuedAt: 1 }), job({ id: 'b', label: 'y', priority: 'high', queuedAt: 9 }), job({ waitedMs: 1 }), job({ id: 'c', label: 'z', queuedAt: 7 })]) : isStatus(input) ? st([job({ runningMs: b.t - 101000 })], []) : { status: 0, output: '' };
     // the first status query (before the run) must not see our own job: a queue with only others
     let first = true;
     const o = io();
     expect(finish(['--repo', main], o.io, (c, a, input) => { if (first) { first = false; return st([], []); } return exec(c, a, input); }, false, b as Bg)).toBe(0);
-    expect(o.out.slice(0, 3)).toEqual(['finish main: queued, 2 ahead', 'finish main: running, 00:20', 'finish main: running, 01:20']);
-    expect(o.out[3]!.startsWith(`PASS ${sha} `)).toBe(true);
-    expect(o.out[3]).toContain('all good');
+    expect(o.err).toEqual(['finish main: queued, 2 ahead', 'finish main: running, 00:20', 'finish main: running, 01:20']);
+    expect(o.out).toHaveLength(1);
+    expect(o.out[0]!.startsWith(`PASS ${sha} `)).toBe(true);
+    expect(o.out[0]).toContain('all good');
     expect(fs.readFileSync(path.join(rcDir, 'run.sh'), 'utf8')).toContain('in.sh');
     expect(fs.readFileSync(path.join(rcDir, 'in.sh'), 'utf8')).toContain(`--label 'finish main'`);
   });
@@ -212,13 +213,15 @@ describe('finish: one run per branch, sign of life, --detach and --result (K572)
     expect(o.out[0]).toContain(dir);
     queue = st([job({ runningMs: 65000 })], []);
     expect(finish(['--repo', main, '--result'], o.io, exec, false, b as Bg)).toBe(4);
-    expect(o.out[1]).toMatch(/^finish main: running, 01:05; result: /);
+    expect(o.err.at(-1)).toMatch(/^finish main: running, 01:05; result: /);
+    expect(o.out).toHaveLength(1);
     fs.writeFileSync(path.join(dir, 'out.log'), 'tests ok\n');
     fs.writeFileSync(path.join(dir, 'rc'), '0\n');
     expect(finish(['--repo', main, '--result'], o.io, exec, false, b as Bg)).toBe(0);
-    expect(o.out[2]!.startsWith(`PASS ${sha} `)).toBe(true);
-    expect(o.out[2]).toContain('tests ok');
+    expect(o.out[1]!.startsWith(`PASS ${sha} `)).toBe(true);
+    expect(o.out[1]).toContain('tests ok');
     queue = st([], []);
+    b.t += 1000;
     expect(finish(['--repo', main, '--detach'], o.io, exec, false, b as Bg)).toBe(0);
     expect(fs.existsSync(path.join(dir, 'rc'))).toBe(false);
     fs.writeFileSync(path.join(dir, 'out.log'), 'boom\n');
@@ -227,5 +230,51 @@ describe('finish: one run per branch, sign of life, --detach and --result (K572)
     expect(o.out.at(-1)!.startsWith(`FAIL ${sha} `)).toBe(true);
     expect(o.out.at(-1)).toContain('exit 2');
     expect(o.out.at(-1)).toContain('boom');
+  });
+
+  it('a run still in its clone or install (not yet in the queue) is refused from its result folder; a dead one (no heartbeat for 120 s) is not', () => {
+    const { main } = fresh('k5');
+    const b = fakeBg(path.join(root, 'k5-home'));
+    const exec = (_c: string, _a: string[], input: string) => isStatus(input) ? st([], []) : { status: 0, output: '' };
+    const o = io();
+    expect(finish(['--repo', main, '--detach'], o.io, exec, false, b as Bg)).toBe(0);
+    const dir = b.starts[0]!;
+    b.t += 30000;
+    expect(finish(['--repo', main], o.io, exec, false, b as Bg)).toBe(3);
+    expect(o.err.at(-1)).toMatch(/^REFUSED: a finish run for main is in progress \(last sign 30 s ago/);
+    b.t += 200000;
+    fs.writeFileSync(path.join(dir, 'hb'), String(b.t / 1000 - 10));
+    expect(finish(['--repo', main, '--detach'], o.io, exec, false, b as Bg)).toBe(3);
+    expect(o.err.at(-1)).toContain('last sign 10 s ago');
+    expect(b.starts).toHaveLength(1);
+    b.t += 125000;
+    expect(finish(['--repo', main, '--detach'], o.io, exec, false, b as Bg)).toBe(0);
+    expect(b.starts).toHaveLength(2);
+    expect(fs.readFileSync(path.join(dir, 'run.sh'), 'utf8')).toMatch(/date \+%s > '[^']*hb'; sleep 20/);
+  });
+
+  it('--result refuses a result whose tested sha is not the recorded head; the run starts in WSL under setsid nohup', () => {
+    const { main, sha } = fresh('k6');
+    const b = fakeBg(path.join(root, 'k6-home'));
+    const exec = (_c: string, _a: string[], input: string) => isStatus(input) ? st([], []) : { status: 0, output: '' };
+    const o = io();
+    expect(finish(['--repo', main, '--detach'], o.io, exec, false, b as Bg)).toBe(0);
+    const dir = b.starts[0]!;
+    expect(b.cmds[0]).toEqual(['bash', ['-c', `setsid nohup bash '${path.join(dir, 'run.sh')}' > /dev/null 2>&1 < /dev/null &`]]);
+    expect(fs.readFileSync(path.join(dir, 'in.sh'), 'utf8')).toContain(`cd "$d" && git rev-parse HEAD > '${path.join(dir, 'sha')}' && `);
+    fs.writeFileSync(path.join(dir, 'sha'), 'f'.repeat(40) + '\n');
+    fs.writeFileSync(path.join(dir, 'out.log'), 'ok\n');
+    fs.writeFileSync(path.join(dir, 'rc'), '0\n');
+    expect(finish(['--repo', main, '--result'], o.io, exec, false, b as Bg)).toBe(5);
+    expect(o.err.at(-1)).toContain(`STALE: the stored result is for ${'f'.repeat(40)}, not the recorded head ${sha}`);
+    expect(o.out.join('\n')).not.toMatch(/PASS/);
+    fs.writeFileSync(path.join(dir, 'sha'), sha + '\n');
+    expect(finish(['--repo', main, '--result'], o.io, exec, false, b as Bg)).toBe(0);
+    expect(o.out.at(-1)!.startsWith(`PASS ${sha} `)).toBe(true);
+    const w = fakeBg(path.join(root, 'k6-winhome'));
+    expect(finish(['--repo', main, '--detach'], o.io, exec, true, w as Bg)).toBe(0);
+    expect(w.cmds[0]![0]).toBe('wsl');
+    expect(w.cmds[0]![1].slice(0, 3)).toEqual(['-e', 'bash', '-c']);
+    expect(w.cmds[0]![1][3]).toMatch(/^setsid nohup bash '\/(mnt\/[a-z]\/)?[^']*run\.sh' > \/dev\/null 2>&1 < \/dev\/null &$/);
   });
 });

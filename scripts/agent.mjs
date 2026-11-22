@@ -75,7 +75,7 @@ export function teardown(args, io) {
 
 const real = (cmd, args, input) => { const r = spawnSync(cmd, args, { input, encoding: 'utf8', maxBuffer: 1 << 28 }); return { status: r.status, error: r.error, output: `${r.stdout ?? ''}${r.stderr ?? ''}` } }
 const realBg = {
-  start(dir, win) { const c = spawn(win ? 'wsl' : 'bash', win ? ['-e', 'bash', toWsl(path.join(dir, 'run.sh'))] : [path.join(dir, 'run.sh')], { detached: true, stdio: 'ignore', windowsHide: true }); c.on('error', () => {}); c.unref() },
+  start(cmd, args) { const c = spawn(cmd, args, { detached: true, stdio: 'ignore', windowsHide: true }); c.on('error', () => {}); c.unref() },
   sleep: (ms) => { Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, ms) },
   now: () => Date.now(),
   home: os.homedir(),
@@ -104,7 +104,13 @@ const report = (m, status, output, io) => {
   return line
 }
 const comment = (repo, branch, line, io) => { try { execFileSync('gh', ['pr', 'comment', branch, '--body', line], { cwd: repo, stdio: 'pipe' }) } catch { io.err('warning: could not comment on the PR (gh missing or no PR yet)') } }
+// K572: a run in progress = meta without rc, and a heartbeat (written every 20 s by run.sh) or its start less than 120 s ago; older = dead
+const DEAD = 120000
+const lastSign = (dir) => { try { const m = JSON.parse(fs.readFileSync(path.join(dir, 'meta.json'), 'utf8')); if (fs.existsSync(path.join(dir, 'rc'))) return null; let hb = 0; try { hb = Number(fs.readFileSync(path.join(dir, 'hb'), 'utf8').trim()) * 1000 || 0 } catch { /* no heartbeat yet */ } return Math.max(m.started ?? 0, hb) } catch { return null } }
 const stored = (dir, m, io, repo, f) => {
+  let tested = ''
+  try { tested = fs.readFileSync(path.join(dir, 'sha'), 'utf8').trim() } catch { /* clone failed before writing it */ }
+  if (tested && tested !== m.sha) { io.err(`STALE: the stored result is for ${tested}, not the recorded head ${m.sha} (an older run wrote it); run finish again`); return 5 }
   const rc = Number(fs.readFileSync(path.join(dir, 'rc'), 'utf8').trim())
   const line = report(m, rc, fs.existsSync(path.join(dir, 'out.log')) ? fs.readFileSync(path.join(dir, 'out.log'), 'utf8') : '', io)
   if (f.comment) comment(repo, m.branch, line, io)
@@ -123,7 +129,7 @@ export function finish(args, io, exec = real, win = process.platform === 'win32'
     const branch = git(repo, ['rev-parse', '--abbrev-ref', 'HEAD']), dir = stateDir((bg ?? realBg).home, repo, branch)
     if (!fs.existsSync(path.join(dir, 'meta.json'))) { io.err(`no finish run stored for ${branch} (${dir})`); return 2 }
     const m = JSON.parse(fs.readFileSync(path.join(dir, 'meta.json'), 'utf8'))
-    if (!fs.existsSync(path.join(dir, 'rc'))) { io.out(`${life(branch, queueJob(exec, win, m.label), m.started, (bg ?? realBg).now())}; result: ${dir}`); return 4 }
+    if (!fs.existsSync(path.join(dir, 'rc'))) { io.err(`${life(branch, queueJob(exec, win, m.label), m.started, (bg ?? realBg).now())}; result: ${dir}`); return 4 }
     return stored(dir, m, io, repo, f)
   }
   const dirty = git(repo, ['status', '--porcelain']).split('\n').filter(Boolean)
@@ -146,17 +152,19 @@ export function finish(args, io, exec = real, win = process.platform === 'win32'
     if (f.comment) comment(repo, branch, line, io)
     return r.status === 0 ? 0 : 1
   }
-  const dir = stateDir(bg.home, repo, branch), W = (p) => q(win ? toWsl(p) : p), rc = path.join(dir, 'rc')
+  const dir = stateDir(bg.home, repo, branch), W = (p) => q(win ? toWsl(p) : p), rc = path.join(dir, 'rc'), seen = lastSign(dir)
+  if (seen !== null && bg.now() - seen < DEAD) { io.err(`REFUSED: a finish run for ${branch} is in progress (last sign ${Math.round((bg.now() - seen) / 1000)} s ago, ${dir}); read it with node kit.mjs finish --result`); return 3 }
   fs.rmSync(dir, { recursive: true, force: true })
   fs.mkdirSync(dir, { recursive: true })
   m.started = bg.now()
   fs.writeFileSync(path.join(dir, 'meta.json'), JSON.stringify(m))
-  fs.writeFileSync(path.join(dir, 'in.sh'), sh)
-  fs.writeFileSync(path.join(dir, 'run.sh'), `bash ${W(path.join(dir, 'in.sh'))} > ${W(path.join(dir, 'out.log'))} 2>&1; echo $? > ${W(rc + '.tmp')}; mv ${W(rc + '.tmp')} ${W(rc)}\n`)
-  bg.start(dir, win)
+  fs.writeFileSync(path.join(dir, 'in.sh'), sh.replace('cd "$d" && ', `cd "$d" && git rev-parse HEAD > ${W(path.join(dir, 'sha'))} && `))
+  fs.writeFileSync(path.join(dir, 'run.sh'), `( while :; do date +%s > ${W(path.join(dir, 'hb'))}; sleep 20; done ) & h=$!; bash ${W(path.join(dir, 'in.sh'))} > ${W(path.join(dir, 'out.log'))} 2>&1; r=$?; kill $h; echo $r > ${W(rc + '.tmp')}; mv ${W(rc + '.tmp')} ${W(rc)}\n`)
+  const bgc = `setsid nohup bash ${W(path.join(dir, 'run.sh'))} > /dev/null 2>&1 < /dev/null &`
+  bg.start(win ? 'wsl' : 'bash', win ? ['-e', 'bash', '-c', bgc] : ['-c', bgc], dir)
   if (f.detach) { io.out(`started ${label} in the background; result file: ${dir}; read it with: node kit.mjs finish --result`); return 0 }
   let last = m.started
-  while (!fs.existsSync(rc)) { bg.sleep(2000); const now = bg.now(); if (now - last >= 60000) { last = now; io.out(life(branch, queueJob(exec, win, label), m.started, now)) } }
+  while (!fs.existsSync(rc)) { bg.sleep(2000); const now = bg.now(); if (now - last >= 60000) { last = now; io.err(life(branch, queueJob(exec, win, label), m.started, now)) } }
   return stored(dir, m, io, repo, f)
 }
 
