@@ -355,6 +355,7 @@ The blind matching test's result was not recorded: the PR, its comments and docs
 | K663 | card-harness: `cardCasesIn` resolves a same-file string const for `printed` (else its own problem line); rule 11 mixed mode quote-checks clauses with a cardCase and lets the rest cite by test title. | S |  | done |
 | K664 | card-harness `patternProblems`: `wording` keeps the whole-pattern shape check, and split patterns compare their wording groups (before, both were skipped). | S |  | done |
 | K665 | card-harness `restrictionProblems`: restrictions nested anywhere in a record's effect tree are found (before, only top-level keys were read). | S |  | done |
+| K667 | card-harness `screenProblems`: `allowNumbers` patterns are removed before any amount is read, so a card-number reference is never taken as the printed amount. | S |  | done |
 
 ## Asked for by the owner
 

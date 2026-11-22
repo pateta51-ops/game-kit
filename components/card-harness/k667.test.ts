@@ -24,6 +24,9 @@ describe('cards:screen number references (K667)', () => {
     expect(run('Replace this with card #9?', undefined, { allowNumbers: ref }, 'Replace this with card #9.')).toEqual([]);
     expect(run('Gain 4?', undefined, { allowNumbers: ref }, 'Gain 4, then card #9.')).toEqual([]);
   });
+  it('K667 every reference is removed, not only the first', () => {
+    expect(run('Replace card #2 or card #2?', ['2'], { allowNumbers: ref })).toEqual(['prompt for c: no amount']);
+  });
   it('K667 a counted prompt: the printed reference is no printed number', () => {
     const cl = { id: 'c', text: 'Pay X, then card #9.', amounts: 'counted' as const };
     const r = (shown: string, more: Partial<ScreenInput>): string[] => screenProblems({ faces: [], zoom: (x) => x, icons: {}, clauses: [cl], prompts: [{ clause: 'c', shown, value: 3 }], opened: ['c'], ...more });
