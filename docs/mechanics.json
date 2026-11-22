@@ -127,9 +127,6 @@
     { "words": "response window, timing window prompt, play a response now, reaction window, pass", "part": "engine-core", "read": "recipe timing.md (windows)", "missing": "one prompt that offers every response legal at a window, with a pass", "row": "K646", "sheet": "triggers" }
   ],
   "searches": {
-    "status condition token": "engine-core",
-    "give a status to a unit": "engine-core",
-    "stunned until end of turn": "engine-core",
     "undo button": "engine-core",
     "line of sight": "grid-map",
     "wall": "grid-map",
