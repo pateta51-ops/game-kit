@@ -371,7 +371,7 @@ Card tests on real cards. Test code only; the engine imports nothing here but `c
 The card-language shell (K206): card effects as data, one typed verb table where each verb has a field check, a handler that runs on engine-core and a text generator that prints the card's words from the same step. The game writes its own verbs; the standard pack (K232, `pack.ts`) gives the common ones.
 
 - **Also called:** Card effects written as data
-- **Words:** card, effects, data, verbs, text, validator, rules, language, offered, can resolve, unpayable cost, dry run, would change nothing, offer, offer policy, no change, effect offered
+- **Words:** card, effects, data, verbs, text, validator, rules, language, offered, can resolve, unpayable cost, dry run, would change nothing, offer, offer policy, no change, effect offered, paid effect, modified cost, tax, discount, cannot know, hidden cards
 - **Release:** 1.0; not seen
 - **The game supplies:** The verbs, with their field checks, handlers and text.
 - **Use it when:** A new game encodes card effects as data: verb table with handler, resume and text slots, validator, every-verb test; the standard verb pack (cardPack) on card-zones: draw, discard, mill, move, putIntoPlay, setAside, recall, gain, refill, shuffle, search, destroy, attach, detach, reveal, lookAt, scout, flip, exhaust, ready, chooseCards, chooseOption, may, chooseNumber, chooseDestination, choosePlayer, choosePayment, orderEffects, gainResource, pay, convert, adjust, seq, if, forEach, eachPlayer, repeat, count, later, payThen, custom; every card move through timing would; words overridable. Recipe: docs/recipes/card-effect.md.
@@ -894,12 +894,12 @@ Links every glossary term and icon code in the game's texts to a lookup, and che
 A square grid with walls as data: adjacent spaces, distance, every shortest path or only its distinct first steps, extra steps a game adds, line of sight, tiles that turn half a circle (180 degrees only: a game whose tiles turn a quarter cannot use `rotateTile`), and targeting shapes (within range, adjacent, row, column, line, area). Pure functions, no state, no packages, draws nothing. Written for the kit.
 
 - **Also called:** Square grid with walls and sight
-- **Words:** grid, distance, range, wall, walls, adjacent, line of sight, sight, path, squares, tiles, targeting, first step, shortest path, extra steps, extra adjacency, adjacency, extra neighbours, diagonal, move toward, ties, area
+- **Words:** grid, distance, range, wall, walls, adjacent, line of sight, sight, path, squares, tiles, targeting, first step, shortest path, extra steps, extra adjacency, adjacency, extra neighbours, diagonal, move toward, ties, area, inset corners, corridor, end corner, sight end corner wall
 - **Release:** 1.0; not seen
 - **The game supplies:** Rows, columns, the walls, merged spaces and tiles of its map.
 - **Use it when:** A square grid board with walls: adjacent spaces, grid distance and range, shortest paths, line of sight, tiles that turn, and targeting shapes (within range, adjacent, row, column, line, area).
 - **Not for:** Drawing the map; hex or graph boards (board-model); movement rules or costs per step.
-- **Key exports:** `gridMap`, `cellsOf`, `spaceAt`, `neighbours`, `distance`, `shortestPaths`, `firstSteps`, `lineOfSight`, `tileOf`, `spacesOf`, `adjacentTiles`, `rotateTile`, `adjacent`, `within`, and 15 more
+- **Key exports:** `gridMap`, `cellsOf`, `spaceAt`, `neighbours`, `distance`, `shortestPaths`, `firstSteps`, `lineOfSight`, `tileOf`, `spacesOf`, `adjacentTiles`, `rotateTile`, `adjacent`, `within`, and 16 more
 - **Needs:** nothing
 - **Came from:** none (written for the kit)
 - **Docs:** [README](../components/grid-map/README.md) ([rules for agents](../components/grid-map/README.md#rules-for-agents))

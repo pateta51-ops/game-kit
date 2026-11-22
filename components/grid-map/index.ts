@@ -237,11 +237,27 @@ function corners(g: GridMap, space: string): Cell[] {
   return [...out.values()]
 }
 
-export function lineOfSight(g: GridMap, a: string, b: string): boolean {
-  const pa = corners(g, a)
-  const pb = corners(g, b)
+// inset corners: coordinates in thousandths of a side, so every test below is exact integer arithmetic
+const cross = (ax: number, ay: number, bx: number, by: number, cx: number, cy: number) => (bx - ax) * (cy - ay) - (by - ay) * (cx - ax)
+function clearInset(g: GridMap, x1: number, y1: number, x2: number, y2: number): boolean {
+  const on = (x: number, y: number) => !cross(x1, y1, x2, y2, x, y) && Math.min(x1, x2) <= x && x <= Math.max(x1, x2) && Math.min(y1, y2) <= y && y <= Math.max(y1, y2)
+  for (const [h, x, y] of g.inner) {
+    const [bx, by] = h ? [x + 1, y] : [x, y + 1]
+    // an inset point never lies on a grid line, so the segment meets a wall in one point at most
+    if (on(x * 1000, y * 1000)) { if (g.blocked[y * (g.cols + 1) + x]) return false; continue }
+    if (on(bx * 1000, by * 1000)) { if (g.blocked[by * (g.cols + 1) + bx]) return false; continue }
+    if (cross(x1, y1, x2, y2, x * 1000, y * 1000) * cross(x1, y1, x2, y2, bx * 1000, by * 1000) < 0 && cross(x * 1000, y * 1000, bx * 1000, by * 1000, x1, y1) * cross(x * 1000, y * 1000, bx * 1000, by * 1000, x2, y2) < 0) return false
+  }
+  return true
+}
+const inset = (g: GridMap, space: string): Cell[] => cellsOf(g, space).flatMap(([r, c]) => [[r, c], [r, c + 1], [r + 1, c], [r + 1, c + 1]].map(([y, x]): Cell => [y! * 1000 + (y === r ? 1 : -1), x! * 1000 + (x === c ? 1 : -1)]))
+
+export type Sight = { insetCorners?: boolean }
+export function lineOfSight(g: GridMap, a: string, b: string, o: Sight = {}): boolean {
+  const pa = o.insetCorners ? inset(g, a) : corners(g, a)
+  const pb = o.insetCorners ? inset(g, b) : corners(g, b)
   if (a === b) return true
-  for (const [y1, x1] of pa) for (const [y2, x2] of pb) if (clear(g, x1, y1, x2, y2)) return true
+  for (const [y1, x1] of pa) for (const [y2, x2] of pb) if (o.insetCorners ? clearInset(g, x1, y1, x2, y2) : clear(g, x1, y1, x2, y2)) return true
   return false
 }
 
@@ -287,10 +303,10 @@ export function adjacent(g: GridMap, space: string, o: Steps & { throughWalls?: 
   return table(g, o, o.throughWalls)[space] as readonly string[]
 }
 
-export function within(g: GridMap, from: string, n: number, o: Steps & { throughWalls?: boolean; sight?: boolean } = {}): string[] {
+export function within(g: GridMap, from: string, n: number, o: Steps & Sight & { throughWalls?: boolean; sight?: boolean } = {}): string[] {
   cellsOf(g, from)
   const d = flood(table(g, o, o.throughWalls), [from], undefined, n)
-  return g.spaces.filter(s => s !== from && d.has(s) && (!o.sight || lineOfSight(g, from, s)))
+  return g.spaces.filter(s => s !== from && d.has(s) && (!o.sight || lineOfSight(g, from, s, o)))
 }
 
 function run(g: GridMap, r: number, c: number, d: Direction, stop?: boolean, length = Infinity, open?: boolean, extra?: ReadonlySet<string>): string[] {
@@ -328,12 +344,12 @@ export const rowOf = (g: GridMap, space: string, o: { stopAtWall?: boolean } = {
 export const columnOf = (g: GridMap, space: string, o: { stopAtWall?: boolean } = {}): string[] => lane(g, space, ['n', 's'], o.stopAtWall)
 
 export type AreaShape = { square: true; diamond?: never } | { diamond: true; square?: never }
-export function area(g: GridMap, centre: string, radius: number, o: AreaShape & { sight?: boolean }): string[] {
+export function area(g: GridMap, centre: string, radius: number, o: AreaShape & Sight & { sight?: boolean }): string[] {
   if (!o || !o.square === !o.diamond) throw new Error('grid-map: area needs exactly one of { square: true } or { diamond: true }')
   const mid = cellsOf(g, centre)
   return g.spaces.filter(s => (g.cells[s] as readonly Cell[]).some(([r, c]) => mid.some(([mr, mc]) => {
     const a = Math.abs(r - mr)
     const b = Math.abs(c - mc)
     return (o.square ? Math.max(a, b) : a + b) <= radius
-  })) && (!o.sight || lineOfSight(g, centre, s)))
+  })) && (!o.sight || lineOfSight(g, centre, s, o)))
 }

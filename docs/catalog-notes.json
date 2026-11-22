@@ -117,7 +117,11 @@
       "diagonal",
       "move toward",
       "ties",
-      "area"
+      "area",
+      "inset corners",
+      "corridor",
+      "end corner",
+      "sight end corner wall"
     ],
     "visible": false,
     "release": 1,
@@ -334,7 +338,13 @@
       "offer",
       "offer policy",
       "no change",
-      "effect offered"
+      "effect offered",
+      "paid effect",
+      "modified cost",
+      "tax",
+      "discount",
+      "cannot know",
+      "hidden cards"
     ],
     "visible": false,
     "release": 1,

@@ -94,6 +94,14 @@ export interface Moved {
 type Words = string | ((step: never) => string);
 /** K529: what the would-change-nothing check answers. `unknown`: hidden information, a random draw, a cap hit, or a step the engine cannot run. */
 export type Offered = 'yes' | 'no' | 'unknown';
+/** K583: why a check answered `unknown`: a handler threw (`error` holds it), cards the seat cannot see, another seat's choice, a random draw, a cap hit (`budget`), or the check was called inside itself. With several, the first of this list. */
+export type OfferReason = 'error' | 'hidden' | 'otherSeat' | 'random' | 'budget' | 'nested';
+/** K583: the check's answer with its reason (`pack.judge`). */
+export interface OfferCheck {
+  readonly answer: Offered;
+  readonly reason?: OfferReason;
+  readonly error?: unknown;
+}
 /** K529: when an effect is offered; set once per game from its rulings. Every default is the pack's behaviour before the policy existed. */
 export interface OfferPolicy<S = unknown> {
   /** `may` (and an optional trigger) whose effect would change nothing: `ask` anyway (default), `skip` (not offered), `bar` (asked, yes barred with the code `noChange`). */
@@ -106,6 +114,10 @@ export interface OfferPolicy<S = unknown> {
   readonly deadChoice?: 'today' | 'skip' | 'bar';
   /** What an `unknown` result counts as: `offer` (default) or `skip`. */
   readonly unknown?: 'offer' | 'skip';
+  /** K583, a paid effect (`payThen`, a `choosePayment` way) in the check: `cost` (default: judged on its cost alone, `then` is not run) or `effect` (a payable cost is able; the cost is paid on the copy, `then` runs, and only what `then` changes counts). */
+  readonly paid?: 'cost' | 'effect';
+  /** K583: `true` throws every error a handler throws inside the check (default: the check answers `unknown` with the reason `error`). For tests of card data. */
+  readonly strict?: boolean;
   /** The check's caps: answers tried in all (default 32) and tasks run per answer (default 2000). A cap hit is `unknown`. */
   readonly branches?: number;
   readonly tasks?: number;
@@ -126,6 +138,8 @@ export interface PackConfig<G extends GameTypes, E extends PackEnv = PackEnv> {
   readonly noPlayer?: (s: G['state'], env: E) => string | undefined;
   /** Resources and counters; default `state.res[seat][key]`. */
   readonly res?: { get(s: G['state'], seat: string, key: string): number; set(ctx: Ctx<G>, seat: string, key: string, n: number): void };
+  /** K583: the amount a `pay` or `convert` step asks for now (a tax, a discount); default the printed amount. Read by the can-pay check, the whole-cost sum, the payment and `costed`. */
+  readonly due?: (s: G['state'], step: PackStep, env: E, printed: number) => number;
   readonly custom?: Readonly<Record<string, { run(ctx: Ctx<G>, step: PackStep, env: E): void; readonly resume?: (ctx: Ctx<G>, step: PackStep, env: E, answer: readonly string[]) => void; readonly payable?: (s: G['state'], step: PackStep, env: E) => boolean; text(step: PackStep): string }>>;
   /** The game's words per verb: a template (`{slot}`, `{slot:noun}` for "2 nouns") or a function of the step. */
   readonly words?: Partial<Record<PackOp, Words>>;
@@ -143,13 +157,28 @@ export interface PackConfig<G extends GameTypes, E extends PackEnv = PackEnv> {
   readonly handlers?: () => HandlerTable<G>;
 }
 
-const CANNOT_KNOW = new Error('card-language pack: the dry run cannot know');
-const stop = (): never => {
-  throw CANNOT_KNOW;
+const FIXED = 'card-language:due-read';
+const SAME_ENV: readonly string[] = ['seq', 'may', 'if', 'chooseOption', 'choosePayment', 'orderEffects', 'repeat', 'payThen'];
+class Stop extends Error {
+  readonly reason: OfferReason;
+  constructor(reason: OfferReason) {
+    super('card-language pack: the dry run cannot know');
+    this.reason = reason;
+  }
+}
+const stop = (reason: OfferReason = 'hidden'): never => {
+  throw new Stop(reason);
 };
+const CHANGED = new Error('card-language pack: the dry run saw a change');
 let dry: string | null = null;
-/** K529: is the pack's check running this handler on a copy? A game's custom verb that would read cards the seat cannot see throws or skips then. */
+/** K529: is the pack's check running this handler on a copy? */
 export const inDryRun = (): boolean => dry !== null;
+/** K583: the seat the check judges for, or null outside the check. */
+export const dryRunSeat = (): string | null => dry;
+/** K583: a game test, count, filter or custom verb calls this before it reads cards the acting seat cannot see: inside the check that answer is `unknown` (reason `hidden`); in the real run it does nothing. */
+export const cannotKnow = (): void => {
+  if (dry !== null) stop('hidden');
+};
 // Distinct cards for card-taking cost steps: each need lists the cards that could pay it (augmenting paths, not first fit).
 const matched = (need: readonly (readonly string[])[]): boolean => {
   const by = new Map<string, number>();
@@ -207,7 +236,7 @@ export function runLater<G extends GameTypes>(ctx: Ctx<G>, at: string): void {
 }
 
 /** The pack: `verbs` (spread into the game's table), `happen` (call it first in timing's `cfg.happen`; true when the occurrence was a pack move). */
-export function cardPack<G extends GameTypes, E extends PackEnv = PackEnv>(cfg: PackConfig<G, E> = {}): { verbs: VerbTable<G, PackStep, E>; happen: (ctx: Ctx<G>, occ: Occurrence) => boolean; wouldChange: (s: G['state'], content: G['content'], steps: readonly (PackStep | Step)[], env: E) => Offered } {
+export function cardPack<G extends GameTypes, E extends PackEnv = PackEnv>(cfg: PackConfig<G, E> = {}): { verbs: VerbTable<G, PackStep, E>; happen: (ctx: Ctx<G>, occ: Occurrence) => boolean; wouldChange: (s: G['state'], content: G['content'], steps: readonly (PackStep | Step)[], env: E) => Offered; judge: (s: G['state'], content: G['content'], steps: readonly (PackStep | Step)[], env: E) => OfferCheck; costed: <T extends readonly (PackStep | Step)[]>(s: G['state'], steps: T, env: E) => T } {
   const P: OfferPolicy<G['state']> = cfg.offer ?? {};
   const checks = (P.noChange ?? 'ask') !== 'ask' || (P.deadChoice ?? 'today') !== 'today';
   if (checks && !cfg.handlers) throw new EngineBugError('card-language pack: offer.noChange and offer.deadChoice need cfg.handlers (() => RULES.handlers)');
@@ -222,7 +251,41 @@ export function cardPack<G extends GameTypes, E extends PackEnv = PackEnv>(cfg: 
   };
   const n = (a: Amount | undefined, env: E, d = 1): number => (a === undefined ? d : a === 'X' ? (env.n ?? 0) : a);
   // K529 seam: the one place a cost amount is read (judged in `payable`, taken in `pay` and `convert`).
-  const due = (p: { readonly amount: Amount }, env: E): number => n(p.amount, env);
+  // K583: `cfg.due` gives the amount asked for now.
+  // An amount written `X` is the number the effect computed: `due` is not called for it. A result that is not a whole number of 0 or more is the game's bug.
+  // K583: a cost step `payThen` read at its start carries the key FIXED (a step field a game does not write; it survives a saved state), and is not read again.
+  const due = (s: PackState, p: { readonly amount: Amount }, env: E): number => {
+    const printed = n(p.amount, env);
+    if (!cfg.due || p.amount === 'X' || (p as Record<string, unknown>)[FIXED] === true) return printed;
+    if (hid(s)) stop();
+    const d = cfg.due(s as unknown as G['state'], p as PackStep, env, printed);
+    if (!Number.isInteger(d) || d < 0) throw new EngineBugError(`card-language pack: due gave ${String(d)} for a cost of ${String(printed)} (a whole number, 0 or more, is needed)`);
+    return d;
+  };
+  // K583: the steps with each cost amount as `cfg.due` gives it (for labels); the same object when nothing differs.
+  const costed = <T extends Eff>(s: G['state'], steps: T, env: E, mark = false): T => {
+    const all = (xs: Eff): Eff => {
+      const ys = xs.map(one);
+      return ys.every((y, i) => y === xs[i]) ? xs : ys;
+    };
+    const one = (x: PackStep | Step): PackStep | Step => {
+      const p = x as PackStep;
+      let out: object = x;
+      if ((p.op === 'pay' || p.op === 'convert') && p.amount !== 'X') {
+        const d = due(s as unknown as PackState, p, env);
+        if (mark) out = { ...p, amount: d, [FIXED]: true };
+        else if (d !== n(p.amount, env)) out = { ...p, amount: d };
+      }
+      // K583: a cost is read at its start only through steps that keep its env; a step under one that changes the env (another seat, other cards) is read when it is paid.
+      if (mark && !SAME_ENV.includes(p.op)) return out as PackStep | Step;
+      for (const [k, v] of Object.entries(x) as [string, unknown][]) {
+        const w: unknown = isEff(v) ? all(v) : Array.isArray(v) && v.every(isEff) ? v.map(all) : v;
+        if (isEff(v) ? w !== v : Array.isArray(w) && w.some((e, i) => e !== (v as unknown[])[i])) out = { ...out, [k]: w };
+      }
+      return out as PackStep | Step;
+    };
+    return (cfg.due ? all(steps) : steps) as T;
+  };
   const def = (op: string): { from?: string; to?: string; sel?: Sel; at?: At } => ({ ...DEF[op], ...cfg.zones?.[op as PackOp] });
   const zone = (s: PackState, name: string, seat: string): string => (s.zones[`${name}:${seat}`] !== undefined ? `${name}:${seat}` : name);
   const go = (ctx: Ctx<G>, steps: Eff, env: E): void => ctx.then(...(effectTasks(steps, env) as unknown as G['task'][]));
@@ -230,7 +293,7 @@ export function cardPack<G extends GameTypes, E extends PackEnv = PackEnv>(cfg: 
     const base = { kind, seat: env.seat, min, max, options };
     askVerb(ctx, (cfg.prompt?.(base, st, env) ?? base) as Omit<G['prompt'], 'id'>, st, env);
   };
-  const resGet = (s: PackState, seat: string, key: string): number => (cfg.res ? cfg.res.get(s as unknown as G['state'], seat, key) : (s.res?.[seat]?.[key] ?? 0));
+  const resGet = (s: PackState, seat: string, key: string): number => (cfg.res ? (hid(s) && stop(), cfg.res.get(s as unknown as G['state'], seat, key)) : (s.res?.[seat]?.[key] ?? 0));
   const resSet = (ctx: Ctx<G>, seat: string, key: string, v: number): void => {
     if (cfg.res) return cfg.res.set(ctx, seat, key, v);
     const s = S(ctx);
@@ -245,13 +308,17 @@ export function cardPack<G extends GameTypes, E extends PackEnv = PackEnv>(cfg: 
     const p = st as PackStep;
     if (p.op === 'pay' || p.op === 'convert') {
       const had = resGet(s, env.seat, p.res) - (l?.res[p.res] ?? 0);
-      if (l) l.res[p.res] = (l.res[p.res] ?? 0) + due(p, env);
+      if (l) l.res[p.res] = (l.res[p.res] ?? 0) + due(s, p, env);
       if (l && p.op === 'convert') l.res[p.into] = (l.res[p.into] ?? 0) - n(p.get, env);
-      return had >= due(p, env);
+      return had >= due(s, p, env);
     }
     if (p.op === 'seq') return p.steps.every((x) => payable(s, x, env, l));
     if (p.op === 'payThen') return p.cost.every((x) => payable(s, x, env, l));
-    if (p.op === 'custom') return cfg.custom?.[p.name]?.payable?.(s as unknown as G['state'], p, env) ?? true;
+    if (p.op === 'custom') {
+      const f = cfg.custom?.[p.name]?.payable;
+      if (f && hid(s)) stop();
+      return f?.(s as unknown as G['state'], p, env) ?? true;
+    }
     if (!('cards' in fieldsOf(p.op))) return true;
     const c = p as Cards & { op: string; to?: string };
     const d = def(c.op);
@@ -286,30 +353,75 @@ export function cardPack<G extends GameTypes, E extends PackEnv = PackEnv>(cfg: 
   const whole = (s: PackState, cost: Eff, env: E, l: Ledger = { res: {}, top: {}, need: {} }): boolean => cost.every((x) => payable(s, x, env, l)) && Object.values(l.need).every(matched);
   const canPay = (s: PackState, cost: Eff, env: E): boolean => (P.cost === 'whole' ? whole(s, cost, env) : cost.every((x) => payable(s, x, env)));
   const VIEW_SKIP = ['stack', 'prompt', 'seq', 'promptSeq', 'log', 'timing', 'cardMoves', 'rng', 'forced'];
-  const view = (s: unknown): string => canonicalJson(P.view ? P.view(s as G['state']) : Object.fromEntries(Object.entries(s as object).filter(([k]) => !VIEW_SKIP.includes(k))));
+  // K583: an empty `marks` record (left by a marking verb that marked nothing, or unmarked the last card) is the same game as none.
+  const unmarked = (s: unknown): unknown => ((s as PackState).marks !== undefined && Object.keys((s as PackState).marks ?? {}).length === 0 ? { ...(s as object), marks: undefined } : s);
+  const view = (s: unknown): string => canonicalJson(P.view ? P.view(unmarked(s) as G['state']) : Object.fromEntries(Object.entries(unmarked(s) as object).filter(([k]) => !VIEW_SKIP.includes(k))));
+  // K583, paid = effect: the branch the check is running. `base` is the game it compares with (moved past each cost paid); `cost` counts the costs being paid, while nothing is compared.
+  // `sees`: the cards the judged seat saw when the outermost cost began; `hidden`: a cost has since shown it a card, so no game code runs any more (the answer must not tell the card).
+  let J: { base: string; cost: number; sees: readonly string[] | null; hidden: boolean } = { base: '', cost: 0, sees: null, hidden: false };
+  const seenBy = (s: PackState, seat: string): string[] => Object.values(s.zones).flatMap((zn) => zn.cards).filter((c) => canSee(s, seat, c));
+  // K583: in the check, has a cost shown the judged seat a card since it began? Noted the moment it is shown (read before each task and each game hook).
+  const hid = (s: PackState): boolean => {
+    if (dry === null) return false;
+    if (!J.hidden && J.sees !== null && seenBy(s, dry).some((c) => !(J.sees ?? []).includes(c))) J.hidden = true;
+    return J.hidden;
+  };
+  // A task that runs game code: a verb that is not the pack's own row, or any task kind but `verb` and engine-core's `timing.*`.
+  const gameTask = (t: G['task']): boolean => {
+    const k = String((t as { kind?: unknown }).kind);
+    if (k !== 'verb') return !k.startsWith('timing.');
+    const op = String((t as unknown as { step?: { op?: unknown } }).step?.op);
+    const mine = (verbs as Record<string, unknown>)[op];
+    return mine === undefined || (table() as Record<string, unknown>)[op] !== mine;
+  };
+  const REASONS: readonly OfferReason[] = ['error', 'hidden', 'otherSeat', 'random', 'budget', 'nested'];
   // K529: would these steps change the game? They run on a copy with the game's handlers; every prompt forks one run per answer tried.
-  const wouldChange = (state: G['state'], content: G['content'], steps: Eff, env: E): Offered => {
-    if (dry !== null) return 'unknown';
+  const judge = (state: G['state'], content: G['content'], steps: Eff, env: E): OfferCheck => {
+    const whys = new Set<OfferReason>();
+    let error: unknown;
+    const note = (r: OfferReason): 'unknown' => {
+      whys.add(r);
+      return 'unknown';
+    };
+    const answer = judged(state, content, steps, env, note, (e) => void (error ??= e));
+    const reason = REASONS.find((r) => whys.has(r));
+    return answer !== 'unknown' || reason === undefined ? { answer } : { answer, reason, ...(reason === 'error' ? { error } : {}) };
+  };
+  const wouldChange = (state: G['state'], content: G['content'], steps: Eff, env: E): Offered => judge(state, content, steps, env).answer;
+  const judged = (state: G['state'], content: G['content'], steps: Eff, env: E, note: (r: OfferReason) => 'unknown', threw: (e: unknown) => void): Offered => {
+    if (dry !== null) return note('nested');
     if (!cfg.handlers) throw new EngineBugError('card-language pack: wouldChange needs cfg.handlers (() => RULES.handlers)');
     if (state.result !== null) return 'no';
     let left = 0;
-    const table = Object.fromEntries(Object.entries(cfg.handlers()).map(([k, h]) => [k, (c: Ctx<G>, t: G['task']) => ((left -= 1) < 0 ? stop() : h(c, t))])) as HandlerTable<G>;
+    const table = Object.fromEntries(Object.entries(cfg.handlers()).map(([k, h]) => [k, (c: Ctx<G>, t: G['task']) => ((left -= 1) < 0 ? stop('budget') : hid(c.s as unknown as PackState) && gameTask(t) ? stop() : h(c, t))])) as HandlerTable<G>;
     const before = view(state);
+    const at = new WeakMap<object, typeof J>();
+    const random = (): never => stop('random');
     // One run to the next prompt: yes, no, unknown, or the copy with its prompt open.
     const seg = (s: Draft<KernelState>, first?: readonly G['task'][]): Offered | Draft<KernelState> => {
       left = P.tasks ?? 2000;
+      J = { ...(at.get(s) ?? { base: before, cost: 0, sees: null, hidden: false }) };
       const ctx = makeCtx<G>({}, s as Draft<G['state']>, content, []);
-      (ctx as { rng: unknown }).rng = { nextUint32: stop, int: stop, shuffle: stop };
+      (ctx as { rng: unknown }).rng = { nextUint32: random, int: random, shuffle: random };
+      const moved = (): boolean => s.result !== null || (J.cost === 0 && view(s) !== J.base);
       try {
         if (first) ctx.then(...first);
         run(ctx, table);
       } catch (e) {
-        if (e !== CANNOT_KNOW && !(e instanceof EngineBugError) && !(e instanceof GameOver)) throw e;
-        if (!(e instanceof GameOver)) return view(s) === before ? 'unknown' : 'yes';
+        if (e === CHANGED) return 'yes';
+        if (!(e instanceof GameOver)) {
+          // K583: any throw of a handler in a branch nobody chose is unknown (the error kept), never a crash of the real action; `strict` throws it.
+          if (P.strict === true && !(e instanceof Stop)) throw e;
+          if (moved()) return 'yes';
+          if (!(e instanceof Stop)) threw(e);
+          return note(e instanceof Stop ? e.reason : 'error');
+        }
       }
-      if (view(s) !== before) return 'yes';
+      // K583: an effect that ends the game is a change under every view.
+      if (moved()) return 'yes';
       if (s.prompt === null) return 'no';
-      return s.prompt.seat !== undefined && String(s.prompt.seat) !== env.seat ? 'unknown' : s;
+      at.set(s, J);
+      return s.prompt.seat !== undefined && String(s.prompt.seat) !== env.seat ? note('otherSeat') : s;
     };
     const start = copyState(state) as Draft<KernelState>;
     start.stack = [];
@@ -328,6 +440,8 @@ export function cardPack<G extends GameTypes, E extends PackEnv = PackEnv>(cfg: 
       if (yes(seg(start, effectTasks(steps, env)))) return 'yes';
       const fork = (s: Draft<KernelState>, picks: readonly string[]): boolean => {
         const c = copyState(s);
+        const j = at.get(s);
+        if (j) at.set(c, j);
         c.prompt = null;
         const { prompt: _bound, ...task } = c.stack.pop() ?? { kind: '' };
         c.stack.push({ ...task, answer: [...picks] });
@@ -342,7 +456,7 @@ export function cardPack<G extends GameTypes, E extends PackEnv = PackEnv>(cfg: 
         const answers = [...(p.min === 0 ? [[]] : []), ...(p.min <= 1 && p.max >= 1 ? on.map((id) => [id]) : p.min > 1 && on.length >= p.min ? [on.slice(0, p.min)] : [])];
         rest.push([s, answers]);
         for (const picks of answers) {
-          if ((tried += 1) > (P.branches ?? 32)) return 'unknown';
+          if ((tried += 1) > (P.branches ?? 32)) return note('budget');
           if (fork(s, picks)) return 'yes';
         }
       }
@@ -363,7 +477,7 @@ export function cardPack<G extends GameTypes, E extends PackEnv = PackEnv>(cfg: 
         for (const all of [sets(0, []), lone]) {
           for (const picks of all) {
             if (had.has(picks.join('\n'))) continue;
-            if ((tried += 1) > (P.branches ?? 32)) return 'unknown';
+            if ((tried += 1) > (P.branches ?? 32)) return note('budget');
             if (fork(s, picks)) return 'yes';
             rest.push(...open.splice(0).map((o): [Draft<KernelState>, readonly (readonly string[])[]] => [o, []]));
           }
@@ -380,7 +494,8 @@ export function cardPack<G extends GameTypes, E extends PackEnv = PackEnv>(cfg: 
     if (r === 'unknown') return 'unknown';
     const unpaid = (x: Step): boolean => {
       const p = x as PackStep;
-      return p.op === 'payThen' ? !canPay(s, p.cost, e) : (p.op === 'pay' || p.op === 'convert') && !payable(s, p, e);
+      // K583: a cost inside a seq or a may counts too.
+      return p.op === 'payThen' ? !canPay(s, p.cost, e) : p.op === 'seq' ? p.steps.some(unpaid) : p.op === 'may' ? p.then.some(unpaid) : (p.op === 'pay' || p.op === 'convert') && !payable(s, p, e);
     };
     return o.some(unpaid) ? 'cannotPay' : 'noChange';
   };
@@ -391,18 +506,25 @@ export function cardPack<G extends GameTypes, E extends PackEnv = PackEnv>(cfg: 
     if (st.filter !== undefined && f === undefined) throw new EngineBugError(`card-language pack: no filter ${st.filter}`);
     const judge = dry;
     if (judge !== null && f !== undefined && cardsIn(s, z).some((c) => (peek || canSee(s, env.seat, c)) && !canSee(s, judge, c))) stop();
+    if (f !== undefined) blind(s, env);
     return cardsIn(s, z).flatMap((c, i) => {
       const seen = peek || canSee(s, env.seat, c);
       if (!seen) return f === undefined ? [`#${String(i)}`] : [];
       return f === undefined || f(s as unknown as G['state'], c, env) ? [c] : [];
     });
   };
+  // K583: in the check a card picked blind stays unknown to the game: its tests, counts, filters and custom verbs are not run with it.
+  const blind = (s: PackState, env: E): void => {
+    const judge = dry;
+    if (judge !== null && (hid(s) || (env.cards ?? []).some((c) => locate(s, c) !== undefined && !canSee(s, judge, c)))) stop();
+  };
   const unhide = (s: PackState, z: string, picks: readonly string[]): string[] => picks.map((p) => (p.startsWith('#') ? (cardsIn(s, z)[Number(p.slice(1))] ?? '') : p));
   const pickAsk = (ctx: Ctx<G>, st: PackStep, env: E, z: string, min: number, max: number, peek = false, kind = 'chooseCards', keep?: (id: string) => boolean): boolean => {
     const ids = eligible(S(ctx), st as { filter?: string }, env, z, peek).filter((id) => keep?.(id) ?? true);
     const hi = Math.min(max, ids.length);
     if (hi === 0) return false;
-    ask(ctx, st, env, kind, ids.map((id) => ({ id, enabled: true })), Math.min(min, hi), hi);
+    // K641: an option over a card the seat cannot see is `unseen`, so a lone one is asked, never taken for the player.
+    ask(ctx, st, env, kind, ids.map((id) => ({ id, enabled: true, ...(id.startsWith('#') ? { unseen: true as const } : {}) })), Math.min(min, hi), hi);
     return true;
   };
   const prune = (s: Draft<PackState>): void => {
@@ -478,7 +600,12 @@ export function cardPack<G extends GameTypes, E extends PackEnv = PackEnv>(cfg: 
       if (k === undefined) return;
       const s = S(ctx);
       const ids = topOf(s, st, e, k);
-      for (const c of ids) reveal(s, locate(s, c)?.zone ?? '', [c], who === 'all' ? 'all' : [e.seat]);
+      for (const c of ids) {
+        const zn = locate(s, c)?.zone ?? '';
+        // K583: in the check, looking at a card the seat already sees (or revealing one all see) is no change.
+        if (dry !== null && (who === 'all' ? s.zones[zn]?.seen === 'all' : canSee(s, e.seat, c))) continue;
+        reveal(s, zn, [c], who === 'all' ? 'all' : [e.seat]);
+      }
       if (st.then) go(ctx, st.then, { ...e, cards: ids });
     },
     resume: (ctx, step, env, a) => picked(ctx, step, need(env), a),
@@ -505,6 +632,11 @@ export function cardPack<G extends GameTypes, E extends PackEnv = PackEnv>(cfg: 
   });
   const flow = <F extends object>(fields: F, run: (ctx: Ctx<G>, st: never, env: E) => void, resume?: (ctx: Ctx<G>, st: never, env: E, a: readonly string[]) => void): V =>
     ({ fields, run: (ctx: Ctx<G>, st: never, env: E | undefined) => run(ctx, st, need(env)), ...(resume ? { resume: (ctx: Ctx<G>, st: never, env: E | undefined, a: readonly string[]) => resume(ctx, st, need(env), a) } : {}), text: null }) as unknown as V;
+  // K583: in the check a shuffle of fewer than two cards (none of them shown to a seat) changes nothing and draws nothing.
+  const mix = (ctx: Ctx<G>, z: string): void => {
+    if (dry !== null && cardsIn(S(ctx), z).length < 2 && S(ctx).zones[z]?.shown === undefined) return;
+    shuffleZone(ctx, z);
+  };
   const list = (k: number): KernelOption[] => Array.from({ length: k }, (_, i) => ({ id: String(i), enabled: true }));
 
   const verbs = {
@@ -532,10 +664,10 @@ export function cardPack<G extends GameTypes, E extends PackEnv = PackEnv>(cfg: 
       const src = zone(s, st.from, e.seat);
       send(ctx, 'refill', Math.min(Math.max(0, st.size - cardsIn(s, z).length), cardsIn(s, src).length), src, z, 'bottom', e);
     }),
-    shuffle: flow({ zone: str }, (ctx, st: Extract<PackStep, { op: 'shuffle' }>, e) => shuffleZone(ctx, zone(S(ctx), st.zone, e.seat))),
+    shuffle: flow({ zone: str }, (ctx, st: Extract<PackStep, { op: 'shuffle' }>, e) => mix(ctx, zone(S(ctx), st.zone, e.seat))),
     search: flow({ zone: str, filter: optional(str), count: optional(amount), to: optional(str), shuffle: optional(bool) }, (ctx, st: Extract<PackStep, { op: 'search' }>, e) => {
       const z = zone(S(ctx), st.zone, e.seat);
-      if (!pickAsk(ctx, st, e, z, 0, n(st.count, e), true, 'search') && st.shuffle !== false) shuffleZone(ctx, z);
+      if (!pickAsk(ctx, st, e, z, 0, n(st.count, e), true, 'search') && st.shuffle !== false) mix(ctx, z);
     }, (ctx, st: Extract<PackStep, { op: 'search' }>, e, a) => {
       const s = S(ctx);
       const z = zone(s, st.zone, e.seat);
@@ -608,6 +740,7 @@ export function cardPack<G extends GameTypes, E extends PackEnv = PackEnv>(cfg: 
     },
     choosePlayer: flow({ others: optional(bool), then: eff }, (ctx, st: Extract<PackStep, { op: 'choosePlayer' }>, e) => {
       if (!cfg.seats) throw new EngineBugError('card-language pack: choosePlayer needs cfg.seats');
+      if (hid(S(ctx))) stop();
       const seats = cfg.seats(ctx.s).filter((p) => !st.others || p !== e.seat);
       if (seats.length > 0) return ask(ctx, st, e, 'choosePlayer', seats.map((id) => ({ id, enabled: true })), 1, 1);
       const seat = cfg.noPlayer?.(ctx.s, e);
@@ -615,8 +748,11 @@ export function cardPack<G extends GameTypes, E extends PackEnv = PackEnv>(cfg: 
     }, (ctx, st: Extract<PackStep, { op: 'choosePlayer' }>, e, a) => go(ctx, st.then, { ...e, seat: a[0] ?? e.seat })),
     choosePayment: flow({ ways: effs, then: eff }, (ctx, st: Extract<PackStep, { op: 'choosePayment' }>, e) => {
       const s = S(ctx);
-      const opts = st.ways.map((w, i) => (canPay(s, w, e) ? { id: String(i), enabled: true } : P.deadChoice === 'bar' ? bar(String(i), 'cannotPay') : { id: String(i), enabled: false, why: 'cannotPay' }));
-      if (opts.some((o) => o.enabled)) ask(ctx, st, e, 'choosePayment', opts, 1, 1);
+      // K583, paid = effect: a payable way whose effect would change nothing is dead for `deadChoice`.
+      const rs = st.ways.map((w): Offered | null => (!canPay(s, w, e) ? null : dry !== null || P.paid !== 'effect' || (P.deadChoice ?? 'today') === 'today' ? 'yes' : wouldChange(ctx.s, ctx.content, [{ op: 'payThen', cost: w, then: st.then } as Step], e)));
+      if (!rs.some((r) => r !== null && live(r))) return;
+      const opts = rs.map((r, i) => (r === null ? (P.deadChoice === 'bar' ? bar(String(i), 'cannotPay') : { id: String(i), enabled: false, why: 'cannotPay' }) : live(r) || P.deadChoice !== 'bar' ? { id: String(i), enabled: true } : bar(String(i), r === 'unknown' ? 'unknown' : 'noChange')));
+      ask(ctx, st, e, 'choosePayment', opts, 1, 1);
     }, (ctx, st: Extract<PackStep, { op: 'choosePayment' }>, e, a) => go(ctx, [{ op: 'payThen', cost: st.ways[Number(a[0])] ?? [], then: st.then } as Step], e)),
     orderEffects: flow({ effects: effs }, (ctx, st: Extract<PackStep, { op: 'orderEffects' }>, e) => {
       if (st.effects.length === 1) return go(ctx, st.effects[0] ?? [], e);
@@ -626,12 +762,12 @@ export function cardPack<G extends GameTypes, E extends PackEnv = PackEnv>(cfg: 
     pay: flow({ res: str, amount }, (ctx, st: Extract<PackStep, { op: 'pay' }>, e) => {
       const s = S(ctx);
       if (!payable(s, st, e)) return;
-      resSet(ctx, e.seat, st.res, resGet(s, e.seat, st.res) - due(st, e));
+      resSet(ctx, e.seat, st.res, resGet(s, e.seat, st.res) - due(s, st, e));
     }),
     convert: flow({ res: str, amount, into: str, get: amount }, (ctx, st: Extract<PackStep, { op: 'convert' }>, e) => {
       const s = S(ctx);
       if (!payable(s, st, e)) return;
-      resSet(ctx, e.seat, st.res, resGet(s, e.seat, st.res) - due(st, e));
+      resSet(ctx, e.seat, st.res, resGet(s, e.seat, st.res) - due(s, st, e));
       resSet(ctx, e.seat, st.into, resGet(S(ctx), e.seat, st.into) + n(st.get, e));
     }),
     adjust: flow({ key: str, by: int, min: optional(int), max: optional(int) }, (ctx, st: Extract<PackStep, { op: 'adjust' }>, e) =>
@@ -640,12 +776,14 @@ export function cardPack<G extends GameTypes, E extends PackEnv = PackEnv>(cfg: 
     if: flow({ test: str, then: eff, else: optional(eff) }, (ctx, st: Extract<PackStep, { op: 'if' }>, e) => {
       const t = cfg.tests?.[st.test];
       if (!t) throw new EngineBugError(`card-language pack: no test ${st.test}`);
+      blind(S(ctx), e);
       const branch = t(ctx.s, e) ? st.then : st.else;
       if (branch) go(ctx, branch, e);
     }),
     forEach: flow({ then: eff }, (ctx, st: Extract<PackStep, { op: 'forEach' }>, e) => ctx.then(...((e.cards ?? []).flatMap((c) => effectTasks(st.then, { ...e, cards: [c] })) as unknown as G['task'][]))),
     eachPlayer: flow({ then: eff }, (ctx, st: Extract<PackStep, { op: 'eachPlayer' }>, e) => {
       if (!cfg.seats) throw new EngineBugError('card-language pack: eachPlayer needs cfg.seats');
+      if (hid(S(ctx))) stop();
       const all = cfg.seats(ctx.s);
       const i = Math.max(0, all.indexOf(e.seat));
       ctx.then(...([...all.slice(i), ...all.slice(0, i)].flatMap((seat) => effectTasks(st.then, { ...e, seat })) as unknown as G['task'][]));
@@ -654,6 +792,7 @@ export function cardPack<G extends GameTypes, E extends PackEnv = PackEnv>(cfg: 
     count: flow({ what: str, then: eff }, (ctx, st: Extract<PackStep, { op: 'count' }>, e) => {
       const c = cfg.counts?.[st.what];
       if (!c) throw new EngineBugError(`card-language pack: no count ${st.what}`);
+      blind(S(ctx), e);
       go(ctx, st.then, { ...e, n: c(ctx.s, e) });
     }),
     later: flow({ at: str, then: eff }, (ctx, st: Extract<PackStep, { op: 'later' }>, e) => {
@@ -663,32 +802,52 @@ export function cardPack<G extends GameTypes, E extends PackEnv = PackEnv>(cfg: 
     payThen: flow({ cost: eff, then: eff }, (ctx, st: Extract<PackStep, { op: 'payThen' }>, e) => {
       // Pays the cost, then (the same step again, env.paidFrom set) runs `then` only when no cost occurrence was cancelled.
       const s = S(ctx);
-      const { paidFrom, owed, ...rest } = e;
+      // K583: under cost = parts a game env's own `owed` stays (as before K529); under whole the field is the pack's.
+      const { paidFrom, ...all } = e;
+      const { owed, ...bare } = all;
+      const rest = P.cost === 'whole' ? bare : all;
       const occs = (s as unknown as KernelState).timing?.occurrences ?? [];
+      // K583, paid = effect in the check: what a cost changed is not counted; the game is compared from where the cost ended.
+      const fx = dry !== null && P.paid === 'effect';
+      const costEnds = (): void => {
+        if (!fx || (J.cost -= 1) !== 0) return;
+        J.base = view(s);
+      };
+      // K583: every amount of the cost is read from `cfg.due` here, before anything is paid, so the cost is paid as it was judged.
+      const paying = rest;
       // K529, a cost judged as a whole is paid one step at a time: a step that cannot pay when it is reached stops the cost, and `then` does not run.
       const next = (from: number, left: readonly Step[]): void => {
         const step = left[0];
-        if (step === undefined || !payable(s, step, rest as E)) return;
-        ctx.then(...(effectTasks([step], { ...rest, owed: left.slice(1) }) as unknown as G['task'][]), ...(effectTasks([st], { ...rest, paidFrom: from, owed: left.slice(1) }) as unknown as G['task'][]));
+        if (step === undefined || !payable(s, step, paying as E)) return costEnds();
+        ctx.then(...(effectTasks([step], { ...paying, owed: left.slice(1) }) as unknown as G['task'][]), ...(effectTasks([st], { ...rest, paidFrom: from, owed: left.slice(1) }) as unknown as G['task'][]));
       };
       if (paidFrom !== undefined) {
-        if (occs.some((o) => o.id >= paidFrom && o.state === 'cancelled')) return;
+        if (occs.some((o) => o.id >= paidFrom && o.state === 'cancelled')) return costEnds();
         if (P.cost === 'whole' && owed !== undefined && owed.length > 0) return next(paidFrom, owed);
-        // K529: in the check the "if you do" part does not run, so it never counts on its own.
-        if (dry === null) go(ctx, st.then, rest as E);
+        costEnds();
+        // K529: in the check the "if you do" part does not run, so it never counts on its own (K583: it runs under paid = effect).
+        if (dry === null || fx) go(ctx, st.then, rest as E);
         return;
       }
-      if (!canPay(s, st.cost, e)) return;
-      if (P.cost === 'whole') return next((s as unknown as KernelState).timing?.next ?? 0, st.cost);
-      ctx.then(...(effectTasks(st.cost, e) as unknown as G['task'][]), ...(effectTasks([st], { ...e, paidFrom: (s as unknown as KernelState).timing?.next ?? 0 }) as unknown as G['task'][]));
+      const cost = costed(ctx.s, st.cost, e, true);
+      if (!canPay(s, cost, e)) return;
+      if (fx) {
+        if (J.cost === 0 && view(s) !== J.base) throw CHANGED;
+        if (J.cost === 0) J.sees = seenBy(s, dry ?? '');
+        J.cost += 1;
+      }
+      if (P.cost === 'whole') return next((s as unknown as KernelState).timing?.next ?? 0, cost);
+      ctx.then(...(effectTasks(cost, e) as unknown as G['task'][]), ...(effectTasks([st], { ...e, paidFrom: (s as unknown as KernelState).timing?.next ?? 0 }) as unknown as G['task'][]));
     }),
     custom: flow({ name: str, n: optional(amount) }, (ctx, st: Extract<PackStep, { op: 'custom' }>, e) => {
       const c = cfg.custom?.[st.name];
       if (!c) throw new EngineBugError(`card-language pack: no custom verb ${st.name}`);
+      blind(S(ctx), e);
       c.run(ctx, st, e);
     }, (ctx, st: Extract<PackStep, { op: 'custom' }>, e, a) => {
       const r = cfg.custom?.[st.name]?.resume;
       if (!r) throw new EngineBugError(`card-language pack: custom verb ${st.name} was answered but has no resume`);
+      if (hid(S(ctx))) stop();
       r(ctx, st, e, a);
     }),
   } as Record<PackOp, V>;
@@ -736,6 +895,7 @@ export function cardPack<G extends GameTypes, E extends PackEnv = PackEnv>(cfg: 
     if (m.top) {
       if (cardsIn(s, m.from).length === 0 && m.op === 'draw' && !m.again) {
         // The reshuffle is its own `would` occurrence (kind `reshuffle`); the draw is tried once more after it.
+        if (cfg.reshuffle && hid(s)) stop();
         const r = cfg.reshuffle?.(s as unknown as G['state'], m.from, m.seat);
         if (r !== undefined && cardsIn(s, r).length > 0) {
           const env = { seat: m.seat } as E;
@@ -756,5 +916,5 @@ export function cardPack<G extends GameTypes, E extends PackEnv = PackEnv>(cfg: 
     cfg.moved?.(ctx, { op: m.op, card: id, from, to: m.to, seat: m.seat });
     return true;
   };
-  return { verbs: verbs as unknown as VerbTable<G, PackStep, E>, happen, wouldChange };
+  return { verbs: verbs as unknown as VerbTable<G, PackStep, E>, happen, wouldChange, judge, costed };
 }
