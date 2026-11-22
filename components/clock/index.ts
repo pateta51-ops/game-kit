@@ -73,7 +73,7 @@ export function stepsTo(spec: ClockSpec, state: ClockState, space: Space): numbe
   const i = indexOf(spec, space), n = size(spec)
   if (i < 0) throw new Error(`clock: ${space} is not a space`)
   const by = (i - state.value) * sign(spec)
-  return spec.ends === 'wrap' ? ((by % n) + n) % n : by
+  return spec.ends === 'wrap' ? ((by % n) + n) % n : by || 0
 }
 export function left(spec: ClockSpec, state: ClockState): number {
   return Math.abs(endOf(spec) - state.value)

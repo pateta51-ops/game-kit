@@ -230,6 +230,7 @@ describe('clock', () => {
     expect(left(up, newClock(up))).toBe(4)
     const down: ClockSpec = { ...up, direction: 'down', start: 'e' }
     expect([stepsTo(down, newClock(down), 'b'), stepsTo(down, newClock(down), 'f')]).toEqual([3, -1])
+    expect(Object.is(stepsTo(down, newClock(down), 'e'), 0)).toBe(true)
     const loop: ClockSpec = { spaces: 8, start: 7, ends: 'wrap', thresholds: [] }
     expect([stepsTo(loop, newClock(loop), 2), stepsTo(loop, newClock(loop), 7), stepsTo({ ...loop, direction: 'down' }, newClock(loop), 2)]).toEqual([3, 0, 5])
     expect(step(loop, newClock(loop), stepsTo(loop, newClock(loop), 2)).state.value).toBe(2)
