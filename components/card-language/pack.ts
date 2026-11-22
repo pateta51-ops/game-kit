@@ -406,6 +406,7 @@ export function cardPack<G extends GameTypes, E extends PackEnv = PackEnv>(cfg: 
   // K597: the state game code reads (tests, counts, filters, `payable`, `due`, `res.get`, `seats`, `noPlayer`, `reshuffle`). In resolves a read-only view that stops (hidden)
   // only when a read yields a card that came into view: an array element, an object key or a string holding its id (a log line); `length` passes. Elsewhere the hard stop of K583.
   // K597 fourth look: on an object whose own keys or values hold such a card, any keyed read (but an array's `length` and inherited methods), `in`, own-key check or key listing stops.
+  // Never on the key asked alone: asking for a key that names a new card would stop only in the worlds where that card is new.
   // `rw`: a `viewSafe` custom verb or row runs on it, its writes go to the state (a view handed back is stored as what it views).
   const ro = <T>(s: T, rw = false): T => {
     if (R === null) return hid(s as unknown as PackState) ? stop() : s;
@@ -430,16 +431,16 @@ export function cardPack<G extends GameTypes, E extends PackEnv = PackEnv>(cfg: 
       const t = o;
       const old = PX.get(t);
       if (old !== undefined) return old;
-      const dirty = (k?: PropertyKey): boolean => bad(k) || Reflect.ownKeys(t).some((x) => bad(x) || bad(Reflect.get(t, x)));
+      const dirty = (): boolean => Reflect.ownKeys(t).some((x) => bad(x) || bad(Reflect.get(t, x)));
       const p = new Proxy(Array.isArray(o) ? [] : {}, {
         get: (_, k) => {
-          if (bad(k) || ((Object.hasOwn(t, k) || !(k in t)) && !(Array.isArray(t) && k === 'length') && dirty())) stop();
+          if (((Object.hasOwn(t, k) || !(k in t)) && !(Array.isArray(t) && k === 'length') && dirty())) stop();
           return px(Reflect.get(t, k));
         },
-        has: (_, k) => (dirty(k) ? stop() : Reflect.has(t, k)),
+        has: (_, k) => (dirty() ? stop() : Reflect.has(t, k)),
         ownKeys: () => (dirty() ? stop() : Reflect.ownKeys(t)),
         getOwnPropertyDescriptor: (_, k) => {
-          if (dirty(k)) stop();
+          if (dirty()) stop();
           const d = Reflect.getOwnPropertyDescriptor(t, k);
           if (d === undefined) return undefined;
           return Array.isArray(t) && k === 'length' ? { value: t.length, writable: true, enumerable: false, configurable: false } : 'value' in d ? { ...d, value: px(d.value), configurable: true } : { ...d, configurable: true };

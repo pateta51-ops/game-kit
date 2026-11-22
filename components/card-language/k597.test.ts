@@ -240,10 +240,16 @@ describe('card-language resolves (K597, K605): third look', () => {
       (s) => Object.getOwnPropertyDescriptor(s.got ?? {}, 'd2') !== undefined, (s) => Reflect.ownKeys(s.got ?? {}).length === 1, (s) => s.got?.zz === undefined, (s) => Reflect.has(s.got ?? {}, 'd1'),
     ];
     for (const [i, f] of reads.entries()) for (const d of DECKS) expect([i, resolves([DRAW, IF], t(f, d))]).toMatchObject([i, { answer: 'unknown', reason: 'hidden' }]);
+    // Never on the key asked alone: after a look at the deck's top (d2 new in one order only), asking for d2 in marks that hold no new card is answered alike.
+    const rs = DECKS.map((d) => resolves([{ op: 'discard', count: 1 }, { op: 'lookAt', count: 1 }, IF], t((s) => s.got?.d2 === 1 || 'd2' in (s.got ?? {}), d)));
+    expect(rs[0]?.answer).not.toBe('unknown');
+    expect(rs[1]).toEqual(rs[0]);
   });
   it('K597 fourth look: a custom verb or game row flagged viewSafe runs after a card came into view, on the guarded view; unflagged keeps the hard stop', () => {
     const custom = (viewSafe: boolean) => ({
       nine: { run: (ctx: Ctx<G>) => void (draftOf(ctx).res = { ...ctx.s.res, a: { gold: 9 } }), text: () => 'Nine.', viewSafe },
+      keep: { run: (ctx: Ctx<G>) => void (draftOf(ctx).res = { ...ctx.s.res, b: { gold: 1 } }), text: () => 'Keep.', viewSafe },
+      zones: { run: (ctx: Ctx<G>) => void (draftOf(ctx).zones = { ...ctx.s.zones }), text: () => 'Zones.', viewSafe },
       drewTwo: { run: (ctx: Ctx<G>) => void (cardsIn(ctx.s, 'hand:a').includes('d2') && (draftOf(ctx).res = { a: { gold: 9 } })), text: () => 'Drew two.', viewSafe },
       ask: {
         run: (ctx: Ctx<G>, st: PackStep, env: PackEnv) => askVerb(ctx, { kind: 'ask', seat: env.seat, min: 1, max: 1, options: [{ id: 'x', enabled: true }, { id: 'y', enabled: true }] }, st, env),
@@ -258,6 +264,9 @@ describe('card-language resolves (K597, K605): third look', () => {
       expect(resolves([DRAW, c('nine')], on)).toEqual({ answer: 'full', skipped: [] });
       expect(resolves([DRAW, c('nine')], off)).toEqual({ answer: 'unknown', reason: 'hidden', skipped: [{ step: 1, reason: 'hidden' }] });
       expect(resolves([DRAW, c('ask')], on)).toEqual({ answer: 'full', skipped: [] });
+      // What it writes is stored as the state, never as the view: a later prompt copies the state.
+      expect(resolves([DRAW, c('keep'), { op: 'chooseOption', options: [[NOTHING], [GAIN]] }], on)).toEqual({ answer: 'full', skipped: [] });
+      expect(resolves([DRAW, c('zones'), { op: 'discard', cards: 'pick' }], on)).toEqual({ answer: 'part', skipped: [{ step: 1, reason: 'noChange' }] });
       expect(resolves([DRAW, c('ask'), { op: 'if', test: 'rich', then: [GAIN] }], on)).toEqual({ answer: 'part', skipped: [{ step: 2, reason: 'condition' }] });
       expect(resolves([DRAW, c('ask')], off)).toMatchObject({ answer: 'unknown', reason: 'hidden' });
       // The guard still holds: a flagged verb that reads the drawn card stops.
@@ -438,9 +447,8 @@ describe('card-language resolves (K597): agrees with playing every answer', () =
   }, 240000);
   it('K597 fourth look: with the custom verbs and the row that read no card flagged viewSafe, fewer answers are unknown; every answer is still the same in every hidden world and agrees with brute force', () => {
     const n = { effects: 0, unknownOff: 0, unknownOn: 0, lostOff: 0, lostOn: 0, hiddenOff: 0, hiddenOn: 0 };
-    const eff = gen(5973, true);
-    for (let i = 0; i < 400; i += 1) {
-      const e = eff(2);
+    for (const [seed, depth] of [[5973, 2], [5974, 2], [5975, 3]] as const) for (let i = 0, eff = gen(seed, true); i < 400; i += 1) {
+      const e = eff(depth);
       if (looksAtASeenCard(e)) continue;
       const at = (g: typeof base.g) => {
         const { s, content } = g.at();
@@ -465,7 +473,7 @@ describe('card-language resolves (K597): agrees with playing every answer', () =
       n.hiddenOn += agree && r.reason === 'hidden' ? 1 : 0;
     }
     console.log(`K597 viewSafe share: ${JSON.stringify(n)}`);
-    expect(n.effects).toBeGreaterThan(200);
+    expect(n.effects).toBeGreaterThan(600);
     expect(n.hiddenOn).toBeLessThan(n.hiddenOff);
     expect(n.lostOn).toBeLessThan(n.lostOff);
   }, 240000);
