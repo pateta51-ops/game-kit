@@ -312,6 +312,9 @@
     "not": "Card rules themselves; those stay in the game.",
     "title": "Test card effects on real cards",
     "tags": [
+      "restriction phrase case sensitive",
+      "restriction word at start of text",
+      "restriction key not phrases",
       "raw key in card reading",
       "describe check accepted list",
       "reading order verdict",

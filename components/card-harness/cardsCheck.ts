@@ -112,7 +112,9 @@ export interface RestrictionInput {
   readonly records: readonly CardRecord[];
   /** The grammar's restriction keys (phase, moment, trigger, condition, limit, optional, duration). */
   readonly keys: readonly string[];
-  readonly words: Readonly<Record<string, readonly string[]>>;
+  readonly words: Readonly<Record<string, readonly Phrase[]>>;
+  /** K677: `"<key>:<value>"` to phrases that, when present in the clause, stop that key from matching (both ways); other keys are not touched. Default: none. */
+  readonly notPhrases?: Readonly<Record<string, readonly Phrase[]>>;
   /** Ruling ids (AR map and rulings log). */
   readonly rulings: readonly string[];
   /** A record that leaves something lasting; it must carry `durationKey` (default `duration`). */
@@ -129,8 +131,11 @@ export interface RestrictionInput {
   /** K665: the icon code a step pays (e.g. `{gem 2}` for a `pay` step of gem 2), or undefined. A printed phrase equal to a paid icon counts as its restriction present. */
   readonly paidIcon?: (step: Record<string, unknown>) => string | undefined;
 }
+/** K677: a plain string matches case-insensitively anywhere (as before); `{ phrase, case: true }` matches only with the same letter case, `start: true` only at the start of the text. */
+export type Phrase = string | { readonly phrase: string; readonly case?: boolean; readonly start?: boolean };
+const ph = (p: Phrase): string => (typeof p === 'string' ? p : p.phrase);
 const val = (v: unknown): string => (typeof v === 'object' && v !== null ? JSON.stringify(v) : String(v));
-const has = (text: string, phrase: string, slash = false): boolean => new RegExp(String.raw`(?<![\p{L}\p{N}_${slash ? '/' : ''}])${phrase.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}(?![\p{L}\p{N}_${slash ? '/' : ''}])`, 'iu').test(text);
+const has = (text: string, p: Phrase, slash = false): boolean => new RegExp(String.raw`${typeof p !== 'string' && p.start ? String.raw`^\s*` : ''}(?<![\p{L}\p{N}_${slash ? '/' : ''}])${ph(p).replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}(?![\p{L}\p{N}_${slash ? '/' : ''}])`, typeof p !== 'string' && p.case ? 'u' : 'iu').test(text);
 const cites = (why: unknown, rulings: ReadonlySet<string>): boolean => [why].flat().some((w) => typeof w === 'string' && [...rulings].some((r) => new RegExp(`(^|[^\\w-])${r.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}(?![\\w-])`).test(w)));
 const STEP_KEYS = new Set(['effects', 'then', 'else', 'steps', 'options', 'upgraded', 'each', 'branch', 'effect']);
 /** The record and its step nodes (K665): objects with an `op`, and what sits in the step lists and branches (`STEP_KEYS`); never filters, targets or other metadata. Iterative, each object once. */
@@ -154,12 +159,13 @@ export function restrictionProblems(i: RestrictionInput): string[] {
   const found: { id: string; key: string; message: string }[] = [];
   const skip = new Set([...i.keys, dk, whyKey]);
   const all = (r: CardRecord) => nodes(r, skip);
+  const not = (t: string, kv: string) => (i.notPhrases?.[kv] ?? []).some((p) => has(t, p, i.slashJoins));
   for (const r of i.records) {
     const t = text.get(r.clause) ?? '';
     for (const k of new Set([...i.keys, ...(i.lasting?.(r) ? [dk] : [])])) for (const n of all(r)) {
       if (n[k] === undefined) continue;
       const v = val(n[k]);
-      if ((i.words[`${k}:${v}`] ?? []).some((p) => has(t, p, i.slashJoins)) || cites(n[whyKey], rulings) || cites(r[whyKey], rulings)) continue;
+      if ((!not(t, `${k}:${v}`) && (i.words[`${k}:${v}`] ?? []).some((p) => has(t, p, i.slashJoins))) || cites(n[whyKey], rulings) || cites(r[whyKey], rulings)) continue;
       found.push({ id: r.id, key: k, message: `${r.id}: ${k}=${v} has no printed source and no AR` });
     }
     if (i.lasting?.(r) && !all(r).some((n) => n[dk] !== undefined)) found.push({ id: r.id, key: dk, message: `${r.id}: lasting effect with no duration` });
@@ -168,7 +174,7 @@ export function restrictionProblems(i: RestrictionInput): string[] {
     const recs = i.records.filter((r) => r.clause === c);
     if (recs.length === 0) continue;
     for (const [kv, phrases] of Object.entries(i.words)) {
-      const p = phrases.find((x) => has(t, x, i.slashJoins));
+      const f = not(t, kv) ? undefined : phrases.find((x) => has(t, x, i.slashJoins)), p = f === undefined ? undefined : ph(f);
       if (p !== undefined && recs.some((r) => all(r).some((n) => i.paidIcon?.(n)?.toLowerCase() === p.toLowerCase()))) continue;
       const k = kv.slice(0, kv.indexOf(':')), v = kv.slice(kv.indexOf(':') + 1);
       if (p !== undefined && !recs.some((r) => all(r).some((n) => n[k] !== undefined && val(n[k]) === v))) found.push({ id: c, key: k, message: `${c}: printed "${p}" has no restriction ${k}=${v}` });
@@ -187,9 +193,9 @@ export function restrictionProblems(i: RestrictionInput): string[] {
   return out;
 }
 /** The clauses with the most restriction words, most first (`--list-restrictions`). */
-export function restrictionCounts(clauses: readonly CatalogueClause[], words: Readonly<Record<string, readonly string[]>>): { clause: CatalogueClause; count: number; words: string[] }[] {
+export function restrictionCounts(clauses: readonly CatalogueClause[], words: Readonly<Record<string, readonly Phrase[]>>): { clause: CatalogueClause; count: number; words: string[] }[] {
   const phrases = [...new Set(Object.values(words).flat())];
-  return clauses.map((c) => { const w = phrases.filter((p) => has(c.text, p)); return { clause: c, count: w.length, words: w }; })
+  return clauses.map((c) => { const w = [...new Set(phrases.filter((p) => has(c.text, p)).map(ph))]; return { clause: c, count: w.length, words: w }; })
     .sort((a, b) => b.count - a.count || byId(a.clause, b.clause));
 }
 
@@ -363,11 +369,11 @@ export function cardsCheckMain(argv: readonly string[], input: CardsCheckInput, 
   let i: CardsCheckInput & { words: RestrictionInput['words'] } = { ...input, words: input.words ?? {} };
   if (argv.includes('--words')) {
     if (!io?.read) { log('FAIL --words needs a RecordIo with read'); return 1; }
-    try { i = { ...i, words: JSON.parse(io.read(wordsPathOf(argv))) as Record<string, readonly string[]> }; } catch (e) { log(`FAIL --words ${wordsPathOf(argv)}: ${(e as Error).message}`); return 1; }
+    try { i = { ...i, words: JSON.parse(io.read(wordsPathOf(argv))) as Record<string, readonly Phrase[]> }; } catch (e) { log(`FAIL --words ${wordsPathOf(argv)}: ${(e as Error).message}`); return 1; }
   } else if (input.words === undefined && io?.read) {
     let t: string | undefined;
     try { t = io.read(RESTRICTION_WORDS_PATH); } catch { t = undefined; }
-    if (t !== undefined) { try { i = { ...i, words: JSON.parse(t) as Record<string, readonly string[]> }; } catch (e) { log(`FAIL ${RESTRICTION_WORDS_PATH}: ${(e as Error).message}`); return 1; } }
+    if (t !== undefined) { try { i = { ...i, words: JSON.parse(t) as Record<string, readonly Phrase[]> }; } catch (e) { log(`FAIL ${RESTRICTION_WORDS_PATH}: ${(e as Error).message}`); return 1; } }
   }
   const arg = (f: string): string | undefined => { const k = argv.indexOf(f); return k < 0 ? undefined : argv[k + 1]; };
   const batchOf = (b: string): readonly string[] => { if (!i.batch) throw new Error('cardsCheck: no batch() given'); return i.batch(b); };

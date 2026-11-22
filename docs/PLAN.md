@@ -467,6 +467,7 @@ A candidate is a part some game wants and nobody builds yet. A second game that 
 | K646 | window prompt: at a timing window, one prompt that offers every response legal at that moment (from hand, in play, by seat) and a pass, built on engine-core windows; a game passes what counts as a response and who may answer. | M | Radiance, Hunted North Pole | candidate |
 | K656 | `pieces-3d` dice: d4, d8, d12 and d20 beside d6 and d10 (today `diceGl` draws only d6 and d10). | S | Hunted North Pole | candidate |
 | K674 | card-zones capacity: an `onLeave` hook called after the excess cards move, for the game's own events and effect ends | S | Dice Commandos | done |
+| K677 | card-harness restrictions check: case-sensitive and start-anchored phrases, and per-key notPhrases | S | Dice Commandos | done |
 
 ## Harvest from the existing games (owner, 15 Nov 2026)
 
