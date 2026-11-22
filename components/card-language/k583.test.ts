@@ -146,14 +146,15 @@ describe('card-language offer policy (K583) point 4: hidden information', () => 
   });
   it('K583 a hidden trigger of another seat does not change the answer; one the seat can see is unknown with the reason otherSeat', () => {
     const pool = { react: { when: [{ on: 'draw', optional: true, then: [GAIN] }] } };
-    const eff: Eff = [{ op: 'may', then: [DRAW] }];
+    const TRIG: PackStep = { op: 'custom', name: 'triggers' };
+    const eff: Eff = [{ op: 'may', then: [DRAW, TRIG] }];
     const held = game({ noChange: 'skip' }, { deck: [], b: ['b1', 'react'], pool });
     const none = game({ noChange: 'skip' }, { deck: [], b: ['b1', 'b2'], pool });
-    expect([held.check([DRAW]), none.check([DRAW])]).toEqual(['no', 'no']);
+    expect([held.check([DRAW, TRIG]), none.check([DRAW, TRIG])]).toEqual(['no', 'no']);
     expect([held.play(eff).prompts, none.play(eff).prompts]).toEqual([[], []]);
     const open = game({ noChange: 'skip' }, { deck: [], pool: { p1: { when: [{ on: 'draw', optional: true, then: [GAIN] }] } } });
-    expect(judge(open, [DRAW])).toEqual({ answer: 'unknown', reason: 'otherSeat' });
-    expect(held.play([DRAW], [['yes']]).prompts.map((p) => [p.kind, p.seat])).toEqual([['may', 'b']]);
+    expect(judge(open, [DRAW, TRIG])).toEqual({ answer: 'unknown', reason: 'otherSeat' });
+    expect(held.play([DRAW, TRIG], [['yes']]).prompts.map((p) => [p.kind, p.seat])).toEqual([['may', 'b']]);
   });
   it('K583 the reason tells a spent budget from what cannot be known: budget, random, otherSeat, hidden', () => {
     const g = game();

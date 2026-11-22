@@ -2,7 +2,7 @@
 // game runs on the pack as it is and on a frozen copy of an earlier one. Seat a acts with 3 gold; p1 (in play) is the source card.
 import { applyAction, canonicalJson, createGame, draftOf, GameOver, hashState, hashValue, seedRng, timingHandlers, type AnswerAction, type Ctx, type Draft, type GameRules, type HandlerTable, type KernelPrompt, type KernelState, type KernelTask, type Occurrence } from '../engine-core/index.ts';
 import { cardsIn, locate, newZones } from '../card-zones/index.ts';
-import { askVerb, effectTasks, verbHandler, type AnyVerbTable, type VerbTable, type VerbTask } from './index.ts';
+import { askVerb, effectTasks, verbHandler, type VerbTable, type VerbTask } from './index.ts';
 import { cannotKnow, type Offered, type OfferPolicy, type PackConfig, type PackEnv, type PackState, type PackStep } from './pack.ts';
 import { cardTriggers, type WhenCard } from './when.ts';
 
@@ -27,7 +27,7 @@ export interface G {
 }
 export type Eff = readonly PackStep[];
 interface BasePack {
-  readonly verbs: VerbTable<G, PackStep>;
+  readonly verbs: VerbTable<G, PackStep, PackEnv>;
   readonly happen: (ctx: Ctx<G>, occ: Occurrence) => boolean;
   readonly wouldChange: (s: S, content: Content, steps: Eff, env: PackEnv) => Offered;
 }
@@ -112,6 +112,8 @@ export const offerGame = <P extends BasePack>(make: (cfg: never) => P, opts: Gam
         },
         text: () => 'Pairs.',
       },
+      // The game's moment for triggers (engine-core timing): a game pushes it at its effect end.
+      triggers: { run: (ctx) => ctx.then({ kind: 'timing.triggers' }), text: () => 'Triggers.' },
       peek: { run: (ctx, _st, env) => (cannotKnow(), void (cardsIn(ctx.s, 'hand:b')[0] === 'b1' && res(ctx, env.seat, 9))), text: () => 'Peek.' },
       // Case 25: attempt to draw, otherwise gain 1 gold (the game's own verb, on the pack's check).
       attempt: { run: (ctx, _st, env) => ctx.then(...(effectTasks([pack.wouldChange(ctx.s, ctx.content, [DRAW], env) === 'no' ? GAIN : DRAW], env) as Task[])), text: () => 'Attempt.' },
@@ -130,7 +132,7 @@ export const offerGame = <P extends BasePack>(make: (cfg: never) => P, opts: Gam
     handlers: {
       ...timingHandlers<G>({
         happen: (ctx, o) => void pack.happen(ctx, o),
-        ...(opts.pool ? cardTriggers<G>({ pool: opts.pool, player: () => 'b', active: (s, c) => locate(s, c) !== undefined, table: pack.verbs as unknown as AnyVerbTable }) : {}),
+        ...(opts.pool ? cardTriggers<G>({ pool: opts.pool, player: () => 'b', active: (s, c) => locate(s, c) !== undefined, table: pack.verbs }) : {}),
       }),
       verb: verbHandler<G>(pack.verbs),
     },
