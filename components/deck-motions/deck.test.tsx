@@ -28,13 +28,15 @@ const fakeCanvas = () => {
   vi.spyOn(window.performance, 'now').mockReturnValue(0);
   window.requestAnimationFrame = (f) => { next = f; return 1; };
   window.cancelAnimationFrame = () => { next = undefined; };
-  vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockImplementation(function (this: HTMLCanvasElement, type: string) {
+  vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockImplementation(function (this: HTMLCanvasElement, type: string, opts?: unknown) {
     asked.push(type);
+    askedOpts.push(opts);
     if (type !== '2d') return null;
     const target = { canvas: this, drawImage: (...a: unknown[]) => { drawn.push(a); } } as Record<string, unknown>;
     return new Proxy(target, { get: (t, k: string) => k in t ? t[k] : () => ({ addColorStop: () => undefined }), set: () => true }) as never;
   } as never);
 };
+const askedOpts: unknown[] = [];
 const layer = () => document.querySelector('[data-riffle-motion="deck"]');
 afterEach(() => { made.length = 0; vi.restoreAllMocks(); });
 
@@ -213,6 +215,19 @@ describe('deck-motions DOM', () => {
     void riffle(deck, 1, { view: 'side', orientation: 'landscape' });
     expect(layer()?.innerHTML).toContain('rotateZ(0deg)');
     expect(layer()?.querySelector('canvas')).toBeNull();
+    finishDeckMotions();
+  });
+  it('K706: the top view asks for an antialiased WebGL2 canvas; side strips carry a transparent outline', () => {
+    setup();
+    fakeCanvas();
+    askedOpts.length = 0;
+    const deck = document.querySelector<HTMLElement>('[data-pile=deck]')!;
+    void riffle(deck, 1);
+    expect(askedOpts).toContainEqual(expect.objectContaining({ antialias: true }));
+    finishDeckMotions();
+    void riffle(deck, 1, { view: 'side' });
+    const strip = layer()!.querySelector<HTMLElement>('div[style*="overflow"]')!;
+    expect(strip.style.outline).toContain('transparent');
     finishDeckMotions();
   });
   it('K396: the top view falls back to 2D canvas strips without WebGL2', () => {

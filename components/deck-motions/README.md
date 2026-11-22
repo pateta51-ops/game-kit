@@ -19,6 +19,7 @@ Cards fly from a pile to their places (deal, refill turn-over, deck cycle) and a
 - Calling `dealFrom` before the new view is rendered: the places are not found.
 - Not calling `finishDeckMotions` on undo or leaving: stand-ins stay on the page.
 - Using it for a market row slide: market-row has its own `rowMotions`.
+- K706: the top view asks for an antialiased WebGL2 canvas (`antialias: true`) and each side-view strip has a transparent 1px outline so Chrome smooths its 3D-transformed edges; keep both when you change the riffle, or the edges go stair-stepped at pixel ratios like 1.5.
 
 
 - The game diffs its views and lists `Move`s: `{ id, dir: 'out' | 'in', pile, at, faceDown, refill?, far? }`. `at` is a pile id or `() => element` (where the card is drawn). `out`: pile to place; `in`: place to pile (a face-down card vanishes into it). `cycleMove(id, discard, deck)`: the top of the discard carried into the deck.

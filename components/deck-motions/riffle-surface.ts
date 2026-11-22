@@ -90,6 +90,7 @@ export function makeSurface(layer: HTMLElement, top: HTMLElement, back: (top: HT
       width: `${String(step + (index === segments - 1 ? 0 : 0.35))}px`,
       height: `${String(height)}px`,
       transformOrigin: 'left center',
+      outline: '1px solid transparent',
     });
     const face = back(top);
     Object.assign(face.style, {
