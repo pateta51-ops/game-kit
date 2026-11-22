@@ -120,5 +120,8 @@
   { "q": "suit change", "first": "none" },
   { "q": "hand limit discard event", "first": "card-zones" },
   { "q": "zone capacity on leave hook", "first": "card-zones" },
-  { "q": "cards leave over limit callback", "first": "card-zones" }
+  { "q": "cards leave over limit callback", "first": "card-zones" },
+  { "q": "game bypasses the kit", "first": "motion-frame" },
+  { "q": "sound cue timing with animation", "first": "motion-frame" },
+  { "q": "check game uses kit hooks", "first": "motion-frame" }
 ]
