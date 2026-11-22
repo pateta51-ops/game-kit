@@ -411,8 +411,29 @@ describe('numberParts: nothing dropped or ignored silently (K582)', () => {
       expect(r.value).toBe(0);
       expect(show(r.parts)).toEqual(['A:add:-2:-2', 'B:add:-1:-1']);
     }
-    expect(show(numberParts(4, [b, add('R', 1), a], o).parts)).toEqual(['A:add:-2:-2', 'R:add:1:1', 'B:add:-1:-1']);
+    expect(show(numberParts(4, [b, add('R', 1), a], o).parts)).toEqual(['R:add:1:1', 'A:add:-2:-2', 'B:add:-1:-1']);
+    expect(numberParts(3, [add('B', -1, { min: 0 }), add('R', 3), add('C', -3, { min: 2 })], o).value).toBe(2);
     expect(numberParts(3, [b, a], { steps: ['add'] }).value).toBe(1);
+  });
+  it('decreases: highestMin in an unsplit add step gives the lowest result any order of the modifiers gives, for every permutation of a pool', () => {
+    const pool = [add('a', -1, { min: 0 }), add('b', 3), add('c', -3, { min: 2 }), add('d', -2), add('e', 1), add('f', -2, { min: 1 })];
+    const perms = (xs: NumberModifier[]): NumberModifier[][] => (xs.length <= 1 ? [xs] : xs.flatMap((x, i) => perms([...xs.slice(0, i), ...xs.slice(i + 1)]).map((p) => [x, ...p])));
+    const all = perms(pool);
+    expect(all).toHaveLength(720);
+    for (const base of [0, 3, 5]) {
+      const plain = all.map((p) => numberParts(base, p, { steps: ['add'] }).value);
+      expect(new Set(plain).size).toBeGreaterThan(1);
+      const sorted = new Set(all.map((p) => numberParts(base, p, { steps: ['add'], decreases: 'highestMin' }).value));
+      expect([...sorted]).toEqual([Math.min(...plain)]);
+      const split = new Set(all.map((p) => numberParts(base, p, MINS).value));
+      expect([...split]).toEqual([Math.min(...plain)]);
+    }
+  });
+  it('a scoped modifier listed with why "scope" shows its amount times its count when the call gives that count', () => {
+    const ms = [add('A', -2, { per: 'units', of: 'play' })];
+    expect(numberParts(10, ms, COST, { counts: { units: () => 4 }, unchanged: true }).unchanged).toEqual([{ source: 'A', op: 'add', amount: -8, applied: 0, why: 'scope' }]);
+    expect(numberParts(10, ms, COST, { unchanged: true }).unchanged).toEqual([{ source: 'A', op: 'add', amount: -2, applied: 0, why: 'scope' }]);
+    expect(numberParts(10, ms, COST)).toEqual({ value: 10, base: 10, parts: [] });
   });
   it('a minimum on a raise, a set, a multiply, a floor or a cap is an engine bug; on a reduction that counts to zero it is not', () => {
     expect(() => numberParts(3, [add('A', 1, { min: 2 })], SUM)).toThrow(EngineBugError);
@@ -450,6 +471,12 @@ describe('numberParts: reports on modifiers that changed nothing (K582)', () => 
     expect(show(r.parts)).toEqual(['B:set:2:-2']);
     expect(r.unchanged?.map((u) => `${u.source}:${u.why}`)).toEqual(['A:refused', 'C:outranked']);
   });
+  it('setOnlyLowers comes before the setters rule: with "last", a last setter that would raise is refused and the one before it applies', () => {
+    const r = numberParts(4, [set('A', 2), set('B', 5)], { steps: ['set'], setOnlyLowers: true, setters: 'last' }, { unchanged: true });
+    expect(r.value).toBe(2);
+    expect(show(r.parts)).toEqual(['A:set:2:-2']);
+    expect(r.unchanged?.map((u) => `${u.source}:${u.why}`)).toEqual(['B:refused']);
+  });
   it('setters that tie: lowest and highest keep the first given, last keeps the last', () => {
     const ms = [set('A', 2), set('B', 2)];
     const win = (setters: NonNullable<NumberOrder['setters']>): string | undefined => numberParts(4, ms, { steps: ['set'], setters }).parts[0]?.source;
@@ -485,7 +512,13 @@ describe('numberParts: edge values (K582)', () => {
     const o: NumberOrder = { steps: ['multiply'] };
     expect(numberParts(100, [mul('A', 1.1)], { ...o, round: 'up' }).value).toBe(110);
     expect(numberParts(100, [mul('A', 1.15)], { ...o, round: 'down' }).value).toBe(115);
-    expect(numberParts(3, [mul('A', 0.1)], o).value).toBe(0.3);
+    const raw = numberParts(3, [mul('A', 0.1)], o);
+    expect(raw.value).toBe(3 * 0.1);
+    expect(raw.base + total(raw.parts)).toBeCloseTo(raw.value, 12);
+    expect(numberParts(10, [mul('T', 1 / 3), mul('U', 3, { round: 'down' })], o).value).toBe(10);
+    expect(numberParts(123456789012345.5, [mul('A', 1)], { ...o, round: 'down' }, { unchanged: true }).value).toBe(123456789012345);
+    const whole = numberParts(100, [mul('A', 1.1), mul('B', 0.5)], { ...o, round: 'up' });
+    expect(whole.base + total(whole.parts)).toBe(whole.value);
     expect(numberParts(5, [mul('A', 0.5)], o).value).toBe(2.5);
     expect(numberParts(2 ** 52 + 1, [mul('A', 2)], { ...o, round: 'up' }).value).toBe(2 ** 53 + 2);
   });
