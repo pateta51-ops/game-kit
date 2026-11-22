@@ -38,10 +38,14 @@ export function screenProblems(i: ScreenInput): string[] {
     for (const m of t.matchAll(new RegExp(`${esc(o)}([^${esc(c)}]+)${esc(c)}`, 'g'))) used.add(m[1] ?? '');
   for (const code of [...new Set([...Object.keys(i.icons), ...used])].sort())
     if ((i.icons[code] ?? '').trim() === '') out.push(`icon ${code} has no label`);
-  const text = new Map(i.clauses.map((x) => [x.id, x.text]));
-  const am = new Map(i.clauses.map((x) => [x.id, x.amounts]));
+  const first = [...i.clauses].reverse();
+  const text = new Map(first.map((x) => [x.id, x.text]));
+  const am = new Map(first.map((x) => [x.id, x.amounts]));
+  const seen = new Map<string, string>();
+  for (const x of i.clauses) { const j = JSON.stringify([x.text, x.amounts, x.promptAmounts]), s = seen.get(x.id); if (s === undefined) seen.set(x.id, j); else if (s !== j) out.push(`${x.id}: listed twice with different text or amounts`); }
+  const token = new RegExp(`${esc(o)}[^${esc(c)}]+${esc(c)}`, 'g');
   for (const x of i.clauses) if (x.amounts && x.amounts !== 'counted') for (const a of x.amounts) if (!numbers(x.text).includes(a)) out.push(`${x.id}: amount ${a} is not in its text`);
-  const per = new Map(i.clauses.filter((x) => x.promptAmounts).map((x) => [x.id, x.promptAmounts!]));
+  const per = new Map(first.filter((x) => x.promptAmounts).map((x) => [x.id, x.promptAmounts!]));
   for (const x of i.clauses) {
     if (x.promptAmounts && x.amounts) out.push(`${x.id}: amounts and promptAmounts both set`);
     for (const [k, e] of (x.promptAmounts ?? []).entries()) if (e !== 'counted') for (const a of e) if (!numbers(x.text).includes(a)) out.push(`${x.id}: prompt ${String(k + 1)} amount ${a} is not in its text`);
@@ -53,7 +57,7 @@ export function screenProblems(i: ScreenInput): string[] {
     if (e) { (steps.get(p.clause) ?? steps.set(p.clause, new Set()).get(p.clause)!).add(k); if (k >= e.length) { out.push(`prompt for ${p.clause}: prompt ${String(k + 1)} has no promptAmounts entry`); continue; } }
     const a = e ? e[k] : am.get(p.clause);
     const got = new Set(numbers(p.shown));
-    if (a === 'counted') { if (got.size === 0) out.push(`prompt for ${p.clause}: no amount`); continue; }
+    if (a === 'counted') { if (numbers(p.shown.replace(token, ' ')).length === 0) out.push(`prompt for ${p.clause}: no amount`); continue; }
     const want = a ?? numbers(text.get(p.clause) ?? '');
     if (want.length > 0 && !want.some((w) => got.has(w))) out.push(`prompt for ${p.clause}: no amount`);
   }
