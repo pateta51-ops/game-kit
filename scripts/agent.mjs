@@ -1,7 +1,7 @@
 // Plain-node worker commands, no install and no tsx: node kit.mjs worktree|finish|teardown (also: node scripts/agent.mjs <cmd> ...).
 //   worktree --branch <b> [--repo .] [--dir d] [--base origin/main] [--shared <dir with node_modules>] [--no-fetch]   new worktree + node_modules link
 //   worktree --here [--branch <b>] [--shared d]   for a worker already inside a worktree: link node_modules from the main checkout (or --shared); --branch also switches to a new branch
-//   finish [--repo .] [--check "npm run check"] [--install "npm ci"] [--tail 15] [--comment] [--detach] | finish --result   clone + install + check in WSL (bash on Linux); prints PASS <sha> or FAIL <sha>; refuses (exit 3) while the queue holds `finish <branch>`; a line a minute while it waits and runs; --detach returns at once, --result reads the stored outcome (exit 4 while running) (K572); with --check the line is check passed|failed <sha> (check: <command>), never PASS, so it cannot pass for the gate (K416)
+//   finish [--repo .] [--check "npm run check"] [--install "npm ci"] [--tail 15] [--comment] [--detach] | finish --result   clone + install + check in WSL (bash on Linux); prints PASS <sha> or FAIL <sha>; refuses (exit 3) while the queue holds `finish <branch>`; a line a minute while it waits and runs; --detach returns at once, --result reads the stored outcome (exit 4 while running) (K572); the WSL run writes a start marker first: if it is not there after 45 s finish exits 6 with `the run did not start` and the command to run by hand (K644); with --check the line is check passed|failed <sha> (check: <command>), never PASS, so it cannot pass for the gate (K416)
 //   teardown --worktree <dir> [--repo .] [--force]
 import { execFileSync, spawn, spawnSync } from 'node:child_process'
 import { createHash } from 'node:crypto'
@@ -74,12 +74,19 @@ export function teardown(args, io) {
 }
 
 const real = (cmd, args, input) => { const r = spawnSync(cmd, args, { input, encoding: 'utf8', maxBuffer: 1 << 28 }); return { status: r.status, error: r.error, output: `${r.stdout ?? ''}${r.stderr ?? ''}` } }
-const realBg = {
-  start(cmd, args) { const c = spawn(cmd, args, { detached: true, stdio: 'ignore', windowsHide: true }); c.on('error', () => {}); c.unref() },
+export const realBg = {
+  start(cmd, args, _dir, env, sp = spawn) { const c = sp(cmd, args, { detached: true, stdio: 'ignore', windowsHide: true, env: { ...process.env, ...env } }); c.on('error', () => {}); c.unref() },
   sleep: (ms) => { Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, ms) },
   now: () => Date.now(),
   home: os.homedir(),
 }
+// K644: WSL tears down a `setsid nohup ... &` child when wsl.exe exits at once, so the launch stays until the run writes `started` (<= 20 s); Git Bash must not rewrite the /mnt paths
+export const launch = (win, dir) => {
+  const W = (p) => q(win ? toWsl(p) : p)
+  const bgc = `setsid nohup bash ${W(path.join(dir, 'run.sh'))} > /dev/null 2>&1 < /dev/null & i=0; while [ ! -e ${W(path.join(dir, 'started'))} ] && [ $i -lt 100 ]; do sleep 0.2; i=$((i+1)); done`
+  return { cmd: win ? 'wsl' : 'bash', args: win ? ['-e', 'bash', '-c', bgc] : ['-c', bgc], env: { MSYS_NO_PATHCONV: '1', MSYS2_ARG_CONV_EXCL: '*' } }
+}
+export const byHand = (win, dir) => win ? `wsl -e bash -c "bash ${q(toWsl(path.join(dir, 'run.sh')))}"` : `bash ${q(path.join(dir, 'run.sh'))}`
 const HQ = `H=$(command -v heavy || { [ -x "$HOME/.local/bin/heavy" ] && echo "$HOME/.local/bin/heavy"; }); [ -n "$H" ] || exit 9; "$H" status`
 const mmss = (ms) => `${String(Math.floor(ms / 60000)).padStart(2, '0')}:${String(Math.floor(ms / 1000) % 60).padStart(2, '0')}`
 // K572: the queue's job labelled `finish <branch>`; null when the queue is not reachable or not installed; {down} when WSL/bash cannot start
@@ -159,9 +166,18 @@ export function finish(args, io, exec = real, win = process.platform === 'win32'
   m.started = bg.now()
   fs.writeFileSync(path.join(dir, 'meta.json'), JSON.stringify(m))
   fs.writeFileSync(path.join(dir, 'in.sh'), sh.replace('cd "$d" && ', `cd "$d" && git rev-parse HEAD > ${W(path.join(dir, 'sha'))} && `))
-  fs.writeFileSync(path.join(dir, 'run.sh'), `( while :; do date +%s > ${W(path.join(dir, 'hb'))}; sleep 20; done ) & h=$!; bash ${W(path.join(dir, 'in.sh'))} > ${W(path.join(dir, 'out.log'))} 2>&1; r=$?; kill $h; echo $r > ${W(rc + '.tmp')}; mv ${W(rc + '.tmp')} ${W(rc)}\n`)
-  const bgc = `setsid nohup bash ${W(path.join(dir, 'run.sh'))} > /dev/null 2>&1 < /dev/null &`
-  bg.start(win ? 'wsl' : 'bash', win ? ['-e', 'bash', '-c', bgc] : ['-c', bgc], dir)
+  fs.writeFileSync(path.join(dir, 'run.sh'), `date +%s > ${W(path.join(dir, 'started'))}; ( while :; do date +%s > ${W(path.join(dir, 'hb'))}; sleep 20; done ) & h=$!; bash ${W(path.join(dir, 'in.sh'))} > ${W(path.join(dir, 'out.log'))} 2>&1; r=$?; kill $h; echo $r > ${W(rc + '.tmp')}; mv ${W(rc + '.tmp')} ${W(rc)}\n`)
+  const l = launch(win, dir)
+  bg.start(l.cmd, l.args, dir, l.env)
+  const t0 = bg.now()
+  while (!fs.existsSync(path.join(dir, 'started'))) {
+    if (bg.now() - t0 >= 45000) {
+      fs.rmSync(path.join(dir, 'meta.json'), { force: true })
+      io.err(`finish ${branch}: the run did not start (no start marker after 45 s); run it by hand: ${byHand(win, dir)}`)
+      return 6
+    }
+    bg.sleep(500)
+  }
   if (f.detach) { io.out(`started ${label} in the background; result file: ${dir}; read it with: node kit.mjs finish --result`); return 0 }
   let last = m.started
   while (!fs.existsSync(rc)) { bg.sleep(2000); const now = bg.now(); if (now - last >= 60000) { last = now; io.err(life(branch, queueJob(exec, win, label), m.started, now)) } }
