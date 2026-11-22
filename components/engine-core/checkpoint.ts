@@ -13,6 +13,8 @@ import type { Ctx, GameTypes, HandlerTable, KernelTask } from './types.ts';
 /** One state check (win/loss, uniqueness, limits, empty zones). Returns true when it changed something; asking or pushing tasks counts too. */
 export interface StateCheck<G extends GameTypes> {
   readonly name: string;
+  /** K703: run only when no occurrence is pending (the whole batch, and any batch it is nested in, has happened); between occurrences it is skipped as if it held. Default: every checkpoint. */
+  readonly afterBatch?: boolean;
   run(ctx: Ctx<G>): boolean | void;
 }
 export interface CheckpointConfig<G extends GameTypes> {
@@ -78,6 +80,10 @@ export function checkpointHandlers<G extends GameTypes>(cfg: TimingConfig<G>): H
       const c = cp.checks?.[at];
       if (c === undefined) {
         if (liveTriggers(cfg, ctx.s, ctx.content).length > 0 && !ctx.s.stack.some((x) => x.kind === 'timing.triggers')) ctx.then({ kind: 'timing.triggers' });
+        return;
+      }
+      if (c.afterBatch === true && ctx.s.timing?.occurrences.some((o) => o.state === 'pending') === true) {
+        ctx.then({ kind: 'timing.check', at: at + 1 } as CheckTask);
         return;
       }
       const n = ctx.s.stack.length;
