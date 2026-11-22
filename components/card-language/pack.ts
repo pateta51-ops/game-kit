@@ -326,18 +326,47 @@ export function cardPack<G extends GameTypes, E extends PackEnv = PackEnv>(cfg: 
     const prev = openDraft(start, true);
     try {
       if (yes(seg(start, effectTasks(steps, env)))) return 'yes';
+      const fork = (s: Draft<KernelState>, picks: readonly string[]): boolean => {
+        const c = copyState(s);
+        c.prompt = null;
+        const { prompt: _bound, ...task } = c.stack.pop() ?? { kind: '' };
+        c.stack.push({ ...task, answer: [...picks] });
+        return yes(seg(c));
+      };
+      // K579: the quick answers first, as before; `rest` keeps each prompt with what was tried, for the pick sets still left.
+      const rest: [Draft<KernelState>, readonly (readonly string[])[]][] = [];
       for (let s = open.shift(); s !== undefined; s = open.shift()) {
         const p = s.prompt;
         if (p === null) continue;
         const on = p.options.filter((o) => o.enabled && o.alone !== true).map((o) => o.id);
         const answers = [...(p.min === 0 ? [[]] : []), ...(p.min <= 1 && p.max >= 1 ? on.map((id) => [id]) : p.min > 1 && on.length >= p.min ? [on.slice(0, p.min)] : [])];
+        rest.push([s, answers]);
         for (const picks of answers) {
           if ((tried += 1) > (P.branches ?? 32)) return 'unknown';
-          const c = copyState(s);
-          c.prompt = null;
-          const { prompt: _bound, ...task } = c.stack.pop() ?? { kind: '' };
-          c.stack.push({ ...task, answer: picks });
-          if (yes(seg(c))) return 'yes';
+          if (fork(s, picks)) return 'yes';
+        }
+      }
+      // K579: then every other legal answer (each set of size min..max, every order when the order matters, each option answered alone), and all answers under those. Out of budget with some left: unknown, never no.
+      for (let r = rest.shift(); r !== undefined; r = rest.shift()) {
+        const [s, done] = r;
+        const p = s.prompt;
+        if (p === null) continue;
+        const had = new Set(done.map((a) => a.join('\n')));
+        const on = p.options.filter((o) => o.enabled && o.alone !== true).map((o) => o.id);
+        const ordered = p.ordered === true || ['scout', 'orderEffects'].includes((s.stack[s.stack.length - 1] as { step?: { op?: string } } | undefined)?.step?.op ?? '');
+        const sets = function* (from: number, acc: readonly string[]): Generator<readonly string[]> {
+          if (acc.length >= p.min) yield acc;
+          if (acc.length >= p.max || acc.length + on.length - (ordered ? acc.length : from) < p.min) return;
+          for (let i = ordered ? 0 : from; i < on.length; i += 1) if (!acc.includes(on[i] ?? '')) yield* sets(i + 1, [...acc, on[i] ?? '']);
+        };
+        const lone = p.options.filter((o) => o.enabled && o.alone === true).map((o) => [o.id]);
+        for (const all of [sets(0, []), lone]) {
+          for (const picks of all) {
+            if (had.has(picks.join('\n'))) continue;
+            if ((tried += 1) > (P.branches ?? 32)) return 'unknown';
+            if (fork(s, picks)) return 'yes';
+            rest.push(...open.splice(0).map((o): [Draft<KernelState>, readonly (readonly string[])[]] => [o, []]));
+          }
         }
       }
       return unknown ? 'unknown' : 'no';

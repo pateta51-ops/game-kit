@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { applyAction, blocked, createGame, draftOf, hashState, hashValue, seedRng, timingHandlers, type AnswerAction, type Draft, type GameRules, type KernelPrompt, type KernelState, type KernelTask } from '../engine-core/index.ts';
+import { applyAction, blocked, canonicalJson, createGame, enumerateAnswers, draftOf, hashState, hashValue, seedRng, timingHandlers, type AnswerAction, type Draft, type GameRules, type KernelPrompt, type KernelState, type KernelTask } from '../engine-core/index.ts';
 import { cardsIn, newZones } from '../card-zones/index.ts';
-import { effectTasks, verbHandler, type VerbTask } from './index.ts';
+import { askVerb, effectTasks, verbHandler, type VerbTask } from './index.ts';
 import { cardPack, inDryRun, type OfferPolicy, type PackEnv, type PackState, type PackStep } from './pack.ts';
 
 // K529: a made-up two-seat game on the pack (tests only). Seat a acts with 3 gold; p1 (in play) is the source card.
@@ -34,7 +34,7 @@ const game = (offer?: OfferPolicy<S>, wire = true) => {
   const nested: string[] = [];
   const pack = cardPack<G>({
     filters: { even: (_s, c) => c.endsWith('2') },
-    tests: { rich: (s, e) => gold(s, e.seat) >= 9 },
+    tests: { rich: (s, e) => gold(s, e.seat) >= 9, two: (_s, e) => e.cards?.length === 2, h2: (_s, e) => e.cards?.join() === 'h2', poor: (s, e) => gold(s, e.seat) === 2, ends: (_s, e) => ['h2', 'd1'].every((c) => e.cards?.includes(c)) },
     seats: () => ['a', 'b'],
     custom: {
       nothing: { run: () => undefined, text: () => 'Nothing.' },
@@ -42,6 +42,17 @@ const game = (offer?: OfferPolicy<S>, wire = true) => {
       loop: { run: (ctx, st, env) => ctx.then(...(effectTasks([st], env) as Task[])), text: () => 'Loop.' },
       spend: { run: (ctx, _st, env) => void (draftOf(ctx).res = { [env.seat]: { gold: 0 } }), text: () => 'Lose all gold.' },
       nest: { run: (ctx, _st, env) => void nested.push(pack.wouldChange(ctx.s, ctx.content, [GAIN], env)), text: () => 'Nest.' },
+      order: {
+        run: (ctx, st, env) => askVerb(ctx, { kind: 'order', seat: env.seat, min: 3, max: 3, ordered: true, options: ['x', 'y', 'z'].map((id) => ({ id, enabled: true })) }, st, env),
+        resume: (ctx, _st, env, a) => void (a.join('') === 'zyx' && (draftOf(ctx).res = { [env.seat]: { gold: 0 } })),
+        text: () => 'Order.',
+      },
+      lone: {
+        run: (ctx, st, env) => askVerb(ctx, { kind: 'lone', seat: env.seat, min: 1, max: 1, options: [{ id: 'stay', enabled: true }, { id: 'other', enabled: true, alone: true }] }, st, env),
+        resume: (ctx, _st, env, a) => void (a[0] === 'other' && (draftOf(ctx).res = { [env.seat]: { gold: 0 } })),
+        text: () => 'Lone.',
+      },
+      have: { run: () => undefined, payable: (s, _st, e) => gold(s, e.seat) >= 2, text: () => 'Have 2 gold.' },
       dry: { run: (ctx) => void (inDryRun() && ctx.emit({ type: 'dry' })), text: () => 'Dry.' },
     },
     moved: (ctx, m) => ctx.emit({ type: `${m.op} ${m.card}` }),
@@ -84,7 +95,7 @@ const game = (offer?: OfferPolicy<S>, wire = true) => {
     expect(hashState(s)).toBe(h);
     return r;
   };
-  return { pack, play, check, nested };
+  return { pack, play, check, nested, RULES };
 };
 const z = (s: S, name: string): readonly string[] => cardsIn(s, name);
 const kinds = (p: readonly KernelPrompt[]): (string | undefined)[] => p.map((x) => x.kind);
@@ -312,6 +323,12 @@ describe('card-language offer policy (K529): one test per knob setting', () => {
       [[{ op: 'payThen', cost: [{ op: 'discard', count: 1 }, { op: 'exhaust' }], then: [{ op: 'may', then: [DRAW] }] }], [['h2'], ['yes']]],
       [[pay(9), { op: 'convert', res: 'gold', amount: 2, into: 'vp', get: 1 }], []],
     ];
+    const seen = runs.map(([effect, answers]) => {
+      const { s, prompts } = game().play(effect, answers);
+      return `${hashState(s)} ${prompts.map((p) => `${String(p.kind)} ${String(p.min)}-${String(p.max)} ${p.options.map((o) => (o.enabled ? o.id : `!${o.id}`)).join(',')}`).join('; ')}`;
+    });
+    // K579: recorded on the pack as it was before K579 (state hash, then each prompt offered); a change of the default path fails here.
+    expect(seen).toEqual(["a3f8924fed750119 may 1-1 yes,no","a3f8924fed750119 may 1-1 yes,no","2ec17ff668bd8a72 ","a3f8924fed750119 chooseCards 2-2 h1,h2","ba7d048fb02021fa chooseOption 1-1 0,1,2","a3f8924fed750119 chooseOption 1-1 0,1","2cfd92392f7e10d8 may 1-1 yes,no","f4a89317fa54bb5b choosePayment 1-1 !0,1","f309a6a0089916f0 ","d3ab7e793702e5a9 chooseCards 1-1 h1,h2; may 1-1 yes,no","cbd63fb9510fe496 "]);
     for (const [effect, answers] of runs) {
       const a = game().play(effect, answers);
       const b = game(DEFAULTS).play(effect, answers);
@@ -319,5 +336,196 @@ describe('card-language offer policy (K529): one test per knob setting', () => {
       expect([hashState(b.s), JSON.stringify(b.prompts)]).toEqual([hashState(a.s), JSON.stringify(a.prompts)]);
       expect(hashState(c.s)).toBe(hashState(a.s));
     }
+  });
+});
+
+describe('card-language offer policy (K579): the check tries every legal pick set, or answers unknown', () => {
+  const { check } = game();
+  const pair: Eff = [{ op: 'chooseCards', zone: 'hand', min: 2, max: 2, then: [{ op: 'if', test: 'ends', then: [GAIN] }] }];
+  const upTo: Eff = [{ op: 'chooseCards', zone: 'hand', min: 0, max: 2, then: [{ op: 'if', test: 'two', then: [GAIN] }] }];
+  it('K579 choose 2 of 3 where only the last pair changes something is a yes', () => {
+    expect(check(pair, undefined, [DRAW])).toBe('yes');
+    const { s, prompts } = game({ noChange: 'skip' }).play([DRAW, { op: 'may', then: pair }], [['yes'], ['h2', 'd1']]);
+    expect([kinds(prompts), gold(s)]).toEqual([['may', 'chooseCards'], 4]);
+  });
+  it('K579 choose up to 2 where only a pair changes something is a yes', () => {
+    expect(check(upTo)).toBe('yes');
+    expect(blocked(game({ deadChoice: 'bar' }).play([{ op: 'chooseOption', options: [upTo, [GAIN]] }], [['1']]).prompts[0] ?? null)).toEqual([]);
+  });
+  it('K579 it stays a no when every pick set was tried and none changes anything', () => {
+    expect(check([{ op: 'chooseCards', zone: 'hand', min: 2, max: 2, then: [NOTHING] }], undefined, [DRAW])).toBe('no');
+    expect(check([{ op: 'chooseCards', zone: 'hand', min: 0, max: 2, then: [{ op: 'if', test: 'ends', then: [GAIN] }] }])).toBe('no');
+    expect(game({ noChange: 'skip' }).play([{ op: 'may', then: [{ op: 'chooseCards', zone: 'hand', min: 0, max: 2, then: [NOTHING] }] }]).prompts).toEqual([]);
+  });
+  it('K579 pick sets left untried when the branch cap is reached give unknown, never a no', () => {
+    const idle: Eff = [{ op: 'chooseCards', zone: 'hand', min: 2, max: 2, then: [NOTHING] }];
+    expect(game({ branches: 2 }).check(pair, undefined, [DRAW])).toBe('unknown');
+    expect(game({ branches: 2 }).check(idle, undefined, [DRAW])).toBe('unknown');
+    expect(game({ branches: 3 }).check(idle, undefined, [DRAW])).toBe('no');
+    expect(kinds(game({ branches: 2, noChange: 'skip' }).play([DRAW, { op: 'may', then: idle }], [['no']]).prompts)).toEqual(['may']);
+    expect(game({ branches: 2, noChange: 'skip', unknown: 'skip' }).play([DRAW, { op: 'may', then: idle }]).prompts).toEqual([]);
+  });
+  it('K579 a prompt whose order matters is tried in every order; an option answered alone is tried', () => {
+    const down: PackStep = { op: 'adjust', key: 'gold', by: -1 };
+    const up: PackStep = { op: 'adjust', key: 'gold', by: 1, max: 3 };
+    expect(check([{ op: 'orderEffects', effects: [[down], [up]] }])).toBe('yes');
+    expect(check([{ op: 'orderEffects', effects: [[down], [{ op: 'adjust', key: 'gold', by: 1 }]] }])).toBe('no');
+    expect(check([{ op: 'custom', name: 'lone' }])).toBe('yes');
+  });
+  it('K579 a prompt opened under a pick set of the second pass is answered too', () => {
+    const under = (then: Eff): Eff => [{ op: 'chooseCards', zone: 'hand', min: 2, max: 2, then: [{ op: 'if', test: 'ends', then: [{ op: 'may', then }] }] }];
+    expect(check(under([GAIN]), undefined, [DRAW])).toBe('yes');
+    expect(check(under([NOTHING]), undefined, [DRAW])).toBe('no');
+  });
+  it('K579 a prompt marked ordered is tried in every order', () => {
+    expect(check([{ op: 'custom', name: 'order' }])).toBe('yes');
+    expect(game({ branches: 5 }).check([{ op: 'custom', name: 'order' }])).toBe('unknown');
+  });
+  it('K579 scout over cards the seat has already seen is tried in every order', () => {
+    const seen: Eff = [{ op: 'lookAt', count: 2 }];
+    expect(check([{ op: 'scout', count: 2 }], undefined, seen)).toBe('yes');
+    expect(check([{ op: 'scout', count: 1 }], undefined, seen)).toBe('no');
+  });
+  it('K579 (pins today) the order of the picks inside one pick set is not tried unless the prompt is ordered: an effect that reads it can answer no wrongly', () => {
+    const inOrder: Eff = [{ op: 'chooseCards', zone: 'hand', min: 2, max: 2, then: [{ op: 'move', cards: 'chosen', from: 'hand', to: 'hand', at: 'bottom' }] }];
+    expect(check(inOrder)).toBe('no');
+    expect(z(game().play(inOrder, [['h2', 'h1']]).s, 'hand:a')).toEqual(['h2', 'h1']);
+  });
+});
+
+// K579: prior-art cases that had no test, and the two rules questions the defaults hide. Each pins what the pack does today.
+describe('card-language offer policy (K579): pinned behaviour', () => {
+  const { check, play } = game();
+  const hand = (s: S): number => z(s, 'hand:a').length;
+  it('K579 rules question a (pins today): under cost = parts a refused pay step still gives the effect; cost = whole is the knob', () => {
+    const two: Eff = [{ op: 'payThen', cost: [pay(2), pay(2)], then: [DRAW] }];
+    const parts = play(two).s;
+    const whole = game({ cost: 'whole' }).play(two).s;
+    expect([gold(parts), hand(parts), gold(whole), hand(whole)]).toEqual([1, 3, 3, 2]);
+  });
+  it('K579 rules question b, case 20 (pins today): a paid option whose effect does nothing is always offered, under every knob', () => {
+    const paid: Eff = [{ op: 'payThen', cost: [pay(1)], then: [NOTHING] }];
+    const g = game({ noChange: 'skip', deadChoice: 'bar', unknown: 'skip', cost: 'whole', fewer: 'exact' });
+    expect(g.check(paid)).toBe('yes');
+    const asked = g.play([{ op: 'may', then: paid }], [['yes']]);
+    expect([kinds(asked.prompts), gold(asked.s)]).toEqual([['may'], 2]);
+    expect(blocked(g.play([{ op: 'chooseOption', options: [paid, [NOTHING]] }], [['0']]).prompts[0] ?? null).map((b) => b.id)).toEqual(['1']);
+  });
+  it('K579 case 6 (pins today): a "have N" cost part is judged on the state as it is; under cost = whole it is judged again when reached, after the spend', () => {
+    const cost: Eff = [{ op: 'payThen', cost: [pay(2), { op: 'custom', name: 'have' }], then: [DRAW] }];
+    const parts = play(cost).s;
+    const whole = game({ cost: 'whole' }).play(cost).s;
+    expect([gold(parts), hand(parts), gold(whole), hand(whole)]).toEqual([1, 3, 1, 2]);
+  });
+  it('K579 case 16: a declined may leaves its cost unpaid and its "if you do" part unrun', () => {
+    const eff: Eff = [{ op: 'may', then: [{ op: 'payThen', cost: [pay(1)], then: [DRAW] }] }];
+    const no = play(eff, [['no']]).s;
+    const yes = play(eff, [['yes']]).s;
+    expect([gold(no), hand(no), gold(yes), hand(yes)]).toEqual([3, 2, 2, 3]);
+  });
+  it('K579 case 21 (pins today): an option that resolves only in part is offered beside one that resolves in full', () => {
+    const { s, prompts } = game({ deadChoice: 'bar' }).play([{ op: 'chooseOption', options: [[{ op: 'draw', count: 3 }], [{ op: 'draw', count: 2 }]] }], [['0']]);
+    expect([blocked(prompts[0] ?? null), hand(s)]).toEqual([[], 4]);
+  });
+  it('K579 case 24: choosing one card at a time, a later pick no longer offers the card an earlier pick took', () => {
+    const { prompts } = play([{ op: 'repeat', times: 2, then: [{ op: 'chooseCards', zone: 'hand', max: 1, then: [{ op: 'discard', cards: 'chosen' }] }] }], [['h1'], ['h2']]);
+    expect(prompts.map((p) => p.options.map((o) => o.id))).toEqual([['h1', 'h2'], ['h2']]);
+  });
+  it('K579 case 27 (pins today): a cost that cannot be paid stops only its own "if you do" part; a step beside it still makes the effect able', () => {
+    expect(check([{ op: 'payThen', cost: [pay(9)], then: [GAIN] }, GAIN])).toBe('yes');
+    expect(check([{ op: 'payThen', cost: [pay(9)], then: [GAIN, GAIN] }])).toBe('no');
+  });
+  it('K579 case 28: a step that names the card an earlier step chose is judged with that card, in the check and as a cost', () => {
+    const bound: Eff = [{ op: 'chooseCards', zone: 'hand', max: 1, then: [{ op: 'if', test: 'ends', then: [GAIN], else: [{ op: 'discard', cards: 'chosen' }] }] }];
+    expect(check(bound)).toBe('yes');
+    expect(check([{ op: 'chooseCards', zone: 'aside', max: 1, then: [{ op: 'discard', cards: 'chosen' }] }])).toBe('no');
+    const { s } = play([{ op: 'payThen', cost: bound, then: [GAIN] }], [['h1']]);
+    expect([z(s, 'hand:a'), gold(s)]).toEqual([['h2'], 4]);
+    expect(gold(play([{ op: 'payThen', cost: [{ op: 'discard', cards: 'chosen' }], then: [GAIN] }]).s)).toBe(3);
+  });
+  it('K579 case 32: an effect each player does is able when any seat can do it without a choice', () => {
+    expect(check([{ op: 'eachPlayer', then: [DRAW] }], { seat: 'b' })).toBe('yes');
+    expect(check([{ op: 'eachPlayer', then: [NOTHING] }])).toBe('no');
+    expect(check([{ op: 'eachPlayer', then: [{ op: 'may', then: [NOTHING] }] }])).toBe('unknown');
+  });
+  it('K579 case 37 (pins today): X read before any step sets it counts as 0, so the effect is not able', () => {
+    expect(check([{ op: 'gainResource', res: 'gold', amount: 'X' }])).toBe('no');
+    expect(gold(play([{ op: 'gainResource', res: 'gold', amount: 'X' }]).s)).toBe(3);
+  });
+});
+
+// K579: the check against brute force. Random small effects on the fake game (fixed seed); the truth plays every legal answer
+// of every prompt through the real engine. The same answers as the check: a pick set once, in option order; every order for an
+// ordered prompt, scout and orderEffects. No payThen (its "if you do" part is left out of the check on purpose), nothing random,
+// no other seat, no hidden cards: those answer unknown and have their own tests.
+describe('card-language offer policy (K579): the check agrees with playing every answer', () => {
+  let seed = 579;
+  const rnd = (n: number): number => {
+    seed = (Math.imul(seed, 1103515245) + 12345) >>> 0;
+    return (seed >>> 8) % n;
+  };
+  const of = <T,>(xs: readonly T[]): T => xs[rnd(xs.length)] as T;
+  const leaf = (): PackStep => of<() => PackStep>([
+    () => GAIN, () => NOTHING, () => NOTHING, () => DRAW, () => pay(1), () => pay(9),
+    () => ({ op: 'custom', name: 'nothing' }), () => ({ op: 'custom', name: 'lone' }), () => ({ op: 'custom', name: 'order' }),
+    () => ({ op: 'adjust', key: 'gold', by: -1 }), () => ({ op: 'adjust', key: 'gold', by: 1, max: 3 }),
+    () => ({ op: 'gainResource', res: 'gold', amount: 'X' }), () => ({ op: 'discard', cards: 'chosen' }),
+    () => ({ op: 'if', test: of(['two', 'h2', 'poor', 'rich']), then: [of([GAIN, DRAW, NOTHING])] }),
+  ])();
+  const eff = (depth: number): PackStep[] => Array.from({ length: 1 + rnd(2) }, () => step(depth));
+  const step = (depth: number): PackStep => (depth === 0 || rnd(4) === 0 ? leaf() : of<() => PackStep>([
+    () => ({ op: 'may', then: eff(depth - 1) }),
+    () => ({ op: 'chooseOption', options: [eff(depth - 1), eff(depth - 1)] }),
+    () => ({ op: 'chooseCards', zone: 'hand', min: rnd(3), max: 2 + rnd(2), then: eff(depth - 1) }),
+    () => ({ op: 'chooseCards', zone: 'hand', min: rnd(2), max: 1, then: eff(depth - 1) }),
+    () => ({ op: 'orderEffects', effects: Array.from({ length: 2 + rnd(2) }, () => eff(depth - 1)) }),
+    () => ({ op: 'chooseNumber', max: 2, then: eff(depth - 1) }),
+    () => ({ op: 'seq', steps: [{ op: 'scout', count: 2 }, ...eff(depth - 1)] }),
+    () => ({ op: 'if', test: of(['two', 'h2', 'poor']), then: eff(depth - 1) }),
+    () => ({ op: 'if', test: 'two', then: eff(depth - 1) }),
+  ])());
+  const SKIP = ['stack', 'prompt', 'seq', 'promptSeq', 'log', 'timing', 'cardMoves', 'rng', 'forced'];
+  const view = (s: S): string => canonicalJson(Object.fromEntries(Object.entries(s).filter(([k]) => !SKIP.includes(k))));
+  const wide = game({ branches: 100000 });
+  const narrow = game({ branches: 3 });
+  // Every effect starts after the seat has looked at its top two cards, so a scout of them changes the game only by their order.
+  const SEEN: Eff = [{ op: 'lookAt', count: 2 }];
+  const base = view(createGame(wide.RULES, { seed: 's' }, {}, { effect: SEEN }).state);
+  // Does any line of play change the game? undefined: too many states for a test.
+  const truth = (effect: Eff): boolean | undefined => {
+    const content = { effect: [...SEEN, ...effect] };
+    let left = 1500;
+    const any = (s: S): boolean | undefined => {
+      if ((left -= 1) < 0) return undefined;
+      if (view(s) !== base) return true;
+      const p = s.prompt;
+      if (p === null) return false;
+      const ordered = p.ordered === true || p.kind === 'orderCards' || p.kind === 'orderEffects';
+      for (const a of enumerateAnswers({ ...s, prompt: { ...p, ordered } })) {
+        const r = any(applyAction(wide.RULES, s, a, content).state);
+        if (r !== false) return r;
+      }
+      return false;
+    };
+    return any(createGame(wide.RULES, { seed: 's' }, {}, content).state);
+  };
+  it('K579 300 random effects: yes and no match brute force; a small budget answers the same or unknown; the state is untouched', () => {
+    const seen = { yes: 0, no: 0, unknown: 0 };
+    for (let i = 0; i < 300; i += 1) {
+      const effect = eff(3);
+      const t = truth(effect);
+      if (t === undefined) continue;
+      const want = t ? 'yes' : 'no';
+      const got = wide.check(effect, { seat: 'a', source: 'p1' }, SEEN);
+      if (got !== want) throw new Error(`check ${got}, brute force ${want}: ${JSON.stringify(effect)}`);
+      const small = narrow.check(effect, { seat: 'a', source: 'p1' }, SEEN);
+      if (small !== want && small !== 'unknown') throw new Error(`budget 3: check ${small}, brute force ${want}: ${JSON.stringify(effect)}`);
+      seen[want] += 1;
+      if (small === 'unknown') seen.unknown += 1;
+    }
+    expect(seen.yes).toBeGreaterThan(60);
+    expect(seen.no).toBeGreaterThan(40);
+    expect(seen.unknown).toBeGreaterThan(10);
+    expect(inDryRun()).toBe(false);
   });
 });
