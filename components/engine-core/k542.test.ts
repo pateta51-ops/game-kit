@@ -1,5 +1,5 @@
-// K542: statuses (a named lasting effect on an object) on the timed fake game; the stun cases restate Warp's Edge
-// src/engine/combat/stun.ts (6790200): a stun given, it blocks an action, it ends at the named point.
+// K542: statuses (a named lasting effect on an object) on the timed fake game; the stun cases restate a game's stun
+// (component.json sources): a stun given, it blocks an action, it ends at the named point.
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
@@ -19,7 +19,7 @@ const ask = (ctx: Ctx<Timed>, next: string): void =>
 const enabled = (s: TimedState): boolean | undefined => s.prompt?.options.find((o) => o.id === 'act')?.enabled;
 
 describe('K542 statuses', () => {
-  it('K542 stun (stun.ts): a stunned unit cannot take the action; the stun ends at the end of the turn and the action is offered again', () => {
+  it('K542 stun: a stunned unit cannot take the action; the stun ends at the end of the turn and the action is offered again', () => {
     const g = timedGame({}, {
       turn: (ctx) => { giveStatus(ctx, T, 'u1', 'stunned', { source: 'laser' }); ask(ctx, 'endTurn'); },
       endTurn: (ctx) => { boundary(ctx, { kind: 'turnEnd' }); ask(ctx, 'done'); },
