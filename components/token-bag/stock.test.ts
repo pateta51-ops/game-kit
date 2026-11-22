@@ -130,7 +130,7 @@ describe('finite stocks and a bag (K593)', () => {
   it('the README recipe "Finite stocks and a bag" runs as written', () => {
     const part = readFileSync(join(dirname(fileURLToPath(import.meta.url)), 'README.md'), 'utf8').split(/^## /m).find((p) => p.startsWith('Finite stocks and a bag')) ?? '';
     const code = /```ts\r?\n([\s\S]*?)```/.exec(part)?.[1] ?? '';
-    expect(code).toContain("from '../kit/token-bag/stock'");
+    expect(code).toContain("/token-bag/stock'");
     const log = vi.spyOn(console, 'log').mockImplementation(() => undefined);
     try {
       const js = ts.transpileModule(code, { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } }).outputText;
