@@ -469,7 +469,10 @@
       "delay effect until",
       "gain tokens",
       "would do nothing",
-      "cannot be paid"
+      "cannot be paid",
+      "amount expression count per",
+      "then only if previous resolved",
+      "condition expression all any not compare"
     ],
     "visible": false,
     "release": 1,
