@@ -419,5 +419,8 @@
   { "q": "plan check build own rows", "first": "plan-checker" },
   { "q": "flash once and go dark", "first": "glow" },
   { "q": "glow ramp up from dark", "first": "glow" },
-  { "q": "single flash glow", "first": "glow" }
+  { "q": "single flash glow", "first": "glow" },
+  { "q": "pr body lists new modules", "first": "none" },
+  { "q": "worker pr body new files listed", "first": "none" },
+  { "q": "reason for each new file", "first": "none" }
 ]
