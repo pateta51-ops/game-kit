@@ -30,7 +30,7 @@ describe('K669 describeCheck tokensOnly', () => {
   const t = (p: string, g: string) => describeCheck([{ id: 'x#1', printed: p, encoding: g }], (e: string) => e, undefined, undefined, undefined, opts({ tokensOnly: true }));
   it('word differences are ignored', () => { expect(t('Draw 2 {card}', 'Take 2 {card} now')).toEqual([]); });
   it('a changed number is caught', () => { expect(t('Draw 2 {card}', 'Draw 3 {card}').join('\n')).toContain('printed [2] is not in the generated reading'); });
-  it('a changed icon is caught', () => { expect(t('Draw 2 {card}', 'Draw 2 {wound}').join('\n')).toContain('generated [{wound}]'); });
+  it('a changed icon is caught', () => { expect(t('Draw 2 {card}', 'Draw 2 {wound}').join('\n')).toContain('generated [wound]'); });
 });
 
 describe('K669 parseReadingFiles order', () => {
