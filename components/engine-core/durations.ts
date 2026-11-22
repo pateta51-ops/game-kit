@@ -14,6 +14,8 @@ export type Duration =
   | { readonly until: 'turnBegins' | 'nextTurnBegins'; readonly player: string }
   | { readonly until: 'endOfBatch'; readonly batch: number; readonly ifCancelled: 'expire' | 'wait' }
   | { readonly until: 'used'; readonly uses: number }
+  /** K541: ends when the game calls `eventOver(ctx, event, instance)`; with `instance`, only that instance's end ends it. */
+  | { readonly until: 'event'; readonly event: string; readonly instance?: string }
   | { readonly while: 'sourceInPlay' }
   | { readonly until: 'game' };
 export interface ContinuousEffect {
@@ -117,6 +119,23 @@ export function boundary<G extends GameTypes>(ctx: Ctx<G>, b: Boundary): void {
       return d.until === 'turnBegins' ? end(e) : { ...e, duration: { until: 'turnBegins', player: d.player } };
     return e;
   });
+}
+
+/**
+ * K541: the game's named event `event` happened (a combat ended, the next reveal): every `until: 'event'` effect waiting
+ * on it ends, those with no `instance` and those whose `instance` is this one; returns their ids. An effect added later
+ * waits for the next one.
+ */
+export function eventOver<G extends GameTypes>(ctx: Ctx<G>, event: string, instance?: string): number[] {
+  if (event === '') throw new EngineBugError('eventOver: an event needs a name');
+  const ids: number[] = [];
+  mark(ctx, (e) => {
+    const d = e.duration;
+    if (!('until' in d) || d.until !== 'event' || d.event !== event || (d.instance !== undefined && d.instance !== instance)) return e;
+    ids.push(e.id);
+    return end(e);
+  });
+  return ids;
 }
 
 /** Batch `b` still runs: an occurrence of it is pending, or its end (`timing.batchEnd`) is still on the stack. */

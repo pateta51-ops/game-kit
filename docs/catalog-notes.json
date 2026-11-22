@@ -839,7 +839,11 @@
       "reduction",
       "breakdown",
       "floor",
-      "minimum"
+      "minimum",
+      "until end of combat",
+      "duration named end point",
+      "lasts until event",
+      "named end point"
     ],
     "visible": false,
     "release": 1,

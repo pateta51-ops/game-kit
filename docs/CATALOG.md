@@ -776,12 +776,12 @@ Sixteen verbs for the director's spec format as DOM effects for the motion frame
 The kernel of a game engine: seeded random numbers, canonical JSON and hashes, the task runner with prompts, copy on write, replay, undo and the save format. A game passes one `GameTypes` bundle and a `GameRules<G>` (handlers, `blank`, `setup`, `contentHash`, optional `stamp`, `invariants`, `revealWords`); see `fake/counter.ts`. Import from one of the entry files below, never from an implementation module. Options legal but doing nothing (`idle`, K91): `idle.md`.
 
 - **Also called:** Game rules engine core
-- **Words:** engine, rules, random, undo, replay, save, prompts, state, modifier, stat, cost, reduction, breakdown, floor, minimum
+- **Words:** engine, rules, random, undo, replay, save, prompts, state, modifier, stat, cost, reduction, breakdown, floor, minimum, until end of combat, duration named end point, lasts until event, named end point
 - **Release:** 1.0; not seen
 - **The game supplies:** The rules: state, actions, prompts and set-up.
 - **Use it when:** Every game's engine: seeded random, tasks and prompts, copy on write, replay, undo, saves, timing windows and triggers.
 - **Not for:** A game's rules or content; the game writes its own `GameRules`.
-- **Key exports:** `claimEngineCore`, `canonicalJson`, `fnv1a64`, `copyJson`, `copyState`, `deepFreeze`, `freezeState`, `isFreezing`, `setStateFreezing`, `advance`, `applyAction`, `applyActionWith`, `createGame`, `isChecking`, and 263 more
+- **Key exports:** `claimEngineCore`, `canonicalJson`, `fnv1a64`, `copyJson`, `copyState`, `deepFreeze`, `freezeState`, `isFreezing`, `setStateFreezing`, `advance`, `applyAction`, `applyActionWith`, `createGame`, `isChecking`, and 264 more
 - **Needs:** nothing
 - **Came from:** jarl
 - **Docs:** [README](../components/engine-core/README.md) ([rules for agents](../components/engine-core/README.md#rules-for-agents))
