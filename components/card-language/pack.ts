@@ -63,8 +63,6 @@ export interface PackEnv {
   readonly paidFrom?: number;
   /** K529, set by the pack while a cost judged as a whole is paid: the cost steps still to pay after this one. */
   readonly owed?: readonly Step[];
-  /** K583, set by the pack while a `payThen` cost is paid: its amounts were read from `cfg.due` before anything was paid and are not read again. */
-  readonly fixed?: true;
 }
 /** A move waiting for its occurrence (`cardMoves`, keyed by occurrence id). */
 export interface PendingMove {
@@ -159,6 +157,7 @@ export interface PackConfig<G extends GameTypes, E extends PackEnv = PackEnv> {
   readonly handlers?: () => HandlerTable<G>;
 }
 
+const FIXED = 'card-language:due-read';
 class Stop extends Error {
   readonly reason: OfferReason;
   constructor(reason: OfferReason) {
@@ -253,15 +252,17 @@ export function cardPack<G extends GameTypes, E extends PackEnv = PackEnv>(cfg: 
   // K529 seam: the one place a cost amount is read (judged in `payable`, taken in `pay` and `convert`).
   // K583: `cfg.due` gives the amount asked for now.
   // An amount written `X` is the number the effect computed: `due` is not called for it. A result that is not a whole number of 0 or more is the game's bug.
+  // K583: a cost step `payThen` read at its start carries the key FIXED (a step field a game does not write; it survives a saved state), and is not read again.
   const due = (s: PackState, p: { readonly amount: Amount }, env: E): number => {
     const printed = n(p.amount, env);
-    if (!cfg.due || env.fixed === true || p.amount === 'X') return printed;
+    if (!cfg.due || p.amount === 'X' || (p as Record<string, unknown>)[FIXED] === true) return printed;
+    if (hid(s)) stop();
     const d = cfg.due(s as unknown as G['state'], p as PackStep, env, printed);
     if (!Number.isInteger(d) || d < 0) throw new EngineBugError(`card-language pack: due gave ${String(d)} for a cost of ${String(printed)} (a whole number, 0 or more, is needed)`);
     return d;
   };
   // K583: the steps with each cost amount as `cfg.due` gives it (for labels); the same object when nothing differs.
-  const costed = <T extends Eff>(s: G['state'], steps: T, env: E): T => {
+  const costed = <T extends Eff>(s: G['state'], steps: T, env: E, mark = false): T => {
     const all = (xs: Eff): Eff => {
       const ys = xs.map(one);
       return ys.every((y, i) => y === xs[i]) ? xs : ys;
@@ -269,14 +270,18 @@ export function cardPack<G extends GameTypes, E extends PackEnv = PackEnv>(cfg: 
     const one = (x: PackStep | Step): PackStep | Step => {
       const p = x as PackStep;
       let out: object = x;
-      if ((p.op === 'pay' || p.op === 'convert') && due(s as unknown as PackState, p, env) !== n(p.amount, env)) out = { ...p, amount: due(s as unknown as PackState, p, env) };
+      if ((p.op === 'pay' || p.op === 'convert') && p.amount !== 'X') {
+        const d = due(s as unknown as PackState, p, env);
+        if (mark) out = { ...p, amount: d, [FIXED]: true };
+        else if (d !== n(p.amount, env)) out = { ...p, amount: d };
+      }
       for (const [k, v] of Object.entries(x) as [string, unknown][]) {
         const w: unknown = isEff(v) ? all(v) : Array.isArray(v) && v.every(isEff) ? v.map(all) : v;
         if (isEff(v) ? w !== v : Array.isArray(w) && w.some((e, i) => e !== (v as unknown[])[i])) out = { ...out, [k]: w };
       }
       return out as PackStep | Step;
     };
-    return (cfg.due && env.fixed !== true ? all(steps) : steps) as T;
+    return (cfg.due ? all(steps) : steps) as T;
   };
   const def = (op: string): { from?: string; to?: string; sel?: Sel; at?: At } => ({ ...DEF[op], ...cfg.zones?.[op as PackOp] });
   const zone = (s: PackState, name: string, seat: string): string => (s.zones[`${name}:${seat}`] !== undefined ? `${name}:${seat}` : name);
@@ -285,9 +290,9 @@ export function cardPack<G extends GameTypes, E extends PackEnv = PackEnv>(cfg: 
     const base = { kind, seat: env.seat, min, max, options };
     askVerb(ctx, (cfg.prompt?.(base, st, env) ?? base) as Omit<G['prompt'], 'id'>, st, env);
   };
-  const resGet = (s: PackState, seat: string, key: string): number => (cfg.res ? cfg.res.get(s as unknown as G['state'], seat, key) : (s.res?.[seat]?.[key] ?? 0));
+  const resGet = (s: PackState, seat: string, key: string): number => (cfg.res ? (hid(s) && stop(), cfg.res.get(s as unknown as G['state'], seat, key)) : (s.res?.[seat]?.[key] ?? 0));
   const resSet = (ctx: Ctx<G>, seat: string, key: string, v: number): void => {
-    if (cfg.res) return cfg.res.set(ctx, seat, key, v);
+    if (cfg.res) return (hid(S(ctx)) && stop(), cfg.res.set(ctx, seat, key, v));
     const s = S(ctx);
     if (s.res === undefined) s.res = {};
     const all = own(s, 'res') as Record<string, Record<string, number>>;
@@ -306,7 +311,11 @@ export function cardPack<G extends GameTypes, E extends PackEnv = PackEnv>(cfg: 
     }
     if (p.op === 'seq') return p.steps.every((x) => payable(s, x, env, l));
     if (p.op === 'payThen') return p.cost.every((x) => payable(s, x, env, l));
-    if (p.op === 'custom') return cfg.custom?.[p.name]?.payable?.(s as unknown as G['state'], p, env) ?? true;
+    if (p.op === 'custom') {
+      const f = cfg.custom?.[p.name]?.payable;
+      if (f && hid(s)) stop();
+      return f?.(s as unknown as G['state'], p, env) ?? true;
+    }
     if (!('cards' in fieldsOf(p.op))) return true;
     const c = p as Cards & { op: string; to?: string };
     const d = def(c.op);
@@ -345,9 +354,23 @@ export function cardPack<G extends GameTypes, E extends PackEnv = PackEnv>(cfg: 
   const unmarked = (s: unknown): unknown => ((s as PackState).marks !== undefined && Object.keys((s as PackState).marks ?? {}).length === 0 ? { ...(s as object), marks: undefined } : s);
   const view = (s: unknown): string => canonicalJson(P.view ? P.view(unmarked(s) as G['state']) : Object.fromEntries(Object.entries(unmarked(s) as object).filter(([k]) => !VIEW_SKIP.includes(k))));
   // K583, paid = effect: the branch the check is running. `base` is the game it compares with (moved past each cost paid); `cost` counts the costs being paid, while nothing is compared.
-  // `sees`: the cards the judged seat saw when the outermost cost began; `hidden`: a cost has since shown it a card, so no game test, count, filter or custom verb runs any more (the answer must not tell the card).
+  // `sees`: the cards the judged seat saw when the outermost cost began; `hidden`: a cost has since shown it a card, so no game code runs any more (the answer must not tell the card).
   let J: { base: string; cost: number; sees: readonly string[] | null; hidden: boolean } = { base: '', cost: 0, sees: null, hidden: false };
   const seenBy = (s: PackState, seat: string): string[] => Object.values(s.zones).flatMap((zn) => zn.cards).filter((c) => canSee(s, seat, c));
+  // K583: in the check, has a cost shown the judged seat a card since it began? Noted the moment it is shown (read before each task and each game hook).
+  const hid = (s: PackState): boolean => {
+    if (dry === null) return false;
+    if (!J.hidden && J.sees !== null && seenBy(s, dry).some((c) => !(J.sees ?? []).includes(c))) J.hidden = true;
+    return J.hidden;
+  };
+  // A task that runs game code: a verb that is not the pack's own row, or any task kind but `verb` and engine-core's `timing.*`.
+  const gameTask = (t: G['task']): boolean => {
+    const k = String((t as { kind?: unknown }).kind);
+    if (k !== 'verb') return !k.startsWith('timing.');
+    const op = String((t as unknown as { step?: { op?: unknown } }).step?.op);
+    const mine = (verbs as Record<string, unknown>)[op];
+    return mine === undefined || (table() as Record<string, unknown>)[op] !== mine;
+  };
   const REASONS: readonly OfferReason[] = ['error', 'hidden', 'otherSeat', 'random', 'budget', 'nested'];
   // K529: would these steps change the game? They run on a copy with the game's handlers; every prompt forks one run per answer tried.
   const judge = (state: G['state'], content: G['content'], steps: Eff, env: E): OfferCheck => {
@@ -367,7 +390,7 @@ export function cardPack<G extends GameTypes, E extends PackEnv = PackEnv>(cfg: 
     if (!cfg.handlers) throw new EngineBugError('card-language pack: wouldChange needs cfg.handlers (() => RULES.handlers)');
     if (state.result !== null) return 'no';
     let left = 0;
-    const table = Object.fromEntries(Object.entries(cfg.handlers()).map(([k, h]) => [k, (c: Ctx<G>, t: G['task']) => ((left -= 1) < 0 ? stop('budget') : h(c, t))])) as HandlerTable<G>;
+    const table = Object.fromEntries(Object.entries(cfg.handlers()).map(([k, h]) => [k, (c: Ctx<G>, t: G['task']) => ((left -= 1) < 0 ? stop('budget') : hid(c.s as unknown as PackState) && gameTask(t) ? stop() : h(c, t))])) as HandlerTable<G>;
     const before = view(state);
     const at = new WeakMap<object, typeof J>();
     const random = (): never => stop('random');
@@ -490,7 +513,7 @@ export function cardPack<G extends GameTypes, E extends PackEnv = PackEnv>(cfg: 
   // K583: in the check a card picked blind stays unknown to the game: its tests, counts, filters and custom verbs are not run with it.
   const blind = (s: PackState, env: E): void => {
     const judge = dry;
-    if (judge !== null && (J.hidden || (env.cards ?? []).some((c) => locate(s, c) !== undefined && !canSee(s, judge, c)))) stop();
+    if (judge !== null && (hid(s) || (env.cards ?? []).some((c) => locate(s, c) !== undefined && !canSee(s, judge, c)))) stop();
   };
   const unhide = (s: PackState, z: string, picks: readonly string[]): string[] => picks.map((p) => (p.startsWith('#') ? (cardsIn(s, z)[Number(p.slice(1))] ?? '') : p));
   const pickAsk = (ctx: Ctx<G>, st: PackStep, env: E, z: string, min: number, max: number, peek = false, kind = 'chooseCards', keep?: (id: string) => boolean): boolean => {
@@ -784,10 +807,10 @@ export function cardPack<G extends GameTypes, E extends PackEnv = PackEnv>(cfg: 
       const costEnds = (): void => {
         if (!fx || (J.cost -= 1) !== 0) return;
         J.base = view(s);
-        if (seenBy(s, dry ?? '').some((c) => !(J.sees ?? []).includes(c))) J.hidden = true;
+        hid(s);
       };
       // K583: every amount of the cost is read from `cfg.due` here, before anything is paid, so the cost is paid as it was judged.
-      const paying = { ...rest, fixed: true as const };
+      const paying = rest;
       // K529, a cost judged as a whole is paid one step at a time: a step that cannot pay when it is reached stops the cost, and `then` does not run.
       const next = (from: number, left: readonly Step[]): void => {
         const step = left[0];
@@ -802,15 +825,18 @@ export function cardPack<G extends GameTypes, E extends PackEnv = PackEnv>(cfg: 
         if (dry === null || fx) go(ctx, st.then, rest as E);
         return;
       }
-      const cost = costed(ctx.s, st.cost, e);
-      if (!canPay(s, cost, { ...e, fixed: true })) return;
+      const cost = costed(ctx.s, st.cost, e, true);
+      if (!canPay(s, cost, e)) return;
       if (fx) {
         if (J.cost === 0 && view(s) !== J.base) throw CHANGED;
-        if (J.cost === 0) J.sees = seenBy(s, dry ?? '');
+        if (J.cost === 0) {
+          hid(s);
+          J.sees = seenBy(s, dry ?? '');
+        }
         J.cost += 1;
       }
       if (P.cost === 'whole') return next((s as unknown as KernelState).timing?.next ?? 0, cost);
-      ctx.then(...(effectTasks(cost, { ...e, fixed: true }) as unknown as G['task'][]), ...(effectTasks([st], { ...e, paidFrom: (s as unknown as KernelState).timing?.next ?? 0 }) as unknown as G['task'][]));
+      ctx.then(...(effectTasks(cost, e) as unknown as G['task'][]), ...(effectTasks([st], { ...e, paidFrom: (s as unknown as KernelState).timing?.next ?? 0 }) as unknown as G['task'][]));
     }),
     custom: flow({ name: str, n: optional(amount) }, (ctx, st: Extract<PackStep, { op: 'custom' }>, e) => {
       const c = cfg.custom?.[st.name];
@@ -820,6 +846,7 @@ export function cardPack<G extends GameTypes, E extends PackEnv = PackEnv>(cfg: 
     }, (ctx, st: Extract<PackStep, { op: 'custom' }>, e, a) => {
       const r = cfg.custom?.[st.name]?.resume;
       if (!r) throw new EngineBugError(`card-language pack: custom verb ${st.name} was answered but has no resume`);
+      if (hid(S(ctx))) stop();
       r(ctx, st, e, a);
     }),
   } as Record<PackOp, V>;
