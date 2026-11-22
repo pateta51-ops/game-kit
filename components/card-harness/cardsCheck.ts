@@ -206,15 +206,14 @@ export function patternProblems(i: PatternInput): string[] {
       encoded = true;
       if (i.allowShape?.(c.id, recs) != null) continue;
       const s = recs.map(shape).sort().join(' + ');
-      let g = shapes;
-      if (key) { const k = key(c); g = groups.get(k) ?? new Map<string, string>(); groups.set(k, g); }
-      if (!g.has(s)) g.set(s, c.id);
+      if (!shapes.has(s)) shapes.set(s, c.id);
+      if (key) { const k = key(c); const g = groups.get(k) ?? new Map<string, string>(); groups.set(k, g); if (!g.has(s)) g.set(s, c.id); }
     }
     if (!encoded) continue;
     const row = i.arMap.find((r) => r.id === p.id);
     if (row === undefined) out.push(`${p.id} has no AR-map row`);
     else if (row.ar.trim() === '' || /not read/i.test(row.ar)) out.push(`${p.id}: AR-map row is not read`);
-    if (row?.split !== true) for (const [k, g] of groups) if (g.size > 1) out.push(`${p.id} wording "${k}" has ${String(g.size)} shapes: ${[...g].map(([s, c]) => `${c} {${s}}`).join('; ')}`);
+    for (const [k, g] of groups) if (g.size > 1) out.push(`${p.id} wording "${k}" has ${String(g.size)} shapes: ${[...g].map(([s, c]) => `${c} {${s}}`).join('; ')}`);
     if (shapes.size > 1 && row?.split !== true) out.push(`${p.id} has ${String(shapes.size)} shapes: ${[...shapes].map(([s, c]) => `${c} {${s}}`).join('; ')}`);
   }
   return out;

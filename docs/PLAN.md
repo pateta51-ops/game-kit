@@ -353,6 +353,7 @@ The blind matching test's result was not recorded: the PR, its comments and docs
 | K655 | grid-map `lineOfSight` option `insetCorners`: sight lines run between the corners moved 1/1000 of a side into each cell, so a corridor walled on both sides sees along itself and a wall a space touches still blocks; default unchanged. | S | Dice Commandos | done |
 | K661 | card-harness `expectNotOffered`/`expectNotFired`: an optional `clauseOf(x)` maps a game's own option, prompt and event shapes to clause ids. | S |  | done |
 | K663 | card-harness: `cardCasesIn` resolves a same-file string const for `printed` (else its own problem line); rule 11 mixed mode quote-checks clauses with a cardCase and lets the rest cite by test title. | S |  | done |
+| K664 | card-harness `patternProblems`: `wording` keeps the whole-pattern shape check, and split patterns compare their wording groups (before, both were skipped). | S |  | done |
 
 ## Asked for by the owner
 
