@@ -561,7 +561,7 @@ Pull this component and use it where it is: a game never edits or copies its `ki
 A clock as rules data: a marker on a row of spaces (countdown, round tracker, danger track) that steps forward or back, with thresholds that fire as it lands on or passes a space, and per-space values read from where it stands. Pure functions, no packages, nothing drawn (K530).
 
 - **Also called:** Clock or countdown with thresholds
-- **Words:** clock, countdown, round tracker, round, tracker, threshold, timer, doom track, marker, limit, lose space, track, lose, overrun, track overrun, distance to space, distance, space, dry run
+- **Words:** clock, countdown, round tracker, round, tracker, threshold, timer, doom track, marker, limit, lose space, track, lose, overrun, track overrun, distance to space, distance, space, dry run, steps back, looping track, cannot advance, check a track definition
 - **Release:** 1.0; not seen
 - **The game supplies:** The spaces, start, direction, thresholds with their kinds and data, and per-space values.
 - **Use it when:** A marker on a row of spaces as rules data (countdown, round tracker, danger or doom track): steps forward or back by the game's number, thresholds that fire on landing or passing (lose, trigger, reward, limit) in order, once-only thresholds, per-space values such as a limit read from the marker's row; a lose space anywhere on the row, on landing or on passing; crossings become engine-core occurrences that can carry the threshold's data and space.
