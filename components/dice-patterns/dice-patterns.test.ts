@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { checkPattern, compile, meaning, smallest, type Pattern } from './index.ts';
+import * as before from './main-k527.frozen.ts';
 
 // Local copies of the two shapes this part feeds (dice-odds chance, dice-tray readRoll); not imported.
 type Chance = (k: number, test: (dice: number[], extra?: number) => boolean, spec?: { sides?: number }) => number;
@@ -245,16 +246,57 @@ describe('dice-patterns second review (K578)', () => {
     }
     expect(met).toBeGreaterThan(100);
   });
-  it('a die of value 0 is not rolled: compile, smallest and meaning leave it out', () => {
+  it('compile and smallest judge the values they are given; only meaning leaves out value 0 (not rolled)', () => {
     const pair: Pattern = { kind: 'same', n: 2 };
-    expect(smallest(pair, [0, 0, 4, 4])).toEqual([2, 3]);
-    expect(smallest(pair, [0, 0, 4])).toBeNull();
-    expect(t(pair, [0, 0, 4])).toBe(false);
-    expect(t({ kind: 'even', n: 2 }, [0, 0, 3])).toBe(false);
-    expect(t({ kind: 'count', n: 3 }, [0, 5, 5])).toBe(false);
-    expect(smallest({ kind: 'sum', op: '=', value: 7 }, [7, 0], { whole: true })).toEqual([0]);
-    expect(smallest({ kind: 'sum', op: '=', value: 7 }, [0, 3, 0, 4], { whole: true })).toEqual([1, 3]);
+    expect(smallest(pair, [0, 0, 4, 4])).toEqual([0, 1]);
+    expect(t(pair, [0, 0, 4])).toBe(true);
+    expect(t({ kind: 'even', n: 2 }, [0, 0, 3])).toBe(true);
+    expect(meaning('pair', pair, 'a pair').test([{ value: 0 }, { value: 0 }, { value: 4 }])).toBe(false);
     expect(meaning('pair', pair, 'a pair').test([{ value: 0 }, { value: 0 }, { value: 4 }, { value: 4 }])).toBe(true);
+  });
+  it('a zero face and a negative face are values like any other: sum, same, count, different, odd', () => {
+    expect(t({ kind: 'sum', op: '=', value: 2 }, [0, -1, 3])).toBe(true);
+    expect(t({ kind: 'sum', op: '<', value: 0 }, [-1, 0])).toBe(true);
+    expect(smallest({ kind: 'sum', op: '=', value: 2 }, [0, -1, 3], { whole: true })).toEqual([1, 2]);
+    expect(t({ kind: 'same', n: 2 }, [-1, 0, -1])).toBe(true);
+    expect(smallest({ kind: 'same', n: 2 }, [-1, 0, -1, 0])).toEqual([0, 2]);
+    expect(t({ kind: 'same', n: 2 }, [-1, 0, 1])).toBe(false);
+    expect(t({ kind: 'count', n: 3 }, [0, -1, 0])).toBe(true);
+    expect(t({ kind: 'count', op: '=', n: 2 }, [0, -1, 0])).toBe(false);
+    expect(smallest({ kind: 'count', n: 2 }, [0, -1, 0])).toEqual([0, 1]);
+    expect(t({ kind: 'different', n: 3 }, [0, -1, 1, 0])).toBe(true);
+    expect(t({ kind: 'different', n: 3 }, [0, -1, -1, 0])).toBe(false);
+    expect(smallest({ kind: 'different', n: 2 }, [0, 0, -1])).toEqual([0, 2]);
+    expect(t({ kind: 'odd', n: 2 }, [-1, -3, 2])).toBe(true);
+    expect(t({ kind: 'even', n: 2 }, [-2, 0, 1])).toBe(true);
+    expect(t({ kind: 'odd', n: 1 }, [-2, 0])).toBe(false);
+  });
+  it('calls without the new options give what the part gave before K578 (frozen copy, fixed seed, faces 0 to 6)', () => {
+    let s = 5150;
+    const rnd = (n: number): number => { s = (s * 1103515245 + 12345) & 0x7fffffff; return (s >> 8) % n; };
+    type Old = Parameters<typeof before.compile>[0];
+    const leaf = (): Old => {
+      const n = 1 + rnd(3), face = 1 + rnd(6), value = rnd(13), op = (['<', '<=', '=', '>=', '>'] as const)[rnd(5)] as '<';
+      const all: Old[] = [{ kind: 'same', n }, { kind: 'different', n }, { kind: 'run', n }, { kind: 'even', n }, { kind: 'odd', n }, { kind: 'count', n },
+        { kind: 'atLeast', face, n }, { kind: 'face', face, n }, { kind: 'sum', op, value }, { kind: 'max', op, value: face }, { kind: 'max', value: face },
+        { kind: 'spread', op, value: rnd(6) }, { kind: 'spread', value: rnd(6) }, { kind: 'twoPair' }];
+      return all[rnd(all.length)] as Old;
+    };
+    const pattern = (): Old => { const k = rnd(6); return k === 0 ? { kind: 'all', of: [leaf(), leaf()] } : k === 1 ? { kind: 'any', of: [leaf(), { kind: 'all', of: [leaf(), leaf()] }] } : leaf(); };
+    let met = 0, sets = 0;
+    for (let i = 0; i < 4000; i += 1) {
+      const p = pattern();
+      const v = Array.from({ length: rnd(7) }, () => rnd(7));
+      const want = before.compile(p)(v);
+      expect(compile(p)(v), JSON.stringify([p, v])).toBe(want);
+      const set = before.smallest(p, v);
+      expect(smallest(p, v), JSON.stringify([p, v])).toEqual(set);
+      if (want) met += 1;
+      if (set) sets += 1;
+    }
+    expect(met).toBeGreaterThan(500);
+    expect(4000 - met).toBeGreaterThan(500);
+    expect(sets).toBeGreaterThan(met);
   });
 });
 
