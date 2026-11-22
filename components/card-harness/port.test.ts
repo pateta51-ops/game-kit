@@ -113,6 +113,9 @@ describe('K648 expectNotOffered on a game with its own engine', () => {
     sc.set((s) => void (s.total = 3)).run('pick');
     expect(() => expectNotOffered(sc, b as string)).toThrow(/expectNotOffered: taking two#\d crashed instead of being refused: .*disabled: two/);
     expect(() => expectNotOffered(sc, b as string, undefined, { refused: (e) => e instanceof Error && e.message.startsWith('disabled:') })).not.toThrow();
+    expect(() => expectNotOffered(sc, b as string, undefined, { refused: (e) => /disabled|not offered/i.test(String(e)) })).not.toThrow();
+    expect(() => expectNotOffered(sc, b as string, () => { throw new Error('cannot read hand'); }, { refused: (e) => /disabled|not offered/i.test(String(e)) })).toThrow(/crashed instead of being refused: Error: cannot read hand/);
+    expect(() => expectNotOffered(sc, b as string, () => { throw new Error('Answer [x] refused: boom', { cause: new TypeError('boom') }); }, { refused: (e) => /refused/i.test(String(e)) })).toThrow(/crashed instead of being refused/);
     expect(() => expectNotOffered(sc, b as string, () => { throw new TypeError('boom'); }, { refused: (e) => e instanceof Error && e.message.startsWith('disabled:') })).toThrow(/crashed instead of being refused: TypeError: boom/);
   });
 });

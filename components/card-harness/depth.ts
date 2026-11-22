@@ -149,7 +149,7 @@ const sig = (t: Observed): string => `${JSON.stringify(t.s ?? null)}|${String(t.
  * rewind when a prompt is open) is refused (it returns false or throws the engine's refusal, K648: any other throw fails); state and events are as they were.
  */
 const causes = (e: unknown): unknown[] => (e instanceof Error && e.cause !== undefined && e.cause !== e ? [e, ...causes(e.cause)] : [e]);
-/** K648: the engine's refusal (engine-core's `IllegalActionError`, or the game's own through `refused`), here or in a `cause`. */
+/** K648: the engine's refusal (engine-core's `IllegalActionError`, or the game's own through `refused`), the innermost `cause` (what was first thrown, not Scenario's `refused:` wrapper). */
 export interface NotOfferedOptions {
   readonly refused?: (e: unknown) => boolean;
 }
@@ -169,7 +169,7 @@ export function expectNotOffered(t: Observed, id: string | readonly string[], at
     try {
       refused = tryIt() === false;
     } catch (e) {
-      if (!causes(e).some(o.refused ?? ((x) => x instanceof IllegalActionError))) throw new Error(`expectNotOffered: taking ${want.join(', ')} crashed instead of being refused: ${String(e)}`, { cause: e });
+      if (!(o.refused ?? ((x) => x instanceof IllegalActionError))(causes(e).at(-1))) throw new Error(`expectNotOffered: taking ${want.join(', ')} crashed instead of being refused: ${String(e)}`, { cause: e });
       refused = true;
     }
     if (!refused) throw new Error(`expectNotOffered: taking ${want.join(', ')} was not refused`);
