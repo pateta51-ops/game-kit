@@ -22,8 +22,11 @@ describe('card-language (K654): the older engines\' cases on the fake game', () 
     const { s, prompts } = game({ cost: 'whole' }).play(tap);
     expect([prompts, z(s, 'hand:a').length, s.marks]).toEqual([[], 2, undefined]);
   });
-  it('K654 S-B18 today: under cost = parts (default) each exhaust is judged alone, so the one card pays both and the effect is offered', () => {
-    expect(game().check([paid([{ op: 'exhaust' }, { op: 'exhaust', cards: 'pick', from: 'play', count: 1 }], [DRAW, DRAW])])).toBe('yes');
+  it('K654 S-B18 today: under cost = parts (default) each exhaust is judged alone, so the one card pays both and the effect is offered and draws 2', () => {
+    const tap: Eff = [paid([{ op: 'exhaust' }, { op: 'exhaust', cards: 'pick', from: 'play', count: 1 }], [DRAW, DRAW])];
+    expect(game().check(tap)).toBe('yes');
+    const { s, prompts } = game().play(tap, [['p1']]);
+    expect([prompts.map((p) => p.options.map((o) => o.id)), z(s, 'hand:a').length, s.marks]).toEqual([[['p1']], 4, { p1: ['exhausted'] }]);
   });
 
   // S-B19: the rules of the new game give the number; today the pack makes no reshuffle when the zone shuffled in is empty.
@@ -61,7 +64,12 @@ describe('card-language (K654): the older engines\' cases on the fake game', () 
     expect([z(gained, 'hand:a').length, gold(gained, 'b')]).toEqual([3, 1]);
   });
 
-  it('K654 I-B12 today (cannot be expressed): "draw 2, discard 1 of them" has no pick among the cards just moved; a pick in the hand lists the whole hand', () => {
+  // The step shape below (a mover's `then` with a pick among the moved cards) is the fix row's to choose; today `then` on a draw is ignored.
+  it.fails('K654 I-B12 fix row K658: "draw 2, then discard 1 of them" offers only the two cards drawn', () => {
+    const { s, prompts } = game().play([{ op: 'draw', count: 2, then: [{ op: 'discard', cards: 'pick', from: 'chosen', count: 1 }] } as unknown as PackStep], [['d1']]);
+    expect([prompts[0]?.options.map((o) => o.id), z(s, 'discard:a')]).toEqual([['d1', 'd2'], ['d1']]);
+  });
+  it('K654 I-B12 today: a draw hands no cards on, so a pick in the hand after "draw 2" lists the whole hand', () => {
     const { prompts } = game().play([{ op: 'draw', count: 2 }, { op: 'chooseCards', zone: 'hand', max: 1, then: [{ op: 'discard', cards: 'chosen' }] }], [['d1']]);
     expect(prompts[0]?.options.map((o) => o.id)).toEqual(['h1', 'h2', 'd1', 'd2']);
   });
@@ -76,7 +84,7 @@ describe('card-language (K654): the older engines\' cases on the fake game', () 
     expect(blocked(prompts[0] ?? null).map((b) => [b.id, b.reason])).toEqual([['1', 'noChange']]);
     expect([gold(s), gold(s, 'a', 'wood')]).toEqual([0, 3]);
   });
-  it.fails('K654 I-B22 fix row needed: gaining 0 of a resource the seat never held is judged a change, so "gain X gems" with X unbound is not barred', () => {
+  it.fails('K654 I-B22 fix row K657: gaining 0 of a resource the seat never held is judged a change, so "gain X gems" with X unbound is not barred', () => {
     const { prompts } = xg({ deadChoice: 'bar' }).play([choice('gem')], [['0']]);
     expect(blocked(prompts[0] ?? null).map((b) => [b.id, b.reason])).toEqual([['1', 'noChange']]);
   });
@@ -103,9 +111,13 @@ describe('card-language (K654): the older engines\' cases on the fake game', () 
     expect([asked > 0, asked <= 2]).toEqual([true, true]);
     expect([st.prompt, z(st, 'hand:a').length, z(st, 'discard:a')]).toEqual([null, 5, []]);
   });
-  it('K654 I-B24 today (cannot be expressed as a draw): a draw "if able" has no field; a move from deck to hand never reshuffles', () => {
-    const { s } = deckGame().play([MILL3, { op: 'move', cards: 'top', from: 'deck', to: 'hand', count: 2 }]);
-    expect([z(s, 'hand:a').length, z(s, 'discard:a').length]).toEqual([2, 3]);
+  it('K654 I-B24 recipe: "draw 2 if able" is a repeat of one draw under a deck-not-empty test: it draws what is there and never reshuffles', () => {
+    const g = game(undefined, { deck: ['d1', 'd2', 'd3'], pool: tide, cfg: { reshuffle: () => 'discard:a', tests: { deckHas: (s) => z(s, 'deck:a').length > 0 } } });
+    const able: Eff = [{ op: 'repeat', times: 2, then: [{ op: 'if', test: 'deckHas', then: [DRAW] }] }, TRIG];
+    const empty = g.play([MILL3, ...able]).s;
+    expect([z(empty, 'hand:a').length, z(empty, 'discard:a').length, gold(empty, 'b', 'coin')]).toEqual([2, 3, 0]);
+    const one = g.play([{ op: 'mill', count: 2 }, ...able]).s;
+    expect([z(one, 'hand:a'), z(one, 'discard:a').length, gold(one, 'b', 'coin')]).toEqual([['h1', 'h2', 'd3'], 2, 0]);
   });
 
   it('K654 E-B9: the card chosen before a cost is the one the effect changes', () => {
@@ -121,8 +133,12 @@ describe('card-language (K654): the older engines\' cases on the fake game', () 
     const { prompts } = g.play([{ op: 'count', what: 'gold', then: [{ op: 'chooseNumber', min: 1, max: 'X', then: [paid([PAYX], [res('gem', 'X')])] }] }], [['3']]);
     expect(prompts[0]?.options.map((o) => o.id)).toEqual(['1', '2', '3']);
   });
-  it('K654 E-B9 today: with a printed max above what is held, the unpayable numbers are offered and enabled; one picked pays and gains nothing', () => {
-    const { s, prompts } = game({ deadChoice: 'bar' }).play([{ op: 'chooseNumber', min: 1, max: 5, then: [paid([PAYX], [res('gem', 'X')])] }], [['5']]);
-    expect([blocked(prompts[0] ?? null), kinds(prompts), gold(s), gold(s, 'a', 'gem')]).toEqual([[], ['chooseNumber'], 3, 0]);
+  it('K654 E-B9 today: under the default policy a number above what is held is offered; picked, it pays and gains nothing', () => {
+    const { s, prompts } = game().play([{ op: 'chooseNumber', min: 1, max: 5, then: [paid([PAYX], [res('gem', 'X')])] }], [['5']]);
+    expect([kinds(prompts), gold(s), gold(s, 'a', 'gem')]).toEqual([['chooseNumber'], 3, 0]);
+  });
+  it.fails('K654 E-B9 fix row K660: under deadChoice = bar a number whose cost cannot be paid, so it changes nothing, is barred', () => {
+    const { prompts } = game({ deadChoice: 'bar' }).play([{ op: 'chooseNumber', min: 1, max: 5, then: [paid([PAYX], [res('gem', 'X')])] }], [['2']]);
+    expect(blocked(prompts[0] ?? null).map((b) => b.id)).toEqual(['4', '5']);
   });
 });
