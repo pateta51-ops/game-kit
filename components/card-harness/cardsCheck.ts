@@ -164,7 +164,7 @@ export function restrictionProblems(i: RestrictionInput): string[] {
     for (const [kv, phrases] of Object.entries(i.words)) {
       const p = phrases.find((x) => has(t, x));
       const k = kv.slice(0, kv.indexOf(':')), v = kv.slice(kv.indexOf(':') + 1);
-      if (p !== undefined && !recs.some((r) => r[k] !== undefined && val(r[k]) === v)) found.push({ id: c, key: k, message: `${c}: printed "${p}" has no restriction ${k}=${v}` });
+      if (p !== undefined && !recs.some((r) => all(r).some((n) => n[k] !== undefined && val(n[k]) === v))) found.push({ id: c, key: k, message: `${c}: printed "${p}" has no restriction ${k}=${v}` });
     }
   }
   const used = new Set<object>();
