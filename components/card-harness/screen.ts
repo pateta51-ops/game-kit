@@ -60,6 +60,7 @@ export function screenProblems(i: ScreenInput): string[] {
   const steps = new Map<string, Set<number>>();
   const ia = i.iconAmounts, iaRe = ia instanceof RegExp ? new RegExp(ia.source, ia.flags.replace(/[gy]/g, '')) : undefined;
   const allowRe = (i.allowNumbers ?? []).flatMap((x) => (x instanceof RegExp ? [new RegExp(x.source, x.flags.includes('g') ? x.flags : `${x.flags}g`)] : []));
+  const noRef = (t: string): string => allowRe.reduce((u, r) => u.replace(r, ' '), t);
   const allowNum = (i.allowNumbers ?? []).filter((x): x is string => typeof x === 'string');
   for (const p of i.prompts) {
     const k = p.step ?? 0;
@@ -67,9 +68,9 @@ export function screenProblems(i: ScreenInput): string[] {
     if (e) { (steps.get(p.clause) ?? steps.set(p.clause, new Set()).get(p.clause)!).add(k); if (k >= e.length) { out.push(`prompt for ${p.clause}: prompt ${String(k + 1)} has no promptAmounts entry`); continue; } }
     const a = e ? e[k] : am.get(p.clause);
     const words = p.shown.replace(token, (m) => { const k = m.slice(o.length, m.length - c.length); return (iaRe ? iaRe.test(k) : (ia as readonly string[] | undefined)?.includes(k)) ? ` ${m} ` : ' '; });
-    const got = new Set(numbers(words));
+    const got = new Set(numbers(noRef(words)));
     if (a === 'counted') {
-      const cw = allowRe.reduce((t, r) => t.replace(r, ' '), words), cnt = new Set(cw.match(/\d+(?!\d|(?:st|nd|rd|th)\b)/gi) ?? []);
+      const cw = noRef(words), cnt = new Set(cw.match(/\d+(?!\d|(?:st|nd|rd|th)\b)/gi) ?? []);
       if (cnt.size === 0) { out.push(`prompt for ${p.clause}: no amount`); continue; }
       const v = p.value === undefined ? undefined : String(p.value), printed = numbers(text.get(p.clause) ?? '');
       if (v !== undefined && !/^-?\d+$/.test(v)) { out.push(`prompt for ${p.clause}: value ${v} is not a whole number`); continue; }
@@ -80,7 +81,7 @@ export function screenProblems(i: ScreenInput): string[] {
       else if (stray.length > 1) out.push(`prompt for ${p.clause}: numbers ${stray.join(', ')} shown, pass value to tell the amount`);
       continue;
     }
-    const want = a ?? numbers(text.get(p.clause) ?? '');
+    const want = a ?? numbers(noRef(text.get(p.clause) ?? ''));
     if (want.length > 0 && !want.some((w) => got.has(w))) out.push(`prompt for ${p.clause}: no amount`);
   }
   if (i.prompts.length > 0) for (const [id, e] of per) for (let k = 0; k < e.length; k++) if (!steps.get(id)?.has(k)) out.push(`${id}: promptAmounts entry ${String(k + 1)} but no prompt ${String(k + 1)} opened`);
