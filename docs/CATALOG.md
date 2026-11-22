@@ -756,10 +756,10 @@ Dice patterns as plain data (a pair, N the same, a run, odd or even, a sum again
 Pure logic of a dice tray and its roll window (K211), opt-in, unstyled; the game draws it (CSS, `pieces-3d`) and writes its own meanings. Import from `index`. Needs `state-machines`.
 
 - **Also called:** Dice rolling and holding
-- **Words:** dice, roll, hold, tray, reroll, window, random, reroll cost, pay to reroll, target number, modify roll, add to roll, combat reroll window, until different value
+- **Words:** dice, roll, hold, tray, reroll, window, random, reroll cost, pay to reroll, target number, modify roll, add to roll, combat reroll window, until different value, named dice roll, dice roll name, force a dice roll
 - **Release:** 1.0; not seen
 - **The game supplies:** The dice, their meanings and how they are drawn.
-- **Use it when:** Dice in play, held dice, rolling through ctx.rng and the roll window content. Recipe: docs/recipes/dice.md.
+- **Use it when:** Dice in play, held dice, rolling through ctx.rng (a roll name selects a test override) and the roll window content. Recipe: docs/recipes/dice.md.
 - **Not for:** Dice drawing or 3D (pieces-3d) and odds (dice-odds).
 - **Key exports:** `newTray`, `roll`, `hold`, `toggleHold`, `adjust`, `remove`, `values`, `heldDice`, `readRoll`, `rollWith`, `rollWindow`, `step`, `winStart`, `winPickToken`, and 18 more
 - **Hook:** newTray: dice in play

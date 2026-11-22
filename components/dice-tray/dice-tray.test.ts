@@ -81,4 +81,14 @@ describe('roll window flow (7IS)', () => {
     expect(values(setValue(t, 0, 4))).toEqual([4]);
     expect(values(setValue(t, 0, 0))).toEqual([1]);
   });
+  it('K692 named rolls: attack [6,2] and defense [3] are forced, unnamed stays seeded', () => {
+    const forced: Record<string, number[]> = { attack: [6, 2], defense: [3] };
+    const rng = { int: (max: number, name?: string) => { const q = name ? forced[name] : undefined; return q ? (q.shift() ?? 1) - 1 : max - 1 } };
+    expect(values(roll(newTray([6, 6]), rng, undefined, 'attack').tray)).toEqual([6, 2]);
+    expect(values(roll(newTray([6]), rng, undefined, 'defense').tray)).toEqual([3]);
+    expect(values(roll(newTray([6, 6]), rng).tray)).toEqual([6, 6]);
+  });
+  it('K692 default path matches main values', () => {
+    expect(values(roll(newTray([6, 6, 10]), seq([0, 5, 9])).tray)).toEqual([1, 6, 10]);
+  });
 });

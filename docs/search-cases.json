@@ -316,7 +316,7 @@
   { "q": "duration this round", "first": "engine-core" },
   { "q": "enemy driven by deck", "first": "automa" },
   { "q": "automated enemy movement", "first": "K559" },
-  { "q": "mission goals as data", "first": "engine-core" },
+  { "q": "mission goals as data", "first": "K546" },
   { "q": "setup options forced", "first": "none" },
   { "q": "combat compare lower wins", "first": "K550" },
   { "q": "attack and defense roll", "first": "K550" },
@@ -440,5 +440,11 @@
   { "q": "test ability not offered", "first": "card-harness" },
   { "q": "resume after crash", "first": "sim-pool" },
   { "q": "marker cannot advance", "first": "clock" },
-  { "q": "fewest dice meet pattern", "first": "dice-patterns" }
+  { "q": "fewest dice meet pattern", "first": "dice-patterns" },
+  { "q": "flash once and go dark", "first": "glow" },
+  { "q": "glow ramp up from dark", "first": "glow" },
+  { "q": "single flash glow", "first": "glow" },
+  { "q": "force a dice roll in a test", "first": "dice-tray" },
+  { "q": "dice tray roll name override", "first": "dice-tray" },
+  { "q": "named dice roll", "first": "dice-tray" }
 ]
