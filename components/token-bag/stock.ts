@@ -1,6 +1,6 @@
 // K593: finite stocks and a bag, engine side (pure, no DOM). Every piece has an id and sits in exactly one place the game
 // names (bag, a hand, set aside, discard, removed, a supply); places hold piece ids, so the state is plain data.
-// Ported from Warp's Edge engine/state/tokens.ts (moveToken, gainFromSupply) and engine/turn/draw.ts (drawFromBag).
+// Source: component.json (K593).
 
 /** Where every piece is: `places[place]` its piece ids, `kinds[id]` its kind. Plain data: save it as it is. */
 export interface Stocks {
