@@ -372,7 +372,7 @@
   { "q": "pool of dice runs out", "first": "token-bag" },
   { "q": "effect lasts until end of combat", "first": "engine-core" },
   { "q": "duration this combat", "first": "engine-core" },
-  { "q": "unit cannot attack status", "first": "K542" },
+  { "q": "unit cannot attack status", "first": "engine-core" },
   { "q": "hand size maximum choose discard", "first": "card-zones" },
   { "q": "order of simultaneous triggers commute", "first": "K591" },
   { "q": "skip trigger order prompt same result", "first": "K591" },
@@ -419,5 +419,8 @@
   { "q": "plan check build own rows", "first": "plan-checker" },
   { "q": "pr body lists new modules", "first": "none" },
   { "q": "worker pr body new files listed", "first": "none" },
-  { "q": "reason for each new file", "first": "none" }
+  { "q": "reason for each new file", "first": "none" },
+  { "q": "status condition token", "first": "engine-core" },
+  { "q": "give a status to a unit", "first": "engine-core" },
+  { "q": "stunned until end of turn", "first": "engine-core" }
 ]

@@ -9,7 +9,7 @@ it('K278: index exports exactly the union of kernel, timed and tools, with no na
   const union = parts.flat();
   expect(new Set(union).size).toBe(union.length);
   expect(Object.keys(index).sort()).toEqual(union.sort());
-  expect(union.length).toBe(178); // K541: eventOver, waitingOn
+  expect(union.length).toBe(185); // K541: eventOver, waitingOn; K542: giveStatus, hasStatus, removeStatus, STATUS, statusCount, statusesOf, statusLeft
 });
 
 // K278: tsc fails if index stops exporting a type an entry has
