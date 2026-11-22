@@ -584,17 +584,11 @@ describe('E B17: a forced choice taken without asking gives the same game as ask
   })();
   const taken = go(game(true));
 
-  it.fails('E B17 (defect, fix row K652: askOrTake advances promptSeq) the game with the only answer taken equals the one where it was asked: the same final hash and events', () => {
+  it('E B17 K652 the game with the only answer taken equals the one where it was asked: the same final hash and events', () => {
     expect(said(taken)).toEqual(['chose a']);
     expect(taken.log).toEqual(asked.log);
+    expect(taken.promptSeq).toBe(asked.promptSeq);
     expect(hashState(taken)).toBe(hashState(asked));
-  });
-  it('E B17 today: the same events and state except `promptSeq`, which counts the prompt asked, so the hashes differ', () => {
-    expect(said(taken)).toEqual(['chose a']);
-    expect(taken.log).toEqual(asked.log);
-    expect(taken.promptSeq).toBe(asked.promptSeq - 1);
-    expect(hashState({ ...taken, promptSeq: 0 })).toBe(hashState({ ...asked, promptSeq: 0 }));
-    expect(hashState(taken)).not.toBe(hashState(asked));
   });
   it('E B17 K652 a later prompt has the same id whether the earlier single-answer prompt was taken or asked', () => {
     const later = (take: boolean) => {
