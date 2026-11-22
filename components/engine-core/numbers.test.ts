@@ -397,6 +397,11 @@ describe('numberParts: nothing dropped or ignored silently (K582)', () => {
     expect(numberParts(3, ms, COST, { of: 'other', unchanged: true }).unchanged).toEqual([]);
     expect(numberParts(3, ms, COST, { of: 'play', unchanged: true }).value).toBe(2);
   });
+  it('a default call with no scope and no unchanged option: a scoped modifier does not apply, does not throw and leaves no sign', () => {
+    const r = numberParts(3, [add('A', -1, { of: 'play' }), add('B', -1)], COST);
+    expect(r).toEqual({ value: 2, base: 3, parts: [{ source: 'B', op: 'add', amount: -1, applied: -1 }] });
+    expect(Object.keys(r)).toEqual(['value', 'base', 'parts']);
+  });
   it('decreases: highestMin also orders the reductions of an unsplit add step, in either input order', () => {
     const o: NumberOrder = { steps: ['add'], decreases: 'highestMin' };
     const a = add('A', -2, { min: 1 });

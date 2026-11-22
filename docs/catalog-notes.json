@@ -2054,8 +2054,8 @@
     "guide": "README.md"
   },
   "clock": {
-    "use": "A marker on a row of spaces as rules data (countdown, round tracker, danger or doom track): steps forward or back by the game's number, thresholds that fire on landing or passing (lose, trigger, reward, limit) in order, once-only thresholds, per-space values such as a limit read from the marker's row; crossings become engine-core occurrences.",
-    "not": "Drawing the track (track); turn or round flow (turn-flow); deciding what a threshold does (the game).",
+    "use": "A marker on a row of spaces as rules data (countdown, round tracker, danger or doom track): steps forward or back by the game's number, thresholds that fire on landing or passing (lose, trigger, reward, limit) in order, once-only thresholds, per-space values such as a limit read from the marker's row; a lose space anywhere on the row, on landing or on passing; crossings become engine-core occurrences that can carry the threshold's data and space.",
+    "not": "Drawing the track (track); turn or round flow (turn-flow); deciding what a threshold does (the game); tokens counted without a cap, with no fixed row of spaces (a counter in the game).",
     "title": "Clock or countdown with thresholds",
     "tags": [
       "clock",
@@ -2067,7 +2067,10 @@
       "timer",
       "doom track",
       "marker",
-      "limit"
+      "limit",
+      "lose space",
+      "track",
+      "lose"
     ],
     "visible": false,
     "release": 1,

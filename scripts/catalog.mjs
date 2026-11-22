@@ -110,7 +110,7 @@ const arch =
 // K524: docs/mechanics.json -> docs/recipes/mechanics.md, the page `kit.mjs search` reads in the kit and in a game
 const mechFile = J('docs', 'mechanics.json')
 const q = (x) => '`' + x + '`'
-const answer = (m) => !m.part ? 'not in the kit' + (m.row ? ' (candidate ' + m.row + ')' : '') + (m.note ? ': ' + m.note : '')
+const answer = (m) => m.tool ? 'tool ' + q(m.tool) + ' (tools/' + m.tool + ')' + (m.read ? ': read ' + m.read : '') : !m.part ? 'not in the kit' + (m.row ? ' (candidate ' + m.row + ')' : '') + (m.note ? ': ' + m.note : '')
   : (m.missing ? 'partly: ' : '') + q(m.part) + (m.read ? ': read ' + m.read : '') + (m.also?.length ? '; also ' + m.also.map(q).join(', ') : '') + (m.missing ? '; missing: ' + m.missing : '') + (m.row ? '; candidate ' + m.row : '') + (m.pending ? ' (pending: ' + m.pending + ')' : '')
 const cell = (t) => t.replace(/\|/g, '\\|')
 const pages = [['CATALOG.md', body], ['ARCHITECTURE.md', arch], ['PLAN.md', render(top)]]
