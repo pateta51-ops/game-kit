@@ -477,7 +477,7 @@
     "gameSupplies": "The table of card fields."
   },
   "card-zones": {
-    "use": "Decks, hands, discards and play areas as ordered id lists in engine state, with who sees what and a per-seat view for opponents and the UI. Hand, pile and drag UI parts are planned (K218-K220), not built: ask for them, do not build them in the game. Recipe: docs/recipes/card-table.md.",
+    "use": "Decks, hands, discards and play areas as ordered id lists in engine state, with who sees what and a per-seat view for opponents and the UI. A zone can have a capacity (hand limit, slot limit) that rules raise and give up, with a state check that asks the owner which cards over the limit go to the discard. Hand, pile and drag UI parts are planned (K218-K220), not built: ask for them, do not build them in the game. Recipe: docs/recipes/card-table.md.",
     "not": "Boards and spaces (board-model), card faces, or rules about running out.",
     "title": "Decks, hands and discards as lists",
     "tags": [
@@ -488,7 +488,12 @@
       "lists",
       "visibility",
       "play",
-      "area"
+      "area",
+      "hand limit",
+      "zone capacity",
+      "discard choice",
+      "over the limit",
+      "choose what to drop"
     ],
     "visible": false,
     "release": 1,
@@ -945,7 +950,10 @@
       "zones",
       "place",
       "drag",
-      "screen"
+      "screen",
+      "zone card size",
+      "landscape card zone",
+      "card orientation per zone"
     ],
     "looks": "A page where you drag boxes for each part of the table and export the arrangement.",
     "visible": true,
