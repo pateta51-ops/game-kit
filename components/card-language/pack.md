@@ -35,6 +35,9 @@
 | gainResource, pay, convert, adjust | `res amount`; `res amount`; `res amount into get`; `key by min? max?` | `cfg.res` or `state.res[seat][key]`; pay and convert refuse (do nothing) when not payable |
 | seq, if, forEach, eachPlayer, repeat, count, later, payThen, custom | `steps`; `test then else?`; `then`; `then`; `times then`; `what then`; `at then`; `cost then`; `name n?` | `cfg.tests`, `cfg.counts`, `cfg.seats` (active seat first), `runLater(ctx, at)` at the game's moment, payThen only when every cost step is payable (resources; the cards a moving or marking step names exist, an exhausted card cannot be exhausted; nested; `cfg.custom[name].payable`), and `then` only when no cost occurrence was cancelled in its `would` window; choosePayment pays through payThen, `cfg.custom[name]` (`run`, `resume`, `text`) |
 
+## Offer policy (K529)
+`cardPack({ offer: { noChange, cost, fewer, deadChoice, unknown, branches, tasks, view }, handlers: () => RULES.handlers })`: when `may`, `chooseCards`, `chooseOption`, `choosePayment` and `payThen` offer their effect, and `pack.wouldChange(s, content, steps, env)`, the would-change-nothing check. Defaults, the table from ruling to knob and the check's limits: README, "Rules for agents".
+
 ## Timing
 Each moved card is one occurrence of a `would` batch: `kind` the verb (`chooseDestination`, `search`, `refill` and `attach` use their own name), `keys.player` the seat, `keys.target` the card (absent for a `top` move: the card is read when it happens), `keys.source` env.source. Prevention, replacement and before windows apply as for any batch; `cfg.moved(ctx, move)` is called after each card moved (log). `draw` from an empty deck: `cfg.reshuffle(s, deck, seat)` names the zone shuffled in, or undefined to stop (default stop); the reshuffle is its own occurrence (kind `reshuffle`), then the draw is tried once more (cancelled: the draw stops).
 

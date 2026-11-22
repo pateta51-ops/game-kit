@@ -49,8 +49,10 @@ graph LR
   character_select["character-select"]
   check_runner["check-runner"]
   ci_templates["ci-templates"]
+  clock["clock"]
   content_pack["content-pack"] --> card_harness["card-harness"]
   content_pack["content-pack"] --> card_language["card-language"]
+  content_pack["content-pack"] --> card_parts["card-parts"]
   content_pack["content-pack"] --> engine_core["engine-core"]
   controls["controls"]
   counter["counter"] --> effect_library["effect-library"]
@@ -82,6 +84,7 @@ graph LR
   ghost_card["ghost-card"]
   glossary["glossary"] --> phone_mode["phone-mode"]
   glossary["glossary"] --> state_machines["state-machines"]
+  grid_map["grid-map"]
   layout_editor["layout-editor"] --> board_layout["board-layout"]
   learned_opponent["learned-opponent"] --> engine_core["engine-core"]
   learned_opponent["learned-opponent"] --> sim_pool["sim-pool"]
@@ -178,6 +181,7 @@ graph LR
 - `character-select`
 - `check-runner`
 - `ci-templates`
+- `clock`
 - `content-pack`
 - `controls`
 - `coverage-report`
@@ -188,6 +192,7 @@ graph LR
 - `dice-tray`
 - `e2e-helpers`
 - `ghost-card`
+- `grid-map`
 - `layout-editor`
 - `learned-opponent`
 - `lint-preset`
