@@ -41,7 +41,7 @@ describe('K663 README recipe', () => {
 
 describe('K663 rule 11 mixed mode', () => {
   const good = call(`'${TEXT}'`);
-  const t = (texts: string[], mixed?: boolean) => inventory(base(texts, { mixed }));
+  const t = (texts: string[], mixed?: boolean) => inventory(base(texts, mixed === undefined ? {} : { mixed }));
   it('K663 a clause with a cardCase is quote-checked: a wrong quote fails', () => {
     const r = t([good.replace('pair.', 'pair'), "it('CL-twin scores', () => {})", "it('CL-plain draws', () => {})"], true);
     expect(r.quoteDiffers).toEqual(['CL-twin: quote differs (tests/t0.test.ts)']);
