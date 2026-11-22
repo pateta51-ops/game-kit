@@ -90,6 +90,7 @@ describe('K684 finish: every new src file is listed under Built new', () => {
   });
   it('K684 a file moved with git mv is not new: passes with no section', () => {
     const main = game('i', { 'notes.md': 'x' });
+    fs.mkdirSync(path.join(main, 'src/ui'));
     g(main, 'mv', 'src/old.ts', 'src/ui/old.ts');
     g(main, 'commit', '-qm', 'move');
     const r = run(main, null);
