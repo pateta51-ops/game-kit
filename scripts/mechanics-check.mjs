@@ -28,6 +28,7 @@ const named = new Set()
 for (const m of lines) {
   const w = '"' + m.words + '"'
   if (!m.words?.trim()) { bad.push('a line has no words'); continue }
+  if (m.tool && !fs.existsSync(J('tools', m.tool, 'README.md'))) bad.push(`${w}: tools/${m.tool}/README.md is missing`)
   if (m.row && !row(m.row)) bad.push(`${w}: row ${m.row} is not in docs/plan`)
   if (m.row) named.add(m.row)
   if (m.pending && !row(m.pending)) bad.push(`${w}: pending row ${m.pending} is not in docs/plan`)
