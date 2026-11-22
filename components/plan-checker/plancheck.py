@@ -42,7 +42,11 @@ Checks:
     Kit phase row of this map builds), and a backticked lower-case name outside parentheses that is neither is a
     problem. The pin is the first vX.Y.Z on a line of the section that says pin, pinned or tag as a word, else
     kit/kit.lock.json's ref, else the first vX.Y.Z of the section; Pull rows with no pin at all are a problem. A NOTE
-    always says whether the Pull rows were checked and against which tag. A Kit phase row names a GK<n> that is a
+    always says whether the Pull rows were checked and against which tag. With no kit checkout (--kit PATH, $KIT_DIR,
+    the checkout holding this script, ~/game-kit), the Pull rows are checked against the game's locked copy (K568):
+    kit/ beside the plan's docs folder, or the folder holding this script, when it holds kit.lock.json; its parts are
+    the lock's components, the folders holding component.json and every component kit/CATALOG.md lists (the whole
+    kit at the lock's tag); a plan pin other than the lock's ref is a NOTE. A Kit phase row names a GK<n> that is a
     "Phase GK<n>" heading, and a new kit phase also has a build-own row;
   * a game sheet table (a header cell names "Game sheet") with a row for each line of references/game-sheet.md
     (SHEET_LINES; asked for only when the mechanics map is not checked), each with an answer, and with a backticked kit part or the words "build-own" in its third cell
@@ -91,7 +95,7 @@ Sections are found by heading keywords (case-insensitive); override them if your
   --scenarios "Scenario catalogue"  --phases "Implementation phases"  --types "Type definitions"
   --sessions "Session plan"  --cards "Card-language test programme"  --done "Definition of Done"  --layers "Layers"
 
-Warnings (never fail; skipped quietly when no game-kit checkout is found: --kit PATH, else $KIT_DIR, the checkout holding this script, C:/projects/game-kit or
+Warnings (never fail; skipped quietly when no game-kit checkout is found: --kit PATH, else $KIT_DIR, the checkout holding this script or
 ~/game-kit): the kit pin (kit/kit.lock.json beside the plan's docs folder, else a "kit ... pin ... vX.Y.Z" line) is 5+
 minor versions behind the latest kit tag; a "Phase GKnn" heading or its "targets" lines name a K row that the kit's
 docs/PLAN.md marks done.
@@ -334,7 +338,7 @@ SHEET_LINES = ("who the player controls", "what can run out", "clocks and tracks
 
 
 def kit_dir() -> Path | None:
-    for c in ([Path(opt("--kit", ""))] if "--kit" in sys.argv else ([Path(os.environ["KIT_DIR"])] if os.environ.get("KIT_DIR") else []) + [Path(__file__).resolve().parents[2], Path("C:/projects/game-kit"), Path.home() / "game-kit"]):
+    for c in ([Path(opt("--kit", ""))] if "--kit" in sys.argv else ([Path(os.environ["KIT_DIR"])] if os.environ.get("KIT_DIR") else []) + [Path(__file__).resolve().parents[2], Path.home() / "game-kit"]):
         if (c / "docs" / "PLAN.md").is_file() and (c / "components").is_dir() and (c / "kit.mjs").is_file():
             return c
     return None
@@ -760,7 +764,18 @@ def main() -> int:
         with contextlib.suppress(OSError):
             comps = set(subprocess.run(["git", "-C", str(kit), "ls-tree", "-d", "--name-only", tag + ":components"],
                                        capture_output=True, text=True, encoding="utf-8").stdout.split())
-    notes.add(f"kit: Pull rows checked against {tag} in {kit}" if comps else "kit: Pull rows NOT checked ("
+    locked = None if kit else next((d for d in (path.resolve().parent.parent / "kit", Path(__file__).resolve().parents[1]) if (d / "kit.lock.json").is_file()), None)
+    if locked and tag:
+        with contextlib.suppress(Exception):
+            lk = json.loads((locked / "kit.lock.json").read_text(encoding="utf-8"))
+            cat = locked / "CATALOG.md"
+            comps = set(lk.get("components", {})) | ({d.name for d in locked.iterdir() if (d / "component.json").is_file()}) | (set(re.findall(r"\[`([a-z0-9-]+)`\]\(#", cat.read_text(encoding="utf-8"))) if cat.is_file() else set())
+            if lk.get("ref") and lk["ref"] != tag:
+                notes.add(f"kit: the plan pins {tag} but {locked / 'kit.lock.json'} holds {lk['ref']}: Pull rows checked against the locked copy")
+            tag = lk.get("ref") or tag
+        notes.add(f"kit: Pull rows checked against the locked copy {locked} at {tag} (no kit checkout; candidate rows not checked: --kit PATH or $KIT_DIR)" if comps else f"kit: Pull rows NOT checked (no kit checkout; the locked copy {locked} names no component)")
+    else:
+        notes.add(f"kit: Pull rows checked against {tag} in {kit}" if comps else "kit: Pull rows NOT checked ("
               + ("no kit checkout" if not kit else "no kit pin in the reuse map" if not tag else f"tag {tag} not in {kit}: git fetch --tags") + ")")
     ownset = {norm(o[0]) for o in own}
     phased = {n for r in maprows if norm(r[1]).startswith("kit phase") for n in re.findall(slug, r[2])}

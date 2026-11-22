@@ -477,6 +477,7 @@ x
   const FIT = "| row | verdict |\n|---|---|\n| Spy movement | truly this game's |\n| Greedy player | candidate |\n| Walled grid | kit phase |\n";
   const py = candidates(process.env, process.platform)[0] ?? ['python'];
   let mapText: string | null = null;
+  let lockKit: ((k: string) => void) | null = null;
   const exec =(text: string, fit: string | null = FIT, ...extra: string[]): { code: number | null; out: string; f: string; args: string[] } => {
     const d = join(tmp('pc-kit-'), 'docs');
     mkdirSync(join(d, 'plan-review'), { recursive: true });
@@ -487,6 +488,7 @@ x
       mkdirSync(join(dirname(d), 'kit', 'recipes'), { recursive: true });
       writeFileSync(join(dirname(d), 'kit', 'recipes', 'mechanics.md'), mapText, 'utf-8');
     }
+    if (lockKit) lockKit(join(dirname(d), 'kit'));
     const args = ['--sessions-optional', '--scenarios-end', 'Property tests', '--depth-optional', '--cards-optional', ...(extra.includes('--kit') ? [] : ['--kit', kit]), ...extra];
     const r = spawnSync(py[0] ?? 'python', [...py.slice(1), '-X', 'utf8', fileURLToPath(new URL('./plancheck.py', import.meta.url)), f, ...args], { encoding: 'utf-8' });
     return { code: r.status, out: r.stdout, f, args };
@@ -570,6 +572,50 @@ x
     const r = exec(GOOD, FIT, '--kit', join(kit, 'docs'));
     expect(r.out).toContain('NOTE kit: Pull rows NOT checked (no kit checkout)');
     expect(r.code).toBe(0);
+  });
+  describe("K568: no kit checkout, the game's locked copy kit/ (kit.lock.json) checks the Pull rows", () => {
+    const none = ['--kit', join(kit, 'docs')];
+    const locked = (ref: string, catalog: boolean) => (k: string): void => {
+      for (const c of ['engine-core', 'card-language']) {
+        mkdirSync(join(k, c), { recursive: true });
+        writeFileSync(join(k, c, 'component.json'), '{}');
+      }
+      writeFileSync(join(k, 'kit.lock.json'), JSON.stringify({ ref, commit: 'abc', components: { 'engine-core': { files: {} }, 'card-language': { files: {} } } }));
+      if (catalog) writeFileSync(join(k, 'CATALOG.md'), '| Component | Use it when |\n|---|---|\n| [`board-model`](#board-model) | spaces |\n| [`engine-core`](#engine-core) | rules |\n');
+    };
+    const withLock = (setup: ((k: string) => void) | null, text: string, ...extra: string[]) => {
+      lockKit = setup;
+      try { return exec(text, FIT, ...extra); } finally { lockKit = null; }
+    };
+    const kp = (out: string): string[] => out.split(/\r?\n/).filter((l) => l.startsWith('PROBLEM kit:')).sort();
+    it('K568 a Pull row naming a part the locked copy and its tag lack: the same problem lines as a kit checkout', () => {
+      const bad = GOOD.replace('`engine-core` (', '`engine-core`, `dice-oddz` (').replace('| `board-model`, `grid-map` |', '| `dice-tray` |');
+      const want = kp(exec(bad).out);
+      expect(want).toEqual(["PROBLEM kit: reuse map: Pull row 'Map' names no kit part of v0.227.1", "PROBLEM kit: reuse map: `dice-oddz` (row 'Kernel') is no kit part at v0.227.1", "PROBLEM kit: reuse map: `dice-tray` (row 'Map') is no kit part at v0.227.1"].sort());
+      const r = withLock(locked('v0.227.1', true), bad, ...none);
+      expect(kp(r.out)).toEqual(want);
+      expect(r.code).toBe(1);
+    });
+    it('K568 a good plan passes against the locked copy (a part not pulled counts when CATALOG.md lists it); the NOTE names the locked copy', () => {
+      const r = withLock(locked('v0.227.1', true), GOOD, ...none);
+      expect(r.out).not.toContain('PROBLEM');
+      expect(r.out).toMatch(/NOTE kit: Pull rows checked against the locked copy \S*kit at v0\.227\.1 \(no kit checkout/);
+      expect(r.code).toBe(0);
+      expect(kp(withLock(locked('v0.227.1', false), GOOD, ...none).out)).toEqual(["PROBLEM kit: reuse map: `board-model` (row 'Map') is no kit part at v0.227.1"]);
+    });
+    it('K568 the plan pins another tag than the lock: a NOTE says so and the rows are still checked', () => {
+      const r = withLock(locked('v0.230.0', true), GOOD.replace('`engine-core` (', '`engine-core`, `dice-oddz` ('), ...none);
+      expect(r.out).toContain('NOTE kit: the plan pins v0.227.1 but');
+      expect(r.out).toContain('holds v0.230.0: Pull rows checked against the locked copy');
+      expect(kp(r.out)).toEqual(["PROBLEM kit: reuse map: `dice-oddz` (row 'Kernel') is no kit part at v0.230.0"]);
+      expect(r.code).toBe(1);
+    });
+    it("K568 a kit/ without kit.lock.json and no checkout: today's NOTE; no drive path in the script", () => {
+      const r = withLock((k) => mkdirSync(join(k, 'engine-core'), { recursive: true }), GOOD, ...none);
+      expect(r.out).toContain('NOTE kit: Pull rows NOT checked (no kit checkout)');
+      expect(r.code).toBe(0);
+      expect(readFileSync(new URL('./plancheck.py', import.meta.url), 'utf-8')).not.toMatch(/[A-Z]:\/projects/);
+    });
   });
   it('a tag the kit lacks: the NOTE says to fetch tags', () => {
     const r = exec(GOOD.replace('tag v0.227.1', 'tag v0.999.0'));
