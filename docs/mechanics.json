@@ -92,6 +92,7 @@
     { "words": "save and load a game", "part": "saves", "read": "recipe saves-settings-frame.md", "sheet": "between" },
     { "words": "unlockable feats", "part": "achievements", "read": "its README", "sheet": "between" },
     { "words": "records of finished games, best score, play time", "part": "play-stats", "read": "its README", "sheet": "between" },
+    { "words": "kit gap claim needs search, doc says not in the kit, check plan claims against kit, kit gap claim in a plan, built new in a handoff, claim the kit lacks a part", "part": "plan-checker", "read": "the plan's build-own table (plancheck.py); for the experience, build-plan and handoff docs: kit/agent.mjs finish (K698), each claim line carries search: two phrasings, nearest and a why of six words", "sheet": "content" },
     { "words": "load card data, scenario data, checked ids and references", "part": "content-pack", "read": "recipe content-pipeline.md", "sheet": "content" },
     { "words": "dossier card files, column map, icon count check", "part": "content-pack", "read": "its README rule 6b, `dossierRow` (`textColumns`, `columns`, `checkIconsOnCard`) and the expand it returns", "missing": "icons read from several separate columns and kept per column: icons outside `textColumns` stay raw in `extra`", "row": "K604", "sheet": "content" },
     { "words": "icons in printed text, unknown icon codes, inline icon codes in text, inline icon codes", "part": "card-parts", "read": "its README, `parseIconText`, `unknownIcons`", "sheet": "content" },

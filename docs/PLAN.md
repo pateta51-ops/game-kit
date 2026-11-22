@@ -367,6 +367,7 @@ The blind matching test's result was not recorded: the PR, its comments and docs
 | K688 | Built new check: re-run each line's searches, ignore entries need a reason, new exports in old files need a line | M |  | done |
 | K689 | bypass patterns: game-side holds and timers, and input wrappers around skipAll/hurry | S |  | done |
 | K690 | plancheck: build-own rows for screen, motion and sound code are accepted and required | S |  | done |
+| K698 | Claim check in finish: a line in docs/experience, BUILD_PLAN.md or docs/handoff that says the kit lacks something carries two searches, and the kit's search and effects are run again on them | M |  | done |
 
 ## Asked for by the owner
 

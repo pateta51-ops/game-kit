@@ -2,7 +2,7 @@
 //   worktree --branch <b> [--repo .] [--dir d] [--base origin/main] [--shared <dir with node_modules>] [--no-fetch]   new worktree + node_modules link
 //   worktree --here [--branch <b>] [--shared d]   for a worker already inside a worktree: link node_modules from the main checkout (or --shared); --branch also switches to a new branch
 //   finish [--repo .] [--check "npm run check"] [--install "npm ci"] [--tail 15] [--comment] [--detach] | finish --result   clone + install + check in WSL (bash on Linux); prints PASS <sha> or FAIL <sha>; refuses (exit 3) while the queue holds `finish <branch>`; a line a minute while it waits and runs; --detach returns at once, --result reads the stored outcome (exit 4 while running) (K572); the WSL run writes a start marker first: if it is not there after 45 s finish exits 6 with `the run did not start` and the command to run by hand (K644); with --check the line is check passed|failed <sha> (check: <command>), never PASS, so it cannot pass for the gate (K416)
-//   finish also reads the PR body (gh pr view, or --body <file>) and fails before any run unless every file added under src/ since the merge base with main (not tests, *.d.ts, or package.json kit.builtNew.ignore globs) is named in a "Built new" section, one line each: - <file or folder> | search: <words>; <other words> | nearest: <kit part or none> | why: <reason> (K684; not with --check; renames are not new; a folder line covers files only two levels below src/; no merge base fails). K688: each line's two searches run again with the game's kit/kit.mjs search, and when a search's first 3 lines name parts and none is the line's nearest it fails (check: search finds <part>); kit.builtNew.ignore entries are { glob, why } (no bare string, no empty why, no glob covering most of src/ such as src/** or src/**/*.ts, at most 10); a new top-level export or top-level setTimeout/setInterval/createMachine added to a changed src/ file needs a line naming <file>#<export> or the file (renames, edits and newly exported old names do not count)
+//   finish also reads the PR body (gh pr view, or --body <file>) and fails before any run unless every file added under src/ since the merge base with main (not tests, *.d.ts, or package.json kit.builtNew.ignore globs) is named in a "Built new" section, one line each: - <file or folder> | search: <words>; <other words> | nearest: <kit part or none> | why: <reason> (K684; not with --check; renames are not new; a folder line covers files only two levels below src/; no merge base fails). K688: each line's two searches run again with the game's kit/kit.mjs search, and when a search's first 3 lines name parts and none is the line's nearest it fails (check: search finds <part>); kit.builtNew.ignore entries are { glob, why } (no bare string, no empty why, no glob covering most of src/ such as src/** or src/**/*.ts, at most 10); a new top-level export or top-level setTimeout/setInterval/createMachine added to a changed src/ file needs a line naming <file>#<export> or the file (renames, edits and newly exported old names do not count). K698: also (not with --check) every added or changed line, since the merge base, of docs/experience/**, docs/BUILD_PLAN.md, docs/handoff/** (plus package.json kit.claimDocs globs) that claims the kit lacks something (CLAIM_WORDS: kit gap, not in the kit, Built new, new effect, game-own ...; headings skipped) needs search: <words>; <other words>; each phrasing runs with kit/kit.mjs search and effects, and when the first 3 lines name a part (after "not in the kit by that name" only the guesses sharing a word) the line needs nearest: <that part> and a why of six words or more (check: search finds <part>); a K<n> on a claim line whose row is done in kit/plan or the sibling game-kit/docs/plan fails (the kit row is done: pull it)
 //   teardown --worktree <dir> [--repo .] [--force]
 import { execFileSync, spawn, spawnSync } from 'node:child_process'
 import { createHash } from 'node:crypto'
@@ -183,7 +183,7 @@ const kitSearch = (repo) => {
   const k = path.join(repo, 'kit', 'kit.mjs')
   if (!fs.existsSync(k)) return undefined
   const home = fs.mkdtempSync(path.join(os.tmpdir(), 'kit-search-'))
-  return (q) => spawnSync(process.execPath, [k, 'search', ...q.split(/\s+/)], { cwd: repo, encoding: 'utf8', env: { ...process.env, HOME: home, USERPROFILE: home } }).stdout ?? ''
+  return (q, cmd = 'search') => spawnSync(process.execPath, [k, cmd, ...q.split(/\s+/)], { cwd: repo, encoding: 'utf8', env: { ...process.env, HOME: home, USERPROFILE: home } }).stdout ?? ''
 }
 export function builtNew(files, body, search) {
   const lines = body.split(/\r?\n/), at = lines.findIndex((l) => /^\s*(#{1,6}\s*)?\**\s*built new\s*:?\s*\**\s*:?\s*$/i.test(l))
@@ -204,6 +204,60 @@ export function builtNew(files, body, search) {
   for (const n of full) if (n.split('/').length < 3 && !n.includes('#') && !files.some((x) => x === n || x.startsWith(n + '#'))) bad.push(`too broad: ${n}/ (name a file, or a folder at least two levels below src/, such as src/ui/motion/)`)
   const missing = files.filter((x) => { const [file, name] = x.split('#'); return !full.some((n) => x === n || (name && n === file) || (name && TIMERS.includes(name) && n.startsWith(file + '#')) || (n.split('/').length >= 3 && x.startsWith(n + '/'))) })
   return [...(at < 0 ? ['no "Built new" section in the PR body'] : []), ...bad, ...missing.map((x) => 'missing: ' + x + (x.includes('#') ? ' (new in a changed file; name <file>#<export> or the file)' : ''))]
+}
+// K698: role documents where the build-own decision is made; a claim that the kit lacks something must carry two searches
+export const CLAIM_DOCS = ['docs/experience/**', 'docs/BUILD_PLAN.md', 'docs/handoff/**']
+// the brief's words, plus phrasings of the same claim seen in plans: "missing from the kit", "kit does not have", "no kit part", "build it ourselves", "our own effect", "kit cannot"
+export const CLAIM_WORDS = ['kit gap', 'not in the kit', 'the kit lacks', 'kit has no', 'built new', 'new effect', 'build our own', 'game-own', 'missing from the kit', 'kit does not have', "kit doesn't have", 'no kit part', 'build it ourselves', 'our own effect', 'kit cannot']
+export function claimDocs(repo) {
+  let x = []
+  try { x = JSON.parse(fs.readFileSync(path.join(repo, 'package.json'), 'utf8')).kit?.claimDocs ?? [] } catch { /* no package.json */ }
+  if (!Array.isArray(x) || x.some((g) => typeof g !== 'string' || !g.trim())) return { globs: CLAIM_DOCS, probs: ['kit.claimDocs: must be a list of glob strings (added to ' + CLAIM_DOCS.join(', ') + ')'] }
+  return { globs: [...CLAIM_DOCS, ...x], probs: [] }
+}
+// the changed or added lines of the claim documents since the merge base: [{ file, n, text }]; null without a merge base
+export function claimLines(repo, globs = claimDocs(repo).globs) {
+  const base = mergeBase(repo)
+  if (!base) return null
+  const out = []
+  for (const f of git(repo, ['diff', '--name-only', '--diff-filter=AMR', base, 'HEAD']).split('\n').filter(Boolean)) {
+    if (!globs.some((g) => globRe(g).test(f))) continue
+    let n = 0
+    for (const l of git(repo, ['diff', '-U0', base, 'HEAD', '--', f]).split('\n')) {
+      const h = l.match(/^@@ -\S+ \+(\d+)/)
+      if (h) { n = Number(h[1]); continue }
+      if (l.startsWith('+') && !l.startsWith('+++ ')) out.push({ file: f, n: n++, text: l.slice(1) })
+    }
+  }
+  return out
+}
+export const isClaim = (t) => !/^\s*#/.test(t) && CLAIM_WORDS.some((w) => t.toLowerCase().includes(w))
+// the parts the first 3 lines name; after "not in the kit by that name" the 3 guesses count only when they share a word with the phrasing
+export function claimParts(o, p) {
+  const L = o.split(/\r?\n/).filter(Boolean).filter((l) => !/^(not in the kit by that name|not built yet)$/.test(l)).slice(0, 3)
+  const ws = p.toLowerCase().split(/\W+/).filter((w) => w.length > 3)
+  return L.filter((l) => !o.includes('not in the kit by that name') || ws.some((w) => l.toLowerCase().includes(w))).map(searchPart).filter(Boolean)
+}
+const doneRow = (dirs, id) => { for (const d of dirs) { try { return /^state:\s*done/im.test(fs.readFileSync(path.join(d, id + '.md'), 'utf8').split(/^---\s*$/m)[1] ?? '') } catch { /* not in this folder */ } } return false }
+export const planDirs = (repo) => [path.join(repo, 'kit', 'plan'), path.join(path.dirname(mainOf(repo)), 'game-kit', 'docs', 'plan')].filter((d) => fs.existsSync(d))
+export function claims(lines, search, dirs = []) {
+  const bad = []
+  for (const { file, n, text } of lines) {
+    if (!isClaim(text)) continue
+    const at = `${file}:${n}: ${text.trim().slice(0, 160)}`
+    const c = text.split('|').map((x) => x.trim().replace(/^[-*]\s*/, '')), get = (k) => (c.find((x) => x.toLowerCase().startsWith(k + ':')) ?? '').slice(k.length + 1).trim()
+    for (const id of new Set(text.match(/\bK\d+\b/g) ?? [])) if (doneRow(dirs, id)) bad.push(`${at}\n  the kit row is done: pull it (${id})`)
+    const ph = get('search').split(';').map((x) => x.trim()).filter(Boolean)
+    if (ph.length < 2) { bad.push(`${at}\n  a claim needs search: <words>; <other words> (two phrasings run with kit/kit.mjs search and effects)`); continue }
+    const near = (get('nearest').replace(/`/g, '').match(/[\w./-]+/g) ?? []).filter((t) => t !== 'none'), why = get('why').split(/\s+/).filter(Boolean).length
+    if (search) for (const p of ph) for (const cmd of ['search', 'effects']) {
+      const ps = claimParts(search(p, cmd), p)
+      if (!ps.length) continue
+      const hit = ps.some((q) => near.some((t) => t === q || q.startsWith(t + '/') || t.startsWith(q + '/')))
+      if (!hit || why < 6) bad.push(`${at}\n  check: search finds ${ps[0]} (${cmd} "${p}"); use it, or write nearest: ${ps[0]} | why: <reason of six words or more>`)
+    }
+  }
+  return bad
 }
 export function finish(args, io, exec = real, win = process.platform === 'win32', bg = exec === real ? realBg : null) {
   const f = parse(args, ['comment', 'detach', 'result'])
@@ -239,6 +293,12 @@ export function finish(args, io, exec = real, win = process.platform === 'win32'
       const probs = body === null ? [f.body ? `cannot read --body ${f.body}` : 'no PR body (no PR yet?): pass --body <file> with the PR body'] : builtNew(files, body, kitSearch(repo))
       if (probs.length) { io.out(`FAIL ${sha} (${branch}; Built new: ${nf.length} new file(s) and ${ne.length} new export(s) or timer(s) in changed files under src/ not all listed, or a search finds a kit part; nothing was run)\n${probs.join('\n')}\nexpected under a "## Built new" heading, one line per new file, folder or <file>#<export>:\n${BUILT_NEW_LINE}`); return 1 }
     }
+  }
+  if (!f.check) {
+    // K698: claim lines in the role documents
+    const cd = claimDocs(repo), cl = cd.probs.length ? [] : claimLines(repo, cd.globs) ?? []
+    const probs = cd.probs.length ? cd.probs : cl.some((l) => isClaim(l.text)) ? claims(cl, kitSearch(repo), planDirs(repo)) : []
+    if (probs.length) { io.out(`FAIL ${sha} (${branch}; kit claims: a line in ${cd.globs.join(', ')} says the kit lacks something; nothing was run)\n${probs.join('\n')}\neach claim line carries: search: <words>; <other words> | nearest: <kit part or none> | why: <reason of six words or more>`); return 1 }
   }
   const label = 'finish ' + branch
   const unavailable = (e) => { io.out(`FAIL ${sha} (${branch}; could not run the check: ${win ? 'WSL is unavailable' : 'bash is unavailable'}${e ? ' - ' + e.message : ''}; the check never runs on local Windows)`); return 1 }

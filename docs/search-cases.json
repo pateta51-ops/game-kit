@@ -437,5 +437,8 @@
   { "q": "test ability not offered", "first": "card-harness" },
   { "q": "resume after crash", "first": "sim-pool" },
   { "q": "marker cannot advance", "first": "clock" },
-  { "q": "fewest dice meet pattern", "first": "dice-patterns" }
+  { "q": "fewest dice meet pattern", "first": "dice-patterns" },
+  { "q": "kit gap claim needs search", "first": "plan-checker" },
+  { "q": "doc says not in the kit", "first": "plan-checker" },
+  { "q": "check plan claims against kit", "first": "plan-checker" }
 ]
