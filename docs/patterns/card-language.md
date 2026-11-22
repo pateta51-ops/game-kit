@@ -3,7 +3,7 @@
 Component `card-language` holds the verb table (`fields`, `run`, `text` per op) and its checks; the interpreter around it stays the game's, welded to its state and phases. Recipe: [card-effect.md](../recipes/card-effect.md). Below: the shape the table follows.
 
 ## Example (read, never edit)
-- jarl `pateta51-ops/rise-of-a-jarl-fan-prototype` @ `6f006a2` (C:\projects\rise-of-a-jarl-fan-prototype):
+- jarl `pateta51-ops/rise-of-a-jarl-fan-prototype` @ `6f006a2`:
   - `src/engine/effects/ops.ts`: registry + validator.
   - `src/engine/effects/describe.ts`: text generator.
   - `scripts/describe-check.ts`, `tests/scripts/describe-check.test.ts`: the gate.

@@ -1,6 +1,6 @@
 # Harvest: Rise of a Jarl -> game-kit v0.21.0
 
-Snapshot `C:\projects\_harvest\jarl` (origin/main, code only) against `C:\projects\game-kit`. Read-only review, 15 Nov 2026.
+Snapshot the harvest snapshot of jarl (origin/main, code only) against `C:\projects\game-kit`. Read-only review, 15 Nov 2026.
 "Kit checked" means I grepped the kit's code for the feature and it was absent. Nothing was run.
 
 Overall: Jarl was the source of about half the kit, and the grafts the selection named were taken (bug dialog machine, routes `follow()`, update machine, Layout setting, `fitZoom`, `setSafeArea`, `declareLocalState`, `expectIllegal`, pending file, tutorial placement). What is left is mostly tooling and small UI helpers that never had a kit row.

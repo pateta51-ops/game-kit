@@ -1,6 +1,6 @@
 # Harvest review: Earthborne Rangers (`ebr`) against game-kit v0.21.0
 
-Read-only review, 15 Nov 2026. Snapshot: `C:\projects\_harvest\ebr`. Kit: `C:\projects\game-kit`.
+Read-only review, 15 Nov 2026. Snapshot: the harvest snapshot of ebr. Kit: `C:\projects\game-kit`.
 "Checked" means the kit path was searched (grep) or listed; no test was run. 16 candidates, best first; 5 recommended.
 
 ## Grafts that were taken (no gap)

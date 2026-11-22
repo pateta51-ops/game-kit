@@ -9,20 +9,22 @@ const esc = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 const rules = [
   ['personal email', /[a-z0-9._%+-]+@(gmail|googlemail|hotmail|outlook|live|yahoo|icloud|me|proton|protonmail)\.[a-z.]+/gi, (m) => m.toLowerCase() !== 'betasteward@gmail.com'],
   ['Windows user folder', /\b[A-Za-z]:?[\\/]+Users[\\/]+([A-Za-z0-9._-]+)/g, (m, u) => !['me', 'user', 'name', 'runneradmin', 'public', 'default'].includes(u.toLowerCase())],
+  ['local drive path', /(?:\b[A-Za-z]:|\/mnt\/[a-z])[\\/]+projects[\\/]+([^\\/\s`'")<>,;]*)/gi, (m, d) => !['game-kit', 'demo', 'x', ''].includes(d.toLowerCase())],
   ['WSL home', /\/home\/([a-z0-9_-]+)\//g, (m, u) => !['me', 'user', 'runner', 'node'].includes(u)],
   ['tailnet host', /\b[a-z0-9-]+\.tail[0-9a-f]{4,}\.ts\.net\b|\btail[0-9a-f]{6}\b/gi, () => true],
   ['claude.ai link', /claude\.ai\/(artifact|code\/artifact|code\/session|chat)\/[A-Za-z0-9_-]{12,}/g, () => true],
   ['session id', /\blocal_[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\b/g, () => true],
   ...own.map((w) => ['private word', new RegExp(esc(w), 'gi'), () => true]),
 ];
+const DRIVE_EXEMPT = new Set(['ports.json', 'tools/game-server/boxes.json', 'docs/PORTS.md']); // the registries hold each game's repo folder on purpose
 const hits = [];
 for (const f of git('ls-files', '-z').split('\0').filter(Boolean)) {
-  if (f === 'scripts/personal-check.mjs' || !existsSync(f)) continue;
+  if (f === 'scripts/personal-check.mjs' || f === 'tests/personal-check.test.ts' || !existsSync(f)) continue;
   const buf = readFileSync(f);
   if (buf.length > 5e6 || buf.subarray(0, 8000).includes(0)) continue;
   const lines = buf.toString('utf8').split('\n');
   lines.forEach((line, i) => {
-    for (const [name, re, keep] of rules) for (const m of line.matchAll(re)) if (keep(m[0], m[1] ?? '')) hits.push(`${f}:${i + 1}: ${name}`);
+    for (const [name, re, keep] of rules) if (!(name === 'local drive path' && DRIVE_EXEMPT.has(f))) for (const m of line.matchAll(re)) if (keep(m[0], m[1] ?? '')) hits.push(`${f}:${i + 1}: ${name}`);
   });
 }
 const ev = process.env.GITHUB_EVENT_PATH && existsSync(process.env.GITHUB_EVENT_PATH) ? JSON.parse(readFileSync(process.env.GITHUB_EVENT_PATH, 'utf8')) : {};

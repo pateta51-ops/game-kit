@@ -5,7 +5,7 @@ No component: the frame is a game's look (SELECTION.md, "Menus shell and phone")
 ## Example (read, never edit)
 - stcc `Star-trek-captains-chair-game` @ `9fc59643`: `src/ui/screens/ScreenFrame.tsx` (frame + `Panel`).
 - rome `rome-fate-of-an-empire-fan-prototype` @ `1d0fd2e`: `src/ui/screens/MenuFrame.tsx` (+ `MenuNav`); `src/ui/frame/ResolutionFrame.tsx` (pure `fitBox`, `resolutionSize`, `shouldFrame`: reusable).
-- Dev and phone scripts: jarl `6f006a2` (`C:\projects\rise-of-a-jarl-fan-prototype`), `package.json` scripts and `scripts/`; ports are per game and never copied. Gap: the script bodies were not read for this note.
+- Dev and phone scripts: jarl `6f006a2`, `package.json` scripts and `scripts/`; ports are per game and never copied. Gap: the script bodies were not read for this note.
 
 ## What a frame is
 One component every menu-type screen (settings, saved games, packs, glossary, rules, start menu) renders inside. Props: `title`, optional `subtitle`, `active` route name, `testId`, `children`; `wide` where needed. It supplies, in the game's look: logo or emblem, page title, side list of screens, Home link, a way back to the game in progress when one is running, and panels (`Panel { title, hero, testId }`).

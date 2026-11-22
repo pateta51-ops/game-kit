@@ -3,7 +3,7 @@
 Kit part: K15 (tutorial engine, base stcc; stage 4). The freeze step is welded to each game's engine and content: pattern only (SELECTION.md, "In-game helpers").
 
 ## Example (read, never edit)
-- stcc `Star-trek-captains-chair-game` @ `9fc59643` (C:\projects\Star-trek-captains-chair-game): `src/tutorial/freeze.ts` (`freezePack`, `cutPack`, `neededCode`, `namedBy`); also `src/tutorial/{scenario,hash,registry}.ts` (names only) and `scripts/tutorial-freeze.ts` (not read).
+- stcc `Star-trek-captains-chair-game` @ `9fc59643`: `src/tutorial/freeze.ts` (`freezePack`, `cutPack`, `neededCode`, `namedBy`); also `src/tutorial/{scenario,hash,registry}.ts` (names only) and `scripts/tutorial-freeze.ts` (not read).
 - warps `warps-edge-fan-prototype` @ `2af6937`: `scripts/tutorial-freeze.ts` (refreeze rules, exit codes; ported from stcc).
 - jarl `6f006a2` has no freeze: live content plus a seed.
 

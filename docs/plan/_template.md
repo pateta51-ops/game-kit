@@ -166,7 +166,7 @@ The owner asked for tiers 1 and 2 to be built now, in this order, without waitin
 
 | # | Row | Bundle | Note |
 |---|---|---|---|
-| 17 | K78 | Card testing | the renderer here; the reading-judge step goes to the architect skill master in `C:\projects\_skills` |
+| 17 | K78 | Card testing | the renderer here; the reading-judge step goes to the architect skill master in the skill masters |
 | 18 | K77 | Card testing | |
 | 19 | K97 | Card testing | |
 | 20 | K99 | Card testing | |

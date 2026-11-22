@@ -3,7 +3,7 @@
 Engine-core already holds `replay()` and the command-line replay (K2). The viewer is welded to its game's screens and art: pattern only, L if ever shared (SELECTION.md, "Presentation").
 
 ## Example (read, never edit)
-rome `rome-fate-of-an-empire-fan-prototype` @ `1d0fd2e` (C:\projects\rome-fate-of-an-empire-fan-prototype):
+rome `rome-fate-of-an-empire-fan-prototype` @ `1d0fd2e`:
 - `src/ui/motion/replays.ts`: recordings to steps.
 - `src/ui/motion/replayStage.ts`: stage over the real board (game-bound).
 - `docs/ui/motion/replays.json`: `{ records, clips }`.

@@ -1,6 +1,6 @@
 # Harvest: Imperium: Horizons (`imp`) against game-kit v0.21.0
 
-Read-only review of `C:\projects\_harvest\imp` (snapshot of origin/main) against `C:\projects\game-kit`. No code run, no test run.
+Read-only review of the harvest snapshot of imp (snapshot of origin/main) against `C:\projects\game-kit`. No code run, no test run.
 Kit gaps were checked by grep over `components/`, `scripts/`, `tests/` (not `docs/`). Game files were read by their header and export list only, unless stated.
 19 candidates, best first. "rec" = recommended (5).
 
