@@ -945,7 +945,10 @@
       "zones",
       "place",
       "drag",
-      "screen"
+      "screen",
+      "zone card size",
+      "landscape card zone",
+      "card orientation per zone"
     ],
     "looks": "A page where you drag boxes for each part of the table and export the arrangement.",
     "visible": true,
