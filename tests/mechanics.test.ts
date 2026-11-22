@@ -190,13 +190,15 @@ describe('K524 gate (scripts/mechanics-check.mjs)', () => {
     expect(g.stderr).toContain('search "zorking": the first line must be a mechanic: line naming `tool`');
     expect(g.stderr).toContain('search "blorp": the first line must be a mechanic: line naming `alpha`; got: Inner blorp');
   });
-  it('the 20 planner searches and the 4 K574 ones pass on the repository, each naming its part', () => {
+  it('the 20 planner searches, the 4 K574 ones and the 5 K585 ones pass on the repository, each naming its part', () => {
     const m = JSON.parse(fs.readFileSync(path.join(ROOT, 'docs', 'mechanics.json'), 'utf8')) as { searches: Record<string, string> };
-    expect(Object.keys(m.searches)).toEqual(['undo button', 'line of sight', 'wall', 'heavy queue', 'modifier', 'why disabled', 'objective', 'encounter', 'adjacent', 'resource pool', 'pay cost', 'duration', 'trigger', 'status', 'legal moves', 'distance', 'health', 'continuous effect', 'prevent damage', 'replacement', 'preview', 'scenario', 'dice odds', 'reroll']);
+    expect(Object.keys(m.searches)).toEqual(['undo button', 'line of sight', 'wall', 'heavy queue', 'modifier', 'why disabled', 'objective', 'encounter', 'adjacent', 'resource pool', 'pay cost', 'duration', 'trigger', 'status', 'legal moves', 'distance', 'health', 'continuous effect', 'prevent damage', 'replacement', 'preview', 'scenario', 'dice odds', 'reroll', 'stat breakdown', 'cost reduction', 'dry run', 'can resolve', 'unpayable cost']);
     const g = node(path.join(ROOT, 'scripts', 'mechanics-check.mjs'));
     expect(g.stderr).toBe('');
     expect(g.status).toBe(0);
     for (const q of ['modifier', 'adjacent', 'pay cost']) expect(node(path.join(ROOT, 'kit.mjs'), 'search', ...q.split(' ')).stdout).toMatch(/^mechanic: /);
+    for (const q of ['stat breakdown', 'cost reduction']) expect(node(path.join(ROOT, 'kit.mjs'), 'search', ...q.split(' ')).stdout.split('\n')[0]).toMatch(/^mechanic: .* -> `engine-core`: read numbers\.md, `numberParts`/);
+    for (const q of ['dry run', 'can resolve', 'unpayable cost']) expect(node(path.join(ROOT, 'kit.mjs'), 'search', ...q.split(' ')).stdout.split('\n')[0]).toMatch(/^mechanic: may this effect be offered, .* -> `card-language`: read its README "Offer policy"/);
   });
 });
 
