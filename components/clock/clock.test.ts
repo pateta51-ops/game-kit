@@ -19,7 +19,7 @@ const run = (heading: string): unknown => {
   const log = vi.spyOn(console, 'log').mockImplementation(() => undefined)
   try {
     // eslint-disable-next-line @typescript-eslint/no-implied-eval
-    new Function('require', 'exports', ts.transpileModule(code, { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } }).outputText)(() => clock, {})
+    (new Function('require', 'exports', ts.transpileModule(code, { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } }).outputText) as (r: () => unknown, e: object) => void)(() => clock, {})
     return log.mock.calls.at(-1)
   } finally { log.mockRestore() }
 }
@@ -293,7 +293,7 @@ describe('clock', () => {
       const files = HEADINGS.map((h, i) => {
         expect(block(h), h + ' has a ts block').not.toBe('')
         const f = join(dir, 'b' + i + '.ts')
-        writeFileSync(f, block(h).replaceAll("'../kit/clock/index'", JSON.stringify(join(here, 'index.ts').replaceAll('\\', '/'))))
+        writeFileSync(f, block(h).replace(/'[^']*kit\/clock\/index'/, JSON.stringify(join(here, 'index.ts').replaceAll('\\', '/'))))
         return f
       })
       writeFileSync(join(dir, 'tsconfig.json'), JSON.stringify({ compilerOptions: { target: 'ES2023', lib: ['ES2023', 'DOM'], module: 'ESNext', moduleResolution: 'bundler', moduleDetection: 'force', types: [], strict: true, noUncheckedIndexedAccess: true, exactOptionalPropertyTypes: true, verbatimModuleSyntax: true, skipLibCheck: true, noEmit: true, allowImportingTsExtensions: true }, files }))

@@ -322,6 +322,7 @@ The blind matching test's result was not recorded: the PR, its comments and docs
 | K568 | plan-checker: with no kit checkout (a game's CI), the reuse map's Pull rows are checked against the game's locked copy `kit/` (recognised by `kit.lock.json`; parts from the lock, its folders and `kit/CATALOG.md`); the hard-coded local drive candidate is gone (`--kit PATH`, `$KIT_DIR`). | S | kit steward (plan check in a game's CI) | done |
 | K574 | Search gaps from the miss log: plain words added to mechanics lines, candidate tags and effect tags, two new candidates (K575, K576), a `tool` answer for a mechanics line (`heavy queue` finds tools/heavy-queue), and the miss log described in the help text. | S | kit steward (search misses of 21 Nov) | done |
 | K581 | `clock`: a recipe and state checks (`onSpace`, `reached`) for a lose space that is not the last space of the row, landing only or reaching and passing; `occurrences(crossings, prefix, true)` also carries the threshold's `data`, its `space`, `how` and the `way` of travel, and a crossing says its `way`. Findable under: lose space on a track, countdown threshold, round tracker. | S | kit steward (check of the tier 1 rows) | done |
+| K588 | `clock`: dry-run and lose-space recipes made right for both directions and put under test, `reached` and `onSpace` agree, a sign when a step does not fit, distance to a given space. | S | kit steward (second review of the part) | done |
 
 ## Asked for by the owner
 
