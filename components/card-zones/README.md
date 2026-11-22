@@ -14,10 +14,12 @@ Card zones as data on engine-core state (K223): decks, hands, discards and play 
 5. Give opponents' `viewLeaks` the list from `hiddenFrom(s, seat)`.
 6. Add `zoneProblems(s, expected?)` to `GameRules.invariants`.
 7. Keep end-of-deck rules (reshuffle the discard, game end) and card meaning in the game.
+8. A zone with a capacity (K599): set `limit` in its `ZoneDef`; change it only with `raiseLimit(s, zone, source, by)` and `dropRaise(s, zone, source)`; read it with `limitOf` and `overBy`. Put `capacityCheck(zones, { to, chooser?, kind? })` in engine-core `checkpoint.checks` (or call `overLimit(ctx, zones, opts)` from your own state check) and spread `capacityHandlers()` into the game's handlers. It asks the chooser (default the zone's owner) for exactly the excess, by card id, and moves them to `to`; when every card must go it asks nothing and moves them all. Which zone is checked, when a raise may be given up, and what a bot picks stay in the game.
 
 **Common mistakes:**
 - Moving a card to or from an unknown zone, or a card already in a zone (`place`) or in none (`moveCard`): each throws `EngineBugError`.
 - Reading `s.zones` directly in a view: hidden ids and order leak.
+- Using `capacityCheck` without `capacityHandlers()`: the answer has no handler. A zone over its limit with no owner and no `chooser`: `EngineBugError`. `raiseLimit` on a zone with no `limit`: `EngineBugError`.
 
 - State: the game keeps `zones: newZones({ name: { seen, owner?, cards? } })` (`Zoned`); per-seat keys by `seatZone('hand', seat)`. A card carries no zone field; `locate`, `cardsIn` find it.
 - Seen: `all`, `owner` (others see the count), `top` (top card and count), `count`, `none` (not even the count: absent from the view, or only its revealed cards).
@@ -37,4 +39,15 @@ draw(s, 'deck', 'hand:a', 2) // inside a handler: the draft from draftOf(ctx); s
 moveCard(s, 'c1', 'discard')
 reveal(s, 'hand:a', ['c2'], ['b'])
 console.log(viewOf(s, 'b'), hiddenFrom(s, 'b')) // hand:a { count: 1, owner: 'a', cards: ['c2'] }; deck { count: 1 }; ['c3']
+```
+
+## Capacity
+
+A hand limit, a slot limit: `limit` on the zone, raised and given up by source, checked by an engine-core state check that asks for exactly the excess (prompt kind `zones.overLimit`, options are the card ids). Run by `capacity.test.ts` ("README recipe"); there `s` is the state and `Play` the game's types.
+
+```ts
+const checks = [capacityCheck<Play>(['hand:a'], { to: 'discard' })]; // engine-core checkpoint.checks; asks the zone's owner
+const handlers = { ...capacityHandlers<Play>() }; // the prompt's resume task, added to the game's handlers
+raiseLimit(s, 'hand:a', 'annex'); // a rule raises the limit: 3 to 4
+dropRaise(s, 'hand:a', 'annex'); // the raise is given up: back to 3
 ```

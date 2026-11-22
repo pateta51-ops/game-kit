@@ -2,7 +2,7 @@
 // (lists of card ids, index 0 = top, a card carries no zone field and is found by looking, every move takes it out and
 // puts it in one step) and their view selectors (INFO-04: count and top only); Rome keeps the same lists per seat.
 // Writes go through engine-core's copy-on-write barrier inside an action; the only randomness is ctx.rng.
-import { draftOf, EngineBugError, leaveZone, own, type Ctx, type Draft, type GameTypes, type Tracked } from '../engine-core/index.ts';
+import { draftOf, EngineBugError, leaveZone, own, type Ctx, type Draft, type GameTypes, type HandlerTable, type KernelTask, type StateCheck, type Tracked } from '../engine-core/index.ts';
 
 /** Who sees a zone's cards: everyone, its owner, no one (not even the count), the top card only, the count only. */
 export type Seen = 'all' | 'owner' | 'none' | 'top' | 'count';
@@ -12,6 +12,10 @@ export interface Zone {
   readonly owner?: string;
   /** Cards revealed while in this zone: id to seats (`'*'` = all). Cleared when the card leaves or the zone is shuffled. */
   readonly shown?: Readonly<Record<string, readonly string[]>>;
+  /** K599: the base capacity; absent = no limit. */
+  readonly limit?: number;
+  /** K599: raises of the limit by source id (`raiseLimit`, `dropRaise`). */
+  readonly raises?: Readonly<Record<string, number>>;
 }
 export interface Zoned {
   readonly zones: Readonly<Record<string, Zone>>;
@@ -28,10 +32,11 @@ export interface ZoneDef {
   readonly seen: Seen;
   readonly owner?: string;
   readonly cards?: readonly string[];
+  readonly limit?: number;
 }
 
 export const newZones = (defs: Readonly<Record<string, ZoneDef>>): Record<string, Zone> =>
-  Object.fromEntries(Object.entries(defs).map(([k, d]) => [k, { cards: [...(d.cards ?? [])], seen: d.seen, ...(d.owner === undefined ? {} : { owner: d.owner }) }]));
+  Object.fromEntries(Object.entries(defs).map(([k, d]) => [k, { cards: [...(d.cards ?? [])], seen: d.seen, ...(d.owner === undefined ? {} : { owner: d.owner }), ...(d.limit === undefined ? {} : { limit: d.limit }) }]));
 
 /** `name:seat`, the usual key of a per-seat zone. */
 export const seatZone = (name: string, seat: string): string => `${name}:${seat}`;
@@ -154,3 +159,88 @@ export function zoneProblems(s: Zoned, expected?: number): string[] {
   if (expected !== undefined && seen.size !== expected) out.push(`${String(seen.size)} cards, expected ${String(expected)}`);
   return out;
 }
+
+// K599: a zone with a capacity (ported from a duty-officer limit: the limit is a base plus raises, a raise can be given up, over the limit the
+// chooser picks exactly the excess, which leaves for a discard zone; the next check asks again).
+
+/** The zone's limit: its base plus every raise; undefined when the zone has none. */
+export function limitOf(s: Zoned, zone: string): number | undefined {
+  const z = zoneOf(s, zone);
+  return z.limit === undefined ? undefined : z.limit + Object.values(z.raises ?? {}).reduce((a, b) => a + b, 0);
+}
+
+/** Raises the limit by `by` from `source` (again from the same source replaces it). */
+export function raiseLimit(s: Zoned, zone: string, source: string, by = 1): void {
+  const z = ownZone(s, zone);
+  if (z.limit === undefined) throw new EngineBugError(`card-zones: ${zone} has no limit to raise`);
+  if (z.raises === undefined) z.raises = {};
+  (own(z, 'raises') as Record<string, number>)[source] = by;
+}
+
+/** Gives up the raise from `source`; false when there was none. */
+export function dropRaise(s: Zoned, zone: string, source: string): boolean {
+  if (zoneOf(s, zone).raises?.[source] === undefined) return false;
+  const z = ownZone(s, zone);
+  const r = own(z, 'raises') as Record<string, number>;
+  delete r[source];
+  if (Object.keys(r).length === 0) delete z.raises;
+  return true;
+}
+
+/** How many cards the zone holds beyond its limit (0 with no limit). */
+export const overBy = (s: Zoned, zone: string): number => {
+  const l = limitOf(s, zone);
+  return l === undefined ? 0 : Math.max(0, cardsIn(s, zone).length - l);
+};
+
+export interface OverLimit {
+  /** The zone the excess goes to. */
+  readonly to: string | ((zone: string) => string);
+  /** Who picks (default the zone's owner). */
+  readonly chooser?: string | ((zone: string) => string);
+  /** The prompt's kind (default `zones.overLimit`). */
+  readonly kind?: string;
+}
+interface LeaveTask extends KernelTask {
+  readonly zone: string;
+  readonly to: string;
+}
+export const OVER_LIMIT = 'zones.overLimit';
+
+const leave = (s: Zoned, zone: string, ids: readonly string[], to: string): void => {
+  const cards = cardsIn(s, zone);
+  for (const id of [...ids].sort((a, b) => cards.indexOf(a) - cards.indexOf(b))) moveCard(s, id, to);
+};
+
+/** For a state check: the first zone over its limit asks its chooser for exactly the excess (by card id), or moves every card when all must go. True when it asked or moved. Needs `capacityHandlers()` in the game's handlers. */
+export function overLimit<G extends GameTypes>(ctx: Ctx<G>, zones: readonly string[], o: OverLimit): boolean {
+  const s = ctx.s as unknown as Zoned;
+  for (const zone of zones) {
+    const n = overBy(s, zone);
+    if (n === 0) continue;
+    const to = typeof o.to === 'string' ? o.to : o.to(zone);
+    const cards = cardsIn(s, zone);
+    if (n === cards.length) {
+      leave(draftOf(ctx) as unknown as Zoned, zone, cards, to);
+      return true;
+    }
+    const seat = o.chooser === undefined ? zoneOf(s, zone).owner : typeof o.chooser === 'string' ? o.chooser : o.chooser(zone);
+    if (seat === undefined) throw new EngineBugError(`card-zones: ${zone} is over its limit and has no owner or chooser`);
+    const prompt = { kind: o.kind ?? OVER_LIMIT, seat, min: n, max: n, options: cards.map((id) => ({ id, enabled: true })) };
+    const task: LeaveTask = { kind: OVER_LIMIT, zone, to };
+    ctx.ask(prompt as unknown as Omit<G['prompt'], 'id'>, task);
+    return true;
+  }
+  return false;
+}
+
+/** `overLimit` as an engine-core state check, for `checkpoint.checks`. */
+export const capacityCheck = <G extends GameTypes>(zones: readonly string[], o: OverLimit, name = OVER_LIMIT): StateCheck<G> => ({ name, run: (ctx) => overLimit(ctx, zones, o) });
+
+/** The resume handler of the over-limit prompt: moves the picked cards to the discard zone. */
+export const capacityHandlers = <G extends GameTypes>(): HandlerTable<G> => ({
+  [OVER_LIMIT]: (ctx, t) => {
+    const task = t as LeaveTask;
+    leave(draftOf(ctx) as unknown as Zoned, task.zone, task.answer ?? [], task.to);
+  },
+});
