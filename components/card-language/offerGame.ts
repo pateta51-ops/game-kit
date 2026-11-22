@@ -12,8 +12,8 @@ export interface S extends KernelState, PackState {
   readonly log: readonly { readonly seq: number; readonly type: string }[];
   /** The brute-force run's own notes (never part of the view): what a cost changed is not counted. */
   readonly truth?: { readonly hit: boolean; readonly open: readonly number[]; readonly base: string | null };
-  /** K597, the brute-force run's notes: the view after the last step marker, and the steps whose run changed it. */
-  readonly steps?: { readonly base: string; readonly done: readonly number[] };
+  /** K597, the brute-force run's notes: the view after the last step marker, the parts whose run changed it (a top-level payThen: i its cost, i + 0.5 its effect), the step running, the view when a cost ended. */
+  readonly steps?: { readonly base: string; readonly done: readonly number[]; readonly next: number; readonly paid?: string };
 }
 export interface Content { readonly effect: readonly PackStep[]; readonly env?: PackEnv }
 export interface G {
@@ -138,9 +138,12 @@ export const offerGame = <P extends BasePack>(make: (cfg: never) => P, opts: Gam
       step: { run: (ctx, st) => {
         const v = viewOf(ctx.s);
         const n = (st as { n?: number }).n;
-        const t = ctx.s.steps ?? { base: v, done: [] };
-        draftOf(ctx).steps = { base: v, done: n !== undefined && v !== t.base ? [...t.done, n - 1] : t.done } as never;
+        const t = ctx.s.steps ?? { base: v, done: [], next: 0 };
+        const done = n === undefined ? t.done : t.paid !== undefined ? [...t.done, ...(t.paid !== t.base ? [n - 1] : []), ...(v !== t.paid ? [n - 0.5] : [])] : v !== t.base ? [...t.done, n - 1] : t.done;
+        draftOf(ctx).steps = { base: v, done, next: n ?? 0 } as never;
       }, text: () => 'Step.' },
+      // K597: first in the effect of a top-level payThen of a real run: the view when its cost ended.
+      paid: { run: (ctx) => void (ctx.s.steps && ctx.s.steps.paid === undefined && (draftOf(ctx).steps = { ...ctx.s.steps, paid: viewOf(ctx.s) } as never)), text: () => 'Paid.' },
       start: { run: (ctx) => note(ctx, (t) => ({ ...t, base: viewOf(ctx.s) })), text: () => 'Start.' },
       pre: { run: (ctx, st) => note(ctx, (t) => ({ ...t, hit: t.hit || (t.open.length === 0 && viewOf(ctx.s) !== (t.base ?? base())), open: [...t.open, (st as { n?: number }).n ?? 0] })), text: () => 'Pre.' },
       mark: { run: (ctx) => note(ctx, (t) => ({ ...t, open: t.open.slice(0, -1), base: t.open.length === 1 ? viewOf(ctx.s) : t.base })), text: () => 'Mark.' },

@@ -128,65 +128,95 @@ describe('card-language resolves (K597): the README recipe runs', () => {
 });
 
 // K597 interface row: the three-way answer against exhaustive real play of every answer. A line of play resolves a top-level
-// step when the game's view changed while it ran (or it ended the game). Full: some line resolves every step; part: some line
-// resolves one, none all; none: no line resolves any. Unknown only on an effect holding a step whose outcome hidden or random
-// information, another seat's choice or a handler error decides.
+// step when the game's view changed while it ran (or it ended the game); a top-level payThen is two parts, its cost and its
+// effect. Full: some line resolves every part; part: some line resolves one, none all; none: no line resolves any.
+// Without hidden information the answer is never unknown. With it, the effect is played in every hidden world (the acting
+// seat's deck, the other seat's hand, the seed): a known answer must hold in every world, and an unknown one means worlds
+// disagree, or a declared case (another seat's choice, a handler error, game code reading a card the seat cannot see, K583).
 describe('card-language resolves (K597): agrees with playing every answer', () => {
   const has = (e: Eff, f: (st: PackStep) => boolean): boolean => e.some((st) => f(st) || Object.values(st).some((v) => Array.isArray(v) && typeof v[0] === 'object' && (Array.isArray(v[0]) ? (v as Eff[]).some((o) => has(o, f)) : has(v as Eff, f))));
   // Declared: in the check, looking at a card the seat already sees (or revealing one all see) is no change (K583); a real run records it.
   const looksAtASeenCard = (e: Eff): boolean => has(e, (st) => (st.op === 'lookAt' || st.op === 'reveal') && st.cards === 'all' && st.from !== 'deck');
   const HIDDEN = ['hand:b', 'deck', 'deck:b'];
-  const cannotKnow = (e: Eff): boolean => has(e, (st) => (st.op === 'custom' && ['roll', 'boom', 'back', 'pairs', 'nest'].includes(st.name)) || ['shuffle', 'search', 'mill', 'choosePlayer', 'eachPlayer'].includes(st.op) || (st.op === 'chooseCards' && HIDDEN.includes(st.zone)) || (st.op === 'lookAt' && st.cards !== 'all'));
-  // Declared (K583's guard, kept by resolves): once a cost begins, a card it or its effect shows the seat stops the game code after it (unknown, hidden).
+  // Declared (K583's guard, kept by resolves): once a cost begins, a card it or its effect shows the seat stops the game code after it.
   const SHOWS = ['scout', 'draw', 'mill', 'lookAt', 'reveal', 'search', 'discard'];
-  const showsAfterACost = (e: Eff): boolean => has(e, (st) => (st.op === 'payThen' || st.op === 'choosePayment') && has([st], (x) => SHOWS.includes(x.op))) && has(e, (x) => ['custom', 'if', 'count', 'chooseCards'].includes(x.op));
-  const g = game({ branches: 100000 });
-  const truth = (effect: Eff): string | undefined => {
-    const content = { effect: [{ op: 'custom', name: 'step' } as PackStep, ...effect.flatMap((st, i): PackStep[] => [st, { op: 'custom', name: 'step', n: i + 1 }])] };
+  const CODE = ['custom', 'if', 'count', 'chooseCards', 'search'];
+  const showsAfterACost = (e: Eff): boolean => has(e, (st) => (st.op === 'payThen' || st.op === 'choosePayment') && has([st], (x) => SHOWS.includes(x.op))) && has(e, (x) => CODE.includes(x.op));
+  const secret = (e: Eff): boolean => has(e, (st) => (st.op === 'custom' && ['roll', 'boom', 'back', 'pairs', 'nest'].includes(st.name)) || ['shuffle', 'search', 'mill', 'choosePlayer', 'eachPlayer'].includes(st.op) || (st.op === 'chooseCards' && HIDDEN.includes(st.zone)) || (st.op === 'lookAt' && st.cards !== 'all')) || showsAfterACost(e);
+  // Declared (K583): game code that reads a card the seat cannot see is unknown whatever the card is, so worlds may agree.
+  const readsUnseen = (e: Eff): boolean => showsAfterACost(e) || has(e, (st) => (st.op === 'chooseCards' && HIDDEN.includes(st.zone) && has(st.then as Eff, (x) => CODE.includes(x.op))) || (st.op === 'search' && st.filter !== undefined));
+  const WORLDS = [['d1', 'd2'], ['d2', 'd1'], ['d3', 'd4']].flatMap((deck) => [['b1', 'b2', 'b3'], ['b4', 'b5', 'b6']].map((b) => ({ deck, b, g: offerGame(cardPack<G>, { offer: { branches: 100000 }, deck, b }) })));
+  const [base] = WORLDS;
+  if (base === undefined) throw new Error('no world');
+  const truth = (g: typeof base.g, effect: Eff, seed: string): string | undefined => {
+    const top = (st: PackStep): PackStep => (st.op === 'payThen' ? { ...st, then: [{ op: 'custom', name: 'paid' }, ...st.then] } : st);
+    const content = { effect: [{ op: 'custom', name: 'step' } as PackStep, ...effect.flatMap((st, i): PackStep[] => [top(st), { op: 'custom', name: 'step', n: i + 1 }])] };
+    const units = effect.reduce((n, st) => n + (st.op === 'payThen' ? 2 : 1), 0);
     let left = 3000;
     let best = 0;
     const walk = (s: S): boolean => {
       if ((left -= 1) < 0) return false;
-      if (s.result !== null) best = Math.max(best, (s.steps?.done.length ?? 0) + 1);
-      if (s.result !== null) return true;
+      const t = s.steps;
+      if (s.result !== null) {
+        const i = t?.next ?? 0;
+        const now = (effect[i]?.op === 'payThen' ? [i, i + 0.5] : [i]).filter((u) => !(t?.done ?? []).includes(u));
+        best = Math.max(best, (t?.done.length ?? 0) + now.length);
+        return true;
+      }
       const p = s.prompt;
-      if (p === null) return (best = Math.max(best, s.steps?.done.length ?? 0)), true;
+      if (p === null) return (best = Math.max(best, t?.done.length ?? 0)), true;
       const ordered = p.ordered === true || p.kind === 'orderCards' || p.kind === 'orderEffects';
       for (const a of enumerateAnswers({ ...s, prompt: { ...p, ordered } })) if (!walk(applyAction(g.RULES, s, a, content).state)) return false;
       return true;
     };
     try {
-      if (!walk(createGame(g.RULES, { seed: 's' }, {}, content).state)) return undefined;
+      if (!walk(createGame(g.RULES, { seed }, {}, content).state)) return undefined;
     } catch {
       return undefined;
     }
-    return best === effect.length ? 'full' : best > 0 ? 'part' : 'none';
+    return best === units ? 'full' : best > 0 ? 'part' : 'none';
   };
-  it('K597 1,200 random effects: full, part and none match brute force; unknown only where hidden information decides', () => {
-    const seen: Record<string, number> = { full: 0, part: 0, none: 0, unknown: 0, compared: 0 };
-    const { s, content } = g.at();
+  it('K597 1,200 random effects: full, part and none match brute force in every hidden world; unknown only where worlds disagree or a declared case', () => {
+    const seen: Record<string, number> = { full: 0, part: 0, none: 0, unknown: 0, plain: 0, everyWorld: 0, disagree: 0, declared: 0 };
+    const add = (k: string): void => void (seen[k] = (seen[k] ?? 0) + 1);
     for (const seed of [597, 5972]) {
       const eff = gen(seed);
       for (let i = 0; i < 600; i += 1) {
         const e = eff(2);
         if (looksAtASeenCard(e)) continue;
-        const r = g.pack.resolves(s, content, e, A);
-        seen[r.answer] = (seen[r.answer] ?? 0) + 1;
-        if (r.answer === 'unknown') {
-          if (!cannotKnow(e) && !showsAfterACost(e)) throw new Error(`unknown (${String(r.reason)}) with nothing hidden: ${JSON.stringify(e)}`);
+        const rs = WORLDS.map((w) => {
+          const { s, content } = w.g.at();
+          return w.g.pack.resolves(s, content, e, A);
+        });
+        const r = rs[0];
+        if (r === undefined) throw new Error('no answer');
+        add(r.answer);
+        // The answer is the seat's own: the same in every hidden world.
+        if (rs.some((x) => x.answer !== r.answer)) throw new Error(`answers differ between hidden worlds: ${rs.map((y) => y.answer).join()}: ${JSON.stringify(e)}`);
+        if (r.answer === 'full' ? r.skipped.length !== 0 : r.skipped.length === 0) throw new Error(`skipped ${JSON.stringify(r.skipped)} with ${r.answer}`);
+        if (!secret(e)) {
+          if (r.answer === 'unknown') throw new Error(`unknown (${String(r.reason)}) with nothing hidden: ${JSON.stringify(e)}`);
+          const t = truth(base.g, e, 's');
+          if (t !== undefined && t !== r.answer) throw new Error(`resolves ${r.answer}, brute force ${t}: ${JSON.stringify(e)}`);
+          if (t !== undefined) add('plain');
           continue;
         }
-        const t = truth(e);
-        if (t !== undefined) seen.compared = (seen.compared ?? 0) + 1;
-        if (t !== undefined && t !== r.answer) throw new Error(`resolves ${r.answer}, brute force ${t}: ${JSON.stringify(e)}`);
-        if (r.answer === 'full' ? r.skipped.length !== 0 : r.skipped.length === 0) throw new Error(`skipped ${JSON.stringify(r.skipped)} with ${r.answer}`);
+        const ts = WORLDS.flatMap((w) => ['s', 't'].map((sd) => truth(w.g, e, sd)));
+        if (ts.some((t) => t === undefined)) continue;
+        if (r.answer !== 'unknown') {
+          if (ts.some((t) => t !== r.answer)) throw new Error(`resolves ${r.answer}, worlds ${ts.join()}: ${JSON.stringify(e)}`);
+          add('everyWorld');
+        } else if (new Set(ts).size > 1) add('disagree');
+        else if (['otherSeat', 'error', 'nested'].includes(r.reason ?? '') || (r.reason === 'hidden' && readsUnseen(e))) add('declared');
+        else throw new Error(`unknown (${String(r.reason)}) but every world gives ${String(ts[0])}: ${JSON.stringify(e)}`);
       }
     }
-    expect(seen.compared).toBeGreaterThan(500);
-    expect(seen.full).toBeGreaterThan(200);
+    console.log(JSON.stringify(seen));
+    expect(seen.plain).toBeGreaterThan(300);
+    expect(seen.everyWorld).toBeGreaterThan(50);
+    expect(seen.disagree).toBeGreaterThan(20);
     expect(seen.part).toBeGreaterThan(60);
     expect(seen.none).toBeGreaterThan(150);
-    expect(seen.unknown).toBeGreaterThan(200);
     expect(inDryRun()).toBe(false);
   }, 240000);
 });
