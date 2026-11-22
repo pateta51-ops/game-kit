@@ -1,4 +1,4 @@
-import { execFileSync } from 'node:child_process';
+import { execFileSync, spawnSync } from 'node:child_process';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
@@ -113,6 +113,24 @@ describe('K698 finish checks claim lines in the role documents', () => {
     const exec: Exec = (_c, _a, input) => (sent.push(input), { status: 0, output: 'ok' });
     expect(finish(['--repo', main, '--check', 'npm test'], { out: () => {}, err: () => {} }, exec, false)).toBe(0);
     expect(sent.some((s) => s.includes('npm test'))).toBe(true);
+  });
+  it('K698 kit.mjs claims <file>: checks every claim line of one file on disk, outside the globs too; exit 1 on a problem, 0 clean', () => {
+    const main = game({ 'README.md': 'x' });
+    put(main, 'notes/look.md', 'The board.\n' + claim + '\nA kit gap | search: playable highlight; lit card | nearest: glow | why: it cannot follow a dragged card\n');
+    const kit = path.resolve(import.meta.dirname, '..', 'kit.mjs');
+    const r = spawnSync(process.execPath, [kit, 'claims', path.join(main, 'notes/look.md'), '--repo', main], { encoding: 'utf8' });
+    expect(r.status).toBe(1);
+    expect(r.stdout).toContain('notes/look.md:2: ' + claim);
+    expect(r.stdout).toContain('a claim needs search:');
+    expect(r.stdout).not.toContain('notes/look.md:3:');
+    put(main, 'notes/ok.md', 'The board.\nA kit gap | search: playable highlight; lit card | nearest: glow | why: it cannot follow a dragged card\n');
+    const ok = spawnSync(process.execPath, [kit, 'claims', path.join(main, 'notes/ok.md'), '--repo', main], { encoding: 'utf8' });
+    expect(ok.status).toBe(0);
+    expect(ok.stdout).toContain('claims ok: notes/ok.md');
+    put(main, 'notes/glow.md', 'A kit gap | search: playable highlight; lit card\n');
+    const g2 = spawnSync(process.execPath, [kit, 'claims', path.join(main, 'notes/glow.md'), '--repo', main], { encoding: 'utf8' });
+    expect(g2.status).toBe(1);
+    expect(g2.stdout).toContain('check: search finds glow');
   });
   it('K698 claimParts: after a miss line, only guesses sharing a word with the phrasing count', () => {
     expect(claimParts('count: Counts a number up.\nnot in the kit by that name', 'lit card')).toEqual([]);

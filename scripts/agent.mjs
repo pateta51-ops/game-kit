@@ -340,5 +340,18 @@ export function finish(args, io, exec = real, win = process.platform === 'win32'
   return stored(dir, m, io, repo, f)
 }
 
-const cmds = { worktree, finish, teardown }
+// K698: node kit.mjs claims <file> [--repo <game repo>]: the claim rules of finish on every line of one file as it is on disk
+export function claimsCmd(args, io) {
+  const file = args[0], f = file && !file.startsWith('--') ? parse(args.slice(1)) : null
+  if (!f) { io.err('usage: claims <file> [--repo <game repo>]'); return 2 }
+  const repo = path.resolve(f.repo ?? '.')
+  let t
+  try { t = fs.readFileSync(path.resolve(file), 'utf8') } catch { io.err('cannot read ' + file); return 2 }
+  const rel = path.relative(repo, path.resolve(file)).replace(/\\/g, '/')
+  const bad = claims(t.split(/\r?\n/).map((text, i) => ({ file: rel, n: i + 1, text })), kitSearch(repo), planDirs(repo))
+  if (bad.length) { io.out(bad.join('\n') + '\neach claim line carries: search: <words>; <other words> | nearest: <kit part or none> | why: <reason of six words or more>'); return 1 }
+  io.out('claims ok: ' + rel)
+  return 0
+}
+const cmds = { worktree, finish, teardown, claims: claimsCmd }
 if (process.argv[1] && import.meta.url === pathToFileURL(path.resolve(process.argv[1])).href) process.exitCode = cmds[process.argv[2]]?.(process.argv.slice(3), { out: (l) => console.log(l), err: (l) => console.error(l) }) ?? 2
