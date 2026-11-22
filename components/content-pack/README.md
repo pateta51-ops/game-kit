@@ -13,6 +13,7 @@ Card and scenario data as a checked pack: the game names its record kinds, each 
 4. Give `def.verbs` (the game's verb table) so `effects` fields are checked with card-language `validateEffect`; extra checks go in `def.check(kind, record, all)` returning problem strings.
 5. Describe expansions in a `Registry` with `dependsOn`; `tick`/`untick` keep dependencies, and `choiceFromJson` returns null when a saved choice no longer fits the registry.
 6. Use `mergePacks` for base plus expansions: one owner per record id (`E_PACK_CONFLICT` across packs, `E_DUP_ID` in one); replace a record only with `replaces: { kind, id, by }`.
+6b. For dossier card CSVs that share one column schema use `dossierRow({ icons, syntax?, textColumns, columns?, joiner?, notDeck? })`: pass `.kind` as a kind of `loadText`; each row gives `id` (from `component_id`), `deck`, `name`, `type`, `quantity`, `text` (the text columns joined with ` ¶ `), `icons` (parsed by card-parts `parseIconText`, never a second reader), `iconsOnCard`, `artFront`, `artBack`, `extra` (other columns). `checkIconsOnCard: false` switches that count check off (icons printed outside the text columns); a `quantity` that is not a whole number is a problem naming the id. A filled `icons_on_card` that differs from the printed marker count, or an unknown icon, is a problem naming the id. `expand(records)` gives one record per copy (`id#1..N`, `base` = the id), skipping `notDeck` types.
 7. Draw the choice with `ExpansionPicker` (unstyled; the game styles it).
 
 **Common mistakes:**
@@ -29,6 +30,14 @@ Card and scenario data as a checked pack: the game names its record kinds, each 
 - `ui.ts`: `ExpansionPicker({ registry, base, ticked, onChange, words? })`, unstyled: base locked on, one checkbox per product, variant note, unavailable ones disabled with their reason.
 
 ## Use it in 10 lines
+
+```ts
+import { dossierRow, loadText } from '../kit/content-pack/index';
+
+const d = dossierRow({ icons: { gem: { label: 'gem' } }, syntax: { open: '{', close: '}', separator: ':' }, textColumns: ['rules'], notDeck: ['sheet'] });
+const r = loadText({ kinds: { card: d.kind } }, { card: { csv: 'component_id,name,type,quantity,rules\nx,X,unit,2,Gain {gem:1}.' } });
+console.log(r.ok ? d.expand(r.pack.records.card as never[]).map((c) => c.id) : r.problems); // ['x#1', 'x#2']
+```
 
 ```ts
 import { z } from 'zod';
