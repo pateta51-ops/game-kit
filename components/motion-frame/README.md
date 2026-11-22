@@ -16,6 +16,7 @@ Plays motion specs in the director's format (one JSON per beat: `actors`, `steps
 8. Call `putMotionSpeed(speed, name)` at start and when the setting changes (or `bindMotionSpeed`), and import `view-transition.css` when using `withViewTransition`.
 9. Give swapped board elements unique `data-motion-key` values.
 10. Give `mountMotionLab` a player of its own: on the game's player a press would end the game's beats.
+11. With motion-frame present, sound cues play only from `onCue` / `onDroppedCue`, never from a timer or from a sum of `maxMs`; beat order comes only from the player's queue plus `parallel: true` / `holdUntil`, never from sorting or splicing the list of beats or steps the game passes (sorting one beat's cue rows by time is fine). `node kit/kit.mjs check` fails `src/` on these (`bypass` in `component.json`: `cue-time-from-maxms`, `beats-reordered`); a line that must do it carries `// kit-allow <id>: <reason>` (no reason fails).
 
 **Common mistakes:**
 - A `holdUntil` beat holds the queue until `release()`, `skipAll()` or `autoContinueMs`: wire a release or the board freezes.

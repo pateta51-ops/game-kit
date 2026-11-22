@@ -360,6 +360,9 @@ The blind matching test's result was not recorded: the PR, its comments and docs
 | K668 | card-harness: prompt rules in the screen scan (whole printed clause, who pays, no rule id, handler sentence equals clause, credited by record path, per option, empty log fails) and a prompt recorder for card tests. | M |  | done |
 | K669 | card-harness: `describeCheck` reports raw keys, empty brackets and stand-in numbers in a reading, keeps an accepted list with stale failure and a tokens-only mode; `parseReadings` applies readings in recorded order. | S |  | done |
 | K670 | layout-editor: optional per-zone `card: [w, h]` overriding the screen card size in drawing, cardFit and layoutWarnings; editable in the Zone panel. For screens that mix portrait, landscape and large cards. | S |  | done |
+| K675 | kit check: components declare bypass patterns; `kit.mjs check` fails a game that goes around a kit part, naming the hook to use; first patterns for motion-frame and sound-player. | M |  | done |
+| K679 | art-pipeline: minimum JPEG quality for re-encoded faces within the size cap; art check fails an enlarged face. | S |  | done |
+| K684 | finish: every new src file is listed under 'Built new' with two kit searches, the nearest part and why it did not fit. | M |  | done |
 
 ## Asked for by the owner
 
@@ -368,6 +371,8 @@ The blind matching test's result was not recorded: the PR, its comments and docs
 | K410 | A new tuner page `tuners/energy.html` for effect-library's energy and transfer effects that no tuner shows: column, curved and rotating beams, warp and spiral transfers, projectile, shield bubble, plasma orb, reticle and drift cloud. Each gets a stage with a Play button, a "Kit default" preset read from the component's constants, sliders for its tunable values with unit and one-line help, and the "These settings in code" block with Copy, per tuners/README.md. Listed in the README's table. | M | owner (18 Nov 2026): tuners missing for many kit effects | done |
 | K411 | A new tuner page `tuners/screen.html` for screen and camera motion that no tuner shows: effect-library camera pull and push, scroll pan, letterbox banner, typewriter, pile lift; board-viewport zoom and pan; modal-dialog open and close; phone-mode sheet motion; card-zoom; achievements pop-up; card-attachments. Each gets a stage with a Play button, a "Kit default" preset read from the component's constants, sliders for its tunable values (unit, one-line help) and the "These settings in code" block with Copy, per tuners/README.md. Listed in the README's table. | M | owner (18 Nov 2026): tuners missing for many kit parts | done |
 | K673 | kit tooling: search cases run as a check, ranking that ignores a single common word on candidates, and every row file carries a state line. | M | owner (22 Nov 2026): search and status kept right every time the kit changes | done |
+| K676 | search: answer the planners' unanswered searches of 22 Nov with tags and cases. | M | owner (22 Nov 2026): every planner search that found nothing is answered before a tag | done |
+| K687 | search: answer 12 more planner searches of 22 Nov. | S | owner (22 Nov 2026): every planner search that found nothing is answered before a tag | done |
 
 ## Candidates
 
@@ -465,6 +470,8 @@ A candidate is a part some game wants and nobody builds yet. A second game that 
 | K639 | `clock`: the value at a space other than the marker's, and a step amount that is not whole refused instead of rounded up; a game passes the space. | S |  | candidate |
 | K646 | window prompt: at a timing window, one prompt that offers every response legal at that moment (from hand, in play, by seat) and a pass, built on engine-core windows; a game passes what counts as a response and who may answer. | M | Radiance, Hunted North Pole | candidate |
 | K656 | `pieces-3d` dice: d4, d8, d12 and d20 beside d6 and d10 (today `diceGl` draws only d6 and d10). | S | Hunted North Pole | candidate |
+| K674 | card-zones capacity: an `onLeave` hook called after the excess cards move, for the game's own events and effect ends | S | Dice Commandos | done |
+| K677 | card-harness restrictions check: case-sensitive and start-anchored phrases, and per-key notPhrases | S | Dice Commandos | done |
 
 ## Harvest from the existing games (owner, 15 Nov 2026)
 
@@ -514,6 +521,7 @@ What a game's own tool did that the kit's does not; each kept that game on its o
 | K67 | `traceability` options: `describe` titles count; a test title alone is enough (no code-comment rule); scenario check off or 2-digit ids; ids-per-title cap; id shapes with word suffixes, one digit or a sub-letter; phase and pending modes | Jarl, Rome, EBR, Imperium, STCC, Unstoppable | M | done (left: a text scan, not a TypeScript parse as in EBR) |
 | K68 | `plan-checker`: session-plan heading optional; every rule id covered by a scenario; scenario catalogue read in full; skip with a notice when Python is missing | Unstoppable, EBR | S | done (left: `--tsc` over several sections, as in Unstoppable) |
 | K69 | `bundle-size`: base path in addresses; follow static imports and stylesheet `url(...)`; an exported budget a test can import; limits that can be left out | STCC, Unstoppable | S | done (left: Unstoppable flag names) |
+| K681 | card-zones: shuffleZone passes an rng name (named override) like ctx.rng.shuffle. |  | S | done |
 | K70 | `ci-templates` and `repo-gate`: workflow templates filled from a config, not placeholders; `full-gate.mjs`, `local-ci.sh`, `watch-run.sh` usable as pulled; skip reporter on vitest 2; runners file exempt from its own rule; no blob fetch in a partial clone; install command in READMEs with `RUNNER_REPO` and `RUNNER_LABEL` | Jarl, Rome, EBR, Imperium, STCC, Unstoppable | M | done |
 | K71 | `check-runner`: environment per lane; a phase after the lanes; pull-request mode holding a game's own scripts; gate-all error-code column; timeout and tree kill in `gate()`; `replay-cli` checkpoint goldens | EBR, STCC | M | done |
 | K72 | `tooling-scripts`, the rest of K64: picture re-encoder, font fetch and WOFF packer, mock capture, owner PC setup, dossier sync, simulation bundler | Jarl, Rome, Warp's, Imperium | M | done (`mock-capture` without the phone callout boards; `setup.ps1` never executed in CI) |

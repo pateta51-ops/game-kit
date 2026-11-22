@@ -5,9 +5,9 @@
 //   node kit.mjs state                                                                  (game-kit checkout) prints what is open (PLAN rows not done, waiting, watch)
 //   node kit.mjs next-id [n] [--from <docs/plan dir or file>...]                                (game-kit checkout) the next free K number(s): origin/main and every open PR's docs/plan/ file names
 //   node kit.mjs next-id [n] --reserve                                                 also reserves the ids on origin (refs/kit-reserved/K<n>) so no other session gets them
-//   node kit.mjs worktree --branch <b> | worktree --here | finish [--comment] | teardown --worktree <dir>   worker commands, plain node (scripts/agent.mjs, pulled as kit/agent.mjs); finish prints PASS|FAIL <sha> (with --check: check passed|failed <sha> (check: <command>), never PASS)
+//   node kit.mjs worktree --branch <b> | worktree --here | finish [--comment] [--body <PR body file>] | teardown --worktree <dir>   worker commands, plain node (scripts/agent.mjs, pulled as kit/agent.mjs); finish prints PASS|FAIL <sha> (with --check: check passed|failed <sha> (check: <command>), never PASS); without --check it first fails unless each file added under src/ is a line of the PR body's "Built new" section: - <file or folder> | search: <words>; <other words> | nearest: <kit part or none> | why: <reason> (K684; ignore globs: package.json kit.builtNew.ignore; renames are not new; a folder covers files only two levels below src/, e.g. src/ui/motion/)
 //   node kit/kit.mjs outdated [<game-kit checkout>]                                    the game's tag vs the latest, the PLAN rows and breaking notes between them
-//   node kit/kit.mjs check [--source <game-kit checkout>]                               fails if ./kit differs from kit/kit.lock.json; --source also fails if the tag moved off the locked commit or that commit holds other content
+//   node kit/kit.mjs check [--source <game-kit checkout>]                               fails if ./kit differs from kit/kit.lock.json; --source also fails if the tag moved off the locked commit or that commit holds other content; also fails src/ (tests excluded) on the `bypass` patterns of the pulled components' component.json (K675)
 import { execFileSync as x, spawnSync } from 'node:child_process'
 import { createHash } from 'node:crypto'
 import fs from 'node:fs'
@@ -180,6 +180,25 @@ if (cmd === 'pull') {
       const miss = fs.existsSync(cj) ? (JSON.parse(fs.readFileSync(cj, 'utf8')).packages ?? []).filter((m) => !(m in have)) : []
       if (miss.length) console.warn('warning: ' + n + ' needs package(s) this game lacks: ' + miss.join(', '))
     }
+  }
+  // K675: each pulled component's component.json `bypass` patterns, run over the game's src/ (not kit/, not tests)
+  const pats = Object.keys(lock.components).flatMap((n) => { const cj = 'kit/' + n + '/component.json'; return fs.existsSync(cj) ? (JSON.parse(fs.readFileSync(cj, 'utf8')).bypass ?? []).map((p) => ({ ...p, from: n })) : [] })
+  if (pats.length && fs.existsSync('src')) {
+    const hits = []
+    const files = walk('src').filter((f) => /\.(m?[jt]sx?|cjs|vue|svelte)$/.test(f) && !/(^|\/)(node_modules|kit|tests?|__tests__)\//.test(f.slice(4)) && !/\.(test|spec)\.[^/]+$/.test(f))
+    for (const f of files) {
+      const t = fs.readFileSync(f, 'utf8'), lines = t.split(/\r?\n/)
+      for (const p of pats) {
+        if (!(p.imports ?? [p.from]).some((m) => new RegExp('(from|import|require)\\s*\\(?\\s*[\'"]([^\'"\\n]*/)?' + m + '(/[^\'"\\n]*)?[\'"]').test(t))) continue
+        for (const m of t.matchAll(new RegExp(p.match, 'g' + (p.flags ?? '')))) {
+          const ln = t.slice(0, m.index).split('\n').length
+          const al = [lines[ln - 1], lines[ln - 2] ?? ''].map((l) => l.match(new RegExp('kit-allow\\s+' + p.id + '(?![\\w-])(:\\s*(\\S.*))?'))).find(Boolean)
+          if (al && al[2]) continue
+          hits.push(f + ':' + ln + ' ' + p.id + ' (' + p.from + '): ' + (al ? 'kit-allow ' + p.id + ' needs a reason (// kit-allow ' + p.id + ': <reason>); ' : '') + p.hook)
+        }
+      }
+    }
+    if (hits.length) { console.error('src/ goes around a kit part. Use the hook named, or put // kit-allow <id>: <reason> on the line.\n' + hits.join('\n')); process.exit(1) }
   }
   const names = Object.keys(lock.components).join(', ') || 'no components'
   console.log(lock.ref ? 'kit ok at ' + lock.ref + ': ' + names : 'kit ok: ' + (Object.entries(lock.components).map(([n, c]) => n + '@' + c.ref).join(', ') || names) + (Object.keys(lock.components).length ? ' (per-component locks: the next pull converts them to one tag)' : ''))
@@ -358,6 +377,6 @@ if (cmd === 'pull') {
   const { newGame } = await import(pathToFileURL(d + '/components/scaffold/newgame.js').href)
   try { newGame({ dir, id, name, kit: d, ...flags, remote: flags.remote !== false }) } catch (e) { console.error(e.message); process.exit(1) }
 } else {
-  console.error('usage: kit.mjs pull <game-kit checkout> <ref> [component...] | kit.mjs check | kit.mjs outdated [game-kit checkout] | kit.mjs next-id [n] [--reserve] | kit.mjs state | kit.mjs worktree|finish|teardown | kit.mjs list | kit.mjs search <word> | kit.mjs effects [word] | kit.mjs new <dir> <id> "<Name>"')
+  console.error('usage: kit.mjs pull <game-kit checkout> <ref> [component...] | kit.mjs check | kit.mjs outdated [game-kit checkout] | kit.mjs next-id [n] [--reserve] | kit.mjs state | kit.mjs worktree|finish [--body <PR body file>]|teardown | kit.mjs list | kit.mjs search <word> | kit.mjs effects [word] | kit.mjs new <dir> <id> "<Name>"')
   process.exit(2)
 }

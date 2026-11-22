@@ -883,7 +883,9 @@
    "exhaust",
    "turn sideways",
    "used",
-   "rotate"
+   "rotate",
+   "ready exhausted cards",
+   "round start"
   ],
   "group": "move-and-fly",
   "ends": "changed",
