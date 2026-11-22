@@ -844,7 +844,11 @@
       "reduction",
       "breakdown",
       "floor",
-      "minimum"
+      "minimum",
+      "until end of combat",
+      "duration named end point",
+      "lasts until event",
+      "named end point"
     ],
     "visible": false,
     "release": 1,
@@ -2083,7 +2087,7 @@
       "continuous",
       "modifier"
     ],
-    "use": "An effect stays for a while and changes numbers or rules until a boundary ends it (`addEffect`, `boundary`, `effectsOf`, `sumEffects`).",
+    "use": "An effect stays for a while and changes numbers or rules until a boundary or a named event the game fires ends it (`addEffect`, `boundary`, `eventOver`, `waitingOn`, `effectsOf`, `sumEffects`).",
     "guide": "timing.md"
   },
   "engine-core/layers": {
