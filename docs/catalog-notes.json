@@ -1143,7 +1143,11 @@
       "reuse map",
       "game sheet check",
       "mechanics map",
-      "closed candidate"
+      "closed candidate",
+      "plan check in ci",
+      "locked copy",
+      "pull rows",
+      "reuse map check"
     ],
     "visible": false,
     "release": 1,
