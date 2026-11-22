@@ -258,6 +258,13 @@
         "paths": [
           "ebr src/engine/phases/lasting.ts (K541: design only; lasting effects ended by a named expiry)"
         ]
+      },
+      {
+        "game": "warps",
+        "commit": "6790200",
+        "paths": [
+          "src/engine/combat/stun.ts (K542: a stun recorded per target, read when an action asks)"
+        ]
       }
     ]
   },

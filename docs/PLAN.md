@@ -363,8 +363,9 @@ The blind matching test's result was not recorded: the PR, its comments and docs
 | K675 | kit check: components declare bypass patterns; `kit.mjs check` fails a game that goes around a kit part, naming the hook to use; first patterns for motion-frame and sound-player. | M |  | done |
 | K679 | art-pipeline: minimum JPEG quality for re-encoded faces within the size cap; art check fails an enlarged face. | S |  | done |
 | K684 | finish: every new src file is listed under 'Built new' with two kit searches, the nearest part and why it did not fit. | M |  | done |
-| K685 | search names the hook a game calls; hook lists per component; kit-internal searches are not logged as misses. | M |  | done |
+| K688 | Built new check: re-run each line's searches, ignore entries need a reason, new exports in old files need a line | M |  | done |
 | K689 | bypass patterns: game-side holds and timers, and input wrappers around skipAll/hurry | S |  | done |
+| K690 | plancheck: build-own rows for screen, motion and sound code are accepted and required | S |  | done |
 
 ## Asked for by the owner
 
@@ -400,7 +401,7 @@ A candidate is a part some game wants and nobody builds yet. A second game that 
 | K538 | card-language: when a host leaves play its attachments leave with it, each to the zone the game names; a game passes the destination per attachment kind. | S | Radiance, STCC, Imperium, Earthborne Rangers | candidate |
 | K539 | card-language: a face-down view of a card for a seat that may not see it, with the owner and revealing rules; a game passes who may look. | S | Radiance | candidate |
 | K541 | engine-core: a lasting effect whose end point is a named event the game defines, instead of the nine fixed duration kinds; a game passes the event name and when it fires. | M | Radiance, STCC, Earthborne Rangers, Warp's Edge, Dice Commandos | done |
-| K542 | a status: a named lasting effect shown as a token on a card or unit, with a verb to give, remove and test it; a game passes the names, tokens and end rules. | M | survey, Warp's Edge | candidate |
+| K542 | a status: a named lasting effect shown as a token on a card or unit, with a verb to give, remove and test it; a game passes the names, tokens and end rules. | M | survey, Warp's Edge, Dice Commandos | done |
 | K543 | dice placed on slots: slots with a rule on which die value fits, and a table from die value to the yield the slot gives; a game passes the slots, the rules and the table. | M | Dieson Crusoe | candidate |
 | K544 | layered cell grid: cells that hold a stack of layers, with placement over lower layers, what shows on top and what is covered; a game passes the layer rules and the shapes. | M | Crystallo, Dicemancy | candidate |
 | K546 | objectives with progress: a goal with a count or steps, its progress, when it is done or failed, and objectives per scenario; a game passes the goals and what moves them. | M | Dice Commandos, Paranormal, survey, STCC, Earthborne Rangers, Warp's Edge, Dieson Crusoe | candidate |

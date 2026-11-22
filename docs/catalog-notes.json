@@ -1036,7 +1036,13 @@
       "additive",
       "random override",
       "override rolls",
-      "modifier per count"
+      "modifier per count",
+      "status",
+      "condition",
+      "stunned",
+      "status token",
+      "give a status",
+      "wound"
     ],
     "visible": false,
     "release": 1,
