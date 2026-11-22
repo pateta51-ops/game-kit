@@ -9,7 +9,7 @@ const esc = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 const rules = [
   ['personal email', /[a-z0-9._%+-]+@(gmail|googlemail|hotmail|outlook|live|yahoo|icloud|me|proton|protonmail)\.[a-z.]+/gi, (m) => m.toLowerCase() !== 'betasteward@gmail.com'],
   ['Windows user folder', /\b[A-Za-z]:?[\\/]+Users[\\/]+([A-Za-z0-9._-]+)/g, (m, u) => !['me', 'user', 'name', 'runneradmin', 'public', 'default'].includes(u.toLowerCase())],
-  ['local drive path', /\b[A-Za-z]:[\\/]+projects[\\/]+([^\\/\s`'")<>,;]*)/g, (m, d) => !['game-kit', 'demo', 'x', ''].includes(d)],
+  ['local drive path', /(?:\b[A-Za-z]:|\/mnt\/[a-z])[\\/]+projects[\\/]+([^\\/\s`'")<>,;]*)/gi, (m, d) => !['game-kit', 'demo', 'x', ''].includes(d.toLowerCase())],
   ['WSL home', /\/home\/([a-z0-9_-]+)\//g, (m, u) => !['me', 'user', 'runner', 'node'].includes(u)],
   ['tailnet host', /\b[a-z0-9-]+\.tail[0-9a-f]{4,}\.ts\.net\b|\btail[0-9a-f]{6}\b/gi, () => true],
   ['claude.ai link', /claude\.ai\/(artifact|code\/artifact|code\/session|chat)\/[A-Za-z0-9_-]{12,}/g, () => true],
