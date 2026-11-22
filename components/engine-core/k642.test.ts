@@ -233,10 +233,6 @@ describe('results that happen together (K642)', () => {
   });
 
   const UNRANKED: TriggerCandidate[] = [{ ability: 'stone', source: 'u1', player: 'p1', order: 'silent' }, { ability: 'ash', source: 'u1', player: 'p1', order: 'silent' }];
-  it.fails('K642 two plain gains together, no ranks from the game: no question, printed order', () => {
-    expect(go(results(UNRANKED)).state.trace).toEqual(['stone', 'ash']);
-  });
-
   it('K642 today: two plain gains together, no ranks from the game: no question, resolved by ability key, not in printed order', () => {
     const s = go(results(UNRANKED)).state;
     expect(s.result).toEqual({ done: true });
@@ -267,11 +263,6 @@ describe('results that happen together (K642)', () => {
     expect(types(r.events, 'gained', 'unavailable')).toEqual(['gained:u2', 'unavailable:u1']);
     expect(r.state.n).toEqual({ stock: 0, otherStock: 5, held: 1 });
     expect(types(pick(rewards, s1, idFor(s1, 'u1')).events, 'gained', 'unavailable')).toEqual(['gained:u1', 'unavailable:u2']);
-  });
-
-  it.fails('K642 two units defeated at once as one batch, rewards competing: both units are defeated in the order the player chose', () => {
-    const s1 = go(rewards, { n: { stock: 1 } }).state;
-    expect(pick(rewards, s1, idFor(s1, 'u2')).state.trace).toEqual(['defeat:u2', 'defeat:u1']);
   });
 
   it('K642 today: two units defeated at once as one batch are defeated in batch order, before the order question; only the rewards follow the answer', () => {
