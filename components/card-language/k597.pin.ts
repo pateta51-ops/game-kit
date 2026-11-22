@@ -16,7 +16,7 @@ export const pinned = (): { hash: string; count: number } => {
         const e = eff(2);
         try {
           const r = g.pack.judge(s, content, e, A);
-          out.push(`${g.pack.wouldChange(s, content, e, A)} ${r.answer} ${String(r.reason)} ${r.error === undefined ? '' : String(r.error)}`);
+          out.push(`${g.pack.wouldChange(s, content, e, A)} ${r.answer} ${String(r.reason)} ${r.error === undefined ? '' : (r.error as Error).toString()}`);
         } catch (x) {
           out.push(`throws ${String(x)}`);
         }

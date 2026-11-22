@@ -99,6 +99,17 @@ export type OfferReason = 'error' | 'hidden' | 'otherSeat' | 'random' | 'budget'
 /** K583: the check's answer with its reason (`pack.judge`). */
 export interface OfferCheck {
   readonly answer: Offered;
+  readonly reason?: OfferReason | SkipReason;
+  readonly error?: unknown;
+}
+/** K605: why a step changed nothing: a false condition, a cost that cannot be paid, no card it may take, an empty zone, or none of these. */
+export type SkipReason = 'condition' | 'cannotPay' | 'noTarget' | 'emptyZone' | 'noChange';
+/** K597: how much of an effect would resolve: every top-level step on some line of play (`full`), some step but never all (`part`), none (`none`), or `unknown`. */
+export type Resolved = 'full' | 'part' | 'none' | 'unknown';
+/** K597: `pack.resolves`'s answer; `skipped`: the steps the best line does not resolve, each with its reason (`error` holds what a handler threw). */
+export interface ResolveCheck {
+  readonly answer: Resolved;
+  readonly skipped: readonly { readonly step: number; readonly reason: SkipReason | OfferReason; readonly error?: unknown }[];
   readonly reason?: OfferReason;
   readonly error?: unknown;
 }
@@ -123,6 +134,8 @@ export interface OfferPolicy<S = unknown> {
   readonly tasks?: number;
   /** What counts as the game for the check (default: the state without the kernel's and the pack's bookkeeping). */
   readonly view?: (s: S) => unknown;
+  /** K605: the game decides the check's answer: gets the check (a `no` with its reason) and returns the answer used by `judge`, `wouldChange` and the policy. */
+  readonly decide?: (s: S, steps: readonly (PackStep | Step)[], env: PackEnv, check: OfferCheck) => OfferCheck;
 }
 export interface PackConfig<G extends GameTypes, E extends PackEnv = PackEnv> {
   /** Default zones per verb (names; `hand` means `hand:<seat>` when that zone exists). */
@@ -158,6 +171,7 @@ export interface PackConfig<G extends GameTypes, E extends PackEnv = PackEnv> {
 }
 
 const FIXED = 'card-language:due-read';
+const STEP = 'card-language:step';
 const SAME_ENV: readonly string[] = ['seq', 'may', 'if', 'chooseOption', 'choosePayment', 'orderEffects', 'repeat', 'payThen'];
 class Stop extends Error {
   readonly reason: OfferReason;
@@ -236,7 +250,7 @@ export function runLater<G extends GameTypes>(ctx: Ctx<G>, at: string): void {
 }
 
 /** The pack: `verbs` (spread into the game's table), `happen` (call it first in timing's `cfg.happen`; true when the occurrence was a pack move). */
-export function cardPack<G extends GameTypes, E extends PackEnv = PackEnv>(cfg: PackConfig<G, E> = {}): { verbs: VerbTable<G, PackStep, E>; happen: (ctx: Ctx<G>, occ: Occurrence) => boolean; wouldChange: (s: G['state'], content: G['content'], steps: readonly (PackStep | Step)[], env: E) => Offered; judge: (s: G['state'], content: G['content'], steps: readonly (PackStep | Step)[], env: E) => OfferCheck; costed: <T extends readonly (PackStep | Step)[]>(s: G['state'], steps: T, env: E) => T } {
+export function cardPack<G extends GameTypes, E extends PackEnv = PackEnv>(cfg: PackConfig<G, E> = {}): { verbs: VerbTable<G, PackStep, E>; happen: (ctx: Ctx<G>, occ: Occurrence) => boolean; wouldChange: (s: G['state'], content: G['content'], steps: readonly (PackStep | Step)[], env: E) => Offered; judge: (s: G['state'], content: G['content'], steps: readonly (PackStep | Step)[], env: E, opts?: { readonly why?: boolean }) => OfferCheck; resolves: (s: G['state'], content: G['content'], steps: readonly (PackStep | Step)[], env: E) => ResolveCheck; costed: <T extends readonly (PackStep | Step)[]>(s: G['state'], steps: T, env: E) => T } {
   const P: OfferPolicy<G['state']> = cfg.offer ?? {};
   const checks = (P.noChange ?? 'ask') !== 'ask' || (P.deadChoice ?? 'today') !== 'today';
   if (checks && !cfg.handlers) throw new EngineBugError('card-language pack: offer.noChange and offer.deadChoice need cfg.handlers (() => RULES.handlers)');
@@ -358,7 +372,11 @@ export function cardPack<G extends GameTypes, E extends PackEnv = PackEnv>(cfg: 
   const view = (s: unknown): string => canonicalJson(P.view ? P.view(unmarked(s) as G['state']) : Object.fromEntries(Object.entries(unmarked(s) as object).filter(([k]) => !VIEW_SKIP.includes(k))));
   // K583, paid = effect: the branch the check is running. `base` is the game it compares with (moved past each cost paid); `cost` counts the costs being paid, while nothing is compared.
   // `sees`: the cards the judged seat saw when the outermost cost began; `hidden`: a cost has since shown it a card, so no game code runs any more (the answer must not tell the card).
-  let J: { base: string; cost: number; sees: readonly string[] | null; hidden: boolean } = { base: '', cost: 0, sees: null, hidden: false };
+  // K597, resolves: `done` the top-level steps this line resolved, `next` the step running, `mark` the view when it began, `whys` each step's reason read when it began.
+  type Line = { base: string; cost: number; sees: readonly string[] | null; hidden: boolean; done: readonly number[]; next: number; mark: string; whys: Readonly<Record<number, SkipReason | OfferReason>> };
+  let J: Line = { base: '', cost: 0, sees: null, hidden: false, done: [], next: 0, mark: '', whys: {} };
+  // K597: set while `resolves` runs the search: each line runs to its end, and `line` gets it (true: a line resolved every step, stop).
+  let R: { readonly line: (j: Line, reason?: OfferReason, error?: unknown) => boolean } | null = null;
   const seenBy = (s: PackState, seat: string): string[] => Object.values(s.zones).flatMap((zn) => zn.cards).filter((c) => canSee(s, seat, c));
   // K583: in the check, has a cost shown the judged seat a card since it began? Noted the moment it is shown (read before each task and each game hook).
   const hid = (s: PackState): boolean => {
@@ -376,16 +394,92 @@ export function cardPack<G extends GameTypes, E extends PackEnv = PackEnv>(cfg: 
   };
   const REASONS: readonly OfferReason[] = ['error', 'hidden', 'otherSeat', 'random', 'budget', 'nested'];
   // K529: would these steps change the game? They run on a copy with the game's handlers; every prompt forks one run per answer tried.
-  const judge = (state: G['state'], content: G['content'], steps: Eff, env: E): OfferCheck => {
+  const check = (state: G['state'], content: G['content'], steps: Eff, env: E, r: typeof R = null): OfferCheck => {
     const whys = new Set<OfferReason>();
     let error: unknown;
     const note = (r: OfferReason): 'unknown' => {
       whys.add(r);
       return 'unknown';
     };
-    const answer = judged(state, content, steps, env, note, (e) => void (error ??= e));
+    const was = R;
+    R = r;
+    let answer: Offered;
+    try {
+      answer = judged(state, content, steps, env, note, (e) => void (error ??= e));
+    } finally {
+      R = was;
+    }
     const reason = REASONS.find((r) => whys.has(r));
     return answer !== 'unknown' || reason === undefined ? { answer } : { answer, reason, ...(reason === 'error' ? { error } : {}) };
+  };
+  // K605: a `no` with its reason (`why`), read on the state as it is, as the check's seat; the game's `decide` gets that answer.
+  const judge = (state: G['state'], content: G['content'], steps: Eff, env: E, opts?: { readonly why?: boolean }): OfferCheck => {
+    const c = check(state, content, steps, env);
+    const w = c.answer === 'no' && dry === null && (opts?.why === true || P.decide) ? { answer: c.answer, reason: aside(env, () => first(state as unknown as PackState, steps, env)) } : c;
+    return P.decide ? P.decide(state, steps, env, w) : opts?.why === true ? w : c;
+  };
+  // K597: how much of the effect would resolve, on the same search: each line of play runs to its end, step by step.
+  const resolves = (state: G['state'], content: G['content'], steps: Eff, env: E): ResolveCheck => {
+    type L = { done: readonly number[]; next: number; whys: Line['whys']; reason?: OfferReason; error?: unknown };
+    const lines: L[] = [];
+    const c = check(state, content, steps, env, { line: (j, reason, error) => (lines.push({ done: j.done, next: j.next, whys: j.whys, ...(reason === undefined ? {} : { reason, error }) }), reason === undefined && j.done.length === steps.length) });
+    const best = lines.reduce<L | undefined>((b, l) => (b === undefined || l.done.length > b.done.length || (l.done.length === b.done.length && b.reason !== undefined && l.reason === undefined) ? l : b), undefined);
+    const answer: Resolved = c.answer === 'yes' ? 'full' : c.answer === 'unknown' ? 'unknown' : (best?.done.length ?? 0) > 0 ? 'part' : 'none';
+    const skipped = answer === 'full' ? [] : steps.map((_, i) => i).filter((i) => !(best?.done ?? []).includes(i)).map((i) => (best?.reason !== undefined && i >= best.next ? { step: i, reason: best.reason, ...(best.reason === 'error' ? { error: best.error } : {}) } : { step: i, reason: best?.whys[i] ?? 'noChange' }));
+    return { answer, skipped, ...(c.answer === 'unknown' && c.reason !== undefined ? { reason: c.reason as OfferReason, ...(c.reason === 'error' ? { error: c.error } : {}) } : {}) };
+  };
+  // K605: why a step changes nothing, read when it begins (the first reason of a list of steps, else noChange).
+  const first = (s: PackState, xs: Eff, env: E): SkipReason | OfferReason => {
+    for (const x of xs) {
+      const r = whyNot(s, x, env);
+      if (r !== 'noChange') return r;
+    }
+    return 'noChange';
+  };
+  const whyNot = (s: PackState, x: Step, env: E): SkipReason | OfferReason => {
+    try {
+      const p = x as PackStep;
+      if (p.op === 'if') {
+        const t = cfg.tests?.[p.test];
+        if (!t) return 'error';
+        blind(s, env);
+        const b = t(s as unknown as G['state'], env) ? p.then : p.else;
+        return b === undefined ? 'condition' : first(s, b, env);
+      }
+      if (p.op === 'payThen') return canPay(s, p.cost, env) ? first(s, p.then, env) : 'cannotPay';
+      if (p.op === 'choosePayment') return p.ways.some((w) => canPay(s, w, env)) ? first(s, p.then, env) : 'cannotPay';
+      if (p.op === 'pay' || p.op === 'convert') return payable(s, p, env) ? 'noChange' : 'cannotPay';
+      if (p.op === 'seq') return first(s, p.steps, env);
+      if (p.op === 'may') return first(s, p.then, env);
+      if (p.op === 'chooseCards' || p.op === 'search') {
+        const z = zone(s, p.zone, env.seat);
+        if (cardsIn(s, z).length === 0) return 'emptyZone';
+        if (eligible(s, p, env, z, p.op === 'search').length === 0) return 'noTarget';
+        return p.op === 'chooseCards' ? first(s, p.then, env) : 'noChange';
+      }
+      if (!('cards' in fieldsOf(p.op))) return 'noChange';
+      const c = p as Cards & { op: string };
+      const d = def(c.op);
+      const sel = c.cards ?? d.sel ?? 'chosen';
+      if (sel === 'source') return env.source === undefined || locate(s, env.source) === undefined ? 'noTarget' : 'noChange';
+      if (sel === 'chosen') return (env.cards ?? []).length === 0 ? 'noTarget' : 'noChange';
+      const from = zone(s, c.from ?? d.from ?? 'hand', env.seat);
+      if (cardsIn(s, from).length === 0) return 'emptyZone';
+      return sel === 'pick' && eligible(s, c, env, from, false).length === 0 ? 'noTarget' : 'noChange';
+    } catch (e) {
+      return e instanceof Stop ? e.reason : 'error';
+    }
+  };
+  // Runs `f` as the check of `env.seat` (hidden cards stay hidden), outside a check.
+  const aside = <T>(env: E, f: () => T): T => {
+    const was = [dry, J] as const;
+    dry = env.seat;
+    J = { base: '', cost: 0, sees: null, hidden: false, done: [], next: 0, mark: '', whys: {} };
+    try {
+      return f();
+    } finally {
+      [dry, J] = was;
+    }
   };
   const wouldChange = (state: G['state'], content: G['content'], steps: Eff, env: E): Offered => judge(state, content, steps, env).answer;
   const judged = (state: G['state'], content: G['content'], steps: Eff, env: E, note: (r: OfferReason) => 'unknown', threw: (e: unknown) => void): Offered => {
@@ -395,12 +489,22 @@ export function cardPack<G extends GameTypes, E extends PackEnv = PackEnv>(cfg: 
     let left = 0;
     const table = Object.fromEntries(Object.entries(cfg.handlers()).map(([k, h]) => [k, (c: Ctx<G>, t: G['task']) => ((left -= 1) < 0 ? stop('budget') : hid(c.s as unknown as PackState) && gameTask(t) ? stop() : h(c, t))])) as HandlerTable<G>;
     const before = view(state);
+    const F = R;
+    // K597: a marker after each top-level step (and one before the first): the step resolved when the view changed while it ran.
+    if (F) (table as Record<string, unknown>)[STEP] = (c: Ctx<G>, t: { i: number }): void => {
+      const v = view(c.s);
+      if (t.i >= 0 && v !== J.mark) J.done = [...J.done, t.i];
+      J.mark = v;
+      J.next = t.i + 1;
+      const st = steps[t.i + 1];
+      if (st !== undefined) J.whys = { ...J.whys, [t.i + 1]: whyNot(c.s as unknown as PackState, st, env) };
+    };
     const at = new WeakMap<object, typeof J>();
     const random = (): never => stop('random');
     // One run to the next prompt: yes, no, unknown, or the copy with its prompt open.
     const seg = (s: Draft<KernelState>, first?: readonly G['task'][]): Offered | Draft<KernelState> => {
       left = P.tasks ?? 2000;
-      J = { ...(at.get(s) ?? { base: before, cost: 0, sees: null, hidden: false }) };
+      J = { ...(at.get(s) ?? { base: before, cost: 0, sees: null, hidden: false, done: [], next: 0, mark: before, whys: {} }) };
       const ctx = makeCtx<G>({}, s as Draft<G['state']>, content, []);
       (ctx as { rng: unknown }).rng = { nextUint32: random, int: random, shuffle: random };
       const moved = (): boolean => s.result !== null || (J.cost === 0 && view(s) !== J.base);
@@ -412,10 +516,19 @@ export function cardPack<G extends GameTypes, E extends PackEnv = PackEnv>(cfg: 
         if (!(e instanceof GameOver)) {
           // K583: any throw of a handler in a branch nobody chose is unknown (the error kept), never a crash of the real action; `strict` throws it.
           if (P.strict === true && !(e instanceof Stop)) throw e;
-          if (moved()) return 'yes';
+          if (!F && moved()) return 'yes';
           if (!(e instanceof Stop)) threw(e);
+          F?.line(J, e instanceof Stop ? e.reason : 'error', e instanceof Stop ? undefined : e);
           return note(e instanceof Stop ? e.reason : 'error');
         }
+      }
+      if (F) {
+        if (s.result !== null && J.next < steps.length && !J.done.includes(J.next)) J.done = [...J.done, J.next];
+        if (s.result !== null || s.prompt === null) return F.line(J) ? 'yes' : 'no';
+        at.set(s, J);
+        if (s.prompt.seat === undefined || String(s.prompt.seat) === env.seat) return s;
+        F.line(J, 'otherSeat');
+        return note('otherSeat');
       }
       // K583: an effect that ends the game is a change under every view.
       if (moved()) return 'yes';
@@ -437,7 +550,8 @@ export function cardPack<G extends GameTypes, E extends PackEnv = PackEnv>(cfg: 
     dry = env.seat;
     const prev = openDraft(start, true);
     try {
-      if (yes(seg(start, effectTasks(steps, env)))) return 'yes';
+      const mk = (i: number): G['task'] => ({ kind: STEP, i }) as unknown as G['task'];
+      if (yes(seg(start, F ? [mk(-1), ...steps.flatMap((st, i) => [...(effectTasks([st], env) as unknown as G['task'][]), mk(i)])] : effectTasks(steps, env)))) return 'yes';
       const fork = (s: Draft<KernelState>, picks: readonly string[]): boolean => {
         const c = copyState(s);
         const j = at.get(s);
@@ -808,7 +922,7 @@ export function cardPack<G extends GameTypes, E extends PackEnv = PackEnv>(cfg: 
       const rest = P.cost === 'whole' ? bare : all;
       const occs = (s as unknown as KernelState).timing?.occurrences ?? [];
       // K583, paid = effect in the check: what a cost changed is not counted; the game is compared from where the cost ended.
-      const fx = dry !== null && P.paid === 'effect';
+      const fx = dry !== null && (P.paid === 'effect' || R !== null);
       const costEnds = (): void => {
         if (!fx || (J.cost -= 1) !== 0) return;
         J.base = view(s);
@@ -832,7 +946,7 @@ export function cardPack<G extends GameTypes, E extends PackEnv = PackEnv>(cfg: 
       const cost = costed(ctx.s, st.cost, e, true);
       if (!canPay(s, cost, e)) return;
       if (fx) {
-        if (J.cost === 0 && view(s) !== J.base) throw CHANGED;
+        if (R === null && J.cost === 0 && view(s) !== J.base) throw CHANGED;
         if (J.cost === 0) J.sees = seenBy(s, dry ?? '');
         J.cost += 1;
       }
@@ -916,5 +1030,5 @@ export function cardPack<G extends GameTypes, E extends PackEnv = PackEnv>(cfg: 
     cfg.moved?.(ctx, { op: m.op, card: id, from, to: m.to, seat: m.seat });
     return true;
   };
-  return { verbs: verbs as unknown as VerbTable<G, PackStep, E>, happen, wouldChange, judge, costed };
+  return { verbs: verbs as unknown as VerbTable<G, PackStep, E>, happen, wouldChange, judge, resolves, costed };
 }

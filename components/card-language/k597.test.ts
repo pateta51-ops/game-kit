@@ -41,7 +41,7 @@ describe('card-language resolves (K597): prior-art cases restated on the made-up
   });
   it('K597 a cost that cannot be paid: none (cannotPay); paid, its effect runs and the step resolves', () => {
     expect(resolves([{ op: 'payThen', cost: [pay(9)], then: [GAIN] }])).toEqual({ answer: 'none', skipped: [{ step: 0, reason: 'cannotPay' }] });
-    expect(resolves([{ op: 'payThen', cost: [pay(1)], then: [GAIN] }]).answer).toBe('full');
+    expect(resolves([{ op: 'payThen', cost: [pay(1)], then: [DRAW] }]).answer).toBe('full');
   });
   it('K597 every answer is tried, not the first one enabled: choosing h2 makes the gain happen', () => {
     expect(resolves([{ op: 'chooseCards', zone: 'hand', min: 1, max: 1, then: [{ op: 'if', test: 'h2', then: [GAIN] }] }]).answer).toBe('full');
@@ -137,9 +137,12 @@ describe('card-language resolves (K597): agrees with playing every answer', () =
   const looksAtASeenCard = (e: Eff): boolean => has(e, (st) => (st.op === 'lookAt' || st.op === 'reveal') && st.cards === 'all' && st.from !== 'deck');
   const HIDDEN = ['hand:b', 'deck', 'deck:b'];
   const cannotKnow = (e: Eff): boolean => has(e, (st) => (st.op === 'custom' && ['roll', 'boom', 'back', 'pairs', 'nest'].includes(st.name)) || ['shuffle', 'search', 'mill', 'choosePlayer', 'eachPlayer'].includes(st.op) || (st.op === 'chooseCards' && HIDDEN.includes(st.zone)) || (st.op === 'lookAt' && st.cards !== 'all'));
+  // Declared (K583's guard, kept by resolves): once a cost begins, a card it or its effect shows the seat stops the game code after it (unknown, hidden).
+  const SHOWS = ['scout', 'draw', 'mill', 'lookAt', 'reveal', 'search', 'discard'];
+  const showsAfterACost = (e: Eff): boolean => has(e, (st) => (st.op === 'payThen' || st.op === 'choosePayment') && has([st], (x) => SHOWS.includes(x.op))) && has(e, (x) => ['custom', 'if', 'count', 'chooseCards'].includes(x.op));
   const g = game({ branches: 100000 });
   const truth = (effect: Eff): string | undefined => {
-    const content = { effect: [{ op: 'custom', name: 'step' } as PackStep, ...effect.flatMap((st, i): PackStep[] => [st, { op: 'custom', name: 'step', n: i + 1 } as PackStep])] };
+    const content = { effect: [{ op: 'custom', name: 'step' } as PackStep, ...effect.flatMap((st, i): PackStep[] => [st, { op: 'custom', name: 'step', n: i + 1 }])] };
     let left = 3000;
     let best = 0;
     const walk = (s: S): boolean => {
@@ -160,7 +163,7 @@ describe('card-language resolves (K597): agrees with playing every answer', () =
     return best === effect.length ? 'full' : best > 0 ? 'part' : 'none';
   };
   it('K597 1,200 random effects: full, part and none match brute force; unknown only where hidden information decides', () => {
-    const seen: Record<string, number> = { full: 0, part: 0, none: 0, unknown: 0 };
+    const seen: Record<string, number> = { full: 0, part: 0, none: 0, unknown: 0, compared: 0 };
     const { s, content } = g.at();
     for (const seed of [597, 5972]) {
       const eff = gen(seed);
@@ -170,18 +173,20 @@ describe('card-language resolves (K597): agrees with playing every answer', () =
         const r = g.pack.resolves(s, content, e, A);
         seen[r.answer] = (seen[r.answer] ?? 0) + 1;
         if (r.answer === 'unknown') {
-          if (!cannotKnow(e)) throw new Error(`unknown (${String(r.reason)}) with nothing hidden: ${JSON.stringify(e)}`);
+          if (!cannotKnow(e) && !showsAfterACost(e)) throw new Error(`unknown (${String(r.reason)}) with nothing hidden: ${JSON.stringify(e)}`);
           continue;
         }
         const t = truth(e);
+        if (t !== undefined) seen.compared = (seen.compared ?? 0) + 1;
         if (t !== undefined && t !== r.answer) throw new Error(`resolves ${r.answer}, brute force ${t}: ${JSON.stringify(e)}`);
         if (r.answer === 'full' ? r.skipped.length !== 0 : r.skipped.length === 0) throw new Error(`skipped ${JSON.stringify(r.skipped)} with ${r.answer}`);
       }
     }
-    expect(seen.full).toBeGreaterThan(100);
-    expect(seen.part).toBeGreaterThan(50);
-    expect(seen.none).toBeGreaterThan(30);
-    expect(seen.unknown).toBeGreaterThan(30);
+    expect(seen.compared).toBeGreaterThan(500);
+    expect(seen.full).toBeGreaterThan(200);
+    expect(seen.part).toBeGreaterThan(60);
+    expect(seen.none).toBeGreaterThan(150);
+    expect(seen.unknown).toBeGreaterThan(200);
     expect(inDryRun()).toBe(false);
   }, 240000);
 });
