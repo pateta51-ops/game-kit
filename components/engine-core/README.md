@@ -18,7 +18,7 @@ The kernel of a game engine: seeded random numbers, canonical JSON and hashes, t
 9. Compute a modified cost with `numberParts` before any payment plan, option label or can-pay check of the game, and pass its `value` to all of them. Nothing in the kit does it for the game: `card-language`'s verb pack reads the printed amount of a cost step.
 10. Take every field of a `NumberOrder` (step order, setter rule, rounding, floor, cap) from the game's rulings; where they are silent, ask. Use `numberParts` for a stat or cost with set, add, multiply, floor or cap instead of a hand-written fold.
 11. Pass `opts.of` whenever a modifier names an `of`, and read which bound holds from `bounds` (`holds`), not from `bound`. Tell two modifiers of one source apart by `ref`.
-12. Mark an option the answering player has not seen (a face-down card, an unrevealed option) with `unseen: true`: when it is the only legal answer, `onlyOne` returns null and `askOrTake` asks instead of taking it (K641).
+12. Mark an option the answering player has not seen (a face-down card, an unrevealed option) with `unseen: true`: when it is the only legal answer, `onlyOne` returns null and `askOrTake` asks instead of taking it (K641). The game, or the part that builds the prompt, sets `unseen` on every option over a hidden thing; nothing in the kernel sets it (card-language will set it for hidden picks in its own row).
 
 **Common mistakes:**
 - Using the old `ctx.then` then `ctx.ask` form in new code: it is deprecated.

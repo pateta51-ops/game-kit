@@ -3,6 +3,8 @@ Shows the engine's open question (an engine-core prompt) through a typed widget 
 
 ## Rules for agents
 
+`autoAnswer` never answers a lone option marked `unseen` (engine-core `onlyOne`, K641): the player is shown the prompt.
+
 **What it does:** Shows the engine's open question through a typed widget registry.
 
 **You must:**
