@@ -40,7 +40,7 @@ export function screenProblems(i: ScreenInput): string[] {
     if ((i.icons[code] ?? '').trim() === '') out.push(`icon ${code} has no label`);
   const text = new Map(i.clauses.map((x) => [x.id, x.text]));
   const am = new Map(i.clauses.map((x) => [x.id, x.amounts]));
-  for (const x of i.clauses) if (Array.isArray(x.amounts)) for (const a of x.amounts) if (!numbers(x.text).includes(a)) out.push(`${x.id}: amount ${a} is not in its text`);
+  for (const x of i.clauses) if (x.amounts && x.amounts !== 'counted') for (const a of x.amounts) if (!numbers(x.text).includes(a)) out.push(`${x.id}: amount ${a} is not in its text`);
   for (const p of i.prompts) {
     const a = am.get(p.clause);
     const got = new Set(numbers(p.shown));
