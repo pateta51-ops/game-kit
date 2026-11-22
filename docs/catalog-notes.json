@@ -311,7 +311,14 @@
       "prompt amount check",
       "clause two prompts",
       "screen text amounts",
-      "amounts per prompt"
+      "amounts per prompt",
+      "known findings",
+      "known findings list",
+      "pending findings owner",
+      "baseline of card check findings",
+      "pending list",
+      "baseline",
+      "owner"
     ],
     "visible": false,
     "release": 1,
