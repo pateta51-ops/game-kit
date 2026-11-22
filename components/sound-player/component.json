@@ -11,12 +11,7 @@
       "src/ui/audio/fakeContext.ts (the fake context for tests; its gains now keep their schedule)"
     ],
     "grafts": [
-      {
-        "game": "unst",
-        "paths": [
-          "the cap per cue name from its event-to-cue merge layer; idea only, no file taken"
-        ]
-      },
+      { "game": "unst", "paths": ["the cap per cue name from its event-to-cue merge layer; idea only, no file taken"] },
       {
         "game": "unst",
         "commit": "9e666b4",
@@ -30,53 +25,15 @@
     ]
   },
   "ideas": [
-    {
-      "repo": "marvel-champions-digital-game (AGPL-3.0)",
-      "paths": [
-        "audio/sfx/README.md, scripts/trim-mp3.mjs: idea only, written new (trail-only cues, chain, front silence, whole-frame trim)"
-      ]
-    },
-    {
-      "repo": "netrunner (MIT)",
-      "paths": [
-        "src/cljs/nr/sounds.cljs: idea only (silent on first state)"
-      ]
-    },
-    {
-      "repo": "Forge (GPL-3.0)",
-      "paths": [
-        "forge/sound/EventVisualizer.java: idea only (own sound, then fallback)"
-      ]
-    },
-    {
-      "repo": "marvel-champions-digital-game (AGPL-3.0)",
-      "paths": [
-        "music/README.md, audio/music-catalog.ts: idea only (musicChain.ts, folder convention)"
-      ]
-    },
-    {
-      "repo": "Forge (GPL-3.0)",
-      "paths": [
-        "forge/sound/SoundSystem.java: idea only (shelved track resumes)"
-      ]
-    },
-    {
-      "repo": "ArkhamHorror (no licence)",
-      "paths": [
-        "frontend/src/arkham/rainAudio.ts: idea only (seam crossfade)"
-      ]
-    }
+    { "repo": "marvel-champions-digital-game (AGPL-3.0)", "paths": ["audio/sfx/README.md, scripts/trim-mp3.mjs: idea only, written new (trail-only cues, chain, front silence, whole-frame trim)"] },
+    { "repo": "netrunner (MIT)", "paths": ["src/cljs/nr/sounds.cljs: idea only (silent on first state)"] },
+    { "repo": "Forge (GPL-3.0)", "paths": ["forge/sound/EventVisualizer.java: idea only (own sound, then fallback)"] },
+    { "repo": "marvel-champions-digital-game (AGPL-3.0)", "paths": ["music/README.md, audio/music-catalog.ts: idea only (musicChain.ts, folder convention)"] },
+    { "repo": "Forge (GPL-3.0)", "paths": ["forge/sound/SoundSystem.java: idea only (shelved track resumes)"] },
+    { "repo": "ArkhamHorror (no licence)", "paths": ["frontend/src/arkham/rainAudio.ts: idea only (seam crossfade)"] }
   ],
   "needs": [],
   "bypass": [
-    {
-      "id": "sound-on-timer",
-      "imports": [
-        "motion-frame"
-      ],
-      "match": "\\bset(?:Timeout|Interval)\\s*\\([\\s\\S]{0,200}?(?:\\b\\w*(?:sound|audio|sfx)\\w*\\.play\\w*\\s*\\(|\\.play\\w*\\s*\\([^)\\n]*\\bcue)",
-      "flags": "i",
-      "hook": "with motion-frame, a sound cue plays only from createMotionPlayer onCue / onDroppedCue, never from a timer"
-    }
+    {"id":"sound-on-timer","imports":["motion-frame"],"match":"\\bset(?:Timeout|Interval)\\s*\\([\\s\\S]{0,200}?(?:\\b\\w*(?:sound|audio|sfx)\\w*\\.play\\w*\\s*\\(|\\.play\\w*\\s*\\([^)\\n]*\\bcue)","flags":"i","hook":"with motion-frame, a sound cue plays only from createMotionPlayer onCue / onDroppedCue, never from a timer"}
   ]
 }
