@@ -51,7 +51,7 @@ function met(p: Pattern, v: readonly number[]): boolean {
       return false;
     }
     case 'even': return count((x) => x % 2 === 0) >= p.n;
-    case 'odd': return count((x) => x % 2 !== 0) >= p.n;
+    case 'odd': return count((x) => Math.abs(x % 2) === 1) >= p.n;
     case 'count': return v.length >= 1 && cmp(v.length, p.op ?? '>=', p.n);
     case 'atLeast': return count((x) => x >= p.face) >= p.n;
     case 'face': return count((x) => x === p.face) >= p.n;
@@ -70,7 +70,7 @@ export function compile(p: Pattern): Test {
   return (v) => met(p, v);
 }
 
-/** A dice-tray `Meaning`: dice with value 0 (not rolled) are left out; `compile` and `smallest` judge every value they are given. */
+/** A dice-tray `Meaning`: dice with value 0 or less (0 is not rolled) are left out; `compile` and `smallest` judge every value they are given. */
 export function meaning<T = string>(id: string, p: Pattern, label: T): { id: string; label: T; test(dice: readonly { value: number }[]): boolean } {
   const test = compile(p);
   return { id, label, test: (dice) => test(dice.map((d) => d.value).filter((x) => x > 0)) };
