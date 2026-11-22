@@ -3,7 +3,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { afterAll, describe, expect, it } from 'vitest';
-import { finish, launch, teardown, type Bg } from '../scripts/agent.mjs';
+import { byHand, finish, launch, realBg, teardown, type Bg } from '../scripts/agent.mjs';
 
 const KIT = path.resolve(import.meta.dirname, '..', 'kit.mjs');
 const root = fs.mkdtempSync(path.join(os.tmpdir(), 'agent-test-'));
@@ -300,9 +300,30 @@ describe('finish: one run per branch, sign of life, --detach and --result (K572)
       expect(finish(['--repo', main], o.io, exec, win, b as Bg)).not.toBe(0);
       expect(b.t - t0).toBeLessThanOrEqual(60000);
       expect(o.err.join(' ')).toMatch(/did not start/);
-      expect(o.err.join(' ')).toContain(win ? 'wsl -e bash ' : 'bash ');
+      expect(o.err.join(' ')).toContain(byHand(win, b.starts.at(-1)!));
       expect(o.err.join(' ')).toContain('run.sh');
       expect(o.out.join(' ')).not.toMatch(/PASS/);
     }
+  });
+  it('K644 the printed by-hand command has no bare /mnt path argument for Git Bash to rewrite', () => {
+    expect(byHand(true, 'C:/h/r')).toBe(`wsl -e bash -c "bash '/mnt/c/h/r/run.sh'"`);
+    expect(byHand(false, '/h/r')).toBe(`bash '${path.join('/h/r', 'run.sh')}'`);
+  });
+
+  it('K644 the real launcher passes the environment (MSYS path conversion off) to the spawned process', () => {
+    let seen: { cmd: string; opts: { env: Record<string, string>; detached: boolean } } | undefined;
+    const fake = (cmd: string, _a: string[], opts: { env: Record<string, string>; detached: boolean }) => (seen = { cmd, opts }, { on: () => {}, unref: () => {} });
+    realBg.start('wsl', ['x'], '', { MSYS_NO_PATHCONV: '1', MSYS2_ARG_CONV_EXCL: '*' }, fake);
+    expect(seen!.opts.env.MSYS_NO_PATHCONV).toBe('1');
+    expect(seen!.opts.env.MSYS2_ARG_CONV_EXCL).toBe('*');
+    expect(seen!.opts.detached).toBe(true);
+  });
+
+  it('K644 run.sh writes the start marker as its first act', () => {
+    const { main } = fresh('k644r');
+    const b = fakeBg(path.join(root, 'k644r-home'));
+    finish(['--repo', main, '--detach'], io().io, (_c, _a, input) => isStatus(input) ? st([], []) : { status: 0, output: '' }, false, b as Bg);
+    const dir = b.starts[0]!;
+    expect(fs.readFileSync(path.join(dir, 'run.sh'), 'utf8').startsWith(`date +%s > '${path.join(dir, 'started')}'; `)).toBe(true);
   });
 });

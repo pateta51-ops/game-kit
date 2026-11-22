@@ -74,8 +74,8 @@ export function teardown(args, io) {
 }
 
 const real = (cmd, args, input) => { const r = spawnSync(cmd, args, { input, encoding: 'utf8', maxBuffer: 1 << 28 }); return { status: r.status, error: r.error, output: `${r.stdout ?? ''}${r.stderr ?? ''}` } }
-const realBg = {
-  start(cmd, args, _dir, env) { const c = spawn(cmd, args, { detached: true, stdio: 'ignore', windowsHide: true, env: { ...process.env, ...env } }); c.on('error', () => {}); c.unref() },
+export const realBg = {
+  start(cmd, args, _dir, env, sp = spawn) { const c = sp(cmd, args, { detached: true, stdio: 'ignore', windowsHide: true, env: { ...process.env, ...env } }); c.on('error', () => {}); c.unref() },
   sleep: (ms) => { Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, ms) },
   now: () => Date.now(),
   home: os.homedir(),
@@ -86,6 +86,7 @@ export const launch = (win, dir) => {
   const bgc = `setsid nohup bash ${W(path.join(dir, 'run.sh'))} > /dev/null 2>&1 < /dev/null & i=0; while [ ! -e ${W(path.join(dir, 'started'))} ] && [ $i -lt 100 ]; do sleep 0.2; i=$((i+1)); done`
   return { cmd: win ? 'wsl' : 'bash', args: win ? ['-e', 'bash', '-c', bgc] : ['-c', bgc], env: { MSYS_NO_PATHCONV: '1', MSYS2_ARG_CONV_EXCL: '*' } }
 }
+export const byHand = (win, dir) => win ? `wsl -e bash -c "bash ${q(toWsl(path.join(dir, 'run.sh')))}"` : `bash ${q(path.join(dir, 'run.sh'))}`
 const HQ = `H=$(command -v heavy || { [ -x "$HOME/.local/bin/heavy" ] && echo "$HOME/.local/bin/heavy"; }); [ -n "$H" ] || exit 9; "$H" status`
 const mmss = (ms) => `${String(Math.floor(ms / 60000)).padStart(2, '0')}:${String(Math.floor(ms / 1000) % 60).padStart(2, '0')}`
 // K572: the queue's job labelled `finish <branch>`; null when the queue is not reachable or not installed; {down} when WSL/bash cannot start
@@ -172,7 +173,7 @@ export function finish(args, io, exec = real, win = process.platform === 'win32'
   while (!fs.existsSync(path.join(dir, 'started'))) {
     if (bg.now() - t0 >= 45000) {
       fs.rmSync(path.join(dir, 'meta.json'), { force: true })
-      io.err(`finish ${branch}: the run did not start (no start marker after 45 s); run it by hand: ${win ? 'wsl -e bash ' : 'bash '}${W(path.join(dir, 'run.sh'))}`)
+      io.err(`finish ${branch}: the run did not start (no start marker after 45 s); run it by hand: ${byHand(win, dir)}`)
       return 6
     }
     bg.sleep(500)
