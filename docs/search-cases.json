@@ -1,471 +1,1954 @@
 [
-  { "q": "restriction phrase case sensitive", "first": "card-harness" },
-  { "q": "restriction word at start of text", "first": "card-harness" },
-  { "q": "restriction key not phrases", "first": "card-harness" },
-  { "q": "prompt quotes printed clause", "first": "card-harness" },
-  { "q": "who pays shared cost prompt", "first": "card-harness" },
-  { "q": "record prompts in card tests", "first": "card-harness" },
-  { "q": "known findings list", "first": "card-harness" },
-  { "q": "pending findings owner", "first": "card-harness" },
-  { "q": "baseline of card check findings", "first": "card-harness" },
-  { "q": "test that an ability is not offered", "first": "card-harness" },
-  { "q": "crash counted as refusal", "first": "card-harness" },
-  { "q": "not offered helper", "first": "card-harness" },
-  { "q": "screen amount icon", "first": "card-harness" },
-  { "q": "counted amount shown", "first": "card-harness" },
-  { "q": "prompt shows wrong number", "first": "card-harness" },
-  { "q": "scenario builder test state", "first": "card-harness" },
-  { "q": "pick among the cards just moved", "first": "card-language" },
-  { "q": "choose number bar dead", "first": "card-language" },
-  { "q": "gain zero no change", "first": "card-language" },
-  { "q": "amount due", "first": "card-language" },
-  { "q": "offer effect no change", "first": "card-language" },
-  { "q": "dry run", "first": "card-language" },
-  { "q": "can resolve", "first": "card-language" },
-  { "q": "unpayable cost", "first": "card-language" },
-  { "q": "look reorder top cards", "first": "card-language" },
-  { "q": "discard a random card", "first": "card-language" },
-  { "q": "heal up to maximum", "first": "card-language" },
-  { "q": "resource several cards change", "first": "card-language" },
-  { "q": "unreached clauses", "first": "sim-pool" },
-  { "q": "whole game coverage", "first": "sim-pool" },
-  { "q": "replay a failing seed", "first": "sim-pool" },
-  { "q": "fuzz invariants whole game", "first": "sim-pool" },
-  { "q": "simulation runner", "first": "sim-pool" },
-  { "q": "whole game driver every clause resolved", "first": "sim-pool" },
-  { "q": "enters play trigger", "first": "engine-core" },
-  { "q": "response window", "first": "engine-core" },
-  { "q": "stat breakdown", "first": "engine-core" },
-  { "q": "modifier floor", "first": "engine-core" },
-  { "q": "cost reduction minimum", "first": "engine-core" },
-  { "q": "stat maximum cap", "first": "engine-core" },
-  { "q": "clamped stored value", "first": "engine-core" },
-  { "q": "hand size limit", "first": "engine-core" },
-  { "q": "state check lose at zero", "first": "engine-core" },
-  { "q": "win lose check", "first": "engine-core" },
-  { "q": "until end of combat", "first": "engine-core" },
-  { "q": "status duration", "first": "engine-core" },
-  { "q": "instead of defeat replacement", "first": "engine-core" },
-  { "q": "trigger order player chooses", "first": "engine-core" },
-  { "q": "deterministic engine undo", "first": "engine-core" },
-  { "q": "would an effect do anything", "first": "engine-core" },
-  { "q": "game sheet questions", "first": "plan-checker" },
-  { "q": "plan must answer what the kit holds", "first": "plan-checker" },
-  { "q": "mechanics map line belongs to which question", "first": "plan-checker" },
-  { "q": "plan check kit fit", "first": "plan-checker" },
-  { "q": "track overrun", "first": "clock" },
-  { "q": "distance to space on track", "first": "clock" },
-  { "q": "lose space on a track", "first": "clock" },
-  { "q": "countdown threshold", "first": "clock" },
-  { "q": "round tracker", "first": "clock" },
-  { "q": "spawn count", "first": "clock" },
-  { "q": "die that cycles at 6", "first": "clock" },
-  { "q": "counter wraps around", "first": "clock" },
-  { "q": "wrap track", "first": "clock" },
-  { "q": "time track threshold", "first": "clock" },
-  { "q": "first step shortest path", "first": "grid-map" },
-  { "q": "extra steps diagonal", "first": "grid-map" },
-  { "q": "move toward ties", "first": "grid-map" },
-  { "q": "grid distance", "first": "grid-map" },
-  { "q": "line of sight", "first": "grid-map" },
-  { "q": "multi cell space counts as one", "first": "grid-map" },
-  { "q": "diagonal move past wall corner", "first": "grid-map" },
-  { "q": "ranged attack line of sight", "first": "grid-map" },
-  { "q": "shortest path ties player choice", "first": "grid-map" },
-  { "q": "rotate map tile at setup", "first": "grid-map" },
-  { "q": "exact sum dice", "first": "dice-patterns" },
-  { "q": "smallest set of dice", "first": "dice-patterns" },
-  { "q": "dice group exact size", "first": "dice-patterns" },
-  { "q": "assign dice to slots", "first": "dice-patterns" },
-  { "q": "dice check skill test", "first": "dice-tray" },
-  { "q": "keep higher die", "first": "dice-tray" },
-  { "q": "token on space", "first": "board-model" },
-  { "q": "hand limit discard choice", "first": "card-zones" },
-  { "q": "zone capacity", "first": "card-zones" },
-  { "q": "over the limit choose what to drop", "first": "card-zones" },
-  { "q": "once per round", "first": "turn-flow" },
-  { "q": "use limit per game", "first": "turn-flow" },
-  { "q": "once per turn per card", "first": "turn-flow" },
-  { "q": "once per game ability", "first": "turn-flow" },
-  { "q": "once per round ability limit", "first": "turn-flow" },
-  { "q": "offline pwa", "first": "offline" },
-  { "q": "scan ingestion", "first": "scan-ingest" },
-  { "q": "flatbed scan crop cards", "first": "scan-ingest" },
-  { "q": "golden replay file", "first": "replay-cli" },
-  { "q": "game adapter for language model", "first": "llm-playtester" },
-  { "q": "rule-based test player", "first": "opponent" },
-  { "q": "content validation", "first": "content-pack" },
-  { "q": "card csv columns", "first": "content-pack" },
-  { "q": "two transcriptions agree", "first": "transcription-check" },
-  { "q": "transcription coverage of card words", "first": "coverage-report" },
-  { "q": "d20 die 3d", "first": "pieces-3d" },
-  { "q": "token pool random draw", "first": "token-bag" },
-  { "q": "events to log rows adapter", "first": "game-log" },
-  { "q": "zone visibility face-down deck", "first": "card-zones" },
-  { "q": "music by state", "first": "sound-player" },
-  { "q": "op table text generation own engine", "first": "card-language/op-table" },
-  { "q": "discard row", "first": "K520" },
-  { "q": "stop set", "first": "K629" },
-  { "q": "undo button", "first": "engine-core" },
-  { "q": "hand of cards", "first": "card-hand" },
-  { "q": "burn", "first": "burn-away" },
-  { "q": "4K desktop table", "first": "none" },
-  { "q": "boss damage slots", "first": "none" },
-  { "q": "odds after rerolls", "first": "K552" },
-  { "q": "divide among", "first": "K536" },
-  { "q": "copy an effect", "first": "K557" },
-  { "q": "hidden movement", "first": "K576" },
-  { "q": "two games one app", "first": "none" },
-  { "q": "weapon ammo", "first": "none" },
-  { "q": "suit change", "first": "none" },
-  { "q": "hand limit discard event", "first": "card-zones" },
-  { "q": "zone capacity on leave hook", "first": "card-zones" },
-  { "q": "cards leave over limit callback", "first": "card-zones" },
-  { "q": "jpeg quality re-encode face", "first": "art-pipeline" },
-  { "q": "face enlarged larger than source", "first": "art-pipeline" },
-  { "q": "minimum image quality size cap", "first": "art-pipeline" },
-  { "q": "game bypasses the kit", "first": "motion-frame" },
-  { "q": "sound cue timing with animation", "first": "motion-frame" },
-  { "q": "check game uses kit hooks", "first": "motion-frame" },
-  { "q": "new file without kit search", "first": "none" },
-  { "q": "built new section check", "first": "none" },
-  { "q": "finish checks new modules", "first": "none" },
-  { "q": "shuffle zone named rng", "first": "card-zones" },
-  { "q": "shuffle deck rng name override", "first": "card-zones" },
-  { "q": "shuffle zone forced order test", "first": "card-zones" },
-  { "q": "extra adjacency", "first": "grid-map" },
-  { "q": "what is missing from a dice pattern", "first": "K620" },
-  { "q": "dice still needed to meet pattern", "first": "K620" },
-  { "q": "dice condition met", "first": "dice-patterns" },
-  { "q": "skip effect that changes nothing", "first": "card-language" },
-  { "q": "steps back to a space on a looping track", "first": "clock" },
-  { "q": "track marker cannot advance", "first": "clock" },
-  { "q": "check a track definition", "first": "clock" },
-  { "q": "offer paid effect only if it does something", "first": "card-language" },
-  { "q": "modified cost tax discount on a card", "first": "card-language" },
-  { "q": "effect cannot know hidden cards", "first": "card-language" },
-  { "q": "effect interpreter verbs", "first": "card-language" },
-  { "q": "resolve whole effect or none", "first": "K548" },
-  { "q": "bespoke card ability", "first": "card-language" },
-  { "q": "card scans crop", "first": "scan-ingest" },
-  { "q": "die-cut silhouette", "first": "none" },
-  { "q": "prompt screen text scan", "first": "card-harness" },
-  { "q": "clause coverage driver", "first": "sim-pool" },
-  { "q": "engine port bridge", "first": "card-language/op-table" },
-  { "q": "prompt bridge own engine", "first": "none" },
-  { "q": "train map stations", "first": "board-model" },
-  { "q": "arcade score", "first": "play-stats" },
-  { "q": "build your own character", "first": "none" },
-  { "q": "steward", "first": "none" },
-  { "q": "task queue prompt replay seeded", "first": "engine-core" },
-  { "q": "effect interpreter ops", "first": "card-language" },
-  { "q": "card ability data verbs", "first": "card-language" },
-  { "q": "resolve all lines or none", "first": "K548" },
-  { "q": "atomic effect block forfeited", "first": "K548" },
-  { "q": "number parts discount steps", "first": "card-language" },
-  { "q": "stat cap gain lost", "first": "engine-core" },
-  { "q": "solo enemy deck script", "first": "automa" },
-  { "q": "test pilot bot random greedy", "first": "K424" },
-  { "q": "silhouette outline die-cut token", "first": "none" },
-  { "q": "poor setup not offered helper", "first": "card-harness" },
-  { "q": "reading judge printed clause render", "first": "card-harness" },
-  { "q": "prompt scan words on screen", "first": "card-harness" },
-  { "q": "bridge own engine prompt to widget", "first": "none" },
-  { "q": "beat from engine events", "first": "motion-frame" },
-  { "q": "music state intensity layers", "first": "sound-player" },
-  { "q": "symbol count set collection", "first": "none" },
-  { "q": "route map stations network movement", "first": "board-model" },
-  { "q": "graph nodes move piece along edges", "first": "board-model" },
-  { "q": "high score XP total", "first": "play-stats" },
-  { "q": "campaign record deck carried between games", "first": "campaign" },
-  { "q": "draw three keep one draft pick", "first": "card-language" },
-  { "q": "repeat limit same effect per turn", "first": "turn-flow" },
-  { "q": "level up deck add cards", "first": "K595" },
-  { "q": "threat row refill spawn", "first": "market-row" },
-  { "q": "difficulty tier handicap", "first": "challenges" },
-  { "q": "attach upgrade behind card sleeve", "first": "card-attachments" },
-  { "q": "custom handler one-off card", "first": "card-language" },
-  { "q": "move a piece along edges", "first": "board-model" },
-  { "q": "adaptive music by game state", "first": "sound-player" },
-  { "q": "finish does not start", "first": "none" },
-  { "q": "worker proof PASS line", "first": "none" },
-  { "q": "run the check in WSL from Windows", "first": "heavy-queue" },
-  { "q": "worktree teardown", "first": "none" },
-  { "q": "once per turn response", "first": "turn-flow" },
-  { "q": "pending list baseline", "first": "card-harness" },
-  { "q": "unreached clauses coverage", "first": "sim-pool" },
-  { "q": "prompt printed words", "first": "card-harness" },
-  { "q": "replay finding seed", "first": "sim-pool" },
-  { "q": "unreached clause", "first": "sim-pool" },
-  { "q": "who pays shared cost", "first": "card-harness" },
-  { "q": "poor line condition cost", "first": "card-harness" },
-  { "q": "coverage rounds until no new clause", "first": "sim-pool" },
-  { "q": "mutation guard off", "first": "none" },
-  { "q": "prompt attribution path", "first": "card-harness" },
-  { "q": "deal damage split among targets", "first": "K536" },
-  { "q": "pay or else otherwise", "first": "card-language" },
-  { "q": "amount expression count times", "first": "card-language" },
-  { "q": "prompt recorder vitest test title", "first": "card-harness" },
-  { "q": "render snapshot records", "first": "card-harness" },
-  { "q": "response window prompt", "first": "K646" },
-  { "q": "travel distance between locations", "first": "none" },
-  { "q": "condition expression all any not compare", "first": "card-language" },
-  { "q": "amount expression count per", "first": "card-language" },
-  { "q": "then only if previous resolved", "first": "card-language" },
-  { "q": "raw key generated text", "first": "card-harness" },
-  { "q": "choose amount split tokens", "first": "K536" },
-  { "q": "due", "first": "card-language" },
-  { "q": "target filter select cards", "first": "card-language" },
-  { "q": "resolve cards left to right with windows", "first": "K560" },
-  { "q": "random direction move", "first": "none" },
-  { "q": "deck reveal ends round", "first": "none" },
-  { "q": "overlapping cards footprint", "first": "K544" },
-  { "q": "reshuffle trigger card", "first": "card-language/triggers" },
-  { "q": "placement enumeration", "first": "board-model" },
-  { "q": "fire spreads to neighbours", "first": "none" },
-  { "q": "legal placements grid", "first": "board-model" },
-  { "q": "connected group", "first": "none" },
-  { "q": "visit a building", "first": "none" },
-  { "q": "adjacent touching edge", "first": "grid-map" },
-  { "q": "card stack on a location", "first": "card-zones" },
-  { "q": "rearrange row", "first": "none" },
-  { "q": "add card to row", "first": "K520" },
-  { "q": "pay with a set of cards total", "first": "K590" },
-  { "q": "weapon", "first": "none" },
-  { "q": "ammo tracker", "first": "none" },
-  { "q": "restriction on next turn", "first": "engine-core" },
-  { "q": "collection of items", "first": "none" },
-  { "q": "tile flip", "first": "none" },
-  { "q": "odds next card", "first": "none" },
-  { "q": "greedy player", "first": "K424" },
-  { "q": "clauseList", "first": "card-harness" },
-  { "q": "stack of cards per pile", "first": "card-pile" },
-  { "q": "discard row payment", "first": "K520" },
-  { "q": "dice check target reroll", "first": "K552" },
-  { "q": "calendar day track", "first": "clock" },
-  { "q": "double dice", "first": "none" },
-  { "q": "dice check against a difficulty", "first": "dice-tray" },
-  { "q": "use ability once per game", "first": "turn-flow" },
-  { "q": "build from resources", "first": "none" },
-  { "q": "campaign carry between games", "first": "campaign" },
-  { "q": "route through areas", "first": "none" },
-  { "q": "extra action", "first": "none" },
-  { "q": "music state", "first": "sound-player" },
-  { "q": "reroll pay", "first": "dice-tray" },
-  { "q": "flip die opposite face", "first": "none" },
-  { "q": "clause list catalogue", "first": "card-harness" },
-  { "q": "clause list", "first": "card-harness" },
-  { "q": "clause split printed text", "first": "card-harness" },
-  { "q": "unprinted scope restriction words", "first": "card-harness" },
-  { "q": "printed restriction word", "first": "card-harness" },
-  { "q": "cards screen every face", "first": "proof-sheet" },
-  { "q": "screen check every card", "first": "card-harness" },
-  { "q": "look at top sort", "first": "card-language" },
-  { "q": "middle of the deck", "first": "none" },
-  { "q": "line of sight end corner wall", "first": "grid-map" },
-  { "q": "sight endpoints never block", "first": "grid-map" },
-  { "q": "stored value clamped each change", "first": "K612" },
-  { "q": "heal lose N", "first": "card-language" },
-  { "q": "random orientation of a card", "first": "none" },
-  { "q": "card rotated at shuffle", "first": "none" },
-  { "q": "randomly rearrange cards", "first": "card-language" },
-  { "q": "modify roll add to roll", "first": "dice-tray" },
-  { "q": "placement legality", "first": "board-model" },
-  { "q": "placement scorer", "first": "none" },
-  { "q": "clause splitter", "first": "card-harness" },
-  { "q": "split damage among targets", "first": "K536" },
-  { "q": "draw a card reshuffle", "first": "card-language" },
-  { "q": "polyhedral dice d8 d4", "first": "K656" },
-  { "q": "derived value checkpoint", "first": "engine-core" },
-  { "q": "card row cleared by trigger", "first": "K520" },
-  { "q": "two triggers same time order", "first": "engine-core" },
-  { "q": "time track game end", "first": "clock" },
-  { "q": "dice target reroll cost", "first": "dice-tray" },
-  { "q": "instant card resolves when drawn", "first": "card-language/triggers" },
-  { "q": "draw trigger resolve card", "first": "card-language/triggers" },
-  { "q": "probability after reroll", "first": "K552" },
-  { "q": "place dice into groups", "first": "dice-patterns" },
-  { "q": "carry state between campaign games", "first": "campaign" },
-  { "q": "exhausted ability marker", "first": "card-language" },
-  { "q": "whole game coverage report", "first": "sim-pool" },
-  { "q": "number printed clauses", "first": "card-harness" },
-  { "q": "legal move driver", "first": "sim-pool" },
-  { "q": "claude player adapter", "first": "llm-playtester" },
-  { "q": "music state machine", "first": "sound-player" },
-  { "q": "encounter deck spawn", "first": "card-zones" },
-  { "q": "check against a difficulty drawn card", "first": "K594" },
-  { "q": "enemy reinforcement shuffle", "first": "card-zones" },
-  { "q": "stacked deck test", "first": "card-harness" },
-  { "q": "search a deck stop at first", "first": "card-language" },
-  { "q": "draw until you find", "first": "card-language" },
-  { "q": "delay effect until", "first": "card-language" },
-  { "q": "search stop at first", "first": "card-language" },
-  { "q": "gain tokens resource", "first": "card-language" },
-  { "q": "attack damage rounds", "first": "K550" },
-  { "q": "trigger when card added to row", "first": "K520" },
-  { "q": "reload ammo weapon", "first": "none" },
-  { "q": "pattern shapes wording", "first": "card-harness" },
-  { "q": "same wording different shape", "first": "card-harness" },
-  { "q": "die as unit pip value", "first": "none" },
-  { "q": "dice as pieces on board", "first": "none" },
-  { "q": "additive modifier floor", "first": "engine-core" },
-  { "q": "deck reshuffle discard", "first": "card-language" },
-  { "q": "two ended card rotated deck", "first": "none" },
-  { "q": "not offered would do nothing", "first": "card-language" },
-  { "q": "effect cannot be paid", "first": "card-language" },
-  { "q": "duration this round", "first": "engine-core" },
-  { "q": "enemy driven by deck", "first": "automa" },
-  { "q": "automated enemy movement", "first": "K559" },
-  { "q": "mission goals as data", "first": "engine-core" },
-  { "q": "setup options forced", "first": "none" },
-  { "q": "combat compare lower wins", "first": "K550" },
-  { "q": "attack and defense roll", "first": "K550" },
-  { "q": "spawn enemy at point", "first": "K556" },
-  { "q": "reinforcement spawn limit", "first": "K556" },
-  { "q": "reading order units", "first": "none" },
-  { "q": "enemy activation order", "first": "none" },
-  { "q": "swap positions", "first": "K601" },
-  { "q": "teleport placement", "first": "none" },
-  { "q": "damage tokens defeat", "first": "K550" },
-  { "q": "step display opponent turn", "first": "paced-view" },
-  { "q": "machine queue heavy run", "first": "heavy-queue" },
-  { "q": "special space counts as one", "first": "grid-map" },
-  { "q": "enemy reading order", "first": "none" },
-  { "q": "once per combat", "first": "turn-flow" },
-  { "q": "setup field depends on scenario", "first": "none" },
-  { "q": "scenario forces option", "first": "none" },
-  { "q": "card with two ends", "first": "none" },
-  { "q": "deck turned half", "first": "none" },
-  { "q": "public back of top card", "first": "card-zones" },
-  { "q": "free action count", "first": "none" },
-  { "q": "actions per turn counter", "first": "none" },
-  { "q": "die on the map piece", "first": "none" },
-  { "q": "line of sight ranged attack corner", "first": "grid-map" },
-  { "q": "random override rolls", "first": "engine-core" },
-  { "q": "build grid from tile records", "first": "grid-map" },
-  { "q": "board assembled from map tiles", "first": "grid-map" },
-  { "q": "tile placed upside down in scenario layout", "first": "K633" },
-  { "q": "diagonal step allowed by ability", "first": "K630" },
-  { "q": "movement stops when entering occupied area", "first": "K629" },
-  { "q": "move ends on entering enemy zone", "first": "K629" },
-  { "q": "move toward nearest target with tie choice", "first": "K559" },
-  { "q": "enemy moves along shortest path player breaks tie", "first": "K559" },
-  { "q": "dice as units on a map", "first": "none" },
-  { "q": "die value is unit strength", "first": "none" },
-  { "q": "move unit up to N spaces then fight", "first": "K602" },
-  { "q": "movement interrupted by combat continue", "first": "K602" },
-  { "q": "enemy ai movement card driven", "first": "automa" },
-  { "q": "automated enemies move toward destination", "first": "K559" },
-  { "q": "attack roll versus defense roll", "first": "K550" },
-  { "q": "combat resolution compare totals", "first": "K550" },
-  { "q": "spawn enemies at spawn point", "first": "K556" },
-  { "q": "reinforcements up to limit", "first": "K556" },
-  { "q": "card with two ends orientation", "first": "none" },
-  { "q": "deck card public back hidden face", "first": "card-zones" },
-  { "q": "resource track with reset at max", "first": "clock" },
-  { "q": "meter that resets and gives reward", "first": "clock" },
-  { "q": "action points per turn", "first": "none" },
-  { "q": "extra action granted", "first": "none" },
-  { "q": "boss with special rules", "first": "none" },
-  { "q": "tokens placed on map spaces", "first": "board-model" },
-  { "q": "win condition per scenario", "first": "engine-core" },
-  { "q": "pool of dice runs out", "first": "token-bag" },
-  { "q": "effect lasts until end of combat", "first": "engine-core" },
-  { "q": "duration this combat", "first": "engine-core" },
-  { "q": "unit cannot attack status", "first": "engine-core" },
-  { "q": "hand size maximum choose discard", "first": "card-zones" },
-  { "q": "order of simultaneous triggers commute", "first": "K591" },
-  { "q": "skip trigger order prompt same result", "first": "K591" },
-  { "q": "show which dice still needed", "first": "K620" },
-  { "q": "scenario forces setup choice", "first": "none" },
-  { "q": "reroll window combat", "first": "dice-tray" },
-  { "q": "reroll until different value", "first": "dice-tray" },
-  { "q": "move token to space", "first": "board-model" },
-  { "q": "carry token with unit", "first": "none" },
-  { "q": "advance track one space at a time", "first": "clock" },
-  { "q": "swap two units positions", "first": "K601" },
-  { "q": "roll d6 on table", "first": "K543" },
-  { "q": "dice table lookup", "first": "K543" },
-  { "q": "shoot at range", "first": "grid-map" },
-  { "q": "rotate tile with pieces", "first": "K575" },
-  { "q": "turn map tile mid game", "first": "K575" },
-  { "q": "spend actions to move", "first": "none" },
-  { "q": "teleport to objective", "first": "none" },
-  { "q": "skip a phase this round", "first": "turn-flow" },
-  { "q": "skip phase condition", "first": "turn-flow" },
-  { "q": "card test scenario put pieces on spaces", "first": "card-harness" },
-  { "q": "scenario put tokens on map", "first": "card-harness" },
-  { "q": "simulation module drivers", "first": "sim-pool" },
-  { "q": "wounded instead of removed", "first": "engine-core" },
-  { "q": "motion beats event order cue sound from motion player", "first": "motion-frame" },
-  { "q": "game bypasses the kit release", "first": "motion-frame" },
-  { "q": "game bypasses the kit hurry", "first": "motion-frame" },
-  { "q": "game bypasses the kit skip", "first": "motion-frame" },
-  { "q": "art pipeline image jpeg manifest", "first": "art-pipeline" },
-  { "q": "movement path step one space at a time end space reach", "first": "grid-map" },
-  { "q": "barred option reason code not offered", "first": "card-language" },
-  { "q": "round phases loop actions per turn", "first": "turn-flow" },
-  { "q": "play a sound after the animation step", "first": "motion-frame" },
-  { "q": "timer hold auto continue", "first": "motion-frame" },
-  { "q": "reachable spaces within N steps", "first": "grid-map" },
-  { "q": "move preview end spaces paths", "first": "grid-map" },
-  { "q": "playtest random answers through the screen", "first": "dev-autoplay" },
-  { "q": "play whole games by script e2e", "first": "sim-pool" },
-  { "q": "music state machine layers by game state", "first": "sound-player" },
-  { "q": "all end spaces of a move with distinct paths", "first": "grid-map" },
-  { "q": "ready exhausted cards at round start", "first": "tap" },
-  { "q": "build own table check", "first": "plan-checker" },
-  { "q": "plan build own table rows", "first": "plan-checker" },
-  { "q": "plan check build own rows", "first": "plan-checker" },
-  { "q": "flash once and go dark", "first": "glow" },
-  { "q": "glow ramp up from dark", "first": "glow" },
-  { "q": "single flash glow", "first": "glow" },
-  { "q": "pr body lists new modules", "first": "none" },
-  { "q": "worker pr body new files listed", "first": "none" },
-  { "q": "reason for each new file", "first": "none" },
-  { "q": "status condition token", "first": "engine-core" },
-  { "q": "give a status to a unit", "first": "engine-core" },
-  { "q": "stunned until end of turn", "first": "engine-core" },
-  { "q": "force a dice roll in a test", "first": "dice-tray" },
-  { "q": "dice tray roll name override", "first": "dice-tray" },
-  { "q": "named dice roll", "first": "dice-tray" },
-  { "q": "hold with fallback", "first": "motion-frame" },
-  { "q": "play sound on beat", "first": "motion-frame" },
-  { "q": "skip animation on click", "first": "motion-frame" },
-  { "q": "offer only if it does something", "first": "card-language" },
-  { "q": "end effect at end of combat", "first": "engine-core" },
-  { "q": "hand limit discard", "first": "card-zones" },
-  { "q": "shuffle deck seeded", "first": "card-zones" },
-  { "q": "end turn early", "first": "turn-flow" },
-  { "q": "fade sound out", "first": "sound-player" },
-  { "q": "see past walls", "first": "grid-map" },
-  { "q": "keep die out of next roll", "first": "dice-tray" },
-  { "q": "test ability not offered", "first": "card-harness" },
-  { "q": "resume after crash", "first": "sim-pool" },
-  { "q": "marker cannot advance", "first": "clock" },
-  { "q": "fewest dice meet pattern", "first": "dice-patterns" },
-  { "q": "animation queue", "first": "motion-frame" },
-  { "q": "event queue for animations", "first": "motion-frame" },
-  { "q": "timer for bot thinking delay", "first": "paced-view" },
-  { "q": "toast message", "first": "ui-helpers" },
-  { "q": "tooltip hover card", "first": "ui-helpers" },
-  { "q": "undo last move", "first": "engine-core" },
-  { "q": "save game slots", "first": "saves" },
-  { "q": "popup notice", "first": "modal-dialog" },
-  { "q": "card zoom preview", "first": "card-zoom" },
-  { "q": "confirm button prompt", "first": "prompt-host" },
-  { "q": "reroll window choose dice to reroll", "first": "dice-tray" },
-  { "q": "win probability exact odds two dice compare", "first": "dice-odds" },
-  { "q": "resize image long edge cap", "first": "art-pipeline" },
-  { "q": "resource cap", "first": "card-language" },
-  { "q": "end of round scoring", "first": "turn-flow" },
-  { "q": "did nothing", "first": "engine-core/do-nothing" },
-  { "q": "campaign setup", "first": "campaign" },
-  { "q": "phone campaign", "first": "campaign" },
-  { "q": "theme kit", "first": "theme-check" },
-  { "q": "skin components", "first": "controls" },
-  { "q": "static ability changes cost", "first": "engine-core/layers" },
-  { "q": "scenario objective progress", "first": "engine-core" },
-  { "q": "mission goal done or failed", "first": "engine-core" },
-  { "q": "objective with steps", "first": "engine-core" }
+  {
+    "q": "restriction phrase case sensitive",
+    "first": "card-harness"
+  },
+  {
+    "q": "restriction word at start of text",
+    "first": "card-harness"
+  },
+  {
+    "q": "restriction key not phrases",
+    "first": "card-harness"
+  },
+  {
+    "q": "prompt quotes printed clause",
+    "first": "card-harness"
+  },
+  {
+    "q": "who pays shared cost prompt",
+    "first": "card-harness"
+  },
+  {
+    "q": "record prompts in card tests",
+    "first": "card-harness"
+  },
+  {
+    "q": "known findings list",
+    "first": "card-harness"
+  },
+  {
+    "q": "pending findings owner",
+    "first": "card-harness"
+  },
+  {
+    "q": "baseline of card check findings",
+    "first": "card-harness"
+  },
+  {
+    "q": "test that an ability is not offered",
+    "first": "card-harness"
+  },
+  {
+    "q": "crash counted as refusal",
+    "first": "card-harness"
+  },
+  {
+    "q": "not offered helper",
+    "first": "card-harness"
+  },
+  {
+    "q": "screen amount icon",
+    "first": "card-harness"
+  },
+  {
+    "q": "counted amount shown",
+    "first": "card-harness"
+  },
+  {
+    "q": "prompt shows wrong number",
+    "first": "card-harness"
+  },
+  {
+    "q": "scenario builder test state",
+    "first": "card-harness"
+  },
+  {
+    "q": "pick among the cards just moved",
+    "first": "card-language"
+  },
+  {
+    "q": "choose number bar dead",
+    "first": "card-language"
+  },
+  {
+    "q": "gain zero no change",
+    "first": "card-language"
+  },
+  {
+    "q": "amount due",
+    "first": "card-language"
+  },
+  {
+    "q": "offer effect no change",
+    "first": "card-language"
+  },
+  {
+    "q": "dry run",
+    "first": "card-language"
+  },
+  {
+    "q": "can resolve",
+    "first": "card-language"
+  },
+  {
+    "q": "unpayable cost",
+    "first": "card-language"
+  },
+  {
+    "q": "look reorder top cards",
+    "first": "card-language"
+  },
+  {
+    "q": "discard a random card",
+    "first": "card-language"
+  },
+  {
+    "q": "heal up to maximum",
+    "first": "card-language"
+  },
+  {
+    "q": "resource several cards change",
+    "first": "card-language"
+  },
+  {
+    "q": "unreached clauses",
+    "first": "sim-pool"
+  },
+  {
+    "q": "whole game coverage",
+    "first": "sim-pool"
+  },
+  {
+    "q": "replay a failing seed",
+    "first": "sim-pool"
+  },
+  {
+    "q": "fuzz invariants whole game",
+    "first": "sim-pool"
+  },
+  {
+    "q": "simulation runner",
+    "first": "sim-pool"
+  },
+  {
+    "q": "whole game driver every clause resolved",
+    "first": "sim-pool"
+  },
+  {
+    "q": "enters play trigger",
+    "first": "engine-core"
+  },
+  {
+    "q": "response window",
+    "first": "engine-core"
+  },
+  {
+    "q": "stat breakdown",
+    "first": "engine-core"
+  },
+  {
+    "q": "modifier floor",
+    "first": "engine-core"
+  },
+  {
+    "q": "cost reduction minimum",
+    "first": "engine-core"
+  },
+  {
+    "q": "stat maximum cap",
+    "first": "engine-core"
+  },
+  {
+    "q": "clamped stored value",
+    "first": "engine-core"
+  },
+  {
+    "q": "hand size limit",
+    "first": "engine-core"
+  },
+  {
+    "q": "state check lose at zero",
+    "first": "engine-core"
+  },
+  {
+    "q": "win lose check",
+    "first": "engine-core"
+  },
+  {
+    "q": "until end of combat",
+    "first": "engine-core"
+  },
+  {
+    "q": "status duration",
+    "first": "engine-core"
+  },
+  {
+    "q": "instead of defeat replacement",
+    "first": "engine-core"
+  },
+  {
+    "q": "trigger order player chooses",
+    "first": "engine-core"
+  },
+  {
+    "q": "deterministic engine undo",
+    "first": "engine-core"
+  },
+  {
+    "q": "would an effect do anything",
+    "first": "engine-core"
+  },
+  {
+    "q": "game sheet questions",
+    "first": "plan-checker"
+  },
+  {
+    "q": "plan must answer what the kit holds",
+    "first": "plan-checker"
+  },
+  {
+    "q": "mechanics map line belongs to which question",
+    "first": "plan-checker"
+  },
+  {
+    "q": "plan check kit fit",
+    "first": "plan-checker"
+  },
+  {
+    "q": "track overrun",
+    "first": "clock"
+  },
+  {
+    "q": "distance to space on track",
+    "first": "clock"
+  },
+  {
+    "q": "lose space on a track",
+    "first": "clock"
+  },
+  {
+    "q": "countdown threshold",
+    "first": "clock"
+  },
+  {
+    "q": "round tracker",
+    "first": "clock"
+  },
+  {
+    "q": "spawn count",
+    "first": "clock"
+  },
+  {
+    "q": "die that cycles at 6",
+    "first": "clock"
+  },
+  {
+    "q": "counter wraps around",
+    "first": "clock"
+  },
+  {
+    "q": "wrap track",
+    "first": "clock"
+  },
+  {
+    "q": "time track threshold",
+    "first": "clock"
+  },
+  {
+    "q": "first step shortest path",
+    "first": "grid-map"
+  },
+  {
+    "q": "extra steps diagonal",
+    "first": "grid-map"
+  },
+  {
+    "q": "move toward ties",
+    "first": "grid-map"
+  },
+  {
+    "q": "grid distance",
+    "first": "grid-map"
+  },
+  {
+    "q": "line of sight",
+    "first": "grid-map"
+  },
+  {
+    "q": "multi cell space counts as one",
+    "first": "grid-map"
+  },
+  {
+    "q": "diagonal move past wall corner",
+    "first": "grid-map"
+  },
+  {
+    "q": "ranged attack line of sight",
+    "first": "grid-map"
+  },
+  {
+    "q": "shortest path ties player choice",
+    "first": "grid-map"
+  },
+  {
+    "q": "rotate map tile at setup",
+    "first": "grid-map"
+  },
+  {
+    "q": "exact sum dice",
+    "first": "dice-patterns"
+  },
+  {
+    "q": "smallest set of dice",
+    "first": "dice-patterns"
+  },
+  {
+    "q": "dice group exact size",
+    "first": "dice-patterns"
+  },
+  {
+    "q": "assign dice to slots",
+    "first": "dice-patterns"
+  },
+  {
+    "q": "dice check skill test",
+    "first": "dice-tray"
+  },
+  {
+    "q": "keep higher die",
+    "first": "dice-tray"
+  },
+  {
+    "q": "token on space",
+    "first": "board-model"
+  },
+  {
+    "q": "hand limit discard choice",
+    "first": "card-zones"
+  },
+  {
+    "q": "zone capacity",
+    "first": "card-zones"
+  },
+  {
+    "q": "over the limit choose what to drop",
+    "first": "card-zones"
+  },
+  {
+    "q": "once per round",
+    "first": "turn-flow"
+  },
+  {
+    "q": "use limit per game",
+    "first": "turn-flow"
+  },
+  {
+    "q": "once per turn per card",
+    "first": "turn-flow"
+  },
+  {
+    "q": "once per game ability",
+    "first": "turn-flow"
+  },
+  {
+    "q": "once per round ability limit",
+    "first": "turn-flow"
+  },
+  {
+    "q": "offline pwa",
+    "first": "offline"
+  },
+  {
+    "q": "scan ingestion",
+    "first": "scan-ingest"
+  },
+  {
+    "q": "flatbed scan crop cards",
+    "first": "scan-ingest"
+  },
+  {
+    "q": "golden replay file",
+    "first": "replay-cli"
+  },
+  {
+    "q": "game adapter for language model",
+    "first": "llm-playtester"
+  },
+  {
+    "q": "rule-based test player",
+    "first": "opponent"
+  },
+  {
+    "q": "content validation",
+    "first": "content-pack"
+  },
+  {
+    "q": "card csv columns",
+    "first": "content-pack"
+  },
+  {
+    "q": "two transcriptions agree",
+    "first": "transcription-check"
+  },
+  {
+    "q": "transcription coverage of card words",
+    "first": "coverage-report"
+  },
+  {
+    "q": "d20 die 3d",
+    "first": "pieces-3d"
+  },
+  {
+    "q": "token pool random draw",
+    "first": "token-bag"
+  },
+  {
+    "q": "events to log rows adapter",
+    "first": "game-log"
+  },
+  {
+    "q": "zone visibility face-down deck",
+    "first": "card-zones"
+  },
+  {
+    "q": "music by state",
+    "first": "sound-player"
+  },
+  {
+    "q": "op table text generation own engine",
+    "first": "card-language/op-table"
+  },
+  {
+    "q": "discard row",
+    "first": "K520"
+  },
+  {
+    "q": "stop set",
+    "first": "K629"
+  },
+  {
+    "q": "undo button",
+    "first": "engine-core"
+  },
+  {
+    "q": "hand of cards",
+    "first": "card-hand"
+  },
+  {
+    "q": "burn",
+    "first": "burn-away"
+  },
+  {
+    "q": "4K desktop table",
+    "first": "none"
+  },
+  {
+    "q": "boss damage slots",
+    "first": "none"
+  },
+  {
+    "q": "odds after rerolls",
+    "first": "K552"
+  },
+  {
+    "q": "divide among",
+    "first": "K536"
+  },
+  {
+    "q": "copy an effect",
+    "first": "K557"
+  },
+  {
+    "q": "hidden movement",
+    "first": "K576"
+  },
+  {
+    "q": "two games one app",
+    "first": "none"
+  },
+  {
+    "q": "weapon ammo",
+    "first": "none"
+  },
+  {
+    "q": "suit change",
+    "first": "none"
+  },
+  {
+    "q": "hand limit discard event",
+    "first": "card-zones"
+  },
+  {
+    "q": "zone capacity on leave hook",
+    "first": "card-zones"
+  },
+  {
+    "q": "cards leave over limit callback",
+    "first": "card-zones"
+  },
+  {
+    "q": "jpeg quality re-encode face",
+    "first": "art-pipeline"
+  },
+  {
+    "q": "face enlarged larger than source",
+    "first": "art-pipeline"
+  },
+  {
+    "q": "minimum image quality size cap",
+    "first": "art-pipeline"
+  },
+  {
+    "q": "game bypasses the kit",
+    "first": "motion-frame"
+  },
+  {
+    "q": "sound cue timing with animation",
+    "first": "motion-frame"
+  },
+  {
+    "q": "check game uses kit hooks",
+    "first": "motion-frame"
+  },
+  {
+    "q": "new file without kit search",
+    "first": "none"
+  },
+  {
+    "q": "built new section check",
+    "first": "none"
+  },
+  {
+    "q": "finish checks new modules",
+    "first": "none"
+  },
+  {
+    "q": "shuffle zone named rng",
+    "first": "card-zones"
+  },
+  {
+    "q": "shuffle deck rng name override",
+    "first": "card-zones"
+  },
+  {
+    "q": "shuffle zone forced order test",
+    "first": "card-zones"
+  },
+  {
+    "q": "extra adjacency",
+    "first": "grid-map"
+  },
+  {
+    "q": "what is missing from a dice pattern",
+    "first": "K620"
+  },
+  {
+    "q": "dice still needed to meet pattern",
+    "first": "K620"
+  },
+  {
+    "q": "dice condition met",
+    "first": "dice-patterns"
+  },
+  {
+    "q": "skip effect that changes nothing",
+    "first": "card-language"
+  },
+  {
+    "q": "steps back to a space on a looping track",
+    "first": "clock"
+  },
+  {
+    "q": "track marker cannot advance",
+    "first": "clock"
+  },
+  {
+    "q": "check a track definition",
+    "first": "clock"
+  },
+  {
+    "q": "offer paid effect only if it does something",
+    "first": "card-language"
+  },
+  {
+    "q": "modified cost tax discount on a card",
+    "first": "card-language"
+  },
+  {
+    "q": "effect cannot know hidden cards",
+    "first": "card-language"
+  },
+  {
+    "q": "effect interpreter verbs",
+    "first": "card-language"
+  },
+  {
+    "q": "resolve whole effect or none",
+    "first": "K548"
+  },
+  {
+    "q": "bespoke card ability",
+    "first": "card-language"
+  },
+  {
+    "q": "card scans crop",
+    "first": "scan-ingest"
+  },
+  {
+    "q": "die-cut silhouette",
+    "first": "none"
+  },
+  {
+    "q": "prompt screen text scan",
+    "first": "card-harness"
+  },
+  {
+    "q": "clause coverage driver",
+    "first": "sim-pool"
+  },
+  {
+    "q": "engine port bridge",
+    "first": "card-language/op-table"
+  },
+  {
+    "q": "prompt bridge own engine",
+    "first": "none"
+  },
+  {
+    "q": "train map stations",
+    "first": "board-model"
+  },
+  {
+    "q": "arcade score",
+    "first": "play-stats"
+  },
+  {
+    "q": "build your own character",
+    "first": "none"
+  },
+  {
+    "q": "steward",
+    "first": "none"
+  },
+  {
+    "q": "task queue prompt replay seeded",
+    "first": "engine-core"
+  },
+  {
+    "q": "effect interpreter ops",
+    "first": "card-language"
+  },
+  {
+    "q": "card ability data verbs",
+    "first": "card-language"
+  },
+  {
+    "q": "resolve all lines or none",
+    "first": "K548"
+  },
+  {
+    "q": "atomic effect block forfeited",
+    "first": "K548"
+  },
+  {
+    "q": "number parts discount steps",
+    "first": "card-language"
+  },
+  {
+    "q": "stat cap gain lost",
+    "first": "engine-core"
+  },
+  {
+    "q": "solo enemy deck script",
+    "first": "automa"
+  },
+  {
+    "q": "test pilot bot random greedy",
+    "first": "K424"
+  },
+  {
+    "q": "silhouette outline die-cut token",
+    "first": "none"
+  },
+  {
+    "q": "poor setup not offered helper",
+    "first": "card-harness"
+  },
+  {
+    "q": "reading judge printed clause render",
+    "first": "card-harness"
+  },
+  {
+    "q": "prompt scan words on screen",
+    "first": "card-harness"
+  },
+  {
+    "q": "bridge own engine prompt to widget",
+    "first": "none"
+  },
+  {
+    "q": "beat from engine events",
+    "first": "motion-frame"
+  },
+  {
+    "q": "music state intensity layers",
+    "first": "sound-player"
+  },
+  {
+    "q": "symbol count set collection",
+    "first": "none"
+  },
+  {
+    "q": "route map stations network movement",
+    "first": "board-model"
+  },
+  {
+    "q": "graph nodes move piece along edges",
+    "first": "board-model"
+  },
+  {
+    "q": "high score XP total",
+    "first": "play-stats"
+  },
+  {
+    "q": "campaign record deck carried between games",
+    "first": "campaign"
+  },
+  {
+    "q": "draw three keep one draft pick",
+    "first": "card-language"
+  },
+  {
+    "q": "repeat limit same effect per turn",
+    "first": "turn-flow"
+  },
+  {
+    "q": "level up deck add cards",
+    "first": "K595"
+  },
+  {
+    "q": "threat row refill spawn",
+    "first": "market-row"
+  },
+  {
+    "q": "difficulty tier handicap",
+    "first": "challenges"
+  },
+  {
+    "q": "attach upgrade behind card sleeve",
+    "first": "card-attachments"
+  },
+  {
+    "q": "custom handler one-off card",
+    "first": "card-language"
+  },
+  {
+    "q": "move a piece along edges",
+    "first": "board-model"
+  },
+  {
+    "q": "adaptive music by game state",
+    "first": "sound-player"
+  },
+  {
+    "q": "finish does not start",
+    "first": "none"
+  },
+  {
+    "q": "worker proof PASS line",
+    "first": "none"
+  },
+  {
+    "q": "run the check in WSL from Windows",
+    "first": "heavy-queue"
+  },
+  {
+    "q": "worktree teardown",
+    "first": "none"
+  },
+  {
+    "q": "once per turn response",
+    "first": "turn-flow"
+  },
+  {
+    "q": "pending list baseline",
+    "first": "card-harness"
+  },
+  {
+    "q": "unreached clauses coverage",
+    "first": "sim-pool"
+  },
+  {
+    "q": "prompt printed words",
+    "first": "card-harness"
+  },
+  {
+    "q": "replay finding seed",
+    "first": "sim-pool"
+  },
+  {
+    "q": "unreached clause",
+    "first": "sim-pool"
+  },
+  {
+    "q": "who pays shared cost",
+    "first": "card-harness"
+  },
+  {
+    "q": "poor line condition cost",
+    "first": "card-harness"
+  },
+  {
+    "q": "coverage rounds until no new clause",
+    "first": "sim-pool"
+  },
+  {
+    "q": "mutation guard off",
+    "first": "none"
+  },
+  {
+    "q": "prompt attribution path",
+    "first": "card-harness"
+  },
+  {
+    "q": "deal damage split among targets",
+    "first": "K536"
+  },
+  {
+    "q": "pay or else otherwise",
+    "first": "card-language"
+  },
+  {
+    "q": "amount expression count times",
+    "first": "card-language"
+  },
+  {
+    "q": "prompt recorder vitest test title",
+    "first": "card-harness"
+  },
+  {
+    "q": "render snapshot records",
+    "first": "card-harness"
+  },
+  {
+    "q": "response window prompt",
+    "first": "K646"
+  },
+  {
+    "q": "travel distance between locations",
+    "first": "none"
+  },
+  {
+    "q": "condition expression all any not compare",
+    "first": "card-language"
+  },
+  {
+    "q": "amount expression count per",
+    "first": "card-language"
+  },
+  {
+    "q": "then only if previous resolved",
+    "first": "card-language"
+  },
+  {
+    "q": "raw key generated text",
+    "first": "card-harness"
+  },
+  {
+    "q": "choose amount split tokens",
+    "first": "K536"
+  },
+  {
+    "q": "due",
+    "first": "card-language"
+  },
+  {
+    "q": "target filter select cards",
+    "first": "card-language"
+  },
+  {
+    "q": "resolve cards left to right with windows",
+    "first": "K560"
+  },
+  {
+    "q": "random direction move",
+    "first": "none"
+  },
+  {
+    "q": "deck reveal ends round",
+    "first": "none"
+  },
+  {
+    "q": "overlapping cards footprint",
+    "first": "K544"
+  },
+  {
+    "q": "reshuffle trigger card",
+    "first": "card-language/triggers"
+  },
+  {
+    "q": "placement enumeration",
+    "first": "board-model"
+  },
+  {
+    "q": "fire spreads to neighbours",
+    "first": "none"
+  },
+  {
+    "q": "legal placements grid",
+    "first": "board-model"
+  },
+  {
+    "q": "connected group",
+    "first": "none"
+  },
+  {
+    "q": "visit a building",
+    "first": "none"
+  },
+  {
+    "q": "adjacent touching edge",
+    "first": "grid-map"
+  },
+  {
+    "q": "card stack on a location",
+    "first": "card-zones"
+  },
+  {
+    "q": "rearrange row",
+    "first": "none"
+  },
+  {
+    "q": "add card to row",
+    "first": "K520"
+  },
+  {
+    "q": "pay with a set of cards total",
+    "first": "K590"
+  },
+  {
+    "q": "weapon",
+    "first": "none"
+  },
+  {
+    "q": "ammo tracker",
+    "first": "none"
+  },
+  {
+    "q": "restriction on next turn",
+    "first": "engine-core"
+  },
+  {
+    "q": "collection of items",
+    "first": "none"
+  },
+  {
+    "q": "tile flip",
+    "first": "none"
+  },
+  {
+    "q": "odds next card",
+    "first": "none"
+  },
+  {
+    "q": "greedy player",
+    "first": "K424"
+  },
+  {
+    "q": "clauseList",
+    "first": "card-harness"
+  },
+  {
+    "q": "stack of cards per pile",
+    "first": "card-pile"
+  },
+  {
+    "q": "discard row payment",
+    "first": "K520"
+  },
+  {
+    "q": "dice check target reroll",
+    "first": "K552"
+  },
+  {
+    "q": "calendar day track",
+    "first": "clock"
+  },
+  {
+    "q": "double dice",
+    "first": "none"
+  },
+  {
+    "q": "dice check against a difficulty",
+    "first": "dice-tray"
+  },
+  {
+    "q": "use ability once per game",
+    "first": "turn-flow"
+  },
+  {
+    "q": "build from resources",
+    "first": "none"
+  },
+  {
+    "q": "campaign carry between games",
+    "first": "campaign"
+  },
+  {
+    "q": "route through areas",
+    "first": "none"
+  },
+  {
+    "q": "extra action",
+    "first": "none"
+  },
+  {
+    "q": "music state",
+    "first": "sound-player"
+  },
+  {
+    "q": "reroll pay",
+    "first": "dice-tray"
+  },
+  {
+    "q": "flip die opposite face",
+    "first": "none"
+  },
+  {
+    "q": "clause list catalogue",
+    "first": "card-harness"
+  },
+  {
+    "q": "clause list",
+    "first": "card-harness"
+  },
+  {
+    "q": "clause split printed text",
+    "first": "card-harness"
+  },
+  {
+    "q": "unprinted scope restriction words",
+    "first": "card-harness"
+  },
+  {
+    "q": "printed restriction word",
+    "first": "card-harness"
+  },
+  {
+    "q": "cards screen every face",
+    "first": "proof-sheet"
+  },
+  {
+    "q": "screen check every card",
+    "first": "card-harness"
+  },
+  {
+    "q": "look at top sort",
+    "first": "card-language"
+  },
+  {
+    "q": "middle of the deck",
+    "first": "none"
+  },
+  {
+    "q": "line of sight end corner wall",
+    "first": "grid-map"
+  },
+  {
+    "q": "sight endpoints never block",
+    "first": "grid-map"
+  },
+  {
+    "q": "stored value clamped each change",
+    "first": "K612"
+  },
+  {
+    "q": "heal lose N",
+    "first": "card-language"
+  },
+  {
+    "q": "random orientation of a card",
+    "first": "none"
+  },
+  {
+    "q": "card rotated at shuffle",
+    "first": "none"
+  },
+  {
+    "q": "randomly rearrange cards",
+    "first": "card-language"
+  },
+  {
+    "q": "modify roll add to roll",
+    "first": "dice-tray"
+  },
+  {
+    "q": "placement legality",
+    "first": "board-model"
+  },
+  {
+    "q": "placement scorer",
+    "first": "none"
+  },
+  {
+    "q": "clause splitter",
+    "first": "card-harness"
+  },
+  {
+    "q": "split damage among targets",
+    "first": "K536"
+  },
+  {
+    "q": "draw a card reshuffle",
+    "first": "card-language"
+  },
+  {
+    "q": "polyhedral dice d8 d4",
+    "first": "K656"
+  },
+  {
+    "q": "derived value checkpoint",
+    "first": "engine-core"
+  },
+  {
+    "q": "card row cleared by trigger",
+    "first": "K520"
+  },
+  {
+    "q": "two triggers same time order",
+    "first": "engine-core"
+  },
+  {
+    "q": "time track game end",
+    "first": "clock"
+  },
+  {
+    "q": "dice target reroll cost",
+    "first": "dice-tray"
+  },
+  {
+    "q": "instant card resolves when drawn",
+    "first": "card-language/triggers"
+  },
+  {
+    "q": "draw trigger resolve card",
+    "first": "card-language/triggers"
+  },
+  {
+    "q": "probability after reroll",
+    "first": "K552"
+  },
+  {
+    "q": "place dice into groups",
+    "first": "dice-patterns"
+  },
+  {
+    "q": "carry state between campaign games",
+    "first": "campaign"
+  },
+  {
+    "q": "exhausted ability marker",
+    "first": "card-language"
+  },
+  {
+    "q": "whole game coverage report",
+    "first": "sim-pool"
+  },
+  {
+    "q": "number printed clauses",
+    "first": "card-harness"
+  },
+  {
+    "q": "legal move driver",
+    "first": "sim-pool"
+  },
+  {
+    "q": "claude player adapter",
+    "first": "llm-playtester"
+  },
+  {
+    "q": "music state machine",
+    "first": "sound-player"
+  },
+  {
+    "q": "encounter deck spawn",
+    "first": "card-zones"
+  },
+  {
+    "q": "check against a difficulty drawn card",
+    "first": "K594"
+  },
+  {
+    "q": "enemy reinforcement shuffle",
+    "first": "card-zones"
+  },
+  {
+    "q": "stacked deck test",
+    "first": "card-harness"
+  },
+  {
+    "q": "search a deck stop at first",
+    "first": "card-language"
+  },
+  {
+    "q": "draw until you find",
+    "first": "card-language"
+  },
+  {
+    "q": "delay effect until",
+    "first": "card-language"
+  },
+  {
+    "q": "search stop at first",
+    "first": "card-language"
+  },
+  {
+    "q": "gain tokens resource",
+    "first": "card-language"
+  },
+  {
+    "q": "attack damage rounds",
+    "first": "K550"
+  },
+  {
+    "q": "trigger when card added to row",
+    "first": "K520"
+  },
+  {
+    "q": "reload ammo weapon",
+    "first": "none"
+  },
+  {
+    "q": "pattern shapes wording",
+    "first": "card-harness"
+  },
+  {
+    "q": "same wording different shape",
+    "first": "card-harness"
+  },
+  {
+    "q": "die as unit pip value",
+    "first": "none"
+  },
+  {
+    "q": "dice as pieces on board",
+    "first": "none"
+  },
+  {
+    "q": "additive modifier floor",
+    "first": "engine-core"
+  },
+  {
+    "q": "deck reshuffle discard",
+    "first": "card-language"
+  },
+  {
+    "q": "two ended card rotated deck",
+    "first": "none"
+  },
+  {
+    "q": "not offered would do nothing",
+    "first": "card-language"
+  },
+  {
+    "q": "effect cannot be paid",
+    "first": "card-language"
+  },
+  {
+    "q": "duration this round",
+    "first": "engine-core"
+  },
+  {
+    "q": "enemy driven by deck",
+    "first": "automa"
+  },
+  {
+    "q": "automated enemy movement",
+    "first": "K559"
+  },
+  {
+    "q": "mission goals as data",
+    "first": "engine-core"
+  },
+  {
+    "q": "setup options forced",
+    "first": "none"
+  },
+  {
+    "q": "combat compare lower wins",
+    "first": "K550"
+  },
+  {
+    "q": "attack and defense roll",
+    "first": "K550"
+  },
+  {
+    "q": "spawn enemy at point",
+    "first": "K556"
+  },
+  {
+    "q": "reinforcement spawn limit",
+    "first": "K556"
+  },
+  {
+    "q": "reading order units",
+    "first": "none"
+  },
+  {
+    "q": "enemy activation order",
+    "first": "none"
+  },
+  {
+    "q": "swap positions",
+    "first": "K601"
+  },
+  {
+    "q": "teleport placement",
+    "first": "none"
+  },
+  {
+    "q": "damage tokens defeat",
+    "first": "K550"
+  },
+  {
+    "q": "step display opponent turn",
+    "first": "paced-view"
+  },
+  {
+    "q": "machine queue heavy run",
+    "first": "heavy-queue"
+  },
+  {
+    "q": "special space counts as one",
+    "first": "grid-map"
+  },
+  {
+    "q": "enemy reading order",
+    "first": "none"
+  },
+  {
+    "q": "once per combat",
+    "first": "turn-flow"
+  },
+  {
+    "q": "setup field depends on scenario",
+    "first": "none"
+  },
+  {
+    "q": "scenario forces option",
+    "first": "none"
+  },
+  {
+    "q": "card with two ends",
+    "first": "none"
+  },
+  {
+    "q": "deck turned half",
+    "first": "none"
+  },
+  {
+    "q": "public back of top card",
+    "first": "card-zones"
+  },
+  {
+    "q": "free action count",
+    "first": "none"
+  },
+  {
+    "q": "actions per turn counter",
+    "first": "none"
+  },
+  {
+    "q": "die on the map piece",
+    "first": "none"
+  },
+  {
+    "q": "line of sight ranged attack corner",
+    "first": "grid-map"
+  },
+  {
+    "q": "random override rolls",
+    "first": "engine-core"
+  },
+  {
+    "q": "build grid from tile records",
+    "first": "grid-map"
+  },
+  {
+    "q": "board assembled from map tiles",
+    "first": "grid-map"
+  },
+  {
+    "q": "tile placed upside down in scenario layout",
+    "first": "K633"
+  },
+  {
+    "q": "diagonal step allowed by ability",
+    "first": "K630"
+  },
+  {
+    "q": "movement stops when entering occupied area",
+    "first": "K629"
+  },
+  {
+    "q": "move ends on entering enemy zone",
+    "first": "K629"
+  },
+  {
+    "q": "move toward nearest target with tie choice",
+    "first": "K559"
+  },
+  {
+    "q": "enemy moves along shortest path player breaks tie",
+    "first": "K559"
+  },
+  {
+    "q": "dice as units on a map",
+    "first": "none"
+  },
+  {
+    "q": "die value is unit strength",
+    "first": "none"
+  },
+  {
+    "q": "move unit up to N spaces then fight",
+    "first": "K602"
+  },
+  {
+    "q": "movement interrupted by combat continue",
+    "first": "K602"
+  },
+  {
+    "q": "enemy ai movement card driven",
+    "first": "automa"
+  },
+  {
+    "q": "automated enemies move toward destination",
+    "first": "K559"
+  },
+  {
+    "q": "attack roll versus defense roll",
+    "first": "K550"
+  },
+  {
+    "q": "combat resolution compare totals",
+    "first": "K550"
+  },
+  {
+    "q": "spawn enemies at spawn point",
+    "first": "K556"
+  },
+  {
+    "q": "reinforcements up to limit",
+    "first": "K556"
+  },
+  {
+    "q": "card with two ends orientation",
+    "first": "none"
+  },
+  {
+    "q": "deck card public back hidden face",
+    "first": "card-zones"
+  },
+  {
+    "q": "resource track with reset at max",
+    "first": "clock"
+  },
+  {
+    "q": "meter that resets and gives reward",
+    "first": "clock"
+  },
+  {
+    "q": "action points per turn",
+    "first": "none"
+  },
+  {
+    "q": "extra action granted",
+    "first": "none"
+  },
+  {
+    "q": "boss with special rules",
+    "first": "none"
+  },
+  {
+    "q": "tokens placed on map spaces",
+    "first": "board-model"
+  },
+  {
+    "q": "win condition per scenario",
+    "first": "engine-core"
+  },
+  {
+    "q": "pool of dice runs out",
+    "first": "token-bag"
+  },
+  {
+    "q": "effect lasts until end of combat",
+    "first": "engine-core"
+  },
+  {
+    "q": "duration this combat",
+    "first": "engine-core"
+  },
+  {
+    "q": "unit cannot attack status",
+    "first": "engine-core"
+  },
+  {
+    "q": "hand size maximum choose discard",
+    "first": "card-zones"
+  },
+  {
+    "q": "order of simultaneous triggers commute",
+    "first": "K591"
+  },
+  {
+    "q": "skip trigger order prompt same result",
+    "first": "K591"
+  },
+  {
+    "q": "show which dice still needed",
+    "first": "K620"
+  },
+  {
+    "q": "scenario forces setup choice",
+    "first": "none"
+  },
+  {
+    "q": "reroll window combat",
+    "first": "dice-tray"
+  },
+  {
+    "q": "reroll until different value",
+    "first": "dice-tray"
+  },
+  {
+    "q": "move token to space",
+    "first": "board-model"
+  },
+  {
+    "q": "carry token with unit",
+    "first": "none"
+  },
+  {
+    "q": "advance track one space at a time",
+    "first": "clock"
+  },
+  {
+    "q": "swap two units positions",
+    "first": "K601"
+  },
+  {
+    "q": "roll d6 on table",
+    "first": "K543"
+  },
+  {
+    "q": "dice table lookup",
+    "first": "K543"
+  },
+  {
+    "q": "shoot at range",
+    "first": "grid-map"
+  },
+  {
+    "q": "rotate tile with pieces",
+    "first": "K575"
+  },
+  {
+    "q": "turn map tile mid game",
+    "first": "K575"
+  },
+  {
+    "q": "spend actions to move",
+    "first": "none"
+  },
+  {
+    "q": "teleport to objective",
+    "first": "none"
+  },
+  {
+    "q": "skip a phase this round",
+    "first": "turn-flow"
+  },
+  {
+    "q": "skip phase condition",
+    "first": "turn-flow"
+  },
+  {
+    "q": "card test scenario put pieces on spaces",
+    "first": "card-harness"
+  },
+  {
+    "q": "scenario put tokens on map",
+    "first": "card-harness"
+  },
+  {
+    "q": "simulation module drivers",
+    "first": "sim-pool"
+  },
+  {
+    "q": "wounded instead of removed",
+    "first": "engine-core"
+  },
+  {
+    "q": "motion beats event order cue sound from motion player",
+    "first": "motion-frame"
+  },
+  {
+    "q": "game bypasses the kit release",
+    "first": "motion-frame"
+  },
+  {
+    "q": "game bypasses the kit hurry",
+    "first": "motion-frame"
+  },
+  {
+    "q": "game bypasses the kit skip",
+    "first": "motion-frame"
+  },
+  {
+    "q": "art pipeline image jpeg manifest",
+    "first": "art-pipeline"
+  },
+  {
+    "q": "movement path step one space at a time end space reach",
+    "first": "grid-map"
+  },
+  {
+    "q": "barred option reason code not offered",
+    "first": "card-language"
+  },
+  {
+    "q": "round phases loop actions per turn",
+    "first": "turn-flow"
+  },
+  {
+    "q": "play a sound after the animation step",
+    "first": "motion-frame"
+  },
+  {
+    "q": "timer hold auto continue",
+    "first": "motion-frame"
+  },
+  {
+    "q": "reachable spaces within N steps",
+    "first": "grid-map"
+  },
+  {
+    "q": "move preview end spaces paths",
+    "first": "grid-map"
+  },
+  {
+    "q": "playtest random answers through the screen",
+    "first": "dev-autoplay"
+  },
+  {
+    "q": "play whole games by script e2e",
+    "first": "sim-pool"
+  },
+  {
+    "q": "music state machine layers by game state",
+    "first": "sound-player"
+  },
+  {
+    "q": "all end spaces of a move with distinct paths",
+    "first": "grid-map"
+  },
+  {
+    "q": "ready exhausted cards at round start",
+    "first": "tap"
+  },
+  {
+    "q": "build own table check",
+    "first": "plan-checker"
+  },
+  {
+    "q": "plan build own table rows",
+    "first": "plan-checker"
+  },
+  {
+    "q": "plan check build own rows",
+    "first": "plan-checker"
+  },
+  {
+    "q": "flash once and go dark",
+    "first": "glow"
+  },
+  {
+    "q": "glow ramp up from dark",
+    "first": "glow"
+  },
+  {
+    "q": "single flash glow",
+    "first": "glow"
+  },
+  {
+    "q": "pr body lists new modules",
+    "first": "none"
+  },
+  {
+    "q": "worker pr body new files listed",
+    "first": "none"
+  },
+  {
+    "q": "reason for each new file",
+    "first": "none"
+  },
+  {
+    "q": "status condition token",
+    "first": "engine-core"
+  },
+  {
+    "q": "give a status to a unit",
+    "first": "engine-core"
+  },
+  {
+    "q": "stunned until end of turn",
+    "first": "engine-core"
+  },
+  {
+    "q": "force a dice roll in a test",
+    "first": "dice-tray"
+  },
+  {
+    "q": "dice tray roll name override",
+    "first": "dice-tray"
+  },
+  {
+    "q": "named dice roll",
+    "first": "dice-tray"
+  },
+  {
+    "q": "hold with fallback",
+    "first": "motion-frame"
+  },
+  {
+    "q": "play sound on beat",
+    "first": "motion-frame"
+  },
+  {
+    "q": "skip animation on click",
+    "first": "motion-frame"
+  },
+  {
+    "q": "offer only if it does something",
+    "first": "card-language"
+  },
+  {
+    "q": "end effect at end of combat",
+    "first": "engine-core"
+  },
+  {
+    "q": "hand limit discard",
+    "first": "card-zones"
+  },
+  {
+    "q": "shuffle deck seeded",
+    "first": "card-zones"
+  },
+  {
+    "q": "end turn early",
+    "first": "turn-flow"
+  },
+  {
+    "q": "fade sound out",
+    "first": "sound-player"
+  },
+  {
+    "q": "see past walls",
+    "first": "grid-map"
+  },
+  {
+    "q": "keep die out of next roll",
+    "first": "dice-tray"
+  },
+  {
+    "q": "test ability not offered",
+    "first": "card-harness"
+  },
+  {
+    "q": "resume after crash",
+    "first": "sim-pool"
+  },
+  {
+    "q": "marker cannot advance",
+    "first": "clock"
+  },
+  {
+    "q": "fewest dice meet pattern",
+    "first": "dice-patterns"
+  },
+  {
+    "q": "animation queue",
+    "first": "motion-frame"
+  },
+  {
+    "q": "event queue for animations",
+    "first": "motion-frame"
+  },
+  {
+    "q": "timer for bot thinking delay",
+    "first": "paced-view"
+  },
+  {
+    "q": "toast message",
+    "first": "ui-helpers"
+  },
+  {
+    "q": "tooltip hover card",
+    "first": "ui-helpers"
+  },
+  {
+    "q": "undo last move",
+    "first": "engine-core"
+  },
+  {
+    "q": "save game slots",
+    "first": "saves"
+  },
+  {
+    "q": "popup notice",
+    "first": "modal-dialog"
+  },
+  {
+    "q": "card zoom preview",
+    "first": "card-zoom"
+  },
+  {
+    "q": "confirm button prompt",
+    "first": "prompt-host"
+  },
+  {
+    "q": "reroll window choose dice to reroll",
+    "first": "dice-tray"
+  },
+  {
+    "q": "win probability exact odds two dice compare",
+    "first": "dice-odds"
+  },
+  {
+    "q": "resize image long edge cap",
+    "first": "art-pipeline"
+  },
+  {
+    "q": "resource cap",
+    "first": "card-language"
+  },
+  {
+    "q": "end of round scoring",
+    "first": "turn-flow"
+  },
+  {
+    "q": "did nothing",
+    "first": "engine-core/do-nothing"
+  },
+  {
+    "q": "campaign setup",
+    "first": "campaign"
+  },
+  {
+    "q": "phone campaign",
+    "first": "campaign"
+  },
+  {
+    "q": "theme kit",
+    "first": "theme-check"
+  },
+  {
+    "q": "skin components",
+    "first": "controls"
+  },
+  {
+    "q": "static ability changes cost",
+    "first": "engine-core/layers"
+  },
+  {
+    "q": "scenario objective progress",
+    "first": "engine-core"
+  },
+  {
+    "q": "mission goal done or failed",
+    "first": "engine-core"
+  },
+  {
+    "q": "objective with steps",
+    "first": "engine-core"
+  },
+  {
+    "q": "unlock locked card",
+    "first": "none"
+  },
+  {
+    "q": "put cards on top or bottom of deck",
+    "first": "card-language"
+  },
+  {
+    "q": "scenario setup place pieces",
+    "first": "card-harness"
+  },
+  {
+    "q": "lose condition prompt",
+    "first": "engine-core"
+  },
+  {
+    "q": "end game bonus points",
+    "first": "table-panels"
+  },
+  {
+    "q": "victory points term",
+    "first": "glossary"
+  },
+  {
+    "q": "final score breakdown",
+    "first": "table-panels"
+  },
+  {
+    "q": "resource pool with limit",
+    "first": "card-language"
+  },
+  {
+    "q": "payment plan swap resources",
+    "first": "K590"
+  },
+  {
+    "q": "forecast next round",
+    "first": "none"
+  },
+  {
+    "q": "scenario test fixture",
+    "first": "card-harness"
+  },
+  {
+    "q": "theme skin components",
+    "first": "theme-check"
+  },
+  {
+    "q": "styled component gallery",
+    "first": "theme-check"
+  },
+  {
+    "q": "game over summary screen",
+    "first": "table-panels"
+  },
+  {
+    "q": "board space labels",
+    "first": "board-layout"
+  },
+  {
+    "q": "numbered map labels",
+    "first": "board-layout"
+  },
+  {
+    "q": "optional board zones",
+    "first": "board-layout"
+  },
+  {
+    "q": "phone campaign panel",
+    "first": "phone-mode"
+  },
+  {
+    "q": "score preview panel",
+    "first": "engine-core/preview"
+  }
 ]
