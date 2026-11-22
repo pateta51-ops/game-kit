@@ -19,7 +19,7 @@ const toStep = (e: Entry): ClauseStep | undefined =>
 const dir = mkdtempSync(join(tmpdir(), 'k666-proof-'));
 const log = join(dir, 'proof.jsonl');
 const recipeLog = join(dir, 'recipe.jsonl');
-const IDS = ['g-resolved', 'g-static', 'g-noop', 'g-hook', 'g-fails', 'g-absent', 'r-old'];
+const IDS = ['g-resolved', 'g-static', 'g-noop', 'g-hook', 'g-fails', 'g-absent', 'g-hand', 'g-after', 'g-before', 'g-same', 'r-old'];
 
 // These run first and write the log the next block reads.
 describe('K666 proof from a game log', () => {
@@ -38,6 +38,16 @@ describe('K666 proof from a game log', () => {
   });
   it('a clause missing from the trace is refused', () => {
     expect(() => proveResolved(log, clauseTrace<Entry>([], toStep), 'g-absent')).toThrow('Not resolved: g-absent (not in the trace)');
+  });
+  it('a hand-built trace object is refused', () => {
+    const hand = { steps: [{ clause: 'g-hand', step: 0, kind: 'resolved' as const }] };
+    expect(() => proveResolved(log, hand, 'g-hand')).toThrow('proveResolved: build the trace with clauseTrace(), not by hand');
+  });
+  it('an applied step with only after, only before, or before equal to after is not proven', () => {
+    const one = (s: ClauseStep) => () => proveResolved(log, clauseTrace([s], (x) => x), s.clause);
+    expect(one({ clause: 'g-after', step: 1, kind: 'applied', after: 3 })).toThrow('Not resolved: g-after (applied without before and after)');
+    expect(one({ clause: 'g-before', step: 1, kind: 'applied', before: 3 })).toThrow('Not resolved: g-before (applied without before and after)');
+    expect(one({ clause: 'g-same', step: 1, kind: 'applied', before: 3, after: 3 })).toThrow('Not resolved: g-same (applied with no effect)');
   });
   it.fails('an it.fails test using the input proves nothing', () => {
     proveResolved(log, clauseTrace<Entry>([{ n: 1, card: 'g-fails', event: 'ran' }], toStep), 'g-fails');

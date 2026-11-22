@@ -26,16 +26,21 @@ export interface ClauseTrace {
   readonly changed?: ((clause: string, before: unknown, after: unknown) => boolean) | undefined;
 }
 
+const made = new WeakSet<ClauseTrace>();
+
 /** K666: the trace from a game's own log; `clauseOf` maps each entry (and its index) to the steps it shows, or none. */
 export function clauseTrace<E>(entries: readonly E[], clauseOf: (entry: E, step: number) => ClauseStep | readonly ClauseStep[] | undefined, changed?: ClauseTrace['changed']): ClauseTrace {
-  return { steps: entries.flatMap((e, i) => clauseOf(e, i) ?? []), changed };
+  const t: ClauseTrace = { steps: entries.flatMap((e, i) => clauseOf(e, i) ?? []), changed };
+  made.add(t);
+  return t;
 }
 
 const expectSteps = (trace: ClauseTrace, ids: readonly string[]): void => {
   const changed = trace.changed ?? ((_c, b, a) => !isDeepStrictEqual(b, a));
   const why = (id: string): string | undefined => {
     const s = trace.steps.filter((x) => x.clause === id);
-    if (s.some((x) => x.kind === 'resolved' || changed(id, x.before, x.after))) return undefined;
+    if (s.some((x) => x.kind === 'resolved' || (x.before !== undefined && x.after !== undefined && changed(id, x.before, x.after)))) return undefined;
+    if (s.length > 0 && s.every((x) => x.before === undefined || x.after === undefined)) return 'applied without before and after';
     return s.length > 0 ? 'applied with no effect' : 'not in the trace';
   };
   const bad = ids.flatMap((id) => {
@@ -46,7 +51,10 @@ const expectSteps = (trace: ClauseTrace, ids: readonly string[]): void => {
 };
 
 export function proveResolved(log: string, trace: AbilityTrace<unknown> | ClauseTrace, ...clauses: string[]): void {
-  if ('steps' in trace) expectSteps(trace, clauses);
+  if ('steps' in trace) {
+    if (!made.has(trace)) throw new Error('proveResolved: build the trace with clauseTrace(), not by hand');
+    expectSteps(trace, clauses);
+  }
   else expectResolved(trace, ...clauses);
   const { currentTestName, testPath } = expect.getState();
   const root = process.cwd().replace(/\\/g, '/');
