@@ -544,6 +544,39 @@ x
       expect(want === null ? p : p.filter((l) => l.includes(want)).length > 0).toEqual(want === null ? [] : true);
       expect(r.code).toBe(want === null ? 0 : 1);
     });
+  describe('K690 build-own rows for screen, motion and sound code', () => {
+    const ROWS = '| Screen: hand fan | "hand fan"; "card row" | `player-board` | game code | `player-board` lays cards flat; this fan bends along an arc |\n| Motion: dice tumble | "dice roll"; "tumble" | `motion-frame` | candidate | K700 |\n| Sound: none | every sound is the kit player with this game\'s cues | - | - | - |\n';
+    const UI = GOOD.replace('| Game verbs: none |', ROWS + '| Game verbs: none |') + '\n#### Phase U1 — the table\n\nx\n\n#### Phase V — motion\n\nx\n\n#### Phase AU — sound\n\nx\n';
+    const UFIT = FIT + '| Screen: hand fan | game code |\n| Motion: dice tumble | candidate |\n';
+    const k690 = (t: string): string[] => exec(t, UFIT).out.split(/\r?\n/).filter((l) => l.startsWith('PROBLEM kit:'));
+    it('a plan with Screen, Motion and Sound rows passes (py and ts)', () => {
+      const r = exec(UI, UFIT);
+      expect(r.out).not.toContain('PROBLEM');
+      expect(r.code).toBe(0);
+      expect(main(['--plan', r.f, ...r.args])).toBe(0);
+    });
+    it('a plan that builds a screen with no Screen row fails, naming it (py and ts)', () => {
+      const r = exec(UI.replace(/\| Screen: hand fan .*\n/, ''), UFIT);
+      expect(r.out.split(/\r?\n/).filter((l) => l.startsWith('PROBLEM'))).toEqual(["PROBLEM kit: build-own table: the plan builds screen code (Phase U1) but has no 'Screen' row (one per screen part the game writes, 'Screen: <part>', or 'Screen: none' with a reason of six words or more)"]);
+      expect(r.code).toBe(1);
+      expect(main(['--plan', r.f, ...r.args])).toBe(1);
+    });
+    it('no Motion row under Phase V, no Sound row under Phase AU: each fails', () => {
+      expect(k690(UI.replace(/\| Motion: dice tumble .*\n/, ''))).toEqual([expect.stringContaining("builds motion code (Phase V) but has no 'Motion' row")]);
+      expect(k690(UI.replace(/\| Sound: none .*\n/, ''))).toEqual([expect.stringContaining("builds sound code (Phase AU) but has no 'Sound' row")]);
+    });
+    it('a none row needs a reason and stands alone of its kind; a Screen row still needs its searches', () => {
+      expect(k690(UI.replace("every sound is the kit player with this game's cues", 'kit'))).toEqual(["PROBLEM kit: build-own table: 'Sound: none' gives no reason of six words or more"]);
+      expect(k690(UI.replace('| Sound: none |', '| Sound: music states | "music"; "states" | `sound-player` | candidate | K701 |\n| Sound: none |'))).toEqual(["PROBLEM kit: kit-fit review: no line for the build-own row 'Sound: music states'", "PROBLEM kit: build-own table: 'Sound: none': a kind with rows of its own may not also say none"]);
+      expect(k690(UI.replace('"hand fan"; "card row"', 'fan'))).toEqual(["PROBLEM kit: build-own table: 'Screen: hand fan' names fewer than two phrasings searched in the kit (separate them with ';')"]);
+    });
+    it('an old plan with no UI phase is unchanged; wireframe and mock phases (UW, UK) and voice (VO) ask for no row', () => {
+      expect(k690(GOOD)).toEqual([]);
+      const r = exec(GOOD + '\n#### Phase UW — wireframes\n\nx\n\n#### Phase UK — mocks\n\nx\n\n#### Phase VO — voice\n\nx\n');
+      expect(r.out).not.toContain('PROBLEM');
+      expect(r.code).toBe(0);
+    });
+  });
   it('kit-fit review: an empty file, a missing row, no file', () => {
     expect(problems(GOOD, '').some((l) => l.includes('missing or empty'))).toBe(true);
     expect(problems(GOOD, '| Spy movement | x |\n').some((l) => l.includes('no line for the build-own row'))).toBe(true);
