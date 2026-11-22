@@ -37,8 +37,8 @@ A worker starts with a fresh context. The brief stands alone when it names:
 - The row file says `state: done`; open questions are in the PR body ("Rules questions", "Look questions", "Kit gap").
 
 Pitfalls
-- Never run the heavy check on local Windows; `kit.mjs finish` runs it in WSL.
-- `worktree --here` (the `node_modules` link) is not optional in a worktree: without it the built pages differ and the check fails.
+- Never run the heavy check on local Windows; in a game `kit.mjs finish` runs it in WSL.
+- `worktree --here` (the `node_modules` link) is not optional in a worktree: without it nothing resolves and the check fails.
 - Do not copy `node_modules` into the worktree and do not commit the link.
 - `next-id` needs `gh` signed in to see open PRs; re-run it just before you open the PR if the batch was long.
 - `kit/` in a game changes only by `kit.mjs pull` (see [new-game.md](new-game.md)).
