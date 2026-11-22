@@ -13,7 +13,7 @@ export interface NumberModifier {
   readonly amount: number;
   /** A key in `NumberOptions.conditions`: it counts only while that holds. */
   readonly when?: string;
-  /** A reduction's own minimum: it never lowers a value at or below it, and never raises one. */
+  /** A reduction's own minimum: it never lowers a value at or below it, and never raises one. On anything but an add below 0 (or of 0): an `EngineBugError`. */
   readonly min?: number;
   /** A key in `NumberOptions.counts`: the amount is per counted unit. */
   readonly per?: string;
@@ -21,16 +21,18 @@ export interface NumberModifier {
   readonly round?: 'up' | 'down';
   /** The stat, cost line or cost it changes; one that names another than `NumberOptions.of` is skipped. */
   readonly of?: string;
+  /** Anything the game wants back on the part (an effect id, a clause); copied as it is, never read here. */
+  readonly ref?: unknown;
 }
 export interface NumberOrder {
   readonly steps: readonly NumberStep[];
-  /** Which of several setters applies (default `last`, in the order given). */
+  /** Which of several setters applies (default `last`: last in the array given, not latest in time). */
   readonly setters?: 'last' | 'lowest' | 'highest';
   /** A set never raises the value. */
   readonly setOnlyLowers?: boolean;
-  /** The `decrease` step's order: as given (default), or highest `min` first, then the largest reduction. */
+  /** The `decrease` step's order: as given (default), or highest `min` first, then the largest reduction. `highestMin` needs a `decrease` step and no `add` step (else an `EngineBugError`). */
   readonly decreases?: 'gather' | 'highestMin';
-  /** Rounding after a multiplier (none: the value stays as it is). */
+  /** Rounding after a multiplier (none: the value stays as it is); `up` is toward plus infinity, so toward zero on a negative. */
   readonly round?: 'up' | 'down';
   /** The default floor, source `floor`; needs a `floor` step. */
   readonly floor?: number;
@@ -40,13 +42,20 @@ export interface NumberOrder {
 export interface NumberPart {
   readonly source: string;
   readonly op: NumberOp;
-  /** The modifier's amount (times its count). */
+  /** The modifier's amount (times its count; on a `scope` entry times its count only when the call gave that count). */
   readonly amount: number;
-  /** The change it made: the base plus every `applied` is the value. */
+  /** The change it made: the base plus every `applied` is the value (exactly while every value on the way is a whole number or a half; an unrounded fraction carries float error). */
   readonly applied: number;
+  /** The modifier's `ref`, when it has one. */
+  readonly ref?: unknown;
 }
 export interface UnchangedPart extends NumberPart {
-  readonly why: 'condition' | 'outranked' | 'same';
+  /** `refused`: a setter that `setOnlyLowers` did not let raise. `scope`: it names an `of` and the call named none. May grow: keep a default branch. */
+  readonly why: 'condition' | 'outranked' | 'same' | 'refused' | 'scope';
+}
+export interface NumberBound extends NumberPart {
+  /** The final value sits on this bound. */
+  readonly holds: boolean;
 }
 export interface NumberOptions {
   readonly of?: string;
@@ -60,48 +69,58 @@ export interface NumberResult {
   readonly base: number;
   /** In the order applied; none changed nothing. */
   readonly parts: readonly NumberPart[];
-  /** The last floor or cap that bit (also in `parts`). */
+  /** The last floor or cap that bit (also in `parts`). It may no longer hold on the value: read `bounds`. */
   readonly bound?: NumberPart;
+  /** Every floor or cap that bit, in order, each with whether the final value sits on it (absent: none bit). */
+  readonly bounds?: readonly NumberBound[];
   readonly unchanged?: readonly UnchangedPart[];
 }
 
 export function numberParts(base: number, modifiers: readonly NumberModifier[], order: NumberOrder, opts: NumberOptions = {}): NumberResult {
   const steps = order.steps;
   for (const k of ['floor', 'cap'] as const) if (order[k] !== undefined && !steps.includes(k)) throw new EngineBugError(`numberParts: the order has a default ${k} but no "${k}" step`);
+  if (order.decreases === 'highestMin' && (steps.includes('add') || !steps.includes('decrease'))) throw new EngineBugError('numberParts: decreases "highestMin" needs a "decrease" step and no "add" step');
   const parts: NumberPart[] = [];
   const idle: UnchangedPart[] = [];
   const live: NumberModifier[] = [];
+  const part = (m: NumberModifier, applied: number): NumberPart => ({ source: m.source, op: m.op, amount: m.amount + 0, applied, ...(m.ref === undefined ? {} : { ref: m.ref }) });
   for (const m of modifiers) {
-    if (m.of !== undefined && m.of !== opts.of) continue;
-    let x = m;
+    if (m.of !== undefined && m.of !== opts.of) {
+      const n = m.per === undefined ? undefined : opts.counts?.[m.per];
+      if (opts.of === undefined && opts.unchanged === true) idle.push({ ...part(n === undefined ? m : { ...m, amount: m.amount * n(m) }, 0), why: 'scope' });
+      continue;
+    }
+    let x = { ...m };
     if (m.per !== undefined) {
       const n = opts.counts?.[m.per];
       if (n === undefined) throw new EngineBugError(`numberParts: no count "${m.per}" for ${m.source}`);
       x = { ...m, amount: m.amount * n(m) };
     }
+    if (x.min !== undefined && (x.op !== 'add' || x.amount > 0)) throw new EngineBugError(`numberParts: ${x.source} has a minimum, which only a reduction takes`);
     if (!steps.includes(x.op) && !(x.op === 'add' && ((x.amount <= 0 && steps.includes('decrease')) || (x.amount >= 0 && steps.includes('increase'))))) throw new EngineBugError(`numberParts: ${x.source} has "${x.op}" but the order has no step for it`);
     if (m.when !== undefined) {
       const c = opts.conditions?.[m.when];
       if (c === undefined) throw new EngineBugError(`numberParts: no condition "${m.when}" for ${m.source}`);
       if (!c(m)) {
-        idle.push({ source: x.source, op: x.op, amount: x.amount, applied: 0, why: 'condition' });
+        idle.push({ ...part(x, 0), why: 'condition' });
         continue;
       }
     }
     live.push(x);
   }
-  let v = base;
-  let bound: NumberPart | undefined;
+  let v = base + 0;
+  const bounds: NumberPart[] = [];
   const done = new Set<NumberModifier>();
   const idleOf = new Map<NumberModifier, UnchangedPart>();
   const skip = (m: NumberModifier, why: UnchangedPart['why']): void => {
     if (done.has(m)) return;
     done.add(m);
-    const u = { source: m.source, op: m.op, amount: m.amount, applied: 0, why };
+    const u = { ...part(m, 0), why };
     idleOf.set(m, u);
     idle.push(u);
   };
-  const put = (m: NumberModifier, to: number): NumberPart | undefined => {
+  const put = (m: NumberModifier, at: number): NumberPart | undefined => {
+    const to = at + 0;
     if (to === v) {
       skip(m, 'same');
       return undefined;
@@ -110,7 +129,7 @@ export function numberParts(base: number, modifiers: readonly NumberModifier[], 
     const u = idleOf.get(m);
     if (u !== undefined) idle.splice(idle.indexOf(u), 1);
     idleOf.delete(m);
-    const p = { source: m.source, op: m.op, amount: m.amount, applied: to - v };
+    const p = part(m, to - v);
     parts.push(p);
     v = to;
     return p;
@@ -122,13 +141,15 @@ export function numberParts(base: number, modifiers: readonly NumberModifier[], 
       const ok = order.setOnlyLowers === true ? all.filter((m) => m.amount < v) : all;
       const pick = order.setters ?? 'last';
       const win = pick === 'last' ? ok.at(-1) : ok.reduce<NumberModifier | undefined>((a, m) => (a === undefined || (pick === 'lowest' ? m.amount < a.amount : m.amount > a.amount) ? m : a), undefined);
-      for (const m of all) if (m !== win) skip(m, ok.includes(m) ? 'outranked' : 'same');
+      for (const m of all) if (m !== win) skip(m, ok.includes(m) ? 'outranked' : m.amount > v ? 'refused' : 'same');
       if (win !== undefined) put(win, win.amount);
     } else if (step === 'multiply') {
       for (const m of take((x) => x.op === 'multiply')) {
         const r = m.round ?? order.round;
         const x = v * m.amount;
-        put(m, r === 'up' ? Math.ceil(x) : r === 'down' ? Math.floor(x) : x);
+        const w = Math.round(x);
+        const y = Math.abs(x - w) <= Math.abs(x) * Number.EPSILON * 8 ? w : x;
+        put(m, r === 'up' ? Math.ceil(y) : r === 'down' ? Math.floor(y) : x);
       }
     } else if (step === 'floor' || step === 'cap') {
       const lo = step === 'floor';
@@ -138,7 +159,7 @@ export function numberParts(base: number, modifiers: readonly NumberModifier[], 
       const win = all.reduce<NumberModifier | undefined>((a, m) => (a === undefined || (lo ? m.amount > a.amount : m.amount < a.amount) ? m : a), undefined);
       for (const m of ms) if (m !== win) skip(m, 'outranked');
       if (win !== undefined) {
-        if (lo ? v < win.amount : v > win.amount) bound = put(win, win.amount) ?? bound;
+        if (lo ? v < win.amount : v > win.amount) bounds.push(put(win, win.amount) as NumberPart);
         else if (ms.includes(win)) skip(win, 'same');
       }
     } else {
@@ -147,7 +168,8 @@ export function numberParts(base: number, modifiers: readonly NumberModifier[], 
       for (const m of ms) put(m, m.amount < 0 && m.min !== undefined ? (v <= m.min ? v : Math.max(m.min, v + m.amount)) : v + m.amount);
     }
   }
-  return { value: v, base, parts, ...(bound === undefined ? {} : { bound }), ...(opts.unchanged === true ? { unchanged: idle } : {}) };
+  const bound = bounds.at(-1);
+  return { value: v, base: base + 0, parts, ...(bound === undefined ? {} : { bound, bounds: bounds.map((p) => ({ ...p, holds: v === p.amount })) }), ...(opts.unchanged === true ? { unchanged: idle } : {}) };
 }
 
 /** The kernel's active effects (`effectsOf`: oldest first, ended, waiting, blanked and false `when` ones left out) as modifiers. */
