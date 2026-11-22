@@ -480,7 +480,7 @@
     "gameSupplies": "The table of card fields."
   },
   "card-zones": {
-    "use": "Decks, hands, discards and play areas as ordered id lists in engine state, with who sees what and a per-seat view for opponents and the UI. A zone can have a capacity (hand limit, slot limit) that rules raise and give up, with a state check that asks the owner which cards over the limit go to the discard. Hand, pile and drag UI parts are planned (K218-K220), not built: ask for them, do not build them in the game. Recipe: docs/recipes/card-table.md.",
+    "use": "Decks, hands, discards and play areas as ordered id lists in engine state, with who sees what and a per-seat view for opponents and the UI. A zone can have a capacity (hand limit, slot limit) that rules raise and give up, with a state check that asks the owner which cards over the limit go to the discard. Hand, pile and drag UI parts are planned (K218-K220), not built: ask for them, do not build them in the game. Recipe: docs/recipes/card-table.md. shuffleZone shuffles a zone on ctx.rng; its rng name selects a named override, so a test can force the shuffle order (shuffle zone named rng, shuffle deck rng name override, forced order test).",
     "not": "Boards and spaces (board-model), card faces, or rules about running out.",
     "title": "Decks, hands and discards as lists",
     "tags": [
@@ -500,7 +500,11 @@
       "choose what to drop",
       "discard event",
       "on leave hook",
-      "leave callback"
+      "leave callback",
+      "shuffle",
+      "rng name",
+      "override",
+      "forced order"
     ],
     "visible": false,
     "release": 1,

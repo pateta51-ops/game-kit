@@ -99,10 +99,10 @@ export function draw(s: Zoned, from: string, to: string, n = 1, at: At = 'bottom
   return ids;
 }
 
-/** Shuffles a zone with `ctx.rng` (the only randomness) and forgets what was revealed in it. */
-export function shuffleZone<G extends GameTypes>(ctx: Ctx<G>, zone: string): void {
+/** Shuffles a zone with `ctx.rng` (the only randomness; `opts.name` is ctx.rng.shuffle's name: a test override, same single stream) and forgets what was revealed in it. */
+export function shuffleZone<G extends GameTypes>(ctx: Ctx<G>, zone: string, opts?: { name?: string }): void {
   const z = ownZone(draftOf(ctx) as unknown as Zoned, zone);
-  z.cards = ctx.rng.shuffle(z.cards);
+  z.cards = ctx.rng.shuffle(z.cards, opts?.name);
   delete z.shown;
 }
 
