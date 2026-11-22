@@ -492,6 +492,50 @@ describe('card-language offer policy (K583) third look: after a cost showed a ca
   }, 240000);
 });
 
+describe('card-language offer policy (K583) fourth look: seats, noPlayer and reshuffle after a cost showed a card', () => {
+  const MILL: PackStep = { op: 'mill', count: 1 };
+  const even = (s: S): boolean => cardsIn(s, 'discard:a').some((c) => c.endsWith('2'));
+  const HOOKS: NonNullable<GameOpts['cfg']>[] = [
+    { seats: (s) => (even(s) ? ['a', 'b'] : ['b']) },
+    { seats: () => ['a'], noPlayer: (s) => (even(s) ? 'a' : undefined) },
+    { reshuffle: (s) => (even(s) ? 'discard:a' : undefined) },
+  ];
+  it('K583 200 random paid effects, each hook reading the open discard, over two deck orders: one answer', () => {
+    let x = 5834;
+    const rnd = (k: number): number => {
+      x = (Math.imul(x, 1103515245) + 12345) >>> 0;
+      return (x >>> 8) % k;
+    };
+    const of = <T,>(xs: readonly T[]): T => xs[rnd(xs.length)] as T;
+    const seen = { hidden: 0, known: 0 };
+    for (let i = 0; i < 200; i += 1) {
+      const cost = Array.from({ length: 1 + rnd(2) }, () => of([MILL, MILL, DRAW, pay(1)]));
+      const then = Array.from({ length: 1 + rnd(2) }, () => of<PackStep>([{ op: 'eachPlayer', then: [pay(1)] }, { op: 'choosePlayer', then: [pay(1)] }, { op: 'choosePlayer', others: true, then: [GAIN] }, DRAW, DRAW, NOTHING]));
+      for (const cfg of HOOKS) {
+        const got = [['d1', 'd2'], ['d2', 'd1']].map((deck) => {
+          const g = game({ paid: 'effect' }, { deck, cfg });
+          const { s, content } = g.at();
+          return JSON.stringify(g.pack.judge(s, content, [paid(cost, then)], A));
+        });
+        if (got[0] !== got[1]) throw new Error(`the answer tells the hidden cards: ${got.join(' | ')}: ${JSON.stringify([cost, then])}`);
+        if (got[0]?.includes('hidden')) seen.hidden += 1;
+        else seen.known += 1;
+      }
+    }
+    expect(seen.hidden).toBeGreaterThan(100);
+    expect(seen.known).toBeGreaterThan(50);
+  });
+});
+
+describe('card-language cost hook (K583) fourth look', () => {
+  it("K583 a pay another seat makes inside a cost is read with that seat's env", () => {
+    const g = game(undefined, { cfg: { due: (_s, _st, e, printed) => printed + (e.seat === 'a' ? 1 : 0) } });
+    const B: PackEnv = { seat: 'b', source: 'p1' };
+    const CHOOSE: PackStep = { op: 'choosePlayer', then: [pay(1)] };
+    expect([gold(g.play([CHOOSE], [['a']], B).s), gold(g.play([paid([CHOOSE], [NOTHING])], [['a']], B).s)]).toEqual([1, 1]);
+  });
+});
+
 describe('card-language cost hook (K583) third look', () => {
   const plus1: NonNullable<GameOpts['cfg']>['due'] = (_s, _st, _e, printed) => printed + 1;
   it('K583 a pay step a game verb makes inside a cost is charged like any other', () => {

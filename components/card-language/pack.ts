@@ -158,6 +158,7 @@ export interface PackConfig<G extends GameTypes, E extends PackEnv = PackEnv> {
 }
 
 const FIXED = 'card-language:due-read';
+const SAME_ENV: readonly string[] = ['seq', 'may', 'if', 'chooseOption', 'choosePayment', 'orderEffects', 'repeat', 'payThen'];
 class Stop extends Error {
   readonly reason: OfferReason;
   constructor(reason: OfferReason) {
@@ -275,6 +276,8 @@ export function cardPack<G extends GameTypes, E extends PackEnv = PackEnv>(cfg: 
         if (mark) out = { ...p, amount: d, [FIXED]: true };
         else if (d !== n(p.amount, env)) out = { ...p, amount: d };
       }
+      // K583: a cost is read at its start only through steps that keep its env; a step under one that changes the env (another seat, other cards) is read when it is paid.
+      if (mark && !SAME_ENV.includes(p.op)) return out as PackStep | Step;
       for (const [k, v] of Object.entries(x) as [string, unknown][]) {
         const w: unknown = isEff(v) ? all(v) : Array.isArray(v) && v.every(isEff) ? v.map(all) : v;
         if (isEff(v) ? w !== v : Array.isArray(w) && w.some((e, i) => e !== (v as unknown[])[i])) out = { ...out, [k]: w };
@@ -737,6 +740,7 @@ export function cardPack<G extends GameTypes, E extends PackEnv = PackEnv>(cfg: 
     },
     choosePlayer: flow({ others: optional(bool), then: eff }, (ctx, st: Extract<PackStep, { op: 'choosePlayer' }>, e) => {
       if (!cfg.seats) throw new EngineBugError('card-language pack: choosePlayer needs cfg.seats');
+      if (hid(S(ctx))) stop();
       const seats = cfg.seats(ctx.s).filter((p) => !st.others || p !== e.seat);
       if (seats.length > 0) return ask(ctx, st, e, 'choosePlayer', seats.map((id) => ({ id, enabled: true })), 1, 1);
       const seat = cfg.noPlayer?.(ctx.s, e);
@@ -779,6 +783,7 @@ export function cardPack<G extends GameTypes, E extends PackEnv = PackEnv>(cfg: 
     forEach: flow({ then: eff }, (ctx, st: Extract<PackStep, { op: 'forEach' }>, e) => ctx.then(...((e.cards ?? []).flatMap((c) => effectTasks(st.then, { ...e, cards: [c] })) as unknown as G['task'][]))),
     eachPlayer: flow({ then: eff }, (ctx, st: Extract<PackStep, { op: 'eachPlayer' }>, e) => {
       if (!cfg.seats) throw new EngineBugError('card-language pack: eachPlayer needs cfg.seats');
+      if (hid(S(ctx))) stop();
       const all = cfg.seats(ctx.s);
       const i = Math.max(0, all.indexOf(e.seat));
       ctx.then(...([...all.slice(i), ...all.slice(0, i)].flatMap((seat) => effectTasks(st.then, { ...e, seat })) as unknown as G['task'][]));
@@ -890,6 +895,7 @@ export function cardPack<G extends GameTypes, E extends PackEnv = PackEnv>(cfg: 
     if (m.top) {
       if (cardsIn(s, m.from).length === 0 && m.op === 'draw' && !m.again) {
         // The reshuffle is its own `would` occurrence (kind `reshuffle`); the draw is tried once more after it.
+        if (cfg.reshuffle && hid(s)) stop();
         const r = cfg.reshuffle?.(s as unknown as G['state'], m.from, m.seat);
         if (r !== undefined && cardsIn(s, r).length > 0) {
           const env = { seat: m.seat } as E;
