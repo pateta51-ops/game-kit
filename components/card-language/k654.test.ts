@@ -64,9 +64,9 @@ describe('card-language (K654): the older engines\' cases on the fake game', () 
     expect([z(gained, 'hand:a').length, gold(gained, 'b')]).toEqual([3, 1]);
   });
 
-  // The step shape below (a mover's `then` with a pick among the moved cards) is the fix row's to choose; today `then` on a draw is ignored.
-  it.fails('K654 I-B12 fix row K658: "draw 2, then discard 1 of them" offers only the two cards drawn', () => {
-    const { s, prompts } = game().play([{ op: 'draw', count: 2, then: [{ op: 'discard', cards: 'pick', from: 'chosen', count: 1 }] } as unknown as PackStep], [['d1']]);
+  // K658: a mover's `then` runs after its moves with env.moved; `from: 'moved'` picks among them.
+  it('K654 I-B12 fix row K658: "draw 2, then discard 1 of them" offers only the two cards drawn', () => {
+    const { s, prompts } = game().play([{ op: 'draw', count: 2, then: [{ op: 'discard', cards: 'pick', from: 'moved', count: 1 }] }], [['d1']]);
     expect([prompts[0]?.options.map((o) => o.id), z(s, 'discard:a')]).toEqual([['d1', 'd2'], ['d1']]);
   });
   it('K654 I-B12 today: a draw hands no cards on, so a pick in the hand after "draw 2" lists the whole hand', () => {
@@ -84,7 +84,7 @@ describe('card-language (K654): the older engines\' cases on the fake game', () 
     expect(blocked(prompts[0] ?? null).map((b) => [b.id, b.reason])).toEqual([['1', 'noChange']]);
     expect([gold(s), gold(s, 'a', 'wood')]).toEqual([0, 3]);
   });
-  it.fails('K654 I-B22 fix row K657: gaining 0 of a resource the seat never held is judged a change, so "gain X gems" with X unbound is not barred', () => {
+  it('K654 I-B22 fix row K657: gaining 0 of a resource the seat never held is judged a change, so "gain X gems" with X unbound is not barred', () => {
     const { prompts } = xg({ deadChoice: 'bar' }).play([choice('gem')], [['0']]);
     expect(blocked(prompts[0] ?? null).map((b) => [b.id, b.reason])).toEqual([['1', 'noChange']]);
   });
@@ -137,7 +137,7 @@ describe('card-language (K654): the older engines\' cases on the fake game', () 
     const { s, prompts } = game().play([{ op: 'chooseNumber', min: 1, max: 5, then: [paid([PAYX], [res('gem', 'X')])] }], [['5']]);
     expect([kinds(prompts), gold(s), gold(s, 'a', 'gem')]).toEqual([['chooseNumber'], 3, 0]);
   });
-  it.fails('K654 E-B9 fix row K660: under deadChoice = bar a number whose cost cannot be paid, so it changes nothing, is barred', () => {
+  it('K654 E-B9 fix row K660: under deadChoice = bar a number whose cost cannot be paid, so it changes nothing, is barred', () => {
     const { prompts } = game({ deadChoice: 'bar' }).play([{ op: 'chooseNumber', min: 1, max: 5, then: [paid([PAYX], [res('gem', 'X')])] }], [['2']]);
     expect(blocked(prompts[0] ?? null).map((b) => b.id)).toEqual(['4', '5']);
   });

@@ -17,7 +17,7 @@ interface Cards {
   readonly from?: string;
   readonly filter?: string;
 }
-type Mover<K extends string> = K extends string ? Cards & { readonly op: K; readonly to?: string; readonly at?: At } : never;
+type Mover<K extends string> = K extends string ? Cards & { readonly op: K; readonly to?: string; readonly at?: At; readonly then?: Eff } : never;
 type Looker<K extends string> = K extends string ? Cards & { readonly op: K; readonly then?: Eff } : never;
 type Marker<K extends string> = K extends string ? Cards & { readonly op: K } : never;
 export type MoveOp = 'draw' | 'discard' | 'mill' | 'move' | 'putIntoPlay' | 'setAside' | 'recall' | 'gain' | 'destroy' | 'detach';
@@ -65,6 +65,10 @@ export interface PackEnv {
   readonly owed?: readonly Step[];
   /** K598: the seat the effect began with; set by `choosePlayer` and `eachPlayer` when they hand it to a seat (a game may set it too). */
   readonly actor?: string;
+  /** K658: set by a mover with `then` for its `then`: the cards it moved, in the order they moved (`from: 'moved'` picks among them). */
+  readonly moved?: readonly string[];
+  /** K658, set by the pack: the batch id of the move a mover's `then` waits for. */
+  readonly movedFrom?: number;
 }
 /** A move waiting for its occurrence (`cardMoves`, keyed by occurrence id). */
 export interface PendingMove {
@@ -78,6 +82,9 @@ export interface PendingMove {
   readonly all?: true;
   /** A draw retried after a reshuffle: it does not reshuffle again. */
   readonly again?: true;
+  /** K658: the move belongs to a mover with `then` (its batch id); `got` (on the key `moved:<tag>`): the cards moved so far. */
+  readonly tag?: number;
+  readonly got?: readonly string[];
 }
 /** State the pack adds (all optional, absent until used): pending moves, card marks (`flipped`, `exhausted`), delayed effects, default resource store. */
 export interface PackState extends Zoned {
@@ -232,9 +239,9 @@ const DEF: Record<string, { from?: string; to?: string; sel?: Sel; at?: At }> = 
   chooseDestination: { from: 'hand', sel: 'source' }, search: { to: 'hand' },
 };
 export const PACK_WORDS: Readonly<Record<PackOp, string>> = {
-  draw: 'Draw {count:card}.', discard: 'Discard {what}.', mill: 'Put {what} into {to}.', move: 'Put {what} on the {at} of {to}.',
-  putIntoPlay: 'Put {what} into play.', setAside: 'Set {what} aside.', recall: 'Return {what} to {to}.', gain: 'Gain {what}.',
-  destroy: 'Destroy {what}.', detach: 'Detach {what}.', attach: 'Attach {what} to {host}.', refill: 'Refill {zone} to {size:card} from {from}.',
+  draw: 'Draw {count:card}. {then}', discard: 'Discard {what}. {then}', mill: 'Put {what} into {to}. {then}', move: 'Put {what} on the {at} of {to}. {then}',
+  putIntoPlay: 'Put {what} into play. {then}', setAside: 'Set {what} aside. {then}', recall: 'Return {what} to {to}. {then}', gain: 'Gain {what}. {then}',
+  destroy: 'Destroy {what}. {then}', detach: 'Detach {what}. {then}', attach: 'Attach {what} to {host}.', refill: 'Refill {zone} to {size:card} from {from}.',
   shuffle: 'Shuffle {zone}.', search: 'Search {zone} for {count:card} and put {count:it} into {to}.', reveal: 'Reveal {what}. {then}', lookAt: 'Look at {what}. {then}',
   scout: 'Look at the top {count:card} of {from} and put them back in any order.', flip: 'Flip {what}.', exhaust: 'Exhaust {what}.', ready: 'Ready {what}.',
   chooseCards: 'Choose {max:card} in {zone}. {then}', chooseOption: 'Choose one: {options}', may: 'You may: {then}', chooseNumber: 'Choose a number from {min} to {max}. {then}',
@@ -380,7 +387,11 @@ export function cardPack<G extends GameTypes, E extends PackEnv = PackEnv>(cfg: 
   const VIEW_SKIP = ['stack', 'prompt', 'seq', 'promptSeq', 'log', 'timing', 'cardMoves', 'rng', 'forced'];
   // K583: an empty `marks` record (left by a marking verb that marked nothing, or unmarked the last card) is the same game as none.
   const unmarked = (s: unknown): unknown => ((s as PackState).marks !== undefined && Object.keys((s as PackState).marks ?? {}).length === 0 ? { ...(s as object), marks: undefined } : s);
-  const view = (s: unknown): string => canonicalJson(P.view ? P.view(unmarked(s) as G['state']) : Object.fromEntries(Object.entries(unmarked(s) as object).filter(([k]) => !VIEW_SKIP.includes(k))));
+  // K657: a resource at 0 (also a 0 written for one the seat never held) is the same game as none, and a seat with none left is the same as no record.
+  const unzero = (s: unknown): unknown => ({ ...(s as object), res: Object.fromEntries(Object.entries((s as PackState).res ?? {})
+    .map(([k, v]) => [k, Object.fromEntries(Object.entries(v).filter(([, x]) => x !== 0))] as const)
+    .filter(([, v]) => Object.keys(v).length > 0)) });
+  const view = (s: unknown): string => canonicalJson(P.view ? P.view(unzero(unmarked(s)) as G['state']) : Object.fromEntries(Object.entries(unzero(unmarked(s)) as object).filter(([k]) => !VIEW_SKIP.includes(k))));
   // K583, paid = effect: the branch the check is running. `base` is the game it compares with (moved past each cost paid); `cost` counts the costs being paid, while nothing is compared.
   // `sees`: the cards the judged seat saw when the outermost cost began; `hidden`: a cost has since shown it a card, so no game code runs any more (the answer must not tell the card).
   // K597, resolves: `done` the top-level steps this line resolved, `next` the step running, `mark` the view when it began, `whys` each step's reason read when it began.
@@ -781,15 +792,17 @@ export function cardPack<G extends GameTypes, E extends PackEnv = PackEnv>(cfg: 
   };
   const fieldsOf = (op: string): object => (verbs as Record<string, { fields: object }>)[op]?.fields ?? {};
   // Cards the seat may pick in `z`: ids it sees (or all when `peek`), `#i` for a hidden one (no id leaks); a filter applies to seen cards only.
+  // K658: `moved` is the cards the mover before moved (env.moved) that are still in a zone.
+  const pool = (s: PackState, z: string, env: E): readonly string[] => (z === 'moved' ? (env.moved ?? []).filter((c) => locate(s, c) !== undefined) : cardsIn(s, z));
   const eligible = (s: PackState, st: { filter?: string }, env: E, z: string, peek: boolean): string[] => {
     const f = st.filter === undefined ? undefined : cfg.filters?.[st.filter];
     if (st.filter !== undefined && f === undefined) throw new EngineBugError(`card-language pack: no filter ${st.filter}`);
     const judge = dry;
-    if (judge !== null && f !== undefined && cardsIn(s, z).some((c) => (peek || canSee(s, env.seat, c)) && !canSee(s, judge, c))) stop();
+    if (judge !== null && f !== undefined && pool(s, z, env).some((c) => (peek || canSee(s, env.seat, c)) && !canSee(s, judge, c))) stop();
     if (f !== undefined) blind(s, env);
     const v = f === undefined ? s : ro(s);
     const nu = f === undefined ? [] : fresh(s);
-    return cardsIn(s, z).flatMap((c, i) => {
+    return pool(s, z, env).flatMap((c, i) => {
       const seen = peek || canSee(s, env.seat, c);
       if (!seen) return f === undefined ? [`#${String(i)}`] : [];
       if (nu.includes(c)) stop();
@@ -800,9 +813,9 @@ export function cardPack<G extends GameTypes, E extends PackEnv = PackEnv>(cfg: 
   const blind = (s: PackState, env: E): void => {
     const judge = dry;
     const nu = R === null ? [] : fresh(s);
-    if (judge !== null && ((R === null && hid(s)) || [...(env.cards ?? []), ...(env.source === undefined ? [] : [env.source])].some((c) => nu.includes(c)) || (env.cards ?? []).some((c) => locate(s, c) !== undefined && !canSee(s, judge, c)))) stop();
+    if (judge !== null && ((R === null && hid(s)) || [...(env.cards ?? []), ...(env.moved ?? []), ...(env.source === undefined ? [] : [env.source])].some((c) => nu.includes(c)) || [...(env.cards ?? []), ...(env.moved ?? [])].some((c) => locate(s, c) !== undefined && !canSee(s, judge, c)))) stop();
   };
-  const unhide = (s: PackState, z: string, picks: readonly string[]): string[] => picks.map((p) => (p.startsWith('#') ? (cardsIn(s, z)[Number(p.slice(1))] ?? '') : p));
+  const unhide = (s: PackState, z: string, picks: readonly string[], env: E): string[] => picks.map((p) => (p.startsWith('#') ? (pool(s, z, env)[Number(p.slice(1))] ?? '') : p));
   const pickAsk = (ctx: Ctx<G>, st: PackStep, env: E, z: string, min: number, max: number, peek = false, kind = 'chooseCards', keep?: (id: string) => boolean): boolean => {
     const ids = eligible(S(ctx), st as { filter?: string }, env, z, peek).filter((id) => keep?.(id) ?? true);
     const hi = Math.min(max, ids.length);
@@ -815,7 +828,7 @@ export function cardPack<G extends GameTypes, E extends PackEnv = PackEnv>(cfg: 
   const prune = (s: Draft<PackState>): void => {
     if (s.cardMoves === undefined) return;
     const live = new Set(((s as unknown as KernelState).timing?.occurrences ?? []).filter((o) => o.state === 'pending').map((o) => String(o.id)));
-    for (const k of Object.keys(s.cardMoves)) if (!live.has(k)) delete (own(s, 'cardMoves') as Record<string, unknown>)[k];
+    for (const k of Object.keys(s.cardMoves)) if (!live.has(k) && !k.startsWith('moved:')) delete (own(s, 'cardMoves') as Record<string, unknown>)[k];
   };
   // One `would` batch, one occurrence per card (kind = the verb, keys: player = seat, target = card, source = env.source).
   const send = (ctx: Ctx<G>, op: string, cards: readonly string[] | number, from: string, to: string, at: At, env: E, extra: Partial<PendingMove> = {}): void => {
@@ -841,7 +854,7 @@ export function cardPack<G extends GameTypes, E extends PackEnv = PackEnv>(cfg: 
     const sel = st.cards ?? d.sel ?? 'chosen';
     if (sel === 'source') return env.source === undefined ? [] : [env.source];
     if (sel === 'chosen') return env.cards ?? [];
-    if (sel === 'all') return [...cardsIn(s, from)];
+    if (sel === 'all') return [...pool(s, from, env)];
     if (sel === 'top') return n(st.count, env);
     const c = n(st.count, env);
     // K529, a cost judged as a whole: only picks that leave this step's other picks and the steps still owed payable (a card the seat cannot see is never judged).
@@ -857,24 +870,33 @@ export function cardPack<G extends GameTypes, E extends PackEnv = PackEnv>(cfg: 
   const picked = (ctx: Ctx<G>, st: Cards & { op: string }, env: E, a: readonly string[]): void => {
     const s = S(ctx);
     const from = zone(s, st.from ?? def(st.op).from ?? 'hand', env.seat);
-    go(ctx, [{ ...st, cards: 'chosen' } as Step], { ...env, cards: unhide(s, from, a) });
+    go(ctx, [{ ...st, cards: 'chosen' } as Step], { ...env, cards: unhide(s, from, a, env) });
   };
   const topOf = (s: PackState, st: Cards & { op: string }, env: E, k: readonly string[] | number): readonly string[] =>
     typeof k === 'number' ? cardsIn(s, zone(s, st.from ?? def(st.op).from ?? 'deck', env.seat)).slice(0, k) : k;
   const mover = (op: MoveOp): V => ({
-    fields: { cards: optional(oneOf(SELS)), count: optional(amount), from: optional(str), filter: optional(str), to: optional(str), at: optional(at) },
+    fields: { cards: optional(oneOf(SELS)), count: optional(amount), from: optional(str), filter: optional(str), to: optional(str), at: optional(at), then: optional(eff) },
     run: (ctx, step, env) => {
       const st = step as Mover<MoveOp>;
-      const e = need(env);
-      const k = select(ctx, st, e);
-      if (k === undefined) return;
+      const { movedFrom, ...e } = need(env);
       const s = S(ctx);
+      // K658: the same step again after its moves: `then` runs with env.moved the cards that moved.
+      if (movedFrom !== undefined) {
+        const key = `moved:${String(movedFrom)}`;
+        const got = s.cardMoves?.[key]?.got ?? [];
+        if (s.cardMoves?.[key] !== undefined) delete (own(s, 'cardMoves') as Record<string, unknown>)[key];
+        return go(ctx, st.then ?? [], { ...e, moved: got } as unknown as E);
+      }
+      const k = select(ctx, st, e as E);
+      if (k === undefined) return;
+      const tag = (s as unknown as KernelState).timing?.next ?? 1;
+      if (st.then) ctx.then(...(effectTasks([st], { ...e, movedFrom: tag }) as unknown as G['task'][]));
       const d = def(op);
       // K597: a step that does some but less than its number resolves in part (a draw that would reshuffle does not; nothing at all is no change).
-      const has = cardsIn(s, zone(s, st.from ?? d.from ?? 'deck', e.seat)).length;
+      const has = pool(s, zone(s, st.from ?? d.from ?? 'deck', e.seat), e as E).length;
       if (typeof k === 'number' && has > 0 && has < k && (op !== 'draw' || cfg.reshuffle === undefined)) partly('short');
-      send(ctx, op, typeof k === 'number' ? Math.min(k, op === 'draw' ? k : cardsIn(s, zone(s, st.from ?? d.from ?? 'deck', e.seat)).length) : k,
-        zone(s, st.from ?? d.from ?? 'deck', e.seat), zone(s, st.to ?? d.to ?? 'discard', e.seat), st.at ?? d.at ?? 'top', e);
+      send(ctx, op, typeof k === 'number' ? Math.min(k, op === 'draw' ? k : pool(s, zone(s, st.from ?? d.from ?? 'deck', e.seat), e as E).length) : k,
+        zone(s, st.from ?? d.from ?? 'deck', e.seat), zone(s, st.to ?? d.to ?? 'discard', e.seat), st.at ?? d.at ?? 'top', e as E, st.then ? { tag } : {});
     },
     resume: (ctx, step, env, a) => picked(ctx, step, need(env), a),
     text: null,
@@ -986,7 +1008,7 @@ export function cardPack<G extends GameTypes, E extends PackEnv = PackEnv>(cfg: 
       if (!pickAsk(ctx, st, e, zone(S(ctx), st.zone, e.seat), st.min ?? max, max)) go(ctx, st.then, { ...e, cards: [] });
     }, (ctx, st: Extract<PackStep, { op: 'chooseCards' }>, e, a) => {
       const s = S(ctx);
-      go(ctx, st.then, { ...e, cards: unhide(s, zone(s, st.zone, e.seat), a) });
+      go(ctx, st.then, { ...e, cards: unhide(s, zone(s, st.zone, e.seat), a, e) });
     }),
     chooseOption: flow({ options: effs }, (ctx, st: Extract<PackStep, { op: 'chooseOption' }>, e) => {
       const pre = P.prefer === 'full';
@@ -1018,7 +1040,12 @@ export function cardPack<G extends GameTypes, E extends PackEnv = PackEnv>(cfg: 
       const lo = st.min ?? 0;
       const hi = n(st.max, e);
       if (hi <= lo) return go(ctx, st.then, { ...e, n: Math.max(lo, hi) });
-      ask(ctx, st, e, 'chooseNumber', Array.from({ length: hi - lo + 1 }, (_, i) => ({ id: String(lo + i), enabled: true })), 1, 1);
+      const ns = Array.from({ length: hi - lo + 1 }, (_, i) => lo + i);
+      if (dry !== null || (P.deadChoice ?? 'today') === 'today') return ask(ctx, st, e, 'chooseNumber', ns.map((k) => ({ id: String(k), enabled: true })), 1, 1);
+      // K660: each number is checked on its own (its `then` with X that number); under bar a dead one is barred, none live: not offered.
+      const cs = ns.map((k) => barCheck(ctx.s, ctx.content, st.then, { ...e, n: k }));
+      if (!cs.some((c) => live(c.answer))) return;
+      ask(ctx, st, e, 'chooseNumber', ns.map((k, i) => (live(cs[i]?.answer ?? 'yes') || P.deadChoice !== 'bar' ? { id: String(k), enabled: true } : bar(String(k), why(S(ctx), st.then, { ...e, n: k }, cs[i] ?? { answer: 'no' })))), 1, 1);
     }, (ctx, st: Extract<PackStep, { op: 'chooseNumber' }>, e, a) => go(ctx, st.then, { ...e, n: Number(a[0]) })),
     chooseDestination: {
       fields: { cards: optional(oneOf(SELS)), count: optional(amount), from: optional(str), filter: optional(str), to: names, at: optional(at) },
@@ -1192,7 +1219,7 @@ export function cardPack<G extends GameTypes, E extends PackEnv = PackEnv>(cfg: 
       if (op === 'count') return word('what', String(st.what));
       const from = word('zone', (st.from as string | undefined) ?? d.from ?? 'deck');
       const c = st.count ?? 1;
-      return { source: 'this card', chosen: c === 1 && (st.cards ?? d.sel) === 'chosen' && op !== 'chooseDestination' ? 'it' : 'them', all: `all cards in ${from}`, top: `the top ${plural(c, 'card')} of ${from}`, pick: `${plural(c, 'card')} from ${from}` }[(st.cards ?? d.sel ?? 'chosen') as Sel];
+      return { source: 'this card', chosen: c === 1 && (st.cards ?? d.sel) === 'chosen' && op !== 'chooseDestination' ? 'it' : 'them', all: `all cards in ${from}`, top: `the top ${plural(c, 'card')} of ${from}`, pick: `${plural(c, 'card')} ${st.from === 'moved' ? 'of them' : `from ${from}`}` }[(st.cards ?? d.sel ?? 'chosen') as Sel];
     }
     if (key === 'host') return st.host === 'chosen' ? 'the chosen card' : 'this card';
     if (v === undefined) return '';
@@ -1227,7 +1254,7 @@ export function cardPack<G extends GameTypes, E extends PackEnv = PackEnv>(cfg: 
         const r = cfg.reshuffle?.(ro(s) as unknown as G['state'], m.from, m.seat);
         if (r !== undefined && cardsIn(s, r).length > 0) {
           const env = { seat: m.seat } as E;
-          send(ctx, 'draw', 1, m.from, m.to, m.at, env, { again: true });
+          send(ctx, 'draw', 1, m.from, m.to, m.at, env, { again: true, ...(m.tag === undefined ? {} : { tag: m.tag }) });
           send(ctx, 'reshuffle', 1, r, m.from, 'top', env, { all: true });
         }
         return true;
@@ -1241,6 +1268,10 @@ export function cardPack<G extends GameTypes, E extends PackEnv = PackEnv>(cfg: 
     } else if (id !== undefined && m.from !== '' && locate(s, id)?.zone !== m.from) return true; // it left meanwhile: nothing moves
     if (id === undefined || locate(s, id) === undefined) return true;
     const from = moveCard(s, id, m.to, m.at);
+    if (m.tag !== undefined) {
+      const g = own(s, 'cardMoves') as Record<string, PendingMove>;
+      g[`moved:${String(m.tag)}`] = { op: 'moved', seat: m.seat, from: '', to: '', at: 'top', got: [...(g[`moved:${String(m.tag)}`]?.got ?? []), id] };
+    }
     cfg.moved?.(ctx, { op: m.op, card: id, from, to: m.to, seat: m.seat });
     return true;
   };
