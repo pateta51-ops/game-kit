@@ -476,12 +476,17 @@ x
 `;
   const FIT = "| row | verdict |\n|---|---|\n| Spy movement | truly this game's |\n| Greedy player | candidate |\n| Walled grid | kit phase |\n";
   const py = candidates(process.env, process.platform)[0] ?? ['python'];
-  const exec = (text: string, fit: string | null = FIT, ...extra: string[]): { code: number | null; out: string; f: string; args: string[] } => {
+  let mapText: string | null = null;
+  const exec =(text: string, fit: string | null = FIT, ...extra: string[]): { code: number | null; out: string; f: string; args: string[] } => {
     const d = join(tmp('pc-kit-'), 'docs');
     mkdirSync(join(d, 'plan-review'), { recursive: true });
     const f = join(d, 'P.md');
     writeFileSync(f, text, 'utf-8');
     if (fit !== null) writeFileSync(join(d, 'plan-review', 'kit-fit.md'), fit, 'utf-8');
+    if (mapText !== null) {
+      mkdirSync(join(dirname(d), 'kit', 'recipes'), { recursive: true });
+      writeFileSync(join(dirname(d), 'kit', 'recipes', 'mechanics.md'), mapText, 'utf-8');
+    }
     const args = ['--sessions-optional', '--scenarios-end', 'Property tests', '--depth-optional', '--cards-optional', ...(extra.includes('--kit') ? [] : ['--kit', kit]), ...extra];
     const r = spawnSync(py[0] ?? 'python', [...py.slice(1), '-X', 'utf8', fileURLToPath(new URL('./plancheck.py', import.meta.url)), f, ...args], { encoding: 'utf-8' });
     return { code: r.status, out: r.stdout, f, args };
@@ -570,5 +575,97 @@ x
     const r = exec(GOOD.replace('tag v0.227.1', 'tag v0.999.0'));
     expect(r.out).toContain('tag v0.999.0 not in');
     expect(r.code).toBe(0);
+  });
+
+  describe('K531: the game sheet against the mechanics map, closed candidates', () => {
+    const MAP = '# Mechanics map\n\n| Mechanic | Answer |\n|---|---|\n| roll dice, die, reroll | `dice-tray`: read its README |\n| market, buy from a line of cards | `market-row`: read its README |\n';
+    const FULL = GOOD.replace('| Markets and rows |', '| Roll dice | kit part | `dice-tray` |\n| Market | not in this game | |\n| Markets and rows |');
+    const run = (map: string | null, text: string, ...extra: string[]) => {
+      mapText = map;
+      try { return exec(text, FIT, ...extra); } finally { mapText = null; }
+    };
+    const warns = (out: string): string[] => out.split(/\r?\n/).filter((l) => l.startsWith('NOTE WARN kit:'));
+    it('K531 sheet complete: every map line answered, exit 0', () => {
+      const r = run(MAP, FULL);
+      expect(r.out).not.toContain('PROBLEM');
+      expect(r.out).toContain('NOTE kit: game sheet checked against the mechanics map');
+      expect(r.out).toContain('(2 lines)');
+      expect(warns(r.out)).toEqual([]);
+      expect(r.code).toBe(0);
+    });
+    it('K531 sheet missing one map line: a failure naming its first words', () => {
+      const r = run(MAP, FULL.replace('| Market | not in this game | |\n', ''));
+      expect(r.out.split(/\r?\n/).filter((l) => l.startsWith('PROBLEM'))).toEqual(["PROBLEM kit: game sheet: 1 mechanics map line(s) unanswered: market. Each mechanics map line needs its own row in the game sheet table, first cell = the line's first phrase; answer a kit part, a build-own row, or 'not in this game'"]);
+      expect(r.code).toBe(1);
+      expect(main(['--plan', r.f, ...r.args])).toBe(1);
+    });
+    it('K531 two lines missing: one failure listing both', () => {
+      const r = run(MAP, GOOD);
+      const p = r.out.split(/\r?\n/).filter((l) => l.startsWith('PROBLEM'));
+      expect(p).toHaveLength(1);
+      expect(p[0]).toContain('2 mechanics map line(s) unanswered: roll dice, market.');
+      expect(r.code).toBe(1);
+    });
+    it('K531 a row equal to a longer phrase does not answer the line (equality, not prefix)', () => {
+      const r = run(MAP, FULL.replace('| Market | not in this game | |', '| Market stall | not in this game | |'));
+      expect(r.out).toContain('1 mechanics map line(s) unanswered: market.');
+      expect(r.code).toBe(1);
+    });
+    it('K531 the sheet failure is a NOTE under --kit-optional, exit 0', () => {
+      const r = run(MAP, FULL.replace('| Market | not in this game | |\n', ''), '--kit-optional');
+      expect(r.out).toContain('NOTE kit: game sheet: 1 mechanics map line(s) unanswered: market.');
+      expect(r.out).not.toContain('PROBLEM');
+      expect(r.code).toBe(0);
+    });
+    it('K531 map read from --map PATH', () => {
+      const m = join(tmp('pc-map-'), 'm.md');
+      writeFileSync(m, MAP, 'utf-8');
+      const r = run(null, FULL.replace('| Roll dice | kit part | `dice-tray` |\n', ''), '--map', m);
+      expect(r.out).toContain('PROBLEM kit: game sheet: 1 mechanics map line(s) unanswered: roll dice.');
+      expect(r.code).toBe(1);
+    });
+    it('K531 kit part the map line does not name: a warning, exit 0', () => {
+      const r = run(MAP, FULL.replace('| kit part | `dice-tray` |', '| kit part | `player-board` |'));
+      expect(warns(r.out)).toEqual(["NOTE WARN kit: game sheet line 'Roll dice' answers kit part player-board, which the mechanics map's line does not name"]);
+      expect(r.code).toBe(0);
+    });
+    it('K531 no map file: no sheet check', () => {
+      const r = run(null, GOOD);
+      expect(r.out).toContain('NOTE kit: game sheet NOT checked against the mechanics map');
+      expect(r.out).not.toContain('PROBLEM');
+      expect(r.code).toBe(0);
+    });
+    it('K531 --sheet-optional: no sheet check', () => {
+      const r = run(MAP, GOOD, '--sheet-optional');
+      expect(r.out).not.toContain('mechanics map');
+      expect(r.code).toBe(0);
+      expect(run(MAP, GOOD).code).toBe(1);
+    });
+    it('K531 no game sheet table: one warning line, no map failure', () => {
+      const r = run(MAP, GOOD.replace('| Game sheet line |', '| Sheet line |'));
+      expect(warns(r.out).filter((l) => l.includes('mechanics map'))).toHaveLength(1);
+      expect(r.out).not.toContain('mechanics map line(s) unanswered');
+    });
+    const kit2 = (mech: boolean, state: string): string => {
+      const k = tmp('kit531-');
+      mkdirSync(join(k, 'docs', 'plan'), { recursive: true });
+      mkdirSync(join(k, 'components', 'engine-core'), { recursive: true });
+      writeFileSync(join(k, 'docs', 'PLAN.md'), '| # | Batch | Size | State |\n|---|---|---|---|\n');
+      writeFileSync(join(k, 'kit.mjs'), '');
+      writeFileSync(join(k, 'docs', 'plan', 'K424.md'), `---\nsection: Candidates\nstate: ${state}\n---\n\`sim-pool\` greedy driver with a look-ahead.\n`);
+      if (mech) writeFileSync(join(k, 'docs', 'mechanics.json'), JSON.stringify({ lines: [{ words: 'greedy', part: 'greedy-driver', row: 'K424' }] }));
+      return k;
+    };
+    it('K531 closed candidate named: a warning with the part from the mechanics line, exit 0', () => {
+      const r = exec(GOOD, FIT, '--kit', kit2(true, 'done'));
+      expect(warns(r.out)).toEqual(["NOTE WARN kit: build-own row 'Greedy player' names candidate K424, which the kit closed (state: done): use `greedy-driver`"]);
+      expect(r.code).toBe(0);
+    });
+    it('K531 closed candidate with no mechanics line: the part from the row text', () => {
+      expect(warns(exec(GOOD, FIT, '--kit', kit2(false, 'done')).out)).toEqual(["NOTE WARN kit: build-own row 'Greedy player' names candidate K424, which the kit closed (state: done): use `sim-pool`"]);
+    });
+    it('K531 poor: an open candidate gets no closed warning', () => {
+      expect(warns(exec(GOOD, FIT, '--kit', kit2(true, 'candidate')).out)).toEqual([]);
+    });
   });
 });
