@@ -111,9 +111,6 @@
   ],
   "searches": {
     "undo button": "engine-core",
-    "track overrun": "clock",
-    "distance to space on track": "clock",
-    "lose space": "clock",
     "line of sight": "grid-map",
     "wall": "grid-map",
     "heavy queue": "heavy-queue",
