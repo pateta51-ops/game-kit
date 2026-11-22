@@ -618,7 +618,7 @@
     "gameSupplies": "The dice to compute odds for."
   },
   "dice-patterns": {
-    "use": "Dice patterns as data (a pair, N the same, a run, odd or even, a sum against a number, a count, two pair, all or any) compiled to the test that dice-odds chance and dice-tray readRoll take, plus the smallest set of dice that meets one.",
+    "use": "Dice patterns as data (a pair, N the same, a run, odd or even, a sum against a number, a count, two pair, all or any) compiled to the test that dice-odds chance and dice-tray readRoll take, plus the smallest set of dice that meets one, or the whole roll (an exact sum, a group of an exact size).",
     "not": "Rolling dice, odds after rerolls, card sets or poker hands, dice formulas.",
     "title": "Dice patterns: pair, run, sum",
     "tags": [
@@ -630,7 +630,13 @@
       "sum",
       "same",
       "different",
-      "condition"
+      "condition",
+      "exact",
+      "smallest",
+      "set",
+      "group",
+      "size",
+      "whole"
     ],
     "visible": false,
     "release": 1,
