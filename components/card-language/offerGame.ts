@@ -83,7 +83,7 @@ export const offerGame = <P extends BasePack>(make: (cfg: never) => P, opts: Gam
       evenUp: (s) => cardsIn(s, 'discard:a').some((c) => c.endsWith('2')), drew2: (s) => cardsIn(s, 'hand:a').includes('d2'),
       top: (s) => (cannotKnow(), cardsIn(s, 'deck:a')[0] === 'd1'), owes: (_s, e) => e.owed !== undefined,
       gotD2: (s) => s.got?.d2 === 1, inD2: (s) => 'd2' in (s.got ?? {}), ownD2: (s) => Object.prototype.hasOwnProperty.call(s.got ?? {}, 'd2'), hasD2: (s) => Object.hasOwn(s.got ?? {}, 'd2'),
-      descD2: (s) => Object.getOwnPropertyDescriptor(s.got ?? {}, 'd2') !== undefined,
+      descD2: (s) => Object.getOwnPropertyDescriptor(s.got ?? {}, 'd2') !== undefined, p1: (s) => cardsIn(s, 'play:a').includes('p1'),
     },
     counts: { held: (s, e) => cardsIn(s, `hand:${e.seat}`).length },
     seats: () => ['a', 'b'],
@@ -242,7 +242,7 @@ const custom = (name: string): PackStep => ({ op: 'custom', name });
 // K583: the random effect generator of the check's tests (also K597's comparison). K597: `more` adds tests that read a card drawn or milled (the same sequence without it).
 export const gen = (seed: number, more = false) => {
   const { rnd, of } = rng(seed);
-  const reads = more ? ['drew2', 'evenUp', 'gotD2', 'inD2', 'ownD2', 'hasD2', 'descD2'] : [];
+  const reads = more ? ['drew2', 'evenUp', 'gotD2', 'inD2', 'ownD2', 'hasD2', 'descD2', 'p1'] : [];
   const leaf = (): PackStep => of<() => PackStep>([
     () => GAIN, () => NOTHING, () => NOTHING, () => DRAW, () => pay(1), () => pay(9), () => custom('nothing'), () => custom('lone'), () => custom('order'), () => custom('roll'),
     () => custom('win'), () => custom('boom'), () => custom('back'), () => custom('pairs'), () => custom('nest'), () => custom('attempt'), () => custom('spend'),

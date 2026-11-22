@@ -406,13 +406,19 @@ export function cardPack<G extends GameTypes, E extends PackEnv = PackEnv>(cfg: 
   // K597: the state game code reads (tests, counts, filters, `payable`, `due`, `res.get`, `seats`, `noPlayer`, `reshuffle`). In resolves a read-only view that stops (hidden)
   // only when a read yields a card that came into view: an array element, an object key or a string holding its id (a log line); `length` passes. Elsewhere the hard stop of K583.
   // K597 fourth look: on an object whose own keys or values hold such a card, any keyed read (but an array's `length` and inherited methods), `in`, own-key check or key listing stops.
-  // Never on the key asked alone: asking for a key that names a new card would stop only in the worlds where that card is new.
+  // Never on the key asked alone: asking for a key that names a new card would stop only in the worlds where that card is new. An array's indexes are not ids; writes by a `viewSafe` verb stop the same way.
   // `rw`: a `viewSafe` custom verb or row runs on it, its writes go to the state (a view handed back is stored as what it views).
   const ro = <T>(s: T, rw = false): T => {
     if (R === null) return hid(s as unknown as PackState) ? stop() : s;
     const f = fresh(s as unknown as PackState);
     if (f.length === 0) return s;
-    const bad = (v: unknown): boolean => typeof v === 'string' && f.some((c) => v.includes(c));
+    // K597 fifth look: a card id as a whole token (the string, or bounded by characters that are not letters, digits, `_` or `-`): `p1` does not hold the card `1`.
+    const idc = (ch: string | undefined): boolean => ch !== undefined && /[\w-]/.test(ch);
+    const has = (v: string, c: string): boolean => {
+      for (let i = v.indexOf(c); i >= 0; i = v.indexOf(c, i + 1)) if (!idc(v[i - 1]) && !idc(v[i + c.length])) return true;
+      return false;
+    };
+    const bad = (v: unknown): boolean => typeof v === 'string' && f.some((c) => has(v, c));
     const PX = new WeakMap<object, object>();
     const TG = new WeakMap<object, object>();
     const un = (v: unknown): unknown => {
@@ -431,7 +437,7 @@ export function cardPack<G extends GameTypes, E extends PackEnv = PackEnv>(cfg: 
       const t = o;
       const old = PX.get(t);
       if (old !== undefined) return old;
-      const dirty = (): boolean => Reflect.ownKeys(t).some((x) => bad(x) || bad(Reflect.get(t, x)));
+      const dirty = (): boolean => Reflect.ownKeys(t).some((x) => (!Array.isArray(t) && bad(x)) || bad(Reflect.get(t, x)));
       const p = new Proxy(Array.isArray(o) ? [] : {}, {
         get: (_, k) => {
           if (((Object.hasOwn(t, k) || !(k in t)) && !(Array.isArray(t) && k === 'length') && dirty())) stop();
@@ -446,9 +452,9 @@ export function cardPack<G extends GameTypes, E extends PackEnv = PackEnv>(cfg: 
           return Array.isArray(t) && k === 'length' ? { value: t.length, writable: true, enumerable: false, configurable: false } : 'value' in d ? { ...d, value: px(d.value), configurable: true } : { ...d, configurable: true };
         },
         getPrototypeOf: () => Reflect.getPrototypeOf(t),
-        set: (_, k, v) => rw && Reflect.set(t, k, un(v)),
-        deleteProperty: (_, k) => rw && Reflect.deleteProperty(t, k),
-        defineProperty: (_, k, d) => rw && Reflect.defineProperty(t, k, 'value' in d ? { ...d, value: un(d.value) } : d),
+        set: (_, k, v) => rw && (dirty() ? stop() : Reflect.set(t, k, un(v))),
+        deleteProperty: (_, k) => rw && (dirty() ? stop() : Reflect.deleteProperty(t, k)),
+        defineProperty: (_, k, d) => rw && (dirty() ? stop() : Reflect.defineProperty(t, k, 'value' in d ? { ...d, value: un(d.value) } : d)),
       });
       PX.set(t, p);
       TG.set(p, t);

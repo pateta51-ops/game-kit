@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { applyAction, blocked, createGame, draftOf, enumerateAnswers, hashState, type Ctx } from '../engine-core/index.ts';
-import { cannotKnow, cardPack, inDryRun, type OfferPolicy, type PackEnv, type PackStep } from './pack.ts';
+import { cannotKnow, cardPack, inDryRun, type Moved, type OfferPolicy, type PackEnv, type PackStep } from './pack.ts';
 import { DRAW, GAIN, gen, LUCKY, NOTHING, offerGame, pay, type Eff, type G, type S } from './offerGame.ts';
 import { askVerb } from './index.ts';
 import { pinned } from './k597.pin.ts';
@@ -245,6 +245,22 @@ describe('card-language resolves (K597, K605): third look', () => {
     expect(rs[0]?.answer).not.toBe('unknown');
     expect(rs[1]).toEqual(rs[0]);
   });
+  it('K597 fifth look: a card id counts as a whole token: with numeric ids, p1 in play does not hold the drawn card 1', () => {
+    const IF: PackStep = { op: 'if', test: 'f', then: [GAIN] };
+    for (const d of [['1', '9'], ['9', '1']]) {
+      const g = offerGame(cardPack<G>, { deck: d, cfg: { tests: { f: (s: S) => cardsIn(s, 'play:a').includes('p1') && s.log.length > 0 } } });
+      expect(resolves([DRAW, IF], g)).toEqual({ answer: 'full', skipped: [] });
+      expect(resolves([DRAW, { op: 'if', test: 'f', then: [GAIN] }], offerGame(cardPack<G>, { deck: d, cfg: { tests: { f: (s: S) => s.log.some((l) => l.type === 'draw 1') } } }))).toMatchObject({ answer: 'unknown', reason: 'hidden' });
+    }
+  });
+  it('K597 fifth look: a viewSafe verb that writes to an object holding a card that came into view stops, as a read does', () => {
+    const custom = { forget: { run: (ctx: Ctx<G>) => void delete (draftOf(ctx).got as Record<string, number> | undefined)?.d2, text: () => 'Forget.', viewSafe: true } };
+    const IF: PackStep = { op: 'if', test: 'none', then: [GAIN] };
+    for (const d of DECKS) {
+      const g = offerGame(cardPack<G>, { deck: d, marks: true, cfg: { custom, tests: { none: (s: S) => Object.keys(s.got ?? {}).length === 0 } } });
+      expect(resolves([DRAW, { op: 'custom', name: 'forget' }, IF], g)).toMatchObject({ answer: 'unknown', reason: 'hidden' });
+    }
+  });
   it('K597 fourth look: a custom verb or game row flagged viewSafe runs after a card came into view, on the guarded view; unflagged keeps the hard stop', () => {
     const custom = (viewSafe: boolean) => ({
       nine: { run: (ctx: Ctx<G>) => void (draftOf(ctx).res = { ...ctx.s.res, a: { gold: 9 } }), text: () => 'Nine.', viewSafe },
@@ -336,6 +352,15 @@ describe('card-language resolves (K597): the README recipe runs', () => {
     out.push(`${why.answer} ${String(why.reason)}`);
     // README recipe ends
     expect(out).toEqual(['step 1 skipped: emptyZone', 'no condition']);
+  });
+  it('K597 recipe: a mark kept for every card by its id; a mark kept for some cards only tells which kind came', () => {
+    const IF: PackStep = { op: 'if', test: 'none', then: [GAIN] };
+    const answers = (moved: (ctx: Ctx<G>, m: Moved) => void) => [['d1', 'd2'], ['d2', 'd1']].map((d) => resolves([DRAW, IF], offerGame(cardPack<G>, { deck: d, cfg: { moved, tests: { none: (s: S) => !Object.values(s.got ?? {}).includes(1) } } })).answer);
+    // README recipe (K597 marks) starts
+    const moved = (ctx: Ctx<G>, m: Moved): void => void (draftOf(ctx).got = { ...ctx.s.got, [m.card]: m.card.endsWith('2') ? 1 : 0 });
+    // README recipe ends
+    expect(answers(moved)).toEqual(['unknown', 'unknown']);
+    expect(answers((ctx, m) => void (m.card.endsWith('2') && (draftOf(ctx).got = { ...ctx.s.got, [m.card]: 1 })))).toEqual(['full', 'unknown']);
   });
 });
 
@@ -444,6 +469,20 @@ describe('card-language resolves (K597): agrees with playing every answer', () =
     expect(seen.part).toBeGreaterThan(100);
     expect(seen.none).toBeGreaterThan(150);
     expect(inDryRun()).toBe(false);
+  }, 240000);
+  it('K597 fifth look: with numeric card ids (p1 and h1 hold the id 1 as a substring) the whole answer is the same in every hidden world', () => {
+    const NUM = [['1', '9'], ['9', '1'], ['12', '1'], ['2', '12']].map((deck) => offerGame(cardPack<G>, { offer: { branches: 3000 }, deck, marks: true }));
+    let n = 0;
+    for (const [seed, depth] of [[11, 2], [22, 3]] as const) for (let i = 0, eff = gen(seed, true); i < 300; i += 1) {
+      const e = eff(depth);
+      const rs = NUM.map((g) => {
+        const { s, content } = g.at();
+        return whole(g.pack.resolves(s, content, e, A));
+      });
+      if (rs.some((x) => x !== rs[0])) throw new Error(`answers differ between hidden worlds: ${rs.join()}: ${JSON.stringify(e)}`);
+      n += 1;
+    }
+    expect(n).toBe(600);
   }, 240000);
   it('K597 fourth look: with the custom verbs and the row that read no card flagged viewSafe, fewer answers are unknown; every answer is still the same in every hidden world and agrees with brute force', () => {
     const n = { effects: 0, unknownOff: 0, unknownOn: 0, lostOff: 0, lostOn: 0, hiddenOff: 0, hiddenOn: 0 };
