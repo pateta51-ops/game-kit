@@ -1,12 +1,19 @@
-import { existsSync, mkdtempSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, rmdirSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { dirname, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { afterAll, describe, expect, it } from 'vitest';
-import { ENGINE_WORDS, readScreenLogs, Scenario, screenMain, screenProblems, type ScreenInput, type ScreenPrompt } from './index.ts';
+import { ENGINE_WORDS, promptLogOf, promptLogs, readScreenLogs, Scenario, screenMain, screenProblems, type ScreenInput, type ScreenPrompt } from './index.ts';
 import { cardCase } from './cardCase.ts';
 import { recordCardPrompts } from './promptRecorder.ts';
 import { clearPromptLog } from './clearLog.ts';
 import { DICE_GAME } from './fake/dice.ts';
+
+// clearLog.ts (imported above) clears this test file's own log before it runs: a stale one is written here, at collection.
+const own = promptLogOf(fileURLToPath(import.meta.url));
+mkdirSync(dirname(own), { recursive: true });
+writeFileSync(own, '{"t":"opened","clause":"stale#1"}\n');
+afterAll(() => { rmSync(own, { force: true }); for (const d of [dirname(own), dirname(dirname(own))]) try { rmdirSync(d); } catch { /* not empty */ } });
 
 // Made-up clauses: an amount, two shared costs, a plain line, a choice of two lines.
 const clauses = [
@@ -29,6 +36,13 @@ describe('K668 prompt rules in the screen scan', () => {
     expect(scan([{ ...ok, line: 'Deal 2 damage' }])).toEqual(['prompt for a#1: does not quote its printed clause']);
     expect(scan([{ ...ok, line: 'Deal 2 damage to a foe. Swap two cards.' }])).toEqual(['prompt for a#1: does not quote its printed clause']);
   });
+  it('K668 rule 1: the shown words must hold the clause whole too', () => {
+    expect(scan([{ ...ok, shown: 'Deal 2' }])).toEqual(['prompt for a#1: does not quote its printed clause']);
+  });
+  it('K668 rule 1: with quote on, a prompt without line fails', () => {
+    expect(scan([{ clause: 'a#1', shown: 'Deal 2 damage to a foe.' }], { quote: true })).toEqual(['prompt for a#1: does not quote its printed clause']);
+    expect(scan([ok], { quote: true })).toEqual([]);
+  });
   it('K668 rule 1 poor: a prompt without line is not quote-checked', () => {
     expect(scan([{ clause: 'a#1', shown: 'Deal 2?' }])).toEqual([]);
   });
@@ -40,11 +54,13 @@ describe('K668 prompt rules in the screen scan', () => {
     expect(scan([{ ...b, shown: 'Pay 3 coins per player, you choose.' }], { whoPays })).toEqual(['prompt for b#1: does not say who pays']);
   });
   it('K668 rule 2: a prompt with payers names each of them', () => {
-    expect(scan([{ ...ok, payers: ['P1', 'P2'], shown: 'Deal 2 damage. P1 pays 1' }], { whoPays })).toEqual(['prompt for a#1: does not say who pays']);
-    expect(scan([{ ...ok, payers: ['P1', 'P2'], shown: 'Deal 2 damage. P1 pays 1, P2 pays 1' }], { whoPays })).toEqual([]);
+    expect(scan([{ ...ok, payers: ['P1', 'P2'], shown: 'Deal 2 damage to a foe. P1 pays 1' }], { whoPays })).toEqual(['prompt for a#1: does not say who pays']);
+    expect(scan([{ ...ok, payers: ['P1', 'P2'], shown: 'Deal 2 damage to a foe. P1 pays 1, P2 pays 1' }], { whoPays })).toEqual([]);
   });
   it('K668 rule 2: a who-pays pattern that accepts a bare "you" fails', () => {
     expect(scan([ok], { whoPays: { ...whoPays, says: [/\byou\b/i] } })).toEqual(['whoPays: pattern /\\byou\\b/i accepts a bare "you"']);
+    expect(scan([ok], { whoPays: { ...whoPays, says: [/\byou /i] } })).toEqual(['whoPays: pattern /\\byou /i accepts a bare "you"']);
+    expect(scan([ok], { whoPays: { ...whoPays, says: [/you/] } })).toEqual(['whoPays: pattern /you/ accepts a bare "you"']);
   });
   it('K668 rule 2 poor: without whoPays nothing changes', () => {
     expect(scan([{ clause: 'b#1', shown: 'Pay 3 coins per player.' }])).toEqual([]);
@@ -57,6 +73,10 @@ describe('K668 prompt rules in the screen scan', () => {
     expect(scan([{ ...ok, raw: 'XR-7 Robot: Deal 2 damage.' }], { ruleIds, names: ['XR-7 Robot'] })).toEqual([]);
     expect(scan([{ ...ok, raw: 'XR-8 Robot: Deal 2 damage.' }], { ruleIds, names: ['XR-7 Robot'] })).toEqual(['prompt for a#1: rule id in the prompt text']);
     expect(ENGINE_WORDS.length).toBeGreaterThan(1);
+    expect(scan([{ ...ok, raw: 'engine: choose a foe.' }], { ruleIds })).toEqual(['prompt for a#1: rule id in the prompt text']);
+    expect(scan([{ ...ok, raw: ok.shown, screenOptions: ['F1 (RUL-12)'] }], { ruleIds })).toEqual(['prompt for a#1: rule id in the prompt text']);
+    expect(scan([{ ...ok, raw: ok.shown, engineOptions: ['F1 (RUL-12)'] }], { ruleIds })).toEqual(['prompt for a#1: rule id in the prompt text']);
+    expect(scan([{ ...ok, raw: ok.shown, screenOptions: ['F1'] }], { ruleIds })).toEqual([]);
   });
   it('K668 rule 3 poor: without ruleIds nothing changes', () => {
     expect(scan([{ ...ok, raw: 'Engine: (DMG-03)' }])).toEqual([]);
@@ -69,19 +89,29 @@ describe('K668 prompt rules in the screen scan', () => {
   it('K668 rule 5: a prompt is credited by its record path', () => {
     const records = [{ card: 'e', clause: 'e#1', path: 'play.0' }, { card: 'e', clause: 'e#2', path: 'play.1' }];
     const p: ScreenPrompt = { clause: 'e#2', card: 'e', path: 'play.0.1', line: 'Gain 2 health.', shown: 'Gain health?' };
-    expect(scan([p], { records })).toEqual(['prompt for e#1: no amount']);
+    expect(scan([p], { records })).toEqual(['prompt for e#1: no amount', 'prompt for e#1: does not quote its printed clause']);
     expect(scan([{ ...p, path: 'play.1' }], { records })).toEqual(['prompt for e#2: does not quote its printed clause']);
     expect(scan([{ ...p, path: 'play.9' }], { records })).toEqual(['prompt for e#2: does not quote its printed clause']);
     expect(scan([{ ...p, card: 'x' }], { records })).toEqual(['prompt for e#2: does not quote its printed clause']);
   });
   it('K668 rule 6: a choice of lines is checked per option', () => {
     const records = [{ clause: 'e#1', path: 'play.0' }, { clause: 'e#2', path: 'play.1' }];
-    const p: ScreenPrompt = { clause: 'e#2', line: 'Gain 2 health. Draw a card.', shown: 'Choose the next effect.', choices: [{ label: 'Gain 2 health', path: 'play.0' }, { label: 'Draw a card', path: 'play.1' }] };
+    const p: ScreenPrompt = { clause: 'e#2', line: 'Gain 2 health. Draw a card.', shown: 'Gain 2 health. Draw a card. Choose the next effect.', choices: [{ label: 'Gain 2 health', path: 'play.0' }, { label: 'Draw a card', path: 'play.1' }] };
     expect(scan([p], { records })).toEqual([]);
     expect(scan([{ ...p, choices: [{ label: 'Gain health', path: 'play.0' }, { label: 'Draw a card (DRW-01)', path: 'play.1' }] }], { records, ruleIds })).toEqual(['prompt for e#1: no amount', 'prompt for e#2: rule id in the prompt text']);
     expect(scan([{ ...p, line: 'Gain 2 health.' }], { records })).toEqual(['prompt for e#2: does not quote its printed clause']);
     expect(scan([{ ...p, choices: [{ label: 'Gain 2', path: 'play.9' }] }], { records })).toEqual(['prompt for e#2: option "Gain 2" is no clause\'s']);
     expect(scan([{ ...p, choices: [{ label: 'Gain 2', clause: 'e#1' }] }])).toEqual([]);
+    expect(scan([{ ...p, shown: 'Choose the next effect.' }], { records })).toEqual(['prompt for e#1: does not quote its printed clause', 'prompt for e#2: does not quote its printed clause']);
+  });
+  it('K668 rule 6: the choice prompt itself is checked as well as each option', () => {
+    const records = [{ clause: 'e#1', path: 'play.0' }, { clause: 'e#2', path: 'play.1' }];
+    const p: ScreenPrompt = { clause: 'e#2', shown: 'Gain 2 health. Draw a card. Choose the next effect.', choices: [{ label: 'Gain 2 health', path: 'play.0' }] };
+    expect(scan([{ ...p, shown: `${p.shown} (NXT-01)` }], { records, ruleIds })).toEqual(['prompt for e#2: rule id in the prompt text']);
+    expect(scan([{ ...p, screenOptions: ['Gain 2 health (NXT-01)'] }], { records, ruleIds })).toEqual(['prompt for e#2: rule id in the prompt text']);
+    expect(scan([{ ...p, engineOptions: ['NXT-01'] }], { records, ruleIds })).toEqual(['prompt for e#2: rule id in the prompt text']);
+    expect(scan([{ ...p, payers: ['P1'] }], { records, whoPays })).toEqual(['prompt for e#2: does not say who pays', 'prompt for e#1: does not say who pays']);
+    expect(scan([{ ...p, payers: ['P1'], shown: `${p.shown} P1 pays.` }], { records, whoPays })).toEqual(['prompt for e#1: does not say who pays']);
   });
   it('K668 rule 7: an empty log or an unknown clause id fails', () => {
     expect(scan([], { strictLog: true })).toEqual(['no prompts recorded: run the card tests first', 'no opened clauses recorded: run the card tests first']);
@@ -109,6 +139,13 @@ const play = (): void => {
   expect(sc.prompt).not.toBeNull();
 };
 describe('K668 prompt recorder', () => {
+  it("K668 clearLog clears this test file's own log before it runs", () => {
+    expect(existsSync(own)).toBe(false);
+    expect(own.endsWith('k668.test.ts.jsonl')).toBe(true);
+    const d = mkdtempSync(join(tmpdir(), 'k668-logs-'));
+    writeFileSync(join(d, 'b.jsonl'), ''); writeFileSync(join(d, 'a.jsonl'), ''); writeFileSync(join(d, 'x.txt'), '');
+    expect(promptLogs(d)).toEqual([join(d, 'a.jsonl'), join(d, 'b.jsonl')]);
+  });
   it('K668 clearPromptLog empties the log', () => {
     clearPromptLog(file);
     expect(existsSync(file)).toBe(false);
@@ -122,6 +159,10 @@ describe('K668 prompt recorder', () => {
     expect(screenProblems(input)).toEqual([]);
     expect(screenProblems({ ...input, clauses: [{ id: 'ladder#1', text: 'Score 4, then discard a card.' }] })).toEqual(['prompt for ladder#1: no amount', 'prompt for ladder#1: does not quote its printed clause']);
   });
+  cardCase({ clause: 'ladder#2', printed: 'Score 3, then discard a card.', ar: 'AR-1' }, () => { play(); play(); });
+  it('K668 two scenarios in one card test both record their prompt', () => {
+    expect(readScreenLogs([file]).prompts.filter((p) => p.clause === 'ladder#2')).toHaveLength(2);
+  });
 });
 
 describe('K668 README recipes', () => {
@@ -132,9 +173,12 @@ describe('K668 README recipes', () => {
     expect(found).toEqual(['prompt for b#1: does not say who pays', 'prompt for b#1: rule id in the prompt text']);
   });
   it('K668 recipe: record every card test', () => {
+    const before = Scenario.onPrompt;
     const undo = recordCardPrompts({ entry: (p) => ({ shown: String((p as { text?: string }).text) }) });
     expect(Scenario.onPrompt).toBeTypeOf('function');
+    expect(Scenario.onPrompt).not.toBe(before);
     undo();
-    expect(Scenario.onPrompt).toBeUndefined();
+    expect(Scenario.onPrompt).toBe(before);
+    expect(before).toBeTypeOf('function');
   });
 });
