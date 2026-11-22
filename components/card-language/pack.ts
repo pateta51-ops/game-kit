@@ -745,6 +745,8 @@ export function cardPack<G extends GameTypes, E extends PackEnv = PackEnv>(cfg: 
     }
   };
   const live = (r: Offered): boolean => r === 'yes' || (r === 'unknown' && P.unknown !== 'skip');
+  // K598: env.actor is kept only under forcedSkip noFull, so the default env (and state) is as before.
+  const who = (e: E): { actor?: string } => (P.forcedSkip === 'noFull' ? { actor: e.actor ?? e.seat } : {});
   // K605: the check behind a bar; its reason is used under `barReason: 'why'`, or when the game's `decide` gave one.
   const barCheck = (s: G['state'], content: G['content'], o: Eff, e: E): OfferCheck => judge(s, content, o, e, P.barReason === 'why' ? { why: true } : undefined);
   const why = (s: PackState, o: Eff, e: E, c: OfferCheck): string => {
@@ -1023,8 +1025,8 @@ export function cardPack<G extends GameTypes, E extends PackEnv = PackEnv>(cfg: 
       const seats = cfg.seats(ro(ctx.s)).filter((p) => !st.others || p !== e.seat);
       if (seats.length > 0) return ask(ctx, st, e, 'choosePlayer', seats.map((id) => ({ id, enabled: true })), 1, 1);
       const seat = cfg.noPlayer?.(ro(ctx.s), e);
-      if (seat !== undefined) go(ctx, st.then, { ...e, seat, actor: e.actor ?? e.seat });
-    }, (ctx, st: Extract<PackStep, { op: 'choosePlayer' }>, e, a) => go(ctx, st.then, { ...e, seat: a[0] ?? e.seat, actor: e.actor ?? e.seat })),
+      if (seat !== undefined) go(ctx, st.then, { ...e, seat, ...who(e) });
+    }, (ctx, st: Extract<PackStep, { op: 'choosePlayer' }>, e, a) => go(ctx, st.then, { ...e, seat: a[0] ?? e.seat, ...who(e) })),
     choosePayment: flow({ ways: effs, then: eff }, (ctx, st: Extract<PackStep, { op: 'choosePayment' }>, e) => {
       const s = S(ctx);
       // K583, paid = effect: a payable way whose effect would change nothing is dead for `deadChoice`.
@@ -1068,7 +1070,7 @@ export function cardPack<G extends GameTypes, E extends PackEnv = PackEnv>(cfg: 
       if (!cfg.seats) throw new EngineBugError('card-language pack: eachPlayer needs cfg.seats');
       const all = cfg.seats(ro(ctx.s));
       const i = Math.max(0, all.indexOf(e.seat));
-      ctx.then(...([...all.slice(i), ...all.slice(0, i)].flatMap((seat) => effectTasks(st.then, { ...e, seat, actor: e.actor ?? e.seat })) as unknown as G['task'][]));
+      ctx.then(...([...all.slice(i), ...all.slice(0, i)].flatMap((seat) => effectTasks(st.then, { ...e, seat, ...who(e) })) as unknown as G['task'][]));
     }),
     repeat: flow({ times: amount, then: eff }, (ctx, st: Extract<PackStep, { op: 'repeat' }>, e) => go(ctx, Array.from({ length: n(st.times, e) }, () => st.then).flat(), e)),
     count: flow({ what: str, then: eff }, (ctx, st: Extract<PackStep, { op: 'count' }>, e) => {
