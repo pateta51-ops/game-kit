@@ -128,6 +128,8 @@ describe('card-language offer policy (K529): the would-change-nothing check', ()
   });
   it('K529 case 15: an "if you did" follow-up alone does not count', () => {
     expect(check([{ op: 'payThen', cost: [{ op: 'custom', name: 'nothing' }], then: [GAIN] }])).toBe('no');
+    // K583: a cost is not an "if you did"; under paid = effect a payable cost is able and its effect is judged.
+    expect(game({ paid: 'effect' }).check([{ op: 'payThen', cost: [{ op: 'custom', name: 'nothing' }], then: [GAIN] }])).toBe('yes');
   });
   it('K529 case 17: a false condition with no else is not able; with an else it is judged on the else', () => {
     expect(check([{ op: 'if', test: 'rich', then: [GAIN] }])).toBe('no');
