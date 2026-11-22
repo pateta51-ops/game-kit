@@ -1019,7 +1019,7 @@ Plays motion specs in the director's format (one JSON per beat: `actors`, `steps
 
 - **Also called:** Motion player
 - **Looks like:** Plays a director motion file on the screen, step by step.
-- **Words:** motion, play, animation, spec, beats, director, timeline, beat from engine events, events, sound cue, cue sound from events, event order
+- **Words:** motion, play, animation, spec, beats, director, timeline, sound cue timing, check game uses kit hooks, no bypass, game bypasses the kit, beat from engine events, events, sound cue, cue sound from events, event order
 - **Release:** 1.1; seen on screen
 - **The game supplies:** The motion spec files and the elements they name.
 - **Use it when:** Playing the director's motion specs (JSON beats) on the screen.

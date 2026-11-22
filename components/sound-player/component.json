@@ -32,5 +32,8 @@
     { "repo": "Forge (GPL-3.0)", "paths": ["forge/sound/SoundSystem.java: idea only (shelved track resumes)"] },
     { "repo": "ArkhamHorror (no licence)", "paths": ["frontend/src/arkham/rainAudio.ts: idea only (seam crossfade)"] }
   ],
-  "needs": []
+  "needs": [],
+  "bypass": [
+    {"id":"sound-on-timer","imports":["motion-frame"],"match":"\\bset(?:Timeout|Interval)\\s*\\([\\s\\S]{0,200}?(?:\\b\\w*(?:sound|audio|sfx)\\w*\\.play\\w*\\s*\\(|\\.play\\w*\\s*\\([^)\\n]*\\bcue)","flags":"i","hook":"with motion-frame, a sound cue plays only from createMotionPlayer onCue / onDroppedCue, never from a timer"}
+  ]
 }
