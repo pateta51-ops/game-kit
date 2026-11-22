@@ -5,6 +5,7 @@
 // a backticked name in `read` is not a name of the part (or of an `also` part): an exported name, a member of an exported type, or a file,
 // tests, comments and prose not counted (K585); a component or candidate row is named by no line
 // and has no `mechanics: "none: <reason>"` (catalog-notes.json entry, or the row's front matter);
+// a line has no `sheet` key, or one that is no id of SHEET_QUESTIONS in components/plan-checker/plancheck.py (K584);
 // a search of `searches` does not print a `mechanic:` line first that names the expected part.
 import { spawnSync } from 'node:child_process'
 import fs from 'node:fs'
@@ -44,10 +45,13 @@ const namesOf = (p) => known[p] ??= (() => {
   return s
 })()
 const named = new Set()
+// K584: every line names a question of the game sheet (SHEET_QUESTIONS in plancheck.py, the one place they are written)
+const qids = JSON.parse(fs.readFileSync(J('components', 'plan-checker', 'plancheck.py'), 'utf8').match(/^SHEET_QUESTIONS = (\[[\s\S]*?\]\])/m)[1]).map(([k]) => k)
 for (const m of lines) {
   const w = '"' + m.words + '"'
   if (!m.words?.trim()) { bad.push('a line has no words'); continue }
-  if (m.tool && !fs.existsSync(J('tools', m.tool, 'README.md'))) bad.push(`${w}: tools/${m.tool}/README.md is missing`)
+  if (!qids.includes(m.sheet)) bad.push(`${w}: ${m.sheet ? `sheet "${m.sheet}" is no question of the game sheet` : 'no sheet key'} (name one of: ${qids.join(', ')})`)
+  if (m.tool &&!fs.existsSync(J('tools', m.tool, 'README.md'))) bad.push(`${w}: tools/${m.tool}/README.md is missing`)
   if (m.row && !row(m.row)) bad.push(`${w}: row ${m.row} is not in docs/plan`)
   if (m.row) named.add(m.row)
   if (m.pending && !row(m.pending)) bad.push(`${w}: pending row ${m.pending} is not in docs/plan`)

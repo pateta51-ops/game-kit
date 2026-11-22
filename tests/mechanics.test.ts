@@ -12,7 +12,7 @@ afterAll(() => fs.rmSync(tmp, { recursive: true, force: true }));
 const put = (f: string, s: string) => { fs.mkdirSync(path.dirname(f), { recursive: true }); fs.writeFileSync(f, s); };
 const node = (...a: string[]) => spawnSync('node', a, { encoding: 'utf8', env });
 
-type Line = { words: string; tool?: string; part?: string; read?: string; pending?: string; row?: string };
+type Line = { words: string; tool?: string; part?: string; read?: string; pending?: string; row?: string; sheet?: string };
 type Fake = { notes: Record<string, Record<string, unknown>>; lines: Line[]; searches: Record<string, string>; rows: Record<string, string> };
 const entry = (title: string, more: Record<string, unknown> = {}) => ({ title, use: 'You need ' + title + '.', not: 'Anything else.', tags: ['one', 'two', 'three'], visible: false, release: 1, ...more });
 let n = 0;
@@ -20,6 +20,10 @@ const fake = (edit: (f: Fake) => void = () => {}) => {
   const root = path.join(tmp, 'r' + String(n++));
   for (const f of ['catalog.mjs', 'plan.mjs', 'mechanics-check.mjs']) put(path.join(root, 'scripts', f), fs.readFileSync(path.join(ROOT, 'scripts', f), 'utf8'));
   put(path.join(root, 'kit.mjs'), fs.readFileSync(path.join(ROOT, 'kit.mjs'), 'utf8'));
+  put(path.join(root, 'components', 'plan-checker', 'plancheck.py'), fs.readFileSync(path.join(ROOT, 'components', 'plan-checker', 'plancheck.py'), 'utf8'));
+  put(path.join(root, 'components', 'plan-checker', 'component.json'), JSON.stringify({ name: 'plan-checker', source: { game: 'none' }, needs: [] }));
+  put(path.join(root, 'components', 'plan-checker', 'README.md'), '# plan-checker\n\nThe plan checker.\n');
+  put(path.join(root, 'components', 'plan-checker', 'index.ts'), 'export const zplan = 1\n');
   for (const c of ['alpha', 'tool']) {
     put(path.join(root, 'components', c, 'component.json'), JSON.stringify({ name: c, source: { game: 'none' }, needs: [] }));
     put(path.join(root, 'components', c, 'README.md'), '# ' + c + '\n\nThe ' + c + ' part.\n');
@@ -30,12 +34,13 @@ const fake = (edit: (f: Fake) => void = () => {}) => {
     notes: {
       alpha: entry('Alpha things'),
       tool: entry('Tool things', { mechanics: 'none: tooling' }),
+      'plan-checker': entry('Zplan things', { mechanics: 'none: tooling' }),
       'alpha/inner': { title: 'Inner blorp of alpha', use: 'You blorp.', tags: ['blorp', 'inner', 'deep'], guide: 'guide.md' },
     },
     lines: [
-      { words: 'zorking, zork a blip', part: 'alpha', read: 'guide.md' },
-      { words: 'flarn', part: 'ghost', pending: 'K900' },
-      { words: 'quux', row: 'K901' },
+      { words: 'zorking, zork a blip', part: 'alpha', read: 'guide.md', sheet: 'dice' },
+      { words: 'flarn', part: 'ghost', pending: 'K900', sheet: 'dice' },
+      { words: 'quux', row: 'K901', sheet: 'dice' },
     ],
     searches: { zorking: 'alpha' },
     rows: { K900: 'open', K901: 'candidate' },
@@ -79,7 +84,7 @@ describe('K524 mechanics page and search', () => {
   it('the page is generated, and a stale page fails --check', () => {
     const r = fake();
     const page = path.join(r.root, 'docs', 'recipes', 'mechanics.md');
-    expect(fs.readFileSync(page, 'utf8')).toContain('| zorking, zork a blip | `alpha`: read guide.md |\n| flarn | `ghost` (pending: K900) |\n| quux | not in the kit (candidate K901) |\n');
+    expect(fs.readFileSync(page, 'utf8')).toContain('\n## Dice\n\n| Mechanic | Answer |\n|---|---|\n| zorking, zork a blip | `alpha`: read guide.md |\n| flarn | `ghost` (pending: K900) |\n| quux | not in the kit (candidate K901) |\n');
     fs.appendFileSync(page, 'x');
     const c = r.catalog();
     expect(c.status).toBe(1);
@@ -115,7 +120,7 @@ describe('K524 mechanics page and search', () => {
     expect(log).not.toContain('zorking');
   });
   it('list prints one clean line per component: id, title, use', () => {
-    expect(fake().kit('list').stdout).toBe('alpha: Alpha things. Use: You need Alpha things.\ntool: Tool things. Use: You need Tool things.\n');
+    expect(fake().kit('list').stdout).toBe('alpha: Alpha things. Use: You need Alpha things.\nplan-checker: Zplan things. Use: You need Zplan things.\ntool: Tool things. Use: You need Tool things.\n');
   });
   it('a search inside a game layout (kit.mjs, CATALOG.md, recipes/ side by side) finds a mechanics line', () => {
     const g = path.join(tmp, 'game', 'kit');
@@ -217,9 +222,40 @@ describe('K524 gate (scripts/mechanics-check.mjs)', () => {
   });
 });
 
+describe('K584 every line names a question of the game sheet', () => {
+  it('a line with no sheet key fails the gate with its words and exit 1', () => {
+    const g = fake((f) => { delete f.lines[2]!.sheet; }).gate();
+    expect(g.status).toBe(1);
+    expect(g.stderr).toContain('"quux": no sheet key (name one of: player, run-out, clocks, ');
+  });
+  it('a sheet key that is no question fails the gate', () => {
+    const g = fake((f) => { f.lines[0]!.sheet = 'Dice'; }).gate();
+    expect(g.status).toBe(1);
+    expect(g.stderr).toContain('"zorking, zork a blip": sheet "Dice" is no question of the game sheet');
+  });
+  it('the page groups the lines under their questions, in the order of the sheet; search still reads every line', () => {
+    const r = fake((f) => { f.lines[0]!.sheet = 'markets'; f.lines[2]!.sheet = 'player'; });
+    const page = fs.readFileSync(path.join(r.root, 'docs', 'recipes', 'mechanics.md'), 'utf8');
+    expect(page.split('\n').filter((l) => l.startsWith('## ') || /^\| [a-z]/.test(l))).toEqual(['## Who the player controls', '| quux | not in the kit (candidate K901) |', '## Dice', '| flarn | `ghost` (pending: K900) |', '## Markets and rows', '| zorking, zork a blip | `alpha`: read guide.md |']);
+    expect(r.catalog().status).toBe(0);
+    expect(r.kit('search', 'zorking').stdout).toMatch(/^mechanic: zorking/);
+    expect(r.kit('search', 'quux').stdout).toBe('mechanic: quux -> not in the kit (candidate K901)\n');
+  });
+  it('the repository: 22 questions written once in plancheck.py, every line of the map under one of them', () => {
+    const qs = JSON.parse(/^SHEET_QUESTIONS = (\[[\s\S]*?\]\])/m.exec(fs.readFileSync(path.join(ROOT, 'components', 'plan-checker', 'plancheck.py'), 'utf8'))![1]!) as [string, string][];
+    expect(qs).toHaveLength(22);
+    expect(new Set(qs.map(([k]) => k)).size).toBe(22);
+    const m = JSON.parse(fs.readFileSync(path.join(ROOT, 'docs', 'mechanics.json'), 'utf8')) as { lines: Line[] };
+    expect(m.lines.filter((l) => !qs.some(([k]) => k === l.sheet))).toEqual([]);
+    const page = fs.readFileSync(path.join(ROOT, 'docs', 'recipes', 'mechanics.md'), 'utf8').split(/\r?\n/);
+    expect(page.filter((l) => l.startsWith('## ')).map((l) => l.slice(3))).toEqual(qs.map(([, w]) => w));
+    expect(page.filter((l) => l.startsWith('| ') && !l.startsWith('| Mechanic'))).toHaveLength(m.lines.length);
+  });
+});
+
 describe('K574 a line may name a tool', () => {
   it('prints first as a tool line, is not logged as a miss, and the gate fails a tool with no README', () => {
-    const r = fake((f) => { f.lines.push({ words: 'queue a heavy job', tool: 'qtool', read: 'its README' }); });
+    const r = fake((f) => { f.lines.push({ words: 'queue a heavy job', tool: 'qtool', read: 'its README', sheet: 'content' }); });
     expect(r.write.status).toBe(0);
     expect(r.kit('search', 'heavy', 'queue').stdout).toBe('mechanic: queue a heavy job -> tool `qtool` (tools/qtool): read its README\n');
     expect(fs.existsSync(path.join(tmp, '.game-kit/search-misses.log')) ? fs.readFileSync(path.join(tmp, '.game-kit/search-misses.log'), 'utf8') : '').not.toContain('heavy queue');
