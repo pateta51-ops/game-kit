@@ -1439,13 +1439,13 @@ Settings declared as data, a persisted store of their values and a screen drawn 
 Plays N whole games of any `GameRules<G>` with a driver, in this thread or on worker threads, with crash-safe records and a resume file. Needs `engine-core`.
 
 - **Also called:** Bulk game simulator
-- **Words:** simulate, many, games, bots, balance, fuzz, tune, threads
+- **Words:** simulate, many, games, bots, balance, fuzz, tune, threads, unreached, clauses, whole game, coverage, replay seed, failing seed, findings
 - **Release:** 1.0; not seen
 - **The game supplies:** The game rules and a driver for each seat.
-- **Use it when:** Playing many whole games with drivers on worker threads, fuzzing, sanity bands, sweeps, the K200 weight tuner and paired validation.
+- **Use it when:** Playing many whole games with drivers on worker threads, fuzzing, sanity bands, sweeps, the K200 weight tuner and paired validation; the whole-game check of unreached clauses (proof from counted full-resolve tests), coverage rounds and a findings file to replay a failing seed.
 - **Not for:** A driver's strategy (the game or opponent supplies it).
-- **Key exports:** `DriverRng`, `ANSWER_CAP`, `CRASH_HASH`, `breakAt`, `bySeat`, `crashRecord`, `legalAnswers`, `playOne`, `randomDriver`, `botDriver`, `replayStep`, `formatReport`, `report`, `runGames`, and 67 more
-- **Needs:** [`engine-core`](#engine-core)
+- **Key exports:** `DriverRng`, `ANSWER_CAP`, `CRASH_HASH`, `breakAt`, `bySeat`, `crashRecord`, `legalAnswers`, `playOne`, `randomDriver`, `botDriver`, `replayStep`, `formatReport`, `report`, `runGames`, and 76 more
+- **Needs:** [`engine-core`](#engine-core), [`card-harness`](#card-harness)
 - **Came from:** warps
 - **Docs:** [README](../components/sim-pool/README.md) ([rules for agents](../components/sim-pool/README.md#rules-for-agents))
 
