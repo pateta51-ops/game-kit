@@ -117,7 +117,11 @@
       "diagonal",
       "move toward",
       "ties",
-      "area"
+      "area",
+      "open ends",
+      "corridor",
+      "end corner",
+      "sight end corner wall"
     ],
     "visible": false,
     "release": 1,

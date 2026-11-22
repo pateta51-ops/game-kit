@@ -214,11 +214,11 @@ export function firstSteps(g: GridMap, from: string, to: Targets, o: Steps & { s
 }
 
 const gcd = (a: number, b: number): number => (b ? gcd(b, a % b) : a)
-function clear(g: GridMap, x1: number, y1: number, x2: number, y2: number): boolean {
+function clear(g: GridMap, x1: number, y1: number, x2: number, y2: number, open?: boolean): boolean {
   const dx = x2 - x1
   const dy = y2 - y1
   const n = gcd(Math.abs(dx), Math.abs(dy)) || 1
-  for (let i = 0; i <= n; i++) if (g.blocked[(y1 + (dy / n) * i) * (g.cols + 1) + x1 + (dx / n) * i]) return false
+  for (let i = open ? 1 : 0; i <= (open ? n - 1 : n); i++) if (g.blocked[(y1 + (dy / n) * i) * (g.cols + 1) + x1 + (dx / n) * i]) return false
   for (const [h, x, y] of g.inner) {
     // a, b: along the wall; p: across it
     const [a1, a2, p1, p2, a, p] = h ? [x1, x2, y1, y2, x, y] : [y1, y2, x1, x2, y, x]
@@ -237,11 +237,12 @@ function corners(g: GridMap, space: string): Cell[] {
   return [...out.values()]
 }
 
-export function lineOfSight(g: GridMap, a: string, b: string): boolean {
+export type Sight = { openEnds?: boolean }
+export function lineOfSight(g: GridMap, a: string, b: string, o: Sight = {}): boolean {
   const pa = corners(g, a)
   const pb = corners(g, b)
   if (a === b) return true
-  for (const [y1, x1] of pa) for (const [y2, x2] of pb) if (clear(g, x1, y1, x2, y2)) return true
+  for (const [y1, x1] of pa) for (const [y2, x2] of pb) if (clear(g, x1, y1, x2, y2, o.openEnds)) return true
   return false
 }
 
@@ -287,10 +288,10 @@ export function adjacent(g: GridMap, space: string, o: Steps & { throughWalls?: 
   return table(g, o, o.throughWalls)[space] as readonly string[]
 }
 
-export function within(g: GridMap, from: string, n: number, o: Steps & { throughWalls?: boolean; sight?: boolean } = {}): string[] {
+export function within(g: GridMap, from: string, n: number, o: Steps & Sight & { throughWalls?: boolean; sight?: boolean } = {}): string[] {
   cellsOf(g, from)
   const d = flood(table(g, o, o.throughWalls), [from], undefined, n)
-  return g.spaces.filter(s => s !== from && d.has(s) && (!o.sight || lineOfSight(g, from, s)))
+  return g.spaces.filter(s => s !== from && d.has(s) && (!o.sight || lineOfSight(g, from, s, o)))
 }
 
 function run(g: GridMap, r: number, c: number, d: Direction, stop?: boolean, length = Infinity, open?: boolean, extra?: ReadonlySet<string>): string[] {
@@ -328,12 +329,12 @@ export const rowOf = (g: GridMap, space: string, o: { stopAtWall?: boolean } = {
 export const columnOf = (g: GridMap, space: string, o: { stopAtWall?: boolean } = {}): string[] => lane(g, space, ['n', 's'], o.stopAtWall)
 
 export type AreaShape = { square: true; diamond?: never } | { diamond: true; square?: never }
-export function area(g: GridMap, centre: string, radius: number, o: AreaShape & { sight?: boolean }): string[] {
+export function area(g: GridMap, centre: string, radius: number, o: AreaShape & Sight & { sight?: boolean }): string[] {
   if (!o || !o.square === !o.diamond) throw new Error('grid-map: area needs exactly one of { square: true } or { diamond: true }')
   const mid = cellsOf(g, centre)
   return g.spaces.filter(s => (g.cells[s] as readonly Cell[]).some(([r, c]) => mid.some(([mr, mc]) => {
     const a = Math.abs(r - mr)
     const b = Math.abs(c - mc)
     return (o.square ? Math.max(a, b) : a + b) <= radius
-  })) && (!o.sight || lineOfSight(g, centre, s)))
+  })) && (!o.sight || lineOfSight(g, centre, s, o)))
 }

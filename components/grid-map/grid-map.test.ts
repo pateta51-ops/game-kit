@@ -419,10 +419,11 @@ describe('grid-map: lineOfSight with openEnds', () => {
     expect(lineOfSight(elbow, 'r3c0', 'r0c3', { openEnds: true })).toBe(false)
     expect(lineOfSight(gridMap({ rows: 4, cols: 4, walls: [[0, 2, 'w'], [1, 2, 'w'], [2, 3, 'n']] }), 'r3c0', 'r0c3', { openEnds: true })).toBe(true)
   })
-  it('openEnds: two spaces sharing a corner see each other, even across a wall', () => {
+  it('openEnds: a line starting on a wall is clear of it: spaces whose corners touch the wall see past it', () => {
     expect(lineOfSight(oneWall, 'r0c0', 'r0c1')).toBe(false)
     expect(lineOfSight(oneWall, 'r0c0', 'r0c1', { openEnds: true })).toBe(true)
-    expect(lineOfSight(oneWall, 'r0c0', 'r0c2', { openEnds: true })).toBe(false)
+    expect(lineOfSight(oneWall, 'r0c0', 'r0c2', { openEnds: true })).toBe(true)
+    expect(lineOfSight(gridMap({ rows: 1, cols: 4, walls: [[0, 2, 'w']] }), 'r0c0', 'r0c3', { openEnds: true })).toBe(false)
   })
   it('within and area pass openEnds through to sight', () => {
     expect(within(hall, 'r1c0', 2, { sight: true })).toEqual([])
