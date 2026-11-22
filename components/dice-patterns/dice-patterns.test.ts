@@ -140,6 +140,73 @@ describe('dice-patterns smallest over the whole roll (K578)', () => {
   });
 });
 
+describe('dice-patterns named shapes (K578)', () => {
+  it('one even and one odd together', () => {
+    const p: Pattern = { kind: 'all', of: [{ kind: 'even', n: 1 }, { kind: 'odd', n: 1 }] };
+    expect(t(p, [2, 5])).toBe(true);
+    expect(t(p, [2, 4, 6])).toBe(false);
+    expect(t(p, [3])).toBe(false);
+    expect(smallest(p, [4, 6, 3, 1], { whole: true })).toEqual([0, 2]);
+    expect(smallest(p, [1, 3, 5], { whole: true })).toBeNull();
+  });
+  it('an exact sum of 7 and of 1 over every die', () => {
+    const seven: Pattern = { kind: 'sum', op: '=', value: 7 };
+    expect(t(seven, [1, 2, 4])).toBe(true);
+    expect(t(seven, [6, 2])).toBe(false);
+    expect(smallest(seven, [1, 2, 4], { whole: true })).toEqual([0, 1, 2]);
+    const one: Pattern = { kind: 'sum', op: '=', value: 1 };
+    expect(t(one, [1])).toBe(true);
+    expect(t(one, [1, 1])).toBe(false);
+    expect(smallest(one, [1], { whole: true })).toEqual([0]);
+    expect(smallest(one, [1, 1], { whole: true })).toBeNull();
+    expect(smallest(one, [1, 1])).toEqual([0]);
+  });
+  it('two even dice that are not equal', () => {
+    const p: Pattern = { kind: 'all', of: [{ kind: 'even', n: 2 }, { kind: 'different', n: 2 }] };
+    expect(t(p, [2, 6])).toBe(true);
+    expect(t(p, [4, 4])).toBe(false);
+    expect(t(p, [2, 3])).toBe(false);
+    expect(smallest(p, [4, 4, 5, 2])).toEqual([0, 3]);
+  });
+  it('count with an op: a group of an exact size', () => {
+    const three: Pattern = { kind: 'all', of: [{ kind: 'same', n: 3 }, { kind: 'count', op: '=', n: 3 }] };
+    expect(t(three, [5, 5, 5])).toBe(true);
+    expect(t(three, [5, 5, 5, 5])).toBe(false);
+    expect(t(three, [5, 5])).toBe(false);
+    expect(smallest(three, [5, 5, 5, 5])).toEqual([0, 1, 2]);
+    expect(smallest(three, [5, 5, 5, 5], { whole: true })).toBeNull();
+    expect(t({ kind: 'count', op: '<=', n: 2 }, [4, 1])).toBe(true);
+    expect(t({ kind: 'count', op: '<=', n: 2 }, [4, 1, 1])).toBe(false);
+    expect(t({ kind: 'count', op: '<', n: 3 }, [])).toBe(false);
+    expect(t({ kind: 'count', n: 2 }, [4, 1, 1])).toBe(true);
+    expect(checkPattern({ kind: 'count', op: '!=', n: 2 })).toEqual(['pattern.op: one of <, <=, =, >=, >']);
+  });
+  it('random rolls, = included: whole agrees with compile; without it a set of the dice can meet what the roll does not', () => {
+    let s = 2468;
+    const rnd = (n: number): number => { s = (s * 1103515245 + 12345) & 0x7fffffff; return (s >> 8) % n; };
+    const ps: Pattern[] = [{ kind: 'sum', op: '=', value: 7 }, { kind: 'spread', value: 2 }, { kind: 'sum', op: '<=', value: 5 }, { kind: 'max', op: '<', value: 4 },
+      { kind: 'count', op: '=', n: 2 }, { kind: 'same', n: 2 }, { kind: 'all', of: [{ kind: 'even', n: 1 }, { kind: 'sum', op: '=', value: 9 }] }];
+    const anySet = (p: Pattern, v: number[]): boolean => {
+      for (let m = 1; m < 1 << v.length; m += 1) if (compile(p)(v.filter((_, i) => (m >> i) & 1))) return true;
+      return false;
+    };
+    let met = 0, onlyPart = 0;
+    for (const p of ps) for (let i = 0; i < 200; i += 1) {
+      const v = Array.from({ length: rnd(6) }, () => 1 + rnd(6));
+      const all = compile(p)(v);
+      const w = smallest(p, v, { whole: true });
+      const r = smallest(p, v);
+      expect(w !== null).toBe(all);
+      expect(r !== null).toBe(anySet(p, v));
+      if (all) { met += 1; expect(w).toEqual(r); }
+      if (r) expect(compile(p)(r.map((x) => v[x] as number))).toBe(true);
+      if (r && !all) onlyPart += 1;
+    }
+    expect(met).toBeGreaterThan(100);
+    expect(onlyPart).toBeGreaterThan(100);
+  });
+});
+
 describe('dice-patterns checkPattern', () => {
   it('good data has no problems', () => {
     expect(checkPattern({ kind: 'all', of: [{ kind: 'same', n: 2 }, { kind: 'sum', op: '>', value: 7 }] })).toEqual([]);

@@ -1,6 +1,7 @@
 export type Op = '<' | '<=' | '=' | '>=' | '>';
 export type Pattern =
-  | { kind: 'same' | 'different' | 'run' | 'even' | 'odd' | 'count'; n: number }
+  | { kind: 'same' | 'different' | 'run' | 'even' | 'odd'; n: number }
+  | { kind: 'count'; op?: Op; n: number }
   | { kind: 'atLeast' | 'face'; face: number; n: number }
   | { kind: 'sum'; op: Op; value: number }
   | { kind: 'max' | 'spread'; op?: Op; value: number }
@@ -21,7 +22,8 @@ export function checkPattern(data: unknown, at = 'pattern'): string[] {
   const val = () => { if (typeof d.value !== 'number' || !Number.isFinite(d.value)) p.push(`${at}.value: a number`); };
   const op = (opt: boolean) => { if (!(opt && d.op === undefined) && !OPS.includes(d.op as Op)) p.push(`${at}.op: one of ${OPS.join(', ')}`); };
   switch (d.kind) {
-    case 'same': case 'different': case 'run': case 'even': case 'odd': case 'count': num('n'); break;
+    case 'same': case 'different': case 'run': case 'even': case 'odd': num('n'); break;
+    case 'count': op(true); num('n'); break;
     case 'atLeast': case 'face': num('face'); num('n'); break;
     case 'sum': op(false); val(); break;
     case 'max': case 'spread': op(true); val(); break;
@@ -50,7 +52,7 @@ function met(p: Pattern, v: readonly number[]): boolean {
     }
     case 'even': return count((x) => x % 2 === 0) >= p.n;
     case 'odd': return count((x) => x % 2 === 1) >= p.n;
-    case 'count': return v.length >= p.n;
+    case 'count': return v.length >= 1 && cmp(v.length, p.op ?? '>=', p.n);
     case 'atLeast': return count((x) => x >= p.face) >= p.n;
     case 'face': return count((x) => x === p.face) >= p.n;
     case 'sum': return v.length >= 1 && cmp(v.reduce((a, b) => a + b, 0), p.op, p.value);
@@ -87,8 +89,9 @@ const search = (ok: (s: readonly number[]) => boolean, n: number): number[] | nu
   return null;
 };
 
-/** Indexes of the smallest non-empty set of dice that meets `p` judged on that set alone (ties: lowest indexes), or null. */
-export function smallest(p: Pattern, values: readonly number[]): number[] | null {
+/** Indexes of the smallest non-empty set of dice that meets `p` judged on that set alone (ties: lowest indexes), or null. `whole`: null unless every die together meets `p` too. */
+export function smallest(p: Pattern, values: readonly number[], opts: { whole?: boolean } = {}): number[] | null {
   const test = compile(p);
+  if (opts.whole && !test(values)) return null;
   return search((s) => test(s.map((i) => values[i] as number)), values.length);
 }
