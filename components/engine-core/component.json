@@ -251,6 +251,13 @@
         "paths": [
           "astra-imperium src/engine/modules.ts (K526: per-unit reduction, cost floor)"
         ]
+      },
+      {
+        "game": "ebr",
+        "commit": "b9b06107",
+        "paths": [
+          "ebr src/engine/phases/lasting.ts (K541: design only; lasting effects ended by a named expiry)"
+        ]
       }
     ]
   },
