@@ -14,6 +14,9 @@ const first = (q: string) => run('search', ...q.split(' ')).stdout.split('\n')[0
 
 const top: [string, string][] = [
   ['burn', 'burn-away (was dissolve):'],
+  ['undo button', 'mechanic: undo'],
+  ['sparkle shine', 'light-sweep (was sheen):'],
+  ['heavy queue', 'mechanic: heavy queue'],
   ['burning', 'burn-away (was dissolve):'],
   ['question box', 'Question box (`prompt-host`)'],
   ['count up', 'countUp:'],
@@ -60,8 +63,8 @@ const top: [string, string][] = [
 ];
 
 describe('K500 search', () => {
-  it('forty-four plain queries find the expected top hit', () => {
-    expect(top).toHaveLength(44);
+  it('forty-seven plain queries find the expected top hit', () => {
+    expect(top).toHaveLength(47);
     const bad = top.filter(([q, want]) => !first(q).startsWith(want) || run('search', ...q.split(' ')).stdout.includes('not in the kit')).map(([q]) => q + ' -> ' + first(q).slice(0, 40));
     expect(bad).toEqual([]);
   });

@@ -12,7 +12,7 @@ afterAll(() => fs.rmSync(tmp, { recursive: true, force: true }));
 const put = (f: string, s: string) => { fs.mkdirSync(path.dirname(f), { recursive: true }); fs.writeFileSync(f, s); };
 const node = (...a: string[]) => spawnSync('node', a, { encoding: 'utf8', env });
 
-type Line = { words: string; part?: string; read?: string; pending?: string; row?: string };
+type Line = { words: string; tool?: string; part?: string; read?: string; pending?: string; row?: string };
 type Fake = { notes: Record<string, Record<string, unknown>>; lines: Line[]; searches: Record<string, string>; rows: Record<string, string> };
 const entry = (title: string, more: Record<string, unknown> = {}) => ({ title, use: 'You need ' + title + '.', not: 'Anything else.', tags: ['one', 'two', 'three'], visible: false, release: 1, ...more });
 let n = 0;
@@ -186,5 +186,19 @@ describe('K524 gate (scripts/mechanics-check.mjs)', () => {
     expect(g.stderr).toBe('');
     expect(g.status).toBe(0);
     for (const q of ['modifier', 'adjacent', 'pay cost']) expect(node(path.join(ROOT, 'kit.mjs'), 'search', ...q.split(' ')).stdout).toMatch(/^mechanic: /);
+  });
+});
+
+describe('K574 a line may name a tool', () => {
+  it('prints first as a tool line, is not logged as a miss, and the gate fails a tool with no README', () => {
+    const r = fake((f) => { f.lines.push({ words: 'queue a heavy job', tool: 'qtool', read: 'its README' }); });
+    expect(r.write.status).toBe(0);
+    expect(r.kit('search', 'heavy', 'queue').stdout).toBe('mechanic: queue a heavy job -> tool `qtool` (tools/qtool): read its README\n');
+    expect(fs.existsSync(path.join(tmp, '.game-kit/search-misses.log')) ? fs.readFileSync(path.join(tmp, '.game-kit/search-misses.log'), 'utf8') : '').not.toContain('heavy queue');
+    const g = r.gate();
+    expect(g.status).toBe(1);
+    expect(g.stderr).toContain('"queue a heavy job": tools/qtool/README.md is missing');
+    put(path.join(r.root, 'tools', 'qtool', 'README.md'), '# qtool\n');
+    expect(r.gate().stderr).not.toContain('qtool');
   });
 });

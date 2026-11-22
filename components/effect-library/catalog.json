@@ -2655,7 +2655,8 @@
    "halo",
    "highlight",
    "light",
-   "shine"
+   "outline",
+   "silhouette"
   ],
   "group": "light",
   "ends": "as-started",
@@ -5645,7 +5646,10 @@
    "glint",
    "sweep",
    "shiny",
-   "foil"
+   "foil",
+   "sparkle",
+   "twinkle",
+   "shimmer"
   ],
   "group": "light",
   "ends": "as-started",
