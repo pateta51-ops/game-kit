@@ -2,16 +2,20 @@
 export type Rect = [number, number, number, number];
 export type Fan = 'row' | 'column' | 'stack' | 'grid';
 export type Kind = 'cards' | 'component' | 'pile' | 'group';
-export type Zone = { r: Rect; label?: string; cards?: number; fan?: Fan; kind?: Kind; full?: boolean; scale?: number; locked?: boolean; hidden?: boolean; [k: string]: unknown };
+export type Zone = { r: Rect; label?: string; cards?: number; fan?: Fan; kind?: Kind; full?: boolean; scale?: number; card?: [number, number]; locked?: boolean; hidden?: boolean; [k: string]: unknown };
 export type Screen = { w: number; h: number; card: [number, number]; pile?: [number, number]; zones: Record<string, Zone>; [k: string]: unknown };
 export type Doc = { screens: Record<string, Screen> };
 export type Guide = { axis: 'x' | 'y'; at: number };
-export type Warning = { id: string; kind: 'cards' | 'overlap' | 'outside'; text: string };
+export type Warning = { id: string; kind: 'cards' | 'overlap' | 'outside' | 'card'; text: string };
 
 const FANS = ['row', 'column', 'stack', 'grid'];
 export const KINDS = ['cards', 'component', 'pile', 'group'];
 const num = (v: unknown, d: number): number => (typeof v === 'number' && isFinite(v) ? v : typeof v === 'string' && v.trim() !== '' && isFinite(Number(v)) ? Number(v) : d);
 const isObj = (v: unknown): v is Record<string, unknown> => !!v && typeof v === 'object' && !Array.isArray(v);
+
+const validCard = (c: unknown): c is [number, number] => Array.isArray(c) && c.length === 2 && c.every((n) => typeof n === 'number' && isFinite(n) && n > 0);
+// K670: the card size a zone draws at: its own `card` when valid, else the screen's.
+export const zoneCard = (z: Zone, s: Screen): [number, number] => (validCard(z.card) ? z.card : s.card);
 
 function normalizeZone(v: unknown): Zone | null {
   const o: Record<string, unknown> | null = Array.isArray(v) ? { r: v } : isObj(v) ? v : null;
@@ -25,6 +29,7 @@ function normalizeZone(v: unknown): Zone | null {
   if (typeof o.kind === 'string' && KINDS.includes(o.kind)) z.kind = o.kind as Kind;
   if (o.full === true) z.full = true;
   if (o.scale !== undefined && num(o.scale, 1) < 1 && num(o.scale, 1) > 0) z.scale = Math.max(0.2, num(o.scale, 1));
+  if (o.card !== undefined && validCard(o.card)) z.card = [o.card[0], o.card[1]];
   if (o.locked === true) z.locked = true;
   if (o.hidden === true) z.hidden = true;
   return z;
@@ -150,7 +155,8 @@ export function layoutWarnings(s: Screen): Warning[] {
   const ids = Object.keys(s.zones).filter((k) => !s.zones[k]!.hidden);
   for (const id of ids) {
     const z = s.zones[id]!, p = parentOf(s, id);
-    const k = kindOf(z), f = k === 'pile' ? cardFit(z, z.scale || z.full ? s.card : pileSize(s), 1, 'stack', z.scale ?? 1) : k === 'component' || k === 'group' ? null : cardFit(z, s.card);
+    const zc = zoneCard(z, s), k = kindOf(z), f = k === 'pile' ? cardFit(z, z.scale || z.full ? zc : pileSize(s), 1, 'stack', z.scale ?? 1) : k === 'component' || k === 'group' ? null : cardFit(z, zc);
+    if (z.card !== undefined && !validCard(z.card)) out.push({ id, kind: 'card', text: `${id}: card must be two positive numbers [w, h]; the screen card size is used` });
     if (f && !f.fits) out.push({ id, kind: 'cards', text: k === 'pile' ? `${id}: the pile fits only at ${Math.floor(f.scale * 100)}% of its size` : `${id}: ${z.cards} cards fit only at ${Math.floor(f.scale * 100)}% of the card size` });
     if (!inside(z.r, [0, 0, s.w, s.h])) out.push({ id, kind: 'outside', text: `${id}: outside the screen` });
     else if (p && !inside(z.r, s.zones[p]!.r)) out.push({ id, kind: 'outside', text: `${id}: outside ${p}` });

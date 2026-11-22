@@ -469,12 +469,12 @@ A small card query language (K107): lexer, parser, evaluator. The game supplies 
 Card zones as data on engine-core state (K223): decks, hands, discards and play areas, per seat or shared, each an ordered list of card ids (index 0 is the top) with who sees it, and `viewOf(state, seat)` that hides what a seat may not see. Needs `engine-core`.
 
 - **Also called:** Decks, hands and discards as lists
-- **Words:** deck, hand, discard, zones, lists, visibility, play, area
+- **Words:** deck, hand, discard, zones, lists, visibility, play, area, hand limit, zone capacity, discard choice, over the limit, choose what to drop
 - **Release:** 1.0; not seen
 - **The game supplies:** The zones, their owners and who sees what.
-- **Use it when:** Decks, hands, discards and play areas as ordered id lists in engine state, with who sees what and a per-seat view for opponents and the UI. Hand, pile and drag UI parts are planned (K218-K220), not built: ask for them, do not build them in the game. Recipe: docs/recipes/card-table.md.
+- **Use it when:** Decks, hands, discards and play areas as ordered id lists in engine state, with who sees what and a per-seat view for opponents and the UI. A zone can have a capacity (hand limit, slot limit) that rules raise and give up, with a state check that asks the owner which cards over the limit go to the discard. Hand, pile and drag UI parts are planned (K218-K220), not built: ask for them, do not build them in the game. Recipe: docs/recipes/card-table.md.
 - **Not for:** Boards and spaces (board-model), card faces, or rules about running out.
-- **Key exports:** `newZones`, `seatZone`, `cardsIn`, `locate`, `place`, `moveCard`, `draw`, `shuffleZone`, `reveal`, `canSee`, `viewOf`, `hiddenFrom`, `zoneProblems`, `Seen`, and 5 more
+- **Key exports:** `newZones`, `seatZone`, `cardsIn`, `locate`, `place`, `moveCard`, `draw`, `shuffleZone`, `reveal`, `canSee`, `viewOf`, `hiddenFrom`, `zoneProblems`, `limitOf`, and 14 more
 - **Needs:** [`engine-core`](#engine-core)
 - **Came from:** imperium
 - **Docs:** [README](../components/card-zones/README.md) ([rules for agents](../components/card-zones/README.md#rules-for-agents))
@@ -776,12 +776,12 @@ Sixteen verbs for the director's spec format as DOM effects for the motion frame
 The kernel of a game engine: seeded random numbers, canonical JSON and hashes, the task runner with prompts, copy on write, replay, undo and the save format. A game passes one `GameTypes` bundle and a `GameRules<G>` (handlers, `blank`, `setup`, `contentHash`, optional `stamp`, `invariants`, `revealWords`); see `fake/counter.ts`. Import from one of the entry files below, never from an implementation module. Options legal but doing nothing (`idle`, K91): `idle.md`.
 
 - **Also called:** Game rules engine core
-- **Words:** engine, rules, random, undo, replay, save, prompts, state, modifier, stat, cost, reduction, breakdown, floor, minimum
+- **Words:** engine, rules, random, undo, replay, save, prompts, state, modifier, stat, cost, reduction, breakdown, floor, minimum, until end of combat, duration named end point, lasts until event, named end point
 - **Release:** 1.0; not seen
 - **The game supplies:** The rules: state, actions, prompts and set-up.
 - **Use it when:** Every game's engine: seeded random, tasks and prompts, copy on write, replay, undo, saves, timing windows and triggers.
 - **Not for:** A game's rules or content; the game writes its own `GameRules`.
-- **Key exports:** `claimEngineCore`, `canonicalJson`, `fnv1a64`, `copyJson`, `copyState`, `deepFreeze`, `freezeState`, `isFreezing`, `setStateFreezing`, `advance`, `applyAction`, `applyActionWith`, `createGame`, `isChecking`, and 263 more
+- **Key exports:** `claimEngineCore`, `canonicalJson`, `fnv1a64`, `copyJson`, `copyState`, `deepFreeze`, `freezeState`, `isFreezing`, `setStateFreezing`, `advance`, `applyAction`, `applyActionWith`, `createGame`, `isChecking`, and 265 more
 - **Needs:** nothing
 - **Came from:** jarl
 - **Docs:** [README](../components/engine-core/README.md) ([rules for agents](../components/engine-core/README.md#rules-for-agents))
@@ -797,7 +797,7 @@ The kernel of a game engine: seeded random numbers, canonical JSON and hashes, t
 
 - **Also called:** Lasting effects and durations
 - **Words:** duration, until end of turn, lasting, expires, continuous, modifier
-- **Use it when:** An effect stays for a while and changes numbers or rules until a boundary ends it (`addEffect`, `boundary`, `effectsOf`, `sumEffects`).
+- **Use it when:** An effect stays for a while and changes numbers or rules until a boundary or a named event the game fires ends it (`addEffect`, `boundary`, `eventOver`, `waitingOn`, `effectsOf`, `sumEffects`).
 - **Guide:** [timing.md](../components/engine-core/timing.md)
 
 ### engine-core/layers
@@ -910,12 +910,12 @@ Arrange the zones of a game screen by hand (card zones, piles, hand, market, tra
 
 - **Also called:** Drag-to-place screen layout editor
 - **Looks like:** A page where you drag boxes for each part of the table and export the arrangement.
-- **Words:** layout, editor, wireframe, zones, place, drag, screen
+- **Words:** layout, editor, wireframe, zones, place, drag, screen, zone card size, landscape card zone, card orientation per zone
 - **Release:** 1.0; seen on screen
 - **The game supplies:** The zone names and the board picture.
 - **Use it when:** Arranging a screen's zones by hand (owner, or the director's wireframe gate): a one-file editor whose JSON is a board-layout zones layout per screen; capture.mjs takes a running page's [data-zone] rects as the start.
 - **Not for:** Map click areas and adjacency (board-layout's Inkscape flow), or placing anything at run time (board-layout zone()).
-- **Key exports:** `KINDS`, `normalizeDoc`, `screenLayout`, `descendants`, `childrenOf`, `parentOf`, `moveZone`, `resizeZone`, `idTaken`, `mirrorZones`, `renameZone`, `snap`, `cardFit`, `layoutWarnings`, and 22 more
+- **Key exports:** `KINDS`, `zoneCard`, `normalizeDoc`, `screenLayout`, `descendants`, `childrenOf`, `parentOf`, `moveZone`, `resizeZone`, `idTaken`, `mirrorZones`, `renameZone`, `snap`, `cardFit`, and 23 more
 - **Needs:** [`board-layout`](#board-layout)
 - **Came from:** none (owner request)
 - **Docs:** [README](../components/layout-editor/README.md) ([rules for agents](../components/layout-editor/README.md#rules-for-agents))
@@ -1670,12 +1670,12 @@ Every printed item (card, tile, board) is transcribed twice, independently, then
 Rounds, turns per seat and phases and steps inside a turn as one data table; the runner walks it and calls engine-core `boundary()` at each turn begin, turn end, phase end and round end, so `endOfTurn` / `endOfRound` / `endOfPhase` / `turnBegins` durations end with no manual call (K264). Needs `engine-core`.
 
 - **Also called:** Rounds, turns and phases table
-- **Words:** turns, rounds, phases, steps, order, seat, flow
+- **Words:** turns, rounds, phases, steps, order, seat, flow, once per turn, once per round, once per phase, once per game, once per turn per card, use limit per game, usage limit, used this turn
 - **Release:** 1.0; not seen
 - **The game supplies:** The table of rounds, turns, phases and steps.
-- **Use it when:** Rounds, turns per seat in seat order, and phases and steps inside a turn as one data table; the runner calls engine-core boundary() at each turn, phase and round edge, so endOfTurn / endOfRound / endOfPhase durations end with no manual call; whoseTurn and flowOf read the position from state. Recipe: docs/recipes/turn-flow.md.
+- **Use it when:** Rounds, turns per seat in seat order, and phases and steps inside a turn as one data table; the runner calls engine-core boundary() at each turn, phase and round edge, so endOfTurn / endOfRound / endOfPhase durations end with no manual call; whoseTurn and flowOf read the position from state; once-per limits (K589: once per turn, round, phase or game, per card, per seat) bar a used option with its reason and clear at the matching edge. Recipe: docs/recipes/turn-flow.md.
 - **Not for:** What a step does, simultaneous or out-of-order turns (interrupts, reactions), step-long durations (engine-core has none), or the screen that shows the phase.
-- **Key exports:** `FLOW_NEXT`, `flowOf`, `whoseTurn`, `startFlow`, `endTurn`, `flowHandlers`, `FlowPhase`, `FlowLevel`, `FlowPos`, `FlowState`, `FlowConfig`
+- **Key exports:** `FLOW_NEXT`, `flowOf`, `whoseTurn`, `limitsOf`, `limitUsed`, `markLimit`, `limitOption`, `clearLimits`, `startFlow`, `endTurn`, `flowHandlers`, `FlowPhase`, `FlowLevel`, `FlowPos`, and 7 more
 - **Needs:** [`engine-core`](#engine-core)
 - **Came from:** 7th-inning-stretch
 - **Docs:** [README](../components/turn-flow/README.md) ([rules for agents](../components/turn-flow/README.md#rules-for-agents))
