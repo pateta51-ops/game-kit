@@ -403,8 +403,8 @@
   { "q":"timer hold auto continue","first":"motion-frame" },
   { "q":"reachable spaces within N steps","first":"grid-map" },
   { "q":"move preview end spaces paths","first":"grid-map" },
-  { "q":"playtest random answers through the screen","first":"e2e-helpers" },
-  { "q":"play whole games by script e2e","first":"e2e-helpers" },
+  { "q":"playtest random answers through the screen","first":"dev-autoplay" },
+  { "q":"play whole games by script e2e","first":"sim-pool" },
   { "q":"music state machine layers by game state","first":"sound-player" },
   { "q":"all end spaces of a move with distinct paths","first":"grid-map" },
   { "q":"ready exhausted cards at round start","first":"tap" }
