@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // Run from a game's repo root.
 //   node <kit>/kit.mjs pull <path to game-kit checkout> <tag or commit> [component...]   moves the whole kit to one tag (named components are added); atomic
-//   node kit/kit.mjs list | search <word>                                              the catalogue of every component (pulled or not), from kit/CATALOG.md
+//   node kit/kit.mjs list | search <word>                                              the catalogue of every component (pulled or not), from kit/CATALOG.md; search prints the mechanics map line first (kit/recipes/mechanics.md)
 //   node kit.mjs state                                                                  (game-kit checkout) prints what is open (PLAN rows not done, waiting, watch)
 //   node kit.mjs next-id [n] [--from <docs/plan dir or file>...]                                (game-kit checkout) the next free K number(s): origin/main and every open PR's docs/plan/ file names
 //   node kit.mjs next-id [n] --reserve                                                 also reserves the ids on origin (refs/kit-reserved/K<n>) so no other session gets them
@@ -218,7 +218,7 @@ if (cmd === 'pull') {
     process.exit(0)
   }
   if (!f || (cmd === 'search' && !a.length)) { console.error(f ? 'usage: kit.mjs search <word>' : 'no CATALOG.md beside kit.mjs: pull again'); process.exit(2) }
-  const secs = fs.readFileSync(f, 'utf8').split(/^## /m).slice(1).map((t) => t.split(/\r?\n/))
+  const secs = fs.readFileSync(f, 'utf8').split(/^## /m).slice(1).map((t) => t.split(/^### /m).map((p) => p.split(/\r?\n/)))
   const exportsOf = (n) => {
     const out = new Set()
     const seen = new Set()
@@ -253,7 +253,7 @@ if (cmd === 'pull') {
   const hasTok = (t, w) => t.some((x) => x === w || (w.length > 3 && x.startsWith(w)))
   const bullet = (t, k) => (t.find((l) => l.startsWith('- **' + k + ':**')) ?? '').replace(/^- \*\*[^*]*\*\*\s*/, '')
   const ents = []
-  for (const t of secs) {
+  for (const [t, ...subs] of secs) {
     const [n, , purpose, , use] = t
     const title = bullet(t, 'Also called'), u = bullet(t, 'Use it when') || (use ?? '').replace('- **Use it when:** ', '')
     const pur = (purpose ?? '').split(/(?<=\.)\s/)[0].slice(0, 200)
@@ -261,7 +261,12 @@ if (cmd === 'pull') {
     const sfx = (hit) => hit.length ? ' [export: ' + hit.slice(0, 8).join(', ') + ']' : ''
     ents.push({ id: toks(n), title: toks(n + ' ' + title + ' ' + bullet(t, 'Words')), use: toks(pur + ' ' + u + ' ' + bullet(t, 'Looks like')), ex: exl.map((e) => toks(e).concat(toks(e.toLowerCase()))), exl, eff: false,
       line: (hit) => title ? title + ' (`' + n + '`): Use: ' + u + sfx(hit) : n + ': ' + pur + ' ' + (u ? '(use when: ' + u.replace(/\.$/, '') + '.)' : '') + sfx(hit),
-      listLine: n + ': ' + (use ?? '').replace('- **Use it when:** ', '(use when: ') + (use ? ')' : '') })
+      listLine: title ? n + ': ' + title + '. Use: ' + u : n + ': ' + (use ?? '').replace('- **Use it when:** ', '(use when: ') + (use ? ')' : '') })
+    // K524: a part inside a big part is its own entry, naming the guide to read
+    for (const sl of subs) {
+      const sn = sl[0].trim(), st = bullet(sl, 'Also called'), su = bullet(sl, 'Use it when'), g = bullet(sl, 'Guide').replace(/\[([^\]]*)\]\([^)]*\)/g, '$1')
+      ents.push({ id: toks(sn), title: toks(sn + ' ' + st + ' ' + bullet(sl, 'Words')), use: toks(su), ex: [], exl: [], eff: false, line: () => st + ' (`' + sn + '`): Use: ' + su + ' Guide: ' + n + '/' + g })
+    }
   }
   const ef = [d + '/components/effect-library/catalog.json', d + '/effect-library/catalog.json'].find((p) => fs.existsSync(p))
   if (cmd === 'effects' && a[0] === '--used') {
@@ -290,7 +295,17 @@ if (cmd === 'pull') {
     const sh = c[1].length > 110 ? c[1].slice(0, 107).replace(/\s+\S*$/, '') + '...' : c[1]
     ents.push({ id: [], title: toks(c[1] + ' ' + c[3]), use: [], ex: [], exl: [], eff: false, cand: true, line: () => 'candidate ' + c[0] + ', wanted by ' + c[2] + ': ' + sh })
   }
-  if (cmd === 'list') { for (const e of ents) console.log(e.listLine); process.exit(0) }
+  if (cmd === 'list') { for (const e of ents) if (e.listLine) console.log(e.listLine); process.exit(0) }
+  // K524: the mechanics map (docs/recipes/mechanics.md): a hit is a line one of whose comma-separated phrases holds every query word
+  const mf = cmd === 'search' ? [d + '/docs/recipes/mechanics.md', d + '/recipes/mechanics.md'].find((p) => fs.existsSync(p)) : undefined
+  const mech = []
+  if (mf) for (const l of fs.readFileSync(mf, 'utf8').split(/\r?\n/)) {
+    const c = l.split(/(?<!\\)\|/).slice(1, -1).map((x) => x.trim().replace(/\\\|/g, '|'))
+    if (c.length !== 2 || c[0] === 'Mechanic' || /^-+$/.test(c[0])) continue
+    mech.push({ words: c[0], ans: c[1], alts: c[0].split(',').map((p) => toks(p).filter((w) => !stop.has(w))) })
+  }
+  const mhit = words.length ? mech.map((m, i) => ({ m, i, s: Math.max(0, ...m.alts.map((t) => words.every((w) => hasTok(t, w)) ? (t.length === words.length ? 2 : 1) : 0)) })).filter((x) => x.s).sort((x, y) => y.s - x.s || x.i - y.i) : []
+  for (const { m } of mhit.slice(0, 3)) console.log('mechanic: ' + m.words + ' -> ' + m.ans)
   const w3 = (e, w) => hasTok(e.title, w) ? 3 : hasTok(e.use, w) ? 2 : e.ex.some((x) => hasTok(x, w)) ? 1 : 0
   const pool = cmd === 'effects' ? ents.filter((e) => e.eff) : ents.filter((e) => !e.cand || cf)
   if (cmd === 'effects' && !words.length) { for (const e of pool) console.log(e.line([])); process.exit(0) }
@@ -298,9 +313,16 @@ if (cmd === 'pull') {
   const hits = scored.filter((x) => x.all).sort((x, y) => y.s - x.s || !!x.e.cand - !!y.e.cand || y.e.eff - x.e.eff || x.i - y.i)
   for (const { e } of hits) console.log(e.line(e.exl.filter((x) => words.some((w) => !hasTok(e.title, w) && !hasTok(e.use, w) && hasTok(toks(x).concat(toks(x.toLowerCase())), w)))))
   if (hits.length && hits.every((x) => x.e.cand)) console.log('not built yet')
-  if (!hits.length) {
+  if (!hits.length && !mhit.length) {
     for (const { e } of scored.filter((x) => !x.e.cand).sort((x, y) => y.s - x.s || y.e.eff - x.e.eff || x.i - y.i).slice(0, 3)) console.log(e.line([]))
+    if (mech.length) {
+      const lev = (p, q) => { let r = [...Array(q.length + 1).keys()]; for (let i = 1; i <= p.length; i++) { const n = [i]; for (let j = 1; j <= q.length; j++) n[j] = Math.min(r[j] + 1, n[j - 1] + 1, r[j - 1] + (p[i - 1] === q[j - 1] ? 0 : 1)); r = n } return r[q.length] }
+      const near = mech.map((m, i) => { const t = m.alts.flat(); return { m, i, s: words.filter((w) => hasTok(t, w)).length, d: Math.min(99, ...words.flatMap((w) => t.map((x) => lev(w, x)).filter((n) => n <= 2 && n * 2 < w.length))) } }).sort((x, y) => y.s - x.s || x.d - y.d || x.i - y.i)[0]
+      if (near.s || near.d < 99) console.log('nearest mechanic: ' + near.m.words + ' -> ' + near.m.ans)
+    }
     console.log('not in the kit by that name')
+  }
+  if (!hits.length && mhit.every((x) => x.m.ans.startsWith('not in the kit'))) {
     if (cmd === 'search') try { fs.mkdirSync(dirname(logFile), { recursive: true }); fs.appendFileSync(logFile, new Date().toISOString().slice(0, 10) + ' ' + a.join(' ') + '\n') } catch { /* read-only */ }
   }
 } else if (cmd === 'new') {
