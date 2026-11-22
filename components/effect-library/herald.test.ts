@@ -143,6 +143,15 @@ it('K694 glow start dark: a skip leaves it dark', () => {
   expect(el.style.boxShadow).toContain('transparent');
 });
 
+it('K694 glow start dark: rise and hold clamp to 0..1 at both ends', () => {
+  const offs = (o: Partial<Step>) => { animate.mockClear(); play({ actor: 'a', t: 0, dur: 500, do: 'glow', end: 'dark', start: 'dark', colour: '#9ff', ...o }); return frames().map((f) => f.offset); };
+  expect(offs({ rise: 0, hold: 0 })).toEqual([0, 0, 1]);
+  expect(offs({ rise: 1, hold: 0 })).toEqual([0, 1, 1]);
+  expect(offs({ rise: 0, hold: 0.4 })).toEqual([0, 0, 0.2, 1]);
+  expect(offs({ rise: 1, hold: 0.4 })).toEqual([0, 0.8, 1, 1]);
+  expect(offs({ rise: 0.5, hold: 1 })).toEqual([0, 0, 1, 1]);
+});
+
 it('K449 stamp cracked adds a crack overlay that appears at the press and stays', () => {
   const { end, el } = direct({ do: 'stamp', text: 'LOST', cracked: true });
   const crack = el.querySelector<HTMLElement>('[data-fx-part="crack"]');
