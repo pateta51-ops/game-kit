@@ -265,6 +265,27 @@
         "paths": [
           "src/engine/combat/stun.ts (K542: a stun recorded per target, read when an action asks)"
         ]
+      },
+      {
+        "game": "stcc",
+        "commit": "27fb8882",
+        "paths": [
+          "src/engine/turn/missions.ts (K546: mission progress capped at need, each mission done once)"
+        ]
+      },
+      {
+        "game": "ebr",
+        "commit": "b9b06107",
+        "paths": [
+          "src/engine/phases/clear.ts (K546: a progress threshold clears once)"
+        ]
+      },
+      {
+        "game": "warps",
+        "commit": "6790200",
+        "paths": [
+          "src/engine/combat/counting.ts (K546: met when have reaches need; every part met)"
+        ]
       }
     ]
   },

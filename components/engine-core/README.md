@@ -22,6 +22,7 @@ The kernel of a game engine: seeded random numbers, canonical JSON and hashes, t
 13. End an effect that lasts "for this combat" or "until the next X" with `{ until: 'event', event, instance }` and one `eventOver(ctx, event, instance)` call from the game's own code when that event happens (K541), not with a hand-kept list; pass the instance (the combat's id) whenever the event can nest or repeat, so an inner or later one does not end it.
 14. Expect `askOrTake` to advance `promptSeq` when it takes the only answer, as an opened and answered prompt does (K652): a taken game and an asked one have the same hash and later prompt ids. Re-record any hash or prompt id a game pinned over a taken answer before K652.
 15. Keep a status (stunned, a wound, stealth) with `giveStatus` / `removeStatus` / `hasStatus` / `statusesOf` and one `StatusTable` (K542, "Statuses" below), not a hand-kept list per unit; end it by its `ends` duration, and call `statusLeft` when an object leaves play. Read `given` of the result: a non-stacking status given again does nothing.
+16. Keep a scenario's objectives (a count to reach, steps in or out of order, failures or a round deadline, an owner seat) with `startObjectives` / `advanceObjective` / `markStep` / `failObjective` / `objectivesRoundEnd` (K546, "Objectives" below), not a hand-kept counter or flag; react to done or failed through `objectivesCheck(react)` in `cfg.checkpoint.checks` (or `reportObjectives`), which reports each one once, not by re-reading `objectiveDone` every step.
 
 **Common mistakes:**
 - Using the old `ctx.then` then `ctx.ask` form in new code: it is deprecated.
@@ -57,6 +58,7 @@ The kernel of a game engine: seeded random numbers, canonical JSON and hashes, t
 - Debug edits as engine actions (`DebugAction`: `set`, `force`, `close` and the game's `GameRules.debug` verbs; `debugVerbs`, K100, opt-in): `debug.md`. The console is `debug-console`.
 - Timing (K93, K111, K94, K96, K112, K95, opt-in): batches of occurrences with `would`, `cancelBatch`, `ignoreBatch`, `insteadOf`, the prevention window (`Prevention` card data, `prevent`) the replacement loop (`Replacement`, `ReplaceResult`, `changeOccurrence`), triggers (`TriggerCandidate`, `PendingTrigger`, `DEFAULT_PRIORITY`, `enteredPlay`), `simultaneously`, continuous effects with durations (`addEffect`, `boundary`, `eventOver` for a named end event and `waitingOn` K541, `effectsOf`, `sumEffects`, `anyEffect`, K96) layered recompute (`layered`, `stampActive`, K112) and the checkpoint after every action (`cfg.checkpoint`: `derive`, `checks`, `RECOMPUTE_CAP`, K95); a game spreads `timingHandlers(cfg)` into its handlers: `timing.md`.
 - Statuses (K542, `statuses.ts`, opt-in): `giveStatus`, `removeStatus`, `hasStatus`, `statusCount`, `statusesOf`, `statusLeft` over a game's `StatusTable`; see "Statuses (K542)" below.
+- Objectives (K546, `objectives.ts`, opt-in): `startObjectives`, `advanceObjective`, `markStep`, `failObjective`, `objectivesRoundEnd`, `objectiveProgress`, `objectiveDone`, `objectiveFailed`, `objectivesOf`, `reportObjectives`, `objectivesCheck`; see "Objectives (K546)" below.
 - A number with its parts (K526, K582, `numbers.ts`, opt-in): `numberParts(base, modifiers, order, opts?)` applies `NumberModifier`s (set, add, multiply, floor, cap; own minimum, per-unit count, condition, scope) in the game's `NumberOrder` and returns the value with `parts` (`{ source, op, amount, applied, ref? }`), every floor or cap that bit and whether it still holds (`bounds`; `bound` is the last) and, on request, what changed nothing and why; `effectModifiers` maps the lasting effects (`effectsOf`) onto modifiers; `partsDirection`. For stats, costs, payment, `bar` reasons and a breakdown on screen: [numbers.md](numbers.md).
 
 ## Statuses (K542)
@@ -72,6 +74,20 @@ giveStatus(ctx, STATUSES, 'u1', 'wound'); giveStatus(ctx, STATUSES, 'u1', 'wound
 const tokens = statusesOf(ctx.s, STATUSES, 'u1'); // [{ name: 'stunned', token: 'stun', count: 1 }, { name: 'wound', token: 'wound', count: 2 }]
 boundary(ctx, { kind: 'turnEnd' }); // the stun ends with the turn
 statusLeft(ctx, STATUSES, 'u1'); // the unit left play: its wounds go (endsOnLeave)
+```
+
+## Objectives (K546)
+
+An objective (a mission, a scenario goal, a card to clear) is plain state in `s.objectives` (`objectives.ts`, from `timed.ts`), absent until the game starts one. The game passes `ObjectiveDef`s as data: `id`, `kind: 'count'` with `target`, or `kind: 'steps'` with `steps` (and `ordered: true` when only the next step counts), an optional `fail` (`failures`: fails when `failObjective` has recorded that many; `round`: fails when the game calls `objectivesRoundEnd(ctx, round)` for that round or a later one and it is not done) and an optional `owner` seat. Progress is capped at the target: once done or failed an objective is closed and nothing changes it (`markStep` says `why: 'closed'`; `'already'` for a step marked, `'order'` for an ordered step out of turn). Reads: `objectiveProgress(s, id)` (`have`, `need`, `steps`, `failures`, `outcome`), `objectiveDone`, `objectiveFailed`, `objectivesOf(s, owner?)`. `reportObjectives(ctx)` returns each objective that became done or failed since the last call, once; `objectivesCheck(react)` is the same as a checkpoint state check. When a progress threshold and a failure threshold are both met in one game step, the first call that closes it wins: the game decides which comes first by the order of its calls (`advanceObjective` / `markStep` before or after `failObjective`); the kit makes no choice. An unknown id or step, a count (`target`, `n`, `fail.failures`) not a whole number 1 or more, a round (`fail.round`, `objectivesRoundEnd`) not a whole number 0 or more, an empty `fail: {}`, `markStep` on a count or `advanceObjective` on steps, `failObjective` without `fail.failures`, a repeated id: `EngineBugError`. Tests: `k546.test.ts` (with a comparison against a plain model).
+
+```ts
+startObjectives(ctx, [{ id: 'reach', kind: 'count', target: 3, fail: { round: 5 } }, { id: 'escape', kind: 'steps', steps: ['key', 'door'], ordered: true, owner: 'p1' }]);
+const two = advanceObjective(ctx, 'reach', 2); // { id: 'reach', have: 2, need: 3, steps: [], failures: 0, outcome: 'open' }
+const early = markStep(ctx, 'escape', 'door'); // { marked: false, why: 'order' }: the key comes first
+markStep(ctx, 'escape', 'key'); markStep(ctx, 'escape', 'door'); // escape is done
+const fired = reportObjectives(ctx); // [{ id: 'escape', outcome: 'done' }], once; objectivesCheck(react) does this in the checkpoint
+const late = objectivesRoundEnd(ctx, 5); // ['reach']: not done by the end of round 5
+const mine = objectivesOf(ctx.s, 'p1').map((p) => p.outcome); // ['done']
 ```
 
 ## Use it in 10 lines

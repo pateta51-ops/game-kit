@@ -1051,7 +1051,13 @@
       "stunned",
       "status token",
       "give a status",
-      "wound"
+      "wound",
+      "objective",
+      "scenario objective progress",
+      "mission goal done or failed",
+      "objective with steps",
+      "mission progress",
+      "goal deadline"
     ],
     "visible": false,
     "release": 1,
