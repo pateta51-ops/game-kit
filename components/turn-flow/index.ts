@@ -38,7 +38,8 @@ export const whoseTurn = (s: object): string | undefined => (flowOf(s)?.done ===
 
 // K589: a shared once-per limit. A game declares keys with a scope (and per card, per seat); a used one bars its option
 // with reason `used`; turn, phase and round limits clear at the runner's turnEnd, phaseEnd and roundEnd; game ones never.
-export type LimitScope = 'turn' | 'round' | 'phase' | 'game';
+/** A game-named scope (e.g. `combat`) is never cleared by the runner: the game calls `clearLimits` at its own end. */
+export type LimitScope = 'turn' | 'round' | 'phase' | 'game' | (string & {});
 export interface LimitDef {
   readonly scope: LimitScope;
   readonly perCard?: true;
@@ -53,9 +54,9 @@ export interface LimitRef {
   readonly card?: string;
   readonly seat?: string;
 }
-export type LimitsState = Readonly<Partial<Record<LimitScope, readonly string[]>>>;
+export type LimitsState = Readonly<Record<string, readonly string[]>>;
 type Limited = { readonly limits?: LimitsState };
-const WHY: Record<LimitScope, string> = { turn: 'used this turn', round: 'used this round', phase: 'used this phase', game: 'already used this game' };
+const WHY: Readonly<Record<string, string>> = { turn: 'used this turn', round: 'used this round', phase: 'used this phase', game: 'already used this game' };
 
 function slot(s: object, t: LimitTable, r: LimitRef): [LimitDef, string] {
   const d = t[r.key];
@@ -80,7 +81,7 @@ export function markLimit<G extends GameTypes>(ctx: Ctx<G>, t: LimitTable, r: Li
 }
 /** The prompt option for an action behind the limit: enabled, or barred with reason `used` and the limit's words. */
 export const limitOption = (s: object, t: LimitTable, r: LimitRef, id: string): KernelOption =>
-  limitUsed(s, t, r) ? bar(id, 'used', t[r.key]?.why ?? WHY[t[r.key]?.scope ?? 'turn']) : { id, enabled: true };
+  limitUsed(s, t, r) ? bar(id, 'used', t[r.key]?.why ?? WHY[t[r.key]?.scope ?? ''] ?? `used this ${t[r.key]?.scope ?? ''}`) : { id, enabled: true };
 /** Clears every limit of a scope (the runner does it at its edges; for a game's own boundaries). */
 export function clearLimits<G extends GameTypes>(ctx: Ctx<G>, scope: LimitScope): void {
   const l = limitsOf(ctx.s);

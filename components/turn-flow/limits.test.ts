@@ -1,8 +1,11 @@
 // K589: a shared once-per limit (key, scope turn/round/phase/game, optionally per card and per seat), cleared at turn-flow's
 // edges. Cases restated from three older engines' once-per flags on a made-up two-seat game.
-import { describe, expect, it } from 'vitest';
+import { readFileSync } from 'node:fs';
+import ts from 'typescript';
+import { describe, expect, it, vi } from 'vitest';
 import { applyAction, blocked, createGame, hashValue, seedRng, type AnswerAction, type Ctx, type Draft, type GameRules, type KernelEvent, type KernelOption, type KernelPrompt, type KernelState, type KernelTask } from '../engine-core/index.ts';
-import { clearLimits, flowHandlers, flowOf, limitOption, limitsOf, limitUsed, startFlow, markLimit, type FlowConfig, type FlowState, type LimitRef, type LimitTable, type LimitsState } from './index.ts';
+import * as flowKit from './index.ts';
+import { clearLimits, flowHandlers, flowOf, limitOption, limitsOf, limitUsed, startFlow, markLimit, type FlowConfig, type FlowPos, type FlowState, type LimitRef, type LimitTable, type LimitsState } from './index.ts';
 
 interface LState extends KernelState {
   readonly flow?: FlowState;
@@ -26,22 +29,25 @@ const TABLE: LimitTable = {
   round: { scope: 'round', perSeat: true },
   phase: { scope: 'phase' },
   game: { scope: 'game', perCard: true },
+  seatCard: { scope: 'turn', perCard: true, perSeat: true },
+  combat: { scope: 'combat' }, // a scope the game names; only the game's clearLimits ends it
 };
-const REFS: readonly LimitRef[] = [{ key: 'once', card: 'x' }, { key: 'once', card: 'y' }, { key: 'card', card: 'x' }, { key: 'card', card: 'y' }, { key: 'round' }, { key: 'phase' }, { key: 'game', card: 'x' }, { key: 'game', card: 'y' }];
+const REFS: readonly LimitRef[] = [{ key: 'once', card: 'x' }, { key: 'once', card: 'y' }, { key: 'card', card: 'x' }, { key: 'card', card: 'y' }, { key: 'round' }, { key: 'phase' }, { key: 'game', card: 'x' }, { key: 'game', card: 'y' }, { key: 'seatCard', card: 'x' }, { key: 'combat' }];
 const idOf = (r: LimitRef): string => `${r.key}:${r.card ?? ''}`;
 const refOf = (id: string): LimitRef => REFS.find((r) => idOf(r) === id) as LimitRef;
 
 const ask = (ctx: Ctx<L>): void =>
-  ctx.ask({ min: 1, max: 1, options: [...REFS.map((r) => limitOption(ctx.s, TABLE, r, idOf(r))), { id: 'next', enabled: true }], seat: flowOf(ctx.s)?.seat ?? '' }, { kind: 'use' });
-const game = (rounds = 3): GameRules<L> => {
-  const flow: FlowConfig<L> = { phases: [{ id: 'p1' }, { id: 'p2' }], seats: () => ['a', 'b'], rounds, step: (ctx) => ask(ctx) };
+  ctx.ask({ min: 1, max: 1, options: [...REFS.map((r) => limitOption(ctx.s, TABLE, r, idOf(r))), { id: 'endCombat', enabled: true }, { id: 'next', enabled: true }], seat: flowOf(ctx.s)?.seat ?? '' }, { kind: 'use' });
+const game = (rounds = 3, extra?: (ctx: Ctx<L>, pos: FlowPos) => void): GameRules<L> => {
+  const flow: FlowConfig<L> = { phases: [{ id: 'p1' }, { id: 'p2' }], seats: () => ['a', 'b'], rounds, step: (ctx, pos) => { extra?.(ctx, pos); ask(ctx); } };
   return {
     handlers: {
       ...flowHandlers(flow),
       use: (ctx: Ctx<L>, task) => {
         const pick = task.answer?.[0] as string;
         if (pick === 'next') return;
-        markLimit(ctx, TABLE, refOf(pick));
+        if (pick === 'endCombat') clearLimits(ctx, 'combat');
+        else markLimit(ctx, TABLE, refOf(pick));
         ask(ctx);
       },
     },
@@ -138,28 +144,93 @@ describe('turn-flow once-per limits (K589)', () => {
     expect(() => limitUsed(s, TABLE, { key: 'card' })).toThrow(/card id/);
   });
 
-  it('README recipe: a turn limit with its own words and a per-card round limit, built into one prompt', () => {
-    const table: LimitTable = { draw: { scope: 'turn', why: 'drawn this turn' }, power: { scope: 'round', perCard: true } };
-    const g: GameRules<L> = {
-      ...G,
-      setup: (ctx) => {
-        markLimit(ctx, table, { key: 'draw' });
-        ctx.ask({ min: 1, max: 1, options: [limitOption(ctx.s, table, { key: 'draw' }, 'draw'), limitOption(ctx.s, table, { key: 'power', card: 'c7' }, 'power:c7')] }, { kind: 'pick' });
-      },
-    };
+  it('a scope the game names (combat) outlives phaseEnd, turnEnd and roundEnd; only the game\'s clearLimits ends it, and leaves other scopes alone', () => {
+    let s = picks(start(), ['combat:', 'phase:', 'game:x']);
+    expect(opt(s, 'combat:')).toMatchObject({ enabled: false, reason: 'used', why: 'used this combat' });
+    s = picks(s, ['next', 'next', 'next', 'next']);
+    expect(at(s)).toBe('2:a:p1');
+    expect(opt(s, 'combat:').enabled).toBe(false);
+    s = pick(pick(s, 'phase:'), 'endCombat');
+    expect(at(s)).toBe('2:a:p1');
+    expect(opt(s, 'combat:').enabled).toBe(true);
+    expect(opt(s, 'phase:').enabled).toBe(false);
+    expect(opt(s, 'game:x').enabled).toBe(false);
+  });
+
+  it('when it clears: a mark in the turn\'s last phase clears with the turn; a mark made after the runner\'s turnEnd counts for the next turn', () => {
+    const last = game(3, (ctx, pos) => { if (pos.seat === 'a' && pos.phase === 'p2') markLimit(ctx, TABLE, { key: 'card', card: 'x' }); });
+    let s = createGame(last, { seed: 'k589' }, null, null).state;
+    const go = (st: LState): LState => applyAction(last, st, { kind: 'answer', promptId: (st.prompt as KernelPrompt).id, picks: ['next'] }, null).state;
+    s = go(s);
+    expect(at(s)).toBe('1:a:p2');
+    expect(opt(s, 'card:x').enabled).toBe(false);
+    s = go(s);
+    expect(at(s)).toBe('1:b:p1');
+    expect(opt(s, 'card:x').enabled).toBe(true);
+    // a's end-of-turn trigger resolved late, in b's first step: the runner's turnEnd for a already ran
+    const late = game(3, (ctx, pos) => { if (pos.seat === 'b' && pos.phase === 'p1') markLimit(ctx, TABLE, { key: 'card', card: 'x' }); });
+    let t = createGame(late, { seed: 'k589' }, null, null).state;
+    const on = (st: LState): LState => applyAction(late, st, { kind: 'answer', promptId: (st.prompt as KernelPrompt).id, picks: ['next'] }, null).state;
+    t = on(on(t));
+    expect(at(t)).toBe('1:b:p1');
+    expect(opt(t, 'card:x').enabled).toBe(false);
+    t = on(t);
+    expect(at(t)).toBe('1:b:p2');
+    expect(opt(t, 'card:x').enabled).toBe(false);
+    t = on(t);
+    expect(at(t)).toBe('2:a:p1');
+    expect(opt(t, 'card:x').enabled).toBe(true);
+  });
+
+  it('per card and per seat: the seat on turn by default, an explicit seat for one not on turn; no seat and no turn throws', () => {
+    const g = game(3, (ctx, pos) => {
+      if (pos.round === 1 && pos.seat === 'a' && pos.phase === 'p1') { markLimit(ctx, TABLE, { key: 'seatCard', card: 'x' }); markLimit(ctx, TABLE, { key: 'seatCard', card: 'y', seat: 'b' }); }
+    });
     const s = createGame(g, { seed: 'k589' }, null, null).state;
-    expect(s.prompt?.options).toEqual([{ id: 'draw', enabled: false, reason: 'used', why: 'drawn this turn' }, { id: 'power:c7', enabled: true }]);
+    expect(at(s)).toBe('1:a:p1');
+    expect(limitUsed(s, TABLE, { key: 'seatCard', card: 'x' })).toBe(true);
+    expect(limitUsed(s, TABLE, { key: 'seatCard', card: 'x', seat: 'a' })).toBe(true);
+    expect(limitUsed(s, TABLE, { key: 'seatCard', card: 'x', seat: 'b' })).toBe(false);
+    expect(limitUsed(s, TABLE, { key: 'seatCard', card: 'y', seat: 'b' })).toBe(true);
+    expect(limitUsed(s, TABLE, { key: 'seatCard', card: 'y' })).toBe(false);
+    expect(limitsOf(s)).toEqual({ turn: ['["seatCard","a","x"]', '["seatCard","b","y"]'] });
+    expect(() => limitUsed({}, TABLE, { key: 'seatCard', card: 'x' })).toThrow(/per seat/);
+    expect(() => limitUsed({}, TABLE, { key: 'round' })).toThrow(/per seat/);
+    expect(limitUsed({}, TABLE, { key: 'round', seat: 'a' })).toBe(false);
+  });
+
+  it('a card back in play: the same id stays used; a new id the game gives the returning copy is open', () => {
+    let r: boolean[] = [];
+    const g: GameRules<L> = { ...G, setup: (ctx) => { markLimit(ctx, TABLE, { key: 'card', card: 'x' }); r = [limitUsed(ctx.s, TABLE, { key: 'card', card: 'x' }), limitUsed(ctx.s, TABLE, { key: 'card', card: 'x#2' })]; } };
+    createGame(g, { seed: 'k589' }, null, null);
+    expect(r).toEqual([true, false]);
+  });
+
+  it('README recipe: the Once-per limits block runs as written', () => {
+    const readme = readFileSync(new URL('./README.md', import.meta.url), 'utf8');
+    const code = /## Once-per limits[\s\S]*?```ts\r?\n([\s\S]*?)```/.exec(readme)?.[1] ?? '';
+    expect(code).toContain('console.log(options)');
+    const js = ts.transpileModule(code, { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } }).outputText;
+    const log = vi.spyOn(console, 'log').mockImplementation(() => undefined);
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-implied-eval
+      const g: GameRules<L> = { ...G, setup: (ctx) => { (new Function('require', 'exports', 'ctx', js) as (r: () => unknown, e: object, c: Ctx<L>) => void)(() => flowKit, {}, ctx); } };
+      const s = createGame(g, { seed: 'k589' }, null, null).state;
+      const options = [{ id: 'draw', enabled: false, reason: 'used', why: 'drawn this turn' }, { id: 'power:c7', enabled: true }];
+      expect(log.mock.calls.at(-1)).toEqual([options]);
+      expect(s.prompt?.options).toEqual(options);
+    } finally { log.mockRestore(); }
   });
 
   it('comparison: a plain map of used keys per scope, cleared by hand at each edge, agrees with the part on random play', () => {
-    const key = (r: LimitRef, seat: string): string => `${r.key}|${r.key === 'round' ? seat : ''}|${r.key === 'card' || r.key === 'game' ? (r.card as string) : ''}`;
-    const scopeOf = (r: LimitRef): string => (r.key === 'once' || r.key === 'card' ? 'turn' : r.key);
+    const key = (r: LimitRef, seat: string): string => `${r.key}|${r.key === 'round' || r.key === 'seatCard' ? seat : ''}|${r.key === 'card' || r.key === 'game' || r.key === 'seatCard' ? (r.card as string) : ''}`;
+    const scopeOf = (r: LimitRef): string => (r.key === 'once' || r.key === 'card' || r.key === 'seatCard' ? 'turn' : r.key);
     for (let seed = 1; seed <= 40; seed++) {
       let x = seed * 2654435761;
       const rand = (n: number): number => { x = (x * 1103515245 + 12345) % 2147483648; return x % n; };
       const g = game(4);
       let s = createGame(g, { seed: `k589-${String(seed)}` }, null, null).state;
-      const model: Record<string, Set<string>> & Record<"turn" | "round" | "phase" | "game", Set<string>> = { turn: new Set(), round: new Set(), phase: new Set(), game: new Set() };
+      const model: Record<string, Set<string>> & Record<'turn' | 'round' | 'phase' | 'game' | 'combat', Set<string>> = { turn: new Set(), round: new Set(), phase: new Set(), game: new Set(), combat: new Set() };
       let last = { round: 1, seat: 'a', phase: 'p1' };
       for (let i = 0; i < 400 && s.prompt !== null; i++) {
         const f = flowOf(s) as FlowState;
@@ -171,10 +242,11 @@ describe('turn-flow once-per limits (K589)', () => {
           expect(opt(s, idOf(r)).enabled, `seed ${String(seed)} step ${String(i)} ${idOf(r)}`).toBe(!model[scopeOf(r)]?.has(key(r, f.seat)));
           expect(limitUsed(s, TABLE, r)).toBe(model[scopeOf(r)]?.has(key(r, f.seat)));
         }
-        const all = [...REFS.map(idOf), 'next', 'next', 'next'];
+        const all = [...REFS.map(idOf), 'endCombat', 'next', 'next', 'next'];
         const id = all[rand(all.length)] as string;
         if (id !== 'next' && opt(s, id).enabled !== true) continue;
-        if (id !== 'next') model[scopeOf(refOf(id))]?.add(key(refOf(id), f.seat));
+        if (id === 'endCombat') model.combat.clear();
+        else if (id !== 'next') model[scopeOf(refOf(id))]?.add(key(refOf(id), f.seat));
         s = applyAction(g, s, { kind: 'answer', promptId: s.prompt.id, picks: [id] }, null).state;
       }
       expect(flowOf(s)?.done).toBe(true);
