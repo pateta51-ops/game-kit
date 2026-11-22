@@ -242,7 +242,10 @@ export function lineOfSight(g: GridMap, a: string, b: string, o: Sight = {}): bo
   const pa = corners(g, a)
   const pb = corners(g, b)
   if (a === b) return true
-  for (const [y1, x1] of pa) for (const [y2, x2] of pb) if (clear(g, x1, y1, x2, y2, o.openEnds)) return true
+  const key = ([y, x]: Cell) => `${y},${x}`
+  const ka = new Set(pa.map(key))
+  const kb = new Set(pb.map(key))
+  for (const [y1, x1] of pa) for (const [y2, x2] of pb) if (!(o.openEnds && (kb.has(key([y1, x1])) || ka.has(key([y2, x2]))))) if (clear(g, x1, y1, x2, y2, o.openEnds)) return true
   return false
 }
 

@@ -419,17 +419,28 @@ describe('grid-map: lineOfSight with openEnds', () => {
     expect(lineOfSight(elbow, 'r3c0', 'r0c3', { openEnds: true })).toBe(false)
     expect(lineOfSight(gridMap({ rows: 4, cols: 4, walls: [[0, 2, 'w'], [1, 2, 'w'], [2, 3, 'n']] }), 'r3c0', 'r0c3', { openEnds: true })).toBe(true)
   })
-  it('openEnds: a line starting on a wall is clear of it: spaces whose corners touch the wall see past it', () => {
-    expect(lineOfSight(oneWall, 'r0c0', 'r0c1')).toBe(false)
-    expect(lineOfSight(oneWall, 'r0c0', 'r0c1', { openEnds: true })).toBe(true)
-    expect(lineOfSight(oneWall, 'r0c0', 'r0c2', { openEnds: true })).toBe(true)
-    expect(lineOfSight(gridMap({ rows: 1, cols: 4, walls: [[0, 2, 'w']] }), 'r0c0', 'r0c3', { openEnds: true })).toBe(false)
+  it('openEnds: no end of a line is a corner the two spaces share: orthogonal neighbours with a wall between do not see each other', () => {
+    expect(lineOfSight(oneWall, 'r0c0', 'r0c1', { openEnds: true })).toBe(false)
+    expect(lineOfSight(oneWall, 'r0c1', 'r0c2', { openEnds: true })).toBe(true)
+    expect(lineOfSight(cut, 'r1c1', 'r1c2', { openEnds: true })).toBe(false)
+    expect(lineOfSight(cut, 'r1c2', 'r1c1', { openEnds: true })).toBe(false)
+    expect(lineOfSight(hall, 'r1c1', 'r1c2', { openEnds: true })).toBe(true)
+    expect(lineOfSight(gridMap({ rows: 2, cols: 2, walls: [[0, 0, 'e'], [1, 0, 'e']] }), 'r0c0', 'r0c1', { openEnds: true })).toBe(false)
+    expect(lineOfSight(O, 'r2c2', 'r2c3', { openEnds: true })).toBe(true)
+  })
+  it('openEnds: diagonal neighbours with no wall or a free wall end at their shared corner see each other', () => {
+    expect(lineOfSight(O, 'r1c1', 'r2c2', { openEnds: true })).toBe(true)
+    expect(lineOfSight(gridMap({ rows: 3, cols: 3, walls: [[0, 1, 'w']] }), 'r0c0', 'r1c1', { openEnds: true })).toBe(true)
+  })
+  it('openEnds: a space always sees itself', () => {
+    expect(lineOfSight(hall, 'r1c0', 'r1c0', { openEnds: true })).toBe(true)
+    expect(lineOfSight(M, 'hall', 'hall', { openEnds: true })).toBe(true)
   })
   it('within and area pass openEnds through to sight', () => {
     expect(within(hall, 'r1c0', 2, { sight: true })).toEqual([])
     expect(within(hall, 'r1c0', 2, { sight: true, openEnds: true })).toEqual(['r1c1', 'r1c2'])
-    expect(area(hall, 'r1c0', 2, { diamond: true, sight: true })).toEqual(['r1c0'])
-    expect(area(hall, 'r1c0', 2, { diamond: true, sight: true, openEnds: true })).toEqual(['r0c0', 'r0c1', 'r1c0', 'r1c1', 'r1c2', 'r2c0', 'r2c1'])
+    expect(area(hall, 'r1c0', 1, { diamond: true, sight: true })).toEqual(['r1c0'])
+    expect(area(hall, 'r1c0', 1, { diamond: true, sight: true, openEnds: true })).toEqual(['r1c0', 'r1c1'])
   })
   it('the README corridor recipe runs as written', () => {
     const readme = readFileSync(new URL('./README.md', import.meta.url), 'utf8')
@@ -461,7 +472,10 @@ function bruteSight(g: GridMap, a: string, b: string, open: boolean): boolean {
     return k >= 2 || (k === 1 && (x === 0 || y === 0 || x === g.cols || y === g.rows))
   }
   const corners = (s: string) => g.cells[s]!.flatMap(([r, c]) => [[r, c], [r, c + 1], [r + 1, c], [r + 1, c + 1]] as const)
+  // with openEnds a line joins two different points and neither end is a corner both spaces have
+  const both = (y: number, x: number) => corners(a).some(p => p[0] === y && p[1] === x) && corners(b).some(p => p[0] === y && p[1] === x)
   return corners(a).some(([y1, x1]) => corners(b).some(([y2, x2]) => {
+    if (open && (both(y1, x1) || both(y2, x2) || (x1 === x2 && y1 === y2))) return false
     const dx = x2 - x1
     const dy = y2 - y1
     const D = Math.max(Math.abs(dx), 1) * Math.max(Math.abs(dy), 1) * 2
