@@ -465,7 +465,8 @@ describe('grid-map: lineOfSight with insetCorners', () => {
 // as whole thousandths, so all arithmetic is exact). A segment between two such points is blocked by any wall segment it
 // meets (closed: its ends count), except where the only point met is an end of that wall that no other wall shares.
 // Each meeting point is found by solving the two segments' equations with whole-number numerators and denominators.
-function bruteSight(g: GridMap, a: string, b: string): boolean {
+// `strict` names one kind of free wall end that blocks anyway (h/v: horizontal/vertical wall; A/B: its top-left/bottom-right end)
+function bruteSight(g: GridMap, a: string, b: string, strict?: 'hA' | 'hB' | 'vA' | 'vB'): boolean {
   if (a === b) return true
   const segs = new Map<string, [number, number, number, number]>()
   for (const [r, c, s] of g.walls) {
@@ -489,8 +490,8 @@ function bruteSight(g: GridMap, a: string, b: string): boolean {
     }
     const [t, u, d] = den > 0 ? [tn, un, den] : [-tn, -un, -den]
     if (t < 0 || t > d || u < 0 || u > d) return false
-    if (u === 0) return shared(ax, ay) > 1
-    if (u === d) return shared(bx, by) > 1
+    if (u === 0) return shared(ax, ay) > 1 || strict === (ay === by ? 'hA' : 'vA')
+    if (u === d) return shared(bx, by) > 1 || strict === (ay === by ? 'hB' : 'vB')
     return true
   }
   return pts(a).some(([y1, x1]) => pts(b).some(([y2, x2]) => !walls.some(w => blocks(x1!, y1!, x2!, y2!, w))))
@@ -520,6 +521,40 @@ function mainSight(g: GridMap, a: string, b: string): boolean {
   return corners(a).some(([y1, x1]) => corners(b).some(([y2, x2]) => clear(x1, y1, x2, y2)))
 }
 
+// a 4 x 4 map where r0c3 sees r3c0 only along a line through the bottom free end of a vertical wall; flipped and turned,
+// the same map needs the top end of a vertical wall, and the right and the left end of a horizontal one
+type W = [number, number, 'n' | 'e' | 's' | 'w']
+const freeEnd: W[] = [[0, 1, 'n'], [0, 1, 'e'], [0, 1, 'w'], [0, 3, 'e'], [1, 1, 'e'], [1, 2, 'e'], [1, 2, 'w'], [1, 3, 'n'], [1, 3, 'e'], [1, 3, 's'], [1, 3, 'w'], [2, 0, 'n'], [2, 3, 'n'], [2, 3, 'e'], [3, 1, 'e'], [3, 2, 'w'], [3, 3, 'n']]
+const flipW = (w: W[]) => w.map(([r, c, s]): W => [3 - r, c, ({ n: 's', s: 'n', e: 'e', w: 'w' } as const)[s]])
+const turnW = (w: W[]) => w.map(([r, c, s]): W => [c, r, ({ n: 'w', w: 'n', s: 'e', e: 's' } as const)[s]])
+const freeEndMaps: ['vB' | 'vA' | 'hB' | 'hA', W[], string, string][] = [['vB', freeEnd, 'r0c3', 'r3c0'], ['vA', flipW(freeEnd), 'r3c3', 'r0c0'], ['hB', turnW(freeEnd), 'r3c0', 'r0c3'], ['hA', turnW(flipW(freeEnd)), 'r3c3', 'r0c0']]
+
+describe('grid-map: insetCorners free wall ends and merged spaces', () => {
+  it('insetCorners: a line through the free end of a single wall is clear, for each end of a vertical and a horizontal wall', () => {
+    for (const [kind, walls, a, b] of freeEndMaps) {
+      const g = gridMap({ rows: 4, cols: 4, walls })
+      expect(lineOfSight(g, a, b, ins), kind).toBe(true)
+      expect(lineOfSight(g, b, a, ins), kind).toBe(true)
+      expect(bruteSight(g, a, b, kind), `${kind}: only the free end lets it through`).toBe(false)
+    }
+  })
+  it('insetCorners: a merged space sees, and is seen by, whatever any of its cells sees (each cell inset toward its own centre)', () => {
+    const walls: W[] = [[1, 3, 'w'], [2, 2, 'n'], [2, 3, 'w']]
+    const cells = [[0, 0], [1, 0], [1, 1]] as const
+    const plain = gridMap({ rows: 4, cols: 4, walls })
+    const g = gridMap({ rows: 4, cols: 4, walls, merges: [{ id: 'L', cells }] })
+    expect(cells.map(([r, c]) => lineOfSight(plain, `r${r}c${c}`, 'r1c3', ins))).toEqual([true, false, false])
+    expect(lineOfSight(g, 'L', 'r1c3', ins)).toBe(true)
+    expect(lineOfSight(g, 'r1c3', 'L', ins)).toBe(true)
+    for (const t of g.spaces.filter(s => s !== 'L')) {
+      const any = cells.some(([r, c]) => lineOfSight(plain, `r${r}c${c}`, t, ins))
+      expect(lineOfSight(g, 'L', t, ins), t).toBe(any)
+      expect(lineOfSight(g, t, 'L', ins), t).toBe(any)
+    }
+    expect(g.spaces.filter(t => t !== 'L' && !lineOfSight(g, 'L', t, ins)).length).toBeGreaterThan(0)
+  })
+})
+
 describe('grid-map: lineOfSight against a brute-force model', () => {
   it('on random small walled grids, insetCorners equals the model of the rule, and the default equals main', () => {
     let seed = 655
@@ -545,5 +580,21 @@ describe('grid-map: lineOfSight against a brute-force model', () => {
     }
     expect(differ).toBeGreaterThan(100)
     expect(pairs).toBeGreaterThan(2000)
+  })
+  it('on random variants of the four free-end maps, insetCorners equals the model, and the free-end exception alone decides pairs of every kind', () => {
+    let seed = 655
+    const rnd = () => (seed = (seed * 1103515245 + 12345) % 2147483648) / 2147483648
+    const decided = { hA: 0, hB: 0, vA: 0, vB: 0 }
+    for (let k = 0; k < 100; k++) {
+      const walls = freeEndMaps[k % 4]![1].filter(() => rnd() > 0.1)
+      for (let r = 0; r < 4; r++) for (let c = 0; c < 4; c++) for (const s of ['n', 'e', 's', 'w'] as const) if (rnd() < 0.03) walls.push([r, c, s])
+      const g = gridMap({ rows: 4, cols: 4, walls })
+      for (const a of g.spaces) for (const b of g.spaces) {
+        const want = bruteSight(g, a, b)
+        expect(lineOfSight(g, a, b, { insetCorners: true }), `${JSON.stringify(walls)} ${a} ${b}`).toBe(want)
+        if (want) for (const kind of ['hA', 'hB', 'vA', 'vB'] as const) if (!bruteSight(g, a, b, kind)) decided[kind]++
+      }
+    }
+    for (const kind of ['hA', 'hB', 'vA', 'vB'] as const) expect(decided[kind], kind).toBeGreaterThan(10)
   })
 })
