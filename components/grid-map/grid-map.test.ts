@@ -1,5 +1,6 @@
+import { readFileSync } from 'node:fs'
 import { describe, expect, it } from 'vitest'
-import { adjacent, adjacentTiles, area, cellsOf, columnOf, distance, firstSteps, gridMap, line, lineOfSight, neighbours, rotateTile, rowOf, shortestPaths, spaceAt, spacesOf, tileOf, within } from './index.ts'
+import { type GridMap, adjacent, adjacentTiles, area, cellsOf, columnOf, distance, firstSteps, gridMap, line, lineOfSight, neighbours, rotateTile, rowOf, shortestPaths, spaceAt, spacesOf, tileOf, within } from './index.ts'
 
 // 4 x 6, two 4 x 3 tiles A (left) and B (right). | and _ are walls, HH is the merged space 'hall'.
 //      c0  c1  c2  c3  c4  c5
@@ -389,5 +390,139 @@ describe('grid-map: line with stopAtWall agrees with neighbours', () => {
     expect(line(M, 'r0c1', 'w', { stopAtWall: true, extra: [['r0c0', 'r0c1', 'oneWay']] })).toEqual([])
     expect(() => line(M, 'r0c0', 'e', { stopAtWall: true, extra: [['r0c0', 'nowhere']] })).toThrow('unknown space')
     expect(() => line(M, 'r0c0', 'e', { extra: [['nowhere', 'r0c0', 'oneWay']] })).toThrow('unknown space')
+  })
+})
+
+// row 1 is a corridor walled above and below; `cut` also walls it between c1 and c2
+const hall = gridMap({ rows: 3, cols: 5, walls: [0, 1, 2, 3, 4].flatMap(c => [[1, c, 'n'], [1, c, 's']] as const) })
+const cut = gridMap({ rows: 3, cols: 5, walls: [...hall.walls, [1, 2, 'w']] })
+// two wall arms meet at corner (2, 2) and run to the border, closing off the top right; only a line through that corner reaches it
+const elbow = gridMap({ rows: 4, cols: 4, walls: [[0, 2, 'w'], [1, 2, 'w'], [2, 2, 'n'], [2, 3, 'n']] })
+
+describe('grid-map: lineOfSight with openEnds', () => {
+  it('without the option every corner of a walled corridor blocks: no space in it sees another (unchanged)', () => {
+    expect(lineOfSight(hall, 'r1c0', 'r1c1')).toBe(false)
+    expect(lineOfSight(hall, 'r1c0', 'r1c2')).toBe(false)
+    expect(lineOfSight(hall, 'r1c0', 'r1c4')).toBe(false)
+  })
+  it('openEnds: spaces in a corridor walled on both sides see each other, neighbours and further along', () => {
+    expect(lineOfSight(hall, 'r1c0', 'r1c1', { openEnds: true })).toBe(true)
+    expect(lineOfSight(hall, 'r1c0', 'r1c2', { openEnds: true })).toBe(true)
+    expect(lineOfSight(hall, 'r1c4', 'r1c0', { openEnds: true })).toBe(true)
+  })
+  it('openEnds: a wall crossed mid-line still blocks', () => {
+    expect(lineOfSight(cut, 'r1c0', 'r1c3', { openEnds: true })).toBe(false)
+    expect(lineOfSight(cut, 'r1c0', 'r1c4', { openEnds: true })).toBe(false)
+    expect(lineOfSight(cut, 'r1c0', 'r1c1', { openEnds: true })).toBe(true)
+  })
+  it('openEnds: a point where two wall segments meet, mid-line, still blocks', () => {
+    expect(lineOfSight(elbow, 'r3c0', 'r0c3', { openEnds: true })).toBe(false)
+    expect(lineOfSight(gridMap({ rows: 4, cols: 4, walls: [[0, 2, 'w'], [1, 2, 'w'], [2, 3, 'n']] }), 'r3c0', 'r0c3', { openEnds: true })).toBe(true)
+  })
+  it('openEnds: two spaces sharing a corner see each other, even across a wall', () => {
+    expect(lineOfSight(oneWall, 'r0c0', 'r0c1')).toBe(false)
+    expect(lineOfSight(oneWall, 'r0c0', 'r0c1', { openEnds: true })).toBe(true)
+    expect(lineOfSight(oneWall, 'r0c0', 'r0c2', { openEnds: true })).toBe(false)
+  })
+  it('within and area pass openEnds through to sight', () => {
+    expect(within(hall, 'r1c0', 2, { sight: true })).toEqual([])
+    expect(within(hall, 'r1c0', 2, { sight: true, openEnds: true })).toEqual(['r1c1', 'r1c2'])
+    expect(area(hall, 'r1c0', 2, { diamond: true, sight: true })).toEqual(['r1c0'])
+    expect(area(hall, 'r1c0', 2, { diamond: true, sight: true, openEnds: true })).toEqual(['r0c0', 'r0c1', 'r1c0', 'r1c1', 'r1c2', 'r2c0', 'r2c1'])
+  })
+  it('the README corridor recipe runs as written', () => {
+    const readme = readFileSync(new URL('./README.md', import.meta.url), 'utf8')
+    expect(readme).toContain("const hall = gridMap({ rows: 3, cols: 5, walls: [0, 1, 2, 3, 4].flatMap(c => [[1, c, 'n'], [1, c, 's']] as const) })")
+    expect(readme).toContain("lineOfSight(hall, 'r1c0', 'r1c4') // false")
+    expect(readme).toContain("lineOfSight(hall, 'r1c0', 'r1c4', { openEnds: true }) // true")
+    expect(readme).toContain("within(hall, 'r1c0', 2, { sight: true, openEnds: true }) // ['r1c1', 'r1c2']")
+    expect(lineOfSight(hall, 'r1c0', 'r1c4')).toBe(false)
+    expect(lineOfSight(hall, 'r1c0', 'r1c4', { openEnds: true })).toBe(true)
+  })
+})
+
+// independent model: a point blocks when it lies inside a wall segment off the border, or is a corner where two or more
+// such segments meet, or is the end of one such segment on the border; sight is clear when some corner-to-corner segment
+// (its end points left out with openEnds) holds no blocking point. Points are sampled at every half step between the
+// places the segment meets a grid line, so a crossing, a touch and a run along a wall are all hit exactly.
+function bruteSight(g: GridMap, a: string, b: string, open: boolean): boolean {
+  if (a === b) return true
+  const H = new Set<string>()
+  const V = new Set<string>()
+  for (const [r, c, s] of g.walls) {
+    if (s === 'n' && r > 0) H.add(`${r},${c}`)
+    if (s === 's' && r + 1 < g.rows) H.add(`${r + 1},${c}`)
+    if (s === 'w' && c > 0) V.add(`${c},${r}`)
+    if (s === 'e' && c + 1 < g.cols) V.add(`${c + 1},${r}`)
+  }
+  const point = (x: number, y: number) => {
+    const k = [H.has(`${y},${x - 1}`), H.has(`${y},${x}`), V.has(`${x},${y - 1}`), V.has(`${x},${y}`)].filter(Boolean).length
+    return k >= 2 || (k === 1 && (x === 0 || y === 0 || x === g.cols || y === g.rows))
+  }
+  const corners = (s: string) => g.cells[s]!.flatMap(([r, c]) => [[r, c], [r, c + 1], [r + 1, c], [r + 1, c + 1]] as const)
+  return corners(a).some(([y1, x1]) => corners(b).some(([y2, x2]) => {
+    const dx = x2 - x1
+    const dy = y2 - y1
+    const D = Math.max(Math.abs(dx), 1) * Math.max(Math.abs(dy), 1) * 2
+    for (let j = open ? 1 : 0; j <= (open ? D - 1 : D); j++) {
+      const X = x1 * D + dx * j
+      const Y = y1 * D + dy * j
+      const xi = X % D === 0
+      const yi = Y % D === 0
+      if (xi && yi ? point(X / D, Y / D) : xi ? V.has(`${X / D},${Math.floor(Y / D)}`) : yi && H.has(`${Y / D},${Math.floor(X / D)}`)) return false
+    }
+    return true
+  }))
+}
+// frozen copy of lineOfSight as it was before openEnds, to keep the default unchanged
+function mainSight(g: GridMap, a: string, b: string): boolean {
+  const gcd = (p: number, q: number): number => (q ? gcd(q, p % q) : p)
+  const clear = (x1: number, y1: number, x2: number, y2: number) => {
+    const dx = x2 - x1
+    const dy = y2 - y1
+    const n = gcd(Math.abs(dx), Math.abs(dy)) || 1
+    for (let i = 0; i <= n; i++) if (g.blocked[(y1 + (dy / n) * i) * (g.cols + 1) + x1 + (dx / n) * i]) return false
+    for (const [h, x, y] of g.inner) {
+      const [a1, a2, p1, p2, aa, p] = h ? [x1, x2, y1, y2, x, y] : [y1, y2, x1, x2, y, x]
+      const dp = p2 - p1
+      if (!dp) { if (p1 === p && Math.min(a1, a2) <= aa && Math.max(a1, a2) >= aa + 1) return false; continue }
+      if ((p - p1) * (p - p2) > 0) continue
+      const den = Math.abs(dp)
+      const num = (a1 * dp + (p - p1) * (a2 - a1)) * Math.sign(dp)
+      if (aa * den < num && num < (aa + 1) * den) return false
+    }
+    return true
+  }
+  const corners = (s: string) => g.cells[s]!.flatMap(([r, c]) => [[r, c], [r, c + 1], [r + 1, c], [r + 1, c + 1]] as const)
+  if (a === b) return true
+  return corners(a).some(([y1, x1]) => corners(b).some(([y2, x2]) => clear(x1, y1, x2, y2)))
+}
+
+describe('grid-map: lineOfSight against a brute-force model', () => {
+  it('on random small walled grids, openEnds equals the model with end points left out, and the default equals main and the model with them in', () => {
+    let seed = 655
+    const rnd = () => (seed = (seed * 1103515245 + 12345) % 2147483648) / 2147483648
+    const sides = ['n', 'e', 's', 'w'] as const
+    let open = 0
+    let pairs = 0
+    for (let k = 0; k < 300; k++) {
+      const rows = 1 + Math.floor(rnd() * 4)
+      const cols = 1 + Math.floor(rnd() * 4)
+      const walls: [number, number, 'n' | 'e' | 's' | 'w'][] = []
+      for (let r = 0; r < rows; r++) for (let c = 0; c < cols; c++) for (const s of sides) if (rnd() < 0.25) walls.push([r, c, s])
+      const merges = cols > 1 && rnd() < 0.3 ? [{ id: 'm', cells: [[rows - 1, 0], [rows - 1, 1]] as const }] : []
+      const g = gridMap({ rows, cols, walls, merges })
+      for (const a of g.spaces) for (const b of g.spaces) {
+        const got = lineOfSight(g, a, b, { openEnds: true })
+        const was = lineOfSight(g, a, b)
+        expect(got, `${JSON.stringify(walls)} ${a} ${b} openEnds`).toBe(bruteSight(g, a, b, true))
+        expect(was, `${JSON.stringify(walls)} ${a} ${b}`).toBe(mainSight(g, a, b))
+        expect(was, `${JSON.stringify(walls)} ${a} ${b} model`).toBe(bruteSight(g, a, b, false))
+        if (got !== was) open++
+        pairs++
+      }
+    }
+    expect(open).toBeGreaterThan(100)
+    expect(pairs).toBeGreaterThan(2000)
   })
 })
