@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // Run from a game's repo root.
 //   node <kit>/kit.mjs pull <path to game-kit checkout> <tag or commit> [component...]   moves the whole kit to one tag (named components are added); atomic
-//   node kit/kit.mjs list | search <word>                                              the catalogue of every component (pulled or not), from kit/CATALOG.md; search prints the mechanics map line first (kit/recipes/mechanics.md)
+//   node kit/kit.mjs list | search <word>                                              the catalogue of every component (pulled or not), from kit/CATALOG.md; search prints the mechanics map line first (kit/recipes/mechanics.md); the log ~/.game-kit/search-misses.log gets a line when no part has every word (the 3 parts printed above "not in the kit by that name" are only the nearest guesses) or the only hit is a "not in the kit" mechanics line (a candidate counts as demand); `search --misses [n]` prints the newest
 //   node kit.mjs state                                                                  (game-kit checkout) prints what is open (PLAN rows not done, waiting, watch)
 //   node kit.mjs next-id [n] [--from <docs/plan dir or file>...]                                (game-kit checkout) the next free K number(s): origin/main and every open PR's docs/plan/ file names
 //   node kit.mjs next-id [n] --reserve                                                 also reserves the ids on origin (refs/kit-reserved/K<n>) so no other session gets them

@@ -116,7 +116,7 @@ export function startServer({ scan = procScan, renice = reniceProc, sweepMs = pr
   };
   const view = (l) => {
     const ahead = l.startedAt ? 0 : [...leases.values()].filter((x) => !x.startedAt && (hi(x) && !hi(l) || (hi(x) === hi(l) && x.seq < l.seq))).length;
-    return { id: l.id, granted: !!l.startedAt, ahead, workers };
+    return { id: l.id, granted: !!l.startedAt, ahead, workers, ...(l.cancelled ? { cancelled: true } : {}) };
   };
   const status = () => {
     const now = Date.now();
@@ -150,7 +150,7 @@ ${s.unqueued.length ? `<h2 style="color:#c00">Unqueued (${s.unqueued.length})</h
       if (req.method === 'GET' && path === '/manifest.json') return send(200, { name: 'Heavy queue', short_name: 'Heavy queue', start_url: '/', display: 'standalone', background_color: '#111718', theme_color: '#111718', icons: [{ src: '/icon.png', sizes: '512x512', type: 'image/png', purpose: 'any maskable' }] });
       if (req.method !== 'POST') return send(404, { error: 'not found' });
       if (path === '/acquire') {
-        const l = { id: `${Date.now().toString(36)}-${++seq}`, seq, label: String(b.label ?? 'heavy'), priority: b.priority === 'high' ? 'high' : 'normal', pid: Number(b.pid) || 0, need: b.slots === 'all' ? slots : Math.min(slots, Math.max(1, Math.floor(Number(b.slots)) || 1)), queuedAt: Date.now(), lastBeat: performance.now() };
+        const l = { id: `${Date.now().toString(36)}-${++seq}`, seq, label: String(b.label ?? 'heavy'), priority: b.priority === 'high' ? 'high' : 'normal', pid: Number(b.pid) || 0, run: !!b.run, need: b.slots === 'all' ? slots : Math.min(slots, Math.max(1, Math.floor(Number(b.slots)) || 1)), queuedAt: Date.now(), lastBeat: performance.now() };
         if (b.resume) l.startedAt = Date.now();
         leases.set(l.id, l);
         step();
@@ -159,7 +159,13 @@ ${s.unqueued.length ? `<h2 style="color:#c00">Unqueued (${s.unqueued.length})</h
       const l = leases.get(b.id);
       if (!l) return history.some((h) => h.id === b.id) ? send(410, { error: 'lease ended' }) : send(404, { error: 'unknown lease' });
       if (path === '/beat') { l.lastBeat = performance.now(); step(); return send(200, view(l)); }
-      if (path === '/release') { end(l, b.exit ?? null, l.startedAt ? 'released' : 'cancelled'); step(); return send(200, { ok: true }); }
+      if (path === '/cancel') {
+        if (!l.startedAt) { end(l, null, 'cancelled'); step(); return send(200, { ok: true, was: 'waiting' }); }
+        if (!l.run) return send(409, { error: 'not started by heavy run' });
+        l.cancelled = true;
+        return send(200, { ok: true, was: 'running' });
+      }
+      if (path === '/release') { end(l, b.exit ?? null, l.cancelled ? 'cancelled' : l.startedAt ? 'released' : 'cancelled'); step(); return send(200, { ok: true }); }
       send(404, { error: 'not found' });
     });
   });

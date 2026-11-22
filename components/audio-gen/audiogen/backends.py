@@ -194,6 +194,7 @@ class YuE2(WorkerBackend):
     tool = "YuE2-3B"
     script = "yue2_worker.py"
     pass_env = ("HF_TOKEN",)
+    tag = ""
 
     def queue_tool(self) -> str | None:
         return shutil.which("heavy") or next((str(p) for p in [Path.home() / ".local" / "bin" / "heavy"] if p.exists()), None)
@@ -209,7 +210,7 @@ class YuE2(WorkerBackend):
     def wrap(self, cmd: list[str]) -> list[str]:
         """Every YuE2 run goes through the machine's heavy queue (owner, 19 Nov 2026), unless `queue` is false."""
         h = self.need_queue()
-        return cmd if h is None else [h, "run", "--label", f"audio-gen {self.name}", "--slots", "all", "--mem", f"{self.mem_gib():g}", "--"] + cmd
+        return cmd if h is None else [h, "run", "--label", f"audio-gen {self.name}{self.tag}", "--slots", "all", "--mem", f"{self.mem_gib():g}", "--"] + cmd
 
     def mem_gib(self) -> float:
         """The host memory cap of one cue's job (K474); `memGiB`, default 16 of the 20 GiB WSL total (README)."""
@@ -223,18 +224,21 @@ class YuE2(WorkerBackend):
         return rs
 
     def worker_options(self) -> dict[str, Any]:
-        return {k: v for k, v in super().worker_options().items() if k not in ("queue", "memGiB")}
+        return {k: v for k, v in super().worker_options().items() if k not in ("queue", "memGiB", "queuePerCue")}
 
     def generate(self, jobs: list[Job]) -> list[Result]:
-        """One fresh worker process (and heavy job) per cue, with all its takes, so host RAM is given back; a cue's
-        takes that fail with a CUDA error are retried once in a fresh process; a Skip keeps the earlier cues' results (K465)."""
+        """One fresh worker process per cue, with all its takes, so host RAM is given back; a cue's takes that fail
+        with a CUDA error are retried once in a fresh process; a Skip keeps the earlier results (K465). Queued, each take
+        is its own process and heavy job (K573), so a waiting job can run between two takes; `queuePerCue: true` keeps one job per cue."""
         groups: dict[str, list[Job]] = {}
         for j in jobs:
             groups.setdefault(j.cue.name, []).append(j)
+        split = bool(jobs) and not self.opts.get("queuePerCue", False) and self.need_queue() is not None
+        units = [([j], f" take {i}/{len(js)}") for js in groups.values() for i, j in enumerate(js, 1)] if split             else [(js, "") for js in groups.values()]
         done: dict[int, Result] = {}
         skip: str | None = None
         ran = False
-        for js in groups.values():
+        for js, self.tag in units:
             if skip is None:
                 try:
                     rs = self.capped(super().generate(js))
