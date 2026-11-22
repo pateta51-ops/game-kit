@@ -10,7 +10,7 @@ A clock as rules data: a marker on a row of spaces (countdown, round tracker, da
 1. Write the clock as a plain `ClockSpec`: `spaces` (a count or a list of ids), `start`, `direction` (`up` default: a positive step raises the index; `down`: it lowers it, a countdown), `ends` (`stop` default, or `wrap`), `thresholds`, optional `values` (one list per key, one entry per space).
 2. Run `checkClock(spec)` in a content test and assert `[]`; the other calls do not validate.
 3. Keep the state (`{ value, fired }`, `value` the space index) in the game state; every call returns a new one, assign it.
-4. Pass the step amount already worked out (ruled quantity, modifiers): `step(spec, state, by)` takes it as given; negative steps back, 0 does nothing.
+4. Pass the step amount already worked out (ruled quantity, modifiers): `step(spec, state, by)` takes it as given; negative steps back, 0 does nothing. A fractional amount counts as the next whole step (0.5 moves one space, 2.5 three, and `overrun` counts the same way): round it first when the rule rounds down. An amount that is not a finite number (NaN, Infinity, text, nothing) throws.
 5. Act on `crossings` in the order returned (the order the marker met them; on one space, the order `thresholds` lists them); `kind` and `data` are the game's words.
 6. Give each threshold the direction it fires in: default `forward` (with the positive step), `back`, or `either`.
 7. Use `setTo` for placing the marker (set-up, a "move to" effect): it fires nothing; call `step` when the rule says the marker moves through spaces.
@@ -30,21 +30,35 @@ A clock as rules data: a marker on a row of spaces (countdown, round tracker, da
 - Expecting engine-core to keep `space`, `how`, `way` and `data`: `would` stores `kind`, `keys` and `amount` only, so a trigger or window never sees them. Act on them in the handler that called `step`, or store the list `occurrences` returned in the game state for the trigger to read. A look-up of the threshold by `keys.target` gives its `data` and `space` only, never `how` or `way`, and on a `wrap` clock one step can cross the same threshold twice.
 
 - `newClock(spec)`: `{ value, fired: [] }`. `spaceOf(spec, state)`: the space id (or index for a count). `indexOf(spec, space)`: index or -1.
-- `step(spec, state, by)`: `{ state, crossings, overrun? }`; each crossing `{ threshold, from, to, space, how: 'land' | 'pass' }` (`from`, `to` are the step's ends, `space` the threshold's, `way` is `forward` for a positive step and `back` for a negative one). The last space reached is the land, every space before it a pass. `stop`: the walk ends at the row's edge (either end). `wrap`: it goes round; a long step meets a space once per lap. `overrun`: how many of the steps asked did not fit on a `stop` row (the walk met the edge first); the key is absent when every step fitted, so `if (r.overrun)` reads it. A step from the end space moves nothing, returns no crossing, and its `overrun` is the whole amount.
+- `step(spec, state, by)`: `{ state, crossings, overrun? }`; each crossing `{ threshold, from, to, space, how: 'land' | 'pass' }` (`from`, `to` are the step's ends, `space` the threshold's, `way` is `forward` for a positive step and `back` for a negative one). The last space reached is the land, every space before it a pass. `stop`: the walk ends at the row's edge (either end). `wrap`: it goes round; a long step meets a space once per lap, for up to 1000 laps: a longer step lands where the full step lands and fires as a step of 1000 laps plus the rest, and the result says so: `cut` is the number of laps not walked (the key is absent when nothing was cut). `overrun`: how many of the steps asked did not fit on a `stop` row (the walk met the edge first); the key is absent when every step fitted, so `if (r.overrun)` reads it. A step from the end space moves nothing, returns no crossing, and its `overrun` is the whole amount.
 - `setTo(spec, state, space)`: moves, fires nothing, keeps `fired`; an unknown space throws.
-- `stepsTo(spec, state, space)`: the distance from the marker to that space as a step amount: positive with the clock's `direction` (`up` and `down` alike), negative against it, 0 on it; on a `wrap` clock the way forward round the row (0 to spaces - 1); an unknown space throws. `step(spec, state, stepsTo(spec, state, space))` lands on that space. `step` is pure, so the same call is a dry run that asks what a move would fire ("Recipe: a dry run").
+- `stepsTo(spec, state, space)`: the distance from the marker to that space as a step amount: positive with the clock's `direction` (`up` and `down` alike), negative against it, 0 on it; on a `wrap` clock the way forward round the row (0 to spaces - 1); an unknown space throws. `stepsTo(spec, state, space, 'back')`: on a `wrap` clock the way back round the row as a negative amount (0 to -(spaces - 1)); on a `stop` clock the same answer as without it. From a state on the row, `step(spec, state, stepsTo(spec, state, space))` lands on that space (with `'back'` too); from a state whose `value` is not a space (a start `checkClock` refuses, a hand-made state) it may not. `step` is pure, so the same call is a dry run that asks what a move would fire ("Recipe: a dry run").
 - `left(spec, state)` (steps to the last space in the `direction`; to any other space, `stepsTo`), `ended(spec, state)` (`stop` only: on the end space in the `direction`).
-- `onSpace(spec, state, space)`: the marker stands on that space (id or index). `reached(spec, state, space)`: it stands on that space or beyond it in the `direction` (`stop` only; an unknown space is false, and so is a state whose `value` is not on the row, as with `onSpace`).
+- `onSpace(spec, state, space)`: the marker stands on that space (id or index). `reached(spec, state, space)`: it stands on that space or beyond it in the `direction` (`stop` only; an unknown space is false, and so is a state whose `value` is below 0 or past the row, as with `onSpace`; a hand-made `value` between two spaces, 1.5, is not caught: `reached` compares it as a number while `onSpace` is false).
 - `valueAt(spec, state, key)`: `spec.values[key][state.value]` (a limit that depends on the marker's row).
 - `occurrences(crossings, prefix = 'clock.')`: engine-core `OccurrenceInput`s (`kind` `clock.<kind>`, `keys.target` the threshold id, `amount` 1), ready for `would(ctx, occurrences(r.crossings))` so triggers and windows see them. `occurrences(crossings, prefix, true)` adds `space`, `how`, `way` and `data` to each (rule 9).
-- `checkClock(spec)`: a list of problems, never a throw.
+- `checkClock(spec)`: a list of problems, never a throw. It also reports a key that looks like a misspelt one (`end` for `ends`, `threshold`, `directions`, `dir`, `onec`: one letter added, dropped, changed or swapped, or the first three or more letters; a spec read from JSON has no compiler), `once` that is not `true` or `false`, an `id` or `kind` that is not text, and `values` that is not an object of lists. Other keys of the game's own (`name`, `label`) pass.
 
 ## Recipe: engine-core and track
 
+```ts
+import { ended, newClock, occurrences, step, type ClockOccurrence, type ClockSpec, type ClockState } from '../kit/clock/index'
+
+interface Ctx { s: { clock: ClockState; over?: string } }
+declare const would: (ctx: Ctx, list: ClockOccurrence[]) => void // engine-core's would
+const spec: ClockSpec = { spaces: 4, start: 0, thresholds: [{ id: 'out', at: 3, on: 'land', kind: 'lose' }] }
+const ctx: Ctx = { s: { clock: newClock(spec) } }
+const advance = (by: number) => {
+  const r = step(spec, ctx.s.clock, by); ctx.s.clock = r.state
+  if (r.crossings.length) would(ctx, occurrences(r.crossings)) // triggers answer clock.lose, clock.reward, clock.trigger...
+}
+// the list for engine-core's checkpoint.checks
+const checks = [{ name: 'clock lost', run: (ctx: Ctx) => { if (ended(spec, ctx.s.clock) && !ctx.s.over) { ctx.s.over = 'lost'; return true } return false } }]
+advance(3)
+console.log(checks[0]?.run(ctx), ctx.s.over) // true lost
+```
+
 ```text
-const r = step(spec, s.clock, by); s.clock = r.state
-if (r.crossings.length) would(ctx, occurrences(r.crossings))          // triggers answer clock.reward, clock.trigger...
-checkpoint.checks: [{ name: 'clock lost', run: (ctx) => { if (ended(spec, ctx.s.clock) && !ctx.s.over) { ctx.s.over = 'lost'; return true } } }]
 <Track spaces={rows of spec} index={s.clock.value} ... />                // track reads the same index; marks from thresholds
 ```
 
@@ -77,15 +91,26 @@ const spec: ClockSpec = { spaces: 8, start: 0, thresholds: [{ id: 'gone', at: lo
 const s: { clock: ClockState; over?: string } = { clock: setTo(spec, newClock(spec), 7) }
 const r = step(spec, s.clock, -2); s.clock = r.state
 if (r.crossings.some((c) => c.threshold.kind === 'lose')) s.over = 'lost'
-const lost = () => onSpace(spec, s.clock, loseSpace) // the state check below runs this
-console.log(s.over, lost()) // lost true
+// the list for engine-core's checkpoint.checks: the state check
+const checks = [{ name: 'clock lost', run: (ctx: { s: typeof s }) => { if (onSpace(spec, ctx.s.clock, loseSpace) && !ctx.s.over) { ctx.s.over = 'lost'; return true } return false } }]
+const loaded: { s: typeof s } = { s: { clock: setTo(spec, newClock(spec), loseSpace) } } // a loaded save: no step, no crossing
+console.log(s.over, checks[0]?.run(loaded), loaded.s.over) // lost true lost
 ```
 
-```text
-checkpoint.checks: [{ name: 'clock lost', run: (ctx) => { if (onSpace(spec, ctx.s.clock, loseSpace) && !ctx.s.over) { ctx.s.over = 'lost'; return true } } }]
+Reaching or passing loses: `on: 'landOrPass'` and no `direction` (so `forward`) in the threshold, and `reached(spec, ctx.s.clock, loseSpace)` in the check:
+
+```ts
+import { newClock, reached, setTo, step, type ClockSpec, type ClockState } from '../kit/clock/index'
+
+const loseSpace = 5
+const spec: ClockSpec = { spaces: 8, start: 3, thresholds: [{ id: 'gone', at: loseSpace, on: 'landOrPass', kind: 'lose' }] }
+const check = (clock: ClockState) => reached(spec, clock, loseSpace)
+const over = step(spec, newClock(spec), 4) // goes over the space: lost
+const back = step(spec, over.state, -3) // moves back before it: nothing fires, no longer reached
+console.log(over.crossings.map((c) => c.threshold.kind + ':' + c.how), check(over.state), back.crossings.length, check(back.state), check(setTo(spec, newClock(spec), 6))) // ['lose:pass'] true 0 false true
 ```
 
-Reaching or passing loses: `on: 'landOrPass'` and no `direction` (so `forward`) in the threshold, and `reached(spec, ctx.s.clock, loseSpace)` in the check. A lose space that differs per scenario: build the spec from the scenario's data and keep `loseSpace` beside it.
+A lose space that differs per scenario: build the spec from the scenario's data and keep `loseSpace` beside it.
 
 ### A move against the clock's direction
 

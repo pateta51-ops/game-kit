@@ -48,8 +48,8 @@ Checks:
     the lock's components, the folders holding component.json and every component kit/CATALOG.md lists (the whole
     kit at the lock's tag); a plan pin other than the lock's ref is a NOTE. A Kit phase row names a GK<n> that is a
     "Phase GK<n>" heading, and a new kit phase also has a build-own row;
-  * a game sheet table (a header cell names "Game sheet") with a row for each line of references/game-sheet.md
-    (SHEET_LINES; asked for only when the mechanics map is not checked), each with an answer, and with a backticked kit part or the words "build-own" in its third cell
+  * a game sheet table (a header cell names "Game sheet") with a row for each of the sheet's 22 questions
+    (SHEET_QUESTIONS; always asked for, K584), each with an answer, and with a backticked kit part or the words "build-own" in its third cell
     unless the answer starts "not in this game"; more than half the lines absent is a NOTE;
   * a build-own table (a header cell names "What the game builds"; columns: what, words searched, nearest kit part,
     verdict, register id or refusal) with a row for every New, Port and Pattern row of the reuse map by its Layer text,
@@ -63,11 +63,12 @@ Checks:
     "steward not asked";
   * every Modifier order row holds a backticked name or the words "build-own", in its "Kit function" cell when the
     table has one;
-  * K531, the mechanics map (kit/recipes/mechanics.md beside the plan's docs folder, or --map PATH; skipped when the
-    file is missing or with --sheet-optional): every map line has a game sheet row whose first cell, up to its first
-    comma, equals the line's first phrase (the Mechanic cell up to its first comma; case and spaces ignored); the
-    unanswered lines are one problem giving their count, their first phrases and how to fix it. A sheet row whose answer starts "kit part" and whose backticked names are all absent from the map line's
-    Answer cell is a WARN; a plan with no game sheet table gets one WARN, not a problem;
+  * K584, the mechanics map (kit/recipes/mechanics.md beside the plan's docs folder, or --map PATH; skipped when the
+    file is missing or with --sheet-optional): its lines sit under "## <question>" headings. Warnings only, never a
+    problem: a sheet row answering "not in this game", or build-own with no backticked part, while the map has a built
+    line (a part, whole or partly, not pending) under that question, naming those lines' first phrases; a sheet row
+    whose backticked parts no map line under its question names; a plan with no game sheet table (one WARN). The map's
+    lines need no row of their own (the K531 and K567 failure is gone);
   * a build-own row whose verdict is candidate and whose K<n> is a row the kit's docs/plan/K<n>.md marks "state: done"
     gets a WARN naming the part that closed it (its docs/mechanics.json line, else the row's first backticked name or
     leading "name:");
@@ -330,11 +331,31 @@ def extract(path: Path, lines: list[str], heads: list[tuple[int, int, str]]) -> 
     return 0
 
 
-SHEET_LINES = ("who the player controls", "what can run out", "clocks and tracks", "the phase list", "where the opposition comes from",
-               "dice", "positions", "numbers several cards change", "costs and payment", "may an effect be offered",
-               "lasting effects and status", "triggers and windows", "cards as data", "hidden information", "objectives and scoring",
-               "set-up picks", "between games", "loading the content", "attacks and damage", "tokens and markers",
-               "levels and upgrades", "markets and rows")
+# K584: the game sheet's questions, [id, words]. The one place: scripts/mechanics-check.mjs and scripts/catalog.mjs read this literal (it is JSON too)
+SHEET_QUESTIONS = [
+    ["player", "Who the player controls"],
+    ["run-out", "What can run out"],
+    ["clocks", "Clocks and tracks"],
+    ["phases", "The phase list"],
+    ["opposition", "Where the opposition comes from"],
+    ["dice", "Dice"],
+    ["positions", "Positions"],
+    ["numbers", "Numbers several cards change"],
+    ["costs", "Costs and payment"],
+    ["offered", "May an effect be offered"],
+    ["lasting", "Lasting effects and status"],
+    ["triggers", "Triggers and windows"],
+    ["cards", "Cards as data"],
+    ["hidden", "Hidden information"],
+    ["objectives", "Objectives and scoring"],
+    ["setup", "Set-up picks"],
+    ["between", "Between games"],
+    ["content", "Loading the content"],
+    ["attacks", "Attacks and damage"],
+    ["tokens", "Tokens and markers"],
+    ["levels", "Levels and upgrades"],
+    ["markets", "Markets and rows"]]
+SHEET_LINES = tuple(w.lower() for _, w in SHEET_QUESTIONS)
 
 
 def kit_dir() -> Path | None:
@@ -797,8 +818,7 @@ def main() -> int:
     if "sheet" not in seen:
         kd.append("the reuse map has no game sheet table (a header cell names 'Game sheet'): stage 5")
     else:
-        if "--sheet-optional" in sys.argv or not mp.is_file():
-            kd += [f"game sheet: no row for the line {t!r}" for t in SHEET_LINES if not any(norm(r[0]).startswith(t) for r in sheet)]
+        kd += [f"game sheet: no row for the line {t!r}" for t in SHEET_LINES if not any(norm(r[0]).startswith(t) for r in sheet)]
         for r in sheet:
             ans = norm(r[1]) if len(r) > 1 else ""
             if not ans.strip("-—– "):
@@ -808,35 +828,37 @@ def main() -> int:
         absent = [r[0] for r in sheet if len(r) > 1 and norm(r[1]).startswith("not in this game")]
         if len(absent) * 2 > len(SHEET_LINES):
             notes.add(f"kit: the game sheet says 'not in this game' on {len(absent)} lines: {', '.join(absent)}")
-    # K531: the game sheet answers every line of the kit's mechanics map (kit/recipes/mechanics.md beside the docs folder, or --map)
+    # K584: the map's lines under each question of the sheet (kit/recipes/mechanics.md beside the docs folder, or --map): warnings only
     if "--sheet-optional" not in sys.argv and not mp.is_file() and "sheet" in seen:
         notes.add(f"kit: game sheet NOT checked against the mechanics map (no {mp}; --map PATH)")
     if "--sheet-optional" not in sys.argv and mp.is_file():
         if "sheet" not in seen:
             notes.add(f"WARN kit: the plan has no game sheet table, so it was not checked against the mechanics map {mp}")
         else:
-            mrows, mh2 = [], False
+            byq, cur, nmap = {}, None, 0
             for l in mp.read_text(encoding="utf-8").splitlines():
+                if l.startswith("## "):
+                    cur = norm(l[3:])
                 c = [x.strip() for x in table_cells(l)] if l.strip().startswith("|") else []
-                if len(c) < 2 or re.fullmatch(r"[\s:-]*", c[0]):
+                if len(c) < 2 or re.fullmatch(r"[\s:-]*", c[0]) or norm(c[0]) == "mechanic":
                     continue
-                if not mh2:
-                    mh2 = True
-                    continue
-                mrows.append((norm(c[0]), set(re.findall(r"`([^`]+)`", c[1]))))
-            first = lambda t: t.split(",")[0].strip()
-            miss = []
-            for mech, mnames in mrows:
-                hit = [r for r in sheet if first(norm(r[0])) == first(mech)]
-                if not hit:
-                    miss.append(first(mech))
-                for r in hit:
-                    rn = set(re.findall(slug, " ".join(r[2:])))
-                    if len(r) > 1 and norm(r[1]).startswith("kit part") and rn and not rn & mnames:
-                        notes.add(f"WARN kit: game sheet line {r[0]!r} answers kit part {', '.join(sorted(rn))}, which the mechanics map's line does not name")
-            if miss:
-                kd.append(f"game sheet: {len(miss)} mechanics map line(s) unanswered: {', '.join(miss)}. Each mechanics map line needs its own row in the game sheet table, first cell = the line's first phrase; answer a kit part, a build-own row, or 'not in this game'")
-            notes.add(f"kit: game sheet checked against the mechanics map {mp} ({len(mrows)} lines)")
+                nmap += 1
+                if cur in SHEET_LINES:
+                    byq.setdefault(cur, []).append((c[0].split(",")[0].strip(), c[1]))
+            for t in SHEET_LINES:
+                under = byq.get(t, [])
+                mnames = {x for _, a in under for x in re.findall(r"`([^`]+)`", a)}
+                built = [p for p, a in under if re.match(r"(partly: )?`", a) and "(pending:" not in a]
+                for r in sheet if under else []:
+                    if not norm(r[0]).startswith(t):
+                        continue
+                    third = " ".join(r[2:])
+                    rn, gone = set(re.findall(slug, third)), len(r) > 1 and norm(r[1]).startswith("not in this game")
+                    if built and (gone or (not rn and "build-own" in third.lower())):
+                        notes.add(f"WARN kit: game sheet line {r[0]!r} answers {'not in this game' if gone else 'build-own'}, and the mechanics map has built lines under that question: {', '.join(built)}")
+                    elif not gone and rn and not rn & mnames:
+                        notes.add(f"WARN kit: game sheet line {r[0]!r} names kit part {', '.join(sorted(rn))}, which no mechanics map line under that question names")
+            notes.add(f"kit: game sheet checked against the mechanics map {mp} ({nmap} lines under {len(byq)} questions)" if byq else f"kit: the mechanics map {mp} groups no line under a game sheet question ('## <question>' headings): its {nmap} lines were not compared")
     gv = [o for o in own if norm(o[0]).startswith("game verbs")]
     if "own" not in seen:
         kd.append("the reuse map has no build-own table (a header cell names 'What the game builds'): stage 5")

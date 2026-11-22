@@ -2018,9 +2018,13 @@
       "barred",
       "why disabled",
       "reason",
-      "only option"
+      "only option",
+      "one legal answer",
+      "auto pick single option",
+      "skip prompt with one choice",
+      "hidden option"
     ],
-    "use": "The game says which options are legal, bars the others with a reason code, and notices the only option (`bar`, `blocked`, `onlyOne`, `legalTable`).",
+    "use": "The game says which options are legal, bars the others with a reason code, and notices the only option (`bar`, `blocked`, `onlyOne`, `legalTable`); the only legal answer is taken automatically (`askOrTake`) unless the player has not seen it (`unseen`: a hidden or face-down option is asked).",
     "guide": "legal.md"
   },
   "engine-core/preview": {
@@ -2106,7 +2110,11 @@
       "distance to space",
       "distance",
       "space",
-      "dry run"
+      "dry run",
+      "steps back",
+      "looping track",
+      "cannot advance",
+      "check a track definition"
     ],
     "visible": false,
     "release": 1,
