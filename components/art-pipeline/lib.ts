@@ -158,11 +158,29 @@ export function encodePng(r: Raster): Buffer {
 
 /** Crops and converts pictures; `ext` is the output's extension without the dot, `box` omitted means the whole picture. */
 export interface Codec {
-  out(src: Uint8Array, ext: string, box?: Box): Promise<Uint8Array>;
+  out(src: Uint8Array, ext: string, box?: Box, quality?: number): Promise<Uint8Array>;
+}
+
+/** Encodes at the highest quality (from `max`, default 100, down to `min`) whose output fits `cap` bytes; throws naming the face when even `min` does not fit. */
+export async function encodeWithin(c: Codec, src: Uint8Array, ext: string, face: string, q: { min: number; max?: number }, cap: number | undefined): Promise<Uint8Array> {
+  const at = (n: number): Promise<Uint8Array> => c.out(src, ext, undefined, n);
+  let hi = q.max ?? 100;
+  let best = await at(hi);
+  if (cap === undefined || best.length <= cap) return best;
+  const low = await at(q.min);
+  if (low.length > cap) throw new Error(`${face}: ${String(low.length)} bytes at quality ${String(q.min)} is over the cap of ${String(cap)} bytes`);
+  best = low;
+  let lo = q.min;
+  while (hi - lo > 1) {
+    const mid = Math.floor((lo + hi) / 2);
+    const b = await at(mid);
+    if (b.length <= cap) { lo = mid; best = b; } else hi = mid;
+  }
+  return best;
 }
 interface SharpImg {
   extract(o: { left: number; top: number; width: number; height: number }): SharpImg;
-  toFormat(f: string): SharpImg;
+  toFormat(f: string, o?: { quality: number }): SharpImg;
   toBuffer(): Promise<Uint8Array>;
 }
 
@@ -182,10 +200,10 @@ export async function codec(sharpModule?: string): Promise<Codec> {
     };
   const m = (await import(/^\.|^[A-Za-z]:|^\//.test(sharpModule) ? pathToFileURL(resolve(sharpModule)).href : sharpModule)) as { default: (i: Uint8Array) => SharpImg };
   return {
-    out: (src, ext, box) => {
+    out: (src, ext, box, quality) => {
       let s = m.default(src);
       if (box) s = s.extract({ left: box.x, top: box.y, width: box.w, height: box.h });
-      return s.toFormat(ext === 'jpg' ? 'jpeg' : ext).toBuffer();
+      return s.toFormat(ext === 'jpg' ? 'jpeg' : ext, ...(quality === undefined ? [] : [{ quality }])).toBuffer();
     },
   };
 }

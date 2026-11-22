@@ -120,5 +120,8 @@
   { "q": "suit change", "first": "none" },
   { "q": "hand limit discard event", "first": "card-zones" },
   { "q": "zone capacity on leave hook", "first": "card-zones" },
-  { "q": "cards leave over limit callback", "first": "card-zones" }
+  { "q": "cards leave over limit callback", "first": "card-zones" },
+  { "q": "jpeg quality re-encode face", "first": "art-pipeline" },
+  { "q": "face enlarged larger than source", "first": "art-pipeline" },
+  { "q": "minimum image quality size cap", "first": "art-pipeline" }
 ]

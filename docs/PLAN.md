@@ -360,6 +360,7 @@ The blind matching test's result was not recorded: the PR, its comments and docs
 | K668 | card-harness: prompt rules in the screen scan (whole printed clause, who pays, no rule id, handler sentence equals clause, credited by record path, per option, empty log fails) and a prompt recorder for card tests. | M |  | done |
 | K669 | card-harness: `describeCheck` reports raw keys, empty brackets and stand-in numbers in a reading, keeps an accepted list with stale failure and a tokens-only mode; `parseReadings` applies readings in recorded order. | S |  | done |
 | K670 | layout-editor: optional per-zone `card: [w, h]` overriding the screen card size in drawing, cardFit and layoutWarnings; editable in the Zone panel. For screens that mix portrait, landscape and large cards. | S |  | done |
+| K679 | art-pipeline: minimum JPEG quality for re-encoded faces within the size cap; art check fails an enlarged face. | S |  | done |
 
 ## Asked for by the owner
 

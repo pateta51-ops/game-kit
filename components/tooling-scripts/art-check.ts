@@ -11,6 +11,10 @@ export interface ArtEntry {
   sha256: string;
   bytes: number;
   outSha256?: string;
+  width?: number;
+  height?: number;
+  sourceWidth?: number;
+  sourceHeight?: number;
 }
 export interface ArtConfig {
   /** The manifest: a JSON record of id to ArtEntry. */
@@ -24,6 +28,8 @@ export interface ArtConfig {
   need: readonly string[];
   maxBytes: number | undefined;
   maxFileBytes: number | undefined;
+  /** On unless false: an entry whose pixel size (width x height) is over its source's (sourceWidth x sourceHeight) fails; entries without both sizes are skipped. */
+  noEnlarge?: boolean;
 }
 
 const sha256 = (path: string): string => createHash('sha256').update(readFileSync(path)).digest('hex');
@@ -45,6 +51,8 @@ export function artCheck(c: ArtConfig): { errors: string[]; faces: number; total
       continue;
     }
     if (entry.source !== file || entry.sha256 !== sha256(join(c.sources, file))) errors.push(`${id}: the source ${file} changed since the last build`);
+    if (c.noEnlarge !== false && entry.width !== undefined && entry.height !== undefined && entry.sourceWidth !== undefined && entry.sourceHeight !== undefined && entry.width * entry.height > entry.sourceWidth * entry.sourceHeight)
+      errors.push(`${id}: enlarged: the output is ${String(entry.width)}x${String(entry.height)}, the source ${String(entry.sourceWidth)}x${String(entry.sourceHeight)}`);
     if (!existsSync(out)) errors.push(`${id}: the output ${id}.${c.ext} is missing`);
     else if (statSync(out).size !== entry.bytes || (entry.outSha256 !== undefined && entry.outSha256 !== sha256(out)))
       errors.push(`${id}: the output ${id}.${c.ext} differs from the manifest`);
@@ -65,11 +73,11 @@ export function artCheck(c: ArtConfig): { errors: string[]; faces: number; total
 
 const NAMES = ['manifest', 'sources', 'out', 'ext', 'source-id', 'need', 'max-bytes', 'max-file-bytes'];
 const USAGE =
-  'usage: node art-check.ts --manifest <json> --sources <dir> --out <dir> --ext <webp> [--source-id <regex, group 1 is the id>] [--need <json array of ids>]... [--max-bytes <n>] [--max-file-bytes <n>] [--config <json>]';
+  'usage: node art-check.ts --manifest <json> --sources <dir> --out <dir> --ext <webp> [--source-id <regex, group 1 is the id>] [--need <json array of ids>]... [--max-bytes <n>] [--max-file-bytes <n>] [--allow-enlarged] [--config <json>]';
 
 export function run(args: readonly string[], io: Io = stdio): number {
   try {
-    const f = flags(args, NAMES);
+    const f = flags(args, NAMES, ['allow-enlarged']);
     const [manifest, sources, out, ext] = ['manifest', 'sources', 'out', 'ext'].map((k) => f?.[k]?.[0]);
     const caps = ['max-bytes', 'max-file-bytes'].map((k) => f?.[k]?.[0]);
     if (f === null || manifest === undefined || sources === undefined || out === undefined || ext === undefined || caps.some((v) => v !== undefined && !/^\d+$/.test(v))) {
@@ -90,6 +98,7 @@ export function run(args: readonly string[], io: Io = stdio): number {
       need,
       maxBytes: num('max-bytes'),
       maxFileBytes: num('max-file-bytes'),
+      noEnlarge: f['allow-enlarged'] === undefined,
     });
     for (const e of r.errors) io.err(`error: ${e}`);
     if (r.errors.length > 0) {

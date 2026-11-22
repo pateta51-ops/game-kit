@@ -1870,7 +1870,7 @@
   },
   "art-pipeline": {
     "mechanics": "none: content tooling (art, scans, card data)",
-    "use": "Game-free scripts for a card game's art, driven by the game's config: an index of one chosen image per card (order, overrides, degraded rule), fetch with sha256, sheet cells and crops, PDF pages as faces, a CI cache keyed on input hashes, publish to public with a manifest art-check reads.",
+    "use": "Game-free scripts for a card game's art, driven by the game's config: an index of one chosen image per card (order, overrides, degraded rule), fetch with sha256, sheet cells and crops, PDF pages as faces, a CI cache keyed on input hashes, publish to public with a manifest art-check reads, with a minimum JPEG quality within a size cap and an enlarged-face check.",
     "not": "Mapping card ids to files, the sources' URLs and parsing a dossier: those stay in the game and go in as config.",
     "title": "Get card art ready for the game",
     "tags": [
@@ -1880,7 +1880,13 @@
       "download",
       "pipeline",
       "manifest",
-      "crop"
+      "crop",
+      "jpeg quality",
+      "re-encode",
+      "face enlarged",
+      "larger than source",
+      "size cap",
+      "minimum quality"
     ],
     "visible": false,
     "release": 1,
