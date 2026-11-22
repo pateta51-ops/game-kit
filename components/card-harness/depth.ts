@@ -118,6 +118,7 @@ export const asserts = (c: TestCall): boolean => /\b(?:expect|assert)\w*\s*[(.]|
 /** The body calls one of the two poor-test helpers itself (outside strings and comments). */
 export const callsHelper = (c: TestCall): boolean => /\bexpectNot(?:Offered|Fired)\s*\(/.test(codeOnly(c.body));
 
+export type ClauseOf = (x: unknown) => string | undefined;
 interface Opt {
   readonly id: string | number;
   readonly enabled?: boolean;
@@ -136,11 +137,28 @@ export interface Observed {
 
 const ids = (id: string | readonly string[]): readonly string[] => (typeof id === 'string' ? [id] : id);
 const on = (o: Opt): boolean => o.enabled !== false && o.disabled !== true;
-/** A prompt or event "of" an id: a top-level string field equal to it. */
-const names = (x: unknown, want: readonly string[]): boolean =>
-  x !== null && typeof x === 'object' && Object.entries(x).some(([k, v]) => k !== 'options' && typeof v === 'string' && want.includes(v));
-const offeredIn = (p: unknown, want: readonly string[]): string[] =>
-  p === null || typeof p !== 'object' ? [] : ((p as { options?: readonly Opt[] }).options ?? []).filter((o) => on(o) && want.includes(String(o.id))).map((o) => String(o.id));
+/** K661: the clause id `clauseOf` gives an item (a throw names the helper and the item); undefined: the field match applies. */
+const mapped = (x: unknown, of: ClauseOf | undefined, who: string): string | undefined => {
+  if (of === undefined) return undefined;
+  try {
+    return of(x);
+  } catch (e) {
+    throw new Error(`${who}: clauseOf threw on ${JSON.stringify(x)}: ${String(e)}`, { cause: e });
+  }
+};
+/** A prompt or event "of" an id: what `clauseOf` maps it to, else a top-level string field equal to it (only the item itself, not nested objects). */
+const names = (x: unknown, want: readonly string[], of?: ClauseOf, who = 'expectNotOffered'): boolean => {
+  if (x === null || typeof x !== 'object') return false;
+  const m = mapped(x, of, who);
+  if (m !== undefined) return want.includes(m);
+  return Object.entries(x).some(([k, v]) => k !== 'options' && typeof v === 'string' && want.includes(v));
+};
+const offeredIn = (p: unknown, want: readonly string[], of?: ClauseOf): string[] =>
+  p === null || typeof p !== 'object'
+    ? []
+    : ((p as { options?: readonly Opt[] }).options ?? [])
+        .filter((o) => on(o) && want.includes(mapped(o, of, 'expectNotOffered') ?? String(o.id)))
+        .map((o) => String(o.id));
 const sig = (t: Observed): string => `${JSON.stringify(t.s ?? null)}|${String(t.events?.length ?? 0)}`;
 
 /**
@@ -151,6 +169,8 @@ const sig = (t: Observed): string => `${JSON.stringify(t.s ?? null)}|${String(t.
 const causes = (e: unknown): unknown[] => (e instanceof Error && e.cause !== undefined && e.cause !== e ? [e, ...causes(e.cause)] : [e]);
 /** K648: the engine's refusal (engine-core's `IllegalActionError`, or the game's own through `refused`), the innermost `cause` (what was first thrown, not Scenario's `refused:` wrapper). */
 export interface NotOfferedOptions {
+  /** K661: maps any option, prompt or event of the game to its clause id (undefined: the top-level string field match applies). */
+  readonly clauseOf?: ClauseOf;
   readonly refused?: (e: unknown) => boolean;
 }
 export function expectNotOffered(t: Observed, id: string | readonly string[], attempt?: () => unknown, o: NotOfferedOptions = {}): void {
@@ -159,9 +179,9 @@ export function expectNotOffered(t: Observed, id: string | readonly string[], at
   const steps = [t.prompt, ...(t.history ?? []).map((h) => h.prompt)];
   steps.forEach((p, i) => {
     const at = i === 0 ? 'in the open prompt' : `at step ${String(i)}`;
-    const o = offeredIn(p, want);
-    if (o.length > 0) throw new Error(`expectNotOffered: ${o.join(', ')} is offered ${at}`);
-    if (names(p, want)) throw new Error(`expectNotOffered: a prompt names ${want.join(', ')} ${at}`);
+    const hit = offeredIn(p, want, o.clauseOf);
+    if (hit.length > 0) throw new Error(`expectNotOffered: ${hit.join(', ')} is offered ${at}`);
+    if (names(p, want, o.clauseOf)) throw new Error(`expectNotOffered: a prompt names ${want.join(', ')} ${at}`);
   });
   const tryIt = attempt ?? (t.prompt !== null && t.answer !== undefined && t.withRewind !== undefined ? () => t.withRewind?.(() => t.answer?.(...want)) : undefined);
   if (tryIt !== undefined) {
@@ -181,12 +201,12 @@ export function expectNotOffered(t: Observed, id: string | readonly string[], at
  * K415: a forced effect that does not fire. No event naming `id` in the scenario's events (after `act` when given), no prompt
  * open, and with `act` the state unchanged by it (`same` projects the part that must not move; default the whole state).
  */
-export function expectNotFired(t: Observed, id: string | readonly string[], act?: () => unknown, same?: (s: never) => unknown): void {
+export function expectNotFired(t: Observed, id: string | readonly string[], act?: () => unknown, same?: (s: never) => unknown, o: Pick<NotOfferedOptions, 'clauseOf'> = {}): void {
   const want = ids(id);
   const key = (): string => JSON.stringify(same === undefined ? (t.s ?? null) : same(t.s as never));
   const before = key();
   act?.();
-  const fired = (t.events ?? []).find((e) => names(e, want));
+  const fired = (t.events ?? []).find((e) => names(e, want, o.clauseOf, 'expectNotFired'));
   if (fired !== undefined) throw new Error(`expectNotFired: ${JSON.stringify(fired)} fired`);
   if (t.prompt !== null) throw new Error(`expectNotFired: a prompt is open: ${JSON.stringify(t.prompt)}`);
   if (act !== undefined && key() !== before) throw new Error('expectNotFired: the state changed');

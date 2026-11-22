@@ -12,6 +12,6 @@ export { grammarReference, strictProblems, type Grammar, type NodeSpec, type Opt
 export { contentGate, type GateInput, type GateIssue } from './contentGate.ts';
 export { cardsCheck, cardsCheckMain, catalogueClauses, catalogueProblems, clauseProblems, groupClauses, maskClause, numberClauses, parseReadings, patternNotes, patternProblems, readingProblems, realRecordIo, RESTRICTION_WORDS_PATH, wordsPathOf, recordReadings, recordsHash, restrictionCounts, restrictionProblems, splitClauses, type CardRecord, type CardsCheckInput, type Catalogue, type CatalogueClause, type CataloguePattern, type ClauseInput, type Face, type OpenClause, type PatternInput, type ReadingInput, type ReadingLine, type RecordInput, type RecordIo, type RestrictionInput, type Verdict } from './cardsCheck.ts';
 export { screenProblems, screenMain, type ScreenInput } from './screen.ts';
-export { asserts, callsHelper, codeOnly, expectNotFired, expectNotOffered, testCalls, type NotOfferedOptions, type Observed, type TestCall } from './depth.ts';
+export { asserts, callsHelper, codeOnly, expectNotFired, expectNotOffered, testCalls, type ClauseOf, type NotOfferedOptions, type Observed, type TestCall } from './depth.ts';
 export { KNOWN_HEADER, knownCheck, knownGate, parseKnown, readKnown, refuseWrite, writeKnown, writeKnownMain, type KnownFindings, type KnownIo, type KnownLine, type KnownResult } from './known.ts';
 export { readScreenLogs, recordOpened, recordPrompt, type ScreenLogEntry } from './screenLog.ts';
