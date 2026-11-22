@@ -60,6 +60,14 @@ knownGate('my:check', [], k, log) // 1: the line is stale
 knownGate('my:check', ['x#1: no amount'], { ...k, write: true }, log) // 1: a check never writes
 ```
 
+38. (K677) A phrase in `words` (and in content/restriction-words.json) is a plain string, matched as before (any letter case, anywhere as a whole token run), or a `Phrase` object `{ phrase, case?, start? }`: `case: true` matches only the same letter case, `start: true` only at the start of the clause text (leading spaces skipped; after `ignore` removes its spans). An object, not a prefix such as `^`, because a prefix would change what an existing string means (a leading `^` is matched literally today) and the object reads plainly in the JSON file. `notPhrases` (`"<key>:<value>"` to phrases, same forms): when one is present in a clause, that key does not match there, either way (a printed phrase asks for no restriction, a restriction finds no printed source); other keys are untouched; default none. Tests: `k677.test.ts`.
+
+```ts
+const words = { 'moment:now': [{ phrase: 'Zorb', case: true, start: true }], 'optional:true': ['you may'] }
+const notPhrases = { 'optional:true': ['you may not'] }
+restrictionProblems({ ...input, words, notPhrases }) // "Zorb the flim." asks for moment=now; "zorb the flim." and "Then Zorb." do not; "You may not flim." asks for no optional
+```
+
 **Common mistakes:**
 - (K649, breaking) A game whose prompts showed an amount only inside an icon code, or a counted prompt with two numbers the clause does not print, now fails `cards:screen`: show the amount in words, or list the icon in `iconAmounts`; drop the stray number or pass `value`.
 - (K532, K587) Setting `amounts` or a `promptAmounts` entry (or `[]`) on a clause whose prompt drops a printed amount to make `cards:screen` pass: fix the prompt instead.

@@ -1,4 +1,7 @@
 [
+  { "q": "restriction phrase case sensitive", "first": "card-harness" },
+  { "q": "restriction word at start of text", "first": "card-harness" },
+  { "q": "restriction key not phrases", "first": "card-harness" },
   { "q": "prompt quotes printed clause", "first": "card-harness" },
   { "q": "who pays shared cost prompt", "first": "card-harness" },
   { "q": "record prompts in card tests", "first": "card-harness" },
