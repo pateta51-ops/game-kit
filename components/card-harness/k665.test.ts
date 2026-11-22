@@ -1,0 +1,81 @@
+import { describe, expect, it } from 'vitest';
+import { restrictionProblems, type Catalogue } from './index.ts';
+
+// K665: restrictions nested anywhere in a record's effect tree are found.
+const C = (id: string, text: string) => ({ id, card: id.split('#')[0] ?? '', text });
+const cat: Catalogue = { summary: { clauses: 1 }, patterns: [], oneOffs: [C('owl#1', 'You may lose 2 {gem}.')], interactions: [] };
+const words = { 'optional:true': ['you may'] };
+const run = (rec: Record<string, unknown>, o: Partial<Parameters<typeof restrictionProblems>[0]> = {}) =>
+  restrictionProblems({ catalogue: cat, records: [{ id: 'owl#1 r0', clause: 'owl#1', ...rec }], keys: ['optional', 'phase'], words, rulings: ['AR-1'], ...o });
+const pay = (extra: Record<string, unknown> = {}) => ({ op: 'pay', n: 2, ...extra });
+
+describe('K665 nested restrictions', () => {
+  it('if -> pay -> pay { optional }', () => {
+    expect(run({ op: 'if', then: [pay({ then: [pay({ optional: true })] })] })).toEqual([]);
+  });
+  it('under eachPlayer effects[]', () => {
+    expect(run({ op: 'eachPlayer', effects: [pay({ optional: true })] })).toEqual([]);
+  });
+  it('under an upgraded branch', () => {
+    expect(run({ op: 'if', upgraded: { op: 'seq', steps: [pay({ optional: true })] } })).toEqual([]);
+  });
+  it('missing at every depth still fails', () => {
+    expect(run({ op: 'if', then: [pay({ then: [pay()] })], else: [pay()] })).toEqual(['owl#1: printed "you may" has no restriction optional=true']);
+  });
+  it('a nested restriction with no printed words and no ruling fails; a ruling excuses it', () => {
+    const rec = { op: 'if', then: [pay({ phase: 'night', optional: true })] };
+    expect(run(rec)).toEqual(['owl#1 r0: phase=night has no printed source and no AR']);
+    expect(run({ ...rec, why: 'AR-1' })).toEqual([]);
+  });
+  it('a lasting record may carry its duration in a nested step', () => {
+    const o = { lasting: () => true, words: {}, keys: ['optional', 'duration'], rulings: ['AR-1'] };
+    expect(run({ op: 'if', why: 'AR-1', then: [pay({ duration: 'round' })] }, o)).toEqual([]);
+    expect(run({ op: 'if', why: 'AR-1', then: [pay()] }, o)).toEqual(['owl#1 r0: lasting effect with no duration']);
+  });
+  it('a restriction inside a target or filter is not a step restriction', () => {
+    expect(run({ op: 'pay', target: { filter: { optional: true } } })).toEqual(['owl#1: printed "you may" has no restriction optional=true']);
+    expect(run({ op: 'pay', then: [pay({ target: { filter: { phase: 'night' } } })] }, { words: {} })).toEqual([]);
+  });
+  it('a self-reference does not loop', () => {
+    const a: Record<string, unknown> = { op: 'if' };
+    a.then = [a, { op: 'pay', optional: true }];
+    expect(run(a)).toEqual([]);
+  });
+  it('a 20000-deep tree is walked', () => {
+    let deep: Record<string, unknown> = pay({ optional: true });
+    for (let i = 0; i < 20000; i++) deep = { op: 'if', then: [deep] };
+    expect(run(deep)).toEqual([]);
+  });
+  it('top level is found as before', () => {
+    expect(run({ op: 'pay', optional: true })).toEqual([]);
+  });
+
+  const cat2 = (text: string): Catalogue => ({ summary: { clauses: 1 }, patterns: [], oneOffs: [C('owl#1', text)], interactions: [] });
+  it('type words match whole tokens; "/" splits tokens by default and blocks a match only with slashJoins', () => {
+    const w = { 'kind:alpha': ['TYPE - ALPHA'], 'kind:beta': ['TYPE'] };
+    const r = (text: string, o: Record<string, unknown> = {}) => run({ op: 'pay' }, { catalogue: cat2(text), keys: ['kind'], words: w, ...o });
+    expect(r('TYPE - ALPHA/BETA: gain 1.', { words: { 'kind:alpha': ['TYPE - ALPHA'] }, slashJoins: false })).toEqual(['owl#1: printed "TYPE - ALPHA" has no restriction kind=alpha']);
+    expect(r('ALPHA/TYPE: gain 1.', { words: { 'kind:beta': ['TYPE'] } })).toEqual(['owl#1: printed "TYPE" has no restriction kind=beta']);
+    expect(r('TYPE - ALPHA/BETA: gain 1.', { words: { 'kind:alpha': ['TYPE - ALPHA'] }, slashJoins: true })).toEqual([]);
+    expect(r('ALPHA/TYPE: gain 1.', { words: { 'kind:beta': ['TYPE'] }, slashJoins: true })).toEqual([]);
+    expect(r('TYPES: gain 1.', { words: { 'kind:beta': ['TYPE'] } })).toEqual([]);
+  });
+  it('ignore: reminder text in parentheses is not a source, only when asked', () => {
+    const c = cat2('Gain 1. ¶ (Upgraded: you may lose 2.)');
+    expect(run({ op: 'pay' }, { catalogue: c })).toEqual(['owl#1: printed "you may" has no restriction optional=true']);
+    expect(run({ op: 'pay' }, { catalogue: c, ignore: [/^\(.*\)$/] })).toEqual([]);
+  });
+  it('ignore removes only the matched span: the rest of the line is still read', () => {
+    const c = cat2('(Reminder) You may lose 2 (once).');
+    expect(run({ op: 'pay' }, { catalogue: c, ignore: [/\([^)]*?\)/] })).toEqual(['owl#1: printed "you may" has no restriction optional=true']);
+    expect(run({ op: 'pay', optional: true }, { catalogue: c, ignore: [/\([^)]*?\)/] })).toEqual([]);
+    expect(run({ op: 'pay' }, { catalogue: cat2('(Reminder: you may lose 2.)'), ignore: [/\([^)]*?\)/] })).toEqual([]);
+  });
+  it('a printed icon that a pay step in the tree pays counts as its restriction', () => {
+    const c = cat2('{gem 2}: gain 1.');
+    const o = { catalogue: c, keys: ['cost'], words: { 'cost:icon': ['{gem 2}'] }, paidIcon: (n: Record<string, unknown>) => (n.op === 'pay' ? `{${String(n.res)} ${String(n.n)}}` : undefined) };
+    expect(run({ op: 'seq', steps: [{ op: 'pay', res: 'gem', n: 2, then: [{ op: 'gain', n: 1 }] }] }, o)).toEqual([]);
+    expect(run({ op: 'seq', steps: [{ op: 'pay', res: 'gem', n: 3 }] }, o)).toEqual(['owl#1: printed "{gem 2}" has no restriction cost=icon']);
+    expect(run({ op: 'seq', steps: [{ op: 'pay', res: 'gem', n: 2 }] }, { catalogue: o.catalogue, keys: o.keys, words: o.words })).toEqual(['owl#1: printed "{gem 2}" has no restriction cost=icon']);
+  });
+});
