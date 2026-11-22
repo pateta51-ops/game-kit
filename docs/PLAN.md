@@ -380,6 +380,7 @@ The blind matching test's result was not recorded: the PR, its comments and docs
 | K673 | kit tooling: search cases run as a check, ranking that ignores a single common word on candidates, and every row file carries a state line. | M | owner (22 Nov 2026): search and status kept right every time the kit changes | done |
 | K676 | search: answer the planners' unanswered searches of 22 Nov with tags and cases. | M | owner (22 Nov 2026): every planner search that found nothing is answered before a tag | done |
 | K687 | search: answer 12 more planner searches of 22 Nov. | S | owner (22 Nov 2026): every planner search that found nothing is answered before a tag | done |
+| K699 | search: answer 40 more planner searches of 22 Nov. | S | owner (22 Nov 2026): every planner search that found nothing is answered before a tag | done |
 
 ## Candidates
 
