@@ -23,5 +23,6 @@
     ]
   },
   "needs": ["engine-core", "card-harness"],
+  "packages": ["vitest"],
   "imports": ["engine-core/fake/counter.ts (tests only, by fake/game.ts)"]
 }

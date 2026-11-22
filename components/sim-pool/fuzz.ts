@@ -2,6 +2,7 @@
 // invariant checked after every action; each failure is a seed plus a step, and `--seed X --until N` replays it to there.
 import { readFileSync, writeFileSync } from 'node:fs';
 import type { GameSpec, SimRecord } from './play.ts';
+import type { Proof } from './unreached.ts';
 import { runGames } from './pool.ts';
 
 export type FindingKind = 'violation' | 'runaway' | 'endless' | 'exception' | 'hidden-info';
@@ -48,10 +49,10 @@ export interface WholeGameOptions {
   readonly clauses?: readonly string[] | undefined;
   /** A record's group; default `<settings.mode>/<settings.tier>` (`-` for one not set). */
   readonly group?: ((r: SimRecord) => string) | undefined;
-  /** K651: clauses no game reaches, each proven by a counted full-resolve test (`proof`). Given, a listed clause that resolved fails as stale and one with no proof fails; unset, the report is as before. */
+  /** K651: clauses no game reaches, each proven by a passing full-resolve test of this run (`proof`). Given, a listed clause that resolved fails as stale and one with no proof fails; unset, the report is as before. */
   readonly unreached?: readonly UnreachedEntry[] | undefined;
-  /** K651: clause id to its passing counted full-resolve tests: `provenClauses` (unreached.ts) over card-harness's depth gate and the test run's report. */
-  readonly proof?: Readonly<Record<string, readonly string[]>> | undefined;
+  /** K651: `provenClauses` (unreached.ts) over the log `proveResolved` (prove.ts) wrote in this run; its `problems` fail the check. */
+  readonly proof?: Proof | undefined;
   /** K651: coverage rounds after the run (`fuzzMain`), steering toward the clauses still unreached. */
   readonly rounds?: CoverageRounds | undefined;
   /** K651: write each finding with its seed, driver and settings to this JSON file (`fuzzMain`); `--finding S` replays one from it. */
@@ -127,7 +128,7 @@ export function wholeGame(run: FuzzRun, o: WholeGameOptions = {}, rounds?: Whole
   const neverResolved = o.unreached ? never.filter((c) => !listed.has(c)) : never;
   const noOp = [...new Set(run.records.flatMap((r) => r.noOp ?? []))].filter((c) => !resolved.includes(c)).sort();
   const stale = [...listed].filter((c) => resolved.includes(c));
-  const proofOf = (c: string): readonly string[] => o.proof?.[c] ?? [];
+  const proofOf = (c: string): readonly string[] => o.proof?.proven[c] ?? [];
   const unproven = never.filter((c) => listed.has(c) && proofOf(c).length === 0);
   const proven = never.filter((c) => listed.has(c) && proofOf(c).length > 0).map((c) => ({ clause: c, tests: proofOf(c) }));
   const failures = [
@@ -135,6 +136,7 @@ export function wholeGame(run: FuzzRun, o: WholeGameOptions = {}, rounds?: Whole
     ...(neverResolved.length ? [`never resolved: ${neverResolved.join(', ')}`] : []),
     ...(stale.length ? [`stale unreached entry (resolved in a game): ${stale.join(', ')}`] : []),
     ...(unproven.length ? [`unreached with no counted full-resolve test: ${unproven.join(', ')}`] : []),
+    ...(o.unreached ? (o.proof?.problems ?? []) : []),
   ];
   return { groups, byKind, resolved, neverResolved, noOp, proven, stale, unproven, ...(rounds ? { rounds } : {}), failures };
 }

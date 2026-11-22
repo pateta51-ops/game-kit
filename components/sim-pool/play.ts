@@ -68,13 +68,15 @@ export interface SimGame<G extends GameTypes, S = unknown, O = unknown> {
   reshuffleHidden?(state: G['state'], seat: KernelPrompt['seat'], rng: DriverRng, content: G['content']): G['state'];
   /** K490: the game's ability trace (card-harness `traceAbilities` fits): cleared before each game; its `resolved` ids are stored on the record as `resolved`, so a run merges them across workers. */
   trace?(content: G['content']): ResolvedTrace | undefined;
-  /** K651: did the effect do something? With `trace`, each id resolved inside an action counts (`resolved`) only when this returns true for the state before and after that action; else it goes to the record's `noOp`. Ids resolved in setup or between actions count unchecked. */
+  /** K651: did the effect do something? With `trace`, each resolve counts (`resolved`) only when this returns true, else it goes to the record's `noOp`: per effect when the trace gives `effects` (the state around that one effect), else over the whole action (a no-op clause then counts when another effect of the same action moves the part it reads). Ids without an effect entry resolved in setup or between actions count unchecked. */
   changed?(clause: string, before: G['state'], after: G['state'], content: G['content']): boolean;
 }
 
 /** K490: what `SimGame.trace` returns. */
 export interface ResolvedTrace {
   readonly resolved: Iterable<string>;
+  /** K651: one entry per effect resolved, with the state just before and just after that effect (the game's engine knows the boundary); `SimGame.changed` judges each, and only ids without an entry are judged over the whole action. `clear()` empties it. */
+  readonly effects?: Iterable<{ readonly clause: string; readonly before: unknown; readonly after: unknown }>;
   clear(): void;
 }
 
@@ -223,9 +225,12 @@ export function playOne<G extends GameTypes, S, O = unknown>(game: SimGame<G, S,
   trace?.clear();
   const counted = trace && game.changed ? new Set<string>() : undefined;
   const noOp = new Set<string>();
-  const take = (): void => {
-    if (!counted || !trace) return;
-    for (const id of trace.resolved) counted.add(id);
+  const judge = (before?: G['state'], after?: G['state']): void => {
+    if (!counted || !trace || !game.changed) return;
+    const effects = [...(trace.effects ?? [])];
+    for (const e of effects) (game.changed(e.clause, e.before as G['state'], e.after as G['state'], content) ? counted : noOp).add(e.clause);
+    const each = new Set(effects.map((e) => e.clause));
+    for (const id of trace.resolved) if (!each.has(id)) (before === undefined || after === undefined || game.changed(id, before, after, content) ? counted : noOp).add(id);
     trace.clear();
   };
   const render = (st: G['state']): void => {
@@ -251,7 +256,7 @@ export function playOne<G extends GameTypes, S, O = unknown>(game: SimGame<G, S,
     const start = game.start(spec, content);
     seen = game.observation?.(spec, content);
     const first = createGame(game.rules, start.options, start.rules, content);
-    take();
+    judge();
     let s: G['state'] = first.state;
     state = s;
     violations.push(...first.violations);
@@ -285,13 +290,10 @@ export function playOne<G extends GameTypes, S, O = unknown>(game: SimGame<G, S,
       if (until !== undefined && actions.length >= until) break;
       actions.push(a);
       t = performance.now();
-      take();
+      judge();
       const r = applyAction(game.rules, s, a, content);
       ms.apply = performance.now() - t;
-      if (counted && trace && game.changed) {
-        for (const id of trace.resolved) (game.changed(id, s, r.state, content) ? counted : noOp).add(id);
-        trace.clear();
-      }
+      judge(s, r.state);
       const w = s.rng;
       const n = r.state.rng;
       if (game.undoCheck && ((a.kind === 'answer' && a.reseed !== undefined) || n.a !== w.a || n.b !== w.b || n.c !== w.c || n.d !== w.d) && !isRevealing(r.events))
