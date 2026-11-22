@@ -3,7 +3,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { afterAll, describe, expect, it } from 'vitest';
-import { finish, teardown } from '../scripts/agent.mjs';
+import { finish, teardown, type Bg } from '../scripts/agent.mjs';
 
 const KIT = path.resolve(import.meta.dirname, '..', 'kit.mjs');
 const root = fs.mkdtempSync(path.join(os.tmpdir(), 'agent-test-'));
@@ -74,8 +74,8 @@ describe('agent commands (K216): plain node, no tsx', () => {
     const sent: string[] = [];
     expect(finish(['--repo', main], io, (_c, _a, input) => (sent.push(input), { status: 0, output: 'all good' }), false)).toBe(0);
     expect(out[0]).toMatch(new RegExp(`^PASS ${sha} `));
-    expect(sent[0]).toContain('npm run check');
-    expect(sent[0]).toContain(`"$H" run --label 'finish `); // K399: through the heavy queue when installed
+    expect(sent[1]).toContain('npm run check'); // sent[0] is the K572 queue status query
+    expect(sent[1]).toContain(`"$H" run --label 'finish `); // K399: through the heavy queue when installed
     expect(finish(['--repo', main, '--check', 'echo hi'], io, () => ({ status: 3, output: 'boom' }), false)).toBe(1);
     expect(out[1]!.startsWith(`check failed ${sha} (check: echo hi) `)).toBe(true); // K416
     expect(out[1]).toContain('exit 3');
@@ -94,7 +94,7 @@ describe('agent commands (K216): plain node, no tsx', () => {
     const io = { out: (l: string) => void out.push(l), err: (l: string) => void out.push(l) };
     const sent: string[] = [];
     finish(['--repo', main], io, (_c, _a, input) => (sent.push(input), { status: 0, output: '' }), false);
-    expect(sent[0]).toContain('export TMPDIR="$d-tmp"');
+    expect(sent[1]).toContain('export TMPDIR="$d-tmp"');
     const cmds: string[] = [];
     expect(finish(['--repo', main], io, (c) => (cmds.push(c), { status: null, output: '' }), true)).toBe(1);
     expect(cmds).toEqual(['wsl']);
@@ -144,5 +144,88 @@ describe('agent commands (K216): plain node, no tsx', () => {
     delete j['agent'];
     fs.writeFileSync(lock, JSON.stringify(j));
     expect(kit(game, 'check').status).toBe(0);
+  });
+});
+
+describe('finish: one run per branch, sign of life, --detach and --result (K572)', () => {
+  const io = () => { const out: string[] = []; const err: string[] = []; return { out, err, io: { out: (l: string) => void out.push(l), err: (l: string) => void err.push(l) } }; };
+  const isStatus = (input: string) => input.includes('"$H" status');
+  const job = (o: Record<string, unknown>) => ({ id: 'j9', label: 'finish main', priority: 'normal', queuedAt: 5, ...o });
+  const st = (running: unknown[], waiting: unknown[]) => ({ status: 0, output: JSON.stringify({ slots: 1, running, waiting, history: [] }) });
+  function fresh(name: string) { const main = repo(name); fs.rmSync(path.join(main, 'node_modules'), { recursive: true }); return { main, sha: g(main, 'rev-parse', 'HEAD').trim() }; }
+  function fakeBg(home: string, onSleep: (t: number) => void = () => {}) {
+    const b = { t: 1000, starts: [] as string[], home, start: (dir: string) => void b.starts.push(dir), sleep: (ms: number) => { b.t += ms; onSleep(b.t); }, now: () => b.t };
+    return b;
+  }
+
+  it('a second run is refused while the queue holds finish <branch>: job named, exit 3, nothing cloned', () => {
+    const { main } = fresh('k1');
+    for (const [s, word] of [[st([job({ runningMs: 125000 })], []), 'running for 02:05'], [st([], [job({ waitedMs: 61000 })]), 'waiting for 01:01']] as const) {
+      const o = io(); const sent: string[] = [];
+      expect(finish(['--repo', main], o.io, (_c, _a, input) => (sent.push(input), isStatus(input) ? s : { status: 0, output: '' }), false)).toBe(3);
+      expect(o.err[0]).toContain('job j9 "finish main"');
+      expect(o.err[0]).toContain(word);
+      expect(sent.filter((x) => !isStatus(x))).toHaveLength(0);
+      expect(o.out.join('\n')).not.toMatch(/PASS/);
+    }
+  });
+
+  it('queue unreachable or not installed: the run goes ahead as before', () => {
+    const { main, sha } = fresh('k2');
+    for (const s of [{ status: 3, output: 'no queue at http://127.0.0.1:1' }, { status: 9, output: '' }]) {
+      const o = io(); const sent: string[] = [];
+      expect(finish(['--repo', main], o.io, (_c, _a, input) => (sent.push(input), isStatus(input) ? s : { status: 0, output: 'all good' }), false)).toBe(0);
+      expect(sent).toHaveLength(2);
+      expect(o.out[0]!.startsWith(`PASS ${sha} `)).toBe(true);
+    }
+  });
+
+  it('prints queued, N ahead then running, mm:ss about once a minute, then PASS as before', () => {
+    const { main, sha } = fresh('k3');
+    const home = path.join(root, 'k3-home');
+    let rcDir = '';
+    const b = fakeBg(home, (t) => { if (t >= 201000 && rcDir) { fs.writeFileSync(path.join(rcDir, 'out.log'), 'all good\n'); fs.writeFileSync(path.join(rcDir, 'rc'), '0\n'); } });
+    b.start = (dir: string) => { rcDir = dir; b.starts.push(dir); };
+    const exec = (_c: string, _a: string[], input: string) => b.t < 101000 ? st([job({ id: 'o', label: 'other' })], [job({ id: 'a', label: 'x', queuedAt: 1 }), job({ id: 'b', label: 'y', priority: 'high', queuedAt: 9 }), job({ waitedMs: 1 }), job({ id: 'c', label: 'z', queuedAt: 7 })]) : isStatus(input) ? st([job({ runningMs: b.t - 101000 })], []) : { status: 0, output: '' };
+    // the first status query (before the run) must not see our own job: a queue with only others
+    let first = true;
+    const o = io();
+    expect(finish(['--repo', main], o.io, (c, a, input) => { if (first) { first = false; return st([], []); } return exec(c, a, input); }, false, b as Bg)).toBe(0);
+    expect(o.out.slice(0, 3)).toEqual(['finish main: queued, 2 ahead', 'finish main: running, 00:20', 'finish main: running, 01:20']);
+    expect(o.out[3]!.startsWith(`PASS ${sha} `)).toBe(true);
+    expect(o.out[3]).toContain('all good');
+    expect(fs.readFileSync(path.join(rcDir, 'run.sh'), 'utf8')).toContain('in.sh');
+    expect(fs.readFileSync(path.join(rcDir, 'in.sh'), 'utf8')).toContain(`--label 'finish main'`);
+  });
+
+  it('--detach returns at once; --result says running, then gives the stored PASS and exit 0, or a failure and non-zero', () => {
+    const { main, sha } = fresh('k4');
+    const home = path.join(root, 'k4-home');
+    const b = fakeBg(home);
+    let queue = st([], []);
+    const exec = (_c: string, _a: string[], input: string) => isStatus(input) ? queue : { status: 0, output: '' };
+    const o = io();
+    expect(finish(['--repo', main, '--detach'], o.io, exec, false, b as Bg)).toBe(0);
+    expect(b.starts).toHaveLength(1);
+    const dir = b.starts[0]!;
+    expect(dir.startsWith(path.join(home, '.game-kit', 'finish'))).toBe(true);
+    expect(o.out[0]).toContain(dir);
+    queue = st([job({ runningMs: 65000 })], []);
+    expect(finish(['--repo', main, '--result'], o.io, exec, false, b as Bg)).toBe(4);
+    expect(o.out[1]).toMatch(/^finish main: running, 01:05; result: /);
+    fs.writeFileSync(path.join(dir, 'out.log'), 'tests ok\n');
+    fs.writeFileSync(path.join(dir, 'rc'), '0\n');
+    expect(finish(['--repo', main, '--result'], o.io, exec, false, b as Bg)).toBe(0);
+    expect(o.out[2]!.startsWith(`PASS ${sha} `)).toBe(true);
+    expect(o.out[2]).toContain('tests ok');
+    queue = st([], []);
+    expect(finish(['--repo', main, '--detach'], o.io, exec, false, b as Bg)).toBe(0);
+    expect(fs.existsSync(path.join(dir, 'rc'))).toBe(false);
+    fs.writeFileSync(path.join(dir, 'out.log'), 'boom\n');
+    fs.writeFileSync(path.join(dir, 'rc'), '2\n');
+    expect(finish(['--repo', main, '--result'], o.io, exec, false, b as Bg)).toBe(1);
+    expect(o.out.at(-1)!.startsWith(`FAIL ${sha} `)).toBe(true);
+    expect(o.out.at(-1)).toContain('exit 2');
+    expect(o.out.at(-1)).toContain('boom');
   });
 });
