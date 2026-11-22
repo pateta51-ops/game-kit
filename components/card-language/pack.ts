@@ -63,6 +63,8 @@ export interface PackEnv {
   readonly paidFrom?: number;
   /** K529, set by the pack while a cost judged as a whole is paid: the cost steps still to pay after this one. */
   readonly owed?: readonly Step[];
+  /** K598: the seat the effect began with; set by `choosePlayer` and `eachPlayer` when they hand it to a seat (a game may set it too). */
+  readonly actor?: string;
 }
 /** A move waiting for its occurrence (`cardMoves`, keyed by occurrence id). */
 export interface PendingMove {
@@ -139,8 +141,10 @@ export interface OfferPolicy<S = unknown> {
   readonly decide?: (s: S, steps: readonly (PackStep | Step)[], env: PackEnv, check: OfferCheck) => OfferCheck;
   /** K605: the reason on a barred option: `code` (default: `cannotPay` or `noChange`, as before) or `why` (the reason of `judge(..., { why: true })`). With `decide` set, a reason it returns is used under both. */
   readonly barReason?: 'code' | 'why';
-  /** K598, `chooseOption`: `any` (default) or `full` (an option `resolves` answers `full` bars each `part` one, reason `partial`; every option `none`: not offered; `unknown` never barred). */
+  /** K598, `chooseOption`: `any` (default) or `full` (among the enabled options, one `resolves` answers `full` bars each `part` one, reason `partial`, and each `none` one, reason `none`; every option `none`: not offered; `unknown` never barred). */
   readonly prefer?: 'any' | 'full';
+  /** K598, with `prefer: 'full'`: when a `chooseOption` is not offered: `nothing` (default: no option resolves at all) or `noFull` (also when it is another seat's, `env.actor` set and not `env.seat`, and no option may be full). */
+  readonly forcedSkip?: 'nothing' | 'noFull';
 }
 export interface PackConfig<G extends GameTypes, E extends PackEnv = PackEnv> {
   /** Default zones per verb (names; `hand` means `hand:<seat>` when that zone exists). */
@@ -968,11 +972,17 @@ export function cardPack<G extends GameTypes, E extends PackEnv = PackEnv>(cfg: 
       if (dry !== null || ((P.deadChoice ?? 'today') === 'today' && !pre)) return ask(ctx, st, e, 'chooseOption', list(st.options.length), 1, 1);
       const cs = st.options.map((o): OfferCheck => ((P.deadChoice ?? 'today') === 'today' ? { answer: 'yes' } : barCheck(ctx.s, ctx.content, o, e)));
       if (!cs.some((c) => live(c.answer))) return;
-      // K598, prefer full: read on the seat's view (resolves); a full option bars each part one, nothing resolvable at all is not offered, unknown stays open.
-      const rs = pre ? st.options.map((o) => resolves(ctx.s, ctx.content, o, e)) : [];
-      if (pre && rs.every((r) => r.answer === 'none')) return;
-      const full = rs.some((r) => r.answer === 'full');
-      ask(ctx, st, e, 'chooseOption', cs.map((c, i) => (!live(c.answer) && P.deadChoice === 'bar' ? bar(String(i), why(S(ctx), st.options[i] ?? [], e, c)) : full && rs[i]?.answer === 'part' ? bar(String(i), 'partial', undefined, P.barReason === 'why' ? [...new Set(rs[i].skipped.map((k) => k.reason))].join() : undefined) : { id: String(i), enabled: true })), 1, 1);
+      const opts = cs.map((c, i) => (live(c.answer) || P.deadChoice !== 'bar' ? { id: String(i), enabled: true } : bar(String(i), why(S(ctx), st.options[i] ?? [], e, c))));
+      if (!pre) return ask(ctx, st, e, 'chooseOption', opts, 1, 1);
+      // K598, prefer full, over the options still enabled, on the seat's view (resolves): a full one bars each part or none one; unknown is never barred.
+      const rs = opts.map((o, i) => (o.enabled ? resolves(ctx.s, ctx.content, st.options[i] ?? [], e) : undefined));
+      const full = rs.some((x) => x?.answer === 'full');
+      // Not offered: nothing resolves at all; under forcedSkip noFull, a choice handed to another seat (env.actor) where none may be full.
+      if (P.forcedSkip === 'noFull' && e.actor !== undefined && e.actor !== e.seat ? !rs.some((x) => x?.answer === 'full' || x?.answer === 'unknown') : rs.every((x) => x === undefined || x.answer === 'none')) return;
+      ask(ctx, st, e, 'chooseOption', opts.map((o, i) => {
+        const x = rs[i];
+        return full && x !== undefined && (x.answer === 'part' || x.answer === 'none') ? bar(String(i), x.answer === 'part' ? 'partial' : 'none', undefined, P.barReason === 'why' ? [...new Set(x.skipped.map((k) => k.reason))].join() : undefined) : o;
+      }), 1, 1);
     },
       (ctx, st: Extract<PackStep, { op: 'chooseOption' }>, e, a) => go(ctx, st.options[Number(a[0])] ?? [], e)),
     may: flow({ then: eff }, (ctx, st: Extract<PackStep, { op: 'may' }>, e) => {
@@ -1013,8 +1023,8 @@ export function cardPack<G extends GameTypes, E extends PackEnv = PackEnv>(cfg: 
       const seats = cfg.seats(ro(ctx.s)).filter((p) => !st.others || p !== e.seat);
       if (seats.length > 0) return ask(ctx, st, e, 'choosePlayer', seats.map((id) => ({ id, enabled: true })), 1, 1);
       const seat = cfg.noPlayer?.(ro(ctx.s), e);
-      if (seat !== undefined) go(ctx, st.then, { ...e, seat });
-    }, (ctx, st: Extract<PackStep, { op: 'choosePlayer' }>, e, a) => go(ctx, st.then, { ...e, seat: a[0] ?? e.seat })),
+      if (seat !== undefined) go(ctx, st.then, { ...e, seat, actor: e.actor ?? e.seat });
+    }, (ctx, st: Extract<PackStep, { op: 'choosePlayer' }>, e, a) => go(ctx, st.then, { ...e, seat: a[0] ?? e.seat, actor: e.actor ?? e.seat })),
     choosePayment: flow({ ways: effs, then: eff }, (ctx, st: Extract<PackStep, { op: 'choosePayment' }>, e) => {
       const s = S(ctx);
       // K583, paid = effect: a payable way whose effect would change nothing is dead for `deadChoice`.
@@ -1058,7 +1068,7 @@ export function cardPack<G extends GameTypes, E extends PackEnv = PackEnv>(cfg: 
       if (!cfg.seats) throw new EngineBugError('card-language pack: eachPlayer needs cfg.seats');
       const all = cfg.seats(ro(ctx.s));
       const i = Math.max(0, all.indexOf(e.seat));
-      ctx.then(...([...all.slice(i), ...all.slice(0, i)].flatMap((seat) => effectTasks(st.then, { ...e, seat })) as unknown as G['task'][]));
+      ctx.then(...([...all.slice(i), ...all.slice(0, i)].flatMap((seat) => effectTasks(st.then, { ...e, seat, actor: e.actor ?? e.seat })) as unknown as G['task'][]));
     }),
     repeat: flow({ times: amount, then: eff }, (ctx, st: Extract<PackStep, { op: 'repeat' }>, e) => go(ctx, Array.from({ length: n(st.times, e) }, () => st.then).flat(), e)),
     count: flow({ what: str, then: eff }, (ctx, st: Extract<PackStep, { op: 'count' }>, e) => {

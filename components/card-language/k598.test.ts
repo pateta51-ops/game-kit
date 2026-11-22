@@ -40,9 +40,27 @@ describe('card-language prefer full (K598): prior-art cases restated on the made
   it('K598 an option that wins the game counts as full and bars a part one', () => {
     expect(barred(ask(FULL, choice(PART, WIN)))).toEqual([['0', 'partial', undefined]]);
   });
-  it('K598 a none option beside a full one is not barred for it (deadChoice bars it, with noChange)', () => {
-    expect(barred(ask(FULL, choice(NONE, PART, [DRAW])))).toEqual([['1', 'partial', undefined]]);
+  it('K598 beside a full option only full ones stay enabled: a none option is barred too (none); under deadChoice bar it keeps noChange', () => {
+    expect(barred(ask(FULL, choice(NONE, PART, [DRAW])))).toEqual([['0', 'none', undefined], ['1', 'partial', undefined]]);
     expect(barred(ask({ prefer: 'full', deadChoice: 'bar' }, choice(NONE, PART, [DRAW])))).toEqual([['0', 'noChange', undefined], ['1', 'partial', undefined]]);
+  });
+  it('K598 an empty option ("keep it") is full and bars a part one; under deadChoice bar it is barred first, so prefer never leaves nothing enabled', () => {
+    expect(barred(ask(FULL, choice([], PART)))).toEqual([['1', 'partial', undefined]]);
+    const p = ask({ prefer: 'full', deadChoice: 'bar' }, choice([], PART));
+    expect([barred(p), p?.options.filter((o) => o.enabled).map((o) => o.id)]).toEqual([[['0', 'noChange', undefined]], ['1']]);
+  });
+  it('K598 choose 2 of (a repeated choice): each pick is judged when it opens; after draw 2 empties the deck no option is full and the part one opens', () => {
+    const { s, prompts } = game(FULL).play([{ op: 'repeat', times: 2, then: choice([{ op: 'draw', count: 2 }], PART) }], [['0'], ['1']]);
+    expect([prompts.map(barred), cardsIn(s, 'hand:a').length, gold(s)]).toEqual([[[['1', 'partial', undefined]], []], 4, 4]);
+  });
+  it('K598 forcedSkip noFull: a choice handed to another seat with no full option is skipped; poor: the default, the own seat, or an unknown option still asks', () => {
+    const other = (offer: OfferPolicy<S>, ...options: Eff[]) => game(offer).play([{ op: 'choosePlayer', others: true, then: choice(...options) }], [['b']], undefined, true).s.prompt;
+    const NO_FULL: OfferPolicy<S> = { prefer: 'full', forcedSkip: 'noFull' };
+    expect(other(NO_FULL, PART, NONE)).toBeNull();
+    expect(other(FULL, PART, NONE)?.kind).toBe('chooseOption');
+    expect(ask(NO_FULL, choice(PART, NONE))?.kind).toBe('chooseOption');
+    expect(other(NO_FULL, PART, [{ op: 'custom', name: 'roll' }])?.kind).toBe('chooseOption');
+    expect(barred(other(NO_FULL, PART, [GAIN]))).toEqual([['0', 'partial', undefined]]);
   });
   it('K598 with barReason why a barred option carries its skipped steps\' reasons in missing', () => {
     expect(barred(ask({ prefer: 'full', barReason: 'why' }, choice(PART, [DRAW], [{ op: 'draw', count: 3 }])))).toEqual([['0', 'partial', 'condition'], ['2', 'partial', 'short']]);
@@ -96,7 +114,7 @@ describe('card-language prefer full (K598): agrees with playing every answer', (
         if (ts.some((t) => t === undefined)) continue;
         n.choices += 1;
         n.unknown += ts.includes('unknown') ? 1 : 0;
-        const want = ts.every((t) => t === 'none') ? 'skip' : JSON.stringify(ts.includes('full') ? ts.flatMap((t, k) => (t === 'part' ? [[String(k), 'partial']] : [])) : []);
+        const want = ts.every((t) => t === 'none') ? 'skip' : JSON.stringify(ts.includes('full') ? ts.flatMap((t, k) => (t === 'part' ? [[String(k), 'partial']] : t === 'none' ? [[String(k), 'none']] : [])) : []);
         expect([options, shown[0]]).toEqual([options, want]);
         n[want === 'skip' ? 'skipped' : want === '[]' ? 'open' : 'barred'] += 1;
       }
@@ -108,5 +126,35 @@ describe('card-language prefer full (K598): agrees with playing every answer', (
     expect(n.open).toBeGreaterThan(20);
     expect(n.unknown).toBeGreaterThan(20);
     expect(inDryRun()).toBe(false);
+  }, 240000);
+});
+
+// K598 review: every combination of prefer, deadChoice and forcedSkip on random choices (own seat and another seat's):
+// a choice never opens with nothing enabled, and it is skipped exactly when a rule says so.
+describe('card-language prefer full (K598): never a choice with nothing enabled', () => {
+  it('K598 random choices under every prefer x deadChoice x forcedSkip: at least one enabled option, or skipped by rule', () => {
+    const n = { asked: 0, skipped: 0, barred: 0 };
+    const pol = (['any', 'full'] as const).flatMap((prefer) => (['today', 'skip', 'bar'] as const).flatMap((deadChoice) => (['nothing', 'noFull'] as const).map((forcedSkip): OfferPolicy<S> => ({ prefer, deadChoice, forcedSkip }))));
+    for (const offer of pol) {
+      const g = game(offer);
+      const { s, content } = g.at();
+      const eff = gen(5983, true);
+      for (let i = 0; i < 60; i += 1) {
+        const options = Array.from({ length: 1 + (i % 3) }, (_, k) => (k === 1 && i % 4 === 0 ? [] : eff(1)));
+        const forced = i % 2 === 1;
+        const p = forced ? g.play([{ op: 'choosePlayer', others: true, then: choice(...options) }], [['b']], undefined, true).s.prompt : g.play(choice(...options), [], undefined, true).s.prompt;
+        const env = forced ? { seat: 'b', source: 'p1', actor: 'a' } : { seat: 'a', source: 'p1' };
+        const on = options.map((o) => offer.deadChoice === 'today' || g.pack.wouldChange(s, content, o, env) !== 'no');
+        const rs = options.map((o, k) => (on[k] === true ? g.pack.resolves(s, content, o, env).answer : undefined));
+        const skip = !on.some(Boolean) || (offer.prefer === 'full' && (offer.forcedSkip === 'noFull' && forced ? !rs.some((r) => r === 'full' || r === 'unknown') : rs.every((r) => r === undefined || r === 'none')));
+        expect([options, p === null]).toEqual([options, skip]);
+        if (p !== null) expect([options, p.options.some((o) => o.enabled)]).toEqual([options, true]);
+        n[p === null ? 'skipped' : 'asked'] += 1;
+        n.barred += p?.options.some((o) => !o.enabled) === true ? 1 : 0;
+      }
+    }
+    expect(n.asked).toBeGreaterThan(400);
+    expect(n.skipped).toBeGreaterThan(30);
+    expect(n.barred).toBeGreaterThan(50);
   }, 240000);
 });
