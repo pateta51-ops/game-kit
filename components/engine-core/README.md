@@ -23,7 +23,7 @@ The kernel of a game engine: seeded random numbers, canonical JSON and hashes, t
 - Using the old `ctx.then` then `ctx.ask` form in new code: it is deprecated.
 - A prompt nobody can answer (fewer enabled options than `min`): `EngineBugError`; give a legal option or skip the prompt.
 - A derived value that keeps changing in the checkpoint: `EngineBugError` after the recompute cap.
-- A modifier whose operation has no step in the `NumberOrder`, a default floor or cap without its step, or a `min` on anything but a reduction: `EngineBugError`.
+- A modifier whose operation has no step in the `NumberOrder`, a default floor or cap without its step, a `min` on anything but a reduction, or `decreases: 'highestMin'` without split `increase`, `decrease` steps: `EngineBugError`.
 - Reading `setters: 'last'` as "the newest wins": it is the last in the array given.
 - Using `numberParts` for a stored value clamped after each change, or with a table lookup in the middle: see "Not this part" in `numbers.md`.
 - Storing a modified number in state: read it at use, so an ended effect or a source that left stops counting.

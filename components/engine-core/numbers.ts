@@ -30,7 +30,7 @@ export interface NumberOrder {
   readonly setters?: 'last' | 'lowest' | 'highest';
   /** A set never raises the value. */
   readonly setOnlyLowers?: boolean;
-  /** The order of the reductions in a `decrease` step: as given (default), or highest `min` first, then the largest reduction. With `highestMin` an unsplit `add` step applies its raises first, then its reductions in that order. */
+  /** The `decrease` step's order: as given (default), or highest `min` first, then the largest reduction. `highestMin` needs a `decrease` step and no `add` step (else an `EngineBugError`). */
   readonly decreases?: 'gather' | 'highestMin';
   /** Rounding after a multiplier (none: the value stays as it is); `up` is toward plus infinity, so toward zero on a negative. */
   readonly round?: 'up' | 'down';
@@ -79,6 +79,7 @@ export interface NumberResult {
 export function numberParts(base: number, modifiers: readonly NumberModifier[], order: NumberOrder, opts: NumberOptions = {}): NumberResult {
   const steps = order.steps;
   for (const k of ['floor', 'cap'] as const) if (order[k] !== undefined && !steps.includes(k)) throw new EngineBugError(`numberParts: the order has a default ${k} but no "${k}" step`);
+  if (order.decreases === 'highestMin' && (steps.includes('add') || !steps.includes('decrease'))) throw new EngineBugError('numberParts: decreases "highestMin" needs a "decrease" step and no "add" step');
   const parts: NumberPart[] = [];
   const idle: UnchangedPart[] = [];
   const live: NumberModifier[] = [];
@@ -93,7 +94,7 @@ export function numberParts(base: number, modifiers: readonly NumberModifier[], 
     if (m.per !== undefined) {
       const n = opts.counts?.[m.per];
       if (n === undefined) throw new EngineBugError(`numberParts: no count "${m.per}" for ${m.source}`);
-      x = { ...m, amount: m.amount * n(m) + 0 };
+      x = { ...m, amount: m.amount * n(m) };
     }
     if (x.min !== undefined && (x.op !== 'add' || x.amount > 0)) throw new EngineBugError(`numberParts: ${x.source} has a minimum, which only a reduction takes`);
     if (!steps.includes(x.op) && !(x.op === 'add' && ((x.amount <= 0 && steps.includes('decrease')) || (x.amount >= 0 && steps.includes('increase'))))) throw new EngineBugError(`numberParts: ${x.source} has "${x.op}" but the order has no step for it`);
@@ -163,11 +164,7 @@ export function numberParts(base: number, modifiers: readonly NumberModifier[], 
       }
     } else {
       let ms = take((m) => m.op === 'add' && (step === 'add' || (step === 'decrease' ? m.amount <= 0 : m.amount >= 0)));
-      const byMin = (a: NumberModifier, b: NumberModifier): number => (b.min ?? -Infinity) - (a.min ?? -Infinity) || a.amount - b.amount;
-      if (step === 'decrease' && order.decreases === 'highestMin') ms = ms.sort(byMin);
-      if (step === 'add' && order.decreases === 'highestMin') {
-        ms = [...ms.filter((m) => m.amount >= 0), ...ms.filter((m) => m.amount < 0).sort(byMin)];
-      }
+      if (step === 'decrease' && order.decreases === 'highestMin') ms = ms.sort((a, b) => (b.min ?? -Infinity) - (a.min ?? -Infinity) || a.amount - b.amount);
       for (const m of ms) put(m, m.amount < 0 && m.min !== undefined ? (v <= m.min ? v : Math.max(m.min, v + m.amount)) : v + m.amount);
     }
   }
