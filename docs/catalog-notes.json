@@ -1464,7 +1464,7 @@
     "gameSupplies": "The look tokens for a picked option."
   },
   "pieces-3d": {
-    "use": "Dice, balls and chips built in code with WebGL or CSS (no model files).",
+    "use": "Dice, balls and chips built in code with WebGL or CSS (no model files); a round transparent token chip with die cut edge, no rectangle behind it, its shadow follows the outline.",
     "not": "Modelled or generated meshes; the owner does no 3D model work.",
     "title": "Dice, balls and chips in 3D",
     "tags": [
@@ -1477,7 +1477,11 @@
       "token",
       "round",
       "d20",
-      "die"
+      "die",
+      "die cut",
+      "transparent",
+      "outline",
+      "shadow"
     ],
     "looks": "Rounded dice, a rolling ball and a thick chip with a cast shadow.",
     "visible": true,
@@ -2681,5 +2685,27 @@
     "release": 1,
     "gameSupplies": "The source pictures, the output folder and the target scale or width.",
     "exports": "CLI `upscale.py` (run, check, status, fetch), see its README"
+  },
+  "worker-rules": {
+    "mechanics": "none: build, CI or repository tooling",
+    "use": "The one block of worker rules from the kit that every game's agents file (AGENTS.md) carries: kit first, Must use is an order, Kit gap needs proof, no deciding rules or looks, caps, report order. `pull` stamps it between markers; `worker-rules --adopt` lists hand-written copies to remove.",
+    "not": "A game never edits the stamped text or pulls this component; its own rules go outside the markers.",
+    "title": "Worker rules block",
+    "tags": [
+      "worker",
+      "rules",
+      "block",
+      "stamp",
+      "agents",
+      "file",
+      "game",
+      "kit",
+      "adopt",
+      "markers"
+    ],
+    "visible": false,
+    "release": 1,
+    "gameSupplies": "Its own lines in AGENTS.md outside the markers.",
+    "exports": "`node kit.mjs worker-rules --adopt <game>`; `docs/worker-rules.md`"
   }
 }
