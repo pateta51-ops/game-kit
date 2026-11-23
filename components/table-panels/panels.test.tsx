@@ -1,7 +1,7 @@
 import { act, fireEvent, render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import { advance, noSteps, pushSteps } from '../paced-view/index.ts';
-import { banner, filterSeat, gameResult, groupByTurn, logLines, opponentTurn, phaseChanged } from './index.ts';
+import { banner, filterSeat, gameResult, groupByTurn, logLines, opponentTurn, phaseChanged, wholeLinesHeight } from './index.ts';
 import { GameOver, GameOverActions, LogPanel, OpponentTurnPanel, TurnBanner } from './ui.tsx';
 
 type Ev = { type: 'hit' | 'noise' | 'move'; seat?: string; turn?: number; n?: number };
@@ -119,5 +119,69 @@ describe('banner', () => {
     const bs = [...container.querySelectorAll('button')];
     expect(bs.length).toBeGreaterThan(4);
     expect(bs.every((b) => b.hasAttribute('data-kit'))).toBe(true);
+  });
+});
+
+describe('log order and whole lines (K710)', () => {
+  const many = Array.from({ length: 4 }, (_, i) => ({ type: 'hit' as const, seat: i % 2 ? 'b' : 'a', turn: i < 2 ? 1 : 2, n: i }));
+  const lines = logLines(many, words);
+  const texts = () => screen.getAllByRole('listitem').map((l) => l.textContent);
+  const stub = (name: string, get: (el: HTMLElement) => number) => {
+    const d = Object.getOwnPropertyDescriptor(HTMLElement.prototype, name);
+    Object.defineProperty(HTMLElement.prototype, name, { configurable: true, get(this: HTMLElement) { return get(this); } });
+    return () => { if (d) Object.defineProperty(HTMLElement.prototype, name, d); else delete (HTMLElement.prototype as unknown as Record<string, unknown>)[name]; };
+  };
+  it('default order is unchanged', () => {
+    render(<LogPanel lines={lines} />);
+    expect(texts()).toEqual(['a takes 0 damage', 'b takes 1 damage', 'a takes 2 damage', 'b takes 3 damage']);
+  });
+  it('newest-first reverses turns and lines, keeps grouping, filters the other seat, scrolls to top', () => {
+    const sets: number[] = [];
+    const un = stub('scrollHeight', () => 500);
+    const desc = Object.getOwnPropertyDescriptor(Element.prototype, 'scrollTop');
+    Object.defineProperty(Element.prototype, 'scrollTop', { configurable: true, get() { return 77; }, set(v: number) { sets.push(v); } });
+    try {
+      const { container } = render(<LogPanel lines={lines} order="newest-first" seats={['a', 'b']} />);
+      expect(texts()).toEqual(['b takes 3 damage', 'a takes 2 damage', 'b takes 1 damage', 'a takes 0 damage']);
+      expect([...container.querySelectorAll('[data-part=log-turn]')].map((x) => x.getAttribute('data-turn'))).toEqual(['2', '1']);
+      expect(sets.at(-1)).toBe(0);
+      fireEvent.click(screen.getByText('a'));
+      expect(texts()).toEqual(['a takes 2 damage', 'a takes 0 damage']);
+    } finally { un(); if (desc) Object.defineProperty(Element.prototype, 'scrollTop', desc); }
+  });
+  it('oldest-first scrolls to the bottom', () => {
+    const sets: number[] = [];
+    const un = stub('scrollHeight', () => 500);
+    const desc = Object.getOwnPropertyDescriptor(Element.prototype, 'scrollTop');
+    Object.defineProperty(Element.prototype, 'scrollTop', { configurable: true, get() { return 0; }, set(v: number) { sets.push(v); } });
+    try { render(<LogPanel lines={lines} />); expect(sets.at(-1)).toBe(500); } finally { un(); if (desc) Object.defineProperty(Element.prototype, 'scrollTop', desc); }
+  });
+  it('wholeLinesHeight: 1070 px box, 29 px lines shows 36 lines, 1044 px', () => {
+    expect(wholeLinesHeight(1070, 29)).toBe(1044);
+    expect(1044 / 29).toBe(36);
+  });
+  it('wholeLines snaps the box height and re-scrolls after it', () => {
+    const order: string[] = [];
+    const un = stub('clientHeight', (el) => (el.style.height ? parseFloat(el.style.height) : 1070));
+    const desc = Object.getOwnPropertyDescriptor(Element.prototype, 'scrollTop');
+    Object.defineProperty(Element.prototype, 'scrollTop', { configurable: true, get() { return 0; }, set(this: HTMLElement) { order.push(this.style.height); } });
+    try {
+      const { container } = render(<LogPanel lines={lines} wholeLines={29} />);
+      expect((container.querySelector('[data-part=log-lines]') as HTMLElement).style.height).toBe('1044px');
+      expect(order.at(-1)).toBe('1044px');
+    } finally { un(); if (desc) Object.defineProperty(Element.prototype, 'scrollTop', desc); }
+  });
+  it('wholeLines={true} measures the pitch between two lines (margins count)', () => {
+    const un1 = stub('clientHeight', (el) => (el.style.height ? parseFloat(el.style.height) : 1070));
+    const un2 = stub('offsetTop', (el) => Math.max(0, [...(el.parentElement?.children ?? [])].indexOf(el)) * 29);
+    const un3 = stub('offsetHeight', () => 20);
+    try {
+      const { container } = render(<LogPanel lines={lines} wholeLines />);
+      expect((container.querySelector('[data-part=log-lines]') as HTMLElement).style.height).toBe('1044px');
+    } finally { un1(); un2(); un3(); }
+  });
+  it('no wholeLines leaves the height alone', () => {
+    const { container } = render(<LogPanel lines={lines} />);
+    expect((container.querySelector('[data-part=log-lines]') as HTMLElement).style.height).toBe('');
   });
 });

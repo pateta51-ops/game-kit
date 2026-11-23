@@ -490,6 +490,9 @@
   { "q": "scenario setup place pieces", "first": "card-harness" },
   { "q": "lose condition prompt", "first": "engine-core" },
   { "q": "end game bonus points", "first": "table-panels" },
+  { "q": "log newest first", "first": "table-panels" },
+  { "q": "game log whole lines no cut line", "first": "table-panels" },
+  { "q": "log panel order", "first": "table-panels" },
   { "q": "victory points term", "first": "glossary" },
   { "q": "final score breakdown", "first": "table-panels" },
   { "q": "resource pool with limit", "first": "card-language" },
@@ -515,5 +518,8 @@
   { "q": "tall board scrolls under pinned hand", "first": "board-viewport" },
   { "q": "upscale image sharpen", "first": "picture-upscale" },
   { "q": "super resolution enlarge picture", "first": "picture-upscale" },
-  { "q": "make a picture bigger without blur", "first": "picture-upscale" }
+  { "q": "make a picture bigger without blur", "first": "picture-upscale" },
+  { "q": "worker rules block", "first": "worker-rules" },
+  { "q": "game agents file rules from the kit", "first": "worker-rules" },
+  { "q": "stamp worker rules into a game", "first": "worker-rules" }
 ]

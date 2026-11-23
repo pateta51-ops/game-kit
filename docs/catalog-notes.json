@@ -2102,6 +2102,9 @@
       "opponent",
       "panel",
       "table",
+      "log newest first",
+      "game log whole lines no cut line",
+      "log panel order",
       "final score breakdown",
       "end game bonus points",
       "game over summary screen",
@@ -2682,5 +2685,27 @@
     "release": 1,
     "gameSupplies": "The source pictures, the output folder and the target scale or width.",
     "exports": "CLI `upscale.py` (run, check, status, fetch), see its README"
+  },
+  "worker-rules": {
+    "mechanics": "none: build, CI or repository tooling",
+    "use": "The one block of worker rules from the kit that every game's agents file (AGENTS.md) carries: kit first, Must use is an order, Kit gap needs proof, no deciding rules or looks, caps, report order. `pull` stamps it between markers; `worker-rules --adopt` lists hand-written copies to remove.",
+    "not": "A game never edits the stamped text or pulls this component; its own rules go outside the markers.",
+    "title": "Worker rules block",
+    "tags": [
+      "worker",
+      "rules",
+      "block",
+      "stamp",
+      "agents",
+      "file",
+      "game",
+      "kit",
+      "adopt",
+      "markers"
+    ],
+    "visible": false,
+    "release": 1,
+    "gameSupplies": "Its own lines in AGENTS.md outside the markers.",
+    "exports": "`node kit.mjs worker-rules --adopt <game>`; `docs/worker-rules.md`"
   }
 }

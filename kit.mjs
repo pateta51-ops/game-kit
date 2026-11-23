@@ -2,6 +2,7 @@
 // Run from a game's repo root.
 //   node <kit>/kit.mjs pull <path to game-kit checkout> <tag or commit> [component...]   moves the whole kit to one tag (named components are added); atomic
 //   node kit/kit.mjs list | search <word>                                              the catalogue of every component (pulled or not), from kit/CATALOG.md; search prints the mechanics map line first (kit/recipes/mechanics.md); the log ~/.game-kit/search-misses.log (never with KIT_NO_MISS_LOG=1, which finish and claims set on their own re-runs, K698) gets a line when no part has every word (the 3 parts printed above "not in the kit by that name" are only the nearest guesses) or the only hit is a "not in the kit" mechanics line (a candidate counts as demand), never from the kit's own repository (components/ beside kit.mjs; K685); a component whose catalogue Hook line holds every word is a hit scored as if each word were in its title (first unless a part matches as well by its own words), with that line printed under it as "  hook: ..."; `search --misses [n]` prints the newest
+//   node kit.mjs worker-rules --adopt <game>   K714: prints the game's AGENTS.md sections or bullets that look like worker rules outside the kit:worker-rules markers (pull stamps the block from docs/worker-rules.md between them; check warns)
 //   node kit.mjs state                                                                  (game-kit checkout) prints what is open (PLAN rows not done, waiting, watch)
 //   node kit.mjs next-id [n] [--from <docs/plan dir or file>...]                                (game-kit checkout) the next free K number(s): origin/main and every open PR's docs/plan/ file names
 //   node kit.mjs next-id [n] --reserve                                                 also reserves the ids on origin (refs/kit-reserved/K<n>) so no other session gets them
@@ -23,6 +24,35 @@ const sha = (f) => {
 }
 const walk = (d) => fs.readdirSync(d, { withFileTypes: true }).flatMap((e) => (e.isDirectory() ? walk(d + '/' + e.name) : [d + '/' + e.name])).sort()
 const readLock = () => (fs.existsSync(LOCK) ? JSON.parse(fs.readFileSync(LOCK, 'utf8')) : { components: {} })
+const WR_START = '<!-- kit:worker-rules start -->', WR_END = '<!-- kit:worker-rules end -->'
+const stampRules = (file, block) => {
+  const body = WR_START + '\n' + block.replace(/\r\n/g, '\n').trim() + '\n' + WR_END
+  const have = fs.existsSync(file) ? fs.readFileSync(file, 'utf8') : ''
+  const nl = have.includes('\r\n') ? '\r\n' : '\n'
+  const i = have.indexOf(WR_START), j = have.indexOf(WR_END)
+  let out
+  if (i >= 0 && j > i) out = have.slice(0, i) + body.replace(/\n/g, nl) + have.slice(j + WR_END.length)
+  else out = have + (have && !have.endsWith('\n') ? nl : '') + (have ? nl : '') + ('## Worker rules (from the kit)\n\n' + body + '\n').replace(/\n/g, nl)
+  if (out === have) return null
+  fs.writeFileSync(file + '.kit-tmp', out)
+  return file + '.kit-tmp'
+}
+// sections (heading + body) or bullets outside the markers that look like worker rules
+const looseRules = (file) => {
+  if (!fs.existsSync(file)) return []
+  let t = fs.readFileSync(file, 'utf8').replace(/\r\n/g, '\n')
+  const i = t.indexOf(WR_START), j = t.indexOf(WR_END)
+  if (i >= 0 && j > i) t = t.slice(0, i) + t.slice(j + WR_END.length)
+  const re = /worker|\breports?\b|\bcaps?\b|\bfinish\b|kit gap/i
+  const found = []
+  for (const sec of t.split(/^(?=#{1,6} )/m)) {
+    const head = sec.split('\n')[0]
+    if (/^#{1,6} /.test(head) && /from the kit/i.test(head)) continue
+    if (/^#{1,6} /.test(head) && re.test(head)) found.push(sec.trim())
+    else for (const l of sec.split('\n')) if (/^\s*[-*] /.test(l) && re.test(l)) found.push(l.trim())
+  }
+  return found
+}
 if (cmd === 'pull') {
   // one tag per game: the whole kit moves to <ref>; component names add to it. Built in kit.new, verified, then swapped in: a failed pull leaves kit/ as it was.
   const [src, ref, ...names] = a
@@ -64,6 +94,10 @@ if (cmd === 'pull') {
     } catch (e) { fail('docs/recipes did not copy: ' + String(e.stderr ?? e.message).trim().split('\n')[0]) }
   }
   fs.writeFileSync(NEW + '/kit.lock.json', JSON.stringify(lock, null, 1) + '\n')
+  let stamp = null
+  try {
+    if (x('git', ['-C', src, 'ls-tree', '--name-only', commit, 'docs/worker-rules.md'], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] }).trim()) stamp = stampRules('AGENTS.md', x('git', ['-C', src, 'show', commit + ':docs/worker-rules.md'], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] }))
+  } catch (e) { fs.rmSync('AGENTS.md.kit-tmp', { force: true }); fail('worker rules were not stamped into AGENTS.md: ' + String(e.stderr ?? e.message).trim().split('\n')[0]) }
   const OLD = 'kit.old'
   fs.rmSync(OLD, { recursive: true, force: true })
   const had = fs.existsSync('kit')
@@ -94,8 +128,14 @@ if (cmd === 'pull') {
     }
   }
   fs.rmSync(OLD, { recursive: true, force: true })
+  if (stamp) fs.renameSync(stamp, 'AGENTS.md')
   if (converted) console.log('converted the per-component locks to one tag: ' + ref)
   console.log('pulled ' + ref + ': ' + Object.keys(lock.components).join(', '))
+} else if (cmd === 'worker-rules') {
+  const g = a[a.indexOf('--adopt') + 1]
+  if (a.indexOf('--adopt') < 0 || !g) { console.error('usage: kit.mjs worker-rules --adopt <game folder>'); process.exit(2) }
+  const f = resolve(g, 'AGENTS.md'), l = looseRules(f)
+  console.log(l.length ? 'Hand-written worker rules outside the kit markers in ' + f + ' (remove them; the block replaces them):\n\n' + l.join('\n\n') : 'none outside the markers')
 } else if (cmd === 'state') {
   x('node', [dirname(fileURLToPath(import.meta.url)) + '/scripts/state.mjs'], { stdio: 'inherit' })
 } else if (cmd === 'worktree' || cmd === 'finish' || cmd === 'teardown' || cmd === 'claims') {
@@ -153,6 +193,8 @@ if (cmd === 'pull') {
     console.error('kit/ differs from kit/kit.lock.json. Change the code in the game-kit repo and pull a new version; never edit this copy.\n' + bad.join('\n'))
     process.exit(1)
   }
+  const lr = looseRules('AGENTS.md')
+  if (lr.length) console.warn('warning: AGENTS.md has ' + lr.length + ' worker-rule section(s) outside the kit markers; list them with: node kit/kit.mjs worker-rules --adopt .')
   const si = a.indexOf('--source')
   if (si >= 0) {
     const src = a[si + 1], drift = []

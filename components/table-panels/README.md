@@ -14,7 +14,8 @@ The panels every game writes around its table, as logic plus unstyled slots: log
 5. Give `gameResult(scores, { lowWins })` the game's own scoring; ties share a rank.
 6. For a solo or reasoned end use `title`, `reason`, `standings={false}` and `<GameOverActions>` instead of the winner line.
 7. Supply `turnName`, `phaseName`, `seatName` for any wording; `TurnBanner` fires `onPhase` on a change, not on first show.
-8. Style by `data-part` / `data-action`; every `<button>` carries `data-kit`, so theme resets use `:where(button:not([data-kit]))`.
+8. For a log with the newest line first pass `order="newest-first"` (it stays scrolled to the top, turns and lines reversed, grouping and seat filter unchanged); for a fixed-height box with no half-cut line pass `wholeLines` (true measures the first line, or a line height in px): the box height snaps down to a whole number of lines (1070 px, 29 px lines: 36 lines, 1044 px). Both are opt-in, the defaults are unchanged.
+9. Style by `data-part` / `data-action`; every `<button>` carries `data-kit`, so theme resets use `:where(button:not([data-kit]))`.
 
 **Common mistakes:**
 - Expecting default English words in the log: no words, no line.
@@ -22,7 +23,7 @@ The panels every game writes around its table, as logic plus unstyled slots: log
 
 - `logLines(events, words, { turnOf, seatOf, slots })`: `words` maps event `type` to text with `{slots}` (read from the event, or from `slots(e)`). No words, no line. `rowLines` does the same from game-log rows. `filterSeat(lines, seat|null)` (lines with no seat pass), `groupByTurn(lines)`.
 - `logLines` fills words from the raw event, so keep hidden fields out of the word table, or strip them in `slots`.
-- `<LogPanel lines seats? seatName? turnName? renderLine? />`: grouped by turn, scrolled to the newest, seat filter buttons when `seats` is given.
+- `<LogPanel lines seats? seatName? turnName? renderLine? />`: grouped by turn, scrolled to the newest (`order` `'newest-first' | 'oldest-first'`, `wholeLines` boolean or line px; `wholeLinesHeight(boxPx, linePx)` is the sum), seat filter buttons when `seats` is given.
 - `opponentTurn(steps, isStep, describe, viewer)`: from paced-view `Steps`: `{ done, current, left, total }`. `describe(e, viewer)` returns the text that seat may read, or `null` (hidden: shown as the `hidden` slot, never the event). `<OpponentTurnPanel turn onSkip renderStep? hidden? />` has the skip-to-end button (call paced-view `skip`).
 - `gameResult(scores, { lowWins })`: `{ standings, winners, tied }` from the game's scoring function; ties share a rank. `<GameOver result breakdown? onRematch? onReview? onHome? labels? />`. Solo or reasoned end (K301): `title` (ReactNode) replaces "Winner: seat", `reason` shows under it, `standings={false}` or an empty list hides the list, a standing's `score` is optional, `actions={false}` plus `<GameOverActions onRematch? onReview? onHome? labels? />` places the buttons elsewhere.
 - `banner(phases, turn, seat, phaseId)`, `phaseChanged(prev, next)`; `<TurnBanner phases turn seat phase seatName? turnName? phaseName? onPhase />` (`turnName(turn)` replaces the printed "Turn n"; `phaseName(banner)` replaces the phase words, `null` drops the phase span) fires `onPhase` on a change, not on first show.
