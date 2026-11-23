@@ -397,6 +397,7 @@ The blind matching test's result was not recorded: the PR, its comments and docs
 | K728 | effect-library createGlitch: optional `onBurst(i)` in GlitchOptions, called once at the start of each burst (index from 0), so a game can play a sound per burst; not called when no burst is drawn or after stop/destroy | S |  | done |
 | K730 | guarded-button: initial="open" no longer resets to guarded under React StrictMode (resetKey effect compares with the previous key) | S |  | done |
 | K732 | card-parts: StateBanner weight is a look variable (--kc-banner-weight, default 700); the fit probe shares the style so a heavier weight still fits | S |  | done |
+| K734 | table-panels: GameOver and GameOverActions take an optional extra node rendered after Home inside game-over-actions | S |  | done |
 
 ## Asked for by the owner
 
