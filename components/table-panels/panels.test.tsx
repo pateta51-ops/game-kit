@@ -181,13 +181,13 @@ describe('log order and whole lines (K710)', () => {
   it('K716 wholeLines={true} measures each entry, so a wrapped entry at the bottom is never half cut', () => {
     const un1 = stub('clientHeight', (el) => (el.style.height ? parseFloat(el.style.height) : 200));
     const heights = [20, 29, 87, 58, 87];
-    const rect = Element.prototype.getBoundingClientRect;
+    const rect = Object.getOwnPropertyDescriptor(Element.prototype, 'getBoundingClientRect');
     Element.prototype.getBoundingClientRect = function (this: Element) {
       const all = [...(this.closest('[data-part=log-lines]')?.querySelectorAll('h4, li') ?? [])];
       const i = all.indexOf(this);
-      if (i < 0) return { top: 0, bottom: 0, left: 0, right: 0, width: 0, height: 0, x: 0, y: 0, toJSON() {} } as DOMRect;
+      if (i < 0) return { top: 0, bottom: 0, left: 0, right: 0, width: 0, height: 0, x: 0, y: 0, toJSON() {} };
       const top = heights.slice(0, i).reduce((a, b) => a + b, 0), h = heights[i] ?? 29;
-      return { top, bottom: top + h, left: 0, right: 0, width: 0, height: h, x: 0, y: top, toJSON() {} } as DOMRect;
+      return { top, bottom: top + h, left: 0, right: 0, width: 0, height: h, x: 0, y: top, toJSON() {} };
     };
     try {
       const two = [{ id: 1, turn: 1, text: 'one' }, { id: 2, turn: 1, text: 'three lines' }, { id: 3, turn: 1, text: 'two lines' }, { id: 4, turn: 1, text: 'three lines' }];
@@ -198,7 +198,7 @@ describe('log order and whole lines (K710)', () => {
         const old = render(<LogPanel lines={two} wholeLines />);
         expect((old.container.querySelector('[data-part=log-lines]') as HTMLElement).style.height).toBe('155px');
       } finally { un2(); }
-    } finally { un1(); Element.prototype.getBoundingClientRect = rect; }
+    } finally { un1(); if (rect) Object.defineProperty(Element.prototype, 'getBoundingClientRect', rect); }
   });
   it('K716 fromEnd counts from the scroll end, so trailing margin or padding does not cut the first whole entry', () => {
     const e = [{ top: 0, bottom: 29 }, { top: 29, bottom: 116 }, { top: 116, bottom: 174 }, { top: 174, bottom: 261 }];
