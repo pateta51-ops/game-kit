@@ -1,0 +1,58 @@
+{
+ "37ad6a2f13e4a0bdf0e2219d6563a02788612ba0": {
+  "src/screen/table/Inspect.tsx": [
+   "import { placeZoom } from '../../../kit/card-zoom/index';",
+   "import { Panel } from '../kit/K';"
+  ],
+  "src/screen/table/Table.tsx": [
+   "import { CardHand } from '../../../kit/card-hand/ui';",
+   "import { createInspect } from '../../../kit/ui-helpers/index';",
+   "import { Sheet } from '../../../kit/phone-mode/ui';",
+   "import { plainLine } from '../../../kit/game-log/index';",
+   "import { advance, createStepper, noSteps, pushSteps, skip, type Steps } from '../../../kit/paced-view/index';",
+   "import { TutorialHighlight, TutorialPanel, type TutorialButtonProps } from '../../../kit/tutorial/ui';",
+   "import { PANEL_WORDS } from '../../../kit/tutorial/words';",
+   "import { TUTORIAL_OFF, closeTutorial, leaveTutorial, lockAt, lockPrompt, lockedStep, refusal, startTutorial, stepDone, type TutorialSession } from '../../../kit/tutorial/index';",
+   "import { PickAmount, PromptHost, defaultLook, useBoardPick, type BoardPick, type WidgetProps, type Widgets } from '../../../kit/prompt-host/ui';",
+   "import { pickedAttrs } from '../../../kit/picked-state/index';",
+   "import { Pile as KitPile } from '../../../kit/card-pile/ui';",
+   "import { BottomSheet, CardState, DangerStrip, LogLines, Panel, Plate, Tracker } from '../kit/K';"
+  ],
+  "src/screen/table/Zoom.tsx": [
+   "import { Sheet } from '../../../kit/phone-mode/ui';",
+   "import { CardState, Panel, Plate } from '../kit/K';"
+  ]
+ },
+ "beea5568caa43a98737b569008412a09759640ed": {
+  "src/screen/table/Inspect.tsx": [
+   "import { footprint } from '../../../kit/card-attachments/index';",
+   "import { HostStack } from '../../../kit/card-attachments/ui';",
+   "import { placeZoom } from '../../../kit/card-zoom/index';"
+  ],
+  "src/screen/table/Table.tsx": [
+   "import { CardHand } from '../../../kit/card-hand/ui';",
+   "import { createInspect } from '../../../kit/ui-helpers/index';",
+   "import { Sheet } from '../../../kit/phone-mode/ui';",
+   "import { plainLine } from '../../../kit/game-log/index';",
+   "import { advance, createStepper, noSteps, pushSteps, skip, type Steps } from '../../../kit/paced-view/index';",
+   "import { TutorialHighlight, TutorialPanel, type TutorialButtonProps } from '../../../kit/tutorial/ui';",
+   "import { PANEL_WORDS } from '../../../kit/tutorial/words';",
+   "import { TUTORIAL_OFF, closeTutorial, leaveTutorial, lockAt, lockPrompt, lockedStep, refusal, startTutorial, stepDone, type TutorialSession } from '../../../kit/tutorial/index';",
+   "import { PickAmount, PromptHost, defaultLook, useBoardPick, type BoardPick, type WidgetProps, type Widgets } from '../../../kit/prompt-host/ui';",
+   "import { pickedAttrs } from '../../../kit/picked-state/index';",
+   "import { Pile as KitPile } from '../../../kit/card-pile/ui';",
+   "import { BottomSheet, CardState, DangerStrip, LogLines, Panel, Plate, Tracker } from '../kit/K';"
+  ],
+  "src/screen/table/Zoom.tsx": [
+   "import { Sheet } from '../../../kit/phone-mode/ui';",
+   "import { CardState, Panel, Plate } from '../kit/K';"
+  ],
+  "src/screen/table/transcript.tsx": [
+   "import { CardZoom, ZoomLine } from '../../../kit/card-zoom/ui';",
+   "import { transcribe, type IconSeg, type Transcription, type ZoomOptions, type ZoomSource } from '../../../kit/card-zoom/index';",
+   "import type { IconSet, Syntax } from '../../../kit/card-parts/index';",
+   "import { buildIndex, type GlossaryEntry } from '../../../kit/glossary/match';",
+   "import { GlossaryLink, GlossaryProvider, LookupHost } from '../../../kit/glossary/ui';"
+  ]
+ }
+}
