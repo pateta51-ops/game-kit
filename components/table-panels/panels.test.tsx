@@ -193,7 +193,16 @@ describe('log order and whole lines (K710)', () => {
       const two = [{ id: 1, turn: 1, text: 'one' }, { id: 2, turn: 1, text: 'three lines' }, { id: 3, turn: 1, text: 'two lines' }, { id: 4, turn: 1, text: 'three lines' }];
       const { container } = render(<LogPanel lines={two} wholeLines order="newest-first" />);
       expect((container.querySelector('[data-part=log-lines]') as HTMLElement).style.height).toBe('194px');
+      const un2 = stub('scrollHeight', () => 291);
+      try {
+        const old = render(<LogPanel lines={two} wholeLines />);
+        expect((old.container.querySelector('[data-part=log-lines]') as HTMLElement).style.height).toBe('155px');
+      } finally { un2(); }
     } finally { un1(); Element.prototype.getBoundingClientRect = rect; }
+  });
+  it('K716 fromEnd counts from the scroll end, so trailing margin or padding does not cut the first whole entry', () => {
+    const e = [{ top: 0, bottom: 29 }, { top: 29, bottom: 116 }, { top: 116, bottom: 174 }, { top: 174, bottom: 261 }];
+    expect(wholeEntriesHeight(200, e, true, 271)).toBe(155);
   });
   it('no wholeLines leaves the height alone', () => {
     const { container } = render(<LogPanel lines={lines} />);

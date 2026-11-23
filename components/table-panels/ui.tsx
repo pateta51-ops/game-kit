@@ -17,7 +17,7 @@ export function LogPanel({ lines, seats, seatName = (s) => s, turnName = (t) => 
     const measure = () => {
       el.style.height = '';
       const r = el.getBoundingClientRect();
-      const h = typeof wholeLines === 'number' ? (wholeLines > 0 ? wholeLinesHeight(el.clientHeight, wholeLines) : null) : wholeEntriesHeight(el.clientHeight, [...el.querySelectorAll('h4, li')].map((x) => { const b = x.getBoundingClientRect(); return { top: b.top - r.top + el.scrollTop, bottom: b.bottom - r.top + el.scrollTop }; }), !newest);
+      const h = typeof wholeLines === 'number' ? (wholeLines > 0 ? wholeLinesHeight(el.clientHeight, wholeLines) : null) : wholeEntriesHeight(el.clientHeight, [...el.querySelectorAll('h4, li')].map((x) => { const b = x.getBoundingClientRect(); return { top: b.top - r.top + el.scrollTop, bottom: b.bottom - r.top + el.scrollTop }; }), !newest, el.scrollHeight);
       el.style.height = h === null ? '' : `${h}px`;
       setFit(h);
       toNewest();
