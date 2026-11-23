@@ -389,6 +389,7 @@ The blind matching test's result was not recorded: the PR, its comments and docs
 | K718 | pieces-3d Token: a die-cut token as a true extruded solid in WebGL (outline traced from the scan alpha, front and back faces, side walls in the edge colour, tilt and turn), its flat form the Chip dieCut | M |  | done |
 | K720 | pieces-3d Token recess: a round hollow sunk into the front face of an extruded token (`recess={{ d, depth, x?, y? }}` in mm, centred by default), with its own wall and floor lit like the rest, the floor showing the scan under it darker; a recess that does not fit inside the outline is refused and the token is drawn without it | S |  | done |
 | K721 | card-attachments SleeveStack: cards in one sleeve drawn as one composite per face (inserts' fronts under the host's front, their backs under its back), each insert cut to its own die-cut and read through the host's notch, its tab past the sleeve's open edge; pure insertLayer, layerStyle, tabOf, tabClipOf, tabBox, insertRanks, notchOf, notchWindow | M |  | done |
+| K723 | sim-pool: browser-safe entry sim-pool/browser.ts (DriverRng, legalAnswers, Bot); dev-autoplay imports only it, so useDevAutoplay no longer pulls node: modules into vite dev | S |  | done |
 | K724 | game-store: `get().undoUsed` and `view(state, seat, { undoUsed })` carry the history's undo-used flag (set by a Free-mode undo, kept by saves and load) | S |  | done |
 
 ## Asked for by the owner
