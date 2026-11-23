@@ -88,9 +88,9 @@ export function startTokenLayer(look: TokenLook = {}, sel = '[data-p3-token]', o
     if (!front || back === undefined) { el.removeAttribute('data-p3-drawn'); return false; }
     const [sw, sh2, sd] = (el.getAttribute('data-size') ?? '').split(',').map(Number), ow = el.offsetWidth, oh = el.offsetHeight;
     const size = { w: sw || ow, h: sh2 || oh, d: sd || 2 };
-    const rs = el.getAttribute('data-recess'), [rd = 0, rdep = 0, rx = 0, ry = 0, rf = 0.8] = (rs ?? '').split(',').map(Number);
+    const rs = el.getAttribute('data-recess'), [rd = 0, rdep = 0, rx = 0, ry = 0, rf = 0.8, rsg = 64] = (rs ?? '').split(',').map(Number);
     const key = `${String(el.getAttribute('data-src'))}|${String(backSrc)}|${String(size.w)},${String(size.h)},${String(size.d)}|${String(rs)}`;
-    if (!meshes.has(key)) { const m = extrude(front.outline, front, size, !!back, 0.6, rs ? { d: rd, depth: rdep, x: rx, y: ry } : undefined); meshes.set(key, m && { n: m.idx.length, pos: buf(gl.ARRAY_BUFFER, m.pos), nor: buf(gl.ARRAY_BUFFER, m.nor), uv: buf(gl.ARRAY_BUFFER, m.uv), kind: buf(gl.ARRAY_BUFFER, m.kind), idx: buf(gl.ELEMENT_ARRAY_BUFFER, m.idx) }); }
+    if (!meshes.has(key)) { const m = extrude(front.outline, front, size, !!back, 0.6, rs ? { d: rd, depth: rdep, x: rx, y: ry, segs: rsg } : undefined); meshes.set(key, m && { n: m.idx.length, pos: buf(gl.ARRAY_BUFFER, m.pos), nor: buf(gl.ARRAY_BUFFER, m.nor), uv: buf(gl.ARRAY_BUFFER, m.uv), kind: buf(gl.ARRAY_BUFFER, m.kind), idx: buf(gl.ELEMENT_ARRAY_BUFFER, m.idx) }); }
     const M = meshes.get(key);
     // an outline that cannot be filled (a pinch): fail closed, the flat chip stays
     if (!M) { own.get(el)?.remove(); el.removeAttribute('data-p3-drawn'); return false; }
