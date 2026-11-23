@@ -436,11 +436,12 @@
       "put + set + run + answer: set a position up and answer its prompts",
       "cardCase: a full-resolve card test that quotes the printed clause",
       "expectNotOffered: test that an ability is not offered",
-      "expectNotFired: test that a forced effect did not fire",
+      "expectNotFired: test that a forced effect did not fire, even with a routine prompt open",
       "runInventory: every printed clause is cited by a test",
       "cardsCheckMain: the game cards check of clauses and records",
       "screenMain: the screen text matches the engine",
-      "recordPrompt + recordOpened: record each prompt shown in e2e or a simulation"
+      "recordPrompt + recordOpened: record each prompt shown in e2e or a simulation",
+      "createProbe + recordRan + readRanLog: record the pieces each card test ran; count a piece only when a full-resolve test ran it"
     ]
   },
   "card-language": {
@@ -2671,7 +2672,7 @@
       "offline"
     ],
     "visible": false,
-    "release": 1.0,
+    "release": 1,
     "gameSupplies": "The source pictures, the output folder and the target scale or width.",
     "exports": "CLI `upscale.py` (run, check, status, fetch), see its README"
   }

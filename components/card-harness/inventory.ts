@@ -62,6 +62,25 @@ export interface InventoryInput {
   readonly known?: KnownFindings;
   /** K663: rule 11 mixed mode: a clause with `text` that has a `cardCase` is quote-checked; one without is cited by a test title like a clause without `text`. */
   readonly mixed?: boolean;
+  /** K707: the run log (`readRanLog`): a piece of a `ranKinds` kind is cited only by a full-resolve test (depth on: one counted for a clause; else any test not titled `... poor`) whose record ran it; its text in a test file no longer counts. Record `file` must equal the test's `path`. */
+  readonly ran?: readonly RanRecord[];
+  /** K707: the piece kinds `ran` judges (default every kind but `interaction`). */
+  readonly ranKinds?: readonly string[];
+}
+/** K707: one passing test's run-probe notes (written by `recordRan` in ranLog.ts). */
+export interface RanRecord {
+  /** The test file, relative to `root`, with `/`. */
+  readonly file: string;
+  /** The test's own title (not its describe blocks). */
+  readonly test: string;
+  /** `kind:id` of each piece noted, sorted. */
+  readonly ran: readonly string[];
+  readonly root: string;
+}
+/** K707: the records of `log` written under `root` (default the working directory); a missing log throws (delete it before the card test run, never skip it). */
+export function readRanLog(log: string, root = process.cwd().replace(/\\/g, '/')): RanRecord[] {
+  if (!existsSync(log)) throw new Error(`run log ${log} is missing: run the card tests with recordRan first`);
+  return readFileSync(log, 'utf8').split('\n').filter((l) => l.trim() !== '').map((l) => JSON.parse(l) as RanRecord).filter((r) => r.root === root);
 }
 export interface Row {
   readonly key: string;
@@ -207,7 +226,12 @@ export function inventory(input: InventoryInput): Inventory {
   const fullRe = (id: string): RegExp => new RegExp(`(?<![\\w-])${esc(id)}(?![\\w-])(?! poor\\b)`);
   const poorRe = (id: string): RegExp => new RegExp(`(?<![\\w-])${esc(id)} poor\\b`);
   const notCounted: string[] = [];
+  const fulls = new Map<string, string[]>();
   const full = (c: Clause): string[] => {
+    if (!fulls.has(c.id)) fulls.set(c.id, fullOnce(c));
+    return fulls.get(c.id) as string[];
+  };
+  const fullOnce = (c: Clause): string[] => {
     const q = !quotes(c) ? undefined : new Set(quoted(c));
     return calls
       .filter((k) => fullRe(c.id).test(k.title) && (q === undefined || (k.card !== undefined && q.has(`${k.path} › ${k.title}`))))
@@ -232,8 +256,13 @@ export function inventory(input: InventoryInput): Inventory {
       via: input.directOnly === true || given !== undefined || kind === 'interaction' ? [] : named(cards).filter((p) => !directFiles.has(p)),
     };
   };
+  const ranKinds = input.ran && new Set(input.ranKinds ?? [...new Set(input.pieces.map((p) => p.kind))].filter((k) => k !== 'interaction'));
+  const resolving = input.ran && depth ? new Set((input.clauses ?? []).flatMap((c) => full(c))) : undefined;
+  const ranBy = (key: string): string[] => [
+    ...new Set((input.ran ?? []).filter((r) => r.ran.includes(key) && (resolving ? resolving.has(`${r.file} › ${r.test}`) : !/ poor\b/.test(r.test))).map((r) => `${r.file} › ${r.test}`)),
+  ];
   const rows = [
-    ...input.pieces.map((p) => row(p.kind, p.id, (p.cite ?? []).map((c) => new RegExp(c)).concat(p.cite === undefined ? [word(p.id)] : []), p.cards ?? [], p.kind === 'interaction' || (input.titleOnly === true && p.cite === undefined))),
+    ...input.pieces.map((p) => row(p.kind, p.id, (p.cite ?? []).map((c) => new RegExp(c)).concat(p.cite === undefined ? [word(p.id)] : []), p.cards ?? [], p.kind === 'interaction' || (input.titleOnly === true && p.cite === undefined), ranKinds?.has(p.kind) === true ? ranBy(`${p.kind}:${p.id}`) : undefined)),
     ...(input.clauses ?? []).map((c) => row('clause', c.id, [word(c.id)], c.cards, input.titleOnly === true || (input.mixed === true && !quotes(c)), depth ? full(c) : !quotes(c) ? undefined : quoted(c))),
     ...(input.clauses ?? []).filter((c) => depth && c.conditional === true).map((c) => row('poor', c.id, [], c.cards, true, poor(c))),
   ];

@@ -362,16 +362,17 @@ Card tests on real cards. Test code only; the engine imports nothing here but `c
 - **The game supplies:** The game rules, real cards and scenarios.
 - **Use it when:** Testing card effects on real cards with the scenario builder, prompt delivery, choice probe and inventory with stale check; test depth: a full-resolve test per clause and a poor test (expectNotOffered, expectNotFired) per conditional clause.
 - **Not for:** Card rules themselves; those stay in the game.
-- **Key exports:** `createProbe`, `rulingGroups`, `Scenario`, `scenarioLiteral`, `Delivery`, `cardCasesIn`, `clauseIds`, `interactionNeeds`, `inventory`, `inventoryFindings`, `runInventory`, `testFiles`, `conforms`, `describeCheck`, and 120 more
+- **Key exports:** `createProbe`, `rulingGroups`, `Scenario`, `scenarioLiteral`, `Delivery`, `cardCasesIn`, `clauseIds`, `interactionNeeds`, `inventory`, `inventoryFindings`, `runInventory`, `testFiles`, `readRanLog`, `conforms`, and 125 more
 - **Hook:** Scenario: build a real position and play it in a test
 - **Hook:** put + set + run + answer: set a position up and answer its prompts
 - **Hook:** cardCase: a full-resolve card test that quotes the printed clause
 - **Hook:** expectNotOffered: test that an ability is not offered
-- **Hook:** expectNotFired: test that a forced effect did not fire
+- **Hook:** expectNotFired: test that a forced effect did not fire, even with a routine prompt open
 - **Hook:** runInventory: every printed clause is cited by a test
 - **Hook:** cardsCheckMain: the game cards check of clauses and records
 - **Hook:** screenMain: the screen text matches the engine
 - **Hook:** recordPrompt + recordOpened: record each prompt shown in e2e or a simulation
+- **Hook:** createProbe + recordRan + readRanLog: record the pieces each card test ran; count a piece only when a full-resolve test ran it
 - **Needs:** [`engine-core`](#engine-core), [`plain-text`](#plain-text)
 - **Came from:** stcc
 - **Docs:** [README](../components/card-harness/README.md) ([rules for agents](../components/card-harness/README.md#rules-for-agents))

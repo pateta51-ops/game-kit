@@ -10,11 +10,12 @@ Card tests on real cards. Test code only; the engine imports nothing here but `c
 - `put` + `set` + `run` + `answer`: set a position up and answer its prompts
 - `cardCase`: a full-resolve card test that quotes the printed clause
 - `expectNotOffered`: test that an ability is not offered
-- `expectNotFired`: test that a forced effect did not fire
+- `expectNotFired`: test that a forced effect did not fire, even with a routine prompt open
 - `runInventory`: every printed clause is cited by a test
 - `cardsCheckMain`: the game cards check of clauses and records
 - `screenMain`: the screen text matches the engine
 - `recordPrompt` + `recordOpened`: record each prompt shown in e2e or a simulation
+- `createProbe` + `recordRan` + `readRanLog`: record the pieces each card test ran; count a piece only when a full-resolve test ran it
 <!-- /hooks -->
 
 **What it does:** Test code for card games: a `Scenario` that builds real positions and plays them, a delivery check, an inventory of printed clauses, spec rows, and a strict validator.
@@ -80,6 +81,9 @@ const words = { 'moment:now': [{ phrase: 'Zorb', case: true, start: true }], 'op
 const notPhrases = { 'optional:true': ['you may not'] }
 restrictionProblems({ ...input, words, notPhrases }) // "Zorb the flim." asks for moment=now; "zorb the flim." and "Then Zorb." do not; "You may not flim." asks for no optional
 ```
+
+39. (K707) Count a language piece (an op, a key, a handler) only when a full-resolve test ran it, never by its text in a test file. The run probe is `createProbe<RanNote>()` (a `RunProbe`; game-free, the engine may import it): the game's verb dispatch calls `probe.note({ kind, id })` for each piece it runs, **outside dry run only** (an offer check, a preview or a scan notes nothing), with `kind` and `id` equal to the inventory piece's. `probe.listen(fn)` adds a listener beside `trace` (which still replaces only the `trace` listener) and returns its stop. In a vitest `setupFiles` file call `recordRan(probe, log)` from `kit/card-harness/ranLog` (it imports vitest; not in the index): it appends `{ file, test, ran, root }` per test that passed, is not `it.fails` and noted something. Delete `log` before the card test run; `readRanLog(log, root?)` (index) reads it back, throws when it is missing and keeps only records of this `root`. Pass the records as `ran` to `inventory`/`runInventory`: each piece of a `ranKinds` kind (default every kind but `interaction`) is then cited only by a record of a full-resolve test (depth gate on: a test counted for a clause, rule 24; off: any test not titled `... poor`) that ran it; a poor test, a test that asserts nothing or text in a file cites nothing. Record `file` is relative to the working directory: pass test `path`s the same way. Without `ran` nothing changes. Tests: `k707.test.ts`.
+40. (K707) A game whose flow always opens its next routine prompt passes `{ prompt: 'unrelated' }` in `expectNotFired`'s options (5th argument, beside `clauseOf`): the open prompt then passes when it is the same prompt (as JSON) that was open before `act` (with an `act` only), or when `clauseOf` maps it to a clause not in `id`. A new prompt `clauseOf` cannot map, and any prompt naming `id`, still fail. There is no option that passes any prompt: it would hide the effect's own prompt. Without it nothing changes.
 
 **Common mistakes:**
 - (K649, breaking) A game whose prompts showed an amount only inside an icon code, or a counted prompt with two numbers the clause does not print, now fails `cards:screen`: show the amount in words, or list the icon in `iconAmounts`; drop the stray number or pass `value`.
