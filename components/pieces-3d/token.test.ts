@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { MAX_POINTS, area, edgeColour, extrude, isSimple, simplify, tokenSize, traceAlpha, triangulate, type Pt, type TokenMesh } from './token.ts';
+import { MAX_POINTS, area, edgeColour, extrude, fitsInside, isSimple, simplify, tokenSize, traceAlpha, triangulate, type Pt, type TokenMesh } from './token.ts';
 
 const ex = (...a: Parameters<typeof extrude>) => { const m = extrude(...a); expect(m).not.toBeNull(); return m as TokenMesh; };
 
@@ -100,5 +100,52 @@ describe('pieces-3d: extruded token (K718)', () => {
     expect(Math.max(...m.idx)).toBe(6 * n - 1);
     expect(m.idx.length / 3).toBe(2 * (n - 2) + 2 * n);
     for (let i = 0; i < m.pos.length; i += 3) if (m.kind[i / 3] === 0) expect(Math.abs(Math.hypot(m.pos[i] ?? 0, m.pos[i + 1] ?? 0) - 50)).toBeLessThan(0.5);
+  });
+});
+
+describe('pieces-3d: token recess (K720)', () => {
+  const disc = simplify(traceAlpha(img(poly(ngon(256, 60, 50, 38))), W, H)), size = { w: 74.4, h: 74.4, d: 6 };
+  const edgesOf = (m: TokenMesh) => {
+    const key = (i: number) => [0, 1, 2].map((c) => Math.round((m.pos[3 * i + c] ?? 0) * 1e3)).join(), edges = new Map<string, number>();
+    for (let t = 0; t < m.idx.length; t += 3) for (let e = 0; e < 3; e += 1) { const k = `${key(m.idx[t + e] ?? 0)}|${key(m.idx[t + ((e + 1) % 3)] ?? 0)}`; edges.set(k, (edges.get(k) ?? 0) + 1); }
+    return edges;
+  };
+  for (const [name, R] of [['centred', { d: 57, depth: 3 }], ['off centre', { d: 30, depth: 2, x: 12, y: -8, segs: 40 }]] as const) {
+    it(`K720 a ${name} recess: the solid stays closed (every edge in two triangles, opposite ways), front n + m, back n - 2, side 2n, wall 2m, floor m - 2`, () => {
+      const m = ex(disc, { w: W, h: H }, size, false, 0.6, R), n = disc.length, k = 'segs' in R ? R.segs : 64;
+      expect(m.refused).toBeUndefined();
+      expect(m.tris).toEqual({ front: n + k, back: n - 2, side: 2 * n, wall: 2 * k, floor: k - 2 });
+      expect(m.idx.length / 3).toBe(n + k + n - 2 + 2 * n + 2 * k + k - 2);
+      for (const [e, c] of edgesOf(m)) { const [a, b] = e.split('|'); expect(c).toBe(1); expect(edgesOf(m).get(`${b ?? ''}|${a ?? ''}`)).toBe(1); }
+      // the floor sits `depth` under the front, inside the circle; every wall and floor triangle faces the way its normal says (seen from the hollow)
+      const cx = 'x' in R ? R.x : 0, cy = 'y' in R ? -R.y : 0;
+      for (let i = 0; i < m.kind.length; i += 1) if (m.kind[i] === 4) { expect(m.pos[3 * i + 2]).toBeCloseTo(3 - R.depth, 5); expect(Math.hypot((m.pos[3 * i] ?? 0) - cx, (m.pos[3 * i + 1] ?? 0) - cy)).toBeCloseTo(R.d / 2, 4); }
+      for (let t = 0; t < m.idx.length; t += 3) {
+        const [i, j, l] = [0, 1, 2].map((o) => m.idx[t + o] ?? 0) as [number, number, number], P = (v: number) => [0, 1, 2].map((c) => m.pos[3 * v + c] ?? 0);
+        if ((m.kind[i] ?? 0) < 3) continue;
+        const a = P(i), b = P(j), c = P(l), u = [0, 1, 2].map((q) => (b[q] ?? 0) - (a[q] ?? 0)), v = [0, 1, 2].map((q) => (c[q] ?? 0) - (a[q] ?? 0));
+        const nx = [(u[1] ?? 0) * (v[2] ?? 0) - (u[2] ?? 0) * (v[1] ?? 0), (u[2] ?? 0) * (v[0] ?? 0) - (u[0] ?? 0) * (v[2] ?? 0), (u[0] ?? 0) * (v[1] ?? 0) - (u[1] ?? 0) * (v[0] ?? 0)];
+        expect(nx.reduce((s2, q, c2) => s2 + q * (m.nor[3 * i + c2] ?? 0), 0)).toBeGreaterThan(0);
+      }
+      // the front texture stays outside the hollow: no front triangle has its centre inside the circle
+      for (let t = 0; t < m.idx.length; t += 3) if (m.kind[m.idx[t] ?? 0] === 0) {
+        const g = [0, 1].map((c) => [0, 1, 2].reduce((s2, o) => s2 + (m.pos[3 * (m.idx[t + o] ?? 0) + c] ?? 0), 0) / 3);
+        expect(Math.hypot((g[0] ?? 0) - cx, (g[1] ?? 0) - cy)).toBeGreaterThan(R.d / 2 - 1e-6);
+      }
+    });
+  }
+
+  it('K720 a recess that does not fit is refused: the solid is built without a hollow, as with no recess, and says so', () => {
+    const plain = ex(disc, { w: W, h: H }, size);
+    for (const R of [{ d: 76, depth: 3 }, { d: 57, depth: 3, x: 10 }, { d: 20, depth: 6 }, { d: 20, depth: 0 }, { d: 0, depth: 2 }, { d: 20, depth: 2, x: 60 }]) {
+      const m = ex(disc, { w: W, h: H }, size, false, 0.6, R);
+      expect(m.refused).toBe(true);
+      expect(m.tris).toEqual(plain.tris);
+      expect([...m.idx]).toEqual([...plain.idx]);
+      expect([...m.kind].some((k) => k > 2)).toBe(false);
+    }
+    expect(fitsInside([[0, 0], [10, 0], [10, 10], [0, 10]], [5, 5], 4.9)).toBe(true);
+    expect(fitsInside([[0, 0], [10, 0], [10, 10], [0, 10]], [5, 5], 5)).toBe(false);
+    expect(fitsInside([[0, 0], [10, 0], [10, 10], [0, 10]], [15, 5], 1)).toBe(false);
   });
 });

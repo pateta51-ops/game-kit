@@ -9,7 +9,7 @@ export interface TokenLook { tilt?: number; edge?: string }
 export interface TokenLayer { canvas: HTMLCanvasElement; stop: () => void; frames: () => number }
 
 const VS = 'attribute vec3 aP;attribute vec3 aN;attribute vec2 aT;attribute float aK;uniform mat3 uR;uniform vec2 uC;uniform vec2 uV;uniform float uS;varying vec3 vN;varying vec2 vT;varying float vK;void main(){vec3 p=uR*aP*uS;vN=uR*aN;vT=aT;vK=aK;gl_Position=vec4((uC.x+p.x)/uV.x*2.-1.,1.-(uC.y-p.y)/uV.y*2.,-p.z/(uV.x+uV.y),1.);}';
-const FS = 'precision mediump float;uniform sampler2D uX;uniform sampler2D uB;uniform vec3 uE;varying vec3 vN;varying vec2 vT;varying float vK;void main(){vec3 n=normalize(vN);vec3 l=normalize(vec3(-.45,.6,.66));float d=max(dot(n,l),0.);float s=pow(max(dot(n,normalize(l+vec3(0.,0.,1.))),0.),28.)*.22;vec4 t=vK<.5?texture2D(uX,vT):texture2D(uB,vT);vec3 b=vK>1.5?uE:mix(uE,t.rgb,t.a);gl_FragColor=vec4(b*(.68+.46*d)+s,1.);}';
+const FS = 'precision mediump float;uniform sampler2D uX;uniform sampler2D uB;uniform vec3 uE;uniform float uF;varying vec3 vN;varying vec2 vT;varying float vK;void main(){vec3 n=normalize(vN);vec3 l=normalize(vec3(-.45,.6,.66));float d=max(dot(n,l),0.);float s=pow(max(dot(n,normalize(l+vec3(0.,0.,1.))),0.),28.)*.22;vec4 t=vK<.5||vK>3.5?texture2D(uX,vT):texture2D(uB,vT);vec3 b=vK>1.5&&vK<3.5?uE:mix(uE,t.rgb,t.a);if(vK>3.5)b*=uF;gl_FragColor=vec4(b*(.68+.46*d)+s,1.);}';
 const SV = 'attribute vec2 aQ;uniform vec2 uC;uniform vec2 uV;uniform vec2 uS;varying vec2 vQ;void main(){vQ=aQ;gl_Position=vec4((uC.x+aQ.x*uS.x)/uV.x*2.-1.,1.-(uC.y+aQ.y*uS.y)/uV.y*2.,0.,1.);}';
 const SF = 'precision mediump float;uniform float uA;varying vec2 vQ;void main(){float a=smoothstep(1.,.3,length(vQ))*uA;gl_FragColor=vec4(0.,0.,0.,a);}';
 const rotZ = (a: number): M3 => [Math.cos(a), -Math.sin(a), 0, Math.sin(a), Math.cos(a), 0, 0, 0, 1];
@@ -88,8 +88,9 @@ export function startTokenLayer(look: TokenLook = {}, sel = '[data-p3-token]', o
     if (!front || back === undefined) { el.removeAttribute('data-p3-drawn'); return false; }
     const [sw, sh2, sd] = (el.getAttribute('data-size') ?? '').split(',').map(Number), ow = el.offsetWidth, oh = el.offsetHeight;
     const size = { w: sw || ow, h: sh2 || oh, d: sd || 2 };
-    const key = `${String(el.getAttribute('data-src'))}|${String(backSrc)}|${String(size.w)},${String(size.h)},${String(size.d)}`;
-    if (!meshes.has(key)) { const m = extrude(front.outline, front, size, !!back); meshes.set(key, m && { n: m.idx.length, pos: buf(gl.ARRAY_BUFFER, m.pos), nor: buf(gl.ARRAY_BUFFER, m.nor), uv: buf(gl.ARRAY_BUFFER, m.uv), kind: buf(gl.ARRAY_BUFFER, m.kind), idx: buf(gl.ELEMENT_ARRAY_BUFFER, m.idx) }); }
+    const rs = el.getAttribute('data-recess'), [rd = 0, rdep = 0, rx = 0, ry = 0, rf = 0.8] = (rs ?? '').split(',').map(Number);
+    const key = `${String(el.getAttribute('data-src'))}|${String(backSrc)}|${String(size.w)},${String(size.h)},${String(size.d)}|${String(rs)}`;
+    if (!meshes.has(key)) { const m = extrude(front.outline, front, size, !!back, 0.6, rs ? { d: rd, depth: rdep, x: rx, y: ry } : undefined); meshes.set(key, m && { n: m.idx.length, pos: buf(gl.ARRAY_BUFFER, m.pos), nor: buf(gl.ARRAY_BUFFER, m.nor), uv: buf(gl.ARRAY_BUFFER, m.uv), kind: buf(gl.ARRAY_BUFFER, m.kind), idx: buf(gl.ELEMENT_ARRAY_BUFFER, m.idx) }); }
     const M = meshes.get(key);
     // an outline that cannot be filled (a pinch): fail closed, the flat chip stays
     if (!M) { own.get(el)?.remove(); el.removeAttribute('data-p3-drawn'); return false; }
@@ -120,7 +121,7 @@ export function startTokenLayer(look: TokenLook = {}, sel = '[data-p3-token]', o
     gl.activeTexture(gl.TEXTURE0);
     gl.uniform3f(U(P, 'uE'), ...hex(el.getAttribute('data-edge') || look.edge || front.edge));
     gl.uniformMatrix3fv(U(P, 'uR'), false, [0, 3, 6, 1, 4, 7, 2, 5, 8].map((n) => m[n] ?? 0));
-    gl.uniform2f(U(P, 'uC'), x, y); gl.uniform1f(U(P, 'uS'), s);
+    gl.uniform2f(U(P, 'uC'), x, y); gl.uniform1f(U(P, 'uS'), s); gl.uniform1f(U(P, 'uF'), rf);
     gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, M.idx); gl.drawElements(gl.TRIANGLES, M.n, gl.UNSIGNED_SHORT, 0);
     const g = c.getContext('2d');
     if (g) { g.clearRect(0, 0, W, H); g.drawImage(canvas, 0, canvas.height - H, W, H, 0, 0, W, H); }
@@ -138,7 +139,7 @@ export function startTokenLayer(look: TokenLook = {}, sel = '[data-p3-token]', o
     for (const m of ms) if (m.type === 'attributes') { if ((m.target as Element).matches(sel)) add(m.target as Element); } else m.addedNodes.forEach(found);
     kick();
   });
-  mo.observe(document.body, { subtree: true, childList: true, attributes: true, attributeFilter: ['data-p3-token', 'data-src', 'data-back', 'data-size', 'data-rot', 'data-edge'] });
+  mo.observe(document.body, { subtree: true, childList: true, attributes: true, attributeFilter: ['data-p3-token', 'data-src', 'data-back', 'data-size', 'data-rot', 'data-edge', 'data-recess'] });
   const all = () => { for (const el of live) dirty.add(el); kick(); };
   const resize = () => { sizes = new WeakMap(); all(); };
   window.addEventListener('resize', resize);

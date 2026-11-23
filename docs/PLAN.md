@@ -387,6 +387,7 @@ The blind matching test's result was not recorded: the PR, its comments and docs
 | K716 | table-panels LogPanel: wholeLines fits entries of mixed heights (each entry measured, no half-cut wrapped entry) | S |  | done |
 | K717 | finish: a Must use order for a test-only part (component.json testOnly: card-harness, test-setup) counts imports from tests/ too | S |  | done |
 | K718 | pieces-3d Token: a die-cut token as a true extruded solid in WebGL (outline traced from the scan alpha, front and back faces, side walls in the edge colour, tilt and turn), its flat form the Chip dieCut | M |  | done |
+| K720 | pieces-3d Token recess: a round hollow sunk into the front face of an extruded token (`recess={{ d, depth, x?, y? }}` in mm, centred by default), with its own wall and floor lit like the rest, the floor showing the scan under it darker; a recess that does not fit inside the outline is refused and the token is drawn without it | S |  | done |
 
 ## Asked for by the owner
 

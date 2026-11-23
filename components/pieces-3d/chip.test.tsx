@@ -80,4 +80,20 @@ describe('pieces-3d: Token (K718)', () => {
       expect(t.querySelector('.p3-chip img')).not.toBeNull();
     } finally { s.restore(); }
   });
+
+  it('K720 recess in mm goes to data-recess in px; the layer draws the token with its hollow and stop() still cleans up; no recess sets nothing', async () => {
+    const s = stubGl();
+    try {
+      const t = render(<Token src="recess.png" mm={{ w: 24.8, h: 24.8, thickness: 2 }} pxPerMm={3} recess={{ d: 19, depth: 1 }} />).container.querySelector('[data-p3-token]') as HTMLElement;
+      expect(t.getAttribute('data-recess')).toBe(`${String(19 * 3)},3,0,0,0.8`);
+      expect(token('plain.png').hasAttribute('data-recess')).toBe(false);
+      const layer = startTokenLayer();
+      await vi.waitFor(() => { expect(t.hasAttribute('data-p3-drawn')).toBe(true); });
+      expect(s.calls).toContain('drawElements');
+      layer?.stop();
+      expect(s.lose).toHaveBeenCalledTimes(1);
+      expect(t.querySelector('canvas.p3-token-gl')).toBeNull();
+      expect(t.hasAttribute('data-p3-drawn')).toBe(false);
+    } finally { s.restore(); }
+  });
 });
