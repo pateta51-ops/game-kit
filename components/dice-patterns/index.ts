@@ -100,3 +100,65 @@ export function smallest(p: Pattern, values: readonly number[], opts: { whole?: 
   const q = opts.whole ? metParts(p, values) : p;
   return search((s) => met(q, s.map((i) => values[i] as number)), values.length);
 }
+
+export type Lack =
+  | { kind: 'same' | 'different' | 'even' | 'odd' | 'twoPair' | 'atLeast' | 'face'; have: number; need: number; face?: number }
+  | { kind: 'run'; have: number; need: number; gaps: number[] }
+  | { kind: 'count' | 'sum' | 'max' | 'spread'; op: Op; value: number; have: number; by: number; dir: 'up' | 'down'; dice: number }
+  | { kind: 'any'; of: Lack[][] };
+
+const away = (have: number, op: Op, value: number): { by: number; dir: 'up' | 'down' } => {
+  const up = op === '>=' ? value - have : op === '>' ? value + 1 - have : op === '=' ? value - have : -1;
+  const down = op === '<=' ? have - value : op === '<' ? have - value + 1 : op === '=' ? have - value : -1;
+  return up > 0 ? { by: up, dir: 'up' } : down > 0 ? { by: down, dir: 'down' } : { by: 0, dir: 'up' };
+};
+
+function lacks(p: Pattern, v: readonly number[]): Lack[] {
+  if (met(p, v)) return [];
+  const counts = new Map<number, number>();
+  for (const x of v) counts.set(x, (counts.get(x) ?? 0) + 1);
+  const cnt = (f: (x: number) => boolean): number => v.filter(f).length;
+  const plain = (kind: 'same' | 'different' | 'even' | 'odd' | 'atLeast' | 'face', n: number, have: number, face?: number): Lack[] => [{ kind, have, need: n - have, ...(face === undefined ? {} : { face }) }];
+  const cmpL = (kind: 'count' | 'sum' | 'max' | 'spread', op: Op, value: number, have: number, dice: number): Lack[] => [{ kind, op, value, have, ...away(have, op, value), dice }];
+  switch (p.kind) {
+    case 'same': {
+      let best: number | undefined;
+      for (const [x, c] of counts) if (best === undefined || c > (counts.get(best) as number) || (c === counts.get(best) && x < best)) best = x;
+      return plain('same', p.n, best === undefined ? 0 : counts.get(best) as number, best);
+    }
+    case 'different': return plain('different', p.n, counts.size);
+    case 'even': return plain('even', p.n, cnt((x) => x % 2 === 0));
+    case 'odd': return plain('odd', p.n, cnt((x) => Math.abs(x % 2) === 1));
+    case 'atLeast': return plain('atLeast', p.n, cnt((x) => x >= p.face), p.face);
+    case 'face': return plain('face', p.n, cnt((x) => x === p.face), p.face);
+    case 'run': {
+      const u = [...counts.keys()].sort((a, b) => a - b);
+      if (!u.length) return [{ kind: 'run', have: 0, need: p.n, gaps: [] }];
+      let have = 0, run = 0, bestAt = -1, gaps: number[] = [];
+      u.forEach((x, i) => { run = i > 0 && x === (u[i - 1] as number) + 1 ? run + 1 : 1; have = Math.max(have, run); });
+      for (let s = u[0] as number; s <= (u[u.length - 1] as number); s += 1) {
+        const g: number[] = [];
+        for (let x = s; x < s + p.n; x += 1) if (!counts.has(x)) g.push(x);
+        if (bestAt < 0 || g.length < gaps.length) { bestAt = s; gaps = g; }
+      }
+      return [{ kind: 'run', have, need: gaps.length, gaps }];
+    }
+    case 'twoPair': {
+      const pairs = [...counts.values()].filter((c) => c >= 2).length, singles = [...counts.values()].filter((c) => c === 1).length;
+      const m = 2 - pairs, s = Math.min(m, singles);
+      return [{ kind: 'twoPair', have: pairs, need: s + 2 * (m - s) }];
+    }
+    case 'count': return cmpL('count', p.op ?? '>=', p.n, v.length, v.length < 1 ? 1 : 0);
+    case 'sum': return cmpL('sum', p.op, p.value, v.reduce((a, b) => a + b, 0), v.length < 1 ? 1 : 0);
+    case 'max': return cmpL('max', p.op ?? '=', p.value, v.length ? Math.max(...v) : 0, v.length < 1 ? 1 : 0);
+    case 'spread': return cmpL('spread', p.op ?? '=', p.value, v.length ? Math.max(...v) - Math.min(...v) : 0, Math.max(0, 2 - v.length));
+    case 'all': return p.of.flatMap((q) => lacks(q, v));
+    case 'any': return [{ kind: 'any', of: p.of.map((q) => lacks(q, v)) }];
+  }
+}
+
+/** What `values` lack to meet `p`, as data (empty when nothing is missing). Judged on the whole roll; without `whole`, empty too when some set of the dice meets `p` (`smallest` is not null). */
+export function missing(p: Pattern, values: readonly number[], opts: { whole?: boolean } = {}): Lack[] {
+  compile(p);
+  return !opts.whole && smallest(p, values) !== null ? [] : lacks(p, values);
+}

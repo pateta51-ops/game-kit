@@ -1,6 +1,53 @@
 import { describe, expect, it } from 'vitest';
-import { checkPattern, compile, meaning, smallest, type Pattern } from './index.ts';
+import { checkPattern, compile, meaning, missing, smallest, type Pattern } from './index.ts';
 import * as before from './main-k527.frozen.ts';
+
+describe('dice-patterns missing (K725)', () => {
+  const m = (p: Pattern, v: number[], whole = false) => missing(p, v, { whole });
+  it('odd n=2 on [3] lacks one odd die, whole on and off', () => {
+    const want = [{ kind: 'odd', have: 1, need: 1 }];
+    expect(m({ kind: 'odd', n: 2 }, [3])).toEqual(want);
+    expect(m({ kind: 'odd', n: 2 }, [3], true)).toEqual(want);
+    expect(smallest({ kind: 'odd', n: 2 }, [3], { whole: true })).toBeNull();
+  });
+  it('every kind: one short', () => {
+    expect(m({ kind: 'same', n: 3 }, [4, 4, 1])).toEqual([{ kind: 'same', have: 2, need: 1, face: 4 }]);
+    expect(m({ kind: 'same', n: 2 }, [])).toEqual([{ kind: 'same', have: 0, need: 2 }]);
+    expect(m({ kind: 'different', n: 3 }, [2, 2, 5])).toEqual([{ kind: 'different', have: 2, need: 1 }]);
+    expect(m({ kind: 'even', n: 2 }, [2, 3])).toEqual([{ kind: 'even', have: 1, need: 1 }]);
+    expect(m({ kind: 'atLeast', face: 5, n: 2 }, [5, 2])).toEqual([{ kind: 'atLeast', have: 1, need: 1, face: 5 }]);
+    expect(m({ kind: 'face', face: 6, n: 1 }, [5])).toEqual([{ kind: 'face', have: 0, need: 1, face: 6 }]);
+    expect(m({ kind: 'twoPair' }, [2, 2, 3, 4])).toEqual([{ kind: 'twoPair', have: 1, need: 1 }]);
+    expect(m({ kind: 'twoPair' }, [2, 2])).toEqual([{ kind: 'twoPair', have: 1, need: 2 }]);
+    expect(m({ kind: 'count', n: 3 }, [1, 1])).toEqual([{ kind: 'count', op: '>=', value: 3, have: 2, by: 1, dir: 'up', dice: 0 }]);
+    expect(m({ kind: 'count', op: '=', n: 2 }, [1, 1, 3], true)).toEqual([{ kind: 'count', op: '=', value: 2, have: 3, by: 1, dir: 'down', dice: 0 }]);
+    expect(m({ kind: 'sum', op: '>=', value: 10 }, [3, 4])).toEqual([{ kind: 'sum', op: '>=', value: 10, have: 7, by: 3, dir: 'up', dice: 0 }]);
+    expect(m({ kind: 'sum', op: '>=', value: 3 }, [])).toEqual([{ kind: 'sum', op: '>=', value: 3, have: 0, by: 3, dir: 'up', dice: 1 }]);
+    expect(m({ kind: 'max', op: '>=', value: 5 }, [2, 4])).toEqual([{ kind: 'max', op: '>=', value: 5, have: 4, by: 1, dir: 'up', dice: 0 }]);
+    expect(m({ kind: 'spread', op: '>=', value: 3 }, [4])).toEqual([{ kind: 'spread', op: '>=', value: 3, have: 0, by: 3, dir: 'up', dice: 1 }]);
+  });
+  it('run names the gaps', () => {
+    expect(m({ kind: 'run', n: 3 }, [1, 2, 4, 5])).toEqual([{ kind: 'run', have: 2, need: 1, gaps: [3] }]);
+    expect(m({ kind: 'run', n: 4 }, [2, 5])).toEqual([{ kind: 'run', have: 1, need: 2, gaps: [3, 4] }]);
+    expect(m({ kind: 'run', n: 2 }, [])).toEqual([{ kind: 'run', have: 0, need: 2, gaps: [] }]);
+  });
+  it('all lists the unmet parts, any lists the alternatives', () => {
+    const all: Pattern = { kind: 'all', of: [{ kind: 'odd', n: 2 }, { kind: 'count', op: '=', n: 2 }, { kind: 'even', n: 1 }] };
+    expect(m(all, [3, 5, 1], true)).toEqual([{ kind: 'count', op: '=', value: 2, have: 3, by: 1, dir: 'down', dice: 0 }, { kind: 'even', have: 0, need: 1 }]);
+    const any: Pattern = { kind: 'any', of: [{ kind: 'same', n: 3 }, { kind: 'run', n: 3 }] };
+    expect(m(any, [1, 1, 5])).toEqual([{ kind: 'any', of: [[{ kind: 'same', have: 2, need: 1, face: 1 }], [{ kind: 'run', have: 1, need: 2, gaps: [2, 3] }]] }]);
+    expect(m(any, [2, 2, 2])).toEqual([]);
+  });
+  it('nothing missing when met, and whole off forgives a set inside the roll', () => {
+    expect(m({ kind: 'odd', n: 2 }, [3, 5])).toEqual([]);
+    expect(m({ kind: 'sum', op: '=', value: 7 }, [3, 4, 2])).toEqual([]);
+    expect(m({ kind: 'sum', op: '=', value: 7 }, [3, 4, 2], true)).toEqual([{ kind: 'sum', op: '=', value: 7, have: 9, by: 2, dir: 'down', dice: 0 }]);
+    expect(m({ kind: 'sum', op: '=', value: 7 }, [3, 4], true)).toEqual([]);
+  });
+  it('throws on bad data like compile', () => {
+    expect(() => missing({ kind: 'same', n: 0 }, [1])).toThrow();
+  });
+});
 
 // Local copies of the two shapes this part feeds (dice-odds chance, dice-tray readRoll); not imported.
 type Chance = (k: number, test: (dice: number[], extra?: number) => boolean, spec?: { sides?: number }) => number;

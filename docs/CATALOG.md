@@ -737,19 +737,20 @@ Exact dice probabilities (K24), opt-in. No packages; import from `index`.
 
 ## dice-patterns
 
-Dice patterns as plain data (a pair, N the same, a run, odd or even, a sum against a number, a count) compiled to the test that `dice-odds` `chance` and `dice-tray` `readRoll` take, plus the smallest set of dice that meets one (K527), on its own or only when the whole roll meets it too (K578). No packages; import from `index`.
+Dice patterns as plain data (a pair, N the same, a run, odd or even, a sum against a number, a count) compiled to the test that `dice-odds` `chance` and `dice-tray` `readRoll` take, plus the smallest set of dice that meets one (K527) and what a roll lacks to meet one, as data (K725), on its own or only when the whole roll meets it too (K578). No packages; import from `index`.
 
 - **Also called:** Dice patterns: pair, run, sum
-- **Words:** dice, pattern, check, pair, run, sum, same, different, condition, exact, smallest, set, group, size, whole, met
+- **Words:** dice, pattern, check, pair, run, sum, same, different, condition, exact, smallest, set, group, size, whole, met, missing, lacks
 - **Release:** 1.0; not seen
 - **The game supplies:** Its patterns as plain data and what each one means.
 - **Use it when:** Dice patterns as data (a pair, N the same, a run, odd or even, a sum against a number, a count, two pair, all or any) compiled to the test that dice-odds chance and dice-tray readRoll take, plus the smallest set of dice that meets one, or the whole roll (an exact sum, a group of an exact size).
 - **Not for:** Rolling dice, odds after rerolls, card sets or poker hands, dice formulas.
-- **Key exports:** `checkPattern`, `compile`, `meaning`, `smallest`, `Op`, `Pattern`, `Test`
+- **Key exports:** `checkPattern`, `compile`, `meaning`, `smallest`, `missing`, `Op`, `Pattern`, `Test`, `Lack`
 - **Hook:** compile: test a dice pattern, a pair, a run or a sum, on the dice
 - **Hook:** meaning: a pattern as a dice tray meaning
 - **Hook:** smallest: the fewest dice that meet a pattern
 - **Hook:** checkPattern: check pattern data from content
+- **Hook:** missing: what a dice roll lacks to meet a pattern, as data
 - **Needs:** nothing
 - **Came from:** 7is
 - **Docs:** [README](../components/dice-patterns/README.md) ([rules for agents](../components/dice-patterns/README.md#rules-for-agents))
