@@ -1475,7 +1475,11 @@
       "token",
       "round",
       "d20",
-      "die"
+      "die",
+      "die cut",
+      "transparent",
+      "outline",
+      "shadow"
     ],
     "looks": "Rounded dice, a rolling ball and a thick chip with a cast shadow.",
     "visible": true,

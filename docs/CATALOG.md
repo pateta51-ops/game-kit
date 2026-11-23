@@ -1230,7 +1230,7 @@ Pieces built in code, no model file: a rounded d6 and a ten-sided die (WebGL), a
 
 - **Also called:** Dice, balls and chips in 3D
 - **Looks like:** Rounded dice, a rolling ball and a thick chip with a cast shadow.
-- **Words:** dice, ball, chip, 3d, roll, piece, token, round, d20, die
+- **Words:** dice, ball, chip, 3d, roll, piece, token, round, d20, die, die cut, transparent, outline, shadow
 - **Release:** 1.0; seen on screen
 - **The game supplies:** The look: colours, faces and sizes.
 - **Use it when:** Dice, balls and chips built in code with WebGL or CSS (no model files).

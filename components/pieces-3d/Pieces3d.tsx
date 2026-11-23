@@ -17,7 +17,7 @@ export function Ball({ look, className, ...rest }: { look?: BallLook | undefined
   return <canvas ref={ref} role="img" data-ball="" className={`p3-ball${className ? ` ${className}` : ''}`} {...rest} />;
 }
 
-/** A slab: the printed face on top, board core at its near side, a cast shadow (pieces3d.css). */
-export function Chip({ className, tilt, ...img }: { tilt?: string } & ImgHTMLAttributes<HTMLImageElement>) {
-  return <span className="p3-chip" style={tilt ? ({ '--piece-tilt': tilt } as React.CSSProperties) : undefined}><img className={className} {...img} /></span>;
+/** A slab: the printed face on top, board core at its near side, a cast shadow (pieces3d.css). `dieCut`: edge and shadow follow the picture's alpha outline (round or irregular transparent tokens), not a rectangle. */
+export function Chip({ className, tilt, dieCut, ...img }: { tilt?: string; dieCut?: boolean } & ImgHTMLAttributes<HTMLImageElement>) {
+  return <span className={dieCut ? 'p3-chip p3-diecut' : 'p3-chip'} data-p3-diecut={dieCut ? '' : undefined} style={tilt ? ({ '--piece-tilt': tilt } as React.CSSProperties) : undefined}><img className={className} {...img} /></span>;
 }
