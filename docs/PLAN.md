@@ -386,6 +386,7 @@ The blind matching test's result was not recorded: the PR, its comments and docs
 | K715 | finish: a Must use entry with no :<export> is refused, saying why; <part>:* is the form for a part used whole | S |  | done |
 | K716 | table-panels LogPanel: wholeLines fits entries of mixed heights (each entry measured, no half-cut wrapped entry) | S |  | done |
 | K717 | finish: a Must use order for a test-only part (component.json testOnly: card-harness, test-setup) counts imports from tests/ too | S |  | done |
+| K718 | pieces-3d Token: a die-cut token as a true extruded solid in WebGL (outline traced from the scan alpha, front and back faces, side walls in the edge colour, tilt and turn), its flat form the Chip dieCut | M |  | done |
 
 ## Asked for by the owner
 

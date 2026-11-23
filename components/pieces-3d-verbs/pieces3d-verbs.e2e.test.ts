@@ -6,7 +6,7 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
 const HAVE = existsSync(chromium.executablePath());
 const path = (f: string) => new URL(f, import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, '$1');
-type T = { piecesTest: { demo(noGl: boolean): Promise<{ gl: boolean; layer: boolean; dice: [string, boolean, string][]; ball: number; chip: string; cards: boolean[] }>; verbs(): Promise<Record<string, boolean | number>>; context(): Promise<Record<string, boolean | number> | null> } };
+type T = { piecesTest: { demo(noGl: boolean): Promise<{ token: [boolean, boolean, boolean, string]; gl: boolean; layer: boolean; dice: [string, boolean, string][]; ball: number; chip: string; cards: boolean[] }>; verbs(): Promise<Record<string, boolean | number>>; context(): Promise<Record<string, boolean | number> | null> } };
 
 describe.skipIf(!HAVE && !process.env['CI'])('pieces-3d demo in a browser', () => {
   let browser: Browser;
@@ -28,6 +28,7 @@ describe.skipIf(!HAVE && !process.env['CI'])('pieces-3d demo in a browser', () =
     expect(r.ball).toBeGreaterThan(0);
     expect(r.chip).toBe('preserve-3d');
     expect(r.cards).toEqual([true, true]);
+    expect(r.token).toEqual([true, true, true, 'hidden']); // K718 the extruded token drawn over its flat chip
   }, 30_000);
 
   it('without WebGL the dice keep their flat form', async () => {
@@ -35,6 +36,7 @@ describe.skipIf(!HAVE && !process.env['CI'])('pieces-3d demo in a browser', () =
     const r = await page.evaluate(() => (window as unknown as T).piecesTest.demo(true));
     expect([r.layer, r.gl]).toEqual([false, false]);
     expect(r.dice.every((d) => !d[1] && d[2] === 'visible')).toBe(true);
+    expect(r.token).toEqual([false, false, false, 'visible']); // K718 no WebGL: the token's <Chip dieCut> shows
     expect(r.ball).toBeGreaterThan(0);
   }, 30_000);
 
