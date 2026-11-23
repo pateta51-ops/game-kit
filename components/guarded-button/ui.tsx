@@ -17,7 +17,7 @@ export function GuardedButton({ onFire, children, guardLabel, barred = false, re
   const [state, setState] = useState<GuardState>(initial);
   const root = useRef<HTMLSpanElement>(null);
   const fire = useRef(onFire);
-  fire.current = onFire;
+  useEffect(() => { fire.current = onFire; });
   const first = useRef(true);
   const tap = useCallback(() => {
     const r = guardTap(state, barred);
@@ -40,9 +40,9 @@ export function GuardedButton({ onFire, children, guardLabel, barred = false, re
   }, [state, timeoutMs]);
   const st = barred ? 'barred' : state;
   return (
-    <span ref={root} className={className} data-part="guarded-button" data-state={st}>
+    <span ref={root} className={className} style={{ perspective: 600 }} data-part="guarded-button" data-state={st}>
       <button type="button" data-kit data-part="button" data-state={st} title={barred ? reason : undefined} data-reason={barred ? reason : undefined} aria-disabled={barred || undefined} onClick={tap}>{children}</button>
-      {!barred && state !== 'fired' && <span data-part="guard" data-state={state} role={state === 'guarded' ? 'button' : undefined} onClick={state === 'guarded' ? tap : undefined}>{state === 'guarded' ? guardLabel : null}</span>}
+      {!barred && <span data-part="guard" data-state={state} data-open={state !== 'guarded'} role={state === 'guarded' ? 'button' : undefined} onClick={state === 'guarded' ? tap : undefined} style={{ transformOrigin: 'top', transform: state === 'guarded' ? 'rotateX(0deg)' : 'rotateX(-100deg)', transition: 'transform var(--guarded-button-swing-ms, 300ms) ease-out', pointerEvents: state === 'guarded' ? undefined : 'none' }}>{state === 'guarded' ? guardLabel : null}</span>}
     </span>
   );
 }

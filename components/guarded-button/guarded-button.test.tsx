@@ -61,6 +61,18 @@ describe('guarded-button', () => {
     expect(b.getAttribute('data-reason')).toBe('No action left');
     expect(container.querySelector('[data-part="guard"]')).toBeNull();
   });
+  it('K726: the guard plate swings up on the first tap (data-open) and shuts on the timeout', () => {
+    const { container } = render(<GuardedButton onFire={() => {}} timeoutMs={500}>Abort</GuardedButton>);
+    const plate = () => container.querySelector('[data-part="guard"]') as HTMLElement;
+    expect(plate().getAttribute('data-open')).toBe('false');
+    expect(plate().style.transform).toBe('rotateX(0deg)');
+    fireEvent.click(screen.getByText('Abort'));
+    expect(plate().getAttribute('data-open')).toBe('true');
+    expect(plate().style.transform).toContain('-100deg');
+    act(() => { vi.advanceTimersByTime(501); });
+    expect(plate().getAttribute('data-open')).toBe('false');
+    expect(plate().style.transform).toBe('rotateX(0deg)');
+  });
   it('K726: unmounting clears the timer', () => {
     const { unmount } = render(<GuardedButton onFire={() => {}}>Abort</GuardedButton>);
     fireEvent.click(screen.getByText('Abort'));

@@ -17,12 +17,15 @@ A two-tap commit with no dialog and no backdrop: the first tap lifts a hinged gu
 - Setting your own timer to re-close the guard: `timeoutMs` does it (default 4000, 0 = never).
 - Putting text in the guard layer: `guardLabel` shows only while guarded.
 
+## The swing
+The guard is one flat plate: the root sets `perspective`, the plate turns `rotateX(-100deg)` about its top edge when open (`data-open="true"`, also while fired) and back to 0 when it re-closes, over `--guarded-button-swing-ms` (300 ms). No mesh, no WebGL. The kit has no hinge motion token, and this does not special-case reduced motion (set the variable to `0ms` in your skin). The game positions the plate over the button and may restyle it.
+
 ## Props
 `onFire`, `children`, `guardLabel?`, `barred?`, `reason?`, `timeoutMs?` (4000), `resetKey?`, `initial?` (`guarded`, `open`, `fired`; for a look sheet), `className?`. Pure: `guardTap(state, barred)` gives `{ state, fire }`; `guardClose(state)` closes an open guard.
 
 ## Use it in 10 lines
 ```ts
-import { guardTap, guardClose } from './index.ts'
+import { guardTap, guardClose } from '../kit/guarded-button/index'
 
 const a = guardTap('guarded')
 const b = guardTap(a.state)
