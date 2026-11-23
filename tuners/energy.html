@@ -5331,6 +5331,7 @@ void main() {
     let endTimer;
     let steps = [];
     let dead = false;
+    let bursts = 0;
     let blanked = [];
     const walk = (n, out) => {
       if (n.nodeType === 3) out.push(n);
@@ -5388,6 +5389,7 @@ void main() {
       if (dead || !f) return;
       stop();
       clearClasses();
+      if (kind === "burst") o.onBurst?.(bursts++);
       const len = kind === "burst" && typeof bm !== "number" ? between(bm) : ms[kind];
       const stepped = kind === "burst" && o.burstSteps !== void 0;
       const n = stepped ? Math.max(1, Math.round(typeof o.burstSteps === "number" ? o.burstSteps : between(o.burstSteps))) : 0;
