@@ -37,6 +37,8 @@ export interface GlitchOptions {
   skewDeg?: [number, number];
   /** [min, max] letters: one frame per burst blanks that many letters of the text face (ignored with `mask`); restored on the next frame and at the burst's end */
   blankLetters?: [number, number];
+  /** called once at the start of each burst (each repeat counts), i = burst index from 0; never when no burst is drawn or after stop/destroy */
+  onBurst?: (i: number) => void;
 }
 export interface Glitch {
   burst(): void;
@@ -82,6 +84,7 @@ export function createGlitch(el: HTMLElement, o: GlitchOptions): Glitch {
   let endTimer: ReturnType<typeof setTimeout> | undefined;
   let steps: ReturnType<typeof setTimeout>[] = [];
   let dead = false;
+  let bursts = 0;
   let blanked: [Text, string, string][] = [];
   const walk = (n: Node, out: Text[]): void => {
     if (n.nodeType === 3) out.push(n as Text);
@@ -137,6 +140,7 @@ export function createGlitch(el: HTMLElement, o: GlitchOptions): Glitch {
     if (dead || !f) return;
     stop();
     clearClasses();
+    if (kind === 'burst') o.onBurst?.(bursts++);
     const len = kind === 'burst' && typeof bm !== 'number' ? between(bm) : ms[kind];
     const stepped = kind === 'burst' && o.burstSteps !== undefined;
     const n = stepped ? Math.max(1, Math.round(typeof o.burstSteps === 'number' ? o.burstSteps : between(o.burstSteps as [number, number]))) : 0;
