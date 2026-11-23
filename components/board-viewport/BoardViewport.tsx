@@ -14,6 +14,7 @@ export interface BoardViewportProps {
   minScale?: number;
   maxScale?: number;
   speed?: number;
+  wheel?: "zoom" | "pan";
   className?: string;
   style?: CSSProperties;
   children: ReactNode;
@@ -30,6 +31,7 @@ export function BoardViewport({
   minScale,
   maxScale,
   speed = 1,
+  wheel: wheelMode = "zoom",
   className,
   style,
   children,
@@ -53,9 +55,11 @@ export function BoardViewport({
   );
 
   const motionSpeed = useRef(speed);
+  const wheelRef = useRef(wheelMode);
   useLayoutEffect(() => {
     motionSpeed.current = speed;
-  }, [speed]);
+    wheelRef.current = wheelMode;
+  }, [speed, wheelMode]);
 
   useLayoutEffect(() => {
     const el = viewport.current!;
@@ -128,6 +132,14 @@ export function BoardViewport({
       stop();
       const unit =
         event.deltaMode === 1 ? 33 : event.deltaMode === 2 ? range.size[1] : 1;
+      if (wheelRef.current === "pan" && !event.ctrlKey) {
+        const swap = event.shiftKey && !event.deltaX;
+        const dx = (swap ? event.deltaY : event.deltaX) * unit;
+        const dy = (swap ? 0 : event.deltaY) * unit;
+        const v = current.current;
+        show(clampView({ ...v, x: v.x - dx, y: v.y - dy }, range));
+        return;
+      }
       show(
         zoomAbout(
           current.current,

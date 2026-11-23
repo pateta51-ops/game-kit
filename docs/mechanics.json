@@ -1,5 +1,6 @@
 {
   "lines": [
+    { "words": "scroll the table with the mouse wheel, tall board scrolls under pinned hand, wheel pans the board", "part": "board-viewport", "read": "its README rule 5a, the `wheel` prop (`pan`)", "sheet": "positions" },
     { "words": "gain a resource, take, resource pool, supplies, energy, coins", "part": "card-language", "read": "pack.md, verbs `gainResource`, `adjust` (amounts live in `res` of `PackConfig`, or in `res` of the state)", "also": ["counter"], "sheet": "run-out" },
     { "words": "pay a cost, pay cost, spend, payment, substitute cost, all or nothing, payment plan, swap a payment, payment plans with substitutes, pay cost icons", "part": "card-language", "read": "pack.md, verbs `pay`, `choosePayment`, `payThen`, `convert`", "sheet": "costs" },
     { "words": "pay by discarding face-up cards that show icons, face-up line that refills until a trigger card", "row": "K520", "sheet": "costs" },
