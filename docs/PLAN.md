@@ -377,6 +377,8 @@ The blind matching test's result was not recorded: the PR, its comments and docs
 | K706 | deck-motions riffle: smooth card edges in the top and side views (no stair-stepped aliasing at any pixel ratio) | S |  | done |
 | K707 | card-harness: a run probe (the verb dispatch notes each op, key and handler it runs outside dry run; recordRan logs them per passing test; the inventory counts a piece only when a full-resolve test ran it), and expectNotFired prompt: unrelated (a prompt open before the act or mapped to another clause) | S |  | done |
 | K708 | sim-pool dispatchTrace: a clause trace whose resolves come from verb dispatch outside dry run (a dry-run offer check or a scan that reads a record no longer counts as a resolve) | S |  | done |
+| K709 | board-viewport: opt-in wheel mode where the wheel pans a tall board and ctrl+wheel or pinch zooms | S |  | done |
+| K710 | table-panels LogPanel: newest-first order and a whole-lines fit (no half-cut line in a fixed-height box) | S |  | done |
 | K713 | Kit-batch worker rules moved into AGENTS.md "Change the kit" | S |  | done |
 | K714 | One worker-rules block in the kit, stamped by pull between markers into every game's AGENTS.md; the scaffold's CLAUDE.md line prints no kit version | M |  | done |
 

@@ -1,5 +1,6 @@
 {
   "lines": [
+    { "words": "scroll the table with the mouse wheel, tall board scrolls under pinned hand, wheel pans the board", "part": "board-viewport", "read": "its README rule 5a, the `wheel` prop (`pan`)", "sheet": "positions" },
     { "words": "gain a resource, take, resource pool, supplies, energy, coins", "part": "card-language", "read": "pack.md, verbs `gainResource`, `adjust` (amounts live in `res` of `PackConfig`, or in `res` of the state)", "also": ["counter"], "sheet": "run-out" },
     { "words": "pay a cost, pay cost, spend, payment, substitute cost, all or nothing, payment plan, swap a payment, payment plans with substitutes, pay cost icons", "part": "card-language", "read": "pack.md, verbs `pay`, `choosePayment`, `payThen`, `convert`", "sheet": "costs" },
     { "words": "pay by discarding face-up cards that show icons, face-up line that refills until a trigger card", "row": "K520", "sheet": "costs" },
@@ -117,6 +118,7 @@
     { "words": "odds after rerolls, chance with rerolls, dice check: roll N, count successes, reroll budget", "row": "K552", "note": "today: dice-patterns `atLeast` is a success count as data and dice-odds `chance` gives its odds with no rerolls", "sheet": "dice" },
     { "words": "one board model for graph, hex and square", "row": "K553", "sheet": "positions" },
     { "words": "spawn table stepped by a clock, what appears each step", "row": "K556", "sheet": "opposition" },
+    { "words": "log newest first, log order, game log whole lines, no half-cut log line", "part": "table-panels", "read": "README, `LogPanel`, `wholeLinesHeight`", "sheet": "objectives" },
     { "words": "score table with a breakdown, final scoring lines", "part": "table-panels", "read": "README, `gameResult` and the game-over breakdown slot", "sheet": "objectives" },
     { "words": "walk along the shortest path to a named place, move to nearest, move toward nearest target, path to destination", "row": "K559", "sheet": "positions" },
     { "words": "row of event cards resolved in order with windows", "row": "K560", "sheet": "opposition" },
