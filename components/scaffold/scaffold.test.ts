@@ -47,6 +47,10 @@ describe('scaffold (K204)', () => {
     expect(fs.readFileSync(path.join(out, 'scripts/check-runner.config.json'), 'utf8')).toContain('"repo-gate"');
     expect(fs.existsSync(path.join(out, 'repo-gate.config.json'))).toBe(true);
     expect(fs.readFileSync(path.join(out, 'CLAUDE.md'), 'utf8')).toContain('TODO');
+    const cm = fs.readFileSync(path.join(out, 'CLAUDE.md'), 'utf8');
+    expect(cm).toContain('kit/kit.lock.json');
+    expect(cm).not.toMatch(/\bv?\d+\.\d+\.\d+\b/);
+    expect(fs.readFileSync(path.join(out, 'AGENTS.md'), 'utf8')).toContain('<!-- kit:worker-rules start -->');
     const app = fs.readFileSync(path.join(out, 'src/ui/App.tsx'), 'utf8');
     for (const r of ['MainMenu', 'SetupForm', 'SettingsScreen', 'SavesScreen']) expect(app).toContain(r);
     expect(fs.existsSync(path.join(out, 'kit/screens/ui.tsx'))).toBe(true);

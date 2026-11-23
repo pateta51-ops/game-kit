@@ -159,6 +159,7 @@ graph LR
   tutorial["tutorial"] --> state_machines["state-machines"]
   ui_helpers["ui-helpers"]
   voice["voice"] --> sound_player["sound-player"]
+  worker_rules["worker-rules"]
 ```
 
 ## Leaf parts nothing needs
@@ -230,3 +231,4 @@ graph LR
 - `turn-flow`
 - `tutorial`
 - `voice`
+- `worker-rules`

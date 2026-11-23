@@ -380,6 +380,7 @@ The blind matching test's result was not recorded: the PR, its comments and docs
 | K709 | board-viewport: opt-in wheel mode where the wheel pans a tall board and ctrl+wheel or pinch zooms | S |  | done |
 | K710 | table-panels LogPanel: newest-first order and a whole-lines fit (no half-cut line in a fixed-height box) | S |  | done |
 | K713 | Kit-batch worker rules moved into AGENTS.md "Change the kit" | S |  | done |
+| K714 | One worker-rules block in the kit, stamped by pull between markers into every game's AGENTS.md; the scaffold's CLAUDE.md line prints no kit version | M |  | done |
 
 ## Asked for by the owner
 
