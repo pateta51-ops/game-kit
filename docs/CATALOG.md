@@ -332,7 +332,7 @@ Cards tucked under a host card (a visible L, slide out on hover) or fanned past 
 - **The game supplies:** Card views and the offsets and look.
 - **Use it when:** Cards tucked under or fanned past a host card with a pure footprint, and the tokens on a card: one per token, ×N past a cap, number boxes; or cards in one sleeve drawn as one composite per face: inserts under a die-cut host, each cut to its own die-cut, read through the host's notch, their tabs past the sleeve's open edge.
 - **Not for:** Token shapes, colours or fonts; tokens at fixed face anchors (card-parts) or flying (token-flights).
-- **Key exports:** `TUCK`, `faceBox`, `tuckedTurned`, `tuckOffset`, `tuckSpots`, `footprint`, `outSpan`, `outSpots`, `outSide`, `fanSpots`, `fanFootprint`, `ROW_MAX`, `tokenRow`, `changedDir`, and 21 more
+- **Key exports:** `TUCK`, `faceBox`, `tuckedTurned`, `tuckOffset`, `tuckSpots`, `footprint`, `outSpan`, `outSpots`, `outSide`, `fanSpots`, `fanFootprint`, `ROW_MAX`, `tokenRow`, `changedDir`, and 22 more
 - **Needs:** [`scan-ingest`](#scan-ingest)
 - **Came from:** earthborne-rangers-fan-prototype
 - **Docs:** [README](../components/card-attachments/README.md) ([rules for agents](../components/card-attachments/README.md#rules-for-agents))
