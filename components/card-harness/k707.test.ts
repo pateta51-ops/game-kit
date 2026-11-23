@@ -1,9 +1,9 @@
 import { existsSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { createProbe, expectNotFired, inventory, readRanLog, type RanNote, type RanRecord } from './index.ts';
-import { recordRan } from './ranLog.ts';
+import { inHook, ranRecordOf, recordRan, refuseConcurrent, type RanTask } from './ranLog.ts';
 
 const routine = { kind: 'next-turn', options: [{ id: 'roll' }] };
 
@@ -68,11 +68,22 @@ describe('K707 recordRan writes passing tests only', () => {
   it('CL-2 runs nothing', () => {
     expect(1).toBe(1);
   });
+  describe('with setup hooks', () => {
+    beforeEach(() => probe.note({ kind: 'op', id: 'setup' }));
+    afterEach(() => probe.note({ kind: 'op', id: 'teardown' }));
+    it('CL-3 body', () => {
+      probe.note({ kind: 'op', id: 'body' });
+      expect(1).toBe(1);
+    });
+  });
 });
 describe('K707 recordRan log', () => {
   it('holds one record: the passing test that ran pieces, with its notes sorted', () => {
     const recs = readRanLog(log);
-    expect(recs.map((r) => [r.file, r.test, r.ran])).toEqual([['components/card-harness/k707.test.ts', 'CL-1 resolves', ['key:phase', 'op:gain']]]);
+    expect(recs.map((r) => [r.file, r.test, r.ran])).toEqual([
+      ['components/card-harness/k707.test.ts', 'CL-1 resolves', ['key:phase', 'op:gain']],
+      ['components/card-harness/k707.test.ts', 'CL-3 body', ['op:body']],
+    ]);
     probe.note({ kind: 'op', id: 'after' });
     expect(readFileSync(log, 'utf8')).not.toContain('after');
   });
@@ -82,6 +93,27 @@ describe('K707 recordRan log', () => {
     writeFileSync(other, `${JSON.stringify({ file: 'a', test: 't', ran: ['op:x'], root: '/elsewhere' })}\n`);
     expect(existsSync(other)).toBe(true);
     expect(readRanLog(other)).toEqual([]);
+  });
+});
+
+describe('K707 recorder guards', () => {
+  const task = (state: string, more: Partial<RanTask> = {}): RanTask => ({ name: 'CL-1 x', file: { filepath: '/r/t.test.ts' }, result: { state }, ...more });
+  const ran = new Set(['op:gain']);
+  it('a plain failing or skipped test is not logged; a passing one is', () => {
+    expect(ranRecordOf(task('fail'), ran, '/r')).toBeUndefined();
+    expect(ranRecordOf(task('skip'), ran, '/r')).toBeUndefined();
+    expect(ranRecordOf({ ...task('pass'), result: undefined }, ran, '/r')).toBeUndefined();
+    expect(ranRecordOf(task('pass', { fails: true }), ran, '/r')).toBeUndefined();
+    expect(ranRecordOf(task('pass'), ran, '/r')).toEqual({ file: 't.test.ts', test: 'CL-1 x', ran: ['op:gain'], root: '/r' });
+  });
+  it('a concurrent test is refused with a clear message', () => {
+    expect(() => refuseConcurrent(task('run', { concurrent: true }))).toThrow('recordRan: "CL-1 x" is a concurrent test; the run log credits notes to one test at a time, so card tests must not run concurrently');
+    expect(() => refuseConcurrent(task('run'))).not.toThrow();
+  });
+  it('notes made while a beforeEach or afterEach hook runs are setup', () => {
+    expect(inHook({ ...task('run'), result: { state: 'run', hooks: { beforeEach: 'run' } } })).toBe(true);
+    expect(inHook({ ...task('run'), result: { state: 'run', hooks: { afterEach: 'run' } } })).toBe(true);
+    expect(inHook({ ...task('run'), result: { state: 'run', hooks: { beforeEach: 'pass' } } })).toBe(false);
   });
 });
 
