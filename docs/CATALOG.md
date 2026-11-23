@@ -1233,7 +1233,7 @@ Pieces built in code, no model file: a rounded d6 and a ten-sided die (WebGL), a
 - **Words:** dice, ball, chip, 3d, roll, piece, token, round, d20, die, die cut, transparent, outline, shadow
 - **Release:** 1.0; seen on screen
 - **The game supplies:** The look: colours, faces and sizes.
-- **Use it when:** Dice, balls and chips built in code with WebGL or CSS (no model files).
+- **Use it when:** Dice, balls and chips built in code with WebGL or CSS (no model files); a round transparent token chip with die cut edge, no rectangle behind it, its shadow follows the outline.
 - **Not for:** Modelled or generated meshes; the owner does no 3D model work.
 - **Key exports:** `sub`, `add`, `mul`, `dot`, `cross`, `norm`, `apply`, `mmul`, `transpose`, `ID`, `rotX`, `rotY`, `rotAxis`, `cube`, and 32 more
 - **Needs:** nothing
