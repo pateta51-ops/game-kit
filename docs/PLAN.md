@@ -394,6 +394,7 @@ The blind matching test's result was not recorded: the PR, its comments and docs
 | K724 | game-store: `get().undoUsed` and `view(state, seat, { undoUsed })` carry the history's undo-used flag (set by a Free-mode undo, kept by saves and load) | S |  | done |
 | K725 | dice-patterns missing: what a roll lacks to meet a pattern as data (faces, how many more dice, a run's gaps, how far a sum, max, spread or count is), for every kind, with `whole` as in `smallest`; the game words it | S |  | done |
 | K726 | guarded-button: a two-tap commit with no dialog (first tap lifts a hinged guard, second fires; states guarded, open, fired; timeout, Escape or tap away re-closes; barred with a reason), unstyled with data-part hooks; a new part because modal-dialog is a dialog and phone-mode's second tap is for board picks | S |  | done |
+| K730 | guarded-button: initial="open" no longer resets to guarded under React StrictMode (resetKey effect compares with the previous key) | S |  | done |
 
 ## Asked for by the owner
 

@@ -19,7 +19,7 @@ export function GuardedButton({ onFire, children, guardLabel, barred = false, re
   const root = useRef<HTMLSpanElement>(null);
   const fire = useRef(onFire);
   useEffect(() => { fire.current = onFire; });
-  const first = useRef(true);
+  const prevKey = useRef(resetKey);
   const armedAt = useRef(0);
   const swing = () => {
     const v = root.current ? parseFloat(getComputedStyle(root.current).getPropertyValue('--guarded-button-swing-ms')) : NaN;
@@ -34,7 +34,8 @@ export function GuardedButton({ onFire, children, guardLabel, barred = false, re
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [state, barred]);
   useEffect(() => {
-    if (first.current) { first.current = false; return; }
+    if (prevKey.current === resetKey) return;
+    prevKey.current = resetKey;
     setState('guarded');
   }, [resetKey]);
   if (barred && state === 'open') setState('guarded');
