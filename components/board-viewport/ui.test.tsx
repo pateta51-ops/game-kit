@@ -22,11 +22,11 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
-function board(speed = 0) {
+function board(speed = 0, wheel?: "pan") {
   const ref = createRef<BoardViewportHandle>();
   const click = vi.fn();
   const result = render(
-    <BoardViewport ref={ref} bounds={[0, 0, 400, 200]} speed={speed}>
+    <BoardViewport ref={ref} bounds={[0, 0, 400, 200]} speed={speed} wheel={wheel}>
       <button onClick={click}>Piece</button>
     </BoardViewport>,
   );
@@ -153,4 +153,41 @@ it('clicks a piece when a stale touch contact is older than the timeout', () => 
   fireEvent.pointerUp(piece, touchDown(2));
   fireEvent.click(piece, { detail: 1 });
   expect(click).toHaveBeenCalledOnce();
+});
+
+it("K709 wheel pan: the wheel moves y and keeps the scale, shift or deltaX moves x, ctrl zooms; default zooms", () => {
+  const send = (root: Element, init: WheelEventInit) => {
+    const e = new WheelEvent("wheel", { cancelable: true, clientX: 80, clientY: 30, ...init });
+    fireEvent(root, e);
+    return e;
+  };
+  const tall = (wheel?: "pan") => {
+    const b = board(0, wheel);
+    act(() => b.ref.current?.focus([0, 0, 200, 200]));
+    act(() => b.ref.current?.focus([0, 0, 100, 50]));
+    return b;
+  };
+  const { root, ref } = tall("pan");
+  const before = { ...ref.current!.view };
+  const e = send(root, { deltaY: 20 });
+  expect(e.defaultPrevented).toBe(true);
+  expect(ref.current!.view.scale).toBe(before.scale);
+  expect(ref.current!.view.y).toBeLessThan(before.y);
+  expect(ref.current!.view.x).toBe(before.x);
+  const y1 = ref.current!.view.y;
+  send(root, { deltaY: -5 });
+  expect(ref.current!.view.y).toBe(y1 + 5);
+  send(root, { deltaY: 10, shiftKey: true });
+  expect(ref.current!.view.y).toBe(y1 + 5);
+  expect(ref.current!.view.x).toBeLessThan(before.x);
+  const x1 = ref.current!.view.x;
+  send(root, { deltaX: 3 });
+  expect(ref.current!.view.x).toBe(x1 - 3);
+  send(root, { deltaY: -100, ctrlKey: true });
+  expect(ref.current!.view.scale).not.toBe(before.scale);
+
+  const plain = tall();
+  const s0 = plain.ref.current!.view.scale;
+  send(plain.root, { deltaY: -100 });
+  expect(plain.ref.current!.view.scale).not.toBe(s0);
 });
