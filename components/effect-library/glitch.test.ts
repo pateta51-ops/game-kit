@@ -476,4 +476,27 @@ describe('glitch', () => {
       expect(on('skew')).toBe(true);
     });
   });
+  describe('onBurst', () => {
+    it('fires once per burst at its start with the index, repeats count, none after destroy or while instant', () => {
+      const calls: number[] = [];
+      const g = make({ seed: 1, ...fast, repeat: 1, repeatGapMs: [100, 100], burstMs: 200, onBurst: (i) => calls.push(i) });
+      vi.advanceTimersByTime(999);
+      expect(calls).toEqual([]);
+      vi.advanceTimersByTime(1);
+      expect(calls).toEqual([0]);
+      vi.advanceTimersByTime(299);
+      expect(calls).toEqual([0]);
+      vi.advanceTimersByTime(1);
+      expect(calls).toEqual([0, 1]);
+      g.destroy();
+      vi.advanceTimersByTime(20000);
+      g.burst();
+      expect(calls).toEqual([0, 1]);
+      mount();
+      const n: number[] = [];
+      make({ seed: 1, speed: () => 'instant', onBurst: (i) => n.push(i) }).burst();
+      vi.advanceTimersByTime(20000);
+      expect(n).toEqual([]);
+    });
+  });
 });
