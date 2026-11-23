@@ -1985,7 +1985,8 @@
       "botDriver: a driver that sees the player view only",
       "runResumable + codeVersion: a long run that resumes after a crash",
       "tune + validate: tune weights, then check on fresh seeds",
-      "proveResolved + provenClauses: prove each clause resolved in a played game"
+      "proveResolved + provenClauses: prove each clause resolved in a played game",
+      "dispatchTrace: count a clause resolved only when verb dispatch ran it, not in a dry run"
     ]
   },
   "small-helpers": {
