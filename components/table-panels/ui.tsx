@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
-import { banner, filterSeat, groupByTurn, wholeLinesHeight, phaseChanged, type Banner, type GameResult, type LogLine, type OpponentTurn, type Phase, type StepLine } from './panels.ts';
+import { banner, filterSeat, groupByTurn, wholeLinesHeight, wholeEntriesHeight, phaseChanged, type Banner, type GameResult, type LogLine, type OpponentTurn, type Phase, type StepLine } from './panels.ts';
 
 // Unstyled: structure and data-* hooks only; the game owns layout and look.
 export function LogPanel({ lines, seats, seatName = (s) => s, turnName = (t) => `Turn ${t}`, renderLine, order = 'oldest-first', wholeLines }: {
@@ -16,9 +16,8 @@ export function LogPanel({ lines, seats, seatName = (s) => s, turnName = (t) => 
     if (!wholeLines || !el) { setFit(null); return; }
     const measure = () => {
       el.style.height = '';
-      const li = el.querySelectorAll('li');
-      const lh = typeof wholeLines === 'number' ? wholeLines : li.length > 1 ? Math.abs((li[1] as HTMLElement).offsetTop - (li[0] as HTMLElement).offsetTop) : (li[0] as HTMLElement | undefined)?.offsetHeight ?? 0;
-      const h = lh > 0 ? wholeLinesHeight(el.clientHeight, lh) : null;
+      const r = el.getBoundingClientRect();
+      const h = typeof wholeLines === 'number' ? (wholeLines > 0 ? wholeLinesHeight(el.clientHeight, wholeLines) : null) : wholeEntriesHeight(el.clientHeight, [...el.querySelectorAll('h4, li')].map((x) => { const b = x.getBoundingClientRect(); return { top: b.top - r.top + el.scrollTop, bottom: b.bottom - r.top + el.scrollTop }; }), !newest);
       el.style.height = h === null ? '' : `${h}px`;
       setFit(h);
       toNewest();
