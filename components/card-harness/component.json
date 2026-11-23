@@ -1,4 +1,5 @@
 {
+  "testOnly": true,
   "name": "card-harness",
   "source": {
     "game": "stcc",

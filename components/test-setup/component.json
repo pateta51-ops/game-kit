@@ -1,4 +1,5 @@
 {
+  "testOnly": true,
   "name": "test-setup",
   "source": {
     "game": "unst",
