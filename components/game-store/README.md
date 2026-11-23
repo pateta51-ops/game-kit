@@ -58,3 +58,4 @@ const def = defineGame<Counter, CounterState, string>({ rules: COUNTER, content:
 const sim = simGameOf(def, { drivers: { opponent: botDriverOf(def, bot) } }) // same seed: same answers as the store
 console.log(sim.rules === def.rules)
 ```
+- K724 `undoUsed`: `get().undoUsed` is the history's flag (true after a Free-mode `undo()`, and after `load` of a save that kept it); `view(state, seat, { undoUsed })` gets it as a third argument, so a game's view can show "undo used". Games that ignore the third argument are unchanged.

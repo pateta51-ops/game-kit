@@ -150,6 +150,23 @@ describe('game-store (K234)', () => {
     expect(JSON.stringify(seen.filter((x) => x.view.seat === 'b'))).not.toContain('"sa"');
   });
 
+  it('K724 undoUsed: false before, true after a free undo (snap and view), true after load of a save that kept it', () => {
+    const d2 = { ...def, view: (st: G['state'], seat: 'a' | 'b', ctx?: { undoUsed: boolean }) => ({ ...def.view(st, seat), undoUsed: ctx?.undoUsed }) };
+    const store = createGameStore(d2 as never, { seat: 'a', seed: 'u', undo: 'free' }) as unknown as ReturnType<typeof createGameStore<G, { undoUsed?: boolean }, 'a'>>;
+    store.answer(['1'], store.get().state.prompt?.id ?? 0);
+    expect(store.get().undoUsed).toBe(false);
+    expect(store.get().view.undoUsed).toBe(false);
+    expect(store.undo()).toBe(true);
+    expect(store.get().undoUsed).toBe(true);
+    expect(store.get().view.undoUsed).toBe(true);
+    const h = store.saved();
+    const back = createGameStore(d2 as never, { seat: 'a', undo: 'free' }) as unknown as typeof store;
+    expect(back.get().undoUsed).toBe(false);
+    expect(back.load(createSave(RULES, { options: h.options, rules: h.rules, actions: h.actions, undoUsed: true, savedAt: '' }, {}))).toBeNull();
+    expect(back.get().undoUsed).toBe(true);
+    expect(back.get().view.undoUsed).toBe(true);
+  });
+
   it('loads an older save through its migration and keeps its undo flag for the next autosave', () => {
     const store = createGameStore(def, { seat: 'a', seed: 'm' });
     store.answer(['1'], store.get().state.prompt?.id ?? 0);
