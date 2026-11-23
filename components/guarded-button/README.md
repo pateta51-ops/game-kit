@@ -21,7 +21,7 @@ A two-tap commit with no dialog and no backdrop: the first tap lifts a hinged gu
 The guard is one flat plate: the root sets `perspective`, the plate turns `rotateX(-100deg)` about its top edge when open (`data-open="true"`, also while fired) and back to 0 when it re-closes, over `--guarded-button-swing-ms` (300 ms). No mesh, no WebGL. The kit has no hinge motion token, and this does not special-case reduced motion (set the variable to `0ms` in your skin). The game positions the plate over the button and may restyle it.
 
 ## Props
-`onFire`, `children`, `guardLabel?`, `barred?`, `reason?`, `timeoutMs?` (4000), `resetKey?`, `initial?` (`guarded`, `open`, `fired`; for a look sheet), `className?`. Pure: `guardTap(state, barred)` gives `{ state, fire }`; `guardClose(state)` closes an open guard.
+`onFire`, `children`, `guardLabel?`, `barred?`, `reason?`, `timeoutMs?` (4000), `swingMs?` (300; a second tap before the swing ends is ignored, so a double tap cannot fire; 0 allows it), `resetKey?`, `initial?` (`guarded`, `open`, `fired`; for a look sheet), `className?`. Pure: `guardTap(state, barred)` gives `{ state, fire }`; `guardClose(state)` closes an open guard.
 
 ## Use it in 10 lines
 ```ts
