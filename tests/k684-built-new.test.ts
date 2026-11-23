@@ -70,7 +70,7 @@ describe('K684 finish: every new src file is listed under Built new', () => {
     const main = game('d', { 'src/old.ts': 'export const a = 2', 'src/x.test.ts': '', 'src/tests/h.ts': '', 'src/t.d.ts': '' });
     const r = run(main, null);
     expect(r.rc).toBe(0);
-    expect(r.gh).toHaveLength(0);
+    expect(r.gh).toHaveLength(1); // K712: the body is read once for Must use orders; no PR body still passes
     expect(r.text).toMatch(/^PASS /);
   });
   it('K684 files matching package.json kit.builtNew.ignore globs pass', () => {
@@ -95,7 +95,7 @@ describe('K684 finish: every new src file is listed under Built new', () => {
     g(main, 'commit', '-qm', 'move');
     const r = run(main, null);
     expect(r.rc).toBe(0);
-    expect(r.gh).toHaveLength(0);
+    expect(r.gh).toHaveLength(1); // K712: the body is read once for Must use orders; no PR body still passes
   });
   it('K684 a bare src/ line or a one-level folder covers nothing; a folder two levels below src/ does', () => {
     const main = game('j', { 'src/ui/motion/a.ts': '', 'src/ui/motion/b.ts': '' });

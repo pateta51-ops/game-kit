@@ -177,7 +177,7 @@ describe('K688 new top-level exports and timers in changed files need a line', (
     ]) {
       const r = run(game({ 'src/old.ts': t }), null);
       expect(r.rc).toBe(0);
-      expect(r.gh).toHaveLength(0);
+      expect(r.gh).toHaveLength(1); // K712: the body is read once for Must use orders; no PR body still passes
     }
   });
   it('K688 a changed test file or ignored file is not checked', () => {

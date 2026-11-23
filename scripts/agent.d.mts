@@ -29,3 +29,9 @@ export function docLines(text: string): { n: number; text: string; code: boolean
 export function launch(win: boolean, dir: string): { cmd: string; args: string[]; env: Record<string, string> }
 export function byHand(win: boolean, dir: string): string
 export const realBg: Bg & { start: (cmd: string, args: string[], dir: string, env?: Record<string, string>, sp?: unknown) => void }
+export function kitImports(files: [string, string][]): Map<string, Set<string>>
+export function srcImports(repo: string): Map<string, Set<string>>
+export function orders(body: string, imports: Map<string, Set<string>>): { line: string; probs: string[] }
+export const E2E_PATHS: string[]
+export function e2eNeeded(paths: string[]): string[]
+export function e2eCommand(repo: string): string | null
