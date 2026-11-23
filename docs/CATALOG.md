@@ -1824,7 +1824,7 @@ Rounds, turns per seat and phases and steps inside a turn as one data table; the
 - **The game supplies:** The table of rounds, turns, phases and steps.
 - **Use it when:** Rounds, turns per seat in seat order, and phases and steps inside a turn as one data table; the runner calls engine-core boundary() at each turn, phase and round edge, so endOfTurn / endOfRound / endOfPhase durations end with no manual call; whoseTurn and flowOf read the position from state; once-per limits (K589: once per turn, round, phase or game, per card, per seat) bar a used option with its reason and clear at the matching edge. Recipe: docs/recipes/turn-flow.md.
 - **Not for:** What a step does, simultaneous or out-of-order turns (interrupts, reactions), step-long durations (engine-core has none), or the screen that shows the phase.
-- **Key exports:** `FLOW_NEXT`, `flowOf`, `whoseTurn`, `limitsOf`, `limitUsed`, `markLimit`, `limitOption`, `clearLimits`, `startFlow`, `endTurn`, `flowHandlers`, `FlowPhase`, `FlowLevel`, `FlowPos`, and 7 more
+- **Key exports:** `FLOW_NEXT`, `flowOf`, `whoseTurn`, `limitsOf`, `limitUsed`, `markLimit`, `limitOption`, `clearLimits`, `startFlow`, `endTurn`, `flowHandlers`, `FlowPhase`, `FlowLevel`, `FlowPos`, and 9 more
 - **Hook:** FlowConfig + flowHandlers + startFlow: rounds, turns and phases from one table
 - **Hook:** endTurn: end a turn early, pass
 - **Hook:** flowOf + whoseTurn: whose turn it is and which phase

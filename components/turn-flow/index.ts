@@ -15,6 +15,16 @@ export interface FlowPos {
   readonly phase: string;
   readonly step: string | null;
 }
+export interface FlowSkip {
+  readonly by: string;
+  readonly why?: string;
+}
+export interface FlowSkipped extends FlowPos {
+  readonly kind: 'skipped';
+  readonly level: FlowLevel;
+  readonly by: string;
+  readonly why?: string;
+}
 export interface FlowState extends FlowPos {
   readonly at: readonly [number, number];
   readonly done?: true;
@@ -24,7 +34,8 @@ export interface FlowConfig<G extends GameTypes> {
   readonly phases: readonly FlowPhase[];
   seats(s: G['state']): readonly string[];
   step(ctx: Ctx<G>, pos: FlowPos): void;
-  skip?(s: G['state'], level: FlowLevel, pos: FlowPos): boolean;
+  /** K729: `{ by, why? }` skips and emits a `skipped` event (a `FlowSkipped`; the game's event type must include it); `true` skips silently. */
+  skip?(s: G['state'], level: FlowLevel, pos: FlowPos): boolean | FlowSkip;
   readonly rounds?: number;
   /** K320: the round ends after a turn when this says so (a solo game's round ends when its deck runs out); seats keep cycling within the round. Default: after one turn per seat. */
   roundEnds?(s: G['state'], pos: FlowPos): boolean;
@@ -119,7 +130,11 @@ export function flowHandlers<G extends GameTypes>(cfg: FlowConfig<G>): HandlerTa
       }
       const skip = (level: FlowLevel, who: string): boolean => {
         const ph = cfg.phases[phase];
-        return cfg.skip?.(ctx.s, level, { round, turn, seat: who, phase: level === 'turn' ? '' : (ph?.id ?? ''), step: level === 'step' ? (ph?.steps?.[step] ?? null) : null }) ?? false;
+        const pos: FlowPos = { round, turn, seat: who, phase: level === 'turn' ? '' : (ph?.id ?? ''), step: level === 'step' ? (ph?.steps?.[step] ?? null) : null };
+        const r = cfg.skip?.(ctx.s, level, pos) ?? false;
+        if (typeof r === 'boolean') return r;
+        ctx.emit({ kind: 'skipped', level, ...pos, by: r.by, ...(r.why === undefined ? {} : { why: r.why }) } as unknown as Parameters<typeof ctx.emit>[0]);
+        return true;
       };
       for (;;) {
         if (cfg.over?.(ctx.s) === true) {

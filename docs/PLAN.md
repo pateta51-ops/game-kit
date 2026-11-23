@@ -406,6 +406,7 @@ The blind matching test's result was not recorded: the PR, its comments and docs
 | K687 | search: answer 12 more planner searches of 22 Nov. | S | owner (22 Nov 2026): every planner search that found nothing is answered before a tag | done |
 | K699 | search: answer 40 more planner searches of 22 Nov. | S | owner (22 Nov 2026): every planner search that found nothing is answered before a tag | done |
 | K700 | search: answer 19 more planner searches of 22 Nov. | S | owner (22 Nov 2026): every planner search that found nothing is answered before a tag | done |
+| K729 | turn-flow: skip returns { by, why? } and the runner emits a skipped event. | S | owner (23 Nov 2026): the log says which card skipped a phase | done |
 
 ## Candidates
 
