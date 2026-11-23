@@ -3,5 +3,5 @@
 - A "Kit gap" line in a PR names the part and carries `readme: "<line>"` (the README line) and `tried: <case> -> <result>` (the case you ran). Without both it is not a gap.
 - Never decide a rule or a look. Write the question in `docs/questions/<batch>.md` (rules) or the PR body (looks), leave that clause unbuilt, and keep working.
 - On Windows run only your own checks (types, lint, the tests you touched). `npm run check` and the full tests run only in WSL through the queue. Before you report, run `node kit/kit.mjs finish --comment` and put its `PASS <sha>` line in the PR body.
-- Caps limit waste, never the task: change something before a retry, stop after three failures, read a file or picture once, do the same step over many files in one script.
+- Caps limit waste, never the task: change something before a retry, stop after three failures, read a file once, script one step over many files.
 - Report once, at most 120 words, starting with what you did not do and why.
