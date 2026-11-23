@@ -13,7 +13,7 @@ Cards tucked under a host card (a visible L, slide out on hover) or fanned past 
 4. Pass `ms` from the settings' speed (0 for no slide); pass `open` only for a controlled slide-out.
 5. Give `TokenRow` and `NumberBox` a `render`: the token shapes, colours and fonts are the game's.
 6. Put anchored tokens at fixed spots of a face in `card-parts` (`TokenLayer`), not here; draw a token row from `shownCount(...)` of `counter` when a number must bump or fly.
-7. Draw cards in one sleeve with `<SleeveStack host={{ front, back }} inserts={[{ key, front, back }]} face open? />`: each face an image `{ src, width, height, outline?, cutout? }` (the scan's px size, its die-cut outline normalised on the upright image); list the inserts from the host's front (index 0 lies against it); pass `open={{ back: 'left' }}` when the sleeve opens on the left of that face's image; size it by its parent's width. Never mirror its ranks or layers in the game, and never port a game's own notch or tab code beside it.
+7. Draw cards in one sleeve with `<SleeveStack host={{ front, back }} inserts={[{ key, front, back }]} face open? />`: each face an image `{ src, width, height, outline?, cutout? }` (the scan's px size upright, tab on top, and its die-cut outline normalised on that upright image; `open: 'left'` turns an insert, never pass it pre-turned); list the inserts from the host's front (index 0 lies against it); pass `open={{ back: 'left' }}` when the sleeve opens on the left of that face's image; size it by its parent's width. Never mirror its ranks or layers in the game, and never port a game's own notch or tab code beside it.
 8. Style it yourself: the CSS is structural only; hook on `data-part` (`host-stack`, `host`, `attachment`, `token-row`, `token`, `number-box`, `sleeve`, `sleeve-host`, `sleeve-insert`, `sleeve-tab`).
 
 **Common mistakes:**
@@ -53,5 +53,5 @@ import { HostStack, SleeveStack, TokenRow } from '../kit/card-attachments/ui'
 export const Mission = () => <HostStack host={<b>host</b>} attachments={[{ key: 'a', node: <i>back</i> }]} w={276} h={386} />
 export const Harm = () => <TokenRow kind="harm" count={7} render={() => <span>*</span>} />
 const face = (src: string, width: number, height: number) => ({ src, width, height })
-export const Sleeved = () => <SleeveStack host={{ front: face('h.webp', 700, 980), back: face('hb.webp', 980, 700) }} inserts={[{ key: 'a', front: face('a.webp', 700, 1040), back: face('ab.webp', 1040, 700) }]} face="back" open={{ back: 'left' }} />
+export const Sleeved = () => <SleeveStack host={{ front: face('h.webp', 700, 980), back: face('hb.webp', 980, 700) }} inserts={[{ key: 'a', front: face('a.webp', 700, 1040), back: face('ab.webp', 700, 1040) }]} face="back" open={{ back: 'left' }} />
 ```

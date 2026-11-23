@@ -9,7 +9,7 @@ const tabbed = [[0, 0.1], [0.35, 0.1], [0.35, 0], [0.65, 0], [0.65, 0.1], [1, 0.
 const tabbedB = [[0, 0.1], [0.4, 0.1], [0.4, 0], [0.6, 0], [0.6, 0.1], [1, 0.1], [1, 1], [0, 1]] as const
 const f = (src: string, width: number, height: number, outline?: readonly (readonly [number, number])[]): SleeveFace => ({ src, width, height, ...(outline ? { outline } : {}) })
 const host = { front: f('hf', 100, 140, notched), back: f('hb', 140, 100) }
-const ins = (k: string, o: readonly (readonly [number, number])[] = tabbed) => ({ key: k, front: f(`${k}f`, 100, 150, o), back: f(`${k}b`, 150, 100) })
+const ins = (k: string, o: readonly (readonly [number, number])[] = tabbed) => ({ key: k, front: f(`${k}f`, 100, 150, o), back: f(`${k}b`, 100, 150) })
 const parts = (c: HTMLElement, p: string) => [...c.querySelectorAll<HTMLElement>(`[data-part="${p}"]`)]
 
 describe('sleeve geometry (K721)', () => {
