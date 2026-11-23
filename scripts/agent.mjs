@@ -344,7 +344,7 @@ export function orders(body, imps) {
   const lines = body.split(/\r?\n/), want = new Map(), waived = new Set(), probs = []
   for (const l of lines) {
     const mu = lineOf(l, 'must use')
-    if (mu !== undefined) for (const e of mu.replace(/[`*]/g, '').split(',').map((x) => x.trim()).filter(Boolean)) { const [p, x] = e.split(':').map((y) => y.trim()); if (!x) probs.push(`must use entry "${p}" names no export: write ${p}:<export> (a bare part passes on any import from it, so a skipped export goes unseen), or ${p}:* when the part is used whole`); if (!want.has(p)) want.set(p, new Set()); if (x && x !== '*') want.get(p).add(x) }
+    if (mu !== undefined) for (const e of mu.replace(/`|\*\*/g, '').split(',').map((x) => x.trim()).filter(Boolean)) { const [p, x] = e.split(':').map((y) => y.trim()); if (!x) probs.push(`must use entry "${p}" names no export: write ${p}:<export> (a bare part passes on any import from it, so a skipped export goes unseen), or ${p}:* when the part is used whole`); if (!want.has(p)) want.set(p, new Set()); if (x && x !== '*') want.get(p).add(x) }
     const w = lineOf(l, 'waived')
     if (w !== undefined) {
       const [p, who, why] = w.replace(/`/g, '').split('|').map((y) => y.trim())
