@@ -26,7 +26,7 @@ function board(speed = 0, wheel?: "pan") {
   const ref = createRef<BoardViewportHandle>();
   const click = vi.fn();
   const result = render(
-    <BoardViewport ref={ref} bounds={[0, 0, 400, 200]} speed={speed} wheel={wheel}>
+    <BoardViewport ref={ref} bounds={[0, 0, 400, 200]} speed={speed} {...(wheel ? { wheel } : {})}>
       <button onClick={click}>Piece</button>
     </BoardViewport>,
   );
@@ -186,6 +186,7 @@ it("K709 wheel pan: the wheel moves y and keeps the scale, shift or deltaX moves
   send(root, { deltaY: -100, ctrlKey: true });
   expect(ref.current!.view.scale).not.toBe(before.scale);
 
+  cleanup();
   const plain = tall();
   const s0 = plain.ref.current!.view.scale;
   send(plain.root, { deltaY: -100 });

@@ -14950,6 +14950,7 @@ var K = (() => {
     minScale,
     maxScale,
     speed = 1,
+    wheel: wheelMode = "zoom",
     className,
     style,
     children,
@@ -14971,9 +14972,11 @@ var K = (() => {
       []
     );
     const motionSpeed = (0, import_react.useRef)(speed);
+    const wheelRef = (0, import_react.useRef)(wheelMode);
     (0, import_react.useLayoutEffect)(() => {
       motionSpeed.current = speed;
-    }, [speed]);
+      wheelRef.current = wheelMode;
+    }, [speed, wheelMode]);
     (0, import_react.useLayoutEffect)(() => {
       const el = viewport.current;
       const win = el.ownerDocument.defaultView;
@@ -15038,6 +15041,14 @@ var K = (() => {
         event.preventDefault();
         stop();
         const unit = event.deltaMode === 1 ? 33 : event.deltaMode === 2 ? range.size[1] : 1;
+        if (wheelRef.current === "pan" && !event.ctrlKey) {
+          const swap = event.shiftKey && !event.deltaX;
+          const dx = (swap ? event.deltaY : event.deltaX) * unit;
+          const dy = (swap ? 0 : event.deltaY) * unit;
+          const v = current.current;
+          show(clampView({ ...v, x: v.x - dx, y: v.y - dy }, range));
+          return;
+        }
         show(
           zoomAbout(
             current.current,
