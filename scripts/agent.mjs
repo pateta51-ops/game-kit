@@ -393,7 +393,12 @@ export function e2eCommand(repo) {
   // K712 review: a command made only of shell no-ops (true, :, echo, exit 0, empty), directly or through npm run, runs no e2e suite
   const noop = (c, d = 0) => String(c).split(/&&|\|\||;/).map((x) => x.trim()).every((x) => { const r = x.match(/^npm run (\S+)$/); return r && d < 5 ? s[r[1]] !== undefined && noop(s[r[1]], d + 1) : /^(true|:|echo\b.*|exit\s+0|)$/.test(x) })
   // the command, or an npm script it runs, must name playwright or an e2e script
-  const e2e = (c, d = 0) => /playwright|\be2e\b|:e2e\b/.test(String(c)) || (d < 5 && [...String(c).matchAll(/npm run (\S+)/g)].some((m) => s[m[1]] !== undefined && e2e(s[m[1]], d + 1)))
+  // per segment of && || ;, with a # comment cut off; echo, printf and other no-ops never count
+  const e2e = (c, d = 0) => String(c).split(/&&|\|\||;/).map((x) => x.replace(/(^|\s)#.*$/, '').trim()).some((x) => {
+    if (/^(echo|printf|true|:|exit)\b/.test(x)) return false
+    const r = x.match(/^npm run (\S+)/)
+    return r ? /\be2e\b/.test(r[1]) || (d < 5 && s[r[1]] !== undefined && e2e(s[r[1]], d + 1)) : /playwright|\be2e\b/.test(x)
+  })
   const got = (cmd, from) => noop(cmd) ? { cmd: null, why: `${from} ${JSON.stringify(cmd)} is a no-op (true, :, echo, exit 0 or empty); it must run the game's e2e suites` } : !e2e(cmd) ? { cmd: null, why: `${from} ${JSON.stringify(cmd)} runs no e2e suite (no playwright and no e2e script in it or the npm scripts it runs)` } : { cmd, from }
   if (pk.kit?.e2e !== undefined) return got(pk.kit.e2e, 'package.json kit.e2e')
   const names = s.e2e !== undefined ? ['e2e'] : ['test:e2e', 'test:e2e:phone'].filter((n) => s[n] !== undefined)

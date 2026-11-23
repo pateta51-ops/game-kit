@@ -216,6 +216,10 @@ describe('K712 finish: orders and e2e from the changed paths', () => {
     expect(e2eCommand(chk).why).toContain('runs no e2e suite');
     const gate = game('e7', { 'package.json': JSON.stringify({ scripts: { gate: 'playwright test' }, kit: { e2e: 'npm run gate' } }) }, { 'b.txt': 'b' });
     expect(e2eCommand(gate)).toEqual({ cmd: 'npm run gate', from: 'package.json kit.e2e' });
+    for (const cmd of ['npm run check && echo e2e', 'tsc # e2e']) {
+      const g = game('e8' + cmd.length, { 'package.json': JSON.stringify({ scripts: { check: 'node check.mjs' }, kit: { e2e: cmd } }) }, { 'b.txt': 'b' });
+      expect(e2eCommand(g).cmd).toBe(null);
+    }
   });
   it('K712 second review: a Kit gap line that only starts with none needs its proof', () => {
     const r = orders('## Kit gap\n- none of the viewports pan, so the table scrolls itself\n', imps({}));
