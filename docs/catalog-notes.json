@@ -2679,7 +2679,7 @@
   },
   "worker-rules": {
     "mechanics": "none: build, CI or repository tooling",
-    "use": "The one block of worker rules every game's AGENTS.md carries: kit first, Must use is an order, Kit gap needs proof, no deciding rules or looks, caps, report order. `pull` stamps it between markers; `worker-rules --adopt` lists hand-written copies to remove.",
+    "use": "The one block of worker rules from the kit that every game's agents file (AGENTS.md) carries: kit first, Must use is an order, Kit gap needs proof, no deciding rules or looks, caps, report order. `pull` stamps it between markers; `worker-rules --adopt` lists hand-written copies to remove.",
     "not": "A game never edits the stamped text or pulls this component; its own rules go outside the markers.",
     "title": "Worker rules block",
     "tags": [
