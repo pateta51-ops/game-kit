@@ -147,8 +147,8 @@ are here (sources in component.json).
 - `ScanBoard` draws the scan `width` px wide and puts `render(id, sizePx)` in each box (`data-scan-box`); `boardMm` sets
   `--mm` (px per mm) so a `Piece` inside is drawn at its true size, cut to its outline. Style `data-part="scan-board"`,
   `scan-piece`. The finite supply of pieces is in token-bag (`supply.ts`).
-- Left in the games: card frames and box colours, sleeve layers (upgrade layer, notch and tab windows), the zoom
-  views and pile volume.
+- Left in the games: card frames and box colours, the zoom views and pile volume. Sleeve inserts (inserts under a
+  die-cut host, their tabs, the notch) are card-attachments `SleeveStack` (K721), built on `clipPathOf` and `boxStyle`.
 
 ## Playmats, tone profile (Python, K373)
 

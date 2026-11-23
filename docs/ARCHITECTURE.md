@@ -20,7 +20,7 @@ graph LR
   bug_reporter["bug-reporter"] --> small_helpers["small-helpers"]
   bundle_size["bundle-size"]
   campaign["campaign"]
-  card_attachments["card-attachments"]
+  card_attachments["card-attachments"] --> scan_ingest["scan-ingest"]
   card_hand["card-hand"] --> engine_core["engine-core"]
   card_hand["card-hand"] --> card_zones["card-zones"]
   card_hand["card-hand"] --> drag_drop["drag-drop"]
@@ -217,7 +217,6 @@ graph LR
 - `resolution-frame`
 - `rules-screen`
 - `saves`
-- `scan-ingest`
 - `story`
 - `table-panels`
 - `target-arrow`

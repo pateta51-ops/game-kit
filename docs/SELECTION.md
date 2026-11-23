@@ -173,7 +173,7 @@ Components with no row above. Each starts from the game and commit in its `compo
 | `scaffold` | 7th Inning Stretch `bb71c3fa` (K204; config files and scripts only) | M |
 | `reference-game` | none: written new for the kit (K205; a made-up game generated through `scaffold` as a contract test) | M |
 | `token-bag` | Warp's Edge `6790200` (K246: bag3d timeline, mode, scene, exterior, Rest, Draw; BagDock, BagView, bagDraw; faces, print, speed became the game's; K373 supply: Unstoppable `e314b5f` supply.ts) | M |
-| `card-attachments` | Earthborne `b9b06107` (K245: table/geometry.ts tuck, Tokens.tsx rows and boxes) and Imperium `22736b2f` (Garrison stack; the token shapes and fonts became the game's render) | M |
+| `card-attachments` | Earthborne `b9b06107` (K245: table/geometry.ts tuck, Tokens.tsx rows and boxes) and Imperium `22736b2f` (Garrison stack; the token shapes and fonts became the game's render); Unstoppable `70bf1a46` (K721: sleeve inserts from UpgradeLayers.tsx and scanned/geometry.ts; slot names, words and the notch button left in the game) | M |
 | `token-flights` | Unstoppable `e395a7c4` (K241: flights.ts, flightLedger.ts, TokenFlights.tsx; places, art, lookup and hold became the game's) | M |
 | `deck-motions` | STCC `8e6f55b` (`ui/motion/dealing.ts`: dealFrom, refill turn-over, riffle, shuffleDecks, deck cycle; from LordOfTheRings `a3f3c01`) (K250) | M |
 | `track` | Unstoppable `e395a7c4` (K242: DangerTrack spaces, states, labels, drawn and mat rendering; threatBuffs useMarkerGlide); STCC `8e6f55bd` crewTrack.ts (hop, fill, badge pop) and StepTrack.tsx (LotR PhaseTracker, BSD-3); danger rules, skull and colours left out | M |

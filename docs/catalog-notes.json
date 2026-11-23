@@ -295,7 +295,7 @@
     "gameSupplies": "The scenarios and what a result changes."
   },
   "card-attachments": {
-    "use": "Cards tucked under or fanned past a host card with a pure footprint, and the tokens on a card: one per token, ×N past a cap, number boxes.",
+    "use": "Cards tucked under or fanned past a host card with a pure footprint, and the tokens on a card: one per token, ×N past a cap, number boxes; or cards in one sleeve drawn as one composite per face: inserts under a die-cut host, each cut to its own die-cut, read through the host's notch, their tabs past the sleeve's open edge.",
     "not": "Token shapes, colours or fonts; tokens at fixed face anchors (card-parts) or flying (token-flights).",
     "title": "Cards tucked under others, tokens on cards",
     "tags": [
@@ -309,7 +309,13 @@
       "on-card",
       "upgrade",
       "sleeve",
-      "behind"
+      "behind",
+      "insert",
+      "notch",
+      "die-cut",
+      "tab",
+      "composite",
+      "sleeved"
     ],
     "looks": "Cards peek out from beneath a host card; tokens sit on a card, shown as one each or a number.",
     "visible": true,
