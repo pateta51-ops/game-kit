@@ -32,6 +32,12 @@
   background: transparent;
   cursor: pointer;
 }
+:where([data-part='stack-over']) {
+  position: absolute;
+  inset: 0;
+  z-index: 26;
+  pointer-events: none;
+}
 :where([data-part='stack-hit']:disabled) {
   cursor: default;
 }

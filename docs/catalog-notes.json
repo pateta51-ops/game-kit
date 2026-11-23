@@ -889,7 +889,9 @@
       "group",
       "size",
       "whole",
-      "met"
+      "met",
+      "missing",
+      "lacks"
     ],
     "visible": false,
     "release": 1,
@@ -898,7 +900,8 @@
       "compile: test a dice pattern, a pair, a run or a sum, on the dice",
       "meaning: a pattern as a dice tray meaning",
       "smallest: the fewest dice that meet a pattern",
-      "checkPattern: check pattern data from content"
+      "checkPattern: check pattern data from content",
+      "missing: what a dice roll lacks to meet a pattern, as data"
     ]
   },
   "dice-tray": {

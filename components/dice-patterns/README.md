@@ -1,6 +1,6 @@
 # dice-patterns
 
-Dice patterns as plain data (a pair, N the same, a run, odd or even, a sum against a number, a count) compiled to the test that `dice-odds` `chance` and `dice-tray` `readRoll` take, plus the smallest set of dice that meets one (K527), on its own or only when the whole roll meets it too (K578). No packages; import from `index`.
+Dice patterns as plain data (a pair, N the same, a run, odd or even, a sum against a number, a count) compiled to the test that `dice-odds` `chance` and `dice-tray` `readRoll` take, plus the smallest set of dice that meets one (K527) and what a roll lacks to meet one, as data (K725), on its own or only when the whole roll meets it too (K578). No packages; import from `index`.
 
 ## Rules for agents
 
@@ -10,6 +10,7 @@ Dice patterns as plain data (a pair, N the same, a run, odd or even, a sum again
 - `meaning`: a pattern as a dice tray meaning
 - `smallest`: the fewest dice that meet a pattern
 - `checkPattern`: check pattern data from content
+- `missing`: what a dice roll lacks to meet a pattern, as data
 <!-- /hooks -->
 
 **What it does:** Turns JSON-safe pattern data into `test(values)`, a dice-tray meaning, or the fewest dice that meet it.
@@ -22,12 +23,13 @@ Dice patterns as plain data (a pair, N the same, a run, odd or even, a sum again
 5. Say an exact size with `count` and `op: '='` inside `all` ("three the same and no fourth die": `all` of `same` 3 and `count` `=` 3), judged over the whole group.
 6. Read `all` as conditions that are each judged on the roll by itself; nothing ties them to the same dice. `all` of `even` 2 and `different` 2 is met by `[2, 2, 3]`. It means "two even dice, not equal" only on a group of exactly two dice (add `count` `=` 2, or pass only the two dice). "n dice that are even and all different" inside a bigger roll is not a pattern here yet: write it in the game.
 7. Keep rolls small (about 10 dice): `smallest` tries every set of dice, fewest first.
-8. Write the game's rule for what a met pattern does in the game, not here.
+8. Word what `missing` returns in the game (it is data: counts, faces, gaps, never words); an empty list means nothing is missing.
+9. Write the game's rule for what a met pattern does in the game, not here.
 
 **Common mistakes:**
 - Expecting `smallest` without `whole` to agree with `compile` on the whole roll: it judges each set alone, so it differs for every exact value and upper bound (`sum`, `spread`, `max`, `count` with `=`, `<`, `<=`). The table under "Kinds" lists them.
 - Expecting `smallest` to light every die that counts: it gives the fewest. `sum` `>=` 10 on `[1, 6, 5, 4]` gives `[1, 2]`, with or without `whole`; a game whose sum reads every die lights them all itself.
-- Reading `smallest(p, values, { whole: true })` as "what is missing": null says only that the whole roll does not meet the pattern.
+- Reading `smallest(p, values, { whole: true })` as "what is missing": null says only that the whole roll does not meet the pattern; ask `missing`.
 - Expecting an empty roll to meet anything: every pattern needs at least one die (`spread` two).
 
 ## Kinds
@@ -51,18 +53,21 @@ What `smallest` answers without `whole`, and when that differs from the check of
 | `all` | the fewest dice that meet every part together | when a part differs |
 | `any` | the smallest set of any part | when every met part differs |
 
-Not here: a "not" kind, conditions tied to the same dice, what a roll is missing, rolling, odds after rerolls, card sets or poker hands, dice formulas.
+- `missing(p, values, { whole? })`: a list of `Lack`, empty when nothing is missing (`whole`: judged on every die together, as `compile`; without it, also empty when some set of the dice meets `p`, as `smallest`). Throws like `compile`. One `Lack` per unmet leaf, in pattern order; `all` gives the lacks of its unmet parts, `any` one `{ kind: 'any', of }` with a list of lacks per alternative (empty when a part is met). Leaves: `same`, `different`, `even`, `odd`, `atLeast`, `face`, `twoPair`: `{ kind, have, need }` (`need` more dice, for `twoPair` the fewest dice to add; `face`: the pattern's face, for `same` the commonest value, lowest on a tie, absent on no dice); `run`: `{ kind, have (longest run), need, gaps }`, the values missing from the window of n values with fewest gaps, starting at any whole value from the lowest to the highest rolled (lowest on a tie; `gaps` empty with no dice); `count`, `sum`, `max`, `spread`: `{ kind, op, value, have, by, dir, dice }`, the roll's number, how far it is from meeting `op value` (`dir` `'up'` it must rise, `'down'` fall), and `dice` more dice needed before it can be judged (1 for none at all, 2 for a `spread`). An `all` whose parts are each met by the roll but not by one set gives nothing at that `all`.
+
+Not here: a "not" kind, conditions tied to the same dice, rolling, odds after rerolls, card sets or poker hands, dice formulas.
 
 ## Use it in 10 lines
 
 ```ts
-import { checkPattern, compile, meaning, smallest, type Pattern } from '../kit/dice-patterns/index'
+import { checkPattern, compile, meaning, missing, smallest, type Pattern } from '../kit/dice-patterns/index'
 
 const pair: Pattern = { kind: 'same', n: 2 }
 console.log(checkPattern({ kind: 'same', n: 0 })) // ['pattern.n: a whole number of 1 or more']
 console.log(compile(pair)([1, 4, 6, 4])) // true; also chance(2, compile(pair))
 console.log(smallest(pair, [1, 4, 6, 4, 2])) // [1, 3]
 console.log(smallest({ kind: 'sum', op: '=', value: 7 }, [3, 4, 2], { whole: true })) // null: all three sum to 9
+console.log(missing({ kind: 'odd', n: 2 }, [3])) // [{ kind: 'odd', have: 1, need: 1 }]
 const big = meaning('big', { kind: 'sum', op: '>', value: 7 }, 'big roll') // for readRoll
 console.log(big.test([{ value: 3 }, { value: 5 }])) // true
 ```
