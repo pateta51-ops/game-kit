@@ -108,8 +108,8 @@ export type Lack =
   | { kind: 'any'; of: Lack[][] };
 
 const away = (have: number, op: Op, value: number): { by: number; dir: 'up' | 'down' } => {
-  const up = op === '>=' ? value - have : op === '>' ? value + 1 - have : op === '=' ? value - have : -1;
-  const down = op === '<=' ? have - value : op === '<' ? have - value + 1 : op === '=' ? have - value : -1;
+  const up = op === '>=' ? Math.ceil(value) - have : op === '>' ? Math.floor(value) + 1 - have : op === '=' ? value - have : -1;
+  const down = op === '<=' ? have - Math.floor(value) : op === '<' ? have - Math.ceil(value) + 1 : op === '=' ? have - value : -1;
   return up > 0 ? { by: up, dir: 'up' } : down > 0 ? { by: down, dir: 'down' } : { by: 0, dir: 'up' };
 };
 

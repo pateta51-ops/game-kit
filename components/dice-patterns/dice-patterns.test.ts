@@ -30,6 +30,8 @@ describe('dice-patterns missing (K725)', () => {
     expect(m({ kind: 'run', n: 3 }, [1, 2, 4, 5])).toEqual([{ kind: 'run', have: 2, need: 1, gaps: [3] }]);
     expect(m({ kind: 'run', n: 4 }, [2, 5])).toEqual([{ kind: 'run', have: 1, need: 2, gaps: [3, 4] }]);
     expect(m({ kind: 'run', n: 2 }, [])).toEqual([{ kind: 'run', have: 0, need: 2, gaps: [] }]);
+    expect(m({ kind: 'run', n: 4 }, [8, 8, 9, 1])).toEqual([{ kind: 'run', have: 2, need: 2, gaps: [6, 7] }]);
+    expect(m({ kind: 'sum', op: '>', value: 7.5 }, [7])).toEqual([{ kind: 'sum', op: '>', value: 7.5, have: 7, by: 1, dir: 'up', dice: 0 }]);
   });
   it('all lists the unmet parts, any lists the alternatives', () => {
     const all: Pattern = { kind: 'all', of: [{ kind: 'odd', n: 2 }, { kind: 'count', op: '=', n: 2 }, { kind: 'even', n: 1 }] };
