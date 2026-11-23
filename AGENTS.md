@@ -28,7 +28,7 @@ Needs Node 22.18+: tools run with plain `node` (no tsx, no build); relative impo
 2. Read the component's README (its "Use it in 10 lines" is real, type-checked code) and, for `engine-core`, its guides (`timing.md`, `undo.md`, `random.md`, `legal.md`, `debug.md`).
 3. `kit.mjs new` pulls the base set (`BASE` in `components/scaffold/scaffold.js`: engine-core, game-store, sim-pool, state-machines, app-frame, settings, saves, screens, lint-preset, ci-templates, check-runner, repo-gate, bundle-size); other tooling is pulled by hand (`--existing` for a repo that has files). Recipe: [new-game](docs/recipes/new-game.md).
 4. Before using a part, read its "## Rules for agents" section (`kit/components/<name>/README.md` in a game) and follow every "You must".
-5. A need the kit lacks: change the kit (below) or write "Kit gap" in the PR; do not fork.
+5. A need the kit lacks: change the kit (below) or write "Kit gap" in the PR, each line with `readme: "<README line it rests on>"` and `tried: <case you ran> -> <result>`; do not fork.
 
 ## Change the kit
 1. Look at open PRs: **one open PR per component**. Wait for or continue the one touching yours.
@@ -54,7 +54,7 @@ Needs Node 22.18+: tools run with plain `node` (no tsx, no build); relative impo
 - Importing a kit component from another without listing it in `needs` (same check).
 - `async` functions without `await` (lint `require-await`), tests included.
 - A "Use it in 10 lines" block that no longer compiles (`scripts/readme-examples.mjs`).
-- Deciding a game rule or a look yourself: ask the arbiter or director session, or write it in the PR ("Rules questions", "Look questions", "Kit gap").
+- Deciding a game rule or a look yourself: ask the arbiter or director session, or write it in the PR ("Rules questions", "Look questions", "Kit gap", each with `readme: "<line>"` and `tried: <case> -> <result>`).
 - Showing rule ids (`TURN-07`, `AR-12`) on screen: use `plain-text`.
 - Reading hidden state in an opponent (see below).
 - Unseeded randomness in an engine (`Math.random`, clock): only `ctx.rng` (a game's `lint-preset` fails it).
@@ -84,4 +84,4 @@ Needs Node 22.18+: tools run with plain `node` (no tsx, no build); relative impo
 - The games' repositories are private and never deployed publicly. This kit is public: nothing personal goes into its code, docs, rows, commit messages, PR titles and bodies or tags (no person's name, e-mail address, local drive path, session or chat link, no game's card text); commits use a no-reply identity; `npm run personal` is part of the check. GitHub files under 50 MB.
 
 ## Reports
-Short: the batch id, PR number, branch, check result, what now works, count of open questions. Post-build notes go in `docs/post-build/notes/`.
+Short, what was not done first, then the rest: the batch id, PR number, branch, check result, what now works, count of open questions. Post-build notes go in `docs/post-build/notes/`.
