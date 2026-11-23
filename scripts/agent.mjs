@@ -364,7 +364,7 @@ export function orders(body, imps) {
   const check = (l) => {
     const t = l.trim().replace(/^([-*+]|\d+[.)])\s*/, '')
     seen = true
-    if (!t || /^(none|n\/a)\b/i.test(t)) return
+    if (!t || /^(none|n\/a)\.?$/i.test(t)) return
     const need = [!/readme:\s*["“][^"”]+["”]/i.test(t) && 'readme: "<the README line it rests on>"', !/tried:\s*\S.*->\s*\S/i.test(t) && 'tried: <command or test> -> <result>'].filter(Boolean)
     if (need.length) probs.push(`kit gap line without proof: ${t.slice(0, 120)} (needs ${need.join(' and ')})`)
     for (const p of want.keys()) if (names(t, p)) probs.push(`kit gap line for a Must use part ${p}: ${t.slice(0, 120)} (an ordered part is built, not skipped)`)
@@ -392,7 +392,9 @@ export function e2eCommand(repo) {
   const s = pk.scripts ?? {}
   // K712 review: a command made only of shell no-ops (true, :, echo, exit 0, empty), directly or through npm run, runs no e2e suite
   const noop = (c, d = 0) => String(c).split(/&&|\|\||;/).map((x) => x.trim()).every((x) => { const r = x.match(/^npm run (\S+)$/); return r && d < 5 ? s[r[1]] !== undefined && noop(s[r[1]], d + 1) : /^(true|:|echo\b.*|exit\s+0|)$/.test(x) })
-  const got = (cmd, from) => noop(cmd) ? { cmd: null, why: `${from} ${JSON.stringify(cmd)} is a no-op (true, :, echo, exit 0 or empty); it must run the game's e2e suites` } : { cmd, from }
+  // the command, or an npm script it runs, must name playwright or an e2e script
+  const e2e = (c, d = 0) => /playwright|\be2e\b|:e2e\b/.test(String(c)) || (d < 5 && [...String(c).matchAll(/npm run (\S+)/g)].some((m) => s[m[1]] !== undefined && e2e(s[m[1]], d + 1)))
+  const got = (cmd, from) => noop(cmd) ? { cmd: null, why: `${from} ${JSON.stringify(cmd)} is a no-op (true, :, echo, exit 0 or empty); it must run the game's e2e suites` } : !e2e(cmd) ? { cmd: null, why: `${from} ${JSON.stringify(cmd)} runs no e2e suite (no playwright and no e2e script in it or the npm scripts it runs)` } : { cmd, from }
   if (pk.kit?.e2e !== undefined) return got(pk.kit.e2e, 'package.json kit.e2e')
   const names = s.e2e !== undefined ? ['e2e'] : ['test:e2e', 'test:e2e:phone'].filter((n) => s[n] !== undefined)
   if (!names.length) return { cmd: null, why: 'package.json has no kit.e2e command and no e2e or test:e2e script' }

@@ -210,6 +210,18 @@ describe('K712 finish: orders and e2e from the changed paths', () => {
     const own = game('e5', { 'package.json': JSON.stringify({ scripts: { e2e: 'p' }, kit: { e2e: 'npm run e2e:all' } }) }, { 'b.txt': 'b' });
     expect(e2eCommand(own)).toEqual({ cmd: 'npm run e2e:all', from: 'package.json kit.e2e' });
   });
+  it('K712 second review: a kit.e2e that reaches no playwright or e2e script is refused; one that does through npm run is kept', () => {
+    const chk = game('e6', { 'package.json': JSON.stringify({ scripts: { check: 'node check.mjs' }, kit: { e2e: 'npm run check' } }) }, { 'b.txt': 'b' });
+    expect(e2eCommand(chk).cmd).toBe(null);
+    expect(e2eCommand(chk).why).toContain('runs no e2e suite');
+    const gate = game('e7', { 'package.json': JSON.stringify({ scripts: { gate: 'playwright test' }, kit: { e2e: 'npm run gate' } }) }, { 'b.txt': 'b' });
+    expect(e2eCommand(gate)).toEqual({ cmd: 'npm run gate', from: 'package.json kit.e2e' });
+  });
+  it('K712 second review: a Kit gap line that only starts with none needs its proof', () => {
+    const r = orders('## Kit gap\n- none of the viewports pan, so the table scrolls itself\n', imps({}));
+    expect(r.probs.join('\n')).toMatch(/kit gap/i);
+    expect(orders('## Kit gap\nnone\n', imps({})).probs).toEqual([]);
+  });
 });
 
 describe('K712 replay: Unstoppable PR 305 (fixtures: kit import lines and the Must use, Built new, Kit gap sections only)', () => {
