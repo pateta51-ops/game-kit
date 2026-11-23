@@ -54,7 +54,7 @@ Needs Node 22.18+: tools run with plain `node` (no tsx, no build); relative impo
 - Importing a kit component from another without listing it in `needs` (same check).
 - `async` functions without `await` (lint `require-await`), tests included.
 - A "Use it in 10 lines" block that no longer compiles (`scripts/readme-examples.mjs`).
-- Deciding a game rule or a look yourself: ask the arbiter or director session, or write it in the PR ("Rules questions", "Look questions", "Kit gap", each with `readme: "<line>"` and `tried: <case> -> <result>`).
+- Deciding a game rule or a look yourself: ask the arbiter or director session, or write it in the PR ("Rules questions", "Look questions", "Kit gap": each Kit gap line with `readme: "<line>"` and `tried: <case> -> <result>`).
 - Showing rule ids (`TURN-07`, `AR-12`) on screen: use `plain-text`.
 - Reading hidden state in an opponent (see below).
 - Unseeded randomness in an engine (`Math.random`, clock): only `ctx.rng` (a game's `lint-preset` fails it).
