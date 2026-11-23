@@ -391,6 +391,7 @@ The blind matching test's result was not recorded: the PR, its comments and docs
 | K721 | card-attachments SleeveStack: cards in one sleeve drawn as one composite per face (inserts' fronts under the host's front, their backs under its back), each insert cut to its own die-cut and read through the host's notch, its tab past the sleeve's open edge; pure insertLayer, layerStyle, tabOf, tabClipOf, tabBox, insertRanks, notchOf, notchWindow | M |  | done |
 | K723 | sim-pool: browser-safe entry sim-pool/browser.ts (DriverRng, legalAnswers, Bot); dev-autoplay imports only it, so useDevAutoplay no longer pulls node: modules into vite dev | S |  | done |
 | K724 | game-store: `get().undoUsed` and `view(state, seat, { undoUsed })` carry the history's undo-used flag (set by a Free-mode undo, kept by saves and load) | S |  | done |
+| K725 | dice-patterns missing: what a roll lacks to meet a pattern as data (faces, how many more dice, a run's gaps, how far a sum, max, spread or count is), for every kind, with `whole` as in `smallest`; the game words it | S |  | done |
 
 ## Asked for by the owner
 
