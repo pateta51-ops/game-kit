@@ -509,5 +509,8 @@
   { "q": "none left after several removed at once", "first": "engine-core" },
   { "q": "upscale image sharpen", "first": "picture-upscale" },
   { "q": "super resolution enlarge picture", "first": "picture-upscale" },
-  { "q": "make a picture bigger without blur", "first": "picture-upscale" }
+  { "q": "make a picture bigger without blur", "first": "picture-upscale" },
+  { "q": "worker rules block", "first": "worker-rules" },
+  { "q": "game agents file rules from the kit", "first": "worker-rules" },
+  { "q": "stamp worker rules into a game", "first": "worker-rules" }
 ]
