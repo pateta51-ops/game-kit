@@ -398,6 +398,7 @@ The blind matching test's result was not recorded: the PR, its comments and docs
 | K730 | guarded-button: initial="open" no longer resets to guarded under React StrictMode (resetKey effect compares with the previous key) | S |  | done |
 | K732 | card-parts: StateBanner weight is a look variable (--kc-banner-weight, default 700); the fit probe shares the style so a heavier weight still fits | S |  | done |
 | K734 | table-panels: GameOver and GameOverActions take an optional extra node rendered after Home inside game-over-actions | S |  | done |
+| K735 | replay-cli: a golden whose scripted driver ends before game over (choose returns undefined) records, checks and replays as a normal unfinished game, not CRASHED | S |  | done |
 
 ## Asked for by the owner
 
