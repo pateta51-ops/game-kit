@@ -124,6 +124,26 @@ describe('turn-flow (K264)', () => {
     expect(flowOf(o)?.done).toBe(true);
   });
 
+  it('K729: skip returning { by } emits one skipped event naming the phase and the source; true emits none', () => {
+    const run = (skip: NonNullable<FlowConfig<C>['skip']>): KernelEvent[] => {
+      const g = game({ skip, rounds: 1 });
+      let r = createGame(g, { seed: 'k729' }, { rounds: 1 }, null);
+      const ev = [...r.events];
+      for (let i = 0; i < 50 && r.state.prompt !== null; i++) { r = applyAction(g, r.state, { kind: 'answer', promptId: r.state.prompt.id, picks: ['add'] }, null); ev.push(...r.events); }
+      return ev;
+    };
+    const sk = (e: KernelEvent[]) => e.filter((x) => (x as { kind?: string }).kind === 'skipped') as unknown as { level: string; phase: string; seat: string; step: string | null; by: string; why?: string }[];
+    const ph = sk(run((_s, level, p) => (level === 'phase' && p.phase === 'end' && p.seat === 'a' ? { by: 'Opportunity', why: 'card' } : false)));
+    expect(ph).toHaveLength(1);
+    expect(ph[0]).toMatchObject({ level: 'phase', phase: 'end', seat: 'a', by: 'Opportunity', why: 'card' });
+    const tn = sk(run((_s, level, p) => (level === 'turn' && p.seat === 'b' ? { by: 'Jam' } : false)));
+    expect(tn).toHaveLength(1);
+    expect(tn[0]).toMatchObject({ level: 'turn', seat: 'b', by: 'Jam' });
+    const st = sk(run((_s, level, p) => (level === 'step' && p.step === 'check' && p.seat === 'a' ? { by: 'Fog' } : false)));
+    expect(st[0]).toMatchObject({ level: 'step', phase: 'main', step: 'check', by: 'Fog' });
+    expect(sk(run((_s, level) => level === 'phase'))).toHaveLength(0);
+  });
+
   it('seats added or removed mid-round: the turn ends for the seat that began it, the next seat follows it in the current list', () => {
     const turns = (st: CState): string[] => st.seen.filter((x) => x.endsWith(':start'));
     const dropped = play(game(), (_st, i) => (i === 1 ? 'drop' : 'add'), ['a', 'b', 'c']);
