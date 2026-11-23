@@ -252,3 +252,26 @@ describe('K712 replay: Unstoppable PR 305 (fixtures: kit import lines and the Mu
     expect(r.script).toContain('npm run check && npm run e2e');
   });
 });
+
+describe('K717 test-only parts', () => {
+  const kit = { 'kit/card-harness/component.json': JSON.stringify({ name: 'card-harness', testOnly: true }), 'kit/card-zoom/component.json': JSON.stringify({ name: 'card-zoom' }) };
+  it('K717 a testOnly part is found in tests/ through a local re-export; it fails when no test imports it', () => {
+    const ok = game('t1', kit, { 'src/engine/a.ts': 'export const z = 1', 'tests/cards/harness/index.ts': "export { expectNotOffered, expectNotFired } from '../../../kit/card-harness/index';", 'tests/cards/s15.test.ts': "import { expectNotOffered, expectNotFired } from './harness';\nexpectNotOffered; expectNotFired;" });
+    const r = run(ok, 'Must use: card-harness:expectNotOffered, card-harness:expectNotFired\n');
+    expect(r.text).toContain('ORDERS 1/1');
+    expect(r.text).not.toContain('must use: card-harness');
+    const no = game('t2', kit, { 'src/engine/a.ts': 'export const z = 1', 'tests/cards/s15.test.ts': 'export {}' });
+    const f = run(no, 'Must use: card-harness:expectNotOffered\n');
+    expect(f.rc).toBe(1);
+    expect(f.text).toContain('must use: card-harness (expectNotOffered) is not imported under src/ or tests/');
+  });
+  it('K717 a part without testOnly still counts only src/ imports: a test import does not fulfil it', () => {
+    const m = game('t3', kit, { 'src/engine/a.ts': 'export const z = 1', 'tests/zoom.test.ts': "import { placeZoom } from '../kit/card-zoom/index';\nplaceZoom;" });
+    const r = run(m, 'Must use: card-zoom:placeZoom\n');
+    expect(r.rc).toBe(1);
+    expect(r.text).toContain('must use: card-zoom (placeZoom) is not imported under src/ from kit/card-zoom/');
+  });
+  it('K717 the kit marks card-harness and test-setup testOnly', () => {
+    for (const n of ['card-harness', 'test-setup']) expect((JSON.parse(fs.readFileSync(path.join(import.meta.dirname, '..', 'components', n, 'component.json'), 'utf8')) as { testOnly?: boolean }).testOnly).toBe(true);
+  });
+});
