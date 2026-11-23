@@ -340,7 +340,8 @@ var DM = (() => {
         overflow: "hidden",
         width: `${String(step + (index === segments2 - 1 ? 0 : 0.35))}px`,
         height: `${String(height)}px`,
-        transformOrigin: "left center"
+        transformOrigin: "left center",
+        outline: "1px solid transparent"
       });
       const face = back(top);
       Object.assign(face.style, {
@@ -632,7 +633,7 @@ var DM = (() => {
     return Math.max(-0.55, Math.min(0.39, slope * -0.58 + lift * 0.14));
   }
   function stripRenderer(canvas, originX, originY, width, height, face, capacity, cardWidth, cardHeight, pad) {
-    const gl = canvas.getContext("webgl2", { depth: false, antialias: false });
+    const gl = canvas.getContext("webgl2", { depth: false, antialias: true });
     if (!gl) return canvasStrips(canvas, originX, originY, width, height, face, cardWidth, cardHeight, pad);
     const program = gl.createProgram();
     function attach(type, source) {

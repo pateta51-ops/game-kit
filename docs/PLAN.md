@@ -374,6 +374,7 @@ The blind matching test's result was not recorded: the PR, its comments and docs
 | K702 | token-bag: the stock, index and 2D entries (`ui2d`) import nothing that reaches three.js; only `ui` (the 3D view) does | S |  | done |
 | K703 | engine-core state checks marked afterBatch wait until the whole batch has happened, so a "none left" check sees every removal of one effect | S |  | done |
 | K705 | picture-upscale: an offline GPU tool that enlarges a picture 2-4x with a super-resolution model (spandrel models, a registry with licences, tiles), for art shown larger than its source | M |  | done |
+| K706 | deck-motions riffle: smooth card edges in the top and side views (no stair-stepped aliasing at any pixel ratio) | S |  | done |
 
 ## Asked for by the owner
 

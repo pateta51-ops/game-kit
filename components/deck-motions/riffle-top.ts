@@ -197,7 +197,7 @@ function shade(slope: number, lift: number) {
 }
 
 function stripRenderer(canvas: HTMLCanvasElement, originX: number, originY: number, width: number, height: number, face: HTMLCanvasElement, capacity: number, cardWidth: number, cardHeight: number, pad: number): Strips {
-  const gl = canvas.getContext('webgl2', { depth: false, antialias: false });
+  const gl = canvas.getContext('webgl2', { depth: false, antialias: true });
   if (!gl) return canvasStrips(canvas, originX, originY, width, height, face, cardWidth, cardHeight, pad);
   const program = gl.createProgram();
   function attach(type: number, source: string) {
