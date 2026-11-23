@@ -401,7 +401,7 @@ describe('a scripted golden that ends before game over (K735)', () => {
     const m = script(2);
     const u = fakeIo();
     expect(await checkGoldens(m, DIR, u.io, { update: true })).toBe(0);
-    expect(JSON.parse(u.files[at('s01')] as string).actions).toHaveLength(2);
+    expect((JSON.parse(u.files[at('s01')] as string) as SaveFile<Counter>).actions).toHaveLength(2);
     expect(await checkGoldens(m, DIR, fakeIo({ ...u.files }).io)).toBe(0);
     const c = fakeIo({ ...u.files });
     expect(await checkGoldens(script(3), DIR, c.io)).toBe(1);
