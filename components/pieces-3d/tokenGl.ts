@@ -48,7 +48,7 @@ export function startTokenLayer(look: TokenLook = {}, sel = '[data-p3-token]', o
   const prog = (v: string, f: string) => { const p = gl.createProgram(); gl.attachShader(p, sh(gl.VERTEX_SHADER, v)); gl.attachShader(p, sh(gl.FRAGMENT_SHADER, f)); gl.linkProgram(p); return p; };
   const buf = (target: number, data: AllowSharedBufferSource) => { const b = gl.createBuffer(); gl.bindBuffer(target, b); gl.bufferData(target, data, gl.STATIC_DRAW); return b; };
   let P: WebGLProgram, S: WebGLProgram, quad: WebGLBuffer | null;
-  let texs = new Map<string, WebGLTexture>(), meshes = new Map<string, { n: number; pos: WebGLBuffer | null; nor: WebGLBuffer | null; uv: WebGLBuffer | null; kind: WebGLBuffer | null; idx: WebGLBuffer | null }>();
+  let texs = new Map<string, WebGLTexture>(), meshes = new Map<string, { n: number; pos: WebGLBuffer | null; nor: WebGLBuffer | null; uv: WebGLBuffer | null; kind: WebGLBuffer | null; idx: WebGLBuffer | null } | null>();
   const locs = new Map<string, WebGLUniformLocation | null>();
   const init = () => {
     P = prog(VS, FS); S = prog(SV, SF); locs.clear(); texs = new Map(); meshes = new Map();
@@ -86,13 +86,18 @@ export function startTokenLayer(look: TokenLook = {}, sel = '[data-p3-token]', o
   const draw = (el: HTMLElement) => {
     const front = scan(el, el.getAttribute('data-src')), backSrc = el.getAttribute('data-back'), back = backSrc ? scan(el, backSrc) : null;
     if (!front || back === undefined) { el.removeAttribute('data-p3-drawn'); return false; }
+    const [sw, sh2, sd] = (el.getAttribute('data-size') ?? '').split(',').map(Number), ow = el.offsetWidth, oh = el.offsetHeight;
+    const size = { w: sw || ow, h: sh2 || oh, d: sd || 2 };
+    const key = `${String(el.getAttribute('data-src'))}|${String(backSrc)}|${String(size.w)},${String(size.h)},${String(size.d)}`;
+    if (!meshes.has(key)) { const m = extrude(front.outline, front, size, !!back); meshes.set(key, m && { n: m.idx.length, pos: buf(gl.ARRAY_BUFFER, m.pos), nor: buf(gl.ARRAY_BUFFER, m.nor), uv: buf(gl.ARRAY_BUFFER, m.uv), kind: buf(gl.ARRAY_BUFFER, m.kind), idx: buf(gl.ELEMENT_ARRAY_BUFFER, m.idx) }); }
+    const M = meshes.get(key);
+    // an outline that cannot be filled (a pinch): fail closed, the flat chip stays
+    if (!M) { own.get(el)?.remove(); el.removeAttribute('data-p3-drawn'); return false; }
     let c = own.get(el);
     if (!c || c.parentNode !== el) {
       for (const x of el.querySelectorAll(':scope>canvas.p3-token-gl')) x.remove();
       c = document.createElement('canvas'); c.className = 'p3-token-gl'; el.appendChild(c); own.set(el, c); sizes.delete(el); ro.observe(el);
     }
-    const [sw, sh2, sd] = (el.getAttribute('data-size') ?? '').split(',').map(Number), ow = el.offsetWidth, oh = el.offsetHeight;
-    const size = { w: sw || ow, h: sh2 || oh, d: sd || 2 };
     let z = sizes.get(el);
     if (!z) {
       const k = Math.min(window.devicePixelRatio || 1, 2) * Math.min(4, el.getBoundingClientRect().width / (ow || 1) || 1);
@@ -100,9 +105,6 @@ export function startTokenLayer(look: TokenLook = {}, sel = '[data-p3-token]', o
       sizes.set(el, z); c.width = z.w; c.height = z.h;
     }
     if (z.w < 2 || z.h < 2) return false;
-    const key = `${String(el.getAttribute('data-src'))}|${String(backSrc)}|${String(size.w)},${String(size.h)},${String(size.d)}`;
-    let M = meshes.get(key);
-    if (!M) { const m = extrude(front.outline, front, size, !!back); M = { n: m.idx.length, pos: buf(gl.ARRAY_BUFFER, m.pos), nor: buf(gl.ARRAY_BUFFER, m.nor), uv: buf(gl.ARRAY_BUFFER, m.uv), kind: buf(gl.ARRAY_BUFFER, m.kind), idx: buf(gl.ELEMENT_ARRAY_BUFFER, m.idx) }; meshes.set(key, M); }
     const [tilt = look.tilt ?? (15 * Math.PI) / 180, turn = 0, spin = 0] = (el.getAttribute('data-rot') ?? '').split(',').map((v) => (v === '' ? undefined : Number(v)));
     const m = mmul(rotX(-tilt), mmul(rotY(turn), rotZ(spin)));
     if (canvas.width < z.w || canvas.height < z.h) { canvas.width = Math.max(canvas.width, z.w); canvas.height = Math.max(canvas.height, z.h); }

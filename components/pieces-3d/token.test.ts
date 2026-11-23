@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { area, edgeColour, extrude, simplify, tokenSize, traceAlpha, type Pt } from './token.ts';
+import { MAX_POINTS, area, edgeColour, extrude, isSimple, simplify, tokenSize, traceAlpha, triangulate, type Pt, type TokenMesh } from './token.ts';
+
+const ex = (...a: Parameters<typeof extrude>) => { const m = extrude(...a); expect(m).not.toBeNull(); return m as TokenMesh; };
 
 // synthetic alpha shapes: a disc, a hexagon, a non-convex notched shape (an L with a bite), drawn by an inside test per pixel
 const W = 120, H = 100;
@@ -35,7 +37,7 @@ describe('pieces-3d: extruded token (K718)', () => {
       expect(Math.abs(Math.abs(area(s)) - Math.abs(area(P))) / Math.abs(area(P))).toBeLessThan(0.06);
     });
     it(`K718 the ${name}'s solid is closed: front and back n - 2 triangles, the side 2n, every edge in two triangles, opposite ways`, () => {
-      const s = simplify(traceAlpha(img(poly(P)), W, H)), n = s.length, m = extrude(s, { w: W, h: H }, { w: 60, h: 50, d: 4 });
+      const s = simplify(traceAlpha(img(poly(P)), W, H)), n = s.length, m = ex(s, { w: W, h: H }, { w: 60, h: 50, d: 4 });
       expect(m.tris).toEqual({ front: n - 2, back: n - 2, side: 2 * n });
       expect(m.idx.length / 3).toBe(2 * (n - 2) + 2 * n);
       expect([...m.kind].filter((k) => k === 2).length).toBe(4 * n);
@@ -59,18 +61,44 @@ describe('pieces-3d: extruded token (K718)', () => {
   it('K718 the size is mm x pxPerMm: the solid spans w x h and the thickness', () => {
     const sz = tokenSize({ w: 25, h: 20, thickness: 2 }, 3);
     expect(sz).toEqual({ w: 75, h: 60, d: 6 });
-    const m = extrude(simplify(traceAlpha(img(poly(SHAPES[1]?.[1] ?? [])), W, H)), { w: W, h: H }, sz), r = (c: number) => { const v = [...m.pos].filter((_, i) => i % 3 === c); return Math.max(...v) - Math.min(...v); };
+    const m = ex(simplify(traceAlpha(img(poly(SHAPES[1]?.[1] ?? [])), W, H)), { w: W, h: H }, sz), r = (c: number) => { const v = [...m.pos].filter((_, i) => i % 3 === c); return Math.max(...v) - Math.min(...v); };
     expect(r(0)).toBeCloseTo(75, 5);
     expect(r(1)).toBeCloseTo(60, 5);
     expect(r(2)).toBeCloseTo(6, 5);
   });
 
   it('K718 the back maps the front seen through, or its own scan mirrored; the edge colour comes from the scan', () => {
-    const s = simplify(traceAlpha(img(poly(SHAPES[2]?.[1] ?? [])), W, H)), a = extrude(s, { w: W, h: H }, { w: 1, h: 1, d: 1 }), b = extrude(s, { w: W, h: H }, { w: 1, h: 1, d: 1 }, true);
+    const s = simplify(traceAlpha(img(poly(SHAPES[2]?.[1] ?? [])), W, H)), a = ex(s, { w: W, h: H }, { w: 1, h: 1, d: 1 }), b = ex(s, { w: W, h: H }, { w: 1, h: 1, d: 1 }, true);
     const back = (m: typeof a) => [...m.kind].flatMap((k, i) => (k === 1 ? [m.uv[2 * i] ?? 0] : []));
     const fr = [...a.kind].flatMap((k, i) => (k === 0 ? [a.uv[2 * i] ?? 0] : []));
     expect(back(a)).toEqual(fr);
     expect(back(b).map((u) => +(1 - u).toFixed(6))).toEqual(fr.map((u) => +u.toFixed(6)));
     const d = img(poly(SHAPES[0]?.[1] ?? [])); expect(edgeColour(d, W, traceAlpha(d, W, H), 1)).toBe('#c86432');
+  });
+
+  it('K718 a pinched outline (two squares touching at one corner pixel, a figure-eight) fails closed: no triangles, no solid, the flat chip stays', () => {
+    const sq = (x: number, y: number) => (x > 10 && x < 40 && y > 10 && y < 40) || (x > 40 && x < 70 && y > 40 && y < 70);
+    const t = traceAlpha(img(sq), W, H);
+    expect(t.length).toBeGreaterThan(200); // the trace runs round both squares through the shared corner
+    const s = simplify(t);
+    expect(isSimple(s)).toBe(false);
+    expect(triangulate(s)).toBeNull();
+    expect(extrude(s, { w: W, h: H }, { w: 60, h: 60, d: 4 })).toBeNull();
+    const eight: Pt[] = [[0, 0], [10, 10], [10, 0], [0, 10]];
+    expect(triangulate(eight)).toBeNull();
+    expect(extrude(eight, { w: 20, h: 20 }, { w: 10, h: 10, d: 1 })).toBeNull();
+    expect(isSimple([[0, 0], [10, 0], [10, 10], [0, 10]])).toBe(true);
+  });
+
+  it('K718 an outline far past the Uint16 index limit is simplified to MAX_POINTS first: every index fits and the solid stays closed and true to the shape', () => {
+    const big = ngon(20000, 2000, 2000, 1900);
+    expect(6 * big.length).toBeGreaterThan(65535);
+    const m = ex(big, { w: 4000, h: 4000 }, { w: 100, h: 100, d: 4 }), n = m.tris.side / 2;
+    expect(n).toBeLessThanOrEqual(MAX_POINTS);
+    expect(n).toBeGreaterThan(20);
+    expect(m.pos.length / 3).toBe(6 * n);
+    expect(Math.max(...m.idx)).toBe(6 * n - 1);
+    expect(m.idx.length / 3).toBe(2 * (n - 2) + 2 * n);
+    for (let i = 0; i < m.pos.length; i += 3) if (m.kind[i / 3] === 0) expect(Math.abs(Math.hypot(m.pos[i] ?? 0, m.pos[i + 1] ?? 0) - 50)).toBeLessThan(0.5);
   });
 });

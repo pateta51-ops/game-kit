@@ -5,6 +5,8 @@ import type { Mesh } from './solids.ts';
 export type Pt = [number, number];
 export interface TokenMm { w: number; h: number; thickness: number }
 export interface TokenMesh extends Mesh { kind: Float32Array; tris: { front: number; back: number; side: number } }
+/** At most this many outline points go into a solid (6 vertices each, well under the Uint16 index limit); a longer outline is simplified more. */
+export const MAX_POINTS = 400;
 
 /** The px size of a token: its real mm times the game's px-per-mm scale. */
 export const tokenSize = (mm: TokenMm, pxPerMm: number) => ({ w: mm.w * pxPerMm, h: mm.h * pxPerMm, d: mm.thickness * pxPerMm });
@@ -53,14 +55,32 @@ export function simplify(p: Pt[], tol = 0.75): Pt[] {
 /** Signed area: positive when counter-clockwise in a y-up frame. */
 export const area = (p: Pt[]) => p.reduce((s, [x, y], i) => { const [u, v] = p[(i + 1) % p.length] as Pt; return s + x * v - u * y; }, 0) / 2;
 
-/** Ear clipping of a simple polygon (counter-clockwise, y up): n - 2 triangles as index triples. */
-export function triangulate(p: Pt[]): number[] {
+const cr = (a: Pt, b: Pt, c: Pt) => (b[0] - a[0]) * (c[1] - a[1]) - (b[1] - a[1]) * (c[0] - a[0]);
+/** True when the closed outline neither crosses nor touches itself (no pinch, no figure-eight, no repeated point, no fold back). */
+export function isSimple(p: Pt[]): boolean {
+  const n = p.length;
+  if (n < 3 || new Set(p.map((q) => q.join())).size < n) return false;
+  const on = (a: Pt, b: Pt, q: Pt) => Math.min(a[0], b[0]) <= q[0] && q[0] <= Math.max(a[0], b[0]) && Math.min(a[1], b[1]) <= q[1] && q[1] <= Math.max(a[1], b[1]);
+  const hit = (a: Pt, b: Pt, c: Pt, d: Pt) => {
+    const d1 = cr(c, d, a), d2 = cr(c, d, b), d3 = cr(a, b, c), d4 = cr(a, b, d);
+    if (((d1 > 0 && d2 < 0) || (d1 < 0 && d2 > 0)) && ((d3 > 0 && d4 < 0) || (d3 < 0 && d4 > 0))) return true;
+    return (d1 === 0 && on(c, d, a)) || (d2 === 0 && on(c, d, b)) || (d3 === 0 && on(a, b, c)) || (d4 === 0 && on(a, b, d));
+  };
+  for (let i = 0; i < n; i += 1) {
+    const a = p[i] as Pt, b = p[(i + 1) % n] as Pt, c = p[(i + 2) % n] as Pt;
+    // a fold back onto the last edge
+    if (cr(a, b, c) === 0 && (c[0] - b[0]) * (b[0] - a[0]) + (c[1] - b[1]) * (b[1] - a[1]) < 0) return false;
+    for (let j = i + 2; j < n; j += 1) if (!(i === 0 && j === n - 1) && hit(a, b, p[j] as Pt, p[(j + 1) % n] as Pt)) return false;
+  }
+  return true;
+}
+
+/** Ear clipping of a simple polygon (counter-clockwise, y up): n - 2 triangles as index triples; null when the outline is not simple or no ear is left. */
+export function triangulate(p: Pt[]): number[] | null {
+  if (!isSimple(p)) return null;
   const idx = p.map((_, i) => i), out: number[] = [];
-  const cr = (a: Pt, b: Pt, c: Pt) => (b[0] - a[0]) * (c[1] - a[1]) - (b[1] - a[1]) * (c[0] - a[0]);
   const inside = (q: Pt, a: Pt, b: Pt, c: Pt) => cr(a, b, q) >= 0 && cr(b, c, q) >= 0 && cr(c, a, q) >= 0;
-  let guard = 0;
-  while (idx.length > 3 && guard < p.length * p.length) {
-    guard += 1;
+  while (idx.length > 3) {
     let cut = -1, best = -1;
     for (let i = 0; i < idx.length; i += 1) {
       const ia = idx[(i + idx.length - 1) % idx.length] as number, ib = idx[i] as number, ic = idx[(i + 1) % idx.length] as number, a = p[ia] as Pt, b = p[ib] as Pt, c = p[ic] as Pt, k = cr(a, b, c);
@@ -70,28 +90,30 @@ export function triangulate(p: Pt[]): number[] {
       const q = k / (Math.hypot(b[0] - a[0], b[1] - a[1]) * Math.hypot(c[0] - b[0], c[1] - b[1]) * Math.hypot(a[0] - c[0], a[1] - c[1]) || 1);
       if (q > best) { best = q; cut = i; }
     }
-    // a degenerate run (collinear or touching points): clip the flattest corner anyway
-    if (cut < 0) cut = 0;
+    if (cut < 0) return null;
     out.push(idx[(cut + idx.length - 1) % idx.length] as number, idx[cut] as number, idx[(cut + 1) % idx.length] as number);
     idx.splice(cut, 1);
   }
-  if (idx.length === 3) out.push(...idx);
-  return out;
+  out.push(...idx);
+  return out.length === 3 * (p.length - 2) ? out : null;
 }
 
 /**
  * The extruded solid of an outline in image px (`img` w x h, y down), scaled so the outline's box is `size` w x h and `size.d` thick,
  * centred, y up, the front at +z. uv: the front maps the image; the back maps it mirrored when `ownBack` (a back scan seen from behind)
  * and as the front otherwise (the front seen through). `kind`: 0 front, 1 back, 2 side. Side normals are smooth where the outline turns
- * less than `crease` radians.
+ * less than `crease` radians. More than MAX_POINTS points: simplified further first. Null (fail closed: keep the flat chip) when the
+ * outline is not simple (a pinch, a figure-eight) and so cannot be filled.
  */
-export function extrude(outline: Pt[], img: { w: number; h: number }, size: { w: number; h: number; d: number }, ownBack = false, crease = 0.6): TokenMesh {
+export function extrude(outline: Pt[], img: { w: number; h: number }, size: { w: number; h: number; d: number }, ownBack = false, crease = 0.6): TokenMesh | null {
+  for (let t = 0.75, o = outline; outline.length > MAX_POINTS; t *= 1.5) outline = simplify(o, t);
   const xs = outline.map((q) => q[0]), ys = outline.map((q) => q[1]);
   const x0 = Math.min(...xs), y0 = Math.min(...ys), bw = Math.max(...xs) - x0 || 1, bh = Math.max(...ys) - y0 || 1;
   let p: Pt[] = outline.map(([x, y]) => [((x - x0) / bw - 0.5) * size.w, (0.5 - (y - y0) / bh) * size.h]);
   let src = outline;
   if (area(p) < 0) { p = [...p].reverse(); src = [...outline].reverse(); }
   const n = p.length, z = size.d / 2, tri = triangulate(p);
+  if (!tri) return null;
   const pos: number[] = [], nor: number[] = [], uv: number[] = [], kind: number[] = [], idx: number[] = [];
   const U = (i: number, mirror: boolean): Pt => { const [x, y] = src[i] as Pt, u = (x + 0.5) / img.w; return [mirror ? 1 - u : u, (y + 0.5) / img.h]; };
   for (const [k, zz, nz] of [[0, z, 1], [1, -z, -1]] as const) {

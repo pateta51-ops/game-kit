@@ -1236,7 +1236,7 @@ Pieces built in code, no model file: a rounded d6 and a ten-sided die (WebGL), a
 - **The game supplies:** The look: colours, faces and sizes.
 - **Use it when:** Dice, balls and chips built in code with WebGL or CSS (no model files); a round transparent token chip with die cut edge, no rectangle behind it, its shadow follows the outline; a die-cut token as a true extruded 3D solid (outline traced from the scan alpha, real mm size, back face, side walls, tilt and turn).
 - **Not for:** Modelled or generated meshes; the owner does no 3D model work.
-- **Key exports:** `sub`, `add`, `mul`, `dot`, `cross`, `norm`, `apply`, `mmul`, `transpose`, `ID`, `rotX`, `rotY`, `rotAxis`, `cube`, and 46 more
+- **Key exports:** `sub`, `add`, `mul`, `dot`, `cross`, `norm`, `apply`, `mmul`, `transpose`, `ID`, `rotX`, `rotY`, `rotAxis`, `cube`, and 48 more
 - **Needs:** nothing
 - **Came from:** 7is
 - **Docs:** [README](../components/pieces-3d/README.md) ([rules for agents](../components/pieces-3d/README.md#rules-for-agents))
