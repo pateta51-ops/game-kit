@@ -63,6 +63,17 @@ describe('game over', () => {
   });
 });
 
+describe('game over extra (K734)', () => {
+  it('extra renders inside game-over-actions after Home', () => {
+    for (const ui of [<GameOverActions onHome={() => {}} extra={<button>New Mission</button>} />, <GameOver result={gameResult({ a: 1 })} onHome={() => {}} extra={<button>New Mission</button>} />]) {
+      const { container, unmount } = render(ui);
+      const kids = [...container.querySelector('[data-part="game-over-actions"]')!.children].map((c) => c.textContent);
+      expect(kids).toEqual(['Home', 'New Mission']);
+      unmount();
+    }
+  });
+});
+
 describe('game over solo (K301)', () => {
   const solo = { standings: [], winners: [], tied: false };
   it('title slot, reason, no standings, detachable actions', () => {
