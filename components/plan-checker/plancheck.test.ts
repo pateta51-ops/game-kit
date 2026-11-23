@@ -422,24 +422,6 @@ describe('plancheck --batch read-first ranges (K515)', () => {
   });
 });
 
-describe('plancheck --batch card-test rules (K713)', () => {
-  const run = (plan: string): string => {
-    const f = join(tmp('pc-card-'), 'PLAN.md');
-    writeFileSync(f, plan);
-    const py = candidates(process.env, process.platform)[0] ?? ['python'];
-    return spawnSync(py[0] ?? 'python', [...py.slice(1), '-X', 'utf8', fileURLToPath(new URL('./plancheck.py', import.meta.url)), f, '--batch', 'S1'], { encoding: 'utf-8' }).stdout;
-  };
-  const plan = (row: string, body: string): string => `# Plan\n\n## Session plan\n\n| Batch | Phases | Model | Clauses | Patterns |\n|---|---|---|---|---|\n| S1 | 1 | Sonnet | ${row} |\n\n## Batch S1\n\nDo it.\n\n#### Phase 1 - x\n\n${body}\n`;
-  it('a card batch prints the card-test rules, a screen batch does not', () => {
-    expect(run(plan('12 | P-01', 'Cards.'))).toContain('## Card tests');
-    expect(run(plan('12 | P-01', 'Cards.'))).toContain('`<clause id> poor`');
-    expect(run(plan('- | -', 'Write content/cards/a.json.'))).toContain('## Card tests');
-    const o = run(plan('- | -', 'Build the settings screen.'));
-    expect(o).toContain('Build the settings screen');
-    expect(o).not.toContain('Card tests');
-  });
-});
-
 describe('plancheck kit checks (K525)', () => {
   const git = (cwd: string, ...a: string[]): void => void spawnSync('git', ['-C', cwd, ...a]);
   const kit = tmp('kit525-');

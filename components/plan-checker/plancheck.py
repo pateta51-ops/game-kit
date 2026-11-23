@@ -253,12 +253,6 @@ def span_of(lines: list[str], heads: list[tuple[int, int, str]], k: int) -> tupl
     return i, next((j for j, l2, _ in heads[k + 1:] if l2 <= lvl), len(lines))
 
 
-CARD_TEST_RULES = """## Card tests
-
-- Card tests follow the plan's depth table: a full-resolve test per clause, titled with its clause id; for a clause with a condition or a cost also `<clause id> poor` (the condition false, the cost unpayable, the trigger absent, the wrong phase), which asserts the effect is not offered (`expectNotOffered`, or `expectNotFired` for a forced effect) and nothing resolved. Every test must be able to fail: no bound that always holds (`>= 0` on a count), no assertion inside `if (found)`, no pattern that also matches the opposite text. Records first, tests second: when your records are done, run `npm run cards:render -- <batch>`, commit, and report "records ready" (the count of clauses and of questions). Write no card test until `docs/cards/readings/<batch>.md` is on your branch, and never write that file. Then each test is `cardCase({ clause, printed, ar }, …)`: the clause's printed text word for word, the AR id its pattern has in the AR map, and the result the ruling and the catalogue's case give, never one read off your record. A record carries a restriction (a phase, a moment, a condition, a limit, a duration) only when its clause prints it or an AR says so (`why`).
-"""
-
-
 def numbered(heads: list[tuple[int, int, str]], num: str) -> int | None:
     return next((k for k, (_, _, t) in enumerate(heads) if re.match(rf"§?\s*{re.escape(num)}(?![\d.]*\d)", t)), None)
 
@@ -288,7 +282,6 @@ def extract(path: Path, lines: list[str], heads: list[tuple[int, int, str]]) -> 
         return 1
     toks: list[str] = []
     header: list[str] = []
-    card = False
     for l in section(lines, heads, opt("--sessions", "Session plan")).split("\n"):
         if l.strip().startswith("|"):
             cells = [c.strip() for c in table_cells(l)]
@@ -296,10 +289,6 @@ def extract(path: Path, lines: list[str], heads: list[tuple[int, int, str]]) -> 
                 header = [c.lower() for c in cells]
             elif header and cells[0].strip("`*") == bid and len(cells) == len(header):
                 toks = phase_tokens(cells[next(i for i, c in enumerate(header) if "phase" in c)])
-                for w in ("clauses", "patterns"):
-                    ci = next((i for i, c in enumerate(header) if w in c), None)
-                    if ci is not None and cells[ci].strip("`*- —–") not in ("", "0"):
-                        card = True
     out = []
     kp = find_heading(heads, "Shared preamble")
     if kp is not None:
@@ -330,9 +319,6 @@ def extract(path: Path, lines: list[str], heads: list[tuple[int, int, str]]) -> 
         body = show(k)
         out.append(body)
         read_refs(body)
-    # K713: a card batch (its session row has Clauses or Patterns, or its blocks name content/cards) also gets the card-test rules
-    if card or any("content/cards" in b for b in out[1:]):
-        out.append(CARD_TEST_RULES)
     print("\n".join(out))
     for r in dict.fromkeys(briefs):
         print(f"BRIEF §{r}: section {r} of docs/experience/BRIEF.md")

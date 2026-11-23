@@ -377,7 +377,7 @@ The blind matching test's result was not recorded: the PR, its comments and docs
 | K706 | deck-motions riffle: smooth card edges in the top and side views (no stair-stepped aliasing at any pixel ratio) | S |  | done |
 | K707 | card-harness: a run probe (the verb dispatch notes each op, key and handler it runs outside dry run; recordRan logs them per passing test; the inventory counts a piece only when a full-resolve test ran it), and expectNotFired prompt: unrelated (a prompt open before the act or mapped to another clause) | S |  | done |
 | K708 | sim-pool dispatchTrace: a clause trace whose resolves come from verb dispatch outside dry run (a dry-run offer check or a scan that reads a record no longer counts as a resolve) | S |  | done |
-| K713 | Worker rules moved to where they are needed: kit-batch rules into AGENTS.md, card-test rules printed by plancheck --batch for card batches only | S |  | done |
+| K713 | Kit-batch worker rules moved into AGENTS.md "Change the kit" | S |  | done |
 
 ## Asked for by the owner
 
