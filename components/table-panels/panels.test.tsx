@@ -144,7 +144,7 @@ describe('log order and whole lines (K710)', () => {
   });
   it('wholeLines snaps the box height', () => {
     const d = Object.getOwnPropertyDescriptor(HTMLElement.prototype, 'clientHeight');
-    Object.defineProperty(HTMLElement.prototype, 'clientHeight', { configurable: true, get() { return this.style.height ? parseFloat(this.style.height) : 1070; } });
+    Object.defineProperty(HTMLElement.prototype, 'clientHeight', { configurable: true, get(this: HTMLElement) { return this.style.height ? parseFloat(this.style.height) : 1070; } });
     try {
       const { container } = render(<LogPanel lines={lines} wholeLines={29} />);
       expect((container.querySelector('[data-part=log-lines]') as HTMLElement).style.height).toBe('1044px');
