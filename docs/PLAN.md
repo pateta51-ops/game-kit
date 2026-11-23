@@ -383,6 +383,7 @@ The blind matching test's result was not recorded: the PR, its comments and docs
 | K712 | finish: Must use orders (imports checked, Waived only by the architect), Kit gap lines need the README line and the case run, ORDERS n/m, e2e decided from changed paths | M |  | done |
 | K713 | Kit-batch worker rules moved into AGENTS.md "Change the kit" | S |  | done |
 | K714 | One worker-rules block in the kit, stamped by pull between markers into every game's AGENTS.md; the scaffold's CLAUDE.md line prints no kit version | M |  | done |
+| K715 | finish: a Must use entry with no :<export> is refused, saying why; <part>:* is the form for a part used whole | S |  | done |
 
 ## Asked for by the owner
 

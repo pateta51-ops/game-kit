@@ -161,11 +161,16 @@ describe('K712 review round', () => {
     expect(c.rc).toBe(0);
     expect(c.text).toMatch(/^check passed /);
   });
-  it('K712 review 8: a part-only order fails with no import of the part and passes with any', () => {
-    const r = orders('Must use: card-zoom\n', imps({ 'card-hand': ['CardHand'] }));
-    expect(r.probs).toEqual([expect.stringContaining('must use: card-zoom is not imported')]);
-    expect(r.line).toBe('ORDERS 0/1 missing: card-zoom');
-    expect(orders('Must use: card-zoom\n', imps({ 'card-zoom': ['placeZoom'] }))).toEqual({ line: 'ORDERS 1/1', probs: [] });
+  it('K715 a bare part in Must use is refused, saying why; <part>:* is the form for a part used whole', () => {
+    const bare = orders('Must use: card-zoom\n', imps({ 'card-zoom': ['placeZoom'] }));
+    expect(bare.probs).toEqual([expect.stringContaining('must use entry "card-zoom" names no export: write card-zoom:<export> (a bare part passes on any import')]);
+    expect(bare.probs[0]).toContain('card-zoom:* when the part is used whole');
+    const mixed = orders('Must use: pieces-3d:Chip, track\n', imps({ 'pieces-3d': ['Chip'], track: ['Track'] }));
+    expect(mixed.probs).toEqual([expect.stringContaining('must use entry "track" names no export')]);
+    const whole = orders('Must use: card-zoom:*\n', imps({ 'card-hand': ['CardHand'] }));
+    expect(whole.probs).toEqual([expect.stringContaining('must use: card-zoom is not imported')]);
+    expect(whole.line).toBe('ORDERS 0/1 missing: card-zoom');
+    expect(orders('Must use: card-zoom:*\n', imps({ 'card-zoom': ['placeZoom'] }))).toEqual({ line: 'ORDERS 1/1', probs: [] });
   });
 });
 
