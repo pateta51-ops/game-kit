@@ -195,7 +195,7 @@
   },
   "board-viewport": {
     "mechanics": "none: a way to point or pick on screen",
-    "use": "Fit a large SVG or DOM board, zoom about a pointer, drag to pan, or move the camera to an action rect.",
+    "use": "Fit a large SVG or DOM board, zoom about a pointer, drag to pan, scroll a tall board with the mouse wheel (wheel pan mode), or move the camera to an action rect.",
     "not": "Phone app layout (phone-mode) or scrolling a target into view during a beat (motion-frame).",
     "title": "Zoom and drag a big board",
     "tags": [
@@ -205,7 +205,9 @@
       "camera",
       "fit",
       "board",
-      "scroll"
+      "scroll",
+      "wheel",
+      "pans"
     ],
     "looks": "A large board that zooms toward the pointer, drags to move and can fly to a spot.",
     "visible": true,

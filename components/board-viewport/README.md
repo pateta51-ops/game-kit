@@ -10,6 +10,7 @@ Fit, zoom and pan a large SVG or DOM board, and move the camera to a game-suppli
 3. Give the viewport its width and height through its class or style; it clips overflow.
 4. Pass `speed` from the game's motion setting; speed 0 makes `focus` immediate, and reduced motion does the same.
 5. Control the camera through the ref: `fit()` for an immediate whole-board fit, `focus(rect)` for an eased move; put the camera buttons beside the viewport, in the game.
+5a. `wheel="pan"` (default `"zoom"`) makes the plain wheel pan the board, vertically, and horizontally with shift or a horizontal delta, clamped to the board edges; ctrl+wheel (also trackpad pinch) and touch pinch still zoom. Use it for a board taller than its viewport with a hand pinned below.
 6. Set `minScale` / `maxScale` (CSS pixels per board unit) only to override the defaults (whole-board fit up to eight times that).
 7. Keep the view math inputs finite, with positive ordered scale limits.
 8. To check taps in a real browser run `node components/board-viewport/e2e/tap.mjs` in WSL (`NODE_PATH=$HOME/codex/base/node_modules`).
@@ -31,7 +32,7 @@ A `Rect` is `[x, y, width, height]` in board units with positive width and heigh
 
 ## React
 
-Give the viewport a width and height through its class or style. Draw children at their intrinsic board dimensions. The wrapper clips overflow and uses one transform for the entire board. Wheel and pinch zoom, a five client-pixel drag pans, and a shorter press still clicks the piece. Put game-supplied camera controls beside the viewport.
+Give the viewport a width and height through its class or style. Draw children at their intrinsic board dimensions. The wrapper clips overflow and uses one transform for the entire board. Wheel and pinch zoom (with `wheel="pan"` the wheel pans and ctrl+wheel zooms), a five client-pixel drag pans, and a shorter press still clicks the piece. Put game-supplied camera controls beside the viewport.
 
 The ref exposes the live `view`, `fit()` for an immediate whole-board fit, and `focus(rect)` for an eased fit to a board rectangle. Speed 0 and reduced motion make focus immediate. A viewport resize refits the most recent camera rectangle. The default scale range is whole-board fit through eight times that scale. `minScale` and `maxScale` override those limits in CSS pixels per board unit.
 
