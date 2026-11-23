@@ -4,7 +4,7 @@ import { useLayoutEffect, useRef, useState, type CSSProperties } from 'react'
 import type { Cls } from './parts.tsx'
 import { bannerFit, LINE } from './bannerFit.ts'
 
-const text: CSSProperties = { fontWeight: 'var(--kc-banner-weight, 700)' as CSSProperties['fontWeight'], lineHeight: LINE, fontFamily: 'var(--kc-banner-font, inherit)', letterSpacing: '0.12em', textTransform: 'uppercase', padding: '0 0.1em 0 0.22em', whiteSpace: 'nowrap' }
+const text: CSSProperties = { fontWeight: 'var(--kc-banner-weight, 700)', lineHeight: LINE, fontFamily: 'var(--kc-banner-font, inherit)', letterSpacing: '0.12em', textTransform: 'uppercase', padding: '0 0.1em 0 0.22em', whiteSpace: 'nowrap' }
 
 
 /** The game's word (`word`, never fixed here) across the card on its diagonal, clipped to the card; put it last inside the positioned card. Letters are sized from the word's measured width so both ends stay inside. `grey` dims the face beneath (`--kc-banner-grey`). Look: `--kc-banner-bar|text|edge|font|weight|grey`. `variant="line"`: only a thin diagonal stroke (`--kc-banner-line`, `--kc-banner-line-width`), no word. Bar with no word, nothing. Still, no animation. */

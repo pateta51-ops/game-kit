@@ -133,6 +133,6 @@ describe('StateBanner (K350)', () => {
   })
   it('K732: the bar and the fit probe use --kc-banner-weight with 700 fallback', () => {
     const { container } = render(<StateBanner word="Exhausted" />)
-    for (const sp of Array.from(container.querySelectorAll('span'))) expect((sp as HTMLElement).style.fontWeight).toBe('var(--kc-banner-weight, 700)')
+    for (const sp of Array.from(container.querySelectorAll('span'))) expect(sp.style.fontWeight).toBe('var(--kc-banner-weight, 700)')
   })
 })
