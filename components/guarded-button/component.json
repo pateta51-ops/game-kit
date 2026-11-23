@@ -1,0 +1,14 @@
+{
+  "name": "guarded-button",
+  "source": {
+    "game": "dice-commandos-fan-prototype",
+    "commit": "batch/S26-table",
+    "paths": [
+      "src/ui/theme/ThemeSheet.tsx (Button: kind danger with guardOpen, barred with reason; the hinged guard became the data-part guard, behaviour only; timeout, Escape and tap away added)"
+    ]
+  },
+  "needs": [],
+  "packages": [
+    "react"
+  ]
+}
