@@ -1,3 +1,4 @@
+import { StrictMode } from 'react';
 import { act, fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { guardClose, guardTap } from './guard.ts';
@@ -8,6 +9,13 @@ beforeEach(() => { vi.useFakeTimers(); });
 afterEach(() => { vi.useRealTimers(); });
 
 describe('guarded-button', () => {
+  it('K730: initial="open" stays open under StrictMode; a resetKey change guards it', () => {
+    const el = <GuardedButton onFire={() => {}} initial="open" resetKey={1}>Abort</GuardedButton>;
+    const { container, rerender } = render(<StrictMode>{el}</StrictMode>);
+    expect(state(container)).toBe('open');
+    rerender(<StrictMode><GuardedButton onFire={() => {}} initial="open" resetKey={2}>Abort</GuardedButton></StrictMode>);
+    expect(state(container)).toBe('guarded');
+  });
   it('K726: the first tap opens the guard and does not fire, the second fires', () => {
     const fire = vi.fn();
     const { container } = render(<GuardedButton onFire={fire} guardLabel="LIFT" swingMs={0}>Abort</GuardedButton>);
