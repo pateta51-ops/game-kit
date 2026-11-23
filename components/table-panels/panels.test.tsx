@@ -1,7 +1,7 @@
 import { act, fireEvent, render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import { advance, noSteps, pushSteps } from '../paced-view/index.ts';
-import { banner, filterSeat, gameResult, groupByTurn, logLines, opponentTurn, phaseChanged, wholeLinesHeight } from './index.ts';
+import { banner, filterSeat, gameResult, groupByTurn, logLines, opponentTurn, phaseChanged, wholeLinesHeight, wholeEntriesHeight } from './index.ts';
 import { GameOver, GameOverActions, LogPanel, OpponentTurnPanel, TurnBanner } from './ui.tsx';
 
 type Ev = { type: 'hit' | 'noise' | 'move'; seat?: string; turn?: number; n?: number };
@@ -171,14 +171,38 @@ describe('log order and whole lines (K710)', () => {
       expect(order.at(-1)).toBe('1044px');
     } finally { un(); if (desc) Object.defineProperty(Element.prototype, 'scrollTop', desc); }
   });
-  it('wholeLines={true} measures the pitch between two lines (margins count)', () => {
-    const un1 = stub('clientHeight', (el) => (el.style.height ? parseFloat(el.style.height) : 1070));
-    const un2 = stub('offsetTop', (el) => Math.max(0, [...(el.parentElement?.children ?? [])].indexOf(el)) * 29);
-    const un3 = stub('offsetHeight', () => 20);
+  it('K716 wholeEntriesHeight: entries of 1-3 lines, the last whole one sets the height, from the start or from the end', () => {
+    const e = [{ top: 0, bottom: 29 }, { top: 29, bottom: 116 }, { top: 116, bottom: 174 }, { top: 174, bottom: 261 }];
+    expect(wholeEntriesHeight(200, e)).toBe(174);
+    expect(wholeEntriesHeight(200, e, true)).toBe(145);
+    expect(wholeEntriesHeight(20, e)).toBe(null);
+    expect(wholeEntriesHeight(500, [])).toBe(null);
+  });
+  it('K716 wholeLines={true} measures each entry, so a wrapped entry at the bottom is never half cut', () => {
+    const un1 = stub('clientHeight', (el) => (el.style.height ? parseFloat(el.style.height) : 200));
+    const heights = [20, 29, 87, 58, 87];
+    const rect = Object.getOwnPropertyDescriptor(Element.prototype, 'getBoundingClientRect');
+    Element.prototype.getBoundingClientRect = function (this: Element) {
+      const all = [...(this.closest('[data-part=log-lines]')?.querySelectorAll('h4, li') ?? [])];
+      const i = all.indexOf(this);
+      if (i < 0) return { top: 0, bottom: 0, left: 0, right: 0, width: 0, height: 0, x: 0, y: 0, toJSON() {} };
+      const top = heights.slice(0, i).reduce((a, b) => a + b, 0), h = heights[i] ?? 29;
+      return { top, bottom: top + h, left: 0, right: 0, width: 0, height: h, x: 0, y: top, toJSON() {} };
+    };
     try {
-      const { container } = render(<LogPanel lines={lines} wholeLines />);
-      expect((container.querySelector('[data-part=log-lines]') as HTMLElement).style.height).toBe('1044px');
-    } finally { un1(); un2(); un3(); }
+      const two = [{ id: 1, turn: 1, text: 'one' }, { id: 2, turn: 1, text: 'three lines' }, { id: 3, turn: 1, text: 'two lines' }, { id: 4, turn: 1, text: 'three lines' }];
+      const { container } = render(<LogPanel lines={two} wholeLines order="newest-first" />);
+      expect((container.querySelector('[data-part=log-lines]') as HTMLElement).style.height).toBe('194px');
+      const un2 = stub('scrollHeight', () => 291);
+      try {
+        const old = render(<LogPanel lines={two} wholeLines />);
+        expect((old.container.querySelector('[data-part=log-lines]') as HTMLElement).style.height).toBe('155px');
+      } finally { un2(); }
+    } finally { un1(); if (rect) Object.defineProperty(Element.prototype, 'getBoundingClientRect', rect); }
+  });
+  it('K716 fromEnd counts from the scroll end, so trailing margin or padding does not cut the first whole entry', () => {
+    const e = [{ top: 0, bottom: 29 }, { top: 29, bottom: 116 }, { top: 116, bottom: 174 }, { top: 174, bottom: 261 }];
+    expect(wholeEntriesHeight(200, e, true, 271)).toBe(155);
   });
   it('no wholeLines leaves the height alone', () => {
     const { container } = render(<LogPanel lines={lines} />);

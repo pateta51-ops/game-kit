@@ -65,3 +65,11 @@ export function banner(phases: readonly Phase[], turn: number, seat: string, pha
 // true when the phase, turn or seat differs from the one before; the first banner is not a change
 export const phaseChanged = (prev: Pick<Banner, 'turn' | 'seat' | 'phase'> | null, next: Pick<Banner, 'turn' | 'seat' | 'phase'>): boolean =>
   prev !== null && (prev.phase !== next.phase || prev.turn !== next.turn || prev.seat !== next.seat);
+// K716: entries of mixed heights (top/bottom in px from the content start); the height of the whole entries that fit from the start, or from the end (oldest-first scrolled to the newest; endPx is the scroll end, trailing margins and padding included)
+export function wholeEntriesHeight(boxPx: number, entries: readonly { top: number; bottom: number }[], fromEnd = false, endPx?: number): number | null {
+  if (!entries.length) return null;
+  const end = endPx ?? Math.max(...entries.map((e) => e.bottom));
+  let h = 0;
+  for (const e of entries) { const t = fromEnd ? end - e.top : e.bottom; if (t <= boxPx && t > h) h = t; }
+  return h || null;
+}
