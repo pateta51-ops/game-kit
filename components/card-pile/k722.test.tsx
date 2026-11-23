@@ -3,7 +3,7 @@ import { readFileSync } from 'node:fs'
 import { describe, expect, it } from 'vitest'
 import { Pile } from './ui.ts'
 
-const css = readFileSync(new URL('./card-pile.css', import.meta.url), 'utf8')
+const css = readFileSync('components/card-pile/card-pile.css', 'utf8')
 const rule = (part: string) => new RegExp(`\\[data-part='${part}'\\]\\) \\{([^}]*)\\}`).exec(css)![1]!
 const z = (part: string) => Number(/z-index:\s*(\d+)/.exec(rule(part))![1])
 const face = (id: string) => <b>{id}</b>
