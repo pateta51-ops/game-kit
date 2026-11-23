@@ -2718,5 +2718,27 @@
     "release": 1,
     "gameSupplies": "Its own lines in AGENTS.md outside the markers.",
     "exports": "`node kit.mjs worker-rules --adopt <game>`; `docs/worker-rules.md`"
+  },
+  "guarded-button": {
+    "mechanics": "none: a button behaviour",
+    "use": "A danger button that needs two taps: tap one lifts a guard, tap two fires; closes on timeout, Escape or a tap elsewhere; a barred state with its reason; unstyled.",
+    "not": "A dialog or backdrop (modal-dialog); the board second-tap commit (phone-mode, prompt-host); the guard look.",
+    "title": "Guarded two-tap button",
+    "tags": [
+      "button",
+      "guard",
+      "guarded",
+      "danger",
+      "two",
+      "tap",
+      "confirm",
+      "abort",
+      "safety",
+      "barred"
+    ],
+    "looks": "A danger button under a hinged guard that lifts on the first tap.",
+    "visible": true,
+    "release": 1,
+    "gameSupplies": "The label, the look of the button and its guard."
   }
 }

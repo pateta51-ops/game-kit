@@ -530,5 +530,8 @@
   { "q": "stamp worker rules into a game", "first": "worker-rules" },
   { "q": "sleeve tab past the open edge", "first": "card-attachments" },
   { "q": "upgrade card under a notch", "first": "card-attachments" },
-  { "q": "one composite per face of a sleeved card", "first": "card-attachments" }
+  { "q": "one composite per face of a sleeved card", "first": "card-attachments" },
+  { "q": "guarded danger button two taps to fire", "first": "guarded-button" },
+  { "q": "guarded button lifts a guard", "first": "guarded-button" },
+  { "q": "barred button with a reason", "first": "guarded-button" }
 ]
