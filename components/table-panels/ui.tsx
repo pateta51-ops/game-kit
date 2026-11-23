@@ -10,23 +10,26 @@ export function LogPanel({ lines, seats, seatName = (s) => s, turnName = (t) => 
   const shown = filterSeat(lines, seat);
   const newest = order === 'newest-first';
   const [fit, setFit] = useState<number | null>(null);
-  useEffect(() => { if (box.current) box.current.scrollTop = newest ? 0 : box.current.scrollHeight; }, [shown.length, newest]);
+  const toNewest = () => { if (box.current) box.current.scrollTop = newest ? 0 : box.current.scrollHeight; };
   useEffect(() => {
     const el = box.current;
     if (!wholeLines || !el) { setFit(null); return; }
     const measure = () => {
       el.style.height = '';
-      const lh = typeof wholeLines === 'number' ? wholeLines : (el.querySelector('li') as HTMLElement | null)?.offsetHeight ?? 0;
+      const li = el.querySelectorAll('li');
+      const lh = typeof wholeLines === 'number' ? wholeLines : li.length > 1 ? Math.abs((li[1] as HTMLElement).offsetTop - (li[0] as HTMLElement).offsetTop) : (li[0] as HTMLElement | undefined)?.offsetHeight ?? 0;
       const h = lh > 0 ? wholeLinesHeight(el.clientHeight, lh) : null;
       el.style.height = h === null ? '' : `${h}px`;
       setFit(h);
+      toNewest();
     };
     measure();
     if (typeof ResizeObserver === 'undefined') return;
     const ro = new ResizeObserver(measure);
     if (el.parentElement) ro.observe(el.parentElement);
     return () => ro.disconnect();
-  }, [wholeLines, shown.length]);
+  }, [wholeLines, shown.length, newest]);
+  useEffect(toNewest, [shown.length, newest, fit]);
   return (
     <section data-part="log">
       {seats ? (
