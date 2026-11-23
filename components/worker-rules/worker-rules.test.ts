@@ -30,8 +30,11 @@ beforeAll(() => {
   git(src, 'init', '-q');
   git(src, 'config', 'core.autocrlf', 'false');
   fs.copyFileSync(KIT, path.join(src, 'kit.mjs'));
-  fs.copyFileSync(path.join(ROOT, 'docs/worker-rules.md'), path.join(src, 'docs/worker-rules.md'));
   fs.writeFileSync(path.join(src, 'components/alpha/a.txt'), 'one\n');
+  git(src, 'add', '-A');
+  git(src, 'commit', '-qm', 'v0');
+  git(src, 'tag', '-a', 'v0', '-m', 'v0');
+  fs.copyFileSync(path.join(ROOT, 'docs/worker-rules.md'), path.join(src, 'docs/worker-rules.md'));
   git(src, 'add', '-A');
   git(src, 'commit', '-qm', 'v1');
   git(src, 'tag', '-a', 'v1', '-m', 'v1');
@@ -61,6 +64,33 @@ describe('worker rules block (K714)', () => {
     expect(run(b, 'pull', src, 'v1', 'alpha').status).toBe(0);
     expect(fs.readFileSync(path.join(a, 'AGENTS.md'), 'utf8')).toBe(ta);
     expect(fs.readFileSync(path.join(b, 'AGENTS.md'), 'utf8')).toBe(tb);
+  });
+
+  it('a CRLF AGENTS.md keeps its text outside the markers byte for byte', () => {
+    const before = '# G\r\nPorts 6010.\r\n\r\n';
+    const after = '\r\nTail.\r\n';
+    const d = mk('crlf', before + S + '\r\nold\r\n' + E + after);
+    expect(run(d, 'pull', src, 'v1', 'alpha').status).toBe(0);
+    const t = fs.readFileSync(path.join(d, 'AGENTS.md'), 'utf8');
+    expect(t.startsWith(before + S)).toBe(true);
+    expect(t.endsWith(E + after)).toBe(true);
+    expect(t).not.toContain('old');
+  });
+
+  it('a failed stamp fails the pull and leaves AGENTS.md and kit/ unchanged', () => {
+    const d = path.join(tmp, 'bad');
+    fs.mkdirSync(path.join(d, 'AGENTS.md'), { recursive: true });
+    const r = run(d, 'pull', src, 'v1', 'alpha');
+    expect(r.status).toBe(1);
+    expect(r.stderr).toContain('not stamped');
+    expect(fs.statSync(path.join(d, 'AGENTS.md')).isDirectory()).toBe(true);
+    expect(fs.existsSync(path.join(d, 'kit'))).toBe(false);
+  });
+
+  it('a ref with no worker rules still pulls', () => {
+    const d = mk('old', '# G\n');
+    expect(run(d, 'pull', src, 'v0', 'alpha').status).toBe(0);
+    expect(fs.readFileSync(path.join(d, 'AGENTS.md'), 'utf8')).toBe('# G\n');
   });
 
   it('--adopt lists hand-written rules outside the markers; check warns and passes', () => {

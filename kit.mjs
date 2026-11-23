@@ -33,7 +33,9 @@ const stampRules = (file, block) => {
   let out
   if (i >= 0 && j > i) out = have.slice(0, i) + body.replace(/\n/g, nl) + have.slice(j + WR_END.length)
   else out = have + (have && !have.endsWith('\n') ? nl : '') + (have ? nl : '') + ('## Worker rules (from the kit)\n\n' + body + '\n').replace(/\n/g, nl)
-  if (out !== have) fs.writeFileSync(file, out)
+  if (out === have) return null
+  fs.writeFileSync(file + '.kit-tmp', out)
+  return file + '.kit-tmp'
 }
 // sections (heading + body) or bullets outside the markers that look like worker rules
 const looseRules = (file) => {
@@ -92,6 +94,10 @@ if (cmd === 'pull') {
     } catch (e) { fail('docs/recipes did not copy: ' + String(e.stderr ?? e.message).trim().split('\n')[0]) }
   }
   fs.writeFileSync(NEW + '/kit.lock.json', JSON.stringify(lock, null, 1) + '\n')
+  let stamp = null
+  try {
+    if (x('git', ['-C', src, 'ls-tree', '--name-only', commit, 'docs/worker-rules.md'], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] }).trim()) stamp = stampRules('AGENTS.md', x('git', ['-C', src, 'show', commit + ':docs/worker-rules.md'], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] }))
+  } catch (e) { fs.rmSync('AGENTS.md.kit-tmp', { force: true }); fail('worker rules were not stamped into AGENTS.md: ' + String(e.stderr ?? e.message).trim().split('\n')[0]) }
   const OLD = 'kit.old'
   fs.rmSync(OLD, { recursive: true, force: true })
   const had = fs.existsSync('kit')
@@ -122,7 +128,7 @@ if (cmd === 'pull') {
     }
   }
   fs.rmSync(OLD, { recursive: true, force: true })
-  try { stampRules('AGENTS.md', x('git', ['-C', src, 'show', commit + ':docs/worker-rules.md'], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] })) } catch { /* a ref before the worker rules */ }
+  if (stamp) fs.renameSync(stamp, 'AGENTS.md')
   if (converted) console.log('converted the per-component locks to one tag: ' + ref)
   console.log('pulled ' + ref + ': ' + Object.keys(lock.components).join(', '))
 } else if (cmd === 'worker-rules') {
