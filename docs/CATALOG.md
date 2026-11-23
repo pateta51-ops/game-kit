@@ -1227,16 +1227,16 @@ Enlarges a picture 2-4x offline with a super-resolution model (any spandrel mode
 
 ## pieces-3d
 
-Pieces built in code, no model file: a rounded d6 and a ten-sided die (WebGL), a seamed ball that rolls by distance, a chip with thickness, card edge and cast shadow. Owner's rule: simple shapes made in code may be true 3D; nothing modelled or generated.
+Pieces built in code, no model file: a rounded d6 and a ten-sided die (WebGL), a seamed ball that rolls by distance, a chip with thickness, an extruded die-cut token (WebGL), card edge and cast shadow. Owner's rule: simple shapes made in code may be true 3D; nothing modelled or generated.
 
 - **Also called:** Dice, balls and chips in 3D
-- **Looks like:** Rounded dice, a rolling ball and a thick chip with a cast shadow.
-- **Words:** dice, ball, chip, 3d, roll, piece, token, round, d20, die, die cut, transparent, outline, shadow
+- **Looks like:** Rounded dice, a rolling ball, a thick chip and an extruded die-cut token with a cast shadow.
+- **Words:** dice, ball, chip, 3d, roll, piece, token, round, d20, die, die cut, transparent, outline, shadow, extruded, thickness
 - **Release:** 1.0; seen on screen
 - **The game supplies:** The look: colours, faces and sizes.
-- **Use it when:** Dice, balls and chips built in code with WebGL or CSS (no model files); a round transparent token chip with die cut edge, no rectangle behind it, its shadow follows the outline.
+- **Use it when:** Dice, balls and chips built in code with WebGL or CSS (no model files); a round transparent token chip with die cut edge, no rectangle behind it, its shadow follows the outline; a die-cut token as a true extruded 3D solid (outline traced from the scan alpha, real mm size, back face, side walls, tilt and turn).
 - **Not for:** Modelled or generated meshes; the owner does no 3D model work.
-- **Key exports:** `sub`, `add`, `mul`, `dot`, `cross`, `norm`, `apply`, `mmul`, `transpose`, `ID`, `rotX`, `rotY`, `rotAxis`, `cube`, and 32 more
+- **Key exports:** `sub`, `add`, `mul`, `dot`, `cross`, `norm`, `apply`, `mmul`, `transpose`, `ID`, `rotX`, `rotY`, `rotAxis`, `cube`, and 48 more
 - **Needs:** nothing
 - **Came from:** 7is
 - **Docs:** [README](../components/pieces-3d/README.md) ([rules for agents](../components/pieces-3d/README.md#rules-for-agents))

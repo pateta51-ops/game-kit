@@ -3,6 +3,7 @@ import type React from 'react';
 import { useEffect, useRef, type CanvasHTMLAttributes, type ImgHTMLAttributes } from 'react';
 import { ID } from './solids.ts';
 import { paintBall, type BallLook } from './ball.ts';
+import { tokenSize, type TokenMm } from './token.ts';
 import './pieces3d.css';
 
 /** A sphere at rest; a motion layer repaints its clone with `paintBall` as it rolls. */
@@ -20,4 +21,14 @@ export function Ball({ look, className, ...rest }: { look?: BallLook | undefined
 /** A slab: the printed face on top, board core at its near side, a cast shadow (pieces3d.css). `dieCut`: edge and shadow follow the picture's alpha outline (round or irregular transparent tokens), not a rectangle. */
 export function Chip({ className, tilt, dieCut, ...img }: { tilt?: string; dieCut?: boolean } & ImgHTMLAttributes<HTMLImageElement>) {
   return <span className={dieCut ? 'p3-chip p3-diecut' : 'p3-chip'} data-p3-diecut={dieCut ? '' : undefined} style={tilt ? ({ '--piece-tilt': tilt } as React.CSSProperties) : undefined}><img className={className} {...img} /></span>;
+}
+
+/** K718: a die-cut token as a true extruded solid (`startTokenLayer` draws it); the `<Chip dieCut>` inside is its flat form, shown until the solid is drawn and wherever WebGL is not. Size = `mm` x `pxPerMm`; `tilt`, `turn`, `spin` in radians (turn Math.PI shows the back). */
+export function Token({ src, back, mm, pxPerMm, edge, tilt, turn, spin, alt = '', className }: { src: string; back?: string | undefined; mm: TokenMm; pxPerMm: number; edge?: string | undefined; tilt?: number | undefined; turn?: number | undefined; spin?: number | undefined; alt?: string; className?: string | undefined }) {
+  const { w, h, d } = tokenSize(mm, pxPerMm);
+  return (
+    <span data-p3-token="" data-src={src} data-back={back} data-edge={edge} data-size={`${String(w)},${String(h)},${String(d)}`} data-rot={tilt === undefined && !turn && !spin ? undefined : `${tilt === undefined ? '' : String(tilt)},${String(turn ?? 0)},${String(spin ?? 0)}`} className={className} style={{ width: w, height: h, '--chip-thickness': `${String(d)}px` } as React.CSSProperties}>
+      <Chip dieCut src={src} alt={alt} {...(tilt === undefined ? {} : { tilt: `${String((tilt * 180) / Math.PI)}deg` })} style={{ width: w, height: h }} />
+    </span>
+  );
 }

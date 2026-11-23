@@ -84,6 +84,10 @@ select, .ctl input[type="text"] { font: inherit; color: var(--fg); background: #
 .p3-gl [data-p3-die]>:not(.p3-die-gl){visibility:hidden}
 .p3-die-gl{display:none;position:absolute;left:-50%;top:-50%;width:200%;height:200%;pointer-events:none}
 .p3-gl .p3-die-gl{display:block}
+/* K718 a die-cut token: its <Chip dieCut> shows until the WebGL layer has drawn the extruded solid over it */
+[data-p3-token]{display:inline-block;position:relative;line-height:0;vertical-align:middle}
+[data-p3-token][data-p3-drawn]>:not(.p3-token-gl){visibility:hidden}
+.p3-token-gl{position:absolute;left:-50%;top:-50%;width:200%;height:200%;pointer-events:none}
 </style>
 
 <main class="wrap">

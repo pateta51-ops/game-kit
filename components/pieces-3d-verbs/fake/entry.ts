@@ -13,8 +13,10 @@ async function demo(noGl: boolean) {
   document.body.appendChild(root);
   const r = mountPiecesDemo(root);
   for (let i = 0; i < 10 && r.dice && r.dice.frames() < 16; i += 1) await frame();
-  const dice = [...root.querySelectorAll<HTMLElement>('[data-p3-die]')];
+  for (let i = 0; i < 40 && r.tokens && r.tokens.frames() < 1; i += 1) await frame();
+  const dice = [...root.querySelectorAll<HTMLElement>('[data-p3-die]')], tok = root.querySelector('[data-p3-token]') as HTMLElement;
   return {
+    token: [r.tokens !== null, tok.hasAttribute('data-p3-drawn'), sum(tok.querySelector('canvas.p3-token-gl')) > 0, getComputedStyle(tok.querySelector('.p3-chip') as Element).visibility],
     gl: document.documentElement.classList.contains('p3-gl'), layer: r.dice !== null,
     dice: dice.map((d) => [d.getAttribute('data-p3-die'), sum(d.querySelector('canvas.p3-die-gl')) > 0, getComputedStyle(d.querySelector('.flat') as Element).visibility]),
     ball: sum(root.querySelector('canvas[data-ball]')), chip: getComputedStyle(root.querySelector('.p3-chip') as Element).transformStyle,
