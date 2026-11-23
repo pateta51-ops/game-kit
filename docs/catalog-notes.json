@@ -1464,7 +1464,7 @@
     "gameSupplies": "The look tokens for a picked option."
   },
   "pieces-3d": {
-    "use": "Dice, balls and chips built in code with WebGL or CSS (no model files).",
+    "use": "Dice, balls and chips built in code with WebGL or CSS (no model files); a round transparent token chip with die cut edge, no rectangle behind it, its shadow follows the outline.",
     "not": "Modelled or generated meshes; the owner does no 3D model work.",
     "title": "Dice, balls and chips in 3D",
     "tags": [
@@ -1477,7 +1477,11 @@
       "token",
       "round",
       "d20",
-      "die"
+      "die",
+      "die cut",
+      "transparent",
+      "outline",
+      "shadow"
     ],
     "looks": "Rounded dice, a rolling ball and a thick chip with a cast shadow.",
     "visible": true,
