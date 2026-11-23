@@ -1,4 +1,7 @@
 [
+  { "q": "record pieces a card test ran", "first": "card-harness" },
+  { "q": "piece counted only when a test ran it", "first": "card-harness" },
+  { "q": "forced effect did not fire routine prompt", "first": "card-harness" },
   { "q": "clause resolved only when dispatch ran it", "first": "sim-pool" },
   { "q": "trace resolves not counting dry run", "first": "sim-pool" },
   { "q": "restriction phrase case sensitive", "first": "card-harness" },

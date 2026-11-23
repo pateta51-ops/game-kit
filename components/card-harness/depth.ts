@@ -197,17 +197,26 @@ export function expectNotOffered(t: Observed, id: string | readonly string[], at
   if (sig(t) !== before) throw new Error('expectNotOffered: the state or the events changed');
 }
 
+/** K707: `prompt: 'unrelated'` lets one prompt stay open: the same prompt open before `act` (needs `act`), or one `clauseOf` maps to a clause not in `id`. A new prompt it cannot map still fails, and one naming `id` always fails. */
+export interface NotFiredOptions extends Pick<NotOfferedOptions, 'clauseOf'> {
+  readonly prompt?: 'none' | 'unrelated';
+}
 /**
  * K415: a forced effect that does not fire. No event naming `id` in the scenario's events (after `act` when given), no prompt
  * open, and with `act` the state unchanged by it (`same` projects the part that must not move; default the whole state).
  */
-export function expectNotFired(t: Observed, id: string | readonly string[], act?: () => unknown, same?: (s: never) => unknown, o: Pick<NotOfferedOptions, 'clauseOf'> = {}): void {
+export function expectNotFired(t: Observed, id: string | readonly string[], act?: () => unknown, same?: (s: never) => unknown, o: NotFiredOptions = {}): void {
   const want = ids(id);
   const key = (): string => JSON.stringify(same === undefined ? (t.s ?? null) : same(t.s as never));
   const before = key();
+  const was = JSON.stringify(t.prompt ?? null);
   act?.();
   const fired = (t.events ?? []).find((e) => names(e, want, o.clauseOf, 'expectNotFired'));
   if (fired !== undefined) throw new Error(`expectNotFired: ${JSON.stringify(fired)} fired`);
-  if (t.prompt !== null) throw new Error(`expectNotFired: a prompt is open: ${JSON.stringify(t.prompt)}`);
+  if (t.prompt !== null) {
+    const m = mapped(t.prompt, o.clauseOf, 'expectNotFired');
+    const other = o.prompt === 'unrelated' && !names(t.prompt, want, o.clauseOf, 'expectNotFired') && ((act !== undefined && JSON.stringify(t.prompt) === was) || (m !== undefined && !want.includes(m)));
+    if (!other) throw new Error(`expectNotFired: a prompt is open: ${JSON.stringify(t.prompt)}`);
+  }
   if (act !== undefined && key() !== before) throw new Error('expectNotFired: the state changed');
 }
