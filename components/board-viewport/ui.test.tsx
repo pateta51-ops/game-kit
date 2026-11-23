@@ -192,3 +192,23 @@ it("K709 wheel pan: the wheel moves y and keeps the scale, shift or deltaX moves
   send(plain.root, { deltaY: -100 });
   expect(plain.ref.current!.view.scale).not.toBe(s0);
 });
+
+it("K709 wheel pan clamps at each board edge and shift keeps a real deltaX and deltaY", () => {
+  const { root, ref } = board(0, "pan");
+  act(() => ref.current?.focus([0, 0, 100, 50]));
+  const send = (init: WheelEventInit) => fireEvent(root, new WheelEvent("wheel", { cancelable: true, clientX: 80, clientY: 30, ...init }));
+  const start = { ...ref.current!.view };
+  expect(start.scale).toBe(2);
+  send({ deltaY: 100000 });
+  expect(ref.current!.view.y).toBe(-300);
+  send({ deltaY: -100000 });
+  expect(ref.current!.view.y).toBe(0);
+  send({ deltaX: 100000 });
+  expect(ref.current!.view.x).toBe(-600);
+  send({ deltaX: -100000 });
+  expect(ref.current!.view.x).toBe(0);
+  send({ deltaX: 7, deltaY: 4, shiftKey: true });
+  expect(ref.current!.view.x).toBe(-7);
+  expect(ref.current!.view.y).toBe(-4);
+  expect(ref.current!.view.scale).toBe(2);
+});
