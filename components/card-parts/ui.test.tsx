@@ -131,4 +131,8 @@ describe('StateBanner (K350)', () => {
     expect(parseFloat(bar.style.fontSize)).toBeCloseTo(bannerFit(240, 336, 9), 3)
     rect.mockRestore(); cw.mockRestore(); ch.mockRestore()
   })
+  it('K732: the bar and the fit probe use --kc-banner-weight with 700 fallback', () => {
+    const { container } = render(<StateBanner word="Exhausted" />)
+    for (const sp of Array.from(container.querySelectorAll('span'))) expect(sp.style.fontWeight).toBe('var(--kc-banner-weight, 700)')
+  })
 })
