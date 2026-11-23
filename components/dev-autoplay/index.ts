@@ -5,7 +5,7 @@
 import { seatKey } from '../engine-core/index.ts';
 import type { GameTypes } from '../engine-core/index.ts';
 import type { GameStore } from '../game-store/index.ts';
-import { DriverRng, legalAnswers, type Bot } from '../sim-pool/index.ts';
+import { DriverRng, legalAnswers, type Bot } from '../sim-pool/browser.ts';
 
 export interface AutoplayFlag {
   readonly kind?: string;

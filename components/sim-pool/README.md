@@ -17,6 +17,8 @@ Plays N whole games of any `GameRules<G>` with a driver, in this thread or on wo
 - `dispatchTrace`: count a clause resolved only when verb dispatch ran it, not in a dry run
 <!-- /hooks -->
 
+**Which entry (K723):** browser or UI code imports `sim-pool/browser.ts` (`DriverRng`, `legalAnswers`, `randomDriver`, `botDriver`, `Bot`, `Driver`, `bySeat`, `ANSWER_CAP`, `GameSpec`, `SimGame`; no `node:` module). Node scripts keep `sim-pool/index.ts` (everything, including pool and worker). You must never import `index.ts` from code vite serves to a browser.
+
 **What it does:** Plays many whole games of any `GameRules` with a driver, in-thread or on worker threads, with crash-safe records, a resume file, fuzzing with invariants, grid sweeps and a weight tuner.
 
 **You must:**
