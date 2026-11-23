@@ -34,4 +34,4 @@ export function srcImports(repo: string): Map<string, Set<string>>
 export function orders(body: string, imports: Map<string, Set<string>>): { line: string; probs: string[] }
 export const E2E_PATHS: string[]
 export function e2eNeeded(paths: string[]): string[]
-export function e2eCommand(repo: string): string | null
+export function e2eCommand(repo: string): { cmd: string; from: string } | { cmd: null; why: string }

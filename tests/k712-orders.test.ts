@@ -204,7 +204,7 @@ describe('K712 finish: orders and e2e from the changed paths', () => {
     const r = run(main, '');
     expect(r.rc).toBe(1);
     expect(r.ran).toBe(false);
-    expect(r.text).toContain('so e2e must run, but package.json has no e2e');
+    expect(r.text).toContain('so e2e must run, but package.json has no kit.e2e command and no e2e or test:e2e script');
     const two = game('e4', { 'package.json': JSON.stringify({ scripts: { 'test:e2e': 'p', 'test:e2e:phone': 'p' } }) }, { 'b.txt': 'b' });
     expect(e2eCommand(two)).toEqual({ cmd: 'npm run test:e2e && npm run test:e2e:phone', from: 'package.json scripts test:e2e, test:e2e:phone' });
     const own = game('e5', { 'package.json': JSON.stringify({ scripts: { e2e: 'p' }, kit: { e2e: 'npm run e2e:all' } }) }, { 'b.txt': 'b' });
