@@ -47,9 +47,19 @@ export function tabOf(outline: Outline | null | undefined, o: { side?: number; m
   return bodyTop - top >= min && bodyTop - top <= max ? { top, bodyTop } : null
 }
 
-/** The clip of the tab alone: the outline with every point below `bodyTop` raised to it. */
-export function tabClipOf(outline: Outline, bodyTop: number): string | undefined {
-  return clipPathOf(outline.map(([x, y]) => [x, Math.min(y, bodyTop)] as const))
+/** How far a tab's clip runs past its body line (a fraction of the insert): on under the host for the front tab, short of it for one behind (its base lies on the front tab); a clip ending on an edge leaves a seam. */
+export const TAB_SEAM = 0.004
+
+/** The clip of the tab alone: the outline cut at the line `bodyTop + seam` (a real polygon, no zero-height strip along the shoulders). */
+export function tabClipOf(outline: Outline, bodyTop: number, seam = 0): string | undefined {
+  const cut = bodyTop + seam
+  const out: [number, number][] = []
+  outline.forEach((p, i) => {
+    const q = outline[(i + 1) % outline.length]!
+    if (p[1] <= cut) out.push([p[0], p[1]])
+    if ((p[1] <= cut) !== (q[1] <= cut)) out.push([p[0] + ((cut - p[1]) / (q[1] - p[1])) * (q[0] - p[0]), cut])
+  })
+  return clipPathOf(out)
 }
 
 /**

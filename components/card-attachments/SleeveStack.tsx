@@ -1,5 +1,5 @@
 import type { CSSProperties, ReactNode } from 'react'
-import { imageClipOf, insertLayer, insertRanks, layerStyle, tabBox, tabClipOf, tabOf, type SleeveImage, type SleeveOpen } from './sleeve.ts'
+import { imageClipOf, insertLayer, insertRanks, layerStyle, tabBox, TAB_SEAM, tabClipOf, tabOf, type SleeveImage, type SleeveOpen } from './sleeve.ts'
 
 export interface SleeveFace extends SleeveImage { src: string }
 export interface SleeveInsert { key: string | number; front: SleeveFace; back: SleeveFace }
@@ -38,7 +38,7 @@ export function SleeveStack({ host, inserts, face, open, tabs = true, tabStep, c
     const layer = insertLayer(h, f, edge)
     if (!layer) continue
     const tab = tabs && f.outline ? tabOf(f.outline) : null
-    if (tab && f.outline) under.push(img('sleeve-tab', f, layerStyle({ ...layer, box: tabBox(layer, tab, rank, tabStep) }, ratio), tabClipOf(f.outline, tab.bodyTop), i, rank))
+    if (tab && f.outline) under.push(img('sleeve-tab', f, layerStyle({ ...layer, box: tabBox(layer, tab, rank, tabStep) }, ratio), tabClipOf(f.outline, tab.bodyTop, rank === 0 ? TAB_SEAM : -TAB_SEAM), i, rank))
   }
   for (const { a, i, rank } of order) {
     const f = a[face]

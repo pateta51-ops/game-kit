@@ -9,7 +9,7 @@ const tabbed = [[0, 0.1], [0.35, 0.1], [0.35, 0], [0.65, 0], [0.65, 0.1], [1, 0.
 const tabbedB = [[0, 0.1], [0.4, 0.1], [0.4, 0], [0.6, 0], [0.6, 0.1], [1, 0.1], [1, 1], [0, 1]] as const
 const f = (src: string, width: number, height: number, outline?: readonly (readonly [number, number])[]): SleeveFace => ({ src, width, height, ...(outline ? { outline } : {}) })
 const host = { front: f('hf', 100, 140, notched), back: f('hb', 140, 100) }
-const ins = (k: string, o: readonly (readonly [number, number])[] = tabbed) => ({ key: k, front: f(`${k}f`, 100, 150, o), back: f(`${k}b`, 100, 150) })
+const ins = (k: string, o: readonly (readonly [number, number])[] = tabbed, b?: readonly (readonly [number, number])[]) => ({ key: k, front: f(`${k}f`, 100, 150, o), back: f(`${k}b`, 100, 150, b) })
 const parts = (c: HTMLElement, p: string) => [...c.querySelectorAll<HTMLElement>(`[data-part="${p}"]`)]
 
 describe('sleeve geometry (K721)', () => {
@@ -35,7 +35,8 @@ describe('sleeve geometry (K721)', () => {
     expect(tabOf(tabbed)).toEqual({ top: 0, bodyTop: 0.1 })
     expect(tabOf([[0, 0], [1, 0], [1, 1], [0, 1]])).toBeNull()
     expect(tabOf(undefined)).toBeNull()
-    expect(tabClipOf(tabbed, 0.1)).not.toMatch(/% 100%/)
+    expect(tabClipOf(tabbed, 0.1, -0.004)).toBe('polygon(35% 9.6%, 35% 0%, 65% 0%, 65% 9.6%)') // the tab alone: no strip along the shoulders
+    expect(tabClipOf(tabbed, 0.1, 0.004)).toContain('100% 10.4%')
   })
   it('a tab the host hides stands out to show; one already past stays; each rank behind steps out further', () => {
     const tab = { top: 0, bodyTop: 0.1 }
@@ -92,6 +93,20 @@ describe('SleeveStack (K721)', () => {
     expect(Number.parseFloat(tabs[0]!.style.top)).toBeLessThan(Number.parseFloat(tabs[1]!.style.top))
     const back = render(<SleeveStack host={host} inserts={two} face="back" />).container
     expect(parts(back, 'sleeve-insert').map((e) => e.getAttribute('src'))).toEqual(['ab', 'bb'])
+  })
+  it('a left-opened back: each insert back tab, turned with it, sticks out past the left edge; the one behind further', () => {
+    const { container } = render(<SleeveStack host={host} inserts={[ins('a', tabbed, tabbed), ins('b', tabbedB, tabbedB)]} face="back" open={{ back: 'left' }} />)
+    const tabs = parts(container, 'sleeve-tab')
+    expect(tabs.map((e) => e.getAttribute('src'))).toEqual(['ab', 'bb'])
+    expect(tabs.map((e) => e.dataset.rank)).toEqual(['1', '0'])
+    expect(tabs[0]!.style.transform).toContain('rotate(-90deg)')
+    const left = (e: HTMLElement) => Number.parseFloat(e.style.left)
+    const [layer] = parts(container, 'sleeve-insert')
+    expect(left(tabs[1]!)).toBeLessThan(left(layer!))
+    expect(left(tabs[0]!)).toBeLessThan(left(tabs[1]!))
+    expect(tabs[1]!.style.clipPath).toContain('10.4%')
+    expect(tabs[0]!.style.clipPath).not.toContain('10.4%')
+    expect(tabs[0]!.style.clipPath).not.toContain('100%')
   })
   it('tabs={false} draws no tab; children go over the host', () => {
     const { container } = render(<SleeveStack host={host} inserts={[ins('a')]} face="front" tabs={false}><b data-x="over" /></SleeveStack>)
