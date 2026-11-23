@@ -14,6 +14,8 @@ Dev-only: `?dev=1&autoplay=<prompt kind>[*n]` plays a game-store with a sim-pool
 5. Set `over(state)` for the game's own end, and `leave(prompt)` when the board answers a prompt itself (the bot waits; `paceMs: 0` stops with `left`).
 6. Read `status().stop` to see why it stopped: `off`, `kind`, `steps`, `seat`, `over`, `refused`, `left`.
 
+7. Import `Bot` and friends from `sim-pool/browser.ts`, never `sim-pool/index.ts`: that one pulls `node:` modules (pool, worker) and breaks every page under vite dev.
+
 **Common mistakes:**
 - Forgetting `dev=1` in the URL: the flag is ignored.
 - No `steps` and a game that never reaches the kind: it runs up to `cap` (10,000) answers.
