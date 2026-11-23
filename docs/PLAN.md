@@ -392,6 +392,7 @@ The blind matching test's result was not recorded: the PR, its comments and docs
 | K722 | card-pile: Pile children and the pick badge draw over the top card and the stack-hit (data-part stack-over, pointer-events none) | S |  | done |
 | K723 | sim-pool: browser-safe entry sim-pool/browser.ts (DriverRng, legalAnswers, Bot); dev-autoplay imports only it, so useDevAutoplay no longer pulls node: modules into vite dev | S |  | done |
 | K724 | game-store: `get().undoUsed` and `view(state, seat, { undoUsed })` carry the history's undo-used flag (set by a Free-mode undo, kept by saves and load) | S |  | done |
+| K725 | dice-patterns missing: what a roll lacks to meet a pattern as data (faces, how many more dice, a run's gaps, how far a sum, max, spread or count is), for every kind, with `whole` as in `smallest`; the game words it | S |  | done |
 
 ## Asked for by the owner
 
