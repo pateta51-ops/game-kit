@@ -2,7 +2,7 @@
 //   worktree --branch <b> [--repo .] [--dir d] [--base origin/main] [--shared <dir with node_modules>] [--no-fetch]   new worktree + node_modules link
 //   worktree --here [--branch <b>] [--shared d]   for a worker already inside a worktree: link node_modules from the main checkout (or --shared); --branch also switches to a new branch
 //   finish [--repo .] [--check "npm run check"] [--install "npm ci"] [--tail 15] [--comment] [--detach] | finish --result   clone + install + check in WSL (bash on Linux); prints PASS <sha> or FAIL <sha>; refuses (exit 3) while the queue holds `finish <branch>`; a line a minute while it waits and runs; --detach returns at once, --result reads the stored outcome (exit 4 while running) (K572); the WSL run writes a start marker first: if it is not there after 45 s finish exits 6 with `the run did not start` and the command to run by hand (K644); with --check the line is check passed|failed <sha> (check: <command>), never PASS, so it cannot pass for the gate (K416)
-//   finish also reads the PR body (gh pr view, or --body <file>) and fails before any run unless every file added under src/ since the merge base with main (not tests, *.d.ts, or package.json kit.builtNew.ignore globs) is named in a "Built new" section, one line each: - <file or folder> | search: <words>; <other words> | nearest: <kit part or none> | why: <reason> (K684; not with --check; renames are not new; a folder line covers files only two levels below src/; no merge base fails). K688: each line's two searches run again with the game's kit/kit.mjs search, and when a search's first 3 lines name parts and none is the line's nearest it fails (check: search finds <part>); kit.builtNew.ignore entries are { glob, why } (no bare string, no empty why, no glob covering most of src/ such as src/** or src/**/*.ts, at most 10); a new top-level export or top-level setTimeout/setInterval/createMachine added to a changed src/ file needs a line naming <file>#<export> or the file (renames, edits and newly exported old names do not count). K698: also (not with --check) every added or changed line, since the merge base, of docs/experience/**, docs/BUILD_PLAN.md, docs/handoff/** (plus package.json kit.claimDocs globs) that claims the kit lacks something (CLAIM_WORDS: kit gap, not in the kit, Built new, new effect, game-own, kit ships no, not covered by the kit ..., or a Gap: label;; headings skipped) needs search: <words>; <other words>; each phrasing runs with kit/kit.mjs search and effects, and when the first 3 lines name a part (after "not in the kit by that name" only the guesses sharing a word) the line needs nearest: <that part> and a why of six words or more (check: search finds <part>); a K<n> on a claim line whose row is done in kit/plan or the sibling game-kit/docs/plan fails (the kit row is done: pull it)
+//   finish also reads the PR body (gh pr view, or --body <file>) and fails before any run unless every file added under src/ since the merge base with main (not tests, *.d.ts, or package.json kit.builtNew.ignore globs) is named in a "Built new" section, one line each: - <file or folder> | search: <words>; <other words> | nearest: <kit part or none> | why: <reason> (K684; not with --check; renames are not new; a folder line covers files only two levels below src/; no merge base fails). K688: each line's two searches run again with the game's kit/kit.mjs search, and when a search's first 3 lines name parts and none is the line's nearest it fails (check: search finds <part>); kit.builtNew.ignore entries are { glob, why } (no bare string, no empty why, no glob covering most of src/ such as src/** or src/**/*.ts, at most 10); a new top-level export or top-level setTimeout/setInterval/createMachine added to a changed src/ file needs a line naming <file>#<export> or the file (renames, edits and newly exported old names do not count). K698: also (not with --check) every added or changed line, since the merge base, of docs/experience/**, docs/BUILD_PLAN.md, docs/handoff/** (plus package.json kit.claimDocs globs) that claims the kit lacks something (CLAIM_WORDS: kit gap, not in the kit, Built new, new effect, game-own, kit ships no, not covered by the kit ..., or a Gap: label;; headings skipped) needs search: <words>; <other words>; each phrasing runs with kit/kit.mjs search and effects, and when the first 3 lines name a part (after "not in the kit by that name" only the guesses sharing a word) the line needs nearest: <that part> and a why of six words or more (check: search finds <part>); a K<n> on a claim line whose row is done in kit/plan or the sibling game-kit/docs/plan fails (the kit row is done: pull it). K712: also (not with --check) the PR body is read when the branch changes anything; with no PR body (no PR yet) it fails (no PR body: open the draft PR first); a "Must use: <part>:<export>, ..." (or bare <part>) line is an order: each export must be imported (a value import; import type and inline type names do not count; comments and strings are stripped first) under src/ (tests skipped) from kit/<part>/ (or kit/components/<part>/), else FAIL naming the part; only "Waived: <part> | architect | <why>" clears one; every line of the "Kit gap" section (from a Kit gap(s) heading or label, whose text after the colon is a line too, to the next heading, bold label, or non-list paragraph after a blank line; none is empty) needs readme: "<quoted README line>" and tried: <command or test> -> <result>, and a Kit gap line naming a Must use part fails; ORDERS n/m (parts imported or waived of those listed, then the missing ones) prints on PASS and FAIL (ORDERS 0/0 with no Must use line); e2e is decided from the changed paths: any change under src/screen/** or src/app/** appends the e2e command (package.json kit.e2e, else npm run e2e, else npm run test:e2e and test:e2e:phone) to the gate check and prints E2E: runs (<command> (<where it came from>)); with no such command, or one made only of shell no-ops (true, :, echo, exit 0, empty, also through npm run), it fails
 //   teardown --worktree <dir> [--repo .] [--force]
 import { execFileSync, spawn, spawnSync } from 'node:child_process'
 import { createHash } from 'node:crypto'
@@ -108,7 +108,7 @@ const stateDir = (home, repo, branch) => { const m = mainOf(repo); return path.j
 const report = (m, status, output, io) => {
   const ok = status === 0
   const line = m.check ? `check ${ok ? 'passed' : 'failed'} ${m.sha} (check: ${m.check.replace(/\s+/g, ' ')})` : `${ok ? 'PASS' : 'FAIL'} ${m.sha}`
-  io.out(`${line} (${m.branch}; check ${ok ? 'passed' : 'exit ' + status}, clone removed)\n${output.split('\n').filter((l) => l.trim()).slice(-Number(m.tail ?? 15)).join('\n')}`)
+  io.out(`${line} (${m.branch}; check ${ok ? 'passed' : 'exit ' + status}, clone removed)${m.orders ?? ''}\n${output.split('\n').filter((l) => l.trim()).slice(-Number(m.tail ?? 15)).join('\n')}`)
   return line
 }
 const comment = (repo, branch, line, io) => { try { execFileSync('gh', ['pr', 'comment', branch, '--body', line], { cwd: repo, stdio: 'pipe' }) } catch { io.err('warning: could not comment on the PR (gh missing or no PR yet)') } }
@@ -296,6 +296,115 @@ export function claims(lines, search, dirs = []) {
   }
   return bad
 }
+// K712: the kit imports under src/ (tests and *.d.ts skipped): Map part -> Set of names ('default', '*' for a namespace, export * or import())
+const KIT_SPEC = /^kit\/(?:components\/)?([\w-]+)(?:\/|$)/
+// K712 review: a type-only import or name is not a use
+const clauseNames = (c) => {
+  if (/^\s*type\s/.test(c)) return []
+  const out = [], b = c.match(/\{([^}]*)\}/), rest = c.replace(/\{[^}]*\}/, '')
+  if (b) for (const x of b[1].split(',')) { if (/^\s*type\s/.test(x)) continue; const n = x.trim().split(/\s+as\s+/)[0].trim(); if (/^\w+$/.test(n)) out.push(n) }
+  if (/\*\s*as\s+\w+/.test(rest)) out.push('*')
+  if (/^\s*\w+\s*(,|$)/.test(rest)) out.push('default')
+  return out
+}
+// K712 review: comments dropped, each string literal replaced by §<n>§ so only real import statements match
+const lex = (t) => {
+  const strs = []
+  let o = '', i = 0
+  while (i < t.length) {
+    const c = t[i], d = t[i + 1]
+    if (c === '/' && d === '/') { while (i < t.length && t[i] !== '\n') i++; continue }
+    if (c === '/' && d === '*') { const e = t.indexOf('*/', i + 2); i = e < 0 ? t.length : e + 2; o += ' '; continue }
+    if (c === '"' || c === "'" || c === '`') { let j = i + 1; while (j < t.length && t[j] !== c && (c === '`' || t[j] !== '\n')) j += t[j] === '\\' ? 2 : 1; strs.push(t.slice(i + 1, j)); o += `§${strs.length - 1}§`; i = j + 1; continue }
+    o += c; i++
+  }
+  return { o, strs }
+}
+export function kitImports(files) {
+  const m = new Map()
+  for (const [file, src] of files) {
+    const { o: t, strs } = lex(src)
+    const add = (n, names) => { const spec = strs[Number(n)], p = ((spec.startsWith('.') ? path.posix.join(path.posix.dirname(file), spec) : spec).match(KIT_SPEC) ?? [])[1]; if (!p || !names.length) return; if (!m.has(p)) m.set(p, new Set()); for (const x of names) m.get(p).add(x) }
+    for (const x of t.matchAll(/\bimport\s+([^§;]*?)\s*from\s*§(\d+)§/g)) add(x[2], clauseNames(x[1]))
+    for (const x of t.matchAll(/\bexport\s+(type\s+)?\{([^}]*)\}\s*from\s*§(\d+)§/g)) add(x[3], x[1] ? [] : clauseNames('{' + x[2] + '}'))
+    for (const x of t.matchAll(/\bexport\s*\*\s*(?:as\s+\w+\s*)?from\s*§(\d+)§/g)) add(x[1], ['*'])
+    for (const x of t.matchAll(/\bimport\(\s*§(\d+)§\s*\)/g)) add(x[1], ['*'])
+  }
+  return m
+}
+export function srcImports(repo) {
+  const files = [], walk = (d) => { let es; try { es = fs.readdirSync(path.join(repo, d), { withFileTypes: true }) } catch { return } for (const e of es) { const r = d + '/' + e.name; if (e.isDirectory()) { if (e.name !== 'node_modules') walk(r) } else if (/\.[mc]?[jt]sx?$/.test(r) && !skip(r, [])) files.push([r, fs.readFileSync(path.join(repo, r), 'utf8')]) } }
+  walk('src')
+  return kitImports(files)
+}
+// K712: "Must use: <part>:<export>, ..." lines are orders; only "Waived: <part> | architect | <why>" clears one; "Kit gap" lines need readme: "<line>" and tried: <case> -> <result>
+const lineOf = (l, k) => (l.match(new RegExp('^\\s*(?:[-*]\\s*)?\\**\\s*' + k + '\\s*\\**\\s*:\\s*\\**\\s*(.*)$', 'i')) ?? [])[1]
+const names = (s, p) => new RegExp('(^|[^\\w-])' + p.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '([^\\w-]|$)', 'i').test(s)
+export function orders(body, imps) {
+  const lines = body.split(/\r?\n/), want = new Map(), waived = new Set(), probs = []
+  for (const l of lines) {
+    const mu = lineOf(l, 'must use')
+    if (mu !== undefined) for (const e of mu.replace(/[`*]/g, '').split(',').map((x) => x.trim()).filter(Boolean)) { const [p, x] = e.split(':').map((y) => y.trim()); if (!want.has(p)) want.set(p, new Set()); if (x) want.get(p).add(x) }
+    const w = lineOf(l, 'waived')
+    if (w !== undefined) {
+      const [p, who, why] = w.replace(/`/g, '').split('|').map((y) => y.trim())
+      if (who?.toLowerCase() !== 'architect' || !why || !p) probs.push(`waiver not valid: ${l.trim()} (only "Waived: <part> | architect | <why>" clears a Must use part)`)
+      else waived.add(p)
+    }
+  }
+  const missing = []
+  for (const [p, xs] of want) {
+    if (waived.has(p)) continue
+    const got = imps.get(p), lack = [...xs].filter((x) => !got?.has(x) && !got?.has('*'))
+    if (!got || lack.length) missing.push({ part: p, exports: xs.size ? lack : [] })
+  }
+  for (const m of missing) probs.push(`must use: ${m.part}${m.exports.length ? ' (' + m.exports.join(', ') + ')' : ''} is not imported under src/ from kit/${m.part}/; use it, or the architect writes Waived: ${m.part} | architect | <why>`)
+  // K712 review: the section starts at a "Kit gap(s)" heading or label (text after its colon is a line of it) and ends at a heading, a bold label, or a non-list paragraph after a blank line
+  let gap = false, seen = false, blank = false
+  const check = (l) => {
+    const t = l.trim().replace(/^([-*+]|\d+[.)])\s*/, '')
+    seen = true
+    if (!t || /^(none|n\/a)\.?$/i.test(t)) return
+    const need = [!/readme:\s*["“][^"”]+["”]/i.test(t) && 'readme: "<the README line it rests on>"', !/tried:\s*\S.*->\s*\S/i.test(t) && 'tried: <command or test> -> <result>'].filter(Boolean)
+    if (need.length) probs.push(`kit gap line without proof: ${t.slice(0, 120)} (needs ${need.join(' and ')})`)
+    for (const p of want.keys()) if (names(t, p)) probs.push(`kit gap line for a Must use part ${p}: ${t.slice(0, 120)} (an ordered part is built, not skipped)`)
+  }
+  for (const l of lines) {
+    const kg = l.match(/^\s*(?:#{1,6}\s+)?\**\s*kit gaps?\b(.*)$/i)
+    if (kg) { gap = true; seen = false; blank = false; const c = kg[1].indexOf(':'); if (c >= 0) { const r = kg[1].slice(c + 1).replace(/^[\s*]+/, ''); if (r) check(r) } continue }
+    if (!gap) continue
+    const list = /^\s*([-*+]|\d+[.)])\s/.test(l)
+    if (/^\s*#{1,6}\s/.test(l) || (!list && /^\s*\*\*[^*]+\*\*/.test(l))) { gap = false; continue }
+    if (!l.trim()) { if (seen) blank = true; continue }
+    if (blank && !list) { gap = false; continue }
+    blank = false
+    check(l)
+  }
+  const n = want.size - missing.length
+  return { line: `ORDERS ${n}/${want.size}${missing.length ? ' missing: ' + missing.map((m) => m.part + (m.exports.length ? ' (' + m.exports.join(', ') + ')' : '')).join(', ') : ''}`, probs }
+}
+// K712: e2e runs when a changed path is under one of these, whatever the worker judged
+export const E2E_PATHS = ['src/screen/**', 'src/app/**']
+export const e2eNeeded = (paths) => paths.filter((p) => E2E_PATHS.some((g) => globRe(g).test(p)))
+export function e2eCommand(repo) {
+  let pk = {}
+  try { pk = JSON.parse(fs.readFileSync(path.join(repo, 'package.json'), 'utf8')) } catch { /* no package.json */ }
+  const s = pk.scripts ?? {}
+  // K712 review: a command made only of shell no-ops (true, :, echo, exit 0, empty), directly or through npm run, runs no e2e suite
+  const noop = (c, d = 0) => String(c).split(/&&|\|\||;/).map((x) => x.trim()).every((x) => { const r = x.match(/^npm run (\S+)$/); return r && d < 5 ? s[r[1]] !== undefined && noop(s[r[1]], d + 1) : /^(true|:|echo\b.*|exit\s+0|)$/.test(x) })
+  // the command, or an npm script it runs, must name playwright or an e2e script
+  // per segment of && || ;, with a # comment cut off; echo, printf and other no-ops never count
+  const e2e = (c, d = 0) => String(c).split(/&&|\|\||;/).map((x) => x.replace(/(^|\s)#.*$/, '').trim()).some((x) => {
+    if (/^(echo|printf|true|:|exit)\b/.test(x)) return false
+    const r = x.match(/^npm run (\S+)/)
+    return r ? /\be2e\b/.test(r[1]) || (d < 5 && s[r[1]] !== undefined && e2e(s[r[1]], d + 1)) : /playwright|\be2e\b/.test(x)
+  })
+  const got = (cmd, from) => noop(cmd) ? { cmd: null, why: `${from} ${JSON.stringify(cmd)} is a no-op (true, :, echo, exit 0 or empty); it must run the game's e2e suites` } : !e2e(cmd) ? { cmd: null, why: `${from} ${JSON.stringify(cmd)} runs no e2e suite (no playwright and no e2e script in it or the npm scripts it runs)` } : { cmd, from }
+  if (pk.kit?.e2e !== undefined) return got(pk.kit.e2e, 'package.json kit.e2e')
+  const names = s.e2e !== undefined ? ['e2e'] : ['test:e2e', 'test:e2e:phone'].filter((n) => s[n] !== undefined)
+  if (!names.length) return { cmd: null, why: 'package.json has no kit.e2e command and no e2e or test:e2e script' }
+  return got(names.map((n) => 'npm run ' + n).join(' && '), 'package.json scripts ' + names.join(', '))
+}
 export function finish(args, io, exec = real, win = process.platform === 'win32', bg = exec === real ? realBg : null) {
   const f = parse(args, ['comment', 'detach', 'result'])
   if (!f) { io.err('usage: finish [--repo <worktree>] [--check "npm run check"] [--install "npm ci"] [--tail 15] [--comment] [--detach] [--body <PR body file>] | finish --result [--repo <worktree>] [--comment]'); return 2 }
@@ -317,34 +426,51 @@ export function finish(args, io, exec = real, win = process.platform === 'win32'
   const branch = git(repo, ['rev-parse', '--abbrev-ref', 'HEAD'])
   if (branch === 'HEAD') { io.err('REFUSED: detached HEAD; switch to the batch branch first'); return 1 }
   const sha = git(repo, ['rev-parse', 'HEAD'])
+  let O = '', check = f.check ?? 'npm run check'
   if (!f.check) {
+    // K712: the PR body is read once when the branch changes anything; orders, kit gap proof and e2e from the changed paths
+    const base = mergeBase(repo), changed = base ? git(repo, ['diff', '--name-only', base, 'HEAD']).split('\n').filter(Boolean) : []
     const ig = builtNewIgnore(repo)
-    if (ig.probs.length) { io.out(`FAIL ${sha} (${branch}; Built new: package.json kit.builtNew.ignore is not valid; nothing was run)\n${ig.probs.join('\n')}\neach entry: { "glob": "src/data/*.json", "why": "<reason>" }`); return 1 }
+    if (ig.probs.length) { io.out(`FAIL ${sha} (${branch}; Built new: package.json kit.builtNew.ignore is not valid; nothing was run)\n${ig.probs.join('\n')}\neach entry: { "glob": "src/data/*.json", "why": "<reason>" }${O}`); return 1 }
+    let body = null, bodyErr = ''
+    if (changed.length || f.body) {
+      if (f.body) { try { body = fs.readFileSync(path.resolve(f.body), 'utf8') } catch { bodyErr = `cannot read --body ${f.body}` } }
+      else { const r = exec('gh', ['pr', 'view', branch, '--json', 'body', '-q', '.body'], ''); if (r.status === 0) body = r.output; else bodyErr = 'no PR body: open the draft PR first (or pass --body <file> with the PR body)' }
+      // K712 review: without the body the Must use orders cannot be read
+      if (body === null) { io.out(`FAIL ${sha} (${branch}; ${bodyErr}; the Must use orders and the Built new and Kit gap sections are read from it; nothing was run)`); return 1 }
+    }
+    const ord = orders(body ?? '', srcImports(repo))
+    O = '\n' + ord.line
+    if (ord.probs.length) { io.out(`FAIL ${sha} (${branch}; orders: a Must use part is not imported or waived, or a Kit gap line lacks its proof; nothing was run)\n${ord.probs.join('\n')}${O}`); return 1 }
+    const e2 = e2eNeeded(changed)
+    if (e2.length) {
+      const c = e2eCommand(repo)
+      if (!c.cmd) { io.out(`FAIL ${sha} (${branch}; e2e: ${e2.length} changed path(s) under ${E2E_PATHS.join(' or ')} (${e2[0]}), so e2e must run, but ${c.why}; nothing was run)${O}`); return 1 }
+      check = `${check} && ${c.cmd}`
+      O += `\nE2E: runs (${e2.length} changed under ${E2E_PATHS.join(' or ')}, first ${e2[0]}): ${c.cmd} (${c.from})`
+    }
     const nf = newSrcFiles(repo, ig.globs), ne = nf && newExports(repo, ig.globs)
-    if (nf === null) { io.out(`FAIL ${sha} (${branch}; Built new: no merge base with origin/main or main, so the new files under src/ cannot be listed; fetch origin main or base the branch on main; nothing was run)`); return 1 }
+    if (nf === null) { io.out(`FAIL ${sha} (${branch}; Built new: no merge base with origin/main or main, so the new files under src/ cannot be listed; fetch origin main or base the branch on main; nothing was run)${O}`); return 1 }
     const files = [...nf, ...ne]
     if (files.length) {
-      let body = null
-      if (f.body) { try { body = fs.readFileSync(path.resolve(f.body), 'utf8') } catch { /* named file missing */ } }
-      else { const r = exec('gh', ['pr', 'view', branch, '--json', 'body', '-q', '.body'], ''); if (r.status === 0) body = r.output }
-      const probs = body === null ? [f.body ? `cannot read --body ${f.body}` : 'no PR body (no PR yet?): pass --body <file> with the PR body'] : builtNew(files, body, kitSearch(repo))
-      if (probs.length) { io.out(`FAIL ${sha} (${branch}; Built new: ${nf.length} new file(s) and ${ne.length} new export(s) or timer(s) in changed files under src/ not all listed, or a search finds a kit part; nothing was run)\n${probs.join('\n')}\nexpected under a "## Built new" heading, one line per new file, folder or <file>#<export>:\n${BUILT_NEW_LINE}`); return 1 }
+      const probs = body === null ? [bodyErr || 'no PR body: open the draft PR first (or pass --body <file> with the PR body)'] : builtNew(files, body, kitSearch(repo))
+      if (probs.length) { io.out(`FAIL ${sha} (${branch}; Built new: ${nf.length} new file(s) and ${ne.length} new export(s) or timer(s) in changed files under src/ not all listed, or a search finds a kit part; nothing was run)\n${probs.join('\n')}\nexpected under a "## Built new" heading, one line per new file, folder or <file>#<export>:\n${BUILT_NEW_LINE}${O}`); return 1 }
     }
   }
   if (!f.check) {
     // K698: claim lines in the role documents
     const cd = claimDocs(repo), cl = cd.probs.length ? [] : claimLines(repo, cd.globs) ?? []
     const probs = cd.probs.length ? cd.probs : cl.some((l) => isClaim(l)) ? claims(cl, kitSearch(repo), planDirs(repo)) : []
-    if (probs.length) { io.out(`FAIL ${sha} (${branch}; kit claims: a line in ${cd.globs.join(', ')} says the kit lacks something; nothing was run)\n${probs.join('\n')}\neach claim line carries: search: <words>; <other words> | nearest: <kit part or none> | why: <reason of six words or more>`); return 1 }
+    if (probs.length) { io.out(`FAIL ${sha} (${branch}; kit claims: a line in ${cd.globs.join(', ')} says the kit lacks something; nothing was run)\n${probs.join('\n')}\neach claim line carries: search: <words>; <other words> | nearest: <kit part or none> | why: <reason of six words or more>${O}`); return 1 }
   }
   const label = 'finish ' + branch
-  const unavailable = (e) => { io.out(`FAIL ${sha} (${branch}; could not run the check: ${win ? 'WSL is unavailable' : 'bash is unavailable'}${e ? ' - ' + e.message : ''}; the check never runs on local Windows)`); return 1 }
+  const unavailable = (e) => { io.out(`FAIL ${sha} (${branch}; could not run the check: ${win ? 'WSL is unavailable' : 'bash is unavailable'}${e ? ' - ' + e.message : ''}; the check never runs on local Windows)${O}`); return 1 }
   const q0 = queueJob(exec, win, label)
   if (q0?.down) return unavailable(q0.error)
   if (q0?.job) { io.err(`REFUSED: the queue already holds job ${q0.job.id} "${label}", ${q0.state} for ${mmss(q0.ms)}; wait for it (node kit.mjs finish --result reads a --detach run)`); return 3 }
   const common = path.resolve(repo, git(repo, ['rev-parse', '--git-common-dir']))
-  const sh = script(win ? toWsl(common) : common, branch, `finish-${branch.replace(/[^\w.-]/g, '-')}-${Date.now()}`, f.install ?? 'npm ci', f.check ?? 'npm run check')
-  const m = { sha, branch, check: f.check, tail: f.tail, label }
+  const sh = script(win ? toWsl(common) : common, branch, `finish-${branch.replace(/[^\w.-]/g, '-')}-${Date.now()}`, f.install ?? 'npm ci', check)
+  const m = { sha, branch, check: f.check, tail: f.tail, label, orders: O }
   if (!bg) {
     const r = win ? exec('wsl', ['-e', 'bash', '-s'], sh) : exec('bash', ['-s'], sh)
     if (r.status === null || r.error) return unavailable(r.error)

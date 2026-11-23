@@ -37,7 +37,7 @@ function game(files: Record<string, string>, pkg?: object): string {
 function run(main: string) {
   const out: string[] = [], sent: string[] = [];
   const io = { out: (l: string) => void out.push(l), err: (l: string) => void out.push(l) };
-  const exec: Exec = (c, _a, input) => c === 'gh' ? { status: 1, output: 'no pull requests found' } : (sent.push(input), { status: 0, output: 'all good' });
+  const exec: Exec = (c, _a, input) => c === 'gh' ? { status: 0, output: '' } : (sent.push(input), { status: 0, output: 'all good' });
   const rc = finish(['--repo', main], io, exec, false);
   return { rc, text: out.join('\n'), ran: sent.some((s) => s.includes('npm run check')) };
 }

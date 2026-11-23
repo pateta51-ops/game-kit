@@ -105,10 +105,10 @@ describe('K688 kit.builtNew.ignore entries need a glob and a reason', () => {
   it('K688 good: ten entries with reasons pass and their globs are skipped', () => {
     const ignore = [ok, ...Array.from({ length: 9 }, (_, i) => ({ glob: `src/d${i}/*.json`, why: 'x' }))];
     const main = game({ 'src/data/cards.json': '{}' }, { pkg: { kit: { builtNew: { ignore } } } });
-    const r = run(main, null);
+    const r = run(main, '');
     expect(r.rc).toBe(0);
     expect(r.ran).toBe(true);
-    expect(run(game({ 'notes.md': 'x' }, { pkg: { kit: { builtNew: { ignore: [{ glob: 'src/**/*.json', why: 'data' }, { glob: 'src/gen/**/*.ts', why: 'generated' }] } } } }), null).rc).toBe(0);
+    expect(run(game({ 'notes.md': 'x' }, { pkg: { kit: { builtNew: { ignore: [{ glob: 'src/**/*.json', why: 'data' }, { glob: 'src/gen/**/*.ts', why: 'generated' }] } } } }), '').rc).toBe(0);
   });
 });
 
@@ -141,7 +141,7 @@ describe('K688 new top-level exports and timers in changed files need a line', (
     expect(r.text).toContain('missing: src/old.ts#setInterval');
     expect(run(top, '## Built new\n- src/old.ts#clock | search: a b; c d | nearest: none | why: x\n').rc).toBe(0);
     const inner = game({ 'src/old.ts': 'export const a = 1\nfunction tick() {\n  setTimeout(tick, 100)\n}\n' });
-    expect(run(inner, null).rc).toBe(0);
+    expect(run(inner, '').rc).toBe(0);
   });
   it('K688 removing a plain declaration does not hide a new export as a rename', () => {
     const r = run(game({ 'src/old.ts': 'export const a = 1\nexport function shuffle() {}\n' }), '## Built new\n');
@@ -175,13 +175,13 @@ describe('K688 new top-level exports and timers in changed files need a line', (
       'export const a = 1\nexport function tick() {}\n',
       'export const a = 1\nfunction tick() {}\nnamespace N {\n  export const z = 1\n}\n',
     ]) {
-      const r = run(game({ 'src/old.ts': t }), null);
+      const r = run(game({ 'src/old.ts': t }), '');
       expect(r.rc).toBe(0);
       expect(r.gh).toHaveLength(0);
     }
   });
   it('K688 a changed test file or ignored file is not checked', () => {
     const main = game({ 'src/old.test.ts': 'export function h() {}\n', 'src/gen/x.ts': 'export const b = 1\n' }, { base: { 'src/old.test.ts': '', 'src/gen/x.ts': '' }, pkg: { kit: { builtNew: { ignore: [{ glob: 'src/gen/**', why: 'generated' }] } } } });
-    expect(run(main, null).rc).toBe(0);
+    expect(run(main, '').rc).toBe(0);
   });
 });

@@ -68,14 +68,14 @@ describe('K684 finish: every new src file is listed under Built new', () => {
   });
   it('K684 a modified-only change, a test file and a .d.ts pass with no section; finish behaves as before', () => {
     const main = game('d', { 'src/old.ts': 'export const a = 2', 'src/x.test.ts': '', 'src/tests/h.ts': '', 'src/t.d.ts': '' });
-    const r = run(main, null);
+    const r = run(main, '');
     expect(r.rc).toBe(0);
     expect(r.gh).toHaveLength(0);
     expect(r.text).toMatch(/^PASS /);
   });
   it('K684 files matching package.json kit.builtNew.ignore globs pass', () => {
     const main = game('e', { 'src/data/cards.json': '{}', 'src/assets/a/b.png': 'p' }, { kit: { builtNew: { ignore: [{ glob: 'src/data/*.json', why: 'card data' }, { glob: 'src/assets/**', why: 'images' }] } } });
-    expect(run(main, null).rc).toBe(0);
+    expect(run(main, '').rc).toBe(0);
     const other = game('f', { 'src/data/cards.ts': '' }, { kit: { builtNew: { ignore: [{ glob: 'src/data/*.json', why: 'card data' }] } } });
     expect(run(other, null).rc).toBe(1);
   });
@@ -93,7 +93,7 @@ describe('K684 finish: every new src file is listed under Built new', () => {
     fs.mkdirSync(path.join(main, 'src/ui'));
     g(main, 'mv', 'src/old.ts', 'src/ui/old.ts');
     g(main, 'commit', '-qm', 'move');
-    const r = run(main, null);
+    const r = run(main, '');
     expect(r.rc).toBe(0);
     expect(r.gh).toHaveLength(0);
   });

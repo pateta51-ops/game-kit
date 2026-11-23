@@ -380,6 +380,7 @@ The blind matching test's result was not recorded: the PR, its comments and docs
 | K709 | board-viewport: opt-in wheel mode where the wheel pans a tall board and ctrl+wheel or pinch zooms | S |  | done |
 | K710 | table-panels LogPanel: newest-first order and a whole-lines fit (no half-cut line in a fixed-height box) | S |  | done |
 | K711 | pieces-3d Chip: opt-in die-cut, where the edge and cast shadow follow the picture's alpha outline | S |  | done |
+| K712 | finish: Must use orders (imports checked, Waived only by the architect), Kit gap lines need the README line and the case run, ORDERS n/m, e2e decided from changed paths | M |  | done |
 | K713 | Kit-batch worker rules moved into AGENTS.md "Change the kit" | S |  | done |
 | K714 | One worker-rules block in the kit, stamped by pull between markers into every game's AGENTS.md; the scaffold's CLAUDE.md line prints no kit version | M |  | done |
 
