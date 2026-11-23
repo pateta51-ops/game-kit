@@ -26,14 +26,14 @@ function game(name: string, base: Record<string, string>, files: Record<string, 
   g(main, 'commit', '-qm', 'work');
   return main;
 }
-function run(main: string, body: string) {
+function run(main: string, body: string | null, extra: string[] = []) {
   const out: string[] = [], sent: string[] = [];
   const io = { out: (l: string) => void out.push(l), err: (l: string) => void out.push(l) };
   const bf = path.join(root, `${path.basename(main)}-${out.length}-body.md`);
-  fs.writeFileSync(bf, body);
+  if (body !== null) fs.writeFileSync(bf, body);
   const exec: Exec = (c, _a, input) => c === 'gh' ? { status: 1, output: '' } : (sent.push(input), { status: 0, output: 'all good' });
-  const rc = finish(['--repo', main, '--body', bf], io, exec, false);
-  const script = sent.find((s) => s.includes('npm run check')) ?? '';
+  const rc = finish(['--repo', main, ...(body !== null ? ['--body', bf] : []), ...extra], io, exec, false);
+  const script = sent.find((s) => s.includes('npm run check') || s.includes('echo hi')) ?? '';
   return { rc, text: out.join('\n'), ran: script !== '', script };
 }
 const E2E = { 'package.json': JSON.stringify({ scripts: { e2e: 'playwright test' } }) };
@@ -89,7 +89,7 @@ describe('K712 orders: Must use, Waived, Kit gap proof, ORDERS n/m', () => {
       ['src/screen/table/A.tsx', "import { placeZoom, type ZoomOptions as Z } from '../../../kit/card-zoom/index';\nimport Def, * as All from '../../../kit/card-pile/ui';\nimport {\n  HostStack,\n  footprint,\n} from '../../../kit/components/card-attachments/ui';\nimport { Panel } from '../kit/K';\nimport { Fake } from './kit/card-hand/index';"],
       ['src/x.ts', "export { buildIndex } from '../kit/glossary/match';\nexport * from '../kit/tutorial/index';\nconst t = import('../kit/saves/index');"],
     ]);
-    expect([...m.get('card-zoom')!]).toEqual(['placeZoom', 'ZoomOptions']);
+    expect([...m.get('card-zoom')!]).toEqual(['placeZoom']); // K712 review 3: a type import is not a use
     expect([...m.get('card-pile')!].sort()).toEqual(['*', 'default']);
     expect([...m.get('card-attachments')!]).toEqual(['HostStack', 'footprint']);
     expect([...m.get('glossary')!]).toEqual(['buildIndex']);
@@ -101,6 +101,71 @@ describe('K712 orders: Must use, Waived, Kit gap proof, ORDERS n/m', () => {
   it('K712 e2e paths: src/screen/** and src/app/** need e2e, other paths do not', () => {
     expect(e2eNeeded(['src/screen/table/Table.tsx', 'src/app/x/y.ts', 'src/engine/a.ts', 'docs/screen/a.md'])).toEqual(['src/screen/table/Table.tsx', 'src/app/x/y.ts']);
     expect(e2eNeeded(['src/engine/a.ts', 'e2e/flows.ts'])).toEqual([]);
+  });
+});
+
+describe('K712 review round', () => {
+  it('K712 review 1+2: imports inside comments and strings do not count; an inline comment in the braces keeps every name', () => {
+    const m = kitImports([['src/a.ts', "// import { transcribe } from '../kit/card-zoom/index'\n/* import { CardZoom } from '../kit/card-zoom/ui' */\nconst s = \"import { HostStack } from '../kit/card-attachments/ui'\";\nconst u = `export * from '../kit/saves/index'`;\nimport { placeZoom /* x */, transcribe } from '../kit/card-hand/index';\nimport {\n  a, // why\n  b,\n} from '../kit/card-pile/ui';"]]);
+    expect([...m.get('card-hand')!]).toEqual(['placeZoom', 'transcribe']);
+    expect([...m.get('card-pile')!]).toEqual(['a', 'b']);
+    expect(m.has('card-zoom')).toBe(false);
+    expect(m.has('card-attachments')).toBe(false);
+    expect(m.has('saves')).toBe(false);
+  });
+  it('K712 review 1: finish fails when the ordered import sits only in a comment', () => {
+    const main = game('v1', { 'src/engine/a.ts': '' }, { 'src/engine/a.ts': "// import { transcribe } from '../../kit/card-zoom/index'\nexport {}" });
+    const r = run(main, 'Must use: card-zoom:transcribe\n');
+    expect(r.rc).toBe(1);
+    expect(r.text).toContain('must use: card-zoom (transcribe)');
+  });
+  it('K712 review 3: import type and inline type names do not fulfil an order', () => {
+    const m = kitImports([['src/a.ts', "import type { Transcription } from '../kit/card-zoom/index';\nimport { type ZoomOptions, placeZoom } from '../kit/card-zoom/index';\nexport type { IconSet } from '../kit/card-parts/index';"]]);
+    expect([...m.get('card-zoom') ?? []]).toEqual(['placeZoom']);
+    expect(m.get('card-parts')?.size ?? 0).toBe(0);
+    const r = orders('Must use: card-zoom:Transcription, card-zoom:ZoomOptions, card-parts:IconSet\n', m);
+    expect(r.line).toBe('ORDERS 0/2 missing: card-zoom (Transcription, ZoomOptions), card-parts (IconSet)');
+  });
+  it('K712 review 4: the Kit gap section ends at a bold label, or at a paragraph after a blank line; "none" is an empty section', () => {
+    expect(orders('## Kit gap\nnone\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)\n', imps({})).probs).toEqual([]);
+    expect(orders(`## Kit gap\n- board-viewport: no pan ${proof}\n**Kit override:** none\n- not a gap line\n`, imps({})).probs).toEqual([]);
+    expect(orders(`## Kit gap\n- board-viewport: no pan ${proof}\n\nLook questions (for the director):\n1. a question\n`, imps({})).probs).toEqual([]);
+    expect(orders('## Kit gap\n\n- board-viewport: no proof\n', imps({})).probs).toEqual([expect.stringContaining('kit gap line without proof: board-viewport: no proof')]);
+    expect(orders(`## Kit gap\n- a: x ${proof}\n\n- b: no proof\n`, imps({})).probs).toEqual([expect.stringContaining('kit gap line without proof: b: no proof')]);
+  });
+  it('K712 review 5: an inline "Kit gap: <text>" label and a "## Kit gaps (first round)" heading are read', () => {
+    expect(orders('Kit gap: board-viewport has no wheel pan\n', imps({})).probs).toEqual([expect.stringContaining('kit gap line without proof: board-viewport has no wheel pan')]);
+    expect(orders('## Kit gaps (first round)\n- table-panels: no newest first\n', imps({})).probs).toEqual([expect.stringContaining('kit gap line without proof: table-panels')]);
+    expect(orders('**Kit gap:** none\n', imps({})).probs).toEqual([]);
+    expect(orders(`Kit gap: board-viewport has no wheel pan ${proof}\n`, imps({})).probs).toEqual([]);
+  });
+  it('K712 review 6: an e2e command that is a shell no-op is rejected, and the message says where the command came from', () => {
+    const cases = [[{ kit: { e2e: 'true' } }, 'kit.e2e'], [{ kit: { e2e: ':' } }, 'kit.e2e'], [{ kit: { e2e: 'exit 0' } }, 'kit.e2e'], [{ scripts: { e2e: 'echo skip' } }, 'scripts e2e'], [{ kit: { e2e: 'npm run e2e' }, scripts: { e2e: 'true && echo ok' } }, 'kit.e2e'], [{ kit: { e2e: '  ' } }, 'kit.e2e']] as const;
+    cases.forEach(([pk, why], i) => {
+      const main = game('n' + i, { 'src/app/t.ts': '', 'package.json': JSON.stringify(pk) }, { 'src/app/t.ts': 'const x = 1' });
+      const r = run(main, '');
+      expect(r.rc).toBe(1);
+      expect(r.ran).toBe(false);
+      expect(r.text).toContain('is a no-op');
+      expect(r.text).toContain(why);
+    });
+  });
+  it('K712 review 7: with no PR body finish fails before any run (no ORDERS 0/0); --check still runs', () => {
+    const main = game('p1', { 'src/engine/a.ts': '' }, { 'src/engine/a.ts': 'const x = 1' });
+    const r = run(main, null);
+    expect(r.rc).toBe(1);
+    expect(r.ran).toBe(false);
+    expect(r.text).toContain('no PR body: open the draft PR first');
+    expect(r.text).not.toContain('ORDERS');
+    const c = run(main, null, ['--check', 'echo hi']);
+    expect(c.rc).toBe(0);
+    expect(c.text).toMatch(/^check passed /);
+  });
+  it('K712 review 8: a part-only order fails with no import of the part and passes with any', () => {
+    const r = orders('Must use: card-zoom\n', imps({ 'card-hand': ['CardHand'] }));
+    expect(r.probs).toEqual([expect.stringContaining('must use: card-zoom is not imported')]);
+    expect(r.line).toBe('ORDERS 0/1 missing: card-zoom');
+    expect(orders('Must use: card-zoom\n', imps({ 'card-zoom': ['placeZoom'] }))).toEqual({ line: 'ORDERS 1/1', probs: [] });
   });
 });
 
@@ -128,7 +193,7 @@ describe('K712 finish: orders and e2e from the changed paths', () => {
     const r = run(main, '## Checks\ne2e not needed: no flow change\n');
     expect(r.rc).toBe(0);
     expect(r.script).toContain(`bash -c 'npm run check && npm run e2e'`);
-    expect(r.text).toContain('ORDERS 0/0\nE2E: runs (1 changed under src/screen/** or src/app/**, first src/screen/t.ts): npm run e2e');
+    expect(r.text).toContain('ORDERS 0/0\nE2E: runs (1 changed under src/screen/** or src/app/**, first src/screen/t.ts): npm run e2e (package.json scripts e2e)');
     const other = run(game('e2', { ...E2E, 'src/engine/t.ts': '' }, { 'src/engine/t.ts': 'const x = 1' }), '');
     expect(other.rc).toBe(0);
     expect(other.script).toContain(`bash -c 'npm run check'`);
@@ -141,9 +206,9 @@ describe('K712 finish: orders and e2e from the changed paths', () => {
     expect(r.ran).toBe(false);
     expect(r.text).toContain('so e2e must run, but package.json has no e2e');
     const two = game('e4', { 'package.json': JSON.stringify({ scripts: { 'test:e2e': 'p', 'test:e2e:phone': 'p' } }) }, { 'b.txt': 'b' });
-    expect(e2eCommand(two)).toBe('npm run test:e2e && npm run test:e2e:phone');
+    expect(e2eCommand(two)).toEqual({ cmd: 'npm run test:e2e && npm run test:e2e:phone', from: 'package.json scripts test:e2e, test:e2e:phone' });
     const own = game('e5', { 'package.json': JSON.stringify({ scripts: { e2e: 'p' }, kit: { e2e: 'npm run e2e:all' } }) }, { 'b.txt': 'b' });
-    expect(e2eCommand(own)).toBe('npm run e2e:all');
+    expect(e2eCommand(own)).toEqual({ cmd: 'npm run e2e:all', from: 'package.json kit.e2e' });
   });
 });
 
