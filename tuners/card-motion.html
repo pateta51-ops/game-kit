@@ -40,6 +40,12 @@
   background: transparent;
   cursor: pointer;
 }
+:where([data-part='stack-over']) {
+  position: absolute;
+  inset: 0;
+  z-index: 26;
+  pointer-events: none;
+}
 :where([data-part='stack-hit']:disabled) {
   cursor: default;
 }
@@ -16570,8 +16576,10 @@ var PREVIEW = (() => {
             })() }, k)),
             model.top === void 0 ? null : /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("div", { "data-part": "stack-card", "data-depth": 0, style: { "--k": 0 }, children: topNode }),
             model.browsable ? /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("button", { "data-kit": true, ref: buttonRef, type: "button", "data-part": "stack-hit", "aria-expanded": isOpen || sheet, "aria-label": picking && w.pick !== void 0 ? w.pick(label, names.length) : (w.open ?? ((l) => `Look through the ${l}`))(label), title: p.hitTitle === false ? void 0 : picking && w.pick !== void 0 ? w.pick(label, names.length) : wordsOf, onClick: toggle, onPointerEnter: () => model.top != null && onPreview?.(model.top, "top", buttonRef.current ?? void 0), onPointerLeave: () => onPreview?.(null, "top"), onFocus: () => model.top != null && buttonRef.current !== null && onFocusPreview(model.top, "top", buttonRef.current), onBlur: () => onPreview?.(null, "top") }) : null,
-            picking && p.badge !== void 0 ? /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("span", { "data-part": "pick-badge", "aria-hidden": "true", children: p.badge(names.length) }) : null,
-            p.children
+            picking && p.badge !== void 0 || p.children != null ? /* @__PURE__ */ (0, import_jsx_runtime3.jsxs)("div", { "data-part": "stack-over", children: [
+              picking && p.badge !== void 0 ? /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("span", { "data-part": "pick-badge", "aria-hidden": "true", children: p.badge(names.length) }) : null,
+              p.children
+            ] }) : null
           ]
         }
       ),

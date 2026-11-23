@@ -446,8 +446,7 @@ export function Pile(p: PileProps) {
         {model.browsable ? (
           <button data-kit ref={buttonRef} type="button" data-part="stack-hit" aria-expanded={isOpen || sheet} aria-label={picking && w.pick !== undefined ? w.pick(label, names.length) : (w.open ?? ((l) => `Look through the ${l}`))(label)} title={p.hitTitle === false ? undefined : picking && w.pick !== undefined ? w.pick(label, names.length) : wordsOf} onClick={toggle} onPointerEnter={() => model.top != null && onPreview?.(model.top, 'top', buttonRef.current ?? undefined)} onPointerLeave={() => onPreview?.(null, 'top')} onFocus={() => model.top != null && buttonRef.current !== null && onFocusPreview(model.top, 'top', buttonRef.current)} onBlur={() => onPreview?.(null, 'top')} />
         ) : null}
-        {picking && p.badge !== undefined ? <span data-part="pick-badge" aria-hidden="true">{p.badge(names.length)}</span> : null}
-        {p.children}
+        {(picking && p.badge !== undefined) || p.children != null ? <div data-part="stack-over">{picking && p.badge !== undefined ? <span data-part="pick-badge" aria-hidden="true">{p.badge(names.length)}</span> : null}{p.children}</div> : null}
       </div>
       {overlay}
       {sheet ? (

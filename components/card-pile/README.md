@@ -7,6 +7,7 @@ A pile on the table: a stack at rest (top card, edges of the cards beneath, empt
 **What it does:** A pile on the table: a stack at rest, an animated fan to look through it, picks from it, and a grid in the phone sheet.
 
 **You must:**
+0. `children` and the pick `badge` are drawn in `data-part="stack-over"` (K722): over the top card and the stack-hit, `pointer-events: none` so clicks reach the pile; a game that wants a clickable child sets `pointer-events: auto` on it, and positions it against the stack box (the wrapper fills it).
 1. Import `Pile` from `kit/card-pile/ui`; the CSS loads with it. The game must have `card-zones`, `prompt-host`, `picked-state`, `phone-mode`, `motion-frame` available.
 2. Pass `view` (a card-zones `ZoneView`), `face(id, { where, top })` and `back({ where, top })`; a hidden card is `null` and its id never reaches the DOM.
 3. Pass `browse={false}` for a deck nobody may look through.
