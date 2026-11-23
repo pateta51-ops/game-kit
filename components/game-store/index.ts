@@ -19,7 +19,7 @@ export interface GameDef<G extends GameTypes, V, S extends SeatId = SeatId> {
   /** A new game's options and rules from a seed. */
   readonly start: (seed: string) => { options: G['options']; rules: G['rules'] };
   /** What one seat sees (build it from card-zones `viewOf`); the opponent and the screen read only this. */
-  readonly view: (state: G['state'], seat: S) => V;
+  readonly view: (state: G['state'], seat: S, ctx?: { readonly undoUsed: boolean }) => V;
   /** Answers the settings give without asking (prompt-host `autoAnswer`), or null to ask. Default: always ask. */
   readonly forced?: Forced<G['prompt']>;
   /** The opponent: picks for its open prompt from its own view only. K271: `rng` is keyed `<options.seed>|opponent|<prompt id>`, as sim-pool's for driver `opponent`. */
@@ -41,6 +41,8 @@ export const answerOf = (promptId: number, picks: readonly string[]): AnswerActi
 export interface GameSnap<G extends GameTypes, V> {
   readonly history: StepHistory<G>;
   readonly state: G['state'];
+  /** K724: Free-mode undo was used in this game (history's flag; kept by saves). */
+  readonly undoUsed: boolean;
   /** The player's seat view of the live state. */
   readonly view: V;
   /** paced-view queue of the last click (and the opponent's answers after it). */
@@ -124,7 +126,7 @@ export function createGameStore<G extends GameTypes, V, S extends SeatId>(def: G
     for (const fn of subs) fn();
   };
   const make = (h: StepHistory<G>, steps: Steps<V, G['event']>, options: G['options'], rules: G['rules'], error: string | null): GameSnap<G, V> => ({
-    history: h, state: h.state, view: def.view(h.state, me()), steps, options, rules, error,
+    history: h, state: h.state, undoUsed: h.undoUsed, view: def.view(h.state, me(), { undoUsed: h.undoUsed }), steps, options, rules, error,
   });
   const saved = (): History<G> => ({ options: snap.options, rules: snap.rules, actions: snap.history.actions, cursor: snap.history.actions.length, undoUsed: snap.history.undoUsed });
   const autosave = (): void => {
