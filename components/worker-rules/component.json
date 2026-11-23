@@ -1,0 +1,6 @@
+{
+  "name": "worker-rules",
+  "source": { "game": "kit", "commit": "main", "paths": ["docs/worker-rules.md"], "note": "Tooling: the block is read from the game-kit checkout by `kit.mjs pull`; a game never holds this component." },
+  "needs": [],
+  "packages": []
+}

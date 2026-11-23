@@ -30,6 +30,8 @@ export function groupByTurn(lines: readonly LogLine[]): { turn: number; lines: L
   for (const l of lines) { const g = out[out.length - 1]; if (g && g.turn === l.turn) g.lines.push(l); else out.push({ turn: l.turn, lines: [l] }); }
   return out;
 }
+// K710: a box of boxPx shows floor(boxPx / linePx) whole lines
+export const wholeLinesHeight = (boxPx: number, linePx: number): number => (linePx > 0 ? Math.floor(boxPx / linePx) * linePx : boxPx);
 
 // opponent turn: the steps paced-view plays; `describe` returns what `viewer` may read of a step, null when it is hidden from them
 export interface StepLine { readonly index: number; readonly text: string; readonly hidden: boolean }
