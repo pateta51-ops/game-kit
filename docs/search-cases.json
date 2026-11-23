@@ -527,5 +527,8 @@
   { "q": "make a picture bigger without blur", "first": "picture-upscale" },
   { "q": "worker rules block", "first": "worker-rules" },
   { "q": "game agents file rules from the kit", "first": "worker-rules" },
-  { "q": "stamp worker rules into a game", "first": "worker-rules" }
+  { "q": "stamp worker rules into a game", "first": "worker-rules" },
+  { "q": "sleeve tab past the open edge", "first": "card-attachments" },
+  { "q": "upgrade card under a notch", "first": "card-attachments" },
+  { "q": "one composite per face of a sleeved card", "first": "card-attachments" }
 ]

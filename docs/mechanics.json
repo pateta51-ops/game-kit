@@ -28,6 +28,7 @@
     { "words": "each player, choose a player", "part": "card-language", "read": "pack.md, verbs `eachPlayer`, `choosePlayer`", "sheet": "cards" },
     { "words": "for each, count things, repeat", "part": "card-language", "read": "pack.md, verbs `forEach`, `count`, `repeat`", "sheet": "cards" },
     { "words": "attach, equip, tuck under another, level up, upgrade, level up upgrade, overlay, level overlay", "part": "card-attachments", "read": "its README", "also": ["card-language"], "missing": "stats read from a base card plus its overlays", "row": "K600", "sheet": "levels" },
+    { "words": "sleeve insert, upgrade in the same sleeve, card seen through a notch, die-cut card over another, tab sticking out of a sleeve, upgraded card drawn as one", "part": "card-attachments", "read": "its README \"Sleeve inserts (K721)\": `SleeveStack`, `insertLayer`, `tabBox`", "sheet": "levels" },
     { "words": "trade, swap, convert, exchange", "part": "card-language", "read": "pack.md, verb `convert` (resources only)", "missing": "swapping two cards or two pieces", "row": "K601", "sheet": "costs" },
     { "words": "copy an effect", "row": "K557", "note": "write a game verb through card-language `custom`", "sheet": "cards" },
     { "words": "cannot, restriction, forbidden", "part": "engine-core", "read": "legal.md, `bar` with a reason code; timing.md, `Prevention` and `cancelBatch` stop an effect that would happen", "missing": "a restriction written as card data", "row": "K596", "sheet": "offered" },

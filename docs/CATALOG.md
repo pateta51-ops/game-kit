@@ -323,17 +323,17 @@ The campaign log as plain data and pure functions (release 1.0). No packages; dr
 
 ## card-attachments
 
-Cards tucked under a host card (a visible L, slide out on hover) or fanned past it, and the tokens on a card: one per token, one and "×N" past a cap, number boxes that count down. Port of Earthborne's table geometry and `Tokens.tsx` and Imperium's Garrison stack. `index.ts` is pure (loads in node); `ui.ts` adds React.
+Cards tucked under a host card (a visible L, slide out on hover) or fanned past it, and the tokens on a card: one per token, one and "×N" past a cap, number boxes that count down. Port of Earthborne's table geometry and `Tokens.tsx` and Imperium's Garrison stack; sleeve inserts (K721) from Unstoppable. `index.ts` is pure (loads in node); `ui.ts` adds React.
 
 - **Also called:** Cards tucked under others, tokens on cards
 - **Looks like:** Cards peek out from beneath a host card; tokens sit on a card, shown as one each or a number.
-- **Words:** tucked, under, attached, tokens, counters, card, stack, on-card, upgrade, sleeve, behind
+- **Words:** tucked, under, attached, tokens, counters, card, stack, on-card, upgrade, sleeve, behind, insert, notch, die-cut, tab, composite, sleeved
 - **Release:** 1.0; seen on screen
 - **The game supplies:** Card views and the offsets and look.
-- **Use it when:** Cards tucked under or fanned past a host card with a pure footprint, and the tokens on a card: one per token, ×N past a cap, number boxes.
+- **Use it when:** Cards tucked under or fanned past a host card with a pure footprint, and the tokens on a card: one per token, ×N past a cap, number boxes; or cards in one sleeve drawn as one composite per face: inserts under a die-cut host, each cut to its own die-cut, read through the host's notch, their tabs past the sleeve's open edge.
 - **Not for:** Token shapes, colours or fonts; tokens at fixed face anchors (card-parts) or flying (token-flights).
-- **Key exports:** `TUCK`, `faceBox`, `tuckedTurned`, `tuckOffset`, `tuckSpots`, `footprint`, `outSpan`, `outSpots`, `outSide`, `fanSpots`, `fanFootprint`, `ROW_MAX`, `tokenRow`, `changedDir`, and 7 more
-- **Needs:** nothing
+- **Key exports:** `TUCK`, `faceBox`, `tuckedTurned`, `tuckOffset`, `tuckSpots`, `footprint`, `outSpan`, `outSpots`, `outSide`, `fanSpots`, `fanFootprint`, `ROW_MAX`, `tokenRow`, `changedDir`, and 21 more
+- **Needs:** [`scan-ingest`](#scan-ingest)
 - **Came from:** earthborne-rangers-fan-prototype
 - **Docs:** [README](../components/card-attachments/README.md) ([rules for agents](../components/card-attachments/README.md#rules-for-agents))
 

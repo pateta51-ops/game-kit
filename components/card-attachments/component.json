@@ -7,10 +7,13 @@
       "src/ui/table/geometry.ts (TUCK, tuckOffset, tuckSpots, outSpots, outSpan, footprint, tuckedTurned, sideOut; CardView became a { turned } box and the host's attachments a list; tag, row and plan code left)",
       "src/ui/cards/Tokens.tsx (TokenRow's one-each-then-xN, NumberBox's changed and zero marks; TokenSvg, ClearsTag, colours and fonts left to the game: it passes its own render)",
       "src/ui/cards/numbers.ts (tokenRow, ROW_MAX, Direction; higherIsBad became changedDir)",
-      "imperium-horizon-fan-prototype 22736b2f: src/ui/board/PlayArea.tsx and GarrisonStack in src/ui/cards/Tokens.tsx (a stack fanned past its host, a tap reads one: fanSpots, onRead)"
+      "imperium-horizon-fan-prototype 22736b2f: src/ui/board/PlayArea.tsx and GarrisonStack in src/ui/cards/Tokens.tsx (a stack fanned past its host, a tap reads one: fanSpots, onRead)",
+      "unstoppable-fan-prototype 70bf1a46: src/app/cards/UpgradeLayers.tsx and src/app/scanned/geometry.ts (K721 sleeve inserts: upgradeLayer as insertLayer with an open edge, layerStyle, tabOf, tabClipOf, coreTabBox and threatTabBox as one tabBox, tabRanks as insertRanks over any count, notchOf returning null for the game default, upgradeWindow as notchWindow over any count, imageClipOf; the slot names, words and the notch button left in the game; clipPathOf and boxStyle reused from scan-ingest)"
     ]
   },
-  "needs": [],
+  "needs": [
+    "scan-ingest"
+  ],
   "packages": [
     "react"
   ]
