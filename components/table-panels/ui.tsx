@@ -1,14 +1,32 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
-import { banner, filterSeat, groupByTurn, phaseChanged, type Banner, type GameResult, type LogLine, type OpponentTurn, type Phase, type StepLine } from './panels.ts';
+import { banner, filterSeat, groupByTurn, wholeLinesHeight, phaseChanged, type Banner, type GameResult, type LogLine, type OpponentTurn, type Phase, type StepLine } from './panels.ts';
 
 // Unstyled: structure and data-* hooks only; the game owns layout and look.
-export function LogPanel({ lines, seats, seatName = (s) => s, turnName = (t) => `Turn ${t}`, renderLine }: {
-  lines: readonly LogLine[]; seats?: readonly string[]; seatName?: (s: string) => string; turnName?: (t: number) => ReactNode; renderLine?: (l: LogLine) => ReactNode;
+export function LogPanel({ lines, seats, seatName = (s) => s, turnName = (t) => `Turn ${t}`, renderLine, order = 'oldest-first', wholeLines }: {
+  order?: 'newest-first' | 'oldest-first'; wholeLines?: boolean | number; lines: readonly LogLine[]; seats?: readonly string[]; seatName?: (s: string) => string; turnName?: (t: number) => ReactNode; renderLine?: (l: LogLine) => ReactNode;
 }) {
   const [seat, setSeat] = useState<string | null>(null);
   const box = useRef<HTMLDivElement>(null);
   const shown = filterSeat(lines, seat);
-  useEffect(() => { if (box.current) box.current.scrollTop = box.current.scrollHeight; }, [shown.length]);
+  const newest = order === 'newest-first';
+  const [fit, setFit] = useState<number | null>(null);
+  useEffect(() => { if (box.current) box.current.scrollTop = newest ? 0 : box.current.scrollHeight; }, [shown.length, newest]);
+  useEffect(() => {
+    const el = box.current;
+    if (!wholeLines || !el) { setFit(null); return; }
+    const measure = () => {
+      el.style.height = '';
+      const lh = typeof wholeLines === 'number' ? wholeLines : (el.querySelector('li') as HTMLElement | null)?.offsetHeight ?? 0;
+      const h = lh > 0 ? wholeLinesHeight(el.clientHeight, lh) : null;
+      el.style.height = h === null ? '' : `${h}px`;
+      setFit(h);
+    };
+    measure();
+    if (typeof ResizeObserver === 'undefined') return;
+    const ro = new ResizeObserver(measure);
+    if (el.parentElement) ro.observe(el.parentElement);
+    return () => ro.disconnect();
+  }, [wholeLines, shown.length]);
   return (
     <section data-part="log">
       {seats ? (
@@ -16,8 +34,8 @@ export function LogPanel({ lines, seats, seatName = (s) => s, turnName = (t) => 
           {[null, ...seats].map((s) => <button data-kit key={s ?? 'all'} type="button" data-seat={s ?? ''} aria-pressed={seat === s} onClick={() => setSeat(s)}>{s === null ? 'All' : seatName(s)}</button>)}
         </div>
       ) : null}
-      <div data-part="log-lines" ref={box}>
-        {groupByTurn(shown).map((g) => (
+      <div data-part="log-lines" ref={box} data-order={order} data-fit={fit ?? undefined}>
+        {(newest ? groupByTurn(shown).reverse().map((g) => ({ ...g, lines: [...g.lines].reverse() })) : groupByTurn(shown)).map((g) => (
           <div key={g.turn} data-part="log-turn" data-turn={g.turn}>
             <h4>{turnName(g.turn)}</h4>
             <ul>{g.lines.map((l) => <li key={l.id} data-seat={l.seat ?? ''}>{renderLine ? renderLine(l) : l.text}</li>)}</ul>

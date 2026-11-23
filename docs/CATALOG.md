@@ -1641,12 +1641,12 @@ The panels every game writes around its table, as logic plus unstyled slots: log
 
 - **Also called:** Log, turn banner and game-over panels
 - **Looks like:** The log, the turn banner, the opponent-turn notice and the game-over panel.
-- **Words:** log, banner, turn, game, over, opponent, panel, table, final score breakdown, end game bonus points, game over summary screen, score breakdown
+- **Words:** log, banner, turn, game, over, opponent, panel, table, log newest first, game log whole lines no cut line, log panel order, final score breakdown, end game bonus points, game over summary screen, score breakdown
 - **Release:** 1.0; seen on screen
 - **The game supplies:** The words, layout and look.
 - **Use it when:** The panels around the table, unstyled: log (event words with slots, by turn, seat filter), banner (turn, seat, phase, fires on change), game over (result, breakdown slot, rematch, review log, home), opponent turn (paced-view steps, what the viewer may see, skip to end).
 - **Not for:** Any look, layout or game text; the log data itself (game-log); the opponent's decisions (opponent).
-- **Key exports:** `fill`, `logLines`, `rowLines`, `filterSeat`, `groupByTurn`, `opponentTurn`, `gameResult`, `banner`, `phaseChanged`, `Words`, `LogLine`, `LogOptions`, `StepLine`, `OpponentTurn`, and 4 more
+- **Key exports:** `fill`, `logLines`, `rowLines`, `filterSeat`, `groupByTurn`, `wholeLinesHeight`, `opponentTurn`, `gameResult`, `banner`, `phaseChanged`, `Words`, `LogLine`, `LogOptions`, `StepLine`, and 5 more
 - **Needs:** [`game-log`](#game-log), [`paced-view`](#paced-view)
 - **Came from:** imperium
 - **Docs:** [README](../components/table-panels/README.md) ([rules for agents](../components/table-panels/README.md#rules-for-agents))
