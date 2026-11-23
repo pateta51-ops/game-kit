@@ -40,6 +40,7 @@ Record on one checkout, replay on another (a refactor or a performance change mu
 - Every `contentHash` value is blanked before hashing, so a content change alone does not make every game differ.
 - A base whose kit copy lacks `golden.ts` is recorded with the head's script and the base's `--game` module.
 
+- A golden may end before game over: a driver whose `choose` returns `undefined` ends the game there; the save holds the actions so far, `check`, `record` and `replay` treat it as a normal end (a changed script is CHANGED or DIFF as usual).
 Flags: `--only <name prefix>`; `--games <export>` (another spec list than `goldens`, for a larger record set); `--seedx <text>` (appended to every seed: another sample); `--cap <n>` (stop each recorded game after n actions; a game that stops early is still recorded and replayed).
 Exit codes: 0 all the same, 1 a golden or a game differs, 2 bad usage, an unreadable file or a module that does not load.
 

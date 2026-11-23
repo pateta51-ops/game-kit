@@ -387,3 +387,32 @@ describe('step causes (K79)', () => {
     expect(await run(['check', '/gold', '--game', 'm.ts'], fakeIo(await recorded(), { [P('m.ts')]: { ...fake, causes } }).io)).toBe(1);
   });
 });
+
+describe('a scripted golden that ends before game over (K735)', () => {
+  const script = (n: number): Mod => ({
+    ...mod,
+    specs: [{ name: 's01', driver: 'adds' }],
+    simGame: { ...fake.simGame, driver: (name, ...r) => {
+      const d = fake.simGame.driver(name, ...r);
+      return { ...d, choose: (s, a, rng) => (s.turn <= n ? d.choose(s, a, rng) : (undefined as unknown as Counter['action'])) };
+    } },
+  });
+  it('records and checks clean, a changed script reports the diff, record/replay match', async () => {
+    const m = script(2);
+    const u = fakeIo();
+    expect(await checkGoldens(m, DIR, u.io, { update: true })).toBe(0);
+    expect((JSON.parse(u.files[at('s01')] as string) as SaveFile<Counter>).actions).toHaveLength(2);
+    expect(await checkGoldens(m, DIR, fakeIo({ ...u.files }).io)).toBe(0);
+    const c = fakeIo({ ...u.files });
+    expect(await checkGoldens(script(3), DIR, c.io)).toBe(1);
+    expect(c.lines.join('\n')).not.toContain('CRASHED');
+    expect(c.lines[1]).toContain('  CHANGED\n  - ');
+    const REC = P('/rec.json');
+    const r = fakeIo();
+    expect(await recordGames(m, REC, r.io)).toBe(0);
+    const g = (JSON.parse(r.written[REC] as string) as { games: CrossGame[] }).games;
+    expect(g[0]?.stopped).toBeUndefined();
+    expect(await replayGames(m, REC, fakeIo({ [REC]: r.written[REC] as string }).io)).toBe(0);
+    expect(await replayGames(script(3), REC, fakeIo({ [REC]: r.written[REC] as string }).io)).toBe(1);
+  });
+});

@@ -70,6 +70,7 @@ export function playGolden<G extends GameTypes, S>(game: SimGame<G, S>, content:
       const rng = new DriverRng(`${spec.seed}|${spec.driver}|${String(p.id)}`);
       const answers = game.answers ? game.answers(s, content, rng) : (legalAnswers(p, rng) as G['action'][]);
       const a = driver.choose(s, answers, rng);
+      if (a === undefined) return out;
       const r = applyAction(game.rules, s, a, content);
       s = r.state;
       out.actions.push(a);
@@ -340,7 +341,9 @@ export async function replayGames<G extends GameTypes, S>(mod: GoldenModule<G, S
           try {
             const rng = new DriverRng(`${g.spec.seed}|${g.spec.driver}|${String(p.id)}`);
             const answers = sim.answers ? sim.answers(s, content, rng) : (legalAnswers(p, rng) as G['action'][]);
-            applyAction(sim.rules, s, sim.driver(g.spec.driver, g.spec, content).choose(s, answers, rng), content);
+            const a = sim.driver(g.spec.driver, g.spec, content).choose(s, answers, rng);
+            if (a === undefined) return undefined;
+            applyAction(sim.rules, s, a, content);
           } catch (e) {
             return `stopped at action ${String(g.actions.length)}: ${msg(e)}`;
           }
