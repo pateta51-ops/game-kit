@@ -363,9 +363,9 @@ Card tests on real cards. Test code only; the engine imports nothing here but `c
 - **Words:** restriction phrase case sensitive, restriction word at start of text, restriction key not phrases, raw key in card reading, describe check accepted list, reading order verdict, card, prompt quotes printed clause, who pays shared cost prompt, record prompts in card tests, rule id in prompt text, card number reference amount, allow numbers pattern, screen amount card number, card case quote constant, cite clause by test title, quote check mixed mode, card case const, mixed mode, cite by title, pattern shapes wording, nested restriction, optional inside effect tree, restriction problems, same wording different shape, split pattern check, screen amount icon, counted amount shown, prompt shows wrong number, test, scenario, prompt, probe, inventory, effects, test depth, depth, poor test, poor, not offered, not fired, crash, refusal, crash counted as refusal, expectNotOffered, expectNotFired, clauseOf, map event to clause, not fired clause id, full resolve, prompt amount, screen check, no amount, amounts, prompt amount check, clause two prompts, screen text amounts, amounts per prompt, known findings, known findings list, pending findings owner, baseline of card check findings, pending list, baseline, owner, scan words on screen, screen text scan, poor setup, helper, reading judge, render records, renderer, snapshot, attribution, prompt recorder, vitest, test title, generated text, unprinted, scope, every card, clause splitter, stacked deck, put pieces on spaces, put tokens on map, scenario setup place pieces, scenario test fixture, scenario setup
 - **Release:** 1.0; not seen
 - **The game supplies:** The game rules, real cards and scenarios.
-- **Use it when:** Testing card effects on real cards with the scenario builder, prompt delivery, choice probe and inventory with stale check; test depth: a full-resolve test per clause and a poor test (expectNotOffered, expectNotFired) per conditional clause.
+- **Use it when:** Testing card effects on real cards with the scenario builder, prompt delivery, choice probe and inventory with stale check; test depth: a full-resolve test per clause and a poor test (expectNotOffered, expectNotFired) per conditional clause. Check semantic mutation coverage across the clause inventory.
 - **Not for:** Card rules themselves; those stay in the game.
-- **Key exports:** `createProbe`, `rulingGroups`, `Scenario`, `scenarioLiteral`, `Delivery`, `cardCasesIn`, `clauseIds`, `interactionNeeds`, `inventory`, `inventoryFindings`, `runInventory`, `testFiles`, `readRanLog`, `conforms`, and 125 more
+- **Key exports:** `createProbe`, `rulingGroups`, `Scenario`, `scenarioLiteral`, `Delivery`, `cardCasesIn`, `clauseIds`, `interactionNeeds`, `inventory`, `inventoryFindings`, `runInventory`, `testFiles`, `readRanLog`, `conforms`, and 131 more
 - **Hook:** Scenario: build a real position and play it in a test
 - **Hook:** put + set + run + answer: set a position up and answer its prompts
 - **Hook:** cardCase: a full-resolve card test that quotes the printed clause
@@ -379,6 +379,13 @@ Card tests on real cards. Test code only; the engine imports nothing here but `c
 - **Needs:** [`engine-core`](#engine-core), [`plain-text`](#plain-text)
 - **Came from:** stcc
 - **Docs:** [README](../components/card-harness/README.md) ([rules for agents](../components/card-harness/README.md#rules-for-agents))
+
+### card-harness/mutations
+
+- **Also called:** Semantic mutation tests for card clauses
+- **Words:** semantic card clause mutation, missing clause mutation coverage, card mutant detection, test changed card amounts, mutate card effects
+- **Use it when:** Run a game's original spec rows against altered card records, check an independent inventory of printed clauses, and fail the content gate on invalid, crashing, or surviving mutants and missing tests.
+- **Guide:** [mutations-guide.md](../components/card-harness/mutations-guide.md)
 
 ## card-language
 
