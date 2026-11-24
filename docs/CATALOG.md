@@ -1590,7 +1590,7 @@ Plays N whole games of any `GameRules<G>` with a driver, in this thread or on wo
 - **The game supplies:** The game rules and a driver for each seat.
 - **Use it when:** Playing many whole games with drivers on worker threads, fuzzing, sanity bands, sweeps, the K200 weight tuner and paired validation; the whole-game check of unreached clauses (proof from counted full-resolve tests, with a trace input built from the game's own log so a static clause applied with an effect counts as proven), coverage rounds and a findings file to replay a failing seed; K737 random debug edits (randomDebug hook, debug N) applied every N actions in a fuzz run, and a driver or hasten returning a debug action.
 - **Not for:** A driver's strategy (the game or opponent supplies it).
-- **Key exports:** `DriverRng`, `ANSWER_CAP`, `CRASH_HASH`, `breakAt`, `bySeat`, `crashRecord`, `legalAnswers`, `playOne`, `randomDriver`, `botDriver`, `replayStep`, `formatReport`, `report`, `runGames`, and 78 more
+- **Key exports:** `DriverRng`, `ANSWER_CAP`, `CRASH_HASH`, `breakAt`, `bySeat`, `crashRecord`, `legalAnswers`, `playOne`, `randomDriver`, `botDriver`, `replayStep`, `formatReport`, `report`, `runGames`, and 81 more
 - **Hook:** simGame: the module that plays one game for the pool
 - **Hook:** runGames: play many whole games on worker threads
 - **Hook:** fuzzMain: fuzz games with invariants and report each finding with a seed
