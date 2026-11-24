@@ -427,6 +427,13 @@ The card-language shell (K206): card effects as data, one typed verb table where
 - **Use it when:** A game that keeps its own engine still wants one row per op with checked fields, a run function and its text (`OpTable`, `runOp`, `validateOps`).
 - **Guide:** [README.md](../components/card-language/README.md)
 
+### card-language/payment-plans
+
+- **Also called:** Substitutable resource payment plans
+- **Words:** payment plans, substitute resources, wild resource, required holdings, spending vectors
+- **Use it when:** Enumerate minimal ways to pay from a shared pool with substitutions and required holdings (`paymentPlans`), or rank affordable plans with a game-owned policy (`preferredPayment`).
+- **Guide:** [README.md](../components/card-language/README.md)
+
 ## card-parts
 
 The parts a game builds its own card face from: the layout as the game's data, art with a cache, printed text with SVG icons inline, tokens. No layout or look is fixed here. `index.ts` loads in node; `ui.ts` adds React.

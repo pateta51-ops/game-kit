@@ -12,12 +12,24 @@ export interface PaymentInput {
   readonly rates?: readonly PaymentRate[];
   /** Required unspent holdings, checked after the entire payment. */
   readonly have?: Amounts;
-  /** Hard search-node cap; exceeding it throws, never returns an incomplete list. */
+  /** Maximum visited search positions, including the root. Defaults to 100,000. */
   readonly maxNodes?: number;
+  /** Maximum per-resource dominance comparisons. Defaults to 1,000,000. */
+  readonly maxDominanceChecks?: number;
 }
 export interface PaymentPlan {
   readonly spent: Amounts;
   readonly remaining: Amounts;
+}
+interface RouteChoice {
+  readonly target: number;
+  readonly route: number;
+  readonly rate: PaymentRate;
+  readonly available: number;
+  readonly needed: number;
+  readonly batchesNeeded: number;
+  readonly maxBatches: number;
+  nextBatches: number;
 }
 const whole = (n: number): boolean => Number.isSafeInteger(n) && n >= 0;
 function amountMap(input: Amounts, label: string): Map<string, number> {
@@ -28,12 +40,16 @@ function amountMap(input: Amounts, label: string): Map<string, number> {
 
 /** All distinct componentwise-minimal feasible spending vectors. No transitive substitutions or change. */
 export function paymentPlans(input: PaymentInput): PaymentPlan[] {
+  const { maxNodes = 100_000, maxDominanceChecks = 1_000_000 } = input;
+  if (!Number.isSafeInteger(maxNodes) || maxNodes < 1) throw new Error('invalid maxNodes');
+  if (!Number.isSafeInteger(maxDominanceChecks) || maxDominanceChecks < 1) throw new Error('invalid maxDominanceChecks');
   const pool = amountMap(input.pool, 'pool');
   const cost = amountMap(input.cost, 'cost');
   const have = amountMap(input.have ?? {}, 'have');
   const resources = [...new Set([...pool.keys(), ...cost.keys(), ...have.keys()])].sort();
   const targets = [...cost.keys()].filter(k => (cost.get(k) ?? 0) > 0).sort();
-  const routes = new Map<string, PaymentRate[]>(targets.map(to => [to, [{ from: to, to, spend: 1, cover: 1 }]]));
+  const spendable = new Map(resources.map(id => [id, (pool.get(id) ?? 0) - (have.get(id) ?? 0)]));
+  const routes = new Map<string, PaymentRate[]>(targets.map(to => [to, (spendable.get(to) ?? 0) > 0 ? [{ from: to, to, spend: 1, cover: 1 }] : []]));
   const pairs = new Map<string, Set<string>>();
   for (const rate of input.rates ?? []) {
     if (!rate.from.trim() || !rate.to.trim() || rate.from === rate.to || !whole(rate.spend) || !whole(rate.cover) || rate.spend === 0 || rate.cover === 0) throw new Error('invalid substitution rate');
@@ -41,48 +57,59 @@ export function paymentPlans(input: PaymentInput): PaymentPlan[] {
     if (set.has(rate.to)) throw new Error('duplicate substitution rate: ' + rate.from + ' -> ' + rate.to);
     set.add(rate.to);
     pairs.set(rate.from, set);
-    routes.get(rate.to)?.push(rate);
+    if ((spendable.get(rate.from) ?? 0) >= rate.spend) routes.get(rate.to)?.push(rate);
   }
-  for (const [id, n] of have) if ((pool.get(id) ?? 0) < n) return [];
-  const remaining = new Map(resources.map(id => [id, (pool.get(id) ?? 0) - (have.get(id) ?? 0)]));
-  const limit = input.maxNodes ?? 100_000;
-  if (!Number.isSafeInteger(limit) || limit < 1) throw new Error('invalid maxNodes');
+  for (const n of spendable.values()) if (n < 0) return [];
+  const remaining = new Map(spendable);
   let nodes = 0;
+  let dominanceChecks = 0;
   const results: number[][] = [];
-  const current = (): number[] => resources.map(id => (pool.get(id) ?? 0) - (have.get(id) ?? 0) - (remaining.get(id) ?? 0));
-  const dominates = (a: readonly number[], b: readonly number[]): boolean => a.every((n, i) => n <= (b[i] ?? 0));
+  const dominates = (a: readonly number[], b: readonly number[]): boolean => a.every((n, i) => {
+    if (++dominanceChecks > maxDominanceChecks) throw new Error('payment search exceeded maxDominanceChecks; increase the cap or constrain the pool');
+    return n <= (b[i] ?? 0);
+  });
   const save = (): void => {
-    const spend = current();
+    const spend = resources.map(id => (spendable.get(id) ?? 0) - (remaining.get(id) ?? 0));
     if (results.some(r => dominates(r, spend))) return;
-    for (let i = results.length - 1; i >= 0; i--) if (dominates(spend, results[i] ?? [])) results.splice(i, 1);
+    let kept = 0;
+    for (const plan of results) if (!dominates(spend, plan)) results[kept++] = plan;
+    results.length = kept;
     results.push(spend);
   };
-  const tick = (): void => {
-    if (++nodes > limit) throw new Error('payment search exceeded maxNodes; increase the cap or constrain the pool');
-  };
-  const search = (targetIndex: number, routeIndex: number, needed: number): void => {
-    tick();
-    if (targetIndex >= targets.length) { save(); return; }
-    if (needed <= 0) {
-      const next = targets[targetIndex + 1];
-      search(targetIndex + 1, 0, next === undefined ? 0 : cost.get(next) ?? 0);
-      return;
+  const costAt = (i: number): number => cost.get(targets[i] ?? '') ?? 0;
+  const stack: RouteChoice[] = [];
+  let targetIndex = 0, routeIndex = 0, needed = costAt(0);
+  for (;;) {
+    if (++nodes > maxNodes) throw new Error('payment search exceeded maxNodes; increase the cap or constrain the pool');
+    if (targetIndex >= targets.length) save();
+    else if (needed === 0) {
+      needed = costAt(++targetIndex);
+      routeIndex = 0;
+      continue;
+    } else {
+      const rate = routes.get(targets[targetIndex] ?? '')?.[routeIndex];
+      if (rate !== undefined) {
+        const available = remaining.get(rate.from) ?? 0;
+        const batchesNeeded = Math.ceil(needed / rate.cover);
+        stack.push({ target: targetIndex, route: routeIndex, rate, available, needed, batchesNeeded,
+          maxBatches: Math.min(Math.floor(available / rate.spend), batchesNeeded), nextBatches: 0 });
+      }
     }
-    const to = targets[targetIndex];
-    const rate = to === undefined ? undefined : routes.get(to)?.[routeIndex];
-    if (!rate) return;
-    const available = remaining.get(rate.from) ?? 0;
-    const max = Math.min(Math.floor(available / rate.spend), Math.ceil(needed / rate.cover));
-    for (let batches = 0; batches <= max; batches++) {
-      const paid = batches * rate.spend;
-      if (batches > 0) remaining.set(rate.from, available - paid);
-      const uncovered = batches >= Math.ceil(needed / rate.cover) ? 0 : needed - batches * rate.cover;
-      search(targetIndex, routeIndex + 1, uncovered);
-      if (batches > 0) remaining.set(rate.from, available);
+
+    // Backtrack to the next untried batch count, restoring each exhausted choice.
+    let choice = stack.at(-1);
+    while (choice !== undefined && choice.nextBatches > choice.maxBatches) {
+      remaining.set(choice.rate.from, choice.available);
+      stack.pop();
+      choice = stack.at(-1);
     }
-  };
-  const first = targets[0];
-  search(0, 0, first === undefined ? 0 : cost.get(first) ?? 0);
+    if (choice === undefined) break;
+    const batches = choice.nextBatches++;
+    remaining.set(choice.rate.from, choice.available - batches * choice.rate.spend);
+    targetIndex = choice.target;
+    routeIndex = choice.route + 1;
+    needed = batches === choice.batchesNeeded ? 0 : choice.needed - batches * choice.rate.cover;
+  }
   results.sort((a,b) => {
     // Compare per-resource counts deterministically without unsafe integer sums.
     for (let i=0; i<a.length; i++) {
