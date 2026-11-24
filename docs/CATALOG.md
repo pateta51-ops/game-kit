@@ -365,7 +365,7 @@ Card tests on real cards. Test code only; the engine imports nothing here but `c
 - **The game supplies:** The game rules, real cards and scenarios.
 - **Use it when:** Testing card effects on real cards with the scenario builder, prompt delivery, choice probe and inventory with stale check; test depth: a full-resolve test per clause and a poor test (expectNotOffered, expectNotFired) per conditional clause.
 - **Not for:** Card rules themselves; those stay in the game.
-- **Key exports:** `createProbe`, `rulingGroups`, `Scenario`, `scenarioLiteral`, `Delivery`, `cardCasesIn`, `clauseIds`, `interactionNeeds`, `inventory`, `inventoryFindings`, `runInventory`, `testFiles`, `readRanLog`, `conforms`, and 125 more
+- **Key exports:** `createProbe`, `rulingGroups`, `Scenario`, `scenarioLiteral`, `Delivery`, `cardCasesIn`, `clauseIds`, `interactionNeeds`, `inventory`, `inventoryFindings`, `runInventory`, `testFiles`, `readRanLog`, `conforms`, and 131 more
 - **Hook:** Scenario: build a real position and play it in a test
 - **Hook:** put + set + run + answer: set a position up and answer its prompts
 - **Hook:** cardCase: a full-resolve card test that quotes the printed clause
