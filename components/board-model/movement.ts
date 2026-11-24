@@ -30,20 +30,26 @@ export function reachableMoves(board: Board, from: string, options: MovementOpti
   checkedPoints(options.points);
   const order = new Map(board.order.map((id,i) => [id,i]));
   const best = new Map<string, Destination>([[from,{space:from,cost:0,path:[from]}]]);
-  const settled = new Set<string>();
-  while (true) {
-    const next = [...best.values()].filter(d => !settled.has(d.space)).sort((a,b)=>a.cost-b.cost || (order.get(a.space) ?? 0)-(order.get(b.space) ?? 0))[0];
+  const frontier = new Map(best);
+  while (frontier.size) {
+    let next: Destination | undefined;
+    for (const route of frontier.values()) {
+      if (!next || route.cost < next.cost || (route.cost === next.cost &&
+        (order.get(route.space) ?? 0) < (order.get(next.space) ?? 0))) next = route;
+    }
     if (!next) break;
-    settled.add(next.space);
+    frontier.delete(next.space);
     if (next.space !== from && options.stop?.(next.space)) continue;
     for (const to of board.adjacency[next.space] ?? []) {
       if (!has(board,to)) throw new Error('unknown adjacent space ' + to);
-      if (settled.has(to)) continue;
+      if (best.has(to) && !frontier.has(to)) continue;
       const cost = checkedCost(options.cost(next.space,to));
       if (cost === null || cost > options.points-next.cost) continue;
       const total = next.cost+cost;
       if ((best.get(to)?.cost ?? Infinity) <= total) continue;
-      best.set(to,{space:to,cost:total,path:[...next.path,to]});
+      const route = {space:to,cost:total,path:[...next.path,to]};
+      frontier.set(to,route);
+      best.set(to,route);
     }
   }
   return board.order.flatMap(id => {
