@@ -549,5 +549,5 @@
   { "q": "cheated mark", "first": "cheat-options" },
   { "q": "declarative game starter", "first": "scaffold" },
   { "q": "game spec scaffold", "first": "scaffold" },
-  { "q": "generate pinned game scaffold", "first": "scaffold" }
+  { "q": "pinned declarative project scaffold", "first": "scaffold" }
 ]

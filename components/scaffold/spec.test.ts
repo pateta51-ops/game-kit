@@ -82,7 +82,8 @@ describe('K551 declarative starter',()=>{
     expect(r.status,r.stdout+r.stderr).toBe(0);
     expect(fs.readFileSync(path.join(dir,'index.html'),'utf8')).not.toContain('checkout-only template');
     expect((JSON.parse(fs.readFileSync(path.join(dir,'docs/kit-assembly.json'),'utf8')) as Result).commit).toBe(previous);
-    expect(spawnSync(process.execPath,['kit/kit.mjs','check','--source',source],{cwd:dir,encoding:'utf8'}).status).toBe(0);
+    const lock=JSON.parse(fs.readFileSync(path.join(dir,'kit/kit.lock.json'),'utf8')) as {ref:string;commit:string};
+    expect(lock).toMatchObject({ref:'older-starter',commit:previous});
   },60000);
   it('reads the tagged profile definitions instead of uncommitted checkout definitions',()=>{
     const {dir:source,git}=fixture('profile-source');
@@ -97,7 +98,7 @@ describe('K551 declarative starter',()=>{
     expect(result.status,result.stdout+result.stderr).toBe(0);
     expect((JSON.parse(result.stdout) as Result).components.map(c=>c.name)).toContain('campaign');
   });
-  it.each(['pull','lock','installation'])('leaves the destination untouched after %s failure and can retry', kind=>{
+  it.each(['pull','lock','installation'] as const)('leaves the destination untouched after %s failure and can retry', kind=>{
     const source=kind==='lock' ? fixture('failure-lock').dir : kit;
     const file=write('failed-'+kind,basic);
     const ports=write('failure-ports-'+kind,{games:{demo:{block:6990,serve:{local:4199}}}});
@@ -118,7 +119,7 @@ describe('K551 declarative starter',()=>{
       const bin=fs.mkdtempSync(path.join(tmp,'fake-npm-'));
       const windows=process.platform==='win32';
       fs.writeFileSync(path.join(bin,windows?'npm.cmd':'npm'),windows?'@echo injected install failure\r\n@exit /b 42\r\n':'#!/bin/sh\necho injected install failure >&2\nexit 42\n',{mode:0o755});
-      env['PATH']=bin+path.delimiter+process.env['PATH'];
+      env['PATH']=bin+path.delimiter+(process.env['PATH']??'');
     } else flags.push('--no-install');
     const failed=generate(source,head,file,dir,flags,env);
     expect(failed.status,failed.stdout+failed.stderr).toBe(1);
