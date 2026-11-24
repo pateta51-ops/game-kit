@@ -12,4 +12,4 @@ export { grid, spread, sweep, type Cell, type Spread, type Sweep, type SweepCell
 export { fromWeights, inThread, poolBatch, toWeights, tune, validate, weightsFile, type Batch, type GenerationReport, type Job, type Outcome, type PlayFn, type SetupCheck, type TuneOptions, type Validation, type WeightDef, type Weights, type WeightSpace, type WeightsFile } from './tune.ts';
 export { provenClauses, type Proof, type ProofRecord } from './unreached.ts';
 export { dispatchTrace, type DispatchNotes } from './dispatchTrace.ts';
-export { greedyBot, type GreedyOptions, type GreedyProbe } from './greedy.ts';
+export { greedyBot, greedyPreview, type GreedyOptions, type GreedyPreviewOptions, type GreedyProbe } from './greedy.ts';

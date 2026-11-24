@@ -2,4 +2,4 @@
 export { DriverRng } from './rng.ts';
 export { ANSWER_CAP, bySeat, legalAnswers, randomDriver, type Driver, type GameSpec, type SimGame } from './play.ts';
 export { botDriver, type Bot } from './bot.ts';
-export { greedyBot, type GreedyOptions, type GreedyProbe } from './greedy.ts';
+export { greedyBot, greedyPreview, type GreedyOptions, type GreedyPreviewOptions, type GreedyProbe } from './greedy.ts';
