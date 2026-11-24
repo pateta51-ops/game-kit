@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { appendLog, blocks, groupBox, refFocus, refsOf, rowFocus, delta, exportText, num, previewAt, rewindLog, stepOf, plainLine, ref, text, wordingProblems, type Narrator, type TypedEvent } from './index.ts';
+import { appendLog, replayLog, logKeeper, blocks, groupBox, refFocus, refsOf, rowFocus, delta, exportText, num, previewAt, rewindLog, stepOf, plainLine, ref, text, wordingProblems, type LogEntry, type Narrator, type TypedEvent } from './index.ts';
 
 type Ev = (TypedEvent & { type: 'hurt'; who: string; n: number }) | (TypedEvent & { type: 'tick' }) | (TypedEvent & { type: 'boom' });
 const table: Narrator<Ev> = {
@@ -54,6 +54,78 @@ describe('game-log', () => {
     expect(box.id).toBe('g1');
     expect(box.members.length).toBe(1);
     expect(box.header).toBeUndefined();
+  });
+  describe('rebuild from actions (K742)', () => {
+    type RE = (TypedEvent & { type: 'setup' }) | (TypedEvent & { type: 'add'; n: number });
+    type St = { total: number; log: readonly RE[] };
+    const start = (): St => ({ total: 0, log: [{ seq: 1, type: 'setup' }] });
+    const apply = (s: St, n: number): St => ({ total: s.total + n, log: [...s.log, { seq: s.log.length + 1, type: 'add', n }] });
+    const t: Narrator<RE> = { setup: () => ({ kind: 'structure', parts: [text('Set up')] }), add: (e) => ({ kind: 'action', parts: [text('Add '), num(e.n)] }) };
+    const base = { apply, events: (s: St) => s.log, table: t };
+    const live = (acts: number[]) => { let s = start(), log = appendLog([], s.log, t, 0); acts.forEach((a, i) => { const n = apply(s, a); log = appendLog(log, n.log.slice(s.log.length), t, i + 1); s = n; }); return log; };
+    it('rebuild equals the log built live action by action; set-up rows at step 0', () => {
+      const r = replayLog({ ...base, start: start(), actions: [2, 3, 4] });
+      expect(r.log).toEqual(live([2, 3, 4]));
+      expect(r.state.total).toBe(9);
+      expect(exportText(r.log)).toBe('0 structure: Set up\n1 action: Add 2\n2 action: Add 3\n3 action: Add 4\n');
+    });
+    it('a table made from the states before and after', () => {
+      const r = replayLog({ ...base, start: start(), actions: [2, 3], table: (p: St, n: St) => ({ add: () => ({ kind: 'action', parts: [num(p.total), text(' to '), num(n.total)] }) }) });
+      expect(r.log.map(plainLine)).toEqual(['0 to 2', '2 to 5']);
+    });
+    it('keeper: plays on, undo then redo equals fresh, load rebuilds', () => {
+      const k = logKeeper({ ...base, start: () => start() });
+      const acts = [2, 3, 4];
+      k.sync(acts.slice(0, 1), 'a');
+      k.sync(acts, 'a');
+      expect(k.rows()).toEqual(live(acts));
+      k.sync(acts.slice(0, 1), 'a');
+      expect(k.rows()).toEqual(live([2]));
+      expect(k.state()?.total).toBe(2);
+      k.sync([2, 5], 'a');
+      expect(k.rows()).toEqual(live([2, 5]));
+      k.sync(acts, 'b');
+      expect(k.rows()).toEqual(live(acts));
+      let calls = 0;
+      const k2 = logKeeper({ ...base, apply: (s: St, n: number) => { calls += 1; return apply(s, n); }, start: () => start() });
+      k2.sync(acts, 'x'); k2.sync([...acts, 1], 'x');
+      expect(calls).toBe(4);
+      k2.sync([...acts, 1], 'y');
+      expect(calls).toBe(8);
+    });
+    it('a table factory gets the fresh events and the rows so far: a heading carried from an earlier row, also after undo', () => {
+      const table = (_p: St, _n: St, fresh: readonly RE[], rows: readonly LogEntry[]): Narrator<RE> => {
+        let r = Number(rows[rows.length - 1]?.tag ?? 0);
+        return { add: (e) => { if (e.n > 2) r += 1; expect(fresh).toContain(e); return { kind: 'action', parts: [text(`Add ${e.n} in round ${r}`)], tag: String(r) }; } };
+      };
+      const want = replayLog({ ...base, table, start: start(), actions: [3, 1, 4] }).log;
+      expect(want.map(plainLine)).toEqual(['Add 3 in round 1', 'Add 1 in round 1', 'Add 4 in round 2']);
+      const k = logKeeper({ ...base, table, start: () => start() });
+      k.sync([3, 1, 4]); k.sync([3]); k.sync([3, 1, 4]);
+      expect(k.rows()).toEqual(want);
+    });
+    it('a throwing table factory becomes a problem row', () => {
+      const table = (_p: St, n: St): Narrator<RE> => { if (n.total > 3) throw new Error('x'); return t; };
+      const r = replayLog({ ...base, table, start: start(), actions: [2, 3] });
+      expect(r.log.map((x) => [x.kind, x.step])).toEqual([['structure', 0], ['action', 1], ['problem', 2]]);
+      expect(logKeeper({ ...base, table, start: () => start() }).sync([2, 3])).toEqual(r.log);
+    });
+    it('same(): cloned equal actions are not replayed', () => {
+      let calls = 0;
+      const k = logKeeper({ ...base, apply: (s: St, a: { n: number }) => { calls += 1; return apply(s, a.n); }, start: () => start(), same: (a, b) => a.n === b.n });
+      const acts = [{ n: 2 }, { n: 3 }];
+      k.sync(acts);
+      k.sync([...acts.map((a) => ({ ...a })), { n: 1 }]);
+      expect(calls).toBe(3);
+      expect(k.rows()).toEqual(live([2, 3, 1]));
+    });
+    it('trimmed events: seen is the last seq narrated', () => {
+      const trimmed = { ...base, events: (s: St) => s.log.slice(-1) };
+      expect(replayLog({ ...trimmed, start: start(), actions: [2, 3, 4] }).log).toEqual(live([2, 3, 4]));
+      const k = logKeeper({ ...trimmed, start: () => start() });
+      k.sync([2, 3]); k.sync([2]); k.sync([2, 3, 4]);
+      expect(k.rows()).toEqual(live([2, 3, 4]));
+    });
   });
   it('wording rules', () => {
     expect(wordingProblems({ kind: 'action', parts: [text('ok '), delta(2)] })).toEqual([]);

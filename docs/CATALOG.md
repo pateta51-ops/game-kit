@@ -916,12 +916,12 @@ The kernel of a game engine: seeded random numbers, canonical JSON and hashes, t
 The game's log, derived from engine events by one table. Cards and rules write nothing: a new game has a complete log by listing its event types once. Pure data and functions, no look. Reuses engine-core's `KernelEvent` (a game's events add `type`).
 
 - **Also called:** Readable game log from events
-- **Words:** log, history, events, text, readable, table, rows, adapter
+- **Words:** log, history, events, text, readable, table, rows, adapter, replay, rebuild
 - **Release:** 1.0; not seen
 - **The game supplies:** The table of event types and their words.
-- **Use it when:** A readable game log derived from engine events through one table.
+- **Use it when:** A readable game log derived from engine events through one table; rebuilt from the saved actions on load (replayLog, logKeeper), never saved as text.
 - **Not for:** Engine event design (engine-core).
-- **Key exports:** `text`, `num`, `delta`, `ref`, `icon`, `appendLog`, `blocks`, `plainParts`, `plainLine`, `wordingProblems`, `stepOf`, `rewindLog`, `previewAt`, `refsOf`, and 13 more
+- **Key exports:** `text`, `num`, `delta`, `ref`, `icon`, `appendLog`, `blocks`, `plainParts`, `plainLine`, `wordingProblems`, `stepOf`, `rewindLog`, `previewAt`, `refsOf`, and 16 more
 - **Needs:** [`engine-core`](#engine-core)
 - **Came from:** ArkhamHorror
 - **Docs:** [README](../components/game-log/README.md) ([rules for agents](../components/game-log/README.md#rules-for-agents))
