@@ -575,5 +575,11 @@
   { "q": "executable rule evidence", "first": "traceability/assertions" },
   { "q": "arbiter fixture assertion", "first": "traceability/assertions" },
   { "q": "rule evidence refusal control", "first": "traceability/assertions" },
-  { "q": "executable rule evidence inventory", "first": "traceability/assertions" }
+  { "q": "executable rule evidence inventory", "first": "traceability/assertions" },
+  { "q": "reuse metrics", "first": "reuse-metrics" },
+  { "q": "measure kit references", "first": "reuse-metrics" },
+  { "q": "build telemetry provenance", "first": "reuse-metrics" },
+  { "q": "repeated measurement", "first": "reuse-metrics" },
+  { "q": "copied project telemetry", "first": "reuse-metrics" },
+  { "q": "observation identity", "first": "reuse-metrics" }
 ]
