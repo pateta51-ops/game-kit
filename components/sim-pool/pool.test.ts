@@ -2,7 +2,7 @@ import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { afterAll, describe, expect, it } from 'vitest';
-import { CONTENT } from '../engine-core/fake/counter.ts';
+import { CONTENT, COUNTER, type Counter } from '../engine-core/fake/counter.ts';
 import type { AnswerAction, GameTypes } from '../engine-core/index.ts';
 import { simGame } from './fake/game.ts';
 import { bySeat, findingOf, formatFuzz, fuzz, DriverRng, legalAnswers, playOne, replayStep, runGames, runInThread, report, formatReport, runResumable, type Driver, type GameSpec, type SimGame, type SimRecord } from './index.ts';
@@ -199,6 +199,26 @@ describe('K101 view on every step, hasten, one-step replay', () => {
     const req = { module, specs: specs(3), hasten: 1, view: true };
     expect(await runGames(req, 2)).toEqual(await runGames(req, 1));
     expect((await runGames(req, 1))[0]?.viewBytes).toBeGreaterThan(0);
+  });
+
+  it('K737 a driver may return a DebugAction without a cast; debug: N applies randomDebug after every N plays, the same for a seed', () => {
+    const g = simGame as unknown as SimGame<GameTypes>;
+    const sp = { index: 0, seed: 's2', driver: 'random' };
+    const d: Driver<Counter> = { name: 'dbg', reasons: () => [], choose: (s, a) => (s.turn === 0 ? { kind: 'debug', verb: 'set', args: { path: ['counter'], value: 1 } } : (a[0] as AnswerAction)) };
+    const r = playOne({ ...simGame, driver: () => d }, CONTENT, sp, 4);
+    expect(r.error).toBeUndefined();
+    const run = (o: object, game: SimGame<GameTypes> = g): SimRecord => playOne(game, content, sp, 12, o);
+    const a = run({ debug: 3 });
+    expect(a.error).toBeUndefined();
+    expect(run({ debug: 3 }).hash).toBe(a.hash);
+    expect(a.hash).not.toBe(run({}).hash);
+    const kinds = { ...g, summary: (_s: unknown, acts: readonly { kind: string }[]) => acts.map((x) => x.kind).join() } as unknown as SimGame<GameTypes>;
+    const ks = (run({ debug: 3 }, kinds).summary as string).split(',');
+    expect(ks.slice(0, 7)).toEqual(['answer', 'answer', 'answer', 'debug', 'answer', 'answer', 'answer']);
+    const none = { ...g, randomDebug: undefined } as unknown as SimGame<GameTypes>;
+    expect(run({ debug: 3 }, none).hash).toBe(run({}).hash);
+    const plain = { ...g, rules: COUNTER } as unknown as SimGame<GameTypes>;
+    expect(run({ debug: 3 }, plain).hash).toBe(run({}, plain).hash);
   });
 
   it('replays one step and reports its timings and the slowest steps', () => {
