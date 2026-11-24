@@ -347,9 +347,6 @@
     "not": "Card rules themselves; those stay in the game.",
     "title": "Test card effects on real cards",
     "tags": [
-      "semantic card clause mutation",
-      "missing clause mutation coverage",
-      "card mutant detection",
       "restriction phrase case sensitive",
       "restriction word at start of text",
       "restriction key not phrases",
@@ -2503,6 +2500,12 @@
     "entry": [
       "playtest.ts"
     ]
+  },
+  "card-harness/mutations": {
+    "title": "Semantic mutation tests for card clauses",
+    "tags": ["semantic card clause mutation", "missing clause mutation coverage", "card mutant detection", "test changed card amounts", "mutate card effects"],
+    "use": "Run a game's original spec rows against altered card records, check an independent inventory of printed clauses, and fail the content gate on invalid, crashing, or surviving mutants and missing tests.",
+    "guide": "mutations-guide.md"
   },
   "engine-core/timing": {
     "title": "Prevention, replacement and triggers",
