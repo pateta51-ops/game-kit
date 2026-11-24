@@ -350,7 +350,7 @@
     "gameSupplies": "The cards, their face view and the look."
   },
   "card-harness": {
-    "use": "Testing card effects on real cards with the scenario builder, prompt delivery, choice probe and inventory with stale check; test depth: a full-resolve test per clause and a poor test (expectNotOffered, expectNotFired) per conditional clause.",
+    "use": "Testing card effects on real cards with the scenario builder, prompt delivery, choice probe and inventory with stale check; test depth: a full-resolve test per clause and a poor test (expectNotOffered, expectNotFired) per conditional clause. Check semantic mutation coverage across the clause inventory.",
     "not": "Card rules themselves; those stay in the game.",
     "title": "Test card effects on real cards",
     "tags": [
@@ -1045,7 +1045,7 @@
     "gameSupplies": "The motion specs and the elements to move."
   },
   "engine-core": {
-    "use": "Every game's engine: seeded random, tasks and prompts, copy on write, replay, undo, saves, timing windows and triggers.",
+    "use": "Every game's engine: seeded random, tasks and prompts, copy on write, state invariants, replay, undo, saves, timing windows and triggers.",
     "not": "A game's rules or content; the game writes its own `GameRules`.",
     "title": "Game rules engine core",
     "tags": [
@@ -1091,7 +1091,10 @@
       "mission progress",
       "goal deadline",
       "lose condition prompt",
-      "lose condition"
+      "lose condition",
+      "engine invariant policy",
+      "duplicate card identities",
+      "card zone invariants"
     ],
     "visible": false,
     "release": 1,
@@ -1972,7 +1975,7 @@
   },
   "sim-pool": {
     "use": "Playing many whole games with drivers on worker threads, fuzzing, sanity bands, sweeps, the K200 weight tuner and paired validation; the whole-game check of unreached clauses (proof from counted full-resolve tests, with a trace input built from the game's own log so a static clause applied with an effect counts as proven), coverage rounds and a findings file to replay a failing seed; K737 random debug edits (randomDebug hook, debug N) applied every N actions in a fuzz run, and a driver or hasten returning a debug action.",
-    "not": "A driver's strategy (the game or opponent supplies it).",
+    "not": "Strategy beyond one nested public choice (the game or opponent supplies it).",
     "title": "Bulk game simulator",
     "tags": [
       "simulate",
@@ -2004,7 +2007,10 @@
       "rounds until no new clause",
       "play whole games",
       "by script",
-      "e2e"
+      "e2e",
+      "bounded public greedy",
+      "public nested preview",
+      "test pilot bot random greedy"
     ],
     "visible": false,
     "release": 1,
@@ -2018,8 +2024,15 @@
       "runResumable + codeVersion: a long run that resumes after a crash",
       "tune + validate: tune weights, then check on fresh seeds",
       "proveResolved + provenClauses: prove each clause resolved in a played game",
-      "dispatchTrace: count a clause resolved only when verb dispatch ran it, not in a dry run"
+      "dispatchTrace: count a clause resolved only when verb dispatch ran it, not in a dry run",
+      "greedyBot + greedyPreview: score legal moves with bounded public nested look-ahead and a legal fallback"
     ]
+  },
+  "sim-pool/greedy": {
+    "title": "Simple public-view AI opponent",
+    "use": "Play against the computer, choose the best legal move, or let a bot pick a legal action with bounded engine previews and a public fallback. Use greedyBot and greedyPreview from sim-pool/browser.ts for live play and sim-pool/index.ts for simulation.",
+    "tags": ["play against computer", "simple AI opponent", "choose best legal move", "bot picks legal move", "computer chooses legal action", "bounded lookahead", "public view opponent", "public preview opponent", "greedyBot", "greedyPreview"],
+    "guide": "greedy.md"
   },
   "small-helpers": {
     "mechanics": "none: small helpers with no rule in them",
@@ -2319,8 +2332,15 @@
     "release": 1,
     "gameSupplies": "trace.config.json.",
     "entry": [
-      "check-traceability.ts"
+      "check-traceability.ts",
+      "assertions.ts"
     ]
+  },
+  "traceability/assertions": {
+    "title": "Executable rule evidence",
+    "tags": ["executable", "arbiter", "rule", "evidence", "fixture", "assertion", "refusal", "control", "inventory"],
+    "use": "Run arbiter fixtures and check that every due rule has passing setup or action evidence.",
+    "guide": "rule-evidence.md"
   },
   "track": {
     "use": "A row of spaces with a marker that glides (drawn row or spots on a mat image), per-space marks, labels from the game's words; a hop-and-fill bar with a badge pop; a step list with one lit step; unstyled.",
@@ -2508,6 +2528,12 @@
       "playtest.ts"
     ]
   },
+  "card-harness/mutations": {
+    "title": "Semantic mutation tests for card clauses",
+    "tags": ["semantic card clause mutation", "missing clause mutation coverage", "card mutant detection", "test changed card amounts", "mutate card effects"],
+    "use": "Run a game's original spec rows against altered card records, check an independent inventory of printed clauses, and fail the content gate on invalid, crashing, or surviving mutants and missing tests.",
+    "guide": "mutations-guide.md"
+  },
   "engine-core/timing": {
     "title": "Prevention, replacement and triggers",
     "tags": [
@@ -2637,6 +2663,12 @@
     ],
     "use": "A game that keeps its own engine still wants one row per op with checked fields, a run function and its text (`OpTable`, `runOp`, `validateOps`).",
     "guide": "README.md"
+  },
+  "card-language/payment-plans": {
+    "title": "Substitutable resource payment plans",
+    "tags": ["payment plans", "substitute resources", "wild resource", "required holdings", "spending vectors"],
+    "use": "Enumerate minimal ways to pay from a shared pool with substitutions and required holdings (`paymentPlans`), or rank affordable plans with a game-owned policy (`preferredPayment`).",
+    "guide": "payment.md"
   },
   "clock": {
     "use": "A marker on a row of spaces as rules data (countdown, round tracker, danger or doom track): steps forward or back by the game's number, thresholds that fire on landing or passing (lose, trigger, reward, limit) in order, once-only thresholds, per-space values such as a limit read from the marker's row; a lose space anywhere on the row, on landing or on passing; crossings become engine-core occurrences that can carry the threshold's data and space.",

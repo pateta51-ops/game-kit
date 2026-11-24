@@ -53,7 +53,7 @@ export {
   type HistoryResult,
   type UndoMode,
 } from './undo.ts';
-export { EngineBugError, GameSetupError, IllegalActionError, notYet } from './errors.ts';
+export { EngineBugError, GameSetupError, IllegalActionError, StateInvariantError, notYet } from './errors.ts';
 export {
   addStep,
   canUndoStep,

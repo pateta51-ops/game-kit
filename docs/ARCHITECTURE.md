@@ -154,7 +154,7 @@ graph LR
   token_bag["token-bag"]
   token_flights["token-flights"]
   tooling_scripts["tooling-scripts"]
-  traceability["traceability"]
+  traceability["traceability"] --> engine_core["engine-core"]
   track["track"] --> counter["counter"]
   track["track"] --> motion_frame["motion-frame"]
   transcription_check["transcription-check"]
