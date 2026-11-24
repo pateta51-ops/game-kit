@@ -142,3 +142,12 @@ it('does not treat a definition printed inside inline code as a guide link', () 
     '[example] and ' + link + '(atomic.md).');
   expectComplete(run('literal-definition'));
 });
+
+it.each([
+  ['escaped-backtick', 'A literal \\` token. Read `the example\n[example]: missing-example.md\ncode ends`.'],
+  ['definition-in-image', '![Illustration for\n[example]: missing-example.md\nshown](badge.png)'],
+  ['definition-in-link-label', '[Illustration for\n[example]: missing-example.md\nshown](atomic.md)'],
+])('does not promote apparent definitions inside %s', (name, example) => {
+  fixture(name, rules + example + '\n\n[example] and ' + link + '(atomic.md).');
+  expectComplete(run(name));
+});

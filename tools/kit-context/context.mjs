@@ -100,20 +100,23 @@ function* guideDocuments(markdown) {
   yield document;
   const lines=markdown.split(/\r?\n/);
   let separated=false;
-  // Also accept a stand-alone definition immediately after top-level prose.
-  // Use paragraph boundaries to keep code blocks and HTML blocks out of this compatibility rule.
+  // Also accept trailing stand-alone definitions in top-level prose paragraphs.
   for(let block=document.firstChild;block;block=block.next) {
     if(block.type!=='paragraph') continue;
     const [[start],[end]]=block.sourcepos;
     if(start===end) continue;
-    const prose=lines.slice(start-1,end).join('\n')
-      .replace(/(?<!`)(`+)(?!`)[\s\S]*?(?<!`)\1(?!`)|<!--[\s\S]*?-->/g,span=>span.replace(/[^\n]/g,' '));
-    for(const [offset,line] of prose.split('\n').entries()) {
-      const index=start+offset-1;
-      if(offset && /^ {0,3}\[[^\]\n]+\]:[ \t]+\S/.test(line) && !parser.parse(lines[index]).firstChild) {
-        lines[index]='\n'+lines[index];
-        separated=true;
-      }
+    const plainLines=[''];
+    for(let inline=block.firstChild;inline;inline=inline.next) {
+      if(inline.type==='softbreak' || inline.type==='linebreak') plainLines.push('');
+      else plainLines[plainLines.length-1]+=inline.type==='text'?inline.literal:'\0';
+    }
+    for(let index=end-1, prose=plainLines.length-1;index>=start && prose>0;index--,prose--) {
+      const definition=lines[index];
+      // Match only direct text. Line breaks hidden inside links or code are absent from plainLines.
+      if(!/^ {0,3}\[[^\]\n]+\]:[ \t]+\S/.test(definition) ||
+        plainLines[prose].trim()!==definition.trim() || parser.parse(definition).firstChild) break;
+      lines[index]='\n'+definition;
+      separated=true;
     }
   }
   if(separated) yield parser.parse(lines.join('\n'));
