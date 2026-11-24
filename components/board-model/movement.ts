@@ -1,6 +1,6 @@
 import type { Board } from './index.ts';
 
-/** null blocks a step; a positive integer is its movement-point cost. */
+/** null blocks a step; a nonnegative integer is its movement-point cost. */
 export type StepCost = (from: string, to: string) => number | null;
 export interface MovementOptions {
   readonly points: number;
@@ -17,7 +17,7 @@ export interface Destination {
 }
 const has = (board: Board, id: string): boolean => Object.hasOwn(board.spaces, id);
 function checkedCost(cost: number | null): number | null {
-  if (cost !== null && (!Number.isSafeInteger(cost) || cost < 1)) throw new Error('movement step cost must be a positive safe integer or null');
+  if (cost !== null && (!Number.isSafeInteger(cost) || cost < 0)) throw new Error('movement step cost must be a nonnegative safe integer or null');
   return cost;
 }
 function checkedPoints(points: number): void {
@@ -83,6 +83,77 @@ export function displaceAlong(board: Board, from: string, line: readonly string[
     path.push(to);
     at=to;
     if(i+1<options.steps&&options.stop?.(to))return finish('interrupted');
+  }
+  return finish('complete');
+}
+
+export interface PieceDisplacement {
+  readonly piece: string;
+  readonly from: string;
+  readonly to: string;
+}
+
+export interface ChainDisplacement extends Omit<Displacement, 'path'> {
+  readonly moves: readonly PieceDisplacement[];
+}
+
+export interface ChainOptions {
+  readonly steps: number;
+  /** Next space toward the push or pull. Undefined means the line ends. */
+  readonly next: (space: string) => string | undefined;
+  readonly blocked?: (piece: string, from: string, to: string) => boolean;
+  readonly canPush?: (moving: string, occupant: string) => boolean;
+  readonly stop?: (space: string) => boolean;
+}
+
+/** Plan a displacement over a one-piece-per-space snapshot. Apply all returned moves together. */
+export function displaceChain(board: Board, from: string, occupants: ReadonlyMap<string, string>, options: ChainOptions): ChainDisplacement {
+  checkedPoints(options.steps);
+  if (!has(board, from) || !occupants.has(from)) throw new Error('displacement origin needs a piece: ' + from);
+  const occupancy = new Map(occupants);
+  const pieces = new Set<string>();
+  for (const [space, piece] of occupancy) {
+    if (!has(board, space) || !piece || pieces.has(piece)) throw new Error('invalid displacement occupancy at ' + space);
+    pieces.add(piece);
+  }
+  const moves = new Map<string, PieceDisplacement>();
+  const visited = new Set([from]);
+  let at = from;
+  let moved = 0;
+  const finish = (stop: ChainDisplacement['stop']): ChainDisplacement => {
+    if (stop === 'blocked' || stop === 'endOfLine') return { stop, destination: from, moved: 0, remaining: options.steps, moves: [] };
+    return { stop, destination: at, moved, remaining: options.steps - moved, moves: [...moves.values()] };
+  };
+  while (moved < options.steps) {
+    const destination = options.next(at);
+    if (destination === undefined) return finish('endOfLine');
+    if (visited.has(destination)) return finish('blocked');
+    const links: PieceDisplacement[] = [];
+    const chain = new Set([at]);
+    let current = at;
+    let to: string | undefined = destination;
+    let piece = occupancy.get(current);
+    while (piece !== undefined) {
+      if (to === undefined || !has(board, to) || !(board.adjacency[current] ?? []).includes(to) ||
+          chain.has(to) || options.blocked?.(piece, current, to)) return finish('blocked');
+      links.push({ piece, from: current, to });
+      const occupant = occupancy.get(to);
+      if (occupant === undefined) break;
+      if (!options.canPush?.(piece, occupant)) return finish('blocked');
+      chain.add(to);
+      current = to;
+      piece = occupant;
+      to = options.next(current);
+    }
+    for (const move of links.reverse()) {
+      occupancy.delete(move.from);
+      occupancy.set(move.to, move.piece);
+      moves.set(move.piece, { ...move, from: moves.get(move.piece)?.from ?? move.from });
+    }
+    at = destination;
+    visited.add(at);
+    moved++;
+    if (moved < options.steps && options.stop?.(at)) return finish('interrupted');
   }
   return finish('complete');
 }

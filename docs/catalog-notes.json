@@ -110,7 +110,14 @@
     ],
     "visible": false,
     "release": 1,
-    "gameSupplies": "The spaces, their neighbours and the placement kinds."
+    "gameSupplies": "The spaces, their neighbours and the placement kinds.",
+    "entry": ["index.ts", "movement.ts"]
+  },
+  "board-model/movement": {
+    "title": "Weighted movement and displacement",
+    "tags": ["weighted", "movement", "displacement", "push", "chain", "atomic", "zero-cost", "paths"],
+    "use": "Enumerate legal weighted destinations and plan atomic forced movement for an occupied board.",
+    "guide": "README.md"
   },
   "grid-map": {
     "use": "A square grid board with walls: adjacent spaces, grid distance and range, shortest paths, line of sight, tiles that turn, and targeting shapes (within range, adjacent, row, column, line, area).",

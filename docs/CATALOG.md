@@ -226,10 +226,17 @@ Spaces as data, adjacency computed once, named placement kinds resolved by the b
 - **The game supplies:** The spaces, their neighbours and the placement kinds.
 - **Use it when:** Spaces and adjacency as data, with named placement kinds the board resolves.
 - **Not for:** Drawing or hit areas (board-layout, board-registry).
-- **Key exports:** `createBoard`, `fromLayout`, `hexRows`, `neighbours`, `setSpace`, `availableSpaces`, `emptyBoard`, `baseKinds`, `Space`, `Board`, `Kind`, `Kinds`
+- **Key exports:** `createBoard`, `fromLayout`, `hexRows`, `neighbours`, `setSpace`, `availableSpaces`, `emptyBoard`, `baseKinds`, `reachableMoves`, `displaceAlong`, `displaceChain`, `Space`, `Board`, `Kind`, and 9 more
 - **Needs:** nothing
 - **Came from:** terraforming-mars
 - **Docs:** [README](../components/board-model/README.md) ([rules for agents](../components/board-model/README.md#rules-for-agents))
+
+### board-model/movement
+
+- **Also called:** Weighted movement and displacement
+- **Words:** weighted, movement, displacement, push, chain, atomic, zero-cost, paths
+- **Use it when:** Enumerate legal weighted destinations and plan atomic forced movement for an occupied board.
+- **Guide:** [README.md](../components/board-model/README.md)
 
 ## board-registry
 
