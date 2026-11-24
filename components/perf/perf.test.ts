@@ -72,7 +72,7 @@ describe('perf: timing games', () => {
             reasons: () => d.reasons(),
             choose(state, answers, rng) {
               const a = d.choose(state, answers, rng);
-              actions.push(a);
+              actions.push(a as AnswerAction);
               return a;
             },
           };
