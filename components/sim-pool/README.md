@@ -37,6 +37,8 @@ Plays N whole games of any `GameRules<G>` with a driver, in this thread or on wo
 13. (K666) A game without a kit registry passes `proveResolved(log, clauseTrace(gameLog, clauseOf, changed?), clause)`: `clauseOf` maps each entry of its own log to `{ clause, step, kind: 'resolved' | 'applied', before?, after? }`; an `applied` step proves a static clause only when `changed` (default: before and after differ) says it had an effect, and only when the step carries both `before` and `after`; a trace not returned by `clauseTrace` is refused. Build the trace from what the engine wrote in the test, never a hand-written list of steps.
 14. (K708) When the engine reads a record's `effects` outside a real resolve (a dry-run offer check, a preview, a passive scan), build the trace with `dispatchTrace(registry, probe, kind?)` instead of card-harness `traceAbilities`: `registry` and `considered` are the same, but `resolved` holds only the ids the game's verb dispatch noted on `probe` (`probe.note({ kind: 'clause', id })`, outside dry run only; `kind` default `clause`); `probe` is anything with `listen(fn)` returning a stop (card-harness `createProbe` from K707). It fits `SimGame.trace`, `expectResolved` and `proveResolved`; call `stop()` when the trace is dropped. Tests: `k708.test.ts`.
 
+15. For one-choice look-ahead use `greedyBot({ probe, fallback, maxProbes })` through `botDriver(bot, view)` (K424). The game provides a pure preview adapter operating on a public-only view; mark revealing, random and other-seat branches unknown. Do not pass the authoritative hidden state to the adapter.
+
 **Common mistakes:**
 - A game whose result differs between a pool run and a single run: module state is carried between games.
 - A driver with `stateful: true` in a hidden-info run: it is skipped, not checked.
@@ -151,3 +153,7 @@ const game: SimGame<Counter> = {
 const record = playOne(game, CONTENT, { index: 0, seed: 's1', driver: 'random' }, undefined, { hidden: true })
 console.log(record.error ?? 'no hidden-info finding')
 ```
+
+## Public-view greedy opponent (K424)
+
+`greedyBot` implements `Bot<V,A>` for use with `botDriver` or the live bot adapter. It scores every root legal answer, then considers at most one same-seat nested choice. The game's `probe(view, answer)` supplies a complete score, nested public view plus answers and a cutoff score, `unknown`, or `rejected`. All scores (including `fallback`) must be finite and comparable. A budget defaults to 256 probes; roots are evaluated first, an incomplete set of child alternatives uses its parent score, and unknown roots use the explicit public fallback. Rejected roots are not selected. Ties use the first answer or seeded `DriverRng` with `ties: 'random'`. The bot's reasons are diagnostics only. The kit's existing `preview` does not expose a nested public state: supply a game-owned adapter and run the sim-pool hidden-shuffle check. Never give the bot actual hidden cards, RNG state or another seat's decisions. Existing drivers are unchanged.
