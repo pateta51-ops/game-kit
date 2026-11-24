@@ -9,6 +9,7 @@ import {
   newHistory,
   type History,
   type AnswerAction,
+  type DebugAction,
   type GameRules,
   type GameTypes,
   type InvariantViolation,
@@ -20,7 +21,7 @@ import { DriverRng } from './rng.ts';
 export interface Driver<G extends GameTypes = GameTypes> {
   readonly name: string;
   /** One of `answers` (or another legal action) for the open prompt of `state`; draws only from `rng`. */
-  choose(state: G['state'], answers: readonly G['action'][], rng: DriverRng): G['action'];
+  choose(state: G['state'], answers: readonly G['action'][], rng: DriverRng): G['action'] | DebugAction;
   /** Why the last `choose` answered as it did; empty before the first choice. */
   reasons(): string[];
   /** K274: a driver that keeps state between `choose` calls says so; the hidden-shuffle check skips it (it needs a pure `choose`). */
@@ -63,7 +64,9 @@ export interface SimGame<G extends GameTypes, S = unknown, O = unknown> {
   /** K238: key names the view must not hold (opt-in, like viewLeaks `keys`: e.g. `['rng']`; `stack` may be a real zone); each fails the game as `key:<name>`. Works with or without `secrets`. */
   leakKeys?(state: G['state'], content: G['content']): readonly string[];
   /** K101: the action that moves the game on fast (defeat the boss, fill a track) at the open prompt; with `hasten: N` it is applied instead of the driver's answer after every N actions, so late stages are reached. Return undefined to let the driver answer. */
-  hasten?(state: G['state'], content: G['content']): G['action'] | undefined;
+  hasten?(state: G['state'], content: G['content']): G['action'] | DebugAction | undefined;
+  /** K737: one random debug edit (an engine-core `DebugAction`) for a game with `GameRules.debug`; with `debug: N` it is applied instead of the driver's answer after every N play actions, and recorded like any action. Draw only from `rng` (seeded, so a replay repeats it). Return undefined for none. */
+  randomDebug?(state: G['state'], content: G['content'], rng: DriverRng): DebugAction | undefined;
   /** K274 (G06/T9): with `hidden` set, a copy of `state` in which everything hidden from `seat` is randomised but consistent (opponent hand and deck order shuffled together); draw only from `rng`. The driver must answer the same on it, else the game fails as `hidden-info: ...`. */
   reshuffleHidden?(state: G['state'], seat: KernelPrompt['seat'], rng: DriverRng, content: G['content']): G['state'];
   /** K490: the game's ability trace (card-harness `traceAbilities` fits): cleared before each game; its `resolved` ids are stored on the record as `resolved`, so a run merges them across workers. */
@@ -98,6 +101,8 @@ function leaks(view: unknown, secrets: readonly string[], keys: readonly string[
 export interface PlayOptions {
   readonly view?: boolean | undefined;
   readonly hasten?: number | undefined;
+  /** K737: apply the game's `randomDebug` edit after every N play actions (games with `GameRules.debug`). */
+  readonly debug?: number | undefined;
   /** K274: ask the driver again on `reshuffleHidden`'s state at every decision (`true`) or at this share of them (0..1; chosen from the seed, never from the game's rng). A different answer fails the game as `hidden-info`. Off by default. */
   readonly hidden?: boolean | number | undefined;
   /** Called after each step (also the one that threw) with its milliseconds and the largest view so far in JSON characters. */
@@ -214,7 +219,8 @@ export function bySeat<G extends GameTypes>(drivers: Readonly<Record<string, Dri
 /** Play `spec` to its end, or for `until` actions (the driver still answers at that step, so what fails there fails again). Never throws: an error or an invariant violation ends the game as a failed record. */
 export function playOne<G extends GameTypes, S, O = unknown>(game: SimGame<G, S, O>, content: G['content'], spec: GameSpec, until?: number, opts: PlayOptions = {}): SimRecord<S> {
   let seen: O | undefined;
-  const actions: G['action'][] = [];
+  const actions: (G['action'] | DebugAction)[] = [];
+  let sinceDebug = 0;
   const violations: InvariantViolation[] = [];
   let state: G['state'] | undefined;
   let error: string | undefined;
@@ -285,13 +291,16 @@ export function playOne<G extends GameTypes, S, O = unknown>(game: SimGame<G, S,
         if (hashValue(x) !== hashValue(y)) throw new Error(`hidden-info: at step ${String(actions.length)} seat ${String(p.seat)} prompt ${String(p.id)} the driver answered differently when only hidden state changed`);
       }
       const fast = opts.hasten && actions.length > 0 && actions.length % opts.hasten === 0 ? game.hasten?.(s, content) : undefined;
-      const a = fast ?? driver.choose(s, answers, rng);
+      const dbg = opts.debug && game.rules.debug !== undefined && sinceDebug >= opts.debug ? game.randomDebug?.(s, content, new DriverRng(`${spec.seed}|${spec.driver}|debug|${String(actions.length)}`)) : undefined;
+      const a = dbg ?? fast ?? driver.choose(s, answers, rng);
+      if (dbg) sinceDebug = 0;
+      else sinceDebug += 1;
       ms.choose = performance.now() - t;
       if (until !== undefined && actions.length >= until) break;
       actions.push(a);
       t = performance.now();
       judge();
-      const r = applyAction(game.rules, s, a, content);
+      const r = applyAction(game.rules, s, a as G['action'], content);
       ms.apply = performance.now() - t;
       judge(s, r.state);
       const w = s.rng;
@@ -312,7 +321,7 @@ export function playOne<G extends GameTypes, S, O = unknown>(game: SimGame<G, S,
   const failed = error !== undefined || violations.length > 0;
   let summary: S | undefined;
   try {
-    if (state !== undefined && game.summary) summary = game.summary(state, actions, content, seen as O);
+    if (state !== undefined && game.summary) summary = game.summary(state, actions as G['action'][], content, seen as O);
   } catch (e) {
     error ??= `summary: ${e instanceof Error ? e.message : String(e)}`;
   }
@@ -364,7 +373,7 @@ export function breakAt<G extends GameTypes, S, O = unknown>(
   while (s.result === null && s.prompt !== null && !(typeof stop === 'number' ? actions.length >= stop : stop(s, actions))) {
     const rng = new DriverRng(`${spec.seed}|${spec.driver}|${String(s.prompt.id)}`);
     const answers = game.answers ? game.answers(s, content, rng) : (legalAnswers(s.prompt, rng) as G['action'][]);
-    const a = driver.choose(s, answers, rng);
+    const a = driver.choose(s, answers, rng) as G['action'];
     actions.push(a);
     s = applyAction(game.rules, s, a, content).state;
   }

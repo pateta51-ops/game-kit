@@ -33,6 +33,8 @@ export interface FuzzOptions {
   readonly view?: boolean | undefined;
   /** K101: apply the game's `hasten` action after every N actions. */
   readonly hasten?: number | undefined;
+  /** K737: apply the game's `randomDebug` edit after every N actions. */
+  readonly debug?: number | undefined;
   /** K274: the hidden-shuffle check (see `PlayOptions.hidden`). */
   readonly hidden?: boolean | number | undefined;
   /** K490: stop a game that runs longer than this many ms (wall clock) as a failed `timeout` record (see `RunRequest.gameTimeoutMs`); default off. */
@@ -181,7 +183,7 @@ export async function fuzz(module: string, o: FuzzOptions = {}): Promise<FuzzRun
   const driver = o.driver ?? 'random';
   const seeds = o.seed !== undefined ? [o.seed] : o.seeds ? [...o.seeds] : Array.from({ length: o.games ?? 500 }, (_, i) => `${o.prefix ?? 'fuzz'}-${String(i)}`);
   const specs = seeds.map((seed, index): GameSpec => ({ index, seed, driver, ...(o.settings ? { settings: o.settings(seed, driver) } : {}) }));
-  const records = await runGames({ module, specs, invariants: true, until: o.until, view: o.view, hasten: o.hasten, hidden: o.hidden, gameTimeoutMs: o.gameTimeoutMs, ...(o.worker !== undefined ? { worker: o.worker } : {}) }, o.workers ?? 1);
+  const records = await runGames({ module, specs, invariants: true, until: o.until, view: o.view, hasten: o.hasten, debug: o.debug, hidden: o.hidden, gameTimeoutMs: o.gameTimeoutMs, ...(o.worker !== undefined ? { worker: o.worker } : {}) }, o.workers ?? 1);
   return { records, findings: records.flatMap((r) => findingOf(r) ?? []) };
 }
 
@@ -230,8 +232,8 @@ export const findingEntries = (run: FuzzRun): FindingEntry[] =>
     return settings ? { ...f, settings } : f;
   });
 
-const FLAGS = ['--games', '--prefix', '--driver', '--workers', '--seed', '--until', '--hasten', '--finding'];
-export const FUZZ_USAGE = 'usage: [--games N] [--prefix P] [--driver D] [--workers N] | --seed S [--driver D] [--until STEP] | --finding S (replays a seed of the findings file)';
+const FLAGS = ['--games', '--prefix', '--driver', '--workers', '--seed', '--until', '--hasten', '--debug', '--finding'];
+export const FUZZ_USAGE = 'usage: [--games N] [--prefix P] [--driver D] [--workers N] [--hasten N] [--debug N] | --seed S [--driver D] [--until STEP] | --finding S (replays a seed of the findings file)';
 
 /** The command line of both: many games, or `--seed S [--until N]` for one. Returns the exit code: 1 on any finding, 2 on bad arguments. */
 export async function fuzzMain(
@@ -244,7 +246,7 @@ export async function fuzzMain(
   for (let i = 0; i < args.length; i += 2) {
     const k = args[i] ?? '';
     const v = args[i + 1];
-    const whole = k === '--games' || k === '--workers' || k === '--until' || k === '--hasten';
+    const whole = k === '--games' || k === '--workers' || k === '--until' || k === '--hasten' || k === '--debug';
     if (!FLAGS.includes(k) || v === undefined || (whole && !/^\d+$/.test(v)) || (k === '--until' && !args.includes('--seed')) || (args.includes('--seed') && ['--games', '--prefix', '--workers'].includes(k))) {
       out(FUZZ_USAGE);
       return 2;
@@ -278,6 +280,7 @@ export async function fuzzMain(
     seed: given.get('seed') ?? base.seed,
     until: num('until') ?? base.until,
     hasten: num('hasten') ?? base.hasten,
+    debug: num('debug') ?? base.debug,
   });
   const one = run.records[0];
   if (given.has('seed') && one) out(`seed ${one.seed}: step ${String(one.actions)}, result ${JSON.stringify(one.result)}, actions hash ${one.hash}`);
