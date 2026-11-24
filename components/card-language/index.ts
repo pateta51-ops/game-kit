@@ -190,3 +190,5 @@ export function expectVerbs<T extends AnyVerbTable>(table: T, examples?: readonl
   const p = verbProblems(table, examples, ids);
   if (p.length > 0) throw new Error(`card language:\n${p.join('\n')}`);
 }
+
+export { paymentPlans, preferredPayment, type Amounts, type PaymentInput, type PaymentPlan, type PaymentRate } from './payment.ts';
