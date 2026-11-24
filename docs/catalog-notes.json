@@ -343,10 +343,13 @@
     "gameSupplies": "The cards, their face view and the look."
   },
   "card-harness": {
-    "use": "Testing card effects on real cards with the scenario builder, prompt delivery, choice probe and inventory with stale check; test depth: a full-resolve test per clause and a poor test (expectNotOffered, expectNotFired) per conditional clause.",
+    "use": "Testing card effects on real cards with the scenario builder, prompt delivery, choice probe and inventory with stale check. Check clause test depth with full-resolve and refusal tests, and semantic mutation coverage across the clause inventory.",
     "not": "Card rules themselves; those stay in the game.",
     "title": "Test card effects on real cards",
     "tags": [
+      "semantic card clause mutation",
+      "missing clause mutation coverage",
+      "test catches changed card effect",
       "restriction phrase case sensitive",
       "restriction word at start of text",
       "restriction key not phrases",
