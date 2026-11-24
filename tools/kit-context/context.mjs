@@ -90,21 +90,75 @@ function readDocumentation(dir) {
     addUsage(from,to);
     from=to;
   }
-  return {rules,usage};
+  return {rules,usage,markdown:lines.join('\n')};
 }
-function readLinkedGuides(dir, rows) {
+
+function markdownLinks(markdown) {
+  // Read definitions across the whole document. Examples and comments do not create guide obligations.
+  let fence;
+  let comment=false;
+  const prose=markdown.split(/\r?\n/).map(line=>{
+    if(comment) {
+      const end=line.indexOf('-->');
+      if(end<0) return '';
+      line=line.slice(end+3);
+      comment=false;
+    }
+    const marker=/^ {0,3}(`{3,}|~{3,})(.*)$/.exec(line);
+    if(fence) {
+      if(marker && marker[1][0]===fence[0] && marker[1].length>=fence.length && !marker[2].trim()) fence=undefined;
+      return '';
+    }
+    if(marker) {
+      fence=marker[1];
+      return '';
+    }
+    return line.replace(/(?<!`)(`+)(?!`).*?(?<!`)\1(?!`)|<!--.*?(?:-->|$)/g,(span,ticks)=>{
+      if(ticks) return span;
+      comment=!span.endsWith('-->');
+      return '';
+    });
+  }).join('\n');
+  const normalize=label=>label.trim().replace(/\s+/g,' ').toLowerCase();
+  const label=String.raw`((?:\\.|[^\[\]\\\n])*)`;
+  const destination=String.raw`(?:<([^<>\n]+)>|([^\s<>()]+))`;
+  const title=String.raw`(?:[ \t]+(?:"[^"\n]*"|'[^'\n]*'|\([^()\n]*\)))?`;
+  const definitions=new Map();
+  const body=prose.replace(new RegExp(String.raw`^ {0,3}\[${label}\]:[ \t]*(?:\n[ \t]*)?${destination}${title}[ \t]*$`,'gm'),
+    (_match, key, angled, bare)=>{
+      const id=normalize(key);
+      if(id && !definitions.has(id)) definitions.set(id,angled??bare);
+      return '';
+    });
+  const pattern=new RegExp(String.raw`(?<!\x60)(\x60+)(?!\x60)[\s\S]*?(?<!\x60)\1(?!\x60)|(?<!\\)(!?)\[${label}\](?:\([ \t]*${destination}${title}[ \t]*\)|\[${label}\])?`,'g');
+  return [...body.matchAll(pattern)].flatMap(([, codeSpan, image, text, angled, bare, reference])=>{
+    if(codeSpan || image) return [];
+    const href=angled??bare??definitions.get(normalize(reference||text));
+    return href===undefined?[]:[href];
+  });
+}
+
+function readLinkedGuides(dir, markdown) {
   const visited=new Set([componentFile(dir,'README.md')]);
   const guides=[];
-  const pending=[...rows];
+  const pending=[{file:'README.md',text:markdown}];
+  const decoder=new TextDecoder('utf-8',{fatal:true});
   for(const row of pending) {
-    for(const match of row.text.matchAll(/\]\(([A-Za-z0-9._/-]+\.md)(?:#[^)\s]+)?(?:\s+["'][^)]*["'])?\)/g)) {
-      if(path.posix.isAbsolute(match[1])) continue;
-      const name=path.posix.join(path.posix.dirname(row.file),match[1]);
+    for(const href of markdownLinks(row.text)) {
+      const destination=href.split(/[?#]/,1)[0];
+      if(/^[A-Za-z][\w+.-]*:|^[\\/]/.test(destination)) continue;
+      let guide;
+      try { guide=decodeURIComponent(destination); } catch { guide=destination; }
+      if(!guide.endsWith('.md') || /^[A-Za-z][\w+.-]*:|^[\\/]|\\/.test(guide)) continue;
+      const name=path.posix.join(path.posix.dirname(row.file),guide);
       if(name.split('/').some(part=>part==='..'||ignored.has(part))) continue;
       const target=componentFile(dir,name);
       if(visited.has(target)) continue;
       visited.add(target);
-      const text=readComponentFile(dir,name).trimEnd();
+      let bytes;
+      try { bytes=fs.readFileSync(target); } catch { throw new Error(name+' is missing or unreadable'); }
+      let text;
+      try { text=decoder.decode(bytes).trimEnd(); } catch { throw new Error(name+' is not valid UTF-8 Markdown'); }
       guides.push({file:name,line:1,text});
       // Relative links belong to the canonical guide location, including
       // when the guide was reached through a permitted symbolic link.
@@ -130,11 +184,8 @@ export function contextPacket({root=defaultRoot,component,symbol,entry='index.ts
   if (typeof entry!=='string'||!code.test(entry)||path.isAbsolute(entry)||entry.split(/[\\/]/).some(part=>part==='..'||ignored.has(part))) throw new Error('invalid entry');
   const file=componentFile(dir,entry);
   if (!code.test(file)||test.test(entry)||test.test(file)) throw new Error('entry must be a public source file and not a test');
-  const {rules,usage}=readDocumentation(dir);
-  const guides=readLinkedGuides(dir,[
-    ...rules,
-    ...usage.filter(row=>symbol===undefined||row.text.includes(symbol)||row.text.includes(path.basename(entry))),
-  ]);
+  const {rules,usage,markdown}=readDocumentation(dir);
+  const guides=readLinkedGuides(dir,markdown);
   const options={
     target:ts.ScriptTarget.ESNext, module:ts.ModuleKind.ESNext,
     moduleResolution:ts.ModuleResolutionKind.Bundler, jsx:ts.JsxEmit.ReactJSX,
