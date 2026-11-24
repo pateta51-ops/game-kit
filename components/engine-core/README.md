@@ -26,6 +26,8 @@ The kernel of a game engine: seeded random numbers, canonical JSON and hashes, t
 17. Decide whether simultaneous triggers ask their order from `triggersFor`'s 4th argument `batch` (every occurrence that happened in that settle, all batches collected together, K696): `interactive` only when the order changes the result, else `silent`; switch a replacement on from card data in `replacementsFor`'s 3rd argument `content` (K697), not by offering it everywhere and declining it later.
 18. Mark a state check `afterBatch: true` (K703) when it must see a whole batch settled (no unit of a side left after one effect removed several): it then runs only when the outermost batch has settled, before that batch's triggers resolve ("state checks before triggers"). Without it a check runs between the occurrences of a batch, as before (`timing.md`, "When state checks run").
 
+19. For state checks in simulations, set `GameRules.invariants` to `stateInvariants(config)` (K592) or compose its returned violations with the game's own checks. Select physical instance IDs, conserved pools and permanent flags only; the game declares idle and its queue lengths. Never treat printed card IDs as unique instances.
+
 **Common mistakes:**
 - Using the old `ctx.then` then `ctx.ask` form in new code: it is deprecated.
 - A prompt nobody can answer (fewer enabled options than `min`): `EngineBugError`; give a legal option or skip the prompt.
@@ -107,3 +109,7 @@ console.log(enumerateAnswers(state, (_s, a) => !a.picks.includes('draw'))) // ev
 ```
 
 Cost: an `ordered` prompt lists every order of every pick set (about 110k answers for 8 options, 9.8M for 10), and `valid` filters after the list is built. Keep ordered prompts small or enumerate in the game.
+
+## Reusable state invariants (K592)
+
+Import `stateInvariants` from `tools.ts` or `index.ts`. It builds a `GameRules.invariants` callback with optional selectors for disjoint instance zones (including an optional expected instance universe), nonnegative integer counters, conserved nonnegative integer totals, monotonic flags compared with `prev`, and idle queues. The game supplies every selector; no game-specific rules are inferred. On setup `prev` is absent, so monotonic flag checks wait until an action. Existing kernel checks and sim-pool fuzz reporting work unchanged. Selectors must be pure and must exclude nonphysical references, resettable flags, and quantities that may legitimately be fractional or negative. Use custom checks for those.
