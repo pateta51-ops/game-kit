@@ -69,10 +69,10 @@ legend { font: 700 12px var(--display); text-transform: uppercase; letter-spacin
   <div class="ctls" id="ctls"></div>
 
   <h2 style="font:700 18px var(--display);margin:8px 0 0">Card stacks (card-pile)</h2>
-  <p class="sub">The kit's draw and discard stacks. The edge is how far each card under the top one peeks out. The kit default grows with the screen height (0.22% of it); "fixed" uses the pixels below on every screen.</p>
+  <p class="sub">The kit's draw and discard stacks. The edge is how far each card under the top one peeks out. The kit default is 1.5px on every screen; tick the box to try another size.</p>
   <div class="table" style="padding:0"><div class="stacks" id="stacks"></div></div>
   <div class="ctls"><fieldset><legend>Stack</legend>
-    <label><input type="checkbox" id="k-fixed"> Fixed size (off = kit default, grows with screen)</label>
+    <label><input type="checkbox" id="k-fixed"> Try another size (off = kit default, 1.5px)</label>
     <div class="ctl"><label for="k-px">Edge under the top card</label><output id="k-pxo"></output><input id="k-px" type="range" min="0.5" max="12" step="0.5"><small id="k-now"></small></div>
     <div class="ctl"><label for="k-n">Cards in the stack</label><output id="k-no"></output><input id="k-n" type="range" min="1" max="40" step="1"></div>
   </fieldset></div>
@@ -206,7 +206,7 @@ build(); render();
 </script>
 <script>
 //@kit-js components/card-pile/fan.ts as PILE
-const K = { fixed: false, px: 2, n: 12 };
+const K = { fixed: false, px: 1.5, n: 12 };
 const $k = (id) => document.getElementById(id);
 function stack(n, label) {
   const edges = PILE.edgesFor(n);
@@ -216,10 +216,9 @@ function stack(n, label) {
 function renderStacks() {
   $k('k-fixed').checked = K.fixed; $k('k-px').value = K.px; $k('k-n').value = K.n;
   $k('k-px').disabled = !K.fixed;
-  $k('k-pxo').textContent = K.fixed ? K.px + 'px' : 'kit default';
+  $k('k-pxo').textContent = K.fixed ? K.px + 'px' : 'kit default (1.5px)';
   $k('k-no').textContent = K.n;
-  const now = innerHeight * 0.0022;
-  $k('k-now').textContent = `Kit default on this window: ${now.toFixed(1)}px (${innerHeight}px tall). On a 4K screen in full screen: about 4.7px. At most ${PILE.EDGE_CAP} edges show.`;
+  $k('k-now').textContent = `The old default grew with the screen: ${(innerHeight * 0.0022).toFixed(1)}px on this window, about 4.7px on a 4K screen. At most ${PILE.EDGE_CAP} edges show.`;
   $k('stacks').innerHTML = stack(K.n, 'Draw pile') + stack(Math.max(1, Math.round(K.n / 3)), 'Discard') + stack(2, 'Two cards');
 }
 $k('k-fixed').addEventListener('change', (e) => { K.fixed = e.target.checked; renderStacks(); });
