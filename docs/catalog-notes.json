@@ -1103,7 +1103,7 @@
   },
   "game-log": {
     "mechanics": "none: draws what the engine or the game decided",
-    "use": "A readable game log derived from engine events through one table.",
+    "use": "A readable game log derived from engine events through one table; rebuilt from the saved actions on load (replayLog, logKeeper), never saved as text.",
     "not": "Engine event design (engine-core).",
     "title": "Readable game log from events",
     "tags": [
@@ -1114,7 +1114,9 @@
       "readable",
       "table",
       "rows",
-      "adapter"
+      "adapter",
+      "replay",
+      "rebuild"
     ],
     "visible": false,
     "release": 1,
