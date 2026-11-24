@@ -419,6 +419,7 @@ The blind matching test's result was not recorded: the PR, its comments and docs
 | K729 | turn-flow: skip returns { by, why? } and the runner emits a skipped event. | S | owner (23 Nov 2026): the log says which card skipped a phase | done |
 | K741 | llm-playtester: cheaper calls: a single option is taken without a call, multi-select and split questions asked item by item, option groups, duplicate labels flagged, `--effort` (default low), a capped reason, and an adapter `reference()` lookup table in the cached system prompt. | M | owner (23 Nov 2026): cheaper LLM playtests | done |
 | K742 | game-log: `replayLog` and `logKeeper` rebuild the log from the saved actions (set-up under step 0, action i under step i + 1; rewind on undo, rebuild on a new key), so the log is never saved as text and cannot drift from the save. | S | owner (23 Nov 2026): a loaded save shows exactly the log rows it had | done |
+| K745 | The `kit-context` checkout command reads confined component files and prints bounded JSON with public contracts and agent rules. Incomplete packets name the required reads. The checkout command can inspect a game's locked component copy. Packaging the tool itself into game locks is outside this increment. | S | owner (24 Nov 2026) | done |
 
 ## Candidates
 

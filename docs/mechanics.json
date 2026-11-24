@@ -140,6 +140,7 @@
     { "words": "zone with a capacity, zone capacity, slot limit on a zone, over the limit choose what leaves, over the limit choose what to drop, hand limit discard choice, raise the limit, give up a raise", "part": "card-zones", "read": "its README section Capacity, `capacityCheck`, `overLimit`, `capacityHandlers`, `raiseLimit`, `dropRaise`, `limitOf`", "also": ["engine-core"], "sheet": "player" },
     { "words": "stop set on a grid, spaces that end a move, enter but not leave, reach that stops at a space, stop set", "row": "K629", "note": "today: a second grid with added walls (grid-map)", "sheet": "positions" },
     { "words": "heavy queue, queue a heavy job, queue heavy runs, one at a time on the machine, machine queue, machine queue heavy run, run the check in WSL from Windows", "tool": "heavy-queue", "read": "its README: `heavy run -- <cmd>` in WSL runs a heavy job in the one machine queue", "sheet": "content" },
+    { "words": "agent context packet, bounded component context, public API signature packet", "tool": "kit-context", "read": "its README for the checkout command and the status and required reads in its JSON output", "sheet": "content" },
     { "words": "response window, timing window prompt, play a response now, reaction window, pass", "part": "engine-core", "read": "recipe timing.md (windows)", "missing": "one prompt that offers every response legal at a window, with a pass", "row": "K646", "sheet": "triggers" }
   ],
   "searches": {
