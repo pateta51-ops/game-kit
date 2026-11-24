@@ -1,5 +1,6 @@
+import assert from 'node:assert/strict';
 import { afterEach, describe, expect, it } from 'vitest';
-import { advance, applyAction, createGame, createSave, kernelPort, replay, restoreSave, setInvariantChecking, type GameRules } from './index.ts';
+import { advance, applyAction, createGame, createSave, kernelPort, replay, restoreSave, setInvariantChecking, StateInvariantError, type GameRules } from './index.ts';
 import { answer, board, type BoardGame } from './fake/invariant-board.ts';
 
 type BoardRules = GameRules<BoardGame>;
@@ -32,8 +33,9 @@ describe('K592 invariant policy at real kernel boundaries', () => {
   ] as const)('rejects a %s action without changing authoritative input', (pick, id, message) => {
     const state = start();
     const before = structuredClone(state);
-    expect(() => applyAction(strict, state, answer(state, pick), null)).toThrow(
-      expect.objectContaining({ name: 'StateInvariantError', violations: expect.arrayContaining([{ id, message: expect.stringMatching(message) }]) }),
+    assert.throws(
+      () => applyAction(strict, state, answer(state, pick), null),
+      (e: unknown) => e instanceof StateInvariantError && e.violations.some(v => v.id === id && message.test(v.message)),
     );
     expect(state).toEqual(before);
   });
@@ -82,9 +84,10 @@ describe('K592 invariant policy at real kernel boundaries', () => {
     const input = { options, rules: {}, actions, undoUsed: false, savedAt: '2026-01-01' };
     const save = createSave(board, input, null);
     expect(restoreSave(diagnostic, save, null)).toMatchObject({ ok: true, violations: [{ id: 'counter:tokens' }] });
-    expect(restoreSave(strict, save, null)).toMatchObject({
-      ok: false, error: expect.stringMatching(/counter:tokens/), violations: [{ id: 'counter:tokens' }],
-    });
+    const rejected = restoreSave(strict, save, null);
+    assert(!rejected.ok);
+    expect(rejected.error).toMatch(/counter:tokens/);
+    expect(rejected.violations).toMatchObject([{ id: 'counter:tokens' }]);
     const invalid = applyAction(board, state, answer(state, 'counter'), null).state;
     expect(() => createSave(strict, { ...input, state: invalid }, null)).toThrow(/counter:tokens/);
   });

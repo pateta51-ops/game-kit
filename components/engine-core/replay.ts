@@ -3,7 +3,7 @@
 import { applyAction, createGame } from './apply.ts';
 import { StateInvariantError } from './errors.ts';
 import { hashValue } from './hash.ts';
-import type { GameRules, GameTypes, InvariantViolation } from './types.ts';
+import type { ApplyResult, GameRules, GameTypes, InvariantViolation } from './types.ts';
 
 /** `hashState`: FNV-1a 64 over the canonical JSON of the state. */
 export const hashState = (state: unknown): string => hashValue(state);
@@ -44,33 +44,32 @@ export function replay<G extends GameTypes>(
     for (const violation of found) violations.push(violation);
   };
   const diagnostics = (): Pick<ReplayResult<G>, 'violations'> => violations.length ? { violations } : {};
-  let state: G['state'] | null = null;
-  const fail = (failedAt: number | null, error: string, reason: NonNullable<ReplayResult<G>['reason']>): ReplayResult<G> => ({
-    ok: false,
-    state,
-    hash: state === null ? null : hashState(state),
-    failedAt,
-    error,
-    reason,
-    ...diagnostics(),
-  });
+  let state: G['state'];
   try {
     const first = createGame(game, options, rules, content);
     state = first.state;
     collect(first.violations);
   } catch (e) {
-    if (e instanceof StateInvariantError) {
-      collect(e.violations);
-      return { ...fail(null, `Setup violates state invariants: ${e.message}`, 'illegal'), invariantFailure: true };
-    }
-    return fail(null, `The recorded options cannot start a game: ${String(e)}`, 'illegal');
+    const failure: ReplayResult<G> = { ok: false, state: null, hash: null, failedAt: null, error: null, reason: 'illegal' };
+    if (e instanceof StateInvariantError)
+      return { ...failure, error: `Setup violates state invariants: ${e.message}`, invariantFailure: true, violations: e.violations };
+    return { ...failure, error: `The recorded options cannot start a game: ${String(e)}` };
   }
+  const fail = (failedAt: number | null, error: string, reason: NonNullable<ReplayResult<G>['reason']>): ReplayResult<G> => ({
+    ok: false,
+    state,
+    hash: hashState(state),
+    failedAt,
+    error,
+    reason,
+    ...diagnostics(),
+  });
   if (expect !== undefined && expect.contentHash !== game.contentHash(content)) {
     return fail(null, 'The recording was made with another content pack.', 'pack');
   }
   for (const [at, action] of actions.entries()) {
     try {
-      const next = applyAction(game, state, action, content);
+      const next: ApplyResult<G> = applyAction(game, state, action, content);
       state = next.state;
       collect(next.violations);
     } catch (e) {
