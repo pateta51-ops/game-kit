@@ -1180,6 +1180,7 @@ A rule-based opponent (K103, K115). Pure data and functions; the engine never im
 - **Use it when:** A rule-based AI opponent: advice, profiles and memory as data through a fixed pick pipeline, plus decision records.
 - **Not for:** Trained play (learned-opponent) or tuning weights (sim-pool tune).
 - **Key exports:** `redact`, `viewLeaks`, `REASONS`, `adviceProblems`, `discardOrder`, `PIPELINE`, `loadProfile`, `newMemory`, `remember`, `recalls`, `forget`, `forgetTurn`, `setPlan`, `evaluate`, and 33 more
+- **Hook:** lookAhead + evaluate: a greedy look ahead player: a one-ply driver that scores each move and picks the best, with a goal-seeking score
 - **Needs:** [`sim-pool`](#sim-pool)
 - **Came from:** chiriboga, Forge (GPL-3.0, ideas only); boardgame.io, XMage (MIT, ideas only, no code ported)
 - **Docs:** [README](../components/opponent/README.md) ([rules for agents](../components/opponent/README.md#rules-for-agents))

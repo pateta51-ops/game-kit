@@ -4,6 +4,11 @@ A rule-based opponent (K103, K115). Pure data and functions; the engine never im
 
 ## Rules for agents
 
+<!-- hooks: written by scripts/catalog.mjs from docs/catalog-notes.json; do not edit -->
+**Hooks a game calls:**
+- `lookAhead` + `evaluate`: a greedy look ahead player: a one-ply driver that scores each move and picks the best, with a goal-seeking score
+<!-- /hooks -->
+
 **What it does:** A rule-based opponent: pure functions that choose from the player's own view.
 
 **You must:**

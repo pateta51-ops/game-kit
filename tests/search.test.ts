@@ -171,10 +171,10 @@ describe('K523 candidates', () => {
   const lines = (q: string) => run('search', ...q.split(' ')).stdout.split('\n');
   it('finds a candidate row by its content line and tags, first for discard row', () => {
     expect(lines('discard row')[0]).toMatch(/^candidate K520, wanted by Hunted North Pole, Hunted Mining Colony, Dungeon Ball Legend: discard-row/);
-    expect(lines('greedy driver')[0]).toMatch(/^candidate K424, wanted by Astra Imperium, Crystallo, Dungeon Ball Legend: /);
+    expect(lines('test pilot bot random greedy')[0]).toMatch(/^candidate K424, wanted by Astra Imperium, Crystallo, Dungeon Ball Legend, Dice Commandos: /);
     expect(lines('chamfered keys')[0]).toMatch(/^candidate K423, /);
-    expect(lines('greedy driver')).toContain('not built yet');
-    expect(lines('greedy driver').join('\n')).not.toContain('not in the kit by that name');
+    expect(lines('test pilot bot random greedy')).toContain('not built yet');
+    expect(lines('test pilot bot random greedy').join('\n')).not.toContain('not in the kit by that name');
   });
   it('a second game in wanted-by changes the line; no second row', () => {
     const g = fs.mkdtempSync(path.join(os.tmpdir(), 'k523-'));
