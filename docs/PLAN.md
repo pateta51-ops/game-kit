@@ -401,6 +401,7 @@ The blind matching test's result was not recorded: the PR, its comments and docs
 | K735 | replay-cli: a golden whose scripted driver ends before game over (choose returns undefined) records, checks and replays as a normal unfinished game, not CRASHED | S |  | done |
 | K736 | bug-reporter: replay accepts a saves-part save (version); the report takes saveVersion from it | S |  | done |
 | K737 | sim-pool: a driver or `hasten` may return an engine-core `DebugAction` with no cast; `randomDebug` hook and `debug: N` (`--debug N`) apply a random debug edit every N actions | M |  | done |
+| K739 | search: the opponent part's lookAhead and evaluate (a greedy one-ply driver) lists first for "look ahead greedy player" and "greedy driver", not only the K424 candidate row | S |  | done |
 | K740 | llm-playtester: claude-haiku-5-5 price (with the over-100K-token rate) so --model claude-haiku-5-5 no longer throws "No price for model" | S |  | done |
 
 ## Asked for by the owner
@@ -426,7 +427,7 @@ A candidate is a part some game wants and nobody builds yet. A second game that 
 | K421 | Phone table layout over `Stage`: a fixed 390x664 stage with one zone per wireframe rect, `stretchTo` for tall phones, a `tall` strip transform, and the `-phone` wireframe at x2 menu scaling (Astra `src/ui/table/phone.ts`, `src/ui/screens/layout.ts`) | M | Astra Imperium | candidate |
 | K422 | Bottom-anchored upward-opening scroll panel for a phone dock, with dock fit by observer (the overflow hook only opens downward) (Astra `src/ui/table/Phone.tsx`, FIX-CQ) | S | Astra Imperium | done (closed into K420: one part, a scroll panel that opens down or up; nothing was built) |
 | K423 | Hit-area pattern for chamfered keys: an unclipped wrapper button or pseudo-element carries the 44 px tap area while a `::before` layer draws the clipped plate (Astra screens.css and phone.css, XD-46, FIX-PT2, fix-rel1) | S | Astra Imperium | candidate |
-| K424 | `sim-pool` greedy driver: one-level nested-choice look-ahead over `preview` scored by a game's `vpOf` (Astra `src/sim/drivers.ts`, S12) | S | Astra Imperium, Crystallo, Dungeon Ball Legend | candidate |
+| K424 | `sim-pool` greedy driver: one-level nested-choice look-ahead over `preview` scored by a game's `vpOf` (Astra `src/sim/drivers.ts`, S12) | S | Astra Imperium, Crystallo, Dungeon Ball Legend, Dice Commandos | candidate |
 | K425 | `when` modifier runner: module-level hooks at fixed engine timings (`onPlay`, `onBuild`, `beforeInvasion`, `duringInvasion`), run in source order, as data-driven continuous rules (Astra `src/engine/rules.ts` `whens`/`whenTasks`, S6) | M | Astra Imperium, Warp's Edge, STCC | candidate |
 | K426 | App icon generator: glow plus ring icon from an SVG mark, all sizes (the kit `app-icons` lacks the glow and ring) (Astra `scripts/app-icons.mjs`, S20b) | S | Astra Imperium | candidate |
 | K427 | Map-rect tracing: script that traces zone rects from a scan into a layout JSON merged at content build (Astra `scripts/content/trace-maps.py`, F3) | S | Astra Imperium | candidate |
