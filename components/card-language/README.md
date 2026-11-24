@@ -152,7 +152,7 @@ Case 29 (a cost a card in play changes) is `cfg.due`.
 - "Draw N if able" (never reshuffles): `repeat` N times an `if` on a game test "the deck is not empty" around a one-card `draw`.
 - "Draw 2, then discard 1 of them" (K658): a mover's `then` runs once its cards moved, with `env.moved` the cards that moved; a pick there names them with `from: 'moved'`: `{ op: 'draw', count: 2, then: [{ op: 'discard', cards: 'pick', from: 'moved', count: 1 }] }` offers only the two drawn (run by `k657.test.ts`). A moved card the picking seat cannot see is offered blind (`#i`, `unseen`), and in the check a test, count, filter or custom verb that runs with a card in `env.moved` that came into view is `unknown` (`hidden`), as for `env.cards`. A zone named `moved` is shadowed by it.
 
-For substitutable resource costs (K590), enumerate `paymentPlans` and pass the legal spending vectors to the game's payment prompt. Treat either budget error as a failed calculation. An empty result after a completed calculation means the cost is unaffordable. Only use `preferredPayment` with a game-owned explicit policy.
+For substitutable resource costs (K590), follow the [payment contract and executable example](payment.md). Use `paymentPlans` to generate options and revalidate the selected spend at action time. Use `preferredPayment` with an explicit game-owned policy and surface budget errors separately from unaffordability.
 
 **Common mistakes:**
 - Reading `no` from `wouldChange` as "not searched": `no` is only given when every pick set was tried (not every order of the picks inside a set, unless the prompt is ordered); a small `branches` gives `unknown` more often, and `unknown: 'offer'` (default) then offers the effect.
@@ -226,9 +226,4 @@ console.log(describeEffect(taxed.verbs, taxed.costed({} as GameTypes['state'], [
 
 ## Substitutable resource payment plans (K590)
 
-`paymentPlans({ pool, cost, rates, have?, maxNodes?, maxDominanceChecks? })` returns every distinct componentwise-minimal feasible spending vector with its remaining resources. The result is ordered lexicographically by the spent quantities in sorted resource ID order. All quantities are nonnegative safe integers. A rate consumes `spend` units of `from` to cover `cover` units of `to`. Direct payment is 1:1, excess coverage is lost, and rates never chain. Every target cost draws from the same pool. `have` reserves holdings after the full payment. Model uniquely spendable cards as unit resources only when the game's rulings permit that model. The game owns eligibility, sequential costs and execution. Revalidate the selected plan before committing payment. `preferredPayment(plans, score)` selects a maximum-score plan using the game's finite scoring function and resolves ties by solver order.
-
-- `maxNodes` defaults to 100,000 and counts each visited search position, including the root, cost advances, explored dead ends and feasible leaves. Routes that cannot pay even one batch from the unreserved starting pool are filtered before search.
-- `maxDominanceChecks` defaults to 1,000,000 and counts each resource comparison used to reject a candidate or remove existing plans it dominates. Comparisons stop at the first resource that disproves dominance. Input validation, final sorting and output construction are outside these counters.
-
-Both limits must be positive safe integers, even when retained holdings make payment impossible. Exceeding either limit throws an error naming it. The solver returns a complete list or throws.
+See [payment.md](payment.md) for the public shapes, solver limits and an executable engine example.

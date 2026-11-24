@@ -432,7 +432,7 @@ The card-language shell (K206): card effects as data, one typed verb table where
 - **Also called:** Substitutable resource payment plans
 - **Words:** payment plans, substitute resources, wild resource, required holdings, spending vectors
 - **Use it when:** Enumerate minimal ways to pay from a shared pool with substitutions and required holdings (`paymentPlans`), or rank affordable plans with a game-owned policy (`preferredPayment`).
-- **Guide:** [README.md](../components/card-language/README.md)
+- **Guide:** [payment.md](../components/card-language/payment.md)
 
 ## card-parts
 
