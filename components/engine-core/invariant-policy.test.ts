@@ -12,6 +12,10 @@ const start = () => createGame(board, options, {}, null).state;
 afterEach(() => setInvariantChecking(false));
 
 describe('K592 invariant policy at real kernel boundaries', () => {
+  it('executes the maintained strict-policy example', async () => {
+    await import('./fake/strict-invariants.ts');
+  });
+
   it('rejects invalid setup and settled fixtures in strict mode with the global flag off', () => {
     expect(() => createGame(strict, { seed: 'bad setup' }, {}, null)).toThrow(/zone:cards.*appears in/);
     expect(() => advance(strict, { ...start(), owner: 'outsider' }, null)).toThrow(/owner:card/);

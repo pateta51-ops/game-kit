@@ -18,7 +18,7 @@ Plays N whole games of any `GameRules<G>` with a driver, in this thread or on wo
 - `greedyBot` + `greedyPreview`: score legal moves with bounded public nested look-ahead and a legal fallback
 <!-- /hooks -->
 
-**Which entry (K723):** browser or UI code imports `sim-pool/browser.ts` (`DriverRng`, `legalAnswers`, `randomDriver`, `botDriver`, `Bot`, `Driver`, `bySeat`, `ANSWER_CAP`, `GameSpec`, `SimGame`; no `node:` module). Node scripts keep `sim-pool/index.ts` (everything, including pool and worker). You must never import `index.ts` from code vite serves to a browser.
+**Which entry (K723):** browser or UI code imports `sim-pool/browser.ts` (`DriverRng`, `legalAnswers`, `randomDriver`, `botDriver`, `Bot`, `Driver`, `bySeat`, `ANSWER_CAP`, `GameSpec`, `SimGame`, `greedyBot`, `greedyPreview`; no `node:` module). Node scripts keep `sim-pool/index.ts` (everything, including pool and worker). You must never import `index.ts` from code vite serves to a browser.
 
 **What it does:** Plays many whole games of any `GameRules` with a driver, in-thread or on worker threads, with crash-safe records, a resume file, fuzzing with invariants, grid sweeps and a weight tuner.
 
@@ -38,11 +38,11 @@ Plays N whole games of any `GameRules<G>` with a driver, in this thread or on wo
 13. (K666) A game without a kit registry passes `proveResolved(log, clauseTrace(gameLog, clauseOf, changed?), clause)`: `clauseOf` maps each entry of its own log to `{ clause, step, kind: 'resolved' | 'applied', before?, after? }`; an `applied` step proves a static clause only when `changed` (default: before and after differ) says it had an effect, and only when the step carries both `before` and `after`; a trace not returned by `clauseTrace` is refused. Build the trace from what the engine wrote in the test, never a hand-written list of steps.
 14. (K708) When the engine reads a record's `effects` outside a real resolve (a dry-run offer check, a preview, a passive scan), build the trace with `dispatchTrace(registry, probe, kind?)` instead of card-harness `traceAbilities`: `registry` and `considered` are the same, but `resolved` holds only the ids the game's verb dispatch noted on `probe` (`probe.note({ kind: 'clause', id })`, outside dry run only; `kind` default `clause`); `probe` is anything with `listen(fn)` returning a stop (card-harness `createProbe` from K707). It fits `SimGame.trace`, `expectResolved` and `proveResolved`; call `stop()` when the trace is dropped. Tests: `k708.test.ts`.
 
-15. For one-choice look-ahead use `greedyBot({ probe, fallback, maxProbes, maxRootAnswers })` through `botDriver(bot, view)` (K424). Provide the deciding seat's redacted view and legal answers containing only data available to that seat. Use `greedyPreview` when that view can reconstruct a throwaway engine state. Mark revealing, random and other-seat nested branches unknown. The view, preview, legal answers and fallback must use only information available to that seat, including values captured by their callbacks.
+15. For one-choice look-ahead use `greedyBot({ probe, fallback, maxProbes, maxRootAnswers })` through `botDriver(bot, view)` (K424). Provide the deciding seat's redacted view and legal answers containing only data available to that seat. Use `greedyPreview` when that view can reconstruct a throwaway engine state. Mark revealing, random and other-seat nested branches unknown. The view, preview, legal answers and fallback must use only information available to that seat, including values captured by their callbacks. See the [complete live and simulation example](greedy.md).
 
 **Common mistakes:**
 - A game whose result differs between a pool run and a single run: module state is carried between games.
-- A driver with `stateful: true` in a hidden-info run: it is skipped, not checked.
+- A driver with `stateful: true` in a hidden-info run: only the legal answers are checked. Add a game-owned paired-world test if you need decision evidence for that driver.
 - Tuning on 1,000 games at low win rates: that is noise; use 3,000 or more and `validate` on fresh seeds (training seeds are refused).
 - A worker module that fails to load: the crash is charged to the next game and every game becomes a crash record.
 - A whole-game report with `--until`: it is not printed (a stopped game is not unfinished).
@@ -138,7 +138,11 @@ console.log(record.result, record.actions)
 
 ## Hidden-shuffle check (K274, G06/T9)
 
-Hidden information is otherwise only a convention. A game gives `reshuffleHidden(state, seat, rng, content)` on `SimGame`: a copy of the state with everything hidden from `seat` randomised but consistent (opponent hand and deck order shuffled together). With `hidden: true` (or a share 0..1; also `fuzz({ hidden })` and the `hidden` request field) the pool asks the deciding driver twice before each checked decision, on the real state and on the reshuffled one, with the same fresh `DriverRng` and the same answers; a different answer fails the game as `hidden-info: at step N seat S ...` and `fuzz` reports a finding of kind `hidden-info` (seed, step, driver). An honest `Bot` sees only the view, so it always passes. The check never touches the game's rng or actions (records are identical on and off) and runs before the real `choose`. It needs a pure `choose`: a driver with `stateful: true` is skipped.
+Give `SimGame.reshuffleHidden(state, seat, rng, content)` a consistent alternate state with the same public information for the deciding seat. For example, redistribute the unseen cards across the opponent hand and deck. The pool passes a separate snapshot of game state and a dedicated shuffle RNG. Keep shared content and callback closures free of mutations.
+
+With `hidden: true` or a sampling share from 0 to 1, the pool enumerates the live and alternate worlds independently, using the same starting `DriverRng` for `SimGame.answers` or `legalAnswers`. It compares the ordered canonical JSON answer lists, including payloads. For a pure driver it compares the live decision with a diagnostic driver’s decision from the alternate state, using each enumeration stream at its post-enumeration position. Only the live answer is applied. The check leaves game RNG and the live answer stream unchanged. Return fresh drivers from the factory when they keep per-instance diagnostics. Mark a driver `stateful: true` when its choices depend on previous calls. `bySeat` carries the flag from any child driver. The pool still compares legal answers.
+
+An answer or choice difference stops the game as `hidden-info` with the seed, step, seat and prompt. Fuzz returns exit 1. A passing run is evidence about the paired worlds and decisions it exercised. It cannot prove that closures are pure or that the reshuffle covers every hidden possibility. Test your redaction directly too.
 
 ```ts
 import { playOne, randomDriver, type SimGame } from '../kit/sim-pool/index'
@@ -157,8 +161,4 @@ console.log(record.error ?? 'no hidden-info finding')
 
 ## Public-view greedy opponent (K424)
 
-`greedyBot` implements `Bot<V,A>` for use with `botDriver` or the live bot adapter. The game's `probe(view, answer)` supplies a complete score, nested public view plus answers and a cutoff score, `unknown`, or `rejected`. Use finite, comparable scores for both preview and fallback. Rejected roots are excluded. Ties use the first answer or seeded `DriverRng` with `ties: 'random'`.
-
-`maxProbes` defaults to 256 and counts calls to `probe` across both levels. Root probes come first. Unknown or unprobed roots use the public fallback. A nested choice is scored only if all its children fit in the remaining budget. If any child is unknown or all are rejected, the choice keeps its parent score. `maxRootAnswers` defaults to 1,000,000 and bounds the linear root scan and fallback calls. Both limits require positive safe integers. An oversized root list raises an error before any scoring. If the game needs to supply a smaller legal answer set, use its normal answer enumeration or sampling policy. The limits count answers and calls. The game owns the cost of constructing answer lists and executing each callback.
-
-`greedyPreview({ rules, content, reconstruct, score, nested, view, answers })` builds a probe using the real kernel on a throwaway reconstruction of the deciding seat's view. Supply public kernel state with placeholder hidden fields and a deterministic placeholder RNG. Return `undefined` from `reconstruct` if public information is insufficient. `nested` identifies prompts that continue the current action. Only same-seat nested prompts are projected and enumerated. A revealing or random transition returns `unknown`. If a game's rules consult hidden information without a reveal or random draw, use a game-owned probe that marks those actions unknown. Run the sim-pool hidden-shuffle check using real engine states and game redaction.
+Use `greedyBot` and `greedyPreview` for one legal choice with bounded same-seat look-ahead and a public fallback. The [greedy guide](greedy.md) gives the full API contract, budget semantics, and an executable example for live play and simulation.

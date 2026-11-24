@@ -1605,6 +1605,13 @@ Plays N whole games of any `GameRules<G>` with a driver, in this thread or on wo
 - **Came from:** warps
 - **Docs:** [README](../components/sim-pool/README.md) ([rules for agents](../components/sim-pool/README.md#rules-for-agents))
 
+### sim-pool/greedy
+
+- **Also called:** Simple public-view AI opponent
+- **Words:** play against computer, simple AI opponent, choose best legal move, bot picks legal move, computer chooses legal action, bounded lookahead, public view opponent, public preview opponent, greedyBot, greedyPreview
+- **Use it when:** Play against the computer, choose the best legal move, or let a bot pick a legal action with bounded engine previews and a public fallback. Use greedyBot and greedyPreview from sim-pool/browser.ts for live play and sim-pool/index.ts for simulation.
+- **Guide:** [greedy.md](../components/sim-pool/greedy.md)
+
 ## small-helpers
 
 Small pure helpers from the outside harvest (K109). No packages; import from `index`.

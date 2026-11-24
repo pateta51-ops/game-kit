@@ -2021,6 +2021,12 @@
       "greedyBot + greedyPreview: score legal moves with bounded public nested look-ahead and a legal fallback"
     ]
   },
+  "sim-pool/greedy": {
+    "title": "Simple public-view AI opponent",
+    "use": "Play against the computer, choose the best legal move, or let a bot pick a legal action with bounded engine previews and a public fallback. Use greedyBot and greedyPreview from sim-pool/browser.ts for live play and sim-pool/index.ts for simulation.",
+    "tags": ["play against computer", "simple AI opponent", "choose best legal move", "bot picks legal move", "computer chooses legal action", "bounded lookahead", "public view opponent", "public preview opponent", "greedyBot", "greedyPreview"],
+    "guide": "greedy.md"
+  },
   "small-helpers": {
     "mechanics": "none: small helpers with no rule in them",
     "use": "Icon with hidden word, text-key check, paired legality fixtures, relation index, base-aware asset paths, plural and number formats.",
