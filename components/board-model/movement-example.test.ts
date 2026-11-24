@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { createBoard } from './index.ts';
 import { directedExample, pushInOneTransition } from './examples/movement.ts';
+import { displaceAlong, reachableMoves } from './movement.ts';
 
 const corridor = createBoard(['a', 'b', 'c', 'd', 'e'].map(id => ({ id })), [['a', 'b'], ['b', 'c'], ['c', 'd'], ['d', 'e']]);
 const positions = Object.freeze({ lead: 'a', other: 'b' });
@@ -11,6 +12,20 @@ describe('documented weighted movement and atomic displacement', () => {
   it('uses a directed zero-cost transit edge through a space that cannot be an endpoint', () => {
     expect(directedExample('a')).toEqual([{ space: 'c', cost: 2, path: ['a', 'b', 'c'] }]);
     expect(directedExample('c')).toEqual([]);
+  });
+
+  it('expands the origin and applies stop independently of endpoint eligibility', () => {
+    const options = { points: 2, cost: () => 1, stop: (space: string) => space === 'a' || space === 'b' };
+    expect(reachableMoves(corridor, 'a', options)).toEqual([{ space: 'b', cost: 1, path: ['a', 'b'] }]);
+    expect(reachableMoves(corridor, 'a', { ...options, end: space => space !== 'b' })).toEqual([]);
+  });
+
+  it('completes forced movement on the final step even if that space would interrupt a longer move', () => {
+    const options = { stop: (space: string) => space === 'b' };
+    expect(displaceAlong(corridor, 'a', ['b', 'c'], { ...options, steps: 1 }))
+      .toEqual({ path: ['a', 'b'], destination: 'b', moved: 1, remaining: 0, stop: 'complete' });
+    expect(displaceAlong(corridor, 'a', ['b', 'c'], { ...options, steps: 2 }))
+      .toEqual({ path: ['a', 'b'], destination: 'b', moved: 1, remaining: 1, stop: 'interrupted' });
   });
 
   it('applies an entire chain together without changing board or position inputs', () => {

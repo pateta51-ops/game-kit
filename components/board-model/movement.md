@@ -7,13 +7,13 @@ Import `reachableMoves`, `displaceAlong`, `displaceChain` and their types from [
 `reachableMoves(board, from, { points, cost, stop?, end? }): Destination[]`
 
 - `points` is a nonnegative safe integer. `cost(from, to)` returns a nonnegative safe integer (zero is allowed) or `null` to block the edge.
-- `stop(space)` returning true prevents expanding the route at that space. `end(space)` returning false excludes the space from the results but permits transit.
+- `stop(space)` returning true prevents expansion after arrival. The origin always expands. `end(space)` returning false excludes a space as a destination. Transit through that space still depends on `stop`.
 - Each destination is `{ space: string, cost: number, path: readonly string[] }`. Its cheapest path includes the origin and destination. The origin is excluded from the destinations. Results are in board order. Equal-cost routes keep the first one found when expanding the frontier in board order.
 - Keep costs and predicates stable for one search. Use step-by-step engine actions when movement changes the available options.
 
 ## Forced movement
 
-`displaceAlong(board, from, line, { steps, blocked?, stop? })` follows a single piece along the sequence of spaces after the origin. `steps` is a nonnegative safe integer. `blocked(from, to)` bars an edge and `stop(space)` interrupts after arriving. It returns `{ path, destination, moved, remaining, stop }` and can report partial movement on `blocked` or `endOfLine`.
+`displaceAlong(board, from, line, { steps, blocked?, stop? })` follows a single piece along the sequence of spaces after the origin. `steps` is a nonnegative safe integer. `blocked(from, to)` bars an edge and `stop(space)` interrupts after arriving when steps remain. It returns `{ path, destination, moved, remaining, stop }` and can report partial movement on `blocked` or `endOfLine`.
 
 `displaceChain(board, from, occupants, { steps, next, blocked?, canPush?, stop? })` plans from a one-piece-per-space `ReadonlyMap<string, string>` of space ID to piece ID. Supply these game policies:
 
