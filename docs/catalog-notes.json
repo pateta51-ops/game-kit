@@ -2477,7 +2477,7 @@
   },
   "llm-playtester": {
     "mechanics": "none: test tooling",
-    "use": "Headless whole-game playtests by Claude through a small game adapter (view, numbered options, choose): finds rules and screen bugs the model flags, adapter throws and illegal option lists, and saves each run's replay for a replay test; capped in dollars per run; --dummy plays the first option for free.",
+    "use": "Headless whole-game playtests by Claude through a small game adapter (view, numbered options, choose): finds rules and screen bugs the model flags, adapter throws and illegal option lists, and saves each run's replay for a replay test; capped in dollars per run; --dummy plays the first option for free. Cheap by default: prompt caching, a single option taken without a call, multi-select and split-points questions answered in one call, --effort low, and a cached reference() lookup table of card texts.",
     "not": "The in-game Claude opponent (a game's own server code) or balance sims at volume; use sim-pool for many cheap games.",
     "title": "Whole-game playtests by Claude",
     "tags": [

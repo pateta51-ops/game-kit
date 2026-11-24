@@ -12,9 +12,15 @@ export interface Ask {
   system: string[];
   prompt: string;
   maxTokens?: number;
+  /** K741: sent as output_config.effort; thinking stays adaptive. */
+  effort?: 'low' | 'medium' | 'high';
 }
 export interface Answer {
   option: number;
+  /** K741: a multi-select answer (item numbers). */
+  picks?: number[];
+  /** K741: a split answer (points per target, in order). */
+  points?: number[];
   reason: string;
   usage: Usage;
   stop_reason?: string | null;
@@ -38,7 +44,7 @@ export const PRICES: Record<string, Price> = {
     over: { at: 100_000, price: { input: 0.5, cacheWrite5m: 0.625, cacheWrite1h: 1, cacheRead: 0.05, output: 2.5 } },
   },
 };
-export const MAX_TOKENS = 16000;
+export const MAX_TOKENS = 8000;
 
 export function cost(usage: Usage, model: string): number {
   let p = PRICES[model];
@@ -72,13 +78,15 @@ const TOOL = {
   input_schema: {
     type: 'object' as const,
     properties: {
-      option: { type: 'integer', description: 'The number of the chosen option.' },
+      option: { type: 'integer', description: 'The number of the chosen option, when the question asks for one option.' },
+      picks: { type: 'array', items: { type: 'integer' }, description: 'When the question asks to pick several: the numbers of all picked items.' },
+      points: { type: 'array', items: { type: 'integer' }, description: 'When the question asks to allocate points: one number per target, in the listed order.' },
       reason: {
         type: 'string',
-        description: 'Why, in one or two sentences; start with BUG: when the rules, the view or the options look wrong.',
+        description: 'Why, in one sentence of at most 20 words; start with BUG: when the rules, the view or the options look wrong.',
       },
     },
-    required: ['option', 'reason'],
+    required: ['reason'],
   },
 };
 
@@ -131,12 +139,15 @@ export function makeChooser(client: Messages, maxTokens = MAX_TOKENS): Chooser {
       ),
       tools: [TOOL],
       tool_choice: { type: 'auto' },
+      ...(ask.effort === undefined ? {} : { output_config: { effort: ask.effort } }),
       messages: [{ role: 'user', content: ask.prompt }],
     });
     const use = result.content.find((b) => b.type === 'tool_use');
-    const input = (use?.input ?? {}) as { option?: unknown; reason?: unknown };
+    const input = (use?.input ?? {}) as { option?: unknown; reason?: unknown; picks?: unknown; points?: unknown };
     return {
       option: typeof input.option === 'number' ? input.option : Number.NaN,
+      ...(Array.isArray(input.picks) ? { picks: input.picks as number[] } : {}),
+      ...(Array.isArray(input.points) ? { points: input.points as number[] } : {}),
       reason: typeof input.reason === 'string' ? input.reason : '',
       stop_reason: result.stop_reason ?? null,
       usage: {

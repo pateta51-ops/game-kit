@@ -2,11 +2,11 @@ import { mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import type { Chooser } from './client.ts';
+import type { Answer, Chooser } from './client.ts';
 import { cost, worstCost, makeChooser, type Body } from './client.ts';
 import { createAdapter } from './fake-adapter.ts';
 import { keyName, loadKey } from './key.ts';
-import { ledgerSpent, main, runMain, runPlaytest } from './playtest.ts';
+import { ledgerSpent, main, runMain, runPlaytest, type GameAdapter } from './playtest.ts';
 
 const tmp = () => mkdtempSync(join(tmpdir(), 'llm-playtester-'));
 const usage = { input_tokens: 100, output_tokens: 50, cache_creation_input_tokens: 0, cache_read_input_tokens: 2000 };
@@ -113,12 +113,12 @@ describe('llm-playtester', () => {
     expect(lines.join('\n')).toContain('raise --max-usd');
   });
 
-  it('K398: max_tokens defaults to 16000, is configurable, and a cut-off reply says so', async () => {
+  it('K398: max_tokens defaults to 8000, is configurable, and a cut-off reply says so', async () => {
     const bodies: Body[] = [];
-    const sdk = { messages: { create: (b: Body) => { bodies.push(b); return Promise.resolve({ content: [{ type: 'thinking' }], stop_reason: 'max_tokens', usage: { input_tokens: 1, output_tokens: 16000 } }); } } };
+    const sdk = { messages: { create: (b: Body) => { bodies.push(b); return Promise.resolve({ content: [{ type: 'thinking' }], stop_reason: 'max_tokens', usage: { input_tokens: 1, output_tokens: 8000 } }); } } };
     const r = await runPlaytest(createAdapter(), { seed: 's', client: makeChooser(sdk), out: tmp(), model: 'claude-sonnet-5-5', log: () => undefined });
-    expect(bodies[0]!.max_tokens).toBe(16000);
-    expect(r.findings[0]).toBe('step 0: reply cut off at max_tokens (16000) before a choose tool call');
+    expect(bodies[0]!.max_tokens).toBe(8000);
+    expect(r.findings[0]).toBe('step 0: reply cut off at max_tokens (8000) before a choose tool call');
     await runPlaytest(createAdapter(), { seed: 's', client: makeChooser(sdk, 2000), maxTokens: 2000, out: tmp(), model: 'claude-sonnet-5-5', log: () => undefined });
     expect(bodies.at(-1)!.max_tokens).toBe(2000);
   });
@@ -311,6 +311,121 @@ describe('heavy queue (K416)', () => {
     };
     expect(await run('fine')).toEqual({ code: 0, ended: ['PLAYTEST ENDED won after 4 turns'] });
     expect(await run('BUG: same')).toEqual({ code: 1, ended: [] });
+  });
+});
+
+describe('K741 cheaper playtests', () => {
+  const base = (opts: () => ReturnType<GameAdapter['options']>) => {
+    let over = false;
+    const got: number[][] = [];
+    const a: GameAdapter = { ...createAdapter(), start: () => { over = false; }, options: opts, choose: () => { over = true; }, answer: (v) => { got.push(v); over = true; }, done: () => (over ? { won: true, summary: 'x' } : null) };
+    return { a, got };
+  };
+  const scripted = (picks: number[], prompts: string[] = []): Chooser => (ask) => {
+    prompts.push(ask.prompt);
+    return Promise.resolve({ option: picks.shift() ?? 0, reason: 'ok', usage });
+  };
+
+  it('a single option is taken without a call and logged auto', async () => {
+    const { a } = base(() => ['only']);
+    const r = await runPlaytest(a, { seed: 's', client: () => Promise.reject(new Error('no call expected')), out: tmp() });
+    expect(r).toMatchObject({ stop: 'done', decisions: 1, costUsd: 0 });
+    expect(JSON.parse(readFileSync(join(r.dir, 'decisions.jsonl'), 'utf8'))).toMatchObject({ auto: true, choice: 0, cost: 0 });
+  });
+
+  const listed = (picks: (Partial<Answer>)[], prompts: string[] = []): Chooser => (ask) => {
+    prompts.push(ask.prompt);
+    return Promise.resolve({ option: Number.NaN, reason: 'ok', usage, ...picks.shift() });
+  };
+  const multi = () => base(() => ({ kind: 'multi', min: 2, max: 3, items: ['a', 'b', 'c', 'd'] }));
+
+  it('multi-select: one call lists the items once; the picks go to answer() sorted', async () => {
+    const { a, got } = multi();
+    const prompts: string[] = [];
+    const r = await runPlaytest(a, { seed: 's', client: listed([{ picks: [3, 1] }], prompts), out: tmp() });
+    expect(prompts).toHaveLength(1);
+    expect(prompts[0]).toContain('0. a\n1. b\n2. c\n3. d');
+    expect(prompts[0]!.split('Current view').length).toBe(2);
+    expect(got).toEqual([[1, 3]]);
+    expect(r).toMatchObject({ stop: 'done', decisions: 1 });
+  });
+
+  it('multi-select: fewer picks than min is retried once with the error', async () => {
+    const { a, got } = multi();
+    const prompts: string[] = [];
+    const r = await runPlaytest(a, { seed: 's', client: listed([{ picks: [1] }, { picks: [0, 2] }], prompts), out: tmp() });
+    expect(prompts[1]).toContain('pick 2 to 3 items, not 1');
+    expect(got).toEqual([[0, 2]]);
+    expect(r.findings).toEqual(['step 0: pick 2 to 3 items, not 1']);
+  });
+
+  it('an invalid list answer twice is a finding and stops the run', async () => {
+    const { a, got } = multi();
+    const r = await runPlaytest(a, { seed: 's', client: listed([{ picks: [0, 0] }, { picks: [0, 9] }]), out: tmp() });
+    expect(got).toEqual([]);
+    expect(r.stop).toBe('finding');
+    expect(r.findings).toEqual(['step 0: picks must be different numbers from 0 to 3', 'step 0: picks must be different numbers from 0 to 3']);
+  });
+
+  it('--max-usd stops before a multi-select call', async () => {
+    const { a } = multi();
+    const r = await runPlaytest(a, { seed: 's', client: () => Promise.reject(new Error('no call expected')), out: tmp(), maxUsd: 0.0001, log: () => undefined });
+    expect(r.stop).toBe('max-usd');
+    expect(r.costUsd).toBe(0);
+  });
+
+  it('split: one call, limits and total checked, then answer()', async () => {
+    const { a, got } = base(() => ({ kind: 'split', points: 5, targets: [{ label: 'x', max: 2 }, { label: 'y' }, { label: 'z', min: 1 }] }));
+    const prompts: string[] = [];
+    const r = await runPlaytest(a, { seed: 's', client: listed([{ points: [3, 1, 1] }, { points: [2, 1, 2] }], prompts), out: tmp() });
+    expect(prompts).toHaveLength(2);
+    expect(prompts[0]).toContain('0: 0-2, 1: 0-5, 2: 1-5');
+    expect(prompts[1]).toContain('x must get 0 to 2, not 3');
+    expect(got).toEqual([[2, 1, 2]]);
+    expect(r.decisions).toBe(1);
+  });
+
+  it('a question that cannot be answered is an adapter finding before any call', async () => {
+    const none = () => Promise.reject(new Error('no call expected'));
+    for (const q of [{ kind: 'multi', min: 3, max: 3, items: ['a', 'b'] }, { kind: 'split', points: 2, targets: [] }, { kind: 'split', points: 9, targets: [{ label: 'x', max: 4 }, { label: 'y', max: 4 }] }] as ReturnType<GameAdapter['options']>[]) {
+      const r = await runPlaytest(base(() => q).a, { seed: 's', client: none, out: tmp() });
+      expect(r.stop).toBe('finding');
+      expect(r.findings[0]).toContain('adapter question invalid');
+    }
+  });
+
+  it('groups print as headers; duplicate labels get #2 and one summary line, not a finding', async () => {
+    const { a } = base(() => [{ label: 'play', group: 'Hand' }, { label: 'play', group: 'Hand' }, { label: 'play', group: 'Board' }]);
+    const prompts: string[] = [];
+    const r = await runPlaytest(a, { seed: 's', client: scripted([1], prompts), out: tmp() });
+    expect(prompts[0]).toContain('[Hand]\n0. play\n1. play #2\n[Board]\n2. play');
+    expect(r.findings).toEqual([]);
+    expect(readFileSync(join(r.dir, 'summary.md'), 'utf8')).toContain('- Duplicate option labels: 1');
+    expect(JSON.parse(readFileSync(join(r.dir, 'decisions.jsonl'), 'utf8'))).toMatchObject({ options: ['play', 'play #2', 'play'] });
+  });
+
+  it('effort (default low, --effort) and cache_control land in the request; reference() is in the cached system block', async () => {
+    const bodies: Body[] = [];
+    const sdk = { messages: { create: (b: Body) => { bodies.push(b); return Promise.resolve({ content: [{ type: 'tool_use', input: { option: 1, reason: 'ok' } }], usage: { input_tokens: 1, output_tokens: 1 } }); } } };
+    await runPlaytest({ ...createAdapter(), reference: () => 'CARD-A: full text' }, { seed: 's', client: makeChooser(sdk), out: tmp(), log: () => undefined });
+    expect(bodies[0]!['output_config']).toEqual({ effort: 'low' });
+    const sys = bodies[0]!['system'] as { text: string; cache_control?: unknown }[];
+    expect(sys.at(-1)).toMatchObject({ cache_control: { type: 'ephemeral' } });
+    expect(sys.at(-1)!.text).toContain('CARD-A: full text');
+    expect(JSON.stringify(bodies[0]!['tools'])).toContain('at most 20 words');
+    bodies.length = 0;
+    await runPlaytest(createAdapter(), { seed: 's', client: makeChooser(sdk), out: tmp(), log: () => undefined, effort: 'high' });
+    expect(bodies[0]!['output_config']).toEqual({ effort: 'high' });
+    expect(await main(['--adapter', join(import.meta.dirname, 'fake-adapter.ts'), '--dummy', '--effort', 'max'], () => undefined, {})).toBe(2);
+    expect(await main(['--adapter', join(import.meta.dirname, 'fake-adapter.ts'), '--dummy', '--effort', 'medium', '--out', tmp()], () => undefined, {})).toBe(0);
+  });
+
+  it('plain string lists still work unchanged (no auto, no ask field)', async () => {
+    const r = await runPlaytest(createAdapter(), { seed: 's', client: scripted([0, 0, 0, 0]), out: tmp() });
+    const rows = readFileSync(join(r.dir, 'decisions.jsonl'), 'utf8').trim().split('\n').map((l) => JSON.parse(l) as Record<string, unknown>);
+    expect(rows).toHaveLength(4);
+    for (const x of rows) expect(x).not.toHaveProperty('auto');
+    expect(rows[0]!['options']).toEqual(['add 1', 'add 2']);
   });
 });
 

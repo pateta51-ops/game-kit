@@ -536,9 +536,12 @@
   { "q": "barred button with a reason", "first": "guarded-button" },
   { "q": "log why a phase was skipped", "first": "turn-flow" },
   { "q": "skipped phase event names the card", "first": "turn-flow" },
+  { "q": "cheap llm playtest", "first": "llm-playtester" },
+  { "q": "llm player multi select split points", "first": "llm-playtester" },
+  { "q": "lookup table of card texts for llm playtest", "first": "llm-playtester" },
+  { "q": "look ahead greedy player", "first": "opponent" },
+  { "q": "greedy driver", "first": "opponent" },
   { "q": "cheat options at set-up allowCheats", "first": "cheat-options" },
   { "q": "dev cheats every round start", "first": "cheat-options" },
-  { "q": "cheated mark", "first": "cheat-options" },
-  { "q": "look ahead greedy player", "first": "opponent" },
-  { "q": "greedy driver", "first": "opponent" }
+  { "q": "cheated mark", "first": "cheat-options" }
 ]
