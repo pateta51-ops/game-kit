@@ -1,7 +1,7 @@
 /* K219: structure only (positions, stack edges, fan geometry, backdrop). The look is the game's, on the [data-part] hooks.
-   Sizes: --kp-card-w, --kp-card-h (the card), --kp-step (how far each edge peeks), --kp-u (one table unit). Zero specificity. */
+   K743 Sizes: --kp-card-w, --kp-card-h (the card), --kp-step (how far each edge peeks, 1.5px fixed by default: owner 24 Nov), --kp-u (one table unit). Zero specificity. */
 :where([data-part='stack']) {
-  --kp-step: calc(var(--kp-u, 1vh) * 0.22);
+  --kp-step: 1.5px;
   position: relative;
   flex: none;
   box-sizing: border-box;
