@@ -161,7 +161,8 @@ export function specMain(kit, args) {
   if (resolved.unresolved.length) throw new Error('unresolved mechanics: '+resolved.unresolved.join(', '))
   if (fs.existsSync(flags.dir) && fs.readdirSync(flags.dir).length) throw new Error('generation requires an empty or new directory')
   const {dir, ...options} = flags
-  newGame({...options,dir,id:resolved.id,name:resolved.name,kit,ref:resolved.commit,remote:false,components:resolved.components.map(c=>c.name),scaffold:o=>{
+  newGame({...options,dir,id:resolved.id,name:resolved.name,kit,ref:resolved.ref,remote:false,components:resolved.components.map(c=>c.name),scaffold:o=>{
+    if (resolveAt(kit,resolved.ref,spec).commit!==resolved.commit) throw new Error('kit ref moved after resolution')
     const result=scaffold({...o,install:false,git:false})
     const lock=JSON.parse(fs.readFileSync(path.join(o.dir,'kit/kit.lock.json'),'utf8'))
     if (lock.commit!==resolved.commit || resolved.components.some(c=>!Object.hasOwn(lock.components,c.name))) throw new Error('generated kit does not match resolved assembly')
