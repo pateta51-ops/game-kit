@@ -13,6 +13,6 @@ setStateFreezing(false); // a simulation never keeps a state
 setInvariantChecking(input.invariants);
 port.on('message', (c: WorkerCommand) => {
   if (c.type === 'stop') port.close();
-  else port.postMessage({ type: 'record', record: playOne(game, content, c.spec, input.until, { view: input.view, hasten: input.hasten, hidden: input.hidden }) } satisfies WorkerMessage);
+  else port.postMessage({ type: 'record', record: playOne(game, content, c.spec, input.until, { view: input.view, hasten: input.hasten, debug: input.debug, hidden: input.hidden }) } satisfies WorkerMessage);
 });
 port.postMessage({ type: 'ready' } satisfies WorkerMessage);

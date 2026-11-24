@@ -22,6 +22,7 @@ export interface RunRequest {
   readonly view?: boolean | undefined;
   /** K101: apply the game's `hasten` action after every N actions. */
   readonly hasten?: number | undefined;
+  readonly debug?: number | undefined;
   /** K274: the hidden-shuffle check (see `PlayOptions.hidden`). */
   readonly hidden?: boolean | number | undefined;
   /** K273: a game that runs longer than this many ms (wall clock) is stopped and recorded as `timeout`; its worker is terminated. Default off. Games then run on worker threads, never in this one (a loop cannot be interrupted there). */
@@ -34,6 +35,7 @@ export interface WorkerInput {
   readonly until?: number | undefined;
   readonly view?: boolean | undefined;
   readonly hasten?: number | undefined;
+  readonly debug?: number | undefined;
   readonly hidden?: boolean | number | undefined;
 }
 export type WorkerCommand = { type: 'play'; spec: GameSpec } | { type: 'stop' };
@@ -52,7 +54,7 @@ export async function runInThread(request: RunRequest, onRecord?: (r: SimRecord)
   setStateFreezing(false);
   try {
     return request.specs.map((spec) => {
-      const r = playOne(game, content, spec, request.until, { view: request.view, hasten: request.hasten, hidden: request.hidden });
+      const r = playOne(game, content, spec, request.until, { view: request.view, hasten: request.hasten, debug: request.debug, hidden: request.hidden });
       onRecord?.(r);
       return r;
     });
@@ -78,7 +80,7 @@ export const timeoutRecord = (spec: GameSpec, ms: number): SimRecord<never> => (
 });
 
 async function lane(request: RunRequest, next: () => GameSpec | undefined, collect: (r: SimRecord) => void): Promise<void> {
-  const input: WorkerInput = { module: request.module, invariants: request.invariants ?? true, until: request.until, view: request.view, hasten: request.hasten, hidden: request.hidden };
+  const input: WorkerInput = { module: request.module, invariants: request.invariants ?? true, until: request.until, view: request.view, hasten: request.hasten, debug: request.debug, hidden: request.hidden };
   for (;;) {
     let held: GameSpec | undefined;
     let stopped = false;

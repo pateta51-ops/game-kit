@@ -20,7 +20,7 @@ export function replayStep<G extends GameTypes, S, O = unknown>(
   content: G['content'],
   spec: GameSpec,
   step: number,
-  opts: Pick<PlayOptions, 'view' | 'hasten'> = {},
+  opts: Pick<PlayOptions, 'view' | 'hasten' | 'debug'> = {},
   top = 15,
 ): StepReport {
   const all: { step: number; ms: StepMs }[] = [];
