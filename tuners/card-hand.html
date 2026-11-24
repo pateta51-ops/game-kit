@@ -265,6 +265,139 @@ span[data-part='strip'] {
   }
 }
 
+/* ===== game-kit components/card-pile/card-pile.css, inlined by tuners/build.mjs ===== */
+/* K219: structure only (positions, stack edges, fan geometry, backdrop). The look is the game's, on the [data-part] hooks.
+   Sizes: --kp-card-w, --kp-card-h (the card), --kp-step (how far each edge peeks), --kp-u (one table unit). Zero specificity. */
+:where([data-part='stack']) {
+  --kp-step: calc(var(--kp-u, 1vh) * 0.22);
+  position: relative;
+  flex: none;
+  box-sizing: border-box;
+  width: var(--kp-card-w, 8em);
+  height: var(--kp-card-h, calc(var(--kp-card-w, 8em) * 1.4));
+}
+:where([data-part='stack'][data-landscape='true']) {
+  width: var(--kp-card-h, calc(var(--kp-card-w, 8em) * 1.4));
+  height: var(--kp-card-w, 8em);
+}
+:where([data-part='stack-card']) {
+  position: absolute;
+  inset: 0;
+  z-index: calc(20 - var(--k));
+  transform: translate(calc(var(--k) * var(--kp-step) * -1), calc(var(--k) * var(--kp-step) * -1));
+  pointer-events: none;
+}
+:where([data-part='stack-hit']) {
+  position: absolute;
+  left: calc(var(--edges) * var(--kp-step) * -1);
+  top: calc(var(--edges) * var(--kp-step) * -1);
+  right: 0;
+  bottom: 0;
+  z-index: 24;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+}
+:where([data-part='stack-over']) {
+  position: absolute;
+  inset: 0;
+  z-index: 26;
+  pointer-events: none;
+}
+:where([data-part='stack-hit']:disabled) {
+  cursor: default;
+}
+:where([data-pile-fan]) {
+  position: fixed;
+  inset: 0;
+  z-index: var(--kp-z, 30);
+  pointer-events: none;
+}
+:where([data-pile-fan] > *) {
+  pointer-events: auto;
+}
+:where([data-part='backdrop']) {
+  position: fixed;
+  inset: 0;
+  background: rgb(8 10 14 / 0.3);
+  backdrop-filter: grayscale(0.9) brightness(0.45);
+}
+:where([data-part='fan-cards']) {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+:where([data-part='fan-card']) {
+  position: fixed;
+  width: var(--kp-card-w);
+  height: var(--kp-card-h);
+  transform-origin: 50% 100%;
+  pointer-events: none;
+  will-change: transform;
+}
+:where([data-part='fan-card'][data-lifted='true']) {
+  z-index: 1000 !important;
+}
+:where([data-part='fan-turn']) {
+  transform: translateX(var(--spread)) rotate(var(--turn));
+  transform-origin: 50% 100%;
+  transition: transform var(--kp-hover-ms, 0ms) ease-out;
+  pointer-events: auto;
+}
+:where([data-part='fan-lift']) {
+  transform-origin: 50% 100%;
+  transition: transform var(--kp-hover-ms, 0ms) ease-out;
+  pointer-events: none;
+}
+:where([data-part='fan-card'][data-lifted='true'] [data-part='fan-lift']) {
+  transform: rotate(calc(var(--turn) * -1)) translate(var(--lift-x), calc(var(--kp-u, 1vh) * -3 + var(--lift-y))) scale(var(--kp-lift-scale));
+}
+:where([data-part='fan-hit']) {
+  display: block;
+  width: var(--kp-card-w);
+  height: var(--kp-card-h);
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  pointer-events: auto;
+  cursor: default;
+}
+:where([data-part='fan-hit'][data-mark]:not([data-mark='barred'])) {
+  cursor: pointer;
+}
+:where([data-pile-fan][data-opening='true'] [data-part='fan-turn']),
+:where([data-pile-fan][data-mode='gather'] [data-part='fan-turn']) {
+  pointer-events: none;
+}
+:where([data-part='grid']) {
+  display: grid;
+  grid-template-columns: repeat(var(--kp-grid-cols, 3), 1fr);
+  gap: var(--kp-grid-gap, 0.5em);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+:where([data-part='grid-card']) {
+  position: relative;
+  display: block;
+  width: 100%;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+}
+:where([data-part='grid-top']) {
+  position: absolute;
+  top: 0;
+  left: 0;
+}
+
+.stacks { display: flex; gap: 48px; align-items: flex-end; justify-content: center; flex-wrap: wrap; padding: 40px 12px 24px; }
+.stacks figure { margin: 0; display: grid; gap: 10px; justify-items: center; color: var(--muted); font-size: 12px; }
+.back { width: 100%; height: 100%; border-radius: 7%; box-sizing: border-box; border: 2px solid rgb(255 255 255 / .55); background: repeating-linear-gradient(45deg, #2a3a5c 0 6px, #22304d 6px 12px); box-shadow: 0 1px 2px rgb(0 0 0 / .4); }
 </style>
 
 <div class="wrap">
@@ -287,6 +420,15 @@ span[data-part='strip'] {
   </div>
 
   <div class="ctls" id="ctls"></div>
+
+  <h2 style="font:700 18px var(--display);margin:8px 0 0">Card stacks (card-pile)</h2>
+  <p class="sub">The kit's draw and discard stacks. The edge is how far each card under the top one peeks out. The kit default grows with the screen height (0.22% of it); "fixed" uses the pixels below on every screen.</p>
+  <div class="table" style="padding:0"><div class="stacks" id="stacks"></div></div>
+  <div class="ctls"><fieldset><legend>Stack</legend>
+    <label><input type="checkbox" id="k-fixed"> Fixed size (off = kit default, grows with screen)</label>
+    <div class="ctl"><label for="k-px">Edge under the top card</label><output id="k-pxo"></output><input id="k-px" type="range" min="0.5" max="12" step="0.5"><small id="k-now"></small></div>
+    <div class="ctl"><label for="k-n">Cards in the stack</label><output id="k-no"></output><input id="k-n" type="range" min="1" max="40" step="1"></div>
+  </fieldset></div>
 
   <div>
     <div class="codebar"><h2>These settings in code</h2><button type="button" id="copy">Copy</button></div>
@@ -609,4 +751,193 @@ function render() {
 --hand-stand: ${s.stand}px;`;
 }
 build(); render();
+</script>
+<script>
+"use strict";
+var PILE = (() => {
+  var __defProp = Object.defineProperty;
+  var __getOwnPropDesc = Object.getOwnPropertyDescriptor;
+  var __getOwnPropNames = Object.getOwnPropertyNames;
+  var __hasOwnProp = Object.prototype.hasOwnProperty;
+  var __export = (target, all) => {
+    for (var name in all)
+      __defProp(target, name, { get: all[name], enumerable: true });
+  };
+  var __copyProps = (to, from, except, desc) => {
+    if (from && typeof from === "object" || typeof from === "function") {
+      for (let key of __getOwnPropNames(from))
+        if (!__hasOwnProp.call(to, key) && key !== except)
+          __defProp(to, key, { get: () => from[key], enumerable: !(desc = __getOwnPropDesc(from, key)) || desc.enumerable });
+    }
+    return to;
+  };
+  var __toCommonJS = (mod) => __copyProps(__defProp({}, "__esModule", { value: true }), mod);
+
+  // components/card-pile/fan.ts
+  var fan_exports = {};
+  __export(fan_exports, {
+    EASE_FLIGHT: () => EASE_FLIGHT,
+    EDGE_CAP: () => EDGE_CAP,
+    LIFT: () => LIFT,
+    MAX_STAGGER_MS: () => MAX_STAGGER_MS,
+    MOTION: () => MOTION,
+    arcsFor: () => arcsFor,
+    bottomCentre: () => bottomCentre,
+    curve: () => curve,
+    edgesFor: () => edgesFor,
+    fanPlaces: () => fanPlaces,
+    flight: () => flight,
+    gatherFlight: () => gatherFlight,
+    holesPath: () => holesPath,
+    liftScale: () => liftScale,
+    liftShift: () => liftShift,
+    px: () => px,
+    spreadOf: () => spreadOf,
+    stepFor: () => stepFor,
+    totalMs: () => totalMs
+  });
+  var SHAPE = {
+    /** The share of a card's width that shows beside the next card in an arc. */
+    advance: 0.66,
+    /** The turn between two cards of a short arc, and the most an arc turns from end to end. */
+    turn: 9,
+    spread: 50,
+    /** How far each arc lies below the one behind it, in card heights. */
+    rowDrop: 0.5
+  };
+  var rad = (deg) => deg * Math.PI / 180;
+  function arcsFor(n, w, width, margin) {
+    const perArc = Math.max(1, Math.floor((width - 2 * margin - w) / (SHAPE.advance * w)) + 1);
+    return Math.max(1, Math.ceil(n / perArc));
+  }
+  function fanPlaces(n, pile, u, screen, ceiling) {
+    if (n <= 0) return [];
+    const w = pile.w;
+    const h = pile.h;
+    const margin = 1.5 * u;
+    const rows = arcsFor(n, w, screen.width, margin);
+    const per = Math.ceil(n / rows);
+    const advance = SHAPE.advance * w;
+    const raw = [];
+    for (let row = 0; row < rows; row += 1) {
+      const m = Math.min(per, n - row * per);
+      const step = m <= 1 ? 0 : Math.min(SHAPE.turn, SHAPE.spread / (m - 1));
+      const radius = step === 0 ? 0 : advance / Math.sin(rad(step));
+      for (let col = 0; col < m; col += 1) {
+        const turn = (col - (m - 1) / 2) * step;
+        const foot = step === 0 ? { x: (col - (m - 1) / 2) * advance, y: 0 } : { x: radius * Math.sin(rad(turn)), y: radius * (1 - Math.cos(rad(turn))) };
+        raw.push({ foot: { x: foot.x, y: foot.y + row * SHAPE.rowDrop * h }, turn, row, col });
+      }
+    }
+    let minX = Infinity;
+    let maxX = -Infinity;
+    let minY = Infinity;
+    let maxY = -Infinity;
+    for (const { foot, turn } of raw) {
+      for (const [cx, cy] of [
+        [-w / 2, 0],
+        [w / 2, 0],
+        [-w / 2, -h],
+        [w / 2, -h]
+      ]) {
+        const x = foot.x + cx * Math.cos(rad(turn)) - cy * Math.sin(rad(turn));
+        const y = foot.y + cx * Math.sin(rad(turn)) + cy * Math.cos(rad(turn));
+        minX = Math.min(minX, x);
+        maxX = Math.max(maxX, x);
+        minY = Math.min(minY, y);
+        maxY = Math.max(maxY, y);
+      }
+    }
+    const centre = pile.x + w / 2;
+    const dx = Math.max(margin - minX, Math.min(centre - (minX + maxX) / 2, screen.width - margin - maxX));
+    const above = pile.y + 4 * u - maxY;
+    const below = pile.y + h - 2 * u - minY;
+    const dy0 = minY + above >= margin ? above : below;
+    const floor = Math.min(screen.height - margin, ceiling ?? Infinity);
+    const dy = Math.max(margin - minY, Math.min(dy0, floor - maxY));
+    return raw.map(({ foot, turn, row, col }) => ({
+      box: { x: foot.x + dx - w / 2, y: foot.y + dy - h, w, h },
+      turn,
+      row,
+      col
+    }));
+  }
+  var EDGE_CAP = 8;
+  var edgesFor = (count) => count <= 1 ? 0 : Math.min(EDGE_CAP, count - 1);
+  var MOTION = { fly: 520, flyStep: 70, backdrop: 260, hover: 160 };
+  var MAX_STAGGER_MS = 500;
+  var LIFT = { lift: 3, lifted: 30, rise: 6 };
+  var EASE_FLIGHT = "cubic-bezier(0.35, 0, 0.25, 1)";
+  var px = (n) => `${String(Math.round(n * 100) / 100)}px`;
+  var bottomCentre = (b) => ({ x: b.x + b.w / 2, y: b.y + b.h });
+  var stepFor = (n) => Math.min(MOTION.flyStep, MAX_STAGGER_MS / Math.max(1, n - 1));
+  var totalMs = (n, speed) => (MOTION.fly + (n - 1) * stepFor(n)) * speed;
+  var curve = (a, c, b, t) => ({
+    x: (1 - t) ** 2 * a.x + 2 * (1 - t) * t * c.x + t ** 2 * b.x,
+    y: (1 - t) ** 2 * a.y + 2 * (1 - t) * t * c.y + t ** 2 * b.y
+  });
+  function flight(place, i, n, u) {
+    const start = bottomCentre(place.from);
+    const end = bottomCentre(place.box);
+    const pull = { x: start.x + (end.x - start.x) * 0.2, y: Math.min(start.y - place.from.h, end.y - place.box.h) - LIFT.rise * u };
+    const small = place.from.w / place.box.w;
+    return Array.from({ length: 9 }, (_, k) => {
+      const t = k / 8;
+      const at = curve(start, pull, end, t);
+      const scale = (small + (1 - small) * t) * (1 + 0.05 * Math.sin(Math.PI * t));
+      return {
+        offset: t,
+        transform: `translate(${px(at.x - end.x)}, ${px(at.y - end.y)}) rotate(${String(-place.turn * (1 - t))}deg) scale(${String(scale)})`,
+        zIndex: Math.round(n - i + 2 * i * t)
+      };
+    });
+  }
+  var gatherFlight = (place, i, n, u) => flight(place, i, n, u).reverse().map((k) => ({ ...k, offset: 1 - (k.offset ?? 0) }));
+  function spreadOf(place, lifted, u) {
+    if (lifted === void 0 || place === lifted || place.row !== lifted.row) return 0;
+    const far = Math.abs(place.col - lifted.col);
+    return Math.sign(place.col - lifted.col) * Math.max(0, 2.6 - 0.8 * (far - 1)) * u;
+  }
+  var liftScale = (place, u) => place.box.h > 0 ? LIFT.lifted * u / place.box.h : 1;
+  function liftShift(place, u, screen) {
+    const foot = bottomCentre(place.box);
+    const w = place.box.w * liftScale(place, u);
+    const h = place.box.h * liftScale(place, u);
+    const left = foot.x - w / 2;
+    const top = foot.y - LIFT.lift * u - h;
+    return {
+      x: Math.max(0, u - left) - Math.max(0, left + w - (screen.width - u)),
+      y: Math.max(0, u - top) - Math.max(0, foot.y - (screen.height - u))
+    };
+  }
+  function holesPath(holes) {
+    if (holes.length === 0) return "none";
+    const rect = (b) => `${px(b.x)} ${px(b.y)}, ${px(b.x + b.w)} ${px(b.y)}, ${px(b.x + b.w)} ${px(b.y + b.h)}, ${px(b.x)} ${px(b.y + b.h)}, ${px(b.x)} ${px(b.y)}, 0 0`;
+    return `polygon(evenodd, 0 0, 100% 0, 100% 100%, 0 100%, 0 0, ${holes.map(rect).join(", ")})`;
+  }
+  return __toCommonJS(fan_exports);
+})();
+
+const K = { fixed: false, px: 2, n: 12 };
+const $k = (id) => document.getElementById(id);
+function stack(n, label) {
+  const edges = PILE.edgesFor(n);
+  const cards = Array.from({ length: edges }, (_, j) => edges - j).map((k) => `<div data-part="stack-card" style="--k:${k}"><div class="back"></div></div>`).join('');
+  return `<figure><div data-part="stack" style="--kp-card-w:${s.w}px;--kp-card-h:${s.w * 1.4}px;--edges:${edges}${K.fixed ? `;--kp-step:${K.px}px` : ''}">${cards}<div data-part="stack-card" style="--k:0"><div class="cf" style="background:linear-gradient(160deg,hsl(28 45% 46%),hsl(28 40% 24%))">Top<i>${n} cards</i></div></div></div><figcaption>${label}</figcaption></figure>`;
+}
+function renderStacks() {
+  $k('k-fixed').checked = K.fixed; $k('k-px').value = K.px; $k('k-n').value = K.n;
+  $k('k-px').disabled = !K.fixed;
+  $k('k-pxo').textContent = K.fixed ? K.px + 'px' : 'kit default';
+  $k('k-no').textContent = K.n;
+  const now = innerHeight * 0.0022;
+  $k('k-now').textContent = `Kit default on this window: ${now.toFixed(1)}px (${innerHeight}px tall). On a 4K screen in full screen: about 4.7px. At most ${PILE.EDGE_CAP} edges show.`;
+  $k('stacks').innerHTML = stack(K.n, 'Draw pile') + stack(Math.max(1, Math.round(K.n / 3)), 'Discard') + stack(2, 'Two cards');
+}
+$k('k-fixed').addEventListener('change', (e) => { K.fixed = e.target.checked; renderStacks(); });
+$k('k-px').addEventListener('input', (e) => { K.px = Number(e.target.value); renderStacks(); });
+$k('k-n').addEventListener('input', (e) => { K.n = Number(e.target.value); renderStacks(); });
+addEventListener('resize', renderStacks);
+document.querySelector('.presets').addEventListener('click', renderStacks); document.getElementById('ctls').addEventListener('input', renderStacks);
+renderStacks();
 </script>
