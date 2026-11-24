@@ -95,6 +95,16 @@ describe('game over solo (K301)', () => {
     rerender(<GameOver result={gameResult({ a: 1 })} standings={false} />);
     expect(container.querySelector('ol')).toBeNull();
   });
+  it('K738: the cheated mark shows only when set, with its label or a node', () => {
+    const { container, rerender } = render(<GameOver result={solo} />);
+    expect(container.querySelector('[data-part="game-over-cheated"]')).toBeNull();
+    rerender(<GameOver result={solo} cheated={false} />);
+    expect(container.querySelector('[data-part="game-over-cheated"]')).toBeNull();
+    rerender(<GameOver result={solo} cheated />);
+    expect(container.querySelector('[data-part="game-over-cheated"]')?.textContent).toBe('Cheats on');
+    rerender(<GameOver result={solo} cheated={<i>Dev cheats</i>} />);
+    expect(container.querySelector('[data-part="game-over-cheated"]')?.textContent).toBe('Dev cheats');
+  });
 });
 
 describe('banner', () => {

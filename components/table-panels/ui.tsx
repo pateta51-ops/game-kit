@@ -61,7 +61,7 @@ export function OpponentTurnPanel({ turn, onSkip, hidden = 'Something you cannot
   );
 }
 
-type OverActions = { onRematch?: (() => void) | undefined; onReview?: (() => void) | undefined; onHome?: (() => void) | undefined; labels?: { tie?: string; winner?: string; rematch?: string; review?: string; home?: string } ; extra?: ReactNode };
+type OverActions = { onRematch?: (() => void) | undefined; onReview?: (() => void) | undefined; onHome?: (() => void) | undefined; labels?: { tie?: string; winner?: string; rematch?: string; review?: string; home?: string; cheated?: string } ; extra?: ReactNode };
 
 export function GameOverActions({ onRematch, onReview, onHome, labels = {}, extra }: OverActions) {
   return (
@@ -75,14 +75,15 @@ export function GameOverActions({ onRematch, onReview, onHome, labels = {}, extr
 }
 
 // title replaces the default title; reason shows under it; standings={false} (or none) hides the list; actions={false} leaves the buttons to a <GameOverActions/> placed elsewhere
-export function GameOver({ result, seatName = (s) => s, breakdown, onRematch, onReview, onHome, labels = {}, title, reason, standings = true, actions = true, extra }: {
+export function GameOver({ result, seatName = (s) => s, breakdown, onRematch, onReview, onHome, labels = {}, title, reason, standings = true, actions = true, extra, cheated }: {
   result: Omit<GameResult, 'standings'> & { standings: readonly { seat: string; rank: number; score?: number }[] }; seatName?: (s: string) => ReactNode; breakdown?: (seat: string) => ReactNode;
-  title?: ReactNode; reason?: ReactNode; standings?: boolean; actions?: boolean;
+  title?: ReactNode; reason?: ReactNode; standings?: boolean; actions?: boolean; cheated?: ReactNode;
 } & OverActions) {
   return (
     <section data-part="game-over" data-tied={result.tied}>
       <h2>{title ?? (result.tied ? (labels.tie ?? 'Tie') : <>{labels.winner ?? 'Winner'}: {seatName(result.winners[0] ?? '')}</>)}</h2>
       {reason != null ? <p data-part="game-over-reason">{reason}</p> : null}
+      {cheated != null && cheated !== false ? <p data-part="game-over-cheated">{cheated === true ? (labels.cheated ?? 'Cheats on') : cheated}</p> : null}
       {standings && result.standings.length ? <ol>{result.standings.map((s) => <li key={s.seat} data-seat={s.seat} data-rank={s.rank}><span>{seatName(s.seat)}</span> {s.score != null ? <b>{s.score}</b> : null}{breakdown ? <div data-part="breakdown">{breakdown(s.seat)}</div> : null}</li>)}</ol> : null}
       {actions ? <GameOverActions onRematch={onRematch} onReview={onReview} onHome={onHome} labels={labels} extra={extra} /> : null}
     </section>

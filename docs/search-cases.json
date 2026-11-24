@@ -467,12 +467,6 @@
   { "q": "kit gap claim needs search", "first": "plan-checker" },
   { "q": "doc says not in the kit", "first": "plan-checker" },
   { "q": "check plan claims against kit", "first": "plan-checker" },
-  { "q": "flash once and go dark", "first": "glow" },
-  { "q": "glow ramp up from dark", "first": "glow" },
-  { "q": "single flash glow", "first": "glow" },
-  { "q": "force a dice roll in a test", "first": "dice-tray" },
-  { "q": "dice tray roll name override", "first": "dice-tray" },
-  { "q": "named dice roll", "first": "dice-tray" },
   { "q": "animation queue", "first": "motion-frame" },
   { "q": "event queue for animations", "first": "motion-frame" },
   { "q": "timer for bot thinking delay", "first": "paced-view" },
@@ -542,6 +536,9 @@
   { "q": "barred button with a reason", "first": "guarded-button" },
   { "q": "log why a phase was skipped", "first": "turn-flow" },
   { "q": "skipped phase event names the card", "first": "turn-flow" },
+  { "q": "cheat options at set-up allowCheats", "first": "cheat-options" },
+  { "q": "dev cheats every round start", "first": "cheat-options" },
+  { "q": "cheated mark", "first": "cheat-options" },
   { "q": "look ahead greedy player", "first": "opponent" },
   { "q": "greedy driver", "first": "opponent" }
 ]

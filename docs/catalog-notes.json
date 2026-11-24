@@ -2746,5 +2746,29 @@
     "visible": true,
     "release": 1,
     "gameSupplies": "The label, the look of the button and its guard."
+  },
+  "cheat-options": {
+    "use": "Dev cheats a game declares as data at set-up (number or toggle; once at set-up or every round start), applied only as recorded debug set edits behind allowCheats, with set-up form fields and a cheated mark.",
+    "not": "Debug edits typed by hand (debug-console) or rigging a sim deck or hand.",
+    "title": "Cheat options at set-up",
+    "tags": [
+      "cheat",
+      "cheats",
+      "allowCheats",
+      "cheated",
+      "dev",
+      "setup",
+      "mark",
+      "bonus"
+    ],
+    "visible": false,
+    "release": 1,
+    "gameSupplies": "The cheat list (paths and amounts) and the options that hold the choice.",
+    "mechanics": "none: developer tooling, no rule",
+    "hooks": [
+      "CheatDef + cheatActions: cheats as data, applied as debug edits",
+      "cheatFields + cheatsFrom: the set-up form fields",
+      "cheatedOf + cheatProblem: the cheated mark and the set-up check"
+    ]
   }
 }

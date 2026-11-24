@@ -8,6 +8,7 @@ import { advance, noSteps, pushSteps, skip, type Steps } from '../paced-view/ind
 import { legalAnswers } from '../sim-pool/play.ts';
 import { DriverRng } from '../sim-pool/rng.ts';
 import type { Bot } from '../sim-pool/bot.ts';
+import { cheatActions, cheatedOf, roundOf, type CheatChoice, type CheatConfig } from '../cheat-options/index.ts';
 
 export type SeatId = string | number;
 
@@ -19,7 +20,7 @@ export interface GameDef<G extends GameTypes, V, S extends SeatId = SeatId> {
   /** A new game's options and rules from a seed. */
   readonly start: (seed: string) => { options: G['options']; rules: G['rules'] };
   /** What one seat sees (build it from card-zones `viewOf`); the opponent and the screen read only this. */
-  readonly view: (state: G['state'], seat: S, ctx?: { readonly undoUsed: boolean }) => V;
+  readonly view: (state: G['state'], seat: S, ctx?: { readonly undoUsed: boolean; readonly cheated?: boolean }) => V;
   /** Answers the settings give without asking (prompt-host `autoAnswer`), or null to ask. Default: always ask. */
   readonly forced?: Forced<G['prompt']>;
   /** The opponent: picks for its open prompt from its own view only. K271: `rng` is keyed `<options.seed>|opponent|<prompt id>`, as sim-pool's for driver `opponent`. */
@@ -29,6 +30,8 @@ export interface GameDef<G extends GameTypes, V, S extends SeatId = SeatId> {
   /** The game's log words per event type (table-panels `logLines`). */
   readonly words?: Readonly<Record<string, string>>;
   readonly format?: SaveFormat;
+  /** K738: cheat options (cheat-options): applied by the store as recorded debug edits, joined to the step that made them due. */
+  readonly cheats?: CheatConfig<G['options'], G['state']>;
 }
 
 export const defineGame = <G extends GameTypes, V, S extends SeatId = SeatId>(def: GameDef<G, V, S>): GameDef<G, V, S> => def;
@@ -43,6 +46,8 @@ export interface GameSnap<G extends GameTypes, V> {
   readonly state: G['state'];
   /** K724: Free-mode undo was used in this game (history's flag; kept by saves). */
   readonly undoUsed: boolean;
+  /** K738: a debug edit (a cheat or the console) was played in this game (from the actions, so saves keep it). */
+  readonly cheated: boolean;
   /** The player's seat view of the live state. */
   readonly view: V;
   /** paced-view queue of the last click (and the opponent's answers after it). */
@@ -99,11 +104,17 @@ export function createGameStore<G extends GameTypes, V, S extends SeatId>(def: G
   let snap: GameSnap<G, V>;
 
   // the opponent's prompts and the player's forced ones, each joined to the top step, until the player must answer
-  function settle(h: StepHistory<G>, evs: readonly G['event'][], options: G['options']): { h: StepHistory<G>; evs: G['event'][]; error: string | null } {
+  // K738: with `round` (cheats on) the round cheats are played at each round edge before anything else acts, and forced answers go one at a time
+  function settle(h: StepHistory<G>, evs: readonly G['event'][], options: G['options'], round?: { last: number | undefined }): { h: StepHistory<G>; evs: G['event'][]; error: string | null } {
     const out = [...evs];
     for (let i = 0; i < 1000; i += 1) {
       const p = h.state.prompt as G['prompt'] | null;
       if (p === null) break;
+      if (round !== undefined) {
+        const c = cheat(h, options, 'round', round);
+        if (c.error !== null) return { h, evs: out, error: c.error };
+        h = c.h;
+      }
       const theirs = p.seat !== undefined && seatKey(p.seat) !== seatKey(me());
       if (theirs && def.opponent !== undefined) {
         const r = extendStep(def.rules, h, answerOf(p.id, def.opponent(def.view(h.state, p.seat as S), p, new DriverRng(`${String((options as { seed?: string }).seed ?? '')}|opponent|${String(p.id)}`))), def.content);
@@ -112,8 +123,8 @@ export function createGameStore<G extends GameTypes, V, S extends SeatId>(def: G
         out.push(...r.events);
         continue;
       }
-      const f = sendForced(def.rules, h, def.content, forced, { seat: me() });
-      if (f.capped) return { h: f.history, evs: [...out, ...f.events], error: f.error };
+      const f = sendForced(def.rules, h, def.content, forced, round === undefined ? { seat: me() } : { seat: me(), cap: 1 });
+      if (f.capped && round === undefined) return { h: f.history, evs: [...out, ...f.events], error: f.error };
       if (f.history === h) return { h, evs: out, error: null };
       h = f.history;
       out.push(...f.events);
@@ -126,17 +137,34 @@ export function createGameStore<G extends GameTypes, V, S extends SeatId>(def: G
     for (const fn of subs) fn();
   };
   const make = (h: StepHistory<G>, steps: Steps<V, G['event']>, options: G['options'], rules: G['rules'], error: string | null): GameSnap<G, V> => ({
-    history: h, state: h.state, undoUsed: h.undoUsed, view: def.view(h.state, me(), { undoUsed: h.undoUsed }), steps, options, rules, error,
+    history: h, state: h.state, undoUsed: h.undoUsed, cheated: cheatedOf(h.actions), view: def.view(h.state, me(), { undoUsed: h.undoUsed, cheated: cheatedOf(h.actions) }), steps, options, rules, error,
   });
   const saved = (): History<G> => ({ options: snap.options, rules: snap.rules, actions: snap.history.actions, cursor: snap.history.actions.length, undoUsed: snap.history.undoUsed });
   const autosave = (): void => {
     if (o.saves === undefined) return;
     pending = o.saves.writeAutosave(saved(), o.saveName?.(snap) ?? String((snap.options as { seed?: string }).seed ?? ''));
   };
+  // K738: the cheats due `when` (round ones only when the round changed since `round.last`), each joined to the top step
+  function cheat(h: StepHistory<G>, options: G['options'], when: 'setup' | 'round', round?: { last: number | undefined }): { h: StepHistory<G>; error: string | null } {
+    const c = def.cheats;
+    if (c === undefined) return { h, error: null };
+    if (round !== undefined) {
+      const now = roundOf(c, h.state);
+      if (now === undefined || now === round.last) return { h, error: null };
+      round.last = now;
+    }
+    for (const a of cheatActions(c.defs, c.choice?.(options) ?? (options as CheatChoice), h.state, when)) {
+      const r = extendStep(def.rules, h, a as G['action'], def.content);
+      if (!r.ok) return { h, error: r.error };
+      h = r.history;
+    }
+    return { h, error: null };
+  }
   function fresh(seed: string): void {
     const { options, rules } = def.start(seed);
     const g = createGame(def.rules, options, rules, def.content);
-    const s = settle(newSteps<G>(g.state), g.events, options);
+    const c = cheat(newSteps<G>(g.state), options, 'setup');
+    const s = c.error !== null ? { h: c.h, evs: [...g.events], error: c.error } : settle(c.h, g.events, options, def.cheats === undefined ? undefined : { last: undefined });
     set(make(s.h, o.openingSteps === true ? pushSteps(noSteps(), def.view(def.rules.blank(options, rules, def.content) as G['state'], me()), s.evs, isStep, o.instant?.() ?? false) : noSteps(), options, rules, s.error));
   }
   const mode = (): UndoMode => (typeof o.undo === 'function' ? o.undo() : (o.undo ?? 'safe'));
@@ -153,12 +181,13 @@ export function createGameStore<G extends GameTypes, V, S extends SeatId>(def: G
     answer(picks, promptId) {
       const p = snap.state.prompt;
       if (p === null || p.id !== promptId) return false;
-      const r = answerWithForced(def.rules, snap.history, answerOf(promptId, picks), def.content, forced, { seat: me() });
+      const round = def.cheats === undefined ? undefined : { last: roundOf(def.cheats, snap.state) };
+      const r = round === undefined ? answerWithForced(def.rules, snap.history, answerOf(promptId, picks), def.content, forced, { seat: me() }) : { ...addStep(def.rules, snap.history, answerOf(promptId, picks), def.content), capped: false };
       if (!r.ok) {
         set({ ...snap, error: r.error });
         return false;
       }
-      const s = r.capped ? { h: r.history, evs: [...r.events], error: r.error } : settle(r.history, r.events, snap.options);
+      const s = r.capped ? { h: r.history, evs: [...r.events], error: r.error } : settle(r.history, r.events, snap.options, round);
       set(make(s.h, pushSteps(snap.steps, snap.view, s.evs, isStep, o.instant?.() ?? false), snap.options, snap.rules, s.error));
       autosave();
       return true;
@@ -193,7 +222,7 @@ export function createGameStore<G extends GameTypes, V, S extends SeatId>(def: G
       const m = back.save;
       const r = replaySteps(def.rules, m.options, m.rules, m.actions, def.content, (state, a) => {
         const p = state.prompt as G['prompt'] | null;
-        return (a as { kind: string }).kind === 'debug' || (a.kind === 'answer' && p !== null && (p.seat === undefined || seatKey(p.seat) === seatKey(me())) && forced(p) === null);
+        return ((a as { kind: string }).kind === 'debug' && (a as { args?: { cheat?: unknown } }).args?.cheat === undefined) || (a.kind === 'answer' && p !== null && (p.seat === undefined || seatKey(p.seat) === seatKey(me())) && forced(p) === null);
       });
       if (!r.ok) return r.error;
       const s = settle({ ...r.history, undoUsed: m.undoUsed }, [], m.options);
