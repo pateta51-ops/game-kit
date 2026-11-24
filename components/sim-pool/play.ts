@@ -300,7 +300,7 @@ export function playOne<G extends GameTypes, S, O = unknown>(game: SimGame<G, S,
       actions.push(a);
       t = performance.now();
       judge();
-      const r = applyAction(game.rules, s, a as G['action'], content);
+      const r = applyAction(game.rules, s, a, content);
       ms.apply = performance.now() - t;
       judge(s, r.state);
       const w = s.rng;
@@ -321,7 +321,7 @@ export function playOne<G extends GameTypes, S, O = unknown>(game: SimGame<G, S,
   const failed = error !== undefined || violations.length > 0;
   let summary: S | undefined;
   try {
-    if (state !== undefined && game.summary) summary = game.summary(state, actions as G['action'][], content, seen as O);
+    if (state !== undefined && game.summary) summary = game.summary(state, actions, content, seen as O);
   } catch (e) {
     error ??= `summary: ${e instanceof Error ? e.message : String(e)}`;
   }
@@ -373,7 +373,7 @@ export function breakAt<G extends GameTypes, S, O = unknown>(
   while (s.result === null && s.prompt !== null && !(typeof stop === 'number' ? actions.length >= stop : stop(s, actions))) {
     const rng = new DriverRng(`${spec.seed}|${spec.driver}|${String(s.prompt.id)}`);
     const answers = game.answers ? game.answers(s, content, rng) : (legalAnswers(s.prompt, rng) as G['action'][]);
-    const a = driver.choose(s, answers, rng) as G['action'];
+    const a = driver.choose(s, answers, rng);
     actions.push(a);
     s = applyAction(game.rules, s, a, content).state;
   }

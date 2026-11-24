@@ -205,7 +205,7 @@ describe('K101 view on every step, hasten, one-step replay', () => {
     const g = simGame as unknown as SimGame<GameTypes>;
     const sp = { index: 0, seed: 's2', driver: 'random' };
     const d: Driver<Counter> = { name: 'dbg', reasons: () => [], choose: (s, a) => (s.turn === 0 ? { kind: 'debug', verb: 'set', args: { path: ['counter'], value: 1 } } : (a[0] as AnswerAction)) };
-    const r = playOne({ ...simGame, driver: () => d } as SimGame<Counter, { adds: number }>, CONTENT, sp, 4);
+    const r = playOne({ ...simGame, driver: () => d }, CONTENT, sp, 4);
     expect(r.error).toBeUndefined();
     const run = (o: object, game: SimGame<GameTypes> = g): SimRecord => playOne(game, content, sp, 12, o);
     const a = run({ debug: 3 });
