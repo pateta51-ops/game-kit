@@ -15,6 +15,7 @@ One command makes a working, empty game repo from the kit (K204). Run it from th
 6. Write template files with the `.tpl` ending and only the placeholders `{{id}} {{name}} {{dev}} {{preview}} {{phone}} {{repo}} {{runner}}`; any other `{{x}}` throws "unknown {{x}}".
 7. For a specification-driven start, resolve the spec at the intended kit ref, register its port block, and then generate into a new or empty directory. Keep the registry entry the same between attempts. Treat executable rules and gate configuration as game work.
 8. Do the TODOs listed in the generated `CLAUDE.md` (traceability, theme-check, plan-checker, plain-text, e2e, repo-gate's `cardIdLiteral` and `artFolder`); they are not wired.
+9. Keep `node_modules` local, whether installed or linked. For a local `spec generate` result, run `git init`, `git add -A`, then `npm run check`. Generated ignores cover both dependency forms.
 
 **Common mistakes:**
 - Editing `ports.json` by hand instead of using `server.mjs add`.
@@ -44,6 +45,8 @@ console.log(made.ref, made.ports.dev) // then: cd C:/projects/demo && npm run ch
 
 ## Declarative starter (K551, first increment)
 
+[K748](../../docs/plan/K748.md) tracks the delivered specification, pinned component selection and transactional scaffold. [K551](../../docs/plan/K551.md) tracks the remaining executable system adapters, setup integration and game-specific validation gates.
+
 Run from the game-kit checkout. A JSON spec with version 1, id, name, optional profiles, components, opponent, mechanics and buildOwn selects a pinned set of components before creating files. Profiles are component-selection recipes, not completed game engines. Supported profiles: deck-builder, lcg, bag-builder, dice-placement, tactical-board, campaign. Opponent: none, automa, heuristic, learned.
 
 ```json
@@ -60,4 +63,4 @@ Use a release tag for real games. Resolution uses the generator, templates, mech
 
 Register the game once with `server.mjs add … --pending`, or pass an existing registry with `--ports`. The entry must contain the game's block and phone slot. Earlier drafts of `spec generate` registered missing entries automatically. Generation now reads the registry, stages a new or empty destination beside the requested path, and publishes it after source generation, lock validation, and installation succeed. A normal failure clears the staging directory and leaves the destination ready to retry. An interrupted process can leave a `.kit-spec-*` directory beside the destination. Remove that staging directory after the process exits and retry.
 
-Generation makes a local scaffold. It pulls the resolved components at the exact commit, adds missing declared npm dependencies, and saves `docs/game-spec.json` and `docs/kit-assembly.json`. Use `--link` for an existing `node_modules` or `--no-install` for offline work. Initialize Git and stage the generated source before `npm run check` so the repository gate can inspect it. Keep linked dependencies out of the Git index. Executable game rules, system adapters, setup and game-specific gate configuration remain to be implemented.
+Generation makes a local scaffold. It pulls the resolved components at the exact commit, adds missing declared npm dependencies, and saves `docs/game-spec.json` and `docs/kit-assembly.json`. Use `--link` for an existing `node_modules` or `--no-install` for offline work. Generation adds a `node_modules` ignore when an older template only ignores directories, so `git add -A` skips a dependency link too. After `git init` and `git add -A`, run `npm run check` for the scaffold's baseline checks. Build executable game rules, system adapters, setup and game-specific gate configuration in the game project.

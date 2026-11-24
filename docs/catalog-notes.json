@@ -1736,7 +1736,7 @@
   },
   "repo-gate": {
     "mechanics": "none: build, CI or repository tooling",
-    "use": "A repository gate: file sizes, secrets, session URLs, runner names, card ids in rules code, art budgets.",
+    "use": "A repository gate for file sizes, staged dependency links, secrets, session URLs, runner names, card ids in rules code and art budgets.",
     "not": "Code lint or tests.",
     "title": "Repository safety check",
     "tags": [
@@ -1747,7 +1747,10 @@
       "secrets",
       "scans",
       "names",
-      "budget"
+      "budget",
+      "staged node_modules",
+      "tracked dependency link",
+      "dependency symlink"
     ],
     "visible": false,
     "release": 1,
@@ -1869,15 +1872,19 @@
       "setup",
       "create",
       "repo",
-      "declarative",
       "starter",
-      "spec",
       "scaffold"
     ],
     "visible": false,
     "release": 1,
     "gameSupplies": "The game id and name.",
     "exports": "`node kit.mjs new <dir> <id> \"<Name>\"`, `node kit.mjs spec resolve|generate`, `scaffold(options)` in scaffold.js"
+  },
+  "scaffold/spec": {
+    "title": "Declarative game starter",
+    "tags": ["declarative game starter", "game spec scaffold", "pinned declarative project scaffold"],
+    "use": "Resolve component profiles and generate a pinned, retryable local scaffold from a game specification.",
+    "guide": "README.md"
   },
   "scan-ingest": {
     "mechanics": "none: content tooling (art, scans, card data)",

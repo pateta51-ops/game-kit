@@ -192,6 +192,13 @@ function generate(kit, spec, resolved, scaffold, flags) {
         Object.keys(lock.components).length!==components.length || components.some(c=>!Object.hasOwn(lock.components,c))) {
       throw new Error('generated kit.lock.json does not match resolved assembly')
     }
+    // Older pinned scaffolds ignore only directories, which leaves dependency links stageable.
+    const ignoreFile = path.join(staged,'.gitignore')
+    const ignore = fs.existsSync(ignoreFile) ? fs.readFileSync(ignoreFile,'utf8') : ''
+    if (!ignore.split(/\r?\n/).includes('node_modules')) {
+      const separator = ignore && !ignore.endsWith('\n') ? '\n' : ''
+      fs.appendFileSync(ignoreFile,separator+'node_modules\n')
+    }
     const pkgFile = path.join(staged,'package.json')
     const pkg = JSON.parse(fs.readFileSync(pkgFile,'utf8'))
     for (const kind of ['dependencies','devDependencies']) for (const [p,v] of Object.entries(resolved[kind])) {

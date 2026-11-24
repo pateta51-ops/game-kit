@@ -1,7 +1,8 @@
-import { execFileSync, spawnSync } from 'node:child_process';
+import { execFile, execFileSync, spawnSync } from 'node:child_process';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
+import { promisify } from 'node:util';
 import { afterAll, describe, expect, it } from 'vitest';
 
 const kit = path.dirname(path.dirname(import.meta.dirname));
@@ -85,6 +86,39 @@ describe('K551 declarative starter',()=>{
     const lock=JSON.parse(fs.readFileSync(path.join(dir,'kit/kit.lock.json'),'utf8')) as {ref:string;commit:string};
     expect(lock).toMatchObject({ref:'older-starter',commit:previous});
   },60000);
+  it('keeps linked dependencies untracked when staging a game pinned to an older tag', () => {
+    const { dir: source } = fixture('linked-source');
+    const ref = 'v0.272.0';
+    const file = write('linked-spec', basic);
+    const ports = write('linked-ports', { games: { demo: { block: 6990, serve: { local: 4199 } } } });
+    const dir = path.join(tmp, 'linked-game');
+    const modules = path.join(kit, 'node_modules');
+    const result = generate(source, ref, file, dir, ['--ports', ports, '--link', modules]);
+    expect(result.status, result.stdout + result.stderr).toBe(0);
+    const git = (...args: string[]) => execFileSync('git', args, { cwd: dir, encoding: 'utf8' }).trim();
+    git('init', '-q');
+    git('add', '-A');
+    expect.soft(git('ls-files', '--', 'node_modules')).toBe('');
+    expect(fs.realpathSync(path.join(dir, 'node_modules'))).toBe(fs.realpathSync(modules));
+    const lock = JSON.parse(fs.readFileSync(path.join(dir, 'kit/kit.lock.json'), 'utf8')) as { ref: string };
+    expect(lock.ref).toBe(ref);
+    const gate = spawnSync(process.execPath, ['kit/repo-gate/repo-gate.ts'], { cwd: dir, encoding: 'utf8' });
+    expect(gate.status, gate.stdout + gate.stderr).toBe(0);
+  }, 60_000);
+  it('publishes only one complete scaffold when two attempts share a destination', async () => {
+    const file = write('concurrent-spec', basic);
+    const ports = write('concurrent-ports', { games: { demo: { block: 6990, serve: { local: 4199 } } } });
+    const dir = path.join(tmp, 'concurrent-game');
+    const modules = path.join(kit, 'node_modules');
+    const runAsync = promisify(execFile);
+    const attempt = () => runAsync(process.execPath, [path.join(kit, 'kit.mjs'), 'spec', 'generate', file, '--ref', head, '--dir', dir, '--ports', ports, '--link', modules], { cwd: kit });
+    const results = await Promise.allSettled([attempt(), attempt()]);
+    expect(results.map(result => result.status).sort()).toEqual(['fulfilled', 'rejected']);
+    const lockCheck = spawnSync(process.execPath, ['kit/kit.mjs', 'check', '--source', kit], { cwd: dir, encoding: 'utf8' });
+    expect(lockCheck.status, lockCheck.stdout + lockCheck.stderr).toBe(0);
+    expect(fs.realpathSync(path.join(dir, 'node_modules'))).toBe(fs.realpathSync(modules));
+    expect(fs.readdirSync(tmp).filter(file => file.startsWith('.kit-spec-'))).toEqual([]);
+  }, 60_000);
   it('reads the tagged profile definitions instead of uncommitted checkout definitions',()=>{
     const {dir:source,git}=fixture('profile-source');
     git('tag','profile-starter',head);
@@ -130,6 +164,41 @@ describe('K551 declarative starter',()=>{
     expect(retry.status,retry.stdout+retry.stderr).toBe(0);
     expect(fs.existsSync(path.join(dir,'docs/kit-assembly.json'))).toBe(true);
   },60000);
+  it.each([
+    ['wrong ref', 'lock.ref = "wrong-tag"'],
+    ['wrong commit', 'lock.commit = "0".repeat(40)'],
+    ['missing component', 'delete lock.components["engine-core"]'],
+    ['extra component', 'lock.components["unexpected-component"] = {}'],
+  ])('rejects a generated lock with %s before publishing and can retry', (fault, change) => {
+    const { dir: source } = fixture(`bad-${fault.replaceAll(' ', '-')}`);
+    const file = write(`bad-lock-${fault}`, basic);
+    const ports = write(`bad-lock-ports-${fault}`, { games: { demo: { block: 6990, serve: { local: 4199 } } } });
+    const registries = [ports, path.join(source, 'ports.json'), path.join(source, 'docs/PORTS.md')];
+    const readRegistries = () => registries.map(file => fs.readFileSync(file, 'utf8'));
+    const before = readRegistries();
+    const dir = path.join(tmp, `retry-lock-${fault}`);
+    fs.mkdirSync(dir);
+    // The production pull still runs. Corrupt only the lock it is about to write.
+    const runner = path.join(source, 'kit.mjs');
+    const marker = "  fs.writeFileSync(NEW + '/kit.lock.json'";
+    const code = fs.readFileSync(runner, 'utf8');
+    expect(code).toContain(marker);
+    fs.writeFileSync(runner, code.replace(marker, `  if (process.env.KIT_SPEC_FIXTURE_BAD_LOCK === '1') { ${change} }\n${marker}`));
+    const flags = ['--ports', ports, '--no-install'];
+    const original = fs.statSync(dir);
+    const failed = generate(source, head, file, dir, flags, { KIT_SPEC_FIXTURE_BAD_LOCK: '1' });
+    expect(failed.status, failed.stdout + failed.stderr).toBe(1);
+    expect(failed.stderr).toContain('generated kit.lock.json does not match resolved assembly');
+    expect(fs.statSync(dir).ino).toBe(original.ino);
+    expect(fs.readdirSync(dir)).toEqual([]);
+    expect(fs.readdirSync(tmp).filter(file => file.startsWith('.kit-spec-'))).toEqual([]);
+    expect(readRegistries()).toEqual(before);
+    const retry = generate(source, head, file, dir, flags);
+    expect(retry.status, retry.stdout + retry.stderr).toBe(0);
+    const locked = spawnSync(process.execPath, ['kit/kit.mjs', 'check', '--source', source], { cwd: dir, encoding: 'utf8' });
+    expect(locked.status, locked.stdout + locked.stderr).toBe(0);
+    expect(readRegistries()).toEqual(before);
+  }, 60_000);
   it('leaves an unregistered game and developer-owned files untouched',()=>{
     const {dir:source}=fixture('ports-source');
     const registry=path.join(source,'ports.json');

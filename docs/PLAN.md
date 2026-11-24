@@ -419,6 +419,7 @@ The blind matching test's result was not recorded: the PR, its comments and docs
 | K729 | turn-flow: skip returns { by, why? } and the runner emits a skipped event. | S | owner (23 Nov 2026): the log says which card skipped a phase | done |
 | K741 | llm-playtester: cheaper calls: a single option is taken without a call, multi-select and split questions asked item by item, option groups, duplicate labels flagged, `--effort` (default low), a capped reason, and an adapter `reference()` lookup table in the cached system prompt. | M | owner (23 Nov 2026): cheaper LLM playtests | done |
 | K742 | game-log: `replayLog` and `logKeeper` rebuild the log from the saved actions (set-up under step 0, action i under step i + 1; rewind on undo, rebuild on a new key), so the log is never saved as text and cannot drift from the save. | S | owner (23 Nov 2026): a loaded save shows exactly the log rows it had | done |
+| K748 | scaffold: `kit.mjs spec resolve` selects component profiles and resolves exact kit pins. `kit.mjs spec generate` publishes a retryable scaffold after lock validation and installation. Keep K551 open for executable system adapters, setup integration and game-specific validation gates. | M | owner: deliver and validate the first K551 increment | done |
 
 ## Candidates
 
@@ -452,7 +453,7 @@ A candidate is a part some game wants and nobody builds yet. A second game that 
 | K548 | all-or-nothing effect block: a list of effects that all resolve or none does, with the state restored when one cannot; a game passes the effects. | M | Unstoppable | candidate |
 | K549 | state-change audit: a check that every changed value in the state is explained by an event, listing the unexplained ones; a game passes its event-to-field map. | S | Unstoppable | candidate |
 | K550 | combat verbs: attack, damage, armor and defeat as data on top of `would` and `adjust`, with the hooks where a game inserts its own rules; a game passes the stats and the defeat rule. | L | Radiance, Hunted North Pole, Dice Commandos, survey, Warp's Edge | candidate |
-| K551 | flexible starter: the first increment resolves component profiles and generates a pinned, retryable scaffold from a game specification. Executable system adapters, setup integration and game-specific validation gates remain open. | L | survey | candidate |
+| K551 | flexible starter: build executable system adapters, setup integration and game-specific validation-gate wiring on top of the completed K748 specification, component selection and scaffold increment. | L | survey | candidate |
 | K552 | dice-odds: the chance of a pattern or of a success count given a reroll budget and a keep rule, exact (`dice-patterns` `atLeast`, a success count as data, and `dice-tray` rerolls exist; the odds with rerolls, and a difficulty with its modifiers as data, do not); a game passes the pool, the success rule, the dice and the rerolls. | M | survey, Dungeon Ball Legend | candidate |
 | K553 | one description that gives `board-model` its spaces and `grid-map` its adjacency (both exist); a game passes the cells and links once. | L | survey | candidate |
 | K556 | spawn tables stepped by a clock: what appears at each step of a clock, drawn from tables with the engine random; a game passes the tables and the clock. | M | survey, Warp's Edge | candidate |
