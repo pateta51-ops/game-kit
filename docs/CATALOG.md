@@ -1054,7 +1054,7 @@ The game writes one adapter; Claude (or `--dummy`, the first option, no client b
 - **Words:** playtest, llm, claude, ai, testing, bugs, game, adapter, language model, player
 - **Release:** 1.0; not seen
 - **The game supplies:** An adapter: view, numbered options and choose.
-- **Use it when:** Headless whole-game playtests by Claude through a small game adapter (view, numbered options, choose): finds rules and screen bugs the model flags, adapter throws and illegal option lists, and saves each run's replay for a replay test; capped in dollars per run; --dummy plays the first option for free. Cheap by default: prompt caching, a single option taken without a call, multi-select and split-points questions asked one item at a time, --effort low, and a cached reference() lookup table of card texts.
+- **Use it when:** Headless whole-game playtests by Claude through a small game adapter (view, numbered options, choose): finds rules and screen bugs the model flags, adapter throws and illegal option lists, and saves each run's replay for a replay test; capped in dollars per run; --dummy plays the first option for free. Cheap by default: prompt caching, a single option taken without a call, multi-select and split-points questions answered in one call, --effort low, and a cached reference() lookup table of card texts.
 - **Not for:** The in-game Claude opponent (a game's own server code) or balance sims at volume; use sim-pool for many cheap games.
 - **Key exports:** `runPlaytest`, `ledgerSpent`, `main`, `runMain`, `GameAdapter`, `Item`, `Option`, `MultiSelect`, `Split`, `PlaytestOptions`, `PlaytestResult`, `MainResult`
 - **Needs:** nothing
@@ -1161,6 +1161,7 @@ A rule-based opponent (K103, K115). Pure data and functions; the engine never im
 - **Use it when:** A rule-based AI opponent: advice, profiles and memory as data through a fixed pick pipeline, plus decision records.
 - **Not for:** Trained play (learned-opponent) or tuning weights (sim-pool tune).
 - **Key exports:** `redact`, `viewLeaks`, `REASONS`, `adviceProblems`, `discardOrder`, `PIPELINE`, `loadProfile`, `newMemory`, `remember`, `recalls`, `forget`, `forgetTurn`, `setPlan`, `evaluate`, and 33 more
+- **Hook:** lookAhead + evaluate: a greedy look ahead player: a one-ply driver that scores each move and picks the best, with a goal-seeking score
 - **Needs:** [`sim-pool`](#sim-pool)
 - **Came from:** chiriboga, Forge (GPL-3.0, ideas only); boardgame.io, XMage (MIT, ideas only, no code ported)
 - **Docs:** [README](../components/opponent/README.md) ([rules for agents](../components/opponent/README.md#rules-for-agents))

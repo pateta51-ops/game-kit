@@ -2,7 +2,7 @@ import { mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import type { Chooser } from './client.ts';
+import type { Answer, Chooser } from './client.ts';
 import { cost, worstCost, makeChooser, type Body } from './client.ts';
 import { createAdapter } from './fake-adapter.ts';
 import { keyName, loadKey } from './key.ts';
@@ -333,36 +333,75 @@ describe('K741 cheaper playtests', () => {
     expect(JSON.parse(readFileSync(join(r.dir, 'decisions.jsonl'), 'utf8'))).toMatchObject({ auto: true, choice: 0, cost: 0 });
   });
 
-  it('multi-select: asked item by item, assembled indices go to answer()', async () => {
-    const { a, got } = base(() => ({ kind: 'multi', min: 1, max: 3, items: ['a', 'b', 'c', 'd'] }));
+  const listed = (picks: (Partial<Answer>)[], prompts: string[] = []): Chooser => (ask) => {
+    prompts.push(ask.prompt);
+    return Promise.resolve({ option: Number.NaN, reason: 'ok', usage, ...picks.shift() });
+  };
+  const multi = () => base(() => ({ kind: 'multi', min: 2, max: 3, items: ['a', 'b', 'c', 'd'] }));
+
+  it('multi-select: one call lists the items once; the picks go to answer() sorted', async () => {
+    const { a, got } = multi();
     const prompts: string[] = [];
-    // pick d (3), then b (1 of a,b,c), then Done (index 2 of a,c,Done)
-    const r = await runPlaytest(a, { seed: 's', client: scripted([3, 1, 2], prompts), out: tmp() });
+    const r = await runPlaytest(a, { seed: 's', client: listed([{ picks: [3, 1] }], prompts), out: tmp() });
+    expect(prompts).toHaveLength(1);
+    expect(prompts[0]).toContain('0. a\n1. b\n2. c\n3. d');
+    expect(prompts[0]!.split('Current view').length).toBe(2);
     expect(got).toEqual([[1, 3]]);
-    expect(r.decisions).toBe(3);
-    expect(prompts[0]).not.toContain('Done');
-    expect(prompts[2]).toContain('2. Done: pick no more');
-    expect(prompts[2]).toContain('Picked so far: d; b');
+    expect(r).toMatchObject({ stop: 'done', decisions: 1 });
   });
 
-  it('split: one call per target, the last forced, limits kept', async () => {
+  it('multi-select: fewer picks than min is retried once with the error', async () => {
+    const { a, got } = multi();
+    const prompts: string[] = [];
+    const r = await runPlaytest(a, { seed: 's', client: listed([{ picks: [1] }, { picks: [0, 2] }], prompts), out: tmp() });
+    expect(prompts[1]).toContain('pick 2 to 3 items, not 1');
+    expect(got).toEqual([[0, 2]]);
+    expect(r.findings).toEqual(['step 0: pick 2 to 3 items, not 1']);
+  });
+
+  it('an invalid list answer twice is a finding and stops the run', async () => {
+    const { a, got } = multi();
+    const r = await runPlaytest(a, { seed: 's', client: listed([{ picks: [0, 0] }, { picks: [0, 9] }]), out: tmp() });
+    expect(got).toEqual([]);
+    expect(r.stop).toBe('finding');
+    expect(r.findings).toEqual(['step 0: picks must be different numbers from 0 to 3', 'step 0: picks must be different numbers from 0 to 3']);
+  });
+
+  it('--max-usd stops before a multi-select call', async () => {
+    const { a } = multi();
+    const r = await runPlaytest(a, { seed: 's', client: () => Promise.reject(new Error('no call expected')), out: tmp(), maxUsd: 0.0001, log: () => undefined });
+    expect(r.stop).toBe('max-usd');
+    expect(r.costUsd).toBe(0);
+  });
+
+  it('split: one call, limits and total checked, then answer()', async () => {
     const { a, got } = base(() => ({ kind: 'split', points: 5, targets: [{ label: 'x', max: 2 }, { label: 'y' }, { label: 'z', min: 1 }] }));
     const prompts: string[] = [];
-    const r = await runPlaytest(a, { seed: 's', client: scripted([2, 1], prompts), out: tmp() });
-    expect(got).toEqual([[2, 1, 2]]);
+    const r = await runPlaytest(a, { seed: 's', client: listed([{ points: [3, 1, 1] }, { points: [2, 1, 2] }], prompts), out: tmp() });
     expect(prompts).toHaveLength(2);
-    expect(prompts[0]).toContain('2. 2 to x');
-    expect(prompts[0]).not.toContain('3. ');
-    expect(prompts[1]).toContain('0. 0 to y\n1. 1 to y\n2. 2 to y');
-    expect(r.decisions).toBe(3);
+    expect(prompts[0]).toContain('0: 0-2, 1: 0-5, 2: 1-5');
+    expect(prompts[1]).toContain('x must get 0 to 2, not 3');
+    expect(got).toEqual([[2, 1, 2]]);
+    expect(r.decisions).toBe(1);
   });
 
-  it('groups print as headers; duplicate labels are a finding and get #2', async () => {
+  it('a question that cannot be answered is an adapter finding before any call', async () => {
+    const none = () => Promise.reject(new Error('no call expected'));
+    for (const q of [{ kind: 'multi', min: 3, max: 3, items: ['a', 'b'] }, { kind: 'split', points: 2, targets: [] }, { kind: 'split', points: 9, targets: [{ label: 'x', max: 4 }, { label: 'y', max: 4 }] }] as const) {
+      const r = await runPlaytest(base(() => q).a, { seed: 's', client: none, out: tmp() });
+      expect(r.stop).toBe('finding');
+      expect(r.findings[0]).toContain('adapter question invalid');
+    }
+  });
+
+  it('groups print as headers; duplicate labels get #2 and one summary line, not a finding', async () => {
     const { a } = base(() => [{ label: 'play', group: 'Hand' }, { label: 'play', group: 'Hand' }, { label: 'play', group: 'Board' }]);
     const prompts: string[] = [];
     const r = await runPlaytest(a, { seed: 's', client: scripted([1], prompts), out: tmp() });
     expect(prompts[0]).toContain('[Hand]\n0. play\n1. play #2\n[Board]\n2. play');
-    expect(r.findings).toEqual(['step 0: duplicate option label "play"']);
+    expect(r.findings).toEqual([]);
+    expect(readFileSync(join(r.dir, 'summary.md'), 'utf8')).toContain('- Duplicate option labels: 1');
+    expect(JSON.parse(readFileSync(join(r.dir, 'decisions.jsonl'), 'utf8'))).toMatchObject({ options: ['play', 'play #2', 'play'] });
   });
 
   it('effort (default low, --effort) and cache_control land in the request; reference() is in the cached system block', async () => {

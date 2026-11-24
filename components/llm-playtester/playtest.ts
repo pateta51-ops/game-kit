@@ -7,7 +7,7 @@ import { createHash } from 'node:crypto';
 import { appendFileSync, existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
-import { cost, MAX_TOKENS, PRICES, sdkChooser, worstCost, type Chooser, type Usage } from './client.ts';
+import { cost, MAX_TOKENS, PRICES, sdkChooser, worstCost, type Answer, type Chooser, type Usage } from './client.ts';
 import { loadKey } from './key.ts';
 
 export interface GameAdapter {
@@ -134,8 +134,12 @@ export async function runPlaytest(adapter: GameAdapter, opts: PlaytestOptions): 
     }
   };
   let estimated = false;
-  // K741: one numbered question; a single option is taken without a call (logged auto). Null: the run stops (stop is set).
-  const ask = async (view: string, items: Item[], head = ''): Promise<number | null> => {
+  let dups = 0;
+  // K741: one call per question. A plain list is answered with `option`, a MultiSelect with `picks`, a Split with `points`;
+  // the runner validates, retries once with the error, then logs a finding. A forced answer makes no call (logged auto).
+  // Null: the run stops (stop is set).
+  interface Q { want: string; dummy: number[]; forced?: number[] | undefined; check(a: Answer): string | number[]; say(v: number[]): string }
+  const ask = async (view: string, items: Item[], head: string, q: Q): Promise<number[] | null> => {
     if (decisions >= maxDecisions) {
       stop = 'max-decisions';
       return null;
@@ -145,18 +149,20 @@ export async function runPlaytest(adapter: GameAdapter, opts: PlaytestOptions): 
       const k = `${it.group ?? ''}\u0000${it.label}`;
       const c = (n.get(k) ?? 0) + 1;
       n.set(k, c);
-      if (c === 2) note(`step ${decisions}: duplicate option label "${it.label}"`, true);
+      if (c === 2) dups++;
       return c > 1 ? `${it.label} #${c}` : it.label;
     });
     let g: string | undefined;
     const list = items.map((it, i) => (it.group !== g ? ((g = it.group), `[${g ?? 'other'}]\n`) : '') + `${i}. ${options[i]}`).join('\n');
-    let choice = 0;
+    let v = q.dummy;
     let reason = 'dummy';
     let usage: Usage | null = null;
     let paid = 0;
-    const auto = choose !== null && items.length === 1;
-    if (auto) reason = 'auto: the only option';
-    else if (choose !== null) {
+    const auto = choose !== null && q.forced !== undefined;
+    if (auto) {
+      v = q.forced!;
+      reason = 'auto: the only answer';
+    } else if (choose !== null) {
       let error = '';
       for (let tries = 0; ; tries++) {
         const prompt = `${recent.length ? `Your last decisions:\n${recent.join('\n')}\n\n` : ''}Current view:\n${view}\n\n${head ? `${head}\n\n` : ''}Options:\n${list}${error}`;
@@ -182,28 +188,30 @@ export async function runPlaytest(adapter: GameAdapter, opts: PlaytestOptions): 
         opts.onSpend?.(c, runId);
         paid += c;
         usage = a.usage;
-        choice = a.option;
         reason = a.reason;
-        if (Number.isInteger(choice) && choice >= 0 && choice < options.length) break;
-        const none = Number.isNaN(choice);
-        note(none ? `step ${decisions}: ${a.stop_reason === 'max_tokens' ? `reply cut off at max_tokens (${maxTokens}) before a choose tool call` : 'reply had no choose tool call'}` : `step ${decisions}: invalid option ${String(choice)} of ${options.length}`);
+        const r = q.check(a);
+        if (typeof r !== 'string') {
+          v = r;
+          break;
+        }
+        const none = Number.isNaN(a.option) && a.picks === undefined && a.points === undefined;
+        note(none ? `step ${decisions}: ${a.stop_reason === 'max_tokens' ? `reply cut off at max_tokens (${maxTokens}) before a choose tool call` : 'reply had no choose tool call'}` : `step ${decisions}: ${r}`);
         if (tries >= 1) {
-          appendFileSync(log, JSON.stringify({ step: decisions, view: short(view), options, choice, reason, usage, cost: paid }) + '\n');
+          appendFileSync(log, JSON.stringify({ step: decisions, view: short(view), options, choice: a.picks ?? a.points ?? a.option, reason, usage, cost: paid }) + '\n');
           return null;
         }
-        error = none
-          ? `\n\nReminder: you must call the choose tool with option (0 to ${options.length - 1}) and reason.`
-          : `\n\nYour answer ${String(choice)} is not an option: answer a number from 0 to ${options.length - 1}.`;
+        error = none ? `\n\nReminder: you must call the choose tool with ${q.want} and reason.` : `\n\nYour answer is not valid (${r}): answer with ${q.want}.`;
       }
     }
     const viewHash = createHash('sha1').update(view).digest('hex').slice(0, 12);
-    appendFileSync(log, JSON.stringify({ step: decisions, viewHash, view: short(view), ...(head ? { ask: short(head) } : {}), options, choice, ...(auto ? { auto } : {}), reason, usage, cost: paid }) + '\n');
+    appendFileSync(log, JSON.stringify({ step: decisions, viewHash, view: short(view), ...(head ? { ask: short(head) } : {}), options, choice: q.want.startsWith('option') ? v[0] : v, ...(auto ? { auto } : {}), reason, usage, cost: paid }) + '\n');
     const repeated = /^\s*BUG:/i.test(reason) && note(`step ${decisions}: ${reason}`, true);
-    recent.push(`${decisions}: ${short(options[choice]!, 80)} (${short(reason, 120)})`);
+    recent.push(`${decisions}: ${short(q.say(v), 80)} (${short(reason, 120)})`);
     if (recent.length > (opts.history ?? 6)) recent.shift();
     decisions++;
-    return repeated ? null : choice;
+    return repeated ? null : v;
   };
+  const ints = (x: unknown, len: number): x is number[] => Array.isArray(x) && x.length === len && x.every((i) => Number.isInteger(i));
   let system: string[] = [];
   if (attempt('start', () => {
     adapter.start({
@@ -215,7 +223,7 @@ export async function runPlaytest(adapter: GameAdapter, opts: PlaytestOptions): 
     system = [`${HOW}\n\n${adapter.rulesText()}`, ...(opts.docs ?? []).map((p) => readFileSync(p, 'utf8')), ...(ref ? [`Reference (what the view and options name):\n${ref}`] : [])];
     return true;
   })) {
-    play: for (;;) {
+    for (;;) {
       const end = attempt('done', () => adapter.done());
       if (end === undefined) break;
       if (end !== null) {
@@ -235,47 +243,76 @@ export async function runPlaytest(adapter: GameAdapter, opts: PlaytestOptions): 
           note(`step ${decisions}: no options and the game is not over`);
           break;
         }
-        const c = await ask(view, o.map(item));
-        if (c === null) break;
-        if (attempt('choose', () => (adapter.choose(c), true)) === undefined) {
-          seen.get(last)!.finding += ` (step ${decisions - 1}, option ${c})`;
+        const items = o.map(item);
+        const v = await ask(view, items, '', {
+          want: `option (0 to ${items.length - 1})`,
+          dummy: [0],
+          forced: items.length === 1 ? [0] : undefined,
+          check: (a) => (Number.isInteger(a.option) && a.option >= 0 && a.option < items.length ? [a.option] : `invalid option ${String(a.option)} of ${items.length}`),
+          say: (v) => item(o[v[0]!]!).label,
+        });
+        if (v === null) break;
+        if (attempt('choose', () => (adapter.choose(v[0]!), true)) === undefined) {
+          seen.get(last)!.finding += ` (step ${decisions - 1}, option ${v[0]})`;
           break;
         }
         continue;
       }
-      const v: number[] = [];
+      let v: number[] | null;
       if (o.kind === 'multi') {
-        for (;;) {
-          if (v.length >= o.max) break;
-          const rest = o.items.map((_, i) => i).filter((i) => !v.includes(i));
-          if (rest.length === 0) break;
-          const items = rest.map((i) => item(o.items[i]!));
-          if (v.length >= o.min) items.push({ label: 'Done: pick no more' });
-          const k = await ask(view, items, `${o.title ?? 'Pick'}: choose ${o.min} to ${o.max} of these, one per answer. Picked so far: ${v.map((i) => item(o.items[i]!).label).join('; ') || 'none'}.`);
-          if (k === null) break play;
-          if (k === rest.length) break;
-          v.push(rest[k]!);
+        const items = o.items.map(item);
+        if (!(Number.isInteger(o.min) && Number.isInteger(o.max) && o.min >= 0 && o.min <= o.max && o.min <= items.length)) {
+          note(`step ${decisions}: adapter question invalid: multi-select of ${o.min} to ${o.max} from ${items.length} items`);
+          break;
         }
-        v.sort((x, y) => x - y);
+        const max = Math.min(o.max, items.length);
+        v = await ask(view, items, `${o.title ?? 'Pick'}: choose ${o.min} to ${max} of these items in one answer: picks, the list of their numbers.`, {
+          want: `picks (${o.min} to ${max} different numbers from 0 to ${items.length - 1})`,
+          dummy: items.slice(0, o.min).map((_, i) => i),
+          forced: o.min === items.length ? items.map((_, i) => i) : undefined,
+          check: (a) => {
+            const p = a.picks;
+            if (!Array.isArray(p) || !ints(p, p.length)) return 'picks must be a list of item numbers';
+            if (new Set(p).size !== p.length || p.some((i) => i < 0 || i >= items.length)) return `picks must be different numbers from 0 to ${items.length - 1}`;
+            if (p.length < o.min || p.length > max) return `pick ${o.min} to ${max} items, not ${p.length}`;
+            return [...p].sort((x, y) => x - y);
+          },
+          say: (v) => `picked ${v.map((i) => items[i]!.label).join('; ') || 'none'}`,
+        });
       } else {
-        let left = o.points;
-        for (const [i, t] of o.targets.entries()) {
-          const after = o.targets.slice(i + 1);
-          const lo = Math.max(t.min ?? 0, left - after.reduce((n, u) => n + (u.max ?? Infinity), 0));
-          const hi = Math.min(t.max ?? left, left - after.reduce((n, u) => n + (u.min ?? 0), 0));
-          if (lo > hi) {
-            note(`step ${decisions}: split of ${o.points} cannot be completed within the target limits`);
-            break play;
-          }
-          const sofar = o.targets.slice(0, i).map((u, j) => `${u.label} ${v[j]}`).join('; ') || 'nothing yet';
-          const k = await ask(view, Array.from({ length: hi - lo + 1 }, (_, n) => ({ label: `${lo + n} to ${t.label}`, ...(t.group === undefined ? {} : { group: t.group }) })), `${o.title ?? 'Split'}: allocate ${o.points} points over ${o.targets.map((u) => `${u.label}${u.min !== undefined || u.max !== undefined ? ` (${u.min ?? 0}-${u.max ?? o.points})` : ''}`).join(', ')}, one target per answer. So far: ${sofar}; ${left} left. How many to ${t.label}?`);
-          if (k === null) break play;
-          v.push(lo + k);
-          left -= lo + k;
+        const t = o.targets;
+        const lim = t.map((u) => [u.min ?? 0, u.max ?? o.points] as const);
+        const sum = (k: 0 | 1) => lim.reduce((n, l) => n + l[k], 0);
+        if (t.length === 0 || !Number.isInteger(o.points) || o.points > sum(1) || o.points < sum(0)) {
+          note(`step ${decisions}: adapter question invalid: split of ${o.points} over ${t.length} targets (limits ${sum(0)} to ${sum(1)})`);
+          break;
         }
+        v = await ask(view, t, `${o.title ?? 'Split'}: allocate exactly ${o.points} points over these targets in one answer: points, one number per target in this order (limits: ${t.map((_, i) => `${i}: ${lim[i]![0]}-${lim[i]![1]}`).join(', ')}).`, {
+          want: `points (${t.length} numbers, total ${o.points})`,
+          dummy: (() => {
+            let left = o.points - sum(0);
+            return lim.map(([lo, hi]) => {
+              const x = Math.min(hi - lo, left);
+              left -= x;
+              return lo + x;
+            });
+          })(),
+          forced: t.length === 1 || o.points === sum(1) ? lim.map((l) => (t.length === 1 ? o.points : l[1])) : undefined,
+          check: (a) => {
+            const p = a.points;
+            if (!ints(p, t.length)) return `points must be ${t.length} whole numbers`;
+            const bad = p.findIndex((x, i) => x < lim[i]![0] || x > lim[i]![1]);
+            if (bad >= 0) return `${t[bad]!.label} must get ${lim[bad]![0]} to ${lim[bad]![1]}, not ${p[bad]}`;
+            const s = p.reduce((n, x) => n + x, 0);
+            return s === o.points ? p : `points must total ${o.points}, not ${s}`;
+          },
+          say: (v) => v.map((x, i) => `${t[i]!.label} ${x}`).join('; '),
+        });
       }
-      if (attempt('answer', () => (adapter.answer!(v), true)) === undefined) {
-        seen.get(last)!.finding += ` (step ${decisions - 1}, answer ${v.join(',')})`;
+      if (v === null) break;
+      const w = v;
+      if (attempt('answer', () => (adapter.answer!(w), true)) === undefined) {
+        seen.get(last)!.finding += ` (step ${decisions - 1}, answer ${w.join(',')})`;
         break;
       }
     }
@@ -294,6 +331,7 @@ export async function runPlaytest(adapter: GameAdapter, opts: PlaytestOptions): 
       `- Seed: ${opts.seed}${opts.difficulty ? `, difficulty ${opts.difficulty}` : ''}${opts.scenario ? `, scenario ${opts.scenario}` : ''}`,
       `- Decisions: ${decisions}`,
       `- Cost: $${spent.toFixed(4)} of $${maxUsd}`,
+      ...(dups ? [`- Duplicate option labels: ${dups} (shown as "label #2" in the prompt and the options column)`] : []),
       '',
       '## Findings',
       '',

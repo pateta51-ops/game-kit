@@ -17,6 +17,10 @@ export interface Ask {
 }
 export interface Answer {
   option: number;
+  /** K741: a multi-select answer (item numbers). */
+  picks?: number[];
+  /** K741: a split answer (points per target, in order). */
+  points?: number[];
   reason: string;
   usage: Usage;
   stop_reason?: string | null;
@@ -74,13 +78,15 @@ const TOOL = {
   input_schema: {
     type: 'object' as const,
     properties: {
-      option: { type: 'integer', description: 'The number of the chosen option.' },
+      option: { type: 'integer', description: 'The number of the chosen option, when the question asks for one option.' },
+      picks: { type: 'array', items: { type: 'integer' }, description: 'When the question asks to pick several: the numbers of all picked items.' },
+      points: { type: 'array', items: { type: 'integer' }, description: 'When the question asks to allocate points: one number per target, in the listed order.' },
       reason: {
         type: 'string',
         description: 'Why, in one sentence of at most 20 words; start with BUG: when the rules, the view or the options look wrong.',
       },
     },
-    required: ['option', 'reason'],
+    required: ['reason'],
   },
 };
 
@@ -137,9 +143,11 @@ export function makeChooser(client: Messages, maxTokens = MAX_TOKENS): Chooser {
       messages: [{ role: 'user', content: ask.prompt }],
     });
     const use = result.content.find((b) => b.type === 'tool_use');
-    const input = (use?.input ?? {}) as { option?: unknown; reason?: unknown };
+    const input = (use?.input ?? {}) as { option?: unknown; reason?: unknown; picks?: unknown; points?: unknown };
     return {
       option: typeof input.option === 'number' ? input.option : Number.NaN,
+      ...(Array.isArray(input.picks) ? { picks: input.picks as number[] } : {}),
+      ...(Array.isArray(input.points) ? { points: input.points as number[] } : {}),
       reason: typeof input.reason === 'string' ? input.reason : '',
       stop_reason: result.stop_reason ?? null,
       usage: {

@@ -257,7 +257,7 @@
   { "q": "collection of items", "first": "none" },
   { "q": "tile flip", "first": "none" },
   { "q": "odds next card", "first": "none" },
-  { "q": "greedy player", "first": "K424" },
+  { "q": "greedy player", "first": "opponent" },
   { "q": "clauseList", "first": "card-harness" },
   { "q": "stack of cards per pile", "first": "card-pile" },
   { "q": "discard row payment", "first": "K520" },
@@ -544,5 +544,7 @@
   { "q": "skipped phase event names the card", "first": "turn-flow" },
   { "q": "cheap llm playtest", "first": "llm-playtester" },
   { "q": "llm player multi select split points", "first": "llm-playtester" },
-  { "q": "lookup table of card texts for llm playtest", "first": "llm-playtester" }
+  { "q": "lookup table of card texts for llm playtest", "first": "llm-playtester" },
+  { "q": "look ahead greedy player", "first": "opponent" },
+  { "q": "greedy driver", "first": "opponent" }
 ]
