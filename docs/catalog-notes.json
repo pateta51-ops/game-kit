@@ -1858,7 +1858,7 @@
   },
   "scaffold": {
     "mechanics": "none: build, CI or repository tooling",
-    "use": "Starting a new game: one command makes the empty working repo (Vite, ESLint, Vitest, tsconfig, CI, kit pull, stub GameRules).",
+    "use": "Start an empty working game repo, or use a declarative game spec to select components and generate a pinned scaffold.",
     "not": "Anything inside a running game; it is a generator run from the kit checkout.",
     "title": "Start a new game project",
     "tags": [
@@ -1868,12 +1868,16 @@
       "project",
       "setup",
       "create",
-      "repo"
+      "repo",
+      "declarative",
+      "starter",
+      "spec",
+      "scaffold"
     ],
     "visible": false,
     "release": 1,
     "gameSupplies": "The game id and name.",
-    "exports": "`node kit.mjs new <dir> <id> \"<Name>\"`; `scaffold(options)` in scaffold.js"
+    "exports": "`node kit.mjs new <dir> <id> \"<Name>\"`, `node kit.mjs spec resolve|generate`, `scaffold(options)` in scaffold.js"
   },
   "scan-ingest": {
     "mechanics": "none: content tooling (art, scans, card data)",

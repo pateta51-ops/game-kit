@@ -11,6 +11,18 @@ afterAll(() => fs.rmSync(tmp,{recursive:true,force:true}));
 const run = (...args:string[]) => spawnSync('node',[path.join(kit,'kit.mjs'),'spec',...args,'--ref',head],{cwd:kit,encoding:'utf8'});
 const write = (name:string, data:unknown) => { const f=path.join(tmp,name+'.json'); fs.writeFileSync(f,JSON.stringify(data)); return f; };
 const basic = {version:1,id:'demo',name:'Demo'};
+function fixture(name: string) {
+  const dir = path.join(tmp, name);
+  execFileSync('git', ['clone', '--quiet', '--shared', '--no-checkout', kit, dir]);
+  const git = (...args: string[]) => execFileSync('git', args, {cwd:dir, encoding:'utf8'}).trim();
+  git('sparse-checkout','set','--no-cone','/kit.mjs','/components/scaffold/','/tools/game-server/','/ports.json','/docs/PORTS.md');
+  git('checkout', '--quiet', '--detach', head);
+  for (const file of ['kit.mjs', 'components/scaffold/spec.mjs', 'tools/game-server/server.mjs']) fs.copyFileSync(path.join(kit,file),path.join(dir,file));
+  return {dir, git};
+}
+const generate = (source: string, ref: string, file: string, dest: string, flags: string[], env: NodeJS.ProcessEnv = {}) =>
+  spawnSync(process.execPath,[path.join(source,'kit.mjs'),'spec','generate',file,'--ref',ref,'--dir',dest,...flags],
+    {cwd:source,encoding:'utf8',env:{...process.env,...env}});
 type Result = {commit:string;components:{name:string;reasons:string[]}[];unresolved:string[];mechanics:{status:string;buildOwn?:string}[]};
 describe('K551 declarative starter',()=>{
   it('resolves a pinned revision, profiles, mechanics and dependencies deterministically',()=>{
@@ -57,5 +69,92 @@ describe('K551 declarative starter',()=>{
     expect(fs.existsSync(path.join(dir,'docs/game-spec.json'))).toBe(true);
     expect(spawnSync('node',['kit/kit.mjs','check'],{cwd:dir,encoding:'utf8'}).status).toBe(0);
     expect(run('generate',file,'--dir',dir,'--ports',ports,'--no-install').status).toBe(1);
+  },60000);
+  it('uses the older kit tag template even when the current checkout template changes',()=>{
+    const {dir:source,git}=fixture('tag-source');
+    const previous=git('-c','user.name=Fixture','-c','user.email=fixture@example.invalid','commit-tree',head+'^{tree}','-m','Older starter');
+    git('tag','older-starter',previous);
+    const template=path.join(source,'components/scaffold/template/index.html.tpl');
+    fs.appendFileSync(template,'\n<!-- checkout-only template -->\n');
+    const dir=path.join(tmp,'earlier-game');
+    const ports=write('earlier-ports',{games:{demo:{block:6990,serve:{local:4199}}}});
+    const r=generate(source,'older-starter',write('earlier-spec',basic),dir,['--ports',ports,'--no-install']);
+    expect(r.status,r.stdout+r.stderr).toBe(0);
+    expect(fs.readFileSync(path.join(dir,'index.html'),'utf8')).not.toContain('checkout-only template');
+    expect((JSON.parse(fs.readFileSync(path.join(dir,'docs/kit-assembly.json'),'utf8')) as Result).commit).toBe(previous);
+    expect(spawnSync(process.execPath,['kit/kit.mjs','check','--source',source],{cwd:dir,encoding:'utf8'}).status).toBe(0);
+  },60000);
+  it('reads the tagged profile definitions instead of uncommitted checkout definitions',()=>{
+    const {dir:source,git}=fixture('profile-source');
+    git('tag','profile-starter',head);
+    const program=path.join(source,'components/scaffold/spec.mjs');
+    const code=fs.readFileSync(program,'utf8');
+    const modified=code.replace('"campaign": [','"unreleased-profile": [');
+    expect(modified).not.toBe(code);
+    fs.writeFileSync(program,modified);
+    const file=write('tagged-profile',{...basic,profiles:['campaign']});
+    const result=spawnSync(process.execPath,[path.join(source,'kit.mjs'),'spec','resolve',file,'--ref','profile-starter'],{cwd:source,encoding:'utf8'});
+    expect(result.status,result.stdout+result.stderr).toBe(0);
+    expect((JSON.parse(result.stdout) as Result).components.map(c=>c.name)).toContain('campaign');
+  });
+  it.each(['pull','lock','installation'])('leaves the destination untouched after %s failure and can retry', kind=>{
+    const source=kind==='lock' ? fixture('failure-lock').dir : kit;
+    const file=write('failed-'+kind,basic);
+    const ports=write('failure-ports-'+kind,{games:{demo:{block:6990,serve:{local:4199}}}});
+    const dir=path.join(tmp,'retry-'+kind);
+    fs.mkdirSync(dir);
+    const env: NodeJS.ProcessEnv={};
+    const flags=['--ports',ports];
+    if (kind==='pull') env['KIT_TEST_FAULT']='swap';
+    if (kind==='lock') {
+      const runner=path.join(source,'kit.mjs');
+      const code=fs.readFileSync(runner,'utf8');
+      const updated=code.replace("fs.writeFileSync(NEW + '/kit.lock.json'","if (!process.env.KIT_SPEC_FIXTURE_NO_LOCK) fs.writeFileSync(NEW + '/kit.lock.json'");
+      expect(updated).not.toBe(code);
+      fs.writeFileSync(runner,updated);
+      env['KIT_SPEC_FIXTURE_NO_LOCK']='1';
+    }
+    if (kind==='installation') {
+      const bin=fs.mkdtempSync(path.join(tmp,'fake-npm-'));
+      const windows=process.platform==='win32';
+      fs.writeFileSync(path.join(bin,windows?'npm.cmd':'npm'),windows?'@echo injected install failure\r\n@exit /b 42\r\n':'#!/bin/sh\necho injected install failure >&2\nexit 42\n',{mode:0o755});
+      env['PATH']=bin+path.delimiter+process.env['PATH'];
+    } else flags.push('--no-install');
+    const failed=generate(source,head,file,dir,flags,env);
+    expect(failed.status,failed.stdout+failed.stderr).toBe(1);
+    expect(failed.stderr).toContain({pull:'pull failed',lock:'kit.lock.json',installation:'injected install failure'}[kind]);
+    expect(fs.readdirSync(dir)).toEqual([]);
+    expect(fs.readdirSync(tmp).filter(file=>file.startsWith('.kit-spec-'))).toEqual([]);
+    const retry=generate(source,head,file,dir,['--ports',ports,'--no-install']);
+    expect(retry.status,retry.stdout+retry.stderr).toBe(0);
+    expect(fs.existsSync(path.join(dir,'docs/kit-assembly.json'))).toBe(true);
+  },60000);
+  it('leaves an unregistered game and developer-owned files untouched',()=>{
+    const {dir:source}=fixture('ports-source');
+    const registry=path.join(source,'ports.json');
+    const doc=path.join(source,'docs/PORTS.md');
+    const before=[fs.readFileSync(registry,'utf8'),fs.readFileSync(doc,'utf8')];
+    const file=write('unregistered',{...basic,id:'synthetic-transaction'});
+    const dir=path.join(tmp,'no-ports-game');
+    const failed=generate(source,head,file,dir,['--no-install'],{KIT_TEST_FAULT:'swap'});
+    expect(failed.status,failed.stdout+failed.stderr).toBe(1);
+    expect([fs.readFileSync(registry,'utf8'),fs.readFileSync(doc,'utf8')]).toEqual(before);
+    expect(fs.existsSync(dir)).toBe(false);
+    fs.mkdirSync(dir);
+    fs.writeFileSync(path.join(dir,'keep.txt'),'developer-owned');
+    expect(generate(source,head,file,dir,['--no-install']).status).toBe(1);
+    expect(fs.readdirSync(dir)).toEqual(['keep.txt']);
+    expect(fs.readFileSync(path.join(dir,'keep.txt'),'utf8')).toBe('developer-owned');
+  },60000);
+  it('uses the official registry for a deliberately pre-registered destination',()=>{
+    const {dir:source}=fixture('pending-source');
+    const id='pending-synthetic';
+    const dir=path.join(tmp,'pending-game');
+    const command=spawnSync(process.execPath,['tools/game-server/server.mjs','add',id,'Pending Synthetic',dir,'--pending'],{cwd:source,encoding:'utf8'});
+    expect(command.status,command.stdout+command.stderr).toBe(0);
+    expect(fs.existsSync(dir)).toBe(false);
+    const result=generate(source,head,write('pending-spec',{...basic,id}),dir,['--no-install']);
+    expect(result.status,result.stdout+result.stderr).toBe(0);
+    expect(fs.readFileSync(path.join(dir,'vite.config.ts'),'utf8')).toContain('port:');
   },60000);
 });

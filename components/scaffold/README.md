@@ -13,7 +13,7 @@ One command makes a working, empty game repo from the kit (K204). Run it from th
 4. Re-running is safe: each step (git init, first commit, `gh repo create`, `gh repo edit --delete-branch-on-merge`) prints what it did and a failure names the step. Use `--no-remote` offline; `--no-install` or `--link` skips `npm install`.
 5. After it: set `ci.config.json` (`repo`, `runnerLabel`), run `node kit/ci-templates/render.mjs`, then `npm run check`.
 6. Write template files with the `.tpl` ending and only the placeholders `{{id}} {{name}} {{dev}} {{preview}} {{phone}} {{repo}} {{runner}}`; any other `{{x}}` throws "unknown {{x}}".
-7. For a specification-driven start, resolve the spec before generation; never ignore unresolved mechanics or treat a component selection as an implemented rule.
+7. For a specification-driven start, resolve the spec at the intended kit ref, register its port block, and then generate into a new or empty directory. Keep the registry entry the same between attempts. Treat executable rules and gate configuration as game work.
 8. Do the TODOs listed in the generated `CLAUDE.md` (traceability, theme-check, plan-checker, plain-text, e2e, repo-gate's `cardIdLiteral` and `artFolder`); they are not wired.
 
 **Common mistakes:**
@@ -52,9 +52,12 @@ Run from the game-kit checkout. A JSON spec with version 1, id, name, optional p
 
 ```sh
 node kit.mjs spec resolve game-spec.json --ref HEAD
-node kit.mjs spec generate game-spec.json --dir demo --ref HEAD --ports ports.json --no-install
+node tools/game-server/server.mjs add demo "Demo" demo --pending
+node kit.mjs spec generate game-spec.json --dir demo --ref HEAD
 ```
 
-Use a release tag for real games. Resolve reads the mechanics registry and transitive component manifests at the resolved commit, reports why each component was selected and lists required npm packages. Match an exact comma-separated mechanic alias (case insensitive); use the existing search command to discover aliases. Partial or unmapped mechanics block generation unless the spec has a nonempty buildOwn reason keyed by the requested mechanic. An explicit reason does not turn a partial mechanic into a mapped one. Fully mapped mechanics cannot be overridden with buildOwn.
+Use a release tag for real games. Resolution uses the generator, templates, mechanics registry, and manifests from the selected commit and lists the required npm packages. A ref with its own declarative starter supplies its own profile definitions. Older refs use the original version 1 profile definitions and are supported when they ship a compatible scaffold and all required components. An incompatible ref fails before generation. Match an exact comma-separated mechanic alias (case insensitive). Use search to discover aliases. Partial or unmapped mechanics block generation unless the spec has a nonempty `buildOwn` reason keyed by the requested mechanic. Fully mapped mechanics cannot be overridden with `buildOwn`.
 
-Generate is local only (no private GitHub repo or first commit), requires a new or empty directory, and uses the existing port registration and scaffold. An explicit ports file must already include the id and phone slot. It pulls the resolved components at the exact commit, adds missing declared npm dependencies before installation, and saves docs/game-spec.json and docs/kit-assembly.json. Use --link for an existing node_modules or --no-install for offline work. The generated engine and UI remain stubs: agents must still implement rules, adapters, setup and game-specific gate configuration. Never infer a rule from the profile. Existing kit.mjs new is unchanged.
+Register the game once with `server.mjs add … --pending`, or pass an existing registry with `--ports`. The entry must contain the game's block and phone slot. Earlier drafts of `spec generate` registered missing entries automatically. Generation now reads the registry, stages a new or empty destination beside the requested path, and publishes it after source generation, lock validation, and installation succeed. A normal failure clears the staging directory and leaves the destination ready to retry. An interrupted process can leave a `.kit-spec-*` directory beside the destination. Remove that staging directory after the process exits and retry.
+
+Generation makes a local scaffold with no Git commit or GitHub repository. It pulls the resolved components at the exact commit, adds missing declared npm dependencies, and saves `docs/game-spec.json` and `docs/kit-assembly.json`. Use `--link` for an existing `node_modules` or `--no-install` for offline work. Executable game rules, system adapters, setup and game-specific gate configuration remain to be implemented.
