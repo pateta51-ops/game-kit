@@ -11,6 +11,13 @@ import { readdirSync, readFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import ts from 'typescript';
+import { runRuleAssertions, type RuleAdapter, type RuleCase, type RuleRequirement } from './assertions.ts';
+
+interface ExecutableSuite {
+  adapter: RuleAdapter<unknown, unknown, unknown>;
+  cases: readonly RuleCase<unknown, unknown>[];
+  rules?: readonly RuleRequirement[];
+}
 
 export interface Config {
   plan: string;
@@ -56,6 +63,10 @@ export interface Config {
   countsLine: boolean;
   /** K172 */
   citeFiles: string[];
+  executableSuite?: string;
+  /** Independent inventory approved by the game's arbiter, before deferrals. */
+  executableRuleIds?: readonly string[];
+  allowEmptyExecutableReason?: string;
 }
 export const DEFAULT_CONFIG: Config = {
   plan: 'docs/BUILD_PLAN.md',
@@ -122,7 +133,7 @@ const idSource = (cfg: Config): string =>
   cfg.idPattern !== '' ? `(?:${cfg.idPattern})` : `(?:${[...cfg.families].sort((a, b) => b.length - a.length).join('|')})-(?:${cfg.idTail})${cfg.strictIdEnd ? '(?![A-Za-z0-9_])' : '(?![0-9])'}`;
 export const ruleIdPattern = (cfg: Config): RegExp => new RegExp(cfg.idPattern !== '' ? cfg.idPattern : `(?<![A-Za-z0-9-])${idSource(cfg)}`, 'g');
 const isDeferred = (cfg: Config, id: string): boolean =>
-  cfg.deferred[id] !== undefined || cfg.deferredPrefixes.some((p) => id.startsWith(p));
+  (Object.hasOwn(cfg.deferred, id) && cfg.deferred[id] !== undefined) || cfg.deferredPrefixes.some((p) => id.startsWith(p));
 /** The rule ids one plan line defines: any id of the line, or (idsAtLineStart) the bold id opening a list item or the first cell of a table row. */
 const lineIds = (line: string, cfg: Config): string[] =>
   cfg.idsAtLineStart
@@ -133,7 +144,7 @@ const lineIds = (line: string, cfg: Config): string[] =>
 // Rule ids of the plan
 
 /** The lines of section `number` (heading excluded), ignoring headings and lines inside code fences. */
-function sectionLines(markdown: string, number: number, dot = false): string[] {
+function sectionLines(markdown: string, number: number, dot = false): string[] | undefined {
   const out: string[] = [];
   let inFence = false;
   let inSection = false;
@@ -151,7 +162,7 @@ function sectionLines(markdown: string, number: number, dot = false): string[] {
     }
     if (inSection) out.push(line);
   }
-  return out;
+  return inSection ? out : undefined;
 }
 
 /** The lines under the heading that starts with `heading`, up to the next heading of its level or higher. */
@@ -171,23 +182,62 @@ function headingLines(markdown: string, heading: string): string[] {
 
 function ruleLines(markdown: string, cfg: Config): string[] {
   const lines = sectionLines(markdown, cfg.ruleSection, cfg.headingDot);
-  if (lines.length === 0) throw new Error(`section "## ${String(cfg.ruleSection)}." not found in the plan`);
+  if (lines === undefined) throw new Error(`section "## ${String(cfg.ruleSection)}." not found in the plan`);
   return [...lines, ...cfg.extraRuleHeadings.flatMap((h) => headingLines(markdown, h))];
 }
 
-/** The rule ids the rules section defines, in document order without duplicates or exclusions. Throws without a the rules section. */
+function recognizedRuleIds(markdown: string, cfg: Config): string[] {
+  return [...new Set(ruleLines(markdown, cfg).flatMap(line => lineIds(line, cfg)))];
+}
+
+/** The rule IDs the rules section defines in document order, excluding deferred IDs. */
 export function extractRuleIds(markdown: string, cfg: Config = DEFAULT_CONFIG): string[] {
-  const lines = ruleLines(markdown, cfg);
-  const ids: string[] = [];
-  const seen = new Set<string>();
-  for (const line of lines) {
-    for (const id of lineIds(line, cfg)) {
-      if (seen.has(id) || isDeferred(cfg, id)) continue;
-      seen.add(id);
-      ids.push(id);
+  return recognizedRuleIds(markdown, cfg).filter(id => !isDeferred(cfg, id));
+}
+
+function executableInventory(plan: string, cfg: Config): string[] {
+  const discovered = recognizedRuleIds(plan, cfg).filter(id => id.length > 0);
+  if (!Array.isArray(cfg.deferredPrefixes) || cfg.deferredPrefixes.some(prefix =>
+    typeof prefix !== 'string' || !prefix.trim() || prefix.trim() !== prefix)) {
+    throw new Error('deferredPrefixes must contain only nonblank rule prefixes');
+  }
+  const deferred: unknown = cfg.deferred;
+  if (deferred === null || typeof deferred !== 'object' || Array.isArray(deferred)) {
+    throw new Error('deferred must map rule IDs to nonblank reasons');
+  }
+  for (const [id, reason] of Object.entries(deferred)) {
+    if (!id || id.trim() !== id || typeof reason !== 'string' || !reason.trim()) {
+      throw new Error('deferred must map rule IDs to nonblank reasons (invalid entry ' + JSON.stringify(id) + ')');
     }
   }
-  return ids;
+  const reason = cfg.allowEmptyExecutableReason;
+  if (reason !== undefined && (typeof reason !== 'string' || !reason.trim())) {
+    throw new Error('allowEmptyExecutableReason must be a nonblank reason');
+  }
+  const expected = cfg.executableRuleIds;
+  if (expected !== undefined) {
+    const ids = Array.isArray(expected)
+      ? expected.filter((id: unknown): id is string => typeof id === 'string' && !!id && id.trim() === id)
+      : [];
+    const required = new Set(ids);
+    if (!required.size || required.size !== expected.length) {
+      throw new Error('executableRuleIds must list nonblank, distinct rule IDs');
+    }
+    const found = new Set(discovered);
+    const missing = ids.filter(id => !found.has(id));
+    const extra = discovered.filter(id => !required.has(id));
+    if (missing.length || extra.length) {
+      const differences = [
+        ...(missing.length ? ['missing ' + missing.join(', ')] : []),
+        ...(extra.length ? ['unexpected ' + extra.join(', ')] : []),
+      ];
+      throw new Error('executableRuleIds does not match the plan inventory (' + differences.join(', ') + ')');
+    }
+  }
+  if (!discovered.length && reason === undefined) {
+    throw new Error('no rule IDs recognized. For an intentionally empty scope, set allowEmptyExecutableReason');
+  }
+  return discovered;
 }
 
 // ---------------------------------------------------------------------------------------------------------------------
@@ -537,7 +587,7 @@ export const makeIo = (root: string, cfg: Config): Io => ({
   },
 });
 
-export function run(args: readonly string[], io: Io, cfg: Config = DEFAULT_CONFIG): number {
+export function run(args: readonly string[], io: Io, cfg: Config = DEFAULT_CONFIG, suite?: ExecutableSuite): number {
   const unknown = args.filter(
     (a) => a !== '--strict' && a !== '--warn' && a !== '--quiet' && a !== '--release',
   );
@@ -548,7 +598,19 @@ export function run(args: readonly string[], io: Io, cfg: Config = DEFAULT_CONFI
   const release = args.includes('--release');
   const quiet = args.includes('--quiet');
 
-  const plan = io.readText(cfg.plan);
+  let plan: string;
+  let discovered: string[] = [];
+  try {
+    plan = io.readText(cfg.plan);
+    if (cfg.executableSuite !== undefined) discovered = executableInventory(plan, cfg);
+  } catch (error) {
+    if (cfg.executableSuite === undefined) throw error;
+    const pattern = cfg.idPattern === ''
+      ? 'families ' + JSON.stringify(cfg.families) + ', idTail ' + JSON.stringify(cfg.idTail)
+      : 'idPattern ' + JSON.stringify(cfg.idPattern);
+    io.err(`executable rule inventory for ${cfg.plan}, section ${String(cfg.ruleSection)}, ${pattern}: ${String(error)}. Check the plan section and rule-ID configuration.`);
+    return 1;
+  }
   let merged = new Set<string>();
   try {
     merged = mergedPhases(io.readText(cfg.progress), cfg);
@@ -574,7 +636,7 @@ export function run(args: readonly string[], io: Io, cfg: Config = DEFAULT_CONFI
     due = ids.filter((id) => implemented.has(familyOf(id)));
     implementedList = [...implemented].sort().join(', ');
     const inline = inlinePending(
-      cfg.rulePendingInlineOnly ? sectionLines(plan, cfg.ruleSection, cfg.headingDot) : ruleLines(plan, cfg),
+      cfg.rulePendingInlineOnly ? (sectionLines(plan, cfg.ruleSection, cfg.headingDot) ?? []) : ruleLines(plan, cfg),
       (l) => lineIds(l, cfg)[0],
       !cfg.rulePendingInlineOnly,
     );
@@ -669,7 +731,31 @@ export function run(args: readonly string[], io: Io, cfg: Config = DEFAULT_CONFI
     scMissing.length > 0 ||
     unlisted.length > 0 ||
     sc.unknown.length > 0;
-  return strict && failed ? 1 : 0;
+  let evidenceFailed = false;
+  if (cfg.executableSuite !== undefined) {
+    try {
+      if (typeof suite?.adapter?.setup !== 'function' || typeof suite.adapter.act !== 'function' ||
+        typeof suite.adapter.observe !== 'function' || !Array.isArray(suite.cases)) {
+        throw new Error('executable suite must export an adapter (setup, act, observe) and a cases array');
+      }
+      const recognized = new Set(discovered);
+      const requirements = new Map<string, RuleRequirement>();
+      for (const rule of suite.rules ?? []) {
+        if (!recognized.has(rule.id) || requirements.has(rule.id)) throw new Error('unknown or duplicate executable rule: ' + rule.id);
+        requirements.set(rule.id, rule);
+      }
+      const required = ids.filter(id => pending[id] === undefined && !notDue.has(id));
+      io.out(`executable rule inventory: ${String(discovered.length)} recognized, ${String(required.length)} due` +
+        (discovered.length === 0 ? ` (allowed empty scope: ${cfg.allowEmptyExecutableReason ?? ''})` : ''));
+      const report = runRuleAssertions(suite.adapter, required.map(id => requirements.get(id) ?? id), suite.cases);
+      evidenceFailed = report.problems.length > 0;
+      for (const problem of report.problems) io.err(problem);
+    } catch (error) {
+      io.err('executable rule evidence: ' + String(error));
+      evidenceFailed = true;
+    }
+  }
+  return evidenceFailed || (strict && failed) ? 1 : 0;
 }
 
 if (process.argv[1] !== undefined && import.meta.url === pathToFileURL(resolve(process.argv[1])).href) {
@@ -678,5 +764,14 @@ if (process.argv[1] !== undefined && import.meta.url === pathToFileURL(resolve(p
   const file = at >= 0 ? (args.splice(at, 2)[1] ?? '') : 'trace.config.json';
   const root = process.cwd();
   const cfg: Config = { ...DEFAULT_CONFIG, ...(JSON.parse(readFileSync(join(root, file), 'utf8')) as Partial<Config>) };
-  process.exitCode = run(args, makeIo(root + '/', cfg), cfg);
+  const io = makeIo(root + '/', cfg);
+  try {
+    const suite = cfg.executableSuite === undefined ? undefined :
+      (await import(pathToFileURL(resolve(root, cfg.executableSuite)).href) as { default: ExecutableSuite }).default;
+    process.exitCode = run(args, io, cfg, suite);
+  } catch (error) {
+    if (cfg.executableSuite === undefined) throw error;
+    io.err('executable rule gate: ' + String(error));
+    process.exitCode = 1;
+  }
 }

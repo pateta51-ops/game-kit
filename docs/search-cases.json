@@ -565,5 +565,9 @@
   { "q": "greedy driver", "first": "opponent" },
   { "q": "cheat options at set-up allowCheats", "first": "cheat-options" },
   { "q": "dev cheats every round start", "first": "cheat-options" },
-  { "q": "cheated mark", "first": "cheat-options" }
+  { "q": "cheated mark", "first": "cheat-options" },
+  { "q": "executable rule evidence", "first": "traceability/assertions" },
+  { "q": "arbiter fixture assertion", "first": "traceability/assertions" },
+  { "q": "rule evidence refusal control", "first": "traceability/assertions" },
+  { "q": "executable rule evidence inventory", "first": "traceability/assertions" }
 ]
