@@ -15,6 +15,8 @@ Rule-citation gate. The game passes a `trace.config.json` (any subset of the opt
 6. List ids that are not due in the pending file named by `pending` (id to batch); `--release` fails while it is not empty.
 7. Use `citeFiles` to require rule citations in comments for engine folders.
 
+8. For independent executable arbiter fixtures, use `runRuleAssertions` from `assertions.ts`. A title is not execution evidence; all required rules must have passing cases, with no failed case for those rules.
+
 **Common mistakes:**
 - Citing an id in a `.skip`, `.todo` or `.fails` test: it counts for none unless `countSkipped` is set.
 - A sub-letter id (`LVL-01a`) is read as its base id; with `strictIdEnd` it is not.
@@ -63,3 +65,7 @@ Not covered:
 ```sh
 node kit/traceability/check-traceability.ts --config trace.config.json   # test titles must cite rule ids
 ```
+
+## Executable rules-arbiter fixtures
+
+`runRuleAssertions(adapter, requiredRules, cases)` executes independent seeded cases against the real game adapter. The arbiter owns the JSON-compatible fixture, actions, acceptance expectations and checks; the game supplies `setup`, `act` and normalized `observe`. Every step checks at least one state/event assertion. Paths are own-property string keys or numeric array indices, with `equals`, `notEquals`, `exists`, `absent`, `atLeast` and `atMost`. Rejected actions must not change observed state or emit events. A crash, missing assertion, unknown rule or failing case is not evidence; missing required rule IDs also fail. A game should assert `report.problems` is empty in its test suite. The adapter must observe every rule-relevant field and use actual engine actions, not a second implementation or fabricated state. This runner complements the existing citation gate; it does not change existing traceability behavior. Fixtures and assertions are not generated from the implementation under test.
