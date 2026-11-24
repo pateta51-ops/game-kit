@@ -75,6 +75,7 @@ describe('K551 declarative starter',()=>{
     expect(result.commit).toBe(head);
     expect(fs.existsSync(path.join(dir,'kit/campaign/component.json'))).toBe(true);
     expect(fs.existsSync(path.join(dir,'docs/game-spec.json'))).toBe(true);
+    expect(fs.existsSync(path.join(dir,'scripts/legacy-repo-gate.mjs'))).toBe(false);
     const check=spawnSync(process.execPath,['kit/kit.mjs','check','--source',kit],{cwd:dir,encoding:'utf8'});
     expect(check.status,check.stdout+check.stderr).toBe(0);
     expect(run('generate',file,'--dir',dir,'--ports',ports,'--no-install').status).toBe(1);
@@ -95,23 +96,33 @@ describe('K551 declarative starter',()=>{
     expect(lock).toMatchObject({ref:'older-starter',commit:previous});
   },60000);
   it('keeps linked dependencies untracked when staging a game pinned to an older tag', () => {
-    const { dir: source } = fixture('linked-source');
     const ref = 'v0.272.0';
     const file = write('linked-spec', basic);
     const ports = write('linked-ports', { games: { demo: { block: 6990, serve: { local: 4199 } } } });
     const dir = path.join(tmp, 'linked-game');
     const modules = path.join(kit, 'node_modules');
-    const result = generate(source, ref, file, dir, ['--ports', ports, '--link', modules]);
+    const result = generate(kit, ref, file, dir, ['--ports', ports, '--link', modules]);
     expect(result.status, result.stdout + result.stderr).toBe(0);
     const git = (...args: string[]) => execFileSync('git', args, { cwd: dir, encoding: 'utf8' }).trim();
     git('init', '-q');
     git('add', '-A');
     expect.soft(git('ls-files', '--', 'node_modules')).toBe('');
     expect(fs.realpathSync(path.join(dir, 'node_modules'))).toBe(fs.realpathSync(modules));
-    const commit = execFileSync('git', ['rev-parse', `${ref}^{commit}`], { cwd: source, encoding: 'utf8' }).trim();
+    const commit = execFileSync('git', ['rev-parse', `${ref}^{commit}`], { cwd: kit, encoding: 'utf8' }).trim();
     expectPinnedAssembly(dir, ref, commit);
     const gate = spawnSync(process.execPath, ['kit/repo-gate/repo-gate.ts'], { cwd: dir, encoding: 'utf8' });
     expect(gate.status, gate.stdout + gate.stderr).toBe(0);
+    const runGate = () => spawnSync('npm', ['run', 'repo-gate'], { cwd: dir, encoding: 'utf8', shell: true });
+    git('add', '-f', 'node_modules');
+    const forced = runGate();
+    expect.soft(forced.status, forced.stdout + forced.stderr).toBe(1);
+    expect(forced.stdout + forced.stderr).toContain('node_modules:0: DEPENDENCY_LINK');
+    expect(forced.stdout + forced.stderr).not.toContain('git is not available here');
+    git('rm', '--cached', '--', 'node_modules');
+    expect(runGate().status).toBe(0);
+    expect(fs.realpathSync(path.join(dir, 'node_modules'))).toBe(fs.realpathSync(modules));
+    const gateSource = execFileSync('git', ['show', `${ref}:components/repo-gate/repo-gate.ts`], { cwd: kit });
+    expect(fs.readFileSync(path.join(dir, 'kit/repo-gate/repo-gate.ts'))).toEqual(gateSource);
   }, 60_000);
   it('publishes only one complete scaffold when two attempts share a destination', async () => {
     const file = write('concurrent-spec', basic);

@@ -201,6 +201,15 @@ function generate(kit, spec, resolved, scaffold, flags) {
     }
     const pkgFile = path.join(staged,'package.json')
     const pkg = JSON.parse(fs.readFileSync(pkgFile,'utf8'))
+    // Protect the generated command for legacy pins while leaving the installed kit byte-for-byte pinned.
+    const repoGate = pkg.scripts?.['repo-gate']
+    const pinnedGate = path.join(staged,'kit/repo-gate/repo-gate.ts')
+    if (typeof repoGate === 'string' && fs.existsSync(pinnedGate) && !fs.readFileSync(pinnedGate,'utf8').includes('DEPENDENCY_LINK')) {
+      const legacyCheck = 'scripts/legacy-repo-gate.mjs'
+      fs.mkdirSync(path.join(staged,'scripts'),{recursive:true})
+      fs.copyFileSync(new URL('./legacy-repo-gate.mjs',import.meta.url),path.join(staged,legacyCheck),fs.constants.COPYFILE_EXCL)
+      pkg.scripts['repo-gate'] = `node ${legacyCheck} && ${repoGate}`
+    }
     for (const kind of ['dependencies','devDependencies']) for (const [p,v] of Object.entries(resolved[kind])) {
       if (!Object.hasOwn(pkg.dependencies??{},p)&&!Object.hasOwn(pkg.devDependencies??{},p)) (pkg[kind]??={})[p]=v
     }
