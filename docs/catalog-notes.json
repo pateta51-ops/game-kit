@@ -1695,7 +1695,7 @@
   },
   "reference-game": {
     "mechanics": "none: test tooling",
-    "use": "Kit CI only: a made-up game generated through the scaffold whose own check fails when a component interface drifts.",
+    "use": "Kit CI only: generated card and solo tactical references whose own checks verify the kit's compatibility contracts.",
     "not": "Pulling into a game or copying as a starter; use scaffold for a new game.",
     "title": "Tiny sample game that tests the kit",
     "tags": [
@@ -1704,7 +1704,10 @@
       "game",
       "contract",
       "example",
-      "demo"
+      "demo",
+      "solo tactical reference",
+      "generated compatibility game",
+      "tactical reference contract"
     ],
     "visible": false,
     "release": 1,
