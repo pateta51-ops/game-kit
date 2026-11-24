@@ -605,15 +605,26 @@ describe('executable release inventory in the CLI', () => {
     expect(recognized.status, recognized.stdout + recognized.stderr).toBe(0);
   });
 
-  it('allows explicitly deferred rules or a justified empty scope', () => {
-    const deferred = runCli({ families: ['PAY', 'COMBAT'], deferredPrefixes: ['PAY-', 'COMBAT-'] });
+  it('reports explicitly deferred rules', () => {
+    const deferred = runCli({ families: ['PAY', 'COMBAT'], deferred: { 'PAY-01': 'Future scenario' }, deferredPrefixes: ['COMBAT-'] });
     expect(deferred.status, deferred.stdout + deferred.stderr).toBe(0);
     expect(deferred.stdout).toContain('2 recognized, 0 due');
+  });
+
+  it('allows a justified empty scope', () => {
     const allowed = runCli({ families: ['PAY'], allowEmptyExecutableReason: 'This rules section describes scope only.' },
       '# Plan\n## 3. Rules\n## 4. Notes\n');
     expect(allowed.status, allowed.stdout + allowed.stderr).toBe(0);
     expect(allowed.stdout).toContain('This rules section describes scope only.');
-    expect(runCli({ allowEmptyExecutableReason: '   ' }).status).toBe(1);
+  });
+
+  it('rejects a blank empty-scope justification', () => {
+    const result = runCli({ allowEmptyExecutableReason: '   ' });
+    expect(result.status).toBe(1);
+    expect(result.stderr).toContain('allowEmptyExecutableReason');
+  });
+
+  it('validates the suite even for an explicitly empty scope', () => {
     const invalid = runCli({ allowEmptyExecutableReason: 'No rules for this release.' }, plan,
       'export default { cases: [] };');
     expect(invalid.status).toBe(1);
@@ -634,5 +645,11 @@ describe('executable release inventory in the CLI', () => {
     const result = runCli({ families: ['PAY', 'COMBAT'], deferredPrefixes: [''] });
     expect(result.status, result.stdout + result.stderr).toBe(1);
     expect(result.stderr).toContain('deferredPrefixes');
+  });
+
+  it('rejects non-reasons in the explicit deferral map', () => {
+    const result = runCli({ families: ['PAY', 'COMBAT'], deferred: { 'PAY-01': null, 'COMBAT-01': [] } });
+    expect(result.status, result.stdout + result.stderr).toBe(1);
+    expect(result.stderr).toMatch(/deferred.*PAY-01/);
   });
 });

@@ -133,7 +133,7 @@ const idSource = (cfg: Config): string =>
   cfg.idPattern !== '' ? `(?:${cfg.idPattern})` : `(?:${[...cfg.families].sort((a, b) => b.length - a.length).join('|')})-(?:${cfg.idTail})${cfg.strictIdEnd ? '(?![A-Za-z0-9_])' : '(?![0-9])'}`;
 export const ruleIdPattern = (cfg: Config): RegExp => new RegExp(cfg.idPattern !== '' ? cfg.idPattern : `(?<![A-Za-z0-9-])${idSource(cfg)}`, 'g');
 const isDeferred = (cfg: Config, id: string): boolean =>
-  cfg.deferred[id] !== undefined || cfg.deferredPrefixes.some((p) => id.startsWith(p));
+  (Object.hasOwn(cfg.deferred, id) && cfg.deferred[id] !== undefined) || cfg.deferredPrefixes.some((p) => id.startsWith(p));
 /** The rule ids one plan line defines: any id of the line, or (idsAtLineStart) the bold id opening a list item or the first cell of a table row. */
 const lineIds = (line: string, cfg: Config): string[] =>
   cfg.idsAtLineStart
@@ -200,6 +200,15 @@ function executableInventory(plan: string, cfg: Config): string[] {
   if (!Array.isArray(cfg.deferredPrefixes) || cfg.deferredPrefixes.some(prefix =>
     typeof prefix !== 'string' || !prefix.trim() || prefix.trim() !== prefix)) {
     throw new Error('deferredPrefixes must contain only nonblank rule prefixes');
+  }
+  const deferred: unknown = cfg.deferred;
+  if (deferred === null || typeof deferred !== 'object' || Array.isArray(deferred)) {
+    throw new Error('deferred must map rule IDs to nonblank reasons');
+  }
+  for (const [id, reason] of Object.entries(deferred)) {
+    if (!id || id.trim() !== id || typeof reason !== 'string' || !reason.trim()) {
+      throw new Error('deferred must map rule IDs to nonblank reasons (invalid entry ' + JSON.stringify(id) + ')');
+    }
   }
   const reason = cfg.allowEmptyExecutableReason;
   if (reason !== undefined && (typeof reason !== 'string' || !reason.trim())) {
