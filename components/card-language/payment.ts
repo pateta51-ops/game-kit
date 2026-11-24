@@ -92,8 +92,8 @@ export function paymentPlans(input: PaymentInput): PaymentPlan[] {
     return 0;
   });
   return results.map(spend => ({
-    spent: Object.fromEntries(resources.flatMap((id, i) => (spend[i] ?? 0) > 0 ? [[id, spend[i] ?? 0]] : [])),
-    remaining: Object.fromEntries(resources.map((id,i) => [id, (pool.get(id) ?? 0) - (spend[i] ?? 0)])),
+    spent: Object.fromEntries(resources.flatMap((id, i) => (spend[i] ?? 0) > 0 ? [[id, spend[i] ?? 0] as const] : [])),
+    remaining: Object.fromEntries(resources.map((id,i) => [id, (pool.get(id) ?? 0) - (spend[i] ?? 0)] as const)),
   }));
 }
 
