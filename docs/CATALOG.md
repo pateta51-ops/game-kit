@@ -1799,7 +1799,7 @@ Rule-citation gate. The game passes a `trace.config.json` (any subset of the opt
 - **Use it when:** Test titles must cite the game's rule ids; gate configured in `trace.config.json`.
 - **Not for:** Showing ids on screen (plain-text forbids it).
 - **Key exports:** `DEFAULT_CONFIG`, `readPending`, `ruleIdPattern`, `extractRuleIds`, `extractTitles`, `extractComments`, `computeCoverage`, `groupByPrefix`, `extractScenarioIds`, `scenarioCoverage`, `familyOf`, `phaseFamilies`, `mergedPhases`, `inlinePending`, and 19 more
-- **Needs:** nothing
+- **Needs:** [`engine-core`](#engine-core)
 - **Came from:** jarl
 - **Docs:** [README](../components/traceability/README.md) ([rules for agents](../components/traceability/README.md#rules-for-agents))
 
@@ -1808,7 +1808,7 @@ Rule-citation gate. The game passes a `trace.config.json` (any subset of the opt
 - **Also called:** Executable rule evidence
 - **Words:** executable, arbiter, rule, evidence, fixture, assertion, refusal, control
 - **Use it when:** Run arbiter fixtures and check that every due rule has passing setup or action evidence.
-- **Guide:** [README.md](../components/traceability/README.md)
+- **Guide:** [rule-evidence.md](../components/traceability/rule-evidence.md)
 
 ## track
 
