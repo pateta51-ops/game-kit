@@ -181,3 +181,21 @@ import { recordCardPrompts } from '../kit/card-harness/promptRecorder'
 
 recordCardPrompts({ entry: (p) => ({ shown: String((p as { text?: string }).text) }) }) // yours: the words your table shows for prompt p
 ```
+
+
+### Clause mutation testing (K561)
+
+Use `runClauseMutations(game, rows, mutations, { validate })` from `mutations.ts` with the same `SpecGame` and `SpecRow` objects used by `cardSpecs`. A mutant targets one record index in the original records and names a printed line that record owns. Its callback receives a fresh copy of the record and returns a replacement, or null to remove it. Supply game-specific semantic mutations for amounts, targets, order, optionality, costs and conditions; keep the original spec expectations unchanged.
+
+The original content must pass validation, and every row must pass on the original records. Each mutant runs against all rows for its line, with fresh cloned inputs. Only a failed expectation kills a mutant; engine errors, invalid content, wrong record ownership, and no-op changes are separate failures, never evidence of a strong test. A surviving mutant, a line with no mutant, or a mutant with no row is also a finding. Use plain structured-cloneable content, layouts, actions and expectations; the adapter must build fresh game state on each play and must return assertion failures from check rather than throw. A mutated game must not be run against live saves.
+
+```text
+// With a game's SpecGame, rows and schema validator:
+const report = runClauseMutations(game, rows, [
+  { id: 'C-01-amount', line: 'C-01', recordIndex: 0,
+    mutate: r => ({ ...r, amount: r.amount + 1 }) },
+], { validate });
+expect(report.problems).toEqual([]);
+```
+
+The report lists each mutant status and details, the number killed, total attempted, and gate problems. This is semantic test strength, not line coverage or proof that all meaningful mutations have been supplied.
