@@ -253,7 +253,7 @@
   { "q": "card stack on a location", "first": "card-zones" },
   { "q": "rearrange row", "first": "none" },
   { "q": "add card to row", "first": "K520" },
-  { "q": "pay with a set of cards total", "first": "K590" },
+  { "q": "pay with a set of cards total", "first": "card-language" },
   { "q": "weapon", "first": "none" },
   { "q": "ammo tracker", "first": "none" },
   { "q": "restriction on next turn", "first": "engine-core" },
