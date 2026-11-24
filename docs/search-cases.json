@@ -538,5 +538,7 @@
   { "q": "guarded button lifts a guard", "first": "guarded-button" },
   { "q": "barred button with a reason", "first": "guarded-button" },
   { "q": "log why a phase was skipped", "first": "turn-flow" },
-  { "q": "skipped phase event names the card", "first": "turn-flow" }
+  { "q": "skipped phase event names the card", "first": "turn-flow" },
+  { "q": "look ahead greedy player", "first": "opponent" },
+  { "q": "greedy driver", "first": "opponent" }
 ]

@@ -1386,6 +1386,9 @@
       "profiles",
       "test player"
     ],
+    "hooks": [
+      "lookAhead + evaluate: a greedy look ahead player: a one-ply driver that scores each move and picks the best, with a goal-seeking score"
+    ],
     "visible": false,
     "release": 1,
     "gameSupplies": "The view, candidate moves, advice and handlers."
