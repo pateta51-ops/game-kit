@@ -1,4 +1,5 @@
 // Traceability gate: plan ids, test titles, code comments, coverage, command line. Fixtures use made-up ids of the configured families.
+import { spawnSync } from 'node:child_process';
 import { describe, expect, it } from 'vitest';
 import {
   computeCoverage,
@@ -517,5 +518,138 @@ describe('K172 citeFiles', () => {
     const c: Config = { ...cfg, sourceDirs: ['src'], citeFiles: ['src\\engine\\rules\\'] };
     const r = go([test('src/engine/rules/b.ts', 'x;'), test('src/engine/rules/b.ts', 'x;')], c);
     expect(r.text).toMatch(/: src\/engine\/rules\/b\.ts$/m);
+  });
+});
+
+it('fails the configured gate when a cited due rule lacks executable evidence', () => {
+  const errors: string[] = [];
+  const cfg = { ...DEFAULT_CONFIG, requireComment: false, executableSuite: 'arbiter.mjs' };
+  const io: Io = {
+    readText: path => {
+      if (path !== cfg.plan) throw new Error('unused');
+      return '# Plan\n## 3. Rules\n- **R-01** Spend one token.\n';
+    },
+    testFiles: () => [{ path: 'tests/rules.test.ts', text: "it('R-01 spends a token', () => {});" }],
+    sourceFiles: () => [],
+    out: () => {},
+    err: line => { errors.push(line); },
+  };
+  const adapter = {
+    setup: () => ({ tokens: 1 }),
+    act: () => ({ accepted: true, state: { tokens: 0 }, events: [] }),
+    observe: (state: unknown) => state === null ? null : { tokens: (state as { tokens: number }).tokens },
+  };
+  expect(run(['--strict'], io, cfg, { adapter, cases: [] })).toBe(1);
+  expect(errors.splice(0)).toEqual(['R-01: no passing complete rule evidence']);
+  expect(run(['--warn'], io, cfg, { adapter, cases: [] })).toBe(1);
+  expect(errors.splice(0)).toEqual(['R-01: no passing complete rule evidence']);
+  expect(run(['--strict'], io, cfg, { adapter, cases: [{
+    id: 'spend', rules: ['R-01'], seed: 'fixed', fixture: null,
+    steps: [{ action: 'spend', accepted: true, checks: [{ source: 'state', path: ['tokens'], op: 'equals', value: 0 }] }],
+    evidence: [{ rule: 'R-01', kind: 'action', step: 0, assertion: 0 }],
+  }] })).toBe(0);
+  expect(errors).toEqual([]);
+});
+
+describe('executable release inventory in the CLI', () => {
+  const plan = '# Plan\n## 3. Rules\n- **PAY-01** Pay two tokens.\n- **COMBAT-01** Deal one damage.\n## 4. Notes\nDetails.\n';
+  const emptySuite = `export default { adapter: {
+    setup: fixture => fixture, observe: state => state, act: () => { throw new Error('unexpected action'); }
+  }, cases: [] };`;
+  const runCli = (config: Record<string, unknown>, rules = plan, suite = emptySuite, titles: readonly string[] = []) => {
+    const root = mkdtempSync(join(tmpdir(), 'arbiter-inventory-'));
+    try {
+      writeFileSync(join(root, 'plan.md'), rules);
+      writeFileSync(join(root, 'trace.config.json'), JSON.stringify({
+        plan: 'plan.md', executableSuite: 'arbiter.mjs', requireComment: false, ...config,
+      }));
+      writeFileSync(join(root, 'arbiter.mjs'), suite);
+      mkdirSync(join(root, 'tests'));
+      writeFileSync(join(root, 'tests', 'rules.test.ts'), titles.map(id => 'it(' + JSON.stringify(id) + ', () => {});').join('\n'));
+      const result = spawnSync(process.execPath, [join(import.meta.dirname, 'check-traceability.ts'), '--strict', '--release'], {
+        cwd: root, encoding: 'utf8',
+      });
+      expect(result.error).toBeUndefined();
+      return result;
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  };
+
+  it.each([
+    ['wrong families', {}, plan, 'section 3'],
+    ['wrong custom pattern', { idPattern: 'OTHER-[0-9]+' }, plan, 'section 3'],
+    ['wrong existing section', { ruleSection: 4, families: ['PAY', 'COMBAT'] }, plan, 'section 4'],
+    ['missing section', { ruleSection: 9, families: ['PAY', 'COMBAT'] }, plan, 'section 9'],
+    ['empty plan inventory', { families: ['PAY', 'COMBAT'] }, '# Plan\n## 3. Rules\nPending draft.\n', 'section 3'],
+  ] as const)('rejects %s with configuration diagnostics', (_name, config, source, section) => {
+    const result = runCli(config, source);
+    expect(result.status, result.stdout + result.stderr).toBe(1);
+    expect(result.stderr).toContain('plan.md');
+    expect(result.stderr).toContain(section);
+    expect(result.stderr).toMatch(/families|idPattern/);
+    expect(result.stderr).toContain('Check');
+  });
+
+  it('rejects a truncated inventory despite passing evidence for the only discovered rule', () => {
+    const suite = `export default {
+      adapter: { setup: fixture => fixture, observe: state => state, act: state => ({ accepted: true, state, events: [] }) },
+      cases: [{ id: 'pay', rules: ['PAY-01'], seed: 'test', fixture: { paid: true },
+        steps: [{ action: 'pay', accepted: true, checks: [{ source: 'state', path: ['paid'], op: 'equals', value: true }] }],
+        evidence: [{ kind: 'action', rule: 'PAY-01', step: 0, assertion: 0 }] }]
+    };`;
+    const result = runCli({ families: ['PAY'], executableRuleIds: ['PAY-01', 'COMBAT-01'] }, plan, suite, ['PAY-01']);
+    expect(result.status, result.stdout + result.stderr).toBe(1);
+    expect(result.stderr).toContain('COMBAT-01');
+    const recognized = runCli({ families: ['PAY'], executableRuleIds: ['PAY-01'] }, plan, suite, ['PAY-01']);
+    expect(recognized.status, recognized.stdout + recognized.stderr).toBe(0);
+  });
+
+  it('reports explicitly deferred rules', () => {
+    const deferred = runCli({ families: ['PAY', 'COMBAT'], deferred: { 'PAY-01': 'Future scenario' }, deferredPrefixes: ['COMBAT-'] });
+    expect(deferred.status, deferred.stdout + deferred.stderr).toBe(0);
+    expect(deferred.stdout).toContain('2 recognized, 0 due');
+  });
+
+  it('allows a justified empty scope', () => {
+    const allowed = runCli({ families: ['PAY'], allowEmptyExecutableReason: 'This rules section describes scope only.' },
+      '# Plan\n## 3. Rules\n## 4. Notes\n');
+    expect(allowed.status, allowed.stdout + allowed.stderr).toBe(0);
+    expect(allowed.stdout).toContain('This rules section describes scope only.');
+  });
+
+  it('rejects a blank empty-scope justification', () => {
+    const result = runCli({ allowEmptyExecutableReason: '   ' });
+    expect(result.status).toBe(1);
+    expect(result.stderr).toContain('allowEmptyExecutableReason');
+  });
+
+  it('validates the suite even for an explicitly empty scope', () => {
+    const invalid = runCli({ allowEmptyExecutableReason: 'No rules for this release.' }, plan,
+      'export default { cases: [] };');
+    expect(invalid.status).toBe(1);
+    expect(invalid.stderr).toContain('must export an adapter');
+  });
+
+  it('rejects omitted evidence and reports a missing suite module', () => {
+    const missing = runCli({ families: ['PAY', 'COMBAT'] });
+    expect(missing.status).toBe(1);
+    expect(missing.stderr).toContain('PAY-01: no passing complete rule evidence');
+    expect(missing.stderr).toContain('COMBAT-01: no passing complete rule evidence');
+    const unavailable = runCli({ families: ['PAY', 'COMBAT'], executableSuite: 'missing.mjs' });
+    expect(unavailable.status).toBe(1);
+    expect(unavailable.stderr).toContain('missing.mjs');
+  });
+
+  it('rejects an empty deferred prefix that would match every recognized rule', () => {
+    const result = runCli({ families: ['PAY', 'COMBAT'], deferredPrefixes: [''] });
+    expect(result.status, result.stdout + result.stderr).toBe(1);
+    expect(result.stderr).toContain('deferredPrefixes');
+  });
+
+  it('rejects non-reasons in the explicit deferral map', () => {
+    const result = runCli({ families: ['PAY', 'COMBAT'], deferred: { 'PAY-01': null, 'COMBAT-01': [] } });
+    expect(result.status, result.stdout + result.stderr).toBe(1);
+    expect(result.stderr).toMatch(/deferred.*PAY-01/);
   });
 });

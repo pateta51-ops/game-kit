@@ -169,7 +169,9 @@ export interface GameRules<G extends GameTypes> {
   contentHash(content: G['content']): string;
   /** The fields stamped on every event after `seq`. */
   stamp?(s: G['state']): object;
-  /** Checks run after every action while invariant checking is on. */
+  /** Diagnostic checks report violations. Strict checks reject the result. Omit to use the global diagnostic switch. */
+  readonly invariantPolicy?: 'diagnostic' | 'strict';
+  /** Pure checks of settled setup, fixtures and action results, called according to the invariant policy. */
   invariants?(
     state: G['state'],
     content: G['content'],

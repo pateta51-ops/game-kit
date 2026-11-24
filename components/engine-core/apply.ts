@@ -14,6 +14,7 @@ import { applyDebug, KERNEL_VERBS } from './debug.ts';
 import type { Draft } from './draft.ts';
 import { EngineBugError, IllegalActionError } from './errors.ts';
 import { GameOver } from './gameOver.ts';
+import { checkStateInvariants } from './invariant-policy.ts';
 import { run } from './runner.ts';
 import type { AnswerAction, ApplyResult, Ctx, GameRules, GameTypes, HandlerTable, KernelEvent, KernelState, KernelTask } from './types.ts';
 
@@ -26,15 +27,7 @@ const no = (code: string, message: string): ValidationResult => ({ ok: false, er
 /** "Reveal marks": an action whose result emitted a revealing event cannot be undone in Safe mode. */
 export const isRevealing = (events: readonly KernelEvent[]): boolean => events.some((e) => e.reveal === true);
 
-let checking = false;
-
-/** Dev and test builds check the game's invariants after every action: `applyAction` then fills `violations`. Off by default. */
-export function setInvariantChecking(on: boolean): void {
-  checking = on;
-}
-
-/** Is invariant checking on? */
-export const isChecking = (): boolean => checking;
+export { isChecking, setInvariantChecking } from './invariant-policy.ts';
 
 const validWords = (w: unknown): boolean =>
   typeof w === 'object' && w !== null && (['a', 'b', 'c', 'd'] as const).every((k) => {
@@ -99,14 +92,6 @@ function shallowState(state: KernelState): Draft<KernelState> {
   return out;
 }
 
-const violationsOf = <G extends GameTypes>(
-  game: GameRules<G>,
-  state: G['state'],
-  content: G['content'],
-  events: readonly G['event'][],
-  prev?: G['state'],
-): ApplyResult<G>['violations'] => (checking ? (game.invariants?.(state, content, events, prev) ?? []) : []);
-
 /** `applyAction` with the handler table of the caller: the kernel's own tests run small synthetic tables. */
 export function applyActionWith<G extends GameTypes>(
   game: GameRules<G>,
@@ -152,7 +137,7 @@ export function applyActionWith<G extends GameTypes>(
     closeDraft(prev);
   }
   const result = freezeState(next) as G['state'];
-  return { state: result, events, violations: violationsOf(game, result, content, events, state) };
+  return { state: result, events, violations: checkStateInvariants(game, result, content, events, state) };
 }
 
 /** `applyAction(game, state, action, content)`: the public entry point, over the game's handlers. */
@@ -181,7 +166,7 @@ function settle<G extends GameTypes>(
     if (!(e instanceof GameOver)) throw e;
   }
   const state = freezeState(s) as G['state'];
-  return { state, events, violations: violationsOf(game, state, content, events) };
+  return { state, events, violations: checkStateInvariants(game, state, content, events) };
 }
 
 /** A new game: the game's blank state, its setup, and the stack run to the first prompt. */

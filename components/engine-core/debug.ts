@@ -4,7 +4,7 @@
 import { closeDraft, copyList, openDraft, own } from './cow.ts';
 import { freezeState } from './copy.ts';
 import { makeCtx, setCtxDebug } from './ctx.ts';
-import { isChecking } from './apply.ts';
+import { checkStateInvariants } from './invariant-policy.ts';
 import type { Draft } from './draft.ts';
 import { IllegalActionError } from './errors.ts';
 import { GameOver } from './gameOver.ts';
@@ -91,5 +91,5 @@ export function applyDebug<G extends GameTypes>(
     closeDraft(prev);
   }
   const out = freezeState(next) as G['state'];
-  return { state: out, events, violations: isChecking() ? (game.invariants?.(out, content, events, state) ?? []) : [] };
+  return { state: out, events, violations: checkStateInvariants(game, out, content, events, state) };
 }

@@ -152,6 +152,8 @@ Case 29 (a cost a card in play changes) is `cfg.due`.
 - "Draw N if able" (never reshuffles): `repeat` N times an `if` on a game test "the deck is not empty" around a one-card `draw`.
 - "Draw 2, then discard 1 of them" (K658): a mover's `then` runs once its cards moved, with `env.moved` the cards that moved; a pick there names them with `from: 'moved'`: `{ op: 'draw', count: 2, then: [{ op: 'discard', cards: 'pick', from: 'moved', count: 1 }] }` offers only the two drawn (run by `k657.test.ts`). A moved card the picking seat cannot see is offered blind (`#i`, `unseen`), and in the check a test, count, filter or custom verb that runs with a card in `env.moved` that came into view is `unknown` (`hidden`), as for `env.cards`. A zone named `moved` is shadowed by it.
 
+For substitutable resource costs (K590), follow the [payment contract and executable example](payment.md). Use `paymentPlans` to generate options and revalidate the selected spend at action time. Use `preferredPayment` with an explicit game-owned policy and surface budget errors separately from unaffordability.
+
 **Common mistakes:**
 - Reading `no` from `wouldChange` as "not searched": `no` is only given when every pick set was tried (not every order of the picks inside a set, unless the prompt is ordered); a small `branches` gives `unknown` more often, and `unknown: 'offer'` (default) then offers the effect.
 - A custom verb, test, count or filter that reads cards the acting seat cannot see: the check cannot notice, so call `cannotKnow()` before the read (skipping the read under `inDryRun()` instead gives a wrong `no`).
@@ -221,3 +223,7 @@ timingHandlers<GameTypes>({ happen: (ctx, o) => void pack.happen(ctx, o), ...car
 const taxed = cardPack<GameTypes>({ due: (_s, step, _env, printed) => (step.op === 'pay' && step.res === 'gold' ? printed + 1 : printed), tests: { topIsRed: () => (cannotKnow(), false) } })
 console.log(describeEffect(taxed.verbs, taxed.costed({} as GameTypes['state'], [{ op: 'pay', res: 'gold', amount: 3 }], { seat: 'a' }))) // "Pay 4 gold."
 ```
+
+## Substitutable resource payment plans (K590)
+
+See [payment.md](payment.md) for the public shapes, solver limits and an executable engine example.

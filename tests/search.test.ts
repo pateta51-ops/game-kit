@@ -171,10 +171,18 @@ describe('K523 candidates', () => {
   const lines = (q: string) => run('search', ...q.split(' ')).stdout.split('\n');
   it('finds a candidate row by its content line and tags, first for discard row', () => {
     expect(lines('discard row')[0]).toMatch(/^candidate K520, wanted by Hunted North Pole, Hunted Mining Colony, Dungeon Ball Legend: discard-row/);
-    expect(lines('test pilot bot random greedy')[0]).toMatch(/^candidate K424, wanted by Astra Imperium, Crystallo, Dungeon Ball Legend, Dice Commandos: /);
+    const w = lines('when modifier runner');
+    expect(w[0]).toMatch(/^candidate K425, wanted by Astra Imperium, Warp's Edge, STCC: /);
     expect(lines('chamfered keys')[0]).toMatch(/^candidate K423, /);
-    expect(lines('test pilot bot random greedy')).toContain('not built yet');
-    expect(lines('test pilot bot random greedy').join('\n')).not.toContain('not in the kit by that name');
+    expect(w).toContain('not built yet');
+    expect(w.join('\n')).not.toContain('not in the kit by that name');
+  });
+  it('finds the implemented K424 greedy driver as sim-pool', () => {
+    const r = run('search', 'test', 'pilot', 'bot', 'random', 'greedy');
+    expect(r.status).toBe(0);
+    const found = r.stdout.split('\n');
+    expect(found[0]).toMatch(/^Bulk game simulator \(`sim-pool`\):/);
+    expect(found).not.toContain('not built yet');
   });
   it('a second game in wanted-by changes the line; no second row', () => {
     const g = fs.mkdtempSync(path.join(os.tmpdir(), 'k523-'));
