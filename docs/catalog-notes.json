@@ -753,6 +753,15 @@
     "gameSupplies": "ci.config.json with the game, runner and checks.",
     "exports": "`render.mjs`, `ci.yml`, `full-gate.yml`, `nightly-fuzz.yml`, `local-ci.sh`, `install-wsl.sh`, `watch-run.sh`, `watch-run.mjs`, `skip-reporter.ts`"
   },
+  "combat": {
+    "use": "Resolve an attack using the game's calculation, apply typed damage after armor, and give defeat its own timing window.",
+    "not": "Choosing legal targets, rolling dice, tracking turns, or deciding what defeat does in the game.",
+    "title": "Resolve attacks and damage",
+    "tags": ["combat damage type", "armor piercing damage", "defeat timing window", "attack resolution", "combat verbs"],
+    "visible": false,
+    "release": 1,
+    "gameSupplies": "The attack calculation, legal targets, health and armor stats, defeat rules, and printed words."
+  },
   "content-pack": {
     "use": "Card, deck or scenario data (CSV or JSON) loads through a zod schema per record kind with id-uniqueness, dangling-reference and card-language verb checks, every problem listed at once; also a base + expansions pick list with dependency ticking and a merge into one index.",
     "not": "The game's record shapes, verbs or words; one effect checked at run time (card-language validateEffect); importing or storing packs.",
