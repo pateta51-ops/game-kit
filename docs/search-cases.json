@@ -549,5 +549,8 @@
   { "q": "cheated mark", "first": "cheat-options" },
   { "q": "weighted movement and displacement", "first": "board-model/movement" },
   { "q": "atomic push chain", "first": "board-model/movement" },
-  { "q": "zero-cost weighted paths", "first": "board-model/movement" }
+  { "q": "zero-cost weighted paths", "first": "board-model/movement" },
+  { "q": "weighted movement zero-cost", "first": "board-model/movement" },
+  { "q": "atomic displacement chain", "first": "board-model/movement" },
+  { "q": "movement weighted paths", "first": "board-model/movement" }
 ]

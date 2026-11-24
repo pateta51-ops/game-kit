@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it } from 'vitest';
-import { displaceChain } from '../components/board-model/movement.ts';
+import { pushInOneTransition } from '../components/board-model/examples/movement.ts';
 import type { Board } from '../components/board-model/index.ts';
 import { applyAction, createGame, draftOf, seedRng, setInvariantChecking, type AnswerAction, type GameRules, type KernelState } from '../components/engine-core/index.ts';
 import { gridMap, line } from '../components/grid-map/index.ts';
@@ -48,16 +48,14 @@ const game: GameRules<CorridorGame> = {
     resolve(ctx, task) {
       const s = draftOf(ctx);
       const move = task.answer?.[0];
-      const occupants = new Map(Object.entries(s.positions).map(([piece, space]) => [space, piece]));
-      const plan = displaceChain(board, s.destination, occupants, {
+      const { plan, positions } = pushInOneTransition(board, s.positions, s.destination, {
         steps: s.remaining,
         next: space => line(grid, space, 'e', { length: 1, stopAtWall: true })[0],
         canPush: () => true,
         blocked: (_piece, _from, to) => move === 'blocked' && to === 'r0c4',
         stop: () => move === 'interrupt',
       });
-      const updates = plan.moves.filter(entry => move !== 'corrupt' || entry.piece === 'first');
-      s.positions = { ...s.positions, ...Object.fromEntries(updates.map(({ piece, to }) => [piece, to])) };
+      s.positions = move === 'corrupt' ? { ...s.positions, first: plan.destination } : { ...positions };
       s.destination = plan.destination;
       s.remaining = plan.remaining;
       if (plan.stop === 'interrupted') ctx.then({ kind: 'prompt' });

@@ -117,7 +117,7 @@
     "title": "Weighted movement and displacement",
     "tags": ["weighted", "movement", "displacement", "push", "chain", "atomic", "zero-cost", "paths"],
     "use": "Enumerate legal weighted destinations and plan atomic forced movement for an occupied board.",
-    "guide": "README.md"
+    "guide": "movement.md"
   },
   "grid-map": {
     "use": "A square grid board with walls: adjacent spaces, grid distance and range, shortest paths, line of sight, tiles that turn, and targeting shapes (within range, adjacent, row, column, line, area).",

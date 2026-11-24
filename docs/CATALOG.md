@@ -236,7 +236,7 @@ Spaces as data, adjacency computed once, named placement kinds resolved by the b
 - **Also called:** Weighted movement and displacement
 - **Words:** weighted, movement, displacement, push, chain, atomic, zero-cost, paths
 - **Use it when:** Enumerate legal weighted destinations and plan atomic forced movement for an occupied board.
-- **Guide:** [README.md](../components/board-model/README.md)
+- **Guide:** [movement.md](../components/board-model/movement.md)
 
 ## board-registry
 

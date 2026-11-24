@@ -13,7 +13,7 @@ Spaces as data, adjacency computed once, named placement kinds resolved by the b
 4. Let card data name a kind and ask `availableSpaces(board, kinds, kind, ctx)`; never filter spaces in card code.
 5. Pass the context a kind needs (for `away-from`: `{ tile }`).
 6. Keep costs, bonuses and expansion tiles in the game's kinds, not in the board.
-7. Use the opt-in `movement.ts` entry for weighted reachability and displacement (K602); supply costs, blockers, legal endpoints and interruption rules from the game. Pass collision permission explicitly. Apply the full chain plan in one engine transition, and handle combat or other interruptions in the game.
+7. Follow the [movement contract and executable examples](movement.md) when using the opt-in `movement.ts` entry for weighted reachability or displacement. Apply all positions in a chain plan in one engine transition.
 
 **Common mistakes:**
 - Asking for a kind the table lacks: `availableSpaces` throws `unknown placement kind`.
@@ -45,10 +45,4 @@ console.log(availableSpaces(board, kinds, 'land').map((s) => s.id))
 
 ## Movement rules (K602)
 
-Import `reachableMoves` from `board-model/movement.ts`. It returns the cheapest legal path per destination in board order. Return a nonnegative safe integer from `cost(from, to)`, or null to block an edge. Directed adjacency is respected. A legal transit space can be excluded as an endpoint. A mandatory stop is reachable but cannot be expanded. Equal-cost paths keep the first route found when the frontier is visited in board order. Costs and reachability predicates must depend on the starting board and edge. Use step-by-step game actions when movement changes the legal options.
-
-`displaceAlong(board, from, line, { steps, blocked?, stop? })` follows a supplied line for a single piece. It reports progress, remaining steps and the stop reason.
-
-`displaceChain(board, from, occupants, { steps, next, blocked?, canPush?, stop? })` plans a forced move on a one-piece-per-space snapshot. Pass a map from space to piece ID. `next(space)` supplies the next space toward the push or pull, for example the first space from grid-map's `line`. Without `canPush`, an occupied destination blocks the move. The planner checks each link against adjacency and the game's blockers and prevents cycles. A blocked plan or a line that ends early returns no moves and leaves all steps outstanding. An interruption returns a complete, simultaneous prefix and the steps remaining for the game to resolve and resume.
-
-Apply all returned moves together as origin-to-final updates in an engine action. Validate the settled state with the game's occupancy invariant. The game supplies collision permissions and resolves costs, hazards and combat. Both planners leave their inputs untouched.
+See [movement.md](movement.md) for the public shapes, game policies and executable examples.
