@@ -19,6 +19,7 @@ export const forMode = (mode: string): SimGame<Game> => ({
     const secret = state.deck[0];
     if (mode === 'order' && secret === 9) tied.reverse();
     if (mode === 'payload') return tied.map(a => ({ ...a, privateCard: secret }));
+    if (mode === 'other-throws' && secret === 9) throw new Error('answer projection rejected the alternate world');
     if (mode === 'empty' || (mode === 'other-empty' && secret === 9)) return [];
     rng.nextUint32();
     return tied;

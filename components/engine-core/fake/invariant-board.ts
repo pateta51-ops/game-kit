@@ -26,6 +26,7 @@ const stateChecks = stateInvariants<Board, null>({
   zones: { cards: { locations: s => s.zones, expected: () => ['card'] } },
   counters: s => ({ tokens: s.tokens, reserve: s.reserve }),
   totals: { tokens: { actual: s => s.tokens + s.reserve, expected: () => 3 } },
+  queues: s => ({ idle: s.result !== null, pending: { tasks: s.stack.length } }),
 });
 
 export const board: GameRules<BoardGame> = {

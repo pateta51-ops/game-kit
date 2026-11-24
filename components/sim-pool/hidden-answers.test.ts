@@ -44,6 +44,14 @@ describe('hidden legal answers', () => {
     expect(findingOf(run('other-empty'))?.kind).toBe('hidden-info');
   });
 
+  it('identifies an alternate-only legal-answer exception with the source and step', () => {
+    expect(run('other-throws', 'first', false).error).toBeUndefined();
+    expect(findingOf(run('other-throws'))).toMatchObject({
+      kind: 'hidden-info', step: 0,
+      messages: [expect.stringMatching(/SimGame.answers.*answer projection rejected the alternate world/)],
+    });
+  });
+
   it.each([false, true])('preserves declared stateful drivers and still checks their legal answers (bySeat: %s)', (wrapped) => {
     let choices = 0;
     const makeGame = (mode: string) => {

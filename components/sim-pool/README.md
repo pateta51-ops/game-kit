@@ -142,7 +142,7 @@ Give `SimGame.reshuffleHidden(state, seat, rng, content)` a consistent alternate
 
 With `hidden: true` or a sampling share from 0 to 1, the pool enumerates the live and alternate worlds independently, using the same starting `DriverRng` for `SimGame.answers` or `legalAnswers`. It compares the ordered canonical JSON answer lists, including payloads. For a pure driver it compares the live decision with a diagnostic driver’s decision from the alternate state, using each enumeration stream at its post-enumeration position. Only the live answer is applied. The check leaves game RNG and the live answer stream unchanged. Return fresh drivers from the factory when they keep per-instance diagnostics. Mark a driver `stateful: true` when its choices depend on previous calls. `bySeat` carries the flag from any child driver. The pool still compares legal answers.
 
-An answer or choice difference stops the game as `hidden-info` with the seed, step, seat and prompt. Fuzz returns exit 1. A passing run is evidence about the paired worlds and decisions it exercised. It cannot prove that closures are pure or that the reshuffle covers every hidden possibility. Test your redaction directly too.
+An answer or choice difference stops the game as `hidden-info` with the seed, step, seat and prompt. An exception during the alternate-world callbacks is also a finding, with the callback and cause identified. Fuzz returns exit 1. A passing run is evidence about the paired worlds and decisions it exercised. It cannot prove that closures are pure or that the reshuffle covers every hidden possibility. Test your redaction directly too.
 
 ```ts
 import { playOne, randomDriver, type SimGame } from '../kit/sim-pool/index'

@@ -219,6 +219,15 @@ export function bySeat<G extends GameTypes>(drivers: Readonly<Record<string, Dri
   };
 }
 
+function evaluateAlternate<T>(context: string, source: string, run: () => T): T {
+  try {
+    return run();
+  } catch (cause) {
+    const message = cause instanceof Error ? cause.message : String(cause);
+    throw new Error(`${context} ${source} failed in the alternate world: ${message}`, { cause });
+  }
+}
+
 /** Play `spec` to its end, or for `until` actions (the driver still answers at that step, so what fails there fails again). Never throws: an error or an invariant violation ends the game as a failed record. */
 export function playOne<G extends GameTypes, S, O = unknown>(game: SimGame<G, S, O>, content: G['content'], spec: GameSpec, until?: number, opts: PlayOptions = {}): SimRecord<S> {
   let seen: O | undefined;
@@ -290,35 +299,41 @@ export function playOne<G extends GameTypes, S, O = unknown>(game: SimGame<G, S,
       t = performance.now();
       const fast = opts.hasten && actions.length > 0 && actions.length % opts.hasten === 0 ? game.hasten?.(s, content) : undefined;
       const dbg = opts.debug && game.rules.debug !== undefined && sinceDebug >= opts.debug ? game.randomDebug?.(s, content, new DriverRng(`${spec.seed}|${spec.driver}|debug|${String(actions.length)}`)) : undefined;
-      let a = dbg ?? fast;
+      let a: G['action'] | DebugAction | undefined = dbg ?? fast;
       if (opts.hidden && game.reshuffleHidden && (opts.hidden === true || new DriverRng(`${spec.seed}|${spec.driver}|hidden-sample|${String(actions.length)}`).chance(opts.hidden))) {
         const context = `hidden-info: at step ${String(actions.length)} seat ${String(p.seat)} prompt ${String(p.id)}`;
-        const other = game.reshuffleHidden(structuredClone(s), p.seat, new DriverRng(`${spec.seed}|${spec.driver}|hidden|${String(p.id)}|shuffle`), content);
-        if (other.prompt?.id !== p.id || seatKey(other.prompt.seat) !== seatKey(p.seat)) throw new Error(`${context} the alternate world changed the deciding prompt; check SimGame.reshuffleHidden`);
+        const reshuffle = game.reshuffleHidden.bind(game);
+        const other = evaluateAlternate(context, 'SimGame.reshuffleHidden', () =>
+          reshuffle(structuredClone(s), p.seat, new DriverRng(`${spec.seed}|${spec.driver}|hidden|${String(p.id)}|shuffle`), content));
+        const otherPrompt = other.prompt;
+        if (otherPrompt?.id !== p.id || seatKey(otherPrompt.seat) !== seatKey(p.seat)) throw new Error(`${context} the alternate world changed the deciding prompt; check SimGame.reshuffleHidden`);
         const otherRng = new DriverRng(key);
-        const otherAnswers = game.answers ? game.answers(other, content, otherRng) : legalAnswers(other.prompt, otherRng) as G['action'][];
+        const otherAnswers = evaluateAlternate(context, game.answers ? 'SimGame.answers' : 'legalAnswers', () =>
+          game.answers ? game.answers(other, content, otherRng) : legalAnswers(otherPrompt, otherRng) as G['action'][]);
         if (canonicalJson(answers) !== canonicalJson(otherAnswers)) throw new Error(`${context} legal answers changed in order or payload when only hidden state changed; check SimGame.answers and the prompt options`);
         if (!driver.stateful && a === undefined) {
-          hiddenDriver ??= game.driver(spec.driver, spec, content);
-          const otherChoice = hiddenDriver.choose(other, otherAnswers, otherRng);
+          const otherChoice = evaluateAlternate(context, 'driver choice', () => {
+            hiddenDriver ??= game.driver(spec.driver, spec, content);
+            return hiddenDriver.choose(other, otherAnswers, otherRng);
+          });
           a = driver.choose(s, answers, rng);
           if (canonicalJson(a) !== canonicalJson(otherChoice)) throw new Error(`${context} the driver answered differently when only hidden state changed; check the seat view and driver callbacks`);
         }
       }
-      a ??= driver.choose(s, answers, rng);
+      const action = a ?? driver.choose(s, answers, rng);
       if (dbg) sinceDebug = 0;
       else sinceDebug += 1;
       ms.choose = performance.now() - t;
       if (until !== undefined && actions.length >= until) break;
-      actions.push(a);
+      actions.push(action);
       t = performance.now();
       judge();
-      const r = applyAction(game.rules, s, a, content);
+      const r = applyAction(game.rules, s, action, content);
       ms.apply = performance.now() - t;
       judge(s, r.state);
       const w = s.rng;
       const n = r.state.rng;
-      if (game.undoCheck && ((a.kind === 'answer' && a.reseed !== undefined) || n.a !== w.a || n.b !== w.b || n.c !== w.c || n.d !== w.d) && !isRevealing(r.events))
+      if (game.undoCheck && ((action.kind === 'answer' && action.reseed !== undefined) || n.a !== w.a || n.b !== w.b || n.c !== w.c || n.d !== w.d) && !isRevealing(r.events))
         violations.push({ id: 'bad-undo', message: `action ${String(actions.length)} drew randomness without a reveal event: safe undo could take it back` });
       s = r.state;
       state = s;
