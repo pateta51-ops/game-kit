@@ -1806,7 +1806,7 @@ Rule-citation gate. The game passes a `trace.config.json` (any subset of the opt
 ### traceability/assertions
 
 - **Also called:** Executable rule evidence
-- **Words:** executable, arbiter, rule, evidence, fixture, assertion, refusal
+- **Words:** executable, arbiter, rule, evidence, fixture, assertion, refusal, control
 - **Use it when:** Run arbiter fixtures and check that every due rule has passing setup or action evidence.
 - **Guide:** [README.md](../components/traceability/README.md)
 

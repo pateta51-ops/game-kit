@@ -81,10 +81,11 @@ export function runRuleAssertions<F, A, S>(adapter: RuleAdapter<F, A, S>, requir
   const required = new Map<string, RuleRequirement>();
   for (const entry of requiredRules) {
     const rule: RuleRequirement = typeof entry === 'string' ? { id: entry, kind: 'action' } : entry;
-    if (!rule.id.trim() || rule.id !== rule.id.trim() || required.has(rule.id)) throw new Error('empty, padded or duplicate required rule: ' + rule.id);
-    if (rule.kind !== 'setup' && rule.kind !== 'action') throw new Error('invalid required rule kind: ' + rule.id);
-    if ('requireRefusal' in rule && (rule.kind !== 'action' || typeof rule.requireRefusal !== 'boolean')) throw new Error('invalid refusal requirement: ' + rule.id);
-    required.set(rule.id, rule);
+    const { id } = rule;
+    if (!id.trim() || id !== id.trim() || required.has(id)) throw new Error('empty, padded or duplicate required rule: ' + id);
+    if (rule.kind !== 'setup' && rule.kind !== 'action') throw new Error('invalid required rule kind: ' + id);
+    if ('requireRefusal' in rule && (rule.kind !== 'action' || typeof rule.requireRefusal !== 'boolean')) throw new Error('invalid refusal requirement: ' + id);
+    required.set(id, rule);
   }
   const ids = new Set<string>();
   const covered = new Set<string>();

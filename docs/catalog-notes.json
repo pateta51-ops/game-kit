@@ -2318,7 +2318,7 @@
   },
   "traceability/assertions": {
     "title": "Executable rule evidence",
-    "tags": ["executable", "arbiter", "rule", "evidence", "fixture", "assertion", "refusal"],
+    "tags": ["executable", "arbiter", "rule", "evidence", "fixture", "assertion", "refusal", "control"],
     "use": "Run arbiter fixtures and check that every due rule has passing setup or action evidence.",
     "guide": "README.md"
   },
