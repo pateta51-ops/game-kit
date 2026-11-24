@@ -390,7 +390,7 @@ The card-language shell (K206): card effects as data, one typed verb table where
 - **The game supplies:** The verbs, with their field checks, handlers and text.
 - **Use it when:** A new game encodes card effects as data: verb table with handler, resume and text slots, validator, every-verb test; the standard verb pack (cardPack) on card-zones: draw, discard, mill, move, putIntoPlay, setAside, recall, gain, refill, shuffle, search, destroy, attach, detach, reveal, lookAt, scout, flip, exhaust, ready, chooseCards, chooseOption, may, chooseNumber, chooseDestination, choosePlayer, choosePayment, orderEffects, gainResource, pay, convert, adjust, seq, if, forEach, eachPlayer, repeat, count, later, payThen, custom; every card move through timing would; words overridable. Recipe: docs/recipes/card-effect.md.
 - **Not for:** The game's own rules and words: verbs the pack lacks, card text as printed (override the pack's words), when later effects fire.
-- **Key exports:** `posInt`, `int`, `str`, `bool`, `oneOf`, `listOf`, `optional`, `effectOf`, `grammarOf`, `validateStep`, `validateEffect`, `describeEffect`, `effectTasks`, `askVerb`, and 12 more
+- **Key exports:** `posInt`, `int`, `str`, `bool`, `oneOf`, `listOf`, `optional`, `effectOf`, `grammarOf`, `validateStep`, `validateEffect`, `describeEffect`, `effectTasks`, `askVerb`, and 18 more
 - **Hook:** cardPack + offer: offer an effect only if it does something, each knob set from a ruling
 - **Hook:** wouldChange: ask whether an effect would change the game: yes, no or unknown
 - **Hook:** resolves: how much of an effect would happen: in full, in part or nothing
