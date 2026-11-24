@@ -72,6 +72,24 @@ it('prints a class entrypoint with both constructor and public instance API', ()
   expect(contract(packet)).toContain('amount: number');
 });
 
+it('resolves qualified generic constraints in remapped types without importing unrelated declarations', () => {
+  fixture('namespace-constraint', {
+    'index.ts': [
+      "import type * as Rules from './support.js';",
+      'type Form<T extends Rules.Cost> = { [K in keyof T as `cfg_${string & K}`]: T[K] };',
+      'export function play<T extends Rules.Cost>(value: T): Form<T> { return value as unknown as Form<T>; }',
+    ].join('\n'),
+    'support.ts': 'export interface Cost { value: number }; export interface Other { unrelated: never }',
+  });
+  const packet = read('namespace-constraint');
+  expect(packet).toMatchObject({ status: 'complete', requiredReads: [] });
+  const text = contract(packet);
+  expect(text).toContain('import type * as Rules');
+  expect(text).toContain('interface Cost');
+  expect(text).toContain('cfg_${string & K}');
+  expect(text).not.toContain('interface Other');
+});
+
 it('includes nested explicit any but reports inferred any from a confined sibling even at a tight budget', () => {
   fixture('any-intentional', { 'index.ts': 'export function play(): { result: any } { return { result: 3 }; }' });
   fixture('away', { 'index.ts': "export const hidden = 'prohibited fixture sentinel';" });
@@ -139,4 +157,18 @@ it('includes or names a Rules-linked usage guide while confining guide symlinks'
   fs.unlinkSync(path.join(away, 'play.md'));
   fs.symlinkSync(path.join(dir, 'guide.md'), path.join(away, 'play.md'));
   expect(() => read('escape-guide')).toThrow('play.md escapes component');
+});
+
+it('follows required guides through relative links and terminates when they link back', () => {
+  fixture('nested-guide', {
+    'index.ts': 'export const play = 1;',
+    'README.md': rules + 'Follow the [application guide](guides/application.md).',
+    'guides/application.md': 'The [atomic application contract](atomic.md) is required.',
+    'guides/atomic.md': 'Reserve the cost before changing authoritative state. See [application](application.md).',
+  });
+  const packet = read('nested-guide');
+  expect(packet).toMatchObject({ status: 'complete', requiredReads: [] });
+  expect(packet.usage).toContainEqual(expect.objectContaining({
+    file: 'guides/atomic.md', text: expect.stringContaining('Reserve the cost before changing authoritative state.'),
+  }));
 });

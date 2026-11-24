@@ -93,15 +93,25 @@ function readDocumentation(dir) {
   return {rules,usage};
 }
 function readLinkedGuides(dir, rows) {
-  const guides=new Set();
-  for(const row of rows) {
+  const visited=new Set([componentFile(dir,'README.md')]);
+  const guides=[];
+  const pending=[...rows];
+  for(const row of pending) {
     for(const match of row.text.matchAll(/\]\(([A-Za-z0-9._/-]+\.md)(?:#[^)\s]+)?(?:\s+["'][^)]*["'])?\)/g)) {
-      const name=path.posix.normalize(match[1]);
-      if(name!=='README.md'&&!path.posix.isAbsolute(name)&&
-        !match[1].split('/').some(part=>part==='..'||ignored.has(part))) guides.add(name);
+      if(path.posix.isAbsolute(match[1])) continue;
+      const name=path.posix.join(path.posix.dirname(row.file),match[1]);
+      if(name.split('/').some(part=>part==='..'||ignored.has(part))) continue;
+      const target=componentFile(dir,name);
+      if(visited.has(target)) continue;
+      visited.add(target);
+      const text=readComponentFile(dir,name).trimEnd();
+      guides.push({file:name,line:1,text});
+      // Relative links belong to the canonical guide location, including
+      // when the guide was reached through a permitted symbolic link.
+      pending.push({file:relative(dir,target),text});
     }
   }
-  return [...guides].sort().map(name=>({file:name,line:1,text:readComponentFile(dir,name).trimEnd()}));
+  return guides.sort((a,b)=>a.file<b.file?-1:a.file>b.file?1:0);
 }
 
 /** Source-grounded, bounded context. Never include source outside the requested component. */

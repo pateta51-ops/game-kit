@@ -117,7 +117,9 @@ export function collectContracts({ program, file, focus, projection, relativePat
   let sourceHasErrors;
 
   function collect(node, symbol) {
-    if (rows.has(node)) return;
+    // A namespace alias can resolve to the source module itself. Its
+    // members are collected separately, never as one whole-file contract.
+    if (!node.parent || rows.has(node)) return;
     const source = node.getSourceFile();
     if (!texts.has(source.fileName)) return;
     const signature = contractText(node, source);
