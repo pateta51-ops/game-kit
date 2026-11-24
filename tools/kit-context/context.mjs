@@ -2,6 +2,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { Parser } from 'commonmark';
 import ts from 'typescript';
 import { collectContracts } from './contracts.mjs';
 
@@ -93,49 +94,14 @@ function readDocumentation(dir) {
   return {rules,usage,markdown:lines.join('\n')};
 }
 
-function markdownLinks(markdown) {
-  // Read definitions across the whole document. Examples and comments do not create guide obligations.
-  let fence;
-  let comment=false;
-  const prose=markdown.split(/\r?\n/).map(line=>{
-    if(comment) {
-      const end=line.indexOf('-->');
-      if(end<0) return '';
-      line=line.slice(end+3);
-      comment=false;
-    }
-    const marker=/^ {0,3}(`{3,}|~{3,})(.*)$/.exec(line);
-    if(fence) {
-      if(marker && marker[1][0]===fence[0] && marker[1].length>=fence.length && !marker[2].trim()) fence=undefined;
-      return '';
-    }
-    if(marker) {
-      fence=marker[1];
-      return '';
-    }
-    return line.replace(/(?<!`)(`+)(?!`).*?(?<!`)\1(?!`)|<!--.*?(?:-->|$)/g,(span,ticks)=>{
-      if(ticks) return span;
-      comment=!span.endsWith('-->');
-      return '';
-    });
-  }).join('\n');
-  const normalize=label=>label.trim().replace(/\s+/g,' ').toLowerCase();
-  const label=String.raw`((?:\\.|[^\[\]\\\n])*)`;
-  const destination=String.raw`(?:<([^<>\n]+)>|([^\s<>()]+))`;
-  const title=String.raw`(?:[ \t]+(?:"[^"\n]*"|'[^'\n]*'|\([^()\n]*\)))?`;
-  const definitions=new Map();
-  const body=prose.replace(new RegExp(String.raw`^ {0,3}\[${label}\]:[ \t]*(?:\n[ \t]*)?${destination}${title}[ \t]*$`,'gm'),
-    (_match, key, angled, bare)=>{
-      const id=normalize(key);
-      if(id && !definitions.has(id)) definitions.set(id,angled??bare);
-      return '';
-    });
-  const pattern=new RegExp(String.raw`(?<!\x60)(\x60+)(?!\x60)[\s\S]*?(?<!\x60)\1(?!\x60)|(?<!\\)(!?)\[${label}\](?:\([ \t]*${destination}${title}[ \t]*\)|\[${label}\])?`,'g');
-  return [...body.matchAll(pattern)].flatMap(([, codeSpan, image, text, angled, bare, reference])=>{
-    if(codeSpan || image) return [];
-    const href=angled??bare??definitions.get(normalize(reference||text));
-    return href===undefined?[]:[href];
-  });
+function* markdownLinks(markdown) {
+  const walker=new Parser().parse(markdown).walker();
+  for(let event;(event=walker.next());) {
+    const {node,entering}=event;
+    if(!entering) continue;
+    if(node.type==='image') walker.resumeAt(node,false);
+    if(node.type==='link') yield node.destination;
+  }
 }
 
 function readLinkedGuides(dir, markdown) {

@@ -121,3 +121,17 @@ it('resolves ordinary URL-escaped guide paths before inspecting their confinemen
   fixture('escaped-destination', rules + link + '(notes%20here.md#apply).', { 'notes here.md': constraint });
   expectComplete(run('escaped-destination'), 'notes here.md');
 });
+
+it.each([
+  ['wrapped-inline', 'Follow [the required transaction\ncontract](atomic.md).'],
+  ['wrapped-reference', 'Follow the [required transaction contract][atomic\nupdates].\n\n[atomic updates]: atomic.md'],
+  ['quoted-reference', '> Follow the [required transaction contract][atomic].\n>\n> [atomic]: atomic.md'],
+  ['balanced-destination', link + '(atomic(v2).md).'],
+  ['quoted-example', '> ~~~md\n> [example](absent.md)\n> ~~~\n\n' + link + '(atomic.md).'],
+  ['multiline-code', 'Read `the example\n<!-- then the marker`.\n\n' + link + '(atomic.md).'],
+  ['linked-image', '[![guide](badge.png)](atomic.md)'],
+])('honors ordinary CommonMark guide forms through the real CLI for %s', (name, readme) => {
+  const guide = name === 'balanced-destination' ? 'atomic(v2).md' : 'atomic.md';
+  fixture(name, rules + readme, { [guide]: constraint });
+  expectComplete(run(name), guide);
+});
