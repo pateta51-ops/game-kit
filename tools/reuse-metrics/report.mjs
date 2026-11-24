@@ -1,6 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { isDeepStrictEqual } from 'node:util';
 import ts from 'typescript';
 
 const validName = /^[a-z][a-z0-9-]*$/;
@@ -65,6 +66,15 @@ function evidenceLabel(value,label) {
   if(typeof value!=='string'||!/^[a-z\d][a-z\d._-]*$/i.test(value))throw new Error(label+' must be a nonempty label with letters, digits, dots, underscores or hyphens');
   return value;
 }
+function identityOf(value) {
+  if(value===undefined)return undefined;
+  const identity=record(value,'telemetry identity');
+  checkKeys(identity,['projectId','observationId'],'telemetry identity');
+  return {
+    projectId:evidenceLabel(identity.projectId,'telemetry identity projectId'),
+    observationId:evidenceLabel(identity.observationId,'telemetry identity observationId'),
+  };
+}
 function utcTimestamp(value,label) {
   const date=typeof value==='string'?new Date(value):new Date(NaN);
   if(!Number.isFinite(date.getTime()))throw new Error(label+' must be a UTC ISO timestamp');
@@ -94,7 +104,7 @@ function measurementOf(value,label,baseline=false) {
   const sourceRevision=revision(input.sourceRevision,label+' sourceRevision');
   const kitRevision=baseline&&input.kitRevision==='none'?'none':revision(input.kitRevision,label+' kitRevision');
   const fields=['sourceRevision','kitRevision','window','metrics'];
-  checkKeys(input,baseline?fields:[...fields,'baseline','runtimeAdoption'],label);
+  checkKeys(input,baseline?fields:[...fields,'baseline','runtimeAdoption','identity'],label);
   const raw=record(input.window,label+' window');
   checkKeys(raw,['start','end','protocol'],label+' window');
   const start=utcTimestamp(raw.start,label+' window start'),end=utcTimestamp(raw.end,label+' window end');
@@ -162,6 +172,7 @@ export function measureGame(dir, telemetry={}) {
   if(measured&&measured.kitRevision!==commit?.toLowerCase())throw new Error('telemetry kitRevision does not match the kit lock');
   const baseline=input.baseline===undefined?null:measurementOf(input.baseline,'baseline',true);
   const values=metrics??telemetryOf({});
+  const identity=identityOf(input.identity);
   return {
     ref:typeof lock.ref==='string'?lock.ref:null,
     commit,
@@ -178,9 +189,46 @@ export function measureGame(dir, telemetry={}) {
     telemetry:values,
     baseline,
     comparison:compareMeasurement(measured,baseline,values),
+    ...(identity===undefined?{}:{identity}),
+  };
+}
+function summarizeIdentity(games) {
+  const projects=new Set(),observations=new Map(),observed=new Map();
+  const unidentifiedMeasurementInputs=[];
+  for(const [index,game] of games.entries()) {
+    const input=index+1;
+    const identity=identityOf(game.identity);
+    if(identity===undefined) {
+      if(game.measurement)unidentifiedMeasurementInputs.push(input);
+      continue;
+    }
+    const {projectId,observationId}=identity;
+    const claims=[projectId,game.measurement,game.telemetry,game.runtimeAdoption,game.baseline];
+    const prior=observations.get(observationId);
+    if(prior) {
+      const pair=`${prior.input} and ${input}`;
+      if(isDeepStrictEqual(prior.claims,claims))throw new Error('duplicate observation in inputs '+pair+'; submit the observation once');
+      throw new Error('conflicting observation identity in inputs '+pair+'; reconcile its project and measurement records');
+    }
+    projects.add(projectId);
+    observations.set(observationId,{input,claims});
+    for(const component of Object.keys(game.runtimeAdoption??{})) {
+      if(!observed.has(component))observed.set(component,new Set());
+      observed.get(component).add(projectId);
+    }
+  }
+  const componentsObservedAcrossIdentifiedProjects=[...observed].map(([component,ids])=>({component,projects:ids.size}))
+    .sort((a,b)=>b.projects-a.projects||compare(a.component,b.component));
+  return {
+    status:unidentifiedMeasurementInputs.length?'unverified':observations.size?'identified':'no-measurements',
+    identifiedProjects:projects.size,
+    identifiedObservations:observations.size,
+    unidentifiedMeasurementInputs,
+    componentsObservedAcrossIdentifiedProjects,
   };
 }
 export function summarize(games) {
+  const identity=summarizeIdentity(games);
   const parts=new Map(),observed=new Map();
   let gamesWithRuntimeObservations=0;
   for(const game of games) {
@@ -206,7 +254,7 @@ export function summarize(games) {
   }));
   const counts=entries=>[...entries].sort((a,b)=>b[1]-a[1]||compare(a[0],b[0])).map(([component,games])=>({component,games}));
   return {games:games.length,componentsReferencedAcrossGames:counts(parts),gamesWithRuntimeObservations,
-    componentsObservedAcrossGames:counts(observed),telemetry:metrics};
+    componentsObservedAcrossGames:counts(observed),telemetry:metrics,identity};
 }
 export function main(args) {
   if(!args.length)throw new Error('usage: node tools/reuse-metrics/report.mjs <game-dir> [<game-dir> ...]');

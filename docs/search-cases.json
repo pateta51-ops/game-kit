@@ -549,5 +549,8 @@
   { "q": "cheated mark", "first": "cheat-options" },
   { "q": "reuse metrics", "first": "reuse-metrics" },
   { "q": "measure kit references", "first": "reuse-metrics" },
-  { "q": "build telemetry provenance", "first": "reuse-metrics" }
+  { "q": "build telemetry provenance", "first": "reuse-metrics" },
+  { "q": "repeated measurement", "first": "reuse-metrics" },
+  { "q": "copied project telemetry", "first": "reuse-metrics" },
+  { "q": "observation identity", "first": "reuse-metrics" }
 ]

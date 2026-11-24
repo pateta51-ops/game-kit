@@ -12,6 +12,12 @@ const sourceRevision='2'.repeat(40);
 const window={start:'2026-01-01T00:00:00.000Z',end:'2026-01-02T00:00:00.000Z',protocol:'synthetic-playable-task'};
 const measured=value=>({kind:'measured',value,provenance:'synthetic-usage-record'});
 const build=(metrics={},overrides={})=>({kitRevision,sourceRevision,window,metrics,...overrides});
+const cli=fileURLToPath(new URL('./report.mjs',import.meta.url));
+const run=(...args)=>spawnSync(process.execPath,[cli,...args],{encoding:'utf8'});
+const identified=(projectId,observationId,overrides={})=>build({
+  inputTokens:measured(100),costUsd:measured(2),
+},{identity:{projectId,observationId},runtimeAdoption:{'engine-core':'synthetic-runtime-trace'},...overrides});
+const measurementFile=(root,input)=>fs.writeFileSync(path.join(root,'kit-reuse-metrics.json'),JSON.stringify(input));
 function fixture(name) {
   const root=path.join(tmp,name);
   for(const d of ['kit','src','tests'])fs.mkdirSync(path.join(root,d),{recursive:true});
@@ -107,12 +113,74 @@ describe('reuse metrics',()=>{
     expect(()=>measureGame(root,build({inputTokens:measured(1),cachedInputTokens:measured(2)}))).toThrow('cached tokens');
     expect(()=>measureGame(root,build({costUsd:measured(-1)}))).toThrow('invalid');
     expect(()=>measureGame(root,build({secret:'not a metric'}))).toThrow('unknown');
-    const cli=fileURLToPath(new URL('./report.mjs',import.meta.url));
-    const run=(...args)=>spawnSync('node',[cli,...args],{encoding:'utf8'});
     expect(run(root,root).status).toBe(1);
+    const alias=path.join(tmp,'same-root-alias');
+    fs.symlinkSync(root,alias,'junction');
+    const duplicate=run(root,alias);
+    expect(duplicate.status).toBe(1);
+    expect(duplicate.stderr).toContain('duplicate game directory');
     const result=run(root);
     expect(result.status,result.stderr).toBe(0);
     expect(JSON.parse(result.stdout).summary.games).toBe(1);
     expect(result.stdout).not.toContain(root);
+  });
+  it('reports copied unidentified measurements as unverified submissions without inferring identity',()=>{
+    const root=fixture('legacy-measurement');
+    measurementFile(root,build({inputTokens:measured(100),costUsd:measured(2)}));
+    const copy=path.join(tmp,'legacy-measurement-copy');
+    fs.cpSync(root,copy,{recursive:true});
+    const result=run(root,copy);
+    expect(result.status,result.stderr).toBe(0);
+    const {summary}=JSON.parse(result.stdout);
+    expect(summary.telemetry.inputTokens.measured).toEqual({reportedGames:2,sum:200});
+    expect(summary.telemetry.costUsd.measured).toEqual({reportedGames:2,sum:4});
+    expect(summary.identity).toMatchObject({status:'unverified',unidentifiedMeasurementInputs:[1,2]});
+  });
+  it('rejects a known repeated observation across distinct roots before emitting totals',()=>{
+    const root=fixture('one-observation');
+    measurementFile(root,identified('project-a','observation-a'));
+    const copy=path.join(tmp,'one-observation-copy');
+    fs.cpSync(root,copy,{recursive:true});
+    const result=run(root,copy);
+    expect(result.status).toBe(1);
+    expect(result.stderr).toContain('duplicate observation in inputs 1 and 2');
+    expect(result.stdout).toBe('');
+    expect(result.stderr).not.toContain(root);
+  });
+  it('rejects conflicting claims for the same observation ID',()=>{
+    const root=fixture('conflicting-observation');
+    const first=measureGame(root,identified('project-a','observation-a'));
+    const otherProject=measureGame(root,identified('project-b','observation-a'));
+    const otherValue=measureGame(root,identified('project-a','observation-a',{metrics:{costUsd:measured(3)}}));
+    for(const other of [otherProject,otherValue])
+      expect(()=>summarize([first,other])).toThrow('conflicting observation identity in inputs 1 and 2');
+  });
+  it('counts distinct games with identical contents and distinct observations of one project',()=>{
+    const root=fixture('identified-a');
+    const copy=path.join(tmp,'identified-b');
+    fs.cpSync(root,copy,{recursive:true});
+    const distinct=path.join(tmp,'identified-a-later');
+    fs.cpSync(root,distinct,{recursive:true});
+    const laterWindow={...window,start:window.end,end:'2026-01-03T00:00:00.000Z'};
+    const a=measureGame(root,identified('project-a','observation-a'));
+    const b=measureGame(copy,identified('project-b','observation-b'));
+    const later=measureGame(distinct,identified('project-a','observation-a-later',{window:laterWindow}));
+    const summary=summarize([a,b,later]);
+    expect(summary.telemetry.inputTokens.measured).toEqual({reportedGames:3,sum:300});
+    expect(summary.identity).toEqual({
+      status:'identified',identifiedProjects:2,identifiedObservations:3,unidentifiedMeasurementInputs:[],
+      componentsObservedAcrossIdentifiedProjects:[{component:'engine-core',projects:2}],
+    });
+  });
+  it('keeps static-only and partial identity information explicit',()=>{
+    const root=fixture('partial-identity');
+    expect(summarize([measureGame(root)]).identity.status).toBe('no-measurements');
+    expect(()=>measureGame(root,identified('project-a',undefined))).toThrow('telemetry identity observationId');
+    expect(()=>measureGame(root,identified('https://private.example','observation-a'))).toThrow('telemetry identity projectId');
+    const a=measureGame(root,identified('project-a','observation-a'));
+    const b=measureGame(root,build());
+    expect(summarize([a,b,measureGame(root)]).identity).toMatchObject({
+      status:'unverified',identifiedProjects:1,identifiedObservations:1,unidentifiedMeasurementInputs:[2],
+    });
   });
 });
