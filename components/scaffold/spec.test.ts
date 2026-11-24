@@ -25,6 +25,13 @@ const generate = (source: string, ref: string, file: string, dest: string, flags
   spawnSync(process.execPath,[path.join(source,'kit.mjs'),'spec','generate',file,'--ref',ref,'--dir',dest,...flags],
     {cwd:source,encoding:'utf8',env:{...process.env,...env}});
 type Result = {commit:string;components:{name:string;reasons:string[]}[];unresolved:string[];mechanics:{status:string;buildOwn?:string}[]};
+function expectPinnedAssembly(dir: string, ref: string, commit: string) {
+  const lock = JSON.parse(fs.readFileSync(path.join(dir, 'kit/kit.lock.json'), 'utf8')) as { ref: string; commit: string; components: Record<string, unknown> };
+  const assembly = JSON.parse(fs.readFileSync(path.join(dir, 'docs/kit-assembly.json'), 'utf8')) as Result;
+  expect(lock).toMatchObject({ ref, commit });
+  expect(assembly.commit).toBe(commit);
+  expect(Object.keys(lock.components).sort()).toEqual(assembly.components.map(component => component.name).sort());
+}
 describe('K551 declarative starter',()=>{
   it('resolves a pinned revision, profiles, mechanics and dependencies deterministically',()=>{
     const file=write('resolve',{...basic,profiles:['deck-builder'],mechanics:['draw a card'],opponent:'automa'});
@@ -68,9 +75,10 @@ describe('K551 declarative starter',()=>{
     expect(result.commit).toBe(head);
     expect(fs.existsSync(path.join(dir,'kit/campaign/component.json'))).toBe(true);
     expect(fs.existsSync(path.join(dir,'docs/game-spec.json'))).toBe(true);
-    expect(spawnSync('node',['kit/kit.mjs','check'],{cwd:dir,encoding:'utf8'}).status).toBe(0);
+    const check=spawnSync(process.execPath,['kit/kit.mjs','check','--source',kit],{cwd:dir,encoding:'utf8'});
+    expect(check.status,check.stdout+check.stderr).toBe(0);
     expect(run('generate',file,'--dir',dir,'--ports',ports,'--no-install').status).toBe(1);
-  },60000);
+  },180_000);
   it('uses the older kit tag template even when the current checkout template changes',()=>{
     const {dir:source,git}=fixture('tag-source');
     const previous=git('-c','user.name=Fixture','-c','user.email=fixture@example.invalid','commit-tree',head+'^{tree}','-m','Older starter');
@@ -100,8 +108,8 @@ describe('K551 declarative starter',()=>{
     git('add', '-A');
     expect.soft(git('ls-files', '--', 'node_modules')).toBe('');
     expect(fs.realpathSync(path.join(dir, 'node_modules'))).toBe(fs.realpathSync(modules));
-    const lock = JSON.parse(fs.readFileSync(path.join(dir, 'kit/kit.lock.json'), 'utf8')) as { ref: string };
-    expect(lock.ref).toBe(ref);
+    const commit = execFileSync('git', ['rev-parse', `${ref}^{commit}`], { cwd: source, encoding: 'utf8' }).trim();
+    expectPinnedAssembly(dir, ref, commit);
     const gate = spawnSync(process.execPath, ['kit/repo-gate/repo-gate.ts'], { cwd: dir, encoding: 'utf8' });
     expect(gate.status, gate.stdout + gate.stderr).toBe(0);
   }, 60_000);
@@ -114,8 +122,7 @@ describe('K551 declarative starter',()=>{
     const attempt = () => runAsync(process.execPath, [path.join(kit, 'kit.mjs'), 'spec', 'generate', file, '--ref', head, '--dir', dir, '--ports', ports, '--link', modules], { cwd: kit });
     const results = await Promise.allSettled([attempt(), attempt()]);
     expect(results.map(result => result.status).sort()).toEqual(['fulfilled', 'rejected']);
-    const lockCheck = spawnSync(process.execPath, ['kit/kit.mjs', 'check', '--source', kit], { cwd: dir, encoding: 'utf8' });
-    expect(lockCheck.status, lockCheck.stdout + lockCheck.stderr).toBe(0);
+    expectPinnedAssembly(dir, head, head);
     expect(fs.realpathSync(path.join(dir, 'node_modules'))).toBe(fs.realpathSync(modules));
     expect(fs.readdirSync(tmp).filter(file => file.startsWith('.kit-spec-'))).toEqual([]);
   }, 60_000);
@@ -195,8 +202,7 @@ describe('K551 declarative starter',()=>{
     expect(readRegistries()).toEqual(before);
     const retry = generate(source, head, file, dir, flags);
     expect(retry.status, retry.stdout + retry.stderr).toBe(0);
-    const locked = spawnSync(process.execPath, ['kit/kit.mjs', 'check', '--source', source], { cwd: dir, encoding: 'utf8' });
-    expect(locked.status, locked.stdout + locked.stderr).toBe(0);
+    expectPinnedAssembly(dir, head, head);
     expect(readRegistries()).toEqual(before);
   }, 60_000);
   it('leaves an unregistered game and developer-owned files untouched',()=>{

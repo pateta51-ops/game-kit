@@ -1,6 +1,6 @@
 // Repository gate. Fake tokens, session URLs, tailnet hosts and runner names are built at run time so this file never holds one.
 import { execFileSync, spawnSync } from 'node:child_process';
-import { lstatSync, mkdirSync, mkdtempSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
+import { lstatSync, mkdirSync, mkdtempSync, rmdirSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterAll, describe, expect, it, vi } from 'vitest';
@@ -172,7 +172,7 @@ describe('config and command line', () => {
     expect(failed.stdout).toContain('git rm --cached');
     expect(failed.stderr).not.toContain('git is not available here');
     // The Git index already proves the tracked link is invalid, even when the target is absent.
-    rmSync(target);
+    rmdirSync(target);
     expect(gate().status).toBe(1);
     mkdirSync(target);
     git('rm', '--cached', '--', 'node_modules');
