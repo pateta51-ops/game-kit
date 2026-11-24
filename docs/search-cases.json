@@ -257,7 +257,7 @@
   { "q": "collection of items", "first": "none" },
   { "q": "tile flip", "first": "none" },
   { "q": "odds next card", "first": "none" },
-  { "q": "greedy player", "first": "K424" },
+  { "q": "greedy player", "first": "opponent" },
   { "q": "clauseList", "first": "card-harness" },
   { "q": "stack of cards per pile", "first": "card-pile" },
   { "q": "discard row payment", "first": "K520" },
@@ -541,5 +541,7 @@
   { "q": "guarded button lifts a guard", "first": "guarded-button" },
   { "q": "barred button with a reason", "first": "guarded-button" },
   { "q": "log why a phase was skipped", "first": "turn-flow" },
-  { "q": "skipped phase event names the card", "first": "turn-flow" }
+  { "q": "skipped phase event names the card", "first": "turn-flow" },
+  { "q": "look ahead greedy player", "first": "opponent" },
+  { "q": "greedy driver", "first": "opponent" }
 ]
