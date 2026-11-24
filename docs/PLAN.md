@@ -402,6 +402,7 @@ The blind matching test's result was not recorded: the PR, its comments and docs
 | K736 | bug-reporter: replay accepts a saves-part save (version); the report takes saveVersion from it | S |  | done |
 | K737 | sim-pool: a driver or `hasten` may return an engine-core `DebugAction` with no cast; `randomDebug` hook and `debug: N` (`--debug N`) apply a random debug edit every N actions | M |  | done |
 | K738 | cheat-options (new): cheats declared as data (number or toggle, once at set-up or each round start) applied as recorded debug set edits behind allowCheats; game-store applies them and gives cheated; table-panels GameOver cheated mark; set-up fields through screens extra | M |  | done |
+| K740 | llm-playtester: claude-haiku-5-5 price (with the over-100K-token rate) so --model claude-haiku-5-5 no longer throws "No price for model" | S |  | done |
 
 ## Asked for by the owner
 
