@@ -254,7 +254,7 @@
   { "q": "collection of items", "first": "none" },
   { "q": "tile flip", "first": "none" },
   { "q": "odds next card", "first": "none" },
-  { "q": "greedy player", "first": "K424" },
+  { "q": "greedy player", "first": "opponent" },
   { "q": "clauseList", "first": "card-harness" },
   { "q": "stack of cards per pile", "first": "card-pile" },
   { "q": "discard row payment", "first": "K520" },
