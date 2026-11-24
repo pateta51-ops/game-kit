@@ -6,7 +6,7 @@ import { botDriver, randomDriver, type Driver, type SimGame } from '../index.ts'
 const pick = (answers: readonly AnswerAction[], id: string): AnswerAction => answers.find((a) => a.picks[0] === id) ?? (answers[0] as AnswerAction);
 
 export const simGame: SimGame<Counter, { adds: number }> = {
-  rules: COUNTER,
+  rules: { ...COUNTER, debug: {} },
   content: () => CONTENT,
   start(spec) {
     if (spec.seed === 'boom') throw new Error('boom');
@@ -42,5 +42,7 @@ export const simGame: SimGame<Counter, { adds: number }> = {
   },
   secrets: (s) => (s.options.seed.startsWith('leak') ? ['42'] : []),
   leakKeys: (s) => (s.options.seed === 'leakkey' ? ['rng'] : []),
+  // K737: a kernel `set` edit of the counter, drawn from the seeded rng.
+  randomDebug: (_s, _c, rng) => ({ kind: 'debug', verb: 'set', args: { path: ['counter'], value: rng.int(3) } }),
   hasten: (s) => (s.prompt ? { kind: 'answer', promptId: s.prompt.id, picks: ['add'] } : undefined),
 };
