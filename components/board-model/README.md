@@ -13,6 +13,7 @@ Spaces as data, adjacency computed once, named placement kinds resolved by the b
 4. Let card data name a kind and ask `availableSpaces(board, kinds, kind, ctx)`; never filter spaces in card code.
 5. Pass the context a kind needs (for `away-from`: `{ tile }`).
 6. Keep costs, bonuses and expansion tiles in the game's kinds, not in the board.
+7. Follow the [movement contract and executable examples](movement.md) when using the opt-in `movement.ts` entry. Check route stopping and legal endpoints separately. Apply all positions in a displacement chain plan in one engine transition.
 
 **Common mistakes:**
 - Asking for a kind the table lacks: `availableSpaces` throws `unknown placement kind`.
@@ -41,3 +42,7 @@ const board = createBoard(
 const kinds = { ...baseKinds(), shore: (b: typeof board, s: { id: string }) => (b.adjacency[s.id] ?? []).length > 1 }
 console.log(availableSpaces(board, kinds, 'land').map((s) => s.id))
 ```
+
+## Movement rules (K602)
+
+See [movement.md](movement.md) for the public shapes, game policies and executable examples.
