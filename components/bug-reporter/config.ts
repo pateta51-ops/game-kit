@@ -3,8 +3,8 @@ import type { EmbedFont } from './capture.ts';
 
 export interface GameSnapshot {
   contentHash: string | null;
-  /** The game's save (Saves > Import loads it), or null when no game is open. */
-  replay: { saveVersion: number } | null;
+  /** The game's save (Saves > Import loads it): a saves-part save (`version`) as it is, or any object with `saveVersion`, or null when no game is open. */
+  replay: ({ saveVersion: number } | { version: number }) | null;
   theme?: string;
   round: number | null;
   prompt: { id: string; kind: string; ruleId: string } | null;

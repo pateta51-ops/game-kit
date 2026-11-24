@@ -26,7 +26,7 @@ Call `configureBugReporter(config)` once, before any of the components render (s
 
 - `id`: a short name; it names exported files, the report format, the token's storage key and the queue database.
 - `repo`: `{ owner, repo, branch?, baseBranch?, label? }`. Nothing is hard-coded; the token is typed by the user in `BugSettings` and kept only in their browser.
-- `buildSha`, and `snapshot()`: returns what to attach (`contentHash`, `replay` save, `theme`, `round`, `prompt`, `actions`, `log` lines).
+- `buildSha`, and `snapshot()`: returns what to attach (`contentHash`, `replay` save (a saves-part save with `version` goes as it is; the report adds `saveVersion` from it; any other save needs `saveVersion`), `theme`, `round`, `prompt`, `actions`, `log` lines).
 - Optional: `useButtonMode` (hook, `auto | on | off`), `useHideFloatingButton` (hook), `markupFont`, `fonts()` (font files to embed in captures), `dev` (installs `window.bugReports`).
 
 Import from `bug-reporter/index` (config, stores, queue, token, filing; no React components) and `bug-reporter/ui` (`BugReportHost`, `FloatingBugButton`, `BugSettings`, `QueueBar`, `BugButton`); the file paths still work. Importing reads nothing: the token's storage is read on first use.

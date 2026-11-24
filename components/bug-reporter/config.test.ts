@@ -42,4 +42,22 @@ describe('configuration', () => {
       configureBugReporter(c);
     }
   });
+
+  it('takes the version of a saves-part save (`version` only) as the report saveVersion (K736)', () => {
+    const c = bugConfig();
+    const snap = (replay: unknown) => () => ({ ...c.snapshot(), replay: replay as never });
+    try {
+      configureBugReporter({ ...c, snapshot: snap({ version: 3, state: {} }) });
+      const r = collectReport('v', null);
+      expect(r.replay?.saveVersion).toBe(3);
+      expect(parseReport(JSON.stringify(r)).ok).toBe(true);
+      configureBugReporter({ ...c, snapshot: snap({ saveVersion: 2, version: 3 }) });
+      expect(collectReport('s', null).replay?.saveVersion).toBe(2);
+      configureBugReporter({ ...c, snapshot: snap({ state: {} }) });
+      const r3 = collectReport('n', null);
+      expect(parseReport(JSON.stringify(r3)).ok).toBe(false);
+    } finally {
+      configureBugReporter(c);
+    }
+  });
 });

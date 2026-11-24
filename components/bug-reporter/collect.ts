@@ -45,6 +45,7 @@ export function collectReport(explanation: string, screenshot: string | null, no
   try {
     snap = bugConfig().snapshot();
     replay = snap.replay === null ? null : structuredClone(snap.replay);
+    if (replay !== null && !('saveVersion' in replay) && 'version' in replay) replay = { ...replay, saveVersion: replay.version as number };
   } catch {
     // the report goes out without the snapshot
   }
