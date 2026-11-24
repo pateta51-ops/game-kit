@@ -387,7 +387,7 @@ describe('K741 cheaper playtests', () => {
 
   it('a question that cannot be answered is an adapter finding before any call', async () => {
     const none = () => Promise.reject(new Error('no call expected'));
-    for (const q of [{ kind: 'multi', min: 3, max: 3, items: ['a', 'b'] }, { kind: 'split', points: 2, targets: [] }, { kind: 'split', points: 9, targets: [{ label: 'x', max: 4 }, { label: 'y', max: 4 }] }] as const) {
+    for (const q of [{ kind: 'multi', min: 3, max: 3, items: ['a', 'b'] }, { kind: 'split', points: 2, targets: [] }, { kind: 'split', points: 9, targets: [{ label: 'x', max: 4 }, { label: 'y', max: 4 }] }] as ReturnType<GameAdapter['options']>[]) {
       const r = await runPlaytest(base(() => q).a, { seed: 's', client: none, out: tmp() });
       expect(r.stop).toBe('finding');
       expect(r.findings[0]).toContain('adapter question invalid');
