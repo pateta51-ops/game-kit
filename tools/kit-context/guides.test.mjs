@@ -127,11 +127,18 @@ it.each([
   ['wrapped-reference', 'Follow the [required transaction contract][atomic\nupdates].\n\n[atomic updates]: atomic.md'],
   ['quoted-reference', '> Follow the [required transaction contract][atomic].\n>\n> [atomic]: atomic.md'],
   ['balanced-destination', link + '(atomic(v2).md).'],
+  ['wrapped-nested-label', 'Read [the instruction for\n[Step 2]: apply it](atomic.md).'],
   ['quoted-example', '> ~~~md\n> [example](absent.md)\n> ~~~\n\n' + link + '(atomic.md).'],
-  ['multiline-code', 'Read `the example\n<!-- then the marker`.\n\n' + link + '(atomic.md).'],
-  ['linked-image', '[![guide](badge.png)](atomic.md)'],
+  ['multiline-code', 'Read `the example\nwith <!-- then the marker`.\n\n' + link + '(atomic.md).'],
+  ['linked-image', '[![guide](badge.png)](atomic.md) and ![label [example](missing-alt.md)](badge.png)'],
 ])('honors ordinary CommonMark guide forms through the real CLI for %s', (name, readme) => {
   const guide = name === 'balanced-destination' ? 'atomic(v2).md' : 'atomic.md';
   fixture(name, rules + readme, { [guide]: constraint });
   expectComplete(run(name), guide);
+});
+
+it('does not treat a definition printed inside inline code as a guide link', () => {
+  fixture('literal-definition', rules + 'Read `the example\n[example]: missing-example.md`.\n\n' +
+    '[example] and ' + link + '(atomic.md).');
+  expectComplete(run('literal-definition'));
 });

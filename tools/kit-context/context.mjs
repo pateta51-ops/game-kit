@@ -94,13 +94,40 @@ function readDocumentation(dir) {
   return {rules,usage,markdown:lines.join('\n')};
 }
 
+function* guideDocuments(markdown) {
+  const parser=new Parser();
+  const document=parser.parse(markdown);
+  yield document;
+  const lines=markdown.split(/\r?\n/);
+  let separated=false;
+  // Also accept a stand-alone definition immediately after top-level prose.
+  // Use paragraph boundaries to keep code blocks and HTML blocks out of this compatibility rule.
+  for(let block=document.firstChild;block;block=block.next) {
+    if(block.type!=='paragraph') continue;
+    const [[start],[end]]=block.sourcepos;
+    if(start===end) continue;
+    const prose=lines.slice(start-1,end).join('\n')
+      .replace(/(?<!`)(`+)(?!`)[\s\S]*?(?<!`)\1(?!`)|<!--[\s\S]*?-->/g,span=>span.replace(/[^\n]/g,' '));
+    for(const [offset,line] of prose.split('\n').entries()) {
+      const index=start+offset-1;
+      if(offset && /^ {0,3}\[[^\]\n]+\]:[ \t]+\S/.test(line) && !parser.parse(lines[index]).firstChild) {
+        lines[index]='\n'+lines[index];
+        separated=true;
+      }
+    }
+  }
+  if(separated) yield parser.parse(lines.join('\n'));
+}
+
 function* markdownLinks(markdown) {
-  const walker=new Parser().parse(markdown).walker();
-  for(let event;(event=walker.next());) {
-    const {node,entering}=event;
-    if(!entering) continue;
-    if(node.type==='image') walker.resumeAt(node,false);
-    if(node.type==='link') yield node.destination;
+  for(const document of guideDocuments(markdown)) {
+    const walker=document.walker();
+    for(let event;(event=walker.next());) {
+      const {node,entering}=event;
+      if(!entering) continue;
+      if(node.type==='image') walker.resumeAt(node,false);
+      if(node.type==='link') yield node.destination;
+    }
   }
 }
 
