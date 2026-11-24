@@ -13,6 +13,7 @@ The panels every game writes around its table, as logic plus unstyled slots: log
 4. For `opponentTurn`, make `describe(e, viewer)` return null for anything the viewer may not read; null shows the `hidden` slot, never the event. Wire the skip button to paced-view `skip`.
 5. Give `gameResult(scores, { lowWins })` the game's own scoring; ties share a rank.
 6. For a solo or reasoned end use `title`, `reason`, `standings={false}` and `<GameOverActions>` instead of the winner line.
+6a. K738: pass `cheated` (game-store `get().cheated`) to `GameOver` to show the cheated mark (`data-part="game-over-cheated"`, `labels.cheated`, default "Cheats on", or a node).
 7. Supply `turnName`, `phaseName`, `seatName` for any wording; `TurnBanner` fires `onPhase` on a change, not on first show.
 8. For a log with the newest line first pass `order="newest-first"` (it stays scrolled to the top, turns and lines reversed, grouping and seat filter unchanged); for a fixed-height box with no half-cut line pass `wholeLines`: true measures every turn heading and entry, so entries that wrap to different heights are never half cut (the box snaps down to the last whole one; the oldest that do not fit scroll out of view); a number is a fixed line height in px and snaps to whole lines (1070 px, 29 px lines: 36 lines, 1044 px). Both are opt-in, the defaults are unchanged.
 9. Style by `data-part` / `data-action`; every `<button>` carries `data-kit`, so theme resets use `:where(button:not([data-kit]))`.

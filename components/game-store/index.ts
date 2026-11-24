@@ -8,6 +8,7 @@ import { advance, noSteps, pushSteps, skip, type Steps } from '../paced-view/ind
 import { legalAnswers } from '../sim-pool/play.ts';
 import { DriverRng } from '../sim-pool/rng.ts';
 import type { Bot } from '../sim-pool/bot.ts';
+import { cheatActions, cheatedOf, roundOf, type CheatChoice, type CheatConfig } from '../cheat-options/index.ts';
 
 export type SeatId = string | number;
 
@@ -19,7 +20,7 @@ export interface GameDef<G extends GameTypes, V, S extends SeatId = SeatId> {
   /** A new game's options and rules from a seed. */
   readonly start: (seed: string) => { options: G['options']; rules: G['rules'] };
   /** What one seat sees (build it from card-zones `viewOf`); the opponent and the screen read only this. */
-  readonly view: (state: G['state'], seat: S, ctx?: { readonly undoUsed: boolean }) => V;
+  readonly view: (state: G['state'], seat: S, ctx?: { readonly undoUsed: boolean; readonly cheated?: boolean }) => V;
   /** Answers the settings give without asking (prompt-host `autoAnswer`), or null to ask. Default: always ask. */
   readonly forced?: Forced<G['prompt']>;
   /** The opponent: picks for its open prompt from its own view only. K271: `rng` is keyed `<options.seed>|opponent|<prompt id>`, as sim-pool's for driver `opponent`. */
@@ -29,6 +30,8 @@ export interface GameDef<G extends GameTypes, V, S extends SeatId = SeatId> {
   /** The game's log words per event type (table-panels `logLines`). */
   readonly words?: Readonly<Record<string, string>>;
   readonly format?: SaveFormat;
+  /** K738: cheat options (cheat-options): applied by the store as recorded debug edits, joined to the step that made them due. */
+  readonly cheats?: CheatConfig<G['options'], G['state']>;
 }
 
 export const defineGame = <G extends GameTypes, V, S extends SeatId = SeatId>(def: GameDef<G, V, S>): GameDef<G, V, S> => def;
@@ -43,6 +46,8 @@ export interface GameSnap<G extends GameTypes, V> {
   readonly state: G['state'];
   /** K724: Free-mode undo was used in this game (history's flag; kept by saves). */
   readonly undoUsed: boolean;
+  /** K738: a debug edit (a cheat or the console) was played in this game (from the actions, so saves keep it). */
+  readonly cheated: boolean;
   /** The player's seat view of the live state. */
   readonly view: V;
   /** paced-view queue of the last click (and the opponent's answers after it). */
@@ -126,17 +131,32 @@ export function createGameStore<G extends GameTypes, V, S extends SeatId>(def: G
     for (const fn of subs) fn();
   };
   const make = (h: StepHistory<G>, steps: Steps<V, G['event']>, options: G['options'], rules: G['rules'], error: string | null): GameSnap<G, V> => ({
-    history: h, state: h.state, undoUsed: h.undoUsed, view: def.view(h.state, me(), { undoUsed: h.undoUsed }), steps, options, rules, error,
+    history: h, state: h.state, undoUsed: h.undoUsed, cheated: cheatedOf(h.actions), view: def.view(h.state, me(), { undoUsed: h.undoUsed, cheated: cheatedOf(h.actions) }), steps, options, rules, error,
   });
   const saved = (): History<G> => ({ options: snap.options, rules: snap.rules, actions: snap.history.actions, cursor: snap.history.actions.length, undoUsed: snap.history.undoUsed });
   const autosave = (): void => {
     if (o.saves === undefined) return;
     pending = o.saves.writeAutosave(saved(), o.saveName?.(snap) ?? String((snap.options as { seed?: string }).seed ?? ''));
   };
+  // K738: the cheats due (set-up ones at the start; round ones when the round changed), each joined to the top step
+  function cheat(s: { h: StepHistory<G>; evs: G['event'][]; error: string | null }, options: G['options'], before: number | undefined, start: boolean): { h: StepHistory<G>; evs: G['event'][]; error: string | null } {
+    const c = def.cheats;
+    if (c === undefined || s.error !== null) return s;
+    const choice = c.choice?.(options) ?? (options as CheatChoice);
+    const now = roundOf(c, s.h.state);
+    const acts = [...(start ? cheatActions(c.defs, choice, s.h.state, 'setup') : []), ...(now !== undefined && (start || now !== before) ? cheatActions(c.defs, choice, s.h.state, 'round') : [])];
+    let h = s.h;
+    for (const a of acts) {
+      const r = extendStep(def.rules, h, a as G['action'], def.content);
+      if (!r.ok) return { h, evs: s.evs, error: r.error };
+      h = r.history;
+    }
+    return acts.length === 0 ? s : settle(h, s.evs, options);
+  }
   function fresh(seed: string): void {
     const { options, rules } = def.start(seed);
     const g = createGame(def.rules, options, rules, def.content);
-    const s = settle(newSteps<G>(g.state), g.events, options);
+    const s = cheat(settle(newSteps<G>(g.state), g.events, options), options, undefined, true);
     set(make(s.h, o.openingSteps === true ? pushSteps(noSteps(), def.view(def.rules.blank(options, rules, def.content) as G['state'], me()), s.evs, isStep, o.instant?.() ?? false) : noSteps(), options, rules, s.error));
   }
   const mode = (): UndoMode => (typeof o.undo === 'function' ? o.undo() : (o.undo ?? 'safe'));
@@ -158,7 +178,8 @@ export function createGameStore<G extends GameTypes, V, S extends SeatId>(def: G
         set({ ...snap, error: r.error });
         return false;
       }
-      const s = r.capped ? { h: r.history, evs: [...r.events], error: r.error } : settle(r.history, r.events, snap.options);
+      const was = def.cheats === undefined ? undefined : roundOf(def.cheats, snap.state);
+      const s = cheat(r.capped ? { h: r.history, evs: [...r.events], error: r.error } : settle(r.history, r.events, snap.options), snap.options, was, false);
       set(make(s.h, pushSteps(snap.steps, snap.view, s.evs, isStep, o.instant?.() ?? false), snap.options, snap.rules, s.error));
       autosave();
       return true;
@@ -193,7 +214,7 @@ export function createGameStore<G extends GameTypes, V, S extends SeatId>(def: G
       const m = back.save;
       const r = replaySteps(def.rules, m.options, m.rules, m.actions, def.content, (state, a) => {
         const p = state.prompt as G['prompt'] | null;
-        return (a as { kind: string }).kind === 'debug' || (a.kind === 'answer' && p !== null && (p.seat === undefined || seatKey(p.seat) === seatKey(me())) && forced(p) === null);
+        return ((a as { kind: string }).kind === 'debug' && (a as { args?: { cheat?: unknown } }).args?.cheat === undefined) || (a.kind === 'answer' && p !== null && (p.seat === undefined || seatKey(p.seat) === seatKey(me())) && forced(p) === null);
       });
       if (!r.ok) return r.error;
       const s = settle({ ...r.history, undoUsed: m.undoUsed }, [], m.options);

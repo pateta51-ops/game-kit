@@ -14,6 +14,7 @@ One game store and one game object (K234): `defineGame` is what the game writes 
 5. Mount debug edits with `store.debug`, load with `store.load(save)`, undo with `undo()` / `redo()` (mode `safe` unless `undo` says otherwise).
 6. Set `openingSteps: true` to pace the setup events as steps; the default is off.
 7. Use `sim.ts` (`simGameOf`, `botDriverOf`) in node only.
+8. K738: declare dev cheats with `defineGame({ cheats: { defs, choice?, round? } })` (cheat-options); the store plays them as debug edits; never apply a cheat in the game's own code. Read the mark from `get().cheated`.
 
 **Common mistakes:**
 - Reading `get().state` in the opponent or the screen: only the view is allowed.
@@ -59,3 +60,4 @@ const sim = simGameOf(def, { drivers: { opponent: botDriverOf(def, bot) } }) // 
 console.log(sim.rules === def.rules)
 ```
 - K724 `undoUsed`: `get().undoUsed` is the history's flag (true after a Free-mode `undo()`, and after `load` of a save that kept it); `view(state, seat, { undoUsed })` gets it as a third argument, so a game's view can show "undo used". Games that ignore the third argument are unchanged.
+- K738 `cheats`: `defineGame({ cheats: { defs, choice?, round? } })` (cheat-options `CheatConfig`): after `fresh` the store plays the set-up cheats and the round cheats, and after an answer whose `round(state)` changed the round cheats, each a kernel `set` debug edit joined to that undo step (`load` keeps them in the step before). `get().cheated` (and the view's third argument `{ cheated }`) is true once any debug edit was played. A game without `cheats` is unchanged.
