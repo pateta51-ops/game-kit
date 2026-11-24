@@ -1,0 +1,6 @@
+{
+  "name": "cheat-options",
+  "source": { "game": "dice-commandos", "commit": "see note", "paths": ["src/engine/setup.ts, src/engine/round.ts, src/engine/types.ts (GameOptions.cheats, allowCheats, cheated: shape only, written new)"], "note": "K738: lifted game-free as debug edits; main checkout of 23 Nov 2026." },
+  "needs": ["engine-core", "screens"],
+  "packages": []
+}
