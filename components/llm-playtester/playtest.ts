@@ -52,7 +52,7 @@ export interface PlaytestOptions {
   model?: string;
   maxUsd?: number;
   maxDecisions?: number;
-  /** max_tokens per call (default 16000: thinking models need room before the tool call). */
+  /** max_tokens per call (default 8000, K741: the largest reply seen in two real runs was 4,592 tokens; thinking models need room before the tool call). */
   maxTokens?: number;
   /** output_config.effort sent with each call (default low). */
   effort?: 'low' | 'medium' | 'high';

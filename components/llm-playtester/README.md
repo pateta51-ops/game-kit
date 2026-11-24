@@ -24,11 +24,11 @@ The game writes one adapter; Claude (or `--dummy`, the first option, no client b
 
 
 
-`node kit/llm-playtester/playtest.ts --adapter <module> [--seed s] [--difficulty d] [--scenario s] [--model claude-opus-5-5|claude-sonnet-5-5] [--max-usd 5] [--max-decisions 500] [--max-tokens 16000] [--runs n] [--docs a.md,b.md] [--env .env.local] [--dummy]`. The module exports `createAdapter()` or a default. The game needs `@anthropic-ai/sdk` for paid runs.
+`node kit/llm-playtester/playtest.ts --adapter <module> [--seed s] [--difficulty d] [--scenario s] [--model claude-opus-5-5|claude-sonnet-5-5|claude-haiku-5-5] [--max-usd 5] [--max-decisions 500] [--max-tokens 8000] [--runs n] [--docs a.md,b.md] [--env .env.local] [--dummy]`. The module exports `createAdapter()` or a default. The game needs `@anthropic-ai/sdk` for paid runs.
 
-Key: `<GAME>_CLAUDE_API_KEY` (adapter name in upper snake case: `fakeGame` is `FAKE_GAME_CLAUDE_API_KEY`) from `.env.local` or `--env`, never from the environment. `ANTHROPIC_API_KEY` alone is refused (it would switch Claude Code to API billing). Each call is priced from its usage (cache reads and writes included); a run stops before a call that could pass `--max-usd`. Before the first call it prints the worst-case cost per decision and the cap, and says so when one call alone would exceed the cap.
+Key: `<GAME>_CLAUDE_API_KEY` (adapter name in upper snake case: `fakeGame` is `FAKE_GAME_CLAUDE_API_KEY`) from `.env.local` or `--env`, never from the environment. `ANTHROPIC_API_KEY` alone is refused (it would switch Claude Code to API billing). Each call is priced from its usage (cache reads and writes included; Haiku 5.5 has a higher rate for a prompt over 100,000 tokens, applied per request); a run stops before a call that could pass `--max-usd`. Before the first call it prints the worst-case cost per decision and the cap, and says so when one call alone would exceed the cap.
 
-`maxTokens` (`--max-tokens`, default 16000, `MAX_TOKENS`) caps each reply, thinking included; a reply cut off before its tool call is a finding `reply cut off at max_tokens (n) before a choose tool call`.
+`maxTokens` (`--max-tokens`, default 8000 since K741 (largest reply seen in two real runs: 4,592 tokens), `MAX_TOKENS`) caps each reply, thinking included; a reply cut off before its tool call is a finding `reply cut off at max_tokens (n) before a choose tool call`.
 
 Per run, `logs/llm-player/<run-id>/`: `decisions.jsonl` (step, view hash and start, options, choice, reason, usage, cost), `summary.md` (result, decisions, cost, findings: `BUG:` reasons, invalid options, adapter throws), `replay.json` (`adapter.replay()`). An invalid option is retried once with the error, then the run stops with a finding; an adapter throw stops it with a finding. Exit 1 when a run did not finish.
 

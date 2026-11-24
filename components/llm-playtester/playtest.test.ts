@@ -3,7 +3,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import type { Chooser } from './client.ts';
-import { makeChooser, type Body } from './client.ts';
+import { cost, worstCost, makeChooser, type Body } from './client.ts';
 import { createAdapter } from './fake-adapter.ts';
 import { keyName, loadKey } from './key.ts';
 import { ledgerSpent, main, runMain, runPlaytest, type GameAdapter } from './playtest.ts';
@@ -113,12 +113,12 @@ describe('llm-playtester', () => {
     expect(lines.join('\n')).toContain('raise --max-usd');
   });
 
-  it('K398: max_tokens defaults to 16000, is configurable, and a cut-off reply says so', async () => {
+  it('K398: max_tokens defaults to 8000, is configurable, and a cut-off reply says so', async () => {
     const bodies: Body[] = [];
-    const sdk = { messages: { create: (b: Body) => { bodies.push(b); return Promise.resolve({ content: [{ type: 'thinking' }], stop_reason: 'max_tokens', usage: { input_tokens: 1, output_tokens: 16000 } }); } } };
+    const sdk = { messages: { create: (b: Body) => { bodies.push(b); return Promise.resolve({ content: [{ type: 'thinking' }], stop_reason: 'max_tokens', usage: { input_tokens: 1, output_tokens: 8000 } }); } } };
     const r = await runPlaytest(createAdapter(), { seed: 's', client: makeChooser(sdk), out: tmp(), model: 'claude-sonnet-5-5', log: () => undefined });
-    expect(bodies[0]!.max_tokens).toBe(16000);
-    expect(r.findings[0]).toBe('step 0: reply cut off at max_tokens (16000) before a choose tool call');
+    expect(bodies[0]!.max_tokens).toBe(8000);
+    expect(r.findings[0]).toBe('step 0: reply cut off at max_tokens (8000) before a choose tool call');
     await runPlaytest(createAdapter(), { seed: 's', client: makeChooser(sdk, 2000), maxTokens: 2000, out: tmp(), model: 'claude-sonnet-5-5', log: () => undefined });
     expect(bodies.at(-1)!.max_tokens).toBe(2000);
   });
@@ -387,5 +387,22 @@ describe('K741 cheaper playtests', () => {
     expect(rows).toHaveLength(4);
     for (const x of rows) expect(x).not.toHaveProperty('auto');
     expect(rows[0]!['options']).toEqual(['add 1', 'add 2']);
+  });
+});
+
+describe('K740 haiku prices', () => {
+  const u = (i: number, w: number, r: number, o: number) => ({ input_tokens: i, output_tokens: o, cache_creation_input_tokens: w, cache_read_input_tokens: r });
+  it('low rates up to 100K', () => {
+    expect(cost(u(1000, 2000, 3000, 100), 'claude-haiku-5-5')).toBeCloseTo((1000 * 0.1 + 2000 * 0.125 + 3000 * 0.01 + 100 * 0.5) / 1e6, 12);
+  });
+  it('high rates over 100K, cache reads count', () => {
+    expect(cost(u(1000, 0, 100_000, 100), 'claude-haiku-5-5')).toBeCloseTo((1000 * 0.5 + 100_000 * 0.05 + 100 * 2.5) / 1e6, 12);
+  });
+  it('worstCost and unknown model', () => {
+    const ask = { model: 'claude-haiku-5-5', system: ['x'], prompt: 'y' };
+    expect(worstCost(ask, 1000)).toBeCloseTo(((1002 / 3) * 0.125 + 1000 * 0.5) / 1e6, 12);
+    expect(worstCost({ ...ask, prompt: 'y'.repeat(400_000) }, 1000)).toBeCloseTo(((401_001 / 3) * 0.625 + 1000 * 2.5) / 1e6, 9);
+    expect(() => cost(u(1, 0, 0, 1), 'nope')).toThrow('No price');
+    expect(() => worstCost({ ...ask, model: 'nope' })).toThrow('No price');
   });
 });
