@@ -1038,7 +1038,7 @@
     "gameSupplies": "The motion specs and the elements to move."
   },
   "engine-core": {
-    "use": "Every game's engine: seeded random, tasks and prompts, copy on write, replay, undo, saves, timing windows and triggers.",
+    "use": "Every game's engine: seeded random, tasks and prompts, copy on write, state invariants, replay, undo, saves, timing windows and triggers.",
     "not": "A game's rules or content; the game writes its own `GameRules`.",
     "title": "Game rules engine core",
     "tags": [
@@ -1084,7 +1084,10 @@
       "mission progress",
       "goal deadline",
       "lose condition prompt",
-      "lose condition"
+      "lose condition",
+      "engine invariant policy",
+      "duplicate card identities",
+      "card zone invariants"
     ],
     "visible": false,
     "release": 1,

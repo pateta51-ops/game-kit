@@ -2,6 +2,7 @@
 // a `GameRules`. `kernelPort` turns an engine-core game into one (the two paths give the same results).
 import { advance, applyAction, createGame } from './apply.ts';
 import type { Draft } from './draft.ts';
+import { checkStateInvariants } from './invariant-policy.ts';
 import type { GameRules, GameTypes, InvariantViolation } from './types.ts';
 
 export interface PortOption {
@@ -90,11 +91,19 @@ export function kernelPort<G extends GameTypes, W = never>(
   content: G['content'],
   o: { start?: () => G['state']; options?: (seed: string) => G['options']; gameRules?: G['rules']; put?: (s: Draft<G['state']>, card: string, where: W) => string } = {},
 ): EnginePort<G, W> {
+  const checkedFixture = (s: G['state']): G['state'] => {
+    if (rules.invariantPolicy === 'strict') checkStateInvariants(rules, s, content, []);
+    return s;
+  };
   return {
     content,
-    start: (seed = '') => o.start?.() ?? createGame(rules, o.options?.(seed) ?? ({ seed }), o.gameRules, content).state,
+    start: (seed = '') => {
+      const fixture = o.start?.();
+      if (fixture === undefined) return createGame(rules, o.options?.(seed) ?? ({ seed }), o.gameRules, content).state;
+      return fixture.stack.length > 0 && fixture.prompt === null && fixture.result === null ? fixture : checkedFixture(fixture);
+    },
     apply: (s, a) => applyAction(rules, s, a as G['action'], content).state,
-    settle: (s) => (s.stack.length === 0 ? s : advance(rules, s, content).state),
+    settle: (s) => (s.stack.length === 0 ? checkedFixture(s) : advance(rules, s, content).state),
     prompt: (s) => s.prompt,
     events: (s) => s.log,
     result: (s) => s.result,

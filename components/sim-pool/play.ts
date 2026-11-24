@@ -7,6 +7,7 @@ import {
   hashValue,
   isRevealing,
   newHistory,
+  StateInvariantError,
   type History,
   type AnswerAction,
   type DebugAction,
@@ -314,8 +315,12 @@ export function playOne<G extends GameTypes, S, O = unknown>(game: SimGame<G, S,
       opts.onStep?.(actions.length - 1, { ...ms }, viewBytes);
     }
   } catch (e) {
-    error = e instanceof Error ? e.message : String(e);
-    if (e instanceof Error && e.name !== 'Error') errorName = e.name;
+    if (e instanceof StateInvariantError) {
+      for (const violation of e.violations) violations.push(violation);
+    } else {
+      error = e instanceof Error ? e.message : String(e);
+      if (e instanceof Error && e.name !== 'Error') errorName = e.name;
+    }
     opts.onStep?.(actions.length - 1, { ...ms }, viewBytes);
   }
   const failed = error !== undefined || violations.length > 0;
