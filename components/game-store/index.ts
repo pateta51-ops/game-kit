@@ -104,11 +104,17 @@ export function createGameStore<G extends GameTypes, V, S extends SeatId>(def: G
   let snap: GameSnap<G, V>;
 
   // the opponent's prompts and the player's forced ones, each joined to the top step, until the player must answer
-  function settle(h: StepHistory<G>, evs: readonly G['event'][], options: G['options']): { h: StepHistory<G>; evs: G['event'][]; error: string | null } {
+  // K738: with `round` (cheats on) the round cheats are played at each round edge before anything else acts, and forced answers go one at a time
+  function settle(h: StepHistory<G>, evs: readonly G['event'][], options: G['options'], round?: { last: number | undefined }): { h: StepHistory<G>; evs: G['event'][]; error: string | null } {
     const out = [...evs];
     for (let i = 0; i < 1000; i += 1) {
       const p = h.state.prompt as G['prompt'] | null;
       if (p === null) break;
+      if (round !== undefined) {
+        const c = cheat(h, options, 'round', round);
+        if (c.error !== null) return { h, evs: out, error: c.error };
+        h = c.h;
+      }
       const theirs = p.seat !== undefined && seatKey(p.seat) !== seatKey(me());
       if (theirs && def.opponent !== undefined) {
         const r = extendStep(def.rules, h, answerOf(p.id, def.opponent(def.view(h.state, p.seat as S), p, new DriverRng(`${String((options as { seed?: string }).seed ?? '')}|opponent|${String(p.id)}`))), def.content);
@@ -117,8 +123,8 @@ export function createGameStore<G extends GameTypes, V, S extends SeatId>(def: G
         out.push(...r.events);
         continue;
       }
-      const f = sendForced(def.rules, h, def.content, forced, { seat: me() });
-      if (f.capped) return { h: f.history, evs: [...out, ...f.events], error: f.error };
+      const f = sendForced(def.rules, h, def.content, forced, round === undefined ? { seat: me() } : { seat: me(), cap: 1 });
+      if (f.capped && round === undefined) return { h: f.history, evs: [...out, ...f.events], error: f.error };
       if (f.history === h) return { h, evs: out, error: null };
       h = f.history;
       out.push(...f.events);
@@ -138,25 +144,27 @@ export function createGameStore<G extends GameTypes, V, S extends SeatId>(def: G
     if (o.saves === undefined) return;
     pending = o.saves.writeAutosave(saved(), o.saveName?.(snap) ?? String((snap.options as { seed?: string }).seed ?? ''));
   };
-  // K738: the cheats due (set-up ones at the start; round ones when the round changed), each joined to the top step
-  function cheat(s: { h: StepHistory<G>; evs: G['event'][]; error: string | null }, options: G['options'], before: number | undefined, start: boolean): { h: StepHistory<G>; evs: G['event'][]; error: string | null } {
+  // K738: the cheats due `when` (round ones only when the round changed since `round.last`), each joined to the top step
+  function cheat(h: StepHistory<G>, options: G['options'], when: 'setup' | 'round', round?: { last: number | undefined }): { h: StepHistory<G>; error: string | null } {
     const c = def.cheats;
-    if (c === undefined || s.error !== null) return s;
-    const choice = c.choice?.(options) ?? (options as CheatChoice);
-    const now = roundOf(c, s.h.state);
-    const acts = [...(start ? cheatActions(c.defs, choice, s.h.state, 'setup') : []), ...(now !== undefined && (start || now !== before) ? cheatActions(c.defs, choice, s.h.state, 'round') : [])];
-    let h = s.h;
-    for (const a of acts) {
+    if (c === undefined) return { h, error: null };
+    if (round !== undefined) {
+      const now = roundOf(c, h.state);
+      if (now === undefined || now === round.last) return { h, error: null };
+      round.last = now;
+    }
+    for (const a of cheatActions(c.defs, c.choice?.(options) ?? (options as CheatChoice), h.state, when)) {
       const r = extendStep(def.rules, h, a as G['action'], def.content);
-      if (!r.ok) return { h, evs: s.evs, error: r.error };
+      if (!r.ok) return { h, error: r.error };
       h = r.history;
     }
-    return acts.length === 0 ? s : settle(h, s.evs, options);
+    return { h, error: null };
   }
   function fresh(seed: string): void {
     const { options, rules } = def.start(seed);
     const g = createGame(def.rules, options, rules, def.content);
-    const s = cheat(settle(newSteps<G>(g.state), g.events, options), options, undefined, true);
+    const c = cheat(newSteps<G>(g.state), options, 'setup');
+    const s = c.error !== null ? { h: c.h, evs: [...g.events], error: c.error } : settle(c.h, g.events, options, def.cheats === undefined ? undefined : { last: undefined });
     set(make(s.h, o.openingSteps === true ? pushSteps(noSteps(), def.view(def.rules.blank(options, rules, def.content) as G['state'], me()), s.evs, isStep, o.instant?.() ?? false) : noSteps(), options, rules, s.error));
   }
   const mode = (): UndoMode => (typeof o.undo === 'function' ? o.undo() : (o.undo ?? 'safe'));
@@ -173,13 +181,13 @@ export function createGameStore<G extends GameTypes, V, S extends SeatId>(def: G
     answer(picks, promptId) {
       const p = snap.state.prompt;
       if (p === null || p.id !== promptId) return false;
-      const r = answerWithForced(def.rules, snap.history, answerOf(promptId, picks), def.content, forced, { seat: me() });
+      const round = def.cheats === undefined ? undefined : { last: roundOf(def.cheats, snap.state) };
+      const r = round === undefined ? answerWithForced(def.rules, snap.history, answerOf(promptId, picks), def.content, forced, { seat: me() }) : { ...addStep(def.rules, snap.history, answerOf(promptId, picks), def.content), capped: false };
       if (!r.ok) {
         set({ ...snap, error: r.error });
         return false;
       }
-      const was = def.cheats === undefined ? undefined : roundOf(def.cheats, snap.state);
-      const s = cheat(r.capped ? { h: r.history, evs: [...r.events], error: r.error } : settle(r.history, r.events, snap.options), snap.options, was, false);
+      const s = r.capped ? { h: r.history, evs: [...r.events], error: r.error } : settle(r.history, r.events, snap.options, round);
       set(make(s.h, pushSteps(snap.steps, snap.view, s.evs, isStep, o.instant?.() ?? false), snap.options, snap.rules, s.error));
       autosave();
       return true;

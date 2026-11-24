@@ -213,4 +213,9 @@ describe('game-store (K234)', () => {
     expect(hashState(back.get().state)).toBe(hashState(before));
     expect(createGameStore(def as unknown as typeof dbg, { seat: 'a', seed: 'd' }).debug({ kind: 'debug', verb: 'close' })).toMatch(/DEBUG/);
   });
+  it('K738: without cheats a scripted game gives the same actions and state hash as before K738', () => {
+    const st = createGameStore(def, { seat: 'a', seed: 'k738' });
+    for (let i = 0; i < 20 && st.get().state.result === null; i += 1) st.answer(['2'], st.get().state.prompt?.id ?? 0);
+    expect([hashValue(st.get().history.actions), hashState(st.get().state)]).toEqual(['b572e510a67149b7', '0a3285a9bfab27a1']);
+  });
 });

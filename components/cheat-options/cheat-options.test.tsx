@@ -29,6 +29,27 @@ describe('K738 cheat options', () => {
     expect(cheatProblem(defs, { allowCheats: true, cheats: { nope: 1 } })).toMatch(/no cheat/);
     expect(cheatProblem(defs, { allowCheats: true, cheats: { commandos: 1, fury: false } })).toBeNull();
   });
+  it('K738: edges of cheatProblem, cheatFields and cheatsFrom (out of range, allowCheats off, unknown id)', () => {
+    expect(cheatProblem(defs, {})).toBeNull();
+    expect(cheatProblem(defs, { allowCheats: false })).toBeNull();
+    expect(cheatProblem(defs, { allowCheats: false, cheats: { fury: true } })).toMatch(/allowCheats/);
+    expect(cheatProblem(defs, { cheats: { commandos: 0 } })).toMatch(/allowCheats/);
+    expect(cheatProblem(defs, { allowCheats: true, cheats: { commandos: -1 } })).toMatch(/bad value for "commandos"/);
+    expect(cheatProblem(defs, { allowCheats: true, cheats: { commandos: 1.5 } })).toMatch(/bad value/);
+    expect(cheatProblem(defs, { allowCheats: true, cheats: { commandos: 3, extraActions: 5 } })).toBeNull();
+    expect(cheatProblem(defs, { allowCheats: true, cheats: { extraActions: 6 } })).toMatch(/bad value for "extraActions"/);
+    expect(cheatProblem(defs, { allowCheats: true, cheats: { fury: 1 } })).toMatch(/bad value for "fury"/);
+    expect(cheatProblem(defs, { allowCheats: true, cheats: { commandos: true } })).toMatch(/bad value/);
+    expect(cheatProblem(defs, { allowCheats: true, cheats: { ghost: true } })).toBe('cheats: no cheat "ghost"');
+    expect(cheatFields(defs, false)).toEqual([]);
+    expect(cheatFields([], true)).toEqual([]);
+    expect(cheatFields(defs, true, { off: 'No', on: 'Yes' })[1]).toEqual({ key: 'cheat.fury', label: 'Full fury', default: 'off', options: [{ value: 'off', label: 'No' }, { value: 'on', label: 'Yes' }] });
+    expect(cheatFields(defs, true)[2]?.options.map((o) => o.value)).toEqual(['0', '1', '2', '3', '4', '5']);
+    expect(cheatsFrom(defs, { seats: [], 'cheat.ghost': '3', 'cheat.commandos': 'x', 'cheat.fury': 'off' })).toEqual({});
+    expect(cheatsFrom([], { seats: [], 'cheat.commandos': '2' })).toEqual({});
+    expect(cheatActions(defs, { allowCheats: true }, state, 'setup')).toEqual([]);
+    expect(cheatActions(defs, { allowCheats: true, cheats: { ghost: 2, commandos: 0, fury: false } }, state, 'setup')).toEqual([]);
+  });
   it('K738: cheatedOf is true once any debug edit is played', () => {
     expect(cheatedOf([{ kind: 'answer', promptId: 1, picks: [] }])).toBe(false);
     expect(cheatedOf([{ kind: 'answer' }, { kind: 'debug', verb: 'set' }])).toBe(true);
