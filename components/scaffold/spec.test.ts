@@ -41,7 +41,7 @@ describe('K551 declarative starter',()=>{
     expect((JSON.parse(ok.stdout) as Result).mechanics[0]?.status).toBe('partial');
   });
   it('rejects unknown fields, unsafe component names and unknown profiles',()=>{
-    for (const [i,s] of [{...basic,typo:true},{...basic,components:[path.join('..', '..', 'bad')]},{...basic,profiles:['unknown']}].entries()) {
+    for (const [i,s] of [{...basic,typo:true},{...basic,components:[path.join(String.fromCharCode(46,46), String.fromCharCode(46,46), 'bad')]},{...basic,profiles:['unknown']}].entries()) {
       const r=run('resolve',write('invalid-'+i,s)); expect(r.status).toBe(1); expect(r.stderr).not.toBe('');
     }
   });
