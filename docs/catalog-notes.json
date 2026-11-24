@@ -1038,7 +1038,7 @@
     "gameSupplies": "The motion specs and the elements to move."
   },
   "engine-core": {
-    "use": "Every game's engine: seeded random, tasks and prompts, copy on write, replay, undo, saves, timing windows and triggers.",
+    "use": "Every game's engine: seeded random, tasks and prompts, copy on write, state invariants, replay, undo, saves, timing windows and triggers.",
     "not": "A game's rules or content; the game writes its own `GameRules`.",
     "title": "Game rules engine core",
     "tags": [
@@ -1084,7 +1084,10 @@
       "mission progress",
       "goal deadline",
       "lose condition prompt",
-      "lose condition"
+      "lose condition",
+      "engine invariant policy",
+      "duplicate card identities",
+      "card zone invariants"
     ],
     "visible": false,
     "release": 1,
@@ -1965,7 +1968,7 @@
   },
   "sim-pool": {
     "use": "Playing many whole games with drivers on worker threads, fuzzing, sanity bands, sweeps, the K200 weight tuner and paired validation; the whole-game check of unreached clauses (proof from counted full-resolve tests, with a trace input built from the game's own log so a static clause applied with an effect counts as proven), coverage rounds and a findings file to replay a failing seed; K737 random debug edits (randomDebug hook, debug N) applied every N actions in a fuzz run, and a driver or hasten returning a debug action.",
-    "not": "A driver's strategy (the game or opponent supplies it).",
+    "not": "Strategy beyond one nested public choice (the game or opponent supplies it).",
     "title": "Bulk game simulator",
     "tags": [
       "simulate",
@@ -1997,7 +2000,10 @@
       "rounds until no new clause",
       "play whole games",
       "by script",
-      "e2e"
+      "e2e",
+      "bounded public greedy",
+      "public nested preview",
+      "test pilot bot random greedy"
     ],
     "visible": false,
     "release": 1,
@@ -2011,8 +2017,15 @@
       "runResumable + codeVersion: a long run that resumes after a crash",
       "tune + validate: tune weights, then check on fresh seeds",
       "proveResolved + provenClauses: prove each clause resolved in a played game",
-      "dispatchTrace: count a clause resolved only when verb dispatch ran it, not in a dry run"
+      "dispatchTrace: count a clause resolved only when verb dispatch ran it, not in a dry run",
+      "greedyBot + greedyPreview: score legal moves with bounded public nested look-ahead and a legal fallback"
     ]
+  },
+  "sim-pool/greedy": {
+    "title": "Simple public-view AI opponent",
+    "use": "Play against the computer, choose the best legal move, or let a bot pick a legal action with bounded engine previews and a public fallback. Use greedyBot and greedyPreview from sim-pool/browser.ts for live play and sim-pool/index.ts for simulation.",
+    "tags": ["play against computer", "simple AI opponent", "choose best legal move", "bot picks legal move", "computer chooses legal action", "bounded lookahead", "public view opponent", "public preview opponent", "greedyBot", "greedyPreview"],
+    "guide": "greedy.md"
   },
   "small-helpers": {
     "mechanics": "none: small helpers with no rule in them",

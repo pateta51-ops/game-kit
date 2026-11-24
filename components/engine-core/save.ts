@@ -5,8 +5,9 @@
 // pure steps, one per version; a save without `version` is version 1. Old files are never rewritten: the migrated copy
 // is what loads.
 import { hashValue } from './hash.ts';
+import { checkStateInvariants } from './invariant-policy.ts';
 import { hashState, replay } from './replay.ts';
-import type { GameRules, GameTypes } from './types.ts';
+import type { GameRules, GameTypes, InvariantViolation } from './types.ts';
 
 export const OLDER_BUILD = 'This save is from an older build.';
 export const DAMAGED = 'This save file is damaged.';
@@ -50,7 +51,7 @@ export interface CreateSaveInput<G extends GameTypes> {
   readonly undoUsed: boolean;
   /** ISO time stamp from the caller. */
   readonly savedAt: string;
-  /** The state after `actions` when the caller has it: sealed as is, no replay. */
+  /** The state after `actions` when the caller has it: sealed without replay, checked in strict mode. */
   readonly state?: G['state'];
 }
 
@@ -66,7 +67,7 @@ export function createSave<G extends GameTypes>(
     const r = replay(game, input.options, input.rules, input.actions, content);
     if (!r.ok) throw new Error(r.error ?? 'Cannot save an invalid game.');
     state = r.state as G['state'];
-  }
+  } else if (game.invariantPolicy === 'strict') checkStateInvariants(game, state, content, []);
   return {
     version: format.version,
     appCommit: format.appCommit ?? UNKNOWN_COMMIT,
@@ -101,9 +102,10 @@ export function migrateSave(save: RawSave, format: SaveFormat = DEFAULT_SAVE_FOR
   return { ok: true, save: s['version'] === format.version ? s : { ...s, version: format.version }, from };
 }
 
-export type RestoreResult<G extends GameTypes> =
+export type RestoreResult<G extends GameTypes> = (
   | { readonly ok: true; readonly save: SaveFile<G>; readonly state: G['state'] }
-  | { readonly ok: false; readonly error: string };
+  | { readonly ok: false; readonly error: string }
+) & { readonly violations?: readonly InvariantViolation[] };
 
 const isObj = (x: unknown): x is Record<string, unknown> => x !== null && typeof x === 'object' && !Array.isArray(x);
 
@@ -137,9 +139,11 @@ export function restoreSave<G extends GameTypes>(
     // an action the engine refuses: the file was edited (or is broken); a different final hash: the engine changed
     // A9: a different build wrote it, so a refused action means the engine changed, not that the file was edited
     const otherBuild = save.appCommit !== (format.appCommit ?? UNKNOWN_COMMIT) && save.appCommit !== UNKNOWN_COMMIT && format.appCommit !== undefined;
-    if (!r.ok || r.state === null) return { ok: false, error: r.reason === 'pack' || otherBuild ? OLDER_BUILD : DAMAGED };
-    if (sealOf(r.state, save.undoUsed) !== save.finalHash) return { ok: false, error: OLDER_BUILD };
-    return { ok: true, save, state: r.state };
+    const diagnostics = r.violations === undefined ? {} : { violations: r.violations };
+    if (r.invariantFailure) return { ok: false, error: r.error ?? DAMAGED, ...diagnostics };
+    if (!r.ok || r.state === null) return { ok: false, error: r.reason === 'pack' || otherBuild ? OLDER_BUILD : DAMAGED, ...diagnostics };
+    if (sealOf(r.state, save.undoUsed) !== save.finalHash) return { ok: false, error: OLDER_BUILD, ...diagnostics };
+    return { ok: true, save, state: r.state, ...diagnostics };
   } catch (e) {
     return { ok: false, error: `This save cannot be loaded: ${String(e)}` };
   }
