@@ -21,23 +21,29 @@ export interface Answer {
 }
 export type Chooser = (ask: Ask) => Promise<Answer>;
 
-/** Dollars per million tokens: 5-minute writes 1.25x input, 1-hour writes 2x. */
+/** Dollars per million tokens (from the pricing page; the cache-read multiplier differs per model). `over`: the price of a request whose prompt (input + cache writes + cache reads) exceeds `at` tokens. */
 export interface Price {
   input: number;
   cacheWrite5m: number;
   cacheWrite1h: number;
   cacheRead: number;
   output: number;
+  over?: { at: number; price: Price };
 }
 export const PRICES: Record<string, Price> = {
   'claude-opus-5-5': { input: 4, cacheWrite5m: 5, cacheWrite1h: 8, cacheRead: 0.2, output: 20 },
   'claude-sonnet-5-5': { input: 2, cacheWrite5m: 2.5, cacheWrite1h: 4, cacheRead: 0.1, output: 10 },
+  'claude-haiku-5-5': {
+    input: 0.1, cacheWrite5m: 0.125, cacheWrite1h: 0.2, cacheRead: 0.01, output: 0.5,
+    over: { at: 100_000, price: { input: 0.5, cacheWrite5m: 0.625, cacheWrite1h: 1, cacheRead: 0.05, output: 2.5 } },
+  },
 };
 export const MAX_TOKENS = 16000;
 
 export function cost(usage: Usage, model: string): number {
-  const p = PRICES[model];
+  let p = PRICES[model];
   if (p === undefined) throw new Error(`No price for model ${model}`);
+  if (p.over && usage.input_tokens + usage.cache_creation_input_tokens + usage.cache_read_input_tokens > p.over.at) p = p.over.price;
   const short = usage.ephemeral_5m_input_tokens ?? 0;
   const long = usage.ephemeral_1h_input_tokens ?? 0;
   const unsplit = Math.max(0, usage.cache_creation_input_tokens - short - long);
@@ -53,9 +59,10 @@ export function cost(usage: Usage, model: string): number {
 
 /** A ceiling for the next call before it is made: every prompt token at the cache-write price plus a full answer. */
 export function worstCost(ask: Ask, maxTokens = MAX_TOKENS): number {
-  const p = PRICES[ask.model];
+  let p = PRICES[ask.model];
   if (p === undefined) throw new Error(`No price for model ${ask.model}`);
   const chars = ask.system.reduce((n, s) => n + s.length, 0) + ask.prompt.length + 1000;
+  if (p.over && chars / 3 > p.over.at) p = p.over.price;
   return ((chars / 3) * p.cacheWrite5m + maxTokens * p.output) / 1_000_000;
 }
 

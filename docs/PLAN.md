@@ -400,6 +400,7 @@ The blind matching test's result was not recorded: the PR, its comments and docs
 | K734 | table-panels: GameOver and GameOverActions take an optional extra node rendered after Home inside game-over-actions | S |  | done |
 | K735 | replay-cli: a golden whose scripted driver ends before game over (choose returns undefined) records, checks and replays as a normal unfinished game, not CRASHED | S |  | done |
 | K736 | bug-reporter: replay accepts a saves-part save (version); the report takes saveVersion from it | S |  | done |
+| K740 | llm-playtester: claude-haiku-5-5 price (with the over-100K-token rate) so --model claude-haiku-5-5 no longer throws "No price for model" | S |  | done |
 
 ## Asked for by the owner
 
