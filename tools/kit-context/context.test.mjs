@@ -13,7 +13,7 @@ const write=(name,content)=>fs.writeFileSync(path.join(dir,name),content);
 write('component.json',JSON.stringify({name:'sample',needs:['engine-core'],packages:[]}));
 write('index.ts',"export { act as play } from './impl.ts'; export type { Move } from './impl.ts';");
 write('impl.ts',"export interface Move { n: number }\nexport function act(move: Move): number { return move.n; }\nfunction secret(): string { return 'private implementation'; }");
-write('README.md','# Sample\n## Rules for agents\n1. Use play with legal moves.\n2. Other instructions.\n## More\nThis is not a rule.');
+write('README.md','# Sample\n## Rules for agents\n1. Use play with legal moves.\n2. Other instructions. Long instruction for budget testing. Long instruction for budget testing. Long instruction for budget testing. Long instruction for budget testing. Long instruction for budget testing. Long instruction for budget testing. Long instruction for budget testing. Long instruction for budget testing. Long instruction for budget testing. Long instruction for budget testing. Long instruction for budget testing. Long instruction for budget testing. Long instruction for budget testing. Long instruction for budget testing. Long instruction for budget testing. Long instruction for budget testing. Long instruction for budget testing. Long instruction for budget testing. Long instruction for budget testing. Long instruction for budget testing. \n## More\nThis is not a rule.');
 write('impl.test.ts',"import { play } from './index.ts';\nit('plays',()=>{\n  expect(play({n:1})).toBe(1);\n});");
 afterAll(()=>fs.rmSync(root,{recursive:true,force:true}));
 describe('agent context packets',()=>{
