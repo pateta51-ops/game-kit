@@ -3,6 +3,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import ts from 'typescript';
+import { collectContracts } from './contracts.mjs';
 
 const defaultRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../components');
 const code = /\.(?:ts|tsx|mts|js|mjs)$/;
@@ -29,7 +30,7 @@ function readComponentFile(dir, name) {
   const file=componentFile(dir,name);
   try { return fs.readFileSync(file,'utf8'); } catch { throw new Error(name+' is missing or unreadable'); }
 }
-function compilerHost(dir, options) {
+function compilerHost(dir, options, projection) {
   const host=ts.createCompilerHost(options);
   const libDir=real(path.dirname(host.getDefaultLibFileName(options)));
   const libFile=f=>libDir && path.dirname(f)===libDir && /^lib(?:\.[\w.-]+)?\.d\.ts$/.test(path.basename(f));
@@ -40,8 +41,17 @@ function compilerHost(dir, options) {
     const target=real(candidate);
     return target&&allowed(target)&&ts.sys.fileExists(target)?target:null;
   };
-  host.fileExists=f=>file(f)!==null;
-  host.readFile=f=>{const target=file(f);return target?ts.sys.readFile(target):undefined;};
+  const allowed = target => !projection || !local(dir, target) || projection.has(target);
+  host.fileExists=f=>{const target=file(f);return target!==null&&allowed(target);};
+  host.readFile=f=>{
+    const target=file(f);
+    if(!target||!allowed(target))return undefined;
+    return projection?.get(target)??ts.sys.readFile(target);
+  };
+  if(projection) host.getSourceFile=(f,languageVersion)=>{
+    const text=host.readFile(f);
+    if(text!==undefined) return ts.createSourceFile(f,text,languageVersion,true,ts.ScriptKind.TS);
+  };
   host.realpath=f=>file(f)??f;
   host.directoryExists=f=>{
     const candidate=path.resolve(f);
@@ -58,13 +68,40 @@ function walk(dir) {
     e.isDirectory() && !ignored.has(e.name) ? walk(path.join(dir,e.name)) :
       e.isFile() ? [path.join(dir,e.name)] : []);
 }
-function readRules(dir) {
+function readDocumentation(dir) {
   const lines = readComponentFile(dir,'README.md').split(/\r?\n/);
   const start = lines.findIndex(l => l.trim() === '## Rules for agents');
   if (start < 0) throw new Error('README.md is missing its Rules for agents section');
   let end = lines.findIndex((l,i) => i > start && /^##\s/.test(l));
   if (end < 0) end = lines.length;
-  return lines.slice(start + 1,end).map((text,i)=>({file:'README.md',line:start+i+2,text})).filter(x=>x.text.trim()&&!x.text.startsWith('<!--'));
+  const sourceLines = (from,to) => lines.slice(from,to).map((text,i)=>({file:'README.md',line:from+i+1,text}));
+  const rules=sourceLines(start+1,end).filter(x=>x.text.trim()&&!x.text.startsWith('<!--'));
+  const usage=[];
+  function addUsage(from,to) {
+    const section=sourceLines(from,to).filter(x=>x.line!==1||!/^#\s/.test(x.text));
+    const first=section.findIndex(x=>x.text.trim());
+    if(first===-1)return;
+    usage.push({file:'README.md',line:section[first].line,text:section.slice(first).map(x=>x.text).join('\n').trimEnd()});
+  }
+  addUsage(0,start);
+  for(let from=end;from<lines.length;) {
+    const next=lines.findIndex((line,i)=>i>from&&/^##\s/.test(line));
+    const to=next===-1?lines.length:next;
+    addUsage(from,to);
+    from=to;
+  }
+  return {rules,usage};
+}
+function readLinkedGuides(dir, rows) {
+  const guides=new Set();
+  for(const row of rows) {
+    for(const match of row.text.matchAll(/\]\(([A-Za-z0-9._/-]+\.md)(?:#[^)\s]+)?(?:\s+["'][^)]*["'])?\)/g)) {
+      const name=path.posix.normalize(match[1]);
+      if(name!=='README.md'&&!path.posix.isAbsolute(name)&&
+        !match[1].split('/').some(part=>part==='..'||ignored.has(part))) guides.add(name);
+    }
+  }
+  return [...guides].sort().map(name=>({file:name,line:1,text:readComponentFile(dir,name).trimEnd()}));
 }
 
 /** Source-grounded, bounded context. Never include source outside the requested component. */
@@ -83,11 +120,16 @@ export function contextPacket({root=defaultRoot,component,symbol,entry='index.ts
   if (typeof entry!=='string'||!code.test(entry)||path.isAbsolute(entry)||entry.split(/[\\/]/).some(part=>part==='..'||ignored.has(part))) throw new Error('invalid entry');
   const file=componentFile(dir,entry);
   if (!code.test(file)||test.test(entry)||test.test(file)) throw new Error('entry must be a public source file and not a test');
-  const rules=readRules(dir);
+  const {rules,usage}=readDocumentation(dir);
+  const guides=readLinkedGuides(dir,[
+    ...rules,
+    ...usage.filter(row=>symbol===undefined||row.text.includes(symbol)||row.text.includes(path.basename(entry))),
+  ]);
   const options={
     target:ts.ScriptTarget.ESNext, module:ts.ModuleKind.ESNext,
     moduleResolution:ts.ModuleResolutionKind.Bundler, jsx:ts.JsxEmit.ReactJSX,
-    allowJs:true, skipLibCheck:true, noEmit:true, types:[],
+    allowJs:true, checkJs:true, allowImportingTsExtensions:true, skipLibCheck:true, strict:true, types:[],
+    declaration:true, emitDeclarationOnly:true, removeComments:true, rootDir:dir,
   };
   const program=ts.createProgram([file],options,compilerHost(dir,options));
   const checker = program.getTypeChecker();
@@ -98,48 +140,52 @@ export function contextPacket({root=defaultRoot,component,symbol,entry='index.ts
   if (symbol!==undefined&&!exports.some(x=>x.name===symbol)) throw new Error('symbol is not exported by '+entry+': '+symbol);
   const packet = {
     component,entry,symbol:symbol??null,needs:manifest.needs??[],packages:manifest.packages??[],
-    status:'incomplete',requiredReads:[entry,'README.md'],exports:[],contracts:[],rules:[],testEvidence:[],omitted:0,
+    status:'incomplete',requiredReads:[entry,'README.md'],exports:[],contracts:[],rules:[],usage:[],testEvidence:[],omitted:0,
   };
   const size = () => JSON.stringify(packet).length;
   // Reserve space for both continuation paths and the largest possible omitted count.
   const limit=maxChars-String(Number.MAX_SAFE_INTEGER).length+1;
   if(size()>limit)throw new Error('budget too small for packet metadata and required reads');
-  const required=new Set();
+  const projection = texts => {
+    const projectedOptions={...options,declaration:false,emitDeclarationOnly:false,noEmit:true,skipLibCheck:false};
+    return ts.createProgram([file],projectedOptions,compilerHost(dir,projectedOptions,texts));
+  };
+  const { rows, reads: required } = collectContracts({
+    program,file,
+    focus: symbol===undefined?exports.map(x=>x.name):[symbol],
+    projection,relativePath:f=>relative(dir,f),allExports:symbol===undefined,
+  });
+  const included = [];
   const add = (field, item, read) => {
     packet[field].push(item);
     if (size()>limit) {
       packet[field].pop();
       packet.omitted++;
       if(read) required.add(read);
+    } else if(read) {
+      included.push({field,read});
     }
   };
-  const focus = symbol===undefined?exports:exports.filter(x=>x.name===symbol);
-  for(const x of focus) {
-    const target = x.flags & ts.SymbolFlags.Alias ? checker.getAliasedSymbol(x) : x;
-    const declarations = target.getDeclarations()??[];
-    const signatures=new Set();
-    for(const d of declarations) {
-      const f = d.getSourceFile();
-      const source=real(f.fileName);
-      if(!source||!local(dir,source)||test.test(source))continue;
-      const line = f.getLineAndCharacterOfPosition(d.getStart(f)).line+1;
-      let signature;
-      if(ts.isInterfaceDeclaration(d)||ts.isTypeAliasDeclaration(d)||ts.isEnumDeclaration(d)) signature=d.getText(f);
-      else {
-        const t=checker.getTypeOfSymbolAtLocation(target,d);
-        const sigs=checker.getSignaturesOfType(t,ts.SignatureKind.Call);
-        const ctor=checker.getSignaturesOfType(t,ts.SignatureKind.Construct);
-        const ss=sigs.length?sigs:ctor;
-        signature=ss.length?ss.map(s=>checker.signatureToString(s,d,ts.TypeFormatFlags.NoTruncation)).join('\n'):checker.typeToString(t,d,ts.TypeFormatFlags.NoTruncation);
-      }
-      if(signature==='any'||signatures.has(signature)) continue;
-      signatures.add(signature);
-      add('contracts',{symbol:x.name,file:relative(dir,source),line,signature},entry);
-    }
-    if(!signatures.size) required.add(entry);
-  }
+  for(const row of rows)add('contracts',row,row.file);
   const re=symbol===undefined?null:new RegExp('(?<![\\w$])'+symbol.replace(/[$]/g,'\\$&')+'(?![\\w$])');
+  for(const item of guides)add('usage',item,item.file);
   for(const item of rules)add('rules',item,'README.md');
+  for(const item of usage)add('usage',item,'README.md');
+  packet.requiredReads=[...required].sort();
+  while(size()>limit&&included.length) {
+    const {field,read}=included.pop();
+    packet[field].pop();
+    packet.omitted++;
+    required.add(read);
+    packet.requiredReads=[...required].sort();
+  }
+  // When many local paths compete with material already included, direct
+  // the reader to the public entrypoint and its referenced declarations.
+  if(size()>limit) packet.requiredReads=[
+    ...([...required].some(read=>!read.endsWith('.md'))?[entry]:[]),
+    ...([...required].some(read=>read.endsWith('.md'))?['README.md']:[]),
+  ];
+  if(!packet.requiredReads.length) packet.status='complete';
   if(symbol===undefined) for(const x of exports)add('exports',x.name);
   if(re) {
     for(const f of walk(dir).filter(f=>test.test(f))) {
@@ -152,8 +198,6 @@ export function contextPacket({root=defaultRoot,component,symbol,entry='index.ts
       add('testEvidence',{file:name,line:from+1,text:lines.slice(from,to).join('\n')});
     }
   }
-  packet.requiredReads=packet.requiredReads.filter(read=>required.has(read));
-  if(!packet.requiredReads.length) packet.status='complete';
   return packet;
 }
 export function main(args) {
