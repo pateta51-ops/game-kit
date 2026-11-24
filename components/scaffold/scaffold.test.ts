@@ -54,6 +54,8 @@ describe('scaffold (K204)', () => {
     const app = fs.readFileSync(path.join(out, 'src/ui/App.tsx'), 'utf8');
     for (const r of ['MainMenu', 'SetupForm', 'SettingsScreen', 'SavesScreen']) expect(app).toContain(r);
     expect(fs.existsSync(path.join(out, 'kit/screens/ui.tsx'))).toBe(true);
+    execFileSync('git', ['add', '-A'], { cwd: out });
+    expect(execFileSync('git', ['ls-files', '--', 'node_modules'], { cwd: out, encoding: 'utf8' })).toBe('');
     const run = (...a: string[]) => spawnSync('node', a, { cwd: out, encoding: 'utf8' });
     expect(run('kit/kit.mjs', 'check').status).toBe(0);
     expect(run('kit/ci-templates/render.mjs', '--check').status).toBe(0);
@@ -61,6 +63,18 @@ describe('scaffold (K204)', () => {
     expect(chk.stdout + chk.stderr).toContain('4 passed');
     expect(chk.status, chk.stdout + chk.stderr).toBe(0);
   }, 180_000);
+
+  it('ignores an installed dependency directory as well as a linked one', () => {
+    const dir = fs.mkdtempSync(path.join(tmp, 'installed-'));
+    const ignore = path.join(KIT, 'components/scaffold/template/ignorefile.tpl');
+    fs.copyFileSync(ignore, path.join(dir, '.gitignore'));
+    fs.mkdirSync(path.join(dir, 'node_modules'));
+    fs.writeFileSync(path.join(dir, 'node_modules', 'dependency.js'), 'export {};\n');
+    const git = (...args: string[]) => execFileSync('git', args, { cwd: dir, encoding: 'utf8' });
+    git('init', '-q');
+    git('add', '-A');
+    expect(git('ls-files', '--', 'node_modules')).toBe('');
+  });
 
   it('refuses a folder that is not empty', () => {
     const r = spawnSync('node', [kitMjs, 'new', out, 'demo', 'Demo Game', '--ports', ports, '--no-remote'], { encoding: 'utf8' });

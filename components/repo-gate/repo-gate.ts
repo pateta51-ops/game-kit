@@ -2,6 +2,7 @@
 // is not checked out is sized from git's index) and fails when:
 //   SIZE          a tracked file is over 50 MB (no Git LFS), or its size cannot be read (not checked out, blob not in this clone);
 //   RAW_SCAN      a tracked file is a raw scan or camera format (TIFF, BMP, PSD, RAW, DNG, HEIC...);
+//   DEPENDENCY_LINK a node_modules link is in the Git index;
 //   SECRET        a tracked text file holds something shaped like a GitHub token or a private key block (also in skipText folders);
 //   SESSION_URL   a tracked text file holds a Claude session URL;
 //   TAILNET_HOST  a tracked text file holds a tailnet host name, `<machine>.<tailnet>.ts.net`;
@@ -105,6 +106,8 @@ export interface TrackedFile {
   text: string | null;
   /** Not checked out and its blob is not in this clone: the size could not be read. */
   unsized?: boolean;
+  /** The index contains a node_modules symlink, which must stay local. */
+  dependencyLink?: boolean;
 }
 
 export interface Finding {
@@ -172,6 +175,10 @@ export function checkFiles(
   const idLiteral = cfg.cardIdLiteral === '' ? null : new RegExp(cfg.cardIdLiteral);
   const runners = cfg.runnerNames.map(namePattern);
   for (const file of files) {
+    if (file.dependencyLink) {
+      findings.push({ path: file.path, line: 0, check: 'DEPENDENCY_LINK', message: 'ignore node_modules and use git rm --cached on this path to remove the link from the index' });
+      continue;
+    }
     if (file.bytes > MAX_FILE_BYTES) {
       findings.push({
         path: file.path,
@@ -348,10 +355,11 @@ export function readTracked(ROOT: string): TrackedFile[] {
     .filter((e) => e !== '')
     .map((e) => {
       const tab = e.indexOf('\t');
-      const [, sha] = e.slice(0, tab).split(' ');
-      return { path: e.slice(tab + 1), sha: sha ?? '' };
+      const [mode, sha] = e.slice(0, tab).split(' ');
+      const path = e.slice(tab + 1);
+      return { path, sha: sha ?? '', dependencyLink: mode === '120000' && /(^|\/)node_modules$/.test(path) };
     });
-  const missing = entries.filter((e) => !existsSync(join(ROOT, e.path)));
+  const missing = entries.filter((e) => !e.dependencyLink && !existsSync(join(ROOT, e.path)));
   const indexSizes = new Map<string, number>();
   if (missing.length > 0) {
     // no fetch of a blob a partial clone does not hold (GIT_NO_LAZY_FETCH; an older git is refused every transport): it
@@ -415,7 +423,8 @@ export function readTracked(ROOT: string): TrackedFile[] {
       at = end + 2 + size;
     }
   }
-  return entries.map(({ path, sha }) => {
+  return entries.map(({ path, sha, dependencyLink }) => {
+    if (dependencyLink) return { path, bytes: 0, text: null, dependencyLink };
     const full = join(ROOT, path);
     if (!existsSync(full)) {
       const size = indexSizes.get(sha);

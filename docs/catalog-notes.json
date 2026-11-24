@@ -1746,7 +1746,7 @@
   },
   "repo-gate": {
     "mechanics": "none: build, CI or repository tooling",
-    "use": "A repository gate: file sizes, secrets, session URLs, runner names, card ids in rules code, art budgets.",
+    "use": "A repository gate for file sizes, staged dependency links, secrets, session URLs, runner names, card ids in rules code and art budgets.",
     "not": "Code lint or tests.",
     "title": "Repository safety check",
     "tags": [
@@ -1757,7 +1757,10 @@
       "secrets",
       "scans",
       "names",
-      "budget"
+      "budget",
+      "staged node_modules",
+      "tracked dependency link",
+      "dependency symlink"
     ],
     "visible": false,
     "release": 1,
@@ -1868,7 +1871,7 @@
   },
   "scaffold": {
     "mechanics": "none: build, CI or repository tooling",
-    "use": "Starting a new game: one command makes the empty working repo (Vite, ESLint, Vitest, tsconfig, CI, kit pull, stub GameRules).",
+    "use": "Start an empty working game repo, or use a declarative game spec to select components and generate a pinned scaffold.",
     "not": "Anything inside a running game; it is a generator run from the kit checkout.",
     "title": "Start a new game project",
     "tags": [
@@ -1878,12 +1881,20 @@
       "project",
       "setup",
       "create",
-      "repo"
+      "repo",
+      "starter",
+      "scaffold"
     ],
     "visible": false,
     "release": 1,
     "gameSupplies": "The game id and name.",
-    "exports": "`node kit.mjs new <dir> <id> \"<Name>\"`; `scaffold(options)` in scaffold.js"
+    "exports": "`node kit.mjs new <dir> <id> \"<Name>\"`, `node kit.mjs spec resolve|generate`, `scaffold(options)` in scaffold.js"
+  },
+  "scaffold/spec": {
+    "title": "Declarative game starter",
+    "tags": ["declarative game starter", "game spec scaffold", "pinned declarative project scaffold"],
+    "use": "Resolve component profiles and generate a pinned, retryable local scaffold from a game specification.",
+    "guide": "README.md"
   },
   "scan-ingest": {
     "mechanics": "none: content tooling (art, scans, card data)",

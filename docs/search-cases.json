@@ -581,5 +581,11 @@
   { "q": "build telemetry provenance", "first": "reuse-metrics" },
   { "q": "repeated measurement", "first": "reuse-metrics" },
   { "q": "copied project telemetry", "first": "reuse-metrics" },
-  { "q": "observation identity", "first": "reuse-metrics" }
+  { "q": "observation identity", "first": "reuse-metrics" },
+  { "q": "declarative game starter", "first": "scaffold/spec" },
+  { "q": "game spec scaffold", "first": "scaffold/spec" },
+  { "q": "pinned declarative project scaffold", "first": "scaffold/spec" },
+  { "q": "staged node_modules", "first": "repo-gate" },
+  { "q": "tracked dependency link", "first": "repo-gate" },
+  { "q": "dependency symlink", "first": "repo-gate" }
 ]

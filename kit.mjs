@@ -413,6 +413,11 @@ if (cmd === 'pull') {
     // K685: a search inside the game-kit repository itself (components/ beside kit.mjs) is the kit's own, not a planner's miss
     if (cmd === 'search' && !fs.existsSync(d + '/components') && !process.env.KIT_NO_MISS_LOG) try { fs.mkdirSync(dirname(logFile), { recursive: true }); fs.appendFileSync(logFile, new Date().toISOString().slice(0, 10) + ' ' + a.join(' ') + '\n') } catch { /* read-only */ }
   }
+} else if (cmd === 'spec') {
+  const d = dirname(fileURLToPath(import.meta.url))
+  if (!fs.existsSync(d + '/components/scaffold/spec.mjs')) { console.error('spec runs from the game-kit checkout'); process.exit(2) }
+  const { specMain } = await import(pathToFileURL(d + '/components/scaffold/spec.mjs').href)
+  try { process.exitCode = specMain(d, a) } catch (e) { console.error(e.message); process.exitCode = 1 }
 } else if (cmd === 'new') {
   // node <kit>/kit.mjs new <dir> <id> "<Name>" [--ref r] [--repo owner/name] [--runner label] [--link <node_modules>] [--no-install] [--no-remote] [--ports file] [--existing]
   const flags = {}
