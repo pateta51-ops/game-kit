@@ -15,9 +15,12 @@ Rule-citation gate. The game passes a `trace.config.json` (any subset of the opt
 6. List ids that are not due in the pending file named by `pending` (id to batch); `--release` fails while it is not empty.
 7. Use `citeFiles` to require rule citations in comments for engine folders.
 
+8. For [executable arbiter fixtures](rule-evidence.md), set `executableSuite`, configure rule discovery, and declare the intended inventory in `executableRuleIds` to catch partial discovery. Bind every case rule to a setup or action assertion. Have the arbiter validate each mapping and require a rejection control for rules that forbid an action.
+
 **Common mistakes:**
 - Citing an id in a `.skip`, `.todo` or `.fails` test: it counts for none unless `countSkipped` is set.
 - A sub-letter id (`LVL-01a`) is read as its base id; with `strictIdEnd` it is not.
+- Enabling an executable suite with a section or pattern that finds no rule IDs. Fix discovery, or set `allowEmptyExecutableReason` to a nonblank justification for an intentionally empty scope.
 - Assuming the report wording matches a game's old script: it differs.
 
 | Option (default) | What it does | Games that set it |
@@ -63,3 +66,18 @@ Not covered:
 ```sh
 node kit/traceability/check-traceability.ts --config trace.config.json   # test titles must cite rule ids
 ```
+
+## Executable rules-arbiter fixtures
+
+`runRuleAssertions(adapter, requiredRules, cases)` executes independent seeded cases against the game adapter. The arbiter supplies the fixture, actions, acceptance expectations, and evidence mappings. The game supplies `setup`, `act` and normalized `observe`. Use real engine actions and observe every field relevant to the rule.
+
+- A string in `requiredRules` declares an action rule. Declare a setup-only rule as `{ id: 'SET-01', kind: 'setup' }`.
+- In each case add an `evidence` array. Use `{ rule: 'PAY-01', kind: 'action', step: 0, assertion: 0 }` to bind the first check of the first action. For setup evidence use `{ rule: 'SET-01', kind: 'setup', assertion: 0 }` to bind the first initial-state assertion. Indices are zero-based.
+- Set `requireRefusal: true` on an action requirement to require passing evidence after both an accepted action and an expected rejection. A rejection must leave observed state unchanged and emit no events.
+- Every declared rule needs a binding in the case. A failed case invalidates the rules it declares, even if they have passing evidence elsewhere. Paths are own-property keys or numeric array indices. Operations are `equals`, `notEquals`, `exists`, `absent`, `atLeast` and `atMost`.
+
+The [executable evidence guide](rule-evidence.md) shows the CLI configuration, a maintained engine adapter, and how to verify acceptance and atomic rejection. An enabled suite fails when discovery recognizes zero rules unless an explicit reason allows an empty scope. Use `executableRuleIds` to check for omitted IDs even when discovery recognizes some rules.
+
+**Migration from the original draft:** Keep the case inputs and list of rule IDs. Add explicit bindings and classify setup-only rules. A case containing rule IDs and checks without bindings now fails. The citation gate continues to work with existing configurations.
+
+Executable evidence establishes that the mapped checks ran and passed. The arbiter must independently validate that the fixtures, observations, assertions, and rejection controls substantively test the rule. Fixtures and checks must come from the rules rather than the implementation under test.

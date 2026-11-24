@@ -2,11 +2,24 @@
 // accepted; `applyAction` throws `IllegalActionError` for one that is not (a bug in the caller), and `EngineBugError` when
 // an internal invariant breaks.
 
+import type { InvariantViolation } from './types.ts';
+
 /** An internal invariant broke: a bug in the engine or in content the validator should have refused (§4.4, §5.1). */
 export class EngineBugError extends Error {
   constructor(message: string) {
     super(message);
     this.name = 'EngineBugError';
+  }
+}
+
+/** Strict state checks rejected a settled setup, fixture or action result. */
+export class StateInvariantError extends EngineBugError {
+  readonly violations: readonly InvariantViolation[];
+
+  constructor(violations: readonly InvariantViolation[]) {
+    super(violations.map(v => `${v.id}: ${v.message}`).join('\n'));
+    this.name = 'StateInvariantError';
+    this.violations = violations;
   }
 }
 
