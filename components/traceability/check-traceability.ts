@@ -11,6 +11,13 @@ import { readdirSync, readFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import ts from 'typescript';
+import { runRuleAssertions, type RuleAdapter, type RuleCase, type RuleRequirement } from './assertions.ts';
+
+interface ExecutableSuite {
+  adapter: RuleAdapter<unknown, unknown, unknown>;
+  cases: readonly RuleCase<unknown, unknown>[];
+  rules?: readonly RuleRequirement[];
+}
 
 export interface Config {
   plan: string;
@@ -56,6 +63,7 @@ export interface Config {
   countsLine: boolean;
   /** K172 */
   citeFiles: string[];
+  executableSuite?: string;
 }
 export const DEFAULT_CONFIG: Config = {
   plan: 'docs/BUILD_PLAN.md',
@@ -537,7 +545,7 @@ export const makeIo = (root: string, cfg: Config): Io => ({
   },
 });
 
-export function run(args: readonly string[], io: Io, cfg: Config = DEFAULT_CONFIG): number {
+export function run(args: readonly string[], io: Io, cfg: Config = DEFAULT_CONFIG, suite?: ExecutableSuite): number {
   const unknown = args.filter(
     (a) => a !== '--strict' && a !== '--warn' && a !== '--quiet' && a !== '--release',
   );
@@ -669,7 +677,25 @@ export function run(args: readonly string[], io: Io, cfg: Config = DEFAULT_CONFI
     scMissing.length > 0 ||
     unlisted.length > 0 ||
     sc.unknown.length > 0;
-  return strict && failed ? 1 : 0;
+  let evidenceFailed = false;
+  if (cfg.executableSuite !== undefined) {
+    try {
+      if (!suite) throw new Error('executable suite must export an adapter and cases');
+      const requirements = new Map<string, RuleRequirement>();
+      for (const rule of suite.rules ?? []) {
+        if (!known.has(rule.id) || requirements.has(rule.id)) throw new Error('unknown or duplicate executable rule: ' + rule.id);
+        requirements.set(rule.id, rule);
+      }
+      const required = ids.filter(id => pending[id] === undefined && !notDue.has(id));
+      const report = runRuleAssertions(suite.adapter, required.map(id => requirements.get(id) ?? id), suite.cases);
+      evidenceFailed = report.problems.length > 0;
+      for (const problem of report.problems) io.err(problem);
+    } catch (error) {
+      io.err('executable rule evidence: ' + String(error));
+      evidenceFailed = true;
+    }
+  }
+  return evidenceFailed || (strict && failed) ? 1 : 0;
 }
 
 if (process.argv[1] !== undefined && import.meta.url === pathToFileURL(resolve(process.argv[1])).href) {
@@ -678,5 +704,14 @@ if (process.argv[1] !== undefined && import.meta.url === pathToFileURL(resolve(p
   const file = at >= 0 ? (args.splice(at, 2)[1] ?? '') : 'trace.config.json';
   const root = process.cwd();
   const cfg: Config = { ...DEFAULT_CONFIG, ...(JSON.parse(readFileSync(join(root, file), 'utf8')) as Partial<Config>) };
-  process.exitCode = run(args, makeIo(root + '/', cfg), cfg);
+  const io = makeIo(root + '/', cfg);
+  try {
+    const suite = cfg.executableSuite === undefined ? undefined :
+      (await import(pathToFileURL(resolve(root, cfg.executableSuite)).href) as { default: ExecutableSuite }).default;
+    process.exitCode = run(args, io, cfg, suite);
+  } catch (error) {
+    if (cfg.executableSuite === undefined) throw error;
+    io.err('executable rule gate: ' + String(error));
+    process.exitCode = 1;
+  }
 }

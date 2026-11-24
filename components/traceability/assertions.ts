@@ -11,6 +11,13 @@ export interface RuleStep<A> {
   readonly accepted: boolean;
   readonly checks: readonly Assertion[];
 }
+export type RuleRequirement =
+  | { readonly id: string; readonly kind: 'setup' }
+  | { readonly id: string; readonly kind: 'action'; readonly requireRefusal?: boolean };
+export type RuleEvidence = { readonly rule: string; readonly assertion: number } & (
+  | { readonly kind: 'setup' }
+  | { readonly kind: 'action'; readonly step: number }
+);
 export interface RuleCase<F, A> {
   readonly id: string;
   readonly rules: readonly string[];
@@ -18,6 +25,7 @@ export interface RuleCase<F, A> {
   readonly fixture: F;
   readonly initial?: readonly Assertion[];
   readonly steps: readonly RuleStep<A>[];
+  readonly evidence?: readonly RuleEvidence[];
 }
 export interface RuleAdapter<F, A, S> {
   setup(fixture: F, seed: string): S;
@@ -69,11 +77,19 @@ function problem(assertion: Assertion, state: Json, events: readonly Json[]): st
 }
 
 /** Run independent rule fixtures against a game-owned adapter, with explicit coverage and no title-based credit. */
-export function runRuleAssertions<F, A, S>(adapter: RuleAdapter<F, A, S>, requiredRules: readonly string[], cases: readonly RuleCase<F, A>[]): RuleReport {
-  const required = new Set(requiredRules);
-  if (required.size !== requiredRules.length || requiredRules.some(r => !r.trim())) throw new Error('empty or duplicate required rule');
+export function runRuleAssertions<F, A, S>(adapter: RuleAdapter<F, A, S>, requiredRules: readonly (string | RuleRequirement)[], cases: readonly RuleCase<F, A>[]): RuleReport {
+  const required = new Map<string, RuleRequirement>();
+  for (const entry of requiredRules) {
+    const rule: RuleRequirement = typeof entry === 'string' ? { id: entry, kind: 'action' } : entry;
+    if (!rule.id.trim() || rule.id !== rule.id.trim() || required.has(rule.id)) throw new Error('empty, padded or duplicate required rule: ' + rule.id);
+    if (rule.kind !== 'setup' && rule.kind !== 'action') throw new Error('invalid required rule kind: ' + rule.id);
+    if ('requireRefusal' in rule && (rule.kind !== 'action' || typeof rule.requireRefusal !== 'boolean')) throw new Error('invalid refusal requirement: ' + rule.id);
+    required.set(rule.id, rule);
+  }
   const ids = new Set<string>();
   const covered = new Set<string>();
+  const accepted = new Set<string>();
+  const refused = new Set<string>();
   const failedRules = new Set<string>();
   const results: RuleResult[] = [];
   for (const c of cases) {
@@ -83,11 +99,15 @@ export function runRuleAssertions<F, A, S>(adapter: RuleAdapter<F, A, S>, requir
     if (!c.rules.length || new Set(c.rules).size !== c.rules.length || c.rules.some(r => !required.has(r))) issues.push('case has missing, duplicate or unknown rule IDs');
     if (!c.seed.trim()) issues.push('case has no seed');
     if (!c.steps.length && !c.initial?.length) issues.push('case has no assertions');
+    const executed = new Map<string, Map<number, boolean>>();
     try {
       let state = adapter.setup(structuredClone(c.fixture), c.seed);
       const checks = (expected: readonly Assertion[], observed: Json, events: readonly Json[], label: string): void => {
-        for (const assertion of expected) {
+        const results = new Map<number, boolean>();
+        executed.set(label, results);
+        for (const [i, assertion] of expected.entries()) {
           const error = problem(assertion, observed, events);
+          results.set(i, error === undefined);
           if (error !== undefined) issues.push(label + ': ' + error);
         }
       };
@@ -104,12 +124,68 @@ export function runRuleAssertions<F, A, S>(adapter: RuleAdapter<F, A, S>, requir
         state = result.state;
       }
     } catch (e) { issues.push('adapter error: ' + (e instanceof Error ? e.message : String(e))); }
-    if (issues.length === 0) for (const id of c.rules) covered.add(id);
+    const bindings = new Map<string, Set<string>>();
+    const acceptedHere = new Set<string>();
+    const refusedHere = new Set<string>();
+    for (const evidence of c.evidence ?? []) {
+      const { rule: id, assertion } = evidence;
+      const requirement = required.get(id);
+      if (!requirement || !c.rules.includes(id)) {
+        issues.push(id + ': evidence names a rule outside this case or inventory');
+        continue;
+      }
+      if (evidence.kind !== requirement.kind) {
+        issues.push(id + ': expected ' + requirement.kind + ' evidence');
+        continue;
+      }
+      const step = evidence.kind === 'action' ? c.steps[evidence.step] : undefined;
+      const checks = evidence.kind === 'setup' ? c.initial : step?.checks;
+      if (!Number.isSafeInteger(assertion) || assertion < 0 || !checks?.[assertion] ||
+        (evidence.kind === 'action' && (!Number.isSafeInteger(evidence.step) || evidence.step < 0)) ||
+        (evidence.kind === 'setup' && checks[assertion].source !== 'state')) {
+        issues.push(id + ': invalid evidence reference');
+        continue;
+      }
+      const label = evidence.kind === 'setup' ? 'initial' : 'step ' + String(evidence.step + 1);
+      const key = label + ':' + String(assertion);
+      const seen = bindings.get(id) ?? new Set<string>();
+      if (seen.has(key)) {
+        issues.push(id + ': duplicate evidence reference ' + key);
+        continue;
+      }
+      seen.add(key);
+      bindings.set(id, seen);
+      const passed = executed.get(label)?.get(assertion);
+      if (passed === undefined) issues.push(id + ': evidence did not execute at ' + key);
+      else if (!passed) issues.push(id + ': evidence failed at ' + key);
+      else if (step) (step.accepted ? acceptedHere : refusedHere).add(id);
+    }
+    for (const id of c.rules) if (!bindings.has(id)) issues.push(id + ': missing evidence binding');
+    if (issues.length === 0) {
+      for (const id of bindings.keys()) covered.add(id);
+      for (const id of acceptedHere) accepted.add(id);
+      for (const id of refusedHere) refused.add(id);
+    }
     else for (const id of c.rules) failedRules.add(id);
     results.push({ id: c.id, rules: c.rules, problems: issues });
   }
-  const passed = [...covered].filter(id => !failedRules.has(id)).sort();
-  const missing = [...required].filter(id => !passed.includes(id)).sort();
-  const problems = [...results.flatMap(r => r.problems.map(p => r.id + ': ' + p)), ...missing.map(id => id + ': no passing complete rule evidence')];
+  const missingControls = new Map<string, string>();
+  for (const rule of required.values()) {
+    if (rule.kind === 'action' && rule.requireRefusal) {
+      if (!accepted.has(rule.id)) missingControls.set(rule.id, 'no passing accepted-action evidence');
+      else if (!refused.has(rule.id)) missingControls.set(rule.id, 'no passing rejected-action control');
+    }
+  }
+  const passed = [...covered].filter(id => !failedRules.has(id) && !missingControls.has(id)).sort();
+  const passedIds = new Set(passed);
+  const missing = [...required.keys()].filter(id => !passedIds.has(id)).sort();
+  const problems = [
+    ...results.flatMap(r => r.problems.map(p => r.id + ': ' + p)),
+    ...missing.map(id => id + ': ' + (missingControls.get(id) ?? 'no passing complete rule evidence')),
+  ];
   return { cases: results, problems, passed, missing };
+}
+
+export function assertRuleCoverage(report: RuleReport): void {
+  if (report.problems.length) throw new Error(report.problems.join('\n'));
 }

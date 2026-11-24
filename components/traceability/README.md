@@ -15,7 +15,7 @@ Rule-citation gate. The game passes a `trace.config.json` (any subset of the opt
 6. List ids that are not due in the pending file named by `pending` (id to batch); `--release` fails while it is not empty.
 7. Use `citeFiles` to require rule citations in comments for engine folders.
 
-8. For independent executable arbiter fixtures, use `runRuleAssertions` from `assertions.ts`. A title is not execution evidence; all required rules must have passing cases, with no failed case for those rules.
+8. For executable arbiter fixtures, set `executableSuite` in `trace.config.json` and explicitly bind every case rule to a setup or action assertion. Have the arbiter validate each mapping against the rule and require a rejection control where the rule defines when an action must be refused.
 
 **Common mistakes:**
 - Citing an id in a `.skip`, `.todo` or `.fails` test: it counts for none unless `countSkipped` is set.
@@ -68,4 +68,15 @@ node kit/traceability/check-traceability.ts --config trace.config.json   # test 
 
 ## Executable rules-arbiter fixtures
 
-`runRuleAssertions(adapter, requiredRules, cases)` executes independent seeded cases against the real game adapter. The arbiter owns the JSON-compatible fixture, actions, acceptance expectations and checks; the game supplies `setup`, `act` and normalized `observe`. Every step checks at least one state/event assertion. Paths are own-property string keys or numeric array indices, with `equals`, `notEquals`, `exists`, `absent`, `atLeast` and `atMost`. Rejected actions must not change observed state or emit events. A crash, missing assertion, unknown rule or failing case is not evidence; missing required rule IDs also fail. A game should assert `report.problems` is empty in its test suite. The adapter must observe every rule-relevant field and use actual engine actions, not a second implementation or fabricated state. This runner complements the existing citation gate; it does not change existing traceability behavior. Fixtures and assertions are not generated from the implementation under test.
+`runRuleAssertions(adapter, requiredRules, cases)` executes independent seeded cases against the game adapter. The arbiter supplies the fixture, actions, acceptance expectations, and evidence mappings. The game supplies `setup`, `act` and normalized `observe`. Use real engine actions and observe every field relevant to the rule.
+
+- A string in `requiredRules` declares an action rule. Declare a setup-only rule as `{ id: 'SET-01', kind: 'setup' }`.
+- In each case add an `evidence` array. Use `{ rule: 'PAY-01', kind: 'action', step: 0, assertion: 0 }` to bind the first check of the first action. For setup evidence use `{ rule: 'SET-01', kind: 'setup', assertion: 0 }` to bind the first initial-state assertion. Indices are zero-based.
+- Set `requireRefusal: true` on an action requirement to require passing evidence after both an accepted action and an expected rejection. A rejection must leave observed state unchanged and emit no events.
+- Every declared rule needs a binding in the case. A failed case invalidates the rules it declares, even if they have passing evidence elsewhere. Paths are own-property keys or numeric array indices. Operations are `equals`, `notEquals`, `exists`, `absent`, `atLeast` and `atMost`.
+
+Set `"executableSuite": "tests/arbiter-suite.ts"` in `trace.config.json` to run the suite in the existing traceability gate. The module's default export is `{ adapter, cases, rules? }`. Optional `rules` classifies plan rules or requires rejection controls. Every due plan rule needs coverage and defaults to action evidence. Keep cases for deferred rules out of the active suite. Executable evidence failures return exit code 1 even in citation warning mode. A standalone test can also call `assertRuleCoverage(runRuleAssertions(adapter, requiredRules, cases))`.
+
+**Migration from the original draft:** Keep the case inputs and list of rule IDs. Add explicit bindings and classify setup-only rules. A case containing rule IDs and checks without bindings now fails. The citation gate continues to work with existing configurations.
+
+Executable evidence establishes that the mapped checks ran and passed. The arbiter must independently validate that the fixtures, observations, assertions, and rejection controls substantively test the rule. Fixtures and checks must come from the rules rather than the implementation under test.

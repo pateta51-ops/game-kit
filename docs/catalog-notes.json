@@ -2312,8 +2312,15 @@
     "release": 1,
     "gameSupplies": "trace.config.json.",
     "entry": [
-      "check-traceability.ts"
+      "check-traceability.ts",
+      "assertions.ts"
     ]
+  },
+  "traceability/assertions": {
+    "title": "Executable rule evidence",
+    "tags": ["executable", "arbiter", "rule", "evidence", "fixture", "assertion", "refusal"],
+    "use": "Run arbiter fixtures and check that every due rule has passing setup or action evidence.",
+    "guide": "README.md"
   },
   "track": {
     "use": "A row of spaces with a marker that glides (drawn row or spots on a mat image), per-space marks, labels from the game's words; a hop-and-fill bar with a badge pop; a step list with one lit step; unstyled.",

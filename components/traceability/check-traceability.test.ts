@@ -519,3 +519,33 @@ describe('K172 citeFiles', () => {
     expect(r.text).toMatch(/: src\/engine\/rules\/b\.ts$/m);
   });
 });
+
+it('fails the configured gate when a cited due rule lacks executable evidence', () => {
+  const errors: string[] = [];
+  const cfg = { ...DEFAULT_CONFIG, requireComment: false, executableSuite: 'arbiter.mjs' };
+  const io: Io = {
+    readText: path => {
+      if (path !== cfg.plan) throw new Error('unused');
+      return '# Plan\n## 3. Rules\n- **R-01** Spend one token.\n';
+    },
+    testFiles: () => [{ path: 'tests/rules.test.ts', text: "it('R-01 spends a token', () => {});" }],
+    sourceFiles: () => [],
+    out: () => {},
+    err: line => { errors.push(line); },
+  };
+  const adapter = {
+    setup: () => ({ tokens: 1 }),
+    act: () => ({ accepted: true, state: { tokens: 0 }, events: [] }),
+    observe: (state: unknown) => state === null ? null : { tokens: (state as { tokens: number }).tokens },
+  };
+  expect(run(['--strict'], io, cfg, { adapter, cases: [] })).toBe(1);
+  expect(errors.splice(0)).toEqual(['R-01: no passing complete rule evidence']);
+  expect(run(['--warn'], io, cfg, { adapter, cases: [] })).toBe(1);
+  expect(errors.splice(0)).toEqual(['R-01: no passing complete rule evidence']);
+  expect(run(['--strict'], io, cfg, { adapter, cases: [{
+    id: 'spend', rules: ['R-01'], seed: 'fixed', fixture: null,
+    steps: [{ action: 'spend', accepted: true, checks: [{ source: 'state', path: ['tokens'], op: 'equals', value: 0 }] }],
+    evidence: [{ rule: 'R-01', kind: 'action', step: 0, assertion: 0 }],
+  }] })).toBe(0);
+  expect(errors).toEqual([]);
+});
