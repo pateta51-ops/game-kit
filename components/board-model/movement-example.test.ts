@@ -18,8 +18,10 @@ describe('documented weighted movement and atomic displacement', () => {
     const pushed = pushInOneTransition(corridor, positions, 'a', policy);
     expect(pushed).toMatchObject({ positions: { lead: 'c', other: 'd' }, plan: {
       destination: 'c', moved: 2, remaining: 0, stop: 'complete',
-      moves: expect.arrayContaining([{ piece: 'lead', from: 'a', to: 'c' }, { piece: 'other', from: 'b', to: 'd' }]),
     } });
+    expect(pushed.plan.moves.toSorted((a, b) => a.piece.localeCompare(b.piece))).toEqual([
+      { piece: 'lead', from: 'a', to: 'c' }, { piece: 'other', from: 'b', to: 'd' },
+    ]);
     expect(corridor).toEqual(before);
     expect(positions).toEqual({ lead: 'a', other: 'b' });
   });
