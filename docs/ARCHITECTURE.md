@@ -88,6 +88,8 @@ graph LR
   glossary["glossary"] --> phone_mode["phone-mode"]
   glossary["glossary"] --> state_machines["state-machines"]
   grid_map["grid-map"]
+  growing_map["growing-map"] --> board_model["board-model"]
+  growing_map["growing-map"] --> engine_core["engine-core"]
   guarded_button["guarded-button"]
   layout_editor["layout-editor"] --> board_layout["board-layout"]
   learned_opponent["learned-opponent"] --> engine_core["engine-core"]
@@ -174,7 +176,6 @@ graph LR
 - `art-pipeline`
 - `audio-gen`
 - `automa`
-- `board-model`
 - `board-viewport`
 - `boundary-check`
 - `bug-reporter`
@@ -200,6 +201,7 @@ graph LR
 - `e2e-helpers`
 - `ghost-card`
 - `grid-map`
+- `growing-map`
 - `guarded-button`
 - `layout-editor`
 - `learned-opponent`

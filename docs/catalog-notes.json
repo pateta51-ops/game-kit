@@ -112,6 +112,15 @@
     "release": 1,
     "gameSupplies": "The spaces, their neighbours and the placement kinds."
   },
+  "growing-map": {
+    "use": "A player reveals a tile or room from a seeded deck and adds it at an open board edge.",
+    "not": "Tile geometry, rotation, drawing or a game's rules for where tiles fit.",
+    "title": "Board that grows as you explore",
+    "tags": ["explore", "tile deck", "reveal a room", "open edge", "growing map"],
+    "visible": false,
+    "release": 1,
+    "gameSupplies": "The starting board, open edges, tile deck and the rules for joining a tile."
+  },
   "grid-map": {
     "use": "A square grid board with walls: adjacent spaces, grid distance and range, shortest paths, line of sight, tiles that turn, and targeting shapes (within range, adjacent, row, column, line, area).",
     "not": "Drawing the map; hex or graph boards (board-model); movement rules or costs per step.",
