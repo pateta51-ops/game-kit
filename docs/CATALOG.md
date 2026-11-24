@@ -1054,9 +1054,9 @@ The game writes one adapter; Claude (or `--dummy`, the first option, no client b
 - **Words:** playtest, llm, claude, ai, testing, bugs, game, adapter, language model, player
 - **Release:** 1.0; not seen
 - **The game supplies:** An adapter: view, numbered options and choose.
-- **Use it when:** Headless whole-game playtests by Claude through a small game adapter (view, numbered options, choose): finds rules and screen bugs the model flags, adapter throws and illegal option lists, and saves each run's replay for a replay test; capped in dollars per run; --dummy plays the first option for free.
+- **Use it when:** Headless whole-game playtests by Claude through a small game adapter (view, numbered options, choose): finds rules and screen bugs the model flags, adapter throws and illegal option lists, and saves each run's replay for a replay test; capped in dollars per run; --dummy plays the first option for free. Cheap by default: prompt caching, a single option taken without a call, multi-select and split-points questions asked one item at a time, --effort low, and a cached reference() lookup table of card texts.
 - **Not for:** The in-game Claude opponent (a game's own server code) or balance sims at volume; use sim-pool for many cheap games.
-- **Key exports:** `runPlaytest`, `ledgerSpent`, `main`, `runMain`, `GameAdapter`, `PlaytestOptions`, `PlaytestResult`, `MainResult`
+- **Key exports:** `runPlaytest`, `ledgerSpent`, `main`, `runMain`, `GameAdapter`, `Item`, `Option`, `MultiSelect`, `Split`, `PlaytestOptions`, `PlaytestResult`, `MainResult`
 - **Needs:** nothing
 - **Came from:** stcc
 - **Docs:** [README](../components/llm-playtester/README.md) ([rules for agents](../components/llm-playtester/README.md#rules-for-agents))

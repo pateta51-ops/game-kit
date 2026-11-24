@@ -12,6 +12,8 @@ export interface Ask {
   system: string[];
   prompt: string;
   maxTokens?: number;
+  /** K741: sent as output_config.effort; thinking stays adaptive. */
+  effort?: 'low' | 'medium' | 'high';
 }
 export interface Answer {
   option: number;
@@ -68,7 +70,7 @@ const TOOL = {
       option: { type: 'integer', description: 'The number of the chosen option.' },
       reason: {
         type: 'string',
-        description: 'Why, in one or two sentences; start with BUG: when the rules, the view or the options look wrong.',
+        description: 'Why, in one sentence of at most 20 words; start with BUG: when the rules, the view or the options look wrong.',
       },
     },
     required: ['option', 'reason'],
@@ -124,6 +126,7 @@ export function makeChooser(client: Messages, maxTokens = MAX_TOKENS): Chooser {
       ),
       tools: [TOOL],
       tool_choice: { type: 'auto' },
+      ...(ask.effort === undefined ? {} : { output_config: { effort: ask.effort } }),
       messages: [{ role: 'user', content: ask.prompt }],
     });
     const use = result.content.find((b) => b.type === 'tool_use');

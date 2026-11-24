@@ -6,7 +6,7 @@ import type { Chooser } from './client.ts';
 import { makeChooser, type Body } from './client.ts';
 import { createAdapter } from './fake-adapter.ts';
 import { keyName, loadKey } from './key.ts';
-import { ledgerSpent, main, runMain, runPlaytest } from './playtest.ts';
+import { ledgerSpent, main, runMain, runPlaytest, type GameAdapter } from './playtest.ts';
 
 const tmp = () => mkdtempSync(join(tmpdir(), 'llm-playtester-'));
 const usage = { input_tokens: 100, output_tokens: 50, cache_creation_input_tokens: 0, cache_read_input_tokens: 2000 };
@@ -311,5 +311,81 @@ describe('heavy queue (K416)', () => {
     };
     expect(await run('fine')).toEqual({ code: 0, ended: ['PLAYTEST ENDED won after 4 turns'] });
     expect(await run('BUG: same')).toEqual({ code: 1, ended: [] });
+  });
+});
+
+describe('K741 cheaper playtests', () => {
+  const base = (opts: () => ReturnType<GameAdapter['options']>) => {
+    let over = false;
+    const got: number[][] = [];
+    const a: GameAdapter = { ...createAdapter(), start: () => { over = false; }, options: opts, choose: () => { over = true; }, answer: (v) => { got.push(v); over = true; }, done: () => (over ? { won: true, summary: 'x' } : null) };
+    return { a, got };
+  };
+  const scripted = (picks: number[], prompts: string[] = []): Chooser => (ask) => {
+    prompts.push(ask.prompt);
+    return Promise.resolve({ option: picks.shift() ?? 0, reason: 'ok', usage });
+  };
+
+  it('a single option is taken without a call and logged auto', async () => {
+    const { a } = base(() => ['only']);
+    const r = await runPlaytest(a, { seed: 's', client: () => Promise.reject(new Error('no call expected')), out: tmp() });
+    expect(r).toMatchObject({ stop: 'done', decisions: 1, costUsd: 0 });
+    expect(JSON.parse(readFileSync(join(r.dir, 'decisions.jsonl'), 'utf8'))).toMatchObject({ auto: true, choice: 0, cost: 0 });
+  });
+
+  it('multi-select: asked item by item, assembled indices go to answer()', async () => {
+    const { a, got } = base(() => ({ kind: 'multi', min: 1, max: 3, items: ['a', 'b', 'c', 'd'] }));
+    const prompts: string[] = [];
+    // pick d (3), then b (1 of a,b,c), then Done (index 2 of a,c,Done)
+    const r = await runPlaytest(a, { seed: 's', client: scripted([3, 1, 2], prompts), out: tmp() });
+    expect(got).toEqual([[1, 3]]);
+    expect(r.decisions).toBe(3);
+    expect(prompts[0]).not.toContain('Done');
+    expect(prompts[2]).toContain('2. Done: pick no more');
+    expect(prompts[2]).toContain('Picked so far: d; b');
+  });
+
+  it('split: one call per target, the last forced, limits kept', async () => {
+    const { a, got } = base(() => ({ kind: 'split', points: 5, targets: [{ label: 'x', max: 2 }, { label: 'y' }, { label: 'z', min: 1 }] }));
+    const prompts: string[] = [];
+    const r = await runPlaytest(a, { seed: 's', client: scripted([2, 1], prompts), out: tmp() });
+    expect(got).toEqual([[2, 1, 2]]);
+    expect(prompts).toHaveLength(2);
+    expect(prompts[0]).toContain('2. 2 to x');
+    expect(prompts[0]).not.toContain('3. ');
+    expect(prompts[1]).toContain('0. 0 to y\n1. 1 to y\n2. 2 to y');
+    expect(r.decisions).toBe(3);
+  });
+
+  it('groups print as headers; duplicate labels are a finding and get #2', async () => {
+    const { a } = base(() => [{ label: 'play', group: 'Hand' }, { label: 'play', group: 'Hand' }, { label: 'play', group: 'Board' }]);
+    const prompts: string[] = [];
+    const r = await runPlaytest(a, { seed: 's', client: scripted([1], prompts), out: tmp() });
+    expect(prompts[0]).toContain('[Hand]\n0. play\n1. play #2\n[Board]\n2. play');
+    expect(r.findings).toEqual(['step 0: duplicate option label "play"']);
+  });
+
+  it('effort (default low, --effort) and cache_control land in the request; reference() is in the cached system block', async () => {
+    const bodies: Body[] = [];
+    const sdk = { messages: { create: (b: Body) => { bodies.push(b); return Promise.resolve({ content: [{ type: 'tool_use', input: { option: 1, reason: 'ok' } }], usage: { input_tokens: 1, output_tokens: 1 } }); } } };
+    await runPlaytest({ ...createAdapter(), reference: () => 'CARD-A: full text' }, { seed: 's', client: makeChooser(sdk), out: tmp(), log: () => undefined });
+    expect(bodies[0]!['output_config']).toEqual({ effort: 'low' });
+    const sys = bodies[0]!['system'] as { text: string; cache_control?: unknown }[];
+    expect(sys.at(-1)).toMatchObject({ cache_control: { type: 'ephemeral' } });
+    expect(sys.at(-1)!.text).toContain('CARD-A: full text');
+    expect(JSON.stringify(bodies[0]!['tools'])).toContain('at most 20 words');
+    bodies.length = 0;
+    await runPlaytest(createAdapter(), { seed: 's', client: makeChooser(sdk), out: tmp(), log: () => undefined, effort: 'high' });
+    expect(bodies[0]!['output_config']).toEqual({ effort: 'high' });
+    expect(await main(['--adapter', join(import.meta.dirname, 'fake-adapter.ts'), '--dummy', '--effort', 'max'], () => undefined, {})).toBe(2);
+    expect(await main(['--adapter', join(import.meta.dirname, 'fake-adapter.ts'), '--dummy', '--effort', 'medium', '--out', tmp()], () => undefined, {})).toBe(0);
+  });
+
+  it('plain string lists still work unchanged (no auto, no ask field)', async () => {
+    const r = await runPlaytest(createAdapter(), { seed: 's', client: scripted([0, 0, 0, 0]), out: tmp() });
+    const rows = readFileSync(join(r.dir, 'decisions.jsonl'), 'utf8').trim().split('\n').map((l) => JSON.parse(l) as Record<string, unknown>);
+    expect(rows).toHaveLength(4);
+    for (const x of rows) expect(x).not.toHaveProperty('auto');
+    expect(rows[0]!['options']).toEqual(['add 1', 'add 2']);
   });
 });

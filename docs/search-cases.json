@@ -541,5 +541,8 @@
   { "q": "guarded button lifts a guard", "first": "guarded-button" },
   { "q": "barred button with a reason", "first": "guarded-button" },
   { "q": "log why a phase was skipped", "first": "turn-flow" },
-  { "q": "skipped phase event names the card", "first": "turn-flow" }
+  { "q": "skipped phase event names the card", "first": "turn-flow" },
+  { "q": "cheap llm playtest", "first": "llm-playtester" },
+  { "q": "llm player multi select split points", "first": "llm-playtester" },
+  { "q": "lookup table of card texts for llm playtest", "first": "llm-playtester" }
 ]

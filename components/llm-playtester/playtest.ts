@@ -15,10 +15,35 @@ export interface GameAdapter {
   rulesText(): string;
   start(o: { seed: string; difficulty?: string; scenario?: string }): void;
   view(): string;
-  options(): string[];
+  /** Plain options (strings or labelled items with an optional group), or one multi-select or split question. */
+  options(): Option[] | MultiSelect | Split;
   choose(i: number): void;
+  /** K741: the assembled answer to a MultiSelect (picked item indices, ascending) or a Split (points per target). */
+  answer?(values: number[]): void;
+  /** K741: a lookup table (e.g. full card texts by short name) sent once in the cached system prompt, so view() can name things. */
+  reference?(): string;
   done(): null | { won: boolean; summary: string };
   replay(): unknown;
+}
+export interface Item {
+  label: string;
+  group?: string;
+}
+export type Option = string | Item;
+/** Pick min..max of the items; asked one item per call, with "done" once min is reached. */
+export interface MultiSelect {
+  kind: 'multi';
+  title?: string;
+  min: number;
+  max: number;
+  items: Option[];
+}
+/** Allocate `points` over the targets (each min..max, default 0..points); asked one target per call, the last one forced. */
+export interface Split {
+  kind: 'split';
+  title?: string;
+  points: number;
+  targets: (Item & { min?: number; max?: number })[];
 }
 export interface PlaytestOptions {
   seed: string;
@@ -29,6 +54,8 @@ export interface PlaytestOptions {
   maxDecisions?: number;
   /** max_tokens per call (default 16000: thinking models need room before the tool call). */
   maxTokens?: number;
+  /** output_config.effort sent with each call (default low). */
+  effort?: 'low' | 'medium' | 'high';
   dummy?: boolean;
   /** Extra docs added to the system prompt after rulesText(). */
   docs?: string[];
@@ -59,9 +86,10 @@ export interface PlaytestResult {
 }
 
 const HOW =
-  'You are playtesting a board game adaptation. Each turn you get the current view and numbered options; you must answer by calling the choose tool (always call it, never reply in plain text): the option number and a short reason. Play to win. When the view, the options or the rules look wrong (an illegal option offered, a legal one missing, a wrong count, unclear text), start the reason with BUG: and say what.';
+  'You are playtesting a board game adaptation. Each turn you get the current view and numbered options; you must answer by calling the choose tool (always call it, never reply in plain text): the option number and a reason of one sentence, at most 20 words. Play to win. When the view, the options or the rules look wrong (an illegal option offered, a legal one missing, a wrong count, unclear text), start the reason with BUG: and say what.';
 
 const findingKey = (f: string) => f.toLowerCase().replace(/^step \d+:\s*/, '').replace(/\s+/g, ' ').replace(/[\s.!;:,]+$/, '').trim();
+const item = (o: Option): Item => (typeof o === 'string' ? { label: o } : o);
 const short = (s: string, n = 200) => (s.length > n ? `${s.slice(0, n)}…` : s);
 
 export async function runPlaytest(adapter: GameAdapter, opts: PlaytestOptions): Promise<PlaytestResult> {
@@ -93,6 +121,7 @@ export async function runPlaytest(adapter: GameAdapter, opts: PlaytestOptions): 
   let stop: PlaytestResult['stop'] = 'finding';
   let result: PlaytestResult['result'] = null;
   const maxTokens = opts.maxTokens ?? MAX_TOKENS;
+  const effort = opts.effort ?? 'low';
   const choose: Chooser | null = opts.dummy
     ? null
     : (opts.client ?? (await sdkChooser(loadKey(adapter.name, opts.env ?? '.env.local'), maxTokens)));
@@ -104,6 +133,77 @@ export async function runPlaytest(adapter: GameAdapter, opts: PlaytestOptions): 
       return undefined;
     }
   };
+  let estimated = false;
+  // K741: one numbered question; a single option is taken without a call (logged auto). Null: the run stops (stop is set).
+  const ask = async (view: string, items: Item[], head = ''): Promise<number | null> => {
+    if (decisions >= maxDecisions) {
+      stop = 'max-decisions';
+      return null;
+    }
+    const n = new Map<string, number>();
+    const options = items.map((it) => {
+      const k = `${it.group ?? ''}\u0000${it.label}`;
+      const c = (n.get(k) ?? 0) + 1;
+      n.set(k, c);
+      if (c === 2) note(`step ${decisions}: duplicate option label "${it.label}"`, true);
+      return c > 1 ? `${it.label} #${c}` : it.label;
+    });
+    let g: string | undefined;
+    const list = items.map((it, i) => (it.group !== g ? ((g = it.group), `[${g ?? 'other'}]\n`) : '') + `${i}. ${options[i]}`).join('\n');
+    let choice = 0;
+    let reason = 'dummy';
+    let usage: Usage | null = null;
+    let paid = 0;
+    const auto = choose !== null && items.length === 1;
+    if (auto) reason = 'auto: the only option';
+    else if (choose !== null) {
+      let error = '';
+      for (let tries = 0; ; tries++) {
+        const prompt = `${recent.length ? `Your last decisions:\n${recent.join('\n')}\n\n` : ''}Current view:\n${view}\n\n${head ? `${head}\n\n` : ''}Options:\n${list}${error}`;
+        const ask = { model, system, prompt, maxTokens, effort };
+        const worst = worstCost(ask, maxTokens);
+        if (!estimated) {
+          estimated = true;
+          const say = opts.log ?? console.log;
+          say(`Cost estimate: up to $${worst.toFixed(4)} per decision (${model}), cap $${maxUsd}`);
+          if (worst > maxUsd) {
+            const m = `the first call alone could cost $${worst.toFixed(4)}, over the cap of $${maxUsd}: raise --max-usd`;
+            say(m);
+            note(m);
+          }
+        }
+        if (spent + worst > maxUsd) {
+          stop = 'max-usd';
+          return null;
+        }
+        const a = await choose(ask);
+        const c = cost(a.usage, model);
+        spent += c;
+        opts.onSpend?.(c, runId);
+        paid += c;
+        usage = a.usage;
+        choice = a.option;
+        reason = a.reason;
+        if (Number.isInteger(choice) && choice >= 0 && choice < options.length) break;
+        const none = Number.isNaN(choice);
+        note(none ? `step ${decisions}: ${a.stop_reason === 'max_tokens' ? `reply cut off at max_tokens (${maxTokens}) before a choose tool call` : 'reply had no choose tool call'}` : `step ${decisions}: invalid option ${String(choice)} of ${options.length}`);
+        if (tries >= 1) {
+          appendFileSync(log, JSON.stringify({ step: decisions, view: short(view), options, choice, reason, usage, cost: paid }) + '\n');
+          return null;
+        }
+        error = none
+          ? `\n\nReminder: you must call the choose tool with option (0 to ${options.length - 1}) and reason.`
+          : `\n\nYour answer ${String(choice)} is not an option: answer a number from 0 to ${options.length - 1}.`;
+      }
+    }
+    const viewHash = createHash('sha1').update(view).digest('hex').slice(0, 12);
+    appendFileSync(log, JSON.stringify({ step: decisions, viewHash, view: short(view), ...(head ? { ask: short(head) } : {}), options, choice, ...(auto ? { auto } : {}), reason, usage, cost: paid }) + '\n');
+    const repeated = /^\s*BUG:/i.test(reason) && note(`step ${decisions}: ${reason}`, true);
+    recent.push(`${decisions}: ${short(options[choice]!, 80)} (${short(reason, 120)})`);
+    if (recent.length > (opts.history ?? 6)) recent.shift();
+    decisions++;
+    return repeated ? null : choice;
+  };
   let system: string[] = [];
   if (attempt('start', () => {
     adapter.start({
@@ -111,7 +211,8 @@ export async function runPlaytest(adapter: GameAdapter, opts: PlaytestOptions): 
       ...(opts.difficulty === undefined ? {} : { difficulty: opts.difficulty }),
       ...(opts.scenario === undefined ? {} : { scenario: opts.scenario }),
     });
-    system = [`${HOW}\n\n${adapter.rulesText()}`, ...(opts.docs ?? []).map((p) => readFileSync(p, 'utf8'))];
+    const ref = adapter.reference?.();
+    system = [`${HOW}\n\n${adapter.rulesText()}`, ...(opts.docs ?? []).map((p) => readFileSync(p, 'utf8')), ...(ref ? [`Reference (what the view and options name):\n${ref}`] : [])];
     return true;
   })) {
     play: for (;;) {
@@ -127,64 +228,54 @@ export async function runPlaytest(adapter: GameAdapter, opts: PlaytestOptions): 
         break;
       }
       const view = attempt('view', () => adapter.view());
-      const options = attempt('options', () => adapter.options());
-      if (view === undefined || options === undefined) break;
-      if (options.length === 0) {
-        note(`step ${decisions}: no options and the game is not over`);
-        break;
+      const o = attempt('options', () => adapter.options());
+      if (view === undefined || o === undefined) break;
+      if (Array.isArray(o)) {
+        if (o.length === 0) {
+          note(`step ${decisions}: no options and the game is not over`);
+          break;
+        }
+        const c = await ask(view, o.map(item));
+        if (c === null) break;
+        if (attempt('choose', () => (adapter.choose(c), true)) === undefined) {
+          seen.get(last)!.finding += ` (step ${decisions - 1}, option ${c})`;
+          break;
+        }
+        continue;
       }
-      let choice = 0;
-      let reason = 'dummy';
-      let usage: Usage | null = null;
-      let paid = 0;
-      if (choose !== null) {
-        let error = '';
-        for (let tries = 0; ; tries++) {
-          const prompt = `${recent.length ? `Your last decisions:\n${recent.join('\n')}\n\n` : ''}Current view:\n${view}\n\nOptions:\n${options.map((o, i) => `${i}. ${o}`).join('\n')}${error}`;
-          const ask = { model, system, prompt, maxTokens };
-          const worst = worstCost(ask, maxTokens);
-          if (decisions === 0 && tries === 0) {
-            const say = opts.log ?? console.log;
-            say(`Cost estimate: up to $${worst.toFixed(4)} per decision (${model}), cap $${maxUsd}`);
-            if (worst > maxUsd) {
-              const m = `the first call alone could cost $${worst.toFixed(4)}, over the cap of $${maxUsd}: raise --max-usd`;
-              say(m);
-              note(m);
-            }
-          }
-          if (spent + worst > maxUsd) {
-            stop = 'max-usd';
+      const v: number[] = [];
+      if (o.kind === 'multi') {
+        for (;;) {
+          if (v.length >= o.max) break;
+          const rest = o.items.map((_, i) => i).filter((i) => !v.includes(i));
+          if (rest.length === 0) break;
+          const items = rest.map((i) => item(o.items[i]!));
+          if (v.length >= o.min) items.push({ label: 'Done: pick no more' });
+          const k = await ask(view, items, `${o.title ?? 'Pick'}: choose ${o.min} to ${o.max} of these, one per answer. Picked so far: ${v.map((i) => item(o.items[i]!).label).join('; ') || 'none'}.`);
+          if (k === null) break play;
+          if (k === rest.length) break;
+          v.push(rest[k]!);
+        }
+        v.sort((x, y) => x - y);
+      } else {
+        let left = o.points;
+        for (const [i, t] of o.targets.entries()) {
+          const after = o.targets.slice(i + 1);
+          const lo = Math.max(t.min ?? 0, left - after.reduce((n, u) => n + (u.max ?? Infinity), 0));
+          const hi = Math.min(t.max ?? left, left - after.reduce((n, u) => n + (u.min ?? 0), 0));
+          if (lo > hi) {
+            note(`step ${decisions}: split of ${o.points} cannot be completed within the target limits`);
             break play;
           }
-          const a = await choose(ask);
-          const c = cost(a.usage, model);
-          spent += c;
-          opts.onSpend?.(c, runId);
-          paid += c;
-          usage = a.usage;
-          choice = a.option;
-          reason = a.reason;
-          if (Number.isInteger(choice) && choice >= 0 && choice < options.length) break;
-          const none = Number.isNaN(choice);
-          note(none ? `step ${decisions}: ${a.stop_reason === 'max_tokens' ? `reply cut off at max_tokens (${maxTokens}) before a choose tool call` : 'reply had no choose tool call'}` : `step ${decisions}: invalid option ${String(choice)} of ${options.length}`);
-          if (tries >= 1) {
-            appendFileSync(log, JSON.stringify({ step: decisions, view: short(view), options, choice, reason, usage, cost: paid }) + '\n');
-            break play;
-          }
-          error = none
-            ? `\n\nReminder: you must call the choose tool with option (0 to ${options.length - 1}) and reason.`
-            : `\n\nYour answer ${String(choice)} is not an option: answer a number from 0 to ${options.length - 1}.`;
+          const sofar = o.targets.slice(0, i).map((u, j) => `${u.label} ${v[j]}`).join('; ') || 'nothing yet';
+          const k = await ask(view, Array.from({ length: hi - lo + 1 }, (_, n) => ({ label: `${lo + n} to ${t.label}`, ...(t.group === undefined ? {} : { group: t.group }) })), `${o.title ?? 'Split'}: allocate ${o.points} points over ${o.targets.map((u) => `${u.label}${u.min !== undefined || u.max !== undefined ? ` (${u.min ?? 0}-${u.max ?? o.points})` : ''}`).join(', ')}, one target per answer. So far: ${sofar}; ${left} left. How many to ${t.label}?`);
+          if (k === null) break play;
+          v.push(lo + k);
+          left -= lo + k;
         }
       }
-      const viewHash = createHash('sha1').update(view).digest('hex').slice(0, 12);
-      appendFileSync(log, JSON.stringify({ step: decisions, viewHash, view: short(view), options, choice, reason, usage, cost: paid }) + '\n');
-      const repeated = /^\s*BUG:/i.test(reason) && note(`step ${decisions}: ${reason}`, true);
-      recent.push(`${decisions}: ${short(options[choice]!, 80)} (${short(reason, 120)})`);
-      if (recent.length > (opts.history ?? 6)) recent.shift();
-      decisions++;
-      if (repeated) break;
-      if (attempt('choose', () => (adapter.choose(choice), true)) === undefined) {
-        seen.get(last)!.finding += ` (step ${decisions - 1}, option ${choice})`;
+      if (attempt('answer', () => (adapter.answer!(v), true)) === undefined) {
+        seen.get(last)!.finding += ` (step ${decisions - 1}, answer ${v.join(',')})`;
         break;
       }
     }
@@ -272,6 +363,8 @@ export async function runMain(argv: string[], log: (s: string) => void = console
     const v = flags.get(k);
     if (v !== undefined && !(Number.isFinite(Number(v)) && Number(v) > 0 && (k !== 'max-tokens' || Number.isInteger(Number(v))))) return bad();
   }
+  const effort = g('effort');
+  if (effort !== undefined && !['low', 'medium', 'high'].includes(effort)) return bad();
   const mod = (await import(pathToFileURL(resolve(path)).href)) as { createAdapter?: () => GameAdapter; default?: GameAdapter | (() => GameAdapter) };
   const adapter = mod.createAdapter?.() ?? (typeof mod.default === 'function' ? mod.default() : mod.default);
   if (adapter === undefined) return bad();
@@ -302,6 +395,7 @@ export async function runMain(argv: string[], log: (s: string) => void = console
     }
     if (g('max-decisions') !== undefined) o.maxDecisions = Number(g('max-decisions'));
     if (g('max-tokens') !== undefined) o.maxTokens = Number(g('max-tokens'));
+    if (effort !== undefined) o.effort = effort as 'low';
     if (g('docs') !== undefined) o.docs = g('docs')!.split(',');
     if (client !== undefined) o.client = client;
     o.log = log;
@@ -328,7 +422,7 @@ export async function runMain(argv: string[], log: (s: string) => void = console
 }
 
 function usage(log: (s: string) => void): number {
-  log('usage: node playtest.ts --adapter <module> [--seed s] [--difficulty d] [--scenario s] [--model claude-opus-5-5|claude-sonnet-5-5] [--max-usd 5] [--max-decisions n] [--runs n] [--docs a.md,b.md] [--env .env.local] [--out dir] [--dummy] [--ledger spend.jsonl] [--total-cap usd] [--require-cap]');
+  log('usage: node playtest.ts --adapter <module> [--seed s] [--difficulty d] [--scenario s] [--model claude-opus-5-5|claude-sonnet-5-5] [--max-usd 5] [--max-decisions n] [--effort low|medium|high] [--runs n] [--docs a.md,b.md] [--env .env.local] [--out dir] [--dummy] [--ledger spend.jsonl] [--total-cap usd] [--require-cap]');
   return 2;
 }
 
