@@ -206,3 +206,71 @@ it('allows a routine prompt after a genuinely settled clause', () => {
   expect(report.covered).toEqual(['spark.1']);
   expect(report.problems).toEqual([]);
 });
+
+it('counts malformed mutant projections as errors even when an earlier assertion mismatches', () => {
+  const input = suite(currentPack([baseCards[0]]), [printed[0]!]);
+  const step = { op: 'gainResource', res: 'fuel', amount: 1 } as const;
+  const mutantInput: FixtureSuite = {
+    ...input,
+    start(...args) {
+      const game = input.start(...args);
+      const steps = args[1][0]?.effects;
+      const first = steps?.[0];
+      const amount = steps?.length === 2 && first?.op === 'gainResource' ? first.amount : undefined;
+      if (amount === undefined) return game;
+      return { ...game, probe: {
+        ...game.probe,
+        trace<T>(fn: () => T) {
+          const traced = game.probe.trace(fn);
+          return { ...traced, notes: traced.notes.map(note => note.kind !== 'clause-end' ? note : {
+            ...note,
+            observation: amount === 1 ? { hand: 0 } : { ...note.observation, hand: Number.NaN },
+          }) };
+        },
+      } };
+    },
+    families: {
+      gainResource: (...args) => input.families['gainResource']!(...args).map(row => ({
+        ...row, expect: [...row.expect, { key: 'hand', delta: 0 }],
+      })),
+    },
+    mutations: {
+      validate: validateRecords,
+      trials: [
+        { id: 'same-amount-missing-fuel', line: 'spark.1', recordIndex: 0, mutate: card => ({ ...card, effects: [step, step] }) },
+        { id: 'wrong-amount-invalid-hand', line: 'spark.1', recordIndex: 0, mutate: card => ({ ...card, effects: [{ ...step, amount: 2 }, step] }) },
+      ],
+    },
+  };
+  const report = runCardSuite(mutantInput);
+  expect(report.covered).toEqual(['spark.1']);
+  expect(report.mutations?.results.map(r => [r.status, r.details[0]])).toEqual([
+    ['error', 'missing observation "fuel"'],
+    ['error', '"hand" must provide finite numbers before and after'],
+  ]);
+});
+
+it('requires the paired refusal attempt on mutation trials', () => {
+  const input = suite(currentPack([baseCards[2]]), [printed[2]!]);
+  const mutantInput: FixtureSuite = {
+    ...input,
+    start(...args) {
+      const game = input.start(...args);
+      if (args[0].fuel !== 1 || args[1][0]?.id !== 'same-pump') return game;
+      return { ...game, probe: {
+        ...game.probe,
+        trace<T>(fn: () => T) {
+          const traced = game.probe.trace(fn);
+          return { ...traced, notes: traced.notes.filter(note => note.kind !== 'clause-attempt') };
+        },
+      } };
+    },
+    mutations: {
+      validate: validateRecords,
+      trials: [{ id: 'missing-poor', line: 'pump.1', recordIndex: 0, mutate: card => ({ ...card, id: 'same-pump' }) }],
+    },
+  };
+  const report = runCardSuite(mutantInput);
+  expect(report.covered).toEqual(['pump.1']);
+  expect(report.mutations?.results[0]).toMatchObject({ status: 'error', details: ['need an observed attempt at this clause'] });
+});

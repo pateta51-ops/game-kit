@@ -93,6 +93,10 @@ interface Evidence extends Comparison {
 
 const message = (error: unknown): string => error instanceof Error ? error.message : String(error);
 const id = (value: unknown): value is string => typeof value === 'string' && value.length > 0 && value.trim() === value;
+const scalar = (value: unknown): boolean => value === null || typeof value === 'boolean' || typeof value === 'string'
+  || typeof value === 'number' && Number.isFinite(value);
+
+class RuntimeEvidenceError extends Error {}
 const passed = (status: RuntimeCaseStatus): boolean => status === 'passed' || status === 'exempt';
 const MAX_ANSWERS = 64;
 
@@ -159,23 +163,26 @@ function specGame<C extends RuntimeClause, R, L, G extends GameTypes>(input: Run
     },
     check(result, { kind, expect }) {
       const compared = kind === 'resolve' ? result.scope : result;
-      if (compared === undefined) throw new Error('no complete clause-scoped observation');
-      for (const assertion of expect) {
+      if (compared === undefined) throw new RuntimeEvidenceError('need one clause begin/dispatch/end sequence with observations');
+      if (kind !== 'resolve' && !result.attempted) throw new RuntimeEvidenceError('need an observed attempt at this clause');
+      const mismatches = expect.map(assertion => {
         const { key } = assertion;
-        if (!Object.hasOwn(compared.before, key) || !Object.hasOwn(compared.after, key)) return `missing observation "${key}"`;
         const before = compared.before[key];
         const after = compared.after[key];
+        if (!Object.hasOwn(compared.before, key) || !Object.hasOwn(compared.after, key) || before === undefined || after === undefined)
+          throw new RuntimeEvidenceError(`missing observation "${key}"`);
         if ('delta' in assertion) {
           if (typeof before !== 'number' || typeof after !== 'number' || !Number.isFinite(before) || !Number.isFinite(after))
-            return `"${key}" must provide numbers before and after`;
-          if (after - before !== assertion.delta) return `"${key}" expected delta ${String(assertion.delta)}, got ${String(after - before)}`;
-        } else if (!isDeepStrictEqual(after, assertion.equals)) {
-          return `"${key}" expected ${JSON.stringify(assertion.equals)}, got ${JSON.stringify(after) ?? 'undefined'}`;
+            throw new RuntimeEvidenceError(`"${key}" must provide finite numbers before and after`);
+          return after - before === assertion.delta ? undefined : `"${key}" expected delta ${String(assertion.delta)}, got ${String(after - before)}`;
         }
-      }
+        if (!scalar(before) || !scalar(after))
+          throw new RuntimeEvidenceError(`"${key}" must provide scalar observations before and after`);
+        return isDeepStrictEqual(after, assertion.equals) ? undefined : `"${key}" expected ${JSON.stringify(assertion.equals)}, got ${JSON.stringify(after)}`;
+      });
       if (kind !== 'resolve' && result.dispatched) return 'the clause dispatched in the refusal case';
       if (kind === 'not-offered' && result.offered) return 'the clause option was offered';
-      return undefined;
+      return mismatches.find(issue => issue !== undefined);
     },
   };
 }
@@ -188,7 +195,7 @@ function valid<L>(test: RuntimeCardCase<L>): boolean {
     && test.expect.length > 0
     && test.expect.every(a => id(a.key) && ('delta' in a
       ? Number.isFinite(a.delta)
-      : a.equals === null || typeof a.equals === 'boolean' || typeof a.equals === 'string' || Number.isFinite(a.equals)));
+      : scalar(a.equals)));
 }
 
 /** Derive and run current-pack cases. No test sources or inventory files are written. */
@@ -258,23 +265,18 @@ export function runCardSuite<C extends RuntimeClause, R, L, G extends GameTypes>
       const expectations = { kind, expect };
       try {
         const observed = game.play(structuredClone(layout), structuredClone(act), structuredClone(input.records), false);
-        if (kind === 'resolve' && observed.scope === undefined) {
-          add(name, 'missing-evidence', 'need one clause begin/dispatch/end sequence with observations');
-        } else {
-          const problem = game.check(observed, expectations);
-          const scope = observed.scope;
-          const assertedChange = scope !== undefined && expect.some(e => !isDeepStrictEqual(scope.before[e.key], scope.after[e.key]));
-          if (problem !== undefined) add(name, 'assertion-failed', problem);
-          else if (kind === 'resolve' ? !assertedChange : !observed.attempted)
-            add(name, 'missing-evidence', kind === 'resolve' ? 'need an asserted change inside the clause' : 'need an observed attempt at this clause');
-          else {
-            if (kind === 'resolve' && observed.pickedOption && optionId !== undefined) taken.add(optionId);
-            if (kind === 'not-offered' && optionId !== undefined) poorOptions.push({ index: cases.length, id: optionId });
-            add(name, 'passed');
-          }
+        const problem = game.check(observed, expectations);
+        const scope = observed.scope;
+        const assertedChange = scope !== undefined && expect.some(e => !isDeepStrictEqual(scope.before[e.key], scope.after[e.key]));
+        if (problem !== undefined) add(name, 'assertion-failed', problem);
+        else if (kind === 'resolve' && !assertedChange) add(name, 'missing-evidence', 'need an asserted change inside the clause');
+        else {
+          if (kind === 'resolve' && observed.pickedOption && optionId !== undefined) taken.add(optionId);
+          if (kind === 'not-offered' && optionId !== undefined) poorOptions.push({ index: cases.length, id: optionId });
+          add(name, 'passed');
         }
       } catch (error) {
-        add(name, 'engine-error', message(error));
+        add(name, error instanceof RuntimeEvidenceError ? 'missing-evidence' : 'engine-error', message(error));
       }
       rows.push({ line, name, layout, act, expect: expectations });
     }
