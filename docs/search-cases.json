@@ -593,5 +593,11 @@
   { "q": "empty working game repo", "first": "scaffold" },
   { "q": "start new game project", "first": "scaffold" },
   { "q": "game kit starter repo", "first": "scaffold" },
-  { "q": "dependency symlink", "first": "repo-gate" }
+  { "q": "dependency symlink", "first": "repo-gate" },
+  { "q": "visual replay player", "first": "visual-replay" },
+  { "q": "watch recorded game", "first": "visual-replay" },
+  { "q": "replay table navigation", "first": "visual-replay" },
+  { "q": "migrateSave", "first": "engine-core" },
+  { "q": "RestoreResult", "first": "engine-core" },
+  { "q": "ReplayResult", "first": "engine-core" }
 ]

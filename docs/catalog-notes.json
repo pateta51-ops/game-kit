@@ -2822,5 +2822,22 @@
       "cheatFields + cheatsFrom: the set-up form fields",
       "cheatedOf + cheatProblem: the cheated mark and the set-up check"
     ]
+  },
+  "visual-replay": {
+    "mechanics": "none: playback presentation over recorded engine actions",
+    "use": "Watch a recorded game on its own table with action and turn navigation.",
+    "not": "Headless determinism checks (replay-cli) or saving games (saves).",
+    "title": "Watch a recorded game",
+    "tags": [
+      "visual replay player",
+      "watch recorded game",
+      "playback controls",
+      "replay table",
+      "turn navigation"
+    ],
+    "visible": true,
+    "release": 1,
+    "gameSupplies": "The recording adapter, engine, player view, boundaries and table.",
+    "looks": "The game table shows recorded actions with playback controls."
   }
 }
