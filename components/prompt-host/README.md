@@ -9,7 +9,7 @@ Shows the engine's open question (an engine-core prompt) through a typed widget 
 
 **You must:**
 1. Give `Widgets` one component for every prompt `kind`; a missing kind fails to compile.
-2. Pass `prompt` and `view` from the player's own view, `answer(picks, promptId)` to the store, and `seat` (this screen's seat) so another seat's prompt shows `waiting`.
+2. Pass `prompt` and `view` from the player's own view, and `seat` (this screen's seat) so another seat's prompt shows `waiting`. With `game-store`, forward only answers that carry a prompt ID. Pass that same ID to `store.answer(picks, id)` so the store can reject a stale click. See [Use it in 10 lines](#use-it-in-10-lines).
 3. Supply `look` with `cls`, `label`, the game's words (`done`, `count`, `confirm`, `cancel`, ...) and `text: ids.strip`; keep a game test `checkLook(look)` equal to `[]` (placeholders warn in dev).
 4. For forced answers use the store helper `answerWithForced(game, history, action, content, forced, { seat })` (`seat` required; `'all'` for hot seat), then feed its `events` to paced-view `pushSteps` once. `auto` is only for a game without undo.
 5. Board taps: `useBoardPick` and `<BoardBar>`; map `marks` onto the board elements and call `tap(id)`.
@@ -25,11 +25,6 @@ Shows the engine's open question (an engine-core prompt) through a typed widget 
 ## The game passes
 - K289, `alone` options (engine-core K287): in `PickOptions` and `Order` an enabled alone option (Back, Pass) answers `[id]` on its click and never joins the selection or the order; prompts without `alone` are unchanged.
 
-```tsx
-const WIDGETS: Widgets<Prompt, PlayerView> = { pick: PickOptions, amount: (p) => <PickAmount {...p} start="last" />, order: Order, may: May, pay: PayCost, market: MarketPick };
-<PromptHost widgets={WIDGETS} prompt={view.prompt} view={view} answer={(picks, id) => store.answer(picks, id)} seat={me}
-  waiting={<p>…</p>} look={{ cls, label, text: ids.strip }} />
-```
 - `Widgets<P, V>`: one component per `P['kind']`; a missing kind (or an unknown one in a literal) fails to compile. Each gets `WidgetProps<PromptOf<P, K>, V>`: its own kind's prompt, the view, `answer(picks)` and `look`.
 - `answer(picks, promptId)`: the host always sends the open prompt's id and drops a late answer from an older prompt; the store drops a stale id. `prompt` and `view` come from the player's own view, never the full state. `mine={false}`: the prompt is another seat's; `waiting` shows and no option does. K222: pass `seat` (this screen's seat) instead and the host compares it with `prompt.seat` (a prompt with no seat is everyone's); `mine` (a boolean) still wins when given, but is deprecated.
 - Heading: `title(p)`, else the printed clause of `p.source` when a card asks (prompt-source); a rule's own source shows nothing. Words are the printed words; pass plain-text's `ids.strip` as `look.text` so rule ids in `why` and `idle` never show.
@@ -83,11 +78,15 @@ console.log(autoAnswer(p, true, ['pay'])) // null: the game always asks this kin
 ```
 
 ```tsx
-import { PickOptions, PromptHost, type Widgets } from '../kit/prompt-host/ui'
+import type { GameTypes, KernelPrompt } from '../kit/engine-core/index'
+import type { GameStore } from '../kit/game-store/index'
+import { PickOptions, PromptHost } from '../kit/prompt-host/ui'
 
-type P = { id: number; kind: 'pick'; min: number; max: number; options: { id: string; enabled: boolean }[] }
-const W: Widgets<P, null> = { pick: PickOptions }
-export const Ask = ({ prompt, send }: { prompt: P | null; send: (picks: readonly string[], id?: number) => void }) => <PromptHost widgets={W} prompt={prompt} view={null} answer={send} look={{ label: (o) => o.id.toUpperCase(), done: 'Fertig' }} />
+type P = KernelPrompt & { kind: 'pick' }
+export const Ask = ({ view, seat, store }: { view: { prompt: P | null }; seat: NonNullable<P['seat']>; store: Pick<GameStore<GameTypes, unknown>, 'answer'> }) =>
+  <PromptHost widgets={{ pick: PickOptions }} prompt={view.prompt} view={view} seat={seat}
+    answer={(picks, id) => { if (id !== undefined) store.answer(picks, id) }}
+    look={{ label: (o) => o.id.toUpperCase(), done: 'Fertig' }} />
 ```
 
 Look file (opt-in): `looks/legal-glow.css`, a box-shadow glow on `[data-mark="legal"]` (touch included, no filter); variables `--focus`, `--glow`. Or `looks/imperium-legal.css` (K309): Imperium's three-layer gold bloom on the same marks, sized by `--pick-edge-size`; variables `--pick-glow-core`, `--pick-glow`, `--pick-glow-far`; pair it with picked-state `looks/imperium.css` for the chosen card.

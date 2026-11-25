@@ -431,6 +431,7 @@ The blind matching test's result was not recorded: the PR, its comments and docs
 | K752 | reuse-metrics classifies game sources by test directories and filenames relative to the game, so moving the checkout preserves its report. | S | owner | done |
 | K753 | Preserve visible Rules for agents text after a leading HTML comment in kit-context, including after multiline comments. Keep source line references, follow the visible rule's linked guides, and report the required continuation when the rule or guide exceeds the packet budget. | S | owner | done |
 | K754 | breaking: full finish selects the browser command for scaffold UI changes and declared additional roots. New scaffolds ship a Chromium smoke for menu, setup, step, and undo. Existing games with matching UI paths need a runnable browser suite. | S | owner | done |
+| K756 | Compile the prompt-host example against the game-store answer contract. Forward the supplied prompt ID only when present so the store can reject stale answers. | S |  | done |
 
 ## Candidates
 

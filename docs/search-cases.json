@@ -1,4 +1,7 @@
 [
+  { "q": "prompt widget registry", "first": "prompt-host" },
+  { "q": "one widget per prompt kind", "first": "prompt-host" },
+  { "q": "prompt registry", "first": "prompt-host" },
   { "q": "record pieces a card test ran", "first": "card-harness" },
   { "q": "piece counted only when a test ran it", "first": "card-harness" },
   { "q": "forced effect did not fire routine prompt", "first": "card-harness" },
