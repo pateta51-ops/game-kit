@@ -2023,7 +2023,8 @@
       "bounded public greedy",
       "public nested preview",
       "test pilot bot random greedy",
-      "consumed policy view checks"
+      "consumed policy view checks",
+      "simulation completion"
     ],
     "visible": false,
     "release": 1,
