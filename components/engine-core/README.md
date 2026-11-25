@@ -11,7 +11,7 @@ The kernel of a game engine: seeded random numbers, canonical JSON and hashes, t
 2. Use `ctx.rng` for all randomness; never `Math.random` or the clock (a game's lint preset fails it).
 3. Open a prompt with `ctx.ask(prompt, resume)`: one prompt at a time, passing the `resume` task (or, with no `resume`, only after the handler pushed one itself), and with at least `min` enabled options. Violations throw `EngineBugError` naming the prompt.
 4. Keep state plain data with finite numbers (`canonicalJson` throws otherwise) and change it only through copy on write (`own`).
-5. Supply `contentHash`, `blank` and `setup`; a save whose content hash differs is refused on load.
+5. Supply `contentHash`, `blank` and `setup`; a save whose content hash differs is refused on load. Replay tools that need a failed action index opt in to the restore diagnostics (see Saves below).
 6. Opt in to timing, debug, legal and queries by using their parts; add `GameRules.debug` for the debug console.
 7. Keep `ordered` prompts small: test helpers enumerate every order (about 110k answers for 8 options).
 8. A game with its own engine passes an `EnginePort` (`kernelPort` wraps this kernel) to card-harness and tutorial.

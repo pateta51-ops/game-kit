@@ -1941,7 +1941,7 @@ Replay recorded actions on a game's own table using its engine and view.
 - **The game supplies:** The recording adapter, engine, player view, boundaries and table.
 - **Use it when:** Watch a recorded game on its own table with action and turn navigation.
 - **Not for:** Headless determinism checks (replay-cli) or saving games (saves).
-- **Key exports:** `ReplayError`, `createReplay`, `Recording`, `ReplayAdapter`
+- **Key exports:** `ReplayError`, `createReplay`, `Recording`, `ReplayAdapter`, `ReplayEvent`
 - **Needs:** [`engine-core`](#engine-core), [`paced-view`](#paced-view)
 - **Came from:** new
 - **Docs:** [README](../components/visual-replay/README.md) ([rules for agents](../components/visual-replay/README.md#rules-for-agents))
