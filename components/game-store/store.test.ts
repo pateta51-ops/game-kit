@@ -124,6 +124,45 @@ describe('game-store (K234)', () => {
     expect(rec.result).toEqual({ winner: 'a' });
   });
 
+  it('validates every configured public view and the secrets for that same seat', () => {
+    const seen: Array<{ seat: Seat; undoUsed: boolean | undefined }> = [];
+    const observed = { ...def, view: (state: S, seat: Seat, ctx?: { undoUsed: boolean }) => {
+      seen.push({ seat, undoUsed: ctx?.undoUsed });
+      return def.view(state, seat);
+    } };
+    const spec = { index: 0, seed: 'observe', driver: 'random' };
+    const secrets = (state: S, seat: Seat) => [state.secret[seat === 'a' ? 'b' : 'a']];
+    const game = simGameOf(observed, { viewValidation: { secrets } });
+    const record = playOne(game, {}, spec, undefined, { view: true });
+    expect(record.error).toBeUndefined();
+    expect(record.viewValidation).toEqual({ status: 'executed', checked: 2 * (record.actions + 1) });
+    expect(seen).toEqual(Array.from({ length: record.actions + 1 }, () => [
+      { seat: 'a', undoUsed: false }, { seat: 'b', undoUsed: false },
+    ]).flat());
+    seen.length = 0;
+    const disabled = playOne(game, {}, spec);
+    expect(disabled.hash).toBe(record.hash);
+    expect(disabled.viewValidation).toEqual({ status: 'skipped', checked: 0 });
+    expect(seen).toEqual([]);
+
+    const leaking = simGameOf({ ...def, view: (state: S, seat: Seat) => ({
+      ...def.view(state, seat), leak: seat === 'b' ? state.secret.a : null,
+    }) }, { viewValidation: { secrets } });
+    const leaked = playOne(leaking, {}, spec, undefined, { view: true });
+    expect(leaked.error).toMatch(/seat b.*view leak: sa/);
+    expect(leaked).toMatchObject({ actions: 0, result: null, viewValidation: { status: 'failed', checked: 1 } });
+    const onlyB = playOne(simGameOf(observed, { viewValidation: { seats: ['b'], secrets } }), {}, spec, 0, { view: true });
+    expect(onlyB.viewValidation).toEqual({ status: 'executed', checked: 1 });
+    expect(seen.splice(0)).toEqual([{ seat: 'b', undoUsed: false }]);
+    const noSeats = simGameOf(observed, { viewValidation: { seats: [] } });
+    expect(playOne(noSeats, {}, spec, undefined, { view: true }).viewValidation).toEqual({ status: 'unavailable', checked: 0 });
+
+    const throwing = simGameOf({ ...def, view: () => { throw new Error('planted failure'); } });
+    const threw = playOne(throwing, {}, spec, undefined, { view: true });
+    expect(threw.error).toMatch(/seat a.*planted failure/);
+    expect(threw).toMatchObject({ actions: 0, result: null });
+  });
+
   it('K356: simGameOf starts from the whole spec when the game passes start (settings reach the game)', () => {
     const seen: unknown[] = [];
     const sim = simGameOf(def, { start: (spec) => { seen.push(spec.settings); return def.start(spec.seed); } });

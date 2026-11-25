@@ -14,7 +14,9 @@ One game store and one game object (K234): `defineGame` is what the game writes 
 5. Mount debug edits with `store.debug`, load with `store.load(save)`, undo with `undo()` / `redo()` (mode `safe` unless `undo` says otherwise).
 6. Set `openingSteps: true` to pace the setup events as steps; the default is off.
 7. Use `sim.ts` (`simGameOf`, `botDriverOf`) in node only.
-8. K738: declare dev cheats with `defineGame({ cheats: { defs, choice?, round? } })` (cheat-options); the store plays them as debug edits; never apply a cheat in the game's own code. Read the mark from `get().cheated`.
+8. With `simGameOf`, pass `view: true` to the simulation to validate every declared seat after setup and each action. Supply `viewValidation.secrets(state, seat)` and `leakKeys(state, seat)` for game-owned secrecy assertions. A view must satisfy sim-pool's JSON data contract.
+9. Use `random`, the provided `opponent`, a key in `drivers`, or an explicit `aliases` entry. K750 (breaking): change unintended driver names to `random` or register the intended policy. A misspelling or unavailable opponent is a preflight error.
+10. K738: declare dev cheats with `defineGame({ cheats: { defs, choice?, round? } })` (cheat-options); the store plays them as debug edits; never apply a cheat in the game's own code. Read the mark from `get().cheated`.
 
 **Common mistakes:**
 - Reading `get().state` in the opponent or the screen: only the view is allowed.
@@ -29,8 +31,12 @@ One game store and one game object (K234): `defineGame` is what the game writes 
 - K302 `debug(action)`: an engine-core `DebugAction` (the game sets `GameRules.debug`) as its own undo step, recorded and saved like an answer (a loaded save starts a step at each one), then settled, paced (`pushSteps`) and autosaved; returns the refusal words or undefined, so debug-console mounts with `send={store.debug}`.
 - `undo()`, `redo()`, `canUndo()` (engine-core `undoStep`, mode `safe` by default), `advance()`, `skip()` (paced-view), `fresh(seed)`.
 - `load(save)`: `restoreSave`, then the undo steps rebuilt (`replaySteps`: an answer of the store's seat that `forced` would not give starts a step); `saved()` is the engine-core `History` for saves (`saveNamed`, `SavesScreen`).
-- `sim.ts` (node only): `simGameOf(def, { drivers?, summary?, maxActions?, start? })` is sim-pool's game module (`start(spec)`: a game with settings starts from the spec's `settings` too, K356) (drivers `opponent` and `random`), `opponentDriverOf(def)`, `botDriverOf(def, bot)`, `replayEngineOf(def, describe?)`.
+- `sim.ts` (node only): `simGameOf(def, { drivers?, aliases?, viewValidation?, summary?, maxActions?, start? })` is sim-pool's game module (`start(spec)`: a game with settings starts from the spec's `settings` too, K356) (`random` and `opponent` when defined), `opponentDriverOf(def)`, `botDriverOf(def, bot)`, `replayEngineOf(def, describe?)`.
 - Proof: `store.test.ts`; the reference game plays a whole game, undo, save mid-effect and a view-leak check through it.
+
+K750: `aliases` maps a distinct requested name directly to a registered name. The sim record keeps the requested name in `driver` and the policy's `Driver.name` in `resolvedDriver`. Seeded decisions still use the requested name, including for an alias. Existing custom overrides of `opponent` and `random` are supported. Keep historical records as written and start a new checkpoint for runs whose driver configuration changed.
+
+View validation calls `def.view(state, seat, { undoUsed: false, cheated })` and tests the secrecy assertions for that same seat. It defaults to `def.seats` in declaration order. Set `viewValidation.seats` for an explicit subset. A request with zero configured seats fails. The simulation's debug actions set `cheated`; simulations do not perform undo.
 
 ## Use it in 10 lines
 

@@ -4,7 +4,7 @@
 // takes the next games. A worker loads the game's module (`simGame` export).
 import { Worker } from 'node:worker_threads';
 import { isChecking, isFreezing, setInvariantChecking, setStateFreezing, type GameTypes } from '../engine-core/index.ts';
-import { CRASH_HASH, crashRecord, playOne, type GameSpec, type SimGame, type SimRecord } from './play.ts';
+import { CRASH_HASH, crashRecord, DriverRegistrationError, playOne, type GameSpec, type SimGame, type SimRecord } from './play.ts';
 
 export interface RunRequest {
   /** The URL of the module that exports `simGame`. */
@@ -31,6 +31,7 @@ export interface RunRequest {
 
 export interface WorkerInput {
   readonly module: string;
+  readonly driverNames?: readonly string[];
   readonly invariants: boolean;
   readonly until?: number | undefined;
   readonly view?: boolean | undefined;
@@ -39,7 +40,7 @@ export interface WorkerInput {
   readonly hidden?: boolean | number | undefined;
 }
 export type WorkerCommand = { type: 'play'; spec: GameSpec } | { type: 'stop' };
-export type WorkerMessage = { type: 'record'; record: SimRecord } | { type: 'ready' };
+export type WorkerMessage = { type: 'record'; record: SimRecord } | { type: 'ready' } | { type: 'invalid-driver'; message: string };
 
 const load = async (module: string): Promise<SimGame<GameTypes>> =>
   ((await import(module)) as { simGame: SimGame<GameTypes> }).simGame;
@@ -47,6 +48,7 @@ const load = async (module: string): Promise<SimGame<GameTypes>> =>
 /** Play every game in this thread. */
 export async function runInThread(request: RunRequest, onRecord?: (r: SimRecord) => void): Promise<SimRecord[]> {
   const game = await load(request.module);
+  for (const name of driverNames(request)) game.validateDriver?.(name);
   const content = await game.content();
   const was = isChecking();
   const froze = isFreezing();
@@ -79,8 +81,10 @@ export const timeoutRecord = (spec: GameSpec, ms: number): SimRecord<never> => (
   error: `timeout in game ${String(spec.index)} (seed ${spec.seed}): over ${String(ms)} ms`,
 });
 
-async function lane(request: RunRequest, next: () => GameSpec | undefined, collect: (r: SimRecord) => void): Promise<void> {
-  const input: WorkerInput = { module: request.module, invariants: request.invariants ?? true, until: request.until, view: request.view, hasten: request.hasten, debug: request.debug, hidden: request.hidden };
+const driverNames = (request: RunRequest): string[] => [...new Set(request.specs.map((spec) => spec.driver))];
+
+async function lane(request: RunRequest, names: readonly string[], next: () => GameSpec | undefined, collect: (r: SimRecord) => void): Promise<void> {
+  const input: WorkerInput = { module: request.module, driverNames: names, invariants: request.invariants ?? true, until: request.until, view: request.view, hasten: request.hasten, debug: request.debug, hidden: request.hidden };
   for (;;) {
     let held: GameSpec | undefined;
     let stopped = false;
@@ -93,6 +97,10 @@ async function lane(request: RunRequest, next: () => GameSpec | undefined, colle
         w.on('message', (m: WorkerMessage) => {
           if (timedOut) return;
           clearTimeout(timer);
+          if (m.type === 'invalid-driver') {
+            reject(new DriverRegistrationError(m.message));
+            return;
+          }
           if (m.type === 'record') collect(m.record);
           if (m.type === 'record' && request.fresh === true) {
             held = undefined;
@@ -129,6 +137,7 @@ async function lane(request: RunRequest, next: () => GameSpec | undefined, colle
       });
       if (!again) return;
     } catch (e) {
+      if (e instanceof DriverRegistrationError) throw e;
       if (again) continue;
       if (stopped) return; // died after its last game: nothing lost
       held ??= next(); // died before its first game (the module failed to load): the next game takes the crash
@@ -150,7 +159,8 @@ export async function runGames(request: RunRequest, workers: number, onRecord?: 
   else {
     let at = 0;
     const next = (): GameSpec | undefined => request.specs[at++];
-    await Promise.all(Array.from({ length: count }, () => lane(request, next, collect)));
+    const names = driverNames(request);
+    await Promise.all(Array.from({ length: count }, () => lane(request, names, next, collect)));
   }
   return records.sort((a, b) => a.index - b.index);
 }

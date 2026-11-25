@@ -1133,7 +1133,7 @@
     "gameSupplies": "The table of event types and their words."
   },
   "game-store": {
-    "use": "Every game with a screen: one store over the game's one `defineGame` object (rules, content, seats, start, view, forced, opponent, words): an answer, the forced answers and the opponent's turn after it are one undo step and one paced step; step undo and redo, autosave, load with the undo steps rebuilt; `sim.ts` makes the same object sim-pool's game module, the opponent driver and replay-cli's engine. Recipe: docs/recipes/game-store.md.",
+    "use": "Every game with a screen: one store over the game's one `defineGame` object (rules, content, seats, start, view, forced, opponent, words): an answer, the forced answers and the opponent's turn after it are one undo step and one paced step; step undo and redo, autosave, load with the undo steps rebuilt; `sim.ts` makes the same object sim-pool's game module, the opponent driver and replay-cli's engine. It validates the spec's named registrations and adapts GameDef into per-seat observations with game-owned secrecy assertions. Recipe: docs/recipes/game-store.md.",
     "not": "A per-action undo (engine-core undo.ts); hot-seat play with no opponent (prompt-host answerWithForced with seat 'all' in the game's own store).",
     "title": "One store tying the game together",
     "tags": [
@@ -1985,7 +1985,7 @@
     "gameSupplies": "The game store and a bot."
   },
   "sim-pool": {
-    "use": "Playing many whole games with drivers on worker threads, fuzzing, sanity bands, sweeps, the K200 weight tuner and paired validation; the whole-game check of unreached clauses (proof from counted full-resolve tests, with a trace input built from the game's own log so a static clause applied with an effect counts as proven), coverage rounds and a findings file to replay a failing seed; K737 random debug edits (randomDebug hook, debug N) applied every N actions in a fuzz run, and a driver or hasten returning a debug action.",
+    "use": "Playing many whole games with drivers on worker threads, fuzzing, sanity bands, sweeps, the K200 weight tuner and paired validation; the whole-game check of unreached clauses (proof from counted full-resolve tests, with a trace input built from the game's own log so a static clause applied with an effect counts as proven), coverage rounds and a findings file to replay a failing seed; K737 random debug edits (randomDebug hook, debug N) applied every N actions in a fuzz run, and a driver or hasten returning a debug action. Validate public seat views as JSON, detect hidden information leaks, and check registered driver names before a batch runs.",
     "not": "Strategy beyond one nested public choice (the game or opponent supplies it).",
     "title": "Bulk game simulator",
     "tags": [

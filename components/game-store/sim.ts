@@ -1,6 +1,6 @@
 // K234: the one game object as sim-pool's game module, its driver and replay-cli's engine (node only: sim-pool loads node modules).
 import type { GameTypes } from '../engine-core/index.ts';
-import { botDriver, bySeat, randomDriver, type Bot, type Driver, type GameSpec, type SimGame } from '../sim-pool/index.ts';
+import { botDriver, DriverRegistrationError, randomDriver, type Bot, type Driver, type GameSpec, type SimGame } from '../sim-pool/index.ts';
 import type { ReplayEngine } from '../replay-cli/replay.ts';
 import { answerOf, type GameDef, type SeatId } from './index.ts';
 
@@ -21,16 +21,56 @@ export function opponentDriverOf<G extends GameTypes, V, S extends SeatId>(def: 
 /** K271: a `Bot` as a sim-pool driver over the game's `view`; with driver name `opponent` it answers as `botOpponent` in the store. */
 export const botDriverOf = <G extends GameTypes, V, S extends SeatId>(def: GameDef<G, V, S>, bot: Bot<V, G['action']>): Driver<G> => botDriver<G, V>(bot, def.view);
 
-/** sim-pool's game module: drivers `opponent` (every seat) and `random`, plus the game's own. `start` (K356): a game with settings (mode, difficulty) starts from the whole spec; default `def.start(spec.seed)`. */
+/** sim-pool's game module with registered drivers and public observations for the declared seats. */
 export function simGameOf<G extends GameTypes, V, S extends SeatId, Sum = unknown>(
   def: GameDef<G, V, S>,
-  o: { drivers?: Readonly<Record<string, Driver<G>>>; summary?: (state: G['state']) => Sum; maxActions?: number; start?: (spec: GameSpec) => ReturnType<GameDef<G, V, S>['start']> } = {},
+  o: {
+    drivers?: Readonly<Record<string, Driver<G>>>;
+    aliases?: Readonly<Record<string, string>>;
+    viewValidation?: {
+      seats?: readonly S[];
+      secrets?: (state: G['state'], seat: S) => readonly string[];
+      leakKeys?: (state: G['state'], seat: S) => readonly string[];
+    };
+    summary?: (state: G['state']) => Sum;
+    maxActions?: number;
+    start?: (spec: GameSpec) => ReturnType<GameDef<G, V, S>['start']>;
+  } = {},
 ): SimGame<G, Sum> {
+  const drivers = new Map<string, () => Driver<G>>(
+    Object.entries(o.drivers ?? {}).map(([name, driver]) => [name, () => driver]),
+  );
+  if (!drivers.has('random')) drivers.set('random', () => randomDriver<G>());
+  if (!drivers.has('opponent') && def.opponent !== undefined) drivers.set('opponent', () => opponentDriverOf(def));
+  const aliases = new Map(Object.entries(o.aliases ?? {}));
+  for (const [alias, target] of aliases) {
+    if (!alias || drivers.has(alias) || !drivers.has(target)) {
+      throw new DriverRegistrationError(`invalid driver alias ${JSON.stringify(alias)} for ${JSON.stringify(target)}`);
+    }
+  }
+  const available = [...drivers.keys(), ...aliases.keys()].filter(Boolean).sort().join(', ');
+  const resolve = (name: string): (() => Driver<G>) => {
+    const make = drivers.get(aliases.get(name) ?? name);
+    if (!name || !make) throw new DriverRegistrationError(`unknown driver ${JSON.stringify(name)}; available drivers: ${available}`);
+    return make;
+  };
+  const seats = [...new Set(o.viewValidation?.seats ?? def.seats)];
   return {
     rules: def.rules,
     content: () => def.content,
     start: (spec) => (o.start ? o.start(spec) : def.start(spec.seed)),
-    driver: (name) => o.drivers?.[name] ?? (name === 'opponent' ? bySeat<G>({}, opponentDriverOf(def)) : randomDriver<G>()),
+    validateDriver: (name) => { resolve(name); },
+    driver: (name) => resolve(name)(),
+    ...(seats.length === 0 ? {} : {
+      observeViews: (state, _content, { cheated }) => seats.map((seat) => ({
+        seat,
+        read: () => ({
+          view: def.view(state, seat, { undoUsed: false, cheated }),
+          secrets: o.viewValidation?.secrets?.(state, seat) ?? [],
+          leakKeys: o.viewValidation?.leakKeys?.(state, seat) ?? [],
+        }),
+      })),
+    }),
     ...(o.summary === undefined ? {} : { summary: o.summary }),
     ...(o.maxActions === undefined ? {} : { maxActions: o.maxActions }),
   };
