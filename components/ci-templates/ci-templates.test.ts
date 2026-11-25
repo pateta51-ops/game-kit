@@ -2,7 +2,7 @@
 import { spawn, spawnSync } from 'node:child_process';
 import { chmodSync, cpSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { delimiter, join } from 'node:path';
 import { afterAll, describe, expect, it, vi } from 'vitest';
 import YAML from 'yaml';
 
@@ -56,6 +56,24 @@ describe('rendered files', () => {
     expect(e2e.status).toBe(1);
     expect(e2e.stderr).toContain('e2e: e2e:a exit 0, e2e:b exit 3');
     expect(go('e2e', { E2E_SCRIPTS: 'e2e:c' }).status).toBe(0);
+  });
+
+  it.skipIf(process.platform === 'win32')('the full gate uses the installed Chromium CLI from the package the game depends on', () => {
+    const root = join(dir, 'browser-install');
+    const bin = join(root, 'bin');
+    mkdirSync(bin, { recursive: true });
+    writeFileSync(join(bin, 'npx'), '#!/usr/bin/env node\nprocess.stdout.write(process.argv.slice(2).join(" "));\n', { mode: 0o755 });
+    const install = () => spawnSync(process.execPath, [join(here, 'full-gate.mjs'), 'browsers'], {
+      cwd: root, encoding: 'utf8', env: { ...process.env, PATH: bin + delimiter + process.env['PATH'] },
+    });
+    for (const cli of ['playwright-core', 'playwright']) {
+      const folder = join(root, 'node_modules', cli);
+      mkdirSync(folder, { recursive: true });
+      writeFileSync(join(folder, 'cli.js'), '');
+      const result = install();
+      expect(result.status, result.stderr).toBe(0);
+      expect(result.stdout).toMatch(new RegExp('^' + cli + ' install (?:--with-deps )?chromium webkit$'));
+    }
   });
 
   it('render.mjs writes the workflows from ci.config.json, pointing at the pulled scripts, and --check finds a hand edit', () => {

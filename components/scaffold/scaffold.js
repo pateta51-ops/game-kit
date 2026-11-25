@@ -31,7 +31,7 @@ export function scaffold(o) {
   if (!g.serve?.local) throw new Error(`ports.json entry "${o.id}" has no serve.local (phone slot): run \`node tools/game-server/server.mjs add ${o.id} "${o.name}" <repo path>\` in game-kit`)
   if (!o.existing && fs.existsSync(o.dir) && fs.readdirSync(o.dir).length) throw new Error(`${o.dir} is not empty`)
   const ref = o.ref ?? x('git', ['-C', kit, 'describe', '--tags', '--abbrev=0'], { encoding: 'utf8' }).trim()
-  const vars = { id: o.id, name: o.name, dev: g.block, preview: g.block + 1, phone: g.serve.local, repo: o.repo ?? `OWNER/${o.id}`, runner: o.runner ?? o.id }
+  const vars = { id: o.id, name: o.name, dev: g.block, preview: g.block + 1, e2e: g.block + 2, phone: g.serve.local, repo: o.repo ?? `OWNER/${o.id}`, runner: o.runner ?? o.id }
   if (o.existing) existingCheck(o)
   fs.mkdirSync(o.dir, { recursive: true })
   for (const t of [TEMPLATE, ...(o.overlay ?? [])])

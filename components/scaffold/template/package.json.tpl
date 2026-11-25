@@ -12,6 +12,8 @@
     "lint": "eslint .",
     "typecheck": "tsc -b --noEmit",
     "test": "vitest run --passWithNoTests",
+    "test:e2e": "node tests/scaffold.e2e.mjs",
+    "browser:install": "playwright-core install chromium",
     "kit:check": "node kit/kit.mjs check",
     "ci:check": "node kit/ci-templates/render.mjs --check",
     "repo-gate": "node kit/repo-gate/repo-gate.ts",
@@ -19,6 +21,7 @@
     "check:chain": "npm run test && npm run lint && npm run typecheck && npm run kit:check && npm run ci:check && npm run repo-gate && npm run build && npm run size",
     "check": "node kit/check-runner/check-runner.ts --config scripts/check-runner.config.json"
   },
+  "kit": { "e2eRoots": ["src/ui"] },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
     "@types/node": "^22.20.5",
@@ -31,6 +34,7 @@
     "fake-indexeddb": "^6.2.8",
     "globals": "^17.13.0",
     "jsdom": "^29.1.1",
+    "playwright-core": "1.65.1",
     "typescript": "~6.0.3",
     "typescript-eslint": "^8.71.1",
     "vite": "^8.3.3",
