@@ -36,10 +36,16 @@ function exportsOf(file, seen = new Set()) {
   return out
 }
 
-const purpose = (readme) => {
+const purpose = (file, readme) => {
   const lines = readme.split(/\r?\n/)
   const i = lines.findIndex((l) => l.trim() && !l.startsWith('#'))
-  return i < 0 ? '' : lines[i].trim()
+  if (i < 0) return ''
+  const posix = path.posix
+  return lines[i].trim().replace(/\]\((<?)(\.\.?\/[^?#<>\s)]+)/g, (_match, open, href) => {
+    const target = posix.join(posix.dirname(file), href)
+    const relative = posix.relative('docs', target) || '.'
+    return '](' + open + relative + (href.endsWith('/') ? '/' : '')
+  })
 }
 const one = (s) => s.replace(/\s+/g, ' ').trim()
 
@@ -60,7 +66,7 @@ for (const n of names) {
   if (note.title.trim().split(/\s+/).length > 8) { bad.push(`${n}: title is over 8 words`); continue }
   if (typeof note.visible !== 'boolean' || ![1, 1.1, 1.2, 1.3].includes(note.release)) { bad.push(`${n}: add visible (true or false) and release (1.0, 1.1, 1.2 or 1.3) to docs/catalog-notes.json`); continue }
   const readme = fs.existsSync(path.join(dir, 'README.md')) ? 'components/' + n + '/README.md' : null
-  const text = readme ? purpose(rd(J(readme))) : (note.what ?? '')
+  const text = readme ? purpose(readme, rd(J(readme))) : (note.what ?? '')
   const hooks = note.hooks ?? []
   if (!Array.isArray(hooks) || hooks.some((h) => typeof h !== 'string' || !/^[^:]+: \S/.test(h))) { bad.push(`${n}: hooks must be lines 'name + name: what it does'`); continue }
   const old = readme ? rd(J(readme)) : '', eol = old.includes('\r\n') ? '\r\n' : '\n'

@@ -94,6 +94,11 @@ describe('K238 packages (GAPS-3 tooling A10)', () => {
 });
 
 describe('catalog.mjs --check', () => {
+  it('keeps copied purpose links relative to the generated catalog', () => {
+    const catalog = path.resolve(import.meta.dirname, '..', 'docs', 'CATALOG.md');
+    expect(fs.readFileSync(catalog, 'utf8')).toContain('Recipe: [game-store](recipes/game-store.md).');
+  });
+
   it('passes on the repository', () => {
     expect(spawnSync('node', [path.resolve(import.meta.dirname, '..', 'scripts', 'catalog.mjs'), '--check'], { encoding: 'utf8' }).status).toBe(0);
   });
