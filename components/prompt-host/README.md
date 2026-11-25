@@ -9,7 +9,7 @@ Shows the engine's open question (an engine-core prompt) through a typed widget 
 
 **You must:**
 1. Give `Widgets` one component for every prompt `kind`; a missing kind fails to compile.
-2. Pass `prompt` and `view` from the player's own view, and `seat` (this screen's seat) so another seat's prompt shows `waiting`. With `game-store`, forward only answers that carry a prompt ID. Pass that same ID to `store.answer(picks, id)` so the store can reject a stale click. See [Use it in 10 lines](#use-it-in-10-lines).
+2. Pass `prompt` and `view` from the player's own view, and `seat` (this screen's seat) so another seat's prompt shows `waiting`. With `game-store`, forward only answers that carry a prompt ID. Pass that same ID to `store.answer(picks, id)` so the store can reject a stale click. See the [checked game-store example](../game-store/README.md#use-it-in-10-lines) when your game also installs game-store.
 3. Supply `look` with `cls`, `label`, the game's words (`done`, `count`, `confirm`, `cancel`, ...) and `text: ids.strip`; keep a game test `checkLook(look)` equal to `[]` (placeholders warn in dev).
 4. For forced answers use the store helper `answerWithForced(game, history, action, content, forced, { seat })` (`seat` required; `'all'` for hot seat), then feed its `events` to paced-view `pushSteps` once. `auto` is only for a game without undo.
 5. Board taps: `useBoardPick` and `<BoardBar>`; map `marks` onto the board elements and call `tap(id)`.
@@ -78,15 +78,11 @@ console.log(autoAnswer(p, true, ['pay'])) // null: the game always asks this kin
 ```
 
 ```tsx
-import type { GameTypes, KernelPrompt } from '../kit/engine-core/index'
-import type { GameStore } from '../kit/game-store/index'
-import { PickOptions, PromptHost } from '../kit/prompt-host/ui'
+import { PickOptions, PromptHost, type Widgets } from '../kit/prompt-host/ui'
 
-type P = KernelPrompt & { kind: 'pick' }
-export const Ask = ({ view, seat, store }: { view: { prompt: P | null }; seat: NonNullable<P['seat']>; store: Pick<GameStore<GameTypes, unknown>, 'answer'> }) =>
-  <PromptHost widgets={{ pick: PickOptions }} prompt={view.prompt} view={view} seat={seat}
-    answer={(picks, id) => { if (id !== undefined) store.answer(picks, id) }}
-    look={{ label: (o) => o.id.toUpperCase(), done: 'Fertig' }} />
+type P = { id: number; kind: 'pick'; min: number; max: number; options: { id: string; enabled: boolean }[] }
+const W: Widgets<P, null> = { pick: PickOptions }
+export const Ask = ({ prompt, send }: { prompt: P | null; send: (picks: readonly string[], id?: number) => void }) => <PromptHost widgets={W} prompt={prompt} view={null} answer={send} look={{ label: (o) => o.id.toUpperCase(), done: 'Fertig' }} />
 ```
 
 Look file (opt-in): `looks/legal-glow.css`, a box-shadow glow on `[data-mark="legal"]` (touch included, no filter); variables `--focus`, `--glow`. Or `looks/imperium-legal.css` (K309): Imperium's three-layer gold bloom on the same marks, sized by `--pick-edge-size`; variables `--pick-glow-core`, `--pick-glow`, `--pick-glow-far`; pair it with picked-state `looks/imperium.css` for the chosen card.
