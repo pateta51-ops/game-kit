@@ -28,6 +28,8 @@ The kernel of a game engine: seeded random numbers, canonical JSON and hashes, t
 
 19. For state checks at settled engine boundaries, set `GameRules.invariants` to `stateInvariants(config)` (K592) or compose its returned violations with the game's own checks. Select physical instance IDs, conserved pools and permanent flags only; the game declares idle and its queue lengths. Never treat printed card IDs as unique instances. Set `invariantPolicy: 'strict'` when an invalid transition must be rejected, or `'diagnostic'` when the caller can handle violations. Publish state only after a successful strict call. See the [runnable policy example](#run-a-strict-policy).
 
+20. Check `ApplyResult.triggerCap` when validating setup, an action or a debug edit. It marks the first chain that dropped live triggers in that run. `replay` and `restoreSave` locate the first truncation by zero-based action index (null for setup). The engine keeps the settled state and the game's optional capped event. Treat a flagged result as incomplete rule execution even if the state has a terminal result and the hashes match.
+
 **Common mistakes:**
 - Using the old `ctx.then` then `ctx.ask` form in new code: it is deprecated.
 - A prompt nobody can answer (fewer enabled options than `min`): `EngineBugError`; give a legal option or skip the prompt.

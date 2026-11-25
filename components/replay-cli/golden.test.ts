@@ -8,6 +8,7 @@ import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 import { inCause, restoreSave, ruleCause, type SaveFile, type TaskHandler } from '../engine-core/index.ts';
 import { COUNTER, type Counter } from '../engine-core/fake/counter.ts';
+import { simGame as triggerCapGame } from '../sim-pool/fake/trigger-cap.ts';
 import * as fake from './fake-golden.ts';
 import { blankContentHashes, checkGoldens, GOLDEN_SAVED_AT, goldenGameSpec, playGolden, recordGames, replayGames, run, type CrossGame, type GoldenModule, type GoldenSpec } from './golden.ts';
 import { pathDiff, type Io } from './replay.ts';
@@ -415,4 +416,15 @@ describe('a scripted golden that ends before game over (K735)', () => {
     expect(await replayGames(m, REC, fakeIo({ [REC]: r.written[REC] as string }).io)).toBe(0);
     expect(await replayGames(script(3), REC, fakeIo({ [REC]: r.written[REC] as string }).io)).toBe(1);
   });
+});
+
+it('rejects a trigger-truncated golden update and can replay the stopped trace', async () => {
+  const capped = { simGame: triggerCapGame, specs: [{ name: 'cap', seed: 'cap-seed', driver: 'random' }] };
+  const f = fakeIo();
+  expect(await checkGoldens(capped, DIR, f.io, { update: true })).toBe(1);
+  expect(f.lines.some((line) => line.includes('trigger-cap at action 1'))).toBe(true);
+  expect(f.written).toEqual({});
+  const trace = P('/cap-trace.json');
+  expect(await recordGames(capped, trace, f.io)).toBe(1);
+  expect(await replayGames(capped, trace, f.io)).toBe(0);
 });

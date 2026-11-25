@@ -3,10 +3,11 @@
 Use when the engine asks the player something (`ctx.ask`) and the screen must show it. Component: `prompt-host` (README). The kit gives the registry and the common widgets, unstyled; the game gives the look and any widget of its own kind. See it wired in `components/reference-game` (pick, amount, may by clicks; its store is the old loop, use step 5 and [game-store.md](game-store.md)). A card face as an option: [card-face-zoom.md](card-face-zoom.md).
 
 1. **One widget per prompt kind.** `Widgets<Prompt, PlayerView>` has a key for every `kind` of the game's prompt union; a missing or unknown kind fails to compile. Add a kind to the engine and the compiler lists the widget you owe.
-2. **Host it** with the player's own view (never the full state):
+2. **Host it** with the player's own view. Import the `Answer` type from `prompt-host/ui.ts`. The callback type allows an omitted prompt ID, so forward only answers with an ID and let the store reject stale IDs.
    ```tsx
    const WIDGETS: Widgets<Prompt, PlayerView> = { pick: PickOptions, amount: (p) => <PickAmount {...p} start="last" />, order: Order, may: May, pay: PayCost, market: MarketPick };
-   <PromptHost widgets={WIDGETS} prompt={view.prompt} view={view} answer={(picks, id) => store.answer(picks, id)} seat={me}
+   const answer: Answer = (picks, id) => { if (id !== undefined) store.answer(picks, id) };
+   <PromptHost widgets={WIDGETS} prompt={view.prompt} view={view} answer={answer} seat={me}
      waiting={<p>…</p>} look={{ cls, label, text: ids.strip }} />
    ```
 3. **Style it.** Unstyled: `look.cls(part)` returns your class names (default `kp-<part>`), `look.label(o, p)` draws an option (words or a card face), and `count`, `done`, `less`, `more`, `confirm`, `cancel` are your words. Selectors: `aria-pressed` on picks, `data-option`, `data-kind`.
