@@ -1,13 +1,18 @@
-import { existsSync, mkdirSync, readFileSync, renameSync, rmSync, writeFileSync } from 'node:fs';
-import { dirname, sep } from 'node:path';
+import { existsSync, lstatSync, mkdirSync, readFileSync, realpathSync, renameSync, rmSync, writeFileSync } from 'node:fs';
+import { basename, dirname, join, sep } from 'node:path';
 
 interface Slot { target: string; next: string; backup: string; existed: boolean }
 interface State { phase: 'preparing' | 'committing' | 'committed'; slots: Slot[] }
 const slotsFor = (targets: readonly string[]): Slot[] => targets.map((target) => ({ target, next: `${target}.publish-next`, backup: `${target}.publish-backup`, existed: existsSync(target) }));
 
+export function publicationPath(path: string): string {
+  if (dirname(path) === path || lstatSync(path, { throwIfNoEntry: false })) return realpathSync(path);
+  return join(publicationPath(dirname(path)), basename(path));
+}
+
 function checkPaths(slots: readonly Slot[], marker: string): void {
   const paths = [...slots.flatMap((s) => [s.target, s.next, s.backup]), marker, `${marker}.tmp`];
-  for (let i = 0; i < paths.length; i += 1) if (paths.some((p, j) => i !== j && (p === paths[i] || p.startsWith(`${paths[i]!}${sep}`)))) throw new Error('publication targets, scratch and recovery paths must not overlap');
+  for (const names of [paths, paths.map(publicationPath)]) for (let i = 0; i < names.length; i += 1) if (names.some((p, j) => i !== j && (p === names[i] || p.startsWith(`${names[i]!}${sep}`)))) throw new Error('publication targets, scratch and recovery paths must not overlap');
 }
 
 function clean(marker: string, state: State, rename: typeof renameSync): void {

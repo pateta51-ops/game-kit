@@ -12,7 +12,7 @@ import { dirname, extname, join, relative, resolve, sep } from 'node:path';
 import { isMain, stdio, type Io } from '../tooling-scripts/args.ts';
 import type { ArtIndex } from './art-index.ts';
 import { codec, encodeWithin, fail, imageSize, load, safeName, sha256, type Codec } from './lib.ts';
-import { beginPublication, recoverPublication } from './publication.ts';
+import { beginPublication, publicationPath, recoverPublication } from './publication.ts';
 
 const USAGE = 'usage: node art-publish.ts --config <json> [--recover]';
 const within = (parent: string, file: string): boolean => file === parent || file.startsWith(`${parent}${sep}`);
@@ -35,7 +35,9 @@ export async function run(args: readonly string[], io: Io = stdio, codecOverride
     const targets = [stage, out];
     const manifestGroup = targets.findIndex((target) => within(target, manifestFile));
     if (manifestGroup < 0) targets.push(manifestFile);
-    if (targets.some((p) => within(p, configFile))) throw new Error('publication cannot replace its config');
+    const actualTargets = targets.map(publicationPath);
+    const actualConfig = publicationPath(configFile);
+    if (targets.some((p) => within(p, configFile)) || actualTargets.some((p) => within(p, actualConfig))) throw new Error('publication cannot replace its config');
     const marker = `${configFile}.publish-state.json`;
     if (l.bools.has('recover')) {
       recoverPublication(targets, marker);
@@ -43,6 +45,7 @@ export async function run(args: readonly string[], io: Io = stdio, codecOverride
       return 0;
     }
     const indexFile = resolve(l.dir, c.index);
+    const actualIndex = publicationPath(indexFile);
     const index = JSON.parse(readFileSync(indexFile, 'utf8')) as ArtIndex;
     if (!index || typeof index.defs !== 'object' || index.defs === null || Array.isArray(index.defs) || Object.keys(index.defs).length === 0) throw new Error('index.defs must select at least one logical ID');
     if (!/^[a-z0-9]+$/i.test(c.ext)) throw new Error('ext must be a file extension without a dot');
@@ -54,7 +57,8 @@ export async function run(args: readonly string[], io: Io = stdio, codecOverride
       if (previous !== undefined) throw new Error(`filename collision: ${previous} and ${id} map to ${name}`);
       names.set(name.toLowerCase(), id);
       const src = resolve(root, file);
-      if (targets.some((p) => within(p, src) || within(p, indexFile))) throw new Error(`publication would replace an input: ${id}`);
+      const actualSource = publicationPath(src);
+      if (targets.some((p) => within(p, src) || within(p, indexFile)) || actualTargets.some((p) => within(p, actualSource) || within(p, actualIndex))) throw new Error(`publication would replace an input: ${id}`);
       if (manifestFile === join(stage, `${name}${extname(file)}`) || manifestFile === join(out, `${name}.${c.ext}`)) throw new Error(`manifest would replace face ${id}`);
       if (!statSync(src).isFile()) throw new Error(`${id}: source is not a file`);
       accessSync(src, constants.R_OK);

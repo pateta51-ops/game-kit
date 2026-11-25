@@ -1,5 +1,5 @@
 import { spawnSync } from 'node:child_process';
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, renameSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, renameSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -130,6 +130,72 @@ describe('publication preserves usable art', () => {
     expect(result.stderr).toContain('scratch already exists');
     expect(snapshot()).toEqual(old);
     expect(readFileSync(tmp)).toEqual(bytes);
+  });
+
+  it.each(['source directory', 'source file', 'index', 'config', 'target', 'backup', 'marker'])('rejects a %s symlink alias before changing any input or prior output', (kind) => {
+    const old = snapshot();
+    index({ fresh: 'a.png' });
+    let input = join(dir, 'source/a.png');
+    if (kind === 'source directory') {
+      symlinkSync(join(dir, 'chosen'), join(dir, 'source-alias'), 'dir');
+      config({ root: 'source-alias' });
+      index({ fresh: 'old.png' });
+      input = join(dir, 'source-alias/old.png');
+    } else if (kind === 'source file') {
+      symlinkSync(join(dir, 'chosen/old.png'), join(dir, 'source/alias.png'), 'file');
+      index({ fresh: 'alias.png' });
+      input = join(dir, 'source/alias.png');
+    } else if (kind === 'index' || kind === 'config') {
+      input = join(dir, kind === 'index' ? 'index.json' : 'publish.json');
+      const actual = join(dir, 'chosen', kind === 'index' ? 'index.json' : 'config.json');
+      renameSync(input, actual);
+      symlinkSync(actual, input, 'file');
+    } else {
+      symlinkSync(kind === 'target' ? join(dir, 'chosen') : dir, join(dir, 'alias'), 'dir');
+      config(kind === 'marker' ? { manifest: 'alias/publish.json.publish-state.json' } : { out: kind === 'target' ? 'alias/nested/art' : 'alias/chosen.publish-backup' });
+    }
+    const bytes = readFileSync(input);
+    const result = cli();
+    expect(result.status).toBe(2);
+    expect(result.stderr).toMatch(/replace|overlap/);
+    expect(snapshot()).toEqual(old);
+    expect(readFileSync(input)).toEqual(bytes);
+    expect(existsSync(join(dir, 'publish.json.publish-state.json'))).toBe(false);
+  });
+
+  it('preserves valid input symlinks and publishes and recovers through a separate aliased output parent', () => {
+    const old = snapshot();
+    index({ 'fresh:one': 'a.png' });
+    config({ root: 'source-alias', out: 'public-alias/art' });
+    mkdirSync(join(dir, 'inputs'));
+    for (const file of ['publish.json', 'index.json']) {
+      renameSync(join(dir, file), join(dir, 'inputs', file));
+      symlinkSync(join(dir, 'inputs', file), join(dir, file), 'file');
+    }
+    symlinkSync(join(dir, 'source'), join(dir, 'source-alias'), 'dir');
+    symlinkSync(join(dir, 'public'), join(dir, 'public-alias'), 'dir');
+    const paths = ['publish.json', 'index.json', 'source/a.png'].map((file) => join(dir, file));
+    const before = paths.map((file) => readFileSync(file));
+    const targets = ['chosen', 'public-alias/art', 'public/manifest.json'].map((file) => join(dir, file));
+    const script = `
+      import { mkdirSync, renameSync, writeFileSync } from 'node:fs';
+      import { beginPublication } from ${JSON.stringify(new URL('./publication.ts', import.meta.url).href)};
+      let calls = 0;
+      const p = beginPublication(${JSON.stringify(targets)}, ${JSON.stringify(join(dir, 'publish.json.publish-state.json'))}, (a, b) => {
+        renameSync(a, b); if (++calls === 4) process.exit(73);
+      });
+      for (const path of p.paths.slice(0, 2)) { mkdirSync(path); writeFileSync(path + '/unfinished.png', 'unfinished'); }
+      writeFileSync(p.paths[2], '{}');
+      p.commit();
+    `;
+    expect(spawnSync(process.execPath, ['--input-type=module', '-e', script], { encoding: 'utf8' }).status).toBe(73);
+    const recovered = cli('--recover');
+    expect(recovered.status, recovered.stderr).toBe(0);
+    expect(snapshot()).toEqual(old);
+    const result = cli();
+    expect(result.status, result.stderr).toBe(0);
+    expect(paths.map((file) => readFileSync(file))).toEqual(before);
+    expect(check([...checkArgs(), '--need-ids', put('ids.json', ['fresh:one'])], io)).toBe(0);
   });
 
   it.each([1, 2, 3, 4, 5, 6])('recovers the previous complete release after process interruption at rename %i', (cut) => {
