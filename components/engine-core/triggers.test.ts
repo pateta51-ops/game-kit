@@ -164,6 +164,7 @@ describe('triggers (K94)', () => {
       },
       capped: (left) => ({ type: 'dropped', ability: 'cap', why: String(left.length) }),
     }));
+    expect(r.triggerCap).toMatchObject({ code: 'trigger-cap', cap: 5, processed: 5, remaining: 1 });
     expect(Object.keys(r.state.used)).toHaveLength(5);
     expect(r.events.at(-1)).toMatchObject({ type: 'dropped', ability: 'cap', why: '1' });
     expect(r.state.timing?.pending).toEqual([]);
@@ -289,5 +290,32 @@ describe('triggers read content (K296)', () => {
     expect(order(s)).toEqual(['fromContent@7:2']);
     expect(seen.length).toBeGreaterThan(0);
     expect(seen.every((c) => c === content)).toBe(true);
+  });
+});
+
+describe('trigger cap diagnostics', () => {
+  const candidates = ['one', 'two', 'three'].map((ability) => ({ ability, source: 'tile', player: 'p1' }));
+
+  it('locates the drop after resuming a nested trigger choice', () => {
+    const g = game(candidates, {
+      triggerCap: 1,
+      resolveTrigger(ctx) {
+        ctx.ask({ min: 1, max: 1, options: [{ id: 'resume', enabled: true }] }, { kind: 'resume' });
+      },
+    }, { resume: () => undefined });
+    const first = hit(g);
+    expect(first.triggerCap).toBeUndefined();
+    expect(first.state.prompt?.options.map((option) => option.id)).toEqual(['resume']);
+    const resumed = applyAction(g, first.state, answer(first.state, 'resume'), null);
+    expect(resumed.triggerCap).toMatchObject({ code: 'trigger-cap', cap: 1, processed: 1, remaining: 2 });
+    expect(resumed.state.result).toEqual({ hp: 7 });
+  });
+
+  it('records dropped live work separately from terminal state and game events', () => {
+    const capped = hit(game(candidates, { triggerCap: 2 }));
+    expect(capped.triggerCap).toMatchObject({ code: 'trigger-cap', cap: 2, processed: 2, remaining: 1, batch: 1 });
+    expect(capped.state.result).toEqual({ hp: 7 });
+    expect(capped.events.map((e) => e.type)).toEqual(['damaged']);
+    expect(hit(game(candidates, { triggerCap: 3 }))).not.toHaveProperty('triggerCap');
   });
 });

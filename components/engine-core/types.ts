@@ -123,10 +123,26 @@ export interface InvariantViolation {
   readonly message: string;
 }
 
+/** The first trigger chain in this engine run that dropped live work. */
+export interface TriggerCapDiagnostic {
+  readonly code: 'trigger-cap';
+  readonly cap: number;
+  readonly processed: number;
+  readonly remaining: number;
+  /** Batch of the first dropped trigger. */
+  readonly batch: number;
+}
+
+export interface LocatedTriggerCap extends TriggerCapDiagnostic {
+  /** Zero-based action index, or null for setup. */
+  readonly actionIndex: number | null;
+}
+
 export interface ApplyResult<G extends GameTypes> {
   readonly state: G['state'];
   readonly events: readonly G['event'][];
   readonly violations: readonly InvariantViolation[];
+  readonly triggerCap?: TriggerCapDiagnostic;
 }
 
 /** An event as a handler emits it: the context stamps `seq` and the `stamped` fields. */

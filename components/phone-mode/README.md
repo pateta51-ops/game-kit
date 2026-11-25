@@ -15,6 +15,7 @@ The mechanism of a phone layout: which layout a window gets, the fit zoom of the
 6. To close a `Sheet` from outside set `leaving` and handle `onLeft` (`onClose` is not called then).
 7. Feed `createHaptics({ enabled })` from the game's Haptics setting; use `setSafeArea` in e2e tests (a browser cannot emulate a notch).
 8. Use `dockWantsOpen`, `useDock(wants, dockKey(...))` and `shortPrompt` together for the prompt dock.
+9. Install Playwright separately if you run the standalone screenshot script `demo/imp-shots.mjs`. The phone component does not require it.
 
 **Common mistakes:**
 - Using CSS zoom on a phone screen: only the fitted mode zooms.
