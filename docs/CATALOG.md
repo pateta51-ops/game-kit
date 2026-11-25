@@ -853,7 +853,7 @@ Playwright helpers a game's browser tests share. Lifted from Imperium's `e2e/hel
 
 ## effect-library
 
-Director-spec DOM and canvas effects for the motion frame. See [Effects by group](#effects-by-group) for available effects and variants, and use `EFFECT_NAMES` for registered verb names.
+Director-spec DOM and canvas effects for the motion frame.
 
 - **Also called:** Visual effects for cards and pieces
 - **Looks like:** A set of motions and effects: moving, flipping, fading, sparks, glows and screen layers.
