@@ -4,6 +4,11 @@ The size gate for a vite build: gzips `index.html` and what it loads at once, an
 
 ## Rules for agents
 
+<!-- hooks: written by scripts/catalog.mjs from docs/catalog-notes.json; do not edit -->
+**Hooks a game calls:**
+- `measureBuild` + `run`: check a media cap for images, fonts and audio, including the first download; follow imports for initial accounting
+<!-- /hooks -->
+
 **What it does:** The size gate for a vite build: gzips `index.html` and what it loads at once, and fails when the game's limits are exceeded.
 
 **You must:**

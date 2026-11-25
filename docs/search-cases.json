@@ -669,5 +669,8 @@
   { "q": "edge", "first": "pieces-3d" },
   { "q": "runtime card tests", "first": "card-harness" },
   { "q": "test loaded card pack", "first": "card-harness" },
-  { "q": "runtime card clauses", "first": "card-harness" }
+  { "q": "runtime card clauses", "first": "card-harness" },
+  { "q": "media cap", "first": "bundle-size" },
+  { "q": "follow imports", "first": "bundle-size" },
+  { "q": "first download size", "first": "bundle-size" }
 ]
