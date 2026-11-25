@@ -8,8 +8,8 @@ Drag a source onto a target, both option ids of the open prompt: a drop answers 
 **You must:**
 1. Pass a prompt-host `useBoardPick` result as `pick` and the prompt's id as `promptId`.
 2. Spread `drag.sourceProps(optionId)` on each source, put `data-drop="<optionId>"` on each target, and wrap the board in `onClickCapture={drag.onClickCapture}`.
-3. Render `<DragGhost drag={drag} render={...}/>` so the dragged item is seen.
-4. Pass `speed` from settings (0, `'instant'` or reduced motion: no glide) and `enabled` from the drag setting.
+3. Render `<DragGhost drag={drag} render={...} speed={speed}/>` so the dragged item is seen and its flight uses the same speed as `useDragDrop`.
+4. `speed` is a rate: durations divide by it (`2` is faster, `0.5` slower); 0, `'instant'` or reduced motion: no glide. For a shared duration-factor setting (`0` Off, `0.5` Fast, `1` Normal, `2` Slow), pass `motionRate(factor)` from motion-frame to both `useDragDrop` and `DragGhost`. Pass `enabled` from the drag setting. See [the shared-setting guide](../motion-frame/README.md#one-motion-preference-across-components).
 5. Override `taps(source, target)` when the answer is not `[source, target]` (a click on the source alone answers: `taps: (s) => [s]`).
 6. For composite option ids pass `sourceLegal` and `taps: (s, t) => [t + ':' + s]`.
 7. Put `data-drop-block` on an element (a hand fan) that must not be a target.
@@ -37,6 +37,6 @@ export function Board({ prompt, answer }: { prompt: Parameters<typeof useBoardPi
   const pick = useBoardPick(prompt, answer, { confirm: false })
   const drag = useDragDrop({ pick, promptId: prompt?.id, taps: (s, t) => [s, t], speed: 1 })
   return <div onClickCapture={drag.onClickCapture}><button {...drag.sourceProps('card')} onClick={() => pick.tap('card')}>Card</button>
-    <div data-drop="slot" /><DragGhost drag={drag} render={(id) => <b>{id}</b>} /></div>
+    <div data-drop="slot" /><DragGhost drag={drag} render={(id) => <b>{id}</b>} speed={1} /></div>
 }
 ```

@@ -20,7 +20,7 @@ Plays motion specs in the director's format (one JSON per beat: `actors`, `steps
 **What it does:** Plays the director's motion specs as timed beats; verbs draw, the game keeps its state.
 
 **You must:**
-1. Pass `speed: () => ...` from the settings. It is read when each beat starts: a factor, or `'instant'`; `0` (or any non-positive value) means still, the same as instant: no timeline, `onEnd` at once, cues still sound. Use `speed: () => withReducedMotion(withAutomationOff(setting))`.
+1. Pass `speed: () => ...` from the settings. It is read when each beat starts: a duration factor (`0` Off, `0.5` Fast, `1` Normal, `2` Slow), or `'instant'`; `0` (or any non-positive value) means still, the same as instant: no timeline, `onEnd` at once, cues still sound. Use `speed: () => withReducedMotion(withAutomationOff(setting))`. Convert this factor with `motionRate` before passing it to card-hand or drag-drop, whose legacy APIs divide durations by their speed.
 2. Register a verb for every verb name the specs use (`createVerbs().register`) and run `validateSpecs(specs, stages, verbs)` in the game's check, expecting no lines.
 3. Set per-beat state in `onBeatStart` and clear it in `onBeatEnd`: when called, they always come as a pair; on a skipped, snapped, instant or failed beat they are called only if the beat has `commit` or `data`.
 4. Apply the next game state with `play(beat, { commit, data })`, never from a verb: the player never touches game state.
@@ -37,6 +37,39 @@ Plays motion specs in the director's format (one JSON per beat: `actors`, `steps
 - A `holdUntil` beat holds the queue until `release()`, `skipAll()` or `autoContinueMs`: wire a release or the board freezes.
 - `recordClip` takes the start time in epoch seconds (`Date.now() / 1000`), not `performance.now`; import it from `record`, not `index`.
 - `onBeatEnd` does not mean the beat played in full: check `onEnded(how)` for `skipped`.
+
+## One motion preference across components
+
+Use a duration factor for a shared setting: `0` Off, `0.5` Fast, `1` Normal, `2` Slow. Motion-frame multiplies duration by this number. Card-hand and drag-drop keep their existing rate contract, which divides duration by the number. `motionRate(factor)` is the explicit adapter between them; it does not change existing callers automatically.
+
+| Shared factor | Meaning | Card-hand / drag-drop rate | 280 ms beat or hand transition | 180 ms drag flight |
+|---|---|---|---|---|
+| 0 | Off | 0 | 0 ms | 0 ms |
+| 0.5 | Fast | 2 | 140 ms | 90 ms |
+| 1 | Normal | 1 | 280 ms | 180 ms |
+| 2 | Slow | 0.5 | 560 ms | 360 ms |
+
+`motionRate` returns `0` for `'instant'` or a finite non-positive factor. It throws `RangeError` for NaN, infinity or a positive factor so small that its reciprocal overflows. Validate a custom setting before starting motion; a settings choice with the four values above is a simple bounded contract. Apply `withReducedMotion` / `withAutomationOff` before conversion so Off and accessibility preferences reach every caller.
+
+```tsx
+import { motionRate, withReducedMotion, withAutomationOff } from '../kit/motion-frame/index';
+
+// In the board render, after reading the same setting used by the player's speed():
+const factor = withReducedMotion(withAutomationOff(settings.motion));
+const rate = motionRate(factor);
+const drag = useDragDrop({ pick, promptId: prompt?.id, speed: rate });
+useGlideIn(inPlayRef, inPlayIds, rate);
+// Render both with the converted rate:
+<><CardHand view={hand} face={face} pick={pick} drag={drag} speed={rate} />
+  <DragGhost drag={drag} render={face} speed={rate} /></>;
+// The player and page CSS still receive factor, not rate:
+// speed: () => withReducedMotion(withAutomationOff(readSettings().motion))
+putMotionSpeed(factor);
+```
+
+Migration is opt-in at the game boundary. If the stored preference already represents a duration factor, keep the stored values and convert only card-hand (`CardHand`, `useGlideIn`, explicit hover-tilt speed) and both drag-drop callers (`useDragDrop`, `DragGhost`). If the game's stored values represent a rate, migrate that setting explicitly or convert it to a factor before passing it to factor APIs; do not invert every numeric `speed` argument. Existing direct rate calls still mean `0.5` is slower and `2` faster. Default reading holds remain at least their normal duration at Fast; the adapter does not alter `pace`, `readFollowsSpeed`, reduced variants or commit behavior.
+
+The executed cross-component example is [shared-motion.test.ts](../../tests/shared-motion.test.ts): a settings store drives a motion player, rendered hand and actual drag/ghost path at every listed value and with reduced motion.
 
 ## Timeline (`timeline.ts`, pure)
 - `stageFromLayout(layout, live?)`: a `Stage` (zone id to `[x, y, w, h]`) from a layout JSON; `live` is the game's resolver, asked first (live and dynamic targets). A game may pass any function as a stage.
