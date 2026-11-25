@@ -3,8 +3,8 @@
 // keeps the open prompt, a refused edit changes nothing, and kernel edits emit no events (a game verb's carry `debug`).
 import { closeDraft, copyList, openDraft, own } from './cow.ts';
 import { freezeState } from './copy.ts';
-import { makeCtx, setCtxDebug } from './ctx.ts';
-import { isChecking } from './apply.ts';
+import { ctxDiagnostics, makeCtx, setCtxDebug } from './ctx.ts';
+import { checkStateInvariants } from './invariant-policy.ts';
 import type { Draft } from './draft.ts';
 import { IllegalActionError } from './errors.ts';
 import { GameOver } from './gameOver.ts';
@@ -65,6 +65,7 @@ export function applyDebug<G extends GameTypes>(
   const next = { ...state } as Draft<KernelState>;
   next.stack = copyList(state.stack) as Draft<KernelTask>[];
   const prev = openDraft(next, false);
+  let diagnostics: ReturnType<typeof ctxDiagnostics>;
   try {
     const ctx = makeCtx(game, next as Draft<G['state']>, content, events);
     if (action.verb === 'set') setAt(next, args);
@@ -87,9 +88,10 @@ export function applyDebug<G extends GameTypes>(
     } catch (e) {
       if (!(e instanceof GameOver)) throw e;
     }
+    diagnostics = ctxDiagnostics(ctx);
   } finally {
     closeDraft(prev);
   }
   const out = freezeState(next) as G['state'];
-  return { state: out, events, violations: isChecking() ? (game.invariants?.(out, content, events, state) ?? []) : [] };
+  return { state: out, events, violations: checkStateInvariants(game, out, content, events, state), ...diagnostics };
 }

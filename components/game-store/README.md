@@ -9,12 +9,16 @@ One game store and one game object (K234): `defineGame` is what the game writes 
 **You must:**
 1. Write the game once with `defineGame({ rules, content, seats, start, view, ... })`; `view(state, seat)` must be the seat's own redacted view.
 2. Create the store with `createGameStore(def, { seat, seed?, undo?, saves?, ... })`; React reads it with `useSyncExternalStore(store.subscribe, store.get)`.
-3. Answer only through `store.answer(picks, promptId)`; a stale prompt id is dropped. A click, the forced answers and the opponent's answers are one undo step.
+3. Answer only through `store.answer(picks, promptId)`. From a prompt-host callback, forward only answers with a supplied prompt ID so the store can reject stale clicks. A click, the forced answers and the opponent's answers are one undo step.
 4. The opponent decides from the view only: `opponent(view, prompt, rng)`; use `botOpponent(bot)` so the store and the sim share one bot.
 5. Mount debug edits with `store.debug`, load with `store.load(save)`, undo with `undo()` / `redo()` (mode `safe` unless `undo` says otherwise).
 6. Set `openingSteps: true` to pace the setup events as steps; the default is off.
 7. Use `sim.ts` (`simGameOf`, `botDriverOf`) in node only.
-8. K738: declare dev cheats with `defineGame({ cheats: { defs, choice?, round? } })` (cheat-options); the store plays them as debug edits; never apply a cheat in the game's own code. Read the mark from `get().cheated`.
+8. With `simGameOf`, pass `view: true` to validate seat snapshots after setup and each action and the actual views passed to opponent and bot adapters. Supply `viewValidation.secrets(state, seat)` and `leakKeys(state, seat)` for game-owned secrecy assertions. A view must satisfy sim-pool's JSON data contract.
+9. Use `random`, the provided `opponent`, a key in `drivers`, or an explicit `aliases` entry. K750 (breaking): change unintended driver names to `random` or register the intended policy. A misspelling or unavailable opponent is a preflight error.
+10. K738: declare dev cheats with `defineGame({ cheats: { defs, choice?, round? } })` (cheat-options); the store plays them as debug edits; never apply a cheat in the game's own code. Read the mark from `get().cheated`.
+
+11. Read `store.get().triggerCap` to surface the first trigger-budget warning on the current history, even if the game has a terminal result. A successful answer/load or null store error does not clear it. Replaying a save reconstructs the warning. Undo removes it only if the capped action is undone.
 
 **Common mistakes:**
 - Reading `get().state` in the opponent or the screen: only the view is allowed.
@@ -29,8 +33,12 @@ One game store and one game object (K234): `defineGame` is what the game writes 
 - K302 `debug(action)`: an engine-core `DebugAction` (the game sets `GameRules.debug`) as its own undo step, recorded and saved like an answer (a loaded save starts a step at each one), then settled, paced (`pushSteps`) and autosaved; returns the refusal words or undefined, so debug-console mounts with `send={store.debug}`.
 - `undo()`, `redo()`, `canUndo()` (engine-core `undoStep`, mode `safe` by default), `advance()`, `skip()` (paced-view), `fresh(seed)`.
 - `load(save)`: `restoreSave`, then the undo steps rebuilt (`replaySteps`: an answer of the store's seat that `forced` would not give starts a step); `saved()` is the engine-core `History` for saves (`saveNamed`, `SavesScreen`).
-- `sim.ts` (node only): `simGameOf(def, { drivers?, summary?, maxActions?, start? })` is sim-pool's game module (`start(spec)`: a game with settings starts from the spec's `settings` too, K356) (drivers `opponent` and `random`), `opponentDriverOf(def)`, `botDriverOf(def, bot)`, `replayEngineOf(def, describe?)`.
+- `sim.ts` (node only): `simGameOf(def, { drivers?, aliases?, viewValidation?, summary?, maxActions?, start? })` is sim-pool's game module (`start(spec)`: a game with settings starts from the spec's `settings` too, K356) (`random` and `opponent` when defined), `opponentDriverOf(def)`, `botDriverOf(def, bot)`, `replayEngineOf(def, describe?)`.
 - Proof: `store.test.ts`; the reference game plays a whole game, undo, save mid-effect and a view-leak check through it.
+
+K750: `aliases` maps a distinct requested name directly to a registered name. The sim record keeps the requested name in `driver` and the policy's `Driver.name` in `resolvedDriver` (the target registration if the policy has no name). Seeded decisions still use the requested name, including for an alias. Existing custom overrides of `opponent` and `random` are supported. Keep historical records as written and start a new checkpoint for runs whose driver configuration changed.
+
+Snapshots call `def.view(state, seat, { undoUsed: false, cheated })` and default to `def.seats` in declaration order. Set `viewValidation.seats` for an explicit snapshot subset. A request with zero configured seats fails. The simulation's debug actions set `cheated`; simulations do not perform undo. Opponent and bot adapters still call `def.view(state, seat)` and validate that exact value before the policy sees it. The deciding seat's secrecy assertions apply even if it has no snapshot.
 
 ## Use it in 10 lines
 
@@ -43,6 +51,18 @@ const store = createGameStore(def, { seat: 'me', seed: 'demo', undo: 'free' })
 const p = store.get().state.prompt
 if (p !== null) store.answer(['add'], p.id) // one click: one undo step, its events paced once
 console.log(store.get().history.steps.length, store.undo())
+```
+
+```tsx
+import type { GameTypes, KernelPrompt } from '../kit/engine-core/index'
+import type { GameStore } from '../kit/game-store/index'
+import { PickOptions, PromptHost } from '../kit/prompt-host/ui'
+
+type P = KernelPrompt & { kind: 'pick' }
+export const Ask = ({ view, seat, store }: { view: { prompt: P | null }; seat: NonNullable<P['seat']>; store: Pick<GameStore<GameTypes, unknown>, 'answer'> }) =>
+  <PromptHost widgets={{ pick: PickOptions }} prompt={view.prompt} view={view} seat={seat}
+    answer={(picks, id) => { if (id !== undefined) store.answer(picks, id) }}
+    look={{ label: (o) => o.id.toUpperCase(), done: 'Fertig' }} />
 ```
 
 One bot for the store and the sim (K271):

@@ -36,6 +36,25 @@ const options = (seed: string) => ({ seed });
 const hs = (s: CounterState | null): string => hashState(s);
 
 describe('replay and saves', () => {
+  it('the README save round trip preserves the next seeded outcome', () => {
+    const opts = options('save-round-trip');
+    const add = (state: CounterState): AnswerAction =>
+      ({ kind: 'answer', promptId: state.prompt!.id, picks: ['add'] });
+    const initial = createGame(COUNTER, opts, rules, content).state;
+    const first = add(initial);
+    const current = applyAction(COUNTER, initial, first, content).state;
+    const file = createSave(COUNTER, {
+      options: opts, rules, actions: [first], state: current, undoUsed: false, savedAt: 't',
+    }, content);
+    const restored = importSave(COUNTER, exportSave(file), content);
+    if (!restored.ok) throw new Error(restored.error);
+    const next = add(current);
+    const events = applyAction(COUNTER, current, next, content).events;
+    expect(events[0]?.type).toBe('added');
+    expect(applyAction(COUNTER, restored.state, next, content).events).toEqual(events);
+    expect(restored.state.rng).toEqual(current.rng);
+  });
+
   it('50 random games: replaying each save gives the same final hash', () => {
     for (let i = 1; i <= 50; i += 1) {
       const o = options(`p${String(i)}`);

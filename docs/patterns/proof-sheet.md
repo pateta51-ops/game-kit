@@ -1,6 +1,6 @@
 # Pattern: proof sheet (filters and groups)
 
-No component: screens draw each game's own faces and describe functions (SELECTION.md, "Menus shell and phone"). Take the pure parts; a generic list-with-filter shell taking a renderer is an M lift if ever wanted.
+Use the [proof-sheet component](../../components/proof-sheet/README.md) for current implementation. This pattern records the source review and the rationale for keeping the review screen separate from gameplay. The game supplies the cards, face renderer and printed references.
 
 ## Example (read, never edit)
 stcc `Star-trek-captains-chair-game` @ `9fc59643`:

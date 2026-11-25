@@ -8,7 +8,7 @@ A small made-up card game kept in the kit as a contract test (K205, K276): when 
 
 **You must:**
 1. Never pull or copy it into a game: it is generated into a temp folder by `reference.test.ts`.
-2. Run it only in WSL (`npx vitest run components/reference-game` through `heavy run`, or `node kit.mjs finish`), never on local Windows.
+2. For changes in game-kit, use the hosted PR check on the PR head as described in [AGENTS.md](../../AGENTS.md). For a game integration use that game’s check workflow.
 3. When a component's interface changes, fix the template under `template/` so the generated game compiles and its `npm run check` passes.
 4. To add a component to the contract list it in `components`, use it in the template, cover it in `tests/`.
 5. Keep it unstyled: no look decisions in the template.

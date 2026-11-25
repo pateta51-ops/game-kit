@@ -1,5 +1,5 @@
 export { DriverRng } from './rng.ts';
-export { ANSWER_CAP, CRASH_HASH, breakAt, bySeat, crashRecord, legalAnswers, playOne, randomDriver, type Driver, type GameSpec, type SimGame, type PlayOptions, type ResolvedTrace, type SimRecord, type StepMs } from './play.ts';
+export { ANSWER_CAP, CRASH_HASH, DriverRegistrationError, breakAt, bySeat, crashRecord, legalAnswers, playOne, randomDriver, readDriverView, type Driver, type GameSpec, type SimGame, type PlayOptions, type ResolvedTrace, type SimRecord, type StepMs, type ViewObservation } from './play.ts';
 export { botDriver, type Bot } from './bot.ts';
 export { replayStep, type StepReport } from './replay.ts';
 export { formatReport, report, type FailKind, type Lengths, type Report, type ReportOptions, type Seat } from './report.ts';
@@ -12,3 +12,4 @@ export { grid, spread, sweep, type Cell, type Spread, type Sweep, type SweepCell
 export { fromWeights, inThread, poolBatch, toWeights, tune, validate, weightsFile, type Batch, type GenerationReport, type Job, type Outcome, type PlayFn, type SetupCheck, type TuneOptions, type Validation, type WeightDef, type Weights, type WeightSpace, type WeightsFile } from './tune.ts';
 export { provenClauses, type Proof, type ProofRecord } from './unreached.ts';
 export { dispatchTrace, type DispatchNotes } from './dispatchTrace.ts';
+export { greedyBot, greedyPreview, type GreedyOptions, type GreedyPreviewOptions, type GreedyProbe } from './greedy.ts';

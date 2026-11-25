@@ -141,9 +141,13 @@ describe('agent commands (K216): plain node, no tsx', () => {
     expect(c.stderr).toContain('changed kit/agent.mjs');
     const lock = path.join(game, 'kit', 'kit.lock.json');
     const j = JSON.parse(fs.readFileSync(lock, 'utf8')) as Record<string, unknown>;
+    delete j['support'];
     delete j['agent'];
     fs.writeFileSync(lock, JSON.stringify(j));
-    expect(kit(game, 'check').status).toBe(0);
+    fs.writeFileSync(path.join(game, 'kit', 'kit.mjs'), '// Legacy CLI fixture.');
+    const legacy = kit(game, 'check');
+    expect(legacy.status).toBe(0);
+    expect(legacy.stderr).toContain('legacy lock');
   });
 });
 

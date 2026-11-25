@@ -1,6 +1,6 @@
 # card-language: the standard verb pack (K232)
 
-`cardPack<G, E extends PackEnv>(cfg)` returns `{ verbs, happen, wouldChange, judge, costed }`. Verbs written by two or more of STCC, Imperium, Rome, Unstoppable, Jarl and EBR, or needed by Radiance. Tests: `pack.test.ts` (one case per verb, a save in the middle of an effect, ordered answers, hidden picks, words).
+`cardPack<G, E extends PackEnv>(cfg)` returns `{ verbs, happen, wouldChange, judge, resolves, grade, costed }`. Verbs written by two or more of STCC, Imperium, Rome, Unstoppable, Jarl and EBR, or needed by Radiance. Tests: `pack.test.ts` (one case per verb, a save in the middle of an effect, ordered answers, hidden picks, words).
 
 ## Wire it
 - State: card-zones `zones` plus the optional `PackState` fields (`cardMoves`, `marks`, `later`, `res`; absent until used).

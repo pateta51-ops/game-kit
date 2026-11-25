@@ -7,8 +7,9 @@ import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
-import { createSave, hashState } from '../engine-core/index.ts';
+import { applyAction, createGame, createSave, hashState, would } from '../engine-core/index.ts';
 import { CONTENT, COUNTER, playGame, RULES, type Counter } from '../engine-core/fake/counter.ts';
+import { HIT, timedGame } from '../engine-core/fake/timed.ts';
 import { checkpointDiff, checkpointText, logText, parseLog, replayFile, run, type Checkpoint, type Io, type ReplayEngine, type ReplayLog } from './replay.ts';
 
 const engine: ReplayEngine<Counter> = {
@@ -221,4 +222,26 @@ describe('replay.ts', () => {
       expect(await run(args, fakeIo({})), args.join(' ')).toBe(2);
     }
   });
+});
+
+it('reports trigger truncation separately from a matching replay hash', async () => {
+  const timing = timedGame({
+    triggerCap: 1,
+    triggersFor: () => ['one', 'two'].map((ability) => ({ ability, source: 'tile', player: 'p1' })),
+  }, {
+    chosen(ctx) {
+      ctx.then({ kind: 'timing.triggers' }, { kind: 'end' });
+      would(ctx, [HIT]);
+    },
+  });
+  const seed = 'capped';
+  const rules = { items: [HIT] };
+  const state = createGame(timing, { seed }, rules, null).state;
+  const action = { kind: 'answer', promptId: state.prompt!.id, picks: ['hit'] } as const;
+  const { triggerCap } = applyAction(timing, state, action, null);
+  const capped = createSave(timing, { options: { seed }, rules, actions: [action], undoUsed: false, savedAt: 't' }, null);
+  const io = fakeIo({ '/cap.json': JSON.stringify(capped) });
+  expect(await replayFile(P('/cap.json'), { game: timing, content: () => null }, io)).toBe(0);
+  expect(io.lines).toContain('warning: trigger-cap at action 1: processed 1 of budget 1, dropped 1 (first batch ' + String(triggerCap?.batch) + ')');
+  expect(io.lines.some((line) => line.includes('state hash matches'))).toBe(true);
 });

@@ -1,5 +1,7 @@
 # Effect inventory, all games (18 Nov 2026)
 
+**Historical motion inventory from 18 November 2026.** For current implementation, see [the effects recipe](../recipes/effects-sound-voice.md).
+
 Every animation and visual effect in each game at the commit shown, checked against the kit at origin/main 18 Nov. Status: in kit (component/verb), a planned row, or missing. Missing effects go to the effect batches (motion-retrofit); this file is updated when a row lands.
 
 ## Work list after merging repeats (18 Nov)

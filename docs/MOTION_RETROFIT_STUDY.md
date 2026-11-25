@@ -1,5 +1,7 @@
 # Motion retrofit study (18 Nov 2026)
 
+**Historical rollout study. The owner’s presentation policy below still applies.** For current implementation, see [the effects recipe](recipes/effects-sound-voice.md).
+
 Owner's direction, 18 Nov 2026: the kit is an extensive catalogue of components and effects that future games pick from. Each game's animations are rebuilt on the kit's `motion-frame` (beat specs, ordered player queue) and `effect-library` (verbs, own effects, canvas particles), and the game's own motion code is deleted. Effects first made for one game go into the kit under neutral names, with the game's look passed as settings, so a fix in one game reaches all of them. Nothing stays game-only without a written reason. This replaces the 15 Nov "existing games take the build tooling only" rule for presentation; engines and card code are not part of it.
 
 Trigger: in STCC, the animations after "End turn" play in an order unrelated to the cards' resolution, and the log jumps ahead of them.

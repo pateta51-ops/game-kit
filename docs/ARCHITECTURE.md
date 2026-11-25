@@ -156,7 +156,7 @@ graph LR
   token_bag["token-bag"]
   token_flights["token-flights"]
   tooling_scripts["tooling-scripts"]
-  traceability["traceability"]
+  traceability["traceability"] --> engine_core["engine-core"]
   track["track"] --> counter["counter"]
   track["track"] --> motion_frame["motion-frame"]
   transcription_check["transcription-check"]
@@ -164,6 +164,8 @@ graph LR
   tutorial["tutorial"] --> engine_core["engine-core"]
   tutorial["tutorial"] --> state_machines["state-machines"]
   ui_helpers["ui-helpers"]
+  visual_replay["visual-replay"] --> engine_core["engine-core"]
+  visual_replay["visual-replay"] --> paced_view["paced-view"]
   voice["voice"] --> sound_player["sound-player"]
   worker_rules["worker-rules"]
 ```
@@ -236,5 +238,6 @@ graph LR
 - `transcription-check`
 - `turn-flow`
 - `tutorial`
+- `visual-replay`
 - `voice`
 - `worker-rules`

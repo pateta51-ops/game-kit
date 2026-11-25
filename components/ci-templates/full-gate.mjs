@@ -52,7 +52,8 @@ async function prepare() {
 function browsers() {
   // System libraries need root once; this never waits for a sudo password.
   const sudo = !isWindows && spawnSync('sudo', ['-n', 'true']).status === 0;
-  run('npx', ['playwright', 'install', ...(sudo ? ['--with-deps'] : []), 'chromium', 'webkit']);
+  const cli = existsSync('node_modules/playwright-core/cli.js') && !existsSync('node_modules/playwright/cli.js') ? 'playwright-core' : 'playwright';
+  run('npx', [cli, 'install', ...(sudo ? ['--with-deps'] : []), 'chromium', 'webkit']);
 }
 
 async function e2e() {

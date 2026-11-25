@@ -3,11 +3,11 @@
 Release ladder (owner): 1.0 no animation or sound; 1.1 VFX; 1.2 SFX and music; 1.3 voice. The director owns the specs; the kit plays them. Never add motion or sound to 1.0.
 
 ## 1.1 effects
-Components: [`motion-frame`](../../components/motion-frame/README.md) plays the director's JSON beats; [`effect-library`](../../components/effect-library/README.md) holds the twelve verbs (`move`, `lift`, `settle`, `fade-in`, `fade-out`, `show`, `hide`, `flip`, `scale`, `shake`, `glow`, `text`) and canvas effects.
+Components: [`motion-frame`](../../components/motion-frame/README.md) plays the director's JSON beats; [`effect-library`](../../components/effect-library/README.md) supplies the registered verbs and canvas effects. See [Effects by group](../../components/effect-library/README.md#effects-by-group) and use `EFFECT_NAMES` to validate registered names.
 1. `createVerbs()`, `registerEffects(verbs, { resolve })` returns the layer; `createMotionPlayer({ specs, stages, verbs, speed, context: layer, onBeatEnd })`.
 2. `stageFromLayout` builds stages from the screen layout JSON; `validateSpecs` in the game's check.
 3. `speed` honours reduced motion (`withReducedMotion`) and automation (`withAutomationOff`). `paced-view` shows an answer's events one step at a time.
-4. `board-registry` `movements` gives piece moves between two registries.
+4. Import `movements` from `effect-library` to get piece moves between two registries.
 5. `token-flights`: tokens (coins, damage, discs) that moved between two views fly there; a ledger draws each in one place at a time.
 6. `target-arrow`: the curved arrow from the asking card to the pointer that snaps to a target, collapses into it and hits; `strikes.hold` makes token-flights wait for the hit.
 

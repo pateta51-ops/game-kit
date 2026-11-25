@@ -1,5 +1,7 @@
 # Pattern: timing vocabulary (K93, K111, K94, K96, K95)
 
+**Historical timing design.** For current execution and API contracts, see [engine timing](../../components/engine-core/timing.md).
+
 One vocabulary for the five card-language core rows, fixed before any of them is built. Sources (write-ups in `docs/evaluation/outside/`): halogenandtoast 7, 9, 10 (ArkhamHorror, Marvel); netrunner 1 to 5; marvel-champions 9, 10, 12; forge-xmage F4, F5, F7. ArkhamHorror, Forge and marvel-champions-digital-game are idea only; netrunner and XMage are MIT.
 
 ## What engine-core has today (read in full)

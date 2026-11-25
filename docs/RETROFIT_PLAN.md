@@ -1,5 +1,7 @@
 # Retrofit plan (15 Nov 2026)
 
+**Historical rollout schedule. The standing retrofit policy is in the repository README.** For current implementation, see [the upgrade recipe](recipes/upgrade-kit.md).
+
 Status: approved by the owner, 15 Nov 2026. All seven games are active. No Fable workers: Sonnet for routine work, Opus at medium effort for engine work.
 
 Scope: the recommended retrofit only. Old games take the kit's tooling; the kit takes what the old games do better. Engines and card code stay as they are. Presentation is retrofitted since 18 Nov 2026 (section "Motion retrofit" below).

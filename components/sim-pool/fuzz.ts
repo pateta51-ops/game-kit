@@ -1,11 +1,12 @@
 // The invariant run and the fuzz command (stcc scripts/sim/invariantRun.ts, ebr scripts/fuzz.ts): random games with every
 // invariant checked after every action; each failure is a seed plus a step, and `--seed X --until N` replays it to there.
 import { readFileSync, writeFileSync } from 'node:fs';
-import type { GameSpec, SimRecord } from './play.ts';
+import { hasExecutedViewValidation, isDriverRegistrationError, type GameSpec, type SimRecord } from './play.ts';
 import type { Proof } from './unreached.ts';
 import { runGames } from './pool.ts';
+import { completedGame } from './report.ts';
 
-export type FindingKind = 'violation' | 'runaway' | 'endless' | 'exception' | 'hidden-info';
+export type FindingKind = 'trigger-cap' | 'violation' | 'runaway' | 'endless' | 'exception' | 'hidden-info';
 
 export interface Finding {
   readonly kind: FindingKind;
@@ -114,14 +115,12 @@ export interface WholeGame {
   readonly failures: readonly string[];
 }
 
-const finished = (r: SimRecord): boolean => r.result !== null && r.result !== undefined && r.error === undefined && !r.violations?.length;
-
 /** K490: games started and finished per group, findings by kind, clause ids never resolved. */
 export function wholeGame(run: FuzzRun, o: WholeGameOptions = {}, rounds?: WholeGame['rounds']): WholeGame {
   const group = o.group ?? ((r: SimRecord) => `${String(r.settings?.mode ?? '-')}/${String(r.settings?.tier ?? '-')}`);
   const by = new Map<string, SimRecord[]>();
   for (const r of run.records) by.set(group(r), [...(by.get(group(r)) ?? []), r]);
-  const groups = [...by].sort(([a], [b]) => a.localeCompare(b)).map(([g, rs]) => ({ group: g, started: rs.length, finished: rs.filter(finished).length, unfinished: rs.filter((r) => !finished(r)).map((r) => r.seed) }));
+  const groups = [...by].sort(([a], [b]) => a.localeCompare(b)).map(([g, rs]) => ({ group: g, started: rs.length, finished: rs.filter(completedGame).length, unfinished: rs.filter((r) => !completedGame(r)).map((r) => r.seed) }));
   const byKind: Partial<Record<FindingKind, Finding[]>> = {};
   for (const f of run.findings) (byKind[f.kind] ??= []).push(f);
   const resolved = [...new Set(run.records.flatMap((r) => r.resolved ?? []))].sort();
@@ -168,7 +167,8 @@ export interface FuzzRun {
 
 export function findingOf(r: SimRecord): Finding | undefined {
   let kind: FindingKind;
-  if (r.violations?.length) kind = 'violation';
+  if (r.triggerCap !== undefined) kind = 'trigger-cap';
+  else if (r.violations?.length) kind = 'violation';
   else if (r.error === undefined) return undefined;
   else if (r.errorName === 'EngineBugError' && r.error.startsWith('runaway task loop')) kind = 'runaway';
   else if (r.error.startsWith('hidden-info:')) kind = 'hidden-info';
@@ -178,13 +178,20 @@ export function findingOf(r: SimRecord): Finding | undefined {
   return { kind, seed: r.seed, driver: r.driver, step: r.actions, messages };
 }
 
+class ViewRunError extends Error {}
+
 /** Play the games of `o` from the module that exports `simGame`, invariants on. */
 export async function fuzz(module: string, o: FuzzOptions = {}): Promise<FuzzRun> {
   const driver = o.driver ?? 'random';
   const seeds = o.seed !== undefined ? [o.seed] : o.seeds ? [...o.seeds] : Array.from({ length: o.games ?? 500 }, (_, i) => `${o.prefix ?? 'fuzz'}-${String(i)}`);
+  if (o.view && seeds.length === 0) throw new ViewRunError('view validation requires at least one game');
   const specs = seeds.map((seed, index): GameSpec => ({ index, seed, driver, ...(o.settings ? { settings: o.settings(seed, driver) } : {}) }));
   const records = await runGames({ module, specs, invariants: true, until: o.until, view: o.view, hasten: o.hasten, debug: o.debug, hidden: o.hidden, gameTimeoutMs: o.gameTimeoutMs, ...(o.worker !== undefined ? { worker: o.worker } : {}) }, o.workers ?? 1);
-  return { records, findings: records.flatMap((r) => findingOf(r) ?? []) };
+  const findings = records.flatMap((r) => findingOf(r) ?? []);
+  if (o.view && findings.length === 0 &&
+      (records.length !== specs.length || records.some((record) => !hasExecutedViewValidation(record))))
+    throw new ViewRunError('requested view validation lacks executed checks; check the worker version and adapters');
+  return { records, findings };
 }
 
 export function formatFuzz(run: FuzzRun, shown = 20): string[] {
@@ -199,6 +206,7 @@ export function formatFuzz(run: FuzzRun, shown = 20): string[] {
     `${String(run.records.length)} game(s), ${String(run.records.reduce((s, r) => s + r.actions, 0))} actions checked: exceptions ${n('exception')}, ` +
       `invariant violations ${n('violation')}, runaway guards ${n('runaway')}, never ended ${n('endless')}${run.findings.some((f) => f.kind === 'hidden-info') ? `, hidden-info ${n('hidden-info')}` : ''}`,
   );
+  if (run.findings.some((f) => f.kind === 'trigger-cap')) lines.push(`trigger-truncated ${n('trigger-cap')}`);
   return lines;
 }
 
@@ -236,11 +244,24 @@ const FLAGS = ['--games', '--prefix', '--driver', '--workers', '--seed', '--unti
 export const FUZZ_USAGE = 'usage: [--games N] [--prefix P] [--driver D] [--workers N] [--hasten N] [--debug N] | --seed S [--driver D] [--until STEP] | --finding S (replays a seed of the findings file)';
 
 /** The command line of both: many games, or `--seed S [--until N]` for one. Returns the exit code: 1 on any finding, 2 on bad arguments. */
-export async function fuzzMain(
+export function fuzzMain(
   args: readonly string[],
   module: string,
   base: FuzzOptions = {},
   out: (line: string) => void = (l) => process.stdout.write(`${l}\n`),
+): Promise<number> {
+  return runFuzzMain(args, module, base, out).catch((error: unknown) => {
+    if (!isDriverRegistrationError(error) && !(error instanceof ViewRunError)) throw error;
+    out(error.message);
+    return 2;
+  });
+}
+
+async function runFuzzMain(
+  args: readonly string[],
+  module: string,
+  base: FuzzOptions,
+  out: (line: string) => void,
 ): Promise<number> {
   const given = new Map<string, string>();
   for (let i = 0; i < args.length; i += 2) {

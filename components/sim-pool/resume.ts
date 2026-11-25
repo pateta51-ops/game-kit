@@ -4,7 +4,7 @@
 // (a run stopped mid-write) is cut off and a corrupt line skipped, and that game is played again; crashed games are never written.
 import { appendFileSync, existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { canonicalJson } from '../engine-core/index.ts';
-import { CRASH_HASH, type GameSpec, type SimRecord } from './play.ts';
+import { CRASH_HASH, hasExecutedViewValidation, type GameSpec, type SimRecord } from './play.ts';
 import { runGames, type RunRequest } from './pool.ts';
 
 /** A game's key: its seed, driver and settings (not its index, so a run may grow). */
@@ -49,10 +49,15 @@ export async function runResumable(request: RunRequest, workers: number, file: s
   const old: SimRecord[] = [];
   const specs = request.specs.filter((s) => {
     const r = cp.done.get(specKey(s));
-    if (r) old.push({ ...r, index: s.index });
-    return !r;
+    if (r === undefined) return true;
+    if (request.view && r.result !== null && !hasExecutedViewValidation(r))
+      throw new Error('checkpoint lacks executed view checks for the current scope; start a new checkpoint to validate its views');
+    if (r.triggerCapChecked !== true) return true;
+    old.push({ ...r, index: s.index });
+    return false;
   });
-  const fresh = await runGames({ ...request, specs }, workers, (r) => {
+  const preflightDriverNames = [...new Set([...request.specs.map((spec) => spec.driver), ...(request.preflightDriverNames ?? [])])];
+  const fresh = await runGames({ ...request, specs, preflightDriverNames }, workers, (r) => {
     cp.append(r);
     onRecord?.(r);
   });
