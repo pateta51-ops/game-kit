@@ -16,9 +16,9 @@ export type RuntimeAssertion =
 export interface RuntimeCardSetup<L> {
   readonly layout: L;
   readonly answers: readonly (readonly string[])[];
-  /** The routine prompt left after resolving, when it should remain open. */
-  readonly nextPrompt?: string;
-  /** The exact enabled option ID to look for in a not-offered case. */
+  /** Name of a routine boundary to verify with the game's settled check. */
+  readonly end?: string;
+  /** Option taken in the full resolve and watched in its paired not-offered case. */
   readonly optionId?: string;
 }
 
@@ -28,12 +28,17 @@ export interface RuntimeCardCase<L> extends RuntimeCardSetup<L> {
   readonly expect: readonly RuntimeAssertion[];
 }
 
+export interface RuntimeCardNote extends RanNote {
+  /** An observation snapshot from a real clause-begin or clause-end marker. */
+  readonly observation?: Readonly<Record<string, unknown>>;
+}
+
 interface RuntimeEngine<G extends GameTypes> {
   readonly rules: GameRules<G>;
   readonly options: G['options'];
   readonly setup: G['rules'];
   readonly content: G['content'];
-  readonly probe: Probe<RanNote>;
+  readonly probe: Probe<RuntimeCardNote>;
 }
 
 export interface RuntimeCardSuite<C extends RuntimeClause, R, L, G extends GameTypes> {
@@ -46,6 +51,8 @@ export interface RuntimeCardSuite<C extends RuntimeClause, R, L, G extends GameT
   readonly families: Readonly<Record<string, (clause: C, records: readonly R[]) => readonly RuntimeCardCase<L>[]>>;
   start(layout: L, records: readonly R[]): RuntimeEngine<G>;
   observe(state: G['state']): Readonly<Record<string, unknown>>;
+  /** Verify that a named routine boundary is open and no clause choice is pending. */
+  settled?(state: G['state'], end: string): boolean;
   readonly exempt?: Readonly<Record<string, string>>;
   readonly mutations?: { readonly trials: readonly ClauseMutation<R>[]; readonly validate: MutationOptions<R>['validate'] };
 }
@@ -69,15 +76,19 @@ export interface RuntimeCardReport {
   readonly mutations?: MutationReport;
 }
 
-type Script = Pick<RuntimeCardSetup<unknown>, 'answers' | 'nextPrompt' | 'optionId'> & { readonly line: string };
+type Script = Pick<RuntimeCardSetup<unknown>, 'answers' | 'end' | 'optionId'> & { readonly line: string };
 type Expectations = Pick<RuntimeCardCase<unknown>, 'kind' | 'expect'>;
 type Observation = Readonly<Record<string, unknown>>;
-interface Evidence {
+interface Comparison {
   readonly before: Observation;
   readonly after: Observation;
+}
+interface Evidence extends Comparison {
+  readonly scope?: Comparison;
   readonly attempted: boolean;
   readonly dispatched: boolean;
   readonly offered: boolean;
+  readonly pickedOption: boolean;
 }
 
 const message = (error: unknown): string => error instanceof Error ? error.message : String(error);
@@ -100,6 +111,10 @@ function specGame<C extends RuntimeClause, R, L, G extends GameTypes>(input: Run
       cleanStep(initial, null);
       let state = initial.state;
       const before = structuredClone(input.observe(state));
+      let begins: Observation | undefined;
+      let ends: Observation | undefined;
+      let invalidScope = false;
+      let pickedOption = false;
       let attempted = false;
       let dispatched = false;
       let offered = false;
@@ -109,25 +124,47 @@ function specGame<C extends RuntimeClause, R, L, G extends GameTypes>(input: Run
       watch();
       for (const [index, picks] of script.answers.entries()) {
         if (state.prompt === null) throw new Error(`unused answer ${String(index + 1)}: no prompt is open`);
+        const picked = script.optionId !== undefined && picks.includes(script.optionId)
+          && state.prompt.options.some(o => o.enabled && o.id === script.optionId);
         const action = { kind: 'answer', promptId: state.prompt.id, picks } as G['action'];
         const { result, notes } = game.probe.trace(() => applyAction(game.rules, state, action, game.content));
         cleanStep(result, index);
-        attempted ||= notes.some(e => e.kind === 'clause-attempt' && e.id === script.line);
-        dispatched ||= notes.some(e => e.kind === 'clause' && e.id === script.line);
+        for (const note of notes) {
+          if (note.id !== script.line) continue;
+          if (note.kind === 'clause-attempt') attempted = true;
+          if (note.kind === 'clause-begin') {
+            pickedOption ||= picked;
+            if (begins !== undefined || note.observation === undefined) invalidScope = true;
+            else begins = structuredClone(note.observation);
+          }
+          if (note.kind === 'clause') {
+            dispatched = true;
+            if (begins === undefined || ends !== undefined) invalidScope = true;
+          }
+          if (note.kind === 'clause-end') {
+            if (!dispatched || ends !== undefined || note.observation === undefined) invalidScope = true;
+            else ends = structuredClone(note.observation);
+          }
+        }
         state = result.state;
         watch();
       }
-      if (script.nextPrompt === undefined ? state.prompt !== null : state.prompt?.kind !== script.nextPrompt) {
+      if (script.end === undefined ? state.prompt !== null : state.prompt === null || input.settled?.(state, script.end) !== true) {
         throw new Error(`unexpected prompt after last answer: ${state.prompt?.kind ?? (state.prompt === null ? 'none' : String(state.prompt.id))}`);
       }
-      return { before, after: structuredClone(input.observe(state)), attempted, dispatched, offered };
+      const scope = !invalidScope && begins !== undefined && ends !== undefined ? { before: begins, after: ends } : undefined;
+      return { before, after: structuredClone(input.observe(state)), attempted, dispatched, offered, pickedOption,
+        ...(scope === undefined ? {} : { scope }),
+      };
     },
     check(result, { kind, expect }) {
+      const compared = kind === 'resolve' ? result.scope : result;
+      if (compared === undefined) throw new Error('no complete clause-scoped observation');
       for (const assertion of expect) {
         const { key } = assertion;
-        if (!Object.hasOwn(result.before, key) || !Object.hasOwn(result.after, key)) return `missing observation "${key}"`;
-        const before = result.before[key];
-        const after = result.after[key];
+        if (!Object.hasOwn(compared.before, key) || !Object.hasOwn(compared.after, key)) return `missing observation "${key}"`;
+        const before = compared.before[key];
+        const after = compared.after[key];
         if ('delta' in assertion) {
           if (typeof before !== 'number' || typeof after !== 'number' || !Number.isFinite(before) || !Number.isFinite(after))
             return `"${key}" must provide numbers before and after`;
@@ -147,6 +184,7 @@ function valid<L>(test: RuntimeCardCase<L>): boolean {
   return id(test.name)
     && (test.kind === 'resolve' || test.kind === 'not-fired' || (test.kind === 'not-offered' && id(test.optionId)))
     && test.answers.length > 0 && test.answers.length <= MAX_ANSWERS
+    && (test.end === undefined || id(test.end))
     && test.expect.length > 0
     && test.expect.every(a => id(a.key) && ('delta' in a
       ? Number.isFinite(a.delta)
@@ -211,22 +249,41 @@ export function runCardSuite<C extends RuntimeClause, R, L, G extends GameTypes>
       continue;
     }
     const start = cases.length;
+    const taken = new Set<string>();
+    const poorOptions: { index: number; id: string }[] = [];
     for (const test of defined) {
-      const { name, kind, expect, layout, answers, nextPrompt, optionId } = structuredClone(test);
-      const act: Script = { line, answers, ...(nextPrompt === undefined ? {} : { nextPrompt }), ...(optionId === undefined ? {} : { optionId }) };
+      const { name, kind, expect, layout, ...script } = structuredClone(test);
+      const act: Script = { line, ...script };
+      const optionId = script.optionId;
       const expectations = { kind, expect };
       try {
         const observed = game.play(structuredClone(layout), structuredClone(act), structuredClone(input.records), false);
-        const problem = game.check(observed, expectations);
-        const assertedChange = expect.some(e => !isDeepStrictEqual(observed.before[e.key], observed.after[e.key]));
-        if (problem !== undefined) add(name, 'assertion-failed', problem);
-        else if (kind === 'resolve' ? !observed.dispatched || !assertedChange : !observed.attempted)
-          add(name, 'missing-evidence', kind === 'resolve' ? 'need clause dispatch and an asserted change' : 'need an observed attempt at this clause');
-        else add(name, 'passed');
+        if (kind === 'resolve' && observed.scope === undefined) {
+          add(name, 'missing-evidence', 'need one clause begin/dispatch/end sequence with observations');
+        } else {
+          const problem = game.check(observed, expectations);
+          const scope = observed.scope;
+          const assertedChange = scope !== undefined && expect.some(e => !isDeepStrictEqual(scope.before[e.key], scope.after[e.key]));
+          if (problem !== undefined) add(name, 'assertion-failed', problem);
+          else if (kind === 'resolve' ? !assertedChange : !observed.attempted)
+            add(name, 'missing-evidence', kind === 'resolve' ? 'need an asserted change inside the clause' : 'need an observed attempt at this clause');
+          else {
+            if (kind === 'resolve' && observed.pickedOption && optionId !== undefined) taken.add(optionId);
+            if (kind === 'not-offered' && optionId !== undefined) poorOptions.push({ index: cases.length, id: optionId });
+            add(name, 'passed');
+          }
+        }
       } catch (error) {
         add(name, 'engine-error', message(error));
       }
       rows.push({ line, name, layout, act, expect: expectations });
+    }
+    for (const option of poorOptions) {
+      if (!taken.has(option.id)) cases[option.index] = {
+        ...cases[option.index]!,
+        status: 'missing-evidence',
+        detail: `no successful full resolve took option "${option.id}" for this clause (option witness)`,
+      };
     }
     if (cases.slice(start).every(c => c.status === 'passed')) covered.push(line);
   }

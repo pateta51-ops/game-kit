@@ -5,8 +5,8 @@ import { cardsIn, newZones } from '../../../components/card-zones/index.ts';
 import { load, loadText, type Source } from '../../../components/content-pack/index.ts';
 import { makeChoice, mergePacks, type PackData, type Registry } from '../../../components/content-pack/expansion.ts';
 import { draftOf, hashValue, seedRng, timingHandlers, type AnswerAction, type Draft, type GameRules, type KernelEvent, type KernelPrompt, type KernelState, type KernelTask } from '../../../components/engine-core/index.ts';
-import { createProbe, type RanNote } from '../../../components/card-harness/index.ts';
-import { runtimeCardMain, standardCardCases, type RuntimeCardSuite, type StandardCardRule } from '../../../components/card-harness/runtime.ts';
+import { createProbe } from '../../../components/card-harness/index.ts';
+import { runtimeCardMain, standardCardCases, type RuntimeCardNote, type RuntimeCardSuite, type StandardCardRule } from '../../../components/card-harness/runtime.ts';
 
 interface Printed {
   readonly id: string;
@@ -26,7 +26,7 @@ interface Layout {
 interface G {
   readonly state: KernelState & PackState & { readonly line: string };
   readonly action: AnswerAction;
-  readonly task: KernelTask;
+  readonly task: KernelTask & { readonly line?: string };
   readonly prompt: KernelPrompt;
   readonly event: KernelEvent;
   readonly stamped: never;
@@ -35,7 +35,7 @@ interface G {
   readonly content: readonly Card[];
 }
 
-const probe = createProbe<RanNote>();
+const probe = createProbe<RuntimeCardNote>();
 const pack = cardPack<G, PackEnv & { readonly line: string }>({
   offer: { cost: 'whole' },
   handlers: () => rules.handlers,
@@ -43,6 +43,7 @@ const pack = cardPack<G, PackEnv & { readonly line: string }>({
 });
 const runVerb = verbHandler<G>(pack.verbs);
 const fuel = (s: G['state']): number => s.res?.['you']?.['fuel'] ?? 0;
+const observe = (state: G['state']) => ({ fuel: fuel(state), hand: cardsIn(state, 'hand:you').length, deck: cardsIn(state, 'deck:you').length });
 const rules: GameRules<G> = {
   handlers: {
     ...timingHandlers<G>({ happen: (ctx, o) => { pack.happen(ctx, o); } }),
@@ -55,7 +56,17 @@ const rules: GameRules<G> = {
     },
     resolve(ctx, task) {
       const card = ctx.content.find(r => r.clause === task.answer?.[0]);
-      if (card !== undefined) ctx.then(...effectTasks(card.effects, { seat: 'you', line: card.clause }));
+      if (card !== undefined) ctx.then(
+        { kind: 'clause-begin', line: card.clause },
+        ...effectTasks(card.effects, { seat: 'you', line: card.clause }),
+        { kind: 'clause-end', line: card.clause },
+      );
+    },
+    'clause-begin'(ctx, task) {
+      if (task.line !== undefined && !inDryRun()) probe.note({ kind: 'clause-begin', id: task.line, observation: observe(ctx.s) });
+    },
+    'clause-end'(ctx, task) {
+      if (task.line !== undefined && !inDryRun()) probe.note({ kind: 'clause-end', id: task.line, observation: observe(ctx.s) });
     },
     verb(ctx, task) {
       runVerb(ctx, task);
@@ -125,7 +136,7 @@ export function suite(records: readonly Card[], clauses = printed): RuntimeCardS
       payThen: cases,
     },
     start: (layout, content) => ({ rules, content, setup: {}, options: { ...layout, seed: 'crank' }, probe }),
-    observe: (state) => ({ fuel: fuel(state), hand: cardsIn(state, 'hand:you').length, deck: cardsIn(state, 'deck:you').length }),
+    observe,
   };
 }
 
