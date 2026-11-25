@@ -432,6 +432,7 @@ The blind matching test's result was not recorded: the PR, its comments and docs
 | K753 | Preserve visible Rules for agents text after a leading HTML comment in kit-context, including after multiline comments. Keep source line references, follow the visible rule's linked guides, and report the required continuation when the rule or guide exceeds the packet budget. | S | owner | done |
 | K754 | breaking: full finish selects the browser command for scaffold UI changes and declared additional roots. New scaffolds ship a Chromium smoke for menu, setup, step, and undo. Existing games with matching UI paths need a runnable browser suite. | S | owner | done |
 | K755 | Expose trigger-budget truncation through engine replay and the live store. Stop validation at the dropped work, recheck legacy checkpoints, and exclude truncated and paused runs from clean completion statistics. | M |  | done |
+| K756 | Compile the game-store mount example against the public prompt-host and game-store types. Keep the prompt-host mount example usable on its own. Forward the supplied prompt ID only when present so the store can reject stale answers. | S |  | done |
 
 ## Candidates
 
