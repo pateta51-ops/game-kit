@@ -82,8 +82,7 @@ function readDocumentation(dir) {
   const end=headings.find(index=>index>start&&/^##\s/.test(lines[index]))??lines.length;
   const sourceLines = (from,to) => lines.slice(from,to).map((text,i)=>({file:'README.md',line:from+i+1,text}));
   const rules=sourceLines(start+1,end);
-  const guideLines=lines.slice();
-  const visibleRows=[];
+  const recovered=[];
   const walker=document.walker();
   for(let event;(event=walker.next());) {
     const {node,entering}=event;
@@ -96,6 +95,7 @@ function readDocumentation(dir) {
     const commentLines=comment.split('\n');
     const tail=node.literal.slice(comment.length);
     const recover=tail.trim().length>0;
+    const visibleLines=[];
     for(let offset=0;offset<commentLines.length;offset++) {
       const index=first+offset;
       const last=offset===commentLines.length-1;
@@ -104,10 +104,10 @@ function readDocumentation(dir) {
       if(recover) {
         const suffix=commentLines[offset]+visible;
         const prefix=lines[index].endsWith(suffix)?lines[index].slice(0,lines[index].length-suffix.length):'';
-        guideLines[index]=prefix+visible;
-        if(last) visibleRows.push(index+1);
+        visibleLines.push(prefix+visible);
       }
     }
+    if(recover) recovered.push({first,lines:visibleLines});
   }
   const usage=[];
   function addUsage(from,to) {
@@ -123,14 +123,13 @@ function readDocumentation(dir) {
     addUsage(from,to);
     from=to;
   }
-  const recovered=visibleRows.length?{text:guideLines.join('\n'),visibleRows}:undefined;
   return {rules:rules.filter(row=>row.text.trim()),usage,markdown,recovered};
 }
 
-function* guideDocuments(markdown, visibleRows) {
+function* guideDocuments(markdown, visibleLine) {
   const parser=new Parser();
   const document=parser.parse(markdown);
-  yield {document,visibleRows};
+  yield {document,visibleLine};
   const lines=markdown.split(/\r?\n/);
   const separated=[];
   // Also accept trailing stand-alone definitions in top-level prose paragraphs.
@@ -154,37 +153,48 @@ function* guideDocuments(markdown, visibleRows) {
   }
   if(separated.length) yield {
     document:parser.parse(lines.join('\n')),
-    visibleRows:visibleRows?.map(row=>row+separated.filter(line=>line<=row).length),
+    visibleLine:visibleLine===undefined?undefined:visibleLine+separated.filter(line=>line<=visibleLine).length,
   };
 }
 
-function* markdownLinks(markdown, recoveredRows) {
-  for(const {document,visibleRows} of guideDocuments(markdown,recoveredRows)) {
+function* markdownLinks(markdown, recoveredLine) {
+  for(const {document,visibleLine} of guideDocuments(markdown,recoveredLine)) {
     const walker=document.walker();
     for(let event;(event=walker.next());) {
       const {node,entering}=event;
       if(!entering) continue;
       if(node.type==='image') walker.resumeAt(node,false);
       if(node.type!=='link') continue;
-      if(visibleRows) {
-        // Recovered prose adds guides only from its own parsed blocks.
+      if(visibleLine!==undefined) {
+        // Recovered prose adds guides only from its own parsed block.
         let block=node.parent;
         while(block&&!block.sourcepos) block=block.parent;
-        if(!block||!visibleRows.some(row=>row>=block.sourcepos[0][0]&&row<=block.sourcepos[1][0])) continue;
+        if(!block||visibleLine<block.sourcepos[0][0]||visibleLine>block.sourcepos[1][0]) continue;
       }
       yield node.destination;
     }
   }
 }
 
+function* readmeLinks(markdown, recovered) {
+  yield* markdownLinks(markdown);
+  if(!recovered.length) return;
+  const source=markdown.split('\n');
+  for(const {first,lines} of recovered) {
+    // Reparse one comment block at a time so its syntax cannot affect another.
+    const closingLine=first+lines.length;
+    const variant=[...source.slice(0,first),...lines,...source.slice(closingLine)].join('\n');
+    yield* markdownLinks(variant,closingLine);
+  }
+}
+
 function readLinkedGuides(dir, markdown, recovered) {
   const visited=new Set([componentFile(dir,'README.md')]);
   const guides=[];
-  const pending=[{file:'README.md',text:markdown}];
-  if(recovered) pending.push({file:'README.md',...recovered});
+  const pending=[{file:'README.md',links:readmeLinks(markdown,recovered)}];
   const decoder=new TextDecoder('utf-8',{fatal:true});
   for(const row of pending) {
-    for(const href of markdownLinks(row.text,row.visibleRows)) {
+    for(const href of row.links) {
       const destination=href.split(/[?#]/,1)[0];
       if(/^[A-Za-z][\w+.-]*:|^[\\/]/.test(destination)) continue;
       let guide;
@@ -202,7 +212,7 @@ function readLinkedGuides(dir, markdown, recovered) {
       guides.push({file:name,line:1,text});
       // Relative links belong to the canonical guide location, including
       // when the guide was reached through a permitted symbolic link.
-      pending.push({file:relative(dir,target),text});
+      pending.push({file:relative(dir,target),links:markdownLinks(text)});
     }
   }
   return guides.sort((a,b)=>a.file<b.file?-1:a.file>b.file?1:0);

@@ -153,6 +153,11 @@ it('keeps original guide links and treats links in neighboring fenced examples a
   expectComplete(run('visible-rule-fence'));
 });
 
+it('recovers required guides independently across comment blocks', () => {
+  fixture('separate-rule-comments', rules + '<!-- note --> ```\n\n<!-- note --> ' + link + '(atomic.md).');
+  expectComplete(run('separate-rule-comments'));
+});
+
 it('returns the guide continuation when a visible link after a comment exceeds the budget', () => {
   fixture('tight-visible-guide', rules + '<!-- maintainer note --> ' + link + '(atomic.md).', {
     'atomic.md': constraint.repeat(40),
