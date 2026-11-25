@@ -82,6 +82,8 @@ function readDocumentation(dir) {
   const end=headings.find(index=>index>start&&/^##\s/.test(lines[index]))??lines.length;
   const sourceLines = (from,to) => lines.slice(from,to).map((text,i)=>({file:'README.md',line:from+i+1,text}));
   const rules=sourceLines(start+1,end);
+  const guideLines=lines.slice();
+  const visibleRows=[];
   const walker=document.walker();
   for(let event;(event=walker.next());) {
     const {node,entering}=event;
@@ -91,9 +93,19 @@ function readDocumentation(dir) {
     // CommonMark keeps the rest of a comment block's closing line as HTML.
     const comment=/^[ \t]*(?:<!--[\s\S]*?(?:-->|$)[ \t]*)+/.exec(node.literal)?.[0];
     if(!comment) continue;
-    const count=comment.split('\n').length;
-    for(let offset=0;offset<count;offset++) {
-      rules[index+offset].text=offset===count-1?node.literal.slice(comment.length):'';
+    const commentLines=comment.split('\n');
+    const tail=node.literal.slice(comment.length);
+    for(let offset=0;offset<commentLines.length;offset++) {
+      rules[index+offset].text=offset===commentLines.length-1?tail:'';
+    }
+    if(tail.trim()) {
+      const first=node.sourcepos[0][0]-1;
+      const last=first+commentLines.length-1;
+      const suffix=commentLines.at(-1)+tail;
+      const prefix=lines[last].endsWith(suffix)?lines[last].slice(0,-suffix.length):'';
+      guideLines.fill('',first,last);
+      guideLines[last]=prefix+tail;
+      visibleRows.push(last+1);
     }
   }
   const usage=[];
@@ -110,15 +122,16 @@ function readDocumentation(dir) {
     addUsage(from,to);
     from=to;
   }
-  return {rules:rules.filter(row=>row.text.trim()),usage,markdown};
+  const recovered=visibleRows.length?{text:guideLines.join('\n'),visibleRows}:undefined;
+  return {rules:rules.filter(row=>row.text.trim()),usage,markdown,recovered};
 }
 
-function* guideDocuments(markdown) {
+function* guideDocuments(markdown, visibleRows) {
   const parser=new Parser();
   const document=parser.parse(markdown);
-  yield document;
+  yield {document,visibleRows};
   const lines=markdown.split(/\r?\n/);
-  let separated=false;
+  const separated=[];
   // Also accept trailing stand-alone definitions in top-level prose paragraphs.
   for(let block=document.firstChild;block;block=block.next) {
     if(block.type!=='paragraph') continue;
@@ -135,31 +148,42 @@ function* guideDocuments(markdown) {
       if(!/^ {0,3}\[[^\]\n]+\]:[ \t]+\S/.test(definition) ||
         plainLines[prose].trim()!==definition.trim() || parser.parse(definition).firstChild) break;
       lines[index]='\n'+definition;
-      separated=true;
+      separated.push(index+1);
     }
   }
-  if(separated) yield parser.parse(lines.join('\n'));
+  if(separated.length) yield {
+    document:parser.parse(lines.join('\n')),
+    visibleRows:visibleRows?.map(row=>row+separated.filter(line=>line<=row).length),
+  };
 }
 
-function* markdownLinks(markdown) {
-  for(const document of guideDocuments(markdown)) {
+function* markdownLinks(markdown, recoveredRows) {
+  for(const {document,visibleRows} of guideDocuments(markdown,recoveredRows)) {
     const walker=document.walker();
     for(let event;(event=walker.next());) {
       const {node,entering}=event;
       if(!entering) continue;
       if(node.type==='image') walker.resumeAt(node,false);
-      if(node.type==='link') yield node.destination;
+      if(node.type!=='link') continue;
+      if(visibleRows) {
+        // Recovered prose adds guides only from its own parsed blocks.
+        let block=node.parent;
+        while(block&&!block.sourcepos) block=block.parent;
+        if(!block||!visibleRows.some(row=>row>=block.sourcepos[0][0]&&row<=block.sourcepos[1][0])) continue;
+      }
+      yield node.destination;
     }
   }
 }
 
-function readLinkedGuides(dir, markdown) {
+function readLinkedGuides(dir, markdown, recovered) {
   const visited=new Set([componentFile(dir,'README.md')]);
   const guides=[];
   const pending=[{file:'README.md',text:markdown}];
+  if(recovered) pending.push({file:'README.md',...recovered});
   const decoder=new TextDecoder('utf-8',{fatal:true});
   for(const row of pending) {
-    for(const href of markdownLinks(row.text)) {
+    for(const href of markdownLinks(row.text,row.visibleRows)) {
       const destination=href.split(/[?#]/,1)[0];
       if(/^[A-Za-z][\w+.-]*:|^[\\/]/.test(destination)) continue;
       let guide;
@@ -199,8 +223,8 @@ export function contextPacket({root=defaultRoot,component,symbol,entry='index.ts
   if (typeof entry!=='string'||!code.test(entry)||path.isAbsolute(entry)||entry.split(/[\\/]/).some(part=>part==='..'||ignored.has(part))) throw new Error('invalid entry');
   const file=componentFile(dir,entry);
   if (!code.test(file)||test.test(entry)||test.test(file)) throw new Error('entry must be a public source file and not a test');
-  const {rules,usage,markdown}=readDocumentation(dir);
-  const guides=readLinkedGuides(dir,markdown);
+  const {rules,usage,markdown,recovered}=readDocumentation(dir);
+  const guides=readLinkedGuides(dir,markdown,recovered);
   const options={
     target:ts.ScriptTarget.ESNext, module:ts.ModuleKind.ESNext,
     moduleResolution:ts.ModuleResolutionKind.Bundler, jsx:ts.JsxEmit.ReactJSX,

@@ -128,6 +128,54 @@ it('keeps visible rule text after an HTML comment', () => {
   expect(packet.rules).toContainEqual({ file: 'README.md', line: 3, text: directive });
 });
 
+it.each([
+  ['inline', '<!-- [hidden example](absent.md) --> ' + link + '(atomic.md).'],
+  ['reference', '<!-- [hidden example](absent.md) --> ' + link + '[atomic].\n\n[atomic]: atomic.md'],
+  ['trailing-reference', '<!-- [hidden example](absent.md) --> ' + link + '[atomic].\n[atomic]: atomic.md'],
+  ['multiline', '<!-- [hidden example](absent.md)\nmaintainer note\n--> ' + link + '(atomic.md).'],
+])('loads the required %s guide from visible Rules text after a leading comment', (form, readme) => {
+  const name = 'visible-rule-guide-' + form;
+  fixture(name, rules + readme);
+  const packet = expectComplete(run(name));
+  expect(packet.rules.some(row => row.text.startsWith(link))).toBe(true);
+  expect(JSON.stringify(packet)).not.toContain('hidden example');
+});
+
+it('keeps original guide links and treats links in neighboring fenced examples as literal', () => {
+  fixture('visible-rule-fence', rules + '<!-- maintainer note --> ```\n\n```\n' +
+    '[code example](absent.md)\n```\n\n' + link + '(atomic.md).');
+  expectComplete(run('visible-rule-fence'));
+});
+
+it('returns the guide continuation when a visible link after a comment exceeds the budget', () => {
+  fixture('tight-visible-guide', rules + '<!-- maintainer note --> ' + link + '(atomic.md).', {
+    'atomic.md': constraint.repeat(40),
+  });
+  const result = run('tight-visible-guide', 600);
+  expect(result.status, result.stderr).toBe(2);
+  const serialized = result.stdout.trimEnd();
+  expect(serialized.length).toBeLessThanOrEqual(600);
+  expect(JSON.parse(serialized)).toMatchObject({ status: 'incomplete', requiredReads: ['atomic.md'], omitted: 1 });
+});
+
+it.each([
+  ['missing', 'atomic.md is missing or unreadable'],
+  ['escaping', 'atomic.md escapes component'],
+])('refuses a visible link after a comment with a %s guide target', (kind, message) => {
+  const name = kind + '-visible-rule-guide';
+  const dir = fixture(name, rules + '<!-- maintainer note --> ' + link + '(atomic.md).', {});
+  if (kind === 'escaping') {
+    const outside = path.join(root, 'hidden-rule-guide.md');
+    fs.writeFileSync(outside, 'OUTSIDE GUIDE');
+    fs.symlinkSync(outside, path.join(dir, 'atomic.md'));
+  }
+  const result = run(name);
+  expect(result.status, result.stdout).toBe(1);
+  expect(result.stdout).toBe('');
+  expect(result.stderr).toContain(message);
+  expect(result.stderr).not.toContain('OUTSIDE GUIDE');
+});
+
 it('reports a continuation when visible rule text after a comment cannot fit', () => {
   fixture('tight-visible-rule', rules + '<!-- maintainer note --> ' + directive.repeat(30));
   const tight = run('tight-visible-rule', 600);
