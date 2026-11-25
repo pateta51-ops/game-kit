@@ -1,5 +1,7 @@
 # What game-kit still lacks (16 Nov 2026)
 
+**Historical gap assessment. Its watch items are read by `kit.mjs state`.** For current implementation, see [the component catalogue](../CATALOG.md).
+
 Read-only review. Kit at tag v0.51.0, 55 components, 225 commits made 14-16 Nov.
 Evidence tags: **[read]** = I opened the file; **[listed]** = I saw file names or counted lines with a script, but did not read the code; **[guess]** = my judgement.
 

@@ -1,5 +1,7 @@
 # Component selection (14 Nov 2026)
 
+**Historical component selection and provenance.** For current implementation, see [the component catalogue](CATALOG.md).
+
 Which game's version each kit component starts from. Judged on the code of each game's main branch on 14 Nov 2026 by seven read-only reviews; the evidence is in `docs/evaluation/`.
 
 Source commits: stcc `9fc59643`, warps `2af6937`, ebr `33b5abd3`, rome `1d0fd2e`, jarl `6f006a2`, imp `20a033a`, unst `9e666b4`. Under Falling Skies (ufs `07238a4`) was assessed on 16 Nov 2026 (`docs/RETROFIT_PLAN.md`, Part D); it is the source of the rows below marked K172 and K168 to K170.

@@ -1,6 +1,8 @@
 # effect-library
 
-Sixteen verbs for the director's spec format as DOM effects for the motion frame: `move`, `arc-move`, `lift`, `settle`, `fade-in`, `fade-out`, `show`, `hide`, `flip`, `scale`, `shake`, `shake-group`, `glow`, `unroll`, `multi-stop-path`, `text`, and since K449 `count` and `banner`. Web Animations API; browser only. Beside them: canvas effects with a particle kit and `trail`, a count-up and a boxed ambience layer.
+Director-spec DOM and canvas effects for the motion frame.
+
+See [Effects by group](#effects-by-group) for available effects and variants, and use `EFFECT_NAMES` for registered verb names.
 
 <!-- effects:start (written by catalog-sync.ts from catalog.json) -->
 ## Effects by group
@@ -130,7 +132,7 @@ Sixteen verbs for the director's spec format as DOM effects for the motion frame
 
 ## Rules for agents
 
-**What it does:** Director-spec effects for the motion frame: sixteen DOM verbs (move, lift, flip, glow, text and more), canvas effects with a particle kit, `countUp`, ambience and many opt-in extras. Browser only.
+**What it does:** Director-spec effects for the motion frame: registered DOM effects (move, lift, flip, glow, text and more), canvas effects with a particle kit, `countUp`, ambience and many opt-in extras. Browser only.
 - An object option given as `{}` or `true` takes its defaults.
 
 **You must:**
@@ -246,7 +248,7 @@ All opt-in; without them every verb plays as before.
 ```ts
 import { createEffectLayer, missionSparks, MISSION_SHINE } from '../kit/effect-library/index'
 
-const layer = createEffectLayer() // the DOM layer the motion frame draws the twelve verbs on
+const layer = createEffectLayer() // the DOM layer the motion frame draws DOM effects on
 document.body.append(layer.el)
 layer.clear() // empties it between beats
 const blended = createEffectLayer({ isolate: false }) // K436: parts may screen-blend with the board

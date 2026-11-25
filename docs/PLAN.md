@@ -7,7 +7,7 @@ Sources and reasons: `docs/SELECTION.md`. One worker batch per row unless marked
 1. Lift the base from the source commit named in `docs/SELECTION.md` into `components/<name>/`.
 2. Make it generic: replace every import of game code with a small interface or data the game supplies. Add the grafts.
 3. Bring its tests; add a tiny fake game in the tests where the component needs one.
-4. Write `component.json`: source game, commit, paths, licence notice, other components it needs. A component a game calls or mounts also gets a `README.md` of 30 lines at most: what the game passes in and, for one that draws, a "Look" section naming the variables a game sets to skin it.
+4. Write `component.json`: source game, commit, paths, licence notice, other components it needs. A component a game calls or mounts also gets a `README.md` with its purpose on the first line, a runnable “Use it in 10 lines” example and a “Rules for agents” section. Document game-owned inputs and, for UI components, the styling variables.
 5. Review, CI green on the runner, merge, tag.
 
 Kit code compiles under the strictest TypeScript settings in use (Jarl's), so it compiles in any game.
@@ -437,6 +437,7 @@ The blind matching test's result was not recorded: the PR, its comments and docs
 | K758 | Mechanics search routes public greedy preview, runtime adoption evidence, public API context, card zoom and nested choices to their guides. It names the current limits for tile rotation, layered grids and card-combination matching. | S | owner | done |
 | K759 | Compare the packages requested by a game's locked components with its manifest. Report pinned ranges, package roles and unresolved cases without changing the game's files. | S |  | done |
 | K760 | card-harness: derive and run bounded runtime card cases over the current validated pack and an independent printed inventory. Check dispatch and outcome evidence, exercise standard gains, draws and costs, and reuse the same assertions in the clause mutation gate. | M |  | done |
+| K761 | Documentation: correct active component guidance, route agents from the recipe index, preserve historical evidence and consolidate empty reporting artifacts. Show seeded save replay and cover natural-language dice pattern discovery. | M |  | done |
 
 ## Candidates
 
@@ -510,7 +511,7 @@ A candidate is a part some game wants and nobody builds yet. A second game that 
 | K617 | `dice-patterns` `smallest` with `whole`: search only the parts of an `all` or `any` that the whole roll meets, so an unmet branch never supplies the dice; a game passes nothing new. | S |  | candidate |
 | K618 | `dice-patterns`: can a pattern still be met, given the dice placed so far and how many more may come; a game passes the placed dice and the number left. | S | Dicemancy, Dungeon Ball Legend | candidate |
 | K619 | `dice-patterns`: how many separate groups: the largest number of sets with no die in common that each meet a pattern; a game passes the pattern and the roll. | S | Dieson Crusoe, Dungeon Ball Legend | candidate |
-| K620 | `dice-patterns`: what is missing from a roll for a pattern to be met, in words the screen can show; a game passes the pattern and the roll. | S | Dice Commandos | candidate |
+| K620 | `dice-patterns`: K725 ships `missing(pattern, roll)` for structured counts, faces and gaps. The game supplies screen wording. This candidate remains open for review of any reusable display requirements beyond that data contract. | S | Dice Commandos | candidate |
 | K621 | `dice-patterns`: a kind that is always met, or an `all` of nothing, for a line that needs no dice; a game passes the kind. | S | 7th Inning Stretch | candidate |
 | K622 | `dice-patterns` `checkPattern`: a problem for a key the kind does not read (an `op` on a kind that takes none is dropped without a word today); a game passes nothing new. | S |  | candidate |
 | K623 | `dice-patterns` `smallest`: dice of value 0 are left out and the indexes kept, as `meaning` reads them; a game passes nothing new. | S |  | candidate |

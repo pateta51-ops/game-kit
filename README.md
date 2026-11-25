@@ -15,7 +15,7 @@ Generated, never edited by hand: [docs/CATALOG.md](docs/CATALOG.md) and [docs/AR
 ## Rules
 
 1. **Shared code is edited here, nowhere else.** A game carries a locked copy in its `kit/` folder.
-2. **A game pins a version.** It pulls named components at a tag; nothing changes in a game until it pulls again.
+2. **A game pins a version.** A pull installs named components and their dependency closure and moves the whole installed kit to the selected tag. See [upgrade-kit](docs/recipes/upgrade-kit.md).
 3. **A game never edits its copy.** `node kit/kit.mjs check` fails when `kit/` differs from `kit/kit.lock.json`; every game runs it in its check chain.
 4. **Existing games take the tooling and the presentation.** They pull the build-tooling components as `docs/RETROFIT_PLAN.md` says (owner, 15 Nov 2026), and since 18 Nov 2026 their animations are rebuilt on `motion-frame` and `effect-library` (`docs/MOTION_RETROFIT_STUDY.md`); their engines and card code are not retrofitted.
 5. **A component is generic.** The game plugs in through data or a small interface. No game's rules, card names, zones or texts live here.

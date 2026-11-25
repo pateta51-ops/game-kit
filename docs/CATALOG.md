@@ -519,7 +519,7 @@ Card zones as data on engine-core state (K223): decks, hands, discards and play 
 - **Words:** deck, hand, discard, zones, lists, visibility, play, area, face-down, hand limit, zone capacity, discard choice, over the limit, choose what to drop, discard event, on leave hook, leave callback, shuffle, rng name, override, forced order, card stack on a location, location, hand size maximum, public back, hidden face
 - **Release:** 1.0; not seen
 - **The game supplies:** The zones, their owners and who sees what.
-- **Use it when:** Decks, hands, discards and play areas as ordered id lists in engine state, with who sees what and a per-seat view for opponents and the UI. A zone can have a capacity (hand limit, slot limit) that rules raise and give up, with a state check that asks the owner which cards over the limit go to the discard. Hand, pile and drag UI parts are planned (K218-K220), not built: ask for them, do not build them in the game. Recipe: docs/recipes/card-table.md. shuffleZone shuffles a zone on ctx.rng; its rng name selects a named override, so a test can force the shuffle order (shuffle zone named rng, shuffle deck rng name override, forced order test).
+- **Use it when:** Decks, hands, discards and play areas as ordered id lists in engine state, with who sees what and a per-seat view for opponents and the UI. A zone can have a capacity (hand limit, slot limit) that rules raise and give up, with a state check that asks the owner which cards over the limit go to the discard. Use card-hand, card-pile and drag-drop for the matching UI. Recipe: docs/recipes/card-table.md. shuffleZone shuffles a zone on ctx.rng; its rng name selects a named override, so a test can force the shuffle order (shuffle zone named rng, shuffle deck rng name override, forced order test).
 - **Not for:** Boards and spaces (board-model), card faces, or rules about running out.
 - **Key exports:** `newZones`, `seatZone`, `cardsIn`, `locate`, `place`, `moveCard`, `draw`, `shuffleZone`, `reveal`, `canSee`, `viewOf`, `hiddenFrom`, `zoneProblems`, `limitOf`, and 14 more
 - **Hook:** newZones + seatZone: card zones in the game state, one per seat
@@ -853,14 +853,14 @@ Playwright helpers a game's browser tests share. Lifted from Imperium's `e2e/hel
 
 ## effect-library
 
-Sixteen verbs for the director's spec format as DOM effects for the motion frame: `move`, `arc-move`, `lift`, `settle`, `fade-in`, `fade-out`, `show`, `hide`, `flip`, `scale`, `shake`, `shake-group`, `glow`, `unroll`, `multi-stop-path`, `text`, and since K449 `count` and `banner`. Web Animations API; browser only. Beside them: canvas effects with a particle kit and `trail`, a count-up and a boxed ambience layer.
+Director-spec DOM and canvas effects for the motion frame.
 
 - **Also called:** Visual effects for cards and pieces
 - **Looks like:** A set of motions and effects: moving, flipping, fading, sparks, glows and screen layers.
 - **Words:** effects, animation, particles, flip, move, fade, glow, screen, release-1.1
 - **Release:** 1.1; seen on screen
 - **The game supplies:** The motion specs and the elements to move.
-- **Use it when:** Release 1.1 visual effects: the twelve motion verbs, particles, ambience, canvas layers, an opt-in logo glitch.
+- **Use it when:** Release 1.1 visual effects: registered effects listed in the component README, plus particles, ambience, canvas layers and an opt-in logo glitch.
 - **Not for:** Deciding which effect plays (the game's motion specs and motion-frame).
 - **Key exports:** `startPulse`, `startIdle`, `registerGlEffect`, `crumpleStill`, `MISSION_SHINE`, `MISSION_MS`, `missionSparks`, `decorativeCopy`, `endOnFinished`, `flushEnds`, `place`, `createEffectLayer`, `registerEffect`, `BUILT_IN`, and 156 more
 - **Needs:** [`motion-frame`](#motion-frame), [`board-registry`](#board-registry)
@@ -1566,7 +1566,7 @@ Flatbed scans of a game's components to one upright, tightly cropped image per i
 - **Release:** 1.0; not seen
 - **The game supplies:** The scan files and the crop settings.
 - **Use it when:** Turning flatbed scans into one cropped upright image per item; a printed board scan with live state drawn into its boxes, die-cut pieces at true size, playmat box detection, tone profile.
-- **Not for:** Scanning crew boards or anything shipped in-game.
+- **Not for:** Scanning crew boards. Offline scan tools prepare assets. ScanBoard and Piece are available in-game.
 - **Key exports:** Python package `scanpipe`; TS `index.ts` (measureBoxes, planOverlay, clipPathOf, mmStyle, uniformOutlines...), `ui.ts` (ScanBoard, Piece)
 - **Needs:** nothing
 - **Came from:** scanning-pipeline
