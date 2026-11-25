@@ -1,6 +1,6 @@
 # Recipes
 
-Short task guides for agents. Each names the components, the order, and the check that proves it. Component facts live in [CATALOG.md](../CATALOG.md) and each README; these pages never repeat them. Start at [AGENTS.md](../../AGENTS.md). In a game these pages are `kit/recipes/` and a component's README is `kit/<name>/README.md`.
+Short task guides for agents. Each names the components, the order, and the check that proves it. Component facts live in [CATALOG.md](../CATALOG.md) and each README; these pages never repeat them. Start at [AGENTS.md](../../AGENTS.md). In a game these pages are `kit/recipes/` and an installed component's README is `kit/<name>/README.md`. Installed links resolve in the game. Links to available components and checkout-only guides open the pinned source.
 
 ## Paths
 
@@ -8,7 +8,7 @@ Short task guides for agents. Each names the components, the order, and the chec
 
 **Working on a game batch:** `node kit/kit.mjs search <word>` → the recipe below → the README → build → `node kit/kit.mjs finish --comment` ([agent-workflow](agent-workflow.md)). The kit lacks something: "Kit gap" in the PR. A newer kit is needed: [upgrade-kit](upgrade-kit.md).
 
-**Changing the kit:** [AGENTS.md](../../AGENTS.md) "Change the kit" → [agent-workflow](agent-workflow.md) (id, worktree, checks, finish) → the component's README and tests.
+**Changing the kit:** [AGENTS.md](../../AGENTS.md) "Change the kit" → [agent-workflow](agent-workflow.md) (id, worktree, hosted checks) → the component's README and tests.
 
 ## Task → recipe → components
 

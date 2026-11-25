@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+// kit-support-lock: 1
 // Run from a game's repo root.
 //   node <kit>/kit.mjs pull <path to game-kit checkout> <tag or commit> [component...]   moves the whole kit to one tag (named components are added); atomic
 //   node kit/kit.mjs list | search <word>                                              the catalogue of every component (pulled or not), from kit/CATALOG.md; search prints the mechanics map line first (kit/recipes/mechanics.md); the log ~/.game-kit/search-misses.log (never with KIT_NO_MISS_LOG=1, which finish and claims set on their own re-runs, K698) gets a line when no part has every word (the 3 parts printed above "not in the kit by that name" are only the nearest guesses) or the only hit is a "not in the kit" mechanics line (a candidate counts as demand), never from the kit's own repository (components/ beside kit.mjs; K685); a component whose catalogue Hook line holds every word is a hit scored as if each word were in its title (first unless a part matches as well by its own words), with that line printed under it as "  hook: ..."; `search --misses [n]` prints the newest
@@ -9,24 +10,112 @@
 //   node kit.mjs worktree --branch <b> | worktree --here | finish [--comment] [--body <PR body file>] | teardown --worktree <dir>   worker commands, plain node (scripts/agent.mjs, pulled as kit/agent.mjs); finish prints PASS|FAIL <sha> (with --check: check passed|failed <sha> (check: <command>), never PASS); without --check it first fails unless each file added under src/ is a line of the PR body's "Built new" section: - <file or folder> | search: <words>; <other words> | nearest: <kit part or none> | why: <reason> (K684; ignore globs: package.json kit.builtNew.ignore; renames are not new; a folder covers files only two levels below src/, e.g. src/ui/motion/)
 //   node kit.mjs claims <file> [--repo <game repo>] [--before <old file>]   K698: the claim lines of one file (as on disk, any path; --before: only new or changed lines) checked with finish's claim rules; exit 1 on claim problems, 2 on usage or a missing file, 0 clean
 //   node kit/kit.mjs outdated [<game-kit checkout>]                                    the game's tag vs the latest, the PLAN rows and breaking notes between them
-//   node kit/kit.mjs check [--source <game-kit checkout>]                               fails if ./kit differs from kit/kit.lock.json; --source also fails if the tag moved off the locked commit or that commit holds other content; also fails src/ (tests excluded) on the `bypass` patterns of the pulled components' component.json (K675)
+//   node <trusted checkout>/kit.mjs check [--source <game-kit checkout>]                checks installed files and managed worker rules against the lock; --source also checks the pin and reconstructs its installed docs; legacy locks have partial coverage (upgrade-kit recipe). The installed CLI can check ordinary drift. K675 also checks component bypass patterns in src/.
 import { execFileSync as x, spawnSync } from 'node:child_process'
 import { createHash } from 'node:crypto'
 import fs from 'node:fs'
 import os from 'node:os'
-import { dirname, resolve } from 'node:path'
+import { dirname, posix, resolve } from 'node:path'
 import { fileURLToPath, pathToFileURL } from 'node:url'
 const [cmd, ...a] = process.argv.slice(2)
 const LOCK = 'kit/kit.lock.json'
-const sha = (f) => {
-  const b = fs.readFileSync(f)
-  return createHash('sha256').update(b.includes(0) ? b : b.toString('utf8').replace(/\r\n/g, '\n')).digest('hex')
-}
+const digest = (b) => createHash('sha256').update(b).digest('hex')
+const text = (b) => b.toString('utf8').replace(/\r\n/g, '\n')
+const fileDigest = (b) => digest(b.includes(0) ? b : text(b))
+const sha = (f) => fileDigest(fs.readFileSync(f))
 const walk = (d) => fs.readdirSync(d, { withFileTypes: true }).flatMap((e) => (e.isDirectory() ? walk(d + '/' + e.name) : [d + '/' + e.name])).sort()
 const readLock = () => (fs.existsSync(LOCK) ? JSON.parse(fs.readFileSync(LOCK, 'utf8')) : { components: {} })
+const gitAt = (src) => (...args) => x('git', ['-C', src, ...args], { maxBuffer: 1 << 30, stdio: ['ignore', 'pipe', 'pipe'] })
+const treeNames = (git, commit, ...paths) => git('ls-tree', '-r', '--name-only', '-z', commit, '--', ...paths).toString().split('\0').filter(Boolean)
 const WR_START = '<!-- kit:worker-rules start -->', WR_END = '<!-- kit:worker-rules end -->'
-const stampRules = (file, block) => {
-  const body = WR_START + '\n' + block.replace(/\r\n/g, '\n').trim() + '\n' + WR_END
+const WR_SOURCE = 'docs/worker-rules.md'
+const supportPaths = {
+  'kit.mjs': 'kit/kit.mjs',
+  'scripts/agent.mjs': 'kit/agent.mjs',
+  'docs/CATALOG.md': 'kit/CATALOG.md',
+}
+const supportVersion = 1
+const renderer = 'installed-markdown-v1'
+const supportMarker = (bytes) => /^\/\/ kit-support-lock: 1$/m.test(text(bytes))
+const installedPath = (source) => Object.hasOwn(supportPaths, source) ? supportPaths[source]
+  : source.replace(/^docs\/recipes(?=\/|$)/, 'kit/recipes').replace(/^components\//, 'kit/')
+const renderMarkdown = (bytes, source, file, installed, directories, commit) => {
+  if (!source.endsWith('.md')) return bytes
+  let fence, comment = false
+  return Buffer.from(text(bytes).split('\n').map((line) => {
+    const marker = /^ {0,3}(`{3,}|~{3,})(.*)$/.exec(line)
+    if (fence) {
+      if (marker && marker[1][0] === fence[0] && marker[1].length >= fence.length && !marker[2].trim()) fence = undefined
+      return line
+    }
+    if (marker) { fence = marker[1]; return line }
+    if (/^(?: {4}|\t)/.test(line)) return line
+    let start = 0
+    if (comment) {
+      const end = line.indexOf('-->')
+      if (end < 0) return line
+      start = end + 3
+      comment = false
+    }
+    return line.slice(0, start) + line.slice(start).replace(/(`+).*?\1(?!`)|<!--.*?(?:-->|$)|(\]\([ \t]*|^ {0,3}\[[^\]]+\]:[ \t]*)(<?)([^<>()\s]+)(>?)/g,
+      (match, code, prefix, open, href, close) => {
+        if (match.startsWith('<!--') && !match.endsWith('-->')) comment = true
+        if (code || !prefix || /^(?:[\w+.-]+:|[/?#])/.test(href)) return match
+        const [, name, suffix] = /^([^?#]+)(.*)$/.exec(href)
+        const target = posix.join(posix.dirname(source), name)
+        if (target === '..' || target.startsWith('../')) return match
+        const local = installedPath(target).replace(/\/$/, '')
+        const hrefPath = installed.has(local) || directories.has(local)
+          ? (posix.relative(posix.dirname(file), local) || '.') + (name.endsWith('/') ? '/' : '')
+          : 'https://github.com/pateta51-ops/game-kit/' + (name.endsWith('/') ? 'tree' : 'blob') + '/' + commit + '/' + target
+        return prefix + open + hrefPath + suffix + close
+      })
+  }).join('\n'))
+}
+const readSupport = (git, commit) => {
+  const files = new Map()
+  let rules
+  for (const source of treeNames(git, commit, ...Object.keys(supportPaths), 'docs/recipes', WR_SOURCE)) {
+    const bytes = git('show', commit + ':' + source)
+    if (source === WR_SOURCE) rules = bytes
+    else files.set(installedPath(source), { source, bytes })
+  }
+  return { files, rules, versioned: files.has('kit/kit.mjs') && supportMarker(files.get('kit/kit.mjs').bytes) }
+}
+const supportEntry = (source, bytes, rendered) => ({ source, sourceHash: digest(bytes), hash: fileDigest(rendered) })
+const renderSupport = (support, commit, components) => {
+  const installed = new Set([...components, ...support.files.keys()])
+  const directories = new Set()
+  for (const file of installed) {
+    for (let dir = posix.dirname(file); dir !== '.' && !directories.has(dir); dir = posix.dirname(dir)) directories.add(dir)
+  }
+  const render = support.versioned
+    ? (bytes, source, file) => renderMarkdown(bytes, source, file, installed, directories, commit)
+    : (bytes) => bytes
+  const files = Object.fromEntries([...support.files].map(([file, { source, bytes }]) => {
+    const rendered = render(bytes, source, file)
+    return [file, { entry: supportEntry(source, bytes, rendered), rendered }]
+  }))
+  const rules = support.rules && wrapRules(render(support.rules, WR_SOURCE, 'AGENTS.md'))
+  return { files, rules, render }
+}
+const compareFiles = (have, files, bad) => {
+  for (const f of have) {
+    const known = Object.hasOwn(files, f)
+    if (!known || !fs.lstatSync(f).isFile() || files[f] !== sha(f)) bad.push((known ? 'changed ' : 'added   ') + f)
+  }
+  const found = new Set(have)
+  for (const f of Object.keys(files)) if (!found.has(f)) bad.push('missing ' + f)
+}
+const sameSupport = (left, right) => left?.source === right?.source && left?.sourceHash === right?.sourceHash && left?.hash === right?.hash
+const wrapRules = (b) => WR_START + '\n' + text(b).trim() + '\n' + WR_END
+const extractRules = (file) => {
+  if (!fs.lstatSync(file, { throwIfNoEntry: false })?.isFile()) return
+  const body = text(fs.readFileSync(file))
+  const i = body.indexOf(WR_START), j = body.indexOf(WR_END)
+  if (i >= 0 && j > i) return body.slice(i, j + WR_END.length)
+}
+const stampRules = (file, body) => {
   const have = fs.existsSync(file) ? fs.readFileSync(file, 'utf8') : ''
   const nl = have.includes('\r\n') ? '\r\n' : '\n'
   const i = have.indexOf(WR_START), j = have.indexOf(WR_END)
@@ -58,11 +147,26 @@ if (cmd === 'pull') {
   const [src, ref, ...names] = a
   const old = readLock()
   const converted = Object.values(old.components).some((c) => c.ref) && !old.ref
-  const NEW = 'kit.new'
-  const fail = (m) => { fs.rmSync(NEW, { recursive: true, force: true }); console.error('pull failed, kit/ is unchanged: ' + m); process.exit(1) }
+  const NEW = 'kit.new', OLD = 'kit.old'
+  let stamp = null
+  const clean = (file) => {
+    try { fs.rmSync(file, { recursive: true, force: true }) }
+    catch (e) { console.warn('could not remove ' + file + ': ' + e.message) }
+  }
+  const fail = (message, status = 'kit/ is unchanged') => {
+    clean(NEW)
+    if (stamp) clean(stamp)
+    console.error('pull failed, ' + status + ': ' + message)
+    process.exit(1)
+  }
+  if (fs.lstatSync(OLD, { throwIfNoEntry: false })) {
+    console.error('pull stopped: recovery backup kit.old already exists; inspect it before retrying')
+    process.exit(1)
+  }
   fs.rmSync(NEW, { recursive: true, force: true })
+  const gs = gitAt(src)
   let commit
-  try { commit = x('git', ['-C', src, 'rev-parse', ref + '^{commit}'], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] }).trim() } catch { fail('no tag or commit ' + ref + ' in ' + src) }
+  try { commit = gs('rev-parse', ref + '^{commit}').toString().trim() } catch { fail('no tag or commit ' + ref + ' in ' + src) }
   const lock = { ref, commit, components: {} }
   const todo = [...new Set([...Object.keys(old.components), ...names])]
   fs.mkdirSync(NEW, { recursive: true })
@@ -78,28 +182,47 @@ if (cmd === 'pull') {
     if (fs.existsSync(cj)) for (const m of JSON.parse(fs.readFileSync(cj, 'utf8')).needs ?? []) if (!todo.includes(m)) todo.push(m)
     lock.components[n] = { files: Object.fromEntries(walk(NEW + '/' + n).map((f) => [f.replace(NEW + '/', 'kit/'), sha(f)])) }
   }
-  if (process.env.KIT_TEST_FAULT === 'verify') fs.appendFileSync(Object.keys(Object.values(lock.components)[0].files)[0].replace('kit/', NEW + '/'), 'x')
-  for (const c of Object.values(lock.components)) for (const [f, h] of Object.entries(c.files)) if (!fs.existsSync(f.replace('kit/', NEW + '/')) || sha(f.replace('kit/', NEW + '/')) !== h) fail('file ' + f + ' did not verify')
-  try { fs.writeFileSync(NEW + '/kit.mjs', x('git', ['-C', src, 'show', commit + ':kit.mjs'], { stdio: ['ignore', 'pipe', 'pipe'] })) } catch { fail('no kit.mjs in ' + ref) }
-  try { fs.writeFileSync(NEW + '/agent.mjs', x('git', ['-C', src, 'show', commit + ':scripts/agent.mjs'], { stdio: ['ignore', 'pipe', 'ignore'] })); lock.agent = sha(NEW + '/agent.mjs') } catch { /* a ref before the worker commands */ }
-  try { fs.writeFileSync(NEW + '/CATALOG.md', x('git', ['-C', src, 'show', commit + ':docs/CATALOG.md'], { stdio: ['ignore', 'pipe', 'ignore'] })) } catch { /* a ref with no catalogue */ }
-  let hasRecipes = false
-  try { hasRecipes = !!x('git', ['-C', src, 'ls-tree', '-r', '--name-only', commit, 'docs/recipes'], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] }).trim() } catch (e) { fail('cannot list docs/recipes in ' + ref + ': ' + String(e.stderr ?? e.message).trim().split('\n')[0]) }
-  if (hasRecipes) {
-    try {
-      const tar = x('git', ['-C', src, 'archive', commit, 'docs/recipes'], { maxBuffer: 1 << 30, stdio: ['ignore', 'pipe', 'pipe'] })
-      fs.mkdirSync(NEW + '/recipes')
-      x('tar', ['-xf', '-', '--strip-components=2', '-C', NEW + '/recipes'], { input: tar, stdio: ['pipe', 'pipe', 'pipe'] })
-      lock.recipes = { files: Object.fromEntries(walk(NEW + '/recipes').map((f) => [f.replace(NEW + '/', 'kit/'), sha(f)])) }
-    } catch (e) { fail('docs/recipes did not copy: ' + String(e.stderr ?? e.message).trim().split('\n')[0]) }
-  }
-  fs.writeFileSync(NEW + '/kit.lock.json', JSON.stringify(lock, null, 1) + '\n')
-  let stamp = null
+  let support
+  try { support = readSupport(gs, commit) } catch (e) { fail('support files did not copy: ' + String(e.stderr ?? e.message).trim().split('\n')[0]) }
+  if (!support.files.has('kit/kit.mjs')) fail('no kit.mjs in ' + ref)
+  const staged = (file) => NEW + file.slice('kit'.length)
+  let rendering
   try {
-    if (x('git', ['-C', src, 'ls-tree', '--name-only', commit, 'docs/worker-rules.md'], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] }).trim()) stamp = stampRules('AGENTS.md', x('git', ['-C', src, 'show', commit + ':docs/worker-rules.md'], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] }))
+    const installed = Object.values(lock.components).flatMap((c) => Object.keys(c.files))
+    rendering = renderSupport(support, commit, installed)
+    const files = {}
+    for (const [file, { entry, rendered }] of Object.entries(rendering.files)) {
+      fs.mkdirSync(dirname(staged(file)), { recursive: true })
+      fs.writeFileSync(staged(file), rendered)
+      files[file] = entry
+    }
+    if (support.versioned) {
+      for (const file of installed.filter((f) => f.endsWith('.md'))) {
+        const source = file.replace(/^kit\//, 'components/')
+        const dest = staged(file)
+        if (!fs.lstatSync(dest).isFile()) fail('expected a regular Markdown file at ' + file)
+        const bytes = rendering.render(fs.readFileSync(dest), source, file)
+        fs.writeFileSync(dest, bytes)
+        lock.components[file.split('/')[1]].files[file] = fileDigest(bytes)
+      }
+      lock.support = { version: supportVersion, renderer, files }
+      if (rendering.rules !== undefined) lock.support.workerRules = supportEntry(WR_SOURCE, support.rules, Buffer.from(rendering.rules))
+    } else {
+      const recipes = Object.fromEntries(Object.entries(files).filter(([f]) => f.startsWith('kit/recipes/')).map(([f, e]) => [f, e.hash]))
+      if (Object.keys(recipes).length) lock.recipes = { files: recipes }
+      if (files['kit/agent.mjs']) lock.agent = files['kit/agent.mjs'].hash
+    }
+  } catch (e) { fail('support files did not copy: ' + String(e.stderr ?? e.message).trim().split('\n')[0]) }
+
+  const entries = Object.values(lock.components).flatMap((c) => Object.entries(c.files))
+  if (process.env.KIT_TEST_FAULT === 'verify' && entries.length) fs.appendFileSync(staged(entries[0][0]), 'x')
+  if (process.env.KIT_TEST_FAULT === 'verify-support') fs.appendFileSync(staged('kit/kit.mjs'), 'x')
+  const expected = Object.entries(rendering.files).map(([file, { entry }]) => [file, entry.hash])
+  for (const [file, hash] of [...entries, ...expected]) if (!fs.existsSync(staged(file)) || sha(staged(file)) !== hash) fail('file ' + file + ' did not verify')
+  fs.writeFileSync(NEW + '/kit.lock.json', JSON.stringify(lock, null, 1) + '\n')
+  try {
+    if (rendering.rules !== undefined) stamp = stampRules('AGENTS.md', rendering.rules)
   } catch (e) { fs.rmSync('AGENTS.md.kit-tmp', { force: true }); fail('worker rules were not stamped into AGENTS.md: ' + String(e.stderr ?? e.message).trim().split('\n')[0]) }
-  const OLD = 'kit.old'
-  fs.rmSync(OLD, { recursive: true, force: true })
   const had = fs.existsSync('kit')
   const F = process.env.KIT_TEST_FAULT ?? ''
   const BUSY = ['EPERM', 'EACCES', 'EBUSY']
@@ -109,26 +232,58 @@ if (cmd === 'pull') {
     }
   }
   const fill = (from, to) => {
-    for (const f of walk(from)) { const r = f.slice(from.length + 1); fs.mkdirSync(dirname(to + '/' + r), { recursive: true }); fs.writeFileSync(to + '/' + r, fs.readFileSync(f)) }
-    for (const f of walk(to)) if (!fs.existsSync(from + '/' + f.slice(to.length + 1))) fs.rmSync(f, { force: true })
-  }
-  try { if (had) rn('kit', OLD); if (F === 'swap') throw new Error('forced'); rn(NEW, 'kit') } catch (e) {
-    if (had && fs.existsSync(OLD) && !fs.existsSync('kit')) { try { rn(OLD, 'kit') } catch { /* held open: the copy swap below rebuilds kit/ from OLD */ } }
-    if (!BUSY.includes(e.code)) fail('swap: ' + e.message)
-    let whole = false, lost = false
-    try {
-      if (had && !fs.existsSync(OLD)) fs.cpSync('kit', OLD, { recursive: true })
-      if (had && !fs.existsSync('kit')) { lost = true; fill(OLD, 'kit') }
-      whole = true
-      if (F.includes('fallback')) throw new Error('forced', { cause: e })
-      fill(NEW, 'kit'); fs.rmSync(NEW, { recursive: true, force: true }); console.log('kit/ replaced by copy (' + e.code + ')')
-    } catch (e2) {
-      try { if (had && lost && !whole) throw 0; if (had) { if (whole) fill(OLD, 'kit'); fs.rmSync(OLD, { recursive: true, force: true }) } else fs.rmSync('kit', { recursive: true, force: true }) } catch { /* kit.old stays as the backup */ }
-      fail('swap: ' + e2.message)
+    fs.mkdirSync(to, { recursive: true })
+    const entries = new Map(fs.readdirSync(from, { withFileTypes: true }).map((e) => [e.name, e]))
+    for (const existing of fs.readdirSync(to, { withFileTypes: true })) {
+      const want = entries.get(existing.name)
+      if (!want || want.isDirectory() !== existing.isDirectory() || want.isSymbolicLink() || existing.isSymbolicLink()) {
+        fs.rmSync(to + '/' + existing.name, { recursive: true, force: true })
+      }
+    }
+    for (const [name, entry] of entries) {
+      const src = from + '/' + name, dest = to + '/' + name
+      if (entry.isDirectory()) fill(src, dest)
+      else if (entry.isSymbolicLink()) fs.cpSync(src, dest, { verbatimSymlinks: true })
+      else fs.copyFileSync(src, dest)
     }
   }
-  fs.rmSync(OLD, { recursive: true, force: true })
-  if (stamp) fs.renameSync(stamp, 'AGENTS.md')
+  let backedUp = false, copyReason
+  let operation = 'swap'
+  try {
+    try {
+      if (had) { rn('kit', OLD); backedUp = true }
+      if (F === 'swap') throw new Error('forced')
+      rn(NEW, 'kit')
+    } catch (e) {
+      if (!BUSY.includes(e.code)) throw e
+      if (had && !backedUp) {
+        try { fs.cpSync('kit', OLD, { recursive: true, verbatimSymlinks: true }) }
+        catch (cause) { clean(OLD); throw cause }
+        backedUp = true
+      }
+      if (F.includes('fallback')) throw new Error('forced', { cause: e })
+      fill(NEW, 'kit')
+      copyReason = e.code
+    }
+    operation = 'worker rules were not installed'
+    if (stamp) fs.renameSync(stamp, 'AGENTS.md')
+  } catch (error) {
+    const message = operation + ': ' + error.message
+    try {
+      if (backedUp) {
+        if (!fs.existsSync('kit')) {
+          try { rn(OLD, 'kit') } catch (cause) { if (!BUSY.includes(cause.code)) throw cause }
+        }
+        if (fs.existsSync(OLD)) { fill(OLD, 'kit'); clean(OLD) }
+      } else if (!had) fs.rmSync('kit', { recursive: true, force: true })
+    } catch (rollback) {
+      fail(message + '\nrollback failed: ' + rollback.message, backedUp ? 'recovery copy kept in kit.old' : 'kit/ may be incomplete')
+    }
+    fail(message)
+  }
+  clean(NEW)
+  clean(OLD)
+  if (copyReason) console.log('kit/ replaced by copy (' + copyReason + ')')
   if (converted) console.log('converted the per-component locks to one tag: ' + ref)
   console.log('pulled ' + ref + ': ' + Object.keys(lock.components).join(', '))
 } else if (cmd === 'worker-rules') {
@@ -173,6 +328,7 @@ if (cmd === 'pull') {
   }
   console.log(ids.map((n) => 'K' + n).join(' '))
 } else if (cmd === 'check') {
+  if (!fs.existsSync(LOCK)) { console.error('missing ' + LOCK); process.exit(1) }
   const lock = readLock()
   const bad = []
   for (const [n, c] of Object.entries(lock.components)) {
@@ -182,13 +338,42 @@ if (cmd === 'pull') {
     const cj = 'kit/' + n + '/component.json'
     if (fs.existsSync(cj)) for (const m of JSON.parse(fs.readFileSync(cj, 'utf8')).needs ?? []) if (!lock.components[m]) bad.push(n + ' needs ' + m + ' (not pulled)')
   }
-  if (lock.recipes) {
-    const have = fs.existsSync('kit/recipes') ? walk('kit/recipes') : []
-    for (const f of have) if (lock.recipes.files[f] !== sha(f)) bad.push((f in lock.recipes.files ? 'changed ' : 'added   ') + f)
-    for (const f of Object.keys(lock.recipes.files)) if (!have.includes(f)) bad.push('missing ' + f)
+  const rootFiles = Object.values(supportPaths)
+  let recipes = !!lock.recipes
+  if (lock.support) {
+    const { version, renderer: rendering, files, workerRules } = lock.support
+    if (version !== supportVersion || rendering !== renderer || !files || !Object.hasOwn(files, 'kit/kit.mjs')) {
+      bad.push('unsupported or incomplete support manifest in ' + LOCK)
+    } else {
+      recipes = Object.keys(files).some((file) => file.startsWith('kit/recipes/'))
+      const have = rootFiles.filter((file) => fs.lstatSync(file, { throwIfNoEntry: false }))
+      if (recipes) {
+        const dir = fs.lstatSync('kit/recipes', { throwIfNoEntry: false })
+        if (dir?.isDirectory()) have.push(...walk('kit/recipes'))
+        else if (dir) bad.push('changed kit/recipes')
+      }
+      compareFiles(have, Object.fromEntries(Object.entries(files).map(([file, entry]) => [file, entry?.hash])), bad)
+      if (workerRules) {
+        const rules = extractRules('AGENTS.md')
+        if (rules === undefined || digest(rules) !== workerRules.hash) bad.push((rules === undefined ? 'missing ' : 'changed ') + 'AGENTS.md worker rules')
+      }
+    }
+  } else {
+    if (recipes) {
+      const dir = fs.lstatSync('kit/recipes', { throwIfNoEntry: false })
+      if (dir && !dir.isDirectory()) bad.push('changed kit/recipes')
+      compareFiles(dir?.isDirectory() ? walk('kit/recipes') : [], lock.recipes.files, bad)
+    }
+    if (lock.agent && (!fs.existsSync('kit/agent.mjs') || sha('kit/agent.mjs') !== lock.agent)) bad.push('changed kit/agent.mjs')
+    if (fs.existsSync(LOCK)) {
+      if (fs.lstatSync('kit/kit.mjs', { throwIfNoEntry: false })?.isFile() && supportMarker(fs.readFileSync('kit/kit.mjs'))) {
+        bad.push('support manifest missing for this pin; re-pull the same ref with the kit checkout CLI')
+      } else console.warn('warning: legacy lock checks only recorded files; kit.mjs and CATALOG.md are outside its coverage. See the upgrade-kit recipe.')
+    }
   }
-  if (lock.agent && (!fs.existsSync('kit/agent.mjs') || sha('kit/agent.mjs') !== lock.agent)) bad.push('changed kit/agent.mjs')
-  if (fs.existsSync('kit')) for (const e of fs.readdirSync('kit')) if (!lock.components[e] && !(e === 'recipes' && lock.recipes) && !['kit.lock.json', 'kit.mjs', 'agent.mjs', 'CATALOG.md'].includes(e)) bad.push('stray   kit/' + e + ' (not in the lock)')
+  const knownRoots = ['kit.lock.json', ...rootFiles.filter((file) => !lock.support || Object.hasOwn(lock.support.files ?? {}, file)).map((file) => file.slice(4))]
+  if (recipes) knownRoots.push('recipes')
+  if (fs.existsSync('kit')) for (const e of fs.readdirSync('kit')) if (!lock.components[e] && !knownRoots.includes(e)) bad.push('stray   kit/' + e + ' (not in the lock)')
   if (bad.length) {
     console.error('kit/ differs from kit/kit.lock.json. Change the code in the game-kit repo and pull a new version; never edit this copy.\n' + bad.join('\n'))
     process.exit(1)
@@ -199,20 +384,50 @@ if (cmd === 'pull') {
   if (si >= 0) {
     const src = a[si + 1], drift = []
     if (!src || !lock.ref || !lock.commit) { console.error('check --source needs a game-kit checkout and a lock with ref and commit'); process.exit(1) }
-    const gs = (...c) => x('git', ['-C', src, ...c], { maxBuffer: 1 << 30, stdio: ['ignore', 'pipe', 'pipe'] })
+    const gs = gitAt(src)
     let now
     try { now = gs('rev-parse', lock.ref + '^{commit}').toString().trim() } catch { drift.push('tag ' + lock.ref + ' not found in ' + src + ' (run git fetch --tags in ' + src + ')') }
     if (now && now !== lock.commit) drift.push('tag ' + lock.ref + ' moved: the lock has ' + lock.commit + ', ' + src + ' has ' + now)
-    if (!drift.length) for (const [n, c] of Object.entries(lock.components)) {
-      let names
-      try { names = gs('ls-tree', '-r', '--name-only', lock.commit, 'components/' + n).toString().split(/\r?\n/).filter(Boolean) } catch { drift.push('commit ' + lock.commit + ' not in ' + src); break }
-      const want = names.map((f) => f.replace('components/', 'kit/'))
-      for (const f of Object.keys(c.files)) if (!want.includes(f)) drift.push('not in the tagged commit: ' + f)
-      for (const f of want) {
-        if (!(f in c.files)) { drift.push('in the tagged commit, not in the lock: ' + f); continue }
-        const b = gs('show', lock.commit + ':' + f.replace('kit/', 'components/'))
-        if (createHash('sha256').update(b.includes(0) ? b : b.toString('utf8').replace(/\r\n/g, '\n')).digest('hex') !== c.files[f]) drift.push('content differs from the tagged commit: ' + f)
-      }
+    if (!drift.length) {
+      try {
+        const support = readSupport(gs, lock.commit)
+        const components = Object.entries(lock.components).map(([n, c]) => ({
+          files: c.files, sources: treeNames(gs, lock.commit, 'components/' + n),
+        }))
+        let render = (b) => b
+        if (support.versioned) {
+          if (!lock.support) drift.push('support manifest missing for this pin; re-pull the same ref with the kit checkout CLI')
+          else {
+            const expected = renderSupport(support, lock.commit, components.flatMap((c) => c.sources.map(installedPath)))
+            render = expected.render
+            for (const [file, { entry }] of Object.entries(expected.files)) {
+              if (!sameSupport(lock.support.files[file], entry)) drift.push('support differs from the pinned source or its installed rendering: ' + file)
+            }
+            for (const file of Object.keys(lock.support.files)) if (!Object.hasOwn(expected.files, file)) drift.push('support file not in the pinned source: ' + file)
+            const rules = expected.rules === undefined ? undefined : supportEntry(WR_SOURCE, support.rules, Buffer.from(expected.rules))
+            if (!sameSupport(lock.support.workerRules, rules)) drift.push('support differs from the pinned source or its installed rendering: AGENTS.md worker rules')
+          }
+        } else if (lock.support) drift.push('pinned source predates this support manifest')
+        else {
+          const recorded = { ...lock.recipes?.files, ...(lock.agent ? { 'kit/agent.mjs': lock.agent } : {}) }
+          for (const [file, hash] of Object.entries(recorded)) {
+            if (!support.files.has(file) || fileDigest(support.files.get(file).bytes) !== hash) drift.push('content differs from the tagged commit: ' + file)
+          }
+          if (lock.recipes) for (const file of support.files.keys()) {
+            if (file.startsWith('kit/recipes/') && !Object.hasOwn(recorded, file)) drift.push('in the tagged commit, not in the lock: ' + file)
+          }
+        }
+        for (const { files, sources } of components) {
+          const want = new Set(sources.map(installedPath))
+          for (const file of Object.keys(files)) if (!want.has(file)) drift.push('not in the tagged commit: ' + file)
+          for (const source of sources) {
+            const file = installedPath(source)
+            if (!Object.hasOwn(files, file)) { drift.push('in the tagged commit, not in the lock: ' + file); continue }
+            const bytes = gs('show', lock.commit + ':' + source)
+            if (fileDigest(render(bytes, source, file)) !== files[file]) drift.push('content differs from the tagged commit: ' + file)
+          }
+        }
+      } catch (e) { drift.push('could not read the pinned source: ' + String(e.stderr ?? e.message).trim().split('\n')[0]) }
     }
     if (drift.length) { console.error('kit/ does not match ' + lock.ref + ' in ' + src + '\n' + drift.join('\n')); process.exit(1) }
   }

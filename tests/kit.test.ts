@@ -46,6 +46,14 @@ beforeAll(() => {
   commit('v3');
   put(path.join(src, 'components/gamma/component.json'), '{"needs":["beta"],"packages":["left-pad"]}');
   commit('v4');
+  put(path.join(src, 'scripts/agent.mjs'), '// worker commands\n');
+  put(path.join(src, 'components/alpha/README.md'), 'Alpha. [recipe](../../docs/recipes/guide.md#setup)\n');
+  put(path.join(src, 'components/beta/README.md'), 'Beta.\n');
+  put(path.join(src, 'docs/patterns/p.md'), 'Pattern.\n');
+  put(path.join(src, 'docs/worker-rules.md'), 'Use seeded examples.\n');
+  put(path.join(src, 'docs/recipes/guide.md'), '[installed](../../components/alpha/README.md#use) [available](../../components/beta/README.md#use) [catalog](../CATALOG.md) [pattern][p]\n\n[p]: ../patterns/p.md\n\n    [literal](../../components/alpha/README.md)\n');
+  commit('k751');
+  git(src, 'reset', '--hard', 'v4');
 });
 afterAll(() => fs.rmSync(tmp, { recursive: true, force: true }));
 
@@ -153,10 +161,12 @@ describe('kit.mjs', () => {
     const g = game();
     run(g, 'pull', src, 'v1', 'alpha');
     const f = path.join(g, 'kit/kit.lock.json');
-    const lock = JSON.parse(fs.readFileSync(f, 'utf8')) as { ref?: string; commit?: string; components: Record<string, { ref?: string }> };
+    const lock = JSON.parse(fs.readFileSync(f, 'utf8')) as { ref?: string; support?: unknown; components: Record<string, { ref?: string }> };
     for (const c of Object.values(lock.components)) c.ref = 'v1';
     delete lock.ref;
+    delete lock.support;
     fs.writeFileSync(f, JSON.stringify(lock));
+    put(path.join(g, 'kit/kit.mjs'), '// Legacy CLI fixture.');
     const c = run(g, 'check');
     expect(c.status).toBe(0);
     expect(c.stdout).toContain('alpha@v1');
@@ -261,6 +271,180 @@ describe('kit.mjs', () => {
     run(h, 'pull', src, 'v1', 'alpha');
     put(path.join(h, 'kit/recipes/r.md'), 'x');
     expect(run(h, 'check').stderr).toContain('stray   kit/recipes');
+  });
+
+  it.each([
+    ['CATALOG.md', 'changed'], ['CATALOG.md', 'missing'], ['kit.mjs', 'changed'], ['kit.mjs', 'missing'],
+    ['agent.mjs', 'changed'], ['recipes/guide.md', 'changed'],
+  ])('K751: an external checker catches %s %s', (file, kind) => {
+    const g = game();
+    expect(run(g, 'pull', src, 'k751', 'alpha').status).toBe(0);
+    expect(run(g, 'check', '--source', src).status).toBe(0);
+    const target = path.join(g, 'kit', file);
+    if (kind === 'missing') fs.rmSync(target);
+    else fs.appendFileSync(target, '\n<!-- harmless edit -->\n');
+    for (const args of [[], ['--source', src]]) {
+      const result = run(g, 'check', ...args);
+      expect(result.status, result.stderr).toBe(1);
+      expect(result.stderr).toContain(kind + ' kit/' + file);
+    }
+  });
+
+  it('K751: pinned docs point to installed guides and pinned source for other reads', () => {
+    const g = game();
+    const h = game();
+    expect(run(g, 'pull', src, 'k751', 'alpha').status).toBe(0);
+    expect(run(h, 'pull', src, 'k751', 'alpha').status).toBe(0);
+    const commit = git(src, 'rev-parse', 'k751^{commit}').trim();
+    const guide = (root: string) => fs.readFileSync(path.join(root, 'kit/recipes/guide.md'), 'utf8');
+    const readme = fs.readFileSync(path.join(g, 'kit/alpha/README.md'), 'utf8');
+    expect(guide(g)).toContain('[installed](../alpha/README.md#use)');
+    expect(guide(g)).toContain('[available](https://github.com/pateta51-ops/game-kit/blob/' + commit + '/components/beta/README.md#use)');
+    expect(guide(g)).toContain('[pattern][p]');
+    expect(guide(g)).toContain('[p]: https://github.com/pateta51-ops/game-kit/blob/' + commit + '/docs/patterns/p.md');
+    expect(guide(g)).toContain('[catalog](../CATALOG.md)');
+    expect(guide(g)).toContain('    [literal](../../components/alpha/README.md)');
+    expect(readme).toContain('[recipe](../recipes/guide.md#setup)');
+    expect(git(src, 'show', 'k751:docs/recipes/guide.md')).toContain('[installed](../../components/alpha/README.md#use)');
+    expect(guide(g)).toBe(guide(h));
+    expect(fs.readFileSync(path.join(g, 'kit/kit.lock.json'), 'utf8')).toBe(fs.readFileSync(path.join(h, 'kit/kit.lock.json'), 'utf8'));
+    expect(fs.existsSync(path.join(g, 'kit/beta'))).toBe(false);
+    expect(run(g, 'check', '--source', src).status).toBe(0);
+  });
+
+  it('K751: source checking rejects an edited rendered doc with a matching local digest', () => {
+    const g = game();
+    expect(run(g, 'pull', src, 'k751', 'alpha').status).toBe(0);
+    const file = 'kit/recipes/guide.md';
+    const lockFile = path.join(g, 'kit/kit.lock.json');
+    const lock = JSON.parse(fs.readFileSync(lockFile, 'utf8')) as { support?: { files: Record<string, { hash: string }> }; recipes?: { files: Record<string, string> } };
+    put(path.join(g, file), 'arbitrary local text');
+    const hash = createHash('sha256').update('arbitrary local text').digest('hex');
+    if (lock.support) (lock.support.files[file] as { hash: string }).hash = hash;
+    if (lock.recipes) lock.recipes.files[file] = hash;
+    fs.writeFileSync(lockFile, JSON.stringify(lock));
+    expect(run(g, 'check').status).toBe(0);
+    const result = run(g, 'check', '--source', src);
+    expect(result.status, result.stderr).toBe(1);
+    expect(result.stderr).toContain(file);
+  });
+
+  it('K751: verifies the managed worker rules while allowing game-owned instructions', () => {
+    const g = game();
+    const file = path.join(g, 'AGENTS.md');
+    put(file, '# Game instructions\n');
+    expect(run(g, 'pull', src, 'k751', 'alpha').status).toBe(0);
+    const rules = fs.readFileSync(file, 'utf8');
+    expect(rules).toContain('Use seeded examples.');
+    fs.appendFileSync(file, '\n## Game instructions\nRead the game rules.\n');
+    expect(run(g, 'check', '--source', src).status).toBe(0);
+    put(file, rules.replace('Use seeded examples.', 'Edit the examples.'));
+    const changed = run(g, 'check');
+    expect(changed.status, changed.stderr).toBe(1);
+    expect(changed.stderr).toContain('changed AGENTS.md worker rules');
+  });
+
+  it('K751: legacy pins keep their files and report the limits of their lock', () => {
+    const g = game();
+    const h = game();
+    const old = path.join(src, 'kit.mjs');
+    const cli = fs.readFileSync(old, 'utf8');
+    try {
+      put(old, '// Legacy CLI fixture.\n');
+      commit('k751-legacy');
+    } finally {
+      git(src, 'reset', '--hard', 'v4');
+      put(old, cli);
+    }
+    expect(run(g, 'pull', src, 'k751-legacy', 'alpha').status).toBe(0);
+    expect(fs.readFileSync(path.join(g, 'kit/kit.mjs'), 'utf8')).toBe('// Legacy CLI fixture.\n');
+    const legacy = run(g, 'check', '--source', src);
+    expect(legacy.status, legacy.stderr).toBe(0);
+    expect(legacy.stderr).toContain('legacy lock');
+    expect(legacy.stderr).toContain('kit.mjs and CATALOG.md');
+    expect(run(h, 'pull', src, 'k751', 'alpha').status).toBe(0);
+    const file = path.join(h, 'kit/kit.lock.json');
+    const lock = JSON.parse(fs.readFileSync(file, 'utf8')) as { support?: unknown };
+    delete lock.support;
+    put(file, JSON.stringify(lock));
+    const missing = run(h, 'check', '--source', src);
+    expect(missing.status, missing.stderr).toBe(1);
+    expect(missing.stderr).toContain('re-pull the same ref');
+    expect(run(h, 'pull', src, 'k751').status).toBe(0);
+    expect(run(h, 'check', '--source', src).status).toBe(0);
+  });
+
+  it('K751: a failed support-file verification preserves an existing pin', () => {
+    const g = game();
+    expect(run(g, 'pull', src, 'v4', 'alpha').status).toBe(0);
+    const lock = path.join(g, 'kit/kit.lock.json');
+    const catalog = path.join(g, 'kit/CATALOG.md');
+    const original = [lock, catalog].map((file) => fs.readFileSync(file, 'utf8'));
+    const failed = spawnSync('node', [KIT, 'pull', src, 'k751'], {
+      cwd: g, encoding: 'utf8', env: { ...process.env, KIT_TEST_FAULT: 'verify-support' },
+    });
+    expect(failed.status, failed.stderr).toBe(1);
+    expect(failed.stderr).toContain('file kit/kit.mjs did not verify');
+    expect([lock, catalog].map((file) => fs.readFileSync(file, 'utf8'))).toEqual(original);
+    expect(fs.existsSync(path.join(g, 'kit/recipes'))).toBe(false);
+    expect(fs.existsSync(path.join(g, 'AGENTS.md'))).toBe(false);
+    expect(run(g, 'check', '--source', src).status).toBe(0);
+  });
+
+  it('K751: an interrupted stamp restores the original tree after adding a component', () => {
+    const g = game();
+    expect(run(g, 'pull', src, 'v4', 'alpha').status).toBe(0);
+    const kit = path.join(g, 'kit');
+    const snapshot = (dir: string) => fs.readdirSync(dir, { recursive: true, encoding: 'utf8' }).sort().map((file) => {
+      const full = path.join(dir, file);
+      return [file, fs.statSync(full).isFile() ? fs.readFileSync(full) : null];
+    });
+    const original = snapshot(kit);
+    const shim = path.join(g, 'fail-stamp.mjs');
+    put(shim, `import fs from 'node:fs';
+const rename = fs.renameSync;
+fs.renameSync = (from, to) => {
+  if (from === 'AGENTS.md.kit-tmp' && to === 'AGENTS.md') throw new Error('forced stamp failure');
+  return rename(from, to);
+};
+`);
+    const upgrade = () => spawnSync('node', ['--import', shim, KIT, 'pull', src, 'k751', 'beta'], { cwd: g, encoding: 'utf8' });
+    const failed = upgrade();
+    expect(failed.status, failed.stderr).toBe(1);
+    expect(failed.stderr).toContain('forced stamp failure');
+    expect(snapshot(kit)).toEqual(original);
+    expect(fs.existsSync(path.join(g, 'kit.old'))).toBe(false);
+    expect(fs.existsSync(path.join(g, 'AGENTS.md.kit-tmp'))).toBe(false);
+    expect(run(g, 'check', '--source', src).status).toBe(0);
+
+    fs.appendFileSync(shim, `const remove = fs.rmSync;
+fs.rmSync = (file, options) => {
+  if (file === 'kit/beta') throw new Error('forced rollback failure');
+  return remove(file, options);
+};
+`);
+    const interrupted = upgrade();
+    expect(interrupted.status, interrupted.stderr).toBe(1);
+    expect(interrupted.stderr).toContain('forced rollback failure');
+    const backup = path.join(g, 'kit.old');
+    expect(snapshot(backup)).toEqual(original);
+    const retry = run(g, 'pull', src, 'k751', 'beta');
+    expect(retry.status, retry.stderr).toBe(1);
+    expect(retry.stderr).toContain('kit.old');
+    expect(snapshot(backup)).toEqual(original);
+  });
+
+  it('K751: a successful copy swap prunes retired support directories', () => {
+    const g = game();
+    expect(run(g, 'pull', src, 'k751', 'alpha').status).toBe(0);
+    expect(fs.existsSync(path.join(g, 'kit/recipes'))).toBe(true);
+    const copied = spawnSync('node', [KIT, 'pull', src, 'v4'], {
+      cwd: g, encoding: 'utf8', env: { ...process.env, KIT_TEST_FAULT: 'rename-eperm' },
+    });
+    expect(copied.status, copied.stderr).toBe(0);
+    expect(copied.stdout).toContain('kit/ replaced by copy');
+    expect(fs.existsSync(path.join(g, 'kit/recipes'))).toBe(false);
+    expect(run(g, 'check', '--source', src).status).toBe(0);
   });
 
   it('K227: check reports a stray folder or file in kit/', () => {
