@@ -31,6 +31,19 @@ function isThrowMessage(node) {
     ts.isThrowStatement(call.parent)
 }
 
+function templateSource(node, source, start) {
+  let cursor = start + 1
+  let text = ''
+  for (const { expression, literal } of node.templateSpans) {
+    const opening = expression.pos - 2
+    const next = literal.getStart(source) + 1
+    // Mask each substitution while keeping the source columns of the surrounding text.
+    text += source.text.slice(cursor, opening) + '?'.repeat(next - opening)
+    cursor = next
+  }
+  return text + source.text.slice(cursor, node.end - 1)
+}
+
 function checkCode(file, dir, name, needs, packages) {
   const source = ts.createSourceFile(file, fs.readFileSync(file, 'utf8'), ts.ScriptTarget.Latest, true)
   const local = path.relative(dir, file).split(path.sep).join('/')
@@ -48,7 +61,11 @@ function checkCode(file, dir, name, needs, packages) {
     bad.push(`${position(offset)}: references ${value} outside its folder; ${fix}`)
   }
 
-  const checkPackages = Array.isArray(packages) && !TESTISH.test(file)
+  function checkQuotedPaths(text, offset) {
+    for (const match of text.matchAll(QUOTED_PARENT)) checkPath(match[1], offset + match.index)
+  }
+
+  const checkPackages = Array.isArray(packages) && !TESTISH.test('/' + local)
   function visit(node) {
     const spec = checkPackages ? moduleSpecifier(node) : undefined
     if (spec && ts.isStringLiteralLike(spec) && BARE.test(spec.text) && !isBuiltin(spec.text)) {
@@ -63,9 +80,14 @@ function checkCode(file, dir, name, needs, packages) {
       const start = node.getStart(source)
       checkPath(node.text, start)
       // Embedded quoted paths can still be used by generated source and shell commands.
-      for (const match of node.getText(source).slice(1, -1).matchAll(QUOTED_PARENT)) checkPath(match[1], start + 1 + match.index)
+      checkQuotedPaths(node.getText(source).slice(1, -1), start + 1)
     }
-    if (ts.isTemplateExpression(node) && !isThrowMessage(node)) checkPath(node.head.text + '${…}', node.getStart(source))
+    if (ts.isTemplateExpression(node) && !isThrowMessage(node)) {
+      const start = node.getStart(source)
+      const value = [node.head.text, ...node.templateSpans.map(({ literal }) => literal.text)].join('${…}')
+      checkPath(value, start)
+      checkQuotedPaths(templateSource(node, source, start), start + 1)
+    }
 
     for (const doc of node.jsDoc ?? []) visit(doc)
     ts.forEachChild(node, visit)

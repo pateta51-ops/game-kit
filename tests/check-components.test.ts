@@ -8,8 +8,8 @@ const SCRIPT = path.resolve(import.meta.dirname, '..', 'scripts', 'check-compone
 const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'cc-test-'));
 afterAll(() => fs.rmSync(tmp, { recursive: true, force: true }));
 let n = 0;
-const make = (comps: Record<string, { needs?: string[]; packages?: string[]; files?: Record<string, string>; bare?: boolean; readme?: string }>) => {
-  const root = path.join(tmp, 'r' + String(++n));
+const make = (comps: Record<string, { needs?: string[]; packages?: string[]; files?: Record<string, string>; bare?: boolean; readme?: string }>, checkoutParent = tmp) => {
+  const root = path.join(checkoutParent, 'r' + String(++n));
   for (const [name, c] of Object.entries(comps)) {
     const d = path.join(root, 'components', name);
     fs.mkdirSync(d, { recursive: true });
@@ -117,6 +117,7 @@ describe('K757 literal package loads and component paths', () => {
       "// import '../missing/index.ts'; import('missing-pkg');",
       "/*\nimport 'missing-pkg'\n*/",
       "/* require('../missing/index.ts'); import 'missing-pkg' */",
+      "const line = `command ${name /* '../missing/file' */}`;",
       "throw new Error('../parent');",
       "throw Error('../parent');",
     ].join('\n') } } });
@@ -135,6 +136,10 @@ describe('K757 literal package loads and component paths', () => {
     "const asset = '../b/map.png'; readFileSync(asset)",
     'const command = "cat \'../b/map.png\'"',
     "const template = `export * from '../b/index.ts'`",
+    "const template = `cat '../b/map.png' ${args}`",
+    "const template = `${command} '../b/map.png' ${args}`",
+    "const template = `${command} '../b/map.png'`",
+    "const template = `cat '../b/${filename}'`",
     "new URL('../b/map.png', import.meta.url)",
     "readFileSync(`../b/${name}`)",
     "await import('../b/index.ts')",
@@ -147,6 +152,13 @@ describe('K757 literal package loads and component paths', () => {
     expect(r.status).toBe(1);
     expect(r.stderr).toMatch(/entry\.ts:\d+:\d+: references .* outside its folder/);
     expect(make({ a: { needs: ['b'], files }, b: {} }).status).toBe(0);
+  });
+
+  it('classifies test-only paths relative to the component folder', () => {
+    const files = { 'entry.ts': "await import('missing-pkg')" };
+    const checkoutParent = path.join(tmp, 'examples');
+    expect(make({ a: { files } }, checkoutParent).status).toBe(1);
+    expect(make({ a: { files: { 'examples/entry.ts': files['entry.ts'] } } }).status).toBe(0);
   });
 
   it('keeps test packages and the phone screenshot dependency outside consumer package checks', () => {
