@@ -37,6 +37,14 @@ describe('the fuzz command', () => {
     expect(lines[0]).toMatch(/^5 game\(s\), \d+ actions checked: exceptions 0, invariant violations 0, runaway guards 0, never ended 0$/);
   });
 
+  it('refuses to report success when a requested view check plays no games', async () => {
+    const lines: string[] = [];
+    const collect = (line: string) => { lines.push(line); };
+    expect(await fuzzMain(['--games', '0'], good, { view: true }, collect)).toBe(2);
+    expect(lines).toEqual(['view validation requires at least one game']);
+    expect(await fuzzMain(['--games', '0'], good, {}, collect)).toBe(0);
+  });
+
   it('names exceptions, violations, runaway guards and games that never end, and exits 1', async () => {
     const steps = { bad: 2, loop: 0, long: 40, word: 0, drv: 2 };
     for (const [prefix, kind] of [['bad', 'violation'], ['loop', 'runaway'], ['long', 'endless'], ['word', 'exception'], ['drv', 'exception']] as const) {

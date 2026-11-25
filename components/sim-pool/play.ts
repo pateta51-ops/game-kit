@@ -38,6 +38,52 @@ export interface GameSpec {
   readonly settings?: Readonly<Record<string, string | number | boolean>>;
 }
 
+interface ViewAssertions {
+  readonly secrets?: readonly string[];
+  readonly leakKeys?: readonly string[];
+}
+
+/** A public view and its secrecy assertions for one seat. */
+export interface ViewObservation {
+  readonly seat: string | number;
+  read(): { view: unknown } & ViewAssertions;
+}
+
+type DriverViewValidation = <V>(state: GameTypes['state'], seat: ViewObservation['seat'] | undefined, read: () => V) => V;
+const driverViewScope = Symbol.for('game-kit.sim-pool.driver-view/v1');
+const scope = globalThis as typeof globalThis & { [driverViewScope]?: DriverViewValidation };
+
+/** Read the real policy input, checking it when the synchronous choice is under validation. */
+export function readDriverView<V, S extends ViewObservation['seat'] | undefined>(state: GameTypes['state'], seat: S, read: (seat: S) => V): V {
+  const validate = scope[driverViewScope];
+  return validate ? validate(state, seat, () => read(seat)) : read(seat);
+}
+
+function withDriverViewValidation<T>(choose: () => T, validate?: DriverViewValidation): T {
+  // A bundled simulator and an imported game can have separate module instances.
+  const previous = scope[driverViewScope];
+  if (!previous && !validate) return choose();
+  if (validate) scope[driverViewScope] = validate;
+  else delete scope[driverViewScope];
+  try {
+    return choose();
+  } finally {
+    if (previous) scope[driverViewScope] = previous;
+    else delete scope[driverViewScope];
+  }
+}
+
+const registrationBrand = Symbol.for('game-kit.sim-pool.driver-registration/v1');
+
+/** An invalid driver registration makes a batch fail preflight. */
+export class DriverRegistrationError extends Error {
+  override readonly name = 'DriverRegistrationError';
+  readonly [registrationBrand] = true;
+}
+
+export const isDriverRegistrationError = (error: unknown): error is DriverRegistrationError =>
+  error instanceof Error && Object.hasOwn(error, registrationBrand) && Reflect.get(error, registrationBrand) === true && typeof error.message === 'string';
+
 /** What a game gives the pool. The module a worker loads exports it as `simGame`. */
 export interface SimGame<G extends GameTypes, S = unknown, O = unknown> {
   /** A new observation for each game: `onPrompt` fills it, `summary` reads it. Keep per-game notes here, never in the module. */
@@ -49,6 +95,8 @@ export interface SimGame<G extends GameTypes, S = unknown, O = unknown> {
   content(): G['content'] | Promise<G['content']>;
   start(spec: GameSpec, content: G['content']): { options: G['options']; rules: G['rules'] };
   driver(name: string, spec: GameSpec, content: G['content']): Driver<G>;
+  /** Reject invalid registrations before setup or driver creation. May return the canonical registration, used if the driver has no name. Must only depend on the declared registry. */
+  validateDriver?(name: string): string | void;
   /** The legal answers to the open prompt; default `legalAnswers`. For hidden checks, enumerate only seat-visible choices and keep this callback pure apart from draws from `rng`. */
   answers?(state: G['state'], content: G['content'], rng: DriverRng): readonly G['action'][];
   /** The game's own counters for a game that ended (or stopped). */
@@ -61,6 +109,10 @@ export interface SimGame<G extends GameTypes, S = unknown, O = unknown> {
   promptProblem?(state: G['state'], content: G['content']): string | undefined;
   /** K101: the client view of a state; with `view: true` it is built and serialized after setup and every action, and a throw or a view that cannot be serialized fails the game. */
   view?(state: G['state'], content: G['content']): unknown;
+  /** Seat-aware validation after setup and each action. A legacy view callback takes precedence when present. */
+  observeViews?(state: G['state'], content: G['content'], context: { readonly cheated: boolean }): readonly ViewObservation[];
+  /** Seat assertions for the view a driver consumes. A legacy view retains its own assertions. */
+  driverViewAssertions?(state: G['state'], seat: ViewObservation['seat'], content: G['content']): ViewAssertions;
   /** K238 (GAPS-3 A10): with `view: true`, the strings the view must not show (hidden card ids, names); a view that holds one as a value, a key or a whole word fails the game (`view leak: ...`). */
   secrets?(state: G['state'], content: G['content']): readonly string[];
   /** K238: key names the view must not hold (opt-in, like viewLeaks `keys`: e.g. `['rng']`; `stack` may be a real zone); each fails the game as `key:<name>`. Works with or without `secrets`. */
@@ -99,6 +151,35 @@ function leaks(view: unknown, secrets: readonly string[], keys: readonly string[
   return [...out];
 }
 
+type JsonView = null | boolean | number | string | JsonView[] | { [key: string]: JsonView };
+
+function jsonView(value: unknown, parents = new Set<object>()): JsonView {
+  if (value === null || typeof value === 'string' || typeof value === 'boolean') return value;
+  if (typeof value === 'number' && Number.isFinite(value) && !Object.is(value, -0)) return value;
+  const invalid = () => new TypeError('view must be JSON data without lossy values, accessors, or cycles');
+  if (typeof value !== 'object' || parents.has(value)) throw invalid();
+  const array = Array.isArray(value);
+  const prototype: unknown = Object.getPrototypeOf(value);
+  if (array ? prototype !== Array.prototype : prototype !== Object.prototype && prototype !== null) throw invalid();
+  const keys = Reflect.ownKeys(value);
+  if (array && keys.length !== value.length + 1) throw invalid();
+  if (typeof Reflect.get(value, 'toJSON') === 'function') throw invalid();
+  parents.add(value);
+  const entries: [string, JsonView][] = [];
+  for (const key of keys) {
+    if (array && key === 'length') continue;
+    if (typeof key !== 'string' || (array && (!/^(0|[1-9]\d*)$/.test(key) || Number(key) >= value.length))) throw invalid();
+    const property = Object.getOwnPropertyDescriptor(value, key);
+    if (!property?.enumerable || !Object.hasOwn(property, 'value') || !Object.is(Reflect.get(value, key), property.value)) throw invalid();
+    entries.push([key, jsonView(property.value, parents)]);
+  }
+  parents.delete(value);
+  if (!array) return Object.fromEntries(entries);
+  const items: JsonView[] = [];
+  for (const [key, item] of entries) items[Number(key)] = item;
+  return items;
+}
+
 /** K101 options of one game; both are off by default. */
 export interface PlayOptions {
   readonly view?: boolean | undefined;
@@ -116,6 +197,8 @@ export interface StepMs {
   readonly apply: number;
   readonly view: number;
 }
+
+const viewValidationScope = 'snapshots-and-driver-views';
 
 export interface SimRecord<S = unknown> {
   readonly index: number;
@@ -136,10 +219,29 @@ export interface SimRecord<S = unknown> {
   readonly summary?: S;
   /** K101: the largest view in JSON characters, when views were rendered. */
   readonly viewBytes?: number;
+  /** Evidence for this run. Historical records may lack it. */
+  readonly viewValidation?: {
+    readonly status: 'skipped' | 'not-run' | 'unavailable' | 'executed' | 'failed';
+    readonly checked: number;
+    readonly scope?: typeof viewValidationScope;
+  };
+  /** The selected policy identity. Driver still records the requested registration and keys replay randomness. */
+  readonly resolvedDriver?: string;
   /** K490: the ids `SimGame.trace` saw resolved in this game, sorted. */
   readonly resolved?: readonly string[];
   /** K651: ids resolved in this game only by actions after which `SimGame.changed` said nothing changed, sorted. */
   readonly noOp?: readonly string[];
+}
+
+type ViewValidationEvidence = NonNullable<SimRecord['viewValidation']>;
+
+const viewEvidence = (status: ViewValidationEvidence['status'], checked: number): ViewValidationEvidence =>
+  status === 'executed' ? { status, checked, scope: viewValidationScope } : { status, checked };
+
+export function hasExecutedViewValidation(record: SimRecord): boolean {
+  const evidence = record.viewValidation;
+  return evidence?.status === 'executed' && evidence.scope === viewValidationScope &&
+    Number.isSafeInteger(evidence.checked) && evidence.checked > 0;
 }
 
 export const ANSWER_CAP = 512;
@@ -238,6 +340,11 @@ export function playOne<G extends GameTypes, S, O = unknown>(game: SimGame<G, S,
   let error: string | undefined;
   let errorName: string | undefined;
   let viewBytes: number | undefined;
+  let viewStatus: NonNullable<SimRecord['viewValidation']>['status'] = opts.view ? 'not-run' : 'skipped';
+  let viewsChecked = 0;
+  let cheated = false;
+  let resolvedDriver: string | undefined;
+  const snapshotAssertions = new Map<ViewObservation['seat'], ViewAssertions[]>();
   const ms = { answers: 0, choose: 0, apply: 0, view: 0 };
   const trace = game.trace?.(content);
   trace?.clear();
@@ -251,26 +358,87 @@ export function playOne<G extends GameTypes, S, O = unknown>(game: SimGame<G, S,
     for (const id of trace.resolved) if (!each.has(id)) (before === undefined || after === undefined || game.changed(id, before, after, content) ? counted : noOp).add(id);
     trace.clear();
   };
-  const render = (st: G['state']): void => {
-    if (!opts.view || !game.view) return;
+  const validating = <T>(read: (validate: (view: unknown, secrets?: readonly string[], keys?: readonly string[]) => void) => T,
+    location: () => string): T => {
     const t = performance.now();
+    const validate = (view: unknown, secrets: readonly string[] = [], keys: readonly string[] = []): void => {
+      const json = jsonView(view);
+      viewBytes = Math.max(viewBytes ?? 0, JSON.stringify(json).length);
+      const bad = secrets.length || keys.length ? leaks(json, secrets, keys) : [];
+      if (bad.length) throw new Error(`view leak: ${bad.join(', ')}`);
+      viewsChecked += 1;
+    };
     try {
-      const v = game.view(st, content);
-      viewBytes = Math.max(viewBytes ?? 0, (JSON.stringify(v) ?? '').length);
-      const sec = game.secrets?.(st, content) ?? [];
-      const keys = game.leakKeys?.(st, content) ?? [];
-      if (sec.length || keys.length) {
-        const bad = leaks(v, sec, keys);
-        if (bad.length) throw new Error(`view leak: ${bad.join(', ')}`);
-      }
+      const value = read(validate);
+      if (viewStatus !== 'failed') viewStatus = 'executed';
+      return value;
     } catch (e) {
-      throw new Error(`view after ${String(actions.length)} action(s): ${e instanceof Error ? e.message : String(e)}`, { cause: e });
+      if (viewStatus !== 'unavailable') viewStatus = 'failed';
+      throw new Error(`view after ${String(actions.length)} action(s)${location()}: ${e instanceof Error ? e.message : String(e)}`, { cause: e });
     } finally {
       ms.view += performance.now() - t;
     }
   };
+  const render = (st: G['state']): void => {
+    if (!opts.view) return;
+    snapshotAssertions.clear();
+    let seat: ViewObservation['seat'] | undefined;
+    validating((validate) => {
+      if (game.view) validate(game.view(st, content), game.secrets?.(st, content), game.leakKeys?.(st, content));
+      else {
+        const observations = game.observeViews?.(st, content, { cheated }) ?? [];
+        if (observations.length === 0) {
+          viewStatus = 'unavailable';
+          throw new Error('view validation unavailable: no seats to observe');
+        }
+        for (const observation of observations) {
+          seat = observation.seat;
+          const { view, secrets, leakKeys } = observation.read();
+          validate(view, secrets, leakKeys);
+          if (!game.driverViewAssertions) {
+            const assertions = snapshotAssertions.get(seat) ?? [];
+            assertions.push({ ...(secrets === undefined ? {} : { secrets }), ...(leakKeys === undefined ? {} : { leakKeys }) });
+            snapshotAssertions.set(seat, assertions);
+          }
+        }
+      }
+    }, () => seat === undefined ? '' : ` (seat ${String(seat)})`);
+  };
+  const driverAssertions = (st: G['state'], seat: ViewObservation['seat'] | undefined): ViewAssertions => {
+    if (game.view) return { secrets: game.secrets?.(st, content) ?? [], leakKeys: game.leakKeys?.(st, content) ?? [] };
+    if (seat === undefined) return {};
+    if (game.driverViewAssertions) return game.driverViewAssertions(st, seat, content);
+    const assertions = st === state ? snapshotAssertions.get(seat)
+      : game.observeViews?.(st, content, { cheated }).filter((observation) => observation.seat === seat).map((observation) => observation.read());
+    return { secrets: assertions?.flatMap((a) => a.secrets ?? []) ?? [], leakKeys: assertions?.flatMap((a) => a.leakKeys ?? []) ?? [] };
+  };
+  const chooseAction = (driver: Driver<G>, st: G['state'], answers: readonly G['action'][], rng: DriverRng): G['action'] | DebugAction => {
+    const choose = () => driver.choose(st, answers, rng);
+    if (!opts.view) return withDriverViewValidation(choose);
+    let rejection: Error | undefined;
+    const action = withDriverViewValidation(choose, (viewState, seat, read) => {
+      try {
+        return validating((validate) => {
+          const view = read();
+          const { secrets, leakKeys } = driverAssertions(viewState, seat);
+          validate(view, secrets, leakKeys);
+          return view;
+        }, () => seat === undefined ? ' (driver)' : ` (driver seat ${String(seat)})`);
+      } catch (error) {
+        rejection ??= error instanceof Error ? error : new Error(String(error));
+        throw error;
+      }
+    });
+    if (rejection !== undefined) throw rejection;
+    return action;
+  };
   try {
+    if (opts.view && !game.view && !game.observeViews) {
+      viewStatus = 'unavailable';
+      throw new Error('view validation unavailable: the game has no view adapter');
+    }
     if (opts.hidden && !game.reshuffleHidden) throw new Error('hidden: the game has no reshuffleHidden, so the hidden-shuffle check cannot run');
+    const registration = game.validateDriver?.(spec.driver);
     const start = game.start(spec, content);
     seen = game.observation?.(spec, content);
     const first = createGame(game.rules, start.options, start.rules, content);
@@ -280,6 +448,7 @@ export function playOne<G extends GameTypes, S, O = unknown>(game: SimGame<G, S,
     violations.push(...first.violations);
     render(s);
     const driver = game.driver(spec.driver, spec, content);
+    resolvedDriver = driver.name || registration || spec.driver;
     let hiddenDriver: Driver<G> | undefined;
     const cap = game.maxActions ?? 100_000;
     while (s.result === null && violations.length === 0) {
@@ -314,18 +483,19 @@ export function playOne<G extends GameTypes, S, O = unknown>(game: SimGame<G, S,
         if (!driver.stateful && a === undefined) {
           const otherChoice = evaluateAlternate(context, 'driver choice', () => {
             hiddenDriver ??= game.driver(spec.driver, spec, content);
-            return hiddenDriver.choose(other, otherAnswers, otherRng);
+            return chooseAction(hiddenDriver, other, otherAnswers, otherRng);
           });
-          a = driver.choose(s, answers, rng);
+          a = chooseAction(driver, s, answers, rng);
           if (canonicalJson(a) !== canonicalJson(otherChoice)) throw new Error(`${context} the driver answered differently when only hidden state changed; check the seat view and driver callbacks`);
         }
       }
-      const action = a ?? driver.choose(s, answers, rng);
+      const action = a ?? chooseAction(driver, s, answers, rng);
       if (dbg) sinceDebug = 0;
       else sinceDebug += 1;
-      ms.choose = performance.now() - t;
+      ms.choose = performance.now() - t - ms.view;
       if (until !== undefined && actions.length >= until) break;
       actions.push(action);
+      if (action.kind === 'debug') cheated = true;
       t = performance.now();
       judge();
       const r = applyAction(game.rules, s, action, content);
@@ -371,6 +541,8 @@ export function playOne<G extends GameTypes, S, O = unknown>(game: SimGame<G, S,
     ...(failed ? { log: actions } : {}),
     ...(summary !== undefined ? { summary } : {}),
     ...(viewBytes !== undefined ? { viewBytes } : {}),
+    viewValidation: viewEvidence(viewStatus, viewsChecked),
+    ...(resolvedDriver === undefined ? {} : { resolvedDriver }),
     ...(counted ? { resolved: [...counted].sort() } : trace ? { resolved: [...new Set(trace.resolved)].sort() } : {}),
     ...(counted && [...noOp].some((id) => !counted.has(id)) ? { noOp: [...noOp].filter((id) => !counted.has(id)).sort() } : {}),
   };
@@ -405,7 +577,7 @@ export function breakAt<G extends GameTypes, S, O = unknown>(
   while (s.result === null && s.prompt !== null && !(typeof stop === 'number' ? actions.length >= stop : stop(s, actions))) {
     const rng = new DriverRng(`${spec.seed}|${spec.driver}|${String(s.prompt.id)}`);
     const answers = game.answers ? game.answers(s, content, rng) : (legalAnswers(s.prompt, rng) as G['action'][]);
-    const a = driver.choose(s, answers, rng);
+    const a = withDriverViewValidation(() => driver.choose(s, answers, rng));
     actions.push(a);
     s = applyAction(game.rules, s, a, content).state;
   }

@@ -149,7 +149,8 @@ export function measureGame(dir, telemetry={}) {
     if(!fs.existsSync(from))continue;
     if(fs.realpathSync(from)!==from)throw new Error('source folder is a symlink');
     for(const file of sourceFiles(from)) {
-      const isTest=folder==='tests'||/\.(?:test|spec)\./.test(file)||file.split(path.sep).includes('__tests__');
+      const directories=path.dirname(path.relative(root,file)).split(path.sep);
+      const isTest=folder==='tests'||directories.includes('__tests__')||/\.(?:test|spec)\./.test(path.basename(file));
       const parts=partReferences(file,fs.readFileSync(file,'utf8'),kit);
       const referencesLocked=[...parts.keys()].some(part=>locked.has(part));
       const target=isTest?tests:production;

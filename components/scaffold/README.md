@@ -16,6 +16,7 @@ One command makes a working, empty game repo from the kit (K204). Run it from th
 7. For a specification-driven start, resolve the spec at the intended kit ref, register its port block, and then generate into a new or empty directory. Keep the registry entry the same between attempts. Treat executable rules and gate configuration as game work.
 8. Do the TODOs listed in the generated `CLAUDE.md` (traceability, theme-check, plan-checker, plain-text, e2e, repo-gate's `cardIdLiteral` and `artFolder`); they are not wired.
 9. Keep `node_modules` local, whether installed or linked. For a local `spec generate` result, run `git init`, `git add -A`, then `npm run check`. Generated ignores cover both dependency forms.
+10. Keep game engine code pure. Use pure kit APIs such as `defineGame` from `kit/game-store/index.ts`. The UI imports game engine code through `src/engine/api.ts`.
 
 **Common mistakes:**
 - Editing `ports.json` by hand instead of using `server.mjs add`.
