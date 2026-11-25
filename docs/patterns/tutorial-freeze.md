@@ -23,6 +23,4 @@ The tutorial shows the text the owner approved. Live content may change after ap
 `--dir <folder>` writes `frozen.json` after proving the script plays on that content, and refuses to overwrite an existing one. `--refreeze --decision docs/decisions/<file>.md` overwrites only when that file is a `.md` in `docs/decisions/`, has a line `Refreeze: <scenario id>`, says "owner", and has a file-name date after the freeze it replaces. Exit 0 written, 1 refused or the script does not play, 2 bad usage or missing file. IO is injected (`Io`) so tests need no disk.
 
 ## Kit version
-The game supplies the scenario type, the list of what to copy, and the reference walker. The [tutorial component](../../components/tutorial/README.md) supplies the freeze primitives. The game owns the command, refreeze policy and content wiring.
-
-Code: `components/tutorial/` (script format, headless play, lock, check); the freeze step itself stays in each game.
+The game owns the scenario, content closure, freeze record, command and refreeze policy. The [tutorial component](../../components/tutorial/README.md) supplies `playScript` and `tutorialCheck` to verify that the script still plays against the frozen content.
