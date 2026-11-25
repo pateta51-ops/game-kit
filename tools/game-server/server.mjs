@@ -245,9 +245,11 @@ else if (cmd === 'ports-md') writeFileSync(join(dirname(PORTS), 'docs', 'PORTS.m
 else if (cmd === 'update') { await update(id); console.log('serving'); process.exit(0); }
 else if (cmd === 'stop') { stop(id); console.log('stopped'); }
 else if (cmd === 'add') {
-  const [, , , , name, repo, cwd = ''] = process.argv;
-  if (!id || !name || !repo) { console.error('usage: server.mjs add <id> "<Name>" <repo path> [app subfolder]'); process.exit(2); }
-  if (!existsSync(join(repo, cwd, 'package.json'))) { console.error(`no package.json in ${join(repo, cwd)}`); process.exit(1); }
+  const [, , , , name, repo, subfolder = ''] = process.argv;
+  if (!id || !name || !repo) { console.error('usage: server.mjs add <id> "<Name>" <repo path> [app subfolder | --pending]'); process.exit(2); }
+  const pending = subfolder === '--pending';
+  const cwd = pending ? '' : subfolder;
+  if (!pending && !existsSync(join(repo, cwd, 'package.json'))) { console.error(`no package.json in ${join(repo, cwd)}`); process.exit(1); }
   const s = nextSlot(cfg);
   const g = { name, repo: repo.replaceAll('\\', '/'), block: s.block, serve: { local: s.local, https: s.https, ...(cwd ? { cwd } : {}), build: 'npm run build', start: 'npx vite preview --host 127.0.0.1 --port {port} --strictPort', copyIgnored: [], env: {} } };
   writeFileSync(PORTS, addGameText(readFileSync(PORTS, 'utf8'), id, g));
@@ -257,4 +259,4 @@ else if (cmd === 'add') {
 Next: commit ports.json + docs/PORTS.md in game-kit, set the game's vite ports (server ${s.block}, preview ${s.block + 1}, preview.allowedHosts ['.ts.net']), then Reload ports.json in the panel.`);
   try { await fetch(`http://127.0.0.1:${cfg.panel.local}/api/reload`, { method: 'POST' }); } catch { /* panel not running */ }
 }
-else { console.error('usage: server.mjs [update <id> | stop <id> | status | ports-md | add <id> "<Name>" <repo> [app subfolder]]'); process.exit(2); }
+else { console.error('usage: server.mjs [update <id> | stop <id> | status | ports-md | add <id> "<Name>" <repo> [app subfolder | --pending]]'); process.exit(2); }

@@ -13,21 +13,21 @@ Needs Node 22.18+: tools run with plain `node` (no tsx, no build); relative impo
 
 ## The locked copy (in a game)
 - A game holds `kit/`, a copy of named components at a tag. **Never edit `kit/`**, never copy a component into `src/`, never port from an older game what the kit has.
-- A game holds one kit tag. `node ../game-kit/kit.mjs pull ../game-kit <tag> [component...]` copies components (and their `needs`), moves the whole kit to that tag, and writes `kit/kit.lock.json` plus `kit/CATALOG.md`. Run `node kit/kit.mjs outdated` first ([upgrade-kit](docs/recipes/upgrade-kit.md)). `node kit/kit.mjs check` fails when `kit/` differs from the lock; every game runs it in its check chain. `node kit/kit.mjs check --source ../game-kit` also proves `kit/` matches the game-kit tag it names (fails if the tag moved).
-- Before writing anything in a game: `node kit/kit.mjs search <word>`, then `kit/recipes/`, then the component README. `pull` copies `docs/recipes/` to `kit/recipes/`; `check` guards it like the rest.
+- A game holds one kit tag. `node ../game-kit/kit.mjs pull ../game-kit <tag> [component...]` copies components (and their `needs`), moves the whole kit to that tag, and writes `kit/kit.lock.json` plus `kit/CATALOG.md`. Run `node kit/kit.mjs outdated` first ([upgrade-kit](docs/recipes/upgrade-kit.md)). `node kit/kit.mjs check` checks the lock in every game's check chain. From the game root, `node ../game-kit/kit.mjs check --source ../game-kit` also checks the pinned source and reconstructs installed docs. The checkout copy can diagnose a missing or changed installed CLI. See [upgrade-kit](docs/recipes/upgrade-kit.md) for legacy coverage.
+- Before writing anything in a game: `node kit/kit.mjs search <word>`, then `kit/recipes/`, then the component README. `pull` delivers the recipes to `kit/recipes/`. Follow local links for installed guides and pinned source links to assess available parts before pulling them.
 - Inside a game, find what exists without the kit checkout: `node kit/kit.mjs list`, `node kit/kit.mjs search <words>` (titles, tags, looks, use, effect words, the parts inside big parts, and the mechanics map `kit/recipes/mechanics.md`: a mechanic prints first as `mechanic: <words> -> <answer>`, where the answer is the part and what to read, "partly" and what is missing, or "not in the kit"; a miss prints the nearest mechanics line and is logged to `~/.game-kit/search-misses.log`, newest: `search --misses`), `node kit/kit.mjs effects [words]`.
 - Before adding a plan row, take its id with `node kit.mjs next-id --reserve` (in the game-kit checkout); it reads main and every open PR. The row is the file `docs/plan/K<n>.md` (front matter: `section`, then the table's columns such as `sources`, `effort`, `state`; the content line below it; copy a neighbour). Then run `node scripts/plan.mjs`: it writes `docs/PLAN.md` (generated, committed; never edit it by hand; on a merge conflict in it, resolve the row files and regenerate).
 - Owner host and paths for phone serving live in an untracked `kit.local.json` (copy `kit.local.example.json`).
 - Start a new game: `node kit.mjs new <dir> <id> "<Name>"` does it all (port block, repo, kit pull, first commit, GitHub repo).
 - Workers: `node kit.mjs worktree` (or `worktree --here` when you already are in a worktree), `finish` and `teardown`; no install needed. `next-id --reserve` holds a row id. What `finish` checks (Built new lines, claim rules, `worktree --here`) is in [agent-workflow](docs/recipes/agent-workflow.md), "What finish checks". For a row in this repository the proof is GitHub's check on the PR head, no `finish`.
 - `reference-game` is the contract test of the kit's pieces; `card-parts` and `card-zoom`: the game owns its layout, the kit gives parts.
-- Pulling a newer tag happens only when the game needs something in it. Commit `kit/`.
+- Pulling a newer tag happens only when the game needs something in it. Commit `kit/` and any updated kit-managed block in `AGENTS.md` together.
 
 ## Choose components for a new game
 1. `search` / [CATALOG.md](docs/CATALOG.md): each entry says when to use it and when not. Effects: watch each one play in [gallery/effects.html](gallery/effects.html) (`node gallery/build.mjs` rebuilds it).
 2. Read the component's README (its "Use it in 10 lines" is real, type-checked code) and, for `engine-core`, its guides (`timing.md`, `undo.md`, `random.md`, `legal.md`, `debug.md`).
 3. `kit.mjs new` pulls the base set (`BASE` in `components/scaffold/scaffold.js`: engine-core, game-store, sim-pool, state-machines, app-frame, settings, saves, screens, lint-preset, ci-templates, check-runner, repo-gate, bundle-size); other tooling is pulled by hand (`--existing` for a repo that has files). Recipe: [new-game](docs/recipes/new-game.md).
-4. Before using a part, read its "## Rules for agents" section (`kit/components/<name>/README.md` in a game) and follow every "You must".
+4. Before using a part, read its "## Rules for agents" section (`kit/<name>/README.md` in a game) and follow every "You must".
 5. A need the kit lacks: change the kit (below) or write "Kit gap" in the PR, each line with `readme: "<README line it rests on>"` and `tried: <case you ran> -> <result>`; do not fork.
 
 ## Change the kit
@@ -50,7 +50,7 @@ Needs Node 22.18+: tools run with plain `node` (no tsx, no build); relative impo
 
 ## Rules agents break most
 - Editing `kit/` in a game, or copying kit code into `src/`.
-- A `'..'` or `'../x'` string in a component code file that leaves the component folder for a component not in its `needs` (`scripts/check-components.mjs` flags it); use `dirname()`.
+- A literal parent path that leaves a component folder. Declare any component it refers to in `needs`. The checker covers imports and asset paths. See [component checks](docs/recipes/agent-workflow.md#checks-and-what-each-catches).
 - Importing a kit component from another without listing it in `needs` (same check).
 - `async` functions without `await` (lint `require-await`), tests included.
 - A "Use it in 10 lines" block that no longer compiles (`scripts/readme-examples.mjs`).
@@ -84,4 +84,4 @@ Needs Node 22.18+: tools run with plain `node` (no tsx, no build); relative impo
 - The games' repositories are private and never deployed publicly. This kit is public: nothing personal goes into its code, docs, rows, commit messages, PR titles and bodies or tags (no person's name, e-mail address, local drive path, session or chat link, no game's card text); commits use a no-reply identity; `npm run personal` is part of the check. GitHub files under 50 MB.
 
 ## Reports
-Short, what was not done first, then the rest: the batch id, PR number, branch, check result, what now works, count of open questions. Post-build notes go in `docs/post-build/notes/`.
+Short, what was not done first, then the rest: the batch id, PR number, branch, check result, what now works, count of open questions. Post-build findings go in `docs/post-build/notes/K<n>.md`. When all three categories have no findings, record the batch ID in [the no-findings ledger](docs/post-build/notes/no-findings.md).

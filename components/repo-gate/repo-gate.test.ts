@@ -1,6 +1,6 @@
 // Repository gate. Fake tokens, session URLs, tailnet hosts and runner names are built at run time so this file never holds one.
-import { execFileSync } from 'node:child_process';
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { execFileSync, spawnSync } from 'node:child_process';
+import { lstatSync, mkdirSync, mkdtempSync, rmdirSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterAll, describe, expect, it, vi } from 'vitest';
@@ -151,6 +151,34 @@ describe('repo-gate', () => {
 describe('config and command line', () => {
   const dir = mkdtempSync(join(tmpdir(), 'repo-gate-'));
   afterAll(() => rmSync(dir, { recursive: true, force: true }));
+
+  it('reports an indexed node_modules link as a dependency finding and preserves the link on recovery', () => {
+    const root = join(dir, 'linked-project');
+    const target = join(dir, 'dependencies');
+    const link = join(root, 'node_modules');
+    mkdirSync(root);
+    mkdirSync(target);
+    const git = (...args: string[]) => execFileSync('git', args, { cwd: root, encoding: 'utf8' }).trim();
+    const gate = () => spawnSync(process.execPath, [join(import.meta.dirname, 'repo-gate.ts')], { cwd: root, encoding: 'utf8' });
+    git('init', '-q');
+    writeFileSync(join(root, 'repo-gate.config.json'), '{}');
+    writeFileSync(join(root, '.gitignore'), 'node_modules\n');
+    symlinkSync(target, link, 'junction');
+    git('add', '-A');
+    git('add', '-f', 'node_modules');
+    const failed = gate();
+    expect(failed.status, failed.stdout + failed.stderr).toBe(1);
+    expect(failed.stdout).toContain('node_modules:0: DEPENDENCY_LINK');
+    expect(failed.stdout).toContain('git rm --cached');
+    expect(failed.stderr).not.toContain('git is not available here');
+    // The Git index already proves the tracked link is invalid, even when the target is absent.
+    rmdirSync(target);
+    expect(gate().status).toBe(1);
+    mkdirSync(target);
+    git('rm', '--cached', '--', 'node_modules');
+    expect(lstatSync(link).isSymbolicLink()).toBe(true);
+    expect(gate().status).toBe(0);
+  });
 
   it('reads runner names from the runners file, and runs over a temporary git repository', () => {
     const git = (...a: string[]): void => void execFileSync('git', a, { cwd: dir });

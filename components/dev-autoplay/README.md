@@ -31,7 +31,7 @@ Dev-only: `?dev=1&autoplay=<prompt kind>[*n]` plays a game-store with a sim-pool
 ```ts
 import { createGameStore, defineGame } from '../kit/game-store/index'
 import { devAutoplay } from '../kit/dev-autoplay/index'
-import type { Bot } from '../kit/sim-pool/index'
+import type { Bot } from '../kit/sim-pool/browser'
 import type { AnswerAction } from '../kit/engine-core/kernel'
 import { CONTENT, COUNTER, type Counter, type CounterState } from '../kit/engine-core/fake/counter'
 

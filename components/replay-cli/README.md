@@ -13,6 +13,8 @@ Headless replays, golden games and a determinism check across two checkouts. Nee
 4. For a refactor or performance change record on the base (`golden.ts record`) and `replay` on the head; they must replay the same.
 5. Name each golden with a seed and driver that the game's sim-pool also plays: a golden equals the simulated game of that seed.
 
+6. Read any `trigger-cap` warning even when `replay.ts` exits 0. That exit checks reproducibility. Use the golden-game or fuzz command to validate clean completion.
+
 **Common mistakes:**
 - A driver change shows as CHANGED (the stored moves still replay), an engine or content change as DIVERGED.
 - The driver is not asked again at replay.

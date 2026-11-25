@@ -1,5 +1,7 @@
 # Parts inventory, all games (18 Nov 2026)
 
+**Historical inventory from 18 November 2026.** For current implementation, see [the component catalogue](CATALOG.md).
+
 Every reusable part of 11 games (animations and effects are in motion-retrofit/INVENTORY.md) at the commit shown, checked against the kit: in kit (and whether the game still keeps its own copy), a planned row, or missing. The work list merges the same part across games. Update a row when it lands or a game is retrofitted.
 
 Steward note: item 4 keeps only expansion choice and base+expansion merge; importing or storing packs at run time, and item 5 (private pack hand-off), are dropped (owner, 16 Nov: no pack import, a game carries its own cards). Item 2 (accessibility) is dropped: no accessibility work ever (owner, 18 Nov).

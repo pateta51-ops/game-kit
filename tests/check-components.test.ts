@@ -8,8 +8,8 @@ const SCRIPT = path.resolve(import.meta.dirname, '..', 'scripts', 'check-compone
 const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'cc-test-'));
 afterAll(() => fs.rmSync(tmp, { recursive: true, force: true }));
 let n = 0;
-const make = (comps: Record<string, { needs?: string[]; packages?: string[]; files?: Record<string, string>; bare?: boolean; readme?: string }>) => {
-  const root = path.join(tmp, 'r' + String(++n));
+const make = (comps: Record<string, { needs?: string[]; packages?: string[]; files?: Record<string, string>; bare?: boolean; readme?: string }>, checkoutParent = tmp) => {
+  const root = path.join(checkoutParent, 'r' + String(++n));
   for (const [name, c] of Object.entries(comps)) {
     const d = path.join(root, 'components', name);
     fs.mkdirSync(d, { recursive: true });
@@ -18,7 +18,11 @@ const make = (comps: Record<string, { needs?: string[]; packages?: string[]; fil
       fs.writeFileSync(path.join(d, 'README.md'), c.readme ?? '# ' + name + '\n\n## Rules for agents\n');
       fs.writeFileSync(path.join(d, 'a.test.ts'), '');
     }
-    for (const [f, s] of Object.entries(c.files ?? {})) fs.writeFileSync(path.join(d, f), s);
+    for (const [f, s] of Object.entries(c.files ?? {})) {
+      const file = path.join(d, f);
+      fs.mkdirSync(path.dirname(file), { recursive: true });
+      fs.writeFileSync(file, s);
+    }
   }
   return spawnSync('node', [SCRIPT, root], { encoding: 'utf8' });
 };
@@ -93,7 +97,93 @@ describe('K238 packages (GAPS-3 tooling A10)', () => {
   });
 });
 
+describe('K757 literal package loads and component paths', () => {
+  it.each([
+    "await import('@fixture/pkg/sub')",
+    "require('@fixture/pkg/sub')",
+    "void 0; import '@fixture/pkg/sub'",
+    "export {\n  x,\n} from '@fixture/pkg/sub'",
+  ])('checks package declarations and locates %s', (source) => {
+    const files = { 'entry.ts': '\n' + source };
+    const r = make({ a: { files } });
+    expect(r.status).toBe(1);
+    expect(r.stderr).toMatch(/entry\.ts:\d+:\d+: imports package @fixture\/pkg /);
+    expect(r.stderr).toContain('@fixture/pkg/sub');
+    expect(make({ a: { packages: ['@fixture/pkg'], files } }).status).toBe(0);
+  });
+
+  it('ignores comments and direct throw messages', () => {
+    const r = make({ a: { files: { 'entry.ts': [
+      "// import '../missing/index.ts'; import('missing-pkg');",
+      "/*\nimport 'missing-pkg'\n*/",
+      "/* require('../missing/index.ts'); import 'missing-pkg' */",
+      "const line = `command ${name /* '../missing/file' */}`;",
+      "throw new Error('../parent');",
+      "throw Error('../parent');",
+    ].join('\n') } } });
+    expect(r.status).toBe(0);
+  });
+
+  it('accepts Node built-ins and leaves computed specifiers to their callers', () => {
+    expect(make({ a: { files: { 'entry.ts': [
+      "import { Readable } from 'stream/web';",
+      "require('node:fs/promises');",
+      'void import(name);',
+    ].join('\n') } } }).status).toBe(0);
+  });
+
+  it.each([
+    "const asset = '../b/map.png'; readFileSync(asset)",
+    'const command = "cat \'../b/map.png\'"',
+    "const template = `export * from '../b/index.ts'`",
+    "const template = `cat '../b/map.png' ${args}`",
+    "const template = `${command} '../b/map.png' ${args}`",
+    "const template = `${command} '../b/map.png'`",
+    "const template = `cat '../b/${filename}'`",
+    "new URL('../b/map.png', import.meta.url)",
+    "readFileSync(`../b/${name}`)",
+    "await import('../b/index.ts')",
+    "require('../b/index.ts')",
+    '/// <reference path="../b/base.d.ts" />',
+    "/** @type {import('../b/index.ts').Type} */\nconst value = {};",
+  ])('continues to check the component boundary for %s', (source) => {
+    const files = { 'entry.ts': source };
+    const r = make({ a: { files }, b: {} });
+    expect(r.status).toBe(1);
+    expect(r.stderr).toMatch(/entry\.ts:\d+:\d+: references .* outside its folder/);
+    expect(make({ a: { needs: ['b'], files }, b: {} }).status).toBe(0);
+  });
+
+  it('classifies test-only paths relative to the component folder', () => {
+    const files = { 'entry.ts': "await import('missing-pkg')" };
+    const checkoutParent = path.join(tmp, 'examples');
+    expect(make({ a: { files } }, checkoutParent).status).toBe(1);
+    expect(make({ a: { files: { 'examples/entry.ts': files['entry.ts'] } } }).status).toBe(0);
+  });
+
+  it('keeps test packages and the phone screenshot dependency outside consumer package checks', () => {
+    expect(make({ 'phone-mode': { files: {
+      'demo/imp-shots.mjs': "const play = await import('playwright')",
+      'extra.test.ts': "const test = await import('test-kit')",
+    } } }).status).toBe(0);
+    expect(make({ 'phone-mode': { files: {
+      'demo/imp-shots.mjs': "const other = await import('other-package')",
+    } } }).status).toBe(1);
+    expect(make({ 'phone-mode': { files: {
+      'entry.ts': "const play = await import('playwright')",
+    } } }).status).toBe(1);
+    expect(make({ 'phone-mode': { files: {
+      'demo/imp-shots.mjs': "new URL('../../outside.png', import.meta.url)",
+    } } }).status).toBe(1);
+  });
+});
+
 describe('catalog.mjs --check', () => {
+  it('keeps copied purpose links relative to the generated catalog', () => {
+    const catalog = path.resolve(import.meta.dirname, '..', 'docs', 'CATALOG.md');
+    expect(fs.readFileSync(catalog, 'utf8')).toContain('Recipe: [game-store](recipes/game-store.md).');
+  });
+
   it('passes on the repository', () => {
     expect(spawnSync('node', [path.resolve(import.meta.dirname, '..', 'scripts', 'catalog.mjs'), '--check'], { encoding: 'utf8' }).status).toBe(0);
   });

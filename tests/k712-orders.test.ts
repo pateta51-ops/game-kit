@@ -198,11 +198,51 @@ describe('K712 finish: orders and e2e from the changed paths', () => {
     const r = run(main, '## Checks\ne2e not needed: no flow change\n');
     expect(r.rc).toBe(0);
     expect(r.script).toContain(`bash -c 'npm run check && npm run e2e'`);
-    expect(r.text).toContain('ORDERS 0/0\nE2E: runs (1 changed under src/screen/** or src/app/**, first src/screen/t.ts): npm run e2e (package.json scripts e2e)');
+    expect(r.text).toContain('ORDERS 0/0\nE2E: runs (1 changed UI path(s), first src/screen/t.ts): npm run e2e (package.json scripts e2e)');
     const other = run(game('e2', { ...E2E, 'src/engine/t.ts': '' }, { 'src/engine/t.ts': 'const x = 1' }), '');
     expect(other.rc).toBe(0);
     expect(other.script).toContain(`bash -c 'npm run check'`);
     expect(other.text).not.toContain('E2E:');
+  });
+  it.each(['src/ui/App.tsx', 'src/ui/store.ts', 'src/main.tsx', 'index.html'])('K754 selects the scaffold browser smoke for %s', (file) => {
+    const pkg = { 'package.json': JSON.stringify({ scripts: { 'test:e2e': 'node tests/scaffold.e2e.mjs' } }) };
+    const result = run(game('k754-' + path.basename(file), { ...pkg, [file]: '' }, { [file]: 'changed' }), '');
+    expect(result.rc).toBe(0);
+    expect(result.script).toContain(`bash -c 'npm run check && npm run test:e2e'`);
+    expect(result.text).toContain('first ' + file);
+  });
+  it('K754 uses an explicitly declared root and keeps an engine-only scoped check', () => {
+    const pkg = { 'package.json': JSON.stringify({ scripts: { 'test:e2e': 'node tests/scaffold.e2e.mjs' }, kit: { e2eRoots: ['frontend/Tableaux éclairés'] } }) };
+    const name = 'frontend/Tableaux éclairés/Board.tsx';
+    const result = run(game('k754-frontend', { ...pkg, [name]: '' }, { [name]: 'changed' }), '');
+    expect(result.rc).toBe(0);
+    expect(result.script).toContain(`bash -c 'npm run check && npm run test:e2e'`);
+    expect(result.text).toContain('first ' + name);
+    const engine = 'src/engine/rules.ts';
+    const scoped = run(game('k754-engine', { ...pkg, [engine]: '' }, { [engine]: 'changed' }), '', ['--check', 'echo hi']);
+    expect(scoped.rc).toBe(0);
+    expect(scoped.script).toContain(`bash -c 'echo hi'`);
+    expect(scoped.text).not.toContain('E2E:');
+  });
+  it('K754 runs e2e when a tracked file moves out of a browser root', () => {
+    const from = 'src/ui/helper.ts';
+    const to = 'src/engine/helper.ts';
+    const main = game('k754-move', { ...E2E, [from]: 'export const helper = 1', 'src/engine/keep.ts': '' }, { 'src/old.ts': 'export const a = 2' });
+    g(main, 'mv', from, to);
+    g(main, 'commit', '-qm', 'move helper');
+    expect(g(main, 'diff', '--find-renames', '--name-status', 'origin/main', 'HEAD')).toContain(`R100\t${from}\t${to}`);
+    const result = run(main, '');
+    expect(result.rc, result.text).toBe(0);
+    expect(result.script).toContain(`bash -c 'npm run check && npm run e2e'`);
+    expect(result.text).toContain('first ' + from);
+  });
+  it('K754 rejects malformed browser roots before full finish', () => {
+    const name = 'src/engine/rules.ts';
+    const pkg = { 'package.json': JSON.stringify({ kit: { e2eRoots: ['../elsewhere'] } }) };
+    const result = run(game('k754-invalid', { ...pkg, [name]: '' }, { [name]: 'changed' }), '');
+    expect(result.rc).toBe(1);
+    expect(result.ran).toBe(false);
+    expect(result.text).toContain('kit.e2eRoots must be an array of repository-relative directory names');
   });
   it('K712 a change under src/app with no e2e script fails before any run, exit 1; test:e2e and its phone script are found; kit.e2e wins', () => {
     const main = game('e3', { 'src/app/t.ts': '' }, { 'src/app/t.ts': 'const x = 1' });

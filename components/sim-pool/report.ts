@@ -20,6 +20,10 @@ export interface Lengths {
 export interface Report {
   readonly games: number;
   readonly completed: number;
+  /** No terminal result and no failure (for example, an intentional pause). */
+  readonly unfinished?: number;
+  /** Runs invalidated by a trigger chain dropping work. */
+  readonly truncated?: number;
   /** completed / games (0 for no games). */
   readonly completedShare: number;
   readonly failures: Readonly<Record<FailKind, number>>;
@@ -40,6 +44,9 @@ const failKind = (r: SimRecord<unknown>): FailKind | undefined => {
   return undefined;
 };
 
+export const completedGame = (r: SimRecord): boolean =>
+  r.result !== null && r.result !== undefined && r.triggerCap === undefined && failKind(r) === undefined;
+
 const defaultWinner = (r: SimRecord<unknown>): Seat | undefined => {
   const x = r.result;
   if (typeof x === 'string' || typeof x === 'number') return x;
@@ -58,10 +65,20 @@ export function report<S = unknown>(records: readonly SimRecord<S>[], o: ReportO
   const wins: Record<string, number> = {};
   const first: Record<string, { games: number; wins: number; share: number }> = {};
   let completed = 0;
+  let unfinished = 0;
+  let truncated = 0;
   for (const r of records) {
+    if (r.triggerCap !== undefined) {
+      truncated += 1;
+      continue;
+    }
     const k = failKind(r);
     if (k !== undefined) {
       failures[k] += 1;
+      continue;
+    }
+    if (!completedGame(r)) {
+      unfinished += 1;
       continue;
     }
     completed += 1;
@@ -80,6 +97,8 @@ export function report<S = unknown>(records: readonly SimRecord<S>[], o: ReportO
   return {
     games: records.length,
     completed,
+    unfinished,
+    truncated,
     completedShare: records.length === 0 ? 0 : completed / records.length,
     failures,
     length: lens.length === 0 ? undefined : { min: lens[0] as number, median: median(lens), max: lens[lens.length - 1] as number },
@@ -98,6 +117,8 @@ export function formatReport(r: Report): string {
     `games ${String(r.games)}, completed ${String(r.completed)} (${pct(r.completedShare)})`,
     `failures: timeout ${String(f.timeout)}, crash ${String(f.crash)}, violation ${String(f.violation)}, error ${String(f.error)}`,
   ];
+  if (r.unfinished || r.truncated)
+    lines.push(`unfinished ${String(r.unfinished ?? 0)}, trigger-truncated ${String(r.truncated ?? 0)}`);
   if (r.length) lines.push(`length (actions): min ${String(r.length.min)}, median ${String(r.length.median)}, max ${String(r.length.max)}`);
   const seats = Object.keys(r.winsBySeat).sort();
   if (seats.length) lines.push(`win share by seat: ${seats.map((s) => `${s} ${pct(r.winShareBySeat[s] as number)} (${String(r.winsBySeat[s])})`).join(', ')}`);
