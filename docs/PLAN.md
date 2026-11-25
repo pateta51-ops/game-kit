@@ -427,6 +427,7 @@ The blind matching test's result was not recorded: the PR, its comments and docs
 | K748 | scaffold: `kit.mjs spec resolve` selects component profiles and resolves exact kit pins. `kit.mjs spec generate` publishes a retryable scaffold after lock validation and installation. Keep K551 open for executable system adapters, setup integration and game-specific validation gates. | M | owner: deliver and validate the first K551 increment | done |
 | K749 | Visual replay player rebuilds recorded actions on a game's table with independent controls, save validation, boundaries and optional annotations. | L |  | done |
 | K750 | breaking: game-store and sim-pool validate every requested seat view and its secrecy rules, reject non-JSON views, and refuse unknown driver registrations before play. Migrate accidental fallbacks to an explicit registration, alias or random. | S | owner | done |
+| K751 | kit pull and check: lock the operational files and managed worker rules, resolve Markdown from its delivered location, verify pinned rendering with the trusted checkout CLI, and report legacy lock coverage. Generated scaffold instructions describe pure kit reuse and the engine API boundary. | M | owner: verify installed support files and make installed guides usable | done |
 
 ## Candidates
 

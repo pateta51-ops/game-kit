@@ -950,7 +950,7 @@ The game's log, derived from engine events by one table. Cards and rules write n
 
 ## game-store
 
-One game store and one game object (K234): `defineGame` is what the game writes once; `createGameStore` joins engine-core step undo, prompt-host forced answers, paced-view steps, autosave and the opponent seat. Needs engine-core, prompt-host, paced-view (and sim-pool, replay-cli for `sim.ts`). Recipe: [game-store](../../docs/recipes/game-store.md).
+One game store and one game object (K234): `defineGame` is what the game writes once; `createGameStore` joins engine-core step undo, prompt-host forced answers, paced-view steps, autosave and the opponent seat. Needs engine-core, prompt-host, paced-view (and sim-pool, replay-cli for `sim.ts`). Recipe: [game-store](recipes/game-store.md).
 
 - **Also called:** One store tying the game together
 - **Words:** store, state, game, undo, prompt, view, screen, GameDef opponent bot views

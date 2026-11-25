@@ -2,22 +2,19 @@
 
 1. `node kit/kit.mjs outdated [../game-kit]`: your tag, the latest, the PLAN rows between, and any marked `breaking`.
 2. Upgrade only if a row you need is there. Read each README note marked breaking.
-3. `node kit/kit.mjs pull ../game-kit <tag>`: one tag per game; this moves the whole kit, not one component.
+3. `node ../game-kit/kit.mjs pull ../game-kit <tag>`: one tag per game; this moves the whole kit, not one component.
 4. `node kit/kit.mjs check`, then the game's `npm run check`; fix what a breaking row lists.
-   To also prove the tag was not moved and the content is what the tag holds: `node kit/kit.mjs check --source ../game-kit` (fails when the tag points at another commit or the locked files differ). Tag releases annotated: `git tag -a <v> -m <v>`.
-5. Commit `kit/` alone, with the tag in the message. Never edit `kit/` by hand.
+   From the game root, use `node ../game-kit/kit.mjs check --source ../game-kit` with a trusted checkout. It checks the locked commit, verifies the tracked source, and reconstructs the installed Markdown. It can detect missing or changed `kit/kit.mjs`. The installed CLI can run the same check when you trust it. Tag releases with annotated tags.
+5. Commit `kit/` and any updated kit-managed block in `AGENTS.md` together, with the tag in the message. Never edit `kit/` by hand.
 
-## Upgrading past K229 (breaking: the kit runs on plain node)
+If an interrupted upgrade leaves `kit.old/`, keep it as the recovery copy and inspect the pull error before retrying. Pull refuses to overwrite that backup.
 
-After the pull, a game must:
-1. Use Node 22.18+ (`engines.node`).
-2. Set `allowImportingTsExtensions` (with `noEmit`) and `erasableSyntaxOnly` in its tsconfig: the `kit/` copy now imports `.ts`/`.tsx` files by name.
-3. Name `.ts`/`.tsx` in its own relative imports of every module a kit CLI or sim worker loads (`--game`, `--engine`, `--module`, `simGame`). No kit codemod exists; a one-off script that appends the resolved extension to each relative `from '...'` / `import('...')` does it.
-4. Keep those files free of enums, namespaces and parameter properties.
-5. Run kit CLIs as `node kit/<component>/<script>.ts` and drop `tsx` from `package.json` and CI.
+## Support files and legacy locks
 
-## Upgrading past K235 (breaking: effect code split from the 1.0 path)
+New locks cover the CLI, worker script, catalog, recipes, component files, and the managed worker-rules block in `AGENTS.md` when the pin provides one. Game instructions outside that block are editable. The support manifest records source paths, source and installed SHA-256 digests, and the renderer version. Installed text hashes tolerate CRLF checkouts. Links to installed files use their game paths, and links to available components and checkout-only docs use the pinned source commit. The renderer handles simple relative Markdown link destinations and reference definitions. The checkout files keep their original links.
 
-- `placements`, `movements` and their option types: were `../kit/board-registry/index`, now `../kit/effect-library/index` (file `movement.ts`). board-registry no longer needs effect-library.
-- `registerPieceVerbs`, `copyPieces`, `dice3d`, `PieceVerbOptions`: were `../kit/pieces-3d/index`, now `../kit/pieces-3d-verbs/index`. pieces-3d no longer needs effect-library or motion-frame.
-- Add `pieces-3d-verbs` to the pull list if the game animates dice or balls (release 1.1+): `node kit/kit.mjs pull ../game-kit <tag> pieces-3d-verbs`. A 1.0 game adds nothing.
+A lock catches accidental edits. Trusted source checking also rejects an edit paired with a recomputed local hash. For integrity against a malicious change to both the files and the selected pin, obtain the expected pin independently and verify it with a trusted checkout and checker.
+
+Older pins keep their files and legacy locks. The current checker reports that their coverage is limited to the recorded files, and `--source` checks those recorded files against the pin. Very old per-component locks support the ordinary check and need an explicit pull to select a single pin before source checking. An old installer may copy a new pin's CLI and produce an incomplete lock. Re-pull that same ref using the checkout CLI from the new pin or later, for example `node ../game-kit/kit.mjs pull ../game-kit <same-ref>`. Games remaining on older pins can retain their legacy lock and apply a new pin when they need it.
+
+[Earlier breaking migrations](../upgrade-history.md) covers the Node and effect-module transitions.
