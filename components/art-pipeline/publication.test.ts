@@ -99,6 +99,39 @@ describe('publication preserves usable art', () => {
     expect(readFileSync(join(dir, 'source/a.png'))).toEqual(picture);
   });
 
+  it.each([
+    { manifest: 'publish.json.publish-state.json' },
+    { manifest: 'publish.json.publish-state.json.tmp' },
+    { out: 'publish.json.publish-state.json' },
+    { out: 'publish.json.publish-state.json.tmp' },
+    { manifest: 'publish.json.publish-state.json/manifest.json' },
+    { out: 'publish.json.publish-state.json.tmp/art' },
+  ])('reserves recovery paths before changing any published output: %j', (paths) => {
+    const old = snapshot();
+    const configFile = config(paths);
+    const configBytes = readFileSync(configFile);
+    const result = cli();
+    expect(result.status).toBe(2);
+    expect(result.stderr).toContain('paths must not overlap');
+    expect(snapshot()).toEqual(old);
+    expect(readFileSync(configFile)).toEqual(configBytes);
+    expect(readFileSync(join(dir, 'source/a.png'))).toEqual(picture);
+    expect(existsSync(`${configFile}.publish-state.json`)).toBe(false);
+    expect(existsSync(`${configFile}.publish-state.json.tmp`)).toBe(false);
+  });
+
+  it('preserves an existing recovery temporary file instead of overwriting it', () => {
+    const old = snapshot();
+    index({ fresh: 'a.png' });
+    const tmp = put('publish.json.publish-state.json.tmp', { preserve: true });
+    const bytes = readFileSync(tmp);
+    const result = cli();
+    expect(result.status).toBe(2);
+    expect(result.stderr).toContain('scratch already exists');
+    expect(snapshot()).toEqual(old);
+    expect(readFileSync(tmp)).toEqual(bytes);
+  });
+
   it.each([1, 2, 3, 4, 5, 6])('recovers the previous complete release after process interruption at rename %i', (cut) => {
     const old = snapshot();
     const targets = ['chosen', 'public/art', 'public/manifest.json'].map((p) => join(dir, p));
@@ -187,5 +220,28 @@ describe('publication preserves usable art', () => {
     expect(readFileSync(join(dir, 'public/manifest.json'), 'utf8')).toBe('{}');
     for (const path of targets) expect(existsSync(`${path}.publish-backup`)).toBe(false);
     expect(existsSync(marker)).toBe(false);
+  });
+
+  it.each(['write', 'rename'])('rolls back when the final recovery-marker %s fails', (operation) => {
+    const old = snapshot();
+    index({ fresh: 'a.png' });
+    const script = `
+      import fs from 'node:fs';
+      import { syncBuiltinESMExports } from 'node:module';
+      import { run } from ${JSON.stringify(new URL('./art-publish.ts', import.meta.url).href)};
+      const method = ${JSON.stringify(operation === 'write' ? 'writeFileSync' : 'renameSync')};
+      const original = fs[method];
+      let markers = 0;
+      fs[method] = (...args) => {
+        if (String(args[0]).endsWith('.publish-state.json.tmp') && ++markers === 2) throw new Error('marker update failed');
+        return original(...args);
+      };
+      syncBuiltinESMExports();
+      process.exitCode = await run(['--config', ${JSON.stringify(join(dir, 'publish.json'))}]);
+    `;
+    const result = spawnSync(process.execPath, ['--input-type=module', '-e', script], { encoding: 'utf8' });
+    expect(result.status).toBe(2);
+    expect(result.stderr).toContain('marker update failed');
+    expect(snapshot()).toEqual(old);
   });
 });

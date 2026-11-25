@@ -5,6 +5,11 @@ interface Slot { target: string; next: string; backup: string; existed: boolean 
 interface State { phase: 'preparing' | 'committing' | 'committed'; slots: Slot[] }
 const slotsFor = (targets: readonly string[]): Slot[] => targets.map((target) => ({ target, next: `${target}.publish-next`, backup: `${target}.publish-backup`, existed: existsSync(target) }));
 
+function checkPaths(slots: readonly Slot[], marker: string): void {
+  const paths = [...slots.flatMap((s) => [s.target, s.next, s.backup]), marker, `${marker}.tmp`];
+  for (let i = 0; i < paths.length; i += 1) if (paths.some((p, j) => i !== j && (p === paths[i] || p.startsWith(`${paths[i]!}${sep}`)))) throw new Error('publication targets, scratch and recovery paths must not overlap');
+}
+
 function clean(marker: string, state: State, rename: typeof renameSync): void {
   if (state.phase === 'committing') for (const slot of [...state.slots].reverse()) {
     if (existsSync(slot.backup)) {
@@ -24,6 +29,7 @@ export function recoverPublication(targets: readonly string[], marker: string): 
   if (!existsSync(marker)) throw new Error('no interrupted publication to recover');
   const state = JSON.parse(readFileSync(marker, 'utf8')) as State;
   const slots = slotsFor(targets);
+  checkPaths(slots, marker);
   if (!['preparing', 'committing', 'committed'].includes(state.phase) || !Array.isArray(state.slots) || state.slots.length !== slots.length || state.slots.some((s, i) => typeof s.existed !== 'boolean' || s.target !== slots[i]!.target || s.next !== slots[i]!.next || s.backup !== slots[i]!.backup))
     throw new Error('publication recovery state does not match the configured paths');
   clean(marker, state, renameSync);
@@ -31,25 +37,24 @@ export function recoverPublication(targets: readonly string[], marker: string): 
 
 export function beginPublication(targets: readonly string[], marker: string, rename: typeof renameSync = renameSync): { paths: string[]; commit(): void; abort(): void } {
   const state: State = { phase: 'preparing', slots: slotsFor(targets) };
-  const paths = state.slots.flatMap((s) => [s.target, s.next, s.backup]);
-  for (let i = 0; i < paths.length; i += 1) if (paths.some((p, j) => i !== j && (p === paths[i] || p.startsWith(`${paths[i]!}${sep}`)))) throw new Error('publication targets and scratch paths must not overlap');
+  checkPaths(state.slots, marker);
   if (existsSync(marker)) throw new Error('interrupted publication: run art-publish with the same --config and --recover first');
+  if (existsSync(`${marker}.tmp`)) throw new Error('publication scratch already exists beside the recovery marker; preserve it and inspect recovery before retrying');
   for (const s of state.slots) if (existsSync(s.next) || existsSync(s.backup)) throw new Error(`publication scratch already exists beside ${s.target}; preserve it and inspect recovery before retrying`);
   for (const s of state.slots) mkdirSync(dirname(s.target), { recursive: true });
   writeFileSync(marker, JSON.stringify(state), { flag: 'wx' });
-  const record = () => {
-    writeFileSync(`${marker}.tmp`, JSON.stringify(state));
+  const record = (phase: State['phase']) => {
+    writeFileSync(`${marker}.tmp`, JSON.stringify({ ...state, phase }));
     renameSync(`${marker}.tmp`, marker);
+    state.phase = phase;
   };
   return {
     paths: state.slots.map((s) => s.next),
     commit() {
-      state.phase = 'committing';
-      record();
+      record('committing');
       for (const s of state.slots) if (s.existed) rename(s.target, s.backup);
       for (const s of state.slots) rename(s.next, s.target);
-      state.phase = 'committed';
-      record();
+      record('committed');
       clean(marker, state, rename);
     },
     abort() { clean(marker, state, rename); },
