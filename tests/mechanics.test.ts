@@ -101,6 +101,8 @@ describe('K524 mechanics page and search', () => {
   });
   it('matches a whole search query without treating its words as mechanic aliases', () => {
     const r = fake((f) => { f.lines[0]!.searchQueries = ['Show the scale of a picture']; });
+    const page = fs.readFileSync(path.join(r.root, 'docs/recipes/mechanics.md'), 'utf8');
+    expect(page).toContain('| zorking, zork a blip | `alpha`: read guide.md |\n');
     const full = r.kit('search', 'SHOW the Scale of a picture!');
     expect(full.status).toBe(0);
     expect(full.stdout).toBe('mechanic: zorking, zork a blip -> `alpha`: read guide.md\n');
