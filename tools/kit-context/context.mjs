@@ -69,6 +69,8 @@ function walk(dir) {
     e.isDirectory() && !ignored.has(e.name) ? walk(path.join(dir,e.name)) :
       e.isFile() ? [path.join(dir,e.name)] : []);
 }
+const sourcePrefix=(line,suffix)=>line.endsWith(suffix)?line.slice(0,line.length-suffix.length):'';
+
 function readDocumentation(dir) {
   const lines = readComponentFile(dir,'README.md').split(/\r?\n/);
   const markdown=lines.join('\n');
@@ -89,7 +91,14 @@ function readDocumentation(dir) {
     if(!entering||(node.type!=='html_block'&&node.type!=='code_block')) continue;
     const [[line,column],[lastLine]]=node.sourcepos;
     const first=line-1;
-    recovery.literalSpans.push([first,lastLine,column-1]);
+    const prefixes=[lines[first].slice(0,column-1)];
+    if(node.type==='html_block') {
+      const blockLines=node.literal.split('\n');
+      for(let offset=1;offset<blockLines.length;offset++) {
+        prefixes.push(sourcePrefix(lines[first+offset],blockLines[offset]));
+      }
+    }
+    recovery.literalSpans.push([first,lastLine,prefixes]);
     if(node.type!=='html_block'||first<=start||first>=end) continue;
     // CommonMark keeps the rest of a comment block's closing line as HTML.
     const comment=/^[ \t]*(?:<!--[\s\S]*?(?:-->|$)[ \t]*)+/.exec(node.literal)?.[0];
@@ -105,7 +114,7 @@ function readDocumentation(dir) {
       rules[index-start-1].text=visible;
       if(recover) {
         const suffix=commentLines[offset]+visible;
-        const prefix=lines[index].endsWith(suffix)?lines[index].slice(0,lines[index].length-suffix.length):'';
+        const prefix=sourcePrefix(lines[index],suffix);
         visibleLines.push(prefix+(last?visible:'<!-- -->'));
       }
     }
@@ -183,9 +192,9 @@ function* readmeLinks(markdown, {comments,literalSpans}) {
   if(!comments.length) return;
   const source=markdown.split('\n');
   // Preserve literal block boundaries without letting a reparse expose their contents.
-  for(const [first,end,offset] of literalSpans) {
-    source[first]=source[first].slice(0,offset)+'<!-- -->';
-    source.fill('',first+1,end);
+  for(const [first,end,prefixes] of literalSpans) {
+    source.fill('',first,end);
+    for(let offset=0;offset<prefixes.length;offset++) source[first+offset]=prefixes[offset]+'<!-- -->';
   }
   for(const {first,lines} of comments) {
     // Reparse one comment block at a time so its syntax cannot affect another.

@@ -154,6 +154,13 @@ it('preserves the list marker when an ordinary comment precedes a visible rule',
   expect(packet.rules).toContainEqual({ file: 'README.md', line: 4, text: link + '(atomic.md).' });
 });
 
+it('preserves every quoted list row when masking a preceding multiline comment', () => {
+  fixture('quoted-list-comment-sequence', rules + '> 1234. <!-- ordinary note\n>       hidden note\n>       -->\n' +
+    '>       <!-- editor note --> ' + link + '(atomic.md).');
+  const packet = expectComplete(run('quoted-list-comment-sequence'));
+  expect(packet.rules).toContainEqual({ file: 'README.md', line: 6, text: link + '(atomic.md).' });
+});
+
 it('keeps original guide links and treats links in neighboring fenced examples as literal', () => {
   fixture('visible-rule-fence', rules + '<!-- maintainer note --> ```\n\n```\n' +
     '[code example](absent.md)\n```\n\n' + link + '(atomic.md).');
