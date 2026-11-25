@@ -39,14 +39,14 @@ describe.skipIf(!HAVE && !process.env['CI'])('modal, board shortcuts and attachm
       await page.getByRole('button', { name: 'Open modal', exact: true }).click();
       const modal = page.getByRole('dialog', { name: 'Board decision', exact: true });
       await modal.waitFor({ state: 'visible' });
-      expect(await page.getByRole('textbox', { name: 'Decision note' }).evaluate((el) => el === document.activeElement)).toBe(true);
+      expect(await page.getByRole('textbox', { name: 'Decision note', exact: true }).evaluate((el) => el === document.activeElement)).toBe(true);
       await page.keyboard.type('1e');
       await page.keyboard.press('Enter');
       expect(await values(page)).toEqual(['0', '0', '0', '0', 'card', '0', '0']);
       await page.keyboard.press('Shift+Tab');
       expect(await page.getByRole('button', { name: 'Close modal' }).evaluate((el) => el === document.activeElement)).toBe(true);
       await page.keyboard.press('Tab');
-      expect(await page.getByRole('textbox', { name: 'Decision note' }).evaluate((el) => el === document.activeElement)).toBe(true);
+      expect(await page.getByRole('textbox', { name: 'Decision note', exact: true }).evaluate((el) => el === document.activeElement)).toBe(true);
       await page.keyboard.press('Tab');
       expect(await page.getByRole('button', { name: 'Open nested dialog' }).evaluate((el) => el === document.activeElement)).toBe(true);
       await page.keyboard.press('Tab');
