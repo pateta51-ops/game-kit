@@ -590,5 +590,11 @@
   { "q": "pinned declarative project scaffold", "first": "scaffold/spec" },
   { "q": "staged node_modules", "first": "repo-gate" },
   { "q": "tracked dependency link", "first": "repo-gate" },
-  { "q": "dependency symlink", "first": "repo-gate" }
+  { "q": "dependency symlink", "first": "repo-gate" },
+  { "q": "visual replay player", "first": "visual-replay" },
+  { "q": "watch recorded game", "first": "visual-replay" },
+  { "q": "replay table navigation", "first": "visual-replay" },
+  { "q": "migrateSave", "first": "engine-core" },
+  { "q": "RestoreResult", "first": "engine-core" },
+  { "q": "ReplayResult", "first": "engine-core" }
 ]

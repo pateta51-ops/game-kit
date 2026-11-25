@@ -162,6 +162,8 @@ graph LR
   tutorial["tutorial"] --> engine_core["engine-core"]
   tutorial["tutorial"] --> state_machines["state-machines"]
   ui_helpers["ui-helpers"]
+  visual_replay["visual-replay"] --> engine_core["engine-core"]
+  visual_replay["visual-replay"] --> paced_view["paced-view"]
   voice["voice"] --> sound_player["sound-player"]
   worker_rules["worker-rules"]
 ```
@@ -234,5 +236,6 @@ graph LR
 - `transcription-check`
 - `turn-flow`
 - `tutorial`
+- `visual-replay`
 - `voice`
 - `worker-rules`

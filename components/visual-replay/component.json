@@ -1,0 +1,5 @@
+{
+  "name": "visual-replay",
+  "source": { "game": "new", "commit": "new", "paths": ["Original implementation over engine-core and paced-view"] },
+  "needs": ["engine-core", "paced-view"]
+}
