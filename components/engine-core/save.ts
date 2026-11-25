@@ -7,7 +7,7 @@
 import { hashValue } from './hash.ts';
 import { checkStateInvariants } from './invariant-policy.ts';
 import { hashState, replay } from './replay.ts';
-import type { GameRules, GameTypes, InvariantViolation } from './types.ts';
+import type { GameRules, GameTypes, InvariantViolation, LocatedTriggerCap } from './types.ts';
 
 export const OLDER_BUILD = 'This save is from an older build.';
 export const DAMAGED = 'This save file is damaged.';
@@ -105,7 +105,7 @@ export function migrateSave(save: RawSave, format: SaveFormat = DEFAULT_SAVE_FOR
 export type RestoreResult<G extends GameTypes> = (
   | { readonly ok: true; readonly save: SaveFile<G>; readonly state: G['state'] }
   | { readonly ok: false; readonly error: string; readonly failedAt?: number; readonly actionError?: string }
-) & { readonly violations?: readonly InvariantViolation[] };
+) & { readonly violations?: readonly InvariantViolation[]; readonly triggerCap?: LocatedTriggerCap };
 
 const isObj = (x: unknown): x is Record<string, unknown> => x !== null && typeof x === 'object' && !Array.isArray(x);
 
@@ -140,7 +140,10 @@ export function restoreSave<G extends GameTypes>(
     // an action the engine refuses: the file was edited (or is broken); a different final hash: the engine changed
     // A9: a different build wrote it, so a refused action means the engine changed, not that the file was edited
     const otherBuild = save.appCommit !== (format.appCommit ?? UNKNOWN_COMMIT) && save.appCommit !== UNKNOWN_COMMIT && format.appCommit !== undefined;
-    const diagnostics = r.violations === undefined ? {} : { violations: r.violations };
+    const diagnostics = {
+      ...(r.violations === undefined ? {} : { violations: r.violations }),
+      ...(r.triggerCap === undefined ? {} : { triggerCap: r.triggerCap }),
+    };
     const failedAction = !diagnosticsOptions.actionFailure || r.failedAt === null || r.error === null ? {} : { failedAt: r.failedAt, actionError: r.error };
     if (r.invariantFailure) return { ok: false, error: r.error ?? DAMAGED, ...diagnostics, ...failedAction };
     if (!r.ok || r.state === null) return { ok: false, error: r.reason === 'pack' || otherBuild ? OLDER_BUILD : DAMAGED, ...diagnostics, ...failedAction };

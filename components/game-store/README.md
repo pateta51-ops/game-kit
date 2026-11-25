@@ -18,6 +18,8 @@ One game store and one game object (K234): `defineGame` is what the game writes 
 9. Use `random`, the provided `opponent`, a key in `drivers`, or an explicit `aliases` entry. K750 (breaking): change unintended driver names to `random` or register the intended policy. A misspelling or unavailable opponent is a preflight error.
 10. K738: declare dev cheats with `defineGame({ cheats: { defs, choice?, round? } })` (cheat-options); the store plays them as debug edits; never apply a cheat in the game's own code. Read the mark from `get().cheated`.
 
+11. Read `store.get().triggerCap` to surface the first trigger-budget warning on the current history, even if the game has a terminal result. A successful answer/load or null store error does not clear it. Replaying a save reconstructs the warning. Undo removes it only if the capped action is undone.
+
 **Common mistakes:**
 - Reading `get().state` in the opponent or the screen: only the view is allowed.
 - Sending the same answer from two places: it is two undo steps.

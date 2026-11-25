@@ -104,7 +104,12 @@ async function lane(request: RunRequest, names: readonly string[], next: () => G
             reject(typeof m.message === 'string' ? new DriverRegistrationError(m.message) : new Error('invalid simulation worker registration response'));
             return;
           }
-          if (m.type === 'record') collect(m.record);
+          if (m.type === 'record') {
+            const r = m.record;
+            collect(r.result != null && r.triggerCapChecked !== true
+              ? crashRecord(r, new Error('worker lacks trigger-cap validation; rebuild the worker bundle'))
+              : r);
+          }
           if (m.type === 'record' && request.fresh === true) {
             held = undefined;
             again = true;

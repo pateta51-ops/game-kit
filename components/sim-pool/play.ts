@@ -5,6 +5,7 @@ import {
   applyAction,
   canonicalJson,
   createGame,
+  formatTriggerCap,
   hashValue,
   isRevealing,
   newHistory,
@@ -16,6 +17,8 @@ import {
   type GameTypes,
   type InvariantViolation,
   type KernelPrompt,
+  type TriggerCapDiagnostic,
+  type LocatedTriggerCap,
 } from '../engine-core/index.ts';
 import { DriverRng } from './rng.ts';
 
@@ -214,6 +217,10 @@ export interface SimRecord<S = unknown> {
   /** The thrown error's name, when it is not plain `Error`. */
   readonly errorName?: string;
   readonly violations?: readonly InvariantViolation[];
+  /** The first trigger cap that stopped validation. Captured with the seed and replay log. */
+  readonly triggerCap?: LocatedTriggerCap;
+  /** Evidence that the run could detect trigger truncation. Older checkpoints must replay. */
+  readonly triggerCapChecked?: true;
   /** The actions, kept only when the game failed (for replay). */
   readonly log?: readonly unknown[];
   readonly summary?: S;
@@ -339,6 +346,12 @@ export function playOne<G extends GameTypes, S, O = unknown>(game: SimGame<G, S,
   let state: G['state'] | undefined;
   let error: string | undefined;
   let errorName: string | undefined;
+  let triggerCap: LocatedTriggerCap | undefined;
+  const rejectTriggerCap = (found: TriggerCapDiagnostic | undefined, actionIndex: number | null): void => {
+    if (found === undefined) return;
+    triggerCap = { ...found, actionIndex };
+    throw new Error(formatTriggerCap(triggerCap));
+  };
   let viewBytes: number | undefined;
   let viewStatus: NonNullable<SimRecord['viewValidation']>['status'] = opts.view ? 'not-run' : 'skipped';
   let viewsChecked = 0;
@@ -446,6 +459,7 @@ export function playOne<G extends GameTypes, S, O = unknown>(game: SimGame<G, S,
     let s: G['state'] = first.state;
     state = s;
     violations.push(...first.violations);
+    rejectTriggerCap(first.triggerCap, null);
     render(s);
     const driver = game.driver(spec.driver, spec, content);
     resolvedDriver = driver.name || registration || spec.driver;
@@ -508,6 +522,7 @@ export function playOne<G extends GameTypes, S, O = unknown>(game: SimGame<G, S,
       s = r.state;
       state = s;
       violations.push(...r.violations);
+      rejectTriggerCap(r.triggerCap, actions.length - 1);
       render(s);
       opts.onStep?.(actions.length - 1, { ...ms }, viewBytes);
     }
@@ -539,6 +554,8 @@ export function playOne<G extends GameTypes, S, O = unknown>(game: SimGame<G, S,
     ...(errorName !== undefined ? { errorName } : {}),
     ...(violations.length ? { violations } : {}),
     ...(failed ? { log: actions } : {}),
+    ...(triggerCap === undefined ? {} : { triggerCap }),
+    triggerCapChecked: true,
     ...(summary !== undefined ? { summary } : {}),
     ...(viewBytes !== undefined ? { viewBytes } : {}),
     viewValidation: viewEvidence(viewStatus, viewsChecked),
