@@ -14,6 +14,11 @@ const measured=value=>({kind:'measured',value,provenance:'synthetic-usage-record
 const build=(metrics={},overrides={})=>({kitRevision,sourceRevision,window,metrics,...overrides});
 const cli=fileURLToPath(new URL('./report.mjs',import.meta.url));
 const run=(...args)=>spawnSync(process.execPath,[cli,...args],{encoding:'utf8'});
+const rejected=(result,message)=>{
+  expect(result.status,result.stderr).toBe(1);
+  expect(result.stdout).toBe('');
+  expect(result.stderr).toContain(message);
+};
 const identified=(projectId,observationId,overrides={})=>build({
   inputTokens:measured(100),costUsd:measured(2),
 },{identity:{projectId,observationId},runtimeAdoption:{'engine-core':'synthetic-runtime-trace'},...overrides});
@@ -39,26 +44,17 @@ describe('reuse metrics',()=>{
     expect(result.productionFiles).toBe(2);
     expect(result.telemetry.costUsd).toEqual({kind:'missing'});
   });
-  it.each(['game.test.checkout','game.spec.checkout','__tests__'])('keeps the CLI report when relocated under %s',parent=>{
-    const original=fixture(path.join('ordinary','game'));
-    const relocated=fixture(path.join(parent,'game'));
-    const observation=identified('synthetic-project','synthetic-observation');
-    measurementFile(original,observation);
-    measurementFile(relocated,observation);
-    const baseline=run(original);
-    const candidate=run(relocated);
-    expect(baseline.status,baseline.stderr).toBe(0);
-    expect(candidate.status,candidate.stderr).toBe(0);
-    expect(JSON.parse(candidate.stdout)).toEqual(JSON.parse(baseline.stdout));
-  });
-  it('recognizes deliberate test directories and filename markers inside the game',()=>{
-    const root=fixture('test-conventions');
+  it('keeps the full CLI report when the same game moves under test markers',()=>{
+    let root=fixture(path.join('ordinary','game'));
+    measurementFile(root,identified('synthetic-project','synthetic-observation'));
+    fs.renameSync(path.join(root,'tests/a.test.ts'),path.join(root,'tests/helper.ts'));
     for(const [file,source] of [
       ['src/model.test.ts',"import '../kit/screens/index.ts';"],
       ['src/model.spec.ts',"import '../kit/card-harness/index.ts';"],
       ['src/__tests__/helper.ts',"import '../../kit/screens/index.ts';"],
-      ['tests/helper.ts',"import '../kit/card-harness/index.ts';"],
       ['src/model.test.assets/view.ts',"import '../../kit/engine-core/index.ts';"],
+      ['src/model.spec.assets/view.ts',"import '../../kit/engine-core/index.ts';"],
+      ['src/data/view.ts',"import '../../kit/engine-core/index.ts';"],
     ]) {
       const target=path.join(root,file);
       fs.mkdirSync(path.dirname(target),{recursive:true});
@@ -66,10 +62,21 @@ describe('reuse metrics',()=>{
     }
     const result=run(root);
     expect(result.status,result.stderr).toBe(0);
-    expect(JSON.parse(result.stdout).games[0]).toMatchObject({
-      productionFiles:3,productionFilesReferencingKit:2,productionReferenced:['engine-core'],
-      testFiles:5,testFilesReferencingKit:5,testReferenced:['card-harness','screens'],
-    });
+    const classification={
+      productionFiles:5,productionFilesReferencingKit:4,productionReferenced:['engine-core'],
+      testFiles:4,testFilesReferencingKit:4,testReferenced:['card-harness','screens'],
+    };
+    expect.soft(JSON.parse(result.stdout).games[0],'ordinary').toMatchObject(classification);
+    for(const parent of ['game.test.checkout','game.spec.checkout','__tests__']) {
+      const next=path.join(tmp,parent,'game');
+      fs.mkdirSync(path.dirname(next));
+      fs.renameSync(root,next);
+      root=next;
+      const relocated=run(root);
+      expect(relocated.status,relocated.stderr).toBe(0);
+      expect.soft(JSON.parse(relocated.stdout).games[0],parent).toMatchObject(classification);
+      expect.soft(relocated.stdout,parent).toBe(result.stdout);
+    }
   });
   it('counts game references once and does not turn missing costs into zero',()=>{
     const a=measureGame(fixture('two'),build({inputTokens:measured(100),cachedInputTokens:measured(20),costUsd:measured(1.25)}));
@@ -145,16 +152,41 @@ describe('reuse metrics',()=>{
     expect(()=>measureGame(root,build({inputTokens:measured(1),cachedInputTokens:measured(2)}))).toThrow('cached tokens');
     expect(()=>measureGame(root,build({costUsd:measured(-1)}))).toThrow('invalid');
     expect(()=>measureGame(root,build({secret:'not a metric'}))).toThrow('unknown');
-    expect(run(root,root).status).toBe(1);
+    rejected(run(root,root),'duplicate game directory');
     const alias=path.join(tmp,'same-root-alias');
     fs.symlinkSync(root,alias,'junction');
-    const duplicate=run(root,alias);
-    expect(duplicate.status).toBe(1);
-    expect(duplicate.stderr).toContain('duplicate game directory');
+    rejected(run(root,alias),'duplicate game directory');
     const result=run(root);
     expect(result.status,result.stderr).toBe(0);
     expect(JSON.parse(result.stdout).summary.games).toBe(1);
     expect(result.stdout).not.toContain(root);
+    const {games,summary}=JSON.parse(result.stdout);
+    expect(games[0]).toMatchObject({productionRuntimeReferenced:['engine-core'],runtimeAdoption:null,telemetry:{costUsd:{kind:'missing'}}});
+    expect(summary.telemetry.costUsd.measured).toEqual({reportedGames:0,sum:null});
+  });
+  it('refuses invalid measurement evidence and values without writing a report',()=>{
+    const root=fixture('invalid-evidence');
+    for(const [input,message] of [
+      [build({inputTokens:{kind:'measured',value:10}}),'inputTokens provenance'],
+      [build({}, {sourceRevision:undefined}),'telemetry sourceRevision'],
+      [build({}, {kitRevision:'3'.repeat(40)}),'kitRevision does not match the kit lock'],
+      [build({inputTokens:measured(1.5)}),'invalid telemetry field: inputTokens'],
+      [build({costUsd:{kind:'unknown'}}),'invalid costUsd kind'],
+      [build({}, {runtimeAdoption:{unknown:'synthetic-runtime-trace'}}),'unlocked adoption: unknown'],
+    ]) {
+      measurementFile(root,input);
+      rejected(run(root),message);
+    }
+    fs.writeFileSync(path.join(root,'kit-reuse-metrics.json'),JSON.stringify(build({costUsd:measured('nonfinite')})).replace('"nonfinite"','1e309'));
+    rejected(run(root),'invalid telemetry field: costUsd');
+  });
+  it('refuses unrepresentable measurement aggregates without writing a report',()=>{
+    const first=fixture('aggregate-first'),second=fixture('aggregate-second');
+    measurementFile(first,build({inputTokens:measured(Number.MAX_SAFE_INTEGER),costUsd:measured(1e308)}));
+    measurementFile(second,build({inputTokens:measured(2)}));
+    rejected(run(first,second),'aggregate inputTokens exceeds the safe integer range');
+    measurementFile(second,build({costUsd:measured(1e308)}));
+    rejected(run(first,second),'aggregate costUsd is not finite');
   });
   it('reports copied unidentified measurements as unverified submissions without inferring identity',()=>{
     const root=fixture('legacy-measurement');
@@ -174,10 +206,10 @@ describe('reuse metrics',()=>{
     const copy=path.join(tmp,'one-observation-copy');
     fs.cpSync(root,copy,{recursive:true});
     const result=run(root,copy);
-    expect(result.status).toBe(1);
-    expect(result.stderr).toContain('duplicate observation in inputs 1 and 2');
-    expect(result.stdout).toBe('');
+    rejected(result,'duplicate observation in inputs 1 and 2');
     expect(result.stderr).not.toContain(root);
+    measurementFile(copy,identified('project-a','observation-a',{metrics:{costUsd:measured(3)}}));
+    rejected(run(root,copy),'conflicting observation identity in inputs 1 and 2');
   });
   it('rejects conflicting claims for the same observation ID',()=>{
     const root=fixture('conflicting-observation');
