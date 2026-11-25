@@ -49,6 +49,9 @@ describe('scaffold (K204)', () => {
     expect(fs.readFileSync(path.join(out, 'CLAUDE.md'), 'utf8')).toContain('TODO');
     const cm = fs.readFileSync(path.join(out, 'CLAUDE.md'), 'utf8');
     expect(cm).toContain('kit/kit.lock.json');
+    expect(cm).toContain('Use pure kit components such as `defineGame` from `kit/game-store/index.ts`.');
+    expect(cm).toContain('The UI imports game engine code through `src/engine/api.ts`.');
+    expect(fs.readFileSync(path.join(out, 'src/engine/rules.ts'), 'utf8')).toContain("from '../../kit/game-store/index.ts'");
     expect(cm).not.toMatch(/\bv?\d+\.\d+\.\d+\b/);
     expect(fs.readFileSync(path.join(out, 'AGENTS.md'), 'utf8')).toContain('<!-- kit:worker-rules start -->');
     const app = fs.readFileSync(path.join(out, 'src/ui/App.tsx'), 'utf8');
