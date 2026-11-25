@@ -665,5 +665,8 @@
   { "q": "version", "first": "sim-pool" },
   { "q": "library", "first": "effect-library" },
   { "q": "compare", "first": "dice-tray" },
-  { "q": "edge", "first": "pieces-3d" }
+  { "q": "edge", "first": "pieces-3d" },
+  { "q": "runtime card tests", "first": "card-harness" },
+  { "q": "test loaded card pack", "first": "card-harness" },
+  { "q": "runtime card clauses", "first": "card-harness" }
 ]

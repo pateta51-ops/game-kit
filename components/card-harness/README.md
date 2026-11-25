@@ -87,6 +87,8 @@ restrictionProblems({ ...input, words, notPhrases }) // "Zorb the flim." asks fo
 
 41. (K561) Follow the [executable clause mutation guide](mutations-guide.md). Supply the full clause-bearing record set and the independent printed inventory as `requiredLines`. Keep the original expectations for each mutant, fail validation on every report problem or thrown error, and give each exempt clause a specific reason in `exempt`.
 
+42. (K760) Run [runtime card cases from the loaded pack](runtime-guide.md) when a family can share setups and assertions. Give the suite independent printed expectations, real dispatch evidence and a baseline case plus refusal for guarded clauses. Use the separate runtime exit code in CI.
+
 **Common mistakes:**
 - (K649, breaking) A game whose prompts showed an amount only inside an icon code, or a counted prompt with two numbers the clause does not print, now fails `cards:screen`: show the amount in words, or list the icon in `iconAmounts`; drop the stray number or pass `value`.
 - (K532, K587) Setting `amounts` or a `promptAmounts` entry (or `[]`) on a clause whose prompt drops a printed amount to make `cards:screen` pass: fix the prompt instead.
