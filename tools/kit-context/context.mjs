@@ -87,9 +87,9 @@ function readDocumentation(dir) {
   for(let event;(event=walker.next());) {
     const {node,entering}=event;
     if(!entering||(node.type!=='html_block'&&node.type!=='code_block')) continue;
-    const [[line],[lastLine]]=node.sourcepos;
+    const [[line,column],[lastLine]]=node.sourcepos;
     const first=line-1;
-    recovery.literalSpans.push([first,lastLine]);
+    recovery.literalSpans.push([first,lastLine,column-1]);
     if(node.type!=='html_block'||first<=start||first>=end) continue;
     // CommonMark keeps the rest of a comment block's closing line as HTML.
     const comment=/^[ \t]*(?:<!--[\s\S]*?(?:-->|$)[ \t]*)+/.exec(node.literal)?.[0];
@@ -183,9 +183,9 @@ function* readmeLinks(markdown, {comments,literalSpans}) {
   if(!comments.length) return;
   const source=markdown.split('\n');
   // Preserve literal block boundaries without letting a reparse expose their contents.
-  for(const [first,end] of literalSpans) {
-    source.fill('',first,end);
-    source[first]='<!-- -->';
+  for(const [first,end,offset] of literalSpans) {
+    source[first]=source[first].slice(0,offset)+'<!-- -->';
+    source.fill('',first+1,end);
   }
   for(const {first,lines} of comments) {
     // Reparse one comment block at a time so its syntax cannot affect another.
