@@ -7,6 +7,8 @@
    From the game root, use `node ../game-kit/kit.mjs check --source ../game-kit` with a trusted checkout. It checks the locked commit, verifies the tracked source, and reconstructs the installed Markdown. It can detect missing or changed `kit/kit.mjs`. The installed CLI can run the same check when you trust it. Tag releases with annotated tags.
 5. Commit `kit/` and any updated kit-managed block in `AGENTS.md` together, with the tag in the message. Never edit `kit/` by hand.
 
+If an interrupted upgrade leaves `kit.old/`, keep it as the recovery copy and inspect the pull error before retrying. Pull refuses to overwrite that backup.
+
 ## Support files and legacy locks
 
 New locks cover the CLI, worker script, catalog, recipes, component files, and the managed worker-rules block in `AGENTS.md` when the pin provides one. Game instructions outside that block are editable. The support manifest records source paths, source and installed SHA-256 digests, and the renderer version. Installed text hashes tolerate CRLF checkouts. Links to installed files use their game paths, and links to available components and checkout-only docs use the pinned source commit. The renderer handles simple relative Markdown link destinations and reference definitions. The checkout files keep their original links.
