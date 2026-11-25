@@ -71,12 +71,31 @@ function walk(dir) {
 }
 function readDocumentation(dir) {
   const lines = readComponentFile(dir,'README.md').split(/\r?\n/);
-  const start = lines.findIndex(l => l.trim() === '## Rules for agents');
-  if (start < 0) throw new Error('README.md is missing its Rules for agents section');
-  let end = lines.findIndex((l,i) => i > start && /^##\s/.test(l));
-  if (end < 0) end = lines.length;
+  const markdown=lines.join('\n');
+  const document=new Parser().parse(markdown);
+  const headings=[];
+  for(let block=document.firstChild;block;block=block.next) {
+    if(block.type==='heading') headings.push(block.sourcepos[0][0]-1);
+  }
+  const start=headings.find(index=>lines[index].trim()==='## Rules for agents');
+  if(start===undefined) throw new Error('README.md is missing its Rules for agents section');
+  const end=headings.find(index=>index>start&&/^##\s/.test(lines[index]))??lines.length;
   const sourceLines = (from,to) => lines.slice(from,to).map((text,i)=>({file:'README.md',line:from+i+1,text}));
-  const rules=sourceLines(start+1,end).filter(x=>x.text.trim()&&!x.text.startsWith('<!--'));
+  const rules=sourceLines(start+1,end);
+  const walker=document.walker();
+  for(let event;(event=walker.next());) {
+    const {node,entering}=event;
+    if(!entering||node.type!=='html_block') continue;
+    const index=node.sourcepos[0][0]-start-2;
+    if(index<0||index>=rules.length) continue;
+    // CommonMark keeps the rest of a comment block's closing line as HTML.
+    const comment=/^[ \t]*(?:<!--[\s\S]*?(?:-->|$)[ \t]*)+/.exec(node.literal)?.[0];
+    if(!comment) continue;
+    const count=comment.split('\n').length;
+    for(let offset=0;offset<count;offset++) {
+      rules[index+offset].text=offset===count-1?node.literal.slice(comment.length):'';
+    }
+  }
   const usage=[];
   function addUsage(from,to) {
     const section=sourceLines(from,to).filter(x=>x.line!==1||!/^#\s/.test(x.text));
@@ -91,7 +110,7 @@ function readDocumentation(dir) {
     addUsage(from,to);
     from=to;
   }
-  return {rules,usage,markdown:lines.join('\n')};
+  return {rules:rules.filter(row=>row.text.trim()),usage,markdown};
 }
 
 function* guideDocuments(markdown) {

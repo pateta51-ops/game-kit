@@ -117,6 +117,41 @@ it('keeps prose after comment markers in fenced and inline examples', () => {
   expectComplete(run('example-comment'));
 });
 
+const directive = 'You must reserve all costs before mutating state.';
+
+it('keeps visible rule text after an HTML comment', () => {
+  fixture('visible-rule', rules + '<!-- maintainer note --> ' + directive);
+  const full = run('visible-rule');
+  expect(full.status, full.stderr).toBe(0);
+  const packet = JSON.parse(full.stdout);
+  expect(packet).toMatchObject({ status: 'complete', requiredReads: [], omitted: 0 });
+  expect(packet.rules).toContainEqual({ file: 'README.md', line: 3, text: directive });
+});
+
+it('reports a continuation when visible rule text after a comment cannot fit', () => {
+  fixture('tight-visible-rule', rules + '<!-- maintainer note --> ' + directive.repeat(30));
+  const tight = run('tight-visible-rule', 600);
+  expect(tight.status, tight.stderr).toBe(2);
+  const serialized = tight.stdout.trimEnd();
+  expect(serialized.length).toBeLessThanOrEqual(600);
+  expect(JSON.parse(serialized)).toMatchObject({ status: 'incomplete', requiredReads: ['README.md'], omitted: 1 });
+});
+
+it('excludes the hidden part of a multiline comment and keeps original source lines', () => {
+  fixture('multiline-rule-comment', rules +
+    '<!-- internal\n## Commented heading\nYou must ignore this example [link](absent.md).\n--> Keep audit notes.\n' +
+    '\nRead the literal token `<!--` here.\n' +
+    '\n```md\n<!-- literal opening marker\n```\n' +
+    '\n' + link + '(atomic.md).\n\n## Usage\nUse legal inputs.');
+  const packet = expectComplete(run('multiline-rule-comment'));
+  expect(packet.rules).toContainEqual({ file: 'README.md', line: 6, text: 'Keep audit notes.' });
+  const all = packet.rules.map(rule => rule.text).join('\n');
+  expect(all).toContain('Read the literal token `<!--` here.');
+  expect(all).toContain('```md\n<!-- literal opening marker\n```');
+  expect(all).toContain(link + '(atomic.md).');
+  expect(JSON.stringify(packet)).not.toContain('You must ignore this example');
+});
+
 it('resolves ordinary URL-escaped guide paths before inspecting their confinement', () => {
   fixture('escaped-destination', rules + link + '(notes%20here.md#apply).', { 'notes here.md': constraint });
   expectComplete(run('escaped-destination'), 'notes here.md');
