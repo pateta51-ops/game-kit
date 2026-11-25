@@ -395,7 +395,7 @@ describe('kit.mjs', () => {
     const g = game();
     expect(run(g, 'pull', src, 'v4', 'alpha').status).toBe(0);
     const kit = path.join(g, 'kit');
-    const snapshot = (dir: string) => fs.readdirSync(dir, { recursive: true }).sort().map((file) => {
+    const snapshot = (dir: string) => fs.readdirSync(dir, { recursive: true, encoding: 'utf8' }).sort().map((file) => {
       const full = path.join(dir, file);
       return [file, fs.statSync(full).isFile() ? fs.readFileSync(full) : null];
     });
