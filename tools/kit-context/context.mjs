@@ -71,12 +71,33 @@ function walk(dir) {
 }
 function readDocumentation(dir) {
   const lines = readComponentFile(dir,'README.md').split(/\r?\n/);
-  const start = lines.findIndex(l => l.trim() === '## Rules for agents');
-  if (start < 0) throw new Error('README.md is missing its Rules for agents section');
-  let end = lines.findIndex((l,i) => i > start && /^##\s/.test(l));
-  if (end < 0) end = lines.length;
+  const markdown=lines.join('\n');
+  const document=new Parser().parse(markdown);
+  const headings=[];
+  for(let block=document.firstChild;block;block=block.next) {
+    if(block.type==='heading') headings.push(block.sourcepos[0][0]-1);
+  }
+  const start=headings.find(index=>lines[index].trim()==='## Rules for agents');
+  if(start===undefined) throw new Error('README.md is missing its Rules for agents section');
+  const end=headings.find(index=>index>start&&/^##\s/.test(lines[index]))??lines.length;
   const sourceLines = (from,to) => lines.slice(from,to).map((text,i)=>({file:'README.md',line:from+i+1,text}));
-  const rules=sourceLines(start+1,end).filter(x=>x.text.trim()&&!x.text.startsWith('<!--'));
+  const rules=sourceLines(start+1,end);
+  const commentTails=[];
+  const walker=document.walker();
+  for(let event;(event=walker.next());) {
+    const {node,entering}=event;
+    if(!entering||node.type!=='html_block') continue;
+    const first=node.sourcepos[0][0]-1;
+    if(first<=start||first>=end) continue;
+    // CommonMark keeps the rest of a comment block's closing line as HTML.
+    const comment=/^[ \t]*(?:<!--[\s\S]*?(?:-->|$)[ \t]*)+/.exec(node.literal)?.[0];
+    if(!comment) continue;
+    const closing=first+comment.split('\n').length-1;
+    const tail=node.literal.slice(comment.length);
+    for(let index=first;index<closing;index++) rules[index-start-1].text='';
+    rules[closing-start-1].text=tail;
+    if(tail.trim()) commentTails.push(tail);
+  }
   const usage=[];
   function addUsage(from,to) {
     const section=sourceLines(from,to).filter(x=>x.line!==1||!/^#\s/.test(x.text));
@@ -91,13 +112,13 @@ function readDocumentation(dir) {
     addUsage(from,to);
     from=to;
   }
-  return {rules,usage,markdown:lines.join('\n')};
+  return {rules:rules.filter(row=>row.text.trim()),usage,markdown,commentTails};
 }
 
 function* guideDocuments(markdown) {
   const parser=new Parser();
   const document=parser.parse(markdown);
-  yield document;
+  yield {document,refmap:parser.refmap};
   const lines=markdown.split(/\r?\n/);
   let separated=false;
   // Also accept trailing stand-alone definitions in top-level prose paragraphs.
@@ -119,28 +140,47 @@ function* guideDocuments(markdown) {
       separated=true;
     }
   }
-  if(separated) yield parser.parse(lines.join('\n'));
+  if(separated) yield {
+    document:parser.parse(lines.join('\n')),
+    refmap:parser.refmap,
+  };
 }
 
-function* markdownLinks(markdown) {
-  for(const document of guideDocuments(markdown)) {
-    const walker=document.walker();
-    for(let event;(event=walker.next());) {
-      const {node,entering}=event;
-      if(!entering) continue;
-      if(node.type==='image') walker.resumeAt(node,false);
-      if(node.type==='link') yield node.destination;
-    }
+function* documentLinks(document) {
+  const walker=document.walker();
+  for(let event;(event=walker.next());) {
+    const {node,entering}=event;
+    if(!entering) continue;
+    if(node.type==='image') walker.resumeAt(node,false);
+    if(node.type==='link') yield node.destination;
   }
 }
 
-function readLinkedGuides(dir, markdown) {
+function* markdownLinks(markdown, commentTails=[]) {
+  const references=[];
+  for(const {document,refmap} of guideDocuments(markdown)) {
+    yield* documentLinks(document);
+    if(commentTails.length) references.push(refmap);
+  }
+  for(const tail of commentTails) for(const refmap of references) {
+    const parser=new Parser();
+    const processInlines=parser.processInlines;
+    // CommonMark 0.31 resets references during block parsing. Supply the README's map for inline parsing.
+    parser.processInlines=function(document) {
+      this.refmap=refmap;
+      processInlines.call(this,document);
+    };
+    yield* documentLinks(parser.parse(tail));
+  }
+}
+
+function readLinkedGuides(dir, markdown, commentTails) {
   const visited=new Set([componentFile(dir,'README.md')]);
   const guides=[];
-  const pending=[{file:'README.md',text:markdown}];
+  const pending=[{file:'README.md',links:markdownLinks(markdown,commentTails)}];
   const decoder=new TextDecoder('utf-8',{fatal:true});
   for(const row of pending) {
-    for(const href of markdownLinks(row.text)) {
+    for(const href of row.links) {
       const destination=href.split(/[?#]/,1)[0];
       if(/^[A-Za-z][\w+.-]*:|^[\\/]/.test(destination)) continue;
       let guide;
@@ -158,7 +198,7 @@ function readLinkedGuides(dir, markdown) {
       guides.push({file:name,line:1,text});
       // Relative links belong to the canonical guide location, including
       // when the guide was reached through a permitted symbolic link.
-      pending.push({file:relative(dir,target),text});
+      pending.push({file:relative(dir,target),links:markdownLinks(text)});
     }
   }
   return guides.sort((a,b)=>a.file<b.file?-1:a.file>b.file?1:0);
@@ -180,8 +220,8 @@ export function contextPacket({root=defaultRoot,component,symbol,entry='index.ts
   if (typeof entry!=='string'||!code.test(entry)||path.isAbsolute(entry)||entry.split(/[\\/]/).some(part=>part==='..'||ignored.has(part))) throw new Error('invalid entry');
   const file=componentFile(dir,entry);
   if (!code.test(file)||test.test(entry)||test.test(file)) throw new Error('entry must be a public source file and not a test');
-  const {rules,usage,markdown}=readDocumentation(dir);
-  const guides=readLinkedGuides(dir,markdown);
+  const {rules,usage,markdown,commentTails}=readDocumentation(dir);
+  const guides=readLinkedGuides(dir,markdown,commentTails);
   const options={
     target:ts.ScriptTarget.ESNext, module:ts.ModuleKind.ESNext,
     moduleResolution:ts.ModuleResolutionKind.Bundler, jsx:ts.JsxEmit.ReactJSX,
