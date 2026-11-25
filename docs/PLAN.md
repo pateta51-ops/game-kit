@@ -428,6 +428,7 @@ The blind matching test's result was not recorded: the PR, its comments and docs
 | K749 | Visual replay player rebuilds recorded actions on a game's table with independent controls, save validation, boundaries and optional annotations. | L |  | done |
 | K750 | breaking: game-store and sim-pool validate every requested seat view and its secrecy rules, reject non-JSON views, and refuse unknown driver registrations before play. Migrate accidental fallbacks to an explicit registration, alias or random. | S | owner | done |
 | K751 | kit pull and check: lock the operational files and managed worker rules, resolve Markdown from its delivered location, verify pinned rendering with the trusted checkout CLI, and report legacy lock coverage. Generated scaffold instructions describe pure kit reuse and the engine API boundary. | M | owner: verify installed support files and make installed guides usable | done |
+| K752 | reuse-metrics classifies game sources by test directories and filenames relative to the game, so moving the checkout preserves its report. | S | owner | done |
 | K754 | breaking: full finish selects the browser command for scaffold UI changes and declared additional roots. New scaffolds ship a Chromium smoke for menu, setup, step, and undo. Existing games with matching UI paths need a runnable browser suite. | S | owner | done |
 
 ## Candidates
