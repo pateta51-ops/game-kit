@@ -430,6 +430,7 @@ The blind matching test's result was not recorded: the PR, its comments and docs
 | K751 | kit pull and check: lock the operational files and managed worker rules, resolve Markdown from its delivered location, verify pinned rendering with the trusted checkout CLI, and report legacy lock coverage. Generated scaffold instructions describe pure kit reuse and the engine API boundary. | M | owner: verify installed support files and make installed guides usable | done |
 | K752 | reuse-metrics classifies game sources by test directories and filenames relative to the game, so moving the checkout preserves its report. | S | owner | done |
 | K753 | Preserve visible Rules for agents text after a leading HTML comment in kit-context, including after multiline comments. Keep source line references, follow the visible rule's linked guides, and report the required continuation when the rule or guide exceeds the packet budget. | S | owner | done |
+| K754 | breaking: full finish selects the browser command for scaffold UI changes and declared additional roots. New scaffolds ship a Chromium smoke for menu, setup, step, and undo. Existing games with matching UI paths need a runnable browser suite. | S | owner | done |
 
 ## Candidates
 

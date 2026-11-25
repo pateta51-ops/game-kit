@@ -623,7 +623,7 @@ Pull this component and use it where it is: a game never edits or copies its `ki
 - **Words:** ci, workflow, github, build, server, runner, gate
 - **Release:** 1.0; not seen
 - **The game supplies:** ci.config.json with the game, runner and checks.
-- **Use it when:** Rendering a game's CI workflows, full gate and local CI script from one `ci.config.json`.
+- **Use it when:** Rendering a game's CI workflows, full gate and local CI script from one `ci.config.json`. The full gate installs browser drivers using the game's Playwright package and runs its browser acceptance scripts on a free port.
 - **Not for:** Rules for what the gate contains (repo-gate, check-runner).
 - **Key exports:** `render.mjs`, `ci.yml`, `full-gate.yml`, `nightly-fuzz.yml`, `local-ci.sh`, `install-wsl.sh`, `watch-run.sh`, `watch-run.mjs`, `skip-reporter.ts`
 - **Needs:** nothing
@@ -1543,7 +1543,7 @@ One command makes a working, empty game repo from the kit (K204). Run it from th
 - **Words:** new, game, start, project, setup, create, repo, starter, scaffold
 - **Release:** 1.0; not seen
 - **The game supplies:** The game id and name.
-- **Use it when:** Start an empty working game repo, or use a declarative game spec to select components and generate a pinned scaffold.
+- **Use it when:** Start an empty working game repo, or use a declarative game spec to select components and generate a pinned scaffold. Run its Chromium browser smoke for the stub menu, setup, step and undo.
 - **Not for:** Anything inside a running game; it is a generator run from the kit checkout.
 - **Key exports:** `node kit.mjs new <dir> <id> "<Name>"`, `node kit.mjs spec resolve|generate`, `scaffold(options)` in scaffold.js
 - **Needs:** nothing

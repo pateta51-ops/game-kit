@@ -2,6 +2,7 @@ import { execFileSync, spawnSync } from 'node:child_process';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
+import { chromium } from 'playwright-core';
 import { afterAll, describe, expect, it } from 'vitest';
 
 const KIT = path.dirname(path.dirname(import.meta.dirname));
@@ -66,6 +67,28 @@ describe('scaffold (K204)', () => {
     expect(chk.stdout + chk.stderr).toContain('4 passed');
     expect(chk.status, chk.stdout + chk.stderr).toBe(0);
   }, 180_000);
+
+  it.skipIf(!process.env['PW_CHROMIUM_PATH'] && !fs.existsSync(chromium.executablePath()) && !process.env['CI'])('runs the generated browser smoke and rejects a broken step button', () => {
+    const browserGame = path.join(tmp, 'browser');
+    const generated = spawnSync('node', [kitMjs, 'new', browserGame, 'demo', 'Demo Game', '--ref', head, '--ports', ports, '--link', nm, '--no-install', '--no-remote'], { encoding: 'utf8' });
+    expect(generated.status, generated.stderr).toBe(0);
+    const smoke = (timeout: string) => spawnSync(process.execPath, ['kit/ci-templates/full-gate.mjs', 'e2e'], {
+      cwd: browserGame, encoding: 'utf8',
+      env: { ...process.env, E2E_SCRIPTS: 'test:e2e', E2E_TEST_TIMEOUT_MS: timeout },
+    });
+    const result = smoke('10000');
+    expect(result.status, result.stdout + result.stderr).toBe(0);
+    expect(result.stdout).toMatch(/e2e port: \d+/);
+    expect(result.stdout).toContain('Scaffold browser smoke passed: menu, setup, step, undo');
+    const app = path.join(browserGame, 'src/ui/App.tsx');
+    const ui = fs.readFileSync(app, 'utf8');
+    const handler = "onClick={() => game.answer(['step'], state.prompt?.id ?? 0)}";
+    expect(ui).toContain(handler);
+    fs.writeFileSync(app, ui.replace(handler, 'onClick={() => undefined}'));
+    const broken = smoke('3000');
+    expect(broken.status, broken.stdout + broken.stderr).toBe(1);
+    expect(broken.stderr).toContain('Steps: 1');
+  }, 120_000);
 
   it('ignores an installed dependency directory as well as a linked one', () => {
     const dir = fs.mkdtempSync(path.join(tmp, 'installed-'));

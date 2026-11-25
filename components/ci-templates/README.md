@@ -12,7 +12,7 @@ Pull this component and use it where it is: a game never edits or copies its `ki
 3. A key with no place in the template stops the render; fix the key, do not work around it.
 4. While GitHub-hosted minutes are blocked for private repos, every private game must set `"docsRunsOn": "self"`: the `changes` and `docs` jobs then run on `[self-hosted, <runnerLabel>]` instead of `ubuntu-latest` and pass the heavy queue without a slot (jobs named in `HEAVY_LIGHT_JOBS`, default `changes docs`). Without it the hosted job fails in seconds and every non-draft PR goes red. `"docsSkip": false` removes the jobs altogether.
 5. Run the scripts from `kit/ci-templates/` (`full-gate.mjs`, `local-ci.sh`, `watch-run.sh` or `.mjs`); the full gate reads the slug and `e2eScripts` from `ci.config.json`.
-6. In `playwright.config.ts` spread `gateCaps()` from `kit/ci-templates/playwright-caps` and add its reporter; set `E2E_TEST_TIMEOUT_MS` near the suite's worst case, and `gate.timeoutMinutes` if 30 min is too short.
+6. The full gate's browser install uses the installed `playwright-core` CLI when the game depends on Playwright core alone. In `playwright.config.ts` spread `gateCaps()` from `kit/ci-templates/playwright-caps` and add its reporter; set `E2E_TEST_TIMEOUT_MS` near the suite's worst case, and `gate.timeoutMinutes` if 30 min is too short.
 7. Install the runner from WSL with `RUNNER_REPO`, `RUNNER_LABEL` (the config's `runnerLabel`) and a fresh `RUNNER_TOKEN` (valid one hour) through `install-wsl.sh`; it exits 2 on a missing or malformed token.
 8. Never add `pull_request_target` or repository secrets; the full gate refuses a PR whose head is outside the repository.
 9. Watch a long run with one background `watch-run` command, not a foreground wait.

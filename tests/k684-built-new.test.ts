@@ -10,6 +10,7 @@ const root = fs.mkdtempSync(path.join(os.tmpdir(), 'k684-'));
 afterAll(() => fs.rmSync(root, { recursive: true, force: true }));
 const g = (cwd: string, ...a: string[]) => execFileSync('git', ['-c', 'user.name=t', '-c', 'user.email=t@t', ...a], { cwd, encoding: 'utf8' });
 const put = (dir: string, f: string, t = 'x') => { fs.mkdirSync(path.dirname(path.join(dir, f)), { recursive: true }); fs.writeFileSync(path.join(dir, f), t); };
+const uiPackage = { scripts: { 'test:e2e': 'playwright test' } };
 
 function game(name: string, files: Record<string, string>, pkg?: object): string {
   const bare = path.join(root, `${name}.git`), main = path.join(root, name);
@@ -89,16 +90,17 @@ describe('K684 finish: every new src file is listed under Built new', () => {
     expect(none.text).toContain('pass --body <file>');
   });
   it('K684 a file moved with git mv is not new: passes with no section', () => {
-    const main = game('i', { 'notes.md': 'x' });
+    const main = game('i', { 'notes.md': 'x' }, uiPackage);
     fs.mkdirSync(path.join(main, 'src/ui'));
     g(main, 'mv', 'src/old.ts', 'src/ui/old.ts');
     g(main, 'commit', '-qm', 'move');
     const r = run(main, '');
     expect(r.rc).toBe(0);
     expect(r.gh).toHaveLength(0);
+    expect(r.text).toContain('E2E: runs');
   });
   it('K684 a bare src/ line or a one-level folder covers nothing; a folder two levels below src/ does', () => {
-    const main = game('j', { 'src/ui/motion/a.ts': '', 'src/ui/motion/b.ts': '' });
+    const main = game('j', { 'src/ui/motion/a.ts': '', 'src/ui/motion/b.ts': '' }, uiPackage);
     const line = (p: string) => `## Built new\n- ${p} | search: a b; c d | nearest: none | why: x\n`;
     for (const p of ['src/', 'src', 'ui/', 'src/ui']) {
       const r = run(main, line(p));
