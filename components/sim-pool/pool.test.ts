@@ -183,6 +183,26 @@ describe('K101 view on every step, hasten, one-step replay', () => {
     expect(play('s1').viewBytes).toBeUndefined();
   });
 
+  it('fails requested view validation with no adapter before setup or decisions', () => {
+    const game: SimGame<Counter, { adds: number }> = { ...simGame, start: () => { throw new Error('setup should not run'); } };
+    delete game.view;
+    const record = playOne(game, CONTENT, { index: 0, seed: 's1', driver: 'random' }, undefined, { view: true });
+    expect(record.error).toMatch(/view.*unavailable/);
+    expect(record.viewValidation).toEqual({ status: 'unavailable', checked: 0 });
+    expect(record.actions).toBe(0);
+  });
+
+  it.each([{ dropped: undefined }, { changed: NaN }, Array(1), new Map(), { toJSON: () => 'altered' }, new Proxy({ hidden: 'secret' }, { get: () => undefined })])(
+    'refuses lossy view serialization for %j',
+    (value: unknown) => {
+      const game = { ...simGame, view: () => value };
+      const record = playOne(game, CONTENT, { index: 0, seed: 's1', driver: 'random' }, undefined, { view: true });
+      expect(record.error).toMatch(/view after 0 action.*JSON/);
+      expect(record.viewValidation).toEqual({ status: 'failed', checked: 0 });
+      expect(record.result).toBeNull();
+    },
+  );
+
   it('K238 A10: a view holding a secret id or an rng key fails the game', () => {
     expect(play('leak', undefined, { view: true }).error).toMatch(/^view after 0 action\(s\): view leak: 42$/);
     expect(play('leakkey', undefined, { view: true }).error).toMatch(/view leak: key:rng$/);

@@ -953,10 +953,10 @@ The game's log, derived from engine events by one table. Cards and rules write n
 One game store and one game object (K234): `defineGame` is what the game writes once; `createGameStore` joins engine-core step undo, prompt-host forced answers, paced-view steps, autosave and the opponent seat. Needs engine-core, prompt-host, paced-view (and sim-pool, replay-cli for `sim.ts`). Recipe: [game-store](recipes/game-store.md).
 
 - **Also called:** One store tying the game together
-- **Words:** store, state, game, undo, prompt, view, screen
+- **Words:** store, state, game, undo, prompt, view, screen, GameDef opponent bot views
 - **Release:** 1.0; not seen
 - **The game supplies:** One defineGame object: rules, content, seats, start.
-- **Use it when:** Every game with a screen: one store over the game's one `defineGame` object (rules, content, seats, start, view, forced, opponent, words): an answer, the forced answers and the opponent's turn after it are one undo step and one paced step; step undo and redo, autosave, load with the undo steps rebuilt; `sim.ts` makes the same object sim-pool's game module, the opponent driver and replay-cli's engine. Recipe: docs/recipes/game-store.md.
+- **Use it when:** Every game with a screen: one store over the game's one `defineGame` object (rules, content, seats, start, view, forced, opponent, words): an answer, the forced answers and the opponent's turn after it are one undo step and one paced step; step undo and redo, autosave, load with the undo steps rebuilt; `sim.ts` makes the same object sim-pool's game module, the opponent driver and replay-cli's engine. It validates the spec's named registrations and adapts GameDef into per-seat observations with game-owned secrecy assertions. Recipe: docs/recipes/game-store.md.
 - **Not for:** A per-action undo (engine-core undo.ts); hot-seat play with no opponent (prompt-host answerWithForced with seat 'all' in the game's own store).
 - **Key exports:** `defineGame`, `botOpponent`, `answerOf`, `createGameStore`, `SeatId`, `GameDef`, `GameSnap`, `StoreOptions`, `GameStore`
 - **Needs:** [`engine-core`](#engine-core), [`prompt-host`](#prompt-host), [`paced-view`](#paced-view), [`sim-pool`](#sim-pool), [`replay-cli`](#replay-cli), [`cheat-options`](#cheat-options)
@@ -1614,12 +1614,12 @@ Settings declared as data, a persisted store of their values and a screen drawn 
 Plays N whole games of any `GameRules<G>` with a driver, in this thread or on worker threads, with crash-safe records and a resume file. Needs `engine-core`.
 
 - **Also called:** Bulk game simulator
-- **Words:** simulate, many, games, bots, balance, fuzz, tune, threads, unreached, clauses, whole game, coverage, replay seed, failing seed, findings, prove clause, game log, static clause applied, trace input, invariants, simulation runner, coverage rounds, no new clause, legal move driver, drivers, simulation module, rounds until no new clause, play whole games, by script, e2e, bounded public greedy, public nested preview, test pilot bot random greedy
+- **Words:** simulate, many, games, bots, balance, fuzz, tune, threads, unreached, clauses, whole game, coverage, replay seed, failing seed, findings, prove clause, game log, static clause applied, trace input, invariants, simulation runner, coverage rounds, no new clause, legal move driver, drivers, simulation module, rounds until no new clause, play whole games, by script, e2e, bounded public greedy, public nested preview, test pilot bot random greedy, consumed policy view checks
 - **Release:** 1.0; not seen
 - **The game supplies:** The game rules and a driver for each seat.
-- **Use it when:** Playing many whole games with drivers on worker threads, fuzzing, sanity bands, sweeps, the K200 weight tuner and paired validation; the whole-game check of unreached clauses (proof from counted full-resolve tests, with a trace input built from the game's own log so a static clause applied with an effect counts as proven), coverage rounds and a findings file to replay a failing seed; K737 random debug edits (randomDebug hook, debug N) applied every N actions in a fuzz run, and a driver or hasten returning a debug action.
+- **Use it when:** Playing many whole games with drivers on worker threads, fuzzing, sanity bands, sweeps, the K200 weight tuner and paired validation; the whole-game check of unreached clauses (proof from counted full-resolve tests, with a trace input built from the game's own log so a static clause applied with an effect counts as proven), coverage rounds and a findings file to replay a failing seed; K737 random debug edits (randomDebug hook, debug N) applied every N actions in a fuzz run, and a driver or hasten returning a debug action. Validate public seat views as JSON, detect hidden information leaks, and check registered driver names before a batch runs.
 - **Not for:** Strategy beyond one nested public choice (the game or opponent supplies it).
-- **Key exports:** `DriverRng`, `ANSWER_CAP`, `CRASH_HASH`, `breakAt`, `bySeat`, `crashRecord`, `legalAnswers`, `playOne`, `randomDriver`, `botDriver`, `replayStep`, `formatReport`, `report`, `runGames`, and 83 more
+- **Key exports:** `DriverRng`, `ANSWER_CAP`, `CRASH_HASH`, `DriverRegistrationError`, `breakAt`, `bySeat`, `crashRecord`, `legalAnswers`, `playOne`, `randomDriver`, `readDriverView`, `botDriver`, `replayStep`, `formatReport`, and 86 more
 - **Hook:** simGame: the module that plays one game for the pool
 - **Hook:** runGames: play many whole games on worker threads
 - **Hook:** fuzzMain: fuzz games with invariants and report each finding with a seed
