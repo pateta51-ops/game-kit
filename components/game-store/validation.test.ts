@@ -89,6 +89,13 @@ it('preserves debug context, snapshot subsets and legacy assertion precedence at
   expect(wrapped.stdout).toMatch(/driver seat b.*view leak: ONLY_A/);
 }, 30_000);
 
+it('uses existing per-seat assertions from a generic SimGame at the actual bot boundary', () => {
+  const generic = probe('generic', cli('bot', '1'), { PROBE_VIEW: '1', PROBE_MODE: 'generic' });
+  expect(generic.status, generic.stdout + generic.stderr).toBe(1);
+  expect(generic.stdout).toMatch(/driver seat b.*view leak: ONLY_A/);
+  expect(generic.trace.filter(e => e[0] === 'view' && e[3] === null)).toHaveLength(4);
+}, 30_000);
+
 const historical = (driver: string, seed: string) => `${JSON.stringify({ settings: 'compatible', record: { index: 1, driver, seed, result: { kind: 'won' }, actions: 3, hash: 'historical' } })}\n`;
 const executable = () => pathToFileURL(bundle).href;
 it.each(['source', 'bundle'])('preflights invalid registrations including cached successes using the %s worker', (kind) => {

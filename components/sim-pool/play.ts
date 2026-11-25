@@ -317,6 +317,7 @@ export function playOne<G extends GameTypes, S, O = unknown>(game: SimGame<G, S,
   let viewsChecked = 0;
   let cheated = false;
   let resolvedDriver: string | undefined;
+  const snapshotAssertions = new Map<ViewObservation['seat'], ViewAssertions[]>();
   const ms = { answers: 0, choose: 0, apply: 0, view: 0 };
   const trace = game.trace?.(content);
   trace?.clear();
@@ -353,6 +354,7 @@ export function playOne<G extends GameTypes, S, O = unknown>(game: SimGame<G, S,
   };
   const render = (st: G['state']): void => {
     if (!opts.view) return;
+    snapshotAssertions.clear();
     let seat: ViewObservation['seat'] | undefined;
     validating((validate) => {
       if (game.view) validate(game.view(st, content), game.secrets?.(st, content), game.leakKeys?.(st, content));
@@ -366,17 +368,29 @@ export function playOne<G extends GameTypes, S, O = unknown>(game: SimGame<G, S,
           seat = observation.seat;
           const { view, secrets, leakKeys } = observation.read();
           validate(view, secrets, leakKeys);
+          if (!game.driverViewAssertions) {
+            const assertions = snapshotAssertions.get(seat) ?? [];
+            assertions.push({ ...(secrets === undefined ? {} : { secrets }), ...(leakKeys === undefined ? {} : { leakKeys }) });
+            snapshotAssertions.set(seat, assertions);
+          }
         }
       }
     }, () => seat === undefined ? '' : ` (seat ${String(seat)})`);
+  };
+  const driverAssertions = (st: G['state'], seat: ViewObservation['seat'] | undefined): ViewAssertions => {
+    if (game.view) return { secrets: game.secrets?.(st, content) ?? [], leakKeys: game.leakKeys?.(st, content) ?? [] };
+    if (seat === undefined) return {};
+    if (game.driverViewAssertions) return game.driverViewAssertions(st, seat, content);
+    const assertions = st === state ? snapshotAssertions.get(seat)
+      : game.observeViews?.(st, content, { cheated }).filter((observation) => observation.seat === seat).map((observation) => observation.read());
+    return { secrets: assertions?.flatMap((a) => a.secrets ?? []) ?? [], leakKeys: assertions?.flatMap((a) => a.leakKeys ?? []) ?? [] };
   };
   const chooseAction = (driver: Driver<G>, st: G['state'], answers: readonly G['action'][], rng: DriverRng): G['action'] | DebugAction => {
     if (!opts.view || !driver.chooseWithViewValidation) return driver.choose(st, answers, rng);
     return driver.chooseWithViewValidation(st, answers, rng, (seat, read) => validating((validate) => {
       const view = read();
-      const assertions = game.view ? { secrets: game.secrets?.(st, content) ?? [], leakKeys: game.leakKeys?.(st, content) ?? [] }
-        : seat === undefined ? undefined : game.driverViewAssertions?.(st, seat, content);
-      validate(view, assertions?.secrets, assertions?.leakKeys);
+      const { secrets, leakKeys } = driverAssertions(st, seat);
+      validate(view, secrets, leakKeys);
       return view;
     }, () => seat === undefined ? ' (driver)' : ` (driver seat ${String(seat)})`));
   };

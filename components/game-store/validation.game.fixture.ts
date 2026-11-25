@@ -34,7 +34,7 @@ const definition: GameDef<Counter, string, Seat> = {
   start(seed) { event(['setup', seed]); return { options: { seed }, rules: RULES }; },
   view(state, seat, ctx) {
     event(['view', state.turn, seat, ctx ?? null]);
-    return mode === 'context-leak' && seat === 'b' && ctx === undefined ? secrets.a : secrets[seat];
+    return (mode === 'context-leak' || mode === 'generic') && seat === 'b' && ctx === undefined ? secrets.a : secrets[seat];
   },
   opponent(view, prompt, rng) {
     const draw = rng.int(2);
@@ -61,8 +61,10 @@ const game = simGameOf(definition, {
     secrets: (_state, seat) => { event(['assertion', seat]); return [secrets[seat === 'a' ? 'b' : 'a']]; },
   },
 });
+const generic = { ...game };
+delete generic.driverViewAssertions;
 export const simGame = {
-  ...game,
+  ...(mode === 'generic' ? generic : game),
   content() { event(['content']); return game.content(); },
   validateDriver(name: string) {
     event(['registration', name]);
