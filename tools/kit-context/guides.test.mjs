@@ -2,6 +2,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
+import { HtmlRenderer, Parser } from 'commonmark';
 import { afterAll, expect, it } from 'vitest';
 
 const root = fs.mkdtempSync(path.join(os.tmpdir(), 'kit-context-guides-'));
@@ -118,6 +119,81 @@ it('keeps prose after comment markers in fenced and inline examples', () => {
 });
 
 const directive = 'You must reserve all costs before mutating state.';
+
+it.each([
+  ['present', 100000, 0, { 'atomic.md': constraint }, ''],
+  ['missing', 100000, 1, {}, 'atomic.md is missing or unreadable'],
+  ['escaping', 100000, 1, {}, 'atomic.md escapes component'],
+  ['large', 700, 2, { 'atomic.md': constraint.repeat(60) }, ''],
+])('keeps the comment block boundary when its visible guide is %s', (kind, budget, status, guides, diagnostic) => {
+  const directive = 'You must read [required](atomic.md).';
+  const before = 'Before with an unmatched ` token.';
+  const comment = '<!-- note --> ' + directive;
+  const after = 'After with an unmatched ` token.';
+  const compact = rules + [before, comment, after].join('\n');
+  const spaced = rules + [before, comment, after].join('\n\n');
+  const render = text => new HtmlRenderer().render(new Parser().parse(text));
+  expect(render(compact)).toBe(render(spaced));
+  expect(render(compact)).toContain('<p>' + before + '</p>\n' + comment + '\n<p>' + after + '</p>');
+  for (const [form, readme, line] of [['spaced', spaced, 5], ['compact', compact, 4]]) {
+    const name = form + '-comment-boundary-' + kind;
+    const dir = fixture(name, readme, guides);
+    if (kind === 'escaping') {
+      const outside = path.join(root, 'outside-' + form + '.md');
+      fs.writeFileSync(outside, 'OUTSIDE BOUNDARY GUIDE');
+      fs.symlinkSync(outside, path.join(dir, 'atomic.md'));
+    }
+    const result = run(name, budget);
+    expect(result.status, result.stderr || result.stdout).toBe(status);
+    expect(result.stdout + result.stderr).not.toContain('OUTSIDE BOUNDARY GUIDE');
+    if (status === 1) {
+      expect(result.stdout).toBe('');
+      expect(result.stderr.trim()).toBe(diagnostic);
+      continue;
+    }
+    expect(result.stderr).toBe('');
+    expect(result.stdout.trimEnd().length).toBeLessThanOrEqual(budget);
+    const packet = status === 0 ? expectComplete(result) : JSON.parse(result.stdout);
+    if (status === 2) {
+      expect(packet).toMatchObject({ status: 'incomplete', requiredReads: ['atomic.md'], omitted: 1 });
+      expect(packet.usage.some(row => row.file === 'atomic.md')).toBe(false);
+    }
+    expect(packet.rules).toContainEqual({ file: 'README.md', line, text: directive });
+  }
+});
+
+it('resolves an original reference in a nested comment tail without joining neighboring literal blocks', () => {
+  const directive = 'You must read [required][STEP] and keep `[literal](missing-inline.md)`.';
+  const readme = rules + '> 1. Before with an unmatched ` token.\n' +
+    '>    <!-- [hidden](missing-comment.md)\n>    note --> <!-- second --> ' + directive + '\n' +
+    '>    After with an unmatched ` token.\n>\n>    ~~~md\n>    [literal](missing-fence.md)\n>    ~~~\n\n' +
+    '## References\n\n[step]: atomic.md\n';
+  const rendered = new HtmlRenderer().render(new Parser().parse(readme));
+  expect(rendered).toContain('<blockquote>\n<ol>\n<li>\n<p>Before with an unmatched ` token.</p>');
+  expect(rendered).toContain('<p>After with an unmatched ` token.</p>\n<pre><code class="language-md">');
+  fixture('nested-comment-boundary', readme);
+  const packet = expectComplete(run('nested-comment-boundary'));
+  expect(packet.rules).toContainEqual({ file: 'README.md', line: 5, text: directive });
+  expect(packet.rules.some(row => row.text.includes('[literal](missing-fence.md)'))).toBe(true);
+});
+
+it('does not promote a neighboring literal reference or a recovered fence info string into a guide', () => {
+  fixture('comment-boundary-literal-reference', rules +
+    '```md\n[shortcut]: missing-fenced-definition.md\n```\n' +
+    '<!-- note --> Read [shortcut] and ' + link + '(atomic.md).\n' +
+    '<!-- note --> ~~~md [fence info](missing-fence-info.md)');
+  expectComplete(run('comment-boundary-literal-reference'));
+});
+
+it('does not create a link spanning a comment tail and the next block', () => {
+  const readme = rules + '<!-- note --> A literal [opening\n' +
+    'label](missing-cross-block.md).\n\n' + link + '(atomic.md).';
+  const rendered = new HtmlRenderer().render(new Parser().parse(readme));
+  expect(rendered).toContain('<p>label](missing-cross-block.md).</p>');
+  fixture('comment-boundary-split-link', readme);
+  const packet = expectComplete(run('comment-boundary-split-link'));
+  expect(packet.rules).toContainEqual({ file: 'README.md', line: 3, text: 'A literal [opening' });
+});
 
 it('keeps visible rule text after an HTML comment', () => {
   fixture('visible-rule', rules + '<!-- maintainer note --> ' + directive);
