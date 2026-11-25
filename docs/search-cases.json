@@ -669,5 +669,11 @@
   { "q": "edge", "first": "pieces-3d" },
   { "q": "runtime card tests", "first": "card-harness" },
   { "q": "test loaded card pack", "first": "card-harness" },
-  { "q": "runtime card clauses", "first": "card-harness" }
+  { "q": "runtime card clauses", "first": "card-harness" },
+  { "q": "verified kit context pin", "first": "kit-context" },
+  { "q": "legacy lock context coverage", "first": "kit-context" },
+  { "q": "pinned component contract identity", "first": "kit-context" },
+  { "q": "generated worker brief", "first": "kit-context" },
+  { "q": "task-specific agent brief", "first": "kit-context" },
+  { "q": "brief stale script fingerprints", "first": "kit-context" }
 ]
