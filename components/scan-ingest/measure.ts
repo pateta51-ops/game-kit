@@ -339,8 +339,12 @@ export function loadGeometry(url: string, key: string, asks: Asks, store?: Geome
       const g = await decode(url, asks);
       if (g && store) void store.set(key, g).catch(() => undefined);
       return g;
-    })();
+    })().catch(() => null);
     cache.set(key, p);
+    const pending = p;
+    void pending.then((g) => {
+      if (g === null && cache.get(key) === pending) cache.delete(key);
+    });
   }
   return p;
 }

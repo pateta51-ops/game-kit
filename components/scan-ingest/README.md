@@ -19,6 +19,7 @@ content pack. Real scans never enter the kit; the tests draw their own sheets.
 6. Real scans never enter the kit (its tests draw their own sheets); keep the game's plug-in and tools in the game, outside `kit/`.
 7. For printed boards (`index.ts`, `ui.ts`) pass the game's scan, box list and state: `ScanBoard` draws the scan and calls `render(id, sizePx)` in each box; frames and colours stay in the game.
 8. Tesseract is optional and only for reading print; without it callers get None and one warning.
+9. Treat `loadGeometry` returning `null` as an unsuccessful attempt: keep fallback geometry and call again when the image is available. Concurrent calls share one attempt; only successful geometry is cached. Change the key when the scan or its asks change.
 
 **Common mistakes:**
 - A `--plugin` class that is not a `Plugin` subclass: refused.
@@ -139,7 +140,7 @@ are here (sources in component.json).
 - `measure.ts`: pixel tests (`hsv`, `hueTest`, `nearTest`), `findBlobs` (isolated solid boxes of one colour: integral
   image, ring test, grow), `measureBoxes(w, h, rgba, specs)` for a list of `BoxSpec` (id, test, region, size, ratio,
   usual place), `findRows` (colour rows in an asked order, or null), `firstRun`, `rowFraction`, `measureRgba`, and
-  `loadGeometry(url, key, asks, store?)` (decoded on a canvas once per key; an optional store keeps it across reloads).
+  `loadGeometry(url, key, asks, store?)` (concurrent calls share one canvas decode; successful geometry is cached per key and an optional store keeps it across reloads; `null` is not retained, so a later call retries).
 - `board.ts`: `planOverlay(list, geometry)` (found boxes covered by 4 %, the usual places before measuring, the boxes
   the scan lacks in `missing` so the game draws its own face), `toScreen`, `normalise`, `boxStyle`, `pointStyle`,
   `boxWithin`, `trackPoint`; die-cut pieces: `clipPathOf`, `trimOutline`, `mmOf`, `mmStyle`, `boardMm`, `skewOf` and
