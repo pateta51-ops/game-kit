@@ -4,7 +4,7 @@
 // nearest before it. Nothing here is stored by the kit: a game that wants the same steps after a reload stores where they
 // start (`h.steps.map((s) => s.start)`) and calls `replaySteps`.
 import { applyAction, createGame } from './apply.ts';
-import type { GameRules, GameTypes } from './types.ts';
+import type { GameRules, GameTypes, LocatedTriggerCap } from './types.ts';
 import { randomReason, revealReason, type UndoMode } from './undo.ts';
 
 export interface Step<G extends GameTypes> {
@@ -25,6 +25,8 @@ export interface StepHistory<G extends GameTypes> {
   /** Every action applied to reach `state`. */
   readonly actions: readonly G['action'][];
   readonly state: G['state'];
+  /** The first truncation on the current action history. */
+  readonly triggerCap?: LocatedTriggerCap;
   readonly steps: readonly Step<G>[];
   /** The steps taken back, the next one to redo last. */
   readonly redo: readonly (readonly G['action'][])[];
@@ -88,10 +90,12 @@ function play<G extends GameTypes>(
 ): StepResult<G> {
   let state = h.state;
   let reason: string | null = null;
+  let triggerCap = h.triggerCap;
   const events: G['event'][] = [];
   try {
-    for (const a of actions) {
+    for (const [index, a] of actions.entries()) {
       const r = applyAction(game, state, a, content);
+      if (r.triggerCap !== undefined) triggerCap ??= { ...r.triggerCap, actionIndex: h.actions.length + index };
       reason ??= revealReason(game, r.events) ?? randomReason(game, state, r.state);
       state = r.state;
       for (const e of r.events) events.push(e);
@@ -114,7 +118,7 @@ function play<G extends GameTypes>(
               ? [...h.steps.slice(0, -1), { ...top, count: top.count + actions.length, reason: top.reason ?? reason }]
               : capped(h, [...h.steps, { start: h.actions.length, count: actions.length, reason, before: h.state }]),
         };
-  return { ok: true, history: next, events, error: null };
+  return { ok: true, history: triggerCap === undefined ? next : { ...next, triggerCap }, events, error: null };
 }
 
 /** A decision of the player: a new step. The steps to redo are forgotten. Refused when the engine refuses the action. */
@@ -164,12 +168,14 @@ export function undoStep<G extends GameTypes>(
   } catch (e) {
     return refuse(h, `This history is damaged: ${String(e)}`);
   }
+  const { triggerCap, ...retained } = h;
   return {
     ok: true,
     events: [],
     error: null,
     history: {
-      ...h,
+      ...retained,
+      ...(triggerCap !== undefined && (triggerCap.actionIndex === null || triggerCap.actionIndex < top.start) ? { triggerCap } : {}),
       state,
       actions: h.actions.slice(0, top.start),
       steps: h.steps.slice(0, index),
@@ -205,7 +211,9 @@ export function replaySteps<G extends GameTypes>(
 ): ReplayedSteps<G> {
   let h: StepHistory<G>;
   try {
-    h = newSteps<G>(createGame(game, options, rules, content).state, [], o);
+    const first = createGame(game, options, rules, content);
+    h = newSteps<G>(first.state, [], o);
+    if (first.triggerCap !== undefined) h = { ...h, triggerCap: { ...first.triggerCap, actionIndex: null } };
   } catch (e) {
     return { ok: false, failedAt: null, error: String(e) };
   }

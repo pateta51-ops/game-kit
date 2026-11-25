@@ -622,5 +622,17 @@
   { "q": "replay table navigation", "first": "visual-replay" },
   { "q": "migrateSave", "first": "engine-core" },
   { "q": "RestoreResult", "first": "engine-core" },
-  { "q": "ReplayResult", "first": "engine-core" }
+  { "q": "ReplayResult", "first": "engine-core" },
+  { "q": "pending triggers", "first": "engine-core" },
+  { "q": "formatTriggerCap", "first": "engine-core" },
+  { "q": "TriggerCapDiagnostic", "first": "engine-core" },
+  { "q": "store opponent", "first": "game-store" },
+  { "q": "store steps", "first": "game-store" },
+  { "q": "game store", "first": "game-store" },
+  { "q": "balance report", "first": "sim-pool" },
+  { "q": "whole game report", "first": "sim-pool" },
+  { "q": "simulation completion", "first": "sim-pool" },
+  { "q": "replay cli", "first": "replay-cli" },
+  { "q": "golden replay", "first": "replay-cli" },
+  { "q": "replay saved games", "first": "replay-cli" }
 ]

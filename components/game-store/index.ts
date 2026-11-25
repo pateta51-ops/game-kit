@@ -2,7 +2,7 @@
 // autosave, the opponent seat on its own view), and one `defineGame` object the store, sim-pool, replay-cli and the
 // opponent read. Shape from Imperium src/ui/store/gameStore.ts + history.ts (rebuild with answeredBySettings),
 // Unstoppable's store + undo.ts and EBR store.ts; written new.
-import { addStep, canUndoStep, createGame, extendStep, newSteps, redoStep, replaySteps, restoreSave, seatKey, undoStep, type AnswerAction, type DebugAction, type GameRules, type GameTypes, type History, type KernelPrompt, type SaveFile, type SaveFormat, type StepHistory, type UndoMode } from '../engine-core/index.ts';
+import { addStep, canUndoStep, createGame, extendStep, newSteps, redoStep, replaySteps, restoreSave, seatKey, undoStep, type AnswerAction, type DebugAction, type GameRules, type GameTypes, type History, type KernelPrompt, type LocatedTriggerCap, type SaveFile, type SaveFormat, type StepHistory, type UndoMode } from '../engine-core/index.ts';
 import { answerWithForced, sendForced, type Forced } from '../prompt-host/index.ts';
 import { advance, noSteps, pushSteps, skip, type Steps } from '../paced-view/index.ts';
 import { legalAnswers } from '../sim-pool/play.ts';
@@ -55,6 +55,8 @@ export interface GameSnap<G extends GameTypes, V> {
   readonly options: G['options'];
   readonly rules: G['rules'];
   readonly error: string | null;
+  /** The first trigger-budget truncation on the current history, including setup. */
+  readonly triggerCap?: LocatedTriggerCap;
 }
 
 export interface StoreOptions<S extends SeatId> {
@@ -137,6 +139,7 @@ export function createGameStore<G extends GameTypes, V, S extends SeatId>(def: G
     for (const fn of subs) fn();
   };
   const make = (h: StepHistory<G>, steps: Steps<V, G['event']>, options: G['options'], rules: G['rules'], error: string | null): GameSnap<G, V> => ({
+    ...(h.triggerCap === undefined ? {} : { triggerCap: h.triggerCap }),
     history: h, state: h.state, undoUsed: h.undoUsed, cheated: cheatedOf(h.actions), view: def.view(h.state, me(), { undoUsed: h.undoUsed, cheated: cheatedOf(h.actions) }), steps, options, rules, error,
   });
   const saved = (): History<G> => ({ options: snap.options, rules: snap.rules, actions: snap.history.actions, cursor: snap.history.actions.length, undoUsed: snap.history.undoUsed });
@@ -163,7 +166,8 @@ export function createGameStore<G extends GameTypes, V, S extends SeatId>(def: G
   function fresh(seed: string): void {
     const { options, rules } = def.start(seed);
     const g = createGame(def.rules, options, rules, def.content);
-    const c = cheat(newSteps<G>(g.state), options, 'setup');
+    const history = newSteps<G>(g.state);
+    const c = cheat(g.triggerCap === undefined ? history : { ...history, triggerCap: { ...g.triggerCap, actionIndex: null } }, options, 'setup');
     const s = c.error !== null ? { h: c.h, evs: [...g.events], error: c.error } : settle(c.h, g.events, options, def.cheats === undefined ? undefined : { last: undefined });
     set(make(s.h, o.openingSteps === true ? pushSteps(noSteps(), def.view(def.rules.blank(options, rules, def.content) as G['state'], me()), s.evs, isStep, o.instant?.() ?? false) : noSteps(), options, rules, s.error));
   }

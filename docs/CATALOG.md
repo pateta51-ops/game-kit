@@ -877,7 +877,7 @@ The kernel of a game engine: seeded random numbers, canonical JSON and hashes, t
 - **The game supplies:** The rules: state, actions, prompts and set-up.
 - **Use it when:** Every game's engine: seeded random, tasks and prompts, copy on write, state invariants, replay, undo, saves, timing windows and triggers.
 - **Not for:** A game's rules or content; the game writes its own `GameRules`.
-- **Key exports:** `claimEngineCore`, `canonicalJson`, `fnv1a64`, `copyJson`, `copyState`, `deepFreeze`, `freezeState`, `isFreezing`, `setStateFreezing`, `advance`, `applyAction`, `applyActionWith`, `createGame`, `isChecking`, and 298 more
+- **Key exports:** `claimEngineCore`, `canonicalJson`, `fnv1a64`, `copyJson`, `copyState`, `deepFreeze`, `freezeState`, `isFreezing`, `setStateFreezing`, `advance`, `applyAction`, `applyActionWith`, `createGame`, `isChecking`, and 301 more
 - **Hook:** ctx.ask: open a prompt for a player and resume with the answer
 - **Hook:** ctx.rng: seeded random numbers, never Math.random
 - **Hook:** own: change state by copy on write
@@ -1614,7 +1614,7 @@ Settings declared as data, a persisted store of their values and a screen drawn 
 Plays N whole games of any `GameRules<G>` with a driver, in this thread or on worker threads, with crash-safe records and a resume file. Needs `engine-core`.
 
 - **Also called:** Bulk game simulator
-- **Words:** simulate, many, games, bots, balance, fuzz, tune, threads, unreached, clauses, whole game, coverage, replay seed, failing seed, findings, prove clause, game log, static clause applied, trace input, invariants, simulation runner, coverage rounds, no new clause, legal move driver, drivers, simulation module, rounds until no new clause, play whole games, by script, e2e, bounded public greedy, public nested preview, test pilot bot random greedy, consumed policy view checks
+- **Words:** simulate, many, games, bots, balance, fuzz, tune, threads, unreached, clauses, whole game, coverage, replay seed, failing seed, findings, prove clause, game log, static clause applied, trace input, invariants, simulation runner, coverage rounds, no new clause, legal move driver, drivers, simulation module, rounds until no new clause, play whole games, by script, e2e, bounded public greedy, public nested preview, test pilot bot random greedy, consumed policy view checks, simulation completion
 - **Release:** 1.0; not seen
 - **The game supplies:** The game rules and a driver for each seat.
 - **Use it when:** Playing many whole games with drivers on worker threads, fuzzing, sanity bands, sweeps, the K200 weight tuner and paired validation; the whole-game check of unreached clauses (proof from counted full-resolve tests, with a trace input built from the game's own log so a static clause applied with an effect counts as proven), coverage rounds and a findings file to replay a failing seed; K737 random debug edits (randomDebug hook, debug N) applied every N actions in a fuzz run, and a driver or hasten returning a debug action. Validate public seat views as JSON, detect hidden information leaks, and check registered driver names before a batch runs.
