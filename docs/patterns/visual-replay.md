@@ -1,6 +1,6 @@
 # Pattern: visual replay
 
-Engine-core already holds `replay()` and the command-line replay (K2). The viewer is welded to its game's screens and art: pattern only, L if ever shared (SELECTION.md, "Presentation").
+Engine-core already holds `replay()` and the command-line replay (K2). Use [visual-replay](../../components/visual-replay/README.md) for the shared playback controller; the game supplies its own screens, art and engine adapter.
 
 ## Example (read, never edit)
 rome `rome-fate-of-an-empire-fan-prototype` @ `1d0fd2e`:
