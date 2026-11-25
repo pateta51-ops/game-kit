@@ -426,6 +426,7 @@ The blind matching test's result was not recorded: the PR, its comments and docs
 | K746 | reuse-metrics reports locked availability, type and value references, and separately supplied runtime observations. Build measurements carry revisions, windows and provenance. Aggregates reject overflow and duplicate observation IDs. Copies without explicit identity are flagged as unverified, and only matched measured baseline pairs report savings. | S | owner (24 Nov 2026): validate cross-game reuse and build measurements using synthetic evidence | done |
 | K748 | scaffold: `kit.mjs spec resolve` selects component profiles and resolves exact kit pins. `kit.mjs spec generate` publishes a retryable scaffold after lock validation and installation. Keep K551 open for executable system adapters, setup integration and game-specific validation gates. | M | owner: deliver and validate the first K551 increment | done |
 | K749 | Visual replay player rebuilds recorded actions on a game's table with independent controls, save validation, boundaries and optional annotations. | L |  | done |
+| K750 | breaking: game-store and sim-pool validate every requested seat view and its secrecy rules, reject non-JSON views, and refuse unknown driver registrations before play. Migrate accidental fallbacks to an explicit registration, alias or random. | S | owner | done |
 
 ## Candidates
 
