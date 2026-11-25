@@ -16,3 +16,4 @@ export { asserts, callsHelper, codeOnly, expectNotFired, expectNotOffered, testC
 export { KNOWN_HEADER, knownCheck, knownGate, parseKnown, readKnown, refuseWrite, writeKnown, writeKnownMain, type KnownFindings, type KnownIo, type KnownLine, type KnownResult } from './known.ts';
 export { PROMPT_LOG_DIR, promptLogOf, promptLogs, readScreenLogs, recordOpened, recordPrompt, type ScreenLogEntry } from './screenLog.ts';
 export { runClauseMutations, type ClauseMutation, type MutationStatus, type MutationResult, type MutationReport, type MutationOptions } from './mutations.ts';
+export { runCardSuite, runtimeCardMain, standardCardCases, type RuntimeAssertion, type RuntimeCardCase, type RuntimeCardReport, type RuntimeCardSetup, type RuntimeCardSuite, type RuntimeCaseResult, type RuntimeCaseStatus, type RuntimeClause, type StandardCardRule } from './runtime.ts';
