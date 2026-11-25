@@ -10,7 +10,7 @@ Produce a bounded machine-readable context packet for a public component export,
 1. Use `kit.mjs search` to choose the component first. Run this tool from a game-kit checkout with its dependencies installed.
 2. Select the public entrypoint explicitly if it is not `index.ts` (for example `--entry browser.ts`). A symbol must be exported by that entrypoint.
 3. Check `status`. For an `incomplete` packet, follow every path in `requiredReads` or request a larger budget. Follow imports and re-exports from source paths and guide links from every README section. Read dependencies in the corresponding locked version.
-4. Read the complete component rules and usage instructions before using its API. A `complete` packet includes `rules`, `usage` and the requested local contracts. Visible rules after leading HTML comments retain their README line references and their guide requirements. Read repository policy and game-specific rules separately. Test excerpts illustrate usage.
+4. Read the complete component rules and usage instructions before using its API. A `complete` packet includes `rules`, `usage` and the requested local contracts. Visible rules after leading HTML comments retain their README line references and their guide requirements. Guide discovery parses that visible text separately from adjacent Markdown blocks and uses the README's reference definitions. Read repository policy and game-specific rules separately. Test excerpts illustrate usage.
 5. To inspect the version vendored into a game, pass `--root <game>/kit`; do not use newer checkout APIs to implement against an older locked game.
 6. The tool reads the requested component, does not edit files and does not execute tests or game rules.
 

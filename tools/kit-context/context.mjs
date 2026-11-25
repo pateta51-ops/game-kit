@@ -69,8 +69,6 @@ function walk(dir) {
     e.isDirectory() && !ignored.has(e.name) ? walk(path.join(dir,e.name)) :
       e.isFile() ? [path.join(dir,e.name)] : []);
 }
-const sourcePrefix=(line,suffix)=>line.endsWith(suffix)?line.slice(0,line.length-suffix.length):'';
-
 function readDocumentation(dir) {
   const lines = readComponentFile(dir,'README.md').split(/\r?\n/);
   const markdown=lines.join('\n');
@@ -84,41 +82,21 @@ function readDocumentation(dir) {
   const end=headings.find(index=>index>start&&/^##\s/.test(lines[index]))??lines.length;
   const sourceLines = (from,to) => lines.slice(from,to).map((text,i)=>({file:'README.md',line:from+i+1,text}));
   const rules=sourceLines(start+1,end);
-  const recovery={comments:[],literalSpans:[]};
+  const commentTails=[];
   const walker=document.walker();
   for(let event;(event=walker.next());) {
     const {node,entering}=event;
-    if(!entering||(node.type!=='html_block'&&node.type!=='code_block')) continue;
-    const [[line,column],[lastLine]]=node.sourcepos;
-    const first=line-1;
-    const prefixes=[lines[first].slice(0,column-1)];
-    if(node.type==='html_block') {
-      const blockLines=node.literal.split('\n');
-      for(let offset=1;offset<blockLines.length;offset++) {
-        prefixes.push(sourcePrefix(lines[first+offset],blockLines[offset]));
-      }
-    }
-    recovery.literalSpans.push([first,lastLine,prefixes]);
-    if(node.type!=='html_block'||first<=start||first>=end) continue;
+    if(!entering||node.type!=='html_block') continue;
+    const first=node.sourcepos[0][0]-1;
+    if(first<=start||first>=end) continue;
     // CommonMark keeps the rest of a comment block's closing line as HTML.
     const comment=/^[ \t]*(?:<!--[\s\S]*?(?:-->|$)[ \t]*)+/.exec(node.literal)?.[0];
     if(!comment) continue;
-    const commentLines=comment.split('\n');
+    const closing=first+comment.split('\n').length-1;
     const tail=node.literal.slice(comment.length);
-    const recover=tail.trim().length>0;
-    const visibleLines=[];
-    for(let offset=0;offset<commentLines.length;offset++) {
-      const index=first+offset;
-      const last=offset===commentLines.length-1;
-      const visible=last?tail:'';
-      rules[index-start-1].text=visible;
-      if(recover) {
-        const suffix=commentLines[offset]+visible;
-        const prefix=sourcePrefix(lines[index],suffix);
-        visibleLines.push(prefix+(last?visible:'<!-- -->'));
-      }
-    }
-    if(recover) recovery.comments.push({first,lines:visibleLines});
+    for(let index=first;index<closing;index++) rules[index-start-1].text='';
+    rules[closing-start-1].text=tail;
+    if(tail.trim()) commentTails.push(tail);
   }
   const usage=[];
   function addUsage(from,to) {
@@ -134,15 +112,15 @@ function readDocumentation(dir) {
     addUsage(from,to);
     from=to;
   }
-  return {rules:rules.filter(row=>row.text.trim()),usage,markdown,recovery};
+  return {rules:rules.filter(row=>row.text.trim()),usage,markdown,commentTails};
 }
 
-function* guideDocuments(markdown, visibleLine) {
+function* guideDocuments(markdown) {
   const parser=new Parser();
   const document=parser.parse(markdown);
-  yield {document,visibleLine};
+  yield {document,refmap:parser.refmap};
   const lines=markdown.split(/\r?\n/);
-  const separated=[];
+  let separated=false;
   // Also accept trailing stand-alone definitions in top-level prose paragraphs.
   for(let block=document.firstChild;block;block=block.next) {
     if(block.type!=='paragraph') continue;
@@ -159,55 +137,47 @@ function* guideDocuments(markdown, visibleLine) {
       if(!/^ {0,3}\[[^\]\n]+\]:[ \t]+\S/.test(definition) ||
         plainLines[prose].trim()!==definition.trim() || parser.parse(definition).firstChild) break;
       lines[index]='\n'+definition;
-      separated.push(index+1);
+      separated=true;
     }
   }
-  if(separated.length) yield {
+  if(separated) yield {
     document:parser.parse(lines.join('\n')),
-    visibleLine:visibleLine===undefined?undefined:visibleLine+separated.filter(line=>line<=visibleLine).length,
+    refmap:parser.refmap,
   };
 }
 
-function* markdownLinks(markdown, recoveredLine) {
-  for(const {document,visibleLine} of guideDocuments(markdown,recoveredLine)) {
-    const walker=document.walker();
-    for(let event;(event=walker.next());) {
-      const {node,entering}=event;
-      if(!entering) continue;
-      if(node.type==='image') walker.resumeAt(node,false);
-      if(node.type!=='link') continue;
-      if(visibleLine!==undefined) {
-        // Recovered prose adds guides only from its own parsed block.
-        let block=node.parent;
-        while(block&&!block.sourcepos) block=block.parent;
-        if(!block||visibleLine<block.sourcepos[0][0]||visibleLine>block.sourcepos[1][0]) continue;
-      }
-      yield node.destination;
-    }
+function* documentLinks(document) {
+  const walker=document.walker();
+  for(let event;(event=walker.next());) {
+    const {node,entering}=event;
+    if(!entering) continue;
+    if(node.type==='image') walker.resumeAt(node,false);
+    if(node.type==='link') yield node.destination;
   }
 }
 
-function* readmeLinks(markdown, {comments,literalSpans}) {
-  yield* markdownLinks(markdown);
-  if(!comments.length) return;
-  const source=markdown.split('\n');
-  // Preserve literal block boundaries without letting a reparse expose their contents.
-  for(const [first,end,prefixes] of literalSpans) {
-    source.fill('',first,end);
-    for(let offset=0;offset<prefixes.length;offset++) source[first+offset]=prefixes[offset]+'<!-- -->';
+function* markdownLinks(markdown, commentTails=[]) {
+  const references=[];
+  for(const {document,refmap} of guideDocuments(markdown)) {
+    yield* documentLinks(document);
+    if(commentTails.length) references.push(refmap);
   }
-  for(const {first,lines} of comments) {
-    // Reparse one comment block at a time so its syntax cannot affect another.
-    const closingLine=first+lines.length;
-    const variant=[...source.slice(0,first),...lines,...source.slice(closingLine)].join('\n');
-    yield* markdownLinks(variant,closingLine);
+  for(const tail of commentTails) for(const refmap of references) {
+    const parser=new Parser();
+    const processInlines=parser.processInlines;
+    // CommonMark 0.31 resets references during block parsing. Supply the README's map for inline parsing.
+    parser.processInlines=function(document) {
+      this.refmap=refmap;
+      processInlines.call(this,document);
+    };
+    yield* documentLinks(parser.parse(tail));
   }
 }
 
-function readLinkedGuides(dir, markdown, recovery) {
+function readLinkedGuides(dir, markdown, commentTails) {
   const visited=new Set([componentFile(dir,'README.md')]);
   const guides=[];
-  const pending=[{file:'README.md',links:readmeLinks(markdown,recovery)}];
+  const pending=[{file:'README.md',links:markdownLinks(markdown,commentTails)}];
   const decoder=new TextDecoder('utf-8',{fatal:true});
   for(const row of pending) {
     for(const href of row.links) {
@@ -250,8 +220,8 @@ export function contextPacket({root=defaultRoot,component,symbol,entry='index.ts
   if (typeof entry!=='string'||!code.test(entry)||path.isAbsolute(entry)||entry.split(/[\\/]/).some(part=>part==='..'||ignored.has(part))) throw new Error('invalid entry');
   const file=componentFile(dir,entry);
   if (!code.test(file)||test.test(entry)||test.test(file)) throw new Error('entry must be a public source file and not a test');
-  const {rules,usage,markdown,recovery}=readDocumentation(dir);
-  const guides=readLinkedGuides(dir,markdown,recovery);
+  const {rules,usage,markdown,commentTails}=readDocumentation(dir);
+  const guides=readLinkedGuides(dir,markdown,commentTails);
   const options={
     target:ts.ScriptTarget.ESNext, module:ts.ModuleKind.ESNext,
     moduleResolution:ts.ModuleResolutionKind.Bundler, jsx:ts.JsxEmit.ReactJSX,
