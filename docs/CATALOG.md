@@ -608,12 +608,19 @@ Dev cheats a game declares as data at set-up (more starting units, more actions 
 - **Words:** checks, lint, test, parallel, timeout, runner, chain
 - **Release:** 1.0; not seen
 - **The game supplies:** The list of checks and their lanes.
-- **Use it when:** Running `npm run check` lanes in parallel with process-tree timeouts and a drift check.
+- **Use it when:** Running `npm run check` lanes in parallel with process-tree timeouts and a drift check; optionally recording and verifying acceptance receipts bound to the consumer, kit pin and authored inputs.
 - **Not for:** Writing the checks themselves.
-- **Key exports:** `DEFAULT_CONFIG`, `checkScripts`, `coverageProblems`, `envOf`, `main`, `rowOf`, `gate`, `gateAll`, `report`, `wholeGames`, `testCost`, `Plan`, `Config`, `Row`, and 4 more
+- **Key exports:** `DEFAULT_CONFIG`, `checkScripts`, `coverageProblems`, `envOf`, `main`, `acceptanceReceipt`, `verifyReceipt`, `rowOf`, `gate`, `gateAll`, `report`, `wholeGames`, `testCost`, `Plan`, and 8 more
 - **Needs:** nothing
 - **Came from:** ebr
 - **Docs:** [README](../components/check-runner/README.md) ([rules for agents](../components/check-runner/README.md#rules-for-agents))
+
+### check-runner/receipts
+
+- **Also called:** Acceptance receipts bound to source and inputs
+- **Words:** acceptance receipt, verify check execution evidence, stale consumer acceptance, bound kit revision, cancelled check evidence
+- **Use it when:** Record the existing full check plan's commands and outcomes with consumer, kit lock, specification and acceptance-definition fingerprints; reject stale, missing, stopped, truncated or unfinished local evidence. Does not certify test quality or authenticate execution.
+- **Guide:** [README.md](../components/check-runner/README.md)
 
 ## ci-templates
 
