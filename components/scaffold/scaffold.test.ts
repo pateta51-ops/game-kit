@@ -72,12 +72,13 @@ describe('scaffold (K204)', () => {
     const browserGame = path.join(tmp, 'browser');
     const generated = spawnSync('node', [kitMjs, 'new', browserGame, 'demo', 'Demo Game', '--ref', head, '--ports', ports, '--link', nm, '--no-install', '--no-remote'], { encoding: 'utf8' });
     expect(generated.status, generated.stderr).toBe(0);
-    const smoke = (timeout: string) => spawnSync('npm', ['run', 'test:e2e'], {
-      cwd: browserGame, encoding: 'utf8', shell: process.platform === 'win32',
-      env: { ...process.env, E2E_TEST_TIMEOUT_MS: timeout },
+    const smoke = (timeout: string) => spawnSync(process.execPath, ['kit/ci-templates/full-gate.mjs', 'e2e'], {
+      cwd: browserGame, encoding: 'utf8',
+      env: { ...process.env, E2E_SCRIPTS: 'test:e2e', E2E_TEST_TIMEOUT_MS: timeout },
     });
     const result = smoke('10000');
     expect(result.status, result.stdout + result.stderr).toBe(0);
+    expect(result.stdout).toMatch(/e2e port: \d+/);
     expect(result.stdout).toContain('Scaffold browser smoke passed: menu, setup, step, undo');
     const app = path.join(browserGame, 'src/ui/App.tsx');
     const ui = fs.readFileSync(app, 'utf8');
