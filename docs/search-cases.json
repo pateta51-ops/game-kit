@@ -590,5 +590,8 @@
   { "q": "pinned declarative project scaffold", "first": "scaffold/spec" },
   { "q": "staged node_modules", "first": "repo-gate" },
   { "q": "tracked dependency link", "first": "repo-gate" },
+  { "q": "empty working game repo", "first": "scaffold" },
+  { "q": "start new game project", "first": "scaffold" },
+  { "q": "game kit starter repo", "first": "scaffold" },
   { "q": "dependency symlink", "first": "repo-gate" }
 ]
