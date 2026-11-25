@@ -126,7 +126,7 @@ export function greedyPreview<G extends GameTypes, V>(options: GreedyPreviewOpti
         return true;
       },
     });
-    if (result.stop === 'hiddenInformation') return { kind: 'unknown' };
+    if (result.stop === 'hiddenInformation' || result.triggerCap !== undefined) return { kind: 'unknown' };
     if (result.stop === 'rejected') return { kind: 'rejected' };
     const score = result.numbers.score!.after;
     if (nested === undefined) return { kind: 'complete', score };

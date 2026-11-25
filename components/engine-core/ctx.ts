@@ -10,7 +10,7 @@ import type { Draft } from './draft.ts';
 import { EngineBugError } from './errors.ts';
 import { takePromptSeq, takeSeq } from './ids.ts';
 import { nextUint32, randomInt, shuffleInPlace, type RngState } from './rng.ts';
-import type { Ctx, CtxRng, EventInput, GameRules, GameTypes, KernelEvent, KernelState, KernelTask } from './types.ts';
+import type { Ctx, CtxRng, EventInput, GameRules, GameTypes, KernelEvent, KernelState, KernelTask, TriggerCapDiagnostic } from './types.ts';
 
 /** The working state of `ctx` as a writable draft (the same object; typed readonly). */
 export const draftOf = <G extends GameTypes>(ctx: Ctx<G>): Draft<G['state']> => ctx.s as Draft<G['state']>;
@@ -75,6 +75,7 @@ class StateRng implements CtxRng {
  */
 class RunCtx<G extends GameTypes> implements Ctx<G> {
   readonly rng: CtxRng;
+  triggerCap?: TriggerCapDiagnostic;
   /** K100: set while a debug edit runs; its events carry `debug: true`. */
   debug = false;
   /** K222: the stack depth when the running handler started (-1 outside the runner). */
@@ -165,6 +166,15 @@ export function readCtx<G extends GameTypes>(
 
 /** The events emitted so far through a context `makeCtx` built (the full list, not the capped state log). */
 export const ctxEvents = <G extends GameTypes>(ctx: Ctx<G>): readonly G['event'][] => (ctx as RunCtx<G>).events;
+
+export function noteTriggerCap<G extends GameTypes>(ctx: Ctx<G>, cap: TriggerCapDiagnostic): void {
+  (ctx as RunCtx<G>).triggerCap ??= cap;
+}
+
+export function ctxDiagnostics<G extends GameTypes>(ctx: Ctx<G>): { triggerCap?: TriggerCapDiagnostic } {
+  const triggerCap = (ctx as RunCtx<G>).triggerCap;
+  return triggerCap === undefined ? {} : { triggerCap };
+}
 
 /** K222: the stack depth when a handler starts (the runner sets it). */
 export function setHandlerBase<G extends GameTypes>(ctx: Ctx<G>, n: number): void {

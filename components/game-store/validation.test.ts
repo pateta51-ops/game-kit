@@ -117,7 +117,7 @@ it('requires the current coverage scope from cached successes when validation is
   const file = join(dir, 'old-scope-checkpoint.jsonl');
   const original = JSON.parse(historical('opponent', 'probe-0')) as { settings: string; record: SimRecord };
   const before = `${JSON.stringify({ ...original, record: {
-    ...original.record, hash: '591a90592d20f650', resolvedDriver: 'opponent', viewValidation: { status: 'executed', checked: 8 },
+    ...original.record, triggerCapChecked: true, hash: '591a90592d20f650', resolvedDriver: 'opponent', viewValidation: { status: 'executed', checked: 8 },
   } })}\n`;
   writeFileSync(file, before);
   const env = { PROBE_CHECKPOINT: file, PROBE_MODE: 'context-leak', PROBE_WORKER: executable() };

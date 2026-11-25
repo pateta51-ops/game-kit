@@ -3,7 +3,7 @@
 import { applyAction, createGame } from './apply.ts';
 import { StateInvariantError } from './errors.ts';
 import { hashValue } from './hash.ts';
-import type { ApplyResult, GameRules, GameTypes, InvariantViolation } from './types.ts';
+import type { ApplyResult, GameRules, GameTypes, InvariantViolation, LocatedTriggerCap } from './types.ts';
 
 /** `hashState`: FNV-1a 64 over the canonical JSON of the state. */
 export const hashState = (state: unknown): string => hashValue(state);
@@ -22,6 +22,13 @@ export interface ReplayResult<G extends GameTypes> {
   readonly invariantFailure?: true;
   /** Diagnostics from setup and replayed actions, in execution order. */
   readonly violations?: readonly InvariantViolation[];
+  readonly triggerCap?: LocatedTriggerCap;
+}
+
+/** Public-safe diagnostic text. Seed and replay commands belong to the calling tool. */
+export function formatTriggerCap(cap: LocatedTriggerCap): string {
+  const where = cap.actionIndex === null ? 'setup' : `action ${String(cap.actionIndex + 1)}`;
+  return `trigger-cap at ${where}: processed ${String(cap.processed)} of budget ${String(cap.cap)}, dropped ${String(cap.remaining)} (first batch ${String(cap.batch)})`;
 }
 
 /** What a recorded game expects of the replay: the pack it was played with and, optionally, the final hash. */
@@ -43,12 +50,17 @@ export function replay<G extends GameTypes>(
   const collect = (found: readonly InvariantViolation[]): void => {
     for (const violation of found) violations.push(violation);
   };
-  const diagnostics = (): Pick<ReplayResult<G>, 'violations'> => violations.length ? { violations } : {};
+  let triggerCap: LocatedTriggerCap | undefined;
+  const diagnostics = (): Pick<ReplayResult<G>, 'violations' | 'triggerCap'> => ({
+    ...(violations.length ? { violations } : {}),
+    ...(triggerCap === undefined ? {} : { triggerCap }),
+  });
   let state: G['state'];
   try {
     const first = createGame(game, options, rules, content);
     state = first.state;
     collect(first.violations);
+    if (first.triggerCap !== undefined) triggerCap = { ...first.triggerCap, actionIndex: null };
   } catch (e) {
     const failure: ReplayResult<G> = { ok: false, state: null, hash: null, failedAt: null, error: null, reason: 'illegal' };
     if (e instanceof StateInvariantError)
@@ -72,6 +84,7 @@ export function replay<G extends GameTypes>(
       const next: ApplyResult<G> = applyAction(game, state, action, content);
       state = next.state;
       collect(next.violations);
+      if (next.triggerCap !== undefined) triggerCap ??= { ...next.triggerCap, actionIndex: at };
     } catch (e) {
       if (e instanceof StateInvariantError) {
         collect(e.violations);

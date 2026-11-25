@@ -21,12 +21,14 @@ import { pathToFileURL } from 'node:url';
 import {
   applyAction,
   createGame,
+  formatTriggerCap,
   hashState,
   hashValue,
   migrateSave,
   sealOf,
   type GameRules,
   type GameTypes,
+  type LocatedTriggerCap,
   type RawSave,
   type SaveFormat,
 } from '../engine-core/index.ts';
@@ -229,9 +231,11 @@ export async function replayFile<G extends GameTypes>(path: string, engine: Repl
     if (name !== null) points.push({ name, at, hash: engine.project === undefined ? hashState(s) : hashValue(engine.project(s, content)) });
   };
   let failed: string | null = null;
+  let triggerCap: LocatedTriggerCap | undefined;
   let state: G['state'] | null = null;
   try {
     const created = createGame(game, log.options as G['options'], log.rules, content);
+    if (created.triggerCap !== undefined) triggerCap = { ...created.triggerCap, actionIndex: null };
     let cur: G['state'] = created.state;
     state = cur;
     hashes.push(hashState(cur));
@@ -240,6 +244,7 @@ export async function replayFile<G extends GameTypes>(path: string, engine: Repl
     for (const [at, action] of log.actions.entries()) {
       try {
         const r = applyAction(game, cur, action as G['action'], content);
+        if (r.triggerCap !== undefined) triggerCap ??= { ...r.triggerCap, actionIndex: at };
         cur = r.state;
         state = cur;
         hashes.push(hashState(cur));
@@ -254,6 +259,7 @@ export async function replayFile<G extends GameTypes>(path: string, engine: Repl
     failed = `the options cannot start a game: ${e instanceof Error ? e.message : String(e)}`;
   }
   io.out(`${path}: ${String(log.actions.length)} actions, ${failed ?? 'all applied'}`);
+  if (triggerCap !== undefined) io.out(`warning: ${formatTriggerCap(triggerCap)}`);
   let ok = failed === null;
   // per action: the first step whose state or events hash differs (0 is createGame)
   if (log.hashes !== undefined || log.events !== undefined) {

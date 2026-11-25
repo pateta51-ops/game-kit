@@ -3,7 +3,7 @@
 // `simultaneously` (apply all, capture follow-ups, then resolve). netrunner engine.clj queue-event, create-instances,
 // trigger-event-simult and the priority table (MIT, design); ArkhamHorror / MarvelChampions Simultaneously and
 // captureQueueT (no licence: idea only). Written new.
-import { draftOf } from './ctx.ts';
+import { draftOf, noteTriggerCap } from './ctx.ts';
 import { triggersOver } from './durations.ts';
 import { EngineBugError } from './errors.ts';
 import { timingOf, type Occurrence, type TimingConfig } from './timing.ts';
@@ -128,8 +128,11 @@ export function triggerHandlers<G extends GameTypes>(cfg: TimingConfig<G>): Hand
         if (fired !== undefined) delete timingOf(ctx).fired;
         return;
       }
-      if ((fired ?? 0) >= (cfg.triggerCap ?? TRIGGER_CAP)) {
+      const cap = cfg.triggerCap ?? TRIGGER_CAP;
+      if ((fired ?? 0) >= cap) {
         const left = liveTriggers(cfg, ctx.s, ctx.content);
+        const first = left[0];
+        if (first !== undefined) noteTriggerCap(ctx, { code: 'trigger-cap', cap, processed: fired ?? 0, remaining: left.length, batch: first.batch });
         const t = timingOf(ctx);
         t.pending = pendingTriggers(ctx.s).filter((p) => !left.includes(p)) as never;
         delete t.fired;

@@ -598,13 +598,19 @@ if (cmd === 'pull') {
   if (cmd === 'list') { for (const e of ents) if (e.listLine) console.log(e.listLine); process.exit(0) }
   // K524: the mechanics map (docs/recipes/mechanics.md): a hit is a line one of whose comma-separated phrases holds every query word
   const mf = cmd === 'search' ? [d + '/docs/recipes/mechanics.md', d + '/recipes/mechanics.md'].find((p) => fs.existsSync(p)) : undefined
+  const mechanicPage = mf ? fs.readFileSync(mf, 'utf8') : ''
+  const queryMap = JSON.parse(/^<!-- search queries: (.*) -->$/m.exec(mechanicPage)?.[1] ?? '{}')
   const mech = []
-  if (mf) for (const l of fs.readFileSync(mf, 'utf8').split(/\r?\n/)) {
+  const queryWords = (value) => toks(value).filter((w) => !stop.has(w))
+  for (const l of mechanicPage.split(/\r?\n/)) {
+    if (!l.trimStart().startsWith('|')) continue
     const c = l.split(/(?<!\\)\|/).slice(1, -1).map((x) => x.trim().replace(/\\\|/g, '|'))
     if (c.length !== 2 || c[0] === 'Mechanic' || /^-+$/.test(c[0])) continue
-    mech.push({ words: c[0], ans: c[1], alts: c[0].split(',').map((p) => toks(p).filter((w) => !stop.has(w))) })
+    const exactQueries = Object.hasOwn(queryMap, c[0]) ? queryMap[c[0]].map((q) => queryWords(q).join(' ')) : []
+    mech.push({ words: c[0], ans: c[1], alts: c[0].split(',').map(queryWords), exactQueries })
   }
-  const mhit = words.length ? mech.map((m, i) => ({ m, i, s: Math.max(0, ...m.alts.map((t) => words.every((w) => hasTok(t, w)) ? (t.length === words.length ? 2 : 1) : 0)) })).filter((x) => x.s).sort((x, y) => y.s - x.s || x.i - y.i) : []
+  const query = words.join(' ')
+  const mhit = words.length ? mech.map((m, i) => ({ m, i, s: m.exactQueries.includes(query) ? 3 : Math.max(0, ...m.alts.map((t) => words.every((w) => hasTok(t, w)) ? (t.length === words.length ? 2 : 1) : 0)) })).filter((x) => x.s).sort((x, y) => y.s - x.s || x.i - y.i) : []
   for (const { m } of mhit.slice(0, 3)) console.log('mechanic: ' + m.words + ' -> ' + m.ans)
   const w3 = (e, w) => hasTok(e.title, w) ? 3 : hasTok(e.use, w) ? 2 : e.ex.some((x) => hasTok(x, w)) ? 1 : 0
   const pool = cmd === 'effects' ? ents.filter((e) => e.eff) : ents.filter((e) => !e.cand || cf)
