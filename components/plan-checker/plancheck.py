@@ -108,7 +108,7 @@ Usage: python plancheck.py docs/BUILD_PLAN.md [--tsc] [--scenarios TEXT] [--phas
        [--sessions TEXT] [--sessions-optional] [--scenarios-end TEXT] [--cover TEXT] [--cover-rows A,B]
        [--cover-skip A,B] [--tsc-at DIR] [--cards TEXT] [--done TEXT] [--layers TEXT] [--depth-optional]
        [--cards-optional] [--catalogue PATH] [--max-clauses N] [--max-patterns N] [--kit-optional] [--reuse TEXT] [--kit PATH]
-       [--map PATH] [--sheet-optional]
+       [--map PATH] [--sheet-optional] [--applicability PATH]
 Exit code 0 when no problems were found.
 """
 from __future__ import annotations
@@ -151,6 +151,155 @@ def opt(name: str, default: str) -> str:
         if i + 1 < len(sys.argv):
             return sys.argv[i + 1]
     return default
+
+
+def applicability() -> dict | None:
+    if "--applicability" not in sys.argv:
+        return None
+    incompatible = {"--cards-optional", "--depth-optional", "--kit-optional", "--sessions-optional", "--sheet-optional",
+                    "--cover-skip", "--skip-without-python", "--section", "--batch"} & set(sys.argv)
+    if incompatible:
+        raise ValueError("cannot combine --applicability with " + ", ".join(sorted(incompatible)))
+    value = opt("--applicability", "")
+    if sys.argv.count("--applicability") != 1 or not value or value.startswith("--"):
+        raise ValueError("--applicability needs exactly one file")
+    def unique(pairs):
+        out = {}
+        for key, val in pairs:
+            if key in out:
+                raise ValueError("duplicate key " + key)
+            out[key] = val
+        return out
+    data = json.loads(Path(value).read_text(encoding="utf-8"), object_pairs_hook=unique)
+    if (not isinstance(data, dict) or set(data) != {"version", "cards", "llmPlaytest"}
+            or type(data["version"]) is not int or data["version"] != 1):
+        raise ValueError("expected version 1 with exactly cards and llmPlaytest")
+    for key in ("cards", "llmPlaytest"):
+        part = data[key]
+        if (not isinstance(part, dict) or "mode" not in part or set(part) - {"mode", "reason"}
+                or part["mode"] not in ("required", "none")):
+            raise ValueError(key + " needs mode required or none; only mode and reason are allowed")
+        if (part["mode"] == "none" or "reason" in part) and (not isinstance(part.get("reason"), str) or not part["reason"].strip()):
+            raise ValueError(key + " needs a nonblank reason")
+    return data
+
+
+def prose(text: str) -> str:
+    out, fence = [], None
+    for line in re.sub(r"<!--.*?(?:-->|$)", "", text, flags=re.S).splitlines():
+        mark = re.match(r"^\s*(`{3,}|~{3,})(.*)$", line)
+        if fence is not None:
+            if mark and mark.group(1)[0] == fence[0] and len(mark.group(1)) >= fence[1] and not mark.group(2).strip():
+                fence = None
+        elif mark:
+            fence = (mark.group(1)[0], len(mark.group(1)))
+        else:
+            out.append(line)
+    return "\n".join(out)
+
+
+def strict_inventory(rules: str, scenarios: str, defined: set[str]) -> list[str]:
+    problems, ids = [], set()
+    for line in prose(rules).splitlines():
+        match = re.match(rf"^\s*[-*]\s+\*\*({ID})\*\*\s*(.*)$", line)
+        cells = [c.strip() for c in table_cells(line)] if line.lstrip().startswith("|") else []
+        if match:
+            rule, text = match.groups()
+        elif len(cells) >= 2 and (match := re.fullmatch(rf"\**({ID})\**", cells[0])):
+            rule, text = match.group(1), " ".join(cells[1:])
+        else:
+            continue
+        ids.add(rule)
+        if not text.strip(" -—–"):
+            problems.append("rule " + rule + " has no text")
+    if not ids:
+        problems.append("rule inventory is empty (define rules under Rules or --cover TEXT)")
+    seen, covered = set(), set()
+    for line in prose(scenarios).splitlines():
+        cells = [c.strip() for c in table_cells(line)] if line.lstrip().startswith("|") else []
+        if not cells or not re.fullmatch(r"SC-[A-Z0-9-]+", cells[0]):
+            continue
+        scenario = cells[0]
+        if scenario in seen:
+            problems.append(scenario + " is defined more than once")
+        seen.add(scenario)
+        cited = CITATION.sub(" ", cells[1] if len(cells) > 1 else "")
+        exact = set(expand_ids(cited)) | set(re.findall(r"\bD\d+\b", cited))
+        wild = tuple(f + "-" for f in re.findall(r"\b((?:[A-Z][A-Z0-9]*-)*[A-Z][A-Z0-9]*)-\*", cited))
+        matches = {rule for rule in defined if rule in exact or rule.startswith(wild or ("\0",))}
+        if not matches:
+            problems.append(scenario + " cites no defined rule or decision")
+        covered |= ids & matches
+        if len(cells) < 3 or not cells[2].strip(" -—–"):
+            problems.append(scenario + " has no expected outcome")
+    if not seen:
+        problems.append("scenario inventory is empty")
+    problems += ["rule " + rule + " is not covered by any scenario" for rule in sorted(ids - covered)]
+    return ["applicability: " + problem for problem in problems]
+
+
+def applicability_conflicts(profile: dict, path: Path, src: str, cards: str, phases: str, layers: str,
+                            maprows: list[list[str]], sheet: list[list[str]], clauses: int, patterns: list[str]) -> list[str]:
+    """Check declared exclusions against known inputs, not arbitrary game code."""
+    problems, scripts = [], {}
+    package = path.resolve().parent.parent / "package.json"
+    if package.exists():
+        try:
+            data = json.loads(package.read_text(encoding="utf-8"))
+            if not isinstance(data, dict) or not isinstance(data.get("scripts", {}), dict):
+                raise ValueError("expected a scripts object")
+            scripts = data.get("scripts", {})
+            if any(not isinstance(v, str) for v in scripts.values()):
+                raise ValueError("script commands must be strings")
+        except (ValueError, OSError) as error:
+            scripts = {}
+            problems.append(f"applicability: cannot inspect {package}: {error}")
+    if profile["cards"]["mode"] == "none":
+        found = []
+        if cards:
+            found.append("a card-language test programme")
+        if re.search(r"\bcardCase\b", prose(src)):
+            found.append("cardCase in the plan")
+        if any(re.search(r"\bcard-language\b", row[2]) for row in maprows):
+            found.append("card-language in the reuse map")
+        for row in sheet:
+            question = re.sub(r"\s+", " ", re.sub(r"[*`]", "", row[0])).strip().lower()
+            answer = re.sub(r"[*`]", "", row[1]).strip().lower() if len(row) > 1 else ""
+            if question.startswith("cards as data") and not answer.startswith("not in this game"):
+                found.append("the Cards as data game-sheet answer (use 'not in this game' for an excluded card workflow)")
+        if clauses or patterns:
+            found.append("card clause or pattern work in session batches")
+        if re.search(r"\bcards:[\w-]+", prose(src)) or any(
+                name.startswith("cards:") or re.search(r"\b(?:cards:[\w-]+|card-harness|card-language)\b", command)
+                for name, command in scripts.items()):
+            found.append("a cards script declaration")
+        # Always inspect the conventional catalogue too: --catalogue must not hide known work.
+        catalogues = {path.parent / "cards" / "catalogue.json", Path(opt("--catalogue", str(path.parent / "cards" / "catalogue.json")))}
+        for catalogue in sorted(catalogues):
+            if not catalogue.exists():
+                continue
+            try:
+                data = json.loads(catalogue.read_text(encoding="utf-8"))
+                summary = data.get("summary") if isinstance(data, dict) else None
+                count = summary.get("clauses") if isinstance(summary, dict) else None
+                if type(count) is not int or count < 0 or not isinstance(data.get("patterns"), list):
+                    raise ValueError("expected summary.clauses (nonnegative integer) and patterns (array)")
+                if count or data["patterns"] or any(data.get(key) for key in ("oneOffs", "interactions", "cards", "clauses")):
+                    found.append(f"nonempty catalogue {catalogue}")
+            except (ValueError, OSError) as error:
+                found.append(f"unreadable or invalid catalogue {catalogue}: {error}")
+        problems += ["applicability: cards none contradicts " + item for item in found]
+    if profile["llmPlaytest"]["mode"] == "none":
+        found = []
+        if "llm-playtester" in prose(phases).lower():
+            found.append("an llm-playtester phase")
+        if "llm playtest" in prose(layers).lower():
+            found.append("an LLM playtest layer")
+        if any(re.search(r"(?:^|:)(?:playtest:llm|llm:playtest|llm-playtest(?:er)?)(?:$|:)", name, re.I)
+               or re.search(r"\bllm[-:]playtest(?:er)?\b", command, re.I) for name, command in scripts.items()):
+            found.append("an LLM playtest script")
+        problems += ["applicability: llmPlaytest none contradicts " + item for item in found]
+    return problems
 
 
 def headings(lines: list[str]) -> list[tuple[int, int, str]]:
@@ -419,7 +568,7 @@ def main() -> int:
     args = [a for a in sys.argv[1:] if not a.startswith("--")]
     for flag in ("--scenarios", "--phases", "--types", "--sessions", "--section", "--batch", "--scenarios-end", "--cover",
                  "--cover-rows", "--cover-skip", "--tsc-stub", "--kit", "--tsc-at", "--cards", "--done", "--layers",
-                 "--catalogue", "--max-clauses", "--max-patterns", "--reuse", "--map"):
+                 "--catalogue", "--max-clauses", "--max-patterns", "--reuse", "--map", "--applicability"):
         if flag in sys.argv:
             v = opt(flag, "")
             if v in args:
@@ -428,6 +577,13 @@ def main() -> int:
         print(__doc__)
         return 2
     path = Path(args[0])
+    try:
+        profile = applicability()
+    except (ValueError, OSError) as error:
+        print(f"PROBLEM applicability: {error}")
+        return 1
+    cards_required = profile is None or profile["cards"]["mode"] == "required"
+    llm_required = profile is None or profile["llmPlaytest"]["mode"] == "required"
     src = path.read_text(encoding="utf-8")
     lines = src.split("\n")
     heads = headings(lines)
@@ -435,6 +591,10 @@ def main() -> int:
         return extract(path, lines, heads)
     problems: list[str] = []
     notes: set[str] = set()
+    if profile is not None:
+        for name in ("cards", "llmPlaytest"):
+            part = profile[name]
+            notes.add(f"applicability: {name} {part['mode']}" + (f" — {part['reason']}" if "reason" in part else ""))
 
     # --- code fences ---
     if sum(1 for l in lines if l.strip().startswith("```")) % 2:
@@ -499,6 +659,9 @@ def main() -> int:
 
     # --- bold definitions (outside the scenario catalogue), duplicates ---
     outside = src.replace(scen_sec, "") if scen_sec else src
+    if profile is not None:
+        outside = prose(outside)
+        first_cell_defs = re.findall(rf"^\s*\|\s*\**({ID}|D\d+)\**(?=\s|\|)", outside, re.M)
     bold = re.findall(rf"^\s*[-*]\s+\*\*({ID})\*\*", outside, re.M)
     seen: set[str] = set()
     for b in bold + first_cell_defs:
@@ -509,7 +672,7 @@ def main() -> int:
     families = {d.rsplit("-", 1)[0] for d in defined}
 
     # --- scenario citations ---
-    rows = re.findall(r"^\|\s*(SC-[A-Z0-9-]+)\s*\|([^|\n]*)\|", scen_sec, re.M)
+    rows = re.findall(r"^\|\s*(SC-[A-Z0-9-]+)\s*\|([^|\n]*)\|", prose(scen_sec) if profile is not None else scen_sec, re.M)
     scenarios = sorted({sc for sc, _ in rows})
     if not scen_sec:
         problems.append(f"no heading contains {opt('--scenarios', 'Scenario catalogue')!r} (use --scenarios)")
@@ -526,6 +689,9 @@ def main() -> int:
                 continue
             if tok not in defined:
                 problems.append(f"{sc}: {tok} is not defined")
+
+    if profile is not None:
+        problems += strict_inventory(section(lines, heads, opt("--cover", "Rules")), scen_sec, defined)
 
     # --- --cover: every id of the rules section appears in the catalogue ---
     if "--cover" in sys.argv:
@@ -548,7 +714,11 @@ def main() -> int:
     if not phases:
         problems.append(f"no heading contains {opt('--phases', 'Implementation phases')!r} (use --phases)")
     else:
-        refs = {t for t in expand_ids(phases) if t.startswith("SC-")}
+        phase_text = prose(phases) if profile is not None else phases
+        refs = {t for t in expand_ids(phase_text) if t.startswith("SC-")}
+        if profile is not None:
+            problems += [f"applicability: phase references {s} but that scenario is not defined"
+                         for s in sorted(refs - set(scenarios))]
         for s in scenarios:
             if s not in refs:
                 problems.append(f"{s} is not assigned to any phase")
@@ -564,6 +734,8 @@ def main() -> int:
         m = re.match(r"Phase\s+([A-Za-z0-9]+)\b", h)
         if m:
             phase_ids.append(m.group(1))
+    if profile is not None and not phase_ids:
+        problems.append("applicability: no implementation phase headings")
     if phases and not sess:
         if "--sessions-optional" not in sys.argv:
             problems.append(f"no heading contains {sess_kw!r} (use --sessions)")
@@ -652,9 +824,9 @@ def main() -> int:
     # --- test depth: card tests per clause, default-off paths, the LLM playtest, e2e before review ---
     depth: list[str] = []
     cards = section(lines, heads, opt("--cards", "Card-language test programme"))
-    if not cards:
+    if cards_required and not cards:
         depth.append(f"no heading contains {opt('--cards', 'Card-language test programme')!r} (use --cards)")
-    else:
+    elif cards_required:
         if "expectNotOffered" not in cards:
             depth.append("card tests: the poor-setup helper expectNotOffered is not named")
         nrows, hdr = 0, None
@@ -677,14 +849,19 @@ def main() -> int:
         depth.append(f"no heading contains {opt('--done', 'Definition of Done')!r} (use --done)")
     for need, what in (("expectNotOffered", "the card-test depth gate (a poor test that calls expectNotOffered)"),
                        ("default-off", "the default-off paths"), ("llm playtest", "the LLM playtest")):
+        if (need == "expectNotOffered" and not cards_required) or (need == "llm playtest" and not llm_required):
+            continue
         if done and need.lower() not in done.lower():
             depth.append(f"the Definition of Done lacks {what}")
-    if "llm playtest" not in section(lines, heads, opt("--layers", "Layers")).lower():
+    layers = section(lines, heads, opt("--layers", "Layers"))
+    if profile is not None and not re.sub(r"^\s*#+.*$", "", prose(layers), flags=re.M).strip():
+        depth.append("no nonempty test Layers section")
+    if llm_required and "llm playtest" not in layers.lower():
         depth.append(f"the test layers ({opt('--layers', 'Layers')!r}, use --layers) do not name the LLM playtest")
     kph = find_heading(heads, opt("--phases", "Implementation phases"))
     if kph is not None:
         a, b = span_of(lines, heads, kph)
-        if not any("llm-playtester" in "\n".join(lines[slice(*span_of(lines, heads, k))])
+        if llm_required and not any("llm-playtester" in "\n".join(lines[slice(*span_of(lines, heads, k))])
                    for k, (i, _, t) in enumerate(heads) if a < i < b and re.match(r"Phase\s+\w", t)):
             depth.append("no phase builds the LLM playtest (the kit's llm-playtester)")
     kpre = find_heading(heads, "Shared preamble")
@@ -734,10 +911,11 @@ def main() -> int:
             cd += [f"pattern {p} is in no batch" for p in cp if ch[1] and p not in pids]
         except Exception:  # noqa: BLE001
             cd.append(f"catalogue ({cat}) does not parse or lacks summary.clauses / patterns")
-    if "--cards-optional" in sys.argv:
-        notes |= {f"cards: {d}" for d in cd}
-    else:
-        problems += [f"cards: {d}" for d in cd]
+    if cards_required:
+        if "--cards-optional" in sys.argv:
+            notes |= {f"cards: {d}" for d in cd}
+        else:
+            problems += [f"cards: {d}" for d in cd]
 
     # --- game-kit reuse: pulls at the pin, the game sheet, the build-own table, the kit-fit review ---
     kd: list[str] = []
@@ -773,6 +951,8 @@ def main() -> int:
                 cells[0] = trows[-1][0]
             trows.append(cells)
     own, sheet, maprows = tabs.get("own", []), tabs.get("sheet", []), tabs.get("map", [])
+    if profile is not None:
+        problems += applicability_conflicts(profile, path, src, cards, phases, layers, maprows, sheet, csum, pids)
     if ru and "map" not in seen:
         kd.append("the reuse map has no table with Layer, Kind and Source columns")
     kit, comps = kit_dir(), set()

@@ -669,5 +669,8 @@
   { "q": "edge", "first": "pieces-3d" },
   { "q": "runtime card tests", "first": "card-harness" },
   { "q": "test loaded card pack", "first": "card-harness" },
-  { "q": "runtime card clauses", "first": "card-harness" }
+  { "q": "runtime card clauses", "first": "card-harness" },
+  { "q": "strict noncard plan", "first": "plan-checker/applicability" },
+  { "q": "noncard plan applicability", "first": "plan-checker/applicability" },
+  { "q": "validate plan applicability", "first": "plan-checker/applicability" }
 ]

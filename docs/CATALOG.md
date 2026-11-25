@@ -1340,12 +1340,19 @@ The plan checker: `plancheck.py` checks a game's build plan (Markdown) for balan
 - **Words:** plan, check, markdown, references, batch, ranges, kit fit, build own table, game sheet, reuse map, game sheet check, mechanics map, closed candidate, plan check in ci, locked copy, pull rows, reuse map check
 - **Release:** 1.0; not seen
 - **The game supplies:** The build plan file.
-- **Use it when:** Checking a game plan and listing a batch's line ranges (`plancheck.py --batch`).
+- **Use it when:** Checking a game plan and listing a batch's line ranges (`plancheck.py --batch`); explicit strict applicability supports non-card plans while retaining rule, scenario, session and reuse checks.
 - **Not for:** Anything but the plan file format.
 - **Key exports:** `plancheck.py` (CLI), `plancheck.ts` (wrapper)
 - **Needs:** nothing
 - **Came from:** jarl
 - **Docs:** [README](../components/plan-checker/README.md) ([rules for agents](../components/plan-checker/README.md#rules-for-agents))
+
+### plan-checker/applicability
+
+- **Also called:** Strict checks for non-card game plans
+- **Words:** strict noncard plan, noncard plan applicability, validate plan applicability, explicit card and playtest scope
+- **Use it when:** Declare whether card encoding and LLM playtesting apply, with reasons and contradiction checks; validate real rule and scenario inventories without legacy optional flags. Default plans retain the existing card requirements.
+- **Guide:** [README.md](../components/plan-checker/README.md)
 
 ## play-stats
 
