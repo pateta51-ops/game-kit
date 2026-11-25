@@ -569,7 +569,7 @@ export function playOne<G extends GameTypes, S, O = unknown>(game: SimGame<G, S,
 export const CRASH_HASH = 'crashed';
 
 /** A game whose worker died: a failed record naming the game, so the rest of the run still counts. */
-export const crashRecord = (spec: GameSpec, why: unknown): SimRecord<never> => ({
+export const crashRecord = (spec: Pick<SimRecord, 'index' | 'seed' | 'driver' | 'settings'>, why: unknown): SimRecord<never> => ({
   index: spec.index,
   seed: spec.seed,
   driver: spec.driver,
