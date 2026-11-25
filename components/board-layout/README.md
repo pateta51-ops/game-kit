@@ -16,7 +16,7 @@ Draw the map once over the board picture in Inkscape; get the click areas (space
 7. Use `withZones` to copy a layout with moved zones instead of editing it.
 
 **Common mistakes:**
-- Polygons or other shapes: only rects (and circles) become areas.
+- Polygons or other shapes: only rects, circles and ellipses become areas.
 - An unknown zone id: `zoneRect` returns `[0, 0, 0, 0]`, so the part collapses to nothing.
 - Path commands other than M, m, C, c, L, l, H, h, V, v: the end point is read wrong.
 

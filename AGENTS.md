@@ -84,4 +84,4 @@ Needs Node 22.18+: tools run with plain `node` (no tsx, no build); relative impo
 - The games' repositories are private and never deployed publicly. This kit is public: nothing personal goes into its code, docs, rows, commit messages, PR titles and bodies or tags (no person's name, e-mail address, local drive path, session or chat link, no game's card text); commits use a no-reply identity; `npm run personal` is part of the check. GitHub files under 50 MB.
 
 ## Reports
-Short, what was not done first, then the rest: the batch id, PR number, branch, check result, what now works, count of open questions. Post-build notes go in `docs/post-build/notes/`.
+Short, what was not done first, then the rest: the batch id, PR number, branch, check result, what now works, count of open questions. Post-build findings go in `docs/post-build/notes/K<n>.md`. When all three categories have no findings, record the batch ID in [the no-findings ledger](docs/post-build/notes/no-findings.md).

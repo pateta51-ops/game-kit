@@ -26,8 +26,7 @@ Four small pure helpers from outside ideas (written new). No game types.
 
 Its own component: the three checks need no card-language, scenario or gate runner types, so they fit neither card-harness nor check-runner.
 
-Not here: the `query` channel for derived data (needs `engine-core`) and prompt-kind `cast` for card tests (needs
-`card-harness`); both have open PRs, so they are later work.
+Use [engine-core](../engine-core/README.md) for the derived-data `query` channel and [card-harness](../card-harness/README.md) for `Scenario.cast` in card tests.
 
 ## Use it in 10 lines
 

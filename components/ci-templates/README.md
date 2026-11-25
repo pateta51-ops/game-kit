@@ -47,7 +47,7 @@ RUNNER_REPO=<owner>/<repo> RUNNER_LABEL=<label> RUNNER_TOKEN=<token> bash kit/ci
 
 `RUNNER_LABEL` is the `runnerLabel` of `ci.config.json`. When `repo-gate` is pulled too, the runner's machine name goes in its runners file, and a label that is also a runner name needs `.github/` and `ci.config.json` in the gate's `skipText`.
 
-The older way still works: copy the files and replace the three placeholders by hand (the paths below are for that way).
+For current games, set `ci.config.json` and use `render.mjs` and `render.mjs --check` as described above. The paths and placeholder substitutions below document the legacy copy workflow.
 
 | Placeholder | Meaning | Where it goes |
 |---|---|---|

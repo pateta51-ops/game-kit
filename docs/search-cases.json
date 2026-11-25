@@ -1,4 +1,5 @@
 [
+  { "q": "three equal dice", "first": "dice-patterns" },
   { "q": "missing npm packages", "first": "package-plan" },
   { "q": "compare pinned package ranges", "first": "package-plan" },
   { "q": "existing game dependency plan", "first": "package-plan" },

@@ -67,6 +67,34 @@ The kernel of a game engine: seeded random numbers, canonical JSON and hashes, t
 - Objectives (K546, `objectives.ts`, opt-in): `startObjectives`, `advanceObjective`, `markStep`, `failObjective`, `objectivesRoundEnd`, `objectiveProgress`, `objectiveDone`, `objectiveFailed`, `objectivesOf`, `reportObjectives`, `objectivesCheck`; see "Objectives (K546)" below.
 - A number with its parts (K526, K582, `numbers.ts`, opt-in): `numberParts(base, modifiers, order, opts?)` applies `NumberModifier`s (set, add, multiply, floor, cap; own minimum, per-unit count, condition, scope) in the game's `NumberOrder` and returns the value with `parts` (`{ source, op, amount, applied, ref? }`), every floor or cap that bit and whether it still holds (`bounds`; `bound` is the last) and, on request, what changed nothing and why; `effectModifiers` maps the lasting effects (`effectsOf`) onto modifiers; `partsDirection`. For stats, costs, payment, `bar` reasons and a breakdown on screen: [numbers.md](numbers.md).
 
+
+## Headless save round trip
+
+Use a string for `options.seed` and a plain object for `rules` (an empty object if the game has no rule settings). Keep the original options and rules and the list of accepted actions. The save reader replays those inputs with the same content and verifies the final state seal.
+
+This example uses the checkout's [counter fixture](fake/counter.ts). Run the snippet from `components/engine-core` with `node --input-type=module-typescript`.
+
+```ts
+import assert from 'node:assert/strict';
+import { applyAction, createGame, createSave, exportSave, importSave, type AnswerAction } from './kernel.ts';
+import { CONTENT, COUNTER, RULES, type CounterState } from './fake/counter.ts';
+
+const options = { seed: 'save-round-trip' };
+const add = (state: CounterState): AnswerAction =>
+  ({ kind: 'answer', promptId: state.prompt!.id, picks: ['add'] });
+const initial = createGame(COUNTER, options, RULES, CONTENT).state;
+const first = add(initial);
+const current = applyAction(COUNTER, initial, first, CONTENT).state;
+const file = createSave(COUNTER, {
+  options, rules: RULES, actions: [first], state: current, undoUsed: false, savedAt: new Date().toISOString(),
+}, CONTENT);
+const restored = importSave(COUNTER, exportSave(file), CONTENT);
+if (!restored.ok) throw new Error(restored.error);
+const next = add(current);
+const events = applyAction(COUNTER, current, next, CONTENT).events;
+assert.deepEqual(applyAction(COUNTER, restored.state, next, CONTENT).events, events);
+```
+
 ## Statuses (K542)
 
 A status (stunned, stealth, a wound, "not in combat") is a named lasting effect on any object id, built on `addEffect` (`statuses.ts`, from `timed.ts`): kind `STATUS`, `target` the object, `value` the name, so every `Duration` ends it (`boundary`, `eventOver`, ...) and it is plain state (saves, undo, replay). The game passes one `StatusTable`: per name a `token` key (the view draws it, card-attachments `TokenRow`), `stacks` (a count) or not, `ends` (a `Duration` or `'removed'`) and `endsOnLeave`. Verbs: `giveStatus(ctx, table, object, name, { source?, ends?, instance?, when? })` (a non-stacking status already there: `{ given: false, why: 'already' }`, nothing changes), `removeStatus(ctx, object, name, n?)` (oldest given first; returns how many; `n` a whole number 1 or more, else an `EngineBugError`), `statusLeft(ctx, table, object)` (the object left play), `hasStatus`, `statusCount`, `statusesOf(s, table, object)` (`{ name, token, count }`, first given first); each read takes the game's `EffectsConfig` last (`blanked`, the `when` conditions), so it agrees with `effectsOf` (a status with a `when` needs it). Give, remove and leave act on every status not ended, hidden or not. Each stack is its own effect with its own end: stacks under the table's shared `ends` end together, stacks given with their own `ends` or `instance` end one by one. A name not in the table is an `EngineBugError`. Tests: `k542.test.ts` (with a comparison against a plain model).

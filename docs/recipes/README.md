@@ -10,6 +10,13 @@ Short task guides for agents. Each names the components, the order, and the chec
 
 **Changing the kit:** [AGENTS.md](../../AGENTS.md) "Change the kit" → [agent-workflow](agent-workflow.md) (id, worktree, hosted checks) → the component's README and tests.
 
+## Before implementing
+
+- Match the checkout or installed kit tag to your game. Search for the mechanic, then read the matching recipe and the component’s README, including its agent rules.
+- Check who owns the data or decision. The game supplies rules, content, seat visibility and presentation. The kit supplies reusable mechanisms.
+- Pull the components at one tag and keep the installed `kit/` intact. Test the actual boundary you changed, such as opponent visibility or the next outcome after replay.
+- Use the catalogue and recipes for current capability. The [inventory](../INVENTORY.md) and [selection evidence](../SELECTION.md) preserve historical context.
+
 ## Task → recipe → components
 
 | Task | Recipe | Components |

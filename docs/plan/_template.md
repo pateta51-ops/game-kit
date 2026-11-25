@@ -7,7 +7,7 @@ Sources and reasons: `docs/SELECTION.md`. One worker batch per row unless marked
 1. Lift the base from the source commit named in `docs/SELECTION.md` into `components/<name>/`.
 2. Make it generic: replace every import of game code with a small interface or data the game supplies. Add the grafts.
 3. Bring its tests; add a tiny fake game in the tests where the component needs one.
-4. Write `component.json`: source game, commit, paths, licence notice, other components it needs. A component a game calls or mounts also gets a `README.md` of 30 lines at most: what the game passes in and, for one that draws, a "Look" section naming the variables a game sets to skin it.
+4. Write `component.json`: source game, commit, paths, licence notice, other components it needs. A component a game calls or mounts also gets a `README.md` with its purpose on the first line, a runnable “Use it in 10 lines” example and a “Rules for agents” section. Document game-owned inputs and, for UI components, the styling variables.
 5. Review, CI green on the runner, merge, tag.
 
 Kit code compiles under the strictest TypeScript settings in use (Jarl's), so it compiles in any game.
