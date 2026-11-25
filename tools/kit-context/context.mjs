@@ -82,13 +82,15 @@ function readDocumentation(dir) {
   const end=headings.find(index=>index>start&&/^##\s/.test(lines[index]))??lines.length;
   const sourceLines = (from,to) => lines.slice(from,to).map((text,i)=>({file:'README.md',line:from+i+1,text}));
   const rules=sourceLines(start+1,end);
-  const recovered=[];
+  const recovery={comments:[],literalSpans:[]};
   const walker=document.walker();
   for(let event;(event=walker.next());) {
     const {node,entering}=event;
-    if(!entering||node.type!=='html_block') continue;
-    const first=node.sourcepos[0][0]-1;
-    if(first<=start||first>=end) continue;
+    if(!entering||(node.type!=='html_block'&&node.type!=='code_block')) continue;
+    const [[line],[lastLine]]=node.sourcepos;
+    const first=line-1;
+    recovery.literalSpans.push([first,lastLine]);
+    if(node.type!=='html_block'||first<=start||first>=end) continue;
     // CommonMark keeps the rest of a comment block's closing line as HTML.
     const comment=/^[ \t]*(?:<!--[\s\S]*?(?:-->|$)[ \t]*)+/.exec(node.literal)?.[0];
     if(!comment) continue;
@@ -104,10 +106,10 @@ function readDocumentation(dir) {
       if(recover) {
         const suffix=commentLines[offset]+visible;
         const prefix=lines[index].endsWith(suffix)?lines[index].slice(0,lines[index].length-suffix.length):'';
-        visibleLines.push(prefix+visible);
+        visibleLines.push(prefix+(last?visible:'<!-- -->'));
       }
     }
-    if(recover) recovered.push({first,lines:visibleLines});
+    if(recover) recovery.comments.push({first,lines:visibleLines});
   }
   const usage=[];
   function addUsage(from,to) {
@@ -123,7 +125,7 @@ function readDocumentation(dir) {
     addUsage(from,to);
     from=to;
   }
-  return {rules:rules.filter(row=>row.text.trim()),usage,markdown,recovered};
+  return {rules:rules.filter(row=>row.text.trim()),usage,markdown,recovery};
 }
 
 function* guideDocuments(markdown, visibleLine) {
@@ -176,11 +178,16 @@ function* markdownLinks(markdown, recoveredLine) {
   }
 }
 
-function* readmeLinks(markdown, recovered) {
+function* readmeLinks(markdown, {comments,literalSpans}) {
   yield* markdownLinks(markdown);
-  if(!recovered.length) return;
+  if(!comments.length) return;
   const source=markdown.split('\n');
-  for(const {first,lines} of recovered) {
+  // Preserve literal block boundaries without letting a reparse expose their contents.
+  for(const [first,end] of literalSpans) {
+    source.fill('',first,end);
+    source[first]='<!-- -->';
+  }
+  for(const {first,lines} of comments) {
     // Reparse one comment block at a time so its syntax cannot affect another.
     const closingLine=first+lines.length;
     const variant=[...source.slice(0,first),...lines,...source.slice(closingLine)].join('\n');
@@ -188,10 +195,10 @@ function* readmeLinks(markdown, recovered) {
   }
 }
 
-function readLinkedGuides(dir, markdown, recovered) {
+function readLinkedGuides(dir, markdown, recovery) {
   const visited=new Set([componentFile(dir,'README.md')]);
   const guides=[];
-  const pending=[{file:'README.md',links:readmeLinks(markdown,recovered)}];
+  const pending=[{file:'README.md',links:readmeLinks(markdown,recovery)}];
   const decoder=new TextDecoder('utf-8',{fatal:true});
   for(const row of pending) {
     for(const href of row.links) {
@@ -234,8 +241,8 @@ export function contextPacket({root=defaultRoot,component,symbol,entry='index.ts
   if (typeof entry!=='string'||!code.test(entry)||path.isAbsolute(entry)||entry.split(/[\\/]/).some(part=>part==='..'||ignored.has(part))) throw new Error('invalid entry');
   const file=componentFile(dir,entry);
   if (!code.test(file)||test.test(entry)||test.test(file)) throw new Error('entry must be a public source file and not a test');
-  const {rules,usage,markdown,recovered}=readDocumentation(dir);
-  const guides=readLinkedGuides(dir,markdown,recovered);
+  const {rules,usage,markdown,recovery}=readDocumentation(dir);
+  const guides=readLinkedGuides(dir,markdown,recovery);
   const options={
     target:ts.ScriptTarget.ESNext, module:ts.ModuleKind.ESNext,
     moduleResolution:ts.ModuleResolutionKind.Bundler, jsx:ts.JsxEmit.ReactJSX,

@@ -142,15 +142,24 @@ it.each([
 });
 
 it('loads a guide after a multiline Rules comment inside a list item', () => {
-  fixture('list-comment-rule-guide', rules + '1000. <!-- note\n      --> ' + link + '(atomic.md).');
+  fixture('list-comment-rule-guide', rules + '1000. <!-- note\n      hidden note\n      --> ' + link + '(atomic.md).');
   const packet = expectComplete(run('list-comment-rule-guide'));
-  expect(packet.rules).toContainEqual({ file: 'README.md', line: 4, text: link + '(atomic.md).' });
+  expect(packet.rules).toContainEqual({ file: 'README.md', line: 5, text: link + '(atomic.md).' });
 });
 
 it('keeps original guide links and treats links in neighboring fenced examples as literal', () => {
   fixture('visible-rule-fence', rules + '<!-- maintainer note --> ```\n\n```\n' +
     '[code example](absent.md)\n```\n\n' + link + '(atomic.md).');
   expectComplete(run('visible-rule-fence'));
+});
+
+it.each([
+  ['indented-code', '    [code example](absent.md)'],
+  ['raw-html', '<custom-example>\n[HTML example](absent.md)\n</custom-example>'],
+])('preserves the original classification of %s adjacent to a recovered rule', (kind, literal) => {
+  const name = 'adjacent-' + kind;
+  fixture(name, rules + '<!-- note --> ' + link + '(atomic.md).\n' + literal);
+  expectComplete(run(name));
 });
 
 it('recovers required guides independently across comment blocks', () => {
