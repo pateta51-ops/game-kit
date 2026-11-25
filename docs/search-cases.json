@@ -444,6 +444,8 @@
   { "q": "detect hidden information leaks", "first": "sim-pool" },
   { "q": "validate public seat views JSON", "first": "sim-pool" },
   { "q": "registered driver names batch", "first": "sim-pool" },
+  { "q": "simulation consumed policy view checks", "first": "sim-pool" },
+  { "q": "GameDef opponent bot views", "first": "game-store" },
   { "q": "simulation module drivers", "first": "sim-pool" },
   { "q": "wounded instead of removed", "first": "engine-core" },
   { "q": "motion beats event order cue sound from motion player", "first": "motion-frame" },
@@ -596,5 +598,11 @@
   { "q": "pinned declarative project scaffold", "first": "scaffold/spec" },
   { "q": "staged node_modules", "first": "repo-gate" },
   { "q": "tracked dependency link", "first": "repo-gate" },
-  { "q": "dependency symlink", "first": "repo-gate" }
+  { "q": "dependency symlink", "first": "repo-gate" },
+  { "q": "visual replay player", "first": "visual-replay" },
+  { "q": "watch recorded game", "first": "visual-replay" },
+  { "q": "replay table navigation", "first": "visual-replay" },
+  { "q": "migrateSave", "first": "engine-core" },
+  { "q": "RestoreResult", "first": "engine-core" },
+  { "q": "ReplayResult", "first": "engine-core" }
 ]
