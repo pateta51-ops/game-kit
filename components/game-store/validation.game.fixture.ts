@@ -53,8 +53,20 @@ const bot = botDriverOf(definition, {
     return choice;
   },
 });
+const decorated = {
+  ...bot,
+  choose: (_state: Counter['state'], answers: readonly AnswerAction[]) => {
+    event(['decorated']);
+    return answers.at(-1) as AnswerAction;
+  },
+};
 const game = simGameOf(definition, {
-  drivers: { bot, grouped: unnamed, wrapped: bySeat<Counter>({ a: bot, b: bot }) },
+  drivers: { bot, decorated, grouped: unnamed, wrapped: bySeat<Counter>({ a: bot, b: bot }),
+    delegated: { name: 'delegate', reasons: () => [], choose(state, answers, rng) {
+      try { return bot.choose(state, answers, rng); }
+      catch { event(['fallback']); return answers[0] as AnswerAction; }
+    } },
+  },
   aliases: { alias: 'opponent', unnamed: 'grouped' },
   viewValidation: {
     ...(mode === 'subset' ? { seats: ['b'] as const } : {}),

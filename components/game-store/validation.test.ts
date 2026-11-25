@@ -96,8 +96,53 @@ it('uses existing per-seat assertions from a generic SimGame at the actual bot b
   expect(generic.trace.filter(e => e[0] === 'view' && e[3] === null)).toHaveLength(4);
 }, 30_000);
 
+it('runs the registered choose even for decorated and delegated adapters', () => {
+  const decorated = probe('decorated', ['--probe-games', '2', 'decorated'], { PROBE_VIEW: '1' });
+  expect(decorated.status, decorated.stderr).toBe(0);
+  expect.soft(decorated.trace.filter(e => e[0] === 'decorated')).toHaveLength(18);
+  expect.soft(records(decorated.stdout).map(r => r.viewValidation)).toEqual(Array(6).fill({ status: 'executed', checked: 8, scope: 'snapshots-and-driver-views' }));
+  for (const kind of ['source', 'bundle']) {
+    const delegated = probe(`delegated-${kind}`, cli('delegated'), {
+      PROBE_VIEW: '1', PROBE_MODE: 'context-leak', ...(kind === 'bundle' ? { PROBE_WORKER: executable() } : {}),
+    });
+    expect.soft(delegated.status, delegated.stdout + delegated.stderr).toBe(1);
+    expect.soft(delegated.stdout).toMatch(/driver seat b.*view leak: ONLY_A/);
+    expect.soft(delegated.trace.filter(e => e[0] === 'fallback')).toHaveLength(2);
+  }
+}, 30_000);
+
 const historical = (driver: string, seed: string) => `${JSON.stringify({ settings: 'compatible', record: { index: 1, driver, seed, result: { kind: 'won' }, actions: 3, hash: 'historical' } })}\n`;
 const executable = () => pathToFileURL(bundle).href;
+it('requires the current coverage scope from cached successes when validation is requested', () => {
+  const file = join(dir, 'old-scope-checkpoint.jsonl');
+  const original = JSON.parse(historical('opponent', 'probe-0')) as { settings: string; record: SimRecord };
+  const before = `${JSON.stringify({ ...original, record: {
+    ...original.record, hash: '591a90592d20f650', resolvedDriver: 'opponent', viewValidation: { status: 'executed', checked: 8 },
+  } })}\n`;
+  writeFileSync(file, before);
+  const env = { PROBE_CHECKPOINT: file, PROBE_MODE: 'context-leak', PROBE_WORKER: executable() };
+  const args = ['--probe-batch', 'old-scope'];
+  const disabled = probe('old-scope-disabled', args, env);
+  expect(disabled.status, disabled.stderr).toBe(0);
+  expect(records(disabled.stdout)[0]?.viewValidation).toEqual({ status: 'executed', checked: 8 });
+  const stale = probe('old-scope-enabled', args, { ...env, PROBE_VIEW: '1' });
+  expect(stale.status, stale.stdout + stale.stderr).toBe(1);
+  expect(stale.stdout).toMatch(/checkpoint lacks executed view checks/);
+  expect(stale.trace).toEqual([]);
+  expect(readFileSync(file, 'utf8')).toBe(before);
+
+  writeFileSync(file, '');
+  const safe = { PROBE_CHECKPOINT: file, PROBE_VIEW: '1', PROBE_WORKER: executable() };
+  const fresh = probe('current-scope-fresh', args, safe);
+  expect(fresh.status, fresh.stderr).toBe(0);
+  expect(records(fresh.stdout)[0]?.viewValidation).toEqual({ status: 'executed', checked: 11, scope: 'snapshots-and-driver-views' });
+  const checkpoint = readFileSync(file, 'utf8');
+  const resumed = probe('current-scope-resume', args, safe);
+  expect(resumed.status, resumed.stderr).toBe(0);
+  expect(resumed.stdout).toBe(fresh.stdout);
+  expect(readFileSync(file, 'utf8')).toBe(checkpoint);
+}, 30_000);
+
 it.each(['source', 'bundle'])('preflights invalid registrations including cached successes using the %s worker', (kind) => {
   const worker: Record<string, string> = kind === 'bundle' ? { PROBE_WORKER: executable() } : {};
   const invalid = probe(`${kind}-invalid-cli`, cli('gredey'), worker);

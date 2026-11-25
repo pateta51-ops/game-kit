@@ -4,7 +4,7 @@
 // (a run stopped mid-write) is cut off and a corrupt line skipped, and that game is played again; crashed games are never written.
 import { appendFileSync, existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { canonicalJson } from '../engine-core/index.ts';
-import { CRASH_HASH, type GameSpec, type SimRecord } from './play.ts';
+import { CRASH_HASH, hasExecutedViewValidation, type GameSpec, type SimRecord } from './play.ts';
 import { runGames, type RunRequest } from './pool.ts';
 
 /** A game's key: its seed, driver and settings (not its index, so a run may grow). */
@@ -50,8 +50,8 @@ export async function runResumable(request: RunRequest, workers: number, file: s
   const specs = request.specs.filter((s) => {
     const r = cp.done.get(specKey(s));
     if (r) {
-      if (request.view && r.result !== null && (r.viewValidation?.status !== 'executed' || r.viewValidation.checked === 0))
-        throw new Error('checkpoint lacks executed view checks for a finished game; start a new checkpoint to validate its views');
+      if (request.view && r.result !== null && !hasExecutedViewValidation(r))
+        throw new Error('checkpoint lacks executed view checks for the current scope; start a new checkpoint to validate its views');
       old.push({ ...r, index: s.index });
     }
     return !r;

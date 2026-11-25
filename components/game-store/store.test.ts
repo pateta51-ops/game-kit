@@ -135,7 +135,7 @@ describe('game-store (K234)', () => {
     const game = simGameOf(observed, { viewValidation: { secrets } });
     const record = playOne(game, {}, spec, undefined, { view: true });
     expect(record.error).toBeUndefined();
-    expect(record.viewValidation).toEqual({ status: 'executed', checked: 2 * (record.actions + 1) });
+    expect(record.viewValidation).toEqual({ status: 'executed', checked: 2 * (record.actions + 1), scope: 'snapshots-and-driver-views' });
     expect(seen).toEqual(Array.from({ length: record.actions + 1 }, () => [
       { seat: 'a', undoUsed: false }, { seat: 'b', undoUsed: false },
     ]).flat());
@@ -152,7 +152,7 @@ describe('game-store (K234)', () => {
     expect(leaked.error).toMatch(/seat b.*view leak: sa/);
     expect(leaked).toMatchObject({ actions: 0, result: null, viewValidation: { status: 'failed', checked: 1 } });
     const onlyB = playOne(simGameOf(observed, { viewValidation: { seats: ['b'], secrets } }), {}, spec, 0, { view: true });
-    expect(onlyB.viewValidation).toEqual({ status: 'executed', checked: 1 });
+    expect(onlyB.viewValidation).toEqual({ status: 'executed', checked: 1, scope: 'snapshots-and-driver-views' });
     expect(seen.splice(0)).toEqual([{ seat: 'b', undoUsed: false }]);
     const noSeats = simGameOf(observed, { viewValidation: { seats: [] } });
     expect(playOne(noSeats, {}, spec, undefined, { view: true }).viewValidation).toEqual({ status: 'unavailable', checked: 0 });

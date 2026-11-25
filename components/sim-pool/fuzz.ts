@@ -1,7 +1,7 @@
 // The invariant run and the fuzz command (stcc scripts/sim/invariantRun.ts, ebr scripts/fuzz.ts): random games with every
 // invariant checked after every action; each failure is a seed plus a step, and `--seed X --until N` replays it to there.
 import { readFileSync, writeFileSync } from 'node:fs';
-import { isDriverRegistrationError, type GameSpec, type SimRecord } from './play.ts';
+import { hasExecutedViewValidation, isDriverRegistrationError, type GameSpec, type SimRecord } from './play.ts';
 import type { Proof } from './unreached.ts';
 import { runGames } from './pool.ts';
 
@@ -189,7 +189,7 @@ export async function fuzz(module: string, o: FuzzOptions = {}): Promise<FuzzRun
   const records = await runGames({ module, specs, invariants: true, until: o.until, view: o.view, hasten: o.hasten, debug: o.debug, hidden: o.hidden, gameTimeoutMs: o.gameTimeoutMs, ...(o.worker !== undefined ? { worker: o.worker } : {}) }, o.workers ?? 1);
   const findings = records.flatMap((r) => findingOf(r) ?? []);
   if (o.view && findings.length === 0 &&
-      (records.length !== specs.length || records.some((record) => record.viewValidation?.status !== 'executed' || record.viewValidation.checked === 0)))
+      (records.length !== specs.length || records.some((record) => !hasExecutedViewValidation(record))))
     throw new ViewRunError('requested view validation lacks executed checks; check the worker version and adapters');
   return { records, findings };
 }

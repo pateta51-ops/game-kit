@@ -13,9 +13,10 @@ if (process.argv[1] && pathToFileURL(process.argv[1]).href === import.meta.url) 
   } else if (args[0] === '--probe-batch') {
     const scenario = args[1];
     const specs = ['alias', 'unnamed', 'bot'].map((driver, index) => ({ index, driver, seed: `probe-${String(index)}` }));
-    if (scenario !== 'valid' && scenario !== 'old-evidence') specs[1] = { index: 1, driver: 'gredey', seed: 'historical' };
+    if (scenario === 'old-scope') specs[1] = { index: 1, driver: 'opponent', seed: 'probe-0' };
+    else if (scenario !== 'valid' && scenario !== 'old-evidence') specs[1] = { index: 1, driver: 'gredey', seed: 'historical' };
     try {
-      const request = { module, specs: scenario === 'cached' || scenario === 'old-evidence' ? specs.slice(1, 2) : specs, view, gameTimeoutMs: 3000, ...(worker === undefined ? {} : { worker }) };
+      const request = { module, specs: ['cached', 'old-evidence', 'old-scope'].includes(scenario ?? '') ? specs.slice(1, 2) : specs, view, gameTimeoutMs: 3000, ...(worker === undefined ? {} : { worker }) };
       const file = process.env.PROBE_CHECKPOINT;
       const records = file ? await runResumable(request, 2, file, 'compatible') : await runGames(request, 2);
       process.stdout.write(`${JSON.stringify(records)}\n`);
