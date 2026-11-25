@@ -39,6 +39,38 @@ describe('reuse metrics',()=>{
     expect(result.productionFiles).toBe(2);
     expect(result.telemetry.costUsd).toEqual({kind:'missing'});
   });
+  it.each(['game.test.checkout','game.spec.checkout','__tests__'])('keeps the CLI report when relocated under %s',parent=>{
+    const original=fixture(path.join('ordinary','game'));
+    const relocated=fixture(path.join(parent,'game'));
+    const observation=identified('synthetic-project','synthetic-observation');
+    measurementFile(original,observation);
+    measurementFile(relocated,observation);
+    const baseline=run(original);
+    const candidate=run(relocated);
+    expect(baseline.status,baseline.stderr).toBe(0);
+    expect(candidate.status,candidate.stderr).toBe(0);
+    expect(JSON.parse(candidate.stdout)).toEqual(JSON.parse(baseline.stdout));
+  });
+  it('recognizes deliberate test directories and filename markers inside the game',()=>{
+    const root=fixture('test-conventions');
+    for(const [file,source] of [
+      ['src/model.test.ts',"import '../kit/screens/index.ts';"],
+      ['src/model.spec.ts',"import '../kit/card-harness/index.ts';"],
+      ['src/__tests__/helper.ts',"import '../../kit/screens/index.ts';"],
+      ['tests/helper.ts',"import '../kit/card-harness/index.ts';"],
+      ['src/model.test.assets/view.ts',"import '../../kit/engine-core/index.ts';"],
+    ]) {
+      const target=path.join(root,file);
+      fs.mkdirSync(path.dirname(target),{recursive:true});
+      fs.writeFileSync(target,source);
+    }
+    const result=run(root);
+    expect(result.status,result.stderr).toBe(0);
+    expect(JSON.parse(result.stdout).games[0]).toMatchObject({
+      productionFiles:3,productionFilesReferencingKit:2,productionReferenced:['engine-core'],
+      testFiles:5,testFilesReferencingKit:5,testReferenced:['card-harness','screens'],
+    });
+  });
   it('counts game references once and does not turn missing costs into zero',()=>{
     const a=measureGame(fixture('two'),build({inputTokens:measured(100),cachedInputTokens:measured(20),costUsd:measured(1.25)}));
     const b=measureGame(fixture('three'));
