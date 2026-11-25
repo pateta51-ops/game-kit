@@ -88,24 +88,25 @@ function readDocumentation(dir) {
   for(let event;(event=walker.next());) {
     const {node,entering}=event;
     if(!entering||node.type!=='html_block') continue;
-    const index=node.sourcepos[0][0]-start-2;
-    if(index<0||index>=rules.length) continue;
+    const first=node.sourcepos[0][0]-1;
+    if(first<=start||first>=end) continue;
     // CommonMark keeps the rest of a comment block's closing line as HTML.
     const comment=/^[ \t]*(?:<!--[\s\S]*?(?:-->|$)[ \t]*)+/.exec(node.literal)?.[0];
     if(!comment) continue;
     const commentLines=comment.split('\n');
     const tail=node.literal.slice(comment.length);
+    const recover=tail.trim().length>0;
     for(let offset=0;offset<commentLines.length;offset++) {
-      rules[index+offset].text=offset===commentLines.length-1?tail:'';
-    }
-    if(tail.trim()) {
-      const first=node.sourcepos[0][0]-1;
-      const last=first+commentLines.length-1;
-      const suffix=commentLines.at(-1)+tail;
-      const prefix=lines[last].endsWith(suffix)?lines[last].slice(0,-suffix.length):'';
-      guideLines.fill('',first,last);
-      guideLines[last]=prefix+tail;
-      visibleRows.push(last+1);
+      const index=first+offset;
+      const last=offset===commentLines.length-1;
+      const visible=last?tail:'';
+      rules[index-start-1].text=visible;
+      if(recover) {
+        const suffix=commentLines[offset]+visible;
+        const prefix=lines[index].endsWith(suffix)?lines[index].slice(0,lines[index].length-suffix.length):'';
+        guideLines[index]=prefix+visible;
+        if(last) visibleRows.push(index+1);
+      }
     }
   }
   const usage=[];
