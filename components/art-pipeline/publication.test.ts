@@ -1,0 +1,191 @@
+import { spawnSync } from 'node:child_process';
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, renameSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { dirname, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { run as check } from '../tooling-scripts/art-check.ts';
+import { run as publish } from './art-publish.ts';
+import { encodePng } from './lib.ts';
+import { beginPublication } from './publication.ts';
+
+let dir: string;
+const messages: string[] = [];
+const io = { out: (s: string) => { messages.push(s); }, err: (s: string) => { messages.push(s); } };
+const picture = encodePng({ width: 1, height: 1, data: Buffer.from([1, 2, 3, 255]) });
+const put = (name: string, value: unknown) => {
+  const file = join(dir, name);
+  mkdirSync(dirname(file), { recursive: true });
+  writeFileSync(file, value instanceof Uint8Array ? value : JSON.stringify(value));
+  return file;
+};
+const config = (extra: object = {}) => put('publish.json', { index: 'index.json', root: 'source', stage: 'chosen', out: 'public/art', manifest: 'public/manifest.json', ext: 'png', ...extra });
+const index = (defs: unknown) => put('index.json', { defs, sources: {}, missing: [], counts: {}, order: [] });
+const snapshot = () => ['chosen/old.png', 'public/art/old.png', 'public/manifest.json'].map((p) => existsSync(join(dir, p)) ? readFileSync(join(dir, p)).toString('base64') : null);
+const cli = (...args: string[]) => spawnSync(process.execPath, [fileURLToPath(new URL('./art-publish.ts', import.meta.url)), '--config', join(dir, 'publish.json'), ...args], { encoding: 'utf8' });
+const checkArgs = () => ['--manifest', join(dir, 'public/manifest.json'), '--sources', join(dir, 'chosen'), '--out', join(dir, 'public/art'), '--ext', 'png'];
+
+beforeEach(async () => {
+  dir = mkdtempSync(join(tmpdir(), 'art-publication-'));
+  messages.length = 0;
+  put('source/a.png', picture);
+  index({ old: 'a.png' });
+  expect(await publish(['--config', config()], io)).toBe(0);
+  messages.length = 0;
+});
+afterEach(() => rmSync(dir, { recursive: true, force: true }));
+
+describe('publication preserves usable art', () => {
+  it('rejects colliding logical IDs through the CLI before replacing any prior file', () => {
+    const old = snapshot();
+    index({ 'a:b': 'a.png', 'a/b': 'a.png' });
+    const result = cli();
+    expect(result.status).toBe(2);
+    expect(result.stderr).toContain('collision');
+    expect(result.stderr).toContain('a:b');
+    expect(result.stderr).toContain('a/b');
+    expect(snapshot()).toEqual(old);
+    expect(result.stdout).not.toContain('pictures to');
+    expect(readFileSync(join(dir, 'source/a.png'))).toEqual(picture);
+  });
+
+  it('leaves the prior release byte-identical after a missing source', () => {
+    const old = snapshot();
+    index({ fresh: 'missing.png' });
+    const result = cli();
+    expect(result.status).toBe(2);
+    expect(snapshot()).toEqual(old);
+    expect(result.stdout).not.toContain('pictures to');
+  });
+
+  it.each([[{}], [[]], [null]])('refuses an empty or malformed selection without clearing the prior release: %j', async (defs) => {
+    const old = snapshot();
+    index(defs);
+    expect(await publish(['--config', config()], io)).toBe(2);
+    expect(snapshot()).toEqual(old);
+  });
+
+  it('preserves previous output and sources after encoder and quality failures', async () => {
+    const old = snapshot();
+    index({ fresh: 'a.png' });
+    expect(await publish(['--config', config({ ext: 'jpg' })], io, { out: () => Promise.reject(new Error('encoder failed')) })).toBe(2);
+    expect(snapshot()).toEqual(old);
+    expect(await publish(['--config', config({ ext: 'jpg', quality: { min: 90 }, maxFileBytes: 2 })], io, { out: () => Promise.resolve(Buffer.alloc(10)) })).toBe(2);
+    expect(snapshot()).toEqual(old);
+    expect(readFileSync(join(dir, 'source/a.png'))).toEqual(picture);
+  });
+
+  it('replaces all outputs only after success and checks independently supplied logical IDs', async () => {
+    index({ 'a:b': 'a.png' });
+    expect(await publish(['--config', config()], io)).toBe(0);
+    expect(readdirSync(join(dir, 'chosen'))).toEqual(['a_b.png']);
+    expect(readdirSync(join(dir, 'public/art'))).toEqual(['a_b.png']);
+    expect(check([...checkArgs(), '--need', put('names.json', ['a_b'])], io)).toBe(0);
+    expect(check([...checkArgs(), '--need-ids', put('ids.json', ['a:b'])], io)).toBe(0);
+    expect(check([...checkArgs(), '--need-ids', put('ids.json', ['a:b', 'a/b'])], io)).toBe(1);
+    expect(messages.join('\n')).toContain('a/b: required logical ID');
+  });
+
+  it('supports a manifest inside the output directory without losing identity metadata', async () => {
+    index({ a: 'a.png' });
+    expect(await publish(['--config', config({ manifest: 'public/art/manifest.json' })], io)).toBe(0);
+    expect(check(['--manifest', join(dir, 'public/art/manifest.json'), '--sources', join(dir, 'chosen'), '--out', join(dir, 'public/art'), '--ext', 'png', '--need-ids', put('ids.json', ['a'])], io)).toBe(0);
+  });
+
+  it.each([{ out: 'source' }, { out: 'chosen.publish-backup' }, { manifest: 'public' }, { manifest: 'public/art/old.png' }])('refuses destructive path overlap: %j', async (paths) => {
+    const old = snapshot();
+    expect(await publish(['--config', config(paths)], io)).toBe(2);
+    expect(snapshot()).toEqual(old);
+    expect(readFileSync(join(dir, 'source/a.png'))).toEqual(picture);
+  });
+
+  it.each([1, 2, 3, 4, 5, 6])('recovers the previous complete release after process interruption at rename %i', (cut) => {
+    const old = snapshot();
+    const targets = ['chosen', 'public/art', 'public/manifest.json'].map((p) => join(dir, p));
+    const marker = join(dir, 'publish.json.publish-state.json');
+    const script = `
+      import { mkdirSync, renameSync, writeFileSync } from 'node:fs';
+      import { beginPublication } from ${JSON.stringify(new URL('./publication.ts', import.meta.url).href)};
+      let calls = 0;
+      const p = beginPublication(${JSON.stringify(targets)}, ${JSON.stringify(marker)}, (a, b) => {
+        renameSync(a, b);
+        if (++calls === ${String(cut)}) process.exit(73);
+      });
+      for (const dir of p.paths.slice(0, 2)) { mkdirSync(dir); writeFileSync(dir + '/fresh.png', 'fresh'); }
+      writeFileSync(p.paths[2], '{}');
+      p.commit();
+    `;
+    expect(spawnSync(process.execPath, ['--input-type=module', '-e', script], { encoding: 'utf8' }).status).toBe(73);
+    expect(cli().status).toBe(2);
+    expect(cli('--recover').status).toBe(0);
+    expect(snapshot()).toEqual(old);
+    expect(existsSync(marker)).toBe(false);
+    expect(check(checkArgs(), io)).toBe(0);
+  });
+
+  it.each([1, 2, 3, 4, 5, 6])('rolls back a caught failure at rename %i', (cut) => {
+    const old = snapshot();
+    const targets = ['chosen', 'public/art', 'public/manifest.json'].map((p) => join(dir, p));
+    let calls = 0;
+    const p = beginPublication(targets, join(dir, 'publish.json.publish-state.json'), (a, b) => {
+      if (++calls === cut) throw new Error('blocked rename');
+      renameSync(a, b);
+    });
+    for (const path of p.paths.slice(0, 2)) { mkdirSync(path); writeFileSync(join(path, 'fresh.png'), 'fresh'); }
+    writeFileSync(p.paths[2]!, '{}');
+    expect(() => p.commit()).toThrow('blocked rename');
+    p.abort();
+    expect(snapshot()).toEqual(old);
+  });
+
+  it('retains recoverable backups if rollback itself fails', () => {
+    const old = snapshot();
+    const targets = ['chosen', 'public/art', 'public/manifest.json'].map((p) => join(dir, p));
+    const marker = join(dir, 'publish.json.publish-state.json');
+    let calls = 0;
+    const p = beginPublication(targets, marker, (a, b) => {
+      if (++calls >= 4) throw new Error('filesystem unavailable');
+      renameSync(a, b);
+    });
+    for (const path of p.paths.slice(0, 2)) { mkdirSync(path); writeFileSync(join(path, 'fresh.png'), 'fresh'); }
+    writeFileSync(p.paths[2]!, '{}');
+    expect(() => p.commit()).toThrow('filesystem unavailable');
+    expect(() => p.abort()).toThrow('filesystem unavailable');
+    expect(existsSync(marker)).toBe(true);
+    expect(cli('--recover').status).toBe(0);
+    expect(snapshot()).toEqual(old);
+  });
+
+  it('discards only incomplete preparation and refuses a second writer', () => {
+    const old = snapshot();
+    const p = beginPublication(['chosen', 'public/art', 'public/manifest.json'].map((f) => join(dir, f)), join(dir, 'publish.json.publish-state.json'));
+    mkdirSync(p.paths[0]!);
+    writeFileSync(join(p.paths[0]!, 'unfinished.png'), 'incomplete');
+    expect(cli().status).toBe(2);
+    expect(cli('--recover').status).toBe(0);
+    expect(snapshot()).toEqual(old);
+  });
+
+  it('finishes interrupted committed cleanup without reverting the new release', () => {
+    const targets = ['chosen', 'public/art', 'public/manifest.json'].map((p) => join(dir, p));
+    const marker = join(dir, 'publish.json.publish-state.json');
+    const script = `
+      import fs from 'node:fs';
+      import { syncBuiltinESMExports } from 'node:module';
+      import { beginPublication } from ${JSON.stringify(new URL('./publication.ts', import.meta.url).href)};
+      const p = beginPublication(${JSON.stringify(targets)}, ${JSON.stringify(marker)});
+      for (const dir of p.paths.slice(0, 2)) { fs.mkdirSync(dir); fs.writeFileSync(dir + '/fresh.png', 'fresh'); }
+      fs.writeFileSync(p.paths[2], '{}');
+      const rm = fs.rmSync;
+      fs.rmSync = (...args) => { if (String(args[0]).endsWith('.publish-backup')) process.exit(74); rm(...args); };
+      syncBuiltinESMExports();
+      p.commit();
+    `;
+    expect(spawnSync(process.execPath, ['--input-type=module', '-e', script], { encoding: 'utf8' }).status).toBe(74);
+    expect(cli('--recover').status).toBe(0);
+    expect(readFileSync(join(dir, 'public/art/fresh.png'), 'utf8')).toBe('fresh');
+    expect(readFileSync(join(dir, 'public/manifest.json'), 'utf8')).toBe('{}');
+    for (const path of targets) expect(existsSync(`${path}.publish-backup`)).toBe(false);
+    expect(existsSync(marker)).toBe(false);
+  });
+});

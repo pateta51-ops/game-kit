@@ -7,48 +7,84 @@
 // The manifest also holds the source's pixel size (sourceWidth, sourceHeight) for art-check's enlarged rule.
 // Check afterwards: node tooling-scripts/art-check.ts --manifest <manifest> --sources <stage> --out <out> --ext <ext>.
 // Exit 0, 2 usage or a failed read.
-import { copyFileSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
-import { extname, join, resolve } from 'node:path';
+import { accessSync, constants, mkdirSync, readFileSync, statSync, writeFileSync } from 'node:fs';
+import { dirname, extname, join, relative, resolve, sep } from 'node:path';
 import { isMain, stdio, type Io } from '../tooling-scripts/args.ts';
 import type { ArtIndex } from './art-index.ts';
 import { codec, encodeWithin, fail, imageSize, load, safeName, sha256, type Codec } from './lib.ts';
+import { beginPublication, recoverPublication } from './publication.ts';
 
-const USAGE = 'usage: node art-publish.ts --config <json>';
+const USAGE = 'usage: node art-publish.ts --config <json> [--recover]';
+const within = (parent: string, file: string): boolean => file === parent || file.startsWith(`${parent}${sep}`);
 
 export type Quality = { min: number; max?: number };
 
 export async function run(args: readonly string[], io: Io = stdio, codecOverride?: Codec): Promise<number> {
+  let publication: ReturnType<typeof beginPublication> | undefined;
   try {
-    const l = load(args);
-    if (l === null) {
+    const l = load(args, ['recover']);
+    if (l === null || l.pos.length > 0) {
       io.err(USAGE);
       return 2;
     }
     const c = l.config as { index: string; root: string; stage: string; out: string; manifest: string; ext: string; sharp?: string; quality?: Quality; maxFileBytes?: number; faces?: Record<string, { quality?: Quality; maxFileBytes?: number }> };
     const [root, stage, out] = [resolve(l.dir, c.root), resolve(l.dir, c.stage), resolve(l.dir, c.out)];
-    const index = JSON.parse(readFileSync(resolve(l.dir, c.index), 'utf8')) as ArtIndex;
-    const cod = codecOverride ?? await codec(c.sharp);
-    for (const d of [stage, out]) {
-      rmSync(d, { recursive: true, force: true });
-      mkdirSync(d, { recursive: true });
+    const manifestFile = resolve(l.dir, c.manifest);
+    const configFile = resolve(args[args.lastIndexOf('--config') + 1]!);
+    if (within(stage, out) || within(out, stage) || within(manifestFile, stage) || within(manifestFile, out)) throw new Error('stage, out and manifest must be distinct; stage and out cannot contain each other');
+    const targets = [stage, out];
+    const manifestGroup = targets.findIndex((target) => within(target, manifestFile));
+    if (manifestGroup < 0) targets.push(manifestFile);
+    if (targets.some((p) => within(p, configFile))) throw new Error('publication cannot replace its config');
+    const marker = `${configFile}.publish-state.json`;
+    if (l.bools.has('recover')) {
+      recoverPublication(targets, marker);
+      io.out('art-publish: recovered the interrupted publication; run again to publish');
+      return 0;
     }
-    const manifest: Record<string, object> = {};
-    for (const [id, file] of Object.entries(index.defs).sort()) {
+    const indexFile = resolve(l.dir, c.index);
+    const index = JSON.parse(readFileSync(indexFile, 'utf8')) as ArtIndex;
+    if (!index || typeof index.defs !== 'object' || index.defs === null || Array.isArray(index.defs) || Object.keys(index.defs).length === 0) throw new Error('index.defs must select at least one logical ID');
+    if (!/^[a-z0-9]+$/i.test(c.ext)) throw new Error('ext must be a file extension without a dot');
+    const names = new Map<string, string>();
+    const selected = Object.entries(index.defs).sort().map(([id, file]) => {
       const name = safeName(id);
-      const src = join(root, file);
+      if (!name || name === '.' || name === '..' || typeof file !== 'string' || !file) throw new Error(`invalid selected face: ${id}`);
+      const previous = names.get(name.toLowerCase());
+      if (previous !== undefined) throw new Error(`filename collision: ${previous} and ${id} map to ${name}`);
+      names.set(name.toLowerCase(), id);
+      const src = resolve(root, file);
+      if (targets.some((p) => within(p, src) || within(p, indexFile))) throw new Error(`publication would replace an input: ${id}`);
+      if (manifestFile === join(stage, `${name}${extname(file)}`) || manifestFile === join(out, `${name}.${c.ext}`)) throw new Error(`manifest would replace face ${id}`);
+      if (!statSync(src).isFile()) throw new Error(`${id}: source is not a file`);
+      accessSync(src, constants.R_OK);
+      return { id, name, file, src };
+    });
+    const cod = codecOverride ?? await codec(c.sharp);
+    publication = beginPublication(targets, marker);
+    const [nextStage, nextOut] = publication.paths as [string, string];
+    for (const d of [nextStage, nextOut]) mkdirSync(d, { recursive: true });
+    const manifest: Record<string, object> = Object.create(null) as Record<string, object>;
+    for (const { id, name, file, src } of selected) {
       const stageName = `${name}${extname(file)}`;
-      copyFileSync(src, join(stage, stageName));
       const bytes = readFileSync(src);
+      writeFileSync(join(nextStage, stageName), bytes);
       const made = extname(file).slice(1).toLowerCase() === c.ext ? bytes : await (() => { const q = c.faces?.[id]?.quality ?? c.quality; return q ? encodeWithin(cod, bytes, c.ext, id, q, c.faces?.[id]?.maxFileBytes ?? c.maxFileBytes) : cod.out(bytes, c.ext); })();
-      writeFileSync(join(out, `${name}.${c.ext}`), made);
+      const cap = c.faces?.[id]?.maxFileBytes ?? c.maxFileBytes;
+      if (cap !== undefined && (!Number.isSafeInteger(cap) || cap < 0 || made.length > cap)) throw new Error(`${id}: ${String(made.length)} bytes is over the file cap of ${String(cap)}`);
+      writeFileSync(join(nextOut, `${name}.${c.ext}`), made);
       const size = imageSize(made);
       const from = imageSize(bytes);
       manifest[name] = { source: stageName, sha256: sha256(bytes), bytes: made.length, outSha256: sha256(made), id, ...(size ? { width: size[0], height: size[1] } : {}), ...(from ? { sourceWidth: from[0], sourceHeight: from[1] } : {}) };
     }
-    writeFileSync(resolve(l.dir, c.manifest), JSON.stringify(manifest, null, 1) + '\n');
+    const nextManifest = manifestGroup < 0 ? publication.paths[2]! : join(publication.paths[manifestGroup]!, relative(targets[manifestGroup]!, manifestFile));
+    mkdirSync(dirname(nextManifest), { recursive: true });
+    writeFileSync(nextManifest, JSON.stringify(manifest, null, 1) + '\n');
+    publication.commit();
     io.out(`art-publish: ${String(Object.keys(manifest).length)} pictures to ${c.out}`);
     return 0;
   } catch (e) {
+    if (publication) try { publication.abort(); } catch (recovery) { io.err(`art-publish: recovery incomplete; keep the publish-state file and backups, then run --recover: ${recovery instanceof Error ? recovery.message : String(recovery)}`); }
     return fail(io, 'art-publish', e);
   }
 }

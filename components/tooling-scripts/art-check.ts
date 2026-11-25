@@ -7,6 +7,8 @@ import { join, resolve } from 'node:path';
 import { flags, isMain, stdio, type Io } from './args.ts';
 
 export interface ArtEntry {
+  /** Original logical ID, when filenames use a sanitized name. */
+  id?: string;
   source: string;
   sha256: string;
   bytes: number;
@@ -26,6 +28,8 @@ export interface ArtConfig {
   /** Matched against each source file name; group 1 is the id. Other files are ignored. */
   sourceId: RegExp;
   need: readonly string[];
+  /** Required logical IDs from the game's content, independently of generated filenames. */
+  needIds?: readonly string[];
   maxBytes: number | undefined;
   maxFileBytes: number | undefined;
   /** On unless false: an entry whose pixel size (width x height) is over its source's (sourceWidth x sourceHeight) fails; entries without both sizes are skipped. */
@@ -62,6 +66,16 @@ export function artCheck(c: ArtConfig): { errors: string[]; faces: number; total
   if (ids.size === 0) errors.push(`no source file in ${c.sources} matched ${String(c.sourceId)}`);
   for (const id of Object.keys(manifest)) if (!ids.has(id)) errors.push(`${id}: in the manifest but has no source`);
   for (const id of new Set(c.need)) if (!existsSync(join(c.out, `${id}.${c.ext}`))) errors.push(`${id}: needed by the game but has no ${id}.${c.ext}`);
+  const logical = new Map<string, string>();
+  for (const [name, entry] of Object.entries(manifest)) {
+    const id = entry.id ?? name;
+    if (logical.has(id)) errors.push(`${id}: logical ID occurs in more than one manifest entry`);
+    logical.set(id, name);
+  }
+  for (const id of new Set(c.needIds ?? [])) {
+    const name = logical.get(id);
+    if (name === undefined || !ids.has(name) || !existsSync(join(c.out, `${name}.${c.ext}`))) errors.push(`${id}: required logical ID has no complete published face`);
+  }
   let total = 0;
   for (const f of existsSync(c.out) ? readdirSync(c.out).sort() : []) {
     if (!f.endsWith(`.${c.ext}`)) continue;
@@ -73,9 +87,9 @@ export function artCheck(c: ArtConfig): { errors: string[]; faces: number; total
   return { errors, faces: ids.size, total, skipped };
 }
 
-const NAMES = ['manifest', 'sources', 'out', 'ext', 'source-id', 'need', 'max-bytes', 'max-file-bytes'];
+const NAMES = ['manifest', 'sources', 'out', 'ext', 'source-id', 'need', 'need-ids', 'max-bytes', 'max-file-bytes'];
 const USAGE =
-  'usage: node art-check.ts --manifest <json> --sources <dir> --out <dir> --ext <webp> [--source-id <regex, group 1 is the id>] [--need <json array of ids>]... [--max-bytes <n>] [--max-file-bytes <n>] [--allow-enlarged] [--config <json>]';
+  'usage: node art-check.ts --manifest <json> --sources <dir> --out <dir> --ext <webp> [--source-id <regex, group 1 is the id>] [--need <json array of output names>]... [--need-ids <json array of logical ids>]... [--max-bytes <n>] [--max-file-bytes <n>] [--allow-enlarged] [--config <json>]';
 
 export function run(args: readonly string[], io: Io = stdio): number {
   try {
@@ -91,6 +105,11 @@ export function run(args: readonly string[], io: Io = stdio): number {
       return v === undefined ? undefined : Number(v);
     };
     const need = (f['need'] ?? []).flatMap((p) => JSON.parse(readFileSync(resolve(p), 'utf8')) as string[]);
+    const needIds = (f['need-ids'] ?? []).flatMap((p) => {
+      const value: unknown = JSON.parse(readFileSync(resolve(p), 'utf8'));
+      if (!Array.isArray(value) || value.some((id) => typeof id !== 'string' || !id)) throw new Error('--need-ids requires a JSON array of nonempty logical IDs');
+      return value as string[];
+    });
     const r = artCheck({
       manifest: resolve(manifest),
       sources: resolve(sources),
@@ -98,6 +117,7 @@ export function run(args: readonly string[], io: Io = stdio): number {
       ext,
       sourceId: new RegExp(f['source-id']?.[0] ?? '^(.+)\\.[^.]+$'),
       need,
+      needIds,
       maxBytes: num('max-bytes'),
       maxFileBytes: num('max-file-bytes'),
       noEnlarge: f['allow-enlarged'] === undefined,
