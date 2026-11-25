@@ -3,6 +3,11 @@ Game-free scripts that get a card game's art from its sources to `public/` with 
 
 ## Rules for agents
 
+<!-- hooks: written by scripts/catalog.mjs from docs/catalog-notes.json; do not edit -->
+**Hooks a game calls:**
+- `art-publish`: publish art with filename collision checks and recover interrupted replacement
+<!-- /hooks -->
+
 **What it does:** takes a card game's art from its sources to `public/` in steps (fetch, extract, render a PDF, index, publish, cache), each driven by a JSON config, with a manifest the art check verifies.
 
 **You must:**

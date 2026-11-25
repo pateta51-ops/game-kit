@@ -3,6 +3,11 @@ Small repo scripts a game runs with `node kit/tooling-scripts/<script>.ts`. Each
 
 ## Rules for agents
 
+<!-- hooks: written by scripts/catalog.mjs from docs/catalog-notes.json; do not edit -->
+**Hooks a game calls:**
+- `art-check`: check the output manifest against sources and independently required logical art ids
+<!-- /hooks -->
+
 **What it does:** Small repository scripts a game runs as `node kit/tooling-scripts/<script>.ts`; each takes its paths and patterns as flags or the same names in `--config <json>`.
 
 **You must:**
