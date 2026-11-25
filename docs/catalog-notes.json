@@ -743,7 +743,7 @@
   },
   "ci-templates": {
     "mechanics": "none: build, CI or repository tooling",
-    "use": "Rendering a game's CI workflows, full gate and local CI script from one `ci.config.json`.",
+    "use": "Rendering a game's CI workflows, full gate and local CI script from one `ci.config.json`. The full gate installs browser drivers using the game's Playwright package and runs its browser acceptance scripts on a free port.",
     "not": "Rules for what the gate contains (repo-gate, check-runner).",
     "title": "Build server workflows for a game",
     "tags": [
@@ -1871,7 +1871,7 @@
   },
   "scaffold": {
     "mechanics": "none: build, CI or repository tooling",
-    "use": "Start an empty working game repo, or use a declarative game spec to select components and generate a pinned scaffold.",
+    "use": "Start an empty working game repo, or use a declarative game spec to select components and generate a pinned scaffold. Run its Chromium browser smoke for the stub menu, setup, step and undo.",
     "not": "Anything inside a running game; it is a generator run from the kit checkout.",
     "title": "Start a new game project",
     "tags": [
