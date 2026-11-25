@@ -1,16 +1,79 @@
 import fs from 'node:fs'
+import { isBuiltin } from 'node:module'
 import path from 'node:path'
+import ts from 'typescript'
 
 const root = path.join(process.argv[2] ?? '.', 'components')
 const bad = []
 const walk = (d) => fs.readdirSync(d, { withFileTypes: true }).flatMap((e) => (e.isDirectory() ? walk(path.join(d, e.name)) : [path.join(d, e.name)]))
 const CODE = /\.(ts|tsx|js|jsx|mjs|cjs|mts|cts)$/
-const REL = /['"`](\.\.(?:\/[^'"`\n]*)?)['"`]/g
-const NAME = String.raw`((?:@[\w~.-]+\/)?[A-Za-z][\w~.-]*(?:\/[\w./-]*)?)`
-const BARE = new RegExp(String.raw`^(?:\s*(?:import|export)\s+(?:type\s+)?(?:[\w*{}\s,$]+?\s+from\s+)?|\s*\}\s*from\s*)['"]` + NAME + `['"]`, 'gm')
+const PARENT = /^(?:\.\.)(?:\/|$)/
+const QUOTED_PARENT = /['"`](\.\.(?:\/[^'"`\n]*)?)['"`]/g
+const BARE = /^(?:@[\w~.-]+\/)?[a-z0-9][\w~.-]*(?:\/[\w./-]*)?$/i
 const TESTISH = /(\.test\.|\.e2e\.|[\\/]fake[\\/]|[\\/]examples?[\\/]|\.d\.ts$)/
-const BUILTIN = new Set(['fs', 'path', 'os', 'child_process', 'url', 'crypto', 'util', 'worker_threads', 'zlib', 'http', 'net', 'readline', 'stream', 'events', 'assert', 'buffer', 'module'])
+// This standalone screenshot script uses Playwright only when an operator runs it.
+const DEMO_PACKAGES = new Map([['phone-mode/demo/imp-shots.mjs', 'playwright']])
 const pkgOf = (x) => (x.startsWith('@') ? x.split('/').slice(0, 2).join('/') : x.split('/')[0])
+const isOutside = (rel) => rel === '..' || rel.startsWith('..' + path.sep) || path.isAbsolute(rel)
+
+function moduleSpecifier(node) {
+  if (ts.isImportDeclaration(node) || ts.isExportDeclaration(node) || ts.isJSDocImportTag(node)) return node.moduleSpecifier
+  if (ts.isExternalModuleReference(node)) return node.expression
+  if (ts.isImportTypeNode(node) && ts.isLiteralTypeNode(node.argument)) return node.argument.literal
+  if (ts.isCallExpression(node) && (node.expression.kind === ts.SyntaxKind.ImportKeyword ||
+    (ts.isIdentifier(node.expression) && node.expression.text === 'require'))) return node.arguments[0]
+}
+
+function isThrowMessage(node) {
+  const call = node.parent
+  return (ts.isCallExpression(call) || ts.isNewExpression(call)) && call.arguments?.[0] === node &&
+    ts.isIdentifier(call.expression) && call.expression.text === 'Error' &&
+    ts.isThrowStatement(call.parent)
+}
+
+function checkCode(file, dir, name, needs, packages) {
+  const source = ts.createSourceFile(file, fs.readFileSync(file, 'utf8'), ts.ScriptTarget.Latest, true)
+  const local = path.relative(dir, file).split(path.sep).join('/')
+  const position = (offset) => {
+    const { line, character } = source.getLineAndCharacterOfPosition(offset)
+    return `${name}: ${local}:${line + 1}:${character + 1}`
+  }
+  function checkPath(value, offset) {
+    if (!PARENT.test(value)) return
+    const target = path.resolve(path.dirname(file), value)
+    if (!isOutside(path.relative(dir, target))) return
+    const owner = path.relative(path.resolve(root), target).split(path.sep)[0]
+    if (needs.includes(owner)) return
+    const fix = dirs.includes(owner) ? `declare ${owner} in component.json needs` : 'keep the path inside a declared component'
+    bad.push(`${position(offset)}: references ${value} outside its folder; ${fix}`)
+  }
+
+  const checkPackages = Array.isArray(packages) && !TESTISH.test(file)
+  function visit(node) {
+    const spec = checkPackages ? moduleSpecifier(node) : undefined
+    if (spec && ts.isStringLiteralLike(spec) && BARE.test(spec.text) && !isBuiltin(spec.text)) {
+      const pkg = pkgOf(spec.text)
+      if (!packages.includes(pkg) && DEMO_PACKAGES.get(`${name}/${local}`) !== pkg) {
+        bad.push(`${position(spec.getStart(source))}: imports package ${pkg} (${spec.text}); add ${pkg} to component.json packages`)
+      }
+    }
+
+    // Check parent paths independently of imports, including stored asset paths and URL arguments.
+    if (ts.isStringLiteralLike(node) && !isThrowMessage(node)) {
+      const start = node.getStart(source)
+      checkPath(node.text, start)
+      // Embedded quoted paths can still be used by generated source and shell commands.
+      for (const match of node.getText(source).slice(1, -1).matchAll(QUOTED_PARENT)) checkPath(match[1], start + 1 + match.index)
+    }
+    if (ts.isTemplateExpression(node) && !isThrowMessage(node)) checkPath(node.head.text + '${…}', node.getStart(source))
+
+    for (const doc of node.jsDoc ?? []) visit(doc)
+    ts.forEachChild(node, visit)
+  }
+  visit(source)
+  for (const ref of source.referencedFiles) checkPath(ref.fileName, ref.pos)
+}
+
 const dirs = fs.existsSync(root) ? fs.readdirSync(root, { withFileTypes: true }).filter((e) => e.isDirectory()).map((e) => e.name) : []
 for (const n of dirs) {
   const dir = path.resolve(root, n)
@@ -34,19 +97,7 @@ for (const n of dirs) {
   if (!fs.existsSync(rm) || !fs.readFileSync(rm, 'utf8').split(/\r?\n/)[0].trim()) bad.push(`${n}: README.md missing or its first line is empty`)
   if (fs.existsSync(rm) && !/^## Rules for agents\s*$/m.test(fs.readFileSync(rm, 'utf8'))) bad.push(`${n}: README.md has no "## Rules for agents" heading`)
   if (!walk(dir).some((f) => /(\.test\.[^\\/]+|[\\/]test_[^\\/]+\.py)$/.test(f))) bad.push(`${n}: no test file (*.test.* or test_*.py)`)
-  const used = new Set()
-  for (const f of walk(dir).filter((f) => CODE.test(f))) {
-    if (!TESTISH.test(f)) for (const m of fs.readFileSync(f, 'utf8').matchAll(BARE)) if (!m[1].startsWith('node:') && !BUILTIN.has(m[1])) used.add(pkgOf(m[1]))
-    for (const m of fs.readFileSync(f, 'utf8').matchAll(REL)) {
-      const target = path.resolve(path.dirname(f), m[1])
-      const rel = path.relative(dir, target)
-      if (!rel.startsWith('..') && !path.isAbsolute(rel)) continue
-      const top = path.relative(path.resolve(root), target).split(path.sep)
-      const ok = !top[0].startsWith('..') && top[0] !== '' && needs.includes(top[0])
-      if (!ok) bad.push(`${n}: ${path.relative(dir, f)} imports ${m[1]} outside its folder`)
-    }
-  }
-  if (Array.isArray(pk)) for (const u of used) if (!pk.includes(u)) bad.push(`${n}: imports package ${u} that component.json packages does not list`)
+  for (const f of walk(dir).filter((f) => CODE.test(f))) checkCode(f, dir, n, needs, pk)
 }
 const tools = path.join(path.dirname(root), 'tools')
 if (fs.existsSync(tools)) for (const e of fs.readdirSync(tools, { withFileTypes: true })) {
