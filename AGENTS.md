@@ -50,7 +50,7 @@ Needs Node 22.18+: tools run with plain `node` (no tsx, no build); relative impo
 
 ## Rules agents break most
 - Editing `kit/` in a game, or copying kit code into `src/`.
-- A `'..'` or `'../x'` string in a component code file that leaves the component folder for a component not in its `needs` (`scripts/check-components.mjs` flags it); use `dirname()`.
+- A literal parent path that leaves a component folder. Declare any component it refers to in `needs`. The checker covers imports and asset paths. See [component checks](docs/recipes/agent-workflow.md#checks-and-what-each-catches).
 - Importing a kit component from another without listing it in `needs` (same check).
 - `async` functions without `await` (lint `require-await`), tests included.
 - A "Use it in 10 lines" block that no longer compiles (`scripts/readme-examples.mjs`).
