@@ -1,16 +1,21 @@
-import { applyAction, createGame, replay, restoreSave, type GameRules, type GameTypes, type SaveFormat } from '../engine-core/kernel.ts';
+import { applyAction, createGame, restoreSave, type GameRules, type GameTypes, type SaveFormat } from '../engine-core/kernel.ts';
 import { createReplay, ReplayError, type ReplayAdapter } from './index.ts';
 
-export function fromSave<G extends GameTypes, V>(game: GameRules<G>, content: G['content'], raw: unknown, view: (state: G['state']) => V, format?: SaveFormat, presentation: Pick<ReplayAdapter<G['state'], G['action'], G['event'], V>, 'boundary' | 'isStep'> = {}) {
-  const result = restoreSave(game, raw, content, format);
+export function fromSave<G extends GameTypes, V>(
+  game: GameRules<G>, content: G['content'], raw: unknown, view: (state: G['state']) => V, format?: SaveFormat,
+  presentation: Pick<ReplayAdapter<G['state'], G['action'], G['event'], V>, 'boundary' | 'isStep' | 'visibleEvent'> = {},
+) {
+  const result = restoreSave(game, raw, content, format, { actionFailure: true });
   if (!result.ok) {
-    if (raw && typeof raw === 'object' && 'actions' in raw && 'options' in raw && 'rules' in raw && Array.isArray(raw.actions)) {
-      const input = raw as { options: G['options']; rules: G['rules']; actions: G['action'][] };
-      const check = replay(game, input.options, input.rules, input.actions, content);
-      if (check.failedAt !== null) throw new ReplayError(`${result.error} ${check.error ?? ''}`, check.failedAt);
-    }
-    throw new ReplayError(result.error);
+    const message = result.actionError && result.actionError !== result.error ? `${result.error} ${result.actionError}` : result.error;
+    throw new ReplayError(message, result.failedAt);
   }
   const { options, rules, actions } = result.save;
-  return createReplay({ start: () => createGame(game, options, rules, content).state, apply: (state, action) => applyAction(game, state, action, content), view, ...presentation }, { actions });
+  const { boundary, isStep, visibleEvent } = presentation;
+  return createReplay({
+    start: () => createGame(game, options, rules, content).state,
+    apply: (state, action) => applyAction(game, state, action, content),
+    view,
+    ...(boundary && { boundary }), ...(isStep && { isStep }), ...(visibleEvent && { visibleEvent }),
+  }, { actions });
 }

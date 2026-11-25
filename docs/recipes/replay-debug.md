@@ -4,7 +4,7 @@ Components: [`replay-cli`](../../components/replay-cli/README.md), [`engine-core
 
 | I have | Do |
 |---|---|
-| Watch a recording on the game table | Use [visual-replay](../../components/visual-replay/README.md); the game supplies the engine, recording adapter, boundaries and table. |
+| Watch a recording on the game table | Use [visual-replay](../CATALOG.md#visual-replay). Read `kit/visual-replay/README.md` in a game or `components/visual-replay/README.md` in the kit checkout. The game supplies the engine, adapter, boundaries and table. |
 | A bug report or save file | `node kit/replay-cli/replay.ts log.json --engine <module>`: replays headless; the module exports `engine: { game, content(), ... }`. |
 | A failing fuzz finding | Replay line printed by `fuzzMain`: `--seed S --until N`. `breakAt(game, content, spec, n)` gives the game stopped there as a `History` to import into a test. |
 | A suspicion that a change altered play | Golden games: `golden.ts record` on the base, `golden.ts replay` on the head: names the first action where state or events differ. `golden.ts check <dir>` replays stored games. |

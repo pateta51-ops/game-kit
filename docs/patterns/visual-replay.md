@@ -22,8 +22,8 @@ For each step: `createGame(options, content)`, then `applyAction` for each actio
 ## Stage (game-bound)
 Reads real DOM anchors (`getBoundingClientRect` centre and size) of the source and target cells, interpolates boxes with a smoothstep ease (`p*p*(3-2p)`, clamped), waits for fonts and image decode before the first frame, and throws when an anchor is missing or hidden (a hidden anchor means the layout changed under the clip). Captions and corrections are tables keyed by clip and step.
 
-## Kit version, if ever built
-The game supplies `createGame`, `applyAction`, `getPlayerView`, the screen to mount and the anchors by selector. The kit supplies the records/clips schema and loader, the rebuild loop with its error text, the cache and a timing runner with an injected clock.
+## Shared player
+The game parses its recording, supplies engine and table hooks, and identifies turn or phase changes at action endpoints. The kit builds and caches the timeline and runs playback controls, with optional event pacing. Engine-core saves have a separate adapter. The clip format and stage above belong to the example game.
 
 ## Pitfalls
 - Record with a driver at a fixed seed; re-record only on a deliberate rules change.
