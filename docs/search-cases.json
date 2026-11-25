@@ -643,5 +643,9 @@
   { "q": "grid tiles at multiple levels", "first": "K544" },
   { "q": "nested choice", "first": "engine-core" },
   { "q": "ask a follow-up choice", "first": "engine-core" },
-  { "q": "resume a task after a prompt", "first": "engine-core" }
+  { "q": "resume a task after a prompt", "first": "engine-core" },
+  { "q": "version", "first": "sim-pool" },
+  { "q": "library", "first": "effect-library" },
+  { "q": "compare", "first": "dice-tray" },
+  { "q": "edge", "first": "pieces-3d" }
 ]
