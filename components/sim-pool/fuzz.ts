@@ -1,7 +1,7 @@
 // The invariant run and the fuzz command (stcc scripts/sim/invariantRun.ts, ebr scripts/fuzz.ts): random games with every
 // invariant checked after every action; each failure is a seed plus a step, and `--seed X --until N` replays it to there.
 import { readFileSync, writeFileSync } from 'node:fs';
-import { DriverRegistrationError, type GameSpec, type SimRecord } from './play.ts';
+import { isDriverRegistrationError, type GameSpec, type SimRecord } from './play.ts';
 import type { Proof } from './unreached.ts';
 import { runGames } from './pool.ts';
 
@@ -250,7 +250,7 @@ export function fuzzMain(
   out: (line: string) => void = (l) => process.stdout.write(`${l}\n`),
 ): Promise<number> {
   return runFuzzMain(args, module, base, out).catch((error: unknown) => {
-    if (!(error instanceof DriverRegistrationError) && !(error instanceof ViewRunError)) throw error;
+    if (!isDriverRegistrationError(error) && !(error instanceof ViewRunError)) throw error;
     out(error.message);
     return 2;
   });

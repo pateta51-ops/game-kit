@@ -4,7 +4,7 @@
 // takes the next games. A worker loads the game's module (`simGame` export).
 import { Worker } from 'node:worker_threads';
 import { isChecking, isFreezing, setInvariantChecking, setStateFreezing, type GameTypes } from '../engine-core/index.ts';
-import { CRASH_HASH, crashRecord, DriverRegistrationError, playOne, type GameSpec, type SimGame, type SimRecord } from './play.ts';
+import { CRASH_HASH, crashRecord, DriverRegistrationError, isDriverRegistrationError, playOne, type GameSpec, type SimGame, type SimRecord } from './play.ts';
 
 export interface RunRequest {
   /** The URL of the module that exports `simGame`. */
@@ -101,7 +101,7 @@ async function lane(request: RunRequest, names: readonly string[], next: () => G
           if (timedOut) return;
           clearTimeout(timer);
           if (m.type === 'invalid-driver') {
-            reject(new DriverRegistrationError(m.message));
+            reject(typeof m.message === 'string' ? new DriverRegistrationError(m.message) : new Error('invalid simulation worker registration response'));
             return;
           }
           if (m.type === 'record') collect(m.record);
@@ -140,7 +140,7 @@ async function lane(request: RunRequest, names: readonly string[], next: () => G
       });
       if (!again) return;
     } catch (e) {
-      if (e instanceof DriverRegistrationError) throw e;
+      if (isDriverRegistrationError(e) || request.specs.length === 0) throw e;
       if (again) continue;
       if (stopped) return; // died after its last game: nothing lost
       held ??= next(); // died before its first game (the module failed to load): the next game takes the crash

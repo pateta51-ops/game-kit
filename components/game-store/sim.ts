@@ -1,19 +1,22 @@
 // K234: the one game object as sim-pool's game module, its driver and replay-cli's engine (node only: sim-pool loads node modules).
 import type { GameTypes } from '../engine-core/index.ts';
-import { botDriver, DriverRegistrationError, randomDriver, type Bot, type Driver, type GameSpec, type SimGame } from '../sim-pool/index.ts';
+import { botDriver, DriverRegistrationError, randomDriver, type Bot, type Driver, type DriverRng, type GameSpec, type SimGame, type ValidateDriverView } from '../sim-pool/index.ts';
 import type { ReplayEngine } from '../replay-cli/replay.ts';
 import { answerOf, type GameDef, type SeatId } from './index.ts';
 
 /** The opponent as a sim-pool driver: it reads `view(state, prompt.seat)` only. */
 export function opponentDriverOf<G extends GameTypes, V, S extends SeatId>(def: GameDef<G, V, S>): Driver<G> {
+  const choose = (state: G['state'], answers: readonly G['action'][], rng: DriverRng, validate?: ValidateDriverView) => {
+    const p = state.prompt as G['prompt'];
+    if (def.opponent === undefined) throw new Error('This game has no opponent.');
+    const view = () => def.view(state, p.seat as S);
+    const picks = def.opponent(validate ? validate(p.seat, view) : view(), p, rng);
+    return answers.find((a) => a.kind === 'answer' && a.picks.join() === picks.join()) ?? answerOf(p.id, picks);
+  };
   return {
     name: 'opponent',
-    choose: (state, answers, rng) => {
-      const p = state.prompt as G['prompt'];
-      if (def.opponent === undefined) throw new Error('This game has no opponent.');
-      const picks = def.opponent(def.view(state, p.seat as S), p, rng);
-      return answers.find((a) => a.kind === 'answer' && a.picks.join() === picks.join()) ?? answerOf(p.id, picks);
-    },
+    choose,
+    chooseWithViewValidation: choose,
     reasons: () => [],
   };
 }
@@ -56,6 +59,10 @@ export function simGameOf<G extends GameTypes, V, S extends SeatId, Sum = unknow
     return { key, make };
   };
   const seats = [...new Set(o.viewValidation?.seats ?? def.seats)];
+  const assertions = (state: G['state'], seat: S) => ({
+    secrets: o.viewValidation?.secrets?.(state, seat) ?? [],
+    leakKeys: o.viewValidation?.leakKeys?.(state, seat) ?? [],
+  });
   return {
     rules: def.rules,
     content: () => def.content,
@@ -67,11 +74,11 @@ export function simGameOf<G extends GameTypes, V, S extends SeatId, Sum = unknow
         seat,
         read: () => ({
           view: def.view(state, seat, { undoUsed: false, cheated }),
-          secrets: o.viewValidation?.secrets?.(state, seat) ?? [],
-          leakKeys: o.viewValidation?.leakKeys?.(state, seat) ?? [],
+          ...assertions(state, seat),
         }),
       })),
     }),
+    driverViewAssertions: (state, seat) => assertions(state, seat as S),
     ...(o.summary === undefined ? {} : { summary: o.summary }),
     ...(o.maxActions === undefined ? {} : { maxActions: o.maxActions }),
   };

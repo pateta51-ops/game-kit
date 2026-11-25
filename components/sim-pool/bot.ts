@@ -16,6 +16,10 @@ export function botDriver<G extends GameTypes, V>(bot: Bot<V, G['action']>, view
   return {
     name: bot.name,
     choose: (state, answers, rng) => bot.choose(view(state, state.prompt?.seat as never), answers, rng),
+    chooseWithViewValidation: (state, answers, rng, validate) => {
+      const seat = state.prompt?.seat;
+      return bot.choose(validate(seat, () => view(state, seat as never)), answers, rng);
+    },
     reasons: () => bot.reasons?.() ?? [],
   };
 }
