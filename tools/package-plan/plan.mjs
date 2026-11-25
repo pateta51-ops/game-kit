@@ -60,7 +60,7 @@ function compare(expected, declared, project) {
   const [{ role, range }] = declared
   const [wanted] = expected
   // Stable semver only. Prerelease opt-in differs across comparator sets.
-  if ([range, wanted.range].some(text => /\d-(?=\S)/.test(text) || !semver.validRange(text) || !semver.minVersion(text))) return unresolved('range')
+  if ([range, wanted.range].some(text => /\d-(?=\S)/.test(text.replace(/\+[\w.-]+/g, '')) || !semver.validRange(text) || !semver.minVersion(text))) return unresolved('range')
   const offered = new semver.Range(range)
   const required = new semver.Range(wanted.range)
   const overlaps = offered.set.some(a => required.set.some(b => semver.minVersion([...a, ...b].map(c => c.value).join(' ')) !== null))
@@ -77,7 +77,11 @@ function plan(dir) {
   }
   const { ref, commit, components } = lock
   const kit = path.resolve(import.meta.dirname, '../..')
-  const git = (...args) => execFileSync('git', ['--no-replace-objects', '-C', kit, ...args], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] }).trim()
+  const git = (...args) => execFileSync('git', ['--no-replace-objects', '-C', kit, ...args], {
+    encoding: 'utf8',
+    stdio: ['ignore', 'pipe', 'pipe'],
+    env: { ...process.env, GIT_NO_LAZY_FETCH: '1' },
+  }).trim()
   try {
     if (git('cat-file', '-t', commit) !== 'commit') throw new Error('expected a commit object')
   } catch (e) {

@@ -4,7 +4,7 @@ Compare one consumer's declared package ranges with the requirements of its lock
 
 ## Rules for agents
 
-1. Run `node tools/package-plan/plan.mjs <game-dir>` from a trusted game-kit checkout with its dependencies installed. The checkout needs the full commit recorded in the game's `kit/kit.lock.json`. Check lock integrity separately with `kit.mjs check --source`.
+1. Run `node tools/package-plan/plan.mjs <game-dir>` from a trusted game-kit checkout with its dependencies installed. The checkout needs the commit and its package metadata objects from the game's `kit/kit.lock.json`. In a partial clone, fetch missing metadata separately. Check lock integrity separately with `kit.mjs check --source`.
 2. Read the package's originating components, their READMEs and the pinned declaration role before planning a change. A kit dependency can support an optional feature such as paid playtesting. The plan lists all declared packages of the locked components.
 3. Treat `compatible` as a declaration comparison. Verify the installed modules and the enabled feature with the game's package manager and targeted checks.
 4. Leave changes to manifests and lockfiles to the game. Review unresolved declarations and retain `kit.old` when recovering from an interrupted pull.

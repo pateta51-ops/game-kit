@@ -2,6 +2,7 @@ import { execFileSync, spawnSync } from 'node:child_process'
 import fs from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
+import { pathToFileURL } from 'node:url'
 import { afterAll, expect, it } from 'vitest'
 
 const kit = path.resolve(import.meta.dirname, '../..')
@@ -53,6 +54,7 @@ it.each([
   [{ dependencies: { [sdk]: 'latest' } }, 'unresolved'],
   [{ dependencies: { [sdk]: 'workspace:*' } }, 'unresolved'],
   [{ dependencies: { [sdk]: '1.8.0--pre' } }, 'unresolved'],
+  [{ dependencies: { [sdk]: '1.8.0+build1-hotfix' } }, 'compatible'],
   [{ dependencies: { [sdk]: '>1.8.0 <1.8.1' } }, 'unresolved'],
   [{ dependencies: { [sdk]: '^1.8.0' }, overrides: { [sdk]: '2.0.0' } }, 'unresolved'],
   [{ dependencies: { [sdk]: '<1.8.0 || >=2.0.0' } }, 'conflict'],
@@ -106,4 +108,32 @@ it('compares a real pull pin while the existing integrity check retains its warn
   const checked = invoke('check', '--source', kit)
   expect(checked.status, checked.stderr).toBe(0)
   expect(checked.stderr).not.toContain(sdk)
+})
+
+it('leaves missing blobs unfetched in a partial kit checkout', () => {
+  const sandbox = fs.mkdtempSync(path.join(tmp, 'partial-'))
+  const remote = path.join(sandbox, 'source')
+  const clone = path.join(sandbox, 'clone')
+  const command = (cwd, ...args) => execFileSync('git', args, { cwd, encoding: 'utf8' }).trim()
+  fs.mkdirSync(path.join(remote, 'components', 'probe'), { recursive: true })
+  command(remote, 'init', '-q')
+  command(remote, 'config', 'uploadpack.allowFilter', 'true')
+  fs.writeFileSync(path.join(remote, 'components', 'probe', 'component.json'), JSON.stringify({ name: 'probe', needs: [], packages: ['react'] }))
+  fs.writeFileSync(path.join(remote, 'package.json'), JSON.stringify({ dependencies: { react: '^19.3.1' } }))
+  command(remote, 'add', '.')
+  command(remote, '-c', 'user.name=Fixture', '-c', 'user.email=fixture@example.invalid', 'commit', '-qm', 'Pin')
+  const commit = command(remote, 'rev-parse', 'HEAD')
+  command(sandbox, 'clone', '--quiet', '--no-checkout', '--filter=blob:none', pathToFileURL(remote).href, clone)
+  for (const file of ['tools/package-plan/plan.mjs', 'components/scaffold/packages.mjs']) {
+    fs.mkdirSync(path.dirname(path.join(clone, file)), { recursive: true })
+    fs.copyFileSync(path.join(kit, file), path.join(clone, file))
+  }
+  fs.symlinkSync(path.join(kit, 'node_modules'), path.join(clone, 'node_modules'), 'junction')
+  const dir = fixture({}, { ref: 'partial', commit, components: { probe: {} } })
+  const packs = path.join(clone, '.git', 'objects', 'pack')
+  const before = fs.readdirSync(packs).sort()
+  const result = spawnSync(process.execPath, [path.join(clone, 'tools/package-plan/plan.mjs'), dir], { encoding: 'utf8', cwd: clone })
+  expect(fs.readdirSync(packs).sort()).toEqual(before)
+  expect(result.status, result.stderr).toBe(1)
+  expect(result.stderr).toContain('cannot read pinned components/probe/component.json')
 })
