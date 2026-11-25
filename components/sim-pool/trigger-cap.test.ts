@@ -54,10 +54,10 @@ it('fails a stale bundled worker that supplies a result without current trigger-
   try {
     const worker = join(dir, 'stale.mjs');
     writeFileSync(worker, `
-import { parentPort } from 'node:worker_threads';
+import { parentPort, workerData } from 'node:worker_threads';
 parentPort.on('message', (message) => {
   if (message.type === 'stop') parentPort.close();
-  else parentPort.postMessage({ type: 'record', record: { ...message.spec, result: 'legacy clean', actions: 2, hash: 'legacy' } });
+  else parentPort.postMessage({ type: 'record', record: { ...message.spec, result: workerData.until === undefined ? 'legacy clean' : null, actions: 2, hash: 'legacy' } });
 });
 parentPort.postMessage({ type: 'ready' });
 `);
@@ -65,6 +65,11 @@ parentPort.postMessage({ type: 'ready' });
     expect(record?.result).toBeNull();
     expect(record?.error).toContain('rebuild the worker bundle');
     expect(report([record!]).completed).toBe(0);
+    const lines: string[] = [];
+    expect(await fuzzMain(['--seed', seed, '--until', '1'], module, {
+      worker: pathToFileURL(worker).href, gameTimeoutMs: 5_000,
+    }, (line) => lines.push(line))).toBe(1);
+    expect(lines.join('\n')).toContain('rebuild the worker bundle');
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }

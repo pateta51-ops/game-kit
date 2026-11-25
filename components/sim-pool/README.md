@@ -43,7 +43,7 @@ Plays N whole games of any `GameRules<G>` with a driver, in this thread or on wo
 17. Modules with named registrations should implement `validateDriver(name)` and throw `DriverRegistrationError` for unknown names. Validation is synchronous and depends only on registrations, before loading content on each worker. `simGameOf` provides this hook. Rebuild bundled workers when upgrading to use batch preflight. Preflight also checks requested names on resume, including those already in a checkpoint. The fuzz command exits 2 for invalid registrations and preserves the default `random` for an omitted driver option.
 
 
-- A run stops with a `triggerCap` diagnostic, null result, and replay actions if a trigger chain drops live work. `report` counts that run in `truncated`, and a deliberately cut run with no result in `unfinished`. Neither enters clean finish, length or win counts. Legacy checkpoint records are replayed for trigger-cap evidence. Rebuild a bundled worker after updating the kit.
+- A run stops with a `triggerCap` diagnostic, null result, and replay actions if a trigger chain drops live work. `report` counts that run in `truncated`, and a deliberately cut run with no result in `unfinished`. Neither enters clean finish, length or win counts. Legacy checkpoint records are replayed for trigger-cap evidence. A view-validation run still refuses cached successes without current view evidence. Rebuild a bundled worker after updating the kit.
 
 **Common mistakes:**
 - A game whose result differs between a pool run and a single run: module state is carried between games.

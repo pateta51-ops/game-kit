@@ -106,7 +106,7 @@ async function lane(request: RunRequest, names: readonly string[], next: () => G
           }
           if (m.type === 'record') {
             const r = m.record;
-            collect(r.result != null && r.triggerCapChecked !== true
+            collect(r.triggerCapChecked !== true && r.error === undefined && !r.violations?.length
               ? crashRecord(r, new Error('worker lacks trigger-cap validation; rebuild the worker bundle'))
               : r);
           }
