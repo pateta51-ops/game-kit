@@ -147,9 +147,22 @@ if (cmd === 'pull') {
   const [src, ref, ...names] = a
   const old = readLock()
   const converted = Object.values(old.components).some((c) => c.ref) && !old.ref
-  const NEW = 'kit.new'
+  const NEW = 'kit.new', OLD = 'kit.old'
   let stamp = null
-  const fail = (m) => { fs.rmSync(NEW, { recursive: true, force: true }); if (stamp) fs.rmSync(stamp, { force: true }); console.error('pull failed, kit/ is unchanged: ' + m); process.exit(1) }
+  const clean = (file) => {
+    try { fs.rmSync(file, { recursive: true, force: true }) }
+    catch (e) { console.warn('could not remove ' + file + ': ' + e.message) }
+  }
+  const fail = (message, status = 'kit/ is unchanged') => {
+    clean(NEW)
+    if (stamp) clean(stamp)
+    console.error('pull failed, ' + status + ': ' + message)
+    process.exit(1)
+  }
+  if (fs.lstatSync(OLD, { throwIfNoEntry: false })) {
+    console.error('pull stopped: recovery backup kit.old already exists; inspect it before retrying')
+    process.exit(1)
+  }
   fs.rmSync(NEW, { recursive: true, force: true })
   const gs = gitAt(src)
   let commit
@@ -210,8 +223,6 @@ if (cmd === 'pull') {
   try {
     if (rendering.rules !== undefined) stamp = stampRules('AGENTS.md', rendering.rules)
   } catch (e) { fs.rmSync('AGENTS.md.kit-tmp', { force: true }); fail('worker rules were not stamped into AGENTS.md: ' + String(e.stderr ?? e.message).trim().split('\n')[0]) }
-  const OLD = 'kit.old'
-  fs.rmSync(OLD, { recursive: true, force: true })
   const had = fs.existsSync('kit')
   const F = process.env.KIT_TEST_FAULT ?? ''
   const BUSY = ['EPERM', 'EACCES', 'EBUSY']
@@ -221,36 +232,58 @@ if (cmd === 'pull') {
     }
   }
   const fill = (from, to) => {
-    for (const f of walk(from)) { const r = f.slice(from.length + 1); fs.mkdirSync(dirname(to + '/' + r), { recursive: true }); fs.writeFileSync(to + '/' + r, fs.readFileSync(f)) }
-    for (const f of walk(to)) if (!fs.existsSync(from + '/' + f.slice(to.length + 1))) fs.rmSync(f, { force: true })
-  }
-  try { if (had) rn('kit', OLD); if (F === 'swap') throw new Error('forced'); rn(NEW, 'kit') } catch (e) {
-    if (had && fs.existsSync(OLD) && !fs.existsSync('kit')) { try { rn(OLD, 'kit') } catch { /* held open: the copy swap below rebuilds kit/ from OLD */ } }
-    if (!BUSY.includes(e.code)) fail('swap: ' + e.message)
-    let whole = false, lost = false
-    try {
-      if (had && !fs.existsSync(OLD)) fs.cpSync('kit', OLD, { recursive: true })
-      if (had && !fs.existsSync('kit')) { lost = true; fill(OLD, 'kit') }
-      whole = true
-      if (F.includes('fallback')) throw new Error('forced', { cause: e })
-      fill(NEW, 'kit'); fs.rmSync(NEW, { recursive: true, force: true }); console.log('kit/ replaced by copy (' + e.code + ')')
-    } catch (e2) {
-      try { if (had && lost && !whole) throw 0; if (had) { if (whole) fill(OLD, 'kit'); fs.rmSync(OLD, { recursive: true, force: true }) } else fs.rmSync('kit', { recursive: true, force: true }) } catch { /* kit.old stays as the backup */ }
-      fail('swap: ' + e2.message)
+    fs.mkdirSync(to, { recursive: true })
+    const entries = new Map(fs.readdirSync(from, { withFileTypes: true }).map((e) => [e.name, e]))
+    for (const existing of fs.readdirSync(to, { withFileTypes: true })) {
+      const want = entries.get(existing.name)
+      if (!want || want.isDirectory() !== existing.isDirectory() || want.isSymbolicLink() || existing.isSymbolicLink()) {
+        fs.rmSync(to + '/' + existing.name, { recursive: true, force: true })
+      }
+    }
+    for (const [name, entry] of entries) {
+      const src = from + '/' + name, dest = to + '/' + name
+      if (entry.isDirectory()) fill(src, dest)
+      else if (entry.isSymbolicLink()) fs.cpSync(src, dest, { verbatimSymlinks: true })
+      else fs.copyFileSync(src, dest)
     }
   }
+  let backedUp = false, copyReason
+  let operation = 'swap'
   try {
-    if (stamp) fs.renameSync(stamp, 'AGENTS.md')
-  } catch (e) {
     try {
-      if (had) {
-        fill(OLD, 'kit')
-        fs.rmSync(OLD, { recursive: true, force: true })
-      } else fs.rmSync('kit', { recursive: true, force: true })
-    } catch { /* kit.old stays as the backup */ }
-    fail('worker rules were not installed: ' + e.message)
+      if (had) { rn('kit', OLD); backedUp = true }
+      if (F === 'swap') throw new Error('forced')
+      rn(NEW, 'kit')
+    } catch (e) {
+      if (!BUSY.includes(e.code)) throw e
+      if (had && !backedUp) {
+        try { fs.cpSync('kit', OLD, { recursive: true, verbatimSymlinks: true }) }
+        catch (cause) { clean(OLD); throw cause }
+        backedUp = true
+      }
+      if (F.includes('fallback')) throw new Error('forced', { cause: e })
+      fill(NEW, 'kit')
+      copyReason = e.code
+    }
+    operation = 'worker rules were not installed'
+    if (stamp) fs.renameSync(stamp, 'AGENTS.md')
+  } catch (error) {
+    const message = operation + ': ' + error.message
+    try {
+      if (backedUp) {
+        if (!fs.existsSync('kit')) {
+          try { rn(OLD, 'kit') } catch (cause) { if (!BUSY.includes(cause.code)) throw cause }
+        }
+        if (fs.existsSync(OLD)) { fill(OLD, 'kit'); clean(OLD) }
+      } else if (!had) fs.rmSync('kit', { recursive: true, force: true })
+    } catch (rollback) {
+      fail(message + '\nrollback failed: ' + rollback.message, backedUp ? 'recovery copy kept in kit.old' : 'kit/ may be incomplete')
+    }
+    fail(message)
   }
-  fs.rmSync(OLD, { recursive: true, force: true })
+  clean(NEW)
+  clean(OLD)
+  if (copyReason) console.log('kit/ replaced by copy (' + copyReason + ')')
   if (converted) console.log('converted the per-component locks to one tag: ' + ref)
   console.log('pulled ' + ref + ': ' + Object.keys(lock.components).join(', '))
 } else if (cmd === 'worker-rules') {

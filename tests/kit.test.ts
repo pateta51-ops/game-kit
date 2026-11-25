@@ -391,6 +391,62 @@ describe('kit.mjs', () => {
     expect(run(g, 'check', '--source', src).status).toBe(0);
   });
 
+  it('K751: an interrupted stamp restores the original tree after adding a component', () => {
+    const g = game();
+    expect(run(g, 'pull', src, 'v4', 'alpha').status).toBe(0);
+    const kit = path.join(g, 'kit');
+    const snapshot = (dir: string) => fs.readdirSync(dir, { recursive: true }).sort().map((file) => {
+      const full = path.join(dir, file);
+      return [file, fs.statSync(full).isFile() ? fs.readFileSync(full) : null];
+    });
+    const original = snapshot(kit);
+    const shim = path.join(g, 'fail-stamp.mjs');
+    put(shim, `import fs from 'node:fs';
+const rename = fs.renameSync;
+fs.renameSync = (from, to) => {
+  if (from === 'AGENTS.md.kit-tmp' && to === 'AGENTS.md') throw new Error('forced stamp failure');
+  return rename(from, to);
+};
+`);
+    const upgrade = () => spawnSync('node', ['--import', shim, KIT, 'pull', src, 'k751', 'beta'], { cwd: g, encoding: 'utf8' });
+    const failed = upgrade();
+    expect(failed.status, failed.stderr).toBe(1);
+    expect(failed.stderr).toContain('forced stamp failure');
+    expect(snapshot(kit)).toEqual(original);
+    expect(fs.existsSync(path.join(g, 'kit.old'))).toBe(false);
+    expect(fs.existsSync(path.join(g, 'AGENTS.md.kit-tmp'))).toBe(false);
+    expect(run(g, 'check', '--source', src).status).toBe(0);
+
+    fs.appendFileSync(shim, `const remove = fs.rmSync;
+fs.rmSync = (file, options) => {
+  if (file === 'kit/beta') throw new Error('forced rollback failure');
+  return remove(file, options);
+};
+`);
+    const interrupted = upgrade();
+    expect(interrupted.status, interrupted.stderr).toBe(1);
+    expect(interrupted.stderr).toContain('forced rollback failure');
+    const backup = path.join(g, 'kit.old');
+    expect(snapshot(backup)).toEqual(original);
+    const retry = run(g, 'pull', src, 'k751', 'beta');
+    expect(retry.status, retry.stderr).toBe(1);
+    expect(retry.stderr).toContain('kit.old');
+    expect(snapshot(backup)).toEqual(original);
+  });
+
+  it('K751: a successful copy swap prunes retired support directories', () => {
+    const g = game();
+    expect(run(g, 'pull', src, 'k751', 'alpha').status).toBe(0);
+    expect(fs.existsSync(path.join(g, 'kit/recipes'))).toBe(true);
+    const copied = spawnSync('node', [KIT, 'pull', src, 'v4'], {
+      cwd: g, encoding: 'utf8', env: { ...process.env, KIT_TEST_FAULT: 'rename-eperm' },
+    });
+    expect(copied.status, copied.stderr).toBe(0);
+    expect(copied.stdout).toContain('kit/ replaced by copy');
+    expect(fs.existsSync(path.join(g, 'kit/recipes'))).toBe(false);
+    expect(run(g, 'check', '--source', src).status).toBe(0);
+  });
+
   it('K227: check reports a stray folder or file in kit/', () => {
     const g = game();
     run(g, 'pull', src, 'v1', 'alpha');
