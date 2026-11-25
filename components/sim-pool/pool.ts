@@ -10,6 +10,8 @@ export interface RunRequest {
   /** The URL of the module that exports `simGame`. */
   readonly module: string;
   readonly specs: readonly GameSpec[];
+  /** Also validate these registrations. Resumed runs include the names of checkpointed specs. */
+  readonly preflightDriverNames?: readonly string[];
   /** Invariant checks on (default true). */
   readonly invariants?: boolean;
   /** A bundled worker (the bundle of worker.ts); default worker.ts. */
@@ -81,7 +83,8 @@ export const timeoutRecord = (spec: GameSpec, ms: number): SimRecord<never> => (
   error: `timeout in game ${String(spec.index)} (seed ${spec.seed}): over ${String(ms)} ms`,
 });
 
-const driverNames = (request: RunRequest): string[] => [...new Set(request.specs.map((spec) => spec.driver))];
+const driverNames = (request: RunRequest): string[] =>
+  [...new Set([...request.specs.map((spec) => spec.driver), ...(request.preflightDriverNames ?? [])])];
 
 async function lane(request: RunRequest, names: readonly string[], next: () => GameSpec | undefined, collect: (r: SimRecord) => void): Promise<void> {
   const input: WorkerInput = { module: request.module, driverNames: names, invariants: request.invariants ?? true, until: request.until, view: request.view, hasten: request.hasten, debug: request.debug, hidden: request.hidden };

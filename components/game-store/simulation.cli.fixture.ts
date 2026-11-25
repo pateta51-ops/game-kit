@@ -4,7 +4,7 @@ import { fuzzMain, randomDriver } from '../sim-pool/index.ts';
 import type { GameDef } from './index.ts';
 import { simGameOf } from './sim.ts';
 
-const definition: GameDef<Counter, null> = {
+export const definition: GameDef<Counter, null> = {
   rules: COUNTER,
   content: CONTENT,
   seats: ['solo'],

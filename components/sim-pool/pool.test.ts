@@ -192,7 +192,7 @@ describe('K101 view on every step, hasten, one-step replay', () => {
     expect(record.actions).toBe(0);
   });
 
-  it.each([{ dropped: undefined }, { changed: NaN }, Array(1), new Map(), { toJSON: () => 'altered' }])(
+  it.each([{ dropped: undefined }, { changed: NaN }, Array(1), new Map(), { toJSON: () => 'altered' }, new Proxy({ hidden: 'secret' }, { get: () => undefined })])(
     'refuses lossy view serialization for %j',
     (value: unknown) => {
       const game = { ...simGame, view: () => value };

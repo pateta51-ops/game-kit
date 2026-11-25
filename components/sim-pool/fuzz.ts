@@ -178,13 +178,20 @@ export function findingOf(r: SimRecord): Finding | undefined {
   return { kind, seed: r.seed, driver: r.driver, step: r.actions, messages };
 }
 
+class ViewRunError extends Error {}
+
 /** Play the games of `o` from the module that exports `simGame`, invariants on. */
 export async function fuzz(module: string, o: FuzzOptions = {}): Promise<FuzzRun> {
   const driver = o.driver ?? 'random';
   const seeds = o.seed !== undefined ? [o.seed] : o.seeds ? [...o.seeds] : Array.from({ length: o.games ?? 500 }, (_, i) => `${o.prefix ?? 'fuzz'}-${String(i)}`);
+  if (o.view && seeds.length === 0) throw new ViewRunError('view validation requires at least one game');
   const specs = seeds.map((seed, index): GameSpec => ({ index, seed, driver, ...(o.settings ? { settings: o.settings(seed, driver) } : {}) }));
   const records = await runGames({ module, specs, invariants: true, until: o.until, view: o.view, hasten: o.hasten, debug: o.debug, hidden: o.hidden, gameTimeoutMs: o.gameTimeoutMs, ...(o.worker !== undefined ? { worker: o.worker } : {}) }, o.workers ?? 1);
-  return { records, findings: records.flatMap((r) => findingOf(r) ?? []) };
+  const findings = records.flatMap((r) => findingOf(r) ?? []);
+  if (o.view && findings.length === 0 &&
+      (records.length !== specs.length || records.some((record) => record.viewValidation?.status !== 'executed' || record.viewValidation.checked === 0)))
+    throw new ViewRunError('requested view validation lacks executed checks; check the worker version and adapters');
+  return { records, findings };
 }
 
 export function formatFuzz(run: FuzzRun, shown = 20): string[] {
@@ -243,7 +250,7 @@ export function fuzzMain(
   out: (line: string) => void = (l) => process.stdout.write(`${l}\n`),
 ): Promise<number> {
   return runFuzzMain(args, module, base, out).catch((error: unknown) => {
-    if (!(error instanceof DriverRegistrationError)) throw error;
+    if (!(error instanceof DriverRegistrationError) && !(error instanceof ViewRunError)) throw error;
     out(error.message);
     return 2;
   });

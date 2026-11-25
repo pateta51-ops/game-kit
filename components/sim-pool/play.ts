@@ -60,8 +60,8 @@ export interface SimGame<G extends GameTypes, S = unknown, O = unknown> {
   content(): G['content'] | Promise<G['content']>;
   start(spec: GameSpec, content: G['content']): { options: G['options']; rules: G['rules'] };
   driver(name: string, spec: GameSpec, content: G['content']): Driver<G>;
-  /** Reject invalid registrations before setup or driver creation. Must only depend on the declared registry. */
-  validateDriver?(name: string): void;
+  /** Reject invalid registrations before setup or driver creation. May return the canonical registration, used if the driver has no name. Must only depend on the declared registry. */
+  validateDriver?(name: string): string | void;
   /** The legal answers to the open prompt; default `legalAnswers`. For hidden checks, enumerate only seat-visible choices and keep this callback pure apart from draws from `rng`. */
   answers?(state: G['state'], content: G['content'], rng: DriverRng): readonly G['action'][];
   /** The game's own counters for a game that ended (or stopped). */
@@ -114,9 +114,11 @@ function leaks(view: unknown, secrets: readonly string[], keys: readonly string[
   return [...out];
 }
 
-function assertJsonView(value: unknown, parents = new Set<object>()): void {
-  if (value === null || typeof value === 'string' || typeof value === 'boolean') return;
-  if (typeof value === 'number' && Number.isFinite(value) && !Object.is(value, -0)) return;
+type JsonView = null | boolean | number | string | JsonView[] | { [key: string]: JsonView };
+
+function jsonView(value: unknown, parents = new Set<object>()): JsonView {
+  if (value === null || typeof value === 'string' || typeof value === 'boolean') return value;
+  if (typeof value === 'number' && Number.isFinite(value) && !Object.is(value, -0)) return value;
   const invalid = () => new TypeError('view must be JSON data without lossy values, accessors, or cycles');
   if (typeof value !== 'object' || parents.has(value)) throw invalid();
   const array = Array.isArray(value);
@@ -124,15 +126,21 @@ function assertJsonView(value: unknown, parents = new Set<object>()): void {
   if (array ? prototype !== Array.prototype : prototype !== Object.prototype && prototype !== null) throw invalid();
   const keys = Reflect.ownKeys(value);
   if (array && keys.length !== value.length + 1) throw invalid();
+  if (typeof Reflect.get(value, 'toJSON') === 'function') throw invalid();
   parents.add(value);
+  const entries: [string, JsonView][] = [];
   for (const key of keys) {
     if (array && key === 'length') continue;
     if (typeof key !== 'string' || (array && (!/^(0|[1-9]\d*)$/.test(key) || Number(key) >= value.length))) throw invalid();
     const property = Object.getOwnPropertyDescriptor(value, key);
-    if (!property?.enumerable || !Object.hasOwn(property, 'value')) throw invalid();
-    assertJsonView(property.value, parents);
+    if (!property?.enumerable || !Object.hasOwn(property, 'value') || !Object.is(Reflect.get(value, key), property.value)) throw invalid();
+    entries.push([key, jsonView(property.value, parents)]);
   }
   parents.delete(value);
+  if (!array) return Object.fromEntries(entries);
+  const items: JsonView[] = [];
+  for (const [key, item] of entries) items[Number(key)] = item;
+  return items;
 }
 
 /** K101 options of one game; both are off by default. */
@@ -303,9 +311,9 @@ export function playOne<G extends GameTypes, S, O = unknown>(game: SimGame<G, S,
     const t = performance.now();
     let seat: ViewObservation['seat'] | undefined;
     const validate = (view: unknown, secrets: readonly string[] = [], keys: readonly string[] = []): void => {
-      assertJsonView(view);
-      viewBytes = Math.max(viewBytes ?? 0, JSON.stringify(view).length);
-      const bad = secrets.length || keys.length ? leaks(view, secrets, keys) : [];
+      const json = jsonView(view);
+      viewBytes = Math.max(viewBytes ?? 0, JSON.stringify(json).length);
+      const bad = secrets.length || keys.length ? leaks(json, secrets, keys) : [];
       if (bad.length) throw new Error(`view leak: ${bad.join(', ')}`);
       viewsChecked += 1;
     };
@@ -338,7 +346,7 @@ export function playOne<G extends GameTypes, S, O = unknown>(game: SimGame<G, S,
       throw new Error('view validation unavailable: the game has no view adapter');
     }
     if (opts.hidden && !game.reshuffleHidden) throw new Error('hidden: the game has no reshuffleHidden, so the hidden-shuffle check cannot run');
-    game.validateDriver?.(spec.driver);
+    const registration = game.validateDriver?.(spec.driver);
     const start = game.start(spec, content);
     seen = game.observation?.(spec, content);
     const first = createGame(game.rules, start.options, start.rules, content);
@@ -348,7 +356,7 @@ export function playOne<G extends GameTypes, S, O = unknown>(game: SimGame<G, S,
     violations.push(...first.violations);
     render(s);
     const driver = game.driver(spec.driver, spec, content);
-    resolvedDriver = driver.name || undefined;
+    resolvedDriver = driver.name || registration || spec.driver;
     let hiddenDriver: Driver<G> | undefined;
     const cap = game.maxActions ?? 100_000;
     while (s.result === null && violations.length === 0) {

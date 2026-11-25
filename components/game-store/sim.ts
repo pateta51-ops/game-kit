@@ -49,18 +49,19 @@ export function simGameOf<G extends GameTypes, V, S extends SeatId, Sum = unknow
     }
   }
   const available = [...drivers.keys(), ...aliases.keys()].filter(Boolean).sort().join(', ');
-  const resolve = (name: string): (() => Driver<G>) => {
-    const make = drivers.get(aliases.get(name) ?? name);
+  const resolve = (name: string): { key: string; make: () => Driver<G> } => {
+    const key = aliases.get(name) ?? name;
+    const make = drivers.get(key);
     if (!name || !make) throw new DriverRegistrationError(`unknown driver ${JSON.stringify(name)}; available drivers: ${available}`);
-    return make;
+    return { key, make };
   };
   const seats = [...new Set(o.viewValidation?.seats ?? def.seats)];
   return {
     rules: def.rules,
     content: () => def.content,
     start: (spec) => (o.start ? o.start(spec) : def.start(spec.seed)),
-    validateDriver: (name) => { resolve(name); },
-    driver: (name) => resolve(name)(),
+    validateDriver: (name) => resolve(name).key,
+    driver: (name) => resolve(name).make(),
     ...(seats.length === 0 ? {} : {
       observeViews: (state, _content, { cheated }) => seats.map((seat) => ({
         seat,

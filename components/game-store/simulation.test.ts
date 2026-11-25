@@ -1,9 +1,13 @@
 import { spawnSync } from 'node:child_process';
+import { mkdtempSync, readFileSync, rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { expect, it } from 'vitest';
-import { CONTENT } from '../engine-core/fake/counter.ts';
-import { playOne, runGames } from '../sim-pool/index.ts';
-import { noOpponent } from './simulation.cli.fixture.ts';
+import { CONTENT, type Counter } from '../engine-core/fake/counter.ts';
+import { bySeat, openCheckpoint, playOne, randomDriver, runGames, runResumable } from '../sim-pool/index.ts';
+import { definition, noOpponent } from './simulation.cli.fixture.ts';
+import { simGameOf } from './sim.ts';
 
 const module = new URL('./simulation.cli.fixture.ts', import.meta.url);
 const run = (driver: string) => spawnSync(process.execPath, [
@@ -42,4 +46,36 @@ it('rejects an unavailable opponent and refuses a mixed batch before any setup',
     }, workers, played)).rejects.toThrow(/gredey/);
   }
   expect(records).toEqual([]);
+});
+
+it('records the canonical registration when the aliased driver has an empty name', () => {
+  const unnamed = bySeat<Counter>({}, randomDriver<Counter>());
+  const game = simGameOf(definition, { drivers: { grouped: unnamed }, aliases: { legacy: 'grouped' } });
+  expect(playOne(game, CONTENT, { index: 0, seed: 'grouped', driver: 'legacy' })).toMatchObject({
+    driver: 'legacy', resolvedDriver: 'grouped',
+  });
+});
+
+it('refuses to return historical successes for invalid registrations on resume', async () => {
+  const dir = mkdtempSync(join(tmpdir(), 'driver-preflight-'));
+  try {
+    const file = join(dir, 'resume.jsonl');
+    const requested = { index: 0, seed: 'historical', driver: 'gredey' };
+    openCheckpoint(file, 'compatible').append({ ...requested, actions: 3, hash: 'historical', result: { winner: 0 } });
+    const original = readFileSync(file, 'utf8');
+    const pending = [1, 2].map((index) => ({ index, seed: `pending-${String(index)}`, driver: 'random' }));
+    for (const specs of [[requested], [requested, ...pending]]) {
+      await expect(runResumable({ module: module.href, specs }, 2, file, 'compatible')).rejects.toThrow(/gredey/);
+      expect(readFileSync(file, 'utf8')).toBe(original);
+    }
+
+    const cached = { ...requested, driver: 'random' };
+    openCheckpoint(file, 'compatible').append({ ...cached, actions: 3, hash: 'historical', result: { winner: 0 } });
+    const beforeValidation = readFileSync(file, 'utf8');
+    await expect(runResumable({ module: module.href, specs: [cached], view: true }, 2, file, 'compatible'))
+      .rejects.toThrow(/checkpoint lacks executed view checks/);
+    expect(readFileSync(file, 'utf8')).toBe(beforeValidation);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
 });

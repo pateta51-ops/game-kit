@@ -49,10 +49,15 @@ export async function runResumable(request: RunRequest, workers: number, file: s
   const old: SimRecord[] = [];
   const specs = request.specs.filter((s) => {
     const r = cp.done.get(specKey(s));
-    if (r) old.push({ ...r, index: s.index });
+    if (r) {
+      if (request.view && r.result !== null && (r.viewValidation?.status !== 'executed' || r.viewValidation.checked === 0))
+        throw new Error('checkpoint lacks executed view checks for a finished game; start a new checkpoint to validate its views');
+      old.push({ ...r, index: s.index });
+    }
     return !r;
   });
-  const fresh = await runGames({ ...request, specs }, workers, (r) => {
+  const preflightDriverNames = [...new Set([...request.specs.map((spec) => spec.driver), ...(request.preflightDriverNames ?? [])])];
+  const fresh = await runGames({ ...request, specs, preflightDriverNames }, workers, (r) => {
     cp.append(r);
     onRecord?.(r);
   });
