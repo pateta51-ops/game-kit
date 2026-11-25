@@ -447,7 +447,7 @@ export function finish(args, io, exec = real, win = process.platform === 'win32'
   let O = '', check = f.check ?? 'npm run check'
   if (!f.check) {
     // K712: the PR body is read once when the branch changes anything; orders, kit gap proof and e2e from the changed paths
-    const base = mergeBase(repo), changed = base ? git(repo, ['diff', '--name-only', '-z', base, 'HEAD']).split('\0').filter(Boolean) : []
+    const base = mergeBase(repo), changed = base ? git(repo, ['diff', '--name-only', '--no-renames', '-z', base, 'HEAD']).split('\0').filter(Boolean) : []
     const ig = builtNewIgnore(repo)
     if (ig.probs.length) { io.out(`FAIL ${sha} (${branch}; Built new: package.json kit.builtNew.ignore is not valid; nothing was run)\n${ig.probs.join('\n')}\neach entry: { "glob": "src/data/*.json", "why": "<reason>" }${O}`); return 1 }
     let body = null, bodyErr = ''

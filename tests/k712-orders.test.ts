@@ -224,6 +224,18 @@ describe('K712 finish: orders and e2e from the changed paths', () => {
     expect(scoped.script).toContain(`bash -c 'echo hi'`);
     expect(scoped.text).not.toContain('E2E:');
   });
+  it('K754 runs e2e when a tracked file moves out of a browser root', () => {
+    const from = 'src/ui/helper.ts';
+    const to = 'src/engine/helper.ts';
+    const main = game('k754-move', { ...E2E, [from]: 'export const helper = 1', 'src/engine/keep.ts': '' }, { 'src/old.ts': 'export const a = 2' });
+    g(main, 'mv', from, to);
+    g(main, 'commit', '-qm', 'move helper');
+    expect(g(main, 'diff', '--find-renames', '--name-status', 'origin/main', 'HEAD')).toContain(`R100\t${from}\t${to}`);
+    const result = run(main, '');
+    expect(result.rc, result.text).toBe(0);
+    expect(result.script).toContain(`bash -c 'npm run check && npm run e2e'`);
+    expect(result.text).toContain('first ' + from);
+  });
   it('K754 rejects malformed browser roots before full finish', () => {
     const name = 'src/engine/rules.ts';
     const pkg = { 'package.json': JSON.stringify({ kit: { e2eRoots: ['../elsewhere'] } }) };

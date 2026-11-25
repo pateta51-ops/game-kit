@@ -27,7 +27,7 @@ jobs:
           node-version-file: .nvmrc
       - run: echo "::remove-matcher owner=tsc::"
       - run: npm ci --no-audit --no-fund
-      - run: npx playwright install --with-deps chromium
+      - run: npx --no-install playwright-core install --with-deps chromium
       - run: node components/check-runner/check-runner.ts --config check-runner.config.json --keep-going
         env:
           NO_COLOR: '1'
