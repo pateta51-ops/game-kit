@@ -3,6 +3,7 @@ import fs from 'node:fs'
 import { createRequire } from 'node:module'
 import os from 'node:os'
 import path from 'node:path'
+import { collectPackages } from './packages.mjs'
 
 const require = createRequire(import.meta.url)
 const LEGACY_V1_PROFILES = {
@@ -109,27 +110,25 @@ export function resolveSpec(spec, read, base, profiles) {
     if (status === 'mapped' && reason) throw new Error('buildOwn cannot override a fully mapped mechanic: ' + name)
     return {name,status, ...(m?.part ? {part:m.part, also:m.also ?? [], read:m.read ?? ''}:{}), ...(m?.missing?{missing:m.missing}:{}), ...(m?.row?{candidate:m.row}:{}), ...(reason?{buildOwn:reason}:{})}
   })
-  const visited = new Set()
+  const manifests = new Map()
   const active = new Set()
-  const packages = new Set()
   const visit = n => {
     if (active.has(n)) throw new Error('component dependency cycle: ' + n)
-    if (visited.has(n)) return
+    if (manifests.has(n)) return
     active.add(n)
     const meta = read('components/' + n + '/component.json')
     if (meta.name !== n || !Array.isArray(meta.needs)) throw new Error('invalid component manifest: ' + n)
     for (const dep of meta.needs) { add(dep, 'dependency of ' + n); visit(dep) }
-    for (const p of meta.packages ?? []) packages.add(p)
     active.delete(n)
-    visited.add(n)
+    manifests.set(n, meta)
   }
   for (const n of selected.keys()) visit(n)
   const pkg = read('package.json')
   const dependencies = {}, devDependencies = {}
-  for (const p of [...packages].sort()) {
-    if (Object.hasOwn(pkg.dependencies ?? {},p)) dependencies[p] = pkg.dependencies[p]
-    else if (Object.hasOwn(pkg.devDependencies ?? {},p)) devDependencies[p] = pkg.devDependencies[p]
-    else throw new Error('no pinned package declaration for ' + p)
+  for (const { name, declarations: [declaration] } of collectPackages(manifests, pkg, ['dependencies', 'devDependencies'])) {
+    if (!declaration) throw new Error('no pinned package declaration for ' + name)
+    const destination = declaration.role === 'dependencies' ? dependencies : devDependencies
+    destination[name] = declaration.range
   }
   return {version:1,id:spec.id,name:spec.name,opponent,components:[...selected.keys()].sort().map(name=>({name,reasons:[...selected.get(name)].sort()})),mechanics:decisions,unresolved:decisions.filter(m=>m.status!=='mapped'&&!m.buildOwn).map(m=>m.name),dependencies,devDependencies}
 }

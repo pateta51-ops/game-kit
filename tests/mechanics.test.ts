@@ -12,7 +12,7 @@ afterAll(() => fs.rmSync(tmp, { recursive: true, force: true }));
 const put = (f: string, s: string) => { fs.mkdirSync(path.dirname(f), { recursive: true }); fs.writeFileSync(f, s); };
 const node = (...a: string[]) => spawnSync('node', a, { encoding: 'utf8', env });
 
-type Line = { words: string; tool?: string; part?: string; read?: string; pending?: string; row?: string; sheet?: string };
+type Line = { words: string; searchQueries?: string[]; tool?: string; part?: string; read?: string; pending?: string; row?: string; sheet?: string };
 type Fake = { notes: Record<string, Record<string, unknown>>; lines: Line[]; searches: Record<string, string>; rows: Record<string, string> };
 const entry = (title: string, more: Record<string, unknown> = {}) => ({ title, use: 'You need ' + title + '.', not: 'Anything else.', tags: ['one', 'two', 'three'], visible: false, release: 1, ...more });
 let n = 0;
@@ -98,6 +98,18 @@ describe('K524 mechanics page and search', () => {
       'Inner blorp of alpha (`alpha/inner`): Use: You blorp. Guide: alpha/guide.md',
     ]);
     expect(r.kit('search', 'zork').stdout).toBe('mechanic: zorking, alpha zork -> `alpha`: read guide.md\n');
+  });
+  it('matches a whole search query without treating its words as mechanic aliases', () => {
+    const r = fake((f) => { f.lines[0]!.searchQueries = ['Show the scale of a picture']; });
+    const page = fs.readFileSync(path.join(r.root, 'docs/recipes/mechanics.md'), 'utf8');
+    expect(page).toContain('| zorking, zork a blip | `alpha`: read guide.md |\n');
+    const full = r.kit('search', 'SHOW the Scale of a picture!');
+    expect(full.status).toBe(0);
+    expect(full.stdout).toBe('mechanic: zorking, zork a blip -> `alpha`: read guide.md\n');
+    const broad = r.kit('search', 'picture');
+    expect(broad.status).toBe(0);
+    expect(broad.stdout).not.toContain('mechanic:');
+    expect(broad.stdout).toContain('not in the kit by that name');
   });
   it('a miss prints the nearest mechanics line before "not in the kit by that name"', () => {
     const r = fake();
