@@ -104,7 +104,7 @@ export function migrateSave(save: RawSave, format: SaveFormat = DEFAULT_SAVE_FOR
 
 export type RestoreResult<G extends GameTypes> = (
   | { readonly ok: true; readonly save: SaveFile<G>; readonly state: G['state'] }
-  | { readonly ok: false; readonly error: string }
+  | { readonly ok: false; readonly error: string; readonly failedAt?: number; readonly actionError?: string }
 ) & { readonly violations?: readonly InvariantViolation[] };
 
 const isObj = (x: unknown): x is Record<string, unknown> => x !== null && typeof x === 'object' && !Array.isArray(x);
@@ -115,6 +115,7 @@ export function restoreSave<G extends GameTypes>(
   raw: unknown,
   content: G['content'],
   format: SaveFormat = DEFAULT_SAVE_FORMAT,
+  diagnosticsOptions: { actionFailure?: boolean } = {},
 ): RestoreResult<G> {
   try {
     if (!isObj(raw)) return { ok: false, error: 'This is not a save file.' };
@@ -140,8 +141,9 @@ export function restoreSave<G extends GameTypes>(
     // A9: a different build wrote it, so a refused action means the engine changed, not that the file was edited
     const otherBuild = save.appCommit !== (format.appCommit ?? UNKNOWN_COMMIT) && save.appCommit !== UNKNOWN_COMMIT && format.appCommit !== undefined;
     const diagnostics = r.violations === undefined ? {} : { violations: r.violations };
-    if (r.invariantFailure) return { ok: false, error: r.error ?? DAMAGED, ...diagnostics };
-    if (!r.ok || r.state === null) return { ok: false, error: r.reason === 'pack' || otherBuild ? OLDER_BUILD : DAMAGED, ...diagnostics };
+    const failedAction = !diagnosticsOptions.actionFailure || r.failedAt === null || r.error === null ? {} : { failedAt: r.failedAt, actionError: r.error };
+    if (r.invariantFailure) return { ok: false, error: r.error ?? DAMAGED, ...diagnostics, ...failedAction };
+    if (!r.ok || r.state === null) return { ok: false, error: r.reason === 'pack' || otherBuild ? OLDER_BUILD : DAMAGED, ...diagnostics, ...failedAction };
     if (sealOf(r.state, save.undoUsed) !== save.finalHash) return { ok: false, error: OLDER_BUILD, ...diagnostics };
     return { ok: true, save, state: r.state, ...diagnostics };
   } catch (e) {
