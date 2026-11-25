@@ -4,6 +4,11 @@ A hand of cards as a fan that fits any number of cards in a width, lifts the car
 
 ## Rules for agents
 
+<!-- hooks: written by scripts/catalog.mjs from docs/catalog-notes.json; do not edit -->
+**Hooks a game calls:**
+- `CardHand`: show a card hand with animation speed and play glide controlled by the game
+<!-- /hooks -->
+
 **What it does:** A fan of cards that fits any count in a width, lifts the card under the pointer or focus, shows the prompt's marks, reports taps and is a drag source; a grid layout serves phones.
 
 **You must:**

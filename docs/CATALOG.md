@@ -359,6 +359,7 @@ A hand of cards as a fan that fits any number of cards in a width, lifts the car
 - **Use it when:** Showing a hand of cards (or an opponent's face-down hand) as a fan that fits any width, lifts on pointer or focus, marks legal, picked and barred cards from the prompt, reports taps, is a drag source, and animates draw-in and play glide; or, with layout=grid, the phone hand: whole cards in rows with a header slot.
 - **Not for:** The card face, shadows, glow, badges, colours (the game's, on data-part hooks); reordering a hand.
 - **Key exports:** `TILT`, `fanOf`, `stepOf`, `SPREAD`, `spreadOf`, `shiftOf`, `HAND_MS`, `RISE_MS`, `PLAY_MS`, `msAt`, `noteLaunch`, `takeLaunch`, `playKeyframes`, `riseKeyframes`, and 2 more
+- **Hook:** CardHand: show a card hand with animation speed and play glide controlled by the game
 - **Needs:** [`engine-core`](#engine-core), [`card-zones`](#card-zones), [`drag-drop`](#drag-drop), [`motion-frame`](#motion-frame), [`picked-state`](#picked-state), [`prompt-host`](#prompt-host)
 - **Came from:** imperium
 - **Docs:** [README](../components/card-hand/README.md) ([rules for agents](../components/card-hand/README.md#rules-for-agents))
@@ -832,6 +833,7 @@ Drag a source onto a target, both option ids of the open prompt: a drop answers 
 - **Use it when:** Dragging a source (hand card, pile) onto a target on the board, both option ids of the open prompt: a drop answers as tap source then tap target through prompt-host useBoardPick, with the ghost, legal-target marks and animation.
 - **Not for:** Free dragging that answers nothing (reordering a hand, moving a panel); the look of the ghost and the targets.
 - **Key exports:** `DRAG_THRESHOLD_PX`, `pressSource`, `dragStep`, `DragGesture`, `DragInput`, `DragStep`
+- **Hook:** useDragDrop + DragGhost: drag a card onto a target with one animation speed for the ghost return
 - **Needs:** [`prompt-host`](#prompt-host), [`motion-frame`](#motion-frame), [`engine-core`](#engine-core), [`prompt-source`](#prompt-source)
 - **Came from:** imperium
 - **Docs:** [README](../components/drag-drop/README.md) ([rules for agents](../components/drag-drop/README.md#rules-for-agents))
@@ -1146,7 +1148,8 @@ A React modal over the board and a confirm dialog built on it.
 - **Use it when:** Show a dialog or confirm a choice over the board, with focus return and a scroll lock.
 - **Not for:** Rules for deciding when a game prompts the player.
 - **Key exports:** `Modal`, `ConfirmDialog`, `ModalProps`, `ConfirmDialogProps`
-- **Needs:** nothing
+- **Hook:** Modal + ConfirmDialog: show a modal dialog with keyboard focus, Tab containment and Escape ownership
+- **Needs:** [`ui-helpers`](#ui-helpers)
 - **Came from:** unstoppable
 - **Docs:** [README](../components/modal-dialog/README.md) ([rules for agents](../components/modal-dialog/README.md#rules-for-agents))
 
@@ -1161,7 +1164,8 @@ Plays motion specs in the director's format (one JSON per beat: `actors`, `steps
 - **The game supplies:** The motion spec files and the elements they name.
 - **Use it when:** Playing the director's motion specs (JSON beats) on the screen.
 - **Not for:** The effects themselves (effect-library) or game logic.
-- **Key exports:** `withViewTransition`, `withVariant`, `stageFromLayout`, `buildTimeline`, `validateSpec`, `validateSpecs`, `placeOf`, `createVerbs`, `createMotionPlayer`, `withReducedMotion`, `prefersReducedMotion`, `automatedWithoutMotion`, `withAutomationOff`, `putMotionSpeed`, and 47 more
+- **Key exports:** `withViewTransition`, `withVariant`, `stageFromLayout`, `buildTimeline`, `validateSpec`, `validateSpecs`, `placeOf`, `createVerbs`, `createMotionPlayer`, `withReducedMotion`, `motionRate`, `prefersReducedMotion`, `automatedWithoutMotion`, `withAutomationOff`, and 48 more
+- **Hook:** motionRate: share one motion preference across hand, drag and timeline durations by converting a duration factor to a rate
 - **Hook:** holdUntil + autoContinueMs: hold a beat until a condition, with a timed fallback
 - **Hook:** release: let a held beat go when the game is ready
 - **Hook:** onCue + onDroppedCue: play a sound on a beat, also when the beat is skipped
@@ -1240,7 +1244,7 @@ The engine speed budget: plays whole driver games, times every `applyAction`, an
 
 ## phone-mode
 
-The mechanism of a phone layout: which layout a window gets, the fit zoom of the large screens, safe-area tokens, the one bottom sheet, folds, second-tap commit, the sideways panel. The game keeps its screens, zones, sheet contents, words and look. Needs `state-machines` and the packages `react` and `zustand`. `index.ts` draws nothing and loads in node; `ui.ts` holds the React parts.
+The mechanism of a phone layout: which layout a window gets, the fit zoom of the large screens, safe-area tokens, the one bottom sheet, folds, second-tap commit, the sideways panel. The game keeps its screens, zones, sheet contents, words and look. Needs `state-machines`, `ui-helpers` and the packages `react` and `zustand`. `index.ts` draws nothing and loads in node; `ui.ts` holds the React parts.
 
 - **Also called:** Phone screen layout
 - **Looks like:** A phone-sized layout with one bottom sheet and a second tap to confirm.
@@ -1250,7 +1254,7 @@ The mechanism of a phone layout: which layout a window gets, the fit zoom of the
 - **Use it when:** The game has a phone layout: layout choice, fit zoom, safe areas, the one bottom sheet, second-tap commit.
 - **Not for:** Desktop-only games; some owners skip phone.
 - **Key exports:** `secondTap`, `VIEWPORT_MACHINE`, `foldMachine`, `SECOND_TAP_MACHINE`, `PHONE_SHORT_SIDE`, `DESK_W`, `DESK_H`, `layoutModeFor`, `layoutAttr`, `isPhone`, `fitZoom`, `applyFit`, `setSafeArea`, `needsFit`, and 36 more
-- **Needs:** [`state-machines`](#state-machines)
+- **Needs:** [`state-machines`](#state-machines), [`ui-helpers`](#ui-helpers)
 - **Came from:** jarl
 - **Docs:** [README](../components/phone-mode/README.md) ([rules for agents](../components/phone-mode/README.md#rules-for-agents))
 
@@ -1406,7 +1410,8 @@ Shows the engine's open question (an engine-core prompt) through a typed widget 
 - **Use it when:** Showing the open engine-core prompt on screen: a widget per prompt kind (a missing one fails to compile), the common widgets (pick, amount, order, may, pay) unstyled, forced answers sent from the store in one undo step (answerWithForced), board picks with tap to confirm (one or several). Recipe: docs/recipes/prompts.md.
 - **Not for:** The game's look or its own kind-specific widgets; board highlights (the game draws those from the option ids).
 - **Key exports:** `autoAnswer`, `checkLook`, `answerWithForced`, `sendForced`, `Forced`, `ForcedOptions`
-- **Needs:** [`engine-core`](#engine-core), [`prompt-source`](#prompt-source)
+- **Hook:** useBoardPick: board pick confirmation that yields keyboard input to dialogs
+- **Needs:** [`engine-core`](#engine-core), [`prompt-source`](#prompt-source), [`ui-helpers`](#ui-helpers)
 - **Came from:** rome
 - **Docs:** [README](../components/prompt-host/README.md) ([rules for agents](../components/prompt-host/README.md#rules-for-agents))
 
@@ -1568,6 +1573,7 @@ Flatbed scans of a game's components to one upright, tightly cropped image per i
 - **Use it when:** Turning flatbed scans into one cropped upright image per item; a printed board scan with live state drawn into its boxes, die-cut pieces at true size, playmat box detection, tone profile.
 - **Not for:** Scanning crew boards. Offline scan tools prepare assets. ScanBoard and Piece are available in-game.
 - **Key exports:** Python package `scanpipe`; TS `index.ts` (measureBoxes, planOverlay, clipPathOf, mmStyle, uniformOutlines...), `ui.ts` (ScanBoard, Piece)
+- **Hook:** loadGeometry: load scan board geometry, retry a failed attempt and cache successful measurements
 - **Needs:** nothing
 - **Came from:** scanning-pipeline
 - **Docs:** [README](../components/scan-ingest/README.md) ([rules for agents](../components/scan-ingest/README.md#rules-for-agents))
@@ -1925,7 +1931,9 @@ Small screen helpers with no look and no game types. The stores are zustand vani
 - **The game supplies:** Depends on the helper; see its entry.
 - **Use it when:** Small screen helpers: hover hold, inspect, rule sheet, toasts, prompt keys. For an engine-core prompt use prompt-host instead of createSelection and onlyForcedAnswer.
 - **Not for:** Any look or game type.
-- **Key exports:** `realTimers`, `bindHoverHold`, `createHoverHold`, `createInspect`, `createToasts`, `createSelection`, `picksFor`, `onlyForcedAnswer`, `probedAnswer`, `sheetMatching`, `sheetWords`, `compileIconWords`, `iconizeSegments`, `withoutIconWords`, and 41 more
+- **Key exports:** `realTimers`, `bindHoverHold`, `createHoverHold`, `createInspect`, `createToasts`, `createSelection`, `picksFor`, `onlyForcedAnswer`, `probedAnswer`, `sheetMatching`, `sheetWords`, `compileIconWords`, `iconizeSegments`, `withoutIconWords`, and 43 more
+- **Hook:** bindPromptKeys + bindPlayKeys: background keyboard shortcuts and prompt keys that pause under a dialog
+- **Hook:** activeOverlay: find the active overlay keyboard owner
 - **Needs:** nothing
 - **Came from:** jarl
 - **Docs:** [README](../components/ui-helpers/README.md) ([rules for agents](../components/ui-helpers/README.md#rules-for-agents))

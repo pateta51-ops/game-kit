@@ -2,6 +2,11 @@ A React modal over the board and a confirm dialog built on it.
 
 ## Rules for agents
 
+<!-- hooks: written by scripts/catalog.mjs from docs/catalog-notes.json; do not edit -->
+**Hooks a game calls:**
+- `Modal` + `ConfirmDialog`: show a modal dialog with keyboard focus, Tab containment and Escape ownership
+<!-- /hooks -->
+
 **What it does:** A React modal over the board and a confirm dialog built on it.
 
 **You must:**

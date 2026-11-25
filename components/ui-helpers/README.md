@@ -5,6 +5,12 @@ Small screen helpers with no look and no game types. The stores are zustand vani
 
 ## Rules for agents
 
+<!-- hooks: written by scripts/catalog.mjs from docs/catalog-notes.json; do not edit -->
+**Hooks a game calls:**
+- `bindPromptKeys` + `bindPlayKeys`: background keyboard shortcuts and prompt keys that pause under a dialog
+- `activeOverlay`: find the active overlay keyboard owner
+<!-- /hooks -->
+
 **What it does:** Small screen helpers with no look and no game types: hover hold, inspect, toasts, selection, forced-answer and probe helpers, sheet search, icon words, prompt and play keys, and link tooltips.
 
 **You must:**

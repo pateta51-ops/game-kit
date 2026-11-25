@@ -8,6 +8,11 @@ content pack. Real scans never enter the kit; the tests draw their own sheets.
 
 ## Rules for agents
 
+<!-- hooks: written by scripts/catalog.mjs from docs/catalog-notes.json; do not edit -->
+**Hooks a game calls:**
+- `loadGeometry`: load scan board geometry, retry a failed attempt and cache successful measurements
+<!-- /hooks -->
+
 **What it does:** turns flatbed scans of a game's components into one upright, cropped image per item with a review overlay and a manifest (Python `scanpipe`), and, in TypeScript, draws live state on a printed board scan.
 
 **You must:**

@@ -3,6 +3,11 @@ Drag a source onto a target, both option ids of the open prompt: a drop answers 
 
 ## Rules for agents
 
+<!-- hooks: written by scripts/catalog.mjs from docs/catalog-notes.json; do not edit -->
+**Hooks a game calls:**
+- `useDragDrop` + `DragGhost`: drag a card onto a target with one animation speed for the ghost return
+<!-- /hooks -->
+
 **What it does:** Drag a source onto a target, both option ids of the open prompt; a drop answers exactly as tap source then tap target (one answer, one undo step).
 
 **You must:**

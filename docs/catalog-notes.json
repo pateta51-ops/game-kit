@@ -347,7 +347,10 @@
     "looks": "A row of cards fanned to fit the width; the one under the pointer lifts.",
     "visible": true,
     "release": 1,
-    "gameSupplies": "The cards, their face view and the look."
+    "gameSupplies": "The cards, their face view and the look.",
+    "hooks": [
+      "CardHand: show a card hand with animation speed and play glide controlled by the game"
+    ]
   },
   "card-harness": {
     "use": "Testing card effects on real cards with the scenario builder, prompt delivery, choice probe and inventory with stale check; test depth: a full-resolve test per clause and a poor test (expectNotOffered, expectNotFired) per conditional clause. Check semantic mutation coverage across the clause inventory.",
@@ -969,7 +972,10 @@
     "looks": "A card or pile is picked up and dropped on a board target, answering a question.",
     "visible": true,
     "release": 1,
-    "gameSupplies": "The sources, the targets and the open prompt options."
+    "gameSupplies": "The sources, the targets and the open prompt options.",
+    "hooks": [
+      "useDragDrop + DragGhost: drag a card onto a target with one animation speed for the ghost return"
+    ]
   },
   "e2e-helpers": {
     "mechanics": "none: test tooling",
@@ -1300,6 +1306,9 @@
     "gameSupplies": "The content and its look.",
     "entry": [
       "ui.tsx"
+    ],
+    "hooks": [
+      "Modal + ConfirmDialog: show a modal dialog with keyboard focus, Tab containment and Escape ownership"
     ]
   },
   "motion-frame": {
@@ -1335,6 +1344,7 @@
     "release": 1.1,
     "gameSupplies": "The motion spec files and the elements they name.",
     "hooks": [
+      "motionRate: share one motion preference across hand, drag and timeline durations by converting a duration factor to a rate",
       "holdUntil + autoContinueMs: hold a beat until a condition, with a timed fallback",
       "release: let a held beat go when the game is ready",
       "onCue + onDroppedCue: play a sound on a beat, also when the beat is skipped",
@@ -1687,7 +1697,10 @@
     "looks": "The box that asks the player a question, with a widget for each kind of question.",
     "visible": true,
     "release": 1,
-    "gameSupplies": "A widget for each prompt kind, and the look."
+    "gameSupplies": "A widget for each prompt kind, and the look.",
+    "hooks": [
+      "useBoardPick: board pick confirmation that yields keyboard input to dialogs"
+    ]
   },
   "prompt-source": {
     "use": "Each prompt must name its source card and clause and who decides.",
@@ -1919,7 +1932,10 @@
     "visible": false,
     "release": 1,
     "gameSupplies": "The scan files and the crop settings.",
-    "exports": "Python package `scanpipe`; TS `index.ts` (measureBoxes, planOverlay, clipPathOf, mmStyle, uniformOutlines...), `ui.ts` (ScanBoard, Piece)"
+    "exports": "Python package `scanpipe`; TS `index.ts` (measureBoxes, planOverlay, clipPathOf, mmStyle, uniformOutlines...), `ui.ts` (ScanBoard, Piece)",
+    "hooks": [
+      "loadGeometry: load scan board geometry, retry a failed attempt and cache successful measurements"
+    ]
   },
   "screens": {
     "use": "Main menu and new-game set-up form (seats, scenario, difficulty, extras) from data, unstyled, with a pure default and validate. Non-table screen frame, footer, disclaimer and persistent theme toggle.",
@@ -2438,7 +2454,11 @@
     ],
     "visible": false,
     "release": 1,
-    "gameSupplies": "Depends on the helper; see its entry."
+    "gameSupplies": "Depends on the helper; see its entry.",
+    "hooks": [
+      "bindPromptKeys + bindPlayKeys: background keyboard shortcuts and prompt keys that pause under a dialog",
+      "activeOverlay: find the active overlay keyboard owner"
+    ]
   },
   "voice": {
     "mechanics": "none: sound or voice only",
