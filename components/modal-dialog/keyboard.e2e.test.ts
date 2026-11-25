@@ -49,6 +49,11 @@ describe.skipIf(!HAVE && !process.env['CI'])('modal, board shortcuts and attachm
       expect(await page.getByRole('textbox', { name: 'Decision note' }).evaluate((el) => el === document.activeElement)).toBe(true);
       await page.keyboard.press('Tab');
       expect(await page.getByRole('button', { name: 'Open nested dialog' }).evaluate((el) => el === document.activeElement)).toBe(true);
+      await page.keyboard.press('Tab');
+      expect(await page.getByRole('button', { name: 'Legend action', exact: true }).evaluate((el) => el === document.activeElement)).toBe(true);
+      await page.keyboard.press('Tab');
+      expect(await page.getByRole('textbox', { name: 'Editable decision note', exact: true }).evaluate((el) => el === document.activeElement)).toBe(true);
+      await page.getByRole('button', { name: 'Open nested dialog' }).focus();
       await page.keyboard.press('Enter');
       await page.getByRole('dialog', { name: 'Nested decision', exact: true }).waitFor({ state: 'visible' });
       await page.keyboard.press('Escape');
@@ -91,6 +96,10 @@ describe.skipIf(!HAVE && !process.env['CI'])('modal, board shortcuts and attachm
       await page.keyboard.press('Space');
       expect(await page.getByTestId('reads').textContent()).toBe('2');
       expect(await page.getByTestId('child-actions').textContent()).toBe('2');
+      await page.getByText('Toggle attachment', { exact: true }).click();
+      expect(await page.getByRole('checkbox', { name: 'Toggle attachment' }).isChecked()).toBe(true);
+      expect(await page.getByTestId('reads').textContent()).toBe('2');
+      expect(await page.getByTestId('child-actions').textContent()).toBe('3');
     } finally { await page.close(); }
   });
 

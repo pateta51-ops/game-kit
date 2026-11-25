@@ -46,7 +46,8 @@ function Board() {
       <output data-testid="child-actions">{childActions}</output>
       <HostStack host={<strong>Host</strong>} w={120} h={160} mode="fan" fanStep={0.4} ms={0}
         attachments={[{ key: 'read', node: <span>Readable attachment</span> },
-          { key: 'child', node: <button onClick={() => setChildActions((n) => n + 1)}>Attachment action</button> }]}
+          { key: 'child', node: <button onClick={() => setChildActions((n) => n + 1)}>Attachment action</button> },
+          { key: 'label', node: <label>Toggle attachment<input type="checkbox" onChange={() => setChildActions((n) => n + 1)} /></label> }]}
         onRead={() => setReads((n) => n + 1)} />
     </main>
     {sheet && <Sheet title="Board sheet" slideMs={0} onClose={() => setSheet(false)}>
@@ -54,9 +55,15 @@ function Board() {
     </Sheet>}
     <Modal open={modal} title="Board decision" speed={0} onClose={() => setModal(false)}
       actions={<button onClick={() => setModal(false)}>Close modal</button>}>
+      <fieldset disabled><button data-autofocus>Unavailable fieldset action</button></fieldset>
       <label>Decision note <input aria-label="Decision note" data-autofocus /></label>
       <button hidden>Hidden choice</button><button disabled>Disabled choice</button>
       <button onClick={() => setNested(true)}>Open nested dialog</button>
+      <fieldset disabled>
+        <legend><button>Legend action</button></legend>
+        <legend><button>Unavailable second legend action</button></legend>
+      </fieldset>
+      <div contentEditable suppressContentEditableWarning role="textbox" aria-label="Editable decision note">Editable note</div>
     </Modal>
     <Modal open={nested} title="Nested decision" speed={0} onClose={() => setNested(false)}>
       <button data-autofocus onClick={() => setNested(false)}>Close nested dialog</button>

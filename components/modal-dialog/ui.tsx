@@ -4,7 +4,20 @@ import { activeOverlay, isActiveElement } from '../ui-helpers/promptKeys.ts';
 import './modal-dialog.css';
 
 const FOCUSABLE =
-  'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
+  'a[href], button, input:not([type="hidden"]), select, textarea, [tabindex], [contenteditable]';
+const editable = (element: Element | null): boolean => {
+  for (let at = element; at; at = at.parentElement) {
+    const value = at.getAttribute('contenteditable')?.toLowerCase();
+    if (value === 'false') return false;
+    if (value === '' || value === 'true' || value === 'plaintext-only') return true;
+  }
+  return false;
+};
+const tabStop = (el: HTMLElement): boolean => {
+  if (el.matches(':disabled') || !isActiveElement(el)) return false;
+  if (el.hasAttribute('tabindex') || el.matches('a[href], button, input, select, textarea')) return el.tabIndex >= 0;
+  return editable(el) && !editable(el.parentElement);
+};
 let openCount = 0;
 let previousOverflow = '';
 
@@ -31,7 +44,7 @@ export function Modal({ open, onClose, title, children, actions, closeOnBackdrop
       previousOverflow = document.body.style.overflow;
       document.body.style.overflow = 'hidden';
     }
-    const controls = () => Array.from(panel.querySelectorAll<HTMLElement>(FOCUSABLE)).filter((el) => el.tabIndex >= 0 && isActiveElement(el));
+    const controls = () => Array.from(panel.querySelectorAll<HTMLElement>(FOCUSABLE)).filter(tabStop);
     const first = controls().find((el) => el.hasAttribute('data-autofocus')) ?? controls()[0] ?? panel;
     first.focus({ preventScroll: true });
 

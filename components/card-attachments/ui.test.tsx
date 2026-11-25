@@ -79,6 +79,16 @@ describe('HostStack', () => {
     fireEvent.keyDown(attachment, { key: 'Enter' })
     expect(onRead).not.toHaveBeenCalled()
   })
+  it.each(['wrapped', 'linked'] as const)('leaves a %s checkbox label to its associated control', (kind) => {
+    const onRead = vi.fn(), change = vi.fn()
+    const input = <input id="attachment-choice" type="checkbox" onChange={change} />
+    const node = kind === 'wrapped' ? <label>Toggle {input}</label> : <><label htmlFor="attachment-choice">Toggle</label>{input}</>
+    const { getByText, getByRole } = render(<HostStack host="h" attachments={[{ key: 'a', node }]} w={100} h={140} onRead={onRead} />)
+    fireEvent.click(getByText('Toggle'))
+    expect(change).toHaveBeenCalledTimes(1)
+    expect(getByRole('checkbox')).toBeChecked()
+    expect(onRead).not.toHaveBeenCalled()
+  })
 })
 
 describe('TokenRow and NumberBox', () => {
