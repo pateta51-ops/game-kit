@@ -10,6 +10,7 @@ A React modal over the board and a confirm dialog built on it.
 3. Pass `speed` from settings (default 1, 0 = instant fade).
 4. Set the `--kc-modal-*` variables on `body` or an ancestor of the portal to match the game's look.
 5. Use `closeOnBackdrop={false}` where an accidental click must not dismiss.
+6. Keep nested dialogs in opening order. The last visible, non-inert dialog owns Escape and Tab; background prompt/play keys and armed board picks pause while it is open.
 
 **Common mistakes:**
 - Leaving `open` true after `onConfirm`, `onCancel` or `onClose`: neither dialog closes itself, so it stays up.
@@ -19,7 +20,7 @@ A React modal over the board and a confirm dialog built on it.
 
 `Modal` takes `open`, `onClose`, `title`, `children` and optional `actions`.
 Escape and backdrop clicks call `onClose`. Set `closeOnBackdrop={false}` to disable backdrop dismissal.
-The portal mounts in `document.body` and locks body scrolling while open. Focus goes to `data-autofocus`, the first focusable control, or the panel, and returns to the opener on close.
+The portal mounts in `document.body` and locks body scrolling while open. The panel has `role="dialog"`, `aria-modal="true"` and an accessible name from its title. Focus goes to a visible, enabled `data-autofocus` control, the first focusable control, or the panel. Tab and Shift+Tab wrap within the active dialog. Closing a nested dialog returns focus to its opener; closing a lower dialog does not steal focus from the active one. Only the active dialog handles Escape. Closed dialogs stay mounted under `hidden` and `inert`, so they do not suppress shortcuts.
 `ConfirmDialog` takes the same open, title, backdrop and speed props, plus `message`, `confirmLabel`, `onConfirm`, `onCancel`, optional `cancelLabel` (defaults to Cancel) and `danger`. Escape and backdrop dismissal call `onCancel`. The caller updates `open` after acting.
 `speed` scales the fade duration (default 1, 0 for instant).
 

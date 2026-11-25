@@ -1,6 +1,6 @@
 # phone-mode
 
-The mechanism of a phone layout: which layout a window gets, the fit zoom of the large screens, safe-area tokens, the one bottom sheet, folds, second-tap commit, the sideways panel. The game keeps its screens, zones, sheet contents, words and look. Needs `state-machines` and the packages `react` and `zustand`. `index.ts` draws nothing and loads in node; `ui.ts` holds the React parts.
+The mechanism of a phone layout: which layout a window gets, the fit zoom of the large screens, safe-area tokens, the one bottom sheet, folds, second-tap commit, the sideways panel. The game keeps its screens, zones, sheet contents, words and look. Needs `state-machines`, `ui-helpers` and the packages `react` and `zustand`. `index.ts` draws nothing and loads in node; `ui.ts` holds the React parts.
 
 ## Rules for agents
 
@@ -16,6 +16,7 @@ The mechanism of a phone layout: which layout a window gets, the fit zoom of the
 7. Feed `createHaptics({ enabled })` from the game's Haptics setting; use `setSafeArea` in e2e tests (a browser cannot emulate a notch).
 8. Use `dockWantsOpen`, `useDock(wants, dockKey(...))` and `shortPrompt` together for the prompt dock.
 9. Install Playwright separately if you run the standalone screenshot script `demo/imp-shots.mjs`. The phone component does not require it.
+10. Keep nested dialogs in opening order: only the last active dialog handles Escape. A Modal above a Sheet closes first; an inert leaving sheet no longer owns the keys. Custom overlays should use the shared `ui-helpers` active-overlay check.
 
 **Common mistakes:**
 - Using CSS zoom on a phone screen: only the fitted mode zooms.

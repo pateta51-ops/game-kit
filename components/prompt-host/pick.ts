@@ -4,6 +4,7 @@
 // Confirm or Enter answers once min..max are picked; `confirm: false` answers when max are picked).
 import { useEffect, useState } from 'react';
 import type { KernelPrompt } from '../engine-core/index.ts';
+import { activeOverlay, isControl, isTyping } from '../ui-helpers/promptKeys.ts';
 import type { Answer } from './host.tsx';
 
 export type Mark = 'legal' | 'barred' | 'armed';
@@ -25,7 +26,7 @@ export interface BoardPick {
 }
 
 /** `confirm: false` answers on the first tap (a mouse with hover previews needs no second tap). */
-export function useBoardPick(prompt: KernelPrompt | null, answer: Answer, { confirm: ask = true }: { confirm?: boolean } = {}): BoardPick {
+export function useBoardPick(prompt: KernelPrompt | null, answer: Answer, { confirm: ask = true, overlay, paused }: { confirm?: boolean; overlay?: string; paused?: () => boolean } = {}): BoardPick {
   const [at, setAt] = useState<{ prompt: number; ids: readonly string[] } | null>(null);
   const legal = (id: string): boolean => prompt?.options.some((o) => o.id === id && o.enabled) === true;
   const max = prompt?.max ?? 1;
@@ -72,8 +73,9 @@ export function useBoardPick(prompt: KernelPrompt | null, answer: Answer, { conf
   useEffect(() => {
     if (armed === null) return;
     const key = (e: KeyboardEvent): void => {
-      if (e.key === 'Enter') pick.confirm();
-      else if (e.key === 'Escape') pick.cancel();
+      if (e.defaultPrevented || e.repeat || e.ctrlKey || e.metaKey || e.altKey || isTyping(e.target) || paused?.() === true || activeOverlay(document, overlay) != null) return;
+      if (e.key === 'Enter' && !isControl(e.target) && pick.ready) { e.preventDefault(); pick.confirm(); }
+      else if (e.key === 'Escape') { e.preventDefault(); pick.cancel(); }
     };
     window.addEventListener('keydown', key);
     return () => window.removeEventListener('keydown', key);

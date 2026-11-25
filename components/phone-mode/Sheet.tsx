@@ -1,6 +1,7 @@
 // The bottom sheet: a full-screen layer (100dvh), a scrim that closes it, the panel at its bottom up to --pm-sheet-max of
 // the screen, with a handle, a title, a 44 px close button, a scrolling body and an optional foot in the thumb zone.
 import { useEffect, useId, useRef, useState, type CSSProperties, type PointerEvent as PE, type ReactNode } from 'react';
+import { activeOverlay } from '../ui-helpers/promptKeys.ts';
 import './phone-mode.css';
 
 /** Imperium's: a swipe down on the head past this many px closes the sheet, a shorter drag springs back. */
@@ -113,7 +114,7 @@ export function Sheet({
     hold(true);
     box.current?.focus({ preventScroll: true });
     const key = (e: KeyboardEvent) => {
-      if (e.key !== 'Escape') return;
+      if (e.key !== 'Escape' || e.defaultPrevented || activeOverlay(document) !== box.current) return;
       e.preventDefault();
       req.current();
     };

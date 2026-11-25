@@ -1,5 +1,6 @@
-import { useEffect, useEffectEvent, useRef, type CSSProperties, type ReactNode } from 'react';
+import { useEffect, useEffectEvent, useId, useRef, type CSSProperties, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
+import { activeOverlay, isActiveElement } from '../ui-helpers/promptKeys.ts';
 import './modal-dialog.css';
 
 const FOCUSABLE =
@@ -19,6 +20,7 @@ export interface ModalProps {
 
 export function Modal({ open, onClose, title, children, actions, closeOnBackdrop = true, speed = 1 }: ModalProps) {
   const dialog = useRef<HTMLDivElement>(null);
+  const titleId = useId();
   const close = useEffectEvent(onClose);
 
   useEffect(() => {
@@ -29,22 +31,30 @@ export function Modal({ open, onClose, title, children, actions, closeOnBackdrop
       previousOverflow = document.body.style.overflow;
       document.body.style.overflow = 'hidden';
     }
-    const first = panel.querySelector<HTMLElement>('[data-autofocus]') ??
-      panel.querySelector<HTMLElement>(FOCUSABLE) ?? panel;
+    const controls = () => Array.from(panel.querySelectorAll<HTMLElement>(FOCUSABLE)).filter((el) => el.tabIndex >= 0 && isActiveElement(el));
+    const first = controls().find((el) => el.hasAttribute('data-autofocus')) ?? controls()[0] ?? panel;
     first.focus({ preventScroll: true });
 
     const onKey = (event: KeyboardEvent) => {
-      if (event.key !== 'Escape' || event.defaultPrevented) return;
-      const dialogs = document.querySelectorAll('.kc-modal-backdrop:not([hidden]) > .kc-modal');
-      if (dialogs[dialogs.length - 1] !== panel) return;
-      event.stopPropagation();
-      close();
+      if (event.defaultPrevented || activeOverlay(document) !== panel) return;
+      if (event.key === 'Escape') {
+        event.preventDefault();
+        event.stopPropagation();
+        close();
+      } else if (event.key === 'Tab') {
+        const items = controls(), at = document.activeElement;
+        if (items.length === 0 || !panel.contains(at) || at === panel || (event.shiftKey ? at === items[0] : at === items.at(-1))) {
+          event.preventDefault();
+          (event.shiftKey ? items.at(-1) ?? panel : items[0] ?? panel).focus({ preventScroll: true });
+        }
+      }
     };
     document.addEventListener('keydown', onKey, true);
     return () => {
       document.removeEventListener('keydown', onKey, true);
       if (--openCount === 0) document.body.style.overflow = previousOverflow;
-      if (opener?.isConnected) opener.focus({ preventScroll: true });
+      const front = activeOverlay(document) as HTMLElement | null;
+      if (opener?.isConnected && (!front || front.contains(opener))) opener.focus({ preventScroll: true });
     };
   }, [open]);
 
@@ -59,8 +69,8 @@ export function Modal({ open, onClose, title, children, actions, closeOnBackdrop
         if (open && closeOnBackdrop && event.target === event.currentTarget) onClose();
       }}
     >
-      <div ref={dialog} className="kc-modal" tabIndex={-1}>
-        <h2 className="kc-modal-title">{title}</h2>
+      <div ref={dialog} className="kc-modal" tabIndex={-1} role="dialog" aria-modal="true" aria-labelledby={titleId}>
+        <h2 className="kc-modal-title" id={titleId}>{title}</h2>
         <div className="kc-modal-body">{children}</div>
         {actions == null ? null : <div className="kc-modal-actions">{actions}</div>}
       </div>

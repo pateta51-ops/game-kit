@@ -15,6 +15,7 @@ type KeyListener = (e: KeyPress) => void;
 
 export interface KeyRoot {
   querySelector: (selector: string) => unknown;
+  querySelectorAll?: (selector: string) => ArrayLike<unknown>;
 }
 
 /** `document` is one. */
@@ -62,13 +63,33 @@ export const isControl = (target: unknown): boolean => {
   return typeof get === 'function' && (get as (n: string) => unknown).call(target, 'role') === 'button';
 };
 
+/** Hidden, inert and aria-hidden ancestors do not own keyboard input. */
+export function isActiveElement(node: unknown): boolean {
+  if (node == null) return false;
+  const el = node as Element;
+  if (typeof el.closest !== 'function') return true;
+  if (el.closest('[hidden], [inert], [aria-hidden="true"]')) return false;
+  const view = el.ownerDocument?.defaultView;
+  if (view) for (let at: Element | null = el; at; at = at.parentElement) {
+    const style = view.getComputedStyle(at);
+    if (style.display === 'none' || style.visibility === 'hidden' || style.visibility === 'collapse') return false;
+  }
+  return true;
+}
+
+/** The last active matching overlay in document order; custom selectors keep the same visibility rules. */
+export function activeOverlay(root: KeyRoot, selector = '[role="dialog"], [role="alertdialog"]'): unknown {
+  const nodes = root.querySelectorAll ? Array.from(root.querySelectorAll(selector)) : [root.querySelector(selector)];
+  return nodes.findLast(isActiveElement) ?? null;
+}
+
 /** Returns the unbind. */
 export function bindPromptKeys(target: KeyTarget, options: PromptKeysOptions): () => void {
-  const { overlay = '[role="dialog"]', keys = {} } = options;
+  const { overlay, keys = {} } = options;
   const fn: KeyListener = (e) => {
     if (e.defaultPrevented || options.paused?.() === true || !options.open()) return;
     if (e.ctrlKey || e.metaKey || e.altKey || isTyping(e.target)) return;
-    if (target.querySelector(overlay) != null) return;
+    if (activeOverlay(target, overlay) != null) return;
     const root = options.panel();
     if (root === null) return;
     const press = (selector: string): boolean => {

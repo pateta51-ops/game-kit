@@ -12,6 +12,6 @@
       }
     ]
   },
-  "needs": [],
+  "needs": ["ui-helpers"],
   "packages": ["react", "react-dom"]
 }

@@ -54,6 +54,42 @@ describe('modal-dialog', () => {
     expect(backdrop).toHaveAttribute('hidden');
   });
 
+  it('returns nested focus to its opener without stealing focus when the lower dialog closes', () => {
+    const dialogs = (bottom: boolean, top: boolean) => <>
+      <Modal open={bottom} onClose={vi.fn()} title="Bottom"><button>Nested opener</button></Modal>
+      <Modal open={top} onClose={vi.fn()} title="Top"><button>Top action</button></Modal>
+    </>;
+    const { rerender } = render(dialogs(true, false));
+    const opener = screen.getByRole('button', { name: 'Nested opener' });
+    opener.focus();
+    rerender(dialogs(true, true));
+    expect(document.activeElement).toBe(screen.getByRole('button', { name: 'Top action' }));
+    rerender(dialogs(true, false));
+    expect(document.activeElement).toBe(opener);
+    rerender(dialogs(true, true));
+    const top = screen.getByRole('button', { name: 'Top action' });
+    rerender(dialogs(false, true));
+    expect(document.activeElement).toBe(top);
+  });
+
+  it('names the active dialog and wraps Tab around its enabled visible controls', () => {
+    render(<Modal open title="Review" onClose={vi.fn()}>
+      <button>First</button><button disabled>Disabled</button><button hidden>Hidden</button><button>Last</button>
+    </Modal>);
+    const panel = screen.getByRole('dialog', { name: 'Review' });
+    expect(panel).toHaveAttribute('aria-modal', 'true');
+    const first = screen.getByRole('button', { name: 'First' });
+    const last = screen.getByRole('button', { name: 'Last' });
+    last.focus();
+    fireEvent.keyDown(last, { key: 'Tab' });
+    expect(document.activeElement).toBe(first);
+    fireEvent.keyDown(first, { key: 'Tab', shiftKey: true });
+    expect(document.activeElement).toBe(last);
+    document.body.focus();
+    fireEvent.keyDown(document.body, { key: 'Tab' });
+    expect(document.activeElement).toBe(first);
+  });
+
   it('restores overflow and focus and removes the Escape listener when unmounted open', () => {
     const addListener = vi.spyOn(document, 'addEventListener');
     const removeListener = vi.spyOn(document, 'removeEventListener');
