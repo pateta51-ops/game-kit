@@ -1,4 +1,7 @@
 [
+  { "q": "missing npm packages", "first": "package-plan" },
+  { "q": "compare pinned package ranges", "first": "package-plan" },
+  { "q": "existing game dependency plan", "first": "package-plan" },
   { "q": "prompt widget registry", "first": "prompt-host" },
   { "q": "one widget per prompt kind", "first": "prompt-host" },
   { "q": "prompt registry", "first": "prompt-host" },

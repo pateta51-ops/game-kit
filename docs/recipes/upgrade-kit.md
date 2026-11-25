@@ -3,9 +3,10 @@
 1. `node kit/kit.mjs outdated [../game-kit]`: your tag, the latest, the PLAN rows between, and any marked `breaking`.
 2. Upgrade only if a row you need is there. Read each README note marked breaking.
 3. `node ../game-kit/kit.mjs pull ../game-kit <tag>`: one tag per game; this moves the whole kit, not one component.
-4. `node kit/kit.mjs check`, then the game's `npm run check`; fix what a breaking row lists.
+4. If the selected components change npm requirements, run `node ../game-kit/tools/package-plan/plan.mjs .` to compare the pinned package declarations with the game's manifest. Review each conflict or unresolved item before changing a package. See the [package plan](../../tools/package-plan/README.md).
+5. `node kit/kit.mjs check`, then the game's `npm run check`; fix what a breaking row lists.
    From the game root, use `node ../game-kit/kit.mjs check --source ../game-kit` with a trusted checkout. It checks the locked commit, verifies the tracked source, and reconstructs the installed Markdown. It can detect missing or changed `kit/kit.mjs`. The installed CLI can run the same check when you trust it. Tag releases with annotated tags.
-5. Commit `kit/` and any updated kit-managed block in `AGENTS.md` together, with the tag in the message. Never edit `kit/` by hand.
+6. Commit `kit/` and any updated kit-managed block in `AGENTS.md` together, with the tag in the message. Never edit `kit/` by hand.
 
 If an interrupted upgrade leaves `kit.old/`, keep it as the recovery copy and inspect the pull error before retrying. Pull refuses to overwrite that backup.
 

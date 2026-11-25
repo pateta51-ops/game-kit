@@ -435,6 +435,7 @@ The blind matching test's result was not recorded: the PR, its comments and docs
 | K756 | Compile the game-store mount example against the public prompt-host and game-store types. Keep the prompt-host mount example usable on its own. Forward the supplied prompt ID only when present so the store can reject stale answers. | S |  | done |
 | K757 | Component checks recognize literal JS and TS package loads with source locations, preserve parent-path checks for assets and dependencies, and exempt ordinary comments and direct throw messages. The phone screenshot script keeps its Playwright dependency separate from consumer packages. | S | owner | done |
 | K758 | Mechanics search routes public greedy preview, runtime adoption evidence, public API context, card zoom and nested choices to their guides. It names the current limits for tile rotation, layered grids and card-combination matching. | S | owner | done |
+| K759 | Compare the packages requested by a game's locked components with its manifest. Report pinned ranges, package roles and unresolved cases without changing the game's files. | S |  | done |
 
 ## Candidates
 
