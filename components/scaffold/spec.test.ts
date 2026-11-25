@@ -18,7 +18,7 @@ function fixture(name: string) {
   const git = (...args: string[]) => execFileSync('git', args, {cwd:dir, encoding:'utf8'}).trim();
   git('sparse-checkout','set','--no-cone','/kit.mjs','/components/scaffold/','/tools/game-server/','/ports.json','/docs/PORTS.md');
   git('checkout', '--quiet', '--detach', head);
-  for (const file of ['kit.mjs', 'components/scaffold/spec.mjs', 'tools/game-server/server.mjs']) fs.copyFileSync(path.join(kit,file),path.join(dir,file));
+  for (const file of ['kit.mjs', 'components/scaffold/spec.mjs', 'components/scaffold/packages.mjs', 'tools/game-server/server.mjs']) fs.copyFileSync(path.join(kit,file),path.join(dir,file));
   return {dir, git};
 }
 const generate = (source: string, ref: string, file: string, dest: string, flags: string[], env: NodeJS.ProcessEnv = {}) =>

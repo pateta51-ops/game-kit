@@ -1,4 +1,7 @@
 [
+  { "q": "missing npm packages", "first": "package-plan" },
+  { "q": "compare pinned package ranges", "first": "package-plan" },
+  { "q": "existing game dependency plan", "first": "package-plan" },
   { "q": "record pieces a card test ran", "first": "card-harness" },
   { "q": "piece counted only when a test ran it", "first": "card-harness" },
   { "q": "forced effect did not fire routine prompt", "first": "card-harness" },
