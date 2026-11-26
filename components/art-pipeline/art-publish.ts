@@ -8,14 +8,13 @@
 // Check afterwards: node tooling-scripts/art-check.ts --manifest <manifest> --sources <stage> --out <out> --ext <ext>.
 // Exit 0, 2 usage or a failed read.
 import { accessSync, constants, mkdirSync, readFileSync, statSync, writeFileSync } from 'node:fs';
-import { dirname, extname, join, relative, resolve, sep } from 'node:path';
+import { dirname, extname, join, parse, relative, resolve } from 'node:path';
 import { isMain, stdio, type Io } from '../tooling-scripts/args.ts';
 import type { ArtIndex } from './art-index.ts';
 import { codec, encodeWithin, fail, imageSize, load, safeName, sha256, type Codec } from './lib.ts';
-import { beginPublication, publicationPath, recoverPublication } from './publication.ts';
+import { beginPublication, publicationPath, recoverPublication, withinPublicationPath as within } from './publication.ts';
 
 const USAGE = 'usage: node art-publish.ts --config <json> [--recover]';
-const within = (parent: string, file: string): boolean => file === parent || file.startsWith(`${parent}${sep}`);
 
 export type Quality = { min: number; max?: number };
 
@@ -31,6 +30,7 @@ export async function run(args: readonly string[], io: Io = stdio, codecOverride
     const [root, stage, out] = [resolve(l.dir, c.root), resolve(l.dir, c.stage), resolve(l.dir, c.out)];
     const manifestFile = resolve(l.dir, c.manifest);
     const configFile = resolve(args[args.lastIndexOf('--config') + 1]!);
+    if (process.platform === 'win32' && [stage, out, manifestFile, configFile].some((p) => /[ .](?:\\|$)|:/.test(p.slice(parse(p).root.length)))) throw new Error('ambiguous Windows publication path');
     if (within(stage, out) || within(out, stage) || within(manifestFile, stage) || within(manifestFile, out)) throw new Error('stage, out and manifest must be distinct; stage and out cannot contain each other');
     const targets = [stage, out];
     const manifestGroup = targets.findIndex((target) => within(target, manifestFile));
@@ -59,7 +59,7 @@ export async function run(args: readonly string[], io: Io = stdio, codecOverride
       const src = resolve(root, file);
       const actualSource = publicationPath(src);
       if (targets.some((p) => within(p, src) || within(p, indexFile)) || actualTargets.some((p) => within(p, actualSource) || within(p, actualIndex))) throw new Error(`publication would replace an input: ${id}`);
-      if (manifestFile === join(stage, `${name}${extname(file)}`) || manifestFile === join(out, `${name}.${c.ext}`)) throw new Error(`manifest would replace face ${id}`);
+      if (within(join(stage, `${name}${extname(file)}`), manifestFile) || within(join(out, `${name}.${c.ext}`), manifestFile)) throw new Error(`manifest would replace face ${id}`);
       if (!statSync(src).isFile()) throw new Error(`${id}: source is not a file`);
       accessSync(src, constants.R_OK);
       return { id, name, file, src };

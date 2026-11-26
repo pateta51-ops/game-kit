@@ -92,6 +92,19 @@ describe('publication preserves usable art', () => {
     expect(check(['--manifest', join(dir, 'public/art/manifest.json'), '--sources', join(dir, 'chosen'), '--out', join(dir, 'public/art'), '--ext', 'png', '--need-ids', put('ids.json', ['a'])], io)).toBe(0);
   });
 
+  it.skipIf(process.platform !== 'win32').each([
+    { manifest: 'PUBLIC/ART/OLD.PNG' },
+    { manifest: 'CHOSEN/OLD.PNG.' },
+    { out: 'CHOSEN.PUBLISH-NEXT' },
+  ])('rejects Windows path aliases before replacing a release: %j', (paths) => {
+    const old = snapshot();
+    config(paths);
+    const result = cli();
+    expect(result.status).toBe(2);
+    expect(result.stderr).toMatch(/manifest would replace face|paths must not overlap|ambiguous Windows publication path/);
+    expect(snapshot()).toEqual(old);
+  });
+
   it.each([{ out: 'source' }, { out: 'chosen.publish-backup' }, { manifest: 'public' }, { manifest: 'public/art/old.png' }])('refuses destructive path overlap: %j', async (paths) => {
     const old = snapshot();
     expect(await publish(['--config', config(paths)], io)).toBe(2);

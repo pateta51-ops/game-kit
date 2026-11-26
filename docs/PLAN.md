@@ -438,6 +438,7 @@ The blind matching test's result was not recorded: the PR, its comments and docs
 | K759 | Compare the packages requested by a game's locked components with its manifest. Report pinned ranges, package roles and unresolved cases without changing the game's files. | S |  | done |
 | K760 | card-harness: derive and run bounded runtime card cases over the current validated pack and an independent printed inventory. Check dispatch and outcome evidence, exercise standard gains, draws and costs, and reuse the same assertions in the clause mutation gate. | M |  | done |
 | K761 | Documentation: correct active component guidance, route agents from the recipe index, preserve historical evidence and consolidate empty reporting artifacts. Show seeded save replay and cover natural-language dice pattern discovery. | M |  | done |
+| K763 | Publish a complete art set with logical ID checks, path collision protection and recovery after a failed or interrupted replacement. | M |  | done |
 
 ## Candidates
 
