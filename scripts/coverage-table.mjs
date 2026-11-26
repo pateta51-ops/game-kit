@@ -203,6 +203,7 @@ function binding(file, source, data, configuration, mtimeNs) {
 
 function markdown(report) {
   const counts = value => `${value.percent === null ? 'n/a' : value.percent.toFixed(1) + '%'} (${value.covered}/${value.total})`;
+  const comparable = row => !row.files.length ? 'Unavailable' : `${counts(row.before)} → ${counts(row.after)} (${row.percentagePointDelta.toFixed(1)} pp, files ${row.files.length})`;
   return [
     '# Component coverage', '',
     `Source commit: ${report.source.commit ?? 'unavailable'}. Tree: ${report.source.tree ?? 'unavailable'}. Clean: ${report.source.clean ?? 'unknown'}.`,
@@ -212,10 +213,14 @@ function markdown(report) {
     ...report.components.map(group => `| ${group.name} | ${counts(group.lines)} | ${counts(group.branches)} |`), '',
     'Scope: reported component TypeScript files; no branches means n/a, not 100%. Counts do not prove rule correctness or complete execution.',
     `Baseline: ${report.baseline.status}. Comparison: ${report.comparison.status}. ${report.comparison.reason ?? ''}`,
-    ...(report.comparison.components ? ['', '| Changed component evidence | Lines pp | Branches pp | Scope |', '|---|---:|---:|---|',
+    ...(report.comparison.components ? ['', '| Observed component scope | Lines pp | Branches pp | Scope |', '|---|---:|---:|---|',
       ...report.comparison.components.map(group => `| ${group.name} | ${group.lines?.percentagePointDelta?.toFixed(1) ?? 'n/a'} | ${group.branches?.percentagePointDelta?.toFixed(1) ?? 'n/a'} | ${group.status} |`),
       `Added files: ${report.comparison.addedFiles.join(', ') || 'none'}. Removed/omitted files: ${report.comparison.removedFiles.join(', ') || 'none'}.`,
-      `Components with count or percentage loss: ${report.comparison.losses.join(', ') || 'none observed in the compared scope'}.`] : []),
+      `Components with observed count or percentage loss: ${report.comparison.losses.join(', ') || 'none observed'}.`,
+      '', '| Like-for-like component | Lines | Branches | Line evidence | Branch evidence |', '|---|---|---|---|---|',
+      ...report.comparison.components.map(({ name, likeForLike }) => `| ${name} | ${comparable(likeForLike.lines)} | ${comparable(likeForLike.branches)} | ${likeForLike.lines.regressionEvidence} | ${likeForLike.branches.regressionEvidence} |`),
+      `Components with like-for-like loss: ${report.comparison.likeForLikeLosses.join(', ') || 'none observed'}.`,
+      'The JSON report lists each measured, omitted, added, removed and excluded file.'] : []),
     'Comparisons are informative only. Missing, invalid, incompatible or stale evidence leaves regression unknown. Changed scope and zero denominators cannot establish no regression.', '',
   ].join('\n');
 }
