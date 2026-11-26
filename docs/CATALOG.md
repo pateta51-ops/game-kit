@@ -170,6 +170,7 @@ Game-free scripts that get a card game's art from its sources to `public/` with 
 - **Use it when:** Game-free scripts for a card game's art, driven by the game's config: an index of one chosen image per card (order, overrides, degraded rule), fetch with sha256, sheet cells and crops, PDF pages as faces, a CI cache keyed on input hashes, publish to public with a manifest art-check reads, with a minimum JPEG quality within a size cap and an enlarged-face check.
 - **Not for:** Mapping card ids to files, the sources' URLs and parsing a dossier: those stay in the game and go in as config.
 - **Key exports:** Scripts: `art-index`, `art-fetch`, `art-extract`, `art-render-pdf`, `art-ci-cache`, `art-publish`; `lib`: `cellBox`, `decodePng`, `encodePng`, `imageSize`, `codec`
+- **Hook:** art-publish: publish art with filename collision checks and recover interrupted replacement
 - **Needs:** [`tooling-scripts`](#tooling-scripts)
 - **Came from:** earthborne-rangers
 - **Docs:** [README](../components/art-pipeline/README.md) ([rules for agents](../components/art-pipeline/README.md#rules-for-agents))
@@ -1861,6 +1862,7 @@ Small repo scripts a game runs with `node kit/tooling-scripts/<script>.ts`. Each
 - **Use it when:** Small repo scripts run with `node kit/tooling-scripts/<script>.ts` (art check, shots, text-leak, home screen, docs index). Recipe: docs/recipes/agent-workflow.md.
 - **Not for:** Game-specific scripts.
 - **Key exports:** Scripts: `text-leak`, `art-check`, `shrink-png`, `mock-capture`, `contact-sheet`, `gen-from-table`, `docs-index`, `dossier-sync`, `fonts-fetch`, `woff`, `bundle-node`, `home-screen`, `move`, `lookup`, `launch`
+- **Hook:** art-check: check the output manifest against sources and independently required logical art ids
 - **Needs:** nothing
 - **Came from:** imp
 - **Docs:** [README](../components/tooling-scripts/README.md) ([rules for agents](../components/tooling-scripts/README.md#rules-for-agents))
