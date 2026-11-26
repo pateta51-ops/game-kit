@@ -362,6 +362,23 @@ describe('explicit plan applicability', () => {
     expect(result.code, result.output).toBe(0);
   });
 
+  it.each([
+    ['a delimiter suffix', '| ID | Rules | Expected |\n|---|---|---| <!-- separator comment -->'],
+    ['an inline delimiter comment', '| ID | Rules | Expected |\n|---|---<!-- cell comment -->|---|'],
+    ['a delimiter prefix', '| ID | Rules | Expected |\n<!-- separator comment --> |---|---|---|'],
+    ['a raw extra header pipe', '| ID <!-- extra | separator --> | Rules | Expected |\n|---|---|---|'],
+  ])('does not turn %s into a GFM scenario table by masking comments', (_label, table) => {
+    const text = PLAN.replace('| ID | Rules | Expected |\n|---|---|---|', table);
+    fails({ text }, 'scenario inventory is empty');
+  });
+
+  it('keeps comments out of the evidence in a syntactically valid table', () => {
+    const text = PLAN.replace('| ID | Rules | Expected |', '| ID <!-- heading note --> | Rules | Expected |')
+      .replace('| SC-01 | MOVE-01 | Enter', '| SC-01 | MOVE-01 \\| <!-- UNKNOWN-01 --> | Enter');
+    const result = run({ text });
+    expect(result.code, result.output).toBe(0);
+  });
+
   it('preserves the legacy handling of raw scenario rows', () => {
     const text = PLAN.replace('| ID | Rules | Expected |\n|---|---|---|\n', '');
     const result = run({ text, noProfile: true, flags: ['--cards-optional', '--depth-optional'] });

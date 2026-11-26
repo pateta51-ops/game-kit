@@ -305,7 +305,7 @@ def visible_markdown(lines: list[str]) -> tuple[list[str], list[tuple[int, str, 
     return out, blocks, unclosed or fence is not None
 
 
-def strict_inventory(rules: str, scenarios: list[list[str]], defined: set[str]) -> list[str]:
+def strict_inventory(rules: str, rule_rows: list[list[str]], scenarios: list[list[str]], defined: set[str]) -> list[str]:
     problems, ids = [], set()
     for line in rules.splitlines():
         match = re.match(rf"^\s*[-*]\s+\*\*({ID})\*\*\s*(.*)$", line)
@@ -314,7 +314,7 @@ def strict_inventory(rules: str, scenarios: list[list[str]], defined: set[str]) 
             ids.add(rule)
             if not text.strip(" -—–"):
                 problems.append("rule " + rule + " has no text")
-    for cells in strict_table_rows(rules):
+    for cells in rule_rows:
         if match := re.fullmatch(rf"\**({ID})\**", cells[0]):
             rule = match.group(1)
             ids.add(rule)
@@ -502,29 +502,33 @@ def table_cells(l: str) -> list[str]:
     return out
 
 
-def strict_table_rows(text: str):
+def strict_table_rows(lines: list[str], original: list[str]):
     pipes = re.compile(r"(?<!\\)\|")
 
-    def cells(line: str) -> list[str]:
-        parts = pipes.split(line.strip())
-        start = 1 if len(parts) > 1 and not parts[0] else 0
-        end = len(parts) - 1 if len(parts) > 1 and not parts[-1] else len(parts)
-        return [part.strip() for part in parts[start:end]]
+    def cells(raw: str, evidence: str) -> list[str]:
+        separators = list(pipes.finditer(raw))
+        starts = [0] + [m.end() for m in separators]
+        ends = [m.start() for m in separators] + [len(raw)]
+        start = 1 if separators and not raw[:ends[0]].strip() else 0
+        end = len(ends) - 1 if separators and not raw[starts[-1]:].strip() else len(ends)
+        return [evidence[a:b].strip() for a, b in zip(starts[start:end], ends[start:end])]
 
-    lines, i = text.splitlines(), 0
+    i = 0
     while i + 1 < len(lines):
-        header, separator = lines[i:i + 2]
-        marks = cells(separator)
-        if (not re.match(r"^ {0,3}\S", header) or not re.match(r"^ {0,3}\S", separator)
+        header, separator = original[i:i + 2]
+        marks = cells(separator, separator)
+        if (not lines[i].strip() or not lines[i + 1].strip()
+                or not re.match(r"^ {0,3}\S", header) or not re.match(r"^ {0,3}\S", separator)
                 or BLOCK_START.match(header) or not (pipes.search(header) or pipes.search(separator))
-                or not marks or len(cells(header)) != len(marks) or not all(re.fullmatch(r":?-+:?", mark) for mark in marks)):
+                or not marks or len(cells(header, header)) != len(marks)
+                or not all(re.fullmatch(r":?-+:?", mark) for mark in marks)):
             i += 1
             continue
         i += 2
-        while i < len(lines) and re.match(r"^ {0,3}\S", lines[i]) and not BLOCK_START.match(lines[i]):
-            row = cells(lines[i])
+        while i < len(lines) and lines[i].strip() and re.match(r"^ {0,3}\S", original[i]) and not BLOCK_START.match(original[i]):
+            row = cells(original[i], lines[i])
             if row:
-                yield row[:len(marks)]
+                yield i, row[:len(marks)]
             i += 1
 
 
@@ -799,9 +803,10 @@ def main() -> int:
 
     # --- bold definitions (outside the scenario catalogue), duplicates ---
     outside = src.replace(scen_sec, "") if scen_sec else src
+    table_rows = list(strict_table_rows(lines, original)) if original is not None else []
     if profile is not None:
-        first_cell_defs = [m.group(1) for row in strict_table_rows(outside)
-                           if (m := re.match(rf"^\**({ID}|D\d+)(?=\s|\*|$)", row[0]))]
+        first_cell_defs = [m.group(1) for i, row in table_rows if i not in scen_lines
+                           and (m := re.match(rf"^\**({ID}|D\d+)(?=\s|\*|$)", row[0]))]
     bold = re.findall(rf"^\s*[-*]\s+\*\*({ID})\*\*", outside, re.M)
     seen: set[str] = set()
     for b in bold + first_cell_defs:
@@ -816,7 +821,7 @@ def main() -> int:
     if profile is None:
         rows = re.findall(r"^\|\s*(SC-[A-Z0-9-]+)\s*\|([^|\n]*)\|", scen_sec, re.M)
     else:
-        scenario_cells = [cells for cells in strict_table_rows(scen_sec) if re.fullmatch(r"SC-[A-Z0-9-]+", cells[0])]
+        scenario_cells = [cells for i, cells in table_rows if i in scen_lines and re.fullmatch(r"SC-[A-Z0-9-]+", cells[0])]
         rows = [(cells[0], cells[1] if len(cells) > 1 else "") for cells in scenario_cells]
     scenarios = sorted({sc for sc, _ in rows})
     if not scen_sec:
@@ -836,7 +841,11 @@ def main() -> int:
                 problems.append(f"{sc}: {tok} is not defined")
 
     if profile is not None:
-        problems += strict_inventory(section(lines, heads, opt("--cover", "Rules")), scenario_cells, defined)
+        rules_kw = opt("--cover", "Rules")
+        rules_heading = find_heading(heads, rules_kw)
+        a, b = span_of(lines, heads, rules_heading) if rules_heading is not None else (0, 0)
+        rule_rows = [cells for i, cells in table_rows if a <= i < b]
+        problems += strict_inventory(section(lines, heads, rules_kw), rule_rows, scenario_cells, defined)
 
     # --- --cover: every id of the rules section appears in the catalogue ---
     if "--cover" in sys.argv:
