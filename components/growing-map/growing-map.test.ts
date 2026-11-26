@@ -1,9 +1,11 @@
+import { readFileSync } from 'node:fs'
 import { describe, expect, it, vi } from 'vitest'
 import { createBoard, neighbours } from '../board-model/index.ts'
-import { applyAction, createGame, draftOf, hashValue, seedRng, type AnswerAction, type Draft, type GameRules, type KernelPrompt, type KernelState, type KernelTask } from '../engine-core/index.ts'
+import { applyAction, createGame, draftOf, hashValue, seedRng, type AnswerAction, type CtxRng, type Draft, type GameRules, type KernelPrompt, type KernelState, type KernelTask } from '../engine-core/index.ts'
 import { createGrowingMap, growMap, type GrowingMap, type OpenMapEdge, type TilePlacement } from './index.ts'
 
-const board = createBoard([{ id: 'home', owner: 'a' }, { id: 'side', owner: 'b' }, { id: 'first' }, { id: 'last' }], [['home', 'last'], ['home', 'first']])
+const baseLinks = [['home', 'last'], ['home', 'first']] as const
+const board = createBoard([{ id: 'home', owner: 'a' }, { id: 'side', owner: 'b' }, { id: 'first' }, { id: 'last' }], baseLinks)
 const edges = [{ id: 'east', space: 'home' }, { id: 'west', space: 'side' }, { id: 'later', space: 'last' }] as const
 const tiles = ['amber', 'slate', 'ivory', 'azure', 'lime'] as const
 const fixedOrder = { shuffle: <T>(list: readonly T[]): T[] => [...list] }
@@ -67,6 +69,36 @@ describe('growing map', () => {
     const second = growMap(first.map, 'east-amber-door', next)
     expect(second).toMatchObject({ kind: 'grew', tile: 'amber', map: { tiles: [] } })
     expect(neighbours(second.map.board, 'east-amber')).toEqual(['home', 'east-amber-door-amber'])
+  })
+
+  it('matches full board reconstruction across link subsets, join orders, and selected edges', () => {
+    const spaces = [{ id: 'a' }, { id: 'b' }, { id: 'c' }]
+    const possibleLinks = [['a', 'b'], ['a', 'c'], ['b', 'c']] as const
+    const entrances = [...edges, { id: 'north', space: 'home' }]
+    const start = createGrowingMap(board, entrances, tiles, fixedOrder)
+    const openEdges = [{ id: 'out', space: 'c' }]
+    for (let linkMask = 0; linkMask < 8; linkMask++) {
+      const links = possibleLinks.filter((_, i) => (linkMask & (1 << i)) !== 0)
+      for (let joinMask = 1; joinMask < 16; joinMask++) {
+        const joining = entrances.filter((_, i) => (joinMask & (1 << i)) !== 0)
+        for (let offset = 0; offset < spaces.length; offset++) {
+          for (const ordered of [joining, [...joining].reverse()]) {
+            const targets = ordered.map(({ space }) => spaces[(space === 'home' ? offset : offset + 1) % spaces.length]!.id)
+            const joins = ordered.map(({ id }, i) => ({ edge: id, space: targets[i]! }))
+            const expected = createBoard([...Object.values(board.spaces), ...spaces], [
+              ...baseLinks, ...links, ...ordered.map(({ space }, i) => [space, targets[i]!] as const),
+            ])
+            for (const { id } of joining) {
+              expect(growMap(start, id, () => ({ spaces, links, joins, openEdges }))).toEqual({
+                kind: 'grew', tile: tiles[0], map: {
+                  board: expected, tiles: tiles.slice(1), openEdges: [...entrances.filter(item => !joining.includes(item)), ...openEdges],
+                },
+              })
+            }
+          }
+        }
+      }
+    }
   })
 
   it.each([
@@ -148,6 +180,30 @@ const game: GameRules<Explorer> = {
   },
   contentHash: hashValue,
 }
+
+function explore(rng: CtxRng) {
+  const map = createGrowingMap(createBoard([{ id: 'home' }]), [{ id: 'east', space: 'home' }], ['room'], rng)
+  return growMap(map, 'east', tile => ({
+    spaces: [{ id: tile }], links: [], joins: [{ edge: 'east', space: tile }], openEdges: [],
+  }))
+}
+
+it('runs the README recipe in an engine setup and consumes the edge and tile', () => {
+  const recipe = /^function explore\([\s\S]*?^}/m
+  const readme = readFileSync(new URL('README.md', import.meta.url), 'utf8').replaceAll('\r', '')
+  const source = readFileSync(new URL('growing-map.test.ts', import.meta.url), 'utf8').replaceAll('\r', '')
+  expect(recipe.exec(readme.replace('export function explore', 'function explore'))?.[0]).toBe(recipe.exec(source)?.[0])
+  const state = createGame({
+    ...game, setup(ctx) {
+      const result = explore(ctx.rng)
+      expect(result).toMatchObject({ kind: 'grew', tile: 'room' })
+      draftOf(ctx).map = result.map as Draft<GrowingMap>
+    },
+  }, { seed: 'readme' }, undefined, []).state
+  expect(state.map).toEqual({
+    board: createBoard([{ id: 'home' }, { id: 'room' }], [['home', 'room']]), tiles: [], openEdges: [],
+  })
+})
 
 it('repeats the seeded tile draw through actual engine actions and preserves policy-refused state before retry', () => {
   const start = createGame(game, { seed: 'rooms' }, undefined, tiles).state
