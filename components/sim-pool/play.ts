@@ -21,6 +21,8 @@ import {
   type LocatedTriggerCap,
 } from '../engine-core/index.ts';
 import { DriverRng } from './rng.ts';
+import { isPortSimGame, playPortOne, type PortSimGame } from './port.ts';
+import type { PortTypes } from '../engine-core/index.ts';
 
 /** Decides the answers. The engine never calls a driver: the pool asks it and applies its answer. */
 export interface Driver<G extends GameTypes = GameTypes> {
@@ -52,17 +54,17 @@ export interface ViewObservation {
   read(): { view: unknown } & ViewAssertions;
 }
 
-type DriverViewValidation = <V>(state: GameTypes['state'], seat: ViewObservation['seat'] | undefined, read: () => V) => V;
+type DriverViewValidation = <V>(state: unknown, seat: ViewObservation['seat'] | undefined, read: () => V) => V;
 const driverViewScope = Symbol.for('game-kit.sim-pool.driver-view/v1');
 const scope = globalThis as typeof globalThis & { [driverViewScope]?: DriverViewValidation };
 
 /** Read the real policy input, checking it when the synchronous choice is under validation. */
-export function readDriverView<V, S extends ViewObservation['seat'] | undefined>(state: GameTypes['state'], seat: S, read: (seat: S) => V): V {
+export function readDriverView<V, S extends ViewObservation['seat'] | undefined>(state: unknown, seat: S, read: (seat: S) => V): V {
   const validate = scope[driverViewScope];
   return validate ? validate(state, seat, () => read(seat)) : read(seat);
 }
 
-function withDriverViewValidation<T>(choose: () => T, validate?: DriverViewValidation): T {
+export function withDriverViewValidation<T>(choose: () => T, validate?: DriverViewValidation): T {
   // A bundled simulator and an imported game can have separate module instances.
   const previous = scope[driverViewScope];
   if (!previous && !validate) return choose();
@@ -140,7 +142,7 @@ export interface ResolvedTrace {
   clear(): void;
 }
 
-function leaks(view: unknown, secrets: readonly string[], keys: readonly string[]): string[] {
+export function leaks(view: unknown, secrets: readonly string[], keys: readonly string[]): string[] {
   const out = new Set<string>();
   const hit = (t: string): void => {
     for (const x of secrets) if (x !== '' && (t === x || new RegExp(`(?<![A-Za-z0-9_])${x.replace(/\W/g, '\\$&')}(?![A-Za-z0-9_])`).test(t))) out.add(x);
@@ -156,7 +158,7 @@ function leaks(view: unknown, secrets: readonly string[], keys: readonly string[
 
 type JsonView = null | boolean | number | string | JsonView[] | { [key: string]: JsonView };
 
-function jsonView(value: unknown, parents = new Set<object>()): JsonView {
+export function jsonView(value: unknown, parents = new Set<object>()): JsonView {
   if (value === null || typeof value === 'string' || typeof value === 'boolean') return value;
   if (typeof value === 'number' && Number.isFinite(value) && !Object.is(value, -0)) return value;
   const invalid = () => new TypeError('view must be JSON data without lossy values, accessors, or cycles');
@@ -221,6 +223,10 @@ export interface SimRecord<S = unknown> {
   readonly triggerCap?: LocatedTriggerCap;
   /** Evidence that the run could detect trigger truncation. Older checkpoints must replay. */
   readonly triggerCapChecked?: true;
+  /** Current foreign-port execution protocol; does not claim kernel trigger-cap diagnostics. */
+  readonly portExecution?: 1;
+  /** Requested validation modes for port checkpoint eligibility. Executed view evidence is separate. */
+  readonly portChecks?: { readonly invariants: boolean; readonly view: boolean };
   /** The actions, kept only when the game failed (for replay). */
   readonly log?: readonly unknown[];
   readonly summary?: S;
@@ -242,7 +248,7 @@ export interface SimRecord<S = unknown> {
 
 type ViewValidationEvidence = NonNullable<SimRecord['viewValidation']>;
 
-const viewEvidence = (status: ViewValidationEvidence['status'], checked: number): ViewValidationEvidence =>
+export const viewEvidence = (status: ViewValidationEvidence['status'], checked: number): ViewValidationEvidence =>
   status === 'executed' ? { status, checked, scope: viewValidationScope } : { status, checked };
 
 export function hasExecutedViewValidation(record: SimRecord): boolean {
@@ -338,7 +344,14 @@ function evaluateAlternate<T>(context: string, source: string, run: () => T): T 
 }
 
 /** Play `spec` to its end, or for `until` actions (the driver still answers at that step, so what fails there fails again). Never throws: an error or an invariant violation ends the game as a failed record. */
-export function playOne<G extends GameTypes, S, O = unknown>(game: SimGame<G, S, O>, content: G['content'], spec: GameSpec, until?: number, opts: PlayOptions = {}): SimRecord<S> {
+export function playOne<G extends GameTypes, S, O = unknown>(game: SimGame<G, S, O>, content: G['content'], spec: GameSpec, until?: number, opts?: PlayOptions): SimRecord<S>;
+export function playOne<G extends PortTypes, S, O = unknown>(game: PortSimGame<G, S, O>, content: G['content'], spec: GameSpec, until?: number, opts?: PlayOptions): SimRecord<S>;
+export function playOne(game: SimGame<GameTypes> | PortSimGame<PortTypes>, content: unknown, spec: GameSpec, until?: number, opts?: PlayOptions): SimRecord;
+export function playOne(game: unknown, content: unknown, spec: GameSpec, until?: number, opts: PlayOptions = {}): SimRecord {
+  return isPortSimGame(game) ? playPortOne(game, content, spec, until, opts) : playKernelOne(game as SimGame<GameTypes>, content, spec, until, opts);
+}
+
+function playKernelOne<G extends GameTypes, S, O = unknown>(game: SimGame<G, S, O>, content: G['content'], spec: GameSpec, until: number | undefined, opts: PlayOptions): SimRecord<S> {
   let seen: O | undefined;
   const actions: (G['action'] | DebugAction)[] = [];
   let sinceDebug = 0;
@@ -433,7 +446,7 @@ export function playOne<G extends GameTypes, S, O = unknown>(game: SimGame<G, S,
       try {
         return validating((validate) => {
           const view = read();
-          const { secrets, leakKeys } = driverAssertions(viewState, seat);
+          const { secrets, leakKeys } = driverAssertions(viewState as G['state'], seat);
           validate(view, secrets, leakKeys);
           return view;
         }, () => seat === undefined ? ' (driver)' : ` (driver seat ${String(seat)})`);

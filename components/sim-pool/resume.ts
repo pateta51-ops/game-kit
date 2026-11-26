@@ -5,7 +5,8 @@
 import { appendFileSync, existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { canonicalJson } from '../engine-core/index.ts';
 import { CRASH_HASH, hasExecutedViewValidation, type GameSpec, type SimRecord } from './play.ts';
-import { runGames, type RunRequest } from './pool.ts';
+import { executionKind, runGames, type RunRequest } from './pool.ts';
+import { UNSUPPORTED_PORT_OPTION } from './port.ts';
 
 /** A game's key: its seed, driver and settings (not its index, so a run may grow). */
 export const specKey = (s: { seed: string; driver: string; settings?: GameSpec['settings'] }): string =>
@@ -37,7 +38,7 @@ export function openCheckpoint(file: string, settings: string): Checkpoint {
   return {
     done,
     append: (r) => {
-      if (r.hash !== CRASH_HASH) appendFileSync(file, `${JSON.stringify({ settings, record: r })}\n`);
+      if (r.hash !== CRASH_HASH && !(r.portExecution === 1 && r.errorName === UNSUPPORTED_PORT_OPTION)) appendFileSync(file, `${JSON.stringify({ settings, record: r })}\n`);
     },
   };
 }
@@ -46,13 +47,26 @@ export function openCheckpoint(file: string, settings: string): Checkpoint {
 export async function runResumable(request: RunRequest, workers: number, file: string, settings: string, onRecord?: (r: SimRecord) => void): Promise<SimRecord[]> {
   if (request.until !== undefined) throw new RangeError('runResumable: a run with `until` plays cut games and is never kept');
   const cp = openCheckpoint(file, settings);
+  const checkView = (r: SimRecord): void => {
+    if (request.view && r.result !== null && !hasExecutedViewValidation(r))
+      throw new Error('checkpoint lacks executed view checks for the current scope; start a new checkpoint to validate its views');
+  };
+  let engine: 'kernel' | 'port' | undefined;
+  if (cp.done.size) {
+    if (request.view) for (const spec of request.specs) {
+      const record = cp.done.get(specKey(spec));
+      if (record && record.portExecution !== 1) checkView(record);
+    }
+    engine = await executionKind(request);
+  }
   const old: SimRecord[] = [];
   const specs = request.specs.filter((s) => {
     const r = cp.done.get(specKey(s));
     if (r === undefined) return true;
-    if (request.view && r.result !== null && !hasExecutedViewValidation(r))
-      throw new Error('checkpoint lacks executed view checks for the current scope; start a new checkpoint to validate its views');
-    if (r.triggerCapChecked !== true) return true;
+    if (engine === 'port') {
+      if (r.portExecution !== 1 || r.portChecks?.invariants !== (request.invariants ?? true) || r.portChecks.view !== (request.view === true)) return true;
+    } else if (engine !== 'kernel' || r.triggerCapChecked !== true) return true;
+    checkView(r);
     old.push({ ...r, index: s.index });
     return false;
   });

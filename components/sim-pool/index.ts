@@ -13,3 +13,4 @@ export { fromWeights, inThread, poolBatch, toWeights, tune, validate, weightsFil
 export { provenClauses, type Proof, type ProofRecord } from './unreached.ts';
 export { dispatchTrace, type DispatchNotes } from './dispatchTrace.ts';
 export { greedyBot, greedyPreview, type GreedyOptions, type GreedyPreviewOptions, type GreedyProbe } from './greedy.ts';
+export { portBotDriver, randomPortDriver, type PortDriver, type PortSimGame } from './port.ts';

@@ -1679,20 +1679,22 @@ Settings declared as data, a persisted store of their values and a screen drawn 
 
 ## sim-pool
 
-Plays N whole games of any `GameRules<G>` with a driver, in this thread or on worker threads, with crash-safe records and a resume file. Needs `engine-core`.
+Plays N whole games of a `GameRules<G>` or a game's own `EnginePort<G>` with a driver, in this thread or on worker threads, with crash-safe records and a resume file. Needs `engine-core`.
 
 - **Also called:** Bulk game simulator
 - **Words:** simulate, many, games, bots, balance, fuzz, tune, threads, unreached, clauses, whole game, coverage, replay seed, failing seed, findings, prove clause, game log, static clause applied, trace input, invariants, simulation runner, coverage rounds, no new clause, legal move driver, drivers, simulation module, rounds until no new clause, play whole games, by script, e2e, bounded public greedy, public nested preview, test pilot bot random greedy, consumed policy view checks, simulation completion
 - **Release:** 1.0; not seen
-- **The game supplies:** The game rules and a driver for each seat.
-- **Use it when:** Playing many whole games with drivers on worker threads, fuzzing, sanity bands, sweeps, the K200 weight tuner and paired validation; the whole-game check of unreached clauses (proof from counted full-resolve tests, with a trace input built from the game's own log so a static clause applied with an effect counts as proven), coverage rounds and a findings file to replay a failing seed; K737 random debug edits (randomDebug hook, debug N) applied every N actions in a fuzz run, and a driver or hasten returning a debug action. Validate public seat views as JSON, detect hidden information leaks, and check registered driver names before a batch runs.
+- **The game supplies:** GameRules or a full-game EnginePort factory, explicit legal answers for a port, and a driver.
+- **Use it when:** Playing many whole games with drivers on worker threads, fuzzing, sanity bands, sweeps, the K200 weight tuner and paired validation; the whole-game check of unreached clauses (proof from counted full-resolve tests, with a trace input built from the game's own log so a static clause applied with an effect counts as proven), coverage rounds and a findings file to replay a failing seed; K737 random debug edits (randomDebug hook, debug N) applied every N actions in a fuzz run, and a driver or hasten returning a debug action. Validate public seat views as JSON, detect hidden information leaks, and check registered driver names before a batch runs. Opt-in EnginePort factories let games with their own engines use fuzzing and whole-game reports with explicit legal answers and completion rules.
 - **Not for:** Strategy beyond one nested public choice (the game or opponent supplies it).
-- **Key exports:** `DriverRng`, `ANSWER_CAP`, `CRASH_HASH`, `DriverRegistrationError`, `breakAt`, `bySeat`, `crashRecord`, `legalAnswers`, `playOne`, `randomDriver`, `readDriverView`, `botDriver`, `replayStep`, `formatReport`, and 86 more
+- **Key exports:** `DriverRng`, `ANSWER_CAP`, `CRASH_HASH`, `DriverRegistrationError`, `breakAt`, `bySeat`, `crashRecord`, `legalAnswers`, `playOne`, `randomDriver`, `readDriverView`, `botDriver`, `replayStep`, `formatReport`, and 90 more
 - **Hook:** simGame: the module that plays one game for the pool
 - **Hook:** runGames: play many whole games on worker threads
 - **Hook:** fuzzMain: fuzz games with invariants and report each finding with a seed
 - **Hook:** randomDriver + legalAnswers: random answers from the legal options
+- **Hook:** randomPortDriver: random answers from the port game's supplied legal answers
 - **Hook:** botDriver: a driver that sees the player view only
+- **Hook:** portBotDriver: map a port game's deciding seat to the exact public bot view
 - **Hook:** runResumable + codeVersion: a long run that resumes after a crash
 - **Hook:** tune + validate: tune weights, then check on fresh seeds
 - **Hook:** proveResolved + provenClauses: prove each clause resolved in a played game
