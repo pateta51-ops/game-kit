@@ -46,7 +46,8 @@
     ]
   },
   "needs": [
-    "state-machines"
+    "state-machines",
+    "ui-helpers"
   ],
   "packages": [
     "react",

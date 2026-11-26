@@ -54,6 +54,80 @@ describe('modal-dialog', () => {
     expect(backdrop).toHaveAttribute('hidden');
   });
 
+  it('returns nested focus to its opener without stealing focus when the lower dialog closes', () => {
+    const dialogs = (bottom: boolean, top: boolean) => <>
+      <Modal open={bottom} onClose={vi.fn()} title="Bottom"><button>Nested opener</button></Modal>
+      <Modal open={top} onClose={vi.fn()} title="Top"><button>Top action</button></Modal>
+    </>;
+    const { rerender } = render(dialogs(true, false));
+    const opener = screen.getByRole('button', { name: 'Nested opener' });
+    opener.focus();
+    rerender(dialogs(true, true));
+    expect(document.activeElement).toBe(screen.getByRole('button', { name: 'Top action' }));
+    rerender(dialogs(true, false));
+    expect(document.activeElement).toBe(opener);
+    rerender(dialogs(true, true));
+    const top = screen.getByRole('button', { name: 'Top action' });
+    rerender(dialogs(false, true));
+    expect(document.activeElement).toBe(top);
+  });
+
+  it('names the active dialog and wraps Tab around its enabled visible controls', () => {
+    render(<Modal open title="Review" onClose={vi.fn()}>
+      <button>First</button><button disabled>Disabled</button><button hidden>Hidden</button><button>Last</button>
+    </Modal>);
+    const panel = screen.getByRole('dialog', { name: 'Review' });
+    expect(panel).toHaveAttribute('aria-modal', 'true');
+    const first = screen.getByRole('button', { name: 'First' });
+    const last = screen.getByRole('button', { name: 'Last' });
+    last.focus();
+    fireEvent.keyDown(last, { key: 'Tab' });
+    expect(document.activeElement).toBe(first);
+    fireEvent.keyDown(first, { key: 'Tab', shiftKey: true });
+    expect(document.activeElement).toBe(last);
+    document.body.focus();
+    fireEvent.keyDown(document.body, { key: 'Tab' });
+    expect(document.activeElement).toBe(first);
+  });
+
+  it('ignores controls disabled by a fieldset while preserving its first legend exception', () => {
+    const { rerender } = render(<Modal open title="Review" onClose={vi.fn()}>
+      <fieldset disabled><button data-autofocus>Unavailable</button></fieldset>
+      <button>Continue</button>
+    </Modal>);
+    expect(document.activeElement).toBe(screen.getByRole('button', { name: 'Continue' }));
+    rerender(<Modal open title="Review" onClose={vi.fn()}>
+      <fieldset disabled>
+        <legend><button>Legend action</button></legend><button>Unavailable</button>
+        <legend><button>Second legend unavailable</button></legend>
+      </fieldset>
+      <button>Continue</button>
+    </Modal>);
+    const next = screen.getByRole('button', { name: 'Continue' });
+    const legend = screen.getByRole('button', { name: 'Legend action' });
+    next.focus();
+    fireEvent.keyDown(next, { key: 'Tab' });
+    expect(document.activeElement).toBe(legend);
+    fireEvent.keyDown(legend, { key: 'Tab', shiftKey: true });
+    expect(document.activeElement).toBe(next);
+  });
+
+  it('leaves native Tab traversal into an editable region available', () => {
+    const { rerender } = render(<Modal open title="Review" onClose={vi.fn()}>
+      <button>First</button>
+      <div contentEditable suppressContentEditableWarning>Editable note</div>
+    </Modal>);
+    const first = screen.getByRole('button', { name: 'First' });
+    first.focus();
+    expect(fireEvent.keyDown(first, { key: 'Tab' })).toBe(true);
+    rerender(<Modal open title="Review" onClose={vi.fn()}>
+      <button>First</button>
+      <div contentEditable tabIndex={-1} suppressContentEditableWarning>Editable note</div>
+    </Modal>);
+    expect(fireEvent.keyDown(first, { key: 'Tab' })).toBe(false);
+    expect(document.activeElement).toBe(first);
+  });
+
   it('restores overflow and focus and removes the Escape listener when unmounted open', () => {
     const addListener = vi.spyOn(document, 'addEventListener');
     const removeListener = vi.spyOn(document, 'removeEventListener');

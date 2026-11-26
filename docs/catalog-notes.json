@@ -119,6 +119,15 @@
     "use": "Enumerate legal weighted destinations and plan atomic forced movement for an occupied board.",
     "guide": "movement.md"
   },
+  "growing-map": {
+    "use": "A player reveals a tile or room from a seeded deck and adds it at an open board edge.",
+    "not": "Tile geometry, rotation, drawing or a game's rules for where tiles fit.",
+    "title": "Board that grows as you explore",
+    "tags": ["explore", "tile deck", "reveal a room", "open edge", "growing map"],
+    "visible": false,
+    "release": 1,
+    "gameSupplies": "The starting board, open edges, tile deck and the rules for joining a tile."
+  },
   "grid-map": {
     "use": "A square grid board with walls: adjacent spaces, grid distance and range, shortest paths, line of sight, tiles that turn, and targeting shapes (within range, adjacent, row, column, line, area).",
     "not": "Drawing the map; hex or graph boards (board-model); movement rules or costs per step.",
@@ -277,10 +286,13 @@
     "gameSupplies": "The build folder and the size limits.",
     "entry": [
       "check-bundle-size.ts"
+    ],
+    "hooks": [
+      "measureBuild + run: check a media cap for images, fonts and audio, including the first download; follow imports for initial accounting"
     ]
   },
   "campaign": {
-    "use": "A campaign of linked scenarios kept as a plain log.",
+    "use": "Linked campaign scenarios with a plain log, calendar instructions, a changing roster and a shared card box.",
     "not": "A single game's rules or story text (story).",
     "title": "Linked scenarios kept as a log",
     "tags": [
@@ -295,11 +307,15 @@
       "deck carried",
       "record",
       "campaign setup",
-      "phone campaign"
+      "phone campaign",
+      "campaign calendar",
+      "player roster",
+      "shared card box",
+      "deck copy limits"
     ],
     "visible": false,
     "release": 1,
-    "gameSupplies": "The scenarios and what a result changes."
+    "gameSupplies": "The scenarios, date instructions, roster rules and card limits."
   },
   "card-attachments": {
     "use": "Cards tucked under or fanned past a host card with a pure footprint, and the tokens on a card: one per token, ×N past a cap, number boxes; or cards in one sleeve drawn as one composite per face: inserts under a die-cut host, each cut to its own die-cut, read through the host's notch, their tabs past the sleeve's open edge.",
@@ -347,7 +363,10 @@
     "looks": "A row of cards fanned to fit the width; the one under the pointer lifts.",
     "visible": true,
     "release": 1,
-    "gameSupplies": "The cards, their face view and the look."
+    "gameSupplies": "The cards, their face view and the look.",
+    "hooks": [
+      "CardHand: show a card hand with animation speed and play glide controlled by the game"
+    ]
   },
   "card-harness": {
     "use": "Testing card effects on real cards with the scenario builder, prompt delivery, choice probe and inventory with stale check; test depth: a full-resolve test per clause and a poor test (expectNotOffered, expectNotFired) per conditional clause. Check semantic mutation coverage across the clause inventory.",
@@ -723,7 +742,7 @@
   },
   "check-runner": {
     "mechanics": "none: build, CI or repository tooling",
-    "use": "Running `npm run check` lanes in parallel with process-tree timeouts and a drift check.",
+    "use": "Running `npm run check` lanes in parallel with process-tree timeouts and a drift check; optionally recording and verifying acceptance receipts bound to the consumer, kit pin and authored inputs.",
     "not": "Writing the checks themselves.",
     "title": "Run all checks in parallel",
     "tags": [
@@ -740,6 +759,7 @@
     "gameSupplies": "The list of checks and their lanes.",
     "entry": [
       "check-runner.ts",
+      "receipt.ts",
       "gate-all.ts",
       "test-cost.ts"
     ]
@@ -762,6 +782,15 @@
     "release": 1,
     "gameSupplies": "ci.config.json with the game, runner and checks.",
     "exports": "`render.mjs`, `ci.yml`, `full-gate.yml`, `nightly-fuzz.yml`, `local-ci.sh`, `install-wsl.sh`, `watch-run.sh`, `watch-run.mjs`, `skip-reporter.ts`"
+  },
+  "combat": {
+    "use": "Resolve an attack using the game's calculation, apply typed damage after armor, and give defeat its own timing window.",
+    "not": "Choosing legal targets, rolling dice, tracking turns, or deciding what defeat does in the game.",
+    "title": "Resolve attacks and damage",
+    "tags": ["combat damage type", "armor piercing damage", "defeat timing window", "attack resolution", "combat verbs"],
+    "visible": false,
+    "release": 1,
+    "gameSupplies": "The attack calculation, legal targets, health and armor stats, defeat rules, and printed words."
   },
   "content-pack": {
     "use": "Card, deck or scenario data (CSV or JSON) loads through a zod schema per record kind with id-uniqueness, dangling-reference and card-language verb checks, every problem listed at once; also a base + expansions pick list with dependency ticking and a merge into one index.",
@@ -969,7 +998,10 @@
     "looks": "A card or pile is picked up and dropped on a board target, answering a question.",
     "visible": true,
     "release": 1,
-    "gameSupplies": "The sources, the targets and the open prompt options."
+    "gameSupplies": "The sources, the targets and the open prompt options.",
+    "hooks": [
+      "useDragDrop + DragGhost: drag a card onto a target with one animation speed for the ghost return"
+    ]
   },
   "e2e-helpers": {
     "mechanics": "none: test tooling",
@@ -1300,6 +1332,9 @@
     "gameSupplies": "The content and its look.",
     "entry": [
       "ui.tsx"
+    ],
+    "hooks": [
+      "Modal + ConfirmDialog: show a modal dialog with keyboard focus, Tab containment and Escape ownership"
     ]
   },
   "motion-frame": {
@@ -1344,7 +1379,8 @@
       "skipAll: drop every queued beat on undo, load or leaving the screen",
       "skipOnInput + hurryOnInput: skip or hurry the animation on a click or key",
       "withReducedMotion + withAutomationOff: the motion speed setting, still in tests and under reduced motion",
-      "validateSpecs: check that every motion spec names a known verb and zone"
+      "validateSpecs: check that every motion spec names a known verb and zone",
+      "motionRate: share one motion preference across hand, drag and timeline durations by converting a duration factor to a rate"
     ]
   },
   "offline": {
@@ -1687,7 +1723,10 @@
     "looks": "The box that asks the player a question, with a widget for each kind of question.",
     "visible": true,
     "release": 1,
-    "gameSupplies": "A widget for each prompt kind, and the look."
+    "gameSupplies": "A widget for each prompt kind, and the look.",
+    "hooks": [
+      "useBoardPick: board pick confirmation that yields keyboard input to dialogs"
+    ]
   },
   "prompt-source": {
     "use": "Each prompt must name its source card and clause and who decides.",
@@ -1919,7 +1958,10 @@
     "visible": false,
     "release": 1,
     "gameSupplies": "The scan files and the crop settings.",
-    "exports": "Python package `scanpipe`; TS `index.ts` (measureBoxes, planOverlay, clipPathOf, mmStyle, uniformOutlines...), `ui.ts` (ScanBoard, Piece)"
+    "exports": "Python package `scanpipe`; TS `index.ts` (measureBoxes, planOverlay, clipPathOf, mmStyle, uniformOutlines...), `ui.ts` (ScanBoard, Piece)",
+    "hooks": [
+      "loadGeometry: load scan board geometry, retry a failed attempt and cache successful measurements"
+    ]
   },
   "screens": {
     "use": "Main menu and new-game set-up form (seats, scenario, difficulty, extras) from data, unstyled, with a pure default and validate. Non-table screen frame, footer, disclaimer and persistent theme toggle.",
@@ -2301,7 +2343,10 @@
     "visible": false,
     "release": 1,
     "gameSupplies": "The art config: sources, ids and output.",
-    "exports": "Scripts: `art-index`, `art-fetch`, `art-extract`, `art-render-pdf`, `art-ci-cache`, `art-publish`; `lib`: `cellBox`, `decodePng`, `encodePng`, `imageSize`, `codec`"
+    "exports": "Scripts: `art-index`, `art-fetch`, `art-extract`, `art-render-pdf`, `art-ci-cache`, `art-publish`; `lib`: `cellBox`, `decodePng`, `encodePng`, `imageSize`, `codec`",
+    "hooks": [
+      "art-publish: publish art with filename collision checks and recover interrupted replacement"
+    ]
   },
   "tooling-scripts": {
     "mechanics": "none: build, CI or repository tooling",
@@ -2329,7 +2374,10 @@
     "visible": false,
     "release": 1,
     "gameSupplies": "Each script takes its own paths and flags.",
-    "exports": "Scripts: `text-leak`, `art-check`, `shrink-png`, `mock-capture`, `contact-sheet`, `gen-from-table`, `docs-index`, `dossier-sync`, `fonts-fetch`, `woff`, `bundle-node`, `home-screen`, `move`, `lookup`, `launch`"
+    "exports": "Scripts: `text-leak`, `art-check`, `shrink-png`, `mock-capture`, `contact-sheet`, `gen-from-table`, `docs-index`, `dossier-sync`, `fonts-fetch`, `woff`, `bundle-node`, `home-screen`, `move`, `lookup`, `launch`",
+    "hooks": [
+      "art-check: check the output manifest against sources and independently required logical art ids"
+    ]
   },
   "traceability": {
     "mechanics": "none: test tooling",
@@ -2438,7 +2486,11 @@
     ],
     "visible": false,
     "release": 1,
-    "gameSupplies": "Depends on the helper; see its entry."
+    "gameSupplies": "Depends on the helper; see its entry.",
+    "hooks": [
+      "bindPromptKeys + bindPlayKeys: background keyboard shortcuts and prompt keys that pause under a dialog",
+      "activeOverlay: find the active overlay keyboard owner"
+    ]
   },
   "voice": {
     "mechanics": "none: sound or voice only",
@@ -2544,6 +2596,12 @@
     "entry": [
       "playtest.ts"
     ]
+  },
+  "check-runner/receipts": {
+    "title": "Acceptance receipts bound to source and inputs",
+    "tags": ["acceptance receipt", "verify check execution evidence", "stale consumer acceptance", "bound kit revision", "cancelled check evidence"],
+    "use": "Record the existing full check plan's commands and outcomes with consumer, kit lock, specification and acceptance-definition fingerprints; reject stale, missing, stopped, truncated or unfinished local evidence. Does not certify test quality or authenticate execution.",
+    "guide": "README.md"
   },
   "plan-checker/applicability": {
     "title": "Strict checks for non-card game plans",

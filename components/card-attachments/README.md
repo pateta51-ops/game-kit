@@ -15,6 +15,7 @@ Cards tucked under a host card (a visible L, slide out on hover) or fanned past 
 6. Put anchored tokens at fixed spots of a face in `card-parts` (`TokenLayer`), not here; draw a token row from `shownCount(...)` of `counter` when a number must bump or fly.
 7. Draw cards in one sleeve with `<SleeveStack host={{ front, back }} inserts={[{ key, front, back }]} face open? />`: each face an image `{ src, width, height, outline?, cutout? }` (the scan's px size upright, tab on top, and its die-cut outline normalised on that upright image; `open: 'left'` turns an insert, never pass it pre-turned); list the inserts from the host's front (index 0 lies against it); pass `open={{ back: 'left' }}` when the sleeve opens on the left of that face's image; size it by its parent's width. Never mirror its ranks or layers in the game, and never port a game's own notch or tab code beside it.
 8. Style it yourself: the CSS is structural only; hook on `data-part` (`host-stack`, `host`, `attachment`, `token-row`, `token`, `number-box`, `sleeve`, `sleeve-host`, `sleeve-insert`, `sleeve-tab`).
+9. Supply `onRead` to make an attachment focusable and readable by click, Enter or Space. Nested buttons, links, inputs, their associated labels, disclosure summaries and editable content own their actions and do not also invoke `onRead`.
 
 **Common mistakes:**
 - Putting a card id or face text in the DOM for a face-down attachment: pass the back as `node`.
@@ -22,7 +23,7 @@ Cards tucked under a host card (a visible L, slide out on hover) or fanned past 
 
 ## The game passes
 - Cards as `{ turned?: boolean }` boxes (an exhausted card is turned) and one upright size `cw`, `ch` in px. The geometry never sees a card's id or face.
-- `<HostStack host attachments={[{ key, node, turned? }]} w h mode? side? open? onRead? ms? />`: the game's own nodes. A face-down attachment is passed as its back; only `key` is a React key, never in the DOM. `onRead(index, key)`: a tap (the phone sheet). `ms` 0 for no slide (the settings' speed).
+- `<HostStack host attachments={[{ key, node, turned? }]} w h mode? side? open? onRead? ms? />`: the game's own nodes. A face-down attachment is passed as its back; only `key` is a React key, never in the DOM. `onRead(index, key)`: a tap or Enter/Space on the focused attachment (once on keydown, repeats ignored, Space does not scroll). Nested controls retain their own actions. `ms` 0 for no slide (the settings' speed).
 - `<TokenRow count render={(i) => <MyToken />} times? max? kind? />` and `<NumberBox value dir? zero? render? />`: the token shapes, colours and fonts are the game's (`render`).
 - Anchored tokens at fixed spots of a face stay `card-parts` (`TokenLayer`, `placeTokens`); this is the in-flow row and box. A token that arrives flies with `token-flights`, a number that bumps is `counter`: draw `<TokenRow>` from `shownCount(...)` and put `data-place` on it.
 

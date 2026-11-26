@@ -2,11 +2,13 @@
 // outputs (bytes, and SHA-256 when recorded), every id the game needs has an output, and the sizes stay under the caps.
 // Exit codes: 0 clean, 1 findings, 2 usage or a missing manifest or folder.
 import { createHash } from 'node:crypto';
-import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
-import { join, resolve } from 'node:path';
+import { existsSync, readdirSync, readFileSync, realpathSync, statSync } from 'node:fs';
+import { join, relative, resolve } from 'node:path';
 import { flags, isMain, stdio, type Io } from './args.ts';
 
 export interface ArtEntry {
+  /** Original logical ID, when filenames use a sanitized name. */
+  id?: string;
   source: string;
   sha256: string;
   bytes: number;
@@ -26,6 +28,8 @@ export interface ArtConfig {
   /** Matched against each source file name; group 1 is the id. Other files are ignored. */
   sourceId: RegExp;
   need: readonly string[];
+  /** Required logical IDs from the game's content, independently of generated filenames. */
+  needIds?: readonly string[];
   maxBytes: number | undefined;
   maxFileBytes: number | undefined;
   /** On unless false: an entry whose pixel size (width x height) is over its source's (sourceWidth x sourceHeight) fails; entries without both sizes are skipped. */
@@ -33,13 +37,26 @@ export interface ArtConfig {
 }
 
 const sha256 = (path: string): string => createHash('sha256').update(readFileSync(path)).digest('hex');
+const isFile = (path: string): boolean => statSync(path, { throwIfNoEntry: false })?.isFile() === true;
+const filesIn = (dir: string): string[] => readdirSync(dir, { withFileTypes: true })
+  .filter((entry) => entry.isFile() || (entry.isSymbolicLink() && isFile(join(dir, entry.name))))
+  .map((entry) => entry.name).sort();
 
 export function artCheck(c: ArtConfig): { errors: string[]; faces: number; total: number; skipped: number } {
   const errors: string[] = [];
   let skipped = 0;
   const manifest = JSON.parse(readFileSync(c.manifest, 'utf8')) as Record<string, ArtEntry>;
+  const manifestPath = realpathSync(c.manifest);
+  const manifestIn = (dir: string) => {
+    const actual = existsSync(dir) ? realpathSync(dir) : dir;
+    return (file: string) => !relative(join(dir, file), c.manifest) || !relative(join(actual, file), manifestPath);
+  };
+  const sourceManifest = manifestIn(c.sources);
+  const outputManifest = manifestIn(c.out);
+  const isOutput = (file: string): boolean => !outputManifest(file) && isFile(join(c.out, file));
   const ids = new Set<string>();
-  for (const file of readdirSync(c.sources).sort()) {
+  for (const file of filesIn(c.sources)) {
+    if (sourceManifest(file)) continue;
     const m = c.sourceId.exec(file);
     const id = m?.[1] ?? m?.[0];
     if (id === undefined) continue;
@@ -55,16 +72,26 @@ export function artCheck(c: ArtConfig): { errors: string[]; faces: number; total
     if (c.noEnlarge !== false && (entry.width === undefined || entry.height === undefined || entry.sourceWidth === undefined || entry.sourceHeight === undefined)) skipped += 1;
     if (c.noEnlarge !== false && entry.width !== undefined && entry.height !== undefined && entry.sourceWidth !== undefined && entry.sourceHeight !== undefined && entry.width * entry.height > entry.sourceWidth * entry.sourceHeight)
       errors.push(`${id}: enlarged: the output is ${String(entry.width)}x${String(entry.height)}, the source ${String(entry.sourceWidth)}x${String(entry.sourceHeight)}`);
-    if (!existsSync(out)) errors.push(`${id}: the output ${id}.${c.ext} is missing`);
+    if (!isOutput(`${id}.${c.ext}`)) errors.push(`${id}: the output ${id}.${c.ext} is missing or is not a file`);
     else if (statSync(out).size !== entry.bytes || (entry.outSha256 !== undefined && entry.outSha256 !== sha256(out)))
       errors.push(`${id}: the output ${id}.${c.ext} differs from the manifest`);
   }
   if (ids.size === 0) errors.push(`no source file in ${c.sources} matched ${String(c.sourceId)}`);
   for (const id of Object.keys(manifest)) if (!ids.has(id)) errors.push(`${id}: in the manifest but has no source`);
-  for (const id of new Set(c.need)) if (!existsSync(join(c.out, `${id}.${c.ext}`))) errors.push(`${id}: needed by the game but has no ${id}.${c.ext}`);
+  for (const id of new Set(c.need)) if (!isOutput(`${id}.${c.ext}`)) errors.push(`${id}: needed by the game but has no ${id}.${c.ext}`);
+  const logical = new Map<string, string>();
+  for (const [name, entry] of Object.entries(manifest)) {
+    const id = entry.id ?? name;
+    if (logical.has(id)) errors.push(`${id}: logical ID occurs in more than one manifest entry`);
+    logical.set(id, name);
+  }
+  for (const id of new Set(c.needIds ?? [])) {
+    const name = logical.get(id);
+    if (name === undefined || !ids.has(name) || !isOutput(`${name}.${c.ext}`)) errors.push(`${id}: required logical ID has no complete published face`);
+  }
   let total = 0;
-  for (const f of existsSync(c.out) ? readdirSync(c.out).sort() : []) {
-    if (!f.endsWith(`.${c.ext}`)) continue;
+  for (const f of existsSync(c.out) ? filesIn(c.out) : []) {
+    if (!f.endsWith(`.${c.ext}`) || outputManifest(f)) continue;
     const size = statSync(join(c.out, f)).size;
     total += size;
     if (c.maxFileBytes !== undefined && size > c.maxFileBytes) errors.push(`${f}: ${String(size)} bytes is over the file cap of ${String(c.maxFileBytes)}`);
@@ -73,9 +100,9 @@ export function artCheck(c: ArtConfig): { errors: string[]; faces: number; total
   return { errors, faces: ids.size, total, skipped };
 }
 
-const NAMES = ['manifest', 'sources', 'out', 'ext', 'source-id', 'need', 'max-bytes', 'max-file-bytes'];
+const NAMES = ['manifest', 'sources', 'out', 'ext', 'source-id', 'need', 'need-ids', 'max-bytes', 'max-file-bytes'];
 const USAGE =
-  'usage: node art-check.ts --manifest <json> --sources <dir> --out <dir> --ext <webp> [--source-id <regex, group 1 is the id>] [--need <json array of ids>]... [--max-bytes <n>] [--max-file-bytes <n>] [--allow-enlarged] [--config <json>]';
+  'usage: node art-check.ts --manifest <json> --sources <dir> --out <dir> --ext <webp> [--source-id <regex, group 1 is the id>] [--need <json array of output names>]... [--need-ids <json array of logical ids>]... [--max-bytes <n>] [--max-file-bytes <n>] [--allow-enlarged] [--config <json>]';
 
 export function run(args: readonly string[], io: Io = stdio): number {
   try {
@@ -91,6 +118,11 @@ export function run(args: readonly string[], io: Io = stdio): number {
       return v === undefined ? undefined : Number(v);
     };
     const need = (f['need'] ?? []).flatMap((p) => JSON.parse(readFileSync(resolve(p), 'utf8')) as string[]);
+    const needIds = (f['need-ids'] ?? []).flatMap((p) => {
+      const value: unknown = JSON.parse(readFileSync(resolve(p), 'utf8'));
+      if (!Array.isArray(value) || value.some((id) => typeof id !== 'string' || !id)) throw new Error('--need-ids requires a JSON array of nonempty logical IDs');
+      return value as string[];
+    });
     const r = artCheck({
       manifest: resolve(manifest),
       sources: resolve(sources),
@@ -98,6 +130,7 @@ export function run(args: readonly string[], io: Io = stdio): number {
       ext,
       sourceId: new RegExp(f['source-id']?.[0] ?? '^(.+)\\.[^.]+$'),
       need,
+      needIds,
       maxBytes: num('max-bytes'),
       maxFileBytes: num('max-file-bytes'),
       noEnlarge: f['allow-enlarged'] === undefined,

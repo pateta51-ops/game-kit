@@ -3,6 +3,11 @@ Shows the engine's open question (an engine-core prompt) through a typed widget 
 
 ## Rules for agents
 
+<!-- hooks: written by scripts/catalog.mjs from docs/catalog-notes.json; do not edit -->
+**Hooks a game calls:**
+- `useBoardPick`: board pick confirmation that yields keyboard input to dialogs
+<!-- /hooks -->
+
 `autoAnswer` never answers a lone option marked `unseen` (engine-core `onlyOne`, K641): the player is shown the prompt.
 
 **What it does:** Shows the engine's open question through a typed widget registry.
@@ -16,6 +21,7 @@ Shows the engine's open question (an engine-core prompt) through a typed widget 
 6. Import opt-in look CSS (`looks/overflow.css`, `legal-glow.css`) yourself; pass `overflow` with `stage` and `zone` in the same coordinates.
 7. Show printed words: the heading is the card's printed clause (prompt-source), never a rule id.
 8. Read the picks of `PickOptions` through `onChange(picked)` (and pass `picked` to control it); never read them from the DOM.
+9. `useBoardPick` pauses Enter/Escape while a visible, non-inert dialog or alertdialog is open. For a custom overlay pass `overlay: '<selector>'`, or `paused: () => boolean` for another keyboard owner. Typing, modifiers, repeated or already-handled keys do not answer or clear board picks; a focused button keeps its own Enter.
 
 **Common mistakes:**
 - A chain of forced answers beyond `cap` stops with `capped: true` and an `error`.
@@ -34,7 +40,7 @@ Shows the engine's open question (an engine-core prompt) through a typed widget 
 - `PickOptions` (pick cards or options): toggles, count, Done when min..max; min = max = 1 answers on the click (`confirm` asks for Done); K408: at max (above 1) every unpicked option renders disabled (`aria-disabled`), enabled again when a pick is undone. K457: `onChange(picked)` fires with the picked ids on every pick and unpick; the optional `picked` prop makes the selection controlled (the widget then changes it only through `onChange`; leave it out for the default, own state). A game needing the "all N picked" state uses these, never the DOM.
 - `PickAmount`: options are the amounts in order; a stepper from `start` (index or `'last'`), then Done; K305: `readout(option, prompt)` shows a preview of the current amount (class part `readout`). K522: `hideDone` leaves out the widget's own Done so a game's own Confirm (e.g. a prompt band) can submit; `onChange(picked)` then gives `[amountId]` (or `[]` when that amount is barred) on mount and at every step, and the game's Confirm calls `answer(picked)`. Without `hideDone` it renders and answers as before.
 - `Order`: click in order; a click on a numbered one takes it and those after back; when every legal option fits in max the rest follow the engine's order, else the clicks are the answer (min..max); Done.
-- On the board (UFS tap to confirm): `useBoardPick(prompt, answer, { confirm? })` gives `marks` (option id: legal, barred, armed) for the board to highlight and `tap(id)` for it to call; the first tap arms, a second tap, Confirm or Enter answers, Cancel or Escape disarms (`confirm: false`: the first tap answers). K226: `max > 1` picks several: a tap toggles (all picked ones are `armed`, `picks` in tap order), Confirm or Enter answers once `ready` (min..max), `confirm: false` answers when max are picked; the bar then shows the count. `<BoardBar pick prompt look hint />` is the bar.
+- On the board (UFS tap to confirm): `useBoardPick(prompt, answer, { confirm?, overlay?, paused? })` gives `marks` (option id: legal, barred, armed) for the board to highlight and `tap(id)` for it to call; the first tap arms, a second tap, Confirm or Enter answers, Cancel or Escape disarms (`confirm: false`: the first tap answers). Keyboard input yields to active overlays, editable targets and focused controls; closed always-mounted dialogs do not block it. K226: `max > 1` picks several: a tap toggles (all picked ones are `armed`, `picks` in tap order), Confirm or Enter answers once `ready` (min..max), `confirm: false` answers when max are picked; the bar then shows the count. `<BoardBar pick prompt look hint />` is the bar.
 - `May` (yes / no), `PayCost` (one option per way to pay), `OptionList`: a click answers. `OptionButton`: the shared button. A barred option stays, shows `why` and never answers; a legal one with K91 `idle` shows its words as a warning.
 
 ## Look
