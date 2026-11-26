@@ -9,7 +9,7 @@ Dice patterns as plain data (a pair, N the same, a run, odd or even, a sum again
 - `compile`: test a dice pattern, a pair, a run or a sum, on the dice
 - `meaning`: a pattern as a dice tray meaning
 - `smallest`: the fewest dice that meet a pattern
-- `checkPattern`: check pattern data from content
+- `checkPattern`: check pattern data from content and reject fields its kind does not read
 - `missing`: what a dice roll lacks to meet a pattern, as data
 <!-- /hooks -->
 
@@ -17,7 +17,7 @@ Dice patterns as plain data (a pair, N the same, a run, odd or even, a sum again
 
 **You must:**
 1. Write patterns as data: `{ kind: 'same', n: 2 }` is the one way to say "a pair"; never write the test by hand when a kind here says it.
-2. Run `checkPattern(data)` on patterns loaded from content and report its problems; `compile` throws them joined with `; `.
+2. Run `checkPattern(data)` on patterns loaded from content and report its problems; `compile` throws them joined with `; `. Include only the keys listed for the selected kind: unread fields are problems, including inside `all` and `any`. Keep labels and other content metadata outside the pattern.
 3. Pass `compile(p)` to `chance(k, test)` as it is, and `meaning(id, p, label)` to `readRoll(tray, meanings)`; "not rolled" is the tray's notion: only `meaning` leaves dice out, and it leaves out every die of value 0 or less (0 is the tray's "not rolled"). So `meaning` misjudges dice whose real faces include 0 or less (`spread` `=` 2 on `[0, 3, 5]` is met for `meaning`, not for `compile`; `sum` `=` 3 on `[-1, 3]` the same): such a game judges with `compile`. `compile` and `smallest` judge every value they are given, and a zero or negative face is a value like any other, so take the unrolled dice out yourself before you call them (`same` 2 on `[0, 0, 4, 4]` gives `[0, 1]`).
 4. Choose the question before you call. "Do all these dice together meet it" (a pattern judged over every die on a space, in a slot or in a roll): `compile(p)(values)`, and for the dice to show, `smallest(p, values, { whole: true })`. "Is there a set of dice in this roll that meets it" (the player picks which dice to spend): `smallest(p, values)`. Never use `smallest` without `whole` to judge a whole pool: it says yes to an exact sum that only some of the dice make.
 5. Say an exact size with `count` and `op: '='` inside `all` ("three the same and no fourth die": `all` of `same` 3 and `count` `=` 3), judged over the whole group.
@@ -56,6 +56,12 @@ What `smallest` answers without `whole`, and when that differs from the check of
 - `missing(p, values, { whole? })`: a list of `Lack`, empty when nothing is missing (`whole`: judged on every die together, as `compile`; without it, also empty when some set of the dice meets `p`, as `smallest`). Throws like `compile`. One `Lack` per unmet leaf, in pattern order; `all` gives the lacks of its unmet parts, `any` one `{ kind: 'any', of }` with a list of lacks per alternative (empty when a part is met). Leaves: `same`, `different`, `even`, `odd`, `atLeast`, `face`, `twoPair`: `{ kind, have, need }` (`need` more dice, for `twoPair` the fewest dice to add; `face`: the pattern's face, for `same` the commonest value, lowest on a tie, absent on no dice); `run`: `{ kind, have (longest run), need, gaps }`, the values missing from the window of n values with fewest gaps, starting at any whole value from the lowest to the highest rolled (lowest on a tie; `gaps` empty with no dice); `count`, `sum`, `max`, `spread`: `{ kind, op, value, have, by, dir, dice }`, the roll's number, how far it is from meeting `op value` (`dir` `'up'` it must rise, `'down'` fall), and `dice` more dice needed before it can be judged (1 for none at all, 2 for a `spread`). An `all` whose parts are each met by the roll but not by one set gives nothing at that `all`.
 
 Not here: a "not" kind, conditions tied to the same dice, rolling, odds after rerolls, card sets or poker hands, dice formulas.
+
+## Validation and migration (K622)
+
+`checkPattern` reports each own enumerable string key that the selected kind does not read, at its full path. For example, `{ kind: 'same', n: 2, op: '<' }` reports `pattern.op: not used by kind "same"`; `same` has no comparison option. An unread key is a problem even when its value is `undefined`. The supported optional `op` on `count`, `max` and `spread` still accepts omission or `undefined` and keeps its existing default. All documented pattern shapes and their meaning remain unchanged.
+
+This intentionally tightens validation of data that previously passed with ignored fields. Remove unsupported fields instead of expecting them to change the pattern's meaning. Put labels and other metadata in an outer content record, for example `{ label: 'pair', pattern: { kind: 'same', n: 2 } }`, and pass only its `pattern` to these functions. `compile`, `meaning`, `smallest` and `missing` all reject the same invalid pattern data through `checkPattern`, including invalid alternatives that another `any` branch could bypass during evaluation.
 
 ## Use it in 10 lines
 

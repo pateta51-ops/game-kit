@@ -774,5 +774,8 @@
   {"q": "independent playable effort measurement", "first": "reuse-metrics"},
   {"q": "four card campaign continuation", "first": "reference-game/campaign-continuation"},
   {"q": "calendar changes playable scenario", "first": "reference-game/campaign-continuation"},
-  {"q": "campaign retry physical deck allocation", "first": "reference-game/campaign-continuation"}
+  {"q": "campaign retry physical deck allocation", "first": "reference-game/campaign-continuation"},
+  {"q": "reject unread dice pattern fields", "first": "dice-patterns"},
+  {"q": "dice pattern unsupported key", "first": "dice-patterns"},
+  {"q": "dice pattern unknown option", "first": "dice-patterns"}
 ]
