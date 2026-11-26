@@ -94,7 +94,7 @@ Subsequent reference increments remain separate: dice placement needs explicit p
 ```ts
 import { scaffold } from '../kit/scaffold/scaffold.js'
 // what reference.test.ts does (run it: npx vitest run components/reference-game), then `npm run check` in the folder
-const kit = 'C:/projects/game-kit'
-const made = scaffold({ dir: 'C:/tmp/reference', id: 'reference', name: 'Reference', kit, ref: 'HEAD', ports: 'C:/tmp/ports.json', install: false, overlay: [`${kit}/components/scaffold/courier`, `${kit}/components/reference-game/template`], components: ['prompt-host', 'replay-cli', 'card-language', 'card-zones', 'game-store', 'table-panels', 'opponent', 'paced-view', 'turn-flow', 'automa', 'campaign', 'grid-map', 'content-pack', 'traceability'] })
+const kit = '.'
+const made = scaffold({ dir: 'tmp/reference', id: 'reference', name: 'Reference', kit, ref: 'HEAD', ports: 'tmp/ports.json', install: false, overlay: [`${kit}/components/scaffold/courier`, `${kit}/components/reference-game/template`], components: ['prompt-host', 'replay-cli', 'card-language', 'card-zones', 'game-store', 'table-panels', 'opponent', 'paced-view', 'turn-flow', 'automa', 'campaign', 'grid-map', 'content-pack', 'traceability'] })
 console.log(made.dir)
 ```
