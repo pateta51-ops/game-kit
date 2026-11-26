@@ -205,6 +205,19 @@ HTML_ATTR = r'''[A-Za-z_:][A-Za-z0-9_.:-]*(?:[ \t\n]*=[ \t\n]*(?:"[^"]*"|'[^']*'
 INLINE_HTML = re.compile(r"(?:</[A-Za-z][A-Za-z0-9-]*[ \t\n]*>|<[A-Za-z][A-Za-z0-9-]*(?:[ \t\n]+"
                       + HTML_ATTR + r")*[ \t\n]*/?>)")
 HTML_TAG = re.compile(r"^ {0,3}" + INLINE_HTML.pattern + r"[ \t]*$")
+LINK_ESCAPE = r"(?:\\[!-/:-@\[-`{-~]|\\(?![!-/:-@\[-`{-~]))"
+LINK_LABEL = r"\[((?:" + LINK_ESCAPE + r"|[^\[\]\\\n]){0,999})\]"
+LINK_PAD = r"[ \t]*(?:\n[ \t]*)?"
+LINK_SPACE = r"(?:[ \t]+|[ \t]*\n[ \t]*)"
+LINK_CHAR = r"(?:[^\\()\x00-\x20\x7f]|" + LINK_ESCAPE + ")"
+LINK_DEST = LINK_CHAR
+for _ in range(3):
+    LINK_DEST = r"(?:" + LINK_CHAR + r"|\(" + LINK_DEST + r"*\))"
+LINK_DEST = r"(?P<dest><(?:[^<>\n\\]|" + LINK_ESCAPE + r")*>|(?!<)" + LINK_DEST + r"+)"
+LINK_TITLE = r"""(?P<title>"(?:[^"\\]|{escape})*"|'(?:[^'\\]|{escape})*'|\((?:[^()\\]|{escape})*\))""".format(escape=LINK_ESCAPE)
+INLINE_LINK = re.compile(r"\(" + LINK_PAD + r"(?:" + LINK_DEST + r")?(?:" + LINK_SPACE + LINK_TITLE + r")?" + LINK_PAD + r"\)")
+REF_DEF = re.compile(r" {0,3}" + LINK_LABEL + ":" + LINK_PAD + LINK_DEST + "(?:" + LINK_SPACE + LINK_TITLE + r")?[ \t]*(?=\n|$)")
+REF_LABEL = re.compile(LINK_LABEL)
 
 
 def html_block_end(body: str, paragraph: bool) -> re.Pattern[str] | None:
@@ -255,30 +268,40 @@ def inline_end(lines: list[str], row: int, start: int, ticks: int, containers: l
     return None
 
 
-def inline_html_end(lines: list[str], row: int, start: int, containers: list[int | None]) -> tuple[int, int] | None:
-    tag = ""
+def raw_offset(raw: str, body: str) -> int:
+    prefix = len(raw.expandtabs(4)) - len(body)
+    column, offset = 0, 0
+    while column < prefix:
+        column += 4 - column % 4 if raw[offset] == "\t" else 1
+        offset += 1
+    return offset
+
+
+def inline_match(lines: list[str], row: int, start: int, containers: list[int | None], pattern: re.Pattern[str]):
+    text, result = "", None
     for i, raw in inline_lines(lines, row, containers):
         offset = start if i == row else 0
         if i != row and containers:
-            body, _ = match_containers(raw, containers)
-            prefix = len(raw.expandtabs(4)) - len(body)
-            column = 0
-            while column < prefix:
-                column += 4 - column % 4 if raw[offset] == "\t" else 1
-                offset += 1
-        tag_start = len(tag)
-        tag += raw[offset:] + "\n"
-        if match := INLINE_HTML.match(tag):
-            return i, offset + match.end() - tag_start
-    return None
+            offset = raw_offset(raw, match_containers(raw, containers)[0])
+        before = len(text)
+        text += raw[offset:] + "\n"
+        if (match := pattern.match(text)) and match.end() > before:
+            result = (i, offset + match.end() - before, match)
+            if pattern is not REF_DEF or match["title"] or i + 1 == len(lines):
+                break
+            next_body, _ = match_containers(lines[i + 1], containers)
+            if not next_body.lstrip().startswith(('"', "'", "(")):
+                break
+    return result
 
 
-def visible_markdown(lines: list[str]) -> tuple[list[str], list[tuple[int, str, str]], bool]:
-    out, blocks, content = [], [], []
+def visible_markdown(lines: list[str]) -> tuple[list[str], list[tuple[int, str, str]], bool, list[str]]:
+    out, blocks, content, anchors = [], [], [], []
+    definitions, reference_uses, openers, brackets = set(), [], [], []
     containers: list[int | None] = []
     fence, html = None, None
     paragraph, unclosed = False, False
-    inline = re.compile(r"(\\*)(<!--|`+|</?[A-Za-z])")
+    inline = re.compile(r"(\\*)(<!--|`+|</?[A-Za-z]|[\[\]])")
     span_row, span_end = -1, 0
     hidden_row, hidden_end = -1, 0
     for i, raw in enumerate(lines):
@@ -328,7 +351,13 @@ def visible_markdown(lines: list[str]) -> tuple[list[str], list[tuple[int, str, 
         if block_start and not paragraph and body.startswith("    "):
             out.append(" " * len(raw))
             continue
+        if block_start and (not paragraph or body.lstrip().startswith("|")):
+            brackets.clear()
         pos = len(raw) if i < span_row else span_end if i == span_row else 0
+        if block_start and not paragraph and re.match(r"^ {0,3}"+LINK_LABEL+":", body):
+            if (definition := inline_match(lines, i, raw_offset(raw, body), containers, REF_DEF)) and definition[2][1].strip():
+                hidden_row, hidden_end, ref = definition
+                definitions.add(" ".join(ref[1].split()).casefold())
         visible = list(raw)
         while pos < len(raw):
             if i <= hidden_row:
@@ -343,9 +372,27 @@ def visible_markdown(lines: list[str]) -> tuple[list[str], list[tuple[int, str, 
                         hidden_row, hidden_end = end_of_comment
                         pos = match.start(2)
                 elif match[2].startswith("<"):
-                    if not escaped and (end_of_tag := inline_html_end(lines, i, match.start(2), containers)):
-                        hidden_row, hidden_end = end_of_tag
+                    if not escaped and (end_of_tag := inline_match(lines, i, match.start(2), containers, INLINE_HTML)):
+                        hidden_row, hidden_end, _ = end_of_tag
                         pos = match.start(2)
+                elif match[2] in "[]":
+                    if escaped:
+                        continue
+                    if match[2] == "[":
+                        brackets.append((i, match.start(2)))
+                    elif brackets:
+                        row, col = brackets.pop()
+                        if raw.startswith("(", pos) and (link := inline_match(lines, i, pos, containers, INLINE_LINK)):
+                            hidden_row, hidden_end, target = link
+                            pos = match.start(2)
+                            openers.append((row, col))
+                            brackets.clear()
+                            if target["dest"] and target["dest"].startswith("#") and len(target["dest"]) > 1:
+                                anchors.append(target["dest"][1:])
+                        elif row == i:
+                            ref = REF_LABEL.match(raw, pos)
+                            label = ref[1] if ref and ref[1] else raw[col + 1:match.start(2)]
+                            reference_uses.append((" ".join(label.split()).casefold(), row, col, match.start(2), ref.end() if ref else pos))
                 elif (width_of_span := len(match[2]) - escaped) and (end_of_span := inline_end(lines, i, pos, width_of_span, containers)):
                     span_row, span_end = end_of_span
                     pos = span_end if i == span_row else len(raw)
@@ -353,7 +400,13 @@ def visible_markdown(lines: list[str]) -> tuple[list[str], list[tuple[int, str, 
                 break
         out.append("".join(visible))
         paragraph = bool(out[-1].strip()) and not re.match(r"^ {0,3}(?:#{1,6}\s|\||[-_*=]{3,}\s*$)", body)
-    return out, blocks, unclosed or fence is not None
+    for label, row, start, close, end in reference_uses:
+        if label in definitions:
+            openers.append((row, start))
+            out[row] = out[row][:close] + " " * (end - close) + out[row][end:]
+    for row, start in openers:
+        out[row] = out[row][:start] + " " + out[row][start + 1:]
+    return out, blocks, unclosed or fence is not None, anchors
 
 
 def strict_inventory(rules: str, rule_rows: list[list[str]], scenarios: list[list[str]], defined: set[str]) -> list[str]:
@@ -774,11 +827,12 @@ def main() -> int:
     lines = src.split("\n")
     original = None
     fences: list[tuple[int, str, str]] = []
+    inline_anchors: list[str] = []
     if profile is None:
         unclosed = sum(1 for l in lines if l.strip().startswith("```")) % 2
     else:
         original = lines
-        lines, fences, unclosed = visible_markdown(lines)
+        lines, fences, unclosed, inline_anchors = visible_markdown(lines)
         src = "\n".join(lines)
     heads = headings(lines, original)
     if "--section" in sys.argv or "--batch" in sys.argv:
@@ -796,7 +850,7 @@ def main() -> int:
 
     # --- anchors and § references ---
     anchors = {anchor(h) for _, _, h in heads}
-    for t in re.findall(r"\]\(#([^)]+)\)", src):
+    for t in (re.findall(r"\]\(#([^)]+)\)", src) if profile is None else inline_anchors):
         if t not in anchors:
             problems.append(f"broken anchor #{t}")
     numbered = {m.group(1) for _, _, h in heads if (m := re.match(r"^(\d+(?:\.\d+)*)", h))}

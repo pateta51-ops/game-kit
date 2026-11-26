@@ -417,6 +417,36 @@ describe('explicit plan applicability', () => {
     expect(result.code, result.output).toBe(0);
   });
 
+  it.each([
+    ['destinations', 'Use [one](/SC-01) and [two](/SC-02). Implement'],
+    ['titles', 'Use [examples](/reference "SC-01, SC-02"). Implement'],
+    ['reference definitions', '[one]: /SC-01\n[two]: /SC-02\n\nImplement'],
+    ['reference labels', 'Use [examples][SC-01, SC-02]. Implement\n\n[SC-01, SC-02]: /reference\n\nImplement'],
+  ])('does not count Markdown link %s as phase citations', (_label, body) => {
+    fails({ text: PLAN.replace('SC-01, SC-02. Implement', body) }, 'SC-01 is not assigned to any phase');
+  });
+
+  it('requires a visible rule citation and rule text even with Markdown links', () => {
+    fails({ text: PLAN.replace('| SC-01 | MOVE-01 |', '| SC-01 | [example](/MOVE-01) |') }, 'SC-01 cites no defined rule');
+    fails({ text: PLAN.replace('A move enters an adjacent unblocked space.', '[](/never-visible)') }, 'rule MOVE-01 has no text');
+  });
+
+  it.each([
+    '[SC-01, SC-02](/chapter(one) "Introduction")',
+    '[SC-01, SC-02][guide]\n\n[guide]: /chapter\n\nImplement',
+    '[SC-01, SC-02]',
+    '[description][SC-01, SC-02]',
+    '<https://example.invalid/SC-01/SC-02>',
+    '`[description](/SC-01/SC-02)`',
+  ])('preserves visible Markdown plan references in %s', (body) => {
+    const result = run({ text: PLAN.replace('SC-01, SC-02. Implement', body + ' Implement') });
+    expect(result.code, result.output).toBe(0);
+  });
+
+  it('still reports broken anchor links in strict mode', () => {
+    fails({ text: PLAN.replace('SC-01, SC-02. Implement', 'SC-01, SC-02. [guide](#missing). Implement') }, 'broken anchor #missing');
+  });
+
   it('preserves legacy scenario references around raw HTML', () => {
     const text = PLAN.replace('| ID | Rules | Expected |', '<pre>\n| ID | Rules | Expected |')
       .replace('\n\n## 3. Implementation phases', '\n</pre>\n\n## 3. Implementation phases');
