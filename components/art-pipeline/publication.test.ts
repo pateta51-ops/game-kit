@@ -92,7 +92,7 @@ describe('publication preserves usable art', () => {
     expect(check(['--manifest', join(dir, 'public/art/manifest.json'), '--sources', join(dir, 'chosen'), '--out', join(dir, 'public/art'), '--ext', 'png', '--need-ids', put('ids.json', ['a'])], io)).toBe(0);
   });
 
-  it.each(['chosen/manifest.json', 'public/art/manifest.png'])('publishes and checks an in-directory manifest without counting it as art: %s', async (manifest) => {
+  it.each(['chosen/manifest.json', 'chosen/metadata.v1/manifest.json', 'public/art/manifest.png', 'public/art/metadata.png/manifest.json'])('publishes and checks an in-directory manifest without counting it as art: %s', async (manifest) => {
     index({ face: 'a.png' });
     expect(await publish(['--config', config({ manifest })], io)).toBe(0);
     expect(check([

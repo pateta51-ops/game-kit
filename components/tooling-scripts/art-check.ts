@@ -37,6 +37,9 @@ export interface ArtConfig {
 }
 
 const sha256 = (path: string): string => createHash('sha256').update(readFileSync(path)).digest('hex');
+const filesIn = (dir: string): string[] => readdirSync(dir, { withFileTypes: true })
+  .filter((entry) => entry.isFile() || (entry.isSymbolicLink() && statSync(join(dir, entry.name), { throwIfNoEntry: false })?.isFile()))
+  .map((entry) => entry.name).sort();
 
 export function artCheck(c: ArtConfig): { errors: string[]; faces: number; total: number; skipped: number } {
   const errors: string[] = [];
@@ -50,7 +53,7 @@ export function artCheck(c: ArtConfig): { errors: string[]; faces: number; total
   const sourceManifest = manifestIn(c.sources);
   const outputManifest = manifestIn(c.out);
   const ids = new Set<string>();
-  for (const file of readdirSync(c.sources).sort()) {
+  for (const file of filesIn(c.sources)) {
     if (sourceManifest(file)) continue;
     const m = c.sourceId.exec(file);
     const id = m?.[1] ?? m?.[0];
@@ -85,7 +88,7 @@ export function artCheck(c: ArtConfig): { errors: string[]; faces: number; total
     if (name === undefined || !ids.has(name) || !existsSync(join(c.out, `${name}.${c.ext}`))) errors.push(`${id}: required logical ID has no complete published face`);
   }
   let total = 0;
-  for (const f of existsSync(c.out) ? readdirSync(c.out).sort() : []) {
+  for (const f of existsSync(c.out) ? filesIn(c.out) : []) {
     if (!f.endsWith(`.${c.ext}`) || outputManifest(f)) continue;
     const size = statSync(join(c.out, f)).size;
     total += size;
