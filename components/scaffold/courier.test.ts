@@ -210,7 +210,7 @@ describe('bounded courier assembly', () => {
     const played = browser(dir, '10000');
     expect(played.status, played.stdout + played.stderr).toBe(0);
     expect(played.stdout).toContain('Courier browser acceptance passed');
-    const wide = generate('browser-wide', { ...spec, assembly: { ...assembly, board: { ...assembly.board, cols: 20 } } });
+    const wide = generate('browser-wide', { ...spec, name: 'IntercontinentalCourierDispatchService', assembly: { ...assembly, board: { ...assembly.board, cols: 20 } } });
     const widePlayed = browser(wide, '10000');
     expect(widePlayed.status, widePlayed.stdout + widePlayed.stderr).toBe(0);
     expect(widePlayed.stdout).toContain('Courier browser acceptance passed');

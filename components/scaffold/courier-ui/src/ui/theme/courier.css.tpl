@@ -14,7 +14,7 @@ body {
 .courier-app .kit-sav { grid-template-columns: minmax(0, 1fr); }
 .courier-app .kit-sav-form { flex-wrap: wrap; }
 .courier-app .kit-sav-form input { flex: 1 1 12rem; }
-.courier-app button {
+.courier-app h1, .courier-app button {
   overflow-wrap: anywhere;
 }
 .courier-app [data-part="menu"] { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.5rem; }
