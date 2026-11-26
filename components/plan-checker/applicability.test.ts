@@ -281,6 +281,35 @@ describe('explicit plan applicability', () => {
     fails({ fit: '<!-- Movement policy: Original rules over the existing grid. -->' }, 'no kit-fit review');
   });
 
+  it('does not manufacture headings by masking adjacent comments', () => {
+    fails({ text: PLAN.replace('### Phase 1', '###<!-- annotation --> Phase 1') }, 'no implementation phase headings');
+  });
+
+  it.each([1, 2, 3, 4])('recognizes HTML comment escapes after %s backslashes', (slashes) => {
+    const text = PLAN.replace('SC-01, SC-02. Implement', 'SC-01. ' + '\\'.repeat(slashes) + '<!-- SC-02 --> Implement');
+    if (slashes % 2 === 0) fails({ text }, 'SC-02 is not assigned');
+    else {
+      const result = run({ text });
+      expect(result.code, result.output).toBe(0);
+    }
+  });
+
+  it.each(['`example <!--\ncontinued`', '`example\ncontinued <!--`'])('keeps the comment marker inside a multiline span: %s', (span) => {
+    const text = PLAN.replace('SC-01, SC-02. Implement', 'The marker ' + span + ' is literal. SC-01, SC-02. Implement');
+    const result = run({ text });
+    expect(result.code, result.output).toBe(0);
+  });
+
+  it('does not join an inline span across an interrupting HTML comment block', () => {
+    const text = PLAN.replace('SC-01, SC-02. Implement', 'SC-01. Unclosed ` marker.\n<!-- SC-02 -->`');
+    fails({ text }, 'SC-02 is not assigned');
+  });
+
+  it('does not join an inline span across ordered list items', () => {
+    const text = PLAN.replace('SC-01, SC-02. Implement', '1. SC-01. Unclosed ` marker.\n2. <!-- SC-02 -->`');
+    fails({ text }, 'SC-02 is not assigned');
+  });
+
   it('preserves legacy scenario mentions outside phase blocks', () => {
     const text = PLAN.replace('### Phase 1', 'Overview: SC-02.\n\n### Phase 1').replace('SC-01, SC-02. Implement', 'SC-01. Implement');
     const result = run({ text, noProfile: true, flags: ['--cards-optional', '--depth-optional'] });

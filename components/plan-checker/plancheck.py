@@ -184,16 +184,44 @@ def applicability() -> dict | None:
     return data
 
 
+def unquote(body: str) -> tuple[str, int]:
+    depth = 0
+    while marker := re.match(r"^ {0,3}> ?", body):
+        body, depth = body[marker.end():], depth + 1
+    return body, depth
+
+
+def inline_code_end(lines: list[str], row: int, start: int, ticks: int, quote: int, width: int) -> tuple[int, int] | None:
+    runs = re.compile(r"`+")
+    interrupt = re.compile(r"^ {0,3}(?:#{1,6}(?:[ \t]|$)|`{3,}[^`]*$|~{3,}|<!--|\||"
+                           r"(?:[-+*]|1[.)])[ \t]|(?:=+|-+)[ \t]*$|(?:\*[ \t]*){3,}$|(?:_[ \t]*){3,}$)")
+    for i in range(row, len(lines)):
+        raw = lines[i]
+        if i != row:
+            body, depth = unquote(raw.expandtabs(4))
+            if width:
+                if body.startswith(" " * width):
+                    body, extra = unquote(body[width:])
+                    depth += extra
+                elif re.match(r"^ {0,3}\d{1,9}[.)](?:[ \t]|$)", body):
+                    break
+            if not body.strip() or depth > quote or interrupt.match(body):
+                break
+        for run in runs.finditer(raw, start if i == row else 0):
+            if len(run[0]) == ticks:
+                return i, run.end()
+    return None
+
+
 def visible_markdown(lines: list[str]) -> tuple[list[str], list[tuple[int, str, str]], bool]:
     out, blocks, content, lists = [], [], [], []
     fence = None
     comment, paragraph, unclosed = False, False, False
     list_quote = 0
-    inline = re.compile(r"(?<!\\)<!--|(?<!`)(`+)(?!`).*?(?<!`)\1(?!`)")
+    inline = re.compile(r"(\\*)(<!--|`+)")
+    span_row, span_end = -1, 0
     for i, raw in enumerate(lines):
-        body, quote = raw.expandtabs(4), 0
-        while marker := re.match(r"^ {0,3}> ?", body):
-            body, quote = body[marker.end():], quote + 1
+        body, quote = unquote(raw.expandtabs(4))
         if quote != list_quote:
             lists.clear()
             list_quote = quote
@@ -209,8 +237,8 @@ def visible_markdown(lines: list[str]) -> tuple[list[str], list[tuple[int, str, 
             lists.append(width)
             body = body[item.start(1) + (spaces if spaces <= 4 else 1):]
             paragraph = False
-        while marker := re.match(r"^ {0,3}> ?", body):
-            body, quote = body[marker.end():], quote + 1
+        body, extra = unquote(body)
+        quote += extra
         mark = re.match(r"^ {0,3}(`{3,}|~{3,})(.*)$", body)
         if fence and body.strip() and (quote != fence[3] or (not quote and width < fence[4])):
             unclosed, fence = True, None
@@ -220,28 +248,36 @@ def visible_markdown(lines: list[str]) -> tuple[list[str], list[tuple[int, str, 
                 fence = None
             else:
                 content.append(raw if not quote and not width else body)
-            out.append("")
+            out.append(" " * len(raw))
             continue
         if not comment and mark and (mark.group(1)[0] == "~" or "`" not in mark.group(2)):
             fence = (mark.group(1), i, mark.group(2).strip(), quote, width)
             content = []
             paragraph = False
-            out.append("")
+            out.append(" " * len(raw))
             continue
         if not comment and not paragraph and body.startswith("    "):
-            out.append("")
+            out.append(" " * len(raw))
             continue
-        tail, visible = raw, []
-        while tail:
+        pos = len(raw) if i < span_row else span_end if i == span_row else 0
+        visible = list(raw)
+        while pos < len(raw):
             if comment:
-                _, end, tail = tail.partition("-->")
-                comment = not end
-            elif match := inline.search(tail):
-                comment = match.group(0) == "<!--"
-                visible.append(tail[:match.start() if comment else match.end()])
-                tail = tail[match.end():]
+                end = raw.find("-->", pos)
+                comment = end < 0
+                stop = len(raw) if comment else end + 3
+                visible[pos:stop] = " " * (stop - pos)
+                pos = stop
+            elif match := inline.search(raw, pos):
+                escaped = len(match[1]) % 2
+                pos = match.end()
+                if match[2] == "<!--":
+                    if not escaped:
+                        comment, pos = True, match.start(2)
+                elif (width_of_span := len(match[2]) - escaped) and (end_of_span := inline_code_end(lines, i, pos, width_of_span, quote, width)):
+                    span_row, span_end = end_of_span
+                    pos = span_end if i == span_row else len(raw)
             else:
-                visible.append(tail)
                 break
         out.append("".join(visible))
         paragraph = bool(out[-1].strip()) and not re.match(r"^ {0,3}(?:#{1,6}\s|\||[-_*=]{3,}\s*$)", body)
@@ -352,16 +388,16 @@ def applicability_conflicts(profile: dict, path: Path, src: str, cards: str, pha
     return problems
 
 
-def headings(lines: list[str], masked: bool = False) -> list[tuple[int, int, str]]:
+def headings(lines: list[str], original: list[str] | None = None) -> list[tuple[int, int, str]]:
     """(line index, level, text) of every heading outside code fences."""
     out, in_code = [], False
     for i, l in enumerate(lines):
-        if not masked and l.strip().startswith("```"):
+        if original is None and l.strip().startswith("```"):
             in_code = not in_code
             continue
         if not in_code:
-            m = re.match((r"^ {0,3}" if masked else r"^") + r"(#{1,6})\s+(.*)$", l)
-            if m:
+            m = re.match(r"^ {0,3}(#{1,6})[ \t]+(.*)$" if original is not None else r"^(#{1,6})\s+(.*)$", l)
+            if m and (original is None or re.match(r"^ {0,3}#{1,6}[ \t]+", original[i])):
                 out.append((i, len(m.group(1)), m.group(2).strip()))
     return out
 
@@ -636,13 +672,15 @@ def main() -> int:
     llm_required = profile is None or profile["llmPlaytest"]["mode"] == "required"
     src = path.read_text(encoding="utf-8")
     lines = src.split("\n")
+    original = None
     fences: list[tuple[int, str, str]] = []
     if profile is None:
         unclosed = sum(1 for l in lines if l.strip().startswith("```")) % 2
     else:
+        original = lines
         lines, fences, unclosed = visible_markdown(lines)
         src = "\n".join(lines)
-    heads = headings(lines, profile is not None)
+    heads = headings(lines, original)
     if "--section" in sys.argv or "--batch" in sys.argv:
         return extract(path, lines, heads)
     problems: list[str] = []
