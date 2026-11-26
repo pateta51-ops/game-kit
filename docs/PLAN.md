@@ -448,6 +448,13 @@ The blind matching test's result was not recorded: the PR, its comments and docs
 | K767 | Validate explicitly non-card plans and their visible rule, scenario and phase evidence through an opt-in applicability file. | M |  | done |
 | K768 | Keep keyboard ownership with active dialogs and native controls, expose readable attachments, adapt shared motion timing and retry optional scan geometry loads. | M |  | done |
 | K769 | Generate an opt-in courier starter with executable rules, save and movement acceptance, and a contained phone board. This is one adapter under the broader K551 starter candidate. | M |  | done |
+| K770 | Let modal children handle Escape and Tab before the active modal fallback, with focus restoration and real browser coverage. | S |  | done |
+| K771 | Let phone Sheet children handle Escape and Tab before the active sheet fallback, preserving native Tab movement. | S |  | done |
+| K772 | Generate the bounded reference-card starter from independent card records, printed expectations and setup, using the shared adapter and source-bound command receipts. | M |  | done |
+| K773 | Exercise delayed card clauses, paired hidden worlds, expedition routes and four-card campaign continuations through generated consumers. | M |  | done |
+| K774 | Provide focused same-pin context and continuations, verify generated worker briefs against their inputs, and report component observations with their evidence limits. | M |  | done |
+| K775 | Import record-traced development observations and compare compatible accepted endpoints with explicit measurement limits. | M |  | done |
+| K776 | Verify retained ancestor coverage evidence, require actual Windows and PDF capability cases, and check the identities of commits contributed to a pull request. | M |  | done |
 
 ## Candidates
 

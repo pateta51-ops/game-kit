@@ -37,3 +37,33 @@ describe('personal-check: local drive path', () => {
     expect(run({ 'ports.json': line + ' C:/Users/realperson/x' }).status).toBe(1);
   });
 });
+
+it('excludes only the GitHub-generated test merge from commit identity checks', () => {
+  const cwd = fs.mkdtempSync(path.join(root, 'merge-'));
+  const git = (...args: string[]) => execFileSync('git', args, { cwd, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] }).trim();
+  const commit = (email: string, message: string) => git('-c', 'user.name=Kit test', '-c', `user.email=${email}`, 'commit', '--allow-empty', '-qm', message);
+  const createMerge = (base: string, source: string) => git('-c', 'user.name=Kit test', '-c', 'user.email=merge@example.test', 'commit-tree', `${source}^{tree}`, '-p', base, '-p', source, '-m', 'Test merge');
+  git('init', '-q');
+  commit('test@users.noreply.github.com', 'Base');
+  const base = git('rev-parse', 'HEAD');
+  git('update-ref', 'refs/remotes/origin/main', base);
+  const run = (email: string, fakeHead = false) => {
+    git('reset', '--hard', base);
+    commit(email, 'PR commit');
+    const source = git('rev-parse', 'HEAD');
+    const merge = createMerge(base, source);
+    git('reset', '--hard', merge);
+    const event = path.join(cwd, 'event.json');
+    fs.writeFileSync(event, JSON.stringify({ pull_request: { number: 42, base: { sha: base }, head: { sha: fakeHead ? base : source } } }));
+    const result = spawnSync(process.execPath, [SCRIPT], { cwd, encoding: 'utf8', env: { ...process.env, GITHUB_ACTIONS: 'true', GITHUB_EVENT_NAME: 'pull_request', GITHUB_EVENT_PATH: event, GITHUB_REF: 'refs/pull/42/merge', GITHUB_SHA: merge } });
+    return { result, merge: merge.slice(0, 7), source: source.slice(0, 7) };
+  };
+  expect(run('test@users.noreply.github.com').result.status).toBe(0);
+  const bad = run('author@example.test');
+  expect(bad.result.status).toBe(1);
+  expect(bad.result.stderr).toContain(`commit ${bad.source}:`);
+  expect(bad.result.stderr).not.toContain(`commit ${bad.merge}:`);
+  const mismatched = run('test@users.noreply.github.com', true);
+  expect(mismatched.result.status).toBe(1);
+  expect(mismatched.result.stderr).toContain(`commit ${mismatched.merge}:`);
+});
