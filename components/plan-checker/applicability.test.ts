@@ -379,6 +379,42 @@ describe('explicit plan applicability', () => {
     expect(result.code, result.output).toBe(0);
   });
 
+  it.each([
+    ['<pre>', '</pre>'],
+    ['<div>', '</div>'],
+    ['<markup-example role="table">', '</markup-example>'],
+    ['<?example', '?>'],
+    ['<!EXAMPLE', '>'],
+    ['<![CDATA[', ']]>'],
+  ])('ignores scenario tables inside a raw HTML block starting with %s', (open, close) => {
+    const text = PLAN.replace('| ID | Rules | Expected |', open + '\n| ID | Rules | Expected |')
+      .replace('\n\n## 3. Implementation phases', '\n' + close + '\n\n## 3. Implementation phases');
+    fails({ text }, 'scenario inventory is empty');
+  });
+
+  it.each([
+    ['an explicit terminator', '<PRE>\n\nmarkdown example\n</PRE>\n'],
+    ['a blank line', '<div>\nexample</div>\n\n'],
+    ['the end of its quote', '> <pre>\n> example\n'],
+  ])('accepts the real scenario table after an HTML block ending at %s', (_label, html) => {
+    const text = PLAN.replace('| ID | Rules | Expected |', html + '| ID | Rules | Expected |');
+    const result = run({ text });
+    expect(result.code, result.output).toBe(0);
+  });
+
+  it('preserves visible references beside inline HTML tags', () => {
+    const text = PLAN.replace('SC-01, SC-02. Implement', 'Use <span>SC-01</span>.\n<note>\nThen use <em>SC-02</em>. Implement');
+    const result = run({ text });
+    expect(result.code, result.output).toBe(0);
+  });
+
+  it('preserves legacy scenario references around raw HTML', () => {
+    const text = PLAN.replace('| ID | Rules | Expected |', '<pre>\n| ID | Rules | Expected |')
+      .replace('\n\n## 3. Implementation phases', '\n</pre>\n\n## 3. Implementation phases');
+    const result = run({ text, noProfile: true, flags: ['--cards-optional', '--depth-optional'] });
+    expect(result.code, result.output).toBe(0);
+  });
+
   it('preserves the legacy handling of raw scenario rows', () => {
     const text = PLAN.replace('| ID | Rules | Expected |\n|---|---|---|\n', '');
     const result = run({ text, noProfile: true, flags: ['--cards-optional', '--depth-optional'] });

@@ -188,6 +188,31 @@ QUOTE = re.compile(r"^ {0,3}> ?")
 ITEM = re.compile(r"^ {0,3}(?:[-+*]|\d{1,9}[.)])( +)")
 BLOCK_START = re.compile(r"^ {0,3}(?:#{1,6}(?:[ \t]|$)|`{3,}[^`]*$|~{3,}|<!--|>|"
                          r"(?:[-+*]|1[.)])[ \t]|(?:=+|-+)[ \t]*$|(?:\*[ \t]*){3,}$|(?:_[ \t]*){3,}$)")
+HTML_BLANK = re.compile(r"^[ \t]*$")
+HTML_TAGS = ("address|article|aside|base|basefont|blockquote|body|caption|center|col|colgroup|dd|details|dialog|dir|div|"
+             "dl|dt|fieldset|figcaption|figure|footer|form|frame|frameset|h[1-6]|head|header|hr|html|iframe|legend|li|link|"
+             "main|menu|menuitem|nav|noframes|ol|optgroup|option|p|param|section|source|summary|table|tbody|td|tfoot|th|thead|"
+             "title|tr|track|ul")
+HTML_BLOCKS = (
+    (re.compile(r"^ {0,3}<(?:pre|script|style)(?=[ \t]|>|$)", re.I), re.compile(r"</(?:pre|script|style)>", re.I)),
+    (re.compile(r"^ {0,3}<!--"), re.compile(r"-->")),
+    (re.compile(r"^ {0,3}<\?"), re.compile(r"\?>")),
+    (re.compile(r"^ {0,3}<![A-Z]"), re.compile(r">")),
+    (re.compile(r"^ {0,3}<!\[CDATA\["), re.compile(r"\]\]>")),
+    (re.compile(r"^ {0,3}</?(?:" + HTML_TAGS + r")(?=[ \t]|/?>|$)", re.I), HTML_BLANK),
+)
+HTML_ATTR = r'''[A-Za-z_:][A-Za-z0-9_.:-]*(?:[ \t]*=[ \t]*(?:"[^"]*"|'[^']*'|[^ \t"'=<>`]+))?'''
+HTML_TAG = re.compile(r"^ {0,3}(?:</[A-Za-z][A-Za-z0-9-]*[ \t]*>|<[A-Za-z][A-Za-z0-9-]*(?:[ \t]+"
+                      + HTML_ATTR + r")*[ \t]*/?>)[ \t]*$")
+
+
+def html_block_end(body: str, paragraph: bool) -> re.Pattern[str] | None:
+    if not re.match(r"^ {0,3}<", body):
+        return None
+    for start, end in HTML_BLOCKS:
+        if start.match(body):
+            return end
+    return HTML_BLANK if not paragraph and HTML_TAG.match(body) else None
 
 
 def match_containers(raw: str, containers: list[int | None]) -> tuple[str, int]:
@@ -211,7 +236,7 @@ def inline_end(lines: list[str], row: int, start: int, ticks: int, containers: l
         raw = lines[i]
         if i != row:
             body, depth = match_containers(raw, containers)
-            if (not body.strip() or BLOCK_START.match(body) or body.lstrip().startswith("|")
+            if (not body.strip() or BLOCK_START.match(body) or html_block_end(body, True) or body.lstrip().startswith("|")
                     or (depth < len(containers) and ITEM.match(body))):
                 break
         offset = start if i == row else 0
@@ -227,20 +252,20 @@ def inline_end(lines: list[str], row: int, start: int, ticks: int, containers: l
 def visible_markdown(lines: list[str]) -> tuple[list[str], list[tuple[int, str, str]], bool]:
     out, blocks, content = [], [], []
     containers: list[int | None] = []
-    fence, comment_depth = None, None
+    fence, html = None, None
     paragraph, unclosed = False, False
     inline = re.compile(r"(\\*)(<!--|`+)")
     span_row, span_end = -1, 0
     comment_row, comment_end = -1, 0
     for i, raw in enumerate(lines):
         body, depth = match_containers(raw, containers)
-        if comment_depth is not None and depth < comment_depth:
-            comment_depth = None
+        if html and depth < html[0]:
+            html = None
         if fence and depth < fence[3]:
             unclosed, fence = True, None
         if i > max(span_row, comment_row):
             del containers[depth:]
-            while comment_depth is None and fence is None:
+            while html is None and fence is None:
                 if marker := QUOTE.match(body):
                     containers.append(None)
                     body = body[marker.end():]
@@ -261,13 +286,22 @@ def visible_markdown(lines: list[str]) -> tuple[list[str], list[tuple[int, str, 
                 content.append(body if containers else raw)
             out.append(" " * len(raw))
             continue
-        if comment_depth is None and i > max(span_row, comment_row) and mark and (mark.group(1)[0] == "~" or "`" not in mark.group(2)):
+        block_start = i > max(span_row, comment_row)
+        if html is None and block_start and (close := html_block_end(body, paragraph)):
+            html = (len(containers), close)
+        if html:
+            if html[1].search(body):
+                html = None
+            paragraph = False
+            out.append(" " * len(raw))
+            continue
+        if block_start and mark and (mark.group(1)[0] == "~" or "`" not in mark.group(2)):
             fence = (mark.group(1), i, mark.group(2).strip(), len(containers))
             content = []
             paragraph = False
             out.append(" " * len(raw))
             continue
-        if comment_depth is None and i > max(span_row, comment_row) and not paragraph and body.startswith("    "):
+        if block_start and not paragraph and body.startswith("    "):
             out.append(" " * len(raw))
             continue
         pos = len(raw) if i < span_row else span_end if i == span_row else 0
@@ -277,24 +311,13 @@ def visible_markdown(lines: list[str]) -> tuple[list[str], list[tuple[int, str, 
                 stop = comment_end if i == comment_row else len(raw)
                 visible[pos:stop] = " " * (stop - pos)
                 pos, comment_row = stop, -1 if i == comment_row else comment_row
-            elif comment_depth is not None:
-                end = raw.find("-->", pos)
-                if end >= 0:
-                    comment_depth = None
-                stop = len(raw) if end < 0 else end + 3
-                visible[pos:stop] = " " * (stop - pos)
-                pos = stop
             elif match := inline.search(raw, pos):
                 escaped = len(match[1]) % 2
                 pos = match.end()
                 if match[2] == "<!--":
-                    if not escaped:
-                        if body.lstrip(" ").startswith("<!--"):
-                            comment_depth = len(containers)
-                            pos = match.start(2)
-                        elif end_of_comment := inline_end(lines, i, pos, 0, containers):
-                            comment_row, comment_end = end_of_comment
-                            pos = match.start(2)
+                    if not escaped and (end_of_comment := inline_end(lines, i, pos, 0, containers)):
+                        comment_row, comment_end = end_of_comment
+                        pos = match.start(2)
                 elif (width_of_span := len(match[2]) - escaped) and (end_of_span := inline_end(lines, i, pos, width_of_span, containers)):
                     span_row, span_end = end_of_span
                     pos = span_end if i == span_row else len(raw)
