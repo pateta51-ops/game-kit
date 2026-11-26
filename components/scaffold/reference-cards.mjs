@@ -22,7 +22,7 @@ export function resolveCards(input) {
     if (typeof card.id !== 'string' || !/^[a-z][a-z0-9-]*$/.test(card.id) || ids.has(card.id) || card.line !== card.id+'.1') throw new Error('reference-cards assembly needs unique card IDs with matching .1 clause IDs')
     ids.add(card.id)
     if (typeof card.name !== 'string' || !card.name.trim() || !positive(card.copies,20)) throw new Error('reference-cards assembly needs names and 1 to 20 physical copies per definition')
-    let supported = false
+    let supported
     if (card.id === 'rally') supported = one(card.effect,'boost',2) && card.stay === undefined && card.when === undefined
     else if (card.id === 'ward') supported = Array.isArray(card.effect) && !card.effect.length && card.stay === true && card.when === undefined
     else if (card.id === 'mend') {

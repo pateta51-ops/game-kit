@@ -30,9 +30,9 @@ export function App() {
   return <main>
     <h1>Expedition</h1>
     <p>Defeat the guard, reveal the route and reach the exit. Every move, attack or exploration costs one action point. Entering the exit on your last point wins.</p>
-    <label>Route <select value={index} onChange={event => setIndex(Number(event.target.value))}>
+    <label htmlFor="expedition-route">Route</label>{' '}<select id="expedition-route" value={index} onChange={event => setIndex(Number(event.target.value))}>
       <option value={0}>Short passage</option><option value={1}>Long gallery</option>
-    </select></label>{' '}
+    </select>{' '}
     <form onSubmit={event => { event.preventDefault(); if (draftSeed.trim()) setSeed(draftSeed.trim()); }}>
       <label>Seed <input value={draftSeed} onChange={event => setDraftSeed(event.target.value)} required /></label>{' '}
       <button type="submit">Start with this seed</button>
