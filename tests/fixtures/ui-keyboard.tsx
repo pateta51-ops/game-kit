@@ -11,7 +11,7 @@ const prompt = { id: 1, kind: 'move', min: 1, max: 1, options: [{ id: 'card', en
 function Board() {
   const [modal, setModal] = useState(false);
   const [ordered, setOrdered] = useState(false);
-  const [native, setNative] = useState<'radio' | 'disclosure' | 'shared-radio' | 'frame' | 'ordered-frame' | 'scroll' | null>(null);
+  const [native, setNative] = useState<'radio' | 'disclosure' | 'shared-radio' | 'frame' | 'ordered-frame' | 'adjacent-frames' | 'scroll' | null>(null);
   const [nested, setNested] = useState(false);
   const [sheet, setSheet] = useState(false);
   const [numbers, setNumbers] = useState(0);
@@ -43,6 +43,7 @@ function Board() {
       <button onClick={() => setNative('shared-radio')}>Open shared radio modal</button>
       <button onClick={() => setNative('frame')}>Open frame modal</button>
       <button tabIndex={3} onClick={() => setNative('ordered-frame')}>Open ordered frame modal</button>
+      <button onClick={() => setNative('adjacent-frames')}>Open adjacent frames</button>
       <button onClick={() => setNative('scroll')}>Open scrolling modal</button>
       <button onClick={() => setSheet(true)}>Open sheet</button>
       <label>Background choice <input type="radio" name="shared-choice" defaultChecked /></label>
@@ -100,9 +101,11 @@ function Board() {
       </> : native === 'frame' ? <>
         <button>Before frame</button>
         <iframe title="Embedded controls" srcDoc="<button>Frame action</button>" />
-      </> : native === 'ordered-frame' ? <>
+      </> : native === 'ordered-frame' || native === 'adjacent-frames' ? <>
         <button tabIndex={1}>First frame action</button>
         <iframe tabIndex={2} title="Ranked controls" srcDoc="<button>Frame start</button><button>Frame end</button>" />
+        {native === 'adjacent-frames' &&
+          <iframe tabIndex={4} title="Next ranked controls" srcDoc="<button>Frame start</button><button>Frame end</button>" />}
         <button>Last frame action</button>
       </> : native === 'scroll' ? <>
         <button tabIndex={1}>First scroll action</button>

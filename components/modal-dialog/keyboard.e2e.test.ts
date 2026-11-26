@@ -233,6 +233,51 @@ describe.skipIf(!HAVE && !process.env['CI'])('modal, board shortcuts and attachm
     } finally { await page.close(); }
   });
 
+  it.for([4, 0])('moves directly between adjacent frames when the next tabindex is %s', async (rank) => {
+    const page = await browser.newPage();
+    try {
+      await mount(page);
+      await page.getByRole('button', { name: 'Open adjacent frames' }).click();
+      await page.locator('iframe[title="Next ranked controls"]').evaluate((el: HTMLIFrameElement, index) => {
+        el.tabIndex = index;
+      }, rank);
+      const end = page.frameLocator('iframe[title="Ranked controls"]').getByRole('button', { name: 'Frame end' });
+      const start = page.frameLocator('iframe[title="Next ranked controls"]').getByRole('button', { name: 'Frame start' });
+      await end.focus();
+      await page.keyboard.press('Tab');
+      const forwards = await start.evaluate((el) => el === document.activeElement);
+      await start.focus();
+      await page.keyboard.press('Shift+Tab');
+      const backwards = await end.evaluate((el) => el === document.activeElement);
+      expect({ forwards, backwards }).toEqual({ forwards: true, backwards: true });
+    } finally { await page.close(); }
+  });
+
+  it('keeps open-shadow controls in their native scope order within a ranked modal', async () => {
+    const page = await browser.newPage();
+    try {
+      await mount(page);
+      await page.getByRole('button', { name: 'Open ordered modal' }).click();
+      await page.getByRole('dialog', { name: 'Ordered decision' }).evaluate((el) => {
+        const host = document.createElement('div');
+        el.querySelector('.kc-modal-body')!.append(host);
+        host.attachShadow({ mode: 'open' }).innerHTML =
+          '<button>Shadow default</button><button tabindex="2">Shadow ranked</button>';
+      });
+      await page.getByRole('button', { name: 'Default action' }).focus();
+      for (const [key, name] of [
+        ['Tab', 'Shadow ranked'], ['Tab', 'Shadow default'], ['Tab', 'First priority'],
+        ['Shift+Tab', 'Shadow default'], ['Shift+Tab', 'Shadow ranked'], ['Shift+Tab', 'Default action'],
+      ] as const) {
+        await page.keyboard.press(key);
+        expect(await page.getByRole('button', { name }).evaluate((el) => {
+          const root = el.getRootNode() as Document | ShadowRoot;
+          return root.activeElement === el;
+        }), name).toBe(true);
+      }
+    } finally { await page.close(); }
+  });
+
   it('leaves Escape to a frame whose document is inaccessible to the modal', async () => {
     const page = await browser.newPage();
     try {

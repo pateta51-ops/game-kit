@@ -32,20 +32,49 @@ const tabStop = (el: HTMLElement): boolean => {
 };
 const tabRank = (el: HTMLElement): number => el.tabIndex > 0 ? el.tabIndex : Number.MAX_SAFE_INTEGER;
 const namedRadio = (el: Element | null): el is HTMLInputElement =>
-  el instanceof HTMLInputElement && el.type === 'radio' && el.name !== '';
+  el?.matches('input[type="radio"]') === true && (el as HTMLInputElement).name !== '';
 const sameGroup = (a: HTMLInputElement, b: Element | null): boolean =>
-  namedRadio(b) && a.name === b.name && a.form === b.form;
-function tabOrder(panel: HTMLElement, backwards = false): HTMLElement[] {
-  const items = Array.from(panel.querySelectorAll<HTMLElement>(FOCUSABLE)).filter(tabStop);
+  namedRadio(b) && a.name === b.name && a.form === b.form && a.getRootNode() === b.getRootNode();
+function tabOrder(panel: HTMLElement | ShadowRoot, backwards = false): HTMLElement[] {
+  const items: HTMLElement[] = [];
+  const collect = (parent: ParentNode) => {
+    const assigned = (parent as HTMLSlotElement).assignedElements?.({ flatten: true });
+    for (const child of assigned?.length ? assigned : parent.children) {
+      const el = child as HTMLElement;
+      if (el.shadowRoot) {
+        if (available(el) && (!el.hasAttribute('tabindex') || el.tabIndex >= 0)) items.push(el);
+      } else {
+        if (el.matches(FOCUSABLE) && tabStop(el)) items.push(el);
+        collect(el);
+      }
+    }
+  };
+  collect(panel);
   const radios = items.filter(namedRadio);
-  const checked = Array.from(panel.ownerDocument.querySelectorAll<HTMLInputElement>('input[type="radio"]:checked'));
+  const checked = [...new Set(radios.map((el) => el.getRootNode() as Document | ShadowRoot))]
+    .flatMap((root) => Array.from(root.querySelectorAll<HTMLInputElement>('input[type="radio"]:checked')));
   return items.filter((el) => {
     if (!namedRadio(el)) return true;
     const selected = checked.find((radio) => sameGroup(el, radio));
     if (selected) return selected === el;
     const group = radios.filter((radio) => sameGroup(el, radio));
     return el === (backwards ? group.at(-1) : group[0]);
-  }).sort((a, b) => tabRank(a) - tabRank(b));
+  }).sort((a, b) => tabRank(a) - tabRank(b)).flatMap((el) => {
+    const shadow = el.shadowRoot;
+    if (!shadow) return [el];
+    const children = tabOrder(shadow, backwards);
+    return el.tabIndex >= 0 && !shadow.delegatesFocus ? [el, ...children] : children;
+  });
+}
+function scopeOwner(el: HTMLElement): HTMLElement {
+  const root = (el.assignedSlot ?? el).getRootNode();
+  return 'host' in root ? scopeOwner((root as ShadowRoot).host as HTMLElement) : el;
+}
+function focusTarget(el: HTMLElement, backwards: boolean): void {
+  const body = el.localName === 'iframe' ? (el as HTMLIFrameElement).contentDocument?.body : undefined;
+  const entry = body && tabOrder(body, backwards).at(backwards ? -1 : 0);
+  if (entry) focusTarget(entry, backwards);
+  else el.focus();
 }
 let openCount = 0;
 let previousOverflow = '';
@@ -68,7 +97,7 @@ export function Modal({ open, onClose, title, children, actions, closeOnBackdrop
     const panel = dialog.current;
     if (!panel || activeModal(document) !== panel) return;
     const items = tabOrder(panel, backwards);
-    ((backwards ? items.at(-1) : items[0]) ?? panel).focus();
+    focusTarget((backwards ? items.at(-1) : items[0]) ?? panel, backwards);
   };
 
   useEffect(() => {
@@ -96,13 +125,15 @@ export function Modal({ open, onClose, title, children, actions, closeOnBackdrop
         close();
       } else if (event.key === 'Tab') {
         const backwards = event.shiftKey;
-        const items = tabOrder(panel, backwards), at = document.activeElement;
+        const items = tabOrder(panel, backwards), surface = document.activeElement;
+        let at = surface;
+        while (at?.shadowRoot?.activeElement) at = at.shadowRoot.activeElement;
         if (at?.matches(NATIVE_SUBTREE)) return;
         const start = (backwards ? items.at(-1) : items[0]) ?? panel;
         const index = items.findIndex((el) => el === at || (namedRadio(el) && sameGroup(el, at)));
-        const ordered = (items[0]?.tabIndex ?? 0) > 0;
+        const ordered = items[0] !== undefined && scopeOwner(items[0]).tabIndex > 0;
         let next: HTMLElement | undefined;
-        if (at === null || at === panel || !panel.contains(at)) next = start;
+        if (at === null || at === panel || !panel.contains(surface)) next = start;
         else if (index < 0) {
           const relation = backwards ? Node.DOCUMENT_POSITION_PRECEDING : Node.DOCUMENT_POSITION_FOLLOWING;
           const nearby = (backwards ? items.toReversed() : items)
@@ -122,7 +153,7 @@ export function Modal({ open, onClose, title, children, actions, closeOnBackdrop
             return;
           }
           event.preventDefault();
-          next.focus();
+          focusTarget(next, backwards);
         }
       }
     };
@@ -132,8 +163,10 @@ export function Modal({ open, onClose, title, children, actions, closeOnBackdrop
     const frameDocuments = new Map<HTMLIFrameElement, Document>();
     const syncFrames = () => {
       const frames = new Set(panel.querySelectorAll('iframe'));
+      const first = frames.size > 0 ? tabOrder(panel)[0] : undefined;
+      const ranked = first !== undefined && scopeOwner(first).tabIndex > 0;
       for (const [frame, guards] of frameGuards) {
-        if (frames.has(frame) && frame.tabIndex > 0 && tabStop(frame)) continue;
+        if (ranked && frames.has(frame) && tabStop(frame)) continue;
         for (const guard of guards) guard.remove();
         frameGuards.delete(frame);
       }
@@ -143,7 +176,7 @@ export function Modal({ open, onClose, title, children, actions, closeOnBackdrop
         frameDocuments.delete(frame);
       }
       for (const frame of frames) {
-        if (frame.tabIndex > 0 && tabStop(frame)) {
+        if (ranked && tabStop(frame)) {
           const makeGuard = (backwards: boolean) => {
             const guard = document.createElement('span');
             Object.assign(guard.style, tabGuardStyle);
@@ -152,7 +185,7 @@ export function Modal({ open, onClose, title, children, actions, closeOnBackdrop
               if (enteringFrame || activeModal(document) !== panel) return;
               const items = tabOrder(panel, backwards);
               const next = items[items.indexOf(frame) + (backwards ? -1 : 1)];
-              (next ?? (backwards ? items.at(-1) : items[0]) ?? panel).focus();
+              focusTarget(next ?? (backwards ? items.at(-1) : items[0]) ?? panel, backwards);
             });
             return guard;
           };
