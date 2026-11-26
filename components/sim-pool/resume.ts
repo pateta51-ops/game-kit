@@ -47,8 +47,18 @@ export function openCheckpoint(file: string, settings: string): Checkpoint {
 export async function runResumable(request: RunRequest, workers: number, file: string, settings: string, onRecord?: (r: SimRecord) => void): Promise<SimRecord[]> {
   if (request.until !== undefined) throw new RangeError('runResumable: a run with `until` plays cut games and is never kept');
   const cp = openCheckpoint(file, settings);
+  const checkView = (r: SimRecord): void => {
+    if (request.view && r.result !== null && !hasExecutedViewValidation(r))
+      throw new Error('checkpoint lacks executed view checks for the current scope; start a new checkpoint to validate its views');
+  };
   let engine: 'kernel' | 'port' | undefined;
-  if (cp.done.size) engine = await executionKind(request);
+  if (cp.done.size) {
+    if (request.view) for (const spec of request.specs) {
+      const record = cp.done.get(specKey(spec));
+      if (record && record.portExecution !== 1) checkView(record);
+    }
+    engine = await executionKind(request);
+  }
   const old: SimRecord[] = [];
   const specs = request.specs.filter((s) => {
     const r = cp.done.get(specKey(s));
@@ -56,8 +66,7 @@ export async function runResumable(request: RunRequest, workers: number, file: s
     if (engine === 'port') {
       if (r.portExecution !== 1 || r.portChecks?.invariants !== (request.invariants ?? true) || r.portChecks.view !== (request.view === true)) return true;
     } else if (engine !== 'kernel' || r.triggerCapChecked !== true) return true;
-    if (request.view && r.result !== null && !hasExecutedViewValidation(r))
-      throw new Error('checkpoint lacks executed view checks for the current scope; start a new checkpoint to validate its views');
+    checkView(r);
     old.push({ ...r, index: s.index });
     return false;
   });

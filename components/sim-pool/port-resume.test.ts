@@ -70,7 +70,7 @@ it('keeps a checkpoint from substituting a different port view validation mode',
 it('replays a port checkpoint with only kernel evidence and a kernel checkpoint with only port evidence', async () => {
   const legacy = { ...spec, result: 'not checked', actions: 2, hash: 'legacy' };
   const played: SimRecord[] = [];
-  const records = await runResumable({ module, specs: [spec], fresh: true, view: true }, 2,
+  const records = await runResumable({ module, specs: [spec], fresh: true }, 2,
     checkpoint('wrong-kernel-evidence', { ...legacy, triggerCapChecked: true }), 'fixture', r => played.push(r));
   expect(played).toHaveLength(1);
   expect(records[0]).toMatchObject({ portExecution: 1, actions: 3, result: { winner: 'actor' } });
