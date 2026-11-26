@@ -267,15 +267,18 @@ it('K329 retains step hiding through a committed redraw with an initially empty 
   expect(context.el.children).toHaveLength(0);
 });
 
-it.each(['clear', 'skip'] as const)('K329 does not hide a late source after onActor tears down the run with %s', mode => {
+it.each([
+  ['onActor', 'clear'], ['onActor', 'skip'], ['resolve', 'clear'], ['resolve', 'skip'], ['connect', 'clear'], ['connect', 'skip'],
+] as const)('K329 leaves no late clone or hidden source when %s tears down the run with %s', (hook, mode) => {
   vi.useFakeTimers();
   document.body.innerHTML = '<div id="b" style="visibility:visible!important"></div>';
   const source = document.getElementById('b')!;
   const actors: EffectActor[] = [{ ...b, at: 'gate', hideSource: 'step' }];
   const verbs = createVerbs<EffectCtx>(), seen: string[] = [];
+  const teardown = vi.fn(() => { if (mode === 'clear') context.clear(); else player.skipAll(); });
   const context = registerEffects(verbs, {
-    resolve: () => source,
-    onActor: () => { if (mode === 'clear') context.clear(); else player.skipAll(); },
+    resolve: () => { if (hook === 'resolve') teardown(); return source; },
+    onActor: () => { if (hook === 'onActor') teardown(); },
   });
   verbs.register('probe', () => { seen.push(source.style.visibility); return undefined; });
   let ready = false;
@@ -284,8 +287,19 @@ it.each(['clear', 'skip'] as const)('K329 does not hide a late source after onAc
     frame: callback => { const timer = setTimeout(() => callback(performance.now()), 20); return () => clearTimeout(timer); },
     onBeatStart: run => context.start(run, actors), onBeatEnd: run => context.end(run),
   });
+  if (hook === 'connect') {
+    const tag = `fx-k329-${mode}`;
+    customElements.define(tag, class extends HTMLElement {
+      connectedCallback(): void { if (!this.id) teardown(); }
+    });
+    const element = document.createElement(tag);
+    element.id = 'source-child';
+    source.append(element);
+    element.removeAttribute('id');
+  }
   player.play({ id: 'teardown', actors, whenReady: true, steps: [{ actor: 'b', do: 'probe', t: 40, dur: 200 }] }, { commit: () => { ready = true; } });
   vi.advanceTimersByTime(60);
+  expect(teardown).toHaveBeenCalledTimes(1);
   expect(seen).toEqual(mode === 'clear' ? ['visible'] : []);
   expect(source.style.visibility).toBe('visible');
   expect(context.el.children).toHaveLength(0);

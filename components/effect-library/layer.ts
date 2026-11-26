@@ -198,8 +198,10 @@ export function createEffectLayer(o: LayerOptions = {}): EffectLayer {
           a.classList.add('fx-veil');
           s.background = 'var(--fx-veil)';
         }
-        el.appendChild(a);
+        if (runs.get(run.id) !== m) return a;
         m.set(id, a);
+        el.appendChild(a);
+        if (runs.get(run.id) !== m) return a;
         if (src) {
           originals.set(a, src);
           const saved = hidden.get(src);
