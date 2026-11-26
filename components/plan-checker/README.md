@@ -75,7 +75,7 @@ The strict profile still requires ordinary structural and citation checks, phase
 
 - `Rules` (or the heading selected by `--cover TEXT`) defines at least one rule using `- **MOVE-01** Rule text.` or a table whose first cell is that ID and following cells contain rule text. Use the existing numeric ID format, such as `MOVE-01` or `COU-007`.
 - `Scenario catalogue` (or `--scenarios TEXT`) has at least one `SC-...` row. The second cell cites defined rules or decisions; the third cell gives a nonblank expected outcome. Every rule in the inventory appears in a scenario's citation cell. Existing numeric ranges and family wildcards work. Each scenario ID is unique and assigned to an implementation phase, and each scenario a phase references must exist in the catalogue. Both directions use prose outside comments and fenced examples.
-- `Implementation phases` has real `Phase <id>` headings, assigned to sessions as before. Commented or fenced examples do not count as rules, scenarios or test-layer content.
+- `Implementation phases` has unique, visible `Phase <id>` headings, each assigned to a session. Assign a scenario within a phase block, including its subsections. Introductory prose, comments and fenced examples do not count.
 
 Do not combine the profile with `--cards-optional`, `--depth-optional`, `--kit-optional`, `--sessions-optional`, `--sheet-optional`, `--cover-skip` or `--skip-without-python`; these combinations fail. `--section` and `--batch` are separate read commands and must not carry the profile: extraction is not validation.
 

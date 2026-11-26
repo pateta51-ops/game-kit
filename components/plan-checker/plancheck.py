@@ -710,11 +710,28 @@ def main() -> int:
                 problems.append(f"rule {d} is not covered by any scenario")
 
     # --- every scenario assigned to a phase ---
-    phases = section(lines, heads, opt("--phases", "Implementation phases"))
+    phase_kw = opt("--phases", "Implementation phases")
+    phase_lines = prose(src).split("\n") if profile is not None else lines
+    phase_heads = headings(phase_lines) if profile is not None else heads
+    phases = section(phase_lines, phase_heads, phase_kw)
+    phase_ids: list[str] = []
+    phase_blocks: list[str] = []
+    kph = find_heading(phase_heads, phase_kw)
+    if kph is not None:
+        for k, (_, _, h) in enumerate(section_headings(phase_heads, phase_kw), kph + 1):
+            if m := re.match(r"Phase\s+([A-Za-z0-9]+)\b", h):
+                phase_id = m.group(1)
+                if profile is not None and phase_id in phase_ids:
+                    problems.append(f"applicability: Phase {phase_id} is defined more than once")
+                phase_ids.append(phase_id)
+            if m or (profile is None and re.match(r"Phase\s+\w", h)):
+                phase_blocks.append("\n".join(phase_lines[slice(*span_of(phase_lines, phase_heads, k))]))
+    if profile is not None and not phase_ids:
+        problems.append("applicability: no implementation phase headings")
     if not phases:
         problems.append(f"no heading contains {opt('--phases', 'Implementation phases')!r} (use --phases)")
     else:
-        phase_text = prose(phases) if profile is not None else phases
+        phase_text = "\n".join(phase_blocks) if profile is not None else phases
         refs = {t for t in expand_ids(phase_text) if t.startswith("SC-")}
         if profile is not None:
             problems += [f"applicability: phase references {s} but that scenario is not defined"
@@ -725,17 +742,10 @@ def main() -> int:
 
     # --- session plan: every phase in exactly one batch; every batch has a model and a confidence ---
     sess_kw = opt("--sessions", "Session plan")
-    sess = section(lines, heads, sess_kw)
+    sess = section(phase_lines, phase_heads, sess_kw)
     cd: list[str] = []
     ch, csum, pids = [0, 0], 0, []
     maxc, maxp = int(opt("--max-clauses", "40")), int(opt("--max-patterns", "10"))
-    phase_ids: list[str] = []
-    for _, _, h in section_headings(heads, opt("--phases", "Implementation phases")):
-        m = re.match(r"Phase\s+([A-Za-z0-9]+)\b", h)
-        if m:
-            phase_ids.append(m.group(1))
-    if profile is not None and not phase_ids:
-        problems.append("applicability: no implementation phase headings")
     if phases and not sess:
         if "--sessions-optional" not in sys.argv:
             problems.append(f"no heading contains {sess_kw!r} (use --sessions)")
@@ -858,12 +868,8 @@ def main() -> int:
         depth.append("no nonempty test Layers section")
     if llm_required and "llm playtest" not in layers.lower():
         depth.append(f"the test layers ({opt('--layers', 'Layers')!r}, use --layers) do not name the LLM playtest")
-    kph = find_heading(heads, opt("--phases", "Implementation phases"))
-    if kph is not None:
-        a, b = span_of(lines, heads, kph)
-        if llm_required and not any("llm-playtester" in "\n".join(lines[slice(*span_of(lines, heads, k))])
-                   for k, (i, _, t) in enumerate(heads) if a < i < b and re.match(r"Phase\s+\w", t)):
-            depth.append("no phase builds the LLM playtest (the kit's llm-playtester)")
+    if kph is not None and llm_required and not any("llm-playtester" in block for block in phase_blocks):
+        depth.append("no phase builds the LLM playtest (the kit's llm-playtester)")
     kpre = find_heading(heads, "Shared preamble")
     pre = "\n".join(lines[slice(*span_of(lines, heads, kpre))]) if kpre is not None else ""
     if "e2e" not in pre.lower() or "heavy" not in pre:
@@ -896,8 +902,7 @@ def main() -> int:
     for need in ("cards:check", "cards:screen", "cards:whole-game"):
         if need not in done:
             cd.append(f"the Definition of Done lacks {need}")
-    if kph is not None and not any("cards:whole-game" in "\n".join(lines[slice(*span_of(lines, heads, k))])
-                                   for k, (i, _, t) in enumerate(heads) if a < i < b and re.match(r"Phase\s+\w", t)):
+    if kph is not None and not any("cards:whole-game" in block for block in phase_blocks):
         cd.append("no phase names cards:whole-game")
     for w, on in (("Clauses", ch[0]), ("Patterns", ch[1])):
         if not on:

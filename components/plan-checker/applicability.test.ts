@@ -228,6 +228,27 @@ describe('explicit plan applicability', () => {
     fails({ text: PLAN.replace('SC-01, SC-02. Implement', 'SC-01. <!-- SC-02 --> Implement') }, 'SC-02 is not assigned');
   });
 
+  it.each([
+    ['outside a phase', PLAN.replace('### Phase 1', 'Overview: SC-02.\n\n### Phase 1').replace('SC-01, SC-02. Implement', 'SC-01. Implement'), 'SC-02 is not assigned'],
+    ['in a commented heading', PLAN.replace('### Phase 1 — movement', '<!--\n### Phase 1 — movement\n-->'), 'no implementation phase headings'],
+    ['in a fenced heading', PLAN.replace('### Phase 1 — movement', '~~~~md\n### Phase 1 — movement\n~~~~'), 'no implementation phase headings'],
+    ['in duplicate phase headings', PLAN.replace('## 4. Session plan', '### Phase 1 — duplicate\n\n## 4. Session plan'), 'Phase 1 is defined more than once'],
+  ])('rejects an invalid phase assignment %s', (_label, text, expected) => {
+    fails({ text }, expected);
+  });
+
+  it('ignores a duplicate phase example and accepts scenarios in real phase subsections', () => {
+    const text = PLAN.replace('### Phase 1 — movement', '### Phase 1 — movement\n\n<!--\n### Phase 1 — example\n-->\n\n#### Acceptance');
+    const result = run({ text });
+    expect(result.code, result.output).toBe(0);
+  });
+
+  it('preserves legacy scenario mentions outside phase blocks', () => {
+    const text = PLAN.replace('### Phase 1', 'Overview: SC-02.\n\n### Phase 1').replace('SC-01, SC-02. Implement', 'SC-01. Implement');
+    const result = run({ text, noProfile: true, flags: ['--cards-optional', '--depth-optional'] });
+    expect(result.code, result.output).toBe(0);
+  });
+
   it('preserves legacy handling of dangling phase references without an explicit profile', () => {
     const result = run({ text: PLAN.replace('SC-01, SC-02. Implement', 'SC-01, SC-02, SC-99. Implement'), noProfile: true, flags: ['--cards-optional', '--depth-optional'] });
     expect(result.code, result.output).toBe(0);
