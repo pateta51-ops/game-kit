@@ -93,7 +93,22 @@ export function readSave(x: unknown, version: string): CampaignSave | undefined 
   const o = x as CampaignSave;
   const log = readLog(o.log);
   if (o.v !== 1 || !log || !o.position) return undefined;
-  const validSnapshot = (a: Attempt) => a?.logBefore?.[betweenSessionsKey] === undefined || readLog(a.logBefore) !== undefined;
-  if ((o.attempt && !validSnapshot(o.attempt)) || (Array.isArray(o.history) && !o.history.every(validSnapshot))) return undefined;
-  return { ...o, log, status: o.version === version ? o.status : 'incompatible' };
+  const save: CampaignSave = { ...o, log, status: o.version === version ? o.status : 'incompatible' };
+  const readSnapshot = (a: Attempt) => {
+    const logBefore = readLog(a.logBefore);
+    return logBefore && { ...a, logBefore };
+  };
+  if (o.attempt?.logBefore?.[betweenSessionsKey] !== undefined) {
+    const attempt = readSnapshot(o.attempt);
+    if (!attempt) return undefined;
+    save.attempt = attempt;
+  }
+  if (Array.isArray(o.history)) for (const [index, item] of o.history.entries()) {
+    if (item?.logBefore?.[betweenSessionsKey] === undefined) continue;
+    const attempt = readSnapshot(item);
+    if (!attempt) return undefined;
+    if (save.history === o.history) save.history = o.history.slice();
+    save.history[index] = attempt;
+  }
+  return save;
 }

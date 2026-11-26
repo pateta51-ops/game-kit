@@ -126,6 +126,7 @@ describe('K595 campaign roster and shared card box', () => {
 describe('K595 campaign save and step integration', () => {
   it.each(['active', 'attempt', 'history'] as const)('preserves legacy game-owned betweenSessions data in %s', where => {
     const legacy: CampaignLog & { betweenSessions: string[] } = { ...emptyLog(), betweenSessions: ['session recap'] };
+    if (where !== 'active') Reflect.deleteProperty(legacy, 'recorded');
     const scenario: Step = { kind: 'scenario', id: 'outpost' };
     const active = newCampaign('expedition', '1', scenario, 7, legacy);
     const attempt = begin(active).save;
@@ -163,6 +164,20 @@ describe('K595 campaign save and step integration', () => {
     expect(readSave({ ...started, attempt: broken }, '1')).toBeUndefined();
     expect(readSave({ ...base, history: [broken] }, '1')).toBeUndefined();
     expect(readSave(JSON.parse(JSON.stringify(started)) as unknown, '1')).toEqual(started);
+  });
+
+  it.each(['attempt', 'history'] as const)('defaults missing log fields before restoring an opted-in %s', where => {
+    const recap: Instruction = { id: 'recap', text: 'Record the recap.', cite: 'synthetic', ops: [{ op: 'record', key: 'recap' }] };
+    const log = scheduleCalendarEntry(emptyLog(), 1, recap.id);
+    const scenario: Step = { kind: 'scenario', id: 'outpost' };
+    const active = begin(newCampaign('expedition', '1', scenario, 7, log)).save;
+    const saved = where === 'attempt' ? active : end(active, { log: emptyLog() }, () => null);
+    const snapshot = saved.attempt ?? saved.history[0];
+    if (!snapshot) throw new Error('fixture snapshot missing');
+    Reflect.deleteProperty(snapshot.logBefore, 'recorded');
+    const loaded = readSave(JSON.parse(JSON.stringify(saved)) as unknown, '1');
+    if (!loaded) throw new Error('fixture save did not load');
+    expect(startCalendarDay(retry(loaded).log, 1, { recap }).log.recorded).toEqual(['recap']);
   });
 
   it('starts a date before a normal step and does not apply it again after save, retry, or deterministic replay', () => {
