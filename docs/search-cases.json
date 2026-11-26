@@ -789,5 +789,8 @@
   {"q": "dice pattern unknown option", "first": "dice-patterns"},
   {"q": "verified real consumer gameplay execution", "first": "kit-context"},
   {"q": "receipt-bound game component invocation", "first": "kit-context"},
-  {"q": "real gameplay separate from production release", "first": "kit-context"}
+  {"q": "real gameplay separate from production release", "first": "kit-context"},
+  {"q": "codex cli usage export", "first": "reuse-metrics"},
+  {"q": "reconcile provider token counts", "first": "reuse-metrics"},
+  {"q": "verify cached input tokens from rollout", "first": "reuse-metrics"}
 ]

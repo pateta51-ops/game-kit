@@ -12,6 +12,7 @@ Local, read-only measurement of locked kit availability, static references and e
 5. Use a controlled baseline for savings. Treat the reported differences as the outcome of the supplied comparison. Claims about what caused the difference require independent evidence.
 6. For record-traced development observations, declare the task protocol before handing off work, retain authorized source records outside the public repository, then run `node tools/reuse-metrics/observations.mjs <observation.json> [...]`. Use only the three normalized formats below. The importer checks actual bytes and derivations; it does not authenticate a provider, source revision, preparation timestamp or reviewer identity. Do not relabel a hand-entered quantity as a normalized usage export.
 7. Record the playable milestone and quality result independently of efficiency, with a reviewer identity distinct from the worker. Use `--baseline <observation.json>` only with one current observation and a genuinely compatible task. Missing usage, review or comparison evidence stays missing. Keep coding-agent development usage separate from LLM gameplay usage.
+8. For a fresh single-turn Codex CLI 0.166.0 run using the OpenAI provider, retain both `exec --json` output and the exact local rollout. Reconcile them with `codex-cli.mjs` before creating the usage record. Keep both originals and their hashes private.
 
 ## Measurement input
 
@@ -89,6 +90,16 @@ An optional manifest `metrics` object accepts the existing seven metric names wi
 ### Supported source records
 
 Only these three normalized JSON formats are implemented. A provider export needs an explicit local conversion to this contract; no provider format or generic mapping is automatically recognized. Keep the original authorized export and conversion record locally so the normalization can be audited. A manually invented normalized file is not evidence of actual usage.
+
+### Convert a Codex CLI export
+
+```sh
+node tools/reuse-metrics/codex-cli.mjs private/exec.jsonl private/rollout.jsonl
+```
+
+The tested adapter pairs the exact CLI thread with the single completed rollout turn, checks the chronology and deduplicates provider response identities. It checks cumulative counts against per-response usage and reconciles them with the CLI's completion totals. It reports the model, reasoning setting, successful completion timestamp, digests of both input files, recorded provider-response and tool-call counts, and observed token fields. Cached tokens are included in total input and also reported separately. Absent fields remain missing. The adapter does not determine cost. Failed, interrupted, resumed or incompatible sessions are outside this conversion contract. Retain their raw records and report partial capture separately.
+
+Copy the returned `usage` to a `normalized-records-v1` usage record's `values`, and use the returned `at` and `inputIncludesCached` fields. Add the associated trial identity, verified revisions, window and protocol digest before importing. Successful reconciliation checks consistency between local files. Validate that the runner captured the whole trial and that its source and protocol match before using the results.
 
 Every record includes `version: 1`, globally unique opaque `recordId`, `kind`, the same `identity`, `sourceRevision`, `kitRevision`, `window`, and `protocolSha256` as the manifest. These associations are checked against the supplied manifest and protocol, not against a remote service or a Git checkout. Source files with duplicate IDs or hashes fail, including across observations and the optional baseline. Distinct observations require distinct globally unique observation IDs; copied observations retain their original IDs.
 
