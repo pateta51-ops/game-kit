@@ -52,7 +52,7 @@ export function sourceProvenance({root,component,source}) {
   const src=fs.realpathSync(source);
   // Execute this checkout's verifier, never the installed CLI or code in the supplied source.
   const check=spawnSync(process.execPath,[path.join(checkout,'kit.mjs'),'check','--source',src],{
-    cwd:path.dirname(root),encoding:'utf8',maxBuffer:4*1024*1024,
+    cwd:path.dirname(root),encoding:'utf8',maxBuffer:4*1024*1024,stdio:['ignore','pipe','pipe'],
   });
   if(check.error || check.status!==0) throw new Error('source verification failed: '+(check.error?.message||check.stderr.trim()||'kit check did not succeed'));
   if(!fs.readFileSync(file).equals(bytes)) throw new Error('kit/kit.lock.json changed during source verification; retry');
