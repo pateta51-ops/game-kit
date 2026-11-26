@@ -184,32 +184,73 @@ def applicability() -> dict | None:
     return data
 
 
-def prose(text: str) -> str:
-    out, fence = [], None
-    comment = False
-    for line in text.splitlines():
-        mark = re.match(r"^\s*(`{3,}|~{3,})(.*)$", line)
-        if fence is not None:
-            if mark and mark.group(1)[0] == fence[0] and len(mark.group(1)) >= fence[1] and not mark.group(2).strip():
+def visible_markdown(lines: list[str]) -> tuple[list[str], list[tuple[int, str, str]], bool]:
+    out, blocks, content, lists = [], [], [], []
+    fence = None
+    comment, paragraph, unclosed = False, False, False
+    list_quote = 0
+    inline = re.compile(r"(?<!\\)<!--|(?<!`)(`+)(?!`).*?(?<!`)\1(?!`)")
+    for i, raw in enumerate(lines):
+        body, quote = raw.expandtabs(4), 0
+        while marker := re.match(r"^ {0,3}> ?", body):
+            body, quote = body[marker.end():], quote + 1
+        if quote != list_quote:
+            lists.clear()
+            list_quote = quote
+            paragraph = False
+        margin = len(body) - len(body.lstrip(" "))
+        while lists and body.strip() and margin < lists[-1]:
+            lists.pop()
+        width = lists[-1] if lists else 0
+        body = body[width:]
+        if not (comment or fence) and (item := re.match(r"^ {0,3}(?:[-+*]|\d{1,9}[.)])( +)", body)):
+            spaces = len(item.group(1))
+            width += item.start(1) + (spaces if spaces <= 4 else 1)
+            lists.append(width)
+            body = body[item.start(1) + (spaces if spaces <= 4 else 1):]
+            paragraph = False
+        while marker := re.match(r"^ {0,3}> ?", body):
+            body, quote = body[marker.end():], quote + 1
+        mark = re.match(r"^ {0,3}(`{3,}|~{3,})(.*)$", body)
+        if fence and body.strip() and (quote != fence[3] or (not quote and width < fence[4])):
+            unclosed, fence = True, None
+        if fence:
+            if mark and mark.group(1)[0] == fence[0][0] and len(mark.group(1)) >= len(fence[0]) and not mark.group(2).strip():
+                blocks.append((fence[1], fence[2], "\n".join(content)))
                 fence = None
-        elif mark and not comment:
-            fence = (mark.group(1)[0], len(mark.group(1)))
-        else:
-            visible = []
-            for part in re.split(r"(<!--|-->)", line):
-                if part == "<!--":
-                    comment = True
-                elif part == "-->" and comment:
-                    comment = False
-                elif not comment:
-                    visible.append(part)
-            out.append("".join(visible))
-    return "\n".join(out)
+            else:
+                content.append(raw if not quote and not width else body)
+            out.append("")
+            continue
+        if not comment and mark and (mark.group(1)[0] == "~" or "`" not in mark.group(2)):
+            fence = (mark.group(1), i, mark.group(2).strip(), quote, width)
+            content = []
+            paragraph = False
+            out.append("")
+            continue
+        if not comment and not paragraph and body.startswith("    "):
+            out.append("")
+            continue
+        tail, visible = raw, []
+        while tail:
+            if comment:
+                _, end, tail = tail.partition("-->")
+                comment = not end
+            elif match := inline.search(tail):
+                comment = match.group(0) == "<!--"
+                visible.append(tail[:match.start() if comment else match.end()])
+                tail = tail[match.end():]
+            else:
+                visible.append(tail)
+                break
+        out.append("".join(visible))
+        paragraph = bool(out[-1].strip()) and not re.match(r"^ {0,3}(?:#{1,6}\s|\||[-_*=]{3,}\s*$)", body)
+    return out, blocks, unclosed or fence is not None
 
 
 def strict_inventory(rules: str, scenarios: str, defined: set[str]) -> list[str]:
     problems, ids = [], set()
-    for line in prose(rules).splitlines():
+    for line in rules.splitlines():
         match = re.match(rf"^\s*[-*]\s+\*\*({ID})\*\*\s*(.*)$", line)
         cells = [c.strip() for c in table_cells(line)] if line.lstrip().startswith("|") else []
         if match:
@@ -224,7 +265,7 @@ def strict_inventory(rules: str, scenarios: str, defined: set[str]) -> list[str]
     if not ids:
         problems.append("rule inventory is empty (define rules under Rules or --cover TEXT)")
     seen, covered = set(), set()
-    for line in prose(scenarios).splitlines():
+    for line in scenarios.splitlines():
         cells = [c.strip() for c in table_cells(line)] if line.lstrip().startswith("|") else []
         if not cells or not re.fullmatch(r"SC-[A-Z0-9-]+", cells[0]):
             continue
@@ -267,7 +308,7 @@ def applicability_conflicts(profile: dict, path: Path, src: str, cards: str, pha
         found = []
         if cards:
             found.append("a card-language test programme")
-        if re.search(r"\bcardCase\b", prose(src)):
+        if re.search(r"\bcardCase\b", src):
             found.append("cardCase in the plan")
         if any(re.search(r"\bcard-language\b", row[2]) for row in maprows):
             found.append("card-language in the reuse map")
@@ -278,7 +319,7 @@ def applicability_conflicts(profile: dict, path: Path, src: str, cards: str, pha
                 found.append("the Cards as data game-sheet answer (use 'not in this game' for an excluded card workflow)")
         if clauses or patterns:
             found.append("card clause or pattern work in session batches")
-        if re.search(r"\bcards:[\w-]+", prose(src)) or any(
+        if re.search(r"\bcards:[\w-]+", src) or any(
                 name.startswith("cards:") or re.search(r"\b(?:cards:[\w-]+|card-harness|card-language)\b", command)
                 for name, command in scripts.items()):
             found.append("a cards script declaration")
@@ -300,9 +341,9 @@ def applicability_conflicts(profile: dict, path: Path, src: str, cards: str, pha
         problems += ["applicability: cards none contradicts " + item for item in found]
     if profile["llmPlaytest"]["mode"] == "none":
         found = []
-        if "llm-playtester" in prose(phases).lower():
+        if "llm-playtester" in phases.lower():
             found.append("an llm-playtester phase")
-        if "llm playtest" in prose(layers).lower():
+        if "llm playtest" in layers.lower():
             found.append("an LLM playtest layer")
         if any(re.search(r"(?:^|:)(?:playtest:llm|llm:playtest|llm-playtest(?:er)?)(?:$|:)", name, re.I)
                or re.search(r"\bllm[-:]playtest(?:er)?\b", command, re.I) for name, command in scripts.items()):
@@ -311,15 +352,15 @@ def applicability_conflicts(profile: dict, path: Path, src: str, cards: str, pha
     return problems
 
 
-def headings(lines: list[str]) -> list[tuple[int, int, str]]:
+def headings(lines: list[str], masked: bool = False) -> list[tuple[int, int, str]]:
     """(line index, level, text) of every heading outside code fences."""
     out, in_code = [], False
     for i, l in enumerate(lines):
-        if l.strip().startswith("```"):
+        if not masked and l.strip().startswith("```"):
             in_code = not in_code
             continue
         if not in_code:
-            m = re.match(r"^(#{1,6})\s+(.*)$", l)
+            m = re.match((r"^ {0,3}" if masked else r"^") + r"(#{1,6})\s+(.*)$", l)
             if m:
                 out.append((i, len(m.group(1)), m.group(2).strip()))
     return out
@@ -595,7 +636,13 @@ def main() -> int:
     llm_required = profile is None or profile["llmPlaytest"]["mode"] == "required"
     src = path.read_text(encoding="utf-8")
     lines = src.split("\n")
-    heads = headings(lines)
+    fences: list[tuple[int, str, str]] = []
+    if profile is None:
+        unclosed = sum(1 for l in lines if l.strip().startswith("```")) % 2
+    else:
+        lines, fences, unclosed = visible_markdown(lines)
+        src = "\n".join(lines)
+    heads = headings(lines, profile is not None)
     if "--section" in sys.argv or "--batch" in sys.argv:
         return extract(path, lines, heads)
     problems: list[str] = []
@@ -606,7 +653,7 @@ def main() -> int:
             notes.add(f"applicability: {name} {part['mode']}" + (f" — {part['reason']}" if "reason" in part else ""))
 
     # --- code fences ---
-    if sum(1 for l in lines if l.strip().startswith("```")) % 2:
+    if unclosed:
         problems.append("unbalanced code fences")
 
     # --- anchors and § references ---
@@ -660,7 +707,8 @@ def main() -> int:
         i += 1
 
     # --- JSON blocks ---
-    for k, block in enumerate(re.findall(r"```json\n(.*?)```", src, re.S), 1):
+    json_blocks = re.findall(r"```json\n(.*?)```", src, re.S) if profile is None else [block for _, lang, block in fences if lang == "json"]
+    for k, block in enumerate(json_blocks, 1):
         try:
             json.loads(block)
         except Exception as ex:  # noqa: BLE001
@@ -669,7 +717,6 @@ def main() -> int:
     # --- bold definitions (outside the scenario catalogue), duplicates ---
     outside = src.replace(scen_sec, "") if scen_sec else src
     if profile is not None:
-        outside = prose(outside)
         first_cell_defs = re.findall(rf"^\s*\|\s*\**({ID}|D\d+)\**(?=\s|\|)", outside, re.M)
     bold = re.findall(rf"^\s*[-*]\s+\*\*({ID})\*\*", outside, re.M)
     seen: set[str] = set()
@@ -681,7 +728,7 @@ def main() -> int:
     families = {d.rsplit("-", 1)[0] for d in defined}
 
     # --- scenario citations ---
-    rows = re.findall(r"^\|\s*(SC-[A-Z0-9-]+)\s*\|([^|\n]*)\|", prose(scen_sec) if profile is not None else scen_sec, re.M)
+    rows = re.findall((r"^ {0,3}" if profile is not None else "^") + r"\|\s*(SC-[A-Z0-9-]+)\s*\|([^|\n]*)\|", scen_sec, re.M)
     scenarios = sorted({sc for sc, _ in rows})
     if not scen_sec:
         problems.append(f"no heading contains {opt('--scenarios', 'Scenario catalogue')!r} (use --scenarios)")
@@ -720,21 +767,19 @@ def main() -> int:
 
     # --- every scenario assigned to a phase ---
     phase_kw = opt("--phases", "Implementation phases")
-    phase_lines = prose(src).split("\n") if profile is not None else lines
-    phase_heads = headings(phase_lines) if profile is not None else heads
-    phases = section(phase_lines, phase_heads, phase_kw)
+    phases = section(lines, heads, phase_kw)
     phase_ids: list[str] = []
     phase_blocks: list[str] = []
-    kph = find_heading(phase_heads, phase_kw)
+    kph = find_heading(heads, phase_kw)
     if kph is not None:
-        for k, (_, _, h) in enumerate(section_headings(phase_heads, phase_kw), kph + 1):
+        for k, (_, _, h) in enumerate(section_headings(heads, phase_kw), kph + 1):
             if m := re.match(r"Phase\s+([A-Za-z0-9]+)\b", h):
                 phase_id = m.group(1)
                 if profile is not None and phase_id in phase_ids:
                     problems.append(f"applicability: Phase {phase_id} is defined more than once")
                 phase_ids.append(phase_id)
             if m or (profile is None and re.match(r"Phase\s+\w", h)):
-                phase_blocks.append("\n".join(phase_lines[slice(*span_of(phase_lines, phase_heads, k))]))
+                phase_blocks.append("\n".join(lines[slice(*span_of(lines, heads, k))]))
     if profile is not None and not phase_ids:
         problems.append("applicability: no implementation phase headings")
     if not phases:
@@ -751,7 +796,7 @@ def main() -> int:
 
     # --- session plan: every phase in exactly one batch; every batch has a model and a confidence ---
     sess_kw = opt("--sessions", "Session plan")
-    sess = section(phase_lines, phase_heads, sess_kw)
+    sess = section(lines, heads, sess_kw)
     cd: list[str] = []
     ch, csum, pids = [0, 0], 0, []
     maxc, maxp = int(opt("--max-clauses", "40")), int(opt("--max-patterns", "10"))
@@ -873,7 +918,7 @@ def main() -> int:
         if done and need.lower() not in done.lower():
             depth.append(f"the Definition of Done lacks {what}")
     layers = section(lines, heads, opt("--layers", "Layers"))
-    if profile is not None and not re.sub(r"^\s*#+.*$", "", prose(layers), flags=re.M).strip():
+    if profile is not None and not re.sub(r"^\s*#+.*$", "", layers, flags=re.M).strip():
         depth.append("no nonempty test Layers section")
     if llm_required and "llm playtest" not in layers.lower():
         depth.append(f"the test layers ({opt('--layers', 'Layers')!r}, use --layers) do not name the LLM playtest")
@@ -1068,7 +1113,8 @@ def main() -> int:
         if ph and not any(norm(o[0]).startswith(w) for o in own):
             kd.append(f"build-own table: the plan builds {w} code ({ph}) but has no '{w.capitalize()}' row (one per {w} part the game writes, '{w.capitalize()}: <part>', or '{w.capitalize()}: none' with a reason of six words or more)")
     fit =path.parent / "plan-review" / "kit-fit.md"
-    fitt = norm(fit.read_text(encoding="utf-8", errors="replace")) if fit.is_file() else ""
+    fit_text = fit.read_text(encoding="utf-8", errors="replace") if fit.is_file() else ""
+    fitt = norm("\n".join(visible_markdown(fit_text.split("\n"))[0]) if profile is not None else fit_text)
     if not fitt:
         kd.append(f"no kit-fit review ({fit} is missing or empty): stage 9")
     answered = False
@@ -1143,12 +1189,16 @@ def main() -> int:
                 continue
             if b:
                 ka, kb = find_heading(heads, a), find_heading(heads, b)
-                types = "" if ka is None or kb is None or kb <= ka else "\n".join(lines[heads[ka][0]:heads[kb][0]])
+                span = None if ka is None or kb is None or kb <= ka else (heads[ka][0], heads[kb][0])
             else:
-                types = section(lines, heads, a)
-            if not types and (b or len(specs) > 1):
+                ka = find_heading(heads, a)
+                span = None if ka is None else span_of(lines, heads, ka)
+            if span is None and (b or len(specs) > 1):
                 problems.append(f"--tsc: no section for {spec.strip()!r} (--types)")
-            blocks += re.findall(r"```ts\n(.*?)```", types, re.S)
+            if span is not None:
+                start, end = span
+                blocks += re.findall(r"```ts\n(.*?)```", "\n".join(lines[start:end]), re.S) if profile is None else [
+                    block for i, lang, block in fences if start <= i < end and lang == "ts"]
         code = "\n".join(blocks)
         if not code:
             problems.append("--tsc: no ```ts blocks found in the type-definitions section")

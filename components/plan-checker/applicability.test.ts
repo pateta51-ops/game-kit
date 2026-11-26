@@ -249,6 +249,38 @@ describe('explicit plan applicability', () => {
     expect(result.code, result.output).toBe(0);
   });
 
+  it.each([
+    ['quoted code', PLAN.replace('SC-01, SC-02. Implement', '> ```text\n> SC-02\n> ```\n\nSC-01. Implement'), 'SC-02 is not assigned'],
+    ['indented code', PLAN.replace('SC-01, SC-02. Implement', '    SC-02.\n\nSC-01. Implement'), 'SC-02 is not assigned'],
+    ['Rules heading', PLAN.replace('## 1. Rules', '<!--\n## 1. Rules\n-->'), 'rule inventory'],
+    ['Scenario catalogue heading', PLAN.replace('## 2. Scenario catalogue', '<!--\n## 2. Scenario catalogue\n-->'), 'scenario inventory'],
+    ['Reuse map', PLAN.replace('## 8. Reuse map', '<!--\n## 8. Reuse map') + '\n-->', "no heading contains 'Reuse map'"],
+    ['default-off requirement', PLAN.replace('Exercise default-off paths when present.', 'Exercise alternate paths. <!-- default-off -->'), 'lacks the default-off paths'],
+    ['preamble evidence', PLAN.replace('Send every changed flow through e2e with the heavy run queue.', '<!-- e2e heavy -->'), 'does not send a changed flow through the e2e suites'],
+  ])('rejects hidden Markdown evidence for %s', (_label, text, expected) => {
+    fails({ text }, expected);
+  });
+
+  it.each([
+    ['inline literal comment opener', PLAN.replace('SC-01, SC-02. Implement', '`<!--` is a marker. SC-01, SC-02. Implement')],
+    ['indented fence-like example', PLAN.replace('## 3. Implementation phases', '    ~~~\n\n## 3. Implementation phases')],
+    ['list continuations', PLAN.replace('SC-01, SC-02. Implement', '1. Use SC-01.\n    Then use `SC-02`. Implement')],
+  ])('accepts visible plan evidence with %s', (_label, text) => {
+    const result = run({ text });
+    expect(result.code, result.output).toBe(0);
+  });
+
+  it('validates real JSON fences without parsing fences inside comments', () => {
+    const invalid = '\n```json\n{\n```\n';
+    const hidden = run({ text: PLAN + '<!--' + invalid + '-->\n' });
+    expect(hidden.code, hidden.output).toBe(0);
+    fails({ text: PLAN + invalid }, 'json block 1');
+  });
+
+  it('does not count a commented kit-fit review', () => {
+    fails({ fit: '<!-- Movement policy: Original rules over the existing grid. -->' }, 'no kit-fit review');
+  });
+
   it('preserves legacy scenario mentions outside phase blocks', () => {
     const text = PLAN.replace('### Phase 1', 'Overview: SC-02.\n\n### Phase 1').replace('SC-01, SC-02. Implement', 'SC-01. Implement');
     const result = run({ text, noProfile: true, flags: ['--cards-optional', '--depth-optional'] });
