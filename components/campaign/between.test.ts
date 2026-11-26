@@ -275,7 +275,7 @@ it('K595 runs the opening campaign from the README', () => {
   const example = /## Use it in 10 lines\s+```ts\r?\n([\s\S]*?)```/.exec(readme)?.[1];
   if (!example) throw new Error('campaign README example missing');
   const output = execFileSync(process.execPath, ['--input-type=module-typescript', '-'], {
-    input: example.replaceAll("'../kit/campaign/index'", JSON.stringify(new URL('./index.ts', import.meta.url).href)),
+    input: example.replace(/from ['"]\.\.\/kit\/campaign\/index['"]/, `from ${JSON.stringify(new URL('./index.ts', import.meta.url).href)}`),
     encoding: 'utf8',
   });
   expect(output.trim()).toBe("[ 'stocked' ]");
