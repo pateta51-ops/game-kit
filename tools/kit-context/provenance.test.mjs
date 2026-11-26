@@ -271,4 +271,27 @@ describe('context provenance',()=>{
     expect(bad.stdout).toBe('');
     expect(bad.stderr).toContain('changed kit/sample/index.ts');
   });
+  it('verifies installed provenance when the spawn policy forbids piped verifier stdin',()=>{
+    const root=game('v1');
+    const policy='data:text/javascript,'+encodeURIComponent(`
+      import childProcess from 'node:child_process';
+      import { syncBuiltinESMExports } from 'node:module';
+      const spawn = childProcess.spawnSync;
+      childProcess.spawnSync = (cmd,args,options) => {
+        if (args?.[1] === 'check' && args[2] === '--source' && options?.stdio?.[0] !== 'ignore')
+          return {status:null,error:new Error('verifier stdin pipe denied')};
+        return spawn(cmd,args,options);
+      };
+      syncBuiltinESMExports();
+    `);
+    const run=()=>spawnSync(process.execPath,['--import',policy,cli,'sample','move','--root',root,'--source',source],{encoding:'utf8'});
+    const verified=run();
+    expect(verified.status,verified.stderr).toBe(0);
+    expect(JSON.parse(verified.stdout).provenance.status).toBe('verified');
+    fs.appendFileSync(path.join(root,'sample/index.ts'),'\n// changed\n');
+    const bad=run();
+    expect(bad.status).toBe(1);
+    expect(bad.stdout).toBe('');
+    expect(bad.stderr).toContain('changed kit/sample/index.ts');
+  });
 });

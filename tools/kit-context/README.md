@@ -57,6 +57,8 @@ Without a map for the installed export, focused mode uses that installed version
 
 ## Source provenance
 
+The trusted source verifier runs with standard input disconnected. It still captures diagnostics and fails if the source check rejects the installed kit.
+
 `--source <checkout>` opts into schema version 1 metadata and requires the usual `<game>/kit` installation layout. The packet names the producing tool checkout's commit, whether its tool or verifier files are modified, and the TypeScript version. The producer reports a commit only when the checkout root is correct and the committed tree contains its provenance module and verifier. Otherwise both commit and modification state are null. When Git index flags can hide changes to those files, the modification state is null unless visible changes already establish it. `scope: api-contract` and `taskReadiness: not-assessed` distinguish API completeness from the information needed to finish a game task.
 
 `tool.sourceSha256` fingerprints the producing checkout's `kit.mjs`, non-test `tools/kit-context/*.mjs`, the reuse scanner `tools/reuse-metrics/report.mjs`, and the receipt implementation/binding files `components/check-runner/{check-runner,receipt,tracked-source}.ts`. These paths also participate in modification detection. The digest binds focused continuation cursors even when the checkout was already modified; a second verifier or scanner edit still invalidates the old cursor. Missing producer files are fingerprinted as absent; unreadable files leave the digest null. This scope covers local repository code, not the Node executable or installed package bytes. The standalone observation report includes the same tool identity.
