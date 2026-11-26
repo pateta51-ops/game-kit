@@ -381,6 +381,7 @@ describe('explicit plan applicability', () => {
 
   it.each([
     ['<pre>', '</pre>'],
+    ['<textarea>\n', '</textarea>'],
     ['<div>', '</div>'],
     ['<markup-example role="table">', '</markup-example>'],
     ['<?example', '?>'],
@@ -400,6 +401,14 @@ describe('explicit plan applicability', () => {
     const text = PLAN.replace('| ID | Rules | Expected |', html + '| ID | Rules | Expected |');
     const result = run({ text });
     expect(result.code, result.output).toBe(0);
+  });
+
+  it.each([
+    ['phase citations', PLAN.replace('SC-01, SC-02. Implement', 'Use <span title="SC-01, SC-02">examples</span>. Implement'), 'SC-01 is not assigned to any phase'],
+    ['multiline phase citations', PLAN.replace('SC-01, SC-02. Implement', 'Use <span\n title="SC-01, SC-02">examples</span>. Implement'), 'SC-01 is not assigned to any phase'],
+    ['rule text', PLAN.replace('A move enters an adjacent unblocked space.', '<span title="never visible"></span>'), 'rule MOVE-01 has no text'],
+  ])('does not count inline HTML attributes as %s', (_label, text, expected) => {
+    fails({ text }, expected);
   });
 
   it('preserves visible references beside inline HTML tags', () => {
