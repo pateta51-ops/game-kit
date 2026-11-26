@@ -46,6 +46,79 @@ describe.skipIf(!HAVE && !process.env['CI'])('modal, board shortcuts and attachm
     return root.activeElement === el && document.activeElement === root.host;
   };
 
+  it.for(['Modal', 'Sheet'])('lets native child handlers consume keys before %s fallback without exposing the board', async (owner) => {
+    const page = await browser.newPage();
+    try {
+      await mount(page);
+      await page.getByRole('button', { name: 'Arm board pick' }).click();
+      await page.getByRole('button', { name: `Open child ${owner}` }).click();
+      const overlay = page.getByRole('dialog', { name: `${owner} child keys` });
+      const editor = overlay.getByRole('textbox', { name: 'Child editor' });
+      await editor.focus();
+      await page.keyboard.press('Escape');
+      expect(await overlay.isVisible()).toBe(true);
+      expect(await page.getByTestId('child-keys').textContent()).toBe('Escape');
+      expect(await page.getByTestId('child-closes').textContent()).toBe('0');
+      await page.keyboard.press('Tab');
+      expect(await editor.evaluate((el) => el === document.activeElement)).toBe(true);
+      expect(await page.getByTestId('child-keys').textContent()).toBe('Escape,Tab');
+      await overlay.getByRole('button', { name: 'Child stops Escape' }).focus();
+      await page.keyboard.press('Escape');
+      expect(await overlay.isVisible()).toBe(true);
+      expect(await page.getByTestId('child-keys').textContent()).toBe('Escape,Tab,stopped');
+      await overlay.getByRole('button', { name: 'Child fallback' }).focus();
+      for (const key of ['1', 'e', 'Enter', 'Escape']) await page.keyboard.press(key);
+      await overlay.waitFor({ state: 'hidden' });
+      expect(await page.getByTestId('child-closes').textContent()).toBe('1');
+      expect(await page.getByTestId('child-ancestor-keys').textContent()).toBe('');
+      expect(await page.getByTestId('child-background-keys').textContent()).toBe('');
+      expect(await values(page)).toEqual(['0', '0', '0', '0', 'card', '0', '0']);
+    } finally { await page.close(); }
+  });
+
+  it('leaves native Tab in a child editor at the modal wrap boundary', async () => {
+    const page = await browser.newPage();
+    try {
+      await mount(page);
+      await page.getByRole('button', { name: 'Open child Modal' }).click();
+      const overlay = page.getByRole('dialog', { name: 'Modal child keys' });
+      const editor = overlay.getByRole('textbox', { name: 'Child editor' });
+      await editor.focus();
+      await page.keyboard.press('Tab');
+      expect(await editor.evaluate((el) => el === document.activeElement)).toBe(true);
+      expect(await page.getByTestId('child-keys').textContent()).toBe('Tab');
+      await overlay.getByRole('button', { name: 'Child fallback' }).focus();
+      await page.keyboard.press('Shift+Tab');
+      expect(await editor.evaluate((el) => el === document.activeElement)).toBe(true);
+      expect(await page.getByTestId('child-ancestor-keys').textContent()).toBe('');
+      expect(await page.getByTestId('child-background-keys').textContent()).toBe('');
+    } finally { await page.close(); }
+  });
+
+  it.for(['preventDefault', 'stopPropagation'] as const)('lets a same-origin frame child consume Escape with %s before modal fallback', async (consume) => {
+    const page = await browser.newPage();
+    try {
+      await mount(page);
+      await page.getByRole('button', { name: 'Open frame modal' }).click();
+      const control = page.frameLocator('iframe[title="Embedded controls"]').getByRole('button', { name: 'Frame action' });
+      await control.evaluate((el, method) => {
+        el.addEventListener('keydown', (event) => {
+          if ((event as KeyboardEvent).key !== 'Escape') return;
+          event[method]();
+          el.setAttribute('data-consumed', '1');
+        }, { once: true });
+      }, consume);
+      await control.focus();
+      await page.keyboard.press('Escape');
+      expect(await control.getAttribute('data-consumed')).toBe('1');
+      expect(await page.getByRole('dialog', { name: 'Native controls' }).isVisible()).toBe(true);
+      expect(await control.evaluate((el) => el === document.activeElement)).toBe(true);
+      await page.keyboard.press('Escape');
+      expect(await page.getByRole('dialog', { name: 'Native controls' }).isVisible()).toBe(false);
+      expect(await page.getByTestId('clears').textContent()).toBe('0');
+    } finally { await page.close(); }
+  });
+
   it('contains Tab, isolates keys, closes the top dialog and restores focus before shortcuts resume', async () => {
     const page = await browser.newPage({ viewport: { width: 1280, height: 800 } });
     try {

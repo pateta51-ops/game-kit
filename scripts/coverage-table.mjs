@@ -3,14 +3,16 @@ import { createHash } from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
 import { matchesTrackedTree, workingTreeSha256 } from '../components/check-runner/tracked-source.ts';
+import { compareCoverage, coverageConfiguration } from './coverage-compare.mjs';
 
 const root = process.cwd();
 const directory = path.join(root, 'coverage');
 const summaryFile = path.join(directory, 'coverage-summary.json');
 const digest = value => createHash('sha256').update(value).digest('hex');
-const tool = { name: 'coverage-table', version: 1, sha256: createHash('sha256')
+const tool = { name: 'coverage-table', version: 2, sha256: createHash('sha256')
   .update(fs.readFileSync(new URL(import.meta.url)))
-  .update(fs.readFileSync(new URL('../components/check-runner/tracked-source.ts', import.meta.url))).digest('hex') };
+  .update(fs.readFileSync(new URL('../components/check-runner/tracked-source.ts', import.meta.url)))
+  .update(fs.readFileSync(new URL('./coverage-compare.mjs', import.meta.url))).digest('hex') };
 const gitOutput = (...args) => execFileSync('git', args, { cwd: root, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'], maxBuffer: 16 * 1024 * 1024 });
 const git = (...args) => gitOutput(...args).trim();
 
@@ -28,7 +30,7 @@ function flags(args) {
   const out = {};
   for (let i = 0; i < args.length; i++) {
     const flag = args[i];
-    if (!['--capture', '--started', '--check-outcome'].includes(flag) || !args[i + 1] || args[i + 1].startsWith('--') || Object.hasOwn(out, flag)) throw new Error('Invalid coverage option: ' + flag);
+    if (!['--capture', '--started', '--check-outcome', '--baseline'].includes(flag) || !args[i + 1] || args[i + 1].startsWith('--') || Object.hasOwn(out, flag)) throw new Error('Invalid coverage option: ' + flag);
     out[flag] = args[++i];
   }
   if (out['--capture'] && Object.keys(out).length !== 1) throw new Error('--capture cannot be combined with reporting options');
@@ -209,7 +211,12 @@ function markdown(report) {
     '| Component | Lines | Branches |', '|---|---:|---:|',
     ...report.components.map(group => `| ${group.name} | ${counts(group.lines)} | ${counts(group.branches)} |`), '',
     'Scope: reported component TypeScript files; no branches means n/a, not 100%. Counts do not prove rule correctness or complete execution.',
-    'Regression: unknown. No verified baseline comparison is implemented. Missing, invalid or stale evidence is not a no-regression result.', '',
+    `Baseline: ${report.baseline.status}. Comparison: ${report.comparison.status}. ${report.comparison.reason ?? ''}`,
+    ...(report.comparison.components ? ['', '| Changed component evidence | Lines pp | Branches pp | Scope |', '|---|---:|---:|---|',
+      ...report.comparison.components.map(group => `| ${group.name} | ${group.lines?.percentagePointDelta?.toFixed(1) ?? 'n/a'} | ${group.branches?.percentagePointDelta?.toFixed(1) ?? 'n/a'} | ${group.status} |`),
+      `Added files: ${report.comparison.addedFiles.join(', ') || 'none'}. Removed/omitted files: ${report.comparison.removedFiles.join(', ') || 'none'}.`,
+      `Components with count or percentage loss: ${report.comparison.losses.join(', ') || 'none observed in the compared scope'}.`] : []),
+    'Comparisons are informative only. Missing, invalid, incompatible or stale evidence leaves regression unknown. Changed scope and zero denominators cannot establish no regression.', '',
   ].join('\n');
 }
 
@@ -250,7 +257,7 @@ function report(options) {
   const source = identity();
   const targets = reportTargets(source.commit, pinned.location);
   const { mtimeNs, ...data } = readSummary();
-  const configuration = ['vitest.config.ts', 'package.json', 'package-lock.json', 'check-runner.config.json'].filter(file => fs.existsSync(path.join(root, file))).map(file => ({ path: file, sha256: digest(fs.readFileSync(path.join(root, file))) }));
+  const configuration = coverageConfiguration.filter(file => fs.existsSync(path.join(root, file))).map(file => ({ path: file, sha256: digest(fs.readFileSync(path.join(root, file))) }));
   const evidence = {
     version: 1, tool, createdAt: new Date().toISOString(), source,
     configuration,
@@ -260,8 +267,8 @@ function report(options) {
       checkOutcome: options['--check-outcome'] ?? 'unknown', binding: binding(options['--started'], source, data, configuration, mtimeNs),
       ...(process.env.GITHUB_RUN_ID ? { run: { id: process.env.GITHUB_RUN_ID, attempt: process.env.GITHUB_RUN_ATTEMPT ?? 'unknown', job: process.env.GITHUB_JOB ?? 'unknown' } } : {}),
     },
-    baseline: { status: 'unavailable', reason: 'Automatic baseline selection and verification are not implemented' }, comparison: { status: 'unknown' },
   };
+  Object.assign(evidence, compareCoverage(root, evidence, data.summary.status === 'reported' ? readUnaliased(summaryFile).bytes : Buffer.alloc(0), options['--baseline']));
   const text = markdown(evidence);
   const contents = [JSON.stringify(evidence, null, 2) + '\n', text];
   assertReportDirectory(pinned);

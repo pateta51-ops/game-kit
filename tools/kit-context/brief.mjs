@@ -6,6 +6,7 @@ import { contextPacket } from './context.mjs';
 import { contextTool } from './provenance.mjs';
 
 const sha=bytes=>createHash('sha256').update(bytes).digest('hex');
+const generatorFingerprint=()=>sha(JSON.stringify(fs.readdirSync(import.meta.dirname).filter(file=>file.endsWith('.mjs')&&!file.endsWith('.test.mjs')).sort().map(file=>[file,sha(fs.readFileSync(path.join(import.meta.dirname,file)))])));
 const text=(value,label)=>{
   if(typeof value!=='string'||!value.trim()) throw new Error(label+' must be a nonempty string');
   return value;
@@ -47,7 +48,7 @@ function readReference(root,ref) {
 export function workerBrief({game,source,task,maxChars=24000}) {
   text(game,'game');text(source,'source');
   if(!Number.isSafeInteger(maxChars)||maxChars<2000||maxChars>100000) throw new Error('maxChars must be 2000..100000');
-  object(task,['version','id','repo','branch','kitCommit','goal','reads','recipe','files','apis','acceptance','outOfScope','escalation','questions','completion'],'task');
+  object(task,['version','id','repo','branch','kitCommit','goal','reads','recipe','files','apis','acceptance','outOfScope','escalation','questions','completion','rulings'],'task');
   if(task.version!==1) throw new Error('task version must be 1');
   for(const key of ['id','repo','branch','kitCommit','goal','recipe','completion']) text(task[key],key);
   if(!/^(?:[a-f0-9]{40}|[a-f0-9]{64})$/.test(task.kitCommit)) throw new Error('kitCommit must be an exact commit');
@@ -57,6 +58,10 @@ export function workerBrief({game,source,task,maxChars=24000}) {
   object(task.escalation,['owner','stop'],'escalation');
   text(task.escalation.owner,'escalation.owner');text(task.escalation.stop,'escalation.stop');
   for(const q of task.questions) {object(q,['question','owner'],'question');text(q.question,'question');text(q.owner,'question owner');}
+  if(task.rulings!==undefined) {
+    list(task.rulings,'rulings');
+    for(const ruling of task.rulings) {object(ruling,['id','owner','resolution'],'ruling');for(const key of ['id','owner','resolution']) text(ruling[key],'ruling.'+key);}
+  }
   const root=fs.realpathSync(game);
   const ownedFiles=[];
   for(const item of task.files) {
@@ -79,23 +84,24 @@ export function workerBrief({game,source,task,maxChars=24000}) {
     return {command:'npm run '+item.script,proves:item.proves,executed:false};
   });
   for(const api of task.apis) {
-    object(api,['component','entry','symbol','mustUse','maxChars'],'api');text(api.component,'api.component');text(api.symbol,'api.symbol');
+    object(api,['component','entry','symbol','mustUse','maxChars','focused'],'api');text(api.component,'api.component');text(api.symbol,'api.symbol');
     if(api.mustUse!==undefined&&typeof api.mustUse!=='boolean') throw new Error('api.mustUse must be a boolean');
+    if(api.focused!==undefined&&typeof api.focused!=='boolean') throw new Error('api.focused must be a boolean');
   }
-  const packets=task.apis.map(api=>contextPacket({root:path.join(root,'kit'),source,component:api.component,symbol:api.symbol,entry:api.entry,maxChars:api.maxChars}));
+  const packets=task.apis.map(api=>contextPacket({root:path.join(root,'kit'),source,component:api.component,symbol:api.symbol,entry:api.entry,maxChars:api.maxChars,focused:api.focused}));
   const provenance=packets[0].provenance;
   if(provenance.target.commit!==task.kitCommit) throw new Error('task kitCommit does not match the verified game pin');
   if(packets.some(p=>p.provenance.lock.sha256!==provenance.lock.sha256)) throw new Error('game lock changed while preparing the brief; retry');
   const inputs={task:{sha256:sha(JSON.stringify(task))},package:{file:'package.json',sha256:sha(packageBytes)},ownedFiles};
   const brief={
-    schemaVersion:1,tool:{...contextTool(),mode:'brief'},scope:'worker-brief',status:'incomplete',taskReadiness:'not-assessed',
+    schemaVersion:1,tool:{...contextTool(),mode:'brief'},generatorFingerprint:generatorFingerprint(),scope:'worker-brief',status:'incomplete',taskReadiness:'not-assessed',
     game:root,kit:{status:provenance.status,method:provenance.method,scope:provenance.scope,target:provenance.target,lock:provenance.lock,...(provenance.warnings?{warnings:provenance.warnings}:{})},
-    task:Object.fromEntries(['id','repo','branch','kitCommit','goal','files','outOfScope','escalation','questions','completion'].map(key=>[key,task[key]])),
+    task:Object.fromEntries(['id','repo','branch','kitCommit','goal','files','outOfScope','escalation','questions','completion',...(task.rulings!==undefined?['rulings']:[])].map(key=>[key,task[key]])),
     inputs,inputFingerprint:sha(JSON.stringify({inputs,reads,kitLock:provenance.lock.sha256})),
     reads,recipe:task.recipe,acceptance,validationEvidence:[],
     mustUse:task.apis.filter(api=>api.mustUse).map(api=>api.component+':'+api.symbol),
     apis:packets.map(p=>({component:p.component,entry:p.entry,symbol:p.symbol,content:p.provenance.content})),
-    requiredReads:packets.map(p=>({component:p.component,entry:p.entry,symbol:p.symbol,reason:'packet-budget',files:[p.entry,'README.md']})),
+    requiredReads:packets.map(p=>({component:p.component,entry:p.entry,symbol:p.symbol,reason:'packet-budget',files:[p.entry,'README.md'],...(p.mode==='focused'?{continuation:p.continuation}:{})})),
     omitted:packets.length,
   };
   const size=()=>JSON.stringify(brief).length;
@@ -104,7 +110,7 @@ export function workerBrief({game,source,task,maxChars=24000}) {
     const packet=packets[index],before=brief.requiredReads;
     brief.apis[index].context=packet;
     brief.requiredReads=before.filter(read=>read!==before.find(r=>r.component===packet.component&&r.entry===packet.entry&&r.symbol===packet.symbol));
-    if(packet.status!=='complete') brief.requiredReads.push({component:packet.component,entry:packet.entry,symbol:packet.symbol,reason:'api-contract-incomplete',files:packet.requiredReads});
+    if(packet.status!=='complete') brief.requiredReads.push({component:packet.component,entry:packet.entry,symbol:packet.symbol,reason:'api-contract-incomplete',files:packet.requiredReads,...(packet.mode==='focused'?{continuation:{...packet.continuation,...(packet.page.next?{cursor:packet.page.next}:{})},dependencies:packet.dependencies,deferredReads:packet.deferredReads}:{})});
     brief.omitted--;
     if(size()>maxChars) {delete brief.apis[index].context;brief.requiredReads=before;brief.omitted++;}
   }
@@ -112,20 +118,68 @@ export function workerBrief({game,source,task,maxChars=24000}) {
   return brief;
 }
 
+export function assemblyBrief({game,source,task:input,maxChars=24000}) {
+  if(!Number.isSafeInteger(maxChars)||maxChars<2000||maxChars>100000) throw new Error('maxChars must be 2000..100000');
+  object(input,['version','id','repo','branch','kitCommit','goal','reads','recipe','files','apis','acceptance','outOfScope','escalation','questions','completion','assembly','decisions'],'assembly task');
+  object(input.assembly,['kind','spec','manifest'],'assembly');
+  if(!['courier','reference-cards'].includes(input.assembly.kind)) throw new Error('unsupported assembly task kind');
+  list(input.decisions,'decisions');
+  const root=fs.realpathSync(game),refs=[input.assembly.spec,input.assembly.manifest].map(file=>readReference(root,{file}));
+  const [spec,manifest]=refs.map(ref=>JSON.parse(fs.readFileSync(gameFile(root,ref.file),'utf8')));
+  if(spec.version!==1||manifest.version!==1||spec.id!==manifest.id||spec.assembly?.kind!==input.assembly.kind||manifest.assembly?.kind!==input.assembly.kind||spec.assembly.version!==1||manifest.assembly.version!==1) throw new Error('assembly identity does not match the generated inputs');
+  if(manifest.commit!==input.kitCommit) throw new Error('assembly pin does not match the task');
+  const matches=(declared,resolved)=>{
+    if(Array.isArray(declared)) return Array.isArray(resolved)&&declared.length===resolved.length&&declared.every((value,i)=>matches(value,resolved[i]));
+    if(declared&&typeof declared==='object') return resolved&&typeof resolved==='object'&&!Array.isArray(resolved)&&Object.entries(declared).every(([key,value])=>Object.hasOwn(resolved,key)&&matches(value,resolved[key]));
+    return declared===resolved;
+  };
+  if(!matches(spec.assembly,manifest.assembly)) throw new Error('assembly configuration no longer matches the generated manifest');
+  const rulings=[],questions=[],seen=new Set();
+  for(const decision of input.decisions) {
+    object(decision,['id','owner','resolution','question'],'decision');text(decision.id,'decision.id');text(decision.owner,'decision.owner');
+    if(seen.has(decision.id)) throw new Error('duplicate decision id: '+decision.id);seen.add(decision.id);
+    if(decision.resolution===null) {text(decision.question,'decision.question');questions.push({question:decision.question,owner:decision.owner});}
+    else {text(decision.resolution,'decision.resolution');rulings.push({id:decision.id,owner:decision.owner,resolution:decision.resolution});}
+  }
+  const task=Object.fromEntries(Object.entries(input).filter(([key])=>!['assembly','decisions'].includes(key)));
+  list(task.reads,'reads');list(task.questions,'questions');
+  task.reads=[...task.reads,...refs.filter(ref=>!task.reads.some(read=>read.file===ref.file)).map(({file})=>({file}))];
+  task.questions=[...task.questions,...questions];task.rulings=rulings;
+  const assembly={...input.assembly,configuration:'not-assessed',approval:'caller-supplied-decisions',sha256:sha(JSON.stringify(input))};
+  const brief=workerBrief({game,source,task,maxChars:Math.max(2000,maxChars-JSON.stringify(assembly).length-300)});
+  brief.assembly=assembly;
+  brief.inputs.assignment={sha256:assembly.sha256};
+  brief.inputFingerprint=sha(JSON.stringify({mapped:brief.inputFingerprint,assignment:assembly.sha256}));
+  if(JSON.stringify(brief).length>maxChars) throw new Error('brief budget too small for assembly decisions and continuations');
+  return brief;
+}
+
+export function compareBrief(previous,current) {
+  for(const [label,brief] of [['previous',previous],['current',current]]) {
+    if(brief?.schemaVersion!==1||brief.scope!=='worker-brief'||!['complete','incomplete'].includes(brief.status)||!/^[a-f0-9]{64}$/.test(brief.inputFingerprint??'')) throw new Error(label+' is not a supported saved worker brief');
+  }
+  const fields=[...new Set([...Object.keys(previous),...Object.keys(current)])].sort();
+  const changes=fields.filter(key=>JSON.stringify(previous[key])!==JSON.stringify(current[key]));
+  return {schemaVersion:1,scope:'worker-brief-comparison',status:changes.length?'stale':current.status==='complete'?'matching':'incomplete',changes,previousInputFingerprint:previous.inputFingerprint,currentInputFingerprint:current.inputFingerprint,taskReadiness:'not-assessed',validationEvidence:[]};
+}
+
 export function main(args) {
   const [file,...flags]=args;
-  if(!file) throw new Error('usage: node tools/kit-context/brief.mjs <task.json> --game <game> --source <checkout> [--max-chars 24000]');
+  if(!file) throw new Error('usage: node tools/kit-context/brief.mjs <task.json> --game <game> --source <checkout> [--assembly] [--compare <saved-brief.json>] [--max-chars 24000]');
   const options={task:JSON.parse(fs.readFileSync(file,'utf8'))};
-  for(let i=0;i<flags.length;i+=2) {
-    const key=flags[i],value=flags[i+1];
-    if(!value||value.startsWith('--')||!['--game','--source','--max-chars'].includes(key)) throw new Error('invalid brief flag: '+key);
+  for(let i=0;i<flags.length;i++) {
+    const key=flags[i];
+    if(key==='--assembly') {if(options.assembly) throw new Error('duplicate flag: '+key);options.assembly=true;continue;}
+    const value=flags[++i];
+    if(!value||value.startsWith('--')||!['--game','--source','--max-chars','--compare'].includes(key)) throw new Error('invalid brief flag: '+key);
     const prop=key==='--max-chars'?'maxChars':key.slice(2);
     if(Object.hasOwn(options,prop)) throw new Error('duplicate flag: '+key);
     options[prop]=key==='--max-chars'?Number(value):value;
   }
-  const brief=workerBrief(options);
-  console.log(JSON.stringify(brief));
-  return brief.status==='complete'?0:2;
+  const brief=options.assembly?assemblyBrief(options):workerBrief(options);
+  const output=options.compare?compareBrief(JSON.parse(fs.readFileSync(options.compare,'utf8')),brief):brief;
+  console.log(JSON.stringify(output));
+  return output.status===(options.compare?'matching':'complete')?0:2;
 }
 if(import.meta.main) {
   try {process.exitCode=main(process.argv.slice(2));} catch(e) {console.error(e.message);process.exitCode=1;}

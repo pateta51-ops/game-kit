@@ -33,6 +33,12 @@ for (const [where, text] of [['PR title', ev.pull_request?.title], ['PR body', e
 }
 let range = '';
 try { git('rev-parse', '-q', '--verify', 'origin/main'); range = 'origin/main..HEAD'; } catch { /* shallow CI checkout */ }
+if (range && process.env.GITHUB_ACTIONS === 'true' && process.env.GITHUB_EVENT_NAME === 'pull_request') {
+  const pr = ev.pull_request;
+  const [head, base, source, ...extra] = git('rev-list', '--parents', '-n', '1', 'HEAD').trim().split(' ');
+  if (process.env.GITHUB_REF === `refs/pull/${pr?.number}/merge` && head === process.env.GITHUB_SHA
+    && base === pr?.base?.sha && source === pr?.head?.sha && extra.length === 0) range = `origin/main..${source}`;
+}
 if (range) for (const l of git('log', range, '--format=%h %an <%ae> | %cn <%ce>').split('\n').filter(Boolean)) {
   const ok = (e) => /noreply\.github\.com>|noreply@github\.com>|noreply@anthropic\.com>/.test(e);
   const [a, c] = l.split(' | ');

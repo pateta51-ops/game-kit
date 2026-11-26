@@ -134,7 +134,7 @@ describe('reference game (K205, K234)', () => {
     expect([cardText('jab'), cardText('mend')]).toEqual(['Deal 2 damage.', 'Stays in play. When you take damage, you may: Heal 1.']);
   });
 
-  it('the opponent decides from its own view: the hidden hand never changes the choice', () => {
+  it('redaction hides the other hand order (paired decision checks run in acceptance)', () => {
     const [s] = arranged({});
     const b = s.zones['hand:0'];
     const other: RefState = { ...s, zones: { ...s.zones, 'hand:0': { ...b, cards: [...(b?.cards ?? [])].reverse() } } as RefState['zones'] };

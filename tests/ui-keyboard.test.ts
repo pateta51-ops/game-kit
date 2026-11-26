@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import './setup-dom.ts';
-import { createElement } from 'react';
+import { createElement, type KeyboardEvent as ReactKeyEvent } from 'react';
 import { fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { Modal } from '../components/modal-dialog/ui.tsx';
@@ -21,6 +21,68 @@ function Board({ answer }: { answer: (picks: readonly string[], id?: number) => 
 }
 
 describe('composed gameplay keyboard ownership', () => {
+  it.each(['Modal', 'Sheet'])('lets a focused child consume Escape before closing its %s', (kind) => {
+    const close = vi.fn(), childKey = vi.fn();
+    const child = createElement('input', { 'aria-label': 'Search choices', onKeyDown: (event: ReactKeyEvent<HTMLInputElement>) => {
+      if (event.key === 'Escape') { childKey(); event.preventDefault(); }
+    } });
+    render(kind === 'Modal'
+      ? createElement(Modal, { open: true, title: 'Choices', onClose: close, children: child })
+      : createElement(Sheet, { title: 'Choices', slideMs: 0, onClose: close, children: child }));
+    const input = screen.getByRole('textbox', { name: 'Search choices' });
+    input.focus();
+    fireEvent.keyDown(input, { key: 'Escape' });
+    expect(close).not.toHaveBeenCalled();
+    expect(childKey).toHaveBeenCalledTimes(1);
+    expect(document.activeElement).toBe(input);
+    fireEvent.keyDown(screen.getByRole('dialog', { name: 'Choices' }), { key: 'Escape' });
+    expect(close).toHaveBeenCalledTimes(1);
+  });
+
+  it('leaves a child-owned Tab in the focused modal editor', () => {
+    const childKey = vi.fn();
+    render(createElement(Modal, { open: true, title: 'Edit choices', onClose: vi.fn(), children: [
+      createElement('button', { key: 'first' }, 'First control'),
+      createElement('textarea', { key: 'editor', 'aria-label': 'Choice editor', onKeyDown: (event: ReactKeyEvent<HTMLTextAreaElement>) => {
+        if (event.key === 'Tab') { childKey(); event.preventDefault(); }
+      } }),
+    ] }));
+    const editor = screen.getByRole('textbox', { name: 'Choice editor' });
+    editor.focus();
+    fireEvent.keyDown(editor, { key: 'Tab' });
+    expect(childKey).toHaveBeenCalledTimes(1);
+    expect(document.activeElement).toBe(editor);
+  });
+
+  it.each([['Modal', 'Escape'], ['Modal', 'Tab'], ['Sheet', 'Escape'], ['Sheet', 'Tab']] as const)(
+    'keeps %s %s inside the overlay before ancestor and earlier document shortcuts', (kind, key) => {
+      const background = vi.fn(), ancestor = vi.fn(), close = vi.fn(), childKey = vi.fn();
+      document.addEventListener('keydown', background);
+      stops.push(() => document.removeEventListener('keydown', background));
+      let consumed = false;
+      const child = createElement('button', { onKeyDown: (event: ReactKeyEvent<HTMLButtonElement>) => {
+        childKey();
+        if (consumed) event.preventDefault();
+      } }, 'Boundary action');
+      const overlay = kind === 'Modal'
+        ? createElement(Modal, { open: true, title: 'Boundary', onClose: close, children: child })
+        : createElement(Sheet, { title: 'Boundary', slideMs: 0, onClose: close, children: child });
+      render(createElement('div', { onKeyDown: ancestor }, overlay));
+      const action = screen.getByRole('button', { name: 'Boundary action' });
+      for (const own of [false, true]) {
+        consumed = own;
+        close.mockClear();
+        childKey.mockClear();
+        action.focus();
+        fireEvent.keyDown(action, { key });
+        expect(childKey).toHaveBeenCalledTimes(1);
+        expect(ancestor).not.toHaveBeenCalled();
+        expect(background).not.toHaveBeenCalled();
+        expect(close).toHaveBeenCalledTimes(key === 'Escape' && !own ? 1 : 0);
+      }
+    },
+  );
+
   it('blocks gameplay under an open Modal, then restores keys when the mounted dialog closes', () => {
     const numbered = vi.fn(), end = vi.fn(), answer = vi.fn(), clear = vi.fn(), close = vi.fn();
     const scene = (open: boolean) => createElement('div', null,

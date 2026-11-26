@@ -1,0 +1,1 @@
+{"version":1,"cards":{"mode":"required"},"llmPlaytest":{"mode":"none","reason":"This bounded synthetic composition uses independent rule fixtures, paired hidden worlds and actual browser acceptance; it has no LLM gameplay driver."}}

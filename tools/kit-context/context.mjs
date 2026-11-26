@@ -6,6 +6,8 @@ import { Parser } from 'commonmark';
 import ts from 'typescript';
 import { collectContracts } from './contracts.mjs';
 import { contextTool, sourceProvenance } from './provenance.mjs';
+import { focusedPacket } from './focused.mjs';
+import { observationEvidence } from './observations.mjs';
 
 const defaultRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../components');
 const code = /\.(?:ts|tsx|mts|js|mjs)$/;
@@ -207,16 +209,22 @@ function readLinkedGuides(dir, markdown, commentTails) {
 }
 
 /** Source-grounded, bounded context. Never include source outside the requested component. */
-export function contextPacket({root=defaultRoot,component,symbol,entry='index.ts',maxChars=6000,provenance=false,source}) {
+export function contextPacket({root=defaultRoot,component,symbol,entry='index.ts',maxChars=6000,provenance=false,source,focused=false,cursor,observations,productionConsumers=[]}) {
+  if(focused) return focusedPacket({root,component,symbol,entry,maxChars,provenance,source,cursor,observations,productionConsumers},contextPacket);
+  if(cursor!==undefined) throw new Error('a context cursor requires focused mode');
+  if(productionConsumers.length&&observations===undefined) throw new Error('production consumer authorization requires observations');
   if (!namePattern.test(component??'') || (symbol!==undefined&&!identifier.test(symbol))) throw new Error('invalid component or symbol');
   if (!Number.isSafeInteger(maxChars)||maxChars<500||maxChars>100000) throw new Error('maxChars must be 500..100000');
   const base = fs.realpathSync(root);
   const dir = fs.realpathSync(path.join(base,component));
   if (!inside(base,dir)||dir===base) throw new Error('component escapes root');
-  const identity=provenance||source!==undefined?{
+  const identity=provenance||source!==undefined||observations!==undefined?{
     schemaVersion:1,tool:{...contextTool(),typescript:ts.version},scope:'api-contract',taskReadiness:'not-assessed',
     provenance:sourceProvenance({root:path.resolve(root),component,source}),
   }:{};
+  if(observations!==undefined) identity.maturity=identity.provenance.status==='verified'
+    ?observationEvidence({file:observations,component,commit:identity.provenance.target.commit,source,productionConsumers}).summary
+    :{status:'unknown',reason:'requested pin is not verified',input:{file:path.resolve(observations)}};
   const manifestText=readComponentFile(dir,'component.json');
   let manifest;
   try { manifest=JSON.parse(manifestText); } catch { throw new Error('invalid component.json'); }
@@ -306,22 +314,23 @@ export function contextPacket({root=defaultRoot,component,symbol,entry='index.ts
 }
 export function main(args) {
   const [component,symbolOrFlag,...tail]=args;
-  if(!component)throw new Error('usage: node tools/kit-context/context.mjs <component> [symbol] [--entry index.ts] [--root components] [--max-chars 6000] [--provenance] [--source checkout]');
+  if(!component)throw new Error('usage: node tools/kit-context/context.mjs <component> [symbol] [--entry index.ts] [--root components] [--max-chars 6000] [--provenance] [--source checkout] [--focused] [--cursor value] [--observations inventory.json]');
   const symbol=symbolOrFlag&&!symbolOrFlag.startsWith('--')?symbolOrFlag:undefined;
   const flags=symbol===undefined&&symbolOrFlag?[symbolOrFlag,...tail]:tail;
   const o={component,symbol};
   for(let i=0;i<flags.length;i++) {
     const key=flags[i];
-    if(key==='--provenance') {
-      if(o.provenance)throw new Error('duplicate flag: '+key);
-      o.provenance=true;
+    if(key==='--provenance'||key==='--focused') {
+      const prop=key.slice(2);
+      if(o[prop])throw new Error('duplicate flag: '+key);
+      o[prop]=true;
       continue;
     }
     const value=flags[++i];
-    if(!value||value.startsWith('--')||!['--entry','--root','--max-chars','--source'].includes(key))throw new Error('invalid context flag: '+key);
-    const prop=key==='--max-chars'?'maxChars':key.slice(2);
+    if(!value||value.startsWith('--')||!['--entry','--root','--max-chars','--source','--cursor','--observations','--production-consumers'].includes(key))throw new Error('invalid context flag: '+key);
+    const prop=key==='--max-chars'?'maxChars':key==='--production-consumers'?'productionConsumers':key.slice(2);
     if(Object.hasOwn(o,prop))throw new Error('duplicate flag: '+key);
-    o[prop]=key==='--max-chars'?Number(value):value;
+    o[prop]=key==='--max-chars'?Number(value):key==='--production-consumers'?value.split(','):value;
   }
   const packet=contextPacket(o);
   console.log(JSON.stringify(packet));

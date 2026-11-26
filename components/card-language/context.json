@@ -1,0 +1,67 @@
+{
+  "version": 1,
+  "sources": {
+    "README.md": "17cd3a4d7f8defff18a3abef1e935fb2221a9dfe5c62287eacbfe14a5bf2ae73",
+    "payment.md": "306ae5ec66393293fe93f5f3a26d8b26180c4f28a5c443824724e77d8126ddb1"
+  },
+  "apis": [
+    {
+      "entry": "index.ts",
+      "symbol": "paymentPlans",
+      "rules": [
+        {
+          "file": "README.md",
+          "from": 22,
+          "to": 22
+        },
+        {
+          "file": "payment.md",
+          "from": 18,
+          "to": 28
+        }
+      ],
+      "usage": [
+        {
+          "file": "payment.md",
+          "from": 1,
+          "to": 16
+        },
+        {
+          "file": "payment.md",
+          "from": 29,
+          "to": 31
+        }
+      ],
+      "dependencies": []
+    },
+    {
+      "entry": "index.ts",
+      "symbol": "preferredPayment",
+      "rules": [
+        {
+          "file": "README.md",
+          "from": 22,
+          "to": 22
+        },
+        {
+          "file": "payment.md",
+          "from": 18,
+          "to": 28
+        }
+      ],
+      "usage": [
+        {
+          "file": "payment.md",
+          "from": 1,
+          "to": 16
+        },
+        {
+          "file": "payment.md",
+          "from": 29,
+          "to": 31
+        }
+      ],
+      "dependencies": []
+    }
+  ]
+}

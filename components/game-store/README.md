@@ -4,6 +4,8 @@ One game store and one game object (K234): `defineGame` is what the game writes 
 
 ## Rules for agents
 
+Focused context for `defineGame` retains this README and gives explicit same-pin continuation queries for its declared dependency types. An unresolved dependency or continuation is still required reading, never proof of complete task readiness.
+
 **What it does:** One game store and one game object: engine-core step undo, forced answers, paced views, autosave and the opponent seat joined.
 
 **You must:**

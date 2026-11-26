@@ -91,10 +91,10 @@ export function resolveSpec(spec, read, base, profiles, assemblies = {}) {
   opponents[opponent].forEach(n => add(n, 'opponent: ' + opponent))
   let assembly
   if (spec.assembly !== undefined) {
-    if (!object(spec.assembly) || !Object.hasOwn(assemblies,spec.assembly.kind)) throw new Error('unsupported courier assembly at the selected pin: '+spec.assembly?.kind)
-    if (opponent !== 'none') throw new Error('courier assembly supports opponent: none only; its pilot is a test driver')
-    if ((spec.profiles ?? []).some(p => p !== 'tactical-board') || (spec.mechanics ?? []).length) throw new Error('courier assembly supports only its fixed tactical rules; additional profiles or mechanics need game-owned adapters')
+    if (!object(spec.assembly) || !Object.hasOwn(assemblies,spec.assembly.kind)) throw new Error('unsupported assembly at the selected pin: '+spec.assembly?.kind)
     const adapter = assemblies[spec.assembly.kind]
+    if (!(adapter.opponents ?? ['none']).includes(opponent)) throw new Error(spec.assembly.kind+' assembly does not support opponent: '+opponent)
+    if ((spec.profiles ?? []).some(p => !(adapter.profiles ?? ['tactical-board']).includes(p)) || (spec.mechanics ?? []).length) throw new Error(spec.assembly.kind+' assembly supports only its declared rules; additional profiles or mechanics need game-owned adapters')
     assembly = adapter.resolve(spec.assembly)
     adapter.components.forEach(n => add(n,'assembly: '+assembly.kind))
   }
