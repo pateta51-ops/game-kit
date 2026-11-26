@@ -13,7 +13,7 @@ describe.skipIf(!HAVE && !process.env['CI'])('modal, board shortcuts and attachm
   let script = '';
   let css = '';
   beforeAll(async () => {
-    const bundle = await build({ entryPoints: [resolve('tests/fixtures/ui-keyboard.tsx')], bundle: true, format: 'iife',
+    const bundle = await build({ entryPoints: [resolve('tests/fixtures/ui-keyboard.tsx')], bundle: true, format: 'esm',
       outfile: 'ui-keyboard.js', write: false, logLevel: 'silent' });
     script = bundle.outputFiles.find((f) => f.path.endsWith('.js'))?.text ?? '';
     css = bundle.outputFiles.find((f) => f.path.endsWith('.css'))?.text ?? '';
@@ -25,7 +25,7 @@ describe.skipIf(!HAVE && !process.env['CI'])('modal, board shortcuts and attachm
   const mount = async (page: Page) => {
     await page.setContent('<!doctype html><html><head><meta name="viewport" content="width=device-width, initial-scale=1"></head><body></body></html>');
     await page.addStyleTag({ content: css + '\nbody{font:16px system-ui;margin:16px}button,input{font:inherit;min-height:44px}main{display:grid;gap:12px}output{display:block}' });
-    await page.addScriptTag({ content: script });
+    await page.addScriptTag({ type: 'module', content: script });
     await page.getByRole('button', { name: 'Open modal', exact: true }).waitFor();
   };
   const values = async (page: Page) => page.locator('output').allTextContents();
@@ -76,6 +76,49 @@ describe.skipIf(!HAVE && !process.env['CI'])('modal, board shortcuts and attachm
       await page.keyboard.press('Enter');
       await page.keyboard.press('Escape');
       expect(await values(page)).toEqual(['1', '1', '0', '1', 'none', '0', '0']);
+    } finally { await page.close(); }
+  });
+
+  it('honors an explicitly focused heading that is outside the Tab sequence', async () => {
+    const page = await browser.newPage();
+    try {
+      await mount(page);
+      await page.getByRole('button', { name: 'Open ordered modal' }).click();
+      expect(await page.getByRole('heading', { name: 'Review introduction' }).evaluate((el) => el === document.activeElement)).toBe(true);
+    } finally { await page.close(); }
+  });
+
+  it('contains Tab with positive tabindex values and a background tab stop between them', async () => {
+    const page = await browser.newPage();
+    try {
+      await mount(page);
+      await page.getByRole('button', { name: 'Open ordered modal' }).click();
+      const defaultAction = page.getByRole('button', { name: 'Default action' });
+      const first = page.getByRole('button', { name: 'First priority' });
+      const third = page.getByRole('button', { name: 'Third priority' });
+      await defaultAction.focus();
+      await page.keyboard.press('Tab');
+      expect(await first.evaluate((el) => el === document.activeElement)).toBe(true);
+      await page.keyboard.press('Tab');
+      expect(await third.evaluate((el) => el === document.activeElement)).toBe(true);
+      await page.keyboard.press('Shift+Tab');
+      expect(await first.evaluate((el) => el === document.activeElement)).toBe(true);
+      await page.keyboard.press('Shift+Tab');
+      expect(await defaultAction.evaluate((el) => el === document.activeElement)).toBe(true);
+    } finally { await page.close(); }
+  });
+
+  it('lets the enclosing modal own Escape when a nonmodal dialog is nested inside it', async () => {
+    const page = await browser.newPage();
+    try {
+      await mount(page);
+      const opener = page.getByRole('button', { name: 'Open ordered modal' });
+      await opener.click();
+      await page.getByRole('button', { name: 'First priority' }).focus();
+      await page.keyboard.press('Escape');
+      expect(await page.getByRole('dialog', { name: 'Ordered decision' }).isVisible()).toBe(false);
+      expect(await opener.evaluate((el) => el === document.activeElement)).toBe(true);
+      expect(await page.getByTestId('clears').textContent()).toBe('0');
     } finally { await page.close(); }
   });
 

@@ -10,6 +10,7 @@ const prompt = { id: 1, kind: 'move', min: 1, max: 1, options: [{ id: 'card', en
 
 function Board() {
   const [modal, setModal] = useState(false);
+  const [ordered, setOrdered] = useState(false);
   const [nested, setNested] = useState(false);
   const [sheet, setSheet] = useState(false);
   const [numbers, setNumbers] = useState(0);
@@ -35,6 +36,7 @@ function Board() {
         <button onClick={() => pick.tap('card')}>Arm board pick</button>
       </div>
       <button onClick={() => setModal(true)}>Open modal</button>
+      <button tabIndex={2} onClick={() => setOrdered(true)}>Open ordered modal</button>
       <button onClick={() => setSheet(true)}>Open sheet</button>
       <label>Board note <input aria-label="Board note" /></label>
       <output data-testid="numbers">{numbers}</output>
@@ -67,6 +69,14 @@ function Board() {
     </Modal>
     <Modal open={nested} title="Nested decision" speed={0} onClose={() => setNested(false)}>
       <button data-autofocus onClick={() => setNested(false)}>Close nested dialog</button>
+    </Modal>
+    <Modal open={ordered} title="Ordered decision" speed={0} onClose={() => setOrdered(false)}>
+      <h3 data-autofocus tabIndex={-1}>Review introduction</h3>
+      <button>Default action</button>
+      <button tabIndex={3}>Third priority</button>
+      <section role="dialog" aria-modal="false" aria-label="Supporting choices">
+        <button tabIndex={1}>First priority</button>
+      </section>
     </Modal>
   </>;
 }

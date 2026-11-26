@@ -5,6 +5,11 @@ import './modal-dialog.css';
 
 const FOCUSABLE =
   'a[href], button, input:not([type="hidden"]), select, textarea, [tabindex], [contenteditable]';
+const MODAL = '[role="dialog"][aria-modal="true"], [role="alertdialog"][aria-modal="true"]';
+const keyboardOwner = (): Element | null => {
+  const active = activeOverlay(document) as Element | null;
+  return active?.closest(MODAL) ?? active;
+};
 const editable = (element: Element | null): boolean => {
   for (let at = element; at; at = at.parentElement) {
     const value = at.getAttribute('contenteditable')?.toLowerCase();
@@ -18,6 +23,7 @@ const tabStop = (el: HTMLElement): boolean => {
   if (el.hasAttribute('tabindex') || el.matches('a[href], button, input, select, textarea')) return el.tabIndex >= 0;
   return editable(el) && !editable(el.parentElement);
 };
+const tabRank = (el: HTMLElement): number => el.tabIndex > 0 ? el.tabIndex : Number.MAX_SAFE_INTEGER;
 let openCount = 0;
 let previousOverflow = '';
 
@@ -44,21 +50,42 @@ export function Modal({ open, onClose, title, children, actions, closeOnBackdrop
       previousOverflow = document.body.style.overflow;
       document.body.style.overflow = 'hidden';
     }
-    const controls = () => Array.from(panel.querySelectorAll<HTMLElement>(FOCUSABLE)).filter(tabStop);
-    const first = controls().find((el) => el.hasAttribute('data-autofocus')) ?? controls()[0] ?? panel;
-    first.focus({ preventScroll: true });
+    const controls = () => Array.from(panel.querySelectorAll<HTMLElement>(FOCUSABLE)).filter(tabStop)
+      .sort((a, b) => tabRank(a) - tabRank(b));
+    const preferred = Array.from(panel.querySelectorAll<HTMLElement>('[data-autofocus]')).some((el) => {
+      if (el.matches(':disabled') || !isActiveElement(el)) return false;
+      el.focus({ preventScroll: true });
+      return document.activeElement === el;
+    });
+    if (!preferred) (controls()[0] ?? panel).focus({ preventScroll: true });
 
     const onKey = (event: KeyboardEvent) => {
-      if (event.defaultPrevented || activeOverlay(document) !== panel) return;
+      if (event.defaultPrevented || keyboardOwner() !== panel) return;
       if (event.key === 'Escape') {
         event.preventDefault();
         event.stopPropagation();
         close();
       } else if (event.key === 'Tab') {
         const items = controls(), at = document.activeElement;
-        if (items.length === 0 || !panel.contains(at) || at === panel || (event.shiftKey ? at === items[0] : at === items.at(-1))) {
+        const backwards = event.shiftKey;
+        const start = (backwards ? items.at(-1) : items[0]) ?? panel;
+        const index = at instanceof HTMLElement ? items.indexOf(at) : -1;
+        const ordered = (items[0]?.tabIndex ?? 0) > 0;
+        let next: HTMLElement | undefined;
+        if (at === null || at === panel || !panel.contains(at)) next = start;
+        else if (index < 0) {
+          const relation = backwards ? Node.DOCUMENT_POSITION_PRECEDING : Node.DOCUMENT_POSITION_FOLLOWING;
+          const nearby = (backwards ? items.toReversed() : items)
+            .find((el) => el.tabIndex <= 0 && (at.compareDocumentPosition(el) & relation) !== 0);
+          if (ordered || !nearby) next = nearby ?? start;
+        } else {
+          next = items[index + (backwards ? -1 : 1)];
+          if (next === undefined) next = start;
+          else if (!ordered) return;
+        }
+        if (next) {
           event.preventDefault();
-          (event.shiftKey ? items.at(-1) ?? panel : items[0] ?? panel).focus({ preventScroll: true });
+          next.focus({ preventScroll: true });
         }
       }
     };
@@ -66,7 +93,7 @@ export function Modal({ open, onClose, title, children, actions, closeOnBackdrop
     return () => {
       document.removeEventListener('keydown', onKey, true);
       if (--openCount === 0) document.body.style.overflow = previousOverflow;
-      const front = activeOverlay(document) as HTMLElement | null;
+      const front = keyboardOwner();
       if (opener?.isConnected && (!front || front.contains(opener))) opener.focus({ preventScroll: true });
     };
   }, [open]);
