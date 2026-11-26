@@ -1,6 +1,6 @@
 # sim-pool
 
-Plays N whole games of any `GameRules<G>` with a driver, in this thread or on worker threads, with crash-safe records and a resume file. Needs `engine-core`.
+Plays N whole games of a `GameRules<G>` or a game's own `EnginePort<G>` with a driver, in this thread or on worker threads, with crash-safe records and a resume file. Needs `engine-core`.
 
 ## Rules for agents
 
@@ -10,7 +10,9 @@ Plays N whole games of any `GameRules<G>` with a driver, in this thread or on wo
 - `runGames`: play many whole games on worker threads
 - `fuzzMain`: fuzz games with invariants and report each finding with a seed
 - `randomDriver` + `legalAnswers`: random answers from the legal options
+- `randomPortDriver`: random answers from the port game's supplied legal answers
 - `botDriver`: a driver that sees the player view only
+- `portBotDriver`: map a port game's deciding seat to the exact public bot view
 - `runResumable` + `codeVersion`: a long run that resumes after a crash
 - `tune` + `validate`: tune weights, then check on fresh seeds
 - `proveResolved` + `provenClauses`: prove each clause resolved in a played game
@@ -18,12 +20,12 @@ Plays N whole games of any `GameRules<G>` with a driver, in this thread or on wo
 - `greedyBot` + `greedyPreview`: score legal moves with bounded public nested look-ahead and a legal fallback
 <!-- /hooks -->
 
-**Which entry (K723):** browser or UI code imports `sim-pool/browser.ts` (`DriverRng`, `legalAnswers`, `randomDriver`, `botDriver`, `Bot`, `Driver`, `bySeat`, `ANSWER_CAP`, `GameSpec`, `SimGame`, `greedyBot`, `greedyPreview`; no `node:` module). Node scripts keep `sim-pool/index.ts` (everything, including pool and worker). You must never import `index.ts` from code vite serves to a browser.
+**Which entry (K723):** browser or UI code imports `sim-pool/browser.ts` (`DriverRng`, `legalAnswers`, `randomDriver`, `botDriver`, `Bot`, `Driver`, `bySeat`, `ANSWER_CAP`, `GameSpec`, `SimGame`, `greedyBot`, `greedyPreview`, `PortSimGame`, `PortDriver`, `randomPortDriver`, `portBotDriver`; no `node:` module). Node scripts keep `sim-pool/index.ts` (everything, including pool and worker). You must never import `index.ts` from code vite serves to a browser.
 
-**What it does:** Plays many whole games of any `GameRules` with a driver, in-thread or on worker threads, with crash-safe records, a resume file, fuzzing with invariants, grid sweeps and a weight tuner.
+**What it does:** Plays many whole games of a `GameRules` or a game's own `EnginePort` with a driver, in-thread or on worker threads, with crash-safe records, a resume file, fuzzing with invariants, grid sweeps and a weight tuner.
 
 **You must:**
-1. Write one module that exports `simGame: SimGame<G, S>` (`rules`, `content()`, `start(spec, content)`, `driver(name, spec, content)`); the worker loads it by URL on plain Node, so its `.ts` imports name their extension (a bundled game passes `worker: <bundle URL>`).
+1. Write one module that exports `simGame: SimGame<G, S>` (`rules`, `content()`, `start(spec, content)`, `driver(name, spec, content)`) or `PortSimGame<G, S>` (`content()`, `port(spec, content)`, `answers`, `driver`); the worker loads it by URL on plain Node, so its `.ts` imports name their extension (a bundled game passes `worker: <bundle URL>`).
 2. Make a game a function of its spec (seed, driver, settings) only: keep no counters or caches between games in module variables (use `observation` and `onPrompt` for per-game notes). `fresh: true` shows any leak.
 3. Take driver randomness only from the `DriverRng` passed to `choose`, never `state.rng`; a driver sees the player's view only (`botDriver(bot, view)`), never hidden state.
 4. Run fuzz and invariants with `process.exitCode = await fuzzMain(process.argv.slice(2), module)`. Strict and diagnostic engine policies both report structured violations. Exit 1 means findings (`exception`, `violation`, `runaway`, `endless`, `dead end`, `hidden-info`, `trigger-cap`), each with seed, step and a replay line.
@@ -41,9 +43,12 @@ Plays N whole games of any `GameRules<G>` with a driver, in this thread or on wo
 15. For one-choice look-ahead use `greedyBot({ probe, fallback, maxProbes, maxRootAnswers })` through `botDriver(bot, view)` (K424). Provide the deciding seat's redacted view and legal answers containing only data available to that seat. Use `greedyPreview` when that view can reconstruct a throwaway engine state. Mark revealing, random and other-seat nested branches unknown. The view, preview, legal answers and fallback must use only information available to that seat, including values captured by their callbacks. See the [complete live and simulation example](greedy.md).
 16. For requested view checks, run at least one game and provide a legacy `view` or seat-aware `observeViews`; without an adapter the game fails before setup. Kit opponent and bot adapters also validate the exact view they pass to the policy. When collecting evidence require `viewValidation.status === 'executed'`, `scope === 'snapshots-and-driver-views'`, a positive `checked` count, and a successful game for full-run acceptance.
 17. Modules with named registrations should implement `validateDriver(name)` and throw `DriverRegistrationError` for unknown names. Validation is synchronous and depends only on registrations, before loading content on each worker. `simGameOf` provides this hook. Rebuild bundled workers when upgrading to use batch preflight. Preflight also checks requested names on resume, including those already in a checkpoint. The fuzz command exits 2 for invalid registrations and preserves the default `random` for an omitted driver option.
+18. (K645) A `PortSimGame` has no `rules` property. Return a fresh full-game port from `port(spec, content)`, with real seeded setup and a required `result` callback that returns null/undefined until the whole game finishes. Supply `answers` from the game's own legal-move rules and use `randomPortDriver`; normalized `PortPrompt.options` do not define pick count, ordering, repeated picks or deciding seat. A Scenario fixture port may need different `start` and `result` callbacks. Keep them explicit.
+19. A port's state invariants run with `port.content` after settled setup and each settled action. Put transition checks in `transitionInvariants`; its `before` state is a `structuredClone` snapshot so a mutable engine cannot overwrite the evidence. `changed` uses the same snapshot for an action; per-effect trace entries must already hold separate before/after snapshots. These hooks require cloneable states. Failures, refused actions, missing prompts, and the action cap retain the seed and replay actions and never count as finishes.
+20. Port view checks require `view`; use `portBotDriver(bot, view, seatOf)` for the exact view consumed by a policy and optional `driverViewAssertions` for that explicit seat. `hidden`, `debug`, and `hasten` requests fail clearly for port games, as does `undoCheck: true` on a port module. Kernel `History`, `breakAt`, undo diagnostics, and seat-aware `observeViews` remain on `SimGame`; do not infer them from foreign state fields.
 
 
-- A run stops with a `triggerCap` diagnostic, null result, and replay actions if a trigger chain drops live work. `report` counts that run in `truncated`, and a deliberately cut run with no result in `unfinished`. Neither enters clean finish, length or win counts. Legacy checkpoint records are replayed for trigger-cap evidence. A view-validation run still refuses cached successes without current view evidence. Rebuild a bundled worker after updating the kit.
+- A `GameRules` run stops with a `triggerCap` diagnostic, null result, and replay actions if a trigger chain drops live work. `report` counts that run in `truncated`, and a deliberately cut run with no result in `unfinished`. Neither enters clean finish, length or win counts. Legacy checkpoint records are replayed for trigger-cap evidence. Port runs carry `portExecution: 1` for the port runner; it makes no claim about a foreign engine's trigger cap. Resume checks the loaded module's execution kind in an isolated worker and replays records without matching evidence. A view-validation run still refuses cached successes without current view evidence. Rebuild a bundled worker after updating the kit.
 
 **Common mistakes:**
 - A game whose result differs between a pool run and a single run: module state is carried between games.
@@ -59,6 +64,35 @@ A game writes one module that exports `simGame: SimGame<G, S>`:
 - `answers?(state, content, rng)`: the legal answers; default `legalAnswers(prompt, rng)` (subsets of enabled options, min..max; a prompt of kind `order` also gets every order; over 512, 512 samples).
 - `summary?(state, actions, content, seen)` → `S`: the game's own counters, stored on each record. `observation?(spec, content)` → a new `seen` per game; `onPrompt?(seen, state, answers)` at every open prompt before the driver answers (per-game notes go there, never in module variables).
 - `maxActions?` (default 100,000): a game with no result by then fails.
+
+## An engine with its own state (K645)
+
+Export `simGame: PortSimGame<G, S>` to use the same `playOne`, `runGames`, `runResumable`, `fuzzMain`, `report` and `wholeGame` APIs with an `EnginePort`. `G` extends engine-core's `PortTypes`; the runner reads setup, prompts, actions, invariants and terminal results through the port. String prompt ids and explicit answer payloads are preserved. `false` and `0` are terminal results; only null/undefined mean the game is still running.
+
+This complete example uses the small, original port fixture shipped with sim-pool. The game supplies its own port factory and answer enumeration in the same places:
+
+```ts
+import { randomPortDriver, type PortSimGame } from '../kit/sim-pool/index.ts'
+import { answers, makePort, type PortGame } from '../kit/sim-pool/fake/port-game.ts'
+
+export const simGame: PortSimGame<PortGame> = {
+  content: () => ({ resolved: new Set<string>() }),
+  port: (spec, content) => makePort(spec.seed, content),
+  answers: state => answers(state),
+  driver: () => randomPortDriver<PortGame>(),
+  trace: content => ({ resolved: content.resolved, clear: () => content.resolved.clear() }),
+}
+```
+
+The port factory receives the full `GameSpec`, including settings; content loads once per thread. The factory must deliberately provide whole-game setup and termination. If an existing port is for Scenario tests, replace its fixture `start` with the engine's full setup and replace a preliminary result with a callback that returns a value only at the game's actual terminal state. `settle` runs after setup and every accepted answer. A returned `Error` from `apply` fails that game.
+
+`randomPortDriver(weight?)` chooses only from `answers(state, content, rng)`. The game defines pass, multi-pick, repeated-pick and ordered answers; an empty enumeration is a dead end. The engine still validates the chosen answer. Driver RNG is separate from engine RNG and keyed by the same seed, driver and prompt id as the existing runner. `portBotDriver(bot, view, seatOf)` maps the deciding seat explicitly and sends only `view(state, seat)` to the bot. With `view: true`, the runner validates both snapshots and this exact consumed value as lossless JSON, including the configured secret strings and forbidden keys. A driver catching a rejected view cannot turn the run into a success.
+
+Optional observation, prompt, summary, trace and changed-clause hooks work on the game's actual state. `transitionInvariants(before, after, answer, content)` runs alongside state invariants when invariant checks are enabled. A port may bind different per-spec content; its state invariant callback always receives that `port.content`, while sim-pool callbacks receive the content returned by the module's `content()`.
+
+The port path supports serial play, workers, fresh workers, checkpoints, view validation, whole-game clause reports and fuzz replay with `--seed`/`--until`. Its independent execution evidence does not certify kernel trigger-cap or undo checks. Engine-specific diagnostics belong in the port's invariants or the transition hook. It rejects requested hidden-shuffle, debug, hasten and `undoCheck` modes because `EnginePort` does not define those capabilities. Existing `SimGame` modules retain their original path and capabilities.
+
+## Run a simulation
 
 Run it:
 

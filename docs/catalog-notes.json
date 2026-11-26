@@ -2043,7 +2043,7 @@
     "gameSupplies": "The game store and a bot."
   },
   "sim-pool": {
-    "use": "Playing many whole games with drivers on worker threads, fuzzing, sanity bands, sweeps, the K200 weight tuner and paired validation; the whole-game check of unreached clauses (proof from counted full-resolve tests, with a trace input built from the game's own log so a static clause applied with an effect counts as proven), coverage rounds and a findings file to replay a failing seed; K737 random debug edits (randomDebug hook, debug N) applied every N actions in a fuzz run, and a driver or hasten returning a debug action. Validate public seat views as JSON, detect hidden information leaks, and check registered driver names before a batch runs.",
+    "use": "Playing many whole games with drivers on worker threads, fuzzing, sanity bands, sweeps, the K200 weight tuner and paired validation; the whole-game check of unreached clauses (proof from counted full-resolve tests, with a trace input built from the game's own log so a static clause applied with an effect counts as proven), coverage rounds and a findings file to replay a failing seed; K737 random debug edits (randomDebug hook, debug N) applied every N actions in a fuzz run, and a driver or hasten returning a debug action. Validate public seat views as JSON, detect hidden information leaks, and check registered driver names before a batch runs. Opt-in EnginePort factories let games with their own engines use fuzzing and whole-game reports with explicit legal answers and completion rules.",
     "not": "Strategy beyond one nested public choice (the game or opponent supplies it).",
     "title": "Bulk game simulator",
     "tags": [
@@ -2085,13 +2085,15 @@
     ],
     "visible": false,
     "release": 1,
-    "gameSupplies": "The game rules and a driver for each seat.",
+    "gameSupplies": "GameRules or a full-game EnginePort factory, explicit legal answers for a port, and a driver.",
     "hooks": [
       "simGame: the module that plays one game for the pool",
       "runGames: play many whole games on worker threads",
       "fuzzMain: fuzz games with invariants and report each finding with a seed",
       "randomDriver + legalAnswers: random answers from the legal options",
+      "randomPortDriver: random answers from the port game's supplied legal answers",
       "botDriver: a driver that sees the player view only",
+      "portBotDriver: map a port game's deciding seat to the exact public bot view",
       "runResumable + codeVersion: a long run that resumes after a crash",
       "tune + validate: tune weights, then check on fresh seeds",
       "proveResolved + provenClauses: prove each clause resolved in a played game",

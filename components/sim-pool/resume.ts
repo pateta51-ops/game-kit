@@ -5,7 +5,7 @@
 import { appendFileSync, existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { canonicalJson } from '../engine-core/index.ts';
 import { CRASH_HASH, hasExecutedViewValidation, type GameSpec, type SimRecord } from './play.ts';
-import { runGames, type RunRequest } from './pool.ts';
+import { executionKind, runGames, type RunRequest } from './pool.ts';
 
 /** A game's key: its seed, driver and settings (not its index, so a run may grow). */
 export const specKey = (s: { seed: string; driver: string; settings?: GameSpec['settings'] }): string =>
@@ -46,13 +46,15 @@ export function openCheckpoint(file: string, settings: string): Checkpoint {
 export async function runResumable(request: RunRequest, workers: number, file: string, settings: string, onRecord?: (r: SimRecord) => void): Promise<SimRecord[]> {
   if (request.until !== undefined) throw new RangeError('runResumable: a run with `until` plays cut games and is never kept');
   const cp = openCheckpoint(file, settings);
+  let engine: 'kernel' | 'port' | undefined;
+  if (cp.done.size) engine = await executionKind(request);
   const old: SimRecord[] = [];
   const specs = request.specs.filter((s) => {
     const r = cp.done.get(specKey(s));
     if (r === undefined) return true;
     if (request.view && r.result !== null && !hasExecutedViewValidation(r))
       throw new Error('checkpoint lacks executed view checks for the current scope; start a new checkpoint to validate its views');
-    if (r.triggerCapChecked !== true) return true;
+    if (engine === 'port' ? r.portExecution !== 1 : engine !== 'kernel' || r.triggerCapChecked !== true) return true;
     old.push({ ...r, index: s.index });
     return false;
   });

@@ -16,4 +16,10 @@ Component: [`sim-pool`](../../components/sim-pool/README.md) (needs `engine-core
 8. **Hidden information**: give `SimGame` a `reshuffleHidden` and run with `hidden: true`; a bot whose answer changes when only hidden state changes is a `hidden-info` finding ([ai-opponent.md](ai-opponent.md)).
 9. **Watchdog and balance report**: `gameTimeoutMs` in the request stops a game that hangs (record `errorName: 'timeout'`); `formatReport(report(records, { first }))` prints completion, length, wins by seat and by first player.
 
+## Games with their own engine
+
+Export `simGame: PortSimGame` with `content()`, a per-game `port(spec, content)` factory, `answers(state, content, rng)` and `driver(name, spec, content)`. The factory supplies an `EnginePort` with full-game setup and a result accessor that reports the actual completed game. Check a scenario-oriented port's setup and completion rules before using it for simulation.
+
+The game supplies legal `PortAnswer` values, including its own quantities, ordering and repeated-pick rules. `randomPortDriver()` chooses among those supplied answers. The same `runGames`, `fuzzMain` and whole-game reporting commands run the module; state and transition invariant checks belong to the port contract. See the component README for supported options and evidence requirements before requesting kernel-specific checks.
+
 Run long jobs on the self-hosted runner, not local Windows ([AGENTS.md](../../AGENTS.md)).

@@ -3,8 +3,9 @@
 // workers. A worker that dies (ebr scripts/sim/pool.ts) turns the game it held into a crash record and a new worker
 // takes the next games. A worker loads the game's module (`simGame` export).
 import { Worker } from 'node:worker_threads';
-import { isChecking, isFreezing, setInvariantChecking, setStateFreezing, type GameTypes } from '../engine-core/index.ts';
+import { isChecking, isFreezing, setInvariantChecking, setStateFreezing, type GameTypes, type PortTypes } from '../engine-core/index.ts';
 import { CRASH_HASH, crashRecord, DriverRegistrationError, isDriverRegistrationError, playOne, type GameSpec, type SimGame, type SimRecord } from './play.ts';
+import type { PortSimGame } from './port.ts';
 
 export interface RunRequest {
   /** The URL of the module that exports `simGame`. */
@@ -40,12 +41,31 @@ export interface WorkerInput {
   readonly hasten?: number | undefined;
   readonly debug?: number | undefined;
   readonly hidden?: boolean | number | undefined;
+  readonly inspectOnly?: boolean;
 }
 export type WorkerCommand = { type: 'play'; spec: GameSpec } | { type: 'stop' };
-export type WorkerMessage = { type: 'record'; record: SimRecord } | { type: 'ready' } | { type: 'invalid-driver'; message: string };
+export type WorkerMessage = { type: 'record'; record: SimRecord } | { type: 'ready'; engine?: 'port'; inspected?: true } | { type: 'invalid-driver'; message: string };
 
-const load = async (module: string): Promise<SimGame<GameTypes>> =>
-  ((await import(module)) as { simGame: SimGame<GameTypes> }).simGame;
+const load = async (module: string): Promise<SimGame<GameTypes> | PortSimGame<PortTypes>> =>
+  ((await import(module)) as { simGame: SimGame<GameTypes> | PortSimGame<PortTypes> }).simGame;
+
+/** Inspect the actual module in isolation; a checkpoint's own engine tag never justifies accepting it. */
+export function executionKind(request: Pick<RunRequest, 'module' | 'worker' | 'gameTimeoutMs'>): Promise<'kernel' | 'port' | undefined> {
+  return new Promise(resolve => {
+    let worker: Worker;
+    try { worker = boot(request, { module: request.module, invariants: false, inspectOnly: true }); }
+    catch { resolve(undefined); return; }
+    let settled = false;
+    const finish = (kind?: 'kernel' | 'port'): void => {
+      if (settled) return;
+      settled = true; clearTimeout(timer); void worker.terminate(); resolve(kind);
+    };
+    const timer = setTimeout(() => finish(), request.gameTimeoutMs ?? 30_000);
+    worker.on('message', (message: WorkerMessage) => { if (message.type === 'ready') finish(message.inspected === true ? message.engine === 'port' ? 'port' : 'kernel' : undefined); });
+    worker.on('error', () => finish());
+    worker.on('exit', () => finish());
+  });
+}
 
 /** Play every game in this thread. */
 export async function runInThread(request: RunRequest, onRecord?: (r: SimRecord) => void): Promise<SimRecord[]> {
@@ -68,7 +88,7 @@ export async function runInThread(request: RunRequest, onRecord?: (r: SimRecord)
   }
 }
 
-function boot(request: RunRequest, input: WorkerInput): Worker {
+function boot(request: Pick<RunRequest, 'worker'>, input: WorkerInput): Worker {
   if (request.worker !== undefined) return new Worker(new URL(request.worker), { workerData: input });
   return new Worker(new URL('./worker.ts', import.meta.url), { workerData: input });
 }
@@ -93,6 +113,7 @@ async function lane(request: RunRequest, names: readonly string[], next: () => G
     let stopped = false;
     let again = false;
     let timedOut = false;
+    let portGame = false;
     let timer: ReturnType<typeof setTimeout> | undefined;
     try {
       await new Promise<void>((resolve, reject) => {
@@ -104,10 +125,12 @@ async function lane(request: RunRequest, names: readonly string[], next: () => G
             reject(typeof m.message === 'string' ? new DriverRegistrationError(m.message) : new Error('invalid simulation worker registration response'));
             return;
           }
+          if (m.type === 'ready') portGame = m.engine === 'port';
           if (m.type === 'record') {
             const r = m.record;
-            collect(r.triggerCapChecked !== true && r.error === undefined && !r.violations?.length
-              ? crashRecord(r, new Error('worker lacks trigger-cap validation; rebuild the worker bundle'))
+            const current = portGame ? r.portExecution === 1 : r.triggerCapChecked === true;
+            collect(!current && r.error === undefined && !r.violations?.length
+              ? crashRecord(r, new Error(portGame ? 'worker lacks current EnginePort execution evidence; rebuild the worker bundle' : 'worker lacks trigger-cap validation; rebuild the worker bundle'))
               : r);
           }
           if (m.type === 'record' && request.fresh === true) {
