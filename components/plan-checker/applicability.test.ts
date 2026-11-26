@@ -483,6 +483,32 @@ describe('explicit plan applicability', () => {
     },
   );
 
+  it('does not count multiline emphasis surrounding only images as rule text', () => {
+    fails({ text: PLAN.replace('A move enters an adjacent unblocked space.', '*![](/one.png)\n  ![](/two.png)*') }, 'rule MOVE-01 has no text');
+  });
+
+  it.each(['*Ordinary text\n  ![](/two.png)*', '*![](/one.png)\n\n  ![](/two.png)*'])(
+    'preserves visible text or literal punctuation in %s', (body) => {
+      const result = run({ text: PLAN.replace('A move enters an adjacent unblocked space.', body) });
+      expect(result.code, result.output).toBe(0);
+    },
+  );
+
+  it.each(['|---|', '|||||||||'])('requires a structured session table delimiter: %s', (delimiter) => {
+    const text = PLAN.replace('|---|---|---|---|---|---|---|---|', delimiter);
+    fails({ text }, 'session plan has no batch table');
+    const legacy = run({ text, noProfile: true, flags: ['--cards-optional', '--depth-optional'] });
+    expect(legacy.code, legacy.output).toBe(0);
+  });
+
+  it('accepts a structured session table without outer pipes', () => {
+    const text = PLAN.replace(/\| Batch \|[^\n]+(?=\n)/u, row => row.slice(1, -1).trim())
+      .replace('|---|---|---|---|---|---|---|---|', '---|---|---|---|---|---|---|---')
+      .replace(/\| S1 \|[^\n]+(?=\n)/u, row => row.slice(1, -1).trim());
+    const result = run({ text });
+    expect(result.code, result.output).toBe(0);
+  });
+
   it.each(['style', 'script'])('does not count inline %s contents as phase citations', (tag) => {
     fails({ text: PLAN.replace('SC-01, SC-02. Implement', 'Use <' + tag + '>/* SC-01, SC-02 */</' + tag + '>. Implement') }, 'SC-01 is not assigned to any phase');
   });

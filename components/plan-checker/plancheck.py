@@ -338,6 +338,23 @@ def empty_emphasis(raw: str, line: str) -> str:
     return "".join(chars)
 
 
+def emphasis_lines(lines: list[str], projected: list[str], continuation: list[bool], offsets: list[int]) -> list[str]:
+    i = 0
+    while i < len(lines):
+        j = i + 1
+        while j < len(lines) and continuation[j]:
+            j += 1
+        if j == i + 1:
+            projected[i] = empty_emphasis(lines[i], projected[i])
+        else:
+            raw = "\n".join(" " * offsets[k] + lines[k][offsets[k]:] for k in range(i, j))
+            text = "\n".join(" " * offsets[k] + projected[k][offsets[k]:] for k in range(i, j))
+            for k, row in enumerate(empty_emphasis(raw, text).split("\n"), i):
+                projected[k] = projected[k][:offsets[k]] + row[offsets[k]:]
+        i = j
+    return projected
+
+
 def visible_markdown(lines: list[str]) -> tuple[list[str], list[tuple[int, str, str]], bool, list[str]]:
     out, blocks, content, anchors = [], [], [], []
     definitions, reference_uses, openers, brackets, masked = set(), [], [], [], []
@@ -347,8 +364,12 @@ def visible_markdown(lines: list[str]) -> tuple[list[str], list[tuple[int, str, 
     inline = re.compile(r"(\\*)(<!--|`+|</?[A-Za-z]|!?\[|\])")
     span_row, span_end = -1, 0
     hidden_row, hidden_end = -1, 0
+    continuation, offsets = [False] * len(lines), [0] * len(lines)
+    can_continue = False
     for i, raw in enumerate(lines):
         body, depth = match_containers(raw, containers)
+        joined = can_continue and depth == len(containers)
+        can_continue = False
         if html and depth < html[0]:
             html = None
         if fence and depth < fence[3]:
@@ -366,7 +387,7 @@ def visible_markdown(lines: list[str]) -> tuple[list[str], list[tuple[int, str, 
                     body = body[width:]
                 else:
                     break
-                paragraph = False
+                paragraph, joined = False, False
         mark = re.match(r"^ {0,3}(`{3,}|~{3,})(.*)$", body)
         if fence:
             if mark and mark.group(1)[0] == fence[0][0] and len(mark.group(1)) >= len(fence[0]) and not mark.group(2).strip():
@@ -394,6 +415,8 @@ def visible_markdown(lines: list[str]) -> tuple[list[str], list[tuple[int, str, 
         if block_start and not paragraph and body.startswith("    "):
             out.append(" " * len(raw))
             continue
+        can_continue = bool(body.strip()) and not BLOCK_START.match(body) and not body.lstrip().startswith("|")
+        continuation[i], offsets[i] = joined and can_continue, raw_offset(raw, body)
         if block_start and (not paragraph or body.lstrip().startswith("|")):
             brackets.clear()
         pos = len(raw) if i < span_row else span_end if i == span_row else 0
@@ -467,7 +490,7 @@ def visible_markdown(lines: list[str]) -> tuple[list[str], list[tuple[int, str, 
             out[i] = out[i][:a] + " " * (b - a) + out[i][b:]
     for row, start in openers:
         out[row] = out[row][:start] + " " + out[row][start + 1:]
-    return [empty_emphasis(raw, line) for raw, line in zip(lines, out)], blocks, unclosed or fence is not None, anchors
+    return emphasis_lines(lines, out, continuation, offsets), blocks, unclosed or fence is not None, anchors
 
 
 def strict_inventory(rules: str, rule_rows: list[list[str]], scenarios: list[list[str]], defined: set[str]) -> list[str]:
@@ -667,7 +690,7 @@ def table_cells(l: str) -> list[str]:
     return out
 
 
-def strict_table_rows(lines: list[str], original: list[str]):
+def strict_tables(lines: list[str], original: list[str]):
     pipes = re.compile(r"(?<!\\)\|")
 
     def cells(raw: str, evidence: str) -> list[str]:
@@ -689,11 +712,28 @@ def strict_table_rows(lines: list[str], original: list[str]):
                 or not all(re.fullmatch(r":?-+:?", mark) for mark in marks)):
             i += 1
             continue
+        start, table_rows = i, []
         i += 2
         while i < len(lines) and lines[i].strip() and re.match(r"^ {0,3}\S", original[i]) and not BLOCK_START.match(original[i]):
-            row = cells(original[i], lines[i])
-            if row:
-                yield i, row[:len(marks)]
+            table_rows.append((i, cells(original[i], lines[i])))
+            i += 1
+        yield start, cells(header, lines[start]), table_rows
+
+
+def legacy_session_tables(lines: list[str]):
+    in_code, i = False, 0
+    while i < len(lines):
+        line = lines[i].strip()
+        if line.startswith("```"):
+            in_code = not in_code
+        if not in_code and line.startswith("|") and i + 1 < len(lines) and re.match(r"^\|[\s\-:|]+\|$", lines[i + 1].strip()):
+            header, table_rows = table_cells(line), []
+            i += 2
+            while i < len(lines) and lines[i].strip().startswith("|"):
+                table_rows.append((i, table_cells(lines[i])))
+                i += 1
+            yield header, table_rows
+        else:
             i += 1
 
 
@@ -969,7 +1009,8 @@ def main() -> int:
 
     # --- bold definitions (outside the scenario catalogue), duplicates ---
     outside = src.replace(scen_sec, "") if scen_sec else src
-    table_rows = list(strict_table_rows(lines, original)) if original is not None else []
+    tables = list(strict_tables(lines, original)) if original is not None else []
+    table_rows = [(i, cells[:len(header)]) for _, header, rows in tables for i, cells in rows]
     if profile is not None:
         first_cell_defs = [m.group(1) for i, row in table_rows if i not in scen_lines
                            and (m := re.match(rf"^\**({ID}|D\d+)(?=\s|\*|$)", row[0]))]
@@ -1070,65 +1111,55 @@ def main() -> int:
     elif sess and phases:
         where: dict[str, list[str]] = {p: [] for p in phase_ids}
         batches = 0
-        in_code, slines, i = False, sess.split("\n"), 0
-        while i < len(slines):
-            l = slines[i]
-            if l.strip().startswith("```"):
-                in_code = not in_code
-                i += 1
+        if original is None:
+            session_tables = legacy_session_tables(sess.split("\n"))
+        else:
+            a, b = span_of(lines, heads, find_heading(heads, sess_kw))
+            session_tables = ((header, rows) for i, header, rows in tables if a <= i < b)
+        for header, rows in session_tables:
+            header = [c.strip().lower() for c in header]
+            cols = {name: next((k for k, c in enumerate(header) if name in c), None)
+                    for name in ("phase", "model", "confidence")}
+            if None in cols.values():
                 continue
-            if (not in_code and l.strip().startswith("|") and i + 1 < len(slines)
-                    and re.match(r"^\|[\s\-:|]+\|$", slines[i + 1].strip())):
-                header = [c.strip().lower() for c in table_cells(l)]
-                cols = {name: next((k for k, c in enumerate(header) if name in c), None)
-                        for name in ("phase", "model", "confidence")}
-                j = i + 2
-                if None in cols.values():
-                    while j < len(slines) and slines[j].strip().startswith("|"):
-                        j += 1
-                    i = j
+            cc, pc = (next((k for k, c in enumerate(header) if w in c), None) for w in ("clauses", "patterns"))
+            ch[0] |= cc is not None
+            ch[1] |= pc is not None
+            for j, cells in rows:
+                if len(cells) != len(header):
                     continue
-                cc, pc = (next((k for k, c in enumerate(header) if w in c), None) for w in ("clauses", "patterns"))
-                ch[0] |= cc is not None
-                ch[1] |= pc is not None
-                while j < len(slines) and slines[j].strip().startswith("|"):
-                    cells = [c.strip() for c in table_cells(slines[j])]
-                    if len(cells) == len(header):
-                        batch = cells[0].strip("`*") or f"row {j + 1}"
-                        batches += 1
-                        if cc is not None and cells[cc].strip("`*").isdigit():
-                            csum += int(cells[cc].strip("`*"))
-                            if int(cells[cc].strip("`*")) > maxc:
-                                cd.append(f"{batch} has {cells[cc].strip('`*')} clauses (cap {maxc})")
-                        if pc is not None:
-                            ids = [x.strip("`* ") for x in cells[pc].split(",")]
-                            ids = [x for x in ids if x.strip("-—– ")]
-                            pids += ids
-                            if len(ids) > maxp:
-                                cd.append(f"{batch} has {len(ids)} patterns (cap {maxp})")
-                        toks = phase_tokens(cells[cols["phase"]])
-                        if not toks:
-                            problems.append(f"{batch}: no phases listed")
-                        for t in toks:
-                            if t in where:
-                                where[t].append(batch)
-                            else:
-                                problems.append(f"{batch}: phase {t} has no 'Phase {t}' heading in the phases section")
-                        if cells[cols["model"]].strip("-—– ") == "":
-                            problems.append(f"{batch}: no model")
-                        if not re.search(r"\d+\s*%", cells[cols["confidence"]]):
-                            problems.append(f"{batch}: confidence is not a percentage")
-                        for name, need in (("worker", r"claude|codex|director"), ("touches", r"\w"), ("gate", r"check|full"),
-                                           ("owner", r"\S")):
-                            c = next((k for k, h in enumerate(header) if name in h), None)
-                            if c is None:
-                                notes.add(f"session table has no '{name}' column (the architect schedules by it)")
-                            elif not re.search(need, cells[c], re.I):
-                                problems.append(f"{batch}: '{name}' cell is empty or not understood")
-                    j += 1
-                i = j
-                continue
-            i += 1
+                cells = [c.strip() for c in cells]
+                batch = cells[0].strip("`*") or f"row {j + 1}"
+                batches += 1
+                if cc is not None and cells[cc].strip("`*").isdigit():
+                    csum += int(cells[cc].strip("`*"))
+                    if int(cells[cc].strip("`*")) > maxc:
+                        cd.append(f"{batch} has {cells[cc].strip('`*')} clauses (cap {maxc})")
+                if pc is not None:
+                    ids = [x.strip("`* ") for x in cells[pc].split(",")]
+                    ids = [x for x in ids if x.strip("-—– ")]
+                    pids += ids
+                    if len(ids) > maxp:
+                        cd.append(f"{batch} has {len(ids)} patterns (cap {maxp})")
+                toks = phase_tokens(cells[cols["phase"]])
+                if not toks:
+                    problems.append(f"{batch}: no phases listed")
+                for t in toks:
+                    if t in where:
+                        where[t].append(batch)
+                    else:
+                        problems.append(f"{batch}: phase {t} has no 'Phase {t}' heading in the phases section")
+                if cells[cols["model"]].strip("-—– ") == "":
+                    problems.append(f"{batch}: no model")
+                if not re.search(r"\d+\s*%", cells[cols["confidence"]]):
+                    problems.append(f"{batch}: confidence is not a percentage")
+                for name, need in (("worker", r"claude|codex|director"), ("touches", r"\w"), ("gate", r"check|full"),
+                                   ("owner", r"\S")):
+                    c = next((k for k, h in enumerate(header) if name in h), None)
+                    if c is None:
+                        notes.add(f"session table has no '{name}' column (the architect schedules by it)")
+                    elif not re.search(need, cells[c], re.I):
+                        problems.append(f"{batch}: '{name}' cell is empty or not understood")
         if not batches:
             problems.append("session plan has no batch table (columns Batch, Phases, Model, Confidence)")
         else:
