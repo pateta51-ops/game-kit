@@ -1939,6 +1939,12 @@
     "use": "Resolve component profiles and generate a pinned, retryable local scaffold from a game specification.",
     "guide": "README.md"
   },
+  "scaffold/courier": {
+    "title": "Playable courier assembly",
+    "tags": ["courier game assembly", "playable tactical starter", "generate courier rules store simulation", "courier plan gates", "generated courier acceptance", "courier executable rule inventory"],
+    "use": "Generate the original courier rules, store, public-view UI and simulation from a pinned, bounded configuration; wire its strict non-card plan, executable rule inventory, text and theme gates. Execute the generated acceptance before claiming the game slice passed.",
+    "guide": "README.md"
+  },
   "scan-ingest": {
     "mechanics": "none: content tooling (art, scans, card data)",
     "use": "Turning flatbed scans into one cropped upright image per item; a printed board scan with live state drawn into its boxes, die-cut pieces at true size, playmat box detection, tone profile.",

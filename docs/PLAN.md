@@ -446,6 +446,7 @@ The blind matching test's result was not recorded: the PR, its comments and docs
 | K766 | Bind executed acceptance receipts and component branch coverage to verified consumer inputs and current Git source. | M |  | done |
 | K767 | Validate explicitly non-card plans and their visible rule, scenario and phase evidence through an opt-in applicability file. | M |  | done |
 | K768 | Keep keyboard ownership with active dialogs and native controls, expose readable attachments, adapt shared motion timing and retry optional scan geometry loads. | M |  | done |
+| K769 | Generate an opt-in courier starter with executable rules, save and movement acceptance, and a contained phone board. This is one adapter under the broader K551 starter candidate. | M |  | done |
 
 ## Candidates
 
