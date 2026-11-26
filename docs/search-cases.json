@@ -798,5 +798,8 @@
   {"q": "real gameplay separate from production release", "first": "kit-context"},
   {"q": "codex cli usage export", "first": "reuse-metrics"},
   {"q": "reconcile provider token counts", "first": "reuse-metrics"},
-  {"q": "verify cached input tokens from rollout", "first": "reuse-metrics"}
+  {"q": "verify cached input tokens from rollout", "first": "reuse-metrics"},
+  {"q": "context verifier stdin", "first": "kit-context"},
+  {"q": "sandboxed context source verification", "first": "kit-context"},
+  {"q": "continue pinned context in a worker shell", "first": "kit-context"}
 ]
