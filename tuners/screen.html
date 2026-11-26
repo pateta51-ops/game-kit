@@ -15223,6 +15223,19 @@ var K = (() => {
   function activeModal(root) {
     return activeOverlay(root, '[role="dialog"][aria-modal="true"], [role="alertdialog"][aria-modal="true"]');
   }
+  function deepActiveElement(root) {
+    let active = root.activeElement;
+    while (active?.shadowRoot?.activeElement) active = active.shadowRoot.activeElement;
+    return active;
+  }
+  function composedContains(container, node) {
+    for (let at = node; at; ) {
+      if (at === container) return true;
+      const root = at.getRootNode();
+      at = at.assignedSlot ?? at.parentElement ?? ("host" in root ? root.host : null);
+    }
+    return false;
+  }
 
   // components/phone-mode/Sheet.tsx
   var import_jsx_runtime2 = __toESM(require_jsx_runtime(), 1);
@@ -15308,7 +15321,7 @@ var K = (() => {
     (0, import_react2.useEffect)(() => hold(!leaving), [leaving]);
     (0, import_react2.useEffect)(() => {
       t0.current = performance.now();
-      const from = document.activeElement;
+      const from = deepActiveElement(document);
       const el = layer.current;
       hold(false);
       behindRef.current = [...el?.parentElement?.children ?? []].filter((c) => c !== el && c instanceof HTMLElement && (!c.hasAttribute("inert") || holds.has(c)));
@@ -15324,7 +15337,7 @@ var K = (() => {
         document.removeEventListener("keydown", key, true);
         hold(false);
         const front = activeModal(document);
-        if (from?.isConnected && (!front || front.contains(from))) from.focus?.({ preventScroll: true });
+        if (from?.isConnected && (!front || composedContains(front, from))) from.focus?.({ preventScroll: true });
       };
     }, []);
     const end = () => {
