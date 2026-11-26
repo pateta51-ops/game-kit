@@ -16037,7 +16037,8 @@ var PREVIEW = (() => {
       return () => {
         document.removeEventListener("keydown", key, true);
         hold(false);
-        from?.focus?.({ preventScroll: true });
+        const front = activeModal(document);
+        if (from?.isConnected && (!front || front.contains(from))) from.focus?.({ preventScroll: true });
       };
     }, []);
     const end = () => {
