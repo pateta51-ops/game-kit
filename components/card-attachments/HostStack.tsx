@@ -1,4 +1,4 @@
-import { useRef, useState, type CSSProperties, type ReactNode } from 'react'
+import { useRef, useState, type CSSProperties, type KeyboardEvent, type MouseEvent, type ReactNode } from 'react'
 import { fanFootprint, fanSpots, faceBox, footprint, outSpots, tuckSpots, tuckedTurned, type FanDir, type Spot, type Tuck } from './geometry.ts'
 
 export interface StackCard { key: string | number; node: ReactNode; turned?: boolean }
@@ -18,7 +18,7 @@ export interface HostStackProps {
   fanStep?: number
   /** Controlled slid-out state; else hover, focus and a click on the stack toggle it. */
   open?: boolean
-  /** A tap on an attachment (the phone sheet reads it). */
+  /** Read an attachment by click, Enter or Space; nested controls keep their own actions. */
   onRead?: (index: number, key: string | number) => void
   /** Slide time in ms; 0 for none (the game passes its speed setting). */
   ms?: number
@@ -69,7 +69,23 @@ export function HostStack({ host, hostTurned, attachments, w, h, mode = 'tuck', 
           part="attachment"
           cls={cls}
           data-index={i}
-          {...(onRead ? { role: 'button', tabIndex: 0, onClick: (e: { stopPropagation: () => void }) => { e.stopPropagation(); onRead(i, a.key) } } : {})}
+          {...(onRead ? {
+            role: 'button', tabIndex: 0,
+            onClick: (e: MouseEvent<HTMLDivElement>) => {
+              if (e.defaultPrevented) return
+              const path = e.nativeEvent.composedPath()
+              const end = path.indexOf(e.currentTarget)
+              if (end < 0 || path.slice(0, end).some((target) => target instanceof Element &&
+                (target.matches('button, a[href], area[href], input, select, textarea, details > summary, [role="button"], [contenteditable]:not([contenteditable="false"])') ||
+                  (target instanceof HTMLLabelElement && target.control)))) return
+              e.stopPropagation(); onRead(i, a.key)
+            },
+            onKeyDown: (e: KeyboardEvent<HTMLDivElement>) => {
+              if (e.defaultPrevented || e.nativeEvent.composedPath()[0] !== e.currentTarget || e.ctrlKey || e.metaKey || e.altKey || (e.key !== 'Enter' && e.key !== ' ')) return
+              e.preventDefault(); e.stopPropagation()
+              if (!e.repeat) onRead(i, a.key)
+            },
+          } : {})}
         >
           {a.node}
         </Slot>

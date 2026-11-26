@@ -5,6 +5,12 @@ Small screen helpers with no look and no game types. The stores are zustand vani
 
 ## Rules for agents
 
+<!-- hooks: written by scripts/catalog.mjs from docs/catalog-notes.json; do not edit -->
+**Hooks a game calls:**
+- `bindPromptKeys` + `bindPlayKeys`: background keyboard shortcuts and prompt keys that pause under a dialog
+- `activeOverlay`: find the active overlay keyboard owner
+<!-- /hooks -->
+
 **What it does:** Small screen helpers with no look and no game types: hover hold, inspect, toasts, selection, forced-answer and probe helpers, sheet search, icon words, prompt and play keys, and link tooltips.
 
 **You must:**
@@ -16,6 +22,7 @@ Small screen helpers with no look and no game types. The stores are zustand vani
 6. Keep every bind's returned unbind and call it on teardown (`bindPromptKeys`, `bindPlayKeys`, `bindLinkTooltip`).
 7. In `bindPlayKeys`, do not map the reserved keys 1-9, Enter, Escape, `?` or arrows in `board`: it throws. Pass `paused: () => help.getState().open` to `bindPromptKeys` so Escape closes help first.
 8. Keep the game's own words, keys, never-list, cost function and icon table out of the helpers: the game passes them in.
+9. Give custom overlays a dialog role or pass their selector as `overlay`. Only active overlays suppress board shortcuts: hidden, inert, aria-hidden and CSS-hidden ancestors are ignored. Use `activeOverlay` for other keyboard owners so they follow the same rule. Enter on a native disclosure summary keeps its own action.
 
 **Common mistakes:**
 - Searching rule ids with `sheetMatching`: it only sees printed words by design.
@@ -32,6 +39,7 @@ Small screen helpers with no look and no game types. The stores are zustand vani
 | `sheetMatching(blocks, q, read = sheetWords)` | The rules screen's blocks as `{ level?, text }` (level 1, 2... for a heading). Gives the indexes to show: blocks holding every word, their headings, and the whole section of a heading that matches. |
 | `compileIconWords(file, names, letters)`, `iconizeSegments(table, text, segs, lead)` | The word-to-icon rules, the proper names inside which nothing is replaced, and the glossary matcher's segments. Gives the segments with `iconWord` ones (`code`, `style`, the words as label, the entry `id`). `withoutIconWords(text, match)` drops a word that follows its own icon. |
 | `bindPromptKeys(document, { open, panel, keys?, clear?, back?, overlay? })` | 1-9 click `[data-shortcut="n"]` in the panel; Escape runs `clear`, then `back`; `keys` holds the game's own. Returns the unbind. |
+| `activeOverlay(root, selector?)`, `isActiveElement(element)` | The last active matching overlay in document order (default: dialog or alertdialog), or null; the shared visibility check. DOM roots use `querySelectorAll`; an abstract root with only `querySelector` checks its one result. |
 | `bindLinkTooltip(root, { selector, read, open, close, restMs = 250, graceMs = 300, timers })` | One call on any container (log, prompt, rulings, tutorial text), no per-link wiring: `read(link)` gives the card id, `open(id, link)` floats the tooltip. Rest delay only for the first open; touch ignored; a press hides it until the pointer leaves the link. Returns the unbind. Glossary links keep their click popover; this is the hover preview. |
 
 ```ts
@@ -49,7 +57,7 @@ icon table, its keys and its texts.
 
 ## Keyboard play
 
-`bindPlayKeys(document, { enabled?, panel?, confirm = '[data-confirm]', list = '[data-key-list]', item?, board?, help?, overlay? })`: Enter clicks the panel's confirm control (not when a button has focus); arrows move focus through the items of a list the game marks `data-key-list` (wrapping); `board` maps `event.key` to an action (false = did nothing); `?` opens the `help` store (`createShortcutHelp()`), Escape closes it. Ignored while typing, with a modifier, under a dialog, with `enabled` false, and on key repeat. `board` throws on reserved keys: 1-9, Enter, Escape, `?` and the arrows. Beside `bindPromptKeys`, pass it `paused: () => help.getState().open` so Escape closes the help first in either bind order. Returns the unbind. `shortcutHelpElement(document, rows, title)` builds an unstyled dialog of `{ keys, what }` rows, or draw the store yourself. Play convenience only; keys and labels are the game's.
+`bindPlayKeys(document, { enabled?, panel?, confirm = '[data-confirm]', list = '[data-key-list]', item?, board?, help?, overlay? })`: Enter clicks the panel's confirm control (not when a button has focus); arrows move focus through the items of a list the game marks `data-key-list` (wrapping); `board` maps `event.key` to an action (false = did nothing); `?` opens the `help` store (`createShortcutHelp()`), Escape closes it. Ignored while typing, with a modifier, under an active dialog, with `enabled` false, and on key repeat. A closed always-mounted dialog does not block shortcuts. Custom `overlay` selectors use the same visibility rules. `board` throws on reserved keys: 1-9, Enter, Escape, `?` and the arrows. Beside `bindPromptKeys`, pass it `paused: () => help.getState().open` so Escape closes the help first in either bind order. Returns the unbind. `shortcutHelpElement(document, rows, title)` builds an unstyled dialog of `{ keys, what }` rows, or draw the store yourself. Play convenience only; keys and labels are the game's.
 
 ```ts
 import { bindPlayKeys, createShortcutHelp } from '../kit/ui-helpers/index'

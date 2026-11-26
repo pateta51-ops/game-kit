@@ -334,13 +334,24 @@ export function loadGeometry(url: string, key: string, asks: Asks, store?: Geome
   let p = cache.get(key);
   if (!p) {
     p = (async () => {
-      const hit = store ? await store.get(key).catch(() => undefined) : undefined;
-      if (hit) return hit;
+      if (store) {
+        try {
+          const hit = await store.get(key);
+          if (hit) return hit;
+        } catch { /* An unavailable store still allows a fresh decode. */ }
+      }
       const g = await decode(url, asks);
-      if (g && store) void store.set(key, g).catch(() => undefined);
+      if (g && store) {
+        try { void store.set(key, g).catch(() => undefined); }
+        catch { /* A storage write cannot invalidate decoded geometry. */ }
+      }
       return g;
-    })();
+    })().catch(() => null);
     cache.set(key, p);
+    const pending = p;
+    void pending.then((g) => {
+      if (g === null && cache.get(key) === pending) cache.delete(key);
+    });
   }
   return p;
 }

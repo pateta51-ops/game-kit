@@ -4,13 +4,18 @@ A hand of cards as a fan that fits any number of cards in a width, lifts the car
 
 ## Rules for agents
 
+<!-- hooks: written by scripts/catalog.mjs from docs/catalog-notes.json; do not edit -->
+**Hooks a game calls:**
+- `CardHand`: show a card hand with animation speed and play glide controlled by the game
+<!-- /hooks -->
+
 **What it does:** A fan of cards that fits any count in a width, lifts the card under the pointer or focus, shows the prompt's marks, reports taps and is a drag source; a grid layout serves phones.
 
 **You must:**
 1. Import `CardHand` from `kit/card-hand/ui`; it loads `card-hand.css` itself. Import `kit/card-hand/looks/tilt.css` too only when you pass `hoverTilt`.
 2. Pass `view` (a card-zones `ZoneView`) and `face(id)`; a `null` card is drawn as a back (`back()`), with no id in the DOM, so an opponent's hand uses the same part.
 3. Wire the prompt with `pick` from prompt-host `useBoardPick`; the strip button's click calls `pick.tap(id)`, and a barred card answers nothing.
-4. Pass `speed` from settings; 0, `'instant'` and reduced motion turn every animation off.
+4. `speed` is a rate: durations divide by it (`2` is faster, `0.5` slower); 0, `'instant'` and reduced motion turn every animation off. For a shared duration-factor setting (`0` Off, `0.5` Fast, `1` Normal, `2` Slow), pass `motionRate(factor)` from motion-frame to `CardHand`, `useGlideIn` and any explicit hover-tilt speed. See [the shared-setting guide](../motion-frame/README.md#one-motion-preference-across-components).
 5. Size the hand with the CSS variables (`--hand-card-w`, `--hand-card-ratio`, `--hand-step-max`, `--hand-margin`, `--hand-lift`, `--hand-stand`, `--hand-grow`) on the hand or above it.
 6. Give a drag via `drag` (drag-drop `useDragDrop`) and draw `DragGhost` yourself.
 7. For the glide of a played card, put `data-glide="<id>"` on the element in play and call `useGlideIn(rootRef, ids, speed)`.

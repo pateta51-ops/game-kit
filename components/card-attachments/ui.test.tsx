@@ -42,6 +42,53 @@ describe('HostStack', () => {
     fireEvent.click(part(container, 'attachment')[1]!)
     expect(onRead).toHaveBeenCalledWith(1, 'k1')
   })
+  it.each(['tuck', 'fan'] as const)('reads a %s attachment once with Enter or Space without scrolling', (mode) => {
+    const onRead = vi.fn()
+    const { container } = render(<HostStack host="h" attachments={[{ key: 'a', node: <i>back</i>, turned: true }]} w={100} h={140} mode={mode} onRead={onRead} />)
+    const attachment = part(container, 'attachment')[0]!
+    attachment.focus()
+    expect(document.activeElement).toBe(attachment)
+    expect(fireEvent.keyDown(attachment, { key: 'Enter' })).toBe(false)
+    fireEvent.keyUp(attachment, { key: 'Enter' })
+    expect(onRead).toHaveBeenCalledTimes(1)
+    expect(fireEvent.keyDown(attachment, { key: ' ' })).toBe(false)
+    fireEvent.keyDown(attachment, { key: ' ', repeat: true })
+    fireEvent.keyUp(attachment, { key: ' ' })
+    expect(onRead).toHaveBeenCalledTimes(2)
+    fireEvent.keyDown(attachment, { key: 'a' })
+    fireEvent.keyDown(attachment, { key: 'Enter', ctrlKey: true })
+    expect(onRead).toHaveBeenCalledTimes(2)
+    fireEvent.click(attachment)
+    expect(onRead).toHaveBeenCalledTimes(3)
+    expect(onRead).toHaveBeenLastCalledWith(0, 'a')
+  })
+  it('leaves nested controls to the game and non-readable attachments unfocusable', () => {
+    const onRead = vi.fn()
+    const action = vi.fn()
+    const { container, rerender } = render(<HostStack host="h" attachments={[{ key: 'a', node: <button onClick={action}>Choose</button> }]} w={100} h={140} onRead={onRead} />)
+    const button = container.querySelector('button')!
+    fireEvent.keyDown(button, { key: 'Enter' })
+    fireEvent.keyUp(button, { key: 'Enter' })
+    fireEvent.click(button)
+    expect(action).toHaveBeenCalledTimes(1)
+    expect(onRead).not.toHaveBeenCalled()
+    rerender(<HostStack host="h" attachments={cards(1)} w={100} h={140} />)
+    const attachment = part(container, 'attachment')[0]!
+    expect(attachment).not.toHaveAttribute('role')
+    expect(attachment).not.toHaveAttribute('tabindex')
+    fireEvent.keyDown(attachment, { key: 'Enter' })
+    expect(onRead).not.toHaveBeenCalled()
+  })
+  it.each(['wrapped', 'linked'] as const)('leaves a %s checkbox label to its associated control', (kind) => {
+    const onRead = vi.fn(), change = vi.fn()
+    const input = <input id="attachment-choice" type="checkbox" onChange={change} />
+    const node = kind === 'wrapped' ? <label>Toggle {input}</label> : <><label htmlFor="attachment-choice">Toggle</label>{input}</>
+    const { getByText, getByRole } = render(<HostStack host="h" attachments={[{ key: 'a', node }]} w={100} h={140} onRead={onRead} />)
+    fireEvent.click(getByText('Toggle'))
+    expect(change).toHaveBeenCalledTimes(1)
+    expect(getByRole('checkbox')).toBeChecked()
+    expect(onRead).not.toHaveBeenCalled()
+  })
 })
 
 describe('TokenRow and NumberBox', () => {

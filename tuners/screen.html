@@ -15202,6 +15202,42 @@ var K = (() => {
 
   // components/phone-mode/Sheet.tsx
   var import_react2 = __toESM(require_react(), 1);
+
+  // components/ui-helpers/promptKeys.ts
+  function isActiveElement(node) {
+    if (node == null) return false;
+    const el = node;
+    if (typeof el.closest !== "function") return true;
+    if (el.closest('[hidden], [inert], [aria-hidden="true"]')) return false;
+    const view = el.ownerDocument?.defaultView;
+    if (view) for (let at = el; at; at = at.parentElement) {
+      const style = view.getComputedStyle(at);
+      if (style.display === "none" || style.visibility === "hidden" || style.visibility === "collapse") return false;
+    }
+    return true;
+  }
+  function activeOverlay(root, selector = '[role="dialog"], [role="alertdialog"]') {
+    const nodes = root.querySelectorAll ? Array.from(root.querySelectorAll(selector)) : [root.querySelector(selector)];
+    return nodes.findLast(isActiveElement) ?? null;
+  }
+  function activeModal(root) {
+    return activeOverlay(root, '[role="dialog"][aria-modal="true"], [role="alertdialog"][aria-modal="true"]');
+  }
+  function deepActiveElement(root) {
+    let active = root.activeElement;
+    while (active?.shadowRoot?.activeElement) active = active.shadowRoot.activeElement;
+    return active;
+  }
+  function composedContains(container, node) {
+    for (let at = node; at; ) {
+      if (at === container) return true;
+      const root = at.getRootNode();
+      at = at.assignedSlot ?? at.parentElement ?? ("host" in root ? root.host : null);
+    }
+    return false;
+  }
+
+  // components/phone-mode/Sheet.tsx
   var import_jsx_runtime2 = __toESM(require_jsx_runtime(), 1);
   var SWIPE_CLOSE_PX = 70;
   var ARRIVE_MS = 250;
@@ -15285,14 +15321,14 @@ var K = (() => {
     (0, import_react2.useEffect)(() => hold(!leaving), [leaving]);
     (0, import_react2.useEffect)(() => {
       t0.current = performance.now();
-      const from = document.activeElement;
+      const from = deepActiveElement(document);
       const el = layer.current;
       hold(false);
       behindRef.current = [...el?.parentElement?.children ?? []].filter((c) => c !== el && c instanceof HTMLElement && (!c.hasAttribute("inert") || holds.has(c)));
       hold(true);
       box.current?.focus({ preventScroll: true });
       const key = (e) => {
-        if (e.key !== "Escape") return;
+        if (e.key !== "Escape" || e.defaultPrevented || activeModal(document) !== box.current) return;
         e.preventDefault();
         req.current();
       };
@@ -15300,7 +15336,8 @@ var K = (() => {
       return () => {
         document.removeEventListener("keydown", key, true);
         hold(false);
-        from?.focus?.({ preventScroll: true });
+        const front = activeModal(document);
+        if (from?.isConnected && (!front || composedContains(front, from))) from.focus?.({ preventScroll: true });
       };
     }, []);
     const end = () => {
@@ -15965,10 +16002,24 @@ var K = (() => {
               part: "attachment",
               cls,
               "data-index": i,
-              ...onRead ? { role: "button", tabIndex: 0, onClick: (e) => {
-                e.stopPropagation();
-                onRead(i, a.key);
-              } } : {},
+              ...onRead ? {
+                role: "button",
+                tabIndex: 0,
+                onClick: (e) => {
+                  if (e.defaultPrevented) return;
+                  const path = e.nativeEvent.composedPath();
+                  const end = path.indexOf(e.currentTarget);
+                  if (end < 0 || path.slice(0, end).some((target) => target instanceof Element && (target.matches('button, a[href], area[href], input, select, textarea, details > summary, [role="button"], [contenteditable]:not([contenteditable="false"])') || target instanceof HTMLLabelElement && target.control))) return;
+                  e.stopPropagation();
+                  onRead(i, a.key);
+                },
+                onKeyDown: (e) => {
+                  if (e.defaultPrevented || e.nativeEvent.composedPath()[0] !== e.currentTarget || e.ctrlKey || e.metaKey || e.altKey || e.key !== "Enter" && e.key !== " ") return;
+                  e.preventDefault();
+                  e.stopPropagation();
+                  if (!e.repeat) onRead(i, a.key);
+                }
+              } : {},
               children: a.node
             },
             a.key

@@ -1,6 +1,6 @@
 # phone-mode
 
-The mechanism of a phone layout: which layout a window gets, the fit zoom of the large screens, safe-area tokens, the one bottom sheet, folds, second-tap commit, the sideways panel. The game keeps its screens, zones, sheet contents, words and look. Needs `state-machines` and the packages `react` and `zustand`. `index.ts` draws nothing and loads in node; `ui.ts` holds the React parts.
+The mechanism of a phone layout: which layout a window gets, the fit zoom of the large screens, safe-area tokens, the one bottom sheet, folds, second-tap commit, the sideways panel. The game keeps its screens, zones, sheet contents, words and look. Needs `state-machines`, `ui-helpers` and the packages `react` and `zustand`. `index.ts` draws nothing and loads in node; `ui.ts` holds the React parts.
 
 ## Rules for agents
 
@@ -16,6 +16,7 @@ The mechanism of a phone layout: which layout a window gets, the fit zoom of the
 7. Feed `createHaptics({ enabled })` from the game's Haptics setting; use `setSafeArea` in e2e tests (a browser cannot emulate a notch).
 8. Use `dockWantsOpen`, `useDock(wants, dockKey(...))` and `shortPrompt` together for the prompt dock.
 9. Install Playwright separately if you run the standalone screenshot script `demo/imp-shots.mjs`. The phone component does not require it.
+10. Keep nested dialogs in opening order. The last active dialog marked `aria-modal="true"` handles Escape. A Modal above a Sheet closes first, a nested nonmodal dialog leaves Escape with the Sheet, and an inert leaving sheet no longer owns the keys.
 
 **Common mistakes:**
 - Using CSS zoom on a phone screen: only the fitted mode zooms.
@@ -50,7 +51,7 @@ Source: Imperium U11/U12 (the owner's most played phone game); its proportions a
 - `<PromptLine open onToggle short counts? kicker label>{body}</PromptLine>`: folded, one line (chevron up, the short words, `counts` at the right); open, a head and the body (kept mounted, `hidden`). Pair with `dockWantsOpen`, `useDock`, `shortPrompt`.
 - `<TopBar start end>` and `<PhoneMenu open onClose label>` (scrim, Escape, a press inside closes).
 - Imperium's current dock behaviour: `dockWantsOpen` decides open or folded, `useDock(wants, dockKey(...))` holds the player's fold until the key changes, `pickTabs` lights the tabs; feed `open` to `PromptLine` and `PhoneFrame`.
-- `<Sheet>` now also: the layer behind it is `inert` while it is open and focus returns to the opener on close; `leaveMs` (Imperium 240; default 0) slides it down before `onClose`, `inert` and `data-state="leaving"` meanwhile, at once with `slideMs` 0 or reduced motion; Escape (capture phase) closes, a swipe down on the head past `SWIPE_CLOSE_PX` (70) closes and a shorter drag springs back, focus goes into the panel, the scrim fades in, `arriveMs` (Imperium's `ARRIVE_MS` 250; default 0) ignores scrim taps just after opening, reduced motion is still. `<SheetActions actions reason? note?>` as `foot`: the primary action grows, Cancel is plain.
+- `<Sheet>` now also: the layer behind it is `inert` while it is open and focus returns to the opener on close when it belongs to the remaining active modal or no modal remains; `leaveMs` (Imperium 240; default 0) slides it down before `onClose`, `inert` and `data-state="leaving"` meanwhile, at once with `slideMs` 0 or reduced motion; Escape (capture phase) closes, a swipe down on the head past `SWIPE_CLOSE_PX` (70) closes and a shorter drag springs back, focus goes into the panel, the scrim fades in, `arriveMs` (Imperium's `ARRIVE_MS` 250; default 0) ignores scrim taps just after opening, reduced motion is still. `<SheetActions actions reason? note?>` as `foot`: the primary action grows, Cancel is plain.
 - K279: `<Sheet leaving onLeft closeButton>`: `leaving` (default false) lets the caller close it from outside: the same `leaveMs` slide-down and `inert`, then `onLeft` (`onClose` is not called; at once with `slideMs` 0, `leaveMs` 0 or reduced motion); `closeButton={false}` hides the close button. `<PhoneFrame testId style>`, `<PhoneMenu id>`, `SheetAction.testId` pass straight through.
 
 ## Look

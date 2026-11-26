@@ -444,6 +444,7 @@ The blind matching test's result was not recorded: the PR, its comments and docs
 | K764 | Bind context packets and worker briefs to verified installed kit inputs, supplied decisions and scoped source evidence. | M |  | done |
 | K765 | Apply the individual media cap to ICO favicons and document the recognized media extensions. | S |  | done |
 | K766 | Bind executed acceptance receipts and component branch coverage to verified consumer inputs and current Git source. | M |  | done |
+| K768 | Keep keyboard ownership with active dialogs and native controls, expose readable attachments, adapt shared motion timing and retry optional scan geometry loads. | M |  | done |
 
 ## Candidates
 

@@ -1,6 +1,7 @@
 // The bottom sheet: a full-screen layer (100dvh), a scrim that closes it, the panel at its bottom up to --pm-sheet-max of
 // the screen, with a handle, a title, a 44 px close button, a scrolling body and an optional foot in the thumb zone.
 import { useEffect, useId, useRef, useState, type CSSProperties, type PointerEvent as PE, type ReactNode } from 'react';
+import { activeModal, composedContains, deepActiveElement } from '../ui-helpers/promptKeys.ts';
 import './phone-mode.css';
 
 /** Imperium's: a swipe down on the head past this many px closes the sheet, a shorter drag springs back. */
@@ -106,14 +107,14 @@ export function Sheet({
   useEffect(() => hold(!leaving), [leaving]);
   useEffect(() => {
     t0.current = performance.now();
-    const from = document.activeElement as HTMLElement | null;
+    const from = deepActiveElement(document) as HTMLElement | null;
     const el = layer.current;
     hold(false);
     behindRef.current = [...(el?.parentElement?.children ?? [])].filter((c): c is HTMLElement => c !== el && c instanceof HTMLElement && (!c.hasAttribute('inert') || holds.has(c)));
     hold(true);
     box.current?.focus({ preventScroll: true });
     const key = (e: KeyboardEvent) => {
-      if (e.key !== 'Escape') return;
+      if (e.key !== 'Escape' || e.defaultPrevented || activeModal(document) !== box.current) return;
       e.preventDefault();
       req.current();
     };
@@ -121,7 +122,8 @@ export function Sheet({
     return () => {
       document.removeEventListener('keydown', key, true);
       hold(false);
-      from?.focus?.({ preventScroll: true });
+      const front = activeModal(document) as Element | null;
+      if (from?.isConnected && (!front || composedContains(front, from))) from.focus?.({ preventScroll: true });
     };
   }, []);
   const end = () => {
