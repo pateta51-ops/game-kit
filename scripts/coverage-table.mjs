@@ -32,6 +32,7 @@ function flags(args) {
     out[flag] = args[++i];
   }
   if (out['--capture'] && Object.keys(out).length !== 1) throw new Error('--capture cannot be combined with reporting options');
+  if (out['--check-outcome'] && !out['--started']) throw new Error('--check-outcome requires --started');
   if (out['--check-outcome'] && !['success', 'failure', 'cancelled', 'skipped', 'unknown'].includes(out['--check-outcome'])) throw new Error('Invalid check outcome');
   return out;
 }

@@ -69,6 +69,16 @@ describe('coverage history evidence', () => {
     expect(report.comparison.status).toBe('unknown');
   });
 
+  it('rejects an explicit check outcome without a before-run context', () => {
+    const f = fixture('unbound-outcome');
+    f.writeSummary();
+    expect(f.run().status).toBe(0);
+    const result = f.run('--check-outcome', 'success');
+    expect(result.status).toBe(1);
+    expect(result.stderr).toContain('--check-outcome requires --started');
+    expect(f.read().execution.checkOutcome).toBe('unknown');
+  });
+
   it('clears old coverage and records the actual check outcome without rerunning tests', () => {
     const f = fixture('capture');
     const old = f.writeSummary();
