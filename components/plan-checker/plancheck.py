@@ -206,7 +206,8 @@ INLINE_HTML = re.compile(r"(?:</[A-Za-z][A-Za-z0-9-]*[ \t\n]*>|<[A-Za-z][A-Za-z0
                       + HTML_ATTR + r")*[ \t\n]*/?>)")
 HTML_TAG = re.compile(r"^ {0,3}" + INLINE_HTML.pattern + r"[ \t]*$")
 LINK_ESCAPE = r"(?:\\[!-/:-@\[-`{-~]|\\(?![!-/:-@\[-`{-~]))"
-LINK_LABEL = r"\[((?:" + LINK_ESCAPE + r"|[^\[\]\\\n]){0,999})\]"
+REF_LABEL_LIMIT = 999
+LINK_LABEL = r"\[((?:" + LINK_ESCAPE + r"|[^\[\]\\]){0," + str(REF_LABEL_LIMIT) + r"})\]"
 LINK_PAD = r"[ \t]*(?:\n[ \t]*)?"
 LINK_SPACE = r"(?:[ \t]+|[ \t]*\n[ \t]*)"
 LINK_CHAR = r"(?:[^\\()\x00-\x20\x7f]|" + LINK_ESCAPE + ")"
@@ -292,6 +293,8 @@ def inline_match(lines: list[str], row: int, start: int, containers: list[int | 
             next_body, _ = match_containers(lines[i + 1], containers)
             if not next_body.lstrip().startswith(('"', "'", "(")):
                 break
+        if pattern in (REF_LABEL, REF_DEF) and before > 2 * REF_LABEL_LIMIT + 4 and not REF_LABEL.match(text.lstrip(" ")):
+            break
     return result
 
 
@@ -354,10 +357,12 @@ def visible_markdown(lines: list[str]) -> tuple[list[str], list[tuple[int, str, 
         if block_start and (not paragraph or body.lstrip().startswith("|")):
             brackets.clear()
         pos = len(raw) if i < span_row else span_end if i == span_row else 0
-        if block_start and not paragraph and re.match(r"^ {0,3}"+LINK_LABEL+":", body):
-            if (definition := inline_match(lines, i, raw_offset(raw, body), containers, REF_DEF)) and definition[2][1].strip():
-                hidden_row, hidden_end, ref = definition
-                definitions.add(" ".join(ref[1].split()).casefold())
+        if block_start and not paragraph and re.match(r"^ {0,3}\[", body):
+            label = REF_LABEL.match(body.lstrip(" "))
+            if not label or label.string.startswith(":", label.end()):
+                if (definition := inline_match(lines, i, raw_offset(raw, body), containers, REF_DEF)) and definition[2][1].strip():
+                    hidden_row, hidden_end, ref = definition
+                    definitions.add(" ".join(ref[1].split()).casefold())
         visible = list(raw)
         while pos < len(raw):
             if i <= hidden_row:
@@ -389,10 +394,17 @@ def visible_markdown(lines: list[str]) -> tuple[list[str], list[tuple[int, str, 
                             brackets.clear()
                             if target["dest"] and target["dest"].startswith("#") and len(target["dest"]) > 1:
                                 anchors.append(target["dest"][1:])
-                        elif row == i:
-                            ref = REF_LABEL.match(raw, pos)
-                            label = ref[1] if ref and ref[1] else raw[col + 1:match.start(2)]
-                            reference_uses.append((" ".join(label.split()).casefold(), row, col, match.start(2), ref.end() if ref else pos))
+                        else:
+                            ref = inline_match(lines, i, pos, containers, REF_LABEL) if raw.startswith("[", pos) else None
+                            if ref and ref[2][1]:
+                                label = ref[2][1]
+                            else:
+                                first = inline_match(lines, row, col, containers, REF_LABEL)
+                                if not first or first[:2] != (i, pos):
+                                    continue
+                                label = first[2][1]
+                            end_row, end = ref[:2] if ref else (i, pos)
+                            reference_uses.append((" ".join(label.split()).casefold(), row, col, i, match.start(2), end_row, end))
                 elif (width_of_span := len(match[2]) - escaped) and (end_of_span := inline_end(lines, i, pos, width_of_span, containers)):
                     span_row, span_end = end_of_span
                     pos = span_end if i == span_row else len(raw)
@@ -400,10 +412,12 @@ def visible_markdown(lines: list[str]) -> tuple[list[str], list[tuple[int, str, 
                 break
         out.append("".join(visible))
         paragraph = bool(out[-1].strip()) and not re.match(r"^ {0,3}(?:#{1,6}\s|\||[-_*=]{3,}\s*$)", body)
-    for label, row, start, close, end in reference_uses:
+    for label, row, start, close_row, close, end_row, end in reference_uses:
         if label in definitions:
             openers.append((row, start))
-            out[row] = out[row][:close] + " " * (end - close) + out[row][end:]
+            for i in range(close_row, end_row + 1):
+                a, b = close if i == close_row else 0, end if i == end_row else len(out[i])
+                out[i] = out[i][:a] + " " * (b - a) + out[i][b:]
     for row, start in openers:
         out[row] = out[row][:start] + " " + out[row][start + 1:]
     return out, blocks, unclosed or fence is not None, anchors

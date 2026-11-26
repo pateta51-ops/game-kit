@@ -422,6 +422,9 @@ describe('explicit plan applicability', () => {
     ['titles', 'Use [examples](/reference "SC-01, SC-02"). Implement'],
     ['reference definitions', '[one]: /SC-01\n[two]: /SC-02\n\nImplement'],
     ['reference labels', 'Use [examples][SC-01, SC-02]. Implement\n\n[SC-01, SC-02]: /reference\n\nImplement'],
+    ['multiline reference labels', 'Use [examples][SC-01,\nSC-02]. Implement\n\n[SC-01,\nSC-02]: /reference\n\nImplement'],
+    ['a multiline reference use', 'Use [examples][SC-01,\nSC-02]. Implement\n\n[SC-01, SC-02]: /reference\n\nImplement'],
+    ['a multiline reference definition', 'Use [examples][SC-01, SC-02]. Implement\n\n[SC-01,\nSC-02]: /reference\n\nImplement'],
   ])('does not count Markdown link %s as phase citations', (_label, body) => {
     fails({ text: PLAN.replace('SC-01, SC-02. Implement', body) }, 'SC-01 is not assigned to any phase');
   });
@@ -436,6 +439,8 @@ describe('explicit plan applicability', () => {
     '[SC-01, SC-02][guide]\n\n[guide]: /chapter\n\nImplement',
     '[SC-01, SC-02]',
     '[description][SC-01, SC-02]',
+    '[description][SC-01,\nSC-02]',
+    '[SC-01,\nSC-02][guide]\n\n[guide]: /chapter\n\nImplement',
     '<https://example.invalid/SC-01/SC-02>',
     '`[description](/SC-01/SC-02)`',
   ])('preserves visible Markdown plan references in %s', (body) => {
