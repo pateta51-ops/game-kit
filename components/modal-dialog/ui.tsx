@@ -46,8 +46,11 @@ const namedRadio = (el: Element | null): el is HTMLInputElement =>
 const sameGroup = (a: HTMLInputElement, b: Element | null): boolean =>
   namedRadio(b) && a.name === b.name && a.form === b.form && a.getRootNode() === b.getRootNode();
 function* focusTree(parent: ParentNode, includeShadows = false): Generator<HTMLElement> {
-  const assigned = (parent as HTMLSlotElement).assignedElements?.({ flatten: true });
-  for (const child of assigned?.length ? assigned : parent.children) {
+  const slot = parent as HTMLSlotElement;
+  const children = slot.assignedNodes?.().length
+    ? slot.assignedNodes({ flatten: true }).filter((node): node is Element => node.nodeType === Node.ELEMENT_NODE)
+    : parent.children;
+  for (const child of children) {
     const el = child as HTMLElement;
     yield el;
     if (!el.shadowRoot) yield* focusTree(el, includeShadows);

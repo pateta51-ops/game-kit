@@ -387,6 +387,32 @@ describe.skipIf(!HAVE && !process.env['CI'])('modal, board shortcuts and attachm
     } finally { await page.close(); }
   });
 
+  it('suppresses fallback Tab stops when a slot is assigned text', async () => {
+    const page = await browser.newPage();
+    try {
+      await mount(page);
+      await page.getByRole('button', { name: 'Open ordered modal' }).click();
+      await page.getByRole('dialog', { name: 'Ordered decision' }).evaluate((el) => {
+        const host = document.createElement('div');
+        host.innerHTML = 'Assigned text<button slot="assigned">Assigned element</button>';
+        host.attachShadow({ mode: 'open' }).innerHTML =
+          '<slot><button>Suppressed by text</button></slot>' +
+          '<slot name="empty"><button>Unassigned fallback</button></slot>' +
+          '<slot name="assigned"><button>Suppressed by element</button></slot>';
+        el.querySelector('.kc-modal-body')!.append(host);
+      });
+      await page.getByRole('button', { name: 'Default action' }).focus();
+      for (const [key, name] of [
+        ['Tab', 'Unassigned fallback'], ['Tab', 'Assigned element'], ['Tab', 'First priority'],
+        ['Shift+Tab', 'Assigned element'], ['Shift+Tab', 'Unassigned fallback'], ['Shift+Tab', 'Default action'],
+      ] as const) {
+        await page.keyboard.press(key);
+        expect(await page.getByRole('button', { name }).evaluate((el) =>
+          (el.getRootNode() as Document | ShadowRoot).activeElement === el), name).toBe(true);
+      }
+    } finally { await page.close(); }
+  });
+
   it('includes image-map links only when their image is visible in a ranked modal', async () => {
     const page = await browser.newPage();
     try {
