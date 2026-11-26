@@ -15917,6 +15917,42 @@ var PREVIEW = (() => {
 
   // components/phone-mode/Sheet.tsx
   var import_react = __toESM(require_react(), 1);
+
+  // components/ui-helpers/promptKeys.ts
+  function isActiveElement(node) {
+    if (node == null) return false;
+    const el = node;
+    if (typeof el.closest !== "function") return true;
+    if (el.closest('[hidden], [inert], [aria-hidden="true"]')) return false;
+    const view = el.ownerDocument?.defaultView;
+    if (view) for (let at = el; at; at = at.parentElement) {
+      const style = view.getComputedStyle(at);
+      if (style.display === "none" || style.visibility === "hidden" || style.visibility === "collapse") return false;
+    }
+    return true;
+  }
+  function activeOverlay(root2, selector = '[role="dialog"], [role="alertdialog"]') {
+    const nodes = root2.querySelectorAll ? Array.from(root2.querySelectorAll(selector)) : [root2.querySelector(selector)];
+    return nodes.findLast(isActiveElement) ?? null;
+  }
+  function activeModal(root2) {
+    return activeOverlay(root2, '[role="dialog"][aria-modal="true"], [role="alertdialog"][aria-modal="true"]');
+  }
+  function deepActiveElement(root2) {
+    let active = root2.activeElement;
+    while (active?.shadowRoot?.activeElement) active = active.shadowRoot.activeElement;
+    return active;
+  }
+  function composedContains(container, node) {
+    for (let at = node; at; ) {
+      if (at === container) return true;
+      const root2 = at.getRootNode();
+      at = at.assignedSlot ?? at.parentElement ?? ("host" in root2 ? root2.host : null);
+    }
+    return false;
+  }
+
+  // components/phone-mode/Sheet.tsx
   var import_jsx_runtime2 = __toESM(require_jsx_runtime(), 1);
   var SWIPE_CLOSE_PX = 70;
   var holds = /* @__PURE__ */ new WeakMap();
@@ -15999,14 +16035,14 @@ var PREVIEW = (() => {
     (0, import_react.useEffect)(() => hold(!leaving), [leaving]);
     (0, import_react.useEffect)(() => {
       t0.current = performance.now();
-      const from = document.activeElement;
+      const from = deepActiveElement(document);
       const el = layer.current;
       hold(false);
       behindRef.current = [...el?.parentElement?.children ?? []].filter((c) => c !== el && c instanceof HTMLElement && (!c.hasAttribute("inert") || holds.has(c)));
       hold(true);
       box.current?.focus({ preventScroll: true });
       const key = (e) => {
-        if (e.key !== "Escape") return;
+        if (e.key !== "Escape" || e.defaultPrevented || activeModal(document) !== box.current) return;
         e.preventDefault();
         req.current();
       };
@@ -16014,7 +16050,8 @@ var PREVIEW = (() => {
       return () => {
         document.removeEventListener("keydown", key, true);
         hold(false);
-        from?.focus?.({ preventScroll: true });
+        const front = activeModal(document);
+        if (from?.isConnected && (!front || composedContains(front, from))) from.focus?.({ preventScroll: true });
       };
     }, []);
     const end = () => {

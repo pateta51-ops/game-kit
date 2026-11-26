@@ -795,6 +795,15 @@ export function createMotionPlayer<C = undefined>(o: PlayerOptions<C>): MotionPl
 export function withReducedMotion(speed: Speed, reduced = prefersReducedMotion()): Speed {
   return reduced ? 'instant' : speed;
 }
+/** A shared duration factor (0 off, .5 fast, 1 normal, 2 slow) as the rate that card-hand and drag-drop divide by. */
+export function motionRate(factor: Speed): number {
+  if (factor === 'instant') return 0;
+  if (!Number.isFinite(factor)) throw new RangeError('motionRate requires a finite duration factor');
+  if (factor <= 0) return 0;
+  const rate = 1 / factor;
+  if (!Number.isFinite(rate)) throw new RangeError('motionRate duration factor is too small to convert');
+  return rate;
+}
 export function prefersReducedMotion(): boolean {
   return typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches;
 }

@@ -8,7 +8,7 @@ A small web panel that updates any game to its latest `origin/main` in its own c
 
 **You must:**
 1. Take every port from `ports.json` (readable view `docs/PORTS.md`); never invent one or hard-code one that is not there. A game's block of 10 starts at its dev port: preview +1, e2e +2, second e2e +3.
-2. Add a new game with `node tools/game-server/server.mjs add <id> "<Name>" <repo path> [app subfolder]`: it appends one line to `ports.json`, validates it and regenerates `docs/PORTS.md`; then set what it prints in the game's vite and Playwright config, and commit `ports.json` and `docs/PORTS.md` in game-kit.
+2. Add a new game with `node tools/game-server/server.mjs add <id> "<Name>" <repo path> [app subfolder]`. Pass `--pending` in place of the subfolder to reserve a block before creating a declarative scaffold. Commit the updated `ports.json` and `docs/PORTS.md` in game-kit, and set the game's Vite and Playwright config to the assigned ports.
 3. Change a port in `ports.json` first (`validatePorts` checks every port is unique, phone ports are 4170-4199 and blocks avoid the reserved ranges), then in the game.
 4. Keep owner-specific values (tailnet host, serve root) in the untracked `kit.local.json`; never commit it or put them in the repo.
 5. Use the CLI (`server.mjs update <id> | stop <id> | status`) or the panel; it serves each game from its own clone, never from your worktree.

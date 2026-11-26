@@ -14,6 +14,7 @@ The repository gate: file sizes, raw scans, secrets, session URLs, tailnet hosts
 5. Keep card-id literals and card names out of the engine folders (`engineFolders`); list legitimate exceptions in `engineAllowed`, and set `engineTests: true` to check engine tests too.
 6. With `portFrom` set, run the gate on a `pull_request` event (checkout 2 commits deep) or with `PORT_RULE_BASE` and `PORT_RULE_BODY_FILE`; a PR that changes a `portFrom` file must change a `portTo` file or carry `port: n/a (<reason>)` in its body.
 7. Run it where the files are checked out; a blob a partial clone lacks is a SIZE finding unless `skipMissingBlobs: true`.
+8. Keep dependency links out of Git. `DEPENDENCY_LINK` identifies a staged `node_modules` link even if its target is absent. Add `node_modules` to `.gitignore` and use `git rm --cached -- node_modules` for a link at the repository root. This leaves the local link in place.
 
 **Common mistakes:**
 - Running it from a subfolder: the root is the current folder, so the config is not found.

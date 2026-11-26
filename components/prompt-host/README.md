@@ -3,19 +3,25 @@ Shows the engine's open question (an engine-core prompt) through a typed widget 
 
 ## Rules for agents
 
+<!-- hooks: written by scripts/catalog.mjs from docs/catalog-notes.json; do not edit -->
+**Hooks a game calls:**
+- `useBoardPick`: board pick confirmation that yields keyboard input to dialogs
+<!-- /hooks -->
+
 `autoAnswer` never answers a lone option marked `unseen` (engine-core `onlyOne`, K641): the player is shown the prompt.
 
 **What it does:** Shows the engine's open question through a typed widget registry.
 
 **You must:**
 1. Give `Widgets` one component for every prompt `kind`; a missing kind fails to compile.
-2. Pass `prompt` and `view` from the player's own view, `answer(picks, promptId)` to the store, and `seat` (this screen's seat) so another seat's prompt shows `waiting`.
+2. Pass `prompt` and `view` from the player's own view, and `seat` (this screen's seat) so another seat's prompt shows `waiting`. With `game-store`, forward only answers that carry a prompt ID. Pass that same ID to `store.answer(picks, id)` so the store can reject a stale click. See the [checked game-store example](../game-store/README.md#use-it-in-10-lines) when your game also installs game-store.
 3. Supply `look` with `cls`, `label`, the game's words (`done`, `count`, `confirm`, `cancel`, ...) and `text: ids.strip`; keep a game test `checkLook(look)` equal to `[]` (placeholders warn in dev).
 4. For forced answers use the store helper `answerWithForced(game, history, action, content, forced, { seat })` (`seat` required; `'all'` for hot seat), then feed its `events` to paced-view `pushSteps` once. `auto` is only for a game without undo.
 5. Board taps: `useBoardPick` and `<BoardBar>`; map `marks` onto the board elements and call `tap(id)`.
 6. Import opt-in look CSS (`looks/overflow.css`, `legal-glow.css`) yourself; pass `overflow` with `stage` and `zone` in the same coordinates.
 7. Show printed words: the heading is the card's printed clause (prompt-source), never a rule id.
 8. Read the picks of `PickOptions` through `onChange(picked)` (and pass `picked` to control it); never read them from the DOM.
+9. `useBoardPick` pauses Enter/Escape while a visible, non-inert dialog or alertdialog is open. For a custom overlay pass `overlay: '<selector>'`, or `paused: () => boolean` for another keyboard owner. Typing, modifiers, repeated or already-handled keys do not answer or clear board picks; a focused button keeps its own Enter.
 
 **Common mistakes:**
 - A chain of forced answers beyond `cap` stops with `capped: true` and an `error`.
@@ -25,11 +31,6 @@ Shows the engine's open question (an engine-core prompt) through a typed widget 
 ## The game passes
 - K289, `alone` options (engine-core K287): in `PickOptions` and `Order` an enabled alone option (Back, Pass) answers `[id]` on its click and never joins the selection or the order; prompts without `alone` are unchanged.
 
-```tsx
-const WIDGETS: Widgets<Prompt, PlayerView> = { pick: PickOptions, amount: (p) => <PickAmount {...p} start="last" />, order: Order, may: May, pay: PayCost, market: MarketPick };
-<PromptHost widgets={WIDGETS} prompt={view.prompt} view={view} answer={(picks, id) => store.answer(picks, id)} seat={me}
-  waiting={<p>…</p>} look={{ cls, label, text: ids.strip }} />
-```
 - `Widgets<P, V>`: one component per `P['kind']`; a missing kind (or an unknown one in a literal) fails to compile. Each gets `WidgetProps<PromptOf<P, K>, V>`: its own kind's prompt, the view, `answer(picks)` and `look`.
 - `answer(picks, promptId)`: the host always sends the open prompt's id and drops a late answer from an older prompt; the store drops a stale id. `prompt` and `view` come from the player's own view, never the full state. `mine={false}`: the prompt is another seat's; `waiting` shows and no option does. K222: pass `seat` (this screen's seat) instead and the host compares it with `prompt.seat` (a prompt with no seat is everyone's); `mine` (a boolean) still wins when given, but is deprecated.
 - Heading: `title(p)`, else the printed clause of `p.source` when a card asks (prompt-source); a rule's own source shows nothing. Words are the printed words; pass plain-text's `ids.strip` as `look.text` so rule ids in `why` and `idle` never show.
@@ -39,7 +40,7 @@ const WIDGETS: Widgets<Prompt, PlayerView> = { pick: PickOptions, amount: (p) =>
 - `PickOptions` (pick cards or options): toggles, count, Done when min..max; min = max = 1 answers on the click (`confirm` asks for Done); K408: at max (above 1) every unpicked option renders disabled (`aria-disabled`), enabled again when a pick is undone. K457: `onChange(picked)` fires with the picked ids on every pick and unpick; the optional `picked` prop makes the selection controlled (the widget then changes it only through `onChange`; leave it out for the default, own state). A game needing the "all N picked" state uses these, never the DOM.
 - `PickAmount`: options are the amounts in order; a stepper from `start` (index or `'last'`), then Done; K305: `readout(option, prompt)` shows a preview of the current amount (class part `readout`). K522: `hideDone` leaves out the widget's own Done so a game's own Confirm (e.g. a prompt band) can submit; `onChange(picked)` then gives `[amountId]` (or `[]` when that amount is barred) on mount and at every step, and the game's Confirm calls `answer(picked)`. Without `hideDone` it renders and answers as before.
 - `Order`: click in order; a click on a numbered one takes it and those after back; when every legal option fits in max the rest follow the engine's order, else the clicks are the answer (min..max); Done.
-- On the board (UFS tap to confirm): `useBoardPick(prompt, answer, { confirm? })` gives `marks` (option id: legal, barred, armed) for the board to highlight and `tap(id)` for it to call; the first tap arms, a second tap, Confirm or Enter answers, Cancel or Escape disarms (`confirm: false`: the first tap answers). K226: `max > 1` picks several: a tap toggles (all picked ones are `armed`, `picks` in tap order), Confirm or Enter answers once `ready` (min..max), `confirm: false` answers when max are picked; the bar then shows the count. `<BoardBar pick prompt look hint />` is the bar.
+- On the board (UFS tap to confirm): `useBoardPick(prompt, answer, { confirm?, overlay?, paused? })` gives `marks` (option id: legal, barred, armed) for the board to highlight and `tap(id)` for it to call; the first tap arms, a second tap, Confirm or Enter answers, Cancel or Escape disarms (`confirm: false`: the first tap answers). Keyboard input yields to active overlays, editable targets and focused controls; closed always-mounted dialogs do not block it. K226: `max > 1` picks several: a tap toggles (all picked ones are `armed`, `picks` in tap order), Confirm or Enter answers once `ready` (min..max), `confirm: false` answers when max are picked; the bar then shows the count. `<BoardBar pick prompt look hint />` is the bar.
 - `May` (yes / no), `PayCost` (one option per way to pay), `OptionList`: a click answers. `OptionButton`: the shared button. A barred option stays, shows `why` and never answers; a legal one with K91 `idle` shows its words as a warning.
 
 ## Look

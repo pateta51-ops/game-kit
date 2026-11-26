@@ -17,7 +17,7 @@ export type { Draft } from './draft.ts';
 export { ctxEvents, draftOf, LOG_CAP, makeCtx, readCtx, setRngOverrides } from './ctx.ts';
 export { cardInstanceId, parseCardInstanceId, seatKey, takePromptSeq, takeSeq } from './ids.ts';
 export { GameOver } from './gameOver.ts';
-export { hashState, replay, type ReplayExpectation, type ReplayResult } from './replay.ts';
+export { formatTriggerCap, hashState, replay, type ReplayExpectation, type ReplayResult } from './replay.ts';
 export { MAX_TASKS_PER_ACTION, run } from './runner.ts';
 export {
   createSave,
@@ -53,7 +53,7 @@ export {
   type HistoryResult,
   type UndoMode,
 } from './undo.ts';
-export { EngineBugError, GameSetupError, IllegalActionError, notYet } from './errors.ts';
+export { EngineBugError, GameSetupError, IllegalActionError, StateInvariantError, notYet } from './errors.ts';
 export {
   addStep,
   canUndoStep,

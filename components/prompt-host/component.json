@@ -47,7 +47,8 @@
   },
   "needs": [
     "engine-core",
-    "prompt-source"
+    "prompt-source",
+    "ui-helpers"
   ],
   "packages": [
     "react"

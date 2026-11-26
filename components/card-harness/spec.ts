@@ -22,9 +22,9 @@ export interface SpecGame<R, L, A, E, S> {
 }
 type Reg = (name: string, fn: () => void) => unknown;
 
-const linesOf = <R>(r: R, lineOf?: (r: R) => string | readonly string[] | undefined): readonly string[] => {
+export const linesOf = <R>(r: R, lineOf?: (r: R) => string | readonly string[] | undefined): readonly string[] => {
   const o = r as Record<string, unknown>;
-  const l = lineOf ? lineOf(r) : ((o.line ?? o.lines) as string | readonly string[] | undefined);
+  const l = lineOf ? lineOf(r) : ((o?.line ?? o?.lines) as string | readonly string[] | undefined);
   return l === undefined ? [] : typeof l === 'string' ? [l] : l;
 };
 
@@ -76,7 +76,7 @@ export function specCoverage<R>(input: {
   const has = (l: string): boolean => covered.has(l) || titled(l);
   const exempt = input.exempt ?? {};
   return {
-    missing: [...named].filter((l) => !has(l) && !(l in exempt)).sort(),
+    missing: [...named].filter((l) => !has(l) && !Object.hasOwn(exempt, l)).sort(),
     stale: Object.keys(exempt).filter((l) => has(l) || !named.has(l)).sort(),
   };
 }

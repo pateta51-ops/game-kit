@@ -4,6 +4,11 @@ The size gate for a vite build: gzips `index.html` and what it loads at once, an
 
 ## Rules for agents
 
+<!-- hooks: written by scripts/catalog.mjs from docs/catalog-notes.json; do not edit -->
+**Hooks a game calls:**
+- `measureBuild` + `run`: check a media cap for images, fonts and audio, including the first download; follow imports for initial accounting
+<!-- /hooks -->
+
 **What it does:** The size gate for a vite build: gzips `index.html` and what it loads at once, and fails when the game's limits are exceeded.
 
 **You must:**
@@ -11,7 +16,7 @@ The size gate for a vite build: gzips `index.html` and what it loads at once, an
 2. Pass at least one limit, in bytes: `--initial-budget` (gzipped first download), `--chunk-limit` (one script chunk before gzip) or `--asset-limit`; a limit left out is not checked, and none at all is a usage error (exit 2).
 3. Keep the game's limits in its own script as `Limits` and pass them as the defaults of `run`, so a test can import the same `BUDGET` and call `measureBuild(dir, BUDGET)`.
 4. Set `base` to the app's base path, or `auto`, when the app is not served from `/`; otherwise assets are not found.
-5. Add `follow: true` to count static imports, stylesheet `url(...)` and icon or manifest links.
+5. Add `follow: true` to count static imports, stylesheet `url(...)` and icon or manifest links. `assetLimit` applies once to every supported media file in the build, including files counted in the initial download; enabling `follow` does not relax that cap.
 6. Read exit codes: 0 within limits, 1 over, 2 no build or bad usage.
 
 **Common mistakes:**
@@ -28,10 +33,12 @@ Without `--dir` it builds into `.cache/size-build` first. Exit codes: 0 within t
 |---|---|---|
 | `--initial-budget <bytes>` | `initialBudget` | the first download, gzipped |
 | `--chunk-limit <bytes>` | `chunkLimit` | any one script chunk, before gzip |
-| `--asset-limit <bytes>` | `assetLimit` | any image, font or audio file in the build that the first download does not hold |
+| `--asset-limit <bytes>` | `assetLimit` | each supported image, font or audio file in the build, whether loaded initially or later |
 | `--base <path or auto>` | `base` | the app's base path in the addresses (`/game/assets/x.js`); `auto` finds it |
 | `--follow true` | `follow` | also counts static imports of the scripts, `url(...)` of the stylesheets (not `data:`, `#x` or the encoded `%23x`), icon and manifest links |
 | `--gzip-level <0-9>` | `gzipLevel` | the gzip level (zlib's default when left out) |
+
+The individual asset cap recognizes PNG, JPEG, WebP, GIF, AVIF, SVG, ICO, WOFF, WOFF2, TTF, OTF, MP3, OGG, WAV and M4A by extension.
 
 A limit left out is not checked; at least one of the three is required.
 

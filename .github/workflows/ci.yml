@@ -20,15 +20,37 @@ jobs:
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v7
+      - name: Fetch the starter compatibility tag
+        run: git fetch --no-tags --depth=1 origin tag v0.272.0
       - uses: actions/setup-node@v7
         with:
           node-version-file: .nvmrc
+      - name: Capture coverage source and remove stale results
+        id: coverage-source
+        run: node scripts/coverage-table.mjs --capture "$RUNNER_TEMP/game-kit-coverage-start.json"
       - run: echo "::remove-matcher owner=tsc::"
       - run: npm ci --no-audit --no-fund
-      - run: npx playwright install --with-deps chromium
-      - run: node components/check-runner/check-runner.ts --config check-runner.config.json --keep-going
+      - run: npx --no-install playwright-core install --with-deps chromium
+      - id: checks
+        run: node components/check-runner/check-runner.ts --config check-runner.config.json --keep-going
         env:
           NO_COLOR: '1'
+      - name: Record coverage from this check
+        if: always() && steps.coverage-source.outcome == 'success'
+        run: node scripts/coverage-table.mjs --started "$RUNNER_TEMP/game-kit-coverage-start.json" --check-outcome "$CHECK_OUTCOME"
+        env:
+          CHECK_OUTCOME: ${{ steps.checks.outcome }}
+      - name: Retain exact-source coverage evidence
+        if: always() && steps.coverage-source.outcome == 'success'
+        uses: actions/upload-artifact@v7.0.2
+        with:
+          name: coverage-${{ steps.coverage-source.outputs.commit }}-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            coverage/coverage-summary.json
+            coverage/coverage-evidence.json
+            coverage/coverage-evidence.md
+          if-no-files-found: error
+          retention-days: 30
 
   scan-ingest:
     name: pytest scan-ingest

@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { applyAction, createGame, createSave, restoreSave, type AnswerAction } from '../kit/engine-core/index.ts';
 import { playOne } from '../kit/sim-pool/index.ts';
-import { COURIER, courierSim, type CourierState } from '../src/engine/courier.ts';
+import { COURIER, type CourierState } from '../src/engine/courier.ts';
+import { courierSim } from '../src/courier-sim.ts';
 
 const options = { seed: 'courier' };
 const start = () => createGame(COURIER, options, {}, null).state;

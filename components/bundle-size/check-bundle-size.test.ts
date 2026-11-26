@@ -1,6 +1,8 @@
+import { spawnSync } from 'node:child_process';
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { afterAll, describe, expect, it } from 'vitest';
 import { cssUrls, initialFiles, measureBuild, run, staticImports } from './check-bundle-size.ts';
 
@@ -105,7 +107,7 @@ describe('bundle size', () => {
       expect(paths({ base: 'auto', follow: true })).toEqual(['index.html', 'assets/app.js', 'icon.png', 'assets/app.css', 'assets/dep.js', 'assets/f.woff2']);
       const r = measureBuild(b, { base: 'auto', follow: true, assetLimit: 100 });
       expect(r.lazy.map((f) => f.path)).toEqual(['assets/lazy.js']);
-      expect(r.media).toEqual([]);
+      expect(r.media.map((f) => f.path)).toEqual(['assets/f.woff2']);
       expect(measureBuild(b, { base: 'auto', assetLimit: 100 }).media.map((f) => f.path)).toEqual(['assets/f.woff2']);
       expect(run(['--dir', b, '--base', 'auto', '--follow', 'true', '--initial-budget', '10000'], io)).toBe(0);
       writeFileSync(join(b, 'assets/app.css'), `a{fill:url(%23n);background:url("data:image/svg+xml,%3Csvg fill='url(%23g)'/%3E")}`);
@@ -120,5 +122,29 @@ describe('bundle size', () => {
       expect(at(9)).toBeLessThan(at(1));
       expect(run(['--dir', b, '--base', 'auto', '--gzip-level', '9', '--initial-budget', '10000'], io)).toBe(0);
     });
+  });
+
+  it.each(['png', 'ico', 'woff2', 'ogg'])('enforces the same %s cap through the CLI with follow enabled and disabled', (ext) => {
+    const build = mkdtempSync(join(tmpdir(), 'size-media-'));
+    try {
+      mkdirSync(join(build, 'assets'));
+      writeFileSync(join(build, 'index.html'), '<link rel="stylesheet" href="/game/assets/app.css"><script src="/game/assets/app.js"></script>');
+      writeFileSync(join(build, 'assets/app.js'), 'import("./lazy.js")');
+      writeFileSync(join(build, 'assets/lazy.js'), 'export default 1');
+      writeFileSync(join(build, 'assets/app.css'), `a{background:url(./face.${ext})}b{background:url(./face.${ext})}`);
+      writeFileSync(join(build, `assets/face.${ext}`), Buffer.alloc(68));
+      for (const follow of [false, true]) {
+        const runCli = (cap: number) => spawnSync(process.execPath, [fileURLToPath(new URL('./check-bundle-size.ts', import.meta.url)), '--dir', build, '--base', 'auto', '--follow', String(follow), '--asset-limit', String(cap)], { encoding: 'utf8' });
+        const bad = runCli(10);
+        expect(bad.status).toBe(1);
+        expect(bad.stdout).toContain(`assets/face.${ext}`);
+        expect(bad.stdout).toContain('FAIL: media over the asset limit');
+        expect(runCli(68).status).toBe(0);
+        const report = measureBuild(build, { base: 'auto', follow, assetLimit: 10 });
+        expect(report.media.map((f) => f.path)).toEqual([`assets/face.${ext}`]);
+        expect(report.initial.filter((f) => f.path === `assets/face.${ext}`)).toHaveLength(follow ? 1 : 0);
+        expect(report.lazy.map((f) => f.path)).toEqual(['assets/lazy.js']);
+      }
+    } finally { rmSync(build, { recursive: true, force: true }); }
   });
 });

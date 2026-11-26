@@ -1,5 +1,7 @@
 # Pattern: card-language validator, registry, text generator, dry run
 
+**Design provenance.** For current implementation, use the [card-language contract](../../components/card-language/README.md) and [standard verb pack](../../components/card-language/pack.md).
+
 Component `card-language` holds the verb table (`fields`, `run`, `text` per op) and its checks; the interpreter around it stays the game's, welded to its state and phases. Recipe: [card-effect.md](../recipes/card-effect.md). Below: the shape the table follows.
 
 ## Example (read, never edit)

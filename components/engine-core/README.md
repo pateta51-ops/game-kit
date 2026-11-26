@@ -11,7 +11,7 @@ The kernel of a game engine: seeded random numbers, canonical JSON and hashes, t
 2. Use `ctx.rng` for all randomness; never `Math.random` or the clock (a game's lint preset fails it).
 3. Open a prompt with `ctx.ask(prompt, resume)`: one prompt at a time, passing the `resume` task (or, with no `resume`, only after the handler pushed one itself), and with at least `min` enabled options. Violations throw `EngineBugError` naming the prompt.
 4. Keep state plain data with finite numbers (`canonicalJson` throws otherwise) and change it only through copy on write (`own`).
-5. Supply `contentHash`, `blank` and `setup`; a save whose content hash differs is refused on load.
+5. Supply `contentHash`, `blank` and `setup`; a save whose content hash differs is refused on load. Replay tools that need a failed action index opt in to the restore diagnostics (see Saves below).
 6. Opt in to timing, debug, legal and queries by using their parts; add `GameRules.debug` for the debug console.
 7. Keep `ordered` prompts small: test helpers enumerate every order (about 110k answers for 8 options).
 8. A game with its own engine passes an `EnginePort` (`kernelPort` wraps this kernel) to card-harness and tutorial.
@@ -25,6 +25,10 @@ The kernel of a game engine: seeded random numbers, canonical JSON and hashes, t
 16. Keep a scenario's objectives (a count to reach, steps in or out of order, failures or a round deadline, an owner seat) with `startObjectives` / `advanceObjective` / `markStep` / `failObjective` / `objectivesRoundEnd` (K546, "Objectives" below), not a hand-kept counter or flag; react to done or failed through `objectivesCheck(react)` in `cfg.checkpoint.checks` (or `reportObjectives`), which reports each one once, not by re-reading `objectiveDone` every step.
 17. Decide whether simultaneous triggers ask their order from `triggersFor`'s 4th argument `batch` (every occurrence that happened in that settle, all batches collected together, K696): `interactive` only when the order changes the result, else `silent`; switch a replacement on from card data in `replacementsFor`'s 3rd argument `content` (K697), not by offering it everywhere and declining it later.
 18. Mark a state check `afterBatch: true` (K703) when it must see a whole batch settled (no unit of a side left after one effect removed several): it then runs only when the outermost batch has settled, before that batch's triggers resolve ("state checks before triggers"). Without it a check runs between the occurrences of a batch, as before (`timing.md`, "When state checks run").
+
+19. For state checks at settled engine boundaries, set `GameRules.invariants` to `stateInvariants(config)` (K592) or compose its returned violations with the game's own checks. Select physical instance IDs, conserved pools and permanent flags only; the game declares idle and its queue lengths. Never treat printed card IDs as unique instances. Set `invariantPolicy: 'strict'` when an invalid transition must be rejected, or `'diagnostic'` when the caller can handle violations. Publish state only after a successful strict call. See the [runnable policy example](#run-a-strict-policy).
+
+20. Check `ApplyResult.triggerCap` when validating setup, an action or a debug edit. It marks the first chain that dropped live triggers in that run. `replay` and `restoreSave` locate the first truncation by zero-based action index (null for setup). The engine keeps the settled state and the game's optional capped event. Treat a flagged result as incomplete rule execution even if the state has a terminal result and the hashes match.
 
 **Common mistakes:**
 - Using the old `ctx.then` then `ctx.ask` form in new code: it is deprecated.
@@ -50,7 +54,7 @@ The kernel of a game engine: seeded random numbers, canonical JSON and hashes, t
 - Engine port (K390, `port.ts`): `EnginePort<G, W>` is what a game with its own engine passes to `card-harness` Scenario and `tutorial` (see their READMEs); `PortTypes`, `PortPrompt`, `PortAnswer`; `portAnswer` / `portSettle` (a step with its events, taken from `events(s)` past the previous count), `portOptions`, `portResult`; `kernelPort(rules, content, { start?, options?, gameRules?, put? })` wraps an engine-core game (events from `state.log`, so up to `LOG_CAP`).
 - Prompts (K222): `ctx.ask(prompt, resume)` pushes `resume` and binds it to the prompt (`task.prompt` = the prompt id); the answer goes to that task, and an answer whose bound task is not on top is an `EngineBugError`. The old form (`ctx.then(resume)`, then `ctx.ask(prompt)`) still works but is deprecated; asking with no task pushed by the handler, `ctx.then` after `ask`, and a prompt nobody can answer (fewer enabled options than `min`, or `max < min`; the message names the prompt, its kind, seat and resume task, and the disabled options with their reasons) are `EngineBugError`s; a stale `prompt` tag left on another task is ignored. `KernelPrompt` has optional `kind` (what is asked) and `seat` (who answers, string or number; compare with `seatKey`, so 0 and '0' are one seat), read by prompt-host, sim-pool `bySeat`, opponent and learned-opponent; timing's default prompts carry `kind` `timing.prevent` / `timing.replace` / `timing.order` and the chooser as `seat`.
 - Undo by action (`newHistory`, `recordAction`, `appendAction`, `undo`, `redo`, `canUndo`, `stateAt`) or by step (`newSteps`, `addStep`, `extendStep`, `undoStep`, `redoStep`, `canUndoStep`, `replaySteps`); over an engine port by step (`newPortSteps`, `addPortStep`, `extendPortStep`, `undoPortStep`, `redoPortStep`, `canUndoPortStep`, `replayPortSteps`): `undo.md`.
-- Saves (`createSave`, `restoreSave`, `importSave`, `exportSave`, `migrateSave`): `CreateSaveInput.state` (optional, K266) is sealed without a replay; it must be the state the log replays to, it is not checked on write, and an inconsistent one fails its hash on load.
+- Saves (`createSave`, `restoreSave`, `importSave`, `exportSave`, `migrateSave`): `CreateSaveInput.state` (optional, K266) is sealed without a replay; it must be the state the log replays to. Strict mode checks this snapshot without transition context. On load the engine replays the actions and verifies the hash. For replay tools pass `{ actionFailure: true }` as the fifth argument to `restoreSave` to get `failedAt` (zero based in the migrated log) and `actionError` on an action failure. File-level errors have neither field.
 - Recorded entropy (`AnswerAction.reseed`, `freshWords`), named random overrides and the undo bar (`setRngOverrides`, `randomWords`, K108): `random.md`.
 - Test and play helpers (`differentialApply`, kernel properties, `enumerateAnswers`, `firstPicks`, `randomPicks`, `playUntil`, `expectEvents`, `skipEmptyProblems`, K25, K30; `outcomePicks` from `KernelOption.outcome`, K114): `helpers.md`.
 - Step causes (`inCause`, `ruleCause`, `effectCause`, `causeProblems`, K79, opt-in; work queued with `ctx.then` inside `inCause` runs later without the cause): `cause.md`.
@@ -62,6 +66,34 @@ The kernel of a game engine: seeded random numbers, canonical JSON and hashes, t
 - Statuses (K542, `statuses.ts`, opt-in): `giveStatus`, `removeStatus`, `hasStatus`, `statusCount`, `statusesOf`, `statusLeft` over a game's `StatusTable`; see "Statuses (K542)" below.
 - Objectives (K546, `objectives.ts`, opt-in): `startObjectives`, `advanceObjective`, `markStep`, `failObjective`, `objectivesRoundEnd`, `objectiveProgress`, `objectiveDone`, `objectiveFailed`, `objectivesOf`, `reportObjectives`, `objectivesCheck`; see "Objectives (K546)" below.
 - A number with its parts (K526, K582, `numbers.ts`, opt-in): `numberParts(base, modifiers, order, opts?)` applies `NumberModifier`s (set, add, multiply, floor, cap; own minimum, per-unit count, condition, scope) in the game's `NumberOrder` and returns the value with `parts` (`{ source, op, amount, applied, ref? }`), every floor or cap that bit and whether it still holds (`bounds`; `bound` is the last) and, on request, what changed nothing and why; `effectModifiers` maps the lasting effects (`effectsOf`) onto modifiers; `partsDirection`. For stats, costs, payment, `bar` reasons and a breakdown on screen: [numbers.md](numbers.md).
+
+
+## Headless save round trip
+
+Use a string for `options.seed` and a plain object for `rules` (an empty object if the game has no rule settings). Keep the original options and rules and the list of accepted actions. The save reader replays those inputs with the same content and verifies the final state seal.
+
+This example uses the checkout's [counter fixture](fake/counter.ts). Run the snippet from `components/engine-core` with `node --input-type=module-typescript`.
+
+```ts
+import assert from 'node:assert/strict';
+import { applyAction, createGame, createSave, exportSave, importSave, type AnswerAction } from './kernel.ts';
+import { CONTENT, COUNTER, RULES, type CounterState } from './fake/counter.ts';
+
+const options = { seed: 'save-round-trip' };
+const add = (state: CounterState): AnswerAction =>
+  ({ kind: 'answer', promptId: state.prompt!.id, picks: ['add'] });
+const initial = createGame(COUNTER, options, RULES, CONTENT).state;
+const first = add(initial);
+const current = applyAction(COUNTER, initial, first, CONTENT).state;
+const file = createSave(COUNTER, {
+  options, rules: RULES, actions: [first], state: current, undoUsed: false, savedAt: new Date().toISOString(),
+}, CONTENT);
+const restored = importSave(COUNTER, exportSave(file), CONTENT);
+if (!restored.ok) throw new Error(restored.error);
+const next = add(current);
+const events = applyAction(COUNTER, current, next, CONTENT).events;
+assert.deepEqual(applyAction(COUNTER, restored.state, next, CONTENT).events, events);
+```
 
 ## Statuses (K542)
 
@@ -107,3 +139,19 @@ console.log(enumerateAnswers(state, (_s, a) => !a.picks.includes('draw'))) // ev
 ```
 
 Cost: an `ordered` prompt lists every order of every pick set (about 110k answers for 8 options, 9.8M for 10), and `valid` filters after the list is built. Keep ordered prompts small or enumerate in the game.
+
+## Reusable state invariants (K592)
+
+Import `stateInvariants` from `tools.ts` or `index.ts`. It builds a `GameRules.invariants` callback with optional selectors for disjoint instance zones, their expected instance universe, nonnegative safe integer counters, conserved resource totals, permanent flags and idle queues. Compose it with game-owned checks for such rules as legal ownership, allowed zones and upper counter bounds. Selectors and custom checks must be pure.
+
+The kernel checks the settled result of `createGame`, `advance`, and each normal or debug action. An action runs through its queued tasks up to the next prompt or the end of the game before checking. Temporary states inside that operation can violate an invariant if the operation restores it before yielding. If a game deliberately suspends an operation across a prompt, its selectors must account for that phase. The callback receives previous state and events for actions. Setup and fixture settling have no previous state. In strict mode `kernelPort` also checks a settled state supplied through its custom `start` or `settle`. A custom fixture with tasks pending and no open prompt is checked when those tasks settle.
+
+- `invariantPolicy: 'strict'` throws `StateInvariantError` with structured `violations` before returning a bad state or events. Keep the previous authoritative state when an action throws. A replay returns `ok: false` with `invariantFailure: true`, the last valid state (or null on setup failure) and the rejected action's zero-based index if present. Save restore rejects the recording and reports the invariant violations even if its seal matches.
+- `invariantPolicy: 'diagnostic'` returns the state and `violations` from setup, settling and actions. `replay` and `restoreSave` also report any violations in execution order. State-only APIs such as `stateAt` cannot return these diagnostics. Use strict mode when using those APIs to enforce a rule.
+- With no policy, games keep the global `setInvariantChecking` diagnostic switch, which defaults to off in the kernel. The simulator enables that switch for fuzzing. Explicit policies do not depend on it. Simulations fail a game on either diagnostic or strict violations and report its seed and failing step.
+
+### Run a strict policy
+
+[Run the strict policy example](fake/strict-invariants.ts) with `node components/engine-core/fake/strict-invariants.ts` from the kit root. The [complete board definition](fake/invariant-board.ts) shows the exact `stateInvariants<Board, null>({ zones, counters, totals, queues })` selectors and composes them with game-owned zone, ownership, and counter-cap rules. Its `zones.cards.locations` returns a map of zone name to physical instance IDs, and `zones.cards.expected` declares the instance IDs that must exist. Its `totals.tokens.actual` and `totals.tokens.expected` return the observed and required token totals. Its `queues(state)` returns `{ idle, pending: { tasks } }`. The board treats a completed game as idle and counts the tasks left on its stack. An open prompt still counts as active while its continuation is pending.
+
+The example sets `invariantPolicy: 'strict'` explicitly, moves a card between zones through queued tasks, and rejects invalid setup, an invalid settled action, and a completed board with a pending task. It verifies that a rejected action leaves the prior state intact. The same invalid action returns a candidate state and structured violations with `invariantPolicy: 'diagnostic'`. An application should only publish the new state returned from a successful strict call. The example runs with the global diagnostic switch unset.

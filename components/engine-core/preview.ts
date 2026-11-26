@@ -4,7 +4,7 @@
 import { applyActionWith, validateAction } from './apply.ts';
 import { canonicalJson } from './canonical.ts';
 import { ctxEvents } from './ctx.ts';
-import type { Ctx, GameRules, GameTypes, HandlerTable } from './types.ts';
+import type { Ctx, GameRules, GameTypes, HandlerTable, TriggerCapDiagnostic } from './types.ts';
 
 export type PreviewStop = 'complete' | 'choice' | 'hiddenInformation' | 'rejected';
 
@@ -19,6 +19,7 @@ export interface Preview<G extends GameTypes> {
   readonly stop: PreviewStop;
   readonly error?: string;
   readonly events: readonly G['event'][];
+  readonly triggerCap?: TriggerCapDiagnostic;
   readonly numbers: Readonly<Record<string, { readonly before: number; readonly after: number }>>;
 }
 
@@ -63,7 +64,7 @@ export function preview<G extends GameTypes>(
     const r = applyActionWith(game, state, action, content, table);
     if (hides(r.state, r.events)) return { stop: 'hiddenInformation', events: seen, numbers: pair(before, last) };
     const stop = r.state.prompt !== null && opts.nested?.(r.state) === true ? 'choice' : 'complete';
-    return { stop, events: r.events, numbers: pair(before, count(r.state)) };
+    return { stop, events: r.events, numbers: pair(before, count(r.state)), ...(r.triggerCap === undefined ? {} : { triggerCap: r.triggerCap }) };
   } catch (e) {
     if (e !== STOP) throw e;
     return { stop: 'hiddenInformation', events: seen, numbers: pair(before, last) };

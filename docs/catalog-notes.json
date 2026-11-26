@@ -110,7 +110,23 @@
     ],
     "visible": false,
     "release": 1,
-    "gameSupplies": "The spaces, their neighbours and the placement kinds."
+    "gameSupplies": "The spaces, their neighbours and the placement kinds.",
+    "entry": ["index.ts", "movement.ts"]
+  },
+  "board-model/movement": {
+    "title": "Weighted movement and displacement",
+    "tags": ["weighted", "movement", "displacement", "push", "chain", "atomic", "zero-cost", "paths"],
+    "use": "Enumerate legal weighted destinations and plan atomic forced movement for an occupied board.",
+    "guide": "movement.md"
+  },
+  "growing-map": {
+    "use": "A player reveals a tile or room from a seeded deck and adds it at an open board edge.",
+    "not": "Tile geometry, rotation, drawing or a game's rules for where tiles fit.",
+    "title": "Board that grows as you explore",
+    "tags": ["explore", "tile deck", "reveal a room", "open edge", "growing map"],
+    "visible": false,
+    "release": 1,
+    "gameSupplies": "The starting board, open edges, tile deck and the rules for joining a tile."
   },
   "grid-map": {
     "use": "A square grid board with walls: adjacent spaces, grid distance and range, shortest paths, line of sight, tiles that turn, and targeting shapes (within range, adjacent, row, column, line, area).",
@@ -270,10 +286,13 @@
     "gameSupplies": "The build folder and the size limits.",
     "entry": [
       "check-bundle-size.ts"
+    ],
+    "hooks": [
+      "measureBuild + run: check a media cap for images, fonts and audio, including the first download; follow imports for initial accounting"
     ]
   },
   "campaign": {
-    "use": "A campaign of linked scenarios kept as a plain log.",
+    "use": "Linked campaign scenarios with a plain log, calendar instructions, a changing roster and a shared card box.",
     "not": "A single game's rules or story text (story).",
     "title": "Linked scenarios kept as a log",
     "tags": [
@@ -288,11 +307,15 @@
       "deck carried",
       "record",
       "campaign setup",
-      "phone campaign"
+      "phone campaign",
+      "campaign calendar",
+      "player roster",
+      "shared card box",
+      "deck copy limits"
     ],
     "visible": false,
     "release": 1,
-    "gameSupplies": "The scenarios and what a result changes."
+    "gameSupplies": "The scenarios, date instructions, roster rules and card limits."
   },
   "card-attachments": {
     "use": "Cards tucked under or fanned past a host card with a pure footprint, and the tokens on a card: one per token, ×N past a cap, number boxes; or cards in one sleeve drawn as one composite per face: inserts under a die-cut host, each cut to its own die-cut, read through the host's notch, their tabs past the sleeve's open edge.",
@@ -340,13 +363,19 @@
     "looks": "A row of cards fanned to fit the width; the one under the pointer lifts.",
     "visible": true,
     "release": 1,
-    "gameSupplies": "The cards, their face view and the look."
+    "gameSupplies": "The cards, their face view and the look.",
+    "hooks": [
+      "CardHand: show a card hand with animation speed and play glide controlled by the game"
+    ]
   },
   "card-harness": {
-    "use": "Testing card effects on real cards with the scenario builder, prompt delivery, choice probe and inventory with stale check; test depth: a full-resolve test per clause and a poor test (expectNotOffered, expectNotFired) per conditional clause.",
+    "use": "Testing card effects on real cards with the scenario builder, prompt delivery, choice probe and inventory with stale check; test depth: a full-resolve test per clause and a poor test (expectNotOffered, expectNotFired) per conditional clause. Check semantic mutation coverage across the clause inventory.",
     "not": "Card rules themselves; those stay in the game.",
     "title": "Test card effects on real cards",
     "tags": [
+      "runtime card tests",
+      "test loaded card pack",
+      "runtime card clauses",
       "restriction phrase case sensitive",
       "restriction word at start of text",
       "restriction key not phrases",
@@ -628,7 +657,7 @@
     "gameSupplies": "The table of card fields."
   },
   "card-zones": {
-    "use": "Decks, hands, discards and play areas as ordered id lists in engine state, with who sees what and a per-seat view for opponents and the UI. A zone can have a capacity (hand limit, slot limit) that rules raise and give up, with a state check that asks the owner which cards over the limit go to the discard. Hand, pile and drag UI parts are planned (K218-K220), not built: ask for them, do not build them in the game. Recipe: docs/recipes/card-table.md. shuffleZone shuffles a zone on ctx.rng; its rng name selects a named override, so a test can force the shuffle order (shuffle zone named rng, shuffle deck rng name override, forced order test).",
+    "use": "Decks, hands, discards and play areas as ordered id lists in engine state, with who sees what and a per-seat view for opponents and the UI. A zone can have a capacity (hand limit, slot limit) that rules raise and give up, with a state check that asks the owner which cards over the limit go to the discard. Use card-hand, card-pile and drag-drop for the matching UI. Recipe: docs/recipes/card-table.md. shuffleZone shuffles a zone on ctx.rng; its rng name selects a named override, so a test can force the shuffle order (shuffle zone named rng, shuffle deck rng name override, forced order test).",
     "not": "Boards and spaces (board-model), card faces, or rules about running out.",
     "title": "Decks, hands and discards as lists",
     "tags": [
@@ -713,7 +742,7 @@
   },
   "check-runner": {
     "mechanics": "none: build, CI or repository tooling",
-    "use": "Running `npm run check` lanes in parallel with process-tree timeouts and a drift check.",
+    "use": "Running `npm run check` lanes in parallel with process-tree timeouts and a drift check; optionally recording and verifying acceptance receipts bound to the consumer, kit pin and authored inputs.",
     "not": "Writing the checks themselves.",
     "title": "Run all checks in parallel",
     "tags": [
@@ -730,13 +759,14 @@
     "gameSupplies": "The list of checks and their lanes.",
     "entry": [
       "check-runner.ts",
+      "receipt.ts",
       "gate-all.ts",
       "test-cost.ts"
     ]
   },
   "ci-templates": {
     "mechanics": "none: build, CI or repository tooling",
-    "use": "Rendering a game's CI workflows, full gate and local CI script from one `ci.config.json`.",
+    "use": "Rendering a game's CI workflows, full gate and local CI script from one `ci.config.json`. The full gate installs browser drivers using the game's Playwright package and runs its browser acceptance scripts on a free port.",
     "not": "Rules for what the gate contains (repo-gate, check-runner).",
     "title": "Build server workflows for a game",
     "tags": [
@@ -752,6 +782,15 @@
     "release": 1,
     "gameSupplies": "ci.config.json with the game, runner and checks.",
     "exports": "`render.mjs`, `ci.yml`, `full-gate.yml`, `nightly-fuzz.yml`, `local-ci.sh`, `install-wsl.sh`, `watch-run.sh`, `watch-run.mjs`, `skip-reporter.ts`"
+  },
+  "combat": {
+    "use": "Resolve an attack using the game's calculation, apply typed damage after armor, and give defeat its own timing window.",
+    "not": "Choosing legal targets, rolling dice, tracking turns, or deciding what defeat does in the game.",
+    "title": "Resolve attacks and damage",
+    "tags": ["combat damage type", "armor piercing damage", "defeat timing window", "attack resolution", "combat verbs"],
+    "visible": false,
+    "release": 1,
+    "gameSupplies": "The attack calculation, legal targets, health and armor stats, defeat rules, and printed words."
   },
   "content-pack": {
     "use": "Card, deck or scenario data (CSV or JSON) loads through a zod schema per record kind with id-uniqueness, dangling-reference and card-language verb checks, every problem listed at once; also a base + expansions pick list with dependency ticking and a merge into one index.",
@@ -959,7 +998,10 @@
     "looks": "A card or pile is picked up and dropped on a board target, answering a question.",
     "visible": true,
     "release": 1,
-    "gameSupplies": "The sources, the targets and the open prompt options."
+    "gameSupplies": "The sources, the targets and the open prompt options.",
+    "hooks": [
+      "useDragDrop + DragGhost: drag a card onto a target with one animation speed for the ghost return"
+    ]
   },
   "e2e-helpers": {
     "mechanics": "none: test tooling",
@@ -1018,7 +1060,7 @@
   },
   "effect-library": {
     "mechanics": "none: motion only (release 1.1)",
-    "use": "Release 1.1 visual effects: the twelve motion verbs, particles, ambience, canvas layers, an opt-in logo glitch.",
+    "use": "Release 1.1 visual effects: registered effects listed in the component README, plus particles, ambience, canvas layers and an opt-in logo glitch.",
     "not": "Deciding which effect plays (the game's motion specs and motion-frame).",
     "title": "Visual effects for cards and pieces",
     "tags": [
@@ -1038,7 +1080,7 @@
     "gameSupplies": "The motion specs and the elements to move."
   },
   "engine-core": {
-    "use": "Every game's engine: seeded random, tasks and prompts, copy on write, replay, undo, saves, timing windows and triggers.",
+    "use": "Every game's engine: seeded random, tasks and prompts, copy on write, state invariants, replay, undo, saves, timing windows and triggers.",
     "not": "A game's rules or content; the game writes its own `GameRules`.",
     "title": "Game rules engine core",
     "tags": [
@@ -1084,7 +1126,10 @@
       "mission progress",
       "goal deadline",
       "lose condition prompt",
-      "lose condition"
+      "lose condition",
+      "engine invariant policy",
+      "duplicate card identities",
+      "card zone invariants"
     ],
     "visible": false,
     "release": 1,
@@ -1123,7 +1168,7 @@
     "gameSupplies": "The table of event types and their words."
   },
   "game-store": {
-    "use": "Every game with a screen: one store over the game's one `defineGame` object (rules, content, seats, start, view, forced, opponent, words): an answer, the forced answers and the opponent's turn after it are one undo step and one paced step; step undo and redo, autosave, load with the undo steps rebuilt; `sim.ts` makes the same object sim-pool's game module, the opponent driver and replay-cli's engine. Recipe: docs/recipes/game-store.md.",
+    "use": "Every game with a screen: one store over the game's one `defineGame` object (rules, content, seats, start, view, forced, opponent, words): an answer, the forced answers and the opponent's turn after it are one undo step and one paced step; step undo and redo, autosave, load with the undo steps rebuilt; `sim.ts` makes the same object sim-pool's game module, the opponent driver and replay-cli's engine. It validates the spec's named registrations and adapts GameDef into per-seat observations with game-owned secrecy assertions. Recipe: docs/recipes/game-store.md.",
     "not": "A per-action undo (engine-core undo.ts); hot-seat play with no opponent (prompt-host answerWithForced with seat 'all' in the game's own store).",
     "title": "One store tying the game together",
     "tags": [
@@ -1133,7 +1178,8 @@
       "undo",
       "prompt",
       "view",
-      "screen"
+      "screen",
+      "GameDef opponent bot views"
     ],
     "visible": false,
     "release": 1,
@@ -1286,6 +1332,9 @@
     "gameSupplies": "The content and its look.",
     "entry": [
       "ui.tsx"
+    ],
+    "hooks": [
+      "Modal + ConfirmDialog: show a modal dialog with keyboard focus, Tab containment and Escape ownership"
     ]
   },
   "motion-frame": {
@@ -1330,7 +1379,8 @@
       "skipAll: drop every queued beat on undo, load or leaving the screen",
       "skipOnInput + hurryOnInput: skip or hurry the animation on a click or key",
       "withReducedMotion + withAutomationOff: the motion speed setting, still in tests and under reduced motion",
-      "validateSpecs: check that every motion spec names a known verb and zone"
+      "validateSpecs: check that every motion spec names a known verb and zone",
+      "motionRate: share one motion preference across hand, drag and timeline durations by converting a duration factor to a rate"
     ]
   },
   "offline": {
@@ -1547,7 +1597,7 @@
     "gameSupplies": "The words to show, free of ids."
   },
   "plan-checker": {
-    "use": "Checking a game plan and listing a batch's line ranges (`plancheck.py --batch`).",
+    "use": "Checking a game plan and listing a batch's line ranges (`plancheck.py --batch`); explicit strict applicability supports non-card plans while retaining rule, scenario, session and reuse checks.",
     "not": "Anything but the plan file format.",
     "title": "Check a build plan document",
     "tags": [
@@ -1673,7 +1723,10 @@
     "looks": "The box that asks the player a question, with a widget for each kind of question.",
     "visible": true,
     "release": 1,
-    "gameSupplies": "A widget for each prompt kind, and the look."
+    "gameSupplies": "A widget for each prompt kind, and the look.",
+    "hooks": [
+      "useBoardPick: board pick confirmation that yields keyboard input to dialogs"
+    ]
   },
   "prompt-source": {
     "use": "Each prompt must name its source card and clause and who decides.",
@@ -1695,7 +1748,7 @@
   },
   "reference-game": {
     "mechanics": "none: test tooling",
-    "use": "Kit CI only: generated card and solo tactical references whose own checks verify the kit's compatibility contracts.",
+    "use": "Kit CI only: generated card and solo tactical references whose own checks verify the kit's compatibility contracts, shared courier assembly and bounded runtime/semantic rule evidence.",
     "not": "Pulling into a game or copying as a starter; use scaffold for a new game.",
     "title": "Tiny sample game that tests the kit",
     "tags": [
@@ -1707,7 +1760,10 @@
       "demo",
       "solo tactical reference",
       "generated compatibility game",
-      "tactical reference contract"
+      "tactical reference contract",
+      "reference card acceptance",
+      "courier shared compatibility",
+      "reference printed mutation controls"
     ],
     "visible": false,
     "release": 1,
@@ -1739,7 +1795,7 @@
   },
   "repo-gate": {
     "mechanics": "none: build, CI or repository tooling",
-    "use": "A repository gate: file sizes, secrets, session URLs, runner names, card ids in rules code, art budgets.",
+    "use": "A repository gate for file sizes, staged dependency links, secrets, session URLs, runner names, card ids in rules code and art budgets.",
     "not": "Code lint or tests.",
     "title": "Repository safety check",
     "tags": [
@@ -1750,7 +1806,10 @@
       "secrets",
       "scans",
       "names",
-      "budget"
+      "budget",
+      "staged node_modules",
+      "tracked dependency link",
+      "dependency symlink"
     ],
     "visible": false,
     "release": 1,
@@ -1861,7 +1920,7 @@
   },
   "scaffold": {
     "mechanics": "none: build, CI or repository tooling",
-    "use": "Starting a new game: one command makes the empty working repo (Vite, ESLint, Vitest, tsconfig, CI, kit pull, stub GameRules).",
+    "use": "Start an empty working game repo, or use a declarative game spec to select components and generate a pinned scaffold. Run its Chromium browser smoke for the stub menu, setup, step and undo.",
     "not": "Anything inside a running game; it is a generator run from the kit checkout.",
     "title": "Start a new game project",
     "tags": [
@@ -1871,17 +1930,31 @@
       "project",
       "setup",
       "create",
-      "repo"
+      "repo",
+      "starter",
+      "scaffold"
     ],
     "visible": false,
     "release": 1,
     "gameSupplies": "The game id and name.",
-    "exports": "`node kit.mjs new <dir> <id> \"<Name>\"`; `scaffold(options)` in scaffold.js"
+    "exports": "`node kit.mjs new <dir> <id> \"<Name>\"`, `node kit.mjs spec resolve|generate`, `scaffold(options)` in scaffold.js"
+  },
+  "scaffold/spec": {
+    "title": "Declarative game starter",
+    "tags": ["declarative game starter", "game spec scaffold", "pinned declarative project scaffold"],
+    "use": "Resolve component profiles and generate a pinned, retryable local scaffold from a game specification.",
+    "guide": "README.md"
+  },
+  "scaffold/courier": {
+    "title": "Playable courier assembly",
+    "tags": ["courier game assembly", "playable tactical starter", "generate courier rules store simulation", "courier plan gates", "generated courier acceptance", "courier executable rule inventory"],
+    "use": "Generate the original courier rules, store, public-view UI and simulation from a pinned, bounded configuration; wire its strict non-card plan, executable rule inventory, text and theme gates. Execute the generated acceptance before claiming the game slice passed.",
+    "guide": "README.md"
   },
   "scan-ingest": {
     "mechanics": "none: content tooling (art, scans, card data)",
     "use": "Turning flatbed scans into one cropped upright image per item; a printed board scan with live state drawn into its boxes, die-cut pieces at true size, playmat box detection, tone profile.",
-    "not": "Scanning crew boards or anything shipped in-game.",
+    "not": "Scanning crew boards. Offline scan tools prepare assets. ScanBoard and Piece are available in-game.",
     "title": "Turn scans into cropped pictures",
     "tags": [
       "scan",
@@ -1897,7 +1970,10 @@
     "visible": false,
     "release": 1,
     "gameSupplies": "The scan files and the crop settings.",
-    "exports": "Python package `scanpipe`; TS `index.ts` (measureBoxes, planOverlay, clipPathOf, mmStyle, uniformOutlines...), `ui.ts` (ScanBoard, Piece)"
+    "exports": "Python package `scanpipe`; TS `index.ts` (measureBoxes, planOverlay, clipPathOf, mmStyle, uniformOutlines...), `ui.ts` (ScanBoard, Piece)",
+    "hooks": [
+      "loadGeometry: load scan board geometry, retry a failed attempt and cache successful measurements"
+    ]
   },
   "screens": {
     "use": "Main menu and new-game set-up form (seats, scenario, difficulty, extras) from data, unstyled, with a pure default and validate. Non-table screen frame, footer, disclaimer and persistent theme toggle.",
@@ -1967,8 +2043,8 @@
     "gameSupplies": "The game store and a bot."
   },
   "sim-pool": {
-    "use": "Playing many whole games with drivers on worker threads, fuzzing, sanity bands, sweeps, the K200 weight tuner and paired validation; the whole-game check of unreached clauses (proof from counted full-resolve tests, with a trace input built from the game's own log so a static clause applied with an effect counts as proven), coverage rounds and a findings file to replay a failing seed; K737 random debug edits (randomDebug hook, debug N) applied every N actions in a fuzz run, and a driver or hasten returning a debug action.",
-    "not": "A driver's strategy (the game or opponent supplies it).",
+    "use": "Playing many whole games with drivers on worker threads, fuzzing, sanity bands, sweeps, the K200 weight tuner and paired validation; the whole-game check of unreached clauses (proof from counted full-resolve tests, with a trace input built from the game's own log so a static clause applied with an effect counts as proven), coverage rounds and a findings file to replay a failing seed; K737 random debug edits (randomDebug hook, debug N) applied every N actions in a fuzz run, and a driver or hasten returning a debug action. Validate public seat views as JSON, detect hidden information leaks, and check registered driver names before a batch runs.",
+    "not": "Strategy beyond one nested public choice (the game or opponent supplies it).",
     "title": "Bulk game simulator",
     "tags": [
       "simulate",
@@ -2000,7 +2076,12 @@
       "rounds until no new clause",
       "play whole games",
       "by script",
-      "e2e"
+      "e2e",
+      "bounded public greedy",
+      "public nested preview",
+      "test pilot bot random greedy",
+      "consumed policy view checks",
+      "simulation completion"
     ],
     "visible": false,
     "release": 1,
@@ -2014,8 +2095,15 @@
       "runResumable + codeVersion: a long run that resumes after a crash",
       "tune + validate: tune weights, then check on fresh seeds",
       "proveResolved + provenClauses: prove each clause resolved in a played game",
-      "dispatchTrace: count a clause resolved only when verb dispatch ran it, not in a dry run"
+      "dispatchTrace: count a clause resolved only when verb dispatch ran it, not in a dry run",
+      "greedyBot + greedyPreview: score legal moves with bounded public nested look-ahead and a legal fallback"
     ]
+  },
+  "sim-pool/greedy": {
+    "title": "Simple public-view AI opponent",
+    "use": "Play against the computer, choose the best legal move, or let a bot pick a legal action with bounded engine previews and a public fallback. Use greedyBot and greedyPreview from sim-pool/browser.ts for live play and sim-pool/index.ts for simulation.",
+    "tags": ["play against computer", "simple AI opponent", "choose best legal move", "bot picks legal move", "computer chooses legal action", "bounded lookahead", "public view opponent", "public preview opponent", "greedyBot", "greedyPreview"],
+    "guide": "greedy.md"
   },
   "small-helpers": {
     "mechanics": "none: small helpers with no rule in them",
@@ -2267,7 +2355,10 @@
     "visible": false,
     "release": 1,
     "gameSupplies": "The art config: sources, ids and output.",
-    "exports": "Scripts: `art-index`, `art-fetch`, `art-extract`, `art-render-pdf`, `art-ci-cache`, `art-publish`; `lib`: `cellBox`, `decodePng`, `encodePng`, `imageSize`, `codec`"
+    "exports": "Scripts: `art-index`, `art-fetch`, `art-extract`, `art-render-pdf`, `art-ci-cache`, `art-publish`; `lib`: `cellBox`, `decodePng`, `encodePng`, `imageSize`, `codec`",
+    "hooks": [
+      "art-publish: publish art with filename collision checks and recover interrupted replacement"
+    ]
   },
   "tooling-scripts": {
     "mechanics": "none: build, CI or repository tooling",
@@ -2295,7 +2386,10 @@
     "visible": false,
     "release": 1,
     "gameSupplies": "Each script takes its own paths and flags.",
-    "exports": "Scripts: `text-leak`, `art-check`, `shrink-png`, `mock-capture`, `contact-sheet`, `gen-from-table`, `docs-index`, `dossier-sync`, `fonts-fetch`, `woff`, `bundle-node`, `home-screen`, `move`, `lookup`, `launch`"
+    "exports": "Scripts: `text-leak`, `art-check`, `shrink-png`, `mock-capture`, `contact-sheet`, `gen-from-table`, `docs-index`, `dossier-sync`, `fonts-fetch`, `woff`, `bundle-node`, `home-screen`, `move`, `lookup`, `launch`",
+    "hooks": [
+      "art-check: check the output manifest against sources and independently required logical art ids"
+    ]
   },
   "traceability": {
     "mechanics": "none: test tooling",
@@ -2315,8 +2409,15 @@
     "release": 1,
     "gameSupplies": "trace.config.json.",
     "entry": [
-      "check-traceability.ts"
+      "check-traceability.ts",
+      "assertions.ts"
     ]
+  },
+  "traceability/assertions": {
+    "title": "Executable rule evidence",
+    "tags": ["executable", "arbiter", "rule", "evidence", "fixture", "assertion", "refusal", "control", "inventory"],
+    "use": "Run arbiter fixtures and check that every due rule has passing setup or action evidence.",
+    "guide": "rule-evidence.md"
   },
   "track": {
     "use": "A row of spaces with a marker that glides (drawn row or spots on a mat image), per-space marks, labels from the game's words; a hop-and-fill bar with a badge pop; a step list with one lit step; unstyled.",
@@ -2397,7 +2498,11 @@
     ],
     "visible": false,
     "release": 1,
-    "gameSupplies": "Depends on the helper; see its entry."
+    "gameSupplies": "Depends on the helper; see its entry.",
+    "hooks": [
+      "bindPromptKeys + bindPlayKeys: background keyboard shortcuts and prompt keys that pause under a dialog",
+      "activeOverlay: find the active overlay keyboard owner"
+    ]
   },
   "voice": {
     "mechanics": "none: sound or voice only",
@@ -2503,6 +2608,24 @@
     "entry": [
       "playtest.ts"
     ]
+  },
+  "check-runner/receipts": {
+    "title": "Acceptance receipts bound to source and inputs",
+    "tags": ["acceptance receipt", "verify check execution evidence", "stale consumer acceptance", "bound kit revision", "cancelled check evidence"],
+    "use": "Record the existing full check plan's commands and outcomes with consumer, kit lock, specification and acceptance-definition fingerprints; reject stale, missing, stopped, truncated or unfinished local evidence. Does not certify test quality or authenticate execution.",
+    "guide": "README.md"
+  },
+  "plan-checker/applicability": {
+    "title": "Strict checks for non-card game plans",
+    "tags": ["strict noncard plan", "noncard plan applicability", "validate plan applicability", "explicit card and playtest scope"],
+    "use": "Declare whether card encoding and LLM playtesting apply, with reasons and contradiction checks; validate real rule and scenario inventories without legacy optional flags. Default plans retain the existing card requirements.",
+    "guide": "README.md"
+  },
+  "card-harness/mutations": {
+    "title": "Semantic mutation tests for card clauses",
+    "tags": ["semantic card clause mutation", "missing clause mutation coverage", "card mutant detection", "test changed card amounts", "mutate card effects"],
+    "use": "Run a game's original spec rows against altered card records, check an independent inventory of printed clauses, and fail the content gate on invalid, crashing, or surviving mutants and missing tests.",
+    "guide": "mutations-guide.md"
   },
   "engine-core/timing": {
     "title": "Prevention, replacement and triggers",
@@ -2633,6 +2756,12 @@
     ],
     "use": "A game that keeps its own engine still wants one row per op with checked fields, a run function and its text (`OpTable`, `runOp`, `validateOps`).",
     "guide": "README.md"
+  },
+  "card-language/payment-plans": {
+    "title": "Substitutable resource payment plans",
+    "tags": ["payment plans", "substitute resources", "wild resource", "required holdings", "spending vectors"],
+    "use": "Enumerate minimal ways to pay from a shared pool with substitutions and required holdings (`paymentPlans`), or rank affordable plans with a game-owned policy (`preferredPayment`).",
+    "guide": "payment.md"
   },
   "clock": {
     "use": "A marker on a row of spaces as rules data (countdown, round tracker, danger or doom track): steps forward or back by the game's number, thresholds that fire on landing or passing (lose, trigger, reward, limit) in order, once-only thresholds, per-space values such as a limit read from the marker's row; a lose space anywhere on the row, on landing or on passing; crossings become engine-core occurrences that can carry the threshold's data and space.",
@@ -2775,5 +2904,22 @@
       "cheatFields + cheatsFrom: the set-up form fields",
       "cheatedOf + cheatProblem: the cheated mark and the set-up check"
     ]
+  },
+  "visual-replay": {
+    "mechanics": "none: playback presentation over recorded engine actions",
+    "use": "Watch a recorded game on its own table with action and turn navigation.",
+    "not": "Headless determinism checks (replay-cli) or saving games (saves).",
+    "title": "Watch a recorded game",
+    "tags": [
+      "visual replay player",
+      "watch recorded game",
+      "playback controls",
+      "replay table",
+      "turn navigation"
+    ],
+    "visible": true,
+    "release": 1,
+    "gameSupplies": "The recording adapter, engine, player view, boundaries and table.",
+    "looks": "The game table shows recorded actions with playback controls."
   }
 }

@@ -1,6 +1,6 @@
 # game-kit
 
-The shared code for the owner's digital board-game builds: the best version of each reusable component, taken from the games already built. Private. For new games.
+The shared code for the owner's digital board-game builds: the best version of each reusable component, taken from the games already built. Public kit; game repositories are private. For new games.
 
 Needs Node 22.18 or newer: every kit tool runs with plain `node` (type stripping, no tsx or build step), so relative imports name their `.ts`/`.tsx` file and code uses erasable TypeScript syntax only (no enums, namespaces or parameter properties). Upgrading a game past that change: [upgrade-kit](docs/recipes/upgrade-kit.md).
 
@@ -15,7 +15,7 @@ Generated, never edited by hand: [docs/CATALOG.md](docs/CATALOG.md) and [docs/AR
 ## Rules
 
 1. **Shared code is edited here, nowhere else.** A game carries a locked copy in its `kit/` folder.
-2. **A game pins a version.** It pulls named components at a tag; nothing changes in a game until it pulls again.
+2. **A game pins a version.** A pull installs named components and their dependency closure and moves the whole installed kit to the selected tag. See [upgrade-kit](docs/recipes/upgrade-kit.md).
 3. **A game never edits its copy.** `node kit/kit.mjs check` fails when `kit/` differs from `kit/kit.lock.json`; every game runs it in its check chain.
 4. **Existing games take the tooling and the presentation.** They pull the build-tooling components as `docs/RETROFIT_PLAN.md` says (owner, 15 Nov 2026), and since 18 Nov 2026 their animations are rebuilt on `motion-frame` and `effect-library` (`docs/MOTION_RETROFIT_STUDY.md`); their engines and card code are not retrofitted.
 5. **A component is generic.** The game plugs in through data or a small interface. No game's rules, card names, zones or texts live here.
@@ -24,7 +24,7 @@ Generated, never edited by hand: [docs/CATALOG.md](docs/CATALOG.md) and [docs/AR
 ## Layout
 
 - `kit.mjs` - pull, check (`--source`), outdated, list, search, new, state, next-id (`--reserve`), worktree, finish, teardown (no dependencies; usage at the top of the file).
-- `scripts/` - `catalog.mjs` (CATALOG and ARCHITECTURE), `plan.mjs` (PLAN from `docs/plan/K<n>.md`), `check-components.mjs`, `readme-examples.mjs`, `state.mjs`, `agent.mjs` (worker commands), `coverage-table.mjs` (`npm run coverage`: line coverage per component).
+- `scripts/` - `catalog.mjs` (CATALOG and ARCHITECTURE), `plan.mjs` (PLAN from `docs/plan/K<n>.md`), `check-components.mjs`, `readme-examples.mjs`, `state.mjs`, `agent.mjs` (worker commands), `coverage-table.mjs` (line and branch counts from the existing V8 summary, with source-bound history artifacts; [coverage policy](docs/recipes/agent-workflow.md#coverage-evidence)).
 - `components/<name>/` - one folder per component: code, tests, `component.json`.
 - `docs/SELECTION.md` - which game each component comes from, and why.
 - `docs/PLAN.md` - the batches that build the kit, and their state (generated from `docs/plan/K<n>.md`, one file per row, and `docs/plan/_template.md`).
@@ -72,7 +72,7 @@ A game that needs something the kit lacks changes the kit. It never edits its co
 2. **Who decides.** The game's planner or architect, for size S or M. The owner, for stage 4 and for size L.
 3. **Who builds.** A worker started by the architect of the game that needs it, in a worktree of this repository, on a branch `k<n>-<name>`. One open pull request per component: look at the open ones first, and wait for, or continue, one that touches the same component.
 4. **How.** As "How a batch works" in `docs/PLAN.md`. Interfaces grow by addition, so a game that pulls a newer tag still compiles; a change that breaks callers says `breaking` in its title and lists what a game must change.
-5. **Done.** An independent review, CI green on the `kit` runner, squash-merge, the row in `docs/PLAN.md` marked done in the same pull request. Then a tag on main: the middle number goes up for a new component or feature, the last for a fix.
+5. **Done.** An independent review, CI green on the `kit` runner, steward merge commit, the row in `docs/PLAN.md` marked done in the same pull request. Then a tag on main: the middle number goes up for a new component or feature, the last for a fix.
 6. **Back in the game.** Run `node kit/kit.mjs outdated` to see the rows and breaking notes since the game's tag, pull the one new tag (`pull <tag>` moves the whole kit; names add components), run the game's check, commit `kit/`. A game pulls a newer tag only when it needs something in it.
 
 A bug in a component is fixed the same way: a failing test here first, then the fix, a tag, a pull.

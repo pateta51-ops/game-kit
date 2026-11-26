@@ -18,6 +18,8 @@ export {
 } from './iconWords.ts';
 export {
   bindPromptKeys,
+  activeOverlay,
+  isActiveElement,
   type KeyPress,
   type KeyRoot,
   type KeyTarget,

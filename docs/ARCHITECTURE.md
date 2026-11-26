@@ -52,6 +52,8 @@ graph LR
   check_runner["check-runner"]
   ci_templates["ci-templates"]
   clock["clock"]
+  combat["combat"] --> engine_core["engine-core"]
+  combat["combat"] --> card_language["card-language"]
   content_pack["content-pack"] --> card_harness["card-harness"]
   content_pack["content-pack"] --> card_language["card-language"]
   content_pack["content-pack"] --> card_parts["card-parts"]
@@ -88,6 +90,8 @@ graph LR
   glossary["glossary"] --> phone_mode["phone-mode"]
   glossary["glossary"] --> state_machines["state-machines"]
   grid_map["grid-map"]
+  growing_map["growing-map"] --> board_model["board-model"]
+  growing_map["growing-map"] --> engine_core["engine-core"]
   guarded_button["guarded-button"]
   layout_editor["layout-editor"] --> board_layout["board-layout"]
   learned_opponent["learned-opponent"] --> engine_core["engine-core"]
@@ -101,7 +105,7 @@ graph LR
   market_row["market-row"] --> picked_state["picked-state"]
   market_row["market-row"] --> motion_frame["motion-frame"]
   market_row["market-row"] --> deck_motions["deck-motions"]
-  modal_dialog["modal-dialog"]
+  modal_dialog["modal-dialog"] --> ui_helpers["ui-helpers"]
   motion_frame["motion-frame"]
   offline["offline"] --> state_machines["state-machines"]
   opponent["opponent"] --> sim_pool["sim-pool"]
@@ -109,6 +113,7 @@ graph LR
   perf["perf"] --> engine_core["engine-core"]
   perf["perf"] --> sim_pool["sim-pool"]
   phone_mode["phone-mode"] --> state_machines["state-machines"]
+  phone_mode["phone-mode"] --> ui_helpers["ui-helpers"]
   picked_state["picked-state"]
   picture_upscale["picture-upscale"]
   pieces_3d["pieces-3d"]
@@ -124,6 +129,7 @@ graph LR
   prompt_gallery["prompt-gallery"]
   prompt_host["prompt-host"] --> engine_core["engine-core"]
   prompt_host["prompt-host"] --> prompt_source["prompt-source"]
+  prompt_host["prompt-host"] --> ui_helpers["ui-helpers"]
   prompt_source["prompt-source"]
   proof_sheet["proof-sheet"]
   reference_game["reference-game"] --> scaffold["scaffold"]
@@ -154,7 +160,7 @@ graph LR
   token_bag["token-bag"]
   token_flights["token-flights"]
   tooling_scripts["tooling-scripts"]
-  traceability["traceability"]
+  traceability["traceability"] --> engine_core["engine-core"]
   track["track"] --> counter["counter"]
   track["track"] --> motion_frame["motion-frame"]
   transcription_check["transcription-check"]
@@ -162,6 +168,8 @@ graph LR
   tutorial["tutorial"] --> engine_core["engine-core"]
   tutorial["tutorial"] --> state_machines["state-machines"]
   ui_helpers["ui-helpers"]
+  visual_replay["visual-replay"] --> engine_core["engine-core"]
+  visual_replay["visual-replay"] --> paced_view["paced-view"]
   voice["voice"] --> sound_player["sound-player"]
   worker_rules["worker-rules"]
 ```
@@ -174,7 +182,6 @@ graph LR
 - `art-pipeline`
 - `audio-gen`
 - `automa`
-- `board-model`
 - `board-viewport`
 - `boundary-check`
 - `bug-reporter`
@@ -189,6 +196,7 @@ graph LR
 - `check-runner`
 - `ci-templates`
 - `clock`
+- `combat`
 - `content-pack`
 - `controls`
 - `coverage-report`
@@ -200,6 +208,7 @@ graph LR
 - `e2e-helpers`
 - `ghost-card`
 - `grid-map`
+- `growing-map`
 - `guarded-button`
 - `layout-editor`
 - `learned-opponent`
@@ -234,5 +243,6 @@ graph LR
 - `transcription-check`
 - `turn-flow`
 - `tutorial`
+- `visual-replay`
 - `voice`
 - `worker-rules`

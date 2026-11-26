@@ -1,6 +1,6 @@
 # campaign
 
-The campaign log as plain data and pure functions (release 1.0). No packages; draws nothing; loads in node (tests: `log.test.ts`). Every function returns a new log and never changes its argument, so the log goes into a save as JSON (a game keeps it beside its `saves` history) and undo is keeping the old value. Later parts (steps, saves, screens, graph runner, achievements tab) add to this shape: `readLog` keeps unknown parts and fills missing ones.
+Campaign steps, logs, calendars, rosters and shared card boxes as plain data and pure functions. The log goes into a JSON save beside the scenario history. The logic entry works in Node and on the web. `readLog` fills missing fields and keeps fields the game owns.
 
 ## Rules for agents
 
@@ -14,7 +14,9 @@ The campaign log as plain data and pure functions (release 1.0). No packages; dr
 5. Run a scenario through `begin(save, seed?)` and `end(save, { log, outcome?, resolution? }, next)`: the game sets up from the frozen copy of the log and never reads the campaign itself.
 6. Give the campaign a `NextStep` (or `linear(steps)`, or `graphNext(graph)`); returning null ends it (`status: 'over'`).
 7. Run `checkGraph` on a graph in a test; it lists data problems.
-8. Import `kit/campaign/index` (node-safe) for logic and `kit/campaign/ui` for screens; word every label and citation in the game.
+8. Import `kit/campaign/index` (node-safe) for logic and `kit/campaign/ui` for screens. The game writes the labels and citations.
+9. Use `scheduleCalendarEntry` with stable IDs from the game's between-scenario instructions. Call `startCalendarDay` before `begin` at the first scenario of the day. Keep the previous log while the day is waiting for a choice, and save the returned log once it resolves.
+10. Use `changeCampaignRoster` for joins, absences, retirement and deck edits. Pass the whole shared card box and batch deck exchanges together. Scenario setup uses only players whose status is `active`. Use `remainingCampaignCards` against the current box when accepting a restored roster.
 
 **Common mistakes:**
 - Calling `begin` with no active step, or `end` with no attempt in progress: both throw `campaign: no step ...`.
@@ -44,6 +46,14 @@ The campaign log as plain data and pure functions (release 1.0). No packages; dr
 - Save = `{ v, id, version, log, position, seed, history, attempt?, status }`; each attempt keeps `step, seed, logBefore`. `retry(save)` puts back the last attempt's `logBefore` and step. `readSave(parsed, version)` marks another version `incompatible`.
 ## Graph runner (K158, `graph.ts`, opt-in)
 - `CampaignGraph<E> { kind: 'linear' | 'choice', nodes, before?, finale?: { node, when? }, failAfter?, every? }`; `GraphNode { id, label, kind?, when?, setup?, victory?, defeat? }`. `graphNext(g)` is the `NextStep` (resolve a node with `end(..., { resolution: 'won' | 'lost' })`); `available`, `nodeChoice` + `chooseNode` for the player's pick; `checkGraph` lists data problems. `Instruction<E> { id, text, cite, when?, ops?, choose?, inGame?: { window?, effect: E } }`: printed text and citation with log `ops` (record, crossOut, forget, add, set, insert, strike, remove, reward) or a player's `choose` (options with `when`). `instructions(g, node, phase)`; `runBetween(list, log, step, answers)` gives `{ log, ran, ask? }`; `inGameAt(list, window, log)` gives the effects the game runs in that window (default `afterSetup`). `Cond` is data (`has`, `crossed`, `count`, `inSet`, `played`, `won`, `lost`, `not`, `all`, `any`) or a function; `holds(c, log, save?)`.
+## Calendar, roster and shared card box (K595)
+
+- `scheduleCalendarEntry(log, day, instructionId)` records a between-scenario instruction ID for a positive safe integer day. Each ID can be scheduled once per day. A day already started is closed to edits. The game supplies the corresponding `Instruction` definitions and keeps IDs stable for saved campaigns.
+- `startCalendarDay(log, day, instructions, answers?, save?)` resolves that day's entries in recording order using `runBetween`. Read `ran` for resolved instructions. If `ask` is present, keep the log and retry with the answer. Day instructions accept existing log operations, predicates and choices. Missing definitions or in-game instructions are errors. You can skip empty days but must process queued earlier days first.
+- After a day resolves, starting that day or an earlier day again returns the same log with no instructions. Later days can schedule the same instruction. The kit stores the calendar and roster in a versioned `game-kit:campaign-between-sessions` field, which `begin`, `end` and `retry` carry through the normal save snapshots. Games can keep their existing log fields, including any game-owned `betweenSessions` data. A game that uses no calendar or roster keeps the original v1 log shape.
+- `campaignRoster(log)` returns the players in join order. `changeCampaignRoster(log, edits, { box, allow? })` accepts `join` (with deck), `sitOut`, `return`, `retire` and `setDeck` (with deck). Each edit names a stable `player` ID. Decks list one card ID per physical copy, including repeated IDs. Sitting-out players keep their cards reserved. Retirement releases their deck and preserves their identity. When the game grants a deck upgrade, use `setDeck` to add or exchange cards against the same box. The game supplies any eligibility or deck construction rule through the optional pure `allow` callback.
+- `box` maps card IDs to nonnegative safe integer copy limits. A missing card has no copies. Deck exchanges validate the final allocation as a batch. Errors leave the input log intact. `remainingCampaignCards(log, box)` returns free copies and reports over-allocation. Restoring a save validates the calendar and roster shape. Validating against the game's selected box still requires the game data.
+
 ## Screens (K159, `screens.ts` pure; React in `ui.ts`, static)
 
 `betweenQuestion(save, actions)` + `answerBetween`: the between-scenarios screen as one question (`continue` and the game's `BetweenAction`s, detours). `logSections(log, fields, players)` + `<LogTabs sections tabs />` (the game adds tabs: `changeRows` per instruction, `<AchievementList />`). `handledList` (automated setup as sentences). `startAt({ steps, at, form, answers })` + `<StartForm />`: start anywhere with a chosen history.
@@ -51,11 +61,13 @@ The campaign log as plain data and pure functions (release 1.0). No packages; dr
 ## Use it in 10 lines
 
 ```ts
-import { addCount, emptyLog, record, setCount } from '../kit/campaign/index'
+import { begin, changeCampaignRoster, emptyLog, newCampaign, scheduleCalendarEntry, startCalendarDay } from '../kit/campaign/index'
+import type { Instruction } from '../kit/campaign/index'
 
-let log = emptyLog()
-log = record(log, 'met-the-king')
-log = setCount(log, 'gold', 3, 'scenario-1')
-log = addCount(log, 'gold', 2, 'scenario-2')
-console.log(log.counts)
+const supply: Instruction = { id: 'supply', text: 'Stock the camp.', cite: 'Setup', ops: [{ op: 'record', key: 'stocked' }] }
+let log = changeCampaignRoster(emptyLog(), [{ kind: 'join', player: 'scout', deck: ['lamp'] }], { box: { lamp: 1 } })
+log = startCalendarDay(scheduleCalendarEntry(log, 1, 'supply'), 1, { supply }).log
+const campaign = newCampaign('trail', '1', { kind: 'scenario', id: 'camp' }, 42, log)
+const attempt = begin(campaign)
+console.log(attempt.log.recorded)
 ```

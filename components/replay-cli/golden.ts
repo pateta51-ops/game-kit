@@ -9,7 +9,7 @@
 // Exit codes: 0 all the same, 1 a golden or a game differs, 2 bad usage, an unreadable file or a module that does not load.
 import { join, resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
-import { applyAction, causeProblems, createGame, type CauseCheck, createSave, hashValue, restoreSave, type GameRules, type GameTypes, type SaveFile, type SaveFormat } from '../engine-core/index.ts';
+import { applyAction, causeProblems, createGame, type CauseCheck, createSave, formatTriggerCap, hashValue, restoreSave, type GameRules, type GameTypes, type SaveFile, type SaveFormat } from '../engine-core/index.ts';
 import { DriverRng, legalAnswers, type GameSpec, type SimGame } from '../sim-pool/index.ts';
 import { logText, nodeIo, pathDiff, viewDigest, type Io } from './replay.ts';
 
@@ -49,7 +49,7 @@ export interface Played<G extends GameTypes = GameTypes> {
   /** `[0]` after createGame, then one per action; content hashes blanked. */
   readonly hashes: string[];
   readonly events: string[];
-  /** Why the game has no result (the cap, a refused action, a driver error). */
+  /** Why the run stopped early (a cap, a refused action, a driver error). */
   stopped?: string;
 }
 
@@ -61,6 +61,7 @@ export function playGolden<G extends GameTypes, S>(game: SimGame<G, S>, content:
   let s: G['state'] = first.state;
   out.hashes.push(blankHash(s));
   out.events.push(blankHash(first.events));
+  if (first.triggerCap !== undefined) return { ...out, stopped: formatTriggerCap({ ...first.triggerCap, actionIndex: null }) };
   const driver = game.driver(spec.driver, spec, content);
   while (s.result === null) {
     const p = s.prompt;
@@ -76,6 +77,7 @@ export function playGolden<G extends GameTypes, S>(game: SimGame<G, S>, content:
       out.actions.push(a);
       out.hashes.push(blankHash(s));
       out.events.push(blankHash(r.events));
+      if (r.triggerCap !== undefined) return { ...out, stopped: formatTriggerCap({ ...r.triggerCap, actionIndex: out.actions.length - 1 }) };
     } catch (e) {
       return { ...out, stopped: `stopped at action ${String(out.actions.length)}: ${msg(e)}` };
     }
@@ -323,17 +325,19 @@ export async function replayGames<G extends GameTypes, S>(mod: GoldenModule<G, S
       const at = (i: number, events: unknown): string | null =>
         blankHash(s) !== g.hashes[i] ? `state after action ${String(i)}` : blankHash(events) !== g.events[i] ? `events of action ${String(i)}` : null;
       diff = at(0, first.events);
+      let triggerStop = first.triggerCap === undefined ? undefined : formatTriggerCap({ ...first.triggerCap, actionIndex: null });
       for (let i = 0; diff === null && i < g.actions.length; i += 1) {
         try {
           const r = applyAction(mod.simGame.rules, s, g.actions[i] as G['action'], content);
           s = r.state;
           diff = at(i + 1, r.events);
+          if (r.triggerCap !== undefined) triggerStop ??= formatTriggerCap({ ...r.triggerCap, actionIndex: i });
         } catch (e) {
           diff = `action ${String(i + 1)} refused: ${msg(e)}`;
         }
       }
       if (diff === null) {
-        const now = ((): string | undefined => {
+        const now = triggerStop ?? ((): string | undefined => {
           if (s.result !== null) return undefined;
           const p = s.prompt;
           if (p === null) return 'no prompt is open and the game has no result';

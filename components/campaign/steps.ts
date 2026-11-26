@@ -1,3 +1,4 @@
+import { betweenSessionsKey } from './between-state.ts';
 import { emptyLog, readLog, type CampaignLog } from './log.ts';
 
 export type StepKind = 'prologue' | 'scenario' | 'interlude' | 'upgrade' | 'epilogue' | 'side';
@@ -92,5 +93,22 @@ export function readSave(x: unknown, version: string): CampaignSave | undefined 
   const o = x as CampaignSave;
   const log = readLog(o.log);
   if (o.v !== 1 || !log || !o.position) return undefined;
-  return { ...o, log, status: o.version === version ? o.status : 'incompatible' };
+  const save: CampaignSave = { ...o, log, status: o.version === version ? o.status : 'incompatible' };
+  const readSnapshot = (a: Attempt) => {
+    const logBefore = readLog(a.logBefore);
+    return logBefore && { ...a, logBefore };
+  };
+  if (o.attempt?.logBefore?.[betweenSessionsKey] !== undefined) {
+    const attempt = readSnapshot(o.attempt);
+    if (!attempt) return undefined;
+    save.attempt = attempt;
+  }
+  if (Array.isArray(o.history)) for (const [index, item] of o.history.entries()) {
+    if (item?.logBefore?.[betweenSessionsKey] === undefined) continue;
+    const attempt = readSnapshot(item);
+    if (!attempt) return undefined;
+    if (save.history === o.history) save.history = o.history.slice();
+    save.history[index] = attempt;
+  }
+  return save;
 }

@@ -22,7 +22,7 @@ export interface Limits {
   /** The gzip level (zlib's default when left out). */
   gzipLevel?: number;
 }
-const MEDIA = /\.(png|jpe?g|webp|gif|avif|svg|woff2?|ttf|otf|mp3|ogg|wav|m4a)$/i;
+const MEDIA = /\.(png|jpe?g|webp|gif|avif|svg|ico|woff2?|ttf|otf|mp3|ogg|wav|m4a)$/i;
 
 export interface FileSize {
   /** The path relative to the build folder. */
@@ -142,9 +142,10 @@ export function measureBuild(dir: string, limits: Limits): SizeReport {
   }
   const size = (path: string): FileSize => sizeOf(dir, path, limits.gzipLevel);
   const initial = [size('index.html'), ...named.map(size)];
-  const rest = allFiles(dir).filter((path) => path !== 'index.html' && !named.includes(path));
+  const files = allFiles(dir);
+  const rest = files.filter((path) => path !== 'index.html' && !named.includes(path));
   const lazy = rest.filter((path) => /\.(js|css)$/.test(path)).map(size);
-  const media = rest
+  const media = files
     .filter((path) => MEDIA.test(path))
     .map(size)
     .filter((f) => f.bytes > (limits.assetLimit ?? Infinity));
