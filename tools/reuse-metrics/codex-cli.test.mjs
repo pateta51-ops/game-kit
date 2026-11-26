@@ -61,4 +61,10 @@ it('fails closed on detached usage and counts tools only inside the actual turn'
   f=fixture();
   f.rollout.push({type:'response_item',timestamp:'2099-01-01T10:00:00.000Z',payload:{type:'function_call',call_id:'off-turn'}});
   expect(f.read().toolCalls).toBe(1);
+  f=fixture();
+  f.rollout[2].timestamp='2099-01-01T10:00:00.000Z';
+  expect(f.read).toThrow(/bounds/);
+  f=fixture();
+  f.rollout[6].timestamp='2026-01-01T10:00:03.91Z';
+  expect(f.read().at).toBe('2026-01-01T10:00:03.910Z');
 });

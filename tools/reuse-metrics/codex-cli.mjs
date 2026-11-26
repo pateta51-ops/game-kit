@@ -55,7 +55,7 @@ export function codexCliUsage(eventsBytes,rolloutBytes){
   const first=rollout.indexOf(begin),last=rollout.indexOf(end),model=rollout.indexOf(contextRow);
   if(rollout.indexOf(sessionRow)>first||first>=last||model<=first||model>=last||
     [begin,end].some(row=>row.payload.turn_id!==context.turn_id||row.payload.root_turn_id!==context.turn_id||!occurred(row.timestamp))||
-    Date.parse(begin.timestamp)>Date.parse(end.timestamp))
+    !occurred(contextRow.timestamp)||Date.parse(contextRow.timestamp)<Date.parse(begin.timestamp)||Date.parse(contextRow.timestamp)>Date.parse(end.timestamp))
     throw new Error('Rollout turn bounds are invalid');
   const responses=new Set(),sums={},missing=new Set();
   let previous=Date.parse(begin.timestamp);
@@ -90,7 +90,7 @@ export function codexCliUsage(eventsBytes,rolloutBytes){
   const validCalls=toolIds.size===calls.length&&calls.every(row=>text(row.payload.call_id)&&occurred(row.timestamp)&&
     Date.parse(row.timestamp)>=Date.parse(begin.timestamp)&&Date.parse(row.timestamp)<=Date.parse(end.timestamp));
   return {version:1,sourceFormat:'codex-cli-0.166.0-single-turn',cliVersion:session.cli_version,model:context.model,reasoning:context.effort,
-    at:end.timestamp,evidence:{eventsSha256:digest(eventsBytes),rolloutSha256:digest(rolloutBytes)},usage,
+    at:new Date(end.timestamp).toISOString(),evidence:{eventsSha256:digest(eventsBytes),rolloutSha256:digest(rolloutBytes)},usage,
     ...(Object.hasOwn(usage,'inputTokens')?{inputIncludesCached:true}:{}),modelInvocations:responses.size,
     toolCalls:validCalls?toolIds.size:null,missing:[...Object.values(fields),'costUsd'].filter(key=>!Object.hasOwn(usage,key))};
 }
