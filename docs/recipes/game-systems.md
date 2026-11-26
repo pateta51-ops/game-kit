@@ -27,6 +27,8 @@ Use after `kit.mjs new`, when the stub engine becomes the real game. Each row: t
 1. Steps as data: `Step[]` and `linear(STEPS)` for a fixed order (the graph runner for branches: [campaign README](../../components/campaign/README.md)).
 2. The log is plain data beside the save: `newCampaign`, then `begin` / `end` around each scenario; write results with `record`, `addCount` (pure: each returns a new log).
 3. Set-up of the next scenario reads the log (`count`, `has`), as `startOf(seed, start, log)` does in the reference game.
-4. Test: scenario 1's result changes scenario 2's set-up (the reference game's `tests/smoke.test.ts`).
+4. For optional dates, schedule stable between-scenario instruction IDs with `scheduleCalendarEntry`. Resolve the date with `startCalendarDay` before calling `begin` so a scenario retry keeps the resolved calendar snapshot.
+5. For changing attendance or shared deck inventory, pass the box and the whole batch of edits to `changeCampaignRoster`. Use the active players and their decks from `campaignRoster(log)` at setup.
+6. Test that scenario 1's result changes scenario 2's setup (the reference game's `tests/smoke.test.ts`).
 
 What a rule says (turn order, who chooses, what a card does) is never decided here: ask the arbiter or write a "Rules question".

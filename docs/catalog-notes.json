@@ -280,7 +280,7 @@
     ]
   },
   "campaign": {
-    "use": "A campaign of linked scenarios kept as a plain log.",
+    "use": "Linked campaign scenarios with a plain log, calendar instructions, a changing roster and a shared card box.",
     "not": "A single game's rules or story text (story).",
     "title": "Linked scenarios kept as a log",
     "tags": [
@@ -295,11 +295,15 @@
       "deck carried",
       "record",
       "campaign setup",
-      "phone campaign"
+      "phone campaign",
+      "campaign calendar",
+      "player roster",
+      "shared card box",
+      "deck copy limits"
     ],
     "visible": false,
     "release": 1,
-    "gameSupplies": "The scenarios and what a result changes."
+    "gameSupplies": "The scenarios, date instructions, roster rules and card limits."
   },
   "card-attachments": {
     "use": "Cards tucked under or fanned past a host card with a pure footprint, and the tokens on a card: one per token, ×N past a cap, number boxes; or cards in one sleeve drawn as one composite per face: inserts under a die-cut host, each cut to its own die-cut, read through the host's notch, their tabs past the sleeve's open edge.",

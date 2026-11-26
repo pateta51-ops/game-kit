@@ -92,5 +92,7 @@ export function readSave(x: unknown, version: string): CampaignSave | undefined 
   const o = x as CampaignSave;
   const log = readLog(o.log);
   if (o.v !== 1 || !log || !o.position) return undefined;
+  const validSnapshot = (a: Attempt) => a?.logBefore?.betweenSessions === undefined || readLog(a.logBefore) !== undefined;
+  if ((o.attempt && !validSnapshot(o.attempt)) || (Array.isArray(o.history) && !o.history.every(validSnapshot))) return undefined;
   return { ...o, log, status: o.version === version ? o.status : 'incompatible' };
 }
