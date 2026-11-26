@@ -1,6 +1,6 @@
 import { useEffect, useEffectEvent, useId, useRef, type CSSProperties, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
-import { activeModal, isActiveElement } from '../ui-helpers/promptKeys.ts';
+import { activeModal, composedContains, deepActiveElement, isActiveElement } from '../ui-helpers/promptKeys.ts';
 import './modal-dialog.css';
 
 const NATIVE_SUBTREE = 'iframe, audio[controls], video[controls]';
@@ -110,7 +110,7 @@ export function Modal({ open, onClose, title, children, actions, closeOnBackdrop
   useEffect(() => {
     const panel = dialog.current;
     if (!open || !panel) return;
-    const opener = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    const opener = deepActiveElement(document);
     if (openCount++ === 0) {
       previousOverflow = document.body.style.overflow;
       document.body.style.overflow = 'hidden';
@@ -133,8 +133,7 @@ export function Modal({ open, onClose, title, children, actions, closeOnBackdrop
       } else if (event.key === 'Tab') {
         const backwards = event.shiftKey;
         const items = tabOrder(panel, backwards), surface = document.activeElement;
-        let at = surface;
-        while (at?.shadowRoot?.activeElement) at = at.shadowRoot.activeElement;
+        const at = deepActiveElement(document);
         if (at?.matches(NATIVE_SUBTREE)) return;
         const start = (backwards ? items.at(-1) : items[0]) ?? panel;
         const index = items.findIndex((el) => el === at || (namedRadio(el) && sameGroup(el, at)));
@@ -251,7 +250,9 @@ export function Modal({ open, onClose, title, children, actions, closeOnBackdrop
       document.removeEventListener('keydown', onKey, true);
       if (--openCount === 0) document.body.style.overflow = previousOverflow;
       const front = activeModal(document) as Element | null;
-      if (opener?.isConnected && (!front || front.contains(opener))) opener.focus({ preventScroll: true });
+      if (opener instanceof HTMLElement && opener.isConnected && (!front || composedContains(front, opener))) {
+        opener.focus({ preventScroll: true });
+      }
     };
   }, [open]);
 

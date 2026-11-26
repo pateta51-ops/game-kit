@@ -87,6 +87,21 @@ export function activeModal(root: KeyRoot): unknown {
   return activeOverlay(root, '[role="dialog"][aria-modal="true"], [role="alertdialog"][aria-modal="true"]');
 }
 
+export function deepActiveElement(root: Document): Element | null {
+  let active = root.activeElement;
+  while (active?.shadowRoot?.activeElement) active = active.shadowRoot.activeElement;
+  return active;
+}
+
+export function composedContains(container: Element, node: Element): boolean {
+  for (let at: Element | null = node; at;) {
+    if (at === container) return true;
+    const root = at.getRootNode();
+    at = at.assignedSlot ?? at.parentElement ?? ('host' in root ? (root as ShadowRoot).host : null);
+  }
+  return false;
+}
+
 /** Returns the unbind. */
 export function bindPromptKeys(target: KeyTarget, options: PromptKeysOptions): () => void {
   const { overlay, keys = {} } = options;

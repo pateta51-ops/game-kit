@@ -3,7 +3,7 @@
 import { existsSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { build } from 'esbuild';
-import { chromium, type Browser, type Page } from 'playwright-core';
+import { chromium, type Browser, type Locator, type Page } from 'playwright-core';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
 const HAVE = existsSync(chromium.executablePath());
@@ -30,6 +30,21 @@ describe.skipIf(!HAVE && !process.env['CI'])('modal, board shortcuts and attachm
   };
   const values = async (page: Page) => page.locator('output').allTextContents();
   const focusBody = async (page: Page) => page.evaluate(() => { (document.activeElement as HTMLElement | null)?.blur(); });
+  const shadowOpener = async (trigger: Locator) => {
+    await trigger.evaluate((button: HTMLButtonElement) => {
+      const host = document.createElement('div');
+      const shadowButton = document.createElement('button');
+      shadowButton.textContent = 'Shadow opener';
+      shadowButton.addEventListener('click', () => button.click());
+      host.attachShadow({ mode: 'open' }).append(shadowButton);
+      button.after(host);
+    });
+    return trigger.page().getByRole('button', { name: 'Shadow opener' });
+  };
+  const ownsShadowFocus = (el: Element) => {
+    const root = el.getRootNode() as ShadowRoot;
+    return root.activeElement === el && document.activeElement === root.host;
+  };
 
   it('contains Tab, isolates keys, closes the top dialog and restores focus before shortcuts resume', async () => {
     const page = await browser.newPage({ viewport: { width: 1280, height: 800 } });
@@ -85,6 +100,35 @@ describe.skipIf(!HAVE && !process.env['CI'])('modal, board shortcuts and attachm
       await mount(page);
       await page.getByRole('button', { name: 'Open ordered modal' }).click();
       expect(await page.getByRole('heading', { name: 'Review introduction' }).evaluate((el) => el === document.activeElement)).toBe(true);
+    } finally { await page.close(); }
+  });
+
+  it('restores the open-shadow opener when a nested modal closes', async () => {
+    const page = await browser.newPage();
+    try {
+      await mount(page);
+      await page.getByRole('button', { name: 'Open modal', exact: true }).click();
+      const opener = await shadowOpener(page.getByRole('button', { name: 'Open nested dialog' }));
+      await opener.click();
+      const nested = page.getByRole('dialog', { name: 'Nested decision' });
+      await nested.waitFor();
+      await page.keyboard.press('Escape');
+      await nested.waitFor({ state: 'hidden' });
+      expect(await opener.evaluate(ownsShadowFocus)).toBe(true);
+    } finally { await page.close(); }
+  });
+
+  it('restores the open-shadow opener when a sheet closes', async () => {
+    const page = await browser.newPage();
+    try {
+      await mount(page);
+      const opener = await shadowOpener(page.getByRole('button', { name: 'Open sheet', exact: true }));
+      await opener.click();
+      const sheet = page.getByRole('dialog', { name: 'Board sheet' });
+      await sheet.waitFor();
+      await page.keyboard.press('Escape');
+      await sheet.waitFor({ state: 'detached' });
+      expect(await opener.evaluate(ownsShadowFocus)).toBe(true);
     } finally { await page.close(); }
   });
 
