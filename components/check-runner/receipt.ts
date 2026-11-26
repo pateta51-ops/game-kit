@@ -45,7 +45,7 @@ interface Receipt {
   readonly startedAt: string;
   completedAt: string | null;
   cancelled: boolean;
-  status: Status | 'stale';
+  status: Status | 'stale' | 'invalid';
   readonly commands: Command[];
   problems: string[];
 }
@@ -54,6 +54,7 @@ const sha = (bytes: Uint8Array): string => createHash('sha256').update(bytes).di
 const git = (root: string, ...args: string[]): string => execFileSync('git', args, { cwd: root, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'], maxBuffer: 16 * 1024 * 1024 }).trim();
 const parentPart = /^\.\.$/;
 const outside = (file: string): boolean => path.isAbsolute(file) || parentPart.test(file.split(path.sep, 1)[0] ?? '');
+const invalidCompletionTime = 'receipt completion time is invalid';
 function relative(file: string): string {
   if (typeof file !== 'string' || !file || /[:\0]/.test(file) || path.isAbsolute(file) || file.split(/[\\/]/).some(p => parentPart.test(p) || p === ''))
     throw new Error('receipt paths must be relative files inside the consumer');
@@ -160,6 +161,10 @@ export function acceptanceReceipt(config: ReceiptConfig, configFile: string, scr
       receipt.status = cancelled ? 'stopped' : status(receipt.commands);
       try {
         if (!isDeepStrictEqual(initial, binding(root, definition))) throw new Error('bound inputs changed while checks ran');
+        if (Date.parse(receipt.completedAt) < Date.parse(receipt.startedAt)) {
+          receipt.status = 'invalid';
+          receipt.problems.push(invalidCompletionTime);
+        }
       } catch (error) {
         receipt.status = 'stale';
         receipt.problems.push(error instanceof Error ? error.message : String(error));
@@ -195,7 +200,7 @@ export function verifyReceipt(file: string): { status: string; problems: readonl
     if (typeof value.startedAt !== 'string' || !Number.isFinite(Date.parse(value.startedAt))) throw new Error('receipt start time is invalid');
     if (value.completedAt === null) return { status: 'not-run', problems: ['runner has not completed'] };
     if (typeof value.completedAt !== 'string' || !Number.isFinite(Date.parse(value.completedAt)) || Date.parse(value.completedAt) < Date.parse(value.startedAt))
-      throw new Error('receipt completion time is invalid');
+      throw new Error(invalidCompletionTime);
     if (value.status === 'stale') return { status: 'stale', problems: value.problems };
     if (typeof value.cancelled !== 'boolean' || value.status !== (value.cancelled ? 'stopped' : status(value.commands)) || value.status === 'passed' && value.problems.length)
       throw new Error('receipt outcome differs from its commands');

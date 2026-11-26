@@ -623,7 +623,7 @@ Dev cheats a game declares as data at set-up (more starting units, more actions 
 ### check-runner/receipts
 
 - **Also called:** Acceptance receipts bound to source and inputs
-- **Words:** acceptance receipt, verify check execution evidence, stale consumer acceptance, bound kit revision, cancelled check evidence
+- **Words:** acceptance receipt, verify check execution evidence, stale consumer acceptance, bound kit revision, cancelled check evidence, monotonic check duration, receipt negative elapsed time, clock adjustment receipt duration
 - **Use it when:** Record the existing full check plan's commands and outcomes with consumer, kit lock, specification and acceptance-definition fingerprints; reject stale, missing, stopped, truncated or unfinished local evidence. Does not certify test quality or authenticate execution.
 - **Guide:** [README.md](../components/check-runner/README.md)
 

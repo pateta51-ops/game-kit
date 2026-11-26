@@ -26,6 +26,7 @@ import { spawn } from 'node:child_process';
 import { appendFileSync, closeSync, mkdtempSync, openSync, readFileSync } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
+import { performance } from 'node:perf_hooks';
 import { acceptanceReceipt, type ReceiptConfig } from './receipt.ts';
 
 export interface Plan {
@@ -158,7 +159,7 @@ export function envOf(env: Config['env'], script: string): NodeJS.ProcessEnv {
 }
 
 function runScript(script: string, log: string, env: NodeJS.ProcessEnv = process.env, silent = false, lane?: string): Promise<Done> {
-  const t0 = Date.now();
+  const t0 = performance.now();
   const fd = openSync(log, 'w');
   return new Promise((resolve) => {
     const child = spawn('npm', silent ? ['run', '--silent', script] : ['run', script], {
@@ -206,7 +207,7 @@ function runScript(script: string, log: string, env: NodeJS.ProcessEnv = process
         killTree(child.pid, 'SIGKILL'); // whatever of the tree outlived npm
       }
       closeSync(fd);
-      resolve({ script, code, ms: Date.now() - t0, stopped: child.pid !== undefined && killed.has(child.pid), timedOut, truncated });
+      resolve({ script, code, ms: Math.round(performance.now() - t0), stopped: child.pid !== undefined && killed.has(child.pid), timedOut, truncated });
     };
     child.on('error', (e) => {
       appendFileSync(log, `\ncheck-runner: could not start npm run ${script}: ${e.message}\n`);
@@ -270,7 +271,7 @@ export async function main(argv: readonly string[]): Promise<void> {
   forwardStop('SIGINT');
   forwardStop('SIGTERM');
   const dir = mkdtempSync(path.join(os.tmpdir(), 'check-runner-'));
-  const t0 = Date.now();
+  const t0 = performance.now();
   console.log(`check-runner: first ${FIRST.join(' → ')} alone, then ${LANES.length} lanes: ${LANES.map((l) => l.join(' → ')).join(' | ')}${LAST.length ? `, then ${LAST.join(' → ')} alone` : ''}`);
   const results: Done[] = [];
   const logOf = (script: string) => path.join(dir, `${String(order.indexOf(script))}.log`);
@@ -304,10 +305,11 @@ export async function main(argv: readonly string[]): Promise<void> {
   const failed = results.filter((r) => r.code !== 0 && !r.stopped);
   const rows = [...results].sort((a, b) => order.indexOf(a.script) - order.indexOf(b.script));
   const table = rows.map((r) => `| ${r.script} | ${state(r)} | ${secs(r.ms)} |`);
-  const head = `Checks side by side: ${results.filter((r) => r.code === 0).length} of ${results.length} passed in ${secs(Date.now() - t0)} (wall clock)`;
+  const elapsed = secs(Math.round(performance.now() - t0));
+  const head = `Checks side by side: ${results.filter((r) => r.code === 0).length} of ${results.length} passed in ${elapsed} (wall clock)`;
   const added = results.reduce((sum, x) => sum + x.ms, 0);
   console.log(`${head}\n${rows.map((r) => `  ${r.script.padEnd(26)} ${r.code === 0 ? 'passed' : r.stopped ? 'stopped' : 'FAILED'}  ${secs(r.ms)}`).join('\n')}`);
-  console.log(`wall ${secs(Date.now() - t0)}, checks added up ${secs(added)}, ${String(os.availableParallelism())} cores`);
+  console.log(`wall ${elapsed}, checks added up ${secs(added)}, ${String(os.availableParallelism())} cores`);
   const summary = process.env['GITHUB_STEP_SUMMARY'];
   if (summary) appendFileSync(summary, `### ${head}\n\n| Check | Result | Time |\n| --- | --- | --- |\n${table.join('\n')}\n\n`);
   if (failed.length) {
