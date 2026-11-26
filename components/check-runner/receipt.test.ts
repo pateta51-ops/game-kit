@@ -68,6 +68,27 @@ it('records nonnegative command and wall durations when Date.now goes backwards 
   expect(result.stdout).toMatch(/wall \d+\.\d s, checks added up \d+\.\d s/);
 });
 
+it('fails finalization when a successful check has a reversed receipt UTC window', () => {
+  const f = fixture();
+  const clock = path.join(f.root, 'evidence', 'clock.mjs');
+  mkdirSync(path.dirname(clock), { recursive: true });
+  const startedAt = '2026-01-02T03:04:05.000Z', completedAt = '2026-01-02T03:03:55.000Z';
+  writeFileSync(clock, `const observed = [Date.parse('${startedAt}'), Date.parse('${completedAt}')];
+let wall = observed[0];
+globalThis.Date = class extends Date {
+  constructor(...args) { super(...(args.length ? args : [observed.shift() ?? wall])); }
+  static now() { return wall -= 10000; }
+};\n`);
+  const result = spawnSync(process.execPath, ['--import', pathToFileURL(clock).href, runner], { cwd: f.root, encoding: 'utf8' });
+  expect(result.stdout).toContain('accepted');
+  expect(result.status, result.stderr).toBe(1);
+  expect(f.read()).toMatchObject({ startedAt, completedAt, status: 'invalid', problems: ['receipt completion time is invalid'],
+    commands: [{ script: 'a', status: 'passed', code: 0 }] });
+  const verified = f.verify();
+  expect(verified.status).toBe(1);
+  expect(JSON.parse(verified.stdout)).toMatchObject({ status: 'invalid', problems: ['receipt completion time is invalid'] });
+});
+
 it('keeps failed and unrun checks separate and rejects a removed command in recorded evidence', () => {
   const f = fixture({ a: 'node -e "process.exit(3)"', b: 'node -e "process.exit(0)"' }, { failFast: true });
   expect(f.run().status).toBe(1);

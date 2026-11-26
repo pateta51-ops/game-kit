@@ -12,7 +12,7 @@
 5. In `test-cost.config.json` list the player functions in `players`/`playerFiles`; keep `allow` counts exact: a file over its count, unlisted, or now under it (stale) fails.
 6. Run through the game's npm scripts or `heavy run`, not bare on a busy machine; never edit `kit/check-runner`.
 7. For an acceptance receipt, provide the game-owned specification and acceptance definition, run a clean committed consumer with the full declared check plan, and keep the receipt output ignored by Git. Clear any assume-unchanged or skip-worktree entries first so binding covers all tracked source. Verify the receipt after any source or input change; exit zero alone does not describe which rules the acceptance tests cover.
-8. Use recorded command milliseconds for elapsed duration and the receipt's UTC timestamps for the observed start and completion times. The runner measures command and total elapsed time on a monotonic clock.
+8. Use recorded command milliseconds for elapsed duration and the receipt's UTC timestamps for the observed start and completion times. The runner measures command and total elapsed time on a monotonic clock. If the UTC completion precedes the start, the runner keeps both times, records an invalid receipt and exits nonzero.
 
 **Common mistakes:**
 - Adding a script to the `package.json` chain but not to a lane (or the reverse): the run fails on the disagreement.
