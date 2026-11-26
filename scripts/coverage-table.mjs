@@ -2,7 +2,7 @@ import { execFileSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
-import { matchesTrackedTree } from '../components/check-runner/tracked-source.ts';
+import { matchesTrackedTree, workingTreeSha256 } from '../components/check-runner/tracked-source.ts';
 
 const root = process.cwd();
 const directory = path.join(root, 'coverage');
@@ -18,7 +18,8 @@ function identity() {
     const status = git('--no-optional-locks', '-c', 'core.fsmonitor=false', 'status', '--porcelain', '--untracked-files=all', '--ignore-submodules=none');
     const hidden = git('ls-files', '-v', '-z').split('\0').some(record => /^[a-zS] /.test(record));
     const commit = git('rev-parse', 'HEAD'), tree = git('rev-parse', commit + '^{tree}');
-    return { commit, tree, clean: status === '' && !hidden && matchesTrackedTree(root, tree), statusSha256: digest(status), diffSha256: digest(git('diff', '--binary', 'HEAD')) };
+    const clean = status === '' && !hidden && matchesTrackedTree(root, tree);
+    return { commit, tree, clean, ...(clean ? { workingSha256: workingTreeSha256(root, tree) } : {}), statusSha256: digest(status), diffSha256: digest(git('diff', '--binary', 'HEAD')) };
   } catch { return { status: 'unavailable', reason: 'Git source identity is unavailable' }; }
 }
 
@@ -99,7 +100,9 @@ function binding(file, source, data, configuration) {
   catch { return { status: 'invalid', reason: 'Malformed before-run source context' }; }
   if (!before || before.version !== 1 || !Number.isFinite(Date.parse(before.capturedAt)) || !/^(?:[a-f0-9]{40}|[a-f0-9]{64})$/.test(before.source?.commit ?? '') || !/^(?:[a-f0-9]{40}|[a-f0-9]{64})$/.test(before.source?.tree ?? '') || !/^[a-f0-9]{64}$/.test(before.tool?.sha256 ?? '')) return { status: 'invalid', reason: 'Unsupported before-run source context' };
   if (!before.source.clean || !source.clean) return { status: 'invalid', reason: 'Coverage source is dirty; it is not the recorded commit tree' };
+  if (!/^[a-f0-9]{64}$/.test(before.source.workingSha256 ?? '')) return { status: 'invalid', reason: 'Before-run source context lacks a tracked working-byte fingerprint' };
   if (before.source.commit !== source.commit || before.source.tree !== source.tree || before.tool.sha256 !== tool.sha256) return { status: 'stale', reason: 'Source or reporting tool changed since capture' };
+  if (before.source.workingSha256 !== source.workingSha256) return { status: 'stale', reason: 'Tracked working bytes changed since capture' };
   if (!fs.existsSync(summaryFile)) return { status: 'unavailable', reason: 'No summary for the captured run' };
   if (fs.statSync(summaryFile, { bigint: true }).mtimeNs < fs.statSync(file, { bigint: true }).mtimeNs) return { status: 'stale', reason: 'Coverage summary predates source capture' };
   if (data.summary.status !== 'reported') return { status: 'unavailable', reason: 'No valid component summary for the captured run' };

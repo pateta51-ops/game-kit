@@ -123,6 +123,30 @@ it('rejects a same-size tracked edit with an unchanged cached timestamp', () => 
   expect(readFileSync(f.output)).toEqual(prior);
 });
 
+it('rejects changed working bytes even when a clean filter still produces the committed blob', () => {
+  const f = fixture({ a: 'node check.cjs' });
+  const original = "console.log('first');\n";
+  const script = path.join(f.root, 'check.cjs');
+  f.git('config', 'filter.fixture.clean', 'node clean-filter.cjs');
+  f.git('config', 'filter.fixture.required', 'true');
+  writeFileSync(path.join(f.root, '.gitattributes'), 'check.cjs filter=fixture\n');
+  writeFileSync(path.join(f.root, 'clean-filter.cjs'), `require('node:fs').readFileSync(0); process.stdout.write(${JSON.stringify(original)});\n`);
+  writeFileSync(script, original);
+  f.git('add', '.');
+  f.git('-c', 'user.name=kit-tests', '-c', 'user.email=kit-tests@users.noreply.github.com', 'commit', '-qm', 'Test a local clean filter');
+  expect(f.run().status).toBe(0);
+  expect(f.verify().status).toBe(0);
+  const first = f.read().binding;
+  writeFileSync(script, "console.log('other');\n");
+  expect(f.git('status', '--porcelain')).toBe('');
+  const verify = f.verify();
+  expect(verify.status).toBe(1);
+  expect(JSON.parse(verify.stdout)).toMatchObject({ status: 'stale' });
+  expect(f.run().status).toBe(0);
+  expect(f.read().binding).not.toEqual(first);
+  expect(f.verify().status).toBe(0);
+});
+
 it('fails acceptance if a successful check changes a bound input while running', () => {
   const f = fixture({ a: 'node -e "require(\'fs\').writeFileSync(\'game-spec.json\', \'{}\')"' });
   expect(f.run().status).toBe(1);

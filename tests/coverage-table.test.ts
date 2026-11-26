@@ -112,6 +112,27 @@ describe('coverage history evidence', () => {
     expect(f.read()).toMatchObject({ source: { clean: false }, execution: { binding: { status: 'invalid' } } });
   });
 
+  it('rejects changed working bytes when Git filters still produce the captured tree', () => {
+    const f = fixture('filtered-source');
+    const original = "console.log('first');\n";
+    const script = path.join(f.dir, 'script.cjs');
+    f.git('config', 'filter.fixture.clean', 'node clean-filter.cjs');
+    f.git('config', 'filter.fixture.required', 'true');
+    fs.writeFileSync(path.join(f.dir, '.gitattributes'), 'script.cjs filter=fixture\n');
+    fs.writeFileSync(path.join(f.dir, 'clean-filter.cjs'), `require('node:fs').readFileSync(0); process.stdout.write(${JSON.stringify(original)});\n`);
+    fs.writeFileSync(script, original);
+    f.git('add', '.');
+    f.git('-c', 'user.name=Fixture', '-c', 'user.email=fixture@example.invalid', 'commit', '-qm', 'Test a local clean filter');
+    expect(f.run('--capture', f.start).status).toBe(0);
+    f.writeSummary();
+    expect(f.run('--started', f.start, '--check-outcome', 'success').status).toBe(0);
+    fs.writeFileSync(script, "console.log('other');\n");
+    expect(f.git('status', '--porcelain')).toBe('');
+    const result = f.run('--started', f.start, '--check-outcome', 'success');
+    expect(result.status).toBe(1);
+    expect(f.read()).toMatchObject({ execution: { binding: { status: 'stale' } } });
+  });
+
   it.each(['missing', 'malformed', 'bad-counts'] as const)('reports %s summary as unavailable or invalid, with no zero-coverage fiction', kind => {
     const f = fixture(kind);
     if (kind !== 'missing') {

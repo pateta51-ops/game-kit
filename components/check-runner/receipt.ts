@@ -3,7 +3,7 @@ import { createHash } from 'node:crypto';
 import { existsSync, lstatSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, renameSync, rmSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { isDeepStrictEqual } from 'node:util';
-import { matchesTrackedTree } from './tracked-source.ts';
+import { matchesTrackedTree, workingTreeSha256 } from './tracked-source.ts';
 
 export interface ReceiptConfig {
   readonly output: string;
@@ -13,7 +13,7 @@ export interface ReceiptConfig {
 }
 interface FileIdentity { readonly path: string; readonly sha256: string }
 interface Binding {
-  readonly source: { readonly commit: string; readonly tree: string };
+  readonly source: { readonly commit: string; readonly tree: string; readonly workingSha256: string };
   readonly kit: FileIdentity & { readonly commit: string };
   readonly spec: FileIdentity;
   readonly acceptance: FileIdentity;
@@ -85,7 +85,7 @@ function binding(root: string, definition: Receipt['definition']): Binding {
   const lock = JSON.parse(readFileSync(path.join(root, kit.path), 'utf8')) as { commit?: unknown };
   if (typeof lock.commit !== 'string' || !/^(?:[a-f\d]{40}|[a-f\d]{64})$/.test(lock.commit)) throw new Error('receipt needs a full locked kit commit');
   return {
-    source: { commit, tree },
+    source: { commit, tree, workingSha256: workingTreeSha256(root, tree) },
     kit: { ...kit, commit: lock.commit },
     spec: identity(root, definition.spec), acceptance: identity(root, definition.acceptance),
     config: identity(root, definition.config), package: identity(root, 'package.json'),
